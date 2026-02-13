@@ -6,6 +6,7 @@ pub mod course_result;
 mod course_result_skin_state;
 pub mod decide;
 mod decide_skin_state;
+mod ir_submission;
 pub mod key_config;
 pub mod play;
 pub mod result;

@@ -36,6 +36,7 @@ use bms_skin::property_mapper;
 
 use crate::app_state::AppStateType;
 use crate::state::{GameStateHandler, StateContext};
+use play_skin_state::ScratchAngleState;
 
 /// Extra time after last note before play is considered finished (5 seconds).
 const FINISH_MARGIN_US: i64 = 5_000_000;
@@ -155,6 +156,9 @@ pub struct PlayState {
     // Score comparison
     score_data_property: ScoreDataProperty,
 
+    // Scratch angle animation
+    scratch_angle: ScratchAngleState,
+
     // Abort detection
     start_pressed: bool,
     select_pressed: bool,
@@ -193,6 +197,7 @@ impl PlayState {
             main_bpm: 0.0,
             now_bpm: 0.0,
             score_data_property: ScoreDataProperty::new(),
+            scratch_angle: ScratchAngleState::new(0),
             start_pressed: false,
             select_pressed: false,
         }
@@ -382,6 +387,9 @@ impl PlayState {
 
         self.judge_manager = Some(jm);
         self.gauge = Some(gauge);
+
+        // Initialize scratch angle state
+        self.scratch_angle = ScratchAngleState::new(self.lane_property.scratch_count());
 
         // Store total notes in resource
         ctx.resource.score_data.notes = total_notes as i32;
@@ -717,6 +725,18 @@ impl GameStateHandler for PlayState {
             }
         }
 
+        // Update scratch angle animation
+        if let Some(jm) = &self.judge_manager {
+            let ptime_ms = ctx.timer.now_time_of(TIMER_PLAY);
+            self.scratch_angle.update(
+                ptime_ms,
+                &self.lane_property,
+                &self.key_states,
+                jm.auto_presstime(),
+                self.is_autoplay,
+            );
+        }
+
         // Sync play state to shared game state for skin rendering
         if let Some(shared) = &mut ctx.shared_state
             && let (Some(jm), Some(gauge)) = (&self.judge_manager, &self.gauge)
@@ -766,8 +786,8 @@ impl GameStateHandler for PlayState {
             );
 
             // 23-6: Offsets / Judge per key
-            play_skin_state::sync_play_offsets(shared, play_config);
-            play_skin_state::sync_play_judge_per_key(shared, jm);
+            play_skin_state::sync_play_offsets(shared, play_config, &self.scratch_angle);
+            play_skin_state::sync_play_judge_per_key(shared, jm, &self.lane_property);
         }
     }
 

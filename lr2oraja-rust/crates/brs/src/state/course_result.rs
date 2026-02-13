@@ -117,6 +117,11 @@ impl GameStateHandler for CourseResultState {
             if let Err(e) = db.score_db.set_score_data(std::slice::from_ref(score)) {
                 tracing::warn!("CourseResult: failed to save course score: {e}");
             }
+
+            // IR course submission (fire-and-forget async)
+            if let Some(course) = &ctx.resource.course_data {
+                super::ir_submission::submit_course_score_to_ir(score, course);
+            }
         }
     }
 

@@ -6,6 +6,7 @@
 
 use bms_config::play_config::PlayConfig;
 use bms_database::score_data_property::ScoreDataProperty;
+use bms_model::LaneProperty;
 use bms_rule::GrooveGauge;
 use bms_rule::judge_manager::JudgeManager;
 use bms_skin::property_id::{
@@ -19,6 +20,110 @@ use bms_skin::skin_object::SkinOffset;
 
 use super::PlayPhase;
 use crate::game_state::SharedGameState;
+
+// ---------------------------------------------------------------------------
+// Scratch angle state (ported from Java KeyInputProccessor.java lines 99-137)
+// ---------------------------------------------------------------------------
+
+/// Tracks per-scratch turntable angle and animation speed.
+///
+/// Faithfully ports the Java scratch angle algorithm:
+/// - CW key: targetSpeed = -0.75, moveTowardsSpeed = 16.0, clamp speed <= 0
+/// - CCW key: targetSpeed = 2.0, moveTowardsSpeed = 16.0, clamp speed >= 0
+/// - No input: targetSpeed = 1.0, moveTowardsSpeed = 4.0
+/// - Smooth interpolation toward target, then apply rotation at 270 deg/s.
+pub struct ScratchAngleState {
+    /// Per-scratch current angle (0.0-360.0 degrees).
+    angles: Vec<f32>,
+    /// Per-scratch graphic speed.
+    speeds: Vec<f32>,
+    /// Previous frame time in milliseconds (-1 = not yet set).
+    prev_time_ms: i64,
+}
+
+impl ScratchAngleState {
+    pub fn new(scratch_count: usize) -> Self {
+        Self {
+            angles: vec![0.0; scratch_count],
+            speeds: vec![0.0; scratch_count],
+            prev_time_ms: -1,
+        }
+    }
+
+    /// Update scratch angles based on key states and delta time.
+    ///
+    /// # Arguments
+    /// * `now_ms` - Current frame time in milliseconds
+    /// * `lane_property` - Lane/key mapping
+    /// * `key_states` - Per-physical-key pressed state
+    /// * `auto_presstime` - Per-physical-key autoplay press time (NOT_SET = not pressed)
+    /// * `is_autoplay` - Whether in full autoplay mode
+    pub fn update(
+        &mut self,
+        now_ms: i64,
+        lane_property: &LaneProperty,
+        key_states: &[bool],
+        auto_presstime: &[i64],
+        is_autoplay: bool,
+    ) {
+        if self.prev_time_ms < 0 {
+            self.prev_time_ms = now_ms;
+            return;
+        }
+
+        let delta_s = (now_ms - self.prev_time_ms) as f32 / 1000.0;
+        self.prev_time_ms = now_ms;
+
+        for s in 0..self.angles.len() {
+            let [key_cw, key_ccw] = lane_property.scratch_keys(s);
+
+            let mut target_speed = 1.0f32;
+            let mut move_towards_speed = 4.0f32;
+
+            if !is_autoplay {
+                let cw_pressed = key_states.get(key_ccw).copied().unwrap_or(false)
+                    || auto_presstime.get(key_ccw).copied().unwrap_or(i64::MIN) != i64::MIN;
+                let ccw_pressed = key_states.get(key_cw).copied().unwrap_or(false)
+                    || auto_presstime.get(key_cw).copied().unwrap_or(i64::MIN) != i64::MIN;
+
+                if cw_pressed {
+                    target_speed = -0.75;
+                    move_towards_speed = 16.0;
+                    self.speeds[s] = self.speeds[s].min(0.0);
+                } else if ccw_pressed {
+                    target_speed = 2.0;
+                    move_towards_speed = 16.0;
+                    self.speeds[s] = self.speeds[s].max(0.0);
+                }
+            }
+
+            // Move towards target speed
+            let diff = target_speed - self.speeds[s];
+            if diff.abs() <= delta_s * move_towards_speed {
+                self.speeds[s] = target_speed;
+            } else {
+                self.speeds[s] += diff.signum() * delta_s * move_towards_speed;
+            }
+
+            // Apply rotation
+            if self.speeds[s] > 0.0 {
+                self.angles[s] += 360.0 - self.speeds[s] * delta_s * 270.0;
+            } else if self.speeds[s] < 0.0 {
+                self.angles[s] += -self.speeds[s] * delta_s * 270.0;
+            }
+
+            self.angles[s] %= 360.0;
+            if self.angles[s] < 0.0 {
+                self.angles[s] += 360.0;
+            }
+        }
+    }
+
+    /// Get the angle for a scratch controller.
+    pub fn angle(&self, scratch_idx: usize) -> f32 {
+        self.angles.get(scratch_idx).copied().unwrap_or(0.0)
+    }
+}
 
 /// Synchronize play-specific state into SharedGameState for skin rendering.
 ///
@@ -477,8 +582,12 @@ pub fn sync_play_extended_options(
 // 23-6: Offsets / VALUE_JUDGE sync
 // ---------------------------------------------------------------------------
 
-/// Synchronize skin offsets for lanecover, lift, and hidden cover positions.
-pub fn sync_play_offsets(state: &mut SharedGameState, play_config: &PlayConfig) {
+/// Synchronize skin offsets for lanecover, lift, hidden, and scratch angle.
+pub fn sync_play_offsets(
+    state: &mut SharedGameState,
+    play_config: &PlayConfig,
+    scratch: &ScratchAngleState,
+) {
     use bms_skin::property_id::*;
 
     // OFFSET_LANECOVER: y = lanecover value (0.0-1.0 range, used by skin as y-offset)
@@ -508,14 +617,30 @@ pub fn sync_play_offsets(state: &mut SharedGameState, play_config: &PlayConfig) 
         },
     );
 
-    // OFFSET_SCRATCHANGLE_1P: stub (Phase 24)
-    state
-        .offsets
-        .insert(OFFSET_SCRATCHANGLE_1P, SkinOffset::default());
+    // OFFSET_SCRATCHANGLE_1P/2P: rotation angle in degrees
+    // Java: main.getOffset(OFFSET_SCRATCHANGLE_1P + s).r = scratch[s];
+    state.offsets.insert(
+        OFFSET_SCRATCHANGLE_1P,
+        SkinOffset {
+            r: scratch.angle(0),
+            ..Default::default()
+        },
+    );
+    state.offsets.insert(
+        OFFSET_SCRATCHANGLE_2P,
+        SkinOffset {
+            r: scratch.angle(1),
+            ..Default::default()
+        },
+    );
 }
 
 /// Synchronize per-key and overall judge values.
-pub fn sync_play_judge_per_key(state: &mut SharedGameState, jm: &JudgeManager) {
+pub fn sync_play_judge_per_key(
+    state: &mut SharedGameState,
+    jm: &JudgeManager,
+    lane_property: &bms_model::LaneProperty,
+) {
     use bms_skin::property_id::*;
 
     // Overall latest judge for 1P
@@ -526,12 +651,15 @@ pub fn sync_play_judge_per_key(state: &mut SharedGameState, jm: &JudgeManager) {
         .integers
         .insert(VALUE_JUDGE_2P, jm.now_judge(1) as i32);
 
-    // Per-key judge: use overall judge value as fallback
-    // (JudgeManager doesn't expose per-lane judge yet; Phase 24 will add this)
-    for key_offset in 0..10 {
-        state
-            .integers
-            .insert(VALUE_JUDGE_1P_SCRATCH + key_offset, now_judge);
+    // Per-key judge: use per-lane judge values from JudgeManager
+    // Map lane -> skin offset, then set VALUE_JUDGE_1P_SCRATCH + offset
+    for lane in 0..lane_property.lane_count() {
+        let offset = lane_property.lane_skin_offset(lane);
+        if (0..10).contains(&offset) {
+            state
+                .integers
+                .insert(VALUE_JUDGE_1P_SCRATCH + offset, jm.lane_judge(lane));
+        }
     }
 
     // VALUE_JUDGE_1P_DURATION: timing difference of latest judge (from recent_judges)
@@ -1005,8 +1133,9 @@ mod tests {
             hidden: 0.05,
             ..Default::default()
         };
+        let scratch = ScratchAngleState::new(1);
 
-        sync_play_offsets(&mut state, &pc);
+        sync_play_offsets(&mut state, &pc, &scratch);
 
         let lc = state
             .offsets
@@ -1021,12 +1150,88 @@ mod tests {
         assert!((lift.y - 0.1).abs() < f32::EPSILON);
     }
 
+    // --- Scratch angle tests ---
+
+    #[test]
+    fn scratch_angle_cw_increases_angle() {
+        let lp = LaneProperty::new(PlayMode::Beat7K);
+        let mut sa = ScratchAngleState::new(lp.scratch_count());
+        let [key_cw, _key_ccw] = lp.scratch_keys(0);
+
+        let mut key_states = vec![false; lp.physical_key_count()];
+        let auto_pt = vec![i64::MIN; lp.physical_key_count()];
+
+        // First call sets prev_time
+        sa.update(0, &lp, &key_states, &auto_pt, false);
+
+        // Press CCW key (key_cw in scratch_keys[0] = second key index)
+        key_states[key_cw] = true;
+        sa.update(100, &lp, &key_states, &auto_pt, false);
+
+        assert!(
+            sa.angle(0) > 0.0,
+            "Angle should increase, got {}",
+            sa.angle(0)
+        );
+    }
+
+    #[test]
+    fn scratch_angle_ccw_changes_angle() {
+        let lp = LaneProperty::new(PlayMode::Beat7K);
+        let mut sa = ScratchAngleState::new(lp.scratch_count());
+        let [_key_cw, key_ccw] = lp.scratch_keys(0);
+
+        let mut key_states = vec![false; lp.physical_key_count()];
+        let auto_pt = vec![i64::MIN; lp.physical_key_count()];
+
+        sa.update(0, &lp, &key_states, &auto_pt, false);
+
+        key_states[key_ccw] = true;
+        sa.update(100, &lp, &key_states, &auto_pt, false);
+
+        // CCW should also change angle (reversed direction)
+        assert!(
+            sa.angle(0) > 0.0,
+            "Angle should change, got {}",
+            sa.angle(0)
+        );
+    }
+
+    #[test]
+    fn scratch_angle_wraps_at_360() {
+        let lp = LaneProperty::new(PlayMode::Beat7K);
+        let mut sa = ScratchAngleState::new(lp.scratch_count());
+        let key_states = vec![false; lp.physical_key_count()];
+        let auto_pt = vec![i64::MIN; lp.physical_key_count()];
+
+        sa.update(0, &lp, &key_states, &auto_pt, false);
+        // Large time step to force wrapping
+        sa.update(10_000, &lp, &key_states, &auto_pt, false);
+
+        assert!(sa.angle(0) >= 0.0 && sa.angle(0) < 360.0);
+    }
+
+    #[test]
+    fn scratch_angle_no_change_at_zero_delta() {
+        let lp = LaneProperty::new(PlayMode::Beat7K);
+        let mut sa = ScratchAngleState::new(lp.scratch_count());
+        let key_states = vec![false; lp.physical_key_count()];
+        let auto_pt = vec![i64::MIN; lp.physical_key_count()];
+
+        sa.update(100, &lp, &key_states, &auto_pt, false);
+        let angle_before = sa.angle(0);
+        sa.update(100, &lp, &key_states, &auto_pt, false);
+
+        assert!((sa.angle(0) - angle_before).abs() < f32::EPSILON);
+    }
+
     #[test]
     fn sync_judge_per_key_populates() {
         let (jm, _notes, _gauge) = make_judge_manager(true);
+        let lp = LaneProperty::new(PlayMode::Beat7K);
         let mut state = SharedGameState::default();
 
-        sync_play_judge_per_key(&mut state, &jm);
+        sync_play_judge_per_key(&mut state, &jm, &lp);
 
         assert!(
             state

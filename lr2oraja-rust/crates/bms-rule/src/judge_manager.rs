@@ -274,6 +274,11 @@ pub struct JudgeManager {
     // MultiBad
     multi_bad: MultiBadCollector,
 
+    // Per-lane judge value: lane_judge[lane] = encoded judge
+    // 0=none, 1=PG, 2=GR_EARLY, 3=GR_LATE, 4=GD_EARLY, 5=GD_LATE,
+    // 6=BD_EARLY, 7=BD_LATE, 8=LN_HOLD
+    lane_judge: Vec<i32>,
+
     // Timing
     prev_time: i64,
 }
@@ -418,6 +423,7 @@ impl JudgeManager {
             sckey,
             autoplay: config.autoplay,
             auto_presstime,
+            lane_judge: vec![0i32; key_count],
             multi_bad: MultiBadCollector::new(is_pms),
             prev_time: 0,
         }
@@ -908,6 +914,10 @@ impl JudgeManager {
                                     }
                                     self.lane_states[lane_idx].release_time = NOT_SET;
                                     self.lane_states[lane_idx].ln_end_judge = NO_LN_END_JUDGE;
+                                    // Per-lane: LN hold state
+                                    if lane_idx < self.lane_judge.len() {
+                                        self.lane_judge[lane_idx] = 8;
+                                    }
                                     // Record sckey for BSS tracking
                                     if let Some(sc_idx) = sc {
                                         self.sckey[sc_idx] = key_idx as i32;
@@ -926,6 +936,10 @@ impl JudgeManager {
                                     }
                                     self.lane_states[lane_idx].release_time = NOT_SET;
                                     self.lane_states[lane_idx].ln_end_judge = NO_LN_END_JUDGE;
+                                    // Per-lane: LN hold state
+                                    if lane_idx < self.lane_judge.len() {
+                                        self.lane_judge[lane_idx] = 8;
+                                    }
                                     // Record sckey for BSS tracking
                                     if let Some(sc_idx) = sc {
                                         self.sckey[sc_idx] = key_idx as i32;
@@ -1358,6 +1372,15 @@ impl JudgeManager {
             }
         }
 
+        // Per-lane judge tracking (Java: this.judge[player][offset])
+        if judge != JUDGE_PR && lane < self.lane_judge.len() {
+            self.lane_judge[lane] = if judge == 0 {
+                1 // PGREAT
+            } else {
+                (judge as i32) * 2 + if duration >= 0 { 0 } else { 1 }
+            };
+        }
+
         // Emit judge event
         events.push(JudgeEvent::Judge {
             note_index: note_idx,
@@ -1432,6 +1455,14 @@ impl JudgeManager {
     /// Get the current combo display for a player.
     pub fn now_combo(&self, player: usize) -> i32 {
         self.now_combo.get(player).copied().unwrap_or(0)
+    }
+
+    /// Get the per-lane judge value for a specific lane.
+    ///
+    /// Returns encoded judge: 0=none, 1=PG, 2=GR_EARLY, 3=GR_LATE,
+    /// 4=GD_EARLY, 5=GD_LATE, 6=BD_EARLY, 7=BD_LATE, 8=LN_HOLD.
+    pub fn lane_judge(&self, lane: usize) -> i32 {
+        self.lane_judge.get(lane).copied().unwrap_or(0)
     }
 
     /// Get the number of notes that have been processed (passed).

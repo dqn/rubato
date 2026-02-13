@@ -74,6 +74,9 @@ impl GameStateHandler for ResultState {
                 tracing::warn!("Result: failed to save score log: {e}");
             }
             ctx.timer.set_timer_on(TIMER_RESULT_UPDATESCORE);
+
+            // IR submission (fire-and-forget async)
+            super::ir_submission::submit_score_to_ir(score, &score.sha256, score.mode);
         }
 
         // Load old score from DB
