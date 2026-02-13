@@ -6,6 +6,8 @@
 pub mod bar_manager;
 mod select_skin_state;
 
+use std::collections::HashMap;
+
 use tracing::info;
 
 use bms_database::SongInformation;
@@ -43,6 +45,10 @@ pub struct MusicSelectState {
     scroll_angle: i32,
     /// Cached song information keyed by sha256 to avoid repeated DB lookups.
     cached_song_info: Option<(String, SongInformation)>,
+    /// Score lamp cache: sha256 → ClearType ID (0-10).
+    score_lamp_cache: HashMap<String, i32>,
+    /// Whether the score cache needs refresh.
+    score_cache_dirty: bool,
 }
 
 impl MusicSelectState {
@@ -58,6 +64,8 @@ impl MusicSelectState {
             scroll_start_us: None,
             scroll_angle: 0,
             cached_song_info: None,
+            score_lamp_cache: HashMap::new(),
+            score_cache_dirty: true,
         }
     }
 }
@@ -83,6 +91,7 @@ impl GameStateHandler for MusicSelectState {
         // Load song list from database
         if let Some(db) = ctx.database {
             self.bar_manager.load_root(&db.song_db);
+            self.score_cache_dirty = true;
             info!(
                 songs = self.bar_manager.bar_count(),
                 "MusicSelect: loaded song list"
@@ -123,6 +132,35 @@ impl GameStateHandler for MusicSelectState {
             (0.0, 0)
         };
 
+        // Refresh score lamp cache when bar list changed
+        if self.score_cache_dirty {
+            if let Some(db) = ctx.database {
+                let sha256_list: Vec<String> = self
+                    .bar_manager
+                    .bars()
+                    .iter()
+                    .filter_map(|bar| match bar {
+                        Bar::Song(song_data) => Some(song_data.sha256.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                let sha256_refs: Vec<&str> = sha256_list.iter().map(String::as_str).collect();
+                let mode = ctx.resource.play_mode.mode_id();
+                self.score_lamp_cache.clear();
+                if let Ok(scores) = db.score_db.get_score_datas(&sha256_refs, mode) {
+                    for sd in scores {
+                        let lamp = sd.clear.id() as i32;
+                        // Keep best (highest) clear per sha256
+                        let entry = self.score_lamp_cache.entry(sd.sha256).or_insert(0);
+                        if lamp > *entry {
+                            *entry = lamp;
+                        }
+                    }
+                }
+            }
+            self.score_cache_dirty = false;
+        }
+
         // Sync select state to shared game state for skin rendering
         if let Some(shared) = &mut ctx.shared_state {
             // Determine if current song has LN (from song data metadata)
@@ -137,6 +175,7 @@ impl GameStateHandler for MusicSelectState {
                 self.center_bar,
                 angle_lerp,
                 angle,
+                &self.score_lamp_cache,
             );
 
             // Sync song information for the currently selected song
@@ -210,6 +249,7 @@ impl GameStateHandler for MusicSelectState {
                     ControlKeys::Escape => {
                         if self.bar_manager.is_in_folder() {
                             self.bar_manager.leave_folder();
+                            self.score_cache_dirty = true;
                         }
                         return;
                     }
@@ -228,6 +268,7 @@ impl GameStateHandler for MusicSelectState {
                         // Cycle sort mode
                         self.sort_mode = self.sort_mode.next();
                         self.bar_manager.sort(self.sort_mode);
+                        self.score_cache_dirty = true;
                         info!(sort = ?self.sort_mode, "MusicSelect: sort changed");
                         return;
                     }
@@ -248,6 +289,7 @@ impl GameStateHandler for MusicSelectState {
                                 self.bar_manager.filter_by_mode(Some(mode_id));
                             }
                             self.bar_manager.sort(self.sort_mode);
+                            self.score_cache_dirty = true;
                         }
                         info!(filter = ?self.mode_filter, "MusicSelect: mode filter changed");
                         return;
@@ -329,6 +371,7 @@ impl MusicSelectState {
                             && let Some(db) = ctx.database
                         {
                             self.bar_manager.search(&db.song_db, &self.search_text);
+                            self.score_cache_dirty = true;
                         }
                         self.search_mode = false;
                         self.search_text.clear();
@@ -380,6 +423,7 @@ impl MusicSelectState {
             Some(Bar::Folder { .. }) => {
                 if let Some(db) = ctx.database {
                     self.bar_manager.enter_folder(&db.song_db);
+                    self.score_cache_dirty = true;
                 }
             }
             Some(Bar::Course(_)) => {

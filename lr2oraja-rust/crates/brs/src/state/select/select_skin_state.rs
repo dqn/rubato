@@ -3,6 +3,8 @@
 // Updates SharedGameState with song metadata, bar type, and mode flags
 // from the current selection in MusicSelect state.
 
+use std::collections::HashMap;
+
 use bms_database::SongInformation;
 use bms_render::draw::bar::{BarScrollState, BarSlotData, BarType};
 use bms_skin::property_id::{
@@ -106,6 +108,7 @@ pub fn sync_bar_scroll_state(
     center_bar: usize,
     angle_lerp: f32,
     angle: i32,
+    score_lamp_cache: &HashMap<String, i32>,
 ) {
     let total = bar_manager.bar_count();
     if total == 0 {
@@ -143,7 +146,10 @@ pub fn sync_bar_scroll_state(
                     bar_type: BarType::Song {
                         exists: !song_data.path.is_empty(),
                     },
-                    lamp_id: 0, // TODO: read from score DB
+                    lamp_id: score_lamp_cache
+                        .get(&song_data.sha256)
+                        .copied()
+                        .unwrap_or(0),
                     trophy_id: None,
                     level: song_data.level,
                     difficulty: song_data.difficulty,
@@ -471,5 +477,59 @@ mod tests {
         clear_song_metadata(&mut state);
         assert!(!state.integers.contains_key(&NUMBER_TOTALNOTE_NORMAL));
         assert!(!state.floats.contains_key(&FLOAT_CHART_PEAKDENSITY));
+    }
+
+    #[test]
+    fn sync_bar_scroll_state_uses_score_lamp_cache() {
+        use bms_database::{SongData, SongDatabase};
+
+        let song_db = SongDatabase::open_in_memory().unwrap();
+        let song = SongData {
+            md5: "md5_a".to_string(),
+            sha256: "sha_a".to_string(),
+            title: "Song A".to_string(),
+            path: "a.bms".to_string(),
+            ..Default::default()
+        };
+        song_db.set_song_datas(&[song]).unwrap();
+
+        let mut bm = BarManager::new();
+        bm.load_root(&song_db);
+        assert_eq!(bm.bar_count(), 1);
+
+        let mut cache = HashMap::new();
+        cache.insert("sha_a".to_string(), 6); // Hard clear
+
+        let mut state = SharedGameState::default();
+        sync_bar_scroll_state(&mut state, &bm, 0, 0.0, 0, &cache);
+
+        let scroll = state.bar_scroll_state.as_ref().unwrap();
+        assert_eq!(scroll.slots[0].lamp_id, 6);
+    }
+
+    #[test]
+    fn sync_bar_scroll_state_missing_cache_defaults_to_zero() {
+        use bms_database::{SongData, SongDatabase};
+
+        let song_db = SongDatabase::open_in_memory().unwrap();
+        let song = SongData {
+            md5: "md5_b".to_string(),
+            sha256: "sha_b".to_string(),
+            title: "Song B".to_string(),
+            path: "b.bms".to_string(),
+            ..Default::default()
+        };
+        song_db.set_song_datas(&[song]).unwrap();
+
+        let mut bm = BarManager::new();
+        bm.load_root(&song_db);
+
+        let cache = HashMap::new(); // empty cache
+
+        let mut state = SharedGameState::default();
+        sync_bar_scroll_state(&mut state, &bm, 0, 0.0, 0, &cache);
+
+        let scroll = state.bar_scroll_state.as_ref().unwrap();
+        assert_eq!(scroll.slots[0].lamp_id, 0);
     }
 }
