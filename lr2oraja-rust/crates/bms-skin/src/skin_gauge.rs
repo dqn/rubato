@@ -4,7 +4,7 @@
 // This is constructed by the LR2 CSV loader's SRC_GROOVEGAUGE / DST_GROOVEGAUGE
 // commands and by the JSON loader's gauge object.
 
-use crate::image_handle::ImageHandle;
+use crate::image_handle::ImageRegion;
 use crate::skin_object::SkinObjectBase;
 
 // ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ pub struct GaugePart {
     /// Part type identifier.
     pub part_type: GaugePartType,
     /// Animation frames (typically 6 frames for blinking).
-    pub images: Vec<ImageHandle>,
+    pub images: Vec<ImageRegion>,
     /// Animation timer ID.
     pub timer: Option<i32>,
     /// Animation cycle in milliseconds.
@@ -50,6 +50,16 @@ pub struct SkinGauge {
     pub parts: Vec<GaugePart>,
     /// Number of gauge nodes (typically 50).
     pub nodes: i32,
+    /// Animation type (0=RANDOM, 1=INCREASE, 2=DECREASE, 3=FLICKERING).
+    pub animation_type: i32,
+    /// Animation range (default: 3).
+    pub animation_range: i32,
+    /// Animation interval in milliseconds (default: 33).
+    pub duration: i32,
+    /// Result screen gauge fill start time in milliseconds.
+    pub starttime: i32,
+    /// Result screen gauge fill end time in milliseconds.
+    pub endtime: i32,
 }
 
 impl Default for SkinGauge {
@@ -58,6 +68,11 @@ impl Default for SkinGauge {
             base: SkinObjectBase::default(),
             parts: Vec::new(),
             nodes: 50,
+            animation_type: 0,
+            animation_range: 3,
+            duration: 33,
+            starttime: 0,
+            endtime: 500,
         }
     }
 }
@@ -80,6 +95,11 @@ mod tests {
         let gauge = SkinGauge::default();
         assert_eq!(gauge.nodes, 50);
         assert!(gauge.parts.is_empty());
+        assert_eq!(gauge.animation_type, 0);
+        assert_eq!(gauge.animation_range, 3);
+        assert_eq!(gauge.duration, 33);
+        assert_eq!(gauge.starttime, 0);
+        assert_eq!(gauge.endtime, 500);
     }
 
     #[test]

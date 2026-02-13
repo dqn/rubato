@@ -99,9 +99,9 @@ Phase 0-23 全完了（16 crate, ~61,000行）。全 RenderSnapshot GM テスト
 - **Skin Object Rendering (Loader Wiring)** — レンダリングインフラ（マルチエンティティ基盤、プロシージャルテクスチャパイプライン、draw モジュール）は実装済みだが、一部ローダーが新フィールドにデータを入れないため描画されない。以下の順序で実装すること:
   1. ~~**SkinNumber ローダー (JSON)**~~ — ✅ 完了。`try_build_number()` で `source_images` → `split_grid()` → `build_number_source_set()` → `digit_sources` ポピュレート。`SkinSourceSet` は `ImageRegion` ベースに変更済み。
   2. ~~**SkinFloat ローダー (JSON)**~~ — ✅ 完了。`try_build_float()` で `build_float_source_set()` により 26/24/22/12/11-frame パターン対応。
-  3. **SkinNumber/SkinFloat ローダー (LR2 CSV)** — 未対応。`lr2_csv_loader.rs` の画像読み込みパイプライン構造変更が必要。(`bms-skin/src/loader/lr2_csv_loader.rs`)
+  3. ~~**SkinNumber/SkinFloat ローダー (LR2 CSV)**~~ — ✅ 完了。`src_number()` で `split_grid()` → `build_number_source_set()` → `digit_sources` ポピュレート。SkinFloat は LR2 CSV に該当なし。
   4. ~~**SkinNumber/SkinFloat negative 画像セット**~~ — ✅ 完了。`build_number_source_set()` / `build_float_source_set()` が `Option<SkinSourceSet>` で negative セットを返す。`minus_digit_sources` フィールドでレンダラーが正負判定して画像切替。
-  5. **SkinGauge ローダー** — `GaugePart.images` に `ImageHandle` をポピュレート。JSON: `try_build_gauge()` に `source_images` 接続。LR2 CSV: `SRC_GROOVEGAUGE`/`DST_GROOVEGAUGE` ハンドラ追加。(`bms-skin/src/loader/json_loader.rs`, `bms-skin/src/loader/lr2_csv_loader.rs`)
+  5. ~~**SkinGauge ローダー**~~ — ✅ 完了。`GaugePart.images` を `Vec<ImageRegion>` に変更。JSON: `try_build_gauge()` で `source_images` → indexmap パターン → `split_grid()` → GaugePart ポピュレート。LR2 CSV: `SRC_GROOVEGAUGE`/`SRC_GROOVEGAUGE_EX`/`DST_GROOVEGAUGE` ハンドラ追加。レンダラーも `texture_rect` 対応済み。(`bms-skin/src/skin_gauge.rs`, `bms-skin/src/loader/json_loader.rs`, `bms-skin/src/loader/lr2_csv_loader.rs`, `bms-render/src/draw/gauge.rs`, `bms-render/src/skin_renderer.rs`)
   6. **SkinJudge ローダー** — `judge_images`/`judge_counts` 内の SkinImage/SkinNumber に画像データをポピュレート。JSON: `try_build_judge()` で `source_images` を子オブジェクトに接続済み（`resolve_sub_number` に `source_images` 渡し）。(`bms-skin/src/loader/json_loader.rs`)
   - 詳細計画: `.claude/plans/lively-popping-liskov.md` の Phase 2b/2c/3a/4 を参照
 - **SkinBar Rendering / SongInformation Display** — データ構造は移植済みだがレンダリング未接続。`skin_renderer.rs` の catch-all に落ちる。SongInformation も bms-render 側で未使用。

@@ -1,4 +1,4 @@
-use bms_skin::image_handle::ImageHandle;
+use bms_skin::image_handle::ImageRegion;
 use bms_skin::skin_gauge::GaugePartType;
 use bms_skin::skin_object::Rect;
 use bms_skin::skin_source::image_index;
@@ -7,7 +7,7 @@ use bms_skin::skin_source::image_index;
 #[derive(Debug, Clone)]
 pub struct GaugeNodeCommand {
     pub part_type: GaugePartType,
-    pub image_handle: ImageHandle,
+    pub image_region: ImageRegion,
     pub dst_rect: Rect,
 }
 
@@ -26,7 +26,7 @@ const GAUGE_RED_THRESHOLD: f32 = 0.8;
 pub fn compute_gauge_draw(
     nodes: i32,
     gauge_value: f32,
-    parts: &[(GaugePartType, Vec<ImageHandle>, Option<i32>, i32)],
+    parts: &[(GaugePartType, Vec<ImageRegion>, Option<i32>, i32)],
     timer_time: i64,
     dst: &Rect,
 ) -> Vec<GaugeNodeCommand> {
@@ -65,7 +65,7 @@ pub fn compute_gauge_draw(
             let idx = image_index(images.len(), timer_time, *cycle);
             commands.push(GaugeNodeCommand {
                 part_type: target_type,
-                image_handle: images[idx],
+                image_region: images[idx],
                 dst_rect: Rect::new(dst.x + node_w * i as f32, dst.y, node_w, dst.h),
             });
         }
@@ -77,13 +77,24 @@ pub fn compute_gauge_draw(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bms_skin::image_handle::ImageHandle;
 
-    fn make_parts() -> Vec<(GaugePartType, Vec<ImageHandle>, Option<i32>, i32)> {
+    fn make_region(id: u32) -> ImageRegion {
+        ImageRegion {
+            handle: ImageHandle(id),
+            x: 0.0,
+            y: 0.0,
+            w: 0.0,
+            h: 0.0,
+        }
+    }
+
+    fn make_parts() -> Vec<(GaugePartType, Vec<ImageRegion>, Option<i32>, i32)> {
         vec![
-            (GaugePartType::FrontGreen, vec![ImageHandle(1)], None, 0),
-            (GaugePartType::FrontRed, vec![ImageHandle(2)], None, 0),
-            (GaugePartType::BackGreen, vec![ImageHandle(3)], None, 0),
-            (GaugePartType::BackRed, vec![ImageHandle(4)], None, 0),
+            (GaugePartType::FrontGreen, vec![make_region(1)], None, 0),
+            (GaugePartType::FrontRed, vec![make_region(2)], None, 0),
+            (GaugePartType::BackGreen, vec![make_region(3)], None, 0),
+            (GaugePartType::BackRed, vec![make_region(4)], None, 0),
         ]
     }
 

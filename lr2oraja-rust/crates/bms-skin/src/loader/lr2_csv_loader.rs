@@ -25,6 +25,7 @@ use crate::loader::lr2_result_loader::{self, Lr2ResultState};
 use crate::loader::lr2_select_loader::{self, Lr2SelectState};
 use crate::property_id::{BooleanId, FloatId, IntegerId, StringId, TimerId};
 use crate::skin::Skin;
+use crate::skin_gauge::{GaugePart, GaugePartType, SkinGauge};
 use crate::skin_graph::{GraphDirection, SkinGraph};
 use crate::skin_header::SkinHeader;
 use crate::skin_image::SkinImage;
@@ -181,6 +182,7 @@ enum ObjectSlot {
     Slider,
     Graph,
     Button,
+    Gauge,
 }
 
 /// Loader state shared between the main loader and state-specific sub-loaders.
@@ -202,6 +204,10 @@ pub struct Lr2CsvState {
     found_true: bool,
     /// Option map (id -> 0/1)
     options: HashMap<i32, i32>,
+    /// SRC_GROOVEGAUGE add_x (node spacing X).
+    groovex: i32,
+    /// SRC_GROOVEGAUGE add_y (node spacing Y).
+    groovey: i32,
 }
 
 impl Lr2CsvState {
@@ -217,6 +223,8 @@ impl Lr2CsvState {
             skip: false,
             found_true: false,
             options: options.clone(),
+            groovex: 0,
+            groovey: 0,
         }
     }
 
@@ -442,6 +450,8 @@ fn process_command(
         "SRC_SLIDER" | "SRC_SLIDER_REFNUMBER" => src_slider(cmd, fields, skin, state),
         "SRC_BARGRAPH" | "SRC_BARGRAPH_REFNUMBER" => src_bargraph(cmd, fields, skin, state),
         "SRC_BUTTON" => src_button(fields, skin, state),
+        "SRC_GROOVEGAUGE" => src_groovegauge(fields, skin, state),
+        "SRC_GROOVEGAUGE_EX" => src_groovegauge_ex(fields, skin, state),
 
         // DST commands
         "DST_IMAGE" => apply_dst(ObjectSlot::Image, fields, skin, state),
@@ -450,6 +460,7 @@ fn process_command(
         "DST_SLIDER" => apply_dst(ObjectSlot::Slider, fields, skin, state),
         "DST_BARGRAPH" => apply_dst_bargraph(fields, skin, state),
         "DST_BUTTON" => apply_dst(ObjectSlot::Button, fields, skin, state),
+        "DST_GROOVEGAUGE" => dst_groovegauge(fields, skin, state),
 
         // State-specific dispatch
         _ => {
@@ -785,6 +796,351 @@ fn apply_dst_bargraph(fields: &[&str], skin: &mut Skin, state: &mut Lr2CsvState)
             }
             let y_flipped = state.srch - (y + h) as f32;
             last_dst.region = Rect::new(x as f32, y_flipped, w as f32, h as f32);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// GROOVEGAUGE handlers
+// ---------------------------------------------------------------------------
+
+/// SRC_GROOVEGAUGE: standard groove gauge with 4-cell or 6-cell (PMS) grid layout.
+///
+/// Fields: index, gr, x, y, w, h, div_x, div_y, cycle, timer,
+///         add_x, add_y, parts, animation_type, animation_range, animation_cycle,
+///         starttime, endtime
+///
+/// Ported from LR2SkinCSVLoader.java:533-603.
+fn src_groovegauge(fields: &[&str], skin: &mut Skin, state: &mut Lr2CsvState) {
+    let values = parse_int(fields);
+    let gr = values[2];
+    let handle = ImageHandle(gr as u32);
+
+    let divx = values[7].max(1);
+    let divy = values[8].max(1);
+    let total_cells = divx * divy;
+
+    let grid = split_grid(
+        handle, values[3], values[4], values[5], values[6], divx, divy,
+    );
+    if grid.is_empty() {
+        return;
+    }
+
+    let animation_type = values[14];
+    let is_pms_flicker = animation_type == 3 && total_cells % 6 == 0;
+
+    // Build 36-slot array: gauge[slot][frame] where slot = gauge_type*6 + part_type_offset
+    // For our simplified model, we extract slots 0-5 (gauge type 0).
+    let mut slot_images: [Vec<crate::image_handle::ImageRegion>; 6] =
+        std::array::from_fn(|_| Vec::new());
+
+    if is_pms_flicker {
+        // PMS mode: 6 cells per animation group
+        // Order: FrontRed(0), FrontGreen(1), BackRed(2), BackGreen(3), ExFrontRed(4), ExFrontGreen(5)
+        let groups = total_cells / 6;
+        for g in 0..groups as usize {
+            for (dy, slot) in slot_images.iter_mut().enumerate() {
+                let cell_idx = g * 6 + dy;
+                if cell_idx < grid.len() {
+                    // In PMS mode, each cell maps to its dy slot, replicated across all 6 gauge types
+                    slot.push(grid[cell_idx]);
+                }
+            }
+        }
+    } else {
+        // Standard mode: 4 cells per animation group
+        // Order: dy=0→FrontGreen(slot 1), dy=1→FrontRed(slot 0), dy=2→BackGreen(slot 3), dy=3→BackRed(slot 2)
+        // Java: dy=0→FrontRed with slot[dy]=slot[dy+6]=..., and for dy<2: also ExFront
+        // Mapping: dy 0→slot 0 (FrontRed), dy 1→slot 1 (FrontGreen),
+        //          dy 2→slot 2 (BackRed), dy 3→slot 3 (BackGreen)
+        // ExFront: dy 0→slot 4 (ExFrontRed), dy 1→slot 5 (ExFrontGreen)
+        let groups = total_cells / 4;
+        for g in 0..groups as usize {
+            for dy in 0..4usize {
+                let cell_idx = g * 4 + dy;
+                if cell_idx < grid.len() {
+                    slot_images[dy].push(grid[cell_idx]);
+                    // FrontRed/FrontGreen are also copied to ExFrontRed/ExFrontGreen
+                    if dy < 2 {
+                        slot_images[dy + 4].push(grid[cell_idx]);
+                    }
+                }
+            }
+        }
+    }
+
+    let part_types = [
+        GaugePartType::FrontRed,
+        GaugePartType::FrontGreen,
+        GaugePartType::BackRed,
+        GaugePartType::BackGreen,
+        GaugePartType::ExFrontRed,
+        GaugePartType::ExFrontGreen,
+    ];
+
+    let timer = nonzero_timer(values[10]);
+    let cycle = values[9];
+
+    let parts: Vec<GaugePart> = part_types
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !slot_images[*i].is_empty())
+        .map(|(i, &pt)| GaugePart {
+            part_type: pt,
+            images: slot_images[i].clone(),
+            timer: timer.map(|t| TimerId(t).0),
+            cycle,
+        })
+        .collect();
+
+    let (node_parts, anim_type, anim_range, duration) = if values[13] == 0 {
+        // Default: parts=50 (or 24 for PMS), type=0, range=3 (or 0 for PMS), duration=33
+        (50, 0, 3, 33)
+    } else {
+        (values[13], values[14], values[15], values[16])
+    };
+
+    let gauge = SkinGauge {
+        parts,
+        nodes: node_parts,
+        animation_type: anim_type,
+        animation_range: anim_range,
+        duration,
+        starttime: values[17],
+        endtime: values[18],
+        ..Default::default()
+    };
+
+    state.groovex = values[11];
+    state.groovey = values[12];
+
+    let idx = skin.objects.len();
+    skin.add(gauge.into());
+    state.current.insert(ObjectSlot::Gauge, idx);
+}
+
+/// SRC_GROOVEGAUGE_EX: extended groove gauge with 8/12-cell grid layout.
+///
+/// Same field format as SRC_GROOVEGAUGE but uses 8-cell (standard) or 12-cell (PMS) groups:
+/// Standard 8: FrontRed, FrontGreen, BackRed, BackGreen, ExFrontRed, ExFrontGreen, ExBackRed, ExBackGreen
+/// PMS 12: FrontRed, FrontGreen, BackRed, BackGreen, ExFrontRed, ExFrontGreen, ExBackRed, ExBackGreen,
+///         FlickerFrontRed, FlickerFrontGreen, FlickerExFrontRed, FlickerExFrontGreen
+///
+/// Ported from LR2SkinCSVLoader.java:605-689.
+fn src_groovegauge_ex(fields: &[&str], skin: &mut Skin, state: &mut Lr2CsvState) {
+    let values = parse_int(fields);
+    let gr = values[2];
+    let handle = ImageHandle(gr as u32);
+
+    let divx = values[7].max(1);
+    let divy = values[8].max(1);
+    let total_cells = divx * divy;
+
+    let grid = split_grid(
+        handle, values[3], values[4], values[5], values[6], divx, divy,
+    );
+    if grid.is_empty() {
+        return;
+    }
+
+    let animation_type = values[14];
+    let is_pms_flicker = animation_type == 3 && total_cells % 12 == 0;
+
+    // Build slot images for our 6 GaugePart types.
+    // The Java code fills a 36-slot array; we extract the first gauge type (slots 0-5).
+    let mut slot_images: [Vec<crate::image_handle::ImageRegion>; 6] =
+        std::array::from_fn(|_| Vec::new());
+
+    if is_pms_flicker {
+        // PMS 12-cell groups:
+        // dy 0-3: FrontRed/Green, BackRed/Green (base)
+        // dy 4-7: ExFrontRed/Green, ExBackRed/Green
+        // dy 8-9: Flicker FrontRed/Green (overrides ExFrontRed/Green for type 0)
+        // dy 10-11: Flicker ExFrontRed/Green
+        let groups = total_cells / 12;
+        for g in 0..groups as usize {
+            for dy in 0..12usize {
+                let cell_idx = g * 12 + dy;
+                if cell_idx >= grid.len() {
+                    continue;
+                }
+                match dy {
+                    0..4 => {
+                        // Java: gauge[dx][dy] = gauge[dx][dy+6] = gauge[dx][dy+12] = gauge[dx][dy+18]
+                        slot_images[dy].push(grid[cell_idx]);
+                    }
+                    4..8 => {
+                        // Java: gauge[dx][dy+20] = gauge[dx][dy+26]
+                        // dy+20 for dy=4..7 → slots 24,25,26,27 (type4 parts)
+                        // For our model, skip (these are Ex-type specific)
+                    }
+                    8 | 9 => {
+                        // Java: overrides slot[dy-4]=slot[dy+2]=slot[dy+8]=slot[dy+14]
+                        // dy=8→ slot 4 (ExFrontRed), dy=9→ slot 5 (ExFrontGreen)
+                        slot_images[dy - 4].push(grid[cell_idx]);
+                    }
+                    10 | 11 => {
+                        // Java: gauge[dx][dy+18] = gauge[dx][dy+24]
+                        // For our model, skip (type-specific Ex)
+                    }
+                    _ => {}
+                }
+            }
+        }
+    } else {
+        // Standard 8-cell groups:
+        // dy 0-3: FrontRed/Green, BackRed/Green
+        // dy 4-7: ExFrontRed/Green, ExBackRed/Green
+        let groups = total_cells / 8;
+        for g in 0..groups as usize {
+            for dy in 0..8usize {
+                let cell_idx = g * 8 + dy;
+                if cell_idx >= grid.len() {
+                    continue;
+                }
+                match dy {
+                    0..4 => {
+                        // Java: gauge[dx][dy] = gauge[dx][dy+6] = gauge[dx][dy+12] = gauge[dx][dy+18]
+                        slot_images[dy].push(grid[cell_idx]);
+                        // Java: if dy<2, also ExFront
+                        if dy < 2 {
+                            slot_images[dy + 4].push(grid[cell_idx]);
+                        }
+                    }
+                    4..8 => {
+                        // Java: gauge[dx][dy+20] = gauge[dx][dy+26]
+                        // dy=4→ExFrontRed(slot 4), dy=5→ExFrontGreen(slot 5)
+                        if dy < 6 {
+                            slot_images[dy].push(grid[cell_idx]);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    let part_types = [
+        GaugePartType::FrontRed,
+        GaugePartType::FrontGreen,
+        GaugePartType::BackRed,
+        GaugePartType::BackGreen,
+        GaugePartType::ExFrontRed,
+        GaugePartType::ExFrontGreen,
+    ];
+
+    let timer = nonzero_timer(values[10]);
+    let cycle = values[9];
+
+    let parts: Vec<GaugePart> = part_types
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !slot_images[*i].is_empty())
+        .map(|(i, &pt)| GaugePart {
+            part_type: pt,
+            images: slot_images[i].clone(),
+            timer: timer.map(|t| TimerId(t).0),
+            cycle,
+        })
+        .collect();
+
+    let (node_parts, anim_type, anim_range, duration) = if values[13] == 0 {
+        (50, 0, 3, 33)
+    } else {
+        (values[13], values[14], values[15], values[16])
+    };
+
+    let gauge = SkinGauge {
+        parts,
+        nodes: node_parts,
+        animation_type: anim_type,
+        animation_range: anim_range,
+        duration,
+        starttime: values[17],
+        endtime: values[18],
+        ..Default::default()
+    };
+
+    state.groovex = values[11];
+    state.groovey = values[12];
+
+    let idx = skin.objects.len();
+    skin.add(gauge.into());
+    state.current.insert(ObjectSlot::Gauge, idx);
+}
+
+/// DST_GROOVEGAUGE: positions the gauge with groove-spacing adjustments.
+///
+/// Uses groovex/groovey from SRC to compute per-node sizing.
+///
+/// Ported from LR2SkinCSVLoader.java:691-707.
+fn dst_groovegauge(fields: &[&str], skin: &mut Skin, state: &mut Lr2CsvState) {
+    let idx = match state.current.get(&ObjectSlot::Gauge) {
+        Some(&i) => i,
+        None => return,
+    };
+
+    let values = parse_int(fields);
+
+    // Compute dimensions with groove spacing
+    let width = if state.groovex.abs() >= 1 {
+        state.groovex as f32 * 50.0 * state.dstw / state.srcw
+    } else {
+        values[5] as f32 * state.dstw / state.srcw
+    };
+    let height = if state.groovey.abs() >= 1 {
+        state.groovey as f32 * 50.0 * state.dsth / state.srch
+    } else {
+        values[6] as f32 * state.dsth / state.srch
+    };
+    let x = values[3] as f32 * state.dstw / state.srcw
+        - if state.groovex < 0 {
+            state.groovex as f32 * state.dstw / state.srcw
+        } else {
+            0.0
+        };
+    let y = state.dsth - values[4] as f32 * state.dsth / state.srch - height;
+
+    let base: &mut SkinObjectBase = skin.objects[idx].base_mut();
+    let time = values[2] as i64;
+    let color = Color::from_rgba_u8(
+        values[9] as u8,
+        values[10] as u8,
+        values[11] as u8,
+        values[8] as u8,
+    );
+
+    base.add_destination(Destination {
+        time,
+        region: Rect::new(x, y, width, height),
+        color,
+        angle: values[14],
+        acc: values[7],
+    });
+
+    if base.destinations.len() == 1 {
+        base.blend = values[12];
+        base.filter = values[13];
+        base.set_center(values[15]);
+        base.loop_time = values[16];
+
+        let timer_id = values[17];
+        if timer_id != 0 {
+            base.timer = Some(TimerId(timer_id));
+        }
+
+        for &op_val in &[values[18], values[19], values[20]] {
+            if op_val != 0 {
+                base.draw_conditions.push(BooleanId(op_val));
+            }
+        }
+
+        let offset_ids = read_offset(fields, 21);
+        base.set_offset_ids(&offset_ids);
+
+        if state.stretch >= 0 {
+            base.stretch = StretchType::from_id(state.stretch).unwrap_or_default();
         }
     }
 }

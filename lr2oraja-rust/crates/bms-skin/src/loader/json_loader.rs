@@ -1153,7 +1153,7 @@ fn build_skin_object(
     if let Some(obj) = try_build_judge(data, dst, dst_id, source_images) {
         return Some(obj);
     }
-    if let Some(obj) = try_build_gauge(data, dst, dst_id) {
+    if let Some(obj) = try_build_gauge(data, dst, dst_id, source_images) {
         return Some(obj);
     }
     if let Some(obj) = try_build_bga(data, dst, dst_id) {
@@ -1480,13 +1480,75 @@ fn try_build_gauge(
     data: &JsonSkinData,
     dst: &JsonDestination,
     dst_id: &FlexId,
+    source_images: &HashMap<String, ImageHandle>,
 ) -> Option<SkinObjectType> {
+    use crate::skin_gauge::{GaugePart, GaugePartType};
+
     let gauge = data.gauge.as_ref()?;
     if gauge.id != *dst_id {
         return None;
     }
 
-    let mut skin_gauge = crate::skin_gauge::SkinGauge::new(gauge.parts);
+    let node_count = gauge.nodes.len();
+
+    // Slot-to-node mapping: slots 0-5 = [FrontRed, FrontGreen, BackRed, BackGreen, ExFrontRed, ExFrontGreen]
+    // Derived from Java JsonSkinObjectLoader.java indexmap patterns.
+    let slot_to_node: [usize; 6] = match node_count {
+        4 => [0, 1, 2, 3, 0, 1],
+        8 => [4, 5, 6, 7, 4, 5],
+        12 => [4, 5, 6, 7, 10, 11],
+        _ => [0, 1, 2, 3, 4, 5],
+    };
+
+    let part_types = [
+        GaugePartType::FrontRed,
+        GaugePartType::FrontGreen,
+        GaugePartType::BackRed,
+        GaugePartType::BackGreen,
+        GaugePartType::ExFrontRed,
+        GaugePartType::ExFrontGreen,
+    ];
+
+    // Resolve each node ID to its image grid
+    let node_grids: Vec<Vec<crate::image_handle::ImageRegion>> = gauge
+        .nodes
+        .iter()
+        .map(|node_id| {
+            // Find matching image definition
+            let img = data.image.iter().find(|img| img.id == *node_id);
+            if let Some(img) = img
+                && let Some(&handle) = source_images.get(img.src.as_str())
+            {
+                return split_grid(handle, img.x, img.y, img.w, img.h, img.divx, img.divy);
+            }
+            Vec::new()
+        })
+        .collect();
+
+    // Build GaugeParts from the slot mapping
+    let mut parts = Vec::new();
+    for (slot, &part_type) in part_types.iter().enumerate() {
+        let node_idx = slot_to_node[slot];
+        if node_idx < node_grids.len() && !node_grids[node_idx].is_empty() {
+            parts.push(GaugePart {
+                part_type,
+                images: node_grids[node_idx].clone(),
+                timer: None,
+                cycle: gauge.cycle,
+            });
+        }
+    }
+
+    let mut skin_gauge = crate::skin_gauge::SkinGauge {
+        parts,
+        nodes: gauge.parts,
+        animation_type: gauge.gauge_type,
+        animation_range: gauge.range,
+        duration: gauge.cycle,
+        starttime: gauge.starttime,
+        endtime: gauge.endtime,
+        ..Default::default()
+    };
     apply_destination(&mut skin_gauge.base, dst);
     Some(skin_gauge.into())
 }
