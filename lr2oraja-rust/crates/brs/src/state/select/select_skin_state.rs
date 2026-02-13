@@ -283,6 +283,22 @@ pub fn sync_song_information(state: &mut SharedGameState, info: Option<&SongInfo
             state
                 .floats
                 .insert(FLOAT_CHART_TOTALGAUGE, info.total as f32);
+
+            // Graph data: BPM events (speedchange → (time_us, bpm))
+            state.bpm_events.clear();
+            for pair in info.speedchange_values() {
+                // pair = [speed, time_ms]
+                let time_us = (pair[1] * 1000.0) as i64;
+                let bpm = pair[0];
+                state.bpm_events.push((time_us, bpm));
+            }
+
+            // Graph data: note distribution (sum 7 lane columns per bucket)
+            state.note_distribution.clear();
+            for bucket in info.distribution_values() {
+                let total: i32 = bucket.iter().sum();
+                state.note_distribution.push(total as u32);
+            }
         }
         None => {
             for &id in INTEGER_IDS {
@@ -291,6 +307,8 @@ pub fn sync_song_information(state: &mut SharedGameState, info: Option<&SongInfo
             for &id in FLOAT_IDS {
                 state.floats.remove(&id);
             }
+            state.bpm_events.clear();
+            state.note_distribution.clear();
         }
     }
 }
@@ -531,5 +549,57 @@ mod tests {
 
         let scroll = state.bar_scroll_state.as_ref().unwrap();
         assert_eq!(scroll.slots[0].lamp_id, 0);
+    }
+
+    #[test]
+    fn sync_song_information_populates_graph_data() {
+        let mut state = SharedGameState::default();
+        let info = SongInformation {
+            // speedchange: "150.0,0.0,180.0,5000.0" → [(0, 150.0), (5_000_000, 180.0)]
+            speedchange: "150.0,0.0,180.0,5000.0".to_string(),
+            // distribution: "#" + base36-encoded values; use simple single bucket
+            // 7 columns, each value 1 → base36 "01" × 7 = "01010101010101"
+            distribution: "#01010101010101".to_string(),
+            ..make_test_info()
+        };
+        sync_song_information(&mut state, Some(&info));
+
+        // BPM events: [150.0, 0.0] → (0, 150.0); [180.0, 5000.0] → (5_000_000, 180.0)
+        assert_eq!(state.bpm_events.len(), 2);
+        assert_eq!(state.bpm_events[0].0, 0); // 0.0 * 1000
+        assert!((state.bpm_events[0].1 - 150.0).abs() < 0.001);
+        assert_eq!(state.bpm_events[1].0, 5_000_000); // 5000.0 * 1000
+        assert!((state.bpm_events[1].1 - 180.0).abs() < 0.001);
+
+        // Note distribution: 1 bucket, sum of 7 × 1 = 7
+        assert_eq!(state.note_distribution.len(), 1);
+        assert_eq!(state.note_distribution[0], 7);
+    }
+
+    #[test]
+    fn sync_song_information_none_clears_graph_data() {
+        let mut state = SharedGameState::default();
+        let info = SongInformation {
+            speedchange: "150.0,0.0".to_string(),
+            distribution: "#01010101010101".to_string(),
+            ..make_test_info()
+        };
+        sync_song_information(&mut state, Some(&info));
+        assert!(!state.bpm_events.is_empty());
+        assert!(!state.note_distribution.is_empty());
+
+        sync_song_information(&mut state, None);
+        assert!(state.bpm_events.is_empty());
+        assert!(state.note_distribution.is_empty());
+    }
+
+    #[test]
+    fn sync_song_information_empty_graph_strings() {
+        let mut state = SharedGameState::default();
+        let info = make_test_info(); // distribution and speedchange are empty
+        sync_song_information(&mut state, Some(&info));
+
+        assert!(state.bpm_events.is_empty());
+        assert!(state.note_distribution.is_empty());
     }
 }

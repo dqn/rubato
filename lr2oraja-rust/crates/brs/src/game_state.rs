@@ -28,6 +28,10 @@ pub struct SharedGameState {
     pub now_time_ms: i64,
     /// Bar scroll state for music select screen rendering.
     pub bar_scroll_state: Option<BarScrollState>,
+    /// BPM change events as (time_us, bpm) pairs for BPM graph rendering.
+    pub bpm_events: Vec<(i64, f64)>,
+    /// Note distribution counts per time bucket for note distribution graph rendering.
+    pub note_distribution: Vec<u32>,
 }
 
 /// SkinStateProvider implementation backed by SharedGameState.

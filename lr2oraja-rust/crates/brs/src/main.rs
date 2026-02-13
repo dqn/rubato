@@ -399,8 +399,11 @@ fn state_sync_system(
     let mut shared_guard = shared.0.write().unwrap();
     game_state::sync_common_state(&mut shared_guard, &config.0);
 
-    // Sync bar scroll state to the skin renderer
+    // Sync bar scroll state and graph data to the skin renderer
     if let Some(mut rs) = render_state {
         rs.bar_scroll_state = shared_guard.bar_scroll_state.take();
+        rs.bpm_events.clone_from(&shared_guard.bpm_events);
+        rs.note_distribution
+            .clone_from(&shared_guard.note_distribution);
     }
 }

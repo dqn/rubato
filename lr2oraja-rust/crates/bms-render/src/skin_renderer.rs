@@ -190,6 +190,10 @@ pub struct SkinRenderState {
     pub state_provider: Box<dyn SkinStateProvider>,
     /// Bar scroll state for music select screen bar rendering.
     pub bar_scroll_state: Option<BarScrollState>,
+    /// BPM change events for procedural BPM graph rendering (from select screen).
+    pub bpm_events: Vec<(i64, f64)>,
+    /// Note distribution counts for procedural graph rendering (from select screen).
+    pub note_distribution: Vec<u32>,
 }
 
 // ---------------------------------------------------------------------------
@@ -299,6 +303,8 @@ pub fn setup_skin(
         font_map,
         state_provider,
         bar_scroll_state: None,
+        bpm_events: Vec::new(),
+        note_distribution: Vec::new(),
     });
 }
 
@@ -797,7 +803,14 @@ pub fn skin_render_system(
         let width = rect.w.max(1.0) as u32;
         let height = rect.h.max(1.0) as u32;
 
-        let pixels = generate_procedural_pixels(object, provider, width, height);
+        let pixels = generate_procedural_pixels(
+            object,
+            provider,
+            width,
+            height,
+            &state.bpm_events,
+            &state.note_distribution,
+        );
 
         if let Some(pixels) = pixels {
             let mut hasher = std::hash::DefaultHasher::new();
@@ -1618,15 +1631,24 @@ fn spawn_bar_children(
 }
 
 /// Generates pixel data for procedural texture skin objects.
+///
+/// `bpm_events_override` and `note_distribution_override` allow the select screen
+/// to supply graph data from SongInformation, bypassing the SkinStateProvider defaults.
 fn generate_procedural_pixels(
     object: &SkinObjectType,
     provider: &dyn SkinStateProvider,
     width: u32,
     height: u32,
+    bpm_events_override: &[(i64, f64)],
+    note_distribution_override: &[u32],
 ) -> Option<Vec<u8>> {
     match object {
         SkinObjectType::BpmGraph(_) => {
-            let events = provider.bpm_events();
+            let events = if !bpm_events_override.is_empty() {
+                bpm_events_override
+            } else {
+                provider.bpm_events()
+            };
             Some(draw::visualizer::compute_bpm_graph_pixels(
                 events, width, height,
             ))
@@ -1638,7 +1660,11 @@ fn generate_procedural_pixels(
             ))
         }
         SkinObjectType::NoteDistributionGraph(_) => {
-            let counts = provider.note_distribution();
+            let counts = if !note_distribution_override.is_empty() {
+                note_distribution_override
+            } else {
+                provider.note_distribution()
+            };
             Some(draw::visualizer::compute_note_distribution_pixels(
                 counts, width, height,
             ))
@@ -1968,6 +1994,8 @@ mod tests {
             font_map,
             state_provider: provider,
             bar_scroll_state: None,
+            bpm_events: Vec::new(),
+            note_distribution: Vec::new(),
         };
 
         assert_eq!(state.skin.objects.len(), 0);
