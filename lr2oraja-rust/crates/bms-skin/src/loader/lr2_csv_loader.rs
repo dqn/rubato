@@ -73,7 +73,7 @@ fn parse_int(fields: &[&str]) -> [i32; 22] {
 
 /// Reads offset IDs from CSV fields starting at the given index.
 /// Matches Java's `readOffset(String[], int)` method.
-fn read_offset(fields: &[&str], start: usize) -> Vec<i32> {
+pub(crate) fn read_offset(fields: &[&str], start: usize) -> Vec<i32> {
     let mut result = Vec::new();
     for field in fields.iter().skip(start) {
         let cleaned: String = field
@@ -232,6 +232,21 @@ impl Lr2CsvState {
     ///
     /// Used by state-specific loaders to position their objects.
     pub fn apply_dst_to(&self, idx: usize, fields: &[&str], skin: &mut Skin) {
+        let base: &mut SkinObjectBase = skin.objects[idx].base_mut();
+        self.apply_dst_to_base(base, fields, &[]);
+    }
+
+    /// Applies a DST command directly to a `SkinObjectBase`.
+    ///
+    /// Used by state-specific loaders (e.g., judge, combo) to position sub-objects.
+    /// `extra_offsets` are prepended to the field-based offsets, matching Java's
+    /// `readOffset(str, 21, defaultOffsets)` pattern.
+    pub fn apply_dst_to_base(
+        &self,
+        base: &mut SkinObjectBase,
+        fields: &[&str],
+        extra_offsets: &[i32],
+    ) {
         let values = parse_int(fields);
         let (mut x, mut y, mut w, mut h) = (values[3], values[4], values[5], values[6]);
 
@@ -246,7 +261,6 @@ impl Lr2CsvState {
 
         let y_flipped = self.srch - (y + h) as f32;
 
-        let base: &mut SkinObjectBase = skin.objects[idx].base_mut();
         let time = values[2] as i64;
         let color = Color::from_rgba_u8(
             values[9] as u8,
@@ -280,7 +294,8 @@ impl Lr2CsvState {
                 }
             }
 
-            let offset_ids = read_offset(fields, 21);
+            let mut offset_ids: Vec<i32> = extra_offsets.to_vec();
+            offset_ids.extend(read_offset(fields, 21));
             base.set_offset_ids(&offset_ids);
 
             if self.stretch >= 0 {
@@ -1150,7 +1165,7 @@ fn dst_groovegauge(fields: &[&str], skin: &mut Skin, state: &mut Lr2CsvState) {
 // ---------------------------------------------------------------------------
 
 /// Converts a timer value to Option, treating 0 as None.
-fn nonzero_timer(v: i32) -> Option<i32> {
+pub(crate) fn nonzero_timer(v: i32) -> Option<i32> {
     if v != 0 { Some(v) } else { None }
 }
 
