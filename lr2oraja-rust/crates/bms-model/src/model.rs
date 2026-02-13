@@ -172,6 +172,65 @@ impl BmsModel {
             .fold(self.initial_bpm, f64::max)
     }
 
+    /// Main (most frequent) BPM in the chart, weighted by time duration.
+    ///
+    /// Each BPM segment's duration is computed from `bpm_changes` and `total_time_us`.
+    /// Returns `initial_bpm` if there are no BPM changes.
+    pub fn main_bpm(&self) -> f64 {
+        if self.bpm_changes.is_empty() {
+            return self.initial_bpm;
+        }
+
+        // Accumulate duration per distinct BPM value.
+        // Key: BPM bits (f64::to_bits) to group identical BPMs exactly.
+        let mut durations: HashMap<u64, (f64, i64)> = HashMap::new();
+
+        // Initial BPM segment: from 0 to first change
+        let first_time = self.bpm_changes[0].time_us;
+        if first_time > 0 {
+            let key = self.initial_bpm.to_bits();
+            durations.entry(key).or_insert((self.initial_bpm, 0)).1 += first_time;
+        }
+
+        // BPM change segments
+        for i in 0..self.bpm_changes.len() {
+            let bpm = self.bpm_changes[i].bpm;
+            let start = self.bpm_changes[i].time_us;
+            let end = if i + 1 < self.bpm_changes.len() {
+                self.bpm_changes[i + 1].time_us
+            } else {
+                self.total_time_us
+            };
+            let duration = end - start;
+            if duration > 0 {
+                let key = bpm.to_bits();
+                durations.entry(key).or_insert((bpm, 0)).1 += duration;
+            }
+        }
+
+        durations
+            .into_values()
+            .max_by_key(|&(_, d)| d)
+            .map(|(bpm, _)| bpm)
+            .unwrap_or(self.initial_bpm)
+    }
+
+    /// BPM at a given time in microseconds.
+    ///
+    /// Walks `bpm_changes` (assumed sorted by time) and returns the
+    /// active BPM at `time_us`. Returns `initial_bpm` if before any change.
+    pub fn bpm_at(&self, time_us: i64) -> f64 {
+        let mut bpm = self.initial_bpm;
+        for change in &self.bpm_changes {
+            if change.time_us <= time_us {
+                bpm = change.bpm;
+            } else {
+                break;
+            }
+        }
+        bpm
+    }
+
     /// Time of the last note/event in milliseconds.
     /// Equivalent to Java `BMSModel.getLastTime()` — returns the time of the last
     /// timeline that contains any note (playable, invisible, or mine), including
@@ -442,6 +501,98 @@ mod tests {
         let playable = judge.iter().filter(|n| n.is_playable()).count();
         // 1 LN start + 1 LN end + 1 normal = 3
         assert_eq!(playable, 3);
+    }
+
+    #[test]
+    fn main_bpm_no_changes() {
+        let model = BmsModel {
+            initial_bpm: 150.0,
+            ..Default::default()
+        };
+        assert!((model.main_bpm() - 150.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn main_bpm_single_bpm() {
+        let model = BmsModel {
+            initial_bpm: 120.0,
+            bpm_changes: vec![BpmChange {
+                time_us: 0,
+                bpm: 120.0,
+            }],
+            total_time_us: 10_000_000,
+            ..Default::default()
+        };
+        assert!((model.main_bpm() - 120.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn main_bpm_multiple_bpms() {
+        // 120 BPM for 8s, 180 BPM for 2s -> main = 120
+        let model = BmsModel {
+            initial_bpm: 120.0,
+            bpm_changes: vec![BpmChange {
+                time_us: 8_000_000,
+                bpm: 180.0,
+            }],
+            total_time_us: 10_000_000,
+            ..Default::default()
+        };
+        assert!((model.main_bpm() - 120.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn main_bpm_dominant_later_bpm() {
+        // 120 BPM for 2s, 180 BPM for 8s -> main = 180
+        let model = BmsModel {
+            initial_bpm: 120.0,
+            bpm_changes: vec![BpmChange {
+                time_us: 2_000_000,
+                bpm: 180.0,
+            }],
+            total_time_us: 10_000_000,
+            ..Default::default()
+        };
+        assert!((model.main_bpm() - 180.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn bpm_at_before_any_change() {
+        let model = BmsModel {
+            initial_bpm: 130.0,
+            bpm_changes: vec![BpmChange {
+                time_us: 5_000_000,
+                bpm: 200.0,
+            }],
+            ..Default::default()
+        };
+        assert!((model.bpm_at(1_000_000) - 130.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn bpm_at_after_change() {
+        let model = BmsModel {
+            initial_bpm: 130.0,
+            bpm_changes: vec![BpmChange {
+                time_us: 5_000_000,
+                bpm: 200.0,
+            }],
+            ..Default::default()
+        };
+        assert!((model.bpm_at(6_000_000) - 200.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn bpm_at_exact_change_time() {
+        let model = BmsModel {
+            initial_bpm: 130.0,
+            bpm_changes: vec![BpmChange {
+                time_us: 5_000_000,
+                bpm: 200.0,
+            }],
+            ..Default::default()
+        };
+        assert!((model.bpm_at(5_000_000) - 200.0).abs() < f64::EPSILON);
     }
 
     #[test]

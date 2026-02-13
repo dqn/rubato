@@ -13,6 +13,7 @@ use std::path::Path;
 use bms_audio::driver::AudioDriver;
 use bms_audio::key_sound::KeySoundProcessor;
 use bms_audio::kira_driver::KiraAudioDriver;
+use bms_database::score_data_property::ScoreDataProperty;
 use bms_input::input_processor::InputProcessor;
 use bms_model::{BmsModel, LaneProperty, Note, PlayMode};
 use bms_pattern::{
@@ -145,6 +146,15 @@ pub struct PlayState {
     #[allow(dead_code)]
     is_judge_started: bool,
 
+    // BPM tracking
+    min_bpm: f64,
+    max_bpm: f64,
+    main_bpm: f64,
+    now_bpm: f64,
+
+    // Score comparison
+    score_data_property: ScoreDataProperty,
+
     // Abort detection
     start_pressed: bool,
     select_pressed: bool,
@@ -178,6 +188,11 @@ impl PlayState {
             key_beam_stop: false,
             assist: 0,
             is_judge_started: false,
+            min_bpm: 0.0,
+            max_bpm: 0.0,
+            main_bpm: 0.0,
+            now_bpm: 0.0,
+            score_data_property: ScoreDataProperty::new(),
             start_pressed: false,
             select_pressed: false,
         }
@@ -370,11 +385,39 @@ impl PlayState {
 
         // Store total notes in resource
         ctx.resource.score_data.notes = total_notes as i32;
+
+        // Initialize BPM tracking
+        self.min_bpm = model.min_bpm();
+        self.max_bpm = model.max_bpm();
+        self.main_bpm = model.main_bpm();
+        self.now_bpm = model.initial_bpm;
+
+        // Initialize ScoreDataProperty for real-time score comparison
+        let mut sdp = ScoreDataProperty::new();
+        let oldscore = &ctx.resource.oldscore;
+        sdp.set_target_score(
+            oldscore.exscore(),
+            None,
+            0, // rival score (not implemented yet)
+            None,
+            total_notes as i32,
+        );
+        self.score_data_property = sdp;
     }
 
     /// Handle the Playing phase render logic (timer-driven state checks).
     fn render_playing(&mut self, ctx: &mut StateContext) {
         let ptime_us = ctx.timer.now_time_of(TIMER_PLAY) * 1000;
+
+        // Update current BPM at this time position
+        if let Some(model) = &ctx.resource.bms_model {
+            self.now_bpm = model.bpm_at(ptime_us);
+        }
+
+        // Update ScoreDataProperty
+        if let Some(jm) = &self.judge_manager {
+            self.score_data_property.update(jm.score(), jm.past_notes());
+        }
 
         // Update BGA timeline
         if let Some(bga) = &mut self.bga_processor {
@@ -674,12 +717,7 @@ impl GameStateHandler for PlayState {
         if let Some(shared) = &mut ctx.shared_state
             && let (Some(jm), Some(gauge)) = (&self.judge_manager, &self.gauge)
         {
-            let current_bpm = ctx
-                .resource
-                .bms_model
-                .as_ref()
-                .map(|m| m.initial_bpm as i32)
-                .unwrap_or(120);
+            let current_bpm = self.now_bpm as i32;
             play_skin_state::sync_play_state(shared, jm, gauge, current_bpm);
             play_skin_state::sync_play_options(
                 shared,
@@ -687,6 +725,45 @@ impl GameStateHandler for PlayState {
                 gauge.active_type() as i32,
                 true, // BGA is always on when bga_processor exists
             );
+
+            // 23-2: Hispeed / Duration / Lanecover
+            let mode_id = ctx.resource.play_mode.mode_id();
+            let play_config = &ctx.player_config.play_config(mode_id).playconfig;
+            play_skin_state::sync_play_hispeed_duration(
+                shared,
+                play_config,
+                self.now_bpm,
+                self.main_bpm,
+                self.min_bpm,
+                self.max_bpm,
+            );
+
+            // 23-3: Play time / Music progress
+            let play_elapsed_us = ctx.timer.now_time_of(TIMER_PLAY) * 1000;
+            let total_time_us = ctx
+                .resource
+                .bms_model
+                .as_ref()
+                .map(|m| m.total_time_us)
+                .unwrap_or(0);
+            play_skin_state::sync_play_time(shared, play_elapsed_us, total_time_us);
+
+            // 23-4: Score comparison
+            play_skin_state::sync_play_score_comparison(shared, &self.score_data_property, jm);
+
+            // 23-5: Gauge range / Realtime rank / Extended options
+            play_skin_state::sync_play_gauge_range(shared, gauge);
+            play_skin_state::sync_play_realtime_rank(shared, &self.score_data_property);
+            play_skin_state::sync_play_extended_options(
+                shared,
+                self.phase,
+                self.is_replay,
+                play_config,
+            );
+
+            // 23-6: Offsets / Judge per key
+            play_skin_state::sync_play_offsets(shared, play_config);
+            play_skin_state::sync_play_judge_per_key(shared, jm);
         }
     }
 
