@@ -19,6 +19,7 @@ use anyhow::Result;
 use bms_config::resolution::Resolution;
 use bms_config::skin_type::SkinType;
 
+use crate::image_handle::ImageHandle;
 use crate::loader::lr2_play_loader::{self, Lr2PlayState};
 use crate::loader::lr2_result_loader::{self, Lr2ResultState};
 use crate::loader::lr2_select_loader::{self, Lr2SelectState};
@@ -30,6 +31,7 @@ use crate::skin_image::SkinImage;
 use crate::skin_number::{NumberAlign, SkinNumber, ZeroPadding};
 use crate::skin_object::{Color, Destination, Rect, SkinObjectBase};
 use crate::skin_slider::{SkinSlider, SliderDirection};
+use crate::skin_source::{build_number_source_set, split_grid};
 use crate::skin_text::{SkinText, TextAlign};
 use crate::stretch_type::StretchType;
 
@@ -502,6 +504,7 @@ fn src_image(fields: &[&str], skin: &mut Skin, state: &mut Lr2CsvState) {
 
 fn src_number(fields: &[&str], skin: &mut Skin, state: &mut Lr2CsvState) {
     let values = parse_int(fields);
+    let gr = values[2];
     let divx = values[7].max(1);
     let divy = values[8].max(1);
 
@@ -509,6 +512,17 @@ fn src_number(fields: &[&str], skin: &mut Skin, state: &mut Lr2CsvState) {
         state.current.remove(&ObjectSlot::Number);
         return;
     }
+
+    // Build grid from image handle
+    let handle = ImageHandle(gr as u32);
+    let grid = split_grid(
+        handle, values[3], values[4], values[5], values[6], divx, divy,
+    );
+
+    let timer = nonzero_timer(values[10]);
+    let cycle = values[9];
+    let (digit_sources, has_minus, zeropadding_override) =
+        build_number_source_set(&grid, timer, cycle);
 
     // Detect 24-frame (12 positive + 12 negative digits) vs 10/11-digit layout
     let total_frames = divx * divy;
@@ -523,14 +537,9 @@ fn src_number(fields: &[&str], skin: &mut Skin, state: &mut Lr2CsvState) {
             }),
         )
     } else {
-        let d = if total_frames % 10 == 0 { 10 } else { 11 };
         (
             values[13],
-            if d > 10 {
-                ZeroPadding::Space
-            } else {
-                ZeroPadding::None
-            },
+            ZeroPadding::from_i32(zeropadding_override.unwrap_or(0)),
         )
     };
 
@@ -541,6 +550,10 @@ fn src_number(fields: &[&str], skin: &mut Skin, state: &mut Lr2CsvState) {
         zero_padding,
         align: NumberAlign::from_i32(values[12]),
         space: values[15],
+        digit_sources,
+        has_minus_images: has_minus,
+        image_timer: timer,
+        image_cycle: cycle,
         ..Default::default()
     };
 
@@ -950,9 +963,66 @@ mod tests {
             SkinObjectType::Number(n) => {
                 assert_eq!(n.ref_id, Some(IntegerId(100)));
                 assert_eq!(n.keta, 5);
+                assert_eq!(n.digit_sources.state_count(), 1);
+                assert_eq!(n.digit_sources.images[0].len(), 10);
+                assert!(!n.has_minus_images);
+                assert_eq!(n.zero_padding, ZeroPadding::None);
             }
             _ => panic!("Expected Number"),
         }
+    }
+
+    #[test]
+    fn test_load_number_11_frames() {
+        // 11-frame layout (divx=11, divy=1): 10 digits + space glyph
+        let csv = "\
+#SRC_NUMBER,0,0,0,0,264,24,11,1,0,0,100,0,5,0,0\n\
+#DST_NUMBER,0,0,100,200,24,24,0,255,255,255,255,0,0,0,0,0,0,0,0,0\n";
+        let header = make_header();
+        let skin = load_lr2_skin(csv, header, &HashMap::new(), Resolution::Hd, None).unwrap();
+        assert_eq!(skin.object_count(), 1);
+        match &skin.objects[0] {
+            SkinObjectType::Number(n) => {
+                assert_eq!(n.digit_sources.state_count(), 1);
+                assert_eq!(n.digit_sources.images[0].len(), 11);
+                assert!(!n.has_minus_images);
+                assert_eq!(n.zero_padding, ZeroPadding::Space);
+            }
+            _ => panic!("Expected Number"),
+        }
+    }
+
+    #[test]
+    fn test_load_number_24_frames() {
+        // 24-frame layout (divx=12, divy=2): 12 positive + 12 negative
+        // timer=42, cycle=100
+        let csv = "\
+#SRC_NUMBER,0,0,0,0,288,48,12,2,100,42,100,0,5,0,0\n\
+#DST_NUMBER,0,0,100,200,24,24,0,255,255,255,255,0,0,0,0,0,0,0,0,0\n";
+        let header = make_header();
+        let skin = load_lr2_skin(csv, header, &HashMap::new(), Resolution::Hd, None).unwrap();
+        assert_eq!(skin.object_count(), 1);
+        match &skin.objects[0] {
+            SkinObjectType::Number(n) => {
+                assert_eq!(n.digit_sources.state_count(), 1);
+                assert_eq!(n.digit_sources.images[0].len(), 12);
+                assert!(n.has_minus_images);
+                assert_eq!(n.image_timer, Some(42));
+                assert_eq!(n.image_cycle, 100);
+            }
+            _ => panic!("Expected Number"),
+        }
+    }
+
+    #[test]
+    fn test_load_number_insufficient_frames() {
+        // Less than 10 frames (divx=3, divy=3 = 9) → object not created
+        let csv = "\
+#SRC_NUMBER,0,0,0,0,72,72,3,3,0,0,100,0,5,0,0\n\
+#DST_NUMBER,0,0,100,200,24,24,0,255,255,255,255,0,0,0,0,0,0,0,0,0\n";
+        let header = make_header();
+        let skin = load_lr2_skin(csv, header, &HashMap::new(), Resolution::Hd, None).unwrap();
+        assert_eq!(skin.object_count(), 0);
     }
 
     #[test]

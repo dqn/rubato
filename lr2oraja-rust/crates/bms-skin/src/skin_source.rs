@@ -176,6 +176,56 @@ pub fn split_grid(
     regions
 }
 
+// ---------------------------------------------------------------------------
+// Number source set building
+// ---------------------------------------------------------------------------
+
+/// Builds a `SkinSourceSet` for a SkinNumber from grid images.
+///
+/// Matches Java `JsonSkinObjectLoader.java:100-170`:
+/// - 24-frame divisible: 12 positive + 12 negative per state → has_minus = true
+/// - Otherwise: d = (len % 10 == 0) ? 10 : 11, states × d frames
+///
+/// Returns `(source_set, has_minus, zeropadding_override)`.
+pub fn build_number_source_set(
+    images: &[ImageRegion],
+    timer: Option<i32>,
+    cycle: i32,
+) -> (SkinSourceSet, bool, Option<i32>) {
+    let len = images.len();
+    if len == 0 {
+        return (SkinSourceSet::new(vec![], timer, cycle), false, None);
+    }
+
+    if len.is_multiple_of(24) {
+        // 24-frame: 12 positive + 12 negative per state
+        let states = len / 24;
+        let mut positive = Vec::with_capacity(states);
+        for j in 0..states {
+            let row: Vec<ImageRegion> = (0..12).map(|i| images[j * 24 + i]).collect();
+            positive.push(row);
+        }
+        // negative images stored but only positive set is populated into SkinSourceSet
+        // (matching Java: pn/mn are separate arrays, SkinNumber(pn, mn, ...) stores both)
+        // For now we populate positive only; negative is deferred.
+        (SkinSourceSet::new(positive, timer, cycle), true, None)
+    } else {
+        let d = if len.is_multiple_of(10) { 10 } else { 11 };
+        let states = len / d;
+        let mut rows = Vec::with_capacity(states);
+        for j in 0..states {
+            let row: Vec<ImageRegion> = (0..d).map(|i| images[j * d + i]).collect();
+            rows.push(row);
+        }
+        let zeropadding_override = if d > 10 { Some(2) } else { None };
+        (
+            SkinSourceSet::new(rows, timer, cycle),
+            false,
+            zeropadding_override,
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -334,5 +384,76 @@ mod tests {
     fn test_split_grid_invalid() {
         assert!(split_grid(ImageHandle(0), 0, 0, 100, 100, 0, 1).is_empty());
         assert!(split_grid(ImageHandle(0), 0, 0, 0, 100, 2, 2).is_empty());
+    }
+
+    // -- build_number_source_set tests --
+
+    fn make_regions(count: usize) -> Vec<ImageRegion> {
+        (0..count)
+            .map(|i| ImageRegion {
+                handle: ImageHandle(i as u32),
+                x: 0.0,
+                y: 0.0,
+                w: 10.0,
+                h: 10.0,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn test_build_number_source_set_empty() {
+        let (set, has_minus, zp) = build_number_source_set(&[], None, 0);
+        assert_eq!(set.state_count(), 0);
+        assert!(!has_minus);
+        assert!(zp.is_none());
+    }
+
+    #[test]
+    fn test_build_number_source_set_10_frames() {
+        let images = make_regions(10);
+        let (set, has_minus, zp) = build_number_source_set(&images, Some(1), 100);
+        assert_eq!(set.state_count(), 1);
+        assert_eq!(set.images[0].len(), 10);
+        assert!(!has_minus);
+        assert!(zp.is_none());
+        assert_eq!(set.timer, Some(1));
+        assert_eq!(set.cycle, 100);
+    }
+
+    #[test]
+    fn test_build_number_source_set_11_frames() {
+        let images = make_regions(11);
+        let (set, has_minus, zp) = build_number_source_set(&images, None, 0);
+        assert_eq!(set.state_count(), 1);
+        assert_eq!(set.images[0].len(), 11);
+        assert!(!has_minus);
+        assert_eq!(zp, Some(2)); // ZeroPadding::Space
+    }
+
+    #[test]
+    fn test_build_number_source_set_24_frames() {
+        let images = make_regions(24);
+        let (set, has_minus, zp) = build_number_source_set(&images, Some(5), 200);
+        assert_eq!(set.state_count(), 1);
+        assert_eq!(set.images[0].len(), 12);
+        assert!(has_minus);
+        assert!(zp.is_none());
+        assert_eq!(set.timer, Some(5));
+        assert_eq!(set.cycle, 200);
+    }
+
+    #[test]
+    fn test_build_number_source_set_48_frames() {
+        let images = make_regions(48);
+        let (set, has_minus, _) = build_number_source_set(&images, None, 0);
+        assert_eq!(set.state_count(), 2);
+        assert_eq!(set.images[0].len(), 12);
+        assert_eq!(set.images[1].len(), 12);
+        assert!(has_minus);
+        // Verify correct image mapping: state 0 = images[0..12], state 1 = images[24..36]
+        assert_eq!(set.images[0][0].handle, ImageHandle(0));
+        assert_eq!(set.images[0][11].handle, ImageHandle(11));
+        assert_eq!(set.images[1][0].handle, ImageHandle(24));
+        assert_eq!(set.images[1][11].handle, ImageHandle(35));
     }
 }

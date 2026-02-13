@@ -985,53 +985,7 @@ fn resolve_bar_image(
 // ---------------------------------------------------------------------------
 
 use crate::image_handle::ImageRegion;
-use crate::skin_source::{SkinSourceSet, split_grid};
-
-/// Builds a `SkinSourceSet` for a SkinNumber from grid images.
-///
-/// Matches Java `JsonSkinObjectLoader.java:100-170`:
-/// - 24-frame divisible: 12 positive + 12 negative per state → has_minus = true
-/// - Otherwise: d = (len % 10 == 0) ? 10 : 11, states × d frames
-///
-/// Returns `(source_set, has_minus, zeropadding_override)`.
-fn build_number_source_set(
-    images: &[ImageRegion],
-    timer: Option<i32>,
-    cycle: i32,
-) -> (SkinSourceSet, bool, Option<i32>) {
-    let len = images.len();
-    if len == 0 {
-        return (SkinSourceSet::new(vec![], timer, cycle), false, None);
-    }
-
-    if len.is_multiple_of(24) {
-        // 24-frame: 12 positive + 12 negative per state
-        let states = len / 24;
-        let mut positive = Vec::with_capacity(states);
-        for j in 0..states {
-            let row: Vec<ImageRegion> = (0..12).map(|i| images[j * 24 + i]).collect();
-            positive.push(row);
-        }
-        // negative images stored but only positive set is populated into SkinSourceSet
-        // (matching Java: pn/mn are separate arrays, SkinNumber(pn, mn, ...) stores both)
-        // For now we populate positive only; negative is deferred.
-        (SkinSourceSet::new(positive, timer, cycle), true, None)
-    } else {
-        let d = if len.is_multiple_of(10) { 10 } else { 11 };
-        let states = len / d;
-        let mut rows = Vec::with_capacity(states);
-        for j in 0..states {
-            let row: Vec<ImageRegion> = (0..d).map(|i| images[j * d + i]).collect();
-            rows.push(row);
-        }
-        let zeropadding_override = if d > 10 { Some(2) } else { None };
-        (
-            SkinSourceSet::new(rows, timer, cycle),
-            false,
-            zeropadding_override,
-        )
-    }
-}
+use crate::skin_source::{SkinSourceSet, build_number_source_set, split_grid};
 
 /// Builds a `SkinSourceSet` for a SkinFloat from grid images.
 ///
