@@ -93,7 +93,7 @@ Phase 0-23 全完了（16 crate, ~61,000行）。全 RenderSnapshot GM テスト
 
 ### Deferred / Stub Items
 
-- **MovieProcessor** — 動画デコード未実装。`StubMovieProcessor` (no-op) のみ。FFmpeg 依存が重いため後回し。(`bms-render/src/bga/movie_processor.rs`)
+- **MovieProcessor** — `ffmpeg-next` による動画デコード実装済み。`movie` cargo feature でゲーティング（default 有効）。(`bms-render/src/bga/ffmpeg_movie_processor.rs`)
 - **PomyuCharaLoader** — ポミュキャラスキンはスタブ。`is_pomyu_chara()` が常に `false`。(`bms-skin/src/pomyu_chara_loader.rs`)
 - **SkinBar Rendering / SongInformation Display** — データ構造は移植済みだがレンダリング未接続。`skin_renderer.rs` の catch-all に落ちる。SongInformation も bms-render 側で未使用。
 - **IR Submission (ResultState)** — ローカル DB 保存のみ。bms-ir クレートは存在するがランタイム接続未実装。(`brs/src/state/result.rs`)

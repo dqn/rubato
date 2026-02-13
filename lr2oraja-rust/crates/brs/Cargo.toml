@@ -3,6 +3,10 @@ name = "brs"
 version.workspace = true
 edition.workspace = true
 
+[features]
+default = []
+movie = ["bms-render/movie"]
+
 [dependencies]
 bms-model.workspace = true
 bms-rule.workspace = true

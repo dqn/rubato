@@ -3,6 +3,10 @@ name = "bms-render"
 version.workspace = true
 edition.workspace = true
 
+[features]
+default = []
+movie = ["ffmpeg-next"]
+
 [dependencies]
 bms-config.workspace = true
 bms-model.workspace = true
@@ -13,6 +17,8 @@ bevy_egui.workspace = true
 egui.workspace = true
 image.workspace = true
 serde.workspace = true
+tracing = { workspace = true }
+ffmpeg-next = { version = "8", optional = true }
 
 [dev-dependencies]
 glob = { workspace = true }

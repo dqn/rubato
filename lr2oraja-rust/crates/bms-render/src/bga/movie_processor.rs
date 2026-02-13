@@ -32,6 +32,12 @@ pub trait MovieProcessor: Send + Sync {
     /// Whether the processor is ready for playback.
     fn is_ready(&self) -> bool;
 
+    /// Upload the latest decoded frame to the Bevy image asset.
+    ///
+    /// Called every frame from the main thread. Returns the image handle
+    /// if a new frame was uploaded.
+    fn update_frame(&mut self, images: &mut Assets<Image>) -> Option<Handle<Image>>;
+
     /// Release all resources.
     fn dispose(&mut self);
 }
@@ -54,6 +60,10 @@ impl MovieProcessor for StubMovieProcessor {
     }
 
     fn stop(&mut self) {}
+
+    fn update_frame(&mut self, _images: &mut Assets<Image>) -> Option<Handle<Image>> {
+        None
+    }
 
     fn is_ready(&self) -> bool {
         false

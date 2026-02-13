@@ -40,6 +40,8 @@ pub struct BgaProcessor {
     bg_image_processor: BgImageProcessor,
     /// Movie processors indexed by BMP ID
     movie_processors: HashMap<i32, Box<dyn MovieProcessor>>,
+    /// Cached image handles for movie frames (updated by `update_movie_frames`)
+    movie_frame_handles: HashMap<i32, Handle<Image>>,
     /// Pre-sorted timeline entries
     timeline: Vec<TimelineEntry>,
     /// Current position in timeline
@@ -60,6 +62,9 @@ pub struct BgaProcessor {
     poor_start_us: i64,
     /// Duration to show poor layer (microseconds)
     poor_duration_us: i64,
+
+    /// Frameskip setting (1/n frame display rate)
+    frameskip: i32,
 }
 
 impl BgaProcessor {
@@ -73,6 +78,7 @@ impl BgaProcessor {
         Self {
             bg_image_processor: BgImageProcessor::new(),
             movie_processors: HashMap::new(),
+            movie_frame_handles: HashMap::new(),
             timeline,
             pos: 0,
             last_time_us: -1,
@@ -82,6 +88,7 @@ impl BgaProcessor {
             poor_active: false,
             poor_start_us: 0,
             poor_duration_us: 500_000, // default 500ms
+            frameskip: 1,
         }
     }
 
@@ -136,7 +143,7 @@ impl BgaProcessor {
                     .to_lowercase();
 
                 if MOV_EXTENSIONS.contains(&ext.as_str()) {
-                    // Movie files are not loaded yet (stub processor)
+                    self.create_movie_processor(id, bmp_path);
                     continue;
                 }
 
@@ -164,16 +171,53 @@ impl BgaProcessor {
             }
 
             if !found {
-                // Try movie extensions (just record existence, actual loading deferred)
+                // Try movie extensions
                 for ext in MOV_EXTENSIONS {
                     let candidate = dir.join(format!("{stem}.{ext}"));
                     if candidate.exists() {
-                        // Movie processor would be created here with a real implementation
+                        self.create_movie_processor(id, &candidate);
                         break;
                     }
                 }
             }
         }
+    }
+
+    /// Create a movie processor for the given BMP ID and file path.
+    fn create_movie_processor(&mut self, id: i32, path: &Path) {
+        #[cfg(feature = "movie")]
+        {
+            use super::ffmpeg_movie_processor::FfmpegMovieProcessor;
+            match FfmpegMovieProcessor::new(path, self.frameskip) {
+                Ok(mp) => {
+                    self.movie_processors.insert(id, Box::new(mp));
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to create movie processor for {:?}: {e}", path);
+                }
+            }
+        }
+        #[cfg(not(feature = "movie"))]
+        {
+            let _ = (id, path);
+        }
+    }
+
+    /// Upload decoded movie frames to Bevy image assets.
+    ///
+    /// Call this once per frame from the main thread to pull latest
+    /// decoded frames from movie decoder threads into Bevy images.
+    pub fn update_movie_frames(&mut self, images: &mut Assets<Image>) {
+        for (&id, mp) in &mut self.movie_processors {
+            if let Some(handle) = mp.update_frame(images) {
+                self.movie_frame_handles.insert(id, handle);
+            }
+        }
+    }
+
+    /// Set the frameskip value for movie decoding.
+    pub fn set_frameskip(&mut self, frameskip: i32) {
+        self.frameskip = frameskip;
     }
 
     /// Reset playback state to the beginning.
@@ -242,29 +286,40 @@ impl BgaProcessor {
     }
 
     /// Get the current BGA base layer image handle.
+    ///
+    /// Movie frames take priority over static images.
     pub fn get_bga_image(&self) -> Option<&Handle<Image>> {
         if self.current_bga < 0 {
             return None;
         }
-        // Try movie processor first
-        // (movie_processors not yet populated with real impl, so this just falls through)
-        self.bg_image_processor.get(self.current_bga)
+        self.get_image_for_id(self.current_bga)
     }
 
     /// Get the current overlay layer image handle.
+    ///
+    /// Movie frames take priority over static images.
     pub fn get_layer_image(&self) -> Option<&Handle<Image>> {
         if self.current_layer < 0 {
             return None;
         }
-        self.bg_image_processor.get(self.current_layer)
+        self.get_image_for_id(self.current_layer)
     }
 
     /// Get the current poor/miss layer image handle, if active.
+    ///
+    /// Movie frames take priority over static images.
     pub fn get_poor_image(&self) -> Option<&Handle<Image>> {
         if !self.poor_active || self.current_poor < 0 {
             return None;
         }
-        self.bg_image_processor.get(self.current_poor)
+        self.get_image_for_id(self.current_poor)
+    }
+
+    /// Look up the image handle for a BMP ID, preferring movie frame over static image.
+    fn get_image_for_id(&self, id: i32) -> Option<&Handle<Image>> {
+        self.movie_frame_handles
+            .get(&id)
+            .or_else(|| self.bg_image_processor.get(id))
     }
 
     /// Trigger the poor/miss layer display.
@@ -309,6 +364,7 @@ impl BgaProcessor {
             mp.dispose();
         }
         self.movie_processors.clear();
+        self.movie_frame_handles.clear();
         self.timeline.clear();
     }
 }
