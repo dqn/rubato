@@ -95,5 +95,4 @@ Phase 0-23 全完了（16 crate, ~61,000行）。全 RenderSnapshot GM テスト
 ### Deferred / Stub Items
 
 - **PomyuCharaLoader** — ポミュキャラスキンはスタブ。`is_pomyu_chara()` が常に `false`。(`bms-skin/src/pomyu_chara_loader.rs`)
-- **SongInformation Display** — bms-render 側で未使用。SkinBar とは独立した実装が必要。
-- **TargetProperty Rival/IR** — `RivalTargetProperty` / `InternetRankingTargetProperty` は未実装（MAX にフォールバック）。`RivalDataAccessor` / `RankingData` の移植が前提。(`brs/src/target_property.rs`)
+- **TargetProperty Rival scores** — `Rival` variant のスコア取得は `TargetContext.rival_scores` 経由で機能するが、PlayState でのライバルスコア配列構築は未接続（`rival_scores: None`）。`RivalDataAccessor` からのスコア取得ロジックの統合が必要。(`brs/src/state/play/mod.rs`)

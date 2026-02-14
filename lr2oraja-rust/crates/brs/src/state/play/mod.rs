@@ -37,7 +37,7 @@ use bms_skin::property_mapper;
 
 use crate::app_state::AppStateType;
 use crate::state::{GameStateHandler, StateContext};
-use crate::target_property::TargetProperty;
+use crate::target_property::{TargetContext, TargetProperty};
 use play_skin_state::ScratchAngleState;
 
 /// Extra time after last note before play is considered finished (5 seconds).
@@ -407,8 +407,13 @@ impl PlayState {
         let oldscore = &ctx.resource.oldscore;
         let best_ghost = oldscore.decode_ghost();
         let target = TargetProperty::resolve(&ctx.player_config.targetid);
-        let (target_exscore, _target_name) =
-            target.compute_target(total_notes as i32, oldscore.exscore());
+        let target_ctx = TargetContext {
+            total_notes: total_notes as i32,
+            current_exscore: oldscore.exscore(),
+            rival_scores: None, // TODO: populate from RivalDataAccessor when available
+            ranking_data: ctx.resource.ranking_data.as_ref(),
+        };
+        let (target_exscore, _target_name) = target.compute_target(&target_ctx);
         sdp.set_target_score(
             oldscore.exscore(),
             best_ghost,

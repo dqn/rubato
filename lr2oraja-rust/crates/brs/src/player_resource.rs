@@ -7,6 +7,7 @@ use std::path::PathBuf;
 
 use bms_config::PlayerConfig;
 use bms_database::CourseData;
+use bms_ir::RankingData;
 use bms_model::{BmsModel, PlayMode};
 use bms_replay::replay_data::ReplayData;
 use bms_rule::ScoreData;
@@ -52,6 +53,8 @@ pub struct PlayerResource {
     pub replay_data: Option<ReplayData>,
     /// Flag set by KeyConfig/SkinConfig shutdown to request config file save.
     pub config_save_requested: bool,
+    /// IR ranking data for the current chart (populated by IR query).
+    pub ranking_data: Option<RankingData>,
 
     // --- Course mode fields ---
     /// BMS models for each stage of a course (None when not in course mode).
@@ -136,6 +139,7 @@ impl Default for PlayerResource {
             course_gauges: Vec::new(),
             replay_data: None,
             config_save_requested: false,
+            ranking_data: None,
             course_bms_models: None,
             course_bms_dirs: Vec::new(),
             course_index: 0,
