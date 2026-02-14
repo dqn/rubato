@@ -97,10 +97,10 @@ Phase 0-23 全完了（16 crate, ~61,000行）。全 RenderSnapshot GM テスト
 - **PomyuCharaLoader** — ポミュキャラスキンはスタブ。`is_pomyu_chara()` が常に `false`。(`bms-skin/src/pomyu_chara_loader.rs`)
 - **MovieProcessor** — feature gate (`movie`) で無効化中。`FfmpegMovieProcessor` は実装済み (`bms-render/src/bga/ffmpeg_movie_processor.rs`)
 - **BGA スキンレンダリング (Layer overlay)** — ~~BGA base は描画対応済みだが、layer の重ね描画は未対応（multi-entity 化が必要）~~ **完了** — MultiEntity 化 + `BgaLayerMaterial` シェーダーで base/layer/poor を実装済み
-- **OBS WebSocket 接続** — `try_connect_once()` がスタブ (`bms-external/src/obs/client.rs`)
+- **OBS WebSocket 接続** — ~~`try_connect_once()` がスタブ~~ **完了** — 実 WebSocket 接続 + Hello/Identify ハンドシェイク + ステートマシン化した `connection_task` で送受信対応 (`bms-external/src/obs/client.rs`)
 - **ScrollSpeedModifier Add mode** — per-timeline scroll field 未実装のためスタブ (`bms-pattern/src/scroll_speed_modifier.rs`)
-- **Stream Controller (非Windows)** — macOS/Linux ではスタブ (`bms-stream/src/controller.rs`)
-- **Download Task Retry** — Retry ボタン未接続 (`bms-render/src/mod_menu/menus/download_task.rs`)
+- **Stream Controller (非Windows)** — ~~macOS/Linux ではスタブ~~ **完了** — Unix ドメインソケット (`/tmp/beatoraja.sock`) でリッスン、複数クライアント対応 (`bms-stream/src/controller.rs`)
+- **Download Task Retry** — ~~Retry ボタン未接続~~ **完了** — `HttpDownloadProcessor::retry_task()` + UI ボタン配線 (`bms-download/src/processor.rs`, `bms-render/src/mod_menu/menus/download_task.rs`)
 - **Lua main_state stub** — ランタイムなしのスキン読み込み用 (`bms-skin/src/loader/lua_loader.rs`)
 - **LR2 Play Loader Pomyu stubs** — `DST_PM_CHARA_*` プロパティがスタブ (`bms-skin/src/loader/lr2_play_loader.rs`)
 - **Music Preview** — ~~Select 画面のプレビュー再生未実装~~ **完了** — `brs/src/preview_music.rs` で実装済み
