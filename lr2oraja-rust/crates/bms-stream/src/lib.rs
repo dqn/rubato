@@ -1,7 +1,8 @@
 // Streaming integration
 //
-// Provides named pipe IPC for stream request handling (Windows).
-// On non-Windows platforms, a stub implementation is provided.
+// Provides IPC for stream request handling.
+// On Windows, uses named pipe (\\.\pipe\beatoraja).
+// On Unix, uses domain socket (/tmp/beatoraja.sock).
 
 pub mod command;
 pub mod controller;

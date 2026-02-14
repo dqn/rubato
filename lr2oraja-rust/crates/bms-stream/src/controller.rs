@@ -2,7 +2,7 @@
 //
 // On Windows, connects to \\.\pipe\beatoraja named pipe and dispatches
 // incoming lines to registered StreamCommand handlers.
-// On non-Windows platforms, provides a stub implementation.
+// On Unix platforms, listens on /tmp/beatoraja.sock Unix domain socket.
 
 use std::sync::Arc;
 
@@ -44,12 +44,20 @@ impl StreamController {
         info!("Stream controller started (Windows named pipe)");
     }
 
-    /// Start the stream controller (non-Windows stub).
+    /// Start the stream controller (Unix domain socket).
     #[cfg(not(target_os = "windows"))]
     pub fn start(&mut self) {
-        warn!(
-            "Stream controller is only supported on Windows (named pipe \\\\.\\ pipe\\beatoraja)"
-        );
+        let (tx, rx) = watch::channel(false);
+        self.shutdown_tx = Some(tx);
+
+        let commands = self.commands.clone();
+        tokio::spawn(async move {
+            if let Err(e) = run_unix_listener(commands, rx).await {
+                warn!("Stream Unix listener error: {}", e);
+            }
+        });
+
+        info!("Stream controller started (Unix domain socket)");
     }
 
     /// Stop the stream controller by sending a shutdown signal.
@@ -67,7 +75,6 @@ impl StreamController {
 }
 
 /// Dispatch a received line to all registered commands.
-#[cfg(any(target_os = "windows", test))]
 fn dispatch_line(commands: &[Arc<dyn StreamCommand + Send + Sync>], line: &str) {
     for cmd in commands {
         let prefix = cmd.command_string();
@@ -140,6 +147,78 @@ async fn run_pipe_listener(
         }
     }
 
+    Ok(())
+}
+
+/// Unix domain socket path.
+#[cfg(not(target_os = "windows"))]
+const UNIX_SOCKET_PATH: &str = "/tmp/beatoraja.sock";
+
+/// Unix domain socket listener implementation.
+#[cfg(not(target_os = "windows"))]
+async fn run_unix_listener(
+    commands: Vec<Arc<dyn StreamCommand + Send + Sync>>,
+    mut shutdown_rx: watch::Receiver<bool>,
+) -> anyhow::Result<()> {
+    use tokio::io::AsyncBufReadExt;
+    use tokio::net::UnixListener;
+
+    // Remove stale socket file if it exists
+    let _ = std::fs::remove_file(UNIX_SOCKET_PATH);
+
+    let listener = UnixListener::bind(UNIX_SOCKET_PATH)?;
+    info!("Listening on Unix socket: {}", UNIX_SOCKET_PATH);
+
+    loop {
+        tokio::select! {
+            result = listener.accept() => {
+                match result {
+                    Ok((stream, _addr)) => {
+                        let cmds = commands.clone();
+                        let mut conn_shutdown_rx = shutdown_rx.clone();
+                        tokio::spawn(async move {
+                            let reader = tokio::io::BufReader::new(stream);
+                            let mut lines = reader.lines();
+                            loop {
+                                tokio::select! {
+                                    line_result = lines.next_line() => {
+                                        match line_result {
+                                            Ok(Some(line)) => {
+                                                info!("Received: {}", line);
+                                                dispatch_line(&cmds, &line);
+                                            }
+                                            Ok(None) => break,
+                                            Err(e) => {
+                                                warn!("Error reading from connection: {}", e);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    _ = conn_shutdown_rx.changed() => {
+                                        if *conn_shutdown_rx.borrow() {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        warn!("Error accepting connection: {}", e);
+                    }
+                }
+            }
+            _ = shutdown_rx.changed() => {
+                if *shutdown_rx.borrow() {
+                    info!("Shutdown signal received");
+                    break;
+                }
+            }
+        }
+    }
+
+    // Clean up socket file
+    let _ = std::fs::remove_file(UNIX_SOCKET_PATH);
     Ok(())
 }
 
@@ -233,5 +312,63 @@ mod tests {
         dispatch_line(&commands, &line);
         // The args will be " <hash>" which trim() handles
         assert_eq!(cmd.pending_count(), 1);
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[tokio::test]
+    async fn test_unix_socket_connection() {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+        use tokio::net::UnixStream;
+
+        let socket_path = format!("/tmp/beatoraja_test_{}.sock", std::process::id());
+
+        let cmd = Arc::new(StreamRequestCommand::default());
+        let commands: Vec<Arc<dyn StreamCommand + Send + Sync>> = vec![cmd.clone()];
+
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
+
+        // Remove stale socket
+        let _ = std::fs::remove_file(&socket_path);
+
+        // Start listener with custom path
+        let listener = tokio::net::UnixListener::bind(&socket_path).unwrap();
+        let cmds = commands.clone();
+        let listener_handle = tokio::spawn(async move {
+            let mut rx = shutdown_rx;
+            tokio::select! {
+                result = listener.accept() => {
+                    if let Ok((stream, _)) = result {
+                        let reader = tokio::io::BufReader::new(stream);
+                        let mut lines = reader.lines();
+                        while let Ok(Some(line)) = lines.next_line().await {
+                            dispatch_line(&cmds, &line);
+                        }
+                    }
+                }
+                _ = rx.changed() => {}
+            }
+        });
+
+        // Give the listener time to start
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        // Connect and send a command
+        let mut stream = UnixStream::connect(&socket_path).await.unwrap();
+        let hash = "d".repeat(64);
+        let msg = format!("!!req {}\n", hash);
+        stream.write_all(msg.as_bytes()).await.unwrap();
+        stream.shutdown().await.unwrap();
+
+        // Wait for processing
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        assert_eq!(cmd.pending_count(), 1);
+        let requests = cmd.poll_requests();
+        assert_eq!(requests[0], hash);
+
+        // Shutdown
+        let _ = shutdown_tx.send(true);
+        let _ = listener_handle.await;
+        let _ = std::fs::remove_file(&socket_path);
     }
 }
