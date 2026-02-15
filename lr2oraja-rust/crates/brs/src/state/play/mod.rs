@@ -5,6 +5,7 @@
 
 mod control_input;
 mod play_skin_state;
+pub mod pomyu_chara;
 pub mod practice;
 
 use tracing::{info, warn};

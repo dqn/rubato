@@ -65,6 +65,15 @@ pub trait ImageLoader {
     /// Loads an image from a file path and returns a handle.
     fn load(&mut self, path: &Path) -> Option<ImageHandle>;
 
+    /// Loads an image with color key transparency.
+    ///
+    /// The bottom-right pixel's RGB color is used as the transparent color:
+    /// all pixels matching that color have their alpha set to 0.
+    /// Used by PomyuChara (.chp) images.
+    fn load_with_color_key(&mut self, path: &Path) -> Option<ImageHandle> {
+        self.load(path)
+    }
+
     /// Returns the dimensions (width, height) of a loaded image.
     fn dimensions(&self, handle: ImageHandle) -> Option<(f32, f32)>;
 }

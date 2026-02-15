@@ -13,3 +13,6 @@ serde_json.workspace = true
 image.workspace = true
 encoding_rs.workspace = true
 glob.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

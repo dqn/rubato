@@ -44,6 +44,32 @@ impl<'a> BevyImageLoader<'a> {
 impl ImageLoader for BevyImageLoader<'_> {
     fn load(&mut self, path: &Path) -> Option<ImageHandle> {
         let img = image::open(path).ok()?.into_rgba8();
+        self.register_image(img)
+    }
+
+    fn load_with_color_key(&mut self, path: &Path) -> Option<ImageHandle> {
+        let mut img = image::open(path).ok()?.into_rgba8();
+        let (width, height) = img.dimensions();
+        if width > 0 && height > 0 {
+            // Bottom-right pixel is the color key
+            let key = *img.get_pixel(width - 1, height - 1);
+            let key_rgb = [key[0], key[1], key[2]];
+            for pixel in img.pixels_mut() {
+                if pixel[0] == key_rgb[0] && pixel[1] == key_rgb[1] && pixel[2] == key_rgb[2] {
+                    pixel[3] = 0; // set alpha to transparent
+                }
+            }
+        }
+        self.register_image(img)
+    }
+
+    fn dimensions(&self, handle: ImageHandle) -> Option<(f32, f32)> {
+        self.texture_map.dimensions(handle)
+    }
+}
+
+impl BevyImageLoader<'_> {
+    fn register_image(&mut self, img: image::RgbaImage) -> Option<ImageHandle> {
         let (width, height) = img.dimensions();
         let raw = img.into_raw();
 
@@ -73,9 +99,5 @@ impl ImageLoader for BevyImageLoader<'_> {
             .insert(handle_id, bevy_handle, width as f32, height as f32);
 
         Some(handle_id)
-    }
-
-    fn dimensions(&self, handle: ImageHandle) -> Option<(f32, f32)> {
-        self.texture_map.dimensions(handle)
     }
 }

@@ -4,11 +4,13 @@
 // and custom event/timer definitions.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use bms_config::resolution::Resolution;
 use bms_config::skin_config::Offset;
 
 use crate::custom_event::{CustomEventDef, CustomTimerDef};
+use crate::image_handle::ImageHandle;
 use crate::music_select_skin::MusicSelectSkinConfig;
 use crate::play_skin::PlaySkinConfig;
 use crate::result_skin::{CourseResultSkinConfig, ResultSkinConfig};
@@ -62,6 +64,10 @@ pub struct Skin {
     pub result_config: Option<ResultSkinConfig>,
     /// Course result state-specific configuration.
     pub course_result_config: Option<CourseResultSkinConfig>,
+    /// Extra image paths for PomyuChara (handle -> (path, needs_color_key)).
+    pub extra_image_paths: HashMap<ImageHandle, (PathBuf, bool)>,
+    /// PomyuChara motion cycle times: [1P_NEUTRAL, 1P_FEVER, 1P_GREAT, 1P_GOOD, 1P_BAD, 2P_NEUTRAL, 2P_GREAT, 2P_BAD]
+    pub pomyu_chara_times: [i32; 8],
 }
 
 impl Skin {
@@ -94,6 +100,8 @@ impl Skin {
             select_config: None,
             result_config: None,
             course_result_config: None,
+            extra_image_paths: HashMap::new(),
+            pomyu_chara_times: [1; 8],
         }
     }
 

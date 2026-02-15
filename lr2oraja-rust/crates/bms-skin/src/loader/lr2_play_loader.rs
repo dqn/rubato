@@ -19,6 +19,7 @@ use crate::loader::lr2_csv_loader::{
     Lr2CsvState, nonzero_timer, parse_field, parse_int_pub, read_offset,
 };
 use crate::play_skin::PlaySkinConfig;
+use crate::pomyu_chara_loader::PomyuCharaLoader;
 use crate::property_id::{
     BooleanId, IntegerId, OFFSET_JUDGE_1P, OFFSET_JUDGE_2P, OFFSET_JUDGE_3P, OFFSET_JUDGEDETAIL_1P,
     OFFSET_JUDGEDETAIL_2P, OFFSET_JUDGEDETAIL_3P, OFFSET_LIFT, OPTION_1P_EARLY, OPTION_1P_LATE,
@@ -43,7 +44,6 @@ use crate::stretch_type::StretchType;
 // ---------------------------------------------------------------------------
 
 /// Internal state for play skin loading.
-#[derive(Default)]
 pub struct Lr2PlayState {
     /// Note object index in skin.objects.
     note_idx: Option<usize>,
@@ -81,6 +81,37 @@ pub struct Lr2PlayState {
     pub judge_timer: i32,
     /// Whether judge detail has been added for each player (0=1P, 1=2P, 2=3P).
     detail_added: [bool; 3],
+    /// PomyuChara: last loaded SRC_PM_CHARA_IMAGE part (for DST_PM_CHARA_IMAGE).
+    pm_chara_part: Option<usize>,
+    /// PomyuChara: next available extra image handle ID.
+    pm_chara_next_handle_id: u32,
+}
+
+impl Default for Lr2PlayState {
+    fn default() -> Self {
+        Self {
+            note_idx: None,
+            _note: SkinNote::default(),
+            note_lane: 0,
+            judge_idx: [None; 3],
+            bga_idx: None,
+            hidden_idx: None,
+            lift_idx: None,
+            line_idx: None,
+            judgeline_idx: None,
+            notechart_idx: None,
+            bpmchart_idx: None,
+            timingchart_idx: None,
+            playstart: 0,
+            loadstart: 0,
+            loadend: 0,
+            finish_margin: 0,
+            judge_timer: 0,
+            detail_added: [false; 3],
+            pm_chara_part: None,
+            pm_chara_next_handle_id: 0x2000,
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -328,12 +359,172 @@ pub fn process_play_command(
             true
         }
 
-        // Pomyu character stubs
-        "DST_PM_CHARA_1P"
-        | "DST_PM_CHARA_2P"
-        | "DST_PM_CHARA_ANIMATION"
-        | "SRC_PM_CHARA_IMAGE"
-        | "DST_PM_CHARA_IMAGE" => true,
+        // Pomyu character commands
+        "DST_PM_CHARA_1P" => {
+            // #DST_PM_CHARA_1P, x, y, w, h, color, offset, folderpath
+            let values = parse_int_pub(fields);
+            let (mut x, mut y, mut w, mut h) = (values[1], values[2], values[3], values[4]);
+            if w < 0 {
+                x += w;
+                w = -w;
+            }
+            if h < 0 {
+                y += h;
+                h = -h;
+            }
+            let color = if values[5] == 1 || values[5] == 2 {
+                values[5]
+            } else {
+                1
+            };
+            let offset = values[6];
+            let folder_path = fields.get(7).unwrap_or(&"");
+            if let Some(skin_dir) = skin.header.path.as_ref().and_then(|p| p.parent()) {
+                let chara_path = skin_dir.join(folder_path.replace('\\', "/"));
+                PomyuCharaLoader::load(
+                    &chara_path,
+                    0, // PLAY
+                    color,
+                    x as f32 * state.dstw / state.srcw,
+                    state.dsth - (y + h) as f32 * state.dsth / state.srch,
+                    w as f32 * state.dstw / state.srcw,
+                    h as f32 * state.dsth / state.srch,
+                    1, // side=1P
+                    i32::MIN,
+                    [i32::MIN, i32::MIN, i32::MIN],
+                    offset,
+                    skin,
+                    &mut play_state.pm_chara_next_handle_id,
+                );
+            }
+            true
+        }
+        "DST_PM_CHARA_2P" => {
+            // #DST_PM_CHARA_2P, x, y, w, h, color, offset, folderpath
+            let values = parse_int_pub(fields);
+            let (mut x, mut y, mut w, mut h) = (values[1], values[2], values[3], values[4]);
+            if w < 0 {
+                x += w;
+                w = -w;
+            }
+            if h < 0 {
+                y += h;
+                h = -h;
+            }
+            let color = if values[5] == 1 || values[5] == 2 {
+                values[5]
+            } else {
+                1
+            };
+            let offset = values[6];
+            let folder_path = fields.get(7).unwrap_or(&"");
+            if let Some(skin_dir) = skin.header.path.as_ref().and_then(|p| p.parent()) {
+                let chara_path = skin_dir.join(folder_path.replace('\\', "/"));
+                PomyuCharaLoader::load(
+                    &chara_path,
+                    0, // PLAY
+                    color,
+                    x as f32 * state.dstw / state.srcw,
+                    state.dsth - (y + h) as f32 * state.dsth / state.srch,
+                    w as f32 * state.dstw / state.srcw,
+                    h as f32 * state.dsth / state.srch,
+                    2, // side=2P
+                    i32::MIN,
+                    [i32::MIN, i32::MIN, i32::MIN],
+                    offset,
+                    skin,
+                    &mut play_state.pm_chara_next_handle_id,
+                );
+            }
+            true
+        }
+        "DST_PM_CHARA_ANIMATION" => {
+            // #DST_PM_CHARA_ANIMATION, x, y, w, h, color, animtype, timer, op1, op2, op3, offset, folderpath
+            // animtype 0:NEUTRAL..9:DANCE -> type = animtype + 6
+            let values = parse_int_pub(fields);
+            let anim_type = values[6];
+            if (0..=9).contains(&anim_type) {
+                let (mut x, mut y, mut w, mut h) = (values[1], values[2], values[3], values[4]);
+                if w < 0 {
+                    x += w;
+                    w = -w;
+                }
+                if h < 0 {
+                    y += h;
+                    h = -h;
+                }
+                let color = if values[5] == 1 || values[5] == 2 {
+                    values[5]
+                } else {
+                    1
+                };
+                let folder_path = fields.get(12).unwrap_or(&"");
+                if let Some(skin_dir) = skin.header.path.as_ref().and_then(|p| p.parent()) {
+                    let chara_path = skin_dir.join(folder_path.replace('\\', "/"));
+                    PomyuCharaLoader::load(
+                        &chara_path,
+                        anim_type + 6,
+                        color,
+                        x as f32 * state.dstw / state.srcw,
+                        state.dsth - (y + h) as f32 * state.dsth / state.srch,
+                        w as f32 * state.dstw / state.srcw,
+                        h as f32 * state.dsth / state.srch,
+                        i32::MIN,                           // side not used for animation
+                        values[7],                          // timer
+                        [values[8], values[9], values[10]], // op1, op2, op3
+                        values[11],                         // offset
+                        skin,
+                        &mut play_state.pm_chara_next_handle_id,
+                    );
+                }
+            }
+            true
+        }
+        "SRC_PM_CHARA_IMAGE" => {
+            // #SRC_PM_CHARA_IMAGE, color, type, folderpath
+            // type 0:background 1:name 2:face_upper 3:face_all 4:select_cg
+            play_state.pm_chara_part = None;
+            let values = parse_int_pub(fields);
+            let chara_type = values[2];
+            if (0..=4).contains(&chara_type) {
+                let color = if values[1] == 1 || values[1] == 2 {
+                    values[1]
+                } else {
+                    1
+                };
+                let folder_path = fields.get(3).unwrap_or(&"");
+                if let Some(skin_dir) = skin.header.path.as_ref().and_then(|p| p.parent()) {
+                    let chara_path = skin_dir.join(folder_path.replace('\\', "/"));
+                    let result = PomyuCharaLoader::load(
+                        &chara_path,
+                        chara_type + 1, // BACKGROUND=1, NAME=2, etc.
+                        color,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0, // dst not used for SRC
+                        i32::MIN,
+                        i32::MIN,
+                        [i32::MIN, i32::MIN, i32::MIN],
+                        i32::MIN,
+                        skin,
+                        &mut play_state.pm_chara_next_handle_id,
+                    );
+                    if result.is_some() {
+                        // The SkinImage was added to skin.objects, save its index
+                        play_state.pm_chara_part = Some(skin.objects.len() - 1);
+                    }
+                }
+            }
+            true
+        }
+        "DST_PM_CHARA_IMAGE" => {
+            // Applies DST to the last SRC_PM_CHARA_IMAGE part (same as DST_IMAGE)
+            if let Some(idx) = play_state.pm_chara_part {
+                state.apply_dst_to(idx, fields, skin);
+            }
+            true
+        }
 
         _ => false,
     }
