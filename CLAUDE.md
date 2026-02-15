@@ -104,3 +104,4 @@ Phase 0-23 全完了（16 crate, ~61,000行）。全 RenderSnapshot GM テスト
 - **Lua main_state stub** — ~~ランタイムなしのスキン読み込み用~~ **完了** — `LuaStateProvider` trait + `StubLuaStateProvider` で Rust バックエンド化、`register_main_state()` で全メソッド登録、`timer_util`/`event_util` 統合、audio は no-op スタブ (`bms-skin/src/loader/lua_state_provider.rs`, `bms-skin/src/loader/lua_loader.rs`)
 - **LR2 Play Loader Pomyu stubs** — ~~`DST_PM_CHARA_*` プロパティがスタブ~~ **完了** — PomyuCharaLoader 統合で5コマンド実装済み (`bms-skin/src/loader/lr2_play_loader.rs`)
 - **Music Preview** — ~~Select 画面のプレビュー再生未実装~~ **完了** — `brs/src/preview_music.rs` で実装済み
+- **ExternalManager 統合** — ~~`info!()` ログのみのスタブ~~ **完了** — Discord IPC プラットフォーム実装 + チャンネルベース `DiscordRpcClient` + 実 `ObsListener`/`StreamController` 接続、Rich Presence 更新、OBS シーン切替（Java 互換状態名）、専用 tokio Runtime (`bms-external/src/discord/platform_ipc.rs`, `bms-external/src/discord/client.rs`, `brs/src/external_manager.rs`)

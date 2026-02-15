@@ -160,7 +160,7 @@ fn main() -> Result<()> {
     registry.register(AppStateType::SkinConfig, Box::new(SkinConfigState::new()));
 
     // Initialize external integrations from config
-    let external = ExternalManager::new(&config);
+    let external = ExternalManager::new(&config, &player_config);
     info!(
         discord = external.is_discord_enabled(),
         obs = external.is_obs_enabled(),
@@ -302,7 +302,7 @@ fn state_machine_system(
     mut registry: ResMut<BrsStateRegistry>,
     database: Res<BrsDatabase>,
     mut input_mapper: ResMut<BrsInputMapper>,
-    external: Res<BrsExternalManager>,
+    mut external: ResMut<BrsExternalManager>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut keyboard_events: EventReader<KeyboardInput>,
     mut backend: Local<bevy_keyboard::BevyKeyboardBackend>,
@@ -383,10 +383,21 @@ fn state_machine_system(
     // Notify external integrations on state transitions
     let current_state = registry.registry.current();
     if current_state != prev_state {
-        let song_title = resource.0.bms_model.as_ref().map(|m| m.title.as_str());
+        let (song_title, artist, key_count) = resource
+            .0
+            .bms_model
+            .as_ref()
+            .map(|m| {
+                (
+                    Some(m.title.as_str()),
+                    Some(m.artist.as_str()),
+                    Some(m.mode.key_count()),
+                )
+            })
+            .unwrap_or((None, None, None));
         external
             .0
-            .on_state_change(&current_state.to_string(), song_title);
+            .on_state_change(&current_state.to_string(), song_title, artist, key_count);
     }
 }
 
