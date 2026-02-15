@@ -105,3 +105,5 @@ Phase 0-23 全完了（16 crate, ~61,000行）。全 RenderSnapshot GM テスト
 - **LR2 Play Loader Pomyu stubs** — ~~`DST_PM_CHARA_*` プロパティがスタブ~~ **完了** — PomyuCharaLoader 統合で5コマンド実装済み (`bms-skin/src/loader/lr2_play_loader.rs`)
 - **Music Preview** — ~~Select 画面のプレビュー再生未実装~~ **完了** — `brs/src/preview_music.rs` で実装済み
 - **ExternalManager 統合** — ~~`info!()` ログのみのスタブ~~ **完了** — Discord IPC プラットフォーム実装 + チャンネルベース `DiscordRpcClient` + 実 `ObsListener`/`StreamController` 接続、Rich Presence 更新、OBS シーン切替（Java 互換状態名）、専用 tokio Runtime (`bms-external/src/discord/platform_ipc.rs`, `bms-external/src/discord/client.rs`, `brs/src/external_manager.rs`)
+- **Table/Course システム** — ~70% 完了。データ構造・DB・コースゲームプレイ連携 (PlayerResource, CourseResult) は実装済み。**未実装:** jbmstable-parser の Rust 移植 (現在は .bmt/JSON のみ)、テーブル HTTP ダウンロード/更新、MusicSelect へのコース選択 UI 統合 (`bms-database/src/table_data.rs`, `bms-database/src/course_data.rs`)
+- **Launcher GUI** — ~52% 完了 (11/21パネル)。egui フレームワーク・タブナビ・設定永続化は完成。**未実装パネル:** 高度なオーディオ設定、グラフィックス詳細、スキンプレビュー、ゲージ可視化、ノートスキン選択、タイマー表示、イベントトレース、プロファイラ、高度なプレイオプション、カスタムキーバインド設定 (`bms-launcher/src/panels/`)
