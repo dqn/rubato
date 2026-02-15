@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use bms_config::PracticeProperty;
 use bms_input::control_keys::ControlKeys;
-use bms_model::BmsModel;
+use bms_model::{BmsModel, PlayMode};
 
 use crate::input_mapper::InputState;
 
@@ -127,6 +127,8 @@ pub struct PracticeConfiguration {
     model_last_time_ms: i32,
     /// Whether the chart is DP.
     is_dp: bool,
+    /// Whether the chart is PMS (PopN 5K/9K).
+    is_pms: bool,
     /// SHA256 of the chart (for persistence).
     sha256: String,
     /// Config directory (for save/load).
@@ -142,6 +144,7 @@ impl PracticeConfiguration {
 
         let last_time_ms = model.last_event_time_ms();
         let is_dp = model.mode.player_count() > 1;
+        let is_pms = matches!(model.mode, PlayMode::PopN5K | PlayMode::PopN9K);
 
         // Initialize endtime from model if not previously set
         if property.endtime <= 0 {
@@ -166,6 +169,7 @@ impl PracticeConfiguration {
             press_count: 0,
             model_last_time_ms: last_time_ms,
             is_dp,
+            is_pms,
             sha256,
             config_dir,
         }
@@ -246,11 +250,18 @@ impl PracticeConfiguration {
             }
             PracticeElement::GaugeType => {
                 p.gaugetype = (p.gaugetype + delta).rem_euclid(GAUGE_NAMES.len() as i32);
+                // PMS modes: clamp gauge value to 100 when switching to hard+ gauge types
+                if self.is_pms && p.gaugetype >= 3 && p.startgauge > 100 {
+                    p.startgauge = 100;
+                }
             }
             PracticeElement::GaugeValue => {
-                // TODO: PMS modes use max=120 for gaugetype < 3, others use 100
-                // Requires gaugecategory integration to determine mode-specific max
-                let max = 100;
+                // PMS ASSIST_EASY/EASY/NORMAL have max=120, all others max=100
+                let max = if self.is_pms && p.gaugetype < 3 {
+                    120
+                } else {
+                    100
+                };
                 p.startgauge = (p.startgauge + delta).clamp(1, max);
             }
             PracticeElement::JudgeRank => {
@@ -523,6 +534,71 @@ mod tests {
         let pc = PracticeConfiguration::new(&model, dir.path().to_path_buf());
         assert_eq!(pc.element_count(), 11);
         assert!(pc.is_dp);
+    }
+
+    #[test]
+    fn pms_gauge_max_120_for_normal_types() {
+        let mut model = make_practice_model();
+        model.mode = PlayMode::PopN9K;
+        let dir = tempfile::tempdir().unwrap();
+        let mut pc = PracticeConfiguration::new(&model, dir.path().to_path_buf());
+        assert!(pc.is_pms);
+
+        // ASSIST_EASY (gaugetype=0): max=120
+        pc.cursor_pos = 3; // GaugeValue
+        pc.property.gaugetype = 0;
+        pc.property.startgauge = 119;
+        pc.adjust_value(1);
+        assert_eq!(pc.property.startgauge, 120);
+        pc.adjust_value(1);
+        assert_eq!(pc.property.startgauge, 120); // clamped at 120
+    }
+
+    #[test]
+    fn pms_gauge_max_100_for_hard_types() {
+        let mut model = make_practice_model();
+        model.mode = PlayMode::PopN9K;
+        let dir = tempfile::tempdir().unwrap();
+        let mut pc = PracticeConfiguration::new(&model, dir.path().to_path_buf());
+
+        // HARD (gaugetype=3): max=100
+        pc.cursor_pos = 3; // GaugeValue
+        pc.property.gaugetype = 3;
+        pc.property.startgauge = 100;
+        pc.adjust_value(1);
+        assert_eq!(pc.property.startgauge, 100); // clamped at 100
+    }
+
+    #[test]
+    fn pms_gauge_type_change_clamps_value() {
+        let mut model = make_practice_model();
+        model.mode = PlayMode::PopN9K;
+        let dir = tempfile::tempdir().unwrap();
+        let mut pc = PracticeConfiguration::new(&model, dir.path().to_path_buf());
+
+        // Set gauge value to 120 on NORMAL (gaugetype=2)
+        pc.property.gaugetype = 2;
+        pc.property.startgauge = 120;
+
+        // Switch to HARD (gaugetype=3) -> should clamp to 100
+        pc.cursor_pos = 2; // GaugeType
+        pc.adjust_value(1);
+        assert_eq!(pc.property.gaugetype, 3);
+        assert_eq!(pc.property.startgauge, 100);
+    }
+
+    #[test]
+    fn non_pms_gauge_max_always_100() {
+        let model = make_practice_model(); // Beat7K
+        let dir = tempfile::tempdir().unwrap();
+        let mut pc = PracticeConfiguration::new(&model, dir.path().to_path_buf());
+        assert!(!pc.is_pms);
+
+        pc.cursor_pos = 3; // GaugeValue
+        pc.property.gaugetype = 0; // ASSIST_EASY
+        pc.property.startgauge = 100;
+        pc.adjust_value(1);
+        assert_eq!(pc.property.startgauge, 100); // max=100 even for non-PMS ASSIST_EASY
     }
 
     #[test]
