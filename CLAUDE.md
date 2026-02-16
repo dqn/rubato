@@ -117,6 +117,10 @@ Phase 0-24 全完了（16 crate, ~92,000行）。全 RenderSnapshot GM テスト
 - **Stream Controller (Windows Named Pipes)** — `bms-stream/controller.rs` に両プラットフォーム実装済み
 - **Window 管理** — モニター選択 + F6 フルスクリーントグル + ModMenu Window Settings + ランチャーモニター自動列挙
 
+### Known Issues
+
+- **bms-model パーサーバグ: 拡張チャンネルがモード判定に影響** — invisible notes (ch 31-37) と mine notes (ch D1-D7) が playable lane として解釈され、Beat5K → Beat7K にモードが誤変更される。`golden_master_channel_extended` テストが `#[ignore]` のまま。修正対象: `bms-model` クレートのチャンネル解釈ロジック
+
 ### Completed Deferred Items
 
 以下の項目は全て実装済み:
