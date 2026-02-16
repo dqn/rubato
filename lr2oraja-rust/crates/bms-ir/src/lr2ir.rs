@@ -132,6 +132,7 @@ impl Default for LR2IRConnection {
     }
 }
 
+#[async_trait::async_trait]
 impl IRConnection for LR2IRConnection {
     async fn get_play_data(
         &self,

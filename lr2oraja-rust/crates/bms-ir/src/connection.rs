@@ -1,4 +1,5 @@
 use anyhow::Result;
+use async_trait::async_trait;
 
 use crate::account::IRAccount;
 use crate::chart_data::IRChartData;
@@ -12,7 +13,7 @@ use crate::table_data::IRTableData;
 ///
 /// Corresponds to Java `IRConnection` interface.
 /// Default implementations return "not supported" errors.
-#[allow(async_fn_in_trait)]
+#[async_trait]
 pub trait IRConnection: Send + Sync {
     /// Register a new user.
     async fn register(&self, _account: &IRAccount) -> Result<IRResponse<IRPlayerData>> {

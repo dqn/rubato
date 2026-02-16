@@ -8,10 +8,9 @@ use bevy::render::camera::RenderTarget;
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
 use bevy::render::view::screenshot::{Screenshot, save_to_disk};
-use bevy::sprite::Material2dPlugin;
 
-use bms_render::distance_field_material::DistanceFieldMaterial;
 use bms_render::font_map::FontMap;
+use bms_render::plugin::register_render_materials;
 use bms_render::skin_renderer::{setup_skin, skin_render_system};
 use bms_render::state_provider::SkinStateProvider;
 use bms_render::texture_map::TextureMap;
@@ -59,8 +58,9 @@ impl RenderTestHarness {
                 }),
         );
 
-        // Register DistanceFieldMaterial (required by skin_render_system parameter)
-        app.add_plugins(Material2dPlugin::<DistanceFieldMaterial>::default());
+        // Register embedded shaders and Material2d plugins for DistanceFieldMaterial
+        // and BgaLayerMaterial (both required by skin_render_system parameters).
+        register_render_materials(&mut app);
         app.add_systems(Update, skin_render_system);
 
         // Finalize all plugins — this calls Plugin::finish() on every registered

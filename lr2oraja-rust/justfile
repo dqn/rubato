@@ -121,6 +121,9 @@ golden-master-render-snapshot-gen:
     run_export "$SKIN_DIR/play/play7.luaskin"      "$STATE_DIR/state_play_danger.json"    "$OUT_DIR/ecfn_play7_danger.json"    1920 1080 0
     run_export "$SKIN_DIR/RESULT/result.luaskin"   "$STATE_DIR/state_result_clear.json"   "$OUT_DIR/ecfn_result_clear.json"    1920 1080 7
     run_export "$SKIN_DIR/RESULT/result.luaskin"   "$STATE_DIR/state_result_fail.json"    "$OUT_DIR/ecfn_result_fail.json"     1920 1080 7
+    run_export "$SKIN_DIR/play/play14.luaskin"          "$STATE_DIR/state_play_active.json"    "$OUT_DIR/ecfn_play14_active.json"    1920 1080 2
+    run_export "$SKIN_DIR/play/play7wide.luaskin"        "$STATE_DIR/state_play_active.json"    "$OUT_DIR/ecfn_play7wide_active.json"  1920 1080 0
+    run_export "$SKIN_DIR/RESULT/course_result.luaskin"  "$STATE_DIR/state_result_clear.json"   "$OUT_DIR/ecfn_course_result.json"     1920 1080 15
 
 # Compare Java-Rust RenderSnapshot (structural draw command comparison)
 golden-master-render-snapshot-compare:

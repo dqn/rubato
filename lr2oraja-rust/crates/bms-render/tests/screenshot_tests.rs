@@ -486,6 +486,16 @@ fn test_render_ecfn_course_result() {
     );
 }
 
+fn test_render_ecfn_result2_clear() {
+    run_ecfn_lua_test(
+        "RESULT/result2.luaskin",
+        state_result_clear(),
+        "ecfn_result2_clear",
+        1920,
+        1080,
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Custom test runner
 // ---------------------------------------------------------------------------
@@ -546,6 +556,10 @@ fn get_tests() -> Vec<(&'static str, fn())> {
         (
             "test_render_ecfn_course_result",
             test_render_ecfn_course_result,
+        ),
+        (
+            "test_render_ecfn_result2_clear",
+            test_render_ecfn_result2_clear,
         ),
     ]
 }

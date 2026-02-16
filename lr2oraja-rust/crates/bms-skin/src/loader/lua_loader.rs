@@ -838,13 +838,20 @@ fn lua_value_to_json(value: &mlua::Value) -> Value {
 
 /// Converts a Lua table to a JSON value (array or object).
 ///
-/// If all keys are consecutive integers starting from 1, produces a JSON array.
-/// Empty tables are treated as arrays by default (common convention).
-/// Otherwise, produces a JSON object with string keys.
+/// Tables with consecutive integer keys 1..n are treated as arrays, even if
+/// extra string keys are present (mixed tables). This matches Java's libGDX
+/// Json deserializer behavior, where array elements are read by index and
+/// stray string keys (e.g., `loop` accidentally placed inside a `dst` array)
+/// are silently ignored.
+///
+/// Empty tables without string keys are treated as empty arrays.
+/// Tables with only string keys are treated as objects.
 fn lua_table_to_json(table: &mlua::Table) -> Value {
-    // Check if this is a sequence (array-like table)
     let len = table.raw_len() as i64;
-    if len > 0 && is_sequence(table, len) {
+
+    // Sequence detection: if raw_len > 0 and all integer keys 1..n exist,
+    // treat as array regardless of extra string keys (mixed table tolerance).
+    if len > 0 && has_sequence_keys(table, len) {
         let mut arr = Vec::with_capacity(len as usize);
         for i in 1..=len {
             if let Ok(val) = table.raw_get::<mlua::Value>(i) {
@@ -915,21 +922,20 @@ fn truncate_floats_to_ints(value: Value) -> Value {
     }
 }
 
-/// Checks if a Lua table is a sequence (consecutive integer keys 1..n).
-fn is_sequence(table: &mlua::Table, len: i64) -> bool {
-    // Verify that all keys 1..len exist and there are no extra keys
+/// Checks if a Lua table has consecutive integer keys 1..n.
+///
+/// Unlike the previous `is_sequence`, this does NOT require that the table
+/// has no extra string keys. Mixed tables (array + string keys) are common
+/// in beatoraja Lua skins where a stray field like `loop` is placed inside
+/// a `dst` array table by mistake. Java's libGDX handles this gracefully by
+/// reading only the array portion; we replicate that here.
+fn has_sequence_keys(table: &mlua::Table, len: i64) -> bool {
     for i in 1..=len {
         if table.raw_get::<mlua::Value>(i).is_err() {
             return false;
         }
     }
-    // Check there are no string keys (simple heuristic)
-    let count = table
-        .clone()
-        .pairs::<mlua::Value, mlua::Value>()
-        .flatten()
-        .count();
-    count == len as usize
+    true
 }
 
 // ---------------------------------------------------------------------------
@@ -1183,15 +1189,18 @@ return {
     #[test]
     fn test_mixed_table_to_json() {
         let lua = Lua::new();
-        // Lua table with both integer and string keys
+        // Lua table with both integer and string keys (common in beatoraja
+        // skins, e.g., `dst = { {time=0}, {time=200}, loop=300 }`).
+        // The integer-key portion is treated as an array; string keys are
+        // silently discarded to match Java's libGDX behavior.
         let val: mlua::Value = lua
             .load("{[1] = 'a', [2] = 'b', name = 'test'}")
             .eval()
             .unwrap();
         let json = lua_value_to_json(&val);
-        // Mixed table → treated as object
-        assert!(json.is_object());
-        assert_eq!(json["name"], "test");
+        // Mixed table with sequence portion → treated as array
+        assert!(json.is_array());
+        assert_eq!(json, serde_json::json!(["a", "b"]));
     }
 
     // -- LuaStateProvider integration tests --

@@ -69,6 +69,7 @@ lewton = "0.10"
 claxon = "0.4"
 minimp3 = "0.5"
 ebur128 = "0.1"
+async-trait = "0.1"
 
 quick-xml = { version = "0.37", features = ["serialize"] }
 uuid = { version = "1", features = ["v4"] }

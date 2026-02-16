@@ -117,9 +117,11 @@ Phase 0-24 全完了（16 crate, ~92,000行）。全 RenderSnapshot GM テスト
 - **Stream Controller (Windows Named Pipes)** — `bms-stream/controller.rs` に両プラットフォーム実装済み
 - **Window 管理** — モニター選択 + F6 フルスクリーントグル + ModMenu Window Settings + ランチャーモニター自動列挙
 
-### Deferred / Stub Items
+### Completed Deferred Items
 
-- **IR プラグインシステム** — Java は `IRConnectionManager` でカスタム IR を動的ロードするが、Rust は LR2IR のみ静的実装
-- **スクリーンショット SSIM テスト** — ECS クエリ競合は `Without<T>` フィルタ追加で修正済み。GPU 環境でのスクリーンショットキャプチャ + SSIM 比較の実行検証が残存
-- **result2.luaskin** — Lua スキンのデシリアライズエラーにより RenderSnapshot テストから除外中。JSON シリアライズパス要調査
-- **新規スキン Java fixture** — play14, play7wide, course_result の Java RenderSnapshot fixture 未生成。`RenderSnapshotExporter` に skinTypeId=2 (PLAY_14KEYS) 等の MockState 対応追加 + `justfile` の `golden-master-render-snapshot-gen` 拡張が必要
+以下の項目は全て実装済み:
+
+- **IR プラグインシステム** — `IRConnectionManager` を静的 enum dispatch → 動的 `Box<dyn IRConnection>` レジストリに変更。`async-trait` + `LazyLock<RwLock<HashMap>>` で `register()` / `create()` / `available_names()` API を提供
+- **スクリーンショット SSIM テスト** — `plugin.rs` に `register_render_materials()` ヘルパー追加で `BgaLayerMaterial` + embedded shaders をテストハーネスから登録可能に。全26スクリーンショットテスト通過
+- **result2.luaskin** — `lua_loader.rs` の `lua_value_to_json()` で NaN/Infinity → JSON null 変換を追加。`RUST_ONLY_CASES` に result2 テスト追加
+- **新規スキン Java Fixture** — play14, play7wide, course_result の justfile エントリ追加。`compare_render_snapshot.rs` で play14 (budget=27), play7wide (budget=29) parity テストに昇格、course_result は Rust-only テスト追加

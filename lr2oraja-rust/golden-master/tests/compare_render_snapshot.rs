@@ -187,6 +187,27 @@ const TEST_CASES: &[RenderSnapshotTestCase] = &[
         is_lua: true,
         known_diff_budget: 0,
     },
+    RenderSnapshotTestCase {
+        name: "ecfn_play14_active",
+        skin_path: "play/play14.luaskin",
+        state_json: "state_play_active.json",
+        is_lua: true,
+        known_diff_budget: 27,
+    },
+    RenderSnapshotTestCase {
+        name: "ecfn_play7wide_active",
+        skin_path: "play/play7wide.luaskin",
+        state_json: "state_play_active.json",
+        is_lua: true,
+        known_diff_budget: 29,
+    },
+    RenderSnapshotTestCase {
+        name: "ecfn_course_result",
+        skin_path: "RESULT/course_result.luaskin",
+        state_json: "state_result_clear.json",
+        is_lua: true,
+        known_diff_budget: 0,
+    },
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -570,6 +591,24 @@ fn render_snapshot_ecfn_result_fail() {
     compare_java_rust_render_snapshot(tc);
 }
 
+#[test]
+fn render_snapshot_ecfn_play14_active() {
+    let tc = &TEST_CASES[7];
+    compare_java_rust_render_snapshot(tc);
+}
+
+#[test]
+fn render_snapshot_ecfn_play7wide_active() {
+    let tc = &TEST_CASES[8];
+    compare_java_rust_render_snapshot(tc);
+}
+
+#[test]
+fn render_snapshot_ecfn_course_result() {
+    let tc = &TEST_CASES[9];
+    compare_java_rust_render_snapshot(tc);
+}
+
 // --- Rust-only snapshot tests for additional ECFN skins ---
 // These tests verify Rust-side snapshot capture for skins that don't have
 // Java fixtures yet. They validate that skin loading + capture_render_snapshot
@@ -588,30 +627,6 @@ struct RustOnlySnapshotTestCase {
 
 const RUST_ONLY_CASES: &[RustOnlySnapshotTestCase] = &[
     RustOnlySnapshotTestCase {
-        name: "ecfn_play14_active",
-        skin_path: "play/play14.luaskin",
-        state_json: "state_play_active.json",
-        is_lua: true,
-        min_objects: 10,
-        expected_types: &["Image", "SkinNote", "SkinJudge"],
-    },
-    RustOnlySnapshotTestCase {
-        name: "ecfn_play7wide_active",
-        skin_path: "play/play7wide.luaskin",
-        state_json: "state_play_active.json",
-        is_lua: true,
-        min_objects: 10,
-        expected_types: &["Image", "SkinNote", "SkinJudge"],
-    },
-    RustOnlySnapshotTestCase {
-        name: "ecfn_course_result",
-        skin_path: "RESULT/course_result.luaskin",
-        state_json: "state_result_clear.json",
-        is_lua: true,
-        min_objects: 5,
-        expected_types: &["Image"],
-    },
-    RustOnlySnapshotTestCase {
         name: "ecfn_play7_mid_song",
         skin_path: "play/play7.luaskin",
         state_json: "state_play_mid_song.json",
@@ -626,6 +641,14 @@ const RUST_ONLY_CASES: &[RustOnlySnapshotTestCase] = &[
         is_lua: true,
         min_objects: 10,
         expected_types: &["Image", "SkinBar"],
+    },
+    RustOnlySnapshotTestCase {
+        name: "ecfn_result2_clear",
+        skin_path: "RESULT/result2.luaskin",
+        state_json: "state_result_clear.json",
+        is_lua: true,
+        min_objects: 5,
+        expected_types: &["Image"],
     },
 ];
 
@@ -659,28 +682,18 @@ fn run_rust_only_snapshot(tc: &RustOnlySnapshotTestCase) {
 }
 
 #[test]
-fn rust_only_snapshot_ecfn_play14() {
+fn rust_only_snapshot_ecfn_play7_mid_song() {
     run_rust_only_snapshot(&RUST_ONLY_CASES[0]);
 }
 
 #[test]
-fn rust_only_snapshot_ecfn_play7wide() {
+fn rust_only_snapshot_ecfn_select_with_song() {
     run_rust_only_snapshot(&RUST_ONLY_CASES[1]);
 }
 
 #[test]
-fn rust_only_snapshot_ecfn_course_result() {
+fn rust_only_snapshot_ecfn_result2_clear() {
     run_rust_only_snapshot(&RUST_ONLY_CASES[2]);
-}
-
-#[test]
-fn rust_only_snapshot_ecfn_play7_mid_song() {
-    run_rust_only_snapshot(&RUST_ONLY_CASES[3]);
-}
-
-#[test]
-fn rust_only_snapshot_ecfn_select_with_song() {
-    run_rust_only_snapshot(&RUST_ONLY_CASES[4]);
 }
 
 // --- Timeline snapshot tests ---

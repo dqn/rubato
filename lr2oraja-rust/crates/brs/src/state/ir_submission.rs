@@ -4,7 +4,6 @@
 // Failures are logged but never propagate to the caller.
 
 use bms_ir::chart_data::IRChartData;
-use bms_ir::connection::IRConnection;
 use bms_ir::connection_manager::IRConnectionManager;
 use bms_ir::course_data::IRCourseData;
 use bms_ir::score_data::IRScoreData;

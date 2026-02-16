@@ -1949,6 +1949,7 @@ name = "bms-ir"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "bms-database",
  "bms-model",
  "bms-replay",

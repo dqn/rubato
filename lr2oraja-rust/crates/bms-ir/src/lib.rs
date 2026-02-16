@@ -17,7 +17,7 @@ pub mod table_data;
 pub use account::IRAccount;
 pub use chart_data::IRChartData;
 pub use connection::IRConnection;
-pub use connection_manager::{IRConnectionManager, IRConnectionType};
+pub use connection_manager::IRConnectionManager;
 pub use course_data::{CourseDataConstraint, IRCourseData, IRTrophyData};
 pub use leaderboard::{IRType, LeaderboardEntry};
 pub use lr2ir::LR2IRConnection;
