@@ -1,0 +1,45 @@
+{
+  "type": 6,
+  "name": "Eval Interpolation Modes",
+  "w": 256,
+  "h": 192,
+  "source": [
+    {"id": 0, "path": "bg.png"}
+  ],
+  "image": [
+    {"id": "linear", "src": 0},
+    {"id": "easein", "src": 0},
+    {"id": "easeout", "src": 0},
+    {"id": "discrete", "src": 0}
+  ],
+  "destination": [
+    {
+      "id": "linear",
+      "dst": [
+        {"time": 0, "x": 0, "y": 10, "w": 20, "h": 20, "acc": 0},
+        {"time": 100, "x": 100}
+      ]
+    },
+    {
+      "id": "easein",
+      "dst": [
+        {"time": 0, "x": 0, "y": 40, "w": 20, "h": 20, "acc": 1},
+        {"time": 100, "x": 100}
+      ]
+    },
+    {
+      "id": "easeout",
+      "dst": [
+        {"time": 0, "x": 0, "y": 70, "w": 20, "h": 20, "acc": 2},
+        {"time": 100, "x": 100}
+      ]
+    },
+    {
+      "id": "discrete",
+      "dst": [
+        {"time": 0, "x": 0, "y": 100, "w": 20, "h": 20, "acc": 3},
+        {"time": 100, "x": 100}
+      ]
+    }
+  ]
+}

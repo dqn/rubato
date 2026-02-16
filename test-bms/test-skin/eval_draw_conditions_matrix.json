@@ -1,0 +1,45 @@
+{
+  "type": 6,
+  "name": "Eval Draw Conditions Matrix",
+  "w": 256,
+  "h": 192,
+  "source": [
+    {"id": 0, "path": "bg.png"}
+  ],
+  "image": [
+    {"id": "pos_true", "src": 0},
+    {"id": "pos_false", "src": 0},
+    {"id": "neg_false", "src": 0},
+    {"id": "neg_true", "src": 0}
+  ],
+  "destination": [
+    {
+      "id": "pos_true",
+      "draw": 1,
+      "dst": [
+        {"time": 0, "x": 0, "y": 10, "w": 20, "h": 20}
+      ]
+    },
+    {
+      "id": "pos_false",
+      "draw": 2,
+      "dst": [
+        {"time": 0, "x": 0, "y": 40, "w": 20, "h": 20}
+      ]
+    },
+    {
+      "id": "neg_false",
+      "draw": -3,
+      "dst": [
+        {"time": 0, "x": 0, "y": 70, "w": 20, "h": 20}
+      ]
+    },
+    {
+      "id": "neg_true",
+      "draw": -4,
+      "dst": [
+        {"time": 0, "x": 0, "y": 100, "w": 20, "h": 20}
+      ]
+    }
+  ]
+}

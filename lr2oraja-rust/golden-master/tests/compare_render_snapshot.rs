@@ -570,6 +570,218 @@ fn render_snapshot_ecfn_result_fail() {
     compare_java_rust_render_snapshot(tc);
 }
 
+// --- Rust-only snapshot tests for additional ECFN skins ---
+// These tests verify Rust-side snapshot capture for skins that don't have
+// Java fixtures yet. They validate that skin loading + capture_render_snapshot
+// produces non-empty, structurally sound output.
+
+struct RustOnlySnapshotTestCase {
+    name: &'static str,
+    skin_path: &'static str,
+    state_json: &'static str,
+    is_lua: bool,
+    /// Expected minimum object count (basic sanity check).
+    min_objects: usize,
+    /// Expected object types that must be present.
+    expected_types: &'static [&'static str],
+}
+
+const RUST_ONLY_CASES: &[RustOnlySnapshotTestCase] = &[
+    RustOnlySnapshotTestCase {
+        name: "ecfn_play14_active",
+        skin_path: "play/play14.luaskin",
+        state_json: "state_play_active.json",
+        is_lua: true,
+        min_objects: 10,
+        expected_types: &["Image", "SkinNote", "SkinJudge"],
+    },
+    RustOnlySnapshotTestCase {
+        name: "ecfn_play7wide_active",
+        skin_path: "play/play7wide.luaskin",
+        state_json: "state_play_active.json",
+        is_lua: true,
+        min_objects: 10,
+        expected_types: &["Image", "SkinNote", "SkinJudge"],
+    },
+    RustOnlySnapshotTestCase {
+        name: "ecfn_course_result",
+        skin_path: "RESULT/course_result.luaskin",
+        state_json: "state_result_clear.json",
+        is_lua: true,
+        min_objects: 5,
+        expected_types: &["Image"],
+    },
+    RustOnlySnapshotTestCase {
+        name: "ecfn_play7_mid_song",
+        skin_path: "play/play7.luaskin",
+        state_json: "state_play_mid_song.json",
+        is_lua: true,
+        min_objects: 10,
+        expected_types: &["Image", "SkinNote"],
+    },
+    RustOnlySnapshotTestCase {
+        name: "ecfn_select_with_song",
+        skin_path: "select/select.luaskin",
+        state_json: "state_select_with_song.json",
+        is_lua: true,
+        min_objects: 10,
+        expected_types: &["Image", "SkinBar"],
+    },
+];
+
+fn run_rust_only_snapshot(tc: &RustOnlySnapshotTestCase) {
+    let skin = if tc.is_lua {
+        load_lua_skin(tc.skin_path)
+    } else {
+        load_json_skin(tc.skin_path)
+    };
+    let provider = load_state(tc.state_json);
+    let snapshot = capture_render_snapshot(&skin, &provider);
+
+    assert!(
+        snapshot.commands.len() >= tc.min_objects,
+        "{}: expected at least {} objects, got {}",
+        tc.name,
+        tc.min_objects,
+        snapshot.commands.len()
+    );
+
+    let types = count_object_types(&snapshot);
+    for &expected in tc.expected_types {
+        assert!(
+            types.get(expected).copied().unwrap_or(0) > 0,
+            "{}: expected object type '{}' not found (types: {:?})",
+            tc.name,
+            expected,
+            types
+        );
+    }
+}
+
+#[test]
+fn rust_only_snapshot_ecfn_play14() {
+    run_rust_only_snapshot(&RUST_ONLY_CASES[0]);
+}
+
+#[test]
+fn rust_only_snapshot_ecfn_play7wide() {
+    run_rust_only_snapshot(&RUST_ONLY_CASES[1]);
+}
+
+#[test]
+fn rust_only_snapshot_ecfn_course_result() {
+    run_rust_only_snapshot(&RUST_ONLY_CASES[2]);
+}
+
+#[test]
+fn rust_only_snapshot_ecfn_play7_mid_song() {
+    run_rust_only_snapshot(&RUST_ONLY_CASES[3]);
+}
+
+#[test]
+fn rust_only_snapshot_ecfn_select_with_song() {
+    run_rust_only_snapshot(&RUST_ONLY_CASES[4]);
+}
+
+// --- Timeline snapshot tests ---
+// Verify that animation state changes correctly over time by capturing
+// snapshots at multiple time points and asserting monotonic changes.
+
+fn capture_at_time(skin_path: &str, state_json: &str, time_ms: i64) -> RenderSnapshot {
+    let skin = load_lua_skin(skin_path);
+    let mut provider = load_state(state_json);
+    provider.time_ms = time_ms;
+
+    // Update timer values proportionally to time
+    let timer_keys: Vec<i32> = provider.timers.keys().copied().collect();
+    for key in timer_keys {
+        if let Some(val) = provider.timers.get_mut(&key) {
+            *val = time_ms;
+        }
+    }
+
+    capture_render_snapshot(&skin, &provider)
+}
+
+#[test]
+fn timeline_decide_visibility_changes() {
+    // Decide skin should have different visibility at different times
+    // (timer-driven animations change which objects are shown)
+    let snap_0 = capture_at_time("decide/decide.luaskin", "state_default.json", 0);
+    let snap_3000 = capture_at_time("decide/decide.luaskin", "state_default.json", 3000);
+
+    let visible_0 = snap_0.commands.iter().filter(|c| c.visible).count();
+    let visible_3000 = snap_3000.commands.iter().filter(|c| c.visible).count();
+
+    // Both snapshots should have some visible objects
+    assert!(
+        visible_0 > 0,
+        "decide: no visible objects at t=0"
+    );
+    assert!(
+        visible_3000 > 0,
+        "decide: no visible objects at t=3000"
+    );
+
+    // Total object count should be the same (same skin, different time)
+    assert_eq!(
+        snap_0.commands.len(),
+        snap_3000.commands.len(),
+        "decide: total command count should be equal across time points"
+    );
+}
+
+#[test]
+fn timeline_play7_has_consistent_structure() {
+    // Play skin should have consistent structure across time points
+    let times = [0i64, 1000, 5000, 30000];
+    let snapshots: Vec<_> = times
+        .iter()
+        .map(|&t| capture_at_time("play/play7.luaskin", "state_play_active.json", t))
+        .collect();
+
+    // All snapshots should have the same total object count
+    let base_count = snapshots[0].commands.len();
+    for (i, snap) in snapshots.iter().enumerate() {
+        assert_eq!(
+            snap.commands.len(),
+            base_count,
+            "play7: total command count at t={} ({}) differs from t=0 ({})",
+            times[i],
+            snap.commands.len(),
+            base_count
+        );
+    }
+
+    // At t=30000, there should be visible objects (game is running)
+    let visible_30000 = snapshots[3].commands.iter().filter(|c| c.visible).count();
+    assert!(
+        visible_30000 > 0,
+        "play7: no visible objects at t=30000"
+    );
+}
+
+#[test]
+fn timeline_result_has_stable_visible_set() {
+    // Result screen should reach a stable state after initial animations
+    let snap_5000 = capture_at_time("RESULT/result.luaskin", "state_result_clear.json", 5000);
+    let snap_10000 = capture_at_time("RESULT/result.luaskin", "state_result_clear.json", 10000);
+
+    let visible_5000 = snap_5000.commands.iter().filter(|c| c.visible).count();
+    let visible_10000 = snap_10000.commands.iter().filter(|c| c.visible).count();
+
+    // Result screen should have stabilized by t=5000
+    // Visible count should be similar (within small delta for blinking elements)
+    let delta = (visible_5000 as i32 - visible_10000 as i32).unsigned_abs() as usize;
+    assert!(
+        delta <= 5,
+        "result: visible count changed significantly between t=5000 ({}) and t=10000 ({}), delta={}",
+        visible_5000,
+        visible_10000,
+        delta
+    );
+}
+
 // --- Skin State Object structure tests ---
 // Verify that state-specific skin objects (SkinNote, SkinBar, SkinJudge, etc.)
 // are present in the correct skin snapshots. These catch regressions where

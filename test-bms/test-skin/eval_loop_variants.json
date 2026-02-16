@@ -1,0 +1,40 @@
+{
+  "type": 6,
+  "name": "Eval Loop Variants",
+  "w": 256,
+  "h": 192,
+  "source": [
+    {"id": 0, "path": "bg.png"}
+  ],
+  "image": [
+    {"id": "loop_default", "src": 0},
+    {"id": "loop_mid", "src": 0},
+    {"id": "play_once", "src": 0}
+  ],
+  "destination": [
+    {
+      "id": "loop_default",
+      "loop": 0,
+      "dst": [
+        {"time": 0, "x": 0, "y": 10, "w": 20, "h": 20, "acc": 0},
+        {"time": 100, "x": 100}
+      ]
+    },
+    {
+      "id": "loop_mid",
+      "loop": 50,
+      "dst": [
+        {"time": 0, "x": 0, "y": 40, "w": 20, "h": 20, "acc": 0},
+        {"time": 100, "x": 100}
+      ]
+    },
+    {
+      "id": "play_once",
+      "loop": -1,
+      "dst": [
+        {"time": 0, "x": 0, "y": 70, "w": 20, "h": 20, "acc": 0},
+        {"time": 100, "x": 100}
+      ]
+    }
+  ]
+}
