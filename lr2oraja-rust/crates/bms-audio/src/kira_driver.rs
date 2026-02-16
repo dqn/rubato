@@ -46,6 +46,10 @@ pub struct KiraAudioDriver {
     /// Loading progress tracking
     loaded_count: usize,
     total_count: usize,
+    /// Consecutive playback error count for recovery detection.
+    consecutive_errors: u32,
+    /// Flag indicating the driver needs recovery.
+    recovery_pending: bool,
 }
 
 impl KiraAudioDriver {
@@ -60,6 +64,8 @@ impl KiraAudioDriver {
             global_pitch: 1.0,
             loaded_count: 0,
             total_count: 0,
+            consecutive_errors: 0,
+            recovery_pending: false,
         })
     }
 }
@@ -148,9 +154,14 @@ impl AudioDriver for KiraAudioDriver {
             match self.manager.play(data) {
                 Ok(handle) => {
                     self.active_handles.insert(ch_id, handle);
+                    self.consecutive_errors = 0;
                 }
                 Err(e) => {
                     warn!(wav_id = note.wav_id, "Failed to play note: {e}");
+                    self.consecutive_errors += 1;
+                    if self.consecutive_errors >= 5 {
+                        self.recovery_pending = true;
+                    }
                 }
             }
         }
@@ -165,9 +176,14 @@ impl AudioDriver for KiraAudioDriver {
             match self.manager.play(data) {
                 Ok(_handle) => {
                     // BG notes don't need channel tracking
+                    self.consecutive_errors = 0;
                 }
                 Err(e) => {
                     warn!(wav_id = bg_note.wav_id, "Failed to play bg note: {e}");
+                    self.consecutive_errors += 1;
+                    if self.consecutive_errors >= 5 {
+                        self.recovery_pending = true;
+                    }
                 }
             }
         }
@@ -207,5 +223,30 @@ impl AudioDriver for KiraAudioDriver {
         } else {
             self.loaded_count as f32 / self.total_count as f32
         }
+    }
+
+    fn needs_recovery(&self) -> bool {
+        self.recovery_pending
+    }
+
+    fn try_recover(&mut self) -> Result<()> {
+        warn!(
+            "Attempting audio driver recovery after {} consecutive errors",
+            self.consecutive_errors
+        );
+
+        // Drop active handles before recreating the manager
+        self.active_handles.clear();
+
+        // Recreate the audio manager
+        self.manager = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default())
+            .map_err(|e| anyhow::anyhow!("Audio recovery failed: {e}"))?;
+
+        // Reset error tracking
+        self.consecutive_errors = 0;
+        self.recovery_pending = false;
+
+        warn!("Audio driver recovery successful, sounds remain loaded");
+        Ok(())
     }
 }

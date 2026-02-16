@@ -714,14 +714,8 @@ fn timeline_decide_visibility_changes() {
     let visible_3000 = snap_3000.commands.iter().filter(|c| c.visible).count();
 
     // Both snapshots should have some visible objects
-    assert!(
-        visible_0 > 0,
-        "decide: no visible objects at t=0"
-    );
-    assert!(
-        visible_3000 > 0,
-        "decide: no visible objects at t=3000"
-    );
+    assert!(visible_0 > 0, "decide: no visible objects at t=0");
+    assert!(visible_3000 > 0, "decide: no visible objects at t=3000");
 
     // Total object count should be the same (same skin, different time)
     assert_eq!(
@@ -755,10 +749,7 @@ fn timeline_play7_has_consistent_structure() {
 
     // At t=30000, there should be visible objects (game is running)
     let visible_30000 = snapshots[3].commands.iter().filter(|c| c.visible).count();
-    assert!(
-        visible_30000 > 0,
-        "play7: no visible objects at t=30000"
-    );
+    assert!(visible_30000 > 0, "play7: no visible objects at t=30000");
 }
 
 #[test]

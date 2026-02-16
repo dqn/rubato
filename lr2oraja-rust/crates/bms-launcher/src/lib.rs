@@ -1,4 +1,5 @@
 mod app;
+pub mod monitor;
 pub mod panel;
 pub mod panels;
 mod tab;

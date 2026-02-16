@@ -5,4 +5,5 @@ pub mod discord;
 pub mod obs;
 pub mod score_importer;
 pub mod screenshot;
+pub mod version_check;
 pub mod webhook;

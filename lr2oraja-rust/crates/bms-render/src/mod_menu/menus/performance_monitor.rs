@@ -3,10 +3,15 @@
 // Corresponds to Java `PerformanceMonitor.java`.
 // Watch statistics show average/standard deviation of named timing measurements.
 // Event tree shows hierarchical performance events with duration and thread info.
+// Frame time tracking shows min/max/avg over recent frames with a simple bar graph.
 // Actual measurement system integration is deferred to a future phase;
-// data is injected via `load_events()` and `load_watch_data()`.
+// data is injected via `load_events()`, `load_watch_data()`, and `record_frame_time()`.
 
 use std::collections::HashMap;
+
+use egui::{Color32, Stroke, Vec2, pos2};
+
+const FRAME_TIME_HISTORY_LEN: usize = 60;
 
 #[derive(Debug, Clone)]
 pub struct EventResult {
@@ -51,11 +56,22 @@ impl WatchStats {
     }
 }
 
+/// Frame time statistics computed from the rolling history.
+#[derive(Debug, Clone, Default)]
+pub struct FrameTimeStats {
+    pub min_ms: f32,
+    pub max_ms: f32,
+    pub avg_ms: f32,
+    pub count: usize,
+}
+
 #[derive(Debug, Clone)]
 pub struct PerformanceMonitorState {
     pub event_tree: HashMap<i32, Vec<EventResult>>,
     pub watch_data: Vec<(String, WatchStats)>,
     pub filter_threshold_ms: f32,
+    /// Rolling frame time history (milliseconds), most recent at the end.
+    pub frame_times_ms: Vec<f32>,
 }
 
 impl Default for PerformanceMonitorState {
@@ -64,6 +80,7 @@ impl Default for PerformanceMonitorState {
             event_tree: HashMap::new(),
             watch_data: Vec::new(),
             filter_threshold_ms: 1.0,
+            frame_times_ms: Vec::with_capacity(FRAME_TIME_HISTORY_LEN),
         }
     }
 }
@@ -81,7 +98,43 @@ impl PerformanceMonitorState {
     pub fn load_watch_data(&mut self, data: Vec<(String, WatchStats)>) {
         self.watch_data = data;
     }
+
+    /// Record a frame time sample in milliseconds.
+    ///
+    /// Maintains a rolling buffer of the last [`FRAME_TIME_HISTORY_LEN`] samples.
+    pub fn record_frame_time(&mut self, dt_ms: f32) {
+        if self.frame_times_ms.len() >= FRAME_TIME_HISTORY_LEN {
+            self.frame_times_ms.remove(0);
+        }
+        self.frame_times_ms.push(dt_ms);
+    }
+
+    /// Compute min/max/avg frame time from the rolling history.
+    pub fn frame_time_stats(&self) -> FrameTimeStats {
+        if self.frame_times_ms.is_empty() {
+            return FrameTimeStats::default();
+        }
+        let count = self.frame_times_ms.len();
+        let mut min = f32::MAX;
+        let mut max = f32::MIN;
+        let mut sum = 0.0f32;
+        for &t in &self.frame_times_ms {
+            min = min.min(t);
+            max = max.max(t);
+            sum += t;
+        }
+        FrameTimeStats {
+            min_ms: min,
+            max_ms: max,
+            avg_ms: sum / count as f32,
+            count,
+        }
+    }
 }
+
+const GRAPH_WIDTH: f32 = 400.0;
+const GRAPH_HEIGHT: f32 = 80.0;
+const TARGET_60FPS_MS: f32 = 16.67;
 
 pub fn render(ctx: &egui::Context, open: &mut bool, state: &mut PerformanceMonitorState) {
     egui::Window::new("Performance Monitor")
@@ -89,6 +142,30 @@ pub fn render(ctx: &egui::Context, open: &mut bool, state: &mut PerformanceMonit
         .resizable(true)
         .default_width(500.0)
         .show(ctx, |ui| {
+            // Frame Time section
+            egui::CollapsingHeader::new("Frame Time")
+                .default_open(true)
+                .show(ui, |ui| {
+                    let stats = state.frame_time_stats();
+                    if stats.count == 0 {
+                        ui.label("No frame time data yet.");
+                    } else {
+                        ui.label(format!(
+                            "FPS: {:.0}  |  avg: {:.2}ms  |  min: {:.2}ms  |  max: {:.2}ms  ({} frames)",
+                            if stats.avg_ms > 0.0 { 1000.0 / stats.avg_ms } else { 0.0 },
+                            stats.avg_ms,
+                            stats.min_ms,
+                            stats.max_ms,
+                            stats.count,
+                        ));
+
+                        ui.separator();
+
+                        // Simple bar graph of frame times
+                        render_frame_time_graph(ui, &state.frame_times_ms);
+                    }
+                });
+
             // Watch section
             egui::CollapsingHeader::new("Watch")
                 .default_open(false)
@@ -131,6 +208,64 @@ pub fn render(ctx: &egui::Context, open: &mut bool, state: &mut PerformanceMonit
                         });
                 });
         });
+}
+
+/// Render a simple bar graph of frame times using egui painter.
+fn render_frame_time_graph(ui: &mut egui::Ui, frame_times: &[f32]) {
+    if frame_times.is_empty() {
+        return;
+    }
+
+    let (response, painter) =
+        ui.allocate_painter(Vec2::new(GRAPH_WIDTH, GRAPH_HEIGHT), egui::Sense::hover());
+    let rect = response.rect;
+
+    // Background
+    painter.rect_filled(rect, 0.0, Color32::from_gray(30));
+
+    // 16.67ms target line (60 FPS)
+    let max_display_ms = frame_times
+        .iter()
+        .copied()
+        .fold(TARGET_60FPS_MS * 2.0, f32::max);
+    let target_y = rect.max.y - (TARGET_60FPS_MS / max_display_ms) * rect.height();
+    painter.line_segment(
+        [pos2(rect.min.x, target_y), pos2(rect.max.x, target_y)],
+        Stroke::new(1.0, Color32::from_rgb(100, 100, 100)),
+    );
+
+    // Bars
+    let bar_count = frame_times.len();
+    let bar_width = rect.width() / FRAME_TIME_HISTORY_LEN as f32;
+
+    for (i, &dt) in frame_times.iter().enumerate() {
+        let ratio = (dt / max_display_ms).clamp(0.0, 1.0);
+        let bar_height = ratio * rect.height();
+        let x = rect.min.x + i as f32 * bar_width;
+        let y = rect.max.y - bar_height;
+
+        // Color: green under 16ms, yellow under 33ms, red above
+        let color = if dt <= TARGET_60FPS_MS {
+            Color32::from_rgb(0, 200, 0)
+        } else if dt <= TARGET_60FPS_MS * 2.0 {
+            Color32::from_rgb(200, 200, 0)
+        } else {
+            Color32::from_rgb(200, 0, 0)
+        };
+
+        painter.rect_filled(
+            egui::Rect::from_min_max(pos2(x, y), pos2(x + bar_width - 1.0, rect.max.y)),
+            0.0,
+            color,
+        );
+    }
+
+    // Labels
+    ui.horizontal(|ui| {
+        ui.label(format!("{} frames", bar_count));
+        ui.add_space(GRAPH_WIDTH - 200.0);
+        ui.label(format!("(max scale: {:.1}ms)", max_display_ms));
+    });
 }
 
 fn render_event_children(
@@ -275,5 +410,39 @@ mod tests {
         assert_eq!(state.watch_data.len(), 2);
         assert_eq!(state.watch_data[0].0, "render");
         assert!((state.watch_data[0].1.avg_us - 16.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn frame_time_stats_empty() {
+        let state = PerformanceMonitorState::default();
+        let stats = state.frame_time_stats();
+        assert_eq!(stats.count, 0);
+        assert_eq!(stats.avg_ms, 0.0);
+    }
+
+    #[test]
+    fn record_and_stats() {
+        let mut state = PerformanceMonitorState::default();
+        state.record_frame_time(10.0);
+        state.record_frame_time(20.0);
+        state.record_frame_time(30.0);
+
+        let stats = state.frame_time_stats();
+        assert_eq!(stats.count, 3);
+        assert!((stats.min_ms - 10.0).abs() < f32::EPSILON);
+        assert!((stats.max_ms - 30.0).abs() < f32::EPSILON);
+        assert!((stats.avg_ms - 20.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn frame_time_rolling_buffer() {
+        let mut state = PerformanceMonitorState::default();
+        // Fill beyond capacity
+        for i in 0..(FRAME_TIME_HISTORY_LEN + 10) {
+            state.record_frame_time(i as f32);
+        }
+        assert_eq!(state.frame_times_ms.len(), FRAME_TIME_HISTORY_LEN);
+        // Oldest should be index 10 (first 10 evicted)
+        assert!((state.frame_times_ms[0] - 10.0).abs() < f32::EPSILON);
     }
 }

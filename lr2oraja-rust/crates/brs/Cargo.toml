@@ -35,3 +35,4 @@ tracing-subscriber.workspace = true
 kira.workspace = true
 hound.workspace = true
 tempfile.workspace = true
+arboard.workspace = true

@@ -532,10 +532,7 @@ fn get_tests() -> Vec<(&'static str, fn())> {
             test_render_ecfn_result_clear,
         ),
         ("test_render_ecfn_result_fail", test_render_ecfn_result_fail),
-        (
-            "test_render_blend_additive",
-            test_render_blend_additive,
-        ),
+        ("test_render_blend_additive", test_render_blend_additive),
         ("test_render_rotation", test_render_rotation),
         ("test_render_fade_midpoint", test_render_fade_midpoint),
         (

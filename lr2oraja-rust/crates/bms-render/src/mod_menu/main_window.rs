@@ -28,6 +28,18 @@ pub fn render(ctx: &egui::Context, state: &mut ModMenuState) {
                 &mut state.show_window_settings,
                 "Show Window Settings Window",
             );
+
+            ui.separator();
+            ui.label("Rust Extensions");
+
+            ui.checkbox(
+                &mut state.show_gauge_visualizer,
+                "Show Gauge Visualizer Window",
+            );
+            ui.checkbox(&mut state.show_timer_display, "Show Timer Display Window");
+            ui.checkbox(&mut state.show_event_trace, "Show Event Trace Window");
+            ui.checkbox(&mut state.show_profiler, "Show Profiler Window");
+            ui.checkbox(&mut state.show_skin_options, "Show Skin Options Window");
         });
 
     if state.show_freq_trainer {
@@ -76,5 +88,24 @@ pub fn render(ctx: &egui::Context, state: &mut ModMenuState) {
             &mut state.show_window_settings,
             &mut state.window_settings,
         );
+    }
+    if state.show_gauge_visualizer {
+        menus::gauge_visualizer::render(
+            ctx,
+            &mut state.show_gauge_visualizer,
+            &mut state.gauge_visualizer,
+        );
+    }
+    if state.show_timer_display {
+        menus::timer_display::render(ctx, &mut state.show_timer_display, &mut state.timer_display);
+    }
+    if state.show_event_trace {
+        menus::event_trace::render(ctx, &mut state.show_event_trace, &mut state.event_trace);
+    }
+    if state.show_profiler {
+        menus::profiler::render(ctx, &mut state.show_profiler, &mut state.profiler);
+    }
+    if state.show_skin_options {
+        menus::skin_options::render(ctx, &mut state.show_skin_options, &mut state.skin_options);
     }
 }

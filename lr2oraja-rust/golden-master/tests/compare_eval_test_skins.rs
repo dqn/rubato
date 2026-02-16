@@ -52,7 +52,11 @@ fn find_command<'a>(snapshot: &'a RenderSnapshot, name: &str) -> &'a DrawCommand
 
 /// Assert x coordinate of a visible command within tolerance.
 fn assert_x_approx(cmd: &DrawCommand, expected: f32, tolerance: f32) {
-    assert!(cmd.visible, "Expected '{}' to be visible", cmd.name.as_deref().unwrap_or("?"));
+    assert!(
+        cmd.visible,
+        "Expected '{}' to be visible",
+        cmd.name.as_deref().unwrap_or("?")
+    );
     let dst = cmd.dst.as_ref().expect("Visible command should have dst");
     assert!(
         (dst.x - expected).abs() <= tolerance,
@@ -243,16 +247,28 @@ fn draw_conditions_visibility() {
     let snapshot = capture_render_snapshot(&skin, &provider);
 
     let pos_true = find_command(&snapshot, "pos_true");
-    assert!(pos_true.visible, "draw=1 with bool(1)=true should be visible");
+    assert!(
+        pos_true.visible,
+        "draw=1 with bool(1)=true should be visible"
+    );
 
     let pos_false = find_command(&snapshot, "pos_false");
-    assert!(!pos_false.visible, "draw=2 with bool(2)=false should be hidden");
+    assert!(
+        !pos_false.visible,
+        "draw=2 with bool(2)=false should be hidden"
+    );
 
     let neg_false = find_command(&snapshot, "neg_false");
-    assert!(neg_false.visible, "draw=-3 with bool(3)=false should be visible (negated)");
+    assert!(
+        neg_false.visible,
+        "draw=-3 with bool(3)=false should be visible (negated)"
+    );
 
     let neg_true = find_command(&snapshot, "neg_true");
-    assert!(!neg_true.visible, "draw=-4 with bool(4)=true should be hidden (negated)");
+    assert!(
+        !neg_true.visible,
+        "draw=-4 with bool(4)=true should be hidden (negated)"
+    );
 }
 
 #[test]
@@ -269,10 +285,22 @@ fn draw_conditions_all_true() {
 
     let snapshot = capture_render_snapshot(&skin, &provider);
 
-    assert!(find_command(&snapshot, "pos_true").visible, "draw=1 should be visible");
-    assert!(find_command(&snapshot, "pos_false").visible, "draw=2 should be visible");
-    assert!(!find_command(&snapshot, "neg_false").visible, "draw=-3 should be hidden (negated true)");
-    assert!(!find_command(&snapshot, "neg_true").visible, "draw=-4 should be hidden (negated true)");
+    assert!(
+        find_command(&snapshot, "pos_true").visible,
+        "draw=1 should be visible"
+    );
+    assert!(
+        find_command(&snapshot, "pos_false").visible,
+        "draw=2 should be visible"
+    );
+    assert!(
+        !find_command(&snapshot, "neg_false").visible,
+        "draw=-3 should be hidden (negated true)"
+    );
+    assert!(
+        !find_command(&snapshot, "neg_true").visible,
+        "draw=-4 should be hidden (negated true)"
+    );
 }
 
 #[test]
@@ -289,8 +317,20 @@ fn draw_conditions_all_false() {
 
     let snapshot = capture_render_snapshot(&skin, &provider);
 
-    assert!(!find_command(&snapshot, "pos_true").visible, "draw=1 should be hidden");
-    assert!(!find_command(&snapshot, "pos_false").visible, "draw=2 should be hidden");
-    assert!(find_command(&snapshot, "neg_false").visible, "draw=-3 should be visible (negated false)");
-    assert!(find_command(&snapshot, "neg_true").visible, "draw=-4 should be visible (negated false)");
+    assert!(
+        !find_command(&snapshot, "pos_true").visible,
+        "draw=1 should be hidden"
+    );
+    assert!(
+        !find_command(&snapshot, "pos_false").visible,
+        "draw=2 should be hidden"
+    );
+    assert!(
+        find_command(&snapshot, "neg_false").visible,
+        "draw=-3 should be visible (negated false)"
+    );
+    assert!(
+        find_command(&snapshot, "neg_true").visible,
+        "draw=-4 should be visible (negated false)"
+    );
 }

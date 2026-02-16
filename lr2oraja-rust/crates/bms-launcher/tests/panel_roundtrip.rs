@@ -2,8 +2,7 @@
 // Verifies each LauncherPanel preserves configuration values through load/apply.
 
 use bms_config::{
-    Config, DisplayMode, DriverType, FrequencyType, IRConfig, PlayerConfig, Resolution,
-    SongPreview,
+    Config, DisplayMode, DriverType, FrequencyType, IRConfig, PlayerConfig, Resolution, SongPreview,
 };
 use bms_launcher::panels::{
     audio::AudioPanel, discord::DiscordPanel, input::InputPanel, ir::IrPanel,
@@ -115,7 +114,10 @@ fn input_panel_roundtrip() {
     let mode7 = &mut player_config.mode7;
     mode7.keyboard.duration = 32;
     mode7.keyboard.mouse_scratch_config.mouse_scratch_enabled = true;
-    mode7.keyboard.mouse_scratch_config.mouse_scratch_time_threshold = 200;
+    mode7
+        .keyboard
+        .mouse_scratch_config
+        .mouse_scratch_time_threshold = 200;
     mode7.keyboard.mouse_scratch_config.mouse_scratch_distance = 20;
     mode7.keyboard.mouse_scratch_config.mouse_scratch_mode = 1;
 
@@ -312,10 +314,7 @@ fn play_option_panel_roundtrip_global_fields() {
     assert_eq!(player_config_out.seven_to_nine_type, 1);
     assert_eq!(player_config_out.exit_press_duration, 2000);
     assert_eq!(player_config_out.targetid, "RATE_AAA");
-    assert_eq!(
-        player_config_out.autosavereplay,
-        Some(vec![1, 3, 5, 7])
-    );
+    assert_eq!(player_config_out.autosavereplay, Some(vec![1, 3, 5, 7]));
 }
 
 #[test]
@@ -475,10 +474,7 @@ fn discord_panel_roundtrip() {
     assert!(config_out.use_discord_rpc);
     assert_eq!(config_out.webhook_option, 2);
     assert_eq!(config_out.webhook_name, "TestBot");
-    assert_eq!(
-        config_out.webhook_avatar,
-        "https://example.com/avatar.png"
-    );
+    assert_eq!(config_out.webhook_avatar, "https://example.com/avatar.png");
     assert_eq!(config_out.webhook_url.len(), 2);
     assert_eq!(
         config_out.webhook_url[0],

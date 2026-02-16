@@ -55,6 +55,16 @@ pub trait AudioDriver: Send + Sync {
 
     /// Get the loading progress (0.0 - 1.0).
     fn progress(&self) -> f32;
+
+    /// Check if the audio driver needs recovery from accumulated errors.
+    fn needs_recovery(&self) -> bool {
+        false
+    }
+
+    /// Attempt to recover from audio failures (e.g., recreate the audio backend).
+    fn try_recover(&mut self) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// Compute the channel ID for a note + pitch combination.
@@ -248,5 +258,12 @@ mod tests {
         assert_eq!(driver.target_sample_rate, 44100);
         assert_eq!(driver.target_channels, 2);
         assert_eq!(driver.global_pitch(), 1.0);
+    }
+
+    #[test]
+    fn test_offline_driver_default_recovery() {
+        let mut driver = OfflineAudioDriver::new(44100, 2);
+        assert!(!driver.needs_recovery());
+        assert!(driver.try_recover().is_ok());
     }
 }

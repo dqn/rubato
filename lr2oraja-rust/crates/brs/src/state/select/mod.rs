@@ -4,6 +4,8 @@
 // and transitions to Decide when a song is selected.
 
 pub mod bar_manager;
+pub mod command;
+pub mod leaderboard;
 mod select_skin_state;
 
 use std::collections::HashMap;
@@ -16,6 +18,7 @@ use bms_database::SongInformation;
 use bms_database::song_data::{FAVORITE_CHART, FAVORITE_SONG};
 use bms_input::control_keys::ControlKeys;
 use bms_input::key_command::KeyCommand;
+use bms_rule::ScoreData;
 use bms_skin::property_id::{TIMER_FADEOUT, TIMER_STARTINPUT};
 
 use crate::app_state::AppStateType;
@@ -50,12 +53,20 @@ pub struct MusicSelectState {
     cached_song_info: Option<(String, SongInformation)>,
     /// Score lamp cache: sha256 → ClearType ID (0-10).
     score_lamp_cache: HashMap<String, i32>,
+    /// Score data cache: sha256 → ScoreData (for sorting by score-related fields).
+    score_data_cache: HashMap<String, ScoreData>,
     /// Whether the score cache needs refresh.
     score_cache_dirty: bool,
     /// Microsecond timestamp of the last cursor change (for preview delay).
     songbar_change_time: Option<i64>,
     /// Whether the preview for the current selection has already been triggered.
     preview_triggered: bool,
+    /// Receiver for asynchronous IR leaderboard fetch results.
+    /// Wrapped in `Mutex` to satisfy the `Sync` bound on `GameStateHandler`.
+    ir_fetch_receiver: Option<std::sync::Mutex<std::sync::mpsc::Receiver<Vec<Bar>>>>,
+    /// Command executor for music select commands (clipboard, replay, etc.).
+    #[allow(dead_code)] // Reserved for command system integration (not yet wired to input)
+    command_executor: command::CommandExecutor,
 }
 
 impl MusicSelectState {
@@ -72,9 +83,12 @@ impl MusicSelectState {
             scroll_angle: 0,
             cached_song_info: None,
             score_lamp_cache: HashMap::new(),
+            score_data_cache: HashMap::new(),
             score_cache_dirty: true,
             songbar_change_time: None,
             preview_triggered: false,
+            ir_fetch_receiver: None,
+            command_executor: command::CommandExecutor::new(),
         }
     }
 }
@@ -148,6 +162,17 @@ impl GameStateHandler for MusicSelectState {
     fn render(&mut self, ctx: &mut StateContext) {
         let now = ctx.timer.now_time();
 
+        // Check for completed IR leaderboard fetch
+        let received_bars = self
+            .ir_fetch_receiver
+            .as_ref()
+            .and_then(|mutex| mutex.lock().ok().and_then(|rx| rx.try_recv().ok()));
+        if let Some(bars) = received_bars {
+            self.bar_manager.replace_current_bars(bars);
+            self.score_cache_dirty = true;
+            self.ir_fetch_receiver = None;
+        }
+
         // Enable input after initial delay
         if now > DEFAULT_INPUT_DELAY_MS {
             ctx.timer.switch_timer(TIMER_STARTINPUT, true);
@@ -207,13 +232,21 @@ impl GameStateHandler for MusicSelectState {
                 let sha256_refs: Vec<&str> = sha256_list.iter().map(String::as_str).collect();
                 let mode = ctx.resource.play_mode.mode_id();
                 self.score_lamp_cache.clear();
+                self.score_data_cache.clear();
                 if let Ok(scores) = db.score_db.get_score_datas(&sha256_refs, mode) {
                     for sd in scores {
                         let lamp = sd.clear.id() as i32;
                         // Keep best (highest) clear per sha256
-                        let entry = self.score_lamp_cache.entry(sd.sha256).or_insert(0);
-                        if lamp > *entry {
-                            *entry = lamp;
+                        let lamp_entry =
+                            self.score_lamp_cache.entry(sd.sha256.clone()).or_insert(0);
+                        if lamp > *lamp_entry {
+                            *lamp_entry = lamp;
+                        }
+                        // Keep best score data per sha256 (by clear type)
+                        let score_entry =
+                            self.score_data_cache.entry(sd.sha256.clone()).or_default();
+                        if sd.clear.id() > score_entry.clear.id() {
+                            *score_entry = sd;
                         }
                     }
                 }
@@ -330,7 +363,8 @@ impl GameStateHandler for MusicSelectState {
                     ControlKeys::Num2 => {
                         // Cycle sort mode
                         self.sort_mode = self.sort_mode.next();
-                        self.bar_manager.sort(self.sort_mode);
+                        self.bar_manager
+                            .sort(self.sort_mode, &self.score_data_cache);
                         self.score_cache_dirty = true;
                         info!(sort = ?self.sort_mode, "MusicSelect: sort changed");
                         return;
@@ -351,7 +385,8 @@ impl GameStateHandler for MusicSelectState {
                             if let Some(mode_id) = self.mode_filter {
                                 self.bar_manager.filter_by_mode(Some(mode_id));
                             }
-                            self.bar_manager.sort(self.sort_mode);
+                            self.bar_manager
+                                .sort(self.sort_mode, &self.score_data_cache);
                             self.score_cache_dirty = true;
                         }
                         info!(filter = ?self.mode_filter, "MusicSelect: mode filter changed");
@@ -545,7 +580,14 @@ impl MusicSelectState {
                     }
                 }
             }
-            Some(Bar::Folder { .. }) => {
+            Some(Bar::Folder { .. })
+            | Some(Bar::TableRoot { .. })
+            | Some(Bar::HashFolder { .. })
+            | Some(Bar::Container { .. })
+            | Some(Bar::SameFolder { .. })
+            | Some(Bar::SearchWord { .. })
+            | Some(Bar::Command { .. })
+            | Some(Bar::ContextMenu(_)) => {
                 if let Some(db) = ctx.database {
                     self.bar_manager.enter_folder(&db.song_db);
                     self.score_cache_dirty = true;
@@ -556,14 +598,61 @@ impl MusicSelectState {
                     self.select_course(ctx, &course_data);
                 }
             }
-            Some(Bar::TableRoot { .. }) | Some(Bar::HashFolder { .. }) => {
-                if let Some(db) = ctx.database {
-                    self.bar_manager.enter_folder(&db.song_db);
-                    self.score_cache_dirty = true;
-                }
+            Some(Bar::LeaderBoard {
+                song_data,
+                from_lr2ir,
+            }) => {
+                let song_data = (**song_data).clone();
+                let from_lr2ir = *from_lr2ir;
+                self.enter_leaderboard(song_data, from_lr2ir);
+            }
+            // Selectable non-directory bars that don't navigate
+            Some(Bar::Executable { .. })
+            | Some(Bar::Function { .. })
+            | Some(Bar::Grade(_))
+            | Some(Bar::RandomCourse(_)) => {
+                // TODO: implement specific actions for these bar types
             }
             None => {}
         }
+    }
+
+    /// Enter the leaderboard for a song.
+    ///
+    /// Pushes the current bar list onto the folder stack, shows a loading
+    /// placeholder, and spawns a background thread to fetch IR rankings.
+    fn enter_leaderboard(&mut self, song_data: bms_database::SongData, from_lr2ir: bool) {
+        use bar_manager::FunctionAction;
+
+        // Push current bars and show loading placeholder
+        self.bar_manager.push_and_set_bars(vec![Bar::Function {
+            title: "Loading leaderboard...".to_string(),
+            subtitle: None,
+            display_bar_type: 5,
+            action: FunctionAction::None,
+            lamp: 0,
+        }]);
+
+        // Spawn background IR fetch
+        let (tx, rx) = std::sync::mpsc::channel();
+        self.ir_fetch_receiver = Some(std::sync::Mutex::new(rx));
+
+        let _song = song_data.clone();
+        std::thread::spawn(move || {
+            let bars = if from_lr2ir {
+                // TODO: integrate with LR2IRConnection when available
+                leaderboard::error_to_bars("IR connection not configured")
+            } else {
+                leaderboard::error_to_bars("Leaderboard source not available")
+            };
+            let _ = tx.send(bars);
+        });
+
+        info!(
+            title = %song_data.title,
+            from_lr2ir,
+            "MusicSelect: entering leaderboard"
+        );
     }
 
     fn select_course(&mut self, ctx: &mut StateContext, course_data: &bms_database::CourseData) {
@@ -853,6 +942,27 @@ mod tests {
 
         state.input(&mut ctx);
         assert_eq!(state.sort_mode(), SortMode::Level);
+
+        state.input(&mut ctx);
+        assert_eq!(state.sort_mode(), SortMode::Bpm);
+
+        state.input(&mut ctx);
+        assert_eq!(state.sort_mode(), SortMode::Length);
+
+        state.input(&mut ctx);
+        assert_eq!(state.sort_mode(), SortMode::Clear);
+
+        state.input(&mut ctx);
+        assert_eq!(state.sort_mode(), SortMode::Score);
+
+        state.input(&mut ctx);
+        assert_eq!(state.sort_mode(), SortMode::MissCount);
+
+        state.input(&mut ctx);
+        assert_eq!(state.sort_mode(), SortMode::Duration);
+
+        state.input(&mut ctx);
+        assert_eq!(state.sort_mode(), SortMode::LastUpdate);
 
         state.input(&mut ctx);
         assert_eq!(state.sort_mode(), SortMode::Default);

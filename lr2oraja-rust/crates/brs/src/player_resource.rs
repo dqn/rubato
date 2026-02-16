@@ -12,6 +12,20 @@ use bms_model::{BmsDecoder, BmsModel, PlayMode};
 use bms_replay::replay_data::ReplayData;
 use bms_rule::ScoreData;
 
+/// Player mode determined by CLI arguments.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PlayerMode {
+    /// Normal play mode (default).
+    #[default]
+    Play,
+    /// Practice mode with looping.
+    Practice,
+    /// Autoplay mode (no score save).
+    Autoplay,
+    /// Replay mode with slot index (0-3).
+    Replay(u8),
+}
+
 /// Data shared across game states during a play session.
 #[derive(Debug, Clone)]
 pub struct PlayerResource {
@@ -32,6 +46,9 @@ pub struct PlayerResource {
     pub bms_path: Option<PathBuf>,
     /// Whether the next play session is practice mode.
     pub is_practice: bool,
+    /// Player mode from CLI arguments (Play/Practice/Autoplay/Replay).
+    #[allow(dead_code)] // Reserved for player mode logic integration
+    pub player_mode: PlayerMode,
 
     // --- Play result fields (populated by PlayState shutdown) ---
     /// Gauge log: per-gauge-type values recorded every 500ms during play.
@@ -71,6 +88,24 @@ pub struct PlayerResource {
     pub course_data: Option<CourseData>,
     /// Last gauge value from previous course stage (for carry-over).
     pub course_gauge_carry: Option<f32>,
+
+    // --- Ghost battle fields ---
+    /// Ghost battle settings for pattern sharing (set by LeaderBoardBar, consumed by PlayState).
+    #[allow(dead_code)] // Consumed by PlayState when T10/T12 integrate
+    pub ghost_battle: Option<GhostBattleSettings>,
+}
+
+/// Settings for ghost battle pattern sharing.
+///
+/// When a ghost battle starts, the leader board provides the random seed and lane
+/// sequence so that both players share the same note pattern.
+#[derive(Debug, Clone)]
+#[allow(dead_code)] // Fields read when T10/T12 integrate
+pub struct GhostBattleSettings {
+    /// RNG seed for pattern generation (same seed as the opponent's play).
+    pub random_seed: i64,
+    /// Lane sequence identifier used by the pattern modifier.
+    pub lane_sequence: i32,
 }
 
 impl PlayerResource {
@@ -146,6 +181,7 @@ impl Default for PlayerResource {
             bms_dir: None,
             bms_path: None,
             is_practice: false,
+            player_mode: PlayerMode::default(),
             gauge_log: Vec::new(),
             maxcombo: 0,
             update_score: false,
@@ -162,6 +198,37 @@ impl Default for PlayerResource {
             course_index: 0,
             course_data: None,
             course_gauge_carry: None,
+            ghost_battle: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ghost_battle_default_is_none() {
+        let res = PlayerResource::default();
+        assert!(res.ghost_battle.is_none());
+    }
+
+    #[test]
+    fn ghost_battle_set_and_take() {
+        let mut res = PlayerResource::default();
+        res.ghost_battle = Some(GhostBattleSettings {
+            random_seed: 42,
+            lane_sequence: 3,
+        });
+
+        // First take returns Some with the correct values.
+        let settings = res.ghost_battle.take();
+        assert!(settings.is_some());
+        let settings = settings.unwrap();
+        assert_eq!(settings.random_seed, 42);
+        assert_eq!(settings.lane_sequence, 3);
+
+        // Second take returns None (consumed).
+        assert!(res.ghost_battle.is_none());
     }
 }

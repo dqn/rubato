@@ -1,4 +1,5 @@
 pub mod file_exporter;
+pub mod social_exporter;
 
 /// Information about a score for screenshot metadata.
 #[derive(Debug, Clone)]

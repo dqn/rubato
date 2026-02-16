@@ -12,6 +12,8 @@ serde_json.workspace = true
 tracing.workspace = true
 flate2.workspace = true
 tar.workspace = true
+zip.workspace = true
+delharc.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

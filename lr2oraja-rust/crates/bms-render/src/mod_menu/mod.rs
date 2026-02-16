@@ -14,9 +14,9 @@ use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPlugin};
 
 use self::menus::{
-    DownloadTaskState, FreqTrainerState, JudgeTrainerState, MiscSettingState,
-    PerformanceMonitorState, RandomTrainerState, SkinWidgetManagerState, SongManagerState,
-    WindowSettingsState,
+    DownloadTaskState, EventTraceState, FreqTrainerState, GaugeVisualizerState, JudgeTrainerState,
+    MiscSettingState, PerformanceMonitorState, ProfilerState, RandomTrainerState, SkinOptionsState,
+    SkinWidgetManagerState, SongManagerState, TimerDisplayState, WindowSettingsState,
 };
 use self::notify::NotificationState;
 
@@ -52,6 +52,11 @@ pub struct ModMenuState {
     pub show_skin_widget_manager: bool,
     pub show_performance_monitor: bool,
     pub show_window_settings: bool,
+    pub show_gauge_visualizer: bool,
+    pub show_timer_display: bool,
+    pub show_event_trace: bool,
+    pub show_profiler: bool,
+    pub show_skin_options: bool,
 
     // Trainer / menu states
     pub freq_trainer: FreqTrainerState,
@@ -63,6 +68,11 @@ pub struct ModMenuState {
     pub skin_widget_manager: SkinWidgetManagerState,
     pub performance_monitor: PerformanceMonitorState,
     pub window_settings: WindowSettingsState,
+    pub gauge_visualizer: GaugeVisualizerState,
+    pub timer_display: TimerDisplayState,
+    pub event_trace: EventTraceState,
+    pub profiler: ProfilerState,
+    pub skin_options: SkinOptionsState,
     pub notifications: NotificationState,
 
     // Input capture flag (set by render, read by game systems)

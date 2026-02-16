@@ -1,5 +1,6 @@
 use bms_config::{Config, DisplayMode, PlayerConfig, Resolution};
 
+use crate::monitor::{MonitorInfo, enumerate_monitors};
 use crate::panel::LauncherPanel;
 use crate::tab::Tab;
 use crate::widgets::clamped::clamped_i32;
@@ -41,6 +42,8 @@ pub struct VideoPanel {
     frameskip: i32,
     monitor_name: String,
     misslayer_duration: i32,
+    monitors: Vec<MonitorInfo>,
+    use_custom_monitor: bool,
     dirty: bool,
 }
 
@@ -48,6 +51,12 @@ impl Default for VideoPanel {
     fn default() -> Self {
         let config = Config::default();
         let player_config = PlayerConfig::default();
+        let monitors = enumerate_monitors();
+        let use_custom_monitor = monitors.is_empty()
+            || (!config.monitor_name.is_empty()
+                && !monitors
+                    .iter()
+                    .any(|m| m.to_config_string() == config.monitor_name));
         Self {
             displaymode: config.displaymode,
             resolution: config.resolution,
@@ -61,6 +70,8 @@ impl Default for VideoPanel {
             frameskip: config.frameskip,
             monitor_name: config.monitor_name.clone(),
             misslayer_duration: player_config.misslayer_duration,
+            monitors,
+            use_custom_monitor,
             dirty: false,
         }
     }
@@ -84,6 +95,13 @@ impl LauncherPanel for VideoPanel {
         self.frameskip = config.frameskip;
         self.monitor_name = config.monitor_name.clone();
         self.misslayer_duration = player_config.misslayer_duration;
+        self.monitors = enumerate_monitors();
+        self.use_custom_monitor = self.monitors.is_empty()
+            || (!config.monitor_name.is_empty()
+                && !self
+                    .monitors
+                    .iter()
+                    .any(|m| m.to_config_string() == config.monitor_name));
         self.dirty = false;
     }
 
@@ -202,11 +220,41 @@ impl LauncherPanel for VideoPanel {
         ui.separator();
         ui.label("Monitor");
         let prev = self.monitor_name.clone();
-        ui.horizontal(|ui| {
-            ui.label("Monitor Name:");
-            ui.text_edit_singleline(&mut self.monitor_name);
-        });
-        ui.small("Format: \"MonitorName [x, y]\" (leave empty for default)");
+        if !self.monitors.is_empty() && !self.use_custom_monitor {
+            let selected_label = if self.monitor_name.is_empty() {
+                "(Default)".to_string()
+            } else {
+                self.monitors
+                    .iter()
+                    .find(|m| m.to_config_string() == self.monitor_name)
+                    .map(|m| m.display_label())
+                    .unwrap_or_else(|| self.monitor_name.clone())
+            };
+            egui::ComboBox::from_label("Monitor")
+                .selected_text(&selected_label)
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.monitor_name, String::new(), "(Default)");
+                    for m in &self.monitors {
+                        ui.selectable_value(
+                            &mut self.monitor_name,
+                            m.to_config_string(),
+                            m.display_label(),
+                        );
+                    }
+                });
+            if ui.small_button("Custom...").clicked() {
+                self.use_custom_monitor = true;
+            }
+        } else {
+            ui.horizontal(|ui| {
+                ui.label("Monitor Name:");
+                ui.text_edit_singleline(&mut self.monitor_name);
+            });
+            ui.small("Format: \"MonitorName [x, y]\" (leave empty for default)");
+            if !self.monitors.is_empty() && ui.small_button("Select from list").clicked() {
+                self.use_custom_monitor = false;
+            }
+        }
         if self.monitor_name != prev {
             self.dirty = true;
         }

@@ -7,6 +7,7 @@ mod bevy_keyboard;
 pub mod database_manager;
 pub mod external_manager;
 mod game_state;
+mod hot_reload;
 pub mod input_mapper;
 mod player_resource;
 mod preview_music;
@@ -33,7 +34,7 @@ use database_manager::DatabaseManager;
 use external_manager::ExternalManager;
 use game_state::{SharedGameState, sync_timer_state};
 use input_mapper::InputMapper;
-use player_resource::PlayerResource;
+use player_resource::{PlayerMode, PlayerResource};
 use state::course_result::CourseResultState;
 use state::decide::MusicDecideState;
 use state::key_config::KeyConfigState;
@@ -65,6 +66,48 @@ struct Args {
     /// Skip the launcher GUI and start the game directly.
     #[arg(long)]
     no_launcher: bool,
+
+    /// Autoplay mode.
+    #[arg(short = 'a', long)]
+    autoplay: bool,
+
+    /// Practice mode.
+    #[arg(short = 'p', long)]
+    practice: bool,
+
+    /// Replay mode with slot number (0-3).
+    #[arg(short = 'r', long, value_name = "SLOT", value_parser = clap::value_parser!(u8).range(0..=3))]
+    replay: Option<u8>,
+
+    /// Normal play mode (default, explicit flag for scripting).
+    #[arg(short = 's', long)]
+    play: bool,
+
+    /// BMS file path (positional alternative to --bms).
+    #[arg(value_name = "BMS_PATH")]
+    bms_positional: Option<PathBuf>,
+}
+
+impl Args {
+    /// Resolve the player mode from CLI flags.
+    /// Priority: autoplay > practice > replay > play (default).
+    fn resolve_mode(&self) -> PlayerMode {
+        if self.autoplay {
+            PlayerMode::Autoplay
+        } else if self.practice {
+            PlayerMode::Practice
+        } else if let Some(slot) = self.replay {
+            PlayerMode::Replay(slot)
+        } else {
+            PlayerMode::Play
+        }
+    }
+
+    /// Resolve BMS path from --bms flag or positional argument.
+    /// --bms takes priority over positional.
+    fn resolve_bms_path(&self) -> Option<&PathBuf> {
+        self.bms.as_ref().or(self.bms_positional.as_ref())
+    }
 }
 
 fn main() -> Result<()> {
@@ -78,8 +121,11 @@ fn main() -> Result<()> {
     let args = Args::parse();
     info!("brs starting");
 
+    let player_mode = args.resolve_mode();
+    let bms_path = args.resolve_bms_path().cloned();
+
     // Launch settings GUI unless skipped
-    if !args.no_launcher && args.bms.is_none() {
+    if !args.no_launcher && bms_path.is_none() {
         match bms_launcher::run_launcher(&args.config, &args.player_config) {
             Ok(Some((_, _))) => {
                 info!("Launcher: user clicked Start Game");
@@ -95,8 +141,11 @@ fn main() -> Result<()> {
     }
 
     // Load BMS if specified
-    let mut resource = PlayerResource::default();
-    if let Some(bms_path) = &args.bms {
+    let mut resource = PlayerResource {
+        player_mode,
+        ..Default::default()
+    };
+    if let Some(bms_path) = &bms_path {
         info!(path = %bms_path.display(), "Loading BMS file");
         let model = bms_model::BmsDecoder::decode(bms_path)?;
         resource.play_mode = model.mode;
@@ -232,6 +281,7 @@ fn main() -> Result<()> {
         .add_systems(Update, timer_update_system)
         .add_systems(Update, state_machine_system)
         .add_systems(Update, state_sync_system)
+        .add_systems(Update, hot_reload::hot_reload_system)
         .add_systems(Update, window_manager::window_shortcut_system)
         .add_systems(Update, window_manager::apply_window_settings_system)
         .add_systems(PostStartup, window_manager::apply_monitor_selection_system)
@@ -426,5 +476,132 @@ fn state_sync_system(
         rs.bpm_events.clone_from(&shared_guard.bpm_events);
         rs.note_distribution
             .clone_from(&shared_guard.note_distribution);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_args(
+        bms: Option<&str>,
+        bms_positional: Option<&str>,
+        autoplay: bool,
+        practice: bool,
+        replay: Option<u8>,
+        play: bool,
+    ) -> Args {
+        Args {
+            bms: bms.map(PathBuf::from),
+            db_path: PathBuf::from("db"),
+            config: PathBuf::from("config_sys.json"),
+            player_config: PathBuf::from("config_player.json"),
+            no_launcher: false,
+            autoplay,
+            practice,
+            replay,
+            play,
+            bms_positional: bms_positional.map(PathBuf::from),
+        }
+    }
+
+    #[test]
+    fn resolve_mode_default_is_play() {
+        let args = make_args(None, None, false, false, None, false);
+        assert_eq!(args.resolve_mode(), PlayerMode::Play);
+    }
+
+    #[test]
+    fn resolve_mode_explicit_play_flag() {
+        let args = make_args(None, None, false, false, None, true);
+        assert_eq!(args.resolve_mode(), PlayerMode::Play);
+    }
+
+    #[test]
+    fn resolve_mode_autoplay() {
+        let args = make_args(None, None, true, false, None, false);
+        assert_eq!(args.resolve_mode(), PlayerMode::Autoplay);
+    }
+
+    #[test]
+    fn resolve_mode_practice() {
+        let args = make_args(None, None, false, true, None, false);
+        assert_eq!(args.resolve_mode(), PlayerMode::Practice);
+    }
+
+    #[test]
+    fn resolve_mode_replay() {
+        let args = make_args(None, None, false, false, Some(2), false);
+        assert_eq!(args.resolve_mode(), PlayerMode::Replay(2));
+    }
+
+    #[test]
+    fn resolve_mode_replay_slot_zero() {
+        let args = make_args(None, None, false, false, Some(0), false);
+        assert_eq!(args.resolve_mode(), PlayerMode::Replay(0));
+    }
+
+    #[test]
+    fn resolve_mode_replay_slot_three() {
+        let args = make_args(None, None, false, false, Some(3), false);
+        assert_eq!(args.resolve_mode(), PlayerMode::Replay(3));
+    }
+
+    #[test]
+    fn resolve_mode_autoplay_takes_priority_over_practice() {
+        let args = make_args(None, None, true, true, None, false);
+        assert_eq!(args.resolve_mode(), PlayerMode::Autoplay);
+    }
+
+    #[test]
+    fn resolve_mode_autoplay_takes_priority_over_replay() {
+        let args = make_args(None, None, true, false, Some(1), false);
+        assert_eq!(args.resolve_mode(), PlayerMode::Autoplay);
+    }
+
+    #[test]
+    fn resolve_mode_practice_takes_priority_over_replay() {
+        let args = make_args(None, None, false, true, Some(1), false);
+        assert_eq!(args.resolve_mode(), PlayerMode::Practice);
+    }
+
+    #[test]
+    fn resolve_bms_path_none_when_both_absent() {
+        let args = make_args(None, None, false, false, None, false);
+        assert!(args.resolve_bms_path().is_none());
+    }
+
+    #[test]
+    fn resolve_bms_path_from_flag() {
+        let args = make_args(Some("/path/to/song.bms"), None, false, false, None, false);
+        assert_eq!(
+            args.resolve_bms_path(),
+            Some(&PathBuf::from("/path/to/song.bms"))
+        );
+    }
+
+    #[test]
+    fn resolve_bms_path_from_positional() {
+        let args = make_args(None, Some("/path/to/song.bms"), false, false, None, false);
+        assert_eq!(
+            args.resolve_bms_path(),
+            Some(&PathBuf::from("/path/to/song.bms"))
+        );
+    }
+
+    #[test]
+    fn resolve_bms_path_flag_takes_priority() {
+        let args = make_args(
+            Some("/flag/song.bms"),
+            Some("/positional/song.bms"),
+            false,
+            false,
+            None,
+            false,
+        );
+        assert_eq!(
+            args.resolve_bms_path(),
+            Some(&PathBuf::from("/flag/song.bms"))
+        );
     }
 }

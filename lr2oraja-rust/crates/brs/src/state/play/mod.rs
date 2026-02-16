@@ -7,6 +7,7 @@ mod control_input;
 mod play_skin_state;
 pub mod pomyu_chara;
 pub mod practice;
+pub mod rhythm_timer;
 
 use tracing::{info, warn};
 

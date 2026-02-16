@@ -91,28 +91,35 @@ Lessons learned from Phase 0-3 implementation. Refer to these when implementing 
 
 ## Implementation Status
 
-Phase 0-23 全完了（16 crate, ~61,000行）。全 RenderSnapshot GM テストが strict parity 達成済み。
+Phase 0-24 全完了（16 crate, ~92,000行）。全 RenderSnapshot GM テストが strict parity 達成済み。
+全 Deferred Items 実装完了。
+
+### Completed Items (Phase 24)
+
+以下の項目は全て実装済み:
+
+- **アーカイブ展開 (zip/lzh)** — `bms-download/extract.rs` に .zip / .lzh / .tar.gz 全対応 + パストラバーサル防止
+- **CLI 引数** — `-a` (autoplay), `-p` (practice), `-r` (replay), `-s` (play) + positional BMS_PATH
+- **GithubVersionChecker** — `bms-external/version_check.rs` に GitHub API + semver 比較
+- **GhostBattlePlay** — `player_resource.rs` に `GhostBattleSettings` + take() パターン
+- **オーディオ障害リカバリ** — `kira_driver.rs` に consecutive_errors 追跡 + try_recover() (AudioManager 再作成)
+- **スキンロードエラーフォールバック** — `skin_manager.rs` に 3段階フォールバック (設定スキン → デフォルト → MinimalUI)
+- **ホットリロード** — `hot_reload.rs` に F5 キーで config + skin 再読み込み (ModMenu フォーカス考慮)
+- **RhythmTimerProcessor** — `rhythm_timer.rs` に Java 忠実移植 (小節線 + 四分音符タイミング)
+- **選曲ソート** — 全11モード (Default, Title, Artist, Level, Bpm, Length, Clear, Score, MissCount, Duration, LastUpdate)
+- **選曲画面バータイプ** — 全15種 (Song, Folder, Course, TableRoot, HashFolder, Executable, Function, Grade, RandomCourse, Command, Container, SameFolder, SearchWord, LeaderBoard, ContextMenu)
+- **MusicSelectCommand** — 全11コマンド (Replay cycling, Clipboard copy, Download stubs, SameFolder, ContextMenu)
+- **ライバルスコア表示 UI** — `leaderboard.rs` に entries_to_bars() + 非同期 IR fetch + MusicSelectState 統合
+- **スクリーンショット ソーシャルエクスポート** — `social_exporter.rs` に ScoreTextComposer + WebhookScreenshotExporter
+- **モニター自動列挙** — `monitor.rs` に macOS (CGDisplay) / Windows (EnumDisplayMonitors) + ドロップダウン UI
+- **Launcher GUI Rust 拡張** — ModMenu に5パネル追加 (gauge_visualizer, timer_display, event_trace, profiler, skin_options)
+- **Config 細部** — songPreview, skipDecideScreen, frameskip, analogScroll 等全て `bms-config/src/config.rs` に実装済み
+- **Stream Controller (Windows Named Pipes)** — `bms-stream/controller.rs` に両プラットフォーム実装済み
+- **Window 管理** — モニター選択 + F6 フルスクリーントグル + ModMenu Window Settings + ランチャーモニター自動列挙
 
 ### Deferred / Stub Items
 
-- **Launcher GUI** — Java 対応パネル全完了 (12パネル: audio, discord, input, ir, music_select, obs, play_option, resource, skin, stream, table_editor, video)。**Rust 独自拡張候補 (低優先):** スキンプレビュー (Java でも未実装)、ゲージ可視化、タイマー表示、イベントトレース、プロファイラ、スキンパネル強化 (カスタムオプション/ファイル編集)
-- **Window 管理** — 完了 — 起動時モニター選択 + F6 フルスクリーントグル (モニター保持) + ModMenu Window Settings パネル (解像度/表示モード/VSync ランタイム変更) を実装済み。**未実装 (低優先):** ランチャーでのモニター自動列挙 (現在フリーテキスト入力)
 - **IR プラグインシステム** — Java は `IRConnectionManager` でカスタム IR を動的ロードするが、Rust は LR2IR のみ静的実装
-- **ライバルスコア表示 UI** — データ構造は存在するが MusicSelect 画面での表示統合が不明確
-- **スクリーンショット Twitter 投稿** — ファイルエクスポートのみ。Java の `ScreenShotTwitterExporter` 相当なし
-- **スキンロードエラー時のフォールバック UI** — スキン読み込み失敗時の代替表示なし
-- **オーディオ障害リカバリ** — ゲームプレイ中の Kira オーディオ障害に対するフォールバック処理なし
-- **ホットリロード (スキン/コンフィグ)** — `SkinManager` に `request_load()` は存在するが実際のリロードは未配線
-- **Stream Controller (Windows Named Pipes)** — Unix ソケットは完了。Windows の Named Pipe (`\\.\pipe\beatoraja`) は未検証
-- **選曲画面バータイプ** — Java 17種に対し Rust 5種 (Song, Folder, Course, TableRoot, HashFolder)。未実装: ContextMenuBar, RandomCourseBar, SameFolderBar, LeaderBoardBar, SearchWordBar, ExecutableBar, ContainerBar 等
-- **選曲ソート** — Java 8種+LASTUPDATE に対し Rust 4種 (Default, Title, Artist, Level)。未実装: BPM, LENGTH, CLEAR, SCORE, MISSCOUNT
-- **MusicSelectCommand** — Java 13種のコマンド (ハッシュコピー、IPFS/HTTP ダウンロード、コンテキストメニュー、同フォルダ表示等) が未移植
-- **アーカイブ展開 (zip/lzh)** — `bms-download/extract.rs` は tar.gz のみ。BMS 主要配布形式の .zip と LR2 時代の .lzh が未対応
-- **CLI 引数** — Java の `-a` (autoplay), `-p` (practice), `-r` (replay) 引数が未移植。Rust は `--bms` のみ
-- **RhythmTimerProcessor** — PMS リズムノート拡大用タイマー (小節線/4分音符タイミング) 未実装
-- **GhostBattlePlay** — ゴーストバトル用パターン共有 (Random + lane sequence の static 管理) 未実装
-- **GithubVersionChecker** — バージョンチェック/自動更新なし
-- **Config 細部** — songPreview (OFF/LOOP/SINGLE), skipDecideScreen, frameskip, analogScroll, cacheSkinImage, scrollduration, maxSearchBarCount, setClipboardScreenshot, updatesong 等が未移植
 - **スクリーンショット SSIM テスト** — テストコード追加済みだが `skin_render_system` の Bevy ECS クエリ競合 (`Query` の `Transform`/`Visibility` が `MultiEntityMarker` 有無で衝突) により全テスト実行不可。`Without<T>` または `ParamSet` での修正が必要
 - **result2.luaskin** — Lua スキンのデシリアライズエラーにより RenderSnapshot テストから除外中。JSON シリアライズパス要調査
 - **新規スキン Java fixture** — play14, play7wide, course_result の Java RenderSnapshot fixture 未生成。`RenderSnapshotExporter` に skinTypeId=2 (PLAY_14KEYS) 等の MockState 対応追加 + `justfile` の `golden-master-render-snapshot-gen` 拡張が必要

@@ -69,16 +69,23 @@ pub fn sync_select_state(
             let mode_id = song_data.mode;
             sync_mode_flags(state, mode_id);
         }
-        Some(Bar::Folder { .. }) => {
+        Some(Bar::Folder { .. })
+        | Some(Bar::TableRoot { .. })
+        | Some(Bar::HashFolder { .. })
+        | Some(Bar::Container { .. })
+        | Some(Bar::SameFolder { .. }) => {
             state.booleans.insert(OPTION_FOLDERBAR, true);
             clear_song_metadata(state);
         }
-        Some(Bar::Course(_)) => {
-            // Course bars are not folders or songs
-            clear_song_metadata(state);
-        }
-        Some(Bar::TableRoot { .. }) | Some(Bar::HashFolder { .. }) => {
-            state.booleans.insert(OPTION_FOLDERBAR, true);
+        Some(Bar::Course(_))
+        | Some(Bar::Grade(_))
+        | Some(Bar::RandomCourse(_))
+        | Some(Bar::Executable { .. })
+        | Some(Bar::Function { .. })
+        | Some(Bar::Command { .. })
+        | Some(Bar::SearchWord { .. })
+        | Some(Bar::LeaderBoard { .. })
+        | Some(Bar::ContextMenu(_)) => {
             clear_song_metadata(state);
         }
         None => {
@@ -184,6 +191,73 @@ pub fn sync_bar_scroll_state(
                 bar_type: BarType::Folder,
                 title: name.clone(),
                 text_type: 1, // Folder type
+                ..Default::default()
+            },
+            Bar::Executable { name, .. } => BarSlotData {
+                bar_type: BarType::Song { exists: true },
+                title: name.clone(),
+                text_type: 0, // Song type
+                ..Default::default()
+            },
+            Bar::Function {
+                title,
+                display_bar_type,
+                ..
+            } => BarSlotData {
+                bar_type: BarType::Function {
+                    display_bar_type: *display_bar_type,
+                    display_text_type: 5,
+                },
+                title: title.clone(),
+                text_type: 5, // Function type
+                ..Default::default()
+            },
+            Bar::Grade(grade_data) => BarSlotData {
+                bar_type: BarType::Grade { all_songs: true },
+                title: grade_data.name.clone(),
+                text_type: 2, // Grade type
+                ..Default::default()
+            },
+            Bar::RandomCourse(rc) => BarSlotData {
+                bar_type: BarType::Grade { all_songs: true },
+                title: rc.name.clone(),
+                text_type: 2, // Grade type
+                ..Default::default()
+            },
+            Bar::Command { name, .. } => BarSlotData {
+                bar_type: BarType::Command,
+                title: name.clone(),
+                text_type: 3, // Command type
+                ..Default::default()
+            },
+            Bar::Container { name, .. } => BarSlotData {
+                bar_type: BarType::Folder,
+                title: name.clone(),
+                text_type: 1, // Folder type
+                ..Default::default()
+            },
+            Bar::SameFolder { name, .. } => BarSlotData {
+                bar_type: BarType::Folder,
+                title: name.clone(),
+                text_type: 1, // Folder type
+                ..Default::default()
+            },
+            Bar::SearchWord { query } => BarSlotData {
+                bar_type: BarType::Search,
+                title: query.clone(),
+                text_type: 4, // Search type
+                ..Default::default()
+            },
+            Bar::LeaderBoard { song_data, .. } => BarSlotData {
+                bar_type: BarType::Song { exists: true },
+                title: song_data.title.clone(),
+                text_type: 0, // Song type
+                ..Default::default()
+            },
+            Bar::ContextMenu(cm) => BarSlotData {
+                bar_type: BarType::Command,
+                title: cm.source_bar.bar_name().to_string(),
+                text_type: 3, // Command type
                 ..Default::default()
             },
         };
