@@ -1,0 +1,1834 @@
+{
+  "skin_width" : 1920.0,
+  "skin_height" : 1080.0,
+  "time_ms" : 30000,
+  "commands" : [ {
+    "object_index" : 0,
+    "object_type" : "Image",
+    "name" : "sub_frame",
+    "visible" : true,
+    "dst" : {
+      "x" : 447.0,
+      "y" : 0.0,
+      "w" : 1740.0,
+      "h" : 1080.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 1,
+    "object_type" : "Image",
+    "name" : "PF_N",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 2,
+    "object_type" : "Image",
+    "name" : "PF_F",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 3,
+    "object_type" : "Image",
+    "name" : "PF_S",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 4,
+    "object_type" : "Image",
+    "name" : "GR_N",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 5,
+    "object_type" : "Image",
+    "name" : "GR_F",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 6,
+    "object_type" : "Image",
+    "name" : "GR_S",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 7,
+    "object_type" : "Image",
+    "name" : "GD_N",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 8,
+    "object_type" : "Image",
+    "name" : "GD_F",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 9,
+    "object_type" : "Image",
+    "name" : "GD_S",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 10,
+    "object_type" : "Image",
+    "name" : "BD_N",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 11,
+    "object_type" : "Image",
+    "name" : "BD_F",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 12,
+    "object_type" : "Image",
+    "name" : "BD_S",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 13,
+    "object_type" : "Image",
+    "name" : "PR_N",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 14,
+    "object_type" : "Image",
+    "name" : "PR_F",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 15,
+    "object_type" : "Image",
+    "name" : "PR_S",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 16,
+    "object_type" : "Image",
+    "name" : "FL_N",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 17,
+    "object_type" : "Image",
+    "name" : "FL_F",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 18,
+    "object_type" : "Image",
+    "name" : "FL_S",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 19,
+    "object_type" : "Image",
+    "name" : "lane-bg",
+    "visible" : true,
+    "dst" : {
+      "x" : 72.0,
+      "y" : 282.0,
+      "w" : 522.0,
+      "h" : 798.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 20,
+    "object_type" : "Image",
+    "name" : "-110",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 21,
+    "object_type" : "Image",
+    "name" : "liftcover",
+    "visible" : true,
+    "dst" : {
+      "x" : 77.0,
+      "y" : -506.0,
+      "w" : 512.0,
+      "h" : 793.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 22,
+    "object_type" : "Number",
+    "name" : "lift-value",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 23,
+    "object_type" : "Number",
+    "name" : "lanecover-green",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 24,
+    "object_type" : "Number",
+    "name" : "lanecover-duration",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 25,
+    "object_type" : "Image",
+    "name" : "black",
+    "visible" : true,
+    "dst" : {
+      "x" : 77.0,
+      "y" : 5.0,
+      "w" : 521.0,
+      "h" : 282.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 26,
+    "object_type" : "Image",
+    "name" : "background",
+    "visible" : true,
+    "dst" : {
+      "x" : 0.0,
+      "y" : 0.0,
+      "w" : 617.0,
+      "h" : 1080.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 27,
+    "object_type" : "Image",
+    "name" : "groove_flash",
+    "visible" : true,
+    "dst" : {
+      "x" : 584.0,
+      "y" : 142.0,
+      "w" : 20.0,
+      "h" : 20.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 0.19607843
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 28,
+    "object_type" : "Image",
+    "name" : "groove_flash",
+    "visible" : true,
+    "dst" : {
+      "x" : 584.0,
+      "y" : 142.0,
+      "w" : 20.0,
+      "h" : 20.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 0.19607843
+    },
+    "angle" : 0,
+    "blend" : 2,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 29,
+    "object_type" : "Number",
+    "name" : "nowbpm",
+    "visible" : true,
+    "dst" : {
+      "x" : 1204.0,
+      "y" : 91.0,
+      "w" : 39.0,
+      "h" : 25.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Number",
+      "value" : 120
+    }
+  }, {
+    "object_index" : 30,
+    "object_type" : "Number",
+    "name" : "hispeed",
+    "visible" : true,
+    "dst" : {
+      "x" : 411.0,
+      "y" : 70.0,
+      "w" : 26.0,
+      "h" : 24.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Number",
+      "value" : 1
+    }
+  }, {
+    "object_index" : 31,
+    "object_type" : "Number",
+    "name" : "hispeed-d",
+    "visible" : true,
+    "dst" : {
+      "x" : 473.0,
+      "y" : 70.0,
+      "w" : 26.0,
+      "h" : 24.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Number",
+      "value" : 0
+    }
+  }, {
+    "object_index" : 32,
+    "object_type" : "Number",
+    "name" : "ex_score",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 33,
+    "object_type" : "Image",
+    "name" : "timeleft-frame",
+    "visible" : true,
+    "dst" : {
+      "x" : 621.0,
+      "y" : 882.0,
+      "w" : 79.0,
+      "h" : 38.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 34,
+    "object_type" : "Number",
+    "name" : "timeleft-m",
+    "visible" : true,
+    "dst" : {
+      "x" : 616.0,
+      "y" : 883.0,
+      "w" : 16.0,
+      "h" : 16.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Number",
+      "value" : 0
+    }
+  }, {
+    "object_index" : 35,
+    "object_type" : "Number",
+    "name" : "timeleft-s",
+    "visible" : true,
+    "dst" : {
+      "x" : 660.0,
+      "y" : 883.0,
+      "w" : 16.0,
+      "h" : 16.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Number",
+      "value" : 0
+    }
+  }, {
+    "object_index" : 36,
+    "object_type" : "Image",
+    "name" : "freestage",
+    "visible" : true,
+    "dst" : {
+      "x" : 1071.0,
+      "y" : 1037.0,
+      "w" : 387.0,
+      "h" : 32.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 0.65686274
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 37,
+    "object_type" : "Image",
+    "name" : "keyflash-w",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 38,
+    "object_type" : "Image",
+    "name" : "keyflash-b",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 39,
+    "object_type" : "Image",
+    "name" : "keyflash-w",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 40,
+    "object_type" : "Image",
+    "name" : "keyflash-b",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 41,
+    "object_type" : "Image",
+    "name" : "keyflash-w",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 42,
+    "object_type" : "Image",
+    "name" : "keyflash-b",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 43,
+    "object_type" : "Image",
+    "name" : "keyflash-w",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 44,
+    "object_type" : "Image",
+    "name" : "turntable",
+    "visible" : true,
+    "dst" : {
+      "x" : 84.0,
+      "y" : 205.0,
+      "w" : 40.0,
+      "h" : 40.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 45,
+    "object_type" : "Image",
+    "name" : "keybeam-s",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 46,
+    "object_type" : "Image",
+    "name" : "keybeam-s",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 47,
+    "object_type" : "Image",
+    "name" : "keybeam-s",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 48,
+    "object_type" : "Image",
+    "name" : "keybeam-w",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 49,
+    "object_type" : "Image",
+    "name" : "keybeam-w",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 50,
+    "object_type" : "Image",
+    "name" : "keybeam-b",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 51,
+    "object_type" : "Image",
+    "name" : "keybeam-b",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 52,
+    "object_type" : "Image",
+    "name" : "keybeam-w",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 53,
+    "object_type" : "Image",
+    "name" : "keybeam-w",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 54,
+    "object_type" : "Image",
+    "name" : "keybeam-b",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 55,
+    "object_type" : "Image",
+    "name" : "keybeam-b",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 56,
+    "object_type" : "Image",
+    "name" : "keybeam-w",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 57,
+    "object_type" : "Image",
+    "name" : "keybeam-w",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 58,
+    "object_type" : "Image",
+    "name" : "keybeam-b",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 59,
+    "object_type" : "Image",
+    "name" : "keybeam-b",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 60,
+    "object_type" : "Image",
+    "name" : "keybeam-w",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 61,
+    "object_type" : "Image",
+    "name" : "keybeam-w",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 62,
+    "object_type" : "Image",
+    "name" : "glow_base",
+    "visible" : true,
+    "dst" : {
+      "x" : 77.0,
+      "y" : 295.0,
+      "w" : 512.0,
+      "h" : 59.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 0.5882353
+    },
+    "angle" : 0,
+    "blend" : 2,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 63,
+    "object_type" : "Image",
+    "name" : "glow_base",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 64,
+    "object_type" : "Image",
+    "name" : "15",
+    "visible" : true,
+    "dst" : {
+      "x" : 77.0,
+      "y" : 287.0,
+      "w" : 512.0,
+      "h" : 8.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 65,
+    "object_type" : "SkinNote",
+    "name" : "notes",
+    "visible" : true,
+    "dst" : {
+      "x" : 0.0,
+      "y" : 0.0,
+      "w" : 0.0,
+      "h" : 0.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 0.0
+    },
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 66,
+    "object_type" : "Image",
+    "name" : "110",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 67,
+    "object_type" : "Image",
+    "name" : "111",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 68,
+    "object_type" : "Image",
+    "name" : "112",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 69,
+    "object_type" : "Image",
+    "name" : "113",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 70,
+    "object_type" : "Image",
+    "name" : "114",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 71,
+    "object_type" : "Image",
+    "name" : "115",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 72,
+    "object_type" : "Image",
+    "name" : "116",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 73,
+    "object_type" : "Image",
+    "name" : "117",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 74,
+    "object_type" : "Image",
+    "name" : "hold-1",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 75,
+    "object_type" : "Image",
+    "name" : "hold-2",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 76,
+    "object_type" : "Image",
+    "name" : "hold-3",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 77,
+    "object_type" : "Image",
+    "name" : "hold-4",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 78,
+    "object_type" : "Image",
+    "name" : "hold-5",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 79,
+    "object_type" : "Image",
+    "name" : "hold-6",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 80,
+    "object_type" : "Image",
+    "name" : "hold-7",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 81,
+    "object_type" : "Image",
+    "name" : "hold-8",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 82,
+    "object_type" : "Slider",
+    "name" : "lanecover",
+    "visible" : true,
+    "dst" : {
+      "x" : 77.0,
+      "y" : 1080.0,
+      "w" : 512.0,
+      "h" : 793.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Slider",
+      "value" : 0.20000000298023224,
+      "direction" : 2
+    }
+  }, {
+    "object_index" : 83,
+    "object_type" : "SkinJudge",
+    "name" : "judge",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 84,
+    "object_type" : "Gauge",
+    "name" : "gauge",
+    "visible" : true,
+    "dst" : {
+      "x" : 53.0,
+      "y" : 135.0,
+      "w" : 530.0,
+      "h" : 33.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Gauge",
+      "value" : 0.0,
+      "nodes" : 50
+    }
+  }, {
+    "object_index" : 85,
+    "object_type" : "Gauge",
+    "name" : "gauge",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 86,
+    "object_type" : "Number",
+    "name" : "gaugevalue",
+    "visible" : true,
+    "dst" : {
+      "x" : 414.0,
+      "y" : 172.0,
+      "w" : 39.0,
+      "h" : 28.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Number",
+      "value" : 100
+    }
+  }, {
+    "object_index" : 87,
+    "object_type" : "Number",
+    "name" : "gaugevalue-d",
+    "visible" : true,
+    "dst" : {
+      "x" : 540.0,
+      "y" : 171.0,
+      "w" : 25.0,
+      "h" : 20.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Number",
+      "value" : 0
+    }
+  }, {
+    "object_index" : 88,
+    "object_type" : "SkinBGA",
+    "name" : "bga",
+    "visible" : true,
+    "dst" : {
+      "x" : 760.0,
+      "y" : 148.0,
+      "w" : 1010.0,
+      "h" : 720.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 89,
+    "object_type" : "Image",
+    "name" : "-110",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 90,
+    "object_type" : "Text",
+    "name" : "song-title",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 91,
+    "object_type" : "Text",
+    "name" : "artist",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 92,
+    "object_type" : "Text",
+    "name" : "folder",
+    "visible" : true,
+    "dst" : {
+      "x" : 1262.0,
+      "y" : 942.0,
+      "w" : 1000.0,
+      "h" : 13.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Text",
+      "content" : "",
+      "align" : 1
+    }
+  }, {
+    "object_index" : 93,
+    "object_type" : "Image",
+    "name" : "BGA_titleback",
+    "visible" : true,
+    "dst" : {
+      "x" : 948.0,
+      "y" : 192.0,
+      "w" : 632.0,
+      "h" : 632.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 0.5882353
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 94,
+    "object_type" : "Text",
+    "name" : "genre_big",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 95,
+    "object_type" : "Text",
+    "name" : "song-title_big",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 96,
+    "object_type" : "Text",
+    "name" : "song-title_sub",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 97,
+    "object_type" : "Text",
+    "name" : "artist_big",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 98,
+    "object_type" : "Image",
+    "name" : "BGA_titleback",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 99,
+    "object_type" : "Text",
+    "name" : "genre_big",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 100,
+    "object_type" : "Text",
+    "name" : "song-title_big",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 101,
+    "object_type" : "Text",
+    "name" : "song-title_sub",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 102,
+    "object_type" : "Text",
+    "name" : "artist_big",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 103,
+    "object_type" : "Slider",
+    "name" : "musicprogress",
+    "visible" : true,
+    "dst" : {
+      "x" : 42.0,
+      "y" : 1005.0,
+      "w" : 24.0,
+      "h" : 36.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 1.0
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Slider",
+      "value" : 1.0,
+      "direction" : 2
+    }
+  }, {
+    "object_index" : 104,
+    "object_type" : "Slider",
+    "name" : "musicprogress",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 105,
+    "object_type" : "Number",
+    "name" : "lanecover-value",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 106,
+    "object_type" : "Number",
+    "name" : "lanecover-green",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 107,
+    "object_type" : "Number",
+    "name" : "lanecover-duration",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 108,
+    "object_type" : "Image",
+    "name" : "loading",
+    "visible" : true,
+    "dst" : {
+      "x" : 139.0,
+      "y" : 417.0,
+      "w" : 379.0,
+      "h" : 50.0
+    },
+    "color" : {
+      "r" : 1.0,
+      "g" : 1.0,
+      "b" : 1.0,
+      "a" : 0.63529414
+    },
+    "angle" : 0,
+    "blend" : 0,
+    "detail" : {
+      "type" : "Image",
+      "source_index" : 0,
+      "frame_index" : 0
+    }
+  }, {
+    "object_index" : 109,
+    "object_type" : "Image",
+    "name" : "ready",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 110,
+    "object_type" : "Image",
+    "name" : "ready",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 111,
+    "object_type" : "Image",
+    "name" : "ready",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 112,
+    "object_type" : "Image",
+    "name" : "finish",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 113,
+    "object_type" : "Image",
+    "name" : "finish",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 114,
+    "object_type" : "Image",
+    "name" : "finish",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 115,
+    "object_type" : "Image",
+    "name" : "FC-header1",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 116,
+    "object_type" : "Image",
+    "name" : "FC-header2",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 117,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 118,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 119,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 120,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 121,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 122,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 123,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 124,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 125,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 126,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 127,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 128,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 129,
+    "object_type" : "Image",
+    "name" : "FC-glow",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 130,
+    "object_type" : "Image",
+    "name" : "FC-main1",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 131,
+    "object_type" : "Image",
+    "name" : "FC-main2",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 132,
+    "object_type" : "Image",
+    "name" : "FC-main3",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 133,
+    "object_type" : "Image",
+    "name" : "FC-main4",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 134,
+    "object_type" : "Image",
+    "name" : "FC-flash1",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 135,
+    "object_type" : "Image",
+    "name" : "FC-flash2",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 136,
+    "object_type" : "Image",
+    "name" : "FC-flash3",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 137,
+    "object_type" : "Image",
+    "name" : "FC-ring1",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 138,
+    "object_type" : "Image",
+    "name" : "FC-ring2",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 139,
+    "object_type" : "Image",
+    "name" : "FC-ring3",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 2
+  }, {
+    "object_index" : 140,
+    "object_type" : "Image",
+    "name" : "-111",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 141,
+    "object_type" : "Image",
+    "name" : "an_close1",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 142,
+    "object_type" : "Image",
+    "name" : "an_close2",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 143,
+    "object_type" : "Image",
+    "name" : "an_close3",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 144,
+    "object_type" : "Image",
+    "name" : "an_close4",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 145,
+    "object_type" : "Image",
+    "name" : "an_close5",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 146,
+    "object_type" : "Image",
+    "name" : "an_close6",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 147,
+    "object_type" : "Image",
+    "name" : "an_close7",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 148,
+    "object_type" : "Image",
+    "name" : "an_close8",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 149,
+    "object_type" : "Image",
+    "name" : "an_close9",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 150,
+    "object_type" : "Image",
+    "name" : "an_close10",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 151,
+    "object_type" : "Image",
+    "name" : "an_close11",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 152,
+    "object_type" : "Image",
+    "name" : "an_close12",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 153,
+    "object_type" : "Image",
+    "name" : "an_close13",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 154,
+    "object_type" : "Image",
+    "name" : "an_close14",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 155,
+    "object_type" : "Image",
+    "name" : "an_close15",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 156,
+    "object_type" : "Image",
+    "name" : "an_close16",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 157,
+    "object_type" : "Image",
+    "name" : "an_close17",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 158,
+    "object_type" : "Image",
+    "name" : "an_close18",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 159,
+    "object_type" : "Image",
+    "name" : "an_close19",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 160,
+    "object_type" : "Image",
+    "name" : "an_close20",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 161,
+    "object_type" : "Image",
+    "name" : "an_close21",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 162,
+    "object_type" : "Image",
+    "name" : "an_close22",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 163,
+    "object_type" : "Image",
+    "name" : "an_close23",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 164,
+    "object_type" : "Image",
+    "name" : "an_close24",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 165,
+    "object_type" : "Image",
+    "name" : "an_close25",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 166,
+    "object_type" : "Image",
+    "name" : "an_close26",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 167,
+    "object_type" : "Image",
+    "name" : "an_close27",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 168,
+    "object_type" : "Image",
+    "name" : "an_close28",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 169,
+    "object_type" : "Image",
+    "name" : "an_close29",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 170,
+    "object_type" : "Image",
+    "name" : "an_close30",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 171,
+    "object_type" : "Image",
+    "name" : "an_close31",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 172,
+    "object_type" : "Image",
+    "name" : "an_close32",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 173,
+    "object_type" : "Image",
+    "name" : "an_close33",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 174,
+    "object_type" : "Image",
+    "name" : "an_close34",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 175,
+    "object_type" : "Image",
+    "name" : "an_close35",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 176,
+    "object_type" : "Image",
+    "name" : "an_close36",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 177,
+    "object_type" : "Image",
+    "name" : "an_close37",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 178,
+    "object_type" : "Image",
+    "name" : "an_close38",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 179,
+    "object_type" : "Image",
+    "name" : "an_close39",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 180,
+    "object_type" : "Image",
+    "name" : "an_close40",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 181,
+    "object_type" : "Image",
+    "name" : "an_close41",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 182,
+    "object_type" : "Image",
+    "name" : "an_close42",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 183,
+    "object_type" : "Image",
+    "name" : "an_close43",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 184,
+    "object_type" : "Image",
+    "name" : "an_close44",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 185,
+    "object_type" : "Image",
+    "name" : "an_close45",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 186,
+    "object_type" : "Image",
+    "name" : "an_close46",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 187,
+    "object_type" : "Image",
+    "name" : "an_close47",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 188,
+    "object_type" : "Image",
+    "name" : "an_close48",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 189,
+    "object_type" : "Image",
+    "name" : "an_close49",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 190,
+    "object_type" : "Image",
+    "name" : "an_close50",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 191,
+    "object_type" : "Image",
+    "name" : "an_close51",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 192,
+    "object_type" : "Image",
+    "name" : "an_close52",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 193,
+    "object_type" : "Image",
+    "name" : "an_close53",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 194,
+    "object_type" : "Image",
+    "name" : "an_close54",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 195,
+    "object_type" : "Image",
+    "name" : "an_close55",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 196,
+    "object_type" : "Image",
+    "name" : "-110",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  }, {
+    "object_index" : 197,
+    "object_type" : "Image",
+    "name" : "-110",
+    "visible" : false,
+    "angle" : 0,
+    "blend" : 0
+  } ]
+}

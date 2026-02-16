@@ -1,0 +1,120 @@
+{
+  "metadata" : {
+    "title" : "BGA Timeline Test",
+    "subtitle" : "",
+    "artist" : "brs-test",
+    "sub_artist" : "",
+    "genre" : "Test",
+    "initial_bpm" : 120.0,
+    "judge_rank" : 2,
+    "judge_rank_type" : "BMS_RANK",
+    "total" : 300.0,
+    "total_type" : "BMS",
+    "play_level" : "1",
+    "difficulty" : 0,
+    "player" : 1,
+    "mode" : "beat-5k",
+    "mode_key_count" : 6,
+    "ln_type" : 0,
+    "lnmode" : 0,
+    "banner" : "",
+    "stagefile" : "",
+    "backbmp" : "",
+    "preview" : ""
+  },
+  "hashes" : {
+    "md5" : "ca05f554b15d7c406281100b0b02946b",
+    "sha256" : "1d1b5cbcbbc20a62e114d73afb98d75b2267496c344cbe8b5164137542f0ce9a"
+  },
+  "statistics" : {
+    "total_notes" : 4,
+    "total_notes_key" : 4,
+    "total_notes_long_key" : 0,
+    "total_notes_scratch" : 0,
+    "total_notes_long_scratch" : 0,
+    "total_notes_mine" : 0,
+    "min_bpm" : 120.0,
+    "max_bpm" : 120.0,
+    "timeline_count" : 6
+  },
+  "timelines" : [ {
+    "time_us" : 0,
+    "section" : 0.0,
+    "bpm" : 120.0,
+    "stop_us" : 0,
+    "notes" : [ ]
+  }, {
+    "time_us" : 2000000,
+    "section" : 1.0,
+    "bpm" : 120.0,
+    "stop_us" : 0,
+    "notes" : [ {
+      "lane" : 0,
+      "time_us" : 2000000,
+      "wav_id" : 0,
+      "type" : "Normal"
+    } ]
+  }, {
+    "time_us" : 4000000,
+    "section" : 2.0,
+    "bpm" : 120.0,
+    "stop_us" : 0,
+    "notes" : [ {
+      "lane" : 0,
+      "time_us" : 4000000,
+      "wav_id" : 0,
+      "type" : "Normal"
+    } ]
+  }, {
+    "time_us" : 5000000,
+    "section" : 2.5,
+    "bpm" : 120.0,
+    "stop_us" : 0,
+    "notes" : [ ]
+  }, {
+    "time_us" : 6000000,
+    "section" : 3.0,
+    "bpm" : 120.0,
+    "stop_us" : 0,
+    "notes" : [ {
+      "lane" : 0,
+      "time_us" : 6000000,
+      "wav_id" : 0,
+      "type" : "Normal"
+    } ]
+  }, {
+    "time_us" : 8000000,
+    "section" : 4.0,
+    "bpm" : 120.0,
+    "stop_us" : 0,
+    "notes" : [ {
+      "lane" : 0,
+      "time_us" : 8000000,
+      "wav_id" : 0,
+      "type" : "Normal"
+    } ]
+  } ],
+  "notes" : [ {
+    "lane" : 0,
+    "time_us" : 2000000,
+    "wav_id" : 0,
+    "type" : "Normal"
+  }, {
+    "lane" : 0,
+    "time_us" : 4000000,
+    "wav_id" : 0,
+    "type" : "Normal"
+  }, {
+    "lane" : 0,
+    "time_us" : 6000000,
+    "wav_id" : 0,
+    "type" : "Normal"
+  }, {
+    "lane" : 0,
+    "time_us" : 8000000,
+    "wav_id" : 0,
+    "type" : "Normal"
+  } ],
+  "bpm_changes" : [ ],
+  "stop_events" : [ ]
+}

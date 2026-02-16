@@ -1,0 +1,92 @@
+{
+  "metadata" : {
+    "title" : "Extra Note BG Test",
+    "subtitle" : "",
+    "artist" : "brs-test",
+    "sub_artist" : "",
+    "genre" : "Test",
+    "initial_bpm" : 120.0,
+    "judge_rank" : 2,
+    "judge_rank_type" : "BMS_RANK",
+    "total" : 300.0,
+    "total_type" : "BMS",
+    "play_level" : "1",
+    "difficulty" : 0,
+    "player" : 1,
+    "mode" : "beat-5k",
+    "mode_key_count" : 6,
+    "ln_type" : 0,
+    "lnmode" : 0,
+    "banner" : "",
+    "stagefile" : "",
+    "backbmp" : "",
+    "preview" : ""
+  },
+  "hashes" : {
+    "md5" : "30cc554e8d60367c8553ca09bfcfca19",
+    "sha256" : "a2a73ecc73f075f810fb0c9dd115604a2e44d5b3b1eec4bd0cd2c071ed694cf9"
+  },
+  "statistics" : {
+    "total_notes" : 3,
+    "total_notes_key" : 3,
+    "total_notes_long_key" : 0,
+    "total_notes_scratch" : 0,
+    "total_notes_long_scratch" : 0,
+    "total_notes_mine" : 0,
+    "min_bpm" : 120.0,
+    "max_bpm" : 120.0,
+    "timeline_count" : 3
+  },
+  "timelines" : [ {
+    "time_us" : 0,
+    "section" : 0.0,
+    "bpm" : 120.0,
+    "stop_us" : 0,
+    "notes" : [ ]
+  }, {
+    "time_us" : 2000000,
+    "section" : 1.0,
+    "bpm" : 120.0,
+    "stop_us" : 0,
+    "notes" : [ {
+      "lane" : 0,
+      "time_us" : 2000000,
+      "wav_id" : 0,
+      "type" : "Normal"
+    }, {
+      "lane" : 2,
+      "time_us" : 2000000,
+      "wav_id" : 1,
+      "type" : "Normal"
+    }, {
+      "lane" : 4,
+      "time_us" : 2000000,
+      "wav_id" : 0,
+      "type" : "Normal"
+    } ]
+  }, {
+    "time_us" : 3000000,
+    "section" : 1.5,
+    "bpm" : 120.0,
+    "stop_us" : 0,
+    "notes" : [ ]
+  } ],
+  "notes" : [ {
+    "lane" : 0,
+    "time_us" : 2000000,
+    "wav_id" : 0,
+    "type" : "Normal"
+  }, {
+    "lane" : 2,
+    "time_us" : 2000000,
+    "wav_id" : 1,
+    "type" : "Normal"
+  }, {
+    "lane" : 4,
+    "time_us" : 2000000,
+    "wav_id" : 0,
+    "type" : "Normal"
+  } ],
+  "bpm_changes" : [ ],
+  "stop_events" : [ ]
+}
