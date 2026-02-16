@@ -39,12 +39,15 @@ pub struct VideoPanel {
     bga_expand: i32,
     max_frame_per_second: i32,
     frameskip: i32,
+    monitor_name: String,
+    misslayer_duration: i32,
     dirty: bool,
 }
 
 impl Default for VideoPanel {
     fn default() -> Self {
         let config = Config::default();
+        let player_config = PlayerConfig::default();
         Self {
             displaymode: config.displaymode,
             resolution: config.resolution,
@@ -56,6 +59,8 @@ impl Default for VideoPanel {
             bga_expand: config.bga_expand,
             max_frame_per_second: config.max_frame_per_second,
             frameskip: config.frameskip,
+            monitor_name: config.monitor_name.clone(),
+            misslayer_duration: player_config.misslayer_duration,
             dirty: false,
         }
     }
@@ -66,7 +71,7 @@ impl LauncherPanel for VideoPanel {
         Tab::Video
     }
 
-    fn load(&mut self, config: &Config, _player_config: &PlayerConfig) {
+    fn load(&mut self, config: &Config, player_config: &PlayerConfig) {
         self.displaymode = config.displaymode;
         self.resolution = config.resolution;
         self.use_resolution = config.use_resolution;
@@ -77,6 +82,8 @@ impl LauncherPanel for VideoPanel {
         self.bga_expand = config.bga_expand;
         self.max_frame_per_second = config.max_frame_per_second;
         self.frameskip = config.frameskip;
+        self.monitor_name = config.monitor_name.clone();
+        self.misslayer_duration = player_config.misslayer_duration;
         self.dirty = false;
     }
 
@@ -191,9 +198,33 @@ impl LauncherPanel for VideoPanel {
         if self.frameskip != prev {
             self.dirty = true;
         }
+
+        ui.separator();
+        ui.label("Monitor");
+        let prev = self.monitor_name.clone();
+        ui.horizontal(|ui| {
+            ui.label("Monitor Name:");
+            ui.text_edit_singleline(&mut self.monitor_name);
+        });
+        if self.monitor_name != prev {
+            self.dirty = true;
+        }
+
+        ui.separator();
+        let prev = self.misslayer_duration;
+        clamped_i32(
+            ui,
+            "Miss Layer Duration (ms)",
+            &mut self.misslayer_duration,
+            0,
+            5000,
+        );
+        if self.misslayer_duration != prev {
+            self.dirty = true;
+        }
     }
 
-    fn apply(&self, config: &mut Config, _player_config: &mut PlayerConfig) {
+    fn apply(&self, config: &mut Config, player_config: &mut PlayerConfig) {
         config.displaymode = self.displaymode;
         config.resolution = self.resolution;
         config.use_resolution = self.use_resolution;
@@ -204,6 +235,8 @@ impl LauncherPanel for VideoPanel {
         config.bga_expand = self.bga_expand;
         config.max_frame_per_second = self.max_frame_per_second;
         config.frameskip = self.frameskip;
+        config.monitor_name = self.monitor_name.clone();
+        player_config.misslayer_duration = self.misslayer_duration;
     }
 
     fn has_changes(&self) -> bool {
