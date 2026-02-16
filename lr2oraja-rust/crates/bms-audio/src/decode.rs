@@ -79,7 +79,10 @@ mod tests {
 
     #[test]
     fn test_resolve_audio_path_not_found() {
-        let dir = std::env::temp_dir().join("bms_audio_test_resolve");
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let id = COUNTER.fetch_add(1, Ordering::SeqCst);
+        let dir = std::env::temp_dir().join(format!("bms_audio_test_resolve_{}", id));
         let _ = fs::create_dir_all(&dir);
         assert!(resolve_audio_path(&dir, "nonexistent.wav").is_none());
         let _ = fs::remove_dir_all(&dir);
@@ -87,7 +90,10 @@ mod tests {
 
     #[test]
     fn test_resolve_audio_path_exact_match() {
-        let dir = std::env::temp_dir().join("bms_audio_test_resolve_exact");
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let id = COUNTER.fetch_add(1, Ordering::SeqCst);
+        let dir = std::env::temp_dir().join(format!("bms_audio_test_resolve_exact_{}", id));
         let _ = fs::create_dir_all(&dir);
 
         let file_path = dir.join("test.wav");
@@ -101,7 +107,10 @@ mod tests {
 
     #[test]
     fn test_resolve_audio_path_fallback() {
-        let dir = std::env::temp_dir().join("bms_audio_test_resolve_fallback");
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let id = COUNTER.fetch_add(1, Ordering::SeqCst);
+        let dir = std::env::temp_dir().join(format!("bms_audio_test_resolve_fallback_{}", id));
         let _ = fs::create_dir_all(&dir);
 
         // Only .ogg exists, but we search for .wav
