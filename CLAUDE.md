@@ -116,4 +116,13 @@ Phase 0-24 全完了（16 crate, ~92,000行）。全 RenderSnapshot GM テスト
 - **Stream Controller (Windows Named Pipes)** — `bms-stream/controller.rs` に両プラットフォーム実装済み
 - **Window 管理** — モニター選択 + F6 フルスクリーントグル + ModMenu Window Settings + ランチャーモニター自動列挙
 
+## Known Issues
 
+- **Mutex/RwLock unwrap():** std::sync の lock().unwrap() が 42箇所。parking_lot への移行でパニックリスク解消を推奨
+- **Config/State の過剰 clone():** 476箇所。Arc<Config> 等への移行余地あり
+- **bms-input の依存指定不一致:** 他 crate は workspace deps だが bms-input のみ inline path deps
+- **CI/CD 未整備:** GitHub Actions による自動テスト・Lint パイプラインなし
+- **エラーケーステスト不足:** 異常系テスト・プロパティベーステストの追加余地あり
+- **#[allow(dead_code)] 116箇所:** Phase 24 完了後に不要なものを整理可能
+- **ツール設定未整備:** .rustfmt.toml / clippy.toml が未作成
+- **ベンチマーク不足:** レンダリング・スキンロードのパフォーマンス測定なし
