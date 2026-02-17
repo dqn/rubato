@@ -1,7 +1,7 @@
 // System sound playback queue manager.
 
 /// System sound types for state transitions.
-#[allow(dead_code)] // Reserved for future audio system integration
+#[allow(dead_code)] // TODO: integrate with audio system
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SystemSound {
     Decide,
@@ -14,14 +14,14 @@ pub enum SystemSound {
 }
 
 /// Manages system sound playback queue.
-#[allow(dead_code)] // Reserved for future audio system integration
+#[allow(dead_code)] // TODO: integrate with audio system
 #[derive(Default)]
 pub struct SystemSoundManager {
     /// Queue of sounds to play this frame.
     queue: Vec<SystemSound>,
 }
 
-#[allow(dead_code)] // Reserved for future audio system integration
+#[allow(dead_code)] // TODO: integrate with audio system
 impl SystemSoundManager {
     pub fn new() -> Self {
         Self::default()

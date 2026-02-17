@@ -150,11 +150,11 @@ pub struct PlayState {
     pub(super) bga_processor: Option<BgaProcessor>,
 
     // Control state
-    #[allow(dead_code)]
+    #[allow(dead_code)] // TODO: integrate with play speed system
     pub(super) play_speed: i32,
     pub(super) key_beam_stop: bool,
     pub(super) assist: i32,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // TODO: integrate with judge timing system
     pub(super) is_judge_started: bool,
 
     // BPM tracking
@@ -180,31 +180,31 @@ pub struct PlayState {
 
 impl PlayState {
     /// Get the current play phase.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub fn phase(&self) -> PlayPhase {
         self.phase
     }
 
     /// Get the gauge log (recorded every 500ms, each entry = per-gauge-type values).
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub fn gauge_log(&self) -> &[Vec<f32>] {
         &self.gauge_log
     }
 
     /// Set autoplay mode.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub fn set_autoplay(&mut self, autoplay: bool) {
         self.is_autoplay = autoplay;
     }
 
     /// Get a reference to the BGA processor (for rendering).
-    #[allow(dead_code)]
+    #[allow(dead_code)] // TODO: integrate with Bevy rendering
     pub fn bga_processor(&self) -> Option<&BgaProcessor> {
         self.bga_processor.as_ref()
     }
 
     /// Set replay log (enables replay mode).
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub fn set_replay_log(&mut self, log: Vec<KeyInputLog>) {
         self.replay_log = log;
         self.is_replay = true;
@@ -684,14 +684,14 @@ fn gauge_type_from_i32(v: i32) -> GaugeType {
 #[cfg(test)]
 impl PlayState {
     /// Set manual key states for testing (bypasses InputProcessor).
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub(crate) fn set_key_states(&mut self, states: Vec<bool>, times: Vec<i64>) {
         self.key_states = states;
         self.key_changed_times = times;
     }
 
     /// Get the current gauge value.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub(crate) fn gauge_value(&self) -> f32 {
         self.gauge.as_ref().map_or(0.0, |g| g.value())
     }
@@ -712,7 +712,7 @@ impl PlayState {
     }
 
     /// Get the max combo from the judge manager.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub(crate) fn max_combo(&self) -> i32 {
         self.judge_manager.as_ref().map_or(0, |jm| jm.max_combo())
     }

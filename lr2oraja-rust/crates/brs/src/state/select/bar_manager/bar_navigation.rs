@@ -161,7 +161,7 @@ impl BarManager {
     }
 
     /// Load course data and add them as bars.
-    #[allow(dead_code)] // Used in tests and course mode
+    #[allow(dead_code)] // Used in tests
     pub fn add_courses(&mut self, courses: &[bms_database::CourseData]) {
         for course in courses {
             self.bars.push(Bar::Course(Box::new(course.clone())));

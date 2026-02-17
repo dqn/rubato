@@ -1,7 +1,7 @@
 /// BM controller key constants.
 ///
 /// Ported from Java `BMControllerInputProcessor.BMKeys`.
-#[allow(dead_code)]
+#[allow(dead_code)] // Parsed for completeness (BM controller key constants)
 pub mod bm_keys {
     pub const BUTTON_1: i32 = 0;
     pub const BUTTON_2: i32 = 1;

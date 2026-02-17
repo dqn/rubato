@@ -27,7 +27,7 @@ pub enum PracticeElement {
     OptionDP,
 }
 
-#[allow(dead_code)]
+#[allow(dead_code)] // Used in tests (via PracticeConfiguration)
 impl PracticeElement {
     /// All elements in display order for SP mode.
     const SP_ELEMENTS: [PracticeElement; 9] = [
@@ -109,10 +109,10 @@ const DOUBLE_NAMES: [&str; 2] = ["NORMAL", "FLIP"];
 const GRAPH_NAMES: [&str; 3] = ["NOTETYPE", "JUDGE", "EARLYLATE"];
 
 /// Key repeat threshold in milliseconds (initial delay).
-#[allow(dead_code)]
+#[allow(dead_code)] // TODO: integrate with key repeat system
 const KEY_REPEAT_DELAY_MS: i64 = 500;
 /// Key repeat interval in milliseconds.
-#[allow(dead_code)]
+#[allow(dead_code)] // TODO: integrate with key repeat system
 const KEY_REPEAT_INTERVAL_MS: i64 = 50;
 
 /// Practice configuration state — manages cursor, property, and key repeat.
@@ -135,7 +135,7 @@ pub struct PracticeConfiguration {
     config_dir: PathBuf,
 }
 
-#[allow(dead_code)]
+#[allow(dead_code)] // Used in tests
 impl PracticeConfiguration {
     /// Create a new practice configuration from a model.
     pub fn new(model: &BmsModel, config_dir: PathBuf) -> Self {
@@ -330,7 +330,7 @@ impl PracticeConfiguration {
 }
 
 /// Format milliseconds as "MM:SS.d".
-#[allow(dead_code)]
+#[allow(dead_code)] // Used in tests
 fn format_time_ms(ms: i32) -> String {
     let total_seconds = ms / 1000;
     let minutes = total_seconds / 60;

@@ -75,7 +75,7 @@ impl TimerManager {
 
     /// Returns elapsed microseconds since the given timer was activated.
     /// Returns 0 if the timer is OFF.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub fn now_micro_time_of(&self, id: i32) -> i64 {
         if self.is_timer_on(id) {
             self.now_micro_time - self.micro_timer(id)
@@ -106,7 +106,7 @@ impl TimerManager {
     }
 
     /// Deactivates a timer, setting it to `TIMER_OFF`.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub fn set_timer_off(&mut self, id: i32) {
         self.set_micro_timer(id, TIMER_OFF);
     }
@@ -132,13 +132,13 @@ impl TimerManager {
     }
 
     /// Sets or clears the frozen state. When frozen, `update()` does not advance time.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // TODO: integrate with pause/resume system
     pub fn set_frozen(&mut self, frozen: bool) {
         self.frozen = frozen;
     }
 
     /// Returns whether the timer is frozen.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub fn is_frozen(&self) -> bool {
         self.frozen
     }

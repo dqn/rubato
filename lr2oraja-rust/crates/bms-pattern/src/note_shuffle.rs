@@ -144,7 +144,7 @@ impl RandomizerImpl {
         }
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code)] // TODO: integrate with PatternModifier trait
     fn assist_level(&self) -> AssistLevel {
         match self {
             Self::SRandom(r) => r.assist,
@@ -272,7 +272,7 @@ impl TimeBasedState {
 
 struct SRandomizer {
     time_state: TimeBasedState,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Read via NoteShuffleStrategy::assist_level()
     assist: AssistLevel,
 }
 

@@ -17,7 +17,7 @@ pub(super) const NO_LN_END_JUDGE: usize = usize::MAX;
 #[derive(Debug, Clone)]
 pub(crate) struct LaneState {
     /// Lane index (reserved for future use)
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (lane index for debug/future use)
     pub(super) lane: usize,
     /// Whether this lane is a scratch lane
     pub(super) is_scratch: bool,

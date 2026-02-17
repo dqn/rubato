@@ -30,7 +30,7 @@ use bms_input::keyboard::KeyboardBackend;
 pub struct StateContext<'a> {
     pub timer: &'a mut TimerManager,
     pub resource: &'a mut PlayerResource,
-    #[allow(dead_code)] // Reserved for future state handlers needing config
+    #[allow(dead_code)] // TODO: integrate with state handlers needing config
     pub config: &'a Config,
     pub player_config: &'a mut PlayerConfig,
     /// Set this to request a state transition at the end of the frame.
@@ -42,17 +42,17 @@ pub struct StateContext<'a> {
     /// Input state for the current frame (control keys + commands).
     pub input_state: Option<&'a InputState>,
     /// Skin loading manager (None in tests or when skin system not available).
-    #[allow(dead_code)] // Used by state handlers in Phase 16 steps 2-5
+    #[allow(dead_code)] // TODO: integrate with skin load system
     pub skin_manager: Option<&'a mut SkinManager>,
     /// System sound playback manager (None in tests or when audio not available).
-    #[allow(dead_code)] // Used by state handlers in Phase 16 steps 2-5
+    #[allow(dead_code)] // TODO: integrate with system sound playback
     pub sound_manager: Option<&'a mut SystemSoundManager>,
     /// Characters typed this frame (from Bevy KeyboardInput events).
     pub received_chars: &'a [char],
     /// Bevy image assets for BGA loading (None in tests or when not available).
     pub bevy_images: Option<&'a mut bevy::prelude::Assets<bevy::prelude::Image>>,
     /// Shared game state for skin property synchronization (None in tests).
-    #[allow(dead_code)] // Used by state handlers in Phase 22 steps 2-6
+    #[allow(dead_code)] // TODO: integrate with remaining state handlers
     pub shared_state: Option<&'a mut SharedGameState>,
     /// Preview music processor for select screen (None in tests or non-select states).
     pub preview_music: Option<&'a mut PreviewMusicProcessor>,
@@ -79,6 +79,6 @@ pub trait GameStateHandler: Send + Sync {
     fn shutdown(&mut self, _ctx: &mut StateContext) {}
 
     /// Called for final cleanup (resource deallocation).
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (Java MainState lifecycle)
     fn dispose(&mut self) {}
 }

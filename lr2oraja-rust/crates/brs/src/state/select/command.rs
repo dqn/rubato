@@ -7,14 +7,14 @@
 use super::bar_manager::{Bar, BarManager};
 
 /// Maximum number of replay slots.
-#[allow(dead_code)] // Used in execute() logic
+#[allow(dead_code)] // Used in tests (via execute)
 const MAX_REPLAY: i32 = 4;
 
 /// Commands available on the music select screen.
 ///
 /// Matches the Java `MusicSelectCommand` enum variants.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)] // Reserved for command system integration (not yet wired to input)
+#[allow(dead_code)] // Used in tests
 pub enum MusicSelectCommand {
     /// Reset replay selection to the first available replay.
     ResetReplay,
@@ -44,9 +44,9 @@ pub enum MusicSelectCommand {
 ///
 /// Owns clipboard access and replay selection state.
 pub struct CommandExecutor {
-    #[allow(dead_code)] // Used in execute() and set_clipboard()
+    #[allow(dead_code)] // Used in tests (via execute)
     clipboard: Option<arboard::Clipboard>,
-    #[allow(dead_code)] // Used in execute() and selected_replay()
+    #[allow(dead_code)] // Used in tests (via execute/selected_replay)
     selected_replay: i32,
 }
 
@@ -59,13 +59,13 @@ impl CommandExecutor {
     }
 
     /// Returns the currently selected replay index.
-    #[allow(dead_code)] // Reserved for command system integration (not yet wired to input)
+    #[allow(dead_code)] // Used in tests
     pub fn selected_replay(&self) -> i32 {
         self.selected_replay
     }
 
     /// Execute a command against the current bar manager state.
-    #[allow(dead_code)] // Reserved for command system integration (not yet wired to input)
+    #[allow(dead_code)] // Used in tests
     pub fn execute(&mut self, cmd: MusicSelectCommand, bar_manager: &BarManager) {
         match cmd {
             MusicSelectCommand::ResetReplay => {
@@ -112,7 +112,7 @@ impl CommandExecutor {
         }
     }
 
-    #[allow(dead_code)] // Used in execute()
+    #[allow(dead_code)] // Used in tests (via execute)
     fn set_clipboard(&mut self, text: &str) {
         if let Some(cb) = &mut self.clipboard {
             if let Err(e) = cb.set_text(text.to_string()) {

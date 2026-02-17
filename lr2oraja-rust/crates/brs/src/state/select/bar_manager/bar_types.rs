@@ -40,7 +40,7 @@ impl SortMode {
 
 /// Action associated with a function bar.
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Most actions reserved for future implementation
+#[allow(dead_code)] // Parsed for completeness (Java FunctionAction enum)
 pub enum FunctionAction {
     None,
     Autoplay(Box<SongData>),
@@ -69,9 +69,9 @@ pub enum FunctionAction {
 #[derive(Debug, Clone)]
 pub struct GradeBarData {
     pub name: String,
-    #[allow(dead_code)] // Reserved for course system integration
+    #[allow(dead_code)] // TODO: integrate with course system
     pub course: CourseData,
-    #[allow(dead_code)] // Reserved for course system integration
+    #[allow(dead_code)] // TODO: integrate with course system
     pub constraints: Vec<CourseDataConstraint>,
 }
 
@@ -94,32 +94,32 @@ pub struct ContextMenuItem {
 pub enum Bar {
     // --- Selectable bars ---
     Song(Box<SongData>),
-    #[allow(dead_code)] // Used in tests and folder navigation
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     Folder {
         name: String,
         path: String,
     },
-    #[allow(dead_code)] // Used in tests and course selection
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     Course(Box<CourseData>),
-    #[allow(dead_code)] // Used in table folder display
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     TableRoot {
         name: String,
         folders: Vec<TableFolder>,
         courses: Vec<CourseData>,
     },
-    #[allow(dead_code)] // Used in table folder display
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     HashFolder {
         name: String,
         hashes: Vec<String>, // sha256 preferred, md5 fallback
     },
     /// Executable bar -- runs a set of songs (e.g., autoplay playlist).
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     Executable {
         name: String,
         songs: Vec<SongData>,
     },
     /// Function bar -- a generic action item (autoplay, practice, clipboard, etc.).
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     Function {
         title: String,
         subtitle: Option<String>,
@@ -128,43 +128,43 @@ pub enum Bar {
         lamp: i32,
     },
     /// Grade/dan-i bar -- wraps a course with grade constraints.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     Grade(Box<GradeBarData>),
     /// Random course bar -- selects random songs from SQL queries.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     RandomCourse(Box<RandomCourseData>),
     // --- Directory bars (expand into child bars on enter) ---
     /// Command bar -- executes a SQL query against the song DB.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     Command {
         name: String,
         sql: String,
     },
     /// Container bar -- holds an explicit list of child bars.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     Container {
         name: String,
         children: Vec<Bar>,
     },
     /// Same-folder bar -- finds songs sharing the same folder CRC.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     SameFolder {
         name: String,
         folder_crc: String,
     },
     /// Search word bar -- pre-configured text search.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     SearchWord {
         query: String,
     },
     /// Leaderboard bar -- shows rankings for a song.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     LeaderBoard {
         song_data: Box<SongData>,
         from_lr2ir: bool,
     },
     /// Context menu bar -- right-click actions for a bar.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (Java Bar enum)
     ContextMenu(Box<ContextMenuData>),
 }
 
@@ -194,7 +194,7 @@ impl Bar {
     ///
     /// 0 = Song, 1 = Folder/Directory, 2 = Grade/Course,
     /// 3 = Command, 4 = Search, 5 = Function/Other.
-    #[allow(dead_code)] // Reserved for skin DST field integration
+    #[allow(dead_code)] // Used in tests
     pub fn bar_display_type(&self) -> i32 {
         match self {
             Bar::Song(_) | Bar::Executable { .. } | Bar::LeaderBoard { .. } => 0,

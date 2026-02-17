@@ -12,11 +12,11 @@ use bms_skin::property_id::{
 };
 
 /// Timer check threshold (17ms ~= 1 frame at 60fps).
-#[allow(dead_code)] // Used in stub implementation, will be activated when integrated
+#[allow(dead_code)] // Used in tests (via update_timer)
 const TIMER_THRESHOLD: i64 = 17;
 
 /// Runtime state for PomyuChara animation transitions.
-#[allow(dead_code)] // Stub implementation, will be activated when integrated with Play state
+#[allow(dead_code)] // Used in tests
 pub struct PomyuCharaState {
     /// Cycle times per motion: [1P_NEUTRAL, 1P_FEVER, 1P_GREAT, 1P_GOOD, 1P_BAD, 2P_NEUTRAL, 2P_GREAT, 2P_BAD]
     pub cycle_times: [i32; 8],
@@ -38,7 +38,7 @@ impl Default for PomyuCharaState {
 
 impl PomyuCharaState {
     /// Initialize from skin's pomyu_chara_times.
-    #[allow(dead_code)] // Will be used when integrated with Play state
+    #[allow(dead_code)] // Used in tests
     pub fn from_skin_times(times: &[i32; 8]) -> Self {
         Self {
             cycle_times: *times,
@@ -47,7 +47,7 @@ impl PomyuCharaState {
     }
 
     /// Get cycle time for a timer index (0-7).
-    #[allow(dead_code)] // Used by update_timer, which will be activated when integrated
+    #[allow(dead_code)] // Used in tests (via update_timer)
     fn get_cycle_time(&self, index: i32) -> i32 {
         if index >= 0 && (index as usize) < self.cycle_times.len() {
             self.cycle_times[index as usize].max(1)
@@ -64,7 +64,7 @@ impl PomyuCharaState {
     /// `set_timer_off`: closure to turn off a timer
     /// `past_notes`: total processed notes
     /// `gauge_is_max`: whether the gauge is at max value
-    #[allow(dead_code)] // Will be called from Play state when integrated
+    #[allow(dead_code)] // Used in tests
     pub fn update_timer(
         &mut self,
         timer_on: &impl Fn(i32) -> bool,

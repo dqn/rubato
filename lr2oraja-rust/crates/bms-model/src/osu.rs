@@ -57,16 +57,16 @@ pub struct Events {
 pub struct TimingPoints {
     pub time: f32,
     pub beat_length: f32,
-    #[allow(dead_code)] // Parsed but not yet used in decoder
+    #[allow(dead_code)] // Parsed for completeness (osu! format field)
     pub meter: i32,
-    #[allow(dead_code)] // Parsed but not yet used in decoder
+    #[allow(dead_code)] // Parsed for completeness (osu! format field)
     pub sample_set: i32,
-    #[allow(dead_code)] // Parsed but not yet used in decoder
+    #[allow(dead_code)] // Parsed for completeness (osu! format field)
     pub sample_index: i32,
-    #[allow(dead_code)] // Parsed but not yet used in decoder
+    #[allow(dead_code)] // Parsed for completeness (osu! format field)
     pub volume: i32,
     pub uninherited: bool,
-    #[allow(dead_code)] // Parsed but not yet used in decoder
+    #[allow(dead_code)] // Parsed for completeness (osu! format field)
     pub effects: i32,
 }
 
@@ -99,14 +99,14 @@ pub struct HitSample {
 #[derive(Debug, Default, Clone)]
 pub struct HitObjects {
     pub x: i32,
-    #[allow(dead_code)] // Parsed but not yet used in decoder
+    #[allow(dead_code)] // Parsed for completeness (osu! format field)
     pub y: i32,
     pub time: i32,
     pub hit_type: i32,
-    #[allow(dead_code)] // Parsed but not yet used in decoder
+    #[allow(dead_code)] // Parsed for completeness (osu! format field)
     pub hit_sound: i32,
     pub object_params: Vec<String>,
-    #[allow(dead_code)] // Parsed but not yet used in decoder
+    #[allow(dead_code)] // Parsed for completeness (osu! format field)
     pub hit_sample: HitSample,
 }
 

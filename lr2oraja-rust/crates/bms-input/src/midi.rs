@@ -61,12 +61,12 @@ struct CcMapping {
 /// Ported from Java `MidiInputProcessor.java`.
 pub struct MidiInput {
     /// Active MIDI connections (kept alive to receive events).
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Kept alive to receive MIDI events via callbacks
     connections: Vec<midir::MidiInputConnection<()>>,
     /// Channel receiver for MIDI events from callbacks.
     event_rx: mpsc::Receiver<MidiEvent>,
     /// Channel sender cloned into callbacks.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Cloned into MIDI callbacks; kept alive for channel
     event_tx: mpsc::Sender<MidiEvent>,
     /// MIDI note -> key target mapping (128 entries, None = unmapped).
     note_key_map: [Option<KeyTarget>; MAX_KEYS],

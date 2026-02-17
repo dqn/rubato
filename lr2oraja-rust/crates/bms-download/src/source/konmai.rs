@@ -22,7 +22,7 @@ struct KonmaiResponse {
 
 /// Chart metadata from the Konmai API.
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
+#[allow(dead_code)] // Parsed for completeness (Konmai API response fields)
 struct ChartMeta {
     #[serde(default)]
     chart_name: Option<String>,

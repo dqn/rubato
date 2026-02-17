@@ -10,7 +10,7 @@ use bms_rule::ClearType;
 use super::bar_manager::{Bar, FunctionAction};
 
 /// Convert leaderboard entries to Function bars for display.
-#[allow(dead_code)] // Reserved for IR leaderboard UI integration
+#[allow(dead_code)] // Used in tests
 pub fn entries_to_bars(entries: &[LeaderboardEntry], song_data: &SongData) -> Vec<Bar> {
     if entries.is_empty() {
         return vec![Bar::Function {
@@ -56,7 +56,7 @@ pub fn error_to_bars(msg: &str) -> Vec<Bar> {
 }
 
 /// Convert a ClearType to a human-readable name.
-#[allow(dead_code)] // Used in entries_to_bars()
+#[allow(dead_code)] // Used in tests (via entries_to_bars)
 fn clear_type_name(clear: ClearType) -> &'static str {
     match clear {
         ClearType::NoPlay => "No Play",

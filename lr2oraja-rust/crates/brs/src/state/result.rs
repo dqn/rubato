@@ -247,7 +247,7 @@ impl ResultState {
         self.do_confirm(ctx);
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub(crate) fn cancel(&mut self, ctx: &mut StateContext) {
         self.do_cancel(ctx);
     }

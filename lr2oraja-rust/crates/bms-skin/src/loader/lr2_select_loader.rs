@@ -89,7 +89,7 @@ pub struct Lr2SelectState {
 }
 
 impl Lr2SelectState {
-    #[allow(dead_code)]
+    #[allow(dead_code)] // TODO: integrate with LR2 skin loader
     fn new() -> Self {
         Self {
             barimage: vec![None; 10],

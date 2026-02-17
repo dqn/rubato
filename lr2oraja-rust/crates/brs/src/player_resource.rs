@@ -36,7 +36,7 @@ pub struct PlayerResource {
     /// Active play mode.
     pub play_mode: PlayMode,
     /// Player configuration snapshot.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // TODO: integrate with state handlers
     pub player_config: PlayerConfig,
     /// Original gauge option (saved at Decide, may be modified during Play).
     pub org_gauge_option: i32,
@@ -47,7 +47,7 @@ pub struct PlayerResource {
     /// Whether the next play session is practice mode.
     pub is_practice: bool,
     /// Player mode from CLI arguments (Play/Practice/Autoplay/Replay).
-    #[allow(dead_code)] // Reserved for player mode logic integration
+    #[allow(dead_code)] // TODO: integrate with player mode logic
     pub player_mode: PlayerMode,
 
     // --- Play result fields (populated by PlayState shutdown) ---
@@ -58,7 +58,7 @@ pub struct PlayerResource {
     /// Whether this score should be saved (false for autoplay/replay).
     pub update_score: bool,
     /// Assist option flags.
-    #[allow(dead_code)] // Reserved for assist mode system
+    #[allow(dead_code)] // TODO: integrate with assist mode system
     pub assist: i32,
 
     // --- Result state fields ---
@@ -91,7 +91,7 @@ pub struct PlayerResource {
 
     // --- Ghost battle fields ---
     /// Ghost battle settings for pattern sharing (set by LeaderBoardBar, consumed by PlayState).
-    #[allow(dead_code)] // Consumed by PlayState when T10/T12 integrate
+    #[allow(dead_code)] // TODO: integrate with ghost battle system
     pub ghost_battle: Option<GhostBattleSettings>,
 }
 
@@ -100,7 +100,7 @@ pub struct PlayerResource {
 /// When a ghost battle starts, the leader board provides the random seed and lane
 /// sequence so that both players share the same note pattern.
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Fields read when T10/T12 integrate
+#[allow(dead_code)] // TODO: integrate with ghost battle system
 pub struct GhostBattleSettings {
     /// RNG seed for pattern generation (same seed as the opponent's play).
     pub random_seed: i64,

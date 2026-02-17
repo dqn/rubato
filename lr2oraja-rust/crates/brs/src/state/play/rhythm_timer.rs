@@ -15,7 +15,7 @@ use crate::timer_manager::TimerManager;
 ///
 /// Used during gameplay to drive `TIMER_RHYTHM` and track quarter-note
 /// timing for PMS rhythm note expansion.
-#[allow(dead_code)] // Reserved for PMS rhythm note expansion (not yet integrated)
+#[allow(dead_code)] // Used in tests
 pub struct RhythmTimerProcessor {
     /// Microsecond times of each section line (measure boundary).
     section_times: Vec<i64>,
@@ -36,7 +36,7 @@ impl RhythmTimerProcessor {
     ///
     /// When `use_quarter_note_time` is true (PMS/PopN9K mode), also computes
     /// quarter-note timing by subdividing sections at 0.25 intervals.
-    #[allow(dead_code)] // Reserved for PMS rhythm note expansion (not yet integrated)
+    #[allow(dead_code)] // Used in tests
     pub fn new(model: &BmsModel, use_quarter_note_time: bool) -> Self {
         let timelines = &model.timelines;
 
@@ -133,7 +133,7 @@ impl RhythmTimerProcessor {
     /// * `now_time_ms` - Current wall-clock milliseconds (from timer.now_time()).
     /// * `timer` - Timer manager for setting TIMER_RHYTHM.
     #[allow(clippy::too_many_arguments)] // Matches Java interface; refactoring deferred
-    #[allow(dead_code)] // Reserved for PMS rhythm note expansion (not yet integrated)
+    #[allow(dead_code)] // Used in tests
     pub fn update(
         &mut self,
         delta_time_us: i64,
@@ -178,7 +178,7 @@ impl RhythmTimerProcessor {
     }
 
     /// Returns the wall-clock millisecond time of the most recent quarter-note beat.
-    #[allow(dead_code)] // Reserved for PMS rhythm note expansion (not yet integrated)
+    #[allow(dead_code)] // Used in tests
     pub fn now_quarter_note_time(&self) -> i64 {
         self.now_quarter_note_time
     }

@@ -5,7 +5,7 @@
 //! the parsed chart data including [`TimeLine`], [`Note`], and [`BgNote`] collections.
 //! Other crates consume `BmsModel` as the single source of truth for chart information.
 
-#[allow(dead_code)]
+#[allow(dead_code)] // Parsed for completeness (full bmson format model)
 mod bmson;
 mod bmson_decode;
 mod decode_log;

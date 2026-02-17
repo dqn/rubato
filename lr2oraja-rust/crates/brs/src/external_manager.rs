@@ -13,7 +13,7 @@ use tracing::{info, warn};
 /// Holds a dedicated tokio `Runtime` because Bevy's main thread is synchronous.
 /// Each client is `Option` — `None` means the integration is disabled or failed to initialize.
 pub struct ExternalManager {
-    #[allow(dead_code)] // Used via runtime.enter() which doesn't count as a field read
+    #[allow(dead_code)] // Kept alive for runtime.enter() guard
     runtime: tokio::runtime::Runtime,
     discord: Option<DiscordRpcClient>,
     obs: Option<ObsListener>,

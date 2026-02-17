@@ -62,7 +62,7 @@ impl JavaRandom {
     /// Returns the next pseudorandom i64.
     ///
     /// Matches `java.util.Random.nextLong()`.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (java.util.Random API)
     pub fn next_long(&mut self) -> i64 {
         ((self.next(32) as i64) << 32) + self.next(32) as i64
     }
@@ -77,7 +77,7 @@ impl JavaRandom {
     /// Returns the next pseudorandom f64 in [0.0, 1.0).
     ///
     /// Matches `java.util.Random.nextDouble()`.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed for completeness (java.util.Random API)
     pub fn next_double(&mut self) -> f64 {
         let high = self.next(26) as i64;
         let low = self.next(27) as i64;

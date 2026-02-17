@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::play_config::PlayConfig;
 
 // LibGDX Keys constants
-#[allow(dead_code)]
+#[allow(dead_code)] // Parsed for completeness (LibGDX key code mapping)
 mod libgdx_keys {
     pub const Z: i32 = 54;
     pub const S: i32 = 47;
@@ -30,7 +30,7 @@ mod libgdx_keys {
 }
 
 // BMControllerInputProcessor.BMKeys constants
-#[allow(dead_code)]
+#[allow(dead_code)] // Parsed for completeness (BM controller key constants)
 mod bm_keys {
     pub const BUTTON_1: i32 = 0;
     pub const BUTTON_2: i32 = 1;

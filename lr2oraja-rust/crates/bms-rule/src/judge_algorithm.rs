@@ -22,7 +22,7 @@ pub enum JudgeAlgorithm {
 }
 
 /// The default set of algorithms used in standard play.
-#[allow(dead_code)] // Used by JudgeManager in Phase 11
+#[allow(dead_code)] // TODO: integrate with JudgeManager initialization
 pub const DEFAULT_ALGORITHMS: [JudgeAlgorithm; 3] = [
     JudgeAlgorithm::Combo,
     JudgeAlgorithm::Duration,
