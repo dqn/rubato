@@ -330,11 +330,7 @@ impl SongInformation {
         let mut mainbpm = model.initial_bpm;
         let mut max_count = 0;
         let mut sorted_bpm_counts: Vec<(u64, i32)> = bpm_note_count.into_iter().collect();
-        sorted_bpm_counts.sort_by(|a, b| {
-            f64::from_bits(a.0)
-                .partial_cmp(&f64::from_bits(b.0))
-                .unwrap()
-        });
+        sorted_bpm_counts.sort_by(|a, b| f64::from_bits(a.0).total_cmp(&f64::from_bits(b.0)));
         for (bpm_bits, count) in sorted_bpm_counts {
             if count >= max_count {
                 max_count = count;

@@ -161,7 +161,7 @@ impl BmsDecoder {
                     model.sub_artist = rest[10..].trim().to_string();
                 } else if upper.starts_with("BPM ") && !upper.starts_with("BPM0") {
                     // #BPM (initial BPM, not #BPMxx)
-                    model.initial_bpm = rest[4..].trim().parse().unwrap_or(130.0);
+                    model.initial_bpm = parse_finite_f64_or(rest[4..].trim(), 130.0);
                 } else if upper.starts_with("BPM")
                     && upper.len() >= 6
                     && upper.as_bytes().get(5).copied() == Some(b' ')
@@ -170,7 +170,7 @@ impl BmsDecoder {
                     // Use rest (original case) for ID to preserve base62 case sensitivity
                     if let (Some(id_str), Some(bpm_str)) = (rest.get(3..5), rest.get(6..)) {
                         let id = parse_id(id_str, model.base);
-                        let bpm: f64 = bpm_str.trim().parse().unwrap_or(0.0);
+                        let bpm = parse_finite_f64_or(bpm_str.trim(), 0.0);
                         extended_bpms.insert(id, bpm);
                     }
                 } else if let Some(rest) = upper.strip_prefix("RANK ") {
@@ -184,7 +184,7 @@ impl BmsDecoder {
                     model.judge_rank_raw = raw;
                     model.judge_rank_type = crate::model::JudgeRankType::BmsDefExRank;
                 } else if let Some(rest) = upper.strip_prefix("TOTAL ") {
-                    model.total = rest.trim().parse().unwrap_or(300.0);
+                    model.total = parse_finite_f64_or(rest.trim(), 300.0);
                     model.total_type = crate::model::TotalType::Bms;
                 } else if let Some(rest) = upper.strip_prefix("PLAYLEVEL ") {
                     model.play_level = rest.trim().parse().unwrap_or(0);
@@ -250,7 +250,7 @@ impl BmsDecoder {
                 } else if upper.starts_with("SCROLL") && upper.len() >= 8 {
                     if let (Some(id_str), Some(val_str)) = (rest.get(6..8), rest.get(8..)) {
                         let id = parse_id(id_str, model.base);
-                        let scroll: f64 = val_str.trim().parse().unwrap_or(1.0);
+                        let scroll = parse_finite_f64_or(val_str.trim(), 1.0);
                         scroll_defs.insert(id, scroll);
                     }
                 } else if let Some(event) = parse_channel_line(&upper, rest, model.base) {
@@ -306,7 +306,7 @@ impl BmsDecoder {
                             if let Some(line) = len_str
                                 && let Some(colon_pos) = line.find(':')
                             {
-                                let val: f64 = line[colon_pos + 1..].trim().parse().unwrap_or(1.0);
+                                let val = parse_finite_f64_or(line[colon_pos + 1..].trim(), 1.0);
                                 measure_lengths.insert(measure, val);
                             }
                         }
@@ -330,7 +330,7 @@ impl BmsDecoder {
                     let measure: u32 = measure_str.parse().unwrap_or(0);
                     let val: f64 = rest
                         .get(6..)
-                        .map(|s| s.trim().parse().unwrap_or(1.0))
+                        .map(|s| parse_finite_f64_or(s.trim(), 1.0))
                         .unwrap_or(1.0);
                     measure_lengths.insert(measure, val);
                 }
@@ -912,6 +912,13 @@ fn position_to_us(
 /// E.g., "B4" → base36: 11*36+4=400 → hex: 0xB4=180
 fn base36_to_hex(val: u16) -> u16 {
     (val / 36) * 16 + (val % 36)
+}
+
+fn parse_finite_f64_or(input: &str, default: f64) -> f64 {
+    match input.parse::<f64>() {
+        Ok(v) if v.is_finite() => v,
+        _ => default,
+    }
 }
 
 /// Parse base-36 two-character string to u16
@@ -1727,6 +1734,35 @@ mod tests {
 ";
         let model = decode_inline(bms);
         assert!((model.initial_bpm - 130.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_decode_nan_bpm_falls_back_to_default() {
+        let bms = "\
+#PLAYER 1
+#BPM NaN
+#WAV01 test.wav
+#00111:01
+";
+        let model = decode_inline(bms);
+        assert!((model.initial_bpm - 130.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_decode_nan_extended_bpm_is_not_nan() {
+        let bms = "\
+#PLAYER 1
+#BPM 120
+#BPM01 NaN
+#WAV01 test.wav
+#00108:01
+#00111:01
+";
+        let model = decode_inline(bms);
+        assert!(
+            model.bpm_changes.iter().all(|c| c.bpm.is_finite()),
+            "extended BPM changes should stay finite"
+        );
     }
 
     #[test]

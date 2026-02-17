@@ -800,6 +800,19 @@ mod tests {
         assert_eq!(sanitize_7z_entry_path(".").unwrap(), None);
     }
 
+    #[test]
+    fn test_ensure_7z_path_within_dest_rejects_parent_escape() {
+        let tmp = tempfile::tempdir().unwrap();
+        let extract_dir = tmp.path().join("out");
+        fs::create_dir_all(&extract_dir).unwrap();
+        let dest_canonical = extract_dir.canonicalize().unwrap();
+
+        // Defense in depth: reject escaped paths even if sanitization regresses.
+        let escaped = extract_dir.join("../evil.txt");
+        let result = ensure_7z_path_within_dest(&escaped, &dest_canonical, "../evil.txt");
+        assert!(result.is_err(), "escaped path should be rejected");
+    }
+
     /// Create a test directory with files and compress it to a .7z archive.
     fn create_test_7z(archive_path: &Path, files: &[(&str, &[u8])]) {
         let staging = archive_path.parent().unwrap().join("_7z_staging");
