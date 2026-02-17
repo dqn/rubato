@@ -70,6 +70,7 @@ claxon = "0.4"
 minimp3 = "0.5"
 ebur128 = "0.1"
 async-trait = "0.1"
+parking_lot = "0.12"
 
 quick-xml = { version = "0.37", features = ["serialize"] }
 uuid = { version = "1", features = ["v4"] }
@@ -88,6 +89,7 @@ arboard = "3"
 
 # Dev/test dependencies
 tempfile = "3"
+proptest = "1"
 wiremock = "0.6"
 image-compare = "0.4"
 glob = "0.3"

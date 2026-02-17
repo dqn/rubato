@@ -8,6 +8,6 @@ anyhow.workspace = true
 gilrs.workspace = true
 midir.workspace = true
 serde.workspace = true
-bms-config = { path = "../bms-config" }
-bms-replay = { path = "../bms-replay" }
-bms-model = { path = "../bms-model" }
+bms-config.workspace = true
+bms-replay.workspace = true
+bms-model.workspace = true
