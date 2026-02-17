@@ -1,7 +1,6 @@
 // Archive extraction
 //
-// Provides extraction for tar.gz, zip, and lzh/lha archives.
-// 7z support is omitted for now (would require sevenz-rust).
+// Provides extraction for tar.gz, zip, lzh/lha, and 7z archives.
 
 use std::fs::{self, File};
 use std::io::{self, BufReader};
@@ -109,12 +108,76 @@ pub fn extract_lzh(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Extract a .7z archive to the destination directory.
+///
+/// Validates that extracted paths do not escape the destination directory.
+pub fn extract_7z(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
+    let dest_canonical = dest_dir
+        .canonicalize()
+        .with_context(|| format!("failed to canonicalize {:?}", dest_dir))?;
+
+    sevenz_rust::decompress_file_with_extract_fn(archive_path, dest_dir, |entry, reader, dest| {
+        let entry_name = entry.name();
+
+        // Prevent path traversal: reject entries with ".." components
+        if entry_name.contains("..") {
+            return Err(sevenz_rust::Error::other(format!(
+                "path traversal detected in 7z archive: {entry_name:?}"
+            )));
+        }
+
+        // `dest` is already the full path including the entry name
+        let out_path = dest.to_path_buf();
+
+        // Additional check: ensure the resolved path stays within dest_dir.
+        if let Some(parent) = out_path.parent() {
+            fs::create_dir_all(parent).map_err(|e| sevenz_rust::Error::other(format!("{e}")))?;
+        }
+        let parent_canonical = out_path
+            .parent()
+            .unwrap_or(dest)
+            .canonicalize()
+            .unwrap_or_default();
+        let resolved = parent_canonical.join(out_path.file_name().unwrap_or_default());
+
+        if !resolved.starts_with(&dest_canonical) {
+            return Err(sevenz_rust::Error::other(format!(
+                "path traversal detected in 7z archive: {entry_name:?}"
+            )));
+        }
+
+        if entry.is_directory() {
+            fs::create_dir_all(&out_path).map_err(|e| sevenz_rust::Error::other(format!("{e}")))?;
+        } else {
+            if let Some(parent) = out_path.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| sevenz_rust::Error::other(format!("{e}")))?;
+            }
+            // Skip if this path already exists as a directory (can happen when
+            // compress_to_path includes directory entries that were already created
+            // as parents of files).
+            if !out_path.is_dir() {
+                let mut out_file = File::create(&out_path)
+                    .map_err(|e| sevenz_rust::Error::other(format!("{e}")))?;
+                io::copy(reader, &mut out_file)
+                    .map_err(|e| sevenz_rust::Error::other(format!("{e}")))?;
+            }
+        }
+
+        Ok(true)
+    })
+    .with_context(|| format!("failed to extract 7z archive {:?}", archive_path))?;
+
+    Ok(())
+}
+
 /// Detect archive format by extension and extract.
 ///
 /// Currently supports:
 /// - `.tar.gz`, `.tgz` — tar + gzip
 /// - `.zip` — zip
 /// - `.lzh`, `.lha` — LHA/LZH
+/// - `.7z` — 7-Zip
 ///
 /// Returns an error for unsupported formats.
 pub fn detect_and_extract(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
@@ -130,9 +193,11 @@ pub fn detect_and_extract(archive_path: &Path, dest_dir: &Path) -> anyhow::Resul
         extract_zip(archive_path, dest_dir)
     } else if name.ends_with(".lzh") || name.ends_with(".lha") {
         extract_lzh(archive_path, dest_dir)
+    } else if name.ends_with(".7z") {
+        extract_7z(archive_path, dest_dir)
     } else {
         bail!(
-            "unsupported archive format: {:?} (supported: .tar.gz, .tgz, .zip, .lzh, .lha)",
+            "unsupported archive format: {:?} (supported: .tar.gz, .tgz, .zip, .lzh, .lha, .7z)",
             archive_path
         )
     }
@@ -261,7 +326,7 @@ mod tests {
     #[test]
     fn test_detect_and_extract_unsupported() {
         let tmp = tempfile::tempdir().unwrap();
-        let path = tmp.path().join("test.7z");
+        let path = tmp.path().join("test.rar");
         File::create(&path).unwrap().write_all(b"fake").unwrap();
 
         let extract_dir = tmp.path().join("out");
@@ -528,5 +593,105 @@ mod tests {
 
         // Restore permissions for cleanup
         fs::set_permissions(&extract_dir, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    // --- 7z tests ---
+
+    /// Create a test directory with files and compress it to a .7z archive.
+    fn create_test_7z(archive_path: &Path, files: &[(&str, &[u8])]) {
+        let staging = archive_path.parent().unwrap().join("_7z_staging");
+        fs::create_dir_all(&staging).unwrap();
+
+        for (name, content) in files {
+            let file_path = staging.join(name);
+            if let Some(parent) = file_path.parent() {
+                fs::create_dir_all(parent).unwrap();
+            }
+            fs::write(&file_path, content).unwrap();
+        }
+
+        sevenz_rust::compress_to_path(&staging, archive_path).unwrap();
+        fs::remove_dir_all(&staging).unwrap();
+    }
+
+    #[test]
+    fn test_extract_7z_single_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let archive_path = tmp.path().join("test.7z");
+        let extract_dir = tmp.path().join("out");
+        fs::create_dir_all(&extract_dir).unwrap();
+
+        create_test_7z(&archive_path, &[("hello.txt", b"Hello from 7z!")]);
+
+        extract_7z(&archive_path, &extract_dir).unwrap();
+
+        let extracted = extract_dir.join("hello.txt");
+        assert!(extracted.exists(), "extracted file should exist");
+        assert_eq!(fs::read_to_string(&extracted).unwrap(), "Hello from 7z!");
+    }
+
+    #[test]
+    fn test_extract_7z_with_subdirectory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let archive_path = tmp.path().join("nested.7z");
+        let extract_dir = tmp.path().join("out");
+        fs::create_dir_all(&extract_dir).unwrap();
+
+        create_test_7z(&archive_path, &[("subdir/data.bms", b"bms data from 7z")]);
+
+        extract_7z(&archive_path, &extract_dir).unwrap();
+
+        let extracted = extract_dir.join("subdir/data.bms");
+        assert!(extracted.exists(), "nested file should exist");
+        assert_eq!(fs::read_to_string(&extracted).unwrap(), "bms data from 7z");
+    }
+
+    #[test]
+    #[ignore] // sevenz_rust::compress_to_path normalizes paths, making it impossible
+    // to create a 7z archive with ".." entries via filesystem API. The path
+    // traversal check is still in place and would reject such entries if
+    // they were present.
+    fn test_extract_7z_path_traversal() {
+        let tmp = tempfile::tempdir().unwrap();
+        let archive_path = tmp.path().join("evil.7z");
+        let extract_dir = tmp.path().join("out");
+        fs::create_dir_all(&extract_dir).unwrap();
+
+        // NOTE: This test setup doesn't work as intended because staging.join("..")
+        // is normalized to the parent directory, not a literal ".." directory name.
+        // We would need a lower-level 7z API to construct archives with path
+        // traversal entries, which sevenz_rust doesn't expose.
+        let staging = tmp.path().join("_evil_staging");
+        fs::create_dir_all(staging.join("..")).unwrap();
+        fs::write(staging.join("../evil.txt"), b"evil content").unwrap();
+        sevenz_rust::compress_to_path(&staging, &archive_path).unwrap();
+        fs::remove_dir_all(&staging).unwrap();
+
+        let result = extract_7z(&archive_path, &extract_dir);
+        assert!(
+            result.is_err(),
+            "path traversal entries should cause an error"
+        );
+        // The evil file should not exist outside extract_dir
+        assert!(
+            !tmp.path().join("evil.txt").exists(),
+            "traversal file should not be created outside dest"
+        );
+    }
+
+    #[test]
+    fn test_detect_and_extract_7z() {
+        let tmp = tempfile::tempdir().unwrap();
+        let archive_path = tmp.path().join("test.7z");
+        let extract_dir = tmp.path().join("out");
+        fs::create_dir_all(&extract_dir).unwrap();
+
+        create_test_7z(&archive_path, &[("detected.txt", b"detected via 7z")]);
+
+        detect_and_extract(&archive_path, &extract_dir).unwrap();
+
+        let extracted = extract_dir.join("detected.txt");
+        assert!(extracted.exists());
+        assert_eq!(fs::read_to_string(&extracted).unwrap(), "detected via 7z");
     }
 }
