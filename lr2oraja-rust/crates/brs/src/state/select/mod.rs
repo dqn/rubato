@@ -63,9 +63,9 @@ pub struct MusicSelectState {
     preview_triggered: bool,
     /// Receiver for asynchronous IR leaderboard fetch results.
     /// Wrapped in `Mutex` to satisfy the `Sync` bound on `GameStateHandler`.
-    ir_fetch_receiver: Option<std::sync::Mutex<std::sync::mpsc::Receiver<Vec<Bar>>>>,
+    ir_fetch_receiver: Option<parking_lot::Mutex<std::sync::mpsc::Receiver<Vec<Bar>>>>,
     /// Command executor for music select commands (clipboard, replay, etc.).
-    #[allow(dead_code)] // Reserved for command system integration (not yet wired to input)
+    #[allow(dead_code)] // TODO: integrate with input system
     command_executor: command::CommandExecutor,
 }
 
@@ -166,7 +166,7 @@ impl GameStateHandler for MusicSelectState {
         let received_bars = self
             .ir_fetch_receiver
             .as_ref()
-            .and_then(|mutex| mutex.lock().ok().and_then(|rx| rx.try_recv().ok()));
+            .and_then(|mutex| mutex.lock().try_recv().ok());
         if let Some(bars) = received_bars {
             self.bar_manager.replace_current_bars(bars);
             self.score_cache_dirty = true;
@@ -635,7 +635,7 @@ impl MusicSelectState {
 
         // Spawn background IR fetch
         let (tx, rx) = std::sync::mpsc::channel();
-        self.ir_fetch_receiver = Some(std::sync::Mutex::new(rx));
+        self.ir_fetch_receiver = Some(parking_lot::Mutex::new(rx));
 
         let _song = song_data.clone();
         std::thread::spawn(move || {

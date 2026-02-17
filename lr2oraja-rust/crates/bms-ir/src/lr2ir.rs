@@ -1,5 +1,5 @@
+use parking_lot::Mutex;
 use std::collections::HashMap;
-use std::sync::Mutex;
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -49,7 +49,7 @@ impl LR2IRConnection {
 
         // Check cache
         {
-            let cache = self.cache.lock().unwrap();
+            let cache = self.cache.lock();
             if let Some(cached) = cache.get(&request_body) {
                 return Ok(cached.clone());
             }
@@ -90,7 +90,7 @@ impl LR2IRConnection {
 
         // Store in cache
         {
-            let mut cache = self.cache.lock().unwrap();
+            let mut cache = self.cache.lock();
             cache.insert(request_body, entries.clone());
         }
 
@@ -404,7 +404,7 @@ mod tests {
     #[test]
     fn lr2ir_connection_default() {
         let conn = LR2IRConnection::default();
-        let cache = conn.cache.lock().unwrap();
+        let cache = conn.cache.lock();
         assert!(cache.is_empty());
     }
 

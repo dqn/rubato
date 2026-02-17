@@ -88,7 +88,7 @@ impl StateRegistry {
     }
 
     /// Returns the current active state type.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub fn current(&self) -> AppStateType {
         self.current
     }
@@ -219,7 +219,9 @@ impl StateRegistry {
 mod tests {
     use super::*;
     use crate::state::GameStateHandler;
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
+
+    use parking_lot::Mutex;
 
     /// Test helper that records lifecycle calls.
     #[derive(Default)]
@@ -230,22 +232,22 @@ mod tests {
 
     impl GameStateHandler for RecordingHandler {
         fn create(&mut self, ctx: &mut StateContext) {
-            self.log.lock().unwrap().push("create".to_string());
+            self.log.lock().push("create".to_string());
             if let Some(next) = self.transition_on_create {
                 *ctx.transition = Some(next);
             }
         }
         fn prepare(&mut self, _ctx: &mut StateContext) {
-            self.log.lock().unwrap().push("prepare".to_string());
+            self.log.lock().push("prepare".to_string());
         }
         fn render(&mut self, _ctx: &mut StateContext) {
-            self.log.lock().unwrap().push("render".to_string());
+            self.log.lock().push("render".to_string());
         }
         fn input(&mut self, _ctx: &mut StateContext) {
-            self.log.lock().unwrap().push("input".to_string());
+            self.log.lock().push("input".to_string());
         }
         fn shutdown(&mut self, _ctx: &mut StateContext) {
-            self.log.lock().unwrap().push("shutdown".to_string());
+            self.log.lock().push("shutdown".to_string());
         }
     }
 
@@ -296,7 +298,7 @@ mod tests {
         let mut params = make_params(&mut timer, &mut resource, &config, &mut player_config);
         reg.tick(&mut params);
 
-        let calls = log.lock().unwrap();
+        let calls = log.lock();
         assert_eq!(*calls, vec!["create", "prepare", "render", "input"]);
     }
 
@@ -328,14 +330,14 @@ mod tests {
         reg.tick(&mut params);
 
         // Clear logs
-        select_log.lock().unwrap().clear();
-        decide_log.lock().unwrap().clear();
+        select_log.lock().clear();
+        decide_log.lock().clear();
 
         // Manually trigger transition
         reg.change_state(AppStateType::Decide, &mut params);
 
-        assert!(select_log.lock().unwrap().contains(&"shutdown".to_string()));
-        let decide_calls = decide_log.lock().unwrap();
+        assert!(select_log.lock().contains(&"shutdown".to_string()));
+        let decide_calls = decide_log.lock();
         assert!(decide_calls.contains(&"create".to_string()));
         assert!(decide_calls.contains(&"prepare".to_string()));
         assert_eq!(reg.current(), AppStateType::Decide);

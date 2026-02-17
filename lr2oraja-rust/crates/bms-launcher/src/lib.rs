@@ -13,7 +13,9 @@ mod tab;
 mod widgets;
 
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+
+use parking_lot::Mutex;
 
 use anyhow::Result;
 use bms_config::{Config, PlayerConfig};
@@ -53,7 +55,7 @@ pub fn run_launcher(
     )
     .map_err(|e| anyhow::anyhow!("eframe error: {e}"))?;
 
-    let out = result.lock().unwrap().take();
+    let out = result.lock().take();
     Ok(out)
 }
 
@@ -68,7 +70,7 @@ impl eframe::App for AppWrapper {
         self.inner.update(ctx, frame);
 
         if self.inner.should_start_game {
-            *self.result.lock().unwrap() =
+            *self.result.lock() =
                 Some((self.inner.config.clone(), self.inner.player_config.clone()));
         }
     }

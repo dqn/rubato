@@ -4,7 +4,9 @@
 // the SkinStateProvider reads from. A sync system updates it each frame.
 
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+
+use parking_lot::RwLock;
 
 use bevy::prelude::{Handle, Image};
 use bms_config::Config;
@@ -44,13 +46,13 @@ pub struct SharedGameState {
 }
 
 /// SkinStateProvider implementation backed by SharedGameState.
-#[allow(dead_code)]
+#[allow(dead_code)] // Used in tests
 pub struct GameStateProvider {
     state: Arc<RwLock<SharedGameState>>,
 }
 
 impl GameStateProvider {
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Used in tests
     pub fn new(state: Arc<RwLock<SharedGameState>>) -> Self {
         Self { state }
     }
@@ -58,73 +60,73 @@ impl GameStateProvider {
 
 impl SkinStateProvider for GameStateProvider {
     fn timer_value(&self, timer: TimerId) -> Option<i64> {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.timers.get(&timer.0).copied()
     }
 
     fn integer_value(&self, id: IntegerId) -> i32 {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.integers.get(&id.0).copied().unwrap_or(0)
     }
 
     fn has_integer_value(&self, id: IntegerId) -> bool {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.integers.contains_key(&id.0)
     }
 
     fn float_value(&self, id: FloatId) -> f32 {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.floats.get(&id.0).copied().unwrap_or(0.0)
     }
 
     fn has_float_value(&self, id: FloatId) -> bool {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.floats.contains_key(&id.0)
     }
 
     fn string_value(&self, id: StringId) -> Option<String> {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.strings.get(&id.0).cloned()
     }
 
     fn boolean_value(&self, id: BooleanId) -> bool {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         let raw = state.booleans.get(&id.abs_id()).copied().unwrap_or(false);
         if id.is_negated() { !raw } else { raw }
     }
 
     fn has_boolean_value(&self, id: BooleanId) -> bool {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.booleans.contains_key(&id.abs_id())
     }
 
     fn now_time_ms(&self) -> i64 {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.now_time_ms
     }
 
     fn offset_value(&self, id: i32) -> SkinOffset {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.offsets.get(&id).copied().unwrap_or_default()
     }
 
     fn bga_image(&self) -> Option<Handle<Image>> {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.bga_image.clone()
     }
 
     fn layer_image(&self) -> Option<Handle<Image>> {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.layer_image.clone()
     }
 
     fn poor_image(&self) -> Option<Handle<Image>> {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.poor_image.clone()
     }
 
     fn is_poor_active(&self) -> bool {
-        let state = self.state.read().unwrap();
+        let state = self.state.read();
         state.poor_active
     }
 }
@@ -134,7 +136,7 @@ impl SkinStateProvider for GameStateProvider {
 /// Called once per frame to update the shared state snapshot
 /// that the renderer reads from.
 pub fn sync_timer_state(timer: &TimerManager, state: &Arc<RwLock<SharedGameState>>) {
-    let mut shared = state.write().unwrap();
+    let mut shared = state.write();
     shared.now_time_ms = timer.now_time();
 
     // Sync all standard timers
@@ -258,7 +260,7 @@ mod tests {
     #[test]
     fn timer_value_from_shared_state() {
         let state = make_state();
-        state.write().unwrap().timers.insert(1, 500);
+        state.write().timers.insert(1, 500);
 
         let provider = GameStateProvider::new(state);
         assert_eq!(provider.timer_value(TimerId(1)), Some(500));
@@ -268,7 +270,7 @@ mod tests {
     #[test]
     fn integer_value_from_shared_state() {
         let state = make_state();
-        state.write().unwrap().integers.insert(42, 123);
+        state.write().integers.insert(42, 123);
 
         let provider = GameStateProvider::new(state);
         assert_eq!(provider.integer_value(IntegerId(42)), 123);
@@ -278,7 +280,7 @@ mod tests {
     #[test]
     fn boolean_negation() {
         let state = make_state();
-        state.write().unwrap().booleans.insert(5, true);
+        state.write().booleans.insert(5, true);
 
         let provider = GameStateProvider::new(state);
         assert!(provider.boolean_value(BooleanId(5)));
@@ -296,7 +298,7 @@ mod tests {
         let state = make_state();
         sync_timer_state(&tm, &state);
 
-        let shared = state.read().unwrap();
+        let shared = state.read();
         assert_eq!(shared.now_time_ms, 15); // 15_000 / 1000
         // Timer 1 was set at 10_000, now is 15_000, elapsed = 5_000 us = 5 ms
         assert_eq!(shared.timers.get(&1), Some(&5));
@@ -317,7 +319,7 @@ mod tests {
     fn sync_common_state_populates_time() {
         let state_arc = make_state();
         let config = bms_config::Config::default();
-        let mut shared = state_arc.write().unwrap();
+        let mut shared = state_arc.write();
 
         sync_common_state(&mut shared, &config);
 
@@ -345,7 +347,7 @@ mod tests {
     fn sync_common_state_populates_volume() {
         let state_arc = make_state();
         let config = bms_config::Config::default();
-        let mut shared = state_arc.write().unwrap();
+        let mut shared = state_arc.write();
 
         sync_common_state(&mut shared, &config);
 
@@ -382,7 +384,7 @@ mod tests {
         assert!(!provider.is_poor_active());
 
         // Set poor_active
-        state.write().unwrap().poor_active = true;
+        state.write().poor_active = true;
         assert!(provider.is_poor_active());
     }
 

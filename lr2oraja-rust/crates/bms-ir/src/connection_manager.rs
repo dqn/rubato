@@ -1,5 +1,7 @@
 use std::collections::HashMap;
-use std::sync::{LazyLock, RwLock};
+use std::sync::LazyLock;
+
+use parking_lot::RwLock;
 
 use crate::connection::IRConnection;
 use crate::lr2ir::LR2IRConnection;
@@ -35,19 +37,19 @@ pub struct IRConnectionManager;
 impl IRConnectionManager {
     /// Get all available IR connection names.
     pub fn available_names() -> Vec<String> {
-        let registry = REGISTRY.read().unwrap();
+        let registry = REGISTRY.read();
         registry.keys().map(|k| k.to_string()).collect()
     }
 
     /// Create an IR connection by name.
     pub fn create(name: &str) -> Option<Box<dyn IRConnection>> {
-        let registry = REGISTRY.read().unwrap();
+        let registry = REGISTRY.read();
         registry.get(name).map(|entry| (entry.factory)())
     }
 
     /// Get the home URL for an IR by name.
     pub fn home_url(name: &str) -> Option<&'static str> {
-        let registry = REGISTRY.read().unwrap();
+        let registry = REGISTRY.read();
         registry.get(name).and_then(|entry| entry.home_url)
     }
 
@@ -59,7 +61,7 @@ impl IRConnectionManager {
         factory: fn() -> Box<dyn IRConnection>,
         home_url: Option<&'static str>,
     ) {
-        let mut registry = REGISTRY.write().unwrap();
+        let mut registry = REGISTRY.write();
         registry.insert(name, IrEntry { factory, home_url });
     }
 }

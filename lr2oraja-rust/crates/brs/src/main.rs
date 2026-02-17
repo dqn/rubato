@@ -23,7 +23,9 @@ mod timer_manager;
 mod window_manager;
 
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::Arc;
+
+use parking_lot::{Mutex, RwLock};
 
 use anyhow::Result;
 use bevy::input::ButtonInput;
@@ -408,11 +410,11 @@ fn state_machine_system(
     let prev_state = registry.registry.current();
 
     // Lock database and shared state for this frame
-    let db_guard = database.0.lock().unwrap();
+    let db_guard = database.0.lock();
     let db_ref = db_guard.as_ref();
     let shared_arc = Arc::clone(&registry.shared_state);
-    let mut shared_guard = shared_arc.write().unwrap();
-    let mut pm_guard = ui_res.preview_music.0.lock().unwrap();
+    let mut shared_guard = shared_arc.write();
+    let mut pm_guard = ui_res.preview_music.0.lock();
     let mut params = TickParams {
         timer: &mut timer.0,
         resource: &mut resource.0,
@@ -470,7 +472,7 @@ fn state_sync_system(
     render_state: Option<ResMut<bms_render::skin_renderer::SkinRenderState>>,
 ) {
     sync_timer_state(&timer.0, &shared.0);
-    let mut shared_guard = shared.0.write().unwrap();
+    let mut shared_guard = shared.0.write();
     game_state::sync_common_state(&mut shared_guard, &config.0);
 
     // Sync bar scroll state and graph data to the skin renderer

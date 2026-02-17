@@ -21,7 +21,7 @@ pub trait StreamCommand: Send {
 /// The selector periodically drains pending requests via `poll_requests()`.
 pub struct StreamRequestCommand {
     /// Pending SHA256 hashes waiting to be processed.
-    pending: std::sync::Mutex<VecDeque<String>>,
+    pending: parking_lot::Mutex<VecDeque<String>>,
     /// Maximum number of pending requests.
     pub max_requests: usize,
 }
@@ -35,20 +35,20 @@ impl Default for StreamRequestCommand {
 impl StreamRequestCommand {
     pub fn new(max_requests: usize) -> Self {
         Self {
-            pending: std::sync::Mutex::new(VecDeque::new()),
+            pending: parking_lot::Mutex::new(VecDeque::new()),
             max_requests,
         }
     }
 
     /// Drain and return all pending SHA256 request hashes.
     pub fn poll_requests(&self) -> Vec<String> {
-        let mut pending = self.pending.lock().unwrap();
+        let mut pending = self.pending.lock();
         pending.drain(..).collect()
     }
 
     /// Return the current number of pending requests.
     pub fn pending_count(&self) -> usize {
-        self.pending.lock().unwrap().len()
+        self.pending.lock().len()
     }
 }
 
@@ -70,7 +70,7 @@ impl StreamCommand for StreamRequestCommand {
             return Ok(None);
         }
 
-        let mut pending = self.pending.lock().unwrap();
+        let mut pending = self.pending.lock();
 
         // Evict oldest if at capacity
         if pending.len() >= self.max_requests {
