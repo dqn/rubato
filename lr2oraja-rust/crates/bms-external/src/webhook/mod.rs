@@ -1,5 +1,7 @@
 pub mod payload;
 
+use std::time::Duration;
+
 use anyhow::Result;
 use tracing::{error, info};
 
@@ -12,10 +14,50 @@ pub struct WebhookHandler {
     urls: Vec<String>,
 }
 
+const WEBHOOK_CONNECT_TIMEOUT_SECS: u64 = 5;
+const WEBHOOK_REQUEST_TIMEOUT_SECS: u64 = 15;
+
+fn mask_webhook_url(url: &str) -> String {
+    let Ok(parsed) = reqwest::Url::parse(url) else {
+        return "<invalid-url>".to_string();
+    };
+
+    let Some(host) = parsed.host_str() else {
+        return "<invalid-url>".to_string();
+    };
+
+    let token_hint = parsed
+        .path_segments()
+        .and_then(|mut segments| segments.next_back())
+        .map(|token| {
+            let tail_len = token.chars().count().min(4);
+            let tail: String = token
+                .chars()
+                .rev()
+                .take(tail_len)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect();
+            if tail.is_empty() {
+                "***".to_string()
+            } else {
+                format!("***{tail}")
+            }
+        })
+        .unwrap_or_else(|| "***".to_string());
+
+    format!("{host}/.../{token_hint}")
+}
+
 impl WebhookHandler {
     pub fn new(urls: Vec<String>) -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .connect_timeout(Duration::from_secs(WEBHOOK_CONNECT_TIMEOUT_SECS))
+                .timeout(Duration::from_secs(WEBHOOK_REQUEST_TIMEOUT_SECS))
+                .build()
+                .unwrap_or_default(),
             urls,
         }
     }
@@ -48,10 +90,11 @@ impl WebhookHandler {
             if url.is_empty() {
                 continue;
             }
+            let masked_url = mask_webhook_url(url);
             if let Err(e) = self.send_to_url(url, &payload, screenshot_data).await {
-                error!("webhook send failed for {}: {}", url, e);
+                error!("webhook send failed for {}: {}", masked_url, e);
             } else {
-                info!("webhook sent to {}", url);
+                info!("webhook sent to {}", masked_url);
             }
         }
 
@@ -75,9 +118,19 @@ impl WebhookHandler {
                         .file_name("screenshot.png")
                         .mime_str("image/png")?,
                 );
-            self.client.post(url).multipart(form).send().await?;
+            self.client
+                .post(url)
+                .multipart(form)
+                .send()
+                .await?
+                .error_for_status()?;
         } else {
-            self.client.post(url).json(payload).send().await?;
+            self.client
+                .post(url)
+                .json(payload)
+                .send()
+                .await?
+                .error_for_status()?;
         }
         Ok(())
     }
@@ -86,6 +139,22 @@ impl WebhookHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mask_webhook_url_hides_secret_parts() {
+        let masked = mask_webhook_url(
+            "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz",
+        );
+        assert_eq!(masked, "discord.com/.../***wxyz");
+        assert!(!masked.contains("123456789012345678"));
+        assert!(!masked.contains("abcdefghijklmnopqrstuvwxyz"));
+    }
+
+    #[test]
+    fn mask_webhook_url_handles_invalid_url() {
+        let masked = mask_webhook_url("not-a-url");
+        assert_eq!(masked, "<invalid-url>");
+    }
 
     #[test]
     fn webhook_handler_new() {

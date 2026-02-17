@@ -10,8 +10,9 @@ mod select_skin_state;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 
-use tracing::info;
+use tracing::{info, warn};
 
 use bms_config::SongPreview;
 use bms_database::SongInformation;
@@ -36,6 +37,31 @@ const DEFAULT_FADEOUT_DURATION_MS: i64 = 500;
 
 /// Default scroll animation duration in milliseconds.
 const DEFAULT_SCROLL_DURATION_MS: i64 = 150;
+
+static TABLE_UPDATE_JOB_RUNNING: AtomicBool = AtomicBool::new(false);
+
+fn try_start_table_update_job() -> bool {
+    TABLE_UPDATE_JOB_RUNNING
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .is_ok()
+}
+
+fn finish_table_update_job() {
+    TABLE_UPDATE_JOB_RUNNING.store(false, Ordering::Release);
+}
+
+#[cfg(test)]
+fn finish_table_update_job_for_test() {
+    finish_table_update_job();
+}
+
+struct TableUpdateJobGuard;
+
+impl Drop for TableUpdateJobGuard {
+    fn drop(&mut self) {
+        finish_table_update_job();
+    }
+}
 
 /// Music select state — song browser and selection.
 pub struct MusicSelectState {
@@ -146,14 +172,25 @@ impl GameStateHandler for MusicSelectState {
             if !ctx.config.table_url.is_empty() {
                 let urls = ctx.config.table_url.clone();
                 let table_dir = ctx.config.tablepath.clone();
-                std::thread::spawn(move || {
-                    let rt = tokio::runtime::Builder::new_current_thread()
-                        .enable_all()
-                        .build()
-                        .unwrap();
-                    rt.block_on(crate::table_updater::update_all(&urls, &table_dir));
-                });
-                info!("MusicSelect: background table update started");
+                if try_start_table_update_job() {
+                    std::thread::spawn(move || {
+                        let _job_guard = TableUpdateJobGuard;
+                        let rt = match tokio::runtime::Builder::new_current_thread()
+                            .enable_all()
+                            .build()
+                        {
+                            Ok(rt) => rt,
+                            Err(e) => {
+                                warn!("MusicSelect: failed to build runtime for table update: {e}");
+                                return;
+                            }
+                        };
+                        rt.block_on(crate::table_updater::update_all(&urls, &table_dir));
+                    });
+                    info!("MusicSelect: background table update started");
+                } else {
+                    info!("MusicSelect: background table update already running");
+                }
             }
 
             self.score_cache_dirty = true;
@@ -1143,6 +1180,16 @@ mod tests {
     fn setup_input_ready(timer: &mut TimerManager) {
         timer.set_now_micro_time(1_000_000);
         timer.switch_timer(TIMER_STARTINPUT, true);
+    }
+
+    #[test]
+    fn table_update_job_guard_is_single_flight() {
+        finish_table_update_job_for_test();
+        assert!(try_start_table_update_job());
+        assert!(!try_start_table_update_job());
+        finish_table_update_job_for_test();
+        assert!(try_start_table_update_job());
+        finish_table_update_job_for_test();
     }
 
     #[test]

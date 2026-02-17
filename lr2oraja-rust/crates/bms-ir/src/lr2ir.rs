@@ -1,5 +1,6 @@
 use parking_lot::Mutex;
 use std::collections::HashMap;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -14,6 +15,8 @@ use crate::response::IRResponse;
 use crate::score_data::IRScoreData;
 
 const IR_URL: &str = "http://dream-pro.info/~lavalse/LR2IR/2";
+const IR_CONNECT_TIMEOUT_SECS: u64 = 5;
+const IR_REQUEST_TIMEOUT_SECS: u64 = 10;
 
 /// LR2IR connection.
 ///
@@ -31,7 +34,11 @@ impl LR2IRConnection {
 
     pub fn with_base_url(base_url: String) -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .connect_timeout(Duration::from_secs(IR_CONNECT_TIMEOUT_SECS))
+                .timeout(Duration::from_secs(IR_REQUEST_TIMEOUT_SECS))
+                .build()
+                .unwrap_or_default(),
             base_url,
             cache: Mutex::new(HashMap::new()),
         }
@@ -111,7 +118,6 @@ impl LR2IRConnection {
         let response = self
             .client
             .get(&url)
-            .timeout(std::time::Duration::from_secs(5))
             .send()
             .await
             .context("failed to fetch ghost data")?;

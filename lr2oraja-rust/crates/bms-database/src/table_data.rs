@@ -3,8 +3,8 @@
 //! Port of Java `TableData.java`.
 //! Supports .bmt (GZIP compressed JSON) and .json formats.
 
-use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::fs::{self, File};
+use std::io::{BufReader, BufWriter, Write};
 use std::path::Path;
 
 use anyhow::{Result, anyhow};
@@ -98,26 +98,45 @@ impl TableData {
         let mut data = data.clone();
         data.shrink();
 
-        match ext {
+        let file_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or_else(|| anyhow!("invalid table data filename: {}", path.display()))?;
+        let parent = path.parent().unwrap_or_else(|| Path::new("."));
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or_default();
+        let tmp_path = parent.join(format!(".{file_name}.tmp-{nonce}"));
+
+        let write_result = match ext {
             "bmt" => {
-                let file = File::create(path)?;
+                let file = File::create(&tmp_path)?;
                 let writer = BufWriter::new(file);
-                let gz = GzEncoder::new(writer, Compression::default());
-                serde_json::to_writer_pretty(gz, &data)?;
+                let mut gz = GzEncoder::new(writer, Compression::default());
+                serde_json::to_writer_pretty(&mut gz, &data)?;
+                gz.try_finish()?;
+                Ok(())
             }
             "json" => {
-                let file = File::create(path)?;
-                let writer = BufWriter::new(file);
-                serde_json::to_writer_pretty(writer, &data)?;
+                let file = File::create(&tmp_path)?;
+                let mut writer = BufWriter::new(file);
+                serde_json::to_writer_pretty(&mut writer, &data)?;
+                writer.flush()?;
+                Ok(())
             }
-            _ => {
-                return Err(anyhow!(
-                    "unsupported table data extension: {}",
-                    path.display()
-                ));
-            }
+            _ => Err(anyhow!(
+                "unsupported table data extension: {}",
+                path.display()
+            )),
+        };
+
+        if let Err(e) = write_result {
+            let _ = fs::remove_file(&tmp_path);
+            return Err(e);
         }
 
+        fs::rename(&tmp_path, path)?;
         Ok(())
     }
 
