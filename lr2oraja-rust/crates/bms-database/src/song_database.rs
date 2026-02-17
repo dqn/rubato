@@ -11,6 +11,10 @@ use crate::song_data::SongData;
 const ALLOWED_KEYS: &[&str] = &[
     "md5", "sha256", "title", "artist", "genre", "path", "folder", "parent", "favorite",
 ];
+const DISALLOWED_SQL_KEYWORDS: &[&str] = &[
+    "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "REPLACE", "PRAGMA", "ATTACH",
+    "DETACH", "VACUUM", "BEGIN", "COMMIT", "ROLLBACK",
+];
 
 /// Song database accessor (song.db).
 ///
@@ -23,7 +27,7 @@ impl SongDatabase {
     /// Open (or create) a song database at the given path.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let conn = Connection::open(path)?;
-        conn.execute_batch("PRAGMA synchronous = OFF;")?;
+        conn.execute_batch("PRAGMA synchronous = NORMAL;")?;
         ensure_table(&conn, &FOLDER_TABLE)?;
         ensure_table(&conn, &SONG_TABLE)?;
         Ok(Self { conn })
@@ -152,6 +156,7 @@ impl SongDatabase {
     /// Used by RandomCourse stages that carry user-defined SQL queries.
     /// The query is expected to be a SELECT that returns rows from the song table.
     pub fn get_song_datas_by_sql(&self, sql: &str) -> Result<Vec<SongData>> {
+        validate_read_only_select_sql(sql)?;
         let mut stmt = self.conn.prepare(sql)?;
         let rows = stmt.query_map([], SongData::from_row)?;
         let mut results = Vec::new();
@@ -267,6 +272,26 @@ impl SongDatabase {
         tx.commit()?;
         Ok(())
     }
+}
+
+fn validate_read_only_select_sql(sql: &str) -> Result<()> {
+    let trimmed = sql.trim_start();
+    if trimmed.is_empty() {
+        anyhow::bail!("empty SQL query is not allowed");
+    }
+
+    let upper = trimmed.to_ascii_uppercase();
+    if !upper.starts_with("SELECT ") && !upper.starts_with("WITH ") {
+        anyhow::bail!("only SELECT statements are allowed for random course queries");
+    }
+
+    let tokens = upper.split(|c: char| !c.is_ascii_alphanumeric() && c != '_');
+    for token in tokens {
+        if DISALLOWED_SQL_KEYWORDS.contains(&token) {
+            anyhow::bail!("disallowed SQL keyword in random course query: {}", token);
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -517,5 +542,43 @@ mod tests {
         let db = SongDatabase::open_in_memory().unwrap();
         let result = db.get_folder_datas("malicious_key", "x");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn sql_select_query_allowed() {
+        let db = SongDatabase::open_in_memory().unwrap();
+        let song = sample_song();
+        db.set_song_datas(&[song]).unwrap();
+
+        let found = db
+            .get_song_datas_by_sql("SELECT * FROM song WHERE title = 'Test Song'")
+            .unwrap();
+        assert_eq!(found.len(), 1);
+    }
+
+    #[test]
+    fn sql_non_select_query_rejected() {
+        let db = SongDatabase::open_in_memory().unwrap();
+        let song = sample_song();
+        db.set_song_datas(&[song]).unwrap();
+
+        let result = db.get_song_datas_by_sql("DELETE FROM song");
+        assert!(result.is_err());
+
+        let found = db.get_all_song_datas().unwrap();
+        assert_eq!(found.len(), 1);
+    }
+
+    #[test]
+    fn sql_multi_statement_query_rejected() {
+        let db = SongDatabase::open_in_memory().unwrap();
+        let song = sample_song();
+        db.set_song_datas(&[song]).unwrap();
+
+        let result = db.get_song_datas_by_sql("SELECT * FROM song; DELETE FROM song");
+        assert!(result.is_err());
+
+        let found = db.get_all_song_datas().unwrap();
+        assert_eq!(found.len(), 1);
     }
 }

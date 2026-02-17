@@ -6,6 +6,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::anyhow;
@@ -17,6 +18,8 @@ use crate::task::{DownloadTask, DownloadTaskStatus};
 
 /// Default maximum concurrent downloads.
 const DEFAULT_MAX_CONCURRENT: usize = 5;
+const DOWNLOAD_CONNECT_TIMEOUT_SECS: u64 = 10;
+const DOWNLOAD_REQUEST_TIMEOUT_SECS: u64 = 120;
 
 /// Manages download tasks with concurrent execution limits.
 pub struct HttpDownloadProcessor {
@@ -70,6 +73,9 @@ impl HttpDownloadProcessor {
             {
                 let mut tasks = tasks.lock().await;
                 if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
+                    if task.status == DownloadTaskStatus::Cancel {
+                        return;
+                    }
                     task.set_status(DownloadTaskStatus::Downloading);
                 } else {
                     warn!("Task {} not found", task_id);
@@ -87,15 +93,38 @@ impl HttpDownloadProcessor {
             };
 
             // Download
-            let client = reqwest::Client::new();
+            let client = match reqwest::Client::builder()
+                .connect_timeout(Duration::from_secs(DOWNLOAD_CONNECT_TIMEOUT_SECS))
+                .timeout(Duration::from_secs(DOWNLOAD_REQUEST_TIMEOUT_SECS))
+                .build()
+            {
+                Ok(client) => client,
+                Err(e) => {
+                    let mut tasks = tasks.lock().await;
+                    if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
+                        task.set_error(format!("failed to create HTTP client: {}", e));
+                    }
+                    return;
+                }
+            };
             match download_file(&client, &url, &tasks, task_id).await {
                 Ok(archive_path) => {
+                    if is_cancelled(&tasks, task_id).await {
+                        let _ = tokio::fs::remove_file(&archive_path).await;
+                        return;
+                    }
+
                     // Update status to Downloaded
                     {
                         let mut tasks = tasks.lock().await;
                         if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
                             task.set_status(DownloadTaskStatus::Downloaded);
                         }
+                    }
+
+                    if is_cancelled(&tasks, task_id).await {
+                        let _ = tokio::fs::remove_file(&archive_path).await;
+                        return;
                     }
 
                     // Extract
@@ -189,7 +218,13 @@ async fn download_file(
 ) -> anyhow::Result<PathBuf> {
     use tokio::io::AsyncWriteExt;
 
+    if is_cancelled(tasks, task_id).await {
+        anyhow::bail!("download cancelled");
+    }
     let resp = client.get(url).send().await?.error_for_status()?;
+    if is_cancelled(tasks, task_id).await {
+        anyhow::bail!("download cancelled");
+    }
 
     let content_length = resp.content_length().unwrap_or(0);
 
@@ -255,6 +290,14 @@ async fn download_file(
     file.flush().await?;
 
     Ok(file_path)
+}
+
+async fn is_cancelled(tasks: &Arc<Mutex<Vec<DownloadTask>>>, task_id: usize) -> bool {
+    let tasks = tasks.lock().await;
+    tasks
+        .iter()
+        .find(|t| t.id == task_id)
+        .is_some_and(|task| task.status == DownloadTaskStatus::Cancel)
 }
 
 fn build_temp_archive_path(task_id: usize, hash: &str, filename: &str) -> PathBuf {
