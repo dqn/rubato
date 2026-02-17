@@ -3,6 +3,7 @@ use std::path::Path;
 
 use anyhow::Result;
 
+use crate::decode_log::DecodeLog;
 use crate::mode::PlayMode;
 use crate::model::BmsModel;
 use crate::note::{BgNote, LnType, Note};
@@ -166,7 +167,8 @@ impl BmsDecoder {
                     && upper.as_bytes()[5] == b' '
                 {
                     // #BPMxx value (extended BPM definition)
-                    let id = parse_base36(&upper[3..5]);
+                    // Use rest (original case) for ID to preserve base62 case sensitivity
+                    let id = parse_id(&rest[3..5], model.base);
                     let bpm: f64 = rest[6..].trim().parse().unwrap_or(0.0);
                     extended_bpms.insert(id, bpm);
                 } else if let Some(rest) = upper.strip_prefix("RANK ") {
@@ -181,10 +183,27 @@ impl BmsDecoder {
                     model.judge_rank_type = crate::model::JudgeRankType::BmsDefExRank;
                 } else if let Some(rest) = upper.strip_prefix("TOTAL ") {
                     model.total = rest.trim().parse().unwrap_or(300.0);
+                    model.total_type = crate::model::TotalType::Bms;
                 } else if let Some(rest) = upper.strip_prefix("PLAYLEVEL ") {
                     model.play_level = rest.trim().parse().unwrap_or(0);
                 } else if let Some(rest) = upper.strip_prefix("DIFFICULTY ") {
                     model.difficulty = rest.trim().parse().unwrap_or(0);
+                } else if let Some(rest) = upper.strip_prefix("BASE ") {
+                    let base_val: u8 = rest.trim().parse().unwrap_or(36);
+                    if base_val == 62 {
+                        model.base = 62;
+                    }
+                    // Only 62 is accepted; anything else keeps default 36
+                } else if let Some(rest) = upper.strip_prefix("LNOBJ ") {
+                    let trimmed = rest.trim();
+                    if trimmed.len() >= 2 {
+                        let id = parse_id(&trimmed[..2].to_ascii_uppercase(), model.base);
+                        if id > 0 {
+                            model.lnobj = Some(id);
+                        }
+                    }
+                } else if let Some(rest) = upper.strip_prefix("VOLWAV ") {
+                    model.volwav = rest.trim().parse().unwrap_or(100);
                 } else if let Some(rest) = upper.strip_prefix("LNTYPE ") {
                     let ln: i32 = rest.trim().parse().unwrap_or(1);
                     model.ln_type = match ln {
@@ -201,7 +220,8 @@ impl BmsDecoder {
                 } else if upper.starts_with("PREVIEW ") {
                     model.preview = rest[8..].trim().to_string();
                 } else if upper.starts_with("WAV") && upper.len() >= 5 {
-                    let id = parse_base36(&upper[3..5]);
+                    // Use rest (original case) for ID to preserve base62 case sensitivity
+                    let id = parse_id(&rest[3..5], model.base);
                     let filename = rest[5..].trim();
                     if !filename.is_empty() {
                         model.wav_defs.insert(id, base_dir.join(filename));
@@ -210,20 +230,20 @@ impl BmsDecoder {
                     && upper.len() >= 5
                     && upper.as_bytes()[3] != b' '
                 {
-                    let id = parse_base36(&upper[3..5]);
+                    let id = parse_id(&rest[3..5], model.base);
                     let filename = rest[5..].trim();
                     if !filename.is_empty() {
                         model.bmp_defs.insert(id, base_dir.join(filename));
                     }
                 } else if upper.starts_with("STOP") && upper.len() >= 6 {
-                    let id = parse_base36(&upper[4..6]);
+                    let id = parse_id(&rest[4..6], model.base);
                     let ticks: i64 = rest[6..].trim().parse().unwrap_or(0);
                     stop_defs.insert(id, ticks);
                 } else if upper.starts_with("SCROLL") && upper.len() >= 8 {
-                    let id = parse_base36(&upper[6..8]);
+                    let id = parse_id(&rest[6..8], model.base);
                     let scroll: f64 = rest[8..].trim().parse().unwrap_or(1.0);
                     scroll_defs.insert(id, scroll);
-                } else if let Some(event) = parse_channel_line(&upper) {
+                } else if let Some(event) = parse_channel_line(&upper, rest, model.base) {
                     // Channel data: #MMMCC:data
                     let measure = event.measure;
                     if measure > max_measure {
@@ -620,7 +640,55 @@ impl BmsDecoder {
 
                 match note_kind {
                     NoteKind::Normal => {
-                        model.notes.push(Note::normal(lane, time_us, wav_id));
+                        // LNOBJ check: if wav_id matches lnobj, convert previous note to LN
+                        if model.lnobj == Some(wav_id) {
+                            // Search backwards for the most recent note on this lane
+                            let mut found = false;
+                            for i in (0..model.notes.len()).rev() {
+                                if model.notes[i].lane != lane {
+                                    continue;
+                                }
+                                if model.notes[i].time_us >= time_us {
+                                    continue;
+                                }
+                                let prev = &model.notes[i];
+                                if prev.note_type == crate::note::NoteType::Normal {
+                                    // Convert NormalNote → LongNote
+                                    let start_wav = prev.wav_id;
+                                    let start_time = prev.time_us;
+                                    model.notes[i] = Note::long_note(
+                                        lane,
+                                        start_time,
+                                        time_us,
+                                        start_wav,
+                                        0, // LNOBJ end has no wav (Java uses -2)
+                                        model.ln_type,
+                                    );
+                                    found = true;
+                                    break;
+                                } else if prev.is_long_note() && prev.end_time_us == 0 {
+                                    // Unpaired LN started by LN channel, ended by LNOBJ
+                                    model.notes[i].end_time_us = time_us;
+                                    found = true;
+                                    break;
+                                } else {
+                                    // Conflicting note type
+                                    model.decode_logs.push(DecodeLog::warning(format!(
+                                        "LNOBJ conflict on lane {} at time {}us",
+                                        lane, time_us
+                                    )));
+                                    break;
+                                }
+                            }
+                            if !found {
+                                model.decode_logs.push(DecodeLog::warning(format!(
+                                    "LNOBJ on lane {} at time {}us has no matching start note",
+                                    lane, time_us
+                                )));
+                            }
+                        } else {
+                            model.notes.push(Note::normal(lane, time_us, wav_id));
+                        }
                     }
                     NoteKind::Invisible => {
                         model.notes.push(Note::invisible(lane, time_us, wav_id));
@@ -849,11 +917,43 @@ fn base36_digit(b: u8) -> u16 {
     }
 }
 
+/// Parse base-62 two-character string to u16.
+/// 0-9 = 0-9, A-Z = 10-35, a-z = 36-61
+/// Max value: 61*62+61 = 3843
+fn parse_base62(s: &str) -> u16 {
+    let bytes = s.as_bytes();
+    if bytes.len() < 2 {
+        return 0;
+    }
+    let high = base62_digit(bytes[0]);
+    let low = base62_digit(bytes[1]);
+    high * 62 + low
+}
+
+fn base62_digit(b: u8) -> u16 {
+    match b {
+        b'0'..=b'9' => (b - b'0') as u16,
+        b'A'..=b'Z' => (b - b'A' + 10) as u16,
+        b'a'..=b'z' => (b - b'a' + 36) as u16,
+        _ => 0,
+    }
+}
+
+/// Parse an ID using the current base (36 or 62)
+fn parse_id(s: &str, base: u8) -> u16 {
+    if base == 62 {
+        parse_base62(s)
+    } else {
+        parse_base36(s)
+    }
+}
+
 /// Scroll channel number (base36: S=28, C=12 → 28*36+12=1020)
 const CHANNEL_SCROLL: u16 = 1020;
 
 /// Parse a channel line: #MMMCC:data
-fn parse_channel_line(upper: &str) -> Option<ChannelEvent> {
+/// `upper` is used for measure/channel parsing, `original` preserves case for base62 data
+fn parse_channel_line(upper: &str, original: &str, base: u8) -> Option<ChannelEvent> {
     if upper.len() < 7 {
         return None;
     }
@@ -870,8 +970,9 @@ fn parse_channel_line(upper: &str) -> Option<ChannelEvent> {
         return None;
     }
 
-    let data_str = &upper[6..];
-    let data = parse_channel_data(data_str);
+    // Use original case for data to preserve base62 case sensitivity
+    let data_str = &original[6..];
+    let data = parse_channel_data(data_str, base);
 
     Some(ChannelEvent {
         measure,
@@ -902,8 +1003,8 @@ fn hex_or_base36_digit(b: u8) -> Option<u8> {
 }
 
 /// Parse channel data string into (position, value) pairs
-/// Data is a sequence of base-36 pairs: "01020300" = [(0.0, 01), (0.333, 02), (0.666, 03), (1.0, 00)]
-fn parse_channel_data(data: &str) -> Vec<(f64, u16)> {
+/// Data is a sequence of base-36/62 pairs: "01020300" = [(0.0, 01), (0.333, 02), (0.666, 03), (1.0, 00)]
+fn parse_channel_data(data: &str, base: u8) -> Vec<(f64, u16)> {
     let data = data.trim();
     if data.len() < 2 {
         return Vec::new();
@@ -914,7 +1015,7 @@ fn parse_channel_data(data: &str) -> Vec<(f64, u16)> {
 
     for i in 0..count {
         let s = &data[i * 2..i * 2 + 2];
-        let val = parse_base36(s);
+        let val = parse_id(s, base);
         if val > 0 {
             let pos = i as f64 / count as f64;
             result.push((pos, val));
@@ -1087,7 +1188,7 @@ mod tests {
 
     #[test]
     fn test_parse_channel_data() {
-        let data = parse_channel_data("01020300");
+        let data = parse_channel_data("01020300", 36);
         assert_eq!(data.len(), 3); // 00 is filtered out
         assert_eq!(data[0].1, 1); // 01
         assert_eq!(data[1].1, 2); // 02
@@ -1376,5 +1477,140 @@ mod tests {
 ";
         let model = decode_inline(bms);
         assert!(!model.notes.is_empty(), "should have at least one note");
+    }
+
+    // --- LNOBJ tests ---
+
+    #[test]
+    fn test_lnobj_basic() {
+        // LNOBJ ZZ: WAV01 at beat 0, WAVZZ at beat 2 → LN
+        let bms = "\
+#PLAYER 1
+#BPM 120
+#LNOBJ ZZ
+#WAV01 test.wav
+#WAVZZ end.wav
+#00111:0100ZZ00
+";
+        let model = decode_inline(bms);
+        assert_eq!(model.lnobj, Some(parse_base36("ZZ")));
+
+        let lns: Vec<&Note> = model.notes.iter().filter(|n| n.is_long_note()).collect();
+        assert_eq!(lns.len(), 1, "should have 1 LN from LNOBJ");
+        assert!(
+            lns[0].end_time_us > lns[0].time_us,
+            "LN end must be after start"
+        );
+        assert_eq!(lns[0].wav_id, 1, "start wav_id should be WAV01");
+    }
+
+    #[test]
+    fn test_lnobj_no_match_stays_normal() {
+        // LNOBJ ZZ set but notes use WAV01/WAV02 (not ZZ) → remain normal
+        let bms = "\
+#PLAYER 1
+#BPM 120
+#LNOBJ ZZ
+#WAV01 test.wav
+#WAV02 test2.wav
+#00111:01000200
+";
+        let model = decode_inline(bms);
+        let normals: Vec<&Note> = model
+            .notes
+            .iter()
+            .filter(|n| n.note_type == crate::note::NoteType::Normal)
+            .collect();
+        assert_eq!(normals.len(), 2, "both notes should remain normal");
+    }
+
+    #[test]
+    fn test_lnobj_multiple_lanes() {
+        // LNOBJ on two different lanes
+        let bms = "\
+#PLAYER 1
+#BPM 120
+#LNOBJ ZZ
+#WAV01 a.wav
+#WAV02 b.wav
+#WAVZZ end.wav
+#00111:0100ZZ00
+#00112:0200ZZ00
+";
+        let model = decode_inline(bms);
+        let lns: Vec<&Note> = model.notes.iter().filter(|n| n.is_long_note()).collect();
+        assert_eq!(lns.len(), 2, "should have 2 LNs from LNOBJ");
+    }
+
+    // --- VOLWAV test ---
+
+    #[test]
+    fn test_volwav_parsing() {
+        let bms = "\
+#PLAYER 1
+#BPM 120
+#VOLWAV 80
+";
+        let model = decode_inline(bms);
+        assert_eq!(model.volwav, 80);
+    }
+
+    #[test]
+    fn test_volwav_default() {
+        let bms = "\
+#PLAYER 1
+#BPM 120
+";
+        let model = decode_inline(bms);
+        assert_eq!(model.volwav, 100);
+    }
+
+    // --- BASE 62 tests ---
+
+    #[test]
+    fn test_parse_base62() {
+        // 0-9: 0-9, A-Z: 10-35, a-z: 36-61
+        assert_eq!(parse_base62("00"), 0);
+        assert_eq!(parse_base62("01"), 1);
+        assert_eq!(parse_base62("0Z"), 35);
+        assert_eq!(parse_base62("0a"), 36);
+        assert_eq!(parse_base62("0z"), 61);
+        assert_eq!(parse_base62("10"), 62);
+        assert_eq!(parse_base62("zz"), 61 * 62 + 61); // 3843
+    }
+
+    #[test]
+    fn test_base62_header_parsing() {
+        let bms = "\
+#PLAYER 1
+#BPM 120
+#BASE 62
+#WAV0a test.wav
+#00111:0a
+";
+        let model = decode_inline(bms);
+        assert_eq!(model.base, 62);
+        // WAV0a in base62 = 36
+        assert!(model.wav_defs.contains_key(&36));
+        assert!(!model.notes.is_empty());
+        assert_eq!(model.notes[0].wav_id, 36);
+    }
+
+    #[test]
+    fn test_base62_channel_data() {
+        let data = parse_channel_data("0a0b00", 62);
+        assert_eq!(data.len(), 2); // 00 is filtered
+        assert_eq!(data[0].1, 36); // 0a in base62
+        assert_eq!(data[1].1, 37); // 0b in base62
+    }
+
+    #[test]
+    fn test_base36_default_when_no_base_header() {
+        let bms = "\
+#PLAYER 1
+#BPM 120
+";
+        let model = decode_inline(bms);
+        assert_eq!(model.base, 36);
     }
 }

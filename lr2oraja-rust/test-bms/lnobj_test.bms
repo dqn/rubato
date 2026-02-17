@@ -1,0 +1,26 @@
+*--- LNOBJ test ---
+*
+* Tests #LNOBJ: WAV ZZ acts as LN end marker.
+* Lane 1 (ch11): normal note at beat 0, LNOBJ at beat 2 → LN from beat 0 to beat 2
+* Lane 2 (ch12): normal note at beat 0, LNOBJ at beat 3 → LN from beat 0 to beat 3
+* Lane 3 (ch13): two normal notes (no LNOBJ match) → remain normal
+
+#PLAYER 1
+#GENRE Test
+#TITLE LNOBJ Test
+#ARTIST brs-test
+#BPM 120
+#LNOBJ ZZ
+
+#WAV01 key1.wav
+#WAV02 key2.wav
+#WAV03 key3.wav
+#WAVZZ lnend.wav
+
+*--- Measure 001 ---
+* ch11: note WAV01 at 0/4, LNOBJ WAVZZ at 2/4
+#00111:010000ZZ00
+* ch12: note WAV02 at 0/4, LNOBJ WAVZZ at 3/4
+#00112:02000000ZZ
+* ch13: two normal notes (WAV03), not LNOBJ
+#00113:0300000300
