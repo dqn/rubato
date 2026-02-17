@@ -1,3 +1,11 @@
+//! Skin data model and loaders for JSON, LR2 CSV, and Lua skin formats.
+//!
+//! Provides [`skin::Skin`] as the unified skin representation, with loaders
+//! in [`loader`] for JSON skins, LR2 CSV skins, and Lua-scripted skins.
+//! Key types include [`skin_object::SkinObject`], [`skin_header::SkinHeader`],
+//! and various skin element types (image, number, text, gauge, graph, etc.).
+//! Consumed by `bms-render` to drive the rendering pipeline.
+
 pub mod bmfont;
 pub mod custom_event;
 pub mod image_handle;

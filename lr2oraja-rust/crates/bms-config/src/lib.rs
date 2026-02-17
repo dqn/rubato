@@ -1,4 +1,10 @@
-// Configuration structs (system, player, play, skin, audio, IR)
+//! Configuration data structures for system, player, play, skin, audio, and IR settings.
+//!
+//! Provides [`Config`] for global system settings (window, display, audio driver),
+//! [`PlayerConfig`] for per-player preferences and key bindings,
+//! [`PlayConfig`] / [`PlayModeConfig`] for gameplay options, [`SkinConfig`] for skin
+//! customization, [`AudioConfig`] for audio driver selection, and [`IRConfig`] for
+//! internet ranking credentials. All configs are serialized as JSON via serde.
 
 pub mod audio_config;
 pub mod config;

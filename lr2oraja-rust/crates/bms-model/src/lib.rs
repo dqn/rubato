@@ -1,4 +1,9 @@
-// BMS chart data model: parser, note types, timeline, mode definitions
+//! BMS chart data model: parsing, note types, timeline, and play mode definitions.
+//!
+//! Provides [`BmsDecoder`] and [`BmsonDecoder`] for decoding `.bms`/`.bmson` files,
+//! [`OsuDecoder`] for osu!mania format, and the core [`BmsModel`] struct that holds
+//! the parsed chart data including [`TimeLine`], [`Note`], and [`BgNote`] collections.
+//! Other crates consume `BmsModel` as the single source of truth for chart information.
 
 #[allow(dead_code)]
 mod bmson;

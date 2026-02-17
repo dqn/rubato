@@ -1,7 +1,10 @@
-// Rendering: Bevy setup, sprite batch, blend modes, fonts.
-//
-// Uses Bevy 0.15 for window, camera, and 2D sprite rendering.
-// Skin objects are iterated in Vec order each frame (procedural render loop).
+//! Rendering engine built on Bevy for 2D sprite-based skin display.
+//!
+//! Uses Bevy 0.15 for window, camera, and 2D sprite rendering.
+//! [`skin_renderer::skin_render_system`] iterates skin objects each frame in a
+//! procedural render loop. Includes [`bga`] for background animation layers,
+//! [`blend`] for custom blend modes, [`font_map`] for bitmap font atlases,
+//! and [`mod_menu`] for the in-game debug/mod overlay.
 
 pub mod bga;
 pub mod bga_layer_material;

@@ -1,4 +1,9 @@
-// Replay data, ghost data, key input log
+//! Replay recording, ghost data, and key input logging for BMS plays.
+//!
+//! Provides [`ReplayData`] for serializing and deserializing full play replays,
+//! [`LR2GhostData`] for LR2-compatible ghost score curves, [`KeyInputLog`] for
+//! per-frame key state recording, and [`LR2Random`] for LR2 random seed handling.
+//! Used by the play and result states to save, load, and compare play sessions.
 
 pub mod key_input_log;
 pub mod lr2_ghost_data;

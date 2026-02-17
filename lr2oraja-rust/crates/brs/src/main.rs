@@ -1,6 +1,9 @@
-// brs — main binary for the BMS player.
-//
-// Integrates all crates via Bevy app with state machine.
+//! brs — main binary for the BMS rhythm game player.
+//!
+//! Integrates all workspace crates into a Bevy application with a state machine
+//! driving MusicSelect → Decide → Play → Result screen transitions.
+//! CLI arguments are parsed via clap, and Bevy resources wrap each subsystem
+//! (config, database, input, audio, skin, external integrations).
 
 mod app_state;
 mod bevy_keyboard;

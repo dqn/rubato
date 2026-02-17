@@ -1,4 +1,10 @@
-// Song database, score database (rusqlite)
+//! Song and score database layer backed by rusqlite.
+//!
+//! Provides [`SongDatabase`] for indexing BMS files with metadata ([`SongData`]),
+//! [`ScoreDatabase`] for persisting play results ([`ScoreDataProperty`]),
+//! [`CourseDataAccessor`] and [`TableDataAccessor`] for difficulty tables and courses,
+//! and [`RivalDataAccessor`] for rival score comparisons.
+//! All database access is centralized here to keep SQL logic out of game logic.
 
 pub mod course_data;
 pub mod course_data_accessor;

@@ -1,4 +1,9 @@
-// Judge windows, gauge calculations, score data, clear types
+//! Judge windows, gauge calculations, score data, and clear type definitions.
+//!
+//! Provides [`JudgeProperty`] and [`JudgeAlgorithm`] for hit-timing evaluation,
+//! [`GrooveGauge`] with [`GaugeProperty`] for life-bar management, [`ScoreData`]
+//! for tracking per-play statistics, and [`ClearType`] for ranking play results.
+//! Used by the play state to evaluate player input against chart timing.
 
 mod clear_type;
 pub mod gauge_property;

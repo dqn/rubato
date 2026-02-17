@@ -1,5 +1,10 @@
-// Lane/note shuffle modifiers (Mirror, Random, Cross, etc.)
-// and pattern modifiers (Practice, Mine, LN, Autoplay, Extra, Scroll, Mode)
+//! Lane and note shuffle modifiers for BMS chart pattern manipulation.
+//!
+//! Provides lane shuffles ([`LaneMirrorShuffle`], [`LaneRandomShuffle`], [`LaneRotateShuffle`],
+//! [`LaneCrossShuffle`]) and note-level modifiers ([`LongNoteModifier`], [`MineNoteModifier`],
+//! [`AutoplayModifier`], [`PracticeModifier`], [`ScrollSpeedModifier`], [`ModeModifier`]).
+//! Includes [`JavaRandom`] for exact reproduction of Java's `java.util.Random` LCG.
+//! Applied to a `BmsModel` before gameplay to transform note patterns.
 
 pub mod autoplay_modifier;
 pub mod extra_note_modifier;

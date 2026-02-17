@@ -1,3 +1,10 @@
+//! Settings launcher GUI built on egui/eframe.
+//!
+//! Provides [`run_launcher`] as the entry point, which opens a native window
+//! with tabbed panels for video, audio, input, skin, IR, and other settings.
+//! Returns updated [`bms_config::Config`] and [`bms_config::PlayerConfig`] when
+//! the user clicks "Start Game", or `None` if cancelled.
+
 mod app;
 pub mod monitor;
 pub mod panel;

@@ -1,4 +1,9 @@
-// Internet ranking: IR protocol, LR2IR, ranking data
+//! Internet ranking (IR) client for score submission and leaderboard retrieval.
+//!
+//! Provides [`IRConnection`] trait and [`LR2IRConnection`] for the LR2IR protocol,
+//! [`IRConnectionManager`] for managing active sessions, and data types such as
+//! [`IRScoreData`], [`IRChartData`], [`RankingData`], and [`LeaderboardEntry`].
+//! Used by the play and result states to submit scores and fetch rival rankings.
 
 pub mod account;
 pub mod chart_data;
