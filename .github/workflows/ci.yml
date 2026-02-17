@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "lr2oraja-rust -> target"
+
+      - name: Run cargo check
+        working-directory: lr2oraja-rust
+        run: cargo check --workspace
+
+      # Exclude golden-master (requires Java environment) and screenshot tests (require GPU)
+      - name: Run cargo test
+        working-directory: lr2oraja-rust
+        run: cargo test --workspace --exclude golden-master
+
+      - name: Run cargo clippy
+        working-directory: lr2oraja-rust
+        run: cargo clippy --workspace -- -D warnings
+
+      - name: Run cargo fmt check
+        working-directory: lr2oraja-rust
+        run: cargo fmt --all -- --check
