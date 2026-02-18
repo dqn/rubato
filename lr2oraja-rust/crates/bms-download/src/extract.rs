@@ -81,6 +81,10 @@ pub fn extract_zip(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
         File::open(archive_path).with_context(|| format!("failed to open {:?}", archive_path))?;
     let mut archive = zip::ZipArchive::new(file)
         .with_context(|| format!("failed to read zip archive {:?}", archive_path))?;
+    fs::create_dir_all(dest_dir).with_context(|| format!("failed to create {:?}", dest_dir))?;
+    let dest_canonical = dest_dir
+        .canonicalize()
+        .with_context(|| format!("failed to canonicalize {:?}", dest_dir))?;
 
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i)?;
@@ -89,17 +93,42 @@ pub fn extract_zip(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
             Some(name) => name.to_owned(),
             None => continue, // skip entries with unsafe paths
         };
-        let out_path = dest_dir.join(&name);
+        let out_path = dest_canonical.join(&name);
 
         if entry.is_dir() {
+            ensure_zip_path_within_dest(&out_path, &dest_canonical, &name)?;
             fs::create_dir_all(&out_path)?;
         } else {
             if let Some(parent) = out_path.parent() {
                 fs::create_dir_all(parent)?;
             }
+            ensure_zip_path_within_dest(&out_path, &dest_canonical, &name)?;
             let mut out_file = File::create(&out_path)?;
             io::copy(&mut entry, &mut out_file)?;
         }
+    }
+
+    Ok(())
+}
+
+fn ensure_zip_path_within_dest(
+    out_path: &Path,
+    dest_canonical: &Path,
+    entry_name: &Path,
+) -> anyhow::Result<()> {
+    let mut existing = out_path;
+    while !existing.exists() {
+        existing = existing.parent().ok_or_else(|| {
+            anyhow::anyhow!("invalid zip entry path: {:?} -> {:?}", entry_name, out_path)
+        })?;
+    }
+
+    let existing_canonical = existing
+        .canonicalize()
+        .with_context(|| format!("failed to canonicalize {:?}", existing))?;
+
+    if !existing_canonical.starts_with(dest_canonical) {
+        bail!("path traversal detected in zip archive: {:?}", entry_name);
     }
 
     Ok(())
@@ -578,6 +607,34 @@ mod tests {
         assert!(!tmp.path().join("evil.txt").exists());
         // The safe file should exist
         assert!(extract_dir.join("safe.txt").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_extract_zip_rejects_symlink_escape() {
+        use std::os::unix::fs::symlink;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let archive_path = tmp.path().join("symlink_escape.zip");
+        let extract_dir = tmp.path().join("out");
+        let outside_dir = tmp.path().join("outside");
+        fs::create_dir_all(&extract_dir).unwrap();
+        fs::create_dir_all(&outside_dir).unwrap();
+
+        symlink(&outside_dir, extract_dir.join("escape")).unwrap();
+
+        {
+            let file = File::create(&archive_path).unwrap();
+            let mut writer = zip::ZipWriter::new(file);
+            let options = zip::write::SimpleFileOptions::default();
+            writer.start_file("escape/pwned.txt", options).unwrap();
+            writer.write_all(b"owned").unwrap();
+            writer.finish().unwrap();
+        }
+
+        let result = extract_zip(&archive_path, &extract_dir);
+        assert!(result.is_err());
+        assert!(!outside_dir.join("pwned.txt").exists());
     }
 
     #[test]

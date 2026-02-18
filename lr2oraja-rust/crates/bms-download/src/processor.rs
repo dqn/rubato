@@ -20,6 +20,7 @@ use crate::task::{DownloadTask, DownloadTaskStatus};
 const DEFAULT_MAX_CONCURRENT: usize = 5;
 const DOWNLOAD_CONNECT_TIMEOUT_SECS: u64 = 10;
 const DOWNLOAD_REQUEST_TIMEOUT_SECS: u64 = 120;
+const MAX_ARCHIVE_BYTES: u64 = 1_073_741_824; // 1 GiB
 
 /// Manages download tasks with concurrent execution limits.
 pub struct HttpDownloadProcessor {
@@ -227,6 +228,9 @@ async fn download_file(
     }
 
     let content_length = resp.content_length().unwrap_or(0);
+    if content_length != 0 {
+        validate_download_size_limit(content_length)?;
+    }
 
     // Determine filename from Content-Disposition header or URL
     let filename = resp
@@ -273,6 +277,7 @@ async fn download_file(
     while let Some(chunk) = resp.chunk().await? {
         file.write_all(&chunk).await?;
         downloaded += chunk.len() as u64;
+        validate_download_size_limit(downloaded)?;
 
         // Update progress
         let mut tasks = tasks.lock().await;
@@ -298,6 +303,17 @@ async fn is_cancelled(tasks: &Arc<Mutex<Vec<DownloadTask>>>, task_id: usize) -> 
         .iter()
         .find(|t| t.id == task_id)
         .is_some_and(|task| task.status == DownloadTaskStatus::Cancel)
+}
+
+fn validate_download_size_limit(size: u64) -> anyhow::Result<()> {
+    if size > MAX_ARCHIVE_BYTES {
+        anyhow::bail!(
+            "archive size exceeds the limit: {} > {}",
+            size,
+            MAX_ARCHIVE_BYTES
+        );
+    }
+    Ok(())
 }
 
 fn build_temp_archive_path(task_id: usize, hash: &str, filename: &str) -> PathBuf {
@@ -406,6 +422,23 @@ mod tests {
         assert_eq!(sanitize_download_filename("/"), None);
         assert_eq!(sanitize_download_filename("."), None);
         assert_eq!(sanitize_download_filename(".."), None);
+    }
+
+    #[test]
+    fn test_validate_download_size_limit_allows_within_limit() {
+        assert!(validate_download_size_limit(MAX_ARCHIVE_BYTES).is_ok());
+    }
+
+    #[test]
+    fn test_validate_download_size_limit_rejects_over_limit() {
+        let result = validate_download_size_limit(MAX_ARCHIVE_BYTES + 1);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("archive size exceeds the limit")
+        );
     }
 
     #[test]

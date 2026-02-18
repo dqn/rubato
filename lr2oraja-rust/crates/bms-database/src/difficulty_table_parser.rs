@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 use anyhow::{Result, anyhow};
 use serde_json::Value;
+use url::Url;
 
 use crate::CourseData;
 use crate::course_data::{CourseDataConstraint, CourseSongData, TrophyData};
@@ -233,8 +234,10 @@ pub fn extract_bmstable_url(html: &str) -> Option<String> {
 /// - If `relative` starts with "./" -> strip "./" prefix.
 /// - Prepend the directory portion of `source_url` (everything before last '/').
 pub fn resolve_url(source_url: &str, relative: &str) -> String {
-    if relative.starts_with("http") {
-        return relative.to_string();
+    if let Ok(base) = Url::parse(source_url)
+        && let Ok(joined) = base.join(relative)
+    {
+        return joined.to_string();
     }
 
     let path = if let Some(stripped) = relative.strip_prefix("./") {
@@ -987,6 +990,33 @@ mod tests {
         assert_eq!(
             resolve_url("http://example.com/", "http://other.com/data.json"),
             "http://other.com/data.json"
+        );
+    }
+
+    #[test]
+    fn resolve_root_relative_url() {
+        assert_eq!(
+            resolve_url("https://example.com/table/header.json", "/data.json"),
+            "https://example.com/data.json"
+        );
+    }
+
+    #[test]
+    fn resolve_parent_relative_url() {
+        assert_eq!(
+            resolve_url("https://example.com/table/sub/header.json", "../data.json"),
+            "https://example.com/table/data.json"
+        );
+    }
+
+    #[test]
+    fn resolve_scheme_relative_url() {
+        assert_eq!(
+            resolve_url(
+                "https://example.com/table/header.json",
+                "//cdn.example.com/data.json"
+            ),
+            "https://cdn.example.com/data.json"
         );
     }
 
