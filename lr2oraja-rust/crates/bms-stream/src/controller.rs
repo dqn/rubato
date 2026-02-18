@@ -2,7 +2,7 @@
 //
 // On Windows, connects to \\.\pipe\beatoraja named pipe and dispatches
 // incoming lines to registered StreamCommand handlers.
-// On Unix platforms, listens on /tmp/beatoraja.sock Unix domain socket.
+// On Unix platforms, listens on a per-user Unix domain socket.
 
 use std::sync::Arc;
 
@@ -150,9 +150,44 @@ async fn run_pipe_listener(
     Ok(())
 }
 
-/// Unix domain socket path.
 #[cfg(not(target_os = "windows"))]
-const UNIX_SOCKET_PATH: &str = "/tmp/beatoraja.sock";
+fn sanitize_socket_user_suffix(user: &str) -> String {
+    let mut out = String::with_capacity(user.len());
+    for c in user.chars() {
+        if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+            out.push(c);
+        } else {
+            out.push('_');
+        }
+    }
+    if out.is_empty() {
+        "user".to_string()
+    } else {
+        out
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn unix_socket_path_from_parts(
+    runtime_dir: Option<&std::path::Path>,
+    user: Option<&str>,
+) -> std::path::PathBuf {
+    if let Some(dir) = runtime_dir {
+        return dir.join("brs").join("beatoraja.sock");
+    }
+
+    let suffix = sanitize_socket_user_suffix(user.unwrap_or("user"));
+    std::env::temp_dir().join(format!("beatoraja-{suffix}.sock"))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn unix_socket_path() -> std::path::PathBuf {
+    let runtime_dir = std::env::var_os("XDG_RUNTIME_DIR").map(std::path::PathBuf::from);
+    let user = std::env::var("USER")
+        .or_else(|_| std::env::var("USERNAME"))
+        .ok();
+    unix_socket_path_from_parts(runtime_dir.as_deref(), user.as_deref())
+}
 
 /// Unix domain socket listener implementation.
 #[cfg(not(target_os = "windows"))]
@@ -160,14 +195,24 @@ async fn run_unix_listener(
     commands: Vec<Arc<dyn StreamCommand + Send + Sync>>,
     mut shutdown_rx: watch::Receiver<bool>,
 ) -> anyhow::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
     use tokio::io::AsyncBufReadExt;
     use tokio::net::UnixListener;
 
-    // Remove stale socket file if it exists
-    let _ = std::fs::remove_file(UNIX_SOCKET_PATH);
+    let socket_path = unix_socket_path();
 
-    let listener = UnixListener::bind(UNIX_SOCKET_PATH)?;
-    info!("Listening on Unix socket: {}", UNIX_SOCKET_PATH);
+    if let Some(parent) = socket_path.parent() {
+        std::fs::create_dir_all(parent)?;
+        // Keep runtime dir private for local IPC endpoint.
+        let _ = std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700));
+    }
+
+    // Remove stale socket file if it exists
+    let _ = std::fs::remove_file(&socket_path);
+
+    let listener = UnixListener::bind(&socket_path)?;
+    let _ = std::fs::set_permissions(&socket_path, std::fs::Permissions::from_mode(0o600));
+    info!("Listening on Unix socket: {}", socket_path.display());
 
     loop {
         tokio::select! {
@@ -218,7 +263,7 @@ async fn run_unix_listener(
     }
 
     // Clean up socket file
-    let _ = std::fs::remove_file(UNIX_SOCKET_PATH);
+    let _ = std::fs::remove_file(&socket_path);
     Ok(())
 }
 
@@ -367,6 +412,25 @@ mod tests {
         // Whitespace only
         dispatch_line(&commands, "   ");
         assert_eq!(cmd.pending_count(), 0);
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn test_unix_socket_path_prefers_runtime_dir() {
+        let path =
+            unix_socket_path_from_parts(Some(std::path::Path::new("/tmp/runtime")), Some("dqn"));
+        assert_eq!(
+            path,
+            std::path::Path::new("/tmp/runtime/brs/beatoraja.sock")
+        );
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn test_unix_socket_path_fallback_uses_user_suffix() {
+        let path = unix_socket_path_from_parts(None, Some("dqn@example"));
+        let file_name = path.file_name().and_then(|v| v.to_str()).unwrap_or("");
+        assert_eq!(file_name, "beatoraja-dqn_example.sock");
     }
 
     #[cfg(not(target_os = "windows"))]

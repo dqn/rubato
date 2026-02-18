@@ -129,7 +129,8 @@ impl HttpDownloadProcessor {
                     }
 
                     // Extract
-                    match extract::detect_and_extract(&archive_path, &download_dir) {
+                    match extract_archive_blocking(archive_path.clone(), download_dir.clone()).await
+                    {
                         Ok(()) => {
                             let mut tasks = tasks.lock().await;
                             if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
@@ -207,6 +208,15 @@ impl HttpDownloadProcessor {
             .find(|t| t.id == task_id)
             .cloned()
     }
+}
+
+async fn extract_archive_blocking(
+    archive_path: PathBuf,
+    download_dir: PathBuf,
+) -> anyhow::Result<()> {
+    tokio::task::spawn_blocking(move || extract::detect_and_extract(&archive_path, &download_dir))
+        .await
+        .map_err(|e| anyhow!("extraction task failed: {e}"))?
 }
 
 /// Download a file from the given URL, streaming to disk.
@@ -375,6 +385,7 @@ fn sanitize_download_filename(filename: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
     #[test]
     fn test_extract_filename_quoted() {
@@ -597,5 +608,30 @@ mod tests {
         let result = processor.retry_task(999).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[tokio::test]
+    async fn test_extract_archive_blocking_extracts_zip() {
+        let tmp = tempfile::tempdir().unwrap();
+        let archive_path = tmp.path().join("sample.zip");
+        let out_dir = tmp.path().join("out");
+        std::fs::create_dir_all(&out_dir).unwrap();
+
+        {
+            let file = std::fs::File::create(&archive_path).unwrap();
+            let mut writer = zip::ZipWriter::new(file);
+            let options = zip::write::SimpleFileOptions::default();
+            writer.start_file("hello.txt", options).unwrap();
+            writer.write_all(b"hello").unwrap();
+            writer.finish().unwrap();
+        }
+
+        extract_archive_blocking(archive_path.clone(), out_dir.clone())
+            .await
+            .unwrap();
+        assert_eq!(
+            std::fs::read_to_string(out_dir.join("hello.txt")).unwrap(),
+            "hello"
+        );
     }
 }

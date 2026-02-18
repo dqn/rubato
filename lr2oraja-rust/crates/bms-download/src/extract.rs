@@ -3,7 +3,7 @@
 // Provides extraction for tar.gz, zip, lzh/lha, and 7z archives.
 
 use std::fs::{self, File};
-use std::io::{self, BufReader, Read};
+use std::io::{BufReader, Read, Write};
 use std::path::{Component, Path, PathBuf};
 
 use anyhow::{Context, bail};
@@ -15,6 +15,108 @@ enum ArchiveFormat {
     Zip,
     Lzh,
     SevenZip,
+}
+
+const MAX_EXTRACT_TOTAL_BYTES: u64 = 4 * 1024 * 1024 * 1024; // 4 GiB
+const MAX_EXTRACT_FILE_BYTES: u64 = 512 * 1024 * 1024; // 512 MiB
+const MAX_EXTRACT_ENTRIES: u64 = 100_000;
+
+#[derive(Debug, Clone, Copy)]
+struct ExtractionLimits {
+    max_total_bytes: u64,
+    max_file_bytes: u64,
+    max_entries: u64,
+}
+
+impl Default for ExtractionLimits {
+    fn default() -> Self {
+        Self {
+            max_total_bytes: MAX_EXTRACT_TOTAL_BYTES,
+            max_file_bytes: MAX_EXTRACT_FILE_BYTES,
+            max_entries: MAX_EXTRACT_ENTRIES,
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+struct ExtractionBudget {
+    total_bytes: u64,
+    entries: u64,
+}
+
+impl ExtractionBudget {
+    fn add_entry(&mut self, limits: &ExtractionLimits, entry_name: &str) -> anyhow::Result<()> {
+        self.entries = self.entries.checked_add(1).ok_or_else(|| {
+            anyhow::anyhow!("archive entry count overflow while processing {entry_name:?}")
+        })?;
+        if self.entries > limits.max_entries {
+            bail!(
+                "archive entry count exceeds limit: {} > {}",
+                self.entries,
+                limits.max_entries
+            );
+        }
+        Ok(())
+    }
+
+    fn precheck_file_size(
+        &self,
+        limits: &ExtractionLimits,
+        entry_name: &str,
+        declared_size: Option<u64>,
+    ) -> anyhow::Result<()> {
+        let Some(size) = declared_size else {
+            return Ok(());
+        };
+        if size > limits.max_file_bytes {
+            bail!(
+                "entry extracted size exceeds per-file limit: {:?} ({} > {})",
+                entry_name,
+                size,
+                limits.max_file_bytes
+            );
+        }
+        let projected_total = self.total_bytes.checked_add(size).ok_or_else(|| {
+            anyhow::anyhow!("total extracted size overflow while processing {entry_name:?}")
+        })?;
+        if projected_total > limits.max_total_bytes {
+            bail!(
+                "total extracted size exceeds limit: {} > {}",
+                projected_total,
+                limits.max_total_bytes
+            );
+        }
+        Ok(())
+    }
+
+    fn add_bytes(
+        &mut self,
+        limits: &ExtractionLimits,
+        entry_name: &str,
+        added: u64,
+        entry_written: u64,
+    ) -> anyhow::Result<()> {
+        if entry_written > limits.max_file_bytes {
+            bail!(
+                "entry extracted size exceeds per-file limit: {:?} ({} > {})",
+                entry_name,
+                entry_written,
+                limits.max_file_bytes
+            );
+        }
+
+        self.total_bytes = self.total_bytes.checked_add(added).ok_or_else(|| {
+            anyhow::anyhow!("total extracted size overflow while processing {entry_name:?}")
+        })?;
+        if self.total_bytes > limits.max_total_bytes {
+            bail!(
+                "total extracted size exceeds limit: {} > {}",
+                self.total_bytes,
+                limits.max_total_bytes
+            );
+        }
+        Ok(())
+    }
 }
 
 fn detect_archive_format_from_name(name: &str) -> Option<ArchiveFormat> {
@@ -60,16 +162,162 @@ fn detect_archive_format_from_magic(archive_path: &Path) -> anyhow::Result<Optio
     Ok(None)
 }
 
+fn copy_with_limits<R: Read + ?Sized, W: Write + ?Sized>(
+    reader: &mut R,
+    writer: &mut W,
+    budget: &mut ExtractionBudget,
+    limits: &ExtractionLimits,
+    entry_name: &str,
+    declared_size: Option<u64>,
+) -> anyhow::Result<u64> {
+    budget.precheck_file_size(limits, entry_name, declared_size)?;
+
+    let mut written = 0_u64;
+    let mut buf = [0_u8; 64 * 1024];
+    loop {
+        let read_len = reader
+            .read(&mut buf)
+            .with_context(|| format!("failed to read archive entry {:?}", entry_name))?;
+        if read_len == 0 {
+            break;
+        }
+
+        writer
+            .write_all(&buf[..read_len])
+            .with_context(|| format!("failed to write extracted file {:?}", entry_name))?;
+        written = written.checked_add(read_len as u64).ok_or_else(|| {
+            anyhow::anyhow!(
+                "entry extracted size overflow while writing archive entry {:?}",
+                entry_name
+            )
+        })?;
+        budget.add_bytes(limits, entry_name, read_len as u64, written)?;
+    }
+
+    Ok(written)
+}
+
+fn ensure_path_within_dest(
+    out_path: &Path,
+    dest_canonical: &Path,
+    entry_name: &str,
+) -> anyhow::Result<()> {
+    let mut existing = out_path;
+    while !existing.exists() {
+        existing = existing.parent().ok_or_else(|| {
+            anyhow::anyhow!(
+                "invalid archive entry path: {:?} -> {:?}",
+                entry_name,
+                out_path
+            )
+        })?;
+    }
+
+    let existing_canonical = existing
+        .canonicalize()
+        .with_context(|| format!("failed to canonicalize {:?}", existing))?;
+
+    if !existing_canonical.starts_with(dest_canonical) {
+        bail!("path traversal detected in archive: {:?}", entry_name);
+    }
+
+    Ok(())
+}
+
+fn sanitize_tar_entry_path(entry_path: &Path) -> anyhow::Result<Option<PathBuf>> {
+    let mut relative = PathBuf::new();
+    for component in entry_path.components() {
+        match component {
+            Component::Normal(part) => relative.push(part),
+            Component::CurDir => {}
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                bail!("path traversal detected in tar archive: {:?}", entry_path);
+            }
+        }
+    }
+
+    if relative.as_os_str().is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(relative))
+}
+
 /// Extract a .tar.gz archive to the destination directory.
 pub fn extract_tar_gz(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
+    extract_tar_gz_with_limits(archive_path, dest_dir, &ExtractionLimits::default())
+}
+
+fn extract_tar_gz_with_limits(
+    archive_path: &Path,
+    dest_dir: &Path,
+    limits: &ExtractionLimits,
+) -> anyhow::Result<()> {
     let file =
         File::open(archive_path).with_context(|| format!("failed to open {:?}", archive_path))?;
     let reader = BufReader::new(file);
     let decoder = GzDecoder::new(reader);
     let mut archive = tar::Archive::new(decoder);
-    archive
-        .unpack(dest_dir)
-        .with_context(|| format!("failed to extract {:?} to {:?}", archive_path, dest_dir))?;
+
+    fs::create_dir_all(dest_dir).with_context(|| format!("failed to create {:?}", dest_dir))?;
+    let dest_canonical = dest_dir
+        .canonicalize()
+        .with_context(|| format!("failed to canonicalize {:?}", dest_dir))?;
+    let mut budget = ExtractionBudget::default();
+
+    for entry_result in archive.entries().with_context(|| {
+        format!(
+            "failed to read tar entries from {:?}",
+            archive_path.to_string_lossy()
+        )
+    })? {
+        let mut entry = entry_result
+            .with_context(|| format!("failed to read tar entry from {:?}", archive_path))?;
+        let entry_path = entry
+            .path()
+            .with_context(|| format!("failed to parse tar entry path in {:?}", archive_path))?
+            .into_owned();
+        let entry_name = entry_path.to_string_lossy().to_string();
+        let Some(relative_path) = sanitize_tar_entry_path(&entry_path)? else {
+            continue;
+        };
+
+        budget.add_entry(limits, &entry_name)?;
+        let out_path = dest_canonical.join(relative_path);
+        ensure_path_within_dest(&out_path, &dest_canonical, &entry_name)?;
+
+        let entry_type = entry.header().entry_type();
+        if entry_type.is_dir() {
+            fs::create_dir_all(&out_path)
+                .with_context(|| format!("failed to create extracted dir {:?}", out_path))?;
+            continue;
+        }
+
+        if !entry_type.is_file() {
+            // Skip symlinks/hardlinks/special entries for safety.
+            continue;
+        }
+
+        if let Some(parent) = out_path.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create extracted dir {:?}", parent))?;
+            ensure_path_within_dest(parent, &dest_canonical, &entry_name)?;
+        } else {
+            bail!("invalid tar entry path: {:?}", entry_name);
+        }
+
+        let mut out_file = File::create(&out_path)
+            .with_context(|| format!("failed to create extracted file {:?}", out_path))?;
+        let declared_size = entry.size();
+        copy_with_limits(
+            &mut entry,
+            &mut out_file,
+            &mut budget,
+            limits,
+            &entry_name,
+            Some(declared_size),
+        )?;
+    }
+
     Ok(())
 }
 
@@ -77,6 +325,14 @@ pub fn extract_tar_gz(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()
 ///
 /// Uses `enclosed_name()` to prevent path traversal attacks.
 pub fn extract_zip(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
+    extract_zip_with_limits(archive_path, dest_dir, &ExtractionLimits::default())
+}
+
+fn extract_zip_with_limits(
+    archive_path: &Path,
+    dest_dir: &Path,
+    limits: &ExtractionLimits,
+) -> anyhow::Result<()> {
     let file =
         File::open(archive_path).with_context(|| format!("failed to open {:?}", archive_path))?;
     let mut archive = zip::ZipArchive::new(file)
@@ -85,6 +341,7 @@ pub fn extract_zip(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
     let dest_canonical = dest_dir
         .canonicalize()
         .with_context(|| format!("failed to canonicalize {:?}", dest_dir))?;
+    let mut budget = ExtractionBudget::default();
 
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i)?;
@@ -93,6 +350,8 @@ pub fn extract_zip(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
             Some(name) => name.to_owned(),
             None => continue, // skip entries with unsafe paths
         };
+        let entry_name = name.to_string_lossy().to_string();
+        budget.add_entry(limits, &entry_name)?;
         let out_path = dest_canonical.join(&name);
 
         if entry.is_dir() {
@@ -104,7 +363,15 @@ pub fn extract_zip(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
             }
             ensure_zip_path_within_dest(&out_path, &dest_canonical, &name)?;
             let mut out_file = File::create(&out_path)?;
-            io::copy(&mut entry, &mut out_file)?;
+            let declared_size = entry.size();
+            copy_with_limits(
+                &mut entry,
+                &mut out_file,
+                &mut budget,
+                limits,
+                &entry_name,
+                Some(declared_size),
+            )?;
         }
     }
 
@@ -116,28 +383,21 @@ fn ensure_zip_path_within_dest(
     dest_canonical: &Path,
     entry_name: &Path,
 ) -> anyhow::Result<()> {
-    let mut existing = out_path;
-    while !existing.exists() {
-        existing = existing.parent().ok_or_else(|| {
-            anyhow::anyhow!("invalid zip entry path: {:?} -> {:?}", entry_name, out_path)
-        })?;
-    }
-
-    let existing_canonical = existing
-        .canonicalize()
-        .with_context(|| format!("failed to canonicalize {:?}", existing))?;
-
-    if !existing_canonical.starts_with(dest_canonical) {
-        bail!("path traversal detected in zip archive: {:?}", entry_name);
-    }
-
-    Ok(())
+    ensure_path_within_dest(out_path, dest_canonical, &entry_name.to_string_lossy())
 }
 
 /// Extract a .lzh/.lha archive to the destination directory.
 ///
 /// Validates that extracted paths do not escape the destination directory.
 pub fn extract_lzh(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
+    extract_lzh_with_limits(archive_path, dest_dir, &ExtractionLimits::default())
+}
+
+fn extract_lzh_with_limits(
+    archive_path: &Path,
+    dest_dir: &Path,
+    limits: &ExtractionLimits,
+) -> anyhow::Result<()> {
     let mut decoder = delharc::parse_file(archive_path)
         .with_context(|| format!("failed to open lzh archive {:?}", archive_path))?;
 
@@ -145,10 +405,18 @@ pub fn extract_lzh(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
     let dest_canonical = dest_dir
         .canonicalize()
         .with_context(|| format!("failed to canonicalize {:?}", dest_dir))?;
+    let mut budget = ExtractionBudget::default();
 
     loop {
-        let header = decoder.header();
-        let entry_path = header.parse_pathname();
+        let (entry_path, is_directory, original_size) = {
+            let header = decoder.header();
+            (
+                header.parse_pathname(),
+                header.is_directory(),
+                header.original_size,
+            )
+        };
+        let entry_name = entry_path.to_string_lossy().to_string();
 
         let Some(relative_path) = sanitize_lzh_entry_path(&entry_path)? else {
             if !decoder
@@ -159,28 +427,32 @@ pub fn extract_lzh(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
             }
             continue;
         };
+        budget.add_entry(limits, &entry_name)?;
         let out_path = dest_canonical.join(relative_path);
 
         if let Some(parent) = out_path.parent() {
             fs::create_dir_all(parent)?;
-            let parent_canonical = parent
-                .canonicalize()
-                .with_context(|| format!("failed to canonicalize {:?}", parent))?;
-            if !parent_canonical.starts_with(&dest_canonical) {
-                bail!("path traversal detected in lzh archive: {:?}", entry_path);
-            }
+            ensure_path_within_dest(parent, &dest_canonical, &entry_name)?;
         } else {
             bail!("invalid lzh entry path: {:?}", entry_path);
         }
+        ensure_path_within_dest(&out_path, &dest_canonical, &entry_name)?;
 
-        if header.is_directory() {
+        if is_directory {
             fs::create_dir_all(&out_path)?;
         } else {
             if let Some(parent) = out_path.parent() {
                 fs::create_dir_all(parent)?;
             }
             let mut out_file = File::create(&out_path)?;
-            io::copy(&mut decoder, &mut out_file)?;
+            copy_with_limits(
+                &mut decoder,
+                &mut out_file,
+                &mut budget,
+                limits,
+                &entry_name,
+                Some(original_size),
+            )?;
         }
 
         if !decoder
@@ -243,39 +515,33 @@ fn ensure_7z_path_within_dest(
     dest_canonical: &Path,
     entry_name: &str,
 ) -> Result<(), sevenz_rust::Error> {
-    let mut existing = out_path;
-    while !existing.exists() {
-        existing = existing.parent().ok_or_else(|| {
-            sevenz_rust::Error::other(format!(
-                "invalid 7z entry path: {entry_name:?} -> {out_path:?}"
-            ))
-        })?;
-    }
-
-    let existing_canonical = existing
-        .canonicalize()
-        .map_err(|e| sevenz_rust::Error::other(format!("{e}")))?;
-
-    if !existing_canonical.starts_with(dest_canonical) {
-        return Err(sevenz_rust::Error::other(format!(
-            "path traversal detected in 7z archive: {entry_name:?}"
-        )));
-    }
-
-    Ok(())
+    ensure_path_within_dest(out_path, dest_canonical, entry_name)
+        .map_err(|e| sevenz_rust::Error::other(format!("{e}")))
 }
 
 pub fn extract_7z(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
+    extract_7z_with_limits(archive_path, dest_dir, &ExtractionLimits::default())
+}
+
+fn extract_7z_with_limits(
+    archive_path: &Path,
+    dest_dir: &Path,
+    limits: &ExtractionLimits,
+) -> anyhow::Result<()> {
     fs::create_dir_all(dest_dir).with_context(|| format!("failed to create {:?}", dest_dir))?;
     let dest_canonical = dest_dir
         .canonicalize()
         .with_context(|| format!("failed to canonicalize {:?}", dest_dir))?;
+    let mut budget = ExtractionBudget::default();
 
     sevenz_rust::decompress_file_with_extract_fn(archive_path, dest_dir, |entry, reader, _dest| {
         let entry_name = entry.name();
         let Some(relative_path) = sanitize_7z_entry_path(entry_name)? else {
             return Ok(true);
         };
+        budget
+            .add_entry(limits, entry_name)
+            .map_err(|e| sevenz_rust::Error::other(format!("{e}")))?;
         let out_path = dest_canonical.join(relative_path);
         ensure_7z_path_within_dest(&out_path, &dest_canonical, entry_name)?;
 
@@ -292,8 +558,15 @@ pub fn extract_7z(archive_path: &Path, dest_dir: &Path) -> anyhow::Result<()> {
             if !out_path.is_dir() {
                 let mut out_file = File::create(&out_path)
                     .map_err(|e| sevenz_rust::Error::other(format!("{e}")))?;
-                io::copy(reader, &mut out_file)
-                    .map_err(|e| sevenz_rust::Error::other(format!("{e}")))?;
+                copy_with_limits(
+                    reader,
+                    &mut out_file,
+                    &mut budget,
+                    limits,
+                    entry_name,
+                    Some(entry.size()),
+                )
+                .map_err(|e| sevenz_rust::Error::other(format!("{e}")))?;
             }
         }
 
@@ -549,6 +822,74 @@ mod tests {
         let extracted = extract_dir.join("hello.txt");
         assert!(extracted.exists());
         assert_eq!(fs::read_to_string(&extracted).unwrap(), "Hello from zip!");
+    }
+
+    #[test]
+    fn test_extract_zip_rejects_total_size_over_limit() {
+        let tmp = tempfile::tempdir().unwrap();
+        let archive_path = tmp.path().join("too-large-total.zip");
+        let extract_dir = tmp.path().join("out");
+        fs::create_dir_all(&extract_dir).unwrap();
+
+        {
+            let file = File::create(&archive_path).unwrap();
+            let mut writer = zip::ZipWriter::new(file);
+            let options = zip::write::SimpleFileOptions::default();
+            writer.start_file("a.txt", options).unwrap();
+            writer.write_all(b"12345").unwrap();
+            writer.start_file("b.txt", options).unwrap();
+            writer.write_all(b"67890").unwrap();
+            writer.finish().unwrap();
+        }
+
+        let limits = ExtractionLimits {
+            max_total_bytes: 8,
+            max_file_bytes: 16,
+            max_entries: 8,
+        };
+        let result = extract_zip_with_limits(&archive_path, &extract_dir, &limits);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("total extracted size exceeds limit")
+        );
+    }
+
+    #[test]
+    fn test_extract_zip_rejects_entry_count_over_limit() {
+        let tmp = tempfile::tempdir().unwrap();
+        let archive_path = tmp.path().join("too-many-entries.zip");
+        let extract_dir = tmp.path().join("out");
+        fs::create_dir_all(&extract_dir).unwrap();
+
+        {
+            let file = File::create(&archive_path).unwrap();
+            let mut writer = zip::ZipWriter::new(file);
+            let options = zip::write::SimpleFileOptions::default();
+            writer.start_file("a.txt", options).unwrap();
+            writer.write_all(b"a").unwrap();
+            writer.start_file("b.txt", options).unwrap();
+            writer.write_all(b"b").unwrap();
+            writer.start_file("c.txt", options).unwrap();
+            writer.write_all(b"c").unwrap();
+            writer.finish().unwrap();
+        }
+
+        let limits = ExtractionLimits {
+            max_total_bytes: 32,
+            max_file_bytes: 32,
+            max_entries: 2,
+        };
+        let result = extract_zip_with_limits(&archive_path, &extract_dir, &limits);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("archive entry count exceeds limit")
+        );
     }
 
     #[test]
