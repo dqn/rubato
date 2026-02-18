@@ -129,19 +129,15 @@ impl HttpDownloadProcessor {
                     }
 
                     // Extract
-                    match extract_archive_blocking(archive_path.clone(), download_dir.clone()).await
-                    {
+                    let extraction_result =
+                        extract_archive_blocking(archive_path.clone(), download_dir.clone()).await;
+                    match extraction_result {
                         Ok(()) => {
                             let mut tasks = tasks.lock().await;
                             if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
                                 task.set_status(DownloadTaskStatus::Extracted);
                             }
                             info!("Task {} extracted successfully", task_id);
-
-                            // Clean up archive
-                            if let Err(e) = tokio::fs::remove_file(&archive_path).await {
-                                warn!("Failed to remove archive {:?}: {}", archive_path, e);
-                            }
                         }
                         Err(e) => {
                             let mut tasks = tasks.lock().await;
@@ -149,6 +145,13 @@ impl HttpDownloadProcessor {
                                 task.set_error(format!("extraction failed: {}", e));
                             }
                         }
+                    }
+
+                    // Clean up downloaded archive regardless of extraction result.
+                    if let Err(e) = tokio::fs::remove_file(&archive_path).await
+                        && e.kind() != std::io::ErrorKind::NotFound
+                    {
+                        warn!("Failed to remove archive {:?}: {}", archive_path, e);
                     }
                 }
                 Err(e) => {
@@ -284,25 +287,32 @@ async fn download_file(
     let mut downloaded: u64 = 0;
     let mut resp = resp;
 
-    while let Some(chunk) = resp.chunk().await? {
-        file.write_all(&chunk).await?;
-        downloaded += chunk.len() as u64;
-        validate_download_size_limit(downloaded)?;
+    let write_result = async {
+        while let Some(chunk) = resp.chunk().await? {
+            file.write_all(&chunk).await?;
+            downloaded += chunk.len() as u64;
+            validate_download_size_limit(downloaded)?;
 
-        // Update progress
-        let mut tasks = tasks.lock().await;
-        if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
-            task.download_size = downloaded;
-            // Check for cancellation
-            if task.status == DownloadTaskStatus::Cancel {
-                drop(tasks);
-                let _ = tokio::fs::remove_file(&file_path).await;
-                anyhow::bail!("download cancelled");
+            // Update progress
+            let mut tasks = tasks.lock().await;
+            if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
+                task.download_size = downloaded;
+                // Check for cancellation
+                if task.status == DownloadTaskStatus::Cancel {
+                    drop(tasks);
+                    anyhow::bail!("download cancelled");
+                }
             }
         }
+        file.flush().await?;
+        anyhow::Ok(())
     }
+    .await;
 
-    file.flush().await?;
+    if let Err(e) = write_result {
+        let _ = tokio::fs::remove_file(&file_path).await;
+        return Err(e);
+    }
 
     Ok(file_path)
 }
@@ -385,7 +395,10 @@ fn sanitize_download_filename(filename: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
+    use std::io::{Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::thread;
+    use std::time::Duration as StdDuration;
 
     #[test]
     fn test_extract_filename_quoted() {
@@ -632,6 +645,88 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(out_dir.join("hello.txt")).unwrap(),
             "hello"
+        );
+    }
+
+    fn spawn_static_http_server(body: &'static [u8], content_type: &'static str) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let _ = read_http_request(&mut stream);
+                let header = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: {}\r\nConnection: close\r\n\r\n",
+                    body.len(),
+                    content_type
+                );
+                let _ = stream.write_all(header.as_bytes());
+                let _ = stream.write_all(body);
+                let _ = stream.flush();
+            }
+        });
+
+        format!("http://{addr}/sample.bin")
+    }
+
+    fn read_http_request(stream: &mut TcpStream) -> std::io::Result<()> {
+        stream.set_read_timeout(Some(StdDuration::from_millis(500)))?;
+        let mut buf = [0_u8; 1024];
+        let _ = stream.read(&mut buf)?;
+        Ok(())
+    }
+
+    fn list_temp_archives_for_hash_prefix(prefix: &str) -> Vec<PathBuf> {
+        let dir = std::env::temp_dir().join("brs_download");
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            return Vec::new();
+        };
+
+        entries
+            .flatten()
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| name.starts_with(prefix))
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn test_temp_archive_cleanup_on_extract_failure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let processor = HttpDownloadProcessor::new(tmp.path());
+        let url = spawn_static_http_server(b"not an archive", "application/octet-stream");
+
+        let task_hash = "abcdeffedcba1234";
+        let before_files = list_temp_archives_for_hash_prefix(task_hash);
+
+        let id = processor
+            .add_task(url, "bad archive".into(), task_hash.into())
+            .await;
+        processor.start_download(id);
+
+        for _ in 0..100 {
+            tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+            let task = processor.get_task(id).await.unwrap();
+            if task.status.is_terminal() {
+                break;
+            }
+        }
+
+        let task = processor.get_task(id).await.unwrap();
+        assert_eq!(task.status, DownloadTaskStatus::Error);
+        assert!(
+            task.error_message
+                .as_deref()
+                .is_some_and(|msg| msg.contains("extraction failed"))
+        );
+
+        let after_files = list_temp_archives_for_hash_prefix(task_hash);
+        assert_eq!(
+            after_files, before_files,
+            "temporary archive file must be removed after extraction error"
         );
     }
 }

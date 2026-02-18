@@ -30,6 +30,23 @@ pub fn enumerate_monitors() -> Vec<MonitorInfo> {
     platform::enumerate_monitors_impl()
 }
 
+#[cfg(any(target_os = "linux", test))]
+fn parse_xrandr_geometry_token(geom: &str) -> Option<((u32, u32), (i32, i32))> {
+    let x_pos = geom.find('x')?;
+    let width = geom[..x_pos].parse::<u32>().ok()?;
+    let rest = &geom[x_pos + 1..];
+
+    let first_sign = rest.find(['+', '-'])?;
+    let height = rest[..first_sign].parse::<u32>().ok()?;
+    let offsets = &rest[first_sign..];
+
+    let second_sign = offsets[1..].find(['+', '-'])? + 1;
+    let x = offsets[..second_sign].parse::<i32>().ok()?;
+    let y = offsets[second_sign..].parse::<i32>().ok()?;
+
+    Some(((width, height), (x, y)))
+}
+
 #[cfg(target_os = "macos")]
 mod platform {
     use super::MonitorInfo;
@@ -168,14 +185,12 @@ mod platform {
     }
 
     fn parse_geometry(name: &str, geom: &str) -> Option<MonitorInfo> {
-        // Format: WxH+X+Y
-        let (resolution, offset) = geom.split_once('+')?;
-        let (w, h) = resolution.split_once('x')?;
-        let (x, y) = offset.split_once('+')?;
+        // Format: WxH+X+Y (xrandr may also use negative offsets)
+        let ((w, h), (x, y)) = parse_xrandr_geometry_token(geom)?;
         Some(MonitorInfo {
             name: name.to_string(),
-            position: (x.parse().ok()?, y.parse().ok()?),
-            size: (w.parse().ok()?, h.parse().ok()?),
+            position: (x, y),
+            size: (w, h),
         })
     }
 }
@@ -233,5 +248,21 @@ mod tests {
             let _ = m.display_label();
             let _ = m.to_config_string();
         }
+    }
+
+    #[test]
+    fn parse_xrandr_geometry_positive_offsets() {
+        assert_eq!(
+            parse_xrandr_geometry_token("1920x1080+0+0"),
+            Some(((1920, 1080), (0, 0)))
+        );
+    }
+
+    #[test]
+    fn parse_xrandr_geometry_negative_x_offset() {
+        assert_eq!(
+            parse_xrandr_geometry_token("1920x1080-1920+0"),
+            Some(((1920, 1080), (-1920, 0)))
+        );
     }
 }
