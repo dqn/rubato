@@ -22,6 +22,7 @@ mod target_property;
 mod timer_manager;
 mod window_manager;
 
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -336,6 +337,8 @@ fn main() -> Result<()> {
         })
         .add_systems(Update, timer_update_system)
         .add_systems(Update, state_machine_system)
+        .add_systems(Update, skin_load_system)
+        .add_systems(Update, preview_music_update_system)
         .add_systems(Update, state_sync_system)
         .add_systems(Update, version_check_system)
         .add_systems(Update, hot_reload::hot_reload_system)
@@ -601,6 +604,214 @@ fn version_check_system(mut vc: ResMut<BrsVersionCheck>) {
             tracing::warn!("Version check: channel disconnected");
         }
         None => {}
+    }
+}
+
+/// Consumes pending skin load requests and loads the skin into the Bevy world.
+///
+/// Each frame, checks `SkinManager.take_request()`. If a request exists:
+/// 1. Resolves skin path from player_config (with fallback to default)
+/// 2. Reads and parses the skin file (.luaskin → JSON conversion, .json → preprocess)
+/// 3. Loads source images via BevyImageLoader
+/// 4. Calls setup_skin() to spawn entities and insert SkinRenderState
+fn skin_load_system(
+    mut commands: Commands,
+    mut skin_mgr: ResMut<BrsSkinManager>,
+    player_config: Res<BrsPlayerConfig>,
+    config: Res<BrsConfig>,
+    mut images: ResMut<Assets<Image>>,
+    shared_state: Res<BrsSharedState>,
+    skin_entities: Query<Entity, With<bms_render::skin_renderer::SkinObjectEntity>>,
+) {
+    let Some(skin_type) = skin_mgr.0.take_request() else {
+        return;
+    };
+
+    if let Err(e) = do_skin_load(
+        &mut commands,
+        &mut skin_mgr.0,
+        skin_type,
+        &player_config.0,
+        &config.0,
+        &mut images,
+        &shared_state.0,
+        &skin_entities,
+    ) {
+        tracing::warn!("Skin load failed for {:?}: {e}", skin_type);
+        skin_mgr.0.load_status = skin_manager::SkinLoadStatus::MinimalUi;
+        skin_mgr.0.last_error = Some(format!("{e}"));
+    }
+}
+
+/// Inner function for skin loading — returns Result for clean error handling.
+#[allow(clippy::too_many_arguments)]
+fn do_skin_load(
+    commands: &mut Commands,
+    skin_mgr: &mut skin_manager::SkinManager,
+    skin_type: skin_manager::SkinType,
+    player_config: &bms_config::PlayerConfig,
+    config: &bms_config::Config,
+    images: &mut Assets<Image>,
+    shared_state: &Arc<RwLock<SharedGameState>>,
+    skin_entities: &Query<Entity, With<bms_render::skin_renderer::SkinObjectEntity>>,
+) -> Result<()> {
+    let config_id = skin_type.to_config_id() as usize;
+    let dest_resolution = config.resolution;
+
+    // Resolve skin path from player_config, falling back to default
+    let skin_path_str = player_config
+        .skin
+        .get(config_id)
+        .and_then(|sc| sc.path.as_deref())
+        .filter(|p| !p.is_empty());
+
+    // Collect enabled options and offsets from skin config
+    let (enabled_options, offsets) = player_config
+        .skin
+        .get(config_id)
+        .and_then(|sc| sc.properties.as_ref())
+        .map(|props| {
+            let opts: HashSet<i32> = props.option.iter().map(|o| o.value).collect();
+            let offs: Vec<(i32, bms_config::skin_config::Offset)> = props
+                .offset
+                .iter()
+                .enumerate()
+                .map(|(i, o)| (i as i32, o.clone()))
+                .collect();
+            (opts, offs)
+        })
+        .unwrap_or_default();
+
+    // Try configured path, then default
+    let skin_path = skin_path_str
+        .map(PathBuf::from)
+        .or_else(|| {
+            let default = bms_config::skin_config::SkinConfig::get_default(config_id as i32);
+            default.path.map(PathBuf::from)
+        })
+        .ok_or_else(|| anyhow::anyhow!("No skin path configured for {:?}", skin_type))?;
+
+    info!(path = %skin_path.display(), ?skin_type, "Loading skin");
+
+    let skin_source = std::fs::read_to_string(&skin_path)
+        .map_err(|e| anyhow::anyhow!("Failed to read skin file {}: {e}", skin_path.display()))?;
+
+    let skin_dir = skin_path.parent().unwrap_or(Path::new("."));
+    let is_lua = skin_path
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("luaskin"));
+
+    // Convert to JSON if Lua, otherwise preprocess JSON
+    let json_str = if is_lua {
+        bms_skin::loader::lua_loader::lua_to_json_string(
+            &skin_source,
+            Some(&skin_path),
+            &enabled_options,
+            &offsets,
+            None,
+        )?
+    } else {
+        skin_source.clone()
+    };
+
+    let preprocessed = if is_lua {
+        json_str.clone()
+    } else {
+        bms_skin::loader::json_loader::preprocess_json(&json_str)
+    };
+
+    // Parse JSON to extract source image paths
+    let raw: serde_json::Value = serde_json::from_str(&preprocessed)?;
+
+    // Phase 1: Load source images via BevyImageLoader (borrows images mutably)
+    let mut texture_map = bms_render::texture_map::TextureMap::new();
+    let mut source_images: HashMap<String, bms_skin::image_handle::ImageHandle> = HashMap::new();
+    {
+        let mut loader =
+            bms_render::image_loader_bevy::BevyImageLoader::new(images, &mut texture_map, 0);
+
+        if let Some(sources) = raw.get("source").and_then(|v| v.as_array()) {
+            for src in sources {
+                let id = match src.get("id") {
+                    Some(serde_json::Value::Number(n)) => n.to_string(),
+                    Some(serde_json::Value::String(s)) => s.clone(),
+                    _ => continue,
+                };
+                let path_str = match src.get("path").and_then(|v| v.as_str()) {
+                    Some(p) => p,
+                    None => continue,
+                };
+                let img_path = skin_dir.join(path_str);
+
+                // Try glob expansion for wildcard paths
+                let paths_to_try = if path_str.contains('*') {
+                    if let Some(pattern) = img_path.to_str() {
+                        glob::glob(pattern)
+                            .ok()
+                            .map(|entries| entries.filter_map(|e| e.ok()).collect::<Vec<_>>())
+                            .unwrap_or_default()
+                    } else {
+                        vec![]
+                    }
+                } else {
+                    vec![img_path]
+                };
+
+                for actual_path in paths_to_try {
+                    if let Some(handle) =
+                        bms_skin::image_handle::ImageLoader::load(&mut loader, &actual_path)
+                    {
+                        source_images.insert(id.clone(), handle);
+                        break;
+                    }
+                }
+            }
+        }
+    } // loader dropped — images borrow released
+
+    // Phase 2: Load skin with resolved images
+    let skin = bms_skin::loader::json_loader::load_skin_with_images(
+        &json_str,
+        &enabled_options,
+        dest_resolution,
+        Some(&skin_path),
+        &source_images,
+    )?;
+
+    // Phase 3: Load embedded textures and LR2 bitmap fonts
+    let mut font_map = bms_render::font_map::FontMap::new();
+    bms_render::embedded_textures::load_embedded_textures(images, &mut texture_map);
+    font_map.load_lr2_fonts(&skin, images);
+
+    // Phase 4: Despawn old skin entities and remove old render state
+    for entity in skin_entities.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    commands.remove_resource::<bms_render::skin_renderer::SkinRenderState>();
+
+    // Phase 5: Set up new skin
+    let state_provider = game_state::GameStateProvider::new(Arc::clone(shared_state));
+    bms_render::skin_renderer::setup_skin(
+        commands,
+        skin,
+        texture_map,
+        font_map,
+        Box::new(state_provider),
+    );
+    skin_mgr.mark_loaded(skin_type);
+    skin_mgr.load_status = skin_manager::SkinLoadStatus::Loaded;
+    skin_mgr.last_error = None;
+
+    info!(?skin_type, "Skin loaded successfully");
+    Ok(())
+}
+
+/// Updates the preview music processor each frame.
+///
+/// When a non-looping preview finishes, this switches back to default BGM.
+fn preview_music_update_system(ui_res: Res<StateUiResources>) {
+    if let Some(pm) = ui_res.preview_music.0.lock().as_mut() {
+        pm.update();
     }
 }
 

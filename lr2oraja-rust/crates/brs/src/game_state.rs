@@ -46,13 +46,11 @@ pub struct SharedGameState {
 }
 
 /// SkinStateProvider implementation backed by SharedGameState.
-#[allow(dead_code)] // Used in tests
 pub struct GameStateProvider {
     state: Arc<RwLock<SharedGameState>>,
 }
 
 impl GameStateProvider {
-    #[allow(dead_code)] // Used in tests
     pub fn new(state: Arc<RwLock<SharedGameState>>) -> Self {
         Self { state }
     }

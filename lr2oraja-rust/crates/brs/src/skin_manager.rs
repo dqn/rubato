@@ -4,7 +4,6 @@ use std::path::{Path, PathBuf};
 
 /// Skin types matching Java SkinType enum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)] // Parsed for completeness (Java SkinType enum)
 pub enum SkinType {
     MusicSelect,
     Decide,
@@ -18,6 +17,26 @@ pub enum SkinType {
     CourseResult,
     KeyConfig,
     SkinConfig,
+}
+
+impl SkinType {
+    /// Map to bms_config SkinType ID for player_config.skin[] indexing.
+    pub fn to_config_id(self) -> i32 {
+        match self {
+            Self::Play7 => 0,
+            Self::Play5 => 1,
+            Self::Play14 => 2,
+            Self::Play10 => 3,
+            Self::Play9 => 4,
+            Self::MusicSelect => 5,
+            Self::Decide => 6,
+            Self::Result => 7,
+            Self::CourseResult => 15,
+            Self::KeyConfig => 8,
+            Self::SkinConfig => 9,
+            Self::Play24 => 16,
+        }
+    }
 }
 
 /// Status of the most recent skin load attempt.
@@ -89,13 +108,11 @@ impl SkinManager {
     }
 
     /// Take the pending request (consumed by skin loading system).
-    #[allow(dead_code)] // Used in tests
     pub fn take_request(&mut self) -> Option<SkinType> {
         self.request.take()
     }
 
     /// Mark the current skin as loaded.
-    #[allow(dead_code)] // Used in tests
     pub fn mark_loaded(&mut self, skin_type: SkinType) {
         self.current = Some(skin_type);
         self.loaded = true;
@@ -332,5 +349,42 @@ mod tests {
         assert_eq!(result.status, SkinLoadStatus::MinimalUi);
         assert!(!mgr.is_loaded());
         assert!(mgr.last_error.is_some());
+    }
+
+    #[test]
+    fn to_config_id_maps_all_types() {
+        // Verify mapping matches bms_config::SkinType IDs
+        assert_eq!(SkinType::Play7.to_config_id(), 0);
+        assert_eq!(SkinType::Play5.to_config_id(), 1);
+        assert_eq!(SkinType::Play14.to_config_id(), 2);
+        assert_eq!(SkinType::Play10.to_config_id(), 3);
+        assert_eq!(SkinType::Play9.to_config_id(), 4);
+        assert_eq!(SkinType::MusicSelect.to_config_id(), 5);
+        assert_eq!(SkinType::Decide.to_config_id(), 6);
+        assert_eq!(SkinType::Result.to_config_id(), 7);
+        assert_eq!(SkinType::KeyConfig.to_config_id(), 8);
+        assert_eq!(SkinType::SkinConfig.to_config_id(), 9);
+        assert_eq!(SkinType::CourseResult.to_config_id(), 15);
+        assert_eq!(SkinType::Play24.to_config_id(), 16);
+    }
+
+    #[test]
+    fn to_config_id_unique_values() {
+        let types = [
+            SkinType::MusicSelect,
+            SkinType::Decide,
+            SkinType::Play5,
+            SkinType::Play7,
+            SkinType::Play9,
+            SkinType::Play10,
+            SkinType::Play14,
+            SkinType::Play24,
+            SkinType::Result,
+            SkinType::CourseResult,
+            SkinType::KeyConfig,
+            SkinType::SkinConfig,
+        ];
+        let ids: std::collections::HashSet<i32> = types.iter().map(|t| t.to_config_id()).collect();
+        assert_eq!(ids.len(), types.len(), "All config IDs must be unique");
     }
 }

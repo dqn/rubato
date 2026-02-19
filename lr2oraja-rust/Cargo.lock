@@ -2170,6 +2170,7 @@ dependencies = [
  "bms-skin",
  "bms-stream",
  "clap",
+ "glob",
  "hound",
  "kira",
  "parking_lot",
