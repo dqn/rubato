@@ -13,6 +13,10 @@ pub struct BarManager {
     pub(super) bars: Vec<Bar>,
     pub(super) cursor: usize,
     pub(super) folder_stack: Vec<(Vec<Bar>, usize)>,
+    /// Search history (most recent at end).
+    search_history: Vec<String>,
+    /// Maximum number of search history entries.
+    max_search_bar_count: usize,
 }
 
 impl BarManager {
@@ -21,7 +25,34 @@ impl BarManager {
             bars: Vec::new(),
             cursor: 0,
             folder_stack: Vec::new(),
+            search_history: Vec::new(),
+            max_search_bar_count: 10,
         }
+    }
+
+    /// Set the maximum number of search history entries.
+    pub fn set_max_search_bar_count(&mut self, count: usize) {
+        self.max_search_bar_count = count;
+    }
+
+    /// Add a search query to the history.
+    ///
+    /// Java parity: `BarManager.addSearch()` L550-561. Deduplicates by title,
+    /// respects `maxSearchBarCount` limit, removes oldest when full.
+    pub fn add_search(&mut self, query: String) {
+        // Remove duplicate if already in history
+        self.search_history.retain(|s| s != &query);
+        // Enforce max count (remove oldest)
+        if self.search_history.len() >= self.max_search_bar_count {
+            self.search_history.remove(0);
+        }
+        self.search_history.push(query);
+    }
+
+    /// Returns the search history entries.
+    #[allow(dead_code)] // TODO: integrate with search history skin state
+    pub fn search_history(&self) -> &[String] {
+        &self.search_history
     }
 
     /// Move cursor by delta with wrap-around.
@@ -1503,5 +1534,244 @@ mod tests {
         bm.enter_folder(&db);
         assert!(!bm.is_in_folder());
         assert_eq!(bm.bar_count(), 1);
+    }
+
+    #[test]
+    fn load_builtin_containers_adds_two_containers() {
+        let mut bm = BarManager::new();
+        bm.load_builtin_containers();
+        assert_eq!(bm.bar_count(), 2);
+        assert_eq!(bm.bars[0].bar_name(), "LAMP UPDATE");
+        assert_eq!(bm.bars[1].bar_name(), "SCORE UPDATE");
+    }
+
+    #[test]
+    fn search_adds_to_history() {
+        let db = SongDatabase::open_in_memory().unwrap();
+        let mut bm = BarManager::new();
+        bm.bars = vec![Bar::Song(Box::new(SongData::default()))];
+        bm.search(&db, "test_query");
+        assert_eq!(bm.search_history(), &["test_query"]);
+    }
+
+    #[test]
+    fn search_history_deduplicates() {
+        let mut bm = BarManager::new();
+        bm.add_search("alpha".to_string());
+        bm.add_search("beta".to_string());
+        bm.add_search("alpha".to_string()); // duplicate
+        assert_eq!(bm.search_history(), &["beta", "alpha"]);
+    }
+
+    #[test]
+    fn search_history_respects_max_count() {
+        let mut bm = BarManager::new();
+        bm.set_max_search_bar_count(3);
+        bm.add_search("a".to_string());
+        bm.add_search("b".to_string());
+        bm.add_search("c".to_string());
+        bm.add_search("d".to_string()); // evicts "a"
+        assert_eq!(bm.search_history(), &["b", "c", "d"]);
+    }
+
+    #[test]
+    fn load_root_includes_search_history() {
+        let db = SongDatabase::open_in_memory().unwrap();
+        let mut bm = BarManager::new();
+        bm.add_search("freedom".to_string());
+        bm.add_search("zenith".to_string());
+        bm.load_root(&db);
+        // Empty DB → no folder bars, but search history should be present
+        assert_eq!(bm.bar_count(), 2);
+        assert!(matches!(&bm.bars[0], Bar::SearchWord { query } if query == "freedom"));
+        assert!(matches!(&bm.bars[1], Bar::SearchWord { query } if query == "zenith"));
+    }
+
+    #[test]
+    fn sort_mode_id_round_trip() {
+        let modes = [
+            SortMode::Default,
+            SortMode::Title,
+            SortMode::Artist,
+            SortMode::Level,
+            SortMode::Bpm,
+            SortMode::Length,
+            SortMode::Clear,
+            SortMode::Score,
+            SortMode::MissCount,
+            SortMode::Duration,
+            SortMode::LastUpdate,
+            SortMode::RivalCompareClear,
+            SortMode::RivalCompareScore,
+        ];
+        for mode in modes {
+            let id = mode.to_id();
+            let restored = SortMode::from_id(id);
+            assert_eq!(mode, restored, "round-trip failed for {id}");
+        }
+    }
+
+    #[test]
+    fn sort_mode_from_id_unknown_returns_default() {
+        assert_eq!(SortMode::from_id("UNKNOWN"), SortMode::Default);
+        assert_eq!(SortMode::from_id(""), SortMode::Default);
+    }
+
+    #[test]
+    fn sort_restores_cursor_to_same_song() {
+        let mut bm = BarManager::new();
+        bm.bars = vec![
+            Bar::Song(Box::new(SongData {
+                sha256: "sha_c".to_string(),
+                title: "Charlie".to_string(),
+                ..Default::default()
+            })),
+            Bar::Song(Box::new(SongData {
+                sha256: "sha_a".to_string(),
+                title: "Alpha".to_string(),
+                ..Default::default()
+            })),
+            Bar::Song(Box::new(SongData {
+                sha256: "sha_b".to_string(),
+                title: "Bravo".to_string(),
+                ..Default::default()
+            })),
+        ];
+        // Cursor on "Bravo" (index 2)
+        bm.cursor = 2;
+        bm.sort(SortMode::Title, &HashMap::new());
+        // After sort: ["Alpha", "Bravo", "Charlie"]
+        // Cursor should be restored to "Bravo" at index 1
+        assert_eq!(bm.cursor_pos(), 1);
+        match &bm.bars[bm.cursor_pos()] {
+            Bar::Song(s) => assert_eq!(s.title, "Bravo"),
+            _ => panic!("expected Song"),
+        }
+    }
+
+    #[test]
+    fn sort_restores_cursor_to_non_song_bar() {
+        let mut bm = BarManager::new();
+        bm.bars = vec![
+            Bar::Song(Box::new(SongData {
+                sha256: "sha_z".to_string(),
+                title: "Zebra".to_string(),
+                ..Default::default()
+            })),
+            Bar::Folder {
+                name: "My Folder".to_string(),
+                path: "f".to_string(),
+            },
+            Bar::Song(Box::new(SongData {
+                sha256: "sha_a".to_string(),
+                title: "Alpha".to_string(),
+                ..Default::default()
+            })),
+        ];
+        // Cursor on "My Folder" (index 1)
+        bm.cursor = 1;
+        bm.sort(SortMode::Title, &HashMap::new());
+        // After sort: ["Alpha", "My Folder", "Zebra"]
+        // Cursor should be restored to "My Folder" at index 1
+        assert_eq!(bm.cursor_pos(), 1);
+        assert_eq!(bm.bars[bm.cursor_pos()].bar_name(), "My Folder");
+    }
+
+    #[test]
+    fn command_folder_with_rcourse_creates_random_course_bars() {
+        let mut bm = BarManager::new();
+        let dir = tempfile::tempdir().unwrap();
+        let json_path = dir.path().join("default.json");
+        std::fs::write(
+            &json_path,
+            r#"[{
+                "name": "Random Courses",
+                "folder": [{"name": "Sub", "sql": "level > 5"}],
+                "rcourse": [
+                    {"name": "Random Dan", "stage": [{"title": "S1", "sql": "level > 10"}]},
+                    {"name": "Random Dan 2", "stage": [{"title": "S1", "sql": "level > 12"}]}
+                ]
+            }]"#,
+        )
+        .unwrap();
+        bm.load_command_folders(json_path.to_str().unwrap());
+
+        assert_eq!(bm.bar_count(), 1);
+        match &bm.bars[0] {
+            Bar::Container { name, children } => {
+                assert_eq!(name, "Random Courses");
+                // 1 subfolder + 2 random courses = 3 children
+                assert_eq!(children.len(), 3);
+                assert!(matches!(&children[0], Bar::Command { name, .. } if name == "Sub"));
+                assert!(matches!(&children[1], Bar::RandomCourse(rc) if rc.name == "Random Dan"));
+                assert!(matches!(&children[2], Bar::RandomCourse(rc) if rc.name == "Random Dan 2"));
+            }
+            _ => panic!("expected Container bar"),
+        }
+    }
+
+    #[test]
+    fn filter_invisible_removes_flagged_songs() {
+        use bms_database::song_data::{FAVORITE_SONG, INVISIBLE_CHART, INVISIBLE_SONG};
+
+        let mut bm = BarManager::new();
+        bm.bars = vec![
+            Bar::Song(Box::new(SongData {
+                title: "Visible".to_string(),
+                favorite: 0,
+                ..Default::default()
+            })),
+            Bar::Song(Box::new(SongData {
+                title: "Invisible Song".to_string(),
+                favorite: INVISIBLE_SONG,
+                ..Default::default()
+            })),
+            Bar::Song(Box::new(SongData {
+                title: "Invisible Chart".to_string(),
+                favorite: INVISIBLE_CHART,
+                ..Default::default()
+            })),
+            Bar::Song(Box::new(SongData {
+                title: "Both Flags".to_string(),
+                favorite: INVISIBLE_SONG | INVISIBLE_CHART,
+                ..Default::default()
+            })),
+            Bar::Folder {
+                name: "Folder".to_string(),
+                path: "f".to_string(),
+            },
+            Bar::Song(Box::new(SongData {
+                title: "Fav Only".to_string(),
+                favorite: FAVORITE_SONG,
+                ..Default::default()
+            })),
+        ];
+        bm.filter_invisible();
+        // Should retain: Visible, Folder, Fav Only = 3
+        assert_eq!(bm.bar_count(), 3);
+        assert_eq!(bm.bars[0].bar_name(), "Visible");
+        assert_eq!(bm.bars[1].bar_name(), "Folder");
+        assert_eq!(bm.bars[2].bar_name(), "Fav Only");
+    }
+
+    #[test]
+    fn builtin_containers_have_30_command_children() {
+        let mut bm = BarManager::new();
+        bm.load_builtin_containers();
+
+        for bar in &bm.bars {
+            match bar {
+                Bar::Container { children, .. } => {
+                    assert_eq!(children.len(), 30);
+                    assert_eq!(children[0].bar_name(), "TODAY");
+                    assert_eq!(children[1].bar_name(), "1DAYS AGO");
+                    assert_eq!(children[29].bar_name(), "29DAYS AGO");
+                    for child in children {
+                        assert!(matches!(child, Bar::Command { .. }));
+                    }
+                }
+                _ => panic!("expected Container bar"),
+            }
+        }
     }
 }

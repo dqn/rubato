@@ -4,7 +4,7 @@ use anyhow::Result;
 use rusqlite::Connection;
 
 use crate::folder_data::FolderData;
-use crate::schema::{FOLDER_TABLE, SONG_TABLE, ensure_table};
+use crate::schema::{FOLDER_TABLE, SCORELOG_TABLE, SONG_TABLE, ensure_table};
 use crate::song_data::SongData;
 
 /// Whitelist of allowed column names for `get_song_datas(key, value)`.
@@ -30,6 +30,7 @@ impl SongDatabase {
         conn.execute_batch("PRAGMA synchronous = NORMAL;")?;
         ensure_table(&conn, &FOLDER_TABLE)?;
         ensure_table(&conn, &SONG_TABLE)?;
+        ensure_table(&conn, &SCORELOG_TABLE)?;
         Ok(Self { conn })
     }
 
@@ -38,6 +39,7 @@ impl SongDatabase {
         let conn = Connection::open_in_memory()?;
         ensure_table(&conn, &FOLDER_TABLE)?;
         ensure_table(&conn, &SONG_TABLE)?;
+        ensure_table(&conn, &SCORELOG_TABLE)?;
         Ok(Self { conn })
     }
 

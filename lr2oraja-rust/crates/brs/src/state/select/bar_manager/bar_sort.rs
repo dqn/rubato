@@ -9,6 +9,8 @@ use std::collections::HashMap;
 
 use bms_rule::ScoreData;
 
+use bms_database::song_data::{INVISIBLE_CHART, INVISIBLE_SONG};
+
 use super::bar_types::Bar;
 use super::{BarManager, SortMode};
 
@@ -45,13 +47,37 @@ fn title_fallback_cmp(a: &Bar, b: &Bar) -> Option<Ordering> {
     }
 }
 
+/// Returns a stable identity key for a bar, used for cursor restoration.
+///
+/// Song bars use sha256; other bars use display_type + bar_name.
+fn bar_identity(bar: &Bar) -> String {
+    match bar {
+        Bar::Song(s) => format!("song:{}", s.sha256),
+        other => format!("{}:{}", other.bar_display_type(), other.bar_name()),
+    }
+}
+
 impl BarManager {
+    /// Restore cursor to the bar matching the given identity key.
+    ///
+    /// Java parity: `BarManager` L426-450. After sorting or filtering,
+    /// the cursor is restored to the same bar the user was looking at.
+    pub fn restore_cursor(&mut self, identity: &str) {
+        if let Some(pos) = self.bars.iter().position(|b| bar_identity(b) == identity) {
+            self.cursor = pos;
+        }
+        // If not found, keep cursor at 0 (already reset by sort/filter)
+    }
+
     /// Sort bars by the given mode.
     ///
     /// Follows Java BarSorter parity: non-Song bars fall back to TITLE sort
     /// for all modes except Default. Score-dependent modes use the
     /// `score_cache` keyed by SHA-256.
     pub fn sort(&mut self, mode: SortMode, score_cache: &HashMap<String, ScoreData>) {
+        // Save current bar identity for cursor restoration
+        let saved_identity = self.bars.get(self.cursor).map(bar_identity);
+
         match mode {
             SortMode::Default => {} // Keep original order
             SortMode::Title => {
@@ -209,7 +235,12 @@ impl BarManager {
                 tracing::info!("RivalCompareScore sort: stub (requires rival score data)");
             }
         }
-        self.cursor = 0;
+        // Restore cursor to the previously selected bar
+        if let Some(identity) = saved_identity {
+            self.restore_cursor(&identity);
+        } else {
+            self.cursor = 0;
+        }
     }
 
     /// Filter bars to retain only songs matching the given mode ID.
@@ -222,5 +253,16 @@ impl BarManager {
             });
             self.cursor = 0;
         }
+    }
+
+    /// Remove Song bars with INVISIBLE_SONG or INVISIBLE_CHART flags set.
+    ///
+    /// Java parity: `BarManager` L351-359. Non-Song bars are always retained.
+    pub fn filter_invisible(&mut self) {
+        let invisible_mask = INVISIBLE_SONG | INVISIBLE_CHART;
+        self.bars.retain(|bar| match bar {
+            Bar::Song(s) => s.favorite & invisible_mask == 0,
+            _ => true,
+        });
     }
 }

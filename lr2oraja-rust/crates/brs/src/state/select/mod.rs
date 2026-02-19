@@ -159,6 +159,10 @@ impl GameStateHandler for MusicSelectState {
             }
         }
 
+        // Configure search history limit from config
+        self.bar_manager
+            .set_max_search_bar_count(ctx.config.max_search_bar_count as usize);
+
         // Load song list from database
         if let Some(db) = ctx.database {
             self.bar_manager.load_root(&db.song_db);
@@ -197,6 +201,9 @@ impl GameStateHandler for MusicSelectState {
                 }
             }
 
+            // Load built-in containers (LAMP UPDATE, SCORE UPDATE)
+            self.bar_manager.load_builtin_containers();
+
             // Load course data from "course" directory
             self.bar_manager.load_courses("course");
 
@@ -206,9 +213,22 @@ impl GameStateHandler for MusicSelectState {
             // Load custom command folders from "folder/default.json"
             self.bar_manager.load_command_folders("folder/default.json");
 
+            // Load sort mode from player config (Java parity: BarManager L384)
+            self.sort_mode = ctx
+                .player_config
+                .sortid
+                .as_deref()
+                .map(SortMode::from_id)
+                .unwrap_or(SortMode::Default);
+            if self.sort_mode != SortMode::Default {
+                self.bar_manager
+                    .sort(self.sort_mode, &self.score_data_cache);
+            }
+
             self.score_cache_dirty = true;
             info!(
                 songs = self.bar_manager.bar_count(),
+                sort = ?self.sort_mode,
                 "MusicSelect: loaded song list"
             );
         }
@@ -459,6 +479,8 @@ impl GameStateHandler for MusicSelectState {
                         self.bar_manager
                             .sort(self.sort_mode, &self.score_data_cache);
                         self.score_cache_dirty = true;
+                        // Persist sort mode to player config
+                        ctx.player_config.sortid = Some(self.sort_mode.to_id().to_string());
                         if let Some(sm) = ctx.sound_manager.as_deref_mut() {
                             sm.play(SystemSound::OptionChange);
                         }

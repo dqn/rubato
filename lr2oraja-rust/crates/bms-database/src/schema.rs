@@ -836,6 +836,93 @@ pub static INFORMATION_TABLE: TableDef = TableDef {
     ],
 };
 
+/// Score update log table (tracks clear lamp / score improvements).
+///
+/// Java parity: `ScoreLogDatabaseAccessor.SCORELOG_TABLE`.
+/// Used by LAMP UPDATE / SCORE UPDATE built-in containers.
+pub static SCORELOG_TABLE: TableDef = TableDef {
+    name: "scorelog",
+    columns: &[
+        ColumnDef {
+            name: "sha256",
+            sql_type: "TEXT",
+            not_null: true,
+            primary_key: true,
+            default_val: None,
+        },
+        ColumnDef {
+            name: "mode",
+            sql_type: "INTEGER",
+            not_null: false,
+            primary_key: false,
+            default_val: None,
+        },
+        ColumnDef {
+            name: "clear",
+            sql_type: "INTEGER",
+            not_null: false,
+            primary_key: false,
+            default_val: None,
+        },
+        ColumnDef {
+            name: "oldclear",
+            sql_type: "INTEGER",
+            not_null: false,
+            primary_key: false,
+            default_val: None,
+        },
+        ColumnDef {
+            name: "score",
+            sql_type: "INTEGER",
+            not_null: false,
+            primary_key: false,
+            default_val: None,
+        },
+        ColumnDef {
+            name: "oldscore",
+            sql_type: "INTEGER",
+            not_null: false,
+            primary_key: false,
+            default_val: None,
+        },
+        ColumnDef {
+            name: "combo",
+            sql_type: "INTEGER",
+            not_null: false,
+            primary_key: false,
+            default_val: None,
+        },
+        ColumnDef {
+            name: "oldcombo",
+            sql_type: "INTEGER",
+            not_null: false,
+            primary_key: false,
+            default_val: None,
+        },
+        ColumnDef {
+            name: "minbp",
+            sql_type: "INTEGER",
+            not_null: false,
+            primary_key: false,
+            default_val: None,
+        },
+        ColumnDef {
+            name: "oldminbp",
+            sql_type: "INTEGER",
+            not_null: false,
+            primary_key: false,
+            default_val: None,
+        },
+        ColumnDef {
+            name: "date",
+            sql_type: "INTEGER",
+            not_null: false,
+            primary_key: false,
+            default_val: None,
+        },
+    ],
+};
+
 pub static SCOREDATALOG_TABLE: TableDef = TableDef {
     name: "scoredatalog",
     columns: &[
@@ -1057,6 +1144,7 @@ mod tests {
         ensure_table(&conn, &INFO_TABLE).unwrap();
         ensure_table(&conn, &PLAYER_TABLE).unwrap();
         ensure_table(&conn, &SCORE_TABLE).unwrap();
+        ensure_table(&conn, &SCORELOG_TABLE).unwrap();
         ensure_table(&conn, &SCOREDATALOG_TABLE).unwrap();
         ensure_table(&conn, &INFORMATION_TABLE).unwrap();
 
@@ -1068,7 +1156,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(count, 7);
+        assert_eq!(count, 8);
     }
 
     #[test]

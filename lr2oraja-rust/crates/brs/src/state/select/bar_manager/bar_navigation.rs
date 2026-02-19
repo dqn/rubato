@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use bms_database::{CourseData, CourseDataAccessor, SongDatabase, TableData};
+use bms_database::{CourseData, CourseDataAccessor, RandomCourseData, SongDatabase, TableData};
 
 use super::BarManager;
 use super::bar_types::Bar;
@@ -18,6 +18,11 @@ struct CommandFolder {
     sql: String,
     #[serde(default)]
     folder: Vec<CommandFolder>,
+    /// Random course data embedded in this command folder.
+    ///
+    /// Java parity: `CommandFolder.rcourse` field.
+    #[serde(default)]
+    rcourse: Vec<RandomCourseData>,
     /// Whether to show all songs (Java parity field, not yet used in Rust).
     #[serde(default)]
     #[allow(dead_code)]
@@ -25,6 +30,61 @@ struct CommandFolder {
 }
 
 impl BarManager {
+    /// Load LAMP UPDATE / SCORE UPDATE built-in containers.
+    ///
+    /// Java parity: `BarManager.init()` L231-242. Creates two Container bars,
+    /// each with 30 Command children (TODAY, 1DAYS AGO, ..., 29DAYS AGO) that
+    /// query the `scorelog` table for clear lamp or score improvements.
+    pub fn load_builtin_containers(&mut self) {
+        let now_secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as i64;
+        let day_secs: i64 = 86400;
+        let today_start = (now_secs / day_secs) * day_secs;
+
+        let mut lamp_children = Vec::with_capacity(30);
+        let mut score_children = Vec::with_capacity(30);
+
+        for i in 0..30 {
+            let label = if i == 0 {
+                "TODAY".to_string()
+            } else {
+                format!("{i}DAYS AGO")
+            };
+            let t = today_start - i * day_secs;
+            let t_end = t + day_secs;
+
+            lamp_children.push(Bar::Command {
+                name: label.clone(),
+                sql: format!(
+                    "SELECT DISTINCT song.* FROM song \
+                     INNER JOIN scorelog ON song.sha256 = scorelog.sha256 \
+                     WHERE scorelog.clear > scorelog.oldclear \
+                     AND scorelog.date >= {t} AND scorelog.date < {t_end}"
+                ),
+            });
+            score_children.push(Bar::Command {
+                name: label,
+                sql: format!(
+                    "SELECT DISTINCT song.* FROM song \
+                     INNER JOIN scorelog ON song.sha256 = scorelog.sha256 \
+                     WHERE scorelog.score > scorelog.oldscore \
+                     AND scorelog.date >= {t} AND scorelog.date < {t_end}"
+                ),
+            });
+        }
+
+        self.bars.push(Bar::Container {
+            name: "LAMP UPDATE".to_string(),
+            children: lamp_children,
+        });
+        self.bars.push(Bar::Container {
+            name: "SCORE UPDATE".to_string(),
+            children: score_children,
+        });
+    }
+
     /// Load root bar list from the database.
     ///
     /// Groups songs by their `folder` field (CRC) into folder bars,
@@ -55,6 +115,13 @@ impl BarManager {
             })
             .collect();
 
+        // Append search history as SearchWord bars (Java parity: L304)
+        for query in &self.search_history {
+            self.bars.push(Bar::SearchWord {
+                query: query.clone(),
+            });
+        }
+
         self.cursor = 0;
         self.folder_stack.clear();
     }
@@ -73,6 +140,7 @@ impl BarManager {
                     .get_song_datas("folder", &folder_path)
                     .unwrap_or_default();
                 self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
+                self.filter_invisible();
                 self.cursor = 0;
             }
             Some(Bar::TableRoot {
@@ -121,6 +189,7 @@ impl BarManager {
                     .get_song_datas_by_hashes(&hash_refs)
                     .unwrap_or_default();
                 self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
+                self.filter_invisible();
                 self.cursor = 0;
             }
             Some(Bar::Container { children, .. }) => {
@@ -139,6 +208,7 @@ impl BarManager {
 
                 let songs = song_db.get_song_datas("folder", &crc).unwrap_or_default();
                 self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
+                self.filter_invisible();
                 self.cursor = 0;
             }
             Some(Bar::SearchWord { query }) => {
@@ -149,6 +219,7 @@ impl BarManager {
 
                 let songs = song_db.get_song_datas_by_text(&query).unwrap_or_default();
                 self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
+                self.filter_invisible();
                 self.cursor = 0;
             }
             Some(Bar::Command { sql, .. }) => {
@@ -160,6 +231,7 @@ impl BarManager {
                 // Execute custom SQL query with read-only validation
                 let songs = song_db.get_song_datas_by_sql(&sql).unwrap_or_default();
                 self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
+                self.filter_invisible();
                 self.cursor = 0;
             }
             Some(Bar::ContextMenu(cm)) => {
@@ -322,25 +394,34 @@ impl BarManager {
     }
 
     /// Search for songs matching the query text, pushing the current bar list onto the folder stack.
+    ///
+    /// Also adds the query to the search history.
     pub fn search(&mut self, song_db: &SongDatabase, query: &str) {
+        self.add_search(query.to_string());
+
         let songs = song_db.get_song_datas_by_text(query).unwrap_or_default();
         // Save current state to folder stack
         let old_bars = std::mem::take(&mut self.bars);
         let old_cursor = self.cursor;
         self.folder_stack.push((old_bars, old_cursor));
         self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
+        self.filter_invisible();
         self.cursor = 0;
     }
 }
 
 /// Create a Bar from a CommandFolder definition.
 ///
-/// If the folder has child folders, creates a Container; otherwise creates a Command bar.
-/// Matches Java `createCommandBar()`.
+/// If the folder has child folders or random courses, creates a Container;
+/// otherwise creates a Command bar.
+/// Matches Java `createCommandBar()` L542-548.
 fn create_command_bar(folder: CommandFolder) -> Bar {
-    if !folder.folder.is_empty() {
-        // Nested: create Container with child bars
-        let children: Vec<Bar> = folder.folder.into_iter().map(create_command_bar).collect();
+    if !folder.folder.is_empty() || !folder.rcourse.is_empty() {
+        // Nested: create Container with child bars + random courses
+        let mut children: Vec<Bar> = folder.folder.into_iter().map(create_command_bar).collect();
+        for rc in folder.rcourse {
+            children.push(Bar::RandomCourse(Box::new(rc)));
+        }
         Bar::Container {
             name: folder.name,
             children,
