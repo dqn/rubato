@@ -91,20 +91,29 @@ Lessons learned from Phase 0-3 implementation. Refer to these when implementing 
 
 ## Implementation Status
 
-Phase 0-28 全完了（16 crate, ~92,000行）。全 RenderSnapshot GM テストが strict parity 達成済み。
+Phase 0-29 全完了（16 crate, ~92,000行）。全 RenderSnapshot GM テストが strict parity 達成済み。
 Phase 25: 7z アーカイブ対応、ソート Java パリティ修正、PreviewMusic skin state 接続。
 Phase 26: MusicSelectCommand キーボードショートカット配線（F4/F5/C/NUM8）、CommandResult パターン導入、コンテキストメニュー構築、dead_code 削減。
 Phase 27: SystemSoundManager Kira オーディオ統合、OptionChange サウンド追加（Num1-5）、コンテキストメニュー Num7 キーバインド接続。
 Phase 28: MusicSelect dead_code 統合 — NextReplay/PrevReplay キーバインド（Num9/F3）、selected_replay skin state 公開、Function bar subtitle/lamp 接続、OpenUrl コンテキストメニュー、ShowSameFolder title 接続。
 Phase 29: LR2IR リーダーボード統合、RivalCompareClear/RivalCompareScore ソート実装、ライバル選択 Num6 キーバインド。
+Phase 30: MusicSelect dead_code 統合 — Bar::SameFolder/LeaderBoard/ContextMenu/Executable をフォルダスタックに統合、search_history skin state 公開。
+Phase 31: GradeBar/Course 統合 — Grade bar enter_folder、コース制約の PlayerResource 伝播、RandomCourse SQL 展開。
+Phase 34: FunctionAction::PlayReplay 統合 — リプレイファイル存在チェック、コンテキストメニューへの Replay 1-4 追加。
+Phase 35: Config 配線 — skipDecideScreen、scrolldurationlow/high、showNoSongExistingBar、updatesong を接続。
+Phase 37: GithubVersionChecker 起動時統合 — バックグラウンドバージョンチェック、lastBootedVersion 更新、BrsVersionCheck Bevy Resource。
+Phase 33: GhostBattle seed 消費 — ghost_battle の random_seed をパターン生成に適用、pre-shuffle modifier スキップ。
+Phase 40: オーディオ復旧 — KiraAudioDriver の needs_recovery/try_recover をプレイループに接続。
+Phase 41: ライバルスコア skin state — RivalSkinData 構造体、STRING_RIVAL/NUMBER_RIVAL_SCORE 等を skin state に公開。
 
 ## Deferred / Stub Items
 
-- **dead_code 統合 (C2-C5):** GradeBarData course/constraints skin state 同期、TimerManager set_frozen pause 接続 — 各統合先の機能が未実装のため保留
-- **MusicSelectCommand 残存 dead_code:** Download 系 3 variant（DownloadIpfs/DownloadHttp/DownloadCourseHttp）— ダウンロード機能未実装のため個別 variant に `#[allow(dead_code)]` 付与
-- **FunctionAction / Bar variant dead_code 整理 (Task D):** PlayReplay（リプレイ選択 UI 未実装）、Bar::SameFolder / Bar::Executable / Bar::LeaderBoard / Bar::ContextMenu / Bar::Grade（production code 未構築 or コンパイラ検出外）は `#[allow(dead_code)]` 維持
+- **MusicSelectCommand 残存 dead_code:** Download 系 3 variant（DownloadIpfs/DownloadHttp/DownloadCourseHttp）— ダウンロード機能のアプリレベル統合（Bevy Resource、StateContext、DB リフレッシュ、IPFS プロトコル）が必要なため保留
+- **GhostBattleSettings.lane_sequence:** ゴーストバトル時の lane pattern 共有（Java の RandomTrainer seed map 相当）— 現在は random_seed のみ消費、lane_sequence は未使用
+- **Bar::Executable / Bar::Grade / Bar::LeaderBoard:** production bar list 構築パスで構築されるがコンパイラが検出不可のため `#[allow(dead_code)]` 維持
+- **Windows Named Pipes:** Stream Controller の Windows 対応（Unix domain socket → Named Pipes）
 
 ## Known Issues
 
 - **Config/State の clone():** 484箇所（監査済み: 大半は Bevy Resource/Component の要件や設定値の受け渡しで妥当。大規模移行不要）
-- **#[allow(dead_code)]:** システム統合により TODO 付き dead_code を大幅削減済み。残存は Parsed for completeness / Used in tests / TODO: integrate with 各サブシステム
+- **#[allow(dead_code)]:** 全体 81 件（29 ファイル）。内訳: Used in tests ~35件、Parsed for completeness ~5件、TODO/deferred ~10件、コンパイラ検出外 ~5件。Phase 30-41 で大幅削減済み
