@@ -22,7 +22,9 @@ pub enum JudgeAlgorithm {
 }
 
 /// The default set of algorithms used in standard play.
-#[allow(dead_code)] // TODO: integrate with JudgeManager initialization
+///
+/// The first element is used as the primary note selection algorithm
+/// in JudgeManager initialization.
 pub const DEFAULT_ALGORITHMS: [JudgeAlgorithm; 3] = [
     JudgeAlgorithm::Combo,
     JudgeAlgorithm::Duration,

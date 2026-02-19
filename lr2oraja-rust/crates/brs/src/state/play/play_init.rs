@@ -6,8 +6,9 @@ use bms_database::RivalDataAccessor;
 use bms_database::score_data_property::ScoreDataProperty;
 use bms_model::{LaneProperty, PlayMode};
 use bms_pattern::{ModeModifier, PatternModifier, SevenToNinePattern, SevenToNineType, get_random};
+use bms_rule::judge_algorithm::DEFAULT_ALGORITHMS;
 use bms_rule::judge_manager::{JudgeConfig, JudgeManager};
-use bms_rule::{GrooveGauge, JudgeAlgorithm, PlayerRule};
+use bms_rule::{GrooveGauge, PlayerRule};
 
 use crate::app_state::AppStateType;
 use crate::state::StateContext;
@@ -226,7 +227,7 @@ impl PlayState {
             judge_rank,
             judge_window_rate: jwr,
             scratch_judge_window_rate: sjwr,
-            algorithm: JudgeAlgorithm::Combo,
+            algorithm: DEFAULT_ALGORITHMS[0],
             autoplay: self.is_autoplay,
             judge_property: &rule.judge,
             lane_property: Some(&self.lane_property),

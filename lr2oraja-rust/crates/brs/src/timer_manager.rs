@@ -132,7 +132,8 @@ impl TimerManager {
     }
 
     /// Sets or clears the frozen state. When frozen, `update()` does not advance time.
-    #[allow(dead_code)] // TODO: integrate with pause/resume system
+    ///
+    /// Used by practice mode to pause timer advancement while showing settings UI.
     pub fn set_frozen(&mut self, frozen: bool) {
         self.frozen = frozen;
     }

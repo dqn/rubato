@@ -11,8 +11,9 @@ use bms_database::score_data_property::ScoreDataProperty;
 use bms_model::{JudgeRankType, LaneProperty};
 use bms_pattern::{PatternModifier, PracticeModifier, get_random};
 use bms_render::bga::bga_processor::BgaProcessor;
+use bms_rule::judge_algorithm::DEFAULT_ALGORITHMS;
 use bms_rule::judge_manager::{JudgeConfig, JudgeManager};
-use bms_rule::{GrooveGauge, JudgeAlgorithm, PlayerRule};
+use bms_rule::{GrooveGauge, PlayerRule};
 
 use crate::state::StateContext;
 
@@ -131,7 +132,7 @@ impl PlayState {
             judge_rank,
             judge_window_rate: jwr,
             scratch_judge_window_rate: sjwr,
-            algorithm: JudgeAlgorithm::Combo,
+            algorithm: DEFAULT_ALGORITHMS[0],
             autoplay: self.is_autoplay,
             judge_property: &rule.judge,
             lane_property: Some(&self.lane_property),

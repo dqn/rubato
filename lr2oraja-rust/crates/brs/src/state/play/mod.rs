@@ -357,6 +357,8 @@ impl GameStateHandler for PlayState {
                     ctx.timer.set_timer_off(TIMER_RHYTHM);
                     ctx.timer.set_timer_off(TIMER_MUSIC_END);
                     ctx.timer.set_timer_off(TIMER_FAILED);
+                    // Freeze timer while showing practice settings
+                    ctx.timer.set_frozen(true);
                     // Stop audio from previous loop
                     if let Some(driver) = &mut self.audio_driver {
                         driver.stop_all();
@@ -485,6 +487,7 @@ impl GameStateHandler for PlayState {
                     .contains(&bms_input::control_keys::ControlKeys::Escape)
                 {
                     pc.save_property();
+                    ctx.timer.set_frozen(false);
                     ctx.timer.set_timer_on(TIMER_FADEOUT);
                     self.phase = PlayPhase::PracticeFinished;
                     info!("Play: Practice -> PracticeFinished (escape)");
@@ -494,6 +497,7 @@ impl GameStateHandler for PlayState {
                 if pc.process_input(input_state) {
                     // User pressed play key: apply settings and start playing
                     self.apply_practice_settings(ctx);
+                    ctx.timer.set_frozen(false);
                     self.phase = PlayPhase::Ready;
                     ctx.timer.set_timer_on(TIMER_READY);
                     info!("Play: Practice -> Ready (play key pressed)");

@@ -8,7 +8,7 @@
 mod clear_type;
 pub mod gauge_property;
 mod groove_gauge;
-mod judge_algorithm;
+pub mod judge_algorithm;
 pub mod judge_manager;
 mod judge_property;
 mod player_rule;
@@ -19,7 +19,7 @@ pub use gauge_property::{
     GaugeElementProperty, GaugeModifier, GaugeProperty, GaugeType, GutsEntry,
 };
 pub use groove_gauge::{Gauge, GrooveGauge};
-pub use judge_algorithm::JudgeAlgorithm;
+pub use judge_algorithm::{DEFAULT_ALGORITHMS, JudgeAlgorithm};
 pub use judge_property::{
     JudgeNoteType, JudgeProperty, JudgeWindow, JudgeWindowRule, JudgeWindowTable, MissCondition,
 };
