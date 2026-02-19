@@ -918,7 +918,7 @@ mod tests {
             .map(|i| format!("/tmp/stage{i}").into())
             .collect();
         let course = bms_database::CourseData::default();
-        resource.start_course(course, models, dirs);
+        resource.start_course(course, models, dirs, Vec::new());
     }
 
     #[test]

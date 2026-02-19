@@ -6,7 +6,7 @@
 use std::path::PathBuf;
 
 use bms_config::PlayerConfig;
-use bms_database::CourseData;
+use bms_database::{CourseData, CourseDataConstraint};
 use bms_ir::RankingData;
 use bms_model::{BmsDecoder, BmsModel, PlayMode};
 use bms_replay::replay_data::ReplayData;
@@ -86,6 +86,11 @@ pub struct PlayerResource {
     pub course_data: Option<CourseData>,
     /// Last gauge value from previous course stage (for carry-over).
     pub course_gauge_carry: Option<f32>,
+    /// Grade-specific constraints (e.g., NoSpeed, NoGood, mirror-only).
+    ///
+    /// Populated when selecting a Grade bar; used by PlayState to enforce
+    /// course constraints during play.
+    pub course_constraints: Vec<CourseDataConstraint>,
 
     // --- Ghost battle fields ---
     /// Ghost battle settings for pattern sharing (set by LeaderBoardBar, consumed by PlayState).
@@ -129,7 +134,13 @@ impl PlayerResource {
     }
 
     /// Reset course-specific state for a new course play session.
-    pub fn start_course(&mut self, course: CourseData, models: Vec<BmsModel>, dirs: Vec<PathBuf>) {
+    pub fn start_course(
+        &mut self,
+        course: CourseData,
+        models: Vec<BmsModel>,
+        dirs: Vec<PathBuf>,
+        constraints: Vec<CourseDataConstraint>,
+    ) {
         self.course_data = Some(course);
         self.course_bms_models = Some(models);
         self.course_bms_dirs = dirs;
@@ -137,6 +148,7 @@ impl PlayerResource {
         self.course_score_data = Some(Vec::new());
         self.course_replays.clear();
         self.course_gauges.clear();
+        self.course_constraints = constraints;
         self.course_gauge_carry = None;
     }
 
@@ -150,6 +162,7 @@ impl PlayerResource {
         self.course_replays.clear();
         self.course_gauges.clear();
         self.course_gauge_carry = None;
+        self.course_constraints.clear();
     }
 
     /// Load the next course stage BMS model into bms_model.
@@ -196,6 +209,7 @@ impl Default for PlayerResource {
             course_index: 0,
             course_data: None,
             course_gauge_carry: None,
+            course_constraints: Vec::new(),
             ghost_battle: None,
         }
     }

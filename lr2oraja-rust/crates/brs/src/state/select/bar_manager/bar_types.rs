@@ -119,15 +119,16 @@ pub enum FunctionAction {
         song_data: Box<SongData>,
         lr2_id: i64,
     },
+    ViewLeaderboard {
+        song_data: Box<SongData>,
+    },
 }
 
 /// Grade bar data containing a course with grade constraints.
 #[derive(Debug, Clone)]
 pub struct GradeBarData {
     pub name: String,
-    #[allow(dead_code)] // TODO: integrate with course system
     pub course: CourseData,
-    #[allow(dead_code)] // TODO: integrate with course system
     pub constraints: Vec<CourseDataConstraint>,
 }
 
@@ -166,7 +167,7 @@ pub enum Bar {
         hashes: Vec<String>, // sha256 preferred, md5 fallback
     },
     /// Executable bar -- runs a set of songs (e.g., autoplay playlist).
-    #[allow(dead_code)] // TODO: integrate with executable playlist UI
+    #[allow(dead_code)] // TODO: integrate with production code
     Executable {
         name: String,
         songs: Vec<SongData>,
@@ -196,7 +197,6 @@ pub enum Bar {
         children: Vec<Bar>,
     },
     /// Same-folder bar -- finds songs sharing the same folder CRC.
-    #[allow(dead_code)] // TODO: integrate with same-folder navigation UI
     SameFolder {
         name: String,
         folder_crc: String,
@@ -206,13 +206,12 @@ pub enum Bar {
         query: String,
     },
     /// Leaderboard bar -- shows rankings for a song.
-    #[allow(dead_code)] // TODO: integrate with IR leaderboard screen
+    #[allow(dead_code)] // TODO: integrate with production code
     LeaderBoard {
         song_data: Box<SongData>,
         from_lr2ir: bool,
     },
     /// Context menu bar -- right-click actions for a bar.
-    #[allow(dead_code)] // TODO: integrate with right-click context menu UI
     ContextMenu(Box<ContextMenuData>),
 }
 

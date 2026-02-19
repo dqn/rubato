@@ -202,6 +202,12 @@ pub fn build_song_context_menu(song: &SongData) -> Vec<ContextMenuItem> {
                 flag: FAVORITE_CHART,
             },
         },
+        ContextMenuItem {
+            label: "View Leaderboard".to_string(),
+            action: FunctionAction::ViewLeaderboard {
+                song_data: Box::new(song.clone()),
+            },
+        },
     ]
 }
 
@@ -517,7 +523,7 @@ mod tests {
     fn build_song_context_menu_contains_copy_and_favorites() {
         let song = make_song_data();
         let items = build_song_context_menu(&song);
-        assert_eq!(items.len(), 8);
+        assert_eq!(items.len(), 9);
 
         // Related (Same Folder)
         assert_eq!(items[2].label, "Related (Same Folder)");

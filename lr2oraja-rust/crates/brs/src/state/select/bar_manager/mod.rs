@@ -23,6 +23,8 @@ pub struct BarManager {
     max_search_bar_count: usize,
     /// Rival score cache: sha256 → ScoreData (for rival compare sort modes).
     pub(super) rival_scores: HashMap<String, ScoreData>,
+    /// Whether to show bars for songs whose files don't exist on disk.
+    show_no_song_existing_bar: bool,
 }
 
 impl BarManager {
@@ -34,12 +36,20 @@ impl BarManager {
             search_history: Vec::new(),
             max_search_bar_count: 10,
             rival_scores: HashMap::new(),
+            show_no_song_existing_bar: true,
         }
     }
 
     /// Set the maximum number of search history entries.
     pub fn set_max_search_bar_count(&mut self, count: usize) {
         self.max_search_bar_count = count;
+    }
+
+    /// Set whether to show bars for songs whose files don't exist on disk.
+    ///
+    /// Java parity: `Config.isShowNoSongExistingBar()`.
+    pub fn set_show_no_song_existing_bar(&mut self, show: bool) {
+        self.show_no_song_existing_bar = show;
     }
 
     /// Add a search query to the history.
@@ -57,7 +67,7 @@ impl BarManager {
     }
 
     /// Returns the search history entries.
-    #[allow(dead_code)] // TODO: integrate with search history skin state
+    #[allow(dead_code)] // TODO: wire to skin state / UI
     pub fn search_history(&self) -> &[String] {
         &self.search_history
     }
@@ -1536,18 +1546,42 @@ mod tests {
     }
 
     #[test]
-    fn enter_folder_on_executable_is_noop() {
+    fn enter_folder_on_executable_expands_songs() {
         let db = SongDatabase::open_in_memory().unwrap();
         let mut bm = BarManager::new();
         bm.bars = vec![Bar::Executable {
             name: "Exec".to_string(),
+            songs: vec![
+                SongData {
+                    title: "Song A".to_string(),
+                    ..Default::default()
+                },
+                SongData {
+                    title: "Song B".to_string(),
+                    ..Default::default()
+                },
+            ],
+        }];
+        bm.cursor = 0;
+        bm.enter_folder(&db);
+        assert!(bm.is_in_folder());
+        assert_eq!(bm.bar_count(), 2);
+        assert_eq!(bm.bars[0].bar_name(), "Song A");
+        assert_eq!(bm.bars[1].bar_name(), "Song B");
+    }
+
+    #[test]
+    fn enter_folder_on_empty_executable_pushes_empty() {
+        let db = SongDatabase::open_in_memory().unwrap();
+        let mut bm = BarManager::new();
+        bm.bars = vec![Bar::Executable {
+            name: "Empty".to_string(),
             songs: Vec::new(),
         }];
         bm.cursor = 0;
         bm.enter_folder(&db);
-        // Executable is not a directory type, should be noop
-        assert!(!bm.is_in_folder());
-        assert_eq!(bm.bar_count(), 1);
+        assert!(bm.is_in_folder());
+        assert_eq!(bm.bar_count(), 0);
     }
 
     #[test]

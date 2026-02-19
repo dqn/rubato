@@ -639,7 +639,12 @@ mod tests {
         use bms_model::BmsModel;
         let models = vec![BmsModel::default(), BmsModel::default()];
         let dirs = vec!["/tmp/s0".into(), "/tmp/s1".into()];
-        resource.start_course(bms_database::CourseData::default(), models, dirs);
+        resource.start_course(
+            bms_database::CourseData::default(),
+            models,
+            dirs,
+            Vec::new(),
+        );
         assert!(resource.is_course());
 
         let mut ctx = make_ctx(

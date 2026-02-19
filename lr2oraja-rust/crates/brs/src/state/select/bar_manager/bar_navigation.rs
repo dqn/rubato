@@ -141,6 +141,7 @@ impl BarManager {
                     .unwrap_or_default();
                 self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
                 self.filter_invisible();
+                self.filter_non_existing();
                 self.cursor = 0;
             }
             Some(Bar::TableRoot {
@@ -190,6 +191,7 @@ impl BarManager {
                     .unwrap_or_default();
                 self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
                 self.filter_invisible();
+                self.filter_non_existing();
                 self.cursor = 0;
             }
             Some(Bar::Container { children, .. }) => {
@@ -209,6 +211,7 @@ impl BarManager {
                 let songs = song_db.get_song_datas("folder", &crc).unwrap_or_default();
                 self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
                 self.filter_invisible();
+                self.filter_non_existing();
                 self.cursor = 0;
             }
             Some(Bar::SearchWord { query }) => {
@@ -220,6 +223,7 @@ impl BarManager {
                 let songs = song_db.get_song_datas_by_text(&query).unwrap_or_default();
                 self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
                 self.filter_invisible();
+                self.filter_non_existing();
                 self.cursor = 0;
             }
             Some(Bar::Command { sql, .. }) => {
@@ -232,6 +236,16 @@ impl BarManager {
                 let songs = song_db.get_song_datas_by_sql(&sql).unwrap_or_default();
                 self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
                 self.filter_invisible();
+                self.filter_non_existing();
+                self.cursor = 0;
+            }
+            Some(Bar::Executable { songs, .. }) => {
+                let songs = songs.clone();
+                let old_bars = std::mem::take(&mut self.bars);
+                let old_cursor = self.cursor;
+                self.folder_stack.push((old_bars, old_cursor));
+
+                self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
                 self.cursor = 0;
             }
             Some(Bar::ContextMenu(cm)) => {
@@ -413,6 +427,7 @@ impl BarManager {
         self.folder_stack.push((old_bars, old_cursor));
         self.bars = songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
         self.filter_invisible();
+        self.filter_non_existing();
         self.cursor = 0;
     }
 }

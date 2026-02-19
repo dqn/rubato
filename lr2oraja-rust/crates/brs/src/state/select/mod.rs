@@ -39,8 +39,8 @@ const DEFAULT_INPUT_DELAY_MS: i64 = 500;
 /// Default fadeout duration in milliseconds.
 const DEFAULT_FADEOUT_DURATION_MS: i64 = 500;
 
-/// Default scroll animation duration in milliseconds.
-const DEFAULT_SCROLL_DURATION_MS: i64 = 150;
+/// Fallback scroll animation duration in milliseconds (used when config is 0).
+const FALLBACK_SCROLL_DURATION_MS: i64 = 150;
 
 static TABLE_UPDATE_JOB_RUNNING: AtomicBool = AtomicBool::new(false);
 
@@ -162,9 +162,11 @@ impl GameStateHandler for MusicSelectState {
             }
         }
 
-        // Configure search history limit from config
+        // Configure bar manager from config
         self.bar_manager
             .set_max_search_bar_count(ctx.config.max_search_bar_count as usize);
+        self.bar_manager
+            .set_show_no_song_existing_bar(ctx.config.show_no_song_existing_bar);
 
         // Load song list from database
         if let Some(db) = ctx.database {
@@ -260,8 +262,13 @@ impl GameStateHandler for MusicSelectState {
         if ctx.timer.is_timer_on(TIMER_FADEOUT)
             && ctx.timer.now_time_of(TIMER_FADEOUT) > DEFAULT_FADEOUT_DURATION_MS
         {
-            info!("MusicSelect: transition to Decide");
-            *ctx.transition = Some(AppStateType::Decide);
+            if ctx.config.skip_decide_screen {
+                info!("MusicSelect: transition to Play (skipDecideScreen)");
+                *ctx.transition = Some(AppStateType::Play);
+            } else {
+                info!("MusicSelect: transition to Decide");
+                *ctx.transition = Some(AppStateType::Decide);
+            }
         }
 
         // Preview music: trigger after PREVIEW_DELAY_MS since last cursor change
@@ -278,8 +285,13 @@ impl GameStateHandler for MusicSelectState {
             }
         }
 
-        // Compute scroll interpolation
-        let scroll_duration_us = DEFAULT_SCROLL_DURATION_MS * 1000;
+        // Compute scroll interpolation (use config scrolldurationlow; Java parity)
+        let scroll_duration_ms = if ctx.config.scrolldurationlow > 0 {
+            ctx.config.scrolldurationlow as i64
+        } else {
+            FALLBACK_SCROLL_DURATION_MS
+        };
+        let scroll_duration_us = scroll_duration_ms * 1000;
         let (angle_lerp, angle) = if let Some(start_us) = self.scroll_start_us {
             let elapsed_us = ctx.timer.now_micro_time() - start_us;
             if elapsed_us >= scroll_duration_us {
@@ -649,44 +661,40 @@ impl MusicSelectState {
     fn handle_command_result(&mut self, result: CommandResult, ctx: &mut StateContext) {
         match result {
             CommandResult::None => {}
-            CommandResult::ShowSameFolder { folder_crc, .. } => {
+            CommandResult::ShowSameFolder { title, folder_crc } => {
                 if let Some(db) = ctx.database {
-                    match db.song_db.get_song_datas("folder", &folder_crc) {
-                        Ok(songs) => {
-                            let bars: Vec<Bar> =
-                                songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
-                            if !bars.is_empty() {
-                                self.bar_manager.push_and_set_bars(bars);
-                                self.score_cache_dirty = true;
-                            }
-                        }
-                        Err(e) => {
-                            tracing::warn!("MusicSelect: same folder lookup failed: {e}");
-                        }
-                    }
+                    self.bar_manager.push_and_set_bars(vec![Bar::SameFolder {
+                        name: title,
+                        folder_crc,
+                    }]);
+                    self.bar_manager.enter_folder(&db.song_db);
+                    self.score_cache_dirty = true;
                 }
             }
             CommandResult::ShowContextMenu => {
-                let items = match self.bar_manager.current() {
-                    Some(Bar::Song(song_data)) => build_song_context_menu(song_data),
-                    Some(Bar::TableRoot { name, url, .. }) => {
-                        build_table_context_menu(name, url.as_deref())
+                let (source_bar, items) = match self.bar_manager.current() {
+                    Some(bar @ Bar::Song(song_data)) => {
+                        (Box::new(bar.clone()), build_song_context_menu(song_data))
                     }
-                    Some(Bar::HashFolder { name, .. }) => build_table_folder_context_menu(name),
-                    _ => Vec::new(),
+                    Some(bar @ Bar::TableRoot { name, url, .. }) => (
+                        Box::new(bar.clone()),
+                        build_table_context_menu(name, url.as_deref()),
+                    ),
+                    Some(bar @ Bar::HashFolder { name, .. }) => {
+                        (Box::new(bar.clone()), build_table_folder_context_menu(name))
+                    }
+                    _ => return,
                 };
                 if !items.is_empty() {
-                    let function_bars: Vec<Bar> = items
-                        .into_iter()
-                        .map(|item| Bar::Function {
-                            title: item.label,
-                            subtitle: None,
-                            display_bar_type: 5,
-                            action: item.action,
-                            lamp: 0,
-                        })
-                        .collect();
-                    self.bar_manager.push_and_set_bars(function_bars);
+                    let cm = Bar::ContextMenu(Box::new(bar_manager::ContextMenuData {
+                        source_bar,
+                        items,
+                    }));
+                    self.bar_manager.push_and_set_bars(vec![cm]);
+                    // ContextMenu enter_folder doesn't need song_db but method requires it
+                    if let Some(db) = ctx.database {
+                        self.bar_manager.enter_folder(&db.song_db);
+                    }
                     self.score_cache_dirty = true;
                 }
             }
@@ -823,9 +831,6 @@ impl MusicSelectState {
                 song_data: Box<bms_database::SongData>,
                 from_lr2ir: bool,
             },
-            Executable {
-                songs: Vec<bms_database::SongData>,
-            },
             Function(bar_manager::FunctionAction),
             Grade(bar_manager::GradeBarData),
             RandomCourse(bms_database::RandomCourseData),
@@ -843,6 +848,7 @@ impl MusicSelectState {
             | Some(Bar::SameFolder { .. })
             | Some(Bar::SearchWord { .. })
             | Some(Bar::Command { .. })
+            | Some(Bar::Executable { .. })
             | Some(Bar::ContextMenu(_)) => BarAction::Directory,
             Some(Bar::Course(course_data)) => BarAction::Course((**course_data).clone()),
             Some(Bar::LeaderBoard {
@@ -851,9 +857,6 @@ impl MusicSelectState {
             }) => BarAction::LeaderBoard {
                 song_data: Box::new((**song_data).clone()),
                 from_lr2ir: *from_lr2ir,
-            },
-            Some(Bar::Executable { songs, .. }) => BarAction::Executable {
-                songs: songs.clone(),
             },
             Some(Bar::Function { action, .. }) => BarAction::Function(action.clone()),
             Some(Bar::Grade(grade_data)) => BarAction::Grade((**grade_data).clone()),
@@ -896,32 +899,16 @@ impl MusicSelectState {
             } => {
                 self.enter_leaderboard(*song_data, from_lr2ir);
             }
-            BarAction::Executable { songs } => {
-                // Executable bar: start autoplay with the first song
-                if let Some(song_data) = songs.first() {
-                    let path = std::path::PathBuf::from(&song_data.path);
-                    match bms_model::BmsDecoder::decode(&path) {
-                        Ok(model) => {
-                            ctx.resource.play_mode = model.mode;
-                            ctx.resource.bms_dir = path.parent().map(|p| p.to_path_buf());
-                            ctx.resource.bms_path = Some(path);
-                            ctx.resource.bms_model = Some(model);
-                            ctx.resource.player_mode = crate::player_resource::PlayerMode::Autoplay;
-                            self.fadeout_started = true;
-                            ctx.timer.set_timer_on(TIMER_FADEOUT);
-                            info!("MusicSelect: executable bar - autoplay start");
-                        }
-                        Err(e) => {
-                            tracing::warn!("MusicSelect: failed to load BMS for executable: {e}");
-                        }
-                    }
-                }
-            }
+            // Executable is now treated as Directory (expanded via enter_folder)
             BarAction::Function(func_action) => {
                 self.execute_function_action(ctx, func_action);
             }
             BarAction::Grade(grade_data) => {
-                self.select_course(ctx, &grade_data.course);
+                self.select_course_with_constraints(
+                    ctx,
+                    &grade_data.course,
+                    grade_data.constraints.clone(),
+                );
             }
             BarAction::RandomCourse(rc_data) => {
                 self.select_random_course(ctx, &rc_data);
@@ -1001,6 +988,15 @@ impl MusicSelectState {
     }
 
     fn select_course(&mut self, ctx: &mut StateContext, course_data: &bms_database::CourseData) {
+        self.select_course_with_constraints(ctx, course_data, Vec::new());
+    }
+
+    fn select_course_with_constraints(
+        &mut self,
+        ctx: &mut StateContext,
+        course_data: &bms_database::CourseData,
+        constraints: Vec<bms_database::CourseDataConstraint>,
+    ) {
         let db = match ctx.database {
             Some(db) => db,
             None => {
@@ -1053,7 +1049,8 @@ impl MusicSelectState {
         }
 
         if !models.is_empty() {
-            ctx.resource.start_course(course_data.clone(), models, dirs);
+            ctx.resource
+                .start_course(course_data.clone(), models, dirs, constraints);
             ctx.resource.load_course_stage();
             self.fadeout_started = true;
             ctx.timer.set_timer_on(TIMER_FADEOUT);
@@ -1105,19 +1102,12 @@ impl MusicSelectState {
             FunctionAction::ShowSameFolder { title, folder_crc } => {
                 info!(title = %title, folder_crc = %folder_crc, "MusicSelect: show same folder via function");
                 if let Some(db) = ctx.database {
-                    match db.song_db.get_song_datas("folder", &folder_crc) {
-                        Ok(songs) => {
-                            let bars: Vec<Bar> =
-                                songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
-                            if !bars.is_empty() {
-                                self.bar_manager.push_and_set_bars(bars);
-                                self.score_cache_dirty = true;
-                            }
-                        }
-                        Err(e) => {
-                            tracing::warn!("MusicSelect: same folder lookup failed: {e}");
-                        }
-                    }
+                    self.bar_manager.push_and_set_bars(vec![Bar::SameFolder {
+                        name: title,
+                        folder_crc,
+                    }]);
+                    self.bar_manager.enter_folder(&db.song_db);
+                    self.score_cache_dirty = true;
                 }
             }
             FunctionAction::CopyToClipboard(text) => {
@@ -1192,6 +1182,9 @@ impl MusicSelectState {
                         tracing::warn!("MusicSelect: failed to load BMS for ghost battle: {e}");
                     }
                 }
+            }
+            FunctionAction::ViewLeaderboard { song_data } => {
+                self.enter_leaderboard(*song_data, true);
             }
             FunctionAction::None => {}
         }
@@ -1307,7 +1300,10 @@ impl MusicSelectState {
         }
 
         if !models.is_empty() {
-            ctx.resource.start_course(course_data, models, dirs);
+            // RandomCourse constraints come from the CourseData itself
+            let constraints = course_data.constraint.clone();
+            ctx.resource
+                .start_course(course_data, models, dirs, constraints);
             ctx.resource.load_course_stage();
             self.fadeout_started = true;
             ctx.timer.set_timer_on(TIMER_FADEOUT);

@@ -319,4 +319,17 @@ impl BarManager {
             _ => true,
         });
     }
+
+    /// Remove Song bars whose files don't exist on disk (empty path).
+    ///
+    /// Java parity: `BarManager` L332-341. Called when
+    /// `config.show_no_song_existing_bar` is false.
+    pub fn filter_non_existing(&mut self) {
+        if !self.show_no_song_existing_bar {
+            self.bars.retain(|bar| match bar {
+                Bar::Song(s) => !s.path.is_empty(),
+                _ => true,
+            });
+        }
+    }
 }
