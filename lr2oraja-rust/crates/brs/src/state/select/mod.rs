@@ -29,6 +29,7 @@ use crate::state::{GameStateHandler, StateContext};
 use crate::system_sound::SystemSound;
 
 use bar_manager::{Bar, BarManager, SortMode};
+use command::{CommandResult, MusicSelectCommand, build_song_context_menu};
 
 /// Default input delay in milliseconds.
 const DEFAULT_INPUT_DELAY_MS: i64 = 500;
@@ -360,7 +361,7 @@ impl GameStateHandler for MusicSelectState {
         }
 
         if let Some(input_state) = ctx.input_state {
-            // Process key commands (F9/F10 favorite toggle)
+            // Process key commands
             for cmd in &input_state.commands {
                 match cmd {
                     KeyCommand::AddFavoriteSong => {
@@ -368,6 +369,25 @@ impl GameStateHandler for MusicSelectState {
                     }
                     KeyCommand::AddFavoriteChart => {
                         self.toggle_favorite(ctx, FAVORITE_CHART);
+                    }
+                    KeyCommand::CopySongMd5Hash => {
+                        let result = self
+                            .command_executor
+                            .execute(MusicSelectCommand::CopyMd5Hash, &self.bar_manager);
+                        self.handle_command_result(result, ctx);
+                    }
+                    KeyCommand::CopySongSha256Hash => {
+                        let result = self
+                            .command_executor
+                            .execute(MusicSelectCommand::CopySha256Hash, &self.bar_manager);
+                        self.handle_command_result(result, ctx);
+                    }
+                    KeyCommand::CopyHighlightedMenuText => {
+                        let result = self.command_executor.execute(
+                            MusicSelectCommand::CopyHighlightedMenuText,
+                            &self.bar_manager,
+                        );
+                        self.handle_command_result(result, ctx);
                     }
                     _ => {}
                 }
@@ -508,6 +528,13 @@ impl GameStateHandler for MusicSelectState {
                         // Cycle hi-speed (placeholder for future integration)
                         return;
                     }
+                    ControlKeys::Num8 => {
+                        let result = self
+                            .command_executor
+                            .execute(MusicSelectCommand::ShowSongsOnSameFolder, &self.bar_manager);
+                        self.handle_command_result(result, ctx);
+                        return;
+                    }
                     ControlKeys::Del => {
                         // Transition to KeyConfig
                         *ctx.transition = Some(AppStateType::KeyConfig);
@@ -528,10 +555,55 @@ impl GameStateHandler for MusicSelectState {
 }
 
 impl MusicSelectState {
+    /// Handle a command result from the executor, performing broader state changes.
+    fn handle_command_result(&mut self, result: CommandResult, ctx: &mut StateContext) {
+        match result {
+            CommandResult::None => {}
+            CommandResult::ShowSameFolder { folder_crc, .. } => {
+                if let Some(db) = ctx.database {
+                    match db.song_db.get_song_datas("folder", &folder_crc) {
+                        Ok(songs) => {
+                            let bars: Vec<Bar> =
+                                songs.into_iter().map(|s| Bar::Song(Box::new(s))).collect();
+                            if !bars.is_empty() {
+                                self.bar_manager.push_and_set_bars(bars);
+                                self.score_cache_dirty = true;
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("MusicSelect: same folder lookup failed: {e}");
+                        }
+                    }
+                }
+            }
+            CommandResult::ShowContextMenu => {
+                if let Some(Bar::Song(song_data)) = self.bar_manager.current() {
+                    let function_bars: Vec<Bar> = build_song_context_menu(song_data)
+                        .into_iter()
+                        .map(|item| Bar::Function {
+                            title: item.label,
+                            subtitle: None,
+                            display_bar_type: 5,
+                            action: item.action,
+                            lamp: 0,
+                        })
+                        .collect();
+                    self.bar_manager.push_and_set_bars(function_bars);
+                    self.score_cache_dirty = true;
+                }
+            }
+        }
+    }
+
     /// Record that the cursor changed, resetting the preview delay timer.
+    ///
+    /// Also resets the replay selection (Java parity: cursor movement resets
+    /// the replay slot to the first available).
     fn on_cursor_change(&mut self, now_us: i64) {
         self.songbar_change_time = Some(now_us);
         self.preview_triggered = false;
+        self.command_executor
+            .execute(MusicSelectCommand::ResetReplay, &self.bar_manager);
     }
 
     /// Trigger preview playback for the currently selected bar.
@@ -2071,5 +2143,67 @@ mod tests {
         }
         // Should NOT have pushed into folder stack
         assert!(!state.bar_manager().is_in_folder());
+    }
+
+    // --- MusicSelectCommand keyboard shortcut tests ---
+
+    #[test]
+    fn num8_triggers_show_same_folder() {
+        let mut state = MusicSelectState::new();
+        let mut timer = TimerManager::new();
+        let mut resource = PlayerResource::default();
+        let config = Config::default();
+        let mut player_config = PlayerConfig::default();
+        let mut transition = None;
+
+        let (db, _sha) = make_db_with_song();
+        setup_input_ready(&mut timer);
+        state.bar_manager.load_root(&db.song_db);
+        assert_eq!(state.bar_manager.bar_count(), 1);
+        assert!(!state.bar_manager.is_in_folder());
+
+        let input = InputState {
+            commands: vec![],
+            pressed_keys: vec![ControlKeys::Num8],
+        };
+        {
+            let mut ctx = StateContext {
+                timer: &mut timer,
+                resource: &mut resource,
+                config: &config,
+                player_config: &mut player_config,
+                transition: &mut transition,
+                keyboard_backend: None,
+                database: Some(&db),
+                input_state: Some(&input),
+                skin_manager: None,
+                sound_manager: None,
+                received_chars: &[],
+                bevy_images: None,
+                shared_state: None,
+                preview_music: None,
+            };
+            state.input(&mut ctx);
+        }
+        // Should have pushed same-folder results into bar manager
+        assert!(state.bar_manager().is_in_folder());
+    }
+
+    #[test]
+    fn cursor_change_resets_replay() {
+        let mut state = MusicSelectState::new();
+        // Manually set replay to non-zero
+        state.command_executor = command::CommandExecutor::new();
+        let bm_ref = &state.bar_manager;
+        state
+            .command_executor
+            .execute(command::MusicSelectCommand::NextReplay, bm_ref);
+        assert_eq!(state.command_executor.selected_replay(), 1);
+
+        // Trigger cursor change
+        state.on_cursor_change(1_000_000);
+
+        // Replay should be reset to 0
+        assert_eq!(state.command_executor.selected_replay(), 0);
     }
 }

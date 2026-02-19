@@ -91,13 +91,15 @@ Lessons learned from Phase 0-3 implementation. Refer to these when implementing 
 
 ## Implementation Status
 
-Phase 0-25 全完了（16 crate, ~92,000行）。全 RenderSnapshot GM テストが strict parity 達成済み。
+Phase 0-26 全完了（16 crate, ~92,000行）。全 RenderSnapshot GM テストが strict parity 達成済み。
 Phase 25: 7z アーカイブ対応、ソート Java パリティ修正、PreviewMusic skin state 接続。
+Phase 26: MusicSelectCommand キーボードショートカット配線（F4/F5/C/NUM8）、CommandResult パターン導入、コンテキストメニュー構築、dead_code 削減。
 
 ## Deferred / Stub Items
 
 - **SortMode::RivalCompareClear / RivalCompareScore:** スタブ実装（`tracing::info!` のみ）。Rival データ取得の IR 連携時に実装予定
-- **dead_code 統合 (C2-C5):** MusicSelectCommand キーボードショートカット接続（KeyCommand variant 未実装）、GradeBarData course/constraints skin state 同期、SystemSoundManager audio loading 接続、TimerManager set_frozen pause 接続 — 各統合先の機能が未実装のため保留
+- **dead_code 統合 (C2-C5):** GradeBarData course/constraints skin state 同期、SystemSoundManager audio loading 接続、TimerManager set_frozen pause 接続 — 各統合先の機能が未実装のため保留
+- **MusicSelectCommand 残存 dead_code:** NextReplay/PrevReplay（NUM キー未割当）、Download 系 3 コマンド（ダウンロード機能未実装）、ShowContextMenu（NUM キー未割当）— 各機能の統合時に接続予定
 - **FunctionAction / Bar variant dead_code 整理 (Task D):** 多くの variant が `execute_function_action()` / `select_current()` で使用されているが、コンパイラが検出できない動的パスのため `#[allow(dead_code)]` が残存
 
 ## Known Issues
