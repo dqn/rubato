@@ -459,6 +459,9 @@ impl GameStateHandler for MusicSelectState {
                         self.bar_manager
                             .sort(self.sort_mode, &self.score_data_cache);
                         self.score_cache_dirty = true;
+                        if let Some(sm) = ctx.sound_manager.as_deref_mut() {
+                            sm.play(SystemSound::OptionChange);
+                        }
                         info!(sort = ?self.sort_mode, "MusicSelect: sort changed");
                         return;
                     }
@@ -482,12 +485,18 @@ impl GameStateHandler for MusicSelectState {
                                 .sort(self.sort_mode, &self.score_data_cache);
                             self.score_cache_dirty = true;
                         }
+                        if let Some(sm) = ctx.sound_manager.as_deref_mut() {
+                            sm.play(SystemSound::OptionChange);
+                        }
                         info!(filter = ?self.mode_filter, "MusicSelect: mode filter changed");
                         return;
                     }
                     ControlKeys::Num3 => {
                         // Cycle gauge type
                         ctx.player_config.gauge = (ctx.player_config.gauge + 1) % 6;
+                        if let Some(sm) = ctx.sound_manager.as_deref_mut() {
+                            sm.play(SystemSound::OptionChange);
+                        }
                         info!(
                             gauge = ctx.player_config.gauge,
                             "MusicSelect: gauge changed"
@@ -497,6 +506,9 @@ impl GameStateHandler for MusicSelectState {
                     ControlKeys::Num4 => {
                         // Cycle random type
                         ctx.player_config.random = (ctx.player_config.random + 1) % 10;
+                        if let Some(sm) = ctx.sound_manager.as_deref_mut() {
+                            sm.play(SystemSound::OptionChange);
+                        }
                         info!(
                             random = ctx.player_config.random,
                             "MusicSelect: random changed"
@@ -506,6 +518,9 @@ impl GameStateHandler for MusicSelectState {
                     ControlKeys::Num5 => {
                         // Cycle DP option
                         ctx.player_config.doubleoption = (ctx.player_config.doubleoption + 1) % 4;
+                        if let Some(sm) = ctx.sound_manager.as_deref_mut() {
+                            sm.play(SystemSound::OptionChange);
+                        }
                         info!(
                             dp = ctx.player_config.doubleoption,
                             "MusicSelect: DP option changed"
@@ -538,6 +553,13 @@ impl GameStateHandler for MusicSelectState {
                     }
                     ControlKeys::Num6 => {
                         // Cycle hi-speed (placeholder for future integration)
+                        return;
+                    }
+                    ControlKeys::Num7 => {
+                        let result = self
+                            .command_executor
+                            .execute(MusicSelectCommand::ShowContextMenu, &self.bar_manager);
+                        self.handle_command_result(result, ctx);
                         return;
                     }
                     ControlKeys::Num8 => {

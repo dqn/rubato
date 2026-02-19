@@ -29,8 +29,8 @@ pub enum CommandResult {
 /// Commands available on the music select screen.
 ///
 /// Matches the Java `MusicSelectCommand` enum variants.
-// TODO: NextReplay/PrevReplay need NUM key bindings; Download variants need download integration;
-// ShowContextMenu needs NUM key binding — tracked in Deferred / Stub Items.
+// TODO: NextReplay/PrevReplay need NUM key bindings; Download variants need download integration
+// — tracked in Deferred / Stub Items.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MusicSelectCommand {

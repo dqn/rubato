@@ -22,7 +22,7 @@ mod target_property;
 mod timer_manager;
 mod window_manager;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use parking_lot::{Mutex, RwLock};
@@ -247,6 +247,11 @@ fn main() -> Result<()> {
     let config_path = args.config.clone();
     let player_config_path = args.player_config.clone();
 
+    // Initialize system sounds from config
+    let mut system_sound_mgr = system_sound::SystemSoundManager::default();
+    system_sound_mgr.load_sounds(Path::new(&config.soundpath));
+    system_sound_mgr.set_volume(config.audio.systemvolume as f64);
+
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -275,7 +280,7 @@ fn main() -> Result<()> {
         .insert_resource(BrsInputMapper(InputMapper::new()))
         .insert_resource(BrsExternalManager(external))
         .insert_resource(BrsSkinManager::default())
-        .insert_resource(BrsSystemSoundManager::default())
+        .insert_resource(BrsSystemSoundManager(system_sound_mgr))
         .insert_resource(StateUiResources {
             config_paths: BrsConfigPaths {
                 config: config_path,
