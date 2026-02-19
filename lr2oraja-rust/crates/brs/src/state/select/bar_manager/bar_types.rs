@@ -96,12 +96,10 @@ pub enum FunctionAction {
     Autoplay(Box<SongData>),
     Practice(Box<SongData>),
     ShowSameFolder {
-        #[allow(dead_code)] // TODO: integrate with same-folder UI display
         title: String,
         folder_crc: String,
     },
     CopyToClipboard(String),
-    #[allow(dead_code)] // TODO: integrate with URL open context menu item
     OpenUrl(String),
     ToggleFavorite {
         sha256: String,
@@ -154,6 +152,7 @@ pub enum Bar {
     Course(Box<CourseData>),
     TableRoot {
         name: String,
+        url: Option<String>,
         folders: Vec<TableFolder>,
         courses: Vec<CourseData>,
     },
@@ -170,11 +169,9 @@ pub enum Bar {
     /// Function bar -- a generic action item (autoplay, practice, clipboard, etc.).
     Function {
         title: String,
-        #[allow(dead_code)] // TODO: integrate with subtitle skin label rendering
         subtitle: Option<String>,
         display_bar_type: i32,
         action: FunctionAction,
-        #[allow(dead_code)] // TODO: integrate with lamp skin state rendering
         lamp: i32,
     },
     /// Grade/dan-i bar -- wraps a course with grade constraints.
@@ -194,7 +191,7 @@ pub enum Bar {
         children: Vec<Bar>,
     },
     /// Same-folder bar -- finds songs sharing the same folder CRC.
-    #[allow(dead_code)] // TODO: integrate with same-folder navigation
+    #[allow(dead_code)] // TODO: integrate with same-folder navigation UI
     SameFolder {
         name: String,
         folder_crc: String,

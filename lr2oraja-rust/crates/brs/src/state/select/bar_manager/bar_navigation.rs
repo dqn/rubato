@@ -268,8 +268,14 @@ impl BarManager {
     /// Load table data from cache and add TableRoot bars to the root bar list.
     pub fn load_tables(&mut self, tables: &[TableData]) {
         for table in tables {
+            let url = if table.url.is_empty() {
+                None
+            } else {
+                Some(table.url.clone())
+            };
             self.bars.push(Bar::TableRoot {
                 name: table.name.clone(),
+                url,
                 folders: table.folder.clone(),
                 courses: table.course.clone(),
             });
@@ -285,6 +291,7 @@ impl BarManager {
                 Ok(courses) if !courses.is_empty() => {
                     self.bars.push(Bar::TableRoot {
                         name: "COURSE".to_string(),
+                        url: None,
                         folders: Vec::new(),
                         courses,
                     });

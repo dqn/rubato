@@ -655,6 +655,7 @@ mod tests {
                 name,
                 folders,
                 courses,
+                ..
             } => {
                 assert_eq!(name, "Insane Table");
                 assert_eq!(folders.len(), 2);
@@ -676,6 +677,7 @@ mod tests {
         let table = sample_table_data("Test Table");
         bm.bars = vec![Bar::TableRoot {
             name: table.name.clone(),
+            url: None,
             folders: table.folder.clone(),
             courses: table.course.clone(),
         }];
@@ -761,6 +763,7 @@ mod tests {
             })),
             Bar::TableRoot {
                 name: "Alpha Table".to_string(),
+                url: None,
                 folders: Vec::new(),
                 courses: Vec::new(),
             },
@@ -1116,6 +1119,7 @@ mod tests {
             })),
             Bar::TableRoot {
                 name: "Table".to_string(),
+                url: None,
                 folders: Vec::new(),
                 courses: Vec::new(),
             },

@@ -29,9 +29,6 @@ pub enum CommandResult {
 /// Commands available on the music select screen.
 ///
 /// Matches the Java `MusicSelectCommand` enum variants.
-// TODO: NextReplay/PrevReplay need NUM key bindings; Download variants need download integration
-// — tracked in Deferred / Stub Items.
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MusicSelectCommand {
     /// Reset replay selection to the first available replay.
@@ -47,10 +44,13 @@ pub enum MusicSelectCommand {
     /// Copy the highlighted bar's display text to the clipboard.
     CopyHighlightedMenuText,
     /// Download the selected song via IPFS.
+    #[allow(dead_code)] // TODO: integrate with download feature
     DownloadIpfs,
     /// Download the selected song via HTTP (by MD5).
+    #[allow(dead_code)] // TODO: integrate with download feature
     DownloadHttp,
     /// Download all songs in the selected course via HTTP.
+    #[allow(dead_code)] // TODO: integrate with download feature
     DownloadCourseHttp,
     /// Show all songs in the same folder as the selected song.
     ShowSongsOnSameFolder,
@@ -75,8 +75,6 @@ impl CommandExecutor {
     }
 
     /// Returns the currently selected replay index.
-    // TODO: expose to skin state for replay slot display — used in tests
-    #[allow(dead_code)]
     pub fn selected_replay(&self) -> i32 {
         self.selected_replay
     }
@@ -205,11 +203,18 @@ pub fn build_song_context_menu(song: &SongData) -> Vec<ContextMenuItem> {
 /// Build context menu items for a TableRoot bar.
 ///
 /// Matches the Java `ContextMenuBar.tableContext()` menu layout.
-pub fn build_table_context_menu(name: &str) -> Vec<ContextMenuItem> {
-    vec![ContextMenuItem {
+pub fn build_table_context_menu(name: &str, url: Option<&str>) -> Vec<ContextMenuItem> {
+    let mut items = vec![ContextMenuItem {
         label: "Copy Table Name".to_string(),
         action: FunctionAction::CopyToClipboard(name.to_string()),
-    }]
+    }];
+    if let Some(url) = url {
+        items.push(ContextMenuItem {
+            label: "Open URL".to_string(),
+            action: FunctionAction::OpenUrl(url.to_string()),
+        });
+    }
+    items
 }
 
 /// Build context menu items for a HashFolder bar (table level folder).

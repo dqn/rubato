@@ -346,6 +346,7 @@ impl GameStateHandler for MusicSelectState {
                 has_ln,
                 true,
                 is_preview_playing,
+                self.command_executor.selected_replay(),
             );
             select_skin_state::sync_bar_scroll_state(
                 shared,
@@ -591,6 +592,32 @@ impl GameStateHandler for MusicSelectState {
                         self.handle_command_result(result, ctx);
                         return;
                     }
+                    ControlKeys::Num9 => {
+                        // Cycle replay slot forward
+                        self.command_executor
+                            .execute(MusicSelectCommand::NextReplay, &self.bar_manager);
+                        if let Some(sm) = ctx.sound_manager.as_deref_mut() {
+                            sm.play(SystemSound::OptionChange);
+                        }
+                        info!(
+                            replay = self.command_executor.selected_replay(),
+                            "MusicSelect: replay slot changed (next)"
+                        );
+                        return;
+                    }
+                    ControlKeys::F3 => {
+                        // Cycle replay slot backward
+                        self.command_executor
+                            .execute(MusicSelectCommand::PrevReplay, &self.bar_manager);
+                        if let Some(sm) = ctx.sound_manager.as_deref_mut() {
+                            sm.play(SystemSound::OptionChange);
+                        }
+                        info!(
+                            replay = self.command_executor.selected_replay(),
+                            "MusicSelect: replay slot changed (prev)"
+                        );
+                        return;
+                    }
                     ControlKeys::Del => {
                         // Transition to KeyConfig
                         *ctx.transition = Some(AppStateType::KeyConfig);
@@ -635,7 +662,9 @@ impl MusicSelectState {
             CommandResult::ShowContextMenu => {
                 let items = match self.bar_manager.current() {
                     Some(Bar::Song(song_data)) => build_song_context_menu(song_data),
-                    Some(Bar::TableRoot { name, .. }) => build_table_context_menu(name),
+                    Some(Bar::TableRoot { name, url, .. }) => {
+                        build_table_context_menu(name, url.as_deref())
+                    }
                     Some(Bar::HashFolder { name, .. }) => build_table_folder_context_menu(name),
                     _ => Vec::new(),
                 };
@@ -1008,7 +1037,8 @@ impl MusicSelectState {
                     }
                 }
             }
-            FunctionAction::ShowSameFolder { folder_crc, .. } => {
+            FunctionAction::ShowSameFolder { title, folder_crc } => {
+                info!(title = %title, folder_crc = %folder_crc, "MusicSelect: show same folder via function");
                 if let Some(db) = ctx.database {
                     match db.song_db.get_song_datas("folder", &folder_crc) {
                         Ok(songs) => {

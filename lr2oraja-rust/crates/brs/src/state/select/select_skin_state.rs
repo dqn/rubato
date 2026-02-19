@@ -15,8 +15,10 @@ use bms_skin::property_id::{
     NUMBER_SONGGAUGE_TOTAL, NUMBER_TOTALNOTE_BSS, NUMBER_TOTALNOTE_LN, NUMBER_TOTALNOTE_NORMAL,
     NUMBER_TOTALNOTE_SCRATCH, NUMBER_TOTALNOTES2, OPTION_5KEYSONG, OPTION_7KEYSONG,
     OPTION_9KEYSONG, OPTION_10KEYSONG, OPTION_14KEYSONG, OPTION_BGA, OPTION_FOLDERBAR, OPTION_LN,
-    OPTION_NO_BGA, OPTION_NO_LN, OPTION_PLAYABLEBAR, OPTION_SONGBAR, RATE_MUSICSELECT_POSITION,
-    STRING_ARTIST, STRING_FULLTITLE, STRING_GENRE, STRING_SUBARTIST, STRING_SUBTITLE, STRING_TITLE,
+    OPTION_NO_BGA, OPTION_NO_LN, OPTION_PLAYABLEBAR, OPTION_SELECT_REPLAYDATA,
+    OPTION_SELECT_REPLAYDATA2, OPTION_SELECT_REPLAYDATA3, OPTION_SELECT_REPLAYDATA4,
+    OPTION_SONGBAR, RATE_MUSICSELECT_POSITION, STRING_ARTIST, STRING_FULLTITLE, STRING_GENRE,
+    STRING_SUBARTIST, STRING_SUBTITLE, STRING_TITLE,
 };
 
 use crate::game_state::SharedGameState;
@@ -31,6 +33,7 @@ pub fn sync_select_state(
     has_ln: bool,
     bga_on: bool,
     _is_preview_playing: bool,
+    selected_replay: i32,
 ) {
     // Bar type booleans (clear previous)
     state.booleans.insert(OPTION_SONGBAR, false);
@@ -108,6 +111,20 @@ pub fn sync_select_state(
     state.booleans.insert(OPTION_NO_LN, !has_ln);
     state.booleans.insert(OPTION_BGA, bga_on);
     state.booleans.insert(OPTION_NO_BGA, !bga_on);
+
+    // Replay slot selection (OPTION_SELECT_REPLAYDATA 1205-1208)
+    state
+        .booleans
+        .insert(OPTION_SELECT_REPLAYDATA, selected_replay == 0);
+    state
+        .booleans
+        .insert(OPTION_SELECT_REPLAYDATA2, selected_replay == 1);
+    state
+        .booleans
+        .insert(OPTION_SELECT_REPLAYDATA3, selected_replay == 2);
+    state
+        .booleans
+        .insert(OPTION_SELECT_REPLAYDATA4, selected_replay == 3);
 }
 
 /// Synchronize bar scroll state for skin bar rendering.
@@ -166,6 +183,7 @@ pub fn sync_bar_scroll_state(
                     level: song_data.level,
                     difficulty: song_data.difficulty,
                     title: song_data.title.clone(),
+                    subtitle: None,
                     text_type: 0, // Song type
                     features,
                 }
@@ -202,14 +220,18 @@ pub fn sync_bar_scroll_state(
             },
             Bar::Function {
                 title,
+                subtitle,
                 display_bar_type,
+                lamp,
                 ..
             } => BarSlotData {
                 bar_type: BarType::Function {
                     display_bar_type: *display_bar_type,
                     display_text_type: 5,
                 },
+                lamp_id: *lamp,
                 title: title.clone(),
+                subtitle: subtitle.clone(),
                 text_type: 5, // Function type
                 ..Default::default()
             },
@@ -449,7 +471,7 @@ mod tests {
     fn sync_select_no_bar_clears_metadata() {
         let mut state = SharedGameState::default();
         let bm = BarManager::new();
-        sync_select_state(&mut state, &bm, false, true, false);
+        sync_select_state(&mut state, &bm, false, true, false, 0);
         assert!(!*state.booleans.get(&OPTION_SONGBAR).unwrap());
         assert!(!*state.booleans.get(&OPTION_FOLDERBAR).unwrap());
     }
@@ -458,7 +480,7 @@ mod tests {
     fn sync_select_feature_flags() {
         let mut state = SharedGameState::default();
         let bm = BarManager::new();
-        sync_select_state(&mut state, &bm, true, false, false);
+        sync_select_state(&mut state, &bm, true, false, false, 0);
         assert!(*state.booleans.get(&OPTION_LN).unwrap());
         assert!(!*state.booleans.get(&OPTION_NO_LN).unwrap());
         assert!(!*state.booleans.get(&OPTION_BGA).unwrap());

@@ -35,6 +35,8 @@ pub struct BarSlotData {
     pub difficulty: i32,
     /// Song title text.
     pub title: String,
+    /// Subtitle text (used by Function bars).
+    pub subtitle: Option<String>,
     /// Text type index (0-10) for selecting SkinText variant.
     pub text_type: usize,
     /// Feature flags: bit 0 = LN, bit 1 = Mine, bit 2 = Random,
