@@ -89,7 +89,7 @@ pub struct Lr2SelectState {
 }
 
 impl Lr2SelectState {
-    #[allow(dead_code)] // TODO: integrate with LR2 skin loader
+    #[allow(dead_code)] // Used in tests; production uses Default with lazy initialization
     fn new() -> Self {
         Self {
             barimage: vec![None; 10],

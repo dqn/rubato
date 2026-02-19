@@ -36,6 +36,7 @@ pub fn entries_to_bars(entries: &[LeaderboardEntry], song_data: &SongData) -> Ve
                 action: FunctionAction::GhostBattle {
                     song_data: Box::new(song_data.clone()),
                     lr2_id: entry.lr2_id,
+                    lane_sequence: 0, // Populated by ghost data fetch when available
                 },
                 lamp: entry.ir_score.clear.id() as i32,
             }
@@ -170,7 +171,9 @@ mod tests {
 
         match &bars[0] {
             Bar::Function { action, .. } => match action {
-                FunctionAction::GhostBattle { song_data, lr2_id } => {
+                FunctionAction::GhostBattle {
+                    song_data, lr2_id, ..
+                } => {
                     assert_eq!(song_data.sha256, "test_sha256");
                     assert_eq!(*lr2_id, 42);
                 }

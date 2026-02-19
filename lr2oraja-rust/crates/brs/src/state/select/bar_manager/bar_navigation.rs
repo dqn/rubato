@@ -6,7 +6,7 @@ use std::path::Path;
 use bms_database::{CourseData, CourseDataAccessor, RandomCourseData, SongDatabase, TableData};
 
 use super::BarManager;
-use super::bar_types::Bar;
+use super::bar_types::{Bar, GradeBarData};
 
 /// JSON structure for command folder definitions (folder/default.json).
 ///
@@ -172,9 +172,19 @@ impl BarManager {
                         hashes,
                     });
                 }
-                // Add courses
+                // Add courses: courses with constraints become Grade bars,
+                // plain courses stay as Course bars.
+                // Java parity: TableBar constructs GradeBar when constraint != empty.
                 for course in &courses {
-                    new_bars.push(Bar::Course(Box::new(course.clone())));
+                    if course.constraint.is_empty() {
+                        new_bars.push(Bar::Course(Box::new(course.clone())));
+                    } else {
+                        new_bars.push(Bar::Grade(Box::new(GradeBarData {
+                            name: course.name.clone(),
+                            course: course.clone(),
+                            constraints: course.constraint.clone(),
+                        })));
+                    }
                 }
                 self.bars = new_bars;
                 self.cursor = 0;
@@ -387,9 +397,8 @@ impl BarManager {
         }
     }
 
-    /// Load course data and add them as bars.
-    // TODO: integrate with course selection UI — used in tests
-    #[allow(dead_code)]
+    /// Load course data and add them as bars (test helper).
+    #[allow(dead_code)] // Used in tests; compiler can't detect construction via test helpers
     pub fn add_courses(&mut self, courses: &[CourseData]) {
         for course in courses {
             self.bars.push(Bar::Course(Box::new(course.clone())));

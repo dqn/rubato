@@ -5,7 +5,9 @@ use tracing::{info, warn};
 use bms_database::RivalDataAccessor;
 use bms_database::score_data_property::ScoreDataProperty;
 use bms_model::{LaneProperty, PlayMode};
-use bms_pattern::{ModeModifier, PatternModifier, SevenToNinePattern, SevenToNineType, get_random};
+use bms_pattern::{
+    ModeModifier, PatternModifier, RandomType, SevenToNinePattern, SevenToNineType, get_random,
+};
 use bms_rule::judge_algorithm::DEFAULT_ALGORITHMS;
 use bms_rule::judge_manager::{JudgeConfig, JudgeManager};
 use bms_rule::{GrooveGauge, PlayerRule};
@@ -132,6 +134,14 @@ impl PlayState {
         // Java parity: BMSPlayer lines ~190-350, GhostBattlePlay.consume()
         let ghost_battle = ctx.resource.ghost_battle.take();
 
+        if let Some(ref gb) = ghost_battle {
+            info!(
+                seed = gb.random_seed,
+                lane_sequence = gb.lane_sequence,
+                "Play: ghost battle active"
+            );
+        }
+
         // Apply pre-shuffle modifiers (scroll, longnote, mine, extranote)
         // Java: applied before lane shuffle, config value > 0 means active
         // Java offsets config values by -1 (e.g., ScrollMode 1 -> enum index 0)
@@ -146,6 +156,29 @@ impl PlayState {
         let seed: i64 = ghost_battle
             .as_ref()
             .map_or_else(rand::random, |gb| gb.random_seed);
+
+        // Ghost battle lane_sequence: when the opponent's lane ordering is known,
+        // adjust for MIRROR selection (reverse digits so mirror is applied on
+        // top of the ghost's order).
+        // Java parity: GhostBattlePlay reverses laneOrder digits for mirror.
+        let ghost_lane_seq = ghost_battle
+            .as_ref()
+            .map(|gb| {
+                if gb.lane_sequence != 0 && random_type == RandomType::Mirror {
+                    reverse_lane_sequence(gb.lane_sequence)
+                } else {
+                    gb.lane_sequence
+                }
+            })
+            .unwrap_or(0);
+
+        if ghost_lane_seq != 0 {
+            info!(
+                lane_sequence = ghost_lane_seq,
+                "Play: ghost battle using lane sequence"
+            );
+        }
+
         self.assist += apply_pattern_modifier(
             &mut model,
             random_type,
@@ -311,5 +344,49 @@ impl PlayState {
             total_notes as i32,
         );
         self.score_data_property = sdp;
+    }
+}
+
+/// Reverse the digits of a lane_sequence value.
+///
+/// Lane sequence is encoded as a decimal integer where each digit (1-7)
+/// represents a lane. Reversing produces the mirror permutation.
+/// e.g., 1234567 → 7654321, 3142567 → 7652413
+fn reverse_lane_sequence(seq: i32) -> i32 {
+    let mut digits = Vec::new();
+    let mut n = seq;
+    while n > 0 {
+        digits.push(n % 10);
+        n /= 10;
+    }
+    let mut result = 0;
+    for &d in &digits {
+        result = result * 10 + d;
+    }
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reverse_lane_sequence_identity() {
+        assert_eq!(reverse_lane_sequence(1234567), 7654321);
+    }
+
+    #[test]
+    fn reverse_lane_sequence_mirror() {
+        assert_eq!(reverse_lane_sequence(7654321), 1234567);
+    }
+
+    #[test]
+    fn reverse_lane_sequence_arbitrary() {
+        assert_eq!(reverse_lane_sequence(3142567), 7652413);
+    }
+
+    #[test]
+    fn reverse_lane_sequence_zero() {
+        assert_eq!(reverse_lane_sequence(0), 0);
     }
 }

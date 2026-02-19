@@ -67,7 +67,7 @@ impl BarManager {
     }
 
     /// Returns the search history entries.
-    #[allow(dead_code)] // TODO: wire to skin state / UI
+    #[allow(dead_code)] // Used in tests; skin state wiring deferred
     pub fn search_history(&self) -> &[String] {
         &self.search_history
     }
@@ -1245,15 +1245,6 @@ mod tests {
         };
         assert_eq!(search.bar_name(), "freedom");
 
-        let leader = Bar::LeaderBoard {
-            song_data: Box::new(SongData {
-                title: "Leader Song".to_string(),
-                ..Default::default()
-            }),
-            from_lr2ir: true,
-        };
-        assert_eq!(leader.bar_name(), "Leader Song");
-
         let ctx_menu = Bar::ContextMenu(Box::new(ContextMenuData {
             source_bar: Box::new(Bar::Song(Box::new(SongData {
                 title: "Source".to_string(),
@@ -1274,14 +1265,6 @@ mod tests {
             Bar::Executable {
                 name: "x".to_string(),
                 songs: Vec::new()
-            }
-            .bar_display_type(),
-            0
-        );
-        assert_eq!(
-            Bar::LeaderBoard {
-                song_data: Box::new(SongData::default()),
-                from_lr2ir: false
             }
             .bar_display_type(),
             0

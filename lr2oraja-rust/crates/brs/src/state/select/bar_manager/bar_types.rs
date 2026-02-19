@@ -117,6 +117,7 @@ pub enum FunctionAction {
     GhostBattle {
         song_data: Box<SongData>,
         lr2_id: i64,
+        lane_sequence: i32,
     },
     ViewLeaderboard {
         song_data: Box<SongData>,
@@ -166,8 +167,8 @@ pub enum Bar {
         hashes: Vec<String>, // sha256 preferred, md5 fallback
     },
     /// Executable bar -- runs a set of songs (e.g., autoplay playlist).
+    // Used in tests and bar navigation; compiler can't detect construction via test helpers
     #[allow(dead_code)]
-    // Used in tests and bar navigation; compiler doesn't detect construction via test helpers
     Executable {
         name: String,
         songs: Vec<SongData>,
@@ -181,7 +182,6 @@ pub enum Bar {
         lamp: i32,
     },
     /// Grade/dan-i bar -- wraps a course with grade constraints.
-    #[allow(dead_code)] // TODO: integrate with production bar list construction
     Grade(Box<GradeBarData>),
     /// Random course bar -- selects random songs from SQL queries.
     RandomCourse(Box<RandomCourseData>),
@@ -205,12 +205,6 @@ pub enum Bar {
     SearchWord {
         query: String,
     },
-    /// Leaderboard bar -- shows rankings for a song.
-    #[allow(dead_code)] // TODO: integrate with production bar list construction
-    LeaderBoard {
-        song_data: Box<SongData>,
-        from_lr2ir: bool,
-    },
     /// Context menu bar -- right-click actions for a bar.
     ContextMenu(Box<ContextMenuData>),
 }
@@ -232,7 +226,6 @@ impl Bar {
             Bar::Container { name, .. } => name,
             Bar::SameFolder { name, .. } => name,
             Bar::SearchWord { query } => query,
-            Bar::LeaderBoard { song_data, .. } => &song_data.title,
             Bar::ContextMenu(cm) => cm.source_bar.bar_name(),
         }
     }
@@ -251,7 +244,7 @@ impl Bar {
     /// 3 = Command, 4 = Search, 5 = Function/Other.
     pub fn bar_display_type(&self) -> i32 {
         match self {
-            Bar::Song(_) | Bar::Executable { .. } | Bar::LeaderBoard { .. } => 0,
+            Bar::Song(_) | Bar::Executable { .. } => 0,
             Bar::Folder { .. }
             | Bar::TableRoot { .. }
             | Bar::HashFolder { .. }

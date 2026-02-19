@@ -106,7 +106,10 @@ pub struct GhostBattleSettings {
     /// RNG seed for pattern generation (same seed as the opponent's play).
     pub random_seed: i64,
     /// Lane sequence identifier used by the pattern modifier.
-    #[allow(dead_code)] // TODO: integrate with pattern modifier (ghost battle lane sharing)
+    ///
+    /// Encoded as a decimal integer where each digit represents a lane (1-7),
+    /// e.g. 1234567 for default, 7654321 for mirror.
+    /// Set from IR ghost data's `lane_order`.
     pub lane_sequence: i32,
 }
 

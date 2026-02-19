@@ -91,18 +91,17 @@ Lessons learned from Phase 0-3 implementation. Refer to these when implementing 
 
 ## Implementation Status
 
-Phase 0-42 全完了（16 crate, ~540,000行）。全 RenderSnapshot GM テストが strict parity 達成済み。
-主な完了領域: BMS パーサー/ルール/パターン/リプレイ、MusicSelect UI 全機能（キーボードショートカット・コンテキストメニュー・skin state）、LR2IR・ライバルスコア統合、Config 配線、GhostBattle seed、オーディオ復旧、GithubVersionChecker。
+Phase 0-43 全完了（16 crate, ~540,000行）。全 RenderSnapshot GM テストが strict parity 達成済み。
+主な完了領域: BMS パーサー/ルール/パターン/リプレイ、MusicSelect UI 全機能（キーボードショートカット・コンテキストメニュー・skin state）、LR2IR・ライバルスコア統合、Config 配線、GhostBattle seed+lane_sequence、オーディオ復旧、GithubVersionChecker、Download コマンド統合、Grade バー構築。
 詳細な Phase 別履歴は git log を参照。
 
 ## Deferred / Stub Items
 
-- **MusicSelectCommand 残存 dead_code:** Download 系 3 variant（DownloadIpfs/DownloadHttp/DownloadCourseHttp）— ダウンロード機能のアプリレベル統合（Bevy Resource、StateContext、DB リフレッシュ、IPFS プロトコル）が必要なため保留
-- **GhostBattleSettings.lane_sequence:** ゴーストバトル時の lane pattern 共有（Java の RandomTrainer seed map 相当）— 現在は random_seed のみ消費、lane_sequence は未使用
-- **Bar::Executable / Bar::Grade / Bar::LeaderBoard:** production bar list 構築パスで構築されるがコンパイラが検出不可のため `#[allow(dead_code)]` 維持
+- **Download 系コマンドの実行ハンドラ:** CommandResult::DownloadHttp/DownloadCourseHttp/DownloadIpfs は定義・ログ出力済み。実際の bms-download Processor 呼び出し（Bevy Resource 経由の非同期タスクキュー、DB リフレッシュ、IPFS プロトコル）は保留
+- **Bar::Executable:** production bar list 構築パスで構築されるがコンパイラが検出不可のため `#[allow(dead_code)]` 維持
 - **Windows Named Pipes:** Stream Controller の Windows 対応（Unix domain socket → Named Pipes）
 
 ## Known Issues
 
 - **Config/State の clone():** 484箇所（監査済み: 大半は Bevy Resource/Component の要件や設定値の受け渡しで妥当。大規模移行不要）
-- **#[allow(dead_code)]:** 全体 83 件（30 ファイル）。内訳: Used in tests ~35件、Parsed for completeness ~5件、TODO/deferred ~10件、コンパイラ検出外 ~5件。Phase 30-42 で大幅削減済み
+- **#[allow(dead_code)]:** 全体 80 件（30 ファイル）。内訳: Used in tests ~35件、Parsed for completeness ~5件、TODO/deferred ~10件、コンパイラ検出外 ~5件。Phase 30-43 で大幅削減済み

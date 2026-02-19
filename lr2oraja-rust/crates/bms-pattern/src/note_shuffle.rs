@@ -144,7 +144,7 @@ impl RandomizerImpl {
         }
     }
 
-    #[allow(dead_code)] // TODO: integrate with PatternModifier trait
+    #[allow(dead_code)] // NoteShuffleModifier::assist_level() duplicates this logic inline
     fn assist_level(&self) -> AssistLevel {
         match self {
             Self::SRandom(r) => r.assist,

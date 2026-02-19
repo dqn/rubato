@@ -845,15 +845,9 @@ impl MusicSelectState {
         // Pre-extract data from bar variants that need ownership to avoid borrow checker issues
         // with self.bar_manager (immutable borrow) vs self (mutable borrow).
         enum BarAction {
-            Song {
-                path: String,
-            },
+            Song { path: String },
             Directory,
             Course(bms_database::CourseData),
-            LeaderBoard {
-                song_data: Box<bms_database::SongData>,
-                from_lr2ir: bool,
-            },
             Function(bar_manager::FunctionAction),
             Grade(bar_manager::GradeBarData),
             RandomCourse(bms_database::RandomCourseData),
@@ -874,13 +868,6 @@ impl MusicSelectState {
             | Some(Bar::Executable { .. })
             | Some(Bar::ContextMenu(_)) => BarAction::Directory,
             Some(Bar::Course(course_data)) => BarAction::Course((**course_data).clone()),
-            Some(Bar::LeaderBoard {
-                song_data,
-                from_lr2ir,
-            }) => BarAction::LeaderBoard {
-                song_data: Box::new((**song_data).clone()),
-                from_lr2ir: *from_lr2ir,
-            },
             Some(Bar::Function { action, .. }) => BarAction::Function(action.clone()),
             Some(Bar::Grade(grade_data)) => BarAction::Grade((**grade_data).clone()),
             Some(Bar::RandomCourse(rc_data)) => BarAction::RandomCourse((**rc_data).clone()),
@@ -916,13 +903,6 @@ impl MusicSelectState {
             BarAction::Course(course_data) => {
                 self.select_course(ctx, &course_data);
             }
-            BarAction::LeaderBoard {
-                song_data,
-                from_lr2ir,
-            } => {
-                self.enter_leaderboard(*song_data, from_lr2ir);
-            }
-            // Executable is now treated as Directory (expanded via enter_folder)
             BarAction::Function(func_action) => {
                 self.execute_function_action(ctx, func_action);
             }
@@ -1185,7 +1165,11 @@ impl MusicSelectState {
                     }
                 }
             }
-            FunctionAction::GhostBattle { song_data, lr2_id } => {
+            FunctionAction::GhostBattle {
+                song_data,
+                lr2_id,
+                lane_sequence,
+            } => {
                 let path = std::path::PathBuf::from(&song_data.path);
                 match bms_model::BmsDecoder::decode(&path) {
                     Ok(model) => {
@@ -1196,7 +1180,7 @@ impl MusicSelectState {
                         ctx.resource.ghost_battle =
                             Some(crate::player_resource::GhostBattleSettings {
                                 random_seed: lr2_id,
-                                lane_sequence: 0,
+                                lane_sequence,
                             });
                         self.fadeout_started = true;
                         ctx.timer.set_timer_on(TIMER_FADEOUT);

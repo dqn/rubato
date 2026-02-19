@@ -100,7 +100,6 @@ pub fn sync_select_state(
         | Some(Bar::Function { .. })
         | Some(Bar::Command { .. })
         | Some(Bar::SearchWord { .. })
-        | Some(Bar::LeaderBoard { .. })
         | Some(Bar::ContextMenu(_)) => {
             clear_song_metadata(state);
         }
@@ -316,12 +315,6 @@ pub fn sync_bar_scroll_state(
                 bar_type: BarType::Search,
                 title: query.clone(),
                 text_type: 4, // Search type
-                ..Default::default()
-            },
-            Bar::LeaderBoard { song_data, .. } => BarSlotData {
-                bar_type: BarType::Song { exists: true },
-                title: song_data.title.clone(),
-                text_type: 0, // Song type
                 ..Default::default()
             },
             Bar::ContextMenu(cm) => BarSlotData {
