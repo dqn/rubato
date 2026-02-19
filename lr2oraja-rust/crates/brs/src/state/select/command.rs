@@ -4,6 +4,8 @@
 // that can be triggered from the select screen (e.g., keyboard shortcuts,
 // context menu items).
 
+use std::path::{Path, PathBuf};
+
 use bms_database::SongData;
 use bms_database::song_data::{FAVORITE_CHART, FAVORITE_SONG};
 
@@ -11,6 +13,54 @@ use super::bar_manager::{Bar, BarManager, ContextMenuItem, FunctionAction};
 
 /// Maximum number of replay slots.
 const MAX_REPLAY: i32 = 4;
+
+/// LN-mode prefixes for replay file paths.
+///
+/// Java parity: `PlayDataAccessor.replay = {"", "C", "H"}`.
+const LN_REPLAY_PREFIX: [&str; 3] = ["", "C", "H"];
+
+/// Build the replay data file path (without `.brd` extension).
+///
+/// Java parity: `PlayDataAccessor.getReplayDataFilePath()`.
+pub fn replay_data_file_path(
+    replay_dir: &Path,
+    sha256: &str,
+    has_undefined_ln: bool,
+    lnmode: i32,
+    index: usize,
+) -> PathBuf {
+    let prefix = if has_undefined_ln {
+        LN_REPLAY_PREFIX.get(lnmode as usize).copied().unwrap_or("")
+    } else {
+        ""
+    };
+    let suffix = if index > 0 {
+        format!("_{index}")
+    } else {
+        String::new()
+    };
+    replay_dir.join(format!("{prefix}{sha256}{suffix}.brd"))
+}
+
+/// Check whether a replay file exists for the given song/slot.
+///
+/// Java parity: `PlayDataAccessor.existsReplayData()`.
+pub fn exists_replay_data(
+    replay_dir: &Path,
+    sha256: &str,
+    has_undefined_ln: bool,
+    lnmode: i32,
+    index: usize,
+) -> bool {
+    replay_data_file_path(replay_dir, sha256, has_undefined_ln, lnmode, index).exists()
+}
+
+/// Build the replay data directory path.
+///
+/// Java parity: `PlayDataAccessor.getReplayDataFolder()`.
+pub fn replay_data_dir(playerpath: &str, playername: &str) -> PathBuf {
+    PathBuf::from(playerpath).join(playername).join("replay")
+}
 
 /// Result of executing a music select command.
 ///
@@ -158,9 +208,16 @@ impl Default for CommandExecutor {
 
 /// Build context menu items for a song bar.
 ///
+/// `replay_dir` and `lnmode` are used to check for existing replay files.
+/// When `replay_dir` is Some, replay slots 0–3 are probed and added to the menu.
+///
 /// Matches the Java `ContextMenuBar.songContext()` menu layout.
-pub fn build_song_context_menu(song: &SongData) -> Vec<ContextMenuItem> {
-    vec![
+pub fn build_song_context_menu(
+    song: &SongData,
+    replay_dir: Option<&Path>,
+    lnmode: i32,
+) -> Vec<ContextMenuItem> {
+    let mut items = vec![
         ContextMenuItem {
             label: "Autoplay".to_string(),
             action: FunctionAction::Autoplay(Box::new(song.clone())),
@@ -208,7 +265,25 @@ pub fn build_song_context_menu(song: &SongData) -> Vec<ContextMenuItem> {
                 song_data: Box::new(song.clone()),
             },
         },
-    ]
+    ];
+
+    // Add replay items for existing replay files (Java: ContextMenuBar L198-209)
+    if let Some(dir) = replay_dir {
+        let has_undef_ln = song.has_undefined_long_note();
+        for i in 0..MAX_REPLAY as usize {
+            if exists_replay_data(dir, &song.sha256, has_undef_ln, lnmode, i) {
+                items.push(ContextMenuItem {
+                    label: format!("Replay {}", i + 1),
+                    action: FunctionAction::PlayReplay {
+                        song_data: Box::new(song.clone()),
+                        replay_index: i,
+                    },
+                });
+            }
+        }
+    }
+
+    items
 }
 
 /// Build context menu items for a TableRoot bar.
@@ -512,7 +587,7 @@ mod tests {
     #[test]
     fn build_song_context_menu_contains_autoplay_practice() {
         let song = make_song_data();
-        let items = build_song_context_menu(&song);
+        let items = build_song_context_menu(&song, None, 0);
         assert_eq!(items[0].label, "Autoplay");
         assert!(matches!(items[0].action, FunctionAction::Autoplay(_)));
         assert_eq!(items[1].label, "Practice");
@@ -522,7 +597,7 @@ mod tests {
     #[test]
     fn build_song_context_menu_contains_copy_and_favorites() {
         let song = make_song_data();
-        let items = build_song_context_menu(&song);
+        let items = build_song_context_menu(&song, None, 0);
         assert_eq!(items.len(), 9);
 
         // Related (Same Folder)
@@ -556,6 +631,94 @@ mod tests {
         assert!(matches!(
             items[7].action,
             FunctionAction::ToggleFavorite { flag, .. } if flag == FAVORITE_CHART
+        ));
+    }
+
+    // --- replay_data_file_path tests ---
+
+    #[test]
+    fn replay_path_no_ln_index_zero() {
+        let dir = Path::new("/player/default/replay");
+        let path = replay_data_file_path(dir, "abc123", false, 0, 0);
+        assert_eq!(path, PathBuf::from("/player/default/replay/abc123.brd"));
+    }
+
+    #[test]
+    fn replay_path_no_ln_index_two() {
+        let dir = Path::new("/player/default/replay");
+        let path = replay_data_file_path(dir, "abc123", false, 0, 2);
+        assert_eq!(path, PathBuf::from("/player/default/replay/abc123_2.brd"));
+    }
+
+    #[test]
+    fn replay_path_with_ln_lnmode_zero() {
+        let dir = Path::new("/p/d/replay");
+        let path = replay_data_file_path(dir, "hash", true, 0, 0);
+        // lnmode 0 → prefix ""
+        assert_eq!(path, PathBuf::from("/p/d/replay/hash.brd"));
+    }
+
+    #[test]
+    fn replay_path_with_ln_lnmode_one() {
+        let dir = Path::new("/p/d/replay");
+        let path = replay_data_file_path(dir, "hash", true, 1, 0);
+        // lnmode 1 → prefix "C"
+        assert_eq!(path, PathBuf::from("/p/d/replay/Chash.brd"));
+    }
+
+    #[test]
+    fn replay_path_with_ln_lnmode_two() {
+        let dir = Path::new("/p/d/replay");
+        let path = replay_data_file_path(dir, "hash", true, 2, 3);
+        // lnmode 2 → prefix "H", index 3 → suffix "_3"
+        assert_eq!(path, PathBuf::from("/p/d/replay/Hhash_3.brd"));
+    }
+
+    #[test]
+    fn replay_data_dir_construction() {
+        let dir = replay_data_dir("player", "myname");
+        assert_eq!(dir, PathBuf::from("player/myname/replay"));
+    }
+
+    #[test]
+    fn exists_replay_data_returns_false_for_missing() {
+        let dir = Path::new("/nonexistent/replay");
+        assert!(!exists_replay_data(dir, "hash", false, 0, 0));
+    }
+
+    #[test]
+    fn build_song_context_menu_with_replays() {
+        let dir = tempfile::tempdir().unwrap();
+        let replay_dir = dir.path().join("replay");
+        std::fs::create_dir_all(&replay_dir).unwrap();
+
+        let song = SongData {
+            sha256: "testhash".to_string(),
+            ..Default::default()
+        };
+
+        // Create replay files for slots 0 and 2
+        std::fs::write(replay_dir.join("testhash.brd"), b"").unwrap();
+        std::fs::write(replay_dir.join("testhash_2.brd"), b"").unwrap();
+
+        let items = build_song_context_menu(&song, Some(&replay_dir), 0);
+        // 9 base items + 2 replay items
+        assert_eq!(items.len(), 11);
+        assert_eq!(items[9].label, "Replay 1");
+        assert!(matches!(
+            items[9].action,
+            FunctionAction::PlayReplay {
+                replay_index: 0,
+                ..
+            }
+        ));
+        assert_eq!(items[10].label, "Replay 3");
+        assert!(matches!(
+            items[10].action,
+            FunctionAction::PlayReplay {
+                replay_index: 2,
+                ..
+            }
         ));
     }
 }

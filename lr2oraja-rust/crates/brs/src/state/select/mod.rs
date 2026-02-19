@@ -31,7 +31,7 @@ use crate::system_sound::SystemSound;
 use bar_manager::{Bar, BarManager, SortMode};
 use command::{
     CommandResult, MusicSelectCommand, build_song_context_menu, build_table_context_menu,
-    build_table_folder_context_menu,
+    build_table_folder_context_menu, replay_data_dir,
 };
 
 /// Default input delay in milliseconds.
@@ -672,10 +672,16 @@ impl MusicSelectState {
                 }
             }
             CommandResult::ShowContextMenu => {
+                let replay_dir = replay_data_dir(
+                    &ctx.config.playerpath,
+                    ctx.config.playername.as_deref().unwrap_or("default"),
+                );
+                let lnmode = ctx.player_config.lnmode;
                 let (source_bar, items) = match self.bar_manager.current() {
-                    Some(bar @ Bar::Song(song_data)) => {
-                        (Box::new(bar.clone()), build_song_context_menu(song_data))
-                    }
+                    Some(bar @ Bar::Song(song_data)) => (
+                        Box::new(bar.clone()),
+                        build_song_context_menu(song_data, Some(&replay_dir), lnmode),
+                    ),
                     Some(bar @ Bar::TableRoot { name, url, .. }) => (
                         Box::new(bar.clone()),
                         build_table_context_menu(name, url.as_deref()),

@@ -110,7 +110,6 @@ pub enum FunctionAction {
         sha256: String,
         flag: i32,
     },
-    #[allow(dead_code)] // TODO: integrate with replay selection UI
     PlayReplay {
         song_data: Box<SongData>,
         replay_index: usize,
