@@ -61,6 +61,8 @@ impl PlayState {
             select_pressed: false,
             is_practice: false,
             practice_config: None,
+            rhythm_timer: None,
+            last_render_time_us: 0,
         }
     }
 
@@ -357,6 +359,12 @@ impl PlayState {
         self.max_bpm = model.max_bpm();
         self.main_bpm = model.main_bpm();
         self.now_bpm = model.initial_bpm;
+
+        // L5: Initialize RhythmTimerProcessor for PMS note expansion
+        let is_pms = matches!(model.mode, PlayMode::PopN5K | PlayMode::PopN9K);
+        self.rhythm_timer = Some(super::rhythm_timer::RhythmTimerProcessor::new(
+            &model, is_pms,
+        ));
 
         // Initialize ScoreDataProperty for real-time score comparison
         let mut sdp = ScoreDataProperty::new();

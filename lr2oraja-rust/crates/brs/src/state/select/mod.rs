@@ -385,6 +385,18 @@ impl GameStateHandler for MusicSelectState {
                 self.command_executor.selected_replay(),
                 rival_data.as_ref(),
             );
+            // H8: sync bar clear status from score cache
+            let current_clear = self
+                .bar_manager
+                .current()
+                .and_then(|bar| bar.as_song())
+                .and_then(|song| self.score_lamp_cache.get(&song.sha256))
+                .and_then(|&lamp_id| bms_rule::ClearType::from_id(lamp_id as u8));
+            select_skin_state::sync_bar_clear_status(shared, current_clear);
+
+            // H8: sync panel state
+            select_skin_state::sync_panel_state(shared, 0);
+
             select_skin_state::sync_bar_scroll_state(
                 shared,
                 &self.bar_manager,

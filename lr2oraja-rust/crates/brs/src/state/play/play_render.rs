@@ -9,7 +9,7 @@ use bms_skin::property_id::{
 
 use crate::state::StateContext;
 
-use super::{PlayPhase, PlayState};
+use super::{PlayPhase, PlayState, play_skin_state};
 
 impl PlayState {
     /// Handle the Playing phase render logic (timer-driven state checks).
@@ -19,6 +19,32 @@ impl PlayState {
         // Update current BPM at this time position
         if let Some(model) = &ctx.resource.bms_model {
             self.now_bpm = model.bpm_at(ptime_us);
+        }
+
+        // L5: Update rhythm timer for section lines and PMS note expansion
+        let now_us = ctx.timer.now_micro_time();
+        let delta_us = if self.last_render_time_us > 0 {
+            (now_us - self.last_render_time_us).max(0)
+        } else {
+            16_000 // ~60fps fallback for first frame
+        };
+        self.last_render_time_us = now_us;
+
+        if let Some(rt) = &mut self.rhythm_timer {
+            let freq = ctx.resource.freq_trainer_freq.max(100);
+            let now_time_ms = ctx.timer.now_time_of(TIMER_PLAY);
+            rt.update(
+                delta_us,
+                self.now_bpm,
+                self.play_speed,
+                freq,
+                ptime_us,
+                now_time_ms,
+                ctx.timer,
+            );
+            if let Some(shared) = &mut ctx.shared_state {
+                play_skin_state::sync_play_note_expansion(shared, rt.now_quarter_note_time());
+            }
         }
 
         // M4: Auto-adjust judge timing offset based on recent judge bias

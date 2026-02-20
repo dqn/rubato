@@ -549,7 +549,6 @@ pub fn sync_bpm_flags(state: &mut SharedGameState, minbpm: i32, maxbpm: i32) {
 /// Synchronize select bar clear status flags.
 ///
 /// Java: BooleanPropertyFactory IDs 100-105, 1100-1104.
-#[allow(dead_code)] // H8: wired in skin property factory (not yet called from select state)
 pub fn sync_bar_clear_status(state: &mut SharedGameState, clear: Option<ClearType>) {
     let all_ids = [
         OPTION_SELECT_BAR_NOT_PLAYED,
@@ -596,7 +595,6 @@ pub fn sync_bar_clear_status(state: &mut SharedGameState, clear: Option<ClearTyp
 }
 
 /// Synchronize panel state booleans.
-#[allow(dead_code)] // H8: wired in skin property factory (not yet called from select state)
 pub fn sync_panel_state(state: &mut SharedGameState, panel: i32) {
     state.booleans.insert(OPTION_PANEL1, panel == 1);
     state.booleans.insert(OPTION_PANEL2, panel == 2);

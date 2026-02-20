@@ -178,6 +178,11 @@ pub struct PlayState {
     // Practice mode
     pub(super) is_practice: bool,
     pub(super) practice_config: Option<practice::PracticeConfiguration>,
+
+    // L5: Rhythm timer for PMS note expansion
+    pub(super) rhythm_timer: Option<rhythm_timer::RhythmTimerProcessor>,
+    /// Last render time in microseconds (for delta calculation).
+    pub(super) last_render_time_us: i64,
 }
 
 impl PlayState {
@@ -351,7 +356,7 @@ impl GameStateHandler for PlayState {
                 ctx.config.audio.keyvolume
             };
 
-            match KiraAudioDriver::new() {
+            match KiraAudioDriver::with_device(ctx.config.audio.device_name.clone()) {
                 Ok(mut driver) => {
                     if let Err(e) = driver.set_model(model, base_path) {
                         warn!("Play: failed to load audio: {e}");
@@ -539,11 +544,11 @@ impl GameStateHandler for PlayState {
             // L4: HCN active/damage timers per lane
             play_skin_state::sync_play_hcn_timers(shared, jm, &self.lane_property);
 
+            // H8: Constant modifier flag
+            play_skin_state::sync_play_constant_flag(shared, play_config.enable_constant);
+
             // L2: PMS mode flag for past-note fall-through rendering
-            let is_pms = matches!(
-                ctx.resource.play_mode,
-                PlayMode::PopN5K | PlayMode::PopN9K
-            );
+            let is_pms = matches!(ctx.resource.play_mode, PlayMode::PopN5K | PlayMode::PopN9K);
             play_skin_state::sync_play_pms_mode(shared, is_pms);
         }
     }
