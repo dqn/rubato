@@ -755,8 +755,8 @@ impl MusicSelectState {
             CommandResult::DownloadHttp { md5, title } => {
                 self.start_http_download(&md5, &title);
             }
-            CommandResult::DownloadIpfs { md5, title } => {
-                self.start_ipfs_download(&md5, &title);
+            CommandResult::DownloadIpfs { md5, ipfs, title } => {
+                self.start_ipfs_download(&md5, &ipfs, &title);
             }
             CommandResult::DownloadCourseHttp { songs } => {
                 for (md5, title) in &songs {
@@ -1011,13 +1011,11 @@ impl MusicSelectState {
         });
     }
 
-    /// Start an IPFS download for a song by MD5 hash.
+    /// Start an IPFS download for a song.
     ///
-    /// Constructs an IPFS gateway URL from the MD5 hash. Note: Java uses
-    /// `SongData.ipfs` (IPFS CID) which is not yet available in the Rust
-    /// SongData struct. For now, this attempts a hash-based gateway URL.
-    // TODO: Add SongData.ipfs field for proper IPFS CID-based downloads
-    fn start_ipfs_download(&self, md5: &str, title: &str) {
+    /// Uses `SongData.ipfs` CID when available, falling back to MD5 hash
+    /// as the gateway path component.
+    fn start_ipfs_download(&self, md5: &str, ipfs_cid: &str, title: &str) {
         let Some(handle) = &self.download_handle else {
             info!("MusicSelect: download not available (no download handle)");
             return;
@@ -1027,7 +1025,8 @@ impl MusicSelectState {
             return;
         }
         let gateway = handle.ipfs_gateway.trim_end_matches('/').to_string();
-        let url = format!("{gateway}/ipfs/{md5}");
+        let cid = if ipfs_cid.is_empty() { md5 } else { ipfs_cid };
+        let url = format!("{gateway}/ipfs/{cid}");
         let handle = Arc::clone(handle);
         let md5 = md5.to_string();
         let title = title.to_string();

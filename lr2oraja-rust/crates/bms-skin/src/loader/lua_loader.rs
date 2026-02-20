@@ -468,25 +468,43 @@ fn register_main_state(lua: &Lua, provider: Rc<RefCell<dyn LuaStateProvider>>) -
         .map_err(|e| anyhow::anyhow!("{e}"))?;
     }
 
-    // Deferred audio stubs (no-op until bms-audio integration)
-    ms.set(
-        "audio_play",
-        lua.create_function(|_, _id: i32| Ok(()))
+    // Audio control (matches Java MainStateAccessor signatures)
+    {
+        let p = provider.clone();
+        ms.set(
+            "audio_play",
+            lua.create_function(move |_, (path, volume): (String, f32)| {
+                p.borrow_mut().audio_play(&path, volume);
+                Ok(())
+            })
             .map_err(|e| anyhow::anyhow!("{e}"))?,
-    )
-    .map_err(|e| anyhow::anyhow!("{e}"))?;
-    ms.set(
-        "audio_loop",
-        lua.create_function(|_, _id: i32| Ok(()))
+        )
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    }
+    {
+        let p = provider.clone();
+        ms.set(
+            "audio_loop",
+            lua.create_function(move |_, (path, volume): (String, f32)| {
+                p.borrow_mut().audio_loop(&path, volume);
+                Ok(())
+            })
             .map_err(|e| anyhow::anyhow!("{e}"))?,
-    )
-    .map_err(|e| anyhow::anyhow!("{e}"))?;
-    ms.set(
-        "audio_stop",
-        lua.create_function(|_, _id: i32| Ok(()))
+        )
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    }
+    {
+        let p = provider.clone();
+        ms.set(
+            "audio_stop",
+            lua.create_function(move |_, path: String| {
+                p.borrow_mut().audio_stop(&path);
+                Ok(())
+            })
             .map_err(|e| anyhow::anyhow!("{e}"))?,
-    )
-    .map_err(|e| anyhow::anyhow!("{e}"))?;
+        )
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    }
 
     // Register main_state via package.preload
     let ms_clone = ms.clone();
@@ -1340,6 +1358,9 @@ return {
         fn event_exec(&mut self, id: i32, args: &[i32]) {
             self.mutations.borrow_mut().last_event_exec = Some((id, args.to_vec()));
         }
+        fn audio_play(&mut self, _path: &str, _volume: f32) {}
+        fn audio_loop(&mut self, _path: &str, _volume: f32) {}
+        fn audio_stop(&mut self, _path: &str) {}
     }
 
     #[test]
@@ -1628,5 +1649,27 @@ return {
         )
         .unwrap();
         assert_eq!(skin.object_count(), 1);
+    }
+
+    #[test]
+    fn test_audio_functions_with_correct_signatures() {
+        let provider: Rc<RefCell<dyn LuaStateProvider>> =
+            Rc::new(RefCell::new(StubLuaStateProvider));
+        let lua = create_lua_env(None, Some(provider)).unwrap();
+
+        // audio_play(path, volume) should not error
+        lua.load("local ms = require('main_state'); ms.audio_play('test.wav', 0.8)")
+            .exec()
+            .unwrap();
+
+        // audio_loop(path, volume) should not error
+        lua.load("local ms = require('main_state'); ms.audio_loop('bgm.ogg', 0.5)")
+            .exec()
+            .unwrap();
+
+        // audio_stop(path) should not error
+        lua.load("local ms = require('main_state'); ms.audio_stop('test.wav')")
+            .exec()
+            .unwrap();
     }
 }

@@ -41,7 +41,7 @@ pub use score_data_property::ScoreDataProperty;
 pub use score_database::ScoreDatabase;
 pub use score_log_database::ScoreDataLogDatabase;
 pub use song_data::SongData;
-pub use song_database::SongDatabase;
+pub use song_database::{SongDatabase, UpdateStats};
 pub use song_information::SongInformation;
 pub use song_information_accessor::SongInformationAccessor;
 pub use song_utils::{ILLEGAL_SONGS, crc32_path};

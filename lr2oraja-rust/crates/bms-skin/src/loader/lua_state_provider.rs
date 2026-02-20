@@ -46,6 +46,11 @@ pub trait LuaStateProvider {
     fn set_volume_key(&mut self, value: f32);
     fn set_volume_bg(&mut self, value: f32);
     fn event_exec(&mut self, id: i32, args: &[i32]);
+
+    // Audio control (matches Java MainStateAccessor)
+    fn audio_play(&mut self, path: &str, volume: f32);
+    fn audio_loop(&mut self, path: &str, volume: f32);
+    fn audio_stop(&mut self, path: &str);
 }
 
 /// Stub provider that returns default values for all methods.
@@ -155,6 +160,12 @@ impl LuaStateProvider for StubLuaStateProvider {
     fn set_volume_bg(&mut self, _value: f32) {}
 
     fn event_exec(&mut self, _id: i32, _args: &[i32]) {}
+
+    fn audio_play(&mut self, _path: &str, _volume: f32) {}
+
+    fn audio_loop(&mut self, _path: &str, _volume: f32) {}
+
+    fn audio_stop(&mut self, _path: &str) {}
 }
 
 #[cfg(test)]
@@ -197,5 +208,8 @@ mod tests {
         stub.set_volume_key(0.5);
         stub.set_volume_bg(0.5);
         stub.event_exec(0, &[1, 2]);
+        stub.audio_play("test.wav", 0.8);
+        stub.audio_loop("test.wav", 0.5);
+        stub.audio_stop("test.wav");
     }
 }

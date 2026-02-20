@@ -1,6 +1,9 @@
+use std::path::Path;
+
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use bms_model::{BmsModel, NoteType, PlayMode};
+use bms_model::{BmsDecoder, BmsModel, BmsonDecoder, NoteType, PlayMode};
 
 // Feature flags (matches Java SongData.FEATURE_*)
 pub const FEATURE_UNDEFINEDLN: i32 = 1;
@@ -58,6 +61,12 @@ pub struct SongData {
     pub adddate: i32,
     pub notes: i32,
     pub charthash: String,
+    /// IPFS CID for the song (runtime-only, populated from IR responses).
+    #[serde(default)]
+    pub ipfs: String,
+    /// IPFS CID for appended data (runtime-only, populated from IR responses).
+    #[serde(default)]
+    pub appendipfs: String,
 }
 
 impl SongData {
@@ -129,7 +138,64 @@ impl SongData {
             adddate: 0,
             notes: model.total_notes() as i32,
             charthash: String::new(),
+            ipfs: String::new(),
+            appendipfs: String::new(),
         }
+    }
+
+    /// Create SongData by parsing a BMS/BME/BML/PMS/BMSON file from disk.
+    ///
+    /// Sets `path`, `folder`, and `date` (file mtime as Unix seconds).
+    /// Detects `.txt` companion files for the `CONTENT_TEXT` flag.
+    pub fn from_file(file_path: &Path) -> Result<Self> {
+        let ext = file_path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+
+        let model = match ext.as_str() {
+            "bmson" => BmsonDecoder::decode(file_path)
+                .with_context(|| format!("Failed to decode bmson: {}", file_path.display()))?,
+            _ => BmsDecoder::decode(file_path)
+                .with_context(|| format!("Failed to decode BMS: {}", file_path.display()))?,
+        };
+
+        // Check for companion .txt files
+        let contains_txt = file_path
+            .parent()
+            .map(|dir| {
+                dir.read_dir()
+                    .map(|entries| {
+                        entries.flatten().any(|e| {
+                            e.path()
+                                .extension()
+                                .and_then(|ext| ext.to_str())
+                                .map(|s| s.eq_ignore_ascii_case("txt"))
+                                .unwrap_or(false)
+                        })
+                    })
+                    .unwrap_or(false)
+            })
+            .unwrap_or(false);
+
+        let mut sd = Self::from_model(&model, contains_txt);
+
+        // Set path and folder
+        sd.path = file_path.to_string_lossy().to_string();
+        if let Some(parent) = file_path.parent() {
+            sd.folder = parent.to_string_lossy().to_string();
+        }
+
+        // Set date from file modification time (Unix seconds)
+        if let Ok(metadata) = std::fs::metadata(file_path)
+            && let Ok(mtime) = metadata.modified()
+            && let Ok(duration) = mtime.duration_since(std::time::UNIX_EPOCH)
+        {
+            sd.date = duration.as_secs() as i32;
+        }
+
+        Ok(sd)
     }
 
     /// Validate that required fields are present.
@@ -239,6 +305,9 @@ impl SongData {
             charthash: row
                 .get::<_, Option<String>>("charthash")?
                 .unwrap_or_default(),
+            // Runtime-only fields (not in DB schema)
+            ipfs: String::new(),
+            appendipfs: String::new(),
         })
     }
 }
@@ -637,5 +706,30 @@ mod tests {
         assert_eq!(sd.difficulty, 3);
         // Default mode is Beat7K = 7
         assert_eq!(sd.mode, 7);
+    }
+
+    // -- ipfs fields --
+
+    #[test]
+    fn serde_ipfs_fields_round_trip() {
+        let mut sd = SongData {
+            title: "t".into(),
+            md5: "abc".into(),
+            ipfs: "QmTestCid123".into(),
+            appendipfs: "QmAppendCid456".into(),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&sd).unwrap();
+        let deserialized: SongData = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.ipfs, "QmTestCid123");
+        assert_eq!(deserialized.appendipfs, "QmAppendCid456");
+    }
+
+    #[test]
+    fn serde_ipfs_fields_default_when_missing() {
+        let json = r#"{"md5":"abc","sha256":"","title":"t","subtitle":"","genre":"","artist":"","subartist":"","tag":"","path":"","folder":"","stagefile":"","banner":"","backbmp":"","preview":"","parent":"","level":0,"difficulty":0,"maxbpm":0,"minbpm":0,"length":0,"mode":0,"judge":0,"feature":0,"content":0,"date":0,"favorite":0,"adddate":0,"notes":0,"charthash":""}"#;
+        let sd: SongData = serde_json::from_str(json).unwrap();
+        assert_eq!(sd.ipfs, "");
+        assert_eq!(sd.appendipfs, "");
     }
 }

@@ -93,11 +93,11 @@ Lessons learned from Phase 0-3 implementation. Refer to these when implementing 
 
 Phase 0-43 全完了（16 crate, ~540,000行）。全 RenderSnapshot GM テストが strict parity 達成済み。
 主な完了領域: BMS パーサー/ルール/パターン/リプレイ、MusicSelect UI 全機能（キーボードショートカット・コンテキストメニュー・skin state）、LR2IR・ライバルスコア統合、Config 配線、GhostBattle seed+lane_sequence、オーディオ復旧、GithubVersionChecker、Download コマンド統合、Grade バー構築。
+残存タスク完了: SongData.ipfs/appendipfs フィールド追加、Lua audio_play/loop/stop シグネチャ修正、Skin Options 値編集 UI (ComboBox)、SongUpdateThread (DB リフレッシュ)、ScrollSpeedModifier コメント修正。
 詳細な Phase 別履歴は git log を参照。
 
 ## Deferred / Stub Items
 
-- **Download 系コマンド:** DownloadHttp/DownloadIpfs/DownloadCourseHttp は bms-download Processor 経由で配線完了。DB リフレッシュは次回起動時スキャンに委任（SongUpdateThread 移植時に対応）。IPFS は gateway URL ベースの簡易実装（SongData.ipfs フィールド追加で完全対応予定）
 - **Bar::Executable:** production bar list 構築パスで構築されるがコンパイラが検出不可のため `#[allow(dead_code)]` 維持
 
 ## Known Issues

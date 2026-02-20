@@ -19,7 +19,7 @@ pub enum ScrollSpeedMode {
 /// Normalizes or randomizes scroll speed.
 ///
 /// Remove mode: normalizes all BPM to initial, removes stop events.
-/// Add mode: randomizes scroll speed per section (stub — requires scroll field).
+/// Add mode: randomizes scroll speed per section.
 ///
 /// Java: `ScrollSpeedModifier`
 pub struct ScrollSpeedModifier {

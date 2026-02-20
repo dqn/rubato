@@ -79,7 +79,11 @@ pub enum CommandResult {
     /// Download a song via HTTP.
     DownloadHttp { md5: String, title: String },
     /// Download a song via IPFS.
-    DownloadIpfs { md5: String, title: String },
+    DownloadIpfs {
+        md5: String,
+        ipfs: String,
+        title: String,
+    },
     /// Download all songs in a course via HTTP.
     DownloadCourseHttp { songs: Vec<(String, String)> },
 }
@@ -199,6 +203,7 @@ impl CommandExecutor {
                 if let Some(Bar::Song(s)) = bar_manager.current() {
                     return CommandResult::DownloadIpfs {
                         md5: s.md5.clone(),
+                        ipfs: s.ipfs.clone(),
                         title: s.title.clone(),
                     };
                 }
@@ -539,6 +544,7 @@ mod tests {
             result,
             CommandResult::DownloadIpfs {
                 md5: "test_md5".to_string(),
+                ipfs: String::new(),
                 title: "Test Song".to_string(),
             }
         );

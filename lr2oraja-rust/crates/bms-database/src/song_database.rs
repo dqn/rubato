@@ -1,11 +1,25 @@
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use rusqlite::Connection;
+use tracing::{debug, info, warn};
 
 use crate::folder_data::FolderData;
 use crate::schema::{FOLDER_TABLE, SCORELOG_TABLE, SONG_TABLE, ensure_table};
 use crate::song_data::SongData;
+
+/// BMS file extensions to scan.
+const BMS_EXTENSIONS: &[&str] = &["bms", "bme", "bml", "pms", "bmson"];
+
+/// Statistics returned by `update_song_datas`.
+#[derive(Debug, Default)]
+pub struct UpdateStats {
+    pub scanned: usize,
+    pub added: usize,
+    pub updated: usize,
+    pub removed: usize,
+}
 
 /// Whitelist of allowed column names for `get_song_datas(key, value)`.
 const ALLOWED_KEYS: &[&str] = &[
@@ -245,6 +259,242 @@ impl SongDatabase {
             results.push(r?);
         }
         Ok(results)
+    }
+
+    /// Update the song database by scanning BMS root directories.
+    ///
+    /// `path`: optional specific folder to update (None = all roots).
+    /// `bmsroot`: list of BMS root directories to scan.
+    /// `update_all`: if true, delete all records and do a full rescan.
+    ///
+    /// Matches Java `SQLiteSongDatabaseAccessor.updateSongDatas()`.
+    pub fn update_song_datas(
+        &self,
+        path: Option<&Path>,
+        bmsroot: &[String],
+        update_all: bool,
+    ) -> Result<UpdateStats> {
+        let mut stats = UpdateStats::default();
+
+        // 1. Preserve tags and favorites (keyed by sha256)
+        let mut saved_tags: HashMap<String, String> = HashMap::new();
+        let mut saved_favorites: HashMap<String, i32> = HashMap::new();
+        {
+            let mut stmt = self
+                .conn
+                .prepare("SELECT sha256, tag, favorite FROM song")?;
+            let rows = stmt.query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                    row.get::<_, Option<i32>>(2)?.unwrap_or(0),
+                ))
+            })?;
+            for row in rows {
+                let (sha256, tag, favorite) = row?;
+                if !tag.is_empty() {
+                    saved_tags.insert(sha256.clone(), tag);
+                }
+                if favorite != 0 {
+                    saved_favorites.insert(sha256, favorite);
+                }
+            }
+        }
+
+        // 2. Full rescan: delete all records
+        if update_all {
+            self.conn.execute("DELETE FROM song", [])?;
+            self.conn.execute("DELETE FROM folder", [])?;
+        }
+
+        // 3. Determine directories to scan
+        let scan_dirs: Vec<PathBuf> = if let Some(p) = path {
+            vec![p.to_path_buf()]
+        } else {
+            bmsroot.iter().map(PathBuf::from).collect()
+        };
+
+        // 4. Build map of existing records (path -> date) for incremental check
+        let existing_records: HashMap<String, i32> = if !update_all {
+            let mut map = HashMap::new();
+            let mut stmt = self.conn.prepare("SELECT path, date FROM song")?;
+            let rows = stmt.query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i32>(1)?))
+            })?;
+            for row in rows {
+                let (p, d) = row?;
+                map.insert(p, d);
+            }
+            map
+        } else {
+            HashMap::new()
+        };
+
+        // 5. Scan directories recursively
+        let mut new_songs: Vec<SongData> = Vec::new();
+        let mut seen_paths: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let now_secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i32)
+            .unwrap_or(0);
+
+        for root in &scan_dirs {
+            if !root.is_dir() {
+                warn!(path = %root.display(), "SongUpdate: root directory does not exist, skipping");
+                continue;
+            }
+            self.scan_directory(
+                root,
+                &existing_records,
+                &saved_tags,
+                &saved_favorites,
+                now_secs,
+                &mut new_songs,
+                &mut seen_paths,
+                &mut stats,
+            );
+        }
+
+        // 6. Insert/update scanned songs
+        if !new_songs.is_empty() {
+            self.set_song_datas(&new_songs)?;
+        }
+
+        // 7. Remove records for files that no longer exist (incremental mode)
+        if !update_all {
+            let mut to_remove: Vec<String> = Vec::new();
+            for existing_path in existing_records.keys() {
+                // Only remove if the path is under one of the scan directories
+                let under_scan = scan_dirs
+                    .iter()
+                    .any(|root| existing_path.starts_with(root.to_string_lossy().as_ref()));
+                if under_scan && !seen_paths.contains(existing_path) {
+                    to_remove.push(existing_path.clone());
+                }
+            }
+            if !to_remove.is_empty() {
+                let tx = self.conn.unchecked_transaction()?;
+                {
+                    let mut stmt = tx.prepare("DELETE FROM song WHERE path = ?1")?;
+                    for p in &to_remove {
+                        stmt.execute([p])?;
+                    }
+                }
+                tx.commit()?;
+                stats.removed = to_remove.len();
+            }
+        }
+
+        info!(
+            scanned = stats.scanned,
+            added = stats.added,
+            updated = stats.updated,
+            removed = stats.removed,
+            "SongUpdate: scan complete"
+        );
+
+        Ok(stats)
+    }
+
+    /// Recursively scan a directory for BMS files.
+    #[allow(clippy::too_many_arguments)]
+    fn scan_directory(
+        &self,
+        dir: &Path,
+        existing: &HashMap<String, i32>,
+        saved_tags: &HashMap<String, String>,
+        saved_favorites: &HashMap<String, i32>,
+        now_secs: i32,
+        new_songs: &mut Vec<SongData>,
+        seen_paths: &mut std::collections::HashSet<String>,
+        stats: &mut UpdateStats,
+    ) {
+        let entries = match std::fs::read_dir(dir) {
+            Ok(e) => e,
+            Err(e) => {
+                warn!(path = %dir.display(), error = %e, "SongUpdate: failed to read directory");
+                return;
+            }
+        };
+
+        let mut subdirs = Vec::new();
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                subdirs.push(path);
+                continue;
+            }
+
+            let ext = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_ascii_lowercase();
+
+            if !BMS_EXTENSIONS.contains(&ext.as_str()) {
+                continue;
+            }
+
+            stats.scanned += 1;
+            let path_str = path.to_string_lossy().to_string();
+            seen_paths.insert(path_str.clone());
+
+            // Get file mtime
+            let file_date = std::fs::metadata(&path)
+                .and_then(|m| m.modified())
+                .ok()
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_secs() as i32)
+                .unwrap_or(0);
+
+            // Incremental: skip if path exists and mtime matches
+            if let Some(&existing_date) = existing.get(&path_str)
+                && existing_date == file_date
+            {
+                continue;
+            }
+
+            // Parse the file
+            match SongData::from_file(&path) {
+                Ok(mut sd) => {
+                    // Restore preserved tag/favorite
+                    if let Some(tag) = saved_tags.get(&sd.sha256) {
+                        sd.tag = tag.clone();
+                    }
+                    if let Some(&fav) = saved_favorites.get(&sd.sha256) {
+                        sd.favorite = fav;
+                    }
+
+                    // Set adddate for new entries
+                    if !existing.contains_key(&path_str) {
+                        sd.adddate = now_secs;
+                        stats.added += 1;
+                    } else {
+                        stats.updated += 1;
+                    }
+
+                    new_songs.push(sd);
+                }
+                Err(e) => {
+                    debug!(path = %path.display(), error = %e, "SongUpdate: failed to parse BMS file");
+                }
+            }
+        }
+
+        // Recurse into subdirectories
+        for subdir in subdirs {
+            self.scan_directory(
+                &subdir,
+                existing,
+                saved_tags,
+                saved_favorites,
+                now_secs,
+                new_songs,
+                seen_paths,
+                stats,
+            );
+        }
     }
 
     /// Insert or replace folder data (batch, in a transaction).
@@ -582,5 +832,116 @@ mod tests {
 
         let found = db.get_all_song_datas().unwrap();
         assert_eq!(found.len(), 1);
+    }
+
+    // --- update_song_datas tests ---
+
+    #[test]
+    fn update_song_datas_scans_test_bms() {
+        let test_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("test-bms");
+        if !test_dir.is_dir() {
+            return; // Skip if test-bms not available
+        }
+
+        let db = SongDatabase::open_in_memory().unwrap();
+        let roots = vec![test_dir.to_string_lossy().to_string()];
+        let stats = db.update_song_datas(None, &roots, false).unwrap();
+
+        assert!(stats.scanned > 0, "should have scanned BMS files");
+        assert!(stats.added > 0, "should have added new songs");
+        assert_eq!(stats.removed, 0, "first scan should not remove anything");
+
+        // All scanned songs should be in the database
+        let all = db.get_all_song_datas().unwrap();
+        assert_eq!(all.len(), stats.added);
+    }
+
+    #[test]
+    fn update_song_datas_incremental_skips_unchanged() {
+        let test_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("test-bms");
+        if !test_dir.is_dir() {
+            return;
+        }
+
+        let db = SongDatabase::open_in_memory().unwrap();
+        let roots = vec![test_dir.to_string_lossy().to_string()];
+
+        // First scan
+        let stats1 = db.update_song_datas(None, &roots, false).unwrap();
+        assert!(stats1.added > 0);
+
+        // Second scan: no changes, so added+updated should be 0
+        let stats2 = db.update_song_datas(None, &roots, false).unwrap();
+        assert_eq!(stats2.added, 0, "no new files should be added");
+        assert_eq!(stats2.updated, 0, "no files should be updated");
+        assert_eq!(stats2.removed, 0, "no files should be removed");
+    }
+
+    #[test]
+    fn update_song_datas_full_rescan() {
+        let test_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("test-bms");
+        if !test_dir.is_dir() {
+            return;
+        }
+
+        let db = SongDatabase::open_in_memory().unwrap();
+        let roots = vec![test_dir.to_string_lossy().to_string()];
+
+        // First scan
+        let stats1 = db.update_song_datas(None, &roots, false).unwrap();
+
+        // Full rescan (update_all=true)
+        let stats2 = db.update_song_datas(None, &roots, true).unwrap();
+        assert_eq!(
+            stats2.added, stats1.added,
+            "full rescan should re-add all songs"
+        );
+    }
+
+    #[test]
+    fn update_song_datas_preserves_favorites() {
+        let test_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("test-bms");
+        if !test_dir.is_dir() {
+            return;
+        }
+
+        let db = SongDatabase::open_in_memory().unwrap();
+        let roots = vec![test_dir.to_string_lossy().to_string()];
+
+        // Scan and set a favorite
+        db.update_song_datas(None, &roots, false).unwrap();
+        let all = db.get_all_song_datas().unwrap();
+        if all.is_empty() {
+            return;
+        }
+        let sha = all[0].sha256.clone();
+        db.update_favorite(&sha, 1).unwrap();
+
+        // Full rescan should preserve favorite
+        db.update_song_datas(None, &roots, true).unwrap();
+        let found = db.get_song_datas("sha256", &sha).unwrap();
+        assert!(!found.is_empty());
+        assert_eq!(found[0].favorite, 1, "favorite should be preserved");
+    }
+
+    #[test]
+    fn update_song_datas_nonexistent_root() {
+        let db = SongDatabase::open_in_memory().unwrap();
+        let roots = vec!["/nonexistent/path/to/bms".to_string()];
+        let stats = db.update_song_datas(None, &roots, false).unwrap();
+        assert_eq!(stats.scanned, 0);
+        assert_eq!(stats.added, 0);
     }
 }
