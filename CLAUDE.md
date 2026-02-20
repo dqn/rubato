@@ -47,6 +47,7 @@ brs/
 - **GUI Screenshot Testing:** Capture screenshots from both Java and Rust, compare with SSIM.
 - **Test BMS Files:** Claude creates minimal BMS files for each feature.
 - **Java Modifications Allowed:** Adding debug output / export methods to Java code is permitted for verification.
+- **E2E Testing:** `just e2e-test` runs in-process E2E (no GPU required). `just e2e-test-subprocess` builds and runs the actual binary in headless mode (`--headless --exit-after-result --autoplay`).
 
 ### Golden Master Testing Lessons
 
