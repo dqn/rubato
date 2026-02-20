@@ -497,6 +497,51 @@ fn test_render_ecfn_result2_clear() {
 }
 
 // ---------------------------------------------------------------------------
+// Debug: capture default select skin screenshot
+// ---------------------------------------------------------------------------
+
+fn default_skin_dir() -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("skin")
+        .join("default")
+}
+
+fn test_debug_select_skin() {
+    let skin_path = default_skin_dir().join("select.json");
+
+    let mut provider = bms_render::state_provider::StaticStateProvider::default();
+    // Select screen state: folder bar active, song bar active, 7key mode
+    provider.booleans.insert(1, true); // OPTION_FOLDERBAR
+    provider.booleans.insert(2, true); // OPTION_SONGBAR
+    provider.booleans.insert(5, true); // OPTION_PLAYABLEBAR
+    provider.booleans.insert(160, true); // OPTION_7KEYSONG
+    provider.time_ms = 5000;
+    provider.timers.insert(1, 5000); // TIMER_STARTINPUT
+
+    let mut harness = RenderTestHarness::new(1280, 720);
+    harness.load_json_skin(&skin_path, Box::new(provider));
+
+    let output_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join(".claude")
+        .join("tmp");
+    std::fs::create_dir_all(&output_dir).ok();
+    let output_path = output_dir.join("debug_select.png");
+
+    harness.capture_frame(&output_path);
+    eprintln!("Screenshot saved to: {}", output_path.display());
+}
+
+// ---------------------------------------------------------------------------
 // Custom test runner
 // ---------------------------------------------------------------------------
 
@@ -561,6 +606,7 @@ fn get_tests() -> Vec<(&'static str, fn())> {
             "test_render_ecfn_result2_clear",
             test_render_ecfn_result2_clear,
         ),
+        ("test_debug_select_skin", test_debug_select_skin),
     ]
 }
 
