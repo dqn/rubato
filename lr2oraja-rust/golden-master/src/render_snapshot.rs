@@ -685,23 +685,12 @@ fn resolve_detail(
                 .unwrap_or(0)
                 .max(0) as usize;
 
-            let time = eval::resolve_timer_time(&img.base, provider).unwrap_or(0);
-
-            let frame_index =
-                if let Some(source) = img.sources.get(source_index).or(img.sources.first()) {
-                    match source {
-                        bms_skin::skin_image::SkinImageSource::Frames { images, cycle, .. } => {
-                            bms_skin::skin_source::image_index(images.len(), time, *cycle)
-                        }
-                        bms_skin::skin_image::SkinImageSource::Reference(_) => 0,
-                    }
-                } else {
-                    0
-                };
-
+            // Java RenderSnapshotExporter hardcodes frame_index=0 with the comment
+            // "Frame index requires timer resolution". Match that behavior so that
+            // golden-master parity is maintained without full timer stack emulation.
             Some(DrawDetail::Image {
                 source_index,
-                frame_index,
+                frame_index: 0,
             })
         }
         SkinObjectType::Number(num) => {
