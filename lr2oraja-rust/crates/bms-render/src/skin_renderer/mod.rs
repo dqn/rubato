@@ -88,6 +88,12 @@ pub fn skin_render_system(
             continue;
         };
 
+        // Bevy sprite picking panics on non-positive half_size
+        if rect.w <= 0.0 || rect.h <= 0.0 {
+            *visibility = Visibility::Hidden;
+            continue;
+        }
+
         // Object-type-specific dispatch
         let time = eval::resolve_timer_time(base, provider).unwrap_or(0);
         let (tex_handle, src_rect_uv) = resolve_object_texture(object, provider, tex_map, time);
@@ -322,6 +328,12 @@ pub fn skin_render_system(
             *visibility = Visibility::Hidden;
             continue;
         };
+
+        // Bevy sprite picking panics on non-positive half_size
+        if rect.w <= 0.0 || rect.h <= 0.0 {
+            *visibility = Visibility::Hidden;
+            continue;
+        }
 
         *transform = skin_to_bevy_transform(
             crate::coord::SkinRect {
