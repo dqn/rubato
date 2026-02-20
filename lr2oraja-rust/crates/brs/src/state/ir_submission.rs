@@ -9,6 +9,37 @@ use bms_ir::course_data::IRCourseData;
 use bms_ir::score_data::IRScoreData;
 use bms_rule::ScoreData;
 
+/// Check IR send condition and submit if allowed.
+///
+/// Java: MusicResult.java lines 88-99 — filters by irsend config.
+pub fn maybe_submit_score_to_ir(
+    score: &ScoreData,
+    sha256: &str,
+    lntype: i32,
+    irsend: i32,
+    is_failed: bool,
+    is_score_updated: bool,
+) {
+    use bms_config::ir_config::{IR_SEND_COMPLETE_SONG, IR_SEND_UPDATE_SCORE};
+
+    let should_send = match irsend {
+        IR_SEND_COMPLETE_SONG => !is_failed,
+        IR_SEND_UPDATE_SCORE => is_score_updated,
+        _ => true,
+    };
+
+    if should_send {
+        submit_score_to_ir(score, sha256, lntype);
+    } else {
+        tracing::info!(
+            irsend,
+            is_failed,
+            is_score_updated,
+            "IR: submission skipped by send condition"
+        );
+    }
+}
+
 /// Submit a play score to the IR server (fire-and-forget).
 ///
 /// Creates an LR2IR connection, converts the score to IR format,

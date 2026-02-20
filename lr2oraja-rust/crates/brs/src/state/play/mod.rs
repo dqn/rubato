@@ -21,6 +21,9 @@ use std::path::{Path, PathBuf};
 use bms_audio::driver::AudioDriver;
 use bms_audio::key_sound::KeySoundProcessor;
 use bms_audio::kira_driver::KiraAudioDriver;
+use bms_audio::loudness::LoudnessAnalyzer;
+use bms_config::play_config::FIX_HISPEED_OFF;
+use bms_database::CourseDataConstraint;
 use bms_database::score_data_property::ScoreDataProperty;
 use bms_input::input_processor::InputProcessor;
 use bms_model::{BmsModel, LaneProperty, Note, PlayMode};
@@ -292,6 +295,19 @@ impl GameStateHandler for PlayState {
             self.init_judge_and_gauge(ctx);
         }
 
+        // H5: NO_SPEED constraint — force hispeed to 1.0 and lock adjustments
+        // Java: BMSPlayer.java lines 533-538
+        if ctx
+            .resource
+            .course_constraints
+            .contains(&CourseDataConstraint::NoSpeed)
+        {
+            let mode_id = ctx.resource.play_mode.mode_id();
+            let pc = &mut ctx.player_config.play_config_mut(mode_id).playconfig;
+            pc.hispeed = 1.0;
+            info!("Play: NO_SPEED constraint active, hispeed forced to 1.0");
+        }
+
         // Initialize InputProcessor for manual play (not autoplay/replay)
         if !self.is_autoplay && !self.is_replay {
             let mut ip = InputProcessor::new();
@@ -310,12 +326,38 @@ impl GameStateHandler for PlayState {
         // Initialize audio driver and key sound processor
         if let Some(model) = &ctx.resource.bms_model {
             let base_path = ctx.resource.bms_dir.as_deref().unwrap_or(Path::new("."));
+
+            // H2: Loudness normalization — analyze chart loudness for volume adjustment
+            let key_volume = if ctx.config.audio.normalize_volume {
+                let cache_dir = PathBuf::from(&ctx.config.playerpath).join("cache/normalize");
+                let analyzer = LoudnessAnalyzer::new(cache_dir);
+                match analyzer.analyze(model, base_path) {
+                    Ok(result) => {
+                        let base = ctx.config.audio.keyvolume;
+                        let adjusted = result.adjusted_volume(base);
+                        info!(
+                            lufs = result.loudness_lufs,
+                            base_volume = base,
+                            adjusted_volume = adjusted,
+                            "Play: loudness normalization applied"
+                        );
+                        adjusted
+                    }
+                    Err(e) => {
+                        warn!("Play: loudness analysis failed, using default volume: {e}");
+                        ctx.config.audio.keyvolume
+                    }
+                }
+            } else {
+                ctx.config.audio.keyvolume
+            };
+
             match KiraAudioDriver::new() {
                 Ok(mut driver) => {
                     if let Err(e) = driver.set_model(model, base_path) {
                         warn!("Play: failed to load audio: {e}");
                     }
-                    self.key_sound_processor = Some(KeySoundProcessor::new(model, 1.0));
+                    self.key_sound_processor = Some(KeySoundProcessor::new(model, key_volume));
                     self.audio_driver = Some(Box::new(driver));
                 }
                 Err(e) => {
@@ -537,6 +579,51 @@ impl GameStateHandler for PlayState {
                 "Play: assist mode active, score save disabled"
             );
         }
+
+        // Save play config (hispeed/lanecover/lift/hidden) — Java BMSPlayer.saveConfig()
+        if !self.is_practice && !self.is_replay && !self.is_autoplay {
+            self.save_config(ctx);
+        }
+    }
+}
+
+impl PlayState {
+    /// Persist hispeed, lanecover, lift, hidden to PlayerConfig.
+    ///
+    /// Ported from Java `BMSPlayer.saveConfig()` (lines 979-994).
+    /// Skips if NO_SPEED constraint is active (course mode lock).
+    fn save_config(&self, ctx: &mut StateContext) {
+        // Skip if NO_SPEED constraint is active
+        if ctx
+            .resource
+            .course_constraints
+            .contains(&CourseDataConstraint::NoSpeed)
+        {
+            return;
+        }
+
+        let mode_id = ctx.resource.play_mode.mode_id();
+        let pc = &mut ctx.player_config.play_config_mut(mode_id).playconfig;
+
+        // If fixhispeed is active, duration is the canonical value (hispeed is derived).
+        // Otherwise, save hispeed directly.
+        if pc.fixhispeed != FIX_HISPEED_OFF {
+            let cover = if pc.enablelanecover {
+                pc.lanecover as f64
+            } else {
+                0.0
+            } + if pc.enablelift { pc.lift as f64 } else { 0.0 };
+            let bpm = self.main_bpm;
+            if pc.hispeed > 0.0 && bpm > 0.0 {
+                pc.duration =
+                    (0.5 + (240_000.0 / (pc.hispeed as f64 * bpm)) * (1.0 - cover)) as i32;
+            }
+        }
+        // hispeed, lanecover, lift, hidden are already in PlayConfig
+        // (modified in-place during play via ctx.player_config)
+
+        ctx.resource.config_save_requested = true;
+        info!("Play: config save requested");
     }
 }
 

@@ -93,8 +93,24 @@ impl GameStateHandler for ResultState {
             }
             ctx.timer.set_timer_on(TIMER_RESULT_UPDATESCORE);
 
-            // IR submission (fire-and-forget async)
-            super::ir_submission::submit_score_to_ir(score, &score.sha256, score.mode);
+            // IR submission with send condition filtering (H7)
+            let is_failed = score.clear == ClearType::Failed;
+            let is_score_updated = score.exscore() > ctx.resource.oldscore.exscore();
+            let irsend = ctx
+                .player_config
+                .irconfig
+                .as_deref()
+                .and_then(|cfgs| cfgs.first())
+                .map(|cfg| cfg.irsend)
+                .unwrap_or(bms_config::ir_config::IR_SEND_ALWAYS);
+            super::ir_submission::maybe_submit_score_to_ir(
+                score,
+                &score.sha256,
+                score.mode,
+                irsend,
+                is_failed,
+                is_score_updated,
+            );
         }
 
         // Load old score from DB
@@ -179,6 +195,7 @@ impl GameStateHandler for ResultState {
                 &ctx.resource.score_data,
                 &ctx.resource.oldscore,
                 ctx.resource.maxcombo,
+                ctx.resource.target_exscore,
             );
         }
     }

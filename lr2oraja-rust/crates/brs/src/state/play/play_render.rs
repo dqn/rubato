@@ -123,11 +123,24 @@ impl PlayState {
                 + score.judge_count(JUDGE_MS);
             score.assist = self.assist;
 
+            // H6: Assist level overrides clear type
+            // Java: MusicResult — assist >= 2 → AssistEasy, assist >= 1 → LightAssistEasy
+            if score.clear != ClearType::Failed {
+                if self.assist >= 2 {
+                    score.clear = ClearType::AssistEasy;
+                } else if self.assist >= 1 {
+                    score.clear = ClearType::LightAssistEasy;
+                }
+            }
+
             ctx.resource.score_data = score;
         }
 
         ctx.resource.gauge_log = self.gauge_log.clone();
         ctx.resource.maxcombo = self.judge_manager.as_ref().map_or(0, |jm| jm.max_combo());
         ctx.resource.update_score = !self.is_autoplay && !self.is_replay;
+
+        // Save target/rival EX score for result comparison (H8)
+        ctx.resource.target_exscore = Some(self.score_data_property.rival_score());
     }
 }

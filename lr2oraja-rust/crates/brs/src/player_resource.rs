@@ -74,6 +74,8 @@ pub struct PlayerResource {
     pub config_save_requested: bool,
     /// IR ranking data for the current chart (populated by IR query).
     pub ranking_data: Option<RankingData>,
+    /// Target/rival EX score for result comparison (populated by PlayState).
+    pub target_exscore: Option<i32>,
 
     // --- Course mode fields ---
     /// BMS models for each stage of a course (None when not in course mode).
@@ -206,6 +208,7 @@ impl Default for PlayerResource {
             replay_data: None,
             config_save_requested: false,
             ranking_data: None,
+            target_exscore: None,
             course_bms_models: None,
             course_bms_dirs: Vec::new(),
             course_index: 0,

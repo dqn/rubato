@@ -699,6 +699,21 @@ pub fn sync_play_judge_indicators(state: &mut SharedGameState, jm: &JudgeManager
     state.booleans.insert(OPTION_2P_PERFECT, j2 == 1);
     state.booleans.insert(OPTION_2P_EARLY, j2 > 1 && t2 > 0);
     state.booleans.insert(OPTION_2P_LATE, j2 > 1 && t2 < 0);
+
+    // 3P (keyboard 24K mode)
+    let j3 = jm.now_judge(2);
+    let t3 = jm.recent_judge_timing(2);
+    state.booleans.insert(OPTION_3P_PERFECT, j3 == 1);
+    state.booleans.insert(OPTION_3P_EARLY, j3 > 1 && t3 > 0);
+    state.booleans.insert(OPTION_3P_LATE, j3 > 1 && t3 < 0);
+}
+
+/// Synchronize the constant modifier flag.
+#[allow(dead_code)] // H8: wired in skin property factory (not yet called from play render)
+pub fn sync_play_constant_flag(state: &mut SharedGameState, constant_enabled: bool) {
+    state
+        .booleans
+        .insert(bms_skin::property_id::OPTION_CONSTANT, constant_enabled);
 }
 
 #[cfg(test)]

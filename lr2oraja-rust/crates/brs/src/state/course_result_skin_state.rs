@@ -20,6 +20,7 @@ pub fn sync_course_result_state(state: &mut SharedGameState, resource: &PlayerRe
         &resource.score_data,
         &resource.oldscore,
         resource.maxcombo,
+        resource.target_exscore,
     );
 
     // Course mode flag

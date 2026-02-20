@@ -5,8 +5,10 @@
 
 use std::collections::HashMap;
 
+use bms_database::CourseDataConstraint;
 use bms_database::SongInformation;
 use bms_render::draw::bar::{BarScrollState, BarSlotData, BarType};
+use bms_rule::ClearType;
 use bms_rule::ScoreData;
 use bms_skin::property_id::{
     FLOAT_CHART_AVERAGEDENSITY, FLOAT_CHART_ENDDENSITY, FLOAT_CHART_PEAKDENSITY,
@@ -17,11 +19,24 @@ use bms_skin::property_id::{
     NUMBER_RIVAL_PLAYCOUNT, NUMBER_RIVAL_SCORE, NUMBER_SONGGAUGE_TOTAL, NUMBER_TOTALNOTE_BSS,
     NUMBER_TOTALNOTE_LN, NUMBER_TOTALNOTE_NORMAL, NUMBER_TOTALNOTE_SCRATCH, NUMBER_TOTALNOTES2,
     OPTION_5KEYSONG, OPTION_7KEYSONG, OPTION_9KEYSONG, OPTION_10KEYSONG, OPTION_14KEYSONG,
-    OPTION_BGA, OPTION_COMPARE_RIVAL, OPTION_FOLDERBAR, OPTION_LN, OPTION_NO_BGA, OPTION_NO_LN,
-    OPTION_NOT_COMPARE_RIVAL, OPTION_PLAYABLEBAR, OPTION_SELECT_REPLAYDATA,
-    OPTION_SELECT_REPLAYDATA2, OPTION_SELECT_REPLAYDATA3, OPTION_SELECT_REPLAYDATA4,
-    OPTION_SONGBAR, RATE_MUSICSELECT_POSITION, STRING_ARTIST, STRING_FULLTITLE, STRING_GENRE,
-    STRING_RIVAL, STRING_SUBARTIST, STRING_SUBTITLE, STRING_TITLE,
+    OPTION_24KEYDPSONG, OPTION_24KEYSONG, OPTION_BGA, OPTION_BPMCHANGE, OPTION_COMPARE_RIVAL,
+    OPTION_DIFFICULTY0, OPTION_DIFFICULTY1, OPTION_DIFFICULTY2, OPTION_DIFFICULTY3,
+    OPTION_DIFFICULTY4, OPTION_DIFFICULTY5, OPTION_FOLDERBAR, OPTION_GRADEBAR,
+    OPTION_GRADEBAR_CLASS, OPTION_GRADEBAR_CN, OPTION_GRADEBAR_GAUGE_5KEYS,
+    OPTION_GRADEBAR_GAUGE_7KEYS, OPTION_GRADEBAR_GAUGE_9KEYS, OPTION_GRADEBAR_GAUGE_24KEYS,
+    OPTION_GRADEBAR_GAUGE_LR2, OPTION_GRADEBAR_HCN, OPTION_GRADEBAR_LN, OPTION_GRADEBAR_MIRROR,
+    OPTION_GRADEBAR_NOGOOD, OPTION_GRADEBAR_NOGREAT, OPTION_GRADEBAR_NOSPEED,
+    OPTION_GRADEBAR_RANDOM, OPTION_LN, OPTION_NO_BGA, OPTION_NO_BPMCHANGE, OPTION_NO_LN,
+    OPTION_NOT_COMPARE_RIVAL, OPTION_PANEL1, OPTION_PANEL2, OPTION_PANEL3, OPTION_PLAYABLEBAR,
+    OPTION_RANDOMCOURSEBAR, OPTION_RANDOMSELECTBAR, OPTION_SELECT_BAR_ASSIST_EASY_CLEARED,
+    OPTION_SELECT_BAR_EASY_CLEARED, OPTION_SELECT_BAR_EXHARD_CLEARED, OPTION_SELECT_BAR_FAILED,
+    OPTION_SELECT_BAR_FULL_COMBO_CLEARED, OPTION_SELECT_BAR_HARD_CLEARED,
+    OPTION_SELECT_BAR_LIGHT_ASSIST_EASY_CLEARED, OPTION_SELECT_BAR_MAX_CLEARED,
+    OPTION_SELECT_BAR_NORMAL_CLEARED, OPTION_SELECT_BAR_NOT_PLAYED,
+    OPTION_SELECT_BAR_PERFECT_CLEARED, OPTION_SELECT_REPLAYDATA, OPTION_SELECT_REPLAYDATA2,
+    OPTION_SELECT_REPLAYDATA3, OPTION_SELECT_REPLAYDATA4, OPTION_SONGBAR,
+    RATE_MUSICSELECT_POSITION, STRING_ARTIST, STRING_FULLTITLE, STRING_GENRE, STRING_RIVAL,
+    STRING_SUBARTIST, STRING_SUBTITLE, STRING_TITLE,
 };
 
 use crate::game_state::SharedGameState;
@@ -51,6 +66,11 @@ pub fn sync_select_state(
     state.booleans.insert(OPTION_SONGBAR, false);
     state.booleans.insert(OPTION_FOLDERBAR, false);
     state.booleans.insert(OPTION_PLAYABLEBAR, false);
+
+    // Grade bar flag (clear)
+    state.booleans.insert(OPTION_GRADEBAR, false);
+    state.booleans.insert(OPTION_RANDOMSELECTBAR, false);
+    state.booleans.insert(OPTION_RANDOMCOURSEBAR, false);
 
     match bar_manager.current() {
         Some(Bar::Song(song_data)) => {
@@ -84,6 +104,12 @@ pub fn sync_select_state(
             // Mode flags
             let mode_id = song_data.mode;
             sync_mode_flags(state, mode_id);
+
+            // Difficulty flags (H8)
+            sync_difficulty_flags(state, song_data.difficulty);
+
+            // BPM change flags (H8)
+            sync_bpm_flags(state, song_data.minbpm, song_data.maxbpm);
         }
         Some(Bar::Folder { .. })
         | Some(Bar::TableRoot { .. })
@@ -93,11 +119,29 @@ pub fn sync_select_state(
             state.booleans.insert(OPTION_FOLDERBAR, true);
             clear_song_metadata(state);
         }
-        Some(Bar::Course(_))
-        | Some(Bar::Grade(_))
-        | Some(Bar::RandomCourse(_))
-        | Some(Bar::Executable { .. })
-        | Some(Bar::Function { .. })
+        Some(Bar::Grade(grade_data)) => {
+            state.booleans.insert(OPTION_GRADEBAR, true);
+            state.booleans.insert(OPTION_PLAYABLEBAR, true);
+            sync_grade_bar_constraints(state, &grade_data.constraints);
+            clear_song_metadata(state);
+        }
+        Some(Bar::Course(course_data)) => {
+            state.booleans.insert(OPTION_GRADEBAR, true);
+            state.booleans.insert(OPTION_PLAYABLEBAR, true);
+            sync_grade_bar_constraints(state, &course_data.constraint);
+            clear_song_metadata(state);
+        }
+        Some(Bar::RandomCourse(_)) => {
+            state.booleans.insert(OPTION_RANDOMCOURSEBAR, true);
+            state.booleans.insert(OPTION_PLAYABLEBAR, true);
+            clear_song_metadata(state);
+        }
+        Some(Bar::Executable { .. }) => {
+            state.booleans.insert(OPTION_RANDOMSELECTBAR, true);
+            state.booleans.insert(OPTION_PLAYABLEBAR, true);
+            clear_song_metadata(state);
+        }
+        Some(Bar::Function { .. })
         | Some(Bar::Command { .. })
         | Some(Bar::SearchWord { .. })
         | Some(Bar::ContextMenu(_)) => {
@@ -344,6 +388,8 @@ fn sync_mode_flags(state: &mut SharedGameState, mode_id: i32) {
     state.booleans.insert(OPTION_14KEYSONG, false);
     state.booleans.insert(OPTION_10KEYSONG, false);
     state.booleans.insert(OPTION_9KEYSONG, false);
+    state.booleans.insert(OPTION_24KEYSONG, false);
+    state.booleans.insert(OPTION_24KEYDPSONG, false);
 
     // mode_id matches PlayMode::mode_id() values
     match mode_id {
@@ -361,6 +407,12 @@ fn sync_mode_flags(state: &mut SharedGameState, mode_id: i32) {
         }
         9 => {
             state.booleans.insert(OPTION_9KEYSONG, true);
+        }
+        24 => {
+            state.booleans.insert(OPTION_24KEYSONG, true);
+        }
+        48 => {
+            state.booleans.insert(OPTION_24KEYDPSONG, true);
         }
         _ => {}
     }
@@ -464,6 +516,147 @@ pub fn sync_song_information(state: &mut SharedGameState, info: Option<&SongInfo
             state.note_distribution.clear();
         }
     }
+}
+
+/// Synchronize difficulty flags for the selected song.
+pub fn sync_difficulty_flags(state: &mut SharedGameState, difficulty: i32) {
+    let ids = [
+        OPTION_DIFFICULTY0,
+        OPTION_DIFFICULTY1,
+        OPTION_DIFFICULTY2,
+        OPTION_DIFFICULTY3,
+        OPTION_DIFFICULTY4,
+        OPTION_DIFFICULTY5,
+    ];
+    for &id in &ids {
+        state.booleans.insert(id, false);
+    }
+    let idx = if (1..=5).contains(&difficulty) {
+        difficulty as usize
+    } else {
+        0 // undefined/out-of-range maps to DIFFICULTY0
+    };
+    state.booleans.insert(ids[idx], true);
+}
+
+/// Synchronize BPM change flags for the selected song.
+pub fn sync_bpm_flags(state: &mut SharedGameState, minbpm: i32, maxbpm: i32) {
+    let has_change = minbpm != maxbpm;
+    state.booleans.insert(OPTION_NO_BPMCHANGE, !has_change);
+    state.booleans.insert(OPTION_BPMCHANGE, has_change);
+}
+
+/// Synchronize select bar clear status flags.
+///
+/// Java: BooleanPropertyFactory IDs 100-105, 1100-1104.
+#[allow(dead_code)] // H8: wired in skin property factory (not yet called from select state)
+pub fn sync_bar_clear_status(state: &mut SharedGameState, clear: Option<ClearType>) {
+    let all_ids = [
+        OPTION_SELECT_BAR_NOT_PLAYED,
+        OPTION_SELECT_BAR_FAILED,
+        OPTION_SELECT_BAR_ASSIST_EASY_CLEARED,
+        OPTION_SELECT_BAR_LIGHT_ASSIST_EASY_CLEARED,
+        OPTION_SELECT_BAR_EASY_CLEARED,
+        OPTION_SELECT_BAR_NORMAL_CLEARED,
+        OPTION_SELECT_BAR_HARD_CLEARED,
+        OPTION_SELECT_BAR_EXHARD_CLEARED,
+        OPTION_SELECT_BAR_FULL_COMBO_CLEARED,
+        OPTION_SELECT_BAR_PERFECT_CLEARED,
+        OPTION_SELECT_BAR_MAX_CLEARED,
+    ];
+    for &id in &all_ids {
+        state.booleans.insert(id, false);
+    }
+    match clear {
+        None => state.booleans.insert(OPTION_SELECT_BAR_NOT_PLAYED, true),
+        Some(ClearType::NoPlay) => state.booleans.insert(OPTION_SELECT_BAR_NOT_PLAYED, true),
+        Some(ClearType::Failed) => state.booleans.insert(OPTION_SELECT_BAR_FAILED, true),
+        Some(ClearType::AssistEasy) => state
+            .booleans
+            .insert(OPTION_SELECT_BAR_ASSIST_EASY_CLEARED, true),
+        Some(ClearType::LightAssistEasy) => state
+            .booleans
+            .insert(OPTION_SELECT_BAR_LIGHT_ASSIST_EASY_CLEARED, true),
+        Some(ClearType::Easy) => state.booleans.insert(OPTION_SELECT_BAR_EASY_CLEARED, true),
+        Some(ClearType::Normal) => state
+            .booleans
+            .insert(OPTION_SELECT_BAR_NORMAL_CLEARED, true),
+        Some(ClearType::Hard) => state.booleans.insert(OPTION_SELECT_BAR_HARD_CLEARED, true),
+        Some(ClearType::ExHard) => state
+            .booleans
+            .insert(OPTION_SELECT_BAR_EXHARD_CLEARED, true),
+        Some(ClearType::FullCombo) => state
+            .booleans
+            .insert(OPTION_SELECT_BAR_FULL_COMBO_CLEARED, true),
+        Some(ClearType::Perfect) => state
+            .booleans
+            .insert(OPTION_SELECT_BAR_PERFECT_CLEARED, true),
+        Some(ClearType::Max) => state.booleans.insert(OPTION_SELECT_BAR_MAX_CLEARED, true),
+    };
+}
+
+/// Synchronize panel state booleans.
+#[allow(dead_code)] // H8: wired in skin property factory (not yet called from select state)
+pub fn sync_panel_state(state: &mut SharedGameState, panel: i32) {
+    state.booleans.insert(OPTION_PANEL1, panel == 1);
+    state.booleans.insert(OPTION_PANEL2, panel == 2);
+    state.booleans.insert(OPTION_PANEL3, panel == 3);
+}
+
+/// Synchronize grade bar constraint flags.
+///
+/// Called when a Grade or Course bar is selected.
+pub fn sync_grade_bar_constraints(
+    state: &mut SharedGameState,
+    constraints: &[CourseDataConstraint],
+) {
+    use CourseDataConstraint::*;
+    state
+        .booleans
+        .insert(OPTION_GRADEBAR_CLASS, constraints.contains(&Class));
+    state
+        .booleans
+        .insert(OPTION_GRADEBAR_MIRROR, constraints.contains(&GradeMirror));
+    state
+        .booleans
+        .insert(OPTION_GRADEBAR_RANDOM, constraints.contains(&GradeRandom));
+    state
+        .booleans
+        .insert(OPTION_GRADEBAR_NOSPEED, constraints.contains(&NoSpeed));
+    state
+        .booleans
+        .insert(OPTION_GRADEBAR_NOGOOD, constraints.contains(&NoGood));
+    state
+        .booleans
+        .insert(OPTION_GRADEBAR_NOGREAT, constraints.contains(&NoGreat));
+    state
+        .booleans
+        .insert(OPTION_GRADEBAR_GAUGE_LR2, constraints.contains(&GaugeLr2));
+    state.booleans.insert(
+        OPTION_GRADEBAR_GAUGE_5KEYS,
+        constraints.contains(&Gauge5Keys),
+    );
+    state.booleans.insert(
+        OPTION_GRADEBAR_GAUGE_7KEYS,
+        constraints.contains(&Gauge7Keys),
+    );
+    state.booleans.insert(
+        OPTION_GRADEBAR_GAUGE_9KEYS,
+        constraints.contains(&Gauge9Keys),
+    );
+    state.booleans.insert(
+        OPTION_GRADEBAR_GAUGE_24KEYS,
+        constraints.contains(&Gauge24Keys),
+    );
+    state
+        .booleans
+        .insert(OPTION_GRADEBAR_LN, constraints.contains(&Ln));
+    state
+        .booleans
+        .insert(OPTION_GRADEBAR_CN, constraints.contains(&Cn));
+    state
+        .booleans
+        .insert(OPTION_GRADEBAR_HCN, constraints.contains(&Hcn));
 }
 
 fn clear_song_metadata(state: &mut SharedGameState) {
