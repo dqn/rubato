@@ -145,6 +145,11 @@ impl GameStateHandler for MusicSelectState {
         self.download_handle = ctx.download_handle.cloned();
         info!("MusicSelect: create");
 
+        // Exit early if app exit was requested (e.g., after Result in --exit-after-result mode)
+        if ctx.resource.request_app_exit {
+            return;
+        }
+
         if let Some(skin_mgr) = ctx.skin_manager.as_deref_mut() {
             skin_mgr.request_load(SkinType::MusicSelect);
         }

@@ -146,4 +146,12 @@ coverage-html:
     cargo llvm-cov --workspace --html
     @echo "Report: target/llvm-cov/html/index.html"
 
+# Run E2E tests (in-process + subprocess)
+e2e-test:
+    cargo test -p brs e2e_ -- --nocapture
+
+# Run E2E subprocess test (requires binary build, ~30s)
+e2e-test-subprocess:
+    cargo test -p brs --test e2e_subprocess -- --ignored --nocapture
+
 all: check test clippy fmt-check

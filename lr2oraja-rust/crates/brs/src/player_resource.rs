@@ -113,6 +113,12 @@ pub struct PlayerResource {
     // --- IR send suppression ---
     /// When true, IR submission is suppressed (e.g. freq trainer active).
     pub force_no_ir_send: bool,
+
+    // --- E2E / headless testing ---
+    /// Whether to exit the app after the Result screen completes (from --exit-after-result CLI flag).
+    pub exit_after_result: bool,
+    /// Whether the app should exit (set by ResultState shutdown when exit_after_result is true).
+    pub request_app_exit: bool,
 }
 
 /// Settings for ghost battle pattern sharing.
@@ -238,6 +244,8 @@ impl Default for PlayerResource {
             judge_trainer_active: false,
             judge_trainer_rank: 0,
             force_no_ir_send: false,
+            exit_after_result: false,
+            request_app_exit: false,
         }
     }
 }

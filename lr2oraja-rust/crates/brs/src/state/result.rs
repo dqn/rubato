@@ -259,6 +259,12 @@ impl GameStateHandler for ResultState {
 
     fn shutdown(&mut self, ctx: &mut StateContext) {
         info!("Result: shutdown");
+
+        // Signal app exit when exit_after_result is set (non-course play)
+        if ctx.resource.exit_after_result && !self.is_course {
+            ctx.resource.request_app_exit = true;
+        }
+
         // Advance course index when moving to next stage
         if self.is_course && !self.cancel && self.course_index + 1 < self.course_total {
             ctx.resource.course_index += 1;

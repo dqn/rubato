@@ -98,6 +98,14 @@ struct Args {
     /// Internal: run launcher in subprocess and exit.
     #[arg(long, hide = true)]
     launcher_only: bool,
+
+    /// Run without rendering (headless mode for testing/benchmarking).
+    #[arg(long)]
+    headless: bool,
+
+    /// Exit after the Result screen completes (for E2E testing).
+    #[arg(long)]
+    exit_after_result: bool,
 }
 
 impl Args {
@@ -163,6 +171,7 @@ fn main() -> Result<()> {
     // Load BMS if specified
     let mut resource = PlayerResource {
         player_mode,
+        exit_after_result: args.exit_after_result,
         ..Default::default()
     };
     if let Some(bms_path) = &bms_path {
@@ -339,6 +348,11 @@ fn main() -> Result<()> {
     system_sound_mgr.load_sounds(Path::new(&config.soundpath));
     system_sound_mgr.set_volume(config.audio.systemvolume as f64);
 
+    // Headless mode: run state machine without Bevy rendering
+    if args.headless {
+        return run_headless(registry, resource, config, player_config, database.as_ref());
+    }
+
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -382,6 +396,7 @@ fn main() -> Result<()> {
         })
         .add_systems(Update, timer_update_system)
         .add_systems(Update, state_machine_system)
+        .add_systems(Update, exit_check_system)
         .add_systems(Update, skin_load_system)
         .add_systems(Update, preview_music_update_system)
         .add_systems(Update, state_sync_system)
@@ -391,6 +406,52 @@ fn main() -> Result<()> {
         .add_systems(Update, window_manager::apply_window_settings_system)
         .add_systems(PostStartup, window_manager::apply_monitor_selection_system)
         .run();
+
+    Ok(())
+}
+
+/// Run the game in headless mode (no rendering, no audio).
+///
+/// Uses a manual game loop with `TimerManager::update()` for wall-clock time.
+/// Suitable for E2E testing and benchmarking without GPU.
+fn run_headless(
+    mut registry: StateRegistry,
+    mut resource: PlayerResource,
+    config: bms_config::Config,
+    mut player_config: bms_config::PlayerConfig,
+    database: Option<&DatabaseManager>,
+) -> Result<()> {
+    info!("Running in headless mode");
+
+    let mut timer = TimerManager::new();
+
+    loop {
+        timer.update();
+        let mut params = TickParams {
+            timer: &mut timer,
+            resource: &mut resource,
+            config: &config,
+            player_config: &mut player_config,
+            keyboard_backend: None,
+            database,
+            input_state: None,
+            skin_manager: None,
+            sound_manager: None,
+            received_chars: &[],
+            bevy_images: None,
+            shared_state: None,
+            preview_music: None,
+            download_handle: None,
+        };
+        registry.tick(&mut params);
+
+        if resource.request_app_exit {
+            info!("Headless: exit after result, shutting down");
+            break;
+        }
+
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
 
     Ok(())
 }
@@ -479,6 +540,13 @@ struct BrsConfigPaths {
 
 fn timer_update_system(mut timer: ResMut<BrsTimerManager>) {
     timer.0.update();
+}
+
+/// Exit the app when a state handler requests it (e.g., --exit-after-result).
+fn exit_check_system(resource: Res<BrsPlayerResource>, mut exit: EventWriter<AppExit>) {
+    if resource.0.request_app_exit {
+        exit.send(AppExit::Success);
+    }
 }
 
 #[derive(Resource)]
@@ -909,6 +977,8 @@ mod tests {
             play,
             bms_positional: bms_positional.map(PathBuf::from),
             launcher_only: false,
+            headless: false,
+            exit_after_result: false,
         }
     }
 
@@ -1060,5 +1130,124 @@ mod tests {
             vc.status,
             Some(VersionStatus::UpdateAvailable { .. })
         ));
+    }
+
+    // --- E2E tests ---
+
+    fn make_tick_params<'a>(
+        timer: &'a mut TimerManager,
+        resource: &'a mut PlayerResource,
+        config: &'a bms_config::Config,
+        player_config: &'a mut bms_config::PlayerConfig,
+    ) -> app_state::TickParams<'a> {
+        app_state::TickParams {
+            timer,
+            resource,
+            config,
+            player_config,
+            keyboard_backend: None,
+            database: None,
+            input_state: None,
+            skin_manager: None,
+            sound_manager: None,
+            received_chars: &[],
+            bevy_images: None,
+            shared_state: None,
+            preview_music: None,
+            download_handle: None,
+        }
+    }
+
+    /// In-process E2E test: runs the full state machine flow
+    /// MusicSelect → Decide → Play (autoplay) → Result → exit.
+    ///
+    /// Advances the timer manually (1ms per tick) to drive all state transitions.
+    /// Verifies: state flow, score data, and exit_after_result behavior.
+    #[test]
+    fn e2e_autoplay_full_flow() {
+        let bms_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test-bms/minimal_7k.bms");
+        let model =
+            bms_model::BmsDecoder::decode(&bms_path).expect("Failed to decode minimal_7k.bms");
+
+        let mut resource = PlayerResource {
+            player_mode: PlayerMode::Autoplay,
+            play_mode: model.mode,
+            bms_dir: bms_path.parent().map(|p| p.to_path_buf()),
+            bms_model: Some(model),
+            exit_after_result: true,
+            ..Default::default()
+        };
+
+        let mut registry = StateRegistry::new(AppStateType::MusicSelect);
+        registry.register(AppStateType::MusicSelect, Box::new(MusicSelectState::new()));
+        registry.register(AppStateType::Decide, Box::new(MusicDecideState::new()));
+        registry.register(AppStateType::Play, Box::new(PlayState::new()));
+        registry.register(AppStateType::Result, Box::new(ResultState::new()));
+        registry.register(
+            AppStateType::CourseResult,
+            Box::new(CourseResultState::new()),
+        );
+        registry.register(AppStateType::KeyConfig, Box::new(KeyConfigState::new()));
+        registry.register(AppStateType::SkinConfig, Box::new(SkinConfigState::new()));
+
+        let mut timer = TimerManager::new();
+        let config = bms_config::Config::default();
+        let mut player_config = bms_config::PlayerConfig::default();
+
+        // Run the game loop, advancing 1ms per tick
+        // Maximum ~30s worth of ticks (generous timeout for the full flow)
+        let max_ticks = 30_000;
+        let mut visited_states = vec![AppStateType::MusicSelect];
+
+        for _ in 0..max_ticks {
+            let current = timer.now_micro_time();
+            timer.set_now_micro_time(current + 1_000);
+            let mut params =
+                make_tick_params(&mut timer, &mut resource, &config, &mut player_config);
+            registry.tick(&mut params);
+
+            // Track state transitions
+            let state = registry.current();
+            if visited_states.last() != Some(&state) {
+                visited_states.push(state);
+            }
+
+            if resource.request_app_exit {
+                break;
+            }
+        }
+
+        // Verify the app exited after result
+        assert!(
+            resource.request_app_exit,
+            "App should request exit after result"
+        );
+
+        // Verify full state flow was traversed
+        assert!(
+            visited_states.contains(&AppStateType::Decide),
+            "Should visit Decide, visited: {visited_states:?}"
+        );
+        assert!(
+            visited_states.contains(&AppStateType::Play),
+            "Should visit Play, visited: {visited_states:?}"
+        );
+        assert!(
+            visited_states.contains(&AppStateType::Result),
+            "Should visit Result, visited: {visited_states:?}"
+        );
+
+        // Verify score data (autoplay should judge all notes as PGREAT)
+        assert!(
+            resource.score_data.epg > 0,
+            "Autoplay should produce PGREAT judgments (epg={})",
+            resource.score_data.epg
+        );
+        assert!(
+            resource.maxcombo > 0,
+            "Autoplay should produce combo (maxcombo={})",
+            resource.maxcombo
+        );
     }
 }
