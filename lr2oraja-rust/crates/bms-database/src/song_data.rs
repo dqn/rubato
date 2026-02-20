@@ -305,9 +305,10 @@ impl SongData {
             charthash: row
                 .get::<_, Option<String>>("charthash")?
                 .unwrap_or_default(),
-            // Runtime-only fields (not in DB schema)
-            ipfs: String::new(),
-            appendipfs: String::new(),
+            ipfs: row.get::<_, Option<String>>("ipfs")?.unwrap_or_default(),
+            appendipfs: row
+                .get::<_, Option<String>>("appendipfs")?
+                .unwrap_or_default(),
         })
     }
 }
@@ -712,7 +713,7 @@ mod tests {
 
     #[test]
     fn serde_ipfs_fields_round_trip() {
-        let mut sd = SongData {
+        let sd = SongData {
             title: "t".into(),
             md5: "abc".into(),
             ipfs: "QmTestCid123".into(),

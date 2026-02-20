@@ -6,6 +6,7 @@
 //! [`extract`] for archive extraction (zip, lzh, tar.gz) with path traversal protection.
 
 pub mod extract;
+pub mod ipfs;
 pub mod processor;
 pub mod source;
 pub mod task;

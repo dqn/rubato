@@ -218,10 +218,12 @@ impl SongDatabase {
                 "INSERT OR REPLACE INTO song \
                  (md5,sha256,title,subtitle,genre,artist,subartist,tag,path,folder,\
                   stagefile,banner,backbmp,preview,parent,level,difficulty,maxbpm,minbpm,\
-                  length,mode,judge,feature,content,date,favorite,adddate,notes,charthash) \
+                  length,mode,judge,feature,content,date,favorite,adddate,notes,charthash,\
+                  ipfs,appendipfs) \
                  VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,\
                          ?11,?12,?13,?14,?15,?16,?17,?18,?19,\
-                         ?20,?21,?22,?23,?24,?25,?26,?27,?28,?29)",
+                         ?20,?21,?22,?23,?24,?25,?26,?27,?28,?29,\
+                         ?30,?31)",
             )?;
             for sd in songs {
                 stmt.execute(rusqlite::params![
@@ -254,6 +256,8 @@ impl SongDatabase {
                     sd.adddate,
                     sd.notes,
                     sd.charthash,
+                    sd.ipfs,
+                    sd.appendipfs,
                 ])?;
             }
         }

@@ -375,6 +375,20 @@ pub static SONG_TABLE: TableDef = TableDef {
             primary_key: false,
             default_val: None,
         },
+        ColumnDef {
+            name: "ipfs",
+            sql_type: "TEXT",
+            not_null: false,
+            primary_key: false,
+            default_val: Some("''"),
+        },
+        ColumnDef {
+            name: "appendipfs",
+            sql_type: "TEXT",
+            not_null: false,
+            primary_key: false,
+            default_val: Some("''"),
+        },
     ],
 };
 
