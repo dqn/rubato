@@ -91,67 +91,19 @@ Lessons learned from Phase 0-3 implementation. Refer to these when implementing 
 
 ## Implementation Status
 
-Phase 0-43 全完了（16 crate, ~540,000行）。全 RenderSnapshot GM テストが strict parity 達成済み。
-主な完了領域: BMS パーサー/ルール/パターン/リプレイ、MusicSelect UI 全機能（キーボードショートカット・コンテキストメニュー・skin state）、LR2IR・ライバルスコア統合、Config 配線、GhostBattle seed+lane_sequence、オーディオ復旧、GithubVersionChecker、Download コマンド統合、Grade バー構築。
-残存タスク完了: SongData.ipfs/appendipfs フィールド追加、Lua audio_play/loop/stop シグネチャ修正、Skin Options 値編集 UI (ComboBox)、SongUpdateThread (DB リフレッシュ)、ScrollSpeedModifier コメント修正。
+Phase 0-46 全完了（16 crate, ~541,000行）。全 RenderSnapshot GM テストが strict parity 達成済み。
+Phase 44 (HIGH): Config保存、Loudness正規化、Gauge Auto-Shift、Multi-Bad Collector、NO_SPEED制約、Assist→Result連携、IR送信フィルタ、Skin Property Factories。
+Phase 45 (MEDIUM): Frequency/Random/Judge Trainer統合、Notes Display Timing Auto-Adjust、Guide SE、Play Speed pitch、Additional Key Sounds、IR後Ranking更新。
+Phase 46 (LOW): Judge Area/BPM Guide Lines/HCN/PMS skin state、Screenshot Clipboard、SongDataView/TrainerView パネル、Webhook高度フォーマット、BMS Search→TableData、SongDatabaseUpdateListener、PatternModifyLog、isPlaying()。
 詳細な Phase 別履歴は git log を参照。
 
 ## Deferred / Stub Items
 
 - **Bar::Executable:** production bar list 構築パスで構築されるがコンパイラが検出不可のため `#[allow(dead_code)]` 維持
-
-### Java vs Rust Gap Analysis (2026-02-20)
-
-詳細計画: `.claude/tmp/20260220-plans/` (00-overview.md に全体マップ)
-
-#### HIGH — ゲームプレイ直接影響 (Phase 44)
-
-| ID | Task | Crate | Plan |
-|----|------|-------|------|
-| H1 | Config 保存 (プレイ後 hispeed/lanecover/lift/hidden) | brs | `01-high-config-persistence.md` |
-| H2 | Loudness 正規化の適用 (Analyzer 未接続) | brs, bms-audio | `02-high-loudness-wiring.md` |
-| H3 | Gauge Auto-Shift ロジック (enum のみ、ロジック未実装) | brs, bms-rule | `03-high-gauge-autoshift.md` |
-| H4 | Multi-Bad Collector (密集 BAD フィルタリング) | bms-rule | `04-high-multi-bad-collector.md` |
-| H5 | NO_SPEED 制約チェック (コース中 hispeed ロック) | brs | `05-high-nospeed-constraint.md` |
-| H6 | Assist Level → Result 連携 (クリアタイプ上書き) | brs | `06-high-assist-to-result.md` |
-| H7 | IR 送信条件フィルタリング (ALWAYS/COMPLETE/UPDATE) | brs | `07-high-ir-send-filter.md` |
-| H8 | Skin Property Factories (5 Factory + EventFactory) | bms-skin, brs | `08-high-skin-property-factories.md` |
-
-#### MEDIUM — トレーニング・補助機能 (Phase 45)
-
-| ID | Task | Crate | Plan |
-|----|------|-------|------|
-| M1 | Frequency Trainer | brs, bms-audio | `09-medium-trainers.md` |
-| M2 | Random Trainer seed override | brs, bms-pattern | `09-medium-trainers.md` |
-| M3 | Judge Trainer 統合 | brs, bms-rule | `09-medium-trainers.md` |
-| M4 | Notes Display Timing Auto-Adjust | bms-rule | `10-medium-misc.md` |
-| M5 | Guide SE support | brs, bms-audio | `10-medium-misc.md` |
-| M6 | Play Speed → audio pitch | brs, bms-audio | `10-medium-misc.md` |
-| M7 | Additional Key Sounds (judge SE) | bms-audio | `10-medium-misc.md` |
-| M8 | Ranking update after IR submission | brs, bms-ir | `10-medium-misc.md` |
-
-#### LOW — 表示・UI・非コア (Phase 46)
-
-| ID | Task | Crate | Plan |
-|----|------|-------|------|
-| L1 | Judge Area Visualization | bms-render | `11-low-render-visual.md` |
-| L2 | PMS Past Note Fall-Through | bms-render | `11-low-render-visual.md` |
-| L3 | BPM Guide Lines | bms-render | `11-low-render-visual.md` |
-| L4 | HCN Visual State | bms-render | `11-low-render-visual.md` |
-| L5 | Note Expansion Animation (PMS) | bms-render | `11-low-render-visual.md` |
-| L6 | Twitter Screenshot Export | bms-external | `12-low-external-ui.md` |
-| L7 | Screenshot Clipboard | bms-external | `12-low-external-ui.md` |
-| L8 | Launcher: SongDataView | bms-launcher | `12-low-external-ui.md` |
-| L9 | Launcher: TrainerView | bms-launcher | `12-low-external-ui.md` |
-| L10 | KonmaiDownloadSource | bms-download | `12-low-external-ui.md` |
-| L11 | WriggleDownloadSource | bms-download | `12-low-external-ui.md` |
-| L12 | IPFS appendipfs (差分DL) | bms-download | `12-low-external-ui.md` |
-| L13 | Webhook 高度フォーマット | bms-external | `12-low-external-ui.md` |
-| L14 | Audio Device Selection | bms-audio | `12-low-external-ui.md` |
-| L15 | BMS Search → TableData | bms-external | `12-low-external-ui.md` |
-| L16 | SongDatabaseUpdateListener | bms-database | `12-low-external-ui.md` |
-| L17 | PatternModifyLog | bms-pattern | `12-low-external-ui.md` |
-| L18 | isPlaying() check | bms-audio | `12-low-external-ui.md` |
+- **L5 Note Expansion (PMS):** `sync_play_note_expansion()` 関数は定義済みだが、`RhythmTimerProcessor` が `PlayState` に未組込のため配線未完了
+- **L6 Twitter Screenshot Export:** Twitter API v2 が有料化のためスキップ（Webhook で Discord カバー済み）
+- **L12 IPFS appendipfs:** DB スキーマ移行 + IPFS ゲートウェイ設定が必要。差分DL機能は後回し
+- **L14 Audio Device Selection:** cpal デバイス列挙 + KiraDriver へのデバイス指定が必要。システムデフォルト使用で動作中
 
 ## Known Issues
 
