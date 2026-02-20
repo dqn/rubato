@@ -98,10 +98,21 @@ pub fn load_skin_with_images(
         skin.scene = data.scene;
     }
 
-    // Build options map
+    // Build options map (with def fallback when no explicit selection)
     for opt in &data.property {
+        let any_enabled = opt
+            .item
+            .iter()
+            .any(|item| enabled_options.contains(&item.op));
         for item in &opt.item {
-            let is_enabled = enabled_options.contains(&item.op);
+            let is_enabled = if any_enabled {
+                enabled_options.contains(&item.op)
+            } else {
+                // No explicit selection: use "def" default
+                opt.def
+                    .as_deref()
+                    .is_some_and(|def| item.name.as_deref() == Some(def))
+            };
             skin.options.insert(item.op, if is_enabled { 1 } else { 0 });
         }
     }

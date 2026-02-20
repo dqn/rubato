@@ -46,8 +46,8 @@ pub fn check_option_conditions(
         if let Some(selected) = skin.options.get(&abs).copied() {
             if op > 0 { selected == 1 } else { selected == 0 }
         } else {
-            // Unknown option IDs are rejected (matches Java behavior).
-            false
+            // Unknown option IDs default to visible (Java parity: unregistered options show).
+            true
         }
     })
 }
@@ -629,12 +629,13 @@ mod tests {
     }
 
     #[test]
-    fn option_conditions_unknown_skin_option_rejected() {
+    fn option_conditions_unknown_skin_option_defaults_visible() {
         let mut base = make_base_with_dst(0, 0.0, 0.0, 100.0, 100.0);
         base.option_conditions = vec![9999]; // not in known ranges, not in skin.options
         let p = StaticStateProvider::default();
         let skin = make_skin();
-        assert!(!check_option_conditions(&base, &skin, &p));
+        // Unknown option IDs default to visible (Java parity)
+        assert!(check_option_conditions(&base, &skin, &p));
     }
 
     #[test]
