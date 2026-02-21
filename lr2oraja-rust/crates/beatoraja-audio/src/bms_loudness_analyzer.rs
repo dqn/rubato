@@ -1,0 +1,75 @@
+use bms_model::bms_model::BMSModel;
+
+/// BMS loudness analyzer (stub - depends on ebur128).
+///
+/// Translated from: BMSLoudnessAnalyzer.java
+/// This is a stub since ebur128 library integration is deferred.
+pub struct BMSLoudnessAnalyzer {
+    available: bool,
+}
+
+/// Analysis result containing loudness measurement.
+///
+/// Translated from: BMSLoudnessAnalyzer.AnalysisResult
+pub struct AnalysisResult {
+    pub loudness_lufs: f64,
+    pub success: bool,
+    pub error_message: Option<String>,
+}
+
+impl AnalysisResult {
+    pub fn new_success(loudness_lufs: f64) -> Self {
+        AnalysisResult {
+            loudness_lufs,
+            success: true,
+            error_message: None,
+        }
+    }
+
+    pub fn new_error(error_message: String) -> Self {
+        AnalysisResult {
+            loudness_lufs: f64::NAN,
+            success: false,
+            error_message: Some(error_message),
+        }
+    }
+
+    pub fn calculate_adjusted_volume(&self, base_volume: f32) -> f32 {
+        if !self.success || self.loudness_lufs.is_nan() {
+            return base_volume;
+        }
+
+        // Average loudness level (50% volume)
+        let average_lufs: f64 = -12.00;
+
+        let loudness_diff = self.loudness_lufs - average_lufs;
+        let gain_adjustment = 10.0f64.powf(-loudness_diff / 20.0);
+
+        let adjusted_volume = (0.5f64 * gain_adjustment) as f32;
+        adjusted_volume.max(0.0).min(1.0)
+    }
+}
+
+impl BMSLoudnessAnalyzer {
+    pub fn new() -> Self {
+        BMSLoudnessAnalyzer { available: false }
+    }
+
+    pub fn is_available(&self) -> bool {
+        self.available
+    }
+
+    pub fn analyze(&self, _model: &BMSModel) -> AnalysisResult {
+        todo!("BMSLoudnessAnalyzer depends on ebur128 library")
+    }
+
+    pub fn shutdown(&self) {
+        // No-op for stub
+    }
+}
+
+impl Default for BMSLoudnessAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
