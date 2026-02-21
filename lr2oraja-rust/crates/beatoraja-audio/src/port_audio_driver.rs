@@ -13,8 +13,9 @@ use kira::{AudioManager, AudioManagerSettings, DefaultBackend, PlaybackRate, Sem
 use bms_model::bms_model::BMSModel;
 use bms_model::note::Note;
 
+use crate::abstract_audio_driver::SliceWav;
 use crate::audio_driver::AudioDriver;
-use crate::gdx_sound_driver::linear_to_db;
+use crate::gdx_sound_driver::{add_note_entry, linear_to_db};
 
 pub struct PortAudioDriver {
     manager: AudioManager,
@@ -28,6 +29,9 @@ pub struct PortAudioDriver {
     volume: f32,
     #[allow(dead_code)]
     song_resource_gen: i32,
+    // Sliced sounds by wav ID (for notes with non-zero starttime/duration)
+    slicesound: HashMap<i32, Vec<SliceWav<StaticSoundData>>>,
+    slice_handles: HashMap<(i32, i64, i64), StaticSoundHandle>,
     // Cache for loaded sounds by path (matches Java soundmap)
     sound_cache: HashMap<String, StaticSoundData>,
     // Additional key sounds for judge playback: [6 judges][2: fast=0, late=1]
@@ -47,6 +51,8 @@ impl PortAudioDriver {
             global_pitch: 1.0,
             volume: 1.0,
             song_resource_gen,
+            slicesound: HashMap::new(),
+            slice_handles: HashMap::new(),
             sound_cache: HashMap::new(),
             additional_key_sounds: Default::default(),
             additional_key_sound_handles: Default::default(),
@@ -118,6 +124,8 @@ impl AudioDriver for PortAudioDriver {
         // Clear previous sounds
         self.wav_sounds.clear();
         self.wav_handles.clear();
+        self.slicesound.clear();
+        self.slice_handles.clear();
 
         // Set volume from model's volwav
         let volwav = model.get_volwav();
@@ -137,36 +145,29 @@ impl AudioDriver for PortAudioDriver {
             .get_path()
             .and_then(|p| Path::new(&p).parent().map(|d| d.to_path_buf()));
 
-        // Collect wav IDs referenced by notes
-        let mut referenced_wavs = std::collections::HashSet::new();
+        // Collect notes by wav ID, deduplicating by (starttime, duration)
+        // Translated from AbstractAudioDriver.addNoteList()
+        let mut notemap: HashMap<i32, Vec<(i64, i64)>> = HashMap::new();
         let lanes = model.get_mode().map(|m| m.key()).unwrap_or(0);
         for tl in model.get_all_time_lines() {
             for i in 0..lanes {
                 if let Some(n) = tl.get_note(i) {
-                    if n.get_wav() >= 0 {
-                        referenced_wavs.insert(n.get_wav());
-                    }
+                    add_note_entry(&mut notemap, n);
                     for ln in n.get_layered_notes() {
-                        if ln.get_wav() >= 0 {
-                            referenced_wavs.insert(ln.get_wav());
-                        }
+                        add_note_entry(&mut notemap, ln);
                     }
                 }
-                if let Some(hn) = tl.get_hidden_note(i)
-                    && hn.get_wav() >= 0
-                {
-                    referenced_wavs.insert(hn.get_wav());
+                if let Some(hn) = tl.get_hidden_note(i) {
+                    add_note_entry(&mut notemap, hn);
                 }
             }
             for n in tl.get_back_ground_notes() {
-                if n.get_wav() >= 0 {
-                    referenced_wavs.insert(n.get_wav());
-                }
+                add_note_entry(&mut notemap, n);
             }
         }
 
-        // Load audio files for referenced wav IDs
-        for wav_id in &referenced_wavs {
+        // Load audio for each wav ID
+        for (wav_id, note_entries) in &notemap {
             let wav_id_usize = *wav_id as usize;
             if wav_id_usize >= wav_list.len() {
                 continue;
@@ -176,38 +177,60 @@ impl AudioDriver for PortAudioDriver {
                 continue;
             }
 
-            // Resolve path relative to BMS directory
             let resolved = if let Some(ref dir) = bms_dir {
                 dir.join(wav_path)
             } else {
                 std::path::PathBuf::from(wav_path)
             };
 
-            // Try the resolved path and alternate extensions
             let abs_path = resolved.to_string_lossy().to_string();
             let candidates = crate::audio_driver::get_paths(&abs_path);
 
-            let mut loaded = false;
+            let mut sound_data: Option<StaticSoundData> = None;
             for candidate in &candidates {
                 match StaticSoundData::from_file(candidate) {
-                    Ok(sound_data) => {
-                        self.wav_sounds.insert(*wav_id, sound_data);
-                        loaded = true;
+                    Ok(data) => {
+                        sound_data = Some(data);
                         break;
                     }
                     Err(_) => continue,
                 }
             }
 
-            if !loaded {
+            let Some(base_sound) = sound_data else {
                 log::debug!("Failed to load keysound for wav {}: {}", wav_id, abs_path);
+                continue;
+            };
+
+            for &(starttime, duration) in note_entries {
+                if starttime == 0 && duration == 0 {
+                    // Non-sliced: store full sound
+                    self.wav_sounds.insert(*wav_id, base_sound.clone());
+                } else {
+                    // Sliced: use Kira's slice field for zero-copy sub-sample
+                    let sample_rate = base_sound.sample_rate as i64;
+                    let start_frame = (starttime * sample_rate / 1_000_000) as usize;
+                    let duration_frames = (duration * sample_rate / 1_000_000) as usize;
+                    let total_frames = base_sound.frames.len();
+                    let end_frame = (start_frame + duration_frames).min(total_frames);
+
+                    if start_frame < total_frames {
+                        let mut sliced = base_sound.clone();
+                        sliced.slice = Some((start_frame, end_frame));
+
+                        self.slicesound
+                            .entry(*wav_id)
+                            .or_default()
+                            .push(SliceWav::new(starttime, duration, sliced));
+                    }
+                }
             }
         }
 
         log::info!(
-            "Keysound loading complete. Loaded: {}/{}",
+            "Keysound loading complete. Loaded: {} (sliced: {})",
             self.wav_sounds.len(),
-            referenced_wavs.len()
+            self.slicesound.values().map(|v| v.len()).sum::<usize>()
         );
     }
 
@@ -269,6 +292,9 @@ impl AudioDriver for PortAudioDriver {
                 for (_, mut handle) in self.wav_handles.drain() {
                     handle.stop(Tween::default());
                 }
+                for (_, mut handle) in self.slice_handles.drain() {
+                    handle.stop(Tween::default());
+                }
             }
             Some(note) => {
                 self.stop_note_internal(note);
@@ -300,6 +326,8 @@ impl AudioDriver for PortAudioDriver {
         self.path_sounds.clear();
         self.wav_sounds.clear();
         self.wav_handles.clear();
+        self.slicesound.clear();
+        self.slice_handles.clear();
         self.sound_cache.clear();
         self.additional_key_sounds = Default::default();
         self.additional_key_sound_handles = Default::default();
@@ -327,6 +355,15 @@ impl PortAudioDriver {
         None
     }
 
+    /// Apply pitch shift to a sound handle.
+    fn apply_pitch(&self, handle: &mut StaticSoundHandle, pitch_shift: i32) {
+        if pitch_shift != 0 {
+            handle.set_playback_rate(Semitones(pitch_shift as f64), Tween::default());
+        } else if (self.global_pitch - 1.0).abs() > f32::EPSILON {
+            handle.set_playback_rate(PlaybackRate(self.global_pitch as f64), Tween::default());
+        }
+    }
+
     /// Play a single note's keysound (without layered notes).
     /// Translated from AbstractAudioDriver.play0()
     fn play_note_internal(&mut self, n: &Note, volume: f32, pitch_shift: i32) {
@@ -335,26 +372,45 @@ impl PortAudioDriver {
             return;
         }
 
+        let starttime = n.get_micro_starttime();
+        let duration = n.get_micro_duration();
+
+        // Check for sliced sound first
+        if (starttime != 0 || duration != 0)
+            && let Some(slices) = self.slicesound.get(&wav_id)
+        {
+            for slice in slices {
+                if slice.starttime == starttime && slice.duration == duration {
+                    let key = (wav_id, starttime, duration);
+                    if let Some(mut old_handle) = self.slice_handles.remove(&key) {
+                        old_handle.stop(Tween::default());
+                    }
+                    let sound = slice.wav.clone();
+                    match self.manager.play(sound) {
+                        Ok(mut handle) => {
+                            handle.set_volume(linear_to_db(volume), Tween::default());
+                            self.apply_pitch(&mut handle, pitch_shift);
+                            self.slice_handles.insert(key, handle);
+                        }
+                        Err(e) => {
+                            log::warn!("Failed to play sliced keysound wav {}: {}", wav_id, e);
+                        }
+                    }
+                    return;
+                }
+            }
+        }
+
+        // Non-sliced: play full sound
         if let Some(sound_data) = self.wav_sounds.get(&wav_id) {
-            // Stop any currently playing instance of this keysound
             if let Some(mut old_handle) = self.wav_handles.remove(&wav_id) {
                 old_handle.stop(Tween::default());
             }
-
-            // Clone sound data and play
             let sound = sound_data.clone();
             match self.manager.play(sound) {
                 Ok(mut handle) => {
                     handle.set_volume(linear_to_db(volume), Tween::default());
-                    // Apply pitch: semitone shift if specified, otherwise global pitch
-                    if pitch_shift != 0 {
-                        handle.set_playback_rate(Semitones(pitch_shift as f64), Tween::default());
-                    } else if (self.global_pitch - 1.0).abs() > f32::EPSILON {
-                        handle.set_playback_rate(
-                            PlaybackRate(self.global_pitch as f64),
-                            Tween::default(),
-                        );
-                    }
+                    self.apply_pitch(&mut handle, pitch_shift);
                     self.wav_handles.insert(wav_id, handle);
                 }
                 Err(e) => {
@@ -371,6 +427,18 @@ impl PortAudioDriver {
         if wav_id < 0 {
             return;
         }
+
+        let starttime = n.get_micro_starttime();
+        let duration = n.get_micro_duration();
+
+        if starttime != 0 || duration != 0 {
+            let key = (wav_id, starttime, duration);
+            if let Some(mut handle) = self.slice_handles.remove(&key) {
+                handle.stop(Tween::default());
+                return;
+            }
+        }
+
         if let Some(mut handle) = self.wav_handles.remove(&wav_id) {
             handle.stop(Tween::default());
         }
@@ -383,6 +451,18 @@ impl PortAudioDriver {
         if wav_id < 0 {
             return;
         }
+
+        let starttime = n.get_micro_starttime();
+        let duration = n.get_micro_duration();
+
+        if starttime != 0 || duration != 0 {
+            let key = (wav_id, starttime, duration);
+            if let Some(handle) = self.slice_handles.get_mut(&key) {
+                handle.set_volume(linear_to_db(volume), Tween::default());
+                return;
+            }
+        }
+
         if let Some(handle) = self.wav_handles.get_mut(&wav_id) {
             handle.set_volume(linear_to_db(volume), Tween::default());
         }
