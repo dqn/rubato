@@ -116,9 +116,9 @@ impl PatternModifier for ExtraNoteModifier {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pattern_modifier::make_test_model;
     use bms_model::mode::Mode;
     use bms_model::time_line::TimeLine;
-    use crate::pattern_modifier::make_test_model;
 
     #[test]
     fn extra_note_modifier_creation() {

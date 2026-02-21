@@ -150,23 +150,23 @@ mod tests {
         sd.lms = 8;
 
         // judge 0 = PG
-        assert_eq!(sd.get_judge_count(0, true), 10);  // epg
+        assert_eq!(sd.get_judge_count(0, true), 10); // epg
         assert_eq!(sd.get_judge_count(0, false), 20); // lpg
         // judge 1 = GR
-        assert_eq!(sd.get_judge_count(1, true), 30);  // egr
+        assert_eq!(sd.get_judge_count(1, true), 30); // egr
         assert_eq!(sd.get_judge_count(1, false), 40); // lgr
         // judge 2 = GD
-        assert_eq!(sd.get_judge_count(2, true), 5);   // egd
-        assert_eq!(sd.get_judge_count(2, false), 6);  // lgd
+        assert_eq!(sd.get_judge_count(2, true), 5); // egd
+        assert_eq!(sd.get_judge_count(2, false), 6); // lgd
         // judge 3 = BD
-        assert_eq!(sd.get_judge_count(3, true), 2);   // ebd
-        assert_eq!(sd.get_judge_count(3, false), 3);  // lbd
+        assert_eq!(sd.get_judge_count(3, true), 2); // ebd
+        assert_eq!(sd.get_judge_count(3, false), 3); // lbd
         // judge 4 = PR
-        assert_eq!(sd.get_judge_count(4, true), 1);   // epr
-        assert_eq!(sd.get_judge_count(4, false), 2);  // lpr
+        assert_eq!(sd.get_judge_count(4, true), 1); // epr
+        assert_eq!(sd.get_judge_count(4, false), 2); // lpr
         // judge 5 = MS
-        assert_eq!(sd.get_judge_count(5, true), 7);   // ems
-        assert_eq!(sd.get_judge_count(5, false), 8);  // lms
+        assert_eq!(sd.get_judge_count(5, true), 7); // ems
+        assert_eq!(sd.get_judge_count(5, false), 8); // lms
         // invalid judge
         assert_eq!(sd.get_judge_count(6, true), 0);
         assert_eq!(sd.get_judge_count(-1, false), 0);
@@ -180,8 +180,8 @@ mod tests {
         sd.egr = 30;
         sd.lgr = 40;
 
-        assert_eq!(sd.get_judge_count_total(0), 30);  // epg + lpg
-        assert_eq!(sd.get_judge_count_total(1), 70);  // egr + lgr
+        assert_eq!(sd.get_judge_count_total(0), 30); // epg + lpg
+        assert_eq!(sd.get_judge_count_total(1), 70); // egr + lgr
     }
 
     #[test]
@@ -249,7 +249,10 @@ mod tests {
 
         let ghost = vec![0, 1, 2, 1, 0];
         sd.encode_ghost(Some(&ghost));
-        assert!(!sd.ghost.is_empty(), "ghost should be encoded to non-empty string");
+        assert!(
+            !sd.ghost.is_empty(),
+            "ghost should be encoded to non-empty string"
+        );
 
         let decoded = sd.decode_ghost();
         assert!(decoded.is_some());

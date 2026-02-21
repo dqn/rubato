@@ -59,7 +59,10 @@ mod tests {
 
         rd.shrink();
         assert!(rd.keyinput.is_some(), "keyinput should be set after shrink");
-        assert!(rd.keylog.is_empty(), "keylog should be emptied after shrink");
+        assert!(
+            rd.keylog.is_empty(),
+            "keylog should be emptied after shrink"
+        );
     }
 
     #[test]

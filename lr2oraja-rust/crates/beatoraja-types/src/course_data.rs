@@ -302,7 +302,10 @@ mod tests {
         let mut cd = CourseData::default();
         assert!(cd.get_constraint().is_empty());
 
-        cd.set_constraint(vec![CourseDataConstraint::Class, CourseDataConstraint::NoSpeed]);
+        cd.set_constraint(vec![
+            CourseDataConstraint::Class,
+            CourseDataConstraint::NoSpeed,
+        ]);
         assert_eq!(cd.get_constraint().len(), 2);
     }
 

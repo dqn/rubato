@@ -5,9 +5,7 @@
 
 use std::collections::HashMap;
 
-use beatoraja_core::config::{
-    BGA_OFF, BGAEXPAND_FULL, Config, DisplayMode, SongPreview,
-};
+use beatoraja_core::config::{BGA_OFF, BGAEXPAND_FULL, Config, DisplayMode, SongPreview};
 use beatoraja_types::audio_config::AudioConfig;
 use beatoraja_types::resolution::Resolution;
 
@@ -105,8 +103,7 @@ fn config_serialize_deserialize_roundtrip() {
     let config = make_custom_config();
 
     // Serialize to JSON
-    let json =
-        serde_json::to_string_pretty(&config).expect("Config serialization should not fail");
+    let json = serde_json::to_string_pretty(&config).expect("Config serialization should not fail");
 
     // Deserialize back
     let restored: Config =
@@ -120,18 +117,12 @@ fn config_serialize_deserialize_roundtrip() {
     assert_eq!(restored.window_width, config.window_width);
     assert_eq!(restored.window_height, config.window_height);
     assert_eq!(restored.folderlamp, config.folderlamp);
-    assert_eq!(
-        restored.max_frame_per_second,
-        config.max_frame_per_second
-    );
+    assert_eq!(restored.max_frame_per_second, config.max_frame_per_second);
     assert_eq!(
         restored.prepare_frame_per_second,
         config.prepare_frame_per_second
     );
-    assert_eq!(
-        restored.max_search_bar_count,
-        config.max_search_bar_count
-    );
+    assert_eq!(restored.max_search_bar_count, config.max_search_bar_count);
     assert_eq!(restored.skip_decide_screen, config.skip_decide_screen);
     assert_eq!(
         restored.show_no_song_existing_bar,
@@ -178,10 +169,7 @@ fn config_serialize_deserialize_roundtrip() {
     assert_eq!(restored.enable_http, config.enable_http);
     assert_eq!(restored.download_source, config.download_source);
     assert_eq!(restored.default_download_url, config.default_download_url);
-    assert_eq!(
-        restored.override_download_url,
-        config.override_download_url
-    );
+    assert_eq!(restored.override_download_url, config.override_download_url);
     assert_eq!(restored.download_directory, config.download_directory);
     assert_eq!(restored.ir_send_count, config.ir_send_count);
     assert_eq!(restored.use_discord_rpc, config.use_discord_rpc);
@@ -309,7 +297,11 @@ fn config_roundtrip_preserves_display_mode_variants() {
 
         // Serialize again to compare
         let json3 = serde_json::to_string(&restored).unwrap();
-        assert_eq!(json2, json3, "DisplayMode {} should survive round-trip", label);
+        assert_eq!(
+            json2, json3,
+            "DisplayMode {} should survive round-trip",
+            label
+        );
     }
 }
 

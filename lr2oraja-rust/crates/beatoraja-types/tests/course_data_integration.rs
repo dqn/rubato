@@ -187,9 +187,9 @@ fn validate_removes_invalid_trophies() {
 
     // Mix valid and invalid trophies
     cd.set_trophy(vec![
-        TrophyData::new("Gold".to_string(), 5.0, 90.0),     // valid
-        TrophyData::new("Bad".to_string(), 0.0, 90.0),      // invalid: missrate <= 0
-        TrophyData::new("Silver".to_string(), 10.0, 80.0),  // valid
+        TrophyData::new("Gold".to_string(), 5.0, 90.0), // valid
+        TrophyData::new("Bad".to_string(), 0.0, 90.0),  // invalid: missrate <= 0
+        TrophyData::new("Silver".to_string(), 10.0, 80.0), // valid
         TrophyData::new("Overflow".to_string(), 5.0, 100.0), // invalid: scorerate >= 100
     ]);
 
@@ -244,8 +244,7 @@ fn course_data_full_serde_roundtrip() {
     ]);
 
     let json = serde_json::to_string_pretty(&cd).expect("Serialization should succeed");
-    let restored: CourseData =
-        serde_json::from_str(&json).expect("Deserialization should succeed");
+    let restored: CourseData = serde_json::from_str(&json).expect("Deserialization should succeed");
 
     // Verify name
     assert_eq!(restored.get_name(), "Full Course");

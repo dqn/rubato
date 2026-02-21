@@ -160,8 +160,8 @@ impl PatternModifier for MineNoteModifier {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pattern_modifier::{PatternModifier, make_test_model};
     use bms_model::time_line::TimeLine;
-    use crate::pattern_modifier::{make_test_model, PatternModifier};
 
     // -- Mode enum (mine_note_modifier::Mode) --
 
@@ -277,11 +277,7 @@ mod tests {
         // All other lanes should have mine notes
         for lane in 1..8 {
             let note = tls[0].get_note(lane);
-            assert!(
-                note.is_some(),
-                "Lane {} should have a mine note",
-                lane
-            );
+            assert!(note.is_some(), "Lane {} should have a mine note", lane);
             assert!(
                 note.unwrap().is_mine(),
                 "Lane {} should be a mine note",

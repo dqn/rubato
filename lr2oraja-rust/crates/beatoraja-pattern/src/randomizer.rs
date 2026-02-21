@@ -1369,11 +1369,7 @@ mod tests {
     fn button_combination_table_is_sorted_per_entry() {
         for entry in button_combination_table() {
             for i in 1..entry.len() {
-                assert!(
-                    entry[i] > entry[i - 1],
-                    "Entry {:?} is not sorted",
-                    entry
-                );
+                assert!(entry[i] > entry[i - 1], "Entry {:?} is not sorted", entry);
             }
         }
     }

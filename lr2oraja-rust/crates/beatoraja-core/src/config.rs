@@ -57,7 +57,10 @@ mod tests {
         assert_eq!(config.tablepath, deserialized.tablepath);
         assert_eq!(config.playerpath, deserialized.playerpath);
         assert_eq!(config.skinpath, deserialized.skinpath);
-        assert_eq!(config.max_frame_per_second, deserialized.max_frame_per_second);
+        assert_eq!(
+            config.max_frame_per_second,
+            deserialized.max_frame_per_second
+        );
         assert_eq!(config.bga, deserialized.bga);
         assert_eq!(config.bga_expand, deserialized.bga_expand);
         assert_eq!(config.vsync, deserialized.vsync);
@@ -76,10 +79,7 @@ mod tests {
         let json = serde_json::to_string(&config).unwrap();
         let deserialized: Config = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(
-            deserialized.playername,
-            Some("TestPlayer".to_string())
-        );
+        assert_eq!(deserialized.playername, Some("TestPlayer".to_string()));
         assert_eq!(deserialized.window_width, 1920);
         assert_eq!(deserialized.window_height, 1080);
         assert!(deserialized.vsync);
@@ -204,10 +204,7 @@ mod tests {
 
         // Set a scene
         config.set_obs_scene("play".to_string(), Some("PlayScene".to_string()));
-        assert_eq!(
-            config.get_obs_scene("play"),
-            Some(&"PlayScene".to_string())
-        );
+        assert_eq!(config.get_obs_scene("play"), Some(&"PlayScene".to_string()));
 
         // Remove with None
         config.set_obs_scene("play".to_string(), None);
@@ -258,7 +255,10 @@ mod tests {
 
         assert_eq!(config.get_webhook_option(), 1);
         assert_eq!(config.get_webhook_name(), "MyBot");
-        assert_eq!(config.get_webhook_avatar(), "https://example.com/avatar.png");
+        assert_eq!(
+            config.get_webhook_avatar(),
+            "https://example.com/avatar.png"
+        );
         assert_eq!(config.get_webhook_url().len(), 1);
     }
 

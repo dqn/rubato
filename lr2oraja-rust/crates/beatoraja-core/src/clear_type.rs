@@ -76,10 +76,7 @@ mod tests {
             ClearType::get_clear_type_by_gauge(2),
             Some(ClearType::Normal)
         );
-        assert_eq!(
-            ClearType::get_clear_type_by_gauge(3),
-            Some(ClearType::Hard)
-        );
+        assert_eq!(ClearType::get_clear_type_by_gauge(3), Some(ClearType::Hard));
         assert_eq!(
             ClearType::get_clear_type_by_gauge(4),
             Some(ClearType::ExHard)
@@ -93,10 +90,7 @@ mod tests {
             ClearType::get_clear_type_by_gauge(6),
             Some(ClearType::Normal)
         );
-        assert_eq!(
-            ClearType::get_clear_type_by_gauge(7),
-            Some(ClearType::Hard)
-        );
+        assert_eq!(ClearType::get_clear_type_by_gauge(7), Some(ClearType::Hard));
         assert_eq!(
             ClearType::get_clear_type_by_gauge(8),
             Some(ClearType::ExHard)

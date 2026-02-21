@@ -343,7 +343,10 @@ mod tests {
 
         // Note should still be in lane 0
         assert!(model.get_all_time_lines()[0].get_note(0).is_some());
-        assert_eq!(model.get_all_time_lines()[0].get_note(0).unwrap().get_wav(), 1);
+        assert_eq!(
+            model.get_all_time_lines()[0].get_note(0).unwrap().get_wav(),
+            1
+        );
     }
 
     // -- get_keys --

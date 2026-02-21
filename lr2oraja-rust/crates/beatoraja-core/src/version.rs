@@ -194,7 +194,11 @@ mod tests {
     fn test_version_includes_build_type_prefix() {
         let v = version();
         // BUILD_TYPE is Prerelease, so version starts with "pre"
-        assert!(v.starts_with("pre"), "version should start with 'pre', got: {}", v);
+        assert!(
+            v.starts_with("pre"),
+            "version should start with 'pre', got: {}",
+            v
+        );
         assert_eq!(v, "pre0.5.0");
     }
 

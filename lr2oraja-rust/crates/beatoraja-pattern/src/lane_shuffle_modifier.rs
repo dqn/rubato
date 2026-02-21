@@ -745,11 +745,11 @@ fn search_for_no_murioshi_lane_combinations(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pattern_modifier::make_test_model;
     use bms_model::bms_model::BMSModel;
     use bms_model::mode::Mode;
     use bms_model::note::Note;
     use bms_model::time_line::TimeLine;
-    use crate::pattern_modifier::make_test_model;
 
     // -- PatternModifierBase::get_keys_static --
 
@@ -1011,7 +1011,10 @@ mod tests {
 
         let result = PlayerFlipModifier::make_random(&[], &model, 0);
         // Double player: first half <-> second half
-        assert_eq!(result, vec![8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(
+            result,
+            vec![8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7]
+        );
     }
 
     // -- PlayerBattleModifier --

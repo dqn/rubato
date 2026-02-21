@@ -121,10 +121,10 @@ impl PatternModifier for AutoplayModifier {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pattern_modifier::make_test_model;
     use bms_model::mode::Mode;
     use bms_model::note::Note;
     use bms_model::time_line::TimeLine;
-    use crate::pattern_modifier::make_test_model;
 
     #[test]
     fn autoplay_modifier_creation() {

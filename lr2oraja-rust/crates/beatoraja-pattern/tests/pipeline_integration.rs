@@ -144,7 +144,9 @@ fn mirror_modifier_reverses_lanes() {
         .collect();
 
     // There should be some notes to actually test
-    let has_notes = before.iter().any(|tl_notes| tl_notes.iter().any(|n| n.is_some()));
+    let has_notes = before
+        .iter()
+        .any(|tl_notes| tl_notes.iter().any(|n| n.is_some()));
     assert!(has_notes, "Model should have notes to test mirror on");
 
     // Apply mirror modifier (without scratch lane modify)

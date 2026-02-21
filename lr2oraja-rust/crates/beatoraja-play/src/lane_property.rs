@@ -256,10 +256,7 @@ mod tests {
     #[test]
     fn beat_7k_key_to_lane() {
         let lp = LaneProperty::new(&Mode::BEAT_7K);
-        assert_eq!(
-            lp.get_key_lane_assign(),
-            &[0, 1, 2, 3, 4, 5, 6, 7, 7]
-        );
+        assert_eq!(lp.get_key_lane_assign(), &[0, 1, 2, 3, 4, 5, 6, 7, 7]);
     }
 
     #[test]
@@ -303,7 +300,7 @@ mod tests {
     fn beat_10k_scratch_lanes() {
         let lp = LaneProperty::new(&Mode::BEAT_10K);
         let scratch = lp.get_lane_scratch_assign();
-        assert_eq!(scratch[5], 0);  // Player 1 scratch
+        assert_eq!(scratch[5], 0); // Player 1 scratch
         assert_eq!(scratch[11], 1); // Player 2 scratch
     }
 
@@ -344,8 +341,8 @@ mod tests {
     fn beat_14k_scratch_lanes() {
         let lp = LaneProperty::new(&Mode::BEAT_14K);
         let scratch = lp.get_lane_scratch_assign();
-        assert_eq!(scratch[7], 0);   // Player 1 scratch
-        assert_eq!(scratch[15], 1);  // Player 2 scratch
+        assert_eq!(scratch[7], 0); // Player 1 scratch
+        assert_eq!(scratch[15], 1); // Player 2 scratch
     }
 
     #[test]

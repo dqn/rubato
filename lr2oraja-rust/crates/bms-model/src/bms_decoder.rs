@@ -1234,14 +1234,8 @@ mod tests {
         // SHA256 hash should be 64 hex characters
         assert_eq!(model.get_sha256().len(), 64);
         // Should only contain hex digits
-        assert!(model
-            .get_md5()
-            .chars()
-            .all(|c| c.is_ascii_hexdigit()));
-        assert!(model
-            .get_sha256()
-            .chars()
-            .all(|c| c.is_ascii_hexdigit()));
+        assert!(model.get_md5().chars().all(|c| c.is_ascii_hexdigit()));
+        assert!(model.get_sha256().chars().all(|c| c.is_ascii_hexdigit()));
     }
 
     #[test]

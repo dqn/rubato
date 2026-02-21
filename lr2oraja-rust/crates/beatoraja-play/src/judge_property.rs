@@ -788,10 +788,7 @@ mod tests {
     fn judge_vanish_flags() {
         let jp = sevenkeys();
         // PG through PR cause vanish, MS does not
-        assert_eq!(
-            jp.judge_vanish,
-            vec![true, true, true, true, true, false]
-        );
+        assert_eq!(jp.judge_vanish, vec![true, true, true, true, true, false]);
     }
 
     #[test]

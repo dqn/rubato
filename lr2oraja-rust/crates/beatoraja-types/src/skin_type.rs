@@ -354,6 +354,10 @@ mod tests {
         let mut ids: Vec<i32> = values.iter().map(|st| st.id()).collect();
         ids.sort();
         ids.dedup();
-        assert_eq!(ids.len(), values.len(), "All skin type IDs should be unique");
+        assert_eq!(
+            ids.len(),
+            values.len(),
+            "All skin type IDs should be unique"
+        );
     }
 }
