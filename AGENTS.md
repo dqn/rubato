@@ -9,6 +9,14 @@ All features including peripherals (Launcher, ModMenu, OBS, Discord RPC, Downloa
 
 ## Absolute Rules
 
+### No Investigation, No Planning — Just Translate
+
+- **NEVER** spend time exploring, investigating, or analyzing Java code structure before translating.
+- **NEVER** enter plan mode or create plans for translation work.
+- **NEVER** use Explore agents or research agents to "understand" the codebase.
+- **Just read each Java file and translate it to Rust immediately.** The translation is mechanical — no design decisions needed.
+- The workflow is: `Read Java file → Write Rust file → Test → Next file`.
+
 ### Prohibition on Past History
 
 - **NEVER** read, reference, or consult any previous implementation, plans, or notes.
