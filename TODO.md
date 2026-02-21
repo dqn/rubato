@@ -77,7 +77,7 @@ Optional/peripheral features.
 
 Standalone GUI. Can be deferred.
 
-- [ ] `beatoraja.launcher` (21 files, 9,210 lines) — Settings GUI (egui)
+- [x] `beatoraja.launcher` (21 files, 9,210 lines) — Settings GUI (egui)
 
 ---
 
@@ -91,3 +91,4 @@ Standalone GUI. Can be deferred.
 | 5 | Full gameplay logic with judge calculations |
 | 6 | Skin rendering with actual skins |
 | 7 | Full game flow (select → play → result) |
+| 9 | Launcher settings GUI |

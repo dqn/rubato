@@ -119,10 +119,9 @@ brs/
 - **Phase 6 complete:** `beatoraja-skin` (50+ modules — skin rendering engine, property binding, JSON/LR2/Lua skin loaders)
 - **Phase 7 complete:** `beatoraja-select` (30 modules — song select screen, bar types, bar manager/renderer/sorter), `beatoraja-result` (7 modules — music/course result screens, gauge graph), `beatoraja-decide` (2 modules — decide screen)
 - **Phase 8 complete:** `beatoraja-ir` (14 modules — IR connection, LR2IR, ranking/leaderboard, ghost data), `beatoraja-external` (7 modules — BMS search, Discord listener, screenshot export, webhook, score import), `beatoraja-obs` (2 modules — OBS WebSocket client, OBS listener), `beatoraja-modmenu` (15 modules — ImGui/egui renderer, notify, trainers, skin/download/song menus, performance monitor), `beatoraja-stream` (3 modules — stream controller, stream commands)
+- **Phase 9 complete:** `beatoraja-launcher` (21 modules — settings GUI views, config editors, skin/resource/input/audio/video/OBS/IR/Discord/stream configuration, course/folder/table editors)
 
 ## Deferred / Stub Items
-
-- Phase 9 type dependencies (Launcher) are stubbed in each Phase 8 crate's `stubs.rs`
 - Phase 7+ type dependencies (screen implementations, select bar, etc.) are stubbed in `beatoraja-skin/src/stubs.rs`
 - Phase 4 type dependencies (Config, PlayModeConfig, etc.) are stubbed in each Phase 3 crate's `stubs.rs` (will be replaced with imports from `beatoraja-core`)
 - PortAudio, LibGDX, ebur128, 7z extraction methods use `todo!()` pending external library integration
@@ -373,3 +372,29 @@ Java's `LR2GhostData` uses a CSV-based run-length encoded format with 40+ charac
 ### Windows Named Pipe → Platform-Conditional (Phase 8)
 
 Java's `StreamController` reads from Windows named pipe `\\.\pipe\beatoraja`. In Rust, use `std::fs::File::open` with the pipe path (works on Windows). On non-Windows platforms, the pipe path won't exist, so the feature is effectively Windows-only. Use `#[cfg(windows)]` for platform-specific sections where needed.
+
+### JavaFX GUI → egui Data Structs (Phase 9)
+
+JavaFX views with `@FXML` annotated fields and FXML-bound controllers translate to plain Rust structs with `pub` fields storing UI state. All rendering (ComboBox, Spinner, CheckBox, TableView, etc.) is deferred as `todo!("egui integration")`. The data flow pattern is preserved: `update()` populates struct fields from config, `commit()` writes fields back to config. JavaFX property binding (`SimpleStringProperty`, `ObjectProperty`, etc.) becomes plain field access — reactive binding is deferred to egui integration.
+
+### JavaFX TableView → Vec + Selected Indices (Phase 9)
+
+JavaFX `TableView<T>` with `getItems()`, `getSelectionModel()`, and cell factories translates to `EditableTableView<T>` struct wrapping `Vec<T>` + `Vec<usize>` (selected indices). The `moveSelectedItemsUp/Down` algorithms with block-swap logic must be preserved exactly — they use contiguous-block detection and sentinel index values (`-1` in Java, handled via `i32` in Rust).
+
+### Four-Agent Split for Launcher Phase (Phase 9)
+
+Phase 9 has 21 JavaFX files (4,605 lines). Split into 4 parallel agent groups:
+- Group A: Utility types (JavaFXUtils, NumericSpinner, SpinnerCell, EditableTableView, ControllerConfigViewModel, SongDataView, TrainerView — 7 files)
+- Group B: Small config views (Audio, Discord, IR, Video, MusicSelect, Stream, Input — 7 files)
+- Group C: Medium editor views (OBS, Folder, Table, Course — 4 files)
+- Group D: Large main views (PlayConfiguration, Resource, Skin — 3 files)
+
+Pre-create all module stubs and lib.rs before launching agents. Agents may need to fix cross-references to types created by other agents (e.g., `PlayConfigurationView::PlayMode` referenced by `InputConfigurationView`).
+
+### Static Table URL Map (Phase 9)
+
+Java's `ResourceConfigurationView` contains a static `Map.ofEntries(...)` with 50+ BMS table URLs and Unicode table names/comments. Translate as `lazy_static! { static ref TABLE_NAME_COMMENT: HashMap<&'static str, (&'static str, &'static str)> = ... }`. Unicode escape sequences in Java string literals (`\u26061`, `\u2605`) can be written directly as Unicode characters in Rust string literals.
+
+### SkinHeader Clone Derivation (Phase 9)
+
+The launcher's `SkinConfigurationView` needs to clone `SkinHeader` and its custom item types (`CustomOption`, `CustomFile`, `CustomOffset`, `CustomCategory`). Phase 6 did not derive `Clone` for these types. Added `#[derive(Clone)]` to `SkinHeader` and all custom item types in `beatoraja-skin/src/skin_header.rs` to support cloning in the launcher.
