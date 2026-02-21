@@ -6,8 +6,8 @@ Dependency graph order. Each module is ported only after its dependencies are co
 
 Zero internal dependencies. Port these first.
 
-- [ ] `bms.model` (19 files, 8,070 lines) — BMS format parser
-- [ ] `bms.table` (10 files, 3,108 lines) — LR2 course table parser
+- [x] `bms.model` (19 files, 8,070 lines) — BMS format parser
+- [x] `bms.table` (10 files, 3,108 lines) — LR2 course table parser
 
 ## Phase 2: Format Variants (~1,802 lines)
 
