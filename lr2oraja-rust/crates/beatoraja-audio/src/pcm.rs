@@ -195,14 +195,9 @@ impl PCMLoader {
         if name.ends_with(".wav") {
             self.load_wav(p)?;
         } else if name.ends_with(".ogg") {
-            // ogg: stub (requires vorbis decoder)
-            todo!("OGG decoding not yet implemented");
-        } else if name.ends_with(".mp3") {
-            // mp3: stub (requires mp3 decoder)
-            todo!("MP3 decoding not yet implemented");
-        } else if name.ends_with(".flac") {
-            // flac: stub (requires flac decoder)
-            todo!("FLAC decoding not yet implemented");
+            self.load_ogg(p)?;
+        } else if name.ends_with(".mp3") || name.ends_with(".flac") {
+            self.load_symphonia(p)?;
         } else {
             bail!("{}: unsupported format", p.display());
         }
@@ -244,6 +239,160 @@ impl PCMLoader {
         Ok(())
     }
 
+    fn load_ogg(&mut self, p: &Path) -> Result<()> {
+        use lewton::inside_ogg::OggStreamReader;
+
+        let file = std::fs::File::open(p)?;
+        let mut reader = OggStreamReader::new(file)?;
+
+        self.channels = reader.ident_hdr.audio_channels as i32;
+        self.sample_rate = reader.ident_hdr.audio_sample_rate as i32;
+        self.bits_per_sample = 16;
+
+        let mut all_samples: Vec<i16> = Vec::new();
+        while let Some(packet) = reader.read_dec_packet_itl()? {
+            all_samples.extend_from_slice(&packet);
+        }
+
+        // Convert i16 samples to bytes (little-endian)
+        self.pcm_data = Vec::with_capacity(all_samples.len() * 2);
+        for sample in &all_samples {
+            self.pcm_data.extend_from_slice(&sample.to_le_bytes());
+        }
+
+        Ok(())
+    }
+
+    fn load_symphonia(&mut self, p: &Path) -> Result<()> {
+        use symphonia::core::audio::SampleBuffer;
+        use symphonia::core::codecs::DecoderOptions;
+        use symphonia::core::formats::FormatOptions;
+        use symphonia::core::io::MediaSourceStream;
+        use symphonia::core::meta::MetadataOptions;
+        use symphonia::core::probe::Hint;
+
+        let file = std::fs::File::open(p)?;
+        let mss = MediaSourceStream::new(Box::new(file), Default::default());
+        let mut hint = Hint::new();
+        if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
+            hint.with_extension(ext);
+        }
+
+        let probed = symphonia::default::get_probe().format(
+            &hint,
+            mss,
+            &FormatOptions::default(),
+            &MetadataOptions::default(),
+        )?;
+
+        let mut format = probed.format;
+        let track = format
+            .default_track()
+            .ok_or_else(|| anyhow::anyhow!("no audio track"))?;
+        let track_id = track.id;
+
+        let codec_params = track.codec_params.clone();
+        self.channels = codec_params.channels.map(|c| c.count() as i32).unwrap_or(2);
+        self.sample_rate = codec_params.sample_rate.unwrap_or(44100) as i32;
+        self.bits_per_sample = 16;
+
+        let mut decoder =
+            symphonia::default::get_codecs().make(&codec_params, &DecoderOptions::default())?;
+
+        let mut all_samples: Vec<i16> = Vec::new();
+        loop {
+            let packet = match format.next_packet() {
+                Ok(p) => p,
+                Err(symphonia::core::errors::Error::IoError(ref e))
+                    if e.kind() == std::io::ErrorKind::UnexpectedEof =>
+                {
+                    break;
+                }
+                Err(e) => return Err(e.into()),
+            };
+            if packet.track_id() != track_id {
+                continue;
+            }
+            let decoded = decoder.decode(&packet)?;
+            let spec = *decoded.spec();
+            let duration = decoded.capacity();
+            let mut sample_buf = SampleBuffer::<i16>::new(duration as u64, spec);
+            sample_buf.copy_interleaved_ref(decoded);
+            all_samples.extend_from_slice(sample_buf.samples());
+        }
+
+        self.pcm_data = Vec::with_capacity(all_samples.len() * 2);
+        for sample in &all_samples {
+            self.pcm_data.extend_from_slice(&sample.to_le_bytes());
+        }
+
+        Ok(())
+    }
+
+    fn load_symphonia_from_bytes(&mut self, data: &[u8]) -> Result<()> {
+        use symphonia::core::audio::SampleBuffer;
+        use symphonia::core::codecs::DecoderOptions;
+        use symphonia::core::formats::FormatOptions;
+        use symphonia::core::io::MediaSourceStream;
+        use symphonia::core::meta::MetadataOptions;
+        use symphonia::core::probe::Hint;
+
+        let cursor = std::io::Cursor::new(data.to_vec());
+        let mss = MediaSourceStream::new(Box::new(cursor), Default::default());
+        let mut hint = Hint::new();
+        hint.with_extension("mp3");
+
+        let probed = symphonia::default::get_probe().format(
+            &hint,
+            mss,
+            &FormatOptions::default(),
+            &MetadataOptions::default(),
+        )?;
+
+        let mut format = probed.format;
+        let track = format
+            .default_track()
+            .ok_or_else(|| anyhow::anyhow!("no audio track"))?;
+        let track_id = track.id;
+
+        let codec_params = track.codec_params.clone();
+        self.channels = codec_params.channels.map(|c| c.count() as i32).unwrap_or(2);
+        self.sample_rate = codec_params.sample_rate.unwrap_or(44100) as i32;
+        self.bits_per_sample = 16;
+
+        let mut decoder =
+            symphonia::default::get_codecs().make(&codec_params, &DecoderOptions::default())?;
+
+        let mut all_samples: Vec<i16> = Vec::new();
+        loop {
+            let packet = match format.next_packet() {
+                Ok(p) => p,
+                Err(symphonia::core::errors::Error::IoError(ref e))
+                    if e.kind() == std::io::ErrorKind::UnexpectedEof =>
+                {
+                    break;
+                }
+                Err(e) => return Err(e.into()),
+            };
+            if packet.track_id() != track_id {
+                continue;
+            }
+            let decoded = decoder.decode(&packet)?;
+            let spec = *decoded.spec();
+            let duration = decoded.capacity();
+            let mut sample_buf = SampleBuffer::<i16>::new(duration as u64, spec);
+            sample_buf.copy_interleaved_ref(decoded);
+            all_samples.extend_from_slice(sample_buf.samples());
+        }
+
+        self.pcm_data = Vec::with_capacity(all_samples.len() * 2);
+        for sample in &all_samples {
+            self.pcm_data.extend_from_slice(&sample.to_le_bytes());
+        }
+
+        Ok(())
+    }
+
     fn load_wav(&mut self, p: &Path) -> Result<()> {
         let data = std::fs::read(p)?;
         let mut wav = WavReader::new(&data)?;
@@ -272,8 +421,9 @@ impl PCMLoader {
                 log::info!("Filename: {:?}", p);
             }
             85 => {
-                // mp3 embedded in WAV
-                todo!("MP3-in-WAV decoding not yet implemented");
+                // mp3 embedded in WAV - extract data section and decode as MP3
+                let mp3_data = wav.read_data()?;
+                self.load_symphonia_from_bytes(&mp3_data)?;
             }
             _ => {
                 bail!(
