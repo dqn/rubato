@@ -1,0 +1,15 @@
+[package]
+name = "beatoraja-external"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+discord-rpc.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+reqwest.workspace = true
+
+[dev-dependencies]
