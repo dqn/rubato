@@ -117,3 +117,136 @@ impl PatternModifier for AutoplayModifier {
         self.base.player
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bms_model::mode::Mode;
+    use bms_model::note::Note;
+    use bms_model::time_line::TimeLine;
+    use crate::pattern_modifier::make_test_model;
+
+    #[test]
+    fn autoplay_modifier_creation() {
+        let modifier = AutoplayModifier::new(vec![0, 1]);
+        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.get_player(), 0);
+    }
+
+    #[test]
+    fn autoplay_modifier_with_margin() {
+        let modifier = AutoplayModifier::with_margin(vec![0], 100);
+        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+    }
+
+    #[test]
+    fn autoplay_modifier_set_seed_positive() {
+        let mut modifier = AutoplayModifier::new(vec![0]);
+        modifier.set_seed(42);
+        assert_eq!(modifier.get_seed(), 42);
+    }
+
+    #[test]
+    fn autoplay_modifier_set_seed_negative_ignored() {
+        let mut modifier = AutoplayModifier::new(vec![0]);
+        let original = modifier.get_seed();
+        modifier.set_seed(-1);
+        assert_eq!(modifier.get_seed(), original);
+    }
+
+    #[test]
+    fn autoplay_modifier_set_assist_level() {
+        let mut modifier = AutoplayModifier::new(vec![0]);
+        modifier.set_assist_level(AssistLevel::LightAssist);
+        assert_eq!(modifier.get_assist_level(), AssistLevel::LightAssist);
+    }
+
+    #[test]
+    fn autoplay_moves_note_to_background_no_margin() {
+        let mode = Mode::BEAT_7K;
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_normal(10)));
+        tl.set_note(1, Some(Note::new_normal(20)));
+
+        let mut model = make_test_model(&mode, vec![tl]);
+
+        // Autoplay lane 0 (no margin)
+        let mut modifier = AutoplayModifier::new(vec![0]);
+        modifier.modify(&mut model);
+
+        let tls = model.get_all_time_lines();
+        // Lane 0 note should be moved to background
+        assert!(tls[0].get_note(0).is_none());
+        // Lane 1 note should also be moved (margin=0 means remove=true for all)
+        // Wait, re-read: margin=0 means else branch: remove = true
+        // So ALL specified lanes are moved to background
+        // Lane 1 is NOT in the lanes list, so it stays
+        assert!(tls[0].get_note(1).is_some());
+        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+    }
+
+    #[test]
+    fn autoplay_sets_assist_when_notes_exist() {
+        let mode = Mode::BEAT_7K;
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_normal(10)));
+
+        let mut model = make_test_model(&mode, vec![tl]);
+
+        let mut modifier = AutoplayModifier::new(vec![0]);
+        modifier.modify(&mut model);
+
+        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+    }
+
+    #[test]
+    fn autoplay_no_notes_keeps_none_assist() {
+        let mode = Mode::BEAT_7K;
+        let tl = TimeLine::new(0.0, 0, 8);
+
+        let mut model = make_test_model(&mode, vec![tl]);
+
+        let mut modifier = AutoplayModifier::new(vec![0]);
+        modifier.modify(&mut model);
+
+        // No notes exist in lane 0, so assist stays None
+        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+    }
+
+    #[test]
+    fn autoplay_multiple_lanes() {
+        let mode = Mode::BEAT_7K;
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_normal(10)));
+        tl.set_note(1, Some(Note::new_normal(20)));
+        tl.set_note(2, Some(Note::new_normal(30)));
+
+        let mut model = make_test_model(&mode, vec![tl]);
+
+        let mut modifier = AutoplayModifier::new(vec![0, 1]);
+        modifier.modify(&mut model);
+
+        let tls = model.get_all_time_lines();
+        assert!(tls[0].get_note(0).is_none());
+        assert!(tls[0].get_note(1).is_none());
+        // Lane 2 is not in autoplay lanes
+        assert!(tls[0].get_note(2).is_some());
+    }
+
+    #[test]
+    fn autoplay_mine_note_removed_not_backgrounded() {
+        let mode = Mode::BEAT_7K;
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_mine(-1, 10.0)));
+
+        let mut model = make_test_model(&mode, vec![tl]);
+
+        let mut modifier = AutoplayModifier::new(vec![0]);
+        modifier.modify(&mut model);
+
+        let tls = model.get_all_time_lines();
+        assert!(tls[0].get_note(0).is_none());
+        // Mine notes are removed entirely, not added to background
+        assert!(tls[0].get_back_ground_notes().is_empty());
+    }
+}

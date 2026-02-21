@@ -92,3 +92,148 @@ impl Default for LR2Random {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_seed_is_4357() {
+        // new() calls set_seed(4357)
+        let mut rng = LR2Random::new();
+        let mut rng2 = LR2Random::with_seed(4357);
+        // Both should produce the same sequence
+        for _ in 0..100 {
+            assert_eq!(rng.rand_mt(), rng2.rand_mt());
+        }
+    }
+
+    #[test]
+    fn deterministic_with_same_seed() {
+        let mut rng1 = LR2Random::with_seed(12345);
+        let mut rng2 = LR2Random::with_seed(12345);
+        for _ in 0..1000 {
+            assert_eq!(rng1.rand_mt(), rng2.rand_mt());
+        }
+    }
+
+    #[test]
+    fn different_seeds_produce_different_sequences() {
+        let mut rng1 = LR2Random::with_seed(1);
+        let mut rng2 = LR2Random::with_seed(2);
+        let mut differs = false;
+        for _ in 0..100 {
+            if rng1.rand_mt() != rng2.rand_mt() {
+                differs = true;
+                break;
+            }
+        }
+        assert!(differs, "Different seeds should produce different output");
+    }
+
+    #[test]
+    fn next_int_range() {
+        let mut rng = LR2Random::with_seed(42);
+        for _ in 0..10000 {
+            let val = rng.next_int(10);
+            assert!(val >= 0 && val < 10, "next_int(10) returned {}", val);
+        }
+    }
+
+    #[test]
+    fn next_int_max_1_always_returns_0() {
+        let mut rng = LR2Random::with_seed(99);
+        for _ in 0..100 {
+            assert_eq!(rng.next_int(1), 0);
+        }
+    }
+
+    #[test]
+    fn mt_state_length() {
+        let rng = LR2Random::new();
+        assert_eq!(rng.mt.len(), N + 1);
+        assert_eq!(rng.mtr.len(), N);
+    }
+
+    #[test]
+    fn regeneration_after_n_calls() {
+        // After N (624) calls, generate_mt should be triggered
+        let mut rng = LR2Random::with_seed(100);
+        for _ in 0..N {
+            rng.rand_mt();
+        }
+        assert_eq!(rng.mti, N);
+        // Next call triggers regeneration
+        let _val = rng.rand_mt();
+        assert_eq!(rng.mti, 1);
+    }
+
+    #[test]
+    fn set_seed_resets_state() {
+        let mut rng = LR2Random::with_seed(42);
+        // Generate some values
+        for _ in 0..50 {
+            rng.rand_mt();
+        }
+        // Reset seed
+        rng.set_seed(42);
+        let mut rng2 = LR2Random::with_seed(42);
+        for _ in 0..100 {
+            assert_eq!(rng.rand_mt(), rng2.rand_mt());
+        }
+    }
+
+    #[test]
+    fn known_output_seed_4357() {
+        // Record a known sequence from seed 4357 and verify it's stable
+        let mut rng = LR2Random::with_seed(4357);
+        let first_10: Vec<i32> = (0..10).map(|_| rng.rand_mt()).collect();
+        // Verify against a second run to ensure determinism
+        let mut rng2 = LR2Random::with_seed(4357);
+        let first_10_again: Vec<i32> = (0..10).map(|_| rng2.rand_mt()).collect();
+        assert_eq!(first_10, first_10_again);
+    }
+
+    #[test]
+    fn next_int_distribution_is_roughly_uniform() {
+        let mut rng = LR2Random::with_seed(777);
+        let n = 10;
+        let iters = 10000;
+        let mut counts = vec![0usize; n as usize];
+        for _ in 0..iters {
+            let val = rng.next_int(n);
+            counts[val as usize] += 1;
+        }
+        // Each bucket should have roughly iters/n = 1000 hits
+        // Allow 40% deviation
+        let expected = iters as f64 / n as f64;
+        for (i, &count) in counts.iter().enumerate() {
+            assert!(
+                (count as f64 - expected).abs() < expected * 0.4,
+                "Bucket {} has {} hits, expected ~{}",
+                i,
+                count,
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn with_seed_zero() {
+        // Seed 0 should still produce valid output
+        let mut rng = LR2Random::with_seed(0);
+        // Just verify it doesn't panic and produces values
+        for _ in 0..100 {
+            let _ = rng.rand_mt();
+        }
+    }
+
+    #[test]
+    fn with_seed_negative() {
+        // Negative seed should work via wrapping arithmetic
+        let mut rng = LR2Random::with_seed(-1);
+        for _ in 0..100 {
+            let _ = rng.rand_mt();
+        }
+    }
+}

@@ -112,3 +112,128 @@ impl PatternModifier for ExtraNoteModifier {
         self.base.player
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bms_model::mode::Mode;
+    use bms_model::time_line::TimeLine;
+    use crate::pattern_modifier::make_test_model;
+
+    #[test]
+    fn extra_note_modifier_creation() {
+        let modifier = ExtraNoteModifier::new(0, 1, false);
+        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.get_player(), 0);
+    }
+
+    #[test]
+    fn extra_note_modifier_set_seed() {
+        let mut modifier = ExtraNoteModifier::new(0, 1, false);
+        modifier.set_seed(42);
+        assert_eq!(modifier.get_seed(), 42);
+    }
+
+    #[test]
+    fn extra_note_modifier_set_seed_negative_ignored() {
+        let mut modifier = ExtraNoteModifier::new(0, 1, false);
+        let original = modifier.get_seed();
+        modifier.set_seed(-1);
+        assert_eq!(modifier.get_seed(), original);
+    }
+
+    #[test]
+    fn extra_note_modifier_set_assist_level() {
+        let mut modifier = ExtraNoteModifier::new(0, 1, false);
+        modifier.set_assist_level(AssistLevel::Assist);
+        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+    }
+
+    #[test]
+    fn extra_note_modifier_no_background_notes_is_noop() {
+        let mode = Mode::BEAT_7K;
+        let tl = TimeLine::new(0.0, 0, 8);
+        let mut model = make_test_model(&mode, vec![tl]);
+
+        let mut modifier = ExtraNoteModifier::new(0, 1, false);
+        modifier.modify(&mut model);
+
+        // No background notes -> no extra notes placed
+        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+    }
+
+    #[test]
+    fn extra_note_modifier_places_background_note() {
+        let mode = Mode::BEAT_7K;
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        // Add a background note
+        tl.add_back_ground_note(Note::new_normal(5));
+
+        let mut model = make_test_model(&mode, vec![tl]);
+
+        let mut modifier = ExtraNoteModifier::new(0, 1, false);
+        modifier.modify(&mut model);
+
+        // Background note should be placed somewhere on the lanes
+        let tls = model.get_all_time_lines();
+        let mut found = false;
+        for lane in 0..8 {
+            if let Some(note) = tls[0].get_note(lane) {
+                if note.get_wav() == 5 {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        assert!(found, "Background note should be placed on a lane");
+        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+    }
+
+    #[test]
+    fn extra_note_modifier_depth_limits_placement() {
+        let mode = Mode::BEAT_7K;
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        // Add multiple background notes
+        tl.add_back_ground_note(Note::new_normal(1));
+        tl.add_back_ground_note(Note::new_normal(2));
+        tl.add_back_ground_note(Note::new_normal(3));
+
+        let mut model = make_test_model(&mode, vec![tl]);
+
+        // depth=1 should place at most 1 note per timeline
+        let mut modifier = ExtraNoteModifier::new(0, 1, false);
+        modifier.modify(&mut model);
+
+        let tls = model.get_all_time_lines();
+        let mut placed_count = 0;
+        for lane in 0..8 {
+            if tls[0].get_note(lane).is_some() {
+                placed_count += 1;
+            }
+        }
+        assert_eq!(placed_count, 1, "depth=1 should place exactly 1 note");
+    }
+
+    #[test]
+    fn extra_note_modifier_depth_2() {
+        let mode = Mode::BEAT_7K;
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.add_back_ground_note(Note::new_normal(1));
+        tl.add_back_ground_note(Note::new_normal(2));
+        tl.add_back_ground_note(Note::new_normal(3));
+
+        let mut model = make_test_model(&mode, vec![tl]);
+
+        let mut modifier = ExtraNoteModifier::new(0, 2, false);
+        modifier.modify(&mut model);
+
+        let tls = model.get_all_time_lines();
+        let mut placed_count = 0;
+        for lane in 0..8 {
+            if tls[0].get_note(lane).is_some() {
+                placed_count += 1;
+            }
+        }
+        assert_eq!(placed_count, 2, "depth=2 should place exactly 2 notes");
+    }
+}

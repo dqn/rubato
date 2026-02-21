@@ -742,6 +742,313 @@ fn search_for_no_murioshi_lane_combinations(
     no_murioshi_lane_combinations
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bms_model::bms_model::BMSModel;
+    use bms_model::mode::Mode;
+    use bms_model::note::Note;
+    use bms_model::time_line::TimeLine;
+    use crate::pattern_modifier::make_test_model;
+
+    // -- PatternModifierBase::get_keys_static --
+
+    #[test]
+    fn get_keys_static_beat7k_with_scratch() {
+        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_7K, 0, true);
+        assert_eq!(keys, vec![0, 1, 2, 3, 4, 5, 6, 7]);
+    }
+
+    #[test]
+    fn get_keys_static_beat7k_without_scratch() {
+        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_7K, 0, false);
+        // Scratch key for BEAT_7K is 7
+        assert_eq!(keys, vec![0, 1, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn get_keys_static_popn9k() {
+        let keys = PatternModifierBase::get_keys_static(&Mode::POPN_9K, 0, false);
+        // No scratch keys in POPN_9K
+        assert_eq!(keys, vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    }
+
+    #[test]
+    fn get_keys_static_invalid_player() {
+        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_7K, 1, false);
+        assert!(keys.is_empty());
+    }
+
+    #[test]
+    fn get_keys_static_beat14k_player0() {
+        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_14K, 0, false);
+        // Player 0: keys 0..8, scratch at 7
+        assert_eq!(keys, vec![0, 1, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn get_keys_static_beat14k_player1() {
+        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_14K, 1, false);
+        // Player 1: keys 8..16, scratch at 15
+        assert_eq!(keys, vec![8, 9, 10, 11, 12, 13, 14]);
+    }
+
+    // -- LaneMirrorShuffleModifier --
+
+    #[test]
+    fn mirror_modifier_creation() {
+        let modifier = LaneMirrorShuffleModifier::new(0, false);
+        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.get_player(), 0);
+    }
+
+    #[test]
+    fn mirror_modifier_with_scratch_is_light_assist() {
+        let modifier = LaneMirrorShuffleModifier::new(0, true);
+        assert_eq!(modifier.get_assist_level(), AssistLevel::LightAssist);
+    }
+
+    #[test]
+    fn mirror_make_random_reverses_keys() {
+        // For BEAT_7K without scratch: keys = [0,1,2,3,4,5,6]
+        // Mirror should reverse: result[0]=6, result[1]=5, ..., result[6]=0
+        let mut model = BMSModel::new();
+        model.set_all_time_line(vec![TimeLine::new(0.0, 0, 8)]);
+        model.set_mode(Mode::BEAT_7K);
+
+        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_7K, 0, false);
+        let result = LaneMirrorShuffleModifier::make_random(&keys, &model, 0);
+
+        // result should be [6, 5, 4, 3, 2, 1, 0, 7]
+        // (scratch lane 7 stays at position 7)
+        assert_eq!(result, vec![6, 5, 4, 3, 2, 1, 0, 7]);
+    }
+
+    #[test]
+    fn mirror_make_random_with_scratch() {
+        let mut model = BMSModel::new();
+        model.set_all_time_line(vec![TimeLine::new(0.0, 0, 8)]);
+        model.set_mode(Mode::BEAT_7K);
+
+        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_7K, 0, true);
+        let result = LaneMirrorShuffleModifier::make_random(&keys, &model, 0);
+
+        // All 8 keys reversed: [7, 6, 5, 4, 3, 2, 1, 0]
+        assert_eq!(result, vec![7, 6, 5, 4, 3, 2, 1, 0]);
+    }
+
+    #[test]
+    fn mirror_modifier_modifies_model() {
+        let mode = Mode::BEAT_7K;
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_normal(10)));
+        tl.set_note(6, Some(Note::new_normal(20)));
+
+        let mut model = make_test_model(&mode, vec![tl]);
+
+        let mut modifier = LaneMirrorShuffleModifier::new(0, false);
+        modifier.modify(&mut model);
+
+        let tls = model.get_all_time_lines();
+        // Lane 0 mirrored to lane 6, lane 6 mirrored to lane 0
+        assert_eq!(tls[0].get_note(6).unwrap().get_wav(), 10);
+        assert_eq!(tls[0].get_note(0).unwrap().get_wav(), 20);
+    }
+
+    // -- LaneMirrorShuffleModifier set_seed --
+
+    #[test]
+    fn mirror_modifier_set_seed_negative_ignored() {
+        let mut modifier = LaneMirrorShuffleModifier::new(0, false);
+        let original = modifier.get_seed();
+        modifier.set_seed(-5);
+        assert_eq!(modifier.get_seed(), original);
+    }
+
+    #[test]
+    fn mirror_modifier_set_seed_zero() {
+        let mut modifier = LaneMirrorShuffleModifier::new(0, false);
+        modifier.set_seed(0);
+        assert_eq!(modifier.get_seed(), 0);
+    }
+
+    // -- LaneRandomShuffleModifier --
+
+    #[test]
+    fn random_modifier_creation() {
+        let modifier = LaneRandomShuffleModifier::new(0, false);
+        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+    }
+
+    #[test]
+    fn random_modifier_deterministic_with_same_seed() {
+        let mode = Mode::BEAT_7K;
+        let seed: i64 = 42;
+
+        let make_model = || {
+            let tl = TimeLine::new(0.0, 0, 8);
+            make_test_model(&mode, vec![tl])
+        };
+
+        let keys = PatternModifierBase::get_keys_static(&mode, 0, false);
+        let result1 = LaneRandomShuffleModifier::make_random(&keys, &make_model(), seed);
+        let result2 = LaneRandomShuffleModifier::make_random(&keys, &make_model(), seed);
+        assert_eq!(result1, result2);
+    }
+
+    #[test]
+    fn random_modifier_is_valid_permutation() {
+        let mode = Mode::BEAT_7K;
+        let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 8)]);
+
+        let keys = PatternModifierBase::get_keys_static(&mode, 0, false);
+        let result = LaneRandomShuffleModifier::make_random(&keys, &model, 42);
+
+        // result should have 8 elements (mode_key)
+        assert_eq!(result.len(), 8);
+        // Each key in keys should appear exactly once in result[keys]
+        let mut mapped: Vec<i32> = keys.iter().map(|&k| result[k as usize]).collect();
+        mapped.sort();
+        let mut sorted_keys = keys.clone();
+        sorted_keys.sort();
+        assert_eq!(mapped, sorted_keys);
+        // Scratch lane 7 should stay at 7
+        assert_eq!(result[7], 7);
+    }
+
+    // -- LaneRotateShuffleModifier --
+
+    #[test]
+    fn rotate_modifier_creation() {
+        let modifier = LaneRotateShuffleModifier::new(0, false);
+        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+    }
+
+    #[test]
+    fn rotate_modifier_deterministic_with_same_seed() {
+        let mode = Mode::BEAT_7K;
+        let seed: i64 = 123;
+        let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 8)]);
+
+        let keys = PatternModifierBase::get_keys_static(&mode, 0, false);
+        let result1 = LaneRotateShuffleModifier::make_random(&keys, &model, seed);
+        let result2 = LaneRotateShuffleModifier::make_random(&keys, &model, seed);
+        assert_eq!(result1, result2);
+    }
+
+    #[test]
+    fn rotate_modifier_is_valid_permutation() {
+        let mode = Mode::BEAT_7K;
+        let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 8)]);
+
+        let keys = PatternModifierBase::get_keys_static(&mode, 0, false);
+        let result = LaneRotateShuffleModifier::make_random(&keys, &model, 99);
+
+        assert_eq!(result.len(), 8);
+        let mut mapped: Vec<i32> = keys.iter().map(|&k| result[k as usize]).collect();
+        mapped.sort();
+        let mut sorted_keys = keys.clone();
+        sorted_keys.sort();
+        assert_eq!(mapped, sorted_keys);
+    }
+
+    // -- LaneCrossShuffleModifier --
+
+    #[test]
+    fn cross_modifier_creation() {
+        let modifier = LaneCrossShuffleModifier::new(0, false);
+        assert_eq!(modifier.get_assist_level(), AssistLevel::LightAssist);
+    }
+
+    #[test]
+    fn cross_make_random_swaps_pairs() {
+        // For keys [0,1,2,3,4,5,6] (BEAT_7K without scratch):
+        // i=0: swap(0,1) and swap(6,5) -> result[0]=1, result[1]=0, result[6]=5, result[5]=6
+        // i=2: 2 < 7/2-1=2.5, but while condition is i < keys.len()/2-1 = 2
+        //   so i=2 is not < 2, loop ends
+        let mode = Mode::BEAT_7K;
+        let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 8)]);
+
+        let keys = PatternModifierBase::get_keys_static(&mode, 0, false);
+        let result = LaneCrossShuffleModifier::make_random(&keys, &model, 0);
+
+        assert_eq!(result.len(), 8);
+        // First pair swapped
+        assert_eq!(result[0], 1);
+        assert_eq!(result[1], 0);
+        // Last pair swapped
+        assert_eq!(result[5], 6);
+        assert_eq!(result[6], 5);
+        // Middle key (3) unchanged
+        assert_eq!(result[3], 3);
+        // Scratch unchanged
+        assert_eq!(result[7], 7);
+    }
+
+    // -- PlayerFlipModifier --
+
+    #[test]
+    fn flip_modifier_creation() {
+        let modifier = PlayerFlipModifier::new();
+        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.get_player(), 0);
+    }
+
+    #[test]
+    fn flip_make_random_single_player_no_change() {
+        let mode = Mode::BEAT_7K;
+        let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 8)]);
+
+        let result = PlayerFlipModifier::make_random(&[], &model, 0);
+        // Single player mode: no flip, identity
+        assert_eq!(result, vec![0, 1, 2, 3, 4, 5, 6, 7]);
+    }
+
+    #[test]
+    fn flip_make_random_double_player_swaps_halves() {
+        let mode = Mode::BEAT_14K;
+        let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 16)]);
+
+        let result = PlayerFlipModifier::make_random(&[], &model, 0);
+        // Double player: first half <-> second half
+        assert_eq!(result, vec![8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7]);
+    }
+
+    // -- PlayerBattleModifier --
+
+    #[test]
+    fn battle_modifier_creation() {
+        let modifier = PlayerBattleModifier::new();
+        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(modifier.get_player(), 0);
+    }
+
+    #[test]
+    fn battle_make_random_single_player_returns_empty() {
+        let mode = Mode::BEAT_7K;
+        let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 8)]);
+
+        let keys = PatternModifierBase::get_keys_static(&mode, 0, true);
+        let (result, assist) = PlayerBattleModifier::make_random(&keys, &model, 0);
+        // Single player: returns empty
+        assert!(result.is_empty());
+        assert_eq!(assist, AssistLevel::Assist);
+    }
+
+    #[test]
+    fn battle_make_random_double_player_duplicates_keys() {
+        let mode = Mode::BEAT_14K;
+        let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 16)]);
+
+        let keys = PatternModifierBase::get_keys_static(&mode, 0, true);
+        let (result, _) = PlayerBattleModifier::make_random(&keys, &model, 0);
+        // Should duplicate keys: [keys, keys]
+        assert_eq!(result.len(), keys.len() * 2);
+        assert_eq!(&result[..keys.len()], &keys[..]);
+        assert_eq!(&result[keys.len()..], &keys[..]);
+    }
+}
+
 impl PatternModifier for LanePlayableRandomShuffleModifier {
     fn modify(&mut self, model: &mut BMSModel) {
         self.random = lane_shuffle_modify(

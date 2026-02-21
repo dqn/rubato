@@ -1059,3 +1059,361 @@ impl ConvergeRandomizer {
         permutation
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- RandomizerBase --
+
+    #[test]
+    fn randomizer_base_default_values() {
+        let base = RandomizerBase::new();
+        assert!(base.mode.is_none());
+        assert!(base.modify_lanes.is_empty());
+        assert_eq!(base.get_assist_level(), AssistLevel::None);
+    }
+
+    #[test]
+    fn randomizer_base_default_trait() {
+        let base = RandomizerBase::default();
+        assert!(base.mode.is_none());
+    }
+
+    #[test]
+    fn randomizer_base_set_mode() {
+        let mut base = RandomizerBase::new();
+        base.set_mode(Mode::BEAT_7K);
+        assert_eq!(base.mode, Some(Mode::BEAT_7K));
+    }
+
+    #[test]
+    fn randomizer_base_set_modify_lanes() {
+        let mut base = RandomizerBase::new();
+        base.set_modify_lanes(&[0, 1, 2, 3]);
+        assert_eq!(base.modify_lanes, vec![0, 1, 2, 3]);
+    }
+
+    #[test]
+    fn randomizer_base_get_ln_lane_initially_empty() {
+        let base = RandomizerBase::new();
+        assert!(base.get_ln_lane().is_empty());
+    }
+
+    #[test]
+    fn randomizer_base_set_assist_level() {
+        let mut base = RandomizerBase::new();
+        base.set_assist_level(AssistLevel::Assist);
+        assert_eq!(base.get_assist_level(), AssistLevel::Assist);
+    }
+
+    #[test]
+    fn randomizer_base_set_random_seed_positive() {
+        let mut base1 = RandomizerBase::new();
+        let mut base2 = RandomizerBase::new();
+        base1.set_random_seed(42);
+        base2.set_random_seed(42);
+        // After setting same seed, both should produce the same sequence
+        let v1: i32 = base1.random.gen_range(0..1000);
+        let v2: i32 = base2.random.gen_range(0..1000);
+        assert_eq!(v1, v2);
+    }
+
+    #[test]
+    fn randomizer_base_set_random_seed_negative_ignored() {
+        let mut base = RandomizerBase::new();
+        let val_before: i32 = {
+            let mut clone = base.random.clone();
+            clone.gen_range(0..1000)
+        };
+        base.set_random_seed(-1);
+        let val_after: i32 = base.random.gen_range(0..1000);
+        assert_eq!(val_before, val_after);
+    }
+
+    // -- TimeBasedRandomizerState --
+
+    #[test]
+    fn time_based_state_creation() {
+        let state = TimeBasedRandomizerState::new(100);
+        assert_eq!(state.threshold, 100);
+        assert!(state.last_note_time.is_empty());
+    }
+
+    #[test]
+    fn time_based_state_init_lanes() {
+        let mut state = TimeBasedRandomizerState::new(100);
+        state.init_lanes(&[0, 1, 2]);
+        assert_eq!(state.last_note_time.len(), 3);
+        assert_eq!(*state.last_note_time.get(&0).unwrap(), -10000);
+        assert_eq!(*state.last_note_time.get(&1).unwrap(), -10000);
+        assert_eq!(*state.last_note_time.get(&2).unwrap(), -10000);
+    }
+
+    // -- Constants --
+
+    #[test]
+    fn sran_threshold_value() {
+        assert_eq!(SRAN_THRESHOLD, 40);
+    }
+
+    #[test]
+    fn default_hran_threshold_value() {
+        assert_eq!(DEFAULT_HRAN_THRESHOLD, 100);
+    }
+
+    // -- Randomizer enum --
+
+    #[test]
+    fn randomizer_create_srandom() {
+        let config = PlayerConfig::default();
+        let r = Randomizer::create(Random::SRandom, &Mode::BEAT_7K, &config);
+        assert!(matches!(r, Randomizer::SRandom(_)));
+    }
+
+    #[test]
+    fn randomizer_create_spiral() {
+        let config = PlayerConfig::default();
+        let r = Randomizer::create(Random::Spiral, &Mode::BEAT_7K, &config);
+        assert!(matches!(r, Randomizer::Spiral(_)));
+    }
+
+    #[test]
+    fn randomizer_create_allscr() {
+        let config = PlayerConfig::default();
+        let r = Randomizer::create(Random::AllScr, &Mode::BEAT_7K, &config);
+        assert!(matches!(r, Randomizer::AllScratch(_)));
+    }
+
+    #[test]
+    fn randomizer_create_hrandom() {
+        let config = PlayerConfig::default();
+        let r = Randomizer::create(Random::HRandom, &Mode::BEAT_7K, &config);
+        assert!(matches!(r, Randomizer::SRandom(_)));
+    }
+
+    #[test]
+    fn randomizer_create_converge() {
+        let config = PlayerConfig::default();
+        let r = Randomizer::create(Random::Converge, &Mode::BEAT_7K, &config);
+        assert!(matches!(r, Randomizer::Converge(_)));
+    }
+
+    #[test]
+    fn randomizer_create_srandom_playable() {
+        let config = PlayerConfig::default();
+        let r = Randomizer::create(Random::SRandomPlayable, &Mode::BEAT_7K, &config);
+        assert!(matches!(r, Randomizer::NoMurioshi(_)));
+    }
+
+    #[test]
+    fn randomizer_create_srandom_no_threshold() {
+        let config = PlayerConfig::default();
+        let r = Randomizer::create(Random::SRandomNoThreshold, &Mode::BEAT_7K, &config);
+        assert!(matches!(r, Randomizer::SRandom(_)));
+    }
+
+    #[test]
+    fn randomizer_create_srandom_ex() {
+        let config = PlayerConfig::default();
+        let r = Randomizer::create(Random::SRandomEx, &Mode::BEAT_7K, &config);
+        assert!(matches!(r, Randomizer::SRandom(_)));
+    }
+
+    #[test]
+    fn randomizer_set_random_seed() {
+        let config = PlayerConfig::default();
+        let mut r = Randomizer::create(Random::SRandom, &Mode::BEAT_7K, &config);
+        r.set_random_seed(42);
+    }
+
+    #[test]
+    fn randomizer_set_modify_lanes() {
+        let config = PlayerConfig::default();
+        let mut r = Randomizer::create(Random::SRandom, &Mode::BEAT_7K, &config);
+        r.set_modify_lanes(&[0, 1, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn randomizer_get_assist_level_srandom() {
+        let config = PlayerConfig::default();
+        let r = Randomizer::create(Random::SRandom, &Mode::BEAT_7K, &config);
+        assert_eq!(r.get_assist_level(), AssistLevel::None);
+    }
+
+    #[test]
+    fn randomizer_hrandom_has_light_assist() {
+        let config = PlayerConfig::default();
+        let r = Randomizer::create(Random::HRandom, &Mode::BEAT_7K, &config);
+        assert_eq!(r.get_assist_level(), AssistLevel::LightAssist);
+    }
+
+    #[test]
+    fn randomizer_base_accessor() {
+        let config = PlayerConfig::default();
+        let r = Randomizer::create(Random::SRandom, &Mode::BEAT_7K, &config);
+        assert_eq!(r.base().mode, Some(Mode::BEAT_7K));
+    }
+
+    #[test]
+    fn randomizer_base_mut_accessor() {
+        let config = PlayerConfig::default();
+        let mut r = Randomizer::create(Random::SRandom, &Mode::BEAT_7K, &config);
+        r.base_mut().set_assist_level(AssistLevel::Assist);
+        assert_eq!(r.get_assist_level(), AssistLevel::Assist);
+    }
+
+    // -- SRandomizer --
+
+    #[test]
+    fn srandomizer_creation() {
+        let r = SRandomizer::new(40, AssistLevel::None);
+        assert_eq!(r.base.get_assist_level(), AssistLevel::None);
+        assert_eq!(r.time_state.threshold, 40);
+    }
+
+    // -- SpiralRandomizer --
+
+    #[test]
+    fn spiral_randomizer_default() {
+        let r = SpiralRandomizer::new();
+        assert_eq!(r.base.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(r.increment, 0);
+        assert_eq!(r.head, 0);
+        assert_eq!(r.cycle, 0);
+    }
+
+    #[test]
+    fn spiral_randomizer_default_trait() {
+        let r = SpiralRandomizer::default();
+        assert_eq!(r.increment, 0);
+    }
+
+    // -- AllScratchRandomizer --
+
+    #[test]
+    fn all_scratch_randomizer_creation() {
+        let r = AllScratchRandomizer::new(40, 100, 0);
+        assert_eq!(r.base.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(r.time_state.threshold, 100);
+    }
+
+    #[test]
+    fn all_scratch_set_mode_single_play() {
+        let mut r = AllScratchRandomizer::new(40, 100, 0);
+        r.set_mode(Mode::BEAT_7K);
+        assert_eq!(r.scratch_lane, vec![7]);
+        assert!(!r.is_double_play);
+    }
+
+    #[test]
+    fn all_scratch_set_mode_double_play_side_0() {
+        let mut r = AllScratchRandomizer::new(40, 100, 0);
+        r.set_mode(Mode::BEAT_14K);
+        // BEAT_14K scratch_key = [7, 15], player=2, side=0 -> half=1, offset=0
+        assert_eq!(r.scratch_lane, vec![7]);
+        assert!(r.is_double_play);
+    }
+
+    #[test]
+    fn all_scratch_set_mode_double_play_side_1() {
+        let mut r = AllScratchRandomizer::new(40, 100, 1);
+        r.set_mode(Mode::BEAT_14K);
+        // side=1, half=1, offset=1
+        assert_eq!(r.scratch_lane, vec![15]);
+        assert!(r.is_double_play);
+    }
+
+    // -- ConvergeRandomizer --
+
+    #[test]
+    fn converge_randomizer_creation() {
+        let r = ConvergeRandomizer::new(100, 200);
+        assert_eq!(r.base.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(r.time_state.threshold, 100);
+    }
+
+    // -- NoMurioshiRandomizer --
+
+    #[test]
+    fn no_murioshi_randomizer_creation() {
+        let r = NoMurioshiRandomizer::new(100);
+        assert_eq!(r.base.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(r.time_state.threshold, 100);
+    }
+
+    // -- button_combination_table --
+
+    #[test]
+    fn button_combination_table_has_10_entries() {
+        assert_eq!(button_combination_table().len(), 10);
+    }
+
+    #[test]
+    fn button_combination_table_entries_have_6_elements() {
+        for entry in button_combination_table() {
+            assert_eq!(entry.len(), 6);
+        }
+    }
+
+    #[test]
+    fn button_combination_table_values_in_range() {
+        for entry in button_combination_table() {
+            for &val in entry {
+                assert!(val >= 0 && val <= 8, "Value {} out of range", val);
+            }
+        }
+    }
+
+    #[test]
+    fn button_combination_table_is_sorted_per_entry() {
+        for entry in button_combination_table() {
+            for i in 1..entry.len() {
+                assert!(
+                    entry[i] > entry[i - 1],
+                    "Entry {:?} is not sorted",
+                    entry
+                );
+            }
+        }
+    }
+
+    // -- Threshold calculation --
+
+    #[test]
+    fn randomizer_with_custom_threshold_bpm() {
+        let mut config = PlayerConfig::default();
+        config.hran_threshold_bpm = 150;
+        let r = Randomizer::create(Random::HRandom, &Mode::BEAT_7K, &config);
+        // threshold_millis = ceil(15000.0 / 150) = 100
+        if let Randomizer::SRandom(sr) = &r {
+            assert_eq!(sr.time_state.threshold, 100);
+        } else {
+            panic!("Expected SRandom variant");
+        }
+    }
+
+    #[test]
+    fn randomizer_with_zero_threshold_bpm() {
+        let mut config = PlayerConfig::default();
+        config.hran_threshold_bpm = 0;
+        let r = Randomizer::create(Random::HRandom, &Mode::BEAT_7K, &config);
+        if let Randomizer::SRandom(sr) = &r {
+            assert_eq!(sr.time_state.threshold, 0);
+        } else {
+            panic!("Expected SRandom variant");
+        }
+    }
+
+    #[test]
+    fn randomizer_with_negative_threshold_uses_default() {
+        let mut config = PlayerConfig::default();
+        config.hran_threshold_bpm = -1;
+        let r = Randomizer::create(Random::HRandom, &Mode::BEAT_7K, &config);
+        if let Randomizer::SRandom(sr) = &r {
+            assert_eq!(sr.time_state.threshold, DEFAULT_HRAN_THRESHOLD);
+        } else {
+            panic!("Expected SRandom variant");
+        }
+    }
+}
