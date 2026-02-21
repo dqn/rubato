@@ -32,16 +32,14 @@ impl Lwjgl3Controller {
         //   this.name = GLFW.glfwGetJoystickName(index);
         // All GLFW calls are stubbed — actual integration uses gilrs.
         let _index = index;
-        todo!("GLFW/gilrs integration: query joystick axes/buttons/name for index {}", index)
+        todo!(
+            "GLFW/gilrs integration: query joystick axes/buttons/name for index {}",
+            index
+        )
     }
 
     /// Creates a controller with pre-initialized state (for testing or manual construction).
-    pub fn new_with_state(
-        index: i32,
-        num_axes: usize,
-        num_buttons: usize,
-        name: String,
-    ) -> Self {
+    pub fn new_with_state(index: i32, num_axes: usize, num_buttons: usize, name: String) -> Self {
         Lwjgl3Controller {
             listeners: Vec::new(),
             index,
@@ -76,11 +74,15 @@ impl Lwjgl3Controller {
         //   3. Read new button values; if null, return disconnected.
         //   4. Compare with stored state, fire local listener events on changes.
         //   5. Return changes for manager-level listener dispatch.
-        todo!("GLFW/gilrs integration: poll joystick state for index {}", self.index)
+        todo!(
+            "GLFW/gilrs integration: poll joystick state for index {}",
+            self.index
+        )
     }
 
     /// Processes axis state changes and fires local listener events.
     /// Called with new axis values read from the gamepad API.
+    #[allow(clippy::needless_range_loop)]
     pub fn process_axis_changes(&mut self, new_axes: &[f32]) -> Vec<(i32, f32)> {
         let mut changes = Vec::new();
 
@@ -111,6 +113,7 @@ impl Lwjgl3Controller {
 
     /// Processes button state changes and fires local listener events.
     /// Called with new button values read from the gamepad API.
+    #[allow(clippy::needless_range_loop)]
     pub fn process_button_changes(&mut self, new_buttons: &[bool]) -> Vec<(i32, bool)> {
         let mut changes = Vec::new();
 
