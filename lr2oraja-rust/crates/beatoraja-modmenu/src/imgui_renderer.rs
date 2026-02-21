@@ -7,7 +7,7 @@ use crate::performance_monitor::PerformanceMonitor;
 use crate::random_trainer_menu::RandomTrainerMenu;
 use crate::skin_menu::SkinMenu;
 use crate::skin_widget_manager::SkinWidgetManager;
-use crate::stubs::{Controller, ImBoolean, InputProcessor, Lwjgl3ControllerManager, Version};
+use crate::stubs::{Controller, ImBoolean, InputProcessor, Lwjgl3ControllerManager, Version, version};
 
 use std::sync::Mutex;
 
@@ -135,8 +135,8 @@ impl ImGuiRenderer {
             // Debug information tree node
             // if (ImGui.treeNode("Endless Dream Debug Information"))
             {
-                let _commit_hash = Version::get_git_commit_hash();
-                let _build_time = Version::get_build_date();
+                let _commit_hash = Version::get_git_commit_hash().unwrap_or("unknown");
+                let _build_time = version::get_build_date().unwrap_or("unknown");
                 // ImGui.text("Commit hash: " + commit_hash);
                 // ImGui.text("Build time: " + build_time);
                 // ImGui.text("GLFW version: " + GLFW.glfwGetVersionString());

@@ -98,7 +98,7 @@ impl MiscSettingMenu {
         let players = PlayerConfig::read_all_player_id("player");
         let player_idx = players
             .iter()
-            .position(|p| p == config.get_playername())
+            .position(|p| config.get_playername().is_some_and(|name| p == name))
             .unwrap_or(0);
 
         *PLAYERS.lock().unwrap() = players;
@@ -114,7 +114,7 @@ fn get_play_config() -> PlayConfig {
     if let Some(ref m) = *main {
         let mode = CURRENT_PLAY_MODE.lock().unwrap();
         if let Some(ref mode) = *mode {
-            let player_config = m.get_player_config();
+            let mut player_config = m.get_player_config();
             let play_mode_config = player_config.get_play_config(mode);
             return play_mode_config.get_playconfig().clone();
         }
@@ -186,7 +186,7 @@ fn profile_switcher() {
     let _can_click = if let (Some(_m), Some(c)) = (&*main, &*config) {
         // In Java: main.getCurrentState() instanceof MusicSelector
         // && !config.getPlayername().equals(players[SELECTED_PLAYER.get()])
-        selected < players.len() && c.get_playername() != players[selected]
+        selected < players.len() && c.get_playername() != Some(players[selected].as_str())
     } else {
         false
     };

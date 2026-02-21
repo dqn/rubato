@@ -1,8 +1,17 @@
 // Stubs for external dependencies not yet available in the Rust port.
 // These will be replaced with real implementations in future phases.
 
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+
+// =========================================================================
+// Real type re-exports (replaced from stubs)
+// =========================================================================
+
+pub use beatoraja_core::config::Config;
+pub use beatoraja_core::play_config::PlayConfig;
+pub use beatoraja_core::play_mode_config::PlayModeConfig;
+pub use beatoraja_core::score_data::ScoreData;
+pub use beatoraja_core::version::{self, Version};
 
 // =========================================================================
 // MainController stub
@@ -42,23 +51,13 @@ impl MainController {
 }
 
 // =========================================================================
-// Config stub
-// =========================================================================
-
-#[derive(Clone, Debug, Default)]
-pub struct Config {
-    pub playername: String,
-}
-
-impl Config {
-    pub fn get_playername(&self) -> &str {
-        &self.playername
-    }
-}
-
-// =========================================================================
 // PlayerConfig stub
 // =========================================================================
+// Cannot be replaced: real type has `skin: Vec<Option<beatoraja_types::SkinConfig>>`
+// which is deeply incompatible with the stub SkinConfig used throughout skin_menu.rs.
+// The real SkinConfig has `path: Option<String>`, `properties: Option<SkinProperty>`
+// while the stub has `path: String`, `properties: SkinConfigProperty` with different
+// inner types (SkinOption vs SkinConfigOption, etc.).
 
 #[derive(Clone, Debug, Default)]
 pub struct PlayerConfig {
@@ -68,15 +67,15 @@ pub struct PlayerConfig {
 
 impl PlayerConfig {
     pub fn read_all_player_id(dir: &str) -> Vec<String> {
-        todo!("PlayerConfig::read_all_player_id - Phase 8+ dependency")
+        beatoraja_core::player_config::read_all_player_id(dir)
     }
 
     pub fn read_player_config(dir: &str, player_id: &str) -> PlayerConfig {
-        todo!("PlayerConfig::read_player_config - Phase 8+ dependency")
+        todo!("PlayerConfig::read_player_config - stub adapter")
     }
 
-    pub fn get_play_config(&self, _mode: &bms_model::mode::Mode) -> PlayModeConfig {
-        todo!("PlayerConfig::get_play_config - Phase 8+ dependency")
+    pub fn get_play_config(&mut self, mode: &bms_model::mode::Mode) -> &mut PlayModeConfig {
+        todo!("PlayerConfig::get_play_config - stub adapter")
     }
 
     pub fn get_skin(&self) -> &Vec<SkinConfig> {
@@ -93,109 +92,6 @@ impl PlayerConfig {
 
     pub fn set_skin_history(&mut self, history: Vec<SkinConfig>) {
         self.skin_history = history;
-    }
-}
-
-// =========================================================================
-// PlayModeConfig / PlayConfig stubs
-// =========================================================================
-
-#[derive(Clone, Debug, Default)]
-pub struct PlayModeConfig {
-    pub playconfig: PlayConfig,
-}
-
-impl PlayModeConfig {
-    pub fn get_playconfig(&self) -> &PlayConfig {
-        &self.playconfig
-    }
-
-    pub fn get_playconfig_mut(&mut self) -> &mut PlayConfig {
-        &mut self.playconfig
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PlayConfig {
-    pub enablelift: bool,
-    pub lift: f32,
-    pub enablehidden: bool,
-    pub hidden: f32,
-    pub enablelanecover: bool,
-    pub lanecover: f32,
-    pub lanecovermarginlow: f32,
-    pub lanecovermarginhigh: f32,
-    pub lanecoverswitchduration: i32,
-    pub enable_constant: bool,
-    pub constant_fadein_time: i32,
-}
-
-impl PlayConfig {
-    pub fn is_enablelift(&self) -> bool {
-        self.enablelift
-    }
-    pub fn set_enablelift(&mut self, v: bool) {
-        self.enablelift = v;
-    }
-    pub fn get_lift(&self) -> f32 {
-        self.lift
-    }
-    pub fn set_lift(&mut self, v: f32) {
-        self.lift = v;
-    }
-    pub fn is_enablehidden(&self) -> bool {
-        self.enablehidden
-    }
-    pub fn set_enablehidden(&mut self, v: bool) {
-        self.enablehidden = v;
-    }
-    pub fn get_hidden(&self) -> f32 {
-        self.hidden
-    }
-    pub fn set_hidden(&mut self, v: f32) {
-        self.hidden = v;
-    }
-    pub fn is_enablelanecover(&self) -> bool {
-        self.enablelanecover
-    }
-    pub fn set_enablelanecover(&mut self, v: bool) {
-        self.enablelanecover = v;
-    }
-    pub fn get_lanecover(&self) -> f32 {
-        self.lanecover
-    }
-    pub fn set_lanecover(&mut self, v: f32) {
-        self.lanecover = v;
-    }
-    pub fn get_lanecovermarginlow(&self) -> f32 {
-        self.lanecovermarginlow
-    }
-    pub fn set_lanecovermarginlow(&mut self, v: f32) {
-        self.lanecovermarginlow = v;
-    }
-    pub fn get_lanecovermarginhigh(&self) -> f32 {
-        self.lanecovermarginhigh
-    }
-    pub fn set_lanecovermarginhigh(&mut self, v: f32) {
-        self.lanecovermarginhigh = v;
-    }
-    pub fn get_lanecoverswitchduration(&self) -> i32 {
-        self.lanecoverswitchduration
-    }
-    pub fn set_lanecoverswitchduration(&mut self, v: i32) {
-        self.lanecoverswitchduration = v;
-    }
-    pub fn is_enable_constant(&self) -> bool {
-        self.enable_constant
-    }
-    pub fn set_enable_constant(&mut self, v: bool) {
-        self.enable_constant = v;
-    }
-    pub fn get_constant_fadein_time(&self) -> i32 {
-        self.constant_fadein_time
-    }
-    pub fn set_constant_fadein_time(&mut self, v: i32) {
-        self.constant_fadein_time = v;
     }
 }
 
@@ -323,21 +219,7 @@ pub trait MainState {
     fn as_any(&self) -> &dyn std::any::Any;
 }
 
-// =========================================================================
-// Version stub
-// =========================================================================
-
-pub struct Version;
-
-impl Version {
-    pub fn get_git_commit_hash() -> &'static str {
-        "unknown"
-    }
-
-    pub fn get_build_date() -> &'static str {
-        "unknown"
-    }
-}
+// Version is re-exported from beatoraja_core at the top of this file.
 
 // =========================================================================
 // Skin types stubs
@@ -696,8 +578,10 @@ impl SongBar {
 }
 
 // =========================================================================
-// SongData / ScoreData stubs
+// SongData stub
 // =========================================================================
+// Cannot be replaced: beatoraja-core cannot import from beatoraja-song
+// (circular dependency), and the stub SongData is used by SongBar stub.
 
 #[derive(Clone, Debug, Default)]
 pub struct SongData {
@@ -715,16 +599,7 @@ impl SongData {
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct ScoreData {
-    pub date: i64,
-}
-
-impl ScoreData {
-    pub fn get_date(&self) -> i64 {
-        self.date
-    }
-}
+// ScoreData is re-exported from beatoraja_core at the top of this file.
 
 // =========================================================================
 // PlayerResource stub
