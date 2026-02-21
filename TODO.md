@@ -170,7 +170,7 @@ Stubs that remain due to structural mismatches or external library dependencies:
 
 - **Structural mismatch:** TableData/TableFolder/TableAccessor — CourseData cascade (stub `song` vs real `hash`, `String` vs `Option<String>`, `f64` vs `f32`); requires Phase 15g
 - **Rendering:** TextureRegion/Texture in `beatoraja-play` (skin→play circular dep; deferred to Phase 13)
-- **Lifecycle stubs (trait-ified):** MainController/PlayerResource stubs remain but implement `MainControllerAccess`/`PlayerResourceAccess` traits (Phase 15d)
+- **Lifecycle stubs (trait-ified):** MainController/PlayerResource stubs remain but implement `MainControllerAccess`/`PlayerResourceAccess` traits (Phase 15d). MainState stubs remain as-is — `beatoraja-core` already defines `MainState` trait; downstream stubs have crate-specific APIs (timers, skin, input) that don't converge to a shared trait
 - **External libraries:** LibGDX rendering types (Phase 13), ImGui/egui types (Phase 13), Twitter4j/AWT clipboard (Phase 15e)
 
 Resolved in Phase 15a-d: ~~SongData circular dep~~ → moved to `beatoraja-types`. ~~SkinType/GrooveGauge~~ → moved to `beatoraja-types`. ~~SongDatabaseAccessor/IRConnection struct-vs-trait~~ → replaced with real traits.
