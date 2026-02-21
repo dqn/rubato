@@ -2,87 +2,6 @@
 
 pub use beatoraja_song::song_data::SongData;
 
-// MainControllerAccess / PlayerResourceAccess — re-exported from beatoraja-types (Phase 15d)
-pub use beatoraja_types::main_controller_access::MainControllerAccess;
-pub use beatoraja_types::main_state_type::MainStateType as TypesMainStateType;
-pub use beatoraja_types::player_resource_access::PlayerResourceAccess;
-
-/// Stub for MainController
-pub struct MainController;
-
-impl MainControllerAccess for MainController {
-    fn get_config(&self) -> &beatoraja_types::config::Config {
-        todo!()
-    }
-    fn get_player_config(&self) -> &beatoraja_types::player_config::PlayerConfig {
-        todo!()
-    }
-    fn change_state(&mut self, _state: TypesMainStateType) {
-        todo!()
-    }
-    fn save_config(&self) {
-        todo!()
-    }
-    fn exit(&self) {
-        todo!()
-    }
-    fn save_last_recording(&self, _reason: &str) {
-        todo!()
-    }
-    fn update_song(&mut self, _path: Option<&str>) {
-        todo!()
-    }
-    fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-        None
-    }
-    fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-        None
-    }
-}
-
-impl MainController {
-    pub fn get_ir_status(&self) -> &[IRStatusStub] {
-        &[]
-    }
-
-    pub fn get_player_config_local(&self) -> &PlayerConfigStub {
-        todo!("MainController.get_player_config stub")
-    }
-}
-
-/// Stub for IRStatus
-pub struct IRStatusStub {
-    pub connection: Box<dyn super::ir_connection::IRConnection>,
-}
-
-/// Stub for PlayerConfig (subset)
-pub struct PlayerConfigStub {
-    pub lnmode: i32,
-}
-
-impl PlayerConfigStub {
-    pub fn get_lnmode(&self) -> i32 {
-        self.lnmode
-    }
-}
-
-/// Stub for MainState trait (subset needed by RankingData)
-pub trait MainStateAccessor {
-    fn get_main_controller(&self) -> &MainController;
-    fn get_score_data_property(&self) -> &ScoreDataPropertyStub;
-}
-
-/// Stub for ScoreDataProperty (subset)
-pub struct ScoreDataPropertyStub {
-    pub score: Option<beatoraja_core::score_data::ScoreData>,
-}
-
-impl ScoreDataPropertyStub {
-    pub fn get_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
-        self.score.as_ref()
-    }
-}
-
 /// Stub for beatoraja.modmenu.ImGuiNotify
 pub struct ImGuiNotify;
 
@@ -111,9 +30,6 @@ pub struct LR2Random {
 
 impl LR2Random {
     pub fn new(seed: i32) -> Self {
-        // LR2-specific MT19937 seeding
-        let _state = seed as u32;
-        // Simple LCG-based stub; real implementation in beatoraja-pattern
         Self { state: seed as u32 }
     }
 

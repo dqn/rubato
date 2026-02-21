@@ -17,10 +17,10 @@ use crate::result_key_property::{ResultKey, ResultKeyProperty};
 use std::sync::Arc;
 
 use crate::stubs::{
-    BMSPlayerModeType, ControlKeys, EventType, FloatArray, IR_SEND_ALWAYS, IR_SEND_COMPLETE_SONG,
-    IR_SEND_UPDATE_SCORE, IRConfig, IRConnection, IRCourseData, IRScoreData, IRStatus, KeyCommand,
-    MainController, PlayerResource, RankingData,
+    BMSPlayerModeType, ControlKeys, EventType, FloatArray, IRConfig, IRConnection, IRCourseData,
+    IRScoreData, IRStatus, KeyCommand, MainController, PlayerResource, RankingData,
 };
+use beatoraja_core::ir_config::{IR_SEND_ALWAYS, IR_SEND_COMPLETE_SONG, IR_SEND_UPDATE_SCORE};
 
 /// IR send status for course result
 struct CourseIRSendStatus {

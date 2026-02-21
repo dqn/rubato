@@ -13,7 +13,9 @@
 // Property submodule (interfaces + factories)
 pub mod property;
 
-// Stubs for external dependencies (LibGDX, Phase 7+)
+// Rendering stubs (LibGDX graphics types — deferred to Phase 13 Bevy replacement)
+pub mod rendering_stubs;
+// Stubs for external dependencies (lifecycle types, Phase 7+)
 pub mod stubs;
 
 // Core skin types

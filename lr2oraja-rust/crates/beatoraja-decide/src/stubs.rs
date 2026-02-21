@@ -1,5 +1,4 @@
 // Stubs for external dependencies not yet available as proper imports.
-// These will be replaced with real imports as the corresponding crates are translated.
 
 use beatoraja_core::main_state::MainStateType;
 use beatoraja_core::system_sound_manager::SoundType;
@@ -15,8 +14,6 @@ use beatoraja_types::score_data::ScoreData;
 use beatoraja_types::song_data::SongData;
 
 /// Stub for MainController reference.
-/// In Java, MainState holds `public final MainController main`.
-/// Full MainController is in beatoraja-core but many methods are still stubbed.
 pub struct MainControllerRef;
 
 impl MainControllerRef {
@@ -63,6 +60,15 @@ impl MainControllerAccess for MainControllerRef {
     }
 }
 
+/// Stub for AudioProcessor reference
+pub struct AudioProcessorStub;
+
+impl AudioProcessorStub {
+    pub fn set_global_pitch(&self, _pitch: f32) {
+        todo!("Phase 7+ dependency: AudioProcessor.setGlobalPitch")
+    }
+}
+
 /// Stub for BMSPlayerInputProcessor reference
 pub struct InputProcessorStub;
 
@@ -89,15 +95,6 @@ impl InputProcessorStub {
 pub enum ControlKeysStub {
     Enter,
     Escape,
-}
-
-/// Stub for AudioProcessor reference
-pub struct AudioProcessorStub;
-
-impl AudioProcessorStub {
-    pub fn set_global_pitch(&self, _pitch: f32) {
-        todo!("Phase 7+ dependency: AudioProcessor.setGlobalPitch")
-    }
 }
 
 /// Stub for PlayerResource reference
@@ -235,10 +232,6 @@ impl Default for SkinStub {
         Self::new()
     }
 }
-
-/// Stub for SkinHeader
-#[derive(Clone, Debug, Default)]
-pub struct SkinHeaderStub;
 
 /// Stub for load_skin function
 pub fn load_skin(_skin_type: beatoraja_skin::skin_type::SkinType) -> Option<SkinStub> {

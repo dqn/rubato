@@ -3,17 +3,13 @@
 
 use std::path::{Path, PathBuf};
 
-use beatoraja_types::main_controller_access::MainControllerAccess;
-use beatoraja_types::main_state_type::MainStateType as TypesMainStateType;
-use beatoraja_types::player_resource_access::PlayerResourceAccess;
-
 // =========================================================================
 // Real type re-exports (replaced from stubs)
 // =========================================================================
 
 pub use beatoraja_core::config::Config;
 pub use beatoraja_core::play_config::PlayConfig;
-pub use beatoraja_core::play_mode_config::PlayModeConfig;
+use beatoraja_core::play_mode_config::PlayModeConfig;
 pub use beatoraja_core::score_data::ScoreData;
 pub use beatoraja_core::version::{self, Version};
 
@@ -37,50 +33,12 @@ impl MainController {
         todo!("MainController::get_current_state - Phase 8+ dependency")
     }
 
-    pub fn get_timer(&self) -> Timer {
-        todo!("MainController::get_timer - Phase 8+ dependency")
-    }
-
     pub fn save_config(&self) {
         todo!("MainController::save_config - Phase 8+ dependency")
     }
 
     pub fn load_new_profile(&self, _config: PlayerConfig) {
         todo!("MainController::load_new_profile - Phase 8+ dependency")
-    }
-
-    pub fn get_player_resource(&self) -> PlayerResource {
-        todo!("MainController::get_player_resource - Phase 8+ dependency")
-    }
-}
-
-impl MainControllerAccess for MainController {
-    fn get_config(&self) -> &beatoraja_types::config::Config {
-        todo!("MainController::MainControllerAccess::get_config")
-    }
-    fn get_player_config(&self) -> &beatoraja_types::player_config::PlayerConfig {
-        todo!("MainController::MainControllerAccess::get_player_config")
-    }
-    fn change_state(&mut self, _state: TypesMainStateType) {
-        todo!("MainController::MainControllerAccess::change_state")
-    }
-    fn save_config(&self) {
-        todo!("MainController::MainControllerAccess::save_config")
-    }
-    fn exit(&self) {
-        todo!("MainController::MainControllerAccess::exit")
-    }
-    fn save_last_recording(&self, _reason: &str) {
-        todo!("MainController::MainControllerAccess::save_last_recording")
-    }
-    fn update_song(&mut self, _path: Option<&str>) {
-        todo!("MainController::MainControllerAccess::update_song")
-    }
-    fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-        None
-    }
-    fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-        None
     }
 }
 
@@ -164,15 +122,9 @@ impl SkinConfig {
 pub struct SkinConfigDefault;
 
 impl SkinConfigDefault {
-    pub fn get(_skin_type: &SkinType) -> SkinConfigDefaultEntry {
-        SkinConfigDefaultEntry {
-            path: String::new(),
-        }
+    pub fn get_path(_skin_type: &SkinType) -> String {
+        String::new()
     }
-}
-
-pub struct SkinConfigDefaultEntry {
-    pub path: String,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -229,18 +181,6 @@ pub struct SkinConfigOffset {
     pub h: i32,
     pub r: i32,
     pub a: i32,
-}
-
-// =========================================================================
-// Timer stub
-// =========================================================================
-
-pub struct Timer;
-
-impl Timer {
-    pub fn set_frozen(&self, _frozen: bool) {
-        todo!("Timer::set_frozen - egui integration")
-    }
 }
 
 // =========================================================================
@@ -519,45 +459,15 @@ pub const OPTION_RANDOM_VALUE: i32 = -1;
 // MusicSelector stub
 // =========================================================================
 
-pub struct MusicSelector {
-    pub main: MusicSelectorMainRef,
-}
+pub struct MusicSelector;
 
 impl MusicSelector {
-    pub fn get_bar_render(&self) -> &BarRenderer {
-        todo!("MusicSelector::get_bar_render - select dependency")
-    }
-
-    pub fn get_bar_manager(&self) -> &BarManager {
-        todo!("MusicSelector::get_bar_manager - select dependency")
-    }
-
     pub fn get_selected_bar(&self) -> &dyn Bar {
         todo!("MusicSelector::get_selected_bar - select dependency")
     }
-}
 
-pub struct MusicSelectorMainRef;
-
-impl MusicSelectorMainRef {
-    pub fn get_player_resource(&self) -> &PlayerResource {
-        todo!("MusicSelectorMainRef::get_player_resource - select dependency")
-    }
-}
-
-pub struct BarRenderer;
-
-impl BarRenderer {
-    pub fn update_bar_text(&self) {
-        todo!("BarRenderer::update_bar_text - select dependency")
-    }
-}
-
-pub struct BarManager;
-
-impl BarManager {
-    pub fn update_bar(&self) {
-        todo!("BarManager::update_bar - select dependency")
+    pub fn get_reverse_lookup_data(&self) -> Vec<String> {
+        todo!("MusicSelector::get_reverse_lookup_data - select dependency")
     }
 }
 
@@ -587,101 +497,6 @@ impl SongBar {
 pub use beatoraja_core::stubs::SongData;
 
 // ScoreData is re-exported from beatoraja_core at the top of this file.
-
-// =========================================================================
-// PlayerResource stub
-// =========================================================================
-
-pub struct PlayerResource;
-
-impl PlayerResource {
-    pub fn get_reverse_lookup_data(&self) -> Vec<String> {
-        todo!("PlayerResource::get_reverse_lookup_data - Phase 8+ dependency")
-    }
-}
-
-impl PlayerResourceAccess for PlayerResource {
-    fn get_config(&self) -> &beatoraja_types::config::Config {
-        todo!("PlayerResource::PlayerResourceAccess::get_config")
-    }
-    fn get_player_config(&self) -> &beatoraja_types::player_config::PlayerConfig {
-        todo!("PlayerResource::PlayerResourceAccess::get_player_config")
-    }
-    fn get_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
-        None
-    }
-    fn get_rival_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
-        None
-    }
-    fn get_target_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
-        None
-    }
-    fn get_course_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
-        None
-    }
-    fn set_course_score_data(&mut self, _score: beatoraja_types::score_data::ScoreData) {}
-    fn get_songdata(&self) -> Option<&beatoraja_types::song_data::SongData> {
-        None
-    }
-    fn get_replay_data(&self) -> Option<&beatoraja_types::replay_data::ReplayData> {
-        None
-    }
-    fn get_course_replay(&self) -> &[beatoraja_types::replay_data::ReplayData] {
-        &[]
-    }
-    fn add_course_replay(&mut self, _rd: beatoraja_types::replay_data::ReplayData) {}
-    fn get_course_data(&self) -> Option<&beatoraja_types::course_data::CourseData> {
-        None
-    }
-    fn get_course_index(&self) -> usize {
-        0
-    }
-    fn next_course(&mut self) -> bool {
-        false
-    }
-    fn get_constraint(&self) -> Vec<beatoraja_types::course_data::CourseDataConstraint> {
-        vec![]
-    }
-    fn get_gauge(&self) -> Option<&Vec<Vec<f32>>> {
-        None
-    }
-    fn get_groove_gauge(&self) -> Option<&beatoraja_types::groove_gauge::GrooveGauge> {
-        None
-    }
-    fn get_course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
-        static EMPTY: Vec<Vec<Vec<f32>>> = Vec::new();
-        &EMPTY
-    }
-    fn add_course_gauge(&mut self, _gauge: Vec<Vec<f32>>) {}
-    fn get_maxcombo(&self) -> i32 {
-        0
-    }
-    fn get_org_gauge_option(&self) -> i32 {
-        0
-    }
-    fn set_org_gauge_option(&mut self, _val: i32) {}
-    fn get_assist(&self) -> i32 {
-        0
-    }
-    fn is_update_score(&self) -> bool {
-        false
-    }
-    fn is_update_course_score(&self) -> bool {
-        false
-    }
-    fn is_force_no_ir_send(&self) -> bool {
-        false
-    }
-    fn is_freq_on(&self) -> bool {
-        false
-    }
-    fn get_reverse_lookup_data(&self) -> Vec<String> {
-        vec![]
-    }
-    fn get_reverse_lookup_levels(&self) -> Vec<String> {
-        vec![]
-    }
-}
 
 // =========================================================================
 // ImGui/egui stub types

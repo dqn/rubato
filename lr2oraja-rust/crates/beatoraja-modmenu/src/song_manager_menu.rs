@@ -112,7 +112,7 @@ fn get_current_score_data() -> Option<ScoreData> {
 fn get_reverse_lookup_data() -> Vec<String> {
     let selector = SELECTOR.lock().unwrap();
     if let Some(ref sel) = *selector {
-        return sel.main.get_player_resource().get_reverse_lookup_data();
+        return sel.get_reverse_lookup_data();
     }
     Vec::new()
 }

@@ -521,16 +521,6 @@ impl ImGuiNotify {
 }
 
 // ============================================================
-// SkinConfiguration / KeyConfiguration stubs
-// ============================================================
-
-/// Stub for bms.player.beatoraja.config.SkinConfiguration
-pub struct SkinConfiguration;
-
-/// Stub for bms.player.beatoraja.config.KeyConfiguration
-pub struct KeyConfiguration;
-
-// ============================================================
 // IntegerProperty / BooleanProperty / StringProperty stubs
 // ============================================================
 
