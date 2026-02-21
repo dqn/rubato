@@ -185,3 +185,295 @@ impl LaneProperty {
         &self.scratch_to_key
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // --- BEAT_5K lane property tests ---
+
+    #[test]
+    fn beat_5k_lane_count() {
+        let lp = LaneProperty::new(&Mode::BEAT_5K);
+        // 5 keys + 1 scratch = 6 lanes
+        assert_eq!(lp.get_lane_key_assign().len(), 6);
+    }
+
+    #[test]
+    fn beat_5k_key_to_lane() {
+        let lp = LaneProperty::new(&Mode::BEAT_5K);
+        assert_eq!(lp.get_key_lane_assign(), &[0, 1, 2, 3, 4, 5, 5]);
+    }
+
+    #[test]
+    fn beat_5k_scratch_lane() {
+        let lp = LaneProperty::new(&Mode::BEAT_5K);
+        let scratch = lp.get_lane_scratch_assign();
+        // Lane 5 is scratch (index 0)
+        assert_eq!(scratch[5], 0);
+        // Lanes 0-4 are not scratch
+        for i in 0..5 {
+            assert_eq!(scratch[i], -1);
+        }
+    }
+
+    #[test]
+    fn beat_5k_scratch_keys() {
+        let lp = LaneProperty::new(&Mode::BEAT_5K);
+        let sk = lp.get_scratch_key_assign();
+        assert_eq!(sk.len(), 1);
+        assert_eq!(sk[0], vec![5, 6]);
+    }
+
+    #[test]
+    fn beat_5k_skin_offset() {
+        let lp = LaneProperty::new(&Mode::BEAT_5K);
+        let offsets = lp.get_lane_skin_offset();
+        // Scratch is offset 0, keys are 1-5
+        assert_eq!(offsets[5], 0); // scratch
+        assert_eq!(offsets[0], 1); // key 1
+    }
+
+    #[test]
+    fn beat_5k_player_mapping() {
+        let lp = LaneProperty::new(&Mode::BEAT_5K);
+        let players = lp.get_lane_player();
+        // All lanes belong to player 0
+        for &p in players {
+            assert_eq!(p, 0);
+        }
+    }
+
+    // --- BEAT_7K lane property tests ---
+
+    #[test]
+    fn beat_7k_lane_count() {
+        let lp = LaneProperty::new(&Mode::BEAT_7K);
+        // 7 keys + 1 scratch = 8 lanes
+        assert_eq!(lp.get_lane_key_assign().len(), 8);
+    }
+
+    #[test]
+    fn beat_7k_key_to_lane() {
+        let lp = LaneProperty::new(&Mode::BEAT_7K);
+        assert_eq!(
+            lp.get_key_lane_assign(),
+            &[0, 1, 2, 3, 4, 5, 6, 7, 7]
+        );
+    }
+
+    #[test]
+    fn beat_7k_scratch_lane() {
+        let lp = LaneProperty::new(&Mode::BEAT_7K);
+        let scratch = lp.get_lane_scratch_assign();
+        assert_eq!(scratch[7], 0); // Lane 7 is scratch
+        for i in 0..7 {
+            assert_eq!(scratch[i], -1);
+        }
+    }
+
+    #[test]
+    fn beat_7k_scratch_keys() {
+        let lp = LaneProperty::new(&Mode::BEAT_7K);
+        let sk = lp.get_scratch_key_assign();
+        assert_eq!(sk.len(), 1);
+        assert_eq!(sk[0], vec![7, 8]);
+    }
+
+    #[test]
+    fn beat_7k_player_mapping() {
+        let lp = LaneProperty::new(&Mode::BEAT_7K);
+        let players = lp.get_lane_player();
+        assert_eq!(players.len(), 8);
+        for &p in players {
+            assert_eq!(p, 0);
+        }
+    }
+
+    // --- BEAT_10K lane property tests ---
+
+    #[test]
+    fn beat_10k_lane_count() {
+        let lp = LaneProperty::new(&Mode::BEAT_10K);
+        // 5+5 keys + 2 scratches = 12 lanes
+        assert_eq!(lp.get_lane_key_assign().len(), 12);
+    }
+
+    #[test]
+    fn beat_10k_scratch_lanes() {
+        let lp = LaneProperty::new(&Mode::BEAT_10K);
+        let scratch = lp.get_lane_scratch_assign();
+        assert_eq!(scratch[5], 0);  // Player 1 scratch
+        assert_eq!(scratch[11], 1); // Player 2 scratch
+    }
+
+    #[test]
+    fn beat_10k_two_scratches() {
+        let lp = LaneProperty::new(&Mode::BEAT_10K);
+        let sk = lp.get_scratch_key_assign();
+        assert_eq!(sk.len(), 2);
+        assert_eq!(sk[0], vec![5, 6]);
+        assert_eq!(sk[1], vec![12, 13]);
+    }
+
+    #[test]
+    fn beat_10k_player_mapping() {
+        let lp = LaneProperty::new(&Mode::BEAT_10K);
+        let players = lp.get_lane_player();
+        assert_eq!(players.len(), 12);
+        // First 6 lanes are player 0
+        for i in 0..6 {
+            assert_eq!(players[i], 0);
+        }
+        // Last 6 lanes are player 1
+        for i in 6..12 {
+            assert_eq!(players[i], 1);
+        }
+    }
+
+    // --- BEAT_14K lane property tests ---
+
+    #[test]
+    fn beat_14k_lane_count() {
+        let lp = LaneProperty::new(&Mode::BEAT_14K);
+        // 7+7 keys + 2 scratches = 16 lanes
+        assert_eq!(lp.get_lane_key_assign().len(), 16);
+    }
+
+    #[test]
+    fn beat_14k_scratch_lanes() {
+        let lp = LaneProperty::new(&Mode::BEAT_14K);
+        let scratch = lp.get_lane_scratch_assign();
+        assert_eq!(scratch[7], 0);   // Player 1 scratch
+        assert_eq!(scratch[15], 1);  // Player 2 scratch
+    }
+
+    #[test]
+    fn beat_14k_player_mapping() {
+        let lp = LaneProperty::new(&Mode::BEAT_14K);
+        let players = lp.get_lane_player();
+        assert_eq!(players.len(), 16);
+        for i in 0..8 {
+            assert_eq!(players[i], 0);
+        }
+        for i in 8..16 {
+            assert_eq!(players[i], 1);
+        }
+    }
+
+    // --- POPN lane property tests ---
+
+    #[test]
+    fn popn_9k_lane_count() {
+        let lp = LaneProperty::new(&Mode::POPN_9K);
+        assert_eq!(lp.get_lane_key_assign().len(), 9);
+    }
+
+    #[test]
+    fn popn_9k_no_scratch() {
+        let lp = LaneProperty::new(&Mode::POPN_9K);
+        let scratch = lp.get_lane_scratch_assign();
+        for &s in scratch {
+            assert_eq!(s, -1);
+        }
+        assert!(lp.get_scratch_key_assign().is_empty());
+    }
+
+    #[test]
+    fn popn_5k_lane_count() {
+        let lp = LaneProperty::new(&Mode::POPN_5K);
+        // POPN_5K uses same mapping as POPN_9K (9 lanes)
+        assert_eq!(lp.get_lane_key_assign().len(), 9);
+    }
+
+    #[test]
+    fn popn_5k_no_scratch() {
+        let lp = LaneProperty::new(&Mode::POPN_5K);
+        assert!(lp.get_scratch_key_assign().is_empty());
+    }
+
+    // --- KEYBOARD_24K lane property tests ---
+
+    #[test]
+    fn keyboard_24k_lane_count() {
+        let lp = LaneProperty::new(&Mode::KEYBOARD_24K);
+        assert_eq!(lp.get_lane_key_assign().len(), 26);
+    }
+
+    #[test]
+    fn keyboard_24k_no_scratch() {
+        let lp = LaneProperty::new(&Mode::KEYBOARD_24K);
+        let scratch = lp.get_lane_scratch_assign();
+        for &s in scratch {
+            assert_eq!(s, -1);
+        }
+        assert!(lp.get_scratch_key_assign().is_empty());
+    }
+
+    #[test]
+    fn keyboard_24k_identity_key_to_lane() {
+        let lp = LaneProperty::new(&Mode::KEYBOARD_24K);
+        let mapping = lp.get_key_lane_assign();
+        for (i, &lane) in mapping.iter().enumerate() {
+            assert_eq!(lane, i as i32);
+        }
+    }
+
+    #[test]
+    fn keyboard_24k_player_mapping() {
+        let lp = LaneProperty::new(&Mode::KEYBOARD_24K);
+        let players = lp.get_lane_player();
+        assert_eq!(players.len(), 26);
+        for &p in players {
+            assert_eq!(p, 0);
+        }
+    }
+
+    // --- KEYBOARD_24K_DOUBLE lane property tests ---
+
+    #[test]
+    fn keyboard_24k_double_lane_count() {
+        let lp = LaneProperty::new(&Mode::KEYBOARD_24K_DOUBLE);
+        assert_eq!(lp.get_lane_key_assign().len(), 52);
+    }
+
+    #[test]
+    fn keyboard_24k_double_no_scratch() {
+        let lp = LaneProperty::new(&Mode::KEYBOARD_24K_DOUBLE);
+        assert!(lp.get_scratch_key_assign().is_empty());
+    }
+
+    #[test]
+    fn keyboard_24k_double_player_mapping() {
+        let lp = LaneProperty::new(&Mode::KEYBOARD_24K_DOUBLE);
+        let players = lp.get_lane_player();
+        assert_eq!(players.len(), 52);
+        for i in 0..26 {
+            assert_eq!(players[i], 0);
+        }
+        for i in 26..52 {
+            assert_eq!(players[i], 1);
+        }
+    }
+
+    #[test]
+    fn keyboard_24k_double_skin_offset_wraps() {
+        let lp = LaneProperty::new(&Mode::KEYBOARD_24K_DOUBLE);
+        let offsets = lp.get_lane_skin_offset();
+        // Offsets wrap at 26: lane 0 -> 1, lane 26 -> 1
+        assert_eq!(offsets[0], 1);
+        assert_eq!(offsets[26], 1);
+        assert_eq!(offsets[25], 26);
+        assert_eq!(offsets[51], 26);
+    }
+
+    // --- Clone test ---
+
+    #[test]
+    fn lane_property_is_cloneable() {
+        let lp = LaneProperty::new(&Mode::BEAT_7K);
+        let lp2 = lp.clone();
+        assert_eq!(lp.get_key_lane_assign(), lp2.get_key_lane_assign());
+        assert_eq!(lp.get_lane_player(), lp2.get_lane_player());
+    }
+}

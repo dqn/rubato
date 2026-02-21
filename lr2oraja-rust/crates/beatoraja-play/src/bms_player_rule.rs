@@ -133,3 +133,201 @@ fn bms_player_rule_set_beatoraja() -> Vec<BMSPlayerRule> {
         ),
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // --- get_bms_player_rule tests ---
+
+    #[test]
+    fn lr2_ruleset_returns_lr2_for_any_mode() {
+        // LR2 ruleset has a single rule with empty mode list (matches all)
+        let modes = [
+            Mode::BEAT_5K,
+            Mode::BEAT_7K,
+            Mode::BEAT_10K,
+            Mode::BEAT_14K,
+            Mode::POPN_5K,
+            Mode::POPN_9K,
+            Mode::KEYBOARD_24K,
+            Mode::KEYBOARD_24K_DOUBLE,
+        ];
+        for mode in &modes {
+            let rule = BMSPlayerRule::get_bms_player_rule(mode);
+            assert_eq!(rule.gauge, GaugeProperty::Lr2);
+        }
+    }
+
+    #[test]
+    fn lr2_ruleset_returns_lr2_gauge() {
+        let rule = BMSPlayerRule::get_bms_player_rule(&Mode::BEAT_7K);
+        assert_eq!(rule.gauge, GaugeProperty::Lr2);
+    }
+
+    #[test]
+    fn lr2_ruleset_has_empty_mode_list() {
+        let rule = BMSPlayerRule::get_bms_player_rule(&Mode::BEAT_7K);
+        assert!(rule.mode.is_empty());
+    }
+
+    // --- beatoraja ruleset tests ---
+
+    #[test]
+    fn beatoraja_ruleset_has_five_entries() {
+        let ruleset = bms_player_rule_set_beatoraja();
+        assert_eq!(ruleset.len(), 5);
+    }
+
+    #[test]
+    fn beatoraja_ruleset_fivekeys_for_5k() {
+        let ruleset = bms_player_rule_set_beatoraja();
+        assert_eq!(ruleset[0].gauge, GaugeProperty::FiveKeys);
+        assert!(ruleset[0].mode.contains(&Mode::BEAT_5K));
+        assert!(ruleset[0].mode.contains(&Mode::BEAT_10K));
+    }
+
+    #[test]
+    fn beatoraja_ruleset_sevenkeys_for_7k() {
+        let ruleset = bms_player_rule_set_beatoraja();
+        assert_eq!(ruleset[1].gauge, GaugeProperty::SevenKeys);
+        assert!(ruleset[1].mode.contains(&Mode::BEAT_7K));
+        assert!(ruleset[1].mode.contains(&Mode::BEAT_14K));
+    }
+
+    #[test]
+    fn beatoraja_ruleset_pms_for_popn() {
+        let ruleset = bms_player_rule_set_beatoraja();
+        assert_eq!(ruleset[2].gauge, GaugeProperty::Pms);
+        assert!(ruleset[2].mode.contains(&Mode::POPN_5K));
+        assert!(ruleset[2].mode.contains(&Mode::POPN_9K));
+    }
+
+    #[test]
+    fn beatoraja_ruleset_keyboard_for_24k() {
+        let ruleset = bms_player_rule_set_beatoraja();
+        assert_eq!(ruleset[3].gauge, GaugeProperty::Keyboard);
+        assert!(ruleset[3].mode.contains(&Mode::KEYBOARD_24K));
+        assert!(ruleset[3].mode.contains(&Mode::KEYBOARD_24K_DOUBLE));
+    }
+
+    #[test]
+    fn beatoraja_ruleset_fallback_is_sevenkeys() {
+        let ruleset = bms_player_rule_set_beatoraja();
+        // Last entry has empty mode list (catches everything else)
+        assert_eq!(ruleset[4].gauge, GaugeProperty::SevenKeys);
+        assert!(ruleset[4].mode.is_empty());
+    }
+
+    // --- calculate_default_total tests ---
+
+    #[test]
+    fn default_total_with_zero_notes() {
+        // 160.0 + (0 + max(0 - 400, 0).min(200)) * 0.16
+        // = 160.0 + (0 + 0) * 0.16 = 160.0
+        let total = calculate_default_total(&Mode::BEAT_7K, 0);
+        assert!((total - 160.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn default_total_with_400_notes() {
+        // 160.0 + (400 + max(400 - 400, 0).min(200)) * 0.16
+        // = 160.0 + (400 + 0) * 0.16 = 160.0 + 64.0 = 224.0
+        let total = calculate_default_total(&Mode::BEAT_7K, 400);
+        assert!((total - 224.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn default_total_with_500_notes() {
+        // 160.0 + (500 + max(500 - 400, 0).min(200)) * 0.16
+        // = 160.0 + (500 + 100) * 0.16 = 160.0 + 96.0 = 256.0
+        let total = calculate_default_total(&Mode::BEAT_7K, 500);
+        assert!((total - 256.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn default_total_with_700_notes() {
+        // 160.0 + (700 + max(700 - 400, 0).min(200)) * 0.16
+        // = 160.0 + (700 + min(300, 200)) * 0.16
+        // = 160.0 + (700 + 200) * 0.16 = 160.0 + 144.0 = 304.0
+        let total = calculate_default_total(&Mode::BEAT_7K, 700);
+        assert!((total - 304.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn default_total_with_1000_notes() {
+        // (1000 - 400).max(0).min(200) = 200
+        // 160.0 + (1000 + 200) * 0.16 = 160.0 + 192.0 = 352.0
+        let total = calculate_default_total(&Mode::BEAT_7K, 1000);
+        assert!((total - 352.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn default_total_with_200_notes() {
+        // (200 - 400).max(0).min(200) = 0
+        // 160.0 + (200 + 0) * 0.16 = 160.0 + 32.0 = 192.0
+        let total = calculate_default_total(&Mode::BEAT_7K, 200);
+        assert!((total - 192.0).abs() < f64::EPSILON);
+    }
+
+    // --- validate tests ---
+
+    #[test]
+    fn validate_converts_bms_rank_to_bmson() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        // BMS rank 2 is default (judgerank_type is BmsRank)
+        BMSPlayerRule::validate(&mut model);
+        // After validation, should be BmsonJudgerank
+        assert_eq!(model.get_judgerank_type(), &JudgeRankType::BmsonJudgerank);
+    }
+
+    #[test]
+    fn validate_bms_rank_index_maps_to_lr2_judgerank() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        // Default judgerank = 2 (BmsRank), LR2 judgerank table: [25, 50, 75, 100, 75]
+        // Index 2 => 75
+        BMSPlayerRule::validate(&mut model);
+        assert_eq!(model.get_judgerank(), 75);
+    }
+
+    #[test]
+    fn validate_bms_rank_out_of_range_uses_default() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(10); // out of range 0..5
+        BMSPlayerRule::validate(&mut model);
+        // Should use judgerank[2] = 75 as fallback
+        assert_eq!(model.get_judgerank(), 75);
+    }
+
+    #[test]
+    fn validate_sets_total_type_to_bms() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        BMSPlayerRule::validate(&mut model);
+        assert_eq!(model.get_total_type(), &TotalType::Bms);
+    }
+
+    #[test]
+    fn validate_bmson_judgerank_preserves_positive_value() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(120);
+        model.set_judgerank_type(JudgeRankType::BmsonJudgerank);
+        BMSPlayerRule::validate(&mut model);
+        // Positive BmsonJudgerank preserved as-is
+        assert_eq!(model.get_judgerank(), 120);
+    }
+
+    #[test]
+    fn validate_bmson_judgerank_zero_becomes_100() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(0);
+        model.set_judgerank_type(JudgeRankType::BmsonJudgerank);
+        BMSPlayerRule::validate(&mut model);
+        assert_eq!(model.get_judgerank(), 100);
+    }
+}

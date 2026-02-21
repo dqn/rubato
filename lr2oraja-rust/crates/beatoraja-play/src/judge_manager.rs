@@ -273,3 +273,210 @@ impl JudgeManager {
         &self.ghost
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_creates_default_state() {
+        let jm = JudgeManager::new();
+        assert_eq!(jm.get_combo(), 0);
+        assert_eq!(jm.get_course_combo(), 0);
+        assert_eq!(jm.get_course_maxcombo(), 0);
+    }
+
+    #[test]
+    fn default_is_same_as_new() {
+        let jm1 = JudgeManager::new();
+        let jm2 = JudgeManager::default();
+        assert_eq!(jm1.get_combo(), jm2.get_combo());
+        assert_eq!(jm1.get_course_combo(), jm2.get_course_combo());
+        assert_eq!(jm1.get_course_maxcombo(), jm2.get_course_maxcombo());
+    }
+
+    #[test]
+    fn recent_judges_initialized_to_min() {
+        let jm = JudgeManager::new();
+        let judges = jm.get_recent_judges();
+        assert_eq!(judges.len(), 100);
+        for &j in judges {
+            assert_eq!(j, i64::MIN);
+        }
+    }
+
+    #[test]
+    fn micro_recent_judges_initialized_to_min() {
+        let jm = JudgeManager::new();
+        let judges = jm.get_micro_recent_judges();
+        assert_eq!(judges.len(), 100);
+        for &j in judges {
+            assert_eq!(j, i64::MIN);
+        }
+    }
+
+    #[test]
+    fn recent_judges_index_starts_at_zero() {
+        let jm = JudgeManager::new();
+        assert_eq!(jm.get_recent_judges_index(), 0);
+    }
+
+    #[test]
+    fn set_course_combo() {
+        let mut jm = JudgeManager::new();
+        jm.set_course_combo(42);
+        assert_eq!(jm.get_course_combo(), 42);
+    }
+
+    #[test]
+    fn set_course_maxcombo() {
+        let mut jm = JudgeManager::new();
+        jm.set_course_maxcombo(100);
+        assert_eq!(jm.get_course_maxcombo(), 100);
+    }
+
+    #[test]
+    fn get_now_judge_out_of_bounds_returns_zero() {
+        let jm = JudgeManager::new();
+        // Before init, judgenow is empty
+        assert_eq!(jm.get_now_judge(0), 0);
+        assert_eq!(jm.get_now_judge(100), 0);
+    }
+
+    #[test]
+    fn get_now_combo_out_of_bounds_returns_zero() {
+        let jm = JudgeManager::new();
+        assert_eq!(jm.get_now_combo(0), 0);
+        assert_eq!(jm.get_now_combo(100), 0);
+    }
+
+    #[test]
+    fn get_recent_judge_timing_out_of_bounds_returns_zero() {
+        let jm = JudgeManager::new();
+        assert_eq!(jm.get_recent_judge_timing(0), 0);
+        assert_eq!(jm.get_recent_judge_timing(100), 0);
+    }
+
+    #[test]
+    fn get_recent_judge_micro_timing_out_of_bounds_returns_zero() {
+        let jm = JudgeManager::new();
+        assert_eq!(jm.get_recent_judge_micro_timing(0), 0);
+        assert_eq!(jm.get_recent_judge_micro_timing(100), 0);
+    }
+
+    #[test]
+    fn init_sets_up_judge_tables() {
+        let mut jm = JudgeManager::new();
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(100);
+        jm.init(&model, 1);
+
+        // After init, judgenow should have 1 entry
+        assert_eq!(jm.get_now_judge(0), 0);
+        // judge table should be populated
+        let table = jm.get_judge_table(false);
+        assert!(!table.is_empty());
+        // Scratch table should also be populated
+        let sc_table = jm.get_judge_table(true);
+        assert!(!sc_table.is_empty());
+    }
+
+    #[test]
+    fn init_sets_up_ghost_array() {
+        let mut jm = JudgeManager::new();
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(100);
+        jm.init(&model, 1);
+
+        let ghost = jm.get_ghost();
+        // Ghost array initialized with value 4 for each note
+        let total = model.get_total_notes() as usize;
+        assert_eq!(ghost.len(), total);
+        for &g in ghost {
+            assert_eq!(g, 4);
+        }
+    }
+
+    #[test]
+    fn init_resets_recent_judges() {
+        let mut jm = JudgeManager::new();
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        jm.init(&model, 1);
+
+        assert_eq!(jm.get_recent_judges_index(), 0);
+        for &j in jm.get_recent_judges() {
+            assert_eq!(j, i64::MIN);
+        }
+    }
+
+    #[test]
+    fn get_judge_count_initially_zero() {
+        let jm = JudgeManager::new();
+        // All judge counts should be 0
+        for i in 0..6 {
+            assert_eq!(jm.get_judge_count(i), 0);
+        }
+    }
+
+    #[test]
+    fn get_judge_count_fast_initially_zero() {
+        let jm = JudgeManager::new();
+        for i in 0..6 {
+            assert_eq!(jm.get_judge_count_fast(i, true), 0);
+            assert_eq!(jm.get_judge_count_fast(i, false), 0);
+        }
+    }
+
+    #[test]
+    fn get_past_notes_initially_zero() {
+        let jm = JudgeManager::new();
+        assert_eq!(jm.get_past_notes(), 0);
+    }
+
+    #[test]
+    fn get_auto_presstime_initially_empty() {
+        let jm = JudgeManager::new();
+        assert!(jm.get_auto_presstime().is_empty());
+    }
+
+    #[test]
+    fn get_score_data_returns_default() {
+        let jm = JudgeManager::new();
+        let score = jm.get_score_data();
+        assert_eq!(score.combo, 0);
+        assert_eq!(score.epg, 0);
+        assert_eq!(score.egr, 0);
+    }
+
+    #[test]
+    fn init_with_judgeregion_2() {
+        let mut jm = JudgeManager::new();
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_14K);
+        model.set_judgerank(100);
+        jm.init(&model, 2);
+
+        // Should have 2 judge regions (2 players)
+        assert_eq!(jm.get_now_judge(0), 0);
+        assert_eq!(jm.get_now_judge(1), 0);
+    }
+
+    #[test]
+    fn judge_time_region_returns_note_judge() {
+        let mut jm = JudgeManager::new();
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(100);
+        jm.init(&model, 1);
+
+        let region = jm.get_judge_time_region(0);
+        // Should be the note judge table (not scratch)
+        assert!(!region.is_empty());
+        // LR2 mode: first entry should be PGREAT window
+        assert!(region[0][0] < 0); // late bound is negative
+        assert!(region[0][1] > 0); // early bound is positive
+    }
+}

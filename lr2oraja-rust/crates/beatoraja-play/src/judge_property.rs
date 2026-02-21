@@ -486,3 +486,372 @@ impl JudgePropertyType {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // --- JudgePropertyType tests ---
+
+    #[test]
+    fn judge_property_type_get_returns_correct_variant() {
+        // Just verify each type returns a JudgeProperty without panicking
+        let _ = JudgePropertyType::FiveKeys.get();
+        let _ = JudgePropertyType::SevenKeys.get();
+        let _ = JudgePropertyType::Pms.get();
+        let _ = JudgePropertyType::Keyboard.get();
+        let _ = JudgePropertyType::Lr2.get();
+    }
+
+    // --- JudgeWindowRule pre-defined rule tests ---
+
+    #[test]
+    fn rule_normal_has_correct_judgerank() {
+        let rule = rule_normal();
+        assert_eq!(rule.judgerank, vec![25, 50, 75, 100, 125]);
+        assert_eq!(rule.fixjudge, vec![false, false, false, false, true]);
+        assert_eq!(rule.rule_type, JudgeWindowRuleType::Normal);
+    }
+
+    #[test]
+    fn rule_pms_has_correct_judgerank() {
+        let rule = rule_pms();
+        assert_eq!(rule.judgerank, vec![33, 50, 70, 100, 133]);
+        assert_eq!(rule.fixjudge, vec![true, false, false, true, true]);
+        assert_eq!(rule.rule_type, JudgeWindowRuleType::Pms);
+    }
+
+    #[test]
+    fn rule_lr2_has_correct_judgerank() {
+        let rule = rule_lr2();
+        assert_eq!(rule.judgerank, vec![25, 50, 75, 100, 75]);
+        assert_eq!(rule.fixjudge, vec![false, false, false, true, true]);
+        assert_eq!(rule.rule_type, JudgeWindowRuleType::Lr2);
+    }
+
+    // --- Seven keys note judge window tests ---
+
+    #[test]
+    fn sevenkeys_note_windows() {
+        let jp = sevenkeys();
+        assert_eq!(jp.note.len(), 5);
+        // PGREAT window
+        assert_eq!(jp.note[0], [-20000, 20000]);
+        // GREAT window
+        assert_eq!(jp.note[1], [-60000, 60000]);
+        // GOOD window
+        assert_eq!(jp.note[2], [-150000, 150000]);
+        // BAD window
+        assert_eq!(jp.note[3], [-280000, 220000]);
+        // POOR window (miss)
+        assert_eq!(jp.note[4], [-150000, 500000]);
+    }
+
+    #[test]
+    fn sevenkeys_scratch_windows() {
+        let jp = sevenkeys();
+        assert_eq!(jp.scratch.len(), 5);
+        // Scratch has wider windows than keys
+        assert_eq!(jp.scratch[0], [-30000, 30000]);
+        assert_eq!(jp.scratch[1], [-70000, 70000]);
+    }
+
+    #[test]
+    fn sevenkeys_combo_conditions() {
+        let jp = sevenkeys();
+        // PG, GR, GD continue combo; BD does not; PR does not; MS does
+        assert_eq!(jp.combo, vec![true, true, true, false, false, true]);
+    }
+
+    // --- Five keys note judge window tests ---
+
+    #[test]
+    fn fivekeys_note_windows() {
+        let jp = fivekeys();
+        assert_eq!(jp.note.len(), 5);
+        assert_eq!(jp.note[0], [-20000, 20000]);
+        assert_eq!(jp.note[1], [-50000, 50000]);
+        assert_eq!(jp.note[2], [-100000, 100000]);
+        assert_eq!(jp.note[3], [-150000, 150000]);
+        assert_eq!(jp.note[4], [-150000, 500000]);
+    }
+
+    #[test]
+    fn fivekeys_combo_conditions() {
+        let jp = fivekeys();
+        // PG, GR, GD continue combo; BD, PR, MS do not
+        assert_eq!(jp.combo, vec![true, true, true, false, false, false]);
+    }
+
+    // --- LR2 judge property tests ---
+
+    #[test]
+    fn lr2_note_windows() {
+        let jp = lr2();
+        assert_eq!(jp.note.len(), 5);
+        assert_eq!(jp.note[0], [-21000, 21000]);
+        assert_eq!(jp.note[1], [-60000, 60000]);
+        assert_eq!(jp.note[2], [-120000, 120000]);
+        assert_eq!(jp.note[3], [-200000, 200000]);
+        assert_eq!(jp.note[4], [0, 1000000]);
+    }
+
+    #[test]
+    fn lr2_scratch_same_as_note() {
+        let jp = lr2();
+        // In LR2, scratch windows are the same as note windows
+        assert_eq!(jp.note, jp.scratch);
+    }
+
+    #[test]
+    fn lr2_longnote_windows() {
+        let jp = lr2();
+        assert_eq!(jp.longnote.len(), 4);
+        assert_eq!(jp.longnote[0], [-120000, 120000]);
+        assert_eq!(jp.longnote[3], [-200000, 200000]);
+    }
+
+    #[test]
+    fn lr2_uses_lr2_window_rule() {
+        let jp = lr2();
+        assert_eq!(jp.windowrule.rule_type, JudgeWindowRuleType::Lr2);
+    }
+
+    // --- PMS judge property tests ---
+
+    #[test]
+    fn pms_has_no_scratch() {
+        let jp = pms();
+        assert!(jp.scratch.is_empty());
+        assert!(jp.longscratch.is_empty());
+    }
+
+    #[test]
+    fn pms_has_longnote_margin() {
+        let jp = pms();
+        assert_eq!(jp.longnote_margin, 200000);
+    }
+
+    #[test]
+    fn pms_miss_condition_is_one() {
+        let jp = pms();
+        assert_eq!(jp.miss, MissCondition::One);
+    }
+
+    // --- Keyboard judge property tests ---
+
+    #[test]
+    fn keyboard_has_no_scratch() {
+        let jp = keyboard();
+        assert!(jp.scratch.is_empty());
+        assert!(jp.longscratch.is_empty());
+    }
+
+    #[test]
+    fn keyboard_has_wider_note_windows() {
+        let jp = keyboard();
+        // Keyboard PGREAT window is wider than 7keys
+        assert_eq!(jp.note[0], [-30000, 30000]);
+        assert_eq!(jp.note[1], [-90000, 90000]);
+    }
+
+    // --- LR2 judge scaling tests ---
+
+    #[test]
+    fn lr2_judge_scaling_at_rank_100_returns_base() {
+        // When judgerank >= 100, returns base * judgerank / 100
+        assert_eq!(lr2_judge_scaling(21000, 100), 21000);
+        assert_eq!(lr2_judge_scaling(60000, 100), 60000);
+    }
+
+    #[test]
+    fn lr2_judge_scaling_at_rank_200_doubles() {
+        assert_eq!(lr2_judge_scaling(21000, 200), 42000);
+    }
+
+    #[test]
+    fn lr2_judge_scaling_negative_base() {
+        // Negative base should produce negative result
+        let result = lr2_judge_scaling(-21000, 100);
+        assert_eq!(result, -21000);
+    }
+
+    #[test]
+    fn lr2_judge_scaling_zero_base() {
+        assert_eq!(lr2_judge_scaling(0, 50), 0);
+    }
+
+    #[test]
+    fn lr2_judge_scaling_rank_50() {
+        // Rank 50 should be roughly half the window
+        let result = lr2_judge_scaling(21000, 50);
+        assert!(result < 21000, "rank 50 should narrow the window");
+        assert!(result > 0, "rank 50 should still be positive");
+    }
+
+    #[test]
+    fn lr2_judge_scaling_rank_75() {
+        let result = lr2_judge_scaling(21000, 75);
+        assert!(result < 21000, "rank 75 should narrow the window");
+        assert!(
+            result > lr2_judge_scaling(21000, 50),
+            "rank 75 wider than rank 50"
+        );
+    }
+
+    // --- JudgeWindowRule create tests ---
+
+    #[test]
+    fn normal_rule_create_at_rank_100_preserves_windows() {
+        let rule = rule_normal();
+        let org = &[
+            [-20000i64, 20000],
+            [-60000, 60000],
+            [-150000, 150000],
+            [-280000, 220000],
+            [-150000, 500000],
+        ];
+        let rate = [100, 100, 100];
+        let result = rule.create(org, 100, &rate);
+        // At rank 100, windows should be 100% of original
+        assert_eq!(result[0], [-20000, 20000]);
+        assert_eq!(result[1], [-60000, 60000]);
+        assert_eq!(result[2], [-150000, 150000]);
+    }
+
+    #[test]
+    fn normal_rule_create_at_rank_50_narrows_windows() {
+        let rule = rule_normal();
+        let org = &[
+            [-20000i64, 20000],
+            [-60000, 60000],
+            [-150000, 150000],
+            [-280000, 220000],
+            [-150000, 500000],
+        ];
+        let rate = [100, 100, 100];
+        let result = rule.create(org, 50, &rate);
+        // At rank 50, non-fixed windows should be ~50% of original
+        assert_eq!(result[0], [-10000, 10000]);
+        assert_eq!(result[1], [-30000, 30000]);
+    }
+
+    #[test]
+    fn lr2_rule_create_dispatches_to_lr2() {
+        let rule = rule_lr2();
+        let org = &[
+            [-21000i64, 21000],
+            [-60000, 60000],
+            [-120000, 120000],
+            [-200000, 200000],
+            [0, 1000000],
+        ];
+        let rate = [100, 100, 100];
+        let result = rule.create(org, 100, &rate);
+        // At rank 100 in LR2, windows should be unchanged
+        assert_eq!(result[0], [-21000, 21000]);
+    }
+
+    // --- get_judge and convert_milli tests ---
+
+    #[test]
+    fn get_note_judge_converts_to_milliseconds() {
+        let jp = sevenkeys();
+        let rate = [100, 100, 100];
+        let result = jp.get_note_judge(100, &rate);
+        // Original PGREAT: [-20000, 20000] micros => [-20, 20] millis
+        assert_eq!(result[0], vec![-20, 20]);
+        // GREAT: [-60000, 60000] => [-60, 60]
+        assert_eq!(result[1], vec![-60, 60]);
+    }
+
+    #[test]
+    fn get_judge_returns_correct_note_type() {
+        let jp = sevenkeys();
+        let rate = [100, 100, 100];
+        let note_judge = jp.get_judge(NoteType::Note, 100, &rate);
+        let scratch_judge = jp.get_judge(NoteType::Scratch, 100, &rate);
+        // Note and Scratch should differ for 7keys
+        assert_ne!(note_judge[0], scratch_judge[0]);
+    }
+
+    #[test]
+    fn get_scratch_judge_converts_to_milliseconds() {
+        let jp = sevenkeys();
+        let rate = [100, 100, 100];
+        let result = jp.get_scratch_judge(100, &rate);
+        // Scratch PGREAT: [-30000, 30000] => [-30, 30]
+        assert_eq!(result[0], vec![-30, 30]);
+    }
+
+    #[test]
+    fn judge_vanish_flags() {
+        let jp = sevenkeys();
+        // PG through PR cause vanish, MS does not
+        assert_eq!(
+            jp.judge_vanish,
+            vec![true, true, true, true, true, false]
+        );
+    }
+
+    #[test]
+    fn miss_condition_always_for_sevenkeys() {
+        let jp = sevenkeys();
+        assert_eq!(jp.miss, MissCondition::Always);
+    }
+
+    // --- Judge window rate tests ---
+
+    #[test]
+    fn judge_window_rate_scales_windows() {
+        let jp = sevenkeys();
+        // 50% rate for PG, 100% for GR, 100% for GD
+        let rate = [50, 100, 100];
+        let result = jp.get_judge(NoteType::Note, 100, &rate);
+        // PG window should be halved: [-20000, 20000] * 50% = [-10000, 10000]
+        assert_eq!(result[0], [-10000, 10000]);
+        // GR window should be unchanged: [-60000, 60000]
+        assert_eq!(result[1], [-60000, 60000]);
+    }
+
+    // --- create_lr2 function tests ---
+
+    #[test]
+    fn create_lr2_at_rank_100_preserves_windows() {
+        let org = &[
+            [-21000i64, 21000],
+            [-60000, 60000],
+            [-120000, 120000],
+            [-200000, 200000],
+            [0, 1000000],
+        ];
+        let rate = [100, 100, 100];
+        let result = create_lr2(org, 100, &rate);
+        // At rank 100, LR2 scaling: base * 100 / 100 = base
+        assert_eq!(result[0], [-21000, 21000]);
+        assert_eq!(result[1], [-60000, 60000]);
+        assert_eq!(result[2], [-120000, 120000]);
+        // BAD and POOR windows are never scaled
+        assert_eq!(result[3], [-200000, 200000]);
+        assert_eq!(result[4], [0, 1000000]);
+    }
+
+    #[test]
+    fn create_lr2_at_rank_50_narrows_pg_gr_gd() {
+        let org = &[
+            [-21000i64, 21000],
+            [-60000, 60000],
+            [-120000, 120000],
+            [-200000, 200000],
+            [0, 1000000],
+        ];
+        let rate = [100, 100, 100];
+        let result = create_lr2(org, 50, &rate);
+        // Windows should be narrower at rank 50
+        assert!(result[0][1] < 21000);
+        assert!(result[1][1] < 60000);
+        // BAD and POOR should be unchanged
+        assert_eq!(result[3], [-200000, 200000]);
+        assert_eq!(result[4], [0, 1000000]);
+    }
+}
