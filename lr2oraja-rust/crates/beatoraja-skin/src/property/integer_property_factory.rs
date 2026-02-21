@@ -913,6 +913,7 @@ struct StubIntegerProperty;
 
 impl IntegerProperty for StubIntegerProperty {
     fn get(&self, _state: &dyn MainState) -> i32 {
-        todo!("Phase 7+ dependency: IntegerPropertyFactory requires MainState subtypes")
+        log::warn!("not yet implemented: IntegerPropertyFactory requires MainState subtypes");
+        0
     }
 }

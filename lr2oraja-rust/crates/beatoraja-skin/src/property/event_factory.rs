@@ -484,9 +484,10 @@ struct StubEvent {
 
 impl Event for StubEvent {
     fn exec(&self, _state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
-        todo!(
-            "Phase 7+ dependency: EventFactory requires MainState subtypes (MusicSelector, BMSPlayer, etc.)"
-        )
+        log::warn!(
+            "not yet implemented: EventFactory event_id={} requires MainState subtypes (MusicSelector, BMSPlayer, etc.)",
+            self.event_id
+        );
     }
 
     fn get_event_id(&self) -> i32 {

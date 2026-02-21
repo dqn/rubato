@@ -121,7 +121,7 @@ impl SkinTextFont {
             // sprite.setType(...)
             // layout.setText(...)
             // sprite.draw(font, layout, x, y)
-            todo!("Phase 7+ dependency: SkinTextFont.draw requires LibGDX font rendering")
+            log::warn!("not yet implemented: SkinTextFont.draw requires LibGDX font rendering");
         }
     }
 

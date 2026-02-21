@@ -80,7 +80,7 @@ impl SkinTextBitmap {
         let _align_val = self.text_data.get_align();
         // font.getData().setScale(scale)
         // ... complex rendering with distance field / shadow support
-        todo!("Phase 7+ dependency: SkinTextBitmap.draw requires LibGDX font rendering")
+        log::warn!("not yet implemented: SkinTextBitmap.draw requires LibGDX font rendering");
     }
 
     fn _set_layout(&mut self, _c: &Color, _r: &Rectangle) {
@@ -138,9 +138,10 @@ impl SkinTextBitmapSource {
     pub fn get_font(&self) -> Option<BitmapFont> {
         // In Java, this loads from BitmapFontCache or creates via createCacheableFont.
         // Stubbed for Phase 7+ rendering dependency.
-        todo!(
-            "Phase 7+ dependency: SkinTextBitmapSource.getFont requires LibGDX BitmapFont loading"
-        )
+        log::warn!(
+            "not yet implemented: SkinTextBitmapSource.getFont requires LibGDX BitmapFont loading"
+        );
+        None
     }
 
     pub fn get_original_size(&self) -> f32 {

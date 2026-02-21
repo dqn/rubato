@@ -406,7 +406,8 @@ struct StubFloatProperty;
 
 impl FloatProperty for StubFloatProperty {
     fn get(&self, _state: &dyn MainState) -> f32 {
-        todo!("Phase 7+ dependency: FloatPropertyFactory requires MainState subtypes")
+        log::warn!("not yet implemented: FloatPropertyFactory requires MainState subtypes");
+        0.0
     }
 }
 
@@ -415,6 +416,6 @@ struct StubFloatWriter;
 
 impl FloatWriter for StubFloatWriter {
     fn set(&self, _state: &mut dyn MainState, _value: f32) {
-        todo!("Phase 7+ dependency: FloatPropertyFactory requires MainState subtypes")
+        log::warn!("not yet implemented: FloatPropertyFactory writer requires MainState subtypes");
     }
 }

@@ -595,6 +595,7 @@ struct StubStringProperty;
 
 impl StringProperty for StubStringProperty {
     fn get(&self, _state: &dyn MainState) -> String {
-        todo!("Phase 7+ dependency: StringPropertyFactory requires MainState subtypes")
+        log::warn!("not yet implemented: StringPropertyFactory requires MainState subtypes");
+        String::new()
     }
 }

@@ -69,7 +69,8 @@ pub fn load(_state: &dyn MainState, _skin_type_id: i32) -> Option<()> {
     // Skin skin = load(state, skinType, state.resource.getPlayerConfig().getSkin()[skinType.getId()]);
     // if(skin == null) { ... fallback to default ... }
     // return skin;
-    todo!("Phase 7+ dependency: SkinLoader.load requires full skin loading pipeline")
+    log::warn!("not yet implemented: SkinLoader.load requires full skin loading pipeline");
+    None
 }
 
 /// Loads a skin with a specific skin config.
@@ -82,7 +83,10 @@ pub fn load_with_config(
     // if (sc.getPath().endsWith(".json")) { ... JSONSkinLoader ... }
     // else if (sc.getPath().endsWith(".luaskin")) { ... LuaSkinLoader ... }
     // else { ... LR2SkinCSVLoader ... }
-    todo!("Phase 7+ dependency: SkinLoader.load with config requires full skin loading pipeline")
+    log::warn!(
+        "not yet implemented: SkinLoader.load with config requires full skin loading pipeline"
+    );
+    None
 }
 
 /// Resolves a file path with wildcard and file mapping support.

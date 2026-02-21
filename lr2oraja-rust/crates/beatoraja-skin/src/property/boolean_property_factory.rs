@@ -95,7 +95,8 @@ impl BooleanProperty for StubBooleanProperty {
     }
 
     fn get(&self, _state: &dyn MainState) -> bool {
-        todo!("Phase 7+ dependency: BooleanPropertyFactory requires MainState subtypes")
+        log::warn!("not yet implemented: BooleanPropertyFactory requires MainState subtypes");
+        false
     }
 }
 

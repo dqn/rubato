@@ -176,15 +176,15 @@ impl LR2SkinCSVLoaderState {
         match cmd {
             "STARTINPUT" => {
                 // skin.setInput(parseInt(str[1]))
-                todo!("STARTINPUT: requires skin reference")
+                warn!("not yet implemented: STARTINPUT requires skin reference");
             }
             "SCENETIME" => {
                 // skin.setScene(parseInt(str[1]))
-                todo!("SCENETIME: requires skin reference")
+                warn!("not yet implemented: SCENETIME requires skin reference");
             }
             "FADEOUT" => {
                 // skin.setFadeout(parseInt(str[1]))
-                todo!("FADEOUT: requires skin reference")
+                warn!("not yet implemented: FADEOUT requires skin reference");
             }
             "STRETCH" => {
                 if str_parts.len() > 1 {
@@ -236,7 +236,10 @@ impl LR2SkinCSVLoaderState {
                 let path = Path::new(&imagefile);
                 if path.exists() {
                     // Read and process included file
-                    todo!("INCLUDE: requires file reading with MS932 encoding")
+                    warn!(
+                        "not yet implemented: INCLUDE requires file reading with MS932 encoding: {}",
+                        imagefile
+                    );
                 }
             }
             _ => {
@@ -272,5 +275,8 @@ pub fn get_skin_loader(
     _src: Resolution,
     _config: &beatoraja_core::config::Config,
 ) -> Option<Box<dyn std::any::Any>> {
-    todo!("get_skin_loader: requires concrete loader types to be fully connected")
+    log::warn!(
+        "not yet implemented: get_skin_loader requires concrete loader types to be fully connected"
+    );
+    None
 }

@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use log::warn;
+
 use crate::lr2::lr2_skin_csv_loader::LR2SkinCSVLoaderState;
 use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
 use crate::stubs::{MainState, Rectangle, Resolution, Texture, TextureRegion};
@@ -113,48 +115,48 @@ impl LR2PlaySkinLoaderState {
             // PlayCommand enum entries
             "CLOSE" => {
                 // skin.setClose(parseInt(str[1]))
-                todo!("CLOSE: requires skin reference")
+                warn!("not yet implemented: CLOSE requires skin reference");
             }
             "PLAYSTART" => {
                 // skin.setPlaystart(parseInt(str[1]))
-                todo!("PLAYSTART: requires skin reference")
+                warn!("not yet implemented: PLAYSTART requires skin reference");
             }
             "LOADSTART" => {
                 // skin.setLoadstart(parseInt(str[1]))
-                todo!("LOADSTART: requires skin reference")
+                warn!("not yet implemented: LOADSTART requires skin reference");
             }
             "LOADEND" => {
                 // skin.setLoadend(parseInt(str[1]))
-                todo!("LOADEND: requires skin reference")
+                warn!("not yet implemented: LOADEND requires skin reference");
             }
             "FINISHMARGIN" => {
                 // skin.setFinishMargin(parseInt(str[1]))
-                todo!("FINISHMARGIN: requires skin reference")
+                warn!("not yet implemented: FINISHMARGIN requires skin reference");
             }
             "JUDGETIMER" => {
                 // skin.setJudgetimer(parseInt(str[1]))
-                todo!("JUDGETIMER: requires skin reference")
+                warn!("not yet implemented: JUDGETIMER requires skin reference");
             }
             "SRC_BGA" => {
                 // bga = new SkinBGA(c.getBgaExpand())
                 self.bga = Some(());
-                todo!("SRC_BGA: requires SkinBGA")
+                warn!("not yet implemented: SRC_BGA requires SkinBGA");
             }
             "DST_BGA" => {
                 let _values = lr2_skin_loader::parse_int(str_parts);
                 if self.bga.is_some() {
-                    todo!("DST_BGA: requires skin.setDestination")
+                    warn!("not yet implemented: DST_BGA requires skin.setDestination");
                 }
             }
             "SRC_LINE" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
                 let _images = self.csv.get_source_image(&values);
                 // lines[values[1]] = new SkinImage(images, values[10], values[9])
-                todo!("SRC_LINE: requires SkinImage creation")
+                warn!("not yet implemented: SRC_LINE requires SkinImage creation");
             }
             "DST_LINE" => {
                 let _values = lr2_skin_loader::parse_int(str_parts);
-                todo!("DST_LINE: requires SkinImage.setDestination")
+                warn!("not yet implemented: DST_LINE requires SkinImage.setDestination");
             }
             "SRC_NOTE" => {
                 self.add_note(str_parts, NoteTarget::Note, true);
@@ -285,34 +287,34 @@ impl LR2PlaySkinLoaderState {
             }
             "DST_NOTE_EXPANSION_RATE" => {
                 // skin.setNoteExpansionRate(new int[]{parseInt(str[1]), parseInt(str[2])})
-                todo!("DST_NOTE_EXPANSION_RATE: requires skin reference")
+                warn!("not yet implemented: DST_NOTE_EXPANSION_RATE requires skin reference");
             }
             "SRC_NOWJUDGE_1P" | "SRC_NOWJUDGE_2P" | "SRC_NOWJUDGE_3P" => {
                 let _values = lr2_skin_loader::parse_int(str_parts);
                 let _images = self.csv.get_source_image(&_values);
                 // Create SkinJudge and add judge images
-                todo!("SRC_NOWJUDGE: requires SkinJudge")
+                warn!("not yet implemented: SRC_NOWJUDGE requires SkinJudge");
             }
             "DST_NOWJUDGE_1P" | "DST_NOWJUDGE_2P" | "DST_NOWJUDGE_3P" => {
                 let _values = lr2_skin_loader::parse_int(str_parts);
-                todo!("DST_NOWJUDGE: requires SkinJudge.setDestination")
+                warn!("not yet implemented: DST_NOWJUDGE requires SkinJudge.setDestination");
             }
             "SRC_NOWCOMBO_1P" | "SRC_NOWCOMBO_2P" | "SRC_NOWCOMBO_3P" => {
                 let _values = lr2_skin_loader::parse_int(str_parts);
-                todo!("SRC_NOWCOMBO: requires SkinNumber creation")
+                warn!("not yet implemented: SRC_NOWCOMBO requires SkinNumber creation");
             }
             "DST_NOWCOMBO_1P" | "DST_NOWCOMBO_2P" | "DST_NOWCOMBO_3P" => {
                 let _values = lr2_skin_loader::parse_int(str_parts);
-                todo!("DST_NOWCOMBO: requires SkinNumber.setDestination")
+                warn!("not yet implemented: DST_NOWCOMBO requires SkinNumber.setDestination");
             }
             "SRC_JUDGELINE" => {
                 let _values = lr2_skin_loader::parse_int(str_parts);
                 // line = new SkinImage(images, values[10], values[9])
-                todo!("SRC_JUDGELINE: requires SkinImage")
+                warn!("not yet implemented: SRC_JUDGELINE requires SkinImage");
             }
             "DST_JUDGELINE" => {
                 let _values = lr2_skin_loader::parse_int(str_parts);
-                todo!("DST_JUDGELINE: requires SkinImage.setDestination")
+                warn!("not yet implemented: DST_JUDGELINE requires SkinImage.setDestination");
             }
             "SRC_NOTECHART_1P" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
@@ -371,19 +373,19 @@ impl LR2PlaySkinLoaderState {
             "DST_PM_CHARA_1P" | "DST_PM_CHARA_2P" => {
                 let _values = lr2_skin_loader::parse_int(str_parts);
                 // PomyuCharaLoader load
-                todo!("DST_PM_CHARA: requires PomyuCharaLoader")
+                warn!("not yet implemented: DST_PM_CHARA requires PomyuCharaLoader");
             }
             "DST_PM_CHARA_ANIMATION" => {
                 let _values = lr2_skin_loader::parse_int(str_parts);
-                todo!("DST_PM_CHARA_ANIMATION: requires PomyuCharaLoader")
+                warn!("not yet implemented: DST_PM_CHARA_ANIMATION requires PomyuCharaLoader");
             }
             "SRC_PM_CHARA_IMAGE" => {
                 let _values = lr2_skin_loader::parse_int(str_parts);
-                todo!("SRC_PM_CHARA_IMAGE: requires PomyuCharaLoader")
+                warn!("not yet implemented: SRC_PM_CHARA_IMAGE requires PomyuCharaLoader");
             }
             "DST_PM_CHARA_IMAGE" => {
                 let _values = lr2_skin_loader::parse_int(str_parts);
-                todo!("DST_PM_CHARA_IMAGE: requires PomyuCharaLoader")
+                warn!("not yet implemented: DST_PM_CHARA_IMAGE requires PomyuCharaLoader");
             }
             _ => {
                 // Delegate to CSV loader

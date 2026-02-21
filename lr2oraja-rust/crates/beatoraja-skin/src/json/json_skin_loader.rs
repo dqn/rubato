@@ -522,7 +522,8 @@ impl JSONSkinLoader {
     ) -> Option<SkinObjectData> {
         // Delegate to screen-specific loader
         // Each loader calls back into the base loader for common objects
-        todo!("LibGDX rendering — screen-specific object loading")
+        warn!("not yet implemented: screen-specific object loading (LibGDX rendering)");
+        None
     }
 
     fn set_destination(
