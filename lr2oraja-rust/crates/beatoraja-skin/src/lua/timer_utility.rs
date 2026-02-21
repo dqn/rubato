@@ -53,7 +53,9 @@ impl TimerUtility {
         //   - turn_on_reset: () -> true (sets/resets timer ON)
         //   - turn_off: () -> true (sets timer OFF)
 
-        todo!("mlua integration: export timer utility functions")
+        log::warn!(
+            "TimerUtility::export: Lua timer utility export not yet wired (requires MainState lifetime bridging)"
+        );
     }
 }
 

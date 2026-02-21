@@ -99,7 +99,9 @@ impl MainStateAccessor {
         // table.set("audio_stop", audio_stop function)
         //   - Stops audio at path
 
-        todo!("mlua integration: export main state accessor functions")
+        log::warn!(
+            "MainStateAccessor::export: Lua state accessor export not yet wired (requires MainState lifetime bridging)"
+        );
     }
 }
 

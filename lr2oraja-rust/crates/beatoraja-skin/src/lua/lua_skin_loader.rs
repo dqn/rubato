@@ -36,10 +36,18 @@ impl LuaSkinLoader {
     /// Load skin header from Lua file
     pub fn load_header(&mut self, p: &Path) -> Option<()> {
         // lua.setDirectory(p.getParent())
+        if let Some(parent) = p.parent() {
+            self.lua.set_directory(parent);
+        }
         // LuaValue value = lua.execFile(p)
+        let _value = self.lua.exec_file(p);
         // sk = fromLuaValue(JsonSkin.Skin.class, value)
         // header = loadJsonSkinHeader(sk, p)
-        todo!("mlua integration: load header from Lua file")
+        log::warn!(
+            "LuaSkinLoader::load_header: Lua-to-JsonSkin deserialization not yet implemented for {}",
+            p.display()
+        );
+        None
     }
 
     /// Load skin from Lua file
@@ -81,7 +89,11 @@ impl LuaSkinLoader {
         // 4. Load JSON skin from the Lua-produced structure
         // skin = loadJsonSkin(header, sk, type, property, p)
 
-        todo!("mlua integration: load skin from Lua file")
+        log::warn!(
+            "LuaSkinLoader::load: full Lua skin loading not yet implemented for {}",
+            p.display()
+        );
+        None
     }
 
     /// Deserialize a Lua value into a Rust type
@@ -106,7 +118,10 @@ impl LuaSkinLoader {
         //
         // For arrays: LuaTable keys -> Array.newInstance
         // For structs: reflection over fields, matching Lua table keys to field names
-        todo!("mlua integration: deserialize Lua value to Rust type")
+        log::warn!(
+            "LuaSkinLoader::from_lua_value: Lua-to-Rust deserialization not yet implemented"
+        );
+        None
     }
 }
 

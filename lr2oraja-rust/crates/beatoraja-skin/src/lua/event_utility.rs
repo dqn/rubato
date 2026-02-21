@@ -57,7 +57,9 @@ impl EventUtility {
         //   - impl: throttles action to execute at most every minInterval milliseconds
         //   - NOTE: useful for throttling actions in event_observe_timer_on
 
-        todo!("mlua integration: export event utility functions")
+        log::warn!(
+            "EventUtility::export: Lua event utility export not yet wired (requires MainState lifetime bridging)"
+        );
     }
 }
 
