@@ -289,7 +289,6 @@ fn pattern_modifier_autoplay_minimal_7k() {
 }
 
 #[test]
-#[ignore = "pre-existing index out of bounds in TimeLine::get_note for longnote_types.bms"]
 fn pattern_modifier_autoplay_longnote_types() {
     run_autoplay_test("longnote_types.bms");
 }

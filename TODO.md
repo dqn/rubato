@@ -299,7 +299,7 @@ Remove all remaining `stubs.rs` files or reduce to zero non-rendering stubs.
 
 ## Phase 16: Test Coverage Expansion
 
-Expanded from 72 tests across 6 crates to 935 tests across 11 crates. Golden Master test infrastructure rebuilt and activated (29/29 passing + 8 reactivated from pending).
+Expanded from 72 tests across 6 crates to 936 tests across 11 crates. Golden Master test infrastructure rebuilt and activated (29/29 passing + 8 reactivated from pending + 1 `#[ignore]` fixed).
 
 ### 16a: Unit Tests for Core Logic Crates
 
@@ -317,14 +317,14 @@ Added unit tests for major crates that previously had zero tests.
 - [x] Rewrite golden-master lib.rs to use actual bms-model API (BmsModel fields, Note/NoteType, PlayMode)
 - [x] Enable and run golden-master comparison tests: 29 pass (channel_extended fixed — flatten_notes iteration order aligned with Java)
 - [x] Move 25 test files with stale imports to `tests/pending/` and `src/pending/` for future activation (depend on APIs not yet available: bms_rule, bms_config, bms_skin, bms_render, bms_database)
-- [x] Reactivate 8 pending golden-master test files: compare_config (6), compare_database (23), compare_course_data (4), compare_song_information (23), compare_autoplay (23), compare_pattern_modifiers (4+1 ignored), compare_replay (3), compare_score_data_property (1)
+- [x] Reactivate 8 pending golden-master test files: compare_config (6), compare_database (23), compare_course_data (4), compare_song_information (23), compare_autoplay (23), compare_pattern_modifiers (5), compare_replay (3), compare_score_data_property (1)
 - [x] Fix `channel_extended` golden-master comparison: flatten_notes() per-timeline 2-pass (regular then hidden) to match Java iteration order
 - [x] Fix serde rename mismatches: audio_config (driverName), player_config (hranThresholdBpm, isGuideSe), config (defaultDownloadUrl, overrideDownloadUrl, useDiscordRpc), play_mode_config (jkocHack)
 - [x] Fix song_information: LN duration counting (get_pair() → forward scan), mainbpm tie-breaking (sort by BPM ascending + >=), distribution clamp for negative values
 - [x] Fix course_data: serde aliases for CourseDataConstraint enum, TrophyData validate empty name
 - [ ] Add missing fixtures for modules not yet covered (modmenu, select bar, stream) — deferred until Java exporter updated
 - [ ] Reactivate remaining 17 pending test files — blocked: compare_pattern (make_random private), compare_bga_timeline (BGAProcessor stubbed), Tier 3 tests (e2e_helpers, render snapshots, judge/rule API mismatch)
-- [ ] Fix `pattern_modifier_autoplay_longnote_types` (currently `#[ignore]`): pre-existing index out of bounds in `TimeLine::get_note` when processing `longnote_types.bms` via AutoplayModifier
+- [x] Fix `pattern_modifier_autoplay_longnote_types` (was `#[ignore]`): added bounds checking to `TimeLine::exist_note_at`, `get_note`, `get_note_mut`, `get_hidden_note`, `take_note` to handle out-of-bounds lane access gracefully (return `false`/`None` instead of panic)
 
 ### 16c: Integration Tests
 
@@ -342,7 +342,7 @@ All items were already resolved in prior phases. Phase 17 is a verification-only
 - [x] `NullSongDatabaseAccessor` methods in `beatoraja-select/stubs.rs` → return empty `Vec`/defaults with `log::warn!()` (already implemented)
 - [x] Lifecycle trait default impls (`beatoraja-types`: `MainControllerAccess`, `PlayerResourceAccess`) → use `log::warn!()` + sensible defaults (already implemented)
 - [x] Audit: zero runtime `todo!()` or `unimplemented!()` macro calls in non-rendering code (12 occurrences in comments only)
-- [x] Verify: 843 tests pass, zero clippy warnings, clean `cargo fmt`
+- [x] Verify: 936 tests pass, zero clippy warnings, clean `cargo fmt`
 
 ## Phase 18: Post-Phase 13 Lifecycle Wiring
 

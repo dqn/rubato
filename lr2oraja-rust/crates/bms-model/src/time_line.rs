@@ -126,15 +126,16 @@ impl TimeLine {
     }
 
     pub fn exist_note_at(&self, lane: i32) -> bool {
-        self.notes[lane as usize].is_some()
+        let idx = lane as usize;
+        idx < self.notes.len() && self.notes[idx].is_some()
     }
 
     pub fn get_note(&self, lane: i32) -> Option<&Note> {
-        self.notes[lane as usize].as_ref()
+        self.notes.get(lane as usize).and_then(|n| n.as_ref())
     }
 
     pub fn get_note_mut(&mut self, lane: i32) -> Option<&mut Note> {
-        self.notes[lane as usize].as_mut()
+        self.notes.get_mut(lane as usize).and_then(|n| n.as_mut())
     }
 
     pub fn set_note(&mut self, lane: i32, note: Option<Note>) {
@@ -169,7 +170,7 @@ impl TimeLine {
     }
 
     pub fn get_hidden_note(&self, lane: i32) -> Option<&Note> {
-        self.hiddennotes[lane as usize].as_ref()
+        self.hiddennotes.get(lane as usize).and_then(|n| n.as_ref())
     }
 
     pub fn add_back_ground_note(&mut self, note: Note) {
@@ -271,7 +272,12 @@ impl TimeLine {
     }
 
     pub fn take_note(&mut self, lane: i32) -> Option<Note> {
-        self.notes[lane as usize].take()
+        let idx = lane as usize;
+        if idx < self.notes.len() {
+            self.notes[idx].take()
+        } else {
+            None
+        }
     }
 }
 
