@@ -16,5 +16,7 @@ serde_json.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 reqwest.workspace = true
+arboard.workspace = true
+image.workspace = true
 
 [dev-dependencies]

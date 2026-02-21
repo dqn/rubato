@@ -24,3 +24,5 @@ beatoraja-stream = { workspace = true }
 bms-model = { workspace = true }
 md-processor = { workspace = true }
 beatoraja-song = { workspace = true }
+arboard = { workspace = true }
+cpal = { workspace = true }

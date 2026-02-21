@@ -591,16 +591,20 @@ pub use beatoraja_skin::skin_property::{
 // Twitter4j stubs (entirely stubbed - no Rust equivalent)
 // ============================================================
 
-/// Stub for twitter4j.Twitter
+/// Stub for twitter4j.Twitter — Twitter API not supported in Rust port
 pub struct Twitter;
 
 impl Twitter {
     pub fn upload_media(&self, _name: &str, _input: &[u8]) -> anyhow::Result<UploadedMedia> {
-        todo!("twitter4j.Twitter.uploadMedia - no Rust equivalent")
+        anyhow::bail!(
+            "Twitter API is not supported in Rust port (twitter4j has no Rust equivalent)"
+        )
     }
 
     pub fn update_status(&self, _update: &StatusUpdate) -> anyhow::Result<Status> {
-        todo!("twitter4j.Twitter.updateStatus - no Rust equivalent")
+        anyhow::bail!(
+            "Twitter API is not supported in Rust port (twitter4j has no Rust equivalent)"
+        )
     }
 }
 
@@ -718,13 +722,34 @@ impl std::fmt::Display for Status {
 // AWT Clipboard stubs
 // ============================================================
 
-/// Stub for java.awt.datatransfer.Clipboard + ImageTransferable
-/// Clipboard image copy is platform-specific and has no direct Rust equivalent
+/// Cross-platform clipboard helper using arboard crate
 pub struct ClipboardHelper;
 
 impl ClipboardHelper {
-    pub fn copy_image_to_clipboard(_path: &str) -> anyhow::Result<()> {
-        todo!("AWT Clipboard image copy - no direct Rust equivalent")
+    /// Copy an image file to the system clipboard.
+    /// Uses arboard for cross-platform clipboard access.
+    pub fn copy_image_to_clipboard(path: &str) -> anyhow::Result<()> {
+        use arboard::{Clipboard, ImageData};
+        use std::borrow::Cow;
+
+        let img = image::open(path)
+            .map_err(|e| anyhow::anyhow!("Failed to open image {}: {}", path, e))?;
+        let rgba = img.to_rgba8();
+        let (width, height) = rgba.dimensions();
+        let bytes = rgba.into_raw();
+
+        let img_data = ImageData {
+            width: width as usize,
+            height: height as usize,
+            bytes: Cow::Owned(bytes),
+        };
+
+        let mut clipboard =
+            Clipboard::new().map_err(|e| anyhow::anyhow!("Failed to access clipboard: {}", e))?;
+        clipboard
+            .set_image(img_data)
+            .map_err(|e| anyhow::anyhow!("Failed to copy image to clipboard: {}", e))?;
+        Ok(())
     }
 }
 
