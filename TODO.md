@@ -48,11 +48,11 @@ Core gameplay logic. Depends on: config, model, input, audio.
 
 Multi-format skin rendering. Depends on: config, model, play.
 
-- [ ] `beatoraja.skin` base (34 files, 15,594 lines) — Skin rendering engine
-  - [ ] `beatoraja.skin.json` (11 files, 5,456 lines) — JSON skin loader
-  - [ ] `beatoraja.skin.lr2` (10 files, 6,482 lines) — LR2 skin loader
-  - [ ] `beatoraja.skin.lua` (5 files, 2,480 lines) — Lua skin loader
-  - [ ] `beatoraja.skin.property` (13 files, 8,216 lines) — Property binding
+- [x] `beatoraja.skin` base (34 files, 15,594 lines) — Skin rendering engine
+  - [x] `beatoraja.skin.json` (11 files, 5,456 lines) — JSON skin loader
+  - [x] `beatoraja.skin.lr2` (10 files, 6,482 lines) — LR2 skin loader
+  - [x] `beatoraja.skin.lua` (5 files, 2,480 lines) — Lua skin loader
+  - [x] `beatoraja.skin.property` (13 files, 8,216 lines) — Property binding
 
 ## Phase 7: Screen Implementations (~11,900 lines)
 

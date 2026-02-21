@@ -158,6 +158,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "beatoraja-skin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "beatoraja-audio",
+ "beatoraja-core",
+ "beatoraja-input",
+ "beatoraja-play",
+ "bms-model",
+ "chrono",
+ "encoding_rs",
+ "log",
+ "rand",
+ "regex",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "bitflags"
 version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

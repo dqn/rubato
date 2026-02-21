@@ -1,0 +1,21 @@
+[package]
+name = "beatoraja-skin"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bms-model.workspace = true
+beatoraja-core.workspace = true
+beatoraja-play.workspace = true
+beatoraja-audio.workspace = true
+beatoraja-input.workspace = true
+log.workspace = true
+rand.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+encoding_rs.workspace = true
+regex.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]

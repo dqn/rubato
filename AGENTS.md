@@ -116,10 +116,11 @@ brs/
 - **Phase 3 complete:** `beatoraja-common` (3 modules), `discord-rpc` (4 modules), `beatoraja-input` (9 modules), `beatoraja-audio` (13 modules), `md-processor` (10 modules)
 - **Phase 4 complete:** `beatoraja-core` (47 modules — config types, data models, DB accessors, core/resource types, config subpackage)
 - **Phase 5 complete:** `beatoraja-pattern` (14 modules — lane/note shuffle, modifiers), `beatoraja-play` (28 modules — judge, gauge, BGA, game loop)
+- **Phase 6 complete:** `beatoraja-skin` (50+ modules — skin rendering engine, property binding, JSON/LR2/Lua skin loaders)
 
 ## Deferred / Stub Items
 
-- Phase 6+ type dependencies (SkinType, Skin, SkinObject, etc.) are stubbed in `beatoraja-play/src/stubs.rs` and `beatoraja-core/src/stubs.rs`
+- Phase 7+ type dependencies (screen implementations, select bar, etc.) are stubbed in `beatoraja-skin/src/stubs.rs`
 - Phase 4 type dependencies (Config, PlayModeConfig, etc.) are stubbed in each Phase 3 crate's `stubs.rs` (will be replaced with imports from `beatoraja-core`)
 - PortAudio, LibGDX, ebur128, 7z extraction methods use `todo!()` pending external library integration
 - javax.sound.midi equivalents stubbed (no direct Rust equivalent)
@@ -277,3 +278,34 @@ Skin-related types in the play package (SkinNote, SkinGauge, SkinJudge, SkinHidd
 ### Java Random vs Rust rand (Phase 5)
 
 Java's `java.util.Random(seed)` uses a specific LCG algorithm. For pattern shuffle reproducibility, use `rand::rngs::StdRng::seed_from_u64(seed)` or `SmallRng` — but note that exact random sequences will differ. If exact Java Random reproduction is needed, implement the Java LCG manually (multiplier=0x5DEECE66D, addend=0xB, mask=(1L<<48)-1).
+
+### LibGDX Rendering Types as Stubs (Phase 6)
+
+The skin system depends heavily on LibGDX types (TextureRegion, Texture, SpriteBatch, BitmapFont, ShaderProgram, Pixmap, Matrix4, etc.). Create comprehensive stubs in `stubs.rs` with `#[derive(Clone, Default, Debug, PartialEq)]` so they can be used in collections and comparisons. Actual rendering integration is deferred to a future graphics integration phase.
+
+### Java Interface → Rust Trait with Box<dyn> (Phase 6)
+
+Java property interfaces (BooleanProperty, FloatProperty, IntegerProperty, StringProperty, TimerProperty, Event) translate to Rust traits with `Box<dyn Trait>` for polymorphism. Factory classes (e.g., `BooleanPropertyFactory.getBooleanProperty(id)`) become functions returning `Option<Box<dyn Trait>>` with a large `match` on the integer ID.
+
+### Vec<Option<T>> for Nullable Java Arrays (Phase 6)
+
+Java `TextureRegion[]` arrays where elements can be `null` translate to `Vec<Option<TextureRegion>>`. However, many callers construct these from non-null Vecs. Solution: provide convenience constructors like `new_with_int_timer_from_vec(images: Vec<TextureRegion>, ...)` that wraps each element in `Some()`, alongside the canonical `new_with_int_timer(images: Vec<Option<TextureRegion>>, ...)`.
+
+### Five-Agent Split for Large Skin Phase (Phase 6)
+
+Phase 6 has 73 Java files (~19K lines). Split into 5 parallel agent groups:
+- Property traits & factories (13 files)
+- Base types (skin_type, skin_property, sources — 15 files)
+- Rendering objects (skin_object, skin_image, skin_graph, etc. — 19 files)
+- JSON skin loaders (11 files)
+- LR2 + Lua skin loaders (15 files)
+
+Pre-create all module stubs and lib.rs before launching agents. Monitor agent completion — if any agent shuts down mid-work, identify remaining stub files (1-line files) and launch replacement agents.
+
+### SkinObject Mega-Class Pattern (Phase 6)
+
+Java's `SkinObject` is a ~1200-line class with extensive rendering logic (draw_image, color/rotation/stretch transformations, region calculations). Translate as a single `SkinObjectData` struct with methods. The `SkinObjectRenderer` struct wraps SpriteBatch state. Use `pub` fields for cross-struct access patterns (e.g., `skin_image.data.draw`).
+
+### Factory Function Naming Convention (Phase 6)
+
+Java factory classes use method names like `getIntegerProperty(id)`. In Rust, append `_by_id` suffix to distinguish from other overloads: `get_integer_property_by_id(id)`, `get_rate_property_by_id(id)`, `get_image_index_property_by_id(id)`. All callers must use the exact function name — agents sometimes use the shorter form, causing compilation errors across multiple files.

@@ -1,0 +1,10 @@
+pub mod lr2_course_result_skin_loader;
+pub mod lr2_decide_skin_loader;
+pub mod lr2_font_loader;
+pub mod lr2_play_skin_loader;
+pub mod lr2_result_skin_loader;
+pub mod lr2_select_skin_loader;
+pub mod lr2_skin_csv_loader;
+pub mod lr2_skin_header_loader;
+pub mod lr2_skin_loader;
+pub mod lr2_skin_select_skin_loader;

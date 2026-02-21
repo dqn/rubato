@@ -10,6 +10,7 @@ members = [
     "crates/beatoraja-core",
     "crates/beatoraja-pattern",
     "crates/beatoraja-play",
+    "crates/beatoraja-skin",
 ]
 resolver = "2"
 
@@ -29,6 +30,7 @@ md-processor = { path = "crates/md-processor" }
 beatoraja-core = { path = "crates/beatoraja-core" }
 beatoraja-pattern = { path = "crates/beatoraja-pattern" }
 beatoraja-play = { path = "crates/beatoraja-play" }
+beatoraja-skin = { path = "crates/beatoraja-skin" }
 
 # Error handling
 anyhow = "1"
