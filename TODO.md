@@ -13,8 +13,8 @@ Zero internal dependencies. Port these first.
 
 Depends on: bms.model
 
-- [ ] `bms.model.bmson` (16 files, 526 lines) — BMSON parser
-- [ ] `bms.model.osu` (9 files, 1,276 lines) — osu! format converter
+- [x] `bms.model.bmson` (16 files, 526 lines) — BMSON parser
+- [x] `bms.model.osu` (9 files, 1,276 lines) — osu! format converter
 
 ## Phase 3: Low-level Subsystems (~12,050 lines)
 

@@ -112,12 +112,11 @@ brs/
 ## Implementation Status
 
 - **Phase 1 complete:** `bms-model` (15 modules), `bms-table` (11 modules)
+- **Phase 2 complete:** `bmson` (16 model types + BMSONDecoder), `osu` (9 model types + OSUDecoder)
 
 ## Deferred / Stub Items
 
-- `BMSONDecoder` — depends on `bms.model.bmson` (Phase 2)
-- `OSUDecoder` — depends on `bms.model.osu` (Phase 2)
-- `ChartDecoder::get_decoder()` — `.bmson` / `.osu` branches use `todo!()`
+None currently — all chart format decoders (BMS, BMSON, osu!) are implemented.
 
 ## Translation Lessons Learned
 
@@ -176,3 +175,24 @@ Java enums with `BiFunction` fields (like `CommandWord` in `BMSDecoder.java`) tr
 ### Java TreeMap Iteration Order
 
 `TreeMap` in Java iterates in key order. `BTreeMap` in Rust provides the same guarantee. Always use `BTreeMap` (not `HashMap`) when Java uses `TreeMap`, especially for section/timeline processing where order matters.
+
+### BMSON JSON Model Types (Phase 2)
+
+Java BMSON model classes with `@JsonIgnoreProperties(ignoreUnknown=true)` translate to Rust structs with `#[serde(default)]` and `#[derive(Deserialize)]`. Fields that can be `null` in JSON (checked with `!= null` in Java) should use `Option<T>`. Use `#[serde(default)]` on the struct to handle missing fields.
+
+### Java switch-case Fallthrough (Phase 2)
+
+The Java `Osu.java` parser has a `switch(section)` where the `"General"` case falls through to `"Editor"` (missing `break`). In Rust, `match` does not fall through. Replicate the fallthrough by explicitly calling the Editor parser at the end of the General branch.
+
+### BTreeMap `lowerEntry` and `subMap` (Phase 2)
+
+- Java `TreeMap.lowerEntry(y)` → Rust `BTreeMap::range(..y).next_back()`
+- Java `TreeMap.subMap(y1, false, y2, true)` → Rust `BTreeMap::range((Excluded(y1), Included(y2)))`
+
+### LongNote Pairing Without Direct References (Phase 2)
+
+Java's BMSONDecoder uses direct object references for LN pairs (`ln.setPair(lnend)`). In Rust, use section-based tracking (`BmsonLnInfo { start_section, end_section, end_y }`) and timeline key lookups to modify pair notes. The `end_y` field allows locating the end note's timeline for wav/starttime/duration assignment.
+
+### Submodule Organization (Phase 2)
+
+When Java packages (like `bms.model.bmson` with 16 small classes) translate to Rust, consolidate all types into a single `mod.rs` file rather than one file per type. This reduces file count and simplifies imports.
