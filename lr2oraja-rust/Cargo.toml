@@ -23,6 +23,7 @@ members = [
     "crates/beatoraja-song",
     "crates/beatoraja-controller",
     "crates/beatoraja-system",
+    "crates/beatoraja-bin",
 ]
 resolver = "2"
 
@@ -101,6 +102,15 @@ lazy_static = "1"
 
 # XML
 quick-xml = { version = "0.37", features = ["serialize"] }
+
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
+
+# Logging (env-based)
+env_logger = "0.11"
+
+# Windowing
+winit = "0.30"
 
 # Testing
 tempfile = "3"

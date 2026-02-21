@@ -1,0 +1,16 @@
+[package]
+name = "beatoraja-bin"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "beatoraja"
+path = "src/main.rs"
+
+[dependencies]
+beatoraja-core = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+clap = { workspace = true }
+env_logger = { workspace = true }
+winit = { workspace = true }
