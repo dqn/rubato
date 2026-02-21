@@ -235,89 +235,8 @@ impl BMSPlayerMode {
     }
 }
 
-/// Stub for beatoraja.CourseData
-/// Cannot be replaced: field name differs (song vs hash), TrophyData types differ
-#[derive(Clone, Debug, Default)]
-pub struct CourseData {
-    pub name: String,
-    pub song: Vec<SongData>,
-    pub constraint: Vec<CourseDataConstraint>,
-    pub trophy: Vec<TrophyData>,
-    pub release: bool,
-}
-
-impl CourseData {
-    pub fn get_name(&self) -> &str {
-        &self.name
-    }
-    pub fn set_name(&mut self, s: String) {
-        self.name = s;
-    }
-    pub fn get_song(&self) -> &[SongData] {
-        &self.song
-    }
-    pub fn set_song(&mut self, s: Vec<SongData>) {
-        self.song = s;
-    }
-    pub fn get_constraint(&self) -> &[CourseDataConstraint] {
-        &self.constraint
-    }
-    pub fn set_constraint(&mut self, c: Vec<CourseDataConstraint>) {
-        self.constraint = c;
-    }
-    pub fn get_trophy(&self) -> &[TrophyData] {
-        &self.trophy
-    }
-    pub fn set_trophy(&mut self, t: Vec<TrophyData>) {
-        self.trophy = t;
-    }
-    pub fn set_release(&mut self, r: bool) {
-        self.release = r;
-    }
-    pub fn set_course_song_models(&mut self, _models: &[SongData]) { /* stub */
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize)]
-pub enum CourseDataConstraint {
-    Class,
-    Mirror,
-    Random,
-    Ln,
-    Cn,
-    Hcn,
-    NoSpeed,
-    NoGood,
-    NoGreat,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct TrophyData {
-    pub name: String,
-    pub missrate: f64,
-    pub scorerate: f64,
-}
-
-impl TrophyData {
-    pub fn get_name(&self) -> &str {
-        &self.name
-    }
-    pub fn set_name(&mut self, s: String) {
-        self.name = s;
-    }
-    pub fn get_missrate(&self) -> f64 {
-        self.missrate
-    }
-    pub fn set_missrate(&mut self, v: f64) {
-        self.missrate = v;
-    }
-    pub fn get_scorerate(&self) -> f64 {
-        self.scorerate
-    }
-    pub fn set_scorerate(&mut self, v: f64) {
-        self.scorerate = v;
-    }
-}
+// beatoraja.CourseData / TrophyData / CourseDataConstraint — replaced with real types from beatoraja-types (Phase 15g)
+pub use beatoraja_types::course_data::{CourseData, CourseDataConstraint, TrophyData};
 
 /// Stub for beatoraja.RandomCourseData
 #[derive(Clone, Debug, Default, serde::Deserialize)]
@@ -351,139 +270,16 @@ impl RandomCourseData {
 #[derive(Clone, Debug, Default, serde::Deserialize)]
 pub struct RandomStageData;
 
-/// Stub for beatoraja.TableData
-/// Cannot be replaced: real TableData.course uses real CourseData (beatoraja-types),
-/// but beatoraja-select uses its own CourseData stub with different field names and types.
-/// Replacing requires cascading CourseData, TrophyData, CourseDataConstraint changes.
-#[derive(Clone, Debug, Default)]
-pub struct TableData {
-    pub name: String,
-    pub url: Option<String>,
-    pub folder: Vec<TableFolder>,
-    pub course: Vec<CourseData>,
-}
+// beatoraja.TableData / TableFolder — replaced with real types from beatoraja-core (Phase 15g)
+pub use beatoraja_core::table_data::{TableData, TableFolder};
 
-impl TableData {
-    pub fn get_name(&self) -> &str {
-        &self.name
-    }
-    pub fn set_name(&mut self, s: String) {
-        self.name = s;
-    }
-    pub fn get_url(&self) -> Option<&str> {
-        self.url.as_deref()
-    }
-    pub fn set_url(&mut self, u: String) {
-        self.url = Some(u);
-    }
-    pub fn get_folder(&self) -> &[TableFolder] {
-        &self.folder
-    }
-    pub fn set_folder(&mut self, f: Vec<TableFolder>) {
-        self.folder = f;
-    }
-    pub fn get_course(&self) -> &[CourseData] {
-        &self.course
-    }
-    pub fn set_course(&mut self, c: Vec<CourseData>) {
-        self.course = c;
-    }
-    pub fn validate(&self) -> bool {
-        true
-    }
-}
+// beatoraja.TableDataAccessor / TableAccessor / DifficultyTableAccessor — replaced with real types from beatoraja-core (Phase 15g)
+pub use beatoraja_core::table_data_accessor::{
+    DifficultyTableAccessor, TableAccessor, TableDataAccessor,
+};
 
-#[derive(Clone, Debug, Default)]
-pub struct TableFolder {
-    pub name: String,
-    pub song: Vec<SongData>,
-}
-
-impl TableFolder {
-    pub fn get_name(&self) -> &str {
-        &self.name
-    }
-    pub fn set_name(&mut self, s: String) {
-        self.name = s;
-    }
-    pub fn get_song(&self) -> &[SongData] {
-        &self.song
-    }
-    pub fn set_song(&mut self, s: Vec<SongData>) {
-        self.song = s;
-    }
-}
-
-/// Stub for beatoraja.TableDataAccessor
-/// Cannot be replaced: read_all/write use stub TableData, not real TableData.
-#[derive(Clone, Debug, Default)]
-pub struct TableDataAccessor {
-    pub tablepath: String,
-}
-
-impl TableDataAccessor {
-    pub fn new(tablepath: &str) -> Self {
-        Self {
-            tablepath: tablepath.to_string(),
-        }
-    }
-    pub fn read_all(&self) -> Vec<TableData> {
-        todo!()
-    }
-    pub fn write(&self, _td: &TableData) {
-        todo!()
-    }
-}
-
-/// Stub for TableDataAccessor.TableAccessor trait
-/// Cannot be replaced: read/write use stub TableData, not real TableData.
-pub trait TableAccessor: Send + Sync {
-    fn name(&self) -> &str;
-    fn read(&self) -> TableData;
-    fn write(&self, td: &TableData);
-}
-
-/// Stub for DifficultyTableAccessor
-pub struct DifficultyTableAccessor {
-    pub tablepath: String,
-    pub url: String,
-}
-
-impl DifficultyTableAccessor {
-    pub fn new(tablepath: &str, url: &str) -> Self {
-        Self {
-            tablepath: tablepath.to_string(),
-            url: url.to_string(),
-        }
-    }
-}
-
-impl TableAccessor for DifficultyTableAccessor {
-    fn name(&self) -> &str {
-        &self.url
-    }
-    fn read(&self) -> TableData {
-        todo!()
-    }
-    fn write(&self, _td: &TableData) { /* stub */
-    }
-}
-
-/// Stub for beatoraja.CourseDataAccessor
-pub struct CourseDataAccessor {
-    pub path: String,
-}
-
-impl CourseDataAccessor {
-    pub fn new(path: &str) -> Self {
-        Self {
-            path: path.to_string(),
-        }
-    }
-    pub fn read_all(&self) -> Vec<CourseData> {
-        todo!()
-    }
-}
+// beatoraja.CourseDataAccessor — replaced with real type from beatoraja-core (Phase 15g)
+pub use beatoraja_core::course_data_accessor::CourseDataAccessor;
 
 /// Stub for beatoraja.PlayDataAccessor
 pub struct PlayDataAccessor;
@@ -1090,19 +886,16 @@ impl BMSSearchAccessor {
     pub fn new(_tablepath: &str) -> Self {
         Self
     }
-    pub fn read(&self) -> Option<TableData> {
-        None
-    }
 }
 
 impl TableAccessor for BMSSearchAccessor {
     fn name(&self) -> &str {
         "BMS Search"
     }
-    fn read(&self) -> TableData {
-        todo!()
+    fn read(&self) -> Option<TableData> {
+        None
     }
-    fn write(&self, _td: &TableData) {}
+    fn write(&self, _td: &mut TableData) {}
 }
 
 // ============================================================

@@ -156,7 +156,7 @@ impl TableDataAccessor {
 
 /// Table accessor trait.
 /// Translated from Java: TableDataAccessor.TableAccessor
-pub trait TableAccessor {
+pub trait TableAccessor: Send + Sync {
     fn name(&self) -> &str;
     fn read(&self) -> Option<TableData>;
     fn write(&self, td: &mut TableData);

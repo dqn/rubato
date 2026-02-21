@@ -82,9 +82,9 @@ impl GradeBar {
 
     fn qualified(score: &ScoreData, trophy: &TrophyData) -> bool {
         score.get_notes() != 0
-            && trophy.get_missrate() >= score.get_minbp() as f64 * 100.0 / score.get_notes() as f64
+            && trophy.get_missrate() >= score.get_minbp() as f32 * 100.0 / score.get_notes() as f32
             && trophy.get_scorerate()
-                <= score.get_exscore() as f64 * 100.0 / (score.get_notes() as f64 * 2.0)
+                <= score.get_exscore() as f32 * 100.0 / (score.get_notes() as f32 * 2.0)
     }
 
     pub fn get_lamp(&self, _is_player: bool) -> i32 {

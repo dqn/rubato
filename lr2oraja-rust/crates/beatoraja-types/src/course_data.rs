@@ -38,8 +38,32 @@ impl CourseData {
         &self.hash
     }
 
+    pub fn set_name(&mut self, name: String) {
+        self.name = Some(name);
+    }
+
     pub fn set_song(&mut self, hash: Vec<SongData>) {
         self.hash = hash;
+    }
+
+    pub fn get_trophy(&self) -> &[TrophyData] {
+        &self.trophy
+    }
+
+    pub fn set_trophy(&mut self, trophy: Vec<TrophyData>) {
+        self.trophy = trophy;
+    }
+
+    pub fn set_constraint(&mut self, constraint: Vec<CourseDataConstraint>) {
+        self.constraint = constraint;
+    }
+
+    pub fn set_release(&mut self, release: bool) {
+        self.release = release;
+    }
+
+    pub fn set_course_song_models(&mut self, _models: &[SongData]) {
+        // Java compat stub
     }
 
     pub fn is_class_course(&self) -> bool {
@@ -192,6 +216,30 @@ impl TrophyData {
             missrate,
             scorerate,
         }
+    }
+
+    pub fn get_name(&self) -> &str {
+        self.name.as_deref().unwrap_or("")
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        self.name = Some(name);
+    }
+
+    pub fn get_missrate(&self) -> f32 {
+        self.missrate
+    }
+
+    pub fn set_missrate(&mut self, v: f32) {
+        self.missrate = v;
+    }
+
+    pub fn get_scorerate(&self) -> f32 {
+        self.scorerate
+    }
+
+    pub fn set_scorerate(&mut self, v: f32) {
+        self.scorerate = v;
     }
 }
 

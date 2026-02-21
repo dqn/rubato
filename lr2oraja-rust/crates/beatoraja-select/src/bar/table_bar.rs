@@ -41,7 +41,7 @@ impl TableBar {
     }
 
     pub fn get_url(&self) -> Option<&str> {
-        self.td.get_url()
+        self.td.get_url_opt()
     }
 
     pub fn get_accessor(&self) -> &dyn TableAccessor {
