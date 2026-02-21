@@ -3,10 +3,6 @@
 
 use std::sync::Arc;
 
-pub use beatoraja_types::main_controller_access::MainControllerAccess;
-pub use beatoraja_types::main_state_type::MainStateType as TypesMainStateType;
-pub use beatoraja_types::player_resource_access::PlayerResourceAccess;
-
 // ============================================================
 // Re-exports from real crates (Phase 11 stub replacements)
 // ============================================================
@@ -23,7 +19,92 @@ pub use beatoraja_skin::stubs::PixmapFormat;
 pub use beatoraja_skin::stubs::Rectangle;
 pub use beatoraja_skin::stubs::Texture;
 pub use beatoraja_skin::stubs::TextureRegion;
-pub use beatoraja_song::song_data::SongData;
+use beatoraja_song::song_data::SongData;
+
+// ============================================================
+// PlayDataAccessor stub
+// ============================================================
+
+/// Stub for bms.player.beatoraja.PlayDataAccessor
+pub struct PlayDataAccessor;
+
+impl PlayDataAccessor {
+    pub fn exists_replay_data_model(
+        &self,
+        _model: &bms_model::bms_model::BMSModel,
+        _lnmode: i32,
+        _index: i32,
+    ) -> bool {
+        false
+    }
+
+    pub fn exists_replay_data_course(
+        &self,
+        _models: &[bms_model::bms_model::BMSModel],
+        _lnmode: i32,
+        _index: i32,
+        _constraint: &[beatoraja_core::course_data::CourseDataConstraint],
+    ) -> bool {
+        false
+    }
+
+    pub fn read_score_data(
+        &self,
+        _model: &bms_model::bms_model::BMSModel,
+        _lnmode: i32,
+    ) -> Option<beatoraja_core::score_data::ScoreData> {
+        None
+    }
+
+    pub fn read_score_data_course(
+        &self,
+        _models: &[bms_model::bms_model::BMSModel],
+        _lnmode: i32,
+        _random: i32,
+        _constraint: &[beatoraja_core::course_data::CourseDataConstraint],
+    ) -> Option<beatoraja_core::score_data::ScoreData> {
+        None
+    }
+
+    pub fn write_score_data(
+        &self,
+        _score: &beatoraja_core::score_data::ScoreData,
+        _model: &bms_model::bms_model::BMSModel,
+        _lnmode: i32,
+        _update: bool,
+    ) {
+    }
+
+    pub fn write_score_data_course(
+        &self,
+        _score: &beatoraja_core::score_data::ScoreData,
+        _models: &[bms_model::bms_model::BMSModel],
+        _lnmode: i32,
+        _random: i32,
+        _constraint: &[beatoraja_core::course_data::CourseDataConstraint],
+        _update: bool,
+    ) {
+    }
+
+    pub fn write_replay_data(
+        &self,
+        _replay: &beatoraja_core::replay_data::ReplayData,
+        _model: &bms_model::bms_model::BMSModel,
+        _lnmode: i32,
+        _index: i32,
+    ) {
+    }
+
+    pub fn write_replay_data_course(
+        &self,
+        _replays: &[beatoraja_core::replay_data::ReplayData],
+        _models: &[bms_model::bms_model::BMSModel],
+        _lnmode: i32,
+        _index: i32,
+        _constraint: &[beatoraja_core::course_data::CourseDataConstraint],
+    ) {
+    }
+}
 
 // ============================================================
 // MainController stub
@@ -49,24 +130,12 @@ impl MainController {
         todo!("Phase 8+ dependency: MainController.getIRStatus")
     }
 
-    pub fn get_play_data_accessor(&self) -> &PlayDataAccessor {
-        todo!("Phase 8+ dependency: MainController.getPlayDataAccessor")
-    }
-
-    pub fn get_audio_processor(&self) -> &AudioProcessor {
-        todo!("Phase 8+ dependency: MainController.getAudioProcessor")
-    }
-
     pub fn change_state(&mut self, _state_type: beatoraja_core::main_state::MainStateType) {
         todo!("Phase 8+ dependency: MainController.changeState")
     }
 
     pub fn save_last_recording(&self, _tag: &str) {
         todo!("Phase 8+ dependency: MainController.saveLastRecording")
-    }
-
-    pub fn get_ranking_data_cache(&self) -> &RankingDataCache {
-        todo!("Phase 8+ dependency: MainController.getRankingDataCache")
     }
 
     pub fn ir_send_status(&self) -> &Vec<IRSendStatusMain> {
@@ -76,43 +145,9 @@ impl MainController {
     pub fn ir_send_status_mut(&mut self) -> &mut Vec<IRSendStatusMain> {
         todo!("Phase 8+ dependency: MainController.irSendStatus")
     }
-}
 
-impl MainControllerAccess for MainController {
-    fn get_config(&self) -> &beatoraja_types::config::Config {
-        todo!("MainControllerAccess::get_config for MainController stub")
-    }
-
-    fn get_player_config(&self) -> &beatoraja_types::player_config::PlayerConfig {
-        todo!("MainControllerAccess::get_player_config for MainController stub")
-    }
-
-    fn change_state(&mut self, _state: TypesMainStateType) {
-        todo!("MainControllerAccess::change_state for MainController stub")
-    }
-
-    fn save_config(&self) {
-        todo!("MainControllerAccess::save_config for MainController stub")
-    }
-
-    fn exit(&self) {
-        todo!("MainControllerAccess::exit for MainController stub")
-    }
-
-    fn save_last_recording(&self, _reason: &str) {
-        todo!("MainControllerAccess::save_last_recording for MainController stub")
-    }
-
-    fn update_song(&mut self, _path: Option<&str>) {
-        todo!("MainControllerAccess::update_song for MainController stub")
-    }
-
-    fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-        None
-    }
-
-    fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-        None
+    pub fn get_play_data_accessor(&self) -> &PlayDataAccessor {
+        todo!("Phase 8+ dependency: MainController.getPlayDataAccessor")
     }
 }
 
@@ -131,10 +166,6 @@ pub use beatoraja_ir::ir_connection::IRConnection;
 
 // IRConfig: replaced by pub use from beatoraja_core
 pub use beatoraja_core::ir_config::IRConfig;
-pub use beatoraja_core::ir_config::{IR_SEND_ALWAYS, IR_SEND_COMPLETE_SONG, IR_SEND_UPDATE_SCORE};
-
-// IRResponse: replaced by pub use from beatoraja_ir
-pub use beatoraja_ir::ir_response::IRResponse;
 
 // IRScoreData: replaced by pub use from beatoraja_ir
 pub use beatoraja_ir::ir_score_data::IRScoreData;
@@ -142,14 +173,8 @@ pub use beatoraja_ir::ir_score_data::IRScoreData;
 // IRCourseData: replaced by pub use from beatoraja_ir
 pub use beatoraja_ir::ir_course_data::IRCourseData;
 
-// IRChartData: replaced by pub use from beatoraja_ir
-pub use beatoraja_ir::ir_chart_data::IRChartData;
-
 // RankingData: replaced by pub use from beatoraja_ir
 pub use beatoraja_ir::ranking_data::RankingData;
-
-// RankingDataCache: replaced by pub use from beatoraja_ir
-pub use beatoraja_ir::ranking_data_cache::RankingDataCache;
 
 // ============================================================
 // MainController.IRSendStatus (for MusicResult)
@@ -220,6 +245,85 @@ impl BMSPlayerInputProcessor {
 }
 
 // ============================================================
+// GrooveGauge stub
+// ============================================================
+
+/// Stub for bms.player.beatoraja.play.GrooveGauge
+pub struct GrooveGaugeStub {
+    pub gauge_type: i32,
+}
+
+impl GrooveGaugeStub {
+    pub fn get_type(&self) -> i32 {
+        self.gauge_type
+    }
+
+    pub fn get_gauge_type_length(&self) -> usize {
+        9
+    }
+
+    pub fn get_gauge(&self, _gauge_type: i32) -> &beatoraja_play::groove_gauge::Gauge {
+        todo!("Phase 8+ dependency: GrooveGauge.getGauge")
+    }
+
+    pub fn get_clear_type(&self) -> beatoraja_core::clear_type::ClearType {
+        todo!("Phase 8+ dependency: GrooveGauge.getClearType")
+    }
+}
+
+// ============================================================
+// GdxArray (LibGDX) stub
+// ============================================================
+
+/// Stub for com.badlogic.gdx.utils.Array<T>
+pub struct GdxArray<T> {
+    pub items: Vec<T>,
+    pub size: usize,
+}
+
+impl<T> GdxArray<T> {
+    pub fn new() -> Self {
+        Self {
+            items: Vec::new(),
+            size: 0,
+        }
+    }
+
+    pub fn add(&mut self, value: T) {
+        self.items.push(value);
+        self.size = self.items.len();
+    }
+
+    pub fn get(&self, index: usize) -> &T {
+        &self.items[index]
+    }
+}
+
+impl<T> Default for GdxArray<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a GdxArray<T> {
+    type Item = &'a T;
+    type IntoIter = std::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.items.iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut GdxArray<T> {
+    type Item = &'a mut T;
+    type IntoIter = std::slice::IterMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.items.iter_mut()
+    }
+}
+
+// ============================================================
 // PlayerResource stub
 // ============================================================
 
@@ -249,20 +353,8 @@ impl PlayerResource {
         &self.play_mode
     }
 
-    pub fn get_groove_gauge(&self) -> &GrooveGaugeStub {
-        todo!("Phase 8+ dependency: PlayerResource.getGrooveGauge")
-    }
-
     pub fn get_gauge(&self) -> &[FloatArray] {
         todo!("Phase 8+ dependency: PlayerResource.getGauge")
-    }
-
-    pub fn get_course_gauge(&self) -> &GdxArray<Vec<FloatArray>> {
-        todo!("Phase 8+ dependency: PlayerResource.getCourseGauge")
-    }
-
-    pub fn get_course_gauge_mut(&mut self) -> &mut GdxArray<Vec<FloatArray>> {
-        todo!("Phase 8+ dependency: PlayerResource.getCourseGauge")
     }
 
     pub fn get_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
@@ -374,124 +466,17 @@ impl PlayerResource {
     pub fn is_freq_on(&self) -> bool {
         false
     }
-}
 
-impl PlayerResourceAccess for PlayerResource {
-    fn get_config(&self) -> &beatoraja_types::config::Config {
-        todo!("PlayerResourceAccess::get_config for PlayerResource stub")
+    pub fn get_groove_gauge(&self) -> &GrooveGaugeStub {
+        todo!("Phase 8+ dependency: PlayerResource.getGrooveGauge")
     }
 
-    fn get_player_config(&self) -> &beatoraja_types::player_config::PlayerConfig {
-        todo!("PlayerResourceAccess::get_player_config for PlayerResource stub")
+    pub fn get_course_gauge(&self) -> &GdxArray<Vec<FloatArray>> {
+        todo!("Phase 8+ dependency: PlayerResource.getCourseGauge")
     }
 
-    fn get_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
-        None
-    }
-
-    fn get_rival_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
-        None
-    }
-
-    fn get_target_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
-        None
-    }
-
-    fn get_course_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
-        None
-    }
-
-    fn set_course_score_data(&mut self, _score: beatoraja_types::score_data::ScoreData) {
-        // no-op stub
-    }
-
-    fn get_songdata(&self) -> Option<&beatoraja_types::song_data::SongData> {
-        todo!("PlayerResourceAccess::get_songdata for PlayerResource stub")
-    }
-
-    fn get_replay_data(&self) -> Option<&beatoraja_types::replay_data::ReplayData> {
-        todo!("PlayerResourceAccess::get_replay_data for PlayerResource stub")
-    }
-
-    fn get_course_replay(&self) -> &[beatoraja_types::replay_data::ReplayData] {
-        todo!("PlayerResourceAccess::get_course_replay for PlayerResource stub")
-    }
-
-    fn add_course_replay(&mut self, _rd: beatoraja_types::replay_data::ReplayData) {
-        todo!("PlayerResourceAccess::add_course_replay for PlayerResource stub")
-    }
-
-    fn get_course_data(&self) -> Option<&beatoraja_types::course_data::CourseData> {
-        None
-    }
-
-    fn get_course_index(&self) -> usize {
-        0
-    }
-
-    fn next_course(&mut self) -> bool {
-        false
-    }
-
-    fn get_constraint(&self) -> Vec<beatoraja_types::course_data::CourseDataConstraint> {
-        vec![]
-    }
-
-    fn get_gauge(&self) -> Option<&Vec<Vec<f32>>> {
-        None
-    }
-
-    fn get_groove_gauge(&self) -> Option<&beatoraja_types::groove_gauge::GrooveGauge> {
-        None
-    }
-
-    fn get_course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
-        static EMPTY: Vec<Vec<Vec<f32>>> = Vec::new();
-        &EMPTY
-    }
-
-    fn add_course_gauge(&mut self, _gauge: Vec<Vec<f32>>) {
-        // no-op stub
-    }
-
-    fn get_maxcombo(&self) -> i32 {
-        0
-    }
-
-    fn get_org_gauge_option(&self) -> i32 {
-        0
-    }
-
-    fn set_org_gauge_option(&mut self, _val: i32) {
-        // no-op stub
-    }
-
-    fn get_assist(&self) -> i32 {
-        0
-    }
-
-    fn is_update_score(&self) -> bool {
-        false
-    }
-
-    fn is_update_course_score(&self) -> bool {
-        false
-    }
-
-    fn is_force_no_ir_send(&self) -> bool {
-        false
-    }
-
-    fn is_freq_on(&self) -> bool {
-        false
-    }
-
-    fn get_reverse_lookup_data(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn get_reverse_lookup_levels(&self) -> Vec<String> {
-        vec![]
+    pub fn get_course_gauge_mut(&mut self) -> &mut GdxArray<Vec<FloatArray>> {
+        todo!("Phase 8+ dependency: PlayerResource.getCourseGauge")
     }
 }
 
@@ -512,137 +497,6 @@ pub enum BMSPlayerModeType {
     Practice,
     Replay,
     ReplayDifferent,
-}
-
-// ============================================================
-// PlayDataAccessor stub
-// ============================================================
-
-/// Stub for bms.player.beatoraja.PlayDataAccessor
-pub struct PlayDataAccessor;
-
-impl PlayDataAccessor {
-    pub fn exists_replay_data_model(
-        &self,
-        _model: &bms_model::bms_model::BMSModel,
-        _lnmode: i32,
-        _index: i32,
-    ) -> bool {
-        false
-    }
-
-    pub fn exists_replay_data_course(
-        &self,
-        _models: &[bms_model::bms_model::BMSModel],
-        _lnmode: i32,
-        _index: i32,
-        _constraint: &[beatoraja_core::course_data::CourseDataConstraint],
-    ) -> bool {
-        false
-    }
-
-    pub fn read_score_data(
-        &self,
-        _model: &bms_model::bms_model::BMSModel,
-        _lnmode: i32,
-    ) -> Option<beatoraja_core::score_data::ScoreData> {
-        None
-    }
-
-    pub fn read_score_data_course(
-        &self,
-        _models: &[bms_model::bms_model::BMSModel],
-        _lnmode: i32,
-        _random: i32,
-        _constraint: &[beatoraja_core::course_data::CourseDataConstraint],
-    ) -> Option<beatoraja_core::score_data::ScoreData> {
-        None
-    }
-
-    pub fn write_score_data(
-        &self,
-        _score: &beatoraja_core::score_data::ScoreData,
-        _model: &bms_model::bms_model::BMSModel,
-        _lnmode: i32,
-        _update: bool,
-    ) {
-        // stub
-    }
-
-    pub fn write_score_data_course(
-        &self,
-        _score: &beatoraja_core::score_data::ScoreData,
-        _models: &[bms_model::bms_model::BMSModel],
-        _lnmode: i32,
-        _random: i32,
-        _constraint: &[beatoraja_core::course_data::CourseDataConstraint],
-        _update: bool,
-    ) {
-        // stub
-    }
-
-    pub fn write_replay_data(
-        &self,
-        _replay: &beatoraja_core::replay_data::ReplayData,
-        _model: &bms_model::bms_model::BMSModel,
-        _lnmode: i32,
-        _index: i32,
-    ) {
-        // stub
-    }
-
-    pub fn write_replay_data_course(
-        &self,
-        _replays: &[beatoraja_core::replay_data::ReplayData],
-        _models: &[bms_model::bms_model::BMSModel],
-        _lnmode: i32,
-        _index: i32,
-        _constraint: &[beatoraja_core::course_data::CourseDataConstraint],
-    ) {
-        // stub
-    }
-}
-
-// ============================================================
-// AudioProcessor stub
-// ============================================================
-
-/// Stub for AudioProcessor
-pub struct AudioProcessor;
-
-impl AudioProcessor {
-    pub fn stop_note(&self, _note: Option<()>) {
-        // stub
-    }
-}
-
-// SongData: replaced by pub use beatoraja_song::song_data::SongData
-
-// ============================================================
-// GrooveGauge stub (partial)
-// ============================================================
-
-/// Stub for bms.player.beatoraja.play.GrooveGauge
-pub struct GrooveGaugeStub {
-    pub gauge_type: i32,
-}
-
-impl GrooveGaugeStub {
-    pub fn get_type(&self) -> i32 {
-        self.gauge_type
-    }
-
-    pub fn get_gauge_type_length(&self) -> usize {
-        9
-    }
-
-    pub fn get_gauge(&self, _gauge_type: i32) -> &beatoraja_play::groove_gauge::Gauge {
-        todo!("Phase 8+ dependency: GrooveGauge.getGauge")
-    }
-
-    pub fn get_clear_type(&self) -> beatoraja_core::clear_type::ClearType {
-        todo!("Phase 8+ dependency: GrooveGauge.getClearType")
-    }
 }
 
 // ============================================================
@@ -705,49 +559,6 @@ impl IntArray {
 
     pub fn contains(&self, value: i32) -> bool {
         self.items.contains(&value)
-    }
-}
-
-/// Stub for com.badlogic.gdx.utils.Array<T>
-#[derive(Clone, Debug, Default)]
-pub struct GdxArray<T> {
-    pub items: Vec<T>,
-    pub size: usize,
-}
-
-impl<T> GdxArray<T> {
-    pub fn new() -> Self {
-        Self {
-            items: Vec::new(),
-            size: 0,
-        }
-    }
-
-    pub fn add(&mut self, value: T) {
-        self.items.push(value);
-        self.size = self.items.len();
-    }
-
-    pub fn get(&self, index: usize) -> &T {
-        &self.items[index]
-    }
-}
-
-impl<T> IntoIterator for GdxArray<T> {
-    type Item = T;
-    type IntoIter = std::vec::IntoIter<T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.items.into_iter()
-    }
-}
-
-impl<'a, T> IntoIterator for &'a GdxArray<T> {
-    type Item = &'a T;
-    type IntoIter = std::slice::Iter<'a, T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.items.iter()
     }
 }
 
