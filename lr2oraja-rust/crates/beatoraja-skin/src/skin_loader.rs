@@ -36,8 +36,14 @@ impl PixmapResourcePool {
         false
     }
 
-    pub fn get(&self, _path: &str) -> Option<Pixmap> {
-        todo!("Image loading: PixmapResourcePool.get")
+    pub fn get(&self, path: &str) -> Option<Pixmap> {
+        match Pixmap::from_file(path) {
+            Ok(pixmap) => Some(pixmap),
+            Err(e) => {
+                log::warn!("Failed to load image: {}", e);
+                None
+            }
+        }
     }
 }
 

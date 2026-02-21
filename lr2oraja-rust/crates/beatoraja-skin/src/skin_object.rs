@@ -12,7 +12,7 @@ use crate::property::integer_property_factory;
 use crate::property::timer_property::TimerProperty;
 use crate::skin_property;
 use crate::stretch_type::StretchType;
-use crate::stubs::{Color, MainState, Rectangle, SkinOffset, TextureRegion};
+use crate::stubs::{Color, MainState, Rectangle, SkinOffset, SpriteBatch, TextureRegion};
 
 /// SkinObjectDestination (inner class of SkinObject)
 #[derive(Clone, Debug)]
@@ -1184,6 +1184,7 @@ pub struct SkinObjectRenderer {
     pub color: Color,
     pub blend: i32,
     pub obj_type: i32,
+    pub sprite: SpriteBatch,
 }
 
 impl Default for SkinObjectRenderer {
@@ -1205,6 +1206,7 @@ impl SkinObjectRenderer {
             color: Color::new(1.0, 1.0, 1.0, 1.0),
             blend: 0,
             obj_type: 0,
+            sprite: SpriteBatch::new(),
         }
     }
 
@@ -1236,21 +1238,35 @@ impl SkinObjectRenderer {
         self.obj_type
     }
 
-    pub fn draw(&mut self, _image: &TextureRegion, _x: f32, _y: f32, _w: f32, _h: f32) {
-        todo!("Phase 7+ dependency: SkinObjectRenderer.draw requires LibGDX SpriteBatch")
+    /// Java: sprite.draw(image, x + 0.01f, y + 0.01f, w, h)
+    /// The 0.01 offset is a workaround for a Windows TextureRegion rendering issue.
+    pub fn draw(&mut self, image: &TextureRegion, x: f32, y: f32, w: f32, h: f32) {
+        self.sprite.draw_region(image, x + 0.01, y + 0.01, w, h);
     }
 
+    /// Java: sprite.draw(image, x + 0.01f, y + 0.01f, cx * w, cy * h, w, h, 1, 1, angle)
     pub fn draw_rotated(
         &mut self,
-        _image: &TextureRegion,
-        _x: f32,
-        _y: f32,
-        _w: f32,
-        _h: f32,
-        _cx: f32,
-        _cy: f32,
-        _angle: i32,
+        image: &TextureRegion,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        cx: f32,
+        cy: f32,
+        angle: i32,
     ) {
-        todo!("Phase 7+ dependency: SkinObjectRenderer.draw rotated requires LibGDX SpriteBatch")
+        self.sprite.draw_region_rotated(
+            image,
+            x + 0.01,
+            y + 0.01,
+            cx * w,
+            cy * h,
+            w,
+            h,
+            1.0,
+            1.0,
+            angle as f32,
+        );
     }
 }

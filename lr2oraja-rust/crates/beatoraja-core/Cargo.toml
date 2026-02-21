@@ -11,6 +11,10 @@ beatoraja-input = { workspace = true }
 beatoraja-audio = { workspace = true }
 beatoraja-types = { workspace = true }
 
+# Rendering
+beatoraja-render = { workspace = true }
+image = { workspace = true }
+
 # Error handling
 anyhow = { workspace = true }
 

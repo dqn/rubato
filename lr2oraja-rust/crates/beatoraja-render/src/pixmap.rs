@@ -44,6 +44,30 @@ impl Pixmap {
         }
     }
 
+    /// Load an image file and convert to RGBA8888 Pixmap.
+    /// Supports PNG, JPEG, BMP, GIF, and other formats via the `image` crate.
+    pub fn from_file(path: &str) -> Result<Self, String> {
+        let img = image::open(path).map_err(|e| format!("Failed to load image {}: {}", path, e))?;
+        let rgba = img.to_rgba8();
+        let (w, h) = (rgba.width(), rgba.height());
+        Ok(Self {
+            width: w as i32,
+            height: h as i32,
+            data: rgba.into_raw(),
+            current_color: [255, 255, 255, 255],
+        })
+    }
+
+    /// Create a Pixmap from raw RGBA8888 data.
+    pub fn from_rgba_data(width: i32, height: i32, data: Vec<u8>) -> Self {
+        Self {
+            width,
+            height,
+            data,
+            current_color: [255, 255, 255, 255],
+        }
+    }
+
     pub fn get_width(&self) -> i32 {
         self.width
     }

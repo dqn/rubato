@@ -1,11 +1,9 @@
 use std::path::Path;
 
+use beatoraja_render::pixmap::Pixmap;
 use log::warn;
 
 use crate::resource_pool::ResourcePool;
-
-/// Stub for Pixmap (LibGDX)
-pub struct Pixmap;
 
 /// PixmapResourcePool - resource pool for Pixmap images
 pub struct PixmapResourcePool {
@@ -90,14 +88,13 @@ impl PixmapResourcePool {
         }
     }
 
-    fn load_pixmap_from_file(_path: &str) -> Result<Pixmap, String> {
-        // TODO: Implement actual image loading (Phase 5+ LibGDX replacement)
-        Err("Pixmap loading not yet implemented".to_string())
+    fn load_pixmap_from_file(path: &str) -> Result<Pixmap, String> {
+        Pixmap::from_file(path)
     }
 
-    fn load_pixmap_fallback(_path: &str) -> Result<Pixmap, String> {
-        // TODO: Implement fallback image loading (ImageIO equivalent)
-        Err("Pixmap fallback loading not yet implemented".to_string())
+    fn load_pixmap_fallback(path: &str) -> Result<Pixmap, String> {
+        // Fallback: try loading via image crate with explicit format detection
+        Pixmap::from_file(path)
     }
 }
 
