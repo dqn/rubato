@@ -9,6 +9,7 @@ beatoraja-core.workspace = true
 beatoraja-pattern.workspace = true
 beatoraja-audio.workspace = true
 beatoraja-input.workspace = true
+beatoraja-song.workspace = true
 log.workspace = true
 rand.workspace = true
 serde.workspace = true

@@ -1,5 +1,64 @@
 // External dependency stubs for beatoraja-external crate
-// These will be replaced with actual implementations when corresponding phases are translated.
+//
+// Phase 11 analysis — Why remaining stubs cannot be replaced yet:
+//
+// MainController, PlayerResource, Config, PlayerConfig:
+//   Real types in beatoraja-core use pub fields (no getters/setters), and the
+//   external code accesses them through chain like state.resource.get_config().
+//   The real Config field names differ (set_clipboard_screenshot vs
+//   set_clipboard_when_screenshot), PlayerConfig twitter fields are Option<String>
+//   not String, and PlayerResource.get_songdata() returns Option not direct ref.
+//
+// MainState:
+//   Real type is a trait (beatoraja_core::main_state::MainState), but external
+//   code uses it as a struct with `state.resource` field access. Replacing
+//   requires a wrapper struct or reworking all callers.
+//
+// MainStateListener:
+//   Takes &MainState (struct) in stub vs &dyn MainState (trait) in real type.
+//
+// SongData:
+//   Real beatoraja-song::SongData has pub fields, no set_title()/set_md5() etc.
+//   External code calls setters extensively (bms_search_accessor.rs).
+//
+// SongDatabaseAccessor:
+//   Real type is a trait in beatoraja-song, stub is a struct. Callers instantiate
+//   it as a concrete type.
+//
+// ScoreData:
+//   Real type has get_judge_count(judge, fast) (2-arg) but callers use 1-arg
+//   get_judge_count(judge). Real update() takes 2 args, stub takes 1.
+//
+// ScoreDatabaseAccessor:
+//   Real type requires path in constructor (new(path) -> Result), stub is unit
+//   struct. set_score_data signature differs (&ScoreData vs &[ScoreData]).
+//
+// TableData, TableFolder, TableDataAccessor, TableAccessor:
+//   Real TableFolder has name: Option<String> and songs field, stub has name:
+//   String and song field. write() takes &mut vs &. Setter methods don't exist
+//   on real types.
+//
+// ReplayData:
+//   Real type has lane_shuffle_pattern: Option<Vec<Vec<i32>>>, stub has
+//   Vec<Vec<i32>>. Field access differs.
+//
+// Mode:
+//   Real bms_model::mode::Mode is enum (no id field). Could theoretically replace
+//   but used via state.resource.get_original_mode() which returns Option<()> in
+//   real PlayerResource, not &Mode. Chain is broken.
+//
+// IntegerProperty, BooleanProperty, StringProperty traits + factories:
+//   Real traits in beatoraja-skin reference beatoraja-skin's own MainState stub
+//   trait, not this crate's MainState struct. Type mismatch.
+//
+// Twitter4j, ClipboardHelper, Pixmap, GdxGraphics, BufferUtils, PixmapIO:
+//   No real Rust equivalents exist.
+//
+// ImGuiNotify:
+//   From beatoraja-modmenu (cannot depend on it).
+//
+// AbstractResult, ScreenType:
+//   From beatoraja-result/beatoraja-play (cannot depend on them).
 
 use std::collections::HashMap;
 
@@ -666,23 +725,15 @@ impl StringPropertyFactory {
 }
 
 // ============================================================
-// SkinProperty constants
+// SkinProperty constants (re-exported from beatoraja-skin)
 // ============================================================
 
-pub const NUMBER_CLEAR: i32 = 370;
-pub const NUMBER_PLAYLEVEL: i32 = 96;
-pub const NUMBER_MAXSCORE: i32 = 72;
-pub const OPTION_RESULT_AAA_1P: i32 = 300;
-pub const OPTION_RESULT_AA_1P: i32 = 301;
-pub const OPTION_RESULT_A_1P: i32 = 302;
-pub const OPTION_RESULT_B_1P: i32 = 303;
-pub const OPTION_RESULT_C_1P: i32 = 304;
-pub const OPTION_RESULT_D_1P: i32 = 305;
-pub const OPTION_RESULT_E_1P: i32 = 306;
-pub const OPTION_RESULT_F_1P: i32 = 307;
-pub const STRING_FULLTITLE: i32 = 12;
-pub const STRING_TABLE_NAME: i32 = 1001;
-pub const STRING_TABLE_LEVEL: i32 = 1002;
+pub use beatoraja_skin::skin_property::{
+    NUMBER_CLEAR, NUMBER_MAXSCORE, NUMBER_PLAYLEVEL, OPTION_RESULT_AAA_1P, OPTION_RESULT_AA_1P,
+    OPTION_RESULT_A_1P, OPTION_RESULT_B_1P, OPTION_RESULT_C_1P, OPTION_RESULT_D_1P,
+    OPTION_RESULT_E_1P, OPTION_RESULT_F_1P, STRING_FULLTITLE, STRING_TABLE_LEVEL,
+    STRING_TABLE_NAME,
+};
 
 // ============================================================
 // Twitter4j stubs (entirely stubbed - no Rust equivalent)

@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 bms-model.workspace = true
 beatoraja-core.workspace = true
+beatoraja-song.workspace = true
 log.workspace = true
 serde.workspace = true
 serde_json.workspace = true

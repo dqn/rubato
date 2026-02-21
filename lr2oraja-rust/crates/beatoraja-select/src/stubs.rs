@@ -1893,25 +1893,10 @@ impl MainLoader {
 pub struct PerformanceMetrics;
 
 // ============================================================
-// bms.model.Mode
+// bms.model.Mode — re-exported from real bms-model crate
 // ============================================================
 
-pub mod bms_model {
-    #[derive(Clone, Debug, PartialEq, Eq)]
-    pub struct Mode {
-        pub id: i32,
-    }
-
-    impl Mode {
-        pub const BEAT_7K: Mode = Mode { id: 7 };
-        pub const BEAT_14K: Mode = Mode { id: 14 };
-        pub const POPN_9K: Mode = Mode { id: 9 };
-        pub const BEAT_5K: Mode = Mode { id: 5 };
-        pub const BEAT_10K: Mode = Mode { id: 10 };
-        pub const KEYBOARD_24K: Mode = Mode { id: 24 };
-        pub const KEYBOARD_24K_DOUBLE: Mode = Mode { id: 48 };
-    }
-}
+pub use ::bms_model::mode as bms_model;
 
 // ============================================================
 // bms.tool.util.Pair

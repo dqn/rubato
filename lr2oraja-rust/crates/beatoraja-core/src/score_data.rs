@@ -138,6 +138,134 @@ impl ScoreData {
         self.player = player.unwrap_or("").to_string();
     }
 
+    pub fn get_sha256(&self) -> &str {
+        &self.sha256
+    }
+
+    pub fn get_player(&self) -> &str {
+        &self.player
+    }
+
+    pub fn get_mode(&self) -> i32 {
+        self.mode
+    }
+
+    pub fn get_clear(&self) -> i32 {
+        self.clear
+    }
+
+    pub fn get_date(&self) -> i64 {
+        self.date
+    }
+
+    pub fn get_playcount(&self) -> i32 {
+        self.playcount
+    }
+
+    pub fn get_clearcount(&self) -> i32 {
+        self.clearcount
+    }
+
+    pub fn get_notes(&self) -> i32 {
+        self.notes
+    }
+
+    pub fn get_combo(&self) -> i32 {
+        self.combo
+    }
+
+    pub fn get_minbp(&self) -> i32 {
+        self.minbp
+    }
+
+    pub fn get_passnotes(&self) -> i32 {
+        self.passnotes
+    }
+
+    pub fn get_random(&self) -> i32 {
+        self.random
+    }
+
+    pub fn get_option(&self) -> i32 {
+        self.option
+    }
+
+    pub fn get_seed(&self) -> i64 {
+        self.seed
+    }
+
+    pub fn get_assist(&self) -> i32 {
+        self.assist
+    }
+
+    pub fn get_gauge(&self) -> i32 {
+        self.gauge
+    }
+
+    pub fn get_state(&self) -> i32 {
+        self.state
+    }
+
+    pub fn get_scorehash(&self) -> &str {
+        &self.scorehash
+    }
+
+    pub fn get_trophy(&self) -> &str {
+        &self.trophy
+    }
+
+    pub fn get_ghost(&self) -> &str {
+        &self.ghost
+    }
+
+    pub fn get_epg(&self) -> i32 {
+        self.epg
+    }
+
+    pub fn get_lpg(&self) -> i32 {
+        self.lpg
+    }
+
+    pub fn get_egr(&self) -> i32 {
+        self.egr
+    }
+
+    pub fn get_lgr(&self) -> i32 {
+        self.lgr
+    }
+
+    pub fn get_egd(&self) -> i32 {
+        self.egd
+    }
+
+    pub fn get_lgd(&self) -> i32 {
+        self.lgd
+    }
+
+    pub fn get_ebd(&self) -> i32 {
+        self.ebd
+    }
+
+    pub fn get_lbd(&self) -> i32 {
+        self.lbd
+    }
+
+    pub fn get_epr(&self) -> i32 {
+        self.epr
+    }
+
+    pub fn get_lpr(&self) -> i32 {
+        self.lpr
+    }
+
+    pub fn get_ems(&self) -> i32 {
+        self.ems
+    }
+
+    pub fn get_lms(&self) -> i32 {
+        self.lms
+    }
+
     pub fn get_exscore(&self) -> i32 {
         (self.epg + self.lpg) * 2 + self.egr + self.lgr
     }

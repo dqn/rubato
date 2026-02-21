@@ -1,5 +1,5 @@
 use crate::player_information::PlayerInformation;
-use crate::stubs::MainController;
+use crate::main_controller::MainController;
 
 /// Rival data accessor.
 /// Translated from Java: RivalDataAccessor

@@ -1,4 +1,10 @@
-// Phase 5+ stubs - will be replaced when later phases are translated
+// Phase 5+ stubs — types from downstream crates that beatoraja-core cannot import
+// due to circular dependency constraints. These will be replaced if/when the
+// dependency graph is restructured (e.g., extracting shared types into a common crate).
+
+// ---------------------------------------------------------------------------
+// beatoraja-play stubs
+// ---------------------------------------------------------------------------
 
 /// Stub for beatoraja.play.GrooveGauge
 pub struct GrooveGauge;
@@ -62,6 +68,10 @@ pub enum BMSPlayerRule {
     Beatoraja,
 }
 
+// ---------------------------------------------------------------------------
+// beatoraja-skin stubs
+// ---------------------------------------------------------------------------
+
 /// Stub for beatoraja.skin.SkinType
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -106,6 +116,10 @@ impl SkinType {
     }
 }
 
+// ---------------------------------------------------------------------------
+// beatoraja-select stubs
+// ---------------------------------------------------------------------------
+
 /// Stub for beatoraja.select.BarSorter
 pub struct BarSorter;
 
@@ -132,8 +146,9 @@ impl BarSorter {
     ];
 }
 
-/// Stub for beatoraja.pattern.ScrollSpeedModifier
-pub struct ScrollSpeedModifier;
+// ---------------------------------------------------------------------------
+// beatoraja-pattern stubs
+// ---------------------------------------------------------------------------
 
 pub mod scroll_speed_modifier {
     #[derive(Clone, Debug)]
@@ -150,9 +165,6 @@ pub mod scroll_speed_modifier {
     }
 }
 
-/// Stub for beatoraja.pattern.LongNoteModifier
-pub struct LongNoteModifier;
-
 pub mod long_note_modifier {
     #[derive(Clone, Debug)]
     pub enum Mode {
@@ -168,9 +180,6 @@ pub mod long_note_modifier {
     }
 }
 
-/// Stub for beatoraja.pattern.MineNoteModifier
-pub struct MineNoteModifier;
-
 pub mod mine_note_modifier {
     #[derive(Clone, Debug)]
     pub enum Mode {
@@ -184,6 +193,10 @@ pub mod mine_note_modifier {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// beatoraja-ir stubs
+// ---------------------------------------------------------------------------
 
 /// Stub for beatoraja.ir.IRConnectionManager
 pub struct IRConnectionManager;
@@ -199,7 +212,11 @@ impl IRConnectionManager {
     }
 }
 
-/// Stub for beatoraja.input.BMSPlayerInputDevice
+// ---------------------------------------------------------------------------
+// beatoraja-input stubs (incompatible field layout with beatoraja-input crate)
+// ---------------------------------------------------------------------------
+
+/// Stub for beatoraja.input.BMSPlayerInputDevice.Type
 pub mod bms_player_input_device {
     #[allow(non_camel_case_types)]
     #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -211,18 +228,40 @@ pub mod bms_player_input_device {
     }
 }
 
-/// Stub for MainController (Phase 7+)
-pub struct MainController;
+/// Stub for beatoraja.input.KeyInputLog (pub fields; beatoraja-input uses private fields)
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct KeyInputLog {
+    pub time: i64,
+    pub keycode: i32,
+    pub pressed: bool,
+}
 
-/// Stub for MainState (Phase 7+)
-pub trait MainStateTrait {}
+impl KeyInputLog {
+    pub fn validate(&self) -> bool {
+        true
+    }
+}
 
-/// Stub for Gdx types
-pub struct Gdx;
-pub struct SpriteBatch;
-pub struct ShaderProgram;
-pub struct Pixmap;
-pub struct Texture;
+// ---------------------------------------------------------------------------
+// beatoraja-pattern stubs (incompatible field layout with beatoraja-pattern crate)
+// ---------------------------------------------------------------------------
+
+/// Stub for beatoraja.pattern.PatternModifyLog (field layout differs from beatoraja-pattern)
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct PatternModifyLog {
+    pub old_lane: i32,
+    pub new_lane: i32,
+}
+
+impl PatternModifyLog {
+    pub fn validate(&self) -> bool {
+        true
+    }
+}
+
+// ---------------------------------------------------------------------------
+// beatoraja-song stubs
+// ---------------------------------------------------------------------------
 
 /// Stub for beatoraja.song.SongData
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
@@ -243,34 +282,3 @@ impl SongData {
             || self.md5.as_ref().is_some_and(|s| !s.is_empty())
     }
 }
-
-/// Stub for beatoraja.input.KeyInputLog
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
-pub struct KeyInputLog {
-    pub time: i64,
-    pub keycode: i32,
-    pub pressed: bool,
-}
-
-impl KeyInputLog {
-    pub fn validate(&self) -> bool {
-        true
-    }
-}
-
-/// Stub for beatoraja.pattern.PatternModifyLog
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
-pub struct PatternModifyLog {
-    pub old_lane: i32,
-    pub new_lane: i32,
-}
-
-impl PatternModifyLog {
-    pub fn validate(&self) -> bool {
-        true
-    }
-}
-
-/// Stub for beatoraja.PlayConfig
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
-pub struct PlayConfig;

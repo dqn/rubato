@@ -1,8 +1,6 @@
 // External dependency stubs for Phase 6 Skin System
 // These will be replaced with actual implementations when corresponding phases are translated.
 
-use std::collections::HashMap;
-
 // ============================================================
 // LibGDX graphics types
 // ============================================================
@@ -851,48 +849,11 @@ impl TimingDistribution {
 }
 
 // ============================================================
-// beatoraja.song types (stubs)
+// beatoraja.song types (replaced with real imports)
 // ============================================================
 
-/// Stub for beatoraja.song.SongData
-#[derive(Clone, Debug, Default)]
-pub struct SongData {
-    pub length: i32,
-}
-
-impl SongData {
-    pub fn get_bms_model(&self) -> Option<&bms_model::bms_model::BMSModel> {
-        None
-    }
-
-    pub fn get_information(&self) -> Option<&SongInformation> {
-        None
-    }
-
-    pub fn get_length(&self) -> i32 {
-        self.length
-    }
-}
-
-/// Stub for beatoraja.song.SongInformation
-#[derive(Clone, Debug, Default)]
-pub struct SongInformation {
-    pub mainbpm: f64,
-}
-
-impl SongInformation {
-    pub fn get_speedchange_values(&self) -> Vec<[f64; 2]> {
-        vec![]
-    }
-
-    pub fn get_distribution_values(&self) -> Vec<Vec<i32>> {
-        vec![]
-    }
-
-    pub fn get_mainbpm(&self) -> f64 {
-        self.mainbpm
-    }
-}
+pub use beatoraja_song::song_data::SongData;
+pub use beatoraja_song::song_information::SongInformation;
 
 /// Stub for beatoraja.PlayerResource
 pub struct PlayerResource;

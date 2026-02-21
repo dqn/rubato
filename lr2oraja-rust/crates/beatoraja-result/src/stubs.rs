@@ -1,7 +1,23 @@
 // External dependency stubs for beatoraja-result crate
 // These will be replaced with actual implementations when corresponding phases are translated.
 
-use std::sync::Arc;
+// ============================================================
+// Re-exports from real crates (Phase 11 stub replacements)
+// ============================================================
+
+pub use beatoraja_core::timer_manager::TimerManager;
+pub use beatoraja_input::key_command::KeyCommand;
+pub use beatoraja_input::keyboard_input_processor::ControlKeys;
+pub use beatoraja_skin::skin::Skin;
+pub use beatoraja_skin::skin_header::SkinHeader;
+pub use beatoraja_skin::skin_object::SkinObjectRenderer;
+pub use beatoraja_skin::stubs::Color;
+pub use beatoraja_skin::stubs::Pixmap;
+pub use beatoraja_skin::stubs::PixmapFormat;
+pub use beatoraja_skin::stubs::Rectangle;
+pub use beatoraja_skin::stubs::Texture;
+pub use beatoraja_skin::stubs::TextureRegion;
+pub use beatoraja_song::song_data::SongData;
 
 // ============================================================
 // MainController stub
@@ -300,32 +316,6 @@ impl BMSPlayerInputProcessor {
     }
 }
 
-/// Stub for bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ControlKeys {
-    Escape,
-    Enter,
-    Num1,
-    Num2,
-    Num3,
-    Num4,
-    Num5,
-    Num6,
-    Num7,
-    Num8,
-    Num9,
-    Up,
-    Down,
-    Left,
-    Right,
-}
-
-/// Stub for bms.player.beatoraja.input.KeyCommand
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum KeyCommand {
-    OpenIr,
-}
-
 // ============================================================
 // PlayerResource stub
 // ============================================================
@@ -604,21 +594,7 @@ impl AudioProcessor {
     }
 }
 
-// ============================================================
-// SongData stub
-// ============================================================
-
-/// Stub for bms.player.beatoraja.song.SongData
-#[derive(Clone, Debug, Default)]
-pub struct SongData {
-    pub notes: i32,
-}
-
-impl SongData {
-    pub fn get_notes(&self) -> i32 {
-        self.notes
-    }
-}
+// SongData: replaced by pub use beatoraja_song::song_data::SongData
 
 // ============================================================
 // GrooveGauge stub (partial)
@@ -753,234 +729,20 @@ impl<'a, T> IntoIterator for &'a GdxArray<T> {
     }
 }
 
-// ============================================================
-// Skin-related stubs
-// ============================================================
+// Skin: replaced by pub use beatoraja_skin::skin::Skin
+// SkinHeader: replaced by pub use beatoraja_skin::skin_header::SkinHeader
+// Color: replaced by pub use beatoraja_skin::stubs::Color
+// Rectangle: replaced by pub use beatoraja_skin::stubs::Rectangle
+// SkinObjectRenderer: replaced by pub use beatoraja_skin::skin_object::SkinObjectRenderer
 
-/// Stub for beatoraja.skin.Skin (base class for result skins)
-pub struct Skin {
-    pub header: SkinHeader,
-    pub input: i32,
-    pub scene: i32,
-    pub fadeout: i32,
-}
-
-impl Skin {
-    pub fn new(_header: SkinHeader) -> Self {
-        Self {
-            header: _header,
-            input: 0,
-            scene: 0,
-            fadeout: 0,
-        }
-    }
-
-    pub fn get_input(&self) -> i32 {
-        self.input
-    }
-
-    pub fn get_scene(&self) -> i32 {
-        self.scene
-    }
-
-    pub fn get_fadeout(&self) -> i32 {
-        self.fadeout
-    }
-}
-
-/// Stub for SkinHeader
-#[derive(Clone, Debug, Default)]
-pub struct SkinHeader;
-
-// ============================================================
-// SkinObject stubs (for SkinGaugeGraphObject)
-// ============================================================
-
-/// Stub for com.badlogic.gdx.graphics.Color
-#[derive(Clone, Debug)]
-pub struct Color {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-    pub a: f32,
-}
-
-impl Default for Color {
-    fn default() -> Self {
-        Self {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 1.0,
-        }
-    }
-}
-
-impl Color {
-    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
-        Self { r, g, b, a }
-    }
-
-    pub fn value_of(hex: &str) -> Self {
-        let hex = hex.trim();
-        let len = hex.len();
-        if len < 6 {
-            return Color::new(1.0, 0.0, 0.0, 1.0);
-        }
-        let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255) as f32 / 255.0;
-        let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0) as f32 / 255.0;
-        let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0) as f32 / 255.0;
-        let a = if len >= 8 {
-            u8::from_str_radix(&hex[6..8], 16).unwrap_or(255) as f32 / 255.0
-        } else {
-            1.0
-        };
-        Color::new(r, g, b, a)
-    }
-}
-
-/// Stub for com.badlogic.gdx.graphics.g2d.TextureRegion
-#[derive(Clone, Debug, Default)]
-pub struct TextureRegion {
-    pub texture: Option<Texture>,
-    pub region_width: i32,
-    pub region_height: i32,
-}
-
-impl TextureRegion {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn from_texture(texture: Texture) -> Self {
-        Self {
-            region_width: texture.width,
-            region_height: texture.height,
-            texture: Some(texture),
-        }
-    }
-
-    pub fn get_texture(&self) -> Option<&Texture> {
-        self.texture.as_ref()
-    }
-
-    pub fn set_region(&mut self, _x: i32, _y: i32, _width: i32, _height: i32) {
-        // stub
-    }
-}
-
-/// Stub for com.badlogic.gdx.graphics.Texture
-#[derive(Clone, Debug, Default)]
-pub struct Texture {
-    pub width: i32,
-    pub height: i32,
-}
-
-impl Texture {
-    pub fn from_pixmap(pixmap: &Pixmap) -> Self {
-        Self {
-            width: pixmap.width,
-            height: pixmap.height,
-        }
-    }
-
-    pub fn get_width(&self) -> i32 {
-        self.width
-    }
-
-    pub fn get_height(&self) -> i32 {
-        self.height
-    }
-
-    pub fn dispose(&mut self) {
-        // stub
-    }
-}
-
-/// Stub for com.badlogic.gdx.graphics.Pixmap
-#[derive(Clone, Debug, Default)]
-pub struct Pixmap {
-    pub width: i32,
-    pub height: i32,
-}
-
-impl Pixmap {
-    pub fn new(width: i32, height: i32) -> Self {
-        Self { width, height }
-    }
-
-    pub fn set_color(&mut self, _color: &Color) {
-        // stub
-    }
-
-    pub fn fill(&mut self) {
-        // stub
-    }
-
-    pub fn fill_rectangle(&mut self, _x: i32, _y: i32, _width: i32, _height: i32) {
-        // stub
-    }
-
-    pub fn draw_line(&mut self, _x1: i32, _y1: i32, _x2: i32, _y2: i32) {
-        // stub
-    }
-
-    pub fn dispose(&mut self) {
-        // stub
-    }
-}
+// TextureRegion, Texture, Pixmap: replaced by pub use beatoraja_skin::stubs::*
 
 /// Stub for SkinObject base (partial — only what SkinGaugeGraphObject needs)
 pub struct SkinObjectData {
     pub region: Rectangle,
 }
 
-/// Stub for com.badlogic.gdx.math.Rectangle
-#[derive(Clone, Debug, Default)]
-pub struct Rectangle {
-    pub x: f32,
-    pub y: f32,
-    pub width: f32,
-    pub height: f32,
-}
-
-/// Stub for SkinObjectRenderer
-pub struct SkinObjectRenderer;
-
-impl SkinObjectRenderer {
-    pub fn draw(&mut self, _tex: &TextureRegion, _x: f32, _y: f32, _w: f32, _h: f32) {
-        // stub
-    }
-}
-
-// ============================================================
-// MainState shared data stubs (needed by AbstractResult)
-// ============================================================
-
-/// Stub for TimerManager (used by AbstractResult via MainState)
-pub struct TimerManager;
-
-impl TimerManager {
-    pub fn get_now_time(&self) -> i64 {
-        0
-    }
-
-    pub fn get_now_time_for(&self, _timer_id: i32) -> i64 {
-        0
-    }
-
-    pub fn switch_timer(&mut self, _timer_id: i32, _on: bool) {
-        // stub
-    }
-
-    pub fn is_timer_on(&self, _timer_id: i32) -> bool {
-        false
-    }
-
-    pub fn get_timer(&self, _timer_id: i32) -> i64 {
-        0
-    }
-}
+// TimerManager: replaced by pub use beatoraja_core::timer_manager::TimerManager
 
 // ============================================================
 // EventFactory stub

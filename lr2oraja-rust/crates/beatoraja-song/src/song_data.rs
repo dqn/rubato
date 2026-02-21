@@ -363,12 +363,132 @@ impl SongData {
         (self.feature & FEATURE_SCROLL) != 0
     }
 
+    pub fn get_title(&self) -> &str {
+        &self.title
+    }
+
+    pub fn get_subtitle(&self) -> &str {
+        &self.subtitle
+    }
+
+    pub fn get_genre(&self) -> &str {
+        &self.genre
+    }
+
+    pub fn get_artist(&self) -> &str {
+        &self.artist
+    }
+
+    pub fn get_subartist(&self) -> &str {
+        &self.subartist
+    }
+
     pub fn get_md5(&self) -> &str {
         &self.md5
     }
 
     pub fn get_sha256(&self) -> &str {
         &self.sha256
+    }
+
+    pub fn get_url(&self) -> &str {
+        self.url.as_deref().unwrap_or("")
+    }
+
+    pub fn get_appendurl(&self) -> &str {
+        self.appendurl.as_deref().unwrap_or("")
+    }
+
+    pub fn get_level(&self) -> i32 {
+        self.level
+    }
+
+    pub fn get_judge(&self) -> i32 {
+        self.judge
+    }
+
+    pub fn get_minbpm(&self) -> i32 {
+        self.minbpm
+    }
+
+    pub fn get_maxbpm(&self) -> i32 {
+        self.maxbpm
+    }
+
+    pub fn get_notes(&self) -> i32 {
+        self.notes
+    }
+
+    pub fn get_mode(&self) -> i32 {
+        self.mode
+    }
+
+    pub fn get_difficulty(&self) -> i32 {
+        self.difficulty
+    }
+
+    pub fn get_favorite(&self) -> i32 {
+        self.favorite
+    }
+
+    pub fn set_favorite(&mut self, favorite: i32) {
+        self.favorite = favorite;
+    }
+
+    pub fn get_feature(&self) -> i32 {
+        self.feature
+    }
+
+    pub fn get_content(&self) -> i32 {
+        self.content
+    }
+
+    pub fn get_length(&self) -> i32 {
+        self.length
+    }
+
+    pub fn get_date(&self) -> i32 {
+        self.date
+    }
+
+    pub fn get_adddate(&self) -> i32 {
+        self.adddate
+    }
+
+    pub fn get_tag(&self) -> &str {
+        &self.tag
+    }
+
+    pub fn get_folder(&self) -> &str {
+        &self.folder
+    }
+
+    pub fn get_parent(&self) -> &str {
+        &self.parent
+    }
+
+    pub fn get_stagefile(&self) -> &str {
+        &self.stagefile
+    }
+
+    pub fn get_backbmp(&self) -> &str {
+        &self.backbmp
+    }
+
+    pub fn get_banner(&self) -> &str {
+        &self.banner
+    }
+
+    pub fn get_preview(&self) -> &str {
+        &self.preview
+    }
+
+    pub fn get_charthash(&self) -> Option<&str> {
+        self.charthash.as_deref()
+    }
+
+    pub fn get_song_information(&self) -> Option<&SongInformation> {
+        self.info.as_ref()
     }
 
     pub fn merge(&mut self, song: &SongData) {

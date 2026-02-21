@@ -6,7 +6,7 @@ use beatoraja_play::groove_gauge::Gauge;
 use crate::abstract_result::AbstractResultData;
 use crate::course_result::CourseResult;
 use crate::stubs::{
-    Color, FloatArray, IntArray, Pixmap, PlayerResource, Rectangle, SkinObjectData,
+    Color, FloatArray, IntArray, Pixmap, PixmapFormat, PlayerResource, Rectangle, SkinObjectData,
     SkinObjectRenderer, Texture, TextureRegion,
 };
 
@@ -281,7 +281,7 @@ impl SkinGaugeGraphObject {
             let height = region_height as i32;
 
             // Create background pixmap
-            let mut shape = Pixmap::new(width, height);
+            let mut shape = Pixmap::new(width, height, PixmapFormat::RGBA8888);
             self.color = self.typetable[self.current_type as usize] as usize;
             shape.set_color(&self.graphcolor[self.color]);
             shape.fill();
@@ -301,7 +301,7 @@ impl SkinGaugeGraphObject {
                 shape.dispose();
 
                 // Create graph pixmap
-                let mut shape = Pixmap::new(width, height);
+                let mut shape = Pixmap::new(width, height, PixmapFormat::RGBA8888);
                 let mut f1: Option<f32> = None;
                 let mut last_gauge: f32 = -1.0;
                 let mut last_x: i32 = -1;
@@ -394,7 +394,7 @@ impl SkinGaugeGraphObject {
         }
         // Draw graph with render progress
         if let Some(ref mut shapetex) = self.shapetex {
-            shapetex.set_region(
+            shapetex.set_region_from(
                 0,
                 0,
                 (region_width * self.render) as i32,

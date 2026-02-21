@@ -1,4 +1,4 @@
-use crate::stubs::MainController;
+use crate::main_controller::MainController;
 
 // Key configuration screen.
 // Translated from Java: KeyConfiguration extends MainState

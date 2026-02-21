@@ -212,7 +212,7 @@ impl AbstractResultData {
             gauge_type: 0,
             oldscore: ScoreData::default(),
             score: ScoreDataProperty::new(),
-            timer: TimerManager,
+            timer: TimerManager::new(),
         }
     }
 

@@ -240,8 +240,12 @@ impl SkinNoteDistributionGraph {
             self.model_set = model.is_some();
             if self.graph_type == TYPE_NORMAL {
                 if let Some(s) = song {
-                    if let Some(info) = s.get_information() {
-                        let distribution = info.get_distribution_values();
+                    if let Some(info) = s.get_song_information() {
+                        let distribution: Vec<Vec<i32>> = info
+                            .get_distribution_values()
+                            .iter()
+                            .map(|row| row.to_vec())
+                            .collect();
                         self.update_graph_from_distribution(&distribution);
                     } else {
                         self.update_graph(model);

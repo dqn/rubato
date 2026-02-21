@@ -133,7 +133,7 @@ impl SkinBPMGraph {
             self.current = song.cloned();
             self.model_set = model.is_some();
             if let Some(s) = song {
-                if let Some(info) = s.get_information() {
+                if let Some(info) = s.get_song_information() {
                     self.update_graph_from_info(info);
                 } else {
                     self.update_graph_from_model(model);
@@ -166,7 +166,7 @@ impl SkinBPMGraph {
 
     fn update_graph_from_info(&mut self, info: &SongInformation) {
         let raw_data = info.get_speedchange_values();
-        self.bpm_data = raw_data;
+        self.bpm_data = raw_data.to_vec();
         self.minbpm = f64::MAX;
         self.maxbpm = f64::MIN;
         for d in &self.bpm_data {
@@ -175,7 +175,7 @@ impl SkinBPMGraph {
             }
             self.maxbpm = self.maxbpm.min(d[0]); // Note: Java code has Math.min here too (likely a bug)
         }
-        self.mainbpm = info.get_mainbpm();
+        self.mainbpm = info.mainbpm;
 
         self.update_texture();
     }

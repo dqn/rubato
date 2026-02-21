@@ -2,7 +2,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::player_config::PlayerConfig;
-use crate::stubs::{MainController, SkinType};
+use crate::main_controller::MainController;
+use crate::stubs::SkinType;
 
 /// Skin configuration screen.
 /// Translated from Java: SkinConfiguration extends MainState

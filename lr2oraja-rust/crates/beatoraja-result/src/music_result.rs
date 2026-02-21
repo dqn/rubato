@@ -181,7 +181,7 @@ impl MusicResult {
 
         if self.data.timer.is_timer_on(TIMER_FADEOUT) {
             // if (timer.getNowTime(TIMER_FADEOUT) > getSkin().getFadeout())
-            let fadeout_time = self.data.timer.get_now_time_for(TIMER_FADEOUT);
+            let fadeout_time = self.data.timer.get_now_time_for_id(TIMER_FADEOUT);
             // Skin access required for fadeout threshold
             // Full render logic with course mode transitions
             todo!("Phase 8+ dependency: render with skin and state transitions")
