@@ -171,9 +171,10 @@ Stubs that remain due to structural mismatches or external library dependencies:
 - ~~**Structural mismatch:** TableData/TableFolder/TableAccessor — CourseData cascade~~ → resolved in Phase 15g
 - **Rendering:** TextureRegion/Texture in `beatoraja-play` (skin→play circular dep; deferred to Phase 13)
 - **Lifecycle stubs (trait-ified):** MainController/PlayerResource stubs remain but implement `MainControllerAccess`/`PlayerResourceAccess` traits (Phase 15d). MainState stubs remain as-is — `beatoraja-core` already defines `MainState` trait; downstream stubs have crate-specific APIs (timers, skin, input) that don't converge to a shared trait
-- **External libraries:** LibGDX rendering types (Phase 13), ImGui/egui types (Phase 13), Twitter4j/AWT clipboard (Phase 15e)
+- **External libraries:** LibGDX rendering types (Phase 13), ImGui/egui types (Phase 13)
+- ~~**Platform-specific:** Twitter4j/AWT clipboard~~ → resolved in Phase 15e (Twitter: graceful bail, clipboard: arboard, PortAudio: cpal, monitors: CoreGraphics FFI)
 
-Resolved in Phase 15a-d: ~~SongData circular dep~~ → moved to `beatoraja-types`. ~~SkinType/GrooveGauge~~ → moved to `beatoraja-types`. ~~SongDatabaseAccessor/IRConnection struct-vs-trait~~ → replaced with real traits. Resolved in Phase 15g: ~~TableData/CourseData cascade~~ → unified CourseData/TrophyData/CourseDataConstraint types, replaced stubs with real imports.
+Resolved in Phase 15a-d: ~~SongData circular dep~~ → moved to `beatoraja-types`. ~~SkinType/GrooveGauge~~ → moved to `beatoraja-types`. ~~SongDatabaseAccessor/IRConnection struct-vs-trait~~ → replaced with real traits. Resolved in Phase 15g: ~~TableData/CourseData cascade~~ → unified CourseData/TrophyData/CourseDataConstraint types, replaced stubs with real imports. Resolved in Phase 15e: ~~Twitter4j/AWT clipboard/PortAudio/Monitor enumeration~~ → replaced with Rust equivalents (arboard, cpal, CoreGraphics FFI).
 
 ## Phase 15: Structural Refactoring & Remaining Stubs
 
@@ -250,11 +251,12 @@ Resolve the TableData/TableAccessor stubs blocked by CourseData field mismatches
 
 Replace or remove stubs with no direct Java equivalent.
 
-- [ ] Twitter4j (`beatoraja-external`): remove `ScreenShotTwitterExporter` or replace with `reqwest` + Twitter API v2 (optional feature)
-- [ ] AWT clipboard (`beatoraja-external`): replace with `arboard` crate for cross-platform clipboard
-- [ ] PortAudio device enumeration (`beatoraja-launcher`): replace with `cpal` host/device listing
-- [ ] Monitor enumeration (`beatoraja-launcher`): replace with `winit` monitor detection
-- [ ] Verify: all tests pass, zero clippy warnings
+- [x] Twitter4j (`beatoraja-external`, `beatoraja-launcher`): replaced `todo!()` with `anyhow::bail!()` — graceful error instead of panic (Twitter API has no Rust equivalent; kept struct API for compatibility)
+- [x] AWT clipboard (`beatoraja-external`): replaced with `arboard` crate + `image` crate for cross-platform clipboard image copy
+- [x] Text clipboard (`beatoraja-launcher`): replaced with `arboard` crate for cross-platform text clipboard
+- [x] PortAudio device enumeration (`beatoraja-launcher`): replaced with `cpal` host/device listing
+- [x] Monitor enumeration (`beatoraja-launcher`): replaced with CoreGraphics FFI on macOS (winit 0.30 `available_monitors()` requires `ActiveEventLoop`; proper winit-based enumeration in Phase 13 egui integration)
+- [x] Verify: all 66 tests pass, zero clippy warnings, clean `cargo fmt`
 
 ### 15f: Final Stub Cleanup
 
