@@ -7,6 +7,7 @@ members = [
     "crates/beatoraja-input",
     "crates/beatoraja-audio",
     "crates/md-processor",
+    "crates/beatoraja-core",
 ]
 resolver = "2"
 
@@ -23,6 +24,7 @@ discord-rpc = { path = "crates/discord-rpc" }
 beatoraja-input = { path = "crates/beatoraja-input" }
 beatoraja-audio = { path = "crates/beatoraja-audio" }
 md-processor = { path = "crates/md-processor" }
+beatoraja-core = { path = "crates/beatoraja-core" }
 
 # Error handling
 anyhow = "1"
@@ -52,6 +54,12 @@ uuid = { version = "1", features = ["v4"] }
 
 # Async runtime
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "fs"] }
+
+# Random
+rand = "0.8"
+
+# Date/Time
+chrono = "0.4"
 
 # Testing
 tempfile = "3"

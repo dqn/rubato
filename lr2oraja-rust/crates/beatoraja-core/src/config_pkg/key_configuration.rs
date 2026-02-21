@@ -1,0 +1,221 @@
+use crate::stubs::MainController;
+
+// Key configuration screen.
+// Translated from Java: KeyConfiguration extends MainState
+//
+// This is heavily dependent on libGDX UI (SpriteBatch, BitmapFont, ShapeDrawer, etc.)
+// and input processing (BMSPlayerInputProcessor, BMControllerInputProcessor, MidiInputProcessor).
+// Most rendering and input methods are stubbed pending Phase 5+ graphics integration.
+
+static MODE: &[&str] = &[
+    "5 KEYS",
+    "7 KEYS",
+    "9 KEYS",
+    "10 KEYS",
+    "14 KEYS",
+    "24 KEYS",
+    "24 KEYS DOUBLE",
+];
+
+static KEYS: &[&[&str]] = &[
+    &[
+        "1 KEY", "2 KEY", "3 KEY", "4 KEY", "5 KEY", "F-SCR", "R-SCR", "START", "SELECT",
+    ],
+    &[
+        "1 KEY", "2 KEY", "3 KEY", "4 KEY", "5 KEY", "6 KEY", "7 KEY", "F-SCR", "R-SCR", "START",
+        "SELECT",
+    ],
+    &[
+        "1 KEY", "2 KEY", "3 KEY", "4 KEY", "5 KEY", "6 KEY", "7 KEY", "8 KEY", "9 KEY", "START",
+        "SELECT",
+    ],
+    &[
+        "1P-1 KEY", "1P-2 KEY", "1P-3 KEY", "1P-4 KEY", "1P-5 KEY", "1P-F-SCR", "1P-R-SCR",
+        "2P-1 KEY", "2P-2 KEY", "2P-3 KEY", "2P-4 KEY", "2P-5 KEY", "2P-F-SCR", "2P-R-SCR",
+        "START", "SELECT",
+    ],
+    &[
+        "1P-1 KEY", "1P-2 KEY", "1P-3 KEY", "1P-4 KEY", "1P-5 KEY", "1P-6 KEY", "1P-7 KEY",
+        "1P-F-SCR", "1P-R-SCR", "2P-1 KEY", "2P-2 KEY", "2P-3 KEY", "2P-4 KEY", "2P-5 KEY",
+        "2P-6 KEY", "2P-7 KEY", "2P-F-SCR", "2P-R-SCR", "START", "SELECT",
+    ],
+    &[
+        "C1",
+        "C#1",
+        "D1",
+        "D#1",
+        "E1",
+        "F1",
+        "F#1",
+        "G1",
+        "G#1",
+        "A1",
+        "A#1",
+        "B1",
+        "C2",
+        "C#2",
+        "D2",
+        "D#2",
+        "E2",
+        "F2",
+        "F#2",
+        "G2",
+        "G#2",
+        "A2",
+        "A#2",
+        "B2",
+        "WHEEL-UP",
+        "WHEEL-DOWN",
+        "START",
+        "SELECT",
+    ],
+    &[
+        "1P-C1",
+        "1P-C#1",
+        "1P-D1",
+        "1P-D#1",
+        "1P-E1",
+        "1P-F1",
+        "1P-F#1",
+        "1P-G1",
+        "1P-G#1",
+        "1P-A1",
+        "1P-A#1",
+        "1P-B1",
+        "1P-C2",
+        "1P-C#2",
+        "1P-D2",
+        "1P-D#2",
+        "1P-E2",
+        "1P-F2",
+        "1P-F#2",
+        "1P-G2",
+        "1P-G#2",
+        "1P-A2",
+        "1P-A#2",
+        "1P-B2",
+        "1P-WHEEL-UP",
+        "1P-WHEEL-DOWN",
+        "2P-C1",
+        "2P-C#1",
+        "2P-D1",
+        "2P-D#1",
+        "2P-E1",
+        "2P-F1",
+        "2P-F#1",
+        "2P-G1",
+        "2P-G#1",
+        "2P-A1",
+        "2P-A#1",
+        "2P-B1",
+        "2P-C2",
+        "2P-C#2",
+        "2P-D2",
+        "2P-D#2",
+        "2P-E2",
+        "2P-F2",
+        "2P-F#2",
+        "2P-G2",
+        "2P-G#2",
+        "2P-A2",
+        "2P-A#2",
+        "2P-B2",
+        "2P-WHEEL-UP",
+        "2P-WHEEL-DOWN",
+        "START",
+        "SELECT",
+    ],
+];
+
+static KEYSA: &[&[i32]] = &[
+    &[0, 1, 2, 3, 4, 5, 6, -1, -2],
+    &[0, 1, 2, 3, 4, 5, 6, 7, 8, -1, -2],
+    &[0, 1, 2, 3, 4, 5, 6, 7, 8, -1, -2],
+    &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, -1, -2],
+    &[
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, -1, -2,
+    ],
+    &[
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+        25, -1, -2,
+    ],
+    &[
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+        25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+        48, 49, 50, 51, -1, -2,
+    ],
+];
+
+#[allow(dead_code)]
+static PLAYER_OFFSET: i32 = 100;
+
+#[allow(dead_code)]
+static SELECTKEY: &[&str] = &["7 KEYS", "9 KEYS", "14 KEYS"];
+
+#[allow(dead_code)]
+pub struct KeyConfiguration {
+    cursorpos: usize,
+    scrollpos: usize,
+    keyinput: bool,
+    mode: usize,
+    deletepressed: bool,
+    // References to input processors and config are Phase 5+ types
+    // Stubbed for now
+}
+
+impl KeyConfiguration {
+    pub fn new(_main: &MainController) -> Self {
+        Self {
+            cursorpos: 0,
+            scrollpos: 0,
+            keyinput: false,
+            mode: 0,
+            deletepressed: false,
+        }
+    }
+
+    pub fn create(&mut self) {
+        // TODO: loadSkin, font generation, input processor setup
+        // Requires Phase 5+ types (SkinType, SkinHeader, FreeTypeFontGenerator, BMSPlayerInputProcessor)
+        todo!("KeyConfiguration::create requires Phase 5+ UI types")
+    }
+
+    pub fn render(&mut self) {
+        // TODO: Full rendering with SpriteBatch, ShapeDrawer
+        // Requires Phase 5+ graphics types
+        todo!("KeyConfiguration::render requires Phase 5+ UI types")
+    }
+
+    pub fn set_key_assign_mode(&mut self, index: usize) {
+        self.cursorpos = index;
+        self.keyinput = true;
+    }
+
+    pub fn get_key_assign(&self, index: usize) -> &str {
+        if index >= KEYSA[self.mode].len() {
+            return "!!!";
+        }
+        // TODO: requires input processor state
+        "---"
+    }
+
+    pub fn get_mode(&self) -> usize {
+        self.mode
+    }
+
+    pub fn get_mode_name(&self) -> &str {
+        MODE[self.mode]
+    }
+
+    pub fn get_keys(&self) -> &[&str] {
+        KEYS[self.mode]
+    }
+
+    pub fn get_keysa(&self) -> &[i32] {
+        KEYSA[self.mode]
+    }
+
+    pub fn dispose(&mut self) {
+        // TODO: dispose font resources
+    }
+}

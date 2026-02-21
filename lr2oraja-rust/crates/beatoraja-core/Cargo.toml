@@ -1,0 +1,42 @@
+[package]
+name = "beatoraja-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Internal crates
+bms-model = { workspace = true }
+beatoraja-common = { workspace = true }
+beatoraja-input = { workspace = true }
+beatoraja-audio = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Logging
+log = { workspace = true }
+
+# Database
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# Encoding
+base64 = "0.22"
+flate2 = "1"
+
+# Crypto (for IRConfig cipher)
+aes = "0.8"
+ecb = "0.1"
+
+# Random
+rand = { workspace = true }
+
+# Date/Time
+chrono = { workspace = true }
+sha2.workspace = true
+
+[dev-dependencies]
+tempfile = { workspace = true }
