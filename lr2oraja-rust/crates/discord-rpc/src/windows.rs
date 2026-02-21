@@ -1,27 +1,25 @@
-use anyhow::{Result, bail};
+use std::fs::{File, OpenOptions};
+use std::io::{Read, Write};
+
+use anyhow::Result;
 
 use crate::connection::IPCConnection;
 
 /// Translates: WindowsIPCConnection.java
 ///
-/// ```java
-/// class WindowsIPCConnection implements IPCConnection {
-///     private static final String PIPE_PATH = "\\\\.\\pipe\\discord-ipc-0";
-///     private WinNT.HANDLE pipeHandle;
-/// ```
-///
-/// Stub implementation for non-Windows platforms.
-/// Full Windows named pipe implementation is deferred.
-#[allow(dead_code)]
+/// On Windows, opens the Discord named pipe via std::fs::File.
+/// OpenOptions::new().read(true).write(true) maps to:
+///   CreateFile(path, GENERIC_READ | GENERIC_WRITE, 0, null, OPEN_EXISTING, 0, null)
+/// On non-Windows platforms, the pipe path does not exist so connect() will fail at runtime.
 const PIPE_PATH: &str = r"\\.\pipe\discord-ipc-0";
 
 pub struct WindowsIPCConnection {
-    // Windows HANDLE would go here
+    file: Option<File>,
 }
 
 impl WindowsIPCConnection {
     pub fn new() -> Self {
-        WindowsIPCConnection {}
+        WindowsIPCConnection { file: None }
     }
 }
 
@@ -32,65 +30,39 @@ impl Default for WindowsIPCConnection {
 }
 
 impl IPCConnection for WindowsIPCConnection {
-    /// Translates:
-    /// ```java
-    /// public void connect() throws IOException {
-    ///     pipeHandle = Kernel32.INSTANCE.CreateFile(PIPE_PATH,
-    ///             Kernel32.GENERIC_READ | Kernel32.GENERIC_WRITE,
-    ///             0, null, Kernel32.OPEN_EXISTING, 0, null);
-    ///
-    ///     if (pipeHandle == null || WinNT.INVALID_HANDLE_VALUE.equals(pipeHandle)) {
-    ///         throw new IOException("Failed to connect to Discord IPC pipe");
-    ///     }
-    /// }
-    /// ```
+    /// Connect to the Discord IPC named pipe.
+    /// Translated from: WindowsIPCConnection.connect()
     fn connect(&mut self) -> Result<()> {
-        bail!("Windows IPC connection not implemented on this platform");
+        let file = OpenOptions::new().read(true).write(true).open(PIPE_PATH)?;
+        self.file = Some(file);
+        Ok(())
     }
 
-    /// Translates:
-    /// ```java
-    /// public void write(ByteBuffer buffer) throws IOException {
-    ///     byte[] data = new byte[buffer.remaining()];
-    ///     buffer.get(data);
-    ///     IntByReference bytesWritten = new IntByReference();
-    ///
-    ///     if (!Kernel32.INSTANCE.WriteFile(pipeHandle, data, data.length, bytesWritten, null)) {
-    ///         throw new IOException("Failed to write to Discord IPC pipe");
-    ///     }
-    /// }
-    /// ```
-    fn write(&mut self, _buffer: &[u8]) -> Result<()> {
-        bail!("Windows IPC connection not implemented on this platform");
+    /// Write data to the named pipe.
+    /// Translated from: WindowsIPCConnection.write()
+    fn write(&mut self, buffer: &[u8]) -> Result<()> {
+        if let Some(ref mut file) = self.file {
+            file.write_all(buffer)?;
+        }
+        Ok(())
     }
 
-    /// Translates:
-    /// ```java
-    /// public ByteBuffer read(int size) throws IOException {
-    ///     byte[] data = new byte[size];
-    ///     IntByReference bytesRead = new IntByReference();
-    ///
-    ///     if (!Kernel32.INSTANCE.ReadFile(pipeHandle, data, data.length, bytesRead, null)) {
-    ///         throw new IOException("Failed to read from Discord IPC pipe");
-    ///     }
-    ///
-    ///     return ByteBuffer.wrap(data, 0, bytesRead.getValue());
-    /// }
-    /// ```
-    fn read(&mut self, _size: usize) -> Result<Vec<u8>> {
-        bail!("Windows IPC connection not implemented on this platform");
+    /// Read data from the named pipe.
+    /// Translated from: WindowsIPCConnection.read()
+    fn read(&mut self, size: usize) -> Result<Vec<u8>> {
+        let mut buffer = vec![0u8; size];
+        if let Some(ref mut file) = self.file {
+            file.read_exact(&mut buffer)?;
+        }
+        Ok(buffer)
     }
 
-    /// Translates:
-    /// ```java
-    /// public void close() {
-    ///     if (pipeHandle != null && !WinNT.INVALID_HANDLE_VALUE.equals(pipeHandle)) {
-    ///         Kernel32.INSTANCE.CloseHandle(pipeHandle);
-    ///     }
-    /// }
-    /// ```
+    /// Close the named pipe connection.
+    /// Translated from: WindowsIPCConnection.close()
     fn close(&mut self) {
-        // No-op on non-Windows platforms
+        if let Some(file) = self.file.take() {
+            drop(file);
+        }
     }
 }
 
@@ -109,7 +81,8 @@ mod tests {
     }
 
     #[test]
-    fn test_connect_fails_on_non_windows() {
+    fn test_connect_fails_without_discord() {
+        // Named pipe does not exist unless Discord is running (or not on Windows)
         let mut conn = WindowsIPCConnection::new();
         let result = conn.connect();
         assert!(result.is_err());

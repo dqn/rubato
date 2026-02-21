@@ -54,7 +54,7 @@ Dependency graph order. Each module is ported only after its dependencies are co
 - [x] Keysound parallel loading — rayon `par_iter()` for file I/O in `set_model()`, matching Java `parallelStream()`
 - [x] AudioCache keysound deduplication — file-level `HashMap<String, FileCacheEntry>` with generational eviction (`ResourcePool.disposeOld()`); cache persists across `set_model()` calls, rayon loads only uncached paths, `evict_old_cache()` ages entries by `song_resource_gen`
 - [x] `play_judge()` / `set_additional_key_sound()` — judge sound playback implemented in both GdxSoundDriver and PortAudioDriver with Kira playback, sound caching, and per-judge/timing handle management
-- [ ] Windows named pipe IPC (`beatoraja-external`) — platform-specific, no Rust equivalent yet
+- [x] Windows named pipe IPC (`discord-rpc`) — `std::fs::File` + `OpenOptions` opens `\\.\pipe\discord-ipc-0` as regular file; `read_exact`/`write_all` for I/O; no external crate needed; compiles cross-platform, connects only on Windows with Discord running
 
 ## Remaining Stubs (Cannot Replace Yet)
 
