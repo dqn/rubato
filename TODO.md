@@ -148,6 +148,9 @@ Replace `todo!()` stubs with real library calls (~377 `todo!()` total). All runt
 - [x] FFmpeg → ffmpeg-next (BGA video decoding) — `beatoraja-skin` with `ffmpeg` feature flag (`#[cfg(feature = "ffmpeg")]`); falls back to `log::warn!()` when disabled
 - [x] javax.sound.midi → midir (MIDI device input) — `beatoraja-input` with `midir` crate; `open()` enumerates ports, callback→mpsc channel, `poll()` dispatches to `on_short_message()`
 - [x] PortAudio → Kira audio playback driver — `beatoraja-audio` `PortAudioDriver` backed by Kira `AudioManager` (mirrors `GdxSoundDriver` pattern)
+- [ ] BGA `MovieSeekThread` (background video decoding) — current impl is synchronous; Java uses a background thread for seek/decode
+- [ ] Keysound loading pipeline — `PortAudioDriver`/`GdxSoundDriver` `set_model()` does not load WAV files; `play_path()`/`play_note()` are stubs with `log::warn!()`
+- [ ] Windows named pipe IPC (`beatoraja-external`) — platform-specific, no Rust equivalent yet
 
 ## Phase 14: Remaining Stub Unification
 
