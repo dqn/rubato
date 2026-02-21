@@ -147,8 +147,8 @@ Align stub APIs with real type APIs across all crates.
 
 - [x] Unify Config/PlayerConfig field types (`String` vs `Option<String>`, `f32` vs `i32`)
 - [x] Unify Resolution type (struct with `f32` fields vs enum with `i32` methods)
-- [ ] Unify SongDatabaseAccessor (struct in stubs vs trait in real implementation — deferred to Phase 15c)
-- [ ] Unify BMSPlayerInputProcessor parameter types (`i32` vs `usize` — deferred to Phase 15c)
+- [x] Unify SongDatabaseAccessor (struct in stubs vs trait in real implementation — completed in Phase 15c)
+- [x] Unify BMSPlayerInputProcessor parameter types (`i32` vs `usize` — completed in Phase 15c)
 - [x] Unify ScoreData method signatures (`set_player(String)` vs `set_player(Option<&str>)`)
 - [x] Update all callers to match unified APIs
 - [x] Reduce `stubs.rs` files to rendering-only + circular dep stubs
@@ -166,12 +166,14 @@ Align stub APIs with real type APIs across all crates.
 
 ### Remaining Stubs (Cannot Replace)
 
-Stubs that remain due to circular dependencies, struct-vs-trait mismatches, or external library dependencies:
+Stubs that remain due to structural mismatches or external library dependencies:
 
-- **Circular deps:** SongData in `beatoraja-core` (song→core), SkinType/GrooveGauge in `beatoraja-types` (skin/play→core), TextureRegion in `beatoraja-play` (skin→play)
-- **Struct vs trait:** SongDatabaseAccessor (struct in stubs, trait in real), IRConnection (struct in stubs, trait in real)
-- **Complex lifecycle:** MainController, PlayerResource, MainState in all downstream crates
-- **External libraries:** LibGDX rendering types (Phase 13), ImGui/egui types (Phase 13), Twitter4j (no equivalent), AWT clipboard (no equivalent)
+- **Structural mismatch:** TableData/TableFolder/TableAccessor — CourseData cascade (stub `song` vs real `hash`, `String` vs `Option<String>`, `f64` vs `f32`); requires Phase 15g
+- **Rendering:** TextureRegion/Texture in `beatoraja-play` (skin→play circular dep; deferred to Phase 13)
+- **Lifecycle stubs (trait-ified):** MainController/PlayerResource stubs remain but implement `MainControllerAccess`/`PlayerResourceAccess` traits (Phase 15d)
+- **External libraries:** LibGDX rendering types (Phase 13), ImGui/egui types (Phase 13), Twitter4j/AWT clipboard (Phase 15e)
+
+Resolved in Phase 15a-d: ~~SongData circular dep~~ → moved to `beatoraja-types`. ~~SkinType/GrooveGauge~~ → moved to `beatoraja-types`. ~~SongDatabaseAccessor/IRConnection struct-vs-trait~~ → replaced with real traits.
 
 ## Phase 15: Structural Refactoring & Remaining Stubs
 
@@ -228,6 +230,16 @@ Define trait interfaces in `beatoraja-types` for the "god objects" so downstream
 - [x] Provide `NullMainController` and `NullPlayerResource` default impls in `beatoraja-types`
 - [~] `MainStateAccess` trait: deferred — existing `MainState` trait in `beatoraja-core` already serves this purpose; downstream stubs vary too much for a unified trait
 - [x] Verify: all 66 tests pass, zero clippy warnings, clean `cargo fmt`
+
+### 15g: TableData / CourseData Cascade Unification
+
+Resolve the TableData/TableAccessor stubs blocked by CourseData field mismatches (deferred from Phase 15c).
+
+- [ ] Unify `CourseData` fields across stubs and real type: `song` → `hash`, `String` → `Option<String>`, `f64` → `f32`
+- [ ] Update `TrophyData` / `CourseDataConstraint` stubs to match real types
+- [ ] Replace `TableData` / `TableFolder` / `TableAccessor` stubs in `beatoraja-select` with real imports from `beatoraja-core`
+- [ ] Update ~10 files of callers for field name/type changes
+- [ ] Verify: all tests pass, zero clippy warnings
 
 ### 15e: Platform-Specific Replacements
 
