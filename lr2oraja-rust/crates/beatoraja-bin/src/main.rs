@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
 use clap::Parser;
@@ -13,6 +14,7 @@ use beatoraja_core::config::{Config, DisplayMode};
 use beatoraja_core::main_controller::MainController;
 use beatoraja_core::player_config::PlayerConfig;
 use beatoraja_core::version;
+use beatoraja_render::gpu_context::GpuContext;
 
 /// LR2oraja Endless Dream - BMS player
 #[derive(Parser, Debug)]
@@ -129,6 +131,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     let mut app = BeatorajaApp {
         controller: main_controller,
         window: None,
+        gpu: None,
         title,
         width: w as u32,
         height: h as u32,
@@ -148,7 +151,8 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
 /// with create(), render(), resize(), pause(), resume(), dispose() callbacks.
 struct BeatorajaApp {
     controller: MainController,
-    window: Option<Window>,
+    window: Option<Arc<Window>>,
+    gpu: Option<GpuContext>,
     title: String,
     width: u32,
     height: u32,
@@ -175,9 +179,27 @@ impl ApplicationHandler for BeatorajaApp {
                 Ok(window) => {
                     if matches!(self.display_mode, DisplayMode::FULLSCREEN) {
                         // Java: Gdx.graphics.setFullscreenMode(finalGdxDisplayMode)
-                        // Phase 13: actual fullscreen mode via winit/bevy
-                        warn!("Fullscreen mode requested but not yet implemented (Phase 13)");
+                        warn!("Fullscreen mode requested but not yet implemented");
                     }
+                    let window = Arc::new(window);
+
+                    // Create wgpu GPU context bound to this window's surface
+                    match pollster::block_on(GpuContext::new_with_surface(
+                        Arc::clone(&window),
+                        self.width,
+                        self.height,
+                    )) {
+                        Ok(gpu) => {
+                            info!("wgpu GPU context created successfully");
+                            self.gpu = Some(gpu);
+                        }
+                        Err(e) => {
+                            error!("Failed to create GPU context: {}", e);
+                            event_loop.exit();
+                            return;
+                        }
+                    }
+
                     self.window = Some(window);
                 }
                 Err(e) => {
@@ -212,12 +234,57 @@ impl ApplicationHandler for BeatorajaApp {
             }
             // Java: main.resize(width, height)
             WindowEvent::Resized(size) => {
+                if let Some(gpu) = &mut self.gpu {
+                    gpu.resize(size.width, size.height);
+                }
                 self.controller
                     .resize(size.width as i32, size.height as i32);
             }
             // Java: main.render() — called every frame via ApplicationListener.render()
             WindowEvent::RedrawRequested => {
                 self.controller.render();
+
+                // wgpu render pass: clear screen and present
+                if let Some(gpu) = &self.gpu {
+                    match gpu.get_current_texture() {
+                        Ok(output) => {
+                            let view = output
+                                .texture
+                                .create_view(&wgpu::TextureViewDescriptor::default());
+                            let mut encoder = gpu.device.create_command_encoder(
+                                &wgpu::CommandEncoderDescriptor {
+                                    label: Some("beatoraja frame encoder"),
+                                },
+                            );
+                            // Clear screen with black; SpriteBatch draw calls will be added here
+                            {
+                                let _render_pass =
+                                    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                        label: Some("beatoraja render pass"),
+                                        color_attachments: &[Some(
+                                            wgpu::RenderPassColorAttachment {
+                                                view: &view,
+                                                resolve_target: None,
+                                                ops: wgpu::Operations {
+                                                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                                                    store: wgpu::StoreOp::Store,
+                                                },
+                                            },
+                                        )],
+                                        depth_stencil_attachment: None,
+                                        timestamp_writes: None,
+                                        occlusion_query_set: None,
+                                    });
+                            }
+                            gpu.queue.submit(std::iter::once(encoder.finish()));
+                            output.present();
+                        }
+                        Err(e) => {
+                            warn!("Failed to get surface texture: {}", e);
+                        }
+                    }
+                }
+
                 if let Some(window) = &self.window {
                     window.request_redraw();
                 }

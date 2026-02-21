@@ -538,9 +538,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "beatoraja-core",
+ "beatoraja-render",
  "clap",
  "env_logger",
  "log",
+ "pollster",
+ "wgpu",
  "winit",
 ]
 
@@ -820,6 +823,7 @@ dependencies = [
  "beatoraja-core",
  "beatoraja-input",
  "beatoraja-play",
+ "beatoraja-render",
  "beatoraja-song",
  "beatoraja-types",
  "bms-model",

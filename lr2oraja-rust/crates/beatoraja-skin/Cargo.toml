@@ -19,5 +19,6 @@ anyhow.workspace = true
 encoding_rs.workspace = true
 regex.workspace = true
 chrono.workspace = true
+beatoraja-render.workspace = true
 
 [dev-dependencies]
