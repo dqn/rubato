@@ -113,19 +113,41 @@ Create an executable binary target.
 
 ## Phase 13: External Library Integration
 
-Replace `todo!()` stubs with real library calls (~377 `todo!()` total).
+Replace `todo!()` stubs with real library calls (~377 `todo!()` total). All runtime `todo!()` eliminated (replaced with `log::warn!()` fallbacks).
 
-- [ ] LibGDX rendering → Bevy (TextureRegion, SpriteBatch, ShaderProgram, etc.)
-- [ ] JavaFX UI → egui (launcher views, ~40 `todo!()`)
-  - [ ] File dialogs (`show_directory_chooser`, `show_file_chooser`) → `rfd` or egui file dialog
+### 13a: Quick Wins
+- [x] File dialogs (`show_directory_chooser`, `show_file_chooser`) → `rfd`
+- [x] LR2 score import (`play_configuration_view.rs`) → rusqlite + ScoreDatabaseAccessor
+- [x] AES crypto → implemented
+- [x] tar.gz extraction → `flate2` + `tar`
+- [x] 7z extraction → `sevenz-rust`
+
+### 13b: Audio
+- [x] OGG/MP3/FLAC decoding → `lewton` / `symphonia`
+- [x] Kira playback → `kira` 0.12
+- [x] Loudness analysis → `ebur128`
+
+### 13c: wgpu Rendering Foundation
+- [x] `beatoraja-render` crate — SpriteBatch, Texture, Pixmap, GpuContext, surface integration
+- [x] `rendering_stubs.rs` replaced with `pub use beatoraja_render::*` re-exports (630→15 lines)
+
+### 13d: Skin Loading Pipeline
+- [x] LR2 CSV/Play/JSON loaders, property factories, font rendering
+
+### 13e: mlua Integration
+- [x] Lua VM init, script-backed properties, skin config export
+
+### 13f: egui UI (partial)
+- [x] `todo!()` → `log::warn!()` fallbacks across launcher, modmenu, select, result, decide
+- [ ] Full egui UI integration (launcher views, mod menu) — deferred
   - [ ] `open_url_in_browser` / `open_folder_in_file_manager` → `open` crate
   - [ ] Monitor enumeration on non-macOS → winit `ActiveEventLoop::available_monitors()` (available once egui event loop is running)
-- [ ] LuaJ → mlua (Lua skin loader, ~40 `todo!()`)
-- [ ] PortAudio → cpal/Kira (audio driver, ~20 `todo!()`) — device enumeration done in Phase 15e; audio playback driver remains
-- [ ] FFmpeg → ffmpeg-next (BGA video processing)
-- [ ] javax.sound.midi → midir (MIDI device enumeration)
-- [ ] 7z extraction → sevenz-rust
-- [ ] LR2 score import (`play_configuration_view.rs`) → rusqlite + ScoreDatabaseAccessor
+
+### 13g: FFmpeg / Remaining (partial)
+- [x] `todo!()` → `log::warn!()` fallbacks across core, types, obs, ir, external, controller
+- [ ] FFmpeg → ffmpeg-next (BGA video processing) — stub with `log::warn!()`
+- [ ] javax.sound.midi → midir (MIDI device enumeration) — stub with `log::warn!()`
+- [ ] PortAudio → cpal/Kira audio playback driver — device enumeration done in Phase 15e; playback driver deferred
 
 ## Phase 14: Remaining Stub Unification
 
