@@ -123,6 +123,32 @@ Replace `todo!()` stubs with real library calls (~377 `todo!()` total).
 - [ ] javax.sound.midi → midir (MIDI device enumeration)
 - [ ] 7z extraction → sevenz-rust
 
+## Phase 14: Remaining Stub Unification
+
+Resolve type stubs that Phase 11 could not replace due to circular dependencies or API mismatches.
+
+### Circular Dependency Resolution
+
+Extract shared types into a low-level crate to break cycles.
+
+- [ ] Create `beatoraja-types` crate with shared types (Config, PlayerConfig, PlayModeConfig, Resolution, SkinType, SongData, ScoreData)
+- [ ] Replace `beatoraja-core` stubs for SongData, SkinType, GrooveGauge with `beatoraja-types` import
+- [ ] Replace `beatoraja-play` stubs for TextureRegion/Texture with `beatoraja-types` import
+- [ ] Replace `beatoraja-input`/`beatoraja-audio` Config stubs with `beatoraja-types` import
+- [ ] Update all crates to depend on `beatoraja-types` instead of local stubs
+
+### API Incompatibility Resolution
+
+Align stub APIs with real type APIs across all crates.
+
+- [ ] Unify Config/PlayerConfig field types (`String` vs `Option<String>`, `f32` vs `i32`)
+- [ ] Unify Resolution type (struct with `f32` fields vs enum with `i32` methods)
+- [ ] Unify SongDatabaseAccessor (struct in stubs vs trait in real implementation)
+- [ ] Unify BMSPlayerInputProcessor parameter types (`i32` vs `usize`)
+- [ ] Unify ScoreData method signatures (`set_player(String)` vs `set_player(Option<&str>)`)
+- [ ] Update all callers to match unified APIs
+- [ ] Remove remaining `stubs.rs` files (or reduce to rendering-only stubs for Phase 13)
+
 ---
 
 ## Testing Checkpoints
@@ -140,3 +166,4 @@ Replace `todo!()` stubs with real library calls (~377 `todo!()` total).
 | 11 | Cross-crate compilation without stubs |
 | 12 | Application launches (blank window) |
 | 13 | Full game playable |
+| 14 | All `stubs.rs` files eliminated or reduced to rendering-only |
