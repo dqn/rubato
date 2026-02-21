@@ -1,12 +1,12 @@
 //! MidiInputProcessor - MIDI device input processing
 //!
 //! Translated from: bms.player.beatoraja.input.MidiInputProcessor
-//! Note: javax.sound.midi is not available in Rust. MIDI device enumeration
-//! and receiver are stubbed out. The logic is preserved for when a MIDI
-//! library is integrated.
+//! Uses midir for real MIDI device enumeration and input.
 
 use crate::bms_player_input_device::{BMSPlayerInputDevice, DeviceType};
 use crate::stubs::{MidiConfig, MidiInput, MidiInputType};
+use midir::{MidiInput as MidirInput, MidiInputConnection};
+use std::sync::mpsc;
 
 const MAX_KEYS: usize = 128;
 
@@ -49,6 +49,12 @@ pub struct MidiInputProcessor {
 
     pitch_bend_up: Option<KeyHandler>,
     pitch_bend_down: Option<KeyHandler>,
+
+    // Active MIDI input connections (midir auto-disconnects on drop)
+    connections: Vec<MidiInputConnection<()>>,
+
+    // Receives (command, data1, data2) from MIDI callback threads
+    receiver: Option<mpsc::Receiver<(i32, i32, i32)>>,
 }
 
 impl Default for MidiInputProcessor {
@@ -59,9 +65,6 @@ impl Default for MidiInputProcessor {
 
 impl MidiInputProcessor {
     pub fn new() -> Self {
-        // In Java, MidiSystem.getMidiDeviceInfo() is called here.
-        // Stubbed out - no MIDI device enumeration in Rust yet.
-
         let mut proc = Self {
             starttime: 0,
             pitch: 0,
@@ -71,17 +74,110 @@ impl MidiInputProcessor {
             key_map: Vec::new(),
             pitch_bend_up: None,
             pitch_bend_down: None,
+            connections: Vec::new(),
+            receiver: None,
         };
         proc.clear_handlers();
         proc
     }
 
     pub fn open(&mut self) {
-        // Stub: In Java, opens MIDI devices and sets receivers.
+        // Close any existing connections first
+        self.close();
+
+        let (sender, receiver) = mpsc::channel();
+        self.receiver = Some(receiver);
+
+        // Enumerate MIDI input ports
+        let midi_in = match MidirInput::new("beatoraja-enum") {
+            Ok(m) => m,
+            Err(e) => {
+                log::warn!("Failed to create MIDI input for enumeration: {}", e);
+                return;
+            }
+        };
+
+        let ports = midi_in.ports();
+        log::info!("Found {} MIDI input port(s)", ports.len());
+
+        for port in &ports {
+            let port_name = midi_in
+                .port_name(port)
+                .unwrap_or_else(|_| "unknown".to_string());
+
+            // Each MidirInput::connect() consumes the instance, so create a new one per port
+            let midi_in_for_port = match MidirInput::new(&format!("beatoraja-{}", port_name)) {
+                Ok(m) => m,
+                Err(e) => {
+                    log::warn!(
+                        "Failed to create MIDI input for port '{}': {}",
+                        port_name,
+                        e
+                    );
+                    continue;
+                }
+            };
+
+            let tx = sender.clone();
+            match midi_in_for_port.connect(
+                port,
+                &port_name,
+                move |_timestamp_us, message, _data| {
+                    if message.is_empty() {
+                        return;
+                    }
+                    let command = (message[0] & 0xF0) as i32;
+                    let data1 = if message.len() > 1 {
+                        message[1] as i32
+                    } else {
+                        0
+                    };
+                    let data2 = if message.len() > 2 {
+                        message[2] as i32
+                    } else {
+                        0
+                    };
+                    let _ = tx.send((command, data1, data2));
+                },
+                (),
+            ) {
+                Ok(conn) => {
+                    log::info!("Connected to MIDI input port: {}", port_name);
+                    self.connections.push(conn);
+                }
+                Err(e) => {
+                    log::warn!(
+                        "Failed to connect to MIDI input port '{}': {}",
+                        port_name,
+                        e
+                    );
+                }
+            }
+        }
     }
 
     pub fn close(&mut self) {
-        // Stub: In Java, closes MIDI devices.
+        // Dropping MidiInputConnection auto-disconnects
+        self.connections.clear();
+        self.receiver = None;
+    }
+
+    /// Poll pending MIDI messages from the channel and dispatch them.
+    /// Must be called from the main thread each frame.
+    pub fn poll(&mut self, callback: &mut dyn MidiCallback) {
+        // Temporarily take the receiver to avoid borrow conflict with &mut self
+        let receiver = match self.receiver.take() {
+            Some(r) => r,
+            None => return,
+        };
+
+        // Drain all pending messages (non-blocking)
+        while let Ok((command, data1, data2)) = receiver.try_recv() {
+            self.on_short_message(command, data1, data2, callback);
+        }
+
+        // Put the receiver back
+        self.receiver = Some(receiver);
     }
 
     #[allow(clippy::needless_range_loop)]
