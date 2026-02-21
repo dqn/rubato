@@ -28,6 +28,11 @@ pub struct PortAudioDriver {
     volume: f32,
     #[allow(dead_code)]
     song_resource_gen: i32,
+    // Cache for loaded sounds by path (matches Java soundmap)
+    sound_cache: HashMap<String, StaticSoundData>,
+    // Additional key sounds for judge playback: [6 judges][2: fast=0, late=1]
+    additional_key_sounds: [[Option<StaticSoundData>; 2]; 6],
+    additional_key_sound_handles: [[Option<StaticSoundHandle>; 2]; 6],
 }
 
 impl PortAudioDriver {
@@ -42,6 +47,9 @@ impl PortAudioDriver {
             global_pitch: 1.0,
             volume: 1.0,
             song_resource_gen,
+            sound_cache: HashMap::new(),
+            additional_key_sounds: Default::default(),
+            additional_key_sound_handles: Default::default(),
         }
     }
 }
@@ -203,7 +211,21 @@ impl AudioDriver for PortAudioDriver {
         );
     }
 
-    fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
+    fn set_additional_key_sound(&mut self, judge: i32, fast: bool, path: Option<&str>) {
+        if !(0..6).contains(&judge) {
+            return;
+        }
+        let j = judge as usize;
+        let idx = if fast { 0 } else { 1 };
+        match path {
+            Some(p) if !p.is_empty() => {
+                self.additional_key_sounds[j][idx] = self.get_sound(p);
+            }
+            _ => {
+                self.additional_key_sounds[j][idx] = None;
+            }
+        }
+    }
     fn abort(&mut self) {}
     fn get_progress(&self) -> f32 {
         1.0
@@ -216,7 +238,29 @@ impl AudioDriver for PortAudioDriver {
         }
     }
 
-    fn play_judge(&mut self, _judge: i32, _fast: bool) {}
+    fn play_judge(&mut self, judge: i32, fast: bool) {
+        if !(0..6).contains(&judge) {
+            return;
+        }
+        let j = judge as usize;
+        let idx = if fast { 0 } else { 1 };
+        if let Some(sound_data) = &self.additional_key_sounds[j][idx] {
+            // Stop previous handle
+            if let Some(mut handle) = self.additional_key_sound_handles[j][idx].take() {
+                handle.stop(Tween::default());
+            }
+            let sound = sound_data.clone();
+            match self.manager.play(sound) {
+                Ok(mut handle) => {
+                    handle.set_volume(linear_to_db(self.volume), Tween::default());
+                    self.additional_key_sound_handles[j][idx] = Some(handle);
+                }
+                Err(e) => {
+                    log::warn!("Failed to play judge sound {}: {}", judge, e);
+                }
+            }
+        }
+    }
 
     fn stop_note(&mut self, n: Option<&Note>) {
         match n {
@@ -256,10 +300,33 @@ impl AudioDriver for PortAudioDriver {
         self.path_sounds.clear();
         self.wav_sounds.clear();
         self.wav_handles.clear();
+        self.sound_cache.clear();
+        self.additional_key_sounds = Default::default();
+        self.additional_key_sound_handles = Default::default();
     }
 }
 
 impl PortAudioDriver {
+    /// Load and cache a sound from path.
+    /// Translated from AbstractAudioDriver.getSound()
+    fn get_sound(&mut self, path: &str) -> Option<StaticSoundData> {
+        if path.is_empty() {
+            return None;
+        }
+        if let Some(data) = self.sound_cache.get(path) {
+            return Some(data.clone());
+        }
+        let candidates = crate::audio_driver::get_paths(path);
+        for candidate in &candidates {
+            if let Ok(sound_data) = StaticSoundData::from_file(candidate) {
+                self.sound_cache
+                    .insert(path.to_string(), sound_data.clone());
+                return Some(sound_data);
+            }
+        }
+        None
+    }
+
     /// Play a single note's keysound (without layered notes).
     /// Translated from AbstractAudioDriver.play0()
     fn play_note_internal(&mut self, n: &Note, volume: f32, pitch_shift: i32) {

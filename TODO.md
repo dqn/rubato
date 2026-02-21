@@ -53,7 +53,7 @@ Dependency graph order. Each module is ported only after its dependencies are co
 - [ ] Keysound sound slicing — Java `SliceWav` mechanism: `(starttime, duration)` per Note → PCM sub-sample extraction. Required for BMS keysound slicing (`#WAV` with non-zero start/duration)
 - [ ] Keysound parallel loading — Java uses `parallelStream()` in `setModel()`; current Rust loads sequentially
 - [ ] AudioCache keysound deduplication — Java caches by `(path, start, duration)` key to avoid redundant loads
-- [ ] `play_judge()` / `set_additional_key_sound()` — judge sound playback (miss/bad/good/great/perfect SFX) not yet implemented
+- [x] `play_judge()` / `set_additional_key_sound()` — judge sound playback implemented in both GdxSoundDriver and PortAudioDriver with Kira playback, sound caching, and per-judge/timing handle management
 - [ ] Windows named pipe IPC (`beatoraja-external`) — platform-specific, no Rust equivalent yet
 
 ## Remaining Stubs (Cannot Replace Yet)
