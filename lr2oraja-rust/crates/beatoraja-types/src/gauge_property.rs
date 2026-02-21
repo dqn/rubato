@@ -576,3 +576,146 @@ fn gep(
         guts: guts.iter().map(|g| g.to_vec()).collect(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gauge_property_values_count() {
+        assert_eq!(GaugeProperty::values().len(), 5);
+    }
+
+    #[test]
+    fn test_gauge_property_names() {
+        assert_eq!(GaugeProperty::FiveKeys.name(), "FIVEKEYS");
+        assert_eq!(GaugeProperty::SevenKeys.name(), "SEVENKEYS");
+        assert_eq!(GaugeProperty::Pms.name(), "PMS");
+        assert_eq!(GaugeProperty::Keyboard.name(), "KEYBOARD");
+        assert_eq!(GaugeProperty::Lr2.name(), "LR2");
+    }
+
+    #[test]
+    fn test_gauge_property_equality() {
+        assert_eq!(GaugeProperty::FiveKeys, GaugeProperty::FiveKeys);
+        assert_ne!(GaugeProperty::FiveKeys, GaugeProperty::SevenKeys);
+    }
+
+    #[test]
+    fn test_gauge_property_copy() {
+        let gp = GaugeProperty::SevenKeys;
+        let gp2 = gp;
+        assert_eq!(gp, gp2);
+    }
+
+    #[test]
+    fn test_get_values_returns_9_elements() {
+        // Each GaugeProperty variant should produce exactly 9 gauge element properties
+        for gp in GaugeProperty::values() {
+            let values = gp.get_values();
+            assert_eq!(
+                values.len(),
+                9,
+                "{} should have 9 gauge elements",
+                gp.name()
+            );
+        }
+    }
+
+    #[test]
+    fn test_five_keys_first_element() {
+        let values = GaugeProperty::FiveKeys.get_values();
+        let first = &values[0];
+        assert!(first.modifier.is_some());
+        assert_eq!(first.min, 2.0);
+        assert_eq!(first.max, 100.0);
+        assert_eq!(first.init, 20.0);
+        assert_eq!(first.border, 50.0);
+        assert_eq!(first.death, 0.0);
+        assert_eq!(first.value.len(), 6);
+        assert_eq!(first.value[0], 1.0); // PG
+        assert_eq!(first.value[4], -3.0); // PR
+    }
+
+    #[test]
+    fn test_seven_keys_hard_gauge_has_guts() {
+        let values = GaugeProperty::SevenKeys.get_values();
+        // Index 3 is HARD gauge
+        let hard = &values[3];
+        assert!(!hard.guts.is_empty());
+        assert_eq!(hard.guts.len(), 5);
+        // First guts entry: [10.0, 0.4]
+        assert_eq!(hard.guts[0], vec![10.0, 0.4]);
+        assert_eq!(hard.guts[4], vec![50.0, 0.8]);
+    }
+
+    #[test]
+    fn test_seven_keys_assist_easy_modifier() {
+        let values = GaugeProperty::SevenKeys.get_values();
+        let assist_easy = &values[0];
+        assert_eq!(assist_easy.modifier, Some(GaugeModifier::Total));
+    }
+
+    #[test]
+    fn test_seven_keys_hard_modifier() {
+        let values = GaugeProperty::SevenKeys.get_values();
+        let hard = &values[3];
+        assert_eq!(hard.modifier, Some(GaugeModifier::LimitIncrement));
+    }
+
+    #[test]
+    fn test_seven_keys_hazard_modifier() {
+        let values = GaugeProperty::SevenKeys.get_values();
+        let hazard = &values[5];
+        assert_eq!(hazard.modifier, None);
+    }
+
+    #[test]
+    fn test_lr2_hard_has_death_border() {
+        let values = GaugeProperty::Lr2.get_values();
+        // LR2 HARD gauge (index 3) has death=2.0
+        let hard = &values[3];
+        assert_eq!(hard.death, 2.0);
+    }
+
+    #[test]
+    fn test_gauge_element_value_len() {
+        // All gauge elements should have exactly 6 values (PG, GR, GD, BD, PR, MS)
+        for gp in GaugeProperty::values() {
+            for (i, element) in gp.get_values().iter().enumerate() {
+                assert_eq!(
+                    element.value.len(),
+                    6,
+                    "{}[{}] should have 6 judge values",
+                    gp.name(),
+                    i
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_gauge_element_property_clone() {
+        let values = GaugeProperty::SevenKeys.get_values();
+        let original = &values[0];
+        let cloned = original.clone();
+        assert_eq!(cloned.min, original.min);
+        assert_eq!(cloned.max, original.max);
+        assert_eq!(cloned.init, original.init);
+        assert_eq!(cloned.border, original.border);
+        assert_eq!(cloned.value, original.value);
+    }
+
+    #[test]
+    fn test_assist_easy_border_values() {
+        // Verify the border values differ across gauge types
+        let fk = GaugeProperty::FiveKeys.get_values();
+        let sk = GaugeProperty::SevenKeys.get_values();
+        let pms = GaugeProperty::Pms.get_values();
+
+        // Assist Easy (index 0) borders
+        assert_eq!(fk[0].border, 50.0);
+        assert_eq!(sk[0].border, 60.0);
+        assert_eq!(pms[0].border, 65.0);
+    }
+}

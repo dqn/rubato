@@ -264,3 +264,265 @@ impl GrooveGauge {
         GrooveGauge::new(model, id, gauge)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_model() -> BMSModel {
+        let mut model = BMSModel::new();
+        model.set_total(300.0);
+        model
+    }
+
+    // -- GaugeModifier tests --
+
+    #[test]
+    fn test_gauge_modifier_total_positive() {
+        let model = make_model();
+        let result = GaugeModifier::Total.modify(1.0, &model);
+        // f * total / total_notes; total_notes = 0 for empty model
+        // 1.0 * 300.0 / 0 = inf (or NaN), but let us check with notes > 0
+        // With 0 notes, this would be inf; that's the Java behavior too
+        assert!(result.is_infinite() || result.is_nan() || result > 0.0);
+    }
+
+    #[test]
+    fn test_gauge_modifier_total_negative_unchanged() {
+        let model = make_model();
+        let result = GaugeModifier::Total.modify(-5.0, &model);
+        assert_eq!(result, -5.0);
+    }
+
+    #[test]
+    fn test_gauge_modifier_limit_increment_negative_unchanged() {
+        let model = make_model();
+        let result = GaugeModifier::LimitIncrement.modify(-3.0, &model);
+        assert_eq!(result, -3.0);
+    }
+
+    #[test]
+    fn test_gauge_modifier_modify_damage_positive_unchanged() {
+        let model = make_model();
+        let result = GaugeModifier::ModifyDamage.modify(1.0, &model);
+        assert_eq!(result, 1.0);
+    }
+
+    #[test]
+    fn test_gauge_modifier_equality() {
+        assert_eq!(GaugeModifier::Total, GaugeModifier::Total);
+        assert_ne!(GaugeModifier::Total, GaugeModifier::LimitIncrement);
+        assert_ne!(GaugeModifier::LimitIncrement, GaugeModifier::ModifyDamage);
+    }
+
+    // -- Gauge tests --
+
+    #[test]
+    fn test_gauge_initial_value() {
+        let model = make_model();
+        let element = GaugeElementProperty {
+            modifier: None,
+            value: vec![0.15, 0.12, 0.03, -5.0, -10.0, -5.0],
+            min: 0.0,
+            max: 100.0,
+            init: 100.0,
+            border: 0.0,
+            death: 0.0,
+            guts: vec![],
+        };
+        let gauge = Gauge::new(&model, element, ClearType::Hard);
+        assert_eq!(gauge.get_value(), 100.0);
+    }
+
+    #[test]
+    fn test_gauge_set_value_clamped() {
+        let model = make_model();
+        let element = GaugeElementProperty {
+            modifier: None,
+            value: vec![0.15, 0.12, 0.03, -5.0, -10.0, -5.0],
+            min: 0.0,
+            max: 100.0,
+            init: 50.0,
+            border: 0.0,
+            death: 0.0,
+            guts: vec![],
+        };
+        let mut gauge = Gauge::new(&model, element, ClearType::Hard);
+        assert_eq!(gauge.get_value(), 50.0);
+
+        // Set above max
+        gauge.set_value(150.0);
+        assert_eq!(gauge.get_value(), 100.0);
+
+        // Set to min
+        gauge.set_value(0.0);
+        assert_eq!(gauge.get_value(), 0.0);
+    }
+
+    #[test]
+    fn test_gauge_death_border() {
+        let model = make_model();
+        let element = GaugeElementProperty {
+            modifier: None,
+            value: vec![0.1, 0.1, 0.05, -6.0, -10.0, -2.0],
+            min: 0.0,
+            max: 100.0,
+            init: 100.0,
+            border: 0.0,
+            death: 2.0,
+            guts: vec![],
+        };
+        let mut gauge = Gauge::new(&model, element, ClearType::Hard);
+        // Setting below death border kills the gauge
+        gauge.set_value(1.5);
+        assert_eq!(gauge.get_value(), 0.0);
+    }
+
+    #[test]
+    fn test_gauge_is_qualified() {
+        let model = make_model();
+        let element = GaugeElementProperty {
+            modifier: None,
+            value: vec![1.0, 1.0, 0.5, -3.0, -6.0, -2.0],
+            min: 2.0,
+            max: 100.0,
+            init: 20.0,
+            border: 80.0,
+            death: 0.0,
+            guts: vec![],
+        };
+        let mut gauge = Gauge::new(&model, element, ClearType::Normal);
+        // 20 < 80, not qualified
+        assert!(!gauge.is_qualified());
+
+        gauge.set_value(80.0);
+        assert!(gauge.is_qualified());
+
+        gauge.set_value(90.0);
+        assert!(gauge.is_qualified());
+    }
+
+    #[test]
+    fn test_gauge_is_max() {
+        let model = make_model();
+        let element = GaugeElementProperty {
+            modifier: None,
+            value: vec![1.0, 1.0, 0.5, -3.0, -6.0, -2.0],
+            min: 0.0,
+            max: 100.0,
+            init: 100.0,
+            border: 80.0,
+            death: 0.0,
+            guts: vec![],
+        };
+        let gauge = Gauge::new(&model, element, ClearType::Normal);
+        assert!(gauge.is_max());
+    }
+
+    #[test]
+    fn test_gauge_update() {
+        let model = make_model();
+        let element = GaugeElementProperty {
+            modifier: None,
+            value: vec![0.15, 0.12, 0.03, -5.0, -10.0, -5.0],
+            min: 0.0,
+            max: 100.0,
+            init: 50.0,
+            border: 0.0,
+            death: 0.0,
+            guts: vec![],
+        };
+        let mut gauge = Gauge::new(&model, element, ClearType::Hard);
+        assert_eq!(gauge.get_value(), 50.0);
+
+        // Update with PG (judge=0), rate=1.0 => +0.15
+        gauge.update(0, 1.0);
+        let expected = (50.0 + 0.15_f32).clamp(0.0, 100.0);
+        assert!((gauge.get_value() - expected).abs() < 1e-6);
+    }
+
+    // -- GrooveGauge tests --
+
+    #[test]
+    fn test_groove_gauge_construction() {
+        let model = make_model();
+        let gg = GrooveGauge::new(&model, NORMAL, &GaugeProperty::SevenKeys);
+        assert_eq!(gg.get_type(), NORMAL);
+        assert!(!gg.is_type_changed());
+        assert_eq!(gg.get_gauge_type_length(), 9);
+    }
+
+    #[test]
+    fn test_groove_gauge_type_change() {
+        let model = make_model();
+        let mut gg = GrooveGauge::new(&model, NORMAL, &GaugeProperty::SevenKeys);
+        assert!(!gg.is_type_changed());
+
+        gg.set_type(HARD);
+        assert_eq!(gg.get_type(), HARD);
+        assert!(gg.is_type_changed());
+    }
+
+    #[test]
+    fn test_groove_gauge_is_course_gauge() {
+        let model = make_model();
+        let gg_normal = GrooveGauge::new(&model, NORMAL, &GaugeProperty::SevenKeys);
+        assert!(!gg_normal.is_course_gauge());
+
+        let gg_class = GrooveGauge::new(&model, CLASS, &GaugeProperty::SevenKeys);
+        assert!(gg_class.is_course_gauge());
+
+        let gg_exclass = GrooveGauge::new(&model, EXCLASS, &GaugeProperty::SevenKeys);
+        assert!(gg_exclass.is_course_gauge());
+
+        let gg_exhardclass = GrooveGauge::new(&model, EXHARDCLASS, &GaugeProperty::SevenKeys);
+        assert!(gg_exhardclass.is_course_gauge());
+    }
+
+    #[test]
+    fn test_groove_gauge_get_value() {
+        let model = make_model();
+        let gg = GrooveGauge::new(&model, NORMAL, &GaugeProperty::SevenKeys);
+        // NORMAL init = 20.0
+        assert_eq!(gg.get_value(), 20.0);
+    }
+
+    #[test]
+    fn test_groove_gauge_set_value() {
+        let model = make_model();
+        let mut gg = GrooveGauge::new(&model, NORMAL, &GaugeProperty::SevenKeys);
+        gg.set_value(50.0);
+        // All gauges should be clamped to their respective min/max
+        // NORMAL gauge value should be set to 50
+        assert_eq!(gg.get_value(), 50.0);
+    }
+
+    #[test]
+    fn test_groove_gauge_get_clear_type() {
+        let model = make_model();
+        let gg = GrooveGauge::new(&model, NORMAL, &GaugeProperty::SevenKeys);
+        let ct = gg.get_clear_type();
+        // Gauge type 2 (NORMAL) maps to ClearType::Normal via get_clear_type_by_gauge
+        assert_eq!(ct, ClearType::Normal);
+    }
+
+    #[test]
+    fn test_groove_gauge_constants() {
+        assert_eq!(GrooveGauge::ASSISTEASY, 0);
+        assert_eq!(GrooveGauge::EASY, 1);
+        assert_eq!(GrooveGauge::NORMAL, 2);
+        assert_eq!(GrooveGauge::HARD, 3);
+        assert_eq!(GrooveGauge::EXHARD, 4);
+        assert_eq!(GrooveGauge::HAZARD, 5);
+        assert_eq!(GrooveGauge::GRADE_NORMAL, 6);
+        assert_eq!(GrooveGauge::GRADE_HARD, 7);
+        assert_eq!(GrooveGauge::GRADE_EXHARD, 8);
+    }
+
+    #[test]
+    fn test_groove_gauge_create_with_id() {
+        let model = make_model();
+        let gg = GrooveGauge::create_with_id(&model, EASY, &GaugeProperty::FiveKeys);
+        assert_eq!(gg.get_type(), EASY);
+    }
+}

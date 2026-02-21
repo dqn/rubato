@@ -105,3 +105,167 @@ impl Validatable for ReplayData {
         !self.keylog.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_replay_data_new() {
+        let rd = ReplayData::new();
+        assert!(rd.player.is_none());
+        assert!(rd.sha256.is_none());
+        assert_eq!(rd.mode, 0);
+        assert!(rd.keylog.is_empty());
+        assert!(rd.keyinput.is_none());
+        assert_eq!(rd.gauge, 0);
+        assert!(rd.pattern.is_none());
+        assert!(rd.lane_shuffle_pattern.is_none());
+        assert!(rd.rand.is_empty());
+        assert_eq!(rd.date, 0);
+        assert_eq!(rd.seven_to_nine_pattern, 0);
+        assert_eq!(rd.randomoption, 0);
+        assert_eq!(rd.randomoptionseed, -1);
+        assert_eq!(rd.randomoption2, 0);
+        assert_eq!(rd.randomoption2seed, -1);
+        assert_eq!(rd.doubleoption, 0);
+        assert!(rd.config.is_none());
+    }
+
+    #[test]
+    fn test_replay_data_default() {
+        let rd = ReplayData::default();
+        // Default doesn't set randomoptionseed to -1 (new() does)
+        assert_eq!(rd.randomoptionseed, 0);
+        assert_eq!(rd.randomoption2seed, 0);
+    }
+
+    #[test]
+    fn test_replay_data_serde_round_trip() {
+        let mut rd = ReplayData::new();
+        rd.player = Some("TestPlayer".to_string());
+        rd.sha256 = Some("abc123hash".to_string());
+        rd.mode = 7;
+        rd.gauge = 3;
+        rd.date = 1700000000;
+        rd.rand = vec![1, 2, 3];
+        rd.randomoption = 5;
+        rd.randomoptionseed = 42;
+
+        let json = serde_json::to_string(&rd).unwrap();
+        let deserialized: ReplayData = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.player.as_deref(), Some("TestPlayer"));
+        assert_eq!(deserialized.sha256.as_deref(), Some("abc123hash"));
+        assert_eq!(deserialized.mode, 7);
+        assert_eq!(deserialized.gauge, 3);
+        assert_eq!(deserialized.date, 1700000000);
+        assert_eq!(deserialized.rand, vec![1, 2, 3]);
+        assert_eq!(deserialized.randomoption, 5);
+        assert_eq!(deserialized.randomoptionseed, 42);
+    }
+
+    #[test]
+    fn test_replay_data_shrink_and_validate_round_trip() {
+        let mut rd = ReplayData::new();
+        rd.keylog = vec![
+            KeyInputLog {
+                time: 1000,
+                keycode: 0,
+                pressed: true,
+            },
+            KeyInputLog {
+                time: 2000,
+                keycode: 1,
+                pressed: false,
+            },
+            KeyInputLog {
+                time: 3000,
+                keycode: 2,
+                pressed: true,
+            },
+        ];
+
+        // Shrink compresses keylog into keyinput string
+        rd.shrink();
+        assert!(rd.keylog.is_empty());
+        assert!(rd.keyinput.is_some());
+
+        // Validate decompresses keyinput back into keylog
+        assert!(rd.validate());
+        assert_eq!(rd.keylog.len(), 3);
+        assert_eq!(rd.keylog[0].time, 1000);
+        assert_eq!(rd.keylog[0].keycode, 0);
+        assert!(rd.keylog[0].pressed);
+        assert_eq!(rd.keylog[1].time, 2000);
+        assert_eq!(rd.keylog[1].keycode, 1);
+        assert!(!rd.keylog[1].pressed);
+        assert_eq!(rd.keylog[2].time, 3000);
+        assert_eq!(rd.keylog[2].keycode, 2);
+        assert!(rd.keylog[2].pressed);
+    }
+
+    #[test]
+    fn test_replay_data_validate_empty_keylog() {
+        let mut rd = ReplayData::new();
+        // No keylog and no keyinput => invalid
+        assert!(!rd.validate());
+    }
+
+    #[test]
+    fn test_replay_data_validate_with_keylog() {
+        let mut rd = ReplayData::new();
+        rd.keylog = vec![KeyInputLog {
+            time: 100,
+            keycode: 0,
+            pressed: true,
+        }];
+        assert!(rd.validate());
+    }
+
+    #[test]
+    fn test_replay_data_with_pattern() {
+        let mut rd = ReplayData::new();
+        rd.pattern = Some(vec![
+            PatternModifyLog {
+                old_lane: 0,
+                new_lane: 3,
+            },
+            PatternModifyLog {
+                old_lane: 1,
+                new_lane: 2,
+            },
+        ]);
+
+        let json = serde_json::to_string(&rd).unwrap();
+        let deserialized: ReplayData = serde_json::from_str(&json).unwrap();
+        let pattern = deserialized.pattern.unwrap();
+        assert_eq!(pattern.len(), 2);
+        assert_eq!(pattern[0].old_lane, 0);
+        assert_eq!(pattern[0].new_lane, 3);
+    }
+
+    #[test]
+    fn test_replay_data_with_config() {
+        let mut rd = ReplayData::new();
+        rd.config = Some(PlayConfig::default());
+
+        let json = serde_json::to_string(&rd).unwrap();
+        let deserialized: ReplayData = serde_json::from_str(&json).unwrap();
+        assert!(deserialized.config.is_some());
+        assert_eq!(deserialized.config.unwrap().hispeed, 1.0);
+    }
+
+    #[test]
+    fn test_replay_data_lane_shuffle_pattern() {
+        let mut rd = ReplayData::new();
+        rd.lane_shuffle_pattern = Some(vec![vec![0, 1, 2], vec![2, 1, 0]]);
+
+        let json = serde_json::to_string(&rd).unwrap();
+        let deserialized: ReplayData = serde_json::from_str(&json).unwrap();
+        let lsp = deserialized.lane_shuffle_pattern.unwrap();
+        assert_eq!(lsp.len(), 2);
+        assert_eq!(lsp[0], vec![0, 1, 2]);
+        assert_eq!(lsp[1], vec![2, 1, 0]);
+    }
+}

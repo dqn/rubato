@@ -611,3 +611,314 @@ impl crate::ipfs_information::IpfsInformation for SongData {
         self.org_md5.clone().unwrap_or_default()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_construction() {
+        let sd = SongData::new();
+        assert_eq!(sd.title, "");
+        assert_eq!(sd.subtitle, "");
+        assert_eq!(sd.genre, "");
+        assert_eq!(sd.artist, "");
+        assert_eq!(sd.subartist, "");
+        assert_eq!(sd.md5, "");
+        assert_eq!(sd.sha256, "");
+        assert_eq!(sd.favorite, 0);
+        assert_eq!(sd.level, 0);
+        assert_eq!(sd.mode, 0);
+        assert_eq!(sd.difficulty, 0);
+        assert_eq!(sd.judge, 0);
+        assert_eq!(sd.minbpm, 0);
+        assert_eq!(sd.maxbpm, 0);
+        assert_eq!(sd.length, 0);
+        assert_eq!(sd.notes, 0);
+        assert_eq!(sd.content, 0);
+        assert_eq!(sd.feature, 0);
+        assert_eq!(sd.date, 0);
+        assert_eq!(sd.adddate, 0);
+        assert!(sd.url.is_none());
+        assert!(sd.ipfs.is_none());
+        assert!(sd.model.is_none());
+        assert!(sd.info.is_none());
+        assert!(sd.charthash.is_none());
+        assert!(sd.org_md5.is_none());
+    }
+
+    #[test]
+    fn test_serde_round_trip() {
+        let mut sd = SongData::new();
+        sd.title = "Test Song".to_string();
+        sd.subtitle = "~Extra~".to_string();
+        sd.genre = "Techno".to_string();
+        sd.artist = "DJ Test".to_string();
+        sd.subartist = "feat. Guest".to_string();
+        sd.md5 = "abc123".to_string();
+        sd.sha256 = "def456".to_string();
+        sd.level = 12;
+        sd.mode = 7;
+        sd.difficulty = 3;
+        sd.judge = 100;
+        sd.minbpm = 140;
+        sd.maxbpm = 180;
+        sd.length = 120000;
+        sd.notes = 1500;
+        sd.favorite = FAVORITE_SONG;
+        sd.url = Some("https://example.com".to_string());
+
+        let json = serde_json::to_string(&sd).unwrap();
+        let deserialized: SongData = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.title, "Test Song");
+        assert_eq!(deserialized.subtitle, "~Extra~");
+        assert_eq!(deserialized.genre, "Techno");
+        assert_eq!(deserialized.artist, "DJ Test");
+        assert_eq!(deserialized.subartist, "feat. Guest");
+        assert_eq!(deserialized.md5, "abc123");
+        assert_eq!(deserialized.sha256, "def456");
+        assert_eq!(deserialized.level, 12);
+        assert_eq!(deserialized.mode, 7);
+        assert_eq!(deserialized.difficulty, 3);
+        assert_eq!(deserialized.judge, 100);
+        assert_eq!(deserialized.minbpm, 140);
+        assert_eq!(deserialized.maxbpm, 180);
+        assert_eq!(deserialized.length, 120000);
+        assert_eq!(deserialized.notes, 1500);
+        assert_eq!(deserialized.favorite, FAVORITE_SONG);
+        assert_eq!(deserialized.url.as_deref(), Some("https://example.com"));
+    }
+
+    #[test]
+    fn test_field_accessors() {
+        let mut sd = SongData::new();
+        sd.set_title("My Title".to_string());
+        sd.set_subtitle("Sub".to_string());
+        sd.set_genre("Pop".to_string());
+        sd.set_artist("Artist A".to_string());
+        sd.set_subartist("Sub B".to_string());
+        sd.set_md5("md5hash".to_string());
+        sd.set_sha256("sha256hash".to_string());
+        sd.set_url("https://url.com".to_string());
+        sd.set_appendurl("https://append.com".to_string());
+        sd.set_mode(14);
+        sd.set_favorite(FAVORITE_CHART);
+
+        assert_eq!(sd.get_title(), "My Title");
+        assert_eq!(sd.get_subtitle(), "Sub");
+        assert_eq!(sd.get_genre(), "Pop");
+        assert_eq!(sd.get_artist(), "Artist A");
+        assert_eq!(sd.get_subartist(), "Sub B");
+        assert_eq!(sd.get_md5(), "md5hash");
+        assert_eq!(sd.get_sha256(), "sha256hash");
+        assert_eq!(sd.get_url(), "https://url.com");
+        assert_eq!(sd.get_appendurl(), "https://append.com");
+        assert_eq!(sd.get_mode(), 14);
+        assert_eq!(sd.get_favorite(), FAVORITE_CHART);
+    }
+
+    #[test]
+    fn test_full_title_with_subtitle() {
+        let mut sd = SongData::new();
+        sd.set_title("Main".to_string());
+        sd.set_subtitle("Extra".to_string());
+
+        assert_eq!(sd.full_title(), "Main Extra");
+        // Also test the mutable caching version
+        assert_eq!(sd.get_full_title(), "Main Extra");
+    }
+
+    #[test]
+    fn test_full_title_without_subtitle() {
+        let mut sd = SongData::new();
+        sd.set_title("Main".to_string());
+
+        assert_eq!(sd.full_title(), "Main");
+        assert_eq!(sd.get_full_title(), "Main");
+    }
+
+    #[test]
+    fn test_full_title_cache_invalidation() {
+        let mut sd = SongData::new();
+        sd.set_title("A".to_string());
+        sd.set_subtitle("B".to_string());
+        assert_eq!(sd.get_full_title(), "A B");
+
+        // Changing title should invalidate cache
+        sd.set_title("C".to_string());
+        assert_eq!(sd.get_full_title(), "C B");
+
+        // Changing subtitle should invalidate cache
+        sd.set_subtitle("D".to_string());
+        assert_eq!(sd.get_full_title(), "C D");
+    }
+
+    #[test]
+    fn test_full_artist() {
+        let mut sd = SongData::new();
+        sd.set_artist("Artist".to_string());
+        sd.set_subartist("Sub".to_string());
+        assert_eq!(sd.get_full_artist(), "Artist Sub");
+
+        sd.set_subartist("".to_string());
+        assert_eq!(sd.get_full_artist(), "Artist");
+    }
+
+    #[test]
+    fn test_path_operations() {
+        let mut sd = SongData::new();
+        assert!(sd.get_path().is_none());
+
+        sd.set_path("/songs/test.bms".to_string());
+        assert_eq!(sd.get_path(), Some("/songs/test.bms"));
+
+        sd.add_another_path("/songs/test2.bms".to_string());
+        assert_eq!(sd.get_all_paths().len(), 2);
+        assert_eq!(sd.get_all_paths()[1], "/songs/test2.bms");
+
+        sd.clear_path();
+        assert!(sd.get_path().is_none());
+        assert!(sd.get_all_paths().is_empty());
+    }
+
+    #[test]
+    fn test_set_path_opt() {
+        let mut sd = SongData::new();
+        sd.set_path_opt(Some("/songs/a.bms".to_string()));
+        assert_eq!(sd.get_path(), Some("/songs/a.bms"));
+
+        sd.set_path_opt(None);
+        assert!(sd.get_path().is_none());
+    }
+
+    #[test]
+    fn test_feature_flags() {
+        let mut sd = SongData::new();
+        sd.feature = FEATURE_LONGNOTE | FEATURE_MINENOTE | FEATURE_STOPSEQUENCE;
+
+        assert!(sd.has_long_note());
+        assert!(sd.has_mine_note());
+        assert!(sd.is_bpmstop());
+        assert!(sd.has_any_long_note());
+
+        assert!(!sd.has_undefined_long_note());
+        assert!(!sd.has_charge_note());
+        assert!(!sd.has_hell_charge_note());
+        assert!(!sd.has_random_sequence());
+        assert!(!sd.has_scroll_change());
+    }
+
+    #[test]
+    fn test_content_flags() {
+        let mut sd = SongData::new();
+        sd.content = CONTENT_TEXT | CONTENT_BGA;
+
+        assert!(sd.has_document());
+        assert!(sd.has_bga());
+        assert!(!sd.has_preview());
+    }
+
+    #[test]
+    fn test_validate() {
+        let mut sd = SongData::new();
+        // Empty title => invalid
+        assert!(!sd.validate());
+
+        sd.title = "Test".to_string();
+        // No md5 and no sha256 => invalid
+        assert!(!sd.validate());
+
+        sd.md5 = "hash".to_string();
+        assert!(sd.validate());
+
+        // sha256 only also valid
+        let mut sd2 = SongData::new();
+        sd2.title = "Test".to_string();
+        sd2.sha256 = "shahash".to_string();
+        assert!(sd2.validate());
+    }
+
+    #[test]
+    fn test_merge() {
+        let mut sd1 = SongData::new();
+        let mut sd2 = SongData::new();
+        sd2.url = Some("https://merged.com".to_string());
+        sd2.appendurl = Some("https://append-merged.com".to_string());
+
+        sd1.merge(&sd2);
+        assert_eq!(sd1.get_url(), "https://merged.com");
+        assert_eq!(sd1.get_appendurl(), "https://append-merged.com");
+
+        // If sd1 already has url, merge should not overwrite
+        let mut sd3 = SongData::new();
+        sd3.url = Some("https://other.com".to_string());
+        sd1.merge(&sd3);
+        assert_eq!(sd1.get_url(), "https://merged.com");
+    }
+
+    #[test]
+    fn test_shrink() {
+        let mut sd = SongData::new();
+        sd.set_title("Title".to_string());
+        sd.set_subtitle("Sub".to_string());
+        sd.set_path("/path".to_string());
+        sd.level = 10;
+        sd.notes = 500;
+        sd.preview = "preview.ogg".to_string();
+
+        sd.shrink();
+
+        assert!(sd.get_all_paths().is_empty());
+        assert_eq!(sd.level, 0);
+        assert_eq!(sd.notes, 0);
+        assert!(sd.preview.is_empty());
+        assert!(sd.folder.is_empty());
+        // Title should still be there
+        assert_eq!(sd.get_title(), "Title");
+    }
+
+    #[test]
+    fn test_clone() {
+        let mut sd = SongData::new();
+        sd.set_title("Clone Test".to_string());
+        sd.md5 = "md5clone".to_string();
+        sd.level = 7;
+
+        let cloned = sd.clone();
+        assert_eq!(cloned.get_title(), "Clone Test");
+        assert_eq!(cloned.get_md5(), "md5clone");
+        assert_eq!(cloned.get_level(), 7);
+    }
+
+    #[test]
+    fn test_ipfs_accessors() {
+        let mut sd = SongData::new();
+        assert_eq!(sd.get_ipfs_str(), "");
+        assert_eq!(sd.get_append_ipfs_str(), "");
+
+        sd.ipfs = Some("Qm123".to_string());
+        sd.appendipfs = Some("Qm456".to_string());
+        assert_eq!(sd.get_ipfs_str(), "Qm123");
+        assert_eq!(sd.get_append_ipfs_str(), "Qm456");
+    }
+
+    #[test]
+    fn test_org_md5_accessor() {
+        let sd = SongData::new();
+        assert!(sd.get_org_md5_vec().is_empty());
+
+        let mut sd2 = SongData::new();
+        sd2.org_md5 = Some(vec!["md5a".to_string(), "md5b".to_string()]);
+        assert_eq!(sd2.get_org_md5_vec().len(), 2);
+        assert_eq!(sd2.get_org_md5_vec()[0], "md5a");
+    }
+
+    #[test]
+    fn test_favorite_constants() {
+        assert_eq!(FAVORITE_SONG, 1);
+        assert_eq!(FAVORITE_CHART, 2);
+        assert_eq!(INVISIBLE_SONG, 4);
+        assert_eq!(INVISIBLE_CHART, 8);
+    }
+}

@@ -640,3 +640,298 @@ impl SongTrophy {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_score_data_default() {
+        let sd = ScoreData::default();
+        assert_eq!(sd.get_player(), "unknown");
+        assert_eq!(sd.get_sha256(), "");
+        assert_eq!(sd.get_mode(), 0);
+        assert_eq!(sd.get_clear(), 0);
+        assert_eq!(sd.get_date(), 0);
+        assert_eq!(sd.get_playcount(), 0);
+        assert_eq!(sd.get_clearcount(), 0);
+        assert_eq!(sd.get_epg(), 0);
+        assert_eq!(sd.get_lpg(), 0);
+        assert_eq!(sd.get_egr(), 0);
+        assert_eq!(sd.get_lgr(), 0);
+        assert_eq!(sd.get_egd(), 0);
+        assert_eq!(sd.get_lgd(), 0);
+        assert_eq!(sd.get_ebd(), 0);
+        assert_eq!(sd.get_lbd(), 0);
+        assert_eq!(sd.get_epr(), 0);
+        assert_eq!(sd.get_lpr(), 0);
+        assert_eq!(sd.get_ems(), 0);
+        assert_eq!(sd.get_lms(), 0);
+        assert_eq!(sd.get_combo(), 0);
+        assert_eq!(sd.get_notes(), 0);
+        assert_eq!(sd.get_passnotes(), 0);
+        assert_eq!(sd.get_minbp(), i32::MAX);
+        assert_eq!(sd.get_avgjudge(), i64::MAX);
+        assert_eq!(sd.get_seed(), -1);
+        assert_eq!(sd.get_trophy(), "");
+        assert_eq!(sd.get_ghost(), "");
+        assert_eq!(sd.get_scorehash(), "");
+        assert!(sd.device_type.is_none());
+        assert!(sd.judge_algorithm.is_none());
+        assert!(sd.rule.is_none());
+        assert!(sd.skin.is_none());
+    }
+
+    #[test]
+    fn test_score_data_new_with_mode() {
+        let sd = ScoreData::new(Mode::BEAT_5K);
+        assert_eq!(sd.playmode, Mode::BEAT_5K);
+        assert_eq!(sd.get_player(), "unknown");
+    }
+
+    #[test]
+    fn test_score_data_serde_round_trip() {
+        let mut sd = ScoreData::new(Mode::BEAT_7K);
+        sd.sha256 = "abc123".to_string();
+        sd.player = "player1".to_string();
+        sd.clear = 5;
+        sd.epg = 100;
+        sd.lpg = 90;
+        sd.egr = 80;
+        sd.lgr = 70;
+        sd.egd = 10;
+        sd.lgd = 5;
+        sd.combo = 250;
+        sd.notes = 500;
+        sd.date = 1700000000;
+
+        let json = serde_json::to_string(&sd).unwrap();
+        let deserialized: ScoreData = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.get_sha256(), "abc123");
+        assert_eq!(deserialized.get_player(), "player1");
+        assert_eq!(deserialized.get_clear(), 5);
+        assert_eq!(deserialized.get_epg(), 100);
+        assert_eq!(deserialized.get_lpg(), 90);
+        assert_eq!(deserialized.get_egr(), 80);
+        assert_eq!(deserialized.get_lgr(), 70);
+        assert_eq!(deserialized.get_egd(), 10);
+        assert_eq!(deserialized.get_lgd(), 5);
+        assert_eq!(deserialized.get_combo(), 250);
+        assert_eq!(deserialized.get_notes(), 500);
+        assert_eq!(deserialized.get_date(), 1700000000);
+    }
+
+    #[test]
+    fn test_exscore_calculation() {
+        let mut sd = ScoreData::default();
+        sd.epg = 100;
+        sd.lpg = 50;
+        sd.egr = 30;
+        sd.lgr = 20;
+        // exscore = (epg + lpg) * 2 + egr + lgr = (100+50)*2 + 30+20 = 350
+        assert_eq!(sd.get_exscore(), 350);
+    }
+
+    #[test]
+    fn test_judge_count() {
+        let mut sd = ScoreData::default();
+        sd.epg = 10;
+        sd.lpg = 20;
+        sd.egr = 30;
+        sd.lgr = 40;
+        sd.egd = 5;
+        sd.lgd = 6;
+        sd.ebd = 3;
+        sd.lbd = 4;
+        sd.epr = 1;
+        sd.lpr = 2;
+        sd.ems = 7;
+        sd.lms = 8;
+
+        // PG (judge=0)
+        assert_eq!(sd.get_judge_count(0, true), 10);
+        assert_eq!(sd.get_judge_count(0, false), 20);
+        assert_eq!(sd.get_judge_count_total(0), 30);
+
+        // GR (judge=1)
+        assert_eq!(sd.get_judge_count(1, true), 30);
+        assert_eq!(sd.get_judge_count(1, false), 40);
+        assert_eq!(sd.get_judge_count_total(1), 70);
+
+        // GD (judge=2)
+        assert_eq!(sd.get_judge_count(2, true), 5);
+        assert_eq!(sd.get_judge_count(2, false), 6);
+
+        // BD (judge=3)
+        assert_eq!(sd.get_judge_count(3, true), 3);
+        assert_eq!(sd.get_judge_count(3, false), 4);
+
+        // PR (judge=4)
+        assert_eq!(sd.get_judge_count(4, true), 1);
+        assert_eq!(sd.get_judge_count(4, false), 2);
+
+        // MS (judge=5)
+        assert_eq!(sd.get_judge_count(5, true), 7);
+        assert_eq!(sd.get_judge_count(5, false), 8);
+
+        // Out of range
+        assert_eq!(sd.get_judge_count(6, true), 0);
+        assert_eq!(sd.get_judge_count(-1, false), 0);
+    }
+
+    #[test]
+    fn test_add_judge_count() {
+        let mut sd = ScoreData::default();
+        sd.add_judge_count(0, true, 5);
+        sd.add_judge_count(0, false, 3);
+        sd.add_judge_count(1, true, 10);
+        sd.add_judge_count(5, false, 2);
+        // Out of range should be no-op
+        sd.add_judge_count(6, true, 100);
+
+        assert_eq!(sd.get_epg(), 5);
+        assert_eq!(sd.get_lpg(), 3);
+        assert_eq!(sd.get_egr(), 10);
+        assert_eq!(sd.get_lms(), 2);
+    }
+
+    #[test]
+    fn test_set_player() {
+        let mut sd = ScoreData::default();
+        sd.set_player(Some("TestPlayer"));
+        assert_eq!(sd.get_player(), "TestPlayer");
+
+        sd.set_player(None);
+        assert_eq!(sd.get_player(), "");
+    }
+
+    #[test]
+    fn test_ghost_encode_decode_round_trip() {
+        let mut sd = ScoreData::default();
+        sd.notes = 5;
+        let ghost_data = vec![0, 1, 2, 3, 4];
+        sd.encode_ghost(Some(&ghost_data));
+        assert!(!sd.ghost.is_empty());
+
+        let decoded = sd.decode_ghost().unwrap();
+        assert_eq!(decoded, ghost_data);
+    }
+
+    #[test]
+    fn test_ghost_encode_none() {
+        let mut sd = ScoreData::default();
+        sd.encode_ghost(None);
+        assert!(sd.ghost.is_empty());
+    }
+
+    #[test]
+    fn test_ghost_encode_empty() {
+        let mut sd = ScoreData::default();
+        sd.encode_ghost(Some(&[]));
+        assert!(sd.ghost.is_empty());
+    }
+
+    #[test]
+    fn test_ghost_decode_empty() {
+        let sd = ScoreData::default();
+        assert!(sd.decode_ghost().is_none());
+    }
+
+    #[test]
+    fn test_update_clear() {
+        let mut sd = ScoreData::default();
+        sd.clear = 3;
+        sd.notes = 100;
+
+        let mut newscore = ScoreData::default();
+        newscore.clear = 5;
+        newscore.notes = 100;
+
+        assert!(sd.update(&newscore, false));
+        assert_eq!(sd.clear, 5);
+    }
+
+    #[test]
+    fn test_update_exscore() {
+        let mut sd = ScoreData::default();
+        sd.epg = 10;
+        sd.lpg = 10;
+        sd.notes = 100;
+
+        let mut newscore = ScoreData::default();
+        newscore.epg = 50;
+        newscore.lpg = 50;
+        newscore.notes = 100;
+
+        assert!(sd.update(&newscore, true));
+        assert_eq!(sd.epg, 50);
+        assert_eq!(sd.lpg, 50);
+    }
+
+    #[test]
+    fn test_update_no_change() {
+        let mut sd = ScoreData::default();
+        sd.clear = 5;
+        sd.epg = 100;
+        sd.lpg = 100;
+        sd.combo = 200;
+        sd.minbp = 0;
+        sd.avgjudge = 0;
+
+        let newscore = sd.clone();
+        assert!(!sd.update(&newscore, true));
+    }
+
+    // -- SongTrophy tests --
+
+    #[test]
+    fn test_song_trophy_character() {
+        assert_eq!(SongTrophy::Easy.character(), 'g');
+        assert_eq!(SongTrophy::Groove.character(), 'G');
+        assert_eq!(SongTrophy::Hard.character(), 'h');
+        assert_eq!(SongTrophy::ExHard.character(), 'H');
+        assert_eq!(SongTrophy::Normal.character(), 'n');
+        assert_eq!(SongTrophy::Mirror.character(), 'm');
+        assert_eq!(SongTrophy::Random.character(), 'r');
+        assert_eq!(SongTrophy::SRandom.character(), 's');
+        assert_eq!(SongTrophy::Battle.character(), 'B');
+    }
+
+    #[test]
+    fn test_song_trophy_values_count() {
+        assert_eq!(SongTrophy::values().len(), 16);
+    }
+
+    #[test]
+    fn test_song_trophy_get_trophy() {
+        assert_eq!(SongTrophy::get_trophy('g'), Some(SongTrophy::Easy));
+        assert_eq!(SongTrophy::get_trophy('G'), Some(SongTrophy::Groove));
+        assert_eq!(SongTrophy::get_trophy('H'), Some(SongTrophy::ExHard));
+        assert_eq!(SongTrophy::get_trophy('B'), Some(SongTrophy::Battle));
+        assert_eq!(SongTrophy::get_trophy('z'), None);
+    }
+
+    #[test]
+    fn test_song_trophy_round_trip() {
+        // Every trophy should be recoverable from its character
+        for trophy in SongTrophy::values() {
+            let c = trophy.character();
+            let recovered = SongTrophy::get_trophy(c);
+            assert_eq!(recovered, Some(*trophy));
+        }
+    }
+
+    #[test]
+    fn test_score_data_trophy_constants() {
+        assert_eq!(ScoreData::TROPHY_EASY, SongTrophy::Easy);
+        assert_eq!(ScoreData::TROPHY_GROOVE, SongTrophy::Groove);
+        assert_eq!(ScoreData::TROPHY_HARD, SongTrophy::Hard);
+        assert_eq!(ScoreData::TROPHY_EXHARD, SongTrophy::ExHard);
+        assert_eq!(ScoreData::TROPHY_NORMAL, SongTrophy::Normal);
+        assert_eq!(ScoreData::TROPHY_MIRROR, SongTrophy::Mirror);
+        assert_eq!(ScoreData::TROPHY_RANDOM, SongTrophy::Random);
+        assert_eq!(ScoreData::TROPHY_S_RANDOM, SongTrophy::SRandom);
+        assert_eq!(ScoreData::TROPHY_BATTLE, SongTrophy::Battle);
+    }
+}

@@ -113,3 +113,112 @@ impl BMKeys {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_button_constants() {
+        assert_eq!(BMKeys::BUTTON_1, 0);
+        assert_eq!(BMKeys::BUTTON_2, 1);
+        assert_eq!(BMKeys::BUTTON_3, 2);
+        assert_eq!(BMKeys::BUTTON_4, 3);
+        assert_eq!(BMKeys::BUTTON_5, 4);
+        assert_eq!(BMKeys::BUTTON_6, 5);
+        assert_eq!(BMKeys::BUTTON_7, 6);
+        assert_eq!(BMKeys::BUTTON_8, 7);
+        assert_eq!(BMKeys::BUTTON_9, 8);
+        assert_eq!(BMKeys::BUTTON_10, 9);
+        assert_eq!(BMKeys::BUTTON_16, 15);
+        assert_eq!(BMKeys::BUTTON_32, 31);
+    }
+
+    #[test]
+    fn test_axis_constants() {
+        assert_eq!(BMKeys::AXIS1_PLUS, 32);
+        assert_eq!(BMKeys::AXIS1_MINUS, 33);
+        assert_eq!(BMKeys::AXIS2_PLUS, 34);
+        assert_eq!(BMKeys::AXIS2_MINUS, 35);
+        assert_eq!(BMKeys::AXIS3_PLUS, 36);
+        assert_eq!(BMKeys::AXIS3_MINUS, 37);
+        assert_eq!(BMKeys::AXIS4_PLUS, 38);
+        assert_eq!(BMKeys::AXIS4_MINUS, 39);
+        assert_eq!(BMKeys::AXIS5_PLUS, 40);
+        assert_eq!(BMKeys::AXIS5_MINUS, 41);
+        assert_eq!(BMKeys::AXIS6_PLUS, 42);
+        assert_eq!(BMKeys::AXIS6_MINUS, 43);
+        assert_eq!(BMKeys::AXIS7_PLUS, 44);
+        assert_eq!(BMKeys::AXIS7_MINUS, 45);
+        assert_eq!(BMKeys::AXIS8_PLUS, 46);
+        assert_eq!(BMKeys::AXIS8_MINUS, 47);
+    }
+
+    #[test]
+    fn test_maxid() {
+        assert_eq!(BMKeys::MAXID, 48);
+    }
+
+    #[test]
+    fn test_to_string_buttons() {
+        assert_eq!(BMKeys::to_string(BMKeys::BUTTON_1), "BUTTON 1");
+        assert_eq!(BMKeys::to_string(BMKeys::BUTTON_2), "BUTTON 2");
+        assert_eq!(BMKeys::to_string(BMKeys::BUTTON_32), "BUTTON 32");
+    }
+
+    #[test]
+    fn test_to_string_axes() {
+        assert_eq!(BMKeys::to_string(BMKeys::AXIS1_PLUS), "UP (AXIS 1 +)");
+        assert_eq!(BMKeys::to_string(BMKeys::AXIS1_MINUS), "DOWN (AXIS 1 -)");
+        assert_eq!(BMKeys::to_string(BMKeys::AXIS2_PLUS), "RIGHT (AXIS 2 +)");
+        assert_eq!(BMKeys::to_string(BMKeys::AXIS2_MINUS), "LEFT (AXIS 2 -)");
+        assert_eq!(BMKeys::to_string(BMKeys::AXIS3_PLUS), "AXIS 3 +");
+        assert_eq!(BMKeys::to_string(BMKeys::AXIS8_MINUS), "AXIS 8 -");
+    }
+
+    #[test]
+    fn test_to_string_out_of_range() {
+        assert_eq!(BMKeys::to_string(-1), "Unknown");
+        assert_eq!(BMKeys::to_string(48), "Unknown");
+        assert_eq!(BMKeys::to_string(100), "Unknown");
+        assert_eq!(BMKeys::to_string(i32::MAX), "Unknown");
+    }
+
+    #[test]
+    fn test_all_keycodes_have_names() {
+        for i in 0..BMKeys::MAXID as i32 {
+            let name = BMKeys::to_string(i);
+            assert_ne!(name, "Unknown", "Keycode {} should have a name", i);
+        }
+    }
+
+    #[test]
+    fn test_button_sequence_contiguous() {
+        // Buttons 1-32 should be contiguous 0-31
+        for i in 0..32 {
+            let expected_name = format!("BUTTON {}", i + 1);
+            assert_eq!(BMKeys::to_string(i), expected_name);
+        }
+    }
+
+    #[test]
+    fn test_axis_pairs() {
+        // Each axis should have a plus and minus pair at consecutive indices
+        for axis in 0..8 {
+            let plus_idx = 32 + axis * 2;
+            let minus_idx = 33 + axis * 2;
+            let plus_name = BMKeys::to_string(plus_idx);
+            let minus_name = BMKeys::to_string(minus_idx);
+            assert!(
+                plus_name.contains('+'),
+                "Axis {} plus should contain '+'",
+                axis + 1
+            );
+            assert!(
+                minus_name.contains('-'),
+                "Axis {} minus should contain '-'",
+                axis + 1
+            );
+        }
+    }
+}

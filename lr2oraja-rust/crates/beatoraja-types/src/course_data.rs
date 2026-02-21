@@ -248,3 +248,215 @@ impl Validatable for TrophyData {
         self.name.is_some() && self.missrate > 0.0 && self.scorerate < 100.0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- CourseData tests --
+
+    #[test]
+    fn test_course_data_default() {
+        let cd = CourseData::default();
+        assert!(cd.name.is_none());
+        assert!(cd.hash.is_empty());
+        assert!(cd.constraint.is_empty());
+        assert!(cd.trophy.is_empty());
+        assert!(cd.release);
+    }
+
+    #[test]
+    fn test_course_data_name_accessor() {
+        let mut cd = CourseData::default();
+        assert_eq!(cd.get_name(), "");
+
+        cd.set_name("My Course".to_string());
+        assert_eq!(cd.get_name(), "My Course");
+    }
+
+    #[test]
+    fn test_course_data_song_accessor() {
+        let mut cd = CourseData::default();
+        assert!(cd.get_song().is_empty());
+
+        let mut song = SongData::new();
+        song.title = "Song 1".to_string();
+        cd.set_song(vec![song]);
+        assert_eq!(cd.get_song().len(), 1);
+        assert_eq!(cd.get_song()[0].title, "Song 1");
+    }
+
+    #[test]
+    fn test_course_data_trophy_accessor() {
+        let mut cd = CourseData::default();
+        assert!(cd.get_trophy().is_empty());
+
+        let trophy = TrophyData::new("Gold".to_string(), 5.0, 90.0);
+        cd.set_trophy(vec![trophy]);
+        assert_eq!(cd.get_trophy().len(), 1);
+        assert_eq!(cd.get_trophy()[0].get_name(), "Gold");
+    }
+
+    #[test]
+    fn test_course_data_constraint_accessor() {
+        let mut cd = CourseData::default();
+        assert!(cd.get_constraint().is_empty());
+
+        cd.set_constraint(vec![CourseDataConstraint::Class, CourseDataConstraint::NoSpeed]);
+        assert_eq!(cd.get_constraint().len(), 2);
+    }
+
+    #[test]
+    fn test_course_data_release() {
+        let mut cd = CourseData::default();
+        assert!(cd.release);
+
+        cd.set_release(false);
+        assert!(!cd.release);
+    }
+
+    #[test]
+    fn test_course_data_is_class_course() {
+        let mut cd = CourseData::default();
+        assert!(!cd.is_class_course());
+
+        cd.constraint = vec![CourseDataConstraint::Class];
+        assert!(cd.is_class_course());
+
+        cd.constraint = vec![CourseDataConstraint::Mirror];
+        assert!(cd.is_class_course());
+
+        cd.constraint = vec![CourseDataConstraint::Random];
+        assert!(cd.is_class_course());
+
+        cd.constraint = vec![CourseDataConstraint::NoSpeed];
+        assert!(!cd.is_class_course());
+    }
+
+    #[test]
+    fn test_course_data_serde_round_trip() {
+        let mut cd = CourseData::default();
+        cd.set_name("Test Course".to_string());
+        cd.set_release(false);
+        cd.set_constraint(vec![CourseDataConstraint::Class, CourseDataConstraint::Ln]);
+
+        let json = serde_json::to_string(&cd).unwrap();
+        let deserialized: CourseData = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.get_name(), "Test Course");
+        assert!(!deserialized.release);
+        assert_eq!(deserialized.constraint.len(), 2);
+        assert_eq!(deserialized.constraint[0], CourseDataConstraint::Class);
+        assert_eq!(deserialized.constraint[1], CourseDataConstraint::Ln);
+    }
+
+    // -- CourseDataConstraint tests --
+
+    #[test]
+    fn test_constraint_values_count() {
+        assert_eq!(CourseDataConstraint::values().len(), 14);
+    }
+
+    #[test]
+    fn test_constraint_name_str() {
+        assert_eq!(CourseDataConstraint::Class.name_str(), "grade");
+        assert_eq!(CourseDataConstraint::Mirror.name_str(), "grade_mirror");
+        assert_eq!(CourseDataConstraint::NoSpeed.name_str(), "no_speed");
+        assert_eq!(CourseDataConstraint::GaugeLr2.name_str(), "gauge_lr2");
+        assert_eq!(CourseDataConstraint::Ln.name_str(), "ln");
+        assert_eq!(CourseDataConstraint::Hcn.name_str(), "hcn");
+    }
+
+    #[test]
+    fn test_constraint_type() {
+        assert_eq!(CourseDataConstraint::Class.constraint_type(), 0);
+        assert_eq!(CourseDataConstraint::Mirror.constraint_type(), 0);
+        assert_eq!(CourseDataConstraint::Random.constraint_type(), 0);
+        assert_eq!(CourseDataConstraint::NoSpeed.constraint_type(), 1);
+        assert_eq!(CourseDataConstraint::NoGood.constraint_type(), 2);
+        assert_eq!(CourseDataConstraint::NoGreat.constraint_type(), 2);
+        assert_eq!(CourseDataConstraint::GaugeLr2.constraint_type(), 3);
+        assert_eq!(CourseDataConstraint::Gauge7Keys.constraint_type(), 3);
+        assert_eq!(CourseDataConstraint::Ln.constraint_type(), 4);
+        assert_eq!(CourseDataConstraint::Cn.constraint_type(), 4);
+    }
+
+    #[test]
+    fn test_constraint_get_value() {
+        assert_eq!(
+            CourseDataConstraint::get_value("grade"),
+            Some(CourseDataConstraint::Class)
+        );
+        assert_eq!(
+            CourseDataConstraint::get_value("no_speed"),
+            Some(CourseDataConstraint::NoSpeed)
+        );
+        assert_eq!(
+            CourseDataConstraint::get_value("gauge_7k"),
+            Some(CourseDataConstraint::Gauge7Keys)
+        );
+        assert_eq!(CourseDataConstraint::get_value("nonexistent"), None);
+    }
+
+    // -- TrophyData tests --
+
+    #[test]
+    fn test_trophy_data_construction() {
+        let trophy = TrophyData::new("Silver".to_string(), 10.0, 80.0);
+        assert_eq!(trophy.get_name(), "Silver");
+        assert_eq!(trophy.get_missrate(), 10.0);
+        assert_eq!(trophy.get_scorerate(), 80.0);
+    }
+
+    #[test]
+    fn test_trophy_data_default() {
+        let trophy = TrophyData::default();
+        assert_eq!(trophy.get_name(), "");
+        assert_eq!(trophy.get_missrate(), 0.0);
+        assert_eq!(trophy.get_scorerate(), 0.0);
+    }
+
+    #[test]
+    fn test_trophy_data_setters() {
+        let mut trophy = TrophyData::default();
+        trophy.set_name("Gold".to_string());
+        trophy.set_missrate(5.0);
+        trophy.set_scorerate(95.0);
+
+        assert_eq!(trophy.get_name(), "Gold");
+        assert_eq!(trophy.get_missrate(), 5.0);
+        assert_eq!(trophy.get_scorerate(), 95.0);
+    }
+
+    #[test]
+    fn test_trophy_data_validate() {
+        // Valid case: has name, missrate > 0, scorerate < 100
+        let mut valid = TrophyData::new("Test".to_string(), 5.0, 90.0);
+        assert!(valid.validate());
+
+        // Invalid: no name
+        let mut no_name = TrophyData::default();
+        no_name.missrate = 5.0;
+        no_name.scorerate = 90.0;
+        assert!(!no_name.validate());
+
+        // Invalid: missrate <= 0
+        let mut zero_miss = TrophyData::new("Test".to_string(), 0.0, 90.0);
+        assert!(!zero_miss.validate());
+
+        // Invalid: scorerate >= 100
+        let mut high_score = TrophyData::new("Test".to_string(), 5.0, 100.0);
+        assert!(!high_score.validate());
+    }
+
+    #[test]
+    fn test_trophy_data_serde_round_trip() {
+        let trophy = TrophyData::new("Diamond".to_string(), 3.5, 95.0);
+        let json = serde_json::to_string(&trophy).unwrap();
+        let deserialized: TrophyData = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.get_name(), "Diamond");
+        assert_eq!(deserialized.get_missrate(), 3.5);
+        assert_eq!(deserialized.get_scorerate(), 95.0);
+    }
+}
