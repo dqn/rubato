@@ -79,6 +79,45 @@ Standalone GUI. Can be deferred.
 
 - [x] `beatoraja.launcher` (21 files, 9,210 lines) — Settings GUI (egui)
 
+## Phase 10: Remaining Modules (~2,726 lines)
+
+Untranslated Java files not covered by Phase 1–9.
+
+- [ ] `beatoraja.song` (8 files, 2,206 lines) — Song data model & DB accessor
+- [ ] `beatoraja.controller` (3 files, 381 lines) — Lwjgl3 gamepad (LibGDX-dependent)
+- [ ] `beatoraja.system` (1 file, 139 lines) — RobustFile I/O utility
+
+## Phase 11: Integration & Wiring
+
+Replace stubs with real cross-crate imports. No new translation — just connecting existing code.
+
+- [ ] Replace `MainController` stubs across 9+ crates with `beatoraja-core` import
+- [ ] Replace `Config`/`PlayerConfig` stubs with `beatoraja-core` import
+- [ ] Replace `TextureRegion`/`Texture` stubs with `beatoraja-skin` import
+- [ ] Replace `SongData` stubs with `beatoraja-core` (or new `beatoraja-song`) import
+- [ ] Resolve circular dependency issues if any arise
+- [ ] Remove empty/unused `stubs.rs` files
+
+## Phase 12: Binary Entry Point
+
+Create an executable binary target.
+
+- [ ] Add `[[bin]]` target to workspace (e.g. `beatoraja-bin` crate)
+- [ ] Implement `main()` wiring `MainLoader` → `BeatorajaGame` → game loop
+- [ ] Replace LibGDX `Lwjgl3Application` with Bevy app runner or equivalent
+
+## Phase 13: External Library Integration
+
+Replace `todo!()` stubs with real library calls (~377 `todo!()` total).
+
+- [ ] LibGDX rendering → Bevy (TextureRegion, SpriteBatch, ShaderProgram, etc.)
+- [ ] JavaFX UI → egui (launcher views, ~40 `todo!()`)
+- [ ] LuaJ → mlua (Lua skin loader, ~40 `todo!()`)
+- [ ] PortAudio → cpal/Kira (audio driver, ~20 `todo!()`)
+- [ ] FFmpeg → ffmpeg-next (BGA video processing)
+- [ ] javax.sound.midi → midir (MIDI device enumeration)
+- [ ] 7z extraction → sevenz-rust
+
 ---
 
 ## Testing Checkpoints
@@ -92,3 +131,7 @@ Standalone GUI. Can be deferred.
 | 6 | Skin rendering with actual skins |
 | 7 | Full game flow (select → play → result) |
 | 9 | Launcher settings GUI |
+| 10 | Song database operations |
+| 11 | Cross-crate compilation without stubs |
+| 12 | Application launches (blank window) |
+| 13 | Full game playable |
