@@ -1,0 +1,13 @@
+[package]
+name = "beatoraja-input"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+log.workspace = true
+bms-model.workspace = true
+beatoraja-common.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
