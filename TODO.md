@@ -117,11 +117,15 @@ Replace `todo!()` stubs with real library calls (~377 `todo!()` total).
 
 - [ ] LibGDX rendering → Bevy (TextureRegion, SpriteBatch, ShaderProgram, etc.)
 - [ ] JavaFX UI → egui (launcher views, ~40 `todo!()`)
+  - [ ] File dialogs (`show_directory_chooser`, `show_file_chooser`) → `rfd` or egui file dialog
+  - [ ] `open_url_in_browser` / `open_folder_in_file_manager` → `open` crate
+  - [ ] Monitor enumeration on non-macOS → winit `ActiveEventLoop::available_monitors()` (available once egui event loop is running)
 - [ ] LuaJ → mlua (Lua skin loader, ~40 `todo!()`)
-- [ ] PortAudio → cpal/Kira (audio driver, ~20 `todo!()`)
+- [ ] PortAudio → cpal/Kira (audio driver, ~20 `todo!()`) — device enumeration done in Phase 15e; audio playback driver remains
 - [ ] FFmpeg → ffmpeg-next (BGA video processing)
 - [ ] javax.sound.midi → midir (MIDI device enumeration)
 - [ ] 7z extraction → sevenz-rust
+- [ ] LR2 score import (`play_configuration_view.rs`) → rusqlite + ScoreDatabaseAccessor
 
 ## Phase 14: Remaining Stub Unification
 
@@ -263,6 +267,7 @@ Replace or remove stubs with no direct Java equivalent.
 Remove all remaining `stubs.rs` files or reduce to zero non-rendering stubs.
 
 - [ ] Audit each crate's `stubs.rs` — remove stubs that are now unused
+- [ ] Audit `beatoraja-launcher/stubs.rs` utility stubs: `show_directory_chooser`, `show_file_chooser`, `open_url_in_browser`, `open_folder_in_file_manager` (deferred to Phase 13 egui integration)
 - [ ] Move Phase 13 rendering stubs (if any remain) into dedicated `rendering_stubs.rs` to separate from structural stubs
 - [ ] Verify: no non-rendering stubs remain outside `rendering_stubs.rs`
 - [ ] Verify: all tests pass, zero clippy warnings, clean `cargo fmt`
