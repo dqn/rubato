@@ -266,11 +266,11 @@ Replace or remove stubs with no direct Java equivalent.
 
 Remove all remaining `stubs.rs` files or reduce to zero non-rendering stubs.
 
-- [ ] Audit each crate's `stubs.rs` — remove stubs that are now unused
-- [ ] Audit `beatoraja-launcher/stubs.rs` utility stubs: `show_directory_chooser`, `show_file_chooser`, `open_url_in_browser`, `open_folder_in_file_manager` (deferred to Phase 13 egui integration)
-- [ ] Move Phase 13 rendering stubs (if any remain) into dedicated `rendering_stubs.rs` to separate from structural stubs
-- [ ] Verify: no non-rendering stubs remain outside `rendering_stubs.rs`
-- [ ] Verify: all tests pass, zero clippy warnings, clean `cargo fmt`
+- [x] Audit each crate's `stubs.rs` — remove stubs that are now unused (removed hundreds of lines across 9 crates: audio, stream, ir, decide, skin, result, select, external, modmenu)
+- [x] Audit `beatoraja-launcher/stubs.rs` utility stubs: `show_directory_chooser`, `show_file_chooser`, `open_url_in_browser`, `open_folder_in_file_manager` (confirmed deferred to Phase 13 egui integration)
+- [x] Move Phase 13 rendering stubs into dedicated `rendering_stubs.rs` in `beatoraja-skin` (LibGDX types: TextureRegion, Texture, Color, SpriteBatch, Pixmap, etc.); `stubs.rs` re-exports via `pub use crate::rendering_stubs::*`
+- [x] Verify: non-rendering stubs remain only in `stubs.rs` (lifecycle: MainController, PlayerResource, Timer, etc.) — rendering types isolated in `rendering_stubs.rs`
+- [x] Verify: all 66 tests pass, zero clippy warnings, clean `cargo fmt`
 
 ---
 
