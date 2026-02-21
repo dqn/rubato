@@ -40,8 +40,8 @@ Dependency graph order. Each module is ported only after its dependencies are co
 ### 13f: egui UI (partial)
 - [x] `todo!()` → `log::warn!()` fallbacks across launcher, modmenu, select, result, decide
 - [x] `open_url_in_browser` / `open_folder_in_file_manager` → `open` crate
-- [ ] Full egui UI integration (launcher views, mod menu) — deferred
-- [ ] Monitor enumeration on non-macOS → winit `ActiveEventLoop::available_monitors()` (available once egui event loop is running)
+- [ ] Full egui UI integration (launcher views, mod menu) — deferred: requires egui-wgpu render pass integration into the winit event loop (`beatoraja-bin`), egui widget porting for all launcher settings views, and mod menu overlay. Blocked until `beatoraja-render` GpuContext exposes an egui-compatible surface.
+- [ ] Monitor enumeration on non-macOS → winit `ActiveEventLoop::available_monitors()` — blocked: requires the egui/winit event loop to be running (Phase 13f egui integration)
 
 ### 13g: FFmpeg / Remaining (partial)
 - [x] `todo!()` → `log::warn!()` fallbacks across core, types, obs, ir, external, controller
@@ -81,15 +81,15 @@ Dependency graph order. Each module is ported only after its dependencies are co
 
 ## Phase 18: Post-Phase 13 Lifecycle Wiring
 
-Depends on: Phase 13 (rendering & egui integration complete).
+Depends on: Phase 13f (egui UI integration) and Phase 13c (rendering pipeline fully connected).
 
-- [ ] Replace `MainController` stubs in 8 crates (select, ir, obs, result, decide, external, modmenu, md-processor) with real `beatoraja-core::MainController`
-- [ ] Replace `PlayerResource` stubs in 6 crates (select, result, decide, external, modmenu, obs) with real `beatoraja-core::PlayerResource`
-- [ ] Replace `MainState` stubs with real trait impls (requires per-screen concrete types from Phase 13)
-- [ ] Remove all `stubs.rs` files (target: zero remaining stubs)
-- [ ] Remove `rendering_stubs.rs` (all types replaced by wgpu equivalents from Phase 13)
-- [ ] E2E gameplay flow test: select → decide → play → result screen transitions
-- [ ] Verify: all tests pass, zero clippy warnings, clean `cargo fmt`
+- [ ] Replace `MainController` stubs in 8 crates (select, ir, obs, result, decide, external, modmenu, md-processor) with real `beatoraja-core::MainController` — blocked: downstream crates call crate-specific stub APIs not present on real MainController; requires adapter methods or caller updates per crate
+- [ ] Replace `PlayerResource` stubs in 6 crates (select, result, decide, external, modmenu, obs) with real `beatoraja-core::PlayerResource` — blocked: same adapter pattern needed; `PlayerResource` holds rendering/audio handles whose types depend on Phase 13 integration
+- [ ] Replace `MainState` stubs with real trait impls — blocked: requires per-screen concrete types (PlayState, SelectState, etc.) to implement the `MainState` trait with real rendering callbacks
+- [ ] Remove all `stubs.rs` files (target: zero remaining stubs) — blocked: depends on above three stub replacements completing first
+- [ ] Remove `rendering_stubs.rs` (all types replaced by wgpu equivalents from Phase 13) — blocked: skin crates still reference rendering stub types; requires full `beatoraja-render` type propagation
+- [ ] E2E gameplay flow test: select → decide → play → result screen transitions — blocked: requires all stubs removed and real screen implementations wired
+- [ ] Verify: all tests pass, zero clippy warnings, clean `cargo fmt` — blocked: final gate after all above tasks complete
 
 ---
 
