@@ -3,6 +3,10 @@
 
 use std::path::{Path, PathBuf};
 
+use beatoraja_types::main_controller_access::MainControllerAccess;
+use beatoraja_types::main_state_type::MainStateType as TypesMainStateType;
+use beatoraja_types::player_resource_access::PlayerResourceAccess;
+
 // =========================================================================
 // Real type re-exports (replaced from stubs)
 // =========================================================================
@@ -47,6 +51,36 @@ impl MainController {
 
     pub fn get_player_resource(&self) -> PlayerResource {
         todo!("MainController::get_player_resource - Phase 8+ dependency")
+    }
+}
+
+impl MainControllerAccess for MainController {
+    fn get_config(&self) -> &beatoraja_types::config::Config {
+        todo!("MainController::MainControllerAccess::get_config")
+    }
+    fn get_player_config(&self) -> &beatoraja_types::player_config::PlayerConfig {
+        todo!("MainController::MainControllerAccess::get_player_config")
+    }
+    fn change_state(&mut self, _state: TypesMainStateType) {
+        todo!("MainController::MainControllerAccess::change_state")
+    }
+    fn save_config(&self) {
+        todo!("MainController::MainControllerAccess::save_config")
+    }
+    fn exit(&self) {
+        todo!("MainController::MainControllerAccess::exit")
+    }
+    fn save_last_recording(&self, _reason: &str) {
+        todo!("MainController::MainControllerAccess::save_last_recording")
+    }
+    fn update_song(&mut self, _path: Option<&str>) {
+        todo!("MainController::MainControllerAccess::update_song")
+    }
+    fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
+        None
+    }
+    fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
+        None
     }
 }
 
@@ -563,6 +597,89 @@ pub struct PlayerResource;
 impl PlayerResource {
     pub fn get_reverse_lookup_data(&self) -> Vec<String> {
         todo!("PlayerResource::get_reverse_lookup_data - Phase 8+ dependency")
+    }
+}
+
+impl PlayerResourceAccess for PlayerResource {
+    fn get_config(&self) -> &beatoraja_types::config::Config {
+        todo!("PlayerResource::PlayerResourceAccess::get_config")
+    }
+    fn get_player_config(&self) -> &beatoraja_types::player_config::PlayerConfig {
+        todo!("PlayerResource::PlayerResourceAccess::get_player_config")
+    }
+    fn get_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
+        None
+    }
+    fn get_rival_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
+        None
+    }
+    fn get_target_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
+        None
+    }
+    fn get_course_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
+        None
+    }
+    fn set_course_score_data(&mut self, _score: beatoraja_types::score_data::ScoreData) {}
+    fn get_songdata(&self) -> Option<&beatoraja_types::song_data::SongData> {
+        None
+    }
+    fn get_replay_data(&self) -> Option<&beatoraja_types::replay_data::ReplayData> {
+        None
+    }
+    fn get_course_replay(&self) -> &[beatoraja_types::replay_data::ReplayData] {
+        &[]
+    }
+    fn add_course_replay(&mut self, _rd: beatoraja_types::replay_data::ReplayData) {}
+    fn get_course_data(&self) -> Option<&beatoraja_types::course_data::CourseData> {
+        None
+    }
+    fn get_course_index(&self) -> usize {
+        0
+    }
+    fn next_course(&mut self) -> bool {
+        false
+    }
+    fn get_constraint(&self) -> Vec<beatoraja_types::course_data::CourseDataConstraint> {
+        vec![]
+    }
+    fn get_gauge(&self) -> Option<&Vec<Vec<f32>>> {
+        None
+    }
+    fn get_groove_gauge(&self) -> Option<&beatoraja_types::groove_gauge::GrooveGauge> {
+        None
+    }
+    fn get_course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
+        static EMPTY: Vec<Vec<Vec<f32>>> = Vec::new();
+        &EMPTY
+    }
+    fn add_course_gauge(&mut self, _gauge: Vec<Vec<f32>>) {}
+    fn get_maxcombo(&self) -> i32 {
+        0
+    }
+    fn get_org_gauge_option(&self) -> i32 {
+        0
+    }
+    fn set_org_gauge_option(&mut self, _val: i32) {}
+    fn get_assist(&self) -> i32 {
+        0
+    }
+    fn is_update_score(&self) -> bool {
+        false
+    }
+    fn is_update_course_score(&self) -> bool {
+        false
+    }
+    fn is_force_no_ir_send(&self) -> bool {
+        false
+    }
+    fn is_freq_on(&self) -> bool {
+        false
+    }
+    fn get_reverse_lookup_data(&self) -> Vec<String> {
+        vec![]
+    }
+    fn get_reverse_lookup_levels(&self) -> Vec<String> {
+        vec![]
     }
 }
 
