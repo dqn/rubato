@@ -321,6 +321,7 @@ Added unit tests for major crates that previously had zero tests.
 - [x] Fix course_data: serde aliases for CourseDataConstraint enum, TrophyData validate empty name
 - [ ] Add missing fixtures for modules not yet covered (modmenu, select bar, stream) — deferred until Java exporter updated
 - [ ] Reactivate remaining 17 pending test files — blocked: compare_pattern (make_random private), compare_bga_timeline (BGAProcessor stubbed), Tier 3 tests (e2e_helpers, render snapshots, judge/rule API mismatch)
+- [ ] Fix `pattern_modifier_autoplay_longnote_types` (currently `#[ignore]`): pre-existing index out of bounds in `TimeLine::get_note` when processing `longnote_types.bms` via AutoplayModifier
 
 ### 16c: Integration Tests
 
