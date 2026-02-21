@@ -1,0 +1,41 @@
+[workspace]
+members = [
+    "crates/bms-model",
+    "crates/bms-table",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+# Internal crates
+bms-model = { path = "crates/bms-model" }
+bms-table = { path = "crates/bms-table" }
+
+# Error handling
+anyhow = "1"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Hashing
+md-5 = "0.10"
+sha2 = "0.10"
+
+# Encoding
+encoding_rs = "0.8"
+
+# Logging
+log = "0.4"
+
+# HTTP
+reqwest = { version = "0.12", features = ["blocking"] }
+
+# Regex
+regex = "1"
+
+# Testing
+tempfile = "3"
