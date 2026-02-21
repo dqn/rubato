@@ -21,6 +21,7 @@ pub fn sync_course_result_state(state: &mut SharedGameState, resource: &PlayerRe
         &resource.oldscore,
         resource.maxcombo,
         resource.target_exscore,
+        None, // Course result doesn't show individual song metadata
     );
 
     // Course mode flag

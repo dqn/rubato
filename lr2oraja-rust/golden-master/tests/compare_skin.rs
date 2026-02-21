@@ -32,7 +32,10 @@ fn project_root() -> PathBuf {
 }
 
 fn skins_dir() -> PathBuf {
-    project_root().join("skins/ECFN")
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .join("skin/ECFN")
 }
 
 fn test_bms_dir() -> PathBuf {

@@ -442,6 +442,26 @@ impl GameStateHandler for MusicSelectState {
                     select_skin_state::sync_song_information(shared, None);
                 }
             }
+
+            // Player mode flags (autoplay, replay, practice, save-score)
+            select_skin_state::sync_player_mode_flags(shared, &ctx.resource.player_mode);
+
+            // Player name
+            let player_name = ctx.config.playername.as_deref().unwrap_or("");
+            select_skin_state::sync_player_name(shared, player_name);
+
+            // Folder clear statistics
+            let current_hashes: Vec<String> = self
+                .bar_manager
+                .bars()
+                .iter()
+                .filter_map(|bar| bar.as_song().map(|s| s.sha256.clone()))
+                .collect();
+            select_skin_state::sync_folder_clear_stats(
+                shared,
+                &self.score_lamp_cache,
+                &current_hashes,
+            );
         }
     }
 

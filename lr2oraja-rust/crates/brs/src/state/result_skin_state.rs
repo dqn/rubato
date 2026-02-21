@@ -8,37 +8,68 @@ use bms_skin::property_id::{
     FLOAT_BEST_RATE, FLOAT_SCORE_RATE2, NUMBER_BAD, NUMBER_BAD_PLUS_POOR_PLUS_MISS,
     NUMBER_BEST_RATE, NUMBER_BEST_RATE_AFTERDOT, NUMBER_CLEAR, NUMBER_COMBOBREAK,
     NUMBER_DIFF_EXSCORE, NUMBER_DIFF_HIGHSCORE, NUMBER_DIFF_HIGHSCORE2, NUMBER_DIFF_MAXCOMBO,
-    NUMBER_DIFF_MISSCOUNT, NUMBER_EARLY_BAD, NUMBER_EARLY_GOOD, NUMBER_EARLY_GREAT,
-    NUMBER_EARLY_MISS, NUMBER_EARLY_PERFECT, NUMBER_EARLY_POOR, NUMBER_GOOD, NUMBER_GREAT,
-    NUMBER_HIGHSCORE2, NUMBER_LATE_BAD, NUMBER_LATE_GOOD, NUMBER_LATE_GREAT, NUMBER_LATE_MISS,
-    NUMBER_LATE_PERFECT, NUMBER_LATE_POOR, NUMBER_MAXCOMBO2, NUMBER_MAXCOMBO3, NUMBER_MISS,
-    NUMBER_MISSCOUNT2, NUMBER_PERFECT, NUMBER_POOR, NUMBER_POOR_PLUS_MISS, NUMBER_SCORE_RATE,
-    NUMBER_SCORE_RATE_AFTERDOT, NUMBER_SCORE2, NUMBER_SCORE3, NUMBER_TARGET_CLEAR,
-    NUMBER_TARGET_MAXCOMBO, NUMBER_TARGET_MISSCOUNT, NUMBER_TOTALEARLY, NUMBER_TOTALLATE,
-    NUMBER_TOTALNOTES2, OPTION_1PWIN, OPTION_2PWIN, OPTION_A, OPTION_AA, OPTION_AAA, OPTION_B,
-    OPTION_BAD_EXIST, OPTION_BEST_A_1P, OPTION_BEST_AA_1P, OPTION_BEST_AAA_1P, OPTION_BEST_B_1P,
-    OPTION_BEST_C_1P, OPTION_BEST_D_1P, OPTION_BEST_E_1P, OPTION_BEST_F_1P, OPTION_C, OPTION_D,
-    OPTION_DRAW, OPTION_DRAW_MAXCOMBO, OPTION_DRAW_MISSCOUNT, OPTION_DRAW_SCORE,
-    OPTION_DRAW_SCORERANK, OPTION_DRAW_TARGET, OPTION_E, OPTION_F, OPTION_GOOD_EXIST,
-    OPTION_GREAT_EXIST, OPTION_MISS_EXIST, OPTION_PERFECT_EXIST, OPTION_POOR_EXIST,
-    OPTION_RESULT_A_1P, OPTION_RESULT_AA_1P, OPTION_RESULT_AAA_1P, OPTION_RESULT_B_1P,
-    OPTION_RESULT_C_1P, OPTION_RESULT_CLEAR, OPTION_RESULT_D_1P, OPTION_RESULT_E_1P,
-    OPTION_RESULT_F_1P, OPTION_RESULT_FAIL, OPTION_UPDATE_MAXCOMBO, OPTION_UPDATE_MISSCOUNT,
-    OPTION_UPDATE_SCORE, OPTION_UPDATE_SCORERANK, OPTION_UPDATE_TARGET,
+    NUMBER_DIFF_MISSCOUNT, NUMBER_DIFF_TARGETSCORE, NUMBER_EARLY_BAD, NUMBER_EARLY_GOOD,
+    NUMBER_EARLY_GREAT, NUMBER_EARLY_MISS, NUMBER_EARLY_PERFECT, NUMBER_EARLY_POOR, NUMBER_GOOD,
+    NUMBER_GREAT, NUMBER_HIGHSCORE2, NUMBER_LATE_BAD, NUMBER_LATE_GOOD, NUMBER_LATE_GREAT,
+    NUMBER_LATE_MISS, NUMBER_LATE_PERFECT, NUMBER_LATE_POOR, NUMBER_MAXCOMBO2, NUMBER_MAXCOMBO3,
+    NUMBER_MISS, NUMBER_MISSCOUNT2, NUMBER_PERFECT, NUMBER_POOR, NUMBER_POOR_PLUS_MISS,
+    NUMBER_SCORE_RATE, NUMBER_SCORE_RATE_AFTERDOT, NUMBER_SCORE2, NUMBER_SCORE3,
+    NUMBER_TARGET_CLEAR, NUMBER_TARGET_MAXCOMBO, NUMBER_TARGET_MISSCOUNT, NUMBER_TARGET_SCORE,
+    NUMBER_TARGET_SCORE_RATE, NUMBER_TARGET_SCORE_RATE_AFTERDOT,
+    NUMBER_TARGET_SCORE_RATE_AFTERDOT2, NUMBER_TARGET_SCORE_RATE2, NUMBER_TARGET_SCORE2,
+    NUMBER_TOTALEARLY, NUMBER_TOTALLATE, NUMBER_TOTALNOTES2, OPTION_1PWIN, OPTION_2PWIN, OPTION_A,
+    OPTION_AA, OPTION_AAA, OPTION_B, OPTION_BAD_EXIST, OPTION_BEST_A_1P, OPTION_BEST_AA_1P,
+    OPTION_BEST_AAA_1P, OPTION_BEST_B_1P, OPTION_BEST_C_1P, OPTION_BEST_D_1P, OPTION_BEST_E_1P,
+    OPTION_BEST_F_1P, OPTION_C, OPTION_D, OPTION_DRAW, OPTION_DRAW_MAXCOMBO, OPTION_DRAW_MISSCOUNT,
+    OPTION_DRAW_SCORE, OPTION_DRAW_SCORERANK, OPTION_DRAW_TARGET, OPTION_E, OPTION_F,
+    OPTION_GOOD_EXIST, OPTION_GREAT_EXIST, OPTION_MISS_EXIST, OPTION_PERFECT_EXIST,
+    OPTION_POOR_EXIST, OPTION_RESULT_A_1P, OPTION_RESULT_AA_1P, OPTION_RESULT_AAA_1P,
+    OPTION_RESULT_B_1P, OPTION_RESULT_C_1P, OPTION_RESULT_CLEAR, OPTION_RESULT_D_1P,
+    OPTION_RESULT_E_1P, OPTION_RESULT_F_1P, OPTION_RESULT_FAIL, OPTION_UPDATE_MAXCOMBO,
+    OPTION_UPDATE_MISSCOUNT, OPTION_UPDATE_SCORE, OPTION_UPDATE_SCORERANK, OPTION_UPDATE_TARGET,
+    STRING_ARTIST, STRING_FULLTITLE, STRING_GENRE, STRING_SUBARTIST, STRING_SUBTITLE, STRING_TITLE,
 };
 
 use crate::game_state::SharedGameState;
 
+/// Song metadata for result screen display.
+pub struct ResultSongInfo<'a> {
+    pub title: &'a str,
+    pub subtitle: &'a str,
+    pub artist: &'a str,
+    pub sub_artist: &'a str,
+    pub genre: &'a str,
+}
+
 /// Synchronize result-specific state into SharedGameState for skin rendering.
 ///
 /// `target_exscore`: optional rival/target EX score for comparison flags.
+/// `song_info`: optional song metadata for display strings.
+#[allow(clippy::too_many_arguments)]
 pub fn sync_result_state(
     state: &mut SharedGameState,
     score: &ScoreData,
     oldscore: &ScoreData,
     maxcombo: i32,
     target_exscore: Option<i32>,
+    song_info: Option<&ResultSongInfo<'_>>,
 ) {
+    // Song metadata strings (if provided)
+    if let Some(info) = song_info {
+        state.strings.insert(STRING_TITLE, info.title.to_string());
+        state
+            .strings
+            .insert(STRING_SUBTITLE, info.subtitle.to_string());
+        state.strings.insert(
+            STRING_FULLTITLE,
+            format!("{} {}", info.title, info.subtitle),
+        );
+        state.strings.insert(STRING_ARTIST, info.artist.to_string());
+        state
+            .strings
+            .insert(STRING_SUBARTIST, info.sub_artist.to_string());
+        state.strings.insert(STRING_GENRE, info.genre.to_string());
+    }
     // Score values
     let ex = score.exscore();
     let old_ex = oldscore.exscore();
@@ -259,6 +290,29 @@ pub fn sync_result_state(
 
     // Target/rival comparison (Java: MusicResult rivalScore)
     if let Some(target) = target_exscore {
+        state.integers.insert(NUMBER_TARGET_SCORE, target);
+        state.integers.insert(NUMBER_TARGET_SCORE2, target);
+        state.integers.insert(NUMBER_DIFF_TARGETSCORE, ex - target);
+
+        // Target score rate
+        if max_ex > 0 {
+            let target_rate_100 = target as f64 * 100.0 / max_ex as f64;
+            state
+                .integers
+                .insert(NUMBER_TARGET_SCORE_RATE, target_rate_100 as i32);
+            state.integers.insert(
+                NUMBER_TARGET_SCORE_RATE_AFTERDOT,
+                ((target_rate_100 * 100.0) as i32) % 100,
+            );
+            state
+                .integers
+                .insert(NUMBER_TARGET_SCORE_RATE2, target_rate_100 as i32);
+            state.integers.insert(
+                NUMBER_TARGET_SCORE_RATE_AFTERDOT2,
+                ((target_rate_100 * 100.0) as i32) % 100,
+            );
+        }
+
         state.booleans.insert(OPTION_UPDATE_TARGET, ex > target);
         state.booleans.insert(OPTION_DRAW_TARGET, ex == target);
         state.booleans.insert(OPTION_1PWIN, ex > target);
@@ -403,7 +457,7 @@ mod tests {
         let mut state = SharedGameState::default();
         let score = make_score(10, 20);
         let oldscore = make_score(5, 20);
-        sync_result_state(&mut state, &score, &oldscore, 15, None);
+        sync_result_state(&mut state, &score, &oldscore, 15, None, None);
 
         assert_eq!(*state.integers.get(&NUMBER_SCORE2).unwrap(), 20); // 10 * 2
         assert_eq!(*state.integers.get(&NUMBER_MAXCOMBO2).unwrap(), 15);
@@ -416,7 +470,7 @@ mod tests {
         let mut score = ScoreData::default();
         score.clear = bms_rule::ClearType::Normal;
         score.notes = 10;
-        sync_result_state(&mut state, &score, &ScoreData::default(), 0, None);
+        sync_result_state(&mut state, &score, &ScoreData::default(), 0, None, None);
         assert!(*state.booleans.get(&OPTION_RESULT_CLEAR).unwrap());
         assert!(!*state.booleans.get(&OPTION_RESULT_FAIL).unwrap());
     }
@@ -427,7 +481,7 @@ mod tests {
         let mut score = ScoreData::default();
         score.clear = bms_rule::ClearType::Failed;
         score.notes = 10;
-        sync_result_state(&mut state, &score, &ScoreData::default(), 0, None);
+        sync_result_state(&mut state, &score, &ScoreData::default(), 0, None, None);
         assert!(!*state.booleans.get(&OPTION_RESULT_CLEAR).unwrap());
         assert!(*state.booleans.get(&OPTION_RESULT_FAIL).unwrap());
     }
@@ -455,7 +509,7 @@ mod tests {
         score.minbp = 3;
         let mut oldscore = make_score(10, 20);
         oldscore.minbp = 5;
-        sync_result_state(&mut state, &score, &oldscore, 18, None);
+        sync_result_state(&mut state, &score, &oldscore, 18, None, None);
         assert!(*state.booleans.get(&OPTION_UPDATE_SCORE).unwrap());
         assert!(*state.booleans.get(&OPTION_UPDATE_MISSCOUNT).unwrap());
     }
@@ -468,6 +522,7 @@ mod tests {
             &ScoreData::default(),
             &ScoreData::default(),
             0,
+            None,
             None,
         );
         assert!(state.integers.contains_key(&NUMBER_SCORE2));

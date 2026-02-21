@@ -15,33 +15,41 @@ use bms_skin::property_id::{
     FLOAT_CHART_TOTALGAUGE, FLOAT_SCORE_RATE2, NUMBER_BAD_RATE, NUMBER_BAD2, NUMBER_BEST_RATE,
     NUMBER_BEST_RATE_AFTERDOT, NUMBER_CLEARCOUNT, NUMBER_DENSITY_AVERAGE,
     NUMBER_DENSITY_AVERAGE_AFTERDOT, NUMBER_DENSITY_END, NUMBER_DENSITY_END_AFTERDOT,
-    NUMBER_DENSITY_PEAK, NUMBER_DENSITY_PEAK_AFTERDOT, NUMBER_FAILCOUNT, NUMBER_FOLDER_TOTALSONGS,
-    NUMBER_GOOD_RATE, NUMBER_GOOD2, NUMBER_GREAT_RATE, NUMBER_GREAT2, NUMBER_HIGHSCORE2,
-    NUMBER_MAINBPM, NUMBER_MAXBPM, NUMBER_MAXCOMBO2, NUMBER_MINBPM, NUMBER_MISSCOUNT2,
-    NUMBER_PERFECT_RATE, NUMBER_PERFECT2, NUMBER_PLAYCOUNT, NUMBER_PLAYLEVEL, NUMBER_POOR_RATE,
-    NUMBER_POOR2, NUMBER_RIVAL_CLEARCOUNT, NUMBER_RIVAL_FAILCOUNT, NUMBER_RIVAL_MAXCOMBO,
-    NUMBER_RIVAL_MISSCOUNT, NUMBER_RIVAL_PLAYCOUNT, NUMBER_RIVAL_SCORE, NUMBER_SCORE_RATE,
-    NUMBER_SCORE_RATE_AFTERDOT, NUMBER_SCORE2, NUMBER_SONGGAUGE_TOTAL, NUMBER_TOTALNOTE_BSS,
-    NUMBER_TOTALNOTE_LN, NUMBER_TOTALNOTE_NORMAL, NUMBER_TOTALNOTE_SCRATCH, NUMBER_TOTALNOTES2,
-    OPTION_5KEYSONG, OPTION_7KEYSONG, OPTION_9KEYSONG, OPTION_10KEYSONG, OPTION_14KEYSONG,
-    OPTION_24KEYDPSONG, OPTION_24KEYSONG, OPTION_BGA, OPTION_BPMCHANGE, OPTION_COMPARE_RIVAL,
-    OPTION_DIFFICULTY0, OPTION_DIFFICULTY1, OPTION_DIFFICULTY2, OPTION_DIFFICULTY3,
-    OPTION_DIFFICULTY4, OPTION_DIFFICULTY5, OPTION_FOLDERBAR, OPTION_GRADEBAR,
-    OPTION_GRADEBAR_CLASS, OPTION_GRADEBAR_CN, OPTION_GRADEBAR_GAUGE_5KEYS,
+    NUMBER_DENSITY_PEAK, NUMBER_DENSITY_PEAK_AFTERDOT, NUMBER_FAILCOUNT, NUMBER_FOLDER_ASSIST,
+    NUMBER_FOLDER_EASY, NUMBER_FOLDER_EXHARD, NUMBER_FOLDER_FAILED, NUMBER_FOLDER_FULLCOMBO,
+    NUMBER_FOLDER_HARD, NUMBER_FOLDER_MAX, NUMBER_FOLDER_NOPLAY, NUMBER_FOLDER_NORMAL,
+    NUMBER_FOLDER_PERFECT, NUMBER_FOLDER_TOTALSONGS, NUMBER_GOOD_RATE, NUMBER_GOOD2,
+    NUMBER_GREAT_RATE, NUMBER_GREAT2, NUMBER_HIGHSCORE2, NUMBER_JUDGERANK, NUMBER_MAINBPM,
+    NUMBER_MAXBPM, NUMBER_MAXCOMBO2, NUMBER_MINBPM, NUMBER_MISSCOUNT2, NUMBER_PERFECT_RATE,
+    NUMBER_PERFECT2, NUMBER_PLAYCOUNT, NUMBER_PLAYLEVEL, NUMBER_POOR_RATE, NUMBER_POOR2,
+    NUMBER_RIVAL_CLEARCOUNT, NUMBER_RIVAL_FAILCOUNT, NUMBER_RIVAL_MAXCOMBO, NUMBER_RIVAL_MISSCOUNT,
+    NUMBER_RIVAL_PLAYCOUNT, NUMBER_RIVAL_SCORE, NUMBER_SCORE_RATE, NUMBER_SCORE_RATE_AFTERDOT,
+    NUMBER_SCORE2, NUMBER_SONGGAUGE_TOTAL, NUMBER_TOTALNOTE_BSS, NUMBER_TOTALNOTE_LN,
+    NUMBER_TOTALNOTE_NORMAL, NUMBER_TOTALNOTE_SCRATCH, NUMBER_TOTALNOTES2, OPTION_5KEYSONG,
+    OPTION_7KEYSONG, OPTION_9KEYSONG, OPTION_10KEYSONG, OPTION_14KEYSONG, OPTION_24KEYDPSONG,
+    OPTION_24KEYSONG, OPTION_AUTOPLAYOFF, OPTION_AUTOPLAYON, OPTION_BACKBMP, OPTION_BANNER,
+    OPTION_BGA, OPTION_BPMCHANGE, OPTION_BPMSTOP, OPTION_COMPARE_RIVAL, OPTION_DIFFICULTY0,
+    OPTION_DIFFICULTY1, OPTION_DIFFICULTY2, OPTION_DIFFICULTY3, OPTION_DIFFICULTY4,
+    OPTION_DIFFICULTY5, OPTION_DISABLE_SAVE_SCORE, OPTION_ENABLE_SAVE_SCORE, OPTION_FOLDERBAR,
+    OPTION_GRADEBAR, OPTION_GRADEBAR_CLASS, OPTION_GRADEBAR_CN, OPTION_GRADEBAR_GAUGE_5KEYS,
     OPTION_GRADEBAR_GAUGE_7KEYS, OPTION_GRADEBAR_GAUGE_9KEYS, OPTION_GRADEBAR_GAUGE_24KEYS,
     OPTION_GRADEBAR_GAUGE_LR2, OPTION_GRADEBAR_HCN, OPTION_GRADEBAR_LN, OPTION_GRADEBAR_MIRROR,
     OPTION_GRADEBAR_NOGOOD, OPTION_GRADEBAR_NOGREAT, OPTION_GRADEBAR_NOSPEED,
-    OPTION_GRADEBAR_RANDOM, OPTION_LN, OPTION_NO_BGA, OPTION_NO_BPMCHANGE, OPTION_NO_LN,
-    OPTION_NOT_COMPARE_RIVAL, OPTION_PANEL1, OPTION_PANEL2, OPTION_PANEL3, OPTION_PLAYABLEBAR,
-    OPTION_RANDOMCOURSEBAR, OPTION_RANDOMSELECTBAR, OPTION_SELECT_BAR_ASSIST_EASY_CLEARED,
-    OPTION_SELECT_BAR_EASY_CLEARED, OPTION_SELECT_BAR_EXHARD_CLEARED, OPTION_SELECT_BAR_FAILED,
+    OPTION_GRADEBAR_RANDOM, OPTION_JUDGE_EASY, OPTION_JUDGE_HARD, OPTION_JUDGE_NORMAL,
+    OPTION_JUDGE_VERYEASY, OPTION_JUDGE_VERYHARD, OPTION_LN, OPTION_NO_BACKBMP, OPTION_NO_BANNER,
+    OPTION_NO_BGA, OPTION_NO_BPMCHANGE, OPTION_NO_LN, OPTION_NO_RANDOMSEQUENCE,
+    OPTION_NO_SAVE_CLEAR, OPTION_NO_STAGEFILE, OPTION_NO_TEXT, OPTION_NOT_COMPARE_RIVAL,
+    OPTION_PANEL1, OPTION_PANEL2, OPTION_PANEL3, OPTION_PLAYABLEBAR, OPTION_RANDOMCOURSEBAR,
+    OPTION_RANDOMSELECTBAR, OPTION_RANDOMSEQUENCE, OPTION_REPLAY_OFF, OPTION_REPLAY_PLAYING,
+    OPTION_SELECT_BAR_ASSIST_EASY_CLEARED, OPTION_SELECT_BAR_EASY_CLEARED,
+    OPTION_SELECT_BAR_EXHARD_CLEARED, OPTION_SELECT_BAR_FAILED,
     OPTION_SELECT_BAR_FULL_COMBO_CLEARED, OPTION_SELECT_BAR_HARD_CLEARED,
     OPTION_SELECT_BAR_LIGHT_ASSIST_EASY_CLEARED, OPTION_SELECT_BAR_MAX_CLEARED,
     OPTION_SELECT_BAR_NORMAL_CLEARED, OPTION_SELECT_BAR_NOT_PLAYED,
     OPTION_SELECT_BAR_PERFECT_CLEARED, OPTION_SELECT_REPLAYDATA, OPTION_SELECT_REPLAYDATA2,
-    OPTION_SELECT_REPLAYDATA3, OPTION_SELECT_REPLAYDATA4, OPTION_SONGBAR,
-    RATE_MUSICSELECT_POSITION, STRING_ARTIST, STRING_FULLTITLE, STRING_GENRE, STRING_RIVAL,
-    STRING_SUBARTIST, STRING_SUBTITLE, STRING_TITLE,
+    OPTION_SELECT_REPLAYDATA3, OPTION_SELECT_REPLAYDATA4, OPTION_SONGBAR, OPTION_STAGEFILE,
+    OPTION_STATE_PRACTICE, OPTION_TEXT, RATE_MUSICSELECT_POSITION, STRING_ARTIST, STRING_FULLTITLE,
+    STRING_GENRE, STRING_PLAYER, STRING_RIVAL, STRING_SUBARTIST, STRING_SUBTITLE, STRING_TITLE,
 };
 
 use crate::game_state::SharedGameState;
@@ -120,6 +128,42 @@ pub fn sync_select_state(
 
             // BPM change flags (H8)
             sync_bpm_flags(state, song_data.minbpm, song_data.maxbpm);
+
+            // Judge rank (Java: NUMBER_JUDGERANK)
+            state.integers.insert(NUMBER_JUDGERANK, song_data.judge);
+            sync_judge_flags(state, song_data.judge);
+
+            // Feature flags: random sequence, BPM stop
+            let has_random = song_data.feature & bms_database::song_data::FEATURE_RANDOM != 0;
+            state.booleans.insert(OPTION_RANDOMSEQUENCE, has_random);
+            state.booleans.insert(OPTION_NO_RANDOMSEQUENCE, !has_random);
+            let has_stop = song_data.feature & bms_database::song_data::FEATURE_STOPSEQUENCE != 0;
+            state.booleans.insert(OPTION_BPMSTOP, has_stop);
+
+            // Content flags: text
+            let has_text = song_data.content & bms_database::song_data::CONTENT_TEXT != 0;
+            state.booleans.insert(OPTION_TEXT, has_text);
+            state.booleans.insert(OPTION_NO_TEXT, !has_text);
+
+            // Stage file / banner / backbmp existence flags
+            state
+                .booleans
+                .insert(OPTION_STAGEFILE, !song_data.stagefile.is_empty());
+            state
+                .booleans
+                .insert(OPTION_NO_STAGEFILE, song_data.stagefile.is_empty());
+            state
+                .booleans
+                .insert(OPTION_BANNER, !song_data.banner.is_empty());
+            state
+                .booleans
+                .insert(OPTION_NO_BANNER, song_data.banner.is_empty());
+            state
+                .booleans
+                .insert(OPTION_BACKBMP, !song_data.backbmp.is_empty());
+            state
+                .booleans
+                .insert(OPTION_NO_BACKBMP, song_data.backbmp.is_empty());
         }
         Some(Bar::Folder { .. })
         | Some(Bar::TableRoot { .. })
@@ -555,6 +599,29 @@ pub fn sync_difficulty_flags(state: &mut SharedGameState, difficulty: i32) {
     state.booleans.insert(ids[idx], true);
 }
 
+/// Synchronize judge difficulty flags for the selected song.
+///
+/// Java: BooleanPropertyFactory OPTION_JUDGE_VERYHARD through OPTION_JUDGE_VERYEASY.
+/// Judge rank mapping: 0=VERY_HARD, 1=HARD, 2=NORMAL, 3=EASY, 4=VERY_EASY.
+fn sync_judge_flags(state: &mut SharedGameState, judge: i32) {
+    let ids = [
+        OPTION_JUDGE_VERYHARD,
+        OPTION_JUDGE_HARD,
+        OPTION_JUDGE_NORMAL,
+        OPTION_JUDGE_EASY,
+        OPTION_JUDGE_VERYEASY,
+    ];
+    for &id in &ids {
+        state.booleans.insert(id, false);
+    }
+    if let Some(&id) = ids.get(judge as usize) {
+        state.booleans.insert(id, true);
+    } else {
+        // Default to NORMAL for unknown judge values
+        state.booleans.insert(OPTION_JUDGE_NORMAL, true);
+    }
+}
+
 /// Synchronize BPM change flags for the selected song.
 pub fn sync_bpm_flags(state: &mut SharedGameState, minbpm: i32, maxbpm: i32) {
     let has_change = minbpm != maxbpm;
@@ -803,6 +870,74 @@ fn sync_selected_score(state: &mut SharedGameState, score: Option<&ScoreData>) {
             }
         }
     }
+}
+
+/// Synchronize player mode flags (autoplay, replay, practice, save-score).
+///
+/// Java: BooleanPropertyFactory OPTION_AUTOPLAYON/AUTOPLAYOFF, OPTION_REPLAY_OFF/PLAYING,
+/// OPTION_STATE_PRACTICE, OPTION_DISABLE_SAVE_SCORE/ENABLE_SAVE_SCORE/NO_SAVE_CLEAR.
+pub fn sync_player_mode_flags(
+    state: &mut SharedGameState,
+    player_mode: &crate::player_resource::PlayerMode,
+) {
+    use crate::player_resource::PlayerMode;
+    let is_autoplay = matches!(player_mode, PlayerMode::Autoplay);
+    state.booleans.insert(OPTION_AUTOPLAYON, is_autoplay);
+    state.booleans.insert(OPTION_AUTOPLAYOFF, !is_autoplay);
+
+    let is_replay = matches!(player_mode, PlayerMode::Replay(_));
+    state.booleans.insert(OPTION_REPLAY_OFF, !is_replay);
+    state.booleans.insert(OPTION_REPLAY_PLAYING, is_replay);
+
+    let is_practice = matches!(player_mode, PlayerMode::Practice);
+    state.booleans.insert(OPTION_STATE_PRACTICE, is_practice);
+
+    // Score saving flags: disabled for autoplay, replay, and practice
+    let save_disabled = is_autoplay || is_replay || is_practice;
+    state
+        .booleans
+        .insert(OPTION_DISABLE_SAVE_SCORE, save_disabled);
+    state
+        .booleans
+        .insert(OPTION_ENABLE_SAVE_SCORE, !save_disabled);
+    // NO_SAVE_CLEAR: when saving is disabled, clear won't be saved either
+    state.booleans.insert(OPTION_NO_SAVE_CLEAR, save_disabled);
+}
+
+/// Synchronize player name string.
+pub fn sync_player_name(state: &mut SharedGameState, player_name: &str) {
+    state.strings.insert(STRING_PLAYER, player_name.to_string());
+}
+
+/// Synchronize folder clear statistics.
+///
+/// Counts songs per clear type from the score lamp cache.
+/// Java: IntegerPropertyFactory NUMBER_FOLDER_NOPLAY(320) through NUMBER_FOLDER_MAX(330).
+pub fn sync_folder_clear_stats(
+    state: &mut SharedGameState,
+    score_lamp_cache: &HashMap<String, i32>,
+    current_song_hashes: &[String],
+) {
+    let mut counts = [0i32; 11]; // indices 0-10 matching ClearType IDs
+
+    for hash in current_song_hashes {
+        let lamp = score_lamp_cache.get(hash).copied().unwrap_or(0);
+        let idx = lamp.clamp(0, 10) as usize;
+        counts[idx] += 1;
+    }
+
+    state.integers.insert(NUMBER_FOLDER_NOPLAY, counts[0]);
+    state.integers.insert(NUMBER_FOLDER_FAILED, counts[1]);
+    state
+        .integers
+        .insert(NUMBER_FOLDER_ASSIST, counts[2] + counts[3]); // Assist + LightAssist
+    state.integers.insert(NUMBER_FOLDER_EASY, counts[4]);
+    state.integers.insert(NUMBER_FOLDER_NORMAL, counts[5]);
+    state.integers.insert(NUMBER_FOLDER_HARD, counts[6]);
+    state.integers.insert(NUMBER_FOLDER_EXHARD, counts[7]);
+    state.integers.insert(NUMBER_FOLDER_FULLCOMBO, counts[8]);
+    state.integers.insert(NUMBER_FOLDER_PERFECT, counts[9]);
+    state.integers.insert(NUMBER_FOLDER_MAX, counts[10]);
 }
 
 fn clear_song_metadata(state: &mut SharedGameState) {

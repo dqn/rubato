@@ -216,12 +216,24 @@ impl GameStateHandler for ResultState {
 
         // Sync result state to shared game state for skin rendering
         if let Some(shared) = &mut ctx.shared_state {
+            let song_info =
+                ctx.resource
+                    .bms_model
+                    .as_ref()
+                    .map(|m| super::result_skin_state::ResultSongInfo {
+                        title: &m.title,
+                        subtitle: &m.subtitle,
+                        artist: &m.artist,
+                        sub_artist: &m.sub_artist,
+                        genre: &m.genre,
+                    });
             super::result_skin_state::sync_result_state(
                 shared,
                 &ctx.resource.score_data,
                 &ctx.resource.oldscore,
                 ctx.resource.maxcombo,
                 ctx.resource.target_exscore,
+                song_info.as_ref(),
             );
         }
     }
