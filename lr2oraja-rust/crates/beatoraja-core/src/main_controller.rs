@@ -336,7 +336,7 @@ impl MainController {
     }
 
     pub fn change_state(&mut self, _state: MainStateType) {
-        todo!("Phase 5+ dependency: state transition (MusicSelector, BMSPlayer, etc.)")
+        log::warn!("not yet implemented: state transition (MusicSelector, BMSPlayer, etc.)");
     }
 
     pub fn create(&mut self) {
@@ -398,7 +398,7 @@ impl MainController {
 
     pub fn exit(&self) {
         // Gdx.app.exit()
-        todo!("Phase 5+ dependency: application exit")
+        log::warn!("not yet implemented: application exit");
     }
 
     pub fn update_main_state_listener(&mut self, _status: i32) {
@@ -472,11 +472,11 @@ impl MainController {
     }
 
     pub fn update_song(&mut self, _path: &str) {
-        todo!("Phase 5+ dependency: SongUpdateThread")
+        log::warn!("not yet implemented: SongUpdateThread");
     }
 
     pub fn update_song_with_flag(&mut self, _path: &str, _update_parent_when_missing: bool) {
-        todo!("Phase 5+ dependency: SongUpdateThread")
+        log::warn!("not yet implemented: SongUpdateThread with flag");
     }
 
     pub fn get_version() -> &'static str {
@@ -510,7 +510,7 @@ impl MainControllerAccess for MainController {
     }
 
     fn change_state(&mut self, _state: MainStateType) {
-        todo!("Phase 5+ dependency: state transition (MusicSelector, BMSPlayer, etc.)")
+        log::warn!("not yet implemented: state transition via MainControllerAccess");
     }
 
     fn save_config(&self) {

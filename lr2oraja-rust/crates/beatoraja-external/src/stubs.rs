@@ -65,32 +65,54 @@ use beatoraja_types::player_resource_access::PlayerResourceAccess;
 pub struct MainController;
 
 impl MainController {
+    fn null_config() -> &'static Config {
+        use std::sync::OnceLock;
+        static CONFIG: OnceLock<Config> = OnceLock::new();
+        CONFIG.get_or_init(Config::default)
+    }
+
+    fn null_player_config() -> &'static PlayerConfig {
+        use std::sync::OnceLock;
+        static PCONFIG: OnceLock<PlayerConfig> = OnceLock::new();
+        PCONFIG.get_or_init(PlayerConfig::default)
+    }
+
     pub fn get_player_resource(&self) -> &PlayerResource {
-        todo!("Phase 8+ dependency: MainController.getPlayerResource")
+        log::warn!("not yet implemented: MainController.getPlayerResource");
+        static RESOURCE: std::sync::OnceLock<PlayerResource> = std::sync::OnceLock::new();
+        RESOURCE.get_or_init(|| PlayerResource {
+            config: Config::default(),
+            songdata: SongData::default(),
+            replay_data: ReplayData::default(),
+            reverse_lookup_levels: Vec::new(),
+            original_mode: Mode::default(),
+        })
     }
 }
 
 impl MainControllerAccess for MainController {
     fn get_config(&self) -> &Config {
-        todo!("MainController::get_config")
+        log::warn!("MainController::get_config called — returning default");
+        Self::null_config()
     }
     fn get_player_config(&self) -> &PlayerConfig {
-        todo!("MainController::get_player_config")
+        log::warn!("MainController::get_player_config called — returning default");
+        Self::null_player_config()
     }
     fn change_state(&mut self, _state: TypesMainStateType) {
-        todo!("MainController::change_state")
+        log::warn!("MainController::change_state called — no-op");
     }
     fn save_config(&self) {
-        todo!("MainController::save_config")
+        log::warn!("MainController::save_config called — no-op");
     }
     fn exit(&self) {
-        todo!("MainController::exit")
+        log::warn!("MainController::exit called — no-op");
     }
     fn save_last_recording(&self, _reason: &str) {
-        todo!("MainController::save_last_recording")
+        log::warn!("MainController::save_last_recording called — no-op");
     }
     fn update_song(&mut self, _path: Option<&str>) {
-        todo!("MainController::update_song")
+        log::warn!("MainController::update_song called — no-op");
     }
     fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
         None
@@ -140,7 +162,9 @@ impl PlayerResourceAccess for PlayerResource {
         &self.config
     }
     fn get_player_config(&self) -> &PlayerConfig {
-        todo!("PlayerResource::get_player_config")
+        log::warn!("PlayerResource::get_player_config called — returning default");
+        static PCONFIG: std::sync::OnceLock<PlayerConfig> = std::sync::OnceLock::new();
+        PCONFIG.get_or_init(PlayerConfig::default)
     }
     fn get_score_data(&self) -> Option<&beatoraja_types::score_data::ScoreData> {
         None
@@ -265,15 +289,16 @@ pub struct ScoreDatabaseAccessor;
 
 impl ScoreDatabaseAccessor {
     pub fn create_table(&self) {
-        todo!("ScoreDatabaseAccessor.createTable")
+        log::warn!("not yet implemented: ScoreDatabaseAccessor.createTable");
     }
 
     pub fn get_score_data(&self, _sha256: &str, _mode: i32) -> Option<ScoreData> {
-        todo!("ScoreDatabaseAccessor.getScoreData")
+        log::warn!("not yet implemented: ScoreDatabaseAccessor.getScoreData");
+        None
     }
 
     pub fn set_score_data(&self, _scores: &[ScoreData]) {
-        todo!("ScoreDatabaseAccessor.setScoreData")
+        log::warn!("not yet implemented: ScoreDatabaseAccessor.setScoreData");
     }
 }
 
@@ -429,7 +454,7 @@ impl TableDataAccessor {
     }
 
     pub fn write(&self, _td: &TableData) {
-        todo!("TableDataAccessor.write")
+        log::warn!("not yet implemented: TableDataAccessor.write");
     }
 }
 
@@ -464,7 +489,8 @@ impl Pixmap {
     }
 
     pub fn get_pixels(&self) -> Vec<u8> {
-        todo!("Pixmap.getPixels - LibGDX dependency")
+        log::warn!("not yet implemented: Pixmap.getPixels - LibGDX dependency");
+        Vec::new()
     }
 
     pub fn dispose(&mut self) {
@@ -477,11 +503,13 @@ pub struct GdxGraphics;
 
 impl GdxGraphics {
     pub fn get_back_buffer_width() -> i32 {
-        todo!("Gdx.graphics.getBackBufferWidth - LibGDX dependency")
+        log::warn!("not yet implemented: Gdx.graphics.getBackBufferWidth - LibGDX dependency");
+        0
     }
 
     pub fn get_back_buffer_height() -> i32 {
-        todo!("Gdx.graphics.getBackBufferHeight - LibGDX dependency")
+        log::warn!("not yet implemented: Gdx.graphics.getBackBufferHeight - LibGDX dependency");
+        0
     }
 }
 
@@ -490,7 +518,7 @@ pub struct BufferUtils;
 
 impl BufferUtils {
     pub fn copy(_src: &[u8], _src_offset: usize, _dst: &mut Vec<u8>, _count: usize) {
-        todo!("BufferUtils.copy - LibGDX dependency")
+        log::warn!("not yet implemented: BufferUtils.copy - LibGDX dependency");
     }
 }
 
@@ -499,7 +527,7 @@ pub struct PixmapIO;
 
 impl PixmapIO {
     pub fn write_png(_path: &str, _pixmap: &Pixmap) {
-        todo!("PixmapIO.writePNG - LibGDX dependency")
+        log::warn!("not yet implemented: PixmapIO.writePNG - LibGDX dependency");
     }
 }
 
@@ -542,27 +570,54 @@ pub trait StringProperty {
 /// Stub for IntegerPropertyFactory
 pub struct IntegerPropertyFactory;
 
+/// Default integer property returning 0
+struct DefaultIntegerProperty;
+impl IntegerProperty for DefaultIntegerProperty {
+    fn get(&self, _state: &MainState) -> i32 {
+        0
+    }
+}
+
 impl IntegerPropertyFactory {
     pub fn get_integer_property(_id: i32) -> Box<dyn IntegerProperty> {
-        todo!("IntegerPropertyFactory.getIntegerProperty - beatoraja-skin dependency")
+        log::warn!("not yet implemented: IntegerPropertyFactory.getIntegerProperty");
+        Box::new(DefaultIntegerProperty)
     }
 }
 
 /// Stub for BooleanPropertyFactory
 pub struct BooleanPropertyFactory;
 
+/// Default boolean property returning false
+struct DefaultBooleanProperty;
+impl BooleanProperty for DefaultBooleanProperty {
+    fn get(&self, _state: &MainState) -> bool {
+        false
+    }
+}
+
 impl BooleanPropertyFactory {
     pub fn get_boolean_property(_id: i32) -> Box<dyn BooleanProperty> {
-        todo!("BooleanPropertyFactory.getBooleanProperty - beatoraja-skin dependency")
+        log::warn!("not yet implemented: BooleanPropertyFactory.getBooleanProperty");
+        Box::new(DefaultBooleanProperty)
     }
 }
 
 /// Stub for StringPropertyFactory
 pub struct StringPropertyFactory;
 
+/// Default string property returning empty string
+struct DefaultStringProperty;
+impl StringProperty for DefaultStringProperty {
+    fn get(&self, _state: &MainState) -> String {
+        String::new()
+    }
+}
+
 impl StringPropertyFactory {
     pub fn get_string_property(_id: i32) -> Box<dyn StringProperty> {
-        todo!("StringPropertyFactory.getStringProperty - beatoraja-skin dependency")
+        log::warn!("not yet implemented: StringPropertyFactory.getStringProperty");
+        Box::new(DefaultStringProperty)
     }
 }
 

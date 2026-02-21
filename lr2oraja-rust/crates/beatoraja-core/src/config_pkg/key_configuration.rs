@@ -177,13 +177,13 @@ impl KeyConfiguration {
     pub fn create(&mut self) {
         // TODO: loadSkin, font generation, input processor setup
         // Requires Phase 5+ types (SkinType, SkinHeader, FreeTypeFontGenerator, BMSPlayerInputProcessor)
-        todo!("KeyConfiguration::create requires Phase 5+ UI types")
+        log::warn!("not yet implemented: KeyConfiguration::create requires Phase 5+ UI types");
     }
 
     pub fn render(&mut self) {
         // TODO: Full rendering with SpriteBatch, ShapeDrawer
         // Requires Phase 5+ graphics types
-        todo!("KeyConfiguration::render requires Phase 5+ UI types")
+        log::warn!("not yet implemented: KeyConfiguration::render requires Phase 5+ UI types");
     }
 
     pub fn set_key_assign_mode(&mut self, index: usize) {

@@ -69,9 +69,9 @@ impl ObsListener {
             }
             // This is a simplified version — the full version would need config access
             // to look up scene/action for PLAY state.
-            todo!(
-                "Phase 8+ dependency: delayed triggerStateChange(PLAY) needs config access in async context"
-            )
+            log::warn!(
+                "not yet implemented: delayed triggerStateChange(PLAY) needs config access in async context"
+            );
         });
     }
 

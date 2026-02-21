@@ -214,7 +214,8 @@ impl PlayerResource {
         self.replay = Some(ReplayData::new());
         // model = loadBMSModel(f, pconfig.getLnmode())
         // Phase 5+ dependency: ChartDecoder, BMSModel
-        todo!("Phase 5+ dependency: loadBMSModel")
+        log::warn!("not yet implemented: loadBMSModel");
+        false
     }
 
     pub fn get_bms_model(&self) -> Option<()> {
@@ -284,7 +285,8 @@ impl PlayerResource {
     pub fn set_course_bms_files(&mut self, _files: &[PathBuf]) -> bool {
         // Phase 5+ dependency: loadBMSModel for each file
         self.update_course_score = true;
-        todo!("Phase 5+ dependency: loadBMSModel for course files")
+        log::warn!("not yet implemented: loadBMSModel for course files");
+        false
     }
 
     pub fn get_course_bms_models(&self) -> Option<&Vec<()>> {
@@ -548,12 +550,14 @@ impl PlayerResource {
 
     pub fn get_reverse_lookup_data(&self) -> Vec<String> {
         // Phase 5+ dependency: TableDataAccessor, SongData matching
-        todo!("Phase 5+ dependency: getReverseLookupData")
+        log::warn!("not yet implemented: getReverseLookupData");
+        Vec::new()
     }
 
     pub fn get_reverse_lookup_levels(&self) -> Vec<String> {
         // Phase 5+ dependency: TableDataAccessor, SongData matching
-        todo!("Phase 5+ dependency: getReverseLookupLevels")
+        log::warn!("not yet implemented: getReverseLookupLevels");
+        Vec::new()
     }
 }
 
@@ -587,12 +591,10 @@ impl PlayerResourceAccess for PlayerResource {
     }
 
     fn get_songdata(&self) -> Option<&beatoraja_types::song_data::SongData> {
-        self.songdata.as_ref().map(|s| {
-            // The core SongData stub is a different type from beatoraja_types::SongData.
-            // This will be resolved when core's SongData stub is replaced.
-            let _ = s;
-            todo!("Phase 15d: core SongData stub differs from types SongData")
-        })
+        // The core SongData stub is a different type from beatoraja_types::SongData.
+        // This will be resolved when core's SongData stub is replaced.
+        log::warn!("not yet implemented: core SongData stub differs from types SongData");
+        None
     }
 
     fn get_replay_data(&self) -> Option<&ReplayData> {

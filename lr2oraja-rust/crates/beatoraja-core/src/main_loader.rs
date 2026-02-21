@@ -129,7 +129,8 @@ impl MainLoader {
         } else {
             // Launch configuration UI
             // Phase 5+: JavaFX/egui launcher
-            todo!("Phase 5+ dependency: launcher UI")
+            log::warn!("not yet implemented: launcher UI");
+            return;
         }
     }
 

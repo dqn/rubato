@@ -41,30 +41,46 @@ pub trait MainControllerAccess {
 }
 
 /// Null implementation of MainControllerAccess for stub contexts.
-/// All methods panic with todo!().
+/// All methods log a warning and return defaults.
 pub struct NullMainController;
+
+impl NullMainController {
+    fn null_config() -> &'static Config {
+        use std::sync::OnceLock;
+        static CONFIG: OnceLock<Config> = OnceLock::new();
+        CONFIG.get_or_init(Config::default)
+    }
+
+    fn null_player_config() -> &'static PlayerConfig {
+        use std::sync::OnceLock;
+        static PCONFIG: OnceLock<PlayerConfig> = OnceLock::new();
+        PCONFIG.get_or_init(PlayerConfig::default)
+    }
+}
 
 impl MainControllerAccess for NullMainController {
     fn get_config(&self) -> &Config {
-        todo!("NullMainController::get_config")
+        log::warn!("NullMainController::get_config called — returning default");
+        Self::null_config()
     }
     fn get_player_config(&self) -> &PlayerConfig {
-        todo!("NullMainController::get_player_config")
+        log::warn!("NullMainController::get_player_config called — returning default");
+        Self::null_player_config()
     }
     fn change_state(&mut self, _state: MainStateType) {
-        todo!("NullMainController::change_state")
+        log::warn!("NullMainController::change_state called — no-op");
     }
     fn save_config(&self) {
-        todo!("NullMainController::save_config")
+        log::warn!("NullMainController::save_config called — no-op");
     }
     fn exit(&self) {
-        todo!("NullMainController::exit")
+        log::warn!("NullMainController::exit called — no-op");
     }
     fn save_last_recording(&self, _reason: &str) {
-        todo!("NullMainController::save_last_recording")
+        log::warn!("NullMainController::save_last_recording called — no-op");
     }
     fn update_song(&mut self, _path: Option<&str>) {
-        todo!("NullMainController::update_song")
+        log::warn!("NullMainController::update_song called — no-op");
     }
     fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
         None

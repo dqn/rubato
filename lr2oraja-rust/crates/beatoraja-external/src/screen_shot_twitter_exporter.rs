@@ -128,7 +128,8 @@ impl ScreenShotExporter for ScreenShotTwitterExporter {
             let mut pixel_buf = pixmap.get_pixels();
             BufferUtils::copy(pixels, 0, &mut pixel_buf, pixels.len());
             // In Java: create PNG byte array via PixmapIO.PNG
-            let image_bytes: Vec<u8> = todo!("PNG encoding via PixmapIO.PNG - LibGDX dependency");
+            log::warn!("not yet implemented: PNG encoding via PixmapIO.PNG - LibGDX dependency");
+            let image_bytes: Vec<u8> = Vec::new();
 
             // Upload Media and Post
             let mediastatus = twitter.upload_media("from beatoraja", &image_bytes)?;

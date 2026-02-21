@@ -122,15 +122,31 @@ pub trait PlayerResourceAccess {
 }
 
 /// Null implementation of PlayerResourceAccess for stub contexts.
-/// All methods panic with todo!() or return empty defaults.
+/// All methods log a warning and return defaults.
 pub struct NullPlayerResource;
+
+impl NullPlayerResource {
+    fn null_config() -> &'static Config {
+        use std::sync::OnceLock;
+        static CONFIG: OnceLock<Config> = OnceLock::new();
+        CONFIG.get_or_init(Config::default)
+    }
+
+    fn null_player_config() -> &'static PlayerConfig {
+        use std::sync::OnceLock;
+        static PCONFIG: OnceLock<PlayerConfig> = OnceLock::new();
+        PCONFIG.get_or_init(PlayerConfig::default)
+    }
+}
 
 impl PlayerResourceAccess for NullPlayerResource {
     fn get_config(&self) -> &Config {
-        todo!("NullPlayerResource::get_config")
+        log::warn!("NullPlayerResource::get_config called — returning default");
+        Self::null_config()
     }
     fn get_player_config(&self) -> &PlayerConfig {
-        todo!("NullPlayerResource::get_player_config")
+        log::warn!("NullPlayerResource::get_player_config called — returning default");
+        Self::null_player_config()
     }
     fn get_score_data(&self) -> Option<&ScoreData> {
         None

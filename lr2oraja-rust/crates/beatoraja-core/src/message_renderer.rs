@@ -71,7 +71,7 @@ impl Message {
     }
 
     pub fn draw(&self, _x: i32, _y: i32) {
-        todo!("Phase 5+ dependency: LibGDX font rendering")
+        log::warn!("not yet implemented: LibGDX font rendering");
     }
 
     pub fn dispose(&mut self) {

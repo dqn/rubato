@@ -61,7 +61,7 @@ pub trait MainState {
     fn execute_event_id_args(&mut self, id: i32, _arg1: i32, _arg2: i32) {
         // SkinPropertyMapper.isCustomEventId(id) check
         let _ = id;
-        todo!("Phase 5+ dependency: skin.executeCustomEvent")
+        log::warn!("not yet implemented: skin.executeCustomEvent");
     }
 
     fn get_score_data_property(&self) -> &ScoreDataProperty {
@@ -82,11 +82,13 @@ pub trait MainState {
     }
 
     fn get_image(&self, _imageid: i32) -> Option<()> {
-        todo!("Phase 5+ dependency: TextureRegion/image resources")
+        log::warn!("not yet implemented: TextureRegion/image resources");
+        None
     }
 
     fn get_sound(&self, _sound: SoundType) -> Option<String> {
-        todo!("Phase 5+ dependency: MainController.getSoundManager()")
+        log::warn!("not yet implemented: MainController.getSoundManager()");
+        None
     }
 
     fn play_sound(&mut self, sound: SoundType) {
@@ -94,11 +96,11 @@ pub trait MainState {
     }
 
     fn play_sound_loop(&mut self, _sound: SoundType, _loop_sound: bool) {
-        todo!("Phase 5+ dependency: MainController.getSoundManager().play()")
+        log::warn!("not yet implemented: MainController.getSoundManager().play()");
     }
 
     fn stop_sound(&mut self, _sound: SoundType) {
-        todo!("Phase 5+ dependency: MainController.getSoundManager().stop()")
+        log::warn!("not yet implemented: MainController.getSoundManager().stop()");
     }
 }
 

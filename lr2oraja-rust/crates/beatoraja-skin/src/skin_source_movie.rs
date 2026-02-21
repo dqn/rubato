@@ -28,7 +28,8 @@ impl SkinSourceMovie {
 
 impl SkinSource for SkinSourceMovie {
     fn get_image(&self, _time: i64, _state: &dyn MainState) -> Option<TextureRegion> {
-        todo!("FFmpeg video processing not yet available")
+        log::warn!("FFmpeg video decoding not yet implemented");
+        None
     }
 
     fn validate(&self) -> bool {

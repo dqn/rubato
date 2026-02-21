@@ -150,7 +150,8 @@ impl TableDataAccessor {
 
     fn read_from_url(&self, _url: &str) -> Option<TableData> {
         // TODO: implement DifficultyTableParser integration
-        todo!("DifficultyTableParser not yet translated")
+        log::warn!("not yet implemented: DifficultyTableParser");
+        None
     }
 }
 
@@ -187,7 +188,8 @@ impl TableAccessor for DifficultyTableAccessor {
 
     fn read(&self) -> Option<TableData> {
         // TODO: implement DifficultyTableParser
-        todo!("DifficultyTableParser not yet translated")
+        log::warn!("not yet implemented: DifficultyTableParser");
+        None
     }
 
     fn write(&self, td: &mut TableData) {

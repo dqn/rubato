@@ -28,7 +28,7 @@ impl RivalDataAccessor {
         // TODO: IR integration requires Phase 5+ types
         // (IRResponse, IRPlayerData, IRScoreData, ScoreDataImporter, ScoreDataCache)
         // Stubbed for now.
-        todo!("IR integration not yet translated")
+        log::warn!("not yet implemented: IR integration for rival data");
     }
 }
 

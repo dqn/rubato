@@ -172,70 +172,74 @@ impl WebhookHandler {
 
             // Score specific
             if screen_type == ScreenType::MusicResult || screen_type == ScreenType::CourseResult {
-                let result_state = get_abstract_result(current_state);
-                let new_score = result_state.get_new_score();
-                let old_score = result_state.get_old_score();
-                let max_score = IntegerPropertyFactory::get_integer_property(NUMBER_MAXSCORE)
-                    .get(current_state);
+                if let Some(result_state) = get_abstract_result(current_state) {
+                    let new_score = result_state.get_new_score();
+                    let old_score = result_state.get_old_score();
+                    let max_score = IntegerPropertyFactory::get_integer_property(NUMBER_MAXSCORE)
+                        .get(current_state);
 
-                let mut description = String::new();
-                description += &format!(
-                    "**DJ LEVEL:** {} \n",
-                    Self::format_rank(current_state, new_score, max_score)
-                );
-                description += &format!(
-                    "**EX SCORE: {}** {}\n",
-                    new_score.get_exscore(),
-                    Self::format_diff(new_score.get_exscore(), old_score.get_exscore())
-                );
-                description += &format!(
-                    "**BAD/POOR: {}** {}\n",
-                    Self::get_bp_count(new_score),
-                    Self::format_diff(Self::get_bp_count(new_score), Self::get_bp_count(old_score))
-                );
-                if result_state.get_ir_rank() != 0 {
+                    let mut description = String::new();
                     description += &format!(
-                        "**IR RANK: {}/{}** {}\n",
-                        result_state.get_ir_rank(),
-                        result_state.get_ir_total_player(),
+                        "**DJ LEVEL:** {} \n",
+                        Self::format_rank(current_state, new_score, max_score)
+                    );
+                    description += &format!(
+                        "**EX SCORE: {}** {}\n",
+                        new_score.get_exscore(),
+                        Self::format_diff(new_score.get_exscore(), old_score.get_exscore())
+                    );
+                    description += &format!(
+                        "**BAD/POOR: {}** {}\n",
+                        Self::get_bp_count(new_score),
                         Self::format_diff(
-                            result_state.get_ir_rank(),
-                            result_state.get_old_ir_rank()
+                            Self::get_bp_count(new_score),
+                            Self::get_bp_count(old_score)
                         )
                     );
-                }
-                if *current_state.resource.get_original_mode() == Mode::BEAT_7K {
-                    let rd = current_state.resource.get_replay_data();
-                    description += &format!("**PATTERN: {}** \n", Self::format_random(rd));
-                }
-                description += &Self::format_links(current_state);
+                    if result_state.get_ir_rank() != 0 {
+                        description += &format!(
+                            "**IR RANK: {}/{}** {}\n",
+                            result_state.get_ir_rank(),
+                            result_state.get_ir_total_player(),
+                            Self::format_diff(
+                                result_state.get_ir_rank(),
+                                result_state.get_old_ir_rank()
+                            )
+                        );
+                    }
+                    if *current_state.resource.get_original_mode() == Mode::BEAT_7K {
+                        let rd = current_state.resource.get_replay_data();
+                        description += &format!("**PATTERN: {}** \n", Self::format_random(rd));
+                    }
+                    description += &Self::format_links(current_state);
 
-                let mut footer: HashMap<String, String> = HashMap::new();
-                embed.insert(
-                    "title".to_string(),
-                    serde_json::Value::String(Self::create_title(current_state)),
-                );
-                embed.insert(
-                    "color".to_string(),
-                    serde_json::Value::Number(serde_json::Number::from(
-                        screen_shot_exporter::get_clear_type_colour(current_state),
-                    )),
-                );
-                author.insert(
-                    "name".to_string(),
-                    StringPropertyFactory::get_string_property(STRING_TABLE_NAME)
-                        .get(current_state),
-                );
-                embed.insert("author".to_string(), serde_json::to_value(&author).unwrap());
-                embed.insert(
-                    "description".to_string(),
-                    serde_json::Value::String(description),
-                );
-                footer.insert(
-                    "text".to_string(),
-                    "LR2oraja ~Endless Dream~ Scorecard".to_string(),
-                );
-                embed.insert("footer".to_string(), serde_json::to_value(&footer).unwrap());
+                    let mut footer: HashMap<String, String> = HashMap::new();
+                    embed.insert(
+                        "title".to_string(),
+                        serde_json::Value::String(Self::create_title(current_state)),
+                    );
+                    embed.insert(
+                        "color".to_string(),
+                        serde_json::Value::Number(serde_json::Number::from(
+                            screen_shot_exporter::get_clear_type_colour(current_state),
+                        )),
+                    );
+                    author.insert(
+                        "name".to_string(),
+                        StringPropertyFactory::get_string_property(STRING_TABLE_NAME)
+                            .get(current_state),
+                    );
+                    embed.insert("author".to_string(), serde_json::to_value(&author).unwrap());
+                    embed.insert(
+                        "description".to_string(),
+                        serde_json::Value::String(description),
+                    );
+                    footer.insert(
+                        "text".to_string(),
+                        "LR2oraja ~Endless Dream~ Scorecard".to_string(),
+                    );
+                    embed.insert("footer".to_string(), serde_json::to_value(&footer).unwrap());
+                }
             } else {
                 author.insert("name".to_string(), "LR2oraja ~Endless Dream~".to_string());
                 embed.insert("author".to_string(), serde_json::to_value(&author).unwrap());
@@ -328,12 +332,14 @@ impl WebhookHandler {
             }
         }
 
-        let old_score = get_abstract_result(current_state).get_old_score();
-        let old_percent = 100.0f32 * old_score.get_exscore() as f32 / max_score as f32;
-        for rank in &GRADE_RANKS {
-            if old_percent > rank.get_percent() {
-                old_rank = ((rank.get_numerator() / 2.0f32).floor() * 2.0f32) as i32;
-                break;
+        if let Some(result_state) = get_abstract_result(current_state) {
+            let old_score = result_state.get_old_score();
+            let old_percent = 100.0f32 * old_score.get_exscore() as f32 / max_score as f32;
+            for rank in &GRADE_RANKS {
+                if old_percent > rank.get_percent() {
+                    old_rank = ((rank.get_numerator() / 2.0f32).floor() * 2.0f32) as i32;
+                    break;
+                }
             }
         }
         sb += &format!(" {}", Self::format_percent(new_score, max_score));
@@ -448,6 +454,9 @@ fn get_screen_type(_state: &MainState) -> ScreenType {
 
 /// Get the AbstractResult from the current state.
 /// In Java this was done via cast: ((AbstractResult) currentState)
-fn get_abstract_result(_state: &MainState) -> &AbstractResult {
-    todo!("Cast MainState to AbstractResult - requires proper screen type hierarchy")
+fn get_abstract_result(_state: &MainState) -> Option<&AbstractResult> {
+    log::warn!(
+        "not yet implemented: Cast MainState to AbstractResult - requires proper screen type hierarchy"
+    );
+    None
 }

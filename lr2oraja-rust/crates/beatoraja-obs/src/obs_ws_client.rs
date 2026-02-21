@@ -683,7 +683,9 @@ impl ObsWsClient {
             }
             // In a full implementation, we would call do_connect here with the server_uri and password.
             // This requires passing those values through, or storing them in the inner struct.
-            todo!("Full reconnection requires server_uri and password access")
+            log::warn!(
+                "not yet implemented: OBS WebSocket full reconnection requires server_uri and password access"
+            );
         });
     }
 

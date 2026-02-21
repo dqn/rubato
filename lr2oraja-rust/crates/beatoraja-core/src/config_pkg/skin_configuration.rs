@@ -33,13 +33,13 @@ impl SkinConfiguration {
     pub fn create(&mut self) {
         // TODO: loadSkin(SkinType::SKIN_SELECT), loadAllSkins, changeSkinType
         // Requires Phase 5+ skin system
-        todo!("SkinConfiguration::create requires Phase 5+ skin system")
+        log::warn!("not yet implemented: SkinConfiguration::create requires Phase 5+ skin system");
     }
 
     pub fn render(&mut self) {
         // TODO: input handling and rendering
         // Requires Phase 5+ MainState, ControlKeys
-        todo!("SkinConfiguration::render requires Phase 5+ UI types")
+        log::warn!("not yet implemented: SkinConfiguration::render requires Phase 5+ UI types");
     }
 
     pub fn input(&mut self) {

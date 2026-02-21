@@ -49,7 +49,7 @@ impl SpriteBatchHelper {
     pub fn create_sprite_batch_shader() -> () {
         // ShaderProgramFactory.fromString(vertexShader, fragmentShader, true, true)
         // Phase 5+ dependency: LibGDX shader compilation
-        todo!("Phase 5+ dependency: LibGDX ShaderProgramFactory")
+        log::warn!("not yet implemented: LibGDX ShaderProgramFactory");
     }
 
     pub fn create_sprite_batch() -> SpriteBatch {

@@ -31,11 +31,11 @@ impl Lwjgl3Controller {
         //   this.buttonState = new boolean[GLFW.glfwGetJoystickButtons(index).limit()];
         //   this.name = GLFW.glfwGetJoystickName(index);
         // All GLFW calls are stubbed — actual integration uses gilrs.
-        let _index = index;
-        todo!(
-            "GLFW/gilrs integration: query joystick axes/buttons/name for index {}",
+        log::warn!(
+            "not yet implemented: GLFW/gilrs integration: query joystick axes/buttons/name for index {}",
             index
-        )
+        );
+        Self::new_with_state(index, 0, 0, format!("Controller {}", index))
     }
 
     /// Creates a controller with pre-initialized state (for testing or manual construction).
@@ -74,10 +74,11 @@ impl Lwjgl3Controller {
         //   3. Read new button values; if null, return disconnected.
         //   4. Compare with stored state, fire local listener events on changes.
         //   5. Return changes for manager-level listener dispatch.
-        todo!(
-            "GLFW/gilrs integration: poll joystick state for index {}",
+        log::warn!(
+            "not yet implemented: GLFW/gilrs integration: poll joystick state for index {}",
             self.index
-        )
+        );
+        PollResult::Disconnected
     }
 
     /// Processes axis state changes and fires local listener events.
