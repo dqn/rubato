@@ -933,6 +933,14 @@ fn do_skin_load(
     bms_render::embedded_textures::load_embedded_textures(images, &mut texture_map);
     font_map.load_lr2_fonts(&skin, images);
 
+    // Extract skin timing values before moving the skin (Java parity:
+    // Skin.getInput(), Skin.getScene(), Skin.getFadeout()).
+    skin_mgr.skin_timing = skin_manager::SkinTiming {
+        input_ms: skin.input as i64,
+        scene_ms: skin.scene as i64,
+        fadeout_ms: skin.fadeout as i64,
+    };
+
     // Phase 4: Despawn old skin entities and remove old render state
     for entity in skin_entities.iter() {
         commands.entity(entity).despawn_recursive();

@@ -13,13 +13,6 @@ use crate::app_state::AppStateType;
 use crate::skin_manager::SkinType;
 use crate::state::{GameStateHandler, StateContext};
 
-/// Default input delay in milliseconds.
-const DEFAULT_INPUT_DELAY_MS: i64 = 500;
-/// Default scene duration in milliseconds.
-const DEFAULT_SCENE_DURATION_MS: i64 = 5000;
-/// Default fadeout duration in milliseconds.
-const DEFAULT_FADEOUT_DURATION_MS: i64 = 500;
-
 /// Course result state — aggregates and displays results for a course play session.
 pub struct CourseResultState {
     fadeout_started: bool,
@@ -132,19 +125,20 @@ impl GameStateHandler for CourseResultState {
 
     fn render(&mut self, ctx: &mut StateContext) {
         let now = ctx.timer.now_time();
+        let timing = ctx.skin_timing();
 
-        // Enable input after initial delay
-        if now > DEFAULT_INPUT_DELAY_MS {
+        // Enable input after initial delay (Java: getSkin().getInput())
+        if now > timing.input_ms {
             ctx.timer.switch_timer(TIMER_STARTINPUT, true);
         }
 
-        // Check fadeout -> transition
+        // Check fadeout -> transition (Java: getSkin().getFadeout())
         if ctx.timer.is_timer_on(TIMER_FADEOUT) {
-            if ctx.timer.now_time_of(TIMER_FADEOUT) > DEFAULT_FADEOUT_DURATION_MS {
+            if ctx.timer.now_time_of(TIMER_FADEOUT) > timing.fadeout_ms {
                 info!("CourseResult: transition to MusicSelect");
                 *ctx.transition = Some(AppStateType::MusicSelect);
             }
-        } else if now > DEFAULT_SCENE_DURATION_MS {
+        } else if now > timing.scene_ms {
             info!("CourseResult: scene timer expired, starting fadeout");
             self.fadeout_started = true;
             ctx.timer.set_timer_on(TIMER_FADEOUT);

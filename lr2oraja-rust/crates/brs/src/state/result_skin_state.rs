@@ -5,18 +5,26 @@
 
 use bms_rule::ScoreData;
 use bms_skin::property_id::{
-    NUMBER_BAD, NUMBER_DIFF_EXSCORE, NUMBER_DIFF_HIGHSCORE, NUMBER_DIFF_MAXCOMBO, NUMBER_GOOD,
-    NUMBER_GREAT, NUMBER_HIGHSCORE2, NUMBER_MAXCOMBO2, NUMBER_MISS, NUMBER_PERFECT, NUMBER_POOR,
-    NUMBER_SCORE2, NUMBER_TOTALNOTES2, OPTION_1PWIN, OPTION_2PWIN, OPTION_A, OPTION_AA, OPTION_AAA,
-    OPTION_B, OPTION_BAD_EXIST, OPTION_BEST_A_1P, OPTION_BEST_AA_1P, OPTION_BEST_AAA_1P,
-    OPTION_BEST_B_1P, OPTION_BEST_C_1P, OPTION_BEST_D_1P, OPTION_BEST_E_1P, OPTION_BEST_F_1P,
-    OPTION_C, OPTION_D, OPTION_DRAW, OPTION_DRAW_MAXCOMBO, OPTION_DRAW_MISSCOUNT,
-    OPTION_DRAW_SCORE, OPTION_DRAW_SCORERANK, OPTION_DRAW_TARGET, OPTION_E, OPTION_F,
-    OPTION_GOOD_EXIST, OPTION_GREAT_EXIST, OPTION_MISS_EXIST, OPTION_PERFECT_EXIST,
-    OPTION_POOR_EXIST, OPTION_RESULT_A_1P, OPTION_RESULT_AA_1P, OPTION_RESULT_AAA_1P,
-    OPTION_RESULT_B_1P, OPTION_RESULT_C_1P, OPTION_RESULT_CLEAR, OPTION_RESULT_D_1P,
-    OPTION_RESULT_E_1P, OPTION_RESULT_F_1P, OPTION_RESULT_FAIL, OPTION_UPDATE_MAXCOMBO,
-    OPTION_UPDATE_MISSCOUNT, OPTION_UPDATE_SCORE, OPTION_UPDATE_SCORERANK, OPTION_UPDATE_TARGET,
+    FLOAT_BEST_RATE, FLOAT_SCORE_RATE2, NUMBER_BAD, NUMBER_BAD_PLUS_POOR_PLUS_MISS,
+    NUMBER_BEST_RATE, NUMBER_BEST_RATE_AFTERDOT, NUMBER_CLEAR, NUMBER_COMBOBREAK,
+    NUMBER_DIFF_EXSCORE, NUMBER_DIFF_HIGHSCORE, NUMBER_DIFF_HIGHSCORE2, NUMBER_DIFF_MAXCOMBO,
+    NUMBER_DIFF_MISSCOUNT, NUMBER_EARLY_BAD, NUMBER_EARLY_GOOD, NUMBER_EARLY_GREAT,
+    NUMBER_EARLY_MISS, NUMBER_EARLY_PERFECT, NUMBER_EARLY_POOR, NUMBER_GOOD, NUMBER_GREAT,
+    NUMBER_HIGHSCORE2, NUMBER_LATE_BAD, NUMBER_LATE_GOOD, NUMBER_LATE_GREAT, NUMBER_LATE_MISS,
+    NUMBER_LATE_PERFECT, NUMBER_LATE_POOR, NUMBER_MAXCOMBO2, NUMBER_MAXCOMBO3, NUMBER_MISS,
+    NUMBER_MISSCOUNT2, NUMBER_PERFECT, NUMBER_POOR, NUMBER_POOR_PLUS_MISS, NUMBER_SCORE_RATE,
+    NUMBER_SCORE_RATE_AFTERDOT, NUMBER_SCORE2, NUMBER_SCORE3, NUMBER_TARGET_CLEAR,
+    NUMBER_TARGET_MAXCOMBO, NUMBER_TARGET_MISSCOUNT, NUMBER_TOTALEARLY, NUMBER_TOTALLATE,
+    NUMBER_TOTALNOTES2, OPTION_1PWIN, OPTION_2PWIN, OPTION_A, OPTION_AA, OPTION_AAA, OPTION_B,
+    OPTION_BAD_EXIST, OPTION_BEST_A_1P, OPTION_BEST_AA_1P, OPTION_BEST_AAA_1P, OPTION_BEST_B_1P,
+    OPTION_BEST_C_1P, OPTION_BEST_D_1P, OPTION_BEST_E_1P, OPTION_BEST_F_1P, OPTION_C, OPTION_D,
+    OPTION_DRAW, OPTION_DRAW_MAXCOMBO, OPTION_DRAW_MISSCOUNT, OPTION_DRAW_SCORE,
+    OPTION_DRAW_SCORERANK, OPTION_DRAW_TARGET, OPTION_E, OPTION_F, OPTION_GOOD_EXIST,
+    OPTION_GREAT_EXIST, OPTION_MISS_EXIST, OPTION_PERFECT_EXIST, OPTION_POOR_EXIST,
+    OPTION_RESULT_A_1P, OPTION_RESULT_AA_1P, OPTION_RESULT_AAA_1P, OPTION_RESULT_B_1P,
+    OPTION_RESULT_C_1P, OPTION_RESULT_CLEAR, OPTION_RESULT_D_1P, OPTION_RESULT_E_1P,
+    OPTION_RESULT_F_1P, OPTION_RESULT_FAIL, OPTION_UPDATE_MAXCOMBO, OPTION_UPDATE_MISSCOUNT,
+    OPTION_UPDATE_SCORE, OPTION_UPDATE_SCORERANK, OPTION_UPDATE_TARGET,
 };
 
 use crate::game_state::SharedGameState;
@@ -32,21 +40,47 @@ pub fn sync_result_state(
     target_exscore: Option<i32>,
 ) {
     // Score values
-    state.integers.insert(NUMBER_SCORE2, score.exscore());
+    let ex = score.exscore();
+    let old_ex = oldscore.exscore();
+    state.integers.insert(NUMBER_SCORE2, ex);
+    state.integers.insert(NUMBER_SCORE3, ex);
     state.integers.insert(NUMBER_MAXCOMBO2, maxcombo);
+    state.integers.insert(NUMBER_MAXCOMBO3, maxcombo);
     state.integers.insert(NUMBER_TOTALNOTES2, score.notes);
-    state.integers.insert(NUMBER_HIGHSCORE2, oldscore.exscore());
+    state.integers.insert(NUMBER_HIGHSCORE2, old_ex);
+    state.integers.insert(NUMBER_MISSCOUNT2, score.minbp);
+
+    // Clear type IDs (Java: NUMBER_CLEAR / NUMBER_TARGET_CLEAR)
+    state.integers.insert(NUMBER_CLEAR, score.clear.id() as i32);
+    state
+        .integers
+        .insert(NUMBER_TARGET_CLEAR, oldscore.clear.id() as i32);
+
+    // Old score target properties (Java: NUMBER_TARGET_MAXCOMBO, NUMBER_TARGET_MISSCOUNT)
+    if oldscore.maxcombo > 0 {
+        state
+            .integers
+            .insert(NUMBER_TARGET_MAXCOMBO, oldscore.maxcombo);
+    }
+    if oldscore.notes > 0 {
+        state
+            .integers
+            .insert(NUMBER_TARGET_MISSCOUNT, oldscore.minbp);
+    }
 
     // Score diffs
-    state
-        .integers
-        .insert(NUMBER_DIFF_EXSCORE, score.exscore() - oldscore.exscore());
-    state
-        .integers
-        .insert(NUMBER_DIFF_HIGHSCORE, score.exscore() - oldscore.exscore());
+    state.integers.insert(NUMBER_DIFF_EXSCORE, ex - old_ex);
+    state.integers.insert(NUMBER_DIFF_HIGHSCORE, ex - old_ex);
+    state.integers.insert(NUMBER_DIFF_HIGHSCORE2, ex - old_ex);
     state
         .integers
         .insert(NUMBER_DIFF_MAXCOMBO, maxcombo - oldscore.maxcombo);
+    // Java: NUMBER_DIFF_MISSCOUNT = newScore.minbp - oldScore.minbp
+    if oldscore.notes > 0 {
+        state
+            .integers
+            .insert(NUMBER_DIFF_MISSCOUNT, score.minbp - oldscore.minbp);
+    }
 
     // Judge counts
     state
@@ -68,6 +102,109 @@ pub fn sync_result_state(
         .integers
         .insert(NUMBER_MISS, score.judge_count(bms_rule::JUDGE_MS));
 
+    // Score rate as integer (Java: NUMBER_SCORE_RATE / NUMBER_SCORE_RATE_AFTERDOT)
+    let max_ex = score.notes * 2;
+    if max_ex > 0 {
+        let rate_100 = ex as f64 * 100.0 / max_ex as f64;
+        state.integers.insert(NUMBER_SCORE_RATE, rate_100 as i32);
+        state.integers.insert(
+            NUMBER_SCORE_RATE_AFTERDOT,
+            ((rate_100 * 100.0) as i32) % 100,
+        );
+        state.floats.insert(FLOAT_SCORE_RATE2, rate_100 as f32);
+    }
+
+    // Best rate (old score rate)
+    if oldscore.notes > 0 {
+        let old_max = oldscore.notes * 2;
+        let best_rate_100 = old_ex as f64 * 100.0 / old_max as f64;
+        state
+            .integers
+            .insert(NUMBER_BEST_RATE, best_rate_100 as i32);
+        state.integers.insert(
+            NUMBER_BEST_RATE_AFTERDOT,
+            ((best_rate_100 * 100.0) as i32) % 100,
+        );
+        state.floats.insert(FLOAT_BEST_RATE, best_rate_100 as f32);
+    }
+
+    // Early/Late judge count split (Java: NUMBER_EARLY_PERFECT through NUMBER_LATE_MISS)
+    state.integers.insert(
+        NUMBER_EARLY_PERFECT,
+        score.judge_count_early(bms_rule::JUDGE_PG),
+    );
+    state.integers.insert(
+        NUMBER_LATE_PERFECT,
+        score.judge_count_late(bms_rule::JUDGE_PG),
+    );
+    state.integers.insert(
+        NUMBER_EARLY_GREAT,
+        score.judge_count_early(bms_rule::JUDGE_GR),
+    );
+    state.integers.insert(
+        NUMBER_LATE_GREAT,
+        score.judge_count_late(bms_rule::JUDGE_GR),
+    );
+    state.integers.insert(
+        NUMBER_EARLY_GOOD,
+        score.judge_count_early(bms_rule::JUDGE_GD),
+    );
+    state
+        .integers
+        .insert(NUMBER_LATE_GOOD, score.judge_count_late(bms_rule::JUDGE_GD));
+    state.integers.insert(
+        NUMBER_EARLY_BAD,
+        score.judge_count_early(bms_rule::JUDGE_BD),
+    );
+    state
+        .integers
+        .insert(NUMBER_LATE_BAD, score.judge_count_late(bms_rule::JUDGE_BD));
+    state.integers.insert(
+        NUMBER_EARLY_POOR,
+        score.judge_count_early(bms_rule::JUDGE_PR),
+    );
+    state
+        .integers
+        .insert(NUMBER_LATE_POOR, score.judge_count_late(bms_rule::JUDGE_PR));
+    state.integers.insert(
+        NUMBER_EARLY_MISS,
+        score.judge_count_early(bms_rule::JUDGE_MS),
+    );
+    state
+        .integers
+        .insert(NUMBER_LATE_MISS, score.judge_count_late(bms_rule::JUDGE_MS));
+
+    // Aggregate early/late counts (Java: NUMBER_TOTALEARLY/TOTALLATE — sum indices 1-5)
+    let total_early = score.judge_count_early(bms_rule::JUDGE_GR)
+        + score.judge_count_early(bms_rule::JUDGE_GD)
+        + score.judge_count_early(bms_rule::JUDGE_BD)
+        + score.judge_count_early(bms_rule::JUDGE_PR)
+        + score.judge_count_early(bms_rule::JUDGE_MS);
+    let total_late = score.judge_count_late(bms_rule::JUDGE_GR)
+        + score.judge_count_late(bms_rule::JUDGE_GD)
+        + score.judge_count_late(bms_rule::JUDGE_BD)
+        + score.judge_count_late(bms_rule::JUDGE_PR)
+        + score.judge_count_late(bms_rule::JUDGE_MS);
+    state.integers.insert(NUMBER_TOTALEARLY, total_early);
+    state.integers.insert(NUMBER_TOTALLATE, total_late);
+
+    // Combo break (Java: bad + poor count)
+    let combo_break = score.judge_count(bms_rule::JUDGE_BD) + score.judge_count(bms_rule::JUDGE_PR);
+    state.integers.insert(NUMBER_COMBOBREAK, combo_break);
+
+    // Poor + Miss (Java: poor + miss count)
+    let poor_plus_miss =
+        score.judge_count(bms_rule::JUDGE_PR) + score.judge_count(bms_rule::JUDGE_MS);
+    state.integers.insert(NUMBER_POOR_PLUS_MISS, poor_plus_miss);
+
+    // Bad + Poor + Miss
+    let bad_poor_miss = score.judge_count(bms_rule::JUDGE_BD)
+        + score.judge_count(bms_rule::JUDGE_PR)
+        + score.judge_count(bms_rule::JUDGE_MS);
+    state
+        .integers
+        .insert(NUMBER_BAD_PLUS_POOR_PLUS_MISS, bad_poor_miss);
+
     // Clear/Fail flags
     let cleared =
         score.clear != bms_rule::ClearType::Failed && score.clear != bms_rule::ClearType::NoPlay;
@@ -75,9 +212,8 @@ pub fn sync_result_state(
     state.booleans.insert(OPTION_RESULT_FAIL, !cleared);
 
     // Rank flags (based on score rate)
-    let max_score = score.notes * 2;
-    let rate = if max_score > 0 {
-        score.exscore() as f64 / max_score as f64
+    let rate = if max_ex > 0 {
+        ex as f64 / max_ex as f64
     } else {
         0.0
     };
@@ -89,7 +225,7 @@ pub fn sync_result_state(
         .insert(bms_skin::property_id::FLOAT_SCORE_RATE, rate as f32 * 100.0);
 
     // Update flags (comparing with old score)
-    let score_updated = score.exscore() > oldscore.exscore();
+    let score_updated = ex > old_ex;
     let combo_updated = maxcombo > oldscore.maxcombo;
     let miss_updated = oldscore.notes > 0 && score.minbp < oldscore.minbp;
     state.booleans.insert(OPTION_UPDATE_SCORE, score_updated);
@@ -98,7 +234,7 @@ pub fn sync_result_state(
 
     // Rank update check
     let old_rate = if oldscore.notes > 0 {
-        oldscore.exscore() as f64 / (oldscore.notes * 2) as f64
+        old_ex as f64 / (oldscore.notes * 2) as f64
     } else {
         0.0
     };
@@ -108,9 +244,7 @@ pub fn sync_result_state(
     );
 
     // Draw flags (equal comparisons)
-    state
-        .booleans
-        .insert(OPTION_DRAW_SCORE, score.exscore() == oldscore.exscore());
+    state.booleans.insert(OPTION_DRAW_SCORE, ex == old_ex);
     state
         .booleans
         .insert(OPTION_DRAW_MAXCOMBO, maxcombo == oldscore.maxcombo);
@@ -125,7 +259,6 @@ pub fn sync_result_state(
 
     // Target/rival comparison (Java: MusicResult rivalScore)
     if let Some(target) = target_exscore {
-        let ex = score.exscore();
         state.booleans.insert(OPTION_UPDATE_TARGET, ex > target);
         state.booleans.insert(OPTION_DRAW_TARGET, ex == target);
         state.booleans.insert(OPTION_1PWIN, ex > target);

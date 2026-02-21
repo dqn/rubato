@@ -20,13 +20,6 @@ use crate::skin_manager::SkinType;
 use crate::state::{GameStateHandler, StateContext};
 use crate::system_sound::SystemSound;
 
-/// Default input delay in milliseconds (skin.getInput() placeholder).
-const DEFAULT_INPUT_DELAY_MS: i64 = 500;
-/// Default scene duration in milliseconds (skin.getScene() placeholder).
-const DEFAULT_SCENE_DURATION_MS: i64 = 7000;
-/// Default fadeout duration in milliseconds (skin.getFadeout() placeholder).
-const DEFAULT_FADEOUT_DURATION_MS: i64 = 500;
-
 /// Result state — displays play results and handles score persistence.
 pub struct ResultState {
     /// Graph display type: 0 = gauge, 1 = timing.
@@ -82,6 +75,21 @@ impl GameStateHandler for ResultState {
             }
         }
 
+        // Load old score from DB BEFORE saving new score (Java parity:
+        // MusicResult.updateScoreDatabase reads oldscore first, writes new score last).
+        if let Some(db) = ctx.database {
+            let sha256 = &ctx.resource.score_data.sha256;
+            let mode = ctx.resource.score_data.mode;
+            match db.score_db.get_score_data(sha256, mode) {
+                Ok(Some(old)) => ctx.resource.oldscore = old,
+                Ok(None) => ctx.resource.oldscore = Default::default(),
+                Err(e) => {
+                    tracing::warn!("Result: failed to load old score: {e}");
+                    ctx.resource.oldscore = Default::default();
+                }
+            }
+        }
+
         // Save score to DB if update_score is set
         if ctx.resource.update_score
             && let Some(db) = ctx.database
@@ -122,20 +130,6 @@ impl GameStateHandler for ResultState {
             }
         }
 
-        // Load old score from DB
-        if let Some(db) = ctx.database {
-            let sha256 = &ctx.resource.score_data.sha256;
-            let mode = ctx.resource.score_data.mode;
-            match db.score_db.get_score_data(sha256, mode) {
-                Ok(Some(old)) => ctx.resource.oldscore = old,
-                Ok(None) => ctx.resource.oldscore = Default::default(),
-                Err(e) => {
-                    tracing::warn!("Result: failed to load old score: {e}");
-                    ctx.resource.oldscore = Default::default();
-                }
-            }
-        }
-
         // Course mode: accumulate scores, replays, and gauge logs
         if ctx.resource.is_course() {
             self.is_course = true;
@@ -168,15 +162,16 @@ impl GameStateHandler for ResultState {
 
     fn render(&mut self, ctx: &mut StateContext) {
         let now = ctx.timer.now_time();
+        let timing = ctx.skin_timing();
 
-        // Enable input after initial delay
-        if now > DEFAULT_INPUT_DELAY_MS {
+        // Enable input after initial delay (Java: getSkin().getInput())
+        if now > timing.input_ms {
             ctx.timer.switch_timer(TIMER_STARTINPUT, true);
         }
 
-        // Check fadeout -> transition
+        // Check fadeout -> transition (Java: getSkin().getFadeout())
         if ctx.timer.is_timer_on(TIMER_FADEOUT) {
-            if ctx.timer.now_time_of(TIMER_FADEOUT) > DEFAULT_FADEOUT_DURATION_MS {
+            if ctx.timer.now_time_of(TIMER_FADEOUT) > timing.fadeout_ms {
                 let next = if self.cancel {
                     AppStateType::MusicSelect
                 } else if self.is_course && self.course_index + 1 < self.course_total {
@@ -191,7 +186,7 @@ impl GameStateHandler for ResultState {
                 info!(next = %next, cancel = self.cancel, "Result: transition");
                 *ctx.transition = Some(next);
             }
-        } else if now > DEFAULT_SCENE_DURATION_MS {
+        } else if now > timing.scene_ms {
             info!("Result: scene timer expired, starting fadeout");
             ctx.timer.set_timer_on(TIMER_FADEOUT);
             ctx.timer.set_timer_on(TIMER_RESULTGRAPH_END);

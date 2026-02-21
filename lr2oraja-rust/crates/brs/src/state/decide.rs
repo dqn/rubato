@@ -12,13 +12,6 @@ use crate::skin_manager::SkinType;
 use crate::state::{GameStateHandler, StateContext};
 use crate::system_sound::SystemSound;
 
-/// Default input delay in milliseconds (skin.getInput() placeholder).
-const DEFAULT_INPUT_DELAY_MS: i64 = 500;
-/// Default scene duration in milliseconds (skin.getScene() placeholder).
-const DEFAULT_SCENE_DURATION_MS: i64 = 3000;
-/// Default fadeout duration in milliseconds (skin.getFadeout() placeholder).
-const DEFAULT_FADEOUT_DURATION_MS: i64 = 500;
-
 /// Music decide state — brief interstitial between song selection and play.
 pub struct MusicDecideState {
     cancel: bool,
@@ -55,15 +48,16 @@ impl GameStateHandler for MusicDecideState {
 
     fn render(&mut self, ctx: &mut StateContext) {
         let now = ctx.timer.now_time();
+        let timing = ctx.skin_timing();
 
-        // Enable input after initial delay
-        if now > DEFAULT_INPUT_DELAY_MS {
+        // Enable input after initial delay (Java: getSkin().getInput())
+        if now > timing.input_ms {
             ctx.timer.switch_timer(TIMER_STARTINPUT, true);
         }
 
-        // Check fadeout -> transition
+        // Check fadeout -> transition (Java: getSkin().getFadeout())
         if ctx.timer.is_timer_on(TIMER_FADEOUT) {
-            if ctx.timer.now_time_of(TIMER_FADEOUT) > DEFAULT_FADEOUT_DURATION_MS {
+            if ctx.timer.now_time_of(TIMER_FADEOUT) > timing.fadeout_ms {
                 let next = if self.cancel {
                     AppStateType::MusicSelect
                 } else {
@@ -72,7 +66,7 @@ impl GameStateHandler for MusicDecideState {
                 info!(next = %next, cancel = self.cancel, "MusicDecide: transition");
                 *ctx.transition = Some(next);
             }
-        } else if now > DEFAULT_SCENE_DURATION_MS {
+        } else if now > timing.scene_ms {
             info!("MusicDecide: scene timer expired, starting fadeout");
             ctx.timer.set_timer_on(TIMER_FADEOUT);
         }

@@ -80,6 +80,19 @@ fn default_skin_path(skin_type: SkinType) -> Option<PathBuf> {
     Some(PathBuf::from(relative))
 }
 
+/// Skin timing values read from the loaded skin file.
+///
+/// Java: Skin.getInput(), Skin.getScene(), Skin.getFadeout().
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SkinTiming {
+    /// Input enable delay in milliseconds (STARTINPUT timer threshold).
+    pub input_ms: i64,
+    /// Scene duration in milliseconds before auto-fadeout.
+    pub scene_ms: i64,
+    /// Fadeout animation duration in milliseconds.
+    pub fadeout_ms: i64,
+}
+
 /// Manages skin loading requests and state.
 #[derive(Default)]
 pub struct SkinManager {
@@ -93,6 +106,8 @@ pub struct SkinManager {
     pub load_status: SkinLoadStatus,
     /// Error message from the most recent failed load attempt.
     pub last_error: Option<String>,
+    /// Timing values from the currently loaded skin.
+    pub skin_timing: SkinTiming,
 }
 
 impl SkinManager {

@@ -11,17 +11,22 @@ use bms_render::draw::bar::{BarScrollState, BarSlotData, BarType};
 use bms_rule::ClearType;
 use bms_rule::ScoreData;
 use bms_skin::property_id::{
-    FLOAT_CHART_AVERAGEDENSITY, FLOAT_CHART_ENDDENSITY, FLOAT_CHART_PEAKDENSITY,
-    FLOAT_CHART_TOTALGAUGE, NUMBER_DENSITY_AVERAGE, NUMBER_DENSITY_AVERAGE_AFTERDOT,
-    NUMBER_DENSITY_END, NUMBER_DENSITY_END_AFTERDOT, NUMBER_DENSITY_PEAK,
-    NUMBER_DENSITY_PEAK_AFTERDOT, NUMBER_FOLDER_TOTALSONGS, NUMBER_MAINBPM, NUMBER_MAXBPM,
-    NUMBER_MINBPM, NUMBER_RIVAL_CLEARCOUNT, NUMBER_RIVAL_FAILCOUNT, NUMBER_RIVAL_MAXCOMBO,
-    NUMBER_RIVAL_MISSCOUNT, NUMBER_RIVAL_PLAYCOUNT, NUMBER_RIVAL_SCORE, NUMBER_SONGGAUGE_TOTAL,
-    NUMBER_TOTALNOTE_BSS, NUMBER_TOTALNOTE_LN, NUMBER_TOTALNOTE_NORMAL, NUMBER_TOTALNOTE_SCRATCH,
-    NUMBER_TOTALNOTES2, OPTION_5KEYSONG, OPTION_7KEYSONG, OPTION_9KEYSONG, OPTION_10KEYSONG,
-    OPTION_14KEYSONG, OPTION_24KEYDPSONG, OPTION_24KEYSONG, OPTION_BGA, OPTION_BPMCHANGE,
-    OPTION_COMPARE_RIVAL, OPTION_DIFFICULTY0, OPTION_DIFFICULTY1, OPTION_DIFFICULTY2,
-    OPTION_DIFFICULTY3, OPTION_DIFFICULTY4, OPTION_DIFFICULTY5, OPTION_FOLDERBAR, OPTION_GRADEBAR,
+    FLOAT_BEST_RATE, FLOAT_CHART_AVERAGEDENSITY, FLOAT_CHART_ENDDENSITY, FLOAT_CHART_PEAKDENSITY,
+    FLOAT_CHART_TOTALGAUGE, FLOAT_SCORE_RATE2, NUMBER_BAD_RATE, NUMBER_BAD2, NUMBER_BEST_RATE,
+    NUMBER_BEST_RATE_AFTERDOT, NUMBER_CLEARCOUNT, NUMBER_DENSITY_AVERAGE,
+    NUMBER_DENSITY_AVERAGE_AFTERDOT, NUMBER_DENSITY_END, NUMBER_DENSITY_END_AFTERDOT,
+    NUMBER_DENSITY_PEAK, NUMBER_DENSITY_PEAK_AFTERDOT, NUMBER_FAILCOUNT, NUMBER_FOLDER_TOTALSONGS,
+    NUMBER_GOOD_RATE, NUMBER_GOOD2, NUMBER_GREAT_RATE, NUMBER_GREAT2, NUMBER_HIGHSCORE2,
+    NUMBER_MAINBPM, NUMBER_MAXBPM, NUMBER_MAXCOMBO2, NUMBER_MINBPM, NUMBER_MISSCOUNT2,
+    NUMBER_PERFECT_RATE, NUMBER_PERFECT2, NUMBER_PLAYCOUNT, NUMBER_PLAYLEVEL, NUMBER_POOR_RATE,
+    NUMBER_POOR2, NUMBER_RIVAL_CLEARCOUNT, NUMBER_RIVAL_FAILCOUNT, NUMBER_RIVAL_MAXCOMBO,
+    NUMBER_RIVAL_MISSCOUNT, NUMBER_RIVAL_PLAYCOUNT, NUMBER_RIVAL_SCORE, NUMBER_SCORE_RATE,
+    NUMBER_SCORE_RATE_AFTERDOT, NUMBER_SCORE2, NUMBER_SONGGAUGE_TOTAL, NUMBER_TOTALNOTE_BSS,
+    NUMBER_TOTALNOTE_LN, NUMBER_TOTALNOTE_NORMAL, NUMBER_TOTALNOTE_SCRATCH, NUMBER_TOTALNOTES2,
+    OPTION_5KEYSONG, OPTION_7KEYSONG, OPTION_9KEYSONG, OPTION_10KEYSONG, OPTION_14KEYSONG,
+    OPTION_24KEYDPSONG, OPTION_24KEYSONG, OPTION_BGA, OPTION_BPMCHANGE, OPTION_COMPARE_RIVAL,
+    OPTION_DIFFICULTY0, OPTION_DIFFICULTY1, OPTION_DIFFICULTY2, OPTION_DIFFICULTY3,
+    OPTION_DIFFICULTY4, OPTION_DIFFICULTY5, OPTION_FOLDERBAR, OPTION_GRADEBAR,
     OPTION_GRADEBAR_CLASS, OPTION_GRADEBAR_CN, OPTION_GRADEBAR_GAUGE_5KEYS,
     OPTION_GRADEBAR_GAUGE_7KEYS, OPTION_GRADEBAR_GAUGE_9KEYS, OPTION_GRADEBAR_GAUGE_24KEYS,
     OPTION_GRADEBAR_GAUGE_LR2, OPTION_GRADEBAR_HCN, OPTION_GRADEBAR_LN, OPTION_GRADEBAR_MIRROR,
@@ -53,6 +58,7 @@ pub struct RivalSkinData<'a> {
     pub score: Option<&'a ScoreData>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn sync_select_state(
     state: &mut SharedGameState,
     bar_manager: &BarManager,
@@ -61,6 +67,7 @@ pub fn sync_select_state(
     _is_preview_playing: bool,
     selected_replay: i32,
     rival: Option<&RivalSkinData<'_>>,
+    selected_score: Option<&ScoreData>,
 ) {
     // Bar type booleans (clear previous)
     state.booleans.insert(OPTION_SONGBAR, false);
@@ -100,6 +107,9 @@ pub fn sync_select_state(
 
             // Total notes
             state.integers.insert(NUMBER_TOTALNOTES2, song_data.notes);
+
+            // Play level (Java: NUMBER_PLAYLEVEL)
+            state.integers.insert(NUMBER_PLAYLEVEL, song_data.level);
 
             // Mode flags
             let mode_id = song_data.mode;
@@ -209,6 +219,9 @@ pub fn sync_select_state(
         state.strings.insert(STRING_RIVAL, String::new());
         clear_rival_scores(state);
     }
+
+    // Score data properties for the selected song bar (Java: IntegerPropertyFactory)
+    sync_selected_score(state, selected_score);
 }
 
 fn clear_rival_scores(state: &mut SharedGameState) {
@@ -660,6 +673,138 @@ pub fn sync_grade_bar_constraints(
         .insert(OPTION_GRADEBAR_HCN, constraints.contains(&Hcn));
 }
 
+/// Synchronize score data properties for the selected song bar.
+///
+/// Java: IntegerPropertyFactory NUMBER_PLAYCOUNT(77), NUMBER_CLEARCOUNT(78),
+/// NUMBER_FAILCOUNT(79), NUMBER_SCORE2(101), NUMBER_SCORE_RATE(102),
+/// NUMBER_SCORE_RATE_AFTERDOT(103), NUMBER_MAXCOMBO2(105), NUMBER_HIGHSCORE2(170),
+/// NUMBER_MISSCOUNT2(177), NUMBER_PERFECT2(80)-NUMBER_POOR2(84),
+/// NUMBER_PERFECT_RATE(85)-NUMBER_POOR_RATE(89), NUMBER_BEST_RATE(183),
+/// NUMBER_BEST_RATE_AFTERDOT(184).
+fn sync_selected_score(state: &mut SharedGameState, score: Option<&ScoreData>) {
+    const SCORE_INTEGER_IDS: &[i32] = &[
+        NUMBER_PLAYCOUNT,
+        NUMBER_CLEARCOUNT,
+        NUMBER_FAILCOUNT,
+        NUMBER_SCORE2,
+        NUMBER_SCORE_RATE,
+        NUMBER_SCORE_RATE_AFTERDOT,
+        NUMBER_MAXCOMBO2,
+        NUMBER_HIGHSCORE2,
+        NUMBER_MISSCOUNT2,
+        NUMBER_PERFECT2,
+        NUMBER_GREAT2,
+        NUMBER_GOOD2,
+        NUMBER_BAD2,
+        NUMBER_POOR2,
+        NUMBER_PERFECT_RATE,
+        NUMBER_GREAT_RATE,
+        NUMBER_GOOD_RATE,
+        NUMBER_BAD_RATE,
+        NUMBER_POOR_RATE,
+        NUMBER_BEST_RATE,
+        NUMBER_BEST_RATE_AFTERDOT,
+    ];
+    const SCORE_FLOAT_IDS: &[i32] = &[FLOAT_SCORE_RATE2, FLOAT_BEST_RATE];
+
+    match score {
+        Some(sd) => {
+            state.integers.insert(NUMBER_PLAYCOUNT, sd.playcount);
+            state.integers.insert(NUMBER_CLEARCOUNT, sd.clearcount);
+            state
+                .integers
+                .insert(NUMBER_FAILCOUNT, sd.playcount - sd.clearcount);
+
+            let ex = sd.exscore();
+            state.integers.insert(NUMBER_SCORE2, ex);
+            state.integers.insert(NUMBER_HIGHSCORE2, ex);
+            state.integers.insert(NUMBER_MAXCOMBO2, sd.maxcombo);
+            state.integers.insert(NUMBER_MISSCOUNT2, sd.minbp);
+
+            // Score rate (% of max EX score)
+            let max_ex = sd.notes * 2;
+            if max_ex > 0 {
+                let rate_100 = ex as f64 * 100.0 / max_ex as f64;
+                state.integers.insert(NUMBER_SCORE_RATE, rate_100 as i32);
+                state.integers.insert(
+                    NUMBER_SCORE_RATE_AFTERDOT,
+                    ((rate_100 * 100.0) as i32) % 100,
+                );
+                state.floats.insert(FLOAT_SCORE_RATE2, rate_100 as f32);
+
+                // Best rate (same as score rate on select screen)
+                state.integers.insert(NUMBER_BEST_RATE, rate_100 as i32);
+                state
+                    .integers
+                    .insert(NUMBER_BEST_RATE_AFTERDOT, ((rate_100 * 100.0) as i32) % 100);
+                state.floats.insert(FLOAT_BEST_RATE, rate_100 as f32);
+            } else {
+                state.integers.insert(NUMBER_SCORE_RATE, 0);
+                state.integers.insert(NUMBER_SCORE_RATE_AFTERDOT, 0);
+                state.floats.insert(FLOAT_SCORE_RATE2, 0.0);
+                state.integers.insert(NUMBER_BEST_RATE, 0);
+                state.integers.insert(NUMBER_BEST_RATE_AFTERDOT, 0);
+                state.floats.insert(FLOAT_BEST_RATE, 0.0);
+            }
+
+            // Per-judge counts (Java: NUMBER_PERFECT2(80)-NUMBER_POOR2(84))
+            state
+                .integers
+                .insert(NUMBER_PERFECT2, sd.judge_count(bms_rule::JUDGE_PG));
+            state
+                .integers
+                .insert(NUMBER_GREAT2, sd.judge_count(bms_rule::JUDGE_GR));
+            state
+                .integers
+                .insert(NUMBER_GOOD2, sd.judge_count(bms_rule::JUDGE_GD));
+            state
+                .integers
+                .insert(NUMBER_BAD2, sd.judge_count(bms_rule::JUDGE_BD));
+            state
+                .integers
+                .insert(NUMBER_POOR2, sd.judge_count(bms_rule::JUDGE_PR));
+
+            // Per-judge rates (Java: score.getJudgeCount(i) * 100 / score.getNotes())
+            if sd.notes > 0 {
+                state.integers.insert(
+                    NUMBER_PERFECT_RATE,
+                    sd.judge_count(bms_rule::JUDGE_PG) * 100 / sd.notes,
+                );
+                state.integers.insert(
+                    NUMBER_GREAT_RATE,
+                    sd.judge_count(bms_rule::JUDGE_GR) * 100 / sd.notes,
+                );
+                state.integers.insert(
+                    NUMBER_GOOD_RATE,
+                    sd.judge_count(bms_rule::JUDGE_GD) * 100 / sd.notes,
+                );
+                state.integers.insert(
+                    NUMBER_BAD_RATE,
+                    sd.judge_count(bms_rule::JUDGE_BD) * 100 / sd.notes,
+                );
+                state.integers.insert(
+                    NUMBER_POOR_RATE,
+                    sd.judge_count(bms_rule::JUDGE_PR) * 100 / sd.notes,
+                );
+            } else {
+                state.integers.insert(NUMBER_PERFECT_RATE, 0);
+                state.integers.insert(NUMBER_GREAT_RATE, 0);
+                state.integers.insert(NUMBER_GOOD_RATE, 0);
+                state.integers.insert(NUMBER_BAD_RATE, 0);
+                state.integers.insert(NUMBER_POOR_RATE, 0);
+            }
+        }
+        None => {
+            for &id in SCORE_INTEGER_IDS {
+                state.integers.remove(&id);
+            }
+            for &id in SCORE_FLOAT_IDS {
+                state.floats.remove(&id);
+            }
+        }
+    }
+}
+
 fn clear_song_metadata(state: &mut SharedGameState) {
     state.strings.insert(STRING_TITLE, String::new());
     state.strings.insert(STRING_SUBTITLE, String::new());
@@ -705,7 +850,7 @@ mod tests {
     fn sync_select_no_bar_clears_metadata() {
         let mut state = SharedGameState::default();
         let bm = BarManager::new();
-        sync_select_state(&mut state, &bm, false, true, false, 0, None);
+        sync_select_state(&mut state, &bm, false, true, false, 0, None, None);
         assert!(!*state.booleans.get(&OPTION_SONGBAR).unwrap());
         assert!(!*state.booleans.get(&OPTION_FOLDERBAR).unwrap());
     }
@@ -714,7 +859,7 @@ mod tests {
     fn sync_select_feature_flags() {
         let mut state = SharedGameState::default();
         let bm = BarManager::new();
-        sync_select_state(&mut state, &bm, true, false, false, 0, None);
+        sync_select_state(&mut state, &bm, true, false, false, 0, None, None);
         assert!(*state.booleans.get(&OPTION_LN).unwrap());
         assert!(!*state.booleans.get(&OPTION_NO_LN).unwrap());
         assert!(!*state.booleans.get(&OPTION_BGA).unwrap());
@@ -967,7 +1112,7 @@ mod tests {
             name: "TestRival",
             score: Some(&rival_score),
         };
-        sync_select_state(&mut state, &bm, false, true, false, 0, Some(&rival));
+        sync_select_state(&mut state, &bm, false, true, false, 0, Some(&rival), None);
         assert!(*state.booleans.get(&OPTION_COMPARE_RIVAL).unwrap());
         assert!(!*state.booleans.get(&OPTION_NOT_COMPARE_RIVAL).unwrap());
         assert_eq!(state.strings.get(&STRING_RIVAL).unwrap(), "TestRival");
@@ -993,11 +1138,11 @@ mod tests {
             name: "Rival",
             score: Some(&rival_score),
         };
-        sync_select_state(&mut state, &bm, false, true, false, 0, Some(&rival));
+        sync_select_state(&mut state, &bm, false, true, false, 0, Some(&rival), None);
         assert!(state.integers.contains_key(&NUMBER_RIVAL_SCORE));
 
         // Clear rival
-        sync_select_state(&mut state, &bm, false, true, false, 0, None);
+        sync_select_state(&mut state, &bm, false, true, false, 0, None, None);
         assert!(!*state.booleans.get(&OPTION_COMPARE_RIVAL).unwrap());
         assert!(*state.booleans.get(&OPTION_NOT_COMPARE_RIVAL).unwrap());
         assert_eq!(state.strings.get(&STRING_RIVAL).unwrap(), "");
@@ -1012,7 +1157,7 @@ mod tests {
             name: "RivalNoScore",
             score: None,
         };
-        sync_select_state(&mut state, &bm, false, true, false, 0, Some(&rival));
+        sync_select_state(&mut state, &bm, false, true, false, 0, Some(&rival), None);
         assert!(*state.booleans.get(&OPTION_COMPARE_RIVAL).unwrap());
         assert_eq!(state.strings.get(&STRING_RIVAL).unwrap(), "RivalNoScore");
         assert!(!state.integers.contains_key(&NUMBER_RIVAL_SCORE));

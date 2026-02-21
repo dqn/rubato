@@ -22,7 +22,7 @@ use crate::game_state::SharedGameState;
 use crate::input_mapper::InputState;
 use crate::player_resource::PlayerResource;
 use crate::preview_music::PreviewMusicProcessor;
-use crate::skin_manager::SkinManager;
+use crate::skin_manager::{SkinManager, SkinTiming};
 use crate::system_sound::SystemSoundManager;
 use crate::timer_manager::TimerManager;
 use bms_config::{Config, PlayerConfig};
@@ -81,6 +81,44 @@ pub struct StateContext<'a> {
     pub preview_music: Option<&'a mut PreviewMusicProcessor>,
     /// Download handle for background song downloads (None in tests or when disabled).
     pub download_handle: Option<&'a Arc<DownloadHandle>>,
+}
+
+/// Default skin timing values when no skin is loaded (fallback for tests).
+const DEFAULT_INPUT_DELAY_MS: i64 = 500;
+const DEFAULT_SCENE_DURATION_MS: i64 = 3000;
+const DEFAULT_FADEOUT_DURATION_MS: i64 = 500;
+
+impl StateContext<'_> {
+    /// Get skin timing values from the loaded skin, or defaults if no skin is loaded.
+    pub fn skin_timing(&self) -> SkinTiming {
+        self.skin_manager
+            .as_ref()
+            .map(|mgr| {
+                let t = mgr.skin_timing;
+                SkinTiming {
+                    input_ms: if t.input_ms > 0 {
+                        t.input_ms
+                    } else {
+                        DEFAULT_INPUT_DELAY_MS
+                    },
+                    scene_ms: if t.scene_ms > 0 {
+                        t.scene_ms
+                    } else {
+                        DEFAULT_SCENE_DURATION_MS
+                    },
+                    fadeout_ms: if t.fadeout_ms > 0 {
+                        t.fadeout_ms
+                    } else {
+                        DEFAULT_FADEOUT_DURATION_MS
+                    },
+                }
+            })
+            .unwrap_or(SkinTiming {
+                input_ms: DEFAULT_INPUT_DELAY_MS,
+                scene_ms: DEFAULT_SCENE_DURATION_MS,
+                fadeout_ms: DEFAULT_FADEOUT_DURATION_MS,
+            })
+    }
 }
 
 /// Trait for game state handlers. Each variant of `AppStateType` has

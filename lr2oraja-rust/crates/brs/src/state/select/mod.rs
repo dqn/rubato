@@ -21,24 +21,20 @@ use bms_database::song_data::{FAVORITE_CHART, FAVORITE_SONG};
 use bms_input::control_keys::ControlKeys;
 use bms_input::key_command::KeyCommand;
 use bms_rule::ScoreData;
-use bms_skin::property_id::{TIMER_FADEOUT, TIMER_STARTINPUT};
+use bms_skin::property_id::{TIMER_FADEOUT, TIMER_SONGBAR_CHANGE, TIMER_STARTINPUT};
 
 use crate::app_state::AppStateType;
 use crate::preview_music::PREVIEW_DELAY_MS;
 use crate::skin_manager::SkinType;
 use crate::state::{DownloadHandle, GameStateHandler, StateContext};
 use crate::system_sound::SystemSound;
+use crate::timer_manager::TimerManager;
 
 use bar_manager::{Bar, BarManager, SortMode};
 use command::{
     CommandResult, MusicSelectCommand, build_song_context_menu, build_table_context_menu,
     build_table_folder_context_menu, replay_data_dir,
 };
-
-/// Default input delay in milliseconds.
-const DEFAULT_INPUT_DELAY_MS: i64 = 500;
-/// Default fadeout duration in milliseconds.
-const DEFAULT_FADEOUT_DURATION_MS: i64 = 500;
 
 /// Fallback scroll animation duration in milliseconds (used when config is 0).
 const FALLBACK_SCROLL_DURATION_MS: i64 = 150;
@@ -251,6 +247,7 @@ impl GameStateHandler for MusicSelectState {
 
     fn render(&mut self, ctx: &mut StateContext) {
         let now = ctx.timer.now_time();
+        let timing = ctx.skin_timing();
 
         // Check for completed IR leaderboard fetch
         let received_bars = self
@@ -263,14 +260,19 @@ impl GameStateHandler for MusicSelectState {
             self.ir_fetch_receiver = None;
         }
 
-        // Enable input after initial delay
-        if now > DEFAULT_INPUT_DELAY_MS {
+        // Initialize TIMER_SONGBAR_CHANGE on first render (Java: MusicSelector.render L214)
+        if !ctx.timer.is_timer_on(TIMER_SONGBAR_CHANGE) {
+            ctx.timer.set_timer_on(TIMER_SONGBAR_CHANGE);
+        }
+
+        // Enable input after initial delay (Java: getSkin().getInput())
+        if now > timing.input_ms {
             ctx.timer.switch_timer(TIMER_STARTINPUT, true);
         }
 
-        // Check fadeout -> transition
+        // Check fadeout -> transition (Java: getSkin().getFadeout())
         if ctx.timer.is_timer_on(TIMER_FADEOUT)
-            && ctx.timer.now_time_of(TIMER_FADEOUT) > DEFAULT_FADEOUT_DURATION_MS
+            && ctx.timer.now_time_of(TIMER_FADEOUT) > timing.fadeout_ms
         {
             if ctx.config.skip_decide_screen {
                 info!("MusicSelect: transition to Play (skipDecideScreen)");
@@ -381,6 +383,12 @@ impl GameStateHandler for MusicSelectState {
                     name,
                     score: rival_score_ref,
                 });
+            // Get score data for the selected song bar
+            let selected_score = self
+                .bar_manager
+                .current()
+                .and_then(|bar| bar.as_song())
+                .and_then(|song| self.score_data_cache.get(&song.sha256));
             select_skin_state::sync_select_state(
                 shared,
                 &self.bar_manager,
@@ -389,6 +397,7 @@ impl GameStateHandler for MusicSelectState {
                 is_preview_playing,
                 self.command_executor.selected_replay(),
                 rival_data.as_ref(),
+                selected_score,
             );
             // H8: sync bar clear status from score cache
             let current_clear = self
@@ -486,7 +495,7 @@ impl GameStateHandler for MusicSelectState {
                         self.bar_manager.move_cursor(-1);
                         self.scroll_angle = -1;
                         self.scroll_start_us = Some(ctx.timer.now_micro_time());
-                        self.on_cursor_change(ctx.timer.now_micro_time());
+                        self.on_cursor_change(ctx.timer.now_micro_time(), ctx.timer);
                         if let Some(sm) = ctx.sound_manager.as_deref_mut() {
                             sm.play(SystemSound::Select);
                         }
@@ -496,7 +505,7 @@ impl GameStateHandler for MusicSelectState {
                         self.bar_manager.move_cursor(1);
                         self.scroll_angle = 1;
                         self.scroll_start_us = Some(ctx.timer.now_micro_time());
-                        self.on_cursor_change(ctx.timer.now_micro_time());
+                        self.on_cursor_change(ctx.timer.now_micro_time(), ctx.timer);
                         if let Some(sm) = ctx.sound_manager.as_deref_mut() {
                             sm.play(SystemSound::Select);
                         }
@@ -510,7 +519,7 @@ impl GameStateHandler for MusicSelectState {
                         if self.bar_manager.is_in_folder() {
                             self.bar_manager.leave_folder();
                             self.score_cache_dirty = true;
-                            self.on_cursor_change(ctx.timer.now_micro_time());
+                            self.on_cursor_change(ctx.timer.now_micro_time(), ctx.timer);
                             if let Some(sm) = ctx.sound_manager.as_deref_mut() {
                                 sm.play(SystemSound::Folder);
                             }
@@ -787,11 +796,13 @@ impl MusicSelectState {
     ///
     /// Also resets the replay selection (Java parity: cursor movement resets
     /// the replay slot to the first available).
-    fn on_cursor_change(&mut self, now_us: i64) {
+    fn on_cursor_change(&mut self, now_us: i64, timer: &mut TimerManager) {
         self.songbar_change_time = Some(now_us);
         self.preview_triggered = false;
         self.command_executor
             .execute(MusicSelectCommand::ResetReplay, &self.bar_manager);
+        // Reset TIMER_SONGBAR_CHANGE on cursor move (Java: selectedBarMoved L641)
+        timer.set_timer_on(TIMER_SONGBAR_CHANGE);
     }
 
     /// Trigger preview playback for the currently selected bar.
@@ -2527,7 +2538,9 @@ mod tests {
         assert_eq!(state.command_executor.selected_replay(), 1);
 
         // Trigger cursor change
-        state.on_cursor_change(1_000_000);
+        let mut timer = crate::timer_manager::TimerManager::new();
+        timer.set_now_micro_time(1_000_000);
+        state.on_cursor_change(1_000_000, &mut timer);
 
         // Replay should be reset to 0
         assert_eq!(state.command_executor.selected_replay(), 0);
