@@ -1,0 +1,25 @@
+[package]
+name = "beatoraja-launcher"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+regex.workspace = true
+
+beatoraja-core = { workspace = true }
+beatoraja-audio = { workspace = true }
+beatoraja-input = { workspace = true }
+beatoraja-ir = { workspace = true }
+beatoraja-obs = { workspace = true }
+beatoraja-modmenu = { workspace = true }
+beatoraja-skin = { workspace = true }
+beatoraja-play = { workspace = true }
+beatoraja-select = { workspace = true }
+beatoraja-external = { workspace = true }
+beatoraja-stream = { workspace = true }
+bms-model = { workspace = true }
+md-processor = { workspace = true }
