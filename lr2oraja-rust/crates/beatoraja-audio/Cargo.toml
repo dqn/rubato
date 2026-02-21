@@ -8,6 +8,7 @@ anyhow.workspace = true
 log.workspace = true
 bms-model.workspace = true
 beatoraja-common.workspace = true
+beatoraja-types.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

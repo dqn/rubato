@@ -9,6 +9,7 @@ bms-model = { workspace = true }
 beatoraja-common = { workspace = true }
 beatoraja-input = { workspace = true }
 beatoraja-audio = { workspace = true }
+beatoraja-types = { workspace = true }
 
 # Error handling
 anyhow = { workspace = true }

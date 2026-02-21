@@ -1,51 +1,6 @@
-// Stub types for Phase 4 dependencies (Config, ResourcePool, etc.)
-
-/// Stub for bms.player.beatoraja.Config
-pub struct Config {
-    pub song_resource_gen: i32,
-    audio_config: AudioConfig,
-}
-
-impl Config {
-    pub fn get_song_resource_gen(&self) -> i32 {
-        self.song_resource_gen
-    }
-
-    pub fn get_audio_config(&self) -> &AudioConfig {
-        &self.audio_config
-    }
-}
-
-/// Stub for AudioConfig
-pub struct AudioConfig {
-    normalize_volume: bool,
-    driver_name: String,
-    sample_rate: i32,
-    device_buffer_size: i32,
-    device_simultaneous_sources: i32,
-}
-
-impl AudioConfig {
-    pub fn is_normalize_volume(&self) -> bool {
-        self.normalize_volume
-    }
-
-    pub fn get_driver_name(&self) -> &str {
-        &self.driver_name
-    }
-
-    pub fn get_sample_rate(&self) -> i32 {
-        self.sample_rate
-    }
-
-    pub fn get_device_buffer_size(&self) -> i32 {
-        self.device_buffer_size
-    }
-
-    pub fn get_device_simultaneous_sources(&self) -> i32 {
-        self.device_simultaneous_sources
-    }
-}
+// Config types re-exported from beatoraja-types
+pub use beatoraja_types::audio_config::AudioConfig;
+pub use beatoraja_types::config::Config;
 
 /// Stub for bms.player.beatoraja.ResourcePool<K, V>
 pub struct ResourcePool<K, V> {

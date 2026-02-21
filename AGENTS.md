@@ -123,10 +123,13 @@ brs/
 - **Phase 10 complete:** `beatoraja-song` (8 modules — song data model, folder data, song information, DB accessors, CRC32 utils), `beatoraja-controller` (3 modules — LWJGL3/GLFW gamepad controller manager, stubbed for gilrs integration), `beatoraja-system` (1 module — RobustFile I/O with backup/restore semantics)
 - **Phase 11 complete:** Integration & wiring — replaced stubs with real cross-crate imports across 12 crates, added 60+ getter methods to SongData/ScoreData, added beatoraja-song dependency to 7 crates, removed 24+ unused stubs, documented circular dependency constraints
 - **Phase 12 complete:** `beatoraja-bin` (binary entry point — CLI argument parsing via clap, config/player loading, MainController lifecycle, winit event loop with window creation, display mode handling)
+- **Phase 14 in progress:** `beatoraja-types` crate created (15 modules — Config, PlayerConfig, PlayModeConfig, Resolution, AudioConfig, IRConfig, SkinConfig, PlayConfig, ScoreData, CourseData, ReplayData, ClearType, BMKeys, Validatable, stubs). Circular dependency resolution complete: beatoraja-core re-exports from beatoraja-types, beatoraja-input/audio stubs replaced with beatoraja-types imports. API incompatibility resolution partially complete (getter methods added, enum variant updates applied).
 
 ## Deferred / Stub Items
-- **Circular dependency stubs (cannot be replaced):**
-  - `beatoraja-input`, `beatoraja-audio`: Config stubs (beatoraja-core depends on these crates)
+- **Circular dependency stubs (resolved via beatoraja-types):**
+  - `beatoraja-input`, `beatoraja-audio`: Config/PlayModeConfig/Resolution stubs **replaced** with `beatoraja-types` imports
+  - `beatoraja-core`: 14 modules **replaced** with `pub use beatoraja_types::*` re-exports
+- **Remaining circular dependency stubs (cannot be replaced):**
   - `beatoraja-core`: SongData, SkinType, GrooveGauge stubs (beatoraja-song/skin/play depend on core)
   - `beatoraja-play`: TextureRegion/Texture stubs (beatoraja-skin depends on play)
   - `beatoraja-modmenu`, `beatoraja-launcher`: Custom adapter stubs (incompatible APIs)
@@ -478,3 +481,17 @@ Java's manual argument parsing (`for (String s : args)` with `-a`, `-p`, `-r1`..
 Two entry paths from Java remain as `todo!()`:
 1. **Launcher UI path:** When no config exists or no play mode specified, Java launches JavaFX `Application.start()`. Deferred to Phase 13 egui integration.
 2. **Fullscreen mode:** Java's `Gdx.graphics.setFullscreenMode()` uses GLFW monitor APIs. Deferred to Phase 13 rendering integration. The window is created in windowed mode with correct dimensions as a fallback.
+
+### beatoraja-types Extraction Strategy (Phase 14)
+
+To break circular dependencies (core↔input, core↔audio), extract shared types into a bottom-level `beatoraja-types` crate that depends only on `bms-model` and serialization libraries. Key decisions:
+
+1. **BMKeys must move with PlayModeConfig:** PlayModeConfig imports BMKeys from beatoraja-input. Moving PlayModeConfig to beatoraja-types without BMKeys would create beatoraja-types→beatoraja-input→beatoraja-types cycle. Solution: extract BMKeys to `beatoraja-types/src/bm_keys.rs`.
+
+2. **pub use re-export for zero breaking changes:** Replace beatoraja-core module files with `pub use beatoraja_types::module::*;`. All existing import paths like `beatoraja_core::config::Config` continue working without any downstream changes.
+
+3. **Getter methods for stub API compatibility:** Real types use pub fields; stubs used getter methods (e.g., `get_key_assign()`, `is_analog_scroll()`). Add getter methods to beatoraja-types types so downstream callers don't need updating. Field name differences (stub `key_assign` vs real `keys`) are bridged by getters returning the correct field.
+
+4. **Associated constants for module-level constants:** Stubs defined constants as associated constants (e.g., `ControllerConfig::ANALOG_SCRATCH_VER_1`). Real types defined them at module level. Add associated constants that reference the module-level constants: `pub const ANALOG_SCRATCH_VER_1: i32 = ANALOG_SCRATCH_VER_1;`.
+
+5. **Enum variant name changes require caller updates:** MidiInputType stubs used CamelCase variants (`Note`, `PitchBend`), real types use SCREAMING_SNAKE (`NOTE`, `PITCH_BEND`). Resolution changed from struct with field access to enum with method calls. These require updating callers — no way to bridge with re-exports.

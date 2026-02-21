@@ -24,6 +24,7 @@ members = [
     "crates/beatoraja-controller",
     "crates/beatoraja-system",
     "crates/beatoraja-bin",
+    "crates/beatoraja-types",
 ]
 resolver = "2"
 
@@ -56,6 +57,7 @@ beatoraja-launcher = { path = "crates/beatoraja-launcher" }
 beatoraja-song = { path = "crates/beatoraja-song" }
 beatoraja-controller = { path = "crates/beatoraja-controller" }
 beatoraja-system = { path = "crates/beatoraja-system" }
+beatoraja-types = { path = "crates/beatoraja-types" }
 
 # Error handling
 anyhow = "1"

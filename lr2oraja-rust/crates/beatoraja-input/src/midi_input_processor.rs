@@ -66,7 +66,7 @@ impl MidiInputProcessor {
             starttime: 0,
             pitch: 0,
             last_pressed_key_available: false,
-            last_pressed_key: MidiInput::new(),
+            last_pressed_key: MidiInput::default(),
             pitch_threshold: 8192 / 32,
             key_map: Vec::new(),
             pitch_bend_up: None,
@@ -138,7 +138,7 @@ impl MidiInputProcessor {
 
     fn set_handler(&mut self, input: &MidiInput, handler: KeyHandler) {
         match input.input_type {
-            MidiInputType::Note => {
+            MidiInputType::NOTE => {
                 if input.value >= 0
                     && (input.value as usize) < MAX_KEYS
                     && self.key_map[input.value as usize].is_none()
@@ -146,14 +146,14 @@ impl MidiInputProcessor {
                     self.key_map[input.value as usize] = Some(handler);
                 }
             }
-            MidiInputType::PitchBend => {
+            MidiInputType::PITCH_BEND => {
                 if input.value > 0 && self.pitch_bend_up.is_none() {
                     self.pitch_bend_up = Some(handler);
                 } else if input.value < 0 && self.pitch_bend_down.is_none() {
                     self.pitch_bend_down = Some(handler);
                 }
             }
-            MidiInputType::ControlChange => {
+            MidiInputType::CONTROL_CHANGE => {
                 // no-op
             }
         }
@@ -167,7 +167,7 @@ impl MidiInputProcessor {
 
     pub fn note_on(&mut self, num: usize, callback: &mut dyn MidiCallback) {
         self.last_pressed_key_available = true;
-        self.last_pressed_key.input_type = MidiInputType::Note;
+        self.last_pressed_key.input_type = MidiInputType::NOTE;
         self.last_pressed_key.value = num as i32;
         if let Some(handler) = &self.key_map[num] {
             Self::dispatch_handler(handler, true, self.current_time(), callback);
@@ -177,7 +177,7 @@ impl MidiInputProcessor {
     fn on_pitch_bend_up(&mut self, pressed: bool, callback: &mut dyn MidiCallback) {
         if pressed {
             self.last_pressed_key_available = true;
-            self.last_pressed_key.input_type = MidiInputType::PitchBend;
+            self.last_pressed_key.input_type = MidiInputType::PITCH_BEND;
             self.last_pressed_key.value = 1;
         }
         if let Some(handler) = &self.pitch_bend_up {
@@ -188,7 +188,7 @@ impl MidiInputProcessor {
     fn on_pitch_bend_down(&mut self, pressed: bool, callback: &mut dyn MidiCallback) {
         if pressed {
             self.last_pressed_key_available = true;
-            self.last_pressed_key.input_type = MidiInputType::PitchBend;
+            self.last_pressed_key.input_type = MidiInputType::PITCH_BEND;
             self.last_pressed_key.value = -1;
         }
         if let Some(handler) = &self.pitch_bend_down {

@@ -131,11 +131,15 @@ Resolve type stubs that Phase 11 could not replace due to circular dependencies 
 
 Extract shared types into a low-level crate to break cycles.
 
-- [ ] Create `beatoraja-types` crate with shared types (Config, PlayerConfig, PlayModeConfig, Resolution, SkinType, SongData, ScoreData)
-- [ ] Replace `beatoraja-core` stubs for SongData, SkinType, GrooveGauge with `beatoraja-types` import
-- [ ] Replace `beatoraja-play` stubs for TextureRegion/Texture with `beatoraja-types` import
-- [ ] Replace `beatoraja-input`/`beatoraja-audio` Config stubs with `beatoraja-types` import
-- [ ] Update all crates to depend on `beatoraja-types` instead of local stubs
+- [x] Create `beatoraja-types` crate with shared types (Config, PlayerConfig, PlayModeConfig, Resolution, AudioConfig, IRConfig, SkinConfig, PlayConfig, ScoreData, CourseData, ReplayData, ClearType, BMKeys, Validatable)
+- [x] Replace `beatoraja-core` 14 modules with `pub use beatoraja_types::*` re-exports
+- [x] Replace `beatoraja-input` Config/Resolution/PlayModeConfig/KeyboardConfig/ControllerConfig/MidiConfig/MidiInput/MidiInputType/MouseScratchConfig/PlayerConfig stubs with `beatoraja-types` import
+- [x] Replace `beatoraja-audio` Config/AudioConfig stubs with `beatoraja-types` import
+- [x] Add compatibility getter methods to `beatoraja-types` for stub API compatibility
+- [x] Update beatoraja-input callers: Resolution field access → method calls, MidiInputType variant names
+- [x] Verify: all 66 tests pass, zero clippy warnings, clean `cargo fmt`
+- [ ] Replace `beatoraja-play` stubs for TextureRegion/Texture with `beatoraja-types` import (rendering stubs — deferred to Phase 13)
+- [ ] Replace remaining stubs in downstream crates (API-incompatible stubs require further refactoring)
 
 ### API Incompatibility Resolution
 

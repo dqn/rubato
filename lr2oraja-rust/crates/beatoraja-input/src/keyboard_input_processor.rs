@@ -393,9 +393,9 @@ impl KeyBoardInputProcesseor {
 
     pub fn mouse_moved(&self, x: i32, y: i32, callback: &mut dyn KeyboardCallback) -> bool {
         callback.set_mouse_moved(true);
-        callback.set_mouse_x(x * self.resolution.width / GdxGraphics::get_width());
+        callback.set_mouse_x(x * self.resolution.width() / GdxGraphics::get_width());
         callback.set_mouse_y(
-            self.resolution.height - y * self.resolution.height / GdxGraphics::get_height(),
+            self.resolution.height() - y * self.resolution.height() / GdxGraphics::get_height(),
         );
         false
     }
@@ -425,9 +425,9 @@ impl KeyBoardInputProcesseor {
         callback: &mut dyn KeyboardCallback,
     ) -> bool {
         callback.set_mouse_button(button);
-        callback.set_mouse_x(x * self.resolution.width / GdxGraphics::get_width());
+        callback.set_mouse_x(x * self.resolution.width() / GdxGraphics::get_width());
         callback.set_mouse_y(
-            self.resolution.height - y * self.resolution.height / GdxGraphics::get_height(),
+            self.resolution.height() - y * self.resolution.height() / GdxGraphics::get_height(),
         );
         callback.set_mouse_pressed(true);
         false
@@ -440,9 +440,9 @@ impl KeyBoardInputProcesseor {
         _point: i32,
         callback: &mut dyn KeyboardCallback,
     ) -> bool {
-        callback.set_mouse_x(x * self.resolution.width / GdxGraphics::get_width());
+        callback.set_mouse_x(x * self.resolution.width() / GdxGraphics::get_width());
         callback.set_mouse_y(
-            self.resolution.height - y * self.resolution.height / GdxGraphics::get_height(),
+            self.resolution.height() - y * self.resolution.height() / GdxGraphics::get_height(),
         );
         callback.set_mouse_dragged(true);
         false

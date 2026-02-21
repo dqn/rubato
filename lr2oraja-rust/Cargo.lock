@@ -191,6 +191,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "beatoraja-common",
+ "beatoraja-types",
  "bms-model",
  "log",
  "tempfile",
@@ -235,6 +236,7 @@ dependencies = [
  "beatoraja-audio",
  "beatoraja-common",
  "beatoraja-input",
+ "beatoraja-types",
  "bms-model",
  "chrono",
  "ecb",
@@ -286,6 +288,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "beatoraja-common",
+ "beatoraja-types",
  "bms-model",
  "log",
  "tempfile",
@@ -497,6 +500,19 @@ dependencies = [
  "anyhow",
  "log",
  "tempfile",
+]
+
+[[package]]
+name = "beatoraja-types"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "bms-model",
+ "flate2",
+ "log",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
