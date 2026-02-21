@@ -1,13 +1,17 @@
 // External dependency stubs for beatoraja-external crate
 //
-// Phase 11 analysis — Why remaining stubs cannot be replaced yet:
+// Stubs replaced with real types:
+//   Config → pub use beatoraja_core::config::Config
+//   PlayerConfig → pub use beatoraja_core::player_config::PlayerConfig
+//   ScoreData → pub use beatoraja_core::score_data::ScoreData
+//   SongData → pub use beatoraja_song::song_data::SongData
+//   ReplayData → pub use beatoraja_core::replay_data::ReplayData
 //
-// MainController, PlayerResource, Config, PlayerConfig:
-//   Real types in beatoraja-core use pub fields (no getters/setters), and the
-//   external code accesses them through chain like state.resource.get_config().
-//   The real Config field names differ (set_clipboard_screenshot vs
-//   set_clipboard_when_screenshot), PlayerConfig twitter fields are Option<String>
-//   not String, and PlayerResource.get_songdata() returns Option not direct ref.
+// Remaining stubs — Why they cannot be replaced:
+//
+// MainController, PlayerResource:
+//   Real types depend on beatoraja-core internals and screen lifecycle.
+//   External code accesses through chain like state.resource.get_config().
 //
 // MainState:
 //   Real type is a trait (beatoraja_core::main_state::MainState), but external
@@ -17,17 +21,9 @@
 // MainStateListener:
 //   Takes &MainState (struct) in stub vs &dyn MainState (trait) in real type.
 //
-// SongData:
-//   Real beatoraja-song::SongData has pub fields, no set_title()/set_md5() etc.
-//   External code calls setters extensively (bms_search_accessor.rs).
-//
 // SongDatabaseAccessor:
 //   Real type is a trait in beatoraja-song, stub is a struct. Callers instantiate
 //   it as a concrete type.
-//
-// ScoreData:
-//   Real type has get_judge_count(judge, fast) (2-arg) but callers use 1-arg
-//   get_judge_count(judge). Real update() takes 2 args, stub takes 1.
 //
 // ScoreDatabaseAccessor:
 //   Real type requires path in constructor (new(path) -> Result), stub is unit
@@ -37,10 +33,6 @@
 //   Real TableFolder has name: Option<String> and songs field, stub has name:
 //   String and song field. write() takes &mut vs &. Setter methods don't exist
 //   on real types.
-//
-// ReplayData:
-//   Real type has lane_shuffle_pattern: Option<Vec<Vec<i32>>>, stub has
-//   Vec<Vec<i32>>. Field access differs.
 //
 // Mode:
 //   Real bms_model::mode::Mode is enum (no id field). Could theoretically replace
@@ -59,8 +51,6 @@
 //
 // AbstractResult, ScreenType:
 //   From beatoraja-result/beatoraja-play (cannot depend on them).
-
-use std::collections::HashMap;
 
 // ============================================================
 // MainController stub
@@ -111,148 +101,22 @@ impl PlayerResource {
 }
 
 // ============================================================
-// Config stub (fields needed by screenshot/webhook)
+// Config — replaced with real type from beatoraja-core
 // ============================================================
 
-/// Stub for bms.player.beatoraja.Config
-#[derive(Clone, Debug, Default)]
-pub struct Config {
-    pub set_clipboard_when_screenshot: bool,
-    pub webhook_option: i32,
-    pub webhook_url: Vec<String>,
-    pub webhook_name: String,
-    pub webhook_avatar: String,
-}
-
-impl Config {
-    pub fn is_set_clipboard_when_screenshot(&self) -> bool {
-        self.set_clipboard_when_screenshot
-    }
-
-    pub fn get_webhook_option(&self) -> i32 {
-        self.webhook_option
-    }
-
-    pub fn get_webhook_url(&self) -> &[String] {
-        &self.webhook_url
-    }
-
-    pub fn get_webhook_name(&self) -> &str {
-        &self.webhook_name
-    }
-
-    pub fn get_webhook_avatar(&self) -> &str {
-        &self.webhook_avatar
-    }
-}
+pub use beatoraja_core::config::Config;
 
 // ============================================================
-// PlayerConfig stub (fields needed by Twitter exporter)
+// PlayerConfig — replaced with real type from beatoraja-core
 // ============================================================
 
-/// Stub for bms.player.beatoraja.PlayerConfig
-#[derive(Clone, Debug, Default)]
-pub struct PlayerConfig {
-    pub twitter_consumer_key: String,
-    pub twitter_consumer_secret: String,
-    pub twitter_access_token: String,
-    pub twitter_access_token_secret: String,
-}
-
-impl PlayerConfig {
-    pub fn get_twitter_consumer_key(&self) -> &str {
-        &self.twitter_consumer_key
-    }
-
-    pub fn get_twitter_consumer_secret(&self) -> &str {
-        &self.twitter_consumer_secret
-    }
-
-    pub fn get_twitter_access_token(&self) -> &str {
-        &self.twitter_access_token
-    }
-
-    pub fn get_twitter_access_token_secret(&self) -> &str {
-        &self.twitter_access_token_secret
-    }
-}
+pub use beatoraja_core::player_config::PlayerConfig;
 
 // ============================================================
-// SongData stub
+// SongData — replaced with real type from beatoraja-song
 // ============================================================
 
-/// Stub for bms.player.beatoraja.song.SongData
-#[derive(Clone, Debug, Default)]
-pub struct SongData {
-    pub sha256: String,
-    pub md5: String,
-    pub title: String,
-    pub subtitle: String,
-    pub artist: String,
-    pub subartist: String,
-    pub genre: String,
-    pub url: Option<String>,
-    pub notes: i32,
-    pub mode: i32,
-}
-
-impl SongData {
-    pub fn get_sha256(&self) -> &str {
-        &self.sha256
-    }
-    pub fn set_sha256(&mut self, s: String) {
-        self.sha256 = s;
-    }
-    pub fn get_md5(&self) -> &str {
-        &self.md5
-    }
-    pub fn set_md5(&mut self, s: String) {
-        self.md5 = s;
-    }
-    pub fn get_title(&self) -> &str {
-        &self.title
-    }
-    pub fn set_title(&mut self, s: String) {
-        self.title = s;
-    }
-    pub fn get_artist(&self) -> &str {
-        &self.artist
-    }
-    pub fn set_artist(&mut self, s: String) {
-        self.artist = s;
-    }
-    pub fn get_genre(&self) -> &str {
-        &self.genre
-    }
-    pub fn set_genre(&mut self, s: String) {
-        self.genre = s;
-    }
-    pub fn get_url(&self) -> Option<&str> {
-        self.url.as_deref()
-    }
-    pub fn set_url(&mut self, s: String) {
-        self.url = Some(s);
-    }
-    pub fn get_notes(&self) -> i32 {
-        self.notes
-    }
-    pub fn set_notes(&mut self, n: i32) {
-        self.notes = n;
-    }
-    pub fn get_mode(&self) -> i32 {
-        self.mode
-    }
-    pub fn set_mode(&mut self, m: i32) {
-        self.mode = m;
-    }
-    pub fn get_full_title(&self) -> String {
-        if self.subtitle.is_empty() {
-            self.title.clone()
-        } else {
-            format!("{} {}", self.title, self.subtitle)
-        }
-    }
-}
+pub use beatoraja_song::song_data::SongData;
 
 // ============================================================
 // SongDatabaseAccessor stub
@@ -268,136 +132,10 @@ impl SongDatabaseAccessor {
 }
 
 // ============================================================
-// ScoreData stub
+// ScoreData — replaced with real type from beatoraja-core
 // ============================================================
 
-/// Stub for bms.player.beatoraja.ScoreData
-#[derive(Clone, Debug, Default)]
-pub struct ScoreData {
-    pub sha256: String,
-    pub mode: i32,
-    pub clear: i32,
-    pub playcount: i32,
-    pub clearcount: i32,
-    pub epg: i32,
-    pub egr: i32,
-    pub egd: i32,
-    pub ebd: i32,
-    pub epr: i32,
-    pub minbp: i32,
-    pub notes: i32,
-    pub scorehash: String,
-    // Full judge fields for judge_count
-    pub lpg: i32,
-    pub lgr: i32,
-    pub lgd: i32,
-    pub lbd: i32,
-    pub lpr: i32,
-}
-
-impl ScoreData {
-    pub fn get_sha256(&self) -> &str {
-        &self.sha256
-    }
-    pub fn set_sha256(&mut self, s: String) {
-        self.sha256 = s;
-    }
-    pub fn get_mode(&self) -> i32 {
-        self.mode
-    }
-    pub fn set_mode(&mut self, m: i32) {
-        self.mode = m;
-    }
-    pub fn get_clear(&self) -> i32 {
-        self.clear
-    }
-    pub fn set_clear(&mut self, c: i32) {
-        self.clear = c;
-    }
-    pub fn get_playcount(&self) -> i32 {
-        self.playcount
-    }
-    pub fn set_playcount(&mut self, c: i32) {
-        self.playcount = c;
-    }
-    pub fn get_clearcount(&self) -> i32 {
-        self.clearcount
-    }
-    pub fn set_clearcount(&mut self, c: i32) {
-        self.clearcount = c;
-    }
-    pub fn set_epg(&mut self, v: i32) {
-        self.epg = v;
-    }
-    pub fn set_egr(&mut self, v: i32) {
-        self.egr = v;
-    }
-    pub fn set_egd(&mut self, v: i32) {
-        self.egd = v;
-    }
-    pub fn set_ebd(&mut self, v: i32) {
-        self.ebd = v;
-    }
-    pub fn set_epr(&mut self, v: i32) {
-        self.epr = v;
-    }
-    pub fn set_minbp(&mut self, v: i32) {
-        self.minbp = v;
-    }
-    pub fn get_notes(&self) -> i32 {
-        self.notes
-    }
-    pub fn set_notes(&mut self, n: i32) {
-        self.notes = n;
-    }
-    pub fn get_scorehash(&self) -> &str {
-        &self.scorehash
-    }
-    pub fn set_scorehash(&mut self, s: String) {
-        self.scorehash = s;
-    }
-    pub fn get_exscore(&self) -> i32 {
-        (self.epg + self.lpg) * 2 + self.egr + self.lgr
-    }
-
-    /// Get judge count for a specific judge type (combined fast+slow).
-    /// judge: 0=PG, 1=GR, 2=GD, 3=BD, 4=PR, 5=MS
-    pub fn get_judge_count(&self, judge: i32) -> i32 {
-        match judge {
-            0 => self.epg + self.lpg,
-            1 => self.egr + self.lgr,
-            2 => self.egd + self.lgd,
-            3 => self.ebd + self.lbd,
-            4 => self.epr + self.lpr,
-            _ => 0,
-        }
-    }
-
-    pub fn update(&mut self, newscore: &ScoreData) -> bool {
-        let mut updated = false;
-        if newscore.get_exscore() > self.get_exscore() {
-            self.epg = newscore.epg;
-            self.lpg = newscore.lpg;
-            self.egr = newscore.egr;
-            self.lgr = newscore.lgr;
-            self.egd = newscore.egd;
-            self.lgd = newscore.lgd;
-            self.ebd = newscore.ebd;
-            self.lbd = newscore.lbd;
-            self.epr = newscore.epr;
-            self.lpr = newscore.lpr;
-            self.minbp = newscore.minbp;
-            updated = true;
-        }
-        if newscore.clear > self.clear {
-            self.clear = newscore.clear;
-            updated = true;
-        }
-        self.playcount += newscore.playcount;
-        self.clearcount += newscore.clearcount;
-        updated
-    }
-}
+pub use beatoraja_core::score_data::ScoreData;
 
 // ============================================================
 // ScoreDatabaseAccessor stub
@@ -482,15 +220,10 @@ impl AbstractResult {
 }
 
 // ============================================================
-// ReplayData stub
+// ReplayData — replaced with real type from beatoraja-core
 // ============================================================
 
-/// Stub for bms.player.beatoraja.ReplayData
-#[derive(Clone, Debug, Default)]
-pub struct ReplayData {
-    pub randomoption: i32,
-    pub lane_shuffle_pattern: Vec<Vec<i32>>,
-}
+pub use beatoraja_core::replay_data::ReplayData;
 
 // ============================================================
 // Mode stub

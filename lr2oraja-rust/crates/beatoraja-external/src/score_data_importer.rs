@@ -29,32 +29,32 @@ impl ScoreDataImporter {
                     let song = songdb.get_song_datas(&[&md5]);
                     if !song.is_empty() {
                         let mut sd = ScoreData::default();
-                        sd.set_epg(
-                            score.get("perfect").and_then(|v| v.as_i64()).unwrap_or(0) as i32
-                        );
-                        sd.set_egr(score.get("great").and_then(|v| v.as_i64()).unwrap_or(0) as i32);
-                        sd.set_egd(score.get("good").and_then(|v| v.as_i64()).unwrap_or(0) as i32);
-                        sd.set_ebd(score.get("bad").and_then(|v| v.as_i64()).unwrap_or(0) as i32);
-                        sd.set_epr(score.get("poor").and_then(|v| v.as_i64()).unwrap_or(0) as i32);
-                        sd.set_minbp(
-                            score.get("minbp").and_then(|v| v.as_i64()).unwrap_or(0) as i32
-                        );
+                        sd.epg =
+                            score.get("perfect").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                        sd.egr =
+                            score.get("great").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                        sd.egd =
+                            score.get("good").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                        sd.ebd =
+                            score.get("bad").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                        sd.epr =
+                            score.get("poor").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                        sd.minbp =
+                            score.get("minbp").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
                         let clear_idx =
                             score.get("clear").and_then(|v| v.as_i64()).unwrap_or(0) as usize;
                         if clear_idx < clears.len() {
-                            sd.set_clear(clears[clear_idx]);
+                            sd.clear = clears[clear_idx];
                         }
-                        sd.set_playcount(
-                            score.get("playcount").and_then(|v| v.as_i64()).unwrap_or(0) as i32,
-                        );
-                        sd.set_clearcount(
+                        sd.playcount =
+                            score.get("playcount").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                        sd.clearcount =
                             score
                                 .get("clearcount")
                                 .and_then(|v| v.as_i64())
-                                .unwrap_or(0) as i32,
-                        );
-                        sd.set_sha256(song[0].get_sha256().to_string());
-                        sd.set_notes(song[0].get_notes());
+                                .unwrap_or(0) as i32;
+                        sd.sha256 = song[0].get_sha256().to_string();
+                        sd.notes = song[0].get_notes();
                         result.push(sd);
                     }
                 }
@@ -76,16 +76,16 @@ impl ScoreDataImporter {
                 .get_score_data(score.get_sha256(), score.get_mode());
             if oldsd.is_none() {
                 let mut new_sd = ScoreData::default();
-                new_sd.set_playcount(score.get_playcount());
-                new_sd.set_clearcount(score.get_clearcount());
-                new_sd.set_sha256(score.get_sha256().to_string());
-                new_sd.set_mode(score.get_mode());
-                new_sd.set_notes(score.get_notes());
+                new_sd.playcount = score.get_playcount();
+                new_sd.clearcount = score.get_clearcount();
+                new_sd.sha256 = score.get_sha256().to_string();
+                new_sd.mode = score.get_mode();
+                new_sd.notes = score.get_notes();
                 oldsd = Some(new_sd);
             }
             if let Some(ref mut old) = oldsd {
-                old.set_scorehash(scorehash.to_string());
-                if old.update(score) {
+                old.scorehash = scorehash.to_string();
+                if old.update(score, true) {
                     result.push(old.clone());
                 }
             }

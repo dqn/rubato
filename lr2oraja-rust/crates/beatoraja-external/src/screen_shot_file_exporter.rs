@@ -125,7 +125,7 @@ impl ScreenShotFileExporter {
         if !current_state
             .resource
             .get_config()
-            .is_set_clipboard_when_screenshot()
+            .is_set_clipboard_screenshot()
         {
             // Clipboard copy not enabled for screenshots
             return;

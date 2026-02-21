@@ -17,6 +17,7 @@ use crate::result_key_property::{ResultKey, ResultKeyProperty};
 use crate::stubs::{
     BMSPlayerModeType, ControlKeys, EventType, FloatArray, IRConfig, IRConnection, IRCourseData,
     IRScoreData, IRStatus, KeyCommand, MainController, PlayerResource, RankingData,
+    IR_SEND_ALWAYS, IR_SEND_COMPLETE_SONG, IR_SEND_UPDATE_SCORE,
 };
 
 /// IR send status for course result
@@ -46,7 +47,7 @@ impl CourseIRSendStatus {
 
     pub fn send(&mut self) -> bool {
         info!("IR score sending: {:?}", self.course.name);
-        let ir_course_data = IRCourseData::new(&self.course, self.lnmode);
+        let ir_course_data = IRCourseData::new_with_lntype(&self.course, self.lnmode);
         let ir_score_data = IRScoreData::new(&self.score);
         let send_result = self
             .ir
@@ -185,11 +186,11 @@ impl CourseResult {
                     && !resource.is_force_no_ir_send()
                     && resource.get_course_data().release;
                 match irc.config.get_irsend() {
-                    IRConfig::IR_SEND_ALWAYS => {}
-                    IRConfig::IR_SEND_COMPLETE_SONG => {
+                    IR_SEND_ALWAYS => {}
+                    IR_SEND_COMPLETE_SONG => {
                         // commented out in Java
                     }
-                    IRConfig::IR_SEND_UPDATE_SCORE => {
+                    IR_SEND_UPDATE_SCORE => {
                         // commented out in Java
                     }
                     _ => {}

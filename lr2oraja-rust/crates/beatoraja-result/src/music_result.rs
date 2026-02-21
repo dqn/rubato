@@ -19,8 +19,8 @@ use crate::music_result_skin::MusicResultSkin;
 use crate::result_key_property::{ResultKey, ResultKeyProperty};
 use crate::stubs::{
     BMSPlayerModeType, ControlKeys, EventType, FloatArray, IRConfig, IRSendStatusMain, IRStatus,
-    KeyCommand, MainController, PlayerResource, RankingData, is_freq_negative,
-    is_freq_trainer_enabled,
+    KeyCommand, MainController, PlayerResource, RankingData, IR_SEND_ALWAYS, IR_SEND_COMPLETE_SONG,
+    IR_SEND_UPDATE_SCORE, is_freq_negative, is_freq_trainer_enabled,
 };
 
 /// Music result screen
@@ -110,13 +110,13 @@ impl MusicResult {
             for irc in ir {
                 let mut send = resource.is_update_score() && !resource.is_force_no_ir_send();
                 match irc.config.get_irsend() {
-                    IRConfig::IR_SEND_ALWAYS => {}
-                    IRConfig::IR_SEND_COMPLETE_SONG => {
+                    IR_SEND_ALWAYS => {}
+                    IR_SEND_COMPLETE_SONG => {
                         let gauge =
                             &resource.get_gauge()[resource.get_groove_gauge().get_type() as usize];
                         send &= gauge.get(gauge.size - 1) > 0.0;
                     }
-                    IRConfig::IR_SEND_UPDATE_SCORE => {
+                    IR_SEND_UPDATE_SCORE => {
                         if let Some(ref ns) = newscore_clone {
                             send &= ns.get_exscore() > self.data.oldscore.get_exscore()
                                 || ns.clear > self.data.oldscore.clear

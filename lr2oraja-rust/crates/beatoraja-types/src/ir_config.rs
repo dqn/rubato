@@ -75,6 +75,14 @@ impl IRConfig {
         }
         self.validate();
     }
+
+    pub fn get_irsend(&self) -> i32 {
+        self.irsend
+    }
+
+    pub fn get_irname(&self) -> &str {
+        &self.irname
+    }
 }
 
 impl Validatable for IRConfig {

@@ -308,6 +308,66 @@ impl PlayerConfig {
         &mut self.mode24double
     }
 
+    pub fn get_twitter_consumer_key(&self) -> Option<&str> {
+        self.twitter_consumer_key.as_deref()
+    }
+
+    pub fn get_twitter_consumer_secret(&self) -> Option<&str> {
+        self.twitter_consumer_secret.as_deref()
+    }
+
+    pub fn get_twitter_access_token(&self) -> Option<&str> {
+        self.twitter_access_token.as_deref()
+    }
+
+    pub fn get_twitter_access_token_secret(&self) -> Option<&str> {
+        self.twitter_access_token_secret.as_deref()
+    }
+
+    pub fn get_skin_history(&self) -> &[SkinConfig] {
+        &self.skin_history
+    }
+
+    pub fn set_skin_history(&mut self, history: Vec<SkinConfig>) {
+        self.skin_history = history;
+    }
+
+    pub fn get_gauge(&self) -> i32 {
+        self.gauge
+    }
+
+    pub fn get_random(&self) -> i32 {
+        self.random
+    }
+
+    pub fn get_random2(&self) -> i32 {
+        self.random2
+    }
+
+    pub fn get_doubleoption(&self) -> i32 {
+        self.doubleoption
+    }
+
+    pub fn get_judgetiming(&self) -> i32 {
+        self.judgetiming
+    }
+
+    pub fn get_lnmode(&self) -> i32 {
+        self.lnmode
+    }
+
+    pub fn get_gauge_auto_shift(&self) -> i32 {
+        self.gauge_auto_shift
+    }
+
+    pub fn get_bottom_shiftable_gauge(&self) -> i32 {
+        self.bottom_shiftable_gauge
+    }
+
+    pub fn get_targetid(&self) -> &str {
+        &self.targetid
+    }
+
     pub fn get_misslayer_duration(&mut self) -> i32 {
         if self.misslayer_duration < 0 {
             self.misslayer_duration = 0;

@@ -252,7 +252,7 @@ impl WebhookHandler {
 
     // BAD + POOR + EPOOR
     fn get_bp_count(score: &ScoreData) -> i32 {
-        score.get_judge_count(3) + score.get_judge_count(4) + score.get_judge_count(5)
+        score.get_judge_count_total(3) + score.get_judge_count_total(4) + score.get_judge_count_total(5)
     }
 
     // Calculates the number used in rank deltas. e.g. AA+76 MAX-133
@@ -361,9 +361,11 @@ impl WebhookHandler {
             }
             2 | 3 => {
                 // RANDOM, R-RAN
-                if !rd.lane_shuffle_pattern.is_empty() {
-                    for i in 0..7.min(rd.lane_shuffle_pattern[0].len()) {
-                        sb += &format!("{}", rd.lane_shuffle_pattern[0][i] + 1);
+                if let Some(ref pattern) = rd.lane_shuffle_pattern {
+                    if !pattern.is_empty() {
+                        for i in 0..7.min(pattern[0].len()) {
+                            sb += &format!("{}", pattern[0][i] + 1);
+                        }
                     }
                 }
             }

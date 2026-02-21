@@ -73,9 +73,14 @@ impl MainStateListener for DiscordListener {
                 ScreenType::BMSPlayer => {
                     let resource = &state.resource;
                     let songdata = resource.get_songdata();
+                    let full_title = if songdata.subtitle.is_empty() {
+                        songdata.title.clone()
+                    } else {
+                        format!("{} {}", songdata.title, songdata.subtitle)
+                    };
                     data = data.set_details(format!(
                         "{} / {}",
-                        songdata.get_full_title(),
+                        full_title,
                         songdata.get_artist()
                     ));
                     data = data.set_state(format!("Playing: {}Keys", songdata.get_mode()));

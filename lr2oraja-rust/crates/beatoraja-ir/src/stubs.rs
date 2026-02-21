@@ -89,7 +89,4 @@ impl LR2Random {
     }
 }
 
-/// Stub for BMSDecoder.convertHexString
-pub fn convert_hex_string(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{:02x}", b)).collect()
-}
+pub use bms_model::bms_decoder::convert_hex_string;

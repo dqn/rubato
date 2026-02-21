@@ -120,133 +120,27 @@ impl IRConnection {
     }
 }
 
-/// Stub for bms.player.beatoraja.ir.IRConfig
-pub struct IRConfig;
+// IRConfig: replaced by pub use from beatoraja_core
+pub use beatoraja_core::ir_config::IRConfig;
+pub use beatoraja_core::ir_config::{IR_SEND_ALWAYS, IR_SEND_COMPLETE_SONG, IR_SEND_UPDATE_SCORE};
 
-impl IRConfig {
-    pub const IR_SEND_ALWAYS: i32 = 0;
-    pub const IR_SEND_COMPLETE_SONG: i32 = 1;
-    pub const IR_SEND_UPDATE_SCORE: i32 = 2;
+// IRResponse: replaced by pub use from beatoraja_ir
+pub use beatoraja_ir::ir_response::IRResponse;
 
-    pub fn get_irsend(&self) -> i32 {
-        0
-    }
-}
+// IRScoreData: replaced by pub use from beatoraja_ir
+pub use beatoraja_ir::ir_score_data::IRScoreData;
 
-/// Stub for bms.player.beatoraja.ir.IRResponse
-pub struct IRResponse<T> {
-    pub data: Option<T>,
-    pub message: String,
-    pub succeeded: bool,
-}
+// IRCourseData: replaced by pub use from beatoraja_ir
+pub use beatoraja_ir::ir_course_data::IRCourseData;
 
-impl<T> IRResponse<T> {
-    pub fn is_succeeded(&self) -> bool {
-        self.succeeded
-    }
+// IRChartData: replaced by pub use from beatoraja_ir
+pub use beatoraja_ir::ir_chart_data::IRChartData;
 
-    pub fn get_data(&self) -> Option<&T> {
-        self.data.as_ref()
-    }
+// RankingData: replaced by pub use from beatoraja_ir
+pub use beatoraja_ir::ranking_data::RankingData;
 
-    pub fn get_message(&self) -> &str {
-        &self.message
-    }
-}
-
-/// Stub for bms.player.beatoraja.ir.IRScoreData
-pub struct IRScoreData {
-    pub score: beatoraja_core::score_data::ScoreData,
-}
-
-impl IRScoreData {
-    pub fn new(score: &beatoraja_core::score_data::ScoreData) -> Self {
-        Self {
-            score: score.clone(),
-        }
-    }
-}
-
-/// Stub for bms.player.beatoraja.ir.IRCourseData
-pub struct IRCourseData {
-    pub course: beatoraja_core::course_data::CourseData,
-    pub lnmode: i32,
-}
-
-impl IRCourseData {
-    pub fn new(course: &beatoraja_core::course_data::CourseData, lnmode: i32) -> Self {
-        Self {
-            course: course.clone(),
-            lnmode,
-        }
-    }
-}
-
-/// Stub for bms.player.beatoraja.ir.IRChartData
-pub struct IRChartData;
-
-impl IRChartData {
-    pub fn new(_songdata: &SongData) -> Self {
-        Self
-    }
-}
-
-/// Stub for bms.player.beatoraja.ir.RankingData
-#[derive(Clone, Debug)]
-pub struct RankingData {
-    pub rank: i32,
-    pub previous_rank: i32,
-    pub total_player: i32,
-}
-
-impl Default for RankingData {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl RankingData {
-    pub fn new() -> Self {
-        Self {
-            rank: 0,
-            previous_rank: 0,
-            total_player: 0,
-        }
-    }
-
-    pub fn get_rank(&self) -> i32 {
-        self.rank
-    }
-
-    pub fn get_previous_rank(&self) -> i32 {
-        self.previous_rank
-    }
-
-    pub fn get_total_player(&self) -> i32 {
-        self.total_player
-    }
-
-    pub fn update_score(
-        &mut self,
-        _data: Option<&Vec<IRScoreData>>,
-        _score: &beatoraja_core::score_data::ScoreData,
-    ) {
-        todo!("IR dependency: RankingData.updateScore")
-    }
-}
-
-/// Stub for RankingDataCache
-pub struct RankingDataCache;
-
-impl RankingDataCache {
-    pub fn get(&self, _songdata: &SongData, _lnmode: i32) -> Option<RankingData> {
-        None
-    }
-
-    pub fn put(&self, _songdata: &SongData, _lnmode: i32, _data: RankingData) {
-        // stub
-    }
-}
+// RankingDataCache: replaced by pub use from beatoraja_ir
+pub use beatoraja_ir::ranking_data_cache::RankingDataCache;
 
 // ============================================================
 // MainController.IRSendStatus (for MusicResult)

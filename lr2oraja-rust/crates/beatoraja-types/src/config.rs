@@ -360,6 +360,110 @@ impl Config {
         }
     }
 
+    pub fn get_playername(&self) -> Option<&str> {
+        self.playername.as_deref()
+    }
+
+    pub fn is_set_clipboard_screenshot(&self) -> bool {
+        self.set_clipboard_screenshot
+    }
+
+    pub fn get_webhook_option(&self) -> i32 {
+        self.webhook_option
+    }
+
+    pub fn get_webhook_url(&self) -> &[String] {
+        &self.webhook_url
+    }
+
+    pub fn get_webhook_name(&self) -> &str {
+        &self.webhook_name
+    }
+
+    pub fn get_webhook_avatar(&self) -> &str {
+        &self.webhook_avatar
+    }
+
+    pub fn get_bmsroot(&self) -> &[String] {
+        &self.bmsroot
+    }
+
+    pub fn get_table_url(&self) -> &[String] {
+        &self.table_url
+    }
+
+    pub fn get_songpath(&self) -> &str {
+        &self.songpath
+    }
+
+    pub fn get_songinfopath(&self) -> &str {
+        &self.songinfopath
+    }
+
+    pub fn get_tablepath(&self) -> &str {
+        &self.tablepath
+    }
+
+    pub fn get_playerpath(&self) -> &str {
+        &self.playerpath
+    }
+
+    pub fn get_skinpath(&self) -> &str {
+        &self.skinpath
+    }
+
+    pub fn get_bgmpath(&self) -> &str {
+        &self.bgmpath
+    }
+
+    pub fn get_soundpath(&self) -> &str {
+        &self.soundpath
+    }
+
+    pub fn get_systemfontpath(&self) -> &str {
+        &self.systemfontpath
+    }
+
+    pub fn get_messagefontpath(&self) -> &str {
+        &self.messagefontpath
+    }
+
+    pub fn get_max_frame_per_second(&self) -> i32 {
+        self.max_frame_per_second
+    }
+
+    pub fn get_max_search_bar_count(&self) -> i32 {
+        self.max_search_bar_count
+    }
+
+    pub fn get_bga(&self) -> i32 {
+        self.bga
+    }
+
+    pub fn get_bga_expand(&self) -> i32 {
+        self.bga_expand
+    }
+
+    pub fn get_frameskip(&self) -> i32 {
+        self.frameskip
+    }
+
+    pub fn get_override_download_url(&self) -> Option<&str> {
+        if self.override_download_url.is_empty() {
+            None
+        } else {
+            Some(&self.override_download_url)
+        }
+    }
+
+    pub fn get_download_directory(&self) -> &str {
+        &self.download_directory
+    }
+
+    pub fn get_monitor_name(&self) -> &str {
+        &self.monitor_name
+    }
+
     pub fn is_analog_scroll(&self) -> bool {
         self.analog_scroll
     }

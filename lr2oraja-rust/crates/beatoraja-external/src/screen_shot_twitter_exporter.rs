@@ -17,10 +17,22 @@ pub struct ScreenShotTwitterExporter {
 impl ScreenShotTwitterExporter {
     pub fn new(player: &PlayerConfig) -> Self {
         Self {
-            consumer_key: player.get_twitter_consumer_key().to_string(),
-            consumer_secret: player.get_twitter_consumer_secret().to_string(),
-            access_token: player.get_twitter_access_token().to_string(),
-            access_token_secret: player.get_twitter_access_token_secret().to_string(),
+            consumer_key: player
+                .get_twitter_consumer_key()
+                .unwrap_or_default()
+                .to_string(),
+            consumer_secret: player
+                .get_twitter_consumer_secret()
+                .unwrap_or_default()
+                .to_string(),
+            access_token: player
+                .get_twitter_access_token()
+                .unwrap_or_default()
+                .to_string(),
+            access_token_secret: player
+                .get_twitter_access_token_secret()
+                .unwrap_or_default()
+                .to_string(),
         }
     }
 }

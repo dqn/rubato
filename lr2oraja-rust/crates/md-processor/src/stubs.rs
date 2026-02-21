@@ -1,15 +1,7 @@
 // Stub types for Phase 4 dependencies
 
-/// Stub for bms.player.beatoraja.Config
-pub struct Config {
-    pub override_download_url: Option<String>,
-}
-
-impl Config {
-    pub fn get_override_download_url(&self) -> Option<&str> {
-        self.override_download_url.as_deref()
-    }
-}
+// Config is now imported from beatoraja-core (re-exported from beatoraja-types)
+pub use beatoraja_core::config::Config;
 
 /// Stub for MainController reference
 pub trait MainControllerRef: Send + Sync {

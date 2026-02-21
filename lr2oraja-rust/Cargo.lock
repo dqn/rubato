@@ -415,6 +415,7 @@ dependencies = [
  "beatoraja-audio",
  "beatoraja-core",
  "beatoraja-input",
+ "beatoraja-ir",
  "beatoraja-play",
  "beatoraja-skin",
  "beatoraja-song",
@@ -1695,6 +1696,7 @@ name = "md-processor"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "beatoraja-core",
  "log",
  "regex",
  "reqwest",

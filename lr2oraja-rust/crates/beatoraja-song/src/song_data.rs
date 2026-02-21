@@ -491,6 +491,38 @@ impl SongData {
         self.info.as_ref()
     }
 
+    pub fn set_genre(&mut self, genre: String) {
+        self.genre = genre;
+    }
+
+    pub fn set_md5(&mut self, md5: String) {
+        self.md5 = md5;
+    }
+
+    pub fn set_sha256(&mut self, sha256: String) {
+        self.sha256 = sha256;
+    }
+
+    pub fn set_url(&mut self, url: String) {
+        self.url = Some(url);
+    }
+
+    pub fn set_mode(&mut self, mode: i32) {
+        self.mode = mode;
+    }
+
+    pub fn get_ipfs_str(&self) -> &str {
+        self.ipfs.as_deref().unwrap_or("")
+    }
+
+    pub fn get_append_ipfs_str(&self) -> &str {
+        self.appendipfs.as_deref().unwrap_or("")
+    }
+
+    pub fn get_org_md5_vec(&self) -> &[String] {
+        self.org_md5.as_deref().unwrap_or(&[])
+    }
+
     pub fn merge(&mut self, song: &SongData) {
         if self.url.as_ref().is_none_or(|u| u.is_empty()) {
             self.url = song.url.clone();

@@ -88,6 +88,126 @@ impl PlayConfig {
         }
     }
 
+    pub fn is_enablelift(&self) -> bool {
+        self.enablelift
+    }
+
+    pub fn set_enablelift(&mut self, v: bool) {
+        self.enablelift = v;
+    }
+
+    pub fn get_lift(&self) -> f32 {
+        self.lift
+    }
+
+    pub fn set_lift(&mut self, v: f32) {
+        self.lift = v;
+    }
+
+    pub fn is_enablehidden(&self) -> bool {
+        self.enablehidden
+    }
+
+    pub fn set_enablehidden(&mut self, v: bool) {
+        self.enablehidden = v;
+    }
+
+    pub fn get_hidden(&self) -> f32 {
+        self.hidden
+    }
+
+    pub fn set_hidden(&mut self, v: f32) {
+        self.hidden = v;
+    }
+
+    pub fn is_enablelanecover(&self) -> bool {
+        self.enablelanecover
+    }
+
+    pub fn set_enablelanecover(&mut self, v: bool) {
+        self.enablelanecover = v;
+    }
+
+    pub fn get_lanecover(&self) -> f32 {
+        self.lanecover
+    }
+
+    pub fn set_lanecover(&mut self, v: f32) {
+        self.lanecover = v;
+    }
+
+    pub fn get_lanecovermarginlow(&self) -> f32 {
+        self.lanecovermarginlow
+    }
+
+    pub fn set_lanecovermarginlow(&mut self, v: f32) {
+        self.lanecovermarginlow = v;
+    }
+
+    pub fn get_lanecovermarginhigh(&self) -> f32 {
+        self.lanecovermarginhigh
+    }
+
+    pub fn set_lanecovermarginhigh(&mut self, v: f32) {
+        self.lanecovermarginhigh = v;
+    }
+
+    pub fn get_lanecoverswitchduration(&self) -> i32 {
+        self.lanecoverswitchduration
+    }
+
+    pub fn set_lanecoverswitchduration(&mut self, v: i32) {
+        self.lanecoverswitchduration = v;
+    }
+
+    pub fn is_enable_constant(&self) -> bool {
+        self.enable_constant
+    }
+
+    pub fn set_enable_constant(&mut self, v: bool) {
+        self.enable_constant = v;
+    }
+
+    pub fn get_constant_fadein_time(&self) -> i32 {
+        self.constant_fadein_time
+    }
+
+    pub fn set_constant_fadein_time(&mut self, v: i32) {
+        self.constant_fadein_time = v;
+    }
+
+    pub fn get_hispeed(&self) -> f32 {
+        self.hispeed
+    }
+
+    pub fn set_hispeed(&mut self, v: f32) {
+        self.hispeed = v;
+    }
+
+    pub fn get_duration(&self) -> i32 {
+        self.duration
+    }
+
+    pub fn set_duration(&mut self, v: i32) {
+        self.duration = v;
+    }
+
+    pub fn get_fixhispeed(&self) -> i32 {
+        self.fixhispeed
+    }
+
+    pub fn set_fixhispeed(&mut self, v: i32) {
+        self.fixhispeed = v;
+    }
+
+    pub fn get_hispeedmargin(&self) -> f32 {
+        self.hispeedmargin
+    }
+
+    pub fn is_hispeedautoadjust(&self) -> bool {
+        self.hispeedautoadjust
+    }
+
     pub fn get_judgetype(&self) -> String {
         for alg in JudgeAlgorithm::values() {
             if alg.name() == self.judgetype {

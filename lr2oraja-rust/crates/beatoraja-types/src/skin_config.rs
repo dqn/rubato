@@ -17,6 +17,18 @@ impl SkinConfig {
         }
     }
 
+    pub fn get_path(&self) -> Option<&str> {
+        self.path.as_deref()
+    }
+
+    pub fn get_properties(&self) -> Option<&SkinProperty> {
+        self.properties.as_ref()
+    }
+
+    pub fn get_properties_mut(&mut self) -> Option<&mut SkinProperty> {
+        self.properties.as_mut()
+    }
+
     pub fn get_default(id: usize) -> SkinConfig {
         let mut skin = SkinConfig::default();
         if let Some(skin_type) = SkinType::get_skin_type_by_id(id)

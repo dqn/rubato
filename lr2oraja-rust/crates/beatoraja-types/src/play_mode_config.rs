@@ -178,6 +178,14 @@ impl PlayModeConfig {
 
 // Compatibility getters for stub API
 impl PlayModeConfig {
+    pub fn get_playconfig(&self) -> &PlayConfig {
+        &self.playconfig
+    }
+
+    pub fn get_playconfig_mut(&mut self) -> &mut PlayConfig {
+        &mut self.playconfig
+    }
+
     pub fn get_keyboard_config(&self) -> &KeyboardConfig {
         &self.keyboard
     }
