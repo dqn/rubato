@@ -21,3 +21,5 @@ lr2oraja-rust/config_sys.json
 lr2oraja-rust/**/db/
 lr2oraja-rust/songdata.db
 lr2oraja-rust/table/
+lr2oraja-rust/skin/**
+!lr2oraja-rust/skin/default
