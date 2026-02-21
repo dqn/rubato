@@ -78,7 +78,7 @@ impl RandomTrainerMenu {
             }
         }
         // ImGui.end();
-        todo!("RandomTrainerMenu::show - egui integration")
+        log::warn!("not yet implemented: RandomTrainerMenu::show - egui integration");
     }
 
     fn random_history() {

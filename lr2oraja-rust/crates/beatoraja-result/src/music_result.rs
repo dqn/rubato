@@ -84,7 +84,7 @@ impl MusicResult {
         self.data.gauge_type = resource.get_groove_gauge().get_type();
 
         // loadSkin(SkinType.RESULT);
-        todo!("Phase 8+ dependency: loadSkin(SkinType.RESULT)")
+        log::warn!("not yet implemented: loadSkin(SkinType.RESULT)");
     }
 
     pub fn prepare(&mut self, main: &mut MainController, resource: &mut PlayerResource) {
@@ -142,7 +142,7 @@ impl MusicResult {
 
             // IR processing thread
             // In Java this spawns a Thread. In Rust we'd use tokio::spawn or std::thread::spawn.
-            todo!("Phase 8+ dependency: IR processing thread for music result")
+            log::warn!("not yet implemented: IR processing thread for music result");
         }
 
         // Play result sound
@@ -157,7 +157,7 @@ impl MusicResult {
                 .map(|ac| ac.is_loop_result_sound)
                 .unwrap_or(false);
             // play(is_clear ? RESULT_CLEAR : RESULT_FAIL, loop_sound);
-            todo!("Phase 8+ dependency: play result sound")
+            log::warn!("not yet implemented: play result sound");
         }
     }
 
@@ -165,7 +165,7 @@ impl MusicResult {
         // stop(RESULT_CLEAR);
         // stop(RESULT_FAIL);
         // stop(RESULT_CLOSE);
-        todo!("Phase 8+ dependency: stop sounds")
+        log::warn!("not yet implemented: stop result sounds");
     }
 
     pub fn render(&mut self, main: &mut MainController, resource: &mut PlayerResource) {
@@ -185,10 +185,10 @@ impl MusicResult {
             let fadeout_time = self.data.timer.get_now_time_for_id(TIMER_FADEOUT);
             // Skin access required for fadeout threshold
             // Full render logic with course mode transitions
-            todo!("Phase 8+ dependency: render with skin and state transitions")
+            log::warn!("not yet implemented: render with skin and state transitions");
         } else {
             // if (time > getSkin().getScene()) { ... }
-            todo!("Phase 8+ dependency: render scene timeout")
+            log::warn!("not yet implemented: render scene timeout");
         }
     }
 
@@ -264,7 +264,7 @@ impl MusicResult {
 
             if open_ir {
                 // self.execute_event(EventType::open_ir);
-                todo!("Phase 8+ dependency: execute open_ir event")
+                log::warn!("not yet implemented: execute open_ir event");
             }
         }
     }

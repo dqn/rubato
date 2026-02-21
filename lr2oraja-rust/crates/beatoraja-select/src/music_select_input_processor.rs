@@ -50,6 +50,8 @@ impl MusicSelectInputProcessor {
     /// PlayerResource, PlayerConfig, BarRenderer, BarManager, etc.
     /// Since those are all tightly coupled, this is stubbed with todo!()
     pub fn input(&mut self) {
-        todo!("MusicSelectInputProcessor.input requires MusicSelector context")
+        log::warn!(
+            "not yet implemented: MusicSelectInputProcessor.input - requires MusicSelector context"
+        );
     }
 }

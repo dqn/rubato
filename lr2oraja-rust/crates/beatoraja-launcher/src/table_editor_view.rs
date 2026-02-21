@@ -164,8 +164,10 @@ impl TableEditorView {
         // dialog.getDialogPane().setContent(gridPane);
         // dialog.getDialogPane().getButtonTypes().add(new ButtonType("OK", ButtonData.CANCEL_CLOSE));
         // dialog.show();
-        let _ = grid_data; // suppress unused warning
-        todo!("egui integration")
+        log::warn!("not yet implemented: TableEditorView.displayChartDetailsDialog - egui dialog");
+        for (label, value) in &grid_data {
+            log::info!("{}{}", label, value);
+        }
     }
 
     /// get_difficulty_string - converts difficulty int to display string

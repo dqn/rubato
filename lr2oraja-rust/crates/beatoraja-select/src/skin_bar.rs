@@ -171,12 +171,16 @@ impl SkinBar {
 
     pub fn prepare(&mut self, _time: i64, _state: &dyn MainState) {
         // In Java: prepares all sub-objects and calls render.prepare(this, time)
-        todo!("SkinBar.prepare requires BarRenderer and rendering integration")
+        log::warn!(
+            "not yet implemented: SkinBar.prepare - requires BarRenderer and rendering integration"
+        );
     }
 
     pub fn draw(&self, _sprite: &SkinObjectRenderer) {
         // In Java: render.render(sprite, this)
-        todo!("SkinBar.draw requires BarRenderer and rendering integration")
+        log::warn!(
+            "not yet implemented: SkinBar.draw - requires BarRenderer and rendering integration"
+        );
     }
 
     pub fn dispose(&self) {

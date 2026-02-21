@@ -78,6 +78,6 @@ impl SpinnerCell {
         _view_model: &mut ControllerConfigViewModel,
         _column_name: &str,
     ) {
-        todo!("egui integration")
+        log::warn!("not yet implemented: SpinnerCell.apply_to_view_model - egui integration");
     }
 }

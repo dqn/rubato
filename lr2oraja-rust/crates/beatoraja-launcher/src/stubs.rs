@@ -62,7 +62,8 @@ pub struct MainLoader;
 
 impl MainLoader {
     pub fn get_score_database_accessor() -> SongDatabaseAccessor {
-        todo!("MainLoader dependency")
+        log::warn!("not yet implemented: MainLoader.get_score_database_accessor");
+        SongDatabaseAccessor
     }
 
     pub fn get_version_checker() -> VersionChecker {
@@ -70,11 +71,13 @@ impl MainLoader {
     }
 
     pub fn get_available_display_mode() -> Vec<DisplayMode> {
-        todo!("LibGDX display mode")
+        log::warn!("not yet implemented: MainLoader.get_available_display_mode");
+        Vec::new()
     }
 
     pub fn get_desktop_display_mode() -> DisplayMode {
-        todo!("LibGDX display mode")
+        log::warn!("not yet implemented: MainLoader.get_desktop_display_mode");
+        DisplayMode::default()
     }
 
     pub fn play(
@@ -85,7 +88,7 @@ impl MainLoader {
         _player: &PlayerConfig,
         _song_updated: bool,
     ) {
-        todo!("MainLoader play")
+        log::warn!("not yet implemented: MainLoader.play");
     }
 }
 

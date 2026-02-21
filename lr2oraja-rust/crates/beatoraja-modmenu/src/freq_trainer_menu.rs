@@ -48,7 +48,7 @@ impl FreqTrainerMenu {
             *freq = clamp(*freq);
         }
         // ImGui.end();
-        todo!("FreqTrainerMenu::show - egui integration")
+        log::warn!("not yet implemented: FreqTrainerMenu::show - egui integration");
     }
 
     pub fn is_freq_trainer_enabled() -> bool {

@@ -30,7 +30,10 @@ impl LeaderBoardBar {
     pub fn get_children(&self) -> Vec<Bar> {
         // In Java: fetches IR scores and creates FunctionBars
         // This requires network access and MusicSelector context
-        todo!("LeaderBoardBar.getChildren requires IR connection and MusicSelector context")
+        log::warn!(
+            "not yet implemented: LeaderBoardBar.getChildren - requires IR connection and MusicSelector context"
+        );
+        Vec::new()
     }
 
     /// Convert IR scores to function bars

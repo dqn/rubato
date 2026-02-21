@@ -62,7 +62,7 @@ impl SongManagerMenu {
             }
         }
         // ImGui.end();
-        todo!("SongManagerMenu::show - egui integration")
+        log::warn!("not yet implemented: SongManagerMenu::show - egui integration");
     }
 
     pub fn inject_music_selector(music_selector: MusicSelector) {

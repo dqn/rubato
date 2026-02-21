@@ -77,7 +77,10 @@ impl BarRenderer {
 
     pub fn mouse_pressed(&self, _baro: &SkinBar, _button: i32, _x: i32, _y: i32) -> bool {
         // In Java: iterates clickable bars, checks bounds, calls select.select() or manager.close()
-        todo!("BarRenderer.mousePressed requires MusicSelector context")
+        log::warn!(
+            "not yet implemented: BarRenderer.mousePressed - requires MusicSelector context"
+        );
+        false
     }
 
     pub fn prepare(&mut self, _baro: &SkinBar, time: i64) {
@@ -95,7 +98,7 @@ impl BarRenderer {
     pub fn input(&mut self) {
         // In Java: handles scroll input via keyboard/analog/mouse wheel
         // Requires MusicSelector and BMSPlayerInputProcessor context
-        todo!("BarRenderer.input requires MusicSelector context")
+        log::warn!("not yet implemented: BarRenderer.input - requires MusicSelector context");
     }
 
     pub fn reset_input(&mut self) {

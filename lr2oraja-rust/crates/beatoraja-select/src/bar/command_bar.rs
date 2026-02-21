@@ -33,11 +33,14 @@ impl CommandBar {
     pub fn get_children(&self) -> Vec<Bar> {
         // In Java: main.getSongDatabase().getSongDatas(sql, scoreDb, scoreLogDb, infoDb)
         // Requires MusicSelector reference for DB access
-        todo!("CommandBar.getChildren requires MusicSelector context")
+        log::warn!("not yet implemented: CommandBar.getChildren - requires MusicSelector context");
+        Vec::new()
     }
 
     pub fn update_folder_status(&mut self) {
         // In Java: updateFolderStatus(main.getSongDatabase().getSongDatas(...))
-        todo!("CommandBar.updateFolderStatus requires MusicSelector context")
+        log::warn!(
+            "not yet implemented: CommandBar.updateFolderStatus - requires MusicSelector context"
+        );
     }
 }

@@ -88,7 +88,7 @@ impl ObsConfigurationView {
             "On Screenshot".to_string(),
             "On Replay".to_string(),
         ];
-        todo!("egui integration")
+        log::warn!("not yet implemented: ObsConfigurationView.initialize - egui combo box setup");
     }
 
     /// init - called from PlayConfigurationView to set up state rows

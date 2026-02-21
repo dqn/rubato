@@ -82,7 +82,7 @@ impl SkinMenu {
             }
         }
         // ImGui.end();
-        todo!("SkinMenu::show - egui integration")
+        log::warn!("not yet implemented: SkinMenu::show - egui integration");
     }
 
     pub fn invalidate() {

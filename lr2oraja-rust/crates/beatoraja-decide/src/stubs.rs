@@ -18,39 +18,47 @@ pub struct MainControllerRef;
 
 impl MainControllerRef {
     pub fn change_state(&mut self, _state: MainStateType) {
-        todo!("Phase 7+ dependency: MainController.changeState")
+        log::warn!("not yet implemented: MainController.changeState");
     }
 
     pub fn get_input_processor(&self) -> &InputProcessorStub {
-        todo!("Phase 7+ dependency: MainController.getInputProcessor")
+        log::warn!("not yet implemented: MainController.getInputProcessor");
+        static DEFAULT: InputProcessorStub = InputProcessorStub;
+        &DEFAULT
     }
 
     pub fn get_audio_processor(&self) -> &AudioProcessorStub {
-        todo!("Phase 7+ dependency: MainController.getAudioProcessor")
+        log::warn!("not yet implemented: MainController.getAudioProcessor");
+        static DEFAULT: AudioProcessorStub = AudioProcessorStub;
+        &DEFAULT
     }
 }
 
 impl MainControllerAccess for MainControllerRef {
     fn get_config(&self) -> &Config {
-        todo!("MainControllerRef::get_config")
+        log::warn!("not yet implemented: MainControllerRef::get_config");
+        static DEFAULT: std::sync::OnceLock<Config> = std::sync::OnceLock::new();
+        DEFAULT.get_or_init(Config::default)
     }
     fn get_player_config(&self) -> &PlayerConfig {
-        todo!("MainControllerRef::get_player_config")
+        log::warn!("not yet implemented: MainControllerRef::get_player_config");
+        static DEFAULT: std::sync::OnceLock<PlayerConfig> = std::sync::OnceLock::new();
+        DEFAULT.get_or_init(PlayerConfig::default)
     }
     fn change_state(&mut self, _state: TypesMainStateType) {
-        todo!("MainControllerRef::change_state")
+        log::warn!("not yet implemented: MainControllerRef::change_state");
     }
     fn save_config(&self) {
-        todo!("MainControllerRef::save_config")
+        log::warn!("not yet implemented: MainControllerRef::save_config");
     }
     fn exit(&self) {
-        todo!("MainControllerRef::exit")
+        log::warn!("not yet implemented: MainControllerRef::exit");
     }
     fn save_last_recording(&self, _reason: &str) {
-        todo!("MainControllerRef::save_last_recording")
+        log::warn!("not yet implemented: MainControllerRef::save_last_recording");
     }
     fn update_song(&mut self, _path: Option<&str>) {
-        todo!("MainControllerRef::update_song")
+        log::warn!("not yet implemented: MainControllerRef::update_song");
     }
     fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
         None
@@ -65,7 +73,7 @@ pub struct AudioProcessorStub;
 
 impl AudioProcessorStub {
     pub fn set_global_pitch(&self, _pitch: f32) {
-        todo!("Phase 7+ dependency: AudioProcessor.setGlobalPitch")
+        log::warn!("not yet implemented: AudioProcessor.setGlobalPitch");
     }
 }
 
@@ -106,16 +114,22 @@ impl PlayerResourceRef {
     }
 
     pub fn get_player_config(&self) -> &PlayerConfigRef {
-        todo!("Phase 7+ dependency: PlayerResource.getPlayerConfig")
+        log::warn!("not yet implemented: PlayerResource.getPlayerConfig");
+        static DEFAULT: PlayerConfigRef = PlayerConfigRef { gauge: 0 };
+        &DEFAULT
     }
 }
 
 impl PlayerResourceAccess for PlayerResourceRef {
     fn get_config(&self) -> &Config {
-        todo!("PlayerResourceRef::get_config")
+        log::warn!("not yet implemented: PlayerResourceRef::get_config");
+        static DEFAULT: std::sync::OnceLock<Config> = std::sync::OnceLock::new();
+        DEFAULT.get_or_init(Config::default)
     }
     fn get_player_config(&self) -> &PlayerConfig {
-        todo!("PlayerResourceRef::get_player_config")
+        log::warn!("not yet implemented: PlayerResourceRef::get_player_config");
+        static DEFAULT: std::sync::OnceLock<PlayerConfig> = std::sync::OnceLock::new();
+        DEFAULT.get_or_init(PlayerConfig::default)
     }
     fn get_score_data(&self) -> Option<&ScoreData> {
         None
@@ -235,10 +249,11 @@ impl Default for SkinStub {
 
 /// Stub for load_skin function
 pub fn load_skin(_skin_type: beatoraja_skin::skin_type::SkinType) -> Option<SkinStub> {
-    todo!("Phase 7+ dependency: SkinLoader.load")
+    log::warn!("not yet implemented: SkinLoader.load");
+    None
 }
 
 /// Stub for play sound (MainState.play delegates to MainController.getSoundManager())
 pub fn play_sound(_sound: SoundType) {
-    todo!("Phase 7+ dependency: MainController.getSoundManager().play()")
+    log::warn!("not yet implemented: MainController.getSoundManager().play()");
 }

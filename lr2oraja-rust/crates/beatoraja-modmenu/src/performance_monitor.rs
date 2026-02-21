@@ -52,7 +52,7 @@ impl PerformanceMonitor {
             }
         }
         // ImGui.end();
-        todo!("PerformanceMonitor::show - egui integration")
+        log::warn!("not yet implemented: PerformanceMonitor::show - egui integration");
     }
 
     pub fn reload_event_tree() {

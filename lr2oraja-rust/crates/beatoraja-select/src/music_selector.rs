@@ -138,7 +138,7 @@ impl MusicSelector {
 
     pub fn create(&mut self) {
         // In Java: initializes preview, input processor, loads skin, creates search field
-        todo!("MusicSelector.create requires MainController context")
+        log::warn!("not yet implemented: MusicSelector.create - requires MainController context");
     }
 
     pub fn prepare(&mut self) {
@@ -149,12 +149,12 @@ impl MusicSelector {
 
     pub fn render(&mut self) {
         // In Java: handles song info display, preview music, BMS loading, IR ranking, play execution
-        todo!("MusicSelector.render requires full MainState context")
+        log::warn!("not yet implemented: MusicSelector.render - requires full MainState context");
     }
 
     pub fn input(&mut self) {
         // In Java: checks for config/skinconfig state change, then calls musicinput.input()
-        todo!("MusicSelector.input requires MainController context")
+        log::warn!("not yet implemented: MusicSelector.input - requires MainController context");
     }
 
     pub fn shutdown(&mut self) {
@@ -168,7 +168,7 @@ impl MusicSelector {
 
     pub fn select(&mut self, _current: &Bar) {
         // In Java: opens directory or sets play mode
-        todo!("MusicSelector.select requires BarManager integration")
+        log::warn!("not yet implemented: MusicSelector.select - requires BarManager integration");
     }
 
     pub fn get_selected_replay(&self) -> i32 {
@@ -182,24 +182,34 @@ impl MusicSelector {
     pub fn execute(&mut self, _command: MusicSelectCommand) {
         // In Java: command.function.accept(this)
         // The actual dispatch is done in the command enum
-        todo!("MusicSelectCommand execution requires full MusicSelector context")
+        log::warn!(
+            "not yet implemented: MusicSelectCommand execution - requires full MusicSelector context"
+        );
     }
 
     pub fn execute_event(&mut self, _event: EventType) {
-        todo!("MusicSelector.executeEvent requires event handling context")
+        log::warn!(
+            "not yet implemented: MusicSelector.executeEvent - requires event handling context"
+        );
     }
 
     pub fn execute_event_with_arg(&mut self, _event: EventType, _arg: i32) {
-        todo!("MusicSelector.executeEvent requires event handling context")
+        log::warn!(
+            "not yet implemented: MusicSelector.executeEvent(arg) - requires event handling context"
+        );
     }
 
     pub fn execute_event_with_args(&mut self, _event: EventType, _arg1: i32, _arg2: i32) {
-        todo!("MusicSelector.executeEvent requires event handling context")
+        log::warn!(
+            "not yet implemented: MusicSelector.executeEvent(arg1, arg2) - requires event handling context"
+        );
     }
 
     pub fn read_chart(&mut self, _song: &SongData, _current: &Bar) {
         // In Java: sets up resource for playing a chart
-        todo!("MusicSelector.readChart requires PlayerResource context")
+        log::warn!(
+            "not yet implemented: MusicSelector.readChart - requires PlayerResource context"
+        );
     }
 
     pub fn get_sort(&self) -> i32 {
@@ -259,7 +269,7 @@ impl MusicSelector {
 
     pub fn selected_bar_moved(&mut self) {
         // In Java: resets replay, loads images, sets timers, starts preview, loads IR ranking
-        todo!("MusicSelector.selectedBarMoved requires full context")
+        log::warn!("not yet implemented: MusicSelector.selectedBarMoved - requires full context");
     }
 
     pub fn load_selected_song_images(&mut self) {
@@ -272,7 +282,10 @@ impl MusicSelector {
 
     pub fn get_selected_bar_play_config(&self) -> Option<&PlayConfig> {
         // In Java: determines PlayConfig based on selected bar type
-        todo!("MusicSelector.getSelectedBarPlayConfig requires MainController context")
+        log::warn!(
+            "not yet implemented: MusicSelector.getSelectedBarPlayConfig - requires MainController context"
+        );
+        None
     }
 
     pub fn get_current_ranking_data(&self) -> Option<&RankingData> {

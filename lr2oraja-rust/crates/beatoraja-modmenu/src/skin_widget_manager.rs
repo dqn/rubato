@@ -116,7 +116,7 @@ impl SkinWidgetManager {
             }
         }
         // ImGui.end();
-        todo!("SkinWidgetManager::show - egui integration")
+        log::warn!("not yet implemented: SkinWidgetManager::show - egui integration");
     }
 }
 

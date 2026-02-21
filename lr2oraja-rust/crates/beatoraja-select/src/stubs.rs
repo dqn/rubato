@@ -56,22 +56,40 @@ pub struct MainController;
 
 impl MainController {
     pub fn get_song_database(&self) -> &dyn SongDatabaseAccessor {
-        todo!()
+        log::warn!("not yet implemented: MainController.get_song_database");
+        &NullSongDatabaseAccessor
     }
     pub fn get_ir_status(&self) -> &[IRStatus] {
-        todo!()
+        log::warn!("not yet implemented: MainController.get_ir_status");
+        &[]
     }
     pub fn get_ranking_data_cache(&self) -> &RankingDataCache {
-        todo!()
+        log::warn!("not yet implemented: MainController.get_ranking_data_cache");
+        static DEFAULT: RankingDataCache = RankingDataCache;
+        &DEFAULT
     }
     pub fn get_input_processor(&self) -> &BMSPlayerInputProcessor {
-        todo!()
+        log::warn!("not yet implemented: MainController.get_input_processor");
+        static DEFAULT: BMSPlayerInputProcessor = BMSPlayerInputProcessor;
+        &DEFAULT
     }
     pub fn get_player_resource_local(&self) -> &PlayerResource {
-        todo!()
+        log::warn!("not yet implemented: MainController.get_player_resource_local");
+        static DEFAULT: PlayerResource = PlayerResource;
+        &DEFAULT
     }
     pub fn get_current_state(&self) -> &dyn MainState {
-        todo!()
+        log::warn!("not yet implemented: MainController.get_current_state");
+        static DEFAULT: DefaultMainState = DefaultMainState;
+        &DEFAULT
+    }
+}
+
+struct DefaultMainState;
+impl MainState for DefaultMainState {
+    fn get_main(&self) -> &MainController {
+        static DEFAULT: MainController = MainController;
+        &DEFAULT
     }
 }
 
@@ -141,13 +159,15 @@ impl RandomCourseData {
         &self.stage
     }
     pub fn get_song_datas(&self) -> Vec<SongData> {
-        todo!()
+        log::warn!("not yet implemented: RandomCourseData.get_song_datas");
+        Vec::new()
     }
     pub fn lottery_song_datas(&self, _main: &MainController) {
-        todo!()
+        log::warn!("not yet implemented: RandomCourseData.lottery_song_datas");
     }
     pub fn create_course_data(&self) -> CourseData {
-        todo!()
+        log::warn!("not yet implemented: RandomCourseData.create_course_data");
+        CourseData::default()
     }
 }
 
@@ -205,10 +225,10 @@ impl RankingData {
         self.total_player
     }
     pub fn load_song(&self, _selector: &dyn MainState, _song: &SongData) {
-        todo!()
+        log::warn!("not yet implemented: RankingData.load_song");
     }
     pub fn load_course(&self, _selector: &dyn MainState, _course: &CourseData) {
-        todo!()
+        log::warn!("not yet implemented: RankingData.load_course");
     }
 }
 
@@ -223,10 +243,10 @@ impl RankingDataCache {
         None
     }
     pub fn put_song(&self, _song: &SongData, _lnmode: i32, _data: RankingData) {
-        todo!()
+        log::warn!("not yet implemented: RankingDataCache.put_song");
     }
     pub fn put_course(&self, _course: &CourseData, _lnmode: i32, _data: RankingData) {
-        todo!()
+        log::warn!("not yet implemented: RankingDataCache.put_course");
     }
 }
 
@@ -344,7 +364,7 @@ pub struct SkinText;
 impl SkinText {
     pub fn set_text(&self, _text: &str) {}
     pub fn draw(&self, _sprite: &SkinObjectRenderer, _x: f32, _y: f32) {
-        todo!()
+        log::warn!("not yet implemented: SkinText.draw - rendering dependency");
     }
     pub fn prepare(&self, _time: i64, _state: &dyn MainState) {}
     pub fn prepare_font(&self, _chars: &str) {}
@@ -366,7 +386,7 @@ impl SkinNumber {
         _x: f32,
         _y: f32,
     ) {
-        todo!()
+        log::warn!("not yet implemented: SkinNumber.draw - rendering dependency");
     }
     pub fn prepare(&self, _time: i64, _state: &dyn MainState) {}
     pub fn validate(&self) -> bool {
@@ -406,10 +426,10 @@ impl SkinImage {
         _dx: f32,
         _dy: f32,
     ) {
-        todo!()
+        log::warn!("not yet implemented: SkinImage.draw - rendering dependency");
     }
     pub fn draw_offset(&self, _sprite: &SkinObjectRenderer, _dx: f32, _dy: f32) {
-        todo!()
+        log::warn!("not yet implemented: SkinImage.draw_offset - rendering dependency");
     }
     pub fn prepare(&self, _time: i64, _state: &dyn MainState) {}
     pub fn validate(&self) -> bool {
@@ -425,7 +445,7 @@ pub struct SkinObjectRenderer;
 
 impl SkinObjectRenderer {
     pub fn draw(&self, _image: &Option<TextureRegion>, _x: f32, _y: f32, _w: f32, _h: f32) {
-        todo!()
+        log::warn!("not yet implemented: SkinObjectRenderer.draw - rendering dependency");
     }
 }
 
@@ -592,10 +612,12 @@ pub struct NullSongDatabaseAccessor;
 
 impl SongDatabaseAccessor for NullSongDatabaseAccessor {
     fn get_song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
-        todo!()
+        log::warn!("not yet implemented: NullSongDatabaseAccessor.get_song_datas");
+        Vec::new()
     }
     fn get_song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
-        todo!()
+        log::warn!("not yet implemented: NullSongDatabaseAccessor.get_song_datas_by_hashes");
+        Vec::new()
     }
     fn get_song_datas_by_sql(
         &self,
@@ -604,16 +626,19 @@ impl SongDatabaseAccessor for NullSongDatabaseAccessor {
         _scorelog: &str,
         _info: Option<&str>,
     ) -> Vec<SongData> {
-        todo!()
+        log::warn!("not yet implemented: NullSongDatabaseAccessor.get_song_datas_by_sql");
+        Vec::new()
     }
     fn set_song_datas(&self, _songs: &[SongData]) {
-        todo!()
+        log::warn!("not yet implemented: NullSongDatabaseAccessor.set_song_datas");
     }
     fn get_song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
-        todo!()
+        log::warn!("not yet implemented: NullSongDatabaseAccessor.get_song_datas_by_text");
+        Vec::new()
     }
     fn get_folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
-        todo!()
+        log::warn!("not yet implemented: NullSongDatabaseAccessor.get_folder_datas");
+        Vec::new()
     }
 }
 

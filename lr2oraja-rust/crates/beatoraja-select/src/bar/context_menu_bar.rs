@@ -88,21 +88,33 @@ impl ContextMenuBar {
 
     fn missing_song_context(&self) -> Vec<Bar> {
         // In Java: creates SongBar, adds leaderboard, meta, tag entries
-        todo!("ContextMenuBar.missingSongContext requires MusicSelector context")
+        log::warn!(
+            "not yet implemented: ContextMenuBar.missingSongContext - requires MusicSelector context"
+        );
+        Vec::new()
     }
 
     fn song_context(&self) -> Vec<Bar> {
         // In Java: creates play/autoplay/practice bars, leaderboard, related, open folder, etc.
-        todo!("ContextMenuBar.songContext requires MusicSelector context")
+        log::warn!(
+            "not yet implemented: ContextMenuBar.songContext - requires MusicSelector context"
+        );
+        Vec::new()
     }
 
     fn table_context(&self) -> Vec<Bar> {
         // In Java: creates table context menu entries
-        todo!("ContextMenuBar.tableContext requires MusicSelector context")
+        log::warn!(
+            "not yet implemented: ContextMenuBar.tableContext - requires MusicSelector context"
+        );
+        Vec::new()
     }
 
     fn table_folder_context(&self) -> Vec<Bar> {
         // In Java: creates fill missing charts entry
-        todo!("ContextMenuBar.tableFolderContext requires MusicSelector context")
+        log::warn!(
+            "not yet implemented: ContextMenuBar.tableFolderContext - requires MusicSelector context"
+        );
+        Vec::new()
     }
 }

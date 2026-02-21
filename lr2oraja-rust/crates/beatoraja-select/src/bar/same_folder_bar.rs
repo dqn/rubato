@@ -25,6 +25,9 @@ impl SameFolderBar {
 
     pub fn get_children(&self) -> Vec<Bar> {
         // In Java: SongBar.toSongBarArray(selector.getSongDatabase().getSongDatas("folder", crc))
-        todo!("SameFolderBar.getChildren requires SongDatabaseAccessor context")
+        log::warn!(
+            "not yet implemented: SameFolderBar.getChildren - requires SongDatabaseAccessor context"
+        );
+        Vec::new()
     }
 }

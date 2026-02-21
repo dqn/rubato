@@ -22,23 +22,28 @@ pub struct MainController;
 
 impl MainController {
     pub fn get_config(&self) -> Config {
-        todo!("MainController::get_config - Phase 8+ dependency")
+        log::warn!("not yet implemented: MainController::get_config - Phase 8+ dependency");
+        Config::default()
     }
 
     pub fn get_player_config(&self) -> PlayerConfig {
-        todo!("MainController::get_player_config - Phase 8+ dependency")
+        log::warn!("not yet implemented: MainController::get_player_config - Phase 8+ dependency");
+        PlayerConfig::default()
     }
 
     pub fn get_current_state(&self) -> Box<dyn MainState> {
-        todo!("MainController::get_current_state - Phase 8+ dependency")
+        log::warn!("not yet implemented: MainController::get_current_state - Phase 8+ dependency");
+        Box::new(DefaultMainState {
+            skin: Skin::default(),
+        })
     }
 
     pub fn save_config(&self) {
-        todo!("MainController::save_config - Phase 8+ dependency")
+        log::warn!("not yet implemented: MainController::save_config - Phase 8+ dependency");
     }
 
     pub fn load_new_profile(&self, _config: PlayerConfig) {
-        todo!("MainController::load_new_profile - Phase 8+ dependency")
+        log::warn!("not yet implemented: MainController::load_new_profile - Phase 8+ dependency");
     }
 }
 
@@ -62,12 +67,19 @@ impl PlayerConfig {
         beatoraja_core::player_config::read_all_player_id(dir)
     }
 
-    pub fn read_player_config(dir: &str, player_id: &str) -> PlayerConfig {
-        todo!("PlayerConfig::read_player_config - stub adapter")
+    pub fn read_player_config(_dir: &str, _player_id: &str) -> PlayerConfig {
+        log::warn!("not yet implemented: PlayerConfig::read_player_config - stub adapter");
+        PlayerConfig::default()
     }
 
-    pub fn get_play_config(&mut self, mode: &bms_model::mode::Mode) -> &mut PlayModeConfig {
-        todo!("PlayerConfig::get_play_config - stub adapter")
+    pub fn get_play_config(&mut self, _mode: &bms_model::mode::Mode) -> &mut PlayModeConfig {
+        log::warn!("not yet implemented: PlayerConfig::get_play_config - stub adapter");
+        static mut DEFAULT_PMC: Option<PlayModeConfig> = None;
+        // SAFETY: Only used in single-threaded stub context
+        #[allow(static_mut_refs)]
+        unsafe {
+            DEFAULT_PMC.get_or_insert_with(PlayModeConfig::default)
+        }
     }
 
     pub fn get_skin(&self) -> &Vec<SkinConfig> {
@@ -191,6 +203,23 @@ pub trait MainState {
     fn get_skin(&self) -> &Skin;
     fn set_skin(&mut self, skin: Skin);
     fn as_any(&self) -> &dyn std::any::Any;
+}
+
+/// Default MainState implementation for stubs
+struct DefaultMainState {
+    skin: Skin,
+}
+
+impl MainState for DefaultMainState {
+    fn get_skin(&self) -> &Skin {
+        &self.skin
+    }
+    fn set_skin(&mut self, skin: Skin) {
+        self.skin = skin;
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 // Version is re-exported from beatoraja_core at the top of this file.
@@ -338,7 +367,7 @@ impl Skin {
     }
 
     pub fn prepare(&self, _state: &dyn MainState) {
-        todo!("Skin::prepare - rendering dependency")
+        log::warn!("not yet implemented: Skin::prepare - rendering dependency");
     }
 }
 
@@ -393,7 +422,8 @@ impl SkinLoader {
         _skin_type: &SkinType,
         _config: &SkinConfig,
     ) -> Option<Skin> {
-        todo!("SkinLoader::load - rendering dependency")
+        log::warn!("not yet implemented: SkinLoader::load - rendering dependency");
+        None
     }
 }
 
@@ -415,7 +445,8 @@ impl JSONSkinLoader {
     }
 
     pub fn load_header(&self, _path: &Path) -> Option<SkinHeader> {
-        todo!("JSONSkinLoader::load_header - skin loader dependency")
+        log::warn!("not yet implemented: JSONSkinLoader::load_header - skin loader dependency");
+        None
     }
 }
 
@@ -427,7 +458,11 @@ impl LR2SkinHeaderLoader {
     }
 
     pub fn load_skin(&self, _path: &Path, _opt: Option<()>) -> std::io::Result<SkinHeader> {
-        todo!("LR2SkinHeaderLoader::load_skin - skin loader dependency")
+        log::warn!("not yet implemented: LR2SkinHeaderLoader::load_skin - skin loader dependency");
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "LR2SkinHeaderLoader not yet implemented",
+        ))
     }
 }
 
@@ -445,7 +480,8 @@ impl LuaSkinLoader {
     }
 
     pub fn load_header(&self, _path: &Path) -> Option<SkinHeader> {
-        todo!("LuaSkinLoader::load_header - skin loader dependency")
+        log::warn!("not yet implemented: LuaSkinLoader::load_header - skin loader dependency");
+        None
     }
 }
 
@@ -463,16 +499,28 @@ pub struct MusicSelector;
 
 impl MusicSelector {
     pub fn get_selected_bar(&self) -> &dyn Bar {
-        todo!("MusicSelector::get_selected_bar - select dependency")
+        log::warn!("not yet implemented: MusicSelector::get_selected_bar - select dependency");
+        static DEFAULT_BAR: DefaultBar = DefaultBar;
+        &DEFAULT_BAR
     }
 
     pub fn get_reverse_lookup_data(&self) -> Vec<String> {
-        todo!("MusicSelector::get_reverse_lookup_data - select dependency")
+        log::warn!(
+            "not yet implemented: MusicSelector::get_reverse_lookup_data - select dependency"
+        );
+        Vec::new()
     }
 }
 
 pub trait Bar {
     fn as_any(&self) -> &dyn std::any::Any;
+}
+
+struct DefaultBar;
+impl Bar for DefaultBar {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 pub struct SongBar {
@@ -619,6 +667,6 @@ impl Clipboard {
     }
 
     pub fn set_contents(&self, _contents: &str) {
-        todo!("Clipboard::set_contents - platform dependency")
+        log::warn!("not yet implemented: Clipboard::set_contents - platform dependency");
     }
 }

@@ -90,7 +90,7 @@ impl MiscSettingMenu {
         profile_switcher();
 
         // ImGui.end();
-        todo!("MiscSettingMenu::show - egui integration")
+        log::warn!("not yet implemented: MiscSettingMenu::show - egui integration");
     }
 
     pub fn set_main(main: MainController) {

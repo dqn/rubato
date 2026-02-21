@@ -89,7 +89,7 @@ impl DiscordConfigurationView {
         // webhookURL.getColumns().setAll(urlColumn);
         // webhookURL.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         // Table column setup deferred to egui integration
-        todo!("egui integration")
+        log::warn!("not yet implemented: DiscordConfigurationView.init - egui table column setup");
     }
 
     // public void update(Config config)

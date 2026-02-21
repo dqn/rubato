@@ -88,6 +88,7 @@ impl DirectoryBarData {
         // NOTE: This method creates new Bar values which would require Clone.
         // In practice this is called on the Java side via getChildren(Mode, boolean).
         // For now we stub it since we cannot Clone enum-of-Box easily.
-        todo!("DirectoryBar.getChildren(mode, containsSameFolder)")
+        log::warn!("not yet implemented: DirectoryBar.getChildren(mode, containsSameFolder)");
+        Vec::new()
     }
 }

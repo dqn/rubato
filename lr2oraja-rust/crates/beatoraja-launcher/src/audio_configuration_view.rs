@@ -85,7 +85,7 @@ impl AudioConfigurationView {
         // audioFreqOption.getItems().setAll(FrequencyType.UNPROCESSED, FrequencyType.FREQUENCY);
         // audioFastForward.getItems().setAll(FrequencyType.UNPROCESSED, FrequencyType.FREQUENCY);
 
-        todo!("egui integration")
+        log::warn!("not yet implemented: AudioConfigurationView.initialize - egui combo box setup");
     }
 
     // public void update(AudioConfig config)

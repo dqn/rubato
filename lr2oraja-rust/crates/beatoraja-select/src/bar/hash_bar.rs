@@ -56,11 +56,16 @@ impl HashBar {
 
     pub fn get_children(&self) -> Vec<Bar> {
         // In Java: SongBar.toSongBarArray(selector.getSongDatabase().getSongDatas(elementsHash), elements)
-        todo!("HashBar.getChildren requires SongDatabaseAccessor context")
+        log::warn!(
+            "not yet implemented: HashBar.getChildren - requires SongDatabaseAccessor context"
+        );
+        Vec::new()
     }
 
     pub fn update_folder_status(&mut self) {
         // In Java: updateFolderStatus(selector.getSongDatabase().getSongDatas(elementsHash))
-        todo!("HashBar.updateFolderStatus requires SongDatabaseAccessor context")
+        log::warn!(
+            "not yet implemented: HashBar.updateFolderStatus - requires SongDatabaseAccessor context"
+        );
     }
 }

@@ -115,39 +115,54 @@ pub struct MainController;
 
 impl MainController {
     pub fn get_input_processor(&mut self) -> &mut BMSPlayerInputProcessor {
-        todo!("Phase 8+ dependency: MainController.getInputProcessor")
+        log::warn!("not yet implemented: MainController.getInputProcessor");
+        // Leak a boxed value to get a &'static mut reference - stub only
+        Box::leak(Box::new(BMSPlayerInputProcessor))
     }
 
     pub fn get_config(&self) -> &beatoraja_core::config::Config {
-        todo!("Phase 8+ dependency: MainController.getConfig")
+        log::warn!("not yet implemented: MainController.getConfig");
+        static DEFAULT: std::sync::OnceLock<beatoraja_core::config::Config> =
+            std::sync::OnceLock::new();
+        DEFAULT.get_or_init(beatoraja_core::config::Config::default)
     }
 
     pub fn get_player_config(&self) -> &beatoraja_core::player_config::PlayerConfig {
-        todo!("Phase 8+ dependency: MainController.getPlayerConfig")
+        log::warn!("not yet implemented: MainController.getPlayerConfig");
+        static DEFAULT: std::sync::OnceLock<beatoraja_core::player_config::PlayerConfig> =
+            std::sync::OnceLock::new();
+        DEFAULT.get_or_init(beatoraja_core::player_config::PlayerConfig::default)
     }
 
     pub fn get_ir_status(&self) -> &[IRStatus] {
-        todo!("Phase 8+ dependency: MainController.getIRStatus")
+        log::warn!("not yet implemented: MainController.getIRStatus");
+        &[]
     }
 
     pub fn change_state(&mut self, _state_type: beatoraja_core::main_state::MainStateType) {
-        todo!("Phase 8+ dependency: MainController.changeState")
+        log::warn!("not yet implemented: MainController.changeState");
     }
 
     pub fn save_last_recording(&self, _tag: &str) {
-        todo!("Phase 8+ dependency: MainController.saveLastRecording")
+        log::warn!("not yet implemented: MainController.saveLastRecording");
     }
 
     pub fn ir_send_status(&self) -> &Vec<IRSendStatusMain> {
-        todo!("Phase 8+ dependency: MainController.irSendStatus")
+        log::warn!("not yet implemented: MainController.irSendStatus");
+        // Leak a boxed value - stub only, will be replaced with real implementation
+        Box::leak(Box::new(Vec::new()))
     }
 
     pub fn ir_send_status_mut(&mut self) -> &mut Vec<IRSendStatusMain> {
-        todo!("Phase 8+ dependency: MainController.irSendStatus")
+        log::warn!("not yet implemented: MainController.irSendStatus_mut");
+        // Leak a boxed value - stub only, will be replaced with real implementation
+        Box::leak(Box::new(Vec::new()))
     }
 
     pub fn get_play_data_accessor(&self) -> &PlayDataAccessor {
-        todo!("Phase 8+ dependency: MainController.getPlayDataAccessor")
+        log::warn!("not yet implemented: MainController.getPlayDataAccessor");
+        static DEFAULT: PlayDataAccessor = PlayDataAccessor;
+        &DEFAULT
     }
 }
 
@@ -203,7 +218,8 @@ impl IRSendStatusMain {
     }
 
     pub fn send(&mut self) -> bool {
-        todo!("IR dependency: IRSendStatus.send")
+        log::warn!("not yet implemented: IRSendStatus.send");
+        false
     }
 }
 
@@ -263,11 +279,32 @@ impl GrooveGaugeStub {
     }
 
     pub fn get_gauge(&self, _gauge_type: i32) -> &beatoraja_play::groove_gauge::Gauge {
-        todo!("Phase 8+ dependency: GrooveGauge.getGauge")
+        log::warn!("not yet implemented: GrooveGauge.getGauge");
+        static DEFAULT: std::sync::OnceLock<beatoraja_play::groove_gauge::Gauge> =
+            std::sync::OnceLock::new();
+        DEFAULT.get_or_init(|| {
+            let model = bms_model::bms_model::BMSModel::default();
+            let element = beatoraja_types::gauge_property::GaugeElementProperty {
+                modifier: None,
+                value: vec![0.0; 6],
+                min: 0.0,
+                max: 100.0,
+                init: 0.0,
+                border: 80.0,
+                death: 0.0,
+                guts: Vec::new(),
+            };
+            beatoraja_play::groove_gauge::Gauge::new(
+                &model,
+                element,
+                beatoraja_core::clear_type::ClearType::Failed,
+            )
+        })
     }
 
     pub fn get_clear_type(&self) -> beatoraja_core::clear_type::ClearType {
-        todo!("Phase 8+ dependency: GrooveGauge.getClearType")
+        log::warn!("not yet implemented: GrooveGauge.getClearType");
+        beatoraja_core::clear_type::ClearType::Failed
     }
 }
 
@@ -334,15 +371,24 @@ pub struct PlayerResource {
 
 impl PlayerResource {
     pub fn get_bms_model(&self) -> &bms_model::bms_model::BMSModel {
-        todo!("Phase 8+ dependency: PlayerResource.getBMSModel")
+        log::warn!("not yet implemented: PlayerResource.getBMSModel");
+        static DEFAULT: std::sync::OnceLock<bms_model::bms_model::BMSModel> =
+            std::sync::OnceLock::new();
+        DEFAULT.get_or_init(bms_model::bms_model::BMSModel::default)
     }
 
     pub fn get_player_config(&self) -> &beatoraja_core::player_config::PlayerConfig {
-        todo!("Phase 8+ dependency: PlayerResource.getPlayerConfig")
+        log::warn!("not yet implemented: PlayerResource.getPlayerConfig");
+        static DEFAULT: std::sync::OnceLock<beatoraja_core::player_config::PlayerConfig> =
+            std::sync::OnceLock::new();
+        DEFAULT.get_or_init(beatoraja_core::player_config::PlayerConfig::default)
     }
 
     pub fn get_config(&self) -> &beatoraja_core::config::Config {
-        todo!("Phase 8+ dependency: PlayerResource.getConfig")
+        log::warn!("not yet implemented: PlayerResource.getConfig");
+        static DEFAULT: std::sync::OnceLock<beatoraja_core::config::Config> =
+            std::sync::OnceLock::new();
+        DEFAULT.get_or_init(beatoraja_core::config::Config::default)
     }
 
     pub fn get_course_bms_models(&self) -> Option<&[bms_model::bms_model::BMSModel]> {
@@ -354,7 +400,8 @@ impl PlayerResource {
     }
 
     pub fn get_gauge(&self) -> &[FloatArray] {
-        todo!("Phase 8+ dependency: PlayerResource.getGauge")
+        log::warn!("not yet implemented: PlayerResource.getGauge");
+        &[]
     }
 
     pub fn get_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
@@ -388,19 +435,27 @@ impl PlayerResource {
     }
 
     pub fn get_replay_data(&self) -> &beatoraja_core::replay_data::ReplayData {
-        todo!("Phase 8+ dependency: PlayerResource.getReplayData")
+        log::warn!("not yet implemented: PlayerResource.getReplayData");
+        static DEFAULT: std::sync::OnceLock<beatoraja_core::replay_data::ReplayData> =
+            std::sync::OnceLock::new();
+        DEFAULT.get_or_init(beatoraja_core::replay_data::ReplayData::default)
     }
 
     pub fn get_replay_data_mut(&mut self) -> &mut beatoraja_core::replay_data::ReplayData {
-        todo!("Phase 8+ dependency: PlayerResource.getReplayData")
+        log::warn!("not yet implemented: PlayerResource.getReplayData_mut");
+        // Leak a boxed value - stub only, will be replaced with real implementation
+        Box::leak(Box::new(beatoraja_core::replay_data::ReplayData::default()))
     }
 
     pub fn get_course_replay(&self) -> &[beatoraja_core::replay_data::ReplayData] {
-        todo!("Phase 8+ dependency: PlayerResource.getCourseReplay")
+        log::warn!("not yet implemented: PlayerResource.getCourseReplay");
+        &[]
     }
 
     pub fn get_course_replay_mut(&mut self) -> &mut Vec<beatoraja_core::replay_data::ReplayData> {
-        todo!("Phase 8+ dependency: PlayerResource.getCourseReplay")
+        log::warn!("not yet implemented: PlayerResource.getCourseReplay_mut");
+        // Leak a boxed value - stub only, will be replaced with real implementation
+        Box::leak(Box::new(Vec::new()))
     }
 
     pub fn add_course_replay(&mut self, _replay: &beatoraja_core::replay_data::ReplayData) {
@@ -432,11 +487,16 @@ impl PlayerResource {
     }
 
     pub fn get_course_data(&self) -> &beatoraja_core::course_data::CourseData {
-        todo!("Phase 8+ dependency: PlayerResource.getCourseData")
+        log::warn!("not yet implemented: PlayerResource.getCourseData");
+        static DEFAULT: std::sync::OnceLock<beatoraja_core::course_data::CourseData> =
+            std::sync::OnceLock::new();
+        DEFAULT.get_or_init(beatoraja_core::course_data::CourseData::default)
     }
 
     pub fn get_songdata(&self) -> &SongData {
-        todo!("Phase 8+ dependency: PlayerResource.getSongdata")
+        log::warn!("not yet implemented: PlayerResource.getSongdata");
+        static DEFAULT: std::sync::OnceLock<SongData> = std::sync::OnceLock::new();
+        DEFAULT.get_or_init(SongData::default)
     }
 
     pub fn get_org_gauge_option(&self) -> i32 {
@@ -468,15 +528,21 @@ impl PlayerResource {
     }
 
     pub fn get_groove_gauge(&self) -> &GrooveGaugeStub {
-        todo!("Phase 8+ dependency: PlayerResource.getGrooveGauge")
+        log::warn!("not yet implemented: PlayerResource.getGrooveGauge");
+        static DEFAULT: GrooveGaugeStub = GrooveGaugeStub { gauge_type: 0 };
+        &DEFAULT
     }
 
     pub fn get_course_gauge(&self) -> &GdxArray<Vec<FloatArray>> {
-        todo!("Phase 8+ dependency: PlayerResource.getCourseGauge")
+        log::warn!("not yet implemented: PlayerResource.getCourseGauge");
+        static DEFAULT: std::sync::OnceLock<GdxArray<Vec<FloatArray>>> = std::sync::OnceLock::new();
+        DEFAULT.get_or_init(GdxArray::new)
     }
 
     pub fn get_course_gauge_mut(&mut self) -> &mut GdxArray<Vec<FloatArray>> {
-        todo!("Phase 8+ dependency: PlayerResource.getCourseGauge")
+        log::warn!("not yet implemented: PlayerResource.getCourseGauge_mut");
+        // Leak a boxed value - stub only, will be replaced with real implementation
+        Box::leak(Box::new(GdxArray::new()))
     }
 }
 

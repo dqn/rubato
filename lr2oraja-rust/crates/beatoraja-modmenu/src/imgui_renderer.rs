@@ -55,7 +55,7 @@ impl ImGuiRenderer {
         // imGuiGlfw.init(windowHandle, true);
         // imGuiGl3.init("#version 150");
 
-        todo!("ImGuiRenderer::init - egui integration")
+        log::warn!("not yet implemented: ImGuiRenderer::init - egui integration");
     }
 
     pub fn start() {
@@ -66,7 +66,7 @@ impl ImGuiRenderer {
         // imGuiGl3.newFrame();
         // imGuiGlfw.newFrame();
         // ImGui.newFrame();
-        todo!("ImGuiRenderer::start - egui integration")
+        log::warn!("not yet implemented: ImGuiRenderer::start - egui integration");
     }
 
     pub fn render() {
@@ -156,14 +156,14 @@ impl ImGuiRenderer {
         // imGuiGl3.renderDrawData(ImGui.getDrawData());
         // if (ImGui.getIO().getWantCaptureKeyboard() || ImGui.getIO().getWantCaptureMouse())
         // { ... capture input ... }
-        todo!("ImGuiRenderer::end - egui integration")
+        log::warn!("not yet implemented: ImGuiRenderer::end - egui integration");
     }
 
     pub fn dispose() {
         // imGuiGl3.shutdown();
         // imGuiGlfw.shutdown();
         // ImGui.destroyContext();
-        todo!("ImGuiRenderer::dispose - egui integration")
+        log::warn!("not yet implemented: ImGuiRenderer::dispose - egui integration");
     }
 
     pub fn get_show_mod_menu() -> bool {
@@ -185,6 +185,9 @@ impl ImGuiRenderer {
         //     ImGui.popTextWrapPos();
         //     ImGui.endTooltip();
         // }
-        todo!("ImGuiRenderer::help_marker - egui integration")
+        log::warn!(
+            "not yet implemented: ImGuiRenderer::help_marker - egui tooltip for '{}'",
+            _desc
+        );
     }
 }

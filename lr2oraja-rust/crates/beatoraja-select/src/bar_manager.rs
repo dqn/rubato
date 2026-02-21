@@ -77,7 +77,9 @@ impl BarManager {
         // In Java: loads tables, courses, favorites, command folders, random folders
         // This requires: TableDataAccessor, CourseDataAccessor, SongDatabaseAccessor,
         // IRConnection, BMSSearchAccessor, JSON parsing, etc.
-        todo!("BarManager.init requires MusicSelector and TableDataAccessor context")
+        log::warn!(
+            "not yet implemented: BarManager.init - requires MusicSelector and TableDataAccessor context"
+        );
     }
 
     pub fn update_bar_refresh(&mut self) -> bool {
@@ -90,7 +92,8 @@ impl BarManager {
 
     fn update_bar_with_last_dir(&mut self) -> bool {
         // Stub: would re-enter last directory
-        todo!("BarManager.updateBar(dir.last()) requires full context")
+        log::warn!("not yet implemented: BarManager.updateBar(dir.last()) - requires full context");
+        false
     }
 
     pub fn update_bar(&mut self, _bar: Option<&Bar>) -> bool {
@@ -99,7 +102,10 @@ impl BarManager {
         // - DirectoryBar = open folder, get children, filter, sort
         // - Handles mode filtering, invisible charts, sorting, random select
         // - Starts BarContentsLoaderThread for score/banner/stagefile loading
-        todo!("BarManager.updateBar requires full MusicSelector context")
+        log::warn!(
+            "not yet implemented: BarManager.updateBar - requires full MusicSelector context"
+        );
+        false
     }
 
     pub fn close(&mut self) {
@@ -110,7 +116,7 @@ impl BarManager {
             return;
         }
         // In Java: removes last dir, updates to parent
-        todo!("BarManager.close requires MusicSelector context")
+        log::warn!("not yet implemented: BarManager.close - requires MusicSelector context");
     }
 
     pub fn get_directory(&self) -> &[Box<Bar>] {

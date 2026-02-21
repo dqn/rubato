@@ -29,6 +29,6 @@ impl JudgeTrainerMenu {
             }
             // ImGui.end();
         }
-        todo!("JudgeTrainerMenu::show - egui integration")
+        log::warn!("not yet implemented: JudgeTrainerMenu::show - egui integration");
     }
 }

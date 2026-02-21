@@ -22,12 +22,17 @@ impl SearchWordBar {
 
     pub fn get_children(&self) -> Vec<Bar> {
         // In Java: SongBar.toSongBarArray(selector.getSongDatabase().getSongDatasByText(text))
-        todo!("SearchWordBar.getChildren requires SongDatabaseAccessor context")
+        log::warn!(
+            "not yet implemented: SearchWordBar.getChildren - requires SongDatabaseAccessor context"
+        );
+        Vec::new()
     }
 
     pub fn update_folder_status(&mut self) {
         // In Java: updateFolderStatus(selector.getSongDatabase().getSongDatasByText(text))
-        todo!("SearchWordBar.updateFolderStatus requires SongDatabaseAccessor context")
+        log::warn!(
+            "not yet implemented: SearchWordBar.updateFolderStatus - requires SongDatabaseAccessor context"
+        );
     }
 
     pub fn get_title(&self) -> String {

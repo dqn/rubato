@@ -41,7 +41,7 @@ impl DownloadTaskMenu {
             }
         }
         // ImGui.end();
-        todo!("DownloadTaskMenu::show - egui integration")
+        log::warn!("not yet implemented: DownloadTaskMenu::show - egui integration");
     }
 
     fn render_task_table(tasks: &[&Arc<Mutex<DownloadTask>>]) {
@@ -83,7 +83,7 @@ impl DownloadTaskMenu {
             // ImGui.popID();
         }
         // ImGui.endTable();
-        todo!("DownloadTaskMenu::render_task_table - egui integration")
+        log::warn!("not yet implemented: DownloadTaskMenu::render_task_table - egui integration");
     }
 }
 

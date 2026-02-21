@@ -537,7 +537,7 @@ impl PlayConfigurationView {
     /// Show what's new popup
     /// Translates: private void whatsNewPopup()
     pub fn whats_new_popup(&self) {
-        todo!("egui integration")
+        log::warn!("not yet implemented: PlayConfigurationView.whats_new_popup - egui popup");
     }
 
     /// Check for new version
@@ -1011,7 +1011,9 @@ impl PlayConfigurationView {
         // songdb.update_song_datas(updatepath, &config.bmsroot, update_all, false, infodb, &listener);
         // self.song_updated = true;
 
-        todo!("egui integration — progress bar and async BMS loading")
+        log::warn!(
+            "not yet implemented: PlayConfigurationView.load_bms - egui progress bar and async BMS loading"
+        );
     }
 
     /// Import score data from LR2
@@ -1026,7 +1028,9 @@ impl PlayConfigurationView {
         // These use different stub types across crates (beatoraja-core vs beatoraja-external).
         // Stubbed pending rusqlite integration and type unification.
         if let (Some(_config), Some(_player_selected)) = (&self.config, &self.players_selected) {
-            todo!("LR2 score import via rusqlite - pending type unification")
+            log::warn!(
+                "not yet implemented: PlayConfigurationView.import_score_data_from_lr2 - LR2 score import via rusqlite"
+            );
         }
     }
 
@@ -1109,7 +1113,7 @@ impl PlayConfigurationView {
     /// Render the UI
     /// In egui, this replaces the JavaFX FXML layout
     pub fn render(&mut self) {
-        todo!("egui integration")
+        log::warn!("not yet implemented: PlayConfigurationView.render - egui UI rendering");
     }
 }
 

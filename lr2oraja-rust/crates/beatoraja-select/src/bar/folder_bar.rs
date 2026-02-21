@@ -38,10 +38,15 @@ impl FolderBar {
     pub fn get_children(&self) -> Vec<Bar> {
         // In Java: selector.getSongDatabase().getSongDatas("parent", crc)
         // Then if songs > 0 return SongBar array, else return sub-folders
-        todo!("FolderBar.getChildren requires SongDatabaseAccessor context")
+        log::warn!(
+            "not yet implemented: FolderBar.getChildren - requires SongDatabaseAccessor context"
+        );
+        Vec::new()
     }
 
     pub fn update_folder_status(&mut self) {
-        todo!("FolderBar.updateFolderStatus requires SongDatabaseAccessor context")
+        log::warn!(
+            "not yet implemented: FolderBar.updateFolderStatus - requires SongDatabaseAccessor context"
+        );
     }
 }

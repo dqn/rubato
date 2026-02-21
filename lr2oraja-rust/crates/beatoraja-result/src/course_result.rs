@@ -148,7 +148,7 @@ impl CourseResult {
         self.data.gauge_type = resource.get_groove_gauge().get_type();
 
         // loadSkin(SkinType.COURSE_RESULT);
-        todo!("Phase 8+ dependency: loadSkin(SkinType.COURSE_RESULT)")
+        log::warn!("not yet implemented: loadSkin(SkinType.COURSE_RESULT)");
     }
 
     pub fn prepare(&mut self, main: &mut MainController, resource: &mut PlayerResource) {
@@ -210,8 +210,7 @@ impl CourseResult {
 
             // IR processing thread
             // In Java this spawns a Thread. In Rust we'd use tokio::spawn or std::thread::spawn.
-            // For now, mark as todo since it requires async/thread integration.
-            todo!("Phase 8+ dependency: IR processing thread for course result")
+            log::warn!("not yet implemented: IR processing thread for course result");
         }
 
         // Play result sound
@@ -224,7 +223,7 @@ impl CourseResult {
                 .map(|ac| ac.is_loop_course_result_sound)
                 .unwrap_or(false);
             // play(clear ? COURSE_CLEAR/RESULT_CLEAR : COURSE_FAIL/RESULT_FAIL, loop)
-            todo!("Phase 8+ dependency: play result sound")
+            log::warn!("not yet implemented: play course result sound");
         }
     }
 
@@ -232,7 +231,7 @@ impl CourseResult {
         // stop(getSound(COURSE_CLEAR) != null ? COURSE_CLEAR : RESULT_CLEAR);
         // stop(getSound(COURSE_FAIL) != null ? COURSE_FAIL : RESULT_FAIL);
         // stop(getSound(COURSE_CLOSE) != null ? COURSE_CLOSE : RESULT_CLOSE);
-        todo!("Phase 8+ dependency: stop sounds")
+        log::warn!("not yet implemented: stop course result sounds");
     }
 
     pub fn render(&mut self, _resource: &PlayerResource) {
@@ -243,7 +242,7 @@ impl CourseResult {
 
         // if(time > getSkin().getInput()) { timer.switchTimer(TIMER_STARTINPUT, true); }
         // Skin access requires integration
-        todo!("Phase 8+ dependency: render with skin")
+        log::warn!("not yet implemented: render with skin");
     }
 
     pub fn input(&mut self, main: &mut MainController, resource: &mut PlayerResource) {
@@ -306,7 +305,7 @@ impl CourseResult {
                 let input_processor = main.get_input_processor();
                 if input_processor.is_activated(KeyCommand::OpenIr) {
                     // self.execute_event(EventType::open_ir);
-                    todo!("Phase 8+ dependency: execute open_ir event")
+                    log::warn!("not yet implemented: execute open_ir event");
                 }
             }
         }
