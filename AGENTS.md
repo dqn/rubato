@@ -74,42 +74,47 @@ brs/
 
 ## Implementation Status
 
-All phases complete. **1511 tests pass. Zero runtime `todo!()`/`unimplemented!()`.** PlayerResource wrapper migration complete for all 6 crates.
+Phases 1–24e complete. **1651 tests pass, 22 ignored (RenderSnapshot — SkinData→Skin pipeline pending). Zero runtime `todo!()`/`unimplemented!()`.** PlayerResource wrapper migration complete for all 6 crates. Phase 24f (MainController remaining stubs) next.
 
-- **Phases 1–17:** Core translation (17 crates, 300+ modules), real implementations (wgpu, Kira, mlua, ffmpeg-next, midir, cpal, egui UI), circular dep resolution, stub cleanup, platform replacements, 868 tests (715 unit + 121 golden master + 32 integration)
-- **Phase 18a–d:** Core judge loop, rendering state providers, audio decode API, BGA/skin test APIs
-- **Phase 18e (1–12):** Stub replacement — 12 sub-phases of cross-crate dedup, lifecycle cleanup, PlayerResource wrapper, skin/input/IR/table type replacements, dependency cleanup. 4 rounds of full audit — all actionable replacements exhausted
-- **Phase 18f:** E2E test activation (138 tests across 9 files)
-- **Phase 18g:** BRD replay codec
-- **Phase 19:** SkinData→Skin Loading Pipeline — JsonSkinObjectLoader base conversion (all skin object types), screen-specific loaders (Play/Select + 5 minimal), LuaSkinLoader (mlua-based Lua→JsonSkin), SkinLoader entry points. +1,469 lines, +20 tests
-- **Phase 20:** IRConnection Integration — IRSendStatus.send() with score submission, IRInitializer for connection setup/login, IRResendLoop with exponential backoff (tokio), IRStatus with real connection type. +263 lines + 2 new files, +13 tests
-- **Phase 21:** Per-Screen MainState + State Dispatch — All 6 screen states (MusicSelector, MusicDecide, BMSPlayer, MusicResult, KeyConfiguration, SkinConfiguration) implement MainState trait. MainController state dispatch via StateFactory trait (cross-crate), change_state() with Java-matching switch logic, transition lifecycle (create/prepare/shutdown), lifecycle dispatch (render/pause/resume/resize/dispose), decide-skip logic. +23 tests
-- **Phase 22a:** WGSL Sprite Shader + Render Pipeline + SpriteBatch GPU Flush — WGSL shaders for all 6 Java shader types (Normal, Linear, Bilinear, FFmpeg, Layer, DistanceField), SpriteRenderPipeline with 30 pipeline variants (6 shaders x 5 blend modes), SpriteBatch flush_to_gpu() with vertex buffer upload, SkinObjectRenderer pre_draw/post_draw wired (shader switching, blend state, color save/restore). +43 tests
-- **Phase 22b:** SkinObject Draw Methods + SkinTextBitmap — Integration tests for SkinImage/SkinNumber/SkinTextImage draw chains (27 tests). SkinTextBitmap.draw_with_offset() implemented with ab_glyph font rendering (glyph layout with kerning, alignment, overflow modes, shadow, distance field). BitmapFont.layout_glyphs() + PositionedGlyph. +42 tests, +1,346 lines
-- **Phase 22c:** MainController Render Pipeline + FPS Cap — MainController.render() enhanced (sprite begin/end lifecycle, input gating by time delta). SpriteBatch re-export replacing stub. SpriteBatch→wgpu render pass flush with SpriteRenderPipeline, bind groups, projection matrix. FPS capping from Config.maxFramePerSecond. +7 tests, +325 lines
-- **Phase 22d:** Skin.draw_all_objects() Integration — SkinDrawable trait in beatoraja-core (Send-bounded, 10 methods), TimerOnlyMainState adapter bridging core↔skin MainState, impl SkinDrawable for Skin, MainController.render() wired with take/put-back borrow pattern, SkinStub removed from MainStateData. +11 tests, +~150 lines
-- **Phase 23a–d:** LauncherStateFactory + DB wiring — LauncherStateFactory concrete impl in beatoraja-launcher (all 7 state types), MainController `songdb` field + `set_song_database()`/`get_song_database()`, PlayDataAccessor init in constructor, MusicSelector `with_song_database()` injection, CourseResult MainState trait impl. +10 tests
-- **Phase 24c:** Audio driver wiring — beatoraja-select AudioDriver stub deleted, PreviewMusicProcessor wired to `&dyn AudioDriver` trait (beatoraja-audio), MainController `audio: Option<Box<dyn AudioDriver>>` field + get/set methods. +11 tests
-- **Phase 24a:** SQLiteSongDatabaseAccessor + MainLoader entry points — SQLiteSongDatabaseAccessor 6/6 trait methods + updateSongDatas() full BMS scanning (tags/favorites bug fixed). MainLoader.play() returns MainController with window dimensions. MainLoader.start() returns (Config, PlayerConfig, title). LauncherUi eframe::App impl with run_launcher() entry point + play/exit flags. beatoraja-bin simplified to delegate to MainLoader + run_launcher(). +710 lines, +23 tests
-- **Phase 24c:** Audio driver wiring — beatoraja-select AudioDriver stub deleted, PreviewMusicProcessor wired to `&dyn AudioDriver` trait (beatoraja-audio), MainController `audio: Option<Box<dyn AudioDriver>>` field + get/set methods. +11 tests
-- **Phase 24d:** RenderSnapshot test activation — Fixed imports (`bms_config`→`beatoraja_core`, `bms_render`→`golden_master`, `bms_skin`→`beatoraja_skin`), added `Gauge` DrawDetail variant + comparison, moved from `tests/pending/` to `tests/`, 22 tests compiled (#[ignore] — SkinData→Skin pipeline needed)
+- **Phases 1–17:** Core translation (17 crates, 300+ modules), real implementations (wgpu, Kira, mlua, ffmpeg-next, midir, cpal, egui UI), circular dep resolution, stub cleanup, platform replacements, 868 tests
+- **Phase 18a–g:** Core judge loop, rendering state providers, audio decode API, BGA/skin test APIs, stub replacement (12 sub-phases, 4 audit rounds), E2E test activation (138 tests), BRD replay codec
+- **Phase 19:** SkinData→Skin Loading Pipeline — JsonSkinObjectLoader, screen-specific loaders, LuaSkinLoader, SkinLoader entry points. +1,469 lines, +20 tests
+- **Phase 20:** IRConnection Integration — IRSendStatus, IRInitializer, IRResendLoop. +263 lines, +13 tests
+- **Phase 21:** Per-Screen MainState + State Dispatch — 6 screen states, StateFactory trait, change_state(), lifecycle dispatch. +23 tests
+- **Phase 22a–d:** Rendering Pipeline — WGSL shaders (6 types, 30 variants), SkinObject draw + SkinTextBitmap (ab_glyph), MainController render + FPS cap, Skin.draw_all_objects() (SkinDrawable trait). +103 tests, +1,821 lines
+- **Phase 23a–d:** LauncherStateFactory + DB wiring — 7 state types, songdb field, CourseResult. +10 tests
+- **Phase 24a:** SQLiteSongDatabaseAccessor + MainLoader — 6/6 trait methods, updateSongDatas(), LauncherUi eframe. +710 lines, +23 tests
+- **Phase 24c:** Audio driver wiring — AudioDriver stub deleted, MainController audio field. +11 tests
+- **Phase 24b:** Input system integration — WinitKeyCode→Java keycode mapping, SharedKeyState, GdxInput/GdxGraphics real impl, MainController input wiring. +46 tests
+- **Phase 24d:** RenderSnapshot test activation — 22 tests compiled (#[ignore])
+- **Phase 24e:** BarManager + music selection — init/update_bar/close, BarContentsLoaderThread, UpdateBarContext/LoaderContext/CourseTableAccessor. +40 tests
 
-## Remaining Stubs (~2,613 lines across 16 files)
+## Remaining Stubs (3,004 lines across 16 files)
 
-- **beatoraja-external (574 lines):** Pixmap/GdxGraphics/BufferUtils/PixmapIO LibGDX stubs — Phase 22 で wgpu パイプラインが完成し代替実装が可能に。Phase 24 で段階的に解消予定
-- **beatoraja-result (388 lines):** SkinObjectData, AbstractResult/ScreenType stubs — 大半は re-export、rendering 関連はPhase 22 で解消可能
-- **beatoraja-select (~348 lines):** EventType enum、SkinObject/SkinNumber/SkinText/SkinImage rendering stubs、SongManagerMenu wrapper、DownloadTask stubs (AudioDriver stub deleted in Phase 24c)
-- **beatoraja-launcher (321 lines):** MainController partial stubs — Phase 24f で解消
-- **beatoraja-skin (294 lines):** LibGDX graphics stubs (Color, Texture, TextureRegion, Pixmap) — wgpu 型への置換が可能だが全 crate に影響
-- **beatoraja-types (211 lines):** 基本型スタブ — 多くは re-export 用
-- **beatoraja-modmenu (191 lines):** SongManagerMenu, MusicSelector/Bar rendering — modmenu 完全実装まで保持
-- **beatoraja-input (132 lines):** Config/PlayerConfig/PlayModeConfig stubs — 入力システム統合 (Phase 24b) で解消
-- **beatoraja-decide (108 lines):** SkinStub — Phase 22d で MainStateData から除去済み、残は decide 固有
-- **Clean crates (re-exports only):** beatoraja-core (1), beatoraja-audio (1), beatoraja-play (9), beatoraja-obs (9), beatoraja-ir (10), md-processor (12), beatoraja-stream (4)
-- **MainController:** ~11 stub methods — polling thread (Phase 24b), audio driver init (Phase 24f, driver field wired in Phase 24c), updateStateReferences (Phase 24f)
-- **StateFactory:** DONE — LauncherStateFactory in beatoraja-launcher wires all 7 screen state types
-- **Platform:** Windows named pipe (not yet implemented)
-- **Intentional:** Twitter4j → `bail!()` (永久)
+Breakdown: ~1,520 lines true stubs, ~1,100 lines already-implemented code living in stubs.rs, ~140 lines re-exports, ~244 lines tests.
+
+### Large stubs.rs files (actual stubs needing resolution)
+
+- **beatoraja-external (936 lines):** Pixmap/GdxGraphics/BufferUtils/PixmapIO are real implementations (~425 lines + 244 test lines) using `image` crate + atomic globals — should be moved to proper modules. ClipboardHelper (~25 lines) uses `arboard`. Remaining true stubs: ScoreDatabaseAccessor (~15 lines), MainState struct + ScreenType + AbstractResult (~60 lines), IntegerProperty/BooleanProperty/StringProperty traits + factories (~70 lines), Twitter4j (~130 lines, intentional `bail!()`), MainStateListener trait (~5 lines)
+- **beatoraja-result (388 lines):** 25 re-exports. MainController stub (10 methods, ~70 lines), PlayerResource wrapper (35 delegation methods, ~170 lines), RankingDataCache (~20 lines), AudioProcessorStub (~8 lines), SkinObjectData (~5 lines)
+- **beatoraja-launcher (355 lines):** Much is real code: rfd file dialogs (~30 lines), `open` crate URL/folder (~10 lines), arboard clipboard (~15 lines), cpal audio device enum (~20 lines), CoreGraphics FFI monitor enum (~70 lines). True stubs: MainLoader display stubs (~10 lines), VersionChecker (~15 lines), SongDatabaseUpdateListener (~20 lines), TwitterAuth (~25 lines, intentional)
+- **beatoraja-select (343 lines):** 41 re-exports. MainState trait (~3 lines), EventType enum (~25 lines), SkinText/SkinNumber/SkinImage/SkinObject rendering stubs (~90 lines), SkinObjectRenderer stub (~10 lines), SongManagerMenu wrapper (~10 lines), DownloadTask stubs (~40 lines)
+- **beatoraja-skin (294 lines):** 3 re-exports + rendering_stubs.rs (15 lines, all re-exports). MainState/MainController/InputProcessor/Timer/Resolution/SkinOffset stubs (~105 lines), BMSPlayer/JudgeManager stubs (~40 lines), MusicResult/MusicResultResource/TimingDistribution stubs (~55 lines), PlayerResource stub (~35 lines), PlaySkinStub/SkinLoaderStub (~25 lines)
+- **beatoraja-types (211 lines):** 3 re-exports. JudgeAlgorithm/BMSPlayerRule enums (~55 lines), BarSorter (~25 lines), scroll_speed/long_note/mine_note modifier stubs (~45 lines), IRConnectionManager (~15 lines), bms_player_input_device/KeyInputLog/PatternModifyLog (~40 lines)
+- **beatoraja-modmenu (191 lines):** 15 re-exports. MainController (3 methods, ~15 lines), MainState trait (~5 lines), Skin/SkinObject/SkinObjectDestination/Rectangle stubs (~55 lines), MusicSelector/Bar/SongBar stubs (~40 lines)
+- **beatoraja-input (132 lines):** 4 re-exports from beatoraja-types. Real code: GdxInput/GdxGraphics using SharedKeyState (~60 lines), Keys constants (~55 lines), Controller/SkinWidgetManager stubs (~15 lines) — mostly real, Phase 24b will complete
+- **beatoraja-decide (108 lines):** 4 re-exports. MainControllerRef (3 methods, ~20 lines), AudioProcessorStub (~8 lines), SkinStub (~40 lines), load_skin/play_sound (~10 lines)
+
+### Clean crates (re-exports or comments only)
+
+beatoraja-core (1 line), beatoraja-audio (1 line comment), beatoraja-play (9 lines, 2 re-exports), beatoraja-ir (10 lines, 5 re-exports), beatoraja-obs (9 lines, 1 re-export + 2 constants), md-processor (12 lines, 2 re-exports + trait), beatoraja-stream (4 lines, 1 re-export)
+
+### Other stubs (outside stubs.rs)
+
+- **MainController:** 5 stub methods in main_controller.rs — application exit, SongUpdateThread (x2), updateTable, downloadIpfsMessageRenderer → Phase 24f
+- **StateFactory:** DONE — LauncherStateFactory in beatoraja-launcher
+- **Platform:** Windows named pipe (not yet implemented) → Phase 27a
+- **Intentional:** Twitter4j → `bail!()` (~130 lines in external, ~25 lines in launcher — permanent)
 
 ## Lessons Learned
 
