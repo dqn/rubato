@@ -4,7 +4,7 @@ Dependency graph order. Each module is ported only after its dependencies are co
 
 ## Completed Phases
 
-Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 1229 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) complete. Phase 18b (rendering state providers) complete. Phase 18c (audio decode API) complete. Phase 18d (BGA/skin test APIs) complete. Phase 18e-1 (cross-crate stub deduplication) complete. Phase 18e-2 (lifecycle stub replacement) partially complete — obs/external/decide/ir done, 4 crates remaining blocked. Phase 18f (e2e test activation) complete. Phase 18g (BRD replay codec) complete. See AGENTS.md for details.
+Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 1241 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) complete. Phase 18b (rendering state providers) complete. Phase 18c (audio decode API) complete. Phase 18d (BGA/skin test APIs) complete. Phase 18e-1 (cross-crate stub deduplication) complete. Phase 18e-2 (lifecycle stub replacement) partially complete — obs/external/decide/ir done, 4 crates remaining blocked. Phase 18f (e2e test activation) complete. Phase 18g (BRD replay codec) complete. See AGENTS.md for details.
 
 ## Phase 13f: egui UI (complete)
 
@@ -29,9 +29,8 @@ Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 1
 - [ ] Add missing fixtures for modules not yet covered (modmenu, select bar, stream) — Java exporters exist; deferred until Rust-side APIs are implemented
 - [x] Activate 9 e2e test files (Phase 18f) — moved from `pending/` to active: `e2e_judge.rs` (20), `course_e2e.rs` (9), `compare_judge.rs` (6), `compare_replay_e2e.rs` (1), `e2e_edge_cases.rs` (11), `exhaustive_e2e.rs` (72), `timing_boundary_e2e.rs` (10), `full_pipeline_integration.rs` (4), `replay_roundtrip_e2e.rs` (5). Total 138 new tests. Fixed `build_judge_notes()` time ordering bug (was lane-grouped, now sorted by `(time_us, lane)` with pair_index remapping).
 - [x] Activate `compare_skin.rs` and `compare_bga_timeline.rs` (Phase 18d) — moved from `pending/` to active. 11 new tests (6 skin + 5 BGA)
-- [ ] Reactivate remaining 2 pending test files — partially unblocked:
-  - `compare_eval_test_skins.rs` — blocked: requires `test-bms/test-skin/` directory with synthetic test skin files (not present)
-  - `compare_render_snapshot.rs` — **unblocked**: `skin/ECFN/` directory exists with full skin resources, Java fixtures exist in `golden-master/fixtures/render_snapshots_java/` (7 ECFN fixture files). Can be reactivated immediately
+- [x] Activate `compare_eval_test_skins.rs` — rewritten from JSON-loading to programmatic skin construction. Uses `SkinImage::new_with_single(TextureRegion::new())` + `set_destination_with_int_timer_ops()`. Tests interpolation modes (acc=0,1,2,3), loop variants (loop=0,50,-1), draw conditions matrix (positive/negative boolean IDs). 12 new tests. 1241 total tests pass
+- [ ] Reactivate `compare_render_snapshot.rs` — blocked: uses old crate names (bms_config, bms_render, bms_skin), needs full rewrite against current API. Also needs ECFN skin loading pipeline (JSONSkinLoader returns SkinData not Skin) and Lua skin loader (stubbed). Java fixtures exist in `golden-master/fixtures/render_snapshots_java/`
 
 ## Phase 18: Post-Phase 13 Lifecycle Wiring
 
@@ -111,7 +110,8 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 - [x] Rewrite e2e test files against actual API — all 9 files rewritten and compile-verified: `e2e_judge.rs`, `course_e2e.rs`, `compare_judge.rs`, `exhaustive_e2e.rs`, `e2e_edge_cases.rs`, `timing_boundary_e2e.rs`, `replay_roundtrip_e2e.rs`, `full_pipeline_integration.rs`, `compare_replay_e2e.rs`. Old API names (`BmsDecoder`/`BmsModel`/`GaugeType` enum/`PlayerRule`/`model.total_notes()`/`score.judge_count()`) replaced with actual crate types (`BMSDecoder`/`BMSModel`/`i32` gauge constants/`BMSPlayerRule`/`model.get_total_notes()`/`score.get_judge_count_total()`). Replay tests use JSON serde round-trip
 - [x] Activate 9 e2e test files — moved from `tests/pending/` to `tests/`. All 138 new tests pass. Fixed `build_judge_notes()` time ordering bug discovered during activation (was lane-grouped, now sorted by `(time_us, lane)` with pair_index remapping). 1185 total tests pass
 - [x] Activate `compare_skin.rs` and `compare_bga_timeline.rs` (Phase 18d) — 11 new tests
-- [ ] Activate remaining 2 Phase 16b pending tests — `compare_render_snapshot.rs` unblocked (ECFN fixtures exist); `compare_eval_test_skins.rs` still blocked on test-skin directory
+- [x] Activate `compare_eval_test_skins.rs` — rewritten with programmatic skin construction (12 new tests)
+- [ ] Activate `compare_render_snapshot.rs` — blocked: old crate names, SkinData→Skin pipeline gap, Lua loader stubbed
 - [ ] E2E gameplay flow test: select → decide → play → result screen transitions — blocked: requires all stubs removed and real screen implementations wired
 - [ ] Verify: all tests pass, zero clippy warnings, clean `cargo fmt` — blocked: final gate after all above tasks complete
 
@@ -125,10 +125,13 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 ### New Issues Found
 
 - [x] `build_judge_notes()` returned notes in lane-grouped order instead of time order — caused `bpm_extreme_timing_structure` and `multi_stop_timing_gaps` tests to fail. Fixed by sorting by `(time_us, lane)` and remapping `pair_index` values
-- [ ] Missing test skin fixture directory — `test-bms/test-skin/` directory does not exist. Needed by `compare_eval_test_skins.rs`. (`skin/ECFN/` directory already exists with full skin resources and Java fixtures)
+- [x] ~~Missing test skin fixture directory~~ — resolved: `compare_eval_test_skins.rs` rewritten to construct skins programmatically, no fixture files needed
 - [ ] JSONSkinLoader returns `SkinData` (intermediate), not `Skin` — full loading pipeline (SkinData→Skin) not connected. `load_skin_object_for_type()` returns None for all screen-specific types. Full Skin snapshot tests deferred until pipeline is wired
 - [ ] LuaSkinLoader is completely stubbed — `load_header()` and `load_skin()` return None. Lua skin tests skipped
 - [ ] json_skin_loader bug fixes applied during Phase 18d — (1) `source_resolution` was not set from JSON w/h fields, (2) custom file paths were incorrectly absolutized with parent dir, (3) offset defaults were applied to non-PLAY skin types (MusicSelect, Decide, etc.)
+- [ ] Dead pending source files in golden-master — `src/pending/skin_fixtures.rs` and `src/pending/render_snapshot.rs` are outdated copies using old crate names (bms_skin, bms_config). Superseded by active `src/skin_fixtures.rs` and `src/render_snapshot.rs`. Can be deleted
+- [ ] `compare_render_snapshot.rs` more blocked than expected — previously marked as "unblocked" but uses old crate names throughout (bms_config, bms_render, bms_skin), needs SkinData→Skin pipeline for ECFN loading, and Lua loader is stubbed. Requires full API rewrite + loading pipeline before activation
+- [ ] md-processor `MainControllerRef` is a valid adapter pattern — previously classified as "blocked: signature mismatch" in Phase 18e-2, but `update_song()` is actively called via `Arc<dyn MainControllerRef>` in `HttpDownloadProcessor`. This is an intentional adapter trait, not a broken stub. Reclassify as acceptable
 - [ ] `PlayerResourceAccess` trait lacks mutable access and non-types-crate return types — beatoraja-result needs 5 mutable getters (`get_score_data_mut`, `get_replay_data_mut`, `get_course_score_data_mut`, `get_course_replay_mut`, `get_course_gauge_mut`) not on the trait. Also needs methods returning types from bms-model/beatoraja-core (`get_bms_model() -> &BMSModel`, `get_play_mode() -> &BMSPlayerMode`, `get_ranking_data() -> Option<&RankingData>`, `get_original_mode() -> &Mode`). beatoraja-result stub also uses incompatible types: `FloatArray` vs `Vec<f32>`, `GrooveGaugeStub` vs `GrooveGauge`. Trait extension or per-crate extension trait needed before PlayerResource stubs can be replaced
 
 ## Remaining Stubs
