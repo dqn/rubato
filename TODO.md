@@ -4,7 +4,7 @@ Dependency graph order. Each module is ported only after its dependencies are co
 
 ## Completed Phases
 
-Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 1241 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) complete. Phase 18b (rendering state providers) complete. Phase 18c (audio decode API) complete. Phase 18d (BGA/skin test APIs) complete. Phase 18e-1 (cross-crate stub deduplication) complete. Phase 18e-2 (lifecycle stub replacement) partially complete — obs/external/decide/ir done, 4 crates remaining blocked. Phase 18f (e2e test activation) complete. Phase 18g (BRD replay codec) complete. See AGENTS.md for details.
+Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 1241 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) complete. Phase 18b (rendering state providers) complete. Phase 18c (audio decode API) complete. Phase 18d (BGA/skin test APIs) complete. Phase 18e-1 (cross-crate stub deduplication) complete. Phase 18e-2 (lifecycle stub replacement) partially complete — obs/external/decide/ir done, select/decide PlayerResource done, 3 MainController crates + 2 PlayerResource crates remaining blocked. Phase 18f (e2e test activation) complete. Phase 18g (BRD replay codec) complete. See AGENTS.md for details.
 
 ## Phase 13f: egui UI (complete)
 
@@ -77,27 +77,29 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 
 #### 18e-2: Lifecycle stub replacement (partially complete)
 
-##### MainController stubs — completed (3 of 8 crates)
+##### MainController stubs — completed (4 of 8 crates)
 
 - [x] beatoraja-obs: Removed `MainControllerRef` entirely — added `state_type() -> Option<MainStateType>` to `MainState` trait (beatoraja-core), replaced `MainControllerRef::get_state_type(state)` with `state.state_type()` in `obs_listener.rs`. Zero remaining MainController stub code
 - [x] beatoraja-external: Replaced `MainController` struct + `MainControllerAccess` impl with `NullMainController` re-export from beatoraja-types. `MainState.main` field type changed to `NullMainController`. No code accesses `state.main` so change is safe
 - [x] beatoraja-decide: Removed unused `MainControllerAccess` trait impl from `MainControllerRef`. Struct retained with 3 methods (`change_state`, `get_input_processor`, `get_audio_processor`) that are actively called by `MusicDecide`
 - [x] beatoraja-ir: No MainController stub exists — nothing to do
+- [x] beatoraja-select: Removed `MainController` struct + 6 dead methods, `DefaultMainState`, `PlayerResource` empty struct. `MainState` trait simplified to empty marker trait (`get_main()` removed). `RandomCourseData::lottery_song_datas` and `ContextMenuBar::fill_missing_charts` updated to remove `&MainController` parameter. Zero call sites existed
 
-##### MainController stubs — remaining (4 crates)
-
-- [ ] beatoraja-select: 6 methods defined (get_song_database, get_ir_status, get_ranking_data_cache, get_input_processor, get_player_resource_local, get_current_state) but **all unused** — zero call sites in the crate. `MainState` trait with `get_main()` also never called. Dead code; can be removed immediately
+##### MainController stubs — remaining (3 crates)
 - [ ] beatoraja-result: 6 methods actively used in music_result.rs/course_result.rs (get_play_data_accessor, get_input_processor, get_ir_status, save_last_recording, ir_send_status_mut, ir_send_status). 3 unused methods (get_config, get_player_config, change_state) can be pruned. Blocked: type mismatches (PlayDataAccessor optional vs non-optional, BMSPlayerInputProcessor `&mut` vs `&`), `ir_send_status_mut()` doesn't exist on real MainController, IRConnection not implemented
 - [ ] beatoraja-modmenu: `get_current_state()` and `load_new_profile()` are **unused** (dead code). Real blocker: stub `PlayerConfig` uses `Vec<SkinConfig>` but real type uses `Vec<Option<SkinConfig>>`; `SkinConfig.path` is `String` vs `Option<String>`; `SkinConfigProperty` vs `SkinProperty` with `Option<>` wrapping throughout. Requires ~15 call sites in skin_menu.rs to add Option handling. Moderate refactoring task
 - [ ] md-processor: `MainControllerRef` trait with `update_song(&self, path: &str, force: bool)` is **dead code** — `HttpDownloadProcessor` is never instantiated anywhere. Deferred to HttpDownloadProcessor activation
 
-##### PlayerResource stubs — remaining (partially unblocked)
+##### PlayerResource stubs — completed (4 of 6 crates)
 
-- [ ] beatoraja-select: **Empty stub** (`pub struct PlayerResource;`) with zero usage — can be removed immediately
-- [ ] beatoraja-decide: 2 methods (`set_org_gauge_option`, `get_player_config`) — **both exist on `PlayerResourceAccess` trait**. Can convert to `&dyn PlayerResourceAccess` immediately
-- [ ] beatoraja-external: 6 method calls, 5 on `PlayerResourceAccess` trait. Only `get_original_mode() -> &Mode` is missing from trait. Can be unblocked with extension trait for 1 method
-- [ ] beatoraja-result: Blocked — heavily uses mutable access (5 `_mut()` getters) and types not on trait (`BMSModel`, `RankingData`, `FloatArray` vs `Vec<f32>`, `GrooveGaugeStub` vs `GrooveGauge`). Requires trait expansion or per-crate extension trait
+- [x] beatoraja-select: Removed empty `pub struct PlayerResource;` — zero usage (deleted alongside MainController)
+- [x] beatoraja-decide: Replaced `PlayerResourceRef` + `PlayerConfigRef` + 29-method `PlayerResourceAccess` impl with `Box<dyn PlayerResourceAccess>` from beatoraja-types. `MusicDecide::resource` now trait-based. `NullPlayerResource` re-exported for default construction
 - [x] beatoraja-obs/beatoraja-modmenu have no PlayerResource stubs
+
+##### PlayerResource stubs — remaining (2 crates)
+
+- [ ] beatoraja-external: 6 method calls via concrete struct. Trait methods return `Option<>` types but callers use non-optional direct getters (`get_songdata() -> &SongData` vs trait `Option<&SongData>`, `get_replay_data() -> &ReplayData` vs trait `Option<&ReplayData>`, `get_reverse_lookup_levels() -> &[String]` vs trait `Vec<String>`). Also `get_original_mode() -> &Mode` not on trait. Requires caller updates + extension trait, not just a type swap
+- [ ] beatoraja-result: Blocked — heavily uses mutable access (5 `_mut()` getters) and types not on trait (`BMSModel`, `RankingData`, `FloatArray` vs `Vec<f32>`, `GrooveGaugeStub` vs `GrooveGauge`). Requires trait expansion or per-crate extension trait
 
 ##### Other stubs — remaining
 
@@ -129,12 +131,12 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 - [ ] JSONSkinLoader returns `SkinData` (intermediate), not `Skin` — full loading pipeline (SkinData→Skin) not connected. `load_skin_object_for_type()` returns None for all screen-specific types. Full Skin snapshot tests deferred until pipeline is wired
 - [ ] LuaSkinLoader is completely stubbed — `load_header()` and `load_skin()` return None. Lua skin tests skipped
 - [ ] json_skin_loader bug fixes applied during Phase 18d — (1) `source_resolution` was not set from JSON w/h fields, (2) custom file paths were incorrectly absolutized with parent dir, (3) offset defaults were applied to non-PLAY skin types (MusicSelect, Decide, etc.)
-- [ ] Dead pending source files in golden-master — `src/pending/skin_fixtures.rs` and `src/pending/render_snapshot.rs` are outdated copies using old crate names (bms_skin, bms_config). Superseded by active `src/skin_fixtures.rs` and `src/render_snapshot.rs`. Can be deleted
+- [x] Dead pending source files in golden-master — deleted `src/pending/skin_fixtures.rs` and `src/pending/render_snapshot.rs` (outdated copies using old crate names). Removed empty `src/pending/` directory
 - [ ] `compare_render_snapshot.rs` more blocked than expected — previously marked as "unblocked" but uses old crate names throughout (bms_config, bms_render, bms_skin), needs SkinData→Skin pipeline for ECFN loading, and Lua loader is stubbed. Requires full API rewrite + loading pipeline before activation
 - [ ] md-processor `MainControllerRef` is a valid adapter pattern — previously classified as "blocked: signature mismatch" in Phase 18e-2, but `update_song()` is actively called via `Arc<dyn MainControllerRef>` in `HttpDownloadProcessor`. This is an intentional adapter trait, not a broken stub. Reclassify as acceptable
 - [ ] `PlayerResourceAccess` trait lacks mutable access and non-types-crate return types — beatoraja-result needs 5 mutable getters (`get_score_data_mut`, `get_replay_data_mut`, `get_course_score_data_mut`, `get_course_replay_mut`, `get_course_gauge_mut`) not on the trait. Also needs methods returning types from bms-model/beatoraja-core (`get_bms_model() -> &BMSModel`, `get_play_mode() -> &BMSPlayerMode`, `get_ranking_data() -> Option<&RankingData>`, `get_original_mode() -> &Mode`). beatoraja-result stub also uses incompatible types: `FloatArray` vs `Vec<f32>`, `GrooveGaugeStub` vs `GrooveGauge`. Trait extension or per-crate extension trait needed before PlayerResource stubs can be replaced
 
 ## Remaining Stubs
 
-- **Lifecycle (partially resolved):** MainController stubs removed from obs/external/ir (Phase 18e-2). Remaining: select (dead code, removable), result (6 methods actively used, blocked), modmenu (type incompatibility, moderate refactoring), md-processor (dead code, deferred). PlayerResource: select (empty, removable), decide (2 methods on trait, convertible), external (1 method off trait), result (blocked). MainState stubs require per-screen concrete implementations
+- **Lifecycle (mostly resolved):** MainController stubs removed from obs/external/ir/select (Phase 18e-2). Remaining MainController: result (6 methods actively used, blocked), modmenu (type incompatibility, moderate refactoring), md-processor (dead code, deferred). PlayerResource stubs removed from select/decide. Remaining PlayerResource: external (caller type mismatches + missing trait method), result (blocked). MainState stubs require per-screen concrete implementations
 - **Rendering re-exports:** `rendering_stubs.rs` in beatoraja-skin now re-exports real beatoraja-render types (resolved, not stubs)
