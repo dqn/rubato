@@ -11,7 +11,7 @@ use regex::Regex;
 use crate::download_task::{DownloadTask, DownloadTaskStatus};
 use crate::http_download_source::HttpDownloadSource;
 use crate::http_download_source_meta::HttpDownloadSourceMeta;
-use crate::stubs::{ImGuiNotify, MainControllerRef};
+use crate::{ImGuiNotify, MainControllerRef};
 use crate::{konmai_download_source, wriggle_download_source};
 
 pub static DOWNLOAD_SOURCES: LazyLock<HashMap<String, &'static HttpDownloadSourceMeta>> =

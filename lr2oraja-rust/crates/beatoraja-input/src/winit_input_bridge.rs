@@ -11,7 +11,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::stubs::Keys;
+use crate::keys::Keys;
 
 /// Number of key slots (matches Java Gdx.input key array size)
 const KEY_COUNT: usize = 256;

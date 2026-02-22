@@ -3,8 +3,8 @@
 #![allow(unused_variables)]
 #![allow(clippy::needless_range_loop)]
 
-// Stubs for external dependencies
-pub mod stubs;
+// Re-exports (formerly in stubs.rs)
+pub use beatoraja_types::imgui_notify::ImGuiNotify;
 
 // Stream command trait (abstract class)
 pub mod stream_command;

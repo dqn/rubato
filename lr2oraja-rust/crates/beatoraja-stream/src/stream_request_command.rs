@@ -6,8 +6,8 @@ use beatoraja_select::bar::hash_bar::HashBar;
 use beatoraja_select::music_selector::MusicSelector;
 use beatoraja_select::stubs::SongData;
 
+use crate::ImGuiNotify;
 use crate::stream_command::StreamCommand;
-use crate::stubs::ImGuiNotify;
 
 /// Request command processing
 /// Translates: bms.player.beatoraja.stream.command.StreamRequestCommand

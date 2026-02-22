@@ -1,4 +1,5 @@
 pub mod launcher_ui;
+pub mod platform;
 pub mod state_factory;
 pub mod stubs;
 

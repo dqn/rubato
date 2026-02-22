@@ -3,8 +3,8 @@
 //! Translated from: FFmpegProcessor.java (inner class MovieSeekThread)
 //! In Rust, std::thread + mpsc channels replace Java Thread + LinkedBlockingDeque.
 
+use crate::Texture;
 use crate::bga::movie_processor::MovieProcessor;
-use crate::stubs::Texture;
 
 /// Processor status
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

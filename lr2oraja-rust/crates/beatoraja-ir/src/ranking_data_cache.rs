@@ -5,8 +5,8 @@ use sha2::{Digest, Sha256};
 use beatoraja_core::course_data::CourseData;
 use beatoraja_core::stubs::SongData;
 
+use crate::convert_hex_string;
 use crate::ranking_data::RankingData;
-use crate::stubs::convert_hex_string;
 
 /// IR access data cache
 ///

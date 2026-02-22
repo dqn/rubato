@@ -31,5 +31,8 @@ pub mod skin_gauge;
 pub mod skin_hidden;
 pub mod skin_judge;
 pub mod skin_note;
-pub mod stubs;
 pub mod target_property;
+
+// Re-exports (formerly in stubs.rs)
+pub use beatoraja_core::main_controller::MainController;
+pub use beatoraja_render::Texture;

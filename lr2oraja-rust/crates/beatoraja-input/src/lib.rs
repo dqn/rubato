@@ -1,9 +1,11 @@
 pub mod bm_controller_input_processor;
 pub mod bms_player_input_device;
 pub mod bms_player_input_processor;
+pub mod gdx_compat;
 pub mod key_command;
 pub mod key_input_log;
 pub mod keyboard_input_processor;
+pub mod keys;
 pub mod midi_input_processor;
 pub mod mouse_scratch_input;
 pub mod stubs;

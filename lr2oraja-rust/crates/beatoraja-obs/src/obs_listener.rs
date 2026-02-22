@@ -8,7 +8,7 @@ use beatoraja_core::main_state::{MainState, MainStateType};
 use beatoraja_core::main_state_listener::MainStateListener;
 
 use crate::obs_ws_client::ObsWsClient;
-use crate::stubs::{ACTION_NONE, SCENE_NONE};
+use crate::{ACTION_NONE, SCENE_NONE};
 
 /// ObsListener - implements MainStateListener for scene/recording control via OBS WebSocket
 pub struct ObsListener {

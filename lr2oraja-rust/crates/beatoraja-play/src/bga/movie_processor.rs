@@ -1,4 +1,4 @@
-use crate::stubs::Texture;
+use crate::Texture;
 
 /// Movie processor interface for video playback
 pub trait MovieProcessor {

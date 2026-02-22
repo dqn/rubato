@@ -1,6 +1,13 @@
-pub mod stubs;
-
 pub mod download_task;
+
+// Re-exports (formerly in stubs.rs)
+pub use beatoraja_core::config::Config;
+pub use beatoraja_types::imgui_notify::ImGuiNotify;
+
+/// Stub for MainController reference
+pub trait MainControllerRef: Send + Sync {
+    fn update_song(&self, path: &str, force: bool);
+}
 pub mod http_download_processor;
 pub mod http_download_source;
 pub mod http_download_source_meta;

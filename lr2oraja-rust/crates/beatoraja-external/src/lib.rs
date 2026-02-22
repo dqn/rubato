@@ -12,6 +12,10 @@
 // Stubs for external dependencies not yet available
 pub mod stubs;
 
+// Real implementations (moved from stubs.rs in Phase 25a)
+pub mod clipboard_helper;
+pub mod pixmap_io;
+
 // BMS Search API accessor
 pub mod bms_search_accessor;
 

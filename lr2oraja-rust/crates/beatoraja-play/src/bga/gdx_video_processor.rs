@@ -1,5 +1,5 @@
+use crate::Texture;
 use crate::bga::movie_processor::MovieProcessor;
-use crate::stubs::Texture;
 
 /// GDX video processor (stub implementation)
 pub struct GdxVideoProcessor;

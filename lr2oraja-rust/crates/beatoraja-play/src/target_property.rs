@@ -1,4 +1,4 @@
-use crate::stubs::MainController;
+use crate::MainController;
 use beatoraja_core::score_data::ScoreData;
 
 use std::sync::Mutex;

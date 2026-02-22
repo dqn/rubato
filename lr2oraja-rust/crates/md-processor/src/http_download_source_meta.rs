@@ -1,5 +1,5 @@
+use crate::Config;
 use crate::http_download_source::HttpDownloadSource;
-use crate::stubs::Config;
 
 /// Corresponds to HttpDownloadSourceMeta in Java
 pub struct HttpDownloadSourceMeta {

@@ -1,6 +1,6 @@
+use crate::Config;
 use crate::http_download_source::HttpDownloadSource;
 use crate::http_download_source_meta::HttpDownloadSourceMeta;
-use crate::stubs::Config;
 
 use std::sync::LazyLock;
 

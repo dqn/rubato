@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bms_model::mode::Mode;
 
-use crate::stubs::SongData;
+use crate::SongData;
 
 /// IR chart data
 ///

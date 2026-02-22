@@ -1,4 +1,4 @@
-use crate::stubs::{ImGuiNotify, LR2Random, Random};
+use crate::{ImGuiNotify, LR2Random, Random};
 
 /// LR2 ghost data
 ///
