@@ -1,13 +1,11 @@
 use std::collections::HashSet;
 
+use crate::java_random::JavaRandom;
+use crate::pattern_modifier::{AssistLevel, PatternModifier, PatternModifierBase};
+use crate::stubs::RandomTrainer;
 use bms_model::bms_model::BMSModel;
 use bms_model::mode::Mode;
 use bms_model::note::Note;
-use rand::prelude::*;
-use rand::rngs::StdRng;
-
-use crate::pattern_modifier::{AssistLevel, PatternModifier, PatternModifierBase};
-use crate::stubs::RandomTrainer;
 
 fn lane_shuffle_modify(
     base: &mut PatternModifierBase,
@@ -140,7 +138,7 @@ impl LaneMirrorShuffleModifier {
         }
     }
 
-    fn make_random(keys: &[i32], model: &BMSModel, _seed: i64) -> Vec<i32> {
+    pub fn make_random(keys: &[i32], model: &BMSModel, _seed: i64) -> Vec<i32> {
         let mode_key = model.get_mode().map(|m| m.key()).unwrap_or(0);
         let mut result: Vec<i32> = (0..mode_key).collect();
         for lane in 0..keys.len() {
@@ -207,10 +205,10 @@ impl LaneRotateShuffleModifier {
         }
     }
 
-    fn make_random(keys: &[i32], model: &BMSModel, seed: i64) -> Vec<i32> {
-        let mut rand = StdRng::seed_from_u64(seed as u64);
-        let inc = rand.gen_range(0..2) == 1;
-        let start = rand.gen_range(0..(keys.len() - 1)) + if inc { 1 } else { 0 };
+    pub fn make_random(keys: &[i32], model: &BMSModel, seed: i64) -> Vec<i32> {
+        let mut rand = JavaRandom::new(seed);
+        let inc = rand.next_int_bounded(2) == 1;
+        let start = rand.next_int_bounded(keys.len() as i32 - 1) as usize + if inc { 1 } else { 0 };
         let mode_key = model.get_mode().map(|m| m.key()).unwrap_or(0);
         let mut result: Vec<i32> = (0..mode_key).collect();
         let mut rlane = start;
@@ -283,13 +281,13 @@ impl LaneRandomShuffleModifier {
         }
     }
 
-    fn make_random(keys: &[i32], model: &BMSModel, seed: i64) -> Vec<i32> {
-        let mut rand = StdRng::seed_from_u64(seed as u64);
+    pub fn make_random(keys: &[i32], model: &BMSModel, seed: i64) -> Vec<i32> {
+        let mut rand = JavaRandom::new(seed);
         let mut l: Vec<i32> = keys.to_vec();
         let mode_key = model.get_mode().map(|m| m.key()).unwrap_or(0);
         let mut result: Vec<i32> = (0..mode_key).collect();
         for lane in 0..keys.len() {
-            let r = rand.gen_range(0..l.len());
+            let r = rand.next_int_bounded(l.len() as i32) as usize;
             result[keys[lane] as usize] = l[r];
             l.remove(r);
         }
@@ -354,7 +352,7 @@ impl PlayerFlipModifier {
         }
     }
 
-    fn make_random(_keys: &[i32], model: &BMSModel, _seed: i64) -> Vec<i32> {
+    pub fn make_random(_keys: &[i32], model: &BMSModel, _seed: i64) -> Vec<i32> {
         let mode_key = model.get_mode().map(|m| m.key()).unwrap_or(0) as usize;
         let mut result: Vec<i32> = (0..mode_key as i32).collect();
         if model.get_mode().map(|m| m.player()).unwrap_or(0) == 2 {
@@ -417,7 +415,7 @@ impl PlayerBattleModifier {
         }
     }
 
-    fn make_random(keys: &[i32], model: &BMSModel, _seed: i64) -> (Vec<i32>, AssistLevel) {
+    pub fn make_random(keys: &[i32], model: &BMSModel, _seed: i64) -> (Vec<i32>, AssistLevel) {
         if model.get_mode().map(|m| m.player()).unwrap_or(0) == 1 {
             (Vec::new(), AssistLevel::Assist)
         } else {
@@ -526,7 +524,7 @@ impl LaneCrossShuffleModifier {
         }
     }
 
-    fn make_random(keys: &[i32], model: &BMSModel, _seed: i64) -> Vec<i32> {
+    pub fn make_random(keys: &[i32], model: &BMSModel, _seed: i64) -> Vec<i32> {
         let mode_key = model.get_mode().map(|m| m.key()).unwrap_or(0);
         let mut result: Vec<i32> = (0..mode_key).collect();
         let mut i = 0;
@@ -594,7 +592,7 @@ impl LanePlayableRandomShuffleModifier {
         }
     }
 
-    fn make_random(keys: &[i32], model: &BMSModel, _seed: i64) -> Vec<i32> {
+    pub fn make_random(keys: &[i32], model: &BMSModel, _seed: i64) -> Vec<i32> {
         let mode = match model.get_mode() {
             Some(m) => m.clone(),
             None => return Vec::new(),
@@ -677,7 +675,7 @@ impl LanePlayableRandomShuffleModifier {
     }
 }
 
-fn search_for_no_murioshi_lane_combinations(
+pub fn search_for_no_murioshi_lane_combinations(
     original_pattern_list: &HashSet<i32>,
     _keys: &[i32],
 ) -> Vec<Vec<i32>> {

@@ -9,6 +9,7 @@
 
 pub mod autoplay_modifier;
 pub mod extra_note_modifier;
+pub mod java_random;
 pub mod lane_shuffle_modifier;
 pub mod long_note_modifier;
 pub mod lr2_random;
