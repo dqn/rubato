@@ -49,10 +49,8 @@ pub use beatoraja_types::song_database_accessor::SongDatabaseAccessor;
 // beatoraja core types (stubbed — cannot be replaced)
 // ============================================================
 
-/// Stub for beatoraja.MainState
-/// Empty marker trait — get_main() removed (MainController stub deleted, Phase 18e-2).
-/// Retained because SkinText/SkinNumber/SkinImage stubs accept &dyn MainState.
-pub trait MainState {}
+// MainState — re-exported from beatoraja-skin (Phase 25d-2)
+pub use beatoraja_skin::stubs::MainState;
 
 /// MainStateType — re-exported from beatoraja-types (Phase 15d)
 pub use beatoraja_types::main_state_type::MainStateType;
@@ -219,32 +217,8 @@ impl SkinObjectRenderer {
 // beatoraja.skin.property types
 // ============================================================
 
-/// Stub for beatoraja.skin.property.EventFactory.EventType
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum EventType {
-    Mode,
-    Sort,
-    Lnmode,
-    Option1p,
-    Option2p,
-    Optiondp,
-    Gauge1p,
-    Hsfix,
-    Target,
-    Bga,
-    GaugeAutoShift,
-    NotesDisplayTiming,
-    NotesDisplayTimingAutoAdjust,
-    Duration1p,
-    Rival,
-    OpenDocument,
-    OpenWithExplorer,
-    OpenIr,
-    FavoriteSong,
-    FavoriteChart,
-    UpdateFolder,
-    OpenDownloadSite,
-}
+// EventType — re-exported from beatoraja-types (Phase 25d-2)
+pub use beatoraja_types::event_type::EventType;
 
 // skin_property constants — re-exported from beatoraja-skin
 pub use beatoraja_skin::skin_property;

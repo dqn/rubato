@@ -14,7 +14,18 @@ pub mod validatable;
 pub mod bm_keys;
 
 // Skin types
+pub mod skin_main_state;
+pub mod skin_offset;
 pub mod skin_type;
+
+// Timer access trait
+pub mod timer_access;
+
+// Timing distribution (result screen)
+pub mod timing_distribution;
+
+// Event types (music select input processing)
+pub mod event_type;
 
 // Gauge types
 pub mod gauge_property;

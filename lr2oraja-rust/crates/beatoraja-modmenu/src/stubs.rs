@@ -25,15 +25,7 @@ pub use beatoraja_types::main_controller_access::{MainControllerAccess, NullMain
 /// Type alias for backward compatibility — callers use `MainController`.
 pub type MainController = NullMainController;
 
-// =========================================================================
-// MainState trait stub
-// =========================================================================
-
-pub trait MainState {
-    fn get_skin(&self) -> &Skin;
-    fn set_skin(&mut self, skin: Skin);
-    fn as_any(&self) -> &dyn std::any::Any;
-}
+// MainState trait: removed (unused in modmenu — Phase 25d-2)
 
 // Version is re-exported from beatoraja_core at the top of this file.
 
@@ -69,10 +61,6 @@ impl Skin {
     pub fn get_all_skin_objects(&self) -> &[SkinObject] {
         &self.objects
     }
-
-    pub fn prepare(&self, _state: &dyn MainState) {
-        log::warn!("not yet implemented: Skin::prepare - rendering dependency");
-    }
 }
 
 // =========================================================================
@@ -106,13 +94,8 @@ pub struct SkinObjectDestination {
     pub alpha: f32,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct Rectangle {
-    pub x: f32,
-    pub y: f32,
-    pub width: f32,
-    pub height: f32,
-}
+// Rectangle — re-exported from beatoraja-skin (via beatoraja-render, Phase 25d-2)
+pub use beatoraja_skin::stubs::Rectangle;
 
 // =========================================================================
 // MusicSelector stub
@@ -165,7 +148,8 @@ impl SongBar {
 // SongData — real type from beatoraja-types
 // =========================================================================
 
-pub use beatoraja_core::stubs::SongData;
+// SongData — re-exported from beatoraja-types (Phase 25d-2)
+pub use beatoraja_types::song_data::SongData;
 
 // ScoreData is re-exported from beatoraja_core at the top of this file.
 

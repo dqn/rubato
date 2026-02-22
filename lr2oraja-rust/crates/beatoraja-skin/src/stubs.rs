@@ -51,18 +51,13 @@ impl InputProcessor {
     }
 }
 
-/// Stub for SkinOffset (shared between Skin and SkinObject)
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
-pub struct SkinOffset {
-    pub x: f32,
-    pub y: f32,
-    pub w: f32,
-    pub h: f32,
-    pub r: f32,
-    pub a: f32,
-}
+// SkinOffset — re-exported from beatoraja-types (Phase 25d-2)
+pub use beatoraja_types::skin_offset::SkinOffset;
 
-/// Stub for beatoraja.Timer
+/// Stub for beatoraja.Timer — implements TimerAccess from beatoraja-types.
+///
+/// This struct is kept for backward compatibility. New code should use
+/// `&dyn beatoraja_types::timer_access::TimerAccess` directly.
 #[derive(Clone, Debug, Default)]
 pub struct Timer {
     pub now_time: i64,
@@ -91,6 +86,27 @@ impl Timer {
     }
 
     pub fn is_timer_on(&self, _timer_id: i32) -> bool {
+        false
+    }
+}
+
+impl beatoraja_types::timer_access::TimerAccess for Timer {
+    fn get_now_time(&self) -> i64 {
+        self.now_time
+    }
+    fn get_now_micro_time(&self) -> i64 {
+        self.now_micro_time
+    }
+    fn get_micro_timer(&self, _timer_id: i32) -> i64 {
+        0
+    }
+    fn get_timer(&self, _timer_id: i32) -> i64 {
+        0
+    }
+    fn get_now_time_for(&self, _timer_id: i32) -> i64 {
+        0
+    }
+    fn is_timer_on(&self, _timer_id: i32) -> bool {
         false
     }
 }
@@ -196,31 +212,8 @@ impl MusicResultResource {
     }
 }
 
-/// Stub for beatoraja.result.AbstractResult.TimingDistribution
-pub struct TimingDistribution {
-    pub distribution: Vec<i32>,
-    pub array_center: i32,
-    pub average: f32,
-    pub std_dev: f32,
-}
-
-impl TimingDistribution {
-    pub fn get_timing_distribution(&self) -> &[i32] {
-        &self.distribution
-    }
-
-    pub fn get_array_center(&self) -> i32 {
-        self.array_center
-    }
-
-    pub fn get_average(&self) -> f32 {
-        self.average
-    }
-
-    pub fn get_std_dev(&self) -> f32 {
-        self.std_dev
-    }
-}
+// TimingDistribution — re-exported from beatoraja-types (Phase 25d-2)
+pub use beatoraja_types::timing_distribution::TimingDistribution;
 
 // beatoraja.song types (re-exports)
 pub use beatoraja_song::song_data::SongData;
