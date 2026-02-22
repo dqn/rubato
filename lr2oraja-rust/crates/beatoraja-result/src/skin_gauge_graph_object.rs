@@ -4,8 +4,8 @@
 use crate::abstract_result::AbstractResultData;
 use crate::course_result::CourseResult;
 use crate::stubs::{
-    Color, IntArray, Pixmap, PixmapFormat, PlayerResource, Rectangle, SkinObjectData,
-    SkinObjectRenderer, Texture, TextureRegion,
+    Color, Pixmap, PixmapFormat, PlayerResource, Rectangle, SkinObjectData, SkinObjectRenderer,
+    Texture, TextureRegion,
 };
 
 /// Gauge graph rendering object for result screen
@@ -33,7 +33,7 @@ pub struct SkinGaugeGraphObject {
     current_type: i32,
     color: usize,
     gaugehistory: Vec<f32>,
-    section: IntArray,
+    section: Vec<i32>,
     gg: Option<GaugeRef>,
 
     render: f32,
@@ -126,7 +126,7 @@ impl SkinGaugeGraphObject {
             current_type: -1,
             color: 0,
             gaugehistory: Vec::new(),
-            section: IntArray::new(),
+            section: Vec::new(),
             gg: None,
             render: 0.0,
             redraw: false,
@@ -190,7 +190,7 @@ impl SkinGaugeGraphObject {
             current_type: -1,
             color: 0,
             gaugehistory: Vec::new(),
-            section: IntArray::new(),
+            section: Vec::new(),
             gg: None,
             render: 0.0,
             redraw: false,
@@ -226,15 +226,15 @@ impl SkinGaugeGraphObject {
                 .and_then(|gd| gd.get(self.current_type as usize))
                 .cloned()
                 .unwrap_or_default();
-            self.section = IntArray::new();
+            self.section = Vec::new();
             if is_course_result {
                 self.gaugehistory = Vec::new();
                 for l in resource.get_course_gauge() {
                     self.gaugehistory
                         .extend_from_slice(&l[self.current_type as usize]);
-                    let prev = self.section.items.last().copied().unwrap_or(0);
+                    let prev = self.section.last().copied().unwrap_or(0);
                     self.section
-                        .add(prev + l[self.current_type as usize].len() as i32);
+                        .push(prev + l[self.current_type as usize].len() as i32);
                 }
             }
             if let Some(groove_gauge) = resource.get_groove_gauge() {
@@ -310,7 +310,7 @@ impl SkinGaugeGraphObject {
                 let line_width = self.line_width;
 
                 for i in 0..self.gaugehistory.len() {
-                    if self.section.contains(i as i32) {
+                    if self.section.contains(&(i as i32)) {
                         shape.set_color(&Color::value_of("ffffff"));
                         shape.draw_line(
                             (width as f32 * (i as f32 - 1.0) / self.gaugehistory.len() as f32)

@@ -22,90 +22,8 @@ pub use beatoraja_skin::stubs::TextureRegion;
 use beatoraja_types::player_resource_access::{NullPlayerResource, PlayerResourceAccess};
 use beatoraja_types::song_data::SongData;
 
-// ============================================================
-// PlayDataAccessor stub
-// ============================================================
-
-/// Stub for bms.player.beatoraja.PlayDataAccessor
-pub struct PlayDataAccessor;
-
-impl PlayDataAccessor {
-    pub fn exists_replay_data_model(
-        &self,
-        _model: &bms_model::bms_model::BMSModel,
-        _lnmode: i32,
-        _index: i32,
-    ) -> bool {
-        false
-    }
-
-    pub fn exists_replay_data_course(
-        &self,
-        _models: &[bms_model::bms_model::BMSModel],
-        _lnmode: i32,
-        _index: i32,
-        _constraint: &[beatoraja_core::course_data::CourseDataConstraint],
-    ) -> bool {
-        false
-    }
-
-    pub fn read_score_data(
-        &self,
-        _model: &bms_model::bms_model::BMSModel,
-        _lnmode: i32,
-    ) -> Option<beatoraja_core::score_data::ScoreData> {
-        None
-    }
-
-    pub fn read_score_data_course(
-        &self,
-        _models: &[bms_model::bms_model::BMSModel],
-        _lnmode: i32,
-        _random: i32,
-        _constraint: &[beatoraja_core::course_data::CourseDataConstraint],
-    ) -> Option<beatoraja_core::score_data::ScoreData> {
-        None
-    }
-
-    pub fn write_score_data(
-        &self,
-        _score: &beatoraja_core::score_data::ScoreData,
-        _model: &bms_model::bms_model::BMSModel,
-        _lnmode: i32,
-        _update: bool,
-    ) {
-    }
-
-    pub fn write_score_data_course(
-        &self,
-        _score: &beatoraja_core::score_data::ScoreData,
-        _models: &[bms_model::bms_model::BMSModel],
-        _lnmode: i32,
-        _random: i32,
-        _constraint: &[beatoraja_core::course_data::CourseDataConstraint],
-        _update: bool,
-    ) {
-    }
-
-    pub fn write_replay_data(
-        &self,
-        _replay: &beatoraja_core::replay_data::ReplayData,
-        _model: &bms_model::bms_model::BMSModel,
-        _lnmode: i32,
-        _index: i32,
-    ) {
-    }
-
-    pub fn write_replay_data_course(
-        &self,
-        _replays: &[beatoraja_core::replay_data::ReplayData],
-        _models: &[bms_model::bms_model::BMSModel],
-        _lnmode: i32,
-        _index: i32,
-        _constraint: &[beatoraja_core::course_data::CourseDataConstraint],
-    ) {
-    }
-}
+// PlayDataAccessor: replaced by pub use from beatoraja_core (Phase 18e-4)
+pub use beatoraja_core::play_data_accessor::PlayDataAccessor;
 
 // ============================================================
 // MainController stub
@@ -144,8 +62,8 @@ impl MainController {
 
     pub fn get_play_data_accessor(&self) -> &PlayDataAccessor {
         log::warn!("not yet implemented: MainController.getPlayDataAccessor");
-        static DEFAULT: PlayDataAccessor = PlayDataAccessor;
-        &DEFAULT
+        // Leak a boxed null instance - stub only, will be replaced with real implementation
+        Box::leak(Box::new(PlayDataAccessor::null()))
     }
 }
 
@@ -446,34 +364,7 @@ pub enum BMSPlayerModeType {
 
 // FloatArray: replaced by Vec<f32> — callers updated to use Vec directly
 
-/// Stub for com.badlogic.gdx.utils.IntArray
-#[derive(Clone, Debug, Default)]
-pub struct IntArray {
-    pub items: Vec<i32>,
-    pub size: usize,
-}
-
-impl IntArray {
-    pub fn new() -> Self {
-        Self {
-            items: Vec::new(),
-            size: 0,
-        }
-    }
-
-    pub fn add(&mut self, value: i32) {
-        self.items.push(value);
-        self.size = self.items.len();
-    }
-
-    pub fn get(&self, index: usize) -> i32 {
-        self.items[index]
-    }
-
-    pub fn contains(&self, value: i32) -> bool {
-        self.items.contains(&value)
-    }
-}
+// IntArray: replaced by Vec<i32> — callers updated to use Vec directly (Phase 18e-4)
 
 // Skin: replaced by pub use beatoraja_skin::skin::Skin
 // SkinHeader: replaced by pub use beatoraja_skin::skin_header::SkinHeader

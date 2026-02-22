@@ -466,8 +466,10 @@ impl CourseResult {
             let lnmode = resource.get_player_config().lnmode;
             let constraint = resource.get_constraint();
             if let Some(models) = resource.get_course_bms_models() {
+                // Clone replays for write (write_brd_course calls shrink on each)
+                let mut replays = resource.get_course_replay().to_vec();
                 main.get_play_data_accessor().write_replay_data_course(
-                    resource.get_course_replay(),
+                    &mut replays,
                     models,
                     lnmode,
                     index as i32,

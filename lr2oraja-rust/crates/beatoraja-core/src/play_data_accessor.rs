@@ -3,9 +3,11 @@ use std::path::Path;
 
 use sha2::{Digest, Sha256};
 
+use bms_model::bms_model::BMSModel;
+
 use crate::clear_type::ClearType;
 use crate::config::Config;
-use crate::course_data::CourseData;
+use crate::course_data::CourseDataConstraint;
 use crate::player_data::PlayerData;
 use crate::replay_data::ReplayData;
 use crate::score_data::{ScoreData, SongTrophy};
@@ -26,6 +28,19 @@ pub struct PlayDataAccessor {
 }
 
 impl PlayDataAccessor {
+    /// Creates a no-op PlayDataAccessor with no database connections.
+    /// All read methods return None/false; all write methods do nothing.
+    pub fn null() -> Self {
+        Self {
+            hashkey: String::new(),
+            player: String::new(),
+            playerpath: String::new(),
+            scoredb: None,
+            scorelogdb: None,
+            scoredatalogdb: None,
+        }
+    }
+
     pub fn new(config: &Config) -> Self {
         let player = config.playername.clone().unwrap_or_default();
         let playerpath = config.playerpath.clone();
@@ -286,7 +301,7 @@ impl PlayDataAccessor {
         ln: bool,
         lnmode: i32,
         option: i32,
-        constraint: &[CourseData],
+        constraint: &[CourseDataConstraint],
         update_score: bool,
     ) {
         let scoredb = match &self.scoredb {
@@ -336,9 +351,24 @@ impl PlayDataAccessor {
         log::info!("Score database update completed");
     }
 
-    fn compute_constraint_values(_constraint: &[CourseData]) -> (i32, i32, i32) {
-        // TODO: implement constraint parsing when CourseData constraints are fully available
-        (0, 0, 0)
+    fn compute_constraint_values(constraint: &[CourseDataConstraint]) -> (i32, i32, i32) {
+        let mut hispeed = 0;
+        let mut judge = 0;
+        let mut gauge = 0;
+        for c in constraint {
+            match c {
+                CourseDataConstraint::NoSpeed => hispeed = 1,
+                CourseDataConstraint::NoGood => judge = 1,
+                CourseDataConstraint::NoGreat => judge = 2,
+                CourseDataConstraint::GaugeLr2 => gauge = 1,
+                CourseDataConstraint::Gauge5Keys => gauge = 2,
+                CourseDataConstraint::Gauge7Keys => gauge = 3,
+                CourseDataConstraint::Gauge9Keys => gauge = 4,
+                CourseDataConstraint::Gauge24Keys => gauge = 5,
+                _ => {}
+            }
+        }
+        (hispeed, judge, gauge)
     }
 
     fn get_score_hash(&self, score: &ScoreData) -> Option<String> {
@@ -510,5 +540,282 @@ impl PlayDataAccessor {
 
     pub fn get_scoredb(&self) -> Option<&ScoreDatabaseAccessor> {
         self.scoredb.as_ref()
+    }
+
+    // ========================================================================
+    // Model-based convenience methods (extract hash from BMSModel, delegate)
+    // ========================================================================
+
+    /// Read score data for a single BMSModel (delegates to read_score_data_by_hash).
+    pub fn read_score_data_model(&self, model: &BMSModel, lnmode: i32) -> Option<ScoreData> {
+        let hash = model.get_sha256();
+        let ln = model.contains_undefined_long_note();
+        self.read_score_data_by_hash(hash, ln, lnmode)
+    }
+
+    /// Write score data for a single BMSModel (delegates to write_score_data).
+    pub fn write_score_data_model(
+        &self,
+        newscore: &ScoreData,
+        model: &BMSModel,
+        lnmode: i32,
+        update_score: bool,
+    ) {
+        let hash = model.get_sha256();
+        let contains_undefined_ln = model.contains_undefined_long_note();
+        let total_notes = model.get_total_notes();
+        // Calculate last note time in microseconds
+        let last_note_time_us = {
+            let keys = model.get_mode().map(|m| m.key()).unwrap_or(0);
+            let mut time: i64 = 0;
+            for tl in model.get_all_time_lines() {
+                for i in 0..keys {
+                    if tl.get_note(i).is_some_and(|n| n.get_state() != 0) {
+                        time = tl.get_micro_time();
+                    }
+                }
+            }
+            time
+        };
+        self.write_score_data(
+            newscore,
+            hash,
+            contains_undefined_ln,
+            total_notes,
+            lnmode,
+            update_score,
+            last_note_time_us,
+        );
+    }
+
+    /// Check if replay data exists for a single BMSModel.
+    pub fn exists_replay_data_model(&self, model: &BMSModel, lnmode: i32, index: i32) -> bool {
+        let ln = model.contains_undefined_long_note();
+        self.exists_replay_data(model.get_sha256(), ln, lnmode, index)
+    }
+
+    /// Write replay data for a single BMSModel.
+    pub fn write_replay_data_model(
+        &self,
+        rd: &mut ReplayData,
+        model: &BMSModel,
+        lnmode: i32,
+        index: i32,
+    ) {
+        let ln = model.contains_undefined_long_note();
+        self.write_replay_data(rd, model.get_sha256(), ln, lnmode, index);
+    }
+
+    /// Delete score data for a single BMSModel.
+    pub fn delete_score_data_model(&self, model: &BMSModel, lnmode: i32) {
+        self.delete_score_data(
+            model.get_sha256(),
+            model.contains_undefined_long_note(),
+            lnmode,
+        );
+    }
+
+    // ========================================================================
+    // Course methods (multiple BMSModels)
+    // ========================================================================
+
+    /// Read score data for a course (multiple models).
+    pub fn read_score_data_course(
+        &self,
+        models: &[BMSModel],
+        lnmode: i32,
+        option: i32,
+        constraint: &[CourseDataConstraint],
+    ) -> Option<ScoreData> {
+        let hash = Self::course_hash(models);
+        let ln = models.iter().any(|m| m.contains_undefined_long_note());
+        let (hispeed, judge, gauge) = Self::compute_constraint_values(constraint);
+        let mode_val = (if ln { lnmode } else { 0 })
+            + option * 10
+            + hispeed * 100
+            + judge * 1000
+            + gauge * 10000;
+        self.scoredb.as_ref()?.get_score_data(&hash, mode_val)
+    }
+
+    /// Write score data for a course (delegates to write_score_data_for_course).
+    #[allow(clippy::too_many_arguments)]
+    pub fn write_score_data_course(
+        &self,
+        newscore: &ScoreData,
+        models: &[BMSModel],
+        lnmode: i32,
+        option: i32,
+        constraint: &[CourseDataConstraint],
+        update_score: bool,
+    ) {
+        let hashes: Vec<&str> = models.iter().map(|m| m.get_sha256()).collect();
+        let total_notes: i32 = models.iter().map(|m| m.get_total_notes()).sum();
+        let ln = models.iter().any(|m| m.contains_undefined_long_note());
+        self.write_score_data_for_course(
+            newscore,
+            &hashes,
+            total_notes,
+            ln,
+            lnmode,
+            option,
+            constraint,
+            update_score,
+        );
+    }
+
+    /// Check if replay data exists for a course.
+    pub fn exists_replay_data_course(
+        &self,
+        models: &[BMSModel],
+        lnmode: i32,
+        index: i32,
+        constraint: &[CourseDataConstraint],
+    ) -> bool {
+        let hashes: Vec<String> = models.iter().map(|m| m.get_sha256().to_string()).collect();
+        let hash_refs: Vec<&str> = hashes.iter().map(|s| s.as_str()).collect();
+        let ln = models.iter().any(|m| m.contains_undefined_long_note());
+        let path = format!(
+            "{}.brd",
+            self.get_replay_data_file_path_course(&hash_refs, ln, lnmode, index, constraint)
+        );
+        Path::new(&path).exists()
+    }
+
+    /// Read course replay data (array of ReplayData).
+    pub fn read_replay_data_course(
+        &self,
+        models: &[BMSModel],
+        lnmode: i32,
+        index: i32,
+        constraint: &[CourseDataConstraint],
+    ) -> Option<Vec<ReplayData>> {
+        if !self.exists_replay_data_course(models, lnmode, index, constraint) {
+            return None;
+        }
+        let hashes: Vec<String> = models.iter().map(|m| m.get_sha256().to_string()).collect();
+        let hash_refs: Vec<&str> = hashes.iter().map(|s| s.as_str()).collect();
+        let ln = models.iter().any(|m| m.contains_undefined_long_note());
+        let path = format!(
+            "{}.brd",
+            self.get_replay_data_file_path_course(&hash_refs, ln, lnmode, index, constraint)
+        );
+        match ReplayData::read_brd_course(Path::new(&path)) {
+            Ok(rds) => Some(rds),
+            Err(e) => {
+                log::error!("Failed to read course replay data: {}", e);
+                None
+            }
+        }
+    }
+
+    /// Write course replay data (array of ReplayData).
+    pub fn write_replay_data_course(
+        &self,
+        rds: &mut [ReplayData],
+        models: &[BMSModel],
+        lnmode: i32,
+        index: i32,
+        constraint: &[CourseDataConstraint],
+    ) {
+        let hashes: Vec<String> = models.iter().map(|m| m.get_sha256().to_string()).collect();
+        let hash_refs: Vec<&str> = hashes.iter().map(|s| s.as_str()).collect();
+        let ln = models.iter().any(|m| m.contains_undefined_long_note());
+        let path = format!(
+            "{}.brd",
+            self.get_replay_data_file_path_course(&hash_refs, ln, lnmode, index, constraint)
+        );
+        if let Err(e) = ReplayData::write_brd_course(rds, Path::new(&path)) {
+            log::error!("Failed to write course replay data: {}", e);
+        } else {
+            log::info!("Course replay saved: {}", path);
+        }
+    }
+
+    // ========================================================================
+    // Course file path helpers
+    // ========================================================================
+
+    fn get_replay_data_file_path_course(
+        &self,
+        hashes: &[&str],
+        ln: bool,
+        lnmode: i32,
+        index: i32,
+        constraint: &[CourseDataConstraint],
+    ) -> String {
+        // Course hash: first 10 chars of each model's hash concatenated
+        let hash: String = hashes
+            .iter()
+            .map(|h| {
+                let end = std::cmp::min(10, h.len());
+                &h[..end]
+            })
+            .collect();
+
+        // Constraint suffix: 2-digit 1-based ordinal for non-CLASS/MIRROR/RANDOM constraints
+        let mut constraint_suffix = String::new();
+        for c in constraint {
+            if *c != CourseDataConstraint::Class
+                && *c != CourseDataConstraint::Mirror
+                && *c != CourseDataConstraint::Random
+            {
+                let ordinal = Self::constraint_ordinal(c);
+                constraint_suffix.push_str(&format!("{:02}", ordinal + 1));
+            }
+        }
+
+        let sep = std::path::MAIN_SEPARATOR;
+        let prefix = if ln {
+            REPLAY.get(lnmode as usize).copied().unwrap_or("")
+        } else {
+            ""
+        };
+        let constraint_part = if constraint_suffix.is_empty() {
+            String::new()
+        } else {
+            format!("_{}", constraint_suffix)
+        };
+        let index_part = if index > 0 {
+            format!("_{}", index)
+        } else {
+            String::new()
+        };
+        format!(
+            "{}{}{}{}{}{}",
+            self.get_replay_data_folder(),
+            sep,
+            prefix,
+            hash,
+            constraint_part,
+            index_part
+        )
+    }
+
+    fn course_hash(models: &[BMSModel]) -> String {
+        models
+            .iter()
+            .map(|m| m.get_sha256())
+            .collect::<Vec<_>>()
+            .join("")
+    }
+
+    fn constraint_ordinal(c: &CourseDataConstraint) -> i32 {
+        match c {
+            CourseDataConstraint::Class => 0,
+            CourseDataConstraint::Mirror => 1,
+            CourseDataConstraint::Random => 2,
+            CourseDataConstraint::NoSpeed => 3,
+            CourseDataConstraint::NoGood => 4,
+            CourseDataConstraint::NoGreat => 5,
+            CourseDataConstraint::GaugeLr2 => 6,
+            CourseDataConstraint::Gauge5Keys => 7,
+            CourseDataConstraint::Gauge7Keys => 8,
+            CourseDataConstraint::Gauge9Keys => 9,
+            CourseDataConstraint::Gauge24Keys => 10,
+            CourseDataConstraint::Ln => 11,
+            CourseDataConstraint::Cn => 12,
+            CourseDataConstraint::Hcn => 13,
+        }
     }
 }

@@ -293,8 +293,8 @@ impl MusicResult {
             && resource.is_update_score()
             && let Some(rd) = resource.get_replay_data()
         {
-            main.get_play_data_accessor().write_replay_data(
-                rd,
+            main.get_play_data_accessor().write_replay_data_model(
+                &mut rd.clone(),
                 resource.get_bms_model(),
                 resource.get_player_config().lnmode,
                 index as i32,
@@ -317,7 +317,7 @@ impl MusicResult {
         }
         let newscore = newscore.unwrap();
 
-        let oldsc = main.get_play_data_accessor().read_score_data(
+        let oldsc = main.get_play_data_accessor().read_score_data_model(
             resource.get_bms_model(),
             resource.get_player_config().lnmode,
         );
@@ -482,7 +482,7 @@ impl MusicResult {
             && !(is_freq_trainer_enabled() && is_freq_negative())
         {
             if let Some(sd) = resource.get_score_data() {
-                main.get_play_data_accessor().write_score_data(
+                main.get_play_data_accessor().write_score_data_model(
                     sd,
                     resource.get_bms_model(),
                     resource.get_player_config().lnmode,
