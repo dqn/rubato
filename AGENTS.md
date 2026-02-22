@@ -89,12 +89,14 @@ All phases complete. **1511 tests pass. Zero runtime `todo!()`/`unimplemented!()
 - **Phase 22c:** MainController Render Pipeline + FPS Cap — MainController.render() enhanced (sprite begin/end lifecycle, input gating by time delta). SpriteBatch re-export replacing stub. SpriteBatch→wgpu render pass flush with SpriteRenderPipeline, bind groups, projection matrix. FPS capping from Config.maxFramePerSecond. +7 tests, +325 lines
 - **Phase 22d:** Skin.draw_all_objects() Integration — SkinDrawable trait in beatoraja-core (Send-bounded, 10 methods), TimerOnlyMainState adapter bridging core↔skin MainState, impl SkinDrawable for Skin, MainController.render() wired with take/put-back borrow pattern, SkinStub removed from MainStateData. +11 tests, +~150 lines
 - **Phase 23a–d:** LauncherStateFactory + DB wiring — LauncherStateFactory concrete impl in beatoraja-launcher (all 7 state types), MainController `songdb` field + `set_song_database()`/`get_song_database()`, PlayDataAccessor init in constructor, MusicSelector `with_song_database()` injection, CourseResult MainState trait impl. +10 tests
+- **Phase 24c:** Audio driver wiring — beatoraja-select AudioDriver stub deleted, PreviewMusicProcessor wired to `&dyn AudioDriver` trait (beatoraja-audio), MainController `audio: Option<Box<dyn AudioDriver>>` field + get/set methods. +11 tests
+- **Phase 24d:** RenderSnapshot test activation — Fixed imports (`bms_config`→`beatoraja_core`, `bms_render`→`golden_master`, `bms_skin`→`beatoraja_skin`), added `Gauge` DrawDetail variant + comparison, moved from `tests/pending/` to `tests/`, 22 tests compiled (#[ignore] — SkinData→Skin pipeline needed)
 
-## Remaining Stubs (~2,624 lines across 16 files)
+## Remaining Stubs (~2,613 lines across 16 files)
 
 - **beatoraja-external (574 lines):** Pixmap/GdxGraphics/BufferUtils/PixmapIO LibGDX stubs — Phase 22 で wgpu パイプラインが完成し代替実装が可能に。Phase 24 で段階的に解消予定
 - **beatoraja-result (388 lines):** SkinObjectData, AbstractResult/ScreenType stubs — 大半は re-export、rendering 関連はPhase 22 で解消可能
-- **beatoraja-select (359 lines):** AudioDriver struct stub (Phase 24c で KiraAudioDriver に置換)、EventType enum、SkinObject/SkinNumber/SkinText/SkinImage rendering stubs、SongManagerMenu wrapper、DownloadTask stubs
+- **beatoraja-select (~348 lines):** EventType enum、SkinObject/SkinNumber/SkinText/SkinImage rendering stubs、SongManagerMenu wrapper、DownloadTask stubs (AudioDriver stub deleted in Phase 24c)
 - **beatoraja-launcher (321 lines):** MainController partial stubs — Phase 24f で解消
 - **beatoraja-skin (294 lines):** LibGDX graphics stubs (Color, Texture, TextureRegion, Pixmap) — wgpu 型への置換が可能だが全 crate に影響
 - **beatoraja-types (211 lines):** 基本型スタブ — 多くは re-export 用
@@ -102,7 +104,7 @@ All phases complete. **1511 tests pass. Zero runtime `todo!()`/`unimplemented!()
 - **beatoraja-input (132 lines):** Config/PlayerConfig/PlayModeConfig stubs — 入力システム統合 (Phase 24b) で解消
 - **beatoraja-decide (108 lines):** SkinStub — Phase 22d で MainStateData から除去済み、残は decide 固有
 - **Clean crates (re-exports only):** beatoraja-core (1), beatoraja-audio (1), beatoraja-play (9), beatoraja-obs (9), beatoraja-ir (10), md-processor (12), beatoraja-stream (4)
-- **MainController:** ~12 stub methods — polling thread (Phase 24b), audio driver (Phase 24c), updateStateReferences (Phase 24f)
+- **MainController:** ~11 stub methods — polling thread (Phase 24b), audio driver init (Phase 24f, driver field wired in Phase 24c), updateStateReferences (Phase 24f)
 - **StateFactory:** DONE — LauncherStateFactory in beatoraja-launcher wires all 7 screen state types
 - **Platform:** Windows named pipe (not yet implemented)
 - **Intentional:** Twitter4j → `bail!()` (永久)
