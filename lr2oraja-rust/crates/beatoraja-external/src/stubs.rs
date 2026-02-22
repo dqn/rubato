@@ -1,7 +1,5 @@
 // External dependency stubs for beatoraja-external crate
 
-use beatoraja_types::main_controller_access::MainControllerAccess;
-use beatoraja_types::main_state_type::MainStateType as TypesMainStateType;
 use beatoraja_types::player_resource_access::PlayerResourceAccess;
 
 //
@@ -58,69 +56,10 @@ use beatoraja_types::player_resource_access::PlayerResourceAccess;
 //   From beatoraja-result/beatoraja-play (cannot depend on them).
 
 // ============================================================
-// MainController stub
+// MainController — replaced with NullMainController from beatoraja-types (Phase 18e-2)
 // ============================================================
 
-/// Stub for bms.player.beatoraja.MainController
-pub struct MainController;
-
-impl MainController {
-    fn null_config() -> &'static Config {
-        use std::sync::OnceLock;
-        static CONFIG: OnceLock<Config> = OnceLock::new();
-        CONFIG.get_or_init(Config::default)
-    }
-
-    fn null_player_config() -> &'static PlayerConfig {
-        use std::sync::OnceLock;
-        static PCONFIG: OnceLock<PlayerConfig> = OnceLock::new();
-        PCONFIG.get_or_init(PlayerConfig::default)
-    }
-
-    pub fn get_player_resource(&self) -> &PlayerResource {
-        log::warn!("not yet implemented: MainController.getPlayerResource");
-        static RESOURCE: std::sync::OnceLock<PlayerResource> = std::sync::OnceLock::new();
-        RESOURCE.get_or_init(|| PlayerResource {
-            config: Config::default(),
-            songdata: SongData::default(),
-            replay_data: ReplayData::default(),
-            reverse_lookup_levels: Vec::new(),
-            original_mode: Mode::default(),
-        })
-    }
-}
-
-impl MainControllerAccess for MainController {
-    fn get_config(&self) -> &Config {
-        log::warn!("MainController::get_config called — returning default");
-        Self::null_config()
-    }
-    fn get_player_config(&self) -> &PlayerConfig {
-        log::warn!("MainController::get_player_config called — returning default");
-        Self::null_player_config()
-    }
-    fn change_state(&mut self, _state: TypesMainStateType) {
-        log::warn!("MainController::change_state called — no-op");
-    }
-    fn save_config(&self) {
-        log::warn!("MainController::save_config called — no-op");
-    }
-    fn exit(&self) {
-        log::warn!("MainController::exit called — no-op");
-    }
-    fn save_last_recording(&self, _reason: &str) {
-        log::warn!("MainController::save_last_recording called — no-op");
-    }
-    fn update_song(&mut self, _path: Option<&str>) {
-        log::warn!("MainController::update_song called — no-op");
-    }
-    fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-        None
-    }
-    fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-        None
-    }
-}
+pub use beatoraja_types::main_controller_access::NullMainController;
 
 // ============================================================
 // PlayerResource stub
@@ -308,7 +247,7 @@ impl ScoreDatabaseAccessor {
 
 /// Stub for bms.player.beatoraja.MainState
 pub struct MainState {
-    pub main: MainController,
+    pub main: NullMainController,
     pub resource: PlayerResource,
 }
 

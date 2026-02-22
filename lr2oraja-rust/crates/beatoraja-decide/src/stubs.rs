@@ -5,8 +5,6 @@ use beatoraja_core::system_sound_manager::SoundType;
 use beatoraja_types::config::Config;
 use beatoraja_types::course_data::{CourseData, CourseDataConstraint};
 use beatoraja_types::groove_gauge::GrooveGauge;
-use beatoraja_types::main_controller_access::MainControllerAccess;
-use beatoraja_types::main_state_type::MainStateType as TypesMainStateType;
 use beatoraja_types::player_config::PlayerConfig;
 use beatoraja_types::player_resource_access::PlayerResourceAccess;
 use beatoraja_types::replay_data::ReplayData;
@@ -14,6 +12,8 @@ use beatoraja_types::score_data::ScoreData;
 use beatoraja_types::song_data::SongData;
 
 /// Stub for MainController reference.
+/// Retained: get_input_processor/get_audio_processor are crate-specific and not on MainControllerAccess trait.
+/// MainControllerAccess trait impl removed (unused — MusicDecide calls methods on concrete type).
 pub struct MainControllerRef;
 
 impl MainControllerRef {
@@ -31,40 +31,6 @@ impl MainControllerRef {
         log::warn!("not yet implemented: MainController.getAudioProcessor");
         static DEFAULT: AudioProcessorStub = AudioProcessorStub;
         &DEFAULT
-    }
-}
-
-impl MainControllerAccess for MainControllerRef {
-    fn get_config(&self) -> &Config {
-        log::warn!("not yet implemented: MainControllerRef::get_config");
-        static DEFAULT: std::sync::OnceLock<Config> = std::sync::OnceLock::new();
-        DEFAULT.get_or_init(Config::default)
-    }
-    fn get_player_config(&self) -> &PlayerConfig {
-        log::warn!("not yet implemented: MainControllerRef::get_player_config");
-        static DEFAULT: std::sync::OnceLock<PlayerConfig> = std::sync::OnceLock::new();
-        DEFAULT.get_or_init(PlayerConfig::default)
-    }
-    fn change_state(&mut self, _state: TypesMainStateType) {
-        log::warn!("not yet implemented: MainControllerRef::change_state");
-    }
-    fn save_config(&self) {
-        log::warn!("not yet implemented: MainControllerRef::save_config");
-    }
-    fn exit(&self) {
-        log::warn!("not yet implemented: MainControllerRef::exit");
-    }
-    fn save_last_recording(&self, _reason: &str) {
-        log::warn!("not yet implemented: MainControllerRef::save_last_recording");
-    }
-    fn update_song(&mut self, _path: Option<&str>) {
-        log::warn!("not yet implemented: MainControllerRef::update_song");
-    }
-    fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-        None
-    }
-    fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-        None
     }
 }
 

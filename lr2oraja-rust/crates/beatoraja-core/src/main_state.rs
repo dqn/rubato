@@ -10,6 +10,14 @@ pub use beatoraja_types::main_state_type::MainStateType;
 /// In Java this is an abstract class with fields. In Rust we use a trait
 /// plus a shared data struct for common fields.
 pub trait MainState {
+    /// Return the state type for this state.
+    ///
+    /// Translated from: Java `MainController.getStateType(MainState)` which uses instanceof.
+    /// In Rust, each concrete state overrides this to return its own type.
+    fn state_type(&self) -> Option<MainStateType> {
+        None
+    }
+
     /// Get reference to the shared main state data
     fn main_state_data(&self) -> &MainStateData;
 
