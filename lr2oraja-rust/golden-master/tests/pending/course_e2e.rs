@@ -4,8 +4,8 @@
 // by simulating multiple songs in sequence with gauge state carried over
 // between songs (using run_course_simulation / run_course_simulation_manual).
 
-use bms_rule::JUDGE_PG;
-use bms_rule::gauge_property::GaugeType;
+use beatoraja_types::groove_gauge::{CLASS, EXCLASS, EXHARD, EXHARDCLASS, HARD, NORMAL};
+use bms_model::judge_note::JUDGE_PG;
 use golden_master::e2e_helpers::*;
 
 // ============================================================================
@@ -19,7 +19,7 @@ fn course_two_stage_autoplay() {
     let model1 = load_bms("minimal_7k.bms");
     let model2 = load_bms("5key.bms");
 
-    let course = run_course_simulation(&[&model1, &model2], GaugeType::Normal);
+    let course = run_course_simulation(&[&model1, &model2], NORMAL);
     assert!(course.completed, "Course should complete with autoplay");
     assert_eq!(course.stages.len(), 2, "Should have 2 stage results");
 
@@ -33,8 +33,8 @@ fn course_two_stage_autoplay() {
     assert_all_pgreat(&course.stages[1], total2, "course_stage2");
 
     // Combined PG should be sum of individual
-    let total_pg =
-        course.stages[0].score.judge_count(JUDGE_PG) + course.stages[1].score.judge_count(JUDGE_PG);
+    let total_pg = course.stages[0].score.get_judge_count_total(JUDGE_PG)
+        + course.stages[1].score.get_judge_count_total(JUDGE_PG);
     let individual_sum = total1 as i32 + total2 as i32;
     assert_eq!(
         total_pg, individual_sum,
@@ -53,7 +53,7 @@ fn course_gauge_carryover() {
     let model1 = load_bms("minimal_7k.bms");
     let model2 = load_bms("bpm_change.bms");
 
-    let course = run_course_simulation(&[&model1, &model2], GaugeType::Hard);
+    let course = run_course_simulation(&[&model1, &model2], HARD);
     assert!(course.completed, "Course should complete with autoplay");
     assert_eq!(course.stages.len(), 2);
 
@@ -81,11 +81,11 @@ fn course_class_gauge_carryover_accumulates() {
     let model2 = load_bms("5key.bms");
 
     // Run each song independently to get individual gauge values
-    let independent1 = run_autoplay_simulation(&model1, GaugeType::Class);
-    let independent2 = run_autoplay_simulation(&model2, GaugeType::Class);
+    let independent1 = run_autoplay_simulation(&model1, CLASS);
+    let independent2 = run_autoplay_simulation(&model2, CLASS);
 
     // Run as course (gauge carries over)
-    let course = run_course_simulation(&[&model1, &model2], GaugeType::Class);
+    let course = run_course_simulation(&[&model1, &model2], CLASS);
     assert!(course.completed);
     assert_eq!(course.stages.len(), 2);
 
@@ -122,11 +122,11 @@ fn course_failure_stops() {
 
     // No input for song 1 (all miss), autoplay for song 2 doesn't matter
     // because the course should stop after song 1.
-    let empty_log: &[bms_replay::key_input_log::KeyInputLog] = &[];
+    let empty_log: &[beatoraja_input::key_input_log::KeyInputLog] = &[];
     let course = run_course_simulation_manual(
         &[&model1, &model2],
         &[empty_log, empty_log],
-        GaugeType::ExHard,
+        EXHARD,
     );
 
     assert!(
@@ -155,11 +155,11 @@ fn course_exhardclass_failure_stops() {
     let model1 = load_bms("minimal_7k.bms");
     let model2 = load_bms("bpm_change.bms");
 
-    let empty_log: &[bms_replay::key_input_log::KeyInputLog] = &[];
+    let empty_log: &[beatoraja_input::key_input_log::KeyInputLog] = &[];
     let course = run_course_simulation_manual(
         &[&model1, &model2],
         &[empty_log, empty_log],
-        GaugeType::ExHardClass,
+        EXHARDCLASS,
     );
 
     assert!(
@@ -183,11 +183,11 @@ fn course_exhardclass_failure_stops() {
 fn course_gauge_types_autoplay() {
     let model = load_bms("minimal_7k.bms");
 
-    for gauge_type in [GaugeType::Class, GaugeType::ExClass, GaugeType::ExHardClass] {
+    for gauge_type in [CLASS, EXCLASS, EXHARDCLASS] {
         let result = run_autoplay_simulation(&model, gauge_type);
         assert!(
             result.gauge_qualified,
-            "{gauge_type:?} should be qualified on autoplay (value={})",
+            "{gauge_type} should be qualified on autoplay (value={})",
             result.gauge_value
         );
     }
@@ -198,13 +198,13 @@ fn course_gauge_types_autoplay() {
 fn course_gauge_types_all_miss_reduces_gauge() {
     let model = load_bms("minimal_7k.bms");
 
-    for gauge_type in [GaugeType::Class, GaugeType::ExClass, GaugeType::ExHardClass] {
+    for gauge_type in [CLASS, EXCLASS, EXHARDCLASS] {
         let autoplay_result = run_autoplay_simulation(&model, gauge_type);
         let miss_result = run_manual_simulation(&model, &[], gauge_type);
 
         assert!(
             miss_result.gauge_value < autoplay_result.gauge_value,
-            "{gauge_type:?}: all-miss gauge ({}) should be less than autoplay gauge ({})",
+            "{gauge_type}: all-miss gauge ({}) should be less than autoplay gauge ({})",
             miss_result.gauge_value,
             autoplay_result.gauge_value
         );
@@ -222,12 +222,12 @@ fn course_deterministic_scores() {
 
     for filename in files {
         let model = load_bms(filename);
-        let r1 = run_autoplay_simulation(&model, GaugeType::Normal);
-        let r2 = run_autoplay_simulation(&model, GaugeType::Normal);
+        let r1 = run_autoplay_simulation(&model, NORMAL);
+        let r2 = run_autoplay_simulation(&model, NORMAL);
 
         assert_eq!(
-            r1.score.judge_count(JUDGE_PG),
-            r2.score.judge_count(JUDGE_PG),
+            r1.score.get_judge_count_total(JUDGE_PG),
+            r2.score.get_judge_count_total(JUDGE_PG),
             "{filename}: PG count should be deterministic"
         );
         assert_eq!(
@@ -249,7 +249,7 @@ fn course_three_stage_autoplay() {
     let model2 = load_bms("5key.bms");
     let model3 = load_bms("bpm_change.bms");
 
-    let course = run_course_simulation(&[&model1, &model2, &model3], GaugeType::Class);
+    let course = run_course_simulation(&[&model1, &model2, &model3], CLASS);
     assert!(
         course.completed,
         "3-song course should complete with autoplay"

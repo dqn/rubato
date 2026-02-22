@@ -5,34 +5,37 @@
 // - ManualPerfect: all PG, gauge qualified (normal notes only, 0ms offset)
 // - ManualAllMiss: all PR/MS, max_combo=0, gauge not qualified
 
-use bms_rule::gauge_property::GaugeType;
-use bms_rule::{JUDGE_MS, JUDGE_PG, JUDGE_PR};
+use beatoraja_types::groove_gauge::{ASSISTEASY, EASY, EXHARD, HARD, HAZARD, NORMAL};
+use bms_model::judge_note::{JUDGE_MS, JUDGE_PG, JUDGE_PR};
+use bms_model::mode::Mode;
 use golden_master::e2e_helpers::*;
 
-fn run_autoplay_test(bms_file: &str, gauge_type: GaugeType, label: &str) {
+fn run_autoplay_test(bms_file: &str, gauge_type: i32, label: &str) {
     let model = load_bms(bms_file);
-    let total = model.total_notes();
+    let total = model.get_total_notes() as usize;
     assert!(total > 0, "{label}: should have playable notes");
 
     let result = run_autoplay_simulation(&model, gauge_type);
     assert_all_pgreat(&result, total, label);
 }
 
-fn run_manual_perfect_test(bms_file: &str, gauge_type: GaugeType, label: &str) {
+fn run_manual_perfect_test(bms_file: &str, gauge_type: i32, label: &str) {
     let model = load_bms(bms_file);
-    let normal = count_normal_notes(&model);
+    let jn = model.build_judge_notes();
+    let normal = count_normal_notes(&jn);
     assert!(normal > 0, "{label}: should have normal notes");
 
-    let log = create_note_press_log(&model.notes, model.mode, 0);
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
+    let log = create_note_press_log(&jn, mode, 0);
     let result = run_manual_simulation(&model, &log, gauge_type);
 
     let score = &result.score;
     assert_eq!(
-        score.judge_count(JUDGE_PG),
+        score.get_judge_count_total(JUDGE_PG),
         normal as i32,
         "{label}: all normal notes should be PG (PG={}, total_judge={})",
-        score.judge_count(JUDGE_PG),
-        score.total_judge_count()
+        score.get_judge_count_total(JUDGE_PG),
+        (0..6).map(|j| score.get_judge_count_total(j)).sum::<i32>()
     );
     assert!(
         result.gauge_qualified,
@@ -47,21 +50,21 @@ fn run_manual_perfect_test(bms_file: &str, gauge_type: GaugeType, label: &str) {
     );
 }
 
-fn run_manual_all_miss_test(bms_file: &str, gauge_type: GaugeType, label: &str) {
+fn run_manual_all_miss_test(bms_file: &str, gauge_type: i32, label: &str) {
     let model = load_bms(bms_file);
-    let total = model.total_notes();
+    let total = model.get_total_notes() as usize;
     assert!(total > 0, "{label}: should have playable notes");
 
     let result = run_manual_simulation(&model, &[], gauge_type);
 
     let score = &result.score;
-    let miss_count = score.judge_count(JUDGE_PR) + score.judge_count(JUDGE_MS);
+    let miss_count = score.get_judge_count_total(JUDGE_PR) + score.get_judge_count_total(JUDGE_MS);
     assert_eq!(
         miss_count,
         total as i32,
         "{label}: all notes should be PR/MS (PR={}, MS={}, total={})",
-        score.judge_count(JUDGE_PR),
-        score.judge_count(JUDGE_MS),
+        score.get_judge_count_total(JUDGE_PR),
+        score.get_judge_count_total(JUDGE_MS),
         total
     );
     assert_eq!(result.max_combo, 0, "{label}: max_combo should be 0");
@@ -80,60 +83,60 @@ fn run_manual_all_miss_test(bms_file: &str, gauge_type: GaugeType, label: &str) 
 fn beat5k_assist_easy_autoplay() {
     run_autoplay_test(
         "5key.bms",
-        GaugeType::AssistEasy,
+        ASSISTEASY,
         "beat5k_assist_easy_autoplay",
     );
 }
 #[test]
 fn beat5k_easy_autoplay() {
-    run_autoplay_test("5key.bms", GaugeType::Easy, "beat5k_easy_autoplay");
+    run_autoplay_test("5key.bms", EASY, "beat5k_easy_autoplay");
 }
 #[test]
 fn beat5k_normal_autoplay() {
-    run_autoplay_test("5key.bms", GaugeType::Normal, "beat5k_normal_autoplay");
+    run_autoplay_test("5key.bms", NORMAL, "beat5k_normal_autoplay");
 }
 #[test]
 fn beat5k_hard_autoplay() {
-    run_autoplay_test("5key.bms", GaugeType::Hard, "beat5k_hard_autoplay");
+    run_autoplay_test("5key.bms", HARD, "beat5k_hard_autoplay");
 }
 #[test]
 fn beat5k_exhard_autoplay() {
-    run_autoplay_test("5key.bms", GaugeType::ExHard, "beat5k_exhard_autoplay");
+    run_autoplay_test("5key.bms", EXHARD, "beat5k_exhard_autoplay");
 }
 #[test]
 fn beat5k_hazard_autoplay() {
-    run_autoplay_test("5key.bms", GaugeType::Hazard, "beat5k_hazard_autoplay");
+    run_autoplay_test("5key.bms", HAZARD, "beat5k_hazard_autoplay");
 }
 
 #[test]
 fn beat5k_assist_easy_manual_perfect() {
     run_manual_perfect_test(
         "5key.bms",
-        GaugeType::AssistEasy,
+        ASSISTEASY,
         "beat5k_assist_easy_manual_perfect",
     );
 }
 #[test]
 fn beat5k_easy_manual_perfect() {
-    run_manual_perfect_test("5key.bms", GaugeType::Easy, "beat5k_easy_manual_perfect");
+    run_manual_perfect_test("5key.bms", EASY, "beat5k_easy_manual_perfect");
 }
 #[test]
 fn beat5k_normal_manual_perfect() {
     run_manual_perfect_test(
         "5key.bms",
-        GaugeType::Normal,
+        NORMAL,
         "beat5k_normal_manual_perfect",
     );
 }
 #[test]
 fn beat5k_hard_manual_perfect() {
-    run_manual_perfect_test("5key.bms", GaugeType::Hard, "beat5k_hard_manual_perfect");
+    run_manual_perfect_test("5key.bms", HARD, "beat5k_hard_manual_perfect");
 }
 #[test]
 fn beat5k_exhard_manual_perfect() {
     run_manual_perfect_test(
         "5key.bms",
-        GaugeType::ExHard,
+        EXHARD,
         "beat5k_exhard_manual_perfect",
     );
 }
@@ -141,7 +144,7 @@ fn beat5k_exhard_manual_perfect() {
 fn beat5k_hazard_manual_perfect() {
     run_manual_perfect_test(
         "5key.bms",
-        GaugeType::Hazard,
+        HAZARD,
         "beat5k_hazard_manual_perfect",
     );
 }
@@ -150,31 +153,31 @@ fn beat5k_hazard_manual_perfect() {
 fn beat5k_assist_easy_manual_all_miss() {
     run_manual_all_miss_test(
         "5key.bms",
-        GaugeType::AssistEasy,
+        ASSISTEASY,
         "beat5k_assist_easy_manual_all_miss",
     );
 }
 #[test]
 fn beat5k_easy_manual_all_miss() {
-    run_manual_all_miss_test("5key.bms", GaugeType::Easy, "beat5k_easy_manual_all_miss");
+    run_manual_all_miss_test("5key.bms", EASY, "beat5k_easy_manual_all_miss");
 }
 #[test]
 fn beat5k_normal_manual_all_miss() {
     run_manual_all_miss_test(
         "5key.bms",
-        GaugeType::Normal,
+        NORMAL,
         "beat5k_normal_manual_all_miss",
     );
 }
 #[test]
 fn beat5k_hard_manual_all_miss() {
-    run_manual_all_miss_test("5key.bms", GaugeType::Hard, "beat5k_hard_manual_all_miss");
+    run_manual_all_miss_test("5key.bms", HARD, "beat5k_hard_manual_all_miss");
 }
 #[test]
 fn beat5k_exhard_manual_all_miss() {
     run_manual_all_miss_test(
         "5key.bms",
-        GaugeType::ExHard,
+        EXHARD,
         "beat5k_exhard_manual_all_miss",
     );
 }
@@ -182,7 +185,7 @@ fn beat5k_exhard_manual_all_miss() {
 fn beat5k_hazard_manual_all_miss() {
     run_manual_all_miss_test(
         "5key.bms",
-        GaugeType::Hazard,
+        HAZARD,
         "beat5k_hazard_manual_all_miss",
     );
 }
@@ -195,31 +198,31 @@ fn beat5k_hazard_manual_all_miss() {
 fn beat7k_assist_easy_autoplay() {
     run_autoplay_test(
         "minimal_7k.bms",
-        GaugeType::AssistEasy,
+        ASSISTEASY,
         "beat7k_assist_easy_autoplay",
     );
 }
 #[test]
 fn beat7k_easy_autoplay() {
-    run_autoplay_test("minimal_7k.bms", GaugeType::Easy, "beat7k_easy_autoplay");
+    run_autoplay_test("minimal_7k.bms", EASY, "beat7k_easy_autoplay");
 }
 #[test]
 fn beat7k_normal_autoplay() {
     run_autoplay_test(
         "minimal_7k.bms",
-        GaugeType::Normal,
+        NORMAL,
         "beat7k_normal_autoplay",
     );
 }
 #[test]
 fn beat7k_hard_autoplay() {
-    run_autoplay_test("minimal_7k.bms", GaugeType::Hard, "beat7k_hard_autoplay");
+    run_autoplay_test("minimal_7k.bms", HARD, "beat7k_hard_autoplay");
 }
 #[test]
 fn beat7k_exhard_autoplay() {
     run_autoplay_test(
         "minimal_7k.bms",
-        GaugeType::ExHard,
+        EXHARD,
         "beat7k_exhard_autoplay",
     );
 }
@@ -227,7 +230,7 @@ fn beat7k_exhard_autoplay() {
 fn beat7k_hazard_autoplay() {
     run_autoplay_test(
         "minimal_7k.bms",
-        GaugeType::Hazard,
+        HAZARD,
         "beat7k_hazard_autoplay",
     );
 }
@@ -236,7 +239,7 @@ fn beat7k_hazard_autoplay() {
 fn beat7k_assist_easy_manual_perfect() {
     run_manual_perfect_test(
         "minimal_7k.bms",
-        GaugeType::AssistEasy,
+        ASSISTEASY,
         "beat7k_assist_easy_manual_perfect",
     );
 }
@@ -244,7 +247,7 @@ fn beat7k_assist_easy_manual_perfect() {
 fn beat7k_easy_manual_perfect() {
     run_manual_perfect_test(
         "minimal_7k.bms",
-        GaugeType::Easy,
+        EASY,
         "beat7k_easy_manual_perfect",
     );
 }
@@ -252,7 +255,7 @@ fn beat7k_easy_manual_perfect() {
 fn beat7k_normal_manual_perfect() {
     run_manual_perfect_test(
         "minimal_7k.bms",
-        GaugeType::Normal,
+        NORMAL,
         "beat7k_normal_manual_perfect",
     );
 }
@@ -260,7 +263,7 @@ fn beat7k_normal_manual_perfect() {
 fn beat7k_hard_manual_perfect() {
     run_manual_perfect_test(
         "minimal_7k.bms",
-        GaugeType::Hard,
+        HARD,
         "beat7k_hard_manual_perfect",
     );
 }
@@ -268,7 +271,7 @@ fn beat7k_hard_manual_perfect() {
 fn beat7k_exhard_manual_perfect() {
     run_manual_perfect_test(
         "minimal_7k.bms",
-        GaugeType::ExHard,
+        EXHARD,
         "beat7k_exhard_manual_perfect",
     );
 }
@@ -276,7 +279,7 @@ fn beat7k_exhard_manual_perfect() {
 fn beat7k_hazard_manual_perfect() {
     run_manual_perfect_test(
         "minimal_7k.bms",
-        GaugeType::Hazard,
+        HAZARD,
         "beat7k_hazard_manual_perfect",
     );
 }
@@ -285,7 +288,7 @@ fn beat7k_hazard_manual_perfect() {
 fn beat7k_assist_easy_manual_all_miss() {
     run_manual_all_miss_test(
         "minimal_7k.bms",
-        GaugeType::AssistEasy,
+        ASSISTEASY,
         "beat7k_assist_easy_manual_all_miss",
     );
 }
@@ -293,7 +296,7 @@ fn beat7k_assist_easy_manual_all_miss() {
 fn beat7k_easy_manual_all_miss() {
     run_manual_all_miss_test(
         "minimal_7k.bms",
-        GaugeType::Easy,
+        EASY,
         "beat7k_easy_manual_all_miss",
     );
 }
@@ -301,7 +304,7 @@ fn beat7k_easy_manual_all_miss() {
 fn beat7k_normal_manual_all_miss() {
     run_manual_all_miss_test(
         "minimal_7k.bms",
-        GaugeType::Normal,
+        NORMAL,
         "beat7k_normal_manual_all_miss",
     );
 }
@@ -309,7 +312,7 @@ fn beat7k_normal_manual_all_miss() {
 fn beat7k_hard_manual_all_miss() {
     run_manual_all_miss_test(
         "minimal_7k.bms",
-        GaugeType::Hard,
+        HARD,
         "beat7k_hard_manual_all_miss",
     );
 }
@@ -317,7 +320,7 @@ fn beat7k_hard_manual_all_miss() {
 fn beat7k_exhard_manual_all_miss() {
     run_manual_all_miss_test(
         "minimal_7k.bms",
-        GaugeType::ExHard,
+        EXHARD,
         "beat7k_exhard_manual_all_miss",
     );
 }
@@ -325,7 +328,7 @@ fn beat7k_exhard_manual_all_miss() {
 fn beat7k_hazard_manual_all_miss() {
     run_manual_all_miss_test(
         "minimal_7k.bms",
-        GaugeType::Hazard,
+        HAZARD,
         "beat7k_hazard_manual_all_miss",
     );
 }
@@ -338,36 +341,36 @@ fn beat7k_hazard_manual_all_miss() {
 fn beat14k_assist_easy_autoplay() {
     run_autoplay_test(
         "14key_dp.bms",
-        GaugeType::AssistEasy,
+        ASSISTEASY,
         "beat14k_assist_easy_autoplay",
     );
 }
 #[test]
 fn beat14k_easy_autoplay() {
-    run_autoplay_test("14key_dp.bms", GaugeType::Easy, "beat14k_easy_autoplay");
+    run_autoplay_test("14key_dp.bms", EASY, "beat14k_easy_autoplay");
 }
 #[test]
 fn beat14k_normal_autoplay() {
-    run_autoplay_test("14key_dp.bms", GaugeType::Normal, "beat14k_normal_autoplay");
+    run_autoplay_test("14key_dp.bms", NORMAL, "beat14k_normal_autoplay");
 }
 #[test]
 fn beat14k_hard_autoplay() {
-    run_autoplay_test("14key_dp.bms", GaugeType::Hard, "beat14k_hard_autoplay");
+    run_autoplay_test("14key_dp.bms", HARD, "beat14k_hard_autoplay");
 }
 #[test]
 fn beat14k_exhard_autoplay() {
-    run_autoplay_test("14key_dp.bms", GaugeType::ExHard, "beat14k_exhard_autoplay");
+    run_autoplay_test("14key_dp.bms", EXHARD, "beat14k_exhard_autoplay");
 }
 #[test]
 fn beat14k_hazard_autoplay() {
-    run_autoplay_test("14key_dp.bms", GaugeType::Hazard, "beat14k_hazard_autoplay");
+    run_autoplay_test("14key_dp.bms", HAZARD, "beat14k_hazard_autoplay");
 }
 
 #[test]
 fn beat14k_assist_easy_manual_perfect() {
     run_manual_perfect_test(
         "14key_dp.bms",
-        GaugeType::AssistEasy,
+        ASSISTEASY,
         "beat14k_assist_easy_manual_perfect",
     );
 }
@@ -375,7 +378,7 @@ fn beat14k_assist_easy_manual_perfect() {
 fn beat14k_easy_manual_perfect() {
     run_manual_perfect_test(
         "14key_dp.bms",
-        GaugeType::Easy,
+        EASY,
         "beat14k_easy_manual_perfect",
     );
 }
@@ -383,7 +386,7 @@ fn beat14k_easy_manual_perfect() {
 fn beat14k_normal_manual_perfect() {
     run_manual_perfect_test(
         "14key_dp.bms",
-        GaugeType::Normal,
+        NORMAL,
         "beat14k_normal_manual_perfect",
     );
 }
@@ -391,7 +394,7 @@ fn beat14k_normal_manual_perfect() {
 fn beat14k_hard_manual_perfect() {
     run_manual_perfect_test(
         "14key_dp.bms",
-        GaugeType::Hard,
+        HARD,
         "beat14k_hard_manual_perfect",
     );
 }
@@ -399,7 +402,7 @@ fn beat14k_hard_manual_perfect() {
 fn beat14k_exhard_manual_perfect() {
     run_manual_perfect_test(
         "14key_dp.bms",
-        GaugeType::ExHard,
+        EXHARD,
         "beat14k_exhard_manual_perfect",
     );
 }
@@ -407,7 +410,7 @@ fn beat14k_exhard_manual_perfect() {
 fn beat14k_hazard_manual_perfect() {
     run_manual_perfect_test(
         "14key_dp.bms",
-        GaugeType::Hazard,
+        HAZARD,
         "beat14k_hazard_manual_perfect",
     );
 }
@@ -416,7 +419,7 @@ fn beat14k_hazard_manual_perfect() {
 fn beat14k_assist_easy_manual_all_miss() {
     run_manual_all_miss_test(
         "14key_dp.bms",
-        GaugeType::AssistEasy,
+        ASSISTEASY,
         "beat14k_assist_easy_manual_all_miss",
     );
 }
@@ -424,7 +427,7 @@ fn beat14k_assist_easy_manual_all_miss() {
 fn beat14k_easy_manual_all_miss() {
     run_manual_all_miss_test(
         "14key_dp.bms",
-        GaugeType::Easy,
+        EASY,
         "beat14k_easy_manual_all_miss",
     );
 }
@@ -432,7 +435,7 @@ fn beat14k_easy_manual_all_miss() {
 fn beat14k_normal_manual_all_miss() {
     run_manual_all_miss_test(
         "14key_dp.bms",
-        GaugeType::Normal,
+        NORMAL,
         "beat14k_normal_manual_all_miss",
     );
 }
@@ -440,7 +443,7 @@ fn beat14k_normal_manual_all_miss() {
 fn beat14k_hard_manual_all_miss() {
     run_manual_all_miss_test(
         "14key_dp.bms",
-        GaugeType::Hard,
+        HARD,
         "beat14k_hard_manual_all_miss",
     );
 }
@@ -448,7 +451,7 @@ fn beat14k_hard_manual_all_miss() {
 fn beat14k_exhard_manual_all_miss() {
     run_manual_all_miss_test(
         "14key_dp.bms",
-        GaugeType::ExHard,
+        EXHARD,
         "beat14k_exhard_manual_all_miss",
     );
 }
@@ -456,7 +459,7 @@ fn beat14k_exhard_manual_all_miss() {
 fn beat14k_hazard_manual_all_miss() {
     run_manual_all_miss_test(
         "14key_dp.bms",
-        GaugeType::Hazard,
+        HAZARD,
         "beat14k_hazard_manual_all_miss",
     );
 }
@@ -469,36 +472,36 @@ fn beat14k_hazard_manual_all_miss() {
 fn popn9k_assist_easy_autoplay() {
     run_autoplay_test(
         "9key_pms.pms",
-        GaugeType::AssistEasy,
+        ASSISTEASY,
         "popn9k_assist_easy_autoplay",
     );
 }
 #[test]
 fn popn9k_easy_autoplay() {
-    run_autoplay_test("9key_pms.pms", GaugeType::Easy, "popn9k_easy_autoplay");
+    run_autoplay_test("9key_pms.pms", EASY, "popn9k_easy_autoplay");
 }
 #[test]
 fn popn9k_normal_autoplay() {
-    run_autoplay_test("9key_pms.pms", GaugeType::Normal, "popn9k_normal_autoplay");
+    run_autoplay_test("9key_pms.pms", NORMAL, "popn9k_normal_autoplay");
 }
 #[test]
 fn popn9k_hard_autoplay() {
-    run_autoplay_test("9key_pms.pms", GaugeType::Hard, "popn9k_hard_autoplay");
+    run_autoplay_test("9key_pms.pms", HARD, "popn9k_hard_autoplay");
 }
 #[test]
 fn popn9k_exhard_autoplay() {
-    run_autoplay_test("9key_pms.pms", GaugeType::ExHard, "popn9k_exhard_autoplay");
+    run_autoplay_test("9key_pms.pms", EXHARD, "popn9k_exhard_autoplay");
 }
 #[test]
 fn popn9k_hazard_autoplay() {
-    run_autoplay_test("9key_pms.pms", GaugeType::Hazard, "popn9k_hazard_autoplay");
+    run_autoplay_test("9key_pms.pms", HAZARD, "popn9k_hazard_autoplay");
 }
 
 #[test]
 fn popn9k_assist_easy_manual_perfect() {
     run_manual_perfect_test(
         "9key_pms.pms",
-        GaugeType::AssistEasy,
+        ASSISTEASY,
         "popn9k_assist_easy_manual_perfect",
     );
 }
@@ -506,7 +509,7 @@ fn popn9k_assist_easy_manual_perfect() {
 fn popn9k_easy_manual_perfect() {
     run_manual_perfect_test(
         "9key_pms.pms",
-        GaugeType::Easy,
+        EASY,
         "popn9k_easy_manual_perfect",
     );
 }
@@ -514,7 +517,7 @@ fn popn9k_easy_manual_perfect() {
 fn popn9k_normal_manual_perfect() {
     run_manual_perfect_test(
         "9key_pms.pms",
-        GaugeType::Normal,
+        NORMAL,
         "popn9k_normal_manual_perfect",
     );
 }
@@ -522,7 +525,7 @@ fn popn9k_normal_manual_perfect() {
 fn popn9k_hard_manual_perfect() {
     run_manual_perfect_test(
         "9key_pms.pms",
-        GaugeType::Hard,
+        HARD,
         "popn9k_hard_manual_perfect",
     );
 }
@@ -530,7 +533,7 @@ fn popn9k_hard_manual_perfect() {
 fn popn9k_exhard_manual_perfect() {
     run_manual_perfect_test(
         "9key_pms.pms",
-        GaugeType::ExHard,
+        EXHARD,
         "popn9k_exhard_manual_perfect",
     );
 }
@@ -538,7 +541,7 @@ fn popn9k_exhard_manual_perfect() {
 fn popn9k_hazard_manual_perfect() {
     run_manual_perfect_test(
         "9key_pms.pms",
-        GaugeType::Hazard,
+        HAZARD,
         "popn9k_hazard_manual_perfect",
     );
 }
@@ -547,7 +550,7 @@ fn popn9k_hazard_manual_perfect() {
 fn popn9k_assist_easy_manual_all_miss() {
     run_manual_all_miss_test(
         "9key_pms.pms",
-        GaugeType::AssistEasy,
+        ASSISTEASY,
         "popn9k_assist_easy_manual_all_miss",
     );
 }
@@ -555,7 +558,7 @@ fn popn9k_assist_easy_manual_all_miss() {
 fn popn9k_easy_manual_all_miss() {
     run_manual_all_miss_test(
         "9key_pms.pms",
-        GaugeType::Easy,
+        EASY,
         "popn9k_easy_manual_all_miss",
     );
 }
@@ -563,7 +566,7 @@ fn popn9k_easy_manual_all_miss() {
 fn popn9k_normal_manual_all_miss() {
     run_manual_all_miss_test(
         "9key_pms.pms",
-        GaugeType::Normal,
+        NORMAL,
         "popn9k_normal_manual_all_miss",
     );
 }
@@ -571,7 +574,7 @@ fn popn9k_normal_manual_all_miss() {
 fn popn9k_hard_manual_all_miss() {
     run_manual_all_miss_test(
         "9key_pms.pms",
-        GaugeType::Hard,
+        HARD,
         "popn9k_hard_manual_all_miss",
     );
 }
@@ -579,7 +582,7 @@ fn popn9k_hard_manual_all_miss() {
 fn popn9k_exhard_manual_all_miss() {
     run_manual_all_miss_test(
         "9key_pms.pms",
-        GaugeType::ExHard,
+        EXHARD,
         "popn9k_exhard_manual_all_miss",
     );
 }
@@ -587,7 +590,7 @@ fn popn9k_exhard_manual_all_miss() {
 fn popn9k_hazard_manual_all_miss() {
     run_manual_all_miss_test(
         "9key_pms.pms",
-        GaugeType::Hazard,
+        HAZARD,
         "popn9k_hazard_manual_all_miss",
     );
 }

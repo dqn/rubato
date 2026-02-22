@@ -2,22 +2,43 @@
 //
 // Loads Java-generated fixtures and runs equivalent Rust simulations,
 // comparing ScoreData, maxcombo, ghost, gauge values.
+//
+// Notes:
+// - JudgeManager.prev_time starts at 0, so notes at time_us=0 are skipped on
+//   the first frame. We prime the JudgeManager with update(-1) to work around this.
+// - LN notes are split into start+end pairs via build_judge_notes() for JudgeManager.
+// - Pure LN (LNTYPE_LONGNOTE) end notes are not independently judged — only 1
+//   judgment per LN pair, matching Java's behavior.
 
 use std::path::Path;
 
-use bms_model::{BmsDecoder, BmsModel, LaneProperty};
-use bms_replay::key_input_log::KeyInputLog;
-use bms_rule::gauge_property::GaugeType;
-use bms_rule::judge_manager::{JudgeConfig, JudgeManager};
-use bms_rule::{GrooveGauge, JudgeAlgorithm, PlayerRule};
+use beatoraja_core::score_data::ScoreData;
+use beatoraja_input::key_input_log::KeyInputLog;
+use beatoraja_play::bms_player_rule::BMSPlayerRule;
+use beatoraja_play::judge_algorithm::JudgeAlgorithm;
+use beatoraja_play::judge_manager::{JudgeConfig, JudgeManager};
+use beatoraja_play::lane_property::LaneProperty;
+use beatoraja_types::groove_gauge::GrooveGauge;
+use bms_model::bms_decoder::BMSDecoder;
+use bms_model::bms_model::{BMSModel, LNTYPE_LONGNOTE};
+use bms_model::chart_information::ChartInformation;
+use bms_model::mode::Mode;
 use golden_master::judge_fixtures::{JudgeFixtures, JudgeTestCase};
 
 #[path = "support/random_seeds.rs"]
 mod random_seeds;
 
+/// Sentinel for "not set" timestamps (matches JudgeManager internal).
 const NOT_SET: i64 = i64::MIN;
+
+/// Frame step for simulation (1ms = 1000us).
 const FRAME_STEP: i64 = 1_000;
+
+/// Extra time after last note to finish simulation (1 second).
 const TAIL_TIME: i64 = 1_000_000;
+
+/// Gauge value comparison tolerance (f32 rounding).
+const GAUGE_TOLERANCE: f32 = 0.02;
 
 fn test_bms_dir() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -25,73 +46,70 @@ fn test_bms_dir() -> &'static Path {
         .leak()
 }
 
-fn load_bms(filename: &str) -> BmsModel {
+fn load_bms(filename: &str) -> BMSModel {
     let path = test_bms_dir().join(filename);
-    if let Some(selected_randoms) =
-        random_seeds::try_load_selected_randoms(test_bms_dir(), filename)
-    {
-        BmsDecoder::decode_with_randoms(&path, &selected_randoms)
-            .unwrap_or_else(|e| panic!("Failed to parse {filename} with random seeds: {e}"))
-    } else {
-        BmsDecoder::decode(&path).unwrap_or_else(|e| panic!("Failed to parse {filename}: {e}"))
-    }
+    let randoms = random_seeds::try_load_selected_randoms(test_bms_dir(), filename);
+    let info = ChartInformation::new(Some(path), LNTYPE_LONGNOTE, randoms);
+    let mut model = BMSDecoder::new()
+        .decode(info)
+        .unwrap_or_else(|| panic!("Failed to parse {filename}"));
+    BMSPlayerRule::validate(&mut model);
+    model
 }
 
-fn parse_gauge_type(s: &str) -> GaugeType {
+fn parse_gauge_type(s: &str) -> i32 {
     match s {
-        "NORMAL" => GaugeType::Normal,
-        "HARD" => GaugeType::Hard,
-        "EXHARD" => GaugeType::ExHard,
-        "EASY" => GaugeType::Easy,
+        "ASSIST_EASY" => GrooveGauge::ASSISTEASY,
+        "EASY" => GrooveGauge::EASY,
+        "NORMAL" => GrooveGauge::NORMAL,
+        "HARD" => GrooveGauge::HARD,
+        "EXHARD" => GrooveGauge::EXHARD,
+        "HAZARD" => GrooveGauge::HAZARD,
+        "CLASS" => GrooveGauge::GRADE_NORMAL,
+        "EXCLASS" => GrooveGauge::GRADE_HARD,
+        "EXHARDCLASS" => GrooveGauge::GRADE_EXHARD,
         _ => panic!("Unknown gauge type: {s}"),
     }
 }
 
-struct SimulationResult {
-    score: bms_rule::ScoreData,
+struct SimResult {
+    score: ScoreData,
     max_combo: i32,
     ghost: Vec<usize>,
     gauge_value: f32,
     gauge_qualified: bool,
+    pass_notes: i32,
 }
 
-fn run_autoplay_simulation(model: &BmsModel, gauge_type: GaugeType) -> SimulationResult {
+fn run_simulation(model: &BMSModel, tc: &JudgeTestCase) -> SimResult {
     let judge_notes = model.build_judge_notes();
-    let rule = PlayerRule::lr2();
-    let total_notes = judge_notes.iter().filter(|n| n.is_playable()).count();
-    let total = if model.total > 0.0 {
-        model.total
-    } else {
-        PlayerRule::default_total(total_notes)
-    };
+    let mode = model.get_mode().cloned().unwrap_or(Mode::BEAT_7K);
+    let rule = BMSPlayerRule::get_bms_player_rule(&mode);
 
-    let judge_rank = rule
-        .judge
-        .window_rule
-        .resolve_judge_rank(model.judge_rank, model.judge_rank_type);
     let config = JudgeConfig {
         notes: &judge_notes,
-        play_mode: model.mode,
-        ln_type: model.ln_type,
-        judge_rank,
+        mode: &mode,
+        ln_type: model.get_lntype(),
+        judge_rank: model.get_judgerank(),
         judge_window_rate: [100, 100, 100],
         scratch_judge_window_rate: [100, 100, 100],
         algorithm: JudgeAlgorithm::Combo,
-        autoplay: true,
+        autoplay: tc.autoplay,
         judge_property: &rule.judge,
         lane_property: None,
     };
 
-    let mut jm = JudgeManager::new(&config);
-    let mut gauge = GrooveGauge::new(&rule.gauge, gauge_type, total, total_notes);
+    let gauge_type = parse_gauge_type(&tc.gauge_type);
+    let mut jm = JudgeManager::from_config(&config);
+    let mut gauge = GrooveGauge::new(model, gauge_type, &rule.gauge);
 
-    let lp = LaneProperty::new(model.mode);
-    let physical_key_count = lp.physical_key_count();
-    let key_states = vec![false; physical_key_count];
-    let key_times = vec![NOT_SET; physical_key_count];
+    let lp = LaneProperty::new(&mode);
+    let physical_key_count = lp.get_key_lane_assign().len();
 
-    // Prime JudgeManager for notes at time 0
-    jm.update(-1, &judge_notes, &key_states, &key_times, &mut gauge);
+    // Prime JudgeManager: set prev_time to -1 so notes at time_us=0 are not skipped.
+    let empty_states = vec![false; physical_key_count];
+    let empty_times = vec![NOT_SET; physical_key_count];
+    jm.update(-1, &judge_notes, &empty_states, &empty_times, &mut gauge);
 
     let last_note_time = judge_notes
         .iter()
@@ -100,170 +118,157 @@ fn run_autoplay_simulation(model: &BmsModel, gauge_type: GaugeType) -> Simulatio
         .unwrap_or(0);
     let end_time = last_note_time + TAIL_TIME;
 
-    let mut time = 0i64;
-    while time <= end_time {
-        jm.update(time, &judge_notes, &key_states, &key_times, &mut gauge);
-        time += FRAME_STEP;
-    }
-
-    SimulationResult {
-        score: jm.score().clone(),
-        max_combo: jm.max_combo(),
-        ghost: jm.ghost().to_vec(),
-        gauge_value: gauge.value(),
-        gauge_qualified: gauge.is_qualified(),
-    }
-}
-
-fn run_manual_simulation(
-    model: &BmsModel,
-    input_log: &[KeyInputLog],
-    gauge_type: GaugeType,
-) -> SimulationResult {
-    let judge_notes = model.build_judge_notes();
-    let rule = PlayerRule::lr2();
-    let total_notes = judge_notes.iter().filter(|n| n.is_playable()).count();
-    let total = if model.total > 0.0 {
-        model.total
+    if tc.autoplay {
+        // Autoplay: run with empty key states
+        let key_states = vec![false; physical_key_count];
+        let key_times = vec![NOT_SET; physical_key_count];
+        let mut time = 0i64;
+        while time <= end_time {
+            jm.update(time, &judge_notes, &key_states, &key_times, &mut gauge);
+            time += FRAME_STEP;
+        }
     } else {
-        PlayerRule::default_total(total_notes)
-    };
+        // Manual: convert input_log to per-frame key states
+        let log: Vec<KeyInputLog> = tc
+            .input_log
+            .iter()
+            .map(|e| KeyInputLog::with_data(e.presstime, e.keycode, e.pressed))
+            .collect();
 
-    let judge_rank = rule
-        .judge
-        .window_rule
-        .resolve_judge_rank(model.judge_rank, model.judge_rank_type);
-    let config = JudgeConfig {
-        notes: &judge_notes,
-        play_mode: model.mode,
-        ln_type: model.ln_type,
-        judge_rank,
-        judge_window_rate: [100, 100, 100],
-        scratch_judge_window_rate: [100, 100, 100],
-        algorithm: JudgeAlgorithm::Combo,
-        autoplay: false,
-        judge_property: &rule.judge,
-        lane_property: None,
-    };
+        let mut sorted_log: Vec<&KeyInputLog> = log.iter().collect();
+        sorted_log.sort_by_key(|e| e.get_time());
 
-    let mut jm = JudgeManager::new(&config);
-    let mut gauge = GrooveGauge::new(&rule.gauge, gauge_type, total, total_notes);
+        let mut key_states = vec![false; physical_key_count];
+        let mut log_cursor = 0;
+        let mut time = 0i64;
 
-    let lp = LaneProperty::new(model.mode);
-    let physical_key_count = lp.physical_key_count();
+        while time <= end_time {
+            let mut key_changed_times = vec![NOT_SET; physical_key_count];
 
-    let mut sorted_log: Vec<&KeyInputLog> = input_log.iter().collect();
-    sorted_log.sort_by_key(|e| e.get_time());
-
-    let last_note_time = judge_notes
-        .iter()
-        .map(|n| n.time_us.max(n.end_time_us))
-        .max()
-        .unwrap_or(0);
-    let end_time = last_note_time + TAIL_TIME;
-
-    let mut key_states = vec![false; physical_key_count];
-    let mut log_cursor = 0;
-
-    // Prime JudgeManager for notes at time 0
-    let empty_key_times = vec![NOT_SET; physical_key_count];
-    jm.update(-1, &judge_notes, &key_states, &empty_key_times, &mut gauge);
-
-    let mut time = 0i64;
-    while time <= end_time {
-        let mut key_changed_times = vec![NOT_SET; physical_key_count];
-
-        while log_cursor < sorted_log.len() && sorted_log[log_cursor].get_time() <= time {
-            let event = sorted_log[log_cursor];
-            let key = event.keycode as usize;
-            if key < physical_key_count {
-                key_states[key] = event.pressed;
-                key_changed_times[key] = event.get_time();
+            // Input log uses lane indices (keycodes); map directly to physical key indices.
+            while log_cursor < sorted_log.len() && sorted_log[log_cursor].get_time() <= time {
+                let event = sorted_log[log_cursor];
+                let key = event.get_keycode() as usize;
+                if key < physical_key_count {
+                    key_states[key] = event.is_pressed();
+                    key_changed_times[key] = event.get_time();
+                }
+                log_cursor += 1;
             }
-            log_cursor += 1;
-        }
 
-        jm.update(
-            time,
-            &judge_notes,
-            &key_states,
-            &key_changed_times,
-            &mut gauge,
-        );
-        time += FRAME_STEP;
+            jm.update(
+                time,
+                &judge_notes,
+                &key_states,
+                &key_changed_times,
+                &mut gauge,
+            );
+            time += FRAME_STEP;
+        }
     }
 
-    SimulationResult {
+    SimResult {
         score: jm.score().clone(),
         max_combo: jm.max_combo(),
         ghost: jm.ghost().to_vec(),
-        gauge_value: gauge.value(),
+        gauge_value: gauge.get_value(),
         gauge_qualified: gauge.is_qualified(),
+        pass_notes: jm.past_notes(),
     }
 }
 
-fn compare_result(tc: &JudgeTestCase, result: &SimulationResult) -> Vec<String> {
+fn compare_score(
+    actual: &ScoreData,
+    expected: &golden_master::judge_fixtures::ExpectedScore,
+) -> Vec<String> {
     let mut diffs = Vec::new();
-    let expected = &tc.expected;
-
-    // Score: 12 judge fields
-    let s = &result.score;
-    let e = &expected.score;
     let fields = [
-        ("epg", s.epg, e.epg),
-        ("lpg", s.lpg, e.lpg),
-        ("egr", s.egr, e.egr),
-        ("lgr", s.lgr, e.lgr),
-        ("egd", s.egd, e.egd),
-        ("lgd", s.lgd, e.lgd),
-        ("ebd", s.ebd, e.ebd),
-        ("lbd", s.lbd, e.lbd),
-        ("epr", s.epr, e.epr),
-        ("lpr", s.lpr, e.lpr),
-        ("ems", s.ems, e.ems),
-        ("lms", s.lms, e.lms),
+        ("epg", actual.epg, expected.epg),
+        ("lpg", actual.lpg, expected.lpg),
+        ("egr", actual.egr, expected.egr),
+        ("lgr", actual.lgr, expected.lgr),
+        ("egd", actual.egd, expected.egd),
+        ("lgd", actual.lgd, expected.lgd),
+        ("ebd", actual.ebd, expected.ebd),
+        ("lbd", actual.lbd, expected.lbd),
+        ("epr", actual.epr, expected.epr),
+        ("lpr", actual.lpr, expected.lpr),
+        ("ems", actual.ems, expected.ems),
+        ("lms", actual.lms, expected.lms),
+        ("score.maxcombo", actual.combo, expected.maxcombo),
+        ("score.passnotes", actual.passnotes, expected.passnotes),
     ];
-    for (name, rust, java) in &fields {
-        if rust != java {
-            diffs.push(format!("score.{name}: rust={rust} java={java}"));
+    for (name, actual_val, expected_val) in fields {
+        if actual_val != expected_val {
+            diffs.push(format!("{name}: rust={actual_val} java={expected_val}"));
         }
     }
+    diffs
+}
 
-    // maxcombo, passnotes
-    if result.max_combo != expected.maxcombo {
+fn run_test_case(tc: &JudgeTestCase) {
+    let model = load_bms(&tc.filename);
+    let result = run_simulation(&model, tc);
+
+    let mut diffs: Vec<String> = Vec::new();
+
+    // Compare score fields
+    diffs.extend(compare_score(&result.score, &tc.expected.score));
+
+    // Compare maxcombo
+    if result.max_combo != tc.expected.maxcombo {
         diffs.push(format!(
             "maxcombo: rust={} java={}",
-            result.max_combo, expected.maxcombo
+            result.max_combo, tc.expected.maxcombo
         ));
     }
 
-    if s.passnotes != expected.passnotes {
+    // Compare passnotes
+    if result.pass_notes != tc.expected.passnotes {
         diffs.push(format!(
             "passnotes: rust={} java={}",
-            s.passnotes, expected.passnotes
+            result.pass_notes, tc.expected.passnotes
         ));
     }
 
-    // ghost: exact match
-    if result.ghost != expected.ghost {
-        let ghost_len = result.ghost.len().min(expected.ghost.len());
+    // Compare gauge_value with tolerance
+    if (result.gauge_value - tc.expected.gauge_value).abs() > GAUGE_TOLERANCE {
+        diffs.push(format!(
+            "gauge_value: rust={:.4} java={:.4} (diff={:.4})",
+            result.gauge_value,
+            tc.expected.gauge_value,
+            (result.gauge_value - tc.expected.gauge_value).abs()
+        ));
+    }
+
+    // Compare gauge_qualified
+    if result.gauge_qualified != tc.expected.gauge_qualified {
+        diffs.push(format!(
+            "gauge_qualified: rust={} java={}",
+            result.gauge_qualified, tc.expected.gauge_qualified
+        ));
+    }
+
+    // Compare ghost
+    if result.ghost != tc.expected.ghost {
+        let ghost_len = result.ghost.len().min(tc.expected.ghost.len());
         let mut ghost_diff_count = 0;
         for i in 0..ghost_len {
-            if result.ghost[i] != expected.ghost[i] {
+            if result.ghost[i] != tc.expected.ghost[i] {
                 if ghost_diff_count < 5 {
                     diffs.push(format!(
                         "ghost[{i}]: rust={} java={}",
-                        result.ghost[i], expected.ghost[i]
+                        result.ghost[i], tc.expected.ghost[i]
                     ));
                 }
                 ghost_diff_count += 1;
             }
         }
-        if result.ghost.len() != expected.ghost.len() {
+        if result.ghost.len() != tc.expected.ghost.len() {
             diffs.push(format!(
                 "ghost.len: rust={} java={}",
                 result.ghost.len(),
-                expected.ghost.len()
+                tc.expected.ghost.len()
             ));
         }
         if ghost_diff_count > 5 {
@@ -271,44 +276,6 @@ fn compare_result(tc: &JudgeTestCase, result: &SimulationResult) -> Vec<String> 
         }
     }
 
-    // gauge_value: ±0.01 tolerance (f32 precision)
-    if (result.gauge_value - expected.gauge_value).abs() > 0.01 {
-        diffs.push(format!(
-            "gauge_value: rust={:.4} java={:.4}",
-            result.gauge_value, expected.gauge_value
-        ));
-    }
-
-    // gauge_qualified: exact match
-    if result.gauge_qualified != expected.gauge_qualified {
-        diffs.push(format!(
-            "gauge_qualified: rust={} java={}",
-            result.gauge_qualified, expected.gauge_qualified
-        ));
-    }
-
-    diffs
-}
-
-fn run_test_case(tc: &JudgeTestCase) {
-    let model = load_bms(&tc.filename);
-    let gauge_type = parse_gauge_type(&tc.gauge_type);
-
-    let result = if tc.autoplay {
-        run_autoplay_simulation(&model, gauge_type)
-    } else if tc.input_log.is_empty() {
-        // All-miss: manual simulation with no input
-        run_manual_simulation(&model, &[], gauge_type)
-    } else {
-        let log: Vec<KeyInputLog> = tc
-            .input_log
-            .iter()
-            .map(|e| KeyInputLog::new(e.presstime, e.keycode, e.pressed))
-            .collect();
-        run_manual_simulation(&model, &log, gauge_type)
-    };
-
-    let diffs = compare_result(tc, &result);
     if !diffs.is_empty() {
         panic!(
             "GM mismatch for [{}] {}:\n  {}",

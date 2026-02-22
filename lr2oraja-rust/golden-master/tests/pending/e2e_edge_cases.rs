@@ -8,7 +8,8 @@
 // - Extended channels (LNTYPE 2, invisible, mine combinations)
 // - BMSON BPM-crossing long notes
 
-use bms_rule::gauge_property::GaugeType;
+use beatoraja_types::groove_gauge::NORMAL;
+use bms_model::judge_note::JUDGE_PG;
 use golden_master::e2e_helpers::*;
 
 // ============================================================================
@@ -18,7 +19,7 @@ use golden_master::e2e_helpers::*;
 #[test]
 fn autoplay_ln_bpm_cross() {
     let model = load_bms("ln_bpm_cross.bms");
-    let result = run_autoplay_simulation(&model, GaugeType::Normal);
+    let result = run_autoplay_simulation(&model, NORMAL);
     let total = result.ghost.len();
     assert!(total > 0, "ln_bpm_cross should have judged notes");
     assert_all_pgreat(&result, total, "autoplay_ln_bpm_cross");
@@ -27,31 +28,31 @@ fn autoplay_ln_bpm_cross() {
 #[test]
 fn autoplay_bpm_extreme() {
     let model = load_bms("bpm_extreme.bms");
-    let total = model.total_notes();
+    let total = model.get_total_notes() as usize;
     assert!(total > 0, "bpm_extreme should have playable notes");
-    let result = run_autoplay_simulation(&model, GaugeType::Normal);
+    let result = run_autoplay_simulation(&model, NORMAL);
     assert_all_pgreat(&result, total, "autoplay_bpm_extreme");
 }
 
 #[test]
 fn autoplay_multi_stop_rapid() {
     let model = load_bms("multi_stop_rapid.bms");
-    let total = model.total_notes();
+    let total = model.get_total_notes() as usize;
     assert!(total > 0, "multi_stop_rapid should have playable notes");
-    let result = run_autoplay_simulation(&model, GaugeType::Normal);
+    let result = run_autoplay_simulation(&model, NORMAL);
     assert_all_pgreat(&result, total, "autoplay_multi_stop_rapid");
 }
 
 #[test]
 fn autoplay_ln_overlap() {
     let model = load_bms("ln_overlap.bms");
-    let result = run_autoplay_simulation(&model, GaugeType::Normal);
+    let result = run_autoplay_simulation(&model, NORMAL);
     let total = result.ghost.len();
     assert!(total > 0, "ln_overlap should have judged notes");
     // LN overlap edge cases may cause imperfect autoplay (e.g. simultaneous
     // LN end + normal note on the same tick can confuse the judge). Verify
     // that most notes are PG and the gauge is alive.
-    let pg = result.score.judge_count(bms_rule::JUDGE_PG);
+    let pg = result.score.get_judge_count_total(JUDGE_PG);
     assert!(
         pg as usize >= total - 2,
         "autoplay_ln_overlap: most notes should be PG (PG={pg}, total={total})"
@@ -65,7 +66,7 @@ fn autoplay_ln_overlap() {
 #[test]
 fn autoplay_channel_extended() {
     let model = load_bms("channel_extended.bms");
-    let result = run_autoplay_simulation(&model, GaugeType::Normal);
+    let result = run_autoplay_simulation(&model, NORMAL);
     let total = result.ghost.len();
     assert!(total > 0, "channel_extended should have judged notes");
     assert_all_pgreat(&result, total, "autoplay_channel_extended");
@@ -73,10 +74,16 @@ fn autoplay_channel_extended() {
 
 #[test]
 fn autoplay_bmson_bpm_ln_cross() {
+    use bms_model::bmson_decoder::BMSONDecoder;
+    use bms_model::chart_information::ChartInformation;
+    use bms_model::bms_model::LNTYPE_LONGNOTE;
+
     let path = golden_master::e2e_helpers::test_bms_dir().join("bmson_bpm_ln_cross.bmson");
-    let model = bms_model::BmsonDecoder::decode(&path)
-        .unwrap_or_else(|e| panic!("Failed to parse bmson_bpm_ln_cross.bmson: {e}"));
-    let result = run_autoplay_simulation(&model, GaugeType::Normal);
+    let info = ChartInformation::new(Some(path), LNTYPE_LONGNOTE, None);
+    let mut decoder = BMSONDecoder::new(LNTYPE_LONGNOTE);
+    let model = decoder.decode(info)
+        .unwrap_or_else(|| panic!("Failed to parse bmson_bpm_ln_cross.bmson"));
+    let result = run_autoplay_simulation(&model, NORMAL);
     let total = result.ghost.len();
     assert!(total > 0, "bmson_bpm_ln_cross should have judged notes");
     assert_all_pgreat(&result, total, "autoplay_bmson_bpm_ln_cross");
@@ -90,7 +97,7 @@ fn autoplay_bmson_bpm_ln_cross() {
 #[test]
 fn bpm_extreme_timing_structure() {
     let model = load_bms("bpm_extreme.bms");
-    let notes: Vec<_> = model.notes.iter().filter(|n| n.is_playable()).collect();
+    let notes: Vec<_> = model.build_judge_notes().into_iter().filter(|n| n.is_playable()).collect();
     assert!(notes.len() >= 4, "Should have at least 4 playable notes");
 
     // Notes should be in time order
@@ -117,7 +124,7 @@ fn bpm_extreme_timing_structure() {
 #[test]
 fn multi_stop_timing_gaps() {
     let model = load_bms("multi_stop_rapid.bms");
-    let notes: Vec<_> = model.notes.iter().filter(|n| n.is_playable()).collect();
+    let notes: Vec<_> = model.build_judge_notes().into_iter().filter(|n| n.is_playable()).collect();
     assert!(!notes.is_empty(), "Should have playable notes");
 
     // All notes should be in time order
@@ -154,14 +161,15 @@ fn multi_stop_timing_gaps() {
 fn ln_overlap_note_structure() {
     let model = load_bms("ln_overlap.bms");
 
-    let long_notes = model.total_long_notes();
+    let judge_notes = model.build_judge_notes();
+    let long_notes = judge_notes.iter().filter(|n| n.is_long_start()).count();
     assert!(long_notes > 0, "Should have long notes");
 
-    let normal_notes = count_normal_notes(&model);
+    let normal_notes = count_normal_notes(&judge_notes);
     assert!(normal_notes > 0, "Should have normal notes");
 
     // Normal gauge should be qualified on autoplay (tolerant of 1-2 edge case misses)
-    let result = run_autoplay_simulation(&model, GaugeType::Normal);
+    let result = run_autoplay_simulation(&model, NORMAL);
     assert!(
         result.gauge_qualified,
         "Normal gauge should be qualified on autoplay (value={})",
@@ -172,27 +180,26 @@ fn ln_overlap_note_structure() {
 /// Verify extended channel BMS parses invisible and mine notes correctly.
 #[test]
 fn channel_extended_note_types() {
-    use bms_model::NoteType;
-
     let model = load_bms("channel_extended.bms");
 
-    // Should have mine notes
-    let mine_count = model
-        .notes
-        .iter()
-        .filter(|n| n.note_type == NoteType::Mine)
-        .count();
+    // Check mine notes via judge_notes
+    let judge_notes = model.build_judge_notes();
+    let mine_count = judge_notes.iter().filter(|n| n.is_mine()).count();
     assert!(mine_count > 0, "Should have mine notes");
 
-    // Should have invisible notes
-    let invisible_count = model
-        .notes
-        .iter()
-        .filter(|n| n.note_type == NoteType::Invisible)
-        .count();
+    // Check invisible notes via timeline API
+    let keys = model.get_mode().map(|m| m.key()).unwrap_or(0);
+    let mut invisible_count = 0;
+    for tl in model.get_all_time_lines() {
+        for lane in 0..keys {
+            if tl.get_hidden_note(lane).is_some() {
+                invisible_count += 1;
+            }
+        }
+    }
     assert!(invisible_count > 0, "Should have invisible notes");
 
-    // LNTYPE 2 (MGQ) should produce long notes
-    let ln_count = model.total_long_notes();
+    // Check long notes
+    let ln_count = judge_notes.iter().filter(|n| n.is_long_start()).count();
     assert!(ln_count > 0, "Should have long notes (LNTYPE 2 / MGQ)");
 }

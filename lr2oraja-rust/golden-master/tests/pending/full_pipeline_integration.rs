@@ -1,13 +1,14 @@
 // Full pipeline integration tests: BMS → Judge → Score → Replay round-trip.
 //
 // Tests the complete data flow through multiple crates:
-// bms-model → bms-rule → bms-replay → bms-rule (re-simulation)
+// bms-model → bms-rule (judge) → beatoraja-types (replay) → re-simulation
 
-use bms_replay::replay_data::{ReplayData, read_brd, write_brd};
-use bms_rule::JUDGE_PG;
-use bms_rule::gauge_property::GaugeType;
+use beatoraja_types::groove_gauge::{ASSISTEASY, EASY, EXHARD, HARD, NORMAL};
+use beatoraja_types::replay_data::ReplayData;
+use beatoraja_types::stubs::KeyInputLog as ReplayKeyInputLog;
+use bms_model::judge_note::{JUDGE_GR, JUDGE_PG};
+use bms_model::mode::Mode;
 use golden_master::e2e_helpers::*;
-use tempfile::NamedTempFile;
 
 // ============================================================================
 // Full pipeline: BMS → Judge → Score → Replay → Re-simulate
@@ -18,37 +19,53 @@ use tempfile::NamedTempFile;
 #[test]
 fn bms_to_replay_full_pipeline() {
     let model = load_bms("minimal_7k.bms");
-    let normal = count_normal_notes(&model);
+    let jn = model.build_judge_notes();
+    let normal = count_normal_notes(&jn);
 
     // Step 1: Generate perfect keylog
-    let keylog = create_note_press_log(&model.notes, model.mode, 0);
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
+    let keylog = create_note_press_log(&jn, mode, 0);
     assert!(!keylog.is_empty());
 
     // Step 2: Simulate with keylog
-    let original = run_manual_simulation(&model, &keylog, GaugeType::Normal);
-    assert_eq!(original.score.judge_count(JUDGE_PG), normal as i32);
+    let original = run_manual_simulation(&model, &keylog, NORMAL);
+    assert_eq!(original.score.get_judge_count_total(JUDGE_PG), normal as i32);
 
-    // Step 3: Save to BRD
-    let mut replay = ReplayData {
-        sha256: "test_pipeline".to_string(),
-        mode: model.mode as i32,
-        keylog: keylog.clone(),
-        gauge: GaugeType::Normal as i32,
+    // Step 3: Convert to ReplayData and JSON round-trip
+    let replay_keylog: Vec<ReplayKeyInputLog> = keylog
+        .iter()
+        .map(|k| ReplayKeyInputLog {
+            time: k.get_time(),
+            keycode: k.get_keycode(),
+            pressed: k.is_pressed(),
+        })
+        .collect();
+    let replay = ReplayData {
+        sha256: Some("test_pipeline".to_string()),
+        mode: model.get_mode().map(|m| m.key() as i32).unwrap_or(0),
+        keylog: replay_keylog,
+        gauge: NORMAL,
         ..Default::default()
     };
-    let tmp = NamedTempFile::new().unwrap();
-    write_brd(&mut replay, tmp.path()).unwrap();
 
-    // Step 4: Load from BRD
-    let loaded = read_brd(tmp.path()).unwrap();
+    // Step 4: JSON serde round-trip
+    let json = serde_json::to_string(&replay).unwrap();
+    let loaded: ReplayData = serde_json::from_str(&json).unwrap();
 
-    // Step 5: Re-simulate with loaded keylog
-    let replayed = run_manual_simulation(&model, &loaded.keylog, GaugeType::Normal);
+    // Step 5: Convert loaded stub KeyInputLog back to beatoraja_input KeyInputLog
+    let loaded_keylog: Vec<beatoraja_input::key_input_log::KeyInputLog> = loaded
+        .keylog
+        .iter()
+        .map(|k| beatoraja_input::key_input_log::KeyInputLog::with_data(k.time, k.keycode, k.pressed))
+        .collect();
 
-    // Step 6: Verify exact match
+    // Step 6: Re-simulate with loaded keylog
+    let replayed = run_manual_simulation(&model, &loaded_keylog, NORMAL);
+
+    // Step 7: Verify exact match
     assert_eq!(
-        original.score.judge_count(JUDGE_PG),
-        replayed.score.judge_count(JUDGE_PG),
+        original.score.get_judge_count_total(JUDGE_PG),
+        replayed.score.get_judge_count_total(JUDGE_PG),
         "PG should match after full pipeline round-trip"
     );
     assert_eq!(
@@ -71,28 +88,46 @@ fn full_pipeline_multiple_bms() {
 
     for filename in files {
         let model = load_bms(filename);
-        let keylog = create_note_press_log(&model.notes, model.mode, 0);
+        let jn = model.build_judge_notes();
+        let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
+        let keylog = create_note_press_log(&jn, mode, 0);
 
         // Simulate
-        let original = run_manual_simulation(&model, &keylog, GaugeType::Normal);
+        let original = run_manual_simulation(&model, &keylog, NORMAL);
 
-        // Round-trip through BRD
-        let mut replay = ReplayData {
-            mode: model.mode as i32,
-            keylog: keylog.clone(),
+        // Convert to ReplayData and JSON round-trip
+        let replay_keylog: Vec<ReplayKeyInputLog> = keylog
+            .iter()
+            .map(|k| ReplayKeyInputLog {
+                time: k.get_time(),
+                keycode: k.get_keycode(),
+                pressed: k.is_pressed(),
+            })
+            .collect();
+        let replay = ReplayData {
+            mode: model.get_mode().map(|m| m.key() as i32).unwrap_or(0),
+            keylog: replay_keylog,
             ..Default::default()
         };
-        let tmp = NamedTempFile::new().unwrap();
-        write_brd(&mut replay, tmp.path()).unwrap();
-        let loaded = read_brd(tmp.path()).unwrap();
+
+        let json = serde_json::to_string(&replay).unwrap();
+        let loaded: ReplayData = serde_json::from_str(&json).unwrap();
+
+        let loaded_keylog: Vec<beatoraja_input::key_input_log::KeyInputLog> = loaded
+            .keylog
+            .iter()
+            .map(|k| {
+                beatoraja_input::key_input_log::KeyInputLog::with_data(k.time, k.keycode, k.pressed)
+            })
+            .collect();
 
         // Re-simulate
-        let replayed = run_manual_simulation(&model, &loaded.keylog, GaugeType::Normal);
+        let replayed = run_manual_simulation(&model, &loaded_keylog, NORMAL);
 
         // Verify
         assert_eq!(
-            original.score.judge_count(JUDGE_PG),
-            replayed.score.judge_count(JUDGE_PG),
+            original.score.get_judge_count_total(JUDGE_PG),
+            replayed.score.get_judge_count_total(JUDGE_PG),
             "{filename}: PG mismatch after pipeline round-trip"
         );
         assert_eq!(
@@ -114,31 +149,34 @@ fn pipeline_judge_rank_affects_distribution() {
     // minimal_7k.bms has #RANK 2 (judgerank=75, moderate)
     // defexrank.bms has custom rank settings
     let model_rank2 = load_bms("minimal_7k.bms");
+    let jn = model_rank2.build_judge_notes();
+    let mode = model_rank2.get_mode().unwrap_or(&Mode::BEAT_7K);
 
     // At 25ms offset: RANK 2 → within GR window (40ms), outside PG (18ms)
-    let keylog_25ms = create_note_press_log(&model_rank2.notes, model_rank2.mode, 25_000);
-    let result_25ms = run_manual_simulation(&model_rank2, &keylog_25ms, GaugeType::Normal);
+    let keylog_25ms = create_note_press_log(&jn, mode, 25_000);
+    let result_25ms = run_manual_simulation(&model_rank2, &keylog_25ms, NORMAL);
 
     // At 0ms offset: all PG regardless of rank
-    let keylog_0ms = create_note_press_log(&model_rank2.notes, model_rank2.mode, 0);
-    let result_0ms = run_manual_simulation(&model_rank2, &keylog_0ms, GaugeType::Normal);
+    let keylog_0ms = create_note_press_log(&jn, mode, 0);
+    let result_0ms = run_manual_simulation(&model_rank2, &keylog_0ms, NORMAL);
 
     // 0ms should have more PG than 25ms
     assert!(
-        result_0ms.score.judge_count(JUDGE_PG) > result_25ms.score.judge_count(JUDGE_PG),
+        result_0ms.score.get_judge_count_total(JUDGE_PG)
+            > result_25ms.score.get_judge_count_total(JUDGE_PG),
         "0ms offset should have more PG ({}) than 25ms offset ({})",
-        result_0ms.score.judge_count(JUDGE_PG),
-        result_25ms.score.judge_count(JUDGE_PG)
+        result_0ms.score.get_judge_count_total(JUDGE_PG),
+        result_25ms.score.get_judge_count_total(JUDGE_PG)
     );
 
     // 0ms should have 0 GR, while 25ms should have GR > 0
     assert_eq!(
-        result_0ms.score.judge_count(bms_rule::JUDGE_GR),
+        result_0ms.score.get_judge_count_total(JUDGE_GR),
         0,
         "0ms should have no GR"
     );
     assert!(
-        result_25ms.score.judge_count(bms_rule::JUDGE_GR) > 0,
+        result_25ms.score.get_judge_count_total(JUDGE_GR) > 0,
         "25ms should have some GR"
     );
 }
@@ -152,15 +190,11 @@ fn pipeline_judge_rank_affects_distribution() {
 #[test]
 fn pipeline_cross_gauge_score_consistency() {
     let model = load_bms("minimal_7k.bms");
-    let keylog = create_note_press_log(&model.notes, model.mode, 0);
+    let jn = model.build_judge_notes();
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
+    let keylog = create_note_press_log(&jn, mode, 0);
 
-    let gauge_types = [
-        GaugeType::Normal,
-        GaugeType::Easy,
-        GaugeType::Hard,
-        GaugeType::ExHard,
-        GaugeType::AssistEasy,
-    ];
+    let gauge_types = [NORMAL, EASY, HARD, EXHARD, ASSISTEASY];
 
     let results: Vec<_> = gauge_types
         .iter()
@@ -168,12 +202,12 @@ fn pipeline_cross_gauge_score_consistency() {
         .collect();
 
     // All should have same PG count
-    let reference_pg = results[0].score.judge_count(JUDGE_PG);
+    let reference_pg = results[0].score.get_judge_count_total(JUDGE_PG);
     for (gt, result) in gauge_types.iter().zip(results.iter()) {
         assert_eq!(
-            result.score.judge_count(JUDGE_PG),
+            result.score.get_judge_count_total(JUDGE_PG),
             reference_pg,
-            "{gt:?}: PG count should match Normal's"
+            "{gt}: PG count should match Normal's"
         );
     }
 
@@ -182,7 +216,7 @@ fn pipeline_cross_gauge_score_consistency() {
     for (gt, result) in gauge_types.iter().zip(results.iter()) {
         assert_eq!(
             result.max_combo, reference_combo,
-            "{gt:?}: max combo should match Normal's"
+            "{gt}: max combo should match Normal's"
         );
     }
 
@@ -190,7 +224,7 @@ fn pipeline_cross_gauge_score_consistency() {
     for (gt, result) in gauge_types.iter().zip(results.iter()) {
         assert_eq!(
             result.ghost, results[0].ghost,
-            "{gt:?}: ghost should match Normal's"
+            "{gt}: ghost should match Normal's"
         );
     }
 }

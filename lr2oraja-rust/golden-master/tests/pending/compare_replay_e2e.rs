@@ -7,10 +7,16 @@
 
 use std::path::Path;
 
-use bms_model::{BmsDecoder, BmsModel, LaneProperty};
-use bms_rule::gauge_property::GaugeType;
-use bms_rule::judge_manager::{JudgeConfig, JudgeManager};
-use bms_rule::{GrooveGauge, JudgeAlgorithm, PlayerRule};
+use beatoraja_core::score_data::ScoreData;
+use beatoraja_play::bms_player_rule::BMSPlayerRule;
+use beatoraja_play::judge_algorithm::JudgeAlgorithm;
+use beatoraja_play::judge_manager::{JudgeConfig, JudgeManager};
+use beatoraja_play::lane_property::LaneProperty;
+use beatoraja_types::groove_gauge::GrooveGauge;
+use bms_model::bms_decoder::BMSDecoder;
+use bms_model::bms_model::{BMSModel, LNTYPE_LONGNOTE};
+use bms_model::chart_information::ChartInformation;
+use bms_model::mode::Mode;
 use golden_master::replay_e2e_fixtures::{ExpectedScore, ReplayE2EFixtures, ReplayE2ETestCase};
 
 #[path = "support/random_seeds.rs"]
@@ -34,35 +40,34 @@ fn test_bms_dir() -> &'static Path {
         .leak()
 }
 
-fn load_bms(filename: &str) -> BmsModel {
+fn load_bms(filename: &str) -> BMSModel {
     let path = test_bms_dir().join(filename);
-    if let Some(selected_randoms) =
-        random_seeds::try_load_selected_randoms(test_bms_dir(), filename)
-    {
-        BmsDecoder::decode_with_randoms(&path, &selected_randoms)
-            .unwrap_or_else(|e| panic!("Failed to parse {filename} with random seeds: {e}"))
-    } else {
-        BmsDecoder::decode(&path).unwrap_or_else(|e| panic!("Failed to parse {filename}: {e}"))
-    }
+    let randoms = random_seeds::try_load_selected_randoms(test_bms_dir(), filename);
+    let info = ChartInformation::new(Some(path), LNTYPE_LONGNOTE, randoms);
+    let mut model = BMSDecoder::new()
+        .decode(info)
+        .unwrap_or_else(|| panic!("Failed to parse {filename}"));
+    BMSPlayerRule::validate(&mut model);
+    model
 }
 
-fn parse_gauge_type(s: &str) -> GaugeType {
+fn parse_gauge_type(s: &str) -> i32 {
     match s {
-        "ASSIST_EASY" => GaugeType::AssistEasy,
-        "EASY" => GaugeType::Easy,
-        "NORMAL" => GaugeType::Normal,
-        "HARD" => GaugeType::Hard,
-        "EXHARD" => GaugeType::ExHard,
-        "HAZARD" => GaugeType::Hazard,
-        "CLASS" => GaugeType::Class,
-        "EXCLASS" => GaugeType::ExClass,
-        "EXHARDCLASS" => GaugeType::ExHardClass,
+        "ASSIST_EASY" => GrooveGauge::ASSISTEASY,
+        "EASY" => GrooveGauge::EASY,
+        "NORMAL" => GrooveGauge::NORMAL,
+        "HARD" => GrooveGauge::HARD,
+        "EXHARD" => GrooveGauge::EXHARD,
+        "HAZARD" => GrooveGauge::HAZARD,
+        "CLASS" => GrooveGauge::GRADE_NORMAL,
+        "EXCLASS" => GrooveGauge::GRADE_HARD,
+        "EXHARDCLASS" => GrooveGauge::GRADE_EXHARD,
         _ => panic!("Unknown gauge type: {s}"),
     }
 }
 
 struct SimResult {
-    score: bms_rule::ScoreData,
+    score: ScoreData,
     max_combo: i32,
     ghost: Vec<usize>,
     gauge_value: f32,
@@ -70,25 +75,16 @@ struct SimResult {
     pass_notes: i32,
 }
 
-fn run_simulation(model: &BmsModel, tc: &ReplayE2ETestCase) -> SimResult {
+fn run_simulation(model: &BMSModel, tc: &ReplayE2ETestCase) -> SimResult {
     let judge_notes = model.build_judge_notes();
-    let rule = PlayerRule::lr2();
-    let total_notes = judge_notes.iter().filter(|n| n.is_playable()).count();
-    let total = if model.total > 0.0 {
-        model.total
-    } else {
-        PlayerRule::default_total(total_notes)
-    };
+    let mode = model.get_mode().cloned().unwrap_or(Mode::BEAT_7K);
+    let rule = BMSPlayerRule::get_bms_player_rule(&mode);
 
-    let judge_rank = rule
-        .judge
-        .window_rule
-        .resolve_judge_rank(model.judge_rank, model.judge_rank_type);
     let config = JudgeConfig {
         notes: &judge_notes,
-        play_mode: model.mode,
-        ln_type: model.ln_type,
-        judge_rank,
+        mode: &mode,
+        ln_type: model.get_lntype(),
+        judge_rank: model.get_judgerank(),
         judge_window_rate: [100, 100, 100],
         scratch_judge_window_rate: [100, 100, 100],
         algorithm: JudgeAlgorithm::Combo,
@@ -98,11 +94,11 @@ fn run_simulation(model: &BmsModel, tc: &ReplayE2ETestCase) -> SimResult {
     };
 
     let gauge_type = parse_gauge_type(&tc.gauge_type);
-    let mut jm = JudgeManager::new(&config);
-    let mut gauge = GrooveGauge::new(&rule.gauge, gauge_type, total, total_notes);
+    let mut jm = JudgeManager::from_config(&config);
+    let mut gauge = GrooveGauge::new(model, gauge_type, &rule.gauge);
 
-    let lp = LaneProperty::new(model.mode);
-    let physical_key_count = lp.physical_key_count();
+    let lp = LaneProperty::new(&mode);
+    let physical_key_count = lp.get_key_lane_assign().len();
 
     // Prime JudgeManager: set prev_time to -1 so notes at time_us=0 are not skipped.
     let empty_states = vec![false; physical_key_count];
@@ -117,6 +113,7 @@ fn run_simulation(model: &BmsModel, tc: &ReplayE2ETestCase) -> SimResult {
     let end_time = last_note_time + TAIL_TIME;
 
     if tc.autoplay {
+        // Autoplay: run with empty key states
         let key_states = vec![false; physical_key_count];
         let key_times = vec![NOT_SET; physical_key_count];
         let mut time = 0i64;
@@ -125,6 +122,7 @@ fn run_simulation(model: &BmsModel, tc: &ReplayE2ETestCase) -> SimResult {
             time += FRAME_STEP;
         }
     } else {
+        // Manual: convert input_log to per-frame key states
         let mut sorted_log: Vec<&_> = tc.input_log.iter().collect();
         sorted_log.sort_by_key(|e| e.presstime);
 
@@ -135,6 +133,7 @@ fn run_simulation(model: &BmsModel, tc: &ReplayE2ETestCase) -> SimResult {
         while time <= end_time {
             let mut key_changed_times = vec![NOT_SET; physical_key_count];
 
+            // Input log uses lane indices (keycodes); map directly to physical key indices.
             while log_cursor < sorted_log.len() && sorted_log[log_cursor].presstime <= time {
                 let event = &sorted_log[log_cursor];
                 let key = event.keycode as usize;
@@ -160,13 +159,13 @@ fn run_simulation(model: &BmsModel, tc: &ReplayE2ETestCase) -> SimResult {
         score: jm.score().clone(),
         max_combo: jm.max_combo(),
         ghost: jm.ghost().to_vec(),
-        gauge_value: gauge.value(),
+        gauge_value: gauge.get_value(),
         gauge_qualified: gauge.is_qualified(),
         pass_notes: jm.past_notes(),
     }
 }
 
-fn compare_score(actual: &bms_rule::ScoreData, expected: &ExpectedScore) -> Vec<String> {
+fn compare_score(actual: &ScoreData, expected: &ExpectedScore) -> Vec<String> {
     let mut diffs = Vec::new();
     let fields = [
         ("epg", actual.epg, expected.epg),
@@ -181,7 +180,7 @@ fn compare_score(actual: &bms_rule::ScoreData, expected: &ExpectedScore) -> Vec<
         ("lpr", actual.lpr, expected.lpr),
         ("ems", actual.ems, expected.ems),
         ("lms", actual.lms, expected.lms),
-        ("score.maxcombo", actual.maxcombo, expected.maxcombo),
+        ("score.maxcombo", actual.combo, expected.maxcombo),
         ("score.passnotes", actual.passnotes, expected.passnotes),
     ];
     for (name, actual_val, expected_val) in fields {

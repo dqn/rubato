@@ -6,8 +6,9 @@
 //
 // All offsets are in microseconds (1ms = 1000us).
 
-use bms_rule::gauge_property::GaugeType;
-use bms_rule::{JUDGE_BD, JUDGE_GD, JUDGE_GR, JUDGE_MS, JUDGE_PG, JUDGE_PR};
+use beatoraja_types::groove_gauge::NORMAL;
+use bms_model::judge_note::{JUDGE_BD, JUDGE_GD, JUDGE_GR, JUDGE_MS, JUDGE_PG, JUDGE_PR};
+use bms_model::mode::Mode;
 use golden_master::e2e_helpers::*;
 
 // ============================================================================
@@ -18,18 +19,20 @@ use golden_master::e2e_helpers::*;
 #[test]
 fn boundary_17ms_all_pgreat() {
     let model = load_bms("minimal_7k.bms");
-    let normal = count_normal_notes(&model);
-    let log = create_note_press_log(&model.notes, model.mode, 17_000);
-    let result = run_manual_simulation(&model, &log, GaugeType::Normal);
+    let jn = model.build_judge_notes();
+    let normal = count_normal_notes(&jn);
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
+    let log = create_note_press_log(&jn, mode, 17_000);
+    let result = run_manual_simulation(&model, &log, NORMAL);
 
     let score = &result.score;
     assert_eq!(
-        score.judge_count(JUDGE_PG),
+        score.get_judge_count_total(JUDGE_PG),
         normal as i32,
         "17ms should be within PG window (PG={}, GR={}, GD={})",
-        score.judge_count(JUDGE_PG),
-        score.judge_count(JUDGE_GR),
-        score.judge_count(JUDGE_GD),
+        score.get_judge_count_total(JUDGE_PG),
+        score.get_judge_count_total(JUDGE_GR),
+        score.get_judge_count_total(JUDGE_GD),
     );
 }
 
@@ -37,20 +40,22 @@ fn boundary_17ms_all_pgreat() {
 #[test]
 fn boundary_19ms_no_pgreat() {
     let model = load_bms("minimal_7k.bms");
-    let log = create_note_press_log(&model.notes, model.mode, 19_000);
-    let result = run_manual_simulation(&model, &log, GaugeType::Normal);
+    let jn = model.build_judge_notes();
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
+    let log = create_note_press_log(&jn, mode, 19_000);
+    let result = run_manual_simulation(&model, &log, NORMAL);
 
     let score = &result.score;
     assert_eq!(
-        score.judge_count(JUDGE_PG),
+        score.get_judge_count_total(JUDGE_PG),
         0,
         "19ms should be outside PG window (PG={}, GR={}, GD={})",
-        score.judge_count(JUDGE_PG),
-        score.judge_count(JUDGE_GR),
-        score.judge_count(JUDGE_GD),
+        score.get_judge_count_total(JUDGE_PG),
+        score.get_judge_count_total(JUDGE_GR),
+        score.get_judge_count_total(JUDGE_GD),
     );
     assert!(
-        score.judge_count(JUDGE_GR) > 0,
+        score.get_judge_count_total(JUDGE_GR) > 0,
         "19ms should be within GR window"
     );
 }
@@ -63,20 +68,22 @@ fn boundary_19ms_no_pgreat() {
 #[test]
 fn boundary_39ms_all_great() {
     let model = load_bms("minimal_7k.bms");
-    let normal = count_normal_notes(&model);
-    let log = create_note_press_log(&model.notes, model.mode, 39_000);
-    let result = run_manual_simulation(&model, &log, GaugeType::Normal);
+    let jn = model.build_judge_notes();
+    let normal = count_normal_notes(&jn);
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
+    let log = create_note_press_log(&jn, mode, 39_000);
+    let result = run_manual_simulation(&model, &log, NORMAL);
 
     let score = &result.score;
-    let pg_gr = score.judge_count(JUDGE_PG) + score.judge_count(JUDGE_GR);
+    let pg_gr = score.get_judge_count_total(JUDGE_PG) + score.get_judge_count_total(JUDGE_GR);
     assert_eq!(
         pg_gr,
         normal as i32,
         "39ms should be within GR window (PG={}, GR={}, GD={}, BD={})",
-        score.judge_count(JUDGE_PG),
-        score.judge_count(JUDGE_GR),
-        score.judge_count(JUDGE_GD),
-        score.judge_count(JUDGE_BD),
+        score.get_judge_count_total(JUDGE_PG),
+        score.get_judge_count_total(JUDGE_GR),
+        score.get_judge_count_total(JUDGE_GD),
+        score.get_judge_count_total(JUDGE_BD),
     );
 }
 
@@ -84,20 +91,22 @@ fn boundary_39ms_all_great() {
 #[test]
 fn boundary_41ms_no_great() {
     let model = load_bms("minimal_7k.bms");
-    let log = create_note_press_log(&model.notes, model.mode, 41_000);
-    let result = run_manual_simulation(&model, &log, GaugeType::Normal);
+    let jn = model.build_judge_notes();
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
+    let log = create_note_press_log(&jn, mode, 41_000);
+    let result = run_manual_simulation(&model, &log, NORMAL);
 
     let score = &result.score;
     assert_eq!(
-        score.judge_count(JUDGE_PG) + score.judge_count(JUDGE_GR),
+        score.get_judge_count_total(JUDGE_PG) + score.get_judge_count_total(JUDGE_GR),
         0,
         "41ms should be outside GR window (PG={}, GR={}, GD={})",
-        score.judge_count(JUDGE_PG),
-        score.judge_count(JUDGE_GR),
-        score.judge_count(JUDGE_GD),
+        score.get_judge_count_total(JUDGE_PG),
+        score.get_judge_count_total(JUDGE_GR),
+        score.get_judge_count_total(JUDGE_GD),
     );
     assert!(
-        score.judge_count(JUDGE_GD) > 0,
+        score.get_judge_count_total(JUDGE_GD) > 0,
         "41ms should be within GD window"
     );
 }
@@ -110,22 +119,25 @@ fn boundary_41ms_no_great() {
 #[test]
 fn boundary_99ms_all_good() {
     let model = load_bms("minimal_7k.bms");
-    let normal = count_normal_notes(&model);
-    let log = create_note_press_log(&model.notes, model.mode, 99_000);
-    let result = run_manual_simulation(&model, &log, GaugeType::Normal);
+    let jn = model.build_judge_notes();
+    let normal = count_normal_notes(&jn);
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
+    let log = create_note_press_log(&jn, mode, 99_000);
+    let result = run_manual_simulation(&model, &log, NORMAL);
 
     let score = &result.score;
-    let pg_gr_gd =
-        score.judge_count(JUDGE_PG) + score.judge_count(JUDGE_GR) + score.judge_count(JUDGE_GD);
+    let pg_gr_gd = score.get_judge_count_total(JUDGE_PG)
+        + score.get_judge_count_total(JUDGE_GR)
+        + score.get_judge_count_total(JUDGE_GD);
     assert_eq!(
         pg_gr_gd,
         normal as i32,
         "99ms should be within GD window (PG={}, GR={}, GD={}, BD={}, PR={})",
-        score.judge_count(JUDGE_PG),
-        score.judge_count(JUDGE_GR),
-        score.judge_count(JUDGE_GD),
-        score.judge_count(JUDGE_BD),
-        score.judge_count(JUDGE_PR),
+        score.get_judge_count_total(JUDGE_PG),
+        score.get_judge_count_total(JUDGE_GR),
+        score.get_judge_count_total(JUDGE_GD),
+        score.get_judge_count_total(JUDGE_BD),
+        score.get_judge_count_total(JUDGE_PR),
     );
 }
 
@@ -133,21 +145,25 @@ fn boundary_99ms_all_good() {
 #[test]
 fn boundary_101ms_no_good() {
     let model = load_bms("minimal_7k.bms");
-    let log = create_note_press_log(&model.notes, model.mode, 101_000);
-    let result = run_manual_simulation(&model, &log, GaugeType::Normal);
+    let jn = model.build_judge_notes();
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
+    let log = create_note_press_log(&jn, mode, 101_000);
+    let result = run_manual_simulation(&model, &log, NORMAL);
 
     let score = &result.score;
     assert_eq!(
-        score.judge_count(JUDGE_PG) + score.judge_count(JUDGE_GR) + score.judge_count(JUDGE_GD),
+        score.get_judge_count_total(JUDGE_PG)
+            + score.get_judge_count_total(JUDGE_GR)
+            + score.get_judge_count_total(JUDGE_GD),
         0,
         "101ms should be outside GD window (PG={}, GR={}, GD={}, BD={})",
-        score.judge_count(JUDGE_PG),
-        score.judge_count(JUDGE_GR),
-        score.judge_count(JUDGE_GD),
-        score.judge_count(JUDGE_BD),
+        score.get_judge_count_total(JUDGE_PG),
+        score.get_judge_count_total(JUDGE_GR),
+        score.get_judge_count_total(JUDGE_GD),
+        score.get_judge_count_total(JUDGE_BD),
     );
     assert!(
-        score.judge_count(JUDGE_BD) > 0 || score.judge_count(JUDGE_PR) > 0,
+        score.get_judge_count_total(JUDGE_BD) > 0 || score.get_judge_count_total(JUDGE_PR) > 0,
         "101ms should be in BD/PR window"
     );
 }
@@ -160,17 +176,19 @@ fn boundary_101ms_no_good() {
 #[test]
 fn boundary_199ms_not_miss() {
     let model = load_bms("minimal_7k.bms");
-    let log = create_note_press_log(&model.notes, model.mode, 199_000);
-    let result = run_manual_simulation(&model, &log, GaugeType::Normal);
+    let jn = model.build_judge_notes();
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
+    let log = create_note_press_log(&jn, mode, 199_000);
+    let result = run_manual_simulation(&model, &log, NORMAL);
 
     let score = &result.score;
     assert_eq!(
-        score.judge_count(JUDGE_MS),
+        score.get_judge_count_total(JUDGE_MS),
         0,
         "199ms should not be MISS (BD={}, PR={}, MS={})",
-        score.judge_count(JUDGE_BD),
-        score.judge_count(JUDGE_PR),
-        score.judge_count(JUDGE_MS),
+        score.get_judge_count_total(JUDGE_BD),
+        score.get_judge_count_total(JUDGE_PR),
+        score.get_judge_count_total(JUDGE_MS),
     );
 }
 
@@ -178,23 +196,26 @@ fn boundary_199ms_not_miss() {
 #[test]
 fn boundary_201ms_all_miss() {
     let model = load_bms("minimal_7k.bms");
-    let log = create_note_press_log(&model.notes, model.mode, 201_000);
-    let result = run_manual_simulation(&model, &log, GaugeType::Normal);
+    let jn = model.build_judge_notes();
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
+    let log = create_note_press_log(&jn, mode, 201_000);
+    let result = run_manual_simulation(&model, &log, NORMAL);
 
     let score = &result.score;
-    let total = score.total_judge_count();
-    let miss_count = score.judge_count(JUDGE_PR) + score.judge_count(JUDGE_MS);
+    let total: i32 = (0..6).map(|j| score.get_judge_count_total(j)).sum();
+    let miss_count =
+        score.get_judge_count_total(JUDGE_PR) + score.get_judge_count_total(JUDGE_MS);
     // At 201ms, key presses are beyond BD window, so notes pass without being hit
     assert_eq!(
         miss_count,
         total,
         "201ms should result in all MISS/PR (PG={}, GR={}, GD={}, BD={}, PR={}, MS={})",
-        score.judge_count(JUDGE_PG),
-        score.judge_count(JUDGE_GR),
-        score.judge_count(JUDGE_GD),
-        score.judge_count(JUDGE_BD),
-        score.judge_count(JUDGE_PR),
-        score.judge_count(JUDGE_MS),
+        score.get_judge_count_total(JUDGE_PG),
+        score.get_judge_count_total(JUDGE_GR),
+        score.get_judge_count_total(JUDGE_GD),
+        score.get_judge_count_total(JUDGE_BD),
+        score.get_judge_count_total(JUDGE_PR),
+        score.get_judge_count_total(JUDGE_MS),
     );
 }
 
@@ -206,30 +227,32 @@ fn boundary_201ms_all_miss() {
 #[test]
 fn early_late_symmetry_25ms() {
     let model = load_bms("minimal_7k.bms");
+    let jn = model.build_judge_notes();
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
 
-    let late_log = create_note_press_log(&model.notes, model.mode, 25_000);
-    let early_log = create_note_press_log(&model.notes, model.mode, -25_000);
+    let late_log = create_note_press_log(&jn, mode, 25_000);
+    let early_log = create_note_press_log(&jn, mode, -25_000);
 
-    let late_result = run_manual_simulation(&model, &late_log, GaugeType::Normal);
-    let early_result = run_manual_simulation(&model, &early_log, GaugeType::Normal);
+    let late_result = run_manual_simulation(&model, &late_log, NORMAL);
+    let early_result = run_manual_simulation(&model, &early_log, NORMAL);
 
     let late_score = &late_result.score;
     let early_score = &early_result.score;
 
     // Both should have same PG/GR distribution (within GR window)
     assert_eq!(
-        early_score.judge_count(JUDGE_PG),
-        late_score.judge_count(JUDGE_PG),
+        early_score.get_judge_count_total(JUDGE_PG),
+        late_score.get_judge_count_total(JUDGE_PG),
         "PG count should be symmetric: early={}, late={}",
-        early_score.judge_count(JUDGE_PG),
-        late_score.judge_count(JUDGE_PG),
+        early_score.get_judge_count_total(JUDGE_PG),
+        late_score.get_judge_count_total(JUDGE_PG),
     );
     assert_eq!(
-        early_score.judge_count(JUDGE_GR),
-        late_score.judge_count(JUDGE_GR),
+        early_score.get_judge_count_total(JUDGE_GR),
+        late_score.get_judge_count_total(JUDGE_GR),
         "GR count should be symmetric: early={}, late={}",
-        early_score.judge_count(JUDGE_GR),
-        late_score.judge_count(JUDGE_GR),
+        early_score.get_judge_count_total(JUDGE_GR),
+        late_score.get_judge_count_total(JUDGE_GR),
     );
 }
 
@@ -237,22 +260,24 @@ fn early_late_symmetry_25ms() {
 #[test]
 fn early_late_symmetry_50ms() {
     let model = load_bms("minimal_7k.bms");
+    let jn = model.build_judge_notes();
+    let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
 
-    let late_log = create_note_press_log(&model.notes, model.mode, 50_000);
-    let early_log = create_note_press_log(&model.notes, model.mode, -50_000);
+    let late_log = create_note_press_log(&jn, mode, 50_000);
+    let early_log = create_note_press_log(&jn, mode, -50_000);
 
-    let late_result = run_manual_simulation(&model, &late_log, GaugeType::Normal);
-    let early_result = run_manual_simulation(&model, &early_log, GaugeType::Normal);
+    let late_result = run_manual_simulation(&model, &late_log, NORMAL);
+    let early_result = run_manual_simulation(&model, &early_log, NORMAL);
 
     let late_score = &late_result.score;
     let early_score = &early_result.score;
 
     // Both should have same GD distribution (within GD window)
     assert_eq!(
-        early_score.judge_count(JUDGE_GD),
-        late_score.judge_count(JUDGE_GD),
+        early_score.get_judge_count_total(JUDGE_GD),
+        late_score.get_judge_count_total(JUDGE_GD),
         "GD count should be symmetric: early={}, late={}",
-        early_score.judge_count(JUDGE_GD),
-        late_score.judge_count(JUDGE_GD),
+        early_score.get_judge_count_total(JUDGE_GD),
+        late_score.get_judge_count_total(JUDGE_GD),
     );
 }
