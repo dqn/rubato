@@ -4,9 +4,11 @@
 use beatoraja_core::config::Config;
 use beatoraja_core::ir_config::IRConfig;
 use beatoraja_core::player_config::PlayerConfig;
+use beatoraja_skin::skin_type::SkinType;
 use bms_model::mode::Mode;
 
 use crate::play_configuration_view::PlayMode;
+use crate::skin_configuration_view::{SkinConfigItem, SkinConfigurationView};
 
 /// Tab selection for the launcher UI.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -80,6 +82,8 @@ pub struct LauncherUi {
     ir_password_buf: String,
     /// Previous IR index to detect slot switches.
     ir_prev_index: Option<usize>,
+    /// Skin configuration sub-view (skin type/header selection + custom options).
+    skin_view: SkinConfigurationView,
 }
 
 impl LauncherUi {
@@ -88,6 +92,11 @@ impl LauncherUi {
             .playername
             .clone()
             .unwrap_or_else(|| "default".to_string());
+        // Initialize skin configuration view: scan filesystem + load player config
+        let mut skin_view = SkinConfigurationView::new();
+        skin_view.initialize();
+        skin_view.update_config(&config);
+        skin_view.update_player(&player);
         Self {
             config,
             player,
@@ -99,6 +108,7 @@ impl LauncherUi {
             ir_userid_buf: String::new(),
             ir_password_buf: String::new(),
             ir_prev_index: None,
+            skin_view,
         }
     }
 
@@ -360,33 +370,144 @@ impl LauncherUi {
     }
 
     /// Java equivalent: SkinConfigurationView
-    /// Skin type selection and customization.
+    /// Skin type selection, skin header browsing, and custom options/files/offsets.
     fn render_skin_tab(&mut self, ui: &mut egui::Ui) {
         ui.heading("Skin Configuration");
-
-        let skin_count = self.player.skin.iter().filter(|s| s.is_some()).count();
-        ui.label(format!("{} skin slot(s) configured", skin_count));
-
-        ui.separator();
 
         ui.checkbox(&mut self.config.cache_skin_image, "Cache Skin Image (CIM)");
 
         ui.separator();
 
-        // Show configured skin slots
-        for (i, skin_opt) in self.player.skin.iter().enumerate() {
-            if let Some(skin) = skin_opt {
-                ui.horizontal(|ui| {
-                    ui.label(format!("Slot {}:", i));
-                    match &skin.path {
-                        Some(path) if !path.is_empty() => {
-                            ui.label(path);
-                        }
-                        _ => {
-                            ui.label("(no skin selected)");
-                        }
+        // Skin type selector
+        let skin_types = SkinType::values();
+        let current_type = self
+            .skin_view
+            .get_skintype_selector()
+            .unwrap_or(SkinType::Play7Keys);
+        let selected_text = SkinConfigurationView::skin_type_display_name(&current_type);
+        ui.horizontal(|ui| {
+            ui.label("Category:");
+            let mut new_type = current_type;
+            egui::ComboBox::from_id_salt("skin_type_selector")
+                .selected_text(selected_text)
+                .show_ui(ui, |ui| {
+                    for st in &skin_types {
+                        ui.selectable_value(
+                            &mut new_type,
+                            *st,
+                            SkinConfigurationView::skin_type_display_name(st),
+                        );
                     }
                 });
+            if new_type != current_type {
+                self.skin_view.set_skintype_selector(new_type);
+                self.skin_view.change_skin_type();
+            }
+        });
+
+        // Skin header selector
+        let headers = self.skin_view.get_current_headers().to_owned();
+        let header_count = headers.len();
+        let selected_idx = self.skin_view.get_skinheader_selector();
+        ui.horizontal(|ui| {
+            ui.label("Skin:");
+            if header_count == 0 {
+                ui.label("(no skins found)");
+            } else {
+                let display = selected_idx
+                    .and_then(|i| headers.get(i))
+                    .map(SkinConfigurationView::skin_header_display_name)
+                    .unwrap_or_else(|| "(none)".to_string());
+                let mut new_idx = selected_idx.unwrap_or(0);
+                egui::ComboBox::from_id_salt("skin_header_selector")
+                    .selected_text(display)
+                    .show_ui(ui, |ui| {
+                        for (i, header) in headers.iter().enumerate() {
+                            let name = SkinConfigurationView::skin_header_display_name(header);
+                            ui.selectable_value(&mut new_idx, i, name);
+                        }
+                    });
+                if Some(new_idx) != selected_idx {
+                    self.skin_view.set_skinheader_selector(new_idx);
+                    self.skin_view.change_skin_header();
+                }
+            }
+        });
+
+        ui.separator();
+
+        // Render dynamic skin config items (options, files, offsets)
+        let items = self.skin_view.get_skinconfig_items_mut();
+        for item in items.iter_mut() {
+            match item {
+                SkinConfigItem::Label(text) => {
+                    if text.is_empty() {
+                        ui.add_space(4.0);
+                    } else {
+                        ui.label(egui::RichText::new(text.as_str()).strong());
+                    }
+                }
+                SkinConfigItem::Option {
+                    name,
+                    items: combo_items,
+                    selected_index,
+                } => {
+                    ui.horizontal(|ui| {
+                        ui.label(format!("{}:", name));
+                        let display = combo_items
+                            .get(*selected_index)
+                            .cloned()
+                            .unwrap_or_default();
+                        egui::ComboBox::from_id_salt(format!("skin_opt_{}", name))
+                            .selected_text(display)
+                            .show_ui(ui, |ui| {
+                                for (i, label) in combo_items.iter().enumerate() {
+                                    ui.selectable_value(selected_index, i, label.as_str());
+                                }
+                            });
+                    });
+                }
+                SkinConfigItem::File {
+                    name,
+                    items: combo_items,
+                    selected_value,
+                } => {
+                    ui.horizontal(|ui| {
+                        ui.label(format!("{}:", name));
+                        let display = selected_value.clone().unwrap_or_default();
+                        let mut new_val = display.clone();
+                        egui::ComboBox::from_id_salt(format!("skin_file_{}", name))
+                            .selected_text(&display)
+                            .show_ui(ui, |ui| {
+                                for label in combo_items.iter() {
+                                    ui.selectable_value(
+                                        &mut new_val,
+                                        label.clone(),
+                                        label.as_str(),
+                                    );
+                                }
+                            });
+                        if new_val != display {
+                            *selected_value = Some(new_val);
+                        }
+                    });
+                }
+                SkinConfigItem::Offset {
+                    name,
+                    values,
+                    enabled,
+                } => {
+                    ui.horizontal(|ui| {
+                        ui.label(format!("{}:", name));
+                        let labels = ["x", "y", "w", "h", "r", "a"];
+                        for (i, &label) in labels.iter().enumerate() {
+                            if enabled[i] {
+                                ui.label(label);
+                                ui.add(egui::DragValue::new(&mut values[i]).range(-9999..=9999));
+                            }
+                        }
+                    });
+                }
             }
         }
     }
@@ -640,6 +761,12 @@ impl LauncherUi {
         self.config.playername = Some(self.player_name.clone());
         // Flush IR userid/password buffers (triggers AES encryption)
         self.flush_ir_buffers();
+        // Commit skin configuration (saves to player.skin + skin_history)
+        self.skin_view.commit();
+        if let Some(updated_player) = self.skin_view.get_player() {
+            self.player.skin = updated_player.skin.clone();
+            self.player.skin_history = updated_player.skin_history.clone();
+        }
         if let Err(e) = Config::write(&self.config) {
             log::error!("Failed to save config: {}", e);
         }

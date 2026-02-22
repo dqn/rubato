@@ -77,7 +77,7 @@ All phases complete. 936 tests pass. Zero runtime `todo!()`/`unimplemented!()`.
 | 13a–e, 13g | Real implementations: wgpu rendering, Kira audio, mlua, ffmpeg-next, midir, cpal |
 | 13f | egui UI: EguiIntegration (egui-wgpu 0.31), LauncherApp + BeatorajaApp event loops, 10 modmenu widgets, LauncherUi 11 tabs (all wired), winit monitor enumeration |
 | 13f follow-up | LauncherUi 6 placeholder tabs wired to Config/PlayerConfig fields (Input, Skin, Other, IR, Stream, OBS). Dead `show(&mut ImBoolean)` removed from 9 modmenu sub-menus |
-| 13f follow-up 2 | `commit_config()` persists both Config + PlayerConfig. IR tab uses AES-encrypted get/set for userid/password with egui decrypted buffers |
+| 13f follow-up 2 | `commit_config()` persists Config + PlayerConfig. IR tab AES-encrypted get/set with egui buffers. Skin tab: full `SkinConfigurationView` integration (type/header selectors, CustomOption/File/Offset widgets, history). Input tab confirmed complete vs Java |
 | 16a–c | Tests: 715 unit + 121 golden master + 32 integration (compare_rule + compare_pattern reactivated with Java LCG fix) |
 | 17 | Verified zero runtime todo!/unimplemented! |
 | 18 | Post-Phase 13 lifecycle wiring (pending) |

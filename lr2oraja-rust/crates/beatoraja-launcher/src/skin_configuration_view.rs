@@ -105,6 +105,36 @@ impl SkinConfigurationView {
         }
     }
 
+    // ---- Accessors for egui integration ----
+
+    pub fn get_skintype_selector(&self) -> Option<SkinType> {
+        self.skintype_selector
+    }
+
+    pub fn set_skintype_selector(&mut self, skin_type: SkinType) {
+        self.skintype_selector = Some(skin_type);
+    }
+
+    pub fn get_current_headers(&self) -> &[SkinHeader] {
+        &self.current_headers
+    }
+
+    pub fn get_skinheader_selector(&self) -> Option<usize> {
+        self.skinheader_selector
+    }
+
+    pub fn set_skinheader_selector(&mut self, index: usize) {
+        self.skinheader_selector = Some(index);
+    }
+
+    pub fn get_skinconfig_items_mut(&mut self) -> &mut Vec<SkinConfigItem> {
+        &mut self.skinconfig_items
+    }
+
+    pub fn get_player(&self) -> Option<&PlayerConfig> {
+        self.player.as_ref()
+    }
+
     /// Translates: initialize(URL, ResourceBundle)
     pub fn initialize(&mut self) {
         // skintypeSelector.setCellFactory((param) -> new SkinTypeCell());

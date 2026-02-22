@@ -4,7 +4,7 @@ Dependency graph order. Each module is ported only after its dependencies are co
 
 ## Completed Phases
 
-Phases 1–12, 13a–f, 13f follow-up, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 936 tests pass. Zero runtime `todo!()`/`unimplemented!()`. See AGENTS.md for details.
+Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 936 tests pass. Zero runtime `todo!()`/`unimplemented!()`. See AGENTS.md for details.
 
 ## Phase 13f: egui UI (complete)
 
@@ -16,12 +16,12 @@ Phases 1–12, 13a–f, 13f follow-up, 13g, 14, 15a–g, 16a, 16c, 17 — all co
 - [x] Wire remaining LauncherUi tabs to PlayConfigurationView fields — All 11 tabs now functional: Input (keyboard duration, controller JKOC/analog scratch, mouse scratch), Skin (slot display, CIM toggle), Other (IPFS, HTTP download, clipboard screenshot), IR (multi-slot config with name/userid/password/send mode/import), Stream (enable/notify/max request), OBS (WebSocket enable/host/port/password/recording mode/stop wait). All read/write Config and PlayerConfig fields directly.
 - [x] Remove dead legacy `show()` methods in modmenu — Deleted old `show(&mut ImBoolean)` from 9 sub-menus (freq_trainer, judge_trainer, random_trainer, song_manager, download_task, skin_menu, skin_widget_manager, performance_monitor, misc_setting). Cleaned up unused `ImBoolean`/`imgui_renderer` imports where safe.
 
-## Phase 13f follow-up 2: LauncherUi fixes
+## Phase 13f follow-up 2: LauncherUi fixes (complete)
 
 - [x] Fix `commit_config()` to also persist PlayerConfig — now calls both `Config::write()` and `PlayerConfig::write(&config.playerpath, &player)` matching Java `PlayConfigurationView.commit()` + `commitPlayer()`
 - [x] Use `IRConfig::get_userid()`/`set_userid()` and `get_password()`/`set_password()` in IR tab — added decrypted buffers (`ir_userid_buf`/`ir_password_buf`) for egui text editing; flush via `set_userid`/`set_password` (triggers AES encryption) on IR slot switch and commit. Password field uses `egui::TextEdit::password(true)`
-- [ ] Add skin browsing UI to Skin tab — currently shows slot paths only; Java `SkinConfigurationView` has skin type selector, header list from filesystem scan, and dynamic customization options (CustomOption/CustomFile/CustomOffset)
-- [ ] Add key binding editing grid to Input tab — currently shows controller settings only; Java `InputConfigurationView` has a full key assignment table per mode with keyboard/controller/MIDI columns
+- [x] Add skin browsing UI to Skin tab — integrated `SkinConfigurationView` into `LauncherUi`: skin type ComboBox (19 types), skin header ComboBox (filesystem-scanned skins), dynamic CustomOption/CustomFile/CustomOffset egui widgets, history-aware save/restore on type/header switch, commit persists to `player.skin`/`skin_history`
+- [x] ~~Add key binding editing grid to Input tab~~ — NOT NEEDED: Java `InputConfigurationView` is a settings panel (mode, duration, controller table, mouse scratch) which is already fully implemented in Rust. The per-key binding grid is in separate `KeyConfiguration` game-state class, not part of the launcher UI
 
 ## Phase 16b: Golden Master Test Activation (incomplete)
 
