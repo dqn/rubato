@@ -18,9 +18,7 @@ pub mod pattern_modifier_detail_fixtures;
 pub mod replay_e2e_fixtures;
 pub mod rule_fixtures;
 pub mod score_data_property_fixtures;
-// skin_fixtures depends on beatoraja-skin internal APIs (Skin, SkinObjectType, etc.).
-// Moved to src/pending/.
-// pub mod skin_fixtures;
+pub mod skin_fixtures;
 pub mod song_information_fixtures;
 
 use std::path::Path;
