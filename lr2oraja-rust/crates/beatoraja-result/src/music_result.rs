@@ -18,9 +18,8 @@ use crate::abstract_result::{
 use crate::music_result_skin::MusicResultSkin;
 use crate::result_key_property::{ResultKey, ResultKeyProperty};
 use crate::stubs::{
-    BMSPlayerModeType, ControlKeys, EventType, FloatArray, IRConfig, IRSendStatusMain, IRStatus,
-    KeyCommand, MainController, PlayerResource, RankingData, is_freq_negative,
-    is_freq_trainer_enabled,
+    BMSPlayerModeType, ControlKeys, EventType, IRConfig, IRSendStatusMain, IRStatus, KeyCommand,
+    MainController, PlayerResource, RankingData, is_freq_negative, is_freq_trainer_enabled,
 };
 use beatoraja_core::ir_config::{IR_SEND_ALWAYS, IR_SEND_COMPLETE_SONG, IR_SEND_UPDATE_SCORE};
 
@@ -77,11 +76,16 @@ impl MusicResult {
         if resource.get_course_bms_models().is_some() {
             let replay_clone = resource.get_replay_data().clone();
             resource.add_course_replay(&replay_clone);
-            let gauge_clone: Vec<_> = resource.get_gauge().to_vec();
-            resource.add_course_gauge(&gauge_clone);
+            if let Some(gauge) = resource.get_gauge() {
+                let gauge_clone = gauge.clone();
+                resource.add_course_gauge(gauge_clone);
+            }
         }
 
-        self.data.gauge_type = resource.get_groove_gauge().get_type();
+        self.data.gauge_type = resource
+            .get_groove_gauge()
+            .map(|g| g.get_type())
+            .unwrap_or(0);
 
         // loadSkin(SkinType.RESULT);
         log::warn!("not yet implemented: loadSkin(SkinType.RESULT)");
@@ -113,9 +117,12 @@ impl MusicResult {
                 match irc.config.get_irsend() {
                     IR_SEND_ALWAYS => {}
                     IR_SEND_COMPLETE_SONG => {
-                        let gauge =
-                            &resource.get_gauge()[resource.get_groove_gauge().get_type() as usize];
-                        send &= gauge.get(gauge.size - 1) > 0.0;
+                        if let (Some(gauge_data), Some(groove_gauge)) =
+                            (resource.get_gauge(), resource.get_groove_gauge())
+                        {
+                            let gauge = &gauge_data[groove_gauge.get_type() as usize];
+                            send &= gauge.last().copied().unwrap_or(0.0) > 0.0;
+                        }
                     }
                     IR_SEND_UPDATE_SCORE => {
                         if let Some(ref ns) = newscore_clone {
@@ -397,9 +404,16 @@ impl MusicResult {
                 cs.minbp += newscore.minbp;
                 cs.total_duration += newscore.total_duration;
 
-                let gauge_type = resource.get_groove_gauge().get_type() as usize;
-                let gauge = &resource.get_gauge()[gauge_type];
-                if gauge.get(gauge.size - 1) > 0.0 {
+                let gauge_type = resource
+                    .get_groove_gauge()
+                    .map(|g| g.get_type() as usize)
+                    .unwrap_or(0);
+                let last_gauge_val = resource
+                    .get_gauge()
+                    .and_then(|gd| gd.get(gauge_type))
+                    .and_then(|g| g.last().copied())
+                    .unwrap_or(0.0);
+                if last_gauge_val > 0.0 {
                     if resource.get_assist() > 0 {
                         if resource.get_assist() == 1 && cs.clear != ClearType::AssistEasy.id() {
                             cs.clear = ClearType::LightAssistEasy.id();
@@ -426,7 +440,11 @@ impl MusicResult {
                                 cs.clear = ClearType::FullCombo.id();
                             }
                         } else {
-                            cs.clear = resource.get_groove_gauge().get_clear_type().id();
+                            cs.clear = resource
+                                .get_groove_gauge()
+                                .map(|g| g.get_clear_type())
+                                .unwrap_or(ClearType::Failed)
+                                .id();
                         }
                     }
                 } else {

@@ -17,8 +17,8 @@ use crate::result_key_property::{ResultKey, ResultKeyProperty};
 use std::sync::Arc;
 
 use crate::stubs::{
-    BMSPlayerModeType, ControlKeys, EventType, FloatArray, IRConfig, IRConnection, IRCourseData,
-    IRScoreData, IRStatus, KeyCommand, MainController, PlayerResource, RankingData,
+    BMSPlayerModeType, ControlKeys, EventType, IRConfig, IRConnection, IRCourseData, IRScoreData,
+    IRStatus, KeyCommand, MainController, PlayerResource, RankingData,
 };
 use beatoraja_core::ir_config::{IR_SEND_ALWAYS, IR_SEND_COMPLETE_SONG, IR_SEND_UPDATE_SCORE};
 
@@ -102,25 +102,25 @@ impl CourseResult {
 
         // Fill missing course gauge data
         // Collect data first to avoid borrow conflicts
-        let mut gauge_fill_data: Vec<Vec<FloatArray>> = Vec::new();
+        let mut gauge_fill_data: Vec<Vec<Vec<f32>>> = Vec::new();
         if let Some(models) = resource.get_course_bms_models() {
-            let course_gauge_size = resource.get_course_gauge().size;
-            let gauge_type_length = resource.get_groove_gauge().get_gauge_type_length();
+            let course_gauge_size = resource.get_course_gauge().len();
+            let gauge_type_length = resource
+                .get_groove_gauge()
+                .map(|g| g.get_gauge_type_length())
+                .unwrap_or(9);
             for i in course_gauge_size..models.len() {
-                let mut list: Vec<FloatArray> = Vec::with_capacity(gauge_type_length);
+                let mut list: Vec<Vec<f32>> = Vec::with_capacity(gauge_type_length);
                 for _type_idx in 0..gauge_type_length {
-                    let mut fa = FloatArray::new();
                     let last_note_time = models[i].get_last_note_time();
-                    for _l in 0..((last_note_time + 500) / 500) {
-                        fa.add(0.0);
-                    }
+                    let fa = vec![0.0f32; ((last_note_time + 500) / 500) as usize];
                     list.push(fa);
                 }
                 gauge_fill_data.push(list);
             }
         }
         for list in gauge_fill_data {
-            resource.get_course_gauge_mut().add(list);
+            resource.get_course_gauge_mut().push(list);
         }
 
         if let Some(mode) = resource.get_bms_model().get_mode() {
@@ -145,7 +145,10 @@ impl CourseResult {
             }
         }
 
-        self.data.gauge_type = resource.get_groove_gauge().get_type();
+        self.data.gauge_type = resource
+            .get_groove_gauge()
+            .map(|g| g.get_type())
+            .unwrap_or(0);
 
         // loadSkin(SkinType.COURSE_RESULT);
         log::warn!("not yet implemented: loadSkin(SkinType.COURSE_RESULT)");

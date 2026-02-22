@@ -242,105 +242,10 @@ impl BMSPlayerInputProcessor {
     }
 }
 
-// ============================================================
-// GrooveGauge stub
-// ============================================================
+// GrooveGauge: replaced by real type from beatoraja-types
+pub use beatoraja_types::groove_gauge::GrooveGauge;
 
-/// Stub for bms.player.beatoraja.play.GrooveGauge
-pub struct GrooveGaugeStub {
-    pub gauge_type: i32,
-}
-
-impl GrooveGaugeStub {
-    pub fn get_type(&self) -> i32 {
-        self.gauge_type
-    }
-
-    pub fn get_gauge_type_length(&self) -> usize {
-        9
-    }
-
-    pub fn get_gauge(&self, _gauge_type: i32) -> &beatoraja_play::groove_gauge::Gauge {
-        log::warn!("not yet implemented: GrooveGauge.getGauge");
-        static DEFAULT: std::sync::OnceLock<beatoraja_play::groove_gauge::Gauge> =
-            std::sync::OnceLock::new();
-        DEFAULT.get_or_init(|| {
-            let model = bms_model::bms_model::BMSModel::default();
-            let element = beatoraja_types::gauge_property::GaugeElementProperty {
-                modifier: None,
-                value: vec![0.0; 6],
-                min: 0.0,
-                max: 100.0,
-                init: 0.0,
-                border: 80.0,
-                death: 0.0,
-                guts: Vec::new(),
-            };
-            beatoraja_play::groove_gauge::Gauge::new(
-                &model,
-                element,
-                beatoraja_core::clear_type::ClearType::Failed,
-            )
-        })
-    }
-
-    pub fn get_clear_type(&self) -> beatoraja_core::clear_type::ClearType {
-        log::warn!("not yet implemented: GrooveGauge.getClearType");
-        beatoraja_core::clear_type::ClearType::Failed
-    }
-}
-
-// ============================================================
-// GdxArray (LibGDX) stub
-// ============================================================
-
-/// Stub for com.badlogic.gdx.utils.Array<T>
-pub struct GdxArray<T> {
-    pub items: Vec<T>,
-    pub size: usize,
-}
-
-impl<T> GdxArray<T> {
-    pub fn new() -> Self {
-        Self {
-            items: Vec::new(),
-            size: 0,
-        }
-    }
-
-    pub fn add(&mut self, value: T) {
-        self.items.push(value);
-        self.size = self.items.len();
-    }
-
-    pub fn get(&self, index: usize) -> &T {
-        &self.items[index]
-    }
-}
-
-impl<T> Default for GdxArray<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a, T> IntoIterator for &'a GdxArray<T> {
-    type Item = &'a T;
-    type IntoIter = std::slice::Iter<'a, T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.items.iter()
-    }
-}
-
-impl<'a, T> IntoIterator for &'a mut GdxArray<T> {
-    type Item = &'a mut T;
-    type IntoIter = std::slice::IterMut<'a, T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.items.iter_mut()
-    }
-}
+// GdxArray: replaced by Vec<T> — callers updated to use Vec directly
 
 // ============================================================
 // PlayerResource stub
@@ -381,9 +286,9 @@ impl PlayerResource {
         &self.play_mode
     }
 
-    pub fn get_gauge(&self) -> &[FloatArray] {
+    pub fn get_gauge(&self) -> Option<&Vec<Vec<f32>>> {
         log::warn!("not yet implemented: PlayerResource.getGauge");
-        &[]
+        None
     }
 
     pub fn get_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
@@ -444,7 +349,7 @@ impl PlayerResource {
         // stub
     }
 
-    pub fn add_course_gauge(&mut self, _gauge: &[FloatArray]) {
+    pub fn add_course_gauge(&mut self, _gauge: Vec<Vec<f32>>) {
         // stub
     }
 
@@ -509,22 +414,21 @@ impl PlayerResource {
         false
     }
 
-    pub fn get_groove_gauge(&self) -> &GrooveGaugeStub {
+    pub fn get_groove_gauge(&self) -> Option<&GrooveGauge> {
         log::warn!("not yet implemented: PlayerResource.getGrooveGauge");
-        static DEFAULT: GrooveGaugeStub = GrooveGaugeStub { gauge_type: 0 };
-        &DEFAULT
+        None
     }
 
-    pub fn get_course_gauge(&self) -> &GdxArray<Vec<FloatArray>> {
+    pub fn get_course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
         log::warn!("not yet implemented: PlayerResource.getCourseGauge");
-        static DEFAULT: std::sync::OnceLock<GdxArray<Vec<FloatArray>>> = std::sync::OnceLock::new();
-        DEFAULT.get_or_init(GdxArray::new)
+        static DEFAULT: std::sync::OnceLock<Vec<Vec<Vec<f32>>>> = std::sync::OnceLock::new();
+        DEFAULT.get_or_init(Vec::new)
     }
 
-    pub fn get_course_gauge_mut(&mut self) -> &mut GdxArray<Vec<FloatArray>> {
+    pub fn get_course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
         log::warn!("not yet implemented: PlayerResource.getCourseGauge_mut");
         // Leak a boxed value - stub only, will be replaced with real implementation
-        Box::leak(Box::new(GdxArray::new()))
+        Box::leak(Box::new(Vec::new()))
     }
 }
 
@@ -547,39 +451,7 @@ pub enum BMSPlayerModeType {
     ReplayDifferent,
 }
 
-// ============================================================
-// FloatArray (LibGDX) stub
-// ============================================================
-
-/// Stub for com.badlogic.gdx.utils.FloatArray
-#[derive(Clone, Debug, Default)]
-pub struct FloatArray {
-    pub items: Vec<f32>,
-    pub size: usize,
-}
-
-impl FloatArray {
-    pub fn new() -> Self {
-        Self {
-            items: Vec::new(),
-            size: 0,
-        }
-    }
-
-    pub fn add(&mut self, value: f32) {
-        self.items.push(value);
-        self.size = self.items.len();
-    }
-
-    pub fn get(&self, index: usize) -> f32 {
-        self.items[index]
-    }
-
-    pub fn add_all(&mut self, other: &FloatArray) {
-        self.items.extend_from_slice(&other.items);
-        self.size = self.items.len();
-    }
-}
+// FloatArray: replaced by Vec<f32> — callers updated to use Vec directly
 
 /// Stub for com.badlogic.gdx.utils.IntArray
 #[derive(Clone, Debug, Default)]

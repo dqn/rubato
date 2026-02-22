@@ -1,12 +1,10 @@
 // SkinGaugeGraphObject.java -> skin_gauge_graph_object.rs
 // Mechanical line-by-line translation.
 
-use beatoraja_play::groove_gauge::Gauge;
-
 use crate::abstract_result::AbstractResultData;
 use crate::course_result::CourseResult;
 use crate::stubs::{
-    Color, FloatArray, IntArray, Pixmap, PixmapFormat, PlayerResource, Rectangle, SkinObjectData,
+    Color, IntArray, Pixmap, PixmapFormat, PlayerResource, Rectangle, SkinObjectData,
     SkinObjectRenderer, Texture, TextureRegion,
 };
 
@@ -34,7 +32,7 @@ pub struct SkinGaugeGraphObject {
 
     current_type: i32,
     color: usize,
-    gaugehistory: FloatArray,
+    gaugehistory: Vec<f32>,
     section: IntArray,
     gg: Option<GaugeRef>,
 
@@ -127,7 +125,7 @@ impl SkinGaugeGraphObject {
             typetable: [0, 1, 2, 3, 4, 5, 3, 4, 5, 3],
             current_type: -1,
             color: 0,
-            gaugehistory: FloatArray::new(),
+            gaugehistory: Vec::new(),
             section: IntArray::new(),
             gg: None,
             render: 0.0,
@@ -191,7 +189,7 @@ impl SkinGaugeGraphObject {
             typetable: [0, 1, 2, 3, 4, 5, 3, 4, 5, 3],
             current_type: -1,
             color: 0,
-            gaugehistory: FloatArray::new(),
+            gaugehistory: Vec::new(),
             section: IntArray::new(),
             gg: None,
             render: 0.0,
@@ -223,27 +221,30 @@ impl SkinGaugeGraphObject {
         if self.current_type != current_type {
             self.redraw = true;
             self.current_type = current_type;
-            self.gaugehistory = resource.get_gauge()[self.current_type as usize].clone();
+            self.gaugehistory = resource
+                .get_gauge()
+                .and_then(|gd| gd.get(self.current_type as usize))
+                .cloned()
+                .unwrap_or_default();
             self.section = IntArray::new();
             if is_course_result {
-                self.gaugehistory = FloatArray::new();
+                self.gaugehistory = Vec::new();
                 for l in resource.get_course_gauge() {
-                    self.gaugehistory.add_all(&l[self.current_type as usize]);
-                    let prev = if self.section.size > 0 {
-                        self.section.get(self.section.size - 1)
-                    } else {
-                        0
-                    };
+                    self.gaugehistory
+                        .extend_from_slice(&l[self.current_type as usize]);
+                    let prev = self.section.items.last().copied().unwrap_or(0);
                     self.section
-                        .add(prev + l[self.current_type as usize].size as i32);
+                        .add(prev + l[self.current_type as usize].len() as i32);
                 }
             }
-            let gauge = resource.get_groove_gauge().get_gauge(self.current_type);
-            let prop = gauge.get_property();
-            self.gg = Some(GaugeRef {
-                border: prop.border,
-                max: prop.max,
-            });
+            if let Some(groove_gauge) = resource.get_groove_gauge() {
+                let gauge = groove_gauge.get_gauge_by_type(self.current_type);
+                let prop = gauge.get_property();
+                self.gg = Some(GaugeRef {
+                    border: prop.border,
+                    max: prop.max,
+                });
+            }
         }
         // super.prepare(time, state) would go here
     }
@@ -308,24 +309,24 @@ impl SkinGaugeGraphObject {
                 let mut last_y: i32 = -1;
                 let line_width = self.line_width;
 
-                for i in 0..self.gaugehistory.size {
+                for i in 0..self.gaugehistory.len() {
                     if self.section.contains(i as i32) {
                         shape.set_color(&Color::value_of("ffffff"));
                         shape.draw_line(
-                            (width as f32 * (i as f32 - 1.0) / self.gaugehistory.size as f32)
+                            (width as f32 * (i as f32 - 1.0) / self.gaugehistory.len() as f32)
                                 as i32,
                             0,
-                            (width as f32 * (i as f32 - 1.0) / self.gaugehistory.size as f32)
+                            (width as f32 * (i as f32 - 1.0) / self.gaugehistory.len() as f32)
                                 as i32,
                             height,
                         );
                     }
-                    let f2 = self.gaugehistory.get(i);
+                    let f2 = self.gaugehistory[i];
                     if let Some(f1_val) = f1 {
-                        let x1 = (width as f32 * (i as f32 - 1.0) / self.gaugehistory.size as f32)
+                        let x1 = (width as f32 * (i as f32 - 1.0) / self.gaugehistory.len() as f32)
                             as i32;
                         let y1 = ((f1_val / max) * (height - line_width) as f32) as i32;
-                        let x2 = (width as f32 * i as f32 / self.gaugehistory.size as f32) as i32;
+                        let x2 = (width as f32 * i as f32 / self.gaugehistory.len() as f32) as i32;
                         let y2 = ((f2 / max) * (height - line_width) as f32) as i32;
                         let yb = ((border / max) * (height - line_width) as f32) as i32;
                         last_gauge = f2;
