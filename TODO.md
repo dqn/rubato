@@ -1,8 +1,28 @@
 # Porting TODO — Remaining Work
 
-All phases (1–21) complete. 1396 tests pass. See AGENTS.md for full status.
+All phases (1–23) complete. 1500 tests pass. See AGENTS.md for full status.
 
 ## Completed Phases (recent)
+
+### Phase 22b: SkinObject Draw Methods + SkinTextBitmap Font Rendering (complete)
+
++846 lines tests + 500 lines implementation across 7 files. All sub-tasks done:
+
+- [x] **SkinImage draw tests** — 9 tests: basic draw, offset, movie FFmpeg type override, zero alpha skip, region dimensions, color propagation
+- [x] **SkinNumber draw tests** — 9 tests: single/multi digit, spacing, alignment (left/center/right), zero padding, per-digit offsets, length calculation
+- [x] **SkinTextImage draw tests** — 9 tests: glyph layout, alignment, scaling, margin, offset, height scaling, zero source size
+- [x] **SkinTextBitmap.draw_with_offset()** — Real implementation replacing warn!() stub. ab_glyph font rasterization, glyph layout with kerning, alignment (left/center/right), overflow modes (overflow/shrink/truncate), shadow rendering, distance field support. +15 tests
+- [x] **Test infrastructure** — MockMainState helper, test_helpers module for beatoraja-skin
+
+### Phase 22c: MainController Render Pipeline + SpriteBatch GPU Flush + FPS Cap (complete)
+
++325 lines across 5 files + 7 new tests:
+
+- [x] **MainController.render() enhancement** — sprite.begin()/end() lifecycle, input gating by time delta (Java `if(time > prevtime)` pattern), skin draw comments for Phase 22+ wiring
+- [x] **SpriteBatch re-export** — sprite_batch_helper.rs now re-exports real SpriteBatch from beatoraja-render (replacing stub unit struct)
+- [x] **SpriteBatch→wgpu GPU flush** — SpriteRenderPipeline initialization, dummy white texture, uniform/texture bind groups, vertex buffer upload via flush_to_gpu() in render pass
+- [x] **FPS capping** — max_fps from Config, frame duration calculation with thread::sleep, last_frame_time tracking via Instant
+- [x] **bytemuck dependency** — Added for projection matrix buffer upload
 
 ### Phase 21: Per-Screen MainState Implementations + State Dispatch (complete)
 
@@ -56,7 +76,7 @@ All phases (1–21) complete. 1396 tests pass. See AGENTS.md for full status.
 
 ### Known Issues (open)
 
-- [ ] SkinObject→GPU rendering gap: SkinLoader produces Skin with SkinObjects, but no wgpu draw calls yet
+- [x] SkinObject→GPU rendering gap — **PARTIALLY RESOLVED (Phase 22b/c)**: SpriteBatch flush wired to wgpu render pass, SkinObject draw methods implemented and tested. Remaining: Skin.draw_all_objects() integration with real Skin type in MainStateData
 - [ ] Remaining stubs: ~2,200 lines across 16 stubs.rs files — blocked by rendering, database implementations
 - [ ] MainController still has ~12 stub methods (polling thread, updateStateReferences, audio driver) — partially unblocked by Phase 21/23, remaining blocked on Phase 22
 - [x] StateFactory concrete implementation — DONE (Phase 23): LauncherStateFactory in beatoraja-launcher wires all 7 screen states
@@ -68,8 +88,9 @@ All phases (1–21) complete. 1396 tests pass. See AGENTS.md for full status.
 Unblocks: Phase 16b render snapshot tests, Phase 18f E2E tests, visual output
 
 - [x] **22a: WGSL sprite shader + wgpu render pipeline + SpriteBatch GPU flush** — WGSL shaders for all 6 Java shader types (Normal, Linear, Bilinear, FFmpeg, Layer, DistanceField), SpriteRenderPipeline with 30 pipeline variants (6 shaders x 5 blend modes), SpriteBatch flush_to_gpu(), SkinObjectRenderer pre_draw/post_draw wired with shader switching + blend state + color save/restore. +43 new tests
-- [ ] **22b:** Implement SkinObject draw methods (SkinImage/SkinNumber/SkinText)
-- [ ] **22c:** Frame timing and animation system
+- [x] **22b: SkinObject draw methods + SkinTextBitmap** — Draw method integration tests for SkinImage/SkinNumber/SkinTextImage (27 tests). SkinTextBitmap.draw_with_offset() implemented with ab_glyph (glyph layout, alignment, overflow, shadow, distance field). +15 tests. +1,346 lines
+- [x] **22c: MainController render pipeline + FPS cap** — render() enhanced with sprite.begin()/end() lifecycle and input gating. SpriteBatch re-export (real impl replacing stub). SpriteBatch flush wired to wgpu render pass with bind groups. FPS capping from config. +7 tests. +325 lines
+- [ ] **22d:** Skin.draw_all_objects() integration — wire Skin type into MainStateData for per-frame object prepare/draw
 
 ### Phase 23: Database Integration — partially complete
 

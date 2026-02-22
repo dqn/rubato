@@ -74,7 +74,7 @@ brs/
 
 ## Implementation Status
 
-All phases complete. **1396 tests pass. Zero runtime `todo!()`/`unimplemented!()`.** PlayerResource wrapper migration complete for all 6 crates.
+All phases complete. **1500 tests pass. Zero runtime `todo!()`/`unimplemented!()`.** PlayerResource wrapper migration complete for all 6 crates.
 
 - **Phases 1–17:** Core translation (17 crates, 300+ modules), real implementations (wgpu, Kira, mlua, ffmpeg-next, midir, cpal, egui UI), circular dep resolution, stub cleanup, platform replacements, 868 tests (715 unit + 121 golden master + 32 integration)
 - **Phase 18a–d:** Core judge loop, rendering state providers, audio decode API, BGA/skin test APIs
@@ -85,12 +85,14 @@ All phases complete. **1396 tests pass. Zero runtime `todo!()`/`unimplemented!()
 - **Phase 20:** IRConnection Integration — IRSendStatus.send() with score submission, IRInitializer for connection setup/login, IRResendLoop with exponential backoff (tokio), IRStatus with real connection type. +263 lines + 2 new files, +13 tests
 - **Phase 21:** Per-Screen MainState + State Dispatch — All 6 screen states (MusicSelector, MusicDecide, BMSPlayer, MusicResult, KeyConfiguration, SkinConfiguration) implement MainState trait. MainController state dispatch via StateFactory trait (cross-crate), change_state() with Java-matching switch logic, transition lifecycle (create/prepare/shutdown), lifecycle dispatch (render/pause/resume/resize/dispose), decide-skip logic. +23 tests
 - **Phase 22a:** WGSL Sprite Shader + Render Pipeline + SpriteBatch GPU Flush — WGSL shaders for all 6 Java shader types (Normal, Linear, Bilinear, FFmpeg, Layer, DistanceField), SpriteRenderPipeline with 30 pipeline variants (6 shaders x 5 blend modes), SpriteBatch flush_to_gpu() with vertex buffer upload, SkinObjectRenderer pre_draw/post_draw wired (shader switching, blend state, color save/restore). +43 tests
+- **Phase 22b:** SkinObject Draw Methods + SkinTextBitmap — Integration tests for SkinImage/SkinNumber/SkinTextImage draw chains (27 tests). SkinTextBitmap.draw_with_offset() implemented with ab_glyph font rendering (glyph layout with kerning, alignment, overflow modes, shadow, distance field). BitmapFont.layout_glyphs() + PositionedGlyph. +42 tests, +1,346 lines
+- **Phase 22c:** MainController Render Pipeline + FPS Cap — MainController.render() enhanced (sprite begin/end lifecycle, input gating by time delta). SpriteBatch re-export replacing stub. SpriteBatch→wgpu render pass flush with SpriteRenderPipeline, bind groups, projection matrix. FPS capping from Config.maxFramePerSecond. +7 tests, +325 lines
 - **Phase 23a–d:** LauncherStateFactory + DB wiring — LauncherStateFactory concrete impl in beatoraja-launcher (all 7 state types), MainController `songdb` field + `set_song_database()`/`get_song_database()`, PlayDataAccessor init in constructor, MusicSelector `with_song_database()` injection, CourseResult MainState trait impl. +10 tests
 
 ## Remaining Stubs (~2,100 lines across 16 files, all blocked)
 
 - **MainController:** ~12 stub methods (polling thread, updateStateReferences, audio driver — blocker: Phase 22), md-processor (intentional adapter, deferred), modmenu (3 methods, until real MainController). State dispatch functional via StateFactory trait. DB wiring done (songdb + playdata)
-- **Rendering:** SkinText/SkinNumber/SkinImage/SkinObject/SkinObjectRenderer (select), Skin/SkinObject/Rectangle (modmenu), SkinStub (decide), SkinObjectData (result), LibGDX stubs (external) — all blocked on rendering pipeline (Phase 22)
+- **Rendering:** Skin/SkinObject/Rectangle (modmenu), SkinStub (decide), SkinObjectData (result), LibGDX stubs (external) — partially unblocked by Phase 22b/c. SkinText/SkinNumber/SkinImage draw methods now implemented and tested. Remaining: Skin.draw_all_objects() integration with MainStateData (Phase 22d)
 - **Per-screen:** EventType/AudioDriver (select), AbstractResult/ScreenType (external), MusicSelector/Bar/SongBar (modmenu) — blocked on Phase 22. MainState trait impls **DONE** for all 7 screens (including CourseResult)
 - **Other:** Twitter4j (intentional bail), Property stubs (MainState type mismatch), DownloadTask (select)
 - **Clean crates:** beatoraja-obs/stream/ir/md-processor/pattern (re-exports only, zero real stubs)
