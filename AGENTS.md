@@ -84,7 +84,7 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**1739 tests, 22 ignored.** Phases 1–25d complete. Zero clippy warnings. Phase 26 next.
+**1759 tests, 22 ignored.** Phases 1–26a complete. Zero clippy warnings. Phase 26b next.
 
 ## Remaining Stubs (10 `stubs.rs` files, ~2,600 lines)
 

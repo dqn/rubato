@@ -1,12 +1,12 @@
 # Porting TODO — Remaining Work
 
-Phases 1–25d complete. **1739 tests, 22 ignored.** 27 crates, 122k lines. See AGENTS.md.
+Phases 1–26a complete. **1759 tests, 22 ignored.** 27 crates, 122k lines. See AGENTS.md.
 
 ## Phase 26: スキンパイプライン完成 → 22 ignored テスト解除
 
 Resolves: `beatoraja-skin/stubs.rs` (287 lines), `beatoraja-launcher/stubs.rs` (partial)
 
-- **26a:** `PixmapResourcePool` (wgpu テクスチャ ロード/キャッシュ/解放) + `SkinSourceImage`
+- [x] **26a:** `PixmapResourcePool` (wgpu テクスチャ ロード/キャッシュ/解放) + `SkinSourceImage`
 - **26b:** `SkinLoader.load_skin()` (SkinData→Skin 変換 + テクスチャバインド)
 - **26c:** RenderSnapshot Java fixture 生成 + 22 テスト `#[ignore]` 解除 (依存: 26b)
 - **26d:** バナー/ステージファイル画像 + `ReplayData::exists()` (依存: 26a)
