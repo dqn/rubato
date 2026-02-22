@@ -4,7 +4,7 @@ Dependency graph order. Each module is ported only after its dependencies are co
 
 ## Completed Phases
 
-Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 936 tests pass. Zero runtime `todo!()`/`unimplemented!()`. See AGENTS.md for details.
+Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 960+ tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) mostly complete. See AGENTS.md for details.
 
 ## Phase 13f: egui UI (complete)
 
@@ -28,25 +28,27 @@ Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 1
 - [x] Delete duplicate pending tests — `compare_rule.rs` and `compare_pattern.rs` in `pending/` were duplicates of already-active versions with real imports; deleted
 - [ ] Add missing fixtures for modules not yet covered (modmenu, select bar, stream) — deferred until Java exporter updated
 - [ ] Reactivate remaining 15 pending test files — blocked on multiple levels:
-  - **JudgeManager::update() is a stub** (primary blocker, 12 of 15 tests): `beatoraja-play/src/judge_manager.rs` `update(&mut self, _mtime: i64)` has empty body with TODO comment "Phase 7+ dependency — requires BMSPlayer, BMSPlayerInputProcessor, AudioDriver". This is the 400+ line Java judge loop. Blocks: `compare_judge.rs`, `compare_judge_manager.rs`, `compare_replay_e2e.rs`, and all 7 E2E tests via `e2e_helpers.rs`
-  - **Missing judge API types:** `JudgeConfig` struct, `JUDGE_PG`/`JUDGE_GR`/etc. constants, `model.build_judge_notes()` do not exist. `GaugeType` is `i32` constants (not enum). `GrooveGauge::new()` signature differs from test expectations
+  - ~~**JudgeManager::update() is a stub**~~ → resolved: full judge loop implemented in Phase 18a. New testable API: `update(&mut self, mtime, &[JudgeNote], &[bool], &[i64], &mut GrooveGauge)`
+  - ~~**Missing judge API types**~~ → resolved: `JudgeConfig`, `JUDGE_PG`/`JUDGE_GR`/etc. constants, `build_judge_notes()` all implemented in Phase 18a
+  - **e2e_helpers.rs rewrite still needed:** imports/signatures need updating against new API. `GrooveGauge::new()` signature differs from test expectations
   - **Missing rendering API:** `StaticStateProvider`, `SkinStateProvider`, `render_snapshot` module not implemented — blocks `compare_eval_test_skins.rs`, `compare_render_snapshot.rs` (10 tests)
   - **Missing audio API:** `load_audio()`, `f32_to_i16()` not implemented in `beatoraja-audio` — blocks `compare_audio.rs` (11 tests)
   - **Skin loader API mismatch:** tests assume free functions (`json_loader::load_skin()`), actual API uses struct methods (`JsonSkinLoader.load_skin()`) — blocks `compare_skin.rs` (13 tests). Also: `skin.width`/`skin.objects` are private, `skin.scale_x`/`skin.scale_y`/`skin.options` not present
   - **Missing BGA API:** `BgaProcessor` struct not found — blocks `compare_bga_timeline.rs`
   - **Fixture generation:** compare_audio, compare_bga_timeline need Java exporter updates
-  - **Resolution:** requires Phase 18a (judge loop), 18b (rendering state providers), 18c (audio decode API), 18d (BGA + skin test rewrite), then 18f (test activation)
+  - **Resolution:** Phase 18a (judge loop) mostly complete — remaining: e2e_helpers.rs rewrite, 18b (rendering state providers), 18c (audio decode API), 18d (BGA + skin test rewrite), then 18f (test activation)
 
 ## Phase 18: Post-Phase 13 Lifecycle Wiring
 
 Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) is now complete.
 
-### 18a: Core judge loop implementation (unblocks 12 of 15 Phase 16b tests)
+### 18a: Core judge loop implementation (partially complete — unblocks 12 of 15 Phase 16b tests)
 
-- [ ] Implement `JudgeManager::update()` — translate the 400+ line Java judge loop (`BMSPlayer.update()` → `JudgeManager.update()`) from `lr2oraja-java`. Currently a stub with empty body and TODO "Phase 7+ dependency — requires BMSPlayer, BMSPlayerInputProcessor, AudioDriver"
-- [ ] Add `JudgeConfig` struct — encapsulates judge timing windows (PG/GR/GD/BD/PR/MS thresholds) used by `JudgeManager`
-- [ ] Add judge constants (`JUDGE_PG`, `JUDGE_GR`, `JUDGE_GD`, `JUDGE_BD`, `JUDGE_PR`, `JUDGE_MS`) — referenced by tests and judge logic
-- [ ] Add `BMSModel::build_judge_notes()` — builds the note sequence used by judge evaluation
+- [x] Implement `JudgeManager::update()` — full 450-line Java judge loop translated to testable Rust API: `update(&mut self, mtime, &[JudgeNote], &[bool], &[i64], &mut GrooveGauge)`. All 4 sections: pass-through, HCN gauge, key press/release, miss POOR + LN end. Internal `NoteJudgeState` tracks per-note state/play_time. `LaneIterState` reimplements Java `Lane` mark/reset/getNote on flat index arrays. `MultiBadCollector` filters simultaneous bad judgments. `update_micro()` records score/combo/ghost/gauge. 24 tests pass.
+- [x] Add `JudgeConfig` struct — `JudgeConfig<'a>` with notes, mode, ln_type, judge_rank, judge_window_rate, scratch_judge_window_rate, algorithm, autoplay, judge_property, lane_property. `JudgeManager::from_config()` constructor.
+- [x] Add judge constants (`JUDGE_PG`, `JUDGE_GR`, `JUDGE_GD`, `JUDGE_BD`, `JUDGE_PR`, `JUDGE_MS`) — in `bms-model/src/judge_note.rs`
+- [x] Add `BMSModel::build_judge_notes()` — in `bms-model/src/judge_note.rs`, builds flat lane-grouped array with LN pair cross-linking via `pair_index`. 7 tests pass.
+- [x] Add `JudgeAlgorithm::compare_times()` — variant of `compare()` taking raw time/state values and `&[[i64; 2]]` judge table (used by `update()` where only `JudgeNote` is available)
 - [ ] Rewrite `e2e_helpers.rs` against actual API — update imports, adapt to `GrooveGauge::new()` signature (i32 gauge type, not enum), fix `KeyInputLog` path
 
 ### 18b: Rendering state providers (unblocks 2 Phase 16b tests)

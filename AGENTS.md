@@ -68,7 +68,7 @@ brs/
 
 ## Implementation Status
 
-All phases complete. 936 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 16b partially done (2 duplicate pending tests deleted; 15 remaining blocked).
+All phases complete. 960+ tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 16b partially done (2 duplicate pending tests deleted; 15 remaining blocked). Phase 18a (core judge loop) mostly complete.
 
 | Phases | Summary |
 |--------|---------|
@@ -80,7 +80,8 @@ All phases complete. 936 tests pass. Zero runtime `todo!()`/`unimplemented!()`. 
 | 13f follow-up 2 | `commit_config()` persists Config + PlayerConfig. IR tab AES-encrypted get/set with egui buffers. Skin tab: full `SkinConfigurationView` integration (type/header selectors, CustomOption/File/Offset widgets, history). Input tab confirmed complete vs Java |
 | 16a–c | Tests: 715 unit + 121 golden master + 32 integration (compare_rule + compare_pattern reactivated with Java LCG fix). 16b partial: 2 duplicate pending tests deleted; 15 remaining blocked by JudgeManager stub + missing APIs |
 | 17 | Verified zero runtime todo!/unimplemented! |
-| 18 | Post-Phase 13 lifecycle wiring (pending): 18a judge loop, 18b rendering state providers, 18c audio decode, 18d BGA/skin tests, 18e stub replacement, 18f integration verification |
+| 18a | Core judge loop: `JudgeManager::update()` full 450-line translation with testable API (`&[JudgeNote]`, `&[bool]`, `&[i64]`, `&mut GrooveGauge`). `JudgeConfig`, `JudgeNote`, `build_judge_notes()`, `compare_times()`, judge constants. 31 new tests (24 judge_manager + 7 judge_note). e2e_helpers.rs rewrite pending |
+| 18b–f | Post-Phase 13 lifecycle wiring (pending): 18b rendering state providers, 18c audio decode, 18d BGA/skin tests, 18e stub replacement, 18f integration verification |
 
 ## Remaining Stubs
 
@@ -127,3 +128,4 @@ All phases complete. 936 tests pass. Zero runtime `todo!()`/`unimplemented!()`. 
 - **Monitor enumeration:** Non-macOS uses winit `ActiveEventLoop::available_monitors()` cached in a global `Mutex<Vec<MonitorInfo>>` populated from `resumed()`. macOS keeps CoreGraphics FFI.
 - **Stub cleanup:** Always verify with `cargo check` after removal. Cross-crate re-exports require checking downstream crates. Split rendering stubs into `rendering_stubs.rs` with `pub use` in `stubs.rs` for backward compat.
 - **Java Random LCG:** `java.util.Random(seed)` uses LCG (multiplier=`0x5DEECE66D`, addend=`0xB`, mask=48-bit). Seed scramble: `(seed ^ multiplier) & mask`. `nextInt(bound)` has power-of-2 fast path. Must use `wrapping_mul`/`wrapping_add` for i64 overflow. Implemented as `java_random::JavaRandom` in `beatoraja-pattern`. **Never use `StdRng`/`rand` for Java-seeded RNG.**
+- **JudgeManager testable API:** Java `update()` accesses game state (BMSPlayer, AudioDriver, TimerManager) directly; Rust version takes all inputs as parameters (`&[JudgeNote]`, `&[bool]` key_states, `&[i64]` key_changed_times, `&mut GrooveGauge`). Internal `NoteJudgeState` tracks per-note state/play_time since notes are passed immutably. `LaneIterState` reimplements Java `Lane` mark/reset/getNote on flat note index arrays. `JudgeAlgorithm::compare_times()` added alongside original `compare(&Note)` to support JudgeNote-based judge loop.
