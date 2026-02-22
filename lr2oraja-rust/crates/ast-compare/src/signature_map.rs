@@ -44,6 +44,8 @@ pub enum MappingStatus {
     NameConverted,
     FieldAccess,
     ConstructorOverload,
+    MethodOverload,
+    StandardTraitImpl,
     MissingInRust,
     ExtraInRust,
     RustSpecific,
@@ -54,15 +56,54 @@ pub struct SignatureSummary {
     pub total_java_files: usize,
     pub mapped_files: usize,
     pub unmapped_files: usize,
+    pub ignored_files: usize,
     pub total_java_types: usize,
     pub matched_types: usize,
     pub total_java_methods: usize,
     pub matched_methods: usize,
     pub field_access_methods: usize,
     pub constructor_overloads: usize,
+    pub method_overloads: usize,
+    pub standard_trait_impls: usize,
     pub missing_methods: usize,
     pub extra_rust_methods: usize,
     pub rust_specific_methods: usize,
+}
+
+/// Java file patterns that are intentionally not 1:1 mapped to Rust.
+/// These are files that were replaced by different libraries, merged into other files,
+/// or structurally translated differently.
+fn ignored_java_patterns() -> Vec<&'static str> {
+    vec![
+        // bmson POJOs — merged into single Rust modules
+        "bmson/BGA.java",
+        "bmson/BGAHeader.java",
+        "bmson/BarLine.java",
+        "bmson/BmsonObject.java",
+        "bmson/MineChannel.java",
+        "bmson/Note.java",
+        "bmson/SoundChannel.java",
+        // Note subclasses — become enum variants in Rust
+        "model/LongNote.java",
+        "model/MineNote.java",
+        "model/NormalNote.java",
+        // Platform-specific Java implementations replaced by different Rust libs
+        "PortAudioDriver.java",
+        "PortAudioMixer.java",
+        "external/DiscordRPC/DiscordRPC.java",
+        "external/DiscordRPC/DiscordRichPresence.java",
+        "external/DiscordRPC/DiscordUser.java",
+        // JavaFX / ImGui specific (replaced by egui)
+        "JavaFXUtils.java",
+        "ImGuiRenderer.java",
+        // Internal Java utilities with no Rust equivalent
+        "util/ArraySerializer.java",
+    ]
+}
+
+fn is_ignored_java_file(java_path: &str) -> bool {
+    let patterns = ignored_java_patterns();
+    patterns.iter().any(|pattern| java_path.ends_with(pattern))
 }
 
 /// Build a signature mapping report from parsed Java and Rust sources.
@@ -76,18 +117,29 @@ pub fn build_signature_map(
         total_java_files: file_mappings.len(),
         mapped_files: 0,
         unmapped_files: 0,
+        ignored_files: 0,
         total_java_types: 0,
         matched_types: 0,
         total_java_methods: 0,
         matched_methods: 0,
         field_access_methods: 0,
         constructor_overloads: 0,
+        method_overloads: 0,
+        standard_trait_impls: 0,
         missing_methods: 0,
         extra_rust_methods: 0,
         rust_specific_methods: 0,
     };
 
     for fm in file_mappings {
+        let java_path_str = fm.java_path.display().to_string();
+
+        // Skip ignored files
+        if is_ignored_java_file(&java_path_str) {
+            summary.ignored_files += 1;
+            continue;
+        }
+
         let java_source = java_files.iter().find(|f| f.path == fm.java_path);
         let rust_source = fm
             .rust_path
@@ -167,9 +219,13 @@ fn build_type_mappings(
     for jt in java_types {
         summary.total_java_types += 1;
 
-        // Find matching Rust type by name — first in the mapped file, then globally
+        // Find matching Rust type by name:
+        // 1. Exact match in mapped file
+        // 2. Exact match globally (handles pub use re-exports)
+        // 3. Fuzzy match globally (handles Abstract/Base prefix removal)
         let rust_type = find_rust_type(&jt.name, rust_types)
-            .or_else(|| find_rust_type_globally(&jt.name, all_rust_files));
+            .or_else(|| find_rust_type_globally(&jt.name, all_rust_files))
+            .or_else(|| find_rust_type_fuzzy(&jt.name, rust_types, all_rust_files));
 
         if rust_type.is_some() {
             summary.matched_types += 1;
@@ -255,6 +311,26 @@ fn find_rust_type_globally<'a>(
     None
 }
 
+/// Search for a Rust type using fuzzy name matching.
+/// Tries stripping common Java prefixes like Abstract/Base/Default/I.
+fn find_rust_type_fuzzy<'a>(
+    java_name: &str,
+    local_types: &'a [TypeDecl],
+    all_rust_files: &'a [SourceFile],
+) -> Option<&'a TypeDecl> {
+    for candidate in naming::fuzzy_type_candidates(java_name) {
+        // Try local first
+        if let Some(found) = find_rust_type(&candidate, local_types) {
+            return Some(found);
+        }
+        // Try global
+        if let Some(found) = find_rust_type_globally(&candidate, all_rust_files) {
+            return Some(found);
+        }
+    }
+    None
+}
+
 fn build_method_mappings(
     java_methods: &[MethodDecl],
     rust_methods: &[&MethodDecl],
@@ -265,6 +341,8 @@ fn build_method_mappings(
     let mut matched_rust_indices = Vec::new();
     // Track whether new/default has been used for constructor matching
     let mut constructor_primary_matched = false;
+    // Track method names that have already been matched (for overload detection)
+    let mut matched_java_names: Vec<String> = Vec::new();
 
     for jm in java_methods {
         summary.total_java_methods += 1;
@@ -276,6 +354,7 @@ fn build_method_mappings(
             if naming::is_constructor(&jm.name) && (rm.name == "new" || rm.name == "default") {
                 constructor_primary_matched = true;
             }
+            matched_java_names.push(jm.name.clone());
             summary.matched_methods += 1;
             results.push(MethodMappingResult {
                 java_method: jm.name.clone(),
@@ -285,25 +364,61 @@ fn build_method_mappings(
                 rust_line: Some(rm.line),
                 status,
             });
-        } else {
-            // Try field matching for accessors (getter/setter/is/has → pub field)
-            let field_candidates = naming::accessor_field_candidates(&jm.name);
-            let field_match = field_candidates
-                .iter()
-                .find(|candidate| rust_fields.iter().any(|f| f.name == **candidate));
+            continue;
+        }
 
-            if let Some(matched_field) = field_match {
-                summary.field_access_methods += 1;
-                results.push(MethodMappingResult {
-                    java_method: jm.name.clone(),
-                    java_params: jm.params.len(),
-                    java_line: jm.line,
-                    rust_method: Some(format!("(field: {})", matched_field)),
-                    rust_line: None,
-                    status: MappingStatus::FieldAccess,
-                });
-            } else if naming::is_constructor(&jm.name) && constructor_primary_matched {
-                // Constructor overload — a previous constructor already matched new()/default()
+        // Try field matching for accessors (getter/setter/is/has → pub field)
+        let field_candidates = naming::accessor_field_candidates(&jm.name);
+        let field_match = field_candidates
+            .iter()
+            .find(|candidate| rust_fields.iter().any(|f| f.name == **candidate));
+
+        if let Some(matched_field) = field_match {
+            matched_java_names.push(jm.name.clone());
+            summary.field_access_methods += 1;
+            results.push(MethodMappingResult {
+                java_method: jm.name.clone(),
+                java_params: jm.params.len(),
+                java_line: jm.line,
+                rust_method: Some(format!("(field: {})", matched_field)),
+                rust_line: None,
+                status: MappingStatus::FieldAccess,
+            });
+            continue;
+        }
+
+        // Method overload detection — same name already matched or field-accessed
+        if matched_java_names.contains(&jm.name) {
+            summary.method_overloads += 1;
+            results.push(MethodMappingResult {
+                java_method: jm.name.clone(),
+                java_params: jm.params.len(),
+                java_line: jm.line,
+                rust_method: Some("(overload)".to_string()),
+                rust_line: None,
+                status: MappingStatus::MethodOverload,
+            });
+            continue;
+        }
+
+        // Java standard method → Rust trait mapping
+        if let Some(trait_name) = naming::java_standard_method_trait(&jm.name) {
+            summary.standard_trait_impls += 1;
+            results.push(MethodMappingResult {
+                java_method: jm.name.clone(),
+                java_params: jm.params.len(),
+                java_line: jm.line,
+                rust_method: Some(format!("(trait: {})", trait_name)),
+                rust_line: None,
+                status: MappingStatus::StandardTraitImpl,
+            });
+            matched_java_names.push(jm.name.clone());
+            continue;
+        }
+
+        // Constructor handling
+        if naming::is_constructor(&jm.name) {
+            if constructor_primary_matched {
                 summary.constructor_overloads += 1;
                 results.push(MethodMappingResult {
                     java_method: jm.name.clone(),
@@ -313,46 +428,60 @@ fn build_method_mappings(
                     rust_line: None,
                     status: MappingStatus::ConstructorOverload,
                 });
-            } else if naming::is_constructor(&jm.name) {
-                // Constructor — try matching new/default even if already used by exclusion
-                let ctor_match = rust_methods
-                    .iter()
-                    .enumerate()
-                    .find(|(_, rm)| rm.name == "new" || rm.name == "default");
-                if let Some((_, rm)) = ctor_match {
-                    constructor_primary_matched = true;
-                    summary.constructor_overloads += 1;
-                    results.push(MethodMappingResult {
-                        java_method: jm.name.clone(),
-                        java_params: jm.params.len(),
-                        java_line: jm.line,
-                        rust_method: Some(rm.name.clone()),
-                        rust_line: Some(rm.line),
-                        status: MappingStatus::ConstructorOverload,
-                    });
-                } else {
-                    summary.missing_methods += 1;
-                    results.push(MethodMappingResult {
-                        java_method: jm.name.clone(),
-                        java_params: jm.params.len(),
-                        java_line: jm.line,
-                        rust_method: None,
-                        rust_line: None,
-                        status: MappingStatus::MissingInRust,
-                    });
-                }
-            } else {
-                summary.missing_methods += 1;
+                continue;
+            }
+
+            // Try matching new/default even if already used by exclusion
+            let ctor_match = rust_methods
+                .iter()
+                .enumerate()
+                .find(|(_, rm)| rm.name == "new" || rm.name == "default");
+            if let Some((_, rm)) = ctor_match {
+                constructor_primary_matched = true;
+                summary.constructor_overloads += 1;
                 results.push(MethodMappingResult {
                     java_method: jm.name.clone(),
                     java_params: jm.params.len(),
                     java_line: jm.line,
-                    rust_method: None,
-                    rust_line: None,
-                    status: MappingStatus::MissingInRust,
+                    rust_method: Some(rm.name.clone()),
+                    rust_line: Some(rm.line),
+                    status: MappingStatus::ConstructorOverload,
                 });
+                continue;
             }
         }
+
+        // Fuzzy field matching for accessors — check if any Rust field contains the key part
+        if let Some(field_name) = naming::accessor_field_name(&jm.name) {
+            let fuzzy_match = rust_fields.iter().find(|f| {
+                f.name.contains(&field_name)
+                    || field_name.contains(&f.name)
+                    || edit_distance_within(&f.name, &field_name, 2)
+            });
+            if let Some(rf) = fuzzy_match {
+                matched_java_names.push(jm.name.clone());
+                summary.field_access_methods += 1;
+                results.push(MethodMappingResult {
+                    java_method: jm.name.clone(),
+                    java_params: jm.params.len(),
+                    java_line: jm.line,
+                    rust_method: Some(format!("(field~: {})", rf.name)),
+                    rust_line: None,
+                    status: MappingStatus::FieldAccess,
+                });
+                continue;
+            }
+        }
+
+        summary.missing_methods += 1;
+        results.push(MethodMappingResult {
+            java_method: jm.name.clone(),
+            java_params: jm.params.len(),
+            java_line: jm.line,
+            rust_method: None,
+            rust_line: None,
+            status: MappingStatus::MissingInRust,
+        });
     }
 
     // Find extra Rust methods
@@ -375,6 +504,31 @@ fn build_method_mappings(
     }
 
     results
+}
+
+/// Check if two strings have edit distance within the given threshold.
+/// Uses a simple Levenshtein distance with early termination.
+fn edit_distance_within(a: &str, b: &str, max_dist: usize) -> bool {
+    let a_len = a.len();
+    let b_len = b.len();
+
+    if a_len.abs_diff(b_len) > max_dist {
+        return false;
+    }
+
+    let mut prev: Vec<usize> = (0..=b_len).collect();
+    let mut curr = vec![0usize; b_len + 1];
+
+    for (i, ca) in a.chars().enumerate() {
+        curr[0] = i + 1;
+        for (j, cb) in b.chars().enumerate() {
+            let cost = if ca == cb { 0 } else { 1 };
+            curr[j + 1] = (prev[j] + cost).min(prev[j + 1] + 1).min(curr[j] + 1);
+        }
+        std::mem::swap(&mut prev, &mut curr);
+    }
+
+    prev[b_len] <= max_dist
 }
 
 fn find_rust_method<'a>(

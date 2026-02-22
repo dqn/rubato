@@ -91,20 +91,29 @@ pub fn format_signature_report(report: &SignatureReport) -> String {
     let s = &report.summary;
     out.push_str(&format!("{}\n", "=== Summary ===".bold()));
     out.push_str(&format!(
-        "  Files: {} Java → {} mapped, {} unmapped\n",
-        s.total_java_files, s.mapped_files, s.unmapped_files
+        "  Files: {} Java → {} mapped, {} unmapped, {} ignored\n",
+        s.total_java_files, s.mapped_files, s.unmapped_files, s.ignored_files
     ));
     out.push_str(&format!(
         "  Types: {} Java → {} matched\n",
         s.total_java_types, s.matched_types
     ));
+    let resolved = s.matched_methods
+        + s.field_access_methods
+        + s.constructor_overloads
+        + s.method_overloads
+        + s.standard_trait_impls;
     out.push_str(&format!(
-        "  Methods: {} Java → {} matched, {} field-access, {} ctor-overloads, {} missing\n",
-        s.total_java_methods,
+        "  Methods: {} Java → {} resolved, {} missing\n",
+        s.total_java_methods, resolved, s.missing_methods
+    ));
+    out.push_str(&format!(
+        "    resolved: {} matched, {} field-access, {} overloads, {} ctor-overloads, {} trait-impls\n",
         s.matched_methods,
         s.field_access_methods,
+        s.method_overloads,
         s.constructor_overloads,
-        s.missing_methods
+        s.standard_trait_impls
     ));
     out.push_str(&format!(
         "  Rust-only: {} extra, {} Rust-specific (ignored)\n",

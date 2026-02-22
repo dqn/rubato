@@ -107,6 +107,48 @@ pub fn is_rust_specific_method(name: &str) -> bool {
     )
 }
 
+/// Java standard methods that map to Rust trait implementations.
+/// Returns the Rust trait name if the Java method has a known mapping.
+pub fn java_standard_method_trait(java_method: &str) -> Option<&'static str> {
+    match java_method {
+        "toString" => Some("Display"),
+        "equals" => Some("PartialEq"),
+        "hashCode" => Some("Hash"),
+        "compareTo" => Some("Ord"),
+        "clone" => Some("Clone"),
+        "iterator" => Some("IntoIterator"),
+        "values" => Some("(enum)"),
+        "valueOf" => Some("(enum)"),
+        _ => None,
+    }
+}
+
+/// Generate fuzzy type name candidates for a Java type.
+///
+/// Handles patterns like `AbstractFoo` → `Foo`, `BaseFoo` → `Foo`, `IFoo` → `Foo`.
+pub fn fuzzy_type_candidates(java_name: &str) -> Vec<String> {
+    let mut candidates = Vec::new();
+
+    // Strip common prefixes
+    for prefix in ["Abstract", "Base", "Default"] {
+        if let Some(rest) = java_name.strip_prefix(prefix)
+            && !rest.is_empty()
+        {
+            candidates.push(rest.to_string());
+        }
+    }
+
+    // Strip single-letter interface prefix: IFoo → Foo
+    if java_name.len() > 1
+        && java_name.starts_with('I')
+        && java_name.as_bytes()[1].is_ascii_uppercase()
+    {
+        candidates.push(java_name[1..].to_string());
+    }
+
+    candidates
+}
+
 /// Known Rust trait impl names to skip in comparison.
 pub fn is_rust_trait_impl(trait_name: &str) -> bool {
     matches!(
@@ -210,5 +252,26 @@ mod tests {
         assert!(is_constructor("BMSDecoder"));
         assert!(!is_constructor("validate"));
         assert!(!is_constructor("getTitle"));
+    }
+
+    #[test]
+    fn test_java_standard_method_trait() {
+        assert_eq!(java_standard_method_trait("toString"), Some("Display"));
+        assert_eq!(java_standard_method_trait("equals"), Some("PartialEq"));
+        assert_eq!(java_standard_method_trait("hashCode"), Some("Hash"));
+        assert_eq!(java_standard_method_trait("compareTo"), Some("Ord"));
+        assert_eq!(java_standard_method_trait("validate"), None);
+    }
+
+    #[test]
+    fn test_fuzzy_type_candidates() {
+        assert_eq!(
+            fuzzy_type_candidates("AbstractAudioDriver"),
+            vec!["AudioDriver"]
+        );
+        assert_eq!(fuzzy_type_candidates("BaseDecoder"), vec!["Decoder"]);
+        assert_eq!(fuzzy_type_candidates("DefaultConfig"), vec!["Config"]);
+        assert_eq!(fuzzy_type_candidates("IPlayable"), vec!["Playable"]);
+        assert!(fuzzy_type_candidates("Config").is_empty());
     }
 }
