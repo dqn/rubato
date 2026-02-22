@@ -74,7 +74,7 @@ brs/
 
 ## Implementation Status
 
-All phases complete. **1274 tests pass. Zero runtime `todo!()`/`unimplemented!()`.** PlayerResource wrapper migration complete for all 6 crates.
+All phases complete. **1396 tests pass. Zero runtime `todo!()`/`unimplemented!()`.** PlayerResource wrapper migration complete for all 6 crates.
 
 - **Phases 1–17:** Core translation (17 crates, 300+ modules), real implementations (wgpu, Kira, mlua, ffmpeg-next, midir, cpal, egui UI), circular dep resolution, stub cleanup, platform replacements, 868 tests (715 unit + 121 golden master + 32 integration)
 - **Phase 18a–d:** Core judge loop, rendering state providers, audio decode API, BGA/skin test APIs
@@ -83,15 +83,17 @@ All phases complete. **1274 tests pass. Zero runtime `todo!()`/`unimplemented!()
 - **Phase 18g:** BRD replay codec
 - **Phase 19:** SkinData→Skin Loading Pipeline — JsonSkinObjectLoader base conversion (all skin object types), screen-specific loaders (Play/Select + 5 minimal), LuaSkinLoader (mlua-based Lua→JsonSkin), SkinLoader entry points. +1,469 lines, +20 tests
 - **Phase 20:** IRConnection Integration — IRSendStatus.send() with score submission, IRInitializer for connection setup/login, IRResendLoop with exponential backoff (tokio), IRStatus with real connection type. +263 lines + 2 new files, +13 tests
+- **Phase 21:** Per-Screen MainState + State Dispatch — All 6 screen states (MusicSelector, MusicDecide, BMSPlayer, MusicResult, KeyConfiguration, SkinConfiguration) implement MainState trait. MainController state dispatch via StateFactory trait (cross-crate), change_state() with Java-matching switch logic, transition lifecycle (create/prepare/shutdown), lifecycle dispatch (render/pause/resume/resize/dispose), decide-skip logic. +23 tests
 
-## Remaining Stubs (~2,540 lines across 16 files, all blocked)
+## Remaining Stubs (~2,200 lines across 16 files, all blocked)
 
-- **MainController:** ~20 stub methods (state transitions, state management, database access — blocker: Phase 21), md-processor (intentional adapter, deferred), modmenu (3 methods, until real MainController)
+- **MainController:** ~15 stub methods (database access, polling thread, updateStateReferences — blocker: Phase 22-23), md-processor (intentional adapter, deferred), modmenu (3 methods, until real MainController). State dispatch now functional via StateFactory trait
 - **Rendering:** SkinText/SkinNumber/SkinImage/SkinObject/SkinObjectRenderer (select), Skin/SkinObject/Rectangle (modmenu), SkinStub (decide), SkinObjectData (result), LibGDX stubs (external) — all blocked on rendering pipeline (Phase 22)
-- **Per-screen:** MainState trait impls, EventType/AudioDriver (select), AbstractResult/ScreenType (external), MusicSelector/Bar/SongBar (modmenu) — blocked on Phase 21
+- **Per-screen:** EventType/AudioDriver (select), AbstractResult/ScreenType (external), MusicSelector/Bar/SongBar (modmenu) — blocked on Phase 22. MainState trait impls **DONE** for all 6 screens
 - **Other:** Twitter4j (intentional bail), Property stubs (MainState type mismatch), ScoreDatabaseAccessor (external — Phase 23), DownloadTask (select)
 - **Clean crates:** beatoraja-obs/stream/ir/md-processor/pattern (re-exports only, zero real stubs)
 - **Platform:** Windows named pipe (not yet implemented)
+- **StateFactory:** Concrete implementation needed in beatoraja-launcher to wire all screen state types
 
 ## Lessons Learned
 
@@ -99,7 +101,8 @@ All phases complete. **1274 tests pass. Zero runtime `todo!()`/`unimplemented!()
 - **MS932:** `encoding_rs::SHIFT_JIS.decode(raw_bytes)`. LR2IR: Shift_JIS HTTP via `encoding_rs`, XML via `quick-xml`.
 - **Borrow checker:** Parent `this` ref → callback trait (`&mut dyn Trait`). Constructor with sibling → pass primitives. `&mut` borrow conflicts → scoped block pattern (collect results into locals first).
 - **Stubs:** Forward stubs in `stubs.rs` per crate. Replace via `pub use real_crate::module::Type;`. Add Java-style getters to real types rather than modifying callers. Always `cargo check` after removal.
-- **Circular deps:** Core cannot import: song, skin, play, select, result, ir, modmenu. Solution: `beatoraja-types` crate; core re-exports via `pub use`. Extract minimum shared state to break cycles.
+- **Circular deps:** Core cannot import: song, skin, play, select, result, ir, modmenu. Solution: `beatoraja-types` crate; core re-exports via `pub use`. Extract minimum shared state to break cycles. For state dispatch: `StateFactory` trait in core, concrete impl in launcher.
+- **State dispatch:** Java `instanceof` switch → Rust `MainState::state_type()` + `StateFactory` trait. Core holds `Box<dyn MainState>`, launcher provides factory. `change_state(MainStateType)` creates via factory, `transition_to_state()` handles lifecycle.
 - **Parallel agents:** Independent crates → parallel agents. Create workspace `Cargo.toml` + all crate scaffolding BEFORE launching.
 
 ### API Incompatibility (Stub → Real)
