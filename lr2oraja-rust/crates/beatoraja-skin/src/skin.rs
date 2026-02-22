@@ -966,3 +966,171 @@ impl Skin {
         // }
     }
 }
+
+/// Adapter that provides timer data to skin objects via the stubs::MainState interface.
+/// Used by SkinDrawable to bridge beatoraja-core's MainState to beatoraja-skin's internal interface.
+struct TimerOnlyMainState {
+    timer: crate::stubs::Timer,
+    main_controller: crate::stubs::MainController,
+    resource: crate::stubs::PlayerResource,
+}
+
+impl TimerOnlyMainState {
+    fn new(now_time: i64, now_micro_time: i64) -> Self {
+        Self {
+            timer: crate::stubs::Timer {
+                now_time,
+                now_micro_time,
+            },
+            main_controller: crate::stubs::MainController { debug: false },
+            resource: crate::stubs::PlayerResource,
+        }
+    }
+}
+
+impl crate::stubs::MainState for TimerOnlyMainState {
+    fn get_timer(&self) -> &crate::stubs::Timer {
+        &self.timer
+    }
+
+    fn get_offset_value(&self, _id: i32) -> Option<&crate::stubs::SkinOffset> {
+        None
+    }
+
+    fn get_main(&self) -> &crate::stubs::MainController {
+        &self.main_controller
+    }
+
+    fn get_image(&self, _id: i32) -> Option<crate::rendering_stubs::TextureRegion> {
+        None
+    }
+
+    fn get_resource(&self) -> &crate::stubs::PlayerResource {
+        &self.resource
+    }
+}
+
+impl beatoraja_core::main_state::SkinDrawable for Skin {
+    fn draw_all_objects_timed(&mut self, now_time: i64, now_micro_time: i64) {
+        let adapter = TimerOnlyMainState::new(now_time, now_micro_time);
+        self.draw_all_objects(&adapter);
+    }
+
+    fn update_custom_objects_timed(&mut self, now_time: i64, now_micro_time: i64) {
+        let adapter = TimerOnlyMainState::new(now_time, now_micro_time);
+        self.update_custom_objects(&adapter);
+    }
+
+    fn mouse_pressed_at(&mut self, button: i32, x: i32, y: i32) {
+        let mut adapter = TimerOnlyMainState::new(0, 0);
+        self.mouse_pressed(&mut adapter, button, x, y);
+    }
+
+    fn mouse_dragged_at(&mut self, button: i32, x: i32, y: i32) {
+        let mut adapter = TimerOnlyMainState::new(0, 0);
+        self.mouse_dragged(&mut adapter, button, x, y);
+    }
+
+    fn dispose_skin(&mut self) {
+        self.dispose();
+    }
+
+    fn get_fadeout(&self) -> i32 {
+        self.fadeout
+    }
+
+    fn get_input(&self) -> i32 {
+        self.input
+    }
+
+    fn get_scene(&self) -> i32 {
+        self.scene
+    }
+
+    fn get_width(&self) -> f32 {
+        self.width
+    }
+
+    fn get_height(&self) -> f32 {
+        self.height
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::skin_header::SkinHeader;
+    use beatoraja_core::main_state::SkinDrawable;
+
+    fn make_test_skin() -> Skin {
+        Skin::new(SkinHeader::new())
+    }
+
+    #[test]
+    fn test_timer_only_main_state_returns_expected_values() {
+        let adapter = TimerOnlyMainState::new(1000, 1_000_000);
+        let state: &dyn MainState = &adapter;
+        assert_eq!(state.get_timer().get_now_time(), 1000);
+        assert_eq!(state.get_timer().get_now_micro_time(), 1_000_000);
+        assert!(state.get_offset_value(0).is_none());
+        assert!(state.get_image(0).is_none());
+        assert!(!state.get_main().debug);
+    }
+
+    #[test]
+    fn test_skin_drawable_getter_delegation() {
+        let mut skin = make_test_skin();
+        skin.set_fadeout(500);
+        skin.set_input(100);
+        skin.set_scene(2000);
+
+        let drawable: &dyn SkinDrawable = &skin;
+        assert_eq!(drawable.get_fadeout(), 500);
+        assert_eq!(drawable.get_input(), 100);
+        assert_eq!(drawable.get_scene(), 2000);
+        // Default resolution is 640x480
+        assert_eq!(drawable.get_width(), 640.0);
+        assert_eq!(drawable.get_height(), 480.0);
+    }
+
+    #[test]
+    fn test_draw_all_objects_timed_empty_skin() {
+        let mut skin = make_test_skin();
+        // Should not panic with no objects
+        skin.draw_all_objects_timed(0, 0);
+    }
+
+    #[test]
+    fn test_update_custom_objects_timed_empty_skin() {
+        let mut skin = make_test_skin();
+        // Should not panic with no custom objects
+        skin.update_custom_objects_timed(100, 100_000);
+    }
+
+    #[test]
+    fn test_dispose_skin_empty() {
+        let mut skin = make_test_skin();
+        // Should not panic with no objects
+        skin.dispose_skin();
+    }
+
+    #[test]
+    fn test_mouse_pressed_at_empty_skin() {
+        let mut skin = make_test_skin();
+        // Should not panic with no objects
+        skin.mouse_pressed_at(0, 100, 200);
+    }
+
+    #[test]
+    fn test_mouse_dragged_at_empty_skin() {
+        let mut skin = make_test_skin();
+        // Should not panic with no objects
+        skin.mouse_dragged_at(0, 100, 200);
+    }
+
+    #[test]
+    fn test_skin_is_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<Skin>();
+    }
+}

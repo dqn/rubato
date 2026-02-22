@@ -578,13 +578,21 @@ impl MainController {
         }
 
         // Skin update and draw
-        // In Java: if (current.getSkin() != null) {
+        // Java: if (current.getSkin() != null) {
         //     current.getSkin().updateCustomObjects(current);
         //     current.getSkin().drawAllObjects(sprite, current);
         // }
-        // Phase 22+: Skin draw calls require beatoraja-skin Skin type integration.
-        // The actual skin drawing is deferred until MainStateData.skin is replaced
-        // with a real Skin type from beatoraja-skin.
+        if let Some(ref mut current) = self.current {
+            let data = current.main_state_data_mut();
+            let now_time = data.timer.get_now_time();
+            let now_micro_time = data.timer.get_now_micro_time();
+            if let Some(mut skin) = data.skin.take() {
+                skin.update_custom_objects_timed(now_time, now_micro_time);
+                skin.draw_all_objects_timed(now_time, now_micro_time);
+                // Put skin back
+                current.main_state_data_mut().skin = Some(skin);
+            }
+        }
 
         // sprite.end()
         if let Some(ref mut sprite) = self.sprite {
@@ -613,7 +621,16 @@ impl MainController {
             if let Some(ref mut current) = self.current {
                 current.input();
             }
-            // Phase 5+: mouse pressed/dragged events, cursor visibility, FPS toggle, fullscreen toggle
+            // Mouse pressed/dragged → skin (Phase 22d)
+            // Java: if (input.isMousePressed()) {
+            //     current.getSkin().mousePressed(current, input.getMouseButton(), input.getMouseX(), input.getMouseY());
+            // }
+            // Java: if (input.isMouseDragged()) {
+            //     current.getSkin().mouseDragged(current, input.getMouseButton(), input.getMouseX(), input.getMouseY());
+            // }
+            // TODO: Wire mouse events once InputProcessor provides mouse coordinates
+
+            // Phase 5+: cursor visibility, FPS toggle, fullscreen toggle
         }
     }
 
@@ -1512,5 +1529,180 @@ mod tests {
 
         // Timer should advance (or at least not go backwards)
         assert!(time_after >= time_before);
+    }
+
+    // --- Phase 22d: Skin draw wiring tests ---
+
+    use crate::main_state::SkinDrawable;
+
+    /// Mock SkinDrawable that tracks method call counts.
+    struct MockSkinDrawable {
+        draw_count: i32,
+        update_count: i32,
+    }
+
+    impl MockSkinDrawable {
+        fn new() -> Self {
+            Self {
+                draw_count: 0,
+                update_count: 0,
+            }
+        }
+    }
+
+    impl SkinDrawable for MockSkinDrawable {
+        fn draw_all_objects_timed(&mut self, _now_time: i64, _now_micro_time: i64) {
+            self.draw_count += 1;
+        }
+
+        fn update_custom_objects_timed(&mut self, _now_time: i64, _now_micro_time: i64) {
+            self.update_count += 1;
+        }
+
+        fn mouse_pressed_at(&mut self, _button: i32, _x: i32, _y: i32) {}
+        fn mouse_dragged_at(&mut self, _button: i32, _x: i32, _y: i32) {}
+        fn dispose_skin(&mut self) {}
+        fn get_fadeout(&self) -> i32 {
+            0
+        }
+        fn get_input(&self) -> i32 {
+            0
+        }
+        fn get_scene(&self) -> i32 {
+            0
+        }
+        fn get_width(&self) -> f32 {
+            1280.0
+        }
+        fn get_height(&self) -> f32 {
+            720.0
+        }
+    }
+
+    /// A test state that allows setting a skin for render testing.
+    struct SkinTestState {
+        state_data: MainStateData,
+    }
+
+    impl SkinTestState {
+        fn new_with_skin(skin: Box<dyn SkinDrawable>) -> Self {
+            let mut data = MainStateData::new(TimerManager::new());
+            data.skin = Some(skin);
+            Self { state_data: data }
+        }
+    }
+
+    impl MainState for SkinTestState {
+        fn state_type(&self) -> Option<MainStateType> {
+            Some(MainStateType::MusicSelect)
+        }
+
+        fn main_state_data(&self) -> &MainStateData {
+            &self.state_data
+        }
+
+        fn main_state_data_mut(&mut self) -> &mut MainStateData {
+            &mut self.state_data
+        }
+
+        fn create(&mut self) {}
+        fn render(&mut self) {}
+    }
+
+    #[test]
+    fn test_render_calls_skin_draw_methods() {
+        let mut mc = make_test_controller();
+
+        // Manually set current state with a mock skin
+        let mock_skin = Box::new(MockSkinDrawable::new());
+        mc.current = Some(Box::new(SkinTestState::new_with_skin(mock_skin)));
+
+        // Render should call update and draw on the skin
+        mc.render();
+
+        // Verify skin methods were called by checking the skin is still present
+        // (the take/put-back pattern should preserve it)
+        let state = mc.get_current_state().unwrap();
+        assert!(
+            state.main_state_data().skin.is_some(),
+            "skin should be put back after render"
+        );
+    }
+
+    #[test]
+    fn test_render_without_skin_does_not_panic() {
+        let mut mc = make_test_controller();
+
+        // Set a state without a skin
+        let mut data = MainStateData::new(TimerManager::new());
+        data.skin = None;
+        let state = SkinTestState { state_data: data };
+        mc.current = Some(Box::new(state));
+
+        // Should not panic when skin is None
+        mc.render();
+        assert!(mc.get_current_state().is_some());
+    }
+
+    #[test]
+    fn test_render_skin_called_once_per_frame() {
+        use std::sync::{Arc, Mutex};
+
+        /// A mock that records call counts via shared state.
+        struct CountingSkinDrawable {
+            counts: Arc<Mutex<(i32, i32)>>, // (update_count, draw_count)
+        }
+
+        impl SkinDrawable for CountingSkinDrawable {
+            fn draw_all_objects_timed(&mut self, _now_time: i64, _now_micro_time: i64) {
+                self.counts.lock().unwrap().1 += 1;
+            }
+
+            fn update_custom_objects_timed(&mut self, _now_time: i64, _now_micro_time: i64) {
+                self.counts.lock().unwrap().0 += 1;
+            }
+
+            fn mouse_pressed_at(&mut self, _button: i32, _x: i32, _y: i32) {}
+            fn mouse_dragged_at(&mut self, _button: i32, _x: i32, _y: i32) {}
+            fn dispose_skin(&mut self) {}
+            fn get_fadeout(&self) -> i32 {
+                0
+            }
+            fn get_input(&self) -> i32 {
+                0
+            }
+            fn get_scene(&self) -> i32 {
+                0
+            }
+            fn get_width(&self) -> f32 {
+                1280.0
+            }
+            fn get_height(&self) -> f32 {
+                720.0
+            }
+        }
+
+        let counts = Arc::new(Mutex::new((0, 0)));
+        let skin = Box::new(CountingSkinDrawable {
+            counts: counts.clone(),
+        });
+
+        let mut mc = make_test_controller();
+        mc.current = Some(Box::new(SkinTestState::new_with_skin(skin)));
+
+        // Render 3 frames
+        mc.render();
+        mc.render();
+        mc.render();
+
+        let (update_count, draw_count) = *counts.lock().unwrap();
+        assert_eq!(
+            update_count, 3,
+            "update_custom_objects_timed should be called once per frame"
+        );
+        assert_eq!(
+            draw_count, 3,
+            "draw_all_objects_timed should be called once per frame"
+        );
     }
 }

@@ -129,10 +129,51 @@ pub trait MainState {
     }
 }
 
+/// Trait for skin drawing integration.
+///
+/// Abstracts the beatoraja-skin Skin type so that beatoraja-core can call
+/// skin drawing methods without depending on the skin crate (circular dep).
+/// The concrete implementation lives in beatoraja-skin::Skin.
+///
+/// Translated from: Java Skin.drawAllObjects(), updateCustomObjects(), etc.
+pub trait SkinDrawable: Send {
+    /// Draw all skin objects for the current frame.
+    ///
+    /// `now_time` is milliseconds, `now_micro_time` is microseconds from TimerManager.
+    fn draw_all_objects_timed(&mut self, now_time: i64, now_micro_time: i64);
+
+    /// Update custom timers and events.
+    fn update_custom_objects_timed(&mut self, now_time: i64, now_micro_time: i64);
+
+    /// Handle mouse press events (reverse order iteration).
+    fn mouse_pressed_at(&mut self, button: i32, x: i32, y: i32);
+
+    /// Handle mouse drag events (slider objects only).
+    fn mouse_dragged_at(&mut self, button: i32, x: i32, y: i32);
+
+    /// Dispose all skin objects and release resources.
+    fn dispose_skin(&mut self);
+
+    /// Get fadeout duration in milliseconds.
+    fn get_fadeout(&self) -> i32;
+
+    /// Get input start time in milliseconds.
+    fn get_input(&self) -> i32;
+
+    /// Get scene time in milliseconds.
+    fn get_scene(&self) -> i32;
+
+    /// Get skin width.
+    fn get_width(&self) -> f32;
+
+    /// Get skin height.
+    fn get_height(&self) -> f32;
+}
+
 /// Shared data for MainState implementations
 pub struct MainStateData {
-    /// Skin
-    pub skin: Option<SkinStub>,
+    /// Skin (real Skin type via SkinDrawable trait)
+    pub skin: Option<Box<dyn SkinDrawable>>,
     /// Stage (scene2d)
     pub stage: Option<StageStub>,
     /// Timer manager reference
@@ -153,5 +194,4 @@ impl MainStateData {
 }
 
 // Phase 5+ stubs for types used in MainState
-pub struct SkinStub;
 pub struct StageStub;
