@@ -207,7 +207,7 @@ impl ContextMenuBar {
 
     /// Fill missing charts by submitting download tasks.
     /// Corresponds to Java ContextMenuBar.fillMissingCharts(SongData[], MainController)
-    fn fill_missing_charts(want: &[SongData], _main: &MainController) -> i32 {
+    fn fill_missing_charts(want: &[SongData]) -> i32 {
         let md5_and_names: Vec<(String, String)> = want
             .iter()
             .filter_map(|sd| {

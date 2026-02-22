@@ -52,53 +52,10 @@ pub use beatoraja_types::song_database_accessor::SongDatabaseAccessor;
 // beatoraja core types (stubbed — cannot be replaced)
 // ============================================================
 
-/// Stub for beatoraja.MainController
-#[derive(Debug, Default)]
-pub struct MainController;
-
-impl MainController {
-    pub fn get_song_database(&self) -> &dyn SongDatabaseAccessor {
-        log::warn!("not yet implemented: MainController.get_song_database");
-        &NullSongDatabaseAccessor
-    }
-    pub fn get_ir_status(&self) -> &[IRStatus] {
-        log::warn!("not yet implemented: MainController.get_ir_status");
-        &[]
-    }
-    pub fn get_ranking_data_cache(&self) -> &RankingDataCache {
-        log::warn!("not yet implemented: MainController.get_ranking_data_cache");
-        static DEFAULT: RankingDataCache = RankingDataCache;
-        &DEFAULT
-    }
-    pub fn get_input_processor(&self) -> &BMSPlayerInputProcessor {
-        log::warn!("not yet implemented: MainController.get_input_processor");
-        static DEFAULT: BMSPlayerInputProcessor = BMSPlayerInputProcessor;
-        &DEFAULT
-    }
-    pub fn get_player_resource_local(&self) -> &PlayerResource {
-        log::warn!("not yet implemented: MainController.get_player_resource_local");
-        static DEFAULT: PlayerResource = PlayerResource;
-        &DEFAULT
-    }
-    pub fn get_current_state(&self) -> &dyn MainState {
-        log::warn!("not yet implemented: MainController.get_current_state");
-        static DEFAULT: DefaultMainState = DefaultMainState;
-        &DEFAULT
-    }
-}
-
-struct DefaultMainState;
-impl MainState for DefaultMainState {
-    fn get_main(&self) -> &MainController {
-        static DEFAULT: MainController = MainController;
-        &DEFAULT
-    }
-}
-
 /// Stub for beatoraja.MainState
-pub trait MainState {
-    fn get_main(&self) -> &MainController;
-}
+/// Empty marker trait — get_main() removed (MainController stub deleted, Phase 18e-2).
+/// Retained because SkinText/SkinNumber/SkinImage/RankingData stubs accept &dyn MainState.
+pub trait MainState {}
 
 /// MainStateType — re-exported from beatoraja-types (Phase 15d)
 pub use beatoraja_types::main_state_type::MainStateType;
@@ -164,7 +121,7 @@ impl RandomCourseData {
         log::warn!("not yet implemented: RandomCourseData.get_song_datas");
         Vec::new()
     }
-    pub fn lottery_song_datas(&self, _main: &MainController) {
+    pub fn lottery_song_datas(&self) {
         log::warn!("not yet implemented: RandomCourseData.lottery_song_datas");
     }
     pub fn create_course_data(&self) -> CourseData {
@@ -187,9 +144,6 @@ pub use beatoraja_core::table_data_accessor::{
 
 // beatoraja.CourseDataAccessor — replaced with real type from beatoraja-core (Phase 15g)
 pub use beatoraja_core::course_data_accessor::CourseDataAccessor;
-
-/// Stub for beatoraja.PlayerResource
-pub struct PlayerResource;
 
 /// Stub for beatoraja.RankingData
 pub struct RankingData {

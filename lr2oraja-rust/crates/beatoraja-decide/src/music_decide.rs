@@ -7,7 +7,7 @@ use beatoraja_core::timer_manager::TimerManager;
 use beatoraja_skin::skin_property::{TIMER_FADEOUT, TIMER_STARTINPUT};
 use beatoraja_skin::skin_type::SkinType;
 
-use crate::stubs::{ControlKeysStub, MainControllerRef, PlayerResourceRef, SkinStub};
+use crate::stubs::{ControlKeysStub, MainControllerRef, PlayerResourceAccess, SkinStub};
 
 /// MusicDecide - music decide screen state
 ///
@@ -17,13 +17,17 @@ use crate::stubs::{ControlKeysStub, MainControllerRef, PlayerResourceRef, SkinSt
 pub struct MusicDecide {
     pub data: MainStateData,
     pub main: MainControllerRef,
-    pub resource: PlayerResourceRef,
+    pub resource: Box<dyn PlayerResourceAccess>,
     cancel: bool,
     skin: Option<SkinStub>,
 }
 
 impl MusicDecide {
-    pub fn new(main: MainControllerRef, resource: PlayerResourceRef, timer: TimerManager) -> Self {
+    pub fn new(
+        main: MainControllerRef,
+        resource: Box<dyn PlayerResourceAccess>,
+        timer: TimerManager,
+    ) -> Self {
         Self {
             data: MainStateData::new(timer),
             main,
