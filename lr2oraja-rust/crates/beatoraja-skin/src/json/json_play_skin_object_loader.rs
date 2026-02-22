@@ -4,7 +4,7 @@
 use std::path::Path;
 
 use crate::json::json_skin;
-use crate::json::json_skin_loader::{JSONSkinLoader, SkinData, SkinObjectData};
+use crate::json::json_skin_loader::{JSONSkinLoader, SkinData, SkinObjectData, SkinObjectType};
 use crate::json::json_skin_object_loader::{self, JsonSkinObjectLoader};
 
 /// Corresponds to JsonPlaySkinObjectLoader extends JsonSkinObjectLoader<PlaySkin>
@@ -12,7 +12,7 @@ pub struct JsonPlaySkinObjectLoader;
 
 impl JsonSkinObjectLoader for JsonPlaySkinObjectLoader {
     fn get_skin(&self, _header: &crate::json::json_skin_loader::SkinHeaderData) -> SkinData {
-        // PlaySkin creation - stubbed pending Phase 6+ rendering
+        // PlaySkin creation - stubbed pending rendering pipeline
         SkinData::new()
     }
 
@@ -38,10 +38,9 @@ impl JsonSkinObjectLoader for JsonPlaySkinObjectLoader {
         {
             let obj = SkinObjectData {
                 name: note.id.clone(),
+                object_type: SkinObjectType::Note,
                 ..Default::default()
             };
-            // SkinNote creation depends on texture loading - stubbed
-            // In Java: getNoteTexture, SkinNote, setLaneRegion, etc.
             return Some(obj);
         }
 
@@ -50,10 +49,21 @@ impl JsonSkinObjectLoader for JsonPlaySkinObjectLoader {
             if dst_id == img.id.as_deref().unwrap_or("") {
                 let obj = SkinObjectData {
                     name: img.id.clone(),
+                    object_type: SkinObjectType::HiddenCover {
+                        src: img.src.clone(),
+                        x: img.x,
+                        y: img.y,
+                        w: img.w,
+                        h: img.h,
+                        divx: img.divx,
+                        divy: img.divy,
+                        timer: img.timer,
+                        cycle: img.cycle,
+                        disapear_line: img.disapear_line,
+                        is_disapear_line_link_lift: img.is_disapear_line_link_lift,
+                    },
                     ..Default::default()
                 };
-                // SkinHidden creation stubbed
-                // In Java: adds OFFSET_LIFT and OFFSET_HIDDEN_COVER to offsets
                 return Some(obj);
             }
         }
@@ -63,10 +73,21 @@ impl JsonSkinObjectLoader for JsonPlaySkinObjectLoader {
             if dst_id == img.id.as_deref().unwrap_or("") {
                 let obj = SkinObjectData {
                     name: img.id.clone(),
+                    object_type: SkinObjectType::LiftCover {
+                        src: img.src.clone(),
+                        x: img.x,
+                        y: img.y,
+                        w: img.w,
+                        h: img.h,
+                        divx: img.divx,
+                        divy: img.divy,
+                        timer: img.timer,
+                        cycle: img.cycle,
+                        disapear_line: img.disapear_line,
+                        is_disapear_line_link_lift: img.is_disapear_line_link_lift,
+                    },
                     ..Default::default()
                 };
-                // SkinHidden creation for lift cover stubbed
-                // In Java: adds OFFSET_LIFT to offsets
                 return Some(obj);
             }
         }
@@ -77,9 +98,11 @@ impl JsonSkinObjectLoader for JsonPlaySkinObjectLoader {
         {
             let obj = SkinObjectData {
                 name: bga.id.clone(),
+                object_type: SkinObjectType::Bga {
+                    bga_expand: loader.bga_expand,
+                },
                 ..Default::default()
             };
-            // SkinBGA creation stubbed
             return Some(obj);
         }
 
@@ -88,9 +111,12 @@ impl JsonSkinObjectLoader for JsonPlaySkinObjectLoader {
             if dst_id == judge.id.as_deref().unwrap_or("") {
                 let obj = SkinObjectData {
                     name: judge.id.clone(),
+                    object_type: SkinObjectType::Judge {
+                        index: judge.index,
+                        shift: judge.shift,
+                    },
                     ..Default::default()
                 };
-                // SkinJudge creation with images and numbers stubbed
                 return Some(obj);
             }
         }
@@ -100,9 +126,14 @@ impl JsonSkinObjectLoader for JsonPlaySkinObjectLoader {
             if dst_id == chara.id.as_deref().unwrap_or("") {
                 let obj = SkinObjectData {
                     name: chara.id.clone(),
+                    object_type: SkinObjectType::PmChara {
+                        src: chara.src.clone(),
+                        color: chara.color,
+                        chara_type: chara.chara_type,
+                        side: chara.side,
+                    },
                     ..Default::default()
                 };
-                // PomyuCharaLoader stubbed
                 return Some(obj);
             }
         }

@@ -65,28 +65,63 @@ pub fn get_resource() -> std::sync::MutexGuard<'static, Option<PixmapResourcePoo
 
 /// Loads a skin for the given state and skin type.
 /// Corresponds to SkinLoader.load(MainState, SkinType)
-pub fn load(_state: &dyn MainState, _skin_type_id: i32) -> Option<()> {
+pub fn load(
+    _state: &dyn MainState,
+    skin_type: &crate::skin_type::SkinType,
+) -> Option<crate::json::json_skin_loader::SkinData> {
+    // In Java:
     // Skin skin = load(state, skinType, state.resource.getPlayerConfig().getSkin()[skinType.getId()]);
-    // if(skin == null) { ... fallback to default ... }
+    // if(skin == null) { fallback to default }
     // return skin;
-    log::warn!("not yet implemented: SkinLoader.load requires full skin loading pipeline");
+    log::warn!(
+        "SkinLoader.load: requires SkinConfig from PlayerConfig (skin type {:?})",
+        skin_type
+    );
     None
 }
 
-/// Loads a skin with a specific skin config.
+/// Loads a skin with a specific skin config path.
 /// Corresponds to SkinLoader.load(MainState, SkinType, SkinConfig)
+///
+/// Dispatches to JSONSkinLoader (.json), LuaSkinLoader (.luaskin), or LR2SkinCSVLoader.
 pub fn load_with_config(
     _state: &dyn MainState,
-    _skin_type_id: i32,
-    _skin_config_path: &str,
-) -> Option<()> {
-    // if (sc.getPath().endsWith(".json")) { ... JSONSkinLoader ... }
-    // else if (sc.getPath().endsWith(".luaskin")) { ... LuaSkinLoader ... }
-    // else { ... LR2SkinCSVLoader ... }
-    log::warn!(
-        "not yet implemented: SkinLoader.load with config requires full skin loading pipeline"
-    );
-    None
+    skin_type: &crate::skin_type::SkinType,
+    skin_config_path: &str,
+) -> Option<crate::json::json_skin_loader::SkinData> {
+    let property = crate::json::json_skin_loader::SkinConfigProperty;
+
+    if skin_config_path.ends_with(".json") {
+        // JSONSkinLoader
+        let config = _state.get_resource().get_config();
+        let mut loader = crate::json::json_skin_loader::JSONSkinLoader::with_config(config);
+        let result = loader.load_skin(Path::new(skin_config_path), skin_type, &property);
+        // Dispose old resources after loading
+        if let Ok(mut guard) = RESOURCE.lock()
+            && let Some(ref mut r) = *guard
+        {
+            r.dispose_old();
+        }
+        result
+    } else if skin_config_path.ends_with(".luaskin") {
+        // LuaSkinLoader
+        let config = _state.get_resource().get_config();
+        let mut loader = crate::lua::lua_skin_loader::LuaSkinLoader::new_with_state(_state, config);
+        let result = loader.load_skin(Path::new(skin_config_path), skin_type, &property);
+        if let Ok(mut guard) = RESOURCE.lock()
+            && let Some(ref mut r) = *guard
+        {
+            r.dispose_old();
+        }
+        result
+    } else {
+        // LR2SkinCSVLoader - not yet implemented
+        log::warn!(
+            "LR2 CSV skin loading not yet implemented for: {}",
+            skin_config_path
+        );
+        None
+    }
 }
 
 /// Resolves a file path with wildcard and file mapping support.
@@ -210,7 +245,6 @@ pub fn get_texture_with_mipmaps(path: &str, usecim: bool, use_mip_maps: bool) ->
 
             // PixmapIO.writeCIM(Gdx.files.local(cim), pixmap);
             // CIM writing is a LibGDX-specific format, stubbed here
-            // todo!("CIM writing not implemented");
 
             return Some(Texture::from_pixmap_with_mipmaps(&pixmap, use_mip_maps));
         }

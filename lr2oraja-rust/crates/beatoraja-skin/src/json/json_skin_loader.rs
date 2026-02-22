@@ -164,6 +164,11 @@ impl JSONSkinLoader {
         }
     }
 
+    /// Public accessor for LuaSkinLoader to call loadJsonSkinHeader
+    pub fn load_header_from_skin(&self, sk: &json_skin::Skin, p: &Path) -> Option<SkinHeaderData> {
+        self.load_json_skin_header(sk, p)
+    }
+
     fn load_json_skin_header(&self, sk: &json_skin::Skin, p: &Path) -> Option<SkinHeaderData> {
         if sk.skin_type == -1 {
             return None;
@@ -521,17 +526,64 @@ impl JSONSkinLoader {
     }
 
     fn load_skin_object_for_type(
-        &self,
-        _skin_type: &crate::skin_type::SkinType,
-        _skin: &SkinData,
-        _sk: &json_skin::Skin,
-        _dst: &json_skin::Destination,
-        _p: &Path,
+        &mut self,
+        skin_type: &crate::skin_type::SkinType,
+        skin: &SkinData,
+        sk: &json_skin::Skin,
+        dst: &json_skin::Destination,
+        p: &Path,
     ) -> Option<SkinObjectData> {
-        // Delegate to screen-specific loader
-        // Each loader calls back into the base loader for common objects
-        warn!("not yet implemented: screen-specific object loading (LibGDX rendering)");
-        None
+        use crate::json::json_skin_object_loader::JsonSkinObjectLoader;
+        use crate::skin_type::SkinType;
+
+        match skin_type {
+            // Java: PLAY_5KEYS, PLAY_7KEYS, PLAY_9KEYS, PLAY_10KEYS, PLAY_14KEYS,
+            //       PLAY_24KEYS, PLAY_24KEYS_DOUBLE
+            SkinType::Play7Keys
+            | SkinType::Play5Keys
+            | SkinType::Play14Keys
+            | SkinType::Play10Keys
+            | SkinType::Play9Keys
+            | SkinType::Play24Keys
+            | SkinType::Play24KeysDouble => {
+                let loader_impl =
+                    crate::json::json_play_skin_object_loader::JsonPlaySkinObjectLoader;
+                loader_impl.load_skin_object(self, skin, sk, dst, p)
+            }
+            // Java: MUSIC_SELECT
+            SkinType::MusicSelect => {
+                let loader_impl =
+                    crate::json::json_select_skin_object_loader::JsonSelectSkinObjectLoader;
+                loader_impl.load_skin_object(self, skin, sk, dst, p)
+            }
+            // Java: DECIDE
+            SkinType::Decide => {
+                let loader_impl =
+                    crate::json::json_decide_skin_object_loader::JsonDecideSkinObjectLoader;
+                loader_impl.load_skin_object(self, skin, sk, dst, p)
+            }
+            // Java: RESULT
+            SkinType::Result => {
+                let loader_impl =
+                    crate::json::json_result_skin_object_loader::JsonResultSkinObjectLoader;
+                loader_impl.load_skin_object(self, skin, sk, dst, p)
+            }
+            // Java: COURSE_RESULT
+            SkinType::CourseResult => {
+                let loader_impl = crate::json::json_course_result_skin_object_loader::JsonCourseResultSkinObjectLoader;
+                loader_impl.load_skin_object(self, skin, sk, dst, p)
+            }
+            // Java: SKIN_SELECT
+            SkinType::SkinSelect => {
+                let loader_impl = crate::json::json_skin_configuration_skin_object_loader::JsonSkinConfigurationSkinObjectLoader;
+                loader_impl.load_skin_object(self, skin, sk, dst, p)
+            }
+            // Java: KEY_CONFIG + default
+            _ => {
+                let loader_impl = crate::json::json_key_configuration_skin_object_loader::JsonKeyConfigurationSkinObjectLoader;
+                loader_impl.load_skin_object(self, skin, sk, dst, p)
+            }
+        }
     }
 
     fn set_destination(
@@ -793,9 +845,310 @@ impl SkinData {
     }
 }
 
+/// Discriminant for the type of skin object represented by SkinObjectData.
+/// Each variant captures the parameters that the rendering pipeline needs.
+#[derive(Clone, Debug, Default)]
+pub enum SkinObjectType {
+    /// Default/unknown
+    #[default]
+    Unknown,
+    /// Negative-ID SkinImage (e.g. SkinImage(-id))
+    ImageById(i32),
+    /// SkinImage from texture source
+    Image {
+        src: Option<String>,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        divx: i32,
+        divy: i32,
+        timer: Option<i32>,
+        cycle: i32,
+        len: i32,
+        ref_id: i32,
+        act: Option<i32>,
+        click: i32,
+        is_movie: bool,
+    },
+    /// SkinImage from image set
+    ImageSet {
+        images: Vec<String>,
+        ref_id: i32,
+        value: Option<i32>,
+        act: Option<i32>,
+        click: i32,
+    },
+    /// SkinNumber
+    Number {
+        src: Option<String>,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        divx: i32,
+        divy: i32,
+        timer: Option<i32>,
+        cycle: i32,
+        digit: i32,
+        padding: i32,
+        zeropadding: i32,
+        space: i32,
+        ref_id: i32,
+        value: Option<i32>,
+        align: i32,
+        offsets: Option<Vec<SkinNumberOffset>>,
+    },
+    /// SkinFloat
+    Float {
+        src: Option<String>,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        divx: i32,
+        divy: i32,
+        timer: Option<i32>,
+        cycle: i32,
+        iketa: i32,
+        fketa: i32,
+        is_signvisible: bool,
+        align: i32,
+        zeropadding: i32,
+        space: i32,
+        ref_id: i32,
+        value: Option<i32>,
+        gain: f32,
+        offsets: Option<Vec<SkinNumberOffset>>,
+    },
+    /// SkinText
+    Text {
+        font: Option<String>,
+        size: i32,
+        align: i32,
+        ref_id: i32,
+        value: Option<i32>,
+        constant_text: Option<String>,
+        wrapping: bool,
+        overflow: i32,
+        outline_color: String,
+        outline_width: f32,
+        shadow_color: String,
+        shadow_offset_x: f32,
+        shadow_offset_y: f32,
+        shadow_smoothness: f32,
+    },
+    /// SkinSlider
+    Slider {
+        src: Option<String>,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        divx: i32,
+        divy: i32,
+        timer: Option<i32>,
+        cycle: i32,
+        angle: i32,
+        range: i32,
+        slider_type: i32,
+        changeable: bool,
+        value: Option<i32>,
+        event: Option<i32>,
+        is_ref_num: bool,
+        min: i32,
+        max: i32,
+    },
+    /// SkinGraph
+    Graph {
+        src: Option<String>,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        divx: i32,
+        divy: i32,
+        timer: Option<i32>,
+        cycle: i32,
+        angle: i32,
+        graph_type: i32,
+        value: Option<i32>,
+        is_ref_num: bool,
+        min: i32,
+        max: i32,
+    },
+    /// SkinDistributionGraph (graph with type < 0)
+    DistributionGraph {
+        src: Option<String>,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        divx: i32,
+        divy: i32,
+        timer: Option<i32>,
+        cycle: i32,
+        graph_type: i32,
+    },
+    /// SkinGaugeGraphObject
+    GaugeGraph {
+        color: Option<Vec<String>>,
+        assist_clear_bg_color: String,
+        assist_and_easy_fail_bg_color: String,
+        groove_fail_bg_color: String,
+        groove_clear_and_hard_bg_color: String,
+        ex_hard_bg_color: String,
+        hazard_bg_color: String,
+        assist_clear_line_color: String,
+        assist_and_easy_fail_line_color: String,
+        groove_fail_line_color: String,
+        groove_clear_and_hard_line_color: String,
+        ex_hard_line_color: String,
+        hazard_line_color: String,
+        borderline_color: String,
+        border_color: String,
+    },
+    /// SkinNoteDistributionGraph
+    JudgeGraph {
+        graph_type: i32,
+        delay: i32,
+        back_tex_off: i32,
+        order_reverse: i32,
+        no_gap: i32,
+        no_gap_x: i32,
+    },
+    /// SkinBPMGraph
+    BpmGraph {
+        delay: i32,
+        line_width: i32,
+        main_bpm_color: String,
+        min_bpm_color: String,
+        max_bpm_color: String,
+        other_bpm_color: String,
+        stop_line_color: String,
+        transition_line_color: String,
+    },
+    /// SkinHitErrorVisualizer
+    HitErrorVisualizer {
+        width: i32,
+        judge_width_millis: i32,
+        line_width: i32,
+        color_mode: i32,
+        hiterror_mode: i32,
+        ema_mode: i32,
+        line_color: String,
+        center_color: String,
+        pg_color: String,
+        gr_color: String,
+        gd_color: String,
+        bd_color: String,
+        pr_color: String,
+        ema_color: String,
+        alpha: f32,
+        window_length: i32,
+        transparent: i32,
+        draw_decay: i32,
+    },
+    /// SkinTimingVisualizer
+    TimingVisualizer {
+        width: i32,
+        judge_width_millis: i32,
+        line_width: i32,
+        line_color: String,
+        center_color: String,
+        pg_color: String,
+        gr_color: String,
+        gd_color: String,
+        bd_color: String,
+        pr_color: String,
+        transparent: i32,
+        draw_decay: i32,
+    },
+    /// SkinTimingDistributionGraph
+    TimingDistributionGraph {
+        width: i32,
+        line_width: i32,
+        graph_color: String,
+        average_color: String,
+        dev_color: String,
+        pg_color: String,
+        gr_color: String,
+        gd_color: String,
+        bd_color: String,
+        pr_color: String,
+        draw_average: i32,
+        draw_dev: i32,
+    },
+    /// SkinGauge
+    Gauge {
+        nodes: Vec<String>,
+        parts: i32,
+        gauge_type: i32,
+        range: i32,
+        cycle: i32,
+        starttime: i32,
+        endtime: i32,
+    },
+    /// SkinNote (play skin only)
+    Note,
+    /// SkinHidden (hidden cover, play skin only)
+    HiddenCover {
+        src: Option<String>,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        divx: i32,
+        divy: i32,
+        timer: Option<i32>,
+        cycle: i32,
+        disapear_line: i32,
+        is_disapear_line_link_lift: bool,
+    },
+    /// SkinHidden (lift cover, play skin only)
+    LiftCover {
+        src: Option<String>,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        divx: i32,
+        divy: i32,
+        timer: Option<i32>,
+        cycle: i32,
+        disapear_line: i32,
+        is_disapear_line_link_lift: bool,
+    },
+    /// SkinBGA (play skin only)
+    Bga { bga_expand: i32 },
+    /// SkinJudge (play skin only)
+    Judge { index: i32, shift: bool },
+    /// PMchara (play skin only)
+    PmChara {
+        src: Option<String>,
+        color: i32,
+        chara_type: i32,
+        side: i32,
+    },
+    /// SkinBar (select skin only)
+    SongList { center: i32, clickable: Vec<i32> },
+    /// Search text region (select skin only)
+    SearchTextRegion { x: f32, y: f32, w: f32, h: f32 },
+}
+
+/// Offset data for SkinNumber/SkinFloat per-digit offsets
+#[derive(Clone, Debug, Default)]
+pub struct SkinNumberOffset {
+    pub x: i32,
+    pub y: i32,
+    pub w: i32,
+    pub h: i32,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct SkinObjectData {
     pub name: Option<String>,
+    pub object_type: SkinObjectType,
     pub destinations: Vec<DestinationData>,
     pub offset_ids: Vec<i32>,
     pub stretch: i32,
@@ -806,6 +1159,7 @@ impl SkinObjectData {
     pub fn new_image_by_id(id: i32) -> Self {
         Self {
             name: Some(format!("{}", -id)),
+            object_type: SkinObjectType::ImageById(id),
             ..Default::default()
         }
     }

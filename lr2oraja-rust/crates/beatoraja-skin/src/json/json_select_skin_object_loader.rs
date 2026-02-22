@@ -4,7 +4,7 @@
 use std::path::Path;
 
 use crate::json::json_skin;
-use crate::json::json_skin_loader::{JSONSkinLoader, SkinData, SkinObjectData};
+use crate::json::json_skin_loader::{JSONSkinLoader, SkinData, SkinObjectData, SkinObjectType};
 use crate::json::json_skin_object_loader::{self, JsonSkinObjectLoader};
 
 /// Corresponds to JsonSelectSkinObjectLoader extends JsonSkinObjectLoader<MusicSelectSkin>
@@ -12,7 +12,7 @@ pub struct JsonSelectSkinObjectLoader;
 
 impl JsonSkinObjectLoader for JsonSelectSkinObjectLoader {
     fn get_skin(&self, _header: &crate::json::json_skin_loader::SkinHeaderData) -> SkinData {
-        // MusicSelectSkin creation - stubbed pending Phase 6+ rendering
+        // MusicSelectSkin creation - stubbed pending rendering pipeline
         SkinData::new()
     }
 
@@ -38,21 +38,12 @@ impl JsonSkinObjectLoader for JsonSelectSkinObjectLoader {
         {
             let obj = SkinObjectData {
                 name: songlist.id.clone(),
+                object_type: SkinObjectType::SongList {
+                    center: songlist.center,
+                    clickable: songlist.clickable.clone(),
+                },
                 ..Default::default()
             };
-
-            // In Java: creates SkinBar, loads on/off images, lamps, text, levels, graph
-            // All texture-dependent - stubbed
-
-            // SkinBar creation
-            // barobj.setBarImage(onimage, offimage)
-            // skin.setCenterBar(sk.songlist.center)
-            // skin.setClickableBar(sk.songlist.clickable)
-            // lamp, playerlamp, rivallamp, trophy, label loading
-            // text loading via createText
-            // level number loading
-            // distribution graph loading
-
             return Some(obj);
         }
 
