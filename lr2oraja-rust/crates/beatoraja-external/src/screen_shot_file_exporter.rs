@@ -93,8 +93,8 @@ impl ScreenShotExporter for ScreenShotFileExporter {
         let mut pixmap = Pixmap::new(width, height);
         let result: Result<bool, Box<dyn std::error::Error>> = {
             let path = format!("screenshot/{}{}.png", sdf, state_name);
-            let mut pixel_buf = pixmap.get_pixels();
-            BufferUtils::copy(pixels, 0, &mut pixel_buf, pixels.len());
+            let pixel_buf = pixmap.get_pixels();
+            BufferUtils::copy(pixels, 0, pixel_buf, pixels.len());
             PixmapIO::write_png(&path, &pixmap);
             log::info!("Screenshot saved: {}", path);
             pixmap.dispose();

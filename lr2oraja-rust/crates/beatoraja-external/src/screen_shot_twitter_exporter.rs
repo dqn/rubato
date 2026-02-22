@@ -1,8 +1,8 @@
 use crate::screen_shot_exporter::{self, ScreenShotExporter};
 use crate::stubs::{
     BufferUtils, GdxGraphics, ImGuiNotify, IntegerPropertyFactory, MainState, NUMBER_PLAYLEVEL,
-    Pixmap, PlayerConfig, STRING_FULLTITLE, STRING_TABLE_LEVEL, STRING_TABLE_NAME, ScreenType,
-    StatusUpdate, StringPropertyFactory, TwitterConfigurationBuilder, TwitterFactory,
+    Pixmap, PixmapIO, PlayerConfig, STRING_FULLTITLE, STRING_TABLE_LEVEL, STRING_TABLE_NAME,
+    ScreenType, StatusUpdate, StringPropertyFactory, TwitterConfigurationBuilder, TwitterFactory,
 };
 
 /// ScreenShotTwitterExporter - posts screenshots to Twitter.
@@ -125,11 +125,9 @@ impl ScreenShotExporter for ScreenShotTwitterExporter {
         let mut pixmap = Pixmap::new(width, height);
         let result: Result<bool, Box<dyn std::error::Error>> = (|| {
             // create png byte stream
-            let mut pixel_buf = pixmap.get_pixels();
-            BufferUtils::copy(pixels, 0, &mut pixel_buf, pixels.len());
-            // In Java: create PNG byte array via PixmapIO.PNG
-            log::warn!("not yet implemented: PNG encoding via PixmapIO.PNG - LibGDX dependency");
-            let image_bytes: Vec<u8> = Vec::new();
+            let pixel_buf = pixmap.get_pixels();
+            BufferUtils::copy(pixels, 0, pixel_buf, pixels.len());
+            let image_bytes = PixmapIO::encode_png_bytes(&pixmap);
 
             // Upload Media and Post
             let mediastatus = twitter.upload_media("from beatoraja", &image_bytes)?;
