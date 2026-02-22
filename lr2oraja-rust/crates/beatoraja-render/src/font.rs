@@ -11,6 +11,17 @@ use crate::texture::TextureRegion;
 #[derive(Clone, Debug, Default)]
 pub struct BitmapFontData;
 
+/// Positioned glyph for rendering.
+/// Contains the character, its pixel position, and size within the layout.
+#[derive(Clone, Debug)]
+pub struct PositionedGlyph {
+    pub ch: char,
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+}
+
 /// Bitmap font for text rendering.
 /// Corresponds to com.badlogic.gdx.graphics.g2d.BitmapFont.
 use std::sync::Arc;
@@ -45,8 +56,20 @@ impl BitmapFont {
         }
     }
 
+    pub fn get_font(&self) -> Option<&Arc<ab_glyph::FontVec>> {
+        self.font.as_ref()
+    }
+
     pub fn get_regions(&self) -> Vec<TextureRegion> {
         vec![]
+    }
+
+    pub fn get_scale(&self) -> f32 {
+        self.scale
+    }
+
+    pub fn set_scale(&mut self, scale: f32) {
+        self.scale = scale;
     }
 
     pub fn set_color(&mut self, color: &Color) {
@@ -86,6 +109,43 @@ impl BitmapFont {
 
         let height = scaled.height();
         GlyphLayout { width, height }
+    }
+
+    /// Compute positioned glyphs for text at the current scale.
+    /// Returns a list of glyphs with their pixel positions and dimensions,
+    /// plus the total layout width and height.
+    pub fn layout_glyphs(&self, text: &str) -> (Vec<PositionedGlyph>, f32, f32) {
+        use ab_glyph::{Font, ScaleFont};
+        let Some(font) = self.font.as_ref() else {
+            return (vec![], 0.0, 0.0);
+        };
+        let scaled = font.as_scaled(ab_glyph::PxScale::from(self.scale));
+
+        let mut glyphs = Vec::new();
+        let mut cursor_x = 0.0f32;
+        let mut prev_glyph: Option<ab_glyph::GlyphId> = None;
+        let height = scaled.height();
+        let ascent = scaled.ascent();
+
+        for ch in text.chars() {
+            let glyph_id = scaled.glyph_id(ch);
+            if let Some(prev) = prev_glyph {
+                cursor_x += scaled.kern(prev, glyph_id);
+            }
+            let h_advance = scaled.h_advance(glyph_id);
+            // Use h_advance as glyph width for positioning; height is line height
+            glyphs.push(PositionedGlyph {
+                ch,
+                x: cursor_x,
+                y: 0.0,
+                width: h_advance,
+                height,
+            });
+            cursor_x += h_advance;
+            prev_glyph = Some(glyph_id);
+        }
+
+        (glyphs, cursor_x, height)
     }
 }
 
