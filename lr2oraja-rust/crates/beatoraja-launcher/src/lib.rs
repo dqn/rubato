@@ -1,7 +1,9 @@
 pub mod launcher_ui;
+pub mod state_factory;
 pub mod stubs;
 
 pub use launcher_ui::LauncherUi;
+pub use state_factory::LauncherStateFactory;
 
 // Utility types
 pub mod controller_config_view_model;

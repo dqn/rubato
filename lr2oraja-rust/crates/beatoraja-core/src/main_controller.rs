@@ -5,6 +5,7 @@ use log::info;
 
 use beatoraja_types::main_controller_access::MainControllerAccess;
 use beatoraja_types::player_resource_access::PlayerResourceAccess;
+use beatoraja_types::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
 
 use crate::bms_player_mode::BMSPlayerMode;
 use crate::config::Config;
@@ -189,6 +190,9 @@ pub struct MainController {
     /// Ranking data cache
     ircache: RankingDataCache,
 
+    /// Song database accessor (trait object)
+    songdb: Option<Box<dyn SongDatabaseAccessorTrait>>,
+
     /// Song information accessor
     infodb: Option<SongInformationAccessor>,
 
@@ -249,9 +253,8 @@ impl MainController {
             Some(config.soundpath.as_str()),
         );
 
-        // PlayDataAccessor::new depends on config field accessors
-        // that may be in-progress from other translators
-        let playdata: Option<PlayDataAccessor> = None;
+        // Java: playdata = new PlayDataAccessor(config);
+        let playdata = Some(PlayDataAccessor::new(&config));
 
         // Phase 5+: IR initialization, Discord RPC, OBS listener
         let state_listener: Vec<Box<dyn MainStateListener>> = Vec::new();
@@ -275,6 +278,7 @@ impl MainController {
             ir: Vec::new(),
             rivals: RivalDataAccessor::new(),
             ircache: RankingDataCache::new(),
+            songdb: None,
             infodb: None,
             offset,
             state_listener,
@@ -707,11 +711,15 @@ impl MainController {
     /// Returns the song database accessor.
     ///
     /// Translated from: MainController.getSongDatabase()
-    pub fn get_song_database(&self) -> Option<()> {
-        // Delegates to MainLoader.getScoreDatabaseAccessor() in Java
-        // Phase 5+: return actual SongDatabaseAccessor
-        log::warn!("not yet implemented: getSongDatabase");
-        None
+    /// In Java: return MainLoader.getScoreDatabaseAccessor()
+    pub fn get_song_database(&self) -> Option<&dyn SongDatabaseAccessorTrait> {
+        self.songdb.as_deref()
+    }
+
+    /// Set the song database accessor.
+    /// Called by the application entry point (beatoraja-launcher) after creating the DB.
+    pub fn set_song_database(&mut self, songdb: Box<dyn SongDatabaseAccessorTrait>) {
+        self.songdb = Some(songdb);
     }
 
     /// Returns the current state.
@@ -846,10 +854,12 @@ impl MainController {
     /// (set by the launcher). This method only initializes the PlayerResource.
     /// States are created lazily in change_state().
     pub fn initialize_states(&mut self) {
-        // Create PlayerResource
         // In Java: resource = new PlayerResource(audio, config, player, loudnessAnalyzer);
         // Phase 5+: pass audio driver and loudness analyzer
-        // For now, create with available config
+
+        // In Java: playdata = new PlayDataAccessor(config);
+        self.playdata = Some(PlayDataAccessor::new(&self.config));
+
         info!("Initializing states (PlayerResource created, states created on-demand via factory)");
     }
 

@@ -69,6 +69,7 @@ impl CourseIRSendStatus {
 /// Course result screen
 pub struct CourseResult {
     pub data: AbstractResultData,
+    pub main_data: beatoraja_core::main_state::MainStateData,
     ir_send_status: Vec<CourseIRSendStatus>,
     property: ResultKeyProperty,
 }
@@ -77,6 +78,9 @@ impl CourseResult {
     pub fn new() -> Self {
         Self {
             data: AbstractResultData::new(),
+            main_data: beatoraja_core::main_state::MainStateData::new(
+                beatoraja_core::timer_manager::TimerManager::new(),
+            ),
             ir_send_status: Vec::new(),
             property: ResultKeyProperty::beat_7k(),
         }
@@ -493,5 +497,57 @@ impl CourseResult {
 impl Default for CourseResult {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// ============================================================
+// MainState trait implementation
+// ============================================================
+
+impl beatoraja_core::main_state::MainState for CourseResult {
+    fn state_type(&self) -> Option<beatoraja_core::main_state::MainStateType> {
+        Some(beatoraja_core::main_state::MainStateType::CourseResult)
+    }
+
+    fn main_state_data(&self) -> &beatoraja_core::main_state::MainStateData {
+        &self.main_data
+    }
+
+    fn main_state_data_mut(&mut self) -> &mut beatoraja_core::main_state::MainStateData {
+        &mut self.main_data
+    }
+
+    fn create(&mut self) {
+        // Delegates to create(main, resource) when MainController is available
+        log::warn!(
+            "not yet implemented: CourseResult.create() - requires MainController and PlayerResource context"
+        );
+    }
+
+    fn prepare(&mut self) {
+        // Delegates to prepare(main, resource) when MainController is available
+        log::warn!(
+            "not yet implemented: CourseResult.prepare() - requires MainController and PlayerResource context"
+        );
+    }
+
+    fn render(&mut self) {
+        // Delegates to render(resource) when MainController is available
+        log::warn!("not yet implemented: CourseResult.render() - requires PlayerResource context");
+    }
+
+    fn input(&mut self) {
+        // Delegates to input(main, resource) when MainController is available
+        log::warn!(
+            "not yet implemented: CourseResult.input() - requires MainController and PlayerResource context"
+        );
+    }
+
+    fn shutdown(&mut self) {
+        self.shutdown();
+    }
+
+    fn dispose(&mut self) {
+        self.dispose();
     }
 }

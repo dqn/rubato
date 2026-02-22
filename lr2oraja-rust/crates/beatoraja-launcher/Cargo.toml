@@ -19,8 +19,11 @@ beatoraja-modmenu = { workspace = true }
 beatoraja-skin = { workspace = true }
 beatoraja-play = { workspace = true }
 beatoraja-select = { workspace = true }
+beatoraja-result = { workspace = true }
+beatoraja-decide = { workspace = true }
 beatoraja-external = { workspace = true }
 beatoraja-stream = { workspace = true }
+beatoraja-types = { workspace = true }
 bms-model = { workspace = true }
 md-processor = { workspace = true }
 beatoraja-song = { workspace = true }

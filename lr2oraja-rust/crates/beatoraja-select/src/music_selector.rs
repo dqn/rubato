@@ -123,6 +123,18 @@ impl MusicSelector {
         }
     }
 
+    /// Create a MusicSelector with an injected song database accessor.
+    ///
+    /// Translated from: MusicSelector(MainController main, boolean songUpdated)
+    /// In Java, the constructor receives MainController and gets the songdb from it.
+    /// In Rust, we inject the songdb directly to avoid circular dependencies.
+    pub fn with_song_database(songdb: Box<dyn SongDatabaseAccessor>) -> Self {
+        Self {
+            songdb,
+            ..Self::new()
+        }
+    }
+
     pub fn set_rival(&mut self, rival: Option<PlayerInformation>) {
         // In Java: finds rival index, sets rival and rival cache, updates bar
         self.rival = rival;
