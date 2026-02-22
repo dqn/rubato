@@ -8,7 +8,7 @@ use crate::ir_connection::IRConnection;
 pub struct IRConnectionEntry {
     pub name: String,
     pub home: Option<String>,
-    pub factory: Box<dyn Fn() -> Box<dyn IRConnection> + Send + Sync>,
+    pub factory: Box<dyn Fn() -> Box<dyn IRConnection + Send + Sync> + Send + Sync>,
 }
 
 /// IR connection manager
@@ -30,7 +30,7 @@ impl IRConnectionManager {
     }
 
     /// Get an IRConnection instance by name. Returns None if not found.
-    pub fn get_ir_connection(name: &str) -> Option<Box<dyn IRConnection>> {
+    pub fn get_ir_connection(name: &str) -> Option<Box<dyn IRConnection + Send + Sync>> {
         if name.is_empty() {
             return None;
         }

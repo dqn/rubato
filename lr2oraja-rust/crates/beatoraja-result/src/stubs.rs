@@ -72,32 +72,32 @@ impl MainController {
 }
 
 // ============================================================
-// IR (Internet Ranking) stubs
+// IR (Internet Ranking) — real implementations (Phase 20)
 // ============================================================
 
-// IRStatus: moved to crate::ir_status (Phase 18e-7)
+// IRStatus: real type with connection, config, player (Phase 20)
 pub use crate::ir_status::IRStatus;
 
-// IRConnection: replaced by pub use from beatoraja_ir (trait)
+// IRConnection: real trait from beatoraja_ir
 pub use beatoraja_ir::ir_connection::IRConnection;
 
-// IRConfig: replaced by pub use from beatoraja_core
+// IRConfig: real type from beatoraja_core
 pub use beatoraja_core::ir_config::IRConfig;
 
-// IRScoreData: replaced by pub use from beatoraja_ir
+// IRScoreData: real type from beatoraja_ir
 pub use beatoraja_ir::ir_score_data::IRScoreData;
 
-// IRCourseData: replaced by pub use from beatoraja_ir
+// IRCourseData: real type from beatoraja_ir
 pub use beatoraja_ir::ir_course_data::IRCourseData;
 
-// RankingData: replaced by pub use from beatoraja_ir
+// RankingData: real type from beatoraja_ir
 pub use beatoraja_ir::ranking_data::RankingData;
 
 // ============================================================
-// MainController.IRSendStatus (for MusicResult)
+// MainController.IRSendStatus — real implementation (Phase 20)
 // ============================================================
 
-// IRSendStatusMain: moved to crate::ir_send_status (Phase 18e-7)
+// IRSendStatusMain: real type with send() implementation (Phase 20)
 pub use crate::ir_send_status::IRSendStatusMain;
 
 // BMSPlayerInputProcessor: replaced by pub use from beatoraja_input (Phase 18e-9)

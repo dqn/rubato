@@ -577,8 +577,16 @@ impl MainController {
     /// Initialize IR configurations from config.
     ///
     /// Translated from: MainController.initializeIRConfig()
+    ///
+    /// Note: The actual IR initialization logic is in beatoraja_result::ir_initializer
+    /// because beatoraja-core cannot depend on beatoraja-ir (circular dependency).
+    /// This method is called from the application entry point after IR initialization.
     pub fn initialize_ir_config(&mut self) {
-        log::warn!("not yet implemented: initializeIRConfig");
+        // IR initialization is performed externally via beatoraja_result::ir_initializer::initialize_ir_config()
+        // because beatoraja-core cannot depend on beatoraja-ir.
+        // The application entry point should call ir_initializer::initialize_ir_config() and then
+        // set the resulting IRStatus entries on this controller.
+        log::info!("IR config initialization delegated to beatoraja_result::ir_initializer");
     }
 
     /// Initialize all game states (selector, player, result, etc.).

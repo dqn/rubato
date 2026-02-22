@@ -14,6 +14,8 @@
 pub mod stubs;
 
 // IR types (moved from stubs.rs)
+pub mod ir_initializer;
+pub mod ir_resend;
 pub mod ir_send_status;
 pub mod ir_status;
 
