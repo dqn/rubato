@@ -16,6 +16,13 @@ Phases 1–12, 13a–f, 13f follow-up, 13g, 14, 15a–g, 16a, 16c, 17 — all co
 - [x] Wire remaining LauncherUi tabs to PlayConfigurationView fields — All 11 tabs now functional: Input (keyboard duration, controller JKOC/analog scratch, mouse scratch), Skin (slot display, CIM toggle), Other (IPFS, HTTP download, clipboard screenshot), IR (multi-slot config with name/userid/password/send mode/import), Stream (enable/notify/max request), OBS (WebSocket enable/host/port/password/recording mode/stop wait). All read/write Config and PlayerConfig fields directly.
 - [x] Remove dead legacy `show()` methods in modmenu — Deleted old `show(&mut ImBoolean)` from 9 sub-menus (freq_trainer, judge_trainer, random_trainer, song_manager, download_task, skin_menu, skin_widget_manager, performance_monitor, misc_setting). Cleaned up unused `ImBoolean`/`imgui_renderer` imports where safe.
 
+## Phase 13f follow-up 2: LauncherUi fixes
+
+- [ ] Fix `commit_config()` to also persist PlayerConfig — currently only saves Config via `Config::write()`; Input/IR/Stream tab changes are lost. Java `PlayConfigurationView.commit()` calls both `Config::write()` and `PlayerConfig::write()`
+- [ ] Use `IRConfig::get_userid()`/`set_userid()` and `get_password()`/`set_password()` in IR tab — current code reads/writes raw `ir.userid`/`ir.password` fields, bypassing AES encryption logic in `IRConfig::validate()`
+- [ ] Add skin browsing UI to Skin tab — currently shows slot paths only; Java `SkinConfigurationView` has skin type selector, header list from filesystem scan, and dynamic customization options (CustomOption/CustomFile/CustomOffset)
+- [ ] Add key binding editing grid to Input tab — currently shows controller settings only; Java `InputConfigurationView` has a full key assignment table per mode with keyboard/controller/MIDI columns
+
 ## Phase 16b: Golden Master Test Activation (incomplete)
 
 - [ ] Add missing fixtures for modules not yet covered (modmenu, select bar, stream) — deferred until Java exporter updated
