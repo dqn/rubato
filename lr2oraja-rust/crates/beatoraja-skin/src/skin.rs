@@ -551,6 +551,10 @@ impl Skin {
         &self.objects
     }
 
+    pub fn get_objects_mut(&mut self) -> &mut Vec<SkinObject> {
+        &mut self.objects
+    }
+
     pub fn get_custom_events_count(&self) -> usize {
         self.custom_events.len()
     }

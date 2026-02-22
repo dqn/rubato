@@ -58,6 +58,9 @@ pub mod skin_text_image;
 pub mod skin_timing_distribution_graph;
 pub mod skin_timing_visualizer;
 
+// Skin data converter (SkinData -> Skin)
+pub mod skin_data_converter;
+
 // Skin loaders
 pub mod json;
 pub mod lr2;
