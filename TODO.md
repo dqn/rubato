@@ -4,7 +4,7 @@ Dependency graph order. Each module is ported only after its dependencies are co
 
 ## Completed Phases
 
-Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 1042 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) complete. Phase 18c (audio decode API) complete. Phase 18g (BRD replay codec) complete. See AGENTS.md for details.
+Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 1185 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) complete. Phase 18c (audio decode API) complete. Phase 18f (e2e test activation) complete. Phase 18g (BRD replay codec) complete. See AGENTS.md for details.
 
 ## Phase 13f: egui UI (complete)
 
@@ -27,16 +27,12 @@ Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 1
 
 - [x] Delete duplicate pending tests — `compare_rule.rs` and `compare_pattern.rs` in `pending/` were duplicates of already-active versions with real imports; deleted
 - [ ] Add missing fixtures for modules not yet covered (modmenu, select bar, stream) — Java exporters exist; deferred until Rust-side APIs are implemented
-- [ ] Reactivate remaining 13 pending test files — blocked on multiple levels:
-  - ~~**JudgeManager::update() is a stub**~~ → resolved: full judge loop implemented in Phase 18a. New testable API: `update(&mut self, mtime, &[JudgeNote], &[bool], &[i64], &mut GrooveGauge)`
-  - ~~**Missing judge API types**~~ → resolved: `JudgeConfig`, `JUDGE_PG`/`JUDGE_GR`/etc. constants, `build_judge_notes()` all implemented in Phase 18a
-  - ~~**e2e_helpers.rs rewrite still needed**~~ → resolved: rewritten against actual API (Phase 18a complete). `e2e_helpers.rs` activated in lib.rs. `compare_judge_manager.rs` moved out of pending/
+- [x] Activate 9 e2e test files (Phase 18f) — moved from `pending/` to active: `e2e_judge.rs` (20), `course_e2e.rs` (9), `compare_judge.rs` (6), `compare_replay_e2e.rs` (1), `e2e_edge_cases.rs` (11), `exhaustive_e2e.rs` (72), `timing_boundary_e2e.rs` (10), `full_pipeline_integration.rs` (4), `replay_roundtrip_e2e.rs` (5). Total 138 new tests. Fixed `build_judge_notes()` time ordering bug (was lane-grouped, now sorted by `(time_us, lane)` with pair_index remapping).
+- [ ] Reactivate remaining 4 pending test files — blocked on 18b + 18d:
   - **Missing rendering API:** `StaticStateProvider`, `SkinStateProvider`, `render_snapshot` module not implemented — blocks `compare_eval_test_skins.rs`, `compare_render_snapshot.rs` (10 tests)
-  - ~~**Missing audio API:** `load_audio()`, `f32_to_i16()` not implemented in `beatoraja-audio`~~ → resolved: Phase 18c complete. `decode::load_audio()` + `bms_renderer::f32_to_i16()` implemented. `compare_audio.rs` activated (11 tests pass)
   - **Skin loader API mismatch:** tests assume free functions (`json_loader::load_skin()`), actual API uses struct methods (`JsonSkinLoader.load_skin()`) — blocks `compare_skin.rs` (13 tests). Also: `skin.width`/`skin.objects` are private, `skin.scale_x`/`skin.scale_y`/`skin.options` not present
   - **Missing BGA API:** `BgaProcessor` struct not found — blocks `compare_bga_timeline.rs`
-  - **Fixture availability:** compare_bga_timeline fixtures and Java exporters already exist; blocker is Rust-side API (`BgaProcessor`)
-  - **Resolution:** Phase 18a (judge loop) complete. Phase 18c (audio decode) complete. Remaining blockers: 18b (rendering state providers), 18d (BGA + skin test rewrite), then 18f (test activation)
+  - **Resolution:** Remaining blockers: 18b (rendering state providers), 18d (BGA + skin test rewrite)
 
 ## Phase 18: Post-Phase 13 Lifecycle Wiring
 
@@ -47,7 +43,7 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 - [x] Implement `JudgeManager::update()` — full 450-line Java judge loop translated to testable Rust API: `update(&mut self, mtime, &[JudgeNote], &[bool], &[i64], &mut GrooveGauge)`. All 4 sections: pass-through, HCN gauge, key press/release, miss POOR + LN end. Internal `NoteJudgeState` tracks per-note state/play_time. `LaneIterState` reimplements Java `Lane` mark/reset/getNote on flat index arrays. `MultiBadCollector` filters simultaneous bad judgments. `update_micro()` records score/combo/ghost/gauge. 24 tests pass.
 - [x] Add `JudgeConfig` struct — `JudgeConfig<'a>` with notes, mode, ln_type, judge_rank, judge_window_rate, scratch_judge_window_rate, algorithm, autoplay, judge_property, lane_property. `JudgeManager::from_config()` constructor.
 - [x] Add judge constants (`JUDGE_PG`, `JUDGE_GR`, `JUDGE_GD`, `JUDGE_BD`, `JUDGE_PR`, `JUDGE_MS`) — in `bms-model/src/judge_note.rs`
-- [x] Add `BMSModel::build_judge_notes()` — in `bms-model/src/judge_note.rs`, builds flat lane-grouped array with LN pair cross-linking via `pair_index`. 7 tests pass.
+- [x] Add `BMSModel::build_judge_notes()` — in `bms-model/src/judge_note.rs`, builds flat time-ordered array (sorted by `(time_us, lane)`) with LN pair cross-linking via `pair_index`. 8 tests pass.
 - [x] Add `JudgeAlgorithm::compare_times()` — variant of `compare()` taking raw time/state values and `&[[i64; 2]]` judge table (used by `update()` where only `JudgeNote` is available)
 - [x] Rewrite `e2e_helpers.rs` and `compare_judge_manager.rs` against actual API — `from_config()`, `mode` field, `GrooveGauge::new(&model, i32, &GaugeProperty)`, `BMSDecoder::new().decode(ChartInformation)`, `KeyInputLog::with_data()`. Added `pair_index` bounds checks in `update_micro()` and HCN gauge loop. Fixed `build_judge_notes()` LN pairing (stack-based post-processing). Fixed `from_config()` total_notes to exclude LN end notes for LNTYPE_LONGNOTE (matches Java). `compare_judge_manager.rs` activated (moved out of pending). 993 tests pass.
 
@@ -76,10 +72,11 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 - [ ] Remove all `stubs.rs` files (target: zero remaining stubs) — blocked: depends on above three stub replacements completing first
 - [ ] Remove `rendering_stubs.rs` (all types replaced by wgpu equivalents from Phase 13) — blocked: skin crates still reference rendering stub types; requires full `beatoraja-render` type propagation
 
-### 18f: Integration verification
+### 18f: Integration verification (complete — 9 of 9 e2e test files activated)
 
-- [x] Rewrite e2e test files against actual API — all 9 files rewritten and compile-verified: `e2e_judge.rs`, `course_e2e.rs`, `compare_judge.rs`, `exhaustive_e2e.rs`, `e2e_edge_cases.rs`, `timing_boundary_e2e.rs`, `replay_roundtrip_e2e.rs`, `full_pipeline_integration.rs`, `compare_replay_e2e.rs`. Old API names (`BmsDecoder`/`BmsModel`/`GaugeType` enum/`PlayerRule`/`model.total_notes()`/`score.judge_count()`) replaced with actual crate types (`BMSDecoder`/`BMSModel`/`i32` gauge constants/`BMSPlayerRule`/`model.get_total_notes()`/`score.get_judge_count_total()`). Replay tests use JSON serde round-trip (can now be updated to use `ReplayData::read_brd`/`write_brd` from Phase 18g)
-- [ ] Activate remaining 13 Phase 16b pending tests — depends on 18b + 18d completing + e2e test API rewrites (18a, 18c done)
+- [x] Rewrite e2e test files against actual API — all 9 files rewritten and compile-verified: `e2e_judge.rs`, `course_e2e.rs`, `compare_judge.rs`, `exhaustive_e2e.rs`, `e2e_edge_cases.rs`, `timing_boundary_e2e.rs`, `replay_roundtrip_e2e.rs`, `full_pipeline_integration.rs`, `compare_replay_e2e.rs`. Old API names (`BmsDecoder`/`BmsModel`/`GaugeType` enum/`PlayerRule`/`model.total_notes()`/`score.judge_count()`) replaced with actual crate types (`BMSDecoder`/`BMSModel`/`i32` gauge constants/`BMSPlayerRule`/`model.get_total_notes()`/`score.get_judge_count_total()`). Replay tests use JSON serde round-trip
+- [x] Activate 9 e2e test files — moved from `tests/pending/` to `tests/`. All 138 new tests pass. Fixed `build_judge_notes()` time ordering bug discovered during activation (was lane-grouped, now sorted by `(time_us, lane)` with pair_index remapping). 1185 total tests pass
+- [ ] Activate remaining 4 Phase 16b pending tests — depends on 18b + 18d completing (compare_eval_test_skins, compare_render_snapshot, compare_skin, compare_bga_timeline)
 - [ ] E2E gameplay flow test: select → decide → play → result screen transitions — blocked: requires all stubs removed and real screen implementations wired
 - [ ] Verify: all tests pass, zero clippy warnings, clean `cargo fmt` — blocked: final gate after all above tasks complete
 
@@ -91,6 +88,8 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 - [x] 5 new unit tests: BRD round-trip, parent dir creation, nonexistent file error, course round-trip, shrink-on-write verification. 14 total replay_data tests pass
 
 ### New Issues Found
+
+- [x] `build_judge_notes()` returned notes in lane-grouped order instead of time order — caused `bpm_extreme_timing_structure` and `multi_stop_timing_gaps` tests to fail. Fixed by sorting by `(time_us, lane)` and remapping `pair_index` values
 
 ## Remaining Stubs
 
