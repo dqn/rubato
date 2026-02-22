@@ -1,6 +1,6 @@
 use bms_model::mode::Mode;
 
-use crate::imgui_notify::ImGuiNotify;
+use crate::imgui_notify::{ImGuiNotify, NOTIFICATION_POSITIONS};
 use crate::imgui_renderer;
 use crate::stubs::{
     Config, ImBoolean, ImFloat, ImInt, MainController, MusicSelector, PlayConfig, PlayerConfig,
@@ -106,6 +106,110 @@ impl MiscSettingMenu {
         *CONFIG.lock().unwrap() = Some(config);
         *MAIN.lock().unwrap() = Some(main);
     }
+
+    /// Render the misc settings window using egui.
+    pub fn show_ui(ctx: &egui::Context) {
+        {
+            let mode = CURRENT_PLAY_MODE.lock().unwrap();
+            if mode.is_none() {
+                drop(mode);
+                change_play_mode(&Mode::BEAT_7K);
+            }
+        }
+
+        let mut open = true;
+        egui::Window::new("Misc Settings")
+            .open(&mut open)
+            .auto_sized()
+            .show(ctx, |ui| {
+                // Notification position
+                let mut pos = NOTIFICATION_POSITION.lock().unwrap().get();
+                let pos_text = NOTIFICATION_POSITIONS
+                    .get(pos as usize)
+                    .copied()
+                    .unwrap_or("TopLeft");
+                egui::ComboBox::from_label("Notification Positions")
+                    .selected_text(pos_text)
+                    .show_ui(ui, |ui| {
+                        for (i, name) in NOTIFICATION_POSITIONS.iter().enumerate() {
+                            if ui.selectable_value(&mut pos, i as i32, *name).clicked() {
+                                NOTIFICATION_POSITION.lock().unwrap().set(pos);
+                                ImGuiNotify::set_notification_position(pos as usize);
+                            }
+                        }
+                    });
+
+                // Play mode selector
+                let play_mode_options = get_play_mode_options();
+                let mut idx = PLAY_MODE_VALUE.lock().unwrap().get();
+                let mode_text = play_mode_options
+                    .get(idx as usize)
+                    .map(|s| s.as_str())
+                    .unwrap_or("BEAT_7K");
+                egui::ComboBox::from_label("Play Mode")
+                    .selected_text(mode_text)
+                    .show_ui(ui, |ui| {
+                        for (i, option) in play_mode_options.iter().enumerate() {
+                            if ui
+                                .selectable_value(&mut idx, i as i32, option.as_str())
+                                .clicked()
+                            {
+                                PLAY_MODE_VALUE.lock().unwrap().set(idx);
+                                if let Some(mode) = Mode::get_mode(&play_mode_options[i]) {
+                                    change_play_mode(&mode);
+                                }
+                            }
+                        }
+                    });
+
+                ui.separator();
+
+                // Lane cover / Hidden / Lift / Constant settings
+                let mut lift_enabled = ENABLE_LIFT.lock().unwrap().get();
+                ui.checkbox(&mut lift_enabled, "Enable Lift");
+                ENABLE_LIFT.lock().unwrap().set(lift_enabled);
+                if lift_enabled {
+                    let mut lift_val = LIFT_VALUE.lock().unwrap().get();
+                    ui.add(egui::Slider::new(&mut lift_val, 0..=1000).text("Lift"));
+                    LIFT_VALUE.lock().unwrap().set(lift_val);
+                }
+
+                let mut hidden_enabled = ENABLE_HIDDEN.lock().unwrap().get();
+                ui.checkbox(&mut hidden_enabled, "Enable Hidden");
+                ENABLE_HIDDEN.lock().unwrap().set(hidden_enabled);
+                if hidden_enabled {
+                    let mut hidden_val = HIDDEN_VALUE.lock().unwrap().get();
+                    ui.add(egui::Slider::new(&mut hidden_val, 0..=1000).text("Hidden"));
+                    HIDDEN_VALUE.lock().unwrap().set(hidden_val);
+                }
+
+                let mut lc_enabled = ENABLE_LANECOVER.lock().unwrap().get();
+                ui.checkbox(&mut lc_enabled, "Enable Lane Cover");
+                ENABLE_LANECOVER.lock().unwrap().set(lc_enabled);
+                if lc_enabled {
+                    let mut lc_val = LANECOVER_VALUE.lock().unwrap().get();
+                    ui.add(egui::Slider::new(&mut lc_val, 0..=1000).text("Lane Cover"));
+                    LANECOVER_VALUE.lock().unwrap().set(lc_val);
+                }
+
+                let mut constant = ENABLE_CONSTANT.lock().unwrap().get();
+                ui.checkbox(&mut constant, "Enable Constant");
+                ENABLE_CONSTANT.lock().unwrap().set(constant);
+                if constant {
+                    let mut constant_val = CONSTANT_VALUE.lock().unwrap().get();
+                    ui.add(
+                        egui::Slider::new(&mut constant_val, 0..=5000)
+                            .text("Fade-in Time (ms)"),
+                    );
+                    CONSTANT_VALUE.lock().unwrap().set(constant_val);
+                }
+
+                ui.separator();
+
+                // Profile switcher
+                profile_switcher_ui(ui);
+            });
+    }
 }
 
 /// Get current play mode(5k, 7k...) config, a simple wrapper around MainController
@@ -168,6 +272,38 @@ fn change_play_mode(mode: &Mode) {
         .lock()
         .unwrap()
         .set(conf.get_constant_fadein_time());
+}
+
+fn profile_switcher_ui(ui: &mut egui::Ui) {
+    let players = PLAYERS.lock().unwrap();
+    let mut selected = SELECTED_PLAYER.lock().unwrap().get();
+    let selected_text = players
+        .get(selected as usize)
+        .map(|s| s.as_str())
+        .unwrap_or("(none)");
+
+    ui.horizontal(|ui| {
+        egui::ComboBox::from_id_salt("player_profile")
+            .selected_text(selected_text)
+            .show_ui(ui, |ui| {
+                for (i, player) in players.iter().enumerate() {
+                    if ui
+                        .selectable_value(&mut selected, i as i32, player.as_str())
+                        .clicked()
+                    {
+                        SELECTED_PLAYER.lock().unwrap().set(selected);
+                    }
+                }
+            });
+
+        if ui.button("Switch").clicked() {
+            // Profile switch logic (deferred: requires MainController integration)
+        }
+        if ui.button("Reload list").clicked() {
+            load_players();
+        }
+        ui.label("Player Profile");
+    });
 }
 
 fn load_players() {

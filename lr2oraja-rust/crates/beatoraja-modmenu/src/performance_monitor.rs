@@ -55,6 +55,73 @@ impl PerformanceMonitor {
         log::warn!("not yet implemented: PerformanceMonitor::show - egui integration");
     }
 
+    /// Render performance monitor using egui.
+    pub fn show_ui(ctx: &egui::Context) {
+        let now = Instant::now();
+        {
+            let last_update = LAST_EVENT_UPDATE.lock().unwrap();
+            let should_reload = match &*last_update {
+                None => true,
+                Some(t) => now.duration_since(*t).as_nanos() > 500_000_000,
+            };
+            if should_reload {
+                drop(last_update);
+                *LAST_EVENT_UPDATE.lock().unwrap() = Some(now);
+                Self::reload_event_tree();
+            }
+        }
+
+        let mut open = true;
+        egui::Window::new("Performance Monitor")
+            .open(&mut open)
+            .show(ctx, |ui| {
+                ui.collapsing("Watch", |ui| {
+                    let watch_data = WATCH_DATA.lock().unwrap();
+                    if watch_data.is_empty() {
+                        ui.label("No watch data");
+                    } else {
+                        egui::Grid::new("watch_grid").show(ui, |ui| {
+                            ui.label("Name");
+                            ui.label("Avg (ms)");
+                            ui.label("Std (ms)");
+                            ui.end_row();
+                            for (name, stats) in watch_data.iter() {
+                                ui.label(name);
+                                ui.label(format!("{:.2}", stats.avg));
+                                ui.label(format!("{:.2}", stats.std));
+                                ui.end_row();
+                            }
+                        });
+                    }
+                });
+
+                ui.collapsing("Events", |ui| {
+                    let tree = EVENT_TREE.lock().unwrap();
+                    if let Some(ref tree) = *tree {
+                        let threshold = *FILTER_SHORT_THRESHOLD.lock().unwrap();
+                        ui.horizontal(|ui| {
+                            ui.label("Filter threshold (ms):");
+                            let mut t = threshold;
+                            ui.add(egui::DragValue::new(&mut t).speed(0.1));
+                            *FILTER_SHORT_THRESHOLD.lock().unwrap() = t;
+                        });
+                        // Render root events
+                        if let Some(roots) = tree.get(&-1) {
+                            for event in roots {
+                                ui.label(format!(
+                                    "{}: {:.2}ms",
+                                    event.name,
+                                    event.duration as f64 / 1_000_000.0
+                                ));
+                            }
+                        }
+                    } else {
+                        ui.label("No event data");
+                    }
+                });
+            });
+    }
+
     pub fn reload_event_tree() {
         // copy the vector to avoid constantly reading the events while other threads might be writing
         let mut new_tree: HashMap<i32, Vec<EventResult>> = HashMap::new();

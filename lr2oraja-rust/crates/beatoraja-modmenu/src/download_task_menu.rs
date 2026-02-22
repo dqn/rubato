@@ -85,6 +85,44 @@ impl DownloadTaskMenu {
         // ImGui.endTable();
         log::warn!("not yet implemented: DownloadTaskMenu::render_task_table - egui integration");
     }
+
+    /// Render the download task window using egui.
+    pub fn show_ui(ctx: &egui::Context) {
+        let mut open = true;
+        egui::Window::new("Download Tasks")
+            .open(&mut open)
+            .auto_sized()
+            .show(ctx, |ui| {
+                let running = DownloadTaskState::get_running_download_tasks();
+                let expired = DownloadTaskState::get_expired_tasks();
+                if running.is_empty() && expired.is_empty() {
+                    ui.label("No Download Task. Try selecting missing bms to submit new task!");
+                } else {
+                    ui.horizontal(|ui| {
+                        ui.label(format!("Running: {}", running.len()));
+                        ui.label(format!("Expired: {}", expired.len()));
+                    });
+                    ui.separator();
+                    for (_id, task_arc) in &running {
+                        let task = task_arc.lock().unwrap();
+                        let name = task.get_name();
+                        let task_name = if name.len() > MAXIMUM_TASK_NAME_LENGTH {
+                            &name[..MAXIMUM_TASK_NAME_LENGTH]
+                        } else {
+                            name
+                        };
+                        let download_status = task.get_download_task_status();
+                        let status = download_status.name();
+                        let progress = format!(
+                            "{}/{}",
+                            humanize_file_size(task.get_download_size()),
+                            humanize_file_size(task.get_content_length())
+                        );
+                        ui.label(format!("{} ({}) - {}", task_name, status, progress));
+                    }
+                }
+            });
+    }
 }
 
 pub fn humanize_file_size(bytes: i64) -> String {

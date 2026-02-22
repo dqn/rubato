@@ -155,6 +155,86 @@ impl RandomTrainerMenu {
             change_lane_order(&rotated);
         }
     }
+
+    /// Render the random trainer window using egui.
+    pub fn show_ui(ctx: &egui::Context) {
+        init_lane_order();
+        let mut open = true;
+        egui::Window::new("Random Trainer")
+            .open(&mut open)
+            .auto_sized()
+            .show(ctx, |ui| {
+                // Key display
+                ui.horizontal(|ui| {
+                    let lane_order = LANE_ORDER.lock().unwrap();
+                    for i in 0..lane_order.len() {
+                        let lane_char = lane_order[i].chars().next().unwrap_or('1');
+                        let is_random =
+                            crate::random_trainer::RandomTrainer::is_lane_to_random(lane_char);
+                        let label = if is_random {
+                            "?".to_string()
+                        } else {
+                            lane_order[i].clone()
+                        };
+                        let color = if is_random {
+                            egui::Color32::from_rgb(255, 100, 150) // pink
+                        } else if lane_char.to_digit(10).unwrap_or(0) % 2 == 0 {
+                            egui::Color32::from_rgb(50, 50, 150) // dark blue
+                        } else {
+                            egui::Color32::from_rgb(200, 200, 200) // light
+                        };
+                        let btn = egui::Button::new(
+                            egui::RichText::new(&label).size(18.0).color(color),
+                        )
+                        .min_size(egui::vec2(40.0, 60.0));
+                        ui.add(btn);
+                    }
+                });
+
+                // Controls
+                ui.separator();
+                ui.label("Controls");
+                ui.indent("random_controls", |ui| {
+                    let mut enabled = RANDOM_TRAINER_ENABLED.lock().unwrap();
+                    ui.checkbox(&mut enabled.value, "Trainer Enabled");
+                    drop(enabled);
+
+                    let mut track = TRACK_RAN_WHEN_DISABLED.lock().unwrap();
+                    ui.checkbox(&mut track.value, "Track Current Random");
+                    drop(track);
+
+                    let mut bw = BLACK_WHITE_RANDOM_PERMUTATION.lock().unwrap();
+                    ui.checkbox(&mut bw.value, "Black/White Random Select");
+                    drop(bw);
+                });
+
+                ui.horizontal(|ui| {
+                    if ui.button("Mirror").clicked() {
+                        Self::mirror_lane_order();
+                    }
+                    if ui.button("Shift Left").clicked() {
+                        Self::shift_left_lane_order();
+                    }
+                    if ui.button("Shift Right").clicked() {
+                        Self::shift_right_lane_order();
+                    }
+                });
+
+                // Sync state
+                let trainer_enabled = RANDOM_TRAINER_ENABLED.lock().unwrap().get();
+                crate::random_trainer::RandomTrainer::set_active(trainer_enabled);
+                if trainer_enabled {
+                    let current = get_lane_order_string();
+                    let trainer = crate::random_trainer::RandomTrainer::get_lane_order();
+                    if current != trainer {
+                        crate::random_trainer::RandomTrainer::set_lane_order(&current);
+                    }
+                }
+
+                let bw = BLACK_WHITE_RANDOM_PERMUTATION.lock().unwrap().get();
+                crate::random_trainer::RandomTrainer::set_black_white_permute(bw);
+            });
+    }
 }
 
 fn change_lane_order(random: &str) {
