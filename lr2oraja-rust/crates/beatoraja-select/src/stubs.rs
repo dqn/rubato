@@ -23,9 +23,6 @@ pub use beatoraja_core::play_config::PlayConfig;
 pub use beatoraja_core::player_config::PlayerConfig;
 pub use beatoraja_core::score_data::ScoreData;
 
-// Private imports for types used internally but not re-exported
-use beatoraja_core::play_mode_config::{ControllerConfig, KeyboardConfig, MidiConfig};
-
 // ============================================================
 // beatoraja.song types — real SongData from beatoraja-types
 // ============================================================
@@ -178,81 +175,9 @@ impl RankingDataCache {
 // beatoraja.input types
 // ============================================================
 
-/// Stub for beatoraja.input.BMSPlayerInputProcessor
-pub struct BMSPlayerInputProcessor;
-
-impl BMSPlayerInputProcessor {
-    pub fn get_key_state(&self, _key: i32) -> bool {
-        false
-    }
-    pub fn is_analog_input(&self, _key: usize) -> bool {
-        false
-    }
-    pub fn get_analog_diff_and_reset(&self, _key: usize, _threshold: i32) -> i32 {
-        0
-    }
-    pub fn reset_key_changed_time(&self, _key: i32) -> bool {
-        false
-    }
-    pub fn start_pressed(&self) -> bool {
-        false
-    }
-    pub fn is_select_pressed(&self) -> bool {
-        false
-    }
-    pub fn get_scroll(&self) -> i32 {
-        0
-    }
-    pub fn reset_scroll(&self) {}
-    pub fn get_control_key_state(&self, _key: ControlKeys) -> bool {
-        false
-    }
-    pub fn is_control_key_pressed(&self, _key: ControlKeys) -> bool {
-        false
-    }
-    pub fn is_activated(&self, _cmd: KeyCommand) -> bool {
-        false
-    }
-    pub fn set_keyboard_config(&self, _config: &KeyboardConfig) {}
-    pub fn set_controller_config(&self, _config: &ControllerConfig) {}
-    pub fn set_midi_config(&self, _config: &MidiConfig) {}
-}
-
-/// Stub for ControlKeys
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ControlKeys {
-    Num0,
-    Num1,
-    Num2,
-    Num3,
-    Num4,
-    Num5,
-    Num6,
-    Num7,
-    Num8,
-    Num9,
-    Up,
-    Down,
-    Left,
-    Right,
-    Enter,
-    Escape,
-}
-
-/// Stub for KeyCommand
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum KeyCommand {
-    OpenSkinConfiguration,
-    AutoplayFolder,
-    OpenIr,
-    AddFavoriteSong,
-    AddFavoriteChart,
-    UpdateFolder,
-    OpenExplorer,
-    CopySongMd5Hash,
-    CopySongSha256Hash,
-    CopyHighlightedMenuText,
-}
+pub use beatoraja_input::bms_player_input_processor::BMSPlayerInputProcessor;
+pub use beatoraja_input::key_command::KeyCommand;
+pub use beatoraja_input::keyboard_input_processor::ControlKeys;
 
 // ============================================================
 // beatoraja.ir types — replaced with real types from beatoraja-ir

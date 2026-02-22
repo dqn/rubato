@@ -70,7 +70,11 @@ impl MusicSelectKeyProperty {
         }
     }
 
-    pub fn get_analog_change(&self, input: &BMSPlayerInputProcessor, code: MusicSelectKey) -> i32 {
+    pub fn get_analog_change(
+        &self,
+        input: &mut BMSPlayerInputProcessor,
+        code: MusicSelectKey,
+    ) -> i32 {
         let assign = self.assign();
         let mut d_ticks = 0;
         for i in 0..assign.len() {
@@ -85,7 +89,7 @@ impl MusicSelectKeyProperty {
 
     pub fn is_non_analog_pressed(
         &self,
-        input: &BMSPlayerInputProcessor,
+        input: &mut BMSPlayerInputProcessor,
         code: MusicSelectKey,
         reset_state: bool,
     ) -> bool {
@@ -109,7 +113,7 @@ impl MusicSelectKeyProperty {
 
     pub fn is_pressed(
         &self,
-        input: &BMSPlayerInputProcessor,
+        input: &mut BMSPlayerInputProcessor,
         code: MusicSelectKey,
         reset_state: bool,
     ) -> bool {
