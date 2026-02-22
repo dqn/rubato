@@ -169,12 +169,22 @@ impl JSONSkinLoader {
             return None;
         }
 
+        let source_resolution = if sk.w > 0 && sk.h > 0 {
+            Some(Resolution {
+                width: sk.w as f32,
+                height: sk.h as f32,
+            })
+        } else {
+            None
+        };
+
         let mut header = SkinHeaderData::new();
         header.skin_type = sk.skin_type;
         header.name = sk.name.clone().unwrap_or_default();
         header.author = sk.author.clone().unwrap_or_default();
         header.path = p.to_path_buf();
         header.header_type = HEADER_TYPE_BEATORJASKIN;
+        header.source_resolution = source_resolution;
 
         // Process categories
         let mut category_items: Vec<Vec<Option<CustomItemData>>> = Vec::new();
@@ -219,13 +229,10 @@ impl JSONSkinLoader {
         // Process filepaths -> files
         let mut files: Vec<CustomFileData> = Vec::new();
         for pr in &sk.filepath {
-            let parent = p
-                .parent()
-                .map(|pp| pp.to_string_lossy().to_string())
-                .unwrap_or_default();
+            // Keep filepath as-is without prepending parent directory
             let file = CustomFileData {
                 name: pr.name.clone().unwrap_or_default(),
-                path: format!("{}/{}", parent, pr.path.clone().unwrap_or_default()),
+                path: pr.path.clone().unwrap_or_default(),
                 def: pr.def.clone(),
                 selected_filename: None,
             };
@@ -247,8 +254,9 @@ impl JSONSkinLoader {
         header.custom_files = files;
 
         // Process offsets
+        // Only PLAY_* types get the default offsets
         let offset_length_addition = match header.skin_type {
-            0..=6 => 4, // PLAY_* types
+            0 | 1 | 2 | 3 | 4 | 12 | 13 | 14 | 16 | 17 | 18 => 4, // PLAY_* types
             _ => 0,
         };
 
