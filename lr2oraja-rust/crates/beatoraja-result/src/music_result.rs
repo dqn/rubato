@@ -18,7 +18,7 @@ use crate::abstract_result::{
 use crate::music_result_skin::MusicResultSkin;
 use crate::result_key_property::{ResultKey, ResultKeyProperty};
 use crate::stubs::{
-    BMSPlayerModeType, ControlKeys, EventType, IRConfig, IRSendStatusMain, IRStatus, KeyCommand,
+    BMSPlayerModeType, ControlKeys, IRConfig, IRSendStatusMain, IRStatus, KeyCommand,
     MainController, PlayerResource, RankingData, is_freq_negative, is_freq_trainer_enabled,
 };
 use beatoraja_core::ir_config::{IR_SEND_ALWAYS, IR_SEND_COMPLETE_SONG, IR_SEND_UPDATE_SCORE};

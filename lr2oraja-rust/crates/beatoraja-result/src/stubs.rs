@@ -335,32 +335,16 @@ impl Default for PlayerResource {
             inner: Box::new(NullPlayerResource::new()),
             bms_model: bms_model::bms_model::BMSModel::default(),
             course_bms_models: None,
-            play_mode: BMSPlayerMode {
-                mode: BMSPlayerModeType::Play,
-            },
+            play_mode: BMSPlayerMode::new(BMSPlayerModeType::Play),
             ranking_data: None,
         }
     }
 }
 
-// ============================================================
-// BMSPlayerMode stub
-// ============================================================
-
-/// Stub for bms.player.beatoraja.BMSPlayerMode
-#[derive(Clone, Debug)]
-pub struct BMSPlayerMode {
-    pub mode: BMSPlayerModeType,
-}
-
-/// Stub for bms.player.beatoraja.BMSPlayerMode.Mode
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum BMSPlayerModeType {
-    Play,
-    Practice,
-    Replay,
-    ReplayDifferent,
-}
+// BMSPlayerMode: replaced by pub use from beatoraja_core (Phase 18e-5)
+pub use beatoraja_core::bms_player_mode::BMSPlayerMode;
+// Alias Mode as BMSPlayerModeType to avoid naming conflict with bms_model::mode::Mode
+pub use beatoraja_core::bms_player_mode::Mode as BMSPlayerModeType;
 
 // FloatArray: replaced by Vec<f32> — callers updated to use Vec directly
 
@@ -381,16 +365,7 @@ pub struct SkinObjectData {
 
 // TimerManager: replaced by pub use beatoraja_core::timer_manager::TimerManager
 
-// ============================================================
-// EventFactory stub
-// ============================================================
-
-/// Stub for bms.player.beatoraja.skin.property.EventFactory.EventType
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EventType {
-    #[allow(non_camel_case_types)]
-    open_ir,
-}
+// EventType: removed (dead code — only used in commented-out lines)
 
 // ============================================================
 // FreqTrainerMenu stub

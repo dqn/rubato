@@ -6,9 +6,7 @@ use beatoraja_core::score_data::ScoreData;
 use beatoraja_core::score_data_property::ScoreDataProperty;
 
 use crate::result_key_property::ResultKeyProperty;
-use crate::stubs::{
-    BMSPlayerInputProcessor, EventType, MainController, RankingData, Skin, TimerManager,
-};
+use crate::stubs::{BMSPlayerInputProcessor, MainController, RankingData, Skin, TimerManager};
 
 /// Replay data status
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

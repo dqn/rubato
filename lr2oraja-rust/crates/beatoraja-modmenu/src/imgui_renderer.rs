@@ -7,9 +7,7 @@ use crate::performance_monitor::PerformanceMonitor;
 use crate::random_trainer_menu::RandomTrainerMenu;
 use crate::skin_menu::SkinMenu;
 use crate::skin_widget_manager::SkinWidgetManager;
-use crate::stubs::{
-    Controller, ImBoolean, InputProcessor, Lwjgl3ControllerManager, Version, version,
-};
+use crate::stubs::{ImBoolean, Version, version};
 
 use std::sync::Mutex;
 

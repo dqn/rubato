@@ -250,43 +250,7 @@ impl ImFloat {
     }
 }
 
-// =========================================================================
-// LWJGL3/LibGDX stubs
-// =========================================================================
-
-pub struct InputProcessor;
-
-pub struct Lwjgl3ControllerManager;
-
-impl Default for Lwjgl3ControllerManager {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Lwjgl3ControllerManager {
-    pub fn new() -> Self {
-        Lwjgl3ControllerManager
-    }
-
-    pub fn get_controllers(&self) -> Vec<Controller> {
-        Vec::new()
-    }
-}
-
-pub struct Controller {
-    pub name: String,
-}
-
-impl Controller {
-    pub fn get_name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn get_axis(&self, _index: i32) -> f32 {
-        0.0
-    }
-}
+// LWJGL3/LibGDX stubs: InputProcessor, Lwjgl3ControllerManager, Controller removed (unused — Phase 18e-5)
 
 // =========================================================================
 // Clipboard stub
