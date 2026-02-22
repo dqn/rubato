@@ -86,7 +86,8 @@ impl ScoreDataImporter {
             }
         }
 
-        self.scoredb.set_score_data(&result);
+        let score_refs: Vec<&ScoreData> = result.iter().collect();
+        self.scoredb.set_score_data_batch(&score_refs);
         log::info!("Score import complete - imported count: {}", result.len());
     }
 

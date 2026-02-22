@@ -33,7 +33,9 @@ pub mod skin_config;
 pub mod main_state_type;
 
 // Lifecycle trait interfaces
+pub mod abstract_result_access;
 pub mod main_controller_access;
+pub mod main_state_access;
 pub mod player_resource_access;
 
 // UI notification facade
@@ -44,6 +46,12 @@ pub mod random_history;
 
 // Last-played-sort state (shared between beatoraja-select and beatoraja-modmenu)
 pub mod last_played_sort;
+
+// Screen type (external-facing state type)
+pub mod screen_type;
+
+// Score database access trait
+pub mod score_database_access;
 
 // Data models
 pub mod course_data;

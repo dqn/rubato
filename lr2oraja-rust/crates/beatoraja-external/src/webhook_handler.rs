@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::screen_shot_exporter;
 use crate::stubs::{
-    AbstractResult, ImGuiNotify, IntegerPropertyFactory, MainState, Mode, NUMBER_MAXSCORE,
+    AbstractResultAccess, ImGuiNotify, IntegerPropertyFactory, MainState, Mode, NUMBER_MAXSCORE,
     ReplayData, STRING_FULLTITLE, STRING_TABLE_LEVEL, STRING_TABLE_NAME, ScoreData, ScreenType,
     StringPropertyFactory,
 };
@@ -457,7 +457,7 @@ fn get_screen_type(_state: &MainState) -> ScreenType {
 
 /// Get the AbstractResult from the current state.
 /// In Java this was done via cast: ((AbstractResult) currentState)
-fn get_abstract_result(_state: &MainState) -> Option<&AbstractResult> {
+fn get_abstract_result(_state: &MainState) -> Option<&dyn AbstractResultAccess> {
     log::warn!(
         "not yet implemented: Cast MainState to AbstractResult - requires proper screen type hierarchy"
     );

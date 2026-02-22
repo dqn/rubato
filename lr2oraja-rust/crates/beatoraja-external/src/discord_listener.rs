@@ -1,6 +1,7 @@
 use discord_rpc::rich_presence::{RichPresence, RichPresenceData};
 
-use crate::stubs::{MainState, MainStateListener, ScreenType};
+use crate::stubs::{MainStateListener, ScreenType};
+use beatoraja_types::main_state_access::MainStateAccess;
 
 static APPLICATION_ID: &str = "1054234988167561277";
 
@@ -45,7 +46,7 @@ impl Default for DiscordListener {
 }
 
 impl MainStateListener for DiscordListener {
-    fn update(&mut self, state: &MainState, _status: i32) {
+    fn update(&mut self, state: &dyn MainStateAccess, _status: i32) {
         let rp = match self.rich_presence.as_mut() {
             Some(rp) => rp,
             None => return,
@@ -61,7 +62,7 @@ impl MainStateListener for DiscordListener {
                 .set_start_timestamp(now)
                 .set_large_image("bms".to_string(), String::new());
 
-            let screen_type = get_screen_type(state);
+            let screen_type = state.get_screen_type();
 
             match screen_type {
                 ScreenType::MusicSelector => {
@@ -71,7 +72,9 @@ impl MainStateListener for DiscordListener {
                     data = data.set_state("Decide Screen".to_string());
                 }
                 ScreenType::BMSPlayer => {
-                    if let Some(songdata) = state.resource.get_songdata() {
+                    if let Some(resource) = state.get_resource()
+                        && let Some(songdata) = resource.get_songdata()
+                    {
                         let full_title = if songdata.subtitle.is_empty() {
                             songdata.title.clone()
                         } else {
@@ -99,13 +102,4 @@ impl MainStateListener for DiscordListener {
             log::warn!("Failed to update Discord Rich Presence: {}", e);
         }
     }
-}
-
-/// Determine the screen type from state.
-/// In Java this was done via instanceof checks.
-/// This stub function will need to be updated when MainState is properly typed.
-fn get_screen_type(_state: &MainState) -> ScreenType {
-    // TODO: implement proper screen type detection
-    // In Java: state instanceof MusicSelector, state instanceof BMSPlayer, etc.
-    ScreenType::Other
 }

@@ -74,7 +74,7 @@ pub use beatoraja_types::main_controller_access::NullMainController;
 /// Delegates to `Box<dyn PlayerResourceAccess>` for trait methods.
 /// `get_original_mode()` is crate-local (not on trait, since Mode lives in bms-model).
 pub struct PlayerResource {
-    inner: Box<dyn PlayerResourceAccess>,
+    pub(crate) inner: Box<dyn PlayerResourceAccess>,
     original_mode: Mode,
 }
 
@@ -147,87 +147,54 @@ pub use beatoraja_types::song_database_accessor::SongDatabaseAccessor;
 pub use beatoraja_core::score_data::ScoreData;
 
 // ============================================================
-// ScoreDatabaseAccessor stub
+// ScoreDatabaseAccessor — replaced with real type from beatoraja-core
 // ============================================================
 
-/// Stub for bms.player.beatoraja.ScoreDatabaseAccessor
-pub struct ScoreDatabaseAccessor;
-
-impl ScoreDatabaseAccessor {
-    pub fn create_table(&self) {
-        log::warn!("not yet implemented: ScoreDatabaseAccessor.createTable");
-    }
-
-    pub fn get_score_data(&self, _sha256: &str, _mode: i32) -> Option<ScoreData> {
-        log::warn!("not yet implemented: ScoreDatabaseAccessor.getScoreData");
-        None
-    }
-
-    pub fn set_score_data(&self, _scores: &[ScoreData]) {
-        log::warn!("not yet implemented: ScoreDatabaseAccessor.setScoreData");
-    }
-}
+pub use beatoraja_core::score_database_accessor::ScoreDatabaseAccessor;
 
 // ============================================================
-// MainState stub (for ScreenShotExporter)
+// MainState — replaced with MainStateAccess trait from beatoraja-types
 // ============================================================
 
-/// Stub for bms.player.beatoraja.MainState
+/// Legacy MainState wrapper for external code that accesses `state.resource`.
+/// Implements MainStateAccess and provides direct field access for compatibility.
 pub struct MainState {
     pub main: NullMainController,
     pub resource: PlayerResource,
 }
 
-// ============================================================
-// Screen type stubs (for instanceof checks)
-// ============================================================
-
-/// Enum to represent the current screen state type
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ScreenType {
-    MusicSelector,
-    MusicDecide,
-    BMSPlayer,
-    MusicResult,
-    CourseResult,
-    KeyConfiguration,
-    Other,
-}
-
-// ============================================================
-// AbstractResult stub
-// ============================================================
-
-/// Stub for bms.player.beatoraja.result.AbstractResult
-pub struct AbstractResult {
-    pub new_score: ScoreData,
-    pub old_score: ScoreData,
-    pub ir_rank: i32,
-    pub ir_total_player: i32,
-    pub old_ir_rank: i32,
-}
-
-impl AbstractResult {
-    pub fn get_new_score(&self) -> &ScoreData {
-        &self.new_score
+impl beatoraja_types::main_state_access::MainStateAccess for MainState {
+    fn get_screen_type(&self) -> ScreenType {
+        ScreenType::Other
     }
 
-    pub fn get_old_score(&self) -> &ScoreData {
-        &self.old_score
+    fn get_resource(
+        &self,
+    ) -> Option<&dyn beatoraja_types::player_resource_access::PlayerResourceAccess> {
+        Some(&*self.resource.inner)
     }
 
-    pub fn get_ir_rank(&self) -> i32 {
-        self.ir_rank
-    }
-
-    pub fn get_ir_total_player(&self) -> i32 {
-        self.ir_total_player
-    }
-
-    pub fn get_old_ir_rank(&self) -> i32 {
-        self.old_ir_rank
+    fn get_config(&self) -> &Config {
+        self.resource.get_config()
     }
 }
+
+// ============================================================
+// Screen type — replaced with real type from beatoraja-types
+// ============================================================
+
+pub use beatoraja_types::screen_type::ScreenType;
+
+// ============================================================
+// AbstractResult — replaced with AbstractResultAccess trait from beatoraja-types
+// ============================================================
+
+pub use beatoraja_types::abstract_result_access::AbstractResultAccess;
+
+/// Legacy type alias for backward compatibility in this crate.
+/// Functions that return `Option<&AbstractResult>` should use
+/// `Option<&dyn AbstractResultAccess>` instead.
+pub type AbstractResult = dyn AbstractResultAccess;
 
 // ============================================================
 // ReplayData — replaced with real type from beatoraja-core
@@ -470,10 +437,10 @@ impl std::fmt::Display for Status {
 }
 
 // ============================================================
-// MainStateListener stub (re-export)
+// MainStateListener — replaced with trait from beatoraja-types
 // ============================================================
 
-/// Stub for bms.player.beatoraja.MainStateListener
-pub trait MainStateListener {
-    fn update(&mut self, state: &MainState, status: i32);
-}
+// Re-export the trait from beatoraja-types.
+// Note: the real trait uses `&dyn MainStateAccess` instead of `&MainState`.
+// External code still uses the legacy `MainState` struct which implements `MainStateAccess`.
+pub use beatoraja_types::main_state_access::MainStateListener;

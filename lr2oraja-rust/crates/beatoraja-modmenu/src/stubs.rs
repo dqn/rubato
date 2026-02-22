@@ -17,29 +17,13 @@ pub use beatoraja_types::skin_config::{
 pub use beatoraja_types::validatable::Validatable;
 
 // =========================================================================
-// MainController stub
+// MainController — replaced with NullMainController from beatoraja-types
 // =========================================================================
 
-/// Stub for MainController reference used by various menus.
-/// Remaining methods: get_config, get_player_config, save_config.
-/// Removed: get_current_state (dead code), load_new_profile (dead code).
-pub struct MainController;
+pub use beatoraja_types::main_controller_access::{MainControllerAccess, NullMainController};
 
-impl MainController {
-    pub fn get_config(&self) -> Config {
-        log::warn!("not yet implemented: MainController::get_config - Phase 8+ dependency");
-        Config::default()
-    }
-
-    pub fn get_player_config(&self) -> PlayerConfig {
-        log::warn!("not yet implemented: MainController::get_player_config - Phase 8+ dependency");
-        PlayerConfig::default()
-    }
-
-    pub fn save_config(&self) {
-        log::warn!("not yet implemented: MainController::save_config - Phase 8+ dependency");
-    }
-}
+/// Type alias for backward compatibility — callers use `MainController`.
+pub type MainController = NullMainController;
 
 // =========================================================================
 // MainState trait stub

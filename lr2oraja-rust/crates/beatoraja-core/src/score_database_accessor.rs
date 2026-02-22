@@ -417,6 +417,21 @@ impl ScoreDatabaseAccessor {
     }
 }
 
+impl beatoraja_types::score_database_access::ScoreDatabaseAccess for ScoreDatabaseAccessor {
+    fn create_table(&self) {
+        ScoreDatabaseAccessor::create_table(self);
+    }
+
+    fn get_score_data(&self, sha256: &str, mode: i32) -> Option<ScoreData> {
+        ScoreDatabaseAccessor::get_score_data(self, sha256, mode)
+    }
+
+    fn set_score_data_slice(&self, scores: &[ScoreData]) {
+        let refs: Vec<&ScoreData> = scores.iter().collect();
+        self.set_score_data_batch(&refs);
+    }
+}
+
 #[allow(clippy::field_reassign_with_default)]
 fn row_to_score_data(row: &rusqlite::Row) -> ScoreData {
     let mut sd = ScoreData::default();
