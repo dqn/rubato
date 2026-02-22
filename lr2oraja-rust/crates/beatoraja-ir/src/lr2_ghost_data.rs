@@ -116,9 +116,9 @@ impl LR2GhostData {
         }
 
         let random_option = match random_val {
-            1 => Random::MIRROR,
-            2 => Random::RANDOM,
-            _ => Random::IDENTITY,
+            1 => Random::Mirror,
+            2 => Random::Random,
+            _ => Random::Identity,
         };
 
         // generate a proper lane ordering from the given seed
@@ -129,7 +129,7 @@ impl LR2GhostData {
                 return None;
             }
         };
-        let mut rng = LR2Random::new(seed);
+        let mut rng = LR2Random::with_seed(seed);
         let mut targets: [i32; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
         for lane in 1..7 {
             let swap = lane + rng.next_int(7 - lane as i32 + 1) as usize;

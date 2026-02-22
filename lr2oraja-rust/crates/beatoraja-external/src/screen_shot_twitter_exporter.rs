@@ -139,7 +139,7 @@ impl ScreenShotExporter for ScreenShotTwitterExporter {
             let status = twitter.update_status(&update)?;
             log::info!("Twitter Post:{}", status);
             pixmap.dispose();
-            ImGuiNotify::info(&format!("Twitter Upload: {}", text), 2000);
+            ImGuiNotify::info_with_dismiss(&format!("Twitter Upload: {}", text), 2000);
             Ok(true)
         })();
 

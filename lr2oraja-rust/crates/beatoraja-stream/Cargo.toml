@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 bms-model.workspace = true
 beatoraja-core.workspace = true
+beatoraja-types.workspace = true
 beatoraja-select.workspace = true
 log.workspace = true
 anyhow.workspace = true

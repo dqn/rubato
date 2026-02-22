@@ -19,7 +19,7 @@ use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 
 use beatoraja_core::config::Config;
 
-use crate::stubs::ImGuiNotify;
+use beatoraja_types::imgui_notify::ImGuiNotify;
 
 /// ObsRecordingMode - recording mode enum
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

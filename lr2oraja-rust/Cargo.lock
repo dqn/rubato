@@ -670,6 +670,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "beatoraja-core",
+ "beatoraja-pattern",
  "beatoraja-song",
  "beatoraja-types",
  "bms-model",
@@ -895,6 +896,7 @@ dependencies = [
  "anyhow",
  "beatoraja-core",
  "beatoraja-select",
+ "beatoraja-types",
  "bms-model",
  "log",
  "tokio",

@@ -36,6 +36,9 @@ pub mod main_state_type;
 pub mod main_controller_access;
 pub mod player_resource_access;
 
+// UI notification facade
+pub mod imgui_notify;
+
 // Data models
 pub mod course_data;
 pub mod folder_data;

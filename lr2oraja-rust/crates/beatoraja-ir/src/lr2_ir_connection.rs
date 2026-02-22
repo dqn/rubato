@@ -11,7 +11,7 @@ use crate::ir_chart_data::IRChartData;
 use crate::ir_score_data::IRScoreData;
 use crate::leaderboard_entry::LeaderboardEntry;
 use crate::lr2_ghost_data::LR2GhostData;
-use crate::stubs::ImGuiNotify;
+use beatoraja_types::imgui_notify::ImGuiNotify;
 
 /// LR2 IR connection
 ///

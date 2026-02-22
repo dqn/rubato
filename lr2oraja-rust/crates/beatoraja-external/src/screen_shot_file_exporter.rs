@@ -98,7 +98,7 @@ impl ScreenShotExporter for ScreenShotFileExporter {
             PixmapIO::write_png(&path, &pixmap);
             log::info!("Screenshot saved: {}", path);
             pixmap.dispose();
-            ImGuiNotify::info(&format!("Screen shot saved: {}", path), 2000);
+            ImGuiNotify::info_with_dismiss(&format!("Screen shot saved: {}", path), 2000);
 
             self.send_clipboard(current_state, &path);
             self.send_webhook(current_state, &path);
@@ -134,7 +134,7 @@ impl ScreenShotFileExporter {
         match ClipboardHelper::copy_image_to_clipboard(path) {
             Ok(()) => {
                 log::info!("Screenshot saved: Clipboard");
-                ImGuiNotify::info("Screen shot saved : Clipboard", 2000);
+                ImGuiNotify::info_with_dismiss("Screen shot saved : Clipboard", 2000);
             }
             Err(e) => {
                 log::error!("Clipboard copy error: {}", e);

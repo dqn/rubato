@@ -8,19 +8,5 @@ pub trait MainControllerRef: Send + Sync {
     fn update_song(&self, path: &str, force: bool);
 }
 
-/// Stub for ImGuiNotify (logging placeholder)
-pub struct ImGuiNotify;
-
-impl ImGuiNotify {
-    pub fn info(msg: &str) {
-        log::info!("[ImGuiNotify] {}", msg);
-    }
-
-    pub fn warning(msg: &str) {
-        log::warn!("[ImGuiNotify] {}", msg);
-    }
-
-    pub fn error(msg: &str) {
-        log::error!("[ImGuiNotify] {}", msg);
-    }
-}
+// Real type re-export (replaced from stubs)
+pub use beatoraja_types::imgui_notify::ImGuiNotify;

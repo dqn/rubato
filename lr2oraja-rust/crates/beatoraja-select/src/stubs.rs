@@ -492,26 +492,8 @@ pub use beatoraja_core::system_sound_manager::SoundType;
 // beatoraja.modmenu types
 // ============================================================
 
-/// Stub for beatoraja.modmenu.ImGuiNotify
-pub struct ImGuiNotify;
-
-impl ImGuiNotify {
-    pub fn info(_msg: &str) {
-        log::info!("{}", _msg);
-    }
-    pub fn info_with_duration(_msg: &str, _duration: i32) {
-        log::info!("{}", _msg);
-    }
-    pub fn warning(_msg: &str) {
-        log::warn!("{}", _msg);
-    }
-    pub fn error(_msg: &str) {
-        log::error!("{}", _msg);
-    }
-    pub fn error_with_duration(_msg: &str, _duration: i32) {
-        log::error!("{}", _msg);
-    }
-}
+// Real type re-export (replaced from stubs)
+pub use beatoraja_types::imgui_notify::ImGuiNotify;
 
 // ============================================================
 // bms.model.Mode — re-exported from real bms-model crate

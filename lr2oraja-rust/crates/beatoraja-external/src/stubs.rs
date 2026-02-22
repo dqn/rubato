@@ -532,21 +532,10 @@ impl PixmapIO {
 }
 
 // ============================================================
-// ImGuiNotify stub
+// ImGuiNotify — real type re-export (replaced from stubs)
 // ============================================================
 
-/// Stub for bms.player.beatoraja.modmenu.ImGuiNotify
-pub struct ImGuiNotify;
-
-impl ImGuiNotify {
-    pub fn info(msg: &str, _duration_ms: i32) {
-        log::info!("{}", msg);
-    }
-
-    pub fn warning(msg: &str) {
-        log::warn!("{}", msg);
-    }
-}
+pub use beatoraja_types::imgui_notify::ImGuiNotify;
 
 // ============================================================
 // IntegerProperty / BooleanProperty / StringProperty stubs
