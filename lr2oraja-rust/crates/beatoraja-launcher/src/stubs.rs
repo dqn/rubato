@@ -2,8 +2,9 @@
 // These will be replaced with actual implementations during integration
 
 use beatoraja_core::config::Config;
-use beatoraja_core::main_controller::SongDatabaseAccessor;
+use beatoraja_core::main_loader::MainLoader as CoreMainLoader;
 use beatoraja_core::player_config::PlayerConfig;
+use beatoraja_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor;
 
 // === JavaFX → egui stubs ===
 
@@ -61,9 +62,26 @@ pub fn copy_to_clipboard(text: &str) {
 pub struct MainLoader;
 
 impl MainLoader {
-    pub fn get_score_database_accessor() -> SongDatabaseAccessor {
-        log::warn!("not yet implemented: MainLoader.get_score_database_accessor");
-        SongDatabaseAccessor
+    /// Create and register a SQLiteSongDatabaseAccessor with the core MainLoader.
+    ///
+    /// Translated from: MainLoader.getScoreDatabaseAccessor()
+    /// Java: if(songdb == null) { songdb = new SQLiteSongDatabaseAccessor(config.getSongpath(), config.getBmsroot()); }
+    ///
+    /// In Java this is lazily created on first access. In Rust, we eagerly create it
+    /// and set it on the core MainLoader's global slot, which then passes it to MainController.
+    pub fn init_score_database_accessor(config: &Config) {
+        match SQLiteSongDatabaseAccessor::new(config.get_songpath(), config.get_bmsroot()) {
+            Ok(accessor) => {
+                CoreMainLoader::set_score_database_accessor(Box::new(accessor));
+                log::info!(
+                    "Song database accessor initialized: {}",
+                    config.get_songpath()
+                );
+            }
+            Err(e) => {
+                log::error!("Failed to create song database accessor: {}", e);
+            }
+        }
     }
 
     pub fn get_version_checker() -> VersionChecker {
@@ -80,15 +98,31 @@ impl MainLoader {
         DisplayMode::default()
     }
 
+    /// Launch the game.
+    ///
+    /// Translated from: MainLoader.play() (launcher side)
+    ///
+    /// This creates the song database accessor and delegates to the core MainLoader.play().
     pub fn play(
-        _path: Option<&str>,
-        _mode: BMSPlayerMode,
-        _launcher: bool,
-        _config: &Config,
-        _player: &PlayerConfig,
-        _song_updated: bool,
+        path: Option<&str>,
+        mode: BMSPlayerMode,
+        launcher: bool,
+        config: &Config,
+        player: &PlayerConfig,
+        song_updated: bool,
     ) {
-        log::warn!("not yet implemented: MainLoader.play");
+        // Initialize song database accessor before play
+        Self::init_score_database_accessor(config);
+
+        // Delegate to core MainLoader
+        CoreMainLoader::play(
+            path.map(std::path::PathBuf::from),
+            Some(mode),
+            launcher,
+            Some(config.clone()),
+            Some(player.clone()),
+            song_updated,
+        );
     }
 }
 

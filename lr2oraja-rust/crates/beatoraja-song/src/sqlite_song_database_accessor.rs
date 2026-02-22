@@ -1093,3 +1093,172 @@ struct SongDatabaseUpdaterProperty<'a> {
     updatetime: i64,
     listener: &'a SongDatabaseUpdateListener,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_accessor() -> SQLiteSongDatabaseAccessor {
+        SQLiteSongDatabaseAccessor::new(":memory:", &[]).unwrap()
+    }
+
+    fn make_test_song(md5: &str, sha256: &str, title: &str) -> SongData {
+        let mut sd = SongData::new();
+        sd.md5 = md5.to_string();
+        sd.sha256 = sha256.to_string();
+        sd.title = title.to_string();
+        sd.set_path(format!("test/{}.bms", title));
+        sd
+    }
+
+    #[test]
+    fn test_new_creates_tables() {
+        let accessor = create_test_accessor();
+        // Verify tables exist by querying them
+        let songs = accessor.get_song_datas("md5", "nonexistent");
+        assert!(songs.is_empty());
+        let folders = accessor.get_folder_datas("path", "nonexistent");
+        assert!(folders.is_empty());
+    }
+
+    #[test]
+    fn test_insert_and_get_song_by_md5() {
+        let accessor = create_test_accessor();
+        let song = make_test_song("abc123", "sha_abc123", "Test Song");
+        accessor.insert_song(&song).unwrap();
+
+        let results = accessor.get_song_datas("md5", "abc123");
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Test Song");
+        assert_eq!(results[0].md5, "abc123");
+    }
+
+    #[test]
+    fn test_insert_and_get_song_by_sha256() {
+        let accessor = create_test_accessor();
+        let song = make_test_song("md5_xyz", "sha256_xyz", "SHA Test");
+        accessor.insert_song(&song).unwrap();
+
+        let results = accessor.get_song_datas("sha256", "sha256_xyz");
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "SHA Test");
+    }
+
+    #[test]
+    fn test_get_song_datas_empty() {
+        let accessor = create_test_accessor();
+        let results = accessor.get_song_datas("md5", "nonexistent");
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_get_song_datas_by_hashes() {
+        let accessor = create_test_accessor();
+        // SHA256 hashes must be > 32 chars to be classified as sha256
+        let sha1 = "a".repeat(64);
+        let sha2 = "b".repeat(64);
+        let sha3 = "c".repeat(64);
+        let song1 = make_test_song("md5_1", &sha1, "Song 1");
+        let song2 = make_test_song("md5_2", &sha2, "Song 2");
+        let song3 = make_test_song("md5_3", &sha3, "Song 3");
+        accessor.insert_song(&song1).unwrap();
+        accessor.insert_song(&song2).unwrap();
+        accessor.insert_song(&song3).unwrap();
+
+        // Query by sha256 hashes (> 32 chars)
+        let hashes = vec![sha1, sha3];
+        let results = accessor.get_song_datas_by_hashes(&hashes);
+        assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_get_song_datas_by_hashes_md5() {
+        let accessor = create_test_accessor();
+        let song1 = make_test_song("md5_short_1", "sha1", "Song Short 1");
+        let song2 = make_test_song("md5_short_2", "sha2", "Song Short 2");
+        accessor.insert_song(&song1).unwrap();
+        accessor.insert_song(&song2).unwrap();
+
+        // Query by md5 hashes (<= 32 chars)
+        let hashes = vec!["md5_short_1".to_string()];
+        let results = accessor.get_song_datas_by_hashes(&hashes);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Song Short 1");
+    }
+
+    #[test]
+    fn test_get_song_datas_by_text() {
+        let accessor = create_test_accessor();
+        let mut song = make_test_song("m1", "s1", "Rhythm Action");
+        song.artist = "DJ Test".to_string();
+        accessor.insert_song(&song).unwrap();
+
+        let results = accessor.get_song_datas_by_text("Rhythm");
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Rhythm Action");
+
+        let results = accessor.get_song_datas_by_text("DJ Test");
+        assert_eq!(results.len(), 1);
+
+        let results = accessor.get_song_datas_by_text("nonexistent");
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_set_song_datas_batch() {
+        let accessor = create_test_accessor();
+        let songs = vec![
+            make_test_song("batch_1", "sbatch_1", "Batch Song 1"),
+            make_test_song("batch_2", "sbatch_2", "Batch Song 2"),
+            make_test_song("batch_3", "sbatch_3", "Batch Song 3"),
+        ];
+
+        accessor.set_song_datas(&songs);
+
+        let results = accessor.get_song_datas("md5", "batch_1");
+        assert_eq!(results.len(), 1);
+        let results = accessor.get_song_datas("md5", "batch_2");
+        assert_eq!(results.len(), 1);
+        let results = accessor.get_song_datas("md5", "batch_3");
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn test_insert_and_get_folder() {
+        let accessor = create_test_accessor();
+        let folder = FolderData {
+            title: "Test Folder".to_string(),
+            path: "/test/folder/".to_string(),
+            parent: "parent_crc".to_string(),
+            date: 1000,
+            adddate: 2000,
+            ..Default::default()
+        };
+        accessor.insert_folder(&folder).unwrap();
+
+        let results = accessor.get_folder_datas("path", "/test/folder/");
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Test Folder");
+        assert_eq!(results[0].date, 1000);
+    }
+
+    #[test]
+    fn test_get_folder_datas_empty() {
+        let accessor = create_test_accessor();
+        let results = accessor.get_folder_datas("path", "nonexistent");
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_add_plugin() {
+        let mut accessor = create_test_accessor();
+        struct TestPlugin;
+        impl SongDatabaseAccessorPlugin for TestPlugin {
+            fn update(&self, _model: &BMSModel, song: &mut SongData) {
+                song.tag = "plugin_tag".to_string();
+            }
+        }
+        accessor.add_plugin(Box::new(TestPlugin));
+        assert_eq!(accessor.plugins.len(), 1);
+    }
+}
