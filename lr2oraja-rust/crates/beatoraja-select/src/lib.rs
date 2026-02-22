@@ -25,6 +25,7 @@ pub mod music_select_input_processor;
 pub mod music_select_key_property;
 pub mod music_select_skin;
 pub mod music_selector;
+pub mod null_song_database_accessor;
 pub mod preview_music_processor;
 pub mod score_data_cache;
 pub mod search_text_field;

@@ -204,8 +204,8 @@ pub use beatoraja_ir::ir_score_data::IRScoreData;
 // SkinType moved to beatoraja-types (Phase 15b)
 pub use beatoraja_types::skin_type::SkinType;
 
-/// Stub for beatoraja.skin.SkinHeader
-pub struct SkinHeader;
+// SkinHeader: replaced by pub use from beatoraja-skin (Phase 18e-10)
+pub use beatoraja_skin::skin_header::SkinHeader;
 
 /// Stub for beatoraja.skin.SkinText
 #[derive(Clone, Debug, Default)]
@@ -375,43 +375,8 @@ impl AudioDriver {
 
 pub use beatoraja_core::resolution::Resolution;
 
-// ============================================================
-// NullSongDatabaseAccessor — stub implementing SongDatabaseAccessor
-// ============================================================
-
-pub struct NullSongDatabaseAccessor;
-
-impl SongDatabaseAccessor for NullSongDatabaseAccessor {
-    fn get_song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
-        log::warn!("not yet implemented: NullSongDatabaseAccessor.get_song_datas");
-        Vec::new()
-    }
-    fn get_song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
-        log::warn!("not yet implemented: NullSongDatabaseAccessor.get_song_datas_by_hashes");
-        Vec::new()
-    }
-    fn get_song_datas_by_sql(
-        &self,
-        _sql: &str,
-        _score: &str,
-        _scorelog: &str,
-        _info: Option<&str>,
-    ) -> Vec<SongData> {
-        log::warn!("not yet implemented: NullSongDatabaseAccessor.get_song_datas_by_sql");
-        Vec::new()
-    }
-    fn set_song_datas(&self, _songs: &[SongData]) {
-        log::warn!("not yet implemented: NullSongDatabaseAccessor.set_song_datas");
-    }
-    fn get_song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
-        log::warn!("not yet implemented: NullSongDatabaseAccessor.get_song_datas_by_text");
-        Vec::new()
-    }
-    fn get_folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
-        log::warn!("not yet implemented: NullSongDatabaseAccessor.get_folder_datas");
-        Vec::new()
-    }
-}
+// NullSongDatabaseAccessor: moved to crate::null_song_database_accessor (Phase 18e-10)
+pub use crate::null_song_database_accessor::NullSongDatabaseAccessor;
 
 // Clipboard: removed (replaced with direct arboard calls — Phase 18e-6)
 
