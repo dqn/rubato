@@ -117,23 +117,16 @@ Unblocks: SongDatabaseAccessor stubs, PlayDataAccessor stubs
 目標: アプリケーション起動→楽曲選択→プレイまでの実行フローを繋ぐ。
 Phase 22 (レンダリング) と Phase 23 (DB配線) が完了し、ランタイム統合の前提条件が揃った。
 
-### Phase 24a: SQLiteSongDatabaseAccessor + MainLoader.play() エントリポイント
+### Phase 24a: SQLiteSongDatabaseAccessor + MainLoader エントリポイント — complete
 
-**優先度: 最高** — 楽曲データベースが全ての下流機能（選曲、スコア表示、リプレイ）の基盤
-
-依存: なし（即着手可能）
-
-- [ ] `SQLiteSongDatabaseAccessor` を beatoraja-song に実装
-  - rusqlite で `song` テーブル + `folder` テーブルのスキーマ作成 (Java の `SQLiteSongDatabaseAccessor` コンストラクタ参照)
-  - `SongDatabaseAccessor` trait の 6 メソッドを実装: `get_song_datas(key, value)`, `get_song_datas_by_hashes()`, `get_song_datas_by_sql()`, `set_song_datas()`, `get_song_datas_by_text()`, `get_folder_datas()`
-  - `song` テーブル: md5, sha256, title, subtitle, genre, artist, subartist, tag, path, folder, stagefile, banner, backbmp, preview, parent, level, difficulty, maxbpm, minbpm, length, mode, judge, feature, content, date, favorite, adddate, notes, charthash
-  - `folder` テーブル: title, subtitle, command, path, banner, parent, type, date, adddate, max
-- [ ] `updateSongDatas()` — BMS ルートディレクトリ走査 + BMSDecoder/BMSONDecoder でメタデータ抽出 + DB 挿入。タイムスタンプ比較で増分更新
-- [ ] `MainLoader.play()` を完成 — Config 読み込み → SQLiteSongDatabaseAccessor 生成 → MainController 生成 → winit ウィンドウ + wgpu 初期化 → イベントループ開始
-- [ ] `MainLoader.get_score_database_accessor()` を実装 (現在 `None` 返却)
-- [ ] `MainLoader.start()` — egui ランチャー UI の基本フレーム (設定画面表示)
-
-**見積り:** ~800 行実装 + ~20 テスト
+- [x] `SQLiteSongDatabaseAccessor` — 6/6 trait メソッド + DB スキーマ (song 30列, folder 10列) 実装済み (1264行)
+- [x] `updateSongDatas()` — BMS 走査、増分更新、BMSDecoder/BMSONDecoder/OSUDecoder、プラグイン、tags/favorites 保持。バグ修正: 3カラム SELECT で query_songs() を使っていたのをインラインパースに変更
+- [x] `MainLoader.play()` — Config 読み込み → MainController 生成 → window dimensions 設定 → MainController を返す。beatoraja-bin で winit/wgpu イベントループに接続
+- [x] `MainLoader.get_score_database_accessor()` — OnceLock/Mutex でグローバル管理。ランチャーが set、play() が take して MainController に渡す
+- [x] `MainLoader.start()` — (Config, PlayerConfig, title) を返す。beatoraja-bin で eframe::run_native() に接続
+- [x] `LauncherUi` eframe::App impl — run_launcher() エントリポイント、play/exit フラグ、共有 AtomicBool
+- [x] beatoraja-bin 簡素化 — LauncherApp を削除、run_launcher() + MainLoader.play() に委譲
+- [x] テスト: song DB 17件 (うち統合6件追加)、main_loader 14件 (うち3件追加)、launcher_ui 6件追加
 
 ### Phase 24b: 入力システム統合（winit → BMSPlayerInputProcessor）
 
