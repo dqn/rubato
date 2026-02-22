@@ -1,0 +1,48 @@
+{
+  "type": 6,
+  "name": "Test Skin",
+  "author": "Test",
+  "w": 1280,
+  "h": 720,
+  "fadeout": 500,
+  "input": 400,
+  "scene": 3000,
+  "close": 0,
+  "loadend": 0,
+  "playstart": 0,
+  "judgetimer": 0,
+  "finishmargin": 0,
+  "category": [],
+  "property": [],
+  "filepath": [],
+  "offset": [],
+  "source": [
+    {"id": "bg", "path": "bg.png"},
+    {"id": "icon", "path": "icon.png"},
+    {"id": "panel", "path": "panel.png"}
+  ],
+  "font": [],
+  "image": [],
+  "imageset": [],
+  "value": [],
+  "floatvalue": [],
+  "text": [],
+  "slider": [],
+  "graph": [],
+  "gaugegraph": [],
+  "judgegraph": [],
+  "destination": [
+    {"id": "-1", "dst": [{"time": 0, "x": 0, "y": 0, "w": 1280, "h": 720}]},
+    {"id": "-2", "dst": [{"time": 0, "x": 100, "y": 100, "w": 200, "h": 200}], "timer": 40},
+    {"id": "-3", "blend": 2, "dst": [
+      {"time": 0, "x": 50, "y": 50, "w": 100, "h": 100},
+      {"time": 1000, "x": 150, "y": 150, "w": 200, "h": 200}
+    ]}
+  ],
+  "note": [],
+  "gauge": [],
+  "bga": [],
+  "judge": [],
+  "customEvents": [],
+  "customTimers": []
+}

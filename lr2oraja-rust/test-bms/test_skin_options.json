@@ -1,0 +1,66 @@
+{
+  "type": 5,
+  "name": "Test Options Skin",
+  "author": "Test",
+  "w": 1920,
+  "h": 1080,
+  "fadeout": 400,
+  "input": 300,
+  "scene": 2000,
+  "close": 0,
+  "loadend": 0,
+  "playstart": 0,
+  "judgetimer": 0,
+  "finishmargin": 0,
+  "category": [],
+  "property": [
+    {
+      "name": "BG Style",
+      "item": [
+        {"name": "Dark", "op": 900},
+        {"name": "Light", "op": 901}
+      ],
+      "def": "Dark"
+    }
+  ],
+  "filepath": [
+    {
+      "name": "Background",
+      "path": "bg/*.png",
+      "def": "default.png"
+    }
+  ],
+  "offset": [
+    {
+      "name": "Judge Position",
+      "id": 50,
+      "x": true,
+      "y": true,
+      "w": false,
+      "h": false,
+      "r": false,
+      "a": false
+    }
+  ],
+  "source": [],
+  "font": [],
+  "image": [],
+  "imageset": [],
+  "value": [],
+  "floatvalue": [],
+  "text": [],
+  "slider": [],
+  "graph": [],
+  "gaugegraph": [],
+  "judgegraph": [],
+  "destination": [
+    {"id": "-1", "dst": [{"time": 0, "x": 0, "y": 0, "w": 1920, "h": 1080}]},
+    {"id": "-2", "op": [900], "dst": [{"time": 0, "x": 0, "y": 0, "w": 960, "h": 540, "a": 128}]}
+  ],
+  "note": [],
+  "gauge": [],
+  "bga": [],
+  "judge": [],
+  "customEvents": [],
+  "customTimers": []
+}
