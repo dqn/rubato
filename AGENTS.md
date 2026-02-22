@@ -84,7 +84,7 @@ brs/
 
 ## Implementation Status
 
-All phases through 25d-1/25d-3 complete. **1730 tests pass, 22 ignored (RenderSnapshot — SkinData→Skin pipeline pending). Zero runtime `todo!()`/`unimplemented!()`.** Zero clippy warnings. 4 new shared traits in beatoraja-types (ScreenType, ScoreDatabaseAccess, MainStateAccess, AbstractResultAccess). Type stubs fully resolved. Phase 25d-2 (rendering stubs) next.
+All phases through 25d complete. **1739 tests pass, 22 ignored (RenderSnapshot — SkinData→Skin pipeline pending). Zero runtime `todo!()`/`unimplemented!()`.** Zero clippy warnings. 9 new shared types/traits in beatoraja-types. Stub count reduced from ~1,520 to ~900 true lines (remaining: API-incompatible stubs needing call-site refactoring). Phase 26 (resource loading + skin pipeline) next.
 
 - **Phases 1–17:** Core translation (17 crates, 300+ modules), real implementations (wgpu, Kira, mlua, ffmpeg-next, midir, cpal, egui UI), circular dep resolution, stub cleanup, platform replacements, 868 tests
 - **Phase 18a–g:** Core judge loop, rendering state providers, audio decode API, BGA/skin test APIs, stub replacement (12 sub-phases, 4 audit rounds), E2E test activation (138 tests), BRD replay codec
@@ -104,6 +104,7 @@ All phases through 25d-1/25d-3 complete. **1730 tests pass, 22 ignored (RenderSn
 - **Phase 25c:** Quality assurance — zero clippy warnings, cargo fmt clean, 22 ignored tests documented
 - **Phase 25d-1:** Forwarding stub deletion — 4 new traits in beatoraja-types (ScreenType, ScoreDatabaseAccess, MainStateAccess, AbstractResultAccess), ~95 stub lines replaced in external/modmenu
 - **Phase 25d-3:** Type definition stubs — JudgeAlgorithm/BMSPlayerRule/BarSorter/modifier modes fully defined, VersionChecker (reqwest), SongDatabaseUpdateListener (AtomicI32). +29 tests
+- **Phase 25d-2:** Rendering stubs — SkinOffset, TimerAccess, TimingDistribution, EventType, SkinMainState moved to beatoraja-types. ~88 stub lines eliminated. +9 tests
 
 ## Remaining Stubs (~1,520 true stub lines across 10 files)
 
