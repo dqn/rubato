@@ -78,7 +78,15 @@ Dependency graph order. Each module is ported only after its dependencies are co
 - [ ] Add missing fixtures for modules not yet covered (modmenu, select bar, stream) — deferred until Java exporter updated
 - [x] Reactivate compare_rule (3 tests: judge windows 480 cases, gauge properties 225 cases, gauge sequences 80 cases) — all passing
 - [x] Reactivate compare_pattern (lane shuffle mappings 102 cases: MIRROR/ROTATE/RANDOM/CROSS/FLIP) — required Java-compatible LCG (`java_random.rs`) to replace StdRng
-- [ ] Reactivate remaining 15 pending test files — blocked: all use fictional crate names (`bms_rule`, `bms_replay`, `bms_audio`, `bms_render`) not present in workspace; `e2e_helpers`/`render_snapshot`/`skin_fixtures` modules commented out in golden-master lib.rs; JudgeManager::update() is a stub (Phase 7+ dependency); BGAProcessor partially stubbed
+- [ ] Reactivate remaining 17 pending test files — blocked on multiple levels:
+  - **Fictional crate names:** tests import `bms_config`, `bms_skin`, `bms_audio`, `bms_render` which don't exist; actual crates are `beatoraja_skin`, `beatoraja_audio`, `beatoraja_render`, `beatoraja_types`
+  - **Missing modules:** `bms_render::eval`, `bms_render::state_provider::{StaticStateProvider, SkinStateProvider}` not implemented — blocks `render_snapshot.rs`, `compare_eval_test_skins.rs` (10 tests)
+  - **Missing audio API:** `bms_audio::decode::load_audio()`, `bms_audio::renderer::f32_to_i16()` not implemented — blocks `compare_audio.rs` (11 tests)
+  - **API signature mismatch:** tests assume free functions (`json_loader::load_skin()`), actual API uses struct methods (`JsonSkinLoader.load_skin()`) — blocks `compare_skin.rs` (13 tests)
+  - **Type/field divergence:** tests reference `SkinObjectType` (actual: `SkinObject`), `skin.width`/`skin.objects` as pub (actual: private), `skin.scale_x`/`skin.scale_y`/`skin.options`/`skin.custom_events`/`skin.custom_timers` not present
+  - **e2e_helpers.rs:** blocks 7 E2E tests (course_e2e, e2e_edge_cases, e2e_judge, exhaustive_e2e, full_pipeline_integration, replay_roundtrip_e2e, timing_boundary_e2e); depends on JudgeManager integration + KeyInputLog import fixes
+  - **Fixture generation:** compare_audio, compare_bga_timeline need Java exporter updates
+  - **Resolution:** requires Phase 13f (eval/state_provider), Phase 18 (stub removal), then full test rewrite against actual API
 - [x] Investigate BMS decoder mode detection discrepancy — investigated: no actual discrepancy found; both Java and Rust correctly detect `longnote_types.bms` as BEAT_5K; fixture expectation was outdated
 
 ## Phase 18: Post-Phase 13 Lifecycle Wiring
