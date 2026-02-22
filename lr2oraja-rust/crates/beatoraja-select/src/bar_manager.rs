@@ -5,6 +5,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use beatoraja_core::pixmap_resource_pool::PixmapResourcePool;
 use serde::Deserialize;
 
 use crate::bar::bar::Bar;
@@ -43,6 +44,10 @@ pub struct LoaderContext<'a> {
     pub rival_cache: Option<&'a mut ScoreDataCache>,
     pub rival_name: Option<String>,
     pub is_folderlamp: bool,
+    /// Banner pixmap resource pool for loading banner images
+    pub banner_resource: Option<&'a PixmapResourcePool>,
+    /// Stagefile pixmap resource pool for loading stagefile images
+    pub stagefile_resource: Option<&'a PixmapResourcePool>,
 }
 
 /// Bar manager for managing the song bar hierarchy
@@ -1128,48 +1133,69 @@ impl BarContentsLoaderThread {
         // Requires SongInformationAccessor - blocked
 
         // Phase 3: Load banners and stagefiles
+        // Java: for (Bar bar : bars) { if (bar instanceof SongBar && ...) { ... } }
         for bar in bars.iter_mut() {
             if self.is_stopped() {
                 return;
             }
 
-            if let Some(sb) = bar.as_song_bar()
-                && sb.exists_song()
-            {
+            // Extract song data to avoid overlapping borrows (immutable sb → mutable bar)
+            let song_info = bar.as_song_bar().filter(|sb| sb.exists_song()).map(|sb| {
                 let sd = sb.get_song_data();
+                (
+                    sd.get_banner().to_string(),
+                    sd.get_stagefile().to_string(),
+                    sd.get_path().map(|s| s.to_string()),
+                )
+            });
 
+            if let Some((banner_name, stagefile_name, song_path)) = song_info {
                 // Load banner
-                let banner = sd.get_banner();
-                if !banner.is_empty()
-                    && let Some(path) = sd.get_path()
+                // Java: Path bannerfile = Paths.get(song.getPath()).getParent().resolve(song.getBanner());
+                //        if (song.getBanner().length() > 0 && Files.exists(bannerfile)) {
+                //            songbar.setBanner(select.getBannerResource().get(bannerfile.toString()));
+                //        }
+                if !banner_name.is_empty()
+                    && let Some(ref path) = song_path
+                    && let Some(parent) = Path::new(path).parent()
                 {
-                    let parent = Path::new(path).parent();
-                    if let Some(parent) = parent {
-                        let banner_path = parent.join(banner);
-                        if banner_path.exists() {
-                            // Requires PixmapResourcePool for actual loading
-                            log::debug!(
-                                "Banner loading requires PixmapResourcePool: {:?}",
-                                banner_path
-                            );
+                    let banner_path = parent.join(&banner_name);
+                    if banner_path.exists() {
+                        if let Some(banner_pool) = ctx.banner_resource {
+                            let banner_key = banner_path.to_string_lossy().to_string();
+                            let pixmap = banner_pool.get_and_use(&banner_key, |p| p.clone());
+                            if let Some(pix) = pixmap
+                                && let Some(sb) = bar.as_song_bar_mut()
+                            {
+                                sb.set_banner(Some(pix));
+                            }
+                        } else {
+                            log::debug!("Banner loading skipped (no pool): {:?}", banner_path);
                         }
                     }
                 }
 
                 // Load stagefile
-                let stagefile = sd.get_stagefile();
-                if !stagefile.is_empty()
-                    && let Some(path) = sd.get_path()
+                // Java: Path stagefilefile = Paths.get(song.getPath()).getParent().resolve(song.getStagefile());
+                //        if (song.getStagefile().length() > 0 && Files.exists(stagefilefile)) {
+                //            songbar.setStagefile(select.getStagefileResource().get(stagefilefile.toString()));
+                //        }
+                if !stagefile_name.is_empty()
+                    && let Some(ref path) = song_path
+                    && let Some(parent) = Path::new(path).parent()
                 {
-                    let parent = Path::new(path).parent();
-                    if let Some(parent) = parent {
-                        let stage_path = parent.join(stagefile);
-                        if stage_path.exists() {
-                            // Requires PixmapResourcePool for actual loading
-                            log::debug!(
-                                "Stagefile loading requires PixmapResourcePool: {:?}",
-                                stage_path
-                            );
+                    let stage_path = parent.join(&stagefile_name);
+                    if stage_path.exists() {
+                        if let Some(stage_pool) = ctx.stagefile_resource {
+                            let stage_key = stage_path.to_string_lossy().to_string();
+                            let pixmap = stage_pool.get_and_use(&stage_key, |p| p.clone());
+                            if let Some(pix) = pixmap
+                                && let Some(sb) = bar.as_song_bar_mut()
+                            {
+                                sb.set_stagefile(Some(pix));
+                            }
+                        } else {
+                            log::debug!("Stagefile loading skipped (no pool): {:?}", stage_path);
                         }
                     }
                 }
@@ -1424,6 +1450,8 @@ mod tests {
             rival_cache: None,
             rival_name: None,
             is_folderlamp: false,
+            banner_resource: None,
+            stagefile_resource: None,
         };
         loader.run(&mut bars, &mut ctx);
         // Should complete without errors
@@ -1441,6 +1469,8 @@ mod tests {
             rival_cache: None,
             rival_name: None,
             is_folderlamp: false,
+            banner_resource: None,
+            stagefile_resource: None,
         };
         loader.run(&mut bars, &mut ctx);
         // Should return immediately due to stop flag
@@ -1473,6 +1503,8 @@ mod tests {
             rival_cache: None,
             rival_name: None,
             is_folderlamp: false,
+            banner_resource: None,
+            stagefile_resource: None,
         };
 
         loader.run(&mut bars, &mut ctx);
@@ -1480,6 +1512,159 @@ mod tests {
         // Score should be loaded
         assert!(bars[0].get_score().is_some());
         assert_eq!(bars[0].get_score().unwrap().epg, 100);
+    }
+
+    // ---- banner/stagefile loading tests ----
+
+    fn create_test_png(dir: &std::path::Path, name: &str) -> String {
+        let path = dir.join(name);
+        let img = image::RgbaImage::from_pixel(4, 4, image::Rgba([255, 0, 0, 255]));
+        img.save(&path).unwrap();
+        path.to_string_lossy().to_string()
+    }
+
+    #[test]
+    fn test_loader_loads_banner_via_pool() {
+        let dir = tempfile::tempdir().unwrap();
+        // Create a banner image file inside the song directory
+        create_test_png(dir.path(), "banner.png");
+
+        // Create a SongBar with a path in the temp directory and a banner filename
+        let song_file = dir.path().join("test.bms");
+        std::fs::write(&song_file, b"").unwrap();
+        let mut sd = SongData::default();
+        sd.sha256 = "bannerhash".to_string();
+        sd.set_path(song_file.to_string_lossy().to_string());
+        sd.banner = "banner.png".to_string();
+        let mut bars = vec![Bar::Song(Box::new(SongBar::new(sd)))];
+
+        let stop = Arc::new(AtomicBool::new(false));
+        let loader = BarContentsLoaderThread::new(stop);
+        let player_config = PlayerConfig::default();
+        let banner_pool = PixmapResourcePool::new();
+        let mut ctx = LoaderContext {
+            player_config: &player_config,
+            score_cache: None,
+            rival_cache: None,
+            rival_name: None,
+            is_folderlamp: false,
+            banner_resource: Some(&banner_pool),
+            stagefile_resource: None,
+        };
+
+        loader.run(&mut bars, &mut ctx);
+
+        // Banner should be loaded into the SongBar
+        let sb = bars[0].as_song_bar().unwrap();
+        assert!(sb.get_banner().is_some());
+        let pix = sb.get_banner().unwrap();
+        assert_eq!(pix.get_width(), 4);
+        assert_eq!(pix.get_height(), 4);
+    }
+
+    #[test]
+    fn test_loader_loads_stagefile_via_pool() {
+        let dir = tempfile::tempdir().unwrap();
+        // Create a stagefile image file inside the song directory
+        create_test_png(dir.path(), "stagefile.png");
+
+        let song_file = dir.path().join("test.bms");
+        std::fs::write(&song_file, b"").unwrap();
+        let mut sd = SongData::default();
+        sd.sha256 = "stagefilehash".to_string();
+        sd.set_path(song_file.to_string_lossy().to_string());
+        sd.stagefile = "stagefile.png".to_string();
+        let mut bars = vec![Bar::Song(Box::new(SongBar::new(sd)))];
+
+        let stop = Arc::new(AtomicBool::new(false));
+        let loader = BarContentsLoaderThread::new(stop);
+        let player_config = PlayerConfig::default();
+        let stagefile_pool = PixmapResourcePool::new();
+        let mut ctx = LoaderContext {
+            player_config: &player_config,
+            score_cache: None,
+            rival_cache: None,
+            rival_name: None,
+            is_folderlamp: false,
+            banner_resource: None,
+            stagefile_resource: Some(&stagefile_pool),
+        };
+
+        loader.run(&mut bars, &mut ctx);
+
+        // Stagefile should be loaded into the SongBar
+        let sb = bars[0].as_song_bar().unwrap();
+        assert!(sb.get_stagefile().is_some());
+        let pix = sb.get_stagefile().unwrap();
+        assert_eq!(pix.get_width(), 4);
+        assert_eq!(pix.get_height(), 4);
+    }
+
+    #[test]
+    fn test_loader_no_pool_skips_banner_loading() {
+        let dir = tempfile::tempdir().unwrap();
+        create_test_png(dir.path(), "banner.png");
+
+        let song_file = dir.path().join("test.bms");
+        std::fs::write(&song_file, b"").unwrap();
+        let mut sd = SongData::default();
+        sd.sha256 = "nopoolhash".to_string();
+        sd.set_path(song_file.to_string_lossy().to_string());
+        sd.banner = "banner.png".to_string();
+        let mut bars = vec![Bar::Song(Box::new(SongBar::new(sd)))];
+
+        let stop = Arc::new(AtomicBool::new(false));
+        let loader = BarContentsLoaderThread::new(stop);
+        let player_config = PlayerConfig::default();
+        let mut ctx = LoaderContext {
+            player_config: &player_config,
+            score_cache: None,
+            rival_cache: None,
+            rival_name: None,
+            is_folderlamp: false,
+            banner_resource: None,
+            stagefile_resource: None,
+        };
+
+        loader.run(&mut bars, &mut ctx);
+
+        // Banner should NOT be loaded (no pool)
+        let sb = bars[0].as_song_bar().unwrap();
+        assert!(sb.get_banner().is_none());
+    }
+
+    #[test]
+    fn test_loader_nonexistent_banner_file_not_loaded() {
+        let dir = tempfile::tempdir().unwrap();
+        // Do NOT create banner.png, it should not exist
+
+        let song_file = dir.path().join("test.bms");
+        std::fs::write(&song_file, b"").unwrap();
+        let mut sd = SongData::default();
+        sd.sha256 = "missinghash".to_string();
+        sd.set_path(song_file.to_string_lossy().to_string());
+        sd.banner = "banner.png".to_string();
+        let mut bars = vec![Bar::Song(Box::new(SongBar::new(sd)))];
+
+        let stop = Arc::new(AtomicBool::new(false));
+        let loader = BarContentsLoaderThread::new(stop);
+        let player_config = PlayerConfig::default();
+        let banner_pool = PixmapResourcePool::new();
+        let mut ctx = LoaderContext {
+            player_config: &player_config,
+            score_cache: None,
+            rival_cache: None,
+            rival_name: None,
+            is_folderlamp: false,
+            banner_resource: Some(&banner_pool),
+            stagefile_resource: None,
+        };
+
+        loader.run(&mut bars, &mut ctx);
+
+        // Banner should NOT be loaded (file does not exist)
+        let sb = bars[0].as_song_bar().unwrap();
+        assert!(sb.get_banner().is_none());
     }
 
     // ---- add_search tests ----

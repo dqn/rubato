@@ -1,4 +1,5 @@
 use beatoraja_core::main_state::{MainState, MainStateData};
+use beatoraja_core::pixmap_resource_pool::PixmapResourcePool;
 use beatoraja_core::timer_manager::TimerManager;
 use beatoraja_ir::ranking_data;
 
@@ -71,6 +72,11 @@ pub struct MusicSelector {
 
     pub playedsong: Option<SongData>,
     pub playedcourse: Option<CourseData>,
+
+    /// Banner pixmap resource pool
+    pub banners: PixmapResourcePool,
+    /// Stagefile pixmap resource pool
+    pub stagefiles: PixmapResourcePool,
 }
 
 pub static MODE: [Option<bms_model::Mode>; 8] = [
@@ -120,6 +126,8 @@ impl MusicSelector {
             play: None,
             playedsong: None,
             playedcourse: None,
+            banners: PixmapResourcePool::with_maxgen(2),
+            stagefiles: PixmapResourcePool::with_maxgen(2),
         }
     }
 
@@ -592,22 +600,14 @@ impl MusicSelector {
 
     /// Get banner resource pool.
     /// Corresponds to Java MusicSelector.getBannerResource()
-    pub fn get_banner_resource(&self) -> Option<&()> {
-        // Stubbed: PixmapResourcePool not yet wired in select crate
-        log::warn!(
-            "not yet implemented: MusicSelector.getBannerResource - requires PixmapResourcePool"
-        );
-        None
+    pub fn get_banner_resource(&self) -> &PixmapResourcePool {
+        &self.banners
     }
 
     /// Get stagefile resource pool.
     /// Corresponds to Java MusicSelector.getStagefileResource()
-    pub fn get_stagefile_resource(&self) -> Option<&()> {
-        // Stubbed: PixmapResourcePool not yet wired in select crate
-        log::warn!(
-            "not yet implemented: MusicSelector.getStagefileResource - requires PixmapResourcePool"
-        );
-        None
+    pub fn get_stagefile_resource(&self) -> &PixmapResourcePool {
+        &self.stagefiles
     }
 }
 
@@ -903,8 +903,8 @@ impl MainState for MusicSelector {
         if let Some(search) = &mut self.search {
             search.unfocus();
         }
-        // In Java: banners.disposeOld(), stagefiles.disposeOld()
-        // Blocked on PixmapResourcePool
+        self.banners.dispose_old();
+        self.stagefiles.dispose_old();
     }
 
     /// Dispose — clean up bar renderer, search field, and skin.
@@ -917,8 +917,8 @@ impl MainState for MusicSelector {
         if let Some(bar) = &self.bar {
             bar.dispose();
         }
-        // In Java: banners.dispose(), stagefiles.dispose()
-        // Blocked on PixmapResourcePool
+        self.banners.dispose();
+        self.stagefiles.dispose();
         if let Some(search) = &mut self.search {
             search.dispose();
             self.search = None;

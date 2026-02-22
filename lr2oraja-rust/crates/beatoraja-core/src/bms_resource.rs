@@ -1,6 +1,8 @@
 use std::collections::VecDeque;
 use std::thread;
 
+use beatoraja_render::pixmap::Pixmap;
+
 use crate::bms_player_mode::BMSPlayerMode;
 use crate::config::Config;
 use crate::main_loader::MainLoader;
@@ -58,11 +60,11 @@ pub struct BMSResource {
     /// stagefile texture
     stagefile: Option<TextureRegion>,
     /// stagefile pixmap reference
-    _stagefile_pix: Option<()>,
+    stagefile_pix: Option<Pixmap>,
     /// banner texture
     banner: Option<TextureRegion>,
     /// banner pixmap reference
-    _banner_pix: Option<()>,
+    banner_pix: Option<Pixmap>,
 }
 
 impl BMSResource {
@@ -75,9 +77,9 @@ impl BMSResource {
             bgaloaders: VecDeque::new(),
             backbmp: None,
             stagefile: None,
-            _stagefile_pix: None,
+            stagefile_pix: None,
             banner: None,
-            _banner_pix: None,
+            banner_pix: None,
         }
     }
 
@@ -160,27 +162,44 @@ impl BMSResource {
         self.banner.as_ref()
     }
 
-    pub fn set_stagefile(&mut self, pixmap: Option<()>) {
+    /// Set the stagefile pixmap.
+    /// Java: BMSResource.setStagefile(Pixmap pixmap)
+    pub fn set_stagefile(&mut self, pixmap: Option<Pixmap>) {
         let _old_stagefile = self.stagefile.clone();
-        if pixmap.is_some() {
-            // Phase 5+: create TextureRegion from pixmap
-            // For now, stub
+        if let Some(p) = pixmap {
+            // Store pixmap for later TextureRegion creation (Phase 29a rendering)
+            self.stagefile_pix = Some(p);
+            // TextureRegion creation deferred to rendering pipeline
         } else {
             self.stagefile = None;
-            self._stagefile_pix = None;
+            self.stagefile_pix = None;
         }
         // Dispose old if changed
     }
 
-    pub fn set_banner(&mut self, pixmap: Option<()>) {
+    /// Set the banner pixmap.
+    /// Java: BMSResource.setBanner(Pixmap pixmap)
+    pub fn set_banner(&mut self, pixmap: Option<Pixmap>) {
         let _old_banner = self.banner.clone();
-        if pixmap.is_some() {
-            // Phase 5+: create TextureRegion from pixmap
+        if let Some(p) = pixmap {
+            // Store pixmap for later TextureRegion creation (Phase 29a rendering)
+            self.banner_pix = Some(p);
+            // TextureRegion creation deferred to rendering pipeline
         } else {
             self.banner = None;
-            self._banner_pix = None;
+            self.banner_pix = None;
         }
         // Dispose old if changed
+    }
+
+    /// Get the stagefile pixmap reference.
+    pub fn get_stagefile_pix(&self) -> Option<&Pixmap> {
+        self.stagefile_pix.as_ref()
+    }
+
+    /// Get the banner pixmap reference.
+    pub fn get_banner_pix(&self) -> Option<&Pixmap> {
+        self.banner_pix.as_ref()
     }
 
     pub fn dispose(&mut self) {
@@ -192,5 +211,74 @@ impl BMSResource {
         }
         self.stagefile = None;
         self.backbmp = None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use beatoraja_render::pixmap::PixmapFormat;
+
+    fn make_test_pixmap(w: i32, h: i32) -> Pixmap {
+        Pixmap::new(w, h, PixmapFormat::RGBA8888)
+    }
+
+    fn make_bms_resource() -> BMSResource {
+        let config = Config::default();
+        let player = PlayerConfig::default();
+        BMSResource::new(&config, &player)
+    }
+
+    #[test]
+    fn test_set_banner_some_stores_pixmap() {
+        let mut res = make_bms_resource();
+        let pixmap = make_test_pixmap(128, 40);
+        res.set_banner(Some(pixmap));
+        let pix = res.get_banner_pix().unwrap();
+        assert_eq!(pix.get_width(), 128);
+        assert_eq!(pix.get_height(), 40);
+    }
+
+    #[test]
+    fn test_set_banner_none_clears_pixmap() {
+        let mut res = make_bms_resource();
+        let pixmap = make_test_pixmap(128, 40);
+        res.set_banner(Some(pixmap));
+        assert!(res.get_banner_pix().is_some());
+
+        res.set_banner(None);
+        assert!(res.get_banner_pix().is_none());
+        assert!(res.get_banner().is_none());
+    }
+
+    #[test]
+    fn test_set_stagefile_some_stores_pixmap() {
+        let mut res = make_bms_resource();
+        let pixmap = make_test_pixmap(640, 480);
+        res.set_stagefile(Some(pixmap));
+        let pix = res.get_stagefile_pix().unwrap();
+        assert_eq!(pix.get_width(), 640);
+        assert_eq!(pix.get_height(), 480);
+    }
+
+    #[test]
+    fn test_set_stagefile_none_clears_pixmap() {
+        let mut res = make_bms_resource();
+        let pixmap = make_test_pixmap(640, 480);
+        res.set_stagefile(Some(pixmap));
+        assert!(res.get_stagefile_pix().is_some());
+
+        res.set_stagefile(None);
+        assert!(res.get_stagefile_pix().is_none());
+        assert!(res.get_stagefile().is_none());
+    }
+
+    #[test]
+    fn test_initial_state_no_pixmaps() {
+        let res = make_bms_resource();
+        assert!(res.get_banner_pix().is_none());
+        assert!(res.get_stagefile_pix().is_none());
+        assert!(res.get_banner().is_none());
+        assert!(res.get_stagefile().is_none());
     }
 }
