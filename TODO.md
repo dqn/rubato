@@ -76,10 +76,14 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 
 ### 18f: Integration verification
 
-- [ ] Rewrite e2e test files against actual API — `e2e_judge.rs`, `course_e2e.rs`, `compare_judge.rs`, `exhaustive_e2e.rs`, `e2e_edge_cases.rs`, `timing_boundary_e2e.rs`, `replay_roundtrip_e2e.rs`, `full_pipeline_integration.rs`, `compare_replay_e2e.rs` all use old API names (`BmsDecoder`/`BmsModel`/`GaugeType` enum/`PlayerRule`/`model.total_notes()`) that don't match actual crate types (`BMSDecoder`/`BMSModel`/`i32` gauge constants/`BMSPlayerRule`). Same pattern as compare_judge_manager.rs rewrite
+- [x] Rewrite e2e test files against actual API — all 9 files rewritten and compile-verified: `e2e_judge.rs`, `course_e2e.rs`, `compare_judge.rs`, `exhaustive_e2e.rs`, `e2e_edge_cases.rs`, `timing_boundary_e2e.rs`, `replay_roundtrip_e2e.rs`, `full_pipeline_integration.rs`, `compare_replay_e2e.rs`. Old API names (`BmsDecoder`/`BmsModel`/`GaugeType` enum/`PlayerRule`/`model.total_notes()`/`score.judge_count()`) replaced with actual crate types (`BMSDecoder`/`BMSModel`/`i32` gauge constants/`BMSPlayerRule`/`model.get_total_notes()`/`score.get_judge_count_total()`). Replay tests (`replay_roundtrip_e2e.rs`, `full_pipeline_integration.rs`) adapted from BRD binary format to JSON serde round-trip because `read_brd`/`write_brd` are not yet implemented
 - [ ] Activate remaining 14 Phase 16b pending tests — depends on 18a–18d completing + e2e test API rewrites
 - [ ] E2E gameplay flow test: select → decide → play → result screen transitions — blocked: requires all stubs removed and real screen implementations wired
 - [ ] Verify: all tests pass, zero clippy warnings, clean `cargo fmt` — blocked: final gate after all above tasks complete
+
+### New Issues Found
+
+- [ ] Implement `read_brd`/`write_brd` for BRD binary replay format — `beatoraja_types::replay_data::ReplayData` has Serialize/Deserialize but no BRD binary codec. Replay round-trip tests currently use JSON serde as workaround. Java source: `ReplayData.java` read/write methods with custom binary format
 
 ## Remaining Stubs
 

@@ -69,7 +69,7 @@ brs/
 
 ## Implementation Status
 
-All phases complete. 993 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 16b partially done (2 duplicate pending tests deleted; 14 remaining blocked; `compare_judge_manager.rs` activated). Phase 18a (core judge loop) complete.
+All phases complete. 993 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 16b partially done (2 duplicate pending tests deleted; 14 remaining blocked; `compare_judge_manager.rs` activated). Phase 18a (core judge loop) complete. Phase 18f partially done (9 e2e test files rewritten against actual API).
 
 | Phases | Summary |
 |--------|---------|
@@ -82,7 +82,8 @@ All phases complete. 993 tests pass. Zero runtime `todo!()`/`unimplemented!()`. 
 | 16a–c | Tests: 715 unit + 121 golden master + 32 integration (compare_rule + compare_pattern reactivated with Java LCG fix). 16b partial: 2 duplicate pending tests deleted; 14 remaining blocked by missing APIs; `compare_judge_manager.rs` activated |
 | 17 | Verified zero runtime todo!/unimplemented! |
 | 18a | Core judge loop: `JudgeManager::update()` full 450-line translation with testable API. `JudgeConfig`, `JudgeNote`, `build_judge_notes()`, `compare_times()`, judge constants. `e2e_helpers.rs` rewritten and activated (correct BMSDecoder/GrooveGauge/KeyInputLog APIs). `compare_judge_manager.rs` activated (golden master test). `pair_index` bounds checks added. LN pairing fix in `build_judge_notes()`. `total_notes` count fix for LNTYPE_LONGNOTE. 993 tests pass |
-| 18b–f | Post-Phase 13 lifecycle wiring (pending): 18b rendering state providers, 18c audio decode, 18d BGA/skin tests, 18e stub replacement, 18f e2e test API rewrites (9 files use old names: `BmsDecoder`/`GaugeType` enum/`PlayerRule` etc.) + integration verification |
+| 18f (partial) | E2E test API rewrite: 9 pending test files (`e2e_judge.rs`, `course_e2e.rs`, `compare_judge.rs`, `exhaustive_e2e.rs`, `e2e_edge_cases.rs`, `timing_boundary_e2e.rs`, `replay_roundtrip_e2e.rs`, `full_pipeline_integration.rs`, `compare_replay_e2e.rs`) rewritten against actual crate APIs. Old names → real types (`BMSDecoder`/`BMSModel`/i32 gauge constants/`BMSPlayerRule`/`get_total_notes()`/`get_judge_count_total()`). Replay tests adapted to JSON serde (BRD codec not yet implemented). All 9 files compile-verified |
+| 18b–e | Post-Phase 13 lifecycle wiring (pending): 18b rendering state providers, 18c audio decode, 18d BGA/skin tests, 18e stub replacement |
 
 ## Remaining Stubs
 
