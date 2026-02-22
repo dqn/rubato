@@ -4,7 +4,7 @@ Dependency graph order. Each module is ported only after its dependencies are co
 
 ## Completed Phases
 
-Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 1241 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) complete. Phase 18b (rendering state providers) complete. Phase 18c (audio decode API) complete. Phase 18d (BGA/skin test APIs) complete. Phase 18e-1 (cross-crate stub deduplication) complete. Phase 18e-2 (lifecycle stub replacement) partially complete — obs/external/decide/ir done, select/decide PlayerResource done, 3 MainController crates + 2 PlayerResource crates remaining blocked. Phase 18f (e2e test activation) complete. Phase 18g (BRD replay codec) complete. See AGENTS.md for details.
+Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 1241 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) complete. Phase 18b (rendering state providers) complete. Phase 18c (audio decode API) complete. Phase 18d (BGA/skin test APIs) complete. Phase 18e-1 (cross-crate stub deduplication) complete. Phase 18e-2 (lifecycle stub replacement) partially complete — obs/external/decide/ir/select MainController done, modmenu MainController partially done (dead code removed + skin types replaced), select/decide/external PlayerResource done, 2 MainController crates + 1 PlayerResource crate remaining blocked. Phase 18f (e2e test activation) complete. Phase 18g (BRD replay codec) complete. See AGENTS.md for details.
 
 ## Phase 13f: egui UI (complete)
 
@@ -77,7 +77,7 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 
 #### 18e-2: Lifecycle stub replacement (partially complete)
 
-##### MainController stubs — completed (4 of 8 crates)
+##### MainController stubs — completed (6 of 8 crates)
 
 - [x] beatoraja-obs: Removed `MainControllerRef` entirely — added `state_type() -> Option<MainStateType>` to `MainState` trait (beatoraja-core), replaced `MainControllerRef::get_state_type(state)` with `state.state_type()` in `obs_listener.rs`. Zero remaining MainController stub code
 - [x] beatoraja-external: Replaced `MainController` struct + `MainControllerAccess` impl with `NullMainController` re-export from beatoraja-types. `MainState.main` field type changed to `NullMainController`. No code accesses `state.main` so change is safe
@@ -85,9 +85,9 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 - [x] beatoraja-ir: No MainController stub exists — nothing to do
 - [x] beatoraja-select: Removed `MainController` struct + 6 dead methods, `DefaultMainState`, `PlayerResource` empty struct. `MainState` trait simplified to empty marker trait (`get_main()` removed). `RandomCourseData::lottery_song_datas` and `ContextMenuBar::fill_missing_charts` updated to remove `&MainController` parameter. Zero call sites existed
 
-##### MainController stubs — remaining (3 crates)
+##### MainController stubs — remaining (2 crates)
 - [ ] beatoraja-result: 6 methods actively used in music_result.rs/course_result.rs (get_play_data_accessor, get_input_processor, get_ir_status, save_last_recording, ir_send_status_mut, ir_send_status). 3 unused methods (get_config, get_player_config, change_state) can be pruned. Blocked: type mismatches (PlayDataAccessor optional vs non-optional, BMSPlayerInputProcessor `&mut` vs `&`), `ir_send_status_mut()` doesn't exist on real MainController, IRConnection not implemented
-- [ ] beatoraja-modmenu: `get_current_state()` and `load_new_profile()` are **unused** (dead code). Real blocker: stub `PlayerConfig` uses `Vec<SkinConfig>` but real type uses `Vec<Option<SkinConfig>>`; `SkinConfig.path` is `String` vs `Option<String>`; `SkinConfigProperty` vs `SkinProperty` with `Option<>` wrapping throughout. Requires ~15 call sites in skin_menu.rs to add Option handling. Moderate refactoring task
+- [x] beatoraja-modmenu: Removed dead code (`get_current_state()`, `load_new_profile()`, `DefaultMainState`). Replaced stub `PlayerConfig` with real `beatoraja_types::PlayerConfig`. Replaced stub `SkinConfig`/`SkinConfigProperty`/`SkinConfigOption`/`SkinConfigFilePath`/`SkinConfigOffset`/`SkinConfigDefault` with real types (`SkinConfig`/`SkinProperty`/`SkinOption`/`SkinFilePath`/`SkinOffset`). Updated ~15 call sites in skin_menu.rs for `Option<>` handling (`.iter().flatten()`, `is_some_and()`, `Some()` wrapping). Updated misc_setting_menu.rs (`get_play_config(mode.clone())`, `read_all_player_id()` free function). MainController stub retained with 3 methods (get_config, get_player_config, save_config) — needed until real MainController exists. Remaining modmenu stubs: SkinHeader, Skin, SkinObject, SkinLoader, MainState trait (rendering/skin types, separate concern from lifecycle)
 - [ ] md-processor: `MainControllerRef` trait with `update_song(&self, path: &str, force: bool)` is **dead code** — `HttpDownloadProcessor` is never instantiated anywhere. Deferred to HttpDownloadProcessor activation
 
 ##### PlayerResource stubs — completed (5 of 6 crates)
@@ -138,5 +138,5 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 
 ## Remaining Stubs
 
-- **Lifecycle (mostly resolved):** MainController stubs removed from obs/external/ir/select (Phase 18e-2). Remaining MainController: result (6 methods actively used, blocked), modmenu (type incompatibility, moderate refactoring), md-processor (dead code, deferred). PlayerResource stubs removed from select/decide/external. Remaining PlayerResource: result (blocked). MainState stubs require per-screen concrete implementations
+- **Lifecycle (mostly resolved):** MainController stubs removed from obs/external/ir/select/modmenu (Phase 18e-2). modmenu: dead code removed, skin config types replaced with real beatoraja-types; 3-method MainController stub retained for lifecycle. Remaining MainController: result (6 methods actively used, blocked), md-processor (dead code, deferred). PlayerResource stubs removed from select/decide/external. Remaining PlayerResource: result (blocked). MainState stubs require per-screen concrete implementations
 - **Rendering re-exports:** `rendering_stubs.rs` in beatoraja-skin now re-exports real beatoraja-render types (resolved, not stubs)
