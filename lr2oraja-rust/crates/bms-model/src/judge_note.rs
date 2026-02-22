@@ -64,6 +64,10 @@ impl JudgeNote {
 /// Notes are grouped by lane (all lane 0 notes in time order, then lane 1, etc.).
 /// LN start/end pairs are cross-linked via `pair_index` into the flat array.
 /// `end_time_us` for LN start notes is set to the paired end note's time.
+///
+/// Pairing: the BMS decoder does not set `Note::pair` for LNTYPE_LONGNOTE channel notes
+/// (51-59). We compute pairing here by matching each LongStart with the next LongEnd
+/// in the same lane (stack-based, LIFO for nested LNs).
 pub fn build_judge_notes(model: &BMSModel) -> Vec<JudgeNote> {
     let keys = model.get_mode().map(|m| m.key()).unwrap_or(0);
     let mut all_notes = Vec::new();
@@ -102,6 +106,7 @@ pub fn build_judge_notes(model: &BMSModel) -> Vec<JudgeNote> {
                     },
                     ln_type: *note_type,
                     damage: 0.0,
+                    // Use Note::pair if set; otherwise pair_index will be fixed below.
                     pair_index: pair.map(|p| p + base_idx),
                 },
                 Note::Mine { data, damage } => JudgeNote {
@@ -116,6 +121,30 @@ pub fn build_judge_notes(model: &BMSModel) -> Vec<JudgeNote> {
                 },
             };
             all_notes.push(jn);
+        }
+
+        // For LN notes with pair_index=None (BMS decoder doesn't set Note::pair),
+        // compute pairing by matching LongStart with the next LongEnd in this lane.
+        // Uses a stack for potential nested LNs.
+        let lane_end = all_notes.len();
+        let mut start_stack: Vec<usize> = Vec::new();
+        for i in base_idx..lane_end {
+            if all_notes[i].pair_index.is_some() {
+                // pair already set (e.g. from Note::pair), skip auto-pairing
+                continue;
+            }
+            match all_notes[i].kind {
+                JudgeNoteKind::LongStart => {
+                    start_stack.push(i);
+                }
+                JudgeNoteKind::LongEnd => {
+                    if let Some(start_idx) = start_stack.pop() {
+                        all_notes[start_idx].pair_index = Some(i);
+                        all_notes[i].pair_index = Some(start_idx);
+                    }
+                }
+                _ => {}
+            }
         }
     }
 

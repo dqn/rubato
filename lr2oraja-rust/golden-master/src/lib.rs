@@ -5,10 +5,7 @@ pub mod autoplay_fixtures;
 pub mod bga_timeline_fixtures;
 pub mod course_data_fixtures;
 pub mod database_fixtures;
-// e2e_helpers depends on beatoraja-play APIs (JudgeManager, GrooveGauge, PlayerRule, etc.)
-// that have different names/signatures than expected (e.g., BMSPlayerRule vs PlayerRule,
-// judge constants as raw i32 vs named constants). Moved to src/pending/.
-// pub mod e2e_helpers;
+pub mod e2e_helpers;
 pub mod judge_fixtures;
 pub mod pattern_fixtures;
 pub mod pattern_modifier_detail_fixtures;

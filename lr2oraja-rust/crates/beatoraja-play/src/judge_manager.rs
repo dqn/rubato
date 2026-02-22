@@ -399,8 +399,22 @@ impl JudgeManager {
             });
         }
 
-        // Count total playable notes for ghost array
-        let total_notes = config.notes.iter().filter(|n| n.is_playable()).count();
+        // Count total playable notes for ghost array.
+        // Mirrors Java TimeLine.getTotalNotes(lntype): for LNTYPE_LONGNOTE, LN end notes
+        // with TYPE_UNDEFINED are not independently counted (only the LN start counts).
+        let total_notes = config
+            .notes
+            .iter()
+            .filter(|n| {
+                if n.is_long_end()
+                    && n.ln_type == TYPE_UNDEFINED
+                    && config.ln_type == LNTYPE_LONGNOTE
+                {
+                    return false;
+                }
+                n.is_playable()
+            })
+            .count();
 
         let keyassign_vec: Vec<i32> = lp.get_key_lane_assign().to_vec();
         let num_keys = keyassign_vec.len();
@@ -580,7 +594,10 @@ impl JudgeManager {
             // HCN gauge increase/decrease check
             if let Some(passing_idx) = self.lane_states[lane_idx].passing {
                 let pair_idx = notes[passing_idx].pair_index;
-                let pair_state = pair_idx.map(|pi| self.note_states[pi].state).unwrap_or(0);
+                let pair_state = pair_idx
+                    .filter(|&pi| pi < self.note_states.len())
+                    .map(|pi| self.note_states[pi].state)
+                    .unwrap_or(0);
                 if pressed || (pair_state > 0 && pair_state <= 3) || self.autoplay {
                     next_inclease = true;
                 }
@@ -1109,6 +1126,9 @@ impl JudgeManager {
         gauge: &mut GrooveGauge,
     ) {
         let _ = notes; // used for type info if needed in future
+        if note_idx >= self.note_states.len() {
+            return;
+        }
         if judge_vanish {
             if (self.score.passnotes as usize) < self.ghost.len() {
                 self.ghost[self.score.passnotes as usize] = judge;
