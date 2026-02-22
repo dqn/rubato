@@ -7,3 +7,4 @@ pub mod keyboard_input_processor;
 pub mod midi_input_processor;
 pub mod mouse_scratch_input;
 pub mod stubs;
+pub mod winit_input_bridge;

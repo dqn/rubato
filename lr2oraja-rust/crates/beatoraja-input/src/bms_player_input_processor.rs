@@ -499,6 +499,10 @@ impl BMSPlayerInputProcessor {
         self.select_pressed
     }
 
+    pub fn set_select_pressed(&mut self, select_pressed: bool) {
+        self.select_pressed = select_pressed;
+    }
+
     pub fn get_keyboard_input_processor(&self) -> &KeyBoardInputProcesseor {
         &self.kbinput
     }
@@ -777,5 +781,198 @@ impl BMControllerCallback for CtrlEvents {
             is_analog,
             value,
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::stubs::{Config, Keys, PlayerConfig};
+    use crate::winit_input_bridge::SharedKeyState;
+
+    fn make_input_processor() -> BMSPlayerInputProcessor {
+        let config = Config::default();
+        let player = PlayerConfig::default();
+        BMSPlayerInputProcessor::new(&config, &player)
+    }
+
+    #[test]
+    fn test_initial_key_states_all_false() {
+        let proc = make_input_processor();
+        for i in 0..KEYSTATE_SIZE as i32 {
+            assert!(!proc.get_key_state(i));
+        }
+    }
+
+    #[test]
+    fn test_set_and_get_key_state() {
+        let mut proc = make_input_processor();
+        proc.set_key_state(0, true, 1000);
+        assert!(proc.get_key_state(0));
+        assert_eq!(proc.get_key_changed_time(0), 1000);
+
+        proc.set_key_state(0, false, 2000);
+        assert!(!proc.get_key_state(0));
+        assert_eq!(proc.get_key_changed_time(0), 2000);
+    }
+
+    #[test]
+    fn test_reset_key_changed_time() {
+        let mut proc = make_input_processor();
+        proc.set_key_state(5, true, 1000);
+        assert!(proc.reset_key_changed_time(5));
+        assert_eq!(proc.get_key_changed_time(5), i64::MIN);
+        // Second reset should return false since already reset
+        assert!(!proc.reset_key_changed_time(5));
+    }
+
+    #[test]
+    fn test_reset_all_key_state() {
+        let mut proc = make_input_processor();
+        proc.set_key_state(0, true, 1000);
+        proc.set_key_state(1, true, 2000);
+        proc.reset_all_key_state();
+        assert!(!proc.get_key_state(0));
+        assert!(!proc.get_key_state(1));
+        assert_eq!(proc.get_key_changed_time(0), i64::MIN);
+    }
+
+    #[test]
+    fn test_set_start_time_resets_state() {
+        let mut proc = make_input_processor();
+        proc.set_key_state(0, true, 1000);
+        proc.set_start_time(5000);
+        // After setStartTime(nonzero), times should be reset
+        assert_eq!(proc.get_key_changed_time(0), i64::MIN);
+        assert_eq!(proc.get_start_time(), 5000);
+    }
+
+    #[test]
+    fn test_key_log_margin_time() {
+        let mut proc = make_input_processor();
+        proc.set_key_log_margin_time(10);
+        // micro_margin_time should be 10 * 1000 = 10000
+        // This is internal; just verify no panic
+    }
+
+    #[test]
+    fn test_mouse_state() {
+        let proc = make_input_processor();
+        assert_eq!(proc.get_mouse_x(), 0);
+        assert_eq!(proc.get_mouse_y(), 0);
+        assert!(!proc.is_mouse_pressed());
+        assert!(!proc.is_mouse_dragged());
+        assert!(!proc.is_mouse_moved());
+        assert_eq!(proc.get_scroll(), 0);
+    }
+
+    #[test]
+    fn test_start_and_select_pressed() {
+        let mut proc = make_input_processor();
+        assert!(!proc.start_pressed());
+        assert!(!proc.is_select_pressed());
+
+        proc.start_changed(true);
+        assert!(proc.start_pressed());
+
+        proc.set_select_pressed(true);
+        assert!(proc.is_select_pressed());
+    }
+
+    #[test]
+    fn test_enable_disable() {
+        let mut proc = make_input_processor();
+        proc.set_key_state(0, true, 1000);
+        proc.set_enable(false);
+        // Disable should reset all state
+        assert!(!proc.get_key_state(0));
+    }
+
+    #[test]
+    fn test_get_key_state_out_of_range() {
+        let proc = make_input_processor();
+        assert!(!proc.get_key_state(-1));
+        assert!(!proc.get_key_state(256));
+        assert!(!proc.get_key_state(1000));
+    }
+
+    #[test]
+    fn test_number_of_device() {
+        let proc = make_input_processor();
+        // 1 (keyboard) + 0 controllers = 1
+        assert_eq!(proc.get_number_of_device(), 1);
+    }
+
+    #[test]
+    fn test_device_type_default() {
+        let proc = make_input_processor();
+        assert_eq!(proc.get_device_type(), DeviceType::Keyboard);
+    }
+
+    #[test]
+    fn test_poll_with_shared_key_state() {
+        // Set up the shared key state
+        let shared_state = SharedKeyState::new();
+        crate::stubs::set_shared_key_state(shared_state.clone());
+
+        // Use a config with duration=0 to avoid timing issues in tests
+        let config = Config::default();
+        let player = PlayerConfig::default();
+        let mut proc = BMSPlayerInputProcessor::new(&config, &player);
+        // Override keyboard config with zero duration and explicit start/select keys
+        let mut kb_config = KeyboardConfig::default();
+        kb_config.duration = 0;
+        kb_config.start = Keys::Q;
+        kb_config.select = Keys::W;
+        proc.set_keyboard_config(&kb_config);
+
+        // Press the Z key (default keys[0] = Keys::Z = 54)
+        shared_state.set_key_pressed(Keys::Z, true);
+
+        // Poll should detect the key press
+        proc.poll();
+
+        // The first key in default config maps to key index 0
+        // keystate[0] should now be true
+        assert!(
+            proc.get_key_state(0),
+            "key Z press should be detected as key index 0"
+        );
+
+        // Also test start key: default start key = Keys::Q = 45
+        shared_state.set_key_pressed(Keys::Q, true);
+        proc.poll();
+        assert!(proc.start_pressed(), "start key (Q) should be detected");
+
+        // Also test select key: default select key = Keys::W = 51
+        shared_state.set_key_pressed(Keys::W, true);
+        proc.poll();
+        assert!(
+            proc.is_select_pressed(),
+            "select key (W) should be detected"
+        );
+
+        // Release Z key
+        shared_state.set_key_pressed(Keys::Z, false);
+        proc.poll();
+        assert!(!proc.get_key_state(0), "key Z release should be detected");
+    }
+
+    #[test]
+    fn test_scroll_state() {
+        let mut proc = make_input_processor();
+        assert_eq!(proc.get_scroll_x(), 0.0);
+        assert_eq!(proc.get_scroll_y(), 0.0);
+
+        proc.reset_scroll();
+        assert_eq!(proc.get_scroll_x(), 0.0);
+        assert_eq!(proc.get_scroll_y(), 0.0);
+    }
+
+    #[test]
+    fn test_key_input_log_empty_initially() {
+        let proc = make_input_processor();
+        let log = proc.get_key_input_log();
+        assert!(log.is_empty());
     }
 }

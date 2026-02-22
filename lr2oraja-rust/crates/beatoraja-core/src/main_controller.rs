@@ -131,8 +131,7 @@ pub struct HttpDownloadProcessor;
 /// StreamController stub (Phase 5+)
 pub struct StreamController;
 
-/// BMSPlayerInputProcessor stub (Phase 5+)
-pub struct BMSPlayerInputProcessor;
+pub use beatoraja_input::bms_player_input_processor::BMSPlayerInputProcessor;
 
 /// MainController - root class of the application
 #[allow(dead_code)]
@@ -172,8 +171,11 @@ pub struct MainController {
     /// BMS file for single-song play
     bmsfile: Option<PathBuf>,
 
-    /// Input processor (Phase 5+)
-    // input: Option<BMSPlayerInputProcessor>,
+    /// Input processor
+    input: Option<BMSPlayerInputProcessor>,
+
+    /// Input polling thread quit flag
+    input_poll_quit: std::sync::Arc<std::sync::atomic::AtomicBool>,
 
     /// Show FPS flag
     showfps: bool,
@@ -262,6 +264,9 @@ impl MainController {
         // Phase 5+: IR initialization, Discord RPC, OBS listener
         let state_listener: Vec<Box<dyn MainStateListener>> = Vec::new();
 
+        // Create input processor
+        let input = BMSPlayerInputProcessor::new(&config, &player);
+
         Self {
             config,
             player,
@@ -276,6 +281,8 @@ impl MainController {
             timer,
             sprite: None,
             bmsfile: f,
+            input: Some(input),
+            input_poll_quit: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
             showfps: false,
             playdata,
             sound: Some(sound),
@@ -521,12 +528,20 @@ impl MainController {
         ImGuiRenderer::init();
         drop(_perf);
 
-        // Phase 5+: System font loading, input processor, audio driver selection
+        // Phase 5+: System font loading, audio driver selection
 
         // Initialize states (creates PlayerResource)
         self.initialize_states();
 
-        // Phase 5+: updateStateReferences, MiscSettingMenu, polling thread
+        // Start input polling thread
+        // Java: Thread polling = new Thread(() -> { ... input.poll(); ... });
+        // polling.start();
+        // In Rust, input.poll() requires &mut self so we cannot share
+        // BMSPlayerInputProcessor across threads directly. Instead,
+        // we call input.poll() synchronously in render() (same as the
+        // original pre-thread approach). The polling thread pattern is
+        // deferred until we adopt a channel-based architecture where
+        // winit events are forwarded to a poll thread.
 
         // Enter initial state based on bmsfile
         if self.bmsfile.is_some() {
@@ -613,6 +628,11 @@ impl MainController {
 
         // ImGui rendering is handled by egui in main.rs
 
+        // Poll input (Java: done in a separate thread, Rust: done synchronously)
+        if let Some(ref mut input) = self.input {
+            input.poll();
+        }
+
         // Input gating by time delta
         // Java: final long time = System.currentTimeMillis();
         //       if(time > prevtime) { prevtime = time; current.input(); ... }
@@ -625,14 +645,44 @@ impl MainController {
             if let Some(ref mut current) = self.current {
                 current.input();
             }
-            // Mouse pressed/dragged → skin (Phase 22d)
+            // Mouse pressed/dragged → skin
             // Java: if (input.isMousePressed()) {
             //     current.getSkin().mousePressed(current, input.getMouseButton(), input.getMouseX(), input.getMouseY());
             // }
             // Java: if (input.isMouseDragged()) {
             //     current.getSkin().mouseDragged(current, input.getMouseButton(), input.getMouseX(), input.getMouseY());
             // }
-            // TODO: Wire mouse events once InputProcessor provides mouse coordinates
+            if let Some(ref mut input) = self.input {
+                let mouse_pressed = input.is_mouse_pressed();
+                let mouse_dragged = input.is_mouse_dragged();
+                let mouse_button = input.get_mouse_button();
+                let mouse_x = input.get_mouse_x();
+                let mouse_y = input.get_mouse_y();
+                if mouse_pressed {
+                    if let Some(ref mut current) = self.current {
+                        let data = current.main_state_data_mut();
+                        if let Some(ref mut skin) = data.skin {
+                            skin.mouse_pressed_at(mouse_button, mouse_x, mouse_y);
+                        }
+                    }
+                    input.set_mouse_pressed();
+                }
+                if mouse_dragged {
+                    if let Some(ref mut current) = self.current {
+                        let data = current.main_state_data_mut();
+                        if let Some(ref mut skin) = data.skin {
+                            skin.mouse_dragged_at(mouse_button, mouse_x, mouse_y);
+                        }
+                    }
+                    input.set_mouse_dragged();
+                }
+
+                // Mouse moved → cursor visibility timer
+                if input.is_mouse_moved() {
+                    self.mouse_moved_time = time;
+                    input.set_mouse_moved(false);
+                }
+            }
 
             // Phase 5+: cursor visibility, FPS toggle, fullscreen toggle
         }
@@ -643,6 +693,15 @@ impl MainController {
     /// Translated from: MainController.dispose()
     pub fn dispose(&mut self) {
         self.save_config();
+
+        // Stop input polling
+        self.input_poll_quit
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+
+        // Dispose input processor
+        if let Some(ref mut input) = self.input {
+            input.dispose();
+        }
 
         // Dispose current state
         if let Some(ref mut current) = self.current {
@@ -841,9 +900,12 @@ impl MainController {
     ///
     /// Translated from: MainController.getInputProcessor()
     pub fn get_input_processor(&self) -> Option<&BMSPlayerInputProcessor> {
-        // Phase 5+: return &self.input
-        log::warn!("not yet implemented: getInputProcessor");
-        None
+        self.input.as_ref()
+    }
+
+    /// Returns a mutable reference to the input processor.
+    pub fn get_input_processor_mut(&mut self) -> Option<&mut BMSPlayerInputProcessor> {
+        self.input.as_mut()
     }
 
     /// Returns the audio processor.
