@@ -12,6 +12,7 @@ lr2oraja (beatoraja fork, Java 313 files / 72k+ lines) → Rust. All features in
 - **Golden Master** — export Java values as JSON, compare with Rust. Tolerance: ±2μs.
 - **Preserve ALL branch/loop/fallthrough structure.** Copy constants/magic numbers AS-IS.
 - **Explicit type conversions** — every implicit Java cast → explicit Rust cast.
+- When all actionable tasks are blocked, investigate and plan the next phases, then add them to TODO.md.
 
 ## Type Mapping
 
