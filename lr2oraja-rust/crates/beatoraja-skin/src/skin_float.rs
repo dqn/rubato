@@ -480,6 +480,66 @@ impl SkinFloat {
         };
     }
 
+    /// Draw the float number.
+    /// Corresponds to Java SkinFloat.draw(SkinObjectRenderer sprite)
+    pub fn draw(&self, sprite: &mut crate::skin_object::SkinObjectRenderer) {
+        for j in 0..self.current_images.len() {
+            if let Some(ref img) = self.current_images[j] {
+                if let Some(ref offsets) = self.offsets {
+                    if j < offsets.len() {
+                        sprite.draw(
+                            img,
+                            self.region.x
+                                + (self.region.width + self.space as f32) * j as f32
+                                + self.shift
+                                + offsets[j].x,
+                            self.region.y + offsets[j].y,
+                            self.region.width + offsets[j].w,
+                            self.region.height + offsets[j].h,
+                        );
+                    } else {
+                        sprite.draw(
+                            img,
+                            self.region.x
+                                + (self.region.width + self.space as f32) * j as f32
+                                + self.shift,
+                            self.region.y,
+                            self.region.width,
+                            self.region.height,
+                        );
+                    }
+                } else {
+                    sprite.draw(
+                        img,
+                        self.region.x
+                            + (self.region.width + self.space as f32) * j as f32
+                            + self.shift,
+                        self.region.y,
+                        self.region.width,
+                        self.region.height,
+                    );
+                }
+            }
+        }
+    }
+
+    /// Draw with value and state.
+    /// Corresponds to Java SkinFloat.draw(SkinObjectRenderer, long, float, MainState, float, float)
+    pub fn draw_with_value(
+        &mut self,
+        sprite: &mut crate::skin_object::SkinObjectRenderer,
+        time: i64,
+        value: f32,
+        state: &dyn MainState,
+        offset_x: f32,
+        offset_y: f32,
+    ) {
+        self.prepare_with_value(time, state, value, offset_x, offset_y);
+        if self.draw {
+            self.draw(sprite);
+        }
+    }
+
     pub fn get_length(&self) -> f32 {
         self.length
     }

@@ -79,6 +79,51 @@ impl DirectoryBarData {
         self.ranks.fill(0);
     }
 
+    /// No-op base version.
+    /// Corresponds to Java DirectoryBar.updateFolderStatus()
+    pub fn update_folder_status(&mut self) {
+        // Base implementation is no-op (Java: empty method body)
+    }
+
+    /// Update folder lamp/rank status from song data.
+    /// Corresponds to Java DirectoryBar.updateFolderStatus(SongData[] songs)
+    pub fn update_folder_status_with_songs(
+        &mut self,
+        songs: &[SongData],
+        mode: Option<&bms_model::Mode>,
+        score_fn: impl Fn(&SongData) -> Option<ScoreData>,
+    ) {
+        self.clear();
+        for song in songs {
+            if song.get_path().is_none() {
+                continue;
+            }
+            if let Some(m) = mode
+                && song.get_mode() != 0
+                && song.get_mode() != m.id()
+            {
+                continue;
+            }
+            let score = score_fn(song);
+            if let Some(ref score) = score {
+                let clear = score.get_clear() as usize;
+                if clear < self.lamps.len() {
+                    self.lamps[clear] += 1;
+                }
+                if score.get_notes() != 0 {
+                    let rank = (score.get_exscore() * 27 / (score.get_notes() * 2)) as usize;
+                    let rank = if rank < 28 { rank } else { 27 };
+                    self.ranks[rank] += 1;
+                } else {
+                    self.ranks[0] += 1;
+                }
+            } else {
+                self.lamps[0] += 1;
+                self.ranks[0] += 1;
+            }
+        }
+    }
+
     /// Filter children by mode and same-folder flag
     pub fn get_children_filtered(
         children: &[Bar],

@@ -656,6 +656,16 @@ impl PlayerConfig {
         Ok(player)
     }
 
+    pub fn get_config_json(player: &PlayerConfig) -> anyhow::Result<String> {
+        Ok(serde_json::to_string_pretty(player)?)
+    }
+
+    pub fn validate_player_config(playerid: &str, mut player: PlayerConfig) -> PlayerConfig {
+        player.id = Some(playerid.to_string());
+        player.validate();
+        player
+    }
+
     pub fn write(playerpath: &str, player: &PlayerConfig) -> anyhow::Result<()> {
         let id = player.id.as_deref().unwrap_or("unknown");
         let path = PathBuf::from(format!("{}/{}/config_player.json", playerpath, id));

@@ -33,13 +33,60 @@ static RANK: [&str; 28] = [
 
 impl SkinDistributionGraph {
     pub fn new(graph_type: i32) -> Self {
+        let default_images = Self::create_default_images(graph_type);
         let count = if graph_type == 0 { 11 } else { 28 };
         Self {
             graph_type,
-            current_image: vec![None; count],
+            current_image: default_images,
             current_bar: None,
             draw: false,
             region: SkinRegion::default(),
+        }
+    }
+
+    /// Create default 1-pixel colored images for lamp/rank display.
+    /// Corresponds to Java SkinDistributionGraph.createDefaultImages(int type)
+    fn create_default_images(graph_type: i32) -> Vec<Option<TextureRegion>> {
+        if graph_type == 0 {
+            // Lamp: 11 colors
+            let mut pixmap = Pixmap::new(11, 1, PixmapFormat::RGBA8888);
+            for (i, hex) in LAMP.iter().enumerate() {
+                let c = Color::value_of(hex);
+                let rgba = Color::rgba8888(c.r, c.g, c.b, c.a);
+                pixmap.draw_pixel(i as i32, 0, rgba);
+            }
+            let tex = Texture::from_pixmap(&pixmap);
+            let mut result = Vec::with_capacity(11);
+            for i in 0..LAMP.len() as i32 {
+                result.push(Some(TextureRegion::from_texture_region(
+                    tex.clone(),
+                    i,
+                    0,
+                    1,
+                    1,
+                )));
+            }
+            result
+        } else {
+            // Rank: 28 colors
+            let mut pixmap = Pixmap::new(28, 1, PixmapFormat::RGBA8888);
+            for (i, hex) in RANK.iter().enumerate() {
+                let c = Color::value_of(hex);
+                let rgba = Color::rgba8888(c.r, c.g, c.b, c.a);
+                pixmap.draw_pixel(i as i32, 0, rgba);
+            }
+            let tex = Texture::from_pixmap(&pixmap);
+            let mut result = Vec::with_capacity(28);
+            for i in 0..RANK.len() as i32 {
+                result.push(Some(TextureRegion::from_texture_region(
+                    tex.clone(),
+                    i,
+                    0,
+                    1,
+                    1,
+                )));
+            }
+            result
         }
     }
 

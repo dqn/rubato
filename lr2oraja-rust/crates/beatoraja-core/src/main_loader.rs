@@ -208,4 +208,33 @@ impl MainLoader {
         let songs = Self::illegal_songs().lock().unwrap();
         songs.len()
     }
+
+    /// Returns available display modes.
+    ///
+    /// Translated from: MainLoader.getAvailableDisplayMode()
+    /// In Java: Lwjgl3ApplicationConfiguration.getDisplayModes()
+    /// In Rust: winit monitor enumeration via global cache.
+    pub fn get_available_display_mode() -> Vec<(u32, u32)> {
+        // Phase 5+: use winit available_monitors() cache
+        log::warn!("not yet implemented: getAvailableDisplayMode");
+        vec![(1920, 1080), (1280, 720)]
+    }
+
+    /// Returns the desktop display mode.
+    ///
+    /// Translated from: MainLoader.getDesktopDisplayMode()
+    /// In Java: Lwjgl3ApplicationConfiguration.getDisplayMode()
+    pub fn get_desktop_display_mode() -> (u32, u32) {
+        // Phase 5+: use winit primary monitor
+        log::warn!("not yet implemented: getDesktopDisplayMode");
+        (1920, 1080)
+    }
+
+    /// JavaFX start method (launcher UI entry point).
+    ///
+    /// Translated from: MainLoader.start(Stage)
+    /// In Rust, the launcher UI is handled by egui via LauncherApp.
+    pub fn start() {
+        log::warn!("not yet implemented: MainLoader.start (egui launcher)");
+    }
 }

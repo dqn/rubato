@@ -7,13 +7,23 @@ use crate::download_task_state::DownloadTaskState;
 
 pub const MAXIMUM_TASK_NAME_LENGTH: usize = 10;
 
+static PROCESSOR: Mutex<Option<Arc<HttpDownloadProcessor>>> = Mutex::new(None);
+
 pub struct DownloadTaskMenu;
 
 impl DownloadTaskMenu {
+    /// Sets the HttpDownloadProcessor used by DownloadTaskMenu.
+    ///
+    /// Translated from: DownloadTaskMenu.setProcessor(HttpDownloadProcessor)
+    pub fn set_processor(processor: Arc<HttpDownloadProcessor>) {
+        let mut guard = PROCESSOR.lock().unwrap();
+        *guard = Some(processor);
+    }
+
     fn render_task_table(tasks: &[&Arc<Mutex<DownloadTask>>]) {
         // if (ImGui.beginTable("DownloadTaskTable", 3, ...))
         for task_arc in tasks {
-            let task = task_arc.lock().unwrap();
+            let task: std::sync::MutexGuard<'_, DownloadTask> = task_arc.lock().unwrap();
             // ImGui.tableNextRow();
             // ImGui.pushID(task.getId());
 
@@ -29,7 +39,7 @@ impl DownloadTaskMenu {
 
             // Column 1: Progress
             let error_message = task.get_error_message();
-            if error_message.is_none() || error_message.is_some_and(|s| s.is_empty()) {
+            if error_message.is_none() || error_message.is_some_and(|s: &str| s.is_empty()) {
                 let _progress = format!(
                     "{}/{}",
                     humanize_file_size(task.get_download_size()),

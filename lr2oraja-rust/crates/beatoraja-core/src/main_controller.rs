@@ -487,6 +487,62 @@ impl MainController {
         self.auto = Some(auto);
     }
 
+    /// Returns the song database accessor.
+    ///
+    /// Translated from: MainController.getSongDatabase()
+    pub fn get_song_database(&self) -> Option<()> {
+        // Delegates to MainLoader.getScoreDatabaseAccessor() in Java
+        // Phase 5+: return actual SongDatabaseAccessor
+        log::warn!("not yet implemented: getSongDatabase");
+        None
+    }
+
+    /// Returns the current state.
+    ///
+    /// Translated from: MainController.getCurrentState()
+    pub fn get_current_state(&self) -> Option<()> {
+        // Phase 5+: return &dyn MainState
+        log::warn!("not yet implemented: getCurrentState");
+        None
+    }
+
+    /// Returns the state type for a given state.
+    ///
+    /// Translated from: MainController.getStateType(MainState)
+    pub fn get_state_type(_state: Option<()>) -> Option<MainStateType> {
+        // Phase 5+: instanceof checks for each state type
+        log::warn!("not yet implemented: getStateType");
+        None
+    }
+
+    /// Returns the input processor.
+    ///
+    /// Translated from: MainController.getInputProcessor()
+    pub fn get_input_processor(&self) -> Option<&BMSPlayerInputProcessor> {
+        // Phase 5+: return &self.input
+        log::warn!("not yet implemented: getInputProcessor");
+        None
+    }
+
+    /// Returns the audio processor.
+    ///
+    /// Translated from: MainController.getAudioProcessor()
+    pub fn get_audio_processor(&self) -> Option<()> {
+        // Phase 5+: return &self.audio
+        log::warn!("not yet implemented: getAudioProcessor");
+        None
+    }
+
+    /// Returns the current calendar time.
+    ///
+    /// Translated from: MainController.getCurrnetTime() [sic - Java method name has typo]
+    pub fn get_currnet_time(&self) -> i64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as i64
+    }
+
     pub fn get_info_database(&self) -> Option<&SongInformationAccessor> {
         self.infodb.as_ref()
     }
@@ -498,6 +554,116 @@ impl MainController {
     pub fn set_imgui(&mut self, imgui: ImGuiRenderer) {
         self.imgui = Some(imgui);
     }
+
+    /// Load a new player profile, re-initialize states and IR config.
+    ///
+    /// Translated from: MainController.loadNewProfile(PlayerConfig)
+    pub fn load_new_profile(&mut self, pc: PlayerConfig) {
+        self.config.playername = pc.id.clone();
+        self.player = pc;
+
+        // playdata = new PlayDataAccessor(config);
+        // initializeIRConfig();
+        // selector.dispose();
+        // initializeStates();
+        // updateStateReferences();
+        // triggerLnWarning();
+        // setTargetList();
+        // changeState(selector);
+        self.last_config_save = Instant::now().elapsed().as_nanos() as i64;
+        log::warn!("not yet implemented: loadNewProfile lifecycle methods");
+    }
+
+    /// Initialize IR configurations from config.
+    ///
+    /// Translated from: MainController.initializeIRConfig()
+    pub fn initialize_ir_config(&mut self) {
+        log::warn!("not yet implemented: initializeIRConfig");
+    }
+
+    /// Initialize all game states (selector, player, result, etc.).
+    ///
+    /// Translated from: MainController.initializeStates()
+    pub fn initialize_states(&mut self) {
+        log::warn!("not yet implemented: initializeStates");
+    }
+
+    /// Update cross-state references after state re-initialization.
+    ///
+    /// Translated from: MainController.updateStateReferences()
+    pub fn update_state_references(&mut self) {
+        log::warn!("not yet implemented: updateStateReferences");
+    }
+
+    /// Trigger LN warning if the player has LN-related settings.
+    ///
+    /// Translated from: MainController.triggerLnWarning()
+    pub fn trigger_ln_warning(&mut self) {
+        log::warn!("not yet implemented: triggerLnWarning");
+    }
+
+    /// Set the target score list for grade/rival display.
+    ///
+    /// Translated from: MainController.setTargetList()
+    pub fn set_target_list(&mut self) {
+        log::warn!("not yet implemented: setTargetList");
+    }
+
+    /// Periodically save config if enough time has elapsed.
+    ///
+    /// Translated from: MainController.periodicConfigSave()
+    pub fn periodic_config_save(&mut self) {
+        let now = Instant::now().elapsed().as_nanos() as i64;
+        if now - self.last_config_save > 60_000_000_000 {
+            // 60 seconds in nanoseconds
+            self.save_config();
+            self.last_config_save = now;
+        }
+    }
+
+    /// Update difficulty table data in a background thread.
+    ///
+    /// Translated from: MainController.updateTable(TableBar)
+    pub fn update_table(&mut self) {
+        log::warn!("not yet implemented: updateTable (TableUpdateThread)");
+    }
+
+    /// Start IPFS download message rendering thread.
+    ///
+    /// Translated from: MainController.downloadIpfsMessageRenderer(String)
+    pub fn download_ipfs_message_renderer(&mut self, _message: &str) {
+        log::warn!("not yet implemented: downloadIpfsMessageRenderer (DownloadMessageThread)");
+    }
+}
+
+/// UpdateThread - base class for background update threads.
+///
+/// Translated from: MainController.UpdateThread
+pub struct UpdateThread {
+    pub message: String,
+}
+
+/// SongUpdateThread - background thread for song database updates.
+///
+/// Translated from: MainController.SongUpdateThread
+pub struct SongUpdateThread {
+    pub base: UpdateThread,
+    pub path: Option<String>,
+    pub update_parent_when_missing: bool,
+}
+
+/// TableUpdateThread - background thread for table data updates.
+///
+/// Translated from: MainController.TableUpdateThread
+pub struct TableUpdateThread {
+    pub base: UpdateThread,
+}
+
+/// DownloadMessageThread - background thread for download message rendering.
+///
+/// Translated from: MainController.DownloadMessageThread
+pub struct DownloadMessageThread {
+    pub base: UpdateThread,
 }
 
 impl MainControllerAccess for MainController {

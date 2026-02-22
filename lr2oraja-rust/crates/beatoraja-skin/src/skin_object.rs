@@ -1238,10 +1238,42 @@ impl SkinObjectRenderer {
         self.obj_type
     }
 
+    /// Set texture filter based on current type.
+    /// In Java: sets Linear filter for TYPE_LINEAR, TYPE_FFMPEG, TYPE_DISTANCE_FIELD.
+    /// In Rust/wgpu, filtering is handled at sampler level, so this is a no-op stub.
+    fn set_filter(&self, _image: &TextureRegion) {
+        // In Java: if type == TYPE_LINEAR || TYPE_FFMPEG || TYPE_DISTANCE_FIELD,
+        // sets TextureFilter.Linear on the texture.
+        // In wgpu, filtering is configured on samplers, not textures directly.
+    }
+
+    /// Pre-draw setup: shader switching, blend mode, color.
+    /// In Java: switches shader, sets blend function, saves/sets color.
+    /// In Rust/wgpu, these would be handled by the render pipeline state.
+    fn pre_draw(&mut self) {
+        // In Java:
+        // - switches shader if current != type
+        // - sets blend function based on blend value (2=additive, 3=subtractive, 4=multiply, 9=invert)
+        // - saves orgcolor and sets sprite color
+        // Stubbed: wgpu pipeline handles these via render pipeline descriptors
+    }
+
+    /// Post-draw cleanup: restore color and blend mode.
+    /// In Java: restores original color and resets blend to SRC_ALPHA/ONE_MINUS_SRC_ALPHA.
+    fn post_draw(&mut self) {
+        // In Java:
+        // - restores orgcolor if it was saved
+        // - resets blend to default (SRC_ALPHA, ONE_MINUS_SRC_ALPHA) if blend >= 2
+        // Stubbed: wgpu pipeline handles these
+    }
+
     /// Java: sprite.draw(image, x + 0.01f, y + 0.01f, w, h)
     /// The 0.01 offset is a workaround for a Windows TextureRegion rendering issue.
     pub fn draw(&mut self, image: &TextureRegion, x: f32, y: f32, w: f32, h: f32) {
+        self.set_filter(image);
+        self.pre_draw();
         self.sprite.draw_region(image, x + 0.01, y + 0.01, w, h);
+        self.post_draw();
     }
 
     /// Java: sprite.draw(image, x + 0.01f, y + 0.01f, cx * w, cy * h, w, h, 1, 1, angle)
@@ -1256,6 +1288,8 @@ impl SkinObjectRenderer {
         cy: f32,
         angle: i32,
     ) {
+        self.set_filter(image);
+        self.pre_draw();
         self.sprite.draw_region_rotated(
             image,
             x + 0.01,
@@ -1268,5 +1302,6 @@ impl SkinObjectRenderer {
             1.0,
             angle as f32,
         );
+        self.post_draw();
     }
 }

@@ -9,6 +9,8 @@ use crate::lane_renderer::LaneRenderer;
 use crate::practice_configuration::PracticeConfiguration;
 use crate::rhythm_timer_processor::RhythmTimerProcessor;
 use beatoraja_core::score_data::ScoreData;
+use beatoraja_types::replay_data::ReplayData;
+use beatoraja_types::skin_type::SkinType;
 use bms_model::bms_model::BMSModel;
 use bms_model::mode::Mode;
 
@@ -45,6 +47,8 @@ pub struct BMSPlayer {
     startpressedtime: i64,
     adjusted_volume: f32,
     analysis_checked: bool,
+    playinfo: ReplayData,
+    replay_config: Option<beatoraja_types::play_config::PlayConfig>,
 }
 
 impl BMSPlayer {
@@ -71,6 +75,8 @@ impl BMSPlayer {
             startpressedtime: 0,
             adjusted_volume: -1.0,
             analysis_checked: false,
+            playinfo: ReplayData::new(),
+            replay_config: None,
         }
     }
 
@@ -229,6 +235,35 @@ impl BMSPlayer {
 
     pub fn get_mode(&self) -> Mode {
         self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K)
+    }
+
+    /// Get skin type matching the current model mode.
+    /// Corresponds to Java getSkinType() which iterates SkinType.values().
+    pub fn get_skin_type(&self) -> Option<SkinType> {
+        let model_mode = self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K);
+        for skin_type in SkinType::values() {
+            if skin_type.get_mode() == Some(model_mode.clone()) {
+                return Some(skin_type);
+            }
+        }
+        None
+    }
+
+    /// Save play config from lane renderer state.
+    /// Corresponds to Java saveConfig() private method.
+    fn save_config(&self) {
+        // TODO: Phase 7+ dependency - requires PlayerResource, constraint check, PlayerConfig
+        // In Java:
+        // 1. Check if NO_SPEED constraint - if so, return early
+        // 2. Get PlayConfig from playerConfig.getPlayConfig(mode).getPlayconfig()
+        // 3. If fixhispeed != OFF: save duration; else save hispeed
+        // 4. Save lanecover, lift, hidden from lanerender
+    }
+
+    /// Get option information (replay data with random options).
+    /// Corresponds to Java getOptionInformation() returning playinfo.
+    pub fn get_option_information(&self) -> &ReplayData {
+        &self.playinfo
     }
 
     pub fn get_now_quarter_note_time(&self) -> i64 {

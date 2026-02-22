@@ -42,6 +42,16 @@ impl Message {
         }
     }
 
+    /// Initialize font for this message.
+    ///
+    /// Translated from: Message.init(FreeTypeFontGenerator)
+    /// In Java, this generates a BitmapFont from the FreeTypeFontGenerator.
+    /// In Rust, font rendering is Phase 5+ (LibGDX replacement).
+    pub fn init(&mut self) {
+        // Phase 5+: font generation from FreeTypeFontGenerator equivalent
+        log::warn!("not yet implemented: Message.init font generation");
+    }
+
     pub fn set_text(&mut self, text: &str) {
         self.text = text.to_string();
     }

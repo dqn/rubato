@@ -43,6 +43,11 @@ impl SkinTextBitmap {
         }
     }
 
+    /// Load method (no-op, as in Java @Override).
+    pub fn load(&mut self) {
+        // no-op (Java: @Override public void load() {})
+    }
+
     pub fn prepare_font(&mut self, _text: &str) {
         // no-op
     }
@@ -102,6 +107,16 @@ impl SkinTextBitmap {
     }
 }
 
+/// Cacheable bitmap font data.
+/// Corresponds to Java BitmapFontCache.CacheableBitmapFont.
+pub struct CacheableBitmapFont {
+    pub font: Option<BitmapFont>,
+    pub original_size: f32,
+    pub font_type: i32,
+    pub page_width: f32,
+    pub page_height: f32,
+}
+
 pub struct SkinTextBitmapSource {
     pub usecim: bool,
     pub use_mip_maps: bool,
@@ -130,6 +145,28 @@ impl SkinTextBitmapSource {
             font: None,
             original_size: 0.0,
             source_type: 0,
+            page_width: 0.0,
+            page_height: 0.0,
+        }
+    }
+
+    /// Create a cacheable bitmap font from the given path and type.
+    /// Corresponds to Java SkinTextBitmapSource.createCacheableFont.
+    /// In Java, this loads a .fnt file, parses image paths, creates textures,
+    /// and extracts size/pageWidth/pageHeight from the font file header.
+    /// Stubbed: requires LibGDX BitmapFont infrastructure.
+    pub fn create_cacheable_font(
+        &self,
+        _font_path: &std::path::Path,
+        _font_type: i32,
+    ) -> CacheableBitmapFont {
+        log::warn!(
+            "not yet implemented: SkinTextBitmapSource.createCacheableFont requires BitmapFont loading"
+        );
+        CacheableBitmapFont {
+            font: None,
+            original_size: 0.0,
+            font_type: _font_type,
             page_width: 0.0,
             page_height: 0.0,
         }

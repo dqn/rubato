@@ -655,9 +655,20 @@ impl JSONSkinLoader {
     fn get_path(&self, path: &str) -> String {
         get_path_with_filemap(path, &self.filemap)
     }
+
+    /// Get texture for a path, using usecim setting.
+    /// Corresponds to Java JSONSkinLoader.getTexture(String path) which delegates to
+    /// SkinLoader.getTexture(path, usecim).
+    pub fn get_texture(&self, path: &str) -> Option<Texture> {
+        if std::path::Path::new(path).exists() {
+            Some(Texture::new(path))
+        } else {
+            None
+        }
+    }
 }
 
-fn get_path_with_filemap(path: &str, filemap: &HashMap<String, String>) -> String {
+pub(crate) fn get_path_with_filemap(path: &str, filemap: &HashMap<String, String>) -> String {
     for (key, value) in filemap {
         if path.contains(key.as_str()) {
             return path.replace(key.as_str(), value.as_str());

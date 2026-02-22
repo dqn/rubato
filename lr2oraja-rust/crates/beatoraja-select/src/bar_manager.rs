@@ -197,6 +197,37 @@ impl BarManager {
     pub fn set_append_directory_bar(&mut self, key: String, bar: Bar) {
         self.append_folders.insert(key, bar);
     }
+
+    /// Create a command bar from a CommandFolder definition.
+    /// Corresponds to Java BarManager.createCommandBar(MusicSelector, CommandFolder)
+    fn create_command_bar(&self, folder: &CommandFolder) -> Bar {
+        let has_subfolders = !folder.get_folder().is_empty();
+        let has_random_courses = !folder.get_random_course().is_empty();
+
+        if has_subfolders || has_random_courses {
+            let mut children: Vec<Bar> = Vec::new();
+            // Recursively create child bars for sub-folders
+            for child in folder.get_folder() {
+                children.push(self.create_command_bar(child));
+            }
+            // Create RandomCourseBar for random courses
+            for rc in folder.get_random_course() {
+                children.push(Bar::RandomCourse(Box::new(RandomCourseBar::new(
+                    rc.clone(),
+                ))));
+            }
+            Bar::Container(Box::new(ContainerBar::new(
+                folder.get_name().to_string(),
+                children,
+            )))
+        } else {
+            Bar::Command(Box::new(CommandBar::new_with_visibility(
+                folder.get_name().to_string(),
+                folder.get_sql().unwrap_or("").to_string(),
+                folder.is_showall(),
+            )))
+        }
+    }
 }
 
 /// Command folder definition (loaded from JSON)
@@ -329,4 +360,46 @@ fn evaluate_filter_expression(expr: &str, property_value: i32) -> bool {
 struct RandomCourseResult {
     pub course: GradeBar,
     pub dir_string: String,
+}
+
+/// Thread for loading score data, banners, and stagefiles for bar contents.
+/// Corresponds to Java BarManager.BarContentsLoaderThread
+pub struct BarContentsLoaderThread {
+    bars: Vec<Bar>,
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+
+impl BarContentsLoaderThread {
+    /// Create a new bar contents loader thread.
+    /// Corresponds to Java BarContentsLoaderThread(MusicSelector, Bar[])
+    pub fn new(bars: Vec<Bar>) -> Self {
+        Self {
+            bars,
+            stop: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        }
+    }
+
+    /// Run the loader (loads scores, song info, banners, stagefiles).
+    /// Corresponds to Java BarContentsLoaderThread.run()
+    pub fn run(&self) {
+        // In Java: iterates bars, loads scores for SongBar/GradeBar,
+        // updates folder status for DirectoryBar, loads song information,
+        // then loads banners and stagefiles
+        // Requires MusicSelector, ScoreDataCache, PlayDataAccessor, SongInformationAccessor,
+        // PixmapResourcePool (banners/stagefiles)
+        log::warn!(
+            "not yet implemented: BarContentsLoaderThread.run - requires full MusicSelector context"
+        );
+    }
+
+    /// Stop the loader thread.
+    /// Corresponds to Java BarContentsLoaderThread.stopRunning()
+    pub fn stop_running(&self) {
+        self.stop.store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    /// Check if the loader has been stopped.
+    pub fn is_stopped(&self) -> bool {
+        self.stop.load(std::sync::atomic::Ordering::SeqCst)
+    }
 }

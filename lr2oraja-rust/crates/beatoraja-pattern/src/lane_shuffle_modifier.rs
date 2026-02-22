@@ -7,6 +7,36 @@ use bms_model::bms_model::BMSModel;
 use bms_model::mode::Mode;
 use bms_model::note::Note;
 
+fn get_random_pattern_impl(
+    random: &[i32],
+    show_shuffle_pattern: bool,
+    is_scratch_lane_modify: bool,
+    player: i32,
+    mode: &Mode,
+) -> Vec<i32> {
+    let keys = mode.key() / mode.player();
+    let mut repr = vec![0i32; keys as usize];
+    if show_shuffle_pattern {
+        let scratch_key = mode.scratch_key();
+        if !scratch_key.is_empty() && !is_scratch_lane_modify {
+            // BEAT-*K
+            let src_start = (keys * player) as usize;
+            let copy_len = (keys - 1) as usize;
+            if src_start + copy_len <= random.len() {
+                repr[..copy_len].copy_from_slice(&random[src_start..src_start + copy_len]);
+            }
+            repr[keys as usize - 1] = scratch_key[player as usize];
+        } else {
+            let src_start = (keys * player) as usize;
+            let copy_len = keys as usize;
+            if src_start + copy_len <= random.len() {
+                repr[..copy_len].copy_from_slice(&random[src_start..src_start + copy_len]);
+            }
+        }
+    }
+    repr
+}
+
 fn lane_shuffle_modify(
     base: &mut PatternModifierBase,
     model: &mut BMSModel,
@@ -120,6 +150,7 @@ impl PatternModifierBase {
 pub struct LaneMirrorShuffleModifier {
     pub base: PatternModifierBase,
     pub is_scratch_lane_modify: bool,
+    pub show_shuffle_pattern: bool,
     random: Vec<i32>,
 }
 
@@ -134,6 +165,7 @@ impl LaneMirrorShuffleModifier {
         LaneMirrorShuffleModifier {
             base,
             is_scratch_lane_modify,
+            show_shuffle_pattern: false,
             random: Vec::new(),
         }
     }
@@ -145,6 +177,20 @@ impl LaneMirrorShuffleModifier {
             result[keys[lane] as usize] = keys[keys.len() - 1 - lane];
         }
         result
+    }
+
+    pub fn is_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+        get_random_pattern_impl(
+            &self.random,
+            self.show_shuffle_pattern,
+            self.is_scratch_lane_modify,
+            self.base.player,
+            mode,
+        )
     }
 }
 
@@ -187,6 +233,7 @@ impl PatternModifier for LaneMirrorShuffleModifier {
 pub struct LaneRotateShuffleModifier {
     pub base: PatternModifierBase,
     pub is_scratch_lane_modify: bool,
+    pub show_shuffle_pattern: bool,
     random: Vec<i32>,
 }
 
@@ -201,6 +248,7 @@ impl LaneRotateShuffleModifier {
         LaneRotateShuffleModifier {
             base,
             is_scratch_lane_modify,
+            show_shuffle_pattern: true,
             random: Vec::new(),
         }
     }
@@ -221,6 +269,20 @@ impl LaneRotateShuffleModifier {
             }
         }
         result
+    }
+
+    pub fn is_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+        get_random_pattern_impl(
+            &self.random,
+            self.show_shuffle_pattern,
+            self.is_scratch_lane_modify,
+            self.base.player,
+            mode,
+        )
     }
 }
 
@@ -263,6 +325,7 @@ impl PatternModifier for LaneRotateShuffleModifier {
 pub struct LaneRandomShuffleModifier {
     pub base: PatternModifierBase,
     pub is_scratch_lane_modify: bool,
+    pub show_shuffle_pattern: bool,
     random: Vec<i32>,
 }
 
@@ -277,6 +340,7 @@ impl LaneRandomShuffleModifier {
         LaneRandomShuffleModifier {
             base,
             is_scratch_lane_modify,
+            show_shuffle_pattern: true,
             random: Vec::new(),
         }
     }
@@ -292,6 +356,20 @@ impl LaneRandomShuffleModifier {
             l.remove(r);
         }
         result
+    }
+
+    pub fn is_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+        get_random_pattern_impl(
+            &self.random,
+            self.show_shuffle_pattern,
+            self.is_scratch_lane_modify,
+            self.base.player,
+            mode,
+        )
     }
 }
 
@@ -333,6 +411,7 @@ impl PatternModifier for LaneRandomShuffleModifier {
 
 pub struct PlayerFlipModifier {
     pub base: PatternModifierBase,
+    pub show_shuffle_pattern: bool,
     random: Vec<i32>,
 }
 
@@ -348,6 +427,7 @@ impl PlayerFlipModifier {
         base.assist = AssistLevel::None;
         PlayerFlipModifier {
             base,
+            show_shuffle_pattern: false,
             random: Vec::new(),
         }
     }
@@ -361,6 +441,21 @@ impl PlayerFlipModifier {
             }
         }
         result
+    }
+
+    pub fn is_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+        // Java: super(0, true, false) -> isScratchLaneModify = true
+        get_random_pattern_impl(
+            &self.random,
+            self.show_shuffle_pattern,
+            true,
+            self.base.player,
+            mode,
+        )
     }
 }
 
@@ -396,6 +491,7 @@ impl PatternModifier for PlayerFlipModifier {
 
 pub struct PlayerBattleModifier {
     pub base: PatternModifierBase,
+    pub show_shuffle_pattern: bool,
     random: Vec<i32>,
 }
 
@@ -411,6 +507,7 @@ impl PlayerBattleModifier {
         base.assist = AssistLevel::Assist;
         PlayerBattleModifier {
             base,
+            show_shuffle_pattern: false,
             random: Vec::new(),
         }
     }
@@ -424,6 +521,21 @@ impl PlayerBattleModifier {
             result[keys.len()..keys.len() * 2].copy_from_slice(keys);
             (result, AssistLevel::Assist)
         }
+    }
+
+    pub fn is_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+        // Java: super(0, true, false) -> isScratchLaneModify = true
+        get_random_pattern_impl(
+            &self.random,
+            self.show_shuffle_pattern,
+            true,
+            self.base.player,
+            mode,
+        )
     }
 }
 
@@ -510,6 +622,7 @@ impl PatternModifier for PlayerBattleModifier {
 pub struct LaneCrossShuffleModifier {
     pub base: PatternModifierBase,
     pub is_scratch_lane_modify: bool,
+    pub show_shuffle_pattern: bool,
     random: Vec<i32>,
 }
 
@@ -520,6 +633,7 @@ impl LaneCrossShuffleModifier {
         LaneCrossShuffleModifier {
             base,
             is_scratch_lane_modify,
+            show_shuffle_pattern: true,
             random: Vec::new(),
         }
     }
@@ -536,6 +650,20 @@ impl LaneCrossShuffleModifier {
             i += 2;
         }
         result
+    }
+
+    pub fn is_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+        get_random_pattern_impl(
+            &self.random,
+            self.show_shuffle_pattern,
+            self.is_scratch_lane_modify,
+            self.base.player,
+            mode,
+        )
     }
 }
 
@@ -578,6 +706,7 @@ impl PatternModifier for LaneCrossShuffleModifier {
 pub struct LanePlayableRandomShuffleModifier {
     pub base: PatternModifierBase,
     pub is_scratch_lane_modify: bool,
+    pub show_shuffle_pattern: bool,
     random: Vec<i32>,
 }
 
@@ -588,6 +717,7 @@ impl LanePlayableRandomShuffleModifier {
         LanePlayableRandomShuffleModifier {
             base,
             is_scratch_lane_modify,
+            show_shuffle_pattern: true,
             random: Vec::new(),
         }
     }
@@ -672,6 +802,20 @@ impl LanePlayableRandomShuffleModifier {
             }
         }
         result
+    }
+
+    pub fn is_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+        get_random_pattern_impl(
+            &self.random,
+            self.show_shuffle_pattern,
+            self.is_scratch_lane_modify,
+            self.base.player,
+            mode,
+        )
     }
 }
 

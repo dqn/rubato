@@ -79,6 +79,38 @@ impl BMSLoudnessAnalyzer {
     pub fn shutdown(&self) {
         // No-op
     }
+
+    /// Reads cached loudness value for the given hash.
+    ///
+    /// Translated from: BMSLoudnessAnalyzer.readFromCache(String)
+    fn read_from_cache(cache_dir: &std::path::Path, hash: &str) -> Option<f64> {
+        let cache_file = cache_dir.join(format!("{}.lufs", hash));
+        match std::fs::read_to_string(&cache_file) {
+            Ok(content) => match content.trim().parse::<f64>() {
+                Ok(value) => Some(value),
+                Err(e) => {
+                    log::warn!("Failed to parse cache for {}: {}", hash, e);
+                    None
+                }
+            },
+            Err(_) => None,
+        }
+    }
+
+    /// Writes loudness value to cache for the given hash.
+    ///
+    /// Translated from: BMSLoudnessAnalyzer.writeToCache(String, double)
+    fn write_to_cache(cache_dir: &std::path::Path, hash: &str, loudness: f64) {
+        let cache_file = cache_dir.join(format!("{}.lufs", hash));
+        match std::fs::write(&cache_file, loudness.to_string().as_bytes()) {
+            Ok(()) => {
+                log::info!("Cached loudness for {}: {} LUFS", hash, loudness);
+            }
+            Err(e) => {
+                log::warn!("Failed to write cache for {}: {}", hash, e);
+            }
+        }
+    }
 }
 
 impl Default for BMSLoudnessAnalyzer {

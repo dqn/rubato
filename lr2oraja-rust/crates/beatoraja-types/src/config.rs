@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::audio_config::AudioConfig;
+use crate::player_config::PlayerConfig;
 use crate::resolution::Resolution;
 use crate::validatable::{Validatable, remove_empty_strings};
 
@@ -480,6 +481,16 @@ impl Config {
         self.song_resource_gen
     }
 
+    pub fn get_config_json(config: &Config) -> anyhow::Result<String> {
+        Ok(serde_json::to_string_pretty(config)?)
+    }
+
+    pub fn validate_config(mut config: Config) -> anyhow::Result<Config> {
+        config.validate();
+        PlayerConfig::init(&config)?;
+        Ok(config)
+    }
+
     pub fn read() -> anyhow::Result<Config> {
         let configpath = PathBuf::from("config_sys.json");
         let configpath_old = PathBuf::from("config.json");
@@ -513,9 +524,8 @@ impl Config {
             }
         }
 
-        let mut config = config.unwrap_or_default();
-        config.validate();
-        Ok(config)
+        let config = config.unwrap_or_default();
+        Config::validate_config(config)
     }
 
     pub fn write(config: &Config) -> anyhow::Result<()> {

@@ -106,6 +106,52 @@ impl SkinWidgetManager {
     }
 }
 
+/// Render column visibility preference settings popup.
+///
+/// Translated from: SkinWidgetManager.renderPreferColumnSetting()
+/// In Java: ImGui popup with checkboxes for toggling table column visibility.
+fn render_prefer_column_setting(_ui: &mut egui::Ui) {
+    // Phase 5+: column visibility toggles for widget table
+    log::warn!("not yet implemented: SkinWidgetManager.renderPreferColumnSetting egui");
+}
+
+/// Render the skin widgets table with tree nodes per widget.
+///
+/// Translated from: SkinWidgetManager.renderSkinWidgetsTable()
+/// In Java: ImGui table with tree nodes, columns for x/y/w/h, edit popup, move overlay.
+fn render_skin_widgets_table(_ui: &mut egui::Ui, _widgets: &[SkinWidget]) {
+    // Phase 5+: full widget table with edit popups and move overlay
+    log::warn!("not yet implemented: SkinWidgetManager.renderSkinWidgetsTable egui");
+}
+
+/// Render the modification history table.
+///
+/// Translated from: SkinWidgetManager.renderHistoryTable()
+/// In Java: ImGui table showing event descriptions with clipper.
+fn render_history_table(_ui: &mut egui::Ui) {
+    let event_history = EVENT_HISTORY.lock().unwrap();
+    let events = event_history.get_events();
+    if events.is_empty() {
+        _ui.label("No history");
+    } else {
+        for event in events {
+            _ui.label(event.get_description());
+        }
+    }
+}
+
+/// Draw a float value column cell, highlighting modified values in red.
+///
+/// Translated from: SkinWidgetManager.drawFloatValueColumn(int, boolean, float)
+fn draw_float_value_column(ui: &mut egui::Ui, _index: usize, modified: bool, value: f32) {
+    let text = normalize_float(value);
+    if modified {
+        ui.colored_label(egui::Color32::RED, text);
+    } else {
+        ui.label(text);
+    }
+}
+
 fn export_changes() {
     let widgets = WIDGETS.lock().unwrap();
     let event_history = EVENT_HISTORY.lock().unwrap();
@@ -205,6 +251,45 @@ impl Event {
         match self {
             Event::ChangeSingleField { target_name, .. } => target_name,
             Event::ToggleVisible { target_name, .. } => target_name,
+        }
+    }
+
+    /// Undo this event, reverting the affected destination/widget to the previous value.
+    ///
+    /// Translated from: Event.undo() (abstract method with implementations in
+    /// ChangeSingleFieldEvent.undo() and ToggleVisibleEvent.undo())
+    ///
+    /// Note: Since Event doesn't hold mutable references to the actual destinations/widgets,
+    /// this requires the caller to look up the target by name and apply the undo.
+    /// In the current architecture, EventHistory::undo_n() handles this instead.
+    pub fn undo(&self, widgets: &mut [SkinWidget]) {
+        match self {
+            Event::ChangeSingleField {
+                event_type,
+                target_name,
+                previous,
+                ..
+            } => {
+                for widget in widgets.iter_mut() {
+                    for dst in widget.destinations.iter_mut() {
+                        if dst.name == *target_name {
+                            match event_type {
+                                EventType::ChangeX => dst.set_dst_x_with_event(*previous, false),
+                                EventType::ChangeY => dst.set_dst_y_with_event(*previous, false),
+                                EventType::ChangeW => dst.set_dst_w_with_event(*previous, false),
+                                EventType::ChangeH => dst.set_dst_h_with_event(*previous, false),
+                                _ => {}
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+            Event::ToggleVisible { widget_index, .. } => {
+                if *widget_index < widgets.len() {
+                    widgets[*widget_index].toggle_visible();
+                }
+            }
         }
     }
 

@@ -116,4 +116,25 @@ impl BGAProcessor {
     pub fn get_progress(&self) -> f32 {
         self.progress
     }
+
+    /// Get BGA texture data for the given id at the specified time.
+    /// Corresponds to Java getBGAData(long time, int id, boolean cont).
+    fn get_bga_data(&self, _time: i64, id: i32, _cont: bool) -> Option<()> {
+        if self.progress != 1.0 || id == -1 {
+            return None;
+        }
+        // TODO: Phase 7+ dependency - requires MovieProcessor array and BGImageProcessor cache
+        // In Java:
+        // - If movies[id] != null: play if !cont, return getFrame(time)
+        // - Otherwise: return cache.getTexture(id)
+        None
+    }
+
+    /// Draw BGA with fixed aspect ratio.
+    /// Corresponds to Java drawBGAFixRatio(SkinBGA dst, SkinObjectRenderer sprite, Rectangle r, Texture bga).
+    fn draw_bga_fix_ratio(&self) {
+        // TODO: Phase 7+ dependency - requires SkinBGA, SkinObjectRenderer, Texture, Rectangle
+        // In Java, this calculates the aspect-ratio-preserving draw rectangle and renders
+        // the BGA texture with proper stretch mode handling.
+    }
 }

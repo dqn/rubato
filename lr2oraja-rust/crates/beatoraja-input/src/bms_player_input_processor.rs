@@ -446,6 +446,13 @@ impl BMSPlayerInputProcessor {
         self.keylog.to_array()
     }
 
+    /// Sets the start button pressed state.
+    ///
+    /// Translated from: BMSPlayerInputProcessor.startChanged(boolean)
+    pub fn start_changed(&mut self, pressed: bool) {
+        self.start_pressed = pressed;
+    }
+
     pub fn start_pressed(&self) -> bool {
         self.start_pressed
     }

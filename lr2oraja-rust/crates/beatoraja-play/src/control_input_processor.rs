@@ -87,4 +87,33 @@ impl ControlInputProcessor {
         // - ESC to stop play
         // - play speed changes (autoplay/replay only)
     }
+
+    /// Change lane cover/lift/hidden value based on current state.
+    /// Corresponds to Java setCoverValue(float).
+    fn set_cover_value(&mut self, _value: f32) {
+        // TODO: Phase 7+ dependency - requires BMSPlayer.getLanerender()
+        // In Java:
+        // - If lanecover enabled or (lift and hidden both off): adjust lanecover
+        // - If hidden enabled: adjust hidden cover
+        // - If lift enabled and isChangeLift: adjust lift region
+        // - If hispeedAutoAdjust and nowBPM > 0: reset hispeed
+    }
+
+    /// Change cover value by scratch input (START + Scratch).
+    /// Corresponds to Java changeCoverValue(int key, boolean up).
+    fn change_cover_value(&mut self, _key: usize, _up: bool) {
+        // TODO: Phase 7+ dependency - requires BMSPlayerInputProcessor (analog/digital input)
+        // In Java:
+        // - Analog: getAnalogDiffAndReset, setCoverValue(dTicks * margin)
+        // - Non-analog: getKeyState, track timing, setCoverValue with low/high margin
+    }
+
+    /// Change duration by scratch input (SELECT + Scratch).
+    /// Corresponds to Java changeDuration(int key, boolean up).
+    fn change_duration(&mut self, _key: usize, _up: bool) {
+        // TODO: Phase 7+ dependency - requires BMSPlayer.getLanerender(), BMSPlayerInputProcessor
+        // In Java:
+        // - Analog: getAnalogDiffAndReset, lanerender.setDuration(+dTicks)
+        // - Non-analog: getKeyState, track timing, lanerender.setDuration(+/-1)
+    }
 }

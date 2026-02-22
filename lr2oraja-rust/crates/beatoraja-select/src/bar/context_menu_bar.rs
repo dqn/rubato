@@ -1,6 +1,11 @@
+use std::collections::HashSet;
+
 use super::bar::Bar;
 use super::directory_bar::DirectoryBarData;
+use super::function_bar::{FunctionBar, STYLE_FOLDER, STYLE_SEARCH, STYLE_SPECIAL, STYLE_TEXT_NEW};
 use super::hash_bar::HashBar;
+use super::leader_board_bar::LeaderBoardBar;
+use super::song_bar::SongBar;
 use super::table_bar::TableBar;
 use crate::stubs::*;
 
@@ -73,6 +78,16 @@ impl ContextMenuBar {
         0
     }
 
+    /// Returns the parent bar (table).
+    /// Corresponds to Java ContextMenuBar.getPrevious()
+    pub fn get_previous(&self) -> Option<&TableBar> {
+        // In Java: return table (the TableBar reference)
+        // We don't store TableBar directly here but could return a reference
+        // Stubbed since we store table as Option<usize> index
+        log::warn!("not yet implemented: ContextMenuBar.getPrevious - requires TableBar reference");
+        None
+    }
+
     pub fn get_children(&self) -> Vec<Bar> {
         if self.song.is_some() && self.song.as_ref().unwrap().get_path().is_some() {
             return self.song_context();
@@ -116,5 +131,100 @@ impl ContextMenuBar {
             "not yet implemented: ContextMenuBar.tableFolderContext - requires MusicSelector context"
         );
         Vec::new()
+    }
+
+    /// Add leaderboard entries to the context menu.
+    /// Corresponds to Java ContextMenuBar.addLeaderboardEntries(ArrayList<Bar>)
+    fn add_leaderboard_entries(&self, options: &mut Vec<Bar>) {
+        // In Java: creates FunctionBars for leaderboard and LR2IR leaderboard
+        // Requires MusicSelector.main.getIRStatus(), LeaderBoardBar, play(FOLDER_OPEN)
+        log::warn!(
+            "not yet implemented: ContextMenuBar.addLeaderboardEntries - requires MusicSelector context"
+        );
+    }
+
+    /// Add metadata copy entries to the context menu.
+    /// Corresponds to Java ContextMenuBar.addMetaEntries(ArrayList<Bar>)
+    fn add_meta_entries(&self, options: &mut Vec<Bar>) {
+        // In Java: creates FunctionBars for LR2IR page, Chart Viewer, Metadata (Copy Title/MD5/SHA256/Path/URL)
+        log::warn!(
+            "not yet implemented: ContextMenuBar.addMetaEntries - requires MusicSelector context"
+        );
+    }
+
+    /// Add table tag display entries to the context menu.
+    /// Corresponds to Java ContextMenuBar.addTagDisplayEntries(ArrayList<Bar>)
+    fn add_tag_display_entries(&self, options: &mut Vec<Bar>) {
+        // In Java: reverse-looks up song in difficulty tables and creates navigable entries
+        log::warn!(
+            "not yet implemented: ContextMenuBar.addTagDisplayEntries - requires BarManager.getTables()"
+        );
+    }
+
+    /// Add a single table entry for tag display.
+    /// Corresponds to Java ContextMenuBar.addTableEntry(ArrayList<Bar>, TableBar, HashBar)
+    fn add_table_entry(&self, options: &mut Vec<Bar>, _table: &TableBar, _level: &HashBar) {
+        // In Java: creates FunctionBar that navigates to the table/level, with calculated lamps
+        log::warn!(
+            "not yet implemented: ContextMenuBar.addTableEntry - requires BarManager navigation"
+        );
+    }
+
+    /// Calculate clear lamp distribution for a set of songs.
+    /// Corresponds to Java ContextMenuBar.calculateLamps(MusicSelector, SongData[])
+    fn calculate_lamps(
+        songs: &[SongData],
+        score_fn: impl Fn(&SongData) -> Option<ScoreData>,
+        mode: Option<&bms_model::Mode>,
+    ) -> Vec<i32> {
+        let mut lamps = vec![0i32; 11];
+        for song in songs {
+            if song.get_path().is_none() {
+                continue;
+            }
+            if let Some(m) = mode
+                && song.get_mode() != 0
+                && song.get_mode() != m.id()
+            {
+                continue;
+            }
+            let score = score_fn(song);
+            let lamp_index = if let Some(ref s) = score {
+                s.get_clear() as usize
+            } else {
+                0
+            };
+            if lamp_index < lamps.len() {
+                lamps[lamp_index] += 1;
+            }
+        }
+        lamps
+    }
+
+    /// Fill missing charts by submitting download tasks.
+    /// Corresponds to Java ContextMenuBar.fillMissingCharts(SongData[], MainController)
+    fn fill_missing_charts(want: &[SongData], _main: &MainController) -> i32 {
+        let md5_and_names: Vec<(String, String)> = want
+            .iter()
+            .filter_map(|sd| {
+                let md5 = sd.get_md5().to_string();
+                let title = sd.get_title().to_string();
+                if !md5.is_empty() && !title.is_empty() {
+                    Some((md5, title))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        if md5_and_names.is_empty() {
+            return 0;
+        }
+        // In Java: queries songdb for existing songs, filters out those already present,
+        // submits HTTP download tasks for missing ones
+        // Requires MainController.getSongDatabase(), HttpDownloadProcessor
+        log::warn!(
+            "not yet implemented: ContextMenuBar.fillMissingCharts - requires HttpDownloadProcessor"
+        );
+        0
     }
 }

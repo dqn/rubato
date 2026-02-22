@@ -79,7 +79,18 @@ impl JsonSkinSerializer {
         false
     }
 
-    fn test_number(&self, op: i32) -> bool {
+    /// Set up serializers on a JSON loader.
+    /// In Java: registers custom LibGDX Json serializers for conditional/include handling.
+    /// In Rust: serde handles deserialization directly; conditional/include preprocessing
+    /// is done via preprocess_object/preprocess_array methods.
+    pub fn set_serializers(&self, _loader: &mut super::json_skin_loader::JSONSkinLoader) {
+        // No-op in Rust: serde-based deserialization doesn't use LibGDX-style serializer registration.
+        // The preprocess_object and preprocess_array methods handle the same logic.
+    }
+
+    /// Test a single option number.
+    /// Corresponds to Java Serializer.testNumber(int op).
+    pub fn test_number(&self, op: i32) -> bool {
         if op >= 0 {
             self.options.contains(&op)
         } else {

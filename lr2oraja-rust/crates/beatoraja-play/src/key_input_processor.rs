@@ -14,6 +14,32 @@ pub struct KeyInputProccessor {
 
 struct JudgeThread {
     stop: bool,
+    micro_margin_time: i64,
+}
+
+impl JudgeThread {
+    fn new(milli_margin_time: i64) -> Self {
+        JudgeThread {
+            stop: false,
+            micro_margin_time: milli_margin_time * 1000,
+        }
+    }
+
+    /// Run the judge thread.
+    /// Corresponds to Java JudgeThread.run() which processes key input replay
+    /// and calls judge.update(mtime) in a loop.
+    fn run(&mut self) {
+        // TODO: Phase 7+ dependency - requires BMSPlayer, BMSPlayerInputProcessor,
+        // JudgeManager, TimerManager, KeyInputLog[]
+        // In Java:
+        // 1. Loop while !stop
+        // 2. Get current micro time from TIMER_PLAY
+        // 3. Replay keylog entries up to current time
+        // 4. Call judge.update(mtime)
+        // 5. Sleep 0.5ms if time hasn't changed
+        // 6. Break when past last timeline time
+        // 7. Reset all key states when done
+    }
 }
 
 impl KeyInputProccessor {
@@ -31,9 +57,9 @@ impl KeyInputProccessor {
         }
     }
 
-    pub fn start_judge(&mut self) {
+    pub fn start_judge(&mut self, milli_margin_time: i64) {
         // TODO: Phase 7+ dependency - requires TimeLine[], KeyInputLog[], BMSPlayer
-        self.judge = Some(JudgeThread { stop: false });
+        self.judge = Some(JudgeThread::new(milli_margin_time));
         self.is_judge_started = true;
     }
 

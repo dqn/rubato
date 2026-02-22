@@ -265,4 +265,6 @@ impl Controller for Lwjgl3Controller {
     fn set_player_index(&mut self, _index: i32) {
         // empty in Java
     }
+
+    // get_mapping() and get_power_level() use default trait implementations (return None)
 }

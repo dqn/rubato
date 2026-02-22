@@ -71,6 +71,20 @@ pub trait Controller {
 
     /// Sets the player index.
     fn set_player_index(&mut self, index: i32);
+
+    /// Returns the controller mapping, if available.
+    ///
+    /// Translated from: Controller.getMapping()
+    fn get_mapping(&self) -> Option<()> {
+        None
+    }
+
+    /// Returns the controller power level, if available.
+    ///
+    /// Translated from: Controller.getPowerLevel()
+    fn get_power_level(&self) -> Option<()> {
+        None
+    }
 }
 
 /// Corresponds to com.badlogic.gdx.controllers.ControllerManager

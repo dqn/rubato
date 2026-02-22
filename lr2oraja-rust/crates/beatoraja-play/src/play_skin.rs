@@ -1,9 +1,22 @@
 use crate::pomyu_chara_processor::PomyuCharaProcessor;
+use beatoraja_render::color::Rectangle;
 
 /// Play skin
 pub struct PlaySkin {
     /// Margin from STATE_READY to STATE_PLAY (ms)
     playstart: i32,
+    /// Section line images
+    line: Vec<()>,
+    /// Timeline images
+    time: Vec<()>,
+    /// BPM line images
+    bpm: Vec<()>,
+    /// Stop line images
+    stop: Vec<()>,
+    /// Lane region per lane
+    laneregion: Option<Vec<Rectangle>>,
+    /// Lane group region per player
+    lanegroupregion: Option<Vec<Rectangle>>,
     /// Judge region count
     judgeregion: i32,
     /// Margin from STATE_FAILED to exit (ms)
@@ -30,6 +43,12 @@ impl PlaySkin {
     pub fn new() -> Self {
         PlaySkin {
             playstart: 0,
+            line: Vec::new(),
+            time: Vec::new(),
+            bpm: Vec::new(),
+            stop: Vec::new(),
+            laneregion: None,
+            lanegroupregion: None,
             judgeregion: 0,
             close: 0,
             finish_margin: 0,
@@ -103,5 +122,53 @@ impl PlaySkin {
 
     pub fn set_note_expansion_rate(&mut self, rate: [i32; 2]) {
         self.note_expansion_rate = rate;
+    }
+
+    pub fn get_lane_group_region(&self) -> Option<&[Rectangle]> {
+        self.lanegroupregion.as_deref()
+    }
+
+    pub fn set_lane_group_region(&mut self, r: Option<Vec<Rectangle>>) {
+        self.lanegroupregion = r;
+    }
+
+    pub fn get_lane_region(&self) -> Option<&[Rectangle]> {
+        self.laneregion.as_deref()
+    }
+
+    pub fn set_lane_region(&mut self, r: Option<Vec<Rectangle>>) {
+        self.laneregion = r;
+    }
+
+    pub fn get_line(&self) -> &[()] {
+        &self.line
+    }
+
+    pub fn set_line(&mut self, line: Vec<()>) {
+        self.line = line;
+    }
+
+    pub fn get_bpm_line(&self) -> &[()] {
+        &self.bpm
+    }
+
+    pub fn set_bpm_line(&mut self, bpm: Vec<()>) {
+        self.bpm = bpm;
+    }
+
+    pub fn get_stop_line(&self) -> &[()] {
+        &self.stop
+    }
+
+    pub fn set_stop_line(&mut self, stop: Vec<()>) {
+        self.stop = stop;
+    }
+
+    pub fn get_time_line(&self) -> &[()] {
+        &self.time
+    }
+
+    pub fn set_time_line(&mut self, time: Vec<()>) {
+        self.time = time;
     }
 }

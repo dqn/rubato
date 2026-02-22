@@ -219,6 +219,13 @@ impl SkinBar {
         }
     }
 
+    pub fn mouse_pressed(&self, state: &dyn MainState, button: i32, x: i32, y: i32) -> bool {
+        // In Java: return ((MusicSelector) state).getBarRender().mousePressed(this, button, x, y)
+        // Stubbed since we don't have downcast to MusicSelector
+        log::warn!("not yet implemented: SkinBar.mousePressed - requires MusicSelector downcast");
+        false
+    }
+
     pub fn get_graph(&self) -> Option<&SkinDistributionGraph> {
         self.graph.as_ref()
     }

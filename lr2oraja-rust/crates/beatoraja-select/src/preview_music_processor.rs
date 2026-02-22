@@ -61,4 +61,93 @@ impl PreviewMusicProcessor {
     pub fn stop(&mut self) {
         self.preview_running.store(false, Ordering::SeqCst);
     }
+
+    /// Run the preview thread main loop.
+    /// Corresponds to Java PreviewThread.run()
+    /// In Java this is the inner thread's run() method that:
+    /// 1. Plays default music
+    /// 2. Polls commands queue for preview path changes
+    /// 3. Stops preview and switches back to default when preview ends
+    /// 4. Updates volume when system volume changes
+    pub fn run_preview_loop(&self, audio: &AudioDriver, config: &Config) {
+        let sys_vol = config.audio.as_ref().map(|a| a.systemvolume).unwrap_or(0.5);
+        audio.play(&self.default_music, sys_vol, true);
+        let mut playing = self.default_music.clone();
+        let mut current_volume = sys_vol;
+
+        while self.preview_running.load(Ordering::SeqCst) {
+            let sys_vol = config.audio.as_ref().map(|a| a.systemvolume).unwrap_or(0.5);
+            if let Ok(mut cmds) = self.commands.lock() {
+                if let Some(path) = cmds.pop_front() {
+                    let path = if path.is_empty() {
+                        self.default_music.clone()
+                    } else {
+                        path
+                    };
+                    if path != playing {
+                        Self::stop_preview_internal(
+                            audio,
+                            &playing,
+                            &self.default_music,
+                            sys_vol,
+                            true,
+                        );
+                        if path != self.default_music {
+                            let looping = matches!(config.song_preview, SongPreview::LOOP);
+                            audio.play(&path, sys_vol, looping);
+                        } else {
+                            audio.set_volume(&self.default_music, sys_vol);
+                        }
+                        playing = path;
+                    }
+                } else if playing != self.default_music && !audio.is_playing(&playing) {
+                    // Preview finished, return to default music
+                    Self::stop_preview_internal(
+                        audio,
+                        &playing,
+                        &self.default_music,
+                        sys_vol,
+                        true,
+                    );
+                    audio.set_volume(&self.default_music, sys_vol);
+                    playing = self.default_music.clone();
+                } else if (current_volume - sys_vol).abs() > f32::EPSILON {
+                    audio.set_volume(&playing, sys_vol);
+                    current_volume = sys_vol;
+                } else {
+                    drop(cmds);
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                    continue;
+                }
+            }
+        }
+        let sys_vol = config.audio.as_ref().map(|a| a.systemvolume).unwrap_or(0.5);
+        Self::stop_preview_internal(audio, &playing, &self.default_music, sys_vol, false);
+    }
+
+    /// Stop the currently playing preview.
+    /// Corresponds to Java PreviewThread.stopPreview(boolean pause)
+    fn stop_preview_internal(
+        audio: &AudioDriver,
+        playing: &str,
+        default_music: &str,
+        sys_vol: f32,
+        pause: bool,
+    ) {
+        if !playing.is_empty() {
+            if playing != default_music {
+                audio.stop(playing);
+                audio.dispose(playing);
+            } else if pause {
+                // Fade out
+                for i in (0..=10).rev() {
+                    let vol = i as f32 * 0.1 * sys_vol;
+                    audio.set_volume(playing, vol);
+                    std::thread::sleep(std::time::Duration::from_millis(15));
+                }
+            } else {
+                audio.stop(playing);
+            }
+        }
+    }
 }

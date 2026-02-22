@@ -8,7 +8,9 @@
 
 pub use beatoraja_skin::stubs::Color;
 pub use beatoraja_skin::stubs::Pixmap;
+pub use beatoraja_skin::stubs::PixmapFormat;
 pub use beatoraja_skin::stubs::Rectangle;
+pub use beatoraja_skin::stubs::Texture;
 pub use beatoraja_skin::stubs::TextureRegion;
 
 // ============================================================

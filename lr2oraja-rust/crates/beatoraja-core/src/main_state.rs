@@ -102,6 +102,23 @@ pub trait MainState {
     fn stop_sound(&mut self, _sound: SoundType) {
         log::warn!("not yet implemented: MainController.getSoundManager().stop()");
     }
+
+    /// Load skin for the given skin type.
+    ///
+    /// Translated from: MainState.loadSkin(SkinType)
+    fn load_skin(&mut self, _skin_type: i32) {
+        // In Java: setSkin(SkinLoader.load(this, skinType));
+        log::warn!("not yet implemented: MainState.loadSkin");
+    }
+
+    /// Get offset value by ID from MainController.
+    ///
+    /// Translated from: MainState.getOffsetValue(int)
+    fn get_offset_value(&self, _id: i32) -> Option<()> {
+        // In Java: return main.getOffset(id);
+        log::warn!("not yet implemented: MainState.getOffsetValue");
+        None
+    }
 }
 
 /// Shared data for MainState implementations

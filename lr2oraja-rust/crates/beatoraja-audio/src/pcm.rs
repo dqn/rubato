@@ -714,6 +714,31 @@ impl WavFileInputStream {
         }
         result
     }
+
+    /// Skips up to n bytes.
+    ///
+    /// Translated from: WavFileInputStream.skip(long)
+    pub fn skip(&mut self, n: i64) -> i64 {
+        if n < 0 {
+            return 0;
+        }
+        let total = 44 + self.pcm.len() as usize * 2;
+        let remaining = total.saturating_sub(self.pos);
+        if remaining < n as usize {
+            let old_pos = self.pos;
+            self.pos = total;
+            return (total - old_pos) as i64;
+        }
+        self.pos += n as usize;
+        n
+    }
+
+    /// Returns true since mark/reset is supported.
+    ///
+    /// Translated from: WavFileInputStream.markSupported()
+    pub fn mark_supported(&self) -> bool {
+        true
+    }
 }
 
 impl Read for WavFileInputStream {

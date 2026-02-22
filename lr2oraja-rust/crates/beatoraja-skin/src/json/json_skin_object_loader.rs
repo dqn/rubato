@@ -200,6 +200,113 @@ pub fn load_base_skin_object(
     None
 }
 
+/// Get texture from source id and path.
+/// Corresponds to Java JsonSkinObjectLoader.getTexture(String srcid, Path p)
+pub fn get_texture(loader: &mut JSONSkinLoader, srcid: Option<&str>, p: &Path) -> Option<Texture> {
+    let srcid = srcid?;
+    let data = loader.source_map.get(srcid)?;
+    if data.loaded {
+        return match &data.data {
+            Some(SourceDataType::Texture(t)) => Some(t.clone()),
+            _ => None,
+        };
+    }
+    let data_path = data.path.clone();
+    let parent = p
+        .parent()
+        .map(|pp| pp.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let image_path = format!("{}/{}", parent, data_path);
+    let image_file = get_path_with_filemap(&image_path, &loader.filemap);
+
+    let mut result: Option<Texture> = None;
+    if std::path::Path::new(&image_file).exists() {
+        let tex = Texture::new(&image_file);
+        result = Some(tex.clone());
+        if let Some(data) = loader.source_map.get_mut(srcid) {
+            data.data = Some(SourceDataType::Texture(tex));
+            data.loaded = true;
+        }
+    } else if let Some(data) = loader.source_map.get_mut(srcid) {
+        data.loaded = true;
+    }
+    result
+}
+
+use crate::json::json_skin_loader::get_path_with_filemap;
+
+/// Get note textures from image ids.
+/// Corresponds to Java JsonSkinObjectLoader.getNoteTexture(String[] images, Path p)
+pub fn get_note_texture(
+    loader: &mut JSONSkinLoader,
+    images: &[String],
+    p: &Path,
+) -> Vec<Option<Vec<TextureRegion>>> {
+    let sk = match &loader.sk {
+        Some(sk) => sk.clone(),
+        None => return vec![None; images.len()],
+    };
+    let mut note_images: Vec<Option<Vec<TextureRegion>>> = Vec::with_capacity(images.len());
+    for image_id in images {
+        let mut found = false;
+        for img in &sk.image {
+            if img.id.as_deref() == Some(image_id.as_str()) {
+                let tex = get_texture(loader, img.src.as_deref(), p);
+                if let Some(tex) = tex {
+                    let regions =
+                        get_source_image(&tex, img.x, img.y, img.w, img.h, img.divx, img.divy);
+                    note_images.push(Some(regions));
+                } else {
+                    note_images.push(None);
+                }
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            note_images.push(None);
+        }
+    }
+    note_images
+}
+
+/// Create a SkinText from JSON text definition.
+/// Corresponds to Java JsonSkinObjectLoader.createText(JsonSkin.Text, Path)
+pub fn create_text(
+    loader: &mut JSONSkinLoader,
+    text: &json_skin::Text,
+    skin_path: &Path,
+) -> Option<SkinObjectData> {
+    let sk = loader.sk.as_ref()?;
+    for font in &sk.font {
+        if font.id.as_deref() == text.font.as_deref() {
+            let font_path_str = font.path.as_deref().unwrap_or("");
+            let _path = skin_path.parent().map(|pp| pp.join(font_path_str));
+            // In Java: creates SkinTextBitmap or SkinTextFont based on file extension.
+            // Stubbed: requires font loading infrastructure.
+            let obj = SkinObjectData {
+                name: text.id.clone(),
+                ..Default::default()
+            };
+            return Some(obj);
+        }
+    }
+    None
+}
+
+/// Get the file path for a source id.
+/// Corresponds to Java JsonSkinObjectLoader.getSrcIdPath(String srcid, Path p)
+pub fn get_src_id_path(loader: &JSONSkinLoader, srcid: Option<&str>, p: &Path) -> Option<String> {
+    let srcid = srcid?;
+    let data = loader.source_map.get(srcid)?;
+    let parent = p
+        .parent()
+        .map(|pp| pp.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let path = format!("{}/{}", parent, data.path);
+    Some(get_path_with_filemap(&path, &loader.filemap))
+}
+
 /// Helper: get source image regions from texture
 pub fn get_source_image(
     image: &Texture,

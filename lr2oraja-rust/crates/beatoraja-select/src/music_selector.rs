@@ -327,6 +327,59 @@ impl MusicSelector {
     pub fn stop(&self, _sound: SoundType) {
         // In Java: stops system sound
     }
+
+    /// Read course (grade bar) for play.
+    /// Corresponds to Java MusicSelector.readCourse(BMSPlayerMode)
+    fn read_course(&mut self, _mode: BMSPlayerMode) {
+        // In Java: gets GradeBar from manager.getSelected(), checks existsAllSongs(),
+        // calls _readCourse(mode, gradeBar)
+        log::warn!(
+            "not yet implemented: MusicSelector.readCourse - requires GradeBar and PlayerResource context"
+        );
+    }
+
+    /// Read random course for play.
+    /// Corresponds to Java MusicSelector.readRandomCourse(BMSPlayerMode)
+    fn read_random_course(&mut self, _mode: BMSPlayerMode) {
+        // In Java: gets RandomCourseBar, calls lotterySongDatas, creates GradeBar,
+        // calls _readCourse, then manager.addRandomCourse
+        log::warn!(
+            "not yet implemented: MusicSelector.readRandomCourse - requires RandomCourseBar and PlayerResource context"
+        );
+    }
+
+    /// Internal course reading implementation.
+    /// Corresponds to Java MusicSelector._readCourse(BMSPlayerMode, GradeBar)
+    fn _read_course(&mut self, _mode: &BMSPlayerMode, _grade_bar: &Bar) -> bool {
+        // In Java: clears resource, gets song paths, calls resource.setCourseBMSFiles,
+        // applies constraints (CLASS/MIRROR/RANDOM/LN/CN/HCN), sets play mode
+        log::warn!(
+            "not yet implemented: MusicSelector._readCourse - requires PlayerResource context"
+        );
+        false
+    }
+
+    /// Get banner resource pool.
+    /// Corresponds to Java MusicSelector.getBannerResource()
+    pub fn get_banner_resource(&self) -> Option<&()> {
+        // In Java: returns banners (PixmapResourcePool)
+        // Stubbed: PixmapResourcePool not yet wired in select crate
+        log::warn!(
+            "not yet implemented: MusicSelector.getBannerResource - requires PixmapResourcePool"
+        );
+        None
+    }
+
+    /// Get stagefile resource pool.
+    /// Corresponds to Java MusicSelector.getStagefileResource()
+    pub fn get_stagefile_resource(&self) -> Option<&()> {
+        // In Java: returns stagefiles (PixmapResourcePool)
+        // Stubbed: PixmapResourcePool not yet wired in select crate
+        log::warn!(
+            "not yet implemented: MusicSelector.getStagefileResource - requires PixmapResourcePool"
+        );
+        None
+    }
 }
 
 /// Chart replication mode

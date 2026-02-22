@@ -59,8 +59,31 @@ impl TargetProperty {
     pub fn get_name(&self, _main: &MainController) -> String {
         match self {
             TargetProperty::Static(p) => p.name.clone(),
-            TargetProperty::Rival(_p) => "RIVAL".to_string(),
-            TargetProperty::InternetRanking(_p) => "IR".to_string(),
+            TargetProperty::Rival(p) => {
+                // TODO: Phase 7+ dependency - requires MainController.getRivalDataAccessor()
+                // In Java, getName accesses RivalDataAccessor for player info
+                match p.target {
+                    RivalTarget::Index => {
+                        // In Java: info != null ? "RIVAL " + info.getName() : "NO RIVAL"
+                        format!("RIVAL {}", p.index + 1)
+                    }
+                    RivalTarget::Rank => {
+                        if p.index > 0 {
+                            format!("RIVAL RANK {}", p.index + 1)
+                        } else {
+                            "RIVAL TOP".to_string()
+                        }
+                    }
+                    RivalTarget::Next => {
+                        format!("RIVAL NEXT {}", p.index + 1)
+                    }
+                }
+            }
+            TargetProperty::InternetRanking(p) => match p.target {
+                IRTarget::Next => format!("IR NEXT {}RANK", p.value),
+                IRTarget::Rank => format!("IR RANK {}", p.value),
+                IRTarget::RankRate => format!("IR RANK TOP {}%", p.value),
+            },
             TargetProperty::NextRank(_) => "NEXT RANK".to_string(),
         }
     }
@@ -184,6 +207,15 @@ impl RivalTargetProperty {
             index,
             target_score: ScoreData::default(),
         }
+    }
+
+    /// Create score array from rivals + own score.
+    /// Corresponds to Java createScoreArray(MainController).
+    fn create_score_array(&self, _main: &MainController) -> Vec<ScoreData> {
+        // TODO: Phase 7+ dependency - requires MainController.getRivalDataAccessor(),
+        // getPlayDataAccessor(), getSongdata(), getPlayerConfig()
+        // In Java, this collects rival scores and own score into an array.
+        Vec::new()
     }
 
     pub fn get_target_property(id: &str) -> Option<TargetProperty> {

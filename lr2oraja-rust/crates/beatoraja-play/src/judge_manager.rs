@@ -86,6 +86,7 @@ impl LaneIterState {
 /// Collector for simultaneous bad judgments.
 struct MultiBadCollector {
     mjudge: Vec<[i64; 2]>,
+    enabled: bool,
     note_list: Vec<usize>,
     time_list: Vec<i64>,
     size: usize,
@@ -96,10 +97,18 @@ impl MultiBadCollector {
     fn new() -> Self {
         MultiBadCollector {
             mjudge: Vec::new(),
+            enabled: true,
             note_list: Vec::with_capacity(256),
             time_list: Vec::with_capacity(256),
             size: 0,
             array_start: 0,
+        }
+    }
+
+    fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+        if !self.enabled {
+            self.clear();
         }
     }
 
@@ -115,13 +124,16 @@ impl MultiBadCollector {
     }
 
     fn add(&mut self, note_idx: usize, dmtime: i64) {
+        if !self.enabled {
+            return;
+        }
         self.note_list.push(note_idx);
         self.time_list.push(dmtime);
         self.size += 1;
     }
 
     fn filter(&mut self, tnote: Option<usize>, notes: &[JudgeNote]) {
-        if tnote.is_none() {
+        if !self.enabled || tnote.is_none() {
             return;
         }
         let tnote_idx = tnote.unwrap();
@@ -1285,6 +1297,30 @@ impl JudgeManager {
             self.mjudgefast[player]
         } else {
             0
+        }
+    }
+
+    pub fn get_processing_long_note(&self, lane: usize) -> Option<usize> {
+        if lane < self.lane_states.len() {
+            self.lane_states[lane].processing
+        } else {
+            None
+        }
+    }
+
+    pub fn get_passing_long_note(&self, lane: usize) -> Option<usize> {
+        if lane < self.lane_states.len() {
+            self.lane_states[lane].passing
+        } else {
+            None
+        }
+    }
+
+    pub fn get_hell_charge_judge(&self, lane: usize) -> bool {
+        if lane < self.lane_states.len() {
+            self.lane_states[lane].inclease
+        } else {
+            false
         }
     }
 

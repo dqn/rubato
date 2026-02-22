@@ -1,3 +1,4 @@
+use beatoraja_types::play_config::PlayConfig;
 use bms_model::bms_model::BMSModel;
 use std::collections::HashMap;
 
@@ -239,6 +240,34 @@ impl LaneRenderer {
 
     pub fn get_main_bpm(&self) -> f64 {
         self.mainbpm
+    }
+
+    pub fn get_play_config(&self) -> PlayConfig {
+        // Return a PlayConfig snapshot reflecting current renderer state.
+        // In Java, LaneRenderer holds a PlayConfig reference and delegates to it.
+        PlayConfig {
+            hispeed: self.hispeed,
+            duration: self.duration,
+            enable_constant: self.enable_constant,
+            constant_fadein_time: self.constant_fadein_time as i32,
+            fixhispeed: self.fixhispeed,
+            hispeedmargin: self.hispeedmargin,
+            lanecover: self.lanecover,
+            enablelanecover: self.enable_lanecover,
+            lift: self.lift,
+            enablelift: self.enable_lift,
+            hidden: self.hidden,
+            enablehidden: self.enable_hidden,
+            ..PlayConfig::default()
+        }
+    }
+
+    /// Draw long note (CN/HCN/LN).
+    /// Corresponds to Java drawLongNote() private method.
+    fn draw_long_note(&self) {
+        // TODO: Phase 7+ dependency - requires SkinObjectRenderer, SkinLane, TextureRegion
+        // In Java, this is a private 100+ line method that handles HCN/CN/LN drawing
+        // with texture regions, scroll calculation, and note expansion.
     }
 
     pub fn dispose(&mut self) {

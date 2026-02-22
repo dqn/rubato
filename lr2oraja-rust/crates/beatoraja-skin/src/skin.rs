@@ -830,6 +830,118 @@ impl Skin {
         }
     }
 
+    /// Add a SkinNumber with destination and register it.
+    /// Corresponds to Java Skin.addNumber(21 params)
+    pub fn add_number(
+        &mut self,
+        number: SkinNumber,
+        time: i64,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        acc: i32,
+        a: i32,
+        r: i32,
+        g: i32,
+        b: i32,
+        blend: i32,
+        filter: i32,
+        angle: i32,
+        center: i32,
+        loop_val: i32,
+        timer: Option<Box<dyn TimerProperty>>,
+        op1: i32,
+        op2: i32,
+        op3: i32,
+        offset: i32,
+    ) {
+        let dw = self.dw;
+        let dh = self.dh;
+        let mut obj = SkinObject::Number(number);
+        obj.data_mut()
+            .set_destination_with_timer_ops_and_single_offset(
+                time,
+                x * dw,
+                y * dh,
+                w * dw,
+                h * dh,
+                acc,
+                a,
+                r,
+                g,
+                b,
+                blend,
+                filter,
+                angle,
+                center,
+                loop_val,
+                timer,
+                op1,
+                op2,
+                op3,
+                offset,
+            );
+        self.objects.push(obj);
+    }
+
+    /// Add a SkinImage from a TextureRegion with destination and register it.
+    /// Corresponds to Java Skin.addImage(21 params)
+    pub fn add_image(
+        &mut self,
+        tr: TextureRegion,
+        time: i64,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        acc: i32,
+        a: i32,
+        r: i32,
+        g: i32,
+        b: i32,
+        blend: i32,
+        filter: i32,
+        angle: i32,
+        center: i32,
+        loop_val: i32,
+        timer: Option<Box<dyn TimerProperty>>,
+        op1: i32,
+        op2: i32,
+        op3: i32,
+        offset: i32,
+    ) -> usize {
+        let dw = self.dw;
+        let dh = self.dh;
+        let si = SkinImage::new_with_single(tr);
+        let mut obj = SkinObject::Image(si);
+        obj.data_mut()
+            .set_destination_with_timer_ops_and_single_offset(
+                time,
+                x * dw,
+                y * dh,
+                w * dw,
+                h * dh,
+                acc,
+                a,
+                r,
+                g,
+                b,
+                blend,
+                filter,
+                angle,
+                center,
+                loop_val,
+                timer,
+                op1,
+                op2,
+                op3,
+                offset,
+            );
+        self.objects.push(obj);
+        self.objects.len() - 1
+    }
+
     /// Update user-defined objects once per frame.
     /// Update order: timers -> events, each in ascending ID order.
     pub fn update_custom_objects(&mut self, state: &dyn MainState) {

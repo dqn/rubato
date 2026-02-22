@@ -322,6 +322,17 @@ impl PracticeConfiguration {
         }
     }
 
+    /// Draw practice configuration UI.
+    /// Corresponds to Java draw(Rectangle r, SkinObjectRenderer sprite, long time, MainState state).
+    pub fn draw(&self, _time: i64) {
+        // TODO: Phase 7+ dependency - requires Rectangle, SkinObjectRenderer, BitmapFont, MainState
+        // In Java, this method:
+        // 1. Iterates elements, draws text with yellow (cursor) or cyan color
+        // 2. If media loaded, draws "PRESS 1KEY TO PLAY" in orange
+        // 3. Draws judge count table (PGREAT/GREAT/GOOD/BAD/POOR/KPOOR)
+        // 4. Draws practice graph at bottom quarter
+    }
+
     pub fn is_element_visible(&self, index: usize) -> bool {
         match index {
             10 | 11 => {
