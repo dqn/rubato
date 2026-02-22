@@ -4,7 +4,7 @@ Dependency graph order. Each module is ported only after its dependencies are co
 
 ## Completed Phases
 
-Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 1200 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) complete. Phase 18b (rendering state providers) complete. Phase 18c (audio decode API) complete. Phase 18f (e2e test activation) complete. Phase 18g (BRD replay codec) complete. See AGENTS.md for details.
+Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 1179 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) complete. Phase 18b (rendering state providers) complete. Phase 18c (audio decode API) complete. Phase 18d (BGA/skin test APIs) complete. Phase 18f (e2e test activation) complete. Phase 18g (BRD replay codec) complete. See AGENTS.md for details.
 
 ## Phase 13f: egui UI (complete)
 
@@ -28,11 +28,11 @@ Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 1
 - [x] Delete duplicate pending tests — `compare_rule.rs` and `compare_pattern.rs` in `pending/` were duplicates of already-active versions with real imports; deleted
 - [ ] Add missing fixtures for modules not yet covered (modmenu, select bar, stream) — Java exporters exist; deferred until Rust-side APIs are implemented
 - [x] Activate 9 e2e test files (Phase 18f) — moved from `pending/` to active: `e2e_judge.rs` (20), `course_e2e.rs` (9), `compare_judge.rs` (6), `compare_replay_e2e.rs` (1), `e2e_edge_cases.rs` (11), `exhaustive_e2e.rs` (72), `timing_boundary_e2e.rs` (10), `full_pipeline_integration.rs` (4), `replay_roundtrip_e2e.rs` (5). Total 138 new tests. Fixed `build_judge_notes()` time ordering bug (was lane-grouped, now sorted by `(time_us, lane)` with pair_index remapping).
-- [ ] Reactivate remaining 4 pending test files — blocked on 18b + 18d:
-  - **~~Missing rendering API~~** (resolved by 18b): `StaticStateProvider`, `SkinStateProvider`, `render_snapshot`, `eval` modules now implemented. **Still blocked:** `compare_eval_test_skins.rs` requires `test-bms/test-skin/` directory with test skin files (not present); `compare_render_snapshot.rs` requires `skin/ECFN/` directory with ECFN skin files (not present). Both need Java-exported golden master fixtures to be generated
-  - **Skin loader API mismatch:** tests assume free functions (`json_loader::load_skin()`), actual API uses struct methods (`JsonSkinLoader.load_skin()`) — blocks `compare_skin.rs` (13 tests). Also: `skin.width`/`skin.objects` are private, `skin.scale_x`/`skin.scale_y`/`skin.options` not present
-  - **Missing BGA API:** `BgaProcessor` struct not found — blocks `compare_bga_timeline.rs`
-  - **Resolution:** 18b complete (rendering API implemented). Remaining blockers: test skin fixture files (test-bms/test-skin/, skin/ECFN/), 18d (BGA + skin test rewrite)
+- [x] Activate `compare_skin.rs` and `compare_bga_timeline.rs` (Phase 18d) — moved from `pending/` to active. 11 new tests (6 skin + 5 BGA)
+- [ ] Reactivate remaining 2 pending test files — blocked on test fixture files:
+  - `compare_eval_test_skins.rs` requires `test-bms/test-skin/` directory with test skin files (not present in repository)
+  - `compare_render_snapshot.rs` requires `skin/ECFN/` directory with ECFN skin files (not present in repository)
+  - Both need Java-exported golden master fixtures to be generated
 
 ## Phase 18: Post-Phase 13 Lifecycle Wiring
 
@@ -62,10 +62,11 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 - [x] Add WAVE_FORMAT_EXTENSIBLE (0xFFFE) support to WAV reader — reads sub-format GUID to extract actual format type (needed for 24-bit WAV test files). Translated from AudioExporter.java
 - [x] Activate `compare_audio.rs` golden master test — moved from `pending/` to active, updated crate references (`bms_audio` → `beatoraja_audio`). 11 tests pass (6 decode + 3 resample + 2 channel conversion)
 
-### 18d: BGA and skin test APIs (unblocks 2 Phase 16b tests)
+### 18d: BGA and skin test APIs (complete — unblocks 2 Phase 16b tests)
 
-- [ ] Implement `BgaProcessor` — BGA (background animation) timeline processing; translate from Java
-- [ ] Rewrite `compare_skin.rs` against actual API — adapt from free functions (`json_loader::load_skin()`) to struct methods (`JsonSkinLoader.load_skin()`), fix private field access (`skin.width` etc.)
+- [x] Implement `BgaProcessor` timeline processing — `BgaTimeline` struct, `from_model(&BMSModel)`, `set_model_timelines()`, `prepare_bga(time_ms)` (line-by-line Java translation), `update(time_us)` public API, `current_bga_id()`/`current_layer_id()` getters. 8 unit tests
+- [x] Rewrite `compare_skin.rs` against actual API — rewrote from free functions to `JSONSkinLoader::new().load_header()`/`.load()` struct methods; tests verify `SkinHeaderData`/`SkinData` (intermediate types, not `Skin`). Fixed 3 bugs in json_skin_loader.rs: source_resolution not set, filepath absolutization, offset defaults for non-PLAY types. Created test fixtures: `test_skin.json`, `test_skin_options.json`, `test_skin.lr2skin`. 6 tests (3 JSON header/load/destinations + 2 JSON options + 1 LR2 header). Skipped: Lua (stubbed), ECFN (external files), full Skin snapshots (SkinData→Skin pipeline not connected)
+- [x] Rewrite `compare_bga_timeline.rs` against actual API — rewrote from fixture-based golden master to programmatic verification using `BGAProcessor::from_model()` + `update(time_us)` + `current_bga_id()`/`current_layer_id()`. Tests verify BGA/layer state transitions at measure boundaries against `bga_test.bms` (BPM=120). 5 tests. No Java BGA exporter needed
 
 ### 18e: Stub replacement and cleanup
 
@@ -79,7 +80,8 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 
 - [x] Rewrite e2e test files against actual API — all 9 files rewritten and compile-verified: `e2e_judge.rs`, `course_e2e.rs`, `compare_judge.rs`, `exhaustive_e2e.rs`, `e2e_edge_cases.rs`, `timing_boundary_e2e.rs`, `replay_roundtrip_e2e.rs`, `full_pipeline_integration.rs`, `compare_replay_e2e.rs`. Old API names (`BmsDecoder`/`BmsModel`/`GaugeType` enum/`PlayerRule`/`model.total_notes()`/`score.judge_count()`) replaced with actual crate types (`BMSDecoder`/`BMSModel`/`i32` gauge constants/`BMSPlayerRule`/`model.get_total_notes()`/`score.get_judge_count_total()`). Replay tests use JSON serde round-trip
 - [x] Activate 9 e2e test files — moved from `tests/pending/` to `tests/`. All 138 new tests pass. Fixed `build_judge_notes()` time ordering bug discovered during activation (was lane-grouped, now sorted by `(time_us, lane)` with pair_index remapping). 1185 total tests pass
-- [ ] Activate remaining 4 Phase 16b pending tests — depends on 18b + 18d completing (compare_eval_test_skins, compare_render_snapshot, compare_skin, compare_bga_timeline)
+- [x] Activate `compare_skin.rs` and `compare_bga_timeline.rs` (Phase 18d) — 11 new tests
+- [ ] Activate remaining 2 Phase 16b pending tests — depends on test fixture files (compare_eval_test_skins, compare_render_snapshot)
 - [ ] E2E gameplay flow test: select → decide → play → result screen transitions — blocked: requires all stubs removed and real screen implementations wired
 - [ ] Verify: all tests pass, zero clippy warnings, clean `cargo fmt` — blocked: final gate after all above tasks complete
 
@@ -94,6 +96,9 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 
 - [x] `build_judge_notes()` returned notes in lane-grouped order instead of time order — caused `bpm_extreme_timing_structure` and `multi_stop_timing_gaps` tests to fail. Fixed by sorting by `(time_us, lane)` and remapping `pair_index` values
 - [ ] Missing test skin fixture directories — `test-bms/test-skin/` and `skin/ECFN/` directories do not exist in the repository. These are needed by pending golden master tests `compare_eval_test_skins.rs` and `compare_render_snapshot.rs`. Need to either add sample skin files or generate fixtures from Java exporter
+- [ ] JSONSkinLoader returns `SkinData` (intermediate), not `Skin` — full loading pipeline (SkinData→Skin) not connected. `load_skin_object_for_type()` returns None for all screen-specific types. Full Skin snapshot tests deferred until pipeline is wired
+- [ ] LuaSkinLoader is completely stubbed — `load_header()` and `load_skin()` return None. Lua skin tests skipped
+- [ ] json_skin_loader bug fixes applied during Phase 18d — (1) `source_resolution` was not set from JSON w/h fields, (2) custom file paths were incorrectly absolutized with parent dir, (3) offset defaults were applied to non-PLAY skin types (MusicSelect, Decide, etc.)
 
 ## Remaining Stubs
 
