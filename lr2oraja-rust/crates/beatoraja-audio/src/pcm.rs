@@ -78,7 +78,7 @@ impl PCM {
         } else if loader.bits_per_sample == 16 {
             pcm = Some(PCM::Short(ShortPCM::load_pcm(&loader)?));
         } else {
-            // TODO BytePCM has bugs, use ShortPCM instead (matching Java)
+            // Java: "TODO BytePCMのバグが解消されたら切替" — Java itself doesn't use BytePCM
             pcm = Some(PCM::Short(ShortPCM::load_pcm(&loader)?));
         }
 
