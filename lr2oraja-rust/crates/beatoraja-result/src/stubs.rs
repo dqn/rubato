@@ -19,7 +19,8 @@ pub use beatoraja_skin::stubs::PixmapFormat;
 pub use beatoraja_skin::stubs::Rectangle;
 pub use beatoraja_skin::stubs::Texture;
 pub use beatoraja_skin::stubs::TextureRegion;
-use beatoraja_song::song_data::SongData;
+use beatoraja_types::player_resource_access::{NullPlayerResource, PlayerResourceAccess};
+use beatoraja_types::song_data::SongData;
 
 // ============================================================
 // PlayDataAccessor stub
@@ -248,187 +249,179 @@ pub use beatoraja_types::groove_gauge::GrooveGauge;
 // GdxArray: replaced by Vec<T> — callers updated to use Vec directly
 
 // ============================================================
-// PlayerResource stub
+// PlayerResource — replaced with Box<dyn PlayerResourceAccess> wrapper (Phase 18e-2)
 // ============================================================
 
-/// Stub for bms.player.beatoraja.PlayerResource
+/// Wrapper for bms.player.beatoraja.PlayerResource.
+/// Delegates to `Box<dyn PlayerResourceAccess>` for trait methods.
+/// Crate-local methods provide access to non-trait types (BMSModel, BMSPlayerMode, RankingData).
 pub struct PlayerResource {
-    pub play_mode: BMSPlayerMode,
+    inner: Box<dyn PlayerResourceAccess>,
+    bms_model: bms_model::bms_model::BMSModel,
+    course_bms_models: Option<Vec<bms_model::bms_model::BMSModel>>,
+    play_mode: BMSPlayerMode,
+    ranking_data: Option<RankingData>,
 }
 
 impl PlayerResource {
-    pub fn get_bms_model(&self) -> &bms_model::bms_model::BMSModel {
-        log::warn!("not yet implemented: PlayerResource.getBMSModel");
-        static DEFAULT: std::sync::OnceLock<bms_model::bms_model::BMSModel> =
-            std::sync::OnceLock::new();
-        DEFAULT.get_or_init(bms_model::bms_model::BMSModel::default)
+    pub fn new(inner: Box<dyn PlayerResourceAccess>, play_mode: BMSPlayerMode) -> Self {
+        Self {
+            inner,
+            bms_model: bms_model::bms_model::BMSModel::default(),
+            course_bms_models: None,
+            play_mode,
+            ranking_data: None,
+        }
+    }
+
+    // ---- Trait-delegated methods ----
+
+    pub fn get_config(&self) -> &beatoraja_core::config::Config {
+        self.inner.get_config()
     }
 
     pub fn get_player_config(&self) -> &beatoraja_core::player_config::PlayerConfig {
-        log::warn!("not yet implemented: PlayerResource.getPlayerConfig");
-        static DEFAULT: std::sync::OnceLock<beatoraja_core::player_config::PlayerConfig> =
-            std::sync::OnceLock::new();
-        DEFAULT.get_or_init(beatoraja_core::player_config::PlayerConfig::default)
+        self.inner.get_player_config()
     }
 
-    pub fn get_config(&self) -> &beatoraja_core::config::Config {
-        log::warn!("not yet implemented: PlayerResource.getConfig");
-        static DEFAULT: std::sync::OnceLock<beatoraja_core::config::Config> =
-            std::sync::OnceLock::new();
-        DEFAULT.get_or_init(beatoraja_core::config::Config::default)
+    pub fn get_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
+        self.inner.get_score_data()
+    }
+
+    pub fn get_score_data_mut(&mut self) -> Option<&mut beatoraja_core::score_data::ScoreData> {
+        self.inner.get_score_data_mut()
+    }
+
+    pub fn get_target_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
+        self.inner.get_target_score_data()
+    }
+
+    pub fn get_course_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
+        self.inner.get_course_score_data()
+    }
+
+    pub fn set_course_score_data(&mut self, score: beatoraja_core::score_data::ScoreData) {
+        self.inner.set_course_score_data(score);
+    }
+
+    pub fn get_songdata(&self) -> Option<&beatoraja_types::song_data::SongData> {
+        self.inner.get_songdata()
+    }
+
+    pub fn get_replay_data(&self) -> Option<&beatoraja_core::replay_data::ReplayData> {
+        self.inner.get_replay_data()
+    }
+
+    pub fn get_course_replay(&self) -> &[beatoraja_core::replay_data::ReplayData] {
+        self.inner.get_course_replay()
+    }
+
+    pub fn get_course_replay_mut(&mut self) -> &mut Vec<beatoraja_core::replay_data::ReplayData> {
+        self.inner.get_course_replay_mut()
+    }
+
+    pub fn add_course_replay(&mut self, replay: beatoraja_core::replay_data::ReplayData) {
+        self.inner.add_course_replay(replay);
+    }
+
+    pub fn get_course_data(&self) -> Option<&beatoraja_core::course_data::CourseData> {
+        self.inner.get_course_data()
+    }
+
+    pub fn get_course_index(&self) -> usize {
+        self.inner.get_course_index()
+    }
+
+    pub fn next_course(&mut self) -> bool {
+        self.inner.next_course()
+    }
+
+    pub fn get_constraint(&self) -> Vec<beatoraja_core::course_data::CourseDataConstraint> {
+        self.inner.get_constraint()
+    }
+
+    pub fn get_gauge(&self) -> Option<&Vec<Vec<f32>>> {
+        self.inner.get_gauge()
+    }
+
+    pub fn get_groove_gauge(&self) -> Option<&GrooveGauge> {
+        self.inner.get_groove_gauge()
+    }
+
+    pub fn get_course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
+        self.inner.get_course_gauge()
+    }
+
+    pub fn get_course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
+        self.inner.get_course_gauge_mut()
+    }
+
+    pub fn add_course_gauge(&mut self, gauge: Vec<Vec<f32>>) {
+        self.inner.add_course_gauge(gauge);
+    }
+
+    pub fn get_maxcombo(&self) -> i32 {
+        self.inner.get_maxcombo()
+    }
+
+    pub fn get_org_gauge_option(&self) -> i32 {
+        self.inner.get_org_gauge_option()
+    }
+
+    pub fn get_assist(&self) -> i32 {
+        self.inner.get_assist()
+    }
+
+    pub fn is_update_score(&self) -> bool {
+        self.inner.is_update_score()
+    }
+
+    pub fn is_update_course_score(&self) -> bool {
+        self.inner.is_update_course_score()
+    }
+
+    pub fn is_force_no_ir_send(&self) -> bool {
+        self.inner.is_force_no_ir_send()
+    }
+
+    pub fn is_freq_on(&self) -> bool {
+        self.inner.is_freq_on()
+    }
+
+    // ---- Crate-local methods (not on trait — types cause circular deps) ----
+
+    pub fn get_bms_model(&self) -> &bms_model::bms_model::BMSModel {
+        &self.bms_model
     }
 
     pub fn get_course_bms_models(&self) -> Option<&[bms_model::bms_model::BMSModel]> {
-        None
+        self.course_bms_models.as_deref()
     }
 
     pub fn get_play_mode(&self) -> &BMSPlayerMode {
         &self.play_mode
     }
 
-    pub fn get_gauge(&self) -> Option<&Vec<Vec<f32>>> {
-        log::warn!("not yet implemented: PlayerResource.getGauge");
-        None
-    }
-
-    pub fn get_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
-        None
-    }
-
-    pub fn get_score_data_mut(&mut self) -> Option<&mut beatoraja_core::score_data::ScoreData> {
-        None
-    }
-
-    pub fn get_course_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
-        None
-    }
-
-    pub fn get_course_score_data_mut(
-        &mut self,
-    ) -> Option<&mut beatoraja_core::score_data::ScoreData> {
-        None
-    }
-
-    pub fn set_course_score_data(&mut self, _score: beatoraja_core::score_data::ScoreData) {
-        // stub
-    }
-
     pub fn get_ranking_data(&self) -> Option<&RankingData> {
-        None
+        self.ranking_data.as_ref()
     }
 
-    pub fn set_ranking_data(&mut self, _data: Option<RankingData>) {
-        // stub
+    pub fn set_ranking_data(&mut self, data: Option<RankingData>) {
+        self.ranking_data = data;
     }
+}
 
-    pub fn get_replay_data(&self) -> &beatoraja_core::replay_data::ReplayData {
-        log::warn!("not yet implemented: PlayerResource.getReplayData");
-        static DEFAULT: std::sync::OnceLock<beatoraja_core::replay_data::ReplayData> =
-            std::sync::OnceLock::new();
-        DEFAULT.get_or_init(beatoraja_core::replay_data::ReplayData::default)
-    }
-
-    pub fn get_replay_data_mut(&mut self) -> &mut beatoraja_core::replay_data::ReplayData {
-        log::warn!("not yet implemented: PlayerResource.getReplayData_mut");
-        // Leak a boxed value - stub only, will be replaced with real implementation
-        Box::leak(Box::new(beatoraja_core::replay_data::ReplayData::default()))
-    }
-
-    pub fn get_course_replay(&self) -> &[beatoraja_core::replay_data::ReplayData] {
-        log::warn!("not yet implemented: PlayerResource.getCourseReplay");
-        &[]
-    }
-
-    pub fn get_course_replay_mut(&mut self) -> &mut Vec<beatoraja_core::replay_data::ReplayData> {
-        log::warn!("not yet implemented: PlayerResource.getCourseReplay_mut");
-        // Leak a boxed value - stub only, will be replaced with real implementation
-        Box::leak(Box::new(Vec::new()))
-    }
-
-    pub fn add_course_replay(&mut self, _replay: &beatoraja_core::replay_data::ReplayData) {
-        // stub
-    }
-
-    pub fn add_course_gauge(&mut self, _gauge: Vec<Vec<f32>>) {
-        // stub
-    }
-
-    pub fn get_maxcombo(&self) -> i32 {
-        0
-    }
-
-    pub fn get_target_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
-        None
-    }
-
-    pub fn is_update_score(&self) -> bool {
-        false
-    }
-
-    pub fn is_update_course_score(&self) -> bool {
-        false
-    }
-
-    pub fn is_force_no_ir_send(&self) -> bool {
-        false
-    }
-
-    pub fn get_course_data(&self) -> &beatoraja_core::course_data::CourseData {
-        log::warn!("not yet implemented: PlayerResource.getCourseData");
-        static DEFAULT: std::sync::OnceLock<beatoraja_core::course_data::CourseData> =
-            std::sync::OnceLock::new();
-        DEFAULT.get_or_init(beatoraja_core::course_data::CourseData::default)
-    }
-
-    pub fn get_songdata(&self) -> &SongData {
-        log::warn!("not yet implemented: PlayerResource.getSongdata");
-        static DEFAULT: std::sync::OnceLock<SongData> = std::sync::OnceLock::new();
-        DEFAULT.get_or_init(SongData::default)
-    }
-
-    pub fn get_org_gauge_option(&self) -> i32 {
-        0
-    }
-
-    pub fn get_constraint(&self) -> Vec<beatoraja_core::course_data::CourseDataConstraint> {
-        vec![]
-    }
-
-    pub fn get_course_index(&self) -> usize {
-        0
-    }
-
-    pub fn get_assist(&self) -> i32 {
-        0
-    }
-
-    pub fn next_course(&mut self) -> bool {
-        false
-    }
-
-    pub fn reload_bms_file(&mut self) {
-        // stub
-    }
-
-    pub fn is_freq_on(&self) -> bool {
-        false
-    }
-
-    pub fn get_groove_gauge(&self) -> Option<&GrooveGauge> {
-        log::warn!("not yet implemented: PlayerResource.getGrooveGauge");
-        None
-    }
-
-    pub fn get_course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
-        log::warn!("not yet implemented: PlayerResource.getCourseGauge");
-        static DEFAULT: std::sync::OnceLock<Vec<Vec<Vec<f32>>>> = std::sync::OnceLock::new();
-        DEFAULT.get_or_init(Vec::new)
-    }
-
-    pub fn get_course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
-        log::warn!("not yet implemented: PlayerResource.getCourseGauge_mut");
-        // Leak a boxed value - stub only, will be replaced with real implementation
-        Box::leak(Box::new(Vec::new()))
+impl Default for PlayerResource {
+    fn default() -> Self {
+        Self {
+            inner: Box::new(NullPlayerResource::new()),
+            bms_model: bms_model::bms_model::BMSModel::default(),
+            course_bms_models: None,
+            play_mode: BMSPlayerMode {
+                mode: BMSPlayerModeType::Play,
+            },
+            ranking_data: None,
+        }
     }
 }
 

@@ -189,7 +189,10 @@ impl CourseResult {
             for irc in ir {
                 let send = resource.is_update_course_score()
                     && !resource.is_force_no_ir_send()
-                    && resource.get_course_data().release;
+                    && resource
+                        .get_course_data()
+                        .map(|cd| cd.release)
+                        .unwrap_or(false);
                 match irc.config.get_irsend() {
                     IR_SEND_ALWAYS => {}
                     IR_SEND_COMPLETE_SONG => {
@@ -201,10 +204,13 @@ impl CourseResult {
                     _ => {}
                 }
 
-                if send && let Some(ref ns) = newscore {
+                if send
+                    && let Some(ref ns) = newscore
+                    && let Some(course_data) = resource.get_course_data()
+                {
                     self.ir_send_status.push(CourseIRSendStatus::new(
                         irc.connection.clone(),
-                        resource.get_course_data(),
+                        course_data,
                         lnmode,
                         ns,
                     ));

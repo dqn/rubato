@@ -74,8 +74,9 @@ impl MusicResult {
 
         // Stock replay data for course mode
         if resource.get_course_bms_models().is_some() {
-            let replay_clone = resource.get_replay_data().clone();
-            resource.add_course_replay(&replay_clone);
+            if let Some(replay_clone) = resource.get_replay_data().cloned() {
+                resource.add_course_replay(replay_clone);
+            }
             if let Some(gauge) = resource.get_gauge() {
                 let gauge_clone = gauge.clone();
                 resource.add_course_gauge(gauge_clone);
@@ -135,10 +136,13 @@ impl MusicResult {
                     _ => {}
                 }
 
-                if send && let Some(ref ns) = newscore_clone {
+                if send
+                    && let Some(ref ns) = newscore_clone
+                    && let Some(songdata) = resource.get_songdata()
+                {
                     pending_ir_sends.push(IRSendStatusMain::new(
                         irc.connection.clone(),
-                        resource.get_songdata(),
+                        songdata,
                         ns,
                     ));
                 }
@@ -287,8 +291,8 @@ impl MusicResult {
             && resource.get_score_data().is_some()
             && self.data.save_replay[index] != ReplayStatus::Saved
             && resource.is_update_score()
+            && let Some(rd) = resource.get_replay_data()
         {
-            let rd = resource.get_replay_data();
             main.get_play_data_accessor().write_replay_data(
                 rd,
                 resource.get_bms_model(),
@@ -304,9 +308,10 @@ impl MusicResult {
         let newscore = resource.get_score_data().cloned();
         if newscore.is_none() {
             let total_notes = resource.get_bms_model().get_total_notes();
-            if let Some(cscore) = resource.get_course_score_data_mut() {
+            if let Some(mut cscore) = resource.get_course_score_data().cloned() {
                 cscore.minbp += total_notes;
                 cscore.clear = ClearType::Failed.id();
+                resource.set_course_score_data(cscore);
             }
             return;
         }
