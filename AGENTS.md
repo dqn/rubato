@@ -84,7 +84,7 @@ brs/
 
 ## Implementation Status
 
-All phases through 25c complete. **1693 tests pass, 22 ignored (RenderSnapshot — SkinData→Skin pipeline pending). Zero runtime `todo!()`/`unimplemented!()`.** Zero clippy warnings. PlayerResource wrapper migration complete for all 6 crates. 6 re-export-only stubs.rs deleted, 3 large stubs.rs reorganized. 10 stubs.rs remain (~1,520 true stub lines). Phase 25d (stub resolution) next.
+All phases through 25d-1/25d-3 complete. **1730 tests pass, 22 ignored (RenderSnapshot — SkinData→Skin pipeline pending). Zero runtime `todo!()`/`unimplemented!()`.** Zero clippy warnings. 4 new shared traits in beatoraja-types (ScreenType, ScoreDatabaseAccess, MainStateAccess, AbstractResultAccess). Type stubs fully resolved. Phase 25d-2 (rendering stubs) next.
 
 - **Phases 1–17:** Core translation (17 crates, 300+ modules), real implementations (wgpu, Kira, mlua, ffmpeg-next, midir, cpal, egui UI), circular dep resolution, stub cleanup, platform replacements, 868 tests
 - **Phase 18a–g:** Core judge loop, rendering state providers, audio decode API, BGA/skin test APIs, stub replacement (12 sub-phases, 4 audit rounds), E2E test activation (138 tests), BRD replay codec
@@ -102,6 +102,8 @@ All phases through 25c complete. **1693 tests pass, 22 ignored (RenderSnapshot �
 - **Phase 25a:** Stub audit — 6 re-export-only stubs.rs deleted, 3 large stubs.rs reorganized (→gdx_compat.rs, keys.rs, pixmap_io.rs, clipboard_helper.rs, platform.rs). 10 stubs.rs remain with ~1,520 true stub lines
 - **Phase 25b:** E2E integration tests — screen transition chain (12 tests), BarManager integration (20 tests). +32 tests
 - **Phase 25c:** Quality assurance — zero clippy warnings, cargo fmt clean, 22 ignored tests documented
+- **Phase 25d-1:** Forwarding stub deletion — 4 new traits in beatoraja-types (ScreenType, ScoreDatabaseAccess, MainStateAccess, AbstractResultAccess), ~95 stub lines replaced in external/modmenu
+- **Phase 25d-3:** Type definition stubs — JudgeAlgorithm/BMSPlayerRule/BarSorter/modifier modes fully defined, VersionChecker (reqwest), SongDatabaseUpdateListener (AtomicI32). +29 tests
 
 ## Remaining Stubs (~1,520 true stub lines across 10 files)
 

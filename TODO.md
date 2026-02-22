@@ -1,6 +1,6 @@
 # Porting TODO — Remaining Work
 
-All phases (1–25c) complete. **1693 tests pass, 22 ignored.** See AGENTS.md for full status.
+All phases (1–25c, 25d-1, 25d-3) complete. **1730 tests pass, 22 ignored.** See AGENTS.md for full status.
 
 ## Phase 24: ランタイム統合（Runtime Integration）— complete
 
@@ -79,28 +79,15 @@ clippy 警告ゼロ (24ファイル修正)、cargo fmt クリーン、#[allow(cl
 
 真のスタブ ~1,520 行を3カテゴリに分けて段階的に解消する。
 
-#### 25d-1: Cross-crate forwarding スタブの削除 (~620行)
+#### 25d-1: Cross-crate forwarding スタブの削除 — partially complete
 
-循環依存回避のために存在する forwarding スタブを、trait 抽出 + beatoraja-types への型集約で解消。
+4 新規 trait ファイルを beatoraja-types に追加 (ScreenType, ScoreDatabaseAccess, MainStateAccess, AbstractResultAccess)。beatoraja-external (~80行削除)、beatoraja-modmenu (~15行削除) のスタブを trait 参照に置換。
 
-- [ ] **beatoraja-result の MainController/PlayerResource forwarding** (~290行)
-  - MainController stub (10メソッド) → `MainControllerAccess` trait を beatoraja-types に定義、core が impl
-  - PlayerResource wrapper (35メソッド) → 既存の `PlayerResourceAccess` trait を beatoraja-types に移動
-  - RankingDataCache → beatoraja-ir の実型を直接参照
-- [ ] **beatoraja-modmenu の forwarding スタブ** (~110行)
-  - MainController (3メソッド) → 上記 `MainControllerAccess` trait を使用
-  - MusicSelector/Bar/SongBar → beatoraja-select の実型を直接参照 (modmenu→select 依存追加)
-  - Skin/SkinObject → beatoraja-skin の実型を直接参照
-- [ ] **beatoraja-decide の forwarding スタブ** (~85行)
-  - MainControllerRef (3メソッド) → `MainControllerAccess` trait を使用
-  - AudioProcessorStub → beatoraja-audio の `AudioDriver` trait を直接使用
-  - SkinStub/load_skin/play_sound → beatoraja-skin の実型を使用
-- [ ] **beatoraja-external の forwarding スタブ** (~135行, Twitter4j 除く)
-  - ScoreDatabaseAccessor → beatoraja-song の実 trait を直接参照
-  - MainState struct / ScreenType / AbstractResult → beatoraja-types に共通定義を移動
-  - Property traits/factories → beatoraja-types に移動
-
-**見積り:** ~400 行変更 (削除中心) + ~15 テスト
+残存 (deeper type hierarchy 変更が必要):
+- [ ] beatoraja-result MainController/PlayerResource wrapper — crate 固有型 (BMSPlayerInputProcessor, IRStatus 等) に依存
+- [ ] beatoraja-decide MainControllerRef/SkinStub — BMSPlayerInputProcessor, AudioProcessorStub に依存
+- [ ] beatoraja-modmenu Skin/SkinObject/MusicSelector/Bar stubs — レンダリング依存 → **Phase 25d-2** で対応
+- [ ] beatoraja-external Property traits/factories — &MainState 型互換性 → **Phase 29a** で対応
 
 #### 25d-2: レンダリング連携スタブの解消 (~465行)
 
@@ -121,22 +108,9 @@ clippy 警告ゼロ (24ファイル修正)、cargo fmt クリーン、#[allow(cl
 
 **見積り:** ~350 行変更 + ~10 テスト
 
-#### 25d-3: 型定義スタブの beatoraja-types 集約 (~280行)
+#### 25d-3: 型定義スタブの beatoraja-types 集約 — complete
 
-散在する型定義スタブを beatoraja-types に集約して single source of truth を確立。
-
-- [ ] **beatoraja-types のスタブ解消** (~205行)
-  - JudgeAlgorithm / BMSPlayerRule enums → 完全定義 (Java の全バリアント)
-  - BarSorter → beatoraja-select の実型を re-export (types→select 循環に注意、必要なら trait 化)
-  - scroll_speed/long_note/mine_note modifier stubs → 完全実装 (beatoraja-pattern の modify() と連携)
-  - IRConnectionManager → beatoraja-ir の実型を re-export
-  - bms_player_input_device/KeyInputLog/PatternModifyLog → 完全定義
-- [ ] **beatoraja-launcher のスタブ** (~75行, TwitterAuth 除く)
-  - MainLoader display stubs → 実装 or 削除 (ランチャー UI 完成後に不要)
-  - VersionChecker → HTTP リクエスト実装 (reqwest)
-  - SongDatabaseUpdateListener → コールバック trait 化
-
-**見積り:** ~250 行変更 + ~10 テスト
+beatoraja-types: JudgeAlgorithm (Score variant 追加)、BMSPlayerRule (7 variants)、BarSorter (12 variant enum)、modifier Mode 型 (Java 全バリアント)、PatternModifyLog (section/modify 構造)。beatoraja-launcher: SongDatabaseUpdateListener (AtomicI32)、VersionChecker (reqwest GitHub API)、DisplayMode (デフォルト値)。+29 テスト。
 
 #### 永久保持 (対応不要)
 - Twitter4j → `bail!()` (~155行, beatoraja-external + beatoraja-launcher) — サービス終了のため永久保持
