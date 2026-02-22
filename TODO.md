@@ -23,18 +23,19 @@ Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 1
 - [x] Add skin browsing UI to Skin tab — integrated `SkinConfigurationView` into `LauncherUi`: skin type ComboBox (19 types), skin header ComboBox (filesystem-scanned skins), dynamic CustomOption/CustomFile/CustomOffset egui widgets, history-aware save/restore on type/header switch, commit persists to `player.skin`/`skin_history`
 - [x] ~~Add key binding editing grid to Input tab~~ — NOT NEEDED: Java `InputConfigurationView` is a settings panel (mode, duration, controller table, mouse scratch) which is already fully implemented in Rust. The per-key binding grid is in separate `KeyConfiguration` game-state class, not part of the launcher UI
 
-## Phase 16b: Golden Master Test Activation (incomplete)
+## Phase 16b: Golden Master Test Activation (partially complete)
 
+- [x] Delete duplicate pending tests — `compare_rule.rs` and `compare_pattern.rs` in `pending/` were duplicates of already-active versions with real imports; deleted
 - [ ] Add missing fixtures for modules not yet covered (modmenu, select bar, stream) — deferred until Java exporter updated
-- [ ] Reactivate remaining 17 pending test files — blocked on multiple levels:
-  - **Fictional crate names:** tests import `bms_config`, `bms_skin`, `bms_audio`, `bms_render` which don't exist; actual crates are `beatoraja_skin`, `beatoraja_audio`, `beatoraja_render`, `beatoraja_types`
-  - **Missing modules:** `bms_render::eval`, `bms_render::state_provider::{StaticStateProvider, SkinStateProvider}` not implemented — blocks `render_snapshot.rs`, `compare_eval_test_skins.rs` (10 tests)
-  - **Missing audio API:** `bms_audio::decode::load_audio()`, `bms_audio::renderer::f32_to_i16()` not implemented — blocks `compare_audio.rs` (11 tests)
-  - **API signature mismatch:** tests assume free functions (`json_loader::load_skin()`), actual API uses struct methods (`JsonSkinLoader.load_skin()`) — blocks `compare_skin.rs` (13 tests)
-  - **Type/field divergence:** tests reference `SkinObjectType` (actual: `SkinObject`), `skin.width`/`skin.objects` as pub (actual: private), `skin.scale_x`/`skin.scale_y`/`skin.options`/`skin.custom_events`/`skin.custom_timers` not present
-  - **e2e_helpers.rs:** blocks 7 E2E tests (course_e2e, e2e_edge_cases, e2e_judge, exhaustive_e2e, full_pipeline_integration, replay_roundtrip_e2e, timing_boundary_e2e); depends on JudgeManager integration + KeyInputLog import fixes
+- [ ] Reactivate remaining 15 pending test files — blocked on multiple levels:
+  - **JudgeManager::update() is a stub** (primary blocker, 12 of 15 tests): `beatoraja-play/src/judge_manager.rs` `update(&mut self, _mtime: i64)` has empty body with TODO comment "Phase 7+ dependency — requires BMSPlayer, BMSPlayerInputProcessor, AudioDriver". This is the 400+ line Java judge loop. Blocks: `compare_judge.rs`, `compare_judge_manager.rs`, `compare_replay_e2e.rs`, and all 7 E2E tests via `e2e_helpers.rs`
+  - **Missing judge API types:** `JudgeConfig` struct, `JUDGE_PG`/`JUDGE_GR`/etc. constants, `model.build_judge_notes()` do not exist. `GaugeType` is `i32` constants (not enum). `GrooveGauge::new()` signature differs from test expectations
+  - **Missing rendering API:** `StaticStateProvider`, `SkinStateProvider`, `render_snapshot` module not implemented — blocks `compare_eval_test_skins.rs`, `compare_render_snapshot.rs` (10 tests)
+  - **Missing audio API:** `load_audio()`, `f32_to_i16()` not implemented in `beatoraja-audio` — blocks `compare_audio.rs` (11 tests)
+  - **Skin loader API mismatch:** tests assume free functions (`json_loader::load_skin()`), actual API uses struct methods (`JsonSkinLoader.load_skin()`) — blocks `compare_skin.rs` (13 tests). Also: `skin.width`/`skin.objects` are private, `skin.scale_x`/`skin.scale_y`/`skin.options` not present
+  - **Missing BGA API:** `BgaProcessor` struct not found — blocks `compare_bga_timeline.rs`
   - **Fixture generation:** compare_audio, compare_bga_timeline need Java exporter updates
-  - **Resolution:** requires Phase 13f (eval/state_provider), Phase 18 (stub removal), then full test rewrite against actual API
+  - **Resolution:** requires JudgeManager::update() implementation (Phase 18), rendering state providers, audio decode API, then full test rewrite against actual API
 
 ## Phase 18: Post-Phase 13 Lifecycle Wiring
 
