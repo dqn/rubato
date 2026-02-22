@@ -465,7 +465,7 @@ impl DifficultyTableParser {
                 header.insert("attr".to_string(), Value::Object(obj));
             }
 
-            // TODO: course encoding
+            // Java: "TODO 後でcourseの仕様に合わせる" — incomplete in Java too (only name/style)
             let course = dt.get_course();
             if !course.is_empty() {
                 let mut grade: Vec<Value> = Vec::new();

@@ -144,12 +144,13 @@ impl BytePCM {
                     && (((position + 1) * self.channels as i64 + j as i64) as usize)
                         < self.sample.len()
                 {
-                    // Java uses short for interpolation of byte values
-                    let sample1 =
-                        self.sample[(position * self.channels as i64 + j as i64) as usize] as i16;
+                    // Java's byte is signed; assigning byte→short does sign extension.
+                    // u8→i8→i16 matches Java's sign-extended promotion.
+                    let sample1 = self.sample[(position * self.channels as i64 + j as i64) as usize]
+                        as i8 as i16;
                     let sample2 = self.sample
                         [((position + 1) * self.channels as i64 + j as i64) as usize]
-                        as i16;
+                        as i8 as i16;
                     samples[(i * self.channels as i64 + j as i64) as usize] =
                         ((sample1 as i64 * (sample as i64 - modv) + sample2 as i64 * modv)
                             / sample as i64) as u8;
@@ -228,5 +229,34 @@ impl BytePCM {
 
     pub fn validate(&self) -> bool {
         !self.sample.is_empty()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_sample_sign_extension_interpolation() {
+        // Java's byte is signed: 0xFF = -1, 0x00 = 0
+        // When resampling with interpolation, Java sign-extends byte→short,
+        // so 0xFF becomes -1 (not 255). This affects interpolation results.
+        //
+        // Samples: [0xFF, 0x00] at 44100Hz mono
+        // Resample to 88200Hz → 4 output samples
+        // At i=1: interpolate between 0xFF(-1) and 0x00(0)
+        //   Java (signed): (-1 * 44100 + 0 * 44100) / 88200 = 0 → 0x00
+        //   Bug (unsigned): (255 * 44100 + 0 * 44100) / 88200 = 127 → 0x7F
+        let pcm = BytePCM::new(1, 44100, 0, 2, vec![0xFF, 0x00]);
+        let resampled = pcm.change_sample_rate(88200);
+
+        // With correct sign extension: [0xFF, 0x00, 0x00, 0x00]
+        // Without (bug):               [0xFF, 0x7F, 0x00, 0x00]
+        assert_eq!(resampled.sample[0], 0xFF);
+        assert_eq!(
+            resampled.sample[1], 0x00,
+            "Interpolation should use signed byte arithmetic (Java sign extension)"
+        );
+        assert_eq!(resampled.sample[2], 0x00);
     }
 }
