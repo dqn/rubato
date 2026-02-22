@@ -594,17 +594,37 @@ impl<'a> SongDatabaseUpdater<'a> {
         }
 
         // Preserve tags and favorites
-        let records = accessor.query_songs("SELECT sha256, tag, favorite FROM song", &[]);
-        for record in &records {
-            if !record.tag.is_empty() {
-                property
-                    .tags
-                    .insert(record.sha256.clone(), record.tag.clone());
-            }
-            if record.favorite > 0 {
-                property
-                    .favorites
-                    .insert(record.sha256.clone(), record.favorite);
+        {
+            let mut stmt = match accessor
+                .conn
+                .prepare("SELECT sha256, tag, favorite FROM song")
+            {
+                Ok(s) => s,
+                Err(e) => {
+                    log::error!("Error preparing tag/favorite query: {}", e);
+                    return;
+                }
+            };
+            let rows = match stmt.query_map([], |row| {
+                let sha256: String = row.get::<_, String>(0).unwrap_or_default();
+                let tag: String = row.get::<_, String>(1).unwrap_or_default();
+                let favorite: i32 = row.get::<_, i32>(2).unwrap_or(0);
+                Ok((sha256, tag, favorite))
+            }) {
+                Ok(r) => r,
+                Err(e) => {
+                    log::error!("Error querying tags/favorites: {}", e);
+                    return;
+                }
+            };
+            for row in rows.flatten() {
+                let (sha256, tag, favorite) = row;
+                if !tag.is_empty() {
+                    property.tags.insert(sha256.clone(), tag);
+                }
+                if favorite > 0 {
+                    property.favorites.insert(sha256, favorite);
+                }
             }
         }
 
@@ -1260,5 +1280,201 @@ mod tests {
         }
         accessor.add_plugin(Box::new(TestPlugin));
         assert_eq!(accessor.plugins.len(), 1);
+    }
+
+    #[test]
+    fn test_update_song_datas_scans_bms_files() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let bms_dir = tmpdir.path().join("songs").join("testpack");
+        fs::create_dir_all(&bms_dir).unwrap();
+
+        // Write a minimal BMS file
+        let bms_content = "\
+#PLAYER 1\n\
+#GENRE Test\n\
+#TITLE Update Test Song\n\
+#ARTIST tester\n\
+#BPM 120\n\
+#PLAYLEVEL 3\n\
+#RANK 2\n\
+#TOTAL 300\n\
+#WAV01 kick.wav\n\
+#00111:01\n\
+";
+        fs::write(bms_dir.join("test.bms"), bms_content).unwrap();
+
+        let db_path = tmpdir.path().join("song.db");
+        let bmsroot = vec![tmpdir.path().join("songs").to_string_lossy().to_string()];
+        let accessor =
+            SQLiteSongDatabaseAccessor::new(&db_path.to_string_lossy(), &bmsroot).unwrap();
+
+        accessor.update_song_datas(None, &bmsroot, true, false, None);
+
+        // Verify the song was inserted
+        let songs = accessor.get_song_datas("title", "Update Test Song");
+        assert_eq!(songs.len(), 1);
+        assert_eq!(songs[0].artist, "tester");
+        assert!(songs[0].notes > 0);
+    }
+
+    #[test]
+    fn test_update_song_datas_incremental_skips_unchanged() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let bms_dir = tmpdir.path().join("songs").join("testpack");
+        fs::create_dir_all(&bms_dir).unwrap();
+
+        let bms_content = "\
+#PLAYER 1\n\
+#TITLE Incremental Test\n\
+#BPM 120\n\
+#WAV01 kick.wav\n\
+#00111:01\n\
+";
+        fs::write(bms_dir.join("incr.bms"), bms_content).unwrap();
+
+        let db_path = tmpdir.path().join("song.db");
+        let bmsroot = vec![tmpdir.path().join("songs").to_string_lossy().to_string()];
+        let accessor =
+            SQLiteSongDatabaseAccessor::new(&db_path.to_string_lossy(), &bmsroot).unwrap();
+
+        // First update
+        let listener1 = SongDatabaseUpdateListener::new();
+        accessor.update_song_datas_with_listener(None, &bmsroot, false, false, None, &listener1);
+        assert_eq!(listener1.get_new_bms_files_count(), 1);
+
+        // Second update (no changes) - should skip
+        let listener2 = SongDatabaseUpdateListener::new();
+        accessor.update_song_datas_with_listener(None, &bmsroot, false, false, None, &listener2);
+        assert_eq!(listener2.get_new_bms_files_count(), 0);
+        assert_eq!(listener2.get_bms_files_count(), 1);
+    }
+
+    #[test]
+    fn test_update_song_datas_creates_folder_records() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let bms_dir = tmpdir.path().join("songs").join("pack1");
+        fs::create_dir_all(&bms_dir).unwrap();
+
+        let bms_content = "\
+#TITLE Folder Test\n\
+#BPM 120\n\
+#WAV01 kick.wav\n\
+#00111:01\n\
+";
+        fs::write(bms_dir.join("folder_test.bms"), bms_content).unwrap();
+
+        let db_path = tmpdir.path().join("song.db");
+        let bmsroot = vec![tmpdir.path().join("songs").to_string_lossy().to_string()];
+        let accessor =
+            SQLiteSongDatabaseAccessor::new(&db_path.to_string_lossy(), &bmsroot).unwrap();
+
+        accessor.update_song_datas(None, &bmsroot, true, false, None);
+
+        // Check that folder records were created (at least root and pack1)
+        let all_folders: Vec<FolderData> = {
+            let mut stmt = accessor.conn.prepare("SELECT * FROM folder").unwrap();
+            let rows = stmt
+                .query_map([], |row| {
+                    Ok(FolderData {
+                        title: row.get::<_, String>(0).unwrap_or_default(),
+                        subtitle: row.get::<_, String>(1).unwrap_or_default(),
+                        command: row.get::<_, String>(2).unwrap_or_default(),
+                        path: row.get::<_, String>(3).unwrap_or_default(),
+                        banner: row.get::<_, String>(4).unwrap_or_default(),
+                        parent: row.get::<_, String>(5).unwrap_or_default(),
+                        folder_type: row.get::<_, i32>(6).unwrap_or(0),
+                        date: row.get::<_, i32>(7).unwrap_or(0),
+                        adddate: row.get::<_, i32>(8).unwrap_or(0),
+                        max: row.get::<_, i32>(9).unwrap_or(0),
+                    })
+                })
+                .unwrap();
+            rows.flatten().collect()
+        };
+        assert!(
+            !all_folders.is_empty(),
+            "Folder records should be created during update"
+        );
+    }
+
+    #[test]
+    fn test_update_song_datas_empty_bmsroot() {
+        let accessor = create_test_accessor();
+        // Should not panic, just log warning and return
+        accessor.update_song_datas(None, &[], true, false, None);
+    }
+
+    #[test]
+    fn test_update_song_datas_preserves_favorites() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let bms_dir = tmpdir.path().join("songs").join("favpack");
+        fs::create_dir_all(&bms_dir).unwrap();
+
+        let bms_content = "\
+#TITLE Favorite Test\n\
+#BPM 120\n\
+#WAV01 kick.wav\n\
+#00111:01\n\
+";
+        fs::write(bms_dir.join("fav.bms"), bms_content).unwrap();
+
+        let db_path = tmpdir.path().join("song.db");
+        let bmsroot = vec![tmpdir.path().join("songs").to_string_lossy().to_string()];
+        let accessor =
+            SQLiteSongDatabaseAccessor::new(&db_path.to_string_lossy(), &bmsroot).unwrap();
+
+        // First update
+        accessor.update_song_datas(None, &bmsroot, true, false, None);
+
+        // Set favorite on the song
+        let songs = accessor.get_song_datas("title", "Favorite Test");
+        assert_eq!(songs.len(), 1);
+        let sha256 = songs[0].sha256.clone();
+        let _ = accessor.conn.execute(
+            "UPDATE song SET favorite = 3 WHERE sha256 = ?1",
+            rusqlite::params![sha256],
+        );
+
+        // Full re-update (updateAll=true)
+        accessor.update_song_datas(None, &bmsroot, true, false, None);
+
+        // Verify favorite is preserved
+        let songs = accessor.get_song_datas("title", "Favorite Test");
+        assert_eq!(songs.len(), 1);
+        assert_eq!(
+            songs[0].favorite, 3,
+            "Favorite should be preserved across updates"
+        );
+    }
+
+    #[test]
+    fn test_update_song_datas_auto_difficulty() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let bms_dir = tmpdir.path().join("songs").join("diffpack");
+        fs::create_dir_all(&bms_dir).unwrap();
+
+        // "beginner" in subtitle -> difficulty 1
+        let bms_content = "\
+#TITLE Test\n\
+#SUBTITLE beginner\n\
+#BPM 120\n\
+#WAV01 kick.wav\n\
+#00111:01\n\
+";
+        fs::write(bms_dir.join("diff.bms"), bms_content).unwrap();
+
+        let db_path = tmpdir.path().join("song.db");
+        let bmsroot = vec![tmpdir.path().join("songs").to_string_lossy().to_string()];
+        let accessor =
+            SQLiteSongDatabaseAccessor::new(&db_path.to_string_lossy(), &bmsroot).unwrap();
+
+        accessor.update_song_datas(None, &bmsroot, true, false, None);
+
+        let songs = accessor.get_song_datas("title", "Test");
+        assert_eq!(songs.len(), 1);
+        assert_eq!(
+            songs[0].difficulty, 1,
+            "Beginner subtitle should set difficulty to 1"
+        );
     }
 }

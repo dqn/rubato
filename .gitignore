@@ -18,6 +18,7 @@ AGENTS.local.md
 beatoraja-java/**
 lr2oraja-rust/config_player.json
 lr2oraja-rust/config_sys.json
+lr2oraja-rust/**/player/
 lr2oraja-rust/**/db/
 lr2oraja-rust/songdata.db
 lr2oraja-rust/table/
