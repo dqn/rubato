@@ -49,7 +49,7 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 - [x] Add judge constants (`JUDGE_PG`, `JUDGE_GR`, `JUDGE_GD`, `JUDGE_BD`, `JUDGE_PR`, `JUDGE_MS`) — in `bms-model/src/judge_note.rs`
 - [x] Add `BMSModel::build_judge_notes()` — in `bms-model/src/judge_note.rs`, builds flat lane-grouped array with LN pair cross-linking via `pair_index`. 7 tests pass.
 - [x] Add `JudgeAlgorithm::compare_times()` — variant of `compare()` taking raw time/state values and `&[[i64; 2]]` judge table (used by `update()` where only `JudgeNote` is available)
-- [ ] Rewrite `e2e_helpers.rs` against actual API — update imports, adapt to `GrooveGauge::new()` signature (i32 gauge type, not enum), fix `KeyInputLog` path
+- [ ] Rewrite `e2e_helpers.rs` and `compare_judge_manager.rs` against actual API — `JudgeManager::new(&config)` → `from_config(&config)`, `play_mode` → `mode` field, adapt `GrooveGauge::new()` signature (i32 gauge type, not enum), fix `KeyInputLog` path. Also add bounds check for `pair_index` access in `note_states` to prevent panics from malformed data
 
 ### 18b: Rendering state providers (unblocks 2 Phase 16b tests)
 
