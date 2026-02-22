@@ -4,7 +4,7 @@ Dependency graph order. Each module is ported only after its dependencies are co
 
 ## Completed Phases
 
-Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 1185 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) complete. Phase 18c (audio decode API) complete. Phase 18f (e2e test activation) complete. Phase 18g (BRD replay codec) complete. See AGENTS.md for details.
+Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 1200 tests pass. Zero runtime `todo!()`/`unimplemented!()`. Phase 18a (core judge loop) complete. Phase 18b (rendering state providers) complete. Phase 18c (audio decode API) complete. Phase 18f (e2e test activation) complete. Phase 18g (BRD replay codec) complete. See AGENTS.md for details.
 
 ## Phase 13f: egui UI (complete)
 
@@ -29,10 +29,10 @@ Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 1
 - [ ] Add missing fixtures for modules not yet covered (modmenu, select bar, stream) — Java exporters exist; deferred until Rust-side APIs are implemented
 - [x] Activate 9 e2e test files (Phase 18f) — moved from `pending/` to active: `e2e_judge.rs` (20), `course_e2e.rs` (9), `compare_judge.rs` (6), `compare_replay_e2e.rs` (1), `e2e_edge_cases.rs` (11), `exhaustive_e2e.rs` (72), `timing_boundary_e2e.rs` (10), `full_pipeline_integration.rs` (4), `replay_roundtrip_e2e.rs` (5). Total 138 new tests. Fixed `build_judge_notes()` time ordering bug (was lane-grouped, now sorted by `(time_us, lane)` with pair_index remapping).
 - [ ] Reactivate remaining 4 pending test files — blocked on 18b + 18d:
-  - **Missing rendering API:** `StaticStateProvider`, `SkinStateProvider`, `render_snapshot` module not implemented — blocks `compare_eval_test_skins.rs`, `compare_render_snapshot.rs` (10 tests)
+  - **~~Missing rendering API~~** (resolved by 18b): `StaticStateProvider`, `SkinStateProvider`, `render_snapshot`, `eval` modules now implemented. **Still blocked:** `compare_eval_test_skins.rs` requires `test-bms/test-skin/` directory with test skin files (not present); `compare_render_snapshot.rs` requires `skin/ECFN/` directory with ECFN skin files (not present). Both need Java-exported golden master fixtures to be generated
   - **Skin loader API mismatch:** tests assume free functions (`json_loader::load_skin()`), actual API uses struct methods (`JsonSkinLoader.load_skin()`) — blocks `compare_skin.rs` (13 tests). Also: `skin.width`/`skin.objects` are private, `skin.scale_x`/`skin.scale_y`/`skin.options` not present
   - **Missing BGA API:** `BgaProcessor` struct not found — blocks `compare_bga_timeline.rs`
-  - **Resolution:** Remaining blockers: 18b (rendering state providers), 18d (BGA + skin test rewrite)
+  - **Resolution:** 18b complete (rendering API implemented). Remaining blockers: test skin fixture files (test-bms/test-skin/, skin/ECFN/), 18d (BGA + skin test rewrite)
 
 ## Phase 18: Post-Phase 13 Lifecycle Wiring
 
@@ -47,10 +47,13 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 - [x] Add `JudgeAlgorithm::compare_times()` — variant of `compare()` taking raw time/state values and `&[[i64; 2]]` judge table (used by `update()` where only `JudgeNote` is available)
 - [x] Rewrite `e2e_helpers.rs` and `compare_judge_manager.rs` against actual API — `from_config()`, `mode` field, `GrooveGauge::new(&model, i32, &GaugeProperty)`, `BMSDecoder::new().decode(ChartInformation)`, `KeyInputLog::with_data()`. Added `pair_index` bounds checks in `update_micro()` and HCN gauge loop. Fixed `build_judge_notes()` LN pairing (stack-based post-processing). Fixed `from_config()` total_notes to exclude LN end notes for LNTYPE_LONGNOTE (matches Java). `compare_judge_manager.rs` activated (moved out of pending). 993 tests pass.
 
-### 18b: Rendering state providers (unblocks 2 Phase 16b tests)
+### 18b: Rendering state providers (complete — unblocks 2 Phase 16b tests)
 
-- [ ] Implement `StaticStateProvider` and `SkinStateProvider` — provide timer/number/flag values to skin evaluation engine
-- [ ] Implement `render_snapshot` module in golden-master — snapshot infrastructure for comparing rendered skin state against Java fixtures
+- [x] Add `get_id()` to property traits — added default `fn get_id(&self) -> i32 { i32::MIN }` to `BooleanProperty`, `IntegerProperty`, `FloatProperty`, `StringProperty` traits; all factory implementations updated to store and return actual IDs
+- [x] Add getter methods to skin objects — `SkinImage::get_ref_prop()`/`get_source_count()`/`has_valid_source()`, `SkinNumber::get_ref_prop()`, `SkinSlider::get_ref_prop()`/`get_direction()`, `SkinGraph::get_ref_prop()`/`get_direction()`
+- [x] Implement `SkinStateProvider` trait and `StaticStateProvider` — decoupled state interface for golden-master testing; provides timer/boolean/integer/float/string/offset values; boolean negation via negative IDs; `Serialize`/`Deserialize` on `SkinOffset`
+- [x] Implement `eval` module in golden-master — pure-function keyframe evaluation replicating `SkinObjectData::prepare_region/prepare_color/prepare_angle` as immutable functions; `resolve_common()`, `compute_rate()`, `compute_region()`, `compute_color()`, `compute_angle()`, `resolve_text_content()`; 6 unit tests
+- [x] Implement `render_snapshot` module in golden-master — snapshot infrastructure for comparing rendered skin state against Java fixtures; `capture_render_snapshot()`, `compare_snapshots()`, type-specific detail resolution for all 12 `SkinObject` variants; draw condition and option evaluation; workaround functions for skin-specific quirks; 4 unit tests
 
 ### 18c: Audio decode API (complete — unblocks 1 Phase 16b test)
 
@@ -90,6 +93,7 @@ Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) 
 ### New Issues Found
 
 - [x] `build_judge_notes()` returned notes in lane-grouped order instead of time order — caused `bpm_extreme_timing_structure` and `multi_stop_timing_gaps` tests to fail. Fixed by sorting by `(time_us, lane)` and remapping `pair_index` values
+- [ ] Missing test skin fixture directories — `test-bms/test-skin/` and `skin/ECFN/` directories do not exist in the repository. These are needed by pending golden master tests `compare_eval_test_skins.rs` and `compare_render_snapshot.rs`. Need to either add sample skin files or generate fixtures from Java exporter
 
 ## Remaining Stubs
 

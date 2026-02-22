@@ -6,17 +6,17 @@ pub mod bga_timeline_fixtures;
 pub mod course_data_fixtures;
 pub mod database_fixtures;
 pub mod e2e_helpers;
+pub mod eval;
 pub mod judge_fixtures;
 pub mod pattern_fixtures;
 pub mod pattern_modifier_detail_fixtures;
-// render_snapshot depends on beatoraja-skin/beatoraja-render internal APIs
-// (SkinStateProvider, eval, property_id, etc.). Moved to src/pending/.
-// pub mod render_snapshot;
+pub mod render_snapshot;
 pub mod replay_e2e_fixtures;
 pub mod rule_fixtures;
 pub mod score_data_property_fixtures;
 pub mod skin_fixtures;
 pub mod song_information_fixtures;
+pub mod state_provider;
 
 use std::path::Path;
 
