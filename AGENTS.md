@@ -16,6 +16,7 @@ lr2oraja (beatoraja fork, Java 313 files / 72k+ lines) → Rust. All features in
 - After completing a phase/task, update TODO.md (progress, new issues, deferred items) and AGENTS.md (Implementation Status, Remaining Stubs).
 - When new issues are discovered or deferred, add them to TODO.md immediately.
 - When tasks become unblocked, update their blocker status in TODO.md.
+- When using worktree isolation for team agents, **always merge worktree branches before sending shutdown requests**.
 
 ## Type Mapping
 
