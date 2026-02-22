@@ -84,13 +84,14 @@ All phases complete. **1241 tests pass. Zero runtime `todo!()`/`unimplemented!()
 | 18d | BGA/skin test APIs: `BGAProcessor` timeline, `JSONSkinLoader`/`LR2SkinHeaderLoader` tests, 3 skin loader bugs fixed |
 | 18e-1 | Cross-crate stub dedup: `ImGuiNotify` centralized in beatoraja-types, `Random`/`LR2Random` → beatoraja-pattern |
 | 18e-2 | Lifecycle stub replacement: MainController removed from 7/8 crates, PlayerResource wrapper complete for all 6 crates, `PlayerResourceAccess` trait (32 methods), stub types resolved (FloatArray/GdxArray/GrooveGaugeStub → real) |
+| 18e-3 | Modmenu skin stub replacement: SkinHeader/CustomOption/CustomFile/CustomOffset/CustomCategory + loaders (JSON/LR2/Lua) replaced with real beatoraja-skin re-exports, ~170 lines removed, conversion helpers added |
 | 18f | E2E test activation: 9 test files, 138 tests. `build_judge_notes()` time ordering fix |
 | 18g | BRD replay codec: gzip-compressed JSON, `read_brd()`/`write_brd()` + course variants |
 
 ## Remaining Stubs
 
 - **MainController:** result (6 methods actively used, blocked on type mismatches), md-processor (intentional adapter, deferred), modmenu (3-method stub: get_config, get_player_config, save_config — until real MainController exists)
-- **Remaining stubs.rs:** lifecycle stubs, cross-crate re-exports, skin/rendering types (modmenu: SkinHeader/Skin/SkinObject/SkinLoader stubs)
+- **Remaining stubs.rs:** lifecycle stubs, cross-crate re-exports, skin/rendering types (modmenu: Skin/SkinObject stubs — real SkinObject is incompatible enum)
 - **Platform:** Windows named pipe (not yet implemented)
 
 ## Lessons Learned
