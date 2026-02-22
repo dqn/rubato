@@ -1,6 +1,8 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 
+use beatoraja_types::random_history;
+pub use beatoraja_types::random_history::RandomHistoryEntry;
 use log::error;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
@@ -11,7 +13,6 @@ static BLACK_WHITE_PERMUTE: Mutex<bool> = Mutex::new(false);
 static ACTIVE: Mutex<bool> = Mutex::new(false);
 static LANE_MASK: Mutex<Vec<bool>> = Mutex::new(Vec::new());
 static RANDOM_SEED_MAP: Mutex<Option<HashMap<i32, i64>>> = Mutex::new(None);
-static LANE_ORDER_HISTORY: Mutex<VecDeque<RandomHistoryEntry>> = Mutex::new(VecDeque::new());
 
 fn init_defaults() {
     let mut lane_order = LANE_ORDER.lock().unwrap();
@@ -21,26 +22,6 @@ fn init_defaults() {
     let mut lane_mask = LANE_MASK.lock().unwrap();
     if lane_mask.is_empty() {
         *lane_mask = vec![false; 7];
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct RandomHistoryEntry {
-    pub title: String,
-    pub random: String,
-}
-
-impl RandomHistoryEntry {
-    pub fn new(title: String, random: String) -> Self {
-        RandomHistoryEntry { title, random }
-    }
-
-    pub fn get_title(&self) -> &str {
-        &self.title
-    }
-
-    pub fn get_random(&self) -> &str {
-        &self.random
     }
 }
 
@@ -162,11 +143,10 @@ impl RandomTrainer {
     }
 
     pub fn get_random_history() -> VecDeque<RandomHistoryEntry> {
-        LANE_ORDER_HISTORY.lock().unwrap().clone()
+        random_history::get_random_history()
     }
 
     pub fn add_random_history(hist_entry: RandomHistoryEntry) {
-        let mut history = LANE_ORDER_HISTORY.lock().unwrap();
-        history.push_front(hist_entry);
+        random_history::add_random_history(hist_entry);
     }
 }

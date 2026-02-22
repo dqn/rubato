@@ -39,6 +39,12 @@ pub mod player_resource_access;
 // UI notification facade
 pub mod imgui_notify;
 
+// Random history (shared between beatoraja-pattern and beatoraja-modmenu)
+pub mod random_history;
+
+// Last-played-sort state (shared between beatoraja-select and beatoraja-modmenu)
+pub mod last_played_sort;
+
 // Data models
 pub mod course_data;
 pub mod folder_data;

@@ -764,6 +764,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "beatoraja-core",
+ "beatoraja-types",
  "bms-model",
  "log",
  "rand 0.8.5",

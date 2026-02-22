@@ -513,13 +513,16 @@ impl SongDatabaseAccessor for NullSongDatabaseAccessor {
 // SongManagerMenu — stub for beatoraja.select.SongManagerMenu
 // ============================================================
 
+// SongManagerMenu: last-played-sort state moved to beatoraja-types (Phase 18e-8)
+// Thin wrapper preserved for API compatibility
 pub struct SongManagerMenu;
-
 impl SongManagerMenu {
     pub fn is_last_played_sort_enabled() -> bool {
-        false
+        beatoraja_types::last_played_sort::is_enabled()
     }
-    pub fn force_disable_last_played_sort() {}
+    pub fn force_disable_last_played_sort() {
+        beatoraja_types::last_played_sort::force_disable();
+    }
 }
 
 // ============================================================

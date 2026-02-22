@@ -22,4 +22,3 @@ pub mod practice_modifier;
 pub mod random;
 pub mod randomizer;
 pub mod scroll_speed_modifier;
-pub mod stubs;

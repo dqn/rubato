@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::java_random::JavaRandom;
 use crate::pattern_modifier::{AssistLevel, PatternModifier, PatternModifierBase};
-use crate::stubs::RandomTrainer;
+use beatoraja_types::random_history::{RandomHistoryEntry, add_random_history};
 use bms_model::bms_model::BMSModel;
 use bms_model::mode::Mode;
 use bms_model::note::Note;
@@ -60,10 +60,10 @@ fn lane_shuffle_modify(
         for i in 0..random.len() - 1 {
             random_sb.push_str(&(random[i] + 1).to_string());
         }
-        let rt = RandomTrainer::new();
-        RandomTrainer::add_random_history(
-            rt.new_random_history_entry(model.get_title(), &random_sb),
-        );
+        add_random_history(RandomHistoryEntry::new(
+            model.get_title().to_string(),
+            random_sb,
+        ));
     }
 
     let lanes = mode.key() as usize;
