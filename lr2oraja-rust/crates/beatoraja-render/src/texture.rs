@@ -244,11 +244,26 @@ impl TextureRegion {
         self.texture = Some(texture);
     }
 
+    /// Java: TextureRegion.setRegion(int x, int y, int width, int height)
+    /// Sets pixel coords and recalculates UV coordinates from the texture dimensions.
     pub fn set_region_from(&mut self, x: i32, y: i32, width: i32, height: i32) {
         self.region_x = x;
         self.region_y = y;
         self.region_width = width;
         self.region_height = height;
+        // Recalculate UVs — matches LibGDX setRegion(int,int,int,int)
+        if let Some(ref tex) = self.texture {
+            let tw = tex.width;
+            let th = tex.height;
+            if tw > 0 && th > 0 {
+                let inv_w = 1.0 / tw as f32;
+                let inv_h = 1.0 / th as f32;
+                self.u = x as f32 * inv_w;
+                self.v = y as f32 * inv_h;
+                self.u2 = (x + width) as f32 * inv_w;
+                self.v2 = (y + height) as f32 * inv_h;
+            }
+        }
     }
 
     /// Set region relative to a parent TextureRegion, recalculating UV coords.
@@ -304,5 +319,114 @@ impl TextureRegion {
         self.region_width = other.region_width;
         self.region_height = other.region_height;
         self.texture = other.texture.clone();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_texture(w: i32, h: i32) -> Texture {
+        Texture {
+            width: w,
+            height: h,
+            disposed: false,
+        }
+    }
+
+    #[test]
+    fn set_region_from_recalculates_uvs() {
+        let tex = make_texture(100, 200);
+        let mut region = TextureRegion::from_texture(tex);
+        // Initially covers full texture: u=0, v=0, u2=1, v2=1
+        assert_eq!(region.u, 0.0);
+        assert_eq!(region.v, 0.0);
+        assert_eq!(region.u2, 1.0);
+        assert_eq!(region.v2, 1.0);
+
+        // Set to sub-region: left half horizontally, top half vertically
+        region.set_region_from(0, 0, 50, 100);
+        assert_eq!(region.region_x, 0);
+        assert_eq!(region.region_y, 0);
+        assert_eq!(region.region_width, 50);
+        assert_eq!(region.region_height, 100);
+        assert!((region.u - 0.0).abs() < 1e-6);
+        assert!((region.v - 0.0).abs() < 1e-6);
+        assert!((region.u2 - 0.5).abs() < 1e-6);
+        assert!((region.v2 - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn set_region_from_offset_region() {
+        let tex = make_texture(200, 200);
+        let mut region = TextureRegion::from_texture(tex);
+        region.set_region_from(50, 100, 100, 50);
+        assert!((region.u - 0.25).abs() < 1e-6);
+        assert!((region.v - 0.5).abs() < 1e-6);
+        assert!((region.u2 - 0.75).abs() < 1e-6);
+        assert!((region.v2 - 0.75).abs() < 1e-6);
+    }
+
+    #[test]
+    fn set_region_from_no_texture_no_uv_change() {
+        let mut region = TextureRegion::new();
+        region.u = 0.1;
+        region.v = 0.2;
+        region.set_region_from(10, 20, 30, 40);
+        // No texture -> UVs unchanged
+        assert_eq!(region.region_x, 10);
+        assert_eq!(region.region_width, 30);
+        assert!((region.u - 0.1).abs() < 1e-6);
+        assert!((region.v - 0.2).abs() < 1e-6);
+    }
+
+    #[test]
+    fn set_region_from_parent_recalculates_uvs() {
+        let tex = make_texture(100, 100);
+        let parent = TextureRegion::from_texture_region(tex, 20, 30, 60, 40);
+        let mut child = TextureRegion::new();
+        child.set_region_from_parent(&parent, 10, 5, 30, 20);
+
+        // Child pixel: parent_x+x=30, parent_y+y=35, width=30, height=20
+        assert_eq!(child.region_x, 10);
+        assert_eq!(child.region_y, 5);
+        assert_eq!(child.region_width, 30);
+        assert_eq!(child.region_height, 20);
+        assert!((child.u - 0.30).abs() < 1e-6);
+        assert!((child.v - 0.35).abs() < 1e-6);
+        assert!((child.u2 - 0.60).abs() < 1e-6);
+        assert!((child.v2 - 0.55).abs() < 1e-6);
+    }
+
+    #[test]
+    fn set_region_from_parent_copies_texture() {
+        let tex = make_texture(64, 64);
+        let parent = TextureRegion::from_texture(tex);
+        let mut child = TextureRegion::new();
+        assert!(child.texture.is_none());
+        child.set_region_from_parent(&parent, 0, 0, 32, 32);
+        assert!(child.texture.is_some());
+        assert_eq!(child.texture.as_ref().unwrap().width, 64);
+    }
+
+    #[test]
+    fn from_texture_region_uvs() {
+        let tex = make_texture(256, 128);
+        let region = TextureRegion::from_texture_region(tex, 64, 32, 128, 64);
+        assert!((region.u - 0.25).abs() < 1e-6);
+        assert!((region.v - 0.25).abs() < 1e-6);
+        assert!((region.u2 - 0.75).abs() < 1e-6);
+        assert!((region.v2 - 0.75).abs() < 1e-6);
+    }
+
+    #[test]
+    fn flip_swaps_uvs() {
+        let tex = make_texture(100, 100);
+        let mut region = TextureRegion::from_texture_region(tex, 0, 0, 50, 50);
+        let orig_u = region.u;
+        let orig_u2 = region.u2;
+        region.flip(true, false);
+        assert_eq!(region.u, orig_u2);
+        assert_eq!(region.u2, orig_u);
     }
 }
