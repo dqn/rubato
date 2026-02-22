@@ -26,7 +26,7 @@ Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 1
 ## Phase 16b: Golden Master Test Activation (partially complete)
 
 - [x] Delete duplicate pending tests — `compare_rule.rs` and `compare_pattern.rs` in `pending/` were duplicates of already-active versions with real imports; deleted
-- [ ] Add missing fixtures for modules not yet covered (modmenu, select bar, stream) — deferred until Java exporter updated
+- [ ] Add missing fixtures for modules not yet covered (modmenu, select bar, stream) — Java exporters exist; deferred until Rust-side APIs are implemented
 - [ ] Reactivate remaining 14 pending test files — blocked on multiple levels:
   - ~~**JudgeManager::update() is a stub**~~ → resolved: full judge loop implemented in Phase 18a. New testable API: `update(&mut self, mtime, &[JudgeNote], &[bool], &[i64], &mut GrooveGauge)`
   - ~~**Missing judge API types**~~ → resolved: `JudgeConfig`, `JUDGE_PG`/`JUDGE_GR`/etc. constants, `build_judge_notes()` all implemented in Phase 18a
@@ -35,7 +35,7 @@ Phases 1–12, 13a–f, 13f follow-up, 13f follow-up 2, 13g, 14, 15a–g, 16a, 1
   - **Missing audio API:** `load_audio()`, `f32_to_i16()` not implemented in `beatoraja-audio` — blocks `compare_audio.rs` (11 tests)
   - **Skin loader API mismatch:** tests assume free functions (`json_loader::load_skin()`), actual API uses struct methods (`JsonSkinLoader.load_skin()`) — blocks `compare_skin.rs` (13 tests). Also: `skin.width`/`skin.objects` are private, `skin.scale_x`/`skin.scale_y`/`skin.options` not present
   - **Missing BGA API:** `BgaProcessor` struct not found — blocks `compare_bga_timeline.rs`
-  - **Fixture generation:** compare_audio, compare_bga_timeline need Java exporter updates
+  - **Fixture availability:** compare_audio, compare_bga_timeline fixtures and Java exporters already exist; blocker is Rust-side API (`load_audio()`, `BgaProcessor`)
   - **Resolution:** Phase 18a (judge loop) complete. Remaining blockers: 18b (rendering state providers), 18c (audio decode API), 18d (BGA + skin test rewrite), then 18f (test activation)
 
 ## Phase 18: Post-Phase 13 Lifecycle Wiring
