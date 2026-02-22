@@ -11,8 +11,6 @@ beatoraja-play.workspace = true
 beatoraja-input.workspace = true
 beatoraja-skin.workspace = true
 log.workspace = true
-serde.workspace = true
-serde_json.workspace = true
 anyhow.workspace = true
 
 [dev-dependencies]

@@ -10,6 +10,5 @@ beatoraja-types.workspace = true
 beatoraja-select.workspace = true
 log.workspace = true
 anyhow.workspace = true
-tokio.workspace = true
 
 [dev-dependencies]

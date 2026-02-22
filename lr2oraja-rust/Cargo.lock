@@ -626,8 +626,6 @@ dependencies = [
  "beatoraja-types",
  "bms-model",
  "log",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -903,7 +901,6 @@ dependencies = [
  "beatoraja-types",
  "bms-model",
  "log",
- "tokio",
 ]
 
 [[package]]
