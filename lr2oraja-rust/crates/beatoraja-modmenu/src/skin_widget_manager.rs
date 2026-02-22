@@ -118,6 +118,35 @@ impl SkinWidgetManager {
         // ImGui.end();
         log::warn!("not yet implemented: SkinWidgetManager::show - egui integration");
     }
+
+    /// Render the skin widget manager window using egui.
+    pub fn show_ui(ctx: &egui::Context) {
+        let _lock = LOCK.lock().unwrap();
+        let mut open = true;
+        egui::Window::new("Skin Widgets")
+            .open(&mut open)
+            .auto_sized()
+            .show(ctx, |ui| {
+                let widgets = WIDGETS.lock().unwrap();
+                if widgets.is_empty() {
+                    ui.label("No skin is loaded");
+                } else {
+                    ui.horizontal(|ui| {
+                        if ui.button("Undo").clicked() {
+                            EVENT_HISTORY.lock().unwrap().undo();
+                        }
+                        let mut show_cursor = SHOW_CURSOR_POSITION.lock().unwrap();
+                        ui.checkbox(&mut show_cursor.value, "Show Position");
+                        drop(show_cursor);
+                        if ui.button("Export").clicked() {
+                            export_changes();
+                        }
+                    });
+                    ui.separator();
+                    ui.label(format!("{} widgets loaded", widgets.len()));
+                }
+            });
+    }
 }
 
 fn export_changes() {

@@ -198,8 +198,7 @@ impl MiscSettingMenu {
                 if constant {
                     let mut constant_val = CONSTANT_VALUE.lock().unwrap().get();
                     ui.add(
-                        egui::Slider::new(&mut constant_val, 0..=5000)
-                            .text("Fade-in Time (ms)"),
+                        egui::Slider::new(&mut constant_val, 0..=5000).text("Fade-in Time (ms)"),
                     );
                     CONSTANT_VALUE.lock().unwrap().set(constant_val);
                 }

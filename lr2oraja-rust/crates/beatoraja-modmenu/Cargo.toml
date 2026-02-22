@@ -19,5 +19,6 @@ serde_json.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 rand.workspace = true
+egui.workspace = true
 
 [dev-dependencies]

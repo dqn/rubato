@@ -205,9 +205,31 @@ pub struct MonitorInfo {
     pub virtual_y: i32,
 }
 
+static CACHED_MONITORS: std::sync::Mutex<Vec<MonitorInfo>> = std::sync::Mutex::new(Vec::new());
+
+/// Update cached monitor list from winit's ActiveEventLoop.
+/// Call this from the event loop's `resumed()` handler.
+pub fn update_monitors_from_winit(event_loop: &winit::event_loop::ActiveEventLoop) {
+    let monitors: Vec<MonitorInfo> = event_loop
+        .available_monitors()
+        .enumerate()
+        .map(|(i, handle)| {
+            let name = handle
+                .name()
+                .unwrap_or_else(|| format!("Display {}", i + 1));
+            let pos = handle.position();
+            MonitorInfo {
+                name,
+                virtual_x: pos.x,
+                virtual_y: pos.y,
+            }
+        })
+        .collect();
+    *CACHED_MONITORS.lock().unwrap() = monitors;
+}
+
 /// Enumerate available monitors.
-/// Uses CoreGraphics FFI on macOS; other platforms return empty list
-/// (proper winit-based enumeration will be available via ActiveEventLoop in Phase 13 egui integration).
+/// Uses CoreGraphics FFI on macOS; other platforms use winit-cached monitor list.
 pub fn get_monitors() -> Vec<MonitorInfo> {
     #[cfg(target_os = "macos")]
     {
@@ -216,10 +238,13 @@ pub fn get_monitors() -> Vec<MonitorInfo> {
 
     #[cfg(not(target_os = "macos"))]
     {
-        log::warn!(
-            "Monitor enumeration not yet implemented for this platform (deferred to Phase 13 egui integration)"
-        );
-        Vec::new()
+        let cached = CACHED_MONITORS.lock().unwrap();
+        if cached.is_empty() {
+            log::warn!(
+                "Monitor list not yet populated — call update_monitors_from_winit() from the event loop first"
+            );
+        }
+        cached.clone()
     }
 }
 

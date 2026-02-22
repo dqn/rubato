@@ -178,15 +178,14 @@ impl RandomTrainerMenu {
                         };
                         let color = if is_random {
                             egui::Color32::from_rgb(255, 100, 150) // pink
-                        } else if lane_char.to_digit(10).unwrap_or(0) % 2 == 0 {
+                        } else if lane_char.to_digit(10).unwrap_or(0).is_multiple_of(2) {
                             egui::Color32::from_rgb(50, 50, 150) // dark blue
                         } else {
                             egui::Color32::from_rgb(200, 200, 200) // light
                         };
-                        let btn = egui::Button::new(
-                            egui::RichText::new(&label).size(18.0).color(color),
-                        )
-                        .min_size(egui::vec2(40.0, 60.0));
+                        let btn =
+                            egui::Button::new(egui::RichText::new(&label).size(18.0).color(color))
+                                .min_size(egui::vec2(40.0, 60.0));
                         ui.add(btn);
                     }
                 });

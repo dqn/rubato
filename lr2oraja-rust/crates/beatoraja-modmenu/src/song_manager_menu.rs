@@ -65,6 +65,38 @@ impl SongManagerMenu {
         log::warn!("not yet implemented: SongManagerMenu::show - egui integration");
     }
 
+    /// Render the song manager window using egui.
+    pub fn show_ui(ctx: &egui::Context) {
+        let current_song_data = get_current_song_data();
+        let current_score_data = get_current_score_data();
+
+        let mut open = true;
+        egui::Window::new("Song Manager")
+            .open(&mut open)
+            .auto_sized()
+            .show(ctx, |ui| {
+                let song_name = current_song_data
+                    .as_ref()
+                    .map(|sd| sd.get_title().to_string())
+                    .unwrap_or_default();
+
+                let last_play_record_time = current_score_data
+                    .as_ref()
+                    .map(|sd| format!("{}", sd.get_date()))
+                    .unwrap_or_else(|| "N/A".to_string());
+
+                if song_name.is_empty() {
+                    ui.label("Not a selectable song");
+                } else {
+                    ui.label(format!("Song: {}", song_name));
+                    ui.label(format!("Last played: {}", last_play_record_time));
+
+                    let mut sort = LAST_PLAYED_SORT.lock().unwrap();
+                    ui.checkbox(&mut sort.value, "Sort by last played");
+                }
+            });
+    }
+
     pub fn inject_music_selector(music_selector: MusicSelector) {
         *SELECTOR.lock().unwrap() = Some(music_selector);
     }

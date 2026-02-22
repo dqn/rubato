@@ -1,4 +1,7 @@
+pub mod launcher_ui;
 pub mod stubs;
+
+pub use launcher_ui::LauncherUi;
 
 // Utility types
 pub mod controller_config_view_model;

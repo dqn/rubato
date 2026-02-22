@@ -41,129 +41,131 @@ impl ImGuiRenderer {
     pub fn init(width: i32, height: i32) {
         *WINDOW_WIDTH.lock().unwrap() = width;
         *WINDOW_HEIGHT.lock().unwrap() = height;
-
-        // In Java:
-        // Lwjgl3Graphics lwjglGraphics = ((Lwjgl3Graphics) Gdx.graphics);
-        // imGuiGlfw = new ImGuiImplGlfw();
-        // imGuiGl3 = new ImGuiImplGl3();
-        // manager = new Lwjgl3ControllerManager();
-        // windowHandle = lwjglGraphics.getWindow().getWindowHandle();
-        // windowWidth = lwjglGraphics.getWidth();
-        // windowHeight = lwjglGraphics.getHeight();
-        // ImGui.createContext();
-        // ... font loading, glyph ranges, etc.
-        // imGuiGlfw.init(windowHandle, true);
-        // imGuiGl3.init("#version 150");
-
-        log::warn!("not yet implemented: ImGuiRenderer::init - egui integration");
+        // egui context is initialized in beatoraja-bin; nothing to do here.
     }
 
     pub fn start() {
-        // if (tmpProcessor != null) {
-        //     Gdx.input.setInputProcessor(tmpProcessor);
-        //     tmpProcessor = null;
-        // }
-        // imGuiGl3.newFrame();
-        // imGuiGlfw.newFrame();
-        // ImGui.newFrame();
-        log::warn!("not yet implemented: ImGuiRenderer::start - egui integration");
+        // egui frame is managed by beatoraja-bin via egui_winit::State::take_egui_input()
     }
 
-    pub fn render() {
-        // Relative from top left corner, so 44% from the left, 2% from the top
-        let w = window_width();
-        let h = window_height();
-        let _relative_x = w as f32 * 0.44;
-        let _relative_y = h as f32 * 0.02;
-        // ImGui.setNextWindowPos(relativeX, relativeY, ImGuiCond.Once);
-
+    /// Render mod menu overlay using egui.
+    ///
+    /// Java equivalent: ImGuiRenderer.render() — called between ImGui.newFrame() and ImGui.render().
+    /// Called from beatoraja-bin's event loop within egui::Context::run().
+    pub fn render_ui(ctx: &egui::Context) {
         let show_mod_menu = SHOW_MOD_MENU.lock().unwrap().get();
         if show_mod_menu {
-            // ImGui.begin("Endless Dream", ImGuiWindowFlags.AlwaysAutoResize);
+            let mut show = true;
+            egui::Window::new("Endless Dream")
+                .open(&mut show)
+                .auto_sized()
+                .show(ctx, |ui| {
+                    // Sub-window toggle checkboxes
+                    let mut freq = SHOW_FREQ_PLUS.lock().unwrap();
+                    ui.checkbox(&mut freq.value, "Show Rate Modifier Window");
+                    drop(freq);
 
-            // Checkboxes for sub-windows
-            // ImGui.checkbox("Show Rate Modifier Window", SHOW_FREQ_PLUS);
-            // ImGui.checkbox("Show Random Trainer Window", SHOW_RANDOM_TRAINER);
-            // ImGui.checkbox("Show Judge Trainer Window", SHOW_JUDGE_TRAINER);
-            // if (ImGui.checkbox("Show Skin Configuration Window", SHOW_SKIN_MENU)) { SkinMenu.invalidate(); }
-            // ImGui.checkbox("Show Skin Widget Manager Window", SHOW_SKIN_WIDGET_MANAGER);
-            // ImGui.checkbox("Show Song Manager Window", SHOW_SONG_MANAGER);
-            // ImGui.checkbox("Show Download Tasks Window", SHOW_DOWNLOAD_MENU);
-            // if (ImGui.checkbox("Show Performance Monitor Window", SHOW_PERFORMANCE_MONITOR) && SHOW_PERFORMANCE_MONITOR.get())
-            //     { PerformanceMonitor.reloadEventTree(); }
-            // ImGui.checkbox("Show Misc Setting Window", SHOW_MISC_SETTING);
+                    let mut random = SHOW_RANDOM_TRAINER.lock().unwrap();
+                    ui.checkbox(&mut random.value, "Show Random Trainer Window");
+                    drop(random);
 
+                    let mut judge = SHOW_JUDGE_TRAINER.lock().unwrap();
+                    ui.checkbox(&mut judge.value, "Show Judge Trainer Window");
+                    drop(judge);
+
+                    {
+                        let mut skin = SHOW_SKIN_MENU.lock().unwrap();
+                        let old = skin.value;
+                        ui.checkbox(&mut skin.value, "Show Skin Configuration Window");
+                        if skin.value && !old {
+                            SkinMenu::invalidate();
+                        }
+                    }
+
+                    let mut swm = SHOW_SKIN_WIDGET_MANAGER.lock().unwrap();
+                    ui.checkbox(&mut swm.value, "Show Skin Widget Manager Window");
+                    drop(swm);
+
+                    let mut song = SHOW_SONG_MANAGER.lock().unwrap();
+                    ui.checkbox(&mut song.value, "Show Song Manager Window");
+                    drop(song);
+
+                    let mut dl = SHOW_DOWNLOAD_MENU.lock().unwrap();
+                    ui.checkbox(&mut dl.value, "Show Download Tasks Window");
+                    drop(dl);
+
+                    {
+                        let mut perf = SHOW_PERFORMANCE_MONITOR.lock().unwrap();
+                        let old = perf.value;
+                        ui.checkbox(&mut perf.value, "Show Performance Monitor Window");
+                        if perf.value && !old {
+                            PerformanceMonitor::reload_event_tree();
+                        }
+                    }
+
+                    let mut misc = SHOW_MISC_SETTING.lock().unwrap();
+                    ui.checkbox(&mut misc.value, "Show Misc Setting Window");
+                    drop(misc);
+
+                    // Debug information
+                    ui.collapsing("Endless Dream Debug Information", |ui| {
+                        let commit_hash = Version::get_git_commit_hash().unwrap_or("unknown");
+                        let build_time = version::get_build_date().unwrap_or("unknown");
+                        ui.label(format!("Commit hash: {}", commit_hash));
+                        ui.label(format!("Build time: {}", build_time));
+                    });
+                });
+            if !show {
+                SHOW_MOD_MENU.lock().unwrap().set(false);
+            }
+
+            // Render sub-windows
             if SHOW_FREQ_PLUS.lock().unwrap().get() {
-                let mut show = SHOW_FREQ_PLUS.lock().unwrap();
-                FreqTrainerMenu::show(&mut show);
+                FreqTrainerMenu::show_ui(ctx);
             }
             if SHOW_RANDOM_TRAINER.lock().unwrap().get() {
-                let mut show = SHOW_RANDOM_TRAINER.lock().unwrap();
-                RandomTrainerMenu::show(&mut show);
+                RandomTrainerMenu::show_ui(ctx);
             }
             if SHOW_JUDGE_TRAINER.lock().unwrap().get() {
-                let mut show = SHOW_JUDGE_TRAINER.lock().unwrap();
-                JudgeTrainerMenu::show(&mut show);
+                JudgeTrainerMenu::show_ui(ctx);
             }
             if SHOW_SONG_MANAGER.lock().unwrap().get() {
-                let mut show = SHOW_SONG_MANAGER.lock().unwrap();
-                crate::song_manager_menu::SongManagerMenu::show(&mut show);
+                crate::song_manager_menu::SongManagerMenu::show_ui(ctx);
             }
-            // TODO: This menu should based on config. Should not be rendered if user doesn't flag the http download feature
             if SHOW_DOWNLOAD_MENU.lock().unwrap().get() {
-                let mut show = SHOW_DOWNLOAD_MENU.lock().unwrap();
-                DownloadTaskMenu::show(&mut show);
+                DownloadTaskMenu::show_ui(ctx);
             }
             if SHOW_SKIN_WIDGET_MANAGER.lock().unwrap().get() {
                 SkinWidgetManager::set_focus(true);
-                let mut show = SHOW_SKIN_WIDGET_MANAGER.lock().unwrap();
-                SkinWidgetManager::show(&mut show);
+                SkinWidgetManager::show_ui(ctx);
             } else {
                 SkinWidgetManager::set_focus(false);
             }
             if SHOW_PERFORMANCE_MONITOR.lock().unwrap().get() {
-                let mut show = SHOW_PERFORMANCE_MONITOR.lock().unwrap();
-                PerformanceMonitor::show(&mut show);
+                PerformanceMonitor::show_ui(ctx);
             }
             if SHOW_SKIN_MENU.lock().unwrap().get() {
-                let mut show = SHOW_SKIN_MENU.lock().unwrap();
-                SkinMenu::show(&mut show);
+                SkinMenu::show_ui(ctx);
             }
             if SHOW_MISC_SETTING.lock().unwrap().get() {
-                let mut show = SHOW_MISC_SETTING.lock().unwrap();
-                MiscSettingMenu::show(&mut show);
+                MiscSettingMenu::show_ui(ctx);
             }
-
-            // Debug information tree node
-            // if (ImGui.treeNode("Endless Dream Debug Information"))
-            {
-                let _commit_hash = Version::get_git_commit_hash().unwrap_or("unknown");
-                let _build_time = version::get_build_date().unwrap_or("unknown");
-                // ImGui.text("Commit hash: " + commit_hash);
-                // ImGui.text("Build time: " + build_time);
-                // ImGui.text("GLFW version: " + GLFW.glfwGetVersionString());
-                // for controller in manager.getControllers() { ... }
-                // ImGui.treePop();
-            }
-            // ImGui.end();
         }
 
-        ImGuiNotify::render_notifications();
+        // Render toast notifications overlay
+        ImGuiNotify::render_notifications_ui(ctx);
     }
 
+    /// Legacy render method — retained for backward compatibility with MainController stub calls.
+    /// Actual rendering is now done via render_ui() called from beatoraja-bin.
+    pub fn render() {}
+
     pub fn end() {
-        // ImGui.render();
-        // imGuiGl3.renderDrawData(ImGui.getDrawData());
-        // if (ImGui.getIO().getWantCaptureKeyboard() || ImGui.getIO().getWantCaptureMouse())
-        // { ... capture input ... }
-        log::warn!("not yet implemented: ImGuiRenderer::end - egui integration");
+        // egui rendering is handled by beatoraja-bin via EguiIntegration::render()
     }
 
     pub fn dispose() {
-        // imGuiGl3.shutdown();
-        // imGuiGlfw.shutdown();
-        // ImGui.destroyContext();
-        log::warn!("not yet implemented: ImGuiRenderer::dispose - egui integration");
+        // egui context cleanup is handled by beatoraja-bin
     }
 
     pub fn get_show_mod_menu() -> bool {
@@ -176,18 +178,11 @@ impl ImGuiRenderer {
         menu.set(!current);
     }
 
-    pub fn help_marker(_desc: &str) {
-        // ImGui.textDisabled("(?)");
-        // if (ImGui.isItemHovered()) {
-        //     ImGui.beginTooltip();
-        //     ImGui.pushTextWrapPos(ImGui.getFontSize() * 35.0f);
-        //     ImGui.textUnformatted(desc);
-        //     ImGui.popTextWrapPos();
-        //     ImGui.endTooltip();
-        // }
-        log::warn!(
-            "not yet implemented: ImGuiRenderer::help_marker - egui tooltip for '{}'",
-            _desc
-        );
+    /// Show a "(?)" tooltip when hovering.
+    ///
+    /// Java: ImGui.textDisabled("(?)") + isItemHovered() → tooltip
+    pub fn help_marker(ui: &mut egui::Ui, desc: &str) {
+        ui.label(egui::RichText::new("(?)").weak())
+            .on_hover_text(desc);
     }
 }

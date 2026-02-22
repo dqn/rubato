@@ -167,9 +167,9 @@ beatoraja-render = { path = "crates/beatoraja-render" }
 mlua = { version = "0.10", features = ["lua54", "vendored"] }
 
 # GUI
-egui = "0.30"
-egui-winit = "0.30"
-egui-wgpu = "0.30"
+egui = "0.31"
+egui-winit = "0.31"
+egui-wgpu = "0.31"
 
 # Video decoding
 ffmpeg-next = "7"

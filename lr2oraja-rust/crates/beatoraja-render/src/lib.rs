@@ -1,5 +1,6 @@
 pub mod blend;
 pub mod color;
+pub mod egui_integration;
 pub mod font;
 pub mod gpu_context;
 pub mod pixmap;
@@ -9,6 +10,7 @@ pub mod texture;
 
 pub use blend::*;
 pub use color::*;
+pub use egui_integration::*;
 pub use font::*;
 pub use gpu_context::*;
 pub use pixmap::*;

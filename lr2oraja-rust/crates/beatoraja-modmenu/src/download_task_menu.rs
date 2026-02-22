@@ -103,7 +103,7 @@ impl DownloadTaskMenu {
                         ui.label(format!("Expired: {}", expired.len()));
                     });
                     ui.separator();
-                    for (_id, task_arc) in &running {
+                    for task_arc in running.values() {
                         let task = task_arc.lock().unwrap();
                         let name = task.get_name();
                         let task_name = if name.len() > MAXIMUM_TASK_NAME_LENGTH {

@@ -9,11 +9,16 @@ path = "src/main.rs"
 
 [dependencies]
 beatoraja-core = { workspace = true }
+beatoraja-render = { workspace = true }
+beatoraja-modmenu = { workspace = true }
+beatoraja-launcher = { workspace = true }
 anyhow = { workspace = true }
 log = { workspace = true }
 clap = { workspace = true }
 env_logger = { workspace = true }
 winit = { workspace = true }
-beatoraja-render = { workspace = true }
 wgpu = { workspace = true }
+egui = { workspace = true }
+egui-winit = { workspace = true }
+egui-wgpu = { workspace = true }
 pollster = "0.4"

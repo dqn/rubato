@@ -88,6 +88,70 @@ impl SkinMenu {
     pub fn invalidate() {
         *READY.lock().unwrap() = false;
     }
+
+    /// Render the skin configuration window using egui.
+    pub fn show_ui(ctx: &egui::Context) {
+        let main = MAIN.lock().unwrap();
+        if main.is_none() {
+            return;
+        }
+        drop(main);
+
+        let ready = *READY.lock().unwrap();
+        if !ready {
+            refresh();
+        }
+
+        let mut open = true;
+        egui::Window::new("Skin").open(&mut open).show(ctx, |ui| {
+            // Skin selector
+            let skins = SKINS.lock().unwrap();
+            let current = CURRENT_SKIN.lock().unwrap();
+            let current_name = current
+                .as_ref()
+                .map(|s| s.get_name().to_string())
+                .unwrap_or_else(|| "(none)".to_string());
+            drop(current);
+
+            ui.horizontal(|ui| {
+                ui.label("Current skin:");
+                ui.label(&current_name);
+            });
+
+            ui.label(format!("{} skins available", skins.len()));
+            drop(skins);
+
+            ui.separator();
+
+            // Skin config options
+            let current_skin = CURRENT_SKIN.lock().unwrap();
+            if let Some(ref skin) = *current_skin {
+                for option in skin.get_custom_options() {
+                    let mut val = SET_OPTIONS
+                        .lock()
+                        .unwrap()
+                        .as_ref()
+                        .and_then(|m| m.get(&option.name).copied())
+                        .unwrap_or(option.get_default_option());
+                    let selected = option
+                        .contents
+                        .get(val as usize)
+                        .map(|s| s.as_str())
+                        .unwrap_or("Default");
+                    egui::ComboBox::from_label(&option.name)
+                        .selected_text(selected)
+                        .show_ui(ui, |ui| {
+                            for (i, content) in option.contents.iter().enumerate() {
+                                ui.selectable_value(&mut val, i as i32, content.as_str());
+                            }
+                        });
+                    if let Some(ref mut opts) = *SET_OPTIONS.lock().unwrap() {
+                        opts.insert(option.name.clone(), val);
+                    }
+                }
+            }
+        });
+    }
 }
 
 fn menu_header() {

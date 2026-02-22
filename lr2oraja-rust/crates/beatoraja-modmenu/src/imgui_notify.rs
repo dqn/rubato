@@ -409,6 +409,77 @@ impl ImGuiNotify {
             *DEFAULT_TOAST_POS.lock().unwrap() = pos;
         }
     }
+
+    /// Render toast notifications using egui.
+    pub fn render_notifications_ui(ctx: &egui::Context) {
+        let mut notifications = NOTIFICATIONS.lock().unwrap();
+        let mut height: f32 = 0.0;
+
+        let mut i = 0;
+        while i < notifications.len() {
+            let current_toast = &notifications[i];
+
+            if current_toast.get_phase() == ToastPhase::Expired {
+                notifications.remove(i);
+                continue;
+            }
+
+            if NOTIFY_RENDER_LIMIT > 0 && i >= NOTIFY_RENDER_LIMIT {
+                i += 1;
+                continue;
+            }
+
+            let opacity = current_toast.get_fade_percent();
+            let text_color = current_toast.get_color();
+            let title = current_toast
+                .get_default_title()
+                .unwrap_or("Notification")
+                .to_string();
+            let content = current_toast.get_content().to_string();
+            let window_name = format!("##TOAST{}", i);
+
+            let (toast_x, toast_y) = get_toast_pos(&current_toast.pos, height);
+
+            egui::Area::new(egui::Id::new(&window_name))
+                .fixed_pos(egui::pos2(toast_x, toast_y))
+                .show(ctx, |ui| {
+                    let frame = egui::Frame::popup(ui.style()).fill(
+                        egui::Color32::from_rgba_unmultiplied(40, 40, 40, (opacity * 255.0) as u8),
+                    );
+                    frame.show(ui, |ui| {
+                        let color = egui::Color32::from_rgba_unmultiplied(
+                            (text_color[0] * 255.0) as u8,
+                            (text_color[1] * 255.0) as u8,
+                            (text_color[2] * 255.0) as u8,
+                            (opacity * 255.0) as u8,
+                        );
+                        if let Some(icon) = current_toast.get_icon() {
+                            ui.horizontal(|ui| {
+                                ui.label(egui::RichText::new(icon).color(color));
+                                ui.label(egui::RichText::new(&title).color(color).strong());
+                            });
+                        } else {
+                            ui.label(egui::RichText::new(&title).color(color).strong());
+                        }
+                        if !content.is_empty() {
+                            ui.label(egui::RichText::new(&content).color(
+                                egui::Color32::from_rgba_unmultiplied(
+                                    200,
+                                    200,
+                                    200,
+                                    (opacity * 255.0) as u8,
+                                ),
+                            ));
+                        }
+                    });
+
+                    // Approximate toast height
+                    height += 50.0 + NOTIFY_PADDING_MESSAGE_Y;
+                });
+
+            i += 1;
+        }
+    }
 }
 
 fn get_relative_init_pos(pos_type: &ToastPos) -> (f32, f32) {
