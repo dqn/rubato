@@ -48,6 +48,57 @@ pub fn is_setter(name: &str) -> bool {
     name.starts_with("set") && name.len() > 3 && name.as_bytes()[3].is_ascii_uppercase()
 }
 
+/// Check if a Java method name is a boolean accessor (`isX` or `hasX`).
+pub fn is_boolean_accessor(name: &str) -> bool {
+    (name.starts_with("is") && name.len() > 2 && name.as_bytes()[2].is_ascii_uppercase())
+        || (name.starts_with("has") && name.len() > 3 && name.as_bytes()[3].is_ascii_uppercase())
+}
+
+/// Check if a Java method name looks like a constructor (PascalCase or `<init>`).
+pub fn is_constructor(name: &str) -> bool {
+    name == "<init>" || name.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+}
+
+/// Extract the field name from a Java accessor method name.
+///
+/// `getTitle` → `Some("title")`, `setScore` → `Some("score")`,
+/// `isVisible` → `Some("visible")`, `hasData` → `Some("data")`
+pub fn accessor_field_name(java_method: &str) -> Option<String> {
+    let stripped = accessor_strip_prefix(java_method)?;
+    Some(stripped.to_snake_case())
+}
+
+/// Strip the accessor prefix (get/set/is/has) and return the remaining part.
+fn accessor_strip_prefix(java_method: &str) -> Option<&str> {
+    for (prefix, min_len) in [("get", 4), ("set", 4), ("is", 3), ("has", 4)] {
+        if java_method.starts_with(prefix)
+            && java_method.len() >= min_len
+            && java_method.as_bytes()[prefix.len()].is_ascii_uppercase()
+        {
+            return Some(&java_method[prefix.len()..]);
+        }
+    }
+    None
+}
+
+/// Generate candidate field names for a Java accessor.
+///
+/// `getTitle` → `["title"]`, `hasData` → `["data", "has_data"]`
+pub fn accessor_field_candidates(java_method: &str) -> Vec<String> {
+    let mut candidates = Vec::new();
+    if let Some(field) = accessor_field_name(java_method) {
+        candidates.push(field.clone());
+        // For `hasX`, also try `has_x` as field name
+        if java_method.starts_with("has") {
+            let full_snake = method_to_snake(java_method);
+            if full_snake != field {
+                candidates.push(full_snake);
+            }
+        }
+    }
+    candidates
+}
+
 /// Known Rust-specific method names that have no Java counterpart.
 pub fn is_rust_specific_method(name: &str) -> bool {
     matches!(
@@ -126,5 +177,38 @@ mod tests {
         assert!(is_setter("setScore"));
         assert!(!is_setter("set"));
         assert!(!is_setter("setup"));
+    }
+
+    #[test]
+    fn test_accessor_field_name() {
+        assert_eq!(accessor_field_name("getTitle"), Some("title".to_string()));
+        assert_eq!(accessor_field_name("setScore"), Some("score".to_string()));
+        assert_eq!(
+            accessor_field_name("isVisible"),
+            Some("visible".to_string())
+        );
+        assert_eq!(accessor_field_name("hasData"), Some("data".to_string()));
+        assert_eq!(accessor_field_name("getBPM"), Some("bpm".to_string()));
+        assert_eq!(accessor_field_name("validate"), None);
+        assert_eq!(accessor_field_name("get"), None);
+    }
+
+    #[test]
+    fn test_accessor_field_candidates() {
+        assert_eq!(accessor_field_candidates("getTitle"), vec!["title"]);
+        assert_eq!(
+            accessor_field_candidates("hasData"),
+            vec!["data", "has_data"]
+        );
+        assert_eq!(accessor_field_candidates("isVisible"), vec!["visible"]);
+    }
+
+    #[test]
+    fn test_is_constructor() {
+        assert!(is_constructor("Config"));
+        assert!(is_constructor("<init>"));
+        assert!(is_constructor("BMSDecoder"));
+        assert!(!is_constructor("validate"));
+        assert!(!is_constructor("getTitle"));
     }
 }

@@ -99,8 +99,12 @@ pub fn format_signature_report(report: &SignatureReport) -> String {
         s.total_java_types, s.matched_types
     ));
     out.push_str(&format!(
-        "  Methods: {} Java → {} matched, {} missing\n",
-        s.total_java_methods, s.matched_methods, s.missing_methods
+        "  Methods: {} Java → {} matched, {} field-access, {} ctor-overloads, {} missing\n",
+        s.total_java_methods,
+        s.matched_methods,
+        s.field_access_methods,
+        s.constructor_overloads,
+        s.missing_methods
     ));
     out.push_str(&format!(
         "  Rust-only: {} extra, {} Rust-specific (ignored)\n",

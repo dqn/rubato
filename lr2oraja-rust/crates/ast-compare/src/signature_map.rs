@@ -42,6 +42,8 @@ pub struct MethodMappingResult {
 pub enum MappingStatus {
     Matched,
     NameConverted,
+    FieldAccess,
+    ConstructorOverload,
     MissingInRust,
     ExtraInRust,
     RustSpecific,
@@ -56,6 +58,8 @@ pub struct SignatureSummary {
     pub matched_types: usize,
     pub total_java_methods: usize,
     pub matched_methods: usize,
+    pub field_access_methods: usize,
+    pub constructor_overloads: usize,
     pub missing_methods: usize,
     pub extra_rust_methods: usize,
     pub rust_specific_methods: usize,
@@ -76,6 +80,8 @@ pub fn build_signature_map(
         matched_types: 0,
         total_java_methods: 0,
         matched_methods: 0,
+        field_access_methods: 0,
+        constructor_overloads: 0,
         missing_methods: 0,
         extra_rust_methods: 0,
         rust_specific_methods: 0,
@@ -95,9 +101,13 @@ pub fn build_signature_map(
         }
 
         let type_mappings = match (java_source, rust_source) {
-            (Some(java), Some(rust)) => {
-                build_type_mappings(&java.types, &rust.types, &rust.free_functions, &mut summary)
-            }
+            (Some(java), Some(rust)) => build_type_mappings(
+                &java.types,
+                &rust.types,
+                &rust.free_functions,
+                rust_files,
+                &mut summary,
+            ),
             (Some(java), None) => {
                 // All Java types are unmapped
                 let mut mappings = Vec::new();
@@ -149,6 +159,7 @@ fn build_type_mappings(
     java_types: &[TypeDecl],
     rust_types: &[TypeDecl],
     rust_free_fns: &[MethodDecl],
+    all_rust_files: &[SourceFile],
     summary: &mut SignatureSummary,
 ) -> Vec<TypeMappingResult> {
     let mut results = Vec::new();
@@ -156,8 +167,9 @@ fn build_type_mappings(
     for jt in java_types {
         summary.total_java_types += 1;
 
-        // Find matching Rust type by name
-        let rust_type = find_rust_type(&jt.name, rust_types);
+        // Find matching Rust type by name — first in the mapped file, then globally
+        let rust_type = find_rust_type(&jt.name, rust_types)
+            .or_else(|| find_rust_type_globally(&jt.name, all_rust_files));
 
         if rust_type.is_some() {
             summary.matched_types += 1;
@@ -168,11 +180,17 @@ fn build_type_mappings(
             None => &[],
         };
 
+        let rust_fields: &[FieldDecl] = match &rust_type {
+            Some(rt) => &rt.fields,
+            None => &[],
+        };
+
         // Also consider free functions for the first type in a file
         let all_rust_methods: Vec<&MethodDecl> =
             rust_methods.iter().chain(rust_free_fns.iter()).collect();
 
-        let method_mappings = build_method_mappings(&jt.methods, &all_rust_methods, summary);
+        let method_mappings =
+            build_method_mappings(&jt.methods, &all_rust_methods, rust_fields, summary);
 
         results.push(TypeMappingResult {
             java_type: jt.name.clone(),
@@ -185,7 +203,8 @@ fn build_type_mappings(
 
         // Recursively handle inner types
         if !jt.inner_types.is_empty() {
-            let inner_results = build_type_mappings(&jt.inner_types, rust_types, &[], summary);
+            let inner_results =
+                build_type_mappings(&jt.inner_types, rust_types, &[], all_rust_files, summary);
             results.extend(inner_results);
         }
     }
@@ -221,13 +240,31 @@ fn find_rust_type_match(java_name: &str, rust_name: &str) -> bool {
     java_name == rust_name
 }
 
+/// Search for a Rust type globally across all parsed Rust source files.
+/// Used as a fallback when the type isn't found in the directly mapped file
+/// (e.g., when the file just contains `pub use beatoraja_types::*`).
+fn find_rust_type_globally<'a>(
+    java_name: &str,
+    all_rust_files: &'a [SourceFile],
+) -> Option<&'a TypeDecl> {
+    for source in all_rust_files {
+        if let Some(found) = find_rust_type(java_name, &source.types) {
+            return Some(found);
+        }
+    }
+    None
+}
+
 fn build_method_mappings(
     java_methods: &[MethodDecl],
     rust_methods: &[&MethodDecl],
+    rust_fields: &[FieldDecl],
     summary: &mut SignatureSummary,
 ) -> Vec<MethodMappingResult> {
     let mut results = Vec::new();
     let mut matched_rust_indices = Vec::new();
+    // Track whether new/default has been used for constructor matching
+    let mut constructor_primary_matched = false;
 
     for jm in java_methods {
         summary.total_java_methods += 1;
@@ -236,6 +273,9 @@ fn build_method_mappings(
 
         if let Some((idx, rm)) = rust_match {
             matched_rust_indices.push(idx);
+            if naming::is_constructor(&jm.name) && (rm.name == "new" || rm.name == "default") {
+                constructor_primary_matched = true;
+            }
             summary.matched_methods += 1;
             results.push(MethodMappingResult {
                 java_method: jm.name.clone(),
@@ -246,15 +286,72 @@ fn build_method_mappings(
                 status,
             });
         } else {
-            summary.missing_methods += 1;
-            results.push(MethodMappingResult {
-                java_method: jm.name.clone(),
-                java_params: jm.params.len(),
-                java_line: jm.line,
-                rust_method: None,
-                rust_line: None,
-                status: MappingStatus::MissingInRust,
-            });
+            // Try field matching for accessors (getter/setter/is/has → pub field)
+            let field_candidates = naming::accessor_field_candidates(&jm.name);
+            let field_match = field_candidates
+                .iter()
+                .find(|candidate| rust_fields.iter().any(|f| f.name == **candidate));
+
+            if let Some(matched_field) = field_match {
+                summary.field_access_methods += 1;
+                results.push(MethodMappingResult {
+                    java_method: jm.name.clone(),
+                    java_params: jm.params.len(),
+                    java_line: jm.line,
+                    rust_method: Some(format!("(field: {})", matched_field)),
+                    rust_line: None,
+                    status: MappingStatus::FieldAccess,
+                });
+            } else if naming::is_constructor(&jm.name) && constructor_primary_matched {
+                // Constructor overload — a previous constructor already matched new()/default()
+                summary.constructor_overloads += 1;
+                results.push(MethodMappingResult {
+                    java_method: jm.name.clone(),
+                    java_params: jm.params.len(),
+                    java_line: jm.line,
+                    rust_method: Some("(constructor overload)".to_string()),
+                    rust_line: None,
+                    status: MappingStatus::ConstructorOverload,
+                });
+            } else if naming::is_constructor(&jm.name) {
+                // Constructor — try matching new/default even if already used by exclusion
+                let ctor_match = rust_methods
+                    .iter()
+                    .enumerate()
+                    .find(|(_, rm)| rm.name == "new" || rm.name == "default");
+                if let Some((_, rm)) = ctor_match {
+                    constructor_primary_matched = true;
+                    summary.constructor_overloads += 1;
+                    results.push(MethodMappingResult {
+                        java_method: jm.name.clone(),
+                        java_params: jm.params.len(),
+                        java_line: jm.line,
+                        rust_method: Some(rm.name.clone()),
+                        rust_line: Some(rm.line),
+                        status: MappingStatus::ConstructorOverload,
+                    });
+                } else {
+                    summary.missing_methods += 1;
+                    results.push(MethodMappingResult {
+                        java_method: jm.name.clone(),
+                        java_params: jm.params.len(),
+                        java_line: jm.line,
+                        rust_method: None,
+                        rust_line: None,
+                        status: MappingStatus::MissingInRust,
+                    });
+                }
+            } else {
+                summary.missing_methods += 1;
+                results.push(MethodMappingResult {
+                    java_method: jm.name.clone(),
+                    java_params: jm.params.len(),
+                    java_line: jm.line,
+                    rust_method: None,
+                    rust_line: None,
+                    status: MappingStatus::MissingInRust,
+                });
+            }
         }
     }
 
