@@ -3,11 +3,15 @@
 
 use std::sync::Arc;
 
+use beatoraja_types::config::Config;
+use beatoraja_types::player_config::PlayerConfig;
+
 // ============================================================
 // Re-exports from real crates (Phase 11 stub replacements)
 // ============================================================
 
 pub use beatoraja_core::timer_manager::TimerManager;
+pub use beatoraja_input::bms_player_input_processor::BMSPlayerInputProcessor;
 pub use beatoraja_input::key_command::KeyCommand;
 pub use beatoraja_input::keyboard_input_processor::ControlKeys;
 pub use beatoraja_skin::skin::Skin;
@@ -36,7 +40,10 @@ impl MainController {
     pub fn get_input_processor(&mut self) -> &mut BMSPlayerInputProcessor {
         log::warn!("not yet implemented: MainController.getInputProcessor");
         // Leak a boxed value to get a &'static mut reference - stub only
-        Box::leak(Box::new(BMSPlayerInputProcessor))
+        Box::leak(Box::new(BMSPlayerInputProcessor::new(
+            &Config::default(),
+            &PlayerConfig::default(),
+        )))
     }
 
     pub fn get_ir_status(&self) -> &[IRStatus] {
@@ -124,42 +131,7 @@ impl IRSendStatusMain {
     }
 }
 
-// ============================================================
-// Input stubs
-// ============================================================
-
-/// Stub for bms.player.beatoraja.input.BMSPlayerInputProcessor
-pub struct BMSPlayerInputProcessor;
-
-impl BMSPlayerInputProcessor {
-    pub fn get_scroll(&self) -> i32 {
-        0
-    }
-
-    pub fn reset_scroll(&mut self) {
-        // stub
-    }
-
-    pub fn get_key_state(&self, _index: i32) -> bool {
-        false
-    }
-
-    pub fn reset_key_changed_time(&mut self, _index: i32) -> bool {
-        false
-    }
-
-    pub fn reset_all_key_changed_time(&mut self) {
-        // stub
-    }
-
-    pub fn is_control_key_pressed(&self, _key: ControlKeys) -> bool {
-        false
-    }
-
-    pub fn is_activated(&self, _command: KeyCommand) -> bool {
-        false
-    }
-}
+// BMSPlayerInputProcessor: replaced by pub use from beatoraja_input (Phase 18e-9)
 
 // GrooveGauge: replaced by real type from beatoraja-types
 pub use beatoraja_types::groove_gauge::GrooveGauge;
