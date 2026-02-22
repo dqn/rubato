@@ -76,6 +76,7 @@ All phases complete. **1241 tests pass. Zero runtime `todo!()`/`unimplemented!()
 - **Phase 18e (1–11):** Stub replacement — 11 sub-phases of cross-crate dedup, lifecycle cleanup, PlayerResource wrapper, skin/input/IR/table type replacements. 4 rounds of full audit — all actionable replacements exhausted. ~2,440 lines remain (blocked by rendering/IR/database/per-screen implementations)
 - **Phase 18f:** E2E test activation (138 tests across 9 files)
 - **Phase 18g:** BRD replay codec
+- **Phase 18e-12:** Dependency cleanup — removed unused serde/serde_json from beatoraja-decide, unused tokio from beatoraja-stream, deleted stale pending test duplicate
 
 ## Remaining Stubs (~2,440 lines across 16 files, all blocked)
 
