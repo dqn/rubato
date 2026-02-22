@@ -92,8 +92,7 @@ fn replay_json_round_trip() {
     let json = serde_json::to_string(&replay).expect("Failed to serialize ReplayData");
 
     // Deserialize back
-    let loaded: ReplayData =
-        serde_json::from_str(&json).expect("Failed to deserialize ReplayData");
+    let loaded: ReplayData = serde_json::from_str(&json).expect("Failed to deserialize ReplayData");
 
     // Verify key log matches
     assert_eq!(
@@ -101,13 +100,9 @@ fn replay_json_round_trip() {
         replay_keylog.len(),
         "Loaded keylog length should match original"
     );
-    for (i, (original, loaded_entry)) in
-        replay_keylog.iter().zip(loaded.keylog.iter()).enumerate()
+    for (i, (original, loaded_entry)) in replay_keylog.iter().zip(loaded.keylog.iter()).enumerate()
     {
-        assert_eq!(
-            original.time, loaded_entry.time,
-            "Entry {i}: time mismatch"
-        );
+        assert_eq!(original.time, loaded_entry.time, "Entry {i}: time mismatch");
         assert_eq!(
             original.keycode, loaded_entry.keycode,
             "Entry {i}: keycode mismatch"

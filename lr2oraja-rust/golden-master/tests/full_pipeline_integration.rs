@@ -29,7 +29,10 @@ fn bms_to_replay_full_pipeline() {
 
     // Step 2: Simulate with keylog
     let original = run_manual_simulation(&model, &keylog, NORMAL);
-    assert_eq!(original.score.get_judge_count_total(JUDGE_PG), normal as i32);
+    assert_eq!(
+        original.score.get_judge_count_total(JUDGE_PG),
+        normal as i32
+    );
 
     // Step 3: Convert to ReplayData and JSON round-trip
     let replay_keylog: Vec<ReplayKeyInputLog> = keylog
@@ -56,7 +59,9 @@ fn bms_to_replay_full_pipeline() {
     let loaded_keylog: Vec<beatoraja_input::key_input_log::KeyInputLog> = loaded
         .keylog
         .iter()
-        .map(|k| beatoraja_input::key_input_log::KeyInputLog::with_data(k.time, k.keycode, k.pressed))
+        .map(|k| {
+            beatoraja_input::key_input_log::KeyInputLog::with_data(k.time, k.keycode, k.pressed)
+        })
         .collect();
 
     // Step 6: Re-simulate with loaded keylog

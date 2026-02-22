@@ -81,11 +81,7 @@ fn run_manual_all_miss_test(bms_file: &str, gauge_type: i32, label: &str) {
 
 #[test]
 fn beat5k_assist_easy_autoplay() {
-    run_autoplay_test(
-        "5key.bms",
-        ASSISTEASY,
-        "beat5k_assist_easy_autoplay",
-    );
+    run_autoplay_test("5key.bms", ASSISTEASY, "beat5k_assist_easy_autoplay");
 }
 #[test]
 fn beat5k_easy_autoplay() {
@@ -110,11 +106,7 @@ fn beat5k_hazard_autoplay() {
 
 #[test]
 fn beat5k_assist_easy_manual_perfect() {
-    run_manual_perfect_test(
-        "5key.bms",
-        ASSISTEASY,
-        "beat5k_assist_easy_manual_perfect",
-    );
+    run_manual_perfect_test("5key.bms", ASSISTEASY, "beat5k_assist_easy_manual_perfect");
 }
 #[test]
 fn beat5k_easy_manual_perfect() {
@@ -122,11 +114,7 @@ fn beat5k_easy_manual_perfect() {
 }
 #[test]
 fn beat5k_normal_manual_perfect() {
-    run_manual_perfect_test(
-        "5key.bms",
-        NORMAL,
-        "beat5k_normal_manual_perfect",
-    );
+    run_manual_perfect_test("5key.bms", NORMAL, "beat5k_normal_manual_perfect");
 }
 #[test]
 fn beat5k_hard_manual_perfect() {
@@ -134,28 +122,16 @@ fn beat5k_hard_manual_perfect() {
 }
 #[test]
 fn beat5k_exhard_manual_perfect() {
-    run_manual_perfect_test(
-        "5key.bms",
-        EXHARD,
-        "beat5k_exhard_manual_perfect",
-    );
+    run_manual_perfect_test("5key.bms", EXHARD, "beat5k_exhard_manual_perfect");
 }
 #[test]
 fn beat5k_hazard_manual_perfect() {
-    run_manual_perfect_test(
-        "5key.bms",
-        HAZARD,
-        "beat5k_hazard_manual_perfect",
-    );
+    run_manual_perfect_test("5key.bms", HAZARD, "beat5k_hazard_manual_perfect");
 }
 
 #[test]
 fn beat5k_assist_easy_manual_all_miss() {
-    run_manual_all_miss_test(
-        "5key.bms",
-        ASSISTEASY,
-        "beat5k_assist_easy_manual_all_miss",
-    );
+    run_manual_all_miss_test("5key.bms", ASSISTEASY, "beat5k_assist_easy_manual_all_miss");
 }
 #[test]
 fn beat5k_easy_manual_all_miss() {
@@ -163,11 +139,7 @@ fn beat5k_easy_manual_all_miss() {
 }
 #[test]
 fn beat5k_normal_manual_all_miss() {
-    run_manual_all_miss_test(
-        "5key.bms",
-        NORMAL,
-        "beat5k_normal_manual_all_miss",
-    );
+    run_manual_all_miss_test("5key.bms", NORMAL, "beat5k_normal_manual_all_miss");
 }
 #[test]
 fn beat5k_hard_manual_all_miss() {
@@ -175,19 +147,11 @@ fn beat5k_hard_manual_all_miss() {
 }
 #[test]
 fn beat5k_exhard_manual_all_miss() {
-    run_manual_all_miss_test(
-        "5key.bms",
-        EXHARD,
-        "beat5k_exhard_manual_all_miss",
-    );
+    run_manual_all_miss_test("5key.bms", EXHARD, "beat5k_exhard_manual_all_miss");
 }
 #[test]
 fn beat5k_hazard_manual_all_miss() {
-    run_manual_all_miss_test(
-        "5key.bms",
-        HAZARD,
-        "beat5k_hazard_manual_all_miss",
-    );
+    run_manual_all_miss_test("5key.bms", HAZARD, "beat5k_hazard_manual_all_miss");
 }
 
 // ============================================================================
@@ -196,11 +160,7 @@ fn beat5k_hazard_manual_all_miss() {
 
 #[test]
 fn beat7k_assist_easy_autoplay() {
-    run_autoplay_test(
-        "minimal_7k.bms",
-        ASSISTEASY,
-        "beat7k_assist_easy_autoplay",
-    );
+    run_autoplay_test("minimal_7k.bms", ASSISTEASY, "beat7k_assist_easy_autoplay");
 }
 #[test]
 fn beat7k_easy_autoplay() {
@@ -208,11 +168,7 @@ fn beat7k_easy_autoplay() {
 }
 #[test]
 fn beat7k_normal_autoplay() {
-    run_autoplay_test(
-        "minimal_7k.bms",
-        NORMAL,
-        "beat7k_normal_autoplay",
-    );
+    run_autoplay_test("minimal_7k.bms", NORMAL, "beat7k_normal_autoplay");
 }
 #[test]
 fn beat7k_hard_autoplay() {
@@ -220,19 +176,11 @@ fn beat7k_hard_autoplay() {
 }
 #[test]
 fn beat7k_exhard_autoplay() {
-    run_autoplay_test(
-        "minimal_7k.bms",
-        EXHARD,
-        "beat7k_exhard_autoplay",
-    );
+    run_autoplay_test("minimal_7k.bms", EXHARD, "beat7k_exhard_autoplay");
 }
 #[test]
 fn beat7k_hazard_autoplay() {
-    run_autoplay_test(
-        "minimal_7k.bms",
-        HAZARD,
-        "beat7k_hazard_autoplay",
-    );
+    run_autoplay_test("minimal_7k.bms", HAZARD, "beat7k_hazard_autoplay");
 }
 
 #[test]
@@ -245,43 +193,23 @@ fn beat7k_assist_easy_manual_perfect() {
 }
 #[test]
 fn beat7k_easy_manual_perfect() {
-    run_manual_perfect_test(
-        "minimal_7k.bms",
-        EASY,
-        "beat7k_easy_manual_perfect",
-    );
+    run_manual_perfect_test("minimal_7k.bms", EASY, "beat7k_easy_manual_perfect");
 }
 #[test]
 fn beat7k_normal_manual_perfect() {
-    run_manual_perfect_test(
-        "minimal_7k.bms",
-        NORMAL,
-        "beat7k_normal_manual_perfect",
-    );
+    run_manual_perfect_test("minimal_7k.bms", NORMAL, "beat7k_normal_manual_perfect");
 }
 #[test]
 fn beat7k_hard_manual_perfect() {
-    run_manual_perfect_test(
-        "minimal_7k.bms",
-        HARD,
-        "beat7k_hard_manual_perfect",
-    );
+    run_manual_perfect_test("minimal_7k.bms", HARD, "beat7k_hard_manual_perfect");
 }
 #[test]
 fn beat7k_exhard_manual_perfect() {
-    run_manual_perfect_test(
-        "minimal_7k.bms",
-        EXHARD,
-        "beat7k_exhard_manual_perfect",
-    );
+    run_manual_perfect_test("minimal_7k.bms", EXHARD, "beat7k_exhard_manual_perfect");
 }
 #[test]
 fn beat7k_hazard_manual_perfect() {
-    run_manual_perfect_test(
-        "minimal_7k.bms",
-        HAZARD,
-        "beat7k_hazard_manual_perfect",
-    );
+    run_manual_perfect_test("minimal_7k.bms", HAZARD, "beat7k_hazard_manual_perfect");
 }
 
 #[test]
@@ -294,43 +222,23 @@ fn beat7k_assist_easy_manual_all_miss() {
 }
 #[test]
 fn beat7k_easy_manual_all_miss() {
-    run_manual_all_miss_test(
-        "minimal_7k.bms",
-        EASY,
-        "beat7k_easy_manual_all_miss",
-    );
+    run_manual_all_miss_test("minimal_7k.bms", EASY, "beat7k_easy_manual_all_miss");
 }
 #[test]
 fn beat7k_normal_manual_all_miss() {
-    run_manual_all_miss_test(
-        "minimal_7k.bms",
-        NORMAL,
-        "beat7k_normal_manual_all_miss",
-    );
+    run_manual_all_miss_test("minimal_7k.bms", NORMAL, "beat7k_normal_manual_all_miss");
 }
 #[test]
 fn beat7k_hard_manual_all_miss() {
-    run_manual_all_miss_test(
-        "minimal_7k.bms",
-        HARD,
-        "beat7k_hard_manual_all_miss",
-    );
+    run_manual_all_miss_test("minimal_7k.bms", HARD, "beat7k_hard_manual_all_miss");
 }
 #[test]
 fn beat7k_exhard_manual_all_miss() {
-    run_manual_all_miss_test(
-        "minimal_7k.bms",
-        EXHARD,
-        "beat7k_exhard_manual_all_miss",
-    );
+    run_manual_all_miss_test("minimal_7k.bms", EXHARD, "beat7k_exhard_manual_all_miss");
 }
 #[test]
 fn beat7k_hazard_manual_all_miss() {
-    run_manual_all_miss_test(
-        "minimal_7k.bms",
-        HAZARD,
-        "beat7k_hazard_manual_all_miss",
-    );
+    run_manual_all_miss_test("minimal_7k.bms", HAZARD, "beat7k_hazard_manual_all_miss");
 }
 
 // ============================================================================
@@ -339,11 +247,7 @@ fn beat7k_hazard_manual_all_miss() {
 
 #[test]
 fn beat14k_assist_easy_autoplay() {
-    run_autoplay_test(
-        "14key_dp.bms",
-        ASSISTEASY,
-        "beat14k_assist_easy_autoplay",
-    );
+    run_autoplay_test("14key_dp.bms", ASSISTEASY, "beat14k_assist_easy_autoplay");
 }
 #[test]
 fn beat14k_easy_autoplay() {
@@ -376,43 +280,23 @@ fn beat14k_assist_easy_manual_perfect() {
 }
 #[test]
 fn beat14k_easy_manual_perfect() {
-    run_manual_perfect_test(
-        "14key_dp.bms",
-        EASY,
-        "beat14k_easy_manual_perfect",
-    );
+    run_manual_perfect_test("14key_dp.bms", EASY, "beat14k_easy_manual_perfect");
 }
 #[test]
 fn beat14k_normal_manual_perfect() {
-    run_manual_perfect_test(
-        "14key_dp.bms",
-        NORMAL,
-        "beat14k_normal_manual_perfect",
-    );
+    run_manual_perfect_test("14key_dp.bms", NORMAL, "beat14k_normal_manual_perfect");
 }
 #[test]
 fn beat14k_hard_manual_perfect() {
-    run_manual_perfect_test(
-        "14key_dp.bms",
-        HARD,
-        "beat14k_hard_manual_perfect",
-    );
+    run_manual_perfect_test("14key_dp.bms", HARD, "beat14k_hard_manual_perfect");
 }
 #[test]
 fn beat14k_exhard_manual_perfect() {
-    run_manual_perfect_test(
-        "14key_dp.bms",
-        EXHARD,
-        "beat14k_exhard_manual_perfect",
-    );
+    run_manual_perfect_test("14key_dp.bms", EXHARD, "beat14k_exhard_manual_perfect");
 }
 #[test]
 fn beat14k_hazard_manual_perfect() {
-    run_manual_perfect_test(
-        "14key_dp.bms",
-        HAZARD,
-        "beat14k_hazard_manual_perfect",
-    );
+    run_manual_perfect_test("14key_dp.bms", HAZARD, "beat14k_hazard_manual_perfect");
 }
 
 #[test]
@@ -425,43 +309,23 @@ fn beat14k_assist_easy_manual_all_miss() {
 }
 #[test]
 fn beat14k_easy_manual_all_miss() {
-    run_manual_all_miss_test(
-        "14key_dp.bms",
-        EASY,
-        "beat14k_easy_manual_all_miss",
-    );
+    run_manual_all_miss_test("14key_dp.bms", EASY, "beat14k_easy_manual_all_miss");
 }
 #[test]
 fn beat14k_normal_manual_all_miss() {
-    run_manual_all_miss_test(
-        "14key_dp.bms",
-        NORMAL,
-        "beat14k_normal_manual_all_miss",
-    );
+    run_manual_all_miss_test("14key_dp.bms", NORMAL, "beat14k_normal_manual_all_miss");
 }
 #[test]
 fn beat14k_hard_manual_all_miss() {
-    run_manual_all_miss_test(
-        "14key_dp.bms",
-        HARD,
-        "beat14k_hard_manual_all_miss",
-    );
+    run_manual_all_miss_test("14key_dp.bms", HARD, "beat14k_hard_manual_all_miss");
 }
 #[test]
 fn beat14k_exhard_manual_all_miss() {
-    run_manual_all_miss_test(
-        "14key_dp.bms",
-        EXHARD,
-        "beat14k_exhard_manual_all_miss",
-    );
+    run_manual_all_miss_test("14key_dp.bms", EXHARD, "beat14k_exhard_manual_all_miss");
 }
 #[test]
 fn beat14k_hazard_manual_all_miss() {
-    run_manual_all_miss_test(
-        "14key_dp.bms",
-        HAZARD,
-        "beat14k_hazard_manual_all_miss",
-    );
+    run_manual_all_miss_test("14key_dp.bms", HAZARD, "beat14k_hazard_manual_all_miss");
 }
 
 // ============================================================================
@@ -470,11 +334,7 @@ fn beat14k_hazard_manual_all_miss() {
 
 #[test]
 fn popn9k_assist_easy_autoplay() {
-    run_autoplay_test(
-        "9key_pms.pms",
-        ASSISTEASY,
-        "popn9k_assist_easy_autoplay",
-    );
+    run_autoplay_test("9key_pms.pms", ASSISTEASY, "popn9k_assist_easy_autoplay");
 }
 #[test]
 fn popn9k_easy_autoplay() {
@@ -507,43 +367,23 @@ fn popn9k_assist_easy_manual_perfect() {
 }
 #[test]
 fn popn9k_easy_manual_perfect() {
-    run_manual_perfect_test(
-        "9key_pms.pms",
-        EASY,
-        "popn9k_easy_manual_perfect",
-    );
+    run_manual_perfect_test("9key_pms.pms", EASY, "popn9k_easy_manual_perfect");
 }
 #[test]
 fn popn9k_normal_manual_perfect() {
-    run_manual_perfect_test(
-        "9key_pms.pms",
-        NORMAL,
-        "popn9k_normal_manual_perfect",
-    );
+    run_manual_perfect_test("9key_pms.pms", NORMAL, "popn9k_normal_manual_perfect");
 }
 #[test]
 fn popn9k_hard_manual_perfect() {
-    run_manual_perfect_test(
-        "9key_pms.pms",
-        HARD,
-        "popn9k_hard_manual_perfect",
-    );
+    run_manual_perfect_test("9key_pms.pms", HARD, "popn9k_hard_manual_perfect");
 }
 #[test]
 fn popn9k_exhard_manual_perfect() {
-    run_manual_perfect_test(
-        "9key_pms.pms",
-        EXHARD,
-        "popn9k_exhard_manual_perfect",
-    );
+    run_manual_perfect_test("9key_pms.pms", EXHARD, "popn9k_exhard_manual_perfect");
 }
 #[test]
 fn popn9k_hazard_manual_perfect() {
-    run_manual_perfect_test(
-        "9key_pms.pms",
-        HAZARD,
-        "popn9k_hazard_manual_perfect",
-    );
+    run_manual_perfect_test("9key_pms.pms", HAZARD, "popn9k_hazard_manual_perfect");
 }
 
 #[test]
@@ -556,41 +396,21 @@ fn popn9k_assist_easy_manual_all_miss() {
 }
 #[test]
 fn popn9k_easy_manual_all_miss() {
-    run_manual_all_miss_test(
-        "9key_pms.pms",
-        EASY,
-        "popn9k_easy_manual_all_miss",
-    );
+    run_manual_all_miss_test("9key_pms.pms", EASY, "popn9k_easy_manual_all_miss");
 }
 #[test]
 fn popn9k_normal_manual_all_miss() {
-    run_manual_all_miss_test(
-        "9key_pms.pms",
-        NORMAL,
-        "popn9k_normal_manual_all_miss",
-    );
+    run_manual_all_miss_test("9key_pms.pms", NORMAL, "popn9k_normal_manual_all_miss");
 }
 #[test]
 fn popn9k_hard_manual_all_miss() {
-    run_manual_all_miss_test(
-        "9key_pms.pms",
-        HARD,
-        "popn9k_hard_manual_all_miss",
-    );
+    run_manual_all_miss_test("9key_pms.pms", HARD, "popn9k_hard_manual_all_miss");
 }
 #[test]
 fn popn9k_exhard_manual_all_miss() {
-    run_manual_all_miss_test(
-        "9key_pms.pms",
-        EXHARD,
-        "popn9k_exhard_manual_all_miss",
-    );
+    run_manual_all_miss_test("9key_pms.pms", EXHARD, "popn9k_exhard_manual_all_miss");
 }
 #[test]
 fn popn9k_hazard_manual_all_miss() {
-    run_manual_all_miss_test(
-        "9key_pms.pms",
-        HAZARD,
-        "popn9k_hazard_manual_all_miss",
-    );
+    run_manual_all_miss_test("9key_pms.pms", HAZARD, "popn9k_hazard_manual_all_miss");
 }

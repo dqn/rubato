@@ -74,14 +74,15 @@ fn autoplay_channel_extended() {
 
 #[test]
 fn autoplay_bmson_bpm_ln_cross() {
+    use bms_model::bms_model::LNTYPE_LONGNOTE;
     use bms_model::bmson_decoder::BMSONDecoder;
     use bms_model::chart_information::ChartInformation;
-    use bms_model::bms_model::LNTYPE_LONGNOTE;
 
     let path = golden_master::e2e_helpers::test_bms_dir().join("bmson_bpm_ln_cross.bmson");
     let info = ChartInformation::new(Some(path), LNTYPE_LONGNOTE, None);
     let mut decoder = BMSONDecoder::new(LNTYPE_LONGNOTE);
-    let model = decoder.decode(info)
+    let model = decoder
+        .decode(info)
         .unwrap_or_else(|| panic!("Failed to parse bmson_bpm_ln_cross.bmson"));
     let result = run_autoplay_simulation(&model, NORMAL);
     let total = result.ghost.len();
@@ -97,7 +98,11 @@ fn autoplay_bmson_bpm_ln_cross() {
 #[test]
 fn bpm_extreme_timing_structure() {
     let model = load_bms("bpm_extreme.bms");
-    let notes: Vec<_> = model.build_judge_notes().into_iter().filter(|n| n.is_playable()).collect();
+    let notes: Vec<_> = model
+        .build_judge_notes()
+        .into_iter()
+        .filter(|n| n.is_playable())
+        .collect();
     assert!(notes.len() >= 4, "Should have at least 4 playable notes");
 
     // Notes should be in time order
@@ -124,7 +129,11 @@ fn bpm_extreme_timing_structure() {
 #[test]
 fn multi_stop_timing_gaps() {
     let model = load_bms("multi_stop_rapid.bms");
-    let notes: Vec<_> = model.build_judge_notes().into_iter().filter(|n| n.is_playable()).collect();
+    let notes: Vec<_> = model
+        .build_judge_notes()
+        .into_iter()
+        .filter(|n| n.is_playable())
+        .collect();
     assert!(!notes.is_empty(), "Should have playable notes");
 
     // All notes should be in time order

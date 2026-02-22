@@ -161,19 +161,19 @@ pub fn build_judge_notes(model: &BMSModel) -> Vec<JudgeNote> {
 
     // Create index array to track old positions
     let mut indices: Vec<usize> = (0..all_notes.len()).collect();
-    
+
     // Sort indices by the note properties (time, lane)
     indices.sort_by_key(|&i| (all_notes[i].time_us, all_notes[i].lane));
-    
+
     // Create a mapping from old index to new index
     let mut old_to_new = vec![0; all_notes.len()];
     for new_idx in 0..indices.len() {
         old_to_new[indices[new_idx]] = new_idx;
     }
-    
+
     // Reorder notes according to sorted indices
     let sorted_notes: Vec<JudgeNote> = indices.iter().map(|&i| all_notes[i].clone()).collect();
-    
+
     // Update pair_index values to reflect new indices
     let mut result = sorted_notes;
     for note in &mut result {
@@ -357,7 +357,7 @@ mod tests {
 
         // Create notes in different lanes at different times
         let mut tl1 = TimeLine::new(0.0, 1_000_000, 8);
-        tl1.set_note(0, Some(Note::new_normal(1)));  // lane 0, t=1s
+        tl1.set_note(0, Some(Note::new_normal(1))); // lane 0, t=1s
         tl1.set_note(2, Some(Note::new_normal(2))); // lane 2, t=1s
 
         let mut tl2 = TimeLine::new(1.0, 2_000_000, 8);

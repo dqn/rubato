@@ -203,8 +203,7 @@ fn boundary_201ms_all_miss() {
 
     let score = &result.score;
     let total: i32 = (0..6).map(|j| score.get_judge_count_total(j)).sum();
-    let miss_count =
-        score.get_judge_count_total(JUDGE_PR) + score.get_judge_count_total(JUDGE_MS);
+    let miss_count = score.get_judge_count_total(JUDGE_PR) + score.get_judge_count_total(JUDGE_MS);
     // At 201ms, key presses are beyond BD window, so notes pass without being hit
     assert_eq!(
         miss_count,

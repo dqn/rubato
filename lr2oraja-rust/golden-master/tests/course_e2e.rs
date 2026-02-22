@@ -123,11 +123,7 @@ fn course_failure_stops() {
     // No input for song 1 (all miss), autoplay for song 2 doesn't matter
     // because the course should stop after song 1.
     let empty_log: &[beatoraja_input::key_input_log::KeyInputLog] = &[];
-    let course = run_course_simulation_manual(
-        &[&model1, &model2],
-        &[empty_log, empty_log],
-        EXHARD,
-    );
+    let course = run_course_simulation_manual(&[&model1, &model2], &[empty_log, empty_log], EXHARD);
 
     assert!(
         !course.completed,
@@ -156,11 +152,8 @@ fn course_exhardclass_failure_stops() {
     let model2 = load_bms("bpm_change.bms");
 
     let empty_log: &[beatoraja_input::key_input_log::KeyInputLog] = &[];
-    let course = run_course_simulation_manual(
-        &[&model1, &model2],
-        &[empty_log, empty_log],
-        EXHARDCLASS,
-    );
+    let course =
+        run_course_simulation_manual(&[&model1, &model2], &[empty_log, empty_log], EXHARDCLASS);
 
     assert!(
         !course.completed,
