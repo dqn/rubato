@@ -3,6 +3,7 @@ use std::time::Instant;
 
 use log::info;
 
+use beatoraja_audio::audio_driver::AudioDriver;
 use beatoraja_types::imgui_notify::ImGuiNotify;
 use beatoraja_types::main_controller_access::MainControllerAccess;
 use beatoraja_types::player_resource_access::PlayerResourceAccess;
@@ -146,8 +147,9 @@ pub struct MainController {
     /// Mouse moved time
     mouse_moved_time: i64,
 
-    /// Audio driver (Phase 5+)
-    // audio: Option<AudioDriver>,
+    /// Audio driver
+    /// Translated from: MainController.audio (AudioDriver)
+    audio: Option<Box<dyn AudioDriver>>,
 
     /// Player resource
     resource: Option<PlayerResource>,
@@ -267,6 +269,7 @@ impl MainController {
             song_updated,
             boottime: Instant::now(),
             mouse_moved_time: 0,
+            audio: None,
             resource: None,
             current: None,
             state_factory: None,
@@ -846,10 +849,25 @@ impl MainController {
     /// Returns the audio processor.
     ///
     /// Translated from: MainController.getAudioProcessor()
-    pub fn get_audio_processor(&self) -> Option<()> {
-        // Phase 5+: return &self.audio
-        log::warn!("not yet implemented: getAudioProcessor");
-        None
+    pub fn get_audio_processor(&self) -> Option<&dyn AudioDriver> {
+        self.audio.as_deref()
+    }
+
+    /// Returns a mutable reference to the audio processor.
+    pub fn get_audio_processor_mut(&mut self) -> Option<&mut dyn AudioDriver> {
+        self.audio
+            .as_mut()
+            .map(|b| &mut **b as &mut dyn AudioDriver)
+    }
+
+    /// Set the audio driver.
+    ///
+    /// Translated from: MainController constructor audio initialization
+    ///
+    /// In Java, the audio driver is created in create() based on AudioConfig.DriverType.
+    /// In Rust, we inject it to avoid pulling in the concrete driver crate.
+    pub fn set_audio_driver(&mut self, audio: Box<dyn AudioDriver>) {
+        self.audio = Some(audio);
     }
 
     /// Returns the current calendar time.
@@ -1829,5 +1847,102 @@ mod tests {
     fn test_update_state_references_does_not_panic() {
         let mut mc = make_test_controller();
         mc.update_state_references();
+    }
+
+    // --- Audio driver wiring tests (Phase 24c) ---
+
+    use bms_model::bms_model::BMSModel;
+    use bms_model::note::Note;
+
+    /// Mock AudioDriver for testing. Tracks method calls.
+    struct MockAudioDriver {
+        global_pitch: f32,
+        play_count: i32,
+        stop_count: i32,
+    }
+
+    impl MockAudioDriver {
+        fn new() -> Self {
+            Self {
+                global_pitch: 1.0,
+                play_count: 0,
+                stop_count: 0,
+            }
+        }
+    }
+
+    impl AudioDriver for MockAudioDriver {
+        fn play_path(&mut self, _path: &str, _volume: f32, _loop_play: bool) {
+            self.play_count += 1;
+        }
+        fn set_volume_path(&mut self, _path: &str, _volume: f32) {}
+        fn is_playing_path(&self, _path: &str) -> bool {
+            false
+        }
+        fn stop_path(&mut self, _path: &str) {
+            self.stop_count += 1;
+        }
+        fn dispose_path(&mut self, _path: &str) {}
+        fn set_model(&mut self, _model: &BMSModel) {}
+        fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
+        fn abort(&mut self) {}
+        fn get_progress(&self) -> f32 {
+            1.0
+        }
+        fn play_note(&mut self, _n: &Note, _volume: f32, _pitch: i32) {}
+        fn play_judge(&mut self, _judge: i32, _fast: bool) {}
+        fn stop_note(&mut self, _n: Option<&Note>) {}
+        fn set_volume_note(&mut self, _n: &Note, _volume: f32) {}
+        fn set_global_pitch(&mut self, pitch: f32) {
+            self.global_pitch = pitch;
+        }
+        fn get_global_pitch(&self) -> f32 {
+            self.global_pitch
+        }
+        fn dispose_old(&mut self) {}
+        fn dispose(&mut self) {}
+    }
+
+    #[test]
+    fn test_audio_driver_initially_none() {
+        let mc = make_test_controller();
+        assert!(mc.get_audio_processor().is_none());
+    }
+
+    #[test]
+    fn test_set_audio_driver() {
+        let mut mc = make_test_controller();
+        mc.set_audio_driver(Box::new(MockAudioDriver::new()));
+        assert!(mc.get_audio_processor().is_some());
+    }
+
+    #[test]
+    fn test_get_audio_processor_returns_trait_ref() {
+        let mut mc = make_test_controller();
+        mc.set_audio_driver(Box::new(MockAudioDriver::new()));
+
+        let audio = mc.get_audio_processor().unwrap();
+        assert_eq!(audio.get_global_pitch(), 1.0);
+        assert_eq!(audio.get_progress(), 1.0);
+    }
+
+    #[test]
+    fn test_get_audio_processor_mut() {
+        let mut mc = make_test_controller();
+        mc.set_audio_driver(Box::new(MockAudioDriver::new()));
+
+        let audio = mc.get_audio_processor_mut().unwrap();
+        audio.set_global_pitch(1.5);
+        assert_eq!(audio.get_global_pitch(), 1.5);
+    }
+
+    #[test]
+    fn test_audio_driver_play_path() {
+        let mut mc = make_test_controller();
+        mc.set_audio_driver(Box::new(MockAudioDriver::new()));
+
+        let audio = mc.get_audio_processor_mut().unwrap();
+        audio.play_path("/test/sound.wav", 0.8, false);
+        assert!(!audio.is_playing_path("/test/sound.wav"));
     }
 }

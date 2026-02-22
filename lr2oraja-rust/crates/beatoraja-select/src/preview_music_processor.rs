@@ -3,6 +3,8 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
+use beatoraja_audio::audio_driver::AudioDriver;
+
 use crate::stubs::*;
 
 /// Preview music processor
@@ -16,7 +18,7 @@ pub struct PreviewMusicProcessor {
 }
 
 impl PreviewMusicProcessor {
-    pub fn new(_audio: &AudioDriver, _config: &Config) -> Self {
+    pub fn new(_audio: &dyn AudioDriver, _config: &Config) -> Self {
         Self {
             commands: Arc::new(Mutex::new(VecDeque::new())),
             preview_running: Arc::new(AtomicBool::new(false)),
@@ -69,9 +71,9 @@ impl PreviewMusicProcessor {
     /// 2. Polls commands queue for preview path changes
     /// 3. Stops preview and switches back to default when preview ends
     /// 4. Updates volume when system volume changes
-    pub fn run_preview_loop(&self, audio: &AudioDriver, config: &Config) {
+    pub fn run_preview_loop(&self, audio: &mut dyn AudioDriver, config: &Config) {
         let sys_vol = config.audio.as_ref().map(|a| a.systemvolume).unwrap_or(0.5);
-        audio.play(&self.default_music, sys_vol, true);
+        audio.play_path(&self.default_music, sys_vol, true);
         let mut playing = self.default_music.clone();
         let mut current_volume = sys_vol;
 
@@ -94,13 +96,13 @@ impl PreviewMusicProcessor {
                         );
                         if path != self.default_music {
                             let looping = matches!(config.song_preview, SongPreview::LOOP);
-                            audio.play(&path, sys_vol, looping);
+                            audio.play_path(&path, sys_vol, looping);
                         } else {
-                            audio.set_volume(&self.default_music, sys_vol);
+                            audio.set_volume_path(&self.default_music, sys_vol);
                         }
                         playing = path;
                     }
-                } else if playing != self.default_music && !audio.is_playing(&playing) {
+                } else if playing != self.default_music && !audio.is_playing_path(&playing) {
                     // Preview finished, return to default music
                     Self::stop_preview_internal(
                         audio,
@@ -109,10 +111,10 @@ impl PreviewMusicProcessor {
                         sys_vol,
                         true,
                     );
-                    audio.set_volume(&self.default_music, sys_vol);
+                    audio.set_volume_path(&self.default_music, sys_vol);
                     playing = self.default_music.clone();
                 } else if (current_volume - sys_vol).abs() > f32::EPSILON {
-                    audio.set_volume(&playing, sys_vol);
+                    audio.set_volume_path(&playing, sys_vol);
                     current_volume = sys_vol;
                 } else {
                     drop(cmds);
@@ -128,7 +130,7 @@ impl PreviewMusicProcessor {
     /// Stop the currently playing preview.
     /// Corresponds to Java PreviewThread.stopPreview(boolean pause)
     fn stop_preview_internal(
-        audio: &AudioDriver,
+        audio: &mut dyn AudioDriver,
         playing: &str,
         default_music: &str,
         sys_vol: f32,
@@ -136,18 +138,137 @@ impl PreviewMusicProcessor {
     ) {
         if !playing.is_empty() {
             if playing != default_music {
-                audio.stop(playing);
-                audio.dispose(playing);
+                audio.stop_path(playing);
+                audio.dispose_path(playing);
             } else if pause {
                 // Fade out
                 for i in (0..=10).rev() {
                     let vol = i as f32 * 0.1 * sys_vol;
-                    audio.set_volume(playing, vol);
+                    audio.set_volume_path(playing, vol);
                     std::thread::sleep(std::time::Duration::from_millis(15));
                 }
             } else {
-                audio.stop(playing);
+                audio.stop_path(playing);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ::bms_model::bms_model::BMSModel;
+    use ::bms_model::note::Note;
+    use std::sync::atomic::AtomicI32;
+
+    /// Mock AudioDriver for testing PreviewMusicProcessor.
+    struct MockAudioDriver {
+        play_count: AtomicI32,
+        stop_count: AtomicI32,
+    }
+
+    impl MockAudioDriver {
+        fn new() -> Self {
+            Self {
+                play_count: AtomicI32::new(0),
+                stop_count: AtomicI32::new(0),
+            }
+        }
+    }
+
+    impl AudioDriver for MockAudioDriver {
+        fn play_path(&mut self, _path: &str, _volume: f32, _loop_play: bool) {
+            self.play_count.fetch_add(1, Ordering::SeqCst);
+        }
+        fn set_volume_path(&mut self, _path: &str, _volume: f32) {}
+        fn is_playing_path(&self, _path: &str) -> bool {
+            false
+        }
+        fn stop_path(&mut self, _path: &str) {
+            self.stop_count.fetch_add(1, Ordering::SeqCst);
+        }
+        fn dispose_path(&mut self, _path: &str) {}
+        fn set_model(&mut self, _model: &BMSModel) {}
+        fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
+        fn abort(&mut self) {}
+        fn get_progress(&self) -> f32 {
+            1.0
+        }
+        fn play_note(&mut self, _n: &Note, _volume: f32, _pitch: i32) {}
+        fn play_judge(&mut self, _judge: i32, _fast: bool) {}
+        fn stop_note(&mut self, _n: Option<&Note>) {}
+        fn set_volume_note(&mut self, _n: &Note, _volume: f32) {}
+        fn set_global_pitch(&mut self, _pitch: f32) {}
+        fn get_global_pitch(&self) -> f32 {
+            1.0
+        }
+        fn dispose_old(&mut self) {}
+        fn dispose(&mut self) {}
+    }
+
+    #[test]
+    fn test_new_with_audio_driver_trait() {
+        let mut audio = MockAudioDriver::new();
+        let config = Config::default();
+        let processor = PreviewMusicProcessor::new(&mut audio, &config);
+        assert!(processor.get_song_data().is_none());
+    }
+
+    #[test]
+    fn test_set_default() {
+        let mut audio = MockAudioDriver::new();
+        let config = Config::default();
+        let mut processor = PreviewMusicProcessor::new(&mut audio, &config);
+        processor.set_default("/path/to/bgm.ogg");
+        assert_eq!(processor.default_music, "/path/to/bgm.ogg");
+    }
+
+    #[test]
+    fn test_start_with_none_song() {
+        let mut audio = MockAudioDriver::new();
+        let config = Config::default();
+        let mut processor = PreviewMusicProcessor::new(&mut audio, &config);
+        processor.start(None);
+        assert!(processor.get_song_data().is_none());
+        // Command queue should have one entry (empty path)
+        assert_eq!(processor.commands.lock().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_start_with_song() {
+        let mut audio = MockAudioDriver::new();
+        let config = Config::default();
+        let mut processor = PreviewMusicProcessor::new(&mut audio, &config);
+
+        let mut song = SongData::default();
+        song.sha256 = "abc".to_string();
+        processor.start(Some(&song));
+        assert!(processor.get_song_data().is_some());
+        assert_eq!(processor.get_song_data().unwrap().sha256, "abc");
+    }
+
+    #[test]
+    fn test_stop() {
+        let mut audio = MockAudioDriver::new();
+        let config = Config::default();
+        let mut processor = PreviewMusicProcessor::new(&mut audio, &config);
+        processor.preview_running.store(true, Ordering::SeqCst);
+        processor.stop();
+        assert!(!processor.preview_running.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn test_run_preview_loop_immediate_stop() {
+        let mut audio = MockAudioDriver::new();
+        let config = Config::default();
+        let mut processor = PreviewMusicProcessor::new(&audio, &config);
+        processor.set_default("/bgm/default.ogg");
+        // preview_running is false, so run_preview_loop should exit immediately
+        // after playing default music and then calling stop_preview_internal
+        processor.run_preview_loop(&mut audio, &config);
+        // Should have played the default music
+        assert!(audio.play_count.load(Ordering::SeqCst) >= 1);
+        // Should have stopped the default music on exit
+        assert!(audio.stop_count.load(Ordering::SeqCst) >= 1);
     }
 }

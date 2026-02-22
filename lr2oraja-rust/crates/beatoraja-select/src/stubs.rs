@@ -271,22 +271,6 @@ pub use ::bms_model::mode as bms_model;
 pub use beatoraja_core::player_information::PlayerInformation;
 
 // ============================================================
-// AudioDriver — stub for beatoraja.audio.AudioDriver
-// ============================================================
-
-pub struct AudioDriver;
-
-impl AudioDriver {
-    pub fn play(&self, _path: &str, _volume: f32, _looping: bool) {}
-    pub fn stop(&self, _path: &str) {}
-    pub fn dispose(&self, _path: &str) {}
-    pub fn is_playing(&self, _path: &str) -> bool {
-        false
-    }
-    pub fn set_volume(&self, _path: &str, _volume: f32) {}
-}
-
-// ============================================================
 // Resolution — re-exported from beatoraja-core
 // ============================================================
 
