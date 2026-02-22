@@ -74,7 +74,8 @@ All phases complete. 936 tests pass. Zero runtime `todo!()`/`unimplemented!()`.
 |--------|---------|
 | 1–12 | Core translation: 17 crates, 300+ modules, CLI + winit event loop |
 | 14, 15a–g | Circular dep resolution (`beatoraja-types`), struct→trait unification, stub cleanup, platform replacements |
-| 13a–g | Real implementations: wgpu rendering, Kira audio, mlua, egui UI, ffmpeg-next, midir, cpal |
+| 13a–e, 13g | Real implementations: wgpu rendering, Kira audio, mlua, ffmpeg-next, midir, cpal |
+| 13f | egui UI: EguiIntegration (egui-wgpu 0.31), LauncherApp + BeatorajaApp event loops, 10 modmenu widgets, LauncherUi 11 tabs, winit monitor enumeration |
 | 16a–c | Tests: 715 unit + 121 golden master + 32 integration (compare_rule + compare_pattern reactivated with Java LCG fix) |
 | 17 | Verified zero runtime todo!/unimplemented! |
 | 18 | Post-Phase 13 lifecycle wiring (pending) |
@@ -83,7 +84,7 @@ All phases complete. 936 tests pass. Zero runtime `todo!()`/`unimplemented!()`.
 
 - ~~**Circular dep:** TextureRegion/Texture in play~~ → resolved: `pub use beatoraja_render::Texture` in `beatoraja-play/stubs.rs`
 - **Lifecycle:** MainController/PlayerResource stubs in downstream crates (implement traits from `beatoraja-types`)
-- **Remaining stubs.rs:** lifecycle stubs, cross-crate re-exports, Phase 13-deferred items (egui utilities)
+- **Remaining stubs.rs:** lifecycle stubs, cross-crate re-exports
 - **Platform:** Windows named pipe (platform-specific, not yet implemented)
 
 ## Lessons Learned
@@ -117,6 +118,10 @@ All phases complete. 936 tests pass. Zero runtime `todo!()`/`unimplemented!()`.
 - **HashMap ordering:** Differs between Java/Rust — add deterministic tie-breaking (sort by BPM, use `>=`) for `mainbpm`.
 - **Bounds checking:** `TimeLine::get_note`/`exist_note_at` need bounds checks — BMS mode detection may yield fewer lanes than caller expects. Use `.get()` for reads.
 - **CRC32:** Custom poly `0xEDB88320`, appends `\\\0`. **RobustFile:** double-write + `sync_all()`.
-- **Platform replacements:** Twitter4j → `anyhow::bail!()`, AWT clipboard → `arboard`, PortAudio → `cpal`, monitors → CoreGraphics FFI (macOS). Rust 2024: `unsafe extern "C"` blocks.
+- **Platform replacements:** Twitter4j → `anyhow::bail!()`, AWT clipboard → `arboard`, PortAudio → `cpal`, monitors → CoreGraphics FFI (macOS) + winit `available_monitors()` (non-macOS). Rust 2024: `unsafe extern "C"` blocks.
+- **egui-wgpu version:** egui-wgpu 0.30 depends on wgpu 23; project uses wgpu 24. Must use egui/egui-wgpu/egui-winit 0.31 which depends on wgpu ^24.0.0.
+- **RenderPass lifetime:** wgpu 24's `begin_render_pass` returns `RenderPass<'encoder>` but `egui_wgpu::Renderer::render()` requires `RenderPass<'static>`. Fix: `render_pass.forget_lifetime()`.
+- **egui architecture:** egui context managed in beatoraja-bin (avoids circular deps). Two event loops: `LauncherApp` (ControlFlow::Wait, standalone config UI) and `BeatorajaApp` (ControlFlow::Poll, game + egui overlay). Each modmenu sub-menu gets `show_ui(ctx: &egui::Context)`.
+- **Monitor enumeration:** Non-macOS uses winit `ActiveEventLoop::available_monitors()` cached in a global `Mutex<Vec<MonitorInfo>>` populated from `resumed()`. macOS keeps CoreGraphics FFI.
 - **Stub cleanup:** Always verify with `cargo check` after removal. Cross-crate re-exports require checking downstream crates. Split rendering stubs into `rendering_stubs.rs` with `pub use` in `stubs.rs` for backward compat.
 - **Java Random LCG:** `java.util.Random(seed)` uses LCG (multiplier=`0x5DEECE66D`, addend=`0xB`, mask=48-bit). Seed scramble: `(seed ^ multiplier) & mask`. `nextInt(bound)` has power-of-2 fast path. Must use `wrapping_mul`/`wrapping_add` for i64 overflow. Implemented as `java_random::JavaRandom` in `beatoraja-pattern`. **Never use `StdRng`/`rand` for Java-seeded RNG.**

@@ -4,12 +4,12 @@ Dependency graph order. Each module is ported only after its dependencies are co
 
 ## Completed Phases
 
-Phases 1–12, 13a–e, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 940 tests pass. Zero runtime `todo!()`/`unimplemented!()`. See AGENTS.md for details.
+Phases 1–12, 13a–f, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 936 tests pass. Zero runtime `todo!()`/`unimplemented!()`. See AGENTS.md for details.
 
-## Phase 13f: egui UI (incomplete)
+## Phase 13f: egui UI (complete)
 
-- [ ] Full egui UI integration (launcher views, mod menu) — requires egui-wgpu render pass integration into the winit event loop (`beatoraja-bin`), egui widget porting for all launcher settings views, and mod menu overlay. Blocked until `beatoraja-render` GpuContext exposes an egui-compatible surface.
-- [ ] Monitor enumeration on non-macOS → winit `ActiveEventLoop::available_monitors()` — blocked on egui/winit event loop (above)
+- [x] Full egui UI integration (launcher views, mod menu) — EguiIntegration in beatoraja-render wraps egui-wgpu 0.31 + wgpu 24 with `forget_lifetime()` for RenderPass. beatoraja-bin has two event loops: LauncherApp (standalone egui config UI) and BeatorajaApp (game + egui overlay). All 10 modmenu sub-menus ported to egui widgets. LauncherUi with 11 tabs.
+- [x] Monitor enumeration on non-macOS → winit `ActiveEventLoop::available_monitors()` — cached via `update_monitors_from_winit()` called from both event loops' `resumed()` handlers
 
 ## Phase 16b: Golden Master Test Activation (incomplete)
 
@@ -26,7 +26,7 @@ Phases 1–12, 13a–e, 13g, 14, 15a–g, 16a, 16c, 17 — all complete. 940 tes
 
 ## Phase 18: Post-Phase 13 Lifecycle Wiring
 
-Depends on: Phase 13f (egui UI integration) and Phase 13c (rendering pipeline fully connected).
+Depends on: Phase 13c (rendering pipeline fully connected). Phase 13f (egui UI) is now complete.
 
 - [ ] Replace `MainController` stubs in 8 crates (select, ir, obs, result, decide, external, modmenu, md-processor) with real `beatoraja-core::MainController` — blocked: downstream crates call crate-specific stub APIs not present on real MainController; requires adapter methods or caller updates per crate
 - [ ] Replace `PlayerResource` stubs in 6 crates (select, result, decide, external, modmenu, obs) with real `beatoraja-core::PlayerResource` — blocked: same adapter pattern needed; `PlayerResource` holds rendering/audio handles whose types depend on Phase 13 integration
@@ -39,4 +39,4 @@ Depends on: Phase 13f (egui UI integration) and Phase 13c (rendering pipeline fu
 ## Remaining Stubs
 
 - **Lifecycle (trait-ified):** MainController/PlayerResource stubs implement `MainControllerAccess`/`PlayerResourceAccess` traits. MainState stubs use `beatoraja-core` `MainState` trait; downstream stubs have crate-specific APIs
-- **External libraries:** LibGDX rendering types, ImGui/egui types (Phase 13f)
+- **External libraries:** LibGDX rendering types (Phase 13 rendering stubs remain in skin crates)
