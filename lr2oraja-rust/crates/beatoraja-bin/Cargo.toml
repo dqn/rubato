@@ -7,6 +7,9 @@ edition.workspace = true
 name = "beatoraja"
 path = "src/main.rs"
 
+[features]
+dhat-heap = ["dhat"]
+
 [dependencies]
 beatoraja-core = { workspace = true }
 beatoraja-external = { workspace = true }
@@ -25,3 +28,4 @@ egui-winit = { workspace = true }
 egui-wgpu = { workspace = true }
 bytemuck = { workspace = true }
 pollster = "0.4"
+dhat = { workspace = true, optional = true }

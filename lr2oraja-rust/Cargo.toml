@@ -181,3 +181,9 @@ gilrs = "0.11"
 
 # MIDI
 midir = "0.10"
+
+# Memory profiling
+dhat = "0.3"
+
+[profile.release]
+debug = 1  # Keep debug info for profiling stack traces
