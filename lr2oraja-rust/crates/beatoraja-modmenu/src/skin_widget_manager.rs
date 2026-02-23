@@ -1,4 +1,5 @@
 use crate::imgui_notify::ImGuiNotify;
+use crate::imgui_renderer;
 use crate::stubs::{
     Clipboard, ImBoolean, ImFloat, Rectangle, Skin, SkinObject, SkinObjectDestination,
 };
@@ -20,6 +21,71 @@ static EDITING_WIDGET_H: Mutex<ImFloat> = Mutex::new(ImFloat { value: 0.0 });
 static SHOW_CURSOR_POSITION: Mutex<ImBoolean> = Mutex::new(ImBoolean { value: true });
 static MOVE_OVERLAY_ENABLED: Mutex<ImBoolean> = Mutex::new(ImBoolean { value: false });
 static RESET_MOVE_OVERLAY: Mutex<bool> = Mutex::new(false);
+
+// =========================================================================
+// WidgetTableColumn — column configuration for the widget table
+// =========================================================================
+
+/// Getter function type: extracts a float value from a SkinWidgetDestination.
+type ColumnGetter = fn(&SkinWidgetDestination) -> f32;
+
+/// Represents one column in the widget table.
+///
+/// Translated from: SkinWidgetManager.WidgetTableColumn (Java record)
+pub struct WidgetTableColumn {
+    pub name: &'static str,
+    pub show: bool,
+    pub persistent: bool,
+    pub getter: Option<ColumnGetter>,
+    pub change_event_type: Option<EventType>,
+}
+
+static WIDGET_TABLE_COLUMNS: LazyLock<Mutex<Vec<WidgetTableColumn>>> = LazyLock::new(|| {
+    Mutex::new(vec![
+        WidgetTableColumn {
+            name: "ID",
+            show: true,
+            persistent: true,
+            getter: None,
+            change_event_type: None,
+        },
+        WidgetTableColumn {
+            name: "x",
+            show: true,
+            persistent: false,
+            getter: Some(SkinWidgetDestination::get_dst_x),
+            change_event_type: Some(EventType::ChangeX),
+        },
+        WidgetTableColumn {
+            name: "y",
+            show: true,
+            persistent: false,
+            getter: Some(SkinWidgetDestination::get_dst_y),
+            change_event_type: Some(EventType::ChangeY),
+        },
+        WidgetTableColumn {
+            name: "w",
+            show: true,
+            persistent: false,
+            getter: Some(SkinWidgetDestination::get_dst_w),
+            change_event_type: Some(EventType::ChangeW),
+        },
+        WidgetTableColumn {
+            name: "h",
+            show: true,
+            persistent: false,
+            getter: Some(SkinWidgetDestination::get_dst_h),
+            change_event_type: Some(EventType::ChangeH),
+        },
+        WidgetTableColumn {
+            name: "Operation",
+            show: true,
+            persistent: true,
+            getter: None,
+            change_event_type: None,
+        },
+    ])
+});
 
 pub struct SkinWidgetManager;
 
@@ -79,6 +145,10 @@ impl SkinWidgetManager {
     }
 
     /// Render the skin widget manager window using egui.
+    ///
+    /// Translated from: SkinWidgetManager.show(ImBoolean)
+    /// In Java: ImGui window with tab bar (SkinWidgets + History), column settings,
+    /// cursor position overlay.
     pub fn show_ui(ctx: &egui::Context) {
         let _lock = LOCK.lock().unwrap();
         let mut open = true;
@@ -86,23 +156,59 @@ impl SkinWidgetManager {
             .open(&mut open)
             .auto_sized()
             .show(ctx, |ui| {
-                let widgets = WIDGETS.lock().unwrap();
+                let mut widgets = WIDGETS.lock().unwrap();
                 if widgets.is_empty() {
                     ui.label("No skin is loaded");
                 } else {
+                    // Use a simple approach: selectable labels acting as tabs
+                    // egui doesn't have built-in tab bars, so we use a stateful tab index
+                    let tab_id = ui.id().with("skin_widgets_tab");
+                    let mut tab_index =
+                        ui.memory(|mem| mem.data.get_temp::<usize>(tab_id).unwrap_or(0));
+
                     ui.horizontal(|ui| {
-                        if ui.button("Undo").clicked() {
-                            EVENT_HISTORY.lock().unwrap().undo();
+                        if ui.selectable_label(tab_index == 0, "SkinWidgets").clicked() {
+                            tab_index = 0;
                         }
-                        let mut show_cursor = SHOW_CURSOR_POSITION.lock().unwrap();
-                        ui.checkbox(&mut show_cursor.value, "Show Position");
-                        drop(show_cursor);
-                        if ui.button("Export").clicked() {
-                            export_changes();
+                        if ui.selectable_label(tab_index == 1, "History").clicked() {
+                            tab_index = 1;
                         }
                     });
+                    ui.memory_mut(|mem| mem.data.insert_temp(tab_id, tab_index));
+
                     ui.separator();
-                    ui.label(format!("{} widgets loaded", widgets.len()));
+
+                    if tab_index == 0 {
+                        // SkinWidgets tab
+                        ui.horizontal(|ui| {
+                            if ui.button("Undo").clicked() {
+                                let mut event_history = EVENT_HISTORY.lock().unwrap();
+                                event_history.undo_with_widgets(&mut widgets);
+                            }
+                            render_prefer_column_setting(ui);
+                            let mut show_cursor = SHOW_CURSOR_POSITION.lock().unwrap();
+                            ui.checkbox(&mut show_cursor.value, "Show Position");
+                            drop(show_cursor);
+                            if ui.button("Export").clicked() {
+                                export_changes();
+                            }
+                        });
+
+                        render_skin_widgets_table(ui, &mut widgets);
+                    } else {
+                        // History tab
+                        render_history_table(ui);
+                    }
+
+                    // Overlay cursor position
+                    let show_cursor = SHOW_CURSOR_POSITION.lock().unwrap();
+                    if show_cursor.value {
+                        // → **Phase XX**: cursor position requires input integration
+                        // For now show a placeholder using window height
+                        let _window_height = imgui_renderer::window_height();
+                        // In Java: Gdx.input.getX() / (windowHeight - Gdx.input.getY())
+                        // We cannot get cursor position without input integration
+                    }
                 }
             });
     }
@@ -112,33 +218,366 @@ impl SkinWidgetManager {
 ///
 /// Translated from: SkinWidgetManager.renderPreferColumnSetting()
 /// In Java: ImGui popup with checkboxes for toggling table column visibility.
-fn render_prefer_column_setting(_ui: &mut egui::Ui) {
-    // Phase 5+: column visibility toggles for widget table
-    log::warn!("not yet implemented: SkinWidgetManager.renderPreferColumnSetting egui");
+fn render_prefer_column_setting(ui: &mut egui::Ui) {
+    let popup_id = ui.make_persistent_id("PreferColumnSetting");
+    let response = ui.button("Columns");
+    if response.clicked() {
+        ui.memory_mut(|mem| mem.toggle_popup(popup_id));
+    }
+
+    egui::popup_below_widget(
+        ui,
+        popup_id,
+        &response,
+        egui::PopupCloseBehavior::CloseOnClick,
+        |ui| {
+            let mut columns = WIDGET_TABLE_COLUMNS.lock().unwrap();
+            for column in columns.iter_mut() {
+                if column.persistent {
+                    continue;
+                }
+                ui.checkbox(&mut column.show, column.name);
+            }
+        },
+    );
 }
 
 /// Render the skin widgets table with tree nodes per widget.
 ///
 /// Translated from: SkinWidgetManager.renderSkinWidgetsTable()
 /// In Java: ImGui table with tree nodes, columns for x/y/w/h, edit popup, move overlay.
-fn render_skin_widgets_table(_ui: &mut egui::Ui, _widgets: &[SkinWidget]) {
-    // Phase 5+: full widget table with edit popups and move overlay
-    log::warn!("not yet implemented: SkinWidgetManager.renderSkinWidgetsTable egui");
+fn render_skin_widgets_table(ui: &mut egui::Ui, widgets: &mut [SkinWidget]) {
+    // NOTE: This will create a snapshot for us, which can kinda prevent us step into race condition
+    let columns = WIDGET_TABLE_COLUMNS.lock().unwrap();
+    let showing_columns: Vec<(usize, &WidgetTableColumn)> = columns
+        .iter()
+        .enumerate()
+        .filter(|(_, col)| col.show)
+        .collect();
+    let col_size = showing_columns.len();
+    if col_size == 0 {
+        return;
+    }
+    drop(columns);
+
+    let columns = WIDGET_TABLE_COLUMNS.lock().unwrap();
+    let showing_columns: Vec<(usize, &WidgetTableColumn)> = columns
+        .iter()
+        .enumerate()
+        .filter(|(_, col)| col.show)
+        .collect();
+
+    // Table header
+    egui::ScrollArea::vertical()
+        .max_height(ui.text_style_height(&egui::TextStyle::Body) * 20.0)
+        .show(ui, |ui| {
+            egui::Grid::new("skin_widgets_table")
+                .striped(true)
+                .num_columns(col_size)
+                .show(ui, |ui| {
+                    // Header row
+                    for (_, column) in &showing_columns {
+                        ui.strong(column.name);
+                    }
+                    ui.end_row();
+
+                    // Widget rows
+                    for (widget_idx, widget) in widgets.iter_mut().enumerate() {
+                        let is_widget_drawing = widget.is_drawing_on_screen();
+
+                        // ID column: collapsing header
+                        let header_id = ui.make_persistent_id(format!("widget_{}", widget_idx));
+                        let mut is_open =
+                            ui.memory(|mem| mem.data.get_temp::<bool>(header_id).unwrap_or(false));
+
+                        // First column (ID): tree node
+                        let label = if is_widget_drawing {
+                            egui::RichText::new(&widget.name)
+                        } else {
+                            egui::RichText::new(&widget.name)
+                                .color(egui::Color32::from_rgb(128, 128, 128))
+                        };
+                        if ui.selectable_label(is_open, label).clicked() {
+                            is_open = !is_open;
+                        }
+                        ui.memory_mut(|mem| mem.data.insert_temp(header_id, is_open));
+
+                        // Middle columns: "--" placeholder for the widget row
+                        for i in 1..col_size.saturating_sub(1) {
+                            let _ = i;
+                            ui.weak("--");
+                        }
+
+                        // Last column (Operation): Toggle button
+                        if col_size >= 2 {
+                            let event_history = EVENT_HISTORY.lock().unwrap();
+                            let was_visible = widget.skin_object.visible;
+                            drop(event_history);
+                            if ui.button("Toggle").clicked() {
+                                let mut event_history = EVENT_HISTORY.lock().unwrap();
+                                event_history.push_event(Event::ToggleVisible {
+                                    event_type: EventType::ToggleVisible,
+                                    target_name: widget.name.clone(),
+                                    widget_index: widget_idx,
+                                    was_visible_before: was_visible,
+                                });
+                                widget.toggle_visible();
+                            }
+                        }
+                        ui.end_row();
+
+                        // Destination sub-rows (when tree node is open)
+                        if is_open {
+                            for dst in widget.destinations.iter_mut() {
+                                let dst_id = ui.make_persistent_id(format!("dst_{}", dst.name));
+
+                                // First column: destination name
+                                let dst_label = if is_widget_drawing {
+                                    egui::RichText::new(&dst.name)
+                                } else {
+                                    egui::RichText::new(&dst.name)
+                                        .color(egui::Color32::from_rgb(128, 128, 128))
+                                };
+                                ui.label(dst_label);
+
+                                // Middle columns: float values
+                                let event_history = EVENT_HISTORY.lock().unwrap();
+                                let columns_ref = WIDGET_TABLE_COLUMNS.lock().unwrap();
+                                let showing_mid: Vec<&WidgetTableColumn> =
+                                    columns_ref.iter().filter(|col| col.show).collect();
+                                // Columns from index 1 to col_size-2 (exclusive of first and last)
+                                for (i, column) in showing_mid
+                                    .iter()
+                                    .enumerate()
+                                    .take(showing_mid.len().saturating_sub(1))
+                                    .skip(1)
+                                {
+                                    if let (Some(getter), Some(evt_type)) =
+                                        (column.getter, &column.change_event_type)
+                                    {
+                                        let modified = event_history.has_event(&dst.name, evt_type);
+                                        let value = getter(dst);
+                                        draw_float_value_column(ui, i, modified, value);
+                                    } else {
+                                        ui.label("--");
+                                    }
+                                }
+                                drop(columns_ref);
+                                drop(event_history);
+
+                                // Last column: Edit button
+                                if col_size >= 2 {
+                                    let edit_popup_id =
+                                        ui.make_persistent_id(format!("edit_popup_{}", dst.name));
+                                    let edit_response = ui.button("Edit");
+                                    if edit_response.clicked() {
+                                        *EDITING_WIDGET_X.lock().unwrap() = ImFloat {
+                                            value: dst.get_dst_x(),
+                                        };
+                                        *EDITING_WIDGET_Y.lock().unwrap() = ImFloat {
+                                            value: dst.get_dst_y(),
+                                        };
+                                        *EDITING_WIDGET_W.lock().unwrap() = ImFloat {
+                                            value: dst.get_dst_w(),
+                                        };
+                                        *EDITING_WIDGET_H.lock().unwrap() = ImFloat {
+                                            value: dst.get_dst_h(),
+                                        };
+                                        *RESET_MOVE_OVERLAY.lock().unwrap() = true;
+                                        ui.memory_mut(|mem| mem.toggle_popup(edit_popup_id));
+                                    }
+
+                                    let popup_open =
+                                        ui.memory(|mem| mem.is_popup_open(edit_popup_id));
+
+                                    if popup_open {
+                                        egui::Area::new(edit_popup_id)
+                                            .order(egui::Order::Foreground)
+                                            .fixed_pos(edit_response.rect.left_bottom())
+                                            .show(ui.ctx(), |ui| {
+                                                egui::Frame::popup(ui.style()).show(ui, |ui| {
+                                                    render_edit_popup(ui, dst, dst_id);
+                                                });
+                                            });
+                                    } else {
+                                        // If user clicked the empty space while moving widgets,
+                                        // the whole popup would be closed too.
+                                        // So we have to catch the "escaping" widget here.
+                                        if dst.moving_state == 2 {
+                                            dst.moving_state = 0;
+                                            dst.submit_movement();
+                                        }
+                                    }
+                                }
+
+                                ui.end_row();
+                            }
+                        }
+                    }
+                });
+        });
+}
+
+/// Render the edit popup for a single destination.
+///
+/// Translated from the inner part of renderSkinWidgetsTable() where
+/// ImGui.beginPopup("Edit Skin Widget") is used.
+fn render_edit_popup(ui: &mut egui::Ui, dst: &mut SkinWidgetDestination, _dst_id: egui::Id) {
+    ui.label("Edit Skin Widget");
+    ui.separator();
+
+    let mut x = EDITING_WIDGET_X.lock().unwrap();
+    ui.horizontal(|ui| {
+        ui.label("x");
+        ui.add(egui::DragValue::new(&mut x.value).speed(1.0));
+    });
+    drop(x);
+
+    let mut y = EDITING_WIDGET_Y.lock().unwrap();
+    ui.horizontal(|ui| {
+        ui.label("y");
+        ui.add(egui::DragValue::new(&mut y.value).speed(1.0));
+    });
+    drop(y);
+
+    let mut w = EDITING_WIDGET_W.lock().unwrap();
+    ui.horizontal(|ui| {
+        ui.label("w");
+        ui.add(egui::DragValue::new(&mut w.value).speed(1.0));
+    });
+    drop(w);
+
+    let mut h = EDITING_WIDGET_H.lock().unwrap();
+    ui.horizontal(|ui| {
+        ui.label("h");
+        ui.add(egui::DragValue::new(&mut h.value).speed(1.0));
+    });
+    drop(h);
+
+    if ui.button("Submit").clicked() {
+        dst.set_dst_x(EDITING_WIDGET_X.lock().unwrap().value);
+        dst.set_dst_y(EDITING_WIDGET_Y.lock().unwrap().value);
+        dst.set_dst_w(EDITING_WIDGET_W.lock().unwrap().value);
+        dst.set_dst_h(EDITING_WIDGET_H.lock().unwrap().value);
+    }
+
+    // Move overlay checkbox
+    let mut move_enabled = MOVE_OVERLAY_ENABLED.lock().unwrap();
+    let old_move = move_enabled.value;
+    ui.checkbox(&mut move_enabled.value, "Move");
+    let just_enabled = move_enabled.value && !old_move;
+    let reset = *RESET_MOVE_OVERLAY.lock().unwrap();
+
+    if just_enabled || reset {
+        *RESET_MOVE_OVERLAY.lock().unwrap() = false;
+        // Position would be set via ImGui.setNextWindowPos/Size in Java
+        // In egui, the overlay window position is set when creating the Area below
+    }
+
+    if move_enabled.value {
+        if dst.moving_state == 0 {
+            let cloned_region = Rectangle {
+                x: dst.get_dst_x(),
+                y: dst.get_dst_y(),
+                width: dst.get_dst_w(),
+                height: dst.get_dst_h(),
+            };
+            dst.before_move = Some(SkinObjectDestination {
+                time: 0,
+                region: cloned_region,
+                color: None,
+                angle: 0.0,
+                alpha: 0.0,
+            });
+            dst.moving_state = 1;
+        }
+
+        drop(move_enabled);
+        render_move_overlay(ui, dst);
+    } else {
+        dst.moving_state = 0;
+    }
+}
+
+/// Render the move overlay window for drag-moving a widget destination.
+///
+/// Translated from the move overlay section in renderSkinWidgetsTable().
+/// In Java: a borderless, styled ImGui window that displays x/y/w/h and allows
+/// drag-moving the widget position.
+fn render_move_overlay(ui: &mut egui::Ui, dst: &mut SkinWidgetDestination) {
+    let window_height = imgui_renderer::window_height() as f32;
+    let w = dst.get_dst_w();
+    let h = dst.get_dst_h();
+    let x = dst.get_dst_x();
+    let y = window_height - dst.get_dst_y() - h;
+
+    let move_enabled = MOVE_OVERLAY_ENABLED.lock().unwrap();
+
+    egui::Window::new("widget-overlay-popup")
+        .fixed_pos(egui::pos2(x, y))
+        .fixed_size(egui::vec2(w.max(100.0), h.max(40.0)))
+        .title_bar(false)
+        .collapsible(false)
+        .resizable(true)
+        .frame(
+            egui::Frame::window(&egui::Style::default())
+                .fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, 102))
+                .stroke(egui::Stroke::new(
+                    1.0,
+                    egui::Color32::from_rgba_unmultiplied(51, 102, 255, 255),
+                )),
+        )
+        .show(ui.ctx(), |ui| {
+            ui.label(format!("x = {:.1} y = {:.1}", x, dst.get_dst_y()));
+            ui.label(format!("w = {:.1} h = {:.1}", w, h));
+
+            // NOTE: This approach is actually moving the "REAL" widget in-time
+            dst.set_dst_x_with_event(x, false);
+            dst.set_dst_y_with_event(dst.get_dst_y(), false);
+            dst.set_dst_w_with_event(w, false);
+            dst.set_dst_h_with_event(h, false);
+        });
+
+    // Focus state machine: 0 -> 1 -> 2 -> submit
+    // In egui we can't easily detect window focus, so we use a simplified approach:
+    // The move overlay stays active until the user unchecks "Move"
+    if dst.moving_state == 1 {
+        dst.moving_state = 2;
+    }
+
+    if !move_enabled.value && dst.moving_state == 2 {
+        dst.moving_state = 0;
+        dst.submit_movement();
+    }
 }
 
 /// Render the modification history table.
 ///
 /// Translated from: SkinWidgetManager.renderHistoryTable()
 /// In Java: ImGui table showing event descriptions with clipper.
-fn render_history_table(_ui: &mut egui::Ui) {
+fn render_history_table(ui: &mut egui::Ui) {
     let event_history = EVENT_HISTORY.lock().unwrap();
     let events = event_history.get_events();
     if events.is_empty() {
-        _ui.label("No history");
+        ui.label("No history");
     } else {
-        for event in events {
-            _ui.label(event.get_description());
-        }
+        egui::ScrollArea::vertical()
+            .max_height(ui.text_style_height(&egui::TextStyle::Body) * 20.0)
+            .show(ui, |ui| {
+                egui::Grid::new("history_table")
+                    .striped(true)
+                    .num_columns(1)
+                    .show(ui, |ui| {
+                        ui.strong("Description");
+                        ui.end_row();
+                        for (i, event) in events.iter().enumerate() {
+                            ui.push_id(i, |ui| {
+                                ui.label(event.get_description());
+                            });
+                            ui.end_row();
+                        }
+                    });
+            });
     }
 }
 
@@ -559,9 +998,18 @@ impl EventHistory {
         self.event_stack.push(event);
     }
 
-    /// Undo the most recent event
+    /// Undo the most recent event (without widget access — only removes from stack)
     pub fn undo(&mut self) {
         self.undo_n(1);
+    }
+
+    /// Undo the most recent event with mutable access to widgets.
+    ///
+    /// Translated from: EventHistory.undo() — the Java version has back-references
+    /// to the actual destinations/widgets via the Event handle field.
+    /// In Rust we pass the widgets explicitly.
+    pub fn undo_with_widgets(&mut self, widgets: &mut [SkinWidget]) {
+        self.undo_n_with_widgets(1, widgets);
     }
 
     /// Undo the most recent event multiple times
@@ -577,11 +1025,34 @@ impl EventHistory {
             }
             let last = self.event_stack.len() - 1;
             let last_event = self.event_stack.remove(last);
-            // Undo logic would need mutable access to destination/widget
-            // This is a simplified version; actual undo requires back-references
+            // Without widget access, we can only remove from the stack
             let _ = last_event;
         }
 
+        self.rebuild_target_name_index();
+    }
+
+    /// Undo the most recent events with mutable access to widgets
+    pub fn undo_n_with_widgets(&mut self, times: i32, widgets: &mut [SkinWidget]) {
+        let times = times.unsigned_abs() as usize;
+        if times == 0 {
+            return;
+        }
+
+        for _ in 0..times {
+            if self.event_stack.is_empty() {
+                break;
+            }
+            let last = self.event_stack.len() - 1;
+            let last_event = self.event_stack.remove(last);
+            last_event.undo(widgets);
+        }
+
+        self.rebuild_target_name_index();
+    }
+
+    /// Rebuild the target_name_to_events index from event_stack.
+    fn rebuild_target_name_index(&mut self) {
         // Rebuild target_name_to_events from event_stack
         self.target_name_to_events.clear();
         for event in &self.event_stack {
@@ -591,5 +1062,341 @@ impl EventHistory {
                 .or_default()
                 .push(event.clone());
         }
+    }
+}
+
+// =========================================================================
+// Tests
+// =========================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_dst(name: &str, x: f32, y: f32, w: f32, h: f32) -> SkinWidgetDestination {
+        SkinWidgetDestination::new(
+            name.to_string(),
+            SkinObjectDestination {
+                time: 0,
+                region: Rectangle {
+                    x,
+                    y,
+                    width: w,
+                    height: h,
+                },
+                color: None,
+                angle: 0.0,
+                alpha: 0.0,
+            },
+        )
+    }
+
+    fn make_widget(name: &str, dsts: Vec<SkinWidgetDestination>) -> SkinWidget {
+        SkinWidget::new(
+            name.to_string(),
+            SkinObject {
+                name: Some(name.to_string()),
+                draw: true,
+                visible: true,
+                destinations: vec![],
+            },
+            dsts,
+        )
+    }
+
+    // ---- normalize_float tests ----
+
+    #[test]
+    fn test_normalize_float_integer_value() {
+        assert_eq!(normalize_float(10.0), "10");
+    }
+
+    #[test]
+    fn test_normalize_float_trailing_zeros() {
+        assert_eq!(normalize_float(1.5), "1.5");
+    }
+
+    #[test]
+    fn test_normalize_float_four_decimal_places() {
+        assert_eq!(normalize_float(1.23456), "1.2346");
+    }
+
+    #[test]
+    fn test_normalize_float_zero() {
+        assert_eq!(normalize_float(0.0), "0");
+    }
+
+    #[test]
+    fn test_normalize_float_negative() {
+        assert_eq!(normalize_float(-3.14), "-3.14");
+    }
+
+    // ---- WidgetTableColumn static tests ----
+
+    #[test]
+    fn test_widget_table_columns_count() {
+        let columns = WIDGET_TABLE_COLUMNS.lock().unwrap();
+        assert_eq!(columns.len(), 6);
+    }
+
+    #[test]
+    fn test_widget_table_columns_first_is_id_persistent() {
+        let columns = WIDGET_TABLE_COLUMNS.lock().unwrap();
+        assert_eq!(columns[0].name, "ID");
+        assert!(columns[0].persistent);
+        assert!(columns[0].getter.is_none());
+    }
+
+    #[test]
+    fn test_widget_table_columns_last_is_operation_persistent() {
+        let columns = WIDGET_TABLE_COLUMNS.lock().unwrap();
+        let last = &columns[columns.len() - 1];
+        assert_eq!(last.name, "Operation");
+        assert!(last.persistent);
+        assert!(last.getter.is_none());
+    }
+
+    #[test]
+    fn test_widget_table_columns_xywh_have_getters() {
+        let columns = WIDGET_TABLE_COLUMNS.lock().unwrap();
+        // columns[1..5] are x, y, w, h
+        for i in 1..5 {
+            assert!(!columns[i].persistent);
+            assert!(columns[i].getter.is_some());
+            assert!(columns[i].change_event_type.is_some());
+        }
+    }
+
+    #[test]
+    fn test_widget_table_column_getters() {
+        let columns = WIDGET_TABLE_COLUMNS.lock().unwrap();
+        let dst = make_dst("test", 10.0, 20.0, 30.0, 40.0);
+
+        let x_getter = columns[1].getter.unwrap();
+        assert!((x_getter(&dst) - 10.0).abs() < f32::EPSILON);
+
+        let y_getter = columns[2].getter.unwrap();
+        assert!((y_getter(&dst) - 20.0).abs() < f32::EPSILON);
+
+        let w_getter = columns[3].getter.unwrap();
+        assert!((w_getter(&dst) - 30.0).abs() < f32::EPSILON);
+
+        let h_getter = columns[4].getter.unwrap();
+        assert!((h_getter(&dst) - 40.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_widget_table_showing_columns_filter() {
+        let mut columns = WIDGET_TABLE_COLUMNS.lock().unwrap();
+        // Hide x and y columns
+        columns[1].show = false;
+        columns[2].show = false;
+        let showing: Vec<&WidgetTableColumn> = columns.iter().filter(|col| col.show).collect();
+        // Should be: ID, w, h, Operation = 4
+        assert_eq!(showing.len(), 4);
+        assert_eq!(showing[0].name, "ID");
+        assert_eq!(showing[1].name, "w");
+        assert_eq!(showing[2].name, "h");
+        assert_eq!(showing[3].name, "Operation");
+
+        // Restore for other tests
+        columns[1].show = true;
+        columns[2].show = true;
+    }
+
+    // ---- EventHistory tests ----
+
+    #[test]
+    fn test_event_history_push_and_has_event() {
+        let mut history = EventHistory::new();
+        assert!(!history.has_event("dst1", &EventType::ChangeX));
+
+        history.push_event(Event::ChangeSingleField {
+            event_type: EventType::ChangeX,
+            target_name: "dst1".to_string(),
+            previous: 0.0,
+            current: 10.0,
+        });
+
+        assert!(history.has_event("dst1", &EventType::ChangeX));
+        assert!(!history.has_event("dst1", &EventType::ChangeY));
+        assert!(!history.has_event("other", &EventType::ChangeX));
+    }
+
+    #[test]
+    fn test_event_history_undo_with_widgets() {
+        let mut history = EventHistory::new();
+        let mut widgets = vec![make_widget(
+            "w1",
+            vec![make_dst("dst1", 0.0, 0.0, 0.0, 0.0)],
+        )];
+
+        // Push a change event
+        history.push_event(Event::ChangeSingleField {
+            event_type: EventType::ChangeX,
+            target_name: "dst1".to_string(),
+            previous: 0.0,
+            current: 10.0,
+        });
+        // Simulate that x was actually changed to 10
+        widgets[0].destinations[0].destination.region.x = 10.0;
+        assert!((widgets[0].destinations[0].get_dst_x() - 10.0).abs() < f32::EPSILON);
+
+        // Undo
+        history.undo_n_with_widgets(1, &mut widgets);
+
+        // x should be reverted to 0
+        assert!((widgets[0].destinations[0].get_dst_x() - 0.0).abs() < f32::EPSILON);
+        assert!(history.get_events().is_empty());
+    }
+
+    #[test]
+    fn test_event_history_undo_toggle_visible() {
+        let mut history = EventHistory::new();
+        let mut widgets = vec![make_widget("w1", vec![])];
+        assert!(widgets[0].skin_object.visible);
+
+        // Push toggle event, toggling visible to false
+        history.push_event(Event::ToggleVisible {
+            event_type: EventType::ToggleVisible,
+            target_name: "w1".to_string(),
+            widget_index: 0,
+            was_visible_before: true,
+        });
+        widgets[0].toggle_visible(); // now false
+
+        assert!(!widgets[0].skin_object.visible);
+
+        // Undo
+        history.undo_n_with_widgets(1, &mut widgets);
+        assert!(widgets[0].skin_object.visible);
+    }
+
+    #[test]
+    fn test_event_history_clear() {
+        let mut history = EventHistory::new();
+        history.push_event(Event::ChangeSingleField {
+            event_type: EventType::ChangeX,
+            target_name: "dst1".to_string(),
+            previous: 0.0,
+            current: 5.0,
+        });
+        assert!(!history.get_events().is_empty());
+
+        history.clear();
+        assert!(history.get_events().is_empty());
+        assert!(!history.has_event("dst1", &EventType::ChangeX));
+    }
+
+    #[test]
+    fn test_event_history_get_events_by_name() {
+        let mut history = EventHistory::new();
+        history.push_event(Event::ChangeSingleField {
+            event_type: EventType::ChangeX,
+            target_name: "dst1".to_string(),
+            previous: 0.0,
+            current: 10.0,
+        });
+        history.push_event(Event::ChangeSingleField {
+            event_type: EventType::ChangeY,
+            target_name: "dst1".to_string(),
+            previous: 0.0,
+            current: 20.0,
+        });
+        history.push_event(Event::ChangeSingleField {
+            event_type: EventType::ChangeX,
+            target_name: "dst2".to_string(),
+            previous: 0.0,
+            current: 5.0,
+        });
+
+        let dst1_events = history.get_events_by_name("dst1");
+        assert_eq!(dst1_events.len(), 2);
+
+        let dst2_events = history.get_events_by_name("dst2");
+        assert_eq!(dst2_events.len(), 1);
+
+        let none_events = history.get_events_by_name("nonexistent");
+        assert!(none_events.is_empty());
+    }
+
+    // ---- SkinWidget tests ----
+
+    #[test]
+    fn test_skin_widget_is_drawing_on_screen() {
+        let mut widget = make_widget("test", vec![]);
+        assert!(widget.is_drawing_on_screen());
+
+        widget.skin_object.visible = false;
+        assert!(!widget.is_drawing_on_screen());
+
+        widget.skin_object.visible = true;
+        widget.skin_object.draw = false;
+        assert!(!widget.is_drawing_on_screen());
+    }
+
+    #[test]
+    fn test_skin_widget_toggle_visible() {
+        let mut widget = make_widget("test", vec![]);
+        assert!(widget.skin_object.visible);
+
+        widget.toggle_visible();
+        assert!(!widget.skin_object.visible);
+
+        widget.toggle_visible();
+        assert!(widget.skin_object.visible);
+    }
+
+    // ---- Event description tests ----
+
+    #[test]
+    fn test_event_change_x_description() {
+        let event = Event::ChangeSingleField {
+            event_type: EventType::ChangeX,
+            target_name: "dst1".to_string(),
+            previous: 0.0,
+            current: 10.0,
+        };
+        assert_eq!(
+            event.get_description(),
+            "Changed dst1's x from 0.0000 to 10.0000"
+        );
+    }
+
+    #[test]
+    fn test_event_toggle_visible_description() {
+        let event = Event::ToggleVisible {
+            event_type: EventType::ToggleVisible,
+            target_name: "widget1".to_string(),
+            widget_index: 0,
+            was_visible_before: true,
+        };
+        assert_eq!(event.get_description(), "Make widget1 widget invisible");
+
+        let event2 = Event::ToggleVisible {
+            event_type: EventType::ToggleVisible,
+            target_name: "widget1".to_string(),
+            widget_index: 0,
+            was_visible_before: false,
+        };
+        assert_eq!(event2.get_description(), "Make widget1 widget visible");
+    }
+
+    // ---- SkinWidgetDestination tests ----
+
+    #[test]
+    fn test_destination_getters() {
+        let dst = make_dst("test", 1.0, 2.0, 3.0, 4.0);
+        assert!((dst.get_dst_x() - 1.0).abs() < f32::EPSILON);
+        assert!((dst.get_dst_y() - 2.0).abs() < f32::EPSILON);
+        assert!((dst.get_dst_w() - 3.0).abs() < f32::EPSILON);
+        assert!((dst.get_dst_h() - 4.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_destination_moving_state_initial() {
+        let dst = make_dst("test", 0.0, 0.0, 0.0, 0.0);
+        assert_eq!(dst.moving_state, 0);
+        assert!(dst.before_move.is_none());
     }
 }
