@@ -293,7 +293,12 @@ impl BMSPlayer {
     }
 
     /// Corresponds to Java BMSPlayer.createScoreData()
-    pub fn create_score_data(&self) -> Option<ScoreData> {
+    ///
+    /// `device_type` comes from `MainController.get_input_processor().get_device_type()`.
+    pub fn create_score_data(
+        &self,
+        device_type: beatoraja_input::bms_player_input_device::DeviceType,
+    ) -> Option<ScoreData> {
         let mut score = self.judge.get_score_data().clone();
 
         // If not in course mode and not aborted, check if any notes were hit
@@ -407,7 +412,18 @@ impl BMSPlayer {
         }
         score.stddev = stddev;
 
-        // TODO(Phase 41): score.device_type = main.get_input_processor().get_device_type();
+        // Java: score.setDeviceType(main.getInputProcessor().getDeviceType());
+        score.device_type = Some(match device_type {
+            beatoraja_input::bms_player_input_device::DeviceType::Keyboard => {
+                beatoraja_types::stubs::bms_player_input_device::Type::KEYBOARD
+            }
+            beatoraja_input::bms_player_input_device::DeviceType::BmController => {
+                beatoraja_types::stubs::bms_player_input_device::Type::BM_CONTROLLER
+            }
+            beatoraja_input::bms_player_input_device::DeviceType::Midi => {
+                beatoraja_types::stubs::bms_player_input_device::Type::MIDI
+            }
+        });
         // TODO(Phase 41): score.skin = Some(get_skin().header.get_name().to_string());
 
         Some(score)
@@ -1503,6 +1519,7 @@ impl MainState for BMSPlayer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use beatoraja_input::bms_player_input_device::DeviceType;
     use bms_model::bms_model::BMSModel;
     use bms_model::mode::Mode;
 
@@ -1766,7 +1783,7 @@ mod tests {
         // Use ABORTED state to bypass the zero-notes-hit check
         player.state = STATE_ABORTED;
 
-        let score = player.create_score_data().unwrap();
+        let score = player.create_score_data(DeviceType::Keyboard).unwrap();
 
         // total_duration = |1000| + |-2000| + |3000| = 6000
         assert_eq!(score.total_duration, 6000);
@@ -1795,7 +1812,7 @@ mod tests {
         let mut player = BMSPlayer::new(model);
         player.state = STATE_ABORTED;
 
-        let score = player.create_score_data().unwrap();
+        let score = player.create_score_data(DeviceType::Keyboard).unwrap();
 
         // No notes matched state 1-4:
         // avgjudge and avg stay at initial i64::MAX (conditional set not entered)
@@ -1841,7 +1858,7 @@ mod tests {
         let mut player = BMSPlayer::new(model);
         player.state = STATE_ABORTED;
 
-        let score = player.create_score_data().unwrap();
+        let score = player.create_score_data(DeviceType::Keyboard).unwrap();
 
         // Only normal(1000) and ln_start(2000) should be included
         assert_eq!(score.total_duration, 3000); // |1000| + |2000|
@@ -1855,7 +1872,7 @@ mod tests {
         let model = make_model();
         let player = BMSPlayer::new(model);
         // No notes hit - all judge counts are 0
-        let result = player.create_score_data();
+        let result = player.create_score_data(DeviceType::Keyboard);
         assert!(result.is_none());
     }
 
@@ -1865,8 +1882,52 @@ mod tests {
         let mut player = BMSPlayer::new(model);
         player.state = STATE_ABORTED;
         // Even with no notes, aborted state returns score data
-        let result = player.create_score_data();
+        let result = player.create_score_data(DeviceType::Keyboard);
         assert!(result.is_some());
+    }
+
+    // --- create_score_data device_type tests ---
+
+    #[test]
+    fn create_score_data_sets_device_type_keyboard() {
+        use beatoraja_types::stubs::bms_player_input_device;
+
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_ABORTED;
+
+        let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+        assert_eq!(
+            score.device_type,
+            Some(bms_player_input_device::Type::KEYBOARD)
+        );
+    }
+
+    #[test]
+    fn create_score_data_sets_device_type_bm_controller() {
+        use beatoraja_types::stubs::bms_player_input_device;
+
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_ABORTED;
+
+        let score = player.create_score_data(DeviceType::BmController).unwrap();
+        assert_eq!(
+            score.device_type,
+            Some(bms_player_input_device::Type::BM_CONTROLLER)
+        );
+    }
+
+    #[test]
+    fn create_score_data_sets_device_type_midi() {
+        use beatoraja_types::stubs::bms_player_input_device;
+
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_ABORTED;
+
+        let score = player.create_score_data(DeviceType::Midi).unwrap();
+        assert_eq!(score.device_type, Some(bms_player_input_device::Type::MIDI));
     }
 
     // --- update_judge tests ---
