@@ -242,17 +242,51 @@ impl SystemSoundManager {
         self.soundmap.get(sound)
     }
 
-    pub fn play(&self, sound: &SoundType, _loop_sound: bool) {
-        if let Some(_path) = self.soundmap.get(sound) {
-            // main.getAudioProcessor().play(path, systemvolume, loop)
-            // Phase 5+ dependency
+    /// Play a system sound effect or BGM.
+    ///
+    /// Translated from: SystemSoundManager.play() (Java lines 119-121)
+    ///
+    /// When an audio driver is provided, plays the sound at the given system volume.
+    /// Without an audio driver, this is a no-op (useful for testing).
+    pub fn play(
+        &self,
+        sound: &SoundType,
+        loop_sound: bool,
+        audio: Option<&mut dyn beatoraja_audio::audio_driver::AudioDriver>,
+        system_volume: f32,
+    ) {
+        if let Some(path) = self.soundmap.get(sound)
+            && let Some(audio) = audio
+        {
+            audio.play_path(path, system_volume, loop_sound);
         }
     }
 
-    pub fn stop(&self, sound: &SoundType) {
-        if let Some(_path) = self.soundmap.get(sound) {
-            // main.getAudioProcessor().stop(path)
-            // Phase 5+ dependency
+    /// Stop a system sound effect or BGM.
+    ///
+    /// Translated from: SystemSoundManager.stop() (Java lines 126-128)
+    pub fn stop(
+        &self,
+        sound: &SoundType,
+        audio: Option<&mut dyn beatoraja_audio::audio_driver::AudioDriver>,
+    ) {
+        if let Some(path) = self.soundmap.get(sound)
+            && let Some(audio) = audio
+        {
+            audio.stop_path(path);
+        }
+    }
+
+    /// Dispose a sound (called when sound set changes).
+    ///
+    /// Translated from: SystemSoundManager.shuffle() dispose call (Java line 73)
+    pub fn dispose_sound(
+        &self,
+        path: &str,
+        audio: Option<&mut dyn beatoraja_audio::audio_driver::AudioDriver>,
+    ) {
+        if let Some(audio) = audio {
+            audio.dispose_path(path);
         }
     }
 }
@@ -265,4 +299,133 @@ fn rand_f64() -> f64 {
         .unwrap()
         .subsec_nanos();
     (nanos as f64) / (u32::MAX as f64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Mock AudioDriver for testing play/stop/dispose calls.
+    struct MockAudioDriver {
+        played: Vec<(String, f32, bool)>,
+        stopped: Vec<String>,
+        disposed: Vec<String>,
+    }
+
+    impl MockAudioDriver {
+        fn new() -> Self {
+            Self {
+                played: Vec::new(),
+                stopped: Vec::new(),
+                disposed: Vec::new(),
+            }
+        }
+    }
+
+    impl beatoraja_audio::audio_driver::AudioDriver for MockAudioDriver {
+        fn play_path(&mut self, path: &str, volume: f32, loop_play: bool) {
+            self.played.push((path.to_string(), volume, loop_play));
+        }
+        fn set_volume_path(&mut self, _path: &str, _volume: f32) {}
+        fn is_playing_path(&self, _path: &str) -> bool {
+            false
+        }
+        fn stop_path(&mut self, path: &str) {
+            self.stopped.push(path.to_string());
+        }
+        fn dispose_path(&mut self, path: &str) {
+            self.disposed.push(path.to_string());
+        }
+        fn set_model(&mut self, _model: &bms_model::bms_model::BMSModel) {}
+        fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
+        fn abort(&mut self) {}
+        fn get_progress(&self) -> f32 {
+            0.0
+        }
+        fn play_note(&mut self, _n: &bms_model::note::Note, _volume: f32, _pitch: i32) {}
+        fn play_judge(&mut self, _judge: i32, _fast: bool) {}
+        fn stop_note(&mut self, _n: Option<&bms_model::note::Note>) {}
+        fn set_volume_note(&mut self, _n: &bms_model::note::Note, _volume: f32) {}
+        fn set_global_pitch(&mut self, _pitch: f32) {}
+        fn get_global_pitch(&self) -> f32 {
+            1.0
+        }
+        fn dispose_old(&mut self) {}
+        fn dispose(&mut self) {}
+    }
+
+    #[test]
+    fn play_calls_audio_driver() {
+        let mut sm = SystemSoundManager::new(None, None);
+        // Manually insert a sound path
+        sm.soundmap
+            .insert(SoundType::PlayReady, "test/ready.wav".to_string());
+
+        let mut audio = MockAudioDriver::new();
+        sm.play(&SoundType::PlayReady, false, Some(&mut audio), 0.8);
+        assert_eq!(audio.played.len(), 1);
+        assert_eq!(audio.played[0].0, "test/ready.wav");
+        assert!((audio.played[0].1 - 0.8).abs() < f32::EPSILON);
+        assert!(!audio.played[0].2);
+    }
+
+    #[test]
+    fn play_loop_passes_loop_flag() {
+        let mut sm = SystemSoundManager::new(None, None);
+        sm.soundmap
+            .insert(SoundType::Select, "test/select.wav".to_string());
+
+        let mut audio = MockAudioDriver::new();
+        sm.play(&SoundType::Select, true, Some(&mut audio), 1.0);
+        assert_eq!(audio.played.len(), 1);
+        assert!(audio.played[0].2); // loop = true
+    }
+
+    #[test]
+    fn stop_calls_audio_driver() {
+        let mut sm = SystemSoundManager::new(None, None);
+        sm.soundmap
+            .insert(SoundType::PlayStop, "test/stop.wav".to_string());
+
+        let mut audio = MockAudioDriver::new();
+        sm.stop(&SoundType::PlayStop, Some(&mut audio));
+        assert_eq!(audio.stopped.len(), 1);
+        assert_eq!(audio.stopped[0], "test/stop.wav");
+    }
+
+    #[test]
+    fn play_without_audio_driver_is_noop() {
+        let mut sm = SystemSoundManager::new(None, None);
+        sm.soundmap
+            .insert(SoundType::PlayReady, "test/ready.wav".to_string());
+        // Should not panic
+        sm.play(&SoundType::PlayReady, false, None, 0.5);
+    }
+
+    #[test]
+    fn stop_without_audio_driver_is_noop() {
+        let mut sm = SystemSoundManager::new(None, None);
+        sm.soundmap
+            .insert(SoundType::PlayStop, "test/stop.wav".to_string());
+        // Should not panic
+        sm.stop(&SoundType::PlayStop, None);
+    }
+
+    #[test]
+    fn play_missing_sound_is_noop() {
+        let sm = SystemSoundManager::new(None, None);
+        let mut audio = MockAudioDriver::new();
+        // No sound in the map
+        sm.play(&SoundType::PlayReady, false, Some(&mut audio), 0.5);
+        assert!(audio.played.is_empty());
+    }
+
+    #[test]
+    fn dispose_sound_calls_audio_driver() {
+        let sm = SystemSoundManager::new(None, None);
+        let mut audio = MockAudioDriver::new();
+        sm.dispose_sound("old/path.wav", Some(&mut audio));
+        assert_eq!(audio.disposed.len(), 1);
+        assert_eq!(audio.disposed[0], "old/path.wav");
+    }
 }

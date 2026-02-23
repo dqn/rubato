@@ -287,6 +287,11 @@ pub struct MainController {
 
     /// Debug flag
     pub debug: bool,
+
+    /// Loudness analyzer for volume normalization.
+    ///
+    /// Translated from: MainController.loudnessAnalyzer (BMSLoudnessAnalyzer)
+    loudness_analyzer: Option<beatoraja_audio::bms_loudness_analyzer::BMSLoudnessAnalyzer>,
 }
 
 /// Offset count (SkinProperty.OFFSET_MAX + 1)
@@ -357,6 +362,9 @@ impl MainController {
             last_config_save: Instant::now(),
             state_references_callback: None,
             debug: false,
+            loudness_analyzer: Some(
+                beatoraja_audio::bms_loudness_analyzer::BMSLoudnessAnalyzer::new(),
+            ),
         }
     }
 
@@ -410,6 +418,10 @@ impl MainController {
 
     pub fn get_sound_manager(&self) -> Option<&SystemSoundManager> {
         self.sound.as_ref()
+    }
+
+    pub fn get_sound_manager_mut(&mut self) -> Option<&mut SystemSoundManager> {
+        self.sound.as_mut()
     }
 
     pub fn get_ir_status(&self) -> &[IRStatus] {
@@ -1065,6 +1077,24 @@ impl MainController {
     /// In Rust, we inject it to avoid pulling in the concrete driver crate.
     pub fn set_audio_driver(&mut self, audio: Box<dyn AudioDriver>) {
         self.audio = Some(audio);
+    }
+
+    /// Returns the loudness analyzer.
+    ///
+    /// Translated from: MainController.loudnessAnalyzer
+    pub fn get_loudness_analyzer(
+        &self,
+    ) -> Option<&beatoraja_audio::bms_loudness_analyzer::BMSLoudnessAnalyzer> {
+        self.loudness_analyzer.as_ref()
+    }
+
+    /// Shutdown the loudness analyzer.
+    ///
+    /// Translated from: MainController.dispose() lines 864-866
+    pub fn shutdown_loudness_analyzer(&mut self) {
+        if let Some(ref analyzer) = self.loudness_analyzer {
+            analyzer.shutdown();
+        }
     }
 
     /// Returns the current calendar time.
@@ -2345,5 +2375,33 @@ mod tests {
 
         mc.create();
         assert!(*called.lock().unwrap());
+    }
+
+    // --- Phase 41i: Loudness analyzer tests ---
+
+    #[test]
+    fn test_loudness_analyzer_initialized() {
+        let mc = make_test_controller();
+        assert!(mc.get_loudness_analyzer().is_some());
+    }
+
+    #[test]
+    fn test_loudness_analyzer_is_available() {
+        let mc = make_test_controller();
+        let analyzer = mc.get_loudness_analyzer().unwrap();
+        assert!(analyzer.is_available());
+    }
+
+    #[test]
+    fn test_loudness_analyzer_shutdown_no_panic() {
+        let mut mc = make_test_controller();
+        mc.shutdown_loudness_analyzer();
+        // Should not panic
+    }
+
+    #[test]
+    fn test_get_sound_manager_mut() {
+        let mut mc = make_test_controller();
+        assert!(mc.get_sound_manager_mut().is_some());
     }
 }

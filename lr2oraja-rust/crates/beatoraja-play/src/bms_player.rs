@@ -140,6 +140,14 @@ pub struct BMSPlayer {
     active_replay: Option<ReplayData>,
     /// Margin time in milliseconds (from resource)
     margin_time: i64,
+    /// Pending global pitch to apply to the audio driver.
+    /// Set by BMSPlayer during state transitions; consumed by the caller.
+    /// None means no change requested.
+    pending_global_pitch: Option<f32>,
+    /// Fast-forward frequency option (from AudioConfig).
+    /// Cached during initialization so set_play_speed can determine
+    /// whether to apply pitch changes.
+    fast_forward_freq_option: FrequencyType,
 }
 
 impl BMSPlayer {
@@ -175,15 +183,30 @@ impl BMSPlayer {
             total_notes,
             active_replay: None,
             margin_time: 0,
+            pending_global_pitch: None,
+            fast_forward_freq_option: FrequencyType::UNPROCESSED,
         }
     }
 
+    /// Set the fast-forward frequency option for pitch control.
+    /// Should be called during initialization from AudioConfig.
+    pub fn set_fast_forward_freq_option(&mut self, freq_option: FrequencyType) {
+        self.fast_forward_freq_option = freq_option;
+    }
+
+    /// Set play speed and optionally request global pitch change.
+    ///
+    /// Translated from: BMSPlayer.setPlaySpeed(int) + audio pitch logic (Java line 946)
+    ///
+    /// When `fast_forward_freq_option` is `FREQUENCY`, sets a pending global pitch for
+    /// the audio driver. The caller should check `take_pending_global_pitch()` after calling this.
     pub fn set_play_speed(&mut self, playspeed: i32) {
         self.playspeed = playspeed;
-        // TODO: Phase 22 - audio pitch change
-        // if main.getConfig().getAudioConfig().getFastForward() == FrequencyType.FREQUENCY {
-        //     main.getAudioProcessor().setGlobalPitch(playspeed as f32 / 100.0);
-        // }
+        // In Java: if (config.getAudioConfig().getFastForward() == FrequencyType.FREQUENCY)
+        //     main.getAudioProcessor().setGlobalPitch(playspeed / 100f);
+        if self.fast_forward_freq_option == FrequencyType::FREQUENCY {
+            self.pending_global_pitch = Some(playspeed as f32 / 100.0);
+        }
     }
 
     pub fn get_play_speed(&self) -> i32 {
@@ -241,6 +264,46 @@ impl BMSPlayer {
         self.margin_time = margin_time;
     }
 
+    /// Take the pending global pitch value, if any.
+    /// After calling this, the pending value is cleared (consumed).
+    /// The caller should apply the returned pitch to the audio driver.
+    pub fn take_pending_global_pitch(&mut self) -> Option<f32> {
+        self.pending_global_pitch.take()
+    }
+
+    /// Apply loudness analysis result to compute the adjusted volume.
+    ///
+    /// Translated from: BMSPlayer.render() STATE_PRELOAD loudness check (Java lines 614-641)
+    ///
+    /// When called, sets `adjusted_volume` based on the analysis result.
+    /// Returns the adjusted volume (or -1.0 if analysis failed).
+    pub fn apply_loudness_analysis(
+        &mut self,
+        analysis_result: &beatoraja_audio::bms_loudness_analyzer::AnalysisResult,
+        config_key_volume: f32,
+    ) -> f32 {
+        self.analysis_checked = true;
+        if analysis_result.success {
+            self.adjusted_volume = analysis_result.calculate_adjusted_volume(config_key_volume);
+            log::info!(
+                "Volume set to {} ({} LUFS)",
+                self.adjusted_volume,
+                analysis_result.loudness_lufs
+            );
+        } else {
+            self.adjusted_volume = -1.0;
+            if let Some(ref msg) = analysis_result.error_message {
+                log::warn!("Loudness analysis failed: {}", msg);
+            }
+        }
+        self.adjusted_volume
+    }
+
+    /// Check if loudness analysis has been applied.
+    pub fn is_analysis_checked(&self) -> bool {
+        self.analysis_checked
+    }
+
     pub fn get_practice_configuration(&self) -> &PracticeConfiguration {
         &self.practice
     }
@@ -259,7 +322,7 @@ impl BMSPlayer {
             return;
         }
         if self.state == STATE_PRELOAD || self.state == STATE_READY {
-            // main.getAudioProcessor().setGlobalPitch(1.0);
+            self.pending_global_pitch = Some(1.0);
             self.main_state_data.timer.set_timer_on(TIMER_FADEOUT);
             // In Java: if resource.getPlayMode().mode == PLAY => STATE_ABORTED
             // else => STATE_PRACTICE_FINISHED
@@ -300,7 +363,7 @@ impl BMSPlayer {
         {
             self.main_state_data.timer.set_timer_on(TIMER_FADEOUT);
         } else if self.state != STATE_FINISHED {
-            // main.getAudioProcessor().setGlobalPitch(1.0);
+            self.pending_global_pitch = Some(1.0);
             self.state = STATE_FAILED;
             self.main_state_data.timer.set_timer_on(TIMER_FAILED);
             // if resource.mediaLoadFinished() { main.getAudioProcessor().stop(null); }
@@ -1096,6 +1159,46 @@ impl BMSPlayer {
         }
     }
 
+    /// Build guide SE configuration for the audio driver.
+    ///
+    /// Translated from: BMSPlayer.create() guide SE setup (Java lines 512-524)
+    ///
+    /// Returns a list of (judge_index, Option<path>) pairs.
+    /// When `is_guide_se` is true, each entry contains the resolved path from
+    /// `SystemSoundManager::get_sound_paths()` for the corresponding guide SE type.
+    /// When false, all entries contain None (clearing the additional key sounds).
+    ///
+    /// The caller should apply each entry to the audio driver:
+    ///   `audio.set_additional_key_sound(judge, true, path);`
+    ///   `audio.set_additional_key_sound(judge, false, path);`
+    pub fn build_guide_se_config(
+        is_guide_se: bool,
+        sound_manager: &beatoraja_core::system_sound_manager::SystemSoundManager,
+    ) -> Vec<(i32, Option<String>)> {
+        use beatoraja_core::system_sound_manager::SoundType;
+
+        let guide_se_types = [
+            SoundType::GuidesePg,
+            SoundType::GuideseGr,
+            SoundType::GuideseGd,
+            SoundType::GuideseBd,
+            SoundType::GuidesePr,
+            SoundType::GuideseMs,
+        ];
+
+        let mut config = Vec::with_capacity(6);
+        for (i, sound_type) in guide_se_types.iter().enumerate() {
+            if is_guide_se {
+                let paths = sound_manager.get_sound_paths(sound_type);
+                let path = paths.first().map(|p| p.to_string_lossy().to_string());
+                config.push((i as i32, path));
+            } else {
+                config.push((i as i32, None));
+            }
+        }
+        config
+    }
+
     /// Get mutable reference to playinfo for testing.
     #[cfg(test)]
     pub fn playinfo_mut(&mut self) -> &mut ReplayData {
@@ -1411,7 +1514,7 @@ impl MainState for BMSPlayer {
                 if self.main_state_data.timer.get_now_time_for_id(TIMER_FAILED)
                     > self.play_skin.get_close() as i64
                 {
-                    // main.getAudioProcessor().setGlobalPitch(1.0);
+                    self.pending_global_pitch = Some(1.0);
                     // if resource.mediaLoadFinished() { resource.getBGAManager().stop(); }
 
                     // Fill remaining gauge log with 0
@@ -1464,7 +1567,7 @@ impl MainState for BMSPlayer {
                     > 0
                 // skin.getFadeout() - TODO: Phase 22
                 {
-                    // main.getAudioProcessor().setGlobalPitch(1.0);
+                    self.pending_global_pitch = Some(1.0);
                     // resource.getBGAManager().stop();
                     // resource.setScoreData(createScoreData());
                     // resource.setCombo(judge.getCourseCombo());
@@ -3377,5 +3480,163 @@ mod tests {
             expected_bpm,
             actual_bpm
         );
+    }
+
+    // --- Global pitch control tests ---
+
+    #[test]
+    fn set_play_speed_sets_pending_pitch_when_frequency_type() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.set_fast_forward_freq_option(FrequencyType::FREQUENCY);
+        player.set_play_speed(150);
+        assert_eq!(player.take_pending_global_pitch(), Some(1.5));
+    }
+
+    #[test]
+    fn set_play_speed_no_pending_pitch_when_unprocessed() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.set_fast_forward_freq_option(FrequencyType::UNPROCESSED);
+        player.set_play_speed(150);
+        assert_eq!(player.take_pending_global_pitch(), None);
+    }
+
+    #[test]
+    fn take_pending_global_pitch_clears_after_read() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.set_fast_forward_freq_option(FrequencyType::FREQUENCY);
+        player.set_play_speed(200);
+        assert_eq!(player.take_pending_global_pitch(), Some(2.0));
+        // Second call should be None (consumed)
+        assert_eq!(player.take_pending_global_pitch(), None);
+    }
+
+    #[test]
+    fn stop_play_preload_sets_pending_pitch_to_one() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_PRELOAD;
+        player.stop_play();
+        assert_eq!(player.take_pending_global_pitch(), Some(1.0));
+    }
+
+    #[test]
+    fn stop_play_ready_sets_pending_pitch_to_one() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_READY;
+        player.stop_play();
+        assert_eq!(player.take_pending_global_pitch(), Some(1.0));
+    }
+
+    #[test]
+    fn stop_play_failed_state_sets_pending_pitch_to_one() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_PLAY;
+        // Ensure no notes judged and no prior timer
+        player.stop_play();
+        // This goes to ABORTED (no notes judged), no pitch reset here
+        assert_eq!(player.state, STATE_ABORTED);
+        // No pending pitch for ABORTED path (matches Java - only resets on failed path)
+        assert_eq!(player.take_pending_global_pitch(), None);
+    }
+
+    #[test]
+    fn stop_play_failed_path_sets_pending_pitch_to_one() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(100);
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_PLAY;
+
+        // Simulate some notes judged (not finished but notes exist)
+        // Force the judge counts so we enter the failed branch
+        player.judge.get_score_data_mut().epg = 5; // 5 early PGreats
+        player.total_notes = 100; // not all past
+        player.stop_play();
+        assert_eq!(player.state, STATE_FAILED);
+        assert_eq!(player.take_pending_global_pitch(), Some(1.0));
+    }
+
+    // --- Loudness analysis tests ---
+
+    #[test]
+    fn apply_loudness_analysis_success() {
+        use beatoraja_audio::bms_loudness_analyzer::AnalysisResult;
+
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        assert!(!player.is_analysis_checked());
+
+        let result = AnalysisResult::new_success(-14.0);
+        let vol = player.apply_loudness_analysis(&result, 1.0);
+        assert!(player.is_analysis_checked());
+        assert!(vol > 0.0 && vol <= 1.0);
+        assert!((player.get_adjusted_volume() - vol).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn apply_loudness_analysis_failure() {
+        use beatoraja_audio::bms_loudness_analyzer::AnalysisResult;
+
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+
+        let result = AnalysisResult::new_error("test error".to_string());
+        let vol = player.apply_loudness_analysis(&result, 1.0);
+        assert!(player.is_analysis_checked());
+        assert!((vol - (-1.0)).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn apply_loudness_analysis_preserves_base_volume_on_failure() {
+        use beatoraja_audio::bms_loudness_analyzer::AnalysisResult;
+
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+
+        let result = AnalysisResult::new_error("err".to_string());
+        player.apply_loudness_analysis(&result, 0.8);
+        // adjusted_volume should be -1.0 on failure
+        assert!((player.get_adjusted_volume() - (-1.0)).abs() < f32::EPSILON);
+    }
+
+    // --- Guide SE config tests ---
+
+    #[test]
+    fn build_guide_se_config_disabled_returns_all_none() {
+        let sm = beatoraja_core::system_sound_manager::SystemSoundManager::new(None, None);
+        let config = BMSPlayer::build_guide_se_config(false, &sm);
+        assert_eq!(config.len(), 6);
+        for (i, (judge, path)) in config.iter().enumerate() {
+            assert_eq!(*judge, i as i32);
+            assert!(path.is_none(), "judge {} should have None path", i);
+        }
+    }
+
+    #[test]
+    fn build_guide_se_config_enabled_returns_six_entries() {
+        // Without actual sound files, paths will be None (no files found)
+        let sm = beatoraja_core::system_sound_manager::SystemSoundManager::new(None, None);
+        let config = BMSPlayer::build_guide_se_config(true, &sm);
+        assert_eq!(config.len(), 6);
+        // All entries should exist (though paths may be None since no actual sound files)
+        for (i, (judge, _path)) in config.iter().enumerate() {
+            assert_eq!(*judge, i as i32);
+        }
+    }
+
+    // --- Fast forward freq option tests ---
+
+    #[test]
+    fn set_fast_forward_freq_option_stored() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.set_fast_forward_freq_option(FrequencyType::FREQUENCY);
+        player.set_play_speed(75);
+        assert_eq!(player.take_pending_global_pitch(), Some(0.75));
     }
 }

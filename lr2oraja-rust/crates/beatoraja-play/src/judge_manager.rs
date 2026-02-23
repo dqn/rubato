@@ -1409,6 +1409,12 @@ impl JudgeManager {
         &self.score
     }
 
+    /// Get mutable reference to score data (for testing).
+    #[cfg(test)]
+    pub fn get_score_data_mut(&mut self) -> &mut ScoreData {
+        &mut self.score
+    }
+
     pub fn get_judge_count(&self, judge: i32) -> i32 {
         self.score.get_judge_count_total(judge)
     }
