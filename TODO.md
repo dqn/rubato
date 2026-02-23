@@ -1,6 +1,6 @@
 # Porting TODO — Remaining Work
 
-Phases 1–33 complete. **1816 tests, 22 ignored.** 27 crates, 125k lines. See AGENTS.md.
+Phases 1–34 complete. **1889 tests, 0 ignored.** 27 crates, 127k lines. See AGENTS.md.
 
 ---
 
@@ -13,7 +13,7 @@ Phases 1–33 complete. **1816 tests, 22 ignored.** 27 crates, 125k lines. See A
 - [x] **34c:** リプレイデータ復元 — ReplayData からパターン/ゲージ/設定を復元、リプレイモード時のオプション上書き
 - [x] **34d:** アシストレベル計算 — BPMガイド、カスタムジャッジ、定速等のアシストフラグ判定
 - [x] **34e:** DP→SP オプション変換 — ダブルプレイ時の 2P 側オプション処理
-- [ ] **34f:** 周波数トレーナー統合 — FreqTrainer との速度変更連携
+- [x] **34f:** 周波数トレーナー統合 — FreqTrainer との速度変更連携
 
 ## Phase 35: スコアデータ統計完成
 
