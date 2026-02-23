@@ -1,6 +1,6 @@
 # Porting TODO — Remaining Work
 
-Phases 1–39 complete. **1900 tests, 0 ignored.** 27 crates, 127k lines. See AGENTS.md.
+Phases 1–39 complete. **1905 tests, 0 ignored.** 27 crates, 127k lines. See AGENTS.md.
 
 ---
 
