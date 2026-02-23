@@ -26,9 +26,10 @@ use beatoraja_types::clear_type::ClearType;
 use beatoraja_types::play_config::PlayConfig;
 use beatoraja_types::replay_data::ReplayData;
 use beatoraja_types::skin_type::SkinType;
-use bms_model::bms_model::BMSModel;
+use bms_model::bms_model::{BMSModel, LNTYPE_LONGNOTE};
 use bms_model::bms_model_utils;
 use bms_model::mode::Mode;
+use bms_model::note::{Note, TYPE_LONGNOTE, TYPE_UNDEFINED};
 
 pub static TIME_MARGIN: i32 = 5000;
 
@@ -357,6 +358,57 @@ impl BMSPlayer {
             + score.lms
             + self.total_notes
             - self.judge.get_past_notes();
+
+        // Timing statistics (Java BMSPlayer.createScoreData() lines 1053-1094)
+        let mut avgduration: i64 = 0;
+        let mut average: i64 = 0;
+        let mut play_times: Vec<i64> = Vec::new();
+        let lanes = self.model.get_mode().map(|m| m.key()).unwrap_or(0);
+        for tl in self.model.get_all_time_lines() {
+            for i in 0..lanes {
+                if let Some(note) = tl.get_note(i) {
+                    let include = match note {
+                        Note::Normal(_) => true,
+                        Note::Long { end, note_type, .. } => {
+                            let is_ln_end = ((self.model.get_lntype() == LNTYPE_LONGNOTE
+                                && *note_type == TYPE_UNDEFINED)
+                                || *note_type == TYPE_LONGNOTE)
+                                && *end;
+                            !is_ln_end
+                        }
+                        _ => false,
+                    };
+                    if include {
+                        let state = note.get_state();
+                        let time = note.get_micro_play_time();
+                        if (1..=4).contains(&state) {
+                            play_times.push(time);
+                            avgduration += time.abs();
+                            average += time;
+                        }
+                    }
+                }
+            }
+        }
+        score.total_duration = avgduration;
+        score.total_avg = average;
+        if !play_times.is_empty() {
+            score.avgjudge = avgduration / play_times.len() as i64;
+            score.avg = average / play_times.len() as i64;
+        }
+
+        let mut stddev: i64 = 0;
+        for &time in &play_times {
+            let mean_offset = time - score.avg;
+            stddev += mean_offset * mean_offset;
+        }
+        if !play_times.is_empty() {
+            stddev = ((stddev / play_times.len() as i64) as f64).sqrt() as i64;
+        }
+        score.stddev = stddev;
+
+        // TODO(Phase 41): score.device_type = main.get_input_processor().get_device_type();
+        // TODO(Phase 41): score.skin = Some(get_skin().header.get_name().to_string());
 
         Some(score)
     }
@@ -1682,6 +1734,121 @@ mod tests {
     }
 
     // --- create_score_data tests ---
+
+    /// Helper: create a model with notes that have specific state/playtime values.
+    /// `notes_spec` is a vec of (state, micro_play_time) tuples for Normal notes.
+    fn make_model_with_timed_notes(notes_spec: &[(i32, i64)]) -> BMSModel {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(100);
+
+        let mut timelines = Vec::new();
+        for (i, &(state, playtime)) in notes_spec.iter().enumerate() {
+            let mut tl = bms_model::time_line::TimeLine::new(i as f64, (i as i64) * 1_000_000, 8);
+            let mut note = bms_model::note::Note::new_normal(1);
+            note.set_state(state);
+            note.set_micro_play_time(playtime);
+            tl.set_note(0, Some(note));
+            timelines.push(tl);
+        }
+        model.set_all_time_line(timelines);
+        model
+    }
+
+    #[test]
+    fn create_score_data_timing_stats_with_hit_notes() {
+        // Three notes with state 1-4 and known play times:
+        //   note0: state=1, playtime=1000  (|1000| = 1000)
+        //   note1: state=2, playtime=-2000 (|-2000| = 2000)
+        //   note2: state=3, playtime=3000  (|3000| = 3000)
+        let model = make_model_with_timed_notes(&[(1, 1000), (2, -2000), (3, 3000)]);
+        let mut player = BMSPlayer::new(model);
+        // Use ABORTED state to bypass the zero-notes-hit check
+        player.state = STATE_ABORTED;
+
+        let score = player.create_score_data().unwrap();
+
+        // total_duration = |1000| + |-2000| + |3000| = 6000
+        assert_eq!(score.total_duration, 6000);
+        // total_avg = 1000 + (-2000) + 3000 = 2000
+        assert_eq!(score.total_avg, 2000);
+        // avgjudge = total_duration / count = 6000 / 3 = 2000
+        assert_eq!(score.avgjudge, 2000);
+        // avg = total_avg / count = 2000 / 3 = 666
+        assert_eq!(score.avg, 666);
+        // stddev = sqrt(((1000 - 666)^2 + (-2000 - 666)^2 + (3000 - 666)^2) / 3)
+        //        = sqrt((111556 + 7111696 + 5449956) / 3)
+        //        = sqrt(12673208 / 3)
+        //        = sqrt(4224402)
+        //        = 2055 (as i64 from f64::sqrt truncation)
+        let mean = 666_i64;
+        let var = ((1000 - mean).pow(2) + (-2000 - mean).pow(2) + (3000 - mean).pow(2)) / 3;
+        let expected_stddev = (var as f64).sqrt() as i64;
+        assert_eq!(score.stddev, expected_stddev);
+    }
+
+    #[test]
+    fn create_score_data_timing_stats_no_judged_notes() {
+        // Notes with state=0 (not judged) should not contribute to timing stats.
+        // Fields should stay at their initial values.
+        let model = make_model_with_timed_notes(&[(0, 5000), (0, -3000)]);
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_ABORTED;
+
+        let score = player.create_score_data().unwrap();
+
+        // No notes matched state 1-4:
+        // avgjudge and avg stay at initial i64::MAX (conditional set not entered)
+        assert_eq!(score.avgjudge, i64::MAX);
+        assert_eq!(score.avg, i64::MAX);
+        // total_duration, total_avg, and stddev are unconditionally set to 0
+        assert_eq!(score.total_duration, 0);
+        assert_eq!(score.total_avg, 0);
+        assert_eq!(score.stddev, 0);
+    }
+
+    #[test]
+    fn create_score_data_timing_stats_filters_ln_end_notes() {
+        // LN end notes of longnote type should be excluded from timing stats.
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(100);
+        // Default lntype is LNTYPE_LONGNOTE (0)
+
+        let mut tl = bms_model::time_line::TimeLine::new(0.0, 0, 8);
+
+        // Normal note: state=1, playtime=1000 → included
+        let mut normal = bms_model::note::Note::new_normal(1);
+        normal.set_state(1);
+        normal.set_micro_play_time(1000);
+        tl.set_note(0, Some(normal));
+
+        // LN end note with TYPE_UNDEFINED (default) + lntype=LNTYPE_LONGNOTE → excluded
+        let mut ln_end = bms_model::note::Note::new_long(1);
+        ln_end.set_end(true);
+        ln_end.set_state(1);
+        ln_end.set_micro_play_time(5000);
+        tl.set_note(1, Some(ln_end));
+
+        // LN start note (not end): state=2, playtime=2000 → included
+        let mut ln_start = bms_model::note::Note::new_long(1);
+        ln_start.set_state(2);
+        ln_start.set_micro_play_time(2000);
+        tl.set_note(2, Some(ln_start));
+
+        model.set_all_time_line(vec![tl]);
+
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_ABORTED;
+
+        let score = player.create_score_data().unwrap();
+
+        // Only normal(1000) and ln_start(2000) should be included
+        assert_eq!(score.total_duration, 3000); // |1000| + |2000|
+        assert_eq!(score.total_avg, 3000); // 1000 + 2000
+        assert_eq!(score.avgjudge, 1500); // 3000 / 2
+        assert_eq!(score.avg, 1500); // 3000 / 2
+    }
 
     #[test]
     fn create_score_data_returns_none_when_no_notes_hit() {
