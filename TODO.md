@@ -31,7 +31,9 @@ Resolves: `beatoraja-input/stubs.rs` (44 lines)
 
 Resolves: rendering stubs (result/decide/select/modmenu ~972 lines), `beatoraja-types/stubs.rs` (549 lines), `beatoraja-external/stubs.rs` (partial)
 
-- **29a:** API 非互換スタブ解消 (result/decide/select/modmenu rendering, Property traits, MainStateListener trait 統合 + Discord/OBS 接続配線)
+- [x] **29a-1:** MainStateListener trait 統合 + Discord/OBS 接続配線 (StateAccessAdapter パターン)
+- **29a-2:** rendering stubs 削減 (result/decide/select/modmenu ~972 lines) — 段階的削減
+- **29a-3:** Property traits 統合 (beatoraja-skin vs beatoraja-external)
 - **29b:** PlayerResource trait 最小化
 - **29c:** メモリプロファイリング (`dhat`/`jemalloc_ctl`)
 - **29d:** 入力ポーリング非同期化 (nice-to-have)
