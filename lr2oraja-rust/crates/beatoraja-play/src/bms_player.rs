@@ -299,17 +299,8 @@ impl BMSPlayer {
                 gauge.get_type()
             };
         }
-        score.option = self.playinfo.randomoption
-            + (if self.model.get_mode().map_or(1, |m| m.player()) == 2 {
-                self.playinfo.randomoption2 * 10 + self.playinfo.doubleoption * 100
-            } else {
-                0
-            });
-        score.seed = (if self.model.get_mode().map_or(1, |m| m.player()) == 2 {
-            self.playinfo.randomoption2seed * 65536 * 256
-        } else {
-            0
-        }) + self.playinfo.randomoptionseed;
+        score.option = self.encode_option_for_score();
+        score.seed = self.encode_seed_for_score();
         let ghost: Vec<i32> = self.judge.get_ghost().to_vec();
         score.encode_ghost(Some(&ghost));
 
@@ -417,6 +408,41 @@ impl BMSPlayer {
         &self.playinfo
     }
 
+    /// Encode the random seed for ScoreData storage.
+    ///
+    /// For SP (player=1): returns `playinfo.randomoptionseed`.
+    /// For DP (player=2): returns `randomoption2seed * 65536 * 256 + randomoptionseed`.
+    ///
+    /// Corresponds to Java BMSPlayer line 1029:
+    /// `score.setSeed((model.getMode().player == 2 ? playinfo.randomoption2seed * 65536 * 256 : 0) + playinfo.randomoptionseed)`
+    pub fn encode_seed_for_score(&self) -> i64 {
+        let player_count = self.model.get_mode().map_or(1, |m| m.player());
+        if player_count == 2 {
+            self.playinfo.randomoption2seed * 65536 * 256 + self.playinfo.randomoptionseed
+        } else {
+            self.playinfo.randomoptionseed
+        }
+    }
+
+    /// Encode the random option for ScoreData storage.
+    ///
+    /// For SP (player=1): returns `playinfo.randomoption`.
+    /// For DP (player=2): returns `randomoption + randomoption2 * 10 + doubleoption * 100`.
+    ///
+    /// Corresponds to Java BMSPlayer line 1027-1028:
+    /// `score.setOption(playinfo.randomoption + (model.getMode().player == 2
+    ///     ? (playinfo.randomoption2 * 10 + playinfo.doubleoption * 100) : 0))`
+    pub fn encode_option_for_score(&self) -> i32 {
+        let player_count = self.model.get_mode().map_or(1, |m| m.player());
+        if player_count == 2 {
+            self.playinfo.randomoption
+                + self.playinfo.randomoption2 * 10
+                + self.playinfo.doubleoption * 100
+        } else {
+            self.playinfo.randomoption
+        }
+    }
+
     /// Build and apply the pattern modifier chain.
     ///
     /// Corresponds to the pattern modifier section of the Java BMSPlayer constructor
@@ -433,6 +459,18 @@ impl BMSPlayer {
     /// Returns `true` if score submission is valid (no assist/special options).
     pub fn build_pattern_modifiers(&mut self, config: &PlayerConfig) -> bool {
         let mut score = true;
+
+        // TODO: → Phase 37 — GhostBattle seed/option override
+        // When GhostBattle is active (via GhostBattlePlay::consume()):
+        //   - Set playinfo.randomoption from ghost's random ordinal
+        //   - If player config random == MIRROR, apply mirror inversion logic
+        // Java lines 119-138
+
+        // TODO: → Phase 37 — ChartOption seed/option override
+        // When resource.getChartOption() is set (and GhostBattle is not active):
+        //   - Load randomoption, randomoptionseed, randomoption2, randomoption2seed,
+        //     doubleoption, rand from chart_option
+        // Java lines 140-148
 
         // -- Phase 1: Pre-option modifiers (scroll, LN, mine, extra) --
         let mut pre_mods: Vec<Box<dyn PatternModifier>> = Vec::new();
@@ -554,6 +592,14 @@ impl BMSPlayer {
         if self.playinfo.randomoptionseed != -1 {
             pm1.set_seed(self.playinfo.randomoptionseed);
         } else {
+            // TODO: → Phase 37 — GhostBattle seed override
+            // When GhostBattle is active, use ghost's lane pattern seed from RandomTrainer.getRandomSeedMap()
+            // Java: if (ghostBattle.isPresent()) { pm.setSeed(seedmap.get(pattern)); }
+
+            // TODO: → Phase 37 — RandomTrainer seed override
+            // When RandomTrainer is active and mode == BEAT_7K, use seed from RandomTrainer.getRandomSeedMap()
+            // Java: if (RandomTrainer.isActive() && model.getMode() == Mode.BEAT_7K) { pm.setSeed(seedmap.get(...)); }
+
             self.playinfo.randomoptionseed = pm1.get_seed();
         }
         random_mods.push(pm1);
@@ -1660,6 +1706,100 @@ mod tests {
         player.build_pattern_modifiers(&config);
         // BEAT_5K should be converted to BEAT_10K
         assert_eq!(player.get_mode(), Mode::BEAT_10K);
+    }
+
+    // --- encode_seed_for_score tests ---
+
+    #[test]
+    fn encode_seed_for_score_sp_returns_1p_seed() {
+        let model = make_model(); // BEAT_7K (player=1)
+        let mut player = BMSPlayer::new(model);
+        player.playinfo.randomoptionseed = 12345;
+        assert_eq!(player.encode_seed_for_score(), 12345);
+    }
+
+    #[test]
+    fn encode_seed_for_score_dp_returns_combined() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_14K); // DP (player=2)
+        model.set_judgerank(100);
+        let mut player = BMSPlayer::new(model);
+        player.playinfo.randomoptionseed = 100;
+        player.playinfo.randomoption2seed = 3;
+        // Combined: 3 * 65536 * 256 + 100 = 3 * 16777216 + 100 = 50331748
+        assert_eq!(player.encode_seed_for_score(), 50_331_748);
+    }
+
+    #[test]
+    fn encode_seed_for_score_dp_zero_seeds() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_14K);
+        model.set_judgerank(100);
+        let mut player = BMSPlayer::new(model);
+        player.playinfo.randomoptionseed = 0;
+        player.playinfo.randomoption2seed = 0;
+        assert_eq!(player.encode_seed_for_score(), 0);
+    }
+
+    // --- encode_option_for_score tests ---
+
+    #[test]
+    fn encode_option_for_score_sp_returns_randomoption() {
+        let model = make_model(); // BEAT_7K (player=1)
+        let mut player = BMSPlayer::new(model);
+        player.playinfo.randomoption = 5;
+        assert_eq!(player.encode_option_for_score(), 5);
+    }
+
+    #[test]
+    fn encode_option_for_score_dp_returns_combined() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_14K); // DP (player=2)
+        model.set_judgerank(100);
+        let mut player = BMSPlayer::new(model);
+        player.playinfo.randomoption = 2;
+        player.playinfo.randomoption2 = 3;
+        player.playinfo.doubleoption = 1;
+        // Combined: 2 + 3 * 10 + 1 * 100 = 132
+        assert_eq!(player.encode_option_for_score(), 132);
+    }
+
+    #[test]
+    fn encode_option_for_score_dp_no_doubleoption() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_14K);
+        model.set_judgerank(100);
+        let mut player = BMSPlayer::new(model);
+        player.playinfo.randomoption = 1;
+        player.playinfo.randomoption2 = 4;
+        player.playinfo.doubleoption = 0;
+        // Combined: 1 + 4 * 10 + 0 * 100 = 41
+        assert_eq!(player.encode_option_for_score(), 41);
+    }
+
+    // --- seed round-trip test ---
+
+    #[test]
+    fn seed_round_trip_preserved_after_build_modifiers() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        let config = make_default_config();
+
+        // First build: generates a new seed
+        player.build_pattern_modifiers(&config);
+        let saved_seed = player.playinfo.randomoptionseed;
+        assert_ne!(saved_seed, -1, "Seed should be initialized");
+
+        // Second build with the same player: seed should be preserved
+        // (since randomoptionseed is no longer -1, the restore path is used)
+        let model2 = make_model();
+        let mut player2 = BMSPlayer::new(model2);
+        player2.playinfo.randomoptionseed = saved_seed;
+        player2.build_pattern_modifiers(&config);
+        assert_eq!(
+            player2.playinfo.randomoptionseed, saved_seed,
+            "Seed should be preserved on rebuild"
+        );
     }
 
     #[test]
