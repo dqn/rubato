@@ -1509,8 +1509,20 @@ impl MainState for BMSPlayer {
         if let Some(ref mut control) = self.control {
             control.input();
         }
+        // Build InputContext for key input processing.
+        // key_states comes from main.getInputProcessor() — not yet integrated.
+        // auto_presstime comes from the judge manager.
+        let auto_presstime = self.judge.get_auto_presstime().to_vec();
+        let now = self.main_state_data.timer.get_now_time();
         if let Some(ref mut keyinput) = self.keyinput {
-            keyinput.input();
+            let mut ctx = crate::key_input_processor::InputContext {
+                now,
+                key_states: &[], // TODO: Phase 22+ — integrate BMSPlayerInputProcessor key states
+                auto_presstime: &auto_presstime,
+                is_autoplay: false, // TODO: Phase 22+ — read from resource.getPlayMode()
+                timer: &mut self.main_state_data.timer,
+            };
+            keyinput.input(&mut ctx);
         }
     }
 

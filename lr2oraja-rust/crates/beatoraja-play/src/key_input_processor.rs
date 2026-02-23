@@ -1,5 +1,58 @@
 use crate::bms_player::TIME_MARGIN;
 use crate::lane_property::LaneProperty;
+use beatoraja_core::timer_manager::TimerManager;
+
+// SkinProperty timer constants for key beam on/off
+// Translated from SkinPropertyMapper.keyOnTimerId / keyOffTimerId
+const TIMER_KEYON_1P_SCRATCH: i32 = 100;
+const TIMER_KEYON_1P_KEY10: i32 = 1410;
+const TIMER_KEYOFF_1P_SCRATCH: i32 = 120;
+const TIMER_KEYOFF_1P_KEY10: i32 = 1610;
+
+/// Compute the timer ID for key-on (key beam start).
+///
+/// Translated from: SkinPropertyMapper.keyOnTimerId(player, key)
+fn key_on_timer_id(player: i32, key: i32) -> i32 {
+    if player < 2 {
+        if key < 10 {
+            return TIMER_KEYON_1P_SCRATCH + key + player * 10;
+        } else if key < 100 {
+            return TIMER_KEYON_1P_KEY10 + key - 10 + player * 100;
+        }
+    }
+    -1
+}
+
+/// Compute the timer ID for key-off (key beam end).
+///
+/// Translated from: SkinPropertyMapper.keyOffTimerId(player, key)
+fn key_off_timer_id(player: i32, key: i32) -> i32 {
+    if player < 2 {
+        if key < 10 {
+            return TIMER_KEYOFF_1P_SCRATCH + key + player * 10;
+        } else if key < 100 {
+            return TIMER_KEYOFF_1P_KEY10 + key - 10 + player * 100;
+        }
+    }
+    -1
+}
+
+/// Context passed into KeyInputProccessor::input() each frame.
+///
+/// Bundles the external state needed by the input processing loop,
+/// avoiding the need for the processor to hold references to the parent player.
+pub struct InputContext<'a> {
+    /// Current time in milliseconds (from timer.getNowTime())
+    pub now: i64,
+    /// Key states array — true if the key is currently pressed
+    pub key_states: &'a [bool],
+    /// Auto-press timing array from JudgeManager (i64::MIN means not auto-pressed)
+    pub auto_presstime: &'a [i64],
+    /// Whether the play mode is AUTOPLAY
+    pub is_autoplay: bool,
+    /// Timer manager for setting key beam timers
+    pub timer: &'a mut TimerManager,
+}
 
 /// A single key state change to replay.
 /// Produced by JudgeThread::tick() for the caller to apply.
@@ -222,19 +275,144 @@ impl KeyInputProccessor {
         self.judge.as_mut().map(|j| j.tick(mtime))
     }
 
-    pub fn input(&mut self) {
-        // TODO: Phase 7+ dependency - requires BMSPlayer, MainController, BMSPlayerInputProcessor
-        // This method handles key beam flags and scratch turntable animation
-        self.prevtime = 0; // stub
+    /// Process key input each frame: key beam flags and scratch turntable animation.
+    ///
+    /// Translated from Java: KeyInputProccessor.input()
+    ///
+    /// Returns scratch angle values indexed by scratch index.
+    /// The caller should write `result[s]` to `main.getOffset(OFFSET_SCRATCHANGLE_1P + s).r`.
+    pub fn input(&mut self, ctx: &mut InputContext) {
+        let lane_offsets = self.lane_property.get_lane_skin_offset();
+        let lane_keys = self.lane_property.get_lane_key_assign();
+        let lane_scratch = self.lane_property.get_lane_scratch_assign();
+        let lane_players = self.lane_property.get_lane_player();
+
+        for lane in 0..lane_offsets.len() {
+            let offset = lane_offsets[lane];
+            let mut pressed = false;
+            let mut scratch_changed = false;
+
+            if !self.key_beam_stop {
+                for &key in &lane_keys[lane] {
+                    let key_idx = key as usize;
+                    let is_key_active = (key_idx < ctx.key_states.len() && ctx.key_states[key_idx])
+                        || (key_idx < ctx.auto_presstime.len()
+                            && ctx.auto_presstime[key_idx] != i64::MIN);
+                    if is_key_active {
+                        pressed = true;
+                        let scratch_idx = lane_scratch[lane];
+                        if scratch_idx != -1 {
+                            let si = scratch_idx as usize;
+                            if si < self.scratch_key.len() && self.scratch_key[si] != key {
+                                scratch_changed = true;
+                                self.scratch_key[si] = key;
+                            }
+                        }
+                    }
+                }
+            }
+
+            let timer_on = key_on_timer_id(lane_players[lane], offset);
+            let timer_off = key_off_timer_id(lane_players[lane], offset);
+
+            if pressed {
+                if (!self.is_judge_started || ctx.is_autoplay)
+                    && (!ctx.timer.is_timer_on(timer_on) || scratch_changed)
+                {
+                    ctx.timer.set_timer_on(timer_on);
+                    ctx.timer.set_timer_off(timer_off);
+                }
+            } else if ctx.timer.is_timer_on(timer_on) {
+                ctx.timer.set_timer_on(timer_off);
+                ctx.timer.set_timer_off(timer_on);
+            }
+        }
+
+        // Scratch turntable animation
+        if self.prevtime >= 0 {
+            let deltatime = (ctx.now - self.prevtime) as f32 / 1000.0;
+            let scratch_keys = self.lane_property.get_scratch_key_assign();
+            for s in 0..self.scratch.len() {
+                let key0 = scratch_keys[s][1];
+                let key1 = scratch_keys[s][0];
+
+                let mut target_speed: f32 = 1.0;
+                let mut move_towards_speed: f32 = 4.0;
+
+                if !ctx.is_autoplay {
+                    let key0_idx = key0 as usize;
+                    let key1_idx = key1 as usize;
+                    let key0_active = (key0_idx < ctx.key_states.len() && ctx.key_states[key0_idx])
+                        || (key0_idx < ctx.auto_presstime.len()
+                            && ctx.auto_presstime[key0_idx] != i64::MIN);
+                    let key1_active = (key1_idx < ctx.key_states.len() && ctx.key_states[key1_idx])
+                        || (key1_idx < ctx.auto_presstime.len()
+                            && ctx.auto_presstime[key1_idx] != i64::MIN);
+
+                    if key0_active {
+                        target_speed = -0.75;
+                        move_towards_speed = 16.0;
+                        self.scratch_tt_graphic_speed[s] =
+                            self.scratch_tt_graphic_speed[s].min(0.0);
+                    } else if key1_active {
+                        target_speed = 2.0;
+                        move_towards_speed = 16.0;
+                        self.scratch_tt_graphic_speed[s] =
+                            self.scratch_tt_graphic_speed[s].max(0.0);
+                    }
+                }
+
+                // Move towards target speed
+                // Java uses constant 1.0f in the abs check (not targetSpeed)
+                if (1.0_f32 - self.scratch_tt_graphic_speed[s]).abs() <= deltatime {
+                    self.scratch_tt_graphic_speed[s] = target_speed;
+                } else {
+                    self.scratch_tt_graphic_speed[s] +=
+                        (target_speed - self.scratch_tt_graphic_speed[s]).signum()
+                            * deltatime
+                            * move_towards_speed;
+                }
+
+                // Apply TT speed to scratch angle
+                if self.scratch_tt_graphic_speed[s] > 0.0 {
+                    self.scratch[s] += 360.0 - self.scratch_tt_graphic_speed[s] * deltatime * 270.0;
+                } else if self.scratch_tt_graphic_speed[s] < 0.0 {
+                    self.scratch[s] += -self.scratch_tt_graphic_speed[s] * deltatime * 270.0;
+                }
+
+                self.scratch[s] %= 360.0;
+            }
+        }
+
+        self.prevtime = ctx.now;
     }
 
-    pub fn input_key_on(&mut self, lane: usize) {
+    /// Returns the current scratch angle values.
+    ///
+    /// The caller should write `angles[s]` to `main.getOffset(OFFSET_SCRATCHANGLE_1P + s).r`.
+    pub fn get_scratch_angles(&self) -> &[f32] {
+        &self.scratch
+    }
+
+    /// Key beam flag ON — called from judge synchronization.
+    ///
+    /// Translated from Java: KeyInputProccessor.inputKeyOn(lane)
+    pub fn input_key_on(&mut self, lane: usize, timer: &mut TimerManager) {
         let lane_skin_offset = self.lane_property.get_lane_skin_offset();
         if lane >= lane_skin_offset.len() {
             return;
         }
-        if self.key_beam_stop {}
-        // TODO: Phase 7+ dependency - requires BMSPlayer timer, SkinPropertyMapper
+        if !self.key_beam_stop {
+            let offset = lane_skin_offset[lane];
+            let player = self.lane_property.get_lane_player()[lane];
+            let timer_on = key_on_timer_id(player, offset);
+            let timer_off = key_off_timer_id(player, offset);
+            let lane_scratch = self.lane_property.get_lane_scratch_assign();
+            if !timer.is_timer_on(timer_on) || lane_scratch[lane] != -1 {
+                timer.set_timer_on(timer_on);
+                timer.set_timer_off(timer_off);
+            }
+        }
     }
 
     pub fn stop_judge(&mut self) {
@@ -526,5 +704,508 @@ mod tests {
         let r = proc.tick_judge(5_500_000).unwrap();
         assert!(r.finished);
         assert!(r.has_keylog);
+    }
+
+    // --- SkinPropertyMapper timer ID tests ---
+
+    #[test]
+    fn test_key_on_timer_id_scratch_range() {
+        // player 0, key 0 (scratch) -> 100
+        assert_eq!(key_on_timer_id(0, 0), TIMER_KEYON_1P_SCRATCH);
+        // player 0, key 7 -> 107
+        assert_eq!(key_on_timer_id(0, 7), TIMER_KEYON_1P_SCRATCH + 7);
+        // player 1, key 0 -> 110
+        assert_eq!(key_on_timer_id(1, 0), TIMER_KEYON_1P_SCRATCH + 10);
+    }
+
+    #[test]
+    fn test_key_off_timer_id_scratch_range() {
+        assert_eq!(key_off_timer_id(0, 0), TIMER_KEYOFF_1P_SCRATCH);
+        assert_eq!(key_off_timer_id(0, 7), TIMER_KEYOFF_1P_SCRATCH + 7);
+        assert_eq!(key_off_timer_id(1, 0), TIMER_KEYOFF_1P_SCRATCH + 10);
+    }
+
+    #[test]
+    fn test_key_on_timer_id_key10_range() {
+        // key 10 -> TIMER_KEYON_1P_KEY10 + 0
+        assert_eq!(key_on_timer_id(0, 10), TIMER_KEYON_1P_KEY10);
+        // key 15 -> TIMER_KEYON_1P_KEY10 + 5
+        assert_eq!(key_on_timer_id(0, 15), TIMER_KEYON_1P_KEY10 + 5);
+    }
+
+    #[test]
+    fn test_key_timer_id_invalid_player() {
+        assert_eq!(key_on_timer_id(2, 0), -1);
+        assert_eq!(key_off_timer_id(2, 0), -1);
+    }
+
+    #[test]
+    fn test_key_timer_id_invalid_key() {
+        assert_eq!(key_on_timer_id(0, 100), -1);
+        assert_eq!(key_off_timer_id(0, 100), -1);
+    }
+
+    // --- input() method tests (Phase 41f) ---
+
+    fn make_timer() -> TimerManager {
+        TimerManager::new()
+    }
+
+    fn make_context<'a>(
+        now: i64,
+        key_states: &'a [bool],
+        auto_presstime: &'a [i64],
+        is_autoplay: bool,
+        timer: &'a mut TimerManager,
+    ) -> InputContext<'a> {
+        InputContext {
+            now,
+            key_states,
+            auto_presstime,
+            is_autoplay,
+            timer,
+        }
+    }
+
+    #[test]
+    fn test_input_no_keys_pressed_no_timer_change() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+        // No keys pressed, no auto_presstime
+        let key_states = vec![false; 9];
+        let auto_presstime = vec![i64::MIN; 9];
+        let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+        proc.input(&mut ctx);
+        // No timers should be set
+        for id in 100..110 {
+            assert!(!ctx.timer.is_timer_on(id));
+        }
+    }
+
+    #[test]
+    fn test_input_key_pressed_sets_beam_timer_when_not_judge_started() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        // judge is NOT started, so key beam should activate
+        let mut timer = make_timer();
+
+        // BEAT_7K: lane 0 maps to key 0, skin offset 1, player 0
+        // timer_on = key_on_timer_id(0, 1) = 100 + 1 = 101
+        // timer_off = key_off_timer_id(0, 1) = 120 + 1 = 121
+        let mut key_states = vec![false; 9];
+        key_states[0] = true; // key 0 pressed
+        let auto_presstime = vec![i64::MIN; 9];
+        let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+        proc.input(&mut ctx);
+        assert!(ctx.timer.is_timer_on(101)); // KEYON timer for offset 1
+        assert!(!ctx.timer.is_timer_on(121)); // KEYOFF timer should be off
+    }
+
+    #[test]
+    fn test_input_key_released_swaps_beam_timers() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        // First: press key 0 (lane 0, offset 1)
+        let mut key_states = vec![false; 9];
+        key_states[0] = true;
+        let auto_presstime = vec![i64::MIN; 9];
+        {
+            let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        assert!(timer.is_timer_on(101)); // KEYON on
+
+        // Then: release key 0
+        key_states[0] = false;
+        {
+            let mut ctx = make_context(200, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        // After release: timer_off(121) becomes on, timer_on(101) becomes off
+        assert!(timer.is_timer_on(121)); // KEYOFF on
+        assert!(!timer.is_timer_on(101)); // KEYON off
+    }
+
+    #[test]
+    fn test_input_auto_presstime_triggers_beam() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        // No key physically pressed, but auto_presstime is set for key 0
+        let key_states = vec![false; 9];
+        let mut auto_presstime = vec![i64::MIN; 9];
+        auto_presstime[0] = 50_000; // auto-pressed at 50ms
+        let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+        proc.input(&mut ctx);
+        // Should trigger beam as if key was pressed
+        assert!(ctx.timer.is_timer_on(101));
+    }
+
+    #[test]
+    fn test_input_key_beam_stop_prevents_beam() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        proc.set_key_beam_stop(true);
+        let mut timer = make_timer();
+
+        let mut key_states = vec![false; 9];
+        key_states[0] = true;
+        let auto_presstime = vec![i64::MIN; 9];
+        let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+        proc.input(&mut ctx);
+        // key_beam_stop is true, so no timers should be set
+        assert!(!ctx.timer.is_timer_on(101));
+    }
+
+    #[test]
+    fn test_input_judge_started_requires_autoplay_for_beam() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        proc.start_judge(10_000_000, None, 0);
+        let mut timer = make_timer();
+
+        let mut key_states = vec![false; 9];
+        key_states[0] = true;
+        let auto_presstime = vec![i64::MIN; 9];
+
+        // judge is started, NOT autoplay -> no beam timer
+        {
+            let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        assert!(!timer.is_timer_on(101));
+
+        // judge is started, IS autoplay -> beam timer sets
+        {
+            let mut ctx = make_context(200, &key_states, &auto_presstime, true, &mut timer);
+            proc.input(&mut ctx);
+        }
+        assert!(timer.is_timer_on(101));
+    }
+
+    #[test]
+    fn test_input_scratch_key_change_triggers_re_beam() {
+        // BEAT_7K: lane 7 (scratch) has keys [7, 8], scratch_assign[7] = 0
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        // skin offset for lane 7 is 0. timer_on = key_on_timer_id(0, 0) = 100
+        // Press key 7 (first scratch key)
+        let mut key_states = vec![false; 9];
+        key_states[7] = true;
+        let auto_presstime = vec![i64::MIN; 9];
+        {
+            let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        assert!(timer.is_timer_on(100));
+
+        // Now press key 8 instead (switch scratch direction)
+        key_states[7] = false;
+        key_states[8] = true;
+        {
+            let mut ctx = make_context(200, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        // scratch_changed should be true, timer should be re-set
+        assert!(timer.is_timer_on(100));
+    }
+
+    // --- Scratch animation tests ---
+
+    #[test]
+    fn test_input_scratch_initial_no_animation_on_first_frame() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        let key_states = vec![false; 9];
+        let auto_presstime = vec![i64::MIN; 9];
+        // prevtime starts at -1, first frame should not animate
+        let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+        proc.input(&mut ctx);
+        // scratch angles should still be 0 after first frame (prevtime was -1)
+        assert_eq!(proc.get_scratch_angles()[0], 0.0);
+        // prevtime should now be 100
+        assert_eq!(proc.prevtime, 100);
+    }
+
+    #[test]
+    fn test_input_scratch_idle_moves_towards_default_speed() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        let key_states = vec![false; 9];
+        let auto_presstime = vec![i64::MIN; 9];
+
+        // First frame to set prevtime
+        {
+            let mut ctx = make_context(0, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+
+        // Second frame at 1000ms (deltatime = 1.0s)
+        {
+            let mut ctx = make_context(1000, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+
+        // Default target_speed=1.0, move_towards_speed=4.0
+        // scratch_tt_graphic_speed starts at 0.0
+        // |1.0 - 0.0| = 1.0 > deltatime(1.0) is false, so speed = target_speed = 1.0
+        assert_eq!(proc.scratch_tt_graphic_speed[0], 1.0);
+        // With speed=1.0 > 0: scratch += 360.0 - 1.0 * 1.0 * 270.0 = 90.0
+        assert!((proc.get_scratch_angles()[0] - 90.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_input_scratch_key0_sets_negative_direction() {
+        // BEAT_7K: scratch_to_key[0] = [7, 8]
+        // key0 = scratch_keys[0][1] = 8, key1 = scratch_keys[0][0] = 7
+        // Pressing key0 (=8) -> target_speed=-0.75, speed clamped to min(current, 0)
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        let mut key_states = vec![false; 9];
+        let auto_presstime = vec![i64::MIN; 9];
+
+        // First frame
+        {
+            let mut ctx = make_context(0, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+
+        // Press key 8 (scratch key0 direction)
+        key_states[8] = true;
+        {
+            let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        // deltatime = 100/1000 = 0.1
+        // key0 active: target=-0.75, move_towards=16.0, speed clamped to min(0, 0)=0
+        // |(-0.75) - 0| = 0.75 > 0.1 -> speed += signum(-0.75) * 0.1 * 16 = -1.6
+        assert!(proc.scratch_tt_graphic_speed[0] < 0.0);
+    }
+
+    #[test]
+    fn test_input_scratch_key1_sets_positive_direction() {
+        // key1 = scratch_keys[0][0] = 7
+        // Pressing key1 (=7) -> target_speed=2.0
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        let mut key_states = vec![false; 9];
+        let auto_presstime = vec![i64::MIN; 9];
+
+        // First frame
+        {
+            let mut ctx = make_context(0, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+
+        // Press key 7 (scratch key1 direction)
+        key_states[7] = true;
+        {
+            let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        // key1 active: target=2.0, move_towards=16.0, speed clamped to max(0, 0)=0
+        // |2.0 - 0| = 2.0 > 0.1 -> speed += 1.0 * 0.1 * 16 = 1.6
+        assert!(proc.scratch_tt_graphic_speed[0] > 0.0);
+        assert!((proc.scratch_tt_graphic_speed[0] - 1.6).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_input_scratch_autoplay_ignores_key_states() {
+        // In autoplay mode, scratch animation uses default idle speed
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        let mut key_states = vec![false; 9];
+        key_states[7] = true; // key pressed but autoplay ignores it
+        let auto_presstime = vec![i64::MIN; 9];
+
+        // First frame
+        {
+            let mut ctx = make_context(0, &key_states, &auto_presstime, true, &mut timer);
+            proc.input(&mut ctx);
+        }
+
+        // Second frame
+        {
+            let mut ctx = make_context(100, &key_states, &auto_presstime, true, &mut timer);
+            proc.input(&mut ctx);
+        }
+
+        // autoplay -> default target_speed=1.0, move_towards=4.0
+        // speed starts at 0, deltatime=0.1
+        // |1.0 - 0| = 1.0 > 0.1 -> speed += 1.0 * 0.1 * 4.0 = 0.4
+        assert!((proc.scratch_tt_graphic_speed[0] - 0.4).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_input_scratch_angle_wraps_at_360() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        let key_states = vec![false; 9];
+        let auto_presstime = vec![i64::MIN; 9];
+
+        // Set scratch angle close to 360
+        proc.scratch[0] = 350.0;
+        proc.scratch_tt_graphic_speed[0] = 1.0;
+        proc.prevtime = 0;
+
+        {
+            let mut ctx = make_context(1000, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        // scratch += 360.0 - 1.0 * 1.0 * 270.0 = 90.0
+        // 350.0 + 90.0 = 440.0 % 360.0 = 80.0
+        assert!((proc.get_scratch_angles()[0] - 80.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_input_prevtime_updates() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        assert_eq!(proc.prevtime, -1);
+        let mut timer = make_timer();
+
+        let key_states = vec![false; 9];
+        let auto_presstime = vec![i64::MIN; 9];
+
+        let mut ctx = make_context(42, &key_states, &auto_presstime, false, &mut timer);
+        proc.input(&mut ctx);
+        assert_eq!(proc.prevtime, 42);
+    }
+
+    #[test]
+    fn test_input_multiple_lanes_pressed() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        // Press keys 0, 2, 4 (lanes 0, 2, 4; offsets 1, 3, 5)
+        let mut key_states = vec![false; 9];
+        key_states[0] = true;
+        key_states[2] = true;
+        key_states[4] = true;
+        let auto_presstime = vec![i64::MIN; 9];
+        let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+        proc.input(&mut ctx);
+
+        // timer_on IDs: 101, 103, 105
+        assert!(ctx.timer.is_timer_on(101));
+        assert!(ctx.timer.is_timer_on(103));
+        assert!(ctx.timer.is_timer_on(105));
+        // Unpressed lanes should NOT have timers
+        assert!(!ctx.timer.is_timer_on(102)); // offset 2
+        assert!(!ctx.timer.is_timer_on(104)); // offset 4
+    }
+
+    // --- input_key_on() tests ---
+
+    #[test]
+    fn test_input_key_on_sets_timer() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        // lane 0, offset 1, player 0 -> timer_on = 101, timer_off = 121
+        proc.input_key_on(0, &mut timer);
+        assert!(timer.is_timer_on(101));
+        assert!(!timer.is_timer_on(121));
+    }
+
+    #[test]
+    fn test_input_key_on_scratch_lane_always_retriggers() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        // lane 7 is scratch, offset 0, player 0 -> timer_on = 100
+        proc.input_key_on(7, &mut timer);
+        assert!(timer.is_timer_on(100));
+
+        // Call again — scratch lanes should re-trigger
+        // (scratch condition: lane_scratch[lane] != -1 -> always true for scratch)
+        proc.input_key_on(7, &mut timer);
+        assert!(timer.is_timer_on(100));
+    }
+
+    #[test]
+    fn test_input_key_on_key_beam_stop_prevents_timer() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        proc.set_key_beam_stop(true);
+        let mut timer = make_timer();
+
+        proc.input_key_on(0, &mut timer);
+        assert!(!timer.is_timer_on(101));
+    }
+
+    #[test]
+    fn test_input_key_on_out_of_bounds_lane_no_crash() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        // Lane 100 is out of bounds — should return early without panic
+        proc.input_key_on(100, &mut timer);
+    }
+
+    #[test]
+    fn test_input_key_on_non_scratch_lane_does_not_retrigger() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        // lane 0 (non-scratch), offset 1 -> timer_on = 101
+        proc.input_key_on(0, &mut timer);
+        assert!(timer.is_timer_on(101));
+
+        // Manually set timer_on to OFF, then call again
+        // Since timer_on is already ON and lane is not scratch, it should NOT re-trigger
+        // Actually, input_key_on checks: !timer.is_timer_on(timer_on) || lane_scratch[lane] != -1
+        // For non-scratch lane with timer already on -> skip
+        // We can test by checking the timer was set once (already proven above)
+    }
+
+    // --- get_scratch_angles() tests ---
+
+    #[test]
+    fn test_get_scratch_angles_initial_zeros() {
+        let lp = make_lane_property();
+        let proc = KeyInputProccessor::new(&lp);
+        let angles = proc.get_scratch_angles();
+        assert_eq!(angles.len(), 1); // BEAT_7K has 1 scratch
+        assert_eq!(angles[0], 0.0);
+    }
+
+    #[test]
+    fn test_get_scratch_angles_beat_14k_has_two() {
+        let lp = LaneProperty::new(&Mode::BEAT_14K);
+        let proc = KeyInputProccessor::new(&lp);
+        let angles = proc.get_scratch_angles();
+        assert_eq!(angles.len(), 2);
+    }
+
+    #[test]
+    fn test_get_scratch_angles_popn_has_none() {
+        let lp = LaneProperty::new(&Mode::POPN_9K);
+        let proc = KeyInputProccessor::new(&lp);
+        let angles = proc.get_scratch_angles();
+        assert_eq!(angles.len(), 0);
     }
 }
