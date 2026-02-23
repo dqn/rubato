@@ -1506,9 +1506,57 @@ impl MainState for BMSPlayer {
     }
 
     fn input(&mut self) {
-        if let Some(ref mut control) = self.control {
-            control.input();
+        // Compute values before taking mutable borrows
+        let is_note_end = self.is_note_end();
+        let is_timer_play_on = self.main_state_data.timer.is_timer_on(TIMER_PLAY);
+        let now_millis = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as i64;
+
+        // Process control input (START+SELECT, lane cover, hispeed, etc.)
+        if let (Some(mut control), Some(lanerender)) =
+            (self.control.take(), self.lanerender.as_mut())
+        {
+            // TODO: Phase 22+ — wire BMSPlayerInputProcessor state into context
+            let mut noop_analog = |_key: usize, _ms: i32| -> i32 { 0 };
+            let mut ctx = crate::control_input_processor::ControlInputContext {
+                lanerender,
+                start_pressed: false, // TODO: Phase 22+ — from main.getInputProcessor()
+                select_pressed: false, // TODO: Phase 22+ — from main.getInputProcessor()
+                control_key_up: false,
+                control_key_down: false,
+                control_key_escape_pressed: false,
+                control_key_num1: false,
+                control_key_num2: false,
+                control_key_num3: false,
+                control_key_num4: false,
+                key_states: &[], // TODO: Phase 22+ — from main.getInputProcessor()
+                scroll: 0,
+                is_analog: &[],
+                analog_diff_and_reset: &mut noop_analog,
+                is_timer_play_on,
+                is_note_end,
+                window_hold: false, // TODO: Phase 22+ — from playerConfig.isWindowHold()
+                autoplay_mode: beatoraja_core::bms_player_mode::Mode::Play, // TODO: Phase 22+ — from resource.getPlayMode()
+                now_millis,
+            };
+
+            let result = control.input(&mut ctx);
+
+            // Apply result actions
+            if let Some(speed) = result.play_speed {
+                self.set_play_speed(speed);
+            }
+            if result.stop_play {
+                // Restore control before stopping (stop_play may need it)
+                self.control = Some(control);
+                self.stop_play();
+            } else {
+                self.control = Some(control);
+            }
         }
+
         // Build InputContext for key input processing.
         // key_states comes from main.getInputProcessor() — not yet integrated.
         // auto_presstime comes from the judge manager.

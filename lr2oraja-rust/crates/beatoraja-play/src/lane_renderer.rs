@@ -154,6 +154,10 @@ impl LaneRenderer {
         self.enable_lift
     }
 
+    pub fn set_enable_lift(&mut self, b: bool) {
+        self.enable_lift = b;
+    }
+
     pub fn get_lift_region(&self) -> f32 {
         self.lift
     }
