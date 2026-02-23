@@ -23,7 +23,7 @@ impl SkinJudgeObject {
         self.inner.prepare(time);
     }
 
-    pub fn draw(&self, _sprite: &mut SkinObjectRenderer) {
+    pub fn draw(&mut self, _sprite: &mut SkinObjectRenderer) {
         // Stub: judge drawing requires SkinImage/SkinNumber integration
     }
 

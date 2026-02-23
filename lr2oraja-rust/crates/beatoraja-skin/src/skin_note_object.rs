@@ -23,7 +23,7 @@ impl SkinNoteObject {
         self.inner.prepare(time);
     }
 
-    pub fn draw(&self, _sprite: &mut SkinObjectRenderer) {
+    pub fn draw(&mut self, _sprite: &mut SkinObjectRenderer) {
         // Stub: note drawing is handled by LaneRenderer, not the skin object itself
     }
 

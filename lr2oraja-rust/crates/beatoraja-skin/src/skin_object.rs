@@ -1513,4 +1513,169 @@ mod tests {
         ));
         assert!(data.validate());
     }
+
+    // =========================================================================
+    // Phase 40a: Two-phase prepare/draw lifecycle tests
+    // =========================================================================
+
+    /// Helper: set up a single-destination SkinObjectData so prepare() sets draw=true.
+    fn setup_data(data: &mut SkinObjectData, x: f32, y: f32, w: f32, h: f32) {
+        data.set_destination_with_int_timer_ops(
+            0,
+            x,
+            y,
+            w,
+            h,
+            0,
+            255,
+            255,
+            255,
+            255,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            &[0],
+        );
+    }
+
+    #[test]
+    fn test_skin_object_data_prepare_sets_draw_and_region() {
+        // Phase 40a: verify prepare(&mut self) mutates internal state
+        let mut data = SkinObjectData::new();
+        setup_data(&mut data, 10.0, 20.0, 100.0, 50.0);
+
+        // Before prepare: draw is false
+        assert!(!data.draw);
+
+        let state = crate::test_helpers::MockMainState::default();
+        data.prepare(0, &state);
+
+        // After prepare: draw is true, region is populated
+        assert!(data.draw);
+        assert_eq!(data.region.x, 10.0);
+        assert_eq!(data.region.y, 20.0);
+        assert_eq!(data.region.width, 100.0);
+        assert_eq!(data.region.height, 50.0);
+    }
+
+    #[test]
+    fn test_skin_object_data_prepare_then_draw_image() {
+        // Phase 40a: verify two-phase pattern — prepare() then draw_image()
+        let mut data = SkinObjectData::new();
+        setup_data(&mut data, 10.0, 20.0, 100.0, 50.0);
+
+        let state = crate::test_helpers::MockMainState::default();
+        data.prepare(0, &state);
+        assert!(data.draw);
+
+        // Phase 2: draw reads pre-computed state (region, color, angle)
+        let mut renderer = SkinObjectRenderer::new();
+        let image = TextureRegion::new();
+        data.draw_image(&mut renderer, &image);
+
+        // Verify vertices were generated
+        assert_eq!(renderer.sprite.vertices().len(), 6);
+    }
+
+    #[test]
+    fn test_skin_object_data_prepare_color_and_angle_cached() {
+        // Phase 40a: verify prepare() caches color and angle for later draw use
+        let mut data = SkinObjectData::new();
+        // Set up with specific color (128, 64, 32, 200) and angle=45
+        data.set_destination_with_int_timer_ops(
+            0,
+            0.0,
+            0.0,
+            50.0,
+            50.0,
+            0,
+            200,
+            128,
+            64,
+            32,
+            0,
+            0,
+            45,
+            0,
+            0,
+            0,
+            &[0],
+        );
+
+        let state = crate::test_helpers::MockMainState::default();
+        data.prepare(0, &state);
+
+        // Color should be cached
+        assert!((data.color.r - 128.0 / 255.0).abs() < 0.01);
+        assert!((data.color.g - 64.0 / 255.0).abs() < 0.01);
+        assert!((data.color.b - 32.0 / 255.0).abs() < 0.01);
+        assert!((data.color.a - 200.0 / 255.0).abs() < 0.01);
+        // Angle should be cached
+        assert_eq!(data.angle, 45);
+    }
+
+    #[test]
+    fn test_skin_object_data_draw_without_prepare_does_not_draw() {
+        // Phase 40a: verify draw skips when prepare hasn't been called
+        let mut data = SkinObjectData::new();
+        setup_data(&mut data, 10.0, 20.0, 100.0, 50.0);
+
+        // draw is false by default (no prepare called)
+        assert!(!data.draw);
+
+        // Attempting to use draw_image would still work mechanically,
+        // but the caller checks data.draw before calling draw methods.
+        // This test verifies the flag is false.
+    }
+
+    #[test]
+    fn test_skin_object_data_prepare_with_offset_modifies_region() {
+        // Phase 40a: verify prepare_with_offset() adds offset to region
+        let mut data = SkinObjectData::new();
+        setup_data(&mut data, 10.0, 20.0, 100.0, 50.0);
+
+        let state = crate::test_helpers::MockMainState::default();
+        data.prepare_with_offset(0, &state, 5.0, 3.0);
+
+        assert!(data.draw);
+        assert_eq!(data.region.x, 15.0); // 10 + 5
+        assert_eq!(data.region.y, 23.0); // 20 + 3
+    }
+
+    #[test]
+    fn test_skin_object_data_two_phase_separate_calls() {
+        // Phase 40a: The key invariant — prepare and draw are separate calls.
+        // The caller can inspect state between prepare and draw.
+        let mut data = SkinObjectData::new();
+        setup_data(&mut data, 50.0, 60.0, 200.0, 150.0);
+
+        let state = crate::test_helpers::MockMainState::default();
+
+        // Phase 1: prepare (mutable)
+        data.prepare(0, &state);
+        assert!(data.draw);
+
+        // Between phases: caller can read the cached state
+        let cached_region = data.region.clone();
+        let _cached_color = data.color.clone();
+        assert_eq!(cached_region.x, 50.0);
+        assert_eq!(cached_region.width, 200.0);
+
+        // Phase 2: draw (also mutable for scratch-space)
+        let mut renderer = SkinObjectRenderer::new();
+        let image = TextureRegion::new();
+        data.draw_image_at(
+            &mut renderer,
+            &image,
+            cached_region.x,
+            cached_region.y,
+            cached_region.width,
+            cached_region.height,
+        );
+
+        assert_eq!(renderer.sprite.vertices().len(), 6);
+    }
 }

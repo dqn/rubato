@@ -176,8 +176,12 @@ impl SkinBar {
         );
     }
 
-    pub fn draw(&self, _sprite: &SkinObjectRenderer) {
+    pub fn draw(&mut self, _sprite: &mut SkinObjectRenderer) {
         // In Java: render.render(sprite, this)
+        // Two-phase pattern: prepare(&mut self) is called first to compute state,
+        // then draw(&mut self) reads that state and delegates to BarRenderer.render().
+        // draw needs &mut self because child SkinImage/SkinNumber draw methods
+        // require &mut self for scratch-space fields (tmp_rect, tmp_image).
         log::warn!(
             "not yet implemented: SkinBar.draw - requires BarRenderer and rendering integration"
         );
@@ -232,5 +236,71 @@ impl SkinBar {
 
     pub fn set_graph(&mut self, graph: SkinDistributionGraph) {
         self.graph = Some(graph);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_skin_bar_new_initializes_arrays() {
+        let bar = SkinBar::new(0);
+        assert_eq!(bar.barimageon.len(), SkinBar::BAR_COUNT);
+        assert_eq!(bar.barimageoff.len(), SkinBar::BAR_COUNT);
+        assert_eq!(bar.trophy.len(), SkinBar::BARTROPHY_COUNT);
+        assert_eq!(bar.text.len(), SkinBar::BARTEXT_COUNT);
+        assert_eq!(bar.barlevel.len(), SkinBar::BARLEVEL_COUNT);
+        assert_eq!(bar.label.len(), SkinBar::BARLABEL_COUNT);
+        assert_eq!(bar.lamp.len(), SkinBar::BARLAMP_COUNT);
+        assert_eq!(bar.position, 0);
+        assert!(!bar.draw);
+    }
+
+    #[test]
+    fn test_skin_bar_two_phase_prepare_draw_signatures() {
+        // Phase 40a: verify that SkinBar follows the two-phase pattern:
+        //   prepare(&mut self, time, state) — mutable phase
+        //   draw(&mut self, &mut sprite)    — mutable phase (for scratch-space)
+        // This test verifies the signatures compile and can be called sequentially.
+        let mut bar = SkinBar::new(0);
+
+        // Phase 1: prepare (stub — logs warning but doesn't panic)
+        // We can't call prepare without a real MainState, but we can verify draw flag
+        assert!(!bar.draw);
+
+        // Phase 2: draw (stub — logs warning but doesn't panic)
+        let mut renderer = SkinObjectRenderer;
+        bar.draw(&mut renderer);
+        // No panic = success
+    }
+
+    #[test]
+    fn test_skin_bar_position_preserved() {
+        let bar = SkinBar::new(1);
+        assert_eq!(bar.get_position(), 1);
+    }
+
+    #[test]
+    fn test_skin_bar_get_bar_images_bounds() {
+        let bar = SkinBar::new(0);
+        // Valid index returns None (no images set)
+        assert!(bar.get_bar_images(true, 0).is_none());
+        assert!(bar.get_bar_images(false, 0).is_none());
+        // Out of bounds returns None
+        assert!(bar.get_bar_images(true, SkinBar::BAR_COUNT).is_none());
+    }
+
+    #[test]
+    fn test_skin_bar_accessors_bounds_checked() {
+        let bar = SkinBar::new(0);
+        assert!(bar.get_lamp(-1).is_none());
+        assert!(bar.get_lamp(0).is_none());
+        assert!(bar.get_lamp(SkinBar::BARLAMP_COUNT as i32).is_none());
+        assert!(bar.get_trophy(-1).is_none());
+        assert!(bar.get_trophy(0).is_none());
+        assert!(bar.get_text(SkinBar::BARTEXT_COUNT).is_none());
+        assert!(bar.get_barlevel(-1).is_none());
+        assert!(bar.get_label(-1).is_none());
     }
 }

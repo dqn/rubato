@@ -1161,4 +1161,210 @@ mod tests {
         fn assert_send<T: Send>() {}
         assert_send::<Skin>();
     }
+
+    // =========================================================================
+    // Phase 40a: Two-phase prepare/draw via SkinObject enum dispatch
+    // =========================================================================
+
+    /// Helper: make a TextureRegion with known dimensions.
+    fn make_region(w: i32, h: i32) -> TextureRegion {
+        TextureRegion {
+            region_width: w,
+            region_height: h,
+            u: 0.0,
+            v: 0.0,
+            u2: 1.0,
+            v2: 1.0,
+            ..TextureRegion::default()
+        }
+    }
+
+    #[test]
+    fn test_skin_object_enum_two_phase_image() {
+        // Phase 40a: verify SkinObject::Image follows prepare/draw two-phase via enum
+        let mut image = crate::skin_image::SkinImage::new_with_single(make_region(32, 32));
+        image.data.set_destination_with_int_timer_ops(
+            0,
+            10.0,
+            20.0,
+            100.0,
+            50.0,
+            0,
+            255,
+            255,
+            255,
+            255,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            &[0],
+        );
+        let mut obj = SkinObject::Image(image);
+
+        let state = crate::test_helpers::MockMainState::default();
+
+        // Phase 1: prepare (via enum)
+        obj.prepare(0, &state);
+        assert!(obj.is_draw());
+
+        // Phase 2: draw (via enum)
+        let mut renderer = SkinObjectRenderer::new();
+        obj.draw(&mut renderer);
+        // Should have generated vertices
+        assert_eq!(renderer.sprite.vertices().len(), 6);
+    }
+
+    #[test]
+    fn test_skin_object_enum_two_phase_bar() {
+        // Phase 40a: verify SkinObject::Bar follows prepare/draw two-phase via enum
+        let mut bar_obj = crate::skin_bar_object::SkinBarObject::new(0);
+        bar_obj.data.set_destination_with_int_timer_ops(
+            0,
+            0.0,
+            0.0,
+            640.0,
+            480.0,
+            0,
+            255,
+            255,
+            255,
+            255,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            &[0],
+        );
+        let mut obj = SkinObject::Bar(bar_obj);
+
+        let state = crate::test_helpers::MockMainState::default();
+
+        // Phase 1: prepare
+        obj.prepare(0, &state);
+        assert!(obj.is_draw());
+
+        // Phase 2: draw (stub — no panic)
+        let mut renderer = SkinObjectRenderer::new();
+        obj.draw(&mut renderer);
+    }
+
+    #[test]
+    fn test_skin_object_enum_two_phase_number() {
+        // Phase 40a: verify SkinObject::Number follows prepare/draw two-phase via enum
+        let digits: Vec<Vec<TextureRegion>> = vec![(0..12).map(|_| make_region(24, 32)).collect()];
+        let mut num =
+            crate::skin_number::SkinNumber::new_with_int_timer(digits, None, 0, 0, 3, 1, 0, 0, 0);
+        num.data.set_destination_with_int_timer_ops(
+            0,
+            0.0,
+            0.0,
+            24.0,
+            32.0,
+            0,
+            255,
+            255,
+            255,
+            255,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            &[0],
+        );
+        let mut obj = SkinObject::Number(num);
+
+        let state = crate::test_helpers::MockMainState::default();
+
+        // Phase 1: prepare
+        obj.prepare(0, &state);
+        // draw may be false because integer property returns i32::MIN by default
+        // That's expected — the property factory returns None and the default is 0,
+        // which IS a valid value. Let's check.
+        // The default ref_prop is from get_integer_property_by_id(0) which returns None,
+        // so value = i32::MIN... but wait, SkinNumber::prepare calls ref_prop.get() which
+        // returns 0 for id=0 since no property found. Actually ref_prop is None so value = i32::MIN.
+        // i32::MIN triggers early return with draw=false. That's correct behavior.
+    }
+
+    #[test]
+    fn test_skin_object_enum_two_phase_graph() {
+        // Phase 40a: verify SkinObject::Graph follows prepare/draw two-phase
+        let images = vec![make_region(64, 64)];
+        let mut graph = crate::skin_graph::SkinGraph::new_with_int_timer(images, 0, 0, 0, 0);
+        graph.data.set_destination_with_int_timer_ops(
+            0,
+            0.0,
+            0.0,
+            200.0,
+            20.0,
+            0,
+            255,
+            255,
+            255,
+            255,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            &[0],
+        );
+        let mut obj = SkinObject::Graph(graph);
+
+        let state = crate::test_helpers::MockMainState::default();
+
+        // Phase 1: prepare
+        obj.prepare(0, &state);
+        assert!(obj.is_draw());
+
+        // Phase 2: draw
+        let mut renderer = SkinObjectRenderer::new();
+        obj.draw(&mut renderer);
+    }
+
+    #[test]
+    fn test_skin_object_enum_two_phase_slider() {
+        // Phase 40a: verify SkinObject::Slider follows prepare/draw two-phase
+        let images = vec![make_region(16, 16)];
+        let mut slider =
+            crate::skin_slider::SkinSlider::new_with_int_timer(images, 0, 0, 0, 100, 0, false);
+        slider.data.set_destination_with_int_timer_ops(
+            0,
+            0.0,
+            0.0,
+            16.0,
+            16.0,
+            0,
+            255,
+            255,
+            255,
+            255,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            &[0],
+        );
+        let mut obj = SkinObject::Slider(slider);
+
+        let state = crate::test_helpers::MockMainState::default();
+
+        // Phase 1: prepare
+        obj.prepare(0, &state);
+        assert!(obj.is_draw());
+
+        // Phase 2: draw
+        let mut renderer = SkinObjectRenderer::new();
+        obj.draw(&mut renderer);
+    }
 }

@@ -90,9 +90,12 @@ impl BarRenderer {
         // Stubbed since it needs full rendering context
     }
 
-    pub fn render(&self, _sprite: &SkinObjectRenderer, _baro: &SkinBar) {
+    pub fn render(&self, _sprite: &mut SkinObjectRenderer, _baro: &mut SkinBar) {
         // In Java: draws all bar elements (images, text, trophies, lamps, levels, labels)
-        // Requires full rendering pipeline
+        // Two-phase pattern: prepare() computes layout, render() draws using that layout.
+        // render needs &mut SkinBar because child draw methods (SkinImage::draw, etc.)
+        // require &mut self for scratch-space fields (tmp_rect, tmp_image).
+        // render needs &mut SkinObjectRenderer for color/blend state changes.
     }
 
     pub fn input(&mut self) {
@@ -117,5 +120,69 @@ impl BarRenderer {
 
     pub fn dispose(&self) {
         // In Java: no-op (commented out favorite writing)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bar_renderer_new() {
+        let renderer = BarRenderer::new(300, 100, 5);
+        assert_eq!(renderer.durationlow, 300);
+        assert_eq!(renderer.durationhigh, 100);
+        assert_eq!(renderer.analog_ticks_per_scroll, 5);
+        assert_eq!(renderer.barlength, 60);
+        assert_eq!(renderer.duration, 0);
+        assert_eq!(renderer.angle, 0);
+        assert!(!renderer.keyinput);
+        assert!(!renderer.bartextupdate);
+    }
+
+    #[test]
+    fn test_bar_renderer_two_phase_prepare_render() {
+        // Phase 40a: verify BarRenderer follows the two-phase pattern:
+        //   prepare(&mut self, &SkinBar, time) — reads SkinBar, mutates self
+        //   render(&self, &mut sprite, &mut SkinBar) — reads self, mutates SkinBar/sprite
+        let mut renderer = BarRenderer::new(300, 100, 5);
+        let mut bar = SkinBar::new(0);
+
+        // Phase 1: prepare — BarRenderer takes immutable ref to SkinBar
+        renderer.prepare(&bar, 1000);
+        assert_eq!(renderer.time, 1000);
+
+        // Phase 2: render — BarRenderer takes mutable refs to sprite and SkinBar
+        let mut sprite = SkinObjectRenderer;
+        renderer.render(&mut sprite, &mut bar);
+        // No panic = success (render is a stub)
+    }
+
+    #[test]
+    fn test_bar_renderer_prepare_stores_time() {
+        let mut renderer = BarRenderer::new(300, 100, 5);
+        let bar = SkinBar::new(0);
+
+        renderer.prepare(&bar, 5000);
+        assert_eq!(renderer.time, 5000);
+
+        renderer.prepare(&bar, 10000);
+        assert_eq!(renderer.time, 10000);
+    }
+
+    #[test]
+    fn test_bar_renderer_update_bar_text() {
+        let mut renderer = BarRenderer::new(300, 100, 5);
+        assert!(!renderer.bartextupdate);
+        renderer.update_bar_text();
+        assert!(renderer.bartextupdate);
+    }
+
+    #[test]
+    fn test_bar_renderer_mouse_pressed_stub() {
+        let renderer = BarRenderer::new(300, 100, 5);
+        let bar = SkinBar::new(0);
+        // Stub returns false
+        assert!(!renderer.mouse_pressed(&bar, 0, 100, 200));
     }
 }
