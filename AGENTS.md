@@ -85,7 +85,7 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**1900 tests, 0 ignored.** Phases 1–39 complete. Zero clippy warnings.
+**1900 tests, 0 ignored.** Phases 1–39 complete, Phase 41a/41b complete. Zero clippy warnings.
 
 ## Remaining Stubs (~2,550 lines across 10 files)
 
@@ -93,12 +93,12 @@ lr2oraja-rust/       # Cargo workspace
 |-------|------:|--------|
 | beatoraja-types | 549 | Lifecycle — required |
 | beatoraja-external | 446 | Permanent (Twitter4j `bail!()`, API deprecated) |
-| beatoraja-result | 385 | Lifecycle — MainController/PlayerResource |
+| beatoraja-result | 355 | Lifecycle — MainController delegates to trait (41b), AudioProcessor/IR stubs remain |
 | beatoraja-launcher | 314 | Lifecycle — egui integration |
 | beatoraja-skin | 287 | Lifecycle — MainState/Timer/Controller |
 | beatoraja-select | 278 | API incompatible — needs SkinBar rewrite |
 | beatoraja-modmenu | 203 | API incompatible — needs SkinWidget rewrite |
-| beatoraja-decide | 108 | Lifecycle — required |
+| beatoraja-decide | 108 | Lifecycle — MainControllerRef delegates to trait (41b), AudioProcessor/Skin stubs remain |
 | beatoraja-input | 21 | Lifecycle — required |
 | beatoraja-core | 1 | (empty) |
 
