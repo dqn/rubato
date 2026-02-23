@@ -27,6 +27,18 @@ pub trait PatternModifier {
 
     fn get_player(&self) -> i32;
 
+    /// Whether this modifier has a displayable lane shuffle pattern.
+    /// LaneShuffleModifier subclasses override this to return true.
+    fn is_lane_shuffle_to_display(&self) -> bool {
+        false
+    }
+
+    /// Get the random lane pattern for display (e.g., for playinfo.laneShufflePattern).
+    /// LaneShuffleModifier subclasses override this to return their pattern.
+    fn get_lane_shuffle_random_pattern(&self, _mode: &Mode) -> Option<Vec<i32>> {
+        None
+    }
+
     fn get_keys(&self, mode: &Mode, player: i32, contains_scratch: bool) -> Vec<i32> {
         if player >= mode.player() {
             return Vec::new();

@@ -10,8 +10,17 @@ use crate::play_skin::PlaySkin;
 use crate::practice_configuration::PracticeConfiguration;
 use crate::rhythm_timer_processor::RhythmTimerProcessor;
 use beatoraja_core::main_state::{MainState, MainStateData, MainStateType};
+use beatoraja_core::player_config::PlayerConfig;
 use beatoraja_core::score_data::ScoreData;
 use beatoraja_core::timer_manager::TimerManager;
+use beatoraja_pattern::autoplay_modifier::AutoplayModifier;
+use beatoraja_pattern::extra_note_modifier::ExtraNoteModifier;
+use beatoraja_pattern::lane_shuffle_modifier::{PlayerBattleModifier, PlayerFlipModifier};
+use beatoraja_pattern::long_note_modifier::LongNoteModifier;
+use beatoraja_pattern::mine_note_modifier::MineNoteModifier;
+use beatoraja_pattern::mode_modifier::ModeModifier;
+use beatoraja_pattern::pattern_modifier::{AssistLevel, PatternModifier};
+use beatoraja_pattern::scroll_speed_modifier::ScrollSpeedModifier;
 use beatoraja_types::clear_type::ClearType;
 use beatoraja_types::replay_data::ReplayData;
 use beatoraja_types::skin_type::SkinType;
@@ -406,6 +415,199 @@ impl BMSPlayer {
     /// Corresponds to Java getOptionInformation() returning playinfo.
     pub fn get_option_information(&self) -> &ReplayData {
         &self.playinfo
+    }
+
+    /// Build and apply the pattern modifier chain.
+    ///
+    /// Corresponds to the pattern modifier section of the Java BMSPlayer constructor
+    /// (lines ~303-447). This method:
+    /// 1. Applies pre-option modifiers (scroll, LN, mine, extra)
+    /// 2. Handles DP battle mode (doubleoption >= 2): converts SP to DP, adds PlayerBattleModifier
+    /// 3. Handles DP flip (doubleoption == 1): adds PlayerFlipModifier
+    /// 4. Applies 2P random option (DP only)
+    /// 5. Applies 1P random option
+    /// 6. Handles 7to9 mode
+    /// 7. Manages seeds (save/restore from playinfo)
+    /// 8. Accumulates assist level
+    ///
+    /// Returns `true` if score submission is valid (no assist/special options).
+    pub fn build_pattern_modifiers(&mut self, config: &PlayerConfig) -> bool {
+        let mut score = true;
+
+        // -- Phase 1: Pre-option modifiers (scroll, LN, mine, extra) --
+        let mut pre_mods: Vec<Box<dyn PatternModifier>> = Vec::new();
+
+        if config.scroll_mode > 0 {
+            pre_mods.push(Box::new(ScrollSpeedModifier::with_params(
+                config.scroll_mode - 1,
+                config.scroll_section,
+                config.scroll_rate,
+            )));
+        }
+        if config.longnote_mode > 0 {
+            pre_mods.push(Box::new(LongNoteModifier::with_params(
+                config.longnote_mode - 1,
+                config.longnote_rate,
+            )));
+        }
+        if config.mine_mode > 0 {
+            pre_mods.push(Box::new(MineNoteModifier::with_mode(config.mine_mode - 1)));
+        }
+        if config.extranote_depth > 0 {
+            pre_mods.push(Box::new(ExtraNoteModifier::new(
+                config.extranote_type,
+                config.extranote_depth,
+                config.extranote_scratch,
+            )));
+        }
+
+        // Apply pre-option modifiers and accumulate assist level
+        for m in pre_mods.iter_mut() {
+            m.modify(&mut self.model);
+            let assist_level = m.get_assist_level();
+            if assist_level != AssistLevel::None {
+                self.assist = self.assist.max(if assist_level == AssistLevel::Assist {
+                    2
+                } else {
+                    1
+                });
+                score = false;
+            }
+        }
+
+        // -- Phase 2: DP battle mode handling (doubleoption >= 2) --
+        if self.playinfo.doubleoption >= 2 {
+            let mode = self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K);
+            if mode == Mode::BEAT_5K || mode == Mode::BEAT_7K || mode == Mode::KEYBOARD_24K {
+                // Convert SP mode to DP mode
+                let new_mode = match mode {
+                    Mode::BEAT_5K => Mode::BEAT_10K,
+                    Mode::BEAT_7K => Mode::BEAT_14K,
+                    Mode::KEYBOARD_24K => Mode::KEYBOARD_24K_DOUBLE,
+                    _ => unreachable!(),
+                };
+                self.model.set_mode(new_mode);
+
+                // Apply PlayerBattleModifier
+                let mut battle_mod = PlayerBattleModifier::new();
+                battle_mod.modify(&mut self.model);
+
+                // If doubleoption == 3, also add AutoplayModifier for scratch keys
+                if self.playinfo.doubleoption == 3 {
+                    let dp_mode = self.model.get_mode().cloned().unwrap_or(Mode::BEAT_14K);
+                    let scratch_keys = dp_mode.scratch_key().to_vec();
+                    let mut autoplay_mod = AutoplayModifier::new(scratch_keys);
+                    autoplay_mod.modify(&mut self.model);
+                }
+
+                self.assist = self.assist.max(1);
+                score = false;
+                log::info!("Pattern option: BATTLE (L-ASSIST)");
+            } else {
+                // Not SP mode, so BATTLE is not applied
+                self.playinfo.doubleoption = 0;
+            }
+        }
+
+        // -- Phase 3: Random option modifiers --
+        // This section corresponds to Java lines 384-447
+        let mode = self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K);
+        let player_count = mode.player();
+        let mut pattern_array: Vec<Option<Vec<i32>>> = vec![None; player_count as usize];
+
+        let mut random_mods: Vec<Box<dyn PatternModifier>> = Vec::new();
+
+        // DP option modifiers
+        if player_count == 2 {
+            if self.playinfo.doubleoption == 1 {
+                random_mods.push(Box::new(PlayerFlipModifier::new()));
+            }
+            log::info!("Pattern option (DP): {}", self.playinfo.doubleoption);
+
+            // 2P random option
+            let mut pm2 = beatoraja_pattern::pattern_modifier::create_pattern_modifier(
+                self.playinfo.randomoption2,
+                1,
+                &mode,
+                config,
+            );
+            if self.playinfo.randomoption2seed != -1 {
+                pm2.set_seed(self.playinfo.randomoption2seed);
+            } else {
+                self.playinfo.randomoption2seed = pm2.get_seed();
+            }
+            random_mods.push(pm2);
+            log::info!(
+                "Pattern option (2P): {}, Seed: {}",
+                self.playinfo.randomoption2,
+                self.playinfo.randomoption2seed
+            );
+        }
+
+        // 1P random option
+        let mut pm1 = beatoraja_pattern::pattern_modifier::create_pattern_modifier(
+            self.playinfo.randomoption,
+            0,
+            &mode,
+            config,
+        );
+        if self.playinfo.randomoptionseed != -1 {
+            pm1.set_seed(self.playinfo.randomoptionseed);
+        } else {
+            self.playinfo.randomoptionseed = pm1.get_seed();
+        }
+        random_mods.push(pm1);
+        log::info!(
+            "Pattern option (1P): {}, Seed: {}",
+            self.playinfo.randomoption,
+            self.playinfo.randomoptionseed
+        );
+
+        // 7to9 mode
+        if config.seven_to_nine_pattern >= 1 && mode == Mode::BEAT_7K {
+            let mode_mod = ModeModifier::new(Mode::BEAT_7K, Mode::POPN_9K, config.clone());
+            random_mods.push(Box::new(mode_mod));
+        }
+
+        // Apply all random modifiers
+        for m in random_mods.iter_mut() {
+            m.modify(&mut self.model);
+
+            let assist_level = m.get_assist_level();
+            if assist_level != AssistLevel::None {
+                log::info!("Assist pattern option selected");
+                self.assist = self.assist.max(if assist_level == AssistLevel::Assist {
+                    2
+                } else {
+                    1
+                });
+                score = false;
+            }
+
+            // Collect lane shuffle patterns for display
+            if m.is_lane_shuffle_to_display() {
+                let current_mode = self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K);
+                let player_idx = m.get_player() as usize;
+                if player_idx < pattern_array.len()
+                    && let Some(pattern) = m.get_lane_shuffle_random_pattern(&current_mode)
+                {
+                    pattern_array[player_idx] = Some(pattern);
+                }
+            }
+        }
+
+        // Store lane shuffle pattern in playinfo
+        // Convert Vec<Option<Vec<i32>>> to Option<Vec<Vec<i32>>>
+        let has_any_pattern = pattern_array.iter().any(|p| p.is_some());
+        if has_any_pattern {
+            let patterns: Vec<Vec<i32>> = pattern_array
+                .into_iter()
+                .map(|p| p.unwrap_or_default())
+                .collect();
+            self.playinfo.lane_shuffle_pattern = Some(patterns);
+        }
+
+        score
     }
 
     pub fn get_now_quarter_note_time(&self) -> i64 {
@@ -1234,5 +1436,257 @@ mod tests {
         player.dispose();
         assert!(player.main_state_data.skin.is_none());
         assert!(player.main_state_data.stage.is_none());
+    }
+
+    // --- build_pattern_modifiers tests ---
+
+    fn make_default_config() -> beatoraja_core::player_config::PlayerConfig {
+        beatoraja_core::player_config::PlayerConfig::default()
+    }
+
+    #[test]
+    fn build_pattern_modifiers_default_config_no_assist() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        let config = make_default_config();
+        let score = player.build_pattern_modifiers(&config);
+        assert!(score, "Default config should allow score submission");
+        assert_eq!(player.assist, 0, "Default config should not set assist");
+    }
+
+    #[test]
+    fn build_pattern_modifiers_scroll_mode() {
+        // ScrollSpeedModifier requires at least one timeline
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(100);
+        let tl = bms_model::time_line::TimeLine::new(130.0, 0, 8);
+        model.set_all_time_line(vec![tl]);
+
+        let mut player = BMSPlayer::new(model);
+        let mut config = make_default_config();
+        config.scroll_mode = 1; // Enable scroll speed modifier (Remove mode)
+        player.build_pattern_modifiers(&config);
+        // ScrollSpeedModifier in Remove mode sets LightAssist if BPM changes exist;
+        // with a single-BPM model it sets None. Either way, the modifier was applied.
+        // The key thing is it doesn't crash and processes correctly.
+    }
+
+    #[test]
+    fn build_pattern_modifiers_longnote_mode() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        let mut config = make_default_config();
+        config.longnote_mode = 1; // Enable LN modifier (Remove mode)
+        player.build_pattern_modifiers(&config);
+        // LongNoteModifier in Remove mode sets Assist if LNs exist.
+        // With empty model, no LNs, so assist stays None.
+    }
+
+    #[test]
+    fn build_pattern_modifiers_mine_mode() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        let mut config = make_default_config();
+        config.mine_mode = 1; // Enable mine modifier (Remove mode)
+        player.build_pattern_modifiers(&config);
+        // MineNoteModifier in Remove mode sets LightAssist if mine notes exist.
+    }
+
+    #[test]
+    fn build_pattern_modifiers_extranote() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        let mut config = make_default_config();
+        config.extranote_depth = 1; // Enable extra note modifier
+        player.build_pattern_modifiers(&config);
+    }
+
+    #[test]
+    fn build_pattern_modifiers_dp_battle_converts_sp_to_dp() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(100);
+        let mut player = BMSPlayer::new(model);
+
+        let mut config = make_default_config();
+        config.doubleoption = 2;
+        player.playinfo.doubleoption = 2;
+
+        let score = player.build_pattern_modifiers(&config);
+        // SP BEAT_7K should be converted to BEAT_14K
+        assert_eq!(player.get_mode(), Mode::BEAT_14K);
+        // assist should be at least 1 (LightAssist)
+        assert!(player.assist >= 1);
+        // score should be false
+        assert!(!score);
+    }
+
+    #[test]
+    fn build_pattern_modifiers_dp_battle_with_autoplay_scratch() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(100);
+        let mut player = BMSPlayer::new(model);
+
+        let mut config = make_default_config();
+        config.doubleoption = 3; // Battle + L-ASSIST (autoplay scratch)
+        player.playinfo.doubleoption = 3;
+
+        player.build_pattern_modifiers(&config);
+        // SP BEAT_7K should be converted to BEAT_14K
+        assert_eq!(player.get_mode(), Mode::BEAT_14K);
+        assert!(player.assist >= 1);
+    }
+
+    #[test]
+    fn build_pattern_modifiers_dp_battle_non_sp_resets_doubleoption() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_14K); // Already DP
+        model.set_judgerank(100);
+        let mut player = BMSPlayer::new(model);
+
+        let mut config = make_default_config();
+        config.doubleoption = 2;
+        player.playinfo.doubleoption = 2;
+
+        player.build_pattern_modifiers(&config);
+        // Not SP mode, so BATTLE is not applied
+        assert_eq!(player.get_mode(), Mode::BEAT_14K);
+        assert_eq!(player.playinfo.doubleoption, 0);
+    }
+
+    #[test]
+    fn build_pattern_modifiers_dp_flip() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_14K); // DP mode
+        model.set_judgerank(100);
+        let mut player = BMSPlayer::new(model);
+
+        let mut config = make_default_config();
+        config.doubleoption = 1;
+        player.playinfo.doubleoption = 1;
+
+        player.build_pattern_modifiers(&config);
+        // PlayerFlipModifier should be applied, mode stays BEAT_14K
+        assert_eq!(player.get_mode(), Mode::BEAT_14K);
+    }
+
+    #[test]
+    fn build_pattern_modifiers_random_option_seed_saved() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        let config = make_default_config();
+
+        player.build_pattern_modifiers(&config);
+        // After applying modifiers, the 1P random seed should be saved in playinfo
+        // Even with Identity (random=0), the seed is initialized
+        assert_ne!(player.playinfo.randomoptionseed, -1);
+    }
+
+    #[test]
+    fn build_pattern_modifiers_random_option_seed_restored() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        let config = make_default_config();
+
+        // Pre-set a seed (as if restoring from replay)
+        player.playinfo.randomoptionseed = 12345;
+
+        player.build_pattern_modifiers(&config);
+        // The seed should be preserved (not overwritten)
+        assert_eq!(player.playinfo.randomoptionseed, 12345);
+    }
+
+    #[test]
+    fn build_pattern_modifiers_dp_random2_seed_saved() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_14K); // DP mode
+        model.set_judgerank(100);
+        let mut player = BMSPlayer::new(model);
+        let config = make_default_config();
+
+        player.build_pattern_modifiers(&config);
+        // In DP mode, the 2P random seed should also be saved
+        assert_ne!(player.playinfo.randomoption2seed, -1);
+    }
+
+    #[test]
+    fn build_pattern_modifiers_7to9() {
+        let model = make_model(); // BEAT_7K
+        let mut player = BMSPlayer::new(model);
+        let mut config = make_default_config();
+        config.seven_to_nine_pattern = 1; // Enable 7to9
+
+        player.build_pattern_modifiers(&config);
+        // Mode should be changed from BEAT_7K to POPN_9K
+        assert_eq!(player.get_mode(), Mode::POPN_9K);
+        assert!(player.assist >= 1, "7to9 should set at least light assist");
+    }
+
+    #[test]
+    fn build_pattern_modifiers_assist_accumulates_light() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_judgerank(100);
+        // Add timelines with a mine note to trigger assist
+        let mut tl = bms_model::time_line::TimeLine::new(130.0, 0, 8);
+        tl.set_note(0, Some(bms_model::note::Note::new_mine(-1, 10.0)));
+        model.set_all_time_line(vec![tl]);
+
+        let mut player = BMSPlayer::new(model);
+        let mut config = make_default_config();
+        config.mine_mode = 1; // Remove mines -> LightAssist
+
+        let score = player.build_pattern_modifiers(&config);
+        assert_eq!(
+            player.assist, 1,
+            "Mine removal should set assist to 1 (LightAssist)"
+        );
+        assert!(!score, "LightAssist should mark score as invalid");
+    }
+
+    #[test]
+    fn build_pattern_modifiers_5k_battle() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_5K);
+        model.set_judgerank(100);
+        let mut player = BMSPlayer::new(model);
+
+        let mut config = make_default_config();
+        config.doubleoption = 2;
+        player.playinfo.doubleoption = 2;
+
+        player.build_pattern_modifiers(&config);
+        // BEAT_5K should be converted to BEAT_10K
+        assert_eq!(player.get_mode(), Mode::BEAT_10K);
+    }
+
+    #[test]
+    fn build_pattern_modifiers_lane_shuffle_pattern_saved() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_14K); // DP mode
+        model.set_judgerank(100);
+        let tl = bms_model::time_line::TimeLine::new(130.0, 0, 16);
+        model.set_all_time_line(vec![tl]);
+        let mut player = BMSPlayer::new(model);
+
+        let mut config = make_default_config();
+        // Random (id=2) creates LaneRandomShuffleModifier with show_shuffle_pattern=true
+        config.random = 2;
+        player.playinfo.randomoption = 2;
+
+        player.build_pattern_modifiers(&config);
+        // lane_shuffle_pattern should be initialized with player count
+        let lsp = player.playinfo.lane_shuffle_pattern.as_ref();
+        assert!(
+            lsp.is_some(),
+            "lane_shuffle_pattern should be set for DP mode with Random option"
+        );
+        assert_eq!(
+            lsp.unwrap().len(),
+            2,
+            "DP mode should have 2 player patterns"
+        );
     }
 }

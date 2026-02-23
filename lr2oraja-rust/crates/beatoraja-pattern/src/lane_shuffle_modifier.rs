@@ -226,6 +226,14 @@ impl PatternModifier for LaneMirrorShuffleModifier {
     fn get_player(&self) -> i32 {
         self.base.player
     }
+
+    fn is_lane_shuffle_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
+        Some(self.get_random_pattern(mode))
+    }
 }
 
 // ---- LaneRotateShuffleModifier ----
@@ -318,6 +326,14 @@ impl PatternModifier for LaneRotateShuffleModifier {
     fn get_player(&self) -> i32 {
         self.base.player
     }
+
+    fn is_lane_shuffle_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
+        Some(self.get_random_pattern(mode))
+    }
 }
 
 // ---- LaneRandomShuffleModifier ----
@@ -405,6 +421,14 @@ impl PatternModifier for LaneRandomShuffleModifier {
     fn get_player(&self) -> i32 {
         self.base.player
     }
+
+    fn is_lane_shuffle_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
+        Some(self.get_random_pattern(mode))
+    }
 }
 
 // ---- PlayerFlipModifier ----
@@ -484,6 +508,14 @@ impl PatternModifier for PlayerFlipModifier {
 
     fn get_player(&self) -> i32 {
         self.base.player
+    }
+
+    fn is_lane_shuffle_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
+        Some(self.get_random_pattern(mode))
     }
 }
 
@@ -615,6 +647,14 @@ impl PatternModifier for PlayerBattleModifier {
     fn get_player(&self) -> i32 {
         self.base.player
     }
+
+    fn is_lane_shuffle_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
+        Some(self.get_random_pattern(mode))
+    }
 }
 
 // ---- LaneCrossShuffleModifier ----
@@ -698,6 +738,14 @@ impl PatternModifier for LaneCrossShuffleModifier {
 
     fn get_player(&self) -> i32 {
         self.base.player
+    }
+
+    fn is_lane_shuffle_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
+        Some(self.get_random_pattern(mode))
     }
 }
 
@@ -915,6 +963,14 @@ impl PatternModifier for LanePlayableRandomShuffleModifier {
 
     fn get_player(&self) -> i32 {
         self.base.player
+    }
+
+    fn is_lane_shuffle_to_display(&self) -> bool {
+        self.show_shuffle_pattern
+    }
+
+    fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
+        Some(self.get_random_pattern(mode))
     }
 }
 
