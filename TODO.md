@@ -1,6 +1,6 @@
 # Porting TODO — Remaining Work
 
-Phases 1–29d complete. **1759 tests, 22 ignored (9 explicit #[ignore] + 13 fixture-absent runtime skips).** 27 crates, 122k lines. See AGENTS.md.
+Phases 1–33 complete. **1816 tests, 22 ignored (9 explicit #[ignore] + 13 fixture-absent runtime skips).** 27 crates, 122k lines. See AGENTS.md.
 
 ## Phase 26: スキンパイプライン完成 → 22 ignored テスト解除
 
@@ -68,14 +68,18 @@ Resolves: `rust_only_snapshot_ecfn_play7_mid_song`, `_select_with_song`, `skin_s
 
 ## Phase 33: フルレンダリングパイプライン完成
 
-Phase 29a-2/29a-3 の blocking 解消。~972 lines のレンダリングスタブを実際の実装へ置換。
+Phase 29a-2/29a-3 の blocking 解消。レンダリングスタブの分析・置換。
 
-Resolves: `beatoraja-result/stubs.rs` (388 lines), `beatoraja-select/stubs.rs` (317 lines), `beatoraja-modmenu/stubs.rs` (159 lines), `beatoraja-decide/stubs.rs` (108 lines)
+- [x] **33a:** `SkinText::draw()`, `SkinNumber::draw()`, `SkinImage::draw()` — 検証完了。全て beatoraja-skin に完全実装済み (Phase 26/32 で完了済み)
+- [x] **33b:** `SkinObjectRenderer::draw()` — 検証完了。beatoraja-skin/skin_object.rs に完全実装済み。select/modmenu のスタブは API 不一致のため直接置換不可 (異なるフィールド構造・mutability)
+- [x] **33c:** `BooleanPropertyFactory` — `StubBooleanProperty` を `DelegateBooleanProperty` に置換。`MainState::boolean_value(id)` trait メソッド追加 (Integer/String と同パターン)
+- [x] **33d:** stubs 整理 — result: `SkinObjectData` スタブ削除→ beatoraja-skin re-export。modmenu: 未使用 import (`Skin`, `MusicSelector`) 削除。select/modmenu/decide: API 不一致スタブは保持 (将来の SkinBar/SkinWidget リライト時に解消)
 
-- **33a:** `SkinText::draw()`, `SkinNumber::draw()`, `SkinImage::draw()` — wgpu SpriteBatch への描画実装
-- **33b:** `SkinObjectRenderer::draw()` 実装
-- **33c:** Property factories (`IntegerPropertyFactory`, `BooleanPropertyFactory`, `StringPropertyFactory`) 実装
-- **33d:** result/select/modmenu/decide stubs を実装に置換
+**残留スタブ分析:**
+- `beatoraja-result/stubs.rs` (385 lines): MainController/PlayerResource ライフサイクルスタブ、IR re-export — 必須。SkinObjectData は削除済み
+- `beatoraja-select/stubs.rs` (278 lines): SkinText/SkinNumber/SkinImage/SkinObject/SkinObjectRenderer — API 不一致 (stub は `&self`/simple fields、real は `&mut self`/SkinObjectData)。SkinBar リライト時に解消
+- `beatoraja-modmenu/stubs.rs` (203 lines): Skin/SkinObject/SkinObjectDestination — SkinWidgetManager が Clone+Debug derive に依存。リライト時に解消
+- `beatoraja-decide/stubs.rs` (108 lines): MainControllerRef/SkinStub — ライフサイクルスタブ、必須
 
 ## Permanent Stubs
 

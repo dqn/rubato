@@ -84,24 +84,24 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**1759 tests, 22 ignored (9 explicit + 13 fixture-absent).** Phases 1–29d complete. Zero clippy warnings. Remaining: Phase 30 (non-rendering stubs) → 31 (Lua main_state API) → 32 (SkinNote/Bar/Judge) → 33 (full rendering pipeline).
+**1816 tests, 22 ignored (9 explicit + 13 fixture-absent).** Phases 1–33 complete. Zero clippy warnings. All planned phases done. Remaining rendering stubs (~974 lines across 4 crates) require SkinBar/SkinWidget rewrite to replace (API incompatible with real types).
 
-## Remaining Stubs (10 `stubs.rs` files, ~2,600 lines)
+## Remaining Stubs (10 `stubs.rs` files, ~2,550 lines)
 
-| Crate | Lines | Category | Target |
+| Crate | Lines | Category | Status |
 |-------|------:|----------|--------|
-| beatoraja-types | 549 | Shared type stubs | Phase 29a |
-| beatoraja-external | 446 | Twitter4j (`bail!()`) + clipboard | Permanent / 29a |
-| beatoraja-result | 388 | Rendering stubs | Phase 29a |
-| beatoraja-select | 317 | Rendering stubs | Phase 29a |
-| beatoraja-launcher | 314 | Egui integration | Phase 26+ |
-| beatoraja-skin | 287 | Skin pipeline | Phase 26+ |
-| beatoraja-modmenu | 159 | Rendering stubs | Phase 29a |
-| beatoraja-decide | 108 | Rendering stubs | Phase 29a |
-| beatoraja-input | 21 | SkinWidgetManager stub | Phase 29a |
+| beatoraja-types | 549 | Shared type stubs | Lifecycle — required |
+| beatoraja-external | 446 | Twitter4j (`bail!()`) + clipboard | Permanent (API deprecated) |
+| beatoraja-result | 385 | MainController/PlayerResource + re-exports | Lifecycle — SkinObjectData removed (Phase 33) |
+| beatoraja-select | 278 | Rendering stubs (SkinText/SkinNumber/SkinImage) | API incompatible — needs SkinBar rewrite |
+| beatoraja-launcher | 314 | Egui integration | Lifecycle — required |
+| beatoraja-skin | 287 | Skin pipeline (MainState/Timer/Controller) | Lifecycle — required |
+| beatoraja-modmenu | 203 | Skin/SkinObject stubs + MusicSelector | API incompatible — needs SkinWidget rewrite |
+| beatoraja-decide | 108 | MainControllerRef/SkinStub/AudioProcessor | Lifecycle — required |
+| beatoraja-input | 21 | SkinWidgetManager stub | Lifecycle — required |
 | beatoraja-core | 1 | (empty) | — |
 
-**Categories:** Rendering (→29a) · Skin pipeline (→26+) · Platform/input (→28) · Twitter4j (permanent `bail!()`)
+**Categories:** Lifecycle (required for cross-crate API boundaries) · API-incompatible (needs downstream rewrite) · Permanent (Twitter4j `bail!()`)
 
 ## Lessons Learned
 
