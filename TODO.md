@@ -9,7 +9,7 @@ Phases 1–33 complete. **1816 tests, 22 ignored.** 27 crates, 125k lines. See A
 最大のギャップ。Java版 BMSPlayer コンストラクタの ~390行の初期化処理を移植。ゲームプレイの実動作に必須。
 
 - [x] **34a:** PatternModifier 生成・適用 — PlayerConfig から Random/Mirror/Scatter 等のオプション読み取り → PatternModifier チェーン構築 → BMSModel に適用
-- [ ] **34b:** 乱数シード管理 — リプレイ再現用シード保存/復元、JavaRandom LCG シード初期化パス
+- [x] **34b:** 乱数シード管理 — リプレイ再現用シード保存/復元、JavaRandom LCG シード初期化パス
 - [ ] **34c:** リプレイデータ復元 — ReplayData からパターン/ゲージ/設定を復元、リプレイモード時のオプション上書き
 - [ ] **34d:** アシストレベル計算 — BPMガイド、カスタムジャッジ、定速等のアシストフラグ判定
 - [ ] **34e:** DP→SP オプション変換 — ダブルプレイ時の 2P 側オプション処理
