@@ -1,6 +1,6 @@
 # Porting TODO — Remaining Work
 
-Phases 1–29c complete. **1759 tests, 22 ignored.** 27 crates, 122k lines. See AGENTS.md.
+Phases 1–29d complete. **1759 tests, 22 ignored.** 27 crates, 122k lines. See AGENTS.md.
 
 ## Phase 26: スキンパイプライン完成 → 22 ignored テスト解除
 
@@ -36,7 +36,7 @@ Resolves: rendering stubs (result/decide/select/modmenu ~972 lines), `beatoraja-
 - **29a-3:** Property traits 統合 (beatoraja-skin vs beatoraja-external) — レンダリングパイプライン完成待ち
 - [x] **29b:** PlayerResource trait 分析完了 — 32メソッド中31が使用中、`get_rival_score_data()` のみ未参照だがレンダリング完成時に必要。最小化不要
 - [x] **29c:** dhat ヒーププロファイリング (`--features dhat-heap` で有効化、`dhat-heap.json` 出力)
-- **29d:** 入力ポーリング非同期化 (nice-to-have)
+- [x] **29d:** 入力ポーリング分析完了 — 同期ポーリングで十分 (MIDI 既に非同期、フレーム単位処理のため非同期化のメリット限定的)。スキップ
 
 ## Permanent Stubs
 
