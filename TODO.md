@@ -1,6 +1,6 @@
 # Porting TODO — Remaining Work
 
-Phases 1–26b, 26d complete. **1780 tests, 22 ignored.** 27 crates, 122k lines. See AGENTS.md.
+Phases 1–26d complete. **1793 tests, 9 ignored.** 27 crates, 122k lines. See AGENTS.md.
 
 ## Phase 26: スキンパイプライン完成 → 22 ignored テスト解除
 
@@ -8,7 +8,7 @@ Resolves: `beatoraja-skin/stubs.rs` (287 lines), `beatoraja-launcher/stubs.rs` (
 
 - [x] **26a:** `PixmapResourcePool` (wgpu テクスチャ ロード/キャッシュ/解放) + `SkinSourceImage`
 - [x] **26b:** `SkinLoader.load_skin()` (SkinData→Skin 変換 + テクスチャバインド)
-- **26c:** RenderSnapshot Java fixture 生成 + 22 テスト `#[ignore]` 解除 (依存: 26b)
+- [x] **26c:** Lua→JSON 型変換 + 13 テスト `#[ignore]` 解除 (残り 9 ignored: main_state API / SkinNote/SkinBar)
 - [x] **26d:** バナー/ステージファイル画像 + `ReplayData::exists()` (依存: 26a)
 
 ## Phase 27: 楽曲 DB 拡張 + 検索

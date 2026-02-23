@@ -84,7 +84,7 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**1780 tests, 22 ignored.** Phases 1–26b, 26d complete. Zero clippy warnings. Phase 26c next.
+**1793 tests, 9 ignored.** Phases 1–26d complete. Zero clippy warnings. Phase 27 next.
 
 ## Remaining Stubs (10 `stubs.rs` files, ~2,600 lines)
 
@@ -95,13 +95,13 @@ lr2oraja-rust/       # Cargo workspace
 | beatoraja-result | 388 | Rendering stubs | Phase 29a |
 | beatoraja-select | 317 | Rendering stubs | Phase 29a |
 | beatoraja-launcher | 314 | Egui integration | Phase 26+ |
-| beatoraja-skin | 287 | Skin pipeline | Phase 26c |
+| beatoraja-skin | 287 | Skin pipeline | Phase 26+ |
 | beatoraja-modmenu | 159 | Rendering stubs | Phase 29a |
 | beatoraja-decide | 108 | Rendering stubs | Phase 29a |
 | beatoraja-input | 44 | Input device | Phase 28a |
 | beatoraja-core | 1 | (empty) | — |
 
-**Categories:** Rendering (→29a) · Skin pipeline (→26b) · Platform/input (→28) · Twitter4j (permanent `bail!()`)
+**Categories:** Rendering (→29a) · Skin pipeline (→26+) · Platform/input (→28) · Twitter4j (permanent `bail!()`)
 
 ## Lessons Learned
 
@@ -112,3 +112,4 @@ lr2oraja-rust/       # Cargo workspace
 - **API mismatch:** `String`↔`Option<String>` → `.unwrap_or_default()`; `&self`↔`&mut self` → scoped block / `Box::leak`.
 - **Libraries:** winit (`resumed`/`RedrawRequested`/`Poll`), wgpu (direct, `pollster::block_on()`), Kira 0.12, mlua (`load("return "+s)`), egui (`RenderPass::forget_lifetime()`).
 - **Patterns:** `OnceLock` for `&T`, `Box::leak` for `&mut T`. CRC32 poly `0xEDB88320` + `\\\0`. RobustFile: double-write + `sync_all()`. BRD replay: gzip JSON. PlayerResource: trait (32 methods) + `NullPlayerResource`.
+- **Lua→JSON coercion:** Lua dynamic types need 3-layer coercion for serde: numbers→strings (id/src), float→int truncation (Java toint()), empty `{}`→remove (let serde default). Mixed tables `{arr1, arr2, key=val}` → extract array portion. `deserialize_i32_lenient` for ambiguous i32/String fields.
