@@ -130,9 +130,7 @@ impl SkinGaugeGraphObject {
             gg: None,
             render: 0.0,
             redraw: false,
-            object_data: SkinObjectData {
-                region: Rectangle::default(),
-            },
+            object_data: SkinObjectData::new(),
         }
     }
 
@@ -194,9 +192,7 @@ impl SkinGaugeGraphObject {
             gg: None,
             render: 0.0,
             redraw: false,
-            object_data: SkinObjectData {
-                region: Rectangle::default(),
-            },
+            object_data: SkinObjectData::new(),
         }
     }
 

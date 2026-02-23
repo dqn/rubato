@@ -27,6 +27,12 @@ pub trait MainState {
     fn string_value(&self, _id: i32) -> String {
         String::new()
     }
+
+    /// Returns the boolean property value for the given ID.
+    /// Used by BooleanPropertyFactory delegate to look up pre-computed values.
+    fn boolean_value(&self, _id: i32) -> bool {
+        false
+    }
 }
 
 /// Stub for beatoraja.MainController

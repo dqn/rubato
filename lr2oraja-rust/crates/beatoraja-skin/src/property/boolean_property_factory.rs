@@ -59,8 +59,8 @@ fn get_boolean_property_by_id(id: i32) -> Option<Box<dyn BooleanProperty>> {
 
 fn get_boolean_property0(optionid: i32) -> Option<Box<dyn BooleanProperty>> {
     // All of these reference MusicSelector, CourseData, PlayerResource etc.
-    // which are Phase 7+ dependencies. Return stub implementations.
-    Some(Box::new(StubBooleanProperty(optionid)))
+    // Delegate to MainState::boolean_value() which is computed by the caller.
+    Some(Box::new(DelegateBooleanProperty { id: optionid }))
 }
 
 fn get_boolean_type_property(id: i32) -> Option<Box<dyn BooleanProperty>> {
@@ -79,28 +79,30 @@ fn get_boolean_type_property(id: i32) -> Option<Box<dyn BooleanProperty>> {
     ];
 
     if known_ids.contains(&id) {
-        return Some(Box::new(StubBooleanProperty(id)));
+        return Some(Box::new(DelegateBooleanProperty { id }));
     }
 
     None
 }
 
-/// A BooleanProperty that always returns false / non-static.
-/// Used as a placeholder for Phase 7+ dependencies.
-struct StubBooleanProperty(i32);
+/// Delegate BooleanProperty that reads values from MainState::boolean_value().
+/// The actual computation is performed by the caller (e.g., MusicSelector, BMSPlayer),
+/// and the result is exposed via the MainState trait method.
+struct DelegateBooleanProperty {
+    id: i32,
+}
 
-impl BooleanProperty for StubBooleanProperty {
+impl BooleanProperty for DelegateBooleanProperty {
     fn is_static(&self, _state: &dyn MainState) -> bool {
         false
     }
 
-    fn get(&self, _state: &dyn MainState) -> bool {
-        log::warn!("not yet implemented: BooleanPropertyFactory requires MainState subtypes");
-        false
+    fn get(&self, state: &dyn MainState) -> bool {
+        state.boolean_value(self.id)
     }
 
     fn get_id(&self) -> i32 {
-        self.0
+        self.id
     }
 }
 
@@ -125,5 +127,105 @@ impl BooleanProperty for NegatedBooleanProperty {
         } else {
             -inner_id
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::stubs::{MainController, PlayerResource, SkinOffset, TextureRegion, Timer};
+
+    /// MockMainState that returns configurable boolean values.
+    struct BoolMockState {
+        timer: Timer,
+        main: MainController,
+        resource: PlayerResource,
+        /// Maps property ID to boolean value.
+        values: std::collections::HashMap<i32, bool>,
+    }
+
+    impl BoolMockState {
+        fn new(values: std::collections::HashMap<i32, bool>) -> Self {
+            Self {
+                timer: Timer::default(),
+                main: MainController { debug: false },
+                resource: PlayerResource,
+                values,
+            }
+        }
+    }
+
+    impl MainState for BoolMockState {
+        fn get_timer(&self) -> &Timer {
+            &self.timer
+        }
+        fn get_offset_value(&self, _id: i32) -> Option<&SkinOffset> {
+            None
+        }
+        fn get_main(&self) -> &MainController {
+            &self.main
+        }
+        fn get_image(&self, _id: i32) -> Option<TextureRegion> {
+            None
+        }
+        fn get_resource(&self) -> &PlayerResource {
+            &self.resource
+        }
+        fn boolean_value(&self, id: i32) -> bool {
+            self.values.get(&id).copied().unwrap_or(false)
+        }
+    }
+
+    #[test]
+    fn test_delegate_boolean_property_reads_from_state() {
+        let mut values = std::collections::HashMap::new();
+        values.insert(42, true);
+        values.insert(50, false);
+        let state = BoolMockState::new(values);
+
+        // Known BooleanType IDs
+        let prop42 = get_boolean_property(42).expect("id 42 should exist");
+        assert!(prop42.get(&state));
+        assert_eq!(prop42.get_id(), 42);
+
+        let prop50 = get_boolean_property(50).expect("id 50 should exist");
+        assert!(!prop50.get(&state));
+    }
+
+    #[test]
+    fn test_negated_boolean_property() {
+        let mut values = std::collections::HashMap::new();
+        values.insert(42, true);
+        let state = BoolMockState::new(values);
+
+        // Negative ID → negated property
+        let prop = get_boolean_property(-42).expect("negated id -42 should exist");
+        // Original is true, negated should be false
+        assert!(!prop.get(&state));
+        assert_eq!(prop.get_id(), -42);
+    }
+
+    #[test]
+    fn test_delegate_boolean_property_fallback_id() {
+        let state = BoolMockState::new(std::collections::HashMap::new());
+
+        // ID 999 is not in known_ids, falls through to get_boolean_property0
+        let prop = get_boolean_property(999).expect("fallback id 999 should exist");
+        assert!(!prop.get(&state));
+        assert_eq!(prop.get_id(), 999);
+    }
+
+    #[test]
+    fn test_boolean_property_out_of_range() {
+        // ID >= ID_LENGTH should return None
+        assert!(get_boolean_property(65536).is_none());
+        assert!(get_boolean_property(-65536).is_none());
+    }
+
+    #[test]
+    fn test_delegate_boolean_is_not_static() {
+        let state = BoolMockState::new(std::collections::HashMap::new());
+        let prop = get_boolean_property(42).unwrap();
+        assert!(!prop.is_static(&state));
     }
 }

@@ -6,9 +6,9 @@ use std::sync::Mutex;
 use crate::imgui_notify::ImGuiNotify;
 use crate::stubs::{
     Config, CustomCategory, CustomCategoryItem, CustomFile, CustomOffset, CustomOption,
-    JSONSkinLoader, LR2SkinHeaderLoader, LuaSkinLoader, MainController, MusicSelector,
-    OPTION_RANDOM_VALUE, PlayerConfig, Skin, SkinConfig, SkinFilePath, SkinHeader, SkinOffset,
-    SkinOption, SkinProperty, SkinType, TYPE_LR2SKIN, Validatable,
+    JSONSkinLoader, LR2SkinHeaderLoader, LuaSkinLoader, MainController, OPTION_RANDOM_VALUE,
+    PlayerConfig, SkinConfig, SkinFilePath, SkinHeader, SkinOffset, SkinOption, SkinProperty,
+    SkinType, TYPE_LR2SKIN, Validatable,
 };
 use beatoraja_skin::json::json_skin_loader::{CustomItemData, SkinHeaderData};
 use beatoraja_skin::lr2::lr2_skin_header_loader::LR2SkinHeaderData;

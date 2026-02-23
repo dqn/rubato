@@ -375,10 +375,8 @@ pub use beatoraja_core::bms_player_mode::Mode as BMSPlayerModeType;
 
 // TextureRegion, Texture, Pixmap: replaced by pub use beatoraja_skin::stubs::*
 
-/// Stub for SkinObject base (partial — only what SkinGaugeGraphObject needs)
-pub struct SkinObjectData {
-    pub region: Rectangle,
-}
+// SkinObjectData: replaced by pub use from beatoraja-skin (Phase 33c)
+pub use beatoraja_skin::skin_object::SkinObjectData;
 
 // TimerManager: replaced by pub use beatoraja_core::timer_manager::TimerManager
 
