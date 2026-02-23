@@ -8,6 +8,7 @@ use beatoraja_types::imgui_notify::ImGuiNotify;
 use beatoraja_types::main_controller_access::MainControllerAccess;
 use beatoraja_types::player_resource_access::PlayerResourceAccess;
 use beatoraja_types::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
+use beatoraja_types::song_information_db::SongInformationDb;
 
 use crate::bms_player_mode::BMSPlayerMode;
 use crate::config::Config;
@@ -118,8 +119,7 @@ impl RankingDataCache {
 /// SongDatabaseAccessor stub (Phase 5+)
 pub struct SongDatabaseAccessor;
 
-/// SongInformationAccessor stub (Phase 5+)
-pub struct SongInformationAccessor;
+// SongInformationAccessor: stub replaced by SongInformationDb trait (Phase 27c)
 
 /// ObsListener stub (Phase 5+)
 pub struct ObsListener;
@@ -220,7 +220,7 @@ pub struct MainController {
     songdb: Option<Box<dyn SongDatabaseAccessorTrait>>,
 
     /// Song information accessor
-    infodb: Option<SongInformationAccessor>,
+    infodb: Option<Box<dyn SongInformationDb>>,
 
     /// Offset array for skin
     offset: Vec<SkinOffset>,
@@ -1002,8 +1002,8 @@ impl MainController {
             .as_millis() as i64
     }
 
-    pub fn get_info_database(&self) -> Option<&SongInformationAccessor> {
-        self.infodb.as_ref()
+    pub fn get_info_database(&self) -> Option<&dyn SongInformationDb> {
+        self.infodb.as_deref()
     }
 
     pub fn get_music_download_processor(&self) -> Option<&MusicDownloadProcessor> {

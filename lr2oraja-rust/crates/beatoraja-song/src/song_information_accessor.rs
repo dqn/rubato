@@ -2,6 +2,7 @@ use std::sync::Mutex;
 
 use beatoraja_core::sqlite_database_accessor::{Column, SQLiteDatabaseAccessor, Table};
 use beatoraja_core::validatable::remove_invalid_elements_vec;
+use beatoraja_types::song_information_db::SongInformationDb;
 use bms_model::bms_model::BMSModel;
 use rusqlite::Connection;
 
@@ -204,5 +205,31 @@ impl SongInformationAccessor {
                 }
             },
         )
+    }
+}
+
+impl SongInformationDb for SongInformationAccessor {
+    fn get_informations(&self, sql: &str) -> Vec<SongInformation> {
+        self.get_informations(sql)
+    }
+
+    fn get_information(&self, sha256: &str) -> Option<SongInformation> {
+        self.get_information(sha256)
+    }
+
+    fn get_information_for_songs(&self, songs: &mut [SongData]) {
+        self.get_information_for_songs(songs)
+    }
+
+    fn start_update(&self) -> anyhow::Result<()> {
+        self.start_update()
+    }
+
+    fn update(&self, model: &BMSModel) {
+        self.update(model)
+    }
+
+    fn end_update(&self) {
+        self.end_update()
     }
 }

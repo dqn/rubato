@@ -895,6 +895,7 @@ dependencies = [
  "bms-model",
  "log",
  "md-processor",
+ "rayon",
  "rusqlite",
  "serde",
  "serde_json",

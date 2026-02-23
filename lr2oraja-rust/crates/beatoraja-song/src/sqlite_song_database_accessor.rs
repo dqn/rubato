@@ -17,8 +17,8 @@ use crate::folder_data::FolderData;
 use crate::song_data::SongData;
 use crate::song_database_accessor::SongDatabaseAccessor;
 use crate::song_database_update_listener::SongDatabaseUpdateListener;
-use crate::song_information_accessor::SongInformationAccessor;
 use crate::song_utils;
+use beatoraja_types::song_information_db::SongInformationDb;
 
 /// Plugin interface for song database accessor
 pub trait SongDatabaseAccessorPlugin: Send + Sync {
@@ -548,7 +548,7 @@ impl SQLiteSongDatabaseAccessor {
         bmsroot: &[String],
         update_all: bool,
         update_parent_when_missing: bool,
-        info: Option<&SongInformationAccessor>,
+        info: Option<&dyn SongInformationDb>,
     ) {
         let listener = SongDatabaseUpdateListener::new();
         self.update_song_datas_with_listener(
@@ -567,7 +567,7 @@ impl SQLiteSongDatabaseAccessor {
         bmsroot: &[String],
         update_all: bool,
         update_parent_when_missing: bool,
-        info: Option<&SongInformationAccessor>,
+        info: Option<&dyn SongInformationDb>,
         listener: &SongDatabaseUpdateListener,
     ) {
         if bmsroot.is_empty() {
@@ -634,7 +634,7 @@ impl SQLiteSongDatabaseAccessor {
 struct SongDatabaseUpdater<'a> {
     update_all: bool,
     bmsroot: Vec<String>,
-    info: Option<&'a SongInformationAccessor>,
+    info: Option<&'a dyn SongInformationDb>,
 }
 
 impl<'a> SongDatabaseUpdater<'a> {
@@ -1185,7 +1185,7 @@ impl BMSFolder {
 struct SongDatabaseUpdaterProperty<'a> {
     tags: HashMap<String, String>,
     favorites: HashMap<String, i32>,
-    info: Option<&'a SongInformationAccessor>,
+    info: Option<&'a dyn SongInformationDb>,
     updatetime: i64,
     listener: &'a SongDatabaseUpdateListener,
 }

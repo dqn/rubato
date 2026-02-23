@@ -72,3 +72,4 @@ pub mod score_data;
 pub mod song_data;
 pub mod song_database_accessor;
 pub mod song_information;
+pub mod song_information_db;
