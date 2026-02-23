@@ -1,6 +1,6 @@
 # Porting TODO — Remaining Work
 
-Phases 1–27c complete. **1759 tests, 22 ignored.** 27 crates, 122k lines. See AGENTS.md.
+Phases 1–28a complete. **1793 tests, 9 ignored.** 27 crates, 122k lines. See AGENTS.md.
 
 ## Phase 26: スキンパイプライン完成 → 22 ignored テスト解除
 
@@ -21,7 +21,7 @@ Resolves: `beatoraja-skin/stubs.rs` (287 lines), `beatoraja-launcher/stubs.rs` (
 
 Resolves: `beatoraja-input/stubs.rs` (44 lines)
 
-- **28a:** gilrs コントローラ + hotplug
+- [x] **28a:** gilrs コントローラ + hotplug
 - **28b:** KeyCommand (F キー, Alt+Enter, ESC)
 - **28c:** Windows named pipe (`#[cfg(windows)]`)
 - **28d:** winit モニター列挙

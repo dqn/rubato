@@ -84,7 +84,7 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**1759 tests, 22 ignored.** Phases 1–27c complete. Zero clippy warnings. Phase 28a next.
+**1793 tests, 9 ignored.** Phases 1–28a complete. Zero clippy warnings. Phase 28b next.
 
 ## Remaining Stubs (10 `stubs.rs` files, ~2,600 lines)
 
@@ -98,7 +98,7 @@ lr2oraja-rust/       # Cargo workspace
 | beatoraja-skin | 287 | Skin pipeline | Phase 26+ |
 | beatoraja-modmenu | 159 | Rendering stubs | Phase 29a |
 | beatoraja-decide | 108 | Rendering stubs | Phase 29a |
-| beatoraja-input | 44 | Input device | Phase 28a |
+| beatoraja-input | 21 | SkinWidgetManager stub | Phase 29a |
 | beatoraja-core | 1 | (empty) | — |
 
 **Categories:** Rendering (→29a) · Skin pipeline (→26+) · Platform/input (→28) · Twitter4j (permanent `bail!()`)
