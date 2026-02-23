@@ -19,6 +19,7 @@ use crate::property::event_factory;
 use crate::property::string_property_factory;
 use crate::property::timer_property_factory;
 use crate::skin::{Skin, SkinObject};
+use crate::skin_bar_object::SkinBarObject;
 use crate::skin_bpm_graph::SkinBPMGraph;
 use crate::skin_graph::SkinGraph;
 use crate::skin_header::{
@@ -26,7 +27,9 @@ use crate::skin_header::{
 };
 use crate::skin_hit_error_visualizer::SkinHitErrorVisualizer;
 use crate::skin_image::SkinImage;
+use crate::skin_judge_object::SkinJudgeObject;
 use crate::skin_note_distribution_graph::SkinNoteDistributionGraph;
+use crate::skin_note_object::SkinNoteObject;
 use crate::skin_number::SkinNumber;
 use crate::skin_slider::SkinSlider;
 use crate::skin_text_font::SkinTextFont;
@@ -948,8 +951,9 @@ fn convert_skin_object(
             None
         }
         SkinObjectType::Note => {
-            warn!("Note conversion deferred to Phase 29a");
-            None
+            // Default lane count; lanes are configured later via set_lane_region
+            let note = SkinNoteObject::new(0);
+            Some(SkinObject::Note(note))
         }
         SkinObjectType::HiddenCover { .. } => {
             warn!("HiddenCover conversion deferred to Phase 29a");
@@ -963,17 +967,17 @@ fn convert_skin_object(
             warn!("Bga conversion deferred to Phase 29a");
             None
         }
-        SkinObjectType::Judge { .. } => {
-            warn!("Judge conversion deferred to Phase 29a");
-            None
+        SkinObjectType::Judge { index, shift } => {
+            let judge = SkinJudgeObject::new(*index, *shift);
+            Some(SkinObject::Judge(judge))
         }
         SkinObjectType::PmChara { .. } => {
             warn!("PmChara conversion deferred to Phase 29a");
             None
         }
-        SkinObjectType::SongList { .. } => {
-            warn!("SongList conversion deferred to Phase 29a");
-            None
+        SkinObjectType::SongList { center, .. } => {
+            let bar = SkinBarObject::new(*center);
+            Some(SkinObject::Bar(bar))
         }
         SkinObjectType::SearchTextRegion { .. } => {
             warn!("SearchTextRegion conversion deferred to Phase 29a");
@@ -1484,22 +1488,9 @@ mod tests {
         let mut source_map = HashMap::new();
         let path = Path::new("/test/skin.json");
 
-        assert!(convert_skin_object(&SkinObjectType::Note, &mut source_map, path, false).is_none());
         assert!(
             convert_skin_object(
                 &SkinObjectType::Bga { bga_expand: 0 },
-                &mut source_map,
-                path,
-                false
-            )
-            .is_none()
-        );
-        assert!(
-            convert_skin_object(
-                &SkinObjectType::Judge {
-                    index: 0,
-                    shift: false
-                },
                 &mut source_map,
                 path,
                 false
@@ -1531,5 +1522,39 @@ mod tests {
             )
             .is_none()
         );
+    }
+
+    #[test]
+    fn test_note_judge_songlist_return_some() {
+        let mut source_map = HashMap::new();
+        let path = Path::new("/test/skin.json");
+
+        let note = convert_skin_object(&SkinObjectType::Note, &mut source_map, path, false);
+        assert!(note.is_some());
+        assert_eq!(note.unwrap().get_type_name(), "SkinNote");
+
+        let judge = convert_skin_object(
+            &SkinObjectType::Judge {
+                index: 0,
+                shift: false,
+            },
+            &mut source_map,
+            path,
+            false,
+        );
+        assert!(judge.is_some());
+        assert_eq!(judge.unwrap().get_type_name(), "SkinJudge");
+
+        let bar = convert_skin_object(
+            &SkinObjectType::SongList {
+                center: 5,
+                clickable: vec![],
+            },
+            &mut source_map,
+            path,
+            false,
+        );
+        assert!(bar.is_some());
+        assert_eq!(bar.unwrap().get_type_name(), "SkinBar");
     }
 }

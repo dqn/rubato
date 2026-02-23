@@ -8,12 +8,15 @@ use crate::custom_timer::CustomTimer;
 use crate::property::boolean_property::BooleanProperty;
 use crate::property::timer_property::TimerProperty;
 use crate::property::timer_property_factory;
+use crate::skin_bar_object::SkinBarObject;
 use crate::skin_bpm_graph::SkinBPMGraph;
 use crate::skin_graph::SkinGraph;
 use crate::skin_header::SkinHeader;
 use crate::skin_hit_error_visualizer::SkinHitErrorVisualizer;
 use crate::skin_image::SkinImage;
+use crate::skin_judge_object::SkinJudgeObject;
 use crate::skin_note_distribution_graph::SkinNoteDistributionGraph;
+use crate::skin_note_object::SkinNoteObject;
 use crate::skin_number::SkinNumber;
 use crate::skin_object::{SkinObjectData, SkinObjectRenderer};
 use crate::skin_property;
@@ -44,6 +47,9 @@ pub enum SkinObject {
     NoteDistributionGraph(SkinNoteDistributionGraph),
     TimingDistributionGraph(SkinTimingDistributionGraph),
     TimingVisualizer(SkinTimingVisualizer),
+    Note(SkinNoteObject),
+    Bar(SkinBarObject),
+    Judge(SkinJudgeObject),
 }
 
 impl SkinObject {
@@ -61,6 +67,9 @@ impl SkinObject {
             SkinObject::NoteDistributionGraph(o) => &o.data,
             SkinObject::TimingDistributionGraph(o) => &o.data,
             SkinObject::TimingVisualizer(o) => &o.data,
+            SkinObject::Note(o) => &o.data,
+            SkinObject::Bar(o) => &o.data,
+            SkinObject::Judge(o) => &o.data,
         }
     }
 
@@ -78,6 +87,9 @@ impl SkinObject {
             SkinObject::NoteDistributionGraph(o) => &mut o.data,
             SkinObject::TimingDistributionGraph(o) => &mut o.data,
             SkinObject::TimingVisualizer(o) => &mut o.data,
+            SkinObject::Note(o) => &mut o.data,
+            SkinObject::Bar(o) => &mut o.data,
+            SkinObject::Judge(o) => &mut o.data,
         }
     }
 
@@ -126,6 +138,9 @@ impl SkinObject {
             SkinObject::NoteDistributionGraph(o) => o.prepare(time, state),
             SkinObject::TimingDistributionGraph(o) => o.prepare(time, state),
             SkinObject::TimingVisualizer(o) => o.prepare(time, state),
+            SkinObject::Note(o) => o.prepare(time, state),
+            SkinObject::Bar(o) => o.prepare(time, state),
+            SkinObject::Judge(o) => o.prepare(time, state),
         }
     }
 
@@ -145,6 +160,9 @@ impl SkinObject {
             SkinObject::NoteDistributionGraph(_) => {}
             SkinObject::TimingDistributionGraph(o) => o.draw(sprite),
             SkinObject::TimingVisualizer(o) => o.draw(sprite),
+            SkinObject::Note(o) => o.draw(sprite),
+            SkinObject::Bar(o) => o.draw(sprite),
+            SkinObject::Judge(o) => o.draw(sprite),
         }
     }
 
@@ -178,6 +196,9 @@ impl SkinObject {
             SkinObject::NoteDistributionGraph(o) => o.dispose(),
             SkinObject::TimingDistributionGraph(o) => o.dispose(),
             SkinObject::TimingVisualizer(o) => o.dispose(),
+            SkinObject::Note(o) => o.dispose(),
+            SkinObject::Bar(o) => o.dispose(),
+            SkinObject::Judge(o) => o.dispose(),
         }
     }
 
@@ -278,6 +299,9 @@ impl SkinObject {
             SkinObject::NoteDistributionGraph(_) => "NoteDistributionGraph",
             SkinObject::TimingDistributionGraph(_) => "TimingDistributionGraph",
             SkinObject::TimingVisualizer(_) => "TimingVisualizer",
+            SkinObject::Note(_) => "SkinNote",
+            SkinObject::Bar(_) => "SkinBar",
+            SkinObject::Judge(_) => "SkinJudge",
         }
     }
 

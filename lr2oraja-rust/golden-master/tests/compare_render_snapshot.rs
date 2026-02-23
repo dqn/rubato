@@ -739,13 +739,11 @@ fn run_rust_only_snapshot(tc: &RustOnlySnapshotTestCase) {
 }
 
 #[test]
-#[ignore] // needs SkinNote object conversion
 fn rust_only_snapshot_ecfn_play7_mid_song() {
     run_rust_only_snapshot(&RUST_ONLY_CASES[0]);
 }
 
 #[test]
-#[ignore] // needs SkinBar object conversion
 fn rust_only_snapshot_ecfn_select_with_song() {
     run_rust_only_snapshot(&RUST_ONLY_CASES[1]);
 }
@@ -869,7 +867,6 @@ fn count_visible_object_types(snapshot: &RenderSnapshot) -> BTreeMap<String, usi
 }
 
 #[test]
-#[ignore] // needs SkinNote/SkinJudge object conversion
 fn skin_state_objects_play_has_note_judge() {
     // Play skin snapshots must contain SkinNote and SkinJudge objects
     for tc in TEST_CASES.iter().filter(|tc| tc.name.contains("play7")) {
@@ -892,7 +889,6 @@ fn skin_state_objects_play_has_note_judge() {
 }
 
 #[test]
-#[ignore] // needs SkinBar object conversion
 fn skin_state_objects_select_has_bar() {
     // Select skin snapshot must contain SkinBar objects
     let tc = &TEST_CASES[0]; // ecfn_select
