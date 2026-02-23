@@ -92,21 +92,20 @@ lr2oraja-rust/       # Cargo workspace
 | Crate | Lines | Status |
 |-------|------:|--------|
 | beatoraja-types | 549 | Lifecycle — required |
-| beatoraja-external | 446 | Permanent (Twitter4j `bail!()`, API deprecated) |
-| beatoraja-result | 355 | Lifecycle — MainController delegates to trait (41b), AudioProcessor/IR stubs remain |
-| beatoraja-launcher | 314 | Lifecycle — egui integration |
-| beatoraja-skin | 287 | Lifecycle — MainState/Timer/Controller |
-| beatoraja-select | 278 | API incompatible — needs SkinBar rewrite |
-| beatoraja-modmenu | 203 | API incompatible — needs SkinWidget rewrite |
-| beatoraja-decide | 108 | Lifecycle — MainControllerRef delegates to trait (41b), AudioProcessor/Skin stubs remain |
+| beatoraja-external | 446 | Permanent (`bail!()`, Twitter API deprecated) |
+| beatoraja-result | 355 | AudioProcessor/IR stubs remain |
+| beatoraja-launcher | 314 | egui integration |
+| beatoraja-skin | 287 | MainState/Timer/Controller |
+| beatoraja-select | 278 | Needs SkinBar rewrite (Phase 40) |
+| beatoraja-modmenu | 203 | Needs SkinWidget rewrite (Phase 40) |
+| beatoraja-decide | 108 | AudioProcessor/Skin stubs remain |
 | beatoraja-input | 21 | Lifecycle — required |
 | beatoraja-core | 1 | (empty) |
 
 ## Lessons Learned
 
 - **Encoding:** `encoding_rs::SHIFT_JIS` for MS932. **Serde:** `BPM`→`Bpm`, `URL`→`Url`, `#[serde(alias)]`.
-- **Borrow checker:** `&mut` conflicts → scoped block. Self-reference → `Option::take()` + put-back. Parent ref → callback trait.
+- **Borrow checker:** `&mut` conflicts → scoped block. Self-ref → `Option::take()`. Parent ref → callback trait.
 - **Stubs:** `stubs.rs` per crate → replace via `pub use`. Always `cargo check` after removal.
 - **Circular deps:** `beatoraja-types` for shared types. Core cannot import: song, skin, play, select, result, ir, modmenu.
-- **Patterns:** `OnceLock` for `&T`, `Box::leak` for `&mut T`. CRC32 poly `0xEDB88320` + `\\\0`. PlayerResource: trait (32 methods) + `NullPlayerResource`.
-- **Lua→JSON coercion:** 3-layer: numbers→strings, float→int truncation, empty `{}`→remove. `deserialize_i32_lenient` for ambiguous fields.
+- **Lua→JSON coercion:** 3-layer: numbers→strings, float→int truncation, empty `{}`→remove.
