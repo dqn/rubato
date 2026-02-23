@@ -5,7 +5,9 @@
 
 use std::collections::HashMap;
 
-use beatoraja_skin::stubs::SkinOffset;
+use beatoraja_skin::stubs::{
+    MainController, MainState, PlayerResource, SkinOffset, TextureRegion, Timer,
+};
 use serde::{Deserialize, Serialize};
 
 /// Lightweight state provider for skin evaluation.
@@ -111,6 +113,62 @@ impl SkinStateProvider for StaticStateProvider {
 
     fn offset_value(&self, id: i32) -> Option<SkinOffset> {
         self.offsets.get(&id).cloned()
+    }
+}
+
+/// MainState adapter that wraps a StaticStateProvider.
+///
+/// Implements the skin crate's MainState trait so that Lua skins can call
+/// `main_state.number(id)` and `main_state.text(id)` during skin loading.
+/// The integer/string values are looked up from the provider's HashMaps.
+pub struct StaticMainStateAdapter<'a> {
+    provider: &'a StaticStateProvider,
+    timer: Timer,
+    main: MainController,
+    resource: PlayerResource,
+}
+
+impl<'a> StaticMainStateAdapter<'a> {
+    pub fn new(provider: &'a StaticStateProvider) -> Self {
+        Self {
+            provider,
+            timer: Timer {
+                now_time: provider.time_ms,
+                now_micro_time: provider.time_ms * 1000,
+            },
+            main: MainController { debug: false },
+            resource: PlayerResource,
+        }
+    }
+}
+
+impl MainState for StaticMainStateAdapter<'_> {
+    fn get_timer(&self) -> &Timer {
+        &self.timer
+    }
+
+    fn get_offset_value(&self, id: i32) -> Option<&SkinOffset> {
+        self.provider.offsets.get(&id)
+    }
+
+    fn get_main(&self) -> &MainController {
+        &self.main
+    }
+
+    fn get_image(&self, _id: i32) -> Option<TextureRegion> {
+        None
+    }
+
+    fn get_resource(&self) -> &PlayerResource {
+        &self.resource
+    }
+
+    fn integer_value(&self, id: i32) -> i32 {
+        self.provider.integers.get(&id).copied().unwrap_or(0)
+    }
+
+    fn string_value(&self, id: i32) -> String {
+        self.provider.strings.get(&id).cloned().unwrap_or_default()
     }
 }
 

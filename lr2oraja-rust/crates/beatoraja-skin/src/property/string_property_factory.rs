@@ -8,7 +8,7 @@ use crate::stubs::MainState;
 pub fn get_string_property_by_id(id: i32) -> Option<Box<dyn StringProperty>> {
     let map = get_id_map();
     if map.contains_key(&id) {
-        return Some(Box::new(StubStringProperty { id }));
+        return Some(Box::new(DelegateStringProperty { id }));
     }
     None
 }
@@ -17,7 +17,7 @@ pub fn get_string_property_by_id(id: i32) -> Option<Box<dyn StringProperty>> {
 pub fn get_string_property_by_name(name: &str) -> Option<Box<dyn StringProperty>> {
     for st in STRING_TYPES.iter() {
         if st.name == name {
-            return Some(Box::new(StubStringProperty { id: st.id }));
+            return Some(Box::new(DelegateStringProperty { id: st.id }));
         }
     }
     None
@@ -590,15 +590,16 @@ static STRING_TYPES: &[StringTypeEntry] = &[
     },
 ];
 
-/// Stub StringProperty that will be replaced when Phase 7+ is available.
-struct StubStringProperty {
+/// Delegate StringProperty that reads values from MainState::string_value().
+/// This enables both StaticStateProvider (golden-master) and real game states
+/// to provide string values through the same interface.
+struct DelegateStringProperty {
     id: i32,
 }
 
-impl StringProperty for StubStringProperty {
-    fn get(&self, _state: &dyn MainState) -> String {
-        log::warn!("not yet implemented: StringPropertyFactory requires MainState subtypes");
-        String::new()
+impl StringProperty for DelegateStringProperty {
+    fn get(&self, state: &dyn MainState) -> String {
+        state.string_value(self.id)
     }
 
     fn get_id(&self) -> i32 {

@@ -12,20 +12,20 @@ pub fn get_integer_property_by_id(optionid: i32) -> Option<Box<dyn IntegerProper
     // Check ValueType enum
     for vt in VALUE_TYPES.iter() {
         if vt.id == optionid {
-            return Some(Box::new(StubIntegerProperty { id: vt.id }));
+            return Some(Box::new(DelegateIntegerProperty { id: vt.id }));
         }
     }
 
     // Check various range-based properties and switch-based properties
     // All reference BMSPlayer, MusicSelector, AbstractResult etc.
-    Some(Box::new(StubIntegerProperty { id: optionid }))
+    Some(Box::new(DelegateIntegerProperty { id: optionid }))
 }
 
 /// Returns an IntegerProperty for the given ValueType name.
 pub fn get_integer_property_by_name(name: &str) -> Option<Box<dyn IntegerProperty>> {
     for vt in VALUE_TYPES.iter() {
         if vt.name == name {
-            return Some(Box::new(StubIntegerProperty { id: vt.id }));
+            return Some(Box::new(DelegateIntegerProperty { id: vt.id }));
         }
     }
     None
@@ -40,7 +40,7 @@ pub fn get_image_index_property_by_id(optionid: i32) -> Option<Box<dyn IntegerPr
     // Check IndexType enum
     for it in INDEX_TYPES.iter() {
         if it.id == optionid {
-            return Some(Box::new(StubIntegerProperty { id: it.id }));
+            return Some(Box::new(DelegateIntegerProperty { id: it.id }));
         }
     }
 
@@ -48,14 +48,14 @@ pub fn get_image_index_property_by_id(optionid: i32) -> Option<Box<dyn IntegerPr
     // SkinSelectType properties
     // All require Phase 7+ dependencies
 
-    Some(Box::new(StubIntegerProperty { id: optionid }))
+    Some(Box::new(DelegateIntegerProperty { id: optionid }))
 }
 
 /// Returns an IntegerProperty for the given IndexType name.
 pub fn get_image_index_property_by_name(name: &str) -> Option<Box<dyn IntegerProperty>> {
     for it in INDEX_TYPES.iter() {
         if it.name == name {
-            return Some(Box::new(StubIntegerProperty { id: it.id }));
+            return Some(Box::new(DelegateIntegerProperty { id: it.id }));
         }
     }
     None
@@ -908,15 +908,16 @@ static INDEX_TYPES: &[IndexTypeEntry] = &[
     },
 ];
 
-/// Stub IntegerProperty that will be replaced when Phase 7+ is available.
-struct StubIntegerProperty {
+/// Delegate IntegerProperty that reads values from MainState::integer_value().
+/// This enables both StaticStateProvider (golden-master) and real game states
+/// to provide integer values through the same interface.
+struct DelegateIntegerProperty {
     id: i32,
 }
 
-impl IntegerProperty for StubIntegerProperty {
-    fn get(&self, _state: &dyn MainState) -> i32 {
-        log::warn!("not yet implemented: IntegerPropertyFactory requires MainState subtypes");
-        0
+impl IntegerProperty for DelegateIntegerProperty {
+    fn get(&self, state: &dyn MainState) -> i32 {
+        state.integer_value(self.id)
     }
 
     fn get_id(&self) -> i32 {

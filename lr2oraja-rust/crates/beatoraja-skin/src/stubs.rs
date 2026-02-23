@@ -15,6 +15,18 @@ pub trait MainState {
     fn get_main(&self) -> &MainController;
     fn get_image(&self, id: i32) -> Option<TextureRegion>;
     fn get_resource(&self) -> &PlayerResource;
+
+    /// Returns the integer property value for the given ID.
+    /// Used by IntegerPropertyFactory delegate to look up pre-computed values.
+    fn integer_value(&self, _id: i32) -> i32 {
+        0
+    }
+
+    /// Returns the string property value for the given ID.
+    /// Used by StringPropertyFactory delegate to look up pre-computed values.
+    fn string_value(&self, _id: i32) -> String {
+        String::new()
+    }
 }
 
 /// Stub for beatoraja.MainController

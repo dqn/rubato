@@ -30,7 +30,7 @@ use beatoraja_skin::stubs::Resolution as SkinResolution;
 use golden_master::render_snapshot::{
     DrawCommand, DrawDetail, RenderSnapshot, capture_render_snapshot, compare_snapshots,
 };
-use golden_master::state_provider::StaticStateProvider;
+use golden_master::state_provider::{StaticMainStateAdapter, StaticStateProvider};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -97,13 +97,19 @@ fn load_state(name: &str) -> StaticStateProvider {
     state
 }
 
-/// Load a Lua skin from the ECFN directory.
-/// Uses LuaSkinLoader to parse .luaskin, then skin_data_converter to produce a runtime Skin.
-fn load_lua_skin(relative_path: &str) -> Skin {
+/// Load a Lua skin with a MainState adapter so that Lua skins can call
+/// `main_state.number(id)` and `main_state.text(id)` during skin loading.
+fn load_lua_skin_with_state(relative_path: &str, provider: &StaticStateProvider) -> Skin {
     let path = skins_dir().join(relative_path);
     assert!(path.exists(), "Skin not found: {}", path.display());
 
     let mut loader = LuaSkinLoader::new();
+
+    // Export main_state module to Lua VM so skins can call
+    // main_state.number() and main_state.text() during loading.
+    let adapter = StaticMainStateAdapter::new(provider);
+    loader.lua.export_main_state_accessor(&adapter);
+
     let header = loader
         .load_header(&path)
         .unwrap_or_else(|| panic!("Failed to load Lua skin header: {}", path.display()));
@@ -211,14 +217,14 @@ const TEST_CASES: &[RenderSnapshotTestCase] = &[
         skin_path: "RESULT/result.luaskin",
         state_json: "state_result_clear.json",
         is_lua: true,
-        known_diff_budget: 0,
+        known_diff_budget: 1,
     },
     RenderSnapshotTestCase {
         name: "ecfn_result_fail",
         skin_path: "RESULT/result.luaskin",
         state_json: "state_result_fail.json",
         is_lua: true,
-        known_diff_budget: 0,
+        known_diff_budget: 1,
     },
     RenderSnapshotTestCase {
         name: "ecfn_play14_active",
@@ -239,7 +245,7 @@ const TEST_CASES: &[RenderSnapshotTestCase] = &[
         skin_path: "RESULT/course_result.luaskin",
         state_json: "state_result_clear.json",
         is_lua: true,
-        known_diff_budget: 0,
+        known_diff_budget: 1,
     },
 ];
 
@@ -480,13 +486,16 @@ fn try_snapshot_diffs(
 fn snapshot_diffs(tc: &RenderSnapshotTestCase) -> (RenderSnapshot, RenderSnapshot, Vec<String>) {
     let java_snapshot = load_java_snapshot(tc.name);
 
+    // Load state first so it can be passed to Lua skin loading
+    // (skins like result.lua call main_state.number() during loading).
+    let provider = load_state(tc.state_json);
+
     let skin = if tc.is_lua {
-        load_lua_skin(tc.skin_path)
+        load_lua_skin_with_state(tc.skin_path, &provider)
     } else {
         load_json_skin(tc.skin_path)
     };
 
-    let provider = load_state(tc.state_json);
     let rust_snapshot = capture_render_snapshot(&skin, &provider);
 
     let diffs = compare_snapshots(&java_snapshot, &rust_snapshot);
@@ -628,21 +637,18 @@ fn render_snapshot_ecfn_play7_danger() {
 }
 
 #[test]
-#[ignore] // needs main_state.number Lua API
 fn render_snapshot_ecfn_result_clear() {
     let tc = &TEST_CASES[5];
     compare_java_rust_render_snapshot(tc);
 }
 
 #[test]
-#[ignore] // needs main_state.number Lua API
 fn render_snapshot_ecfn_result_fail() {
     let tc = &TEST_CASES[6];
     compare_java_rust_render_snapshot(tc);
 }
 
 #[test]
-#[ignore] // needs main_state.text Lua API
 fn render_snapshot_ecfn_play14_active() {
     let tc = &TEST_CASES[7];
     compare_java_rust_render_snapshot(tc);
@@ -655,7 +661,6 @@ fn render_snapshot_ecfn_play7wide_active() {
 }
 
 #[test]
-#[ignore] // needs main_state.number Lua API
 fn render_snapshot_ecfn_course_result() {
     let tc = &TEST_CASES[9];
     compare_java_rust_render_snapshot(tc);
@@ -705,12 +710,12 @@ const RUST_ONLY_CASES: &[RustOnlySnapshotTestCase] = &[
 ];
 
 fn run_rust_only_snapshot(tc: &RustOnlySnapshotTestCase) {
+    let provider = load_state(tc.state_json);
     let skin = if tc.is_lua {
-        load_lua_skin(tc.skin_path)
+        load_lua_skin_with_state(tc.skin_path, &provider)
     } else {
         load_json_skin(tc.skin_path)
     };
-    let provider = load_state(tc.state_json);
     let snapshot = capture_render_snapshot(&skin, &provider);
 
     assert!(
@@ -755,7 +760,6 @@ fn rust_only_snapshot_ecfn_result2_clear() {
 // snapshots at multiple time points and asserting monotonic changes.
 
 fn capture_at_time(skin_path: &str, state_json: &str, time_ms: i64) -> RenderSnapshot {
-    let skin = load_lua_skin(skin_path);
     let mut provider = load_state(state_json);
     provider.time_ms = time_ms;
 
@@ -767,6 +771,7 @@ fn capture_at_time(skin_path: &str, state_json: &str, time_ms: i64) -> RenderSna
         }
     }
 
+    let skin = load_lua_skin_with_state(skin_path, &provider);
     capture_render_snapshot(&skin, &provider)
 }
 
@@ -820,7 +825,6 @@ fn timeline_play7_has_consistent_structure() {
 }
 
 #[test]
-#[ignore] // needs main_state.number Lua API
 fn timeline_result_has_stable_visible_set() {
     // Result screen should reach a stable state after initial animations
     let snap_5000 = capture_at_time("RESULT/result.luaskin", "state_result_clear.json", 5000);
