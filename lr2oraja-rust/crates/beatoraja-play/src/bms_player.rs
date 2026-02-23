@@ -136,6 +136,10 @@ pub struct BMSPlayer {
     main_state_data: MainStateData,
     /// Total notes in song (from songdata)
     total_notes: i32,
+    /// Active replay data for keylog playback (set when in REPLAY mode)
+    active_replay: Option<ReplayData>,
+    /// Margin time in milliseconds (from resource)
+    margin_time: i64,
 }
 
 impl BMSPlayer {
@@ -169,6 +173,8 @@ impl BMSPlayer {
             play_skin: PlaySkin::new(),
             main_state_data: MainStateData::new(TimerManager::new()),
             total_notes,
+            active_replay: None,
+            margin_time: 0,
         }
     }
 
@@ -222,6 +228,17 @@ impl BMSPlayer {
 
     pub fn get_gauge_mut(&mut self) -> Option<&mut GrooveGauge> {
         self.gauge.as_mut()
+    }
+
+    /// Set the active replay data for keylog playback.
+    /// Should be called when entering REPLAY mode after restore_replay_data().
+    pub fn set_active_replay(&mut self, replay: Option<ReplayData>) {
+        self.active_replay = replay;
+    }
+
+    /// Set the margin time in milliseconds (from resource).
+    pub fn set_margin_time(&mut self, margin_time: i64) {
+        self.margin_time = margin_time;
     }
 
     pub fn get_practice_configuration(&self) -> &PracticeConfiguration {
@@ -1279,9 +1296,12 @@ impl MainState for BMSPlayer {
 
                     // input.setStartTime(micronow + timer.getStartMicroTime() - starttimeoffset * 1000);
                     // input.setKeyLogMarginTime(resource.getMarginTime());
-                    // keyinput.startJudge(model, replay keylog, resource.getMarginTime());
+                    // Java: keyinput.startJudge(model, replay != null ? replay.keylog : null, resource.getMarginTime())
                     if let Some(ref mut ki) = self.keyinput {
-                        ki.start_judge(0); // TODO: Phase 22 - marginTime
+                        let timelines = self.model.get_all_time_lines();
+                        let last_tl_micro = timelines.last().map_or(0, |tl| tl.get_micro_time());
+                        let keylog = self.active_replay.as_ref().map(|r| r.keylog.as_slice());
+                        ki.start_judge(last_tl_micro, keylog, self.margin_time);
                     }
                     self.keysound
                         .start_bg_play(&self.model, self.starttimeoffset * 1000);
