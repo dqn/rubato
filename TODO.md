@@ -1,6 +1,6 @@
 # Porting TODO — Remaining Work
 
-Phases 1–26d complete. **1793 tests, 9 ignored.** 27 crates, 122k lines. See AGENTS.md.
+Phases 1–27c complete. **1759 tests, 22 ignored.** 27 crates, 122k lines. See AGENTS.md.
 
 ## Phase 26: スキンパイプライン完成 → 22 ignored テスト解除
 
@@ -15,7 +15,7 @@ Resolves: `beatoraja-skin/stubs.rs` (287 lines), `beatoraja-launcher/stubs.rs` (
 
 - [x] **27a:** `rayon::par_iter()` による BMS 並列走査
 - [x] **27b:** SQLite FTS5 全文検索 (`get_song_datas_by_text()`)
-- **27c:** `SongInformationAccessor` trait + SQLite CRUD
+- [x] **27c:** `SongInformationAccessor` trait + SQLite CRUD
 
 ## Phase 28: プラットフォーム固有 + 入力
 
