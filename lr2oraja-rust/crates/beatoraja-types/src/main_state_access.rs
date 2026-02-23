@@ -30,8 +30,6 @@ pub trait MainStateListener {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::player_resource_access::NullPlayerResource;
-
     struct TestState;
     impl MainStateAccess for TestState {
         fn get_screen_type(&self) -> ScreenType {

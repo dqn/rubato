@@ -185,3 +185,59 @@ impl SkinDistributionGraph {
         // In Java: disposes all lamp images
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use md_processor::download_task::{DownloadTask, DownloadTaskStatus};
+
+    #[test]
+    fn test_download_percent_prepare() {
+        let task = DownloadTask::new(1, "http://example.com".into(), "test".into(), "abc".into());
+        // Prepare status → 0% progress
+        assert_eq!(task.get_download_task_status(), DownloadTaskStatus::Prepare);
+        let percent = compute_download_percent(&task);
+        assert_eq!(percent, 0.0);
+    }
+
+    #[test]
+    fn test_download_percent_downloading() {
+        let mut task =
+            DownloadTask::new(2, "http://example.com".into(), "test".into(), "def".into());
+        task.set_download_task_status(DownloadTaskStatus::Downloading);
+        task.set_download_size(50);
+        task.set_content_length(100);
+        let percent = compute_download_percent(&task);
+        assert!((percent - 0.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_download_percent_completed_statuses() {
+        let mut task =
+            DownloadTask::new(3, "http://example.com".into(), "test".into(), "ghi".into());
+        for status in [
+            DownloadTaskStatus::Downloaded,
+            DownloadTaskStatus::Extracted,
+            DownloadTaskStatus::Error,
+            DownloadTaskStatus::Cancel,
+        ] {
+            task.set_download_task_status(status);
+            let percent = compute_download_percent(&task);
+            assert_eq!(percent, 1.0, "Expected 1.0 for status {:?}", status);
+        }
+    }
+
+    /// Helper that mirrors the logic in draw_song_bar_download
+    fn compute_download_percent(task: &DownloadTask) -> f32 {
+        match task.get_download_task_status() {
+            DownloadTaskStatus::Prepare => 0.0,
+            DownloadTaskStatus::Downloading => {
+                task.get_download_size() as f32 / task.get_content_length() as f32
+            }
+            DownloadTaskStatus::Downloaded => 1.0,
+            DownloadTaskStatus::Extracted => 1.0,
+            DownloadTaskStatus::Error => 1.0,
+            DownloadTaskStatus::Cancel => 1.0,
+        }
+    }
+}

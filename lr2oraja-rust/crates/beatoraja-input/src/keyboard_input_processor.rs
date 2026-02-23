@@ -5,7 +5,7 @@
 
 use crate::bms_player_input_device::{BMSPlayerInputDevice, DeviceType};
 use crate::mouse_scratch_input::MouseScratchInput;
-use crate::stubs::{GdxGraphics, GdxInput, KeyboardConfig, Keys, Resolution, SkinWidgetManager};
+use crate::stubs::{GdxGraphics, GdxInput, KeyboardConfig, Keys, Resolution};
 
 pub const MASK_SHIFT: i32 = 1 << 0;
 pub const MASK_CTRL: i32 = 1 << 1;
@@ -289,7 +289,7 @@ impl KeyBoardInputProcesseor {
     pub fn poll(&mut self, microtime: i64, callback: &mut dyn KeyboardCallback) {
         // NOTE: For further dev came here, it's better to wrap this variable instead of
         // accessing imgui menu's field directly
-        let accept_input = !SkinWidgetManager::get_focus();
+        let accept_input = !beatoraja_types::skin_widget_focus::get_focus();
         if accept_input && !self.textmode {
             for i in 0..self.keys.len() {
                 if self.keys[i] < 0 {

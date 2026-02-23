@@ -272,46 +272,7 @@ impl SongManagerMenu {
 }
 
 // ============================================================
-// Download task types — stubs for beatoraja.external download
+// Download task types — re-exported from md-processor
 // ============================================================
 
-pub struct DownloadTaskState;
-
-impl DownloadTaskState {
-    pub fn get_running_download_tasks() -> std::collections::HashMap<String, DownloadTask> {
-        std::collections::HashMap::new()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct DownloadTask {
-    pub hash: String,
-    pub download_size: i64,
-    pub content_length: i64,
-    pub status: DownloadTaskStatus,
-}
-
-impl DownloadTask {
-    pub fn get_hash(&self) -> &str {
-        &self.hash
-    }
-    pub fn get_download_size(&self) -> i64 {
-        self.download_size
-    }
-    pub fn get_content_length(&self) -> i64 {
-        self.content_length
-    }
-    pub fn get_download_task_status(&self) -> &DownloadTaskStatus {
-        &self.status
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum DownloadTaskStatus {
-    Prepare,
-    Downloading,
-    Downloaded,
-    Extracted,
-    Error,
-    Cancel,
-}
+pub use md_processor::download_task::{DownloadTask, DownloadTaskStatus};

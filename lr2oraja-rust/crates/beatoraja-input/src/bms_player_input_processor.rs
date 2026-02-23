@@ -955,7 +955,7 @@ mod tests {
     fn test_poll_with_shared_key_state() {
         // Set up the shared key state
         let shared_state = SharedKeyState::new();
-        crate::stubs::set_shared_key_state(shared_state.clone());
+        crate::gdx_compat::set_shared_key_state(shared_state.clone());
 
         // Use a config with duration=0 to avoid timing issues in tests
         let config = Config::default();

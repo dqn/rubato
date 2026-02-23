@@ -284,16 +284,22 @@ mod tests {
     fn test_replay_data_with_pattern() {
         let mut rd = ReplayData::new();
         rd.pattern = Some(vec![
-            PatternModifyLog::new(0.0, vec![3, 0, 1]),
-            PatternModifyLog::new(1.0, vec![2, 1, 0]),
+            PatternModifyLog {
+                old_lane: 3,
+                new_lane: 0,
+            },
+            PatternModifyLog {
+                old_lane: 2,
+                new_lane: 1,
+            },
         ]);
 
         let json = serde_json::to_string(&rd).unwrap();
         let deserialized: ReplayData = serde_json::from_str(&json).unwrap();
         let pattern = deserialized.pattern.unwrap();
         assert_eq!(pattern.len(), 2);
-        assert_eq!(pattern[0].section, 0.0);
-        assert_eq!(pattern[0].modify, Some(vec![3, 0, 1]));
+        assert_eq!(pattern[0].old_lane, 3);
+        assert_eq!(pattern[0].new_lane, 0);
     }
 
     #[test]

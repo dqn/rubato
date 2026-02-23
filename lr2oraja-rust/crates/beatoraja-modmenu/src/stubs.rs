@@ -153,7 +153,53 @@ pub use beatoraja_types::song_data::SongData;
 
 // ScoreData is re-exported from beatoraja_core at the top of this file.
 
-// ImBoolean/ImInt/ImFloat: removed (replaced with plain bool/i32/f32 in Mutex — Phase 18e-6)
-// LWJGL3/LibGDX stubs: InputProcessor, Lwjgl3ControllerManager, Controller removed (unused — Phase 18e-5)
+// =========================================================================
+// ImGui surrogate types used by SkinWidgetManager
+// =========================================================================
 
-// Clipboard: removed (replaced with direct arboard calls — Phase 18e-6)
+/// Surrogate for ImGui ImFloat — a plain f32 wrapper used in static Mutex statics.
+pub struct ImFloat {
+    pub value: f32,
+}
+
+/// Surrogate for ImGui ImBoolean — a plain bool wrapper used in static Mutex statics.
+pub struct ImBoolean {
+    pub value: bool,
+}
+
+// =========================================================================
+// Clipboard stub — wraps arboard
+// =========================================================================
+
+/// Thin wrapper around arboard::Clipboard that silences errors in non-critical paths.
+pub struct Clipboard {
+    inner: Option<arboard::Clipboard>,
+}
+
+impl Default for Clipboard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Clipboard {
+    pub fn new() -> Self {
+        Self {
+            inner: arboard::Clipboard::new().ok(),
+        }
+    }
+
+    pub fn set_contents(&self, text: &str) {
+        if let Some(ref mut cb) = self
+            .inner
+            .as_ref()
+            .and_then(|_| arboard::Clipboard::new().ok())
+        {
+            if let Err(e) = cb.set_text(text) {
+                log::warn!("Clipboard::set_contents failed: {}", e);
+            }
+        } else {
+            log::warn!("Clipboard::set_contents: clipboard unavailable");
+        }
+    }
+}
