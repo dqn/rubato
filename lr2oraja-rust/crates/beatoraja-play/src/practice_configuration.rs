@@ -1,7 +1,12 @@
 use crate::bms_player_rule::BMSPlayerRule;
 use crate::gauge_property::GaugeProperty;
 use crate::groove_gauge::{GrooveGauge, create_groove_gauge};
+use beatoraja_pattern::lane_shuffle_modifier::PlayerFlipModifier;
+use beatoraja_pattern::pattern_modifier::{PatternModifier, create_pattern_modifier};
+use beatoraja_pattern::practice_modifier::PracticeModifier;
+use beatoraja_types::player_config::PlayerConfig;
 use bms_model::bms_model::BMSModel;
+use bms_model::bms_model_utils;
 use bms_model::mode::Mode;
 use serde::{Deserialize, Serialize};
 
@@ -78,6 +83,19 @@ impl PracticeProperty {
             graphtype: 0,
         }
     }
+}
+
+/// Result of applying practice configuration to a model.
+/// Returned by `PracticeConfiguration::apply_to_model`.
+pub struct PracticeApplyResult {
+    /// Groove gauge initialized with practice start gauge
+    pub gauge: Option<GrooveGauge>,
+    /// Frequency ratio if freq != 100 (caller should set global audio pitch)
+    pub freq_ratio: Option<f32>,
+    /// Adjusted start time offset in milliseconds
+    pub starttimeoffset: i64,
+    /// Adjusted play time limit in milliseconds
+    pub playtime: i64,
 }
 
 /// Cached model data for practice mode (extracted from BMSModel to avoid Clone)
@@ -161,6 +179,73 @@ impl PracticeConfiguration {
 
     pub fn dispose(&mut self) {
         // cleanup rendering resources (stub - no GPU resources in Rust translation)
+    }
+
+    /// Apply practice settings to the model.
+    ///
+    /// Translates Java BMSPlayer lines 684-723 (practice mode initialization).
+    /// Modifies the model in-place (frequency, total, time range, pattern, judgerank).
+    /// Returns timing offsets and gauge for the caller.
+    pub fn apply_to_model(
+        &self,
+        model: &mut BMSModel,
+        config: &PlayerConfig,
+    ) -> PracticeApplyResult {
+        let property = &self.property;
+
+        // Frequency change
+        let freq_ratio = if property.freq != 100 {
+            let ratio = property.freq as f32 / 100.0;
+            bms_model_utils::change_frequency(model, ratio);
+            Some(ratio)
+        } else {
+            None
+        };
+
+        // Set total
+        model.set_total(property.total);
+
+        // PracticeModifier: filter notes outside the time range (scaled by freq)
+        let pm_start = (property.starttime as i64) * 100 / (property.freq as i64);
+        let pm_end = (property.endtime as i64) * 100 / (property.freq as i64);
+        let mut pm = PracticeModifier::new(pm_start, pm_end);
+        pm.modify(model);
+
+        // DP modifiers
+        let mode = model.get_mode().cloned().unwrap_or(Mode::BEAT_7K);
+        if mode.player() == 2 {
+            if property.doubleop == 1 {
+                PlayerFlipModifier::new().modify(model);
+            }
+            create_pattern_modifier(property.random2, 1, &mode, config).modify(model);
+        }
+
+        // 1P random modifier
+        create_pattern_modifier(property.random, 0, &mode, config).modify(model);
+
+        // Second PracticeModifier application (preserves Java behavior)
+        pm.modify(model);
+
+        // Gauge
+        let gauge = self.get_gauge(model);
+
+        // Judge rank
+        model.set_judgerank(property.judgerank);
+
+        // Timing calculations
+        let starttimeoffset = if property.starttime > 1000 {
+            (property.starttime as i64 - 1000) * 100 / property.freq as i64
+        } else {
+            0
+        };
+        let playtime = (property.endtime as i64 + 1000) * 100 / property.freq as i64;
+
+        PracticeApplyResult {
+            gauge,
+            freq_ratio,
+            starttimeoffset,
+            playtime,
+        }
     }
 
     /// Process input for practice mode elements
@@ -345,5 +430,111 @@ impl PracticeConfiguration {
             }
             _ => true,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bms_model::time_line::TimeLine;
+
+    fn make_test_model(mode: &Mode, times: &[i32]) -> BMSModel {
+        let mut model = BMSModel::new();
+        model.set_mode(mode.clone());
+        let mut timelines = Vec::new();
+        for &t in times {
+            let mut tl = TimeLine::new(t.into(), 0, mode.key());
+            tl.set_bpm(120.0);
+            timelines.push(tl);
+        }
+        model.set_all_time_line(timelines);
+        model.set_total(300.0);
+        model.set_judgerank(100);
+        model
+    }
+
+    #[test]
+    fn test_apply_to_model_default_freq() {
+        let mut practice = PracticeConfiguration::new();
+        practice.property.freq = 100;
+        practice.property.total = 250.0;
+        practice.property.judgerank = 80;
+        practice.property.starttime = 0;
+        practice.property.endtime = 10000;
+        practice.property.gaugecategory = Some(GaugeProperty::SevenKeys);
+
+        let mut model = make_test_model(&Mode::BEAT_7K, &[0, 1000, 5000, 9000]);
+        let config = PlayerConfig::default();
+
+        let result = practice.apply_to_model(&mut model, &config);
+
+        // freq == 100 → no frequency change
+        assert!(result.freq_ratio.is_none());
+        // total overwritten
+        assert!((model.get_total() - 250.0).abs() < f64::EPSILON);
+        // judgerank overwritten
+        assert_eq!(model.get_judgerank(), 80);
+        // starttimeoffset: starttime(0) <= 1000 → 0
+        assert_eq!(result.starttimeoffset, 0);
+        // playtime: (10000 + 1000) * 100 / 100 = 11000
+        assert_eq!(result.playtime, 11000);
+    }
+
+    #[test]
+    fn test_apply_to_model_half_speed() {
+        let mut practice = PracticeConfiguration::new();
+        practice.property.freq = 50;
+        practice.property.total = 200.0;
+        practice.property.judgerank = 100;
+        practice.property.starttime = 2000;
+        practice.property.endtime = 8000;
+        practice.property.gaugecategory = Some(GaugeProperty::SevenKeys);
+
+        let mut model = make_test_model(&Mode::BEAT_7K, &[0, 1000, 5000, 9000]);
+        let config = PlayerConfig::default();
+
+        let result = practice.apply_to_model(&mut model, &config);
+
+        // freq == 50 → ratio = 0.5
+        assert_eq!(result.freq_ratio, Some(0.5));
+        // starttimeoffset: (2000 - 1000) * 100 / 50 = 2000
+        assert_eq!(result.starttimeoffset, 2000);
+        // playtime: (8000 + 1000) * 100 / 50 = 18000
+        assert_eq!(result.playtime, 18000);
+    }
+
+    #[test]
+    fn test_apply_to_model_returns_gauge() {
+        let mut practice = PracticeConfiguration::new();
+        practice.property.gaugecategory = Some(GaugeProperty::SevenKeys);
+        practice.property.gaugetype = 2; // NORMAL
+        practice.property.startgauge = 50;
+
+        let mut model = make_test_model(&Mode::BEAT_7K, &[0, 5000]);
+        let config = PlayerConfig::default();
+
+        let result = practice.apply_to_model(&mut model, &config);
+
+        // Gauge should be created with startgauge value
+        assert!(result.gauge.is_some());
+        let gauge = result.gauge.unwrap();
+        assert!((gauge.get_value() - 50.0).abs() < f64::EPSILON as f32);
+    }
+
+    #[test]
+    fn test_apply_to_model_starttime_below_1000() {
+        let mut practice = PracticeConfiguration::new();
+        practice.property.starttime = 500;
+        practice.property.endtime = 5000;
+        practice.property.freq = 100;
+        practice.property.gaugecategory = Some(GaugeProperty::SevenKeys);
+
+        let mut model = make_test_model(&Mode::BEAT_7K, &[0, 2000]);
+        let config = PlayerConfig::default();
+
+        let result = practice.apply_to_model(&mut model, &config);
+
+        // starttime(500) <= 1000 → offset = 0
+        assert_eq!(result.starttimeoffset, 0);
     }
 }
