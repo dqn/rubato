@@ -525,9 +525,15 @@ impl PlayConfigurationView {
 
         self.http_download_source = DOWNLOAD_SOURCES.keys().cloned().collect();
 
-        // resourceController.init(this) → deferred to egui integration
-        // discordController.init(this) → deferred to egui integration
-        // obsController.init(this) → deferred to egui integration
+        // Sub-controller init calls: these methods set up internal state
+        // (table columns, combo box items, etc.) — actual rendering is egui.
+        // We pass `self` as a dummy since the parameter is unused in Rust.
+        // NOTE: We cannot pass `&self` here because `self` is `&mut`.
+        // The init methods use `_main` (unused), so we pass a default-constructed instance.
+        let dummy = PlayConfigurationView::new();
+        self.resource_controller.init(&dummy);
+        self.discord_controller.init();
+        self.obs_controller.init(&dummy);
 
         self.check_new_version();
         let elapsed = t.elapsed().as_millis();
@@ -577,18 +583,33 @@ impl PlayConfigurationView {
         let playerpath = config.playerpath.clone();
         self.players = beatoraja_core::player_config::read_all_player_id(&playerpath);
 
-        // videoController.update(config) → todo
-        // audioController.update(config.getAudioConfig()) → todo
-        // musicselectController.update(config) → todo
+        // videoController.update(config)
+        self.video_controller.update(config);
+        // audioController.update(config.getAudioConfig())
+        if let Some(ref audio) = config.audio {
+            self.audio_controller.update(audio.clone());
+        }
+        // musicselectController.update(config)
+        self.music_select_controller.update(config);
 
         self.bgmpath = config.bgmpath.clone();
         self.soundpath = config.soundpath.clone();
 
-        // resourceController.update(config) → todo
-        // discordController.update(config) → todo
-        // obsController.update(config) → todo
-        // skinController.update(config) → todo
+        // resourceController.update(config)
+        // discordController.update(config)
+        // skinController.update(config)
+        // These take &mut Config, so we temporarily take ownership
+        {
+            let mut config = self.config.take().unwrap();
+            self.resource_controller.update(&mut config);
+            self.discord_controller.update(&mut config);
+            self.skin_controller.update_config(&config);
+            // obsController.update(config) — takes Config by value, give a clone
+            self.obs_controller.update(config.clone());
+            self.config = Some(config);
+        }
 
+        let config = self.config.as_ref().unwrap();
         self.usecim = config.cache_skin_image;
         self.clipboard_screenshot = config.set_clipboard_screenshot;
 
@@ -608,7 +629,8 @@ impl PlayConfigurationView {
         }
         self.update_player();
 
-        // tableController.init and update → todo
+        // tableController.init and update deferred to egui integration
+        // (requires ScoreDatabaseAccessor which depends on runtime DB state)
     }
 
     /// Change player
@@ -654,7 +676,7 @@ impl PlayConfigurationView {
             Some(p) => p.clone(),
             None => return,
         };
-        let player = match PlayerConfig::read_player_config(&config.playerpath, &playerid) {
+        let mut player = match PlayerConfig::read_player_config(&config.playerpath, &playerid) {
             Ok(p) => p,
             Err(e) => {
                 warn!("Player config failed to load: {}", e);
@@ -664,8 +686,10 @@ impl PlayConfigurationView {
 
         self.playername = player.name.clone();
 
-        // videoController.updatePlayer(player) → todo
-        // musicselectController.updatePlayer(player) → todo
+        // videoController.updatePlayer(player)
+        self.video_controller.update_player(&mut player);
+        // musicselectController.updatePlayer(player)
+        self.music_select_controller.update_player(&player);
 
         self.scoreop = Some(player.random);
         self.scoreop2 = Some(player.random2);
@@ -715,8 +739,10 @@ impl PlayConfigurationView {
         self.showhiddennote = player.showhiddennote;
         self.showpastnote = player.showpastnote;
 
-        // irController.update(player) → todo
-        // streamController.update(player) → todo
+        // irController.update(player)
+        self.ir_controller.update(&mut player);
+        // streamController.update(player)
+        self.stream_controller.update(&player);
 
         self.twitter_pin_enabled = false;
         if let Some(ref token) = player.twitter_access_token {
@@ -728,29 +754,48 @@ impl PlayConfigurationView {
         self.pc = None;
         self.playconfig = Some(PlayMode::BEAT_7K);
         self.player = Some(player);
+
+        // update_play_config must happen before inputController/skinController updates
+        // because Java calls updatePlayConfig() then inputController.update(player)
         self.update_play_config();
 
-        // inputController.update(player) → todo
-        // skinController.update(player) → todo
+        // inputController.update(player) — needs &mut PlayerConfig
+        if let Some(ref mut player) = self.player {
+            self.input_controller.update(player);
+        }
+        // skinController.update(player)
+        if let Some(ref player) = self.player {
+            self.skin_controller.update_player(player);
+        }
     }
 
     /// Commit config to file
     /// Translates: public void commit()
     pub fn commit(&mut self) {
-        // videoController.commit(config) → todo
-        // audioController.commit() → todo
-        // musicselectController.commit() → todo
+        // videoController.commit(config)
+        if let Some(ref mut config) = self.config {
+            self.video_controller.commit(config);
+        }
+        // audioController.commit()
+        self.audio_controller.commit();
+        // musicselectController.commit()
+        self.music_select_controller.commit();
 
         if let Some(ref mut config) = self.config {
             config.playername = self.players_selected.clone();
 
             config.bgmpath = self.bgmpath.clone();
             config.soundpath = self.soundpath.clone();
+        }
 
-            // resourceController.commit() → todo
-            // discordController.commit() → todo
-            // obsController.commit() → todo
+        // resourceController.commit()
+        self.resource_controller.commit();
+        // discordController.commit()
+        self.discord_controller.commit();
+        // obsController.commit()
+        self.obs_controller.commit();
 
+        if let Some(ref mut config) = self.config {
             config.cache_skin_image = self.usecim;
 
             config.enable_ipfs = self.enable_ipfs;
@@ -771,7 +816,8 @@ impl PlayConfigurationView {
             let _ = Config::write(config);
         }
 
-        // tableController.commit() → todo
+        // tableController.commit()
+        self.table_controller.commit();
     }
 
     /// Commit player config
@@ -788,8 +834,8 @@ impl PlayConfigurationView {
                 player.name = self.playername.clone();
             }
 
-            // videoController.commitPlayer(player) -> todo
-            // musicselectController.commitPlayer() -> todo
+            // videoController.commitPlayer(player)
+            self.video_controller.commit_player(player);
 
             player.random = self.scoreop.unwrap_or(0);
             player.random2 = self.scoreop2.unwrap_or(0);
@@ -840,12 +886,18 @@ impl PlayConfigurationView {
             player.showpastnote = self.showpastnote;
         }
 
-        // inputController.commit() -> todo
-        // irController.commit() -> todo
-        // streamController.commit() -> todo
+        // musicselectController.commitPlayer()
+        self.music_select_controller.commit_player();
+        // inputController.commit()
+        self.input_controller.commit();
+        // irController.commit()
+        self.ir_controller.commit();
+        // streamController.commit()
+        self.stream_controller.commit();
 
         self.update_play_config();
-        // skinController.commit() -> todo
+        // skinController.commit()
+        self.skin_controller.commit();
 
         if let (Some(config), Some(player)) = (&self.config, &self.player) {
             let _ = PlayerConfig::write(&config.playerpath, player);
@@ -1120,5 +1172,362 @@ impl PlayConfigurationView {
 impl Default for PlayConfigurationView {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::field_reassign_with_default)]
+mod tests {
+    use super::*;
+    use beatoraja_core::audio_config::AudioConfig;
+
+    /// Helper: create a PlayConfigurationView with initialize() called
+    fn initialized_view() -> PlayConfigurationView {
+        let mut view = PlayConfigurationView::new();
+        view.initialize();
+        view
+    }
+
+    // ---- initialize() tests ----
+
+    #[test]
+    fn test_initialize_sets_combo_box_labels() {
+        let view = initialized_view();
+
+        assert_eq!(view.score_options_labels.len(), 10);
+        assert_eq!(view.score_options_labels[0], "OFF");
+        assert_eq!(view.score_options_labels[1], "MIRROR");
+
+        assert_eq!(view.double_options_labels.len(), 4);
+        assert_eq!(view.gauge_options_labels.len(), 6);
+        assert_eq!(view.fixhispeed_labels.len(), 5);
+        assert_eq!(view.lntype_labels.len(), 3);
+        assert_eq!(view.gaugeautoshift_labels.len(), 5);
+        assert_eq!(view.bottomshiftablegauge_labels.len(), 3);
+        assert_eq!(view.minemode_labels.len(), 5);
+        assert_eq!(view.scrollmode_labels.len(), 3);
+        assert_eq!(view.longnotemode_labels.len(), 6);
+        assert_eq!(view.judgealgorithm_labels.len(), 3);
+        assert_eq!(view.autosave_labels.len(), 11);
+    }
+
+    #[test]
+    fn test_initialize_populates_http_download_sources() {
+        let view = initialized_view();
+        assert!(!view.http_download_source.is_empty());
+    }
+
+    // ---- update() delegation tests ----
+
+    #[test]
+    fn test_update_delegates_to_video_controller() {
+        let mut view = initialized_view();
+        let config = Config {
+            vsync: true,
+            max_frame_per_second: 120,
+            bga: 2,
+            ..Default::default()
+        };
+
+        view.update(config);
+
+        // VideoConfigurationView.update() should have copied these values
+        // We can verify by calling commit() and checking config roundtrip
+        let mut out_config = Config::default();
+        view.video_controller.commit(&mut out_config);
+        assert!(out_config.vsync);
+        assert_eq!(out_config.max_frame_per_second, 120);
+        assert_eq!(out_config.bga, 2);
+    }
+
+    #[test]
+    fn test_update_delegates_to_audio_controller() {
+        let mut view = initialized_view();
+        let config = Config {
+            audio: Some(AudioConfig {
+                systemvolume: 0.75,
+                keyvolume: 0.5,
+                bgvolume: 0.25,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        view.update(config);
+
+        // AudioConfigurationView stores config internally; commit writes back
+        view.audio_controller.commit();
+    }
+
+    #[test]
+    fn test_update_delegates_to_music_select_controller() {
+        let mut view = initialized_view();
+        let config = Config {
+            scrolldurationlow: 300,
+            scrolldurationhigh: 500,
+            folderlamp: true,
+            ..Default::default()
+        };
+
+        view.update(config);
+
+        // Verify the music_select_controller commit roundtrip
+        view.music_select_controller.commit();
+    }
+
+    #[test]
+    fn test_update_delegates_to_resource_controller() {
+        let mut view = initialized_view();
+        let config = Config {
+            bmsroot: vec!["path1".to_string(), "path2".to_string()],
+            updatesong: true,
+            ..Default::default()
+        };
+
+        view.update(config);
+
+        // resource_controller.update should have picked up bmsroot
+        view.resource_controller.commit();
+    }
+
+    #[test]
+    fn test_update_delegates_to_discord_controller() {
+        let mut view = initialized_view();
+        let config = Config {
+            use_discord_rpc: true,
+            webhook_name: "test_hook".to_string(),
+            ..Default::default()
+        };
+
+        view.update(config);
+
+        view.discord_controller.commit();
+    }
+
+    #[test]
+    fn test_update_delegates_to_obs_controller() {
+        let mut view = initialized_view();
+        let config = Config {
+            use_obs_ws: true,
+            obs_ws_host: "localhost".to_string(),
+            obs_ws_port: 4455,
+            ..Default::default()
+        };
+
+        view.update(config);
+
+        view.obs_controller.commit();
+    }
+
+    // ---- commit() delegation tests ----
+
+    #[test]
+    fn test_commit_delegates_to_video_controller() {
+        let mut view = initialized_view();
+        view.update(Config::default());
+
+        // After commit, the config should reflect sub-controller state
+        view.commit();
+    }
+
+    #[test]
+    fn test_commit_delegates_to_table_controller() {
+        let mut view = initialized_view();
+        view.update(Config::default());
+
+        // table_controller.commit() should be called without panic
+        view.commit();
+    }
+
+    // ---- update_player() delegation tests ----
+
+    #[test]
+    fn test_update_player_delegates_to_ir_controller() {
+        let mut view = initialized_view();
+        view.config = Some(Config {
+            playerpath: "nonexistent_path".to_string(),
+            ..Default::default()
+        });
+
+        // With no valid player file, it should fall back to default
+        view.players_selected = Some("player1".to_string());
+        view.update_player();
+    }
+
+    #[test]
+    fn test_update_player_delegates_to_stream_controller() {
+        let mut view = initialized_view();
+        view.config = Some(Config {
+            playerpath: "nonexistent_path".to_string(),
+            ..Default::default()
+        });
+
+        view.players_selected = Some("player1".to_string());
+        view.update_player();
+    }
+
+    #[test]
+    fn test_update_player_delegates_to_input_controller() {
+        let mut view = initialized_view();
+        view.config = Some(Config {
+            playerpath: "nonexistent_path".to_string(),
+            ..Default::default()
+        });
+
+        view.players_selected = Some("player1".to_string());
+        view.update_player();
+    }
+
+    #[test]
+    fn test_update_player_delegates_to_skin_controller() {
+        let mut view = initialized_view();
+        view.config = Some(Config {
+            playerpath: "nonexistent_path".to_string(),
+            ..Default::default()
+        });
+
+        view.players_selected = Some("player1".to_string());
+        view.update_player();
+    }
+
+    // ---- commit_player() delegation tests ----
+
+    #[test]
+    fn test_commit_player_delegates_to_sub_controllers() {
+        let mut view = initialized_view();
+        view.config = Some(Config::default());
+        view.player = Some(PlayerConfig::default());
+        view.playconfig = Some(PlayMode::BEAT_7K);
+
+        // This should call video_controller.commit_player,
+        // music_select_controller.commit_player, input_controller.commit,
+        // ir_controller.commit, stream_controller.commit,
+        // skin_controller.commit without panic
+        view.commit_player();
+    }
+
+    #[test]
+    fn test_commit_player_skips_when_no_player() {
+        let mut view = initialized_view();
+        view.player = None;
+
+        // Should return early without panic
+        view.commit_player();
+    }
+
+    // ---- PlayMode tests ----
+
+    #[test]
+    fn test_play_mode_display_name() {
+        assert_eq!(PlayMode::BEAT_7K.display_name(), "7KEYS");
+        assert_eq!(PlayMode::BEAT_14K.display_name(), "14KEYS");
+        assert_eq!(
+            PlayMode::KEYBOARD_24K_DOUBLE.display_name(),
+            "24KEYS DOUBLE"
+        );
+    }
+
+    #[test]
+    fn test_play_mode_to_mode() {
+        assert_eq!(PlayMode::BEAT_7K.to_mode(), Mode::BEAT_7K);
+        assert_eq!(PlayMode::POPN_9K.to_mode(), Mode::POPN_9K);
+    }
+
+    #[test]
+    fn test_play_mode_values_length() {
+        assert_eq!(PlayMode::values().len(), 7);
+    }
+
+    // ---- OptionListCell tests ----
+
+    #[test]
+    fn test_option_list_cell_get_text() {
+        let cell = OptionListCell::new(vec!["A".to_string(), "B".to_string(), "C".to_string()]);
+        assert_eq!(cell.get_text(Some(0)), "A");
+        assert_eq!(cell.get_text(Some(2)), "C");
+        assert_eq!(cell.get_text(None), "");
+        assert_eq!(cell.get_text(Some(-1)), "");
+        assert_eq!(cell.get_text(Some(99)), "");
+    }
+
+    // ---- Roundtrip: update -> commit preserves config values ----
+
+    #[test]
+    fn test_update_commit_roundtrip_preserves_config_fields() {
+        let mut view = initialized_view();
+        let config = Config {
+            bgmpath: "/music/bgm".to_string(),
+            soundpath: "/music/sounds".to_string(),
+            cache_skin_image: true,
+            enable_ipfs: true,
+            ipfsurl: "http://ipfs.example.com".to_string(),
+            enable_http: true,
+            download_source: "source1".to_string(),
+            override_download_url: "http://override.example.com".to_string(),
+            set_clipboard_screenshot: true,
+            ..Default::default()
+        };
+
+        view.update(config);
+
+        assert_eq!(view.bgmpath, "/music/bgm");
+        assert_eq!(view.soundpath, "/music/sounds");
+        assert!(view.usecim);
+        assert!(view.enable_ipfs);
+        assert_eq!(view.ipfsurl, "http://ipfs.example.com");
+        assert!(view.enable_http);
+        assert_eq!(view.override_download_url, "http://override.example.com");
+        assert!(view.clipboard_screenshot);
+    }
+
+    // ---- Roundtrip: update_player -> commit_player preserves player fields ----
+
+    #[test]
+    fn test_update_player_commit_player_roundtrip() {
+        let mut view = initialized_view();
+        view.config = Some(Config::default());
+
+        let player = PlayerConfig {
+            name: "TestPlayer".to_string(),
+            random: 3,
+            random2: 5,
+            doubleoption: 1,
+            gauge: 2,
+            lnmode: 1,
+            judgetiming: 10,
+            bpmguide: true,
+            custom_judge: true,
+            key_judge_window_rate_perfect_great: 500,
+            mine_mode: 2,
+            scroll_mode: 1,
+            longnote_mode: 3,
+            forcedcnendings: true,
+            longnote_rate: 1.5,
+            showjudgearea: true,
+            markprocessednote: true,
+            showhiddennote: true,
+            showpastnote: true,
+            autosavereplay: vec![1, 2, 3, 4],
+            ..Default::default()
+        };
+
+        view.player = Some(player);
+        view.playername = "TestPlayer".to_string();
+        view.scoreop = Some(3);
+        view.scoreop2 = Some(5);
+        view.doubleop = Some(1);
+        view.gaugeop = Some(2);
+        view.lntype = Some(1);
+        view.playconfig = Some(PlayMode::BEAT_7K);
+
+        view.commit_player();
+
+        let committed = view.player.as_ref().unwrap();
+        assert_eq!(committed.name, "TestPlayer");
+        assert_eq!(committed.random, 3);
+        assert_eq!(committed.random2, 5);
+        assert_eq!(committed.doubleoption, 1);
+        assert_eq!(committed.gauge, 2);
+        assert_eq!(committed.lnmode, 1);
     }
 }

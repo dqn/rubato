@@ -6,9 +6,7 @@ use beatoraja_core::config::Config;
 use beatoraja_core::main_state::MainStateType;
 use beatoraja_obs::obs_ws_client::{ObsVersionInfo, ObsWsClient, get_action_label, obs_actions};
 
-// PlayConfigurationView is a stub since it's not yet translated
-#[allow(dead_code)]
-pub struct PlayConfigurationView;
+use crate::play_configuration_view::PlayConfigurationView;
 
 /// SCENE_NONE - label for no scene change
 pub const SCENE_NONE: &str = "(No Change)";

@@ -261,6 +261,33 @@ impl SongDatabaseUpdateListener {
     }
 }
 
+// === Twitter stubs — Twitter API not supported in Rust port ===
+
+pub struct TwitterAuth;
+
+impl TwitterAuth {
+    pub fn start_auth(
+        _consumer_key: &str,
+        _consumer_secret: &str,
+    ) -> anyhow::Result<(String, String)> {
+        anyhow::bail!(
+            "Twitter API is not supported in Rust port (twitter4j has no Rust equivalent)"
+        )
+    }
+
+    pub fn complete_pin_auth(
+        _consumer_key: &str,
+        _consumer_secret: &str,
+        _request_token: &str,
+        _request_secret: &str,
+        _pin: &str,
+    ) -> anyhow::Result<(String, String)> {
+        anyhow::bail!(
+            "Twitter API is not supported in Rust port (twitter4j has no Rust equivalent)"
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -306,32 +333,5 @@ mod tests {
         let dm = MainLoader::get_desktop_display_mode();
         assert_eq!(dm.width, 1920);
         assert_eq!(dm.height, 1080);
-    }
-}
-
-// === Twitter stubs — Twitter API not supported in Rust port ===
-
-pub struct TwitterAuth;
-
-impl TwitterAuth {
-    pub fn start_auth(
-        _consumer_key: &str,
-        _consumer_secret: &str,
-    ) -> anyhow::Result<(String, String)> {
-        anyhow::bail!(
-            "Twitter API is not supported in Rust port (twitter4j has no Rust equivalent)"
-        )
-    }
-
-    pub fn complete_pin_auth(
-        _consumer_key: &str,
-        _consumer_secret: &str,
-        _request_token: &str,
-        _request_secret: &str,
-        _pin: &str,
-    ) -> anyhow::Result<(String, String)> {
-        anyhow::bail!(
-            "Twitter API is not supported in Rust port (twitter4j has no Rust equivalent)"
-        )
     }
 }
