@@ -1,6 +1,6 @@
 # Porting TODO — Remaining Work
 
-Phases 1–29d complete. **1759 tests, 22 ignored.** 27 crates, 122k lines. See AGENTS.md.
+Phases 1–29d complete. **1759 tests, 22 ignored (9 explicit #[ignore] + 13 fixture-absent runtime skips).** 27 crates, 122k lines. See AGENTS.md.
 
 ## Phase 26: スキンパイプライン完成 → 22 ignored テスト解除
 
@@ -32,11 +32,50 @@ Resolves: `beatoraja-input/stubs.rs` (44 lines)
 Resolves: rendering stubs (result/decide/select/modmenu ~972 lines), `beatoraja-types/stubs.rs` (549 lines), `beatoraja-external/stubs.rs` (partial)
 
 - [x] **29a-1:** MainStateListener trait 統合 + Discord/OBS 接続配線 (StateAccessAdapter パターン)
-- **29a-2:** rendering stubs 削減 (result/decide/select/modmenu ~972 lines) — レンダリングパイプライン完成待ち
-- **29a-3:** Property traits 統合 (beatoraja-skin vs beatoraja-external) — レンダリングパイプライン完成待ち
-- [x] **29b:** PlayerResource trait 分析完了 — 32メソッド中31が使用中、`get_rival_score_data()` のみ未参照だがレンダリング完成時に必要。最小化不要
+- **29a-2:** rendering stubs 削減 (result/decide/select/modmenu ~972 lines) — → **Phase 33**
+- **29a-3:** Property traits 統合 (beatoraja-skin vs beatoraja-external) — → **Phase 33**
+- [x] **29b:** PlayerResource trait 分析完了 — 32メソッド中31が使用中、最小化不要
 - [x] **29c:** dhat ヒーププロファイリング (`--features dhat-heap` で有効化、`dhat-heap.json` 出力)
-- [x] **29d:** 入力ポーリング分析完了 — 同期ポーリングで十分 (MIDI 既に非同期、フレーム単位処理のため非同期化のメリット限定的)。スキップ
+- [x] **29d:** 入力ポーリング分析完了 — 同期で十分、スキップ
+
+## Phase 30: 非レンダリングスタブ整理
+
+レンダリングパイプライン非依存のスタブを独自ファイルへ移動・実装。
+
+- **30a:** `beatoraja-types` enum 移動 — `JudgeAlgorithm`, `BMSPlayerRule`, `BarSorter` + modifier enums を stubs.rs から専用ファイルへ
+- **30b:** `beatoraja-types` DTO 実装 — `KeyInputLog`, `PatternModifyLog` を stubs.rs から移動
+- **30c:** `beatoraja-input` `SkinWidgetManager::get_focus()` 実装 (21 lines)
+- **30d:** `beatoraja-select` `DownloadTask` 系型 (純粋データ) を stubs.rs から独自ファイルへ
+
+## Phase 31: Lua main_state API 拡張 → 5 ignored テスト解除
+
+`compare_render_snapshot.rs` で `#[ignore]` されている 5 テストのブロッカー解消。
+
+- **31a:** `main_state.number(key)` Lua API — スコア/数値 (GREAT数, MISS数 等) をスキンLuaから参照
+- **31b:** `main_state.text(key)` Lua API — 楽曲名/アーティスト等のテキストをスキンLuaから参照
+
+Resolves: `render_snapshot_ecfn_result_clear`, `_result_fail`, `_play14_active`, `_course_result`, `timeline_result_has_stable_visible_set`
+
+## Phase 32: SkinNote/SkinBar/SkinJudge 型実装 → 4 ignored テスト解除
+
+`compare_render_snapshot.rs` の残り 4 テストのブロッカー解消。
+
+- **32a:** `SkinNote` — 演奏中の落下ノートオブジェクト型
+- **32b:** `SkinBar` — 選曲画面の難易度バーオブジェクト型
+- **32c:** `SkinJudge` — 判定フィードバックオブジェクト型
+
+Resolves: `rust_only_snapshot_ecfn_play7_mid_song`, `_select_with_song`, `skin_state_objects_play_has_note_judge`, `skin_state_objects_select_has_bar`
+
+## Phase 33: フルレンダリングパイプライン完成
+
+Phase 29a-2/29a-3 の blocking 解消。~972 lines のレンダリングスタブを実際の実装へ置換。
+
+Resolves: `beatoraja-result/stubs.rs` (388 lines), `beatoraja-select/stubs.rs` (317 lines), `beatoraja-modmenu/stubs.rs` (159 lines), `beatoraja-decide/stubs.rs` (108 lines)
+
+- **33a:** `SkinText::draw()`, `SkinNumber::draw()`, `SkinImage::draw()` — wgpu SpriteBatch への描画実装
+- **33b:** `SkinObjectRenderer::draw()` 実装
+- **33c:** Property factories (`IntegerPropertyFactory`, `BooleanPropertyFactory`, `StringPropertyFactory`) 実装
+- **33d:** result/select/modmenu/decide stubs を実装に置換
 
 ## Permanent Stubs
 
