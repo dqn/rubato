@@ -1,6 +1,6 @@
 # Porting TODO — Remaining Work
 
-Phases 1–39 complete, Phase 41a/41b + 43b complete. **1905 tests, 0 ignored.** 27 crates, 127k lines. See AGENTS.md.
+Phases 1–39 complete, Phase 40a + 41a/41b + 43b complete. **1928 tests, 0 ignored.** 27 crates, 127k lines. See AGENTS.md.
 
 ---
 
@@ -8,7 +8,7 @@ Phases 1–39 complete, Phase 41a/41b + 43b complete. **1905 tests, 0 ignored.**
 
 API 不整合スタブ (~481行) の解消。select/modmenu のレンダリングパイプライン完成。
 
-- [ ] **40a:** SkinWidget API 設計 — `&self` + simple fields → `&mut self` + SkinObjectData の borrow 問題を解決するアーキテクチャ設計
+- [x] **40a:** SkinWidget API 設計 — `&self` + simple fields → `&mut self` + SkinObjectData の borrow 問題を解決するアーキテクチャ設計
 - [ ] **40b:** beatoraja-select レンダリングスタブ置換 (278行) — SkinText/SkinNumber/SkinImage/SkinObjectRenderer を実 API に接続
 - [ ] **40c:** beatoraja-modmenu レンダリングスタブ置換 (203行) — Skin/SkinObject/SkinObjectDestination + MusicSelector 結合
 - [ ] **40d:** ImGuiRenderer egui 統合 — modmenu の egui レンダリングパイプライン接続
