@@ -32,6 +32,11 @@ impl LuaSkinLoader {
     /// Create a new LuaSkinLoader with MainState and Config
     /// Corresponds to Java: new LuaSkinLoader(MainState, Config)
     pub fn new_with_state(_state: &dyn MainState, config: &beatoraja_core::config::Config) -> Self {
+        Self::new_without_state(config)
+    }
+
+    /// Create a new LuaSkinLoader with Config only (no MainState reference needed)
+    pub fn new_without_state(config: &beatoraja_core::config::Config) -> Self {
         Self {
             lua: SkinLuaAccessor::new(false),
             json_loader: JSONSkinLoader::with_config(config),

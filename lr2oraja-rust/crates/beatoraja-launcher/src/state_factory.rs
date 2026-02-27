@@ -64,7 +64,7 @@ impl StateFactory for LauncherStateFactory {
         match state_type {
             MainStateType::MusicSelect => {
                 // Java: selector = new MusicSelector(this, songUpdated);
-                let selector = MusicSelector::new();
+                let selector = MusicSelector::with_config(controller.get_config().clone());
                 Some(Box::new(selector))
             }
             MainStateType::Decide => {

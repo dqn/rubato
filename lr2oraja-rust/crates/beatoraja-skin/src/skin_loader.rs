@@ -4,8 +4,12 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use beatoraja_core::config::Config;
 use beatoraja_core::pixmap_resource_pool::PixmapResourcePool;
+use beatoraja_core::player_config::PlayerConfig;
 
+use crate::skin::Skin;
+use crate::skin_type::SkinType;
 use crate::stubs::{MainState, Texture};
 
 /// Skin image resource pool
@@ -30,6 +34,89 @@ pub fn get_resource() -> std::sync::MutexGuard<'static, Option<PixmapResourcePoo
         *resource = Some(PixmapResourcePool::new());
     }
     resource
+}
+
+/// Loads a skin from config parameters without requiring a MainState reference.
+///
+/// Resolves the skin path from PlayerConfig (with fallback to SkinConfig default),
+/// dispatches to the appropriate loader (JSON or Lua), and converts SkinData to Skin.
+pub fn load_skin_from_config(
+    config: &Config,
+    player_config: &PlayerConfig,
+    skin_type_id: i32,
+) -> Option<Skin> {
+    let skin_type = SkinType::get_skin_type_by_id(skin_type_id)?;
+
+    // Resolve skin path: player_config.skin[id] → fallback to default
+    let skin_path = player_config
+        .skin
+        .get(skin_type_id as usize)
+        .and_then(|sc| sc.as_ref())
+        .and_then(|sc| sc.path.clone())
+        .or_else(|| beatoraja_types::skin_config::SkinConfig::get_default(skin_type_id).path);
+
+    let skin_path = match skin_path {
+        Some(ref p) if !p.is_empty() => p.clone(),
+        _ => {
+            log::warn!(
+                "No skin path configured for skin type {} ({:?})",
+                skin_type_id,
+                skin_type
+            );
+            return None;
+        }
+    };
+
+    let path = Path::new(&skin_path);
+    let property = crate::json::json_skin_loader::SkinConfigProperty;
+
+    if skin_path.ends_with(".json") {
+        let mut loader = crate::json::json_skin_loader::JSONSkinLoader::with_config(config);
+        let header = loader.load_header(path)?;
+        let data = loader.load(path, &skin_type, &property)?;
+        let skin = crate::skin_data_converter::convert_skin_data(
+            &header,
+            data,
+            &mut loader.source_map,
+            path,
+            loader.usecim,
+            &loader.dstr,
+        );
+
+        if let Ok(guard) = RESOURCE.lock()
+            && let Some(ref r) = *guard
+        {
+            r.dispose_old();
+        }
+
+        skin
+    } else if skin_path.ends_with(".luaskin") {
+        let mut loader = crate::lua::lua_skin_loader::LuaSkinLoader::new_without_state(config);
+        let header = loader.load_header(path)?;
+        let data = loader.load(path, &skin_type, &property)?;
+        let skin = crate::skin_data_converter::convert_skin_data(
+            &header,
+            data,
+            &mut loader.json_loader.source_map,
+            path,
+            loader.json_loader.usecim,
+            &loader.json_loader.dstr,
+        );
+
+        if let Ok(guard) = RESOURCE.lock()
+            && let Some(ref r) = *guard
+        {
+            r.dispose_old();
+        }
+
+        skin
+    } else {
+        log::warn!(
+            "Unsupported skin format for: {} (LR2 CSV not implemented)",
+            skin_path
+        );
+        None
+    }
 }
 
 /// Loads a skin for the given state and skin type.

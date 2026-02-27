@@ -31,6 +31,9 @@ pub struct MusicSelector {
     /// Player config
     pub config: PlayerConfig,
 
+    /// App config (for skin loading)
+    pub app_config: Config,
+
     /// Preview music processor
     pub preview: Option<PreviewMusicProcessor>,
 
@@ -102,11 +105,16 @@ impl Default for MusicSelector {
 
 impl MusicSelector {
     pub fn new() -> Self {
+        Self::with_config(Config::default())
+    }
+
+    pub fn with_config(app_config: Config) -> Self {
         Self {
             main_state_data: MainStateData::new(TimerManager::new()),
             selectedreplay: 0,
             songdb: Box::new(NullSongDatabaseAccessor),
             config: PlayerConfig::default(),
+            app_config,
             preview: None,
             bar: None,
             manager: BarManager::new(),
@@ -647,6 +655,22 @@ impl MainState for MusicSelector {
 
     fn main_state_data_mut(&mut self) -> &mut MainStateData {
         &mut self.main_state_data
+    }
+
+    fn load_skin(&mut self, skin_type: i32) {
+        match beatoraja_skin::skin_loader::load_skin_from_config(
+            &self.app_config,
+            &self.config,
+            skin_type,
+        ) {
+            Some(skin) => {
+                log::info!("Skin loaded for type {}", skin_type);
+                self.main_state_data.skin = Some(Box::new(skin));
+            }
+            None => {
+                log::warn!("Failed to load skin for type {}", skin_type);
+            }
+        }
     }
 
     /// Create state — initialize DB access, song list, bar manager.
