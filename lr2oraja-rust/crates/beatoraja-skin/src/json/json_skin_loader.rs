@@ -18,6 +18,43 @@ use crate::json::json_skin_object_loader::JsonSkinObjectLoader;
 use crate::json::json_skin_serializer::JsonSkinSerializer;
 use crate::stubs::*;
 
+/// Parse a JSON string into a `json_skin::Skin`, coercing numeric values to strings
+/// for fields that Java Gson would auto-coerce (e.g. `id`, `src`).
+///
+/// Java Gson silently converts numbers to strings. serde_json is strict, so we
+/// preprocess the JSON value tree to apply the same coercion.
+fn parse_skin_json(content: &str) -> Result<json_skin::Skin, serde_json::Error> {
+    let mut value: serde_json::Value = serde_json::from_str(content)?;
+    coerce_json_numbers_to_strings(&mut value);
+    serde_json::from_value(value)
+}
+
+/// Recursively walk a JSON value tree and convert numeric values to strings
+/// for object keys known to be `Option<String>` in the Rust model.
+fn coerce_json_numbers_to_strings(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            for (key, val) in map.iter_mut() {
+                if matches!(key.as_str(), "id" | "src" | "font") && val.is_number() {
+                    *val = serde_json::Value::String(
+                        val.as_i64()
+                            .map(|n| n.to_string())
+                            .or_else(|| val.as_f64().map(|n| n.to_string()))
+                            .unwrap_or_default(),
+                    );
+                }
+                coerce_json_numbers_to_strings(val);
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            for val in arr.iter_mut() {
+                coerce_json_numbers_to_strings(val);
+            }
+        }
+        _ => {}
+    }
+}
+
 /// Corresponds to JSONSkinLoader.SourceData
 #[derive(Clone, Debug)]
 pub struct SourceData {
@@ -133,7 +170,7 @@ impl JSONSkinLoader {
             },
         };
 
-        match serde_json::from_str::<json_skin::Skin>(&content) {
+        match parse_skin_json(&content) {
             Ok(sk) => {
                 self.sk = Some(sk.clone());
                 self.load_json_skin_header(&sk, p)
@@ -144,7 +181,7 @@ impl JSONSkinLoader {
                     Ok(bytes) => {
                         warn!("Error parsing json, retrying with Shift JIS: {:?}", p);
                         let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&bytes);
-                        match serde_json::from_str::<json_skin::Skin>(&decoded) {
+                        match parse_skin_json(&decoded) {
                             Ok(sk) => {
                                 self.sk = Some(sk.clone());
                                 self.load_json_skin_header(&sk, p)
@@ -384,12 +421,12 @@ impl JSONSkinLoader {
             },
         };
 
-        let sk = match serde_json::from_str::<json_skin::Skin>(&content) {
+        let sk = match parse_skin_json(&content) {
             Ok(s) => s,
             Err(_) => match std::fs::read(p) {
                 Ok(bytes) => {
                     let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&bytes);
-                    match serde_json::from_str::<json_skin::Skin>(&decoded) {
+                    match parse_skin_json(&decoded) {
                         Ok(s) => s,
                         Err(e) => {
                             error!("Failed to parse JSON skin: {}", e);
