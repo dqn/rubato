@@ -529,11 +529,11 @@ impl MainController {
         let new_state = if let Some(ref factory) = self.state_factory {
             factory.create_state(actual_type, self)
         } else {
-            log::warn!(
-                "No state factory set; cannot create state {:?}",
+            panic!(
+                "No state factory set; cannot create state {:?}. \
+                 Caller must call set_state_factory() before any state transitions.",
                 actual_type
             );
-            None
         };
 
         if let Some(new_state) = new_state {
@@ -1710,16 +1710,13 @@ mod tests {
     }
 
     #[test]
-    fn test_no_factory_logs_warning() {
+    #[should_panic(expected = "No state factory set; cannot create state MusicSelect")]
+    fn test_no_factory_panics() {
         let config = Config::default();
         let player = PlayerConfig::default();
         let mut mc = MainController::new(None, config, player, None, false);
-        // No factory set
-
+        // No factory set — must panic to make wiring bugs immediately visible
         mc.change_state(MainStateType::MusicSelect);
-
-        // Without factory, state should remain None
-        assert!(mc.get_current_state().is_none());
     }
 
     #[test]
