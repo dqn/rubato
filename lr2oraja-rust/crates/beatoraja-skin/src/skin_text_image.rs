@@ -273,6 +273,7 @@ mod tests {
             width: 512,
             height: 512,
             disposed: false,
+            ..Default::default()
         };
 
         // For each glyph, pre-insert it into regions with an image already set

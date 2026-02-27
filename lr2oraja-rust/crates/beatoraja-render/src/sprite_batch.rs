@@ -1,8 +1,12 @@
 // Batched 2D quad renderer.
 // Drop-in replacement for the SpriteBatch stub in rendering_stubs.rs.
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use crate::blend::BlendMode;
 use crate::color::{Color, Matrix4};
+use crate::gpu_texture_manager::{GpuTextureManager, PendingTexture};
 use crate::render_pipeline::SpriteRenderPipeline;
 use crate::shader::ShaderProgram;
 use crate::texture::{Texture, TextureRegion};
@@ -48,6 +52,16 @@ impl SpriteVertex {
 const MAX_SPRITES: usize = 1000;
 const MAX_VERTICES: usize = MAX_SPRITES * 6;
 
+/// A contiguous range of vertices that share the same texture/shader/blend state.
+#[derive(Debug)]
+struct DrawBatch {
+    texture_key: Option<Arc<str>>,
+    shader_type: i32,
+    blend_mode: BlendMode,
+    vertex_start: u32,
+    vertex_count: u32,
+}
+
 /// Batched 2D sprite renderer.
 /// Corresponds to com.badlogic.gdx.graphics.g2d.SpriteBatch.
 ///
@@ -56,6 +70,9 @@ const MAX_VERTICES: usize = MAX_SPRITES * 6;
 #[derive(Debug, Default)]
 pub struct SpriteBatch {
     vertices: Vec<SpriteVertex>,
+    draw_batches: Vec<DrawBatch>,
+    /// Textures encountered during draw calls, waiting for GPU upload
+    pending_textures: HashMap<Arc<str>, PendingTexture>,
     current_color: [f32; 4],
     blend_src: i32,
     blend_dst: i32,
@@ -72,6 +89,8 @@ impl SpriteBatch {
     pub fn new() -> Self {
         Self {
             vertices: Vec::with_capacity(MAX_VERTICES),
+            draw_batches: Vec::new(),
+            pending_textures: HashMap::new(),
             current_color: [1.0, 1.0, 1.0, 1.0],
             blend_src: 0x0302, // GL_SRC_ALPHA
             blend_dst: 0x0303, // GL_ONE_MINUS_SRC_ALPHA
@@ -151,12 +170,14 @@ impl SpriteBatch {
     /// `flush_to_gpu()` which requires a render pass.
     pub fn flush(&mut self) {
         self.vertices.clear();
+        self.draw_batches.clear();
     }
 
     /// Flush batched vertices to GPU via a render pass.
     ///
     /// This is the actual GPU submission path. Creates a vertex buffer,
-    /// binds the appropriate pipeline, and issues draw calls.
+    /// binds the appropriate pipeline, and issues per-batch draw calls
+    /// with the correct texture bind group for each batch.
     #[allow(clippy::too_many_arguments)]
     pub fn flush_to_gpu<'a>(
         &mut self,
@@ -165,34 +186,56 @@ impl SpriteBatch {
         queue: &wgpu::Queue,
         pipeline: &'a SpriteRenderPipeline,
         uniform_bind_group: &'a wgpu::BindGroup,
-        texture_bind_group: &'a wgpu::BindGroup,
+        texture_manager: &'a GpuTextureManager,
     ) {
         if self.vertices.is_empty() {
             return;
         }
 
-        let blend_mode = self.blend_mode;
-        let shader_type = self.shader_type;
+        // Create and write vertex buffer for all batches
+        let vertex_data: &[u8] = bytemuck::cast_slice(&self.vertices);
+        let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("sprite vertex buffer"),
+            size: vertex_data.len() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        queue.write_buffer(&vertex_buffer, 0, vertex_data);
 
-        if let Some(render_pipeline) = pipeline.get_pipeline(shader_type, blend_mode) {
-            // Create and write vertex buffer
-            let vertex_data: &[u8] = bytemuck::cast_slice(&self.vertices);
-            let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("sprite vertex buffer"),
-                size: vertex_data.len() as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            });
-            queue.write_buffer(&vertex_buffer, 0, vertex_data);
+        render_pass.set_bind_group(0, uniform_bind_group, &[]);
+        render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
 
-            render_pass.set_pipeline(render_pipeline);
-            render_pass.set_bind_group(0, uniform_bind_group, &[]);
-            render_pass.set_bind_group(1, texture_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-            render_pass.draw(0..self.vertices.len() as u32, 0..1);
+        // If no draw batches recorded, fall back to single-batch rendering
+        if self.draw_batches.is_empty() {
+            let bind_group = texture_manager.get_bind_group(None, self.shader_type);
+            if let Some(render_pipeline) = pipeline.get_pipeline(self.shader_type, self.blend_mode)
+            {
+                render_pass.set_pipeline(render_pipeline);
+                render_pass.set_bind_group(1, bind_group, &[]);
+                render_pass.draw(0..self.vertices.len() as u32, 0..1);
+            }
+        } else {
+            // Issue one draw call per batch with the correct texture/pipeline
+            for batch in &self.draw_batches {
+                if batch.vertex_count == 0 {
+                    continue;
+                }
+                let bind_group =
+                    texture_manager.get_bind_group(batch.texture_key.as_ref(), batch.shader_type);
+                if let Some(render_pipeline) =
+                    pipeline.get_pipeline(batch.shader_type, batch.blend_mode)
+                {
+                    render_pass.set_pipeline(render_pipeline);
+                    render_pass.set_bind_group(1, bind_group, &[]);
+                    let start = batch.vertex_start;
+                    let end = start + batch.vertex_count;
+                    render_pass.draw(start..end, 0..1);
+                }
+            }
         }
 
         self.vertices.clear();
+        self.draw_batches.clear();
     }
 
     /// Get the projection matrix values.
@@ -207,11 +250,17 @@ impl SpriteBatch {
 
     /// Draw a full texture at (x, y) with size (w, h).
     pub fn draw_texture(&mut self, texture: &Texture, x: f32, y: f32, w: f32, h: f32) {
+        self.record_texture(texture);
         self.push_quad(x, y, w, h, 0.0, 0.0, 1.0, 1.0);
     }
 
     /// Draw a texture region at (x, y) with size (w, h).
     pub fn draw_region(&mut self, region: &TextureRegion, x: f32, y: f32, w: f32, h: f32) {
+        if let Some(tex) = &region.texture {
+            self.record_texture(tex);
+        } else {
+            self.ensure_batch(None);
+        }
         self.push_quad(x, y, w, h, region.u, region.v, region.u2, region.v2);
     }
 
@@ -230,6 +279,12 @@ impl SpriteBatch {
         sy: f32,
         angle: f32,
     ) {
+        if let Some(tex) = &region.texture {
+            self.record_texture(tex);
+        } else {
+            self.ensure_batch(None);
+        }
+
         let cos = angle.to_radians().cos();
         let sin = angle.to_radians().sin();
 
@@ -246,6 +301,7 @@ impl SpriteBatch {
         let uvs = [(u1, v1), (u2, v1), (u2, v2), (u1, v2)];
 
         // Two triangles: 0-1-2, 0-2-3
+        let vertex_count_before = self.vertices.len();
         for &idx in &[0, 1, 2, 0, 2, 3] {
             let (ox, oy) = corners[idx];
             let px = x + cx + ox * cos - oy * sin;
@@ -256,11 +312,65 @@ impl SpriteBatch {
                 color,
             });
         }
+        // Update vertex count of the current draw batch
+        let added = (self.vertices.len() - vertex_count_before) as u32;
+        if let Some(batch) = self.draw_batches.last_mut() {
+            batch.vertex_count += added;
+        }
     }
 
     /// Get the raw vertex data for GPU upload.
     pub fn vertices(&self) -> &[SpriteVertex] {
         &self.vertices
+    }
+
+    /// Drain pending textures that need GPU upload.
+    pub fn drain_pending_textures(&mut self) -> HashMap<Arc<str>, PendingTexture> {
+        std::mem::take(&mut self.pending_textures)
+    }
+
+    /// Record a texture for the current draw call and manage batch boundaries.
+    fn record_texture(&mut self, texture: &Texture) {
+        let key = texture.path.clone();
+
+        // Register pending texture for GPU upload if it has rgba data
+        if let Some(ref path) = key
+            && !self.pending_textures.contains_key(path)
+            && let Some(ref rgba_data) = texture.rgba_data
+        {
+            self.pending_textures.insert(
+                Arc::clone(path),
+                PendingTexture {
+                    width: texture.width as u32,
+                    height: texture.height as u32,
+                    rgba_data: Arc::clone(rgba_data),
+                },
+            );
+        }
+
+        self.ensure_batch(key);
+    }
+
+    /// Ensure a draw batch exists for the current texture/shader/blend state.
+    /// If the current batch has different state, start a new batch.
+    fn ensure_batch(&mut self, texture_key: Option<Arc<str>>) {
+        let needs_new_batch = if let Some(last) = self.draw_batches.last() {
+            last.texture_key != texture_key
+                || last.shader_type != self.shader_type
+                || last.blend_mode != self.blend_mode
+        } else {
+            true
+        };
+
+        if needs_new_batch {
+            self.draw_batches.push(DrawBatch {
+                texture_key,
+                shader_type: self.shader_type,
+                blend_mode: self.blend_mode,
+                vertex_start: self.vertices.len() as u32,
+                vertex_count: 0,
+            });
+        }
     }
 
     /// Push a simple axis-aligned quad.
@@ -301,6 +411,10 @@ impl SpriteBatch {
             },
         ];
         self.vertices.extend_from_slice(&verts);
+        // Update vertex count of the current draw batch
+        if let Some(batch) = self.draw_batches.last_mut() {
+            batch.vertex_count += verts.len() as u32;
+        }
     }
 }
 

@@ -103,6 +103,7 @@ impl BGAProcessor {
                 width: 1,
                 height: 1,
                 disposed: false,
+                ..Default::default()
             },
             image: TextureRegion::new(),
             tmp_rect: Rectangle::default(),
@@ -423,6 +424,7 @@ impl BGAProcessor {
                 width: 256,
                 height: 256,
                 disposed: false,
+                ..Default::default()
             });
         }
         None
@@ -495,6 +497,7 @@ mod tests {
                     width,
                     height,
                     disposed: false,
+                    ..Default::default()
                 },
                 playing: false,
                 play_calls: Vec::new(),

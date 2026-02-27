@@ -1,6 +1,8 @@
 // wgpu-backed Texture and TextureRegion.
 // Drop-in replacements for the types in rendering_stubs.rs.
 
+use std::sync::Arc;
+
 use crate::gpu_context::GpuContext;
 use crate::pixmap::{Pixmap, PixmapFormat};
 
@@ -23,11 +25,18 @@ pub struct Texture {
     pub width: i32,
     pub height: i32,
     pub disposed: bool,
+    /// Source file path for GPU texture cache lookup (cheap clone via Arc)
+    pub path: Option<Arc<str>>,
+    /// RGBA pixel data for lazy GPU upload (cheap clone via Arc)
+    pub rgba_data: Option<Arc<Vec<u8>>>,
 }
 
 impl PartialEq for Texture {
     fn eq(&self, other: &Self) -> bool {
-        self.width == other.width && self.height == other.height && self.disposed == other.disposed
+        self.width == other.width
+            && self.height == other.height
+            && self.disposed == other.disposed
+            && self.path == other.path
     }
 }
 
@@ -41,6 +50,8 @@ impl Texture {
                 width: rgba.width() as i32,
                 height: rgba.height() as i32,
                 disposed: false,
+                path: Some(Arc::from(path)),
+                rgba_data: Some(Arc::new(rgba.into_raw())),
             }
         } else {
             Self::default()
@@ -52,6 +63,8 @@ impl Texture {
             width: pixmap.width,
             height: pixmap.height,
             disposed: false,
+            path: None,
+            rgba_data: Some(Arc::new(pixmap.data().to_vec())),
         }
     }
 
@@ -60,6 +73,8 @@ impl Texture {
             width: pixmap.width,
             height: pixmap.height,
             disposed: false,
+            path: None,
+            rgba_data: Some(Arc::new(pixmap.data().to_vec())),
         }
     }
 
@@ -68,6 +83,8 @@ impl Texture {
             width,
             height,
             disposed: false,
+            path: None,
+            rgba_data: None,
         }
     }
 
@@ -331,6 +348,8 @@ mod tests {
             width: w,
             height: h,
             disposed: false,
+            path: None,
+            rgba_data: None,
         }
     }
 

@@ -152,6 +152,7 @@ mod tests {
             width: 100,
             height: 100,
             disposed: false,
+            ..Default::default()
         });
         let orig_rect = rect.clone();
         StretchType::Stretch.stretch_rect(&mut rect, &mut image);
@@ -169,6 +170,7 @@ mod tests {
             width: 100,
             height: 100,
             disposed: false,
+            ..Default::default()
         });
         StretchType::KeepAspectRatioFitInner.stretch_rect(&mut rect, &mut image);
         // Should fit to height (200), width becomes 200, centered
@@ -185,6 +187,7 @@ mod tests {
             width: 100,
             height: 100,
             disposed: false,
+            ..Default::default()
         });
         StretchType::KeepAspectRatioFitInner.stretch_rect(&mut rect, &mut image);
         // Should fit to width (200), height becomes 200, centered
@@ -201,6 +204,7 @@ mod tests {
             width: 100,
             height: 100,
             disposed: false,
+            ..Default::default()
         });
         StretchType::KeepAspectRatioNoExpanding.stretch_rect(&mut rect, &mut image);
         // scale = min(1.0, min(4.0, 4.0)) = 1.0 — image stays at 100x100
@@ -219,6 +223,7 @@ mod tests {
             width: 400,
             height: 400,
             disposed: false,
+            ..Default::default()
         });
         StretchType::KeepAspectRatioNoExpanding.stretch_rect(&mut rect, &mut image);
         // scale = min(1.0, min(0.5, 0.25)) = 0.25

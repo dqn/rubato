@@ -211,6 +211,8 @@ impl SkinSource for SkinSourceMovie {
                 width: width as i32,
                 height: height as i32,
                 disposed: false,
+                rgba_data: Some(std::sync::Arc::new(rgba_data)),
+                ..Default::default()
             };
             Some(TextureRegion::from_texture(texture))
         }

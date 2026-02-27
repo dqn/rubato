@@ -542,6 +542,7 @@ impl MovieProcessor for FFmpegProcessor {
                                 width: frame.width as i32,
                                 height: frame.height as i32,
                                 disposed: false,
+                                ..Default::default()
                             });
                         }
                     }

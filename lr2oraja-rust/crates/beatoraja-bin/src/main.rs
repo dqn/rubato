@@ -21,6 +21,7 @@ use beatoraja_core::version;
 use beatoraja_launcher::LauncherStateFactory;
 use beatoraja_render::egui_integration::EguiIntegration;
 use beatoraja_render::gpu_context::GpuContext;
+use beatoraja_render::gpu_texture_manager::GpuTextureManager;
 use beatoraja_render::render_pipeline::SpriteRenderPipeline;
 
 /// LR2oraja Endless Dream - BMS player
@@ -188,6 +189,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
         window: None,
         gpu: None,
         sprite_pipeline: None,
+        texture_manager: None,
         egui_integration: None,
         egui_state: None,
         title,
@@ -215,6 +217,8 @@ struct BeatorajaApp {
     gpu: Option<GpuContext>,
     /// Sprite render pipeline for skin object rendering (Phase 22a)
     sprite_pipeline: Option<SpriteRenderPipeline>,
+    /// GPU texture cache for skin image rendering
+    texture_manager: Option<GpuTextureManager>,
     egui_integration: Option<EguiIntegration>,
     egui_state: Option<egui_winit::State>,
     title: String,
@@ -347,6 +351,17 @@ impl ApplicationHandler for BeatorajaApp {
                                 "SpriteRenderPipeline created with {} pipelines",
                                 sprite_pipeline.pipeline_count()
                             );
+
+                            // Create GPU texture manager for skin image rendering
+                            let texture_manager = GpuTextureManager::new(
+                                &gpu.device,
+                                &gpu.queue,
+                                &sprite_pipeline.texture_layout,
+                                &sprite_pipeline.sampler_nearest,
+                                &sprite_pipeline.sampler_linear,
+                            );
+                            self.texture_manager = Some(texture_manager);
+
                             self.sprite_pipeline = Some(sprite_pipeline);
 
                             // Initialize egui integration
@@ -514,71 +529,28 @@ impl ApplicationHandler for BeatorajaApp {
                                     label: Some("beatoraja frame encoder"),
                                 });
 
-                        // Prepare sprite batch resources before the render pass
-                        // (bind groups must outlive the render pass)
+                        // Upload pending textures and prepare sprite batch resources
+                        // before the render pass (bind groups must outlive the render pass)
                         let sprite_resources = if let Some(sprite_pipeline) = &self.sprite_pipeline
+                            && let Some(texture_manager) = &mut self.texture_manager
                             && let Some(sprite_batch) = self.controller.get_sprite_batch_mut()
                             && !sprite_batch.vertices().is_empty()
                         {
-                            // Create a dummy 1x1 white texture for untextured sprites
-                            // Phase 22+: Real texture management will provide proper bind groups
-                            let dummy_texture =
-                                gpu.device.create_texture(&wgpu::TextureDescriptor {
-                                    label: Some("dummy white texture"),
-                                    size: wgpu::Extent3d {
-                                        width: 1,
-                                        height: 1,
-                                        depth_or_array_layers: 1,
-                                    },
-                                    mip_level_count: 1,
-                                    sample_count: 1,
-                                    dimension: wgpu::TextureDimension::D2,
-                                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
-                                    usage: wgpu::TextureUsages::TEXTURE_BINDING
-                                        | wgpu::TextureUsages::COPY_DST,
-                                    view_formats: &[],
-                                });
-                            gpu.queue.write_texture(
-                                wgpu::TexelCopyTextureInfo {
-                                    texture: &dummy_texture,
-                                    mip_level: 0,
-                                    origin: wgpu::Origin3d::ZERO,
-                                    aspect: wgpu::TextureAspect::All,
-                                },
-                                &[255u8, 255, 255, 255],
-                                wgpu::TexelCopyBufferLayout {
-                                    offset: 0,
-                                    bytes_per_row: Some(4),
-                                    rows_per_image: Some(1),
-                                },
-                                wgpu::Extent3d {
-                                    width: 1,
-                                    height: 1,
-                                    depth_or_array_layers: 1,
-                                },
-                            );
-                            let dummy_view =
-                                dummy_texture.create_view(&wgpu::TextureViewDescriptor::default());
-                            let sampler =
-                                sprite_pipeline.get_sampler(sprite_batch.get_shader_type());
-
-                            let texture_bind_group =
-                                gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                                    label: Some("sprite texture bind group"),
-                                    layout: &sprite_pipeline.texture_layout,
-                                    entries: &[
-                                        wgpu::BindGroupEntry {
-                                            binding: 0,
-                                            resource: wgpu::BindingResource::TextureView(
-                                                &dummy_view,
-                                            ),
-                                        },
-                                        wgpu::BindGroupEntry {
-                                            binding: 1,
-                                            resource: wgpu::BindingResource::Sampler(sampler),
-                                        },
-                                    ],
-                                });
+                            // Upload any new textures encountered this frame
+                            let pending = sprite_batch.drain_pending_textures();
+                            for (key, tex) in &pending {
+                                texture_manager.ensure_uploaded(
+                                    key,
+                                    tex.width,
+                                    tex.height,
+                                    &tex.rgba_data,
+                                    &gpu.device,
+                                    &gpu.queue,
+                                    &sprite_pipeline.texture_layout,
+                                    &sprite_pipeline.sampler_nearest,
+                                    &sprite_pipeline.sampler_linear,
+                                );
+                            }
 
                             // Create uniform bind group with projection matrix
                             let projection_data = sprite_batch.projection();
@@ -605,7 +577,7 @@ impl ApplicationHandler for BeatorajaApp {
                                     }],
                                 });
 
-                            Some((uniform_bind_group, texture_bind_group))
+                            Some(uniform_bind_group)
                         } else {
                             None
                         };
@@ -631,9 +603,9 @@ impl ApplicationHandler for BeatorajaApp {
 
                             // Flush SpriteBatch vertices to GPU via the render pipeline
                             // Java: SpriteBatch.flush() submits batched quads to GL
-                            if let Some((ref uniform_bind_group, ref texture_bind_group)) =
-                                sprite_resources
+                            if let Some(ref uniform_bind_group) = sprite_resources
                                 && let Some(sprite_pipeline) = &self.sprite_pipeline
+                                && let Some(texture_manager) = &self.texture_manager
                                 && let Some(sprite_batch) = self.controller.get_sprite_batch_mut()
                             {
                                 sprite_batch.flush_to_gpu(
@@ -642,7 +614,7 @@ impl ApplicationHandler for BeatorajaApp {
                                     &gpu.queue,
                                     sprite_pipeline,
                                     uniform_bind_group,
-                                    texture_bind_group,
+                                    texture_manager,
                                 );
                             }
                         }

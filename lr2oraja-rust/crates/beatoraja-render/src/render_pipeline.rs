@@ -218,6 +218,15 @@ impl SpriteRenderPipeline {
         }
     }
 
+    /// Returns true if the given shader type uses a linear sampler.
+    /// Java: TYPE_LINEAR, TYPE_FFMPEG, TYPE_DISTANCE_FIELD use Linear filter.
+    pub fn is_linear_sampler(shader_type: i32) -> bool {
+        matches!(
+            shader_type,
+            SHADER_TYPE_LINEAR | SHADER_TYPE_FFMPEG | SHADER_TYPE_DISTANCE_FIELD
+        )
+    }
+
     /// Get the total number of pipelines created.
     pub fn pipeline_count(&self) -> usize {
         self.pipelines.len()
