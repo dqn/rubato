@@ -18,6 +18,7 @@ use beatoraja_core::bms_player_mode::BMSPlayerMode;
 use beatoraja_core::config::DisplayMode;
 use beatoraja_core::main_controller::MainController;
 use beatoraja_core::version;
+use beatoraja_launcher::LauncherStateFactory;
 use beatoraja_render::egui_integration::EguiIntegration;
 use beatoraja_render::gpu_context::GpuContext;
 use beatoraja_render::render_pipeline::SpriteRenderPipeline;
@@ -137,6 +138,11 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     // Java: MainLoader.play() handles config, illegal songs, player config, and controller creation.
     // It sets config.windowWidth/Height from resolution before creating MainController.
     let mut main_controller = MainLoader::play(bms_path, player_mode, true, None, None, false)?;
+
+    // Set the state factory so that change_state() can create concrete state instances.
+    // Without this, the controller has no factory and all state transitions silently fail,
+    // resulting in a black screen.
+    main_controller.set_state_factory(Box::new(LauncherStateFactory::new()));
 
     // Java: if(config.isUseDiscordRPC()) { stateListener.add(new DiscordListener()); }
     {
