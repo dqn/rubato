@@ -565,7 +565,9 @@ impl MainController {
         new_state.create();
 
         // In Java: if(newState.getSkin() != null) { newState.getSkin().prepare(newState); }
-        // Phase 22: skin preparation
+        if let Some(ref mut skin) = new_state.main_state_data_mut().skin {
+            skin.prepare_skin();
+        }
 
         // Shutdown the old state
         if let Some(ref mut old_state) = self.current {
@@ -1913,6 +1915,7 @@ mod tests {
 
         fn mouse_pressed_at(&mut self, _button: i32, _x: i32, _y: i32) {}
         fn mouse_dragged_at(&mut self, _button: i32, _x: i32, _y: i32) {}
+        fn prepare_skin(&mut self) {}
         fn dispose_skin(&mut self) {}
         fn get_fadeout(&self) -> i32 {
             0
@@ -2016,6 +2019,7 @@ mod tests {
 
             fn mouse_pressed_at(&mut self, _button: i32, _x: i32, _y: i32) {}
             fn mouse_dragged_at(&mut self, _button: i32, _x: i32, _y: i32) {}
+            fn prepare_skin(&mut self) {}
             fn dispose_skin(&mut self) {}
             fn get_fadeout(&self) -> i32 {
                 0

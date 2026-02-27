@@ -1047,6 +1047,11 @@ impl crate::stubs::MainState for TimerOnlyMainState {
 }
 
 impl beatoraja_core::main_state::SkinDrawable for Skin {
+    fn prepare_skin(&mut self) {
+        let adapter = TimerOnlyMainState::new(0, 0);
+        self.prepare(&adapter);
+    }
+
     fn draw_all_objects_timed(&mut self, now_time: i64, now_micro_time: i64) {
         let adapter = TimerOnlyMainState::new(now_time, now_micro_time);
         self.draw_all_objects(&adapter);

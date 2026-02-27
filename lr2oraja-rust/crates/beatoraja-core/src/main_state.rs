@@ -151,6 +151,9 @@ pub trait SkinDrawable: Send {
     /// Handle mouse drag events (slider objects only).
     fn mouse_dragged_at(&mut self, button: i32, x: i32, y: i32);
 
+    /// Prepare skin for rendering: validate objects, build draw list, load resources.
+    fn prepare_skin(&mut self);
+
     /// Dispose all skin objects and release resources.
     fn dispose_skin(&mut self);
 
