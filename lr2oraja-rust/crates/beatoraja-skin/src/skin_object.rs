@@ -672,6 +672,10 @@ impl SkinObjectData {
 
         if self.fixr.is_none() {
             self.get_rate();
+            if self.dst.is_empty() {
+                self.draw = false;
+                return;
+            }
             if self.rate == 0.0 {
                 let idx = self.index as usize;
                 self.region.set(&self.dst[idx].region);
@@ -745,6 +749,9 @@ impl SkinObjectData {
             return;
         }
         self.get_rate();
+        if self.dst.is_empty() {
+            return;
+        }
         if self.rate == 0.0 {
             let idx = self.index as usize;
             let c = self.dst[idx].color.clone();
@@ -799,6 +806,9 @@ impl SkinObjectData {
             return;
         }
         self.get_rate();
+        if self.dst.is_empty() {
+            return;
+        }
         let idx = self.index as usize;
         self.angle = if self.rate == 0.0 || self.acc == 3 {
             self.dst[idx].angle
@@ -814,6 +824,11 @@ impl SkinObjectData {
 
     fn get_rate(&mut self) {
         if self.rate != -1.0 {
+            return;
+        }
+        if self.dst.is_empty() {
+            self.rate = 0.0;
+            self.index = 0;
             return;
         }
         let mut time2 = self.dst[self.dst.len() - 1].time;
@@ -1677,5 +1692,19 @@ mod tests {
         );
 
         assert_eq!(renderer.sprite.vertices().len(), 6);
+    }
+
+    #[test]
+    fn test_skin_object_data_empty_dst_does_not_panic() {
+        // Regression: get_rate() panicked on `self.dst.len() - 1` when dst is empty.
+        let mut data = SkinObjectData::new();
+        assert!(data.dst.is_empty());
+
+        let state = crate::test_helpers::MockMainState::default();
+        // prepare() calls get_rate(), prepare_color(), prepare_angle() — all must survive empty dst.
+        data.prepare(0, &state);
+
+        // With empty dst, draw should remain false (no destination to render).
+        assert!(!data.draw);
     }
 }
