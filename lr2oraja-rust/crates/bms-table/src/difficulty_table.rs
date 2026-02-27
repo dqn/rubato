@@ -87,3 +87,84 @@ fn value_to_string(v: &Value) -> String {
         other => other.to_string(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn difficulty_table_default_is_empty() {
+        let dt = DifficultyTable::default();
+        assert!(dt.get_elements().is_empty());
+        assert!(dt.get_level_description().is_empty());
+        assert!(dt.get_course().is_empty());
+        assert!(dt.table.get_name().is_none());
+    }
+
+    #[test]
+    fn difficulty_table_with_source_url() {
+        let dt = DifficultyTable::new_with_source_url("https://example.com/table.html");
+        assert!(dt.get_elements().is_empty());
+    }
+
+    #[test]
+    fn set_and_get_level_description() {
+        let mut dt = DifficultyTable::new();
+        let levels = vec!["1".to_string(), "2".to_string(), "3".to_string()];
+        dt.set_level_description(&levels);
+        assert_eq!(dt.get_level_description(), levels);
+    }
+
+    #[test]
+    fn set_and_get_course() {
+        let mut dt = DifficultyTable::new();
+        assert!(dt.get_course().is_empty());
+
+        let courses: Vec<Vec<Course>> = vec![vec![], vec![]];
+        dt.set_course(courses.clone());
+        assert_eq!(dt.get_course().len(), 2);
+    }
+
+    #[test]
+    fn bms_table_element_default_fields() {
+        let elem = DifficultyTableElement::new();
+        assert_eq!(elem.get_level(), "");
+        assert_eq!(elem.get_state(), 0);
+        assert_eq!(elem.get_evaluation(), 0);
+        assert_eq!(elem.get_comment(), "");
+        assert_eq!(elem.get_information(), "");
+        assert_eq!(elem.get_proposer(), "");
+        assert_eq!(elem.get_bmsid(), 0);
+    }
+
+    #[test]
+    fn bms_table_element_set_values_roundtrip() {
+        let mut elem = DifficultyTableElement::new();
+        elem.set_level(Some("12"));
+        elem.set_comment("test comment");
+        elem.set_information("test info");
+        elem.set_proposer("tester");
+        elem.set_bmsid(42);
+
+        assert_eq!(elem.get_level(), "12");
+        assert_eq!(elem.get_comment(), "test comment");
+        assert_eq!(elem.get_information(), "test info");
+        assert_eq!(elem.get_proposer(), "tester");
+        assert_eq!(elem.get_bmsid(), 42);
+
+        // get_values() returns a HashMap with all fields
+        let values = elem.get_values();
+        assert_eq!(values.get("level").unwrap().as_str().unwrap(), "12");
+        assert_eq!(
+            values.get("comment").unwrap().as_str().unwrap(),
+            "test comment"
+        );
+    }
+
+    #[test]
+    fn value_to_string_handles_types() {
+        assert_eq!(value_to_string(&Value::String("hello".into())), "hello");
+        assert_eq!(value_to_string(&Value::Null), "");
+        assert_eq!(value_to_string(&Value::from(42)), "42");
+    }
+}

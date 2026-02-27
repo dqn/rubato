@@ -55,3 +55,39 @@ impl<T> IRResponse<T> {
         self.data.as_ref()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn success_response_has_data() {
+        let resp = IRResponse::success("OK".to_string(), 42);
+        assert!(resp.is_succeeded());
+        assert_eq!(resp.get_message(), "OK");
+        assert_eq!(resp.get_data(), Some(&42));
+    }
+
+    #[test]
+    fn failure_response_has_no_data() {
+        let resp: IRResponse<i32> = IRResponse::failure("error".to_string());
+        assert!(!resp.is_succeeded());
+        assert_eq!(resp.get_message(), "error");
+        assert!(resp.get_data().is_none());
+    }
+
+    #[test]
+    fn new_with_explicit_fields() {
+        let resp = IRResponse::new(true, "msg".to_string(), Some("data"));
+        assert!(resp.is_succeeded());
+        assert_eq!(resp.get_data(), Some(&"data"));
+    }
+
+    #[test]
+    fn clone_preserves_fields() {
+        let resp = IRResponse::success("ok".to_string(), vec![1, 2, 3]);
+        let cloned = resp.clone();
+        assert_eq!(cloned.get_data(), Some(&vec![1, 2, 3]));
+        assert_eq!(cloned.get_message(), "ok");
+    }
+}

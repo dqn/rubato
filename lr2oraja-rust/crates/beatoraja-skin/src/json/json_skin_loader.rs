@@ -1264,6 +1264,19 @@ pub struct CustomTimerData {
 mod tests {
     use super::*;
 
+    /// Minimal valid skin JSON that parses successfully via parse_skin_json.
+    const MINIMAL_SKIN_JSON: &str = r#"{"type":5,"name":"test","w":1920,"h":1080}"#;
+
+    /// Skin JSON with a line comment — valid in Gson but rejected by serde_json.
+    const SKIN_WITH_COMMENT: &str = r#"{
+        // This is a line comment
+        "type": 5,
+        "name": "test"
+    }"#;
+
+    /// Skin JSON with `}{` (close-open) inside a string value, which fix_lenient_json corrupts.
+    const SKIN_WITH_BRACES_IN_STRING: &str = r#"{"type":5,"name":"a}{b"}"#;
+
     #[test]
     fn test_fix_lenient_json_trailing_comma() {
         let input = r#"[1, 2, 3,]"#;
@@ -1312,5 +1325,83 @@ mod tests {
         assert_eq!(skin.name, Some("beatoraja default".to_string()));
         assert!(!skin.source.is_empty());
         assert!(!skin.image.is_empty());
+    }
+
+    // ---- Phase 45b: verify MINIMAL_SKIN_JSON round-trips ----
+
+    #[test]
+    fn test_minimal_skin_json_parses() {
+        let skin = parse_skin_json(MINIMAL_SKIN_JSON).unwrap();
+        assert_eq!(skin.skin_type, 5);
+        assert_eq!(skin.name, Some("test".to_string()));
+        assert_eq!(skin.w, 1920);
+        assert_eq!(skin.h, 1080);
+    }
+
+    // ---- Phase 48a: M2 — line comments rejected by serde_json ----
+    // Gson accepts `// comment` lines; serde_json does not.
+
+    #[test]
+    fn test_line_comment_rejected() {
+        let result = parse_skin_json(SKIN_WITH_COMMENT);
+        assert!(
+            result.is_err(),
+            "serde_json should reject line comments (Gson accepts them)"
+        );
+    }
+
+    // ---- Phase 48b: M2 — block comments rejected by serde_json ----
+
+    #[test]
+    fn test_block_comment_rejected() {
+        let input = r#"{ /* block comment */ "type": 5, "name": "test" }"#;
+        let result = parse_skin_json(input);
+        assert!(
+            result.is_err(),
+            "serde_json should reject block comments (Gson accepts them)"
+        );
+    }
+
+    // ---- Phase 48c: M1 — fix_lenient_json corrupts `}{` inside string literals ----
+    // The MISSING_COMMA regex is not string-literal-aware, so it inserts a comma
+    // between `}` and `{` even when they appear inside a JSON string value.
+
+    #[test]
+    fn test_fix_lenient_json_corrupts_braces_in_strings() {
+        // The MISSING_COMMA regex `\}(\s*)\{` matches close-brace then open-brace.
+        // When `}{` appears inside a string value, the regex still inserts a comma.
+        let input = r#"{"path":"a}{b"}"#;
+        let fixed = fix_lenient_json(input);
+        // The regex turns }{ into },{ even inside the string, corrupting it.
+        assert_ne!(
+            fixed, input,
+            "fix_lenient_json should have modified the input (regex is not string-aware)"
+        );
+        assert!(
+            fixed.contains("},{"),
+            "Expected comma insertion between braces inside string: got {}",
+            fixed
+        );
+    }
+
+    // ---- Phase 48d: M3 — numeric `path` not coerced to string ----
+    // The coercion whitelist is `id | src | font`; `path` is not included.
+    // Gson coerces ALL numeric values when the target field is String, but
+    // our coercion only handles the whitelisted keys.
+
+    #[test]
+    fn test_numeric_path_not_coerced() {
+        let input = r#"{"type":5,"source":[{"id":"0","path":42}]}"#;
+        let cleaned = fix_lenient_json(input);
+        let mut value: serde_json::Value = serde_json::from_str(&cleaned).unwrap();
+        coerce_json_numbers_to_strings(&mut value);
+
+        let path_val = &value["source"][0]["path"];
+        assert!(
+            path_val.is_number(),
+            "path should remain numeric (not in coercion whitelist), got: {}",
+            path_val
+        );
+        assert_eq!(path_val.as_i64(), Some(42));
     }
 }

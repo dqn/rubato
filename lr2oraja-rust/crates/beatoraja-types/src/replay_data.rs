@@ -459,6 +459,58 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    // -- Phase 46a: keycode encoding boundary tests --
+
+    /// Helper: shrink a single KeyInputLog and validate it back, returning the recovered log.
+    fn shrink_validate_roundtrip(keycode: i32, pressed: bool) -> KeyInputLog {
+        let mut rd = ReplayData::new();
+        rd.keylog = vec![KeyInputLog {
+            time: 1000,
+            keycode,
+            pressed,
+        }];
+        rd.shrink();
+        assert!(rd.keyinput.is_some(), "shrink should produce keyinput");
+        assert!(rd.validate(), "validate should succeed");
+        assert_eq!(rd.keylog.len(), 1, "should recover exactly one entry");
+        rd.keylog.remove(0)
+    }
+
+    #[test]
+    fn test_replay_shrink_keycode_126_roundtrip() {
+        // keycode=126 is the boundary: (126+1)*1 = 127, fits in i8
+        let recovered = shrink_validate_roundtrip(126, true);
+        assert_eq!(recovered.keycode, 126);
+        assert!(recovered.pressed);
+
+        let recovered = shrink_validate_roundtrip(126, false);
+        assert_eq!(recovered.keycode, 126);
+        assert!(!recovered.pressed);
+    }
+
+    #[test]
+    #[ignore] // BUG: keycode=127 causes i8 overflow in shrink() — (127+1)*1 = 128, which wraps
+    // to -128 as i8, corrupting the pressed flag (always reads as "not pressed")
+    fn test_replay_shrink_keycode_127_overflow() {
+        let recovered = shrink_validate_roundtrip(127, true);
+        // After the bug: pressed becomes false because 128 as i8 = -128 (negative)
+        assert_eq!(recovered.keycode, 127, "keycode should survive roundtrip");
+        assert!(recovered.pressed, "pressed flag should survive roundtrip");
+    }
+
+    #[test]
+    #[ignore] // BUG: keycode=200 causes both pressed flag AND keycode corruption in shrink()
+    // — (200+1)*1 = 201 as i8 = -55, so pressed reads as false and keycode reads as 54
+    fn test_replay_shrink_keycode_200_corrupted() {
+        let recovered = shrink_validate_roundtrip(200, true);
+        assert_eq!(
+            recovered.keycode, 200,
+            "keycode should survive roundtrip (actual: {})",
+            recovered.keycode
+        );
+        assert!(recovered.pressed, "pressed flag should survive roundtrip");
+    }
+
     #[test]
     fn test_brd_shrinks_keylog_on_write() {
         let dir = std::env::temp_dir().join("brs_test_brd_shrink");

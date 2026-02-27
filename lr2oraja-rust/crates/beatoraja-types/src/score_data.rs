@@ -884,6 +884,39 @@ mod tests {
         assert!(!sd.update(&newscore, true));
     }
 
+    // -- Phase 46b: ghost encoding truncation tests --
+
+    #[test]
+    fn test_ghost_encode_valid_range_roundtrip() {
+        // Judge values 0–5 are the valid range; encode/decode should roundtrip cleanly
+        let mut sd = ScoreData::default();
+        let ghost_data: Vec<i32> = vec![0, 1, 2, 3, 4, 5];
+        sd.notes = ghost_data.len() as i32;
+        sd.encode_ghost(Some(&ghost_data));
+        assert!(!sd.ghost.is_empty());
+
+        let decoded = sd.decode_ghost().unwrap();
+        assert_eq!(decoded, ghost_data);
+    }
+
+    #[test]
+    #[ignore] // BUG: encode_ghost uses `j as u8` which silently truncates values >= 256
+    // — value 256 becomes 0 after truncation, corrupting the ghost data
+    fn test_ghost_encode_truncation_256() {
+        let mut sd = ScoreData::default();
+        let ghost_data: Vec<i32> = vec![256];
+        sd.notes = 1;
+        sd.encode_ghost(Some(&ghost_data));
+
+        let decoded = sd.decode_ghost().unwrap();
+        // After the bug: 256 as u8 = 0, so decoded[0] = 0 instead of 256
+        assert_eq!(
+            decoded[0], 256,
+            "value 256 should survive roundtrip (actual: {})",
+            decoded[0]
+        );
+    }
+
     // -- SongTrophy tests --
 
     #[test]

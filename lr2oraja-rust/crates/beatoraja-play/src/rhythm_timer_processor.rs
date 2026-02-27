@@ -112,3 +112,37 @@ impl RhythmTimerProcessor {
         self.now_quarter_note_time
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Phase 50b: i64 overflow in update() with extreme BPM values.
+    ///
+    /// Line 84: `deltatime * (100 - (nowbpm * play_speed as f64 / 60.0) as i64) / 100`
+    ///
+    /// With nowbpm=1e15 and play_speed=100:
+    ///   nowbpm * play_speed / 60.0 = 1.667e15
+    ///   100 - 1_666_666_666_666_666 = -1_666_666_666_666_566
+    ///   16667 * -1_666_666_666_666_566 overflows i64 (result ~-2.77e19, max i64 ~9.2e18)
+    ///
+    /// In debug mode, Rust panics on integer overflow.
+    #[test]
+    #[should_panic]
+    fn update_overflows_with_extreme_bpm() {
+        let model = BMSModel::default();
+        let mut processor = RhythmTimerProcessor::new(&model, false);
+
+        // nowbpm=1e15, play_speed=100, deltatime=16667 (one frame at 60fps in micros)
+        // The intermediate multiplication deltatime * (100 - huge_negative) overflows i64
+        processor.update(
+            0,     // now
+            0,     // micronow
+            16667, // deltatime (~16.6ms)
+            1e15,  // nowbpm (extreme)
+            100,   // play_speed
+            100,   // freq
+            0,     // play_timer_micro
+        );
+    }
+}

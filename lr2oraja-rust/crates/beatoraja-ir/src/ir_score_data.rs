@@ -141,3 +141,61 @@ impl IRScoreData {
         score
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_from_default_score_data() {
+        let sd = ScoreData::default();
+        let ir = IRScoreData::new(&sd);
+        assert_eq!(ir.sha256, "");
+        assert_eq!(ir.epg, 0);
+        assert_eq!(ir.maxcombo, 0);
+        assert_eq!(ir.notes, 0);
+    }
+
+    #[test]
+    fn exscore_calculation() {
+        let mut sd = ScoreData::default();
+        sd.epg = 10;
+        sd.lpg = 5;
+        sd.egr = 3;
+        sd.lgr = 2;
+        let ir = IRScoreData::new(&sd);
+        // exscore = (epg + lpg) * 2 + egr + lgr = (10+5)*2 + 3+2 = 35
+        assert_eq!(ir.get_exscore(), 35);
+    }
+
+    #[test]
+    fn convert_to_score_data_roundtrip() {
+        let mut sd = ScoreData::default();
+        sd.sha256 = "abc123".to_string();
+        sd.epg = 100;
+        sd.lpg = 50;
+        sd.combo = 42;
+        sd.minbp = 3;
+        sd.clear = 7;
+
+        let ir = IRScoreData::new(&sd);
+        let converted = ir.convert_to_score_data();
+
+        assert_eq!(converted.sha256, "abc123");
+        assert_eq!(converted.epg, 100);
+        assert_eq!(converted.lpg, 50);
+        assert_eq!(converted.combo, 42);
+        assert_eq!(converted.minbp, 3);
+    }
+
+    #[test]
+    fn clone_preserves_all_fields() {
+        let mut sd = ScoreData::default();
+        sd.sha256 = "test".to_string();
+        sd.epg = 7;
+        let ir = IRScoreData::new(&sd);
+        let cloned = ir.clone();
+        assert_eq!(cloned.sha256, "test");
+        assert_eq!(cloned.epg, 7);
+    }
+}

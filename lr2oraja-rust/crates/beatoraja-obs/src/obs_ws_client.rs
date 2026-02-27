@@ -957,3 +957,65 @@ impl ObsWsClient {
         guard.custom_message_handler = Some(handler);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- ObsRecordingMode --
+
+    #[test]
+    fn recording_mode_roundtrip() {
+        for (val, expected) in [
+            (0, ObsRecordingMode::KeepAll),
+            (1, ObsRecordingMode::OnScreenshot),
+            (2, ObsRecordingMode::OnReplay),
+        ] {
+            let mode = ObsRecordingMode::from_value(val).unwrap();
+            assert_eq!(mode, expected);
+            assert_eq!(mode.value(), val);
+        }
+    }
+
+    #[test]
+    fn recording_mode_invalid_value() {
+        assert!(ObsRecordingMode::from_value(3).is_err());
+        assert!(ObsRecordingMode::from_value(-1).is_err());
+    }
+
+    // -- ObsVersionInfo --
+
+    #[test]
+    fn version_info_display() {
+        let info = ObsVersionInfo::new("30.0.0".to_string(), "5.3.0".to_string());
+        assert_eq!(info.get_obs_version(), "30.0.0");
+        assert_eq!(info.get_ws_version(), "5.3.0");
+        assert_eq!(format!("{}", info), "OBS v30.0.0 (WS v5.3.0)");
+    }
+
+    // -- obs_actions / get_action_label --
+
+    #[test]
+    fn obs_actions_contains_expected_entries() {
+        let actions = obs_actions();
+        assert_eq!(actions.get("Stop Recording").unwrap(), "StopRecord");
+        assert_eq!(actions.get("Start Recording").unwrap(), "StartRecord");
+    }
+
+    #[test]
+    fn get_action_label_found() {
+        assert_eq!(
+            get_action_label("StopRecord"),
+            Some("Stop Recording".to_string())
+        );
+        assert_eq!(
+            get_action_label("StartRecord"),
+            Some("Start Recording".to_string())
+        );
+    }
+
+    #[test]
+    fn get_action_label_not_found() {
+        assert_eq!(get_action_label("NonExistent"), None);
+    }
+}
