@@ -702,6 +702,12 @@ impl MainController {
                 skin.draw_all_objects_timed(now_time, now_micro_time);
                 // Put skin back
                 current.main_state_data_mut().skin = Some(skin);
+            } else {
+                use std::sync::Once;
+                static WARN_ONCE: Once = Once::new();
+                WARN_ONCE.call_once(|| {
+                    log::warn!("No skin loaded for current state — screen will be blank. load_skin() is not yet implemented.");
+                });
             }
         }
 

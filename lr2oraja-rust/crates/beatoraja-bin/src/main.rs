@@ -53,7 +53,7 @@ struct Args {
 }
 
 fn main() -> Result<()> {
-    env_logger::init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
@@ -443,6 +443,14 @@ impl ApplicationHandler for BeatorajaApp {
                 let Some(window) = &self.window else { return };
                 let Some(gpu) = &self.gpu else { return };
 
+                // Gather diagnostic info before egui frame (avoids borrow conflicts)
+                let diag_state_type = self.controller.get_current_state_type();
+                let diag_has_skin = self
+                    .controller
+                    .get_current_state()
+                    .map(|s| s.main_state_data().skin.is_some())
+                    .unwrap_or(false);
+
                 // Run egui frame
                 // Java: ImGuiRenderer.start() → ImGuiRenderer.render() → ImGuiRenderer.end()
                 let full_output = if let (Some(egui_state), Some(egui_integration)) =
@@ -451,6 +459,42 @@ impl ApplicationHandler for BeatorajaApp {
                     let raw_input = egui_state.take_egui_input(window);
                     let full_output = egui_integration.ctx.run(raw_input, |ctx| {
                         beatoraja_modmenu::imgui_renderer::ImGuiRenderer::render_ui(ctx);
+
+                        // Diagnostic overlay: show current state and skin status
+                        egui::Area::new(egui::Id::new("diag_overlay"))
+                            .fixed_pos(egui::pos2(10.0, 10.0))
+                            .show(ctx, |ui| {
+                                egui::Frame::new()
+                                    .fill(egui::Color32::from_black_alpha(180))
+                                    .inner_margin(8.0)
+                                    .corner_radius(4.0)
+                                    .show(ui, |ui| {
+                                        let state_str = match diag_state_type {
+                                            Some(st) => format!("{:?}", st),
+                                            None => "None".to_string(),
+                                        };
+                                        ui.colored_label(
+                                            egui::Color32::WHITE,
+                                            format!("State: {}", state_str),
+                                        );
+                                        let skin_color = if diag_has_skin {
+                                            egui::Color32::GREEN
+                                        } else {
+                                            egui::Color32::from_rgb(255, 100, 100)
+                                        };
+                                        ui.colored_label(
+                                            skin_color,
+                                            format!(
+                                                "Skin: {}",
+                                                if diag_has_skin {
+                                                    "loaded"
+                                                } else {
+                                                    "NOT loaded (load_skin stub)"
+                                                }
+                                            ),
+                                        );
+                                    });
+                            });
                     });
                     egui_state.handle_platform_output(window, full_output.platform_output.clone());
                     Some(full_output)
