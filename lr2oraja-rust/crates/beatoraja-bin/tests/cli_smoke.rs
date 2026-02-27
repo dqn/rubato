@@ -76,7 +76,8 @@ fn no_config_runs_without_crash() {
 
     if let Some(code) = output.status.code() {
         assert_ne!(
-            code, 101,
+            code,
+            101,
             "process exited with code 101 (Rust panic). stderr: {}",
             String::from_utf8_lossy(&output.stderr)
         );

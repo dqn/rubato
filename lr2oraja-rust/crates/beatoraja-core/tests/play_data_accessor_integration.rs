@@ -170,7 +170,12 @@ fn replay_path_construction() {
 
     // Verify that a different hash does not match
     assert!(
-        !accessor.exists_replay_data("0000000000000000000000000000000000000000000000000000000000000000", false, 0, 0),
+        !accessor.exists_replay_data(
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            false,
+            0,
+            0
+        ),
         "exists_replay_data should return false for a different hash"
     );
 
