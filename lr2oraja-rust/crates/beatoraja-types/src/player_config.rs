@@ -631,7 +631,7 @@ impl PlayerConfig {
     pub fn init(config: &mut Config) -> anyhow::Result<()> {
         let playerpath = Path::new(&config.playerpath);
         if !playerpath.exists() {
-            std::fs::create_dir(playerpath)?;
+            std::fs::create_dir_all(playerpath)?;
         }
 
         if read_all_player_id(&config.playerpath).is_empty() {

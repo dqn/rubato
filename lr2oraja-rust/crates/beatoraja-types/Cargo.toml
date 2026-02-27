@@ -27,3 +27,6 @@ flate2 = { workspace = true }
 # AES encryption for IR config
 aes = { workspace = true }
 cbc = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

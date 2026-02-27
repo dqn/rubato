@@ -130,7 +130,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
 
     // Java: MainLoader.play() handles config, illegal songs, player config, and controller creation.
     // It sets config.windowWidth/Height from resolution before creating MainController.
-    let mut main_controller = MainLoader::play(bms_path, player_mode, true, None, None, false);
+    let mut main_controller = MainLoader::play(bms_path, player_mode, true, None, None, false)?;
 
     // Java: if(config.isUseDiscordRPC()) { stateListener.add(new DiscordListener()); }
     {

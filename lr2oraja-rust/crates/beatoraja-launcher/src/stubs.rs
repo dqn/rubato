@@ -166,7 +166,7 @@ impl MainLoader {
         Self::init_score_database_accessor(config);
 
         // Delegate to core MainLoader
-        CoreMainLoader::play(
+        let _ = CoreMainLoader::play(
             path.map(std::path::PathBuf::from),
             Some(mode),
             launcher,

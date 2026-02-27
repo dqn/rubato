@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::audio_config::AudioConfig;
 use crate::player_config::PlayerConfig;
@@ -491,9 +491,11 @@ impl Config {
         Ok(config)
     }
 
-    pub fn read() -> anyhow::Result<Config> {
-        let configpath = PathBuf::from("config_sys.json");
-        let configpath_old = PathBuf::from("config.json");
+    /// Read config from a specific directory.
+    /// Looks for `config_sys.json` first, falls back to `config.json`.
+    pub fn read_from(dir: &Path) -> anyhow::Result<Config> {
+        let configpath = dir.join("config_sys.json");
+        let configpath_old = dir.join("config.json");
 
         let mut config: Option<Config> = None;
         if configpath.exists() {
@@ -528,11 +530,20 @@ impl Config {
         Config::validate_config(config)
     }
 
-    pub fn write(config: &Config) -> anyhow::Result<()> {
-        let configpath = PathBuf::from("config_sys.json");
+    /// Write config to a specific directory as `config_sys.json`.
+    pub fn write_to(config: &Config, dir: &Path) -> anyhow::Result<()> {
+        let configpath = dir.join("config_sys.json");
         let json = serde_json::to_string_pretty(config)?;
         std::fs::write(configpath, json.as_bytes())?;
         Ok(())
+    }
+
+    pub fn read() -> anyhow::Result<Config> {
+        Self::read_from(Path::new("."))
+    }
+
+    pub fn write(config: &Config) -> anyhow::Result<()> {
+        Self::write_to(config, Path::new("."))
     }
 }
 

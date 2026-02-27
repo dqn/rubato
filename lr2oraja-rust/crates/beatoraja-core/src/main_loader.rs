@@ -123,7 +123,11 @@ impl MainLoader {
             PathBuf::from("config_sys.json").exists() || PathBuf::from("config.json").exists();
         let has_bms_path = bms_path.is_some();
         if config_exists && (has_bms_path || auto.is_some()) {
-            let _main = Self::play(bms_path, auto, true, None, None, has_bms_path);
+            let _main =
+                Self::play(bms_path, auto, true, None, None, has_bms_path).unwrap_or_else(|e| {
+                    error!("Failed to start: {}", e);
+                    std::process::exit(1);
+                });
         } else {
             // Launch configuration UI
             // Phase 5+: JavaFX/egui launcher
@@ -153,7 +157,7 @@ impl MainLoader {
         config: Option<Config>,
         player: Option<PlayerConfig>,
         song_updated: bool,
-    ) -> MainController {
+    ) -> anyhow::Result<MainController> {
         let mut config = config.unwrap_or_else(|| {
             Config::read().unwrap_or_else(|e| {
                 error!("Config read failed: {}", e);
@@ -168,11 +172,10 @@ impl MainLoader {
         Self::check_illegal_songs();
 
         if Self::get_illegal_song_count() > 0 {
-            error!(
+            anyhow::bail!(
                 "Detected {} illegal BMS songs. Remove them, update song database and restart.",
                 Self::get_illegal_song_count()
             );
-            std::process::exit(1);
         }
 
         let player = player.unwrap_or_else(|| {
@@ -205,7 +208,7 @@ impl MainLoader {
 
         info!("Application started - {}", version::version_long());
 
-        main
+        Ok(main)
     }
 
     /// Returns a reference to the global song database accessor.
@@ -285,16 +288,14 @@ impl MainLoader {
         songs.len()
     }
 
-    /// Clear all illegal songs. Test-only — not present in Java.
-    #[cfg(test)]
-    fn clear_illegal_songs() {
+    /// Clear all illegal songs. For testing — not present in Java.
+    pub fn clear_illegal_songs() {
         let mut songs = Self::illegal_songs().lock().unwrap();
         songs.clear();
     }
 
-    /// Clear the global song database accessor. Test-only — not present in Java.
-    #[cfg(test)]
-    fn clear_score_database_accessor() {
+    /// Clear the global song database accessor. For testing — not present in Java.
+    pub fn clear_score_database_accessor() {
         let mut guard = Self::songdb_lock().lock().unwrap();
         *guard = None;
     }
@@ -567,7 +568,8 @@ mod tests {
 
         let config = Config::default();
         let player = PlayerConfig::default();
-        let controller = MainLoader::play(None, None, true, Some(config), Some(player), false);
+        let controller =
+            MainLoader::play(None, None, true, Some(config), Some(player), false).unwrap();
 
         // The returned controller should have config with window dimensions
         // set from resolution (Java: config.setWindowWidth(w); config.setWindowHeight(h))
@@ -604,7 +606,8 @@ mod tests {
             Some(config),
             Some(PlayerConfig::default()),
             false,
-        );
+        )
+        .unwrap();
 
         let cfg = controller.get_config();
         assert_eq!(cfg.window_width, Resolution::FULLHD.width());
@@ -629,7 +632,8 @@ mod tests {
             Some(Config::default()),
             Some(PlayerConfig::default()),
             false,
-        );
+        )
+        .unwrap();
 
         // The songdb should have been taken from the global slot
         let taken = MainLoader::take_score_database_accessor();

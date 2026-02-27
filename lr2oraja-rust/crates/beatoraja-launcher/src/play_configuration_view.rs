@@ -275,6 +275,9 @@ pub struct PlayConfigurationView {
     request_token: Option<(String, String)>,
     pc: Option<PlayMode>,
 
+    // Exit flag (replaces process::exit(0))
+    pub exit_requested: bool,
+
     // Tab/panel disabled state
     pub player_panel_disabled: bool,
     pub video_tab_disabled: bool,
@@ -410,6 +413,7 @@ impl PlayConfigurationView {
             song_updated: false,
             request_token: None,
             pc: None,
+            exit_requested: false,
             player_panel_disabled: false,
             video_tab_disabled: false,
             audio_tab_disabled: false,
@@ -1159,7 +1163,7 @@ impl PlayConfigurationView {
     /// Translates: public void exit()
     pub fn exit(&mut self) {
         self.commit();
-        std::process::exit(0);
+        self.exit_requested = true;
     }
 
     /// Render the UI
