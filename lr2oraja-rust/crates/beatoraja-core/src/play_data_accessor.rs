@@ -46,6 +46,10 @@ impl PlayDataAccessor {
         let playerpath = config.playerpath.clone();
 
         let sep = std::path::MAIN_SEPARATOR;
+        let player_dir = format!("{}{}{}", playerpath, sep, player);
+        if let Err(e) = std::fs::create_dir_all(&player_dir) {
+            log::error!("Failed to create player directory: {}", e);
+        }
         let score_path = format!("{}{}{}{}{}", playerpath, sep, player, sep, "score.db");
         let scorelog_path = format!("{}{}{}{}{}", playerpath, sep, player, sep, "scorelog.db");
         let scoredatalog_path = format!(

@@ -683,6 +683,9 @@ impl PlayerConfig {
     pub fn write(playerpath: &str, player: &PlayerConfig) -> anyhow::Result<()> {
         let id = player.id.as_deref().unwrap_or("unknown");
         let path = PathBuf::from(format!("{}/{}/config_player.json", playerpath, id));
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
         let json = serde_json::to_string_pretty(player)?;
         std::fs::write(path, json.as_bytes())?;
         Ok(())
