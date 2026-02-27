@@ -18,15 +18,29 @@ use crate::json::json_skin_object_loader::JsonSkinObjectLoader;
 use crate::json::json_skin_serializer::JsonSkinSerializer;
 use crate::stubs::*;
 
-/// Parse a JSON string into a `json_skin::Skin`, coercing numeric values to strings
-/// for fields that Java Gson would auto-coerce (e.g. `id`, `src`).
+/// Parse a JSON string into a `json_skin::Skin` with Gson-compatible leniency.
 ///
-/// Java Gson silently converts numbers to strings. serde_json is strict, so we
-/// preprocess the JSON value tree to apply the same coercion.
+/// Java Gson silently accepts trailing commas and coerces numbers to strings.
+/// serde_json is strict, so we preprocess the input to match Gson behavior:
+/// 1. Strip trailing commas before `]` and `}` (syntax level)
+/// 2. Coerce numeric values to strings for `id`/`src`/`font` keys (value level)
 fn parse_skin_json(content: &str) -> Result<json_skin::Skin, serde_json::Error> {
-    let mut value: serde_json::Value = serde_json::from_str(content)?;
+    let cleaned = fix_lenient_json(content);
+    let mut value: serde_json::Value = serde_json::from_str(&cleaned)?;
     coerce_json_numbers_to_strings(&mut value);
     serde_json::from_value(value)
+}
+
+/// Apply Gson-compatible leniency fixes to a JSON string:
+/// 1. Strip trailing commas before `]` and `}`
+/// 2. Insert missing commas between `}` and `{` (array element separators)
+fn fix_lenient_json(json: &str) -> String {
+    static TRAILING_COMMA: std::sync::LazyLock<regex::Regex> =
+        std::sync::LazyLock::new(|| regex::Regex::new(r",(\s*[}\]])").unwrap());
+    static MISSING_COMMA: std::sync::LazyLock<regex::Regex> =
+        std::sync::LazyLock::new(|| regex::Regex::new(r"\}(\s*)\{").unwrap());
+    let fixed = TRAILING_COMMA.replace_all(json, "$1");
+    MISSING_COMMA.replace_all(&fixed, "},$1{").into_owned()
 }
 
 /// Recursively walk a JSON value tree and convert numeric values to strings
@@ -1244,4 +1258,59 @@ pub struct CustomEventData {
 pub struct CustomTimerData {
     pub id: i32,
     pub timer: Option<i32>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fix_lenient_json_trailing_comma() {
+        let input = r#"[1, 2, 3,]"#;
+        let fixed = fix_lenient_json(input);
+        assert_eq!(fixed, "[1, 2, 3]");
+    }
+
+    #[test]
+    fn test_fix_lenient_json_missing_comma() {
+        let input = "[\n\t{\"a\":1}\n\t{\"b\":2}\n]";
+        let fixed = fix_lenient_json(input);
+        let parsed: serde_json::Value = serde_json::from_str(&fixed).unwrap();
+        assert_eq!(parsed.as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_parse_skin_json_numeric_id_and_src() {
+        let input =
+            r#"{"type":5,"source":[{"id":0,"path":"a.png"}],"image":[{"id":"bg","src":1}]}"#;
+        let skin = parse_skin_json(input).unwrap();
+        assert_eq!(skin.source[0].id, Some("0".to_string()));
+        assert_eq!(skin.image[0].src, Some("1".to_string()));
+    }
+
+    #[test]
+    fn test_parse_default_select_skin() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("skin/default/select.json");
+        if !path.exists() {
+            // Skip if skin file not present in CI
+            return;
+        }
+        let content = std::fs::read_to_string(&path).unwrap();
+        let skin = parse_skin_json(&content);
+        assert!(
+            skin.is_ok(),
+            "Failed to parse select.json: {:?}",
+            skin.err()
+        );
+        let skin = skin.unwrap();
+        assert_eq!(skin.skin_type, 5);
+        assert_eq!(skin.name, Some("beatoraja default".to_string()));
+        assert!(!skin.source.is_empty());
+        assert!(!skin.image.is_empty());
+    }
 }
