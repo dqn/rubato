@@ -112,9 +112,15 @@ fn launch() -> Result<()> {
     let result = beatoraja_launcher::run_launcher(config, player, &title)?;
 
     // Java: PlayConfigurationView.start() calls MainLoader.play()
+    // Re-exec as a child process because winit does not allow creating a second
+    // EventLoop in the same process (eframe already consumed the first one).
     if result.play_requested {
-        info!("Launcher requested play, starting game...");
-        play(None, Some(BMSPlayerMode::PLAY))?;
+        info!("Launcher requested play, re-launching as child process...");
+        let exe = std::env::current_exe()?;
+        let status = std::process::Command::new(exe).arg("-s").status()?;
+        if !status.success() {
+            anyhow::bail!("Game process exited with {}", status);
+        }
     }
 
     Ok(())
