@@ -85,22 +85,40 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**2346 tests, 0 ignored.** Phases 1–43 complete. Zero clippy warnings.
+**2346 tests, 16 ignored (4 env + 12 bug-doc).** Phases 1–43 complete. Zero clippy warnings.
+**Migration audit**: 93.97% method resolution (4,021/4,279). 0 constant mismatches. 3 Rust-side regressions.
 
-## Remaining Stubs (~2,550 lines across 10 files)
+## Remaining Stubs (~2,746 lines across 10 stubs.rs + ~186 inline markers)
 
-| Crate | Lines | Status |
-|-------|------:|--------|
-| beatoraja-types | 549 | Lifecycle — required |
-| beatoraja-external | 446 | Permanent (`bail!()`, Twitter API deprecated) |
-| beatoraja-result | 355 | AudioProcessor/IR stubs remain |
-| beatoraja-launcher | 314 | egui integration |
-| beatoraja-skin | 287 | MainState/Timer/Controller |
-| beatoraja-select | 278 | Needs SkinBar rewrite (Phase 40) |
-| beatoraja-modmenu | 203 | Needs SkinWidget rewrite (Phase 40) |
-| beatoraja-decide | 108 | AudioProcessor/Skin stubs remain |
-| beatoraja-input | 21 | Lifecycle — required |
-| beatoraja-core | 1 | (empty) |
+| Crate | stubs.rs | Markers | Key Blockers |
+|-------|:--------:|:-------:|-------------|
+| beatoraja-launcher | 527 | 13 | Skin header loading, async BMS DB |
+| beatoraja-result | 494 | 27 | CourseResult MainState non-functional, IR thread |
+| beatoraja-external | 446 | 4 | Permanent (`bail!()`, Twitter API deprecated) |
+| beatoraja-skin | 389 | 44 | Timer frozen, FloatProperty all 0.0, Lua 19/28 missing |
+| beatoraja-select | 278 | 55 | 7 bar get_children(), read_chart blocked on PlayerResource |
+| beatoraja-modmenu | 205 | — | Needs SkinWidget rewrite (Phase 40) |
+| beatoraja-decide | 204 | — | AudioProcessor/Skin stubs |
+| beatoraja-audio | 190 | — | GdxAudioDeviceDriver no-op, BMSLoudnessAnalyzer hardcoded |
+| beatoraja-input | 115 | — | MouseScratchInput position hardcoded |
+| beatoraja-types | 88 | — | 7 resolved re-exports, 1 partial (BarSorter) |
+| beatoraja-core | 1 | 33 | PlayerResource.loadBMSModel, load_skin, exit, save_config |
+
+### Critical Gaps (7)
+
+1. PlayerResource.loadBMSModel() — cannot load BMS files
+2. MainState.load_skin() — all screens blank
+3. PlayerResource.SongData type mismatch — get_songdata() always None
+4. read_chart/read_course/read_random_course — select→play blocked
+5. CourseResult MainState non-functional — course results unplayable
+6. FloatPropertyFactory ALL stubs — gauges/covers/rates invisible
+7. SkinTextFont.draw_with_offset() — TrueType text invisible
+
+### Regressions (3)
+
+1. **RandomizerBase uses StdRng** (HIGH) — breaks replay/pattern reproducibility
+2. BytePCM float saturation (Medium) — clipping differs from Java
+3. BytePCM negative overflow (Medium) — same issue, negative range
 
 ## Lessons Learned
 
