@@ -29,3 +29,6 @@ egui-wgpu = { workspace = true }
 bytemuck = { workspace = true }
 pollster = "0.4"
 dhat = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

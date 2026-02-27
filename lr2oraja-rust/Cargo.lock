@@ -595,6 +595,7 @@ dependencies = [
  "env_logger",
  "log",
  "pollster",
+ "tempfile",
  "wgpu",
  "winit",
 ]
@@ -970,6 +971,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tempfile",
 ]
 
 [[package]]
