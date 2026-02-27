@@ -372,6 +372,10 @@ impl MainLoader {
         });
         config.validate();
 
+        if let Err(e) = PlayerConfig::init(&mut config) {
+            error!("Player config init failed: {}", e);
+        }
+
         let player = {
             let playerpath = &config.playerpath;
             let playername = config.playername.as_deref().unwrap_or("default");

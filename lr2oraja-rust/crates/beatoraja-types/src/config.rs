@@ -487,7 +487,7 @@ impl Config {
 
     pub fn validate_config(mut config: Config) -> anyhow::Result<Config> {
         config.validate();
-        PlayerConfig::init(&config)?;
+        PlayerConfig::init(&mut config)?;
         Ok(config)
     }
 

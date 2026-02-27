@@ -628,7 +628,7 @@ impl PlayerConfig {
         self.max_request_count = self.max_request_count.clamp(0, 100);
     }
 
-    pub fn init(config: &Config) -> anyhow::Result<()> {
+    pub fn init(config: &mut Config) -> anyhow::Result<()> {
         let playerpath = Path::new(&config.playerpath);
         if !playerpath.exists() {
             std::fs::create_dir(playerpath)?;
@@ -646,6 +646,8 @@ impl PlayerConfig {
             }
             // Copy replays
             copy_replays(config);
+
+            config.playername = Some("player1".to_string());
         }
 
         Ok(())
