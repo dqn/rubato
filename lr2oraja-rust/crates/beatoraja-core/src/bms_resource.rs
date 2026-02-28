@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::thread;
 
 use beatoraja_render::pixmap::Pixmap;
+use bms_model::bms_model::BMSModel;
 
 use crate::bms_player_mode::BMSPlayerMode;
 use crate::config::Config;
@@ -25,7 +26,7 @@ impl BGAProcessor {
         // Phase 5+ dependency
     }
 
-    pub fn set_model(&mut self, _model: Option<()>) {
+    pub fn set_model(&mut self, _model: Option<&BMSModel>) {
         // Phase 5+ dependency
     }
 
@@ -85,7 +86,7 @@ impl BMSResource {
 
     pub fn set_bms_file(
         &mut self,
-        _model: &(),
+        _model: &BMSModel,
         _f: &Path,
         _config: &Config,
         _mode: &BMSPlayerMode,

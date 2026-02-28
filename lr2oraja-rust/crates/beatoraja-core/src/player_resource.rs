@@ -1,6 +1,10 @@
 use std::path::{Path, PathBuf};
 
 use beatoraja_types::player_resource_access::PlayerResourceAccess;
+use bms_model::bms_model::BMSModel;
+use bms_model::bms_model_utils::set_start_note_time;
+use bms_model::chart_decoder;
+use bms_model::chart_information::ChartInformation;
 
 use crate::bms_player_mode::BMSPlayerMode;
 use crate::bms_resource::BMSResource;
@@ -68,8 +72,8 @@ pub type FloatArray = Vec<f32>;
 /// PlayerResource - holds game session state for data exchange between components
 #[allow(dead_code)]
 pub struct PlayerResource {
-    /// Current BMS model (Phase 5+ stub)
-    model: Option<()>,
+    /// Current BMS model
+    model: Option<BMSModel>,
     /// Margin time
     margin_time: i64,
     /// Current song data
@@ -112,8 +116,8 @@ pub struct PlayerResource {
     loop_play: bool,
     /// Course data
     coursedata: Option<CourseData>,
-    /// Course BMS models (Phase 5+ stub)
-    course: Option<Vec<()>>,
+    /// Course BMS models
+    course: Option<Vec<BMSModel>>,
     /// Course index
     courseindex: usize,
     /// Course gauge history
@@ -209,17 +213,52 @@ impl PlayerResource {
         self.set_tablelevel("");
     }
 
-    pub fn set_bms_file(&mut self, _f: &Path, mode: BMSPlayerMode) -> bool {
+    pub fn set_bms_file(&mut self, f: &Path, mode: BMSPlayerMode) -> bool {
         self.mode = Some(mode);
         self.replay = Some(ReplayData::new());
-        // model = loadBMSModel(f, pconfig.getLnmode())
-        // Phase 5+ dependency: ChartDecoder, BMSModel
-        log::warn!("not yet implemented: loadBMSModel");
-        false
+        let result = Self::load_bms_model(f, self.pconfig.get_lnmode());
+        if let Some((model, margin_time)) = result {
+            if model.get_all_time_lines().is_empty() {
+                return false;
+            }
+            self.margin_time = margin_time;
+            // orgmode = model.getMode() — orgmode is still Option<()> stub,
+            // will be wired when orgmode type is changed to Option<Mode>
+            self.model = Some(model);
+            if let Some(ref mut bmsresource) = self.bmsresource {
+                bmsresource.set_bms_file(
+                    self.model.as_ref().unwrap(),
+                    f,
+                    &self.config,
+                    self.mode.as_ref().unwrap(),
+                );
+            }
+            true
+        } else {
+            log::warn!(
+                "chart does not exist or an error occurred during parsing: {}",
+                f.display()
+            );
+            false
+        }
     }
 
-    pub fn get_bms_model(&self) -> Option<()> {
-        self.model
+    /// Load a BMS model from path, applying start note time and validation.
+    /// Returns (model, margin_time).
+    /// Java: PlayerResource.loadBMSModel(Path, int lnmode)
+    fn load_bms_model(path: &Path, lnmode: i32) -> Option<(BMSModel, i64)> {
+        let mut decoder = chart_decoder::get_decoder(path)?;
+        let info = ChartInformation::new(Some(path.to_path_buf()), lnmode, None);
+        let mut model = decoder.decode(info)?;
+        let margin_time = set_start_note_time(&mut model, 1000);
+        // TODO: BMSPlayerRule::validate(&mut model) — requires beatoraja-play dependency
+        // which core cannot import. Move validate to bms-model or beatoraja-types in a
+        // future phase.
+        Some((model, margin_time))
+    }
+
+    pub fn get_bms_model(&self) -> Option<&BMSModel> {
+        self.model.as_ref()
     }
 
     pub fn get_margin_time(&self) -> i64 {
@@ -282,14 +321,24 @@ impl PlayerResource {
         self.ranking = Some(ranking);
     }
 
-    pub fn set_course_bms_files(&mut self, _files: &[PathBuf]) -> bool {
-        // Phase 5+ dependency: loadBMSModel for each file
+    pub fn set_course_bms_files(&mut self, files: &[PathBuf]) -> bool {
+        let lnmode = self.pconfig.get_lnmode();
+        let mut models = Vec::with_capacity(files.len());
+        for f in files {
+            match Self::load_bms_model(f, lnmode) {
+                Some((model, _margin_time)) => models.push(model),
+                None => {
+                    log::warn!("failed to load BMS model for course file: {:?}", f);
+                    return false;
+                }
+            }
+        }
+        self.course = Some(models);
         self.update_course_score = true;
-        log::warn!("not yet implemented: loadBMSModel for course files");
-        false
+        true
     }
 
-    pub fn get_course_bms_models(&self) -> Option<&Vec<()>> {
+    pub fn get_course_bms_models(&self) -> Option<&Vec<BMSModel>> {
         self.course.as_ref()
     }
 
@@ -691,5 +740,103 @@ impl PlayerResourceAccess for PlayerResource {
 
     fn get_reverse_lookup_levels(&self) -> Vec<String> {
         PlayerResource::get_reverse_lookup_levels(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn test_bms_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("test-bms")
+    }
+
+    #[test]
+    fn set_bms_file_loads_model_from_bms() {
+        let config = Config::default();
+        let pconfig = PlayerConfig::default();
+        let mut resource = PlayerResource::new(config, pconfig);
+
+        let bms_path = test_bms_dir().join("minimal_7k.bms");
+        assert!(
+            bms_path.exists(),
+            "test BMS file must exist: {:?}",
+            bms_path
+        );
+
+        let result = resource.set_bms_file(&bms_path, BMSPlayerMode::PLAY);
+        assert!(result, "set_bms_file should return true on success");
+        assert!(
+            resource.get_bms_model().is_some(),
+            "model should be Some after successful load"
+        );
+    }
+
+    #[test]
+    fn set_bms_file_returns_false_for_nonexistent_file() {
+        let config = Config::default();
+        let pconfig = PlayerConfig::default();
+        let mut resource = PlayerResource::new(config, pconfig);
+
+        let result = resource.set_bms_file(Path::new("/nonexistent/file.bms"), BMSPlayerMode::PLAY);
+        assert!(
+            !result,
+            "set_bms_file should return false for nonexistent file"
+        );
+        assert!(
+            resource.get_bms_model().is_none(),
+            "model should be None after failed load"
+        );
+    }
+
+    #[test]
+    fn set_bms_file_returns_false_for_unsupported_extension() {
+        let config = Config::default();
+        let pconfig = PlayerConfig::default();
+        let mut resource = PlayerResource::new(config, pconfig);
+
+        let result = resource.set_bms_file(Path::new("/some/file.txt"), BMSPlayerMode::PLAY);
+        assert!(
+            !result,
+            "set_bms_file should return false for unsupported extension"
+        );
+    }
+
+    #[test]
+    fn set_bms_file_sets_margin_time() {
+        let config = Config::default();
+        let pconfig = PlayerConfig::default();
+        let mut resource = PlayerResource::new(config, pconfig);
+
+        let bms_path = test_bms_dir().join("minimal_7k.bms");
+        resource.set_bms_file(&bms_path, BMSPlayerMode::PLAY);
+        // margin_time is set by set_start_note_time (may be 0 if first note >= 1000ms)
+        // Just verify it doesn't panic and the field is accessible
+        let _margin = resource.get_margin_time();
+    }
+
+    #[test]
+    fn set_course_bms_files_loads_models() {
+        let config = Config::default();
+        let pconfig = PlayerConfig::default();
+        let mut resource = PlayerResource::new(config, pconfig);
+
+        let bms_path = test_bms_dir().join("minimal_7k.bms");
+        let files = vec![bms_path];
+        let result = resource.set_course_bms_files(&files);
+        assert!(result, "set_course_bms_files should return true on success");
+        assert!(
+            resource.get_course_bms_models().is_some(),
+            "course models should be Some after successful load"
+        );
+        assert_eq!(
+            resource.get_course_bms_models().unwrap().len(),
+            1,
+            "should have loaded exactly 1 course model"
+        );
     }
 }

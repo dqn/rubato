@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
 use log::info;
@@ -285,6 +286,12 @@ pub struct MainController {
     /// Set by the launcher to wire SkinMenu/SongManagerMenu.
     state_references_callback: Option<Box<dyn StateReferencesCallback>>,
 
+    /// Exit requested flag.
+    /// Uses AtomicBool because exit() takes &self (required by MainControllerAccess trait).
+    ///
+    /// Translated from: Gdx.app.exit() triggers LibGDX's ApplicationListener.dispose()
+    exit_requested: AtomicBool,
+
     /// Debug flag
     pub debug: bool,
 
@@ -361,6 +368,7 @@ impl MainController {
             prevtime: 0,
             last_config_save: Instant::now(),
             state_references_callback: None,
+            exit_requested: AtomicBool::new(false),
             debug: false,
             loudness_analyzer: Some(
                 beatoraja_audio::bms_loudness_analyzer::BMSLoudnessAnalyzer::new(),
@@ -871,15 +879,53 @@ impl MainController {
         }
     }
 
+    /// Save config and player config to disk.
+    ///
+    /// Translated from: MainController.saveConfig()
+    ///
+    /// Java lines 883-887:
+    /// ```java
+    /// public void saveConfig(){
+    ///     Config.write(config);
+    ///     PlayerConfig.write(config.getPlayerpath(), player);
+    ///     logger.info("設定情報を保存");
+    /// }
+    /// ```
     pub fn save_config(&self) {
-        // Config::write(&self.config);
-        // PlayerConfig::write(config.playerpath, &self.player);
+        if let Err(e) = Config::write(&self.config) {
+            log::error!("Failed to write config: {}", e);
+        }
+        if let Err(e) = PlayerConfig::write(&self.config.playerpath, &self.player) {
+            log::error!("Failed to write player config: {}", e);
+        }
         info!("Config saved");
     }
 
+    /// Request application exit. Sets exit flag and saves config.
+    ///
+    /// Translated from: MainController.exit()
+    ///
+    /// Java lines 919-921:
+    /// ```java
+    /// public void exit() {
+    ///     Gdx.app.exit();
+    /// }
+    /// ```
+    ///
+    /// In Java, Gdx.app.exit() triggers the LibGDX lifecycle (pause → dispose),
+    /// and dispose() calls saveConfig(). In Rust, we set an exit flag and save
+    /// config immediately, since the main loop checks is_exit_requested().
     pub fn exit(&self) {
-        // Gdx.app.exit()
-        log::warn!("not yet implemented: application exit");
+        self.exit_requested.store(true, Ordering::Release);
+        self.save_config();
+        info!("Exit requested");
+    }
+
+    /// Check whether exit has been requested.
+    ///
+    /// The main event loop should poll this and initiate shutdown when true.
+    pub fn is_exit_requested(&self) -> bool {
+        self.exit_requested.load(Ordering::Acquire)
     }
 
     /// Notify all state listeners of a state change.
@@ -2403,5 +2449,113 @@ mod tests {
     fn test_get_sound_manager_mut() {
         let mut mc = make_test_controller();
         assert!(mc.get_sound_manager_mut().is_some());
+    }
+
+    // --- exit() and save_config() tests ---
+
+    /// Mutex to serialize tests that change the process-wide CWD.
+    /// Config::write() writes to CWD-relative "config_sys.json", so tests
+    /// that verify file I/O must change CWD to a temp dir. This mutex
+    /// prevents concurrent tests from racing on CWD.
+    static CWD_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    #[test]
+    fn test_exit_sets_exit_requested_flag() {
+        let _lock = CWD_MUTEX.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir.path()).unwrap();
+
+        let mc = make_test_controller();
+        assert!(!mc.is_exit_requested());
+
+        mc.exit();
+
+        assert!(mc.is_exit_requested());
+
+        std::env::set_current_dir(original_dir).unwrap();
+    }
+
+    #[test]
+    fn test_exit_calls_save_config() {
+        let _lock = CWD_MUTEX.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config_sys.json");
+
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir.path()).unwrap();
+
+        let mc = make_test_controller();
+        mc.exit();
+
+        // exit() should have called save_config(), which writes config_sys.json
+        assert!(
+            config_path.exists(),
+            "config_sys.json should be written by exit()"
+        );
+
+        std::env::set_current_dir(original_dir).unwrap();
+    }
+
+    #[test]
+    fn test_save_config_writes_config_sys_json() {
+        let _lock = CWD_MUTEX.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir.path()).unwrap();
+
+        let mc = make_test_controller();
+        mc.save_config();
+
+        let config_path = dir.path().join("config_sys.json");
+        assert!(config_path.exists(), "config_sys.json should be created");
+
+        // Verify it's valid JSON that round-trips back to Config
+        let contents = std::fs::read_to_string(&config_path).unwrap();
+        let deserialized: Config = serde_json::from_str(&contents).unwrap();
+        assert_eq!(deserialized.window_width, mc.config.window_width);
+
+        std::env::set_current_dir(original_dir).unwrap();
+    }
+
+    #[test]
+    fn test_save_config_writes_player_config_json() {
+        let _lock = CWD_MUTEX.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir.path()).unwrap();
+
+        let mut config = Config::default();
+        config.playerpath = dir.path().join("player").to_string_lossy().to_string();
+        let mut player = PlayerConfig::default();
+        player.id = Some("test_player".to_string());
+        player.name = "TestName".to_string();
+
+        let mc = MainController::new(None, config.clone(), player, None, false);
+        // Create the player directory so write succeeds
+        std::fs::create_dir_all(format!("{}/test_player", config.playerpath)).unwrap();
+
+        mc.save_config();
+
+        let player_config_path = PathBuf::from(format!(
+            "{}/test_player/config_player.json",
+            config.playerpath
+        ));
+        assert!(
+            player_config_path.exists(),
+            "config_player.json should be created"
+        );
+
+        let contents = std::fs::read_to_string(&player_config_path).unwrap();
+        let deserialized: PlayerConfig = serde_json::from_str(&contents).unwrap();
+        assert_eq!(deserialized.name, "TestName");
+
+        std::env::set_current_dir(original_dir).unwrap();
+    }
+
+    #[test]
+    fn test_is_exit_requested_initially_false() {
+        let mc = make_test_controller();
+        assert!(!mc.is_exit_requested());
     }
 }
