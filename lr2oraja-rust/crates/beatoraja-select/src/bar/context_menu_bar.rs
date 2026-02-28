@@ -11,6 +11,7 @@ use crate::stubs::*;
 
 /// Context menu bar for right-click actions
 /// Translates: bms.player.beatoraja.select.bar.ContextMenuBar
+#[derive(Clone)]
 pub struct ContextMenuBar {
     pub directory: DirectoryBarData,
     pub song: Option<SongData>,

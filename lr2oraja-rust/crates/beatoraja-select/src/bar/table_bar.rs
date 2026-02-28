@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use super::bar::Bar;
 use super::directory_bar::DirectoryBarData;
@@ -8,6 +9,7 @@ use crate::stubs::*;
 
 /// Difficulty table bar
 /// Translates: bms.player.beatoraja.select.bar.TableBar
+#[derive(Clone)]
 pub struct TableBar {
     pub directory: DirectoryBarData,
     /// Table data
@@ -18,12 +20,12 @@ pub struct TableBar {
     pub grades: Vec<GradeBar>,
     /// Level bars + course bars combined
     pub children: Vec<Bar>,
-    /// Table accessor
-    pub tr: Box<dyn TableAccessor>,
+    /// Table accessor (Arc for cheap cloning)
+    pub tr: Arc<dyn TableAccessor>,
 }
 
 impl TableBar {
-    pub fn new(td: TableData, tr: Box<dyn TableAccessor>) -> Self {
+    pub fn new(td: TableData, tr: Arc<dyn TableAccessor>) -> Self {
         let mut bar = Self {
             directory: DirectoryBarData::default(),
             td: TableData::default(),

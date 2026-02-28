@@ -139,7 +139,7 @@ impl BarManager {
         // Create TableBars
         let mut table_bars: Vec<TableBar> = Vec::new();
         for td in sorted_tables {
-            let accessor: Box<dyn TableAccessor> = Box::new(DifficultyTableAccessor::new(
+            let accessor: Arc<dyn TableAccessor> = Arc::new(DifficultyTableAccessor::new(
                 tablepath,
                 td.get_url_opt().unwrap_or(""),
             ));
@@ -158,7 +158,7 @@ impl BarManager {
         let mut course_td = TableData::default();
         course_td.set_name("COURSE".to_string());
         course_td.set_course(course_accessor.read_all());
-        let course_tr: Box<dyn TableAccessor> = Box::new(CourseTableAccessor);
+        let course_tr: Arc<dyn TableAccessor> = Arc::new(CourseTableAccessor);
         self.courses = Some(TableBar::new(course_td, course_tr));
 
         // Load favorites
@@ -351,46 +351,32 @@ impl BarManager {
 
             // Add courses
             if let Some(ref courses) = self.courses {
-                // Create a TableBar clone for root - wrap in Bar::Table
-                // Since we can't clone TableBar (Box<dyn TableAccessor>), add children directly
-                for child in courses.get_children() {
-                    // We need to clone the children; since we can't, add reference-style
-                    // For now, push the courses table bar title as a placeholder
-                }
-                // Add as a single Table bar reference using levels/grades
-                // The courses bar is stored as self.courses; add its children at root level
+                l.push(Bar::Table(Box::new(courses.clone())));
             }
 
             // Add favorites
             for fav in &self.favorites {
-                l.push(Bar::Hash(Box::new(HashBar::new(
-                    fav.title.clone(),
-                    fav.elements.clone(),
-                ))));
+                l.push(Bar::Hash(Box::new(fav.clone())));
             }
 
             // Add append folders
             for folder_bar in self.append_folders.values() {
-                // Can't clone Bar easily; skip for now
-                log::debug!("append_folders skipped in root display - requires Bar Clone");
+                l.push(folder_bar.clone());
             }
 
             // Add tables
             for table in &self.tables {
-                // Same issue - can't clone TableBar
-                log::debug!("table bars skipped in root display - requires TableBar Clone");
+                l.push(Bar::Table(Box::new(table.clone())));
             }
 
             // Add commands
-            // Commands can be re-created; for now skip non-cloneable bars
-            log::debug!("command bars skipped in root display - requires Bar Clone");
+            for cmd in &self.commands {
+                l.push(cmd.clone());
+            }
 
             // Add search results
             for s in &self.search {
-                l.push(Bar::SearchWord(Box::new(SearchWordBar::new(
-                    s.get_title(),
-                    s.get_text().to_string(),
-                ))));
+                l.push(Bar::SearchWord(Box::new(s.clone())));
             }
         } else if let Some(bar) = bar {
             if let Some(dir_data) = bar.as_directory_bar() {
@@ -426,14 +412,11 @@ impl BarManager {
                 Bar::Folder(b) => l.extend(b.get_children()),
                 Bar::Command(b) => l.extend(b.get_children()),
                 Bar::Container(b) => {
-                    // ContainerBar returns &[Bar], need to reconstruct
-                    // Since we can't clone, this is limited
-                    log::debug!("ContainerBar children require Bar Clone");
+                    l.extend(b.get_children().iter().cloned());
                 }
                 Bar::Hash(b) => l.extend(b.get_children()),
                 Bar::Table(b) => {
-                    // Table children
-                    log::debug!("TableBar children require Bar Clone");
+                    l.extend(b.get_children().iter().cloned());
                 }
                 Bar::SearchWord(b) => l.extend(b.get_children()),
                 Bar::ContextMenu(b) => l.extend(b.get_children()),
@@ -539,17 +522,17 @@ impl BarManager {
             if let Some(bar) = bar
                 && bar.is_directory_bar()
             {
-                // We need to store the bar in dir. Since we can't clone Bar,
-                // reconstruct a minimal version.
-                // For now, store the title as a placeholder FolderBar
-                let title = bar.get_title();
-                let dir_bar = Box::new(Bar::Folder(Box::new(FolderBar::new(None, title.clone()))));
+                let dir_bar = Box::new(bar.clone());
                 self.dir.push(dir_bar);
 
                 if self.dir.len() > prevdirsize {
-                    // Store prevbar info as sourcebar
-                    // Since we can't clone Bar, store None
-                    self.sourcebars.push(None);
+                    // Store prevbar (currently selected bar) as sourcebar for navigation history
+                    let sourcebar = if !self.currentsongs.is_empty() {
+                        Some(self.currentsongs[self.selectedindex].clone())
+                    } else {
+                        None
+                    };
+                    self.sourcebars.push(sourcebar);
                 }
             }
 
@@ -727,32 +710,8 @@ impl BarManager {
         if self.currentsongs.is_empty() {
             return false;
         }
-        // Take out currentsongs[selectedindex], update, then restore if needed
-        // Since we can't easily clone Bar, use index-based approach
-        // For directory bars, we reconstruct a minimal bar for the update
-        let selected_idx = self.selectedindex;
-        let is_dir = self.currentsongs[selected_idx].is_directory_bar();
-        if !is_dir {
-            return false;
-        }
-
-        // Extract the title and bar type info needed for update_bar
-        let title = self.currentsongs[selected_idx].get_title();
-        let show_invisible = self.currentsongs[selected_idx]
-            .as_directory_bar()
-            .map(|d| d.is_show_invisible_chart())
-            .unwrap_or(false);
-        let sortable = self.currentsongs[selected_idx]
-            .as_directory_bar()
-            .map(|d| d.is_sortable())
-            .unwrap_or(true);
-
-        // Create a temporary FolderBar to pass to update_bar
-        let mut temp = FolderBar::new(None, title);
-        temp.directory.show_invisible_chart = show_invisible;
-        temp.directory.sortable = sortable;
-        let temp_bar = Bar::Folder(Box::new(temp));
-        self.update_bar(Some(&temp_bar))
+        let selected_bar = self.currentsongs[self.selectedindex].clone();
+        self.update_bar(Some(&selected_bar))
     }
 
     /// Go up one directory level.

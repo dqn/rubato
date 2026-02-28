@@ -130,10 +130,10 @@ impl DirectoryBarData {
         mode: Option<&bms_model::Mode>,
         contains_same_folder: bool,
     ) -> Vec<Bar> {
-        // NOTE: This method creates new Bar values which would require Clone.
-        // In practice this is called on the Java side via getChildren(Mode, boolean).
-        // For now we stub it since we cannot Clone enum-of-Box easily.
+        // NOTE: Bar is now Clone, so filtering can clone children.
+        // The actual filter logic (mode filtering, same-folder handling)
+        // requires SongDatabaseAccessor context which is not yet wired.
         log::warn!("not yet implemented: DirectoryBar.getChildren(mode, containsSameFolder)");
-        Vec::new()
+        children.to_vec()
     }
 }

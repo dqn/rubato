@@ -5,6 +5,7 @@ use crate::stubs::*;
 
 /// Leaderboard display bar
 /// Translates: bms.player.beatoraja.select.bar.LeaderBoardBar
+#[derive(Clone)]
 pub struct LeaderBoardBar {
     pub directory: DirectoryBarData,
     pub song_data: SongData,

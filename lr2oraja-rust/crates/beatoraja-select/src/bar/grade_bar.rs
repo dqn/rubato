@@ -3,6 +3,7 @@ use crate::stubs::*;
 
 /// Course selection bar
 /// Translates: bms.player.beatoraja.select.bar.GradeBar
+#[derive(Clone)]
 pub struct GradeBar {
     pub selectable: SelectableBarData,
     /// Course data

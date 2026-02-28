@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::selectable_bar::SelectableBarData;
 use crate::stubs::SongData;
 
@@ -14,13 +16,13 @@ pub const STYLE_TEXT_PLAIN: i32 = 0;
 pub const STYLE_TEXT_NEW: i32 = 1;
 pub const STYLE_TEXT_MISSING: i32 = 8;
 
-/// Function type for FunctionBar callbacks
+/// Function type for FunctionBar callbacks (Arc for cheap cloning)
 /// In Java: BiConsumer<MusicSelector, FunctionBar>
-/// We use a function pointer or Box<dyn Fn> approach
-pub type FunctionBarCallback = Box<dyn Fn() + Send + Sync>;
+pub type FunctionBarCallback = Arc<dyn Fn() + Send + Sync>;
 
 /// Bar that executes a function when selected
 /// Translates: bms.player.beatoraja.select.bar.FunctionBar
+#[derive(Clone)]
 pub struct FunctionBar {
     pub selectable: SelectableBarData,
     pub function: Option<FunctionBarCallback>,

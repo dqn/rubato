@@ -5,6 +5,7 @@ use crate::stubs::*;
 
 /// Hash collection folder bar
 /// Translates: bms.player.beatoraja.select.bar.HashBar
+#[derive(Clone)]
 pub struct HashBar {
     pub directory: DirectoryBarData,
     pub title: String,

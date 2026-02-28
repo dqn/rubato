@@ -29,6 +29,7 @@ impl BarData {
 }
 
 /// Bar enum representing all bar types in the select screen
+#[derive(Clone)]
 pub enum Bar {
     Song(Box<super::song_bar::SongBar>),
     Folder(Box<super::folder_bar::FolderBar>),
@@ -297,5 +298,149 @@ impl Bar {
                 | Bar::ContextMenu(_)
                 | Bar::LeaderBoard(_)
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bar::command_bar::CommandBar;
+    use crate::bar::container_bar::ContainerBar;
+    use crate::bar::folder_bar::FolderBar;
+    use crate::bar::function_bar::FunctionBar;
+    use crate::bar::grade_bar::GradeBar;
+    use crate::bar::hash_bar::HashBar;
+    use crate::bar::random_course_bar::RandomCourseBar;
+    use crate::bar::same_folder_bar::SameFolderBar;
+    use crate::bar::search_word_bar::SearchWordBar;
+    use crate::bar::song_bar::SongBar;
+    use crate::bar::table_bar::TableBar;
+    use crate::stubs::*;
+    use std::sync::Arc;
+
+    /// Stub TableAccessor for testing
+    struct TestTableAccessor;
+    impl TableAccessor for TestTableAccessor {
+        fn name(&self) -> &str {
+            "test"
+        }
+        fn read(&self) -> Option<TableData> {
+            None
+        }
+        fn write(&self, _td: &mut TableData) {}
+    }
+
+    #[test]
+    fn bar_clone_song() {
+        let bar = Bar::Song(Box::new(SongBar::new(SongData::default())));
+        let cloned = bar.clone();
+        assert_eq!(bar.get_title(), cloned.get_title());
+    }
+
+    #[test]
+    fn bar_clone_folder() {
+        let bar = Bar::Folder(Box::new(FolderBar::new(None, "test".to_string())));
+        let cloned = bar.clone();
+        assert_eq!(bar.get_title(), cloned.get_title());
+    }
+
+    #[test]
+    fn bar_clone_command() {
+        let bar = Bar::Command(Box::new(CommandBar::new(
+            "cmd".to_string(),
+            "SELECT 1".to_string(),
+        )));
+        let cloned = bar.clone();
+        assert_eq!(bar.get_title(), cloned.get_title());
+    }
+
+    #[test]
+    fn bar_clone_container_with_children() {
+        let children = vec![
+            Bar::Folder(Box::new(FolderBar::new(None, "a".to_string()))),
+            Bar::Folder(Box::new(FolderBar::new(None, "b".to_string()))),
+        ];
+        let bar = Bar::Container(Box::new(ContainerBar::new(
+            "container".to_string(),
+            children,
+        )));
+        let cloned = bar.clone();
+        assert_eq!(bar.get_title(), cloned.get_title());
+        if let Bar::Container(ref c) = cloned {
+            assert_eq!(c.get_children().len(), 2);
+        } else {
+            panic!("expected Container variant");
+        }
+    }
+
+    #[test]
+    fn bar_clone_hash() {
+        let bar = Bar::Hash(Box::new(HashBar::new("hash".to_string(), vec![])));
+        let cloned = bar.clone();
+        assert_eq!(bar.get_title(), cloned.get_title());
+    }
+
+    #[test]
+    fn bar_clone_table() {
+        let td = TableData::default();
+        let accessor: Arc<dyn TableAccessor> = Arc::new(TestTableAccessor);
+        let bar = Bar::Table(Box::new(TableBar::new(td, accessor)));
+        let cloned = bar.clone();
+        assert_eq!(bar.get_title(), cloned.get_title());
+    }
+
+    #[test]
+    fn bar_clone_grade() {
+        let bar = Bar::Grade(Box::new(GradeBar::new(CourseData::default())));
+        let cloned = bar.clone();
+        assert_eq!(bar.get_title(), cloned.get_title());
+    }
+
+    #[test]
+    fn bar_clone_random_course() {
+        let bar = Bar::RandomCourse(Box::new(RandomCourseBar::new(RandomCourseData::default())));
+        let cloned = bar.clone();
+        assert_eq!(bar.get_title(), cloned.get_title());
+    }
+
+    #[test]
+    fn bar_clone_search_word() {
+        let bar = Bar::SearchWord(Box::new(SearchWordBar::new(
+            "search".to_string(),
+            "text".to_string(),
+        )));
+        let cloned = bar.clone();
+        assert_eq!(bar.get_title(), cloned.get_title());
+    }
+
+    #[test]
+    fn bar_clone_same_folder() {
+        let bar = Bar::SameFolder(Box::new(SameFolderBar::new(
+            "same".to_string(),
+            "crc".to_string(),
+        )));
+        let cloned = bar.clone();
+        assert_eq!(bar.get_title(), cloned.get_title());
+    }
+
+    #[test]
+    fn bar_clone_function() {
+        let bar = Bar::Function(Box::new(FunctionBar::new("func".to_string(), 0)));
+        let cloned = bar.clone();
+        assert_eq!(bar.get_title(), cloned.get_title());
+    }
+
+    #[test]
+    fn bar_clone_table_shared_accessor() {
+        // Verify Arc-based accessor sharing: clone shares the same accessor
+        let td = TableData::default();
+        let accessor: Arc<dyn TableAccessor> = Arc::new(TestTableAccessor);
+        let bar = Bar::Table(Box::new(TableBar::new(td, accessor)));
+        let cloned = bar.clone();
+        if let (Bar::Table(orig), Bar::Table(cloned_t)) = (&bar, &cloned) {
+            assert_eq!(orig.get_accessor().name(), cloned_t.get_accessor().name());
+        } else {
+            panic!("expected Table variants");
+        }
     }
 }

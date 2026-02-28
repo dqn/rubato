@@ -3,6 +3,7 @@ use super::directory_bar::DirectoryBarData;
 
 /// Bar containing specified child bars
 /// Translates: bms.player.beatoraja.select.bar.ContainerBar
+#[derive(Clone)]
 pub struct ContainerBar {
     pub directory: DirectoryBarData,
     pub title: String,

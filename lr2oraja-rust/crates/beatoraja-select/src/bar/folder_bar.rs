@@ -5,6 +5,7 @@ use crate::stubs::*;
 
 /// File system-linked folder bar
 /// Translates: bms.player.beatoraja.select.bar.FolderBar
+#[derive(Clone)]
 pub struct FolderBar {
     pub directory: DirectoryBarData,
     pub folder: Option<FolderData>,

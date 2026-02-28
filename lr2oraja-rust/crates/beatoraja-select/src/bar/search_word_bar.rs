@@ -4,6 +4,7 @@ use super::song_bar::SongBar;
 
 /// Search bar
 /// Translates: bms.player.beatoraja.select.bar.SearchWordBar
+#[derive(Clone)]
 pub struct SearchWordBar {
     pub directory: DirectoryBarData,
     pub text: String,

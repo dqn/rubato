@@ -3,6 +3,7 @@ use crate::stubs::*;
 
 /// Random course selection bar
 /// Translates: bms.player.beatoraja.select.bar.RandomCourseBar
+#[derive(Clone)]
 pub struct RandomCourseBar {
     pub selectable: SelectableBarData,
     pub course: RandomCourseData,

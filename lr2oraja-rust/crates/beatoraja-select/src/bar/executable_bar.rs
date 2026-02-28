@@ -21,6 +21,20 @@ pub struct ExecutableBar {
     pub current_song: Mutex<Option<SongData>>,
 }
 
+impl Clone for ExecutableBar {
+    fn clone(&self) -> Self {
+        let queue = self.queue.lock().unwrap().clone();
+        let current_song = self.current_song.lock().unwrap().clone();
+        Self {
+            selectable: self.selectable.clone(),
+            title: self.title.clone(),
+            songs: self.songs.clone(),
+            queue: Mutex::new(queue),
+            current_song: Mutex::new(current_song),
+        }
+    }
+}
+
 impl ExecutableBar {
     pub fn new(songs: Vec<SongData>, title: String) -> Self {
         let bar = Self {

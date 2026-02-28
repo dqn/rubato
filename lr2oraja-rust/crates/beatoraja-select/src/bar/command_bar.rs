@@ -5,6 +5,7 @@ use crate::stubs::*;
 
 /// SQL command-based directory bar
 /// Translates: bms.player.beatoraja.select.bar.CommandBar
+#[derive(Clone)]
 pub struct CommandBar {
     pub directory: DirectoryBarData,
     /// Bar title

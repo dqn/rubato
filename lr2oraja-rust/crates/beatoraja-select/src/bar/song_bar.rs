@@ -6,6 +6,7 @@ use crate::stubs::*;
 
 /// Song bar for individual songs
 /// Translates: bms.player.beatoraja.select.bar.SongBar
+#[derive(Clone)]
 pub struct SongBar {
     pub selectable: SelectableBarData,
     /// Song data

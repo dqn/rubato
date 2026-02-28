@@ -4,6 +4,7 @@ use super::song_bar::SongBar;
 
 /// Bar showing all charts in the same directory
 /// Translates: bms.player.beatoraja.select.bar.SameFolderBar
+#[derive(Clone)]
 pub struct SameFolderBar {
     pub directory: DirectoryBarData,
     pub crc: String,
