@@ -44,17 +44,34 @@ pub use beatoraja_types::main_controller_access::{MainControllerAccess, NullMain
 pub struct MainController {
     inner: Box<dyn MainControllerAccess>,
     audio: Option<Box<dyn AudioDriver>>,
+    ir_statuses: Vec<IRStatus>,
 }
 
 impl MainController {
     pub fn new(inner: Box<dyn MainControllerAccess>) -> Self {
-        Self { inner, audio: None }
+        Self {
+            inner,
+            audio: None,
+            ir_statuses: Vec::new(),
+        }
     }
 
     pub fn with_audio(inner: Box<dyn MainControllerAccess>, audio: Box<dyn AudioDriver>) -> Self {
         Self {
             inner,
             audio: Some(audio),
+            ir_statuses: Vec::new(),
+        }
+    }
+
+    pub fn with_ir_statuses(
+        inner: Box<dyn MainControllerAccess>,
+        ir_statuses: Vec<IRStatus>,
+    ) -> Self {
+        Self {
+            inner,
+            audio: None,
+            ir_statuses,
         }
     }
 
@@ -88,8 +105,7 @@ impl MainController {
     }
 
     pub fn get_ir_status(&self) -> &[IRStatus] {
-        log::warn!("not yet implemented: MainController.getIRStatus");
-        &[]
+        &self.ir_statuses
     }
 
     pub fn ir_send_status(&self) -> &Vec<IRSendStatusMain> {

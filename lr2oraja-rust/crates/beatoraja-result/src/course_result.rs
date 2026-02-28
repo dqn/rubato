@@ -235,9 +235,78 @@ impl CourseResult {
                 }
             }
 
-            // IR processing thread
-            // In Java this spawns a Thread. In Rust we'd use tokio::spawn or std::thread::spawn.
-            log::warn!("not yet implemented: IR processing thread for course result");
+            // IR processing (synchronous blocking stub — mirrors MusicResult pattern)
+            // In Java this spawns a Thread. TODO: move to std::thread::spawn for non-blocking.
+            let ir_send_count = self.main.get_config().ir_send_count;
+            let mut irsend = 0;
+            let mut succeed = true;
+            let mut remove_indices: Vec<usize> = Vec::new();
+            for idx in 0..self.ir_send_status.len() {
+                if irsend == 0 {
+                    self.data
+                        .timer
+                        .switch_timer(beatoraja_skin::skin_property::TIMER_IR_CONNECT_BEGIN, true);
+                }
+                irsend += 1;
+                let send_ok = self.ir_send_status[idx].send();
+                succeed &= send_ok;
+                if self.ir_send_status[idx].retry < 0
+                    || self.ir_send_status[idx].retry > ir_send_count
+                {
+                    remove_indices.push(idx);
+                }
+            }
+            // Remove in reverse order to preserve indices
+            for idx in remove_indices.into_iter().rev() {
+                self.ir_send_status.remove(idx);
+            }
+
+            if irsend > 0 {
+                if succeed {
+                    self.data.timer.switch_timer(
+                        beatoraja_skin::skin_property::TIMER_IR_CONNECT_SUCCESS,
+                        true,
+                    );
+                } else {
+                    self.data
+                        .timer
+                        .switch_timer(beatoraja_skin::skin_property::TIMER_IR_CONNECT_FAIL, true);
+                }
+                // Fetch ranking from IR
+                let ir = self.main.get_ir_status();
+                if !ir.is_empty()
+                    && let Some(course_data) = self.resource.get_course_data()
+                {
+                    let ir_course_data = IRCourseData::new_with_lntype(course_data, lnmode);
+                    let response = ir[0].connection.get_course_play_data(None, &ir_course_data);
+                    if response.is_succeeded() {
+                        if let Some(ir_scores) = response.get_data() {
+                            let use_newscore = newscore
+                                .as_ref()
+                                .map(|ns| ns.get_exscore() > self.data.oldscore.get_exscore())
+                                .unwrap_or(false);
+                            let score_for_rank: Option<&beatoraja_core::score_data::ScoreData> =
+                                if use_newscore {
+                                    newscore.as_ref()
+                                } else {
+                                    Some(&self.data.oldscore)
+                                };
+                            if let Some(ref mut ranking) = self.data.ranking {
+                                ranking.update_score(ir_scores, score_for_rank);
+                                if ranking.get_rank() > 10 {
+                                    self.data.ranking_offset = ranking.get_rank() - 5;
+                                } else {
+                                    self.data.ranking_offset = 0;
+                                }
+                            }
+                        }
+                        info!("IR score fetch succeeded: {}", response.get_message());
+                    } else {
+                        warn!("IR score fetch failed: {}", response.get_message());
+                    }
+                }
+            }
+            self.data.state = STATE_IR_FINISHED;
         }
 
         // Play result sound
@@ -602,6 +671,311 @@ mod tests {
             cr.state_type(),
             Some(beatoraja_core::main_state::MainStateType::CourseResult)
         );
+    }
+
+    // ---- IR processing tests ----
+
+    use crate::ir_status::IRStatus as IRStatusReal;
+    use beatoraja_ir::ir_chart_data::IRChartData;
+    use beatoraja_ir::ir_course_data::IRCourseData as IRCourseDataReal;
+    use beatoraja_ir::ir_player_data::IRPlayerData;
+    use beatoraja_ir::ir_response::IRResponse;
+    use beatoraja_ir::ir_score_data::IRScoreData as IRScoreDataReal;
+    use beatoraja_ir::ir_table_data::IRTableData;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    /// Mock IR connection that tracks send_course_play_data calls
+    struct MockCourseIR {
+        send_called: AtomicBool,
+        send_succeeds: bool,
+        ranking_fetch_called: AtomicBool,
+    }
+
+    impl MockCourseIR {
+        fn new(send_succeeds: bool) -> Self {
+            Self {
+                send_called: AtomicBool::new(false),
+                send_succeeds,
+                ranking_fetch_called: AtomicBool::new(false),
+            }
+        }
+    }
+
+    impl crate::stubs::IRConnection for MockCourseIR {
+        fn get_rivals(&self) -> IRResponse<Vec<IRPlayerData>> {
+            IRResponse::failure("not implemented".to_string())
+        }
+        fn get_table_datas(&self) -> IRResponse<Vec<IRTableData>> {
+            IRResponse::failure("not implemented".to_string())
+        }
+        fn get_play_data(
+            &self,
+            _player: Option<&IRPlayerData>,
+            _chart: &IRChartData,
+        ) -> IRResponse<Vec<IRScoreDataReal>> {
+            IRResponse::failure("not implemented".to_string())
+        }
+        fn get_course_play_data(
+            &self,
+            _player: Option<&IRPlayerData>,
+            _course: &IRCourseDataReal,
+        ) -> IRResponse<Vec<IRScoreDataReal>> {
+            self.ranking_fetch_called.store(true, Ordering::SeqCst);
+            IRResponse::success("OK".to_string(), vec![])
+        }
+        fn send_play_data(&self, _model: &IRChartData, _score: &IRScoreDataReal) -> IRResponse<()> {
+            IRResponse::failure("not implemented".to_string())
+        }
+        fn send_course_play_data(
+            &self,
+            _course: &IRCourseDataReal,
+            _score: &IRScoreDataReal,
+        ) -> IRResponse<()> {
+            self.send_called.store(true, Ordering::SeqCst);
+            if self.send_succeeds {
+                IRResponse::success("OK".to_string(), ())
+            } else {
+                IRResponse::failure("Server error".to_string())
+            }
+        }
+        fn get_song_url(&self, _chart: &IRChartData) -> Option<String> {
+            None
+        }
+        fn get_course_url(&self, _course: &IRCourseDataReal) -> Option<String> {
+            None
+        }
+        fn get_player_url(&self, _player: &IRPlayerData) -> Option<String> {
+            None
+        }
+        fn name(&self) -> &str {
+            "MockCourseIR"
+        }
+    }
+
+    /// Mock PlayerResourceAccess that provides course data for IR testing
+    struct MockPlayerResourceForIR {
+        course_score: Option<beatoraja_core::score_data::ScoreData>,
+        course_data: Option<beatoraja_core::course_data::CourseData>,
+        course_gauge: Vec<Vec<Vec<f32>>>,
+        course_replay: Vec<beatoraja_core::replay_data::ReplayData>,
+    }
+
+    impl MockPlayerResourceForIR {
+        fn new_with_course_score() -> Self {
+            let score = beatoraja_core::score_data::ScoreData {
+                clear: beatoraja_core::clear_type::ClearType::Easy.id(),
+                ..Default::default()
+            };
+            let course = beatoraja_core::course_data::CourseData {
+                name: Some("Test Course".to_string()),
+                release: true,
+                ..Default::default()
+            };
+            Self {
+                course_score: Some(score),
+                course_data: Some(course),
+                course_gauge: Vec::new(),
+                course_replay: Vec::new(),
+            }
+        }
+    }
+
+    impl beatoraja_types::player_resource_access::PlayerResourceAccess for MockPlayerResourceForIR {
+        fn get_config(&self) -> &beatoraja_types::config::Config {
+            static CONFIG: std::sync::OnceLock<beatoraja_types::config::Config> =
+                std::sync::OnceLock::new();
+            CONFIG.get_or_init(beatoraja_types::config::Config::default)
+        }
+        fn get_player_config(&self) -> &beatoraja_types::player_config::PlayerConfig {
+            static PC: std::sync::OnceLock<beatoraja_types::player_config::PlayerConfig> =
+                std::sync::OnceLock::new();
+            PC.get_or_init(beatoraja_types::player_config::PlayerConfig::default)
+        }
+        fn get_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
+            None
+        }
+        fn get_rival_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
+            None
+        }
+        fn get_target_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
+            None
+        }
+        fn get_course_score_data(&self) -> Option<&beatoraja_core::score_data::ScoreData> {
+            self.course_score.as_ref()
+        }
+        fn set_course_score_data(&mut self, score: beatoraja_core::score_data::ScoreData) {
+            self.course_score = Some(score);
+        }
+        fn get_songdata(&self) -> Option<&beatoraja_types::song_data::SongData> {
+            None
+        }
+        fn get_replay_data(&self) -> Option<&beatoraja_core::replay_data::ReplayData> {
+            None
+        }
+        fn get_course_replay(&self) -> &[beatoraja_core::replay_data::ReplayData] {
+            &self.course_replay
+        }
+        fn add_course_replay(&mut self, rd: beatoraja_core::replay_data::ReplayData) {
+            self.course_replay.push(rd);
+        }
+        fn get_course_data(&self) -> Option<&beatoraja_core::course_data::CourseData> {
+            self.course_data.as_ref()
+        }
+        fn get_course_index(&self) -> usize {
+            0
+        }
+        fn next_course(&mut self) -> bool {
+            false
+        }
+        fn get_constraint(&self) -> Vec<beatoraja_core::course_data::CourseDataConstraint> {
+            vec![]
+        }
+        fn get_gauge(&self) -> Option<&Vec<Vec<f32>>> {
+            None
+        }
+        fn get_groove_gauge(&self) -> Option<&beatoraja_types::groove_gauge::GrooveGauge> {
+            None
+        }
+        fn get_course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
+            &self.course_gauge
+        }
+        fn add_course_gauge(&mut self, gauge: Vec<Vec<f32>>) {
+            self.course_gauge.push(gauge);
+        }
+        fn get_course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
+            &mut self.course_gauge
+        }
+        fn get_score_data_mut(&mut self) -> Option<&mut beatoraja_core::score_data::ScoreData> {
+            None
+        }
+        fn get_course_replay_mut(&mut self) -> &mut Vec<beatoraja_core::replay_data::ReplayData> {
+            &mut self.course_replay
+        }
+        fn get_maxcombo(&self) -> i32 {
+            0
+        }
+        fn get_org_gauge_option(&self) -> i32 {
+            0
+        }
+        fn set_org_gauge_option(&mut self, _val: i32) {}
+        fn get_assist(&self) -> i32 {
+            0
+        }
+        fn is_update_score(&self) -> bool {
+            true
+        }
+        fn is_update_course_score(&self) -> bool {
+            true
+        }
+        fn is_force_no_ir_send(&self) -> bool {
+            false
+        }
+        fn is_freq_on(&self) -> bool {
+            false
+        }
+        fn get_reverse_lookup_data(&self) -> Vec<String> {
+            vec![]
+        }
+        fn get_reverse_lookup_levels(&self) -> Vec<String> {
+            vec![]
+        }
+        fn clear(&mut self) {}
+        fn set_bms_file(
+            &mut self,
+            _path: &std::path::Path,
+            _mode_type: i32,
+            _mode_id: i32,
+        ) -> bool {
+            false
+        }
+        fn set_course_bms_files(&mut self, _files: &[std::path::PathBuf]) -> bool {
+            false
+        }
+        fn set_tablename(&mut self, _name: &str) {}
+        fn set_tablelevel(&mut self, _level: &str) {}
+        fn set_rival_score_data_option(
+            &mut self,
+            _score: Option<beatoraja_core::score_data::ScoreData>,
+        ) {
+        }
+        fn set_chart_option_data(
+            &mut self,
+            _data: Option<beatoraja_core::replay_data::ReplayData>,
+        ) {
+        }
+        fn set_course_data(&mut self, _data: beatoraja_core::course_data::CourseData) {}
+        fn get_course_song_data(&self) -> Vec<beatoraja_types::song_data::SongData> {
+            vec![]
+        }
+    }
+
+    fn make_ir_course_result(
+        ir_conn: Arc<dyn crate::stubs::IRConnection + Send + Sync>,
+    ) -> CourseResult {
+        use beatoraja_core::ir_config::IRConfig;
+        let ir_status = IRStatusReal::new(
+            IRConfig::default(),
+            ir_conn,
+            IRPlayerData::new(String::new(), String::new(), String::new()),
+        );
+        let main = MainController::with_ir_statuses(
+            Box::new(crate::stubs::NullMainController),
+            vec![ir_status],
+        );
+        let resource = PlayerResource::new(
+            Box::new(MockPlayerResourceForIR::new_with_course_score()),
+            crate::stubs::BMSPlayerMode::new(crate::stubs::BMSPlayerModeType::Play),
+        );
+        CourseResult::new(
+            main,
+            resource,
+            beatoraja_core::timer_manager::TimerManager::new(),
+        )
+    }
+
+    #[test]
+    fn test_prepare_with_ir_transitions_to_ir_finished() {
+        let ir_conn = Arc::new(MockCourseIR::new(true));
+        let mut cr = make_ir_course_result(ir_conn.clone());
+
+        <CourseResult as MainState>::prepare(&mut cr);
+
+        // IR processing should complete and set state to STATE_IR_FINISHED
+        assert_eq!(cr.data.state, crate::abstract_result::STATE_IR_FINISHED);
+    }
+
+    #[test]
+    fn test_prepare_with_ir_sends_course_score() {
+        let ir_conn = Arc::new(MockCourseIR::new(true));
+        let mut cr = make_ir_course_result(ir_conn.clone());
+
+        <CourseResult as MainState>::prepare(&mut cr);
+
+        // The IR send should have been called
+        assert!(ir_conn.send_called.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn test_prepare_with_ir_fetches_ranking() {
+        let ir_conn = Arc::new(MockCourseIR::new(true));
+        let mut cr = make_ir_course_result(ir_conn.clone());
+
+        <CourseResult as MainState>::prepare(&mut cr);
+
+        // After sending, ranking should be fetched via get_course_play_data
+        assert!(ir_conn.ranking_fetch_called.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn test_prepare_with_ir_send_failure_still_finishes() {
+        let ir_conn = Arc::new(MockCourseIR::new(false));
+        let mut cr = make_ir_course_result(ir_conn.clone());
+
+        <CourseResult as MainState>::prepare(&mut cr);
+
+        // Even with send failure, state should transition to IR_FINISHED
+        assert_eq!(cr.data.state, crate::abstract_result::STATE_IR_FINISHED);
+        assert!(ir_conn.send_called.load(Ordering::SeqCst));
     }
 }
 
