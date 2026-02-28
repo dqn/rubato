@@ -93,7 +93,11 @@ impl StateFactory for LauncherStateFactory {
             }
             MainStateType::CourseResult => {
                 // Java: gresult = new CourseResult(this);
-                let course_result = CourseResult::new();
+                let course_result = CourseResult::new(
+                    ResultMainController::new(Box::new(ResultNullMainController)),
+                    ResultPlayerResource::default(),
+                    TimerManager::new(),
+                );
                 Some(Box::new(course_result))
             }
             MainStateType::Config => {

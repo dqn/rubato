@@ -70,46 +70,55 @@ impl CourseIRSendStatus {
 pub struct CourseResult {
     pub data: AbstractResultData,
     pub main_data: beatoraja_core::main_state::MainStateData,
+    pub main: MainController,
+    pub resource: PlayerResource,
     ir_send_status: Vec<CourseIRSendStatus>,
     property: ResultKeyProperty,
 }
 
 impl CourseResult {
-    pub fn new() -> Self {
+    pub fn new(
+        main: MainController,
+        resource: PlayerResource,
+        timer: beatoraja_core::timer_manager::TimerManager,
+    ) -> Self {
         Self {
             data: AbstractResultData::new(),
-            main_data: beatoraja_core::main_state::MainStateData::new(
-                beatoraja_core::timer_manager::TimerManager::new(),
-            ),
+            main_data: beatoraja_core::main_state::MainStateData::new(timer),
+            main,
+            resource,
             ir_send_status: Vec::new(),
             property: ResultKeyProperty::beat_7k(),
         }
     }
 
-    pub fn create(&mut self, main: &mut MainController, resource: &mut PlayerResource) {
+    fn do_create(&mut self) {
         for i in 0..REPLAY_SIZE {
-            let models = resource.get_course_bms_models();
+            let models = self.resource.get_course_bms_models();
             if let Some(models) = models {
-                self.data.save_replay[i] =
-                    if main.get_play_data_accessor().exists_replay_data_course(
+                self.data.save_replay[i] = if self
+                    .main
+                    .get_play_data_accessor()
+                    .exists_replay_data_course(
                         models,
-                        resource.get_player_config().lnmode,
+                        self.resource.get_player_config().lnmode,
                         i as i32,
-                        &resource.get_constraint(),
+                        &self.resource.get_constraint(),
                     ) {
-                        ReplayStatus::Exist
-                    } else {
-                        ReplayStatus::NotExist
-                    };
+                    ReplayStatus::Exist
+                } else {
+                    ReplayStatus::NotExist
+                };
             }
         }
 
         // Fill missing course gauge data
         // Collect data first to avoid borrow conflicts
         let mut gauge_fill_data: Vec<Vec<Vec<f32>>> = Vec::new();
-        if let Some(models) = resource.get_course_bms_models() {
-            let course_gauge_size = resource.get_course_gauge().len();
-            let gauge_type_length = resource
+        if let Some(models) = self.resource.get_course_bms_models() {
+            let course_gauge_size = self.resource.get_course_gauge().len();
+            let gauge_type_length = self
+                .resource
                 .get_groove_gauge()
                 .map(|g| g.get_gauge_type_length())
                 .unwrap_or(9);
@@ -124,32 +133,33 @@ impl CourseResult {
             }
         }
         for list in gauge_fill_data {
-            resource.get_course_gauge_mut().push(list);
+            self.resource.get_course_gauge_mut().push(list);
         }
 
-        if let Some(mode) = resource.get_bms_model().get_mode() {
+        if let Some(mode) = self.resource.get_bms_model().get_mode() {
             self.property = ResultKeyProperty::get(mode).unwrap_or_else(ResultKeyProperty::beat_7k);
         } else {
             self.property = ResultKeyProperty::beat_7k();
         }
 
-        self.update_score_database(main, resource);
+        self.update_score_database();
 
         // Replay auto save
-        if resource.get_play_mode().mode == BMSPlayerModeType::Play {
+        if self.resource.get_play_mode().mode == BMSPlayerModeType::Play {
             for i in 0..REPLAY_SIZE {
-                let auto_save = &resource.get_player_config().autosavereplay;
+                let auto_save = &self.resource.get_player_config().autosavereplay;
                 if i < auto_save.len()
-                    && let Some(new_score) = self.get_new_score(resource)
+                    && let Some(new_score) = self.resource.get_course_score_data()
                     && ReplayAutoSaveConstraint::get(auto_save[i])
                         .is_qualified(&self.data.oldscore, new_score)
                 {
-                    self.save_replay_data(i, main, resource);
+                    self.save_replay_data(i);
                 }
             }
         }
 
-        self.data.gauge_type = resource
+        self.data.gauge_type = self
+            .resource
             .get_groove_gauge()
             .map(|g| g.get_type())
             .unwrap_or(0);
@@ -161,25 +171,25 @@ impl CourseResult {
         );
     }
 
-    pub fn prepare(&mut self, main: &mut MainController, resource: &mut PlayerResource) {
+    fn do_prepare(&mut self) {
         self.data.state = STATE_OFFLINE;
-        let newscore = self.get_new_score(resource).cloned();
+        let newscore = self.resource.get_course_score_data().cloned();
 
-        self.data.ranking = if resource.get_ranking_data().is_some()
-            && resource.get_course_bms_models().is_some()
+        self.data.ranking = if self.resource.get_ranking_data().is_some()
+            && self.resource.get_course_bms_models().is_some()
         {
-            resource.get_ranking_data().cloned()
+            self.resource.get_ranking_data().cloned()
         } else {
             Some(RankingData::new())
         };
         self.data.ranking_offset = 0;
 
-        let ir = main.get_ir_status();
-        if !ir.is_empty() && resource.get_play_mode().mode == BMSPlayerModeType::Play {
+        let ir = self.main.get_ir_status();
+        if !ir.is_empty() && self.resource.get_play_mode().mode == BMSPlayerModeType::Play {
             self.data.state = STATE_IR_PROCESSING;
 
             let mut uln = false;
-            if let Some(models) = resource.get_course_bms_models() {
+            if let Some(models) = self.resource.get_course_bms_models() {
                 for model in models {
                     if model.contains_undefined_long_note() {
                         uln = true;
@@ -188,15 +198,16 @@ impl CourseResult {
                 }
             }
             let lnmode = if uln {
-                resource.get_player_config().lnmode
+                self.resource.get_player_config().lnmode
             } else {
                 0
             };
 
             for irc in ir {
-                let send = resource.is_update_course_score()
-                    && !resource.is_force_no_ir_send()
-                    && resource
+                let send = self.resource.is_update_course_score()
+                    && !self.resource.is_force_no_ir_send()
+                    && self
+                        .resource
                         .get_course_data()
                         .map(|cd| cd.release)
                         .unwrap_or(false);
@@ -213,7 +224,7 @@ impl CourseResult {
 
                 if send
                     && let Some(ref ns) = newscore
-                    && let Some(course_data) = resource.get_course_data()
+                    && let Some(course_data) = self.resource.get_course_data()
                 {
                     self.ir_send_status.push(CourseIRSendStatus::new(
                         irc.connection.clone(),
@@ -232,7 +243,8 @@ impl CourseResult {
         // Play result sound
         if let Some(ref ns) = newscore {
             let _is_clear = ns.clear != ClearType::Failed.id();
-            let _loop_sound = resource
+            let _loop_sound = self
+                .resource
                 .get_config()
                 .audio
                 .as_ref()
@@ -250,7 +262,7 @@ impl CourseResult {
         log::warn!("not yet implemented: stop course result sounds");
     }
 
-    pub fn render(&mut self, _resource: &PlayerResource) {
+    fn do_render(&mut self) {
         let time = self.data.timer.get_now_time();
         self.data.timer.switch_timer(TIMER_RESULTGRAPH_BEGIN, true);
         self.data.timer.switch_timer(TIMER_RESULTGRAPH_END, true);
@@ -261,15 +273,15 @@ impl CourseResult {
         log::warn!("not yet implemented: render with skin");
     }
 
-    pub fn input(&mut self, main: &mut MainController, resource: &mut PlayerResource) {
-        self.data.input(main);
+    fn do_input(&mut self) {
+        self.data.input(&mut self.main);
 
         if !self.data.timer.is_timer_on(TIMER_FADEOUT)
             && self.data.timer.is_timer_on(TIMER_STARTINPUT)
         {
             let mut ok = false;
             for i in 0..self.property.get_assign_length() {
-                let input_processor = main.get_input_processor();
+                let input_processor = self.main.get_input_processor();
                 if self.property.get_assign(i) == Some(ResultKey::ChangeGraph)
                     && input_processor.get_key_state(i)
                     && input_processor.reset_key_changed_time(i)
@@ -284,7 +296,7 @@ impl CourseResult {
             }
 
             {
-                let input_processor = main.get_input_processor();
+                let input_processor = self.main.get_input_processor();
                 if input_processor.is_control_key_pressed(ControlKeys::Escape)
                     || input_processor.is_control_key_pressed(ControlKeys::Enter)
                 {
@@ -292,7 +304,7 @@ impl CourseResult {
                 }
             }
 
-            if (resource.get_score_data().is_none() || ok)
+            if (self.resource.get_score_data().is_none() || ok)
                 && (self.data.state == STATE_OFFLINE || self.data.state == STATE_IR_FINISHED)
             {
                 self.data.timer.switch_timer(TIMER_FADEOUT, true);
@@ -300,7 +312,7 @@ impl CourseResult {
             }
 
             let replay_index = {
-                let input_processor = main.get_input_processor();
+                let input_processor = self.main.get_input_processor();
                 if input_processor.is_control_key_pressed(ControlKeys::Num1) {
                     Some(0)
                 } else if input_processor.is_control_key_pressed(ControlKeys::Num2) {
@@ -314,11 +326,11 @@ impl CourseResult {
                 }
             };
             if let Some(idx) = replay_index {
-                self.save_replay_data(idx, main, resource);
+                self.save_replay_data(idx);
             }
 
             {
-                let input_processor = main.get_input_processor();
+                let input_processor = self.main.get_input_processor();
                 if input_processor.is_activated(KeyCommand::OpenIr) {
                     // self.execute_event(EventType::open_ir);
                     log::warn!("not yet implemented: execute open_ir event");
@@ -327,29 +339,25 @@ impl CourseResult {
         }
     }
 
-    pub fn update_score_database(
-        &mut self,
-        main: &mut MainController,
-        resource: &mut PlayerResource,
-    ) {
-        let lnmode = resource.get_player_config().lnmode;
-        let random_cfg = resource.get_player_config().random;
-        let random2_cfg = resource.get_player_config().random2;
-        let doubleoption_cfg = resource.get_player_config().doubleoption;
-        let newscore = self.get_new_score(resource).cloned();
+    fn update_score_database(&mut self) {
+        let lnmode = self.resource.get_player_config().lnmode;
+        let random_cfg = self.resource.get_player_config().random;
+        let random2_cfg = self.resource.get_player_config().random2;
+        let doubleoption_cfg = self.resource.get_player_config().doubleoption;
+        let newscore = self.resource.get_course_score_data().cloned();
         if newscore.is_none() {
             return;
         }
         let mut newscore = newscore.unwrap();
 
         let mut dp = false;
-        if let Some(models) = resource.get_course_bms_models() {
+        if let Some(models) = self.resource.get_course_bms_models() {
             for model in models {
                 dp |= model.get_mode().map(|m| m.player()).unwrap_or(1) == 2;
             }
         }
 
-        newscore.maxcombo = resource.get_maxcombo();
+        newscore.maxcombo = self.resource.get_maxcombo();
         if newscore.notes != 0 {
             newscore.avgjudge = newscore.total_duration / newscore.notes as i64;
         }
@@ -362,21 +370,23 @@ impl CourseResult {
             random = 1;
         }
 
-        if let Some(models) = resource.get_course_bms_models() {
-            let score = main.get_play_data_accessor().read_score_data_course(
+        if let Some(models) = self.resource.get_course_bms_models() {
+            let score = self.main.get_play_data_accessor().read_score_data_course(
                 models,
                 lnmode,
                 random,
-                &resource.get_constraint(),
+                &self.resource.get_constraint(),
             );
             self.data.oldscore = score.unwrap_or_default();
         }
 
-        let target_exscore = resource
+        let target_exscore = self
+            .resource
             .get_target_score_data()
             .map(|s| s.get_exscore())
             .unwrap_or(0);
-        let total_notes: i32 = resource
+        let total_notes: i32 = self
+            .resource
             .get_course_bms_models()
             .map(|models| models.iter().map(|m| m.get_total_notes()).sum())
             .unwrap_or(0);
@@ -387,22 +397,22 @@ impl CourseResult {
         );
         self.data.score.update_score(Some(&newscore));
 
-        if let Some(models) = resource.get_course_bms_models() {
-            main.get_play_data_accessor().write_score_data_course(
+        if let Some(models) = self.resource.get_course_bms_models() {
+            self.main.get_play_data_accessor().write_score_data_course(
                 &newscore,
                 models,
                 lnmode,
                 random,
-                &resource.get_constraint(),
-                resource.is_update_course_score(),
+                &self.resource.get_constraint(),
+                self.resource.is_update_course_score(),
             );
         }
 
         info!("Score database update complete");
     }
 
-    pub fn get_judge_count(&self, judge: i32, fast: bool, resource: &PlayerResource) -> i32 {
-        if let Some(score) = resource.get_course_score_data() {
+    pub fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
+        if let Some(score) = self.resource.get_course_score_data() {
             match judge {
                 0 => {
                     if fast {
@@ -453,29 +463,24 @@ impl CourseResult {
         }
     }
 
-    pub fn save_replay_data(
-        &mut self,
-        index: usize,
-        main: &mut MainController,
-        resource: &mut PlayerResource,
-    ) {
-        if resource.get_play_mode().mode == BMSPlayerModeType::Play
-            && resource.get_course_score_data().is_some()
+    pub fn save_replay_data(&mut self, index: usize) {
+        if self.resource.get_play_mode().mode == BMSPlayerModeType::Play
+            && self.resource.get_course_score_data().is_some()
             && self.data.save_replay[index] != ReplayStatus::Saved
-            && resource.is_update_course_score()
+            && self.resource.is_update_course_score()
         {
             // Extract gauge value first to avoid borrow conflict
-            let gauge = resource.get_player_config().gauge;
-            let rd = resource.get_course_replay_mut();
+            let gauge = self.resource.get_player_config().gauge;
+            let rd = self.resource.get_course_replay_mut();
             for replay in rd.iter_mut() {
                 replay.gauge = gauge;
             }
-            let lnmode = resource.get_player_config().lnmode;
-            let constraint = resource.get_constraint();
-            if let Some(models) = resource.get_course_bms_models() {
+            let lnmode = self.resource.get_player_config().lnmode;
+            let constraint = self.resource.get_constraint();
+            if let Some(models) = self.resource.get_course_bms_models() {
                 // Clone replays for write (write_brd_course calls shrink on each)
-                let mut replays = resource.get_course_replay().to_vec();
-                main.get_play_data_accessor().write_replay_data_course(
+                let mut replays = self.resource.get_course_replay().to_vec();
+                self.main.get_play_data_accessor().write_replay_data_course(
                     &mut replays,
                     models,
                     lnmode,
@@ -484,12 +489,12 @@ impl CourseResult {
                 );
             }
             self.data.save_replay[index] = ReplayStatus::Saved;
-            main.save_last_recording("ON_REPLAY");
+            self.main.save_last_recording("ON_REPLAY");
         }
     }
 
-    pub fn get_new_score<'a>(&self, resource: &'a PlayerResource) -> Option<&'a ScoreData> {
-        resource.get_course_score_data()
+    pub fn get_new_score(&self) -> Option<&ScoreData> {
+        self.resource.get_course_score_data()
     }
 
     pub fn dispose(&mut self) {
@@ -499,7 +504,12 @@ impl CourseResult {
 
 impl Default for CourseResult {
     fn default() -> Self {
-        Self::new()
+        use crate::stubs::NullMainController;
+        Self::new(
+            MainController::new(Box::new(NullMainController)),
+            PlayerResource::default(),
+            beatoraja_core::timer_manager::TimerManager::new(),
+        )
     }
 }
 
@@ -512,11 +522,20 @@ impl Default for CourseResult {
 mod tests {
     use super::*;
     use beatoraja_core::main_state::MainState;
+    use beatoraja_skin::skin_property::{TIMER_RESULTGRAPH_BEGIN, TIMER_STARTINPUT};
     use beatoraja_skin::skin_type::SkinType;
+
+    fn make_default() -> CourseResult {
+        CourseResult::new(
+            MainController::new(Box::new(crate::stubs::NullMainController)),
+            PlayerResource::default(),
+            beatoraja_core::timer_manager::TimerManager::new(),
+        )
+    }
 
     #[test]
     fn test_state_type_returns_course_result() {
-        let cr = CourseResult::new();
+        let cr = make_default();
         assert_eq!(
             cr.state_type(),
             Some(beatoraja_core::main_state::MainStateType::CourseResult)
@@ -531,9 +550,58 @@ mod tests {
 
     #[test]
     fn test_main_state_data_accessors() {
-        let mut cr = CourseResult::new();
+        let mut cr = make_default();
         let _ = <CourseResult as MainState>::main_state_data(&cr);
         let _ = <CourseResult as MainState>::main_state_data_mut(&mut cr);
+    }
+
+    #[test]
+    fn test_new_stores_main_and_resource() {
+        let cr = make_default();
+        // Verify the fields exist and are accessible
+        assert!(cr.resource.get_score_data().is_none());
+    }
+
+    #[test]
+    fn test_trait_create_delegates_to_do_create() {
+        let mut cr = make_default();
+        // do_create sets gauge_type from groove_gauge (defaults to 0)
+        <CourseResult as MainState>::create(&mut cr);
+        assert_eq!(cr.data.gauge_type, 0);
+    }
+
+    #[test]
+    fn test_trait_prepare_delegates_to_do_prepare() {
+        let mut cr = make_default();
+        // do_prepare sets state to STATE_OFFLINE
+        <CourseResult as MainState>::prepare(&mut cr);
+        assert_eq!(cr.data.state, crate::abstract_result::STATE_OFFLINE);
+    }
+
+    #[test]
+    fn test_trait_render_delegates_to_do_render() {
+        let mut cr = make_default();
+        // do_render switches TIMER_RESULTGRAPH_BEGIN
+        assert!(!cr.data.timer.is_timer_on(TIMER_RESULTGRAPH_BEGIN));
+        <CourseResult as MainState>::render(&mut cr);
+        assert!(cr.data.timer.is_timer_on(TIMER_RESULTGRAPH_BEGIN));
+    }
+
+    #[test]
+    fn test_trait_input_delegates_to_do_input() {
+        let mut cr = make_default();
+        // do_input calls self.data.input(main) which updates IR state
+        // With default state, input should not panic
+        <CourseResult as MainState>::input(&mut cr);
+    }
+
+    #[test]
+    fn test_default_creates_with_null_controller() {
+        let cr = CourseResult::default();
+        assert_eq!(
+            cr.state_type(),
+            Some(beatoraja_core::main_state::MainStateType::CourseResult)
+        );
     }
 }
 
@@ -551,29 +619,19 @@ impl beatoraja_core::main_state::MainState for CourseResult {
     }
 
     fn create(&mut self) {
-        // Delegates to create(main, resource) when MainController is available
-        log::warn!(
-            "not yet implemented: CourseResult.create() - requires MainController and PlayerResource context"
-        );
+        self.do_create();
     }
 
     fn prepare(&mut self) {
-        // Delegates to prepare(main, resource) when MainController is available
-        log::warn!(
-            "not yet implemented: CourseResult.prepare() - requires MainController and PlayerResource context"
-        );
+        self.do_prepare();
     }
 
     fn render(&mut self) {
-        // Delegates to render(resource) when MainController is available
-        log::warn!("not yet implemented: CourseResult.render() - requires PlayerResource context");
+        self.do_render();
     }
 
     fn input(&mut self) {
-        // Delegates to input(main, resource) when MainController is available
-        log::warn!(
-            "not yet implemented: CourseResult.input() - requires MainController and PlayerResource context"
-        );
+        self.do_input();
     }
 
     fn shutdown(&mut self) {
