@@ -58,13 +58,13 @@ Phases 1–44 complete. **2391 tests, 16 ignored.** 27 crates, 127k lines. See A
 
 ## Phase 51: Skin Loaders Completion
 
-- [ ] **51a:** Lua MainStateAccessor — Implement 19 missing functions in beatoraja-skin Lua bridge
+- [x] **51a:** Lua MainStateAccessor — Implement 20 missing functions in beatoraja-skin Lua bridge
   - depends: 47a
-- [ ] **51b:** LR2 21 commands — Implement 21 stubbed LR2 skin commands
+- [x] **51b:** LR2 21 commands — Implement 21 stubbed LR2 skin commands
   - depends: 47a
-- [ ] **51c:** JSON 7 skin factories — Implement 7 stubbed JSON skin factories
+- [x] **51c:** JSON 7 skin factories — Implement 7 stubbed JSON skin factories
   - depends: 47a
-- [ ] **51d:** SkinTextFont.draw_with_offset() — Integrate TrueType font rendering (fontdue/cosmic-text) into wgpu SkinObjectRenderer
+- [x] **51d:** SkinTextFont.draw_with_offset() — Implement TrueType text rendering with alignment, shadow, overflow modes
   - depends: none
 
 ## Phase 52: Launcher & External Wiring
