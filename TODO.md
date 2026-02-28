@@ -1,106 +1,103 @@
 # Porting TODO — Remaining Work
 
-Phases 1–44 complete. **2391 tests, 16 ignored.** 27 crates, 127k lines. See AGENTS.md.
+Phases 1–57 complete. **2940 tests.** 26 crates, 158k lines. See AGENTS.md.
 
 ---
 
-## Phase 45: Regression Fixes (no blockers)
+## Completed Phases (45–57)
 
-- [x] **45a:** RandomizerBase StdRng → JavaRandom — Replace `StdRng` with `JavaRandom` in `beatoraja-pattern/src/randomizer.rs` (field, new(), set_random_seed(), all closure signatures). Also fix `MineNoteModifier` and `LongNoteModifier` using `rand::random()` instead of seeded RNG
-  - depends: none
-- [x] **45b:** Serde field name mismatches in ScoreData — Add `#[serde(rename)]` for `total_duration`→`totalDuration`, `total_avg`→`totalAvg`, `device_type`→`deviceType`, `judge_algorithm`→`judgeAlgorithm`, and rename `combo`→`maxcombo` in `beatoraja-types/src/score_data.rs` + all callers
-  - depends: none
+<details>
+<summary>Phase 45–53: Regression fixes, lifecycle wiring, skin rendering, select→play, result, skin loaders, launcher, quality</summary>
 
-## Phase 46: Core Lifecycle Wiring (unblocks gameplay)
+- **45a–b:** RandomizerBase JavaRandom, ScoreData serde
+- **46a–c:** PlayerResource.loadBMSModel, SongData unification, MainController.exit/save_config
+- **47a–e:** FloatPropertyFactory, Timer, load_skin overrides, SkinFloat, BooleanPropertyFactory
+- **48a–c:** Bar Clone, get_children (7 types), read_chart/read_course
+- **49a–b:** bms_player wiring, LaneRenderer.draw_lane
+- **50a–b:** CourseResult MainState, CourseResult IR thread
+- **51a–d:** Lua MainStateAccessor, LR2 21 commands, JSON 7 factories, SkinTextFont
+- **52a–d:** Skin header loading, async BMS DB, get_screen_type, DifficultyTableParser
+- **53a–d:** modmenu/ir/controller tests, dead code removal (beatoraja-common)
 
-- [x] **46a:** PlayerResource.loadBMSModel() — Wire `ChartDecoderImpl::get_decoder()` into `player_resource.rs:set_bms_file()`. Change `model` field from `Option<()>` to real `BMSModel`. Call `BMSModelUtils::set_start_note_time()` and `BMSPlayerRule::validate()`
-  - depends: none
-- [x] **46b:** PlayerResource.SongData type unification — Replace local `SongData` stub in `beatoraja-core/src/player_resource.rs` with `beatoraja_types::song_data::SongData`. Construct via `SongData::new_from_bms_model()` in `set_bms_file()`
-  - depends: 46a
-- [x] **46c:** MainController.exit() and save_config() — Implement real exit logic and config serialization in `beatoraja-core/src/main_controller.rs`
-  - depends: none
+</details>
 
-## Phase 47: Skin Rendering Pipeline (makes screens visible)
+<details>
+<summary>Phase 54–57: ast-compare audit, BytePCM fix, method-level ignore, final gap resolution</summary>
 
-- [x] **47a:** FloatPropertyFactory implementation — Replace stub `get() → 0.0` with real delegate calls to MainState. Decide architecture: trait method extension vs `dyn Any` downcast for ~50 property entries in `beatoraja-skin/src/property/float_property_factory.rs`
-  - depends: none
-- [x] **47b:** Timer stub replacement — Replace zero-return timer with real timer manager access in `beatoraja-skin`
-  - depends: none
-- [x] **47c:** MainState.load_skin() per-state overrides — Add `load_skin()` override to CourseResult, MusicResult, PlayState, DecideState following MusicSelector's pattern
-  - depends: none
-- [x] **47d:** SkinFloat enum variant — Add SkinFloat to SkinObject enum + dispatch in beatoraja-skin
-  - depends: none
-- [x] **47e:** BooleanPropertyFactory stubs — Implement remaining boolean property delegates
-  - depends: none
+- **54a:** ast-compare ignore list — bmson/osu POJOs added
+- **54b:** BytePCM float→byte — `as i32 as i8` matches Java truncation
+- **55:** 28 genuine gaps audited → 15 false positives, 7 implemented, 6 blocked
+- **56:** Method-level ignore added to ast-compare. 170 false positives (136 patterns). Gap: 90
+- **56b:** 52 additional false positives + PlayerResource.reloadBMSFile. Gap: 38
+- **57:** 13 KeyConfiguration + 13 SkinConfiguration methods, 12 false positives. Gap: 0
 
-## Phase 48: Select→Play Wiring
-
-- [x] **48a:** Bar Clone problem resolution — Resolve `Bar` enum Clone issue (TableAccessor `dyn` → concrete enum or `Arc` shared ownership) in `beatoraja-select/src/bar/bar.rs`
-  - depends: none
-- [x] **48b:** Bar get_children() stubs (7 types) — Implement `get_children()` for FolderBar, HashBar, SearchWordBar, SameFolderBar, CommandBar, LeaderBoardBar, DirectoryBar by threading `SongDatabaseAccessor`
-  - depends: 48a
-- [x] **48c:** read_chart/read_course/read_random_course — Wire select→play state transitions in `beatoraja-select/src/music_selector.rs` via PlayerResource
-  - depends: 46a, 46b, 48b
-
-## Phase 49: Play State Integration
-
-- [x] **49a:** bms_player.rs Phase 22 wiring — Resolve 19 TODO items for input/transition/config wiring in `beatoraja-play/src/bms_player.rs`
-  - depends: 46a, 46b
-- [x] **49b:** LaneRenderer.draw_lane() — Port 713-line Java rendering method in `beatoraja-play/src/lane_renderer.rs`
-  - depends: 47a, 47c
-
-## Phase 50: Result & Course Integration
-
-- [x] **50a:** CourseResult MainState wiring — Wire create/prepare/render/input to MainController and PlayerResource in `beatoraja-result/src/course_result.rs`
-  - depends: 46a, 47c
-- [x] **50b:** CourseResult IR thread — Spawn IR send thread in CourseResult prepare()
-  - depends: 50a
-
-## Phase 51: Skin Loaders Completion
-
-- [x] **51a:** Lua MainStateAccessor — Implement 20 missing functions in beatoraja-skin Lua bridge
-  - depends: 47a
-- [x] **51b:** LR2 21 commands — Implement 21 stubbed LR2 skin commands
-  - depends: 47a
-- [x] **51c:** JSON 7 skin factories — Implement 7 stubbed JSON skin factories
-  - depends: 47a
-- [x] **51d:** SkinTextFont.draw_with_offset() — Implement TrueType text rendering with alignment, shadow, overflow modes
-  - depends: none
-
-## Phase 52: Launcher & External Wiring
-
-- [x] **52a:** Skin header loading wiring — Connect skin header loader in beatoraja-launcher
-  - depends: 47c
-- [x] **52b:** Async BMS DB loading — Implement async song database loading in launcher
-  - depends: none
-- [x] **52c:** get_screen_type() implementation — Replace `→ Other` stubs in 3 external files
-  - depends: none
-- [x] **52d:** DifficultyTableParser bridge — Wire bms-table crate as dependency + toSongData()
-  - depends: none
-
-## Phase 53: Quality & Test Coverage
-
-- [x] **53a:** beatoraja-modmenu tests — Add 58 tests covering imgui_notify, download_task, freq_trainer, skin_menu, random_trainer, misc_setting
-  - depends: none
-- [x] **53b:** beatoraja-ir tests — Add 40+ tests covering ir_response, ir_score_data, leaderboard_entry, lr2_ghost_data, lr2_ir_connection, ranking_data
-  - depends: none
-- [x] **53c:** beatoraja-controller tests — Add 28 tests covering lwjgl3_controller button/axis mapping, manager operations
-  - depends: none
-- [x] **53d:** Remove dead code: beatoraja-common — Removed 785 lines (0 callers), deleted crate from workspace
-  - depends: none
+</details>
 
 ---
 
-## 軽微な未移植項目
+## Phase 58: "Not Implemented" Message Cleanup (non-functional)
 
-| 項目 | 影響 | 備考 |
-|------|------|------|
-| `BMSModel.compareTo()` | 低 | 必要時に Ord 実装可。Java でも未使用 |
-| `BMSModelUtils.getAverageNotesPerTime()` | 低 | Java でも未使用 (デッドコード) |
-| OBS reconnect lifecycle | 低 | server_uri/password の inner 保持が必要 |
-| Skill rating calculation | 低 | Java ソースに実装なし (移植元不在) |
+151 箇所の `not yet implemented` / `not implemented` スタブを分類・整理する。
+
+- [ ] **58a:** Test infrastructure stubs (~24) — MockIRConnection `"not implemented"` → `"mock"`, ast-compare `warn!` → `trace!`
+- [ ] **58b:** NullSongDatabaseAccessor (6) — `warn!` → `trace!`, doc comment 追加
+- [ ] **58c:** Permanently out-of-scope (~6) — javafx_utils, random_trainer, sprite_batch_helper, bms_decoder, key_input_log, skin_source_movie
+- [ ] **58d:** Blocked stubs documentation (~18) — メッセージを `"stub: <method> — blocked by <reason>"` 形式に統一 + beads issue 作成
+
+## Phase 59: Sound System Wiring + MusicSelector Navigation (~25)
+
+- [ ] **59a:** MainControllerAccess にサウンドメソッド追加 (play_sound, stop_sound, has_sound)
+- [ ] **59b:** MusicResult sound wiring (4)
+- [ ] **59c:** CourseResult sound wiring (2)
+- [ ] **59d:** MusicSelector state transition wiring (~8): changeState, exit, executeEvent, getSelectedBarPlayConfig
+- [ ] **59e:** MainState trait overrides for sound (6)
+- [ ] **59f:** Skin stubs MainState/MainController wiring (5)
+
+## Phase 60: PlayerResource Wiring + Result Stubs (~12)
+
+- [ ] **60a:** PlayerResource reverse lookup (2): get_reverse_lookup_data/levels
+- [ ] **60b:** PlayerResourceAccess trait expansion (3): get_replay_data_mut, reload_bms_file, set_gauge_option
+- [ ] **60c:** Result crate remaining stubs (4): getInputProcessor, irSendStatus
+- [ ] **60d:** ChartReplicationMode::Replay* (1)
+- [ ] **60e:** MusicSelector remaining stubs (4): bar_renderer, skin_distribution_graph
+
+## Phase 61: OBS + LR2 Skin + External + Modmenu + Decide (~14)
+
+- [ ] **61a:** OBS delayed triggerStateChange (1)
+- [ ] **61b:** OBS WebSocket reconnection (1)
+- [ ] **61c:** LR2 skin CSV INCLUDE directive (1)
+- [ ] **61d:** LR2 skin_loader CSV format support (3)
+- [ ] **61e:** External property factories (3)
+- [ ] **61f:** Pomyu chara loader (1)
+- [ ] **61g:** Modmenu stubs (2): get_selected_bar, get_reverse_lookup_data
+- [ ] **61h:** Decide stubs (2): getInputProcessor, play_sound
+
+## Phase 62: Launcher egui Integration (~18)
+
+- [ ] **62a:** SongDatabaseAccessor wiring for editor views (4)
+- [ ] **62b:** Configuration view init (3): audio, obs, discord
+- [ ] **62c:** SkinConfiguration/KeyConfiguration create+render (4)
+- [ ] **62d:** PlayConfigurationView (3): What's New, LR2 import, render
+- [ ] **62e:** Remaining launcher stubs (4): table_editor, spinner_cell, course_editor, folder_editor
+
+---
+
+## Minor Unported Items
+
+| Item | Impact | Notes |
+|------|--------|-------|
+| `BMSModel.compareTo()` | Low | Ord impl on demand. Unused in Java |
+| `BMSModelUtils.getAverageNotesPerTime()` | Low | Dead code in Java |
+| Skill rating calculation | Low | No Java source (no porting source) |
 
 ## Permanent Stubs
 
-- **Twitter4j** (`beatoraja-external`): ~446 lines, `bail!()` — API 廃止済みのため意図的に未実装
-- **ShortDirectPCM** (`beatoraja-audio`): Java 固有の DirectBuffer — Rust では不要
+- **Twitter4j** (`beatoraja-external`): ~446 lines, `bail!()` — API deprecated, intentionally unimplemented
+- **ShortDirectPCM** (`beatoraja-audio`): Java-specific DirectBuffer — unnecessary in Rust
+- **JavaFX find_parent_by_class_simple_name** (`beatoraja-launcher`): No egui equivalent
+- **randomtrainer.dat** (`beatoraja-modmenu`): Binary resource from Java, uses empty HashMap fallback
+
+## Post-Phase 62 Remaining (blocked)
+
+- ContextMenuBar group (~10): Requires MusicSelector + BarManager deep integration
+- Download processors (~5): MainController download processor wiring (circular dep)
