@@ -155,6 +155,23 @@ fn ignored_java_patterns() -> Vec<&'static str> {
         "osu/Osu.java",
         // Exception class (replaced by anyhow)
         "exceptions/PlayerConfigException.java",
+        // bmson POJOs — merged into bms-model/src/bmson/mod.rs
+        "bmson/BGASequence.java",
+        "bmson/BMSONObject.java",
+        "bmson/BpmEvent.java",
+        "bmson/MineNote.java",
+        "bmson/ScrollEvent.java",
+        "bmson/Sequence.java",
+        "bmson/StopEvent.java",
+        // osu POJOs — merged into bms-model/src/osu/mod.rs
+        "osu/Colours.java",
+        "osu/Difficulty.java",
+        "osu/Editor.java",
+        "osu/Events.java",
+        "osu/General.java",
+        "osu/HitObjects.java",
+        "osu/Metadata.java",
+        "osu/TimingPoints.java",
     ]
 }
 

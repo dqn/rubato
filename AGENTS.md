@@ -84,12 +84,13 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**2571 tests.** Phases 1–53 complete. Zero clippy warnings.
-**Migration audit**: 93.97% method resolution (4,021/4,279). 0 constant mismatches. 1 Rust-side regression.
+**2940 tests.** Phases 1–54 complete. Zero clippy warnings.
+**Migration audit**: 93.97% method resolution (4,021/4,279). 0 constant mismatches. 0 Rust-side regressions.
+**Phase 54 finding**: ast-compare "missing" 257 methods → 88% false positives (architectural redesign). ~28 genuine gaps remain (deferred features, not blocking).
 
 ### Resolved (Phase 45–53)
 
-All 7 critical gaps and the StdRng regression resolved:
+All 7 critical gaps, the StdRng regression, and BytePCM regressions resolved:
 - PlayerResource.loadBMSModel() — BMS files load (Phase 46a)
 - MainState.load_skin() — screens render (Phase 47c)
 - PlayerResource.SongData unified — get_songdata() returns real data (Phase 46b)
@@ -99,6 +100,8 @@ All 7 critical gaps and the StdRng regression resolved:
 - SkinTextFont.draw_with_offset() — TrueType text renders (Phase 51d)
 - RandomizerBase — JavaRandom LCG restored (Phase 45a)
 - ScoreData serde — Java JSON field names compatible (Phase 45b)
+- BytePCM float→byte — `as i32 as i8` matches Java truncation (Phase 54b)
+- ast-compare ignore list — bmson/osu POJOs added (Phase 54a)
 
 ## Remaining Stubs (~2,872 lines across 10 stubs.rs)
 
@@ -115,10 +118,21 @@ All 7 critical gaps and the StdRng regression resolved:
 | beatoraja-types | 88 | 7 resolved re-exports, 1 partial (BarSorter) |
 | beatoraja-core | 1 | exit/save_config wired, loadBMSModel wired |
 
-### Remaining Regressions (2)
+### Remaining Regressions (0)
 
-1. BytePCM float saturation (Medium) — clipping differs from Java
-2. BytePCM negative overflow (Medium) — same issue, negative range
+BytePCM float saturation and negative overflow resolved in Phase 54b.
+Fix: `(f * 127.0) as i32 as i8` matches Java's `(byte)(int)(f * 127)` truncation semantics.
+
+### Genuine Gaps (~28 methods, non-blocking)
+
+- PlayerConfig I/O (7): createDirectory, copyReplays, loadPlayerConfig — deferred to launcher integration
+- MainState stubs (4): loadSkin, getOffsetValue, getImage, getSound — Phase 47 scaffolding
+- MainController thread stubs (3): updateSong, updateTable, downloadIpfsMessageRenderer
+- Config accessors (4): scrollDuration, clipboard screenshot
+- CipherUtils (2): AES encrypt/decrypt for IR passwords — security gap, deferred
+- SkinTextBitmap (2): character rendering
+- Lua stubs (2): serializeLuaScript, exportSkinPropertyToTable
+- Other (4): BMSModelUtils, CourseResult.shutdown, IRSendStatus.send, SongDatabaseAccessor.updateSongDatas
 
 ## Lessons Learned
 
@@ -130,6 +144,8 @@ All 7 critical gaps and the StdRng regression resolved:
 - **Bar Clone:** `Box<dyn Trait>` blocks Clone → use `Arc<dyn Trait>` for shared trait objects.
 - **Property delegate pattern:** `integer_value(id)` / `float_value(id)` / `boolean_value(id)` on MainState — skin property factories delegate via ID lookup.
 - **Dead crate removal:** beatoraja-common (785 lines, 0 callers) removed in Phase 53d. Always audit before removing: check Cargo.toml deps, re-exports, test imports.
+- **ast-compare false positives:** ~88% of "missing" methods are architectural redesigns (inner class→closure, abstract→enum dispatch, getter→pub field). Always verify Java↔Rust manually before implementing.
+- **Java float→int→byte truncation:** Use `as i32 as i8` in Rust (via i32 to get truncation). Direct `as i8` saturates since Rust 1.45.
 
 ## Landing the Plane (Session Completion)
 

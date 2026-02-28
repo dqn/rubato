@@ -74,7 +74,10 @@ impl BytePCM {
                         pcm[i * 4 + 2],
                         pcm[i * 4 + 3],
                     ]);
-                    s[i] = (f * i8::MAX as f32) as i8 as u8;
+                    // Java: (byte)(pcm.getFloat() * Byte.MAX_VALUE)
+                    // float→int truncates toward zero, int→byte truncates to low 8 bits.
+                    // Rust `as i8` saturates (since 1.45), so go via i32 first.
+                    s[i] = ((f * i8::MAX as f32) as i32 as i8) as u8;
                 }
                 sample = s;
             }

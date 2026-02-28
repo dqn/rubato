@@ -71,7 +71,6 @@ fn byte_pcm_float_0_0_produces_0() {
 /// A correct implementation should explicitly clamp to [-1.0, 1.0] range
 /// before conversion, or use a wider intermediate type.
 #[test]
-#[ignore] // BUG: over-range float silently saturates to same value as f=1.0 (clips)
 fn byte_pcm_float_overflow() {
     let loader = make_float32_loader(&[2.0]);
     let pcm = BytePCM::load_pcm(&loader).unwrap();
@@ -115,7 +114,6 @@ fn byte_pcm_float_nan_produces_zero() {
 /// In Java: `(byte)(int)(-2.0f * 127)` = `(byte)(-254)` = 2 → u8 2.
 /// Rust produces 128 instead.
 #[test]
-#[ignore] // BUG: negative over-range saturates to -128 (u8 128), not Java-compatible 2
 fn byte_pcm_float_neg_overflow() {
     let loader = make_float32_loader(&[-2.0]);
     let pcm = BytePCM::load_pcm(&loader).unwrap();
