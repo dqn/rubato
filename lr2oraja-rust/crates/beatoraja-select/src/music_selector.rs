@@ -1,9 +1,13 @@
+use std::path::PathBuf;
+
 use beatoraja_core::main_state::{MainState, MainStateData};
 use beatoraja_core::pixmap_resource_pool::PixmapResourcePool;
 use beatoraja_core::timer_manager::TimerManager;
 use beatoraja_ir::ranking_data;
+use beatoraja_types::main_controller_access::MainControllerAccess;
 
 use crate::bar::bar::Bar;
+use crate::bar::grade_bar::GradeBar;
 use crate::bar_manager::BarManager;
 use crate::bar_renderer::BarRenderer;
 use crate::bar_sorter::BarSorter;
@@ -78,6 +82,9 @@ pub struct MusicSelector {
     pub banners: PixmapResourcePool,
     /// Stagefile pixmap resource pool
     pub stagefiles: PixmapResourcePool,
+
+    /// MainController reference for state transitions and resource access
+    pub main: Option<Box<dyn MainControllerAccess + Send>>,
 }
 
 pub static MODE: [Option<bms_model::Mode>; 8] = [
@@ -129,6 +136,7 @@ impl MusicSelector {
             playedcourse: None,
             banners: PixmapResourcePool::with_maxgen(2),
             stagefiles: PixmapResourcePool::with_maxgen(2),
+            main: None,
         }
     }
 
@@ -142,6 +150,11 @@ impl MusicSelector {
             songdb,
             ..Self::new()
         }
+    }
+
+    /// Set the main controller reference.
+    pub fn set_main_controller(&mut self, main: Box<dyn MainControllerAccess + Send>) {
+        self.main = Some(main);
     }
 
     pub fn set_rival(&mut self, rival: Option<PlayerInformation>) {
@@ -198,12 +211,153 @@ impl MusicSelector {
         );
     }
 
-    pub fn read_chart(&mut self, _song: &SongData, _current: &Bar) {
-        // In Java: sets up resource for playing a chart
-        // Requires PlayerResource, MainController, RankingDataCache - blocked on Phase 21+
-        log::warn!(
-            "not yet implemented: MusicSelector.readChart - requires PlayerResource context"
-        );
+    /// Read a chart for play.
+    /// Corresponds to Java MusicSelector.readChart(SongData, Bar)
+    pub fn read_chart(&mut self, song: &SongData, current: &Bar) {
+        let main = match self.main.as_mut() {
+            Some(m) => m,
+            None => {
+                log::warn!("read_chart: no MainController available");
+                return;
+            }
+        };
+
+        // Get play mode for set_bms_file encoding
+        let (mode_type, mode_id) = Self::encode_bms_player_mode(self.play.as_ref());
+
+        // resource.clear()
+        if let Some(res) = main.get_player_resource_mut() {
+            res.clear();
+        }
+
+        // resource.setBMSFile(path, play)
+        let path_str = match song.get_path() {
+            Some(p) => p,
+            None => {
+                ImGuiNotify::error("Failed to loading BMS : Song not found, or Song has error");
+                return;
+            }
+        };
+        let path = std::path::Path::new(&path_str);
+
+        let load_success = main
+            .get_player_resource_mut()
+            .map(|res| res.set_bms_file(path, mode_type, mode_id))
+            .unwrap_or(false);
+
+        if load_success {
+            // Set table name/level from directory hierarchy
+            let dir = self.manager.get_directory();
+            if !dir.is_empty()
+                && !matches!(dir.last(), Some(bar) if matches!(**bar, Bar::SameFolder(_)))
+            {
+                let table_urls: Vec<String> = main
+                    .get_config()
+                    .get_table_url()
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect();
+
+                let mut is_dtable = false;
+                let mut tablename: Option<String> = None;
+                let mut tablelevel: Option<String> = None;
+
+                for bar in dir {
+                    if let Some(tb) = bar.as_table_bar()
+                        && let Some(url) = tb.get_url()
+                        && table_urls.iter().any(|u| u == url)
+                    {
+                        is_dtable = true;
+                        tablename = Some(bar.get_title());
+                    }
+                    if bar.as_hash_bar().is_some() && is_dtable {
+                        tablelevel = Some(bar.get_title());
+                        break;
+                    }
+                }
+
+                if let Some(ref name) = tablename
+                    && let Some(res) = main.get_player_resource_mut()
+                {
+                    res.set_tablename(name);
+                }
+                if let Some(ref level) = tablelevel
+                    && let Some(res) = main.get_player_resource_mut()
+                {
+                    res.set_tablelevel(level);
+                }
+            }
+
+            // TODO: IR ranking data cache (requires main.getIRStatus/getRankingDataCache)
+            // Currently deferred — ranking data is not wired through MainControllerAccess
+
+            // Set rival score
+            let rival_score = current.get_rival_score().cloned();
+            if let Some(res) = main.get_player_resource_mut() {
+                res.set_rival_score_data_option(rival_score);
+            }
+
+            // Chart replication mode
+            let chart_option = Self::compute_chart_option(&self.config, current.get_rival_score());
+            if let Some(res) = main.get_player_resource_mut() {
+                res.set_chart_option_data(chart_option);
+            }
+
+            self.playedsong = Some(song.clone());
+            main.change_state(MainStateType::Decide);
+        } else {
+            ImGuiNotify::error("Failed to loading BMS : Song not found, or Song has error");
+        }
+    }
+
+    /// Encode BMSPlayerMode to (mode_type, mode_id) for PlayerResourceAccess::set_bms_file.
+    fn encode_bms_player_mode(mode: Option<&BMSPlayerMode>) -> (i32, i32) {
+        match mode {
+            Some(m) => {
+                let mode_type = match m.mode {
+                    BMSPlayerModeType::Play => 0,
+                    BMSPlayerModeType::Practice => 1,
+                    BMSPlayerModeType::Autoplay => 2,
+                    BMSPlayerModeType::Replay => 3,
+                };
+                (mode_type, m.id)
+            }
+            None => (0, 0), // default to Play
+        }
+    }
+
+    /// Compute chart option based on chart replication mode and rival score.
+    /// Corresponds to the ChartReplicationMode switch in Java readChart.
+    fn compute_chart_option(
+        config: &PlayerConfig,
+        rival_score: Option<&ScoreData>,
+    ) -> Option<beatoraja_types::replay_data::ReplayData> {
+        match ChartReplicationMode::get(config.get_chart_replication_mode()) {
+            ChartReplicationMode::None => None,
+            ChartReplicationMode::RivalChart => rival_score.map(|rival| {
+                let mut opt = beatoraja_types::replay_data::ReplayData::new();
+                opt.randomoption = rival.get_option() % 10;
+                opt.randomoption2 = (rival.get_option() / 10) % 10;
+                opt.doubleoption = rival.get_option() / 100;
+                opt.randomoptionseed = rival.get_seed() % (65536 * 256);
+                opt.randomoption2seed = rival.get_seed() / (65536 * 256);
+                opt
+            }),
+            ChartReplicationMode::RivalOption => rival_score.map(|rival| {
+                let mut opt = beatoraja_types::replay_data::ReplayData::new();
+                opt.randomoption = rival.get_option() % 10;
+                opt.randomoption2 = (rival.get_option() / 10) % 10;
+                opt.doubleoption = rival.get_option() / 100;
+                opt
+            }),
+            ChartReplicationMode::ReplayChart | ChartReplicationMode::ReplayOption => {
+                // TODO: requires main.getPlayDataAccessor().readReplayData() — deferred
+                log::warn!(
+                    "not yet implemented: ChartReplicationMode::Replay* — requires PlayDataAccessor"
+                );
+                None
+            }
+        }
     }
 
     pub fn get_sort(&self) -> i32 {
@@ -587,36 +741,193 @@ impl MusicSelector {
 
     /// Read course (grade bar) for play.
     /// Corresponds to Java MusicSelector.readCourse(BMSPlayerMode)
-    fn read_course(&mut self, _mode: BMSPlayerMode) {
-        // In Java: gets GradeBar from manager.getSelected(), checks existsAllSongs(),
-        // calls _readCourse(mode, gradeBar)
-        // Blocked on PlayerResource (Phase 21+)
-        log::warn!(
-            "not yet implemented: MusicSelector.readCourse - requires GradeBar and PlayerResource context"
-        );
+    fn read_course(&mut self, mode: BMSPlayerMode) {
+        // Get selected bar and check it's a GradeBar
+        let grade_bar = match self.manager.get_selected() {
+            Some(bar) if bar.as_grade_bar().is_some() => bar.clone(),
+            _ => {
+                log::warn!("read_course: selected bar is not a GradeBar");
+                return;
+            }
+        };
+
+        let gb = grade_bar.as_grade_bar().unwrap();
+        if !gb.exists_all_songs() {
+            log::info!("段位の楽曲が揃っていません (course songs are not all available)");
+            // TODO: if main.getHttpDownloadProcessor() != null, execute DOWNLOAD_COURSE_HTTP
+            return;
+        }
+
+        if !self._read_course(&mode, &grade_bar) {
+            ImGuiNotify::error("Failed to loading Course : Some of songs not found");
+            log::info!("段位の楽曲が揃っていません (course songs are not all available)");
+        }
     }
 
     /// Read random course for play.
     /// Corresponds to Java MusicSelector.readRandomCourse(BMSPlayerMode)
-    fn read_random_course(&mut self, _mode: BMSPlayerMode) {
-        // In Java: gets RandomCourseBar, calls lotterySongDatas, creates GradeBar,
-        // calls _readCourse, then manager.addRandomCourse
-        // Blocked on PlayerResource (Phase 21+)
-        log::warn!(
-            "not yet implemented: MusicSelector.readRandomCourse - requires RandomCourseBar and PlayerResource context"
-        );
+    fn read_random_course(&mut self, mode: BMSPlayerMode) {
+        // Get selected bar and check it's a RandomCourseBar
+        let rc_bar = match self.manager.get_selected() {
+            Some(bar) if bar.as_random_course_bar().is_some() => bar.clone(),
+            _ => {
+                log::warn!("read_random_course: selected bar is not a RandomCourseBar");
+                return;
+            }
+        };
+
+        let rcb = rc_bar.as_random_course_bar().unwrap();
+        if !rcb.exists_all_songs() {
+            log::info!(
+                "ランダムコースの楽曲が揃っていません (random course songs not all available)"
+            );
+            return;
+        }
+
+        // TODO: randomCourseBar.getCourseData().lotterySongDatas(main)
+        // This requires DB query access through MainController — deferred.
+        // For now, create course data from the current song_datas.
+        let course_data = rcb.get_course_data().create_course_data();
+        let grade_bar = Bar::Grade(Box::new(GradeBar::new(course_data)));
+
+        if let Some(gb) = grade_bar.as_grade_bar()
+            && !gb.exists_all_songs()
+        {
+            ImGuiNotify::error("Failed to loading Random Course : Some of songs not found");
+            log::info!(
+                "ランダムコースの楽曲が揃っていません (random course songs not all available)"
+            );
+            return;
+        }
+
+        if self._read_course(&mode, &grade_bar) {
+            if let Some(gb) = grade_bar.as_grade_bar() {
+                let dir_string = self.manager.get_directory_string().to_string();
+                self.manager.add_random_course(gb.clone(), dir_string);
+                self.manager.update_bar(None);
+                self.manager.set_selected(&grade_bar);
+            }
+        } else {
+            ImGuiNotify::error("Failed to loading Random Course : Some of songs not found");
+            log::info!(
+                "ランダムコースの楽曲が揃っていません (random course songs not all available)"
+            );
+        }
     }
 
     /// Internal course reading implementation.
     /// Corresponds to Java MusicSelector._readCourse(BMSPlayerMode, GradeBar)
-    fn _read_course(&mut self, _mode: &BMSPlayerMode, _grade_bar: &Bar) -> bool {
-        // In Java: clears resource, gets song paths, calls resource.setCourseBMSFiles,
-        // applies constraints (CLASS/MIRROR/RANDOM/LN/CN/HCN), sets play mode
-        // Blocked on PlayerResource (Phase 21+)
-        log::warn!(
-            "not yet implemented: MusicSelector._readCourse - requires PlayerResource context"
-        );
-        false
+    fn _read_course(&mut self, mode: &BMSPlayerMode, grade_bar: &Bar) -> bool {
+        let main = match self.main.as_mut() {
+            Some(m) => m,
+            None => {
+                log::warn!("_read_course: no MainController available");
+                return false;
+            }
+        };
+
+        // resource.clear()
+        if let Some(res) = main.get_player_resource_mut() {
+            res.clear();
+        }
+
+        // Get song paths from grade bar
+        let gb = match grade_bar.as_grade_bar() {
+            Some(gb) => gb,
+            None => return false,
+        };
+
+        let songs = gb.get_song_datas();
+        let files: Vec<PathBuf> = songs
+            .iter()
+            .filter_map(|s| s.get_path().map(PathBuf::from))
+            .collect();
+
+        if files.len() != songs.len() {
+            log::warn!("_read_course: some songs have no path");
+            return false;
+        }
+
+        // resource.setCourseBMSFiles(files)
+        let load_success = main
+            .get_player_resource_mut()
+            .map(|res| res.set_course_bms_files(&files))
+            .unwrap_or(false);
+
+        if load_success {
+            // Apply constraints for PLAY/AUTOPLAY modes only
+            if mode.mode == BMSPlayerModeType::Play || mode.mode == BMSPlayerModeType::Autoplay {
+                for constraint in gb.get_course_data().get_constraint() {
+                    match constraint {
+                        CourseDataConstraint::Class => {
+                            self.config.set_random(0);
+                            self.config.set_random2(0);
+                            self.config.set_doubleoption(0);
+                        }
+                        CourseDataConstraint::Mirror => {
+                            if self.config.get_random() == 1 {
+                                self.config.set_random2(1);
+                                self.config.set_doubleoption(1);
+                            } else {
+                                self.config.set_random(0);
+                                self.config.set_random2(0);
+                                self.config.set_doubleoption(0);
+                            }
+                        }
+                        CourseDataConstraint::Random => {
+                            if self.config.get_random() > 5 {
+                                self.config.set_random(0);
+                            }
+                            if self.config.get_random2() > 5 {
+                                self.config.set_random2(0);
+                            }
+                        }
+                        CourseDataConstraint::Ln => {
+                            self.config.set_lnmode(0);
+                        }
+                        CourseDataConstraint::Cn => {
+                            self.config.set_lnmode(1);
+                        }
+                        CourseDataConstraint::Hcn => {
+                            self.config.set_lnmode(2);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            // Update course data with song data from loaded models
+            let course_song_data = main
+                .get_player_resource()
+                .map(|res| res.get_course_song_data())
+                .unwrap_or_default();
+
+            let mut course_data = gb.get_course_data().clone();
+            course_data.set_song(course_song_data);
+
+            // resource.setCourseData, setBMSFile for first song
+            let (mode_type, mode_id) = Self::encode_bms_player_mode(Some(mode));
+            if let Some(res) = main.get_player_resource_mut() {
+                res.set_course_data(course_data.clone());
+                if !files.is_empty() {
+                    res.set_bms_file(&files[0], mode_type, mode_id);
+                }
+            }
+
+            self.playedcourse = Some(course_data);
+
+            // TODO: IR ranking data cache (requires main.getIRStatus/getRankingDataCache)
+            // Set rival score/chart option to None for course play
+            if let Some(res) = main.get_player_resource_mut() {
+                res.set_rival_score_data_option(None);
+                res.set_chart_option_data(None);
+            }
+
+            main.change_state(MainStateType::Decide);
+            true
+        } else {
+            false
+        }
     }
 
     /// Get banner resource pool.
@@ -802,11 +1113,11 @@ impl MainState for MusicSelector {
 
         // Play execution — collect bar info into locals first (borrow checker)
         if let Some(play_mode) = self.play.take() {
-            // Classify the selected bar type
+            // Classify the selected bar type and extract needed data into locals
             enum BarAction {
-                SongExists,
+                SongChart { song: SongData, bar: Bar },
                 SongMissing,
-                Executable,
+                ExecutableChart { song: SongData, bar: Bar },
                 Grade,
                 RandomCourse,
                 DirectoryAutoplay,
@@ -817,12 +1128,24 @@ impl MainState for MusicSelector {
                 let is_func = current.as_function_bar().is_some();
                 if let Some(song_bar) = current.as_song_bar() {
                     if song_bar.exists_song() {
-                        (BarAction::SongExists, is_func)
+                        (
+                            BarAction::SongChart {
+                                song: song_bar.get_song_data().clone(),
+                                bar: current.clone(),
+                            },
+                            is_func,
+                        )
                     } else {
                         (BarAction::SongMissing, is_func)
                     }
-                } else if current.as_executable_bar().is_some() {
-                    (BarAction::Executable, is_func)
+                } else if let Some(exec_bar) = current.as_executable_bar() {
+                    (
+                        BarAction::ExecutableChart {
+                            song: exec_bar.get_song_data().clone(),
+                            bar: current.clone(),
+                        },
+                        is_func,
+                    )
                 } else if current.as_grade_bar().is_some() {
                     (BarAction::Grade, is_func)
                 } else if current.as_random_course_bar().is_some() {
@@ -840,23 +1163,15 @@ impl MainState for MusicSelector {
 
             // Now perform mutations without holding a borrow on self.manager
             match action {
-                BarAction::SongExists => {
-                    // In Java: readChart(song, current)
-                    // Blocked on PlayerResource
-                    log::warn!(
-                        "not yet implemented: MusicSelector play execution - readChart blocked on PlayerResource"
-                    );
+                BarAction::SongChart { song, bar } => {
+                    self.read_chart(&song, &bar);
                 }
                 BarAction::SongMissing => {
                     // In Java: checks IPFS/HTTP download, opens download site
                     self.execute_event(EventType::OpenDownloadSite);
                 }
-                BarAction::Executable => {
-                    // In Java: readChart(executableBar.getSongData(), current)
-                    // Blocked on PlayerResource
-                    log::warn!(
-                        "not yet implemented: MusicSelector play execution - ExecutableBar blocked on PlayerResource"
-                    );
+                BarAction::ExecutableChart { song, bar } => {
+                    self.read_chart(&song, &bar);
                 }
                 BarAction::Grade => {
                     let mode = if play_mode.mode == BMSPlayerModeType::Practice {
@@ -1441,5 +1756,536 @@ mod tests {
         let mut selector = MusicSelector::new();
         // OpenDirectory at root with no selected bar — should not panic
         selector.dispatch_input_events(vec![InputEvent::OpenDirectory]);
+    }
+
+    // ============================================================
+    // Mock MainController for read_chart/read_course tests
+    // ============================================================
+
+    use beatoraja_types::main_controller_access::MainControllerAccess;
+    use beatoraja_types::player_resource_access::PlayerResourceAccess;
+    use std::path::{Path, PathBuf};
+    use std::sync::{Arc, Mutex};
+
+    /// Tracks state changes and resource operations for assertions.
+    #[derive(Default)]
+    struct MockState {
+        state_changes: Vec<MainStateType>,
+        cleared: bool,
+        bms_file_path: Option<PathBuf>,
+        bms_file_mode_type: Option<i32>,
+        bms_file_mode_id: Option<i32>,
+        bms_file_result: bool,
+        course_files: Option<Vec<PathBuf>>,
+        course_files_result: bool,
+        tablename: Option<String>,
+        tablelevel: Option<String>,
+        rival_score: Option<Option<ScoreData>>,
+        chart_option: Option<Option<beatoraja_types::replay_data::ReplayData>>,
+        course_data: Option<CourseData>,
+        course_song_data: Vec<SongData>,
+    }
+
+    /// Mock PlayerResource that records operations.
+    struct MockPlayerResource {
+        state: Arc<Mutex<MockState>>,
+    }
+
+    impl PlayerResourceAccess for MockPlayerResource {
+        fn get_config(&self) -> &beatoraja_types::config::Config {
+            static CFG: std::sync::OnceLock<beatoraja_types::config::Config> =
+                std::sync::OnceLock::new();
+            CFG.get_or_init(beatoraja_types::config::Config::default)
+        }
+        fn get_player_config(&self) -> &beatoraja_types::player_config::PlayerConfig {
+            static PC: std::sync::OnceLock<beatoraja_types::player_config::PlayerConfig> =
+                std::sync::OnceLock::new();
+            PC.get_or_init(beatoraja_types::player_config::PlayerConfig::default)
+        }
+        fn get_score_data(&self) -> Option<&ScoreData> {
+            None
+        }
+        fn get_rival_score_data(&self) -> Option<&ScoreData> {
+            None
+        }
+        fn get_target_score_data(&self) -> Option<&ScoreData> {
+            None
+        }
+        fn get_course_score_data(&self) -> Option<&ScoreData> {
+            None
+        }
+        fn set_course_score_data(&mut self, _score: ScoreData) {}
+        fn get_songdata(&self) -> Option<&SongData> {
+            None
+        }
+        fn get_replay_data(&self) -> Option<&beatoraja_types::replay_data::ReplayData> {
+            None
+        }
+        fn get_course_replay(&self) -> &[beatoraja_types::replay_data::ReplayData] {
+            &[]
+        }
+        fn add_course_replay(&mut self, _rd: beatoraja_types::replay_data::ReplayData) {}
+        fn get_course_data(&self) -> Option<&CourseData> {
+            None
+        }
+        fn get_course_index(&self) -> usize {
+            0
+        }
+        fn next_course(&mut self) -> bool {
+            false
+        }
+        fn get_constraint(&self) -> Vec<beatoraja_types::course_data::CourseDataConstraint> {
+            vec![]
+        }
+        fn get_gauge(&self) -> Option<&Vec<Vec<f32>>> {
+            None
+        }
+        fn get_groove_gauge(&self) -> Option<&beatoraja_types::groove_gauge::GrooveGauge> {
+            None
+        }
+        fn get_course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
+            static EMPTY: Vec<Vec<Vec<f32>>> = Vec::new();
+            &EMPTY
+        }
+        fn add_course_gauge(&mut self, _gauge: Vec<Vec<f32>>) {}
+        fn get_course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
+            unimplemented!()
+        }
+        fn get_score_data_mut(&mut self) -> Option<&mut ScoreData> {
+            None
+        }
+        fn get_course_replay_mut(&mut self) -> &mut Vec<beatoraja_types::replay_data::ReplayData> {
+            unimplemented!()
+        }
+        fn get_maxcombo(&self) -> i32 {
+            0
+        }
+        fn get_org_gauge_option(&self) -> i32 {
+            0
+        }
+        fn set_org_gauge_option(&mut self, _val: i32) {}
+        fn get_assist(&self) -> i32 {
+            0
+        }
+        fn is_update_score(&self) -> bool {
+            false
+        }
+        fn is_update_course_score(&self) -> bool {
+            false
+        }
+        fn is_force_no_ir_send(&self) -> bool {
+            false
+        }
+        fn is_freq_on(&self) -> bool {
+            false
+        }
+        fn get_reverse_lookup_data(&self) -> Vec<String> {
+            vec![]
+        }
+        fn get_reverse_lookup_levels(&self) -> Vec<String> {
+            vec![]
+        }
+        fn clear(&mut self) {
+            self.state.lock().unwrap().cleared = true;
+        }
+        fn set_bms_file(&mut self, path: &Path, mode_type: i32, mode_id: i32) -> bool {
+            let mut s = self.state.lock().unwrap();
+            s.bms_file_path = Some(path.to_path_buf());
+            s.bms_file_mode_type = Some(mode_type);
+            s.bms_file_mode_id = Some(mode_id);
+            s.bms_file_result
+        }
+        fn set_course_bms_files(&mut self, files: &[PathBuf]) -> bool {
+            let mut s = self.state.lock().unwrap();
+            s.course_files = Some(files.to_vec());
+            s.course_files_result
+        }
+        fn set_tablename(&mut self, name: &str) {
+            self.state.lock().unwrap().tablename = Some(name.to_string());
+        }
+        fn set_tablelevel(&mut self, level: &str) {
+            self.state.lock().unwrap().tablelevel = Some(level.to_string());
+        }
+        fn set_rival_score_data_option(&mut self, score: Option<ScoreData>) {
+            self.state.lock().unwrap().rival_score = Some(score);
+        }
+        fn set_chart_option_data(
+            &mut self,
+            option: Option<beatoraja_types::replay_data::ReplayData>,
+        ) {
+            self.state.lock().unwrap().chart_option = Some(option);
+        }
+        fn set_course_data(&mut self, data: CourseData) {
+            self.state.lock().unwrap().course_data = Some(data);
+        }
+        fn get_course_song_data(&self) -> Vec<SongData> {
+            self.state.lock().unwrap().course_song_data.clone()
+        }
+    }
+
+    /// Mock MainController that delegates resource access to MockPlayerResource.
+    struct MockMainController {
+        state: Arc<Mutex<MockState>>,
+        resource: MockPlayerResource,
+    }
+
+    impl MockMainController {
+        fn new(state: Arc<Mutex<MockState>>) -> Self {
+            let resource = MockPlayerResource {
+                state: state.clone(),
+            };
+            Self { state, resource }
+        }
+    }
+
+    impl MainControllerAccess for MockMainController {
+        fn get_config(&self) -> &beatoraja_types::config::Config {
+            static CFG: std::sync::OnceLock<beatoraja_types::config::Config> =
+                std::sync::OnceLock::new();
+            CFG.get_or_init(beatoraja_types::config::Config::default)
+        }
+        fn get_player_config(&self) -> &beatoraja_types::player_config::PlayerConfig {
+            static PC: std::sync::OnceLock<beatoraja_types::player_config::PlayerConfig> =
+                std::sync::OnceLock::new();
+            PC.get_or_init(beatoraja_types::player_config::PlayerConfig::default)
+        }
+        fn change_state(&mut self, state: MainStateType) {
+            self.state.lock().unwrap().state_changes.push(state);
+        }
+        fn save_config(&self) {}
+        fn exit(&self) {}
+        fn save_last_recording(&self, _reason: &str) {}
+        fn update_song(&mut self, _path: Option<&str>) {}
+        fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
+            Some(&self.resource)
+        }
+        fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
+            Some(&mut self.resource)
+        }
+    }
+
+    fn make_selector_with_mock() -> (MusicSelector, Arc<Mutex<MockState>>) {
+        let state = Arc::new(Mutex::new(MockState::default()));
+        let mock = MockMainController::new(state.clone());
+        let mut selector = MusicSelector::new();
+        selector.set_main_controller(Box::new(mock));
+        (selector, state)
+    }
+
+    // ============================================================
+    // read_chart tests
+    // ============================================================
+
+    #[test]
+    fn test_read_chart_success_clears_resource_and_transitions() {
+        let (mut selector, state) = make_selector_with_mock();
+        state.lock().unwrap().bms_file_result = true;
+        selector.play = Some(BMSPlayerMode::PLAY);
+
+        let song = make_song_data("abc123", Some("/test/song.bms"));
+        let bar = make_song_bar("abc123", Some("/test/song.bms"));
+
+        selector.read_chart(&song, &bar);
+
+        let s = state.lock().unwrap();
+        assert!(s.cleared, "resource.clear() should have been called");
+        assert_eq!(
+            s.bms_file_path.as_ref().map(|p| p.to_str().unwrap()),
+            Some("/test/song.bms"),
+            "set_bms_file should be called with song path"
+        );
+        assert_eq!(
+            s.state_changes,
+            vec![MainStateType::Decide],
+            "should transition to DECIDE on success"
+        );
+        assert_eq!(
+            selector.playedsong.as_ref().map(|sd| sd.sha256.as_str()),
+            Some("abc123"),
+            "playedsong should be set"
+        );
+    }
+
+    #[test]
+    fn test_read_chart_failure_does_not_transition() {
+        let (mut selector, state) = make_selector_with_mock();
+        state.lock().unwrap().bms_file_result = false;
+        selector.play = Some(BMSPlayerMode::PLAY);
+
+        let song = make_song_data("abc123", Some("/nonexistent.bms"));
+        let bar = make_song_bar("abc123", Some("/nonexistent.bms"));
+
+        selector.read_chart(&song, &bar);
+
+        let s = state.lock().unwrap();
+        assert!(s.cleared, "resource.clear() should still be called");
+        assert!(
+            s.state_changes.is_empty(),
+            "should NOT transition on failure"
+        );
+        assert!(
+            selector.playedsong.is_none(),
+            "playedsong should NOT be set on failure"
+        );
+    }
+
+    #[test]
+    fn test_read_chart_sets_rival_score_and_chart_option() {
+        let (mut selector, state) = make_selector_with_mock();
+        state.lock().unwrap().bms_file_result = true;
+        selector.play = Some(BMSPlayerMode::PLAY);
+
+        let song = make_song_data("abc123", Some("/test/song.bms"));
+        let bar = make_song_bar("abc123", Some("/test/song.bms"));
+
+        selector.read_chart(&song, &bar);
+
+        let s = state.lock().unwrap();
+        // rival_score should have been set (to bar's rival score, which is None)
+        assert!(
+            s.rival_score.is_some(),
+            "set_rival_score_data_option should have been called"
+        );
+        // chart_option should have been set (to None for ChartReplicationMode::None)
+        assert!(
+            s.chart_option.is_some(),
+            "set_chart_option_data should have been called"
+        );
+    }
+
+    #[test]
+    fn test_read_chart_without_main_controller_does_not_panic() {
+        let mut selector = MusicSelector::new();
+        selector.play = Some(BMSPlayerMode::PLAY);
+
+        let song = make_song_data("abc123", Some("/test/song.bms"));
+        let bar = make_song_bar("abc123", Some("/test/song.bms"));
+
+        // Should not panic, just log warning
+        selector.read_chart(&song, &bar);
+    }
+
+    // ============================================================
+    // read_course tests
+    // ============================================================
+
+    #[test]
+    fn test_read_course_success_transitions_to_decide() {
+        let (mut selector, state) = make_selector_with_mock();
+        state.lock().unwrap().course_files_result = true;
+        state.lock().unwrap().bms_file_result = true;
+
+        // Set up a GradeBar as the selected bar with valid songs
+        let course = CourseData {
+            name: Some("Test Course".to_string()),
+            hash: vec![
+                make_song_data("s1", Some("/path/song1.bms")),
+                make_song_data("s2", Some("/path/song2.bms")),
+            ],
+            constraint: vec![],
+            trophy: vec![],
+            release: false,
+        };
+        selector.manager.currentsongs = vec![Bar::Grade(Box::new(GradeBar::new(course)))];
+        selector.manager.selectedindex = 0;
+
+        selector.read_course(BMSPlayerMode::PLAY);
+
+        let s = state.lock().unwrap();
+        assert!(s.cleared, "resource.clear() should have been called");
+        assert!(
+            s.course_files.is_some(),
+            "set_course_bms_files should have been called"
+        );
+        assert_eq!(
+            s.state_changes,
+            vec![MainStateType::Decide],
+            "should transition to DECIDE"
+        );
+        assert!(
+            selector.playedcourse.is_some(),
+            "playedcourse should be set"
+        );
+    }
+
+    #[test]
+    fn test_read_course_missing_songs_does_not_transition() {
+        let (mut selector, state) = make_selector_with_mock();
+
+        // GradeBar with a song that has no path
+        let course = CourseData {
+            name: Some("Incomplete Course".to_string()),
+            hash: vec![
+                make_song_data("s1", Some("/path/song1.bms")),
+                make_song_data("s2", None), // missing path
+            ],
+            constraint: vec![],
+            trophy: vec![],
+            release: false,
+        };
+        selector.manager.currentsongs = vec![Bar::Grade(Box::new(GradeBar::new(course)))];
+        selector.manager.selectedindex = 0;
+
+        selector.read_course(BMSPlayerMode::PLAY);
+
+        let s = state.lock().unwrap();
+        assert!(
+            s.state_changes.is_empty(),
+            "should NOT transition when songs are missing"
+        );
+    }
+
+    #[test]
+    fn test_read_course_class_constraint_resets_random() {
+        let (mut selector, state) = make_selector_with_mock();
+        state.lock().unwrap().course_files_result = true;
+        state.lock().unwrap().bms_file_result = true;
+
+        // Set non-zero random options
+        selector.config.set_random(3);
+        selector.config.set_random2(4);
+        selector.config.set_doubleoption(2);
+
+        let course = CourseData {
+            name: Some("Class Course".to_string()),
+            hash: vec![make_song_data("s1", Some("/path/song1.bms"))],
+            constraint: vec![CourseDataConstraint::Class],
+            trophy: vec![],
+            release: false,
+        };
+        selector.manager.currentsongs = vec![Bar::Grade(Box::new(GradeBar::new(course)))];
+        selector.manager.selectedindex = 0;
+
+        selector.read_course(BMSPlayerMode::PLAY);
+
+        assert_eq!(
+            selector.config.get_random(),
+            0,
+            "CLASS should reset random to 0"
+        );
+        assert_eq!(
+            selector.config.get_random2(),
+            0,
+            "CLASS should reset random2 to 0"
+        );
+        assert_eq!(
+            selector.config.get_doubleoption(),
+            0,
+            "CLASS should reset doubleoption to 0"
+        );
+    }
+
+    // ============================================================
+    // _read_course tests
+    // ============================================================
+
+    #[test]
+    fn test_internal_read_course_ln_constraint() {
+        let (mut selector, state) = make_selector_with_mock();
+        state.lock().unwrap().course_files_result = true;
+        state.lock().unwrap().bms_file_result = true;
+        selector.config.set_lnmode(2);
+
+        let course = CourseData {
+            name: Some("LN Course".to_string()),
+            hash: vec![make_song_data("s1", Some("/path/song1.bms"))],
+            constraint: vec![CourseDataConstraint::Ln],
+            trophy: vec![],
+            release: false,
+        };
+        let bar = Bar::Grade(Box::new(GradeBar::new(course)));
+
+        let result = selector._read_course(&BMSPlayerMode::PLAY, &bar);
+
+        assert!(result, "_read_course should return true on success");
+        assert_eq!(
+            selector.config.get_lnmode(),
+            0,
+            "LN constraint should set lnmode to 0"
+        );
+    }
+
+    #[test]
+    fn test_internal_read_course_autoplay_applies_constraints() {
+        // Java applies constraints for both PLAY and AUTOPLAY modes
+        let (mut selector, state) = make_selector_with_mock();
+        state.lock().unwrap().course_files_result = true;
+        state.lock().unwrap().bms_file_result = true;
+        selector.config.set_random(5);
+
+        let course = CourseData {
+            name: Some("Class Course".to_string()),
+            hash: vec![make_song_data("s1", Some("/path/song1.bms"))],
+            constraint: vec![CourseDataConstraint::Class],
+            trophy: vec![],
+            release: false,
+        };
+        let bar = Bar::Grade(Box::new(GradeBar::new(course)));
+
+        let result = selector._read_course(&BMSPlayerMode::AUTOPLAY, &bar);
+
+        assert!(result);
+        // AUTOPLAY applies CLASS constraint (same as PLAY)
+        assert_eq!(
+            selector.config.get_random(),
+            0,
+            "AUTOPLAY should apply CLASS constraint and reset random"
+        );
+    }
+
+    #[test]
+    fn test_internal_read_course_replay_skips_constraints() {
+        // Java only applies constraints for PLAY and AUTOPLAY, not REPLAY
+        let (mut selector, state) = make_selector_with_mock();
+        state.lock().unwrap().course_files_result = true;
+        state.lock().unwrap().bms_file_result = true;
+        selector.config.set_random(5);
+
+        let course = CourseData {
+            name: Some("Class Course".to_string()),
+            hash: vec![make_song_data("s1", Some("/path/song1.bms"))],
+            constraint: vec![CourseDataConstraint::Class],
+            trophy: vec![],
+            release: false,
+        };
+        let bar = Bar::Grade(Box::new(GradeBar::new(course)));
+
+        let result = selector._read_course(&BMSPlayerMode::REPLAY_1, &bar);
+
+        assert!(result);
+        // REPLAY should NOT apply constraints
+        assert_eq!(
+            selector.config.get_random(),
+            5,
+            "REPLAY should not reset random"
+        );
+    }
+
+    // ============================================================
+    // read_random_course tests
+    // ============================================================
+
+    #[test]
+    fn test_read_random_course_missing_songs_does_not_transition() {
+        let (mut selector, state) = make_selector_with_mock();
+
+        // RandomCourseBar with no stages — exists_all_songs returns false
+        let rcd = RandomCourseData {
+            name: Some("Random Course".to_string()),
+            stage: vec![], // no stages = not all songs exist
+            ..Default::default()
+        };
+        selector.manager.currentsongs = vec![Bar::RandomCourse(Box::new(
+            crate::bar::random_course_bar::RandomCourseBar::new(rcd),
+        ))];
+        selector.manager.selectedindex = 0;
+
+        selector.read_random_course(BMSPlayerMode::PLAY);
+
+        let s = state.lock().unwrap();
+        assert!(
+            s.state_changes.is_empty(),
+            "should NOT transition when random course has no stages"
+        );
     }
 }

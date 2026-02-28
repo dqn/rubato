@@ -690,6 +690,72 @@ impl PlayerResourceAccess for PlayerResource {
     fn get_reverse_lookup_levels(&self) -> Vec<String> {
         PlayerResource::get_reverse_lookup_levels(self)
     }
+
+    fn clear(&mut self) {
+        PlayerResource::clear(self)
+    }
+
+    fn set_bms_file(&mut self, path: &Path, mode_type: i32, mode_id: i32) -> bool {
+        let mode = match mode_type {
+            0 => BMSPlayerMode::new(crate::bms_player_mode::Mode::Play),
+            1 => BMSPlayerMode::new(crate::bms_player_mode::Mode::Practice),
+            2 => BMSPlayerMode::new(crate::bms_player_mode::Mode::Autoplay),
+            3 => BMSPlayerMode::new_with_id(crate::bms_player_mode::Mode::Replay, mode_id),
+            _ => BMSPlayerMode::new(crate::bms_player_mode::Mode::Play),
+        };
+        PlayerResource::set_bms_file(self, path, mode)
+    }
+
+    fn set_course_bms_files(&mut self, files: &[PathBuf]) -> bool {
+        PlayerResource::set_course_bms_files(self, files)
+    }
+
+    fn set_tablename(&mut self, name: &str) {
+        PlayerResource::set_tablename(self, name)
+    }
+
+    fn set_tablelevel(&mut self, level: &str) {
+        PlayerResource::set_tablelevel(self, level)
+    }
+
+    fn set_rival_score_data_option(&mut self, score: Option<ScoreData>) {
+        self.rscore = score;
+    }
+
+    fn set_chart_option_data(&mut self, option: Option<ReplayData>) {
+        self.chart_option = option;
+    }
+
+    fn set_course_data(&mut self, data: CourseData) {
+        PlayerResource::set_course_data(self, data)
+    }
+
+    fn get_course_song_data(&self) -> Vec<beatoraja_types::song_data::SongData> {
+        match self.get_course_bms_models() {
+            Some(models) => models
+                .iter()
+                .map(|m| {
+                    // Build SongData from model metadata without consuming the model
+                    let mut sd = beatoraja_types::song_data::SongData::default();
+                    sd.set_title(m.get_title().to_string());
+                    sd.set_subtitle(m.get_sub_title().to_string());
+                    sd.genre = m.get_genre().to_string();
+                    sd.set_artist(m.get_artist().to_string());
+                    sd.set_subartist(m.get_sub_artist().to_string());
+                    if let Some(p) = m.get_path() {
+                        sd.set_path(p);
+                    }
+                    sd.md5 = m.get_md5().to_string();
+                    sd.sha256 = m.get_sha256().to_string();
+                    sd.notes = m.get_total_notes();
+                    sd.length = m.get_last_time();
+                    sd.mode = m.get_mode().map(|mode| mode.id()).unwrap_or(0);
+                    sd
+                })
+                .collect(),
+            None => vec![],
+        }
+    }
 }
 
 #[cfg(test)]

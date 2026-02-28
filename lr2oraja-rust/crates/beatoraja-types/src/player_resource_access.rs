@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use crate::config::Config;
 use crate::course_data::{CourseData, CourseDataConstraint};
 use crate::groove_gauge::GrooveGauge;
@@ -130,6 +132,40 @@ pub trait PlayerResourceAccess {
 
     /// Get reverse lookup levels (table levels for current song)
     fn get_reverse_lookup_levels(&self) -> Vec<String>;
+
+    // ---- Mutation methods for state transition support ----
+
+    /// Clear session state (course, scores, gauge, combo, table info).
+    /// Corresponds to Java PlayerResource.clear()
+    fn clear(&mut self);
+
+    /// Set BMS file for play. Returns true if loading succeeded.
+    /// `mode_type`: 0=Play, 1=Practice, 2=Autoplay, 3=Replay
+    /// `mode_id`: replay slot index (0 for non-replay modes)
+    /// Corresponds to Java PlayerResource.setBMSFile(Path, BMSPlayerMode)
+    fn set_bms_file(&mut self, path: &Path, mode_type: i32, mode_id: i32) -> bool;
+
+    /// Set course BMS files. Returns true if all files loaded successfully.
+    /// Corresponds to Java PlayerResource.setCourseBMSFiles(Path[])
+    fn set_course_bms_files(&mut self, files: &[PathBuf]) -> bool;
+
+    /// Set table name for current song
+    fn set_tablename(&mut self, name: &str);
+
+    /// Set table level for current song
+    fn set_tablelevel(&mut self, level: &str);
+
+    /// Set rival score data (Option variant for clearing)
+    fn set_rival_score_data_option(&mut self, score: Option<ScoreData>);
+
+    /// Set chart option (replay data for chart replication)
+    fn set_chart_option_data(&mut self, option: Option<ReplayData>);
+
+    /// Set course data
+    fn set_course_data(&mut self, data: CourseData);
+
+    /// Get course BMS models as song data (for course data setSong)
+    fn get_course_song_data(&self) -> Vec<SongData>;
 }
 
 /// Null implementation of PlayerResourceAccess for stub contexts.
@@ -249,6 +285,23 @@ impl PlayerResourceAccess for NullPlayerResource {
         vec![]
     }
     fn get_reverse_lookup_levels(&self) -> Vec<String> {
+        vec![]
+    }
+    fn clear(&mut self) {}
+    fn set_bms_file(&mut self, _path: &Path, _mode_type: i32, _mode_id: i32) -> bool {
+        log::warn!("NullPlayerResource::set_bms_file called — returning false");
+        false
+    }
+    fn set_course_bms_files(&mut self, _files: &[PathBuf]) -> bool {
+        log::warn!("NullPlayerResource::set_course_bms_files called — returning false");
+        false
+    }
+    fn set_tablename(&mut self, _name: &str) {}
+    fn set_tablelevel(&mut self, _level: &str) {}
+    fn set_rival_score_data_option(&mut self, _score: Option<ScoreData>) {}
+    fn set_chart_option_data(&mut self, _option: Option<ReplayData>) {}
+    fn set_course_data(&mut self, _data: CourseData) {}
+    fn get_course_song_data(&self) -> Vec<SongData> {
         vec![]
     }
 }
