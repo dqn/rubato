@@ -195,6 +195,28 @@ impl PlayerResource {
         }
     }
 
+    /// Reload the current BMS file from disk.
+    /// Preserves tablename and tablelevel across clear().
+    /// Java: PlayerResource.reloadBMSFile()
+    pub fn reload_bms_file(&mut self) {
+        if let Some(path_str) = self.get_bms_model().and_then(|m| m.get_path()) {
+            let path = PathBuf::from(&path_str);
+            if let Some((model, margin_time)) =
+                Self::load_bms_model(&path, self.pconfig.get_lnmode())
+            {
+                self.margin_time = margin_time;
+                let songdata = SongData::new_from_model(model, false);
+                self.songdata = Some(songdata);
+            }
+        }
+        let name = self.tablename.clone();
+        let lev = self.tablelevel.clone();
+        self.clear();
+        self.tablename = name;
+        self.tablelevel = lev;
+        self.tablefull = None;
+    }
+
     /// Load a BMS model from path, applying start note time and validation.
     /// Returns (model, margin_time).
     /// Java: PlayerResource.loadBMSModel(Path, int lnmode)
@@ -868,6 +890,48 @@ mod tests {
             trait_songdata.is_some(),
             "PlayerResourceAccess::get_songdata should return Some"
         );
+    }
+
+    #[test]
+    fn reload_bms_file_preserves_table_info() {
+        let config = Config::default();
+        let pconfig = PlayerConfig::default();
+        let mut resource = PlayerResource::new(config, pconfig);
+
+        let bms_path = test_bms_dir().join("minimal_7k.bms");
+        assert!(resource.set_bms_file(&bms_path, BMSPlayerMode::PLAY));
+
+        // Set table info that should be preserved across reload
+        resource.set_tablename("insane");
+        resource.set_tablelevel("★12");
+
+        resource.reload_bms_file();
+
+        // Model should still be loaded after reload
+        assert!(
+            resource.get_bms_model().is_some(),
+            "model should be Some after reload"
+        );
+        // Table info should be preserved
+        assert_eq!(resource.get_tablename(), "insane");
+        assert_eq!(resource.get_tablelevel(), "★12");
+        // Other fields should be cleared
+        assert!(resource.get_score_data().is_none());
+    }
+
+    #[test]
+    fn reload_bms_file_without_model_just_clears() {
+        let config = Config::default();
+        let pconfig = PlayerConfig::default();
+        let mut resource = PlayerResource::new(config, pconfig);
+
+        // No model loaded — reload should just clear without panicking
+        resource.set_tablename("test");
+        resource.set_tablelevel("1");
+        resource.reload_bms_file();
+
+        assert_eq!(resource.get_tablename(), "test");
+        assert_eq!(resource.get_tablelevel(), "1");
     }
 
     #[test]

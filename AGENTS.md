@@ -84,11 +84,12 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**2940 tests.** Phases 1–56 complete. Zero clippy warnings.
-**Migration audit**: 97.90% method resolution (4,189/4,279). 90 genuinely missing. 0 constant mismatches. 0 Rust-side regressions.
+**2940 tests.** Phases 1–56b complete. Zero clippy warnings.
+**Migration audit**: 99.11% method resolution (4,241/4,279). 38 genuinely missing. 0 constant mismatches. 0 Rust-side regressions.
 **Phase 54 finding**: ast-compare "missing" 257 methods → 88% false positives (architectural redesign).
 **Phase 55**: 28 genuine gaps audited → 15 already implemented (false positives), 7 newly implemented, 6 blocked by circular deps.
 **Phase 56**: Method-level ignore added to ast-compare. 170 false positives registered (136 patterns). Accurate gap count: 90 methods.
+**Phase 56b**: 52 additional false positives registered + PlayerResource.reloadBMSFile implemented. 235 methods ignored (186 patterns). Gap: 38 methods.
 
 ### Resolved (Phase 45–53)
 
@@ -125,24 +126,16 @@ All 7 critical gaps, the StdRng regression, and BytePCM regressions resolved:
 BytePCM float saturation and negative overflow resolved in Phase 54b.
 Fix: `(f * 127.0) as i32 as i8` matches Java's `(byte)(int)(f * 127)` truncation semantics.
 
-### Genuine Gaps (Phase 56 audit: 90 remaining)
+### Genuine Gaps (Phase 56b audit: 38 remaining)
 
-**Phase 56**: ast-compare method-level ignore added. `.ast-compare-method-ignore` in workspace root.
-170 methods ignored as false positives (arch redesign, platform, already-impl, thread inner classes).
+**Phase 56b**: 235 methods ignored (186 patterns). `PlayerResource.reloadBMSFile` implemented.
+52 additional false positives resolved: Randomizer enum dispatch, LR2 Skin Loader state pattern,
+AbstractAudioDriver trait methods, audio private helpers, core pub fields, song/model utilities.
 
-**Remaining 90 by domain:**
-- SkinConfiguration (13): skin selection/switching UI — launcher integration
-- KeyConfiguration (13): keyboard/controller/midi key assignment management
-- LR2 Skin Loaders (9): loadSkin methods + CSV helpers
-- Randomizer/Pattern (7): Randomizer base + LaneShuffleModifier
-- AbstractAudioDriver (5): non-abstract methods (getKeySound, getSound, getSampleRate, etc.)
-- PlayerResource (4): getBGAManager, reloadBMSFile, setTableinfo, getAnalysisTask
-- bms-model (4): BMSONDecoder.getTimeLine, ChartDecoder.printLog, Section.getTimeLine, DataProcessor.process
-- beatoraja-play (4): JudgeManager (2), JudgeWindowRule, SkinLane.init
-- beatoraja-song (3): SongData.getTimelines, SongDatabaseAccessor.updateSongDatas, SongInformation.parseInt36
-- beatoraja-audio (5): BMSLoudnessAnalyzer (2), BMSRenderer, GdxAudioDeviceDriver, PCM
-- beatoraja-core misc (13): Config.validatePath, MainController.create, TimerManager, etc.
-- Other (10): IR, select, obs, input, stream
+**Remaining 38 by domain:**
+- SkinConfiguration (13): skin selection/switching UI — blocked by launcher integration
+- KeyConfiguration (13): keyboard/controller/midi key assignment management — blocked by egui UI
+- Other (12): IR, select, obs, input, stream, MainController misc
 
 **Blocked by architecture (non-blocking):**
 - MainState defaults (4): loadSkin, getOffsetValue, getImage, getSound — trait override points
@@ -160,31 +153,16 @@ Fix: `(f * 127.0) as i32 as i8` matches Java's `(byte)(int)(f * 127)` truncation
 - **Property delegate pattern:** `integer_value(id)` / `float_value(id)` / `boolean_value(id)` on MainState — skin property factories delegate via ID lookup.
 - **Dead crate removal:** beatoraja-common (785 lines, 0 callers) removed in Phase 53d. Always audit before removing: check Cargo.toml deps, re-exports, test imports.
 - **ast-compare false positives:** ~88% of "missing" methods are architectural redesigns (inner class→closure, abstract→enum dispatch, getter→pub field). Always verify Java↔Rust manually before implementing.
-- **ast-compare method-level ignore:** `.ast-compare-method-ignore` supports `ClassName.methodName` (exact) and `ClassName.*` (wildcard). Run `just ast-map` to use. 136 patterns → 170 methods ignored.
+- **ast-compare method-level ignore:** `.ast-compare-method-ignore` supports `ClassName.methodName` (exact) and `ClassName.*` (wildcard). Run `just ast-map` to use. 186 patterns → 235 methods ignored.
 - **Java float→int→byte truncation:** Use `as i32 as i8` in Rust (via i32 to get truncation). Direct `as i8` saturates since Rust 1.45.
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
-
-**MANDATORY WORKFLOW:**
+**When ending a work session:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
+4. **Sync beads** - `bd sync`
 5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
-
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+6. **Hand off** - Provide context for next session

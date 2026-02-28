@@ -241,3 +241,77 @@ NoMurioshiRandomizer.selectLane
 ConvergeRandomizer.setModifyLanes
 ConvergeRandomizer.randomize
 ConvergeRandomizer.selectLane
+
+# ============================================================
+# Phase 56b: Additional false positives (90 → ~30)
+# ============================================================
+
+# --- Randomizer base abstract methods → enum dispatch [arch] ---
+Randomizer.randomize
+Randomizer.getLNLane
+Randomizer.setAssistLevel
+LaneShuffleModifier.makeRandom
+LaneShuffleModifier.isToDisplay
+LanePlayableRandomShuffleModifier.searchForNoMurioshiLaneCombinations
+LanePlayableRandomShuffleModifier.swap
+
+# --- LR2 Skin Loaders: loadSkin() → process_*_command() state pattern [arch] ---
+LR2CourseResultSkinLoader.loadSkin
+LR2DecideSkinLoader.loadSkin
+LR2ResultSkinLoader.loadSkin
+LR2SelectSkinLoader.loadSkin
+LR2SkinSelectSkinLoader.loadSkin
+LR2SkinCSVLoader.loadSkin0
+LR2PlaySkinLoader.setSrcNowCombo
+LR2PlaySkinLoader.setDstNowCombo
+LR2PlaySkinLoader.addJudgeDetail
+LR2PlaySkinLoader.makeDefaultLines
+LR2SkinLoader.addCommandWord
+LR2SkinLoader.getPath
+
+# --- AbstractAudioDriver: trait methods / already exist [impl] ---
+AbstractAudioDriver.getKeySound
+AbstractAudioDriver.getSound
+AbstractAudioDriver.getSampleRate
+AbstractAudioDriver.setSampleRate
+AbstractAudioDriver.addNoteList
+
+# --- Audio private helpers / platform-specific [arch] ---
+BMSLoudnessAnalyzer.*
+BMSRenderer.mixShortDirectPCM
+PCM.getDirectByteBuffer
+GdxAudioDeviceDriver.getKeySound
+
+# --- Play: inlined / non-existent / constructor [arch] ---
+JudgeManager.updateMicroMultiBad
+JudgeWindowRule.lr2JudgeScaling
+SkinLane.init
+
+# --- Core: constructor / pub fields / trait methods [impl] ---
+Input.Input
+PlayerResource.getBGAManager
+PlayerResource.setTableinfo
+PlayerResource.getAnalysisTask
+TimerManager.setMainState
+Validatable.removeInvalidElements
+CommandFolder.setRandomCourse
+PlayModeConfig.validate0
+MidiConfig.setKeyAssign
+
+# --- Song/model: pub fields / private utilities [impl] ---
+SongData.getTimelines
+SongInformation.parseInt36
+ChartDecoder.printLog
+DataProcessor.process
+Section.getTimeLine
+BMSONDecoder.getTimeLine
+
+# --- Skin property factories: boolean_value() dispatch [arch] ---
+BooleanPropertyFactory.createCourseDataConstraintProperty
+BooleanPropertyFactory.createReplayProperty
+
+# --- JudgeManager: keysound volume → BMSPlayer handles [arch] ---
+JudgeManager.getKeyVolume
+
+# --- Config: already implemented as validate_path() [impl] ---
+Config.validatePath
