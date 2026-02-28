@@ -24,6 +24,14 @@ impl JavaRandom {
         (self.seed >> (48 - bits)) as i32
     }
 
+    /// Port of java.util.Random.nextDouble().
+    /// Returns a value in [0.0, 1.0).
+    pub fn next_double(&mut self) -> f64 {
+        let hi = self.next(26) as i64;
+        let lo = self.next(27) as i64;
+        (hi * (1i64 << 27) + lo) as f64 / ((1i64 << 53) as f64)
+    }
+
     pub fn next_int_bounded(&mut self, bound: i32) -> i32 {
         assert!(bound > 0, "bound must be positive");
         // Power of 2

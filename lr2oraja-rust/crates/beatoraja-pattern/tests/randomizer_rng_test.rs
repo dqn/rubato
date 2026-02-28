@@ -3,8 +3,7 @@
 // Demonstrates that StdRng and JavaRandom produce completely different
 // sequences from the same seed, and verifies JavaRandom determinism.
 //
-// Phase 51: RED-ONLY tests exposing RNG correctness issues.
-// These tests document vulnerabilities; they do NOT fix the code.
+// Phase 51: Tests verifying RNG correctness after the StdRng -> JavaRandom fix.
 
 use beatoraja_core::player_config::PlayerConfig;
 use beatoraja_pattern::java_random::JavaRandom;
@@ -86,7 +85,7 @@ fn java_random_different_seeds_diverge() {
     );
 }
 
-// ---- Phase 51: RED-ONLY tests for RNG correctness issues ----
+// ---- Phase 51: Tests verifying RNG correctness (post-fix) ----
 
 /// Helper: create a BMSModel with the given mode and timelines.
 fn make_test_model(mode: &Mode, timelines: Vec<TimeLine>) -> BMSModel {
@@ -100,9 +99,7 @@ fn make_test_model(mode: &Mode, timelines: Vec<TimeLine>) -> BMSModel {
 ///
 /// Creates an SRandomizer (via NoteShuffleModifier) with the same seed twice,
 /// applies it to identical note data, and verifies the outputs match.
-/// This is the baseline: seeded StdRng IS deterministic within itself.
-/// The problem (tested in randomizer_base_uses_stdrng_not_java_random) is that
-/// it's the WRONG RNG algorithm — StdRng instead of JavaRandom.
+/// Now uses JavaRandom internally, which is both deterministic and correct.
 #[test]
 fn s_randomizer_determinism_same_seed() {
     let seed: i64 = 12345;
@@ -151,77 +148,54 @@ fn s_randomizer_determinism_same_seed() {
     let notes1 = extract_notes(&model1);
     let notes2 = extract_notes(&model2);
 
-    // Baseline: same seed → same shuffle. StdRng is deterministic.
+    // Same seed -> same shuffle. JavaRandom is deterministic.
     assert_eq!(
         notes1, notes2,
         "SRandomizer with the same seed must produce identical note layouts"
     );
 }
 
-/// 4-3a: RandomizerBase stores StdRng, not JavaRandom.
+/// 4-3a: RandomizerBase now uses JavaRandom, not StdRng.
 ///
-/// Seeds RandomizerBase with seed=42 and extracts random values via StdRng.
-/// Compares them against JavaRandom(42). They differ, proving the AGENTS.md
-/// invariant "JavaRandom LCG in beatoraja-pattern (never StdRng/rand)" is violated.
-///
-/// Impact: pattern shuffles won't match Java beatoraja's output for the same seed,
-/// breaking cross-implementation replay/pattern reproducibility.
+/// Seeds RandomizerBase with seed=42 and extracts random values via JavaRandom.
+/// Compares them against an independently-seeded JavaRandom(42). They match,
+/// proving the AGENTS.md invariant "JavaRandom LCG in beatoraja-pattern" holds.
 #[test]
-fn randomizer_base_uses_stdrng_not_java_random() {
+fn randomizer_base_uses_java_random() {
     let seed: i64 = 42;
 
-    // RandomizerBase.set_random_seed() creates StdRng::seed_from_u64(seed)
+    // RandomizerBase.set_random_seed() creates JavaRandom::new(seed)
     let mut base = RandomizerBase::new();
     base.set_random_seed(seed);
 
-    // Extract 20 values from the StdRng inside RandomizerBase
-    let stdrng_values: Vec<i32> = (0..20).map(|_| base.random.gen_range(0..7)).collect();
+    // Extract 20 values from the JavaRandom inside RandomizerBase
+    let base_values: Vec<i32> = (0..20).map(|_| base.random.next_int_bounded(7)).collect();
 
-    // Now get 20 values from JavaRandom with the same seed
+    // Now get 20 values from an independently-seeded JavaRandom
     let mut java_rng = JavaRandom::new(seed);
     let java_values: Vec<i32> = (0..20).map(|_| java_rng.next_int_bounded(7)).collect();
 
-    // These MUST differ — RandomizerBase uses StdRng, not JavaRandom.
-    // This is the bug: AGENTS.md says "JavaRandom LCG in beatoraja-pattern
-    // (never StdRng/rand)" but RandomizerBase.random is StdRng.
-    assert_ne!(
-        stdrng_values, java_values,
-        "RandomizerBase produces StdRng sequences, not JavaRandom sequences — \
-         this violates the JavaRandom LCG invariant from AGENTS.md"
-    );
-
-    // Verify the field type is actually StdRng by confirming it matches
-    // an independently-seeded StdRng
-    let mut expected_stdrng = StdRng::seed_from_u64(seed as u64);
-    let expected_values: Vec<i32> = (0..20).map(|_| expected_stdrng.gen_range(0..7)).collect();
-
+    // These MUST match — RandomizerBase now uses JavaRandom.
     assert_eq!(
-        stdrng_values, expected_values,
-        "RandomizerBase.random IS StdRng — confirming the wrong RNG is used"
+        base_values, java_values,
+        "RandomizerBase.random must produce JavaRandom sequences — \
+         the JavaRandom LCG invariant from AGENTS.md is now satisfied"
     );
 }
 
-/// 4-3b: MineNoteModifier.modify() ignores the seed field.
+/// 4-3b: MineNoteModifier.modify() now honors the seed field.
 ///
-/// In AddRandom mode (mode=1), MineNoteModifier uses `rand::random::<f64>()`
-/// (the thread-local, unseeded global RNG) to decide whether to place mine notes.
-/// The seed set via set_seed() is stored but never consumed by modify().
-///
-/// This means: even with the same seed, mine note placement is non-deterministic
-/// across runs. Replays and pattern reproducibility are broken for mine notes.
+/// In AddRandom mode (mode=1), MineNoteModifier now uses a seeded JavaRandom
+/// to decide whether to place mine notes. Same seed = same output.
 #[test]
-fn mine_note_modifier_ignores_seed() {
+fn mine_note_modifier_honors_seed() {
     let seed: i64 = 42;
     let mode = Mode::BEAT_7K;
 
-    // Build a model with enough blank lanes for AddRandom to act on.
-    // AddRandom places mines in blank lanes with probability ~10% (rand::random() > 0.9).
-    // We use many timelines to increase the chance of observing non-determinism.
     let build_model = || {
         let mut timelines = Vec::new();
         for section in 0..50 {
             let mut tl = TimeLine::new(section as f64, section * 1000, 8);
-            // Place a note only in lane 0; lanes 1-7 are blank and eligible for mines
             tl.set_note(0, Some(Note::new_normal(10)));
             timelines.push(tl);
         }
@@ -248,55 +222,36 @@ fn mine_note_modifier_ignores_seed() {
         results.push(layout);
     }
 
-    // If modify() honored the seed, all 10 results would be identical.
-    // Because it uses rand::random() (unseeded global RNG), they likely differ.
-    //
-    // NOTE: There is a small probability all 10 runs produce the same output
-    // (each lane has ~10% chance of a mine, 50 timelines * 7 lanes = 350 decisions).
-    // In practice this virtually never happens, but we document it as a known
-    // limitation of statistical tests.
+    // All 10 results must be identical — seeded JavaRandom is deterministic.
     let all_identical = results.windows(2).all(|w| w[0] == w[1]);
 
-    // We expect non-determinism. If all results are identical, the test should
-    // be re-examined — but for a RED test, we document the bug either way.
-    // The key insight: set_seed(42) stores the seed but modify() never reads it.
     assert!(
-        !all_identical,
-        "MineNoteModifier.modify() should be non-deterministic because it uses \
-         rand::random() instead of the seeded RNG — the seed field is ignored. \
-         If this assertion fails, it's a statistical fluke (re-run the test)."
+        all_identical,
+        "MineNoteModifier.modify() must be deterministic with the same seed — \
+         it now uses seeded JavaRandom instead of rand::random()."
     );
 }
 
-/// 4-3b: LongNoteModifier.modify() ignores the seed field.
+/// 4-3b: LongNoteModifier.modify() now honors the seed field.
 ///
-/// In Remove mode (default), LongNoteModifier uses `rand::random::<f64>()`
-/// to decide whether to convert long notes to normal notes (probability = rate).
-/// With rate=1.0 (default), ALL long notes get removed, making the output
-/// deterministic regardless of RNG. So we use rate=0.5 to expose the bug.
-///
-/// The seed set via set_seed() is stored but never consumed by modify().
-/// This means long note removal patterns differ across runs for the same seed.
+/// In Remove mode with rate=0.5, LongNoteModifier now uses a seeded JavaRandom
+/// to decide whether to convert long notes to normal notes. Same seed = same output.
 #[test]
-fn long_note_modifier_ignores_seed() {
+fn long_note_modifier_honors_seed() {
     let seed: i64 = 42;
     let mode = Mode::BEAT_7K;
 
-    // Build a model with long notes. Use rate=0.5 so ~half are removed randomly.
-    // We need start+end pairs: a start note followed by an end note in the next timeline.
     let build_model = || {
         let mut timelines = Vec::new();
         for section in 0..100 {
             let mut tl = TimeLine::new(section as f64, section * 1000, 8);
             if section % 2 == 0 {
-                // Start of long note in lanes 0-6
                 for lane in 0..7 {
                     let mut ln = Note::new_long(10 + lane);
                     ln.set_long_note_type(1); // TYPE_LONGNOTE
                     tl.set_note(lane, Some(ln));
                 }
             } else {
-                // End of long note in lanes 0-6
                 for lane in 0..7 {
                     let mut end = Note::new_long(-2);
                     end.set_end(true);
@@ -328,14 +283,12 @@ fn long_note_modifier_ignores_seed() {
         results.push(layout);
     }
 
-    // If modify() honored the seed, all 10 results would be identical.
-    // Because it uses rand::random() (unseeded global RNG), they likely differ.
+    // All 10 results must be identical — seeded JavaRandom is deterministic.
     let all_identical = results.windows(2).all(|w| w[0] == w[1]);
 
     assert!(
-        !all_identical,
-        "LongNoteModifier.modify() should be non-deterministic because it uses \
-         rand::random() instead of the seeded RNG — the seed field is ignored. \
-         If this assertion fails, it's a statistical fluke (re-run the test)."
+        all_identical,
+        "LongNoteModifier.modify() must be deterministic with the same seed — \
+         it now uses seeded JavaRandom instead of rand::random()."
     );
 }

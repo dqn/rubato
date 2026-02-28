@@ -4,16 +4,15 @@ use beatoraja_core::player_config::PlayerConfig;
 use bms_model::mode::Mode;
 use bms_model::note::Note;
 use bms_model::time_line::TimeLine;
-use rand::prelude::*;
-use rand::rngs::StdRng;
 
+use crate::java_random::JavaRandom;
 use crate::pattern_modifier::AssistLevel;
 use crate::random::Random;
 
 pub struct RandomizerBase {
     pub mode: Option<Mode>,
     pub modify_lanes: Vec<i32>,
-    pub random: StdRng,
+    pub random: JavaRandom,
     ln_active: HashMap<i32, i32>,
     changeable_lane: Vec<i32>,
     assignable_lane: Vec<i32>,
@@ -28,11 +27,11 @@ impl Default for RandomizerBase {
 
 impl RandomizerBase {
     pub fn new() -> Self {
-        let seed = (rand::random::<f64>() * 65536.0 * 65536.0 * 65536.0) as u64;
+        let seed = (rand::random::<f64>() * 65536.0 * 65536.0 * 65536.0) as i64;
         RandomizerBase {
             mode: None,
             modify_lanes: Vec::new(),
-            random: StdRng::seed_from_u64(seed),
+            random: JavaRandom::new(seed),
             ln_active: HashMap::new(),
             changeable_lane: Vec::new(),
             assignable_lane: Vec::new(),
@@ -68,7 +67,7 @@ impl RandomizerBase {
 
     pub fn set_random_seed(&mut self, seed: i64) {
         if seed >= 0 {
-            self.random = StdRng::seed_from_u64(seed as u64);
+            self.random = JavaRandom::new(seed);
         }
     }
 
@@ -80,7 +79,7 @@ impl RandomizerBase {
             &mut TimeLine,
             &mut Vec<i32>,
             &mut Vec<i32>,
-            &mut StdRng,
+            &mut JavaRandom,
         ) -> HashMap<i32, i32>,
     ) -> Vec<i32> {
         let mut changeable = self.changeable_lane.clone();
@@ -159,8 +158,8 @@ impl TimeBasedRandomizerState {
         tl: &TimeLine,
         changeable_lane: &mut Vec<i32>,
         assignable_lane: &mut Vec<i32>,
-        random: &mut StdRng,
-        select_lane: &mut dyn FnMut(&[i32], &mut StdRng) -> usize,
+        random: &mut JavaRandom,
+        select_lane: &mut dyn FnMut(&[i32], &mut JavaRandom) -> usize,
     ) -> HashMap<i32, i32> {
         let mut random_map: HashMap<i32, i32> = HashMap::new();
         let mut note_lane: Vec<i32> = Vec::new();
@@ -204,7 +203,7 @@ impl TimeBasedRandomizerState {
                 .filter(|&&l| *self.last_note_time.get(&l).unwrap_or(&-10000) == min)
                 .copied()
                 .collect();
-            let m = min_lane[random.gen_range(0..min_lane.len())];
+            let m = min_lane[random.next_int_bounded(min_lane.len() as i32) as usize];
             let note = note_lane.remove(0);
             random_map.insert(note, m);
             inferior_lane.retain(|&v| v != m);
@@ -213,7 +212,7 @@ impl TimeBasedRandomizerState {
         // Place remaining lanes randomly
         primary_lane.extend(inferior_lane);
         while !empty_lane.is_empty() {
-            let r = random.gen_range(0..primary_lane.len());
+            let r = random.next_int_bounded(primary_lane.len() as i32) as usize;
             let empty = empty_lane.remove(0);
             let assigned = primary_lane.remove(r);
             random_map.insert(empty, assigned);
@@ -326,11 +325,20 @@ impl Randomizer {
             }
             Randomizer::Spiral(r) => {
                 r.base.set_modify_lanes(lanes);
-                r.increment = r.base.random.gen_range(0..lanes.len().max(1) + 1);
+                r.increment = r
+                    .base
+                    .random
+                    .next_int_bounded((lanes.len().max(1) + 1) as i32)
+                    as usize;
                 if r.increment == 0 && !lanes.is_empty() {
                     r.increment = 1;
                 } else {
-                    r.increment = r.base.random.gen_range(1..lanes.len().max(1));
+                    let max_val = lanes.len().max(1);
+                    r.increment = if max_val > 1 {
+                        r.base.random.next_int_bounded((max_val - 1) as i32) as usize + 1
+                    } else {
+                        1
+                    };
                 }
                 r.head = 0;
                 r.cycle = lanes.len();
@@ -396,8 +404,9 @@ impl SRandomizer {
         let mut changeable = self.base.changeable_lane.clone();
         let mut assignable = self.base.assignable_lane.clone();
         let random_map = {
-            let mut select_fn =
-                |lane: &[i32], rng: &mut StdRng| -> usize { rng.gen_range(0..lane.len()) };
+            let mut select_fn = |lane: &[i32], rng: &mut JavaRandom| -> usize {
+                rng.next_int_bounded(lane.len() as i32) as usize
+            };
             self.time_state.time_based_shuffle(
                 tl,
                 &mut changeable,
@@ -634,7 +643,7 @@ impl AllScratchRandomizer {
         // Assign remaining
         let is_dp = self.is_double_play;
         let modify_side = self.modify_side;
-        let mut select_fn = move |lane: &[i32], rng: &mut StdRng| -> usize {
+        let mut select_fn = move |lane: &[i32], rng: &mut JavaRandom| -> usize {
             if is_dp {
                 let mut index = 0;
                 match modify_side {
@@ -660,7 +669,7 @@ impl AllScratchRandomizer {
                 }
                 index
             } else {
-                rng.gen_range(0..lane.len())
+                rng.next_int_bounded(lane.len() as i32) as usize
             }
         };
 
@@ -813,11 +822,13 @@ impl NoMurioshiRandomizer {
                     .collect();
 
                 if !candidate2.is_empty() {
-                    self.button_combination =
-                        candidate2[self.base.random.gen_range(0..candidate2.len())].clone();
+                    self.button_combination = candidate2
+                        [self.base.random.next_int_bounded(candidate2.len() as i32) as usize]
+                        .clone();
                 } else {
                     let mut random_map: HashMap<i32, i32> = HashMap::new();
-                    let cand_idx = self.base.random.gen_range(0..candidate.len());
+                    let cand_idx =
+                        self.base.random.next_int_bounded(candidate.len() as i32) as usize;
                     self.button_combination = candidate[cand_idx]
                         .iter()
                         .filter(|&&lane| assignable.contains(&lane))
@@ -830,7 +841,11 @@ impl NoMurioshiRandomizer {
                         .collect();
                     for lane in &note_exist_lane {
                         if !self.button_combination.is_empty() {
-                            let i = self.base.random.gen_range(0..self.button_combination.len());
+                            let i = self
+                                .base
+                                .random
+                                .next_int_bounded(self.button_combination.len() as i32)
+                                as usize;
                             let assigned = self.button_combination[i];
                             random_map.insert(*lane, assigned);
                             changeable.retain(|&v| v != *lane);
@@ -841,7 +856,7 @@ impl NoMurioshiRandomizer {
                     self.flag = false;
                     let bc = self.button_combination.clone();
                     let flag = self.flag;
-                    let mut select_fn = |lane: &[i32], rng: &mut StdRng| -> usize {
+                    let mut select_fn = |lane: &[i32], rng: &mut JavaRandom| -> usize {
                         if flag {
                             let l: Vec<i32> = lane
                                 .iter()
@@ -849,11 +864,11 @@ impl NoMurioshiRandomizer {
                                 .copied()
                                 .collect();
                             if !l.is_empty() {
-                                let chosen = l[rng.gen_range(0..l.len())];
+                                let chosen = l[rng.next_int_bounded(l.len() as i32) as usize];
                                 return lane.iter().position(|&x| x == chosen).unwrap();
                             }
                         }
-                        rng.gen_range(0..lane.len())
+                        rng.next_int_bounded(lane.len() as i32) as usize
                     };
                     let remaining = self.time_state.time_based_shuffle(
                         tl,
@@ -874,7 +889,7 @@ impl NoMurioshiRandomizer {
 
         let bc = self.button_combination.clone();
         let flag = self.flag;
-        let mut select_fn = |lane: &[i32], rng: &mut StdRng| -> usize {
+        let mut select_fn = |lane: &[i32], rng: &mut JavaRandom| -> usize {
             if flag {
                 let l: Vec<i32> = lane
                     .iter()
@@ -882,11 +897,11 @@ impl NoMurioshiRandomizer {
                     .copied()
                     .collect();
                 if !l.is_empty() {
-                    let chosen = l[rng.gen_range(0..l.len())];
+                    let chosen = l[rng.next_int_bounded(l.len() as i32) as usize];
                     return lane.iter().position(|&x| x == chosen).unwrap();
                 }
             }
-            rng.gen_range(0..lane.len())
+            rng.next_int_bounded(lane.len() as i32) as usize
         };
         let random_map = self.time_state.time_based_shuffle(
             tl,
@@ -982,7 +997,7 @@ impl ConvergeRandomizer {
         let mut assignable = self.base.assignable_lane.clone();
 
         let renda_count_clone = self.renda_count.clone();
-        let mut select_fn = |lane: &[i32], rng: &mut StdRng| -> usize {
+        let mut select_fn = |lane: &[i32], rng: &mut JavaRandom| -> usize {
             let max = lane
                 .iter()
                 .map(|l| *renda_count_clone.get(l).unwrap_or(&0))
@@ -993,7 +1008,7 @@ impl ConvergeRandomizer {
                 .filter(|&&l| *renda_count_clone.get(&l).unwrap_or(&0) == max)
                 .copied()
                 .collect();
-            let l = gya[rng.gen_range(0..gya.len())];
+            let l = gya[rng.next_int_bounded(gya.len() as i32) as usize];
             lane.iter().position(|&x| x == l).unwrap()
         };
 
@@ -1115,21 +1130,26 @@ mod tests {
         base1.set_random_seed(42);
         base2.set_random_seed(42);
         // After setting same seed, both should produce the same sequence
-        let v1: i32 = base1.random.gen_range(0..1000);
-        let v2: i32 = base2.random.gen_range(0..1000);
+        let v1: i32 = base1.random.next_int_bounded(1000);
+        let v2: i32 = base2.random.next_int_bounded(1000);
         assert_eq!(v1, v2);
     }
 
     #[test]
     fn randomizer_base_set_random_seed_negative_ignored() {
         let mut base = RandomizerBase::new();
-        let val_before: i32 = {
-            let mut clone = base.random.clone();
-            clone.gen_range(0..1000)
-        };
+        // JavaRandom doesn't support Clone, so we just verify negative seed is ignored
+        // by checking that two calls to set_random_seed(-1) don't change behavior
+        let mut base2 = RandomizerBase::new();
+        // Set both to same known seed first
+        base.set_random_seed(99);
+        base2.set_random_seed(99);
+        // Now try negative on base — should be ignored
         base.set_random_seed(-1);
-        let val_after: i32 = base.random.gen_range(0..1000);
-        assert_eq!(val_before, val_after);
+        // Both should still produce the same first value
+        let val1 = base.random.next_int_bounded(1000);
+        let val2 = base2.random.next_int_bounded(1000);
+        assert_eq!(val1, val2);
     }
 
     // -- TimeBasedRandomizerState --
