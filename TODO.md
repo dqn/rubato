@@ -22,15 +22,15 @@ Phases 1–44 complete. **2391 tests, 16 ignored.** 27 crates, 127k lines. See A
 
 ## Phase 47: Skin Rendering Pipeline (makes screens visible)
 
-- [ ] **47a:** FloatPropertyFactory implementation — Replace stub `get() → 0.0` with real delegate calls to MainState. Decide architecture: trait method extension vs `dyn Any` downcast for ~50 property entries in `beatoraja-skin/src/property/float_property_factory.rs`
+- [x] **47a:** FloatPropertyFactory implementation — Replace stub `get() → 0.0` with real delegate calls to MainState. Decide architecture: trait method extension vs `dyn Any` downcast for ~50 property entries in `beatoraja-skin/src/property/float_property_factory.rs`
   - depends: none
-- [ ] **47b:** Timer stub replacement — Replace zero-return timer with real timer manager access in `beatoraja-skin`
+- [x] **47b:** Timer stub replacement — Replace zero-return timer with real timer manager access in `beatoraja-skin`
   - depends: none
-- [ ] **47c:** MainState.load_skin() per-state overrides — Add `load_skin()` override to CourseResult, MusicResult, PlayState, DecideState following MusicSelector's pattern
+- [x] **47c:** MainState.load_skin() per-state overrides — Add `load_skin()` override to CourseResult, MusicResult, PlayState, DecideState following MusicSelector's pattern
   - depends: none
-- [ ] **47d:** SkinFloat enum variant — Add SkinFloat to SkinObject enum + dispatch in beatoraja-skin
+- [x] **47d:** SkinFloat enum variant — Add SkinFloat to SkinObject enum + dispatch in beatoraja-skin
   - depends: none
-- [ ] **47e:** BooleanPropertyFactory stubs — Implement remaining boolean property delegates
+- [x] **47e:** BooleanPropertyFactory stubs — Implement remaining boolean property delegates
   - depends: none
 
 ## Phase 48: Select→Play Wiring
