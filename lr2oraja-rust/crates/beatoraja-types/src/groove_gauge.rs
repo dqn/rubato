@@ -224,6 +224,14 @@ impl GrooveGauge {
         self.gauges[self.gauge_type as usize].is_qualified()
     }
 
+    pub fn is_qualified_by_type(&self, gauge_type: i32) -> bool {
+        if (gauge_type as usize) < self.gauges.len() {
+            self.gauges[gauge_type as usize].is_qualified()
+        } else {
+            false
+        }
+    }
+
     pub fn get_type(&self) -> i32 {
         self.gauge_type
     }

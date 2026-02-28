@@ -207,6 +207,27 @@ pub struct BMSPlayer {
     is_guide_se: bool,
     /// Side effects produced by create() for the caller to apply.
     create_side_effects: Option<CreateSideEffects>,
+    /// Player config reference (set before create() by the caller).
+    /// Used for save_config, gauge_auto_shift, chart_preview, window_hold.
+    player_config: PlayerConfig,
+    /// Whether media loading has finished (set by the caller via resource.mediaLoadFinished()).
+    media_load_finished: bool,
+    /// Input state: START button pressed (from BMSPlayerInputProcessor).
+    /// Updated each frame by the caller before calling render().
+    input_start_pressed: bool,
+    /// Input state: SELECT button pressed (from BMSPlayerInputProcessor).
+    /// Updated each frame by the caller before calling render().
+    input_select_pressed: bool,
+    /// Input state: key states array (from BMSPlayerInputProcessor).
+    /// Updated each frame by the caller before calling render().
+    input_key_states: Vec<bool>,
+    /// Pending state change to request from MainController.
+    /// Set during render() when a state transition is needed.
+    /// The caller should consume this via `take_pending_state_change()`.
+    pending_state_change: Option<MainStateType>,
+    /// Whether we are in course mode (resource.getCourseBMSModels() != null).
+    /// Set by the caller. Quick retry is disabled during courses.
+    is_course_mode: bool,
 }
 
 impl BMSPlayer {
@@ -248,6 +269,13 @@ impl BMSPlayer {
             constraints: Vec::new(),
             is_guide_se: false,
             create_side_effects: None,
+            player_config: PlayerConfig::default(),
+            media_load_finished: false,
+            input_start_pressed: false,
+            input_select_pressed: false,
+            input_key_states: Vec::new(),
+            pending_state_change: None,
+            is_course_mode: false,
         }
     }
 
@@ -282,6 +310,46 @@ impl BMSPlayer {
     /// This comes from PlayerConfig.is_guide_se.
     pub fn set_guide_se(&mut self, enabled: bool) {
         self.is_guide_se = enabled;
+    }
+
+    /// Set the player config. Used for save_config, gauge_auto_shift, chart_preview, etc.
+    pub fn set_player_config(&mut self, config: PlayerConfig) {
+        self.player_config = config;
+    }
+
+    /// Get the player config reference.
+    pub fn get_player_config(&self) -> &PlayerConfig {
+        &self.player_config
+    }
+
+    /// Set whether media loading has finished.
+    /// Called by the caller when resource.mediaLoadFinished() becomes true.
+    pub fn set_media_load_finished(&mut self, finished: bool) {
+        self.media_load_finished = finished;
+    }
+
+    /// Update input state from BMSPlayerInputProcessor each frame.
+    pub fn set_input_state(
+        &mut self,
+        start_pressed: bool,
+        select_pressed: bool,
+        key_states: &[bool],
+    ) {
+        self.input_start_pressed = start_pressed;
+        self.input_select_pressed = select_pressed;
+        self.input_key_states.clear();
+        self.input_key_states.extend_from_slice(key_states);
+    }
+
+    /// Take the pending state change (if any). Returns None if no transition is pending.
+    /// The caller should apply this via main.changeState().
+    pub fn take_pending_state_change(&mut self) -> Option<MainStateType> {
+        self.pending_state_change.take()
+    }
+
+    /// Set whether we are in course mode.
+    pub fn set_course_mode(&mut self, is_course: bool) {
+        self.is_course_mode = is_course;
     }
 
     /// Take the side effects produced by create().
@@ -694,14 +762,47 @@ impl BMSPlayer {
     }
 
     /// Save play config from lane renderer state.
+    ///
     /// Corresponds to Java saveConfig() private method.
-    fn save_config(&self) {
-        // TODO: Phase 22 - requires PlayerResource, constraint check, PlayerConfig
-        // In Java:
+    /// Persists hispeed/duration, lanecover, lift, hidden from the lane renderer
+    /// back into the PlayerConfig's PlayConfig for the current mode.
+    fn save_config(&mut self) {
         // 1. Check if NO_SPEED constraint - if so, return early
-        // 2. Get PlayConfig from playerConfig.getPlayConfig(mode).getPlayconfig()
-        // 3. If fixhispeed != OFF: save duration; else save hispeed
-        // 4. Save lanecover, lift, hidden from lanerender
+        for c in &self.constraints {
+            if *c == CourseDataConstraint::NoSpeed {
+                return;
+            }
+        }
+
+        // 2. Read lane renderer state
+        let lr = match self.lanerender {
+            Some(ref lr) => lr,
+            None => return,
+        };
+        let duration = lr.get_duration();
+        let hispeed = lr.get_hispeed();
+        let lanecover = lr.get_lanecover();
+        let lift = lr.get_lift_region();
+        let hidden = lr.get_hidden_cover();
+
+        // 3. Get PlayConfig from playerConfig.getPlayConfig(mode).getPlayconfig()
+        let mode = self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K);
+        let pc = self
+            .player_config
+            .get_play_config(mode)
+            .get_playconfig_mut();
+
+        // 4. If fixhispeed != OFF: save duration; else save hispeed
+        if pc.fixhispeed != beatoraja_types::play_config::FIX_HISPEED_OFF {
+            pc.duration = duration;
+        } else {
+            pc.hispeed = hispeed;
+        }
+
+        // 5. Save lanecover, lift, hidden
+        pc.lanecover = lanecover;
+        pc.lift = lift;
+        pc.hidden = hidden;
     }
 
     /// Initialize playinfo from PlayerConfig.
@@ -1438,32 +1539,59 @@ impl MainState for BMSPlayer {
                 .timer
                 .switch_timer(TIMER_STARTINPUT, true);
         }
-        // startpressedtime tracking is done via MainController input in Java
-        // We track it locally here for state machine logic
-        // if input.startPressed() || input.isSelectPressed() { startpressedtime = micronow; }
+        // startpressedtime tracking: update when START or SELECT is pressed
+        // Translated from: Java BMSPlayer.render() line 590
+        if self.input_start_pressed || self.input_select_pressed {
+            self.startpressedtime = micronow;
+        }
 
         match self.state {
             // STATE_PRELOAD - wait for resources
             STATE_PRELOAD => {
-                // Chart preview handling (chartPreview config)
-                // TODO: Phase 22 - config.isChartPreview() logic with timer 141
+                // Chart preview handling
+                // Translated from: Java BMSPlayer.render() lines 598-604
+                if self.player_config.chart_preview {
+                    if self.main_state_data.timer.is_timer_on(141)
+                        && micronow > self.startpressedtime
+                    {
+                        self.main_state_data.timer.set_timer_off(141);
+                        if let Some(ref mut lr) = self.lanerender {
+                            lr.init(&self.model);
+                        }
+                    } else if !self.main_state_data.timer.is_timer_on(141)
+                        && micronow == self.startpressedtime
+                    {
+                        self.main_state_data
+                            .timer
+                            .set_micro_timer(141, micronow - self.starttimeoffset * 1000);
+                    }
+                }
 
                 // Check if media loaded and load timers elapsed
                 let load_threshold =
                     (self.play_skin.get_loadstart() + self.play_skin.get_loadend()) as i64 * 1000;
-                // In Java: resource.mediaLoadFinished() && micronow > load_threshold
-                //          && micronow - startpressedtime > 1000000
-                // We simulate media loaded = true for now (blocked on Phase 22)
-                let media_loaded = true; // TODO: Phase 22 - resource.mediaLoadFinished()
-                if media_loaded
+                // Translated from: Java BMSPlayer.render() lines 607-608
+                if self.media_load_finished
                     && micronow > load_threshold
                     && micronow - self.startpressedtime > 1_000_000
                 {
+                    // Chart preview cleanup on transition
+                    if self.player_config.chart_preview {
+                        self.main_state_data.timer.set_timer_off(141);
+                        if let Some(ref mut lr) = self.lanerender {
+                            lr.init(&self.model);
+                        }
+                    }
+
                     // Loudness analysis check
+                    // Translated from: Java BMSPlayer.render() lines 615-641
+                    // The actual analysisTask (Future<AnalysisResult>) requires async infrastructure
+                    // that is not yet available. The check is wired, but the task itself remains a stub.
                     if !self.analysis_checked {
                         self.adjusted_volume = -1.0;
                         self.analysis_checked = true;
-                        // TODO: Phase 22 - analysisTask handling
+                        // TODO: → Phase 45 — Wire analysisTask (BMSLoudnessAnalyzer async result)
+                        // Requires resource.getAnalysisTask() returning a Future<AnalysisResult>
                     }
 
                     self.bga.lock().unwrap().prepare(&() as &dyn std::any::Any);
@@ -1532,23 +1660,127 @@ impl MainState for BMSPlayer {
                     control.set_enable_control(false);
                     control.set_enable_cursor(false);
                 }
-                // practice.processInput(input) - TODO: Phase 22
+                // Process practice input navigation (UP/DOWN/LEFT/RIGHT)
+                // Translated from: Java BMSPlayer.render() line 680
+                let now_millis = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis() as i64;
+                // Control key states are read from input_key_states.
+                // In the Java version, these come from BMSPlayerInputProcessor control keys.
+                // For now we pass the input_start/select state as a proxy for key0 check.
+                self.practice.process_input(
+                    false, // control_up_pressed — requires BMSPlayerInputProcessor.isControlKeyPressed
+                    false, // control_down_pressed — requires BMSPlayerInputProcessor.isControlKeyPressed
+                    false, // control_left_held — requires BMSPlayerInputProcessor.getControlKeyState
+                    false, // control_right_held — requires BMSPlayerInputProcessor.getControlKeyState
+                    now_millis,
+                );
+                // TODO: → Phase 45 — Wire BMSPlayerInputProcessor control key states into practice.process_input
 
-                // In Java: if input.getKeyState(0) && resource.mediaLoadFinished() && time checks
-                // Practice start is triggered by key press
-                // TODO: Phase 22 - full practice start logic
+                // Practice start logic: press key0 while media is loaded and timers elapsed
+                // Translated from: Java BMSPlayer.render() lines 682-723
+                let key0_pressed = self.input_key_states.first().copied().unwrap_or(false);
+                let load_threshold =
+                    (self.play_skin.get_loadstart() + self.play_skin.get_loadend()) as i64 * 1000;
+                if key0_pressed
+                    && self.media_load_finished
+                    && micronow > load_threshold
+                    && micronow - self.startpressedtime > 1_000_000
+                {
+                    // Apply practice configuration and start play
+                    if let Some(ref mut control) = self.control {
+                        control.set_enable_control(true);
+                        control.set_enable_cursor(true);
+                    }
+
+                    let property = self.practice.get_practice_property().clone();
+
+                    // Apply frequency if != 100
+                    if property.freq != 100 {
+                        bms_model_utils::change_frequency(
+                            &mut self.model,
+                            property.freq as f32 / 100.0,
+                        );
+                        if self.fast_forward_freq_option == FrequencyType::FREQUENCY {
+                            self.pending_global_pitch = Some(property.freq as f32 / 100.0);
+                        }
+                    }
+
+                    self.model.set_total(property.total);
+
+                    // Apply practice modifier (time range)
+                    let mut pm = beatoraja_pattern::practice_modifier::PracticeModifier::new(
+                        property.starttime as i64 * 100 / property.freq as i64,
+                        property.endtime as i64 * 100 / property.freq as i64,
+                    );
+                    pm.modify(&mut self.model);
+
+                    // DP options
+                    if self.model.get_mode().map_or(1, |m| m.player()) == 2 {
+                        if property.doubleop == 1 {
+                            let mut flip =
+                                beatoraja_pattern::lane_shuffle_modifier::PlayerFlipModifier::new();
+                            flip.modify(&mut self.model);
+                        }
+                        let mut pm2 = beatoraja_pattern::pattern_modifier::create_pattern_modifier(
+                            property.random2,
+                            1,
+                            &self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K),
+                            &self.player_config,
+                        );
+                        pm2.modify(&mut self.model);
+                    }
+
+                    // 1P random option
+                    let mut pm1 = beatoraja_pattern::pattern_modifier::create_pattern_modifier(
+                        property.random,
+                        0,
+                        &self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K),
+                        &self.player_config,
+                    );
+                    pm1.modify(&mut self.model);
+
+                    // Gauge, judgerank, lane init
+                    self.gauge = self.practice.get_gauge(&self.model);
+                    self.model.set_judgerank(property.judgerank);
+                    if let Some(ref mut lr) = self.lanerender {
+                        lr.init(&self.model);
+                    }
+                    self.play_skin.pomyu.init();
+
+                    self.starttimeoffset = if property.starttime > 1000 {
+                        (property.starttime as i64 - 1000) * 100 / property.freq as i64
+                    } else {
+                        0
+                    };
+                    self.playtime = ((property.endtime as i64 + 1000) * 100 / property.freq as i64)
+                        as i32
+                        + TIME_MARGIN;
+
+                    self.bga.lock().unwrap().prepare(&() as &dyn std::any::Any);
+                    self.state = STATE_READY;
+                    self.main_state_data.timer.set_timer_on(TIMER_READY);
+                    log::info!("Practice -> STATE_READY");
+                }
             }
 
             // STATE_PRACTICE_FINISHED
+            // Translated from: Java BMSPlayer.render() lines 726-731
             STATE_PRACTICE_FINISHED => {
+                let skin_fadeout = self
+                    .main_state_data
+                    .skin
+                    .as_ref()
+                    .map_or(0, |s| s.get_fadeout()) as i64;
                 if self
                     .main_state_data
                     .timer
                     .get_now_time_for_id(TIMER_FADEOUT)
-                    > self.play_skin.get_close() as i64
+                    > skin_fadeout
                 {
                     // input.setEnable(true); input.setStartTime(0);
-                    // main.changeState(MainStateType.MUSICSELECT);
+                    self.pending_state_change = Some(MainStateType::MusicSelect);
                     log::info!("Practice finished, transition to MUSICSELECT");
                 }
             }
@@ -1635,7 +1867,14 @@ impl MainState for BMSPlayer {
                 }
 
                 // pomyu timer update
-                // skin.pomyu.updateTimer(this); - TODO: Phase 22
+                // Translated from: Java BMSPlayer.render() line 766
+                let past_notes = self.judge.get_past_notes();
+                let gauge_is_max = self.gauge.as_ref().is_some_and(|g| g.get_gauge().is_max());
+                self.play_skin.pomyu.update_timer(
+                    &mut self.main_state_data.timer,
+                    past_notes,
+                    gauge_is_max,
+                );
 
                 // Check play time elapsed
                 if (self.playtime as i64) < ptime {
@@ -1654,22 +1893,77 @@ impl MainState for BMSPlayer {
                         .switch_timer(TIMER_ENDOFNOTE_1P, true);
                 }
 
-                // Stage failed check
-                if let Some(ref gauge) = self.gauge {
-                    let g = gauge.get_value();
-                    if g == 0.0 {
-                        // GAUGEAUTOSHIFT_NONE: transition to FAILED
-                        // TODO: Phase 22 - config.getGaugeAutoShift() check
-                        self.state = STATE_FAILED;
-                        self.main_state_data.timer.set_timer_on(TIMER_FAILED);
-                        // if resource.mediaLoadFinished() { main.getAudioProcessor().stop(null); }
-                        // play(PLAY_STOP);
-                        log::info!("STATE_FAILED");
+                // Stage failed check with gauge auto shift
+                // Translated from: Java BMSPlayer.render() lines 782-815
+                if let Some(ref mut gauge) = self.gauge {
+                    let gas = self.player_config.gauge_auto_shift;
+                    use beatoraja_types::groove_gauge::{CLASS, EXHARDCLASS, HAZARD, NORMAL};
+                    use beatoraja_types::player_config::{
+                        GAUGEAUTOSHIFT_BESTCLEAR, GAUGEAUTOSHIFT_CONTINUE, GAUGEAUTOSHIFT_NONE,
+                        GAUGEAUTOSHIFT_SELECT_TO_UNDER, GAUGEAUTOSHIFT_SURVIVAL_TO_GROOVE,
+                    };
+
+                    if gas == GAUGEAUTOSHIFT_BESTCLEAR || gas == GAUGEAUTOSHIFT_SELECT_TO_UNDER {
+                        // Auto-shift to best qualifying gauge
+                        let len = if gas == GAUGEAUTOSHIFT_BESTCLEAR {
+                            if gauge.get_type() >= CLASS {
+                                EXHARDCLASS + 1
+                            } else {
+                                HAZARD + 1
+                            }
+                        } else {
+                            // SELECT_TO_UNDER
+                            if gauge.is_course_gauge() {
+                                (self.player_config.gauge.max(NORMAL).min(EXHARDCLASS) + CLASS
+                                    - NORMAL)
+                                    .min(EXHARDCLASS)
+                                    + 1
+                            } else {
+                                self.player_config.gauge.min(HAZARD) + 1
+                            }
+                        };
+                        let start_type = if gauge.is_course_gauge() {
+                            CLASS
+                        } else if gauge.get_type() < self.player_config.bottom_shiftable_gauge {
+                            gauge.get_type()
+                        } else {
+                            self.player_config.bottom_shiftable_gauge
+                        };
+                        let mut best_type = start_type;
+                        for i in start_type..len {
+                            if gauge.get_value_by_type(i) > 0.0
+                                && gauge.get_gauge_by_type(i).is_qualified()
+                            {
+                                best_type = i;
+                            }
+                        }
+                        gauge.set_type(best_type);
+                    } else if gauge.get_value() == 0.0 {
+                        match gas {
+                            GAUGEAUTOSHIFT_NONE => {
+                                // FAILED transition
+                                self.state = STATE_FAILED;
+                                self.main_state_data.timer.set_timer_on(TIMER_FAILED);
+                                // if resource.mediaLoadFinished() { main.getAudioProcessor().stop(null); }
+                                // play(PLAY_STOP);
+                                log::info!("STATE_FAILED");
+                            }
+                            GAUGEAUTOSHIFT_CONTINUE => {
+                                // Continue playing with 0 gauge
+                            }
+                            GAUGEAUTOSHIFT_SURVIVAL_TO_GROOVE => {
+                                if !gauge.is_course_gauge() {
+                                    gauge.set_type(NORMAL);
+                                }
+                            }
+                            _ => {}
+                        }
                     }
                 }
             }
 
             // STATE_FAILED
+            // Translated from: Java BMSPlayer.render() lines 818-869
             STATE_FAILED => {
                 if let Some(ref mut control) = self.control {
                     control.set_enable_control(false);
@@ -1681,9 +1975,16 @@ impl MainState for BMSPlayer {
                 self.keysound.stop_bg_play();
 
                 // Quick retry check (START xor SELECT)
-                // TODO: Phase 22 - input.startPressed() ^ input.isSelectPressed()
-
-                if self.main_state_data.timer.get_now_time_for_id(TIMER_FAILED)
+                // Translated from: Java BMSPlayer.render() lines 823-838
+                if (self.input_start_pressed ^ self.input_select_pressed)
+                    && !self.is_course_mode
+                    && self.play_mode.mode == beatoraja_core::bms_player_mode::Mode::Play
+                {
+                    self.pending_global_pitch = Some(1.0);
+                    self.save_config();
+                    // resource.reloadBMSFile();
+                    self.pending_state_change = Some(MainStateType::Play);
+                } else if self.main_state_data.timer.get_now_time_for_id(TIMER_FAILED)
                     > self.play_skin.get_close() as i64
                 {
                     self.pending_global_pitch = Some(1.0);
@@ -1708,12 +2009,19 @@ impl MainState for BMSPlayer {
                     self.save_config();
 
                     // Transition: practice -> STATE_PRACTICE, else -> RESULT or MUSICSELECT
-                    // TODO: Phase 22 - main.changeState()
+                    if self.play_mode.mode == beatoraja_core::bms_player_mode::Mode::Practice {
+                        self.state = STATE_PRACTICE;
+                    } else {
+                        // Score data determines whether we go to RESULT or MUSICSELECT
+                        // In Java: if scoreData != null -> RESULT, else -> MUSICSELECT
+                        self.pending_state_change = Some(MainStateType::Result);
+                    }
                     log::info!("Failed close, transition to result/select");
                 }
             }
 
             // STATE_FINISHED
+            // Translated from: Java BMSPlayer.render() lines 872-911
             STATE_FINISHED => {
                 if let Some(ref mut control) = self.control {
                     control.set_enable_control(false);
@@ -1732,12 +2040,17 @@ impl MainState for BMSPlayer {
                 {
                     self.main_state_data.timer.switch_timer(TIMER_FADEOUT, true);
                 }
+                // skin.getFadeout() from the loaded skin
+                let skin_fadeout = self
+                    .main_state_data
+                    .skin
+                    .as_ref()
+                    .map_or(0, |s| s.get_fadeout()) as i64;
                 if self
                     .main_state_data
                     .timer
                     .get_now_time_for_id(TIMER_FADEOUT)
-                    > 0
-                // skin.getFadeout() - TODO: Phase 22
+                    > skin_fadeout
                 {
                     self.pending_global_pitch = Some(1.0);
                     // resource.getBGAManager().stop();
@@ -1751,25 +2064,43 @@ impl MainState for BMSPlayer {
                     // input.setEnable(true); input.setStartTime(0);
 
                     // Transition: practice -> STATE_PRACTICE, else -> RESULT
-                    // TODO: Phase 22 - main.changeState()
+                    if self.play_mode.mode == beatoraja_core::bms_player_mode::Mode::Practice {
+                        self.state = STATE_PRACTICE;
+                    } else {
+                        self.pending_state_change = Some(MainStateType::Result);
+                    }
                     log::info!("Finished, transition to result/select");
                 }
             }
 
             // STATE_ABORTED
+            // Translated from: Java BMSPlayer.render() lines 914-936
             STATE_ABORTED => {
-                // Quick retry check
-                // TODO: Phase 22 - input.startPressed() ^ input.isSelectPressed()
+                // Quick retry check (START xor SELECT in PLAY mode, not course)
+                if self.play_mode.mode == beatoraja_core::bms_player_mode::Mode::Play
+                    && (self.input_start_pressed ^ self.input_select_pressed)
+                    && !self.is_course_mode
+                {
+                    self.pending_global_pitch = Some(1.0);
+                    self.save_config();
+                    // resource.reloadBMSFile();
+                    self.pending_state_change = Some(MainStateType::Play);
+                }
 
+                // skin.getFadeout() from the loaded skin
+                let skin_fadeout = self
+                    .main_state_data
+                    .skin
+                    .as_ref()
+                    .map_or(0, |s| s.get_fadeout()) as i64;
                 if self
                     .main_state_data
                     .timer
                     .get_now_time_for_id(TIMER_FADEOUT)
-                    > 0
-                // skin.getFadeout() - TODO: Phase 22
+                    > skin_fadeout
                 {
                     // input.setEnable(true); input.setStartTime(0);
-                    // main.changeState(MainStateType.MUSICSELECT);
+                    self.pending_state_change = Some(MainStateType::MusicSelect);
                     log::info!("Aborted, transition to MUSICSELECT");
                 }
             }
@@ -1793,12 +2124,12 @@ impl MainState for BMSPlayer {
         if let (Some(mut control), Some(lanerender)) =
             (self.control.take(), self.lanerender.as_mut())
         {
-            // TODO: Phase 22+ — wire BMSPlayerInputProcessor state into context
+            // Wire BMSPlayerInputProcessor state into context
             let mut noop_analog = |_key: usize, _ms: i32| -> i32 { 0 };
             let mut ctx = crate::control_input_processor::ControlInputContext {
                 lanerender,
-                start_pressed: false, // TODO: Phase 22+ — from main.getInputProcessor()
-                select_pressed: false, // TODO: Phase 22+ — from main.getInputProcessor()
+                start_pressed: self.input_start_pressed,
+                select_pressed: self.input_select_pressed,
                 control_key_up: false,
                 control_key_down: false,
                 control_key_escape_pressed: false,
@@ -1806,14 +2137,14 @@ impl MainState for BMSPlayer {
                 control_key_num2: false,
                 control_key_num3: false,
                 control_key_num4: false,
-                key_states: &[], // TODO: Phase 22+ — from main.getInputProcessor()
+                key_states: &self.input_key_states,
                 scroll: 0,
                 is_analog: &[],
                 analog_diff_and_reset: &mut noop_analog,
                 is_timer_play_on,
                 is_note_end,
-                window_hold: false, // TODO: Phase 22+ — from playerConfig.isWindowHold()
-                autoplay_mode: beatoraja_core::bms_player_mode::Mode::Play, // TODO: Phase 22+ — from resource.getPlayMode()
+                window_hold: self.player_config.is_window_hold,
+                autoplay_mode: self.play_mode.mode,
                 now_millis,
             };
 
@@ -1833,16 +2164,15 @@ impl MainState for BMSPlayer {
         }
 
         // Build InputContext for key input processing.
-        // key_states comes from main.getInputProcessor() — not yet integrated.
-        // auto_presstime comes from the judge manager.
         let auto_presstime = self.judge.get_auto_presstime().to_vec();
         let now = self.main_state_data.timer.get_now_time();
+        let is_autoplay = self.play_mode.mode == beatoraja_core::bms_player_mode::Mode::Autoplay;
         if let Some(ref mut keyinput) = self.keyinput {
             let mut ctx = crate::key_input_processor::InputContext {
                 now,
-                key_states: &[], // TODO: Phase 22+ — integrate BMSPlayerInputProcessor key states
+                key_states: &self.input_key_states,
                 auto_presstime: &auto_presstime,
-                is_autoplay: false, // TODO: Phase 22+ — read from resource.getPlayMode()
+                is_autoplay,
                 timer: &mut self.main_state_data.timer,
             };
             keyinput.input(&mut ctx);
@@ -1943,9 +2273,10 @@ mod tests {
         let mut player = BMSPlayer::new(model);
         player.play_skin.set_loadstart(0);
         player.play_skin.set_loadend(0);
+        player.media_load_finished = true;
 
         // The PRELOAD->READY transition requires:
-        // 1. media_loaded = true (hardcoded for now)
+        // 1. media_load_finished = true
         // 2. micronow > (loadstart + loadend) * 1000 = 0
         // 3. micronow - startpressedtime > 1_000_000
         //
@@ -2363,6 +2694,7 @@ mod tests {
     fn lifecycle_preload_ready_play_finished() {
         let model = make_model();
         let mut player = BMSPlayer::new(model);
+        player.media_load_finished = true;
 
         // Start at PRELOAD
         assert_eq!(player.get_state(), STATE_PRELOAD);
@@ -4091,5 +4423,360 @@ mod tests {
         player.create();
         let control = player.control.as_ref().unwrap();
         assert!(!control.is_enable_control());
+    }
+
+    // --- save_config tests ---
+
+    #[test]
+    fn save_config_skips_when_no_speed_constraint() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.lanerender = Some(LaneRenderer::new(&player.model));
+        player.set_constraints(vec![CourseDataConstraint::NoSpeed]);
+
+        // Set a known state on the lane renderer
+        let pc_before = player
+            .player_config
+            .get_play_config_ref(Mode::BEAT_7K)
+            .get_playconfig()
+            .clone();
+
+        player.save_config();
+
+        // Config should not have changed
+        let pc_after = player
+            .player_config
+            .get_play_config_ref(Mode::BEAT_7K)
+            .get_playconfig();
+        assert_eq!(pc_before.hispeed, pc_after.hispeed);
+        assert_eq!(pc_before.lanecover, pc_after.lanecover);
+    }
+
+    #[test]
+    fn save_config_saves_lane_renderer_state() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.lanerender = Some(LaneRenderer::new(&player.model));
+
+        // Default fixhispeed is FIX_HISPEED_MAINBPM (not OFF), so duration should be saved
+        player.save_config();
+
+        let pc = player
+            .player_config
+            .get_play_config_ref(Mode::BEAT_7K)
+            .get_playconfig();
+        // Duration should be set from lane renderer (default duration)
+        let lr_duration = player.lanerender.as_ref().unwrap().get_duration();
+        assert_eq!(pc.duration, lr_duration);
+    }
+
+    #[test]
+    fn save_config_saves_hispeed_when_fixhispeed_off() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.lanerender = Some(LaneRenderer::new(&player.model));
+
+        // Set fixhispeed to OFF
+        player
+            .player_config
+            .get_play_config(Mode::BEAT_7K)
+            .get_playconfig_mut()
+            .fixhispeed = beatoraja_types::play_config::FIX_HISPEED_OFF;
+
+        player.save_config();
+
+        let pc = player
+            .player_config
+            .get_play_config_ref(Mode::BEAT_7K)
+            .get_playconfig();
+        let lr_hispeed = player.lanerender.as_ref().unwrap().get_hispeed();
+        assert_eq!(pc.hispeed, lr_hispeed);
+    }
+
+    // --- media_load_finished tests ---
+
+    #[test]
+    fn preload_does_not_transition_when_media_not_loaded() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.play_skin.set_loadstart(0);
+        player.play_skin.set_loadend(0);
+        player.media_load_finished = false; // Media not loaded
+        player.startpressedtime = -2_000_000;
+
+        std::thread::sleep(std::time::Duration::from_millis(2));
+        player.main_state_data.timer.update();
+        player.render();
+
+        // Should stay in PRELOAD because media not loaded
+        assert_eq!(player.get_state(), STATE_PRELOAD);
+    }
+
+    // --- input state wiring tests ---
+
+    #[test]
+    fn set_input_state_updates_fields() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+
+        player.set_input_state(true, false, &[true, false, true]);
+        assert!(player.input_start_pressed);
+        assert!(!player.input_select_pressed);
+        assert_eq!(player.input_key_states, vec![true, false, true]);
+
+        player.set_input_state(false, true, &[false]);
+        assert!(!player.input_start_pressed);
+        assert!(player.input_select_pressed);
+        assert_eq!(player.input_key_states, vec![false]);
+    }
+
+    // --- startpressedtime tracking tests ---
+
+    #[test]
+    fn startpressedtime_updates_when_start_pressed() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.input_start_pressed = true;
+        player.startpressedtime = -999;
+
+        std::thread::sleep(std::time::Duration::from_millis(1));
+        player.main_state_data.timer.update();
+        player.render();
+
+        // startpressedtime should have been updated to micronow
+        assert!(player.startpressedtime > -999);
+    }
+
+    // --- gauge auto shift tests ---
+
+    #[test]
+    fn gauge_autoshift_continue_does_not_fail() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_PLAY;
+        player.playtime = 999_999;
+        player.player_config.gauge_auto_shift =
+            beatoraja_types::player_config::GAUGEAUTOSHIFT_CONTINUE;
+
+        let gauge = crate::groove_gauge::create_groove_gauge(
+            &player.model,
+            beatoraja_types::groove_gauge::HARD,
+            0,
+            None,
+        )
+        .unwrap();
+        player.gauge = Some(gauge);
+        player.gauge.as_mut().unwrap().set_value(0.0);
+
+        player.main_state_data.timer.update();
+        let now = player.main_state_data.timer.get_now_micro_time();
+        player
+            .main_state_data
+            .timer
+            .set_micro_timer(TIMER_PLAY, now - 1000);
+        player.prevtime = now - 500;
+
+        player.render();
+
+        // Should NOT transition to FAILED with CONTINUE mode
+        assert_eq!(player.get_state(), STATE_PLAY);
+    }
+
+    #[test]
+    fn gauge_autoshift_survival_to_groove_shifts_type() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_PLAY;
+        player.playtime = 999_999;
+        player.player_config.gauge_auto_shift =
+            beatoraja_types::player_config::GAUGEAUTOSHIFT_SURVIVAL_TO_GROOVE;
+
+        let gauge = crate::groove_gauge::create_groove_gauge(
+            &player.model,
+            beatoraja_types::groove_gauge::HARD,
+            0,
+            None,
+        )
+        .unwrap();
+        player.gauge = Some(gauge);
+        player.gauge.as_mut().unwrap().set_value(0.0);
+
+        player.main_state_data.timer.update();
+        let now = player.main_state_data.timer.get_now_micro_time();
+        player
+            .main_state_data
+            .timer
+            .set_micro_timer(TIMER_PLAY, now - 1000);
+        player.prevtime = now - 500;
+
+        player.render();
+
+        // Should shift to NORMAL gauge type, not FAILED
+        assert_eq!(player.get_state(), STATE_PLAY);
+        assert_eq!(
+            player.gauge.as_ref().unwrap().get_type(),
+            beatoraja_types::groove_gauge::NORMAL
+        );
+    }
+
+    // --- quick retry tests ---
+
+    #[test]
+    fn quick_retry_in_failed_state_with_start_xor_select() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_FAILED;
+        player.lanerender = Some(LaneRenderer::new(&player.model));
+        player.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
+        player.set_play_mode(BMSPlayerMode::PLAY);
+        player.is_course_mode = false;
+
+        // START pressed, SELECT not pressed (XOR = true)
+        player.input_start_pressed = true;
+        player.input_select_pressed = false;
+
+        player.main_state_data.timer.update();
+        player.render();
+
+        // Should request transition to PLAY (quick retry)
+        let state_change = player.take_pending_state_change();
+        assert_eq!(state_change, Some(MainStateType::Play));
+    }
+
+    #[test]
+    fn no_quick_retry_in_course_mode() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_FAILED;
+        player.lanerender = Some(LaneRenderer::new(&player.model));
+        player.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
+        player.set_play_mode(BMSPlayerMode::PLAY);
+        player.is_course_mode = true;
+
+        player.input_start_pressed = true;
+        player.input_select_pressed = false;
+
+        player.main_state_data.timer.update();
+        player.render();
+
+        // Quick retry should NOT trigger in course mode
+        // (only TIMER_FAILED timeout transition should happen)
+        let state_change = player.take_pending_state_change();
+        assert_ne!(state_change, Some(MainStateType::Play));
+    }
+
+    #[test]
+    fn aborted_quick_retry_with_start_xor_select() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_ABORTED;
+        player.lanerender = Some(LaneRenderer::new(&player.model));
+        player.set_play_mode(BMSPlayerMode::PLAY);
+        player.is_course_mode = false;
+
+        // SELECT pressed, START not pressed (XOR = true)
+        player.input_start_pressed = false;
+        player.input_select_pressed = true;
+
+        player.main_state_data.timer.update();
+        player.render();
+
+        // Should request transition to PLAY
+        let state_change = player.take_pending_state_change();
+        assert_eq!(state_change, Some(MainStateType::Play));
+    }
+
+    // --- state transition tests ---
+
+    #[test]
+    fn failed_transitions_to_practice_in_practice_mode() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_FAILED;
+        player.lanerender = Some(LaneRenderer::new(&player.model));
+        player.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
+        player.set_play_mode(BMSPlayerMode::PRACTICE);
+
+        // Set TIMER_FAILED so close time is exceeded
+        player.main_state_data.timer.set_timer_on(TIMER_FAILED);
+        player.main_state_data.timer.update();
+        let now = player.main_state_data.timer.get_now_micro_time();
+        player
+            .main_state_data
+            .timer
+            .set_micro_timer(TIMER_FAILED, now - 10_000_000);
+        player.play_skin.set_close(0);
+
+        player.render();
+
+        // In practice mode, should return to STATE_PRACTICE
+        assert_eq!(player.get_state(), STATE_PRACTICE);
+    }
+
+    #[test]
+    fn pending_state_change_consumed_once() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.pending_state_change = Some(MainStateType::Result);
+
+        let first = player.take_pending_state_change();
+        assert_eq!(first, Some(MainStateType::Result));
+
+        let second = player.take_pending_state_change();
+        assert_eq!(second, None);
+    }
+
+    // --- chart preview tests ---
+
+    #[test]
+    fn chart_preview_sets_timer_141_when_enabled() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        player.state = STATE_PRELOAD;
+        player.player_config.chart_preview = true;
+        player.startpressedtime = 0;
+
+        // When micronow == startpressedtime and timer 141 is off, timer 141 should be set
+        player.main_state_data.timer.update();
+        let micronow = player.main_state_data.timer.get_now_micro_time();
+        player.startpressedtime = micronow;
+
+        player.render();
+
+        // Timer 141 should have been set
+        assert!(player.main_state_data.timer.is_timer_on(141));
+    }
+
+    // --- player config wiring tests ---
+
+    #[test]
+    fn set_player_config_persists() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+
+        let mut config = PlayerConfig::default();
+        config.chart_preview = false;
+        config.is_window_hold = true;
+        config.gauge_auto_shift = 3;
+
+        player.set_player_config(config);
+
+        assert!(!player.get_player_config().chart_preview);
+        assert!(player.get_player_config().is_window_hold);
+        assert_eq!(player.get_player_config().gauge_auto_shift, 3);
+    }
+
+    // --- course mode tests ---
+
+    #[test]
+    fn set_course_mode_persists() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+
+        player.set_course_mode(true);
+        assert!(player.is_course_mode);
+
+        player.set_course_mode(false);
+        assert!(!player.is_course_mode);
     }
 }

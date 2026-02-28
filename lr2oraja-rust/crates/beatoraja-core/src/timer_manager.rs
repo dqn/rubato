@@ -15,8 +15,8 @@ pub struct TimerManager {
     timer: Vec<i64>,
 }
 
-/// SkinProperty.TIMER_MAX + 1
-pub const TIMER_COUNT: usize = 256;
+/// SkinProperty.TIMER_MAX + 1 (Java TIMER_MAX = 2999)
+pub const TIMER_COUNT: usize = 3000;
 
 impl TimerManager {
     pub fn new() -> Self {

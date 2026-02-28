@@ -418,6 +418,75 @@ impl PracticeConfiguration {
         // 4. Draws practice graph at bottom quarter
     }
 
+    /// Number of practice configuration elements (indices 0..ELEMENT_COUNT).
+    const ELEMENT_COUNT: usize = 12;
+
+    /// Process input for practice mode navigation.
+    ///
+    /// Translated from: Java PracticeConfiguration.processInput(BMSPlayerInputProcessor input)
+    /// Navigates cursor with UP/DOWN, adjusts values with LEFT/RIGHT.
+    ///
+    /// `control_up_pressed`: control key UP was pressed this frame
+    /// `control_down_pressed`: control key DOWN was pressed this frame
+    /// `control_left_held`: control key LEFT is currently held
+    /// `control_right_held`: control key RIGHT is currently held
+    /// `now_millis`: current time in milliseconds (for repeat logic)
+    pub fn process_input(
+        &mut self,
+        control_up_pressed: bool,
+        control_down_pressed: bool,
+        control_left_held: bool,
+        control_right_held: bool,
+        now_millis: i64,
+    ) {
+        let element_count = Self::ELEMENT_COUNT;
+
+        // Move cursor up (skip invisible elements)
+        if control_up_pressed {
+            loop {
+                self.cursorpos = (self.cursorpos + element_count - 1) % element_count;
+                if self.is_element_visible(self.cursorpos) {
+                    break;
+                }
+            }
+        }
+        // Move cursor down (skip invisible elements)
+        if control_down_pressed {
+            loop {
+                self.cursorpos = (self.cursorpos + 1) % element_count;
+                if self.is_element_visible(self.cursorpos) {
+                    break;
+                }
+            }
+        }
+
+        // Left: decrement current element (with repeat)
+        if control_left_held && (self.presscount == 0 || self.presscount + 10 < now_millis) {
+            if self.presscount == 0 {
+                self.presscount = now_millis + 500;
+            } else {
+                self.presscount = now_millis;
+            }
+            self.process_input_action(self.cursorpos, false);
+        } else if control_right_held && (self.presscount == 0 || self.presscount + 10 < now_millis)
+        {
+            // Right: increment current element (with repeat)
+            if self.presscount == 0 {
+                self.presscount = now_millis + 500;
+            } else {
+                self.presscount = now_millis;
+            }
+            self.process_input_action(self.cursorpos, true);
+        } else if !control_left_held && !control_right_held {
+            self.presscount = 0;
+        }
+    }
+
+    /// Get current cursor position.
+    pub fn get_cursor_pos(&self) -> usize {
+        self.cursorpos
+    }
+
     pub fn is_element_visible(&self, index: usize) -> bool {
         match index {
             10 | 11 => {
@@ -536,5 +605,90 @@ mod tests {
 
         // starttime(500) <= 1000 → offset = 0
         assert_eq!(result.starttimeoffset, 0);
+    }
+
+    // --- process_input tests ---
+
+    /// Helper to make a model with real micro-times for practice tests.
+    fn make_timed_model(mode: &Mode, time_millis: &[i32]) -> BMSModel {
+        let mut model = BMSModel::new();
+        model.set_mode(mode.clone());
+        let mut timelines = Vec::new();
+        for &t_ms in time_millis {
+            let micro = t_ms as i64 * 1000;
+            let tl = TimeLine::new(120.0, micro, mode.key());
+            timelines.push(tl);
+        }
+        model.set_all_time_line(timelines);
+        model.set_total(300.0);
+        model.set_judgerank(100);
+        model
+    }
+
+    #[test]
+    fn process_input_down_advances_cursor() {
+        let mut practice = PracticeConfiguration::new();
+        let model = make_timed_model(&Mode::BEAT_7K, &[0, 60000]);
+        practice.create(&model);
+        assert_eq!(practice.get_cursor_pos(), 0);
+
+        practice.process_input(false, true, false, false, 1000);
+        assert_eq!(practice.get_cursor_pos(), 1);
+    }
+
+    #[test]
+    fn process_input_up_wraps_cursor() {
+        let mut practice = PracticeConfiguration::new();
+        let model = make_timed_model(&Mode::BEAT_7K, &[0, 60000]);
+        practice.create(&model);
+        assert_eq!(practice.get_cursor_pos(), 0);
+
+        // UP from 0 should go to element 9 (skipping invisible 10, 11 in SP)
+        practice.process_input(true, false, false, false, 1000);
+        assert_eq!(practice.get_cursor_pos(), 9);
+    }
+
+    #[test]
+    fn process_input_right_increments_value() {
+        let mut practice = PracticeConfiguration::new();
+        // Need timeline times large enough so starttime + 2000 <= last_time
+        let model = make_timed_model(&Mode::BEAT_7K, &[0, 60000]);
+        practice.create(&model);
+
+        let start_before = practice.get_practice_property().starttime;
+        // Right held = increment. presscount starts at 0, so first press triggers immediately.
+        practice.process_input(false, false, false, true, 1000);
+        let start_after = practice.get_practice_property().starttime;
+
+        // cursor at 0 = STARTTIME, right should increment by 100
+        assert_eq!(start_after, start_before + 100);
+    }
+
+    #[test]
+    fn process_input_left_decrements_value() {
+        let mut practice = PracticeConfiguration::new();
+        let model = make_timed_model(&Mode::BEAT_7K, &[0, 60000]);
+        practice.create(&model);
+
+        // First set starttime to something > 0 so we can decrement
+        practice.get_practice_property_mut().starttime = 500;
+
+        practice.process_input(false, false, true, false, 1000);
+        assert_eq!(practice.get_practice_property().starttime, 400);
+    }
+
+    #[test]
+    fn process_input_resets_presscount_when_no_lr() {
+        let mut practice = PracticeConfiguration::new();
+        let model = make_timed_model(&Mode::BEAT_7K, &[0, 60000]);
+        practice.create(&model);
+
+        // Trigger a press to set presscount
+        practice.process_input(false, false, false, true, 1000);
+        assert_ne!(practice.presscount, 0);
+
+        // Release both → presscount resets
+        practice.process_input(false, false, false, false, 1500);
+        assert_eq!(practice.presscount, 0);
     }
 }
