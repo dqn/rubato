@@ -51,9 +51,9 @@ Phases 1–44 complete. **2391 tests, 16 ignored.** 27 crates, 127k lines. See A
 
 ## Phase 50: Result & Course Integration
 
-- [ ] **50a:** CourseResult MainState wiring — Wire create/prepare/render/input to MainController and PlayerResource in `beatoraja-result/src/course_result.rs`
+- [x] **50a:** CourseResult MainState wiring — Wire create/prepare/render/input to MainController and PlayerResource in `beatoraja-result/src/course_result.rs`
   - depends: 46a, 47c
-- [ ] **50b:** CourseResult IR thread — Spawn IR send thread in CourseResult prepare()
+- [x] **50b:** CourseResult IR thread — Spawn IR send thread in CourseResult prepare()
   - depends: 50a
 
 ## Phase 51: Skin Loaders Completion
