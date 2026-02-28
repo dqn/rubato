@@ -80,13 +80,13 @@ Phases 1–44 complete. **2391 tests, 16 ignored.** 27 crates, 127k lines. See A
 
 ## Phase 53: Quality & Test Coverage
 
-- [ ] **53a:** beatoraja-modmenu tests — Add tests for 5,899 lines, 0 tests
+- [x] **53a:** beatoraja-modmenu tests — Add 58 tests covering imgui_notify, download_task, freq_trainer, skin_menu, random_trainer, misc_setting
   - depends: none
-- [ ] **53b:** beatoraja-ir tests — Add tests for 1,861 lines, 0 tests
+- [x] **53b:** beatoraja-ir tests — Add 40+ tests covering ir_response, ir_score_data, leaderboard_entry, lr2_ghost_data, lr2_ir_connection, ranking_data
   - depends: none
-- [ ] **53c:** beatoraja-controller tests — Add tests for 725 lines, 0 tests
+- [x] **53c:** beatoraja-controller tests — Add 28 tests covering lwjgl3_controller button/axis mapping, manager operations
   - depends: none
-- [ ] **53d:** Remove dead code: beatoraja-common — Remove 785 lines with 0 callers
+- [x] **53d:** Remove dead code: beatoraja-common — Removed 785 lines (0 callers), deleted crate from workspace
   - depends: none
 
 ---
