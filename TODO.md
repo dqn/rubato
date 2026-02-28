@@ -35,11 +35,11 @@ Phases 1–44 complete. **2391 tests, 16 ignored.** 27 crates, 127k lines. See A
 
 ## Phase 48: Select→Play Wiring
 
-- [ ] **48a:** Bar Clone problem resolution — Resolve `Bar` enum Clone issue (TableAccessor `dyn` → concrete enum or `Arc` shared ownership) in `beatoraja-select/src/bar/bar.rs`
+- [x] **48a:** Bar Clone problem resolution — Resolve `Bar` enum Clone issue (TableAccessor `dyn` → concrete enum or `Arc` shared ownership) in `beatoraja-select/src/bar/bar.rs`
   - depends: none
-- [ ] **48b:** Bar get_children() stubs (7 types) — Implement `get_children()` for FolderBar, HashBar, SearchWordBar, SameFolderBar, CommandBar, LeaderBoardBar, DirectoryBar by threading `SongDatabaseAccessor`
+- [x] **48b:** Bar get_children() stubs (7 types) — Implement `get_children()` for FolderBar, HashBar, SearchWordBar, SameFolderBar, CommandBar, LeaderBoardBar, DirectoryBar by threading `SongDatabaseAccessor`
   - depends: 48a
-- [ ] **48c:** read_chart/read_course/read_random_course — Wire select→play state transitions in `beatoraja-select/src/music_selector.rs` via PlayerResource
+- [x] **48c:** read_chart/read_course/read_random_course — Wire select→play state transitions in `beatoraja-select/src/music_selector.rs` via PlayerResource
   - depends: 46a, 46b, 48b
 
 ## Phase 49: Play State Integration
