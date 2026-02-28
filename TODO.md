@@ -13,11 +13,11 @@ Phases 1–44 complete. **2391 tests, 16 ignored.** 27 crates, 127k lines. See A
 
 ## Phase 46: Core Lifecycle Wiring (unblocks gameplay)
 
-- [ ] **46a:** PlayerResource.loadBMSModel() — Wire `ChartDecoderImpl::get_decoder()` into `player_resource.rs:set_bms_file()`. Change `model` field from `Option<()>` to real `BMSModel`. Call `BMSModelUtils::set_start_note_time()` and `BMSPlayerRule::validate()`
+- [x] **46a:** PlayerResource.loadBMSModel() — Wire `ChartDecoderImpl::get_decoder()` into `player_resource.rs:set_bms_file()`. Change `model` field from `Option<()>` to real `BMSModel`. Call `BMSModelUtils::set_start_note_time()` and `BMSPlayerRule::validate()`
   - depends: none
-- [ ] **46b:** PlayerResource.SongData type unification — Replace local `SongData` stub in `beatoraja-core/src/player_resource.rs` with `beatoraja_types::song_data::SongData`. Construct via `SongData::new_from_bms_model()` in `set_bms_file()`
+- [x] **46b:** PlayerResource.SongData type unification — Replace local `SongData` stub in `beatoraja-core/src/player_resource.rs` with `beatoraja_types::song_data::SongData`. Construct via `SongData::new_from_bms_model()` in `set_bms_file()`
   - depends: 46a
-- [ ] **46c:** MainController.exit() and save_config() — Implement real exit logic and config serialization in `beatoraja-core/src/main_controller.rs`
+- [x] **46c:** MainController.exit() and save_config() — Implement real exit logic and config serialization in `beatoraja-core/src/main_controller.rs`
   - depends: none
 
 ## Phase 47: Skin Rendering Pipeline (makes screens visible)
