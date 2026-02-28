@@ -1,6 +1,6 @@
 # lr2oraja Rust Porting
 
-beatoraja fork (Java 313 files / 72k+ lines) → Rust. 27 crates, 122k lines. Source: `./lr2oraja-java`.
+beatoraja fork (Java 313 files / 72k+ lines) → Rust. 26 crates, 158k lines. Source: `./lr2oraja-java`.
 
 ## Rules
 
@@ -45,7 +45,6 @@ lr2oraja-rust/       # Cargo workspace
     bms-model        # BMS/BME/BML parser + model
     bms-table        # Difficulty table parser
     beatoraja-types  # Shared types (circular dep breaker)
-    beatoraja-common # Config, DB schema, utilities
     beatoraja-pattern    # Note pattern (JavaRandom LCG)
     beatoraja-audio      # Audio (Kira 0.12)
     beatoraja-input      # Keyboard/controller input
@@ -85,40 +84,41 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**2391 tests, 16 ignored (4 env + 12 bug-doc).** Phases 1–44 complete. Zero clippy warnings.
-**Migration audit**: 93.97% method resolution (4,021/4,279). 0 constant mismatches. 3 Rust-side regressions.
+**2571 tests.** Phases 1–53 complete. Zero clippy warnings.
+**Migration audit**: 93.97% method resolution (4,021/4,279). 0 constant mismatches. 1 Rust-side regression.
 
-## Remaining Stubs (~2,746 lines across 10 stubs.rs + ~186 inline markers)
+### Resolved (Phase 45–53)
 
-| Crate | stubs.rs | Markers | Key Blockers |
-|-------|:--------:|:-------:|-------------|
-| beatoraja-launcher | 527 | 13 | Skin header loading, async BMS DB |
-| beatoraja-result | 494 | 27 | CourseResult MainState non-functional, IR thread |
-| beatoraja-external | 446 | 4 | Permanent (`bail!()`, Twitter API deprecated) |
-| beatoraja-skin | 389 | 44 | Timer frozen, FloatProperty all 0.0, Lua 19/28 missing |
-| beatoraja-select | 278 | 55 | 7 bar get_children(), read_chart blocked on PlayerResource |
-| beatoraja-modmenu | 205 | — | Needs SkinWidget rewrite (Phase 40) |
-| beatoraja-decide | 204 | — | AudioProcessor/Skin stubs |
-| beatoraja-audio | 190 | — | GdxAudioDeviceDriver no-op, BMSLoudnessAnalyzer hardcoded |
-| beatoraja-input | 115 | — | MouseScratchInput position hardcoded |
-| beatoraja-types | 88 | — | 7 resolved re-exports, 1 partial (BarSorter) |
-| beatoraja-core | 1 | 33 | PlayerResource.loadBMSModel, load_skin, exit, save_config |
+All 7 critical gaps and the StdRng regression resolved:
+- PlayerResource.loadBMSModel() — BMS files load (Phase 46a)
+- MainState.load_skin() — screens render (Phase 47c)
+- PlayerResource.SongData unified — get_songdata() returns real data (Phase 46b)
+- read_chart/read_course — select→play works (Phase 48c)
+- CourseResult MainState — course results functional with IR (Phase 50a/b)
+- FloatPropertyFactory — delegates to MainState (Phase 47a)
+- SkinTextFont.draw_with_offset() — TrueType text renders (Phase 51d)
+- RandomizerBase — JavaRandom LCG restored (Phase 45a)
+- ScoreData serde — Java JSON field names compatible (Phase 45b)
 
-### Critical Gaps (7)
+## Remaining Stubs (~2,872 lines across 10 stubs.rs)
 
-1. PlayerResource.loadBMSModel() — cannot load BMS files
-2. MainState.load_skin() — all screens blank
-3. PlayerResource.SongData type mismatch — get_songdata() always None
-4. read_chart/read_course/read_random_course — select→play blocked
-5. CourseResult MainState non-functional — course results unplayable
-6. FloatPropertyFactory ALL stubs — gauges/covers/rates invisible
-7. SkinTextFont.draw_with_offset() — TrueType text invisible
+| Crate | stubs.rs | Status |
+|-------|:--------:|--------|
+| beatoraja-launcher | 527 | Skin header wired, async DB wired |
+| beatoraja-result | 510 | CourseResult functional, IR thread wired |
+| beatoraja-external | 500 | Permanent (`bail!()`, Twitter API deprecated) + screen_type wired |
+| beatoraja-skin | 495 | Timer/Float/Boolean delegates wired, Lua 20 functions done |
+| beatoraja-select | 278 | Bar Clone resolved, 7 get_children() done, read_chart done |
+| beatoraja-modmenu | 205 | SkinWidget stubs remain |
+| beatoraja-decide | 154 | load_skin wired, AudioProcessor stubs remain |
+| beatoraja-input | 114 | MouseScratchInput position hardcoded |
+| beatoraja-types | 88 | 7 resolved re-exports, 1 partial (BarSorter) |
+| beatoraja-core | 1 | exit/save_config wired, loadBMSModel wired |
 
-### Regressions (3)
+### Remaining Regressions (2)
 
-1. **RandomizerBase uses StdRng** (HIGH) — breaks replay/pattern reproducibility
-2. BytePCM float saturation (Medium) — clipping differs from Java
-3. BytePCM negative overflow (Medium) — same issue, negative range
+1. BytePCM float saturation (Medium) — clipping differs from Java
+2. BytePCM negative overflow (Medium) — same issue, negative range
 
 ## Lessons Learned
 
@@ -127,3 +127,6 @@ lr2oraja-rust/       # Cargo workspace
 - **Stubs:** `stubs.rs` per crate → replace via `pub use`. Always `cargo check` after removal.
 - **Circular deps:** `beatoraja-types` for shared types. Core cannot import: song, skin, play, select, result, ir, modmenu.
 - **Lua→JSON coercion:** 3-layer: numbers→strings, float→int truncation, empty `{}`→remove.
+- **Bar Clone:** `Box<dyn Trait>` blocks Clone → use `Arc<dyn Trait>` for shared trait objects.
+- **Property delegate pattern:** `integer_value(id)` / `float_value(id)` / `boolean_value(id)` on MainState — skin property factories delegate via ID lookup.
+- **Dead crate removal:** beatoraja-common (785 lines, 0 callers) removed in Phase 53d. Always audit before removing: check Cargo.toml deps, re-exports, test imports.
