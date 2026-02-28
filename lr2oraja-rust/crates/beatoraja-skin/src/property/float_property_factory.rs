@@ -6,7 +6,7 @@ use crate::stubs::MainState;
 pub fn get_rate_property_by_id(optionid: i32) -> Option<Box<dyn FloatProperty>> {
     for rt in RATE_TYPES.iter() {
         if rt.id == optionid {
-            return Some(Box::new(StubFloatProperty { id: rt.id }));
+            return Some(Box::new(DelegateFloatProperty { id: rt.id }));
         }
     }
     None
@@ -16,7 +16,7 @@ pub fn get_rate_property_by_id(optionid: i32) -> Option<Box<dyn FloatProperty>> 
 pub fn get_rate_property_by_name(name: &str) -> Option<Box<dyn FloatProperty>> {
     for rt in RATE_TYPES.iter() {
         if rt.name == name {
-            return Some(Box::new(StubFloatProperty { id: rt.id }));
+            return Some(Box::new(DelegateFloatProperty { id: rt.id }));
         }
     }
     None
@@ -26,7 +26,7 @@ pub fn get_rate_property_by_name(name: &str) -> Option<Box<dyn FloatProperty>> {
 pub fn get_rate_writer_by_id(id: i32) -> Option<Box<dyn FloatWriter>> {
     for rt in RATE_TYPES.iter() {
         if rt.id == id && rt.has_writer {
-            return Some(Box::new(StubFloatWriter));
+            return Some(Box::new(DelegateFloatWriter { id: rt.id }));
         }
     }
     None
@@ -36,7 +36,7 @@ pub fn get_rate_writer_by_id(id: i32) -> Option<Box<dyn FloatWriter>> {
 pub fn get_rate_writer_by_name(name: &str) -> Option<Box<dyn FloatWriter>> {
     for rt in RATE_TYPES.iter() {
         if rt.name == name && rt.has_writer {
-            return Some(Box::new(StubFloatWriter));
+            return Some(Box::new(DelegateFloatWriter { id: rt.id }));
         }
     }
     None
@@ -46,12 +46,12 @@ pub fn get_rate_writer_by_name(name: &str) -> Option<Box<dyn FloatWriter>> {
 pub fn get_float_property_by_id(optionid: i32) -> Option<Box<dyn FloatProperty>> {
     for ft in FLOAT_TYPES.iter() {
         if ft.id == optionid {
-            return Some(Box::new(StubFloatProperty { id: ft.id }));
+            return Some(Box::new(DelegateFloatProperty { id: ft.id }));
         }
     }
     for rt in RATE_TYPES.iter() {
         if rt.id == optionid {
-            return Some(Box::new(StubFloatProperty { id: rt.id }));
+            return Some(Box::new(DelegateFloatProperty { id: rt.id }));
         }
     }
     None
@@ -61,12 +61,12 @@ pub fn get_float_property_by_id(optionid: i32) -> Option<Box<dyn FloatProperty>>
 pub fn get_float_property_by_name(name: &str) -> Option<Box<dyn FloatProperty>> {
     for ft in FLOAT_TYPES.iter() {
         if ft.name == name {
-            return Some(Box::new(StubFloatProperty { id: ft.id }));
+            return Some(Box::new(DelegateFloatProperty { id: ft.id }));
         }
     }
     for rt in RATE_TYPES.iter() {
         if rt.name == name {
-            return Some(Box::new(StubFloatProperty { id: rt.id }));
+            return Some(Box::new(DelegateFloatProperty { id: rt.id }));
         }
     }
     None
@@ -401,15 +401,16 @@ static FLOAT_TYPES: &[FloatTypeEntry] = &[
     },
 ];
 
-/// Stub FloatProperty that will be replaced when Phase 7+ is available.
-struct StubFloatProperty {
+/// Delegate FloatProperty that reads values from MainState::float_value().
+/// This enables both StaticStateProvider (golden-master) and real game states
+/// to provide float values through the same interface.
+struct DelegateFloatProperty {
     id: i32,
 }
 
-impl FloatProperty for StubFloatProperty {
-    fn get(&self, _state: &dyn MainState) -> f32 {
-        log::warn!("not yet implemented: FloatPropertyFactory requires MainState subtypes");
-        0.0
+impl FloatProperty for DelegateFloatProperty {
+    fn get(&self, state: &dyn MainState) -> f32 {
+        state.float_value(self.id)
     }
 
     fn get_id(&self) -> i32 {
@@ -417,11 +418,216 @@ impl FloatProperty for StubFloatProperty {
     }
 }
 
-/// Stub FloatWriter that will be replaced when Phase 7+ is available.
-struct StubFloatWriter;
+/// Delegate FloatWriter that writes values via MainState::set_float_value().
+struct DelegateFloatWriter {
+    id: i32,
+}
 
-impl FloatWriter for StubFloatWriter {
-    fn set(&self, _state: &mut dyn MainState, _value: f32) {
-        log::warn!("not yet implemented: FloatPropertyFactory writer requires MainState subtypes");
+impl FloatWriter for DelegateFloatWriter {
+    fn set(&self, state: &mut dyn MainState, value: f32) {
+        state.set_float_value(self.id, value);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::stubs::{MainController, PlayerResource, SkinOffset, TextureRegion, Timer};
+
+    /// MockMainState that returns configurable float values.
+    struct FloatMockState {
+        timer: Timer,
+        main: MainController,
+        resource: PlayerResource,
+        /// Maps property ID to float value.
+        values: std::collections::HashMap<i32, f32>,
+        /// Records set_float_value calls: (id, value).
+        set_calls: std::cell::RefCell<Vec<(i32, f32)>>,
+    }
+
+    impl FloatMockState {
+        fn new(values: std::collections::HashMap<i32, f32>) -> Self {
+            Self {
+                timer: Timer::default(),
+                main: MainController { debug: false },
+                resource: PlayerResource,
+                values,
+                set_calls: std::cell::RefCell::new(Vec::new()),
+            }
+        }
+    }
+
+    impl MainState for FloatMockState {
+        fn get_timer(&self) -> &dyn beatoraja_types::timer_access::TimerAccess {
+            &self.timer
+        }
+        fn get_offset_value(&self, _id: i32) -> Option<&SkinOffset> {
+            None
+        }
+        fn get_main(&self) -> &MainController {
+            &self.main
+        }
+        fn get_image(&self, _id: i32) -> Option<TextureRegion> {
+            None
+        }
+        fn get_resource(&self) -> &PlayerResource {
+            &self.resource
+        }
+        fn float_value(&self, id: i32) -> f32 {
+            self.values.get(&id).copied().unwrap_or(0.0)
+        }
+        fn set_float_value(&mut self, id: i32, value: f32) {
+            self.set_calls.borrow_mut().push((id, value));
+        }
+    }
+
+    #[test]
+    fn test_delegate_float_property_reads_from_state() {
+        let mut values = std::collections::HashMap::new();
+        // lanecover (rate type id=4)
+        values.insert(4, 0.75);
+        // music_progress (rate type id=6)
+        values.insert(6, 0.42);
+        let state = FloatMockState::new(values);
+
+        let prop = get_rate_property_by_id(4).expect("lanecover should exist");
+        assert!(
+            (prop.get(&state) - 0.75).abs() < f32::EPSILON,
+            "lanecover should read 0.75 from state"
+        );
+        assert_eq!(prop.get_id(), 4);
+
+        let prop2 = get_rate_property_by_id(6).expect("music_progress should exist");
+        assert!(
+            (prop2.get(&state) - 0.42).abs() < f32::EPSILON,
+            "music_progress should read 0.42 from state"
+        );
+    }
+
+    #[test]
+    fn test_delegate_float_property_by_name() {
+        let mut values = std::collections::HashMap::new();
+        values.insert(4, 0.33);
+        let state = FloatMockState::new(values);
+
+        let prop = get_rate_property_by_name("lanecover").expect("lanecover by name should exist");
+        assert!(
+            (prop.get(&state) - 0.33).abs() < f32::EPSILON,
+            "lanecover by name should read 0.33"
+        );
+        assert_eq!(prop.get_id(), 4);
+    }
+
+    #[test]
+    fn test_delegate_float_property_default_zero() {
+        // State returns default 0.0 for unknown IDs
+        let state = FloatMockState::new(std::collections::HashMap::new());
+
+        let prop = get_rate_property_by_id(4).expect("lanecover should exist");
+        assert!(
+            (prop.get(&state)).abs() < f32::EPSILON,
+            "default should be 0.0"
+        );
+    }
+
+    #[test]
+    fn test_get_float_property_by_id_covers_float_types() {
+        let mut values = std::collections::HashMap::new();
+        // score_rate (float type id=1102)
+        values.insert(1102, 0.95);
+        let state = FloatMockState::new(values);
+
+        let prop = get_float_property_by_id(1102).expect("score_rate should exist");
+        assert!(
+            (prop.get(&state) - 0.95).abs() < f32::EPSILON,
+            "score_rate should read 0.95"
+        );
+        assert_eq!(prop.get_id(), 1102);
+    }
+
+    #[test]
+    fn test_get_float_property_by_name_covers_float_types() {
+        let mut values = std::collections::HashMap::new();
+        values.insert(1102, 0.88);
+        let state = FloatMockState::new(values);
+
+        let prop =
+            get_float_property_by_name("score_rate").expect("score_rate by name should exist");
+        assert!(
+            (prop.get(&state) - 0.88).abs() < f32::EPSILON,
+            "score_rate by name should read 0.88"
+        );
+    }
+
+    #[test]
+    fn test_get_float_property_by_id_falls_through_to_rate_types() {
+        let mut values = std::collections::HashMap::new();
+        // lanecover is a rate type (id=4), not a float type
+        values.insert(4, 0.5);
+        let state = FloatMockState::new(values);
+
+        let prop =
+            get_float_property_by_id(4).expect("lanecover should be found via rate types fallback");
+        assert!((prop.get(&state) - 0.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_delegate_float_writer_calls_set_float_value() {
+        let mut state = FloatMockState::new(std::collections::HashMap::new());
+
+        // musicselect_position (id=1) has has_writer=true
+        let writer = get_rate_writer_by_id(1).expect("musicselect_position writer should exist");
+        writer.set(&mut state, 0.65);
+
+        let calls = state.set_calls.borrow();
+        assert_eq!(
+            calls.len(),
+            1,
+            "set_float_value should have been called once"
+        );
+        assert_eq!(calls[0].0, 1, "set_float_value should receive id=1");
+        assert!(
+            (calls[0].1 - 0.65).abs() < f32::EPSILON,
+            "set_float_value should receive value 0.65"
+        );
+    }
+
+    #[test]
+    fn test_delegate_float_writer_by_name() {
+        let mut state = FloatMockState::new(std::collections::HashMap::new());
+
+        let writer =
+            get_rate_writer_by_name("mastervolume").expect("mastervolume writer should exist");
+        writer.set(&mut state, 0.8);
+
+        let calls = state.set_calls.borrow();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].0, 17, "mastervolume id should be 17");
+        assert!((calls[0].1 - 0.8).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_rate_writer_not_available_for_readonly() {
+        // lanecover (id=4) has has_writer=false
+        assert!(
+            get_rate_writer_by_id(4).is_none(),
+            "lanecover should not have a writer"
+        );
+        assert!(
+            get_rate_writer_by_name("lanecover").is_none(),
+            "lanecover by name should not have a writer"
+        );
+    }
+
+    #[test]
+    fn test_nonexistent_rate_property() {
+        assert!(get_rate_property_by_id(9999).is_none());
+        assert!(get_rate_property_by_name("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_nonexistent_float_property() {
+        assert!(get_float_property_by_id(9999).is_none());
+        assert!(get_float_property_by_name("nonexistent").is_none());
     }
 }

@@ -34,6 +34,18 @@ pub trait MainState {
         false
     }
 
+    /// Returns the float property value for the given ID.
+    /// Used by FloatPropertyFactory delegate to look up pre-computed values.
+    fn float_value(&self, _id: i32) -> f32 {
+        0.0
+    }
+
+    /// Sets the float property value for the given ID.
+    /// Used by FloatWriter delegate to write values back to state.
+    fn set_float_value(&mut self, _id: i32, _value: f32) {
+        // default no-op
+    }
+
     // ============================================================
     // Event-facing methods (Phase 41h)
     // These provide mutable config access for EventFactory events.
