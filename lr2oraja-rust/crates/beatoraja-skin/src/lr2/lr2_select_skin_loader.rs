@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::lr2::lr2_skin_csv_loader::LR2SkinCSVLoaderState;
+use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
 use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
 use crate::stubs::{MainState, Rectangle, Resolution, TextureRegion};
 
@@ -360,5 +360,11 @@ impl LR2SelectSkinLoaderState {
                 self.csv.process_csv_command(cmd, str_parts);
             }
         }
+    }
+}
+
+impl LR2SkinLoaderAccess for LR2SelectSkinLoaderState {
+    fn csv_mut(&mut self) -> &mut LR2SkinCSVLoaderState {
+        &mut self.csv
     }
 }

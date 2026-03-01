@@ -1,4 +1,4 @@
-use crate::lr2::lr2_skin_csv_loader::LR2SkinCSVLoaderState;
+use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
 use crate::stubs::Resolution;
 
 /// LR2 skin select skin loader
@@ -50,5 +50,11 @@ impl LR2SkinSelectSkinLoaderState {
         // }
         // skin.setCustomPropertyCount(count);
         // This requires SkinPropertyMapper and full skin object access
+    }
+}
+
+impl LR2SkinLoaderAccess for LR2SkinSelectSkinLoaderState {
+    fn csv_mut(&mut self) -> &mut LR2SkinCSVLoaderState {
+        &mut self.csv
     }
 }

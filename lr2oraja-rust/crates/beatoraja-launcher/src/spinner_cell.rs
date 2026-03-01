@@ -75,9 +75,15 @@ impl SpinnerCell {
     /// This replaces the Java valueProperty listener callback.
     pub fn apply_to_view_model(
         &self,
-        _view_model: &mut ControllerConfigViewModel,
-        _column_name: &str,
+        view_model: &mut ControllerConfigViewModel,
+        column_name: &str,
     ) {
-        // egui: value binding handled during render() frame — no JavaFX-style listener needed
+        if let Some(value) = self.get_value() {
+            match column_name {
+                "analogScratchThreshold" => view_model.set_analog_scratch_threshold(value),
+                "analogScratchMode" => view_model.set_analog_scratch_mode(value),
+                _ => {}
+            }
+        }
     }
 }

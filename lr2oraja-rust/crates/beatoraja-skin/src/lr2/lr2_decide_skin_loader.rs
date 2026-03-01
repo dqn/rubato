@@ -1,4 +1,4 @@
-use crate::lr2::lr2_skin_csv_loader::LR2SkinCSVLoaderState;
+use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
 use crate::stubs::Resolution;
 
 /// LR2 decide skin loader
@@ -22,5 +22,11 @@ impl LR2DecideSkinLoaderState {
     /// Process decide-specific commands (none - all delegated to CSV loader)
     pub fn process_decide_command(&mut self, cmd: &str, str_parts: &[String]) {
         self.csv.process_csv_command(cmd, str_parts);
+    }
+}
+
+impl LR2SkinLoaderAccess for LR2DecideSkinLoaderState {
+    fn csv_mut(&mut self) -> &mut LR2SkinCSVLoaderState {
+        &mut self.csv
     }
 }

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use log::warn;
 
-use crate::lr2::lr2_skin_csv_loader::LR2SkinCSVLoaderState;
+use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
 use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
 use crate::skin_image::SkinImage;
 use crate::stubs::{MainState, Rectangle, Resolution, Texture, TextureRegion};
@@ -852,6 +852,12 @@ impl LR2PlaySkinLoaderState {
     pub fn get_lane_cover_position(&self) -> f32 {
         // if skin.laneCover != null, return last destination's y
         -1.0
+    }
+}
+
+impl LR2SkinLoaderAccess for LR2PlaySkinLoaderState {
+    fn csv_mut(&mut self) -> &mut LR2SkinCSVLoaderState {
+        &mut self.csv
     }
 }
 

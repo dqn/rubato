@@ -111,9 +111,16 @@ pub fn load_skin_from_config(
 
         skin
     } else {
-        // LR2 CSV: loaders accumulate concrete objects (not SkinData).
-        // Requires per-loader-type state→Skin converter + get_skin_loader() dispatch.
-        None
+        // LR2 CSV skin
+        let skin = crate::lr2::lr2_skin_csv_loader::load_lr2_skin(path, &skin_type);
+
+        if let Ok(guard) = RESOURCE.lock()
+            && let Some(ref r) = *guard
+        {
+            r.dispose_old();
+        }
+
+        skin
     }
 }
 
@@ -169,8 +176,8 @@ pub fn load_with_config(
         }
         result
     } else {
-        // LR2 CSV: loaders accumulate concrete objects (not SkinData).
-        // Requires per-loader-type state→Skin converter + get_skin_loader() dispatch.
+        // LR2 CSV produces Skin directly (not SkinData).
+        // Use load_skin_from_config() or load_lr2_skin() instead.
         None
     }
 }
