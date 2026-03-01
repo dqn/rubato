@@ -9,6 +9,7 @@ use beatoraja_types::imgui_notify::ImGuiNotify;
 use beatoraja_types::main_controller_access::MainControllerAccess;
 use beatoraja_types::main_state_access::MainStateAccess;
 use beatoraja_types::player_resource_access::PlayerResourceAccess;
+use beatoraja_types::ranking_data_cache_access::RankingDataCacheAccess;
 use beatoraja_types::screen_type::ScreenType;
 use beatoraja_types::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
 use beatoraja_types::song_information_db::SongInformationDb;
@@ -105,23 +106,7 @@ pub struct IRSendStatus {
     pub is_sent: bool,
 }
 
-/// RankingDataCache stub
-pub struct RankingDataCache;
-
-impl Default for RankingDataCache {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl RankingDataCache {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-/// SongDatabaseAccessor stub (Phase 5+)
-pub struct SongDatabaseAccessor;
+// RankingDataCache stub removed — replaced by Box<dyn RankingDataCacheAccess> (brs-2v7)
 
 // SongInformationAccessor: stub replaced by SongInformationDb trait (Phase 27c)
 
@@ -243,8 +228,8 @@ pub struct MainController {
     /// Rival data accessor
     rivals: RivalDataAccessor,
 
-    /// Ranking data cache
-    ircache: RankingDataCache,
+    /// Ranking data cache (trait object — real impl in beatoraja-ir)
+    ircache: Option<Box<dyn RankingDataCacheAccess>>,
 
     /// Song database accessor (trait object)
     songdb: Option<Box<dyn SongDatabaseAccessorTrait>>,
@@ -354,7 +339,7 @@ impl MainController {
             sound: Some(sound),
             ir: Vec::new(),
             rivals: RivalDataAccessor::new(),
-            ircache: RankingDataCache::new(),
+            ircache: None,
             songdb: None,
             infodb: None,
             offset,
@@ -421,8 +406,20 @@ impl MainController {
         &self.rivals
     }
 
-    pub fn get_ranking_data_cache(&self) -> &RankingDataCache {
-        &self.ircache
+    pub fn get_ranking_data_cache(&self) -> Option<&dyn RankingDataCacheAccess> {
+        self.ircache.as_deref()
+    }
+
+    pub fn get_ranking_data_cache_mut(
+        &mut self,
+    ) -> Option<&mut (dyn RankingDataCacheAccess + 'static)> {
+        self.ircache
+            .as_mut()
+            .map(|b| &mut **b as &mut (dyn RankingDataCacheAccess + 'static))
+    }
+
+    pub fn set_ranking_data_cache(&mut self, cache: Box<dyn RankingDataCacheAccess>) {
+        self.ircache = Some(cache);
     }
 
     pub fn get_sound_manager(&self) -> Option<&SystemSoundManager> {

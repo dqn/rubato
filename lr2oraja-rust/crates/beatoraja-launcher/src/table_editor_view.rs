@@ -4,9 +4,9 @@ use std::path::{Path, PathBuf};
 
 use regex::Regex;
 
-use beatoraja_core::main_controller::SongDatabaseAccessor;
 use beatoraja_core::stubs::SongData;
 use beatoraja_core::table_data::TableData;
+use beatoraja_types::song_database_accessor::SongDatabaseAccessor;
 
 use crate::course_editor_view::CourseEditorView;
 use crate::folder_editor_view::FolderEditorView;
@@ -50,12 +50,17 @@ impl TableEditorView {
     }
 
     /// init - sets the song database accessor on sub-controllers
-    pub fn init(&mut self, songdb: SongDatabaseAccessor) {
-        self.course_controller.set_song_database_accessor(songdb);
-        // FolderEditorView.init expects owned SongDatabaseAccessor
-        // but SongDatabaseAccessor is a unit struct, so we create another
-        let songdb2 = SongDatabaseAccessor;
-        self.folder_controller.init(songdb2);
+    ///
+    /// Takes two separate accessors because each sub-controller owns its accessor.
+    /// In Java, a single reference was shared; in Rust, each controller gets its own Box.
+    pub fn init(
+        &mut self,
+        course_songdb: Box<dyn SongDatabaseAccessor>,
+        folder_songdb: Box<dyn SongDatabaseAccessor>,
+    ) {
+        self.course_controller
+            .set_song_database_accessor(course_songdb);
+        self.folder_controller.init(folder_songdb);
     }
 
     /// update - loads table data from file path
@@ -114,7 +119,7 @@ impl TableEditorView {
     /// displayChartDetailsDialog - displays a dialog with chart details
     /// Java: protected static void displayChartDetailsDialog(SongDatabaseAccessor songdb, SongData song, String... extraData)
     pub fn display_chart_details_dialog(
-        _songdb: Option<&SongDatabaseAccessor>,
+        _songdb: Option<&dyn SongDatabaseAccessor>,
         song: &SongData,
         extra_data: &[&str],
     ) {
@@ -231,6 +236,36 @@ mod tests {
 
     use beatoraja_core::course_data::{CourseData, CourseDataConstraint, TrophyData};
     use beatoraja_core::table_data::{TableData, TableFolder};
+    use beatoraja_types::folder_data::FolderData;
+    use beatoraja_types::song_data::SongData as TypesSongData;
+
+    /// Mock SongDatabaseAccessor for testing
+    struct MockSongDb;
+
+    impl SongDatabaseAccessor for MockSongDb {
+        fn get_song_datas(&self, _key: &str, _value: &str) -> Vec<TypesSongData> {
+            Vec::new()
+        }
+        fn get_song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<TypesSongData> {
+            Vec::new()
+        }
+        fn get_song_datas_by_sql(
+            &self,
+            _sql: &str,
+            _score: &str,
+            _scorelog: &str,
+            _info: Option<&str>,
+        ) -> Vec<TypesSongData> {
+            Vec::new()
+        }
+        fn set_song_datas(&self, _songs: &[TypesSongData]) {}
+        fn get_song_datas_by_text(&self, _text: &str) -> Vec<TypesSongData> {
+            Vec::new()
+        }
+        fn get_folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
+            Vec::new()
+        }
+    }
 
     fn make_song(title: &str, md5: &str, sha256: &str) -> SongData {
         let mut sd = SongData::new();
@@ -399,7 +434,7 @@ mod tests {
     #[test]
     fn test_init_sets_songdb() {
         let mut view = TableEditorView::new();
-        view.init(SongDatabaseAccessor);
+        view.init(Box::new(MockSongDb), Box::new(MockSongDb));
         // No panic; sub-controllers have their songdb set
     }
 

@@ -1,8 +1,8 @@
 // Translated from CourseEditorView.java
 
 use beatoraja_core::course_data::{CourseData, CourseDataConstraint, TrophyData};
-use beatoraja_core::main_controller::SongDatabaseAccessor;
 use beatoraja_core::stubs::SongData;
+use beatoraja_types::song_database_accessor::SongDatabaseAccessor;
 
 use crate::folder_editor_view::SongDataView;
 use crate::table_editor_view::TableEditorView;
@@ -50,7 +50,7 @@ pub struct CourseEditorView {
 
     selected_course: Option<usize>, // index into courses
 
-    songdb: Option<SongDatabaseAccessor>,
+    songdb: Option<Box<dyn SongDatabaseAccessor>>,
 }
 
 #[allow(dead_code)]
@@ -157,7 +157,7 @@ impl CourseEditorView {
     }
 
     /// setSongDatabaseAccessor - sets the song database accessor
-    pub fn set_song_database_accessor(&mut self, songdb: SongDatabaseAccessor) {
+    pub fn set_song_database_accessor(&mut self, songdb: Box<dyn SongDatabaseAccessor>) {
         self.songdb = Some(songdb);
     }
 
@@ -461,6 +461,36 @@ impl Default for CourseEditorView {
 #[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
+    use beatoraja_types::folder_data::FolderData;
+    use beatoraja_types::song_data::SongData as TypesSongData;
+
+    /// Mock SongDatabaseAccessor for testing
+    struct MockSongDb;
+
+    impl SongDatabaseAccessor for MockSongDb {
+        fn get_song_datas(&self, _key: &str, _value: &str) -> Vec<TypesSongData> {
+            Vec::new()
+        }
+        fn get_song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<TypesSongData> {
+            Vec::new()
+        }
+        fn get_song_datas_by_sql(
+            &self,
+            _sql: &str,
+            _score: &str,
+            _scorelog: &str,
+            _info: Option<&str>,
+        ) -> Vec<TypesSongData> {
+            Vec::new()
+        }
+        fn set_song_datas(&self, _songs: &[TypesSongData]) {}
+        fn get_song_datas_by_text(&self, _text: &str) -> Vec<TypesSongData> {
+            Vec::new()
+        }
+        fn get_folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
+            Vec::new()
+        }
+    }
 
     fn make_song(title: &str, sha256: &str) -> SongData {
         let mut sd = SongData::new();
@@ -1059,7 +1089,7 @@ mod tests {
     #[test]
     fn test_search_songs_with_hash() {
         let mut view = CourseEditorView::new();
-        view.songdb = Some(SongDatabaseAccessor);
+        view.songdb = Some(Box::new(MockSongDb));
         // Valid md5 hash (32 hex chars)
         view.search = "abcdef1234567890abcdef1234567890".to_string();
 
@@ -1071,7 +1101,7 @@ mod tests {
     #[test]
     fn test_search_songs_with_text() {
         let mut view = CourseEditorView::new();
-        view.songdb = Some(SongDatabaseAccessor);
+        view.songdb = Some(Box::new(MockSongDb));
         view.search = "test query".to_string();
 
         view.search_songs();
@@ -1082,7 +1112,7 @@ mod tests {
     #[test]
     fn test_search_songs_short_text_skipped() {
         let mut view = CourseEditorView::new();
-        view.songdb = Some(SongDatabaseAccessor);
+        view.songdb = Some(Box::new(MockSongDb));
         view.search = "a".to_string(); // length <= 1, not a hash
 
         view.search_songs();
