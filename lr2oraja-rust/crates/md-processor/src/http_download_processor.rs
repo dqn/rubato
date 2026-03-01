@@ -250,6 +250,12 @@ impl HttpDownloadProcessor {
     }
 }
 
+impl beatoraja_types::http_download_submitter::HttpDownloadSubmitter for HttpDownloadProcessor {
+    fn submit_md5_task(&self, md5: &str, task_name: &str) {
+        HttpDownloadProcessor::submit_md5_task(self, md5, task_name);
+    }
+}
+
 /// Download a file from url (no intermediate file protection)
 ///
 /// # Arguments

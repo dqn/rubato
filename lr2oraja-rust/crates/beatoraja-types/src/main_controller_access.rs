@@ -81,8 +81,15 @@ pub trait MainControllerAccess {
     }
 
     /// Update difficulty table data in background.
-    fn update_table(&mut self) {
+    fn update_table(&mut self, _source: Box<dyn crate::table_update_source::TableUpdateSource>) {
         // default no-op
+    }
+
+    /// Get HTTP download submitter for submitting chart download tasks.
+    fn get_http_downloader(
+        &self,
+    ) -> Option<&dyn crate::http_download_submitter::HttpDownloadSubmitter> {
+        None
     }
 
     /// Get rival player count.

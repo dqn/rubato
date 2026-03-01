@@ -236,3 +236,28 @@ impl TableAccessor for DifficultyTableAccessor {
         TableDataAccessor::new(&self.tabledir).write(td);
     }
 }
+
+/// Adapter from `Arc<dyn TableAccessor>` to `TableUpdateSource`.
+/// Allows passing table accessors through `MainControllerAccess` trait
+/// without beatoraja-types knowing about `TableAccessor`.
+pub struct TableAccessorUpdateSource {
+    accessor: std::sync::Arc<dyn TableAccessor>,
+}
+
+impl TableAccessorUpdateSource {
+    pub fn new(accessor: std::sync::Arc<dyn TableAccessor>) -> Self {
+        Self { accessor }
+    }
+}
+
+impl beatoraja_types::table_update_source::TableUpdateSource for TableAccessorUpdateSource {
+    fn source_name(&self) -> String {
+        self.accessor.name().to_string()
+    }
+
+    fn refresh(&self) {
+        if let Some(mut td) = self.accessor.read() {
+            self.accessor.write(&mut td);
+        }
+    }
+}

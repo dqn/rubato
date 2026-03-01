@@ -1,5 +1,7 @@
 use beatoraja_core::main_state::MainState;
 
+use crate::bar::bar::Bar;
+use crate::bar::context_menu_bar::ContextMenuBar;
 use crate::music_selector::{MusicSelector, REPLAY};
 use crate::stubs::*;
 
@@ -129,8 +131,53 @@ impl MusicSelectCommand {
             }
             MusicSelectCommand::ShowContextMenu => {
                 // In Java: opens ContextMenuBar for song/table/hash bars
-                // Blocked on ContextMenuBar(selector, ...) constructor
-                log::warn!("stub: SHOW_CONTEXT_MENU — blocked by ContextMenuBar integration");
+                let selected = selector.manager.get_selected().cloned();
+                let previous = selector.manager.dir.last().map(|b| (**b).clone());
+                let already_in_context_menu = previous
+                    .as_ref()
+                    .is_some_and(|b| b.as_context_menu_bar().is_some());
+
+                if let Some(ref current) = selected {
+                    if let Some(song_bar) = current.as_song_bar() {
+                        if !already_in_context_menu {
+                            let menu =
+                                ContextMenuBar::new_for_song(song_bar.get_song_data().clone());
+                            let bar = Bar::ContextMenu(Box::new(menu));
+                            selector.manager.update_bar(Some(&bar));
+                            selector.play_sound(SoundType::FolderOpen);
+                        } else {
+                            selector.select_song(BMSPlayerMode::PLAY);
+                        }
+                    } else if current.as_table_bar().is_some() {
+                        if !already_in_context_menu {
+                            let title = current.get_title();
+                            let menu = ContextMenuBar::new_for_table(title);
+                            let bar = Bar::ContextMenu(Box::new(menu));
+                            selector.manager.update_bar(Some(&bar));
+                            selector.play_sound(SoundType::FolderOpen);
+                        } else if selector.manager.update_bar(Some(current)) {
+                            selector.play_sound(SoundType::FolderOpen);
+                        }
+                    } else if current.as_hash_bar().is_some()
+                        && previous
+                            .as_ref()
+                            .is_some_and(|p| p.as_table_bar().is_some())
+                    {
+                        let enable_http = selector
+                            .main
+                            .as_ref()
+                            .is_some_and(|m| m.get_config().enable_http);
+                        if !already_in_context_menu && enable_http {
+                            let title = current.get_title();
+                            let menu = ContextMenuBar::new_for_table_folder(title);
+                            let bar = Bar::ContextMenu(Box::new(menu));
+                            selector.manager.update_bar(Some(&bar));
+                            selector.play_sound(SoundType::FolderOpen);
+                        } else if selector.manager.update_bar(Some(current)) {
+                            selector.play_sound(SoundType::FolderOpen);
+                        }
+                    }
+                }
             }
             MusicSelectCommand::CopyHighlightedMenuText => {
                 if let Some(selected) = selector.manager.get_selected() {

@@ -91,8 +91,8 @@ pub const OFFSET_MAX: usize = 255;
 /// IRStatus - holds IR connection state
 pub struct IRStatus {
     pub config: IRConfig,
-    // pub connection: IRConnection, // Phase 5+
-    // pub player: IRPlayerData,     // Phase 5+
+    /// IR rival provider (trait bridge for core→ir rival/score operations)
+    pub rival_provider: Option<Box<dyn beatoraja_types::ir_rival_provider::IRRivalProvider>>,
 }
 
 /// IRSendStatus - holds IR score send state
@@ -435,6 +435,10 @@ impl MainController {
 
     pub fn get_ir_status(&self) -> &[IRStatus] {
         &self.ir
+    }
+
+    pub fn get_ir_status_mut(&mut self) -> &mut Vec<IRStatus> {
+        &mut self.ir
     }
 
     pub fn get_timer(&self) -> &TimerManager {
@@ -1397,17 +1401,24 @@ impl MainController {
     /// Update difficulty table data in a background thread.
     ///
     /// Translated from: MainController.updateTable(TableBar)
-    pub fn update_table(&mut self) {
-        // BLOCKED: requires TableBar from beatoraja-select (circular dep) + threading infrastructure
-        log::warn!("stub: updateTable — blocked by TableUpdateThread + circular dep");
+    pub fn update_table(
+        &mut self,
+        source: Box<dyn beatoraja_types::table_update_source::TableUpdateSource>,
+    ) {
+        let name = source.source_name();
+        beatoraja_types::imgui_notify::ImGuiNotify::info(&format!("updating table : {name}"));
+        std::thread::spawn(move || {
+            source.refresh();
+        });
     }
 
     /// Start IPFS download message rendering thread.
     ///
     /// Translated from: MainController.downloadIpfsMessageRenderer(String)
-    pub fn download_ipfs_message_renderer(&mut self, _message: &str) {
-        // BLOCKED: requires DownloadMessageThread infrastructure
-        log::warn!("stub: downloadIpfsMessageRenderer — blocked by DownloadMessageThread");
+    pub fn download_ipfs_message_renderer(&mut self, message: &str) {
+        // In Java: spawns DownloadMessageThread that polls download.isDownload() + download.getMessage()
+        // MusicDownloadProcessor is still a stub, so we just show the initial notification directly.
+        beatoraja_types::imgui_notify::ImGuiNotify::info(message);
     }
 }
 
@@ -1527,8 +1538,11 @@ impl MainControllerAccess for MainController {
             .and_then(|pda| pda.read_replay_data(sha256, has_ln, lnmode, index))
     }
 
-    fn update_table(&mut self) {
-        MainController::update_table(self);
+    fn update_table(
+        &mut self,
+        source: Box<dyn beatoraja_types::table_update_source::TableUpdateSource>,
+    ) {
+        MainController::update_table(self, source);
     }
 
     fn get_rival_count(&self) -> usize {

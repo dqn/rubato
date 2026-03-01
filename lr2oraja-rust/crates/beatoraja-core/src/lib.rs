@@ -52,6 +52,7 @@ pub mod timer_manager;
 pub mod course_data_accessor;
 pub mod play_data_accessor;
 pub mod rival_data_accessor;
+pub mod score_data_importer;
 pub mod score_data_log_database_accessor;
 pub mod score_database_accessor;
 pub mod score_log_database_accessor;

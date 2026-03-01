@@ -408,8 +408,9 @@ impl MusicSelector {
                             std::path::Path::new(path).parent().and_then(|p| p.to_str())
                     {
                         main.update_song(Some(parent));
-                    } else if selected.as_table_bar().is_some() {
-                        main.update_table();
+                    } else if let Some(table_bar) = selected.as_table_bar() {
+                        let source = TableAccessorUpdateSource::new(table_bar.tr.clone());
+                        main.update_table(Box::new(source));
                     }
                 }
             }
@@ -1571,12 +1572,17 @@ impl MainState for MusicSelector {
                 BarAction::FunctionOnly | BarAction::None => {}
             }
 
-            // FunctionBar execution
-            if is_function_bar
-                && let Some(current) = self.manager.get_selected()
-                && let Some(func_bar) = current.as_function_bar()
-            {
-                func_bar.accept();
+            // FunctionBar execution — extract callback to release immutable borrow
+            // before passing &mut self to the closure
+            if is_function_bar {
+                let callback = self
+                    .manager
+                    .get_selected()
+                    .and_then(|b| b.as_function_bar())
+                    .and_then(|fb| fb.function.clone());
+                if let Some(cb) = callback {
+                    cb(self);
+                }
             }
         }
     }

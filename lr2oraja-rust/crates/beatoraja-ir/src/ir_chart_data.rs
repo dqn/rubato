@@ -7,7 +7,7 @@ use crate::SongData;
 /// IR chart data
 ///
 /// Translated from: IRChartData.java
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct IRChartData {
     /// Chart MD5 hash
     pub md5: String,

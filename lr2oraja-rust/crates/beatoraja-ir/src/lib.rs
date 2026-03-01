@@ -29,3 +29,6 @@ pub mod lr2_ir_connection;
 // Ranking
 pub mod ranking_data;
 pub mod ranking_data_cache;
+
+// IR rival provider (implementation of beatoraja-types::IRRivalProvider)
+pub mod ir_rival_provider_impl;

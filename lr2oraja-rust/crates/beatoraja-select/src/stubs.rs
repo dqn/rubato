@@ -74,7 +74,7 @@ pub use beatoraja_core::table_data::{TableData, TableFolder};
 
 // beatoraja.TableDataAccessor / TableAccessor / DifficultyTableAccessor — replaced with real types from beatoraja-core (Phase 15g)
 pub use beatoraja_core::table_data_accessor::{
-    DifficultyTableAccessor, TableAccessor, TableDataAccessor,
+    DifficultyTableAccessor, TableAccessor, TableAccessorUpdateSource, TableDataAccessor,
 };
 
 // beatoraja.CourseDataAccessor — replaced with real type from beatoraja-core (Phase 15g)

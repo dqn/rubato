@@ -434,7 +434,7 @@ impl BarManager {
                         l.extend(b.get_children().iter().cloned());
                     }
                     Bar::SearchWord(b) => l.extend(b.get_children(songdb)),
-                    Bar::ContextMenu(b) => l.extend(b.get_children()),
+                    Bar::ContextMenu(b) => l.extend(b.get_children(&self.tables)),
                     _ => {}
                 }
             }

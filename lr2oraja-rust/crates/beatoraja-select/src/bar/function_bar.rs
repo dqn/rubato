@@ -18,7 +18,8 @@ pub const STYLE_TEXT_MISSING: i32 = 8;
 
 /// Function type for FunctionBar callbacks (Arc for cheap cloning)
 /// In Java: BiConsumer<MusicSelector, FunctionBar>
-pub type FunctionBarCallback = Arc<dyn Fn() + Send + Sync>;
+/// Accepts &mut MusicSelector so callbacks can access selector state at execution time.
+pub type FunctionBarCallback = Arc<dyn Fn(&mut crate::music_selector::MusicSelector) + Send + Sync>;
 
 /// Bar that executes a function when selected
 /// Translates: bms.player.beatoraja.select.bar.FunctionBar
@@ -92,9 +93,9 @@ impl FunctionBar {
         self.display_text_type = display_text_type;
     }
 
-    pub fn accept(&self) {
+    pub fn accept(&self, selector: &mut crate::music_selector::MusicSelector) {
         if let Some(ref f) = self.function {
-            f();
+            f(selector);
         }
     }
 

@@ -4,6 +4,9 @@ use log::{trace, warn};
 
 use beatoraja_core::score_data::ScoreData;
 
+use crate::ir_chart_data::IRChartData;
+use crate::ir_connection::IRConnection;
+use crate::ir_course_data::IRCourseData;
 use crate::ir_score_data::IRScoreData;
 
 /// IR ranking data
@@ -59,33 +62,53 @@ impl RankingData {
         }
     }
 
-    /// Load ranking data from IR.
-    /// In Java, this spawns a thread. In Rust, we provide the async logic
-    /// but the caller is responsible for spawning.
+    /// Load ranking data for a song from IR.
     ///
-    /// Note: The full implementation requires MainState and IRStatus which are
-    /// not yet available. This is a stub that should be called with pre-fetched data.
-    pub fn load_stub(&mut self) {
+    /// Translated from: RankingData.load() (song path)
+    pub fn load_song(
+        &mut self,
+        connection: &dyn IRConnection,
+        chart: &IRChartData,
+        local_score: Option<&ScoreData>,
+    ) {
         self.state = ACCESS;
-        // In Java:
-        // Thread irprocess = new Thread(() -> {
-        //     final IRStatus[] ir = mainstate.main.getIRStatus();
-        //     IRResponse<IRScoreData[]> response = null;
-        //     if(song instanceof SongData) {
-        //         response = ir[0].connection.getPlayData(null, new IRChartData((SongData) song));
-        //     } else if(song instanceof CourseData) {
-        //         response = ir[0].connection.getCoursePlayData(null, new IRCourseData((CourseData) song, mainstate.main.getPlayerConfig().getLnmode()));
-        //     }
-        //     if(response.isSucceeded()) {
-        //         updateScore(response.getData(), mainstate.getScoreDataProperty().getScoreData());
-        //         state = FINISH;
-        //     } else {
-        //         state = FAIL;
-        //     }
-        //     lastUpdateTime = System.currentTimeMillis();
-        // });
-        // irprocess.start();
-        log::warn!("stub: RankingData.load — blocked by MainState + IRStatus dependencies");
+        let response = connection.get_play_data(None, chart);
+        if response.is_succeeded() {
+            if let Some(data) = response.data {
+                self.update_score(&data, local_score);
+            } else {
+                self.state = FAIL;
+            }
+        } else {
+            warn!("IR ranking data load failed: {}", response.get_message());
+            self.state = FAIL;
+        }
+    }
+
+    /// Load ranking data for a course from IR.
+    ///
+    /// Translated from: RankingData.load() (course path)
+    pub fn load_course(
+        &mut self,
+        connection: &dyn IRConnection,
+        course: &IRCourseData,
+        local_score: Option<&ScoreData>,
+    ) {
+        self.state = ACCESS;
+        let response = connection.get_course_play_data(None, course);
+        if response.is_succeeded() {
+            if let Some(data) = response.data {
+                self.update_score(&data, local_score);
+            } else {
+                self.state = FAIL;
+            }
+        } else {
+            warn!(
+                "IR course ranking data load failed: {}",
+                response.get_message()
+            );
+            self.state = FAIL;
+        }
     }
 
     pub fn update_score(&mut self, scores: &[IRScoreData], localscore: Option<&ScoreData>) {

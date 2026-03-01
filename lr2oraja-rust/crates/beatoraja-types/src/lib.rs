@@ -51,8 +51,10 @@ pub mod main_state_access;
 pub mod player_resource_access;
 
 // Score / song database trait interfaces
+pub mod http_download_submitter;
 pub mod score_database_access;
 pub mod song_information_db;
+pub mod table_update_source;
 
 // UI notification facade
 pub mod imgui_notify;
@@ -88,3 +90,9 @@ pub mod skin_render_context;
 
 // Distribution data (SkinDistributionGraph bridge)
 pub mod distribution_data;
+
+// IR rival provider (core↔ir bridge for rival score fetching)
+pub mod ir_rival_provider;
+
+// Score data cache (shared between core and select)
+pub mod score_data_cache;
