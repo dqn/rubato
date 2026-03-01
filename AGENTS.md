@@ -84,7 +84,7 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**2940 tests.** Phases 1–62 complete + post-62 stub audit. Zero clippy warnings. Zero regressions.
+**3029 tests.** Phases 1–62 complete + post-62 stub audit. Zero clippy warnings. Zero regressions.
 **Migration audit**: 100% method resolution (4,279/4,279). 0 missing. 0 constant mismatches. Gap: 0.
 **ast-compare**: 250 methods ignored (198 patterns). Method-level ignore via `.ast-compare-method-ignore`.
 **"Not implemented" stubs**: 0 remaining. All 151 stubs resolved (Phase 58–62).
@@ -99,13 +99,12 @@ lr2oraja-rust/       # Cargo workspace
 - **Phase 62**: 10 launcher egui stubs downgraded with blocker descriptions
 - **Post-62a**: 9 debug stubs implemented — RankingDataCache (real HashMap cache), open_ir (browser), Target cycling, FavoriteSong/Chart, OpenDocument/WithExplorer/DownloadSite
 - **Post-62b**: OpenIr in MusicSelector (via MainControllerAccess IR URL methods), CIM image fallback, all 31 debug stubs → compile-time comments (0 runtime stubs)
+- **Post-62c**: SongSelectionAccess trait (modmenu↔select bridge), SkinRenderContext trait (SkinDrawable expansion), DistributionData (SkinDistributionGraph bridge), external property factory adapters
 
-### Architecture-Blocked (30 compile-time comments, 0 runtime cost)
+### Architecture-Blocked (21 compile-time comments, 0 runtime cost)
 
-- wgpu rendering pipeline (~11): SkinText/Number/Image draw, SkinDistributionGraph, CourseResult render, message_renderer
+- wgpu rendering pipeline (~11): SkinText/Number/Image draw, SkinDistributionGraph draw, CourseResult render, message_renderer
 - egui UI (~10): launcher views, SkinConfiguration/KeyConfiguration create/render, search popup
-- SkinDrawable context expansion (~5): skin MainState adapter lacks MainController context (change_state, audio, timer)
-- Circular dependencies (~4): modmenu↔select, external↔skin, LR2SkinCSVLoader → SkinData converter
 
 Remaining work tracked in beads (`bd list --status=open`).
 
