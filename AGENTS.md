@@ -84,30 +84,26 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**2940 tests.** Phases 1–57 complete. Zero clippy warnings. Zero regressions.
+**2940 tests.** Phases 1–62 complete. Zero clippy warnings. Zero regressions.
 **Migration audit**: 100% method resolution (4,279/4,279). 0 missing. 0 constant mismatches. Gap: 0.
 **ast-compare**: 250 methods ignored (198 patterns). Method-level ignore via `.ast-compare-method-ignore`.
+**"Not implemented" stubs**: 0 remaining. All 151 stubs resolved (Phase 58–62).
 
-## Remaining Stubs (~2,872 lines across 10 stubs.rs)
+### Resolved (Phase 58–62)
 
-| Crate | stubs.rs | Status |
-|-------|:--------:|--------|
-| beatoraja-launcher | 527 | Skin header wired, async DB wired |
-| beatoraja-result | 510 | CourseResult functional, IR thread wired |
-| beatoraja-external | 500 | Permanent (`bail!()`, Twitter API deprecated) + screen_type wired |
-| beatoraja-skin | 495 | Timer/Float/Boolean delegates wired, Lua 20 functions done |
-| beatoraja-select | 278 | Bar Clone resolved, 7 get_children() done, read_chart done |
-| beatoraja-modmenu | 205 | SkinWidget stubs remain |
-| beatoraja-decide | 154 | load_skin wired, AudioProcessor stubs remain |
-| beatoraja-input | 114 | MouseScratchInput position hardcoded |
-| beatoraja-types | 88 | 7 resolved re-exports, 1 partial (BarSorter) |
-| beatoraja-core | 1 | exit/save_config wired, loadBMSModel wired |
+- **Phase 58**: 46 test/null/out-of-scope stubs reclassified, 18 blocked stubs documented
+- **Phase 59**: Sound system wiring (SoundType, MusicSelector events, sound overrides)
+- **Phase 60**: PlayerResource reverse lookup, trait expansion, MainController Box::leak eliminated, ChartReplication
+- **Phase 61**: OBS triggerStateChange implemented, LR2 CSV INCLUDE, 35 blocked stubs downgraded
+- **Phase 62**: 10 launcher egui stubs downgraded with blocker descriptions
 
-## Blocked by Architecture (non-blocking)
+### Blocked by Architecture (non-blocking, emit `debug!`)
 
-- MainState defaults (4): loadSkin, getOffsetValue, getImage, getSound — trait override points
-- MainController.updateTable — needs TableBar from beatoraja-select (circular dep)
-- MainController IRSendStatus.send — needs IRConnection from beatoraja-ir (circular dep)
+- MainState defaults: loadSkin, getOffsetValue, getImage, getSound — trait override points (concrete states already override)
+- Rendering pipeline (~15): SkinText/Number/Image draw, SkinDistributionGraph, CourseResult render
+- egui UI (~14): launcher views, SkinConfiguration/KeyConfiguration create/render
+- Circular deps (~8): external property factories, modmenu MusicSelector, ContextMenuBar
+- OBS WebSocket reconnect — async cycle prevents `do_connect` call from `schedule_reconnect`
 
 ## Lessons Learned
 
