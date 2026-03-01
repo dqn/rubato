@@ -21,6 +21,18 @@ pub struct SkinImage {
 }
 
 impl SkinImage {
+    /// Create an empty SkinImage with no sources (used in tests).
+    pub fn new_empty() -> Self {
+        Self {
+            data: SkinObjectData::new(),
+            image: Vec::new(),
+            ref_prop: None,
+            current_image: None,
+            removed_sources: Vec::new(),
+            is_movie: false,
+        }
+    }
+
     pub fn new_with_image_id(imageid: i32) -> Self {
         Self {
             data: SkinObjectData::new(),

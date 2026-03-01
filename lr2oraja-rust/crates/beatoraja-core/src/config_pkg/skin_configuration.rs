@@ -743,10 +743,13 @@ impl SkinConfiguration {
 
     /// Load all skin headers by recursively scanning the "skin" directory.
     ///
-    /// NOTE: The actual skin header loaders (JSONSkinLoader, LuaSkinLoader, LR2SkinHeaderLoader)
-    /// live in beatoraja-skin which cannot be imported here due to circular dependencies.
-    /// This method provides the directory scanning skeleton; actual header loading is stubbed.
-    pub fn load_all_skins(&mut self) {
+    /// The `loader` callback dispatches to the appropriate skin header parser based on
+    /// file extension. It is injected from outside beatoraja-core (typically beatoraja-skin)
+    /// to avoid circular dependencies.
+    ///
+    /// The callback receives a path and returns zero or more `SkinHeaderInfo` entries
+    /// (LR2 7/14-key skins may produce a second 5/10-key variant).
+    pub fn load_all_skins(&mut self, loader: &dyn Fn(&Path) -> Vec<SkinHeaderInfo>) {
         self.all_skins = Vec::new();
         let mut skin_paths: Vec<PathBuf> = Vec::new();
         Self::scan_skins(Path::new("skin"), &mut skin_paths);
@@ -757,19 +760,13 @@ impl SkinConfiguration {
                 || path_str.ends_with(".luaskin")
                 || path_str.ends_with(".lr2skin")
             {
-                // TODO: Dispatch to appropriate loader once beatoraja-skin integration is complete.
-                // - .json     -> JSONSkinLoader::load_header(path)
-                // - .luaskin  -> LuaSkinLoader::load_header(path)
-                // - .lr2skin  -> LR2SkinHeaderLoader::load_skin(path, None)
-                //   For LR2 7/14key skins, also add 5/10key variant.
-                log::trace!("Skin file found (loader not yet integrated): {:?}", path);
+                let headers = loader(path);
+                self.all_skins.extend(headers);
             }
         }
 
         if self.all_skins.is_empty() {
-            log::warn!(
-                "load_all_skins: no skins loaded (skin loaders not yet integrated from beatoraja-skin)"
-            );
+            log::warn!("load_all_skins: no skin headers loaded from 'skin' directory");
         }
     }
 
@@ -1469,7 +1466,7 @@ mod tests {
     fn test_load_all_skins_stub_no_panic() {
         let mut sc = make_test_skin_config();
         // Should not panic even though no skin dir exists
-        sc.load_all_skins();
+        sc.load_all_skins(&|_path| Vec::new());
         assert!(sc.all_skins.is_empty());
     }
 

@@ -72,43 +72,24 @@ impl BitmapFontBatchLoader {
         // since the actual GL texture creation must happen on the main thread anyway.
         // The parallel image loading could be done with rayon in the future.
 
-        let mut parsed_font_data: Vec<(PathBuf, BitmapFontData)> = Vec::new();
-
         // Parse each font description file
         for path in self.font_paths.keys() {
-            // BitmapFont.BitmapFontData fontData = new BitmapFont.BitmapFontData(new FileHandle(path.toFile()), false);
-            // In our stub, BitmapFontData is empty. The actual parsing would happen here.
-            let font_data = BitmapFontData;
-            self.font_data.insert(path.clone(), font_data.clone());
-            parsed_font_data.push((path.clone(), font_data));
+            let font_data = BitmapFontData::from_fnt(path).unwrap_or_default();
+            self.font_data.insert(path.clone(), font_data);
         }
 
-        // Load images for each font data
-        // Each font data contains image paths that need to be loaded
-        let loaded_textures: HashMap<String, TextureRegion> = HashMap::new();
-
-        // In the Java code, imagePaths come from BitmapFontData.imagePaths
-        // Since our BitmapFontData is a stub, we skip actual image loading.
-        // The resource pool loading would happen here:
-        //
-        // for (path, font_data) in &parsed_font_data {
-        //     for image_path in &font_data.image_paths {
-        //         let resource = skin_loader::get_resource();
-        //         if let Some(ref r) = *resource {
-        //             if let Some(_pixmap) = r.get(image_path) {
-        //                 // image loaded successfully
-        //             }
-        //         }
-        //     }
-        // }
-
-        // Create textures on main thread
-        // In the Java code, textures are created from loaded images:
-        //
-        // for image_path in loaded_images {
-        //     let texture = skin_loader::get_texture(&image_path, self.usecim, self.use_mip_maps);
-        //     loaded_textures.insert(image_path, TextureRegion::from_texture(texture));
-        // }
+        // Load images for each font data page
+        let mut loaded_textures: HashMap<String, TextureRegion> = HashMap::new();
+        for font_data in self.font_data.values() {
+            for image_path in &font_data.image_paths {
+                if loaded_textures.contains_key(image_path) {
+                    continue;
+                }
+                if let Some(tex) = skin_loader::get_texture(image_path, self.usecim) {
+                    loaded_textures.insert(image_path.clone(), TextureRegion::from_texture(tex));
+                }
+            }
+        }
 
         // Build CacheableBitmapFont for each font path
         for (path, _type_id) in &self.font_paths {
@@ -117,27 +98,30 @@ impl BitmapFontBatchLoader {
                 None => continue,
             };
 
-            // In Java: Array<TextureRegion> imageRegions = new Array<>(fontData.imagePaths.length);
-            // Since BitmapFontData is stubbed, imageRegions will be empty.
-            let image_regions: Vec<TextureRegion> = Vec::new();
+            // Collect texture regions for each page image
+            let image_regions: Vec<TextureRegion> = font_data
+                .image_paths
+                .iter()
+                .filter_map(|ip| loaded_textures.get(ip).cloned())
+                .collect();
 
-            // float size = fontData.lineHeight;
-            // Using 0.0 as stub since BitmapFontData doesn't have lineHeight
-            let mut size: f32 = 0.0;
-            let mut scale_w: f32 = 0.0;
-            let mut scale_h: f32 = 0.0;
+            // Use parsed font data metrics, fall back to read_font_sizes for legacy
+            let mut size = font_data.line_height;
+            let mut scale_w = font_data.scale_w;
+            let mut scale_h = font_data.scale_h;
 
-            let sizes = read_font_sizes(path);
-            if let Some(s) = sizes {
+            if size == 0.0
+                && let Some(s) = read_font_sizes(path)
+            {
                 size = s.size;
                 scale_w = s.scale_w;
                 scale_h = s.scale_h;
-            } else if !image_regions.is_empty() {
+            }
+            if scale_w == 0.0 && !image_regions.is_empty() {
                 scale_w = image_regions[0].get_region_width() as f32;
                 scale_h = image_regions[0].get_region_height() as f32;
             }
 
-            // fontCache.font = new BitmapFont(fontData, imageRegions, true);
             let font_cache = CacheableBitmapFont {
                 font: BitmapFont::new(),
                 font_data,

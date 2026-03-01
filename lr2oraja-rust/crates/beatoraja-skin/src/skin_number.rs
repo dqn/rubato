@@ -28,6 +28,32 @@ pub struct SkinNumber {
 }
 
 impl SkinNumber {
+    /// Create an empty SkinNumber with no sources (used in tests).
+    pub fn new_empty() -> Self {
+        use crate::skin_source_image_set::SkinSourceImageSet;
+        Self {
+            data: SkinObjectData::new(),
+            image: Box::new(SkinSourceImageSet::new_with_int_timer_from_vecs(
+                vec![],
+                0,
+                0,
+            )),
+            mimage: None,
+            ref_prop: None,
+            keta: 0,
+            current_images: Vec::new(),
+            zeropadding: 0,
+            space: 0,
+            align: 0,
+            value: i32::MIN,
+            shiftbase: 0,
+            offsets: None,
+            length: 0.0,
+            image_set: None,
+            shift: 0.0,
+        }
+    }
+
     pub fn new_with_int_timer(
         image: Vec<Vec<TextureRegion>>,
         mimage: Option<Vec<Vec<TextureRegion>>>,

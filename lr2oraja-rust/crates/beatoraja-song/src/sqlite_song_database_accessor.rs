@@ -370,10 +370,15 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
                 md5str.push('\'');
             }
         }
-        let sql = format!(
-            "SELECT * FROM song WHERE md5 IN ({}) OR sha256 IN ({})",
-            md5str, sha256str
-        );
+        let sql = match (md5str.is_empty(), sha256str.is_empty()) {
+            (true, true) => return Vec::new(),
+            (false, true) => format!("SELECT * FROM song WHERE md5 IN ({})", md5str),
+            (true, false) => format!("SELECT * FROM song WHERE sha256 IN ({})", sha256str),
+            (false, false) => format!(
+                "SELECT * FROM song WHERE md5 IN ({}) OR sha256 IN ({})",
+                md5str, sha256str
+            ),
+        };
 
         let m = self.query_songs(&sql, &[]);
 

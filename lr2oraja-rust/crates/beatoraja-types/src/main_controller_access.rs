@@ -132,6 +132,13 @@ pub trait MainControllerAccess {
     ) -> Option<crate::player_information::PlayerInformation> {
         None
     }
+
+    /// Get IR table URLs for connected IR services.
+    /// Returns (ir_name, table_url) pairs.
+    /// Java: MainController.getIRStatus() → IRStatus.tables
+    fn get_ir_table_urls(&self) -> Vec<(String, String)> {
+        Vec::new()
+    }
 }
 
 /// Null implementation of MainControllerAccess for stub contexts.

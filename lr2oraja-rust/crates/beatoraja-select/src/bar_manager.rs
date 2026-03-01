@@ -110,7 +110,7 @@ impl BarManager {
 
     /// Initialize the bar manager: load tables, courses, favorites, command/random folders.
     /// Corresponds to Java BarManager.init()
-    pub fn init(&mut self, config: &Config) {
+    pub fn init(&mut self, config: &Config, ir_table_urls: &[(String, String)]) {
         let tablepath = config.get_tablepath();
         let tdaccessor = TableDataAccessor::new(tablepath);
 
@@ -146,10 +146,15 @@ impl BarManager {
             table_bars.push(TableBar::new(td, accessor));
         }
 
-        // IR tables would be loaded here if IR is connected
-        // Java: if(select.main.getIRStatus().length > 0) { ... }
-        // Blocked on MainController.getIRStatus() - logged as warning
-        log::debug!("IR table loading skipped - requires MainController.getIRStatus()");
+        // Load IR tables if IR connections provide table URLs
+        for (ir_name, table_url) in ir_table_urls {
+            let mut td = TableData::default();
+            td.set_name(format!("{} {}", ir_name, table_url));
+            td.set_url(table_url.clone());
+            let accessor: Arc<dyn TableAccessor> =
+                Arc::new(DifficultyTableAccessor::new(tablepath, table_url));
+            table_bars.push(TableBar::new(td, accessor));
+        }
 
         self.tables = table_bars;
 
@@ -1213,7 +1218,7 @@ mod tests {
     fn test_init_creates_courses() {
         let mut manager = BarManager::new();
         let config = Config::default();
-        manager.init(&config);
+        manager.init(&config, &[]);
         assert!(manager.courses.is_some());
     }
 
@@ -1221,7 +1226,7 @@ mod tests {
     fn test_init_creates_commands() {
         let mut manager = BarManager::new();
         let config = Config::default();
-        manager.init(&config);
+        manager.init(&config, &[]);
         // Should have at least LAMP UPDATE and SCORE UPDATE
         assert!(manager.commands.len() >= 2);
     }
@@ -1230,7 +1235,7 @@ mod tests {
     fn test_init_default_random_folder() {
         let mut manager = BarManager::new();
         let config = Config::default();
-        manager.init(&config);
+        manager.init(&config, &[]);
         // random/default.json likely doesn't exist in test, so default folder is created
         assert!(!manager.random_folder_list.is_empty());
         assert_eq!(
@@ -1243,7 +1248,7 @@ mod tests {
     fn test_init_lamp_update_contains_30_days() {
         let mut manager = BarManager::new();
         let config = Config::default();
-        manager.init(&config);
+        manager.init(&config, &[]);
         // First command should be LAMP UPDATE container with 30 children
         if let Some(Bar::Container(c)) = manager.commands.first() {
             assert_eq!(c.get_title(), "LAMP UPDATE");
@@ -1257,7 +1262,7 @@ mod tests {
     fn test_init_score_update_contains_30_days() {
         let mut manager = BarManager::new();
         let config = Config::default();
-        manager.init(&config);
+        manager.init(&config, &[]);
         if let Some(Bar::Container(c)) = manager.commands.get(1) {
             assert_eq!(c.get_title(), "SCORE UPDATE");
             assert_eq!(c.childbar.len(), 30);

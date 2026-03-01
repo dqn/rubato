@@ -18,7 +18,7 @@ pub struct PreviewMusicProcessor {
 }
 
 impl PreviewMusicProcessor {
-    pub fn new(_audio: &dyn AudioDriver, _config: &Config) -> Self {
+    pub fn new(_config: &Config) -> Self {
         Self {
             commands: Arc::new(Mutex::new(VecDeque::new())),
             preview_running: Arc::new(AtomicBool::new(false)),
@@ -210,7 +210,7 @@ mod tests {
     fn test_new_with_audio_driver_trait() {
         let audio = MockAudioDriver::new();
         let config = Config::default();
-        let processor = PreviewMusicProcessor::new(&audio, &config);
+        let processor = PreviewMusicProcessor::new(&config);
         assert!(processor.get_song_data().is_none());
     }
 
@@ -218,7 +218,7 @@ mod tests {
     fn test_set_default() {
         let audio = MockAudioDriver::new();
         let config = Config::default();
-        let mut processor = PreviewMusicProcessor::new(&audio, &config);
+        let mut processor = PreviewMusicProcessor::new(&config);
         processor.set_default("/path/to/bgm.ogg");
         assert_eq!(processor.default_music, "/path/to/bgm.ogg");
     }
@@ -227,7 +227,7 @@ mod tests {
     fn test_start_with_none_song() {
         let audio = MockAudioDriver::new();
         let config = Config::default();
-        let mut processor = PreviewMusicProcessor::new(&audio, &config);
+        let mut processor = PreviewMusicProcessor::new(&config);
         processor.start(None);
         assert!(processor.get_song_data().is_none());
         // Command queue should have one entry (empty path)
@@ -238,7 +238,7 @@ mod tests {
     fn test_start_with_song() {
         let audio = MockAudioDriver::new();
         let config = Config::default();
-        let mut processor = PreviewMusicProcessor::new(&audio, &config);
+        let mut processor = PreviewMusicProcessor::new(&config);
 
         let mut song = SongData::default();
         song.sha256 = "abc".to_string();
@@ -251,7 +251,7 @@ mod tests {
     fn test_stop() {
         let audio = MockAudioDriver::new();
         let config = Config::default();
-        let mut processor = PreviewMusicProcessor::new(&audio, &config);
+        let mut processor = PreviewMusicProcessor::new(&config);
         processor.preview_running.store(true, Ordering::SeqCst);
         processor.stop();
         assert!(!processor.preview_running.load(Ordering::SeqCst));
@@ -261,7 +261,7 @@ mod tests {
     fn test_run_preview_loop_immediate_stop() {
         let mut audio = MockAudioDriver::new();
         let config = Config::default();
-        let mut processor = PreviewMusicProcessor::new(&audio, &config);
+        let mut processor = PreviewMusicProcessor::new(&config);
         processor.set_default("/bgm/default.ogg");
         // preview_running is false, so run_preview_loop should exit immediately
         // after playing default music and then calling stop_preview_internal

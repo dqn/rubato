@@ -581,7 +581,7 @@ impl MusicSelector {
                 let lnmode = main.get_player_config().get_lnmode();
                 let cached = main
                     .get_ranking_data_cache()
-                    .and_then(|cache| cache.get_song_any(&song, lnmode))
+                    .and_then(|cache| cache.get_song_any(song, lnmode))
                     .and_then(|any| any.downcast_ref::<RankingData>())
                     .cloned();
                 if let Some(rd) = cached {
@@ -591,7 +591,7 @@ impl MusicSelector {
                     let rd = RankingData::new();
                     self.currentir = Some(rd.clone());
                     if let Some(cache) = main.get_ranking_data_cache_mut() {
-                        cache.put_song_any(&song, lnmode, Box::new(rd));
+                        cache.put_song_any(song, lnmode, Box::new(rd));
                     }
                 }
             }
@@ -824,7 +824,7 @@ impl MusicSelector {
                         let song = song_bar.get_song_data();
                         self.currentir = main
                             .get_ranking_data_cache()
-                            .and_then(|c| c.get_song_any(&song, lnmode))
+                            .and_then(|c| c.get_song_any(song, lnmode))
                             .and_then(|a| a.downcast_ref::<RankingData>())
                             .cloned();
                     }
@@ -849,7 +849,7 @@ impl MusicSelector {
                         let course = grade_bar.get_course_data();
                         self.currentir = main
                             .get_ranking_data_cache()
-                            .and_then(|c| c.get_course_any(&course, lnmode))
+                            .and_then(|c| c.get_course_any(course, lnmode))
                             .and_then(|a| a.downcast_ref::<RankingData>())
                             .cloned();
                     }
@@ -1279,7 +1279,7 @@ impl MusicSelector {
                 let course = gb.get_course_data();
                 let cached = main
                     .get_ranking_data_cache()
-                    .and_then(|c| c.get_course_any(&course, lnmode))
+                    .and_then(|c| c.get_course_any(course, lnmode))
                     .and_then(|a| a.downcast_ref::<RankingData>())
                     .cloned();
                 if let Some(rd) = cached {
@@ -1288,7 +1288,7 @@ impl MusicSelector {
                     let rd = RankingData::new();
                     self.currentir = Some(rd.clone());
                     if let Some(cache) = main.get_ranking_data_cache_mut() {
-                        cache.put_course_any(&course, lnmode, Box::new(rd));
+                        cache.put_course_any(course, lnmode, Box::new(rd));
                     }
                 }
             }
@@ -1418,9 +1418,14 @@ impl MainState for MusicSelector {
             }
         }
 
-        // In Java: preview = new PreviewMusicProcessor(main.getAudioProcessor(), resource.getConfig())
-        // preview.setDefault(getSound(SELECT))
-        // Blocked on MainController audio
+        // Create preview music processor
+        {
+            let mut preview = PreviewMusicProcessor::new(&self.app_config);
+            if let Some(sound_path) = self.get_sound(SoundType::Select) {
+                preview.set_default(&sound_path);
+            }
+            self.preview = Some(preview);
+        }
 
         // In Java: sets input config based on musicselectinput mode
         // Blocked on MainController input processor
@@ -1519,28 +1524,28 @@ impl MainState for MusicSelector {
         {
             self.current_ranking_duration = -1;
             // Load/refresh ranking data from cache
-            if let Some(current) = self.manager.get_selected() {
-                if let Some(main) = self.main.as_mut() {
-                    use beatoraja_ir::ranking_data::RankingData;
-                    let lnmode = main.get_player_config().get_lnmode();
-                    if let Some(song_bar) = current.as_song_bar() {
-                        if song_bar.exists_song() {
-                            let song = song_bar.get_song_data();
-                            let cached = main
-                                .get_ranking_data_cache()
-                                .and_then(|c| c.get_song_any(&song, lnmode))
-                                .and_then(|a| a.downcast_ref::<RankingData>())
-                                .cloned();
-                            if cached.is_none() {
-                                let rd = RankingData::new();
-                                self.currentir = Some(rd.clone());
-                                if let Some(cache) = main.get_ranking_data_cache_mut() {
-                                    cache.put_song_any(&song, lnmode, Box::new(rd));
-                                }
-                            } else {
-                                self.currentir = cached;
-                            }
+            if let Some(current) = self.manager.get_selected()
+                && let Some(main) = self.main.as_mut()
+            {
+                use beatoraja_ir::ranking_data::RankingData;
+                let lnmode = main.get_player_config().get_lnmode();
+                if let Some(song_bar) = current.as_song_bar()
+                    && song_bar.exists_song()
+                {
+                    let song = song_bar.get_song_data();
+                    let cached = main
+                        .get_ranking_data_cache()
+                        .and_then(|c| c.get_song_any(song, lnmode))
+                        .and_then(|a| a.downcast_ref::<RankingData>())
+                        .cloned();
+                    if cached.is_none() {
+                        let rd = RankingData::new();
+                        self.currentir = Some(rd.clone());
+                        if let Some(cache) = main.get_ranking_data_cache_mut() {
+                            cache.put_song_any(song, lnmode, Box::new(rd));
                         }
+                    } else {
+                        self.currentir = cached;
                     }
                 }
             }

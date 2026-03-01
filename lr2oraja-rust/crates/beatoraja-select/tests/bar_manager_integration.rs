@@ -44,7 +44,7 @@ fn make_song_bar(sha256: &str, title: &str, artist: &str, path: &str) -> Bar {
 fn init_creates_courses_and_commands() {
     let mut manager = BarManager::new();
     let config = Config::default();
-    manager.init(&config);
+    manager.init(&config, &[]);
 
     // Courses should be initialized
     assert!(manager.courses.is_some());
@@ -77,7 +77,7 @@ fn init_creates_courses_and_commands() {
 fn init_creates_default_random_folder() {
     let mut manager = BarManager::new();
     let config = Config::default();
-    manager.init(&config);
+    manager.init(&config, &[]);
 
     // random/default.json likely missing in test environment; default folder is created
     assert!(
