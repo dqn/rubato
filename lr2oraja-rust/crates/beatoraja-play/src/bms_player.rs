@@ -197,6 +197,10 @@ pub struct BMSPlayer {
     /// Cached during initialization so set_play_speed can determine
     /// whether to apply pitch changes.
     fast_forward_freq_option: FrequencyType,
+    /// BG note volume from AudioConfig.bgvolume.
+    /// Used as fallback when adjusted_volume < 0.
+    /// Set before create() by the caller.
+    bg_volume: f32,
     /// Play mode (PLAY, PRACTICE, AUTOPLAY, REPLAY).
     /// Set before create() by the caller. Determines input processor mode.
     play_mode: BMSPlayerMode,
@@ -272,6 +276,7 @@ impl BMSPlayer {
             margin_time: 0,
             pending_global_pitch: None,
             fast_forward_freq_option: FrequencyType::UNPROCESSED,
+            bg_volume: 0.5,
             play_mode: BMSPlayerMode::PLAY,
             constraints: Vec::new(),
             is_guide_se: false,
@@ -386,6 +391,12 @@ impl BMSPlayer {
         self.fast_forward_freq_option = freq_option;
     }
 
+    /// Set the BG note volume from AudioConfig.bgvolume.
+    /// Should be called during initialization.
+    pub fn set_bg_volume(&mut self, volume: f32) {
+        self.bg_volume = volume;
+    }
+
     /// Set play speed and optionally request global pitch change.
     ///
     /// Translated from: BMSPlayer.setPlaySpeed(int) + audio pitch logic (Java line 946)
@@ -415,6 +426,14 @@ impl BMSPlayer {
 
     pub fn get_adjusted_volume(&self) -> f32 {
         self.adjusted_volume
+    }
+
+    /// Drain pending BG note commands from the autoplay thread.
+    ///
+    /// The caller should call `AudioDriver::play_note(note, volume, 0)` for each
+    /// returned command. This should be called each frame from the main render loop.
+    pub fn drain_pending_bg_notes(&self) -> Vec<crate::key_sound_processor::BgNoteCommand> {
+        self.keysound.drain_pending_bg_notes()
     }
 
     pub fn get_lanerender(&self) -> Option<&LaneRenderer> {
@@ -1829,8 +1848,18 @@ impl MainState for BMSPlayer {
                         let keylog = self.active_replay.as_ref().map(|r| r.keylog.as_slice());
                         ki.start_judge(last_tl_micro, keylog, self.margin_time);
                     }
-                    self.keysound
-                        .start_bg_play(&self.model, self.starttimeoffset * 1000);
+                    // Resolve initial BG volume: use adjusted_volume if >= 0,
+                    // otherwise fall back to bg_volume from AudioConfig.
+                    let initial_bg_vol = if self.adjusted_volume >= 0.0 {
+                        self.adjusted_volume
+                    } else {
+                        self.bg_volume
+                    };
+                    self.keysound.start_bg_play(
+                        &self.model,
+                        self.starttimeoffset * 1000,
+                        initial_bg_vol,
+                    );
                     log::info!("STATE_PLAY");
                 }
             }
@@ -1869,6 +1898,23 @@ impl MainState for BMSPlayer {
                             .timer
                             .set_micro_timer(TIMER_RHYTHM, rhythm_timer);
                     }
+                }
+
+                // Update BG autoplay thread: play time and volume.
+                // Translated from: Java AutoplayThread.run() reads player.timer.getNowMicroTime(TIMER_PLAY)
+                // and player.getAdjustedVolume() / config.getAudioConfig().getBgvolume().
+                {
+                    let play_micro = self
+                        .main_state_data
+                        .timer
+                        .get_now_micro_time_for_id(TIMER_PLAY);
+                    self.keysound.update_play_time(play_micro);
+                    let vol = if self.adjusted_volume >= 0.0 {
+                        self.adjusted_volume
+                    } else {
+                        self.bg_volume
+                    };
+                    self.keysound.update_volume(vol);
                 }
 
                 let ptime = self.main_state_data.timer.get_now_time_for_id(TIMER_PLAY);

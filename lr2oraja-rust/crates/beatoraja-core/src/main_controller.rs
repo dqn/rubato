@@ -413,9 +413,7 @@ impl MainController {
     pub fn get_ranking_data_cache_mut(
         &mut self,
     ) -> Option<&mut (dyn RankingDataCacheAccess + 'static)> {
-        self.ircache
-            .as_mut()
-            .map(|b| &mut **b as &mut (dyn RankingDataCacheAccess + 'static))
+        self.ircache.as_deref_mut()
     }
 
     pub fn set_ranking_data_cache(&mut self, cache: Box<dyn RankingDataCacheAccess>) {
@@ -1540,6 +1538,20 @@ impl MainControllerAccess for MainController {
         source: Box<dyn beatoraja_types::table_update_source::TableUpdateSource>,
     ) {
         MainController::update_table(self, source);
+    }
+
+    fn get_ranking_data_cache(
+        &self,
+    ) -> Option<&dyn beatoraja_types::ranking_data_cache_access::RankingDataCacheAccess> {
+        MainController::get_ranking_data_cache(self)
+    }
+
+    fn get_ranking_data_cache_mut(
+        &mut self,
+    ) -> Option<
+        &mut (dyn beatoraja_types::ranking_data_cache_access::RankingDataCacheAccess + 'static),
+    > {
+        self.ircache.as_deref_mut()
     }
 
     fn get_rival_count(&self) -> usize {

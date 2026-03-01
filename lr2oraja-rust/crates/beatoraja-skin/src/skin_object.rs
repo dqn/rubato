@@ -12,7 +12,10 @@ use crate::property::integer_property_factory;
 use crate::property::timer_property::TimerProperty;
 use crate::skin_property;
 use crate::stretch_type::StretchType;
-use crate::stubs::{Color, MainState, Rectangle, SkinOffset, SpriteBatch, TextureRegion};
+use crate::stubs::{
+    BitmapFont, Color, GlyphLayout, MainState, Rectangle, SkinOffset, SpriteBatch, Texture,
+    TextureRegion,
+};
 
 /// SkinObjectDestination (inner class of SkinObject)
 #[derive(Clone, Debug)]
@@ -1375,6 +1378,38 @@ impl SkinObjectRenderer {
         );
         self.post_draw();
     }
+
+    /// Draw a full Texture at (x, y) with size (w, h).
+    /// Java: SkinObjectRenderer.draw(Texture image, float x, float y, float w, float h)
+    pub fn draw_texture(&mut self, image: &Texture, x: f32, y: f32, w: f32, h: f32) {
+        // Java: setFilter(image)
+        // In wgpu, filtering is configured on samplers via SpriteRenderPipeline::get_sampler().
+        self.pre_draw();
+        self.sprite.draw_texture(image, x, y, w, h);
+        self.post_draw();
+    }
+
+    /// Draw text using a BitmapFont with color.
+    /// Java: SkinObjectRenderer.draw(BitmapFont font, String s, float x, float y, Color c)
+    ///
+    /// Sets the font color, then delegates to font.draw(sprite, text, x, y) which
+    /// rasterizes glyphs and submits quads to the SpriteBatch.
+    pub fn draw_font(&mut self, font: &mut BitmapFont, text: &str, x: f32, y: f32, color: &Color) {
+        // Java: for (TextureRegion region : font.getRegions()) { setFilter(region); }
+        // In wgpu, filtering is handled by sampler selection based on shader_type.
+        self.pre_draw();
+        font.set_color(color);
+        font.draw(&mut self.sprite, text, x, y);
+        self.post_draw();
+    }
+
+    /// Draw pre-laid-out text using a BitmapFont and GlyphLayout.
+    /// Java: SkinObjectRenderer.draw(BitmapFont font, GlyphLayout layout, float x, float y)
+    pub fn draw_font_layout(&mut self, font: &BitmapFont, layout: &GlyphLayout, x: f32, y: f32) {
+        self.pre_draw();
+        font.draw_layout(&mut self.sprite, layout, x, y);
+        self.post_draw();
+    }
 }
 
 #[cfg(test)]
@@ -1706,5 +1741,98 @@ mod tests {
 
         // With empty dst, draw should remain false (no destination to render).
         assert!(!data.draw);
+    }
+
+    // =========================================================================
+    // draw_texture / draw_font / draw_font_layout tests
+    // =========================================================================
+
+    #[test]
+    fn test_skin_object_renderer_draw_texture_generates_vertices() {
+        let mut renderer = SkinObjectRenderer::new();
+        let tex = Texture::default();
+        renderer.draw_texture(&tex, 10.0, 20.0, 100.0, 50.0);
+        // 1 quad = 6 vertices
+        assert_eq!(renderer.sprite.vertices().len(), 6);
+    }
+
+    #[test]
+    fn test_skin_object_renderer_draw_texture_applies_blend() {
+        let mut renderer = SkinObjectRenderer::new();
+        renderer.set_blend(2); // Additive
+        let tex = Texture::default();
+        renderer.draw_texture(&tex, 0.0, 0.0, 10.0, 10.0);
+        // After post_draw, blend is reset to Normal
+        let color = renderer.sprite.get_color();
+        assert_eq!(color.r, 1.0);
+        assert_eq!(color.a, 1.0);
+    }
+
+    #[test]
+    fn test_skin_object_renderer_draw_texture_shader_switching() {
+        let mut renderer = SkinObjectRenderer::new();
+        renderer.set_type(SkinObjectRenderer::TYPE_LINEAR);
+        let tex = Texture::default();
+        renderer.draw_texture(&tex, 0.0, 0.0, 10.0, 10.0);
+        assert_eq!(renderer.current_shader, SkinObjectRenderer::TYPE_LINEAR);
+        assert_eq!(
+            renderer.sprite.get_shader_type(),
+            SkinObjectRenderer::TYPE_LINEAR
+        );
+    }
+
+    #[test]
+    fn test_skin_object_renderer_draw_font_no_crash() {
+        let mut renderer = SkinObjectRenderer::new();
+        let mut font = BitmapFont::new();
+        let white = Color::new(1.0, 1.0, 1.0, 1.0);
+        // BitmapFont without a loaded font file will just be a no-op
+        renderer.draw_font(&mut font, "Hello", 10.0, 20.0, &white);
+        // No crash is the success criterion; font has no loaded font file
+        // so no vertices are generated
+    }
+
+    #[test]
+    fn test_skin_object_renderer_draw_font_saves_restores_color() {
+        let mut renderer = SkinObjectRenderer::new();
+        let blue = Color::new(0.0, 0.0, 1.0, 1.0);
+        renderer.sprite.set_color(&blue);
+        let red = Color::new(1.0, 0.0, 0.0, 1.0);
+        renderer.set_color(&red);
+
+        let mut font = BitmapFont::new();
+        let green = Color::new(0.0, 1.0, 0.0, 1.0);
+        renderer.draw_font(&mut font, "Test", 0.0, 0.0, &green);
+
+        // After post_draw, sprite color should be restored to blue
+        let restored = renderer.sprite.get_color();
+        assert_eq!(restored.r, 0.0);
+        assert_eq!(restored.g, 0.0);
+        assert_eq!(restored.b, 1.0);
+        assert_eq!(restored.a, 1.0);
+    }
+
+    #[test]
+    fn test_skin_object_renderer_draw_font_layout_no_crash() {
+        let mut renderer = SkinObjectRenderer::new();
+        let font = BitmapFont::new();
+        let layout = GlyphLayout::new();
+        renderer.draw_font_layout(&font, &layout, 10.0, 20.0);
+        // No crash is the success criterion
+    }
+
+    #[test]
+    fn test_skin_object_renderer_draw_font_shader_switching() {
+        let mut renderer = SkinObjectRenderer::new();
+        renderer.set_type(SkinObjectRenderer::TYPE_LINEAR);
+        let mut font = BitmapFont::new();
+        let white = Color::new(1.0, 1.0, 1.0, 1.0);
+        renderer.draw_font(&mut font, "Test", 0.0, 0.0, &white);
+        // After draw_font, shader should have been switched to TYPE_LINEAR
+        assert_eq!(renderer.current_shader, SkinObjectRenderer::TYPE_LINEAR);
+        assert_eq!(
+            renderer.sprite.get_shader_type(),
+            SkinObjectRenderer::TYPE_LINEAR
+        );
     }
 }

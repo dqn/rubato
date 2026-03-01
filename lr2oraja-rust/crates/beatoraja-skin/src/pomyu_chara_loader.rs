@@ -3,6 +3,7 @@
 
 use std::io::{BufRead, BufReader};
 use std::path::Path;
+use std::sync::Arc;
 
 use crate::property::timer_property::TimerProperty;
 use crate::skin_image::SkinImage;
@@ -144,13 +145,13 @@ impl<'a> PomyuCharaLoader<'a> {
         let chp = chp?;
 
         // Image data: 0:#CharBMP 1:#CharBMP2P 2:#CharTex 3:#CharTex2P 4:#CharFace 5:#CharFace2P 6:#SelectCG 7:#SelectCG2P
-        let char_bmp: [Option<Texture>; 8] = [None, None, None, None, None, None, None, None];
+        let mut char_bmp: [Option<Texture>; 8] = [None, None, None, None, None, None, None, None];
         let char_bmp_index: usize = 0;
         let char_tex_index: usize = 2;
         let char_face_index: usize = 4;
         let select_cg_index: usize = 6;
         // Transparent processing flags
-        let transparent_flag = [false; 8];
+        let mut transparent_flag = [false; 8];
         // Parameters
         let mut xywh = vec![[0_i32; 4]; 1296];
         let mut char_face_upper_xywh = [0, 0, 256, 256];
@@ -192,36 +193,59 @@ impl<'a> PomyuCharaLoader<'a> {
                         let data = pm_parse_str(&str_parts);
                         if str_parts[0].eq_ignore_ascii_case("#CharBMP") {
                             if data.len() > 1 {
-                                // char_bmp[char_bmp_index] = SkinLoader.getTexture(...)
-                                // Stubbed as todo
+                                let path =
+                                    format!("{}{}", chp_dir_prefix, data[1].replace('\\', "/"));
+                                char_bmp[char_bmp_index] =
+                                    SkinLoaderStub::get_texture(&path, usecim);
                             }
                         } else if str_parts[0].eq_ignore_ascii_case("#CharBMP2P") {
                             if data.len() > 1 {
-                                // char_bmp[char_bmp_index+1] = ...
+                                let path =
+                                    format!("{}{}", chp_dir_prefix, data[1].replace('\\', "/"));
+                                char_bmp[char_bmp_index + 1] =
+                                    SkinLoaderStub::get_texture(&path, usecim);
                             }
                         } else if str_parts[0].eq_ignore_ascii_case("#CharTex") {
                             if data.len() > 1 {
-                                // char_bmp[char_tex_index] = ...
+                                let path =
+                                    format!("{}{}", chp_dir_prefix, data[1].replace('\\', "/"));
+                                char_bmp[char_tex_index] =
+                                    SkinLoaderStub::get_texture(&path, usecim);
                             }
                         } else if str_parts[0].eq_ignore_ascii_case("#CharTex2P") {
                             if data.len() > 1 {
-                                // char_bmp[char_tex_index+1] = ...
+                                let path =
+                                    format!("{}{}", chp_dir_prefix, data[1].replace('\\', "/"));
+                                char_bmp[char_tex_index + 1] =
+                                    SkinLoaderStub::get_texture(&path, usecim);
                             }
                         } else if str_parts[0].eq_ignore_ascii_case("#CharFace") {
                             if data.len() > 1 {
-                                // char_bmp[char_face_index] = ...
+                                let path =
+                                    format!("{}{}", chp_dir_prefix, data[1].replace('\\', "/"));
+                                char_bmp[char_face_index] =
+                                    SkinLoaderStub::get_texture(&path, usecim);
                             }
                         } else if str_parts[0].eq_ignore_ascii_case("#CharFace2P") {
                             if data.len() > 1 {
-                                // char_bmp[char_face_index+1] = ...
+                                let path =
+                                    format!("{}{}", chp_dir_prefix, data[1].replace('\\', "/"));
+                                char_bmp[char_face_index + 1] =
+                                    SkinLoaderStub::get_texture(&path, usecim);
                             }
                         } else if str_parts[0].eq_ignore_ascii_case("#SelectCG") {
                             if data.len() > 1 {
-                                // char_bmp[select_cg_index] = ...
+                                let path =
+                                    format!("{}{}", chp_dir_prefix, data[1].replace('\\', "/"));
+                                char_bmp[select_cg_index] =
+                                    SkinLoaderStub::get_texture(&path, usecim);
                             }
                         } else if str_parts[0].eq_ignore_ascii_case("#SelectCG2P") {
                             if data.len() > 1 {
-                                // char_bmp[select_cg_index+1] = ...
+                                let path =
+                                    format!("{}{}", chp_dir_prefix, data[1].replace('\\', "/"));
+                                char_bmp[select_cg_index + 1] =
+                                    SkinLoaderStub::get_texture(&path, usecim);
                             }
                         } else if str_parts[0].eq_ignore_ascii_case("#Patern")
                             || str_parts[0].eq_ignore_ascii_case("#Pattern")
@@ -308,41 +332,116 @@ impl<'a> PomyuCharaLoader<'a> {
 
         match load_type {
             BACKGROUND => {
-                // Background image
                 let set_index = char_bmp_index + set_color as usize - 1;
-                // In Java: setBMP = transparentProcessing(CharBMP[setIndex], ...)
-                // image[0] = new TextureRegion(setBMP, xywh[1][0], ...)
-                // Stubbed: return None as we can't create real textures
-                return None;
+                char_bmp[set_index] = transparent_processing(
+                    char_bmp[set_index].take(),
+                    set_index,
+                    &mut transparent_flag,
+                );
+                let set_bmp = char_bmp[set_index].as_ref()?;
+                let region = TextureRegion::from_texture_region(
+                    set_bmp.clone(),
+                    xywh[1][0],
+                    xywh[1][1],
+                    xywh[1][2],
+                    xywh[1][3],
+                );
+                let pm_chara_part = SkinImage::new_with_int_timer(vec![region], 0, 0);
+                self.skin.add(pm_chara_part);
+                return None; // Java returns PMcharaPart, but skin.add already stores it
             }
             NAME => {
                 let set_index = char_bmp_index + set_color as usize - 1;
-                return None; // stub
+                char_bmp[set_index] = transparent_processing(
+                    char_bmp[set_index].take(),
+                    set_index,
+                    &mut transparent_flag,
+                );
+                let set_bmp = char_bmp[set_index].as_ref()?;
+                let region = TextureRegion::from_texture_region(
+                    set_bmp.clone(),
+                    xywh[0][0],
+                    xywh[0][1],
+                    xywh[0][2],
+                    xywh[0][3],
+                );
+                let pm_chara_part = SkinImage::new_with_int_timer(vec![region], 0, 0);
+                self.skin.add(pm_chara_part);
+                return None;
             }
             FACE_UPPER => {
-                return None; // stub
+                let set_index = if set_color == 2 && char_bmp[char_face_index + 1].is_some() {
+                    char_face_index + 1
+                } else {
+                    char_face_index
+                };
+                char_bmp[set_index] = transparent_processing(
+                    char_bmp[set_index].take(),
+                    set_index,
+                    &mut transparent_flag,
+                );
+                let set_bmp = char_bmp[set_index].as_ref()?;
+                let region = TextureRegion::from_texture_region(
+                    set_bmp.clone(),
+                    char_face_upper_xywh[0],
+                    char_face_upper_xywh[1],
+                    char_face_upper_xywh[2],
+                    char_face_upper_xywh[3],
+                );
+                let pm_chara_part = SkinImage::new_with_int_timer(vec![region], 0, 0);
+                self.skin.add(pm_chara_part);
+                return None;
             }
             FACE_ALL => {
-                return None; // stub
+                let set_index = if set_color == 2 && char_bmp[char_face_index + 1].is_some() {
+                    char_face_index + 1
+                } else {
+                    char_face_index
+                };
+                char_bmp[set_index] = transparent_processing(
+                    char_bmp[set_index].take(),
+                    set_index,
+                    &mut transparent_flag,
+                );
+                let set_bmp = char_bmp[set_index].as_ref()?;
+                let region = TextureRegion::from_texture_region(
+                    set_bmp.clone(),
+                    char_face_all_xywh[0],
+                    char_face_all_xywh[1],
+                    char_face_all_xywh[2],
+                    char_face_all_xywh[3],
+                );
+                let pm_chara_part = SkinImage::new_with_int_timer(vec![region], 0, 0);
+                self.skin.add(pm_chara_part);
+                return None;
             }
             SELECT_CG => {
-                return None; // stub
+                let set_bmp = if set_color == 2 && char_bmp[select_cg_index + 1].is_some() {
+                    char_bmp[select_cg_index + 1].as_ref()?
+                } else {
+                    char_bmp[select_cg_index].as_ref()?
+                };
+                let w = set_bmp.get_width();
+                let h = set_bmp.get_height();
+                let region = TextureRegion::from_texture_region(set_bmp.clone(), 0, 0, w, h);
+                let pm_chara_part = SkinImage::new_with_int_timer(vec![region], 0, 0);
+                self.skin.add(pm_chara_part);
+                return None;
             }
             NEUTRAL => {
                 if set_motion == i32::MIN {
                     set_motion = 1;
                 }
-                // fall through
                 self.load_play_type(
                     usecim,
                     &chp,
-                    &char_bmp,
-                    &transparent_flag,
+                    &mut char_bmp,
+                    &mut transparent_flag,
                     &xywh,
                     &mut frame,
                     anime,
                     &size,
-                    &loop_val,
+                    &mut loop_val,
                     set_color,
                     increase_rate_threshold,
                     &pattern_data,
@@ -364,38 +463,281 @@ impl<'a> PomyuCharaLoader<'a> {
             }
             FEVER => {
                 set_motion = 6;
-                return None; // stub - similar to NEUTRAL with different motion
+                self.load_play_type(
+                    usecim,
+                    &chp,
+                    &mut char_bmp,
+                    &mut transparent_flag,
+                    &xywh,
+                    &mut frame,
+                    anime,
+                    &size,
+                    &mut loop_val,
+                    set_color,
+                    increase_rate_threshold,
+                    &pattern_data,
+                    char_bmp_index,
+                    char_tex_index,
+                    set_motion,
+                    dsttimer,
+                    dst_op1,
+                    dst_op2,
+                    dst_op3,
+                    dst_offset,
+                    side,
+                    dstx,
+                    dsty,
+                    dstw,
+                    dsth,
+                );
+                return None;
             }
             GREAT => {
                 set_motion = 7;
+                self.load_play_type(
+                    usecim,
+                    &chp,
+                    &mut char_bmp,
+                    &mut transparent_flag,
+                    &xywh,
+                    &mut frame,
+                    anime,
+                    &size,
+                    &mut loop_val,
+                    set_color,
+                    increase_rate_threshold,
+                    &pattern_data,
+                    char_bmp_index,
+                    char_tex_index,
+                    set_motion,
+                    dsttimer,
+                    dst_op1,
+                    dst_op2,
+                    dst_op3,
+                    dst_offset,
+                    side,
+                    dstx,
+                    dsty,
+                    dstw,
+                    dsth,
+                );
                 return None;
             }
             GOOD => {
                 set_motion = 8;
+                self.load_play_type(
+                    usecim,
+                    &chp,
+                    &mut char_bmp,
+                    &mut transparent_flag,
+                    &xywh,
+                    &mut frame,
+                    anime,
+                    &size,
+                    &mut loop_val,
+                    set_color,
+                    increase_rate_threshold,
+                    &pattern_data,
+                    char_bmp_index,
+                    char_tex_index,
+                    set_motion,
+                    dsttimer,
+                    dst_op1,
+                    dst_op2,
+                    dst_op3,
+                    dst_offset,
+                    side,
+                    dstx,
+                    dsty,
+                    dstw,
+                    dsth,
+                );
                 return None;
             }
             BAD => {
                 set_motion = 10;
+                self.load_play_type(
+                    usecim,
+                    &chp,
+                    &mut char_bmp,
+                    &mut transparent_flag,
+                    &xywh,
+                    &mut frame,
+                    anime,
+                    &size,
+                    &mut loop_val,
+                    set_color,
+                    increase_rate_threshold,
+                    &pattern_data,
+                    char_bmp_index,
+                    char_tex_index,
+                    set_motion,
+                    dsttimer,
+                    dst_op1,
+                    dst_op2,
+                    dst_op3,
+                    dst_offset,
+                    side,
+                    dstx,
+                    dsty,
+                    dstw,
+                    dsth,
+                );
                 return None;
             }
             FEVERWIN => {
                 set_motion = 17;
+                self.load_play_type(
+                    usecim,
+                    &chp,
+                    &mut char_bmp,
+                    &mut transparent_flag,
+                    &xywh,
+                    &mut frame,
+                    anime,
+                    &size,
+                    &mut loop_val,
+                    set_color,
+                    increase_rate_threshold,
+                    &pattern_data,
+                    char_bmp_index,
+                    char_tex_index,
+                    set_motion,
+                    dsttimer,
+                    dst_op1,
+                    dst_op2,
+                    dst_op3,
+                    dst_offset,
+                    side,
+                    dstx,
+                    dsty,
+                    dstw,
+                    dsth,
+                );
                 return None;
             }
             WIN => {
                 set_motion = 15;
+                self.load_play_type(
+                    usecim,
+                    &chp,
+                    &mut char_bmp,
+                    &mut transparent_flag,
+                    &xywh,
+                    &mut frame,
+                    anime,
+                    &size,
+                    &mut loop_val,
+                    set_color,
+                    increase_rate_threshold,
+                    &pattern_data,
+                    char_bmp_index,
+                    char_tex_index,
+                    set_motion,
+                    dsttimer,
+                    dst_op1,
+                    dst_op2,
+                    dst_op3,
+                    dst_offset,
+                    side,
+                    dstx,
+                    dsty,
+                    dstw,
+                    dsth,
+                );
                 return None;
             }
             LOSE => {
                 set_motion = 16;
+                self.load_play_type(
+                    usecim,
+                    &chp,
+                    &mut char_bmp,
+                    &mut transparent_flag,
+                    &xywh,
+                    &mut frame,
+                    anime,
+                    &size,
+                    &mut loop_val,
+                    set_color,
+                    increase_rate_threshold,
+                    &pattern_data,
+                    char_bmp_index,
+                    char_tex_index,
+                    set_motion,
+                    dsttimer,
+                    dst_op1,
+                    dst_op2,
+                    dst_op3,
+                    dst_offset,
+                    side,
+                    dstx,
+                    dsty,
+                    dstw,
+                    dsth,
+                );
                 return None;
             }
             OJAMA => {
                 set_motion = 3;
+                self.load_play_type(
+                    usecim,
+                    &chp,
+                    &mut char_bmp,
+                    &mut transparent_flag,
+                    &xywh,
+                    &mut frame,
+                    anime,
+                    &size,
+                    &mut loop_val,
+                    set_color,
+                    increase_rate_threshold,
+                    &pattern_data,
+                    char_bmp_index,
+                    char_tex_index,
+                    set_motion,
+                    dsttimer,
+                    dst_op1,
+                    dst_op2,
+                    dst_op3,
+                    dst_offset,
+                    side,
+                    dstx,
+                    dsty,
+                    dstw,
+                    dsth,
+                );
                 return None;
             }
             DANCE => {
                 set_motion = 14;
+                self.load_play_type(
+                    usecim,
+                    &chp,
+                    &mut char_bmp,
+                    &mut transparent_flag,
+                    &xywh,
+                    &mut frame,
+                    anime,
+                    &size,
+                    &mut loop_val,
+                    set_color,
+                    increase_rate_threshold,
+                    &pattern_data,
+                    char_bmp_index,
+                    char_tex_index,
+                    set_motion,
+                    dsttimer,
+                    dst_op1,
+                    dst_op2,
+                    dst_op3,
+                    dst_offset,
+                    side,
+                    dstx,
+                    dsty,
+                    dstw,
+                    dsth,
+                );
                 return None;
             }
             PLAY => {
@@ -403,13 +745,13 @@ impl<'a> PomyuCharaLoader<'a> {
                 self.load_play_type(
                     usecim,
                     &chp,
-                    &char_bmp,
-                    &transparent_flag,
+                    &mut char_bmp,
+                    &mut transparent_flag,
                     &xywh,
                     &mut frame,
                     anime,
                     &size,
-                    &loop_val,
+                    &mut loop_val,
                     set_color,
                     increase_rate_threshold,
                     &pattern_data,
@@ -440,29 +782,29 @@ impl<'a> PomyuCharaLoader<'a> {
         &mut self,
         _usecim: bool,
         _chp: &str,
-        _char_bmp: &[Option<Texture>; 8],
-        _transparent_flag: &[bool; 8],
-        _xywh: &[[i32; 4]],
+        char_bmp: &mut [Option<Texture>; 8],
+        transparent_flag: &mut [bool; 8],
+        xywh: &[[i32; 4]],
         frame: &mut [i32; 20],
         anime: i32,
-        _size: &[i32; 2],
-        _loop_val: &[i32; 20],
-        _set_color: i32,
-        _increase_rate_threshold: i32,
-        _pattern_data: &[Vec<String>],
-        _char_bmp_index: usize,
-        _char_tex_index: usize,
-        _set_motion: i32,
-        _dsttimer: i32,
-        _dst_op1: i32,
-        _dst_op2: i32,
-        _dst_op3: i32,
-        _dst_offset: i32,
-        _side: i32,
-        _dstx: f32,
-        _dsty: f32,
-        _dstw: f32,
-        _dsth: f32,
+        size: &[i32; 2],
+        loop_val: &mut [i32; 20],
+        set_color: i32,
+        increase_rate_threshold: i32,
+        pattern_data: &[Vec<String>],
+        char_bmp_index: usize,
+        char_tex_index: usize,
+        set_motion: i32,
+        dsttimer: i32,
+        dst_op1: i32,
+        dst_op2: i32,
+        dst_op3: i32,
+        dst_offset: i32,
+        side: i32,
+        dstx: f32,
+        dsty: f32,
+        dstw: f32,
+        dsth: f32,
     ) {
         // Initialize frame values
         for i in 0..frame.len() {
@@ -474,10 +816,463 @@ impl<'a> PomyuCharaLoader<'a> {
             }
         }
 
-        // The rest of the PLAY type implementation requires actual texture creation
-        // and complex animation frame processing. This is stubbed as it depends on
-        // LibGDX rendering primitives.
-        // TODO: Implement when image loading is available
+        // Dummy transparent 1x1 texture
+        let pixmap = Pixmap::new(1, 1, PixmapFormat::RGBA8888);
+        let transparent_tex = Texture::from_pixmap(&pixmap);
+
+        // #Pattern, #Texture, #Layer render order
+        let set_bmp_index = [char_bmp_index, char_tex_index, char_bmp_index];
+        for pattern_index in 0..3 {
+            for pattern_data_index in 0..pattern_data[pattern_index].len() {
+                let str_parts: Vec<&str> = pattern_data[pattern_index][pattern_data_index]
+                    .split('\t')
+                    .collect();
+                if str_parts.len() <= 1 {
+                    continue;
+                }
+                let set_index = set_bmp_index[pattern_index] + set_color as usize - 1;
+                char_bmp[set_index] =
+                    transparent_processing(char_bmp[set_index].take(), set_index, transparent_flag);
+                let set_bmp = match char_bmp[set_index].as_ref() {
+                    Some(t) => t.clone(),
+                    None => continue,
+                };
+
+                let mut motion = i32::MIN;
+                let mut dst = [String::new(), String::new(), String::new(), String::new()];
+                let data = pm_parse_str(&str_parts);
+                if data.len() > 1 {
+                    motion = pm_parse_int(&data[1]);
+                }
+                for i in 0..dst.len() {
+                    if data.len() > i + 2 {
+                        // replaceAll("[^0-9a-zA-Z-]", "")
+                        dst[i] = data[i + 2]
+                            .chars()
+                            .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
+                            .collect();
+                    }
+                }
+
+                let mut timer = i32::MIN;
+                let mut op = [0_i32; 3];
+                if set_motion != i32::MIN && set_motion == motion {
+                    timer = dsttimer;
+                    op[0] = dst_op1;
+                    op[1] = dst_op2;
+                    op[2] = dst_op3;
+                } else if set_motion == i32::MIN {
+                    if side != 2 {
+                        if motion == 1 {
+                            timer = TIMER_PM_CHARA_1P_NEUTRAL;
+                        } else if motion == 6 {
+                            timer = TIMER_PM_CHARA_1P_FEVER;
+                        } else if motion == 7 {
+                            timer = TIMER_PM_CHARA_1P_GREAT;
+                        } else if motion == 8 {
+                            timer = TIMER_PM_CHARA_1P_GOOD;
+                        } else if motion == 10 {
+                            timer = TIMER_PM_CHARA_1P_BAD;
+                        } else if (15..=17).contains(&motion) {
+                            timer = TIMER_MUSIC_END;
+                            if motion == 15 {
+                                // WIN
+                                op[0] = OPTION_1P_BORDER_OR_MORE;
+                                op[1] = -OPTION_1P_100;
+                            } else if motion == 16 {
+                                // LOSE
+                                op[0] = -OPTION_1P_BORDER_OR_MORE;
+                            } else if motion == 17 {
+                                // FEVERWIN
+                                op[0] = OPTION_1P_100;
+                            }
+                        }
+                    } else if motion == 1 {
+                        timer = TIMER_PM_CHARA_2P_NEUTRAL;
+                    } else if motion == 7 {
+                        timer = TIMER_PM_CHARA_2P_GREAT;
+                    } else if motion == 10 {
+                        timer = TIMER_PM_CHARA_2P_BAD;
+                    } else if motion == 15 || motion == 16 {
+                        timer = TIMER_MUSIC_END;
+                        if motion == 15 {
+                            // WIN (2P side: reversed)
+                            op[0] = -OPTION_1P_BORDER_OR_MORE;
+                        } else if motion == 16 {
+                            // LOSE (2P side: reversed)
+                            op[0] = OPTION_1P_BORDER_OR_MORE;
+                        }
+                    }
+                }
+
+                if timer != i32::MIN
+                    && !dst[0].is_empty()
+                    && dst[0].len().is_multiple_of(2)
+                    && (dst[1].is_empty() || dst[1].len() == dst[0].len())
+                    && (dst[2].is_empty() || dst[2].len() == dst[0].len())
+                    && (dst[3].is_empty() || dst[3].len() == dst[0].len())
+                {
+                    // Clamp loop values
+                    if loop_val[motion as usize] >= (dst[0].len() / 2 - 1) as i32 {
+                        loop_val[motion as usize] = (dst[0].len() / 2 - 2) as i32;
+                    } else if loop_val[motion as usize] < -1 {
+                        loop_val[motion as usize] = -1;
+                    }
+
+                    let cycle = frame[motion as usize] * (dst[0].len() / 2) as i32;
+                    let loop_time = frame[motion as usize] * (loop_val[motion as usize] + 1);
+
+                    if set_motion == i32::MIN
+                        && (TIMER_PM_CHARA_1P_NEUTRAL..TIMER_MUSIC_END).contains(&timer)
+                    {
+                        self.skin
+                            .pomyu
+                            .set_pm_chara_time(timer - TIMER_PM_CHARA_1P_NEUTRAL, cycle);
+                    }
+
+                    // Check for hyphen interpolation flag
+                    let mut hyphen_flag = false;
+                    for i in 1..dst.len() {
+                        if dst[i].contains('-') {
+                            hyphen_flag = true;
+                            break;
+                        }
+                    }
+
+                    // Frame interpolation when hyphen exists, 60FPS 17ms threshold
+                    let mut increase_rate = 1;
+                    if hyphen_flag && frame[motion as usize] >= increase_rate_threshold {
+                        for i in 1..=frame[motion as usize] {
+                            if frame[motion as usize] / i < increase_rate_threshold
+                                && frame[motion as usize] % i == 0
+                            {
+                                increase_rate = i;
+                                break;
+                            }
+                        }
+                        // Expand dst[1..] by increase_rate
+                        for i in 1..dst.len() {
+                            let mut chars = Vec::new();
+                            let bytes = dst[i].as_bytes();
+                            let mut j = 0;
+                            while j + 1 < bytes.len() {
+                                for _k in 0..increase_rate {
+                                    chars.push(bytes[j] as char);
+                                    chars.push(bytes[j + 1] as char);
+                                }
+                                j += 2;
+                            }
+                            dst[i] = chars.into_iter().collect();
+                        }
+                    }
+
+                    // DST loading
+                    let frame_time = frame[motion as usize] as f64 / increase_rate as f64;
+                    let loop_frame = loop_val[motion as usize] * increase_rate;
+                    let dstxywh_len = if !dst[1].is_empty() {
+                        dst[1].len() / 2
+                    } else {
+                        dst[0].len() / 2
+                    };
+                    let mut dstxywh = vec![[0, 0, size[0], size[1]]; dstxywh_len];
+
+                    // Parse dst[1] position data with interpolation
+                    let mut start_xywh = [0, 0, size[0], size[1]];
+                    let mut end_xywh = [0, 0, size[0], size[1]];
+                    {
+                        let mut i = 0;
+                        while i < dst[1].len() {
+                            if i + 2 <= dst[1].len() {
+                                if &dst[1][i..i + 2] == "--" {
+                                    let mut count = 0;
+                                    let mut j = i;
+                                    while j < dst[1].len()
+                                        && j + 2 <= dst[1].len()
+                                        && &dst[1][j..j + 2] == "--"
+                                    {
+                                        count += 1;
+                                        j += 2;
+                                    }
+                                    // Read end value
+                                    if i + count * 2 + 2 <= dst[1].len() {
+                                        let end_str = &dst[1][i + count * 2..i + count * 2 + 2];
+                                        let parsed = pm_parse_int_radix(end_str, 36);
+                                        if parsed >= 0 && (parsed as usize) < xywh.len() {
+                                            end_xywh = xywh[parsed as usize];
+                                        }
+                                    }
+                                    // Interpolate
+                                    j = i;
+                                    while j < dst[1].len()
+                                        && j + 2 <= dst[1].len()
+                                        && &dst[1][j..j + 2] == "--"
+                                    {
+                                        for k in 0..4 {
+                                            dstxywh[j / 2][k] = start_xywh[k]
+                                                + (end_xywh[k] - start_xywh[k])
+                                                    * (((j - i) / 2 + 1) as i32)
+                                                    / (count as i32 + 1);
+                                        }
+                                        j += 2;
+                                    }
+                                    i += (count - 1) * 2;
+                                } else {
+                                    let substr = &dst[1][i..i + 2];
+                                    let parsed = pm_parse_int_radix(substr, 36);
+                                    if parsed >= 0 && (parsed as usize) < xywh.len() {
+                                        start_xywh = xywh[parsed as usize];
+                                        dstxywh[i / 2] = start_xywh;
+                                    }
+                                }
+                            }
+                            i += 2;
+                        }
+                    }
+
+                    // Alpha and angle loading
+                    let mut alpha_angle = vec![[255_i32, 0_i32]; dstxywh_len];
+                    for index in 2..dst.len() {
+                        let mut start_value = 0;
+                        let mut end_value;
+                        let mut i = 0;
+                        while i < dst[index].len() {
+                            if i + 2 <= dst[index].len() {
+                                if &dst[index][i..i + 2] == "--" {
+                                    let mut count = 0;
+                                    let mut j = i;
+                                    while j < dst[index].len()
+                                        && j + 2 <= dst[index].len()
+                                        && &dst[index][j..j + 2] == "--"
+                                    {
+                                        count += 1;
+                                        j += 2;
+                                    }
+                                    end_value = 0;
+                                    if i + count * 2 + 2 <= dst[index].len() {
+                                        let end_str = &dst[index][i + count * 2..i + count * 2 + 2];
+                                        let parsed = pm_parse_int_radix(end_str, 16);
+                                        if (0..=255).contains(&parsed) {
+                                            end_value = parsed;
+                                            if index == 3 {
+                                                end_value = (end_value as f32 * 360.0 / 256.0)
+                                                    .round()
+                                                    as i32;
+                                            }
+                                        }
+                                    }
+                                    j = i;
+                                    while j < dst[index].len()
+                                        && j + 2 <= dst[index].len()
+                                        && &dst[index][j..j + 2] == "--"
+                                    {
+                                        alpha_angle[j / 2][index - 2] = start_value
+                                            + (end_value - start_value)
+                                                * (((j - i) / 2 + 1) as i32)
+                                                / (count as i32 + 1);
+                                        j += 2;
+                                    }
+                                    i += (count - 1) * 2;
+                                } else {
+                                    let substr = &dst[index][i..i + 2];
+                                    let parsed = pm_parse_int_radix(substr, 16);
+                                    if (0..=255).contains(&parsed) {
+                                        start_value = parsed;
+                                        if index == 3 {
+                                            start_value =
+                                                (start_value as f32 * 360.0 / 256.0).round() as i32;
+                                        }
+                                        alpha_angle[i / 2][index - 2] = start_value;
+                                    }
+                                }
+                            }
+                            i += 2;
+                        }
+                    }
+
+                    // Guard against size[0] or size[1] being zero (division)
+                    if size[0] == 0 || size[1] == 0 {
+                        continue;
+                    }
+
+                    // Pre-loop frames (up to loop start)
+                    if (loop_frame + increase_rate) != 0 {
+                        let mut images =
+                            Vec::with_capacity((loop_val[motion as usize] + 1) as usize);
+                        let mut i = 0;
+                        while i < (loop_val[motion as usize] + 1) * 2 {
+                            if i + 2 <= dst[0].len() as i32 {
+                                let idx =
+                                    pm_parse_int_radix(&dst[0][i as usize..(i + 2) as usize], 36);
+                                if idx >= 0
+                                    && (idx as usize) < xywh.len()
+                                    && xywh[idx as usize][2] > 0
+                                    && xywh[idx as usize][3] > 0
+                                {
+                                    images.push(TextureRegion::from_texture_region(
+                                        set_bmp.clone(),
+                                        xywh[idx as usize][0],
+                                        xywh[idx as usize][1],
+                                        xywh[idx as usize][2],
+                                        xywh[idx as usize][3],
+                                    ));
+                                } else {
+                                    images.push(TextureRegion::from_texture_region(
+                                        transparent_tex.clone(),
+                                        0,
+                                        0,
+                                        1,
+                                        1,
+                                    ));
+                                }
+                            }
+                            i += 2;
+                        }
+
+                        let mut part = SkinImage::new_with_int_timer(images, timer, loop_time);
+
+                        for i in 0..(loop_frame + increase_rate) as usize {
+                            part.data.set_destination_with_int_timer_and_single_offset(
+                                (frame_time * i as f64) as i64,
+                                dstx + dstxywh[i][0] as f32 * dstw / size[0] as f32,
+                                dsty + dsth
+                                    - (dstxywh[i][1] + dstxywh[i][3]) as f32 * dsth
+                                        / size[1] as f32,
+                                dstxywh[i][2] as f32 * dstw / size[0] as f32,
+                                dstxywh[i][3] as f32 * dsth / size[1] as f32,
+                                3,
+                                alpha_angle[i][0],
+                                255,
+                                255,
+                                255,
+                                1,
+                                0,
+                                alpha_angle[i][1],
+                                0,
+                                -1,
+                                timer,
+                                op[0],
+                                op[1],
+                                op[2],
+                                0,
+                            );
+                        }
+                        let last_pre = (loop_frame + increase_rate - 1) as usize;
+                        part.data.set_destination_with_int_timer_and_single_offset(
+                            (loop_time - 1) as i64,
+                            dstx + dstxywh[last_pre][0] as f32 * dstw / size[0] as f32,
+                            dsty + dsth
+                                - (dstxywh[last_pre][1] + dstxywh[last_pre][3]) as f32 * dsth
+                                    / size[1] as f32,
+                            dstxywh[last_pre][2] as f32 * dstw / size[0] as f32,
+                            dstxywh[last_pre][3] as f32 * dsth / size[1] as f32,
+                            3,
+                            alpha_angle[last_pre][0],
+                            255,
+                            255,
+                            255,
+                            1,
+                            0,
+                            alpha_angle[last_pre][1],
+                            0,
+                            -1,
+                            timer,
+                            op[0],
+                            op[1],
+                            op[2],
+                            dst_offset,
+                        );
+                        self.skin.add(part);
+                    }
+
+                    // Loop frames (from loop start to end)
+                    let loop_start = (loop_val[motion as usize] + 1) as usize;
+                    let total_frames = dst[0].len() / 2;
+                    let loop_image_count = total_frames - loop_start;
+                    let mut images = Vec::with_capacity(loop_image_count);
+                    let mut i = loop_start * 2;
+                    while i < dst[0].len() {
+                        if i + 2 <= dst[0].len() {
+                            let idx = pm_parse_int_radix(&dst[0][i..i + 2], 36);
+                            if idx >= 0
+                                && (idx as usize) < xywh.len()
+                                && xywh[idx as usize][2] > 0
+                                && xywh[idx as usize][3] > 0
+                            {
+                                images.push(TextureRegion::from_texture_region(
+                                    set_bmp.clone(),
+                                    xywh[idx as usize][0],
+                                    xywh[idx as usize][1],
+                                    xywh[idx as usize][2],
+                                    xywh[idx as usize][3],
+                                ));
+                            } else {
+                                images.push(TextureRegion::from_texture_region(
+                                    transparent_tex.clone(),
+                                    0,
+                                    0,
+                                    1,
+                                    1,
+                                ));
+                            }
+                        }
+                        i += 2;
+                    }
+
+                    let mut part = SkinImage::new_with_int_timer(images, timer, cycle - loop_time);
+
+                    for i in (loop_frame + increase_rate) as usize..dstxywh.len() {
+                        part.data.set_destination_with_int_timer_and_single_offset(
+                            (frame_time * i as f64) as i64,
+                            dstx + dstxywh[i][0] as f32 * dstw / size[0] as f32,
+                            dsty + dsth
+                                - (dstxywh[i][1] + dstxywh[i][3]) as f32 * dsth / size[1] as f32,
+                            dstxywh[i][2] as f32 * dstw / size[0] as f32,
+                            dstxywh[i][3] as f32 * dsth / size[1] as f32,
+                            3,
+                            alpha_angle[i][0],
+                            255,
+                            255,
+                            255,
+                            1,
+                            0,
+                            alpha_angle[i][1],
+                            0,
+                            loop_time,
+                            timer,
+                            op[0],
+                            op[1],
+                            op[2],
+                            0,
+                        );
+                    }
+                    let last = dstxywh.len() - 1;
+                    part.data.set_destination_with_int_timer_and_single_offset(
+                        cycle as i64,
+                        dstx + dstxywh[last][0] as f32 * dstw / size[0] as f32,
+                        dsty + dsth
+                            - (dstxywh[last][1] + dstxywh[last][3]) as f32 * dsth / size[1] as f32,
+                        dstxywh[last][2] as f32 * dstw / size[0] as f32,
+                        dstxywh[last][3] as f32 * dsth / size[1] as f32,
+                        3,
+                        alpha_angle[last][0],
+                        255,
+                        255,
+                        255,
+                        1,
+                        0,
+                        alpha_angle[last][1],
+                        0,
+                        loop_time,
+                        timer,
+                        op[0],
+                        op[1],
+                        op[2],
+                        dst_offset,
+                    );
+                    self.skin.add(part);
+                }
+            }
+        }
     }
 }
 
@@ -544,12 +1339,69 @@ fn transparent_processing(
 ) -> Option<Texture> {
     // Transparent processing: bottom-right 1 pixel is transparent color
     // SelectCG icons are not made transparent
-    if tex.is_none() || flag[index] {
-        return tex;
+    let tex = tex?;
+    if flag[index] {
+        return Some(tex);
     }
-    // In Java, this creates a new Pixmap, checks each pixel against the transparent color,
-    // and creates a new Texture. This requires actual pixel data access.
+
+    let w = tex.get_width();
+    let h = tex.get_height();
+    if w <= 0 || h <= 0 {
+        flag[index] = true;
+        return Some(tex);
+    }
+
+    // Access pixel data from rgba_data
+    let rgba_data = match tex.rgba_data.as_ref() {
+        Some(data) => data,
+        None => {
+            flag[index] = true;
+            return Some(tex);
+        }
+    };
+
+    // Get transparent color from bottom-right pixel
+    let br_idx = ((h as usize - 1) * w as usize + (w as usize - 1)) * 4;
+    if br_idx + 3 >= rgba_data.len() {
+        flag[index] = true;
+        return Some(tex);
+    }
+    let tr = rgba_data[br_idx];
+    let tg = rgba_data[br_idx + 1];
+    let tb = rgba_data[br_idx + 2];
+    let ta = rgba_data[br_idx + 3];
+
+    // Create new pixmap with transparent color removed
+    let mut new_data = vec![0u8; (w * h * 4) as usize];
+    for y in 0..h as usize {
+        for x in 0..w as usize {
+            let idx = (y * w as usize + x) * 4;
+            if idx + 3 < rgba_data.len() {
+                let pr = rgba_data[idx];
+                let pg = rgba_data[idx + 1];
+                let pb = rgba_data[idx + 2];
+                let pa = rgba_data[idx + 3];
+                if pr != tr || pg != tg || pb != tb || pa != ta {
+                    new_data[idx] = pr;
+                    new_data[idx + 1] = pg;
+                    new_data[idx + 2] = pb;
+                    new_data[idx + 3] = pa;
+                }
+                // else: leave as 0,0,0,0 (transparent)
+            }
+        }
+    }
+
     flag[index] = true;
-    // Stub: return original texture
-    tex
+
+    Some(Texture {
+        width: w,
+        height: h,
+        disposed: false,
+        path: tex.path.clone(),
+        rgba_data: Some(Arc::new(new_data)),
+        gpu_texture: None,
+        gpu_view: None,
+        sampler: None,
+    })
 }

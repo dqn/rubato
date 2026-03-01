@@ -575,8 +575,26 @@ impl MusicSelector {
                 }
             }
 
-            // TODO: IR ranking data cache (requires main.getIRStatus/getRankingDataCache)
-            // Currently deferred — ranking data is not wired through MainControllerAccess
+            // Load cached IR ranking data for this song
+            {
+                use beatoraja_ir::ranking_data::RankingData;
+                let lnmode = main.get_player_config().get_lnmode();
+                let cached = main
+                    .get_ranking_data_cache()
+                    .and_then(|cache| cache.get_song_any(&song, lnmode))
+                    .and_then(|any| any.downcast_ref::<RankingData>())
+                    .cloned();
+                if let Some(rd) = cached {
+                    self.currentir = Some(rd);
+                } else {
+                    // Create empty ranking data and store in cache for later IR fetch
+                    let rd = RankingData::new();
+                    self.currentir = Some(rd.clone());
+                    if let Some(cache) = main.get_ranking_data_cache_mut() {
+                        cache.put_song_any(&song, lnmode, Box::new(rd));
+                    }
+                }
+            }
 
             // Set rival score
             let rival_score = current.get_rival_score().cloned();
@@ -795,13 +813,21 @@ impl MusicSelector {
             .as_millis() as i64;
 
         // Determine ranking duration based on selected bar type
-        // In Java: checks main.getIRStatus().length > 0
-        // We check if currentir exists as a proxy
+        // Fetch currentir from ranking data cache
         if let Some(current) = self.manager.get_selected() {
             if let Some(song_bar) = current.as_song_bar() {
                 if song_bar.exists_song() {
-                    // In Java: currentir = main.getRankingDataCache().get(song, config.getLnmode())
-                    // Blocked on MainController - use existing currentir
+                    // Refresh currentir from cache
+                    if let Some(main) = self.main.as_ref() {
+                        use beatoraja_ir::ranking_data::RankingData;
+                        let lnmode = main.get_player_config().get_lnmode();
+                        let song = song_bar.get_song_data();
+                        self.currentir = main
+                            .get_ranking_data_cache()
+                            .and_then(|c| c.get_song_any(&song, lnmode))
+                            .and_then(|a| a.downcast_ref::<RankingData>())
+                            .cloned();
+                    }
                     let ranking_reload_dur = self.ranking_reload_duration;
                     let ranking_dur = self.ranking_duration as i64;
                     self.current_ranking_duration = if let Some(ref ir) = self.currentir {
@@ -816,6 +842,17 @@ impl MusicSelector {
                 }
             } else if let Some(grade_bar) = current.as_grade_bar() {
                 if grade_bar.exists_all_songs() {
+                    // Refresh currentir from cache for course
+                    if let Some(main) = self.main.as_ref() {
+                        use beatoraja_ir::ranking_data::RankingData;
+                        let lnmode = main.get_player_config().get_lnmode();
+                        let course = grade_bar.get_course_data();
+                        self.currentir = main
+                            .get_ranking_data_cache()
+                            .and_then(|c| c.get_course_any(&course, lnmode))
+                            .and_then(|a| a.downcast_ref::<RankingData>())
+                            .cloned();
+                    }
                     let ranking_reload_dur = self.ranking_reload_duration;
                     let ranking_dur = self.ranking_duration as i64;
                     self.current_ranking_duration = if let Some(ref ir) = self.currentir {
@@ -1235,7 +1272,26 @@ impl MusicSelector {
 
             self.playedcourse = Some(course_data);
 
-            // TODO: IR ranking data cache (requires main.getIRStatus/getRankingDataCache)
+            // Load/create cached IR ranking data for course
+            {
+                use beatoraja_ir::ranking_data::RankingData;
+                let lnmode = main.get_player_config().get_lnmode();
+                let course = gb.get_course_data();
+                let cached = main
+                    .get_ranking_data_cache()
+                    .and_then(|c| c.get_course_any(&course, lnmode))
+                    .and_then(|a| a.downcast_ref::<RankingData>())
+                    .cloned();
+                if let Some(rd) = cached {
+                    self.currentir = Some(rd);
+                } else {
+                    let rd = RankingData::new();
+                    self.currentir = Some(rd.clone());
+                    if let Some(cache) = main.get_ranking_data_cache_mut() {
+                        cache.put_course_any(&course, lnmode, Box::new(rd));
+                    }
+                }
+            }
             // Set rival score/chart option to None for course play
             if let Some(res) = main.get_player_resource_mut() {
                 res.set_rival_score_data_option(None);
@@ -1462,8 +1518,32 @@ impl MainState for MusicSelector {
             && now_time > songbar_change_time + self.current_ranking_duration
         {
             self.current_ranking_duration = -1;
-            // In Java: loads IR ranking data from cache or creates new
-            // Blocked on MainController.getRankingDataCache(), IRStatus
+            // Load/refresh ranking data from cache
+            if let Some(current) = self.manager.get_selected() {
+                if let Some(main) = self.main.as_mut() {
+                    use beatoraja_ir::ranking_data::RankingData;
+                    let lnmode = main.get_player_config().get_lnmode();
+                    if let Some(song_bar) = current.as_song_bar() {
+                        if song_bar.exists_song() {
+                            let song = song_bar.get_song_data();
+                            let cached = main
+                                .get_ranking_data_cache()
+                                .and_then(|c| c.get_song_any(&song, lnmode))
+                                .and_then(|a| a.downcast_ref::<RankingData>())
+                                .cloned();
+                            if cached.is_none() {
+                                let rd = RankingData::new();
+                                self.currentir = Some(rd.clone());
+                                if let Some(cache) = main.get_ranking_data_cache_mut() {
+                                    cache.put_song_any(&song, lnmode, Box::new(rd));
+                                }
+                            } else {
+                                self.currentir = cached;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Update IR connection timers

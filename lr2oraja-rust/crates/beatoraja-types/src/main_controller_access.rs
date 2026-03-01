@@ -3,6 +3,7 @@ use crate::input_processor_access::InputProcessorAccess;
 use crate::main_state_type::MainStateType;
 use crate::player_config::PlayerConfig;
 use crate::player_resource_access::PlayerResourceAccess;
+use crate::ranking_data_cache_access::RankingDataCacheAccess;
 use crate::replay_data::ReplayData;
 use crate::sound_type::SoundType;
 
@@ -103,6 +104,19 @@ pub trait MainControllerAccess {
     /// Get input processor access.
     /// Java: MainController.getInputProcessor()
     fn get_input_processor(&self) -> Option<&dyn InputProcessorAccess> {
+        None
+    }
+
+    /// Get ranking data cache (immutable).
+    /// Java: MainController.getRankingDataCache()
+    fn get_ranking_data_cache(&self) -> Option<&dyn RankingDataCacheAccess> {
+        None
+    }
+
+    /// Get ranking data cache (mutable).
+    fn get_ranking_data_cache_mut(
+        &mut self,
+    ) -> Option<&mut (dyn RankingDataCacheAccess + 'static)> {
         None
     }
 
