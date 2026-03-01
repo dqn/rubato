@@ -12,6 +12,42 @@ use beatoraja_types::skin_type::SkinType;
 /// Defined locally because beatoraja-skin is not a dependency of beatoraja-core (circular dep).
 const OPTION_RANDOM_VALUE: i32 = -1;
 
+/// SkinProperty button constants (mirrors beatoraja_skin::skin_property).
+/// Defined locally to avoid circular dependency on beatoraja-skin.
+const BUTTON_CHANGE_SKIN: i32 = 190;
+const BUTTON_SKIN_CUSTOMIZE1: i32 = 220;
+const BUTTON_SKIN_CUSTOMIZE10: i32 = 229;
+const BUTTON_SKINSELECT_7KEY: i32 = 170;
+const BUTTON_SKINSELECT_COURSE_RESULT: i32 = 185;
+const BUTTON_SKINSELECT_24KEY: i32 = 386;
+const BUTTON_SKINSELECT_24KEY_BATTLE: i32 = 388;
+
+// Local SkinPropertyMapper helpers (mirrors beatoraja_skin::skin_property_mapper).
+// Defined locally to avoid circular dependency on beatoraja-skin.
+
+fn is_skin_customize_button(id: i32) -> bool {
+    (BUTTON_SKIN_CUSTOMIZE1..BUTTON_SKIN_CUSTOMIZE10).contains(&id)
+}
+
+fn get_skin_customize_index(id: i32) -> i32 {
+    id - BUTTON_SKIN_CUSTOMIZE1
+}
+
+fn is_skin_select_type_id(id: i32) -> bool {
+    (BUTTON_SKINSELECT_7KEY..=BUTTON_SKINSELECT_COURSE_RESULT).contains(&id)
+        || (BUTTON_SKINSELECT_24KEY..=BUTTON_SKINSELECT_24KEY_BATTLE).contains(&id)
+}
+
+fn get_skin_select_type(id: i32) -> Option<SkinType> {
+    if (BUTTON_SKINSELECT_7KEY..=BUTTON_SKINSELECT_COURSE_RESULT).contains(&id) {
+        SkinType::get_skin_type_by_id(id - BUTTON_SKINSELECT_7KEY)
+    } else if (BUTTON_SKINSELECT_24KEY..=BUTTON_SKINSELECT_24KEY_BATTLE).contains(&id) {
+        SkinType::get_skin_type_by_id(id - BUTTON_SKINSELECT_24KEY + 16)
+    } else {
+        None
+    }
+}
+
 /// Lightweight skin header for use within beatoraja-core.
 ///
 /// beatoraja-skin's `SkinHeader` cannot be imported here due to circular dependencies.
@@ -123,6 +159,23 @@ impl CustomItem {
             CustomItem::Offset { max, .. } => *max,
         }
     }
+}
+
+/// Helper for deferring persistence actions in set_custom_item_value to avoid borrow conflicts.
+enum PersistAction {
+    Option {
+        name: String,
+        value: i32,
+    },
+    File {
+        name: String,
+        path: String,
+    },
+    Offset {
+        name: String,
+        kind: usize,
+        value: i32,
+    },
 }
 
 /// Skin configuration screen.
@@ -790,13 +843,165 @@ impl SkinConfiguration {
         &mut self.player
     }
 
-    pub fn execute_event(&mut self, _id: i32, _arg1: i32, _arg2: i32) {
-        // TODO: skin property events
-        // Requires Phase 5+ SkinProperty, SkinPropertyMapper
+    pub fn execute_event(&mut self, id: i32, arg1: i32, _arg2: i32) {
+        match id {
+            BUTTON_CHANGE_SKIN => {
+                if arg1 >= 0 {
+                    self.set_next_skin();
+                } else {
+                    self.set_prev_skin();
+                }
+            }
+            _ => {
+                if is_skin_customize_button(id) {
+                    let index = get_skin_customize_index(id) + self.custom_option_offset;
+                    if let Some(ref mut options) = self.custom_options {
+                        let idx = index as usize;
+                        if idx < options.len() {
+                            let current_value = options[idx].get_value();
+                            let min = options[idx].get_min();
+                            let max = options[idx].get_max();
+
+                            let new_value = if arg1 >= 0 {
+                                if current_value < max {
+                                    current_value + 1
+                                } else {
+                                    min
+                                }
+                            } else if current_value > min {
+                                current_value - 1
+                            } else {
+                                max
+                            };
+
+                            // Update item and persist to config
+                            self.set_custom_item_value(idx, new_value);
+                        }
+                    }
+                } else if is_skin_select_type_id(id) {
+                    let skin_type = get_skin_select_type(id);
+                    self.change_skin_type(skin_type);
+                }
+                // Java: super.executeEvent(id, arg1, arg2) — default no-op in Rust
+            }
+        }
     }
 
     pub fn dispose_resources(&mut self) {
         // TODO: dispose resources
+    }
+
+    /// Update a CustomItem's value and persist the change to the skin config.
+    ///
+    /// Mirrors Java's CustomItemBase.setValue() dispatch:
+    /// - CustomOptionItem: persists via setCustomOption(categoryName, options[value])
+    /// - CustomFileItem: persists via setFilePath(categoryName, actualValues[value])
+    /// - CustomOffsetItem: persists via setCustomOffset(offsetName, kind, value)
+    fn set_custom_item_value(&mut self, index: usize, new_value: i32) {
+        // Extract info needed for persistence before mutating the item
+        let persist_action = {
+            let options = match self.custom_options.as_ref() {
+                Some(o) => o,
+                None => return,
+            };
+            let item = match options.get(index) {
+                Some(i) => i,
+                None => return,
+            };
+            match item {
+                CustomItem::Option {
+                    category_name,
+                    options,
+                    ..
+                } => {
+                    let val = new_value as usize;
+                    let opt_val = if val < options.len() {
+                        options[val]
+                    } else {
+                        return;
+                    };
+                    PersistAction::Option {
+                        name: category_name.clone(),
+                        value: opt_val,
+                    }
+                }
+                CustomItem::File {
+                    category_name,
+                    actual_values,
+                    ..
+                } => {
+                    let val = new_value as usize;
+                    let path = if val < actual_values.len() {
+                        actual_values[val].clone()
+                    } else {
+                        return;
+                    };
+                    PersistAction::File {
+                        name: category_name.clone(),
+                        path,
+                    }
+                }
+                CustomItem::Offset {
+                    offset_name, kind, ..
+                } => PersistAction::Offset {
+                    name: offset_name.clone(),
+                    kind: *kind,
+                    value: new_value,
+                },
+            }
+        };
+
+        // Now mutate the item
+        if let Some(ref mut options) = self.custom_options
+            && let Some(item) = options.get_mut(index)
+        {
+            match item {
+                CustomItem::Option {
+                    selection,
+                    display_value,
+                    contents,
+                    ..
+                } => {
+                    let val = new_value as usize;
+                    *selection = val;
+                    *display_value = if val < contents.len() {
+                        contents[val].clone()
+                    } else {
+                        String::new()
+                    };
+                }
+                CustomItem::File {
+                    selection,
+                    display_value,
+                    display_values,
+                    ..
+                } => {
+                    let val = new_value as usize;
+                    *selection = val;
+                    *display_value = if val < display_values.len() {
+                        display_values[val].clone()
+                    } else {
+                        String::new()
+                    };
+                }
+                CustomItem::Offset { value, .. } => {
+                    *value = new_value;
+                }
+            }
+        }
+
+        // Persist the change to the skin config
+        match persist_action {
+            PersistAction::Option { name, value } => {
+                self.set_custom_option(&name, value);
+            }
+            PersistAction::File { name, path } => {
+                self.set_file_path(&name, &path);
+            }
+            PersistAction::Offset { name, kind, value } => {
+                self.set_custom_offset(&name, kind, value);
+            }
+        }
     }
 
     // ----------------------------------------------------------------
@@ -1479,5 +1684,285 @@ mod tests {
         ];
         sc.set_all_skins(skins);
         assert_eq!(sc.all_skins.len(), 2);
+    }
+
+    // ----------------------------------------------------------------
+    // execute_event tests
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn test_execute_event_change_skin_forward() {
+        let mut sc = make_test_skin_config();
+        sc.available_skins = vec![
+            make_test_header("skin/a.json", SkinType::Play7Keys),
+            make_test_header("skin/b.json", SkinType::Play7Keys),
+        ];
+        sc.config = Some(make_config_with_path("skin/a.json"));
+        sc.selected_skin_index = 0;
+
+        // BUTTON_CHANGE_SKIN = 190, arg1 >= 0 => set_next_skin
+        sc.execute_event(BUTTON_CHANGE_SKIN, 1, 0);
+        assert_eq!(sc.selected_skin_index, 1);
+    }
+
+    #[test]
+    fn test_execute_event_change_skin_backward() {
+        let mut sc = make_test_skin_config();
+        sc.available_skins = vec![
+            make_test_header("skin/a.json", SkinType::Play7Keys),
+            make_test_header("skin/b.json", SkinType::Play7Keys),
+        ];
+        sc.config = Some(make_config_with_path("skin/b.json"));
+        sc.selected_skin_index = 1;
+
+        // arg1 < 0 => set_prev_skin
+        sc.execute_event(BUTTON_CHANGE_SKIN, -1, 0);
+        assert_eq!(sc.selected_skin_index, 0);
+    }
+
+    #[test]
+    fn test_execute_event_customize_button_increment() {
+        let mut sc = make_test_skin_config();
+        sc.custom_options = Some(vec![CustomItem::Option {
+            category_name: "judge_type".to_string(),
+            contents: vec![
+                "Normal".to_string(),
+                "Hard".to_string(),
+                "Random".to_string(),
+            ],
+            options: vec![0, 1, OPTION_RANDOM_VALUE],
+            selection: 0,
+            display_value: "Normal".to_string(),
+        }]);
+        sc.custom_option_offset = 0;
+
+        // BUTTON_SKIN_CUSTOMIZE1 = 220, arg1 >= 0 => increment
+        sc.execute_event(220, 1, 0);
+
+        let options = sc.custom_options.as_ref().unwrap();
+        assert_eq!(options[0].get_value(), 1); // selection moved to index 1
+        assert_eq!(options[0].get_display_value(), "Hard");
+    }
+
+    #[test]
+    fn test_execute_event_customize_button_decrement() {
+        let mut sc = make_test_skin_config();
+        sc.custom_options = Some(vec![CustomItem::Option {
+            category_name: "judge_type".to_string(),
+            contents: vec![
+                "Normal".to_string(),
+                "Hard".to_string(),
+                "Random".to_string(),
+            ],
+            options: vec![0, 1, OPTION_RANDOM_VALUE],
+            selection: 1,
+            display_value: "Hard".to_string(),
+        }]);
+        sc.custom_option_offset = 0;
+
+        // arg1 < 0 => decrement
+        sc.execute_event(220, -1, 0);
+
+        let options = sc.custom_options.as_ref().unwrap();
+        assert_eq!(options[0].get_value(), 0);
+        assert_eq!(options[0].get_display_value(), "Normal");
+    }
+
+    #[test]
+    fn test_execute_event_customize_button_wrap_forward() {
+        let mut sc = make_test_skin_config();
+        sc.custom_options = Some(vec![CustomItem::Option {
+            category_name: "judge_type".to_string(),
+            contents: vec!["A".to_string(), "B".to_string()],
+            options: vec![0, 1],
+            selection: 1, // at max
+            display_value: "B".to_string(),
+        }]);
+        sc.custom_option_offset = 0;
+
+        // At max, increment should wrap to min (0)
+        sc.execute_event(220, 1, 0);
+
+        let options = sc.custom_options.as_ref().unwrap();
+        assert_eq!(options[0].get_value(), 0);
+        assert_eq!(options[0].get_display_value(), "A");
+    }
+
+    #[test]
+    fn test_execute_event_customize_button_wrap_backward() {
+        let mut sc = make_test_skin_config();
+        sc.custom_options = Some(vec![CustomItem::Option {
+            category_name: "judge_type".to_string(),
+            contents: vec!["A".to_string(), "B".to_string()],
+            options: vec![0, 1],
+            selection: 0, // at min
+            display_value: "A".to_string(),
+        }]);
+        sc.custom_option_offset = 0;
+
+        // At min, decrement should wrap to max (1)
+        sc.execute_event(220, -1, 0);
+
+        let options = sc.custom_options.as_ref().unwrap();
+        assert_eq!(options[0].get_value(), 1);
+        assert_eq!(options[0].get_display_value(), "B");
+    }
+
+    #[test]
+    fn test_execute_event_customize_button_with_offset() {
+        let mut sc = make_test_skin_config();
+        sc.custom_options = Some(vec![
+            CustomItem::Option {
+                category_name: "first".to_string(),
+                contents: vec!["X".to_string(), "Y".to_string()],
+                options: vec![10, 20],
+                selection: 0,
+                display_value: "X".to_string(),
+            },
+            CustomItem::Option {
+                category_name: "second".to_string(),
+                contents: vec!["A".to_string(), "B".to_string(), "C".to_string()],
+                options: vec![100, 200, 300],
+                selection: 0,
+                display_value: "A".to_string(),
+            },
+        ]);
+        sc.custom_option_offset = 1; // offset by 1, so CUSTOMIZE1 (index 0) maps to items[1]
+
+        // BUTTON_SKIN_CUSTOMIZE1 = 220, index = 0 + offset 1 = items[1]
+        sc.execute_event(220, 1, 0);
+
+        let options = sc.custom_options.as_ref().unwrap();
+        // First item should be unchanged
+        assert_eq!(options[0].get_value(), 0);
+        // Second item should have incremented
+        assert_eq!(options[1].get_value(), 1);
+        assert_eq!(options[1].get_display_value(), "B");
+    }
+
+    #[test]
+    fn test_execute_event_customize_persists_option() {
+        let mut sc = make_test_skin_config();
+        sc.custom_options = Some(vec![CustomItem::Option {
+            category_name: "my_opt".to_string(),
+            contents: vec!["Off".to_string(), "On".to_string()],
+            options: vec![0, 42],
+            selection: 0,
+            display_value: "Off".to_string(),
+        }]);
+        sc.custom_option_offset = 0;
+
+        sc.execute_event(220, 1, 0); // increment to selection=1, option value=42
+
+        // Verify the option was persisted to config
+        let props = sc.config.as_ref().unwrap().properties.as_ref().unwrap();
+        let saved = props
+            .option
+            .iter()
+            .flatten()
+            .find(|o| o.name.as_deref() == Some("my_opt"));
+        assert!(saved.is_some());
+        assert_eq!(saved.unwrap().value, 42);
+    }
+
+    #[test]
+    fn test_execute_event_customize_offset_item() {
+        let mut sc = make_test_skin_config();
+        sc.custom_options = Some(vec![CustomItem::Offset {
+            category_name: "pos - x".to_string(),
+            offset_name: "pos".to_string(),
+            kind: 0,
+            min: -9999,
+            max: 9999,
+            value: 50,
+        }]);
+        sc.custom_option_offset = 0;
+
+        // Increment from 50 to 51
+        sc.execute_event(220, 1, 0);
+
+        let options = sc.custom_options.as_ref().unwrap();
+        assert_eq!(options[0].get_value(), 51);
+    }
+
+    #[test]
+    fn test_execute_event_skin_select_type() {
+        let mut sc = make_test_skin_config();
+        sc.all_skins = vec![
+            make_test_header("skin/play7.json", SkinType::Play7Keys),
+            make_test_header("skin/select.json", SkinType::MusicSelect),
+        ];
+
+        // BUTTON_SKINSELECT_7KEY = 170 => SkinType::Play7Keys (id 0)
+        sc.execute_event(170, 0, 0);
+        assert_eq!(sc.skin_type, Some(SkinType::Play7Keys));
+        assert_eq!(sc.available_skins.len(), 1);
+    }
+
+    #[test]
+    fn test_execute_event_skin_select_type_music_select() {
+        let mut sc = make_test_skin_config();
+        sc.all_skins = vec![
+            make_test_header("skin/play7.json", SkinType::Play7Keys),
+            make_test_header("skin/select.json", SkinType::MusicSelect),
+        ];
+
+        // BUTTON_SKINSELECT_MUSIC_SELECT = 175 (7KEY=170, offset 5 = MusicSelect)
+        sc.execute_event(175, 0, 0);
+        assert_eq!(sc.skin_type, Some(SkinType::MusicSelect));
+        assert_eq!(sc.available_skins.len(), 1);
+    }
+
+    #[test]
+    fn test_execute_event_unknown_id_no_panic() {
+        let mut sc = make_test_skin_config();
+        // Unknown event id — should not panic (falls through to no-op)
+        sc.execute_event(9999, 0, 0);
+    }
+
+    // ----------------------------------------------------------------
+    // Local SkinPropertyMapper function tests
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn test_is_skin_customize_button() {
+        // Range: [220, 229) — exclusive upper bound
+        assert!(is_skin_customize_button(220));
+        assert!(is_skin_customize_button(224));
+        assert!(is_skin_customize_button(228));
+        assert!(!is_skin_customize_button(219));
+        assert!(!is_skin_customize_button(229));
+    }
+
+    #[test]
+    fn test_get_skin_customize_index() {
+        assert_eq!(get_skin_customize_index(220), 0);
+        assert_eq!(get_skin_customize_index(225), 5);
+        assert_eq!(get_skin_customize_index(228), 8);
+    }
+
+    #[test]
+    fn test_is_skin_select_type_id() {
+        // Primary range: [170, 185]
+        assert!(is_skin_select_type_id(170)); // 7KEY
+        assert!(is_skin_select_type_id(185)); // COURSE_RESULT
+        assert!(!is_skin_select_type_id(169));
+        assert!(!is_skin_select_type_id(186));
+        // 24KEY range: [386, 388]
+        assert!(is_skin_select_type_id(386));
+        assert!(is_skin_select_type_id(388));
+        assert!(!is_skin_select_type_id(385));
+        assert!(!is_skin_select_type_id(389));
+    }
+
+    #[test]
+    fn test_get_skin_select_type() {
+        // 170 = BUTTON_SKINSELECT_7KEY => SkinType id 0 = Play7Keys
+        assert_eq!(get_skin_select_type(170), Some(SkinType::Play7Keys));
+        // 175 = Music Select => SkinType id 5 = MusicSelect
+        assert_eq!(get_skin_select_type(175), Some(SkinType::MusicSelect));
+        // Out of range
+        assert_eq!(get_skin_select_type(0), None);
+        assert_eq!(get_skin_select_type(999), None);
     }
 }

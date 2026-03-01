@@ -824,14 +824,12 @@ const HEADER_TYPE_BEATORJASKIN: i32 = 0;
 
 const MOV_EXTENSIONS: &[&str] = &[".mpg", ".mpeg", ".avi", ".wmv", ".mp4", ".m4v", ".webm"];
 
-fn is_skin_customize_button(_event_id: i32) -> bool {
-    // SkinPropertyMapper.isSkinCustomizeButton stub
-    false
+fn is_skin_customize_button(event_id: i32) -> bool {
+    crate::skin_property_mapper::is_skin_customize_button(event_id)
 }
 
-fn get_skin_customize_index(_event_id: i32) -> i32 {
-    // SkinPropertyMapper.getSkinCustomizeIndex stub
-    0
+fn get_skin_customize_index(event_id: i32) -> i32 {
+    crate::skin_property_mapper::get_skin_customize_index(event_id)
 }
 
 // Data types for skin loading results (replacing actual skin objects for now)
@@ -1536,5 +1534,31 @@ mod tests {
         let skin = SkinData::new();
         assert_eq!(skin.skin_type, None);
         assert!(skin.header.is_none());
+    }
+
+    #[test]
+    fn test_is_skin_customize_button_in_range() {
+        // BUTTON_SKIN_CUSTOMIZE1 = 220, BUTTON_SKIN_CUSTOMIZE10 = 229
+        // Range is [220, 229) — 220..228 are customize buttons
+        assert!(is_skin_customize_button(220)); // CUSTOMIZE1
+        assert!(is_skin_customize_button(224)); // CUSTOMIZE5
+        assert!(is_skin_customize_button(228)); // CUSTOMIZE9
+    }
+
+    #[test]
+    fn test_is_skin_customize_button_out_of_range() {
+        assert!(!is_skin_customize_button(219)); // below range
+        assert!(!is_skin_customize_button(229)); // CUSTOMIZE10 is the exclusive upper bound
+        assert!(!is_skin_customize_button(230)); // above range
+        assert!(!is_skin_customize_button(0));
+        assert!(!is_skin_customize_button(-1));
+    }
+
+    #[test]
+    fn test_get_skin_customize_index() {
+        // Index is relative to BUTTON_SKIN_CUSTOMIZE1 (220)
+        assert_eq!(get_skin_customize_index(220), 0);
+        assert_eq!(get_skin_customize_index(221), 1);
+        assert_eq!(get_skin_customize_index(228), 8);
     }
 }
