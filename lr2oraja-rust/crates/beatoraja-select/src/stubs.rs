@@ -128,7 +128,7 @@ pub struct SkinText;
 impl SkinText {
     pub fn set_text(&self, _text: &str) {}
     pub fn draw(&self, _sprite: &SkinObjectRenderer, _x: f32, _y: f32) {
-        // no-op: requires wgpu rendering pipeline integration
+        // no-op: stub type — migrate to beatoraja-skin SkinText when select crate rendering is integrated
     }
     pub fn prepare(&self, _time: i64, _state: &dyn MainState) {}
     pub fn prepare_font(&self, _chars: &str) {}
@@ -150,7 +150,7 @@ impl SkinNumber {
         _x: f32,
         _y: f32,
     ) {
-        // no-op: requires wgpu rendering pipeline integration
+        // no-op: stub type — migrate to beatoraja-skin SkinNumber when select crate rendering is integrated
     }
     pub fn prepare(&self, _time: i64, _state: &dyn MainState) {}
     pub fn validate(&self) -> bool {
@@ -190,10 +190,10 @@ impl SkinImage {
         _dx: f32,
         _dy: f32,
     ) {
-        // no-op: requires wgpu rendering pipeline integration
+        // no-op: stub type — migrate to beatoraja-skin SkinImage when select crate rendering is integrated
     }
     pub fn draw_offset(&self, _sprite: &SkinObjectRenderer, _dx: f32, _dy: f32) {
-        // no-op: requires wgpu rendering pipeline integration
+        // no-op: stub type — migrate to beatoraja-skin SkinImage when select crate rendering is integrated
     }
     pub fn prepare(&self, _time: i64, _state: &dyn MainState) {}
     pub fn validate(&self) -> bool {
@@ -209,7 +209,7 @@ pub struct SkinObjectRenderer;
 
 impl SkinObjectRenderer {
     pub fn draw(&self, _image: &Option<TextureRegion>, _x: f32, _y: f32, _w: f32, _h: f32) {
-        // no-op: requires wgpu rendering pipeline integration
+        // no-op: stub type — wire to beatoraja-render SpriteBatch when select crate rendering is integrated
     }
 }
 

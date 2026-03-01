@@ -109,7 +109,7 @@ impl SkinDistributionGraph {
 
     pub fn draw_default(&self, _sprite: &SkinObjectRenderer) {
         // In Java: draws using currentBar. Calls draw(sprite, currentBar, 0, 0)
-        // Blocked: requires wgpu rendering pipeline integration.
+        // no-op: requires SkinObjectRenderer → SpriteBatch wiring
     }
 
     pub fn draw_directory(

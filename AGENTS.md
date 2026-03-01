@@ -101,12 +101,11 @@ lr2oraja-rust/       # Cargo workspace
 - **Post-62b**: OpenIr in MusicSelector (via MainControllerAccess IR URL methods), CIM image fallback, all 31 debug stubs → compile-time comments (0 runtime stubs)
 - **Post-62c**: SongSelectionAccess trait (modmenu↔select bridge), SkinRenderContext trait (SkinDrawable expansion), DistributionData (SkinDistributionGraph bridge), external property factory adapters
 
-### Architecture-Blocked (21 compile-time comments, 0 runtime cost)
+### Architecture-Blocked (24 compile-time comments, 0 runtime cost)
 
-- wgpu rendering pipeline (~11): SkinText/Number/Image draw, SkinDistributionGraph draw, CourseResult render, message_renderer
-- egui UI (~10): launcher views, SkinConfiguration/KeyConfiguration create/render, search popup
-
-Remaining work tracked in beads (`bd list --status=open`).
+- wgpu rendering pipeline (~11): stub SkinText/Number/Image/SkinObjectRenderer draw (select crate), SkinDistributionGraph draw, CourseResult render, message_renderer font atlas
+- egui UI (~10): launcher views (combo boxes/table render at frame time), SkinConfiguration/KeyConfiguration (replaced by launcher_ui.rs/SkinConfigurationView), search popup (text input overlay)
+- LR2 CSV skin loading (~3): loader state→Skin converter + per-SkinType dispatch in get_skin_loader()
 
 ### Permanent Stubs (intentionally unimplemented)
 

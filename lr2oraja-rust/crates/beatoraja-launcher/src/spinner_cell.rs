@@ -78,6 +78,6 @@ impl SpinnerCell {
         _view_model: &mut ControllerConfigViewModel,
         _column_name: &str,
     ) {
-        // Blocked: requires egui table cell rendering for spinner value binding
+        // egui: value binding handled during render() frame — no JavaFX-style listener needed
     }
 }

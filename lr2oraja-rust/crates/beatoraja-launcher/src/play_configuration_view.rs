@@ -1331,7 +1331,7 @@ impl PlayConfigurationView {
     /// Render the UI
     /// In egui, this replaces the JavaFX FXML layout
     pub fn render(&mut self) {
-        // Blocked: requires egui UI rendering for the full play configuration layout
+        // egui: replaced by launcher_ui.rs egui render loop
     }
 }
 

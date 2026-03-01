@@ -183,11 +183,11 @@ impl KeyConfiguration {
     }
 
     pub fn create(&mut self) {
-        // Blocked: requires egui key configuration UI (loadSkin, font, input processor)
+        // egui: requires wgpu skin loading + input capture integration
     }
 
     pub fn render(&mut self) {
-        // Blocked: requires egui key configuration UI (SpriteBatch, ShapeDrawer rendering)
+        // egui: requires wgpu SpriteBatch + ShapeDrawer rendering integration
     }
 
     pub fn set_key_assign_mode(&mut self, index: usize) {

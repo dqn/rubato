@@ -364,8 +364,7 @@ impl CourseResult {
         self.data.timer.switch_timer(TIMER_RESULT_UPDATESCORE, true);
 
         // if(time > getSkin().getInput()) { timer.switchTimer(TIMER_STARTINPUT, true); }
-        // Skin access requires integration
-        // Blocked: requires wgpu rendering pipeline + skin draw integration
+        // no-op: requires Skin instance from loader pipeline + skin.drawAllObjects()
     }
 
     fn do_input(&mut self) {

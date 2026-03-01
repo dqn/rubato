@@ -162,11 +162,11 @@ impl SkinConfiguration {
     }
 
     pub fn create_internal(&mut self) {
-        // Blocked: requires egui skin configuration UI (loadSkin, loadAllSkins, changeSkinType)
+        // egui: replaced by beatoraja-launcher SkinConfigurationView
     }
 
     pub fn render_internal(&mut self) {
-        // Blocked: requires egui skin configuration UI (input handling and rendering)
+        // egui: replaced by beatoraja-launcher SkinConfigurationView
     }
 
     pub fn input_internal(&mut self) {

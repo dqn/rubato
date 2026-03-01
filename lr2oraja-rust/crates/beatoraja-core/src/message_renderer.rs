@@ -48,7 +48,7 @@ impl Message {
     /// In Java, this generates a BitmapFont from the FreeTypeFontGenerator.
     /// In Rust, font rendering is Phase 5+ (LibGDX replacement).
     pub fn init(&mut self) {
-        // Blocked: requires wgpu font rendering (FreeTypeFontGenerator equivalent)
+        // no-op: requires font atlas GPU rasterization (ab_glyph → wgpu texture)
     }
 
     pub fn set_text(&mut self, text: &str) {
@@ -80,7 +80,7 @@ impl Message {
     }
 
     pub fn draw(&self, _x: i32, _y: i32) {
-        // Blocked: requires wgpu font rendering (LibGDX BitmapFont equivalent)
+        // no-op: requires font atlas GPU rasterization (ab_glyph → wgpu texture)
     }
 
     pub fn dispose(&mut self) {

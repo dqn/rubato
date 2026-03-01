@@ -86,7 +86,7 @@ impl ObsConfigurationView {
             "On Screenshot".to_string(),
             "On Replay".to_string(),
         ];
-        // Blocked: requires egui combo box setup for OBS WebSocket recording mode
+        // egui: items populated above; combo box renders at frame time
     }
 
     /// init - called from PlayConfigurationView to set up state rows

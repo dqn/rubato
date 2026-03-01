@@ -164,7 +164,7 @@ impl TableEditorView {
         // dialog.getDialogPane().setContent(gridPane);
         // dialog.getDialogPane().getButtonTypes().add(new ButtonType("OK", ButtonData.CANCEL_CLOSE));
         // dialog.show();
-        // Blocked: requires egui dialog for displaying chart details in a modal window
+        // egui: modal dialog TBD — data logged to console as interim fallback
         for (label, value) in &grid_data {
             log::info!("{}{}", label, value);
         }

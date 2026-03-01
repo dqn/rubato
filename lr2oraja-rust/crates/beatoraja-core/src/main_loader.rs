@@ -129,8 +129,7 @@ impl MainLoader {
                     std::process::exit(1);
                 });
         } else {
-            // Blocked by launcher integration: requires JavaFX/egui launcher UI
-            // Blocked: requires egui launcher UI integration
+            // egui: launcher_ui.rs provides entry point — event loop wiring TBD
         }
     }
 

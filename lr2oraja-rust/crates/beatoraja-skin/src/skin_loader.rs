@@ -111,8 +111,8 @@ pub fn load_skin_from_config(
 
         skin
     } else {
-        // Blocked: LR2 CSV skin loaders exist but produce different output than SkinData.
-        // Wiring requires a converter from LR2 loader output to the common Skin type.
+        // LR2 CSV: loaders accumulate concrete objects (not SkinData).
+        // Requires per-loader-type state→Skin converter + get_skin_loader() dispatch.
         None
     }
 }
@@ -169,8 +169,8 @@ pub fn load_with_config(
         }
         result
     } else {
-        // Blocked: LR2 CSV skin loaders exist but produce different output than SkinData.
-        // Wiring requires a converter from LR2 loader output to the common Skin type.
+        // LR2 CSV: loaders accumulate concrete objects (not SkinData).
+        // Requires per-loader-type state→Skin converter + get_skin_loader() dispatch.
         None
     }
 }
