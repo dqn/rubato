@@ -318,10 +318,30 @@ impl MusicSelector {
                 self.play_option_change();
             }
             EventType::Rival => {
-                // Blocked: RivalDataAccessor in beatoraja-core, not on MainControllerAccess
-                log::debug!(
-                    "stub: EventType::Rival — blocked by crate boundary (RivalDataAccessor)"
-                );
+                if let Some(ref main) = self.main {
+                    let rival_count = main.get_rival_count();
+                    // Find current rival's index in the rival list
+                    let mut index: i32 = -1;
+                    for i in 0..rival_count {
+                        if let Some(info) = main.get_rival_information(i)
+                            && self.rival.as_ref() == Some(&info)
+                        {
+                            index = i as i32;
+                            break;
+                        }
+                    }
+                    // Cycle to next/previous rival (Java modular arithmetic)
+                    let total = rival_count as i32 + 1;
+                    let step = if arg1 >= 0 { 2 } else { total };
+                    index = (index + step) % total - 1;
+                    let new_rival = if index >= 0 {
+                        main.get_rival_information(index as usize)
+                    } else {
+                        None
+                    };
+                    self.set_rival(new_rival);
+                }
+                self.play_option_change();
             }
             EventType::FavoriteSong => {
                 let next = arg1 >= 0;
@@ -388,8 +408,9 @@ impl MusicSelector {
                             std::path::Path::new(path).parent().and_then(|p| p.to_str())
                     {
                         main.update_song(Some(parent));
+                    } else if selected.as_table_bar().is_some() {
+                        main.update_table();
                     }
-                    // TableBar case: updateTable is not on MainControllerAccess
                 }
             }
             EventType::OpenDocument => {

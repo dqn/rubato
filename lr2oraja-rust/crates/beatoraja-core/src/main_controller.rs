@@ -1059,12 +1059,11 @@ impl MainController {
                 "no"
             }
         );
-        // Java: spawns SongUpdateThread → getSongDatabase().updateSongDatas(path, bmsroot, ...)
-        // Blocked: SongDatabaseAccessor trait doesn't expose update_song_datas().
-        // The concrete SQLiteSongDatabaseAccessor has it, but core can't downcast.
-        log::warn!(
-            "Song update not yet wired: SongDatabaseAccessor trait needs update_song_datas()"
-        );
+        let update_path = if path.is_empty() { None } else { Some(path) };
+        let bmsroot = self.config.get_bmsroot().to_vec();
+        if let Some(ref songdb) = self.songdb {
+            songdb.update_song_datas(update_path, &bmsroot, false, update_parent_when_missing);
+        }
     }
 
     pub fn get_version() -> &'static str {
@@ -1358,11 +1357,9 @@ impl MainController {
         for i in 0..self.rivals.get_rival_count() {
             targetlist.push(format!("RIVAL_{}", i + 1));
         }
-        // TargetProperty.setTargets(targetlist, this) — blocked: beatoraja-play dependency
-        log::info!(
-            "setTargetList: built {} targets, deferred TargetProperty.setTargets (play circular dep)",
-            targetlist.len()
-        );
+        // Store target IDs in shared state. Target names are set separately
+        // by the launcher layer which can access TargetProperty.
+        beatoraja_types::target_list::set_target_ids(targetlist);
     }
 
     /// Periodically save config if enough time has elapsed.
@@ -1528,6 +1525,21 @@ impl MainControllerAccess for MainController {
         self.playdata
             .as_ref()
             .and_then(|pda| pda.read_replay_data(sha256, has_ln, lnmode, index))
+    }
+
+    fn update_table(&mut self) {
+        MainController::update_table(self);
+    }
+
+    fn get_rival_count(&self) -> usize {
+        self.rivals.get_rival_count()
+    }
+
+    fn get_rival_information(
+        &self,
+        index: usize,
+    ) -> Option<beatoraja_types::player_information::PlayerInformation> {
+        self.rivals.get_rival_information(index).cloned()
     }
 }
 

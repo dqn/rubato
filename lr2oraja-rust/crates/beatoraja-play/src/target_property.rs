@@ -1,11 +1,6 @@
 use crate::MainController;
 use beatoraja_core::score_data::ScoreData;
 
-use std::sync::Mutex;
-
-static TARGETS: Mutex<Vec<String>> = Mutex::new(Vec::new());
-static TARGET_NAMES: Mutex<Vec<String>> = Mutex::new(Vec::new());
-
 /// Score target
 pub enum TargetProperty {
     Static(StaticTargetProperty),
@@ -25,18 +20,11 @@ impl TargetProperty {
     }
 
     pub fn get_targets() -> Vec<String> {
-        TARGETS.lock().unwrap().clone()
+        beatoraja_types::target_list::get_targets()
     }
 
     pub fn get_target_name(target: &str) -> String {
-        let targets = TARGETS.lock().unwrap();
-        let names = TARGET_NAMES.lock().unwrap();
-        for i in 0..targets.len() {
-            if targets[i] == target {
-                return names[i].clone();
-            }
-        }
-        String::new()
+        beatoraja_types::target_list::get_target_name(target)
     }
 
     pub fn get_target_property(id: &str) -> Option<TargetProperty> {

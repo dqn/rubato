@@ -643,12 +643,16 @@ impl ObsWsClient {
         }
 
         if auto_reconnect && was_connected && !is_reconnecting && !is_shutting_down {
-            Self::schedule_reconnect(inner).await;
+            Self::schedule_reconnect(inner);
         }
     }
 
-    /// Schedule a reconnection attempt with exponential backoff
-    async fn schedule_reconnect(inner: &Arc<Mutex<ObsWsClientInner>>) {
+    /// Schedule a reconnection attempt with exponential backoff.
+    ///
+    /// This is a sync function (not async) to break the async type cycle:
+    /// do_connect → on_close → schedule_reconnect → do_connect.
+    /// All async work is inside the tokio::spawn.
+    fn schedule_reconnect(inner: &Arc<Mutex<ObsWsClientInner>>) {
         let (is_reconnecting, auto_reconnect, is_shutting_down, delay) = {
             let guard = inner.lock().unwrap();
             (
@@ -689,13 +693,19 @@ impl ObsWsClient {
                     guard.is_reconnecting = false;
                 }
             }
-            // Blocked: calling do_connect here creates a recursive async type cycle
-            // (do_connect → on_close → schedule_reconnect → do_connect) that requires
-            // converting schedule_reconnect to return Pin<Box<dyn Future>>. server_uri
-            // and password are stored in inner for when this is refactored.
-            log::debug!(
-                "OBS WebSocket reconnection deferred: recursive async cycle requires Pin<Box<dyn Future>> refactor"
-            );
+            let (server_uri, password, shutdown_notify) = {
+                let guard = inner_clone.lock().unwrap();
+                (
+                    guard.server_uri.clone(),
+                    guard.password.clone(),
+                    guard.shutdown_notify.clone(),
+                )
+            };
+            if let Err(e) =
+                ObsWsClient::do_connect(inner_clone, &server_uri, &password, shutdown_notify).await
+            {
+                log::warn!("OBS WebSocket reconnection failed: {}", e);
+            }
         });
     }
 

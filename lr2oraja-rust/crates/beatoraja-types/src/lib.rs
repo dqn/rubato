@@ -73,5 +73,9 @@ pub mod last_played_sort;
 pub mod random_history;
 pub mod skin_main_state;
 pub mod skin_offset;
+pub mod target_list;
 pub mod timer_access;
 pub mod timing_distribution;
+
+// Player types
+pub mod player_information;

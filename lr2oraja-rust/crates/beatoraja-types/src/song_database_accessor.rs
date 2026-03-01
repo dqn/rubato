@@ -29,4 +29,15 @@ pub trait SongDatabaseAccessor: Send {
 
     /// Get folder data by key-value pair
     fn get_folder_datas(&self, key: &str, value: &str) -> Vec<FolderData>;
+
+    /// Update song database for the given path and BMS root directories.
+    fn update_song_datas(
+        &self,
+        _update_path: Option<&str>,
+        _bmsroot: &[String],
+        _update_all: bool,
+        _update_parent_when_missing: bool,
+    ) {
+        // default no-op
+    }
 }

@@ -79,6 +79,24 @@ pub trait MainControllerAccess {
     fn get_ir_course_url(&self, _course_data: &crate::course_data::CourseData) -> Option<String> {
         None
     }
+
+    /// Update difficulty table data in background.
+    fn update_table(&mut self) {
+        // default no-op
+    }
+
+    /// Get rival player count.
+    fn get_rival_count(&self) -> usize {
+        0
+    }
+
+    /// Get rival player information by index.
+    fn get_rival_information(
+        &self,
+        _index: usize,
+    ) -> Option<crate::player_information::PlayerInformation> {
+        None
+    }
 }
 
 /// Null implementation of MainControllerAccess for stub contexts.

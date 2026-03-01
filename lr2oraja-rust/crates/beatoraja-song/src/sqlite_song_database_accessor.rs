@@ -522,6 +522,24 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
             log::error!("Error committing transaction: {}", e);
         }
     }
+
+    fn update_song_datas(
+        &self,
+        update_path: Option<&str>,
+        bmsroot: &[String],
+        update_all: bool,
+        update_parent_when_missing: bool,
+    ) {
+        // Delegate to inherent method with info: None
+        SQLiteSongDatabaseAccessor::update_song_datas(
+            self,
+            update_path,
+            bmsroot,
+            update_all,
+            update_parent_when_missing,
+            None,
+        );
+    }
 }
 
 impl SQLiteSongDatabaseAccessor {
