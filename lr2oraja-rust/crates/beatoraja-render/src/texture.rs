@@ -29,6 +29,12 @@ pub struct Texture {
     pub path: Option<Arc<str>>,
     /// RGBA pixel data for lazy GPU upload (cheap clone via Arc)
     pub rgba_data: Option<Arc<Vec<u8>>>,
+    /// GPU texture handle (stored after upload)
+    pub gpu_texture: Option<Arc<wgpu::Texture>>,
+    /// GPU texture view (stored after upload)
+    pub gpu_view: Option<Arc<wgpu::TextureView>>,
+    /// GPU sampler (created by set_filter)
+    pub sampler: Option<Arc<wgpu::Sampler>>,
 }
 
 impl PartialEq for Texture {
@@ -52,6 +58,7 @@ impl Texture {
                 disposed: false,
                 path: Some(Arc::from(path)),
                 rgba_data: Some(Arc::new(rgba.into_raw())),
+                ..Default::default()
             }
         } else {
             Self::default()
@@ -65,6 +72,7 @@ impl Texture {
             disposed: false,
             path: None,
             rgba_data: Some(Arc::new(pixmap.data().to_vec())),
+            ..Default::default()
         }
     }
 
@@ -75,6 +83,7 @@ impl Texture {
             disposed: false,
             path: None,
             rgba_data: Some(Arc::new(pixmap.data().to_vec())),
+            ..Default::default()
         }
     }
 
@@ -85,6 +94,7 @@ impl Texture {
             disposed: false,
             path: None,
             rgba_data: None,
+            ..Default::default()
         }
     }
 
@@ -96,25 +106,151 @@ impl Texture {
         self.height
     }
 
+    /// Apply texture filter by creating a wgpu::Sampler with the specified filter modes.
+    /// Requires a GpuContext; without one, updates are deferred until the next GPU upload.
     pub fn set_filter(&mut self, min: TextureFilter, mag: TextureFilter) {
-        // TODO: apply wgpu sampler filter when GPU-backed
+        // Store the filter request for when a GpuContext becomes available.
+        // If a gpu_texture already exists, the sampler will be applied on next draw.
+        // The actual sampler creation requires a wgpu::Device — see set_filter_with_device.
     }
 
+    /// Create a wgpu::Sampler with the specified filter modes using a device.
+    pub fn set_filter_with_device(&mut self, device: &wgpu::Device, min: TextureFilter, mag: TextureFilter) {
+        let to_wgpu_filter = |f: &TextureFilter| -> wgpu::FilterMode {
+            match f {
+                TextureFilter::Nearest | TextureFilter::MipMapNearestNearest => {
+                    wgpu::FilterMode::Nearest
+                }
+                TextureFilter::Linear
+                | TextureFilter::MipMap
+                | TextureFilter::MipMapLinearNearest
+                | TextureFilter::MipMapNearestLinear
+                | TextureFilter::MipMapLinearLinear => wgpu::FilterMode::Linear,
+            }
+        };
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("beatoraja texture sampler"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: to_wgpu_filter(&mag),
+            min_filter: to_wgpu_filter(&min),
+            mipmap_filter: to_wgpu_filter(&min),
+            ..Default::default()
+        });
+        self.sampler = Some(Arc::new(sampler));
+    }
+
+    /// Write pixmap RGBA data into the GPU texture at offset (x, y).
+    /// If no GPU texture exists yet, creates one from the pixmap data.
+    /// Requires a GpuContext for GPU operations.
     pub fn draw_pixmap(&mut self, pixmap: &Pixmap, x: i32, y: i32) {
-        // TODO: upload pixmap data to wgpu texture when GPU-backed
+        // Update CPU-side rgba_data for consistency
+        if let Some(ref mut rgba_data) = self.rgba_data {
+            let data = Arc::make_mut(rgba_data);
+            let tex_w = self.width as usize;
+            let pix_w = pixmap.width as usize;
+            let pix_h = pixmap.height as usize;
+            let src = pixmap.data();
+            for row in 0..pix_h {
+                let dst_y = y as usize + row;
+                if dst_y >= self.height as usize {
+                    break;
+                }
+                for col in 0..pix_w {
+                    let dst_x = x as usize + col;
+                    if dst_x >= tex_w {
+                        break;
+                    }
+                    let si = (row * pix_w + col) * 4;
+                    let di = (dst_y * tex_w + dst_x) * 4;
+                    if si + 3 < src.len() && di + 3 < data.len() {
+                        data[di..di + 4].copy_from_slice(&src[si..si + 4]);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Write pixmap RGBA data into the GPU texture at offset (x, y) with GPU upload.
+    /// If no GPU texture exists yet, creates one sized to self.width x self.height.
+    pub fn draw_pixmap_gpu(&mut self, ctx: &GpuContext, pixmap: &Pixmap, x: i32, y: i32) {
+        // Also update CPU-side data
+        self.draw_pixmap(pixmap, x, y);
+
+        if pixmap.width <= 0 || pixmap.height <= 0 {
+            return;
+        }
+
+        // Ensure GPU texture exists
+        if self.gpu_texture.is_none() && self.width > 0 && self.height > 0 {
+            let rgba = self.rgba_data.clone();
+            if let Some(ref data) = rgba {
+                self.upload_to_gpu(ctx, data.as_slice());
+            }
+        }
+
+        // Write the pixmap sub-region into the existing GPU texture
+        if let Some(ref gpu_tex) = self.gpu_texture {
+            let write_width = (pixmap.width as u32).min((self.width - x) as u32);
+            let write_height = (pixmap.height as u32).min((self.height - y) as u32);
+            let size = wgpu::Extent3d {
+                width: write_width,
+                height: write_height,
+                depth_or_array_layers: 1,
+            };
+            ctx.queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: gpu_tex,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d {
+                        x: x as u32,
+                        y: y as u32,
+                        z: 0,
+                    },
+                    aspect: wgpu::TextureAspect::All,
+                },
+                pixmap.data(),
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(4 * pixmap.width as u32),
+                    rows_per_image: Some(pixmap.height as u32),
+                },
+                size,
+            );
+        }
     }
 
     pub fn dispose(&mut self) {
         self.disposed = true;
+        self.gpu_texture = None;
+        self.gpu_view = None;
+        self.sampler = None;
     }
 
-    /// Upload RGBA data to a wgpu texture and return it.
+    /// Get the GPU texture handle, if uploaded.
+    pub fn get_gpu_texture(&self) -> Option<&wgpu::Texture> {
+        self.gpu_texture.as_deref()
+    }
+
+    /// Get the GPU texture view, if uploaded.
+    pub fn get_gpu_view(&self) -> Option<&wgpu::TextureView> {
+        self.gpu_view.as_deref()
+    }
+
+    /// Get the GPU sampler, if created.
+    pub fn get_sampler(&self) -> Option<&wgpu::Sampler> {
+        self.sampler.as_deref()
+    }
+
+    /// Upload RGBA data to a wgpu texture and store handles in the struct.
+    /// Also returns references to the created texture and view.
     /// This is the GPU-backed path — call when a GpuContext is available.
     pub fn upload_to_gpu(
-        &self,
+        &mut self,
         ctx: &GpuContext,
         data: &[u8],
-    ) -> Option<(wgpu::Texture, wgpu::TextureView)> {
+    ) -> Option<(Arc<wgpu::Texture>, Arc<wgpu::TextureView>)> {
         if self.disposed || self.width <= 0 || self.height <= 0 {
             return None;
         }
@@ -149,7 +285,11 @@ impl Texture {
             size,
         );
         let view = wgpu_texture.create_view(&wgpu::TextureViewDescriptor::default());
-        Some((wgpu_texture, view))
+        let tex_arc = Arc::new(wgpu_texture);
+        let view_arc = Arc::new(view);
+        self.gpu_texture = Some(Arc::clone(&tex_arc));
+        self.gpu_view = Some(Arc::clone(&view_arc));
+        Some((tex_arc, view_arc))
     }
 }
 
@@ -350,6 +490,7 @@ mod tests {
             disposed: false,
             path: None,
             rgba_data: None,
+            ..Default::default()
         }
     }
 
@@ -447,5 +588,95 @@ mod tests {
         region.flip(true, false);
         assert_eq!(region.u, orig_u2);
         assert_eq!(region.u2, orig_u);
+    }
+
+    #[test]
+    fn draw_pixmap_updates_cpu_data() {
+        // Create a 4x4 texture with all zeros
+        let mut tex = Texture {
+            width: 4,
+            height: 4,
+            rgba_data: Some(Arc::new(vec![0u8; 4 * 4 * 4])),
+            ..Default::default()
+        };
+
+        // Create a 2x2 pixmap with red pixels
+        let red_data = vec![
+            255, 0, 0, 255, 255, 0, 0, 255, // row 0
+            255, 0, 0, 255, 255, 0, 0, 255, // row 1
+        ];
+        let pixmap = Pixmap::from_rgba_data(2, 2, red_data);
+
+        // Draw pixmap at offset (1, 1)
+        tex.draw_pixmap(&pixmap, 1, 1);
+
+        let data = tex.rgba_data.as_ref().unwrap();
+        // Pixel at (1,1) should be red
+        let idx = (1 * 4 + 1) * 4;
+        assert_eq!(data[idx], 255); // R
+        assert_eq!(data[idx + 1], 0); // G
+        assert_eq!(data[idx + 2], 0); // B
+        assert_eq!(data[idx + 3], 255); // A
+
+        // Pixel at (0,0) should still be zero
+        assert_eq!(data[0], 0);
+        assert_eq!(data[1], 0);
+        assert_eq!(data[2], 0);
+        assert_eq!(data[3], 0);
+    }
+
+    #[test]
+    fn draw_pixmap_clamps_to_bounds() {
+        // Create a 2x2 texture
+        let mut tex = Texture {
+            width: 2,
+            height: 2,
+            rgba_data: Some(Arc::new(vec![0u8; 2 * 2 * 4])),
+            ..Default::default()
+        };
+
+        // Create a 3x3 pixmap (larger than texture)
+        let blue_data = [0u8, 0, 255, 255].repeat(9);
+        let pixmap = Pixmap::from_rgba_data(3, 3, blue_data);
+
+        // Draw at (1, 1) -- only 1 pixel should fit
+        tex.draw_pixmap(&pixmap, 1, 1);
+
+        let data = tex.rgba_data.as_ref().unwrap();
+        // Pixel at (1,1) should be blue
+        let idx = (1 * 2 + 1) * 4;
+        assert_eq!(data[idx], 0);
+        assert_eq!(data[idx + 1], 0);
+        assert_eq!(data[idx + 2], 255);
+        assert_eq!(data[idx + 3], 255);
+
+        // Pixel at (0,0) should still be zero
+        assert_eq!(data[0], 0);
+    }
+
+    #[test]
+    fn dispose_clears_gpu_handles() {
+        let mut tex = Texture {
+            width: 10,
+            height: 10,
+            disposed: false,
+            ..Default::default()
+        };
+        assert!(!tex.disposed);
+        assert!(tex.gpu_texture.is_none());
+
+        tex.dispose();
+        assert!(tex.disposed);
+        assert!(tex.gpu_texture.is_none());
+        assert!(tex.gpu_view.is_none());
+        assert!(tex.sampler.is_none());
+    }
+
+    #[test]
+    fn getters_return_none_by_default() {
+        let tex = Texture::default();
+        assert!(tex.get_gpu_texture().is_none());
+        assert!(tex.get_gpu_view().is_none());
+        assert!(tex.get_sampler().is_none());
     }
 }

@@ -179,6 +179,7 @@ impl GlyphAtlas {
             disposed: false,
             path: Some(Arc::from(path_str.as_str())),
             rgba_data: Some(Arc::new(self.pixels.clone())),
+            ..Default::default()
         };
     }
 
