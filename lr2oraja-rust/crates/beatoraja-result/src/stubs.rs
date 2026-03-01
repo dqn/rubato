@@ -4,6 +4,7 @@
 use beatoraja_audio::audio_driver::AudioDriver;
 use beatoraja_types::config::Config;
 use beatoraja_types::player_config::PlayerConfig;
+use beatoraja_types::sound_type::SoundType;
 
 // ============================================================
 // Re-exports from real crates (Phase 11 stub replacements)
@@ -91,6 +92,18 @@ impl MainController {
 
     pub fn save_last_recording(&self, tag: &str) {
         self.inner.save_last_recording(tag);
+    }
+
+    pub fn play_sound(&mut self, sound: &SoundType, loop_sound: bool) {
+        self.inner.play_sound(sound, loop_sound);
+    }
+
+    pub fn stop_sound(&mut self, sound: &SoundType) {
+        self.inner.stop_sound(sound);
+    }
+
+    pub fn get_sound_path(&self, sound: &SoundType) -> Option<String> {
+        self.inner.get_sound_path(sound)
     }
 
     // ---- Local stubs (types not on MainControllerAccess trait) ----

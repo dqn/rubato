@@ -1,8 +1,8 @@
 use beatoraja_types::timer_access::TimerAccess;
 
 use crate::score_data_property::ScoreDataProperty;
-use crate::system_sound_manager::SoundType;
 use crate::timer_manager::TimerManager;
+use beatoraja_types::sound_type::SoundType;
 
 // MainStateType moved to beatoraja-types (Phase 15d)
 pub use beatoraja_types::main_state_type::MainStateType;

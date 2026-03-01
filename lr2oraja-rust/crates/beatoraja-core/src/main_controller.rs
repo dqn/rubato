@@ -12,6 +12,7 @@ use beatoraja_types::player_resource_access::PlayerResourceAccess;
 use beatoraja_types::screen_type::ScreenType;
 use beatoraja_types::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
 use beatoraja_types::song_information_db::SongInformationDb;
+use beatoraja_types::sound_type::SoundType;
 
 use crate::bms_player_mode::BMSPlayerMode;
 use crate::config::Config;
@@ -1484,6 +1485,37 @@ impl MainControllerAccess for MainController {
         self.resource
             .as_mut()
             .map(|r| r as &mut dyn PlayerResourceAccess)
+    }
+
+    fn play_sound(&mut self, sound: &SoundType, loop_sound: bool) {
+        let volume = self.config.audio.as_ref().map_or(1.0, |a| a.systemvolume);
+        let path = self
+            .sound
+            .as_ref()
+            .and_then(|sm| sm.get_sound(sound).cloned());
+        if let Some(path) = path
+            && let Some(ref mut audio) = self.audio
+        {
+            audio.play_path(&path, volume, loop_sound);
+        }
+    }
+
+    fn stop_sound(&mut self, sound: &SoundType) {
+        let path = self
+            .sound
+            .as_ref()
+            .and_then(|sm| sm.get_sound(sound).cloned());
+        if let Some(path) = path
+            && let Some(ref mut audio) = self.audio
+        {
+            audio.stop_path(&path);
+        }
+    }
+
+    fn get_sound_path(&self, sound: &SoundType) -> Option<String> {
+        self.sound
+            .as_ref()
+            .and_then(|sm| sm.get_sound(sound).cloned())
     }
 }
 

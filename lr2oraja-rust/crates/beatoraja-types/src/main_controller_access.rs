@@ -2,6 +2,7 @@ use crate::config::Config;
 use crate::main_state_type::MainStateType;
 use crate::player_config::PlayerConfig;
 use crate::player_resource_access::PlayerResourceAccess;
+use crate::sound_type::SoundType;
 
 /// Trait interface for MainController access.
 ///
@@ -38,6 +39,21 @@ pub trait MainControllerAccess {
 
     /// Get player resource (mutable)
     fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess>;
+
+    /// Play a system sound effect or BGM.
+    fn play_sound(&mut self, _sound: &SoundType, _loop_sound: bool) {
+        // default no-op
+    }
+
+    /// Stop a system sound effect or BGM.
+    fn stop_sound(&mut self, _sound: &SoundType) {
+        // default no-op
+    }
+
+    /// Check if a sound exists for the given type.
+    fn get_sound_path(&self, _sound: &SoundType) -> Option<String> {
+        None
+    }
 }
 
 /// Null implementation of MainControllerAccess for stub contexts.

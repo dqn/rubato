@@ -311,16 +311,29 @@ impl CourseResult {
 
         // Play result sound
         if let Some(ref ns) = newscore {
-            let _is_clear = ns.clear != ClearType::Failed.id();
-            let _loop_sound = self
+            let is_clear = ns.clear != ClearType::Failed.id();
+            let loop_sound = self
                 .resource
                 .get_config()
                 .audio
                 .as_ref()
                 .map(|ac| ac.is_loop_course_result_sound)
                 .unwrap_or(false);
-            // play(clear ? COURSE_CLEAR/RESULT_CLEAR : COURSE_FAIL/RESULT_FAIL, loop)
-            log::warn!("not yet implemented: play course result sound");
+            if is_clear {
+                let sound = if self.main.get_sound_path(&SoundType::CourseClear).is_some() {
+                    SoundType::CourseClear
+                } else {
+                    SoundType::ResultClear
+                };
+                self.main.play_sound(&sound, loop_sound);
+            } else {
+                let sound = if self.main.get_sound_path(&SoundType::CourseFail).is_some() {
+                    SoundType::CourseFail
+                } else {
+                    SoundType::ResultFail
+                };
+                self.main.play_sound(&sound, loop_sound);
+            }
         }
     }
 
@@ -340,9 +353,8 @@ impl CourseResult {
         self.stop_sound_inner(SoundType::ResultClose);
     }
 
-    fn stop_sound_inner(&mut self, _sound: SoundType) {
-        // Wired when audio system is integrated with MainState.
-        log::warn!("not yet implemented: MainState.stop(SoundType)");
+    fn stop_sound_inner(&mut self, sound: SoundType) {
+        self.main.stop_sound(&sound);
     }
 
     fn do_render(&mut self) {

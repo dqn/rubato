@@ -201,22 +201,152 @@ impl MusicSelector {
         command.execute(self);
     }
 
-    pub fn execute_event(&mut self, _event: EventType) {
-        log::warn!(
-            "not yet implemented: MusicSelector.executeEvent - requires event handling context"
-        );
+    pub fn execute_event(&mut self, event: EventType) {
+        self.execute_event_with_args(event, 0, 0);
     }
 
-    pub fn execute_event_with_arg(&mut self, _event: EventType, _arg: i32) {
-        log::warn!(
-            "not yet implemented: MusicSelector.executeEvent(arg) - requires event handling context"
-        );
+    pub fn execute_event_with_arg(&mut self, event: EventType, arg: i32) {
+        self.execute_event_with_args(event, arg, 0);
     }
 
-    pub fn execute_event_with_args(&mut self, _event: EventType, _arg1: i32, _arg2: i32) {
-        log::warn!(
-            "not yet implemented: MusicSelector.executeEvent(arg1, arg2) - requires event handling context"
-        );
+    /// Dispatch an EventType with arguments.
+    /// Translated from Java MainState.executeEvent(EventType, int, int)
+    /// which calls e.event.exec(this, arg1, arg2).
+    pub fn execute_event_with_args(&mut self, event: EventType, arg1: i32, _arg2: i32) {
+        match event {
+            EventType::Mode => {
+                let current_mode = self.config.get_mode().cloned();
+                let mut idx = 0;
+                for (i, m) in MODE.iter().enumerate() {
+                    if *m == current_mode {
+                        idx = i;
+                        break;
+                    }
+                }
+                let step = if arg1 >= 0 { 1 } else { MODE.len() - 1 };
+                self.config
+                    .set_mode(MODE[(idx + step) % MODE.len()].clone());
+                self.manager.update_bar_refresh();
+                self.play_option_change();
+            }
+            EventType::Sort => {
+                let count = BarSorter::DEFAULT_SORTER.len() as i32;
+                let step = if arg1 >= 0 { 1 } else { count - 1 };
+                self.set_sort((self.get_sort() + step) % count);
+                self.manager.update_bar_refresh();
+                self.play_option_change();
+            }
+            EventType::Lnmode => {
+                let step = if arg1 >= 0 { 1 } else { 2 };
+                self.config
+                    .set_lnmode((self.config.get_lnmode() + step) % 3);
+                self.play_option_change();
+            }
+            EventType::Option1p => {
+                let step = if arg1 >= 0 { 1 } else { 9 };
+                self.config
+                    .set_random((self.config.get_random() + step) % 10);
+                self.play_option_change();
+            }
+            EventType::Option2p => {
+                let step = if arg1 >= 0 { 1 } else { 9 };
+                self.config
+                    .set_random2((self.config.get_random2() + step) % 10);
+                self.play_option_change();
+            }
+            EventType::Optiondp => {
+                let step = if arg1 >= 0 { 1 } else { 3 };
+                self.config
+                    .set_doubleoption((self.config.get_doubleoption() + step) % 4);
+                self.play_option_change();
+            }
+            EventType::Gauge1p => {
+                let step = if arg1 >= 0 { 1 } else { 5 };
+                self.config.gauge = (self.config.gauge + step) % 6;
+                self.play_option_change();
+            }
+            EventType::GaugeAutoShift => {
+                let step = if arg1 >= 0 { 1 } else { 4 };
+                self.config.gauge_auto_shift = (self.config.gauge_auto_shift + step) % 5;
+                self.play_option_change();
+            }
+            EventType::Hsfix => {
+                if let Some(pc) = self.get_selected_play_config_mut() {
+                    let step = if arg1 >= 0 { 1 } else { 4 };
+                    pc.set_fixhispeed((pc.get_fixhispeed() + step) % 5);
+                }
+                self.play_option_change();
+            }
+            EventType::Duration1p => {
+                if let Some(pc) = self.get_selected_play_config_mut() {
+                    let delta = if _arg2 != 0 { _arg2 } else { 1 };
+                    let step = if arg1 >= 0 { delta } else { -delta };
+                    let new_val = (pc.get_duration() + step).clamp(1, 5000);
+                    pc.set_duration(new_val);
+                }
+                self.play_option_change();
+            }
+            EventType::Bga => {
+                let step = if arg1 >= 0 { 1 } else { 2 };
+                self.app_config.bga = (self.app_config.bga + step) % 3;
+                self.play_option_change();
+            }
+            EventType::NotesDisplayTiming => {
+                let step = if arg1 >= 0 { 1 } else { -1 };
+                self.config.judgetiming = (self.config.judgetiming + step).clamp(-500, 500);
+                self.play_option_change();
+            }
+            EventType::NotesDisplayTimingAutoAdjust => {
+                self.config.notes_display_timing_auto_adjust =
+                    !self.config.notes_display_timing_auto_adjust;
+                self.play_option_change();
+            }
+            EventType::Target => {
+                // Cycle target - requires TargetProperty list
+                log::debug!("stub: EventType::Target — requires TargetProperty list");
+            }
+            EventType::Rival => {
+                // Cycle rival - requires RivalDataAccessor
+                log::debug!("stub: EventType::Rival — requires RivalDataAccessor");
+            }
+            EventType::FavoriteSong | EventType::FavoriteChart => {
+                // Toggle favorite - requires SongDatabase write access
+                log::debug!(
+                    "stub: EventType::{:?} — requires SongDatabase write access",
+                    event
+                );
+            }
+            EventType::UpdateFolder => {
+                // Update folder - requires song database update
+                log::debug!("stub: EventType::UpdateFolder — requires song database update");
+            }
+            EventType::OpenDocument
+            | EventType::OpenWithExplorer
+            | EventType::OpenIr
+            | EventType::OpenDownloadSite => {
+                // OS desktop operations - requires platform integration
+                log::debug!(
+                    "stub: EventType::{:?} — requires platform integration",
+                    event
+                );
+            }
+        }
+    }
+
+    /// Play the OPTION_CHANGE system sound.
+    fn play_option_change(&mut self) {
+        self.play_sound(SoundType::OptionChange);
+    }
+
+    /// Get mutable reference to the PlayConfig for the currently selected mode.
+    /// Falls back to BEAT_7K if mode cannot be determined.
+    fn get_selected_play_config_mut(&mut self) -> Option<&mut PlayConfig> {
+        let mode = self
+            .config
+            .get_mode()
+            .cloned()
+            .unwrap_or(bms_model::Mode::BEAT_7K);
+        Some(self.config.get_play_config(mode).get_playconfig_mut())
     }
 
     /// Read a chart for play.
@@ -565,9 +695,13 @@ impl MusicSelector {
         // Java: else if (input.isActivated(OPEN_SKIN_CONFIGURATION)) main.changeState(SKINCONFIG)
         // These require MainController.changeState() — logged as warnings for now
         if input.get_control_key_state(ControlKeys::Num6) {
-            log::warn!("not yet implemented: changeState(CONFIG) - requires MainController");
-        } else if input.is_activated(KeyCommand::OpenSkinConfiguration) {
-            log::warn!("not yet implemented: changeState(SKINCONFIG) - requires MainController");
+            if let Some(ref mut main) = self.main {
+                main.change_state(MainStateType::Config);
+            }
+        } else if input.is_activated(KeyCommand::OpenSkinConfiguration)
+            && let Some(ref mut main) = self.main
+        {
+            main.change_state(MainStateType::SkinConfig);
         }
 
         // Classify the selected bar before borrowing musicinput
@@ -685,17 +819,14 @@ impl MusicSelector {
                     }
                 }
                 InputEvent::Exit => {
-                    // In Java: select.main.exit()
-                    // Blocked on MainController
-                    log::warn!("not yet implemented: exit - requires MainController");
+                    if let Some(ref main) = self.main {
+                        main.exit();
+                    }
                 }
                 InputEvent::ChangeState(state_type) => {
-                    // In Java: main.changeState(stateType)
-                    // Blocked on MainController
-                    log::warn!(
-                        "not yet implemented: changeState({:?}) - requires MainController",
-                        state_type
-                    );
+                    if let Some(ref mut main) = self.main {
+                        main.change_state(state_type);
+                    }
                 }
             }
         }
@@ -707,12 +838,12 @@ impl MusicSelector {
     }
 
     pub fn get_selected_bar_play_config(&self) -> Option<&PlayConfig> {
-        // In Java: determines PlayConfig based on selected bar type
-        // Blocked on MainController.getPlayerConfig()
-        log::warn!(
-            "not yet implemented: MusicSelector.getSelectedBarPlayConfig - requires MainController context"
-        );
-        None
+        let mode = self
+            .config
+            .get_mode()
+            .cloned()
+            .unwrap_or(bms_model::Mode::BEAT_7K);
+        Some(self.config.get_play_config_ref(mode).get_playconfig())
     }
 
     pub fn get_current_ranking_data(&self) -> Option<&RankingData> {
@@ -981,6 +1112,22 @@ impl MainState for MusicSelector {
             None => {
                 log::warn!("Failed to load skin for type {}", skin_type);
             }
+        }
+    }
+
+    fn get_sound(&self, sound: SoundType) -> Option<String> {
+        self.main.as_ref().and_then(|m| m.get_sound_path(&sound))
+    }
+
+    fn play_sound_loop(&mut self, sound: SoundType, loop_sound: bool) {
+        if let Some(ref mut main) = self.main {
+            main.play_sound(&sound, loop_sound);
+        }
+    }
+
+    fn stop_sound(&mut self, sound: SoundType) {
+        if let Some(ref mut main) = self.main {
+            main.stop_sound(&sound);
         }
     }
 

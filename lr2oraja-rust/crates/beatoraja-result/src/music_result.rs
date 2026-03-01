@@ -810,22 +810,20 @@ impl MusicResult {
         self.skin = Some(skin);
     }
 
-    // Sound stubs - delegate to MainState-level sound manager (Phase 22)
-    fn has_sound(&self, _sound: SoundType) -> bool {
-        log::warn!("not yet implemented: getSound(SoundType) != null check");
-        false
+    fn has_sound(&self, sound: SoundType) -> bool {
+        self.main.get_sound_path(&sound).is_some()
     }
 
-    fn play_sound_inner(&mut self, _sound: SoundType) {
-        log::warn!("not yet implemented: MainState.play(SoundType)");
+    fn play_sound_inner(&mut self, sound: SoundType) {
+        self.main.play_sound(&sound, false);
     }
 
-    fn play_sound_loop_inner(&mut self, _sound: SoundType, _loop_sound: bool) {
-        log::warn!("not yet implemented: MainState.play(SoundType, loop)");
+    fn play_sound_loop_inner(&mut self, sound: SoundType, loop_sound: bool) {
+        self.main.play_sound(&sound, loop_sound);
     }
 
-    fn stop_sound_inner(&mut self, _sound: SoundType) {
-        log::warn!("not yet implemented: MainState.stop(SoundType)");
+    fn stop_sound_inner(&mut self, sound: SoundType) {
+        self.main.stop_sound(&sound);
     }
 }
 

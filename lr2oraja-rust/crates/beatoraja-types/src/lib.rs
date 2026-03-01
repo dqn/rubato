@@ -43,6 +43,7 @@ pub mod skin_config;
 // State types
 pub mod main_state_type;
 pub mod screen_type;
+pub mod sound_type;
 
 // Lifecycle trait interfaces
 pub mod main_controller_access;
