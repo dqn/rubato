@@ -51,8 +51,11 @@ impl SkinLane {
     }
 
     pub fn prepare(&mut self, _time: i64) {
-        // TODO: Phase 7+ dependency - requires SkinSource, MainState
-        // In Java, this gets current images from SkinSource for each note type
+        // In Java, SkinLane.prepare() fetches current images from SkinSource
+        // for each note type (note, longnote, mine, hidden, processed).
+        // In Rust, image fetching is handled by the skin-side SkinNoteObject
+        // which assembles DrawCommand vectors via LaneRenderer.draw_lane().
+        // The play-side SkinLane only tracks boolean flags and region data.
     }
 
     pub fn draw(&self) {

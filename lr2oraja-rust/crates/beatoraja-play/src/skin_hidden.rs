@@ -1,4 +1,8 @@
-/// Hidden cover skin object
+/// Hidden cover skin object (play-side state)
+///
+/// Tracks hidden/lift cover state for game logic (note visibility).
+/// The skin-side SkinHidden in beatoraja-skin handles full rendering
+/// with MainState and OFFSET_LIFT integration.
 pub struct SkinHidden {
     /// Disappear line y-coordinate (skin setting value)
     /// Trim below this coordinate. Negative means no trimming.
@@ -30,8 +34,22 @@ impl SkinHidden {
         }
     }
 
-    pub fn prepare(&mut self, time: i64) {
-        // TODO: Phase 7+ dependency - requires MainState, OFFSET_LIFT
+    /// Translated from: Java SkinHidden.prepare(long time, MainState state)
+    ///
+    /// The `lift_y` parameter corresponds to `state.getOffsetValue(OFFSET_LIFT).y`
+    /// in Java. The caller should extract this from the skin offset system and
+    /// pass it here.
+    pub fn prepare(&mut self, time: i64, lift_y: Option<f32>) {
+        // Update disappear line with lift offset
+        if self.is_disapear_line_link_lift
+            && self.disapear_line >= 0.0
+            && let Some(y) = lift_y
+            && self.previous_lift != y
+        {
+            self.disapear_line_added_lift = self.disapear_line + y;
+            self.previous_lift = y;
+        }
+
         self.image_index = self.get_image_index(self.image_count, time);
     }
 
@@ -49,7 +67,6 @@ impl SkinHidden {
         if length == 0 {
             return 0;
         }
-        // TODO: Phase 7+ dependency - timer property offset
         if time < 0 {
             return 0;
         }
@@ -60,8 +77,13 @@ impl SkinHidden {
         self.disapear_line
     }
 
+    pub fn get_disapear_line_added_lift(&self) -> f32 {
+        self.disapear_line_added_lift
+    }
+
     pub fn set_disapear_line(&mut self, disapear_line: f32) {
         self.disapear_line = disapear_line;
+        self.disapear_line_added_lift = disapear_line;
     }
 
     pub fn is_disapear_line_link_lift(&self) -> bool {
@@ -72,7 +94,108 @@ impl SkinHidden {
         self.is_disapear_line_link_lift = value;
     }
 
+    pub fn get_image_index_value(&self) -> usize {
+        self.image_index
+    }
+
     pub fn dispose(&mut self) {
         // no GPU resources in Rust translation
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let h = SkinHidden::new(3, 0, 100);
+        assert_eq!(h.image_count, 3);
+        assert_eq!(h.disapear_line, -1.0);
+        assert!(h.is_disapear_line_link_lift);
+        assert_eq!(h.image_index, 0);
+    }
+
+    #[test]
+    fn test_prepare_no_lift() {
+        let mut h = SkinHidden::new(4, 0, 1000);
+        h.prepare(250, None);
+        // 250 * 4 / 1000 = 1
+        assert_eq!(h.image_index, 1);
+    }
+
+    #[test]
+    fn test_prepare_with_lift() {
+        let mut h = SkinHidden::new(2, 0, 100);
+        h.set_disapear_line(300.0);
+        h.prepare(50, Some(10.0));
+        assert_eq!(h.disapear_line_added_lift, 310.0);
+        assert_eq!(h.previous_lift, 10.0);
+    }
+
+    #[test]
+    fn test_prepare_lift_no_change() {
+        let mut h = SkinHidden::new(2, 0, 100);
+        h.set_disapear_line(300.0);
+        h.prepare(50, Some(10.0));
+        assert_eq!(h.disapear_line_added_lift, 310.0);
+        // Same lift value → no update
+        h.prepare(60, Some(10.0));
+        assert_eq!(h.disapear_line_added_lift, 310.0);
+    }
+
+    #[test]
+    fn test_prepare_lift_disabled() {
+        let mut h = SkinHidden::new(2, 0, 100);
+        h.set_disapear_line(300.0);
+        h.set_disapear_line_link_lift(false);
+        h.prepare(50, Some(10.0));
+        // Lift disabled → disapear_line_added_lift stays at initial value
+        assert_eq!(h.disapear_line_added_lift, 300.0);
+    }
+
+    #[test]
+    fn test_prepare_negative_disapear_line() {
+        let mut h = SkinHidden::new(2, 0, 100);
+        // disapear_line defaults to -1.0 (no trimming)
+        h.prepare(50, Some(10.0));
+        // Negative disapear_line → lift not applied
+        assert_eq!(h.disapear_line_added_lift, -1.0);
+    }
+
+    #[test]
+    fn test_image_index_zero_cycle() {
+        let mut h = SkinHidden::new(4, 0, 0);
+        h.prepare(500, None);
+        assert_eq!(h.image_index, 0);
+    }
+
+    #[test]
+    fn test_image_index_zero_count() {
+        let mut h = SkinHidden::new(0, 0, 100);
+        h.prepare(500, None);
+        assert_eq!(h.image_index, 0);
+    }
+
+    #[test]
+    fn test_image_index_negative_time() {
+        let mut h = SkinHidden::new(4, 0, 1000);
+        h.prepare(-100, None);
+        assert_eq!(h.image_index, 0);
+    }
+
+    #[test]
+    fn test_set_disapear_line() {
+        let mut h = SkinHidden::new(2, 0, 100);
+        h.set_disapear_line(500.0);
+        assert_eq!(h.get_disapear_line(), 500.0);
+        // set_disapear_line also sets disapear_line_added_lift
+        assert_eq!(h.get_disapear_line_added_lift(), 500.0);
+    }
+
+    #[test]
+    fn test_dispose() {
+        let mut h = SkinHidden::new(2, 0, 100);
+        h.dispose(); // no-op, should not panic
     }
 }

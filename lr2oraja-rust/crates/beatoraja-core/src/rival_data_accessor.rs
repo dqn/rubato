@@ -33,6 +33,10 @@ impl RivalDataAccessor {
         self.rivalcaches.get(index)
     }
 
+    pub fn get_rival_score_data_cache_mut(&mut self, index: usize) -> Option<&mut ScoreDataCache> {
+        self.rivalcaches.get_mut(index)
+    }
+
     pub fn get_rival_count(&self) -> usize {
         self.rivals.len()
     }

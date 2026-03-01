@@ -406,6 +406,10 @@ impl MainController {
         &self.rivals
     }
 
+    pub fn get_rival_data_accessor_mut(&mut self) -> &mut RivalDataAccessor {
+        &mut self.rivals
+    }
+
     pub fn get_ranking_data_cache(&self) -> Option<&dyn RankingDataCacheAccess> {
         self.ircache.as_deref()
     }
