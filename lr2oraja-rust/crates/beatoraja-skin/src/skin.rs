@@ -1054,6 +1054,16 @@ impl<'a> TimerOnlyMainState<'a> {
             resource: crate::stubs::PlayerResource,
         }
     }
+
+    fn from_render_context(
+        ctx: &'a dyn beatoraja_types::skin_render_context::SkinRenderContext,
+    ) -> Self {
+        Self {
+            timer: ctx,
+            main_controller: crate::stubs::MainController { debug: false },
+            resource: crate::stubs::PlayerResource,
+        }
+    }
 }
 
 impl crate::stubs::MainState for TimerOnlyMainState<'_> {
@@ -1085,16 +1095,19 @@ impl beatoraja_core::main_state::SkinDrawable for Skin {
         self.prepare(&adapter);
     }
 
-    fn draw_all_objects_timed(&mut self, timer: &dyn beatoraja_types::timer_access::TimerAccess) {
-        let adapter = TimerOnlyMainState::from_timer(timer);
+    fn draw_all_objects_timed(
+        &mut self,
+        ctx: &mut dyn beatoraja_types::skin_render_context::SkinRenderContext,
+    ) {
+        let adapter = TimerOnlyMainState::from_render_context(ctx);
         self.draw_all_objects(&adapter);
     }
 
     fn update_custom_objects_timed(
         &mut self,
-        timer: &dyn beatoraja_types::timer_access::TimerAccess,
+        ctx: &mut dyn beatoraja_types::skin_render_context::SkinRenderContext,
     ) {
-        let adapter = TimerOnlyMainState::from_timer(timer);
+        let adapter = TimerOnlyMainState::from_render_context(ctx);
         self.update_custom_objects(&adapter);
     }
 
@@ -1219,17 +1232,17 @@ mod tests {
     #[test]
     fn test_draw_all_objects_timed_empty_skin() {
         let mut skin = make_test_skin();
-        let null_timer = beatoraja_types::timer_access::NullTimer;
+        let mut null_timer = beatoraja_types::timer_access::NullTimer;
         // Should not panic with no objects
-        skin.draw_all_objects_timed(&null_timer);
+        skin.draw_all_objects_timed(&mut null_timer);
     }
 
     #[test]
     fn test_update_custom_objects_timed_empty_skin() {
         let mut skin = make_test_skin();
-        let timer = crate::stubs::Timer::with_timers(100, 100_000, Vec::new());
+        let mut timer = crate::stubs::Timer::with_timers(100, 100_000, Vec::new());
         // Should not panic with no custom objects
-        skin.update_custom_objects_timed(&timer);
+        skin.update_custom_objects_timed(&mut timer);
     }
 
     #[test]

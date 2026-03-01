@@ -160,8 +160,16 @@ mod tests {
     }
 
     impl SkinDrawable for MockSkin {
-        fn draw_all_objects_timed(&mut self, _timer: &dyn TimerAccess) {}
-        fn update_custom_objects_timed(&mut self, _timer: &dyn TimerAccess) {}
+        fn draw_all_objects_timed(
+            &mut self,
+            _ctx: &mut dyn beatoraja_types::skin_render_context::SkinRenderContext,
+        ) {
+        }
+        fn update_custom_objects_timed(
+            &mut self,
+            _ctx: &mut dyn beatoraja_types::skin_render_context::SkinRenderContext,
+        ) {
+        }
         fn mouse_pressed_at(&mut self, _button: i32, _x: i32, _y: i32) {}
         fn mouse_dragged_at(&mut self, _button: i32, _x: i32, _y: i32) {}
         fn prepare_skin(&mut self) {}

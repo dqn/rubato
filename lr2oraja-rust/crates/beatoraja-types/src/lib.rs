@@ -79,3 +79,12 @@ pub mod timing_distribution;
 
 // Player types
 pub mod player_information;
+
+// Song selection interface (modmenu↔select bridge)
+pub mod song_selection_access;
+
+// Skin render context (SkinDrawable expansion)
+pub mod skin_render_context;
+
+// Distribution data (SkinDistributionGraph bridge)
+pub mod distribution_data;

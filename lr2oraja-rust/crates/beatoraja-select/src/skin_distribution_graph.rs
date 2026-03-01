@@ -1,3 +1,5 @@
+use beatoraja_types::distribution_data::DistributionData;
+
 use crate::bar::bar::Bar;
 use crate::bar::directory_bar::DirectoryBarData;
 use crate::bar::function_bar::FunctionBar;
@@ -11,8 +13,8 @@ pub struct SkinDistributionGraph {
     pub graph_type: i32,
     /// Current graph images
     pub current_image: Vec<Option<TextureRegion>>,
-    /// Current directory bar
-    pub current_bar: Option<usize>,
+    /// Distribution data from the currently selected directory bar
+    pub current_bar: Option<DistributionData>,
     /// Draw flag
     pub draw: bool,
     /// Region for drawing
@@ -90,9 +92,19 @@ impl SkinDistributionGraph {
         }
     }
 
-    pub fn prepare(&mut self, _time: i64, _state: &dyn MainState) {
-        // In Java: casts state to MusicSelector, gets current Bar, checks folderlamp config.
-        // Blocked: skin MainState trait cannot expose selected bar (type in beatoraja-select).
+    pub fn prepare(&mut self, _time: i64, state: &dyn MainState) {
+        // Java: casts state to MusicSelector, gets selected bar, checks folderlamp config.
+        self.current_bar = state.get_distribution_data();
+
+        let is_folderlamp = state
+            .get_config_ref()
+            .is_none_or(|config| config.folderlamp);
+        if !is_folderlamp {
+            self.draw = false;
+            return;
+        }
+
+        self.draw = true;
     }
 
     pub fn draw_default(&self, _sprite: &SkinObjectRenderer) {
@@ -184,6 +196,7 @@ impl SkinDistributionGraph {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use beatoraja_skin::stubs::{SkinOffset, TextureRegion};
     use md_processor::download_task::{DownloadTask, DownloadTaskStatus};
 
     #[test]
@@ -219,6 +232,92 @@ mod tests {
             task.set_download_task_status(status);
             let percent = compute_download_percent(&task);
             assert_eq!(percent, 1.0, "Expected 1.0 for status {:?}", status);
+        }
+    }
+
+    #[test]
+    fn test_prepare_no_distribution_data() {
+        let mut graph = SkinDistributionGraph::new(0);
+        let state = MockMainState::default();
+        graph.prepare(0, &state);
+        assert!(graph.current_bar.is_none());
+        assert!(graph.draw); // folderlamp defaults to true when config is None
+    }
+
+    #[test]
+    fn test_prepare_with_distribution_data() {
+        let mut graph = SkinDistributionGraph::new(0);
+        let mut state = MockMainState::default();
+        let mut dist = DistributionData::default();
+        dist.lamps[0] = 5;
+        dist.lamps[6] = 3;
+        state.distribution = Some(dist.clone());
+        graph.prepare(0, &state);
+        assert!(graph.current_bar.is_some());
+        assert_eq!(graph.current_bar.as_ref().unwrap().lamps[0], 5);
+        assert_eq!(graph.current_bar.as_ref().unwrap().lamps[6], 3);
+        assert!(graph.draw);
+    }
+
+    #[test]
+    fn test_prepare_folderlamp_disabled() {
+        let mut graph = SkinDistributionGraph::new(0);
+        let mut state = MockMainState::default();
+        let mut config = beatoraja_types::config::Config::default();
+        config.folderlamp = false;
+        state.config = Some(config);
+        graph.prepare(0, &state);
+        assert!(!graph.draw);
+    }
+
+    #[test]
+    fn test_prepare_folderlamp_enabled() {
+        let mut graph = SkinDistributionGraph::new(1);
+        let mut state = MockMainState::default();
+        let mut config = beatoraja_types::config::Config::default();
+        config.folderlamp = true;
+        state.config = Some(config);
+        let mut dist = DistributionData::default();
+        dist.ranks[0] = 2;
+        state.distribution = Some(dist);
+        graph.prepare(0, &state);
+        assert!(graph.draw);
+        assert!(graph.current_bar.is_some());
+    }
+
+    #[derive(Default)]
+    struct MockMainState {
+        distribution: Option<DistributionData>,
+        config: Option<beatoraja_types::config::Config>,
+    }
+
+    impl MainState for MockMainState {
+        fn get_timer(&self) -> &dyn beatoraja_types::timer_access::TimerAccess {
+            static NULL: beatoraja_types::timer_access::NullTimer =
+                beatoraja_types::timer_access::NullTimer;
+            &NULL
+        }
+        fn get_offset_value(&self, _id: i32) -> Option<&SkinOffset> {
+            None
+        }
+        fn get_main(&self) -> &beatoraja_skin::stubs::MainController {
+            static MAIN: std::sync::OnceLock<beatoraja_skin::stubs::MainController> =
+                std::sync::OnceLock::new();
+            MAIN.get_or_init(|| beatoraja_skin::stubs::MainController { debug: false })
+        }
+        fn get_image(&self, _id: i32) -> Option<TextureRegion> {
+            None
+        }
+        fn get_resource(&self) -> &beatoraja_skin::stubs::PlayerResource {
+            static RES: std::sync::OnceLock<beatoraja_skin::stubs::PlayerResource> =
+                std::sync::OnceLock::new();
+            RES.get_or_init(|| beatoraja_skin::stubs::PlayerResource)
+        }
+        fn get_distribution_data(&self) -> Option<DistributionData> {
+            self.distribution.clone()
+        }
+        fn get_config_ref(&self) -> Option<&beatoraja_types::config::Config> {
+            self.config.as_ref()
         }
     }
 

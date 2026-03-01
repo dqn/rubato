@@ -101,6 +101,15 @@ pub trait MainState {
         None
     }
 
+    /// Returns the distribution data (lamps/ranks) for the currently selected directory bar.
+    /// Used by SkinDistributionGraph to render folder lamp/rank graphs.
+    /// Only meaningful for MusicSelector; returns None for other states.
+    fn get_distribution_data(
+        &self,
+    ) -> Option<beatoraja_types::distribution_data::DistributionData> {
+        None
+    }
+
     /// Play the OPTION_CHANGE system sound.
     fn play_option_change_sound(&mut self) {
         // default no-op
@@ -114,15 +123,17 @@ pub trait MainState {
 
     /// Execute a custom event by ID with arguments.
     /// Delegates to skin.executeCustomEvent(this, id, arg1, arg2) in Java.
-    /// Default no-op — requires SkinDrawable context expansion to carry MainControllerAccess.
+    /// Default no-op — real implementations live in concrete MainState types.
+    /// SkinRenderContext now carries this capability at the SkinDrawable level.
     fn execute_event(&mut self, _id: i32, _arg1: i32, _arg2: i32) {
-        // no-op: TimerOnlyMainState adapter does not carry MainController context
+        // default no-op
     }
 
     /// Change the application state (e.g., to CONFIG, SKINCONFIG).
-    /// Default no-op — requires SkinDrawable context expansion to carry MainControllerAccess.
+    /// Default no-op — real implementations live in concrete MainState types.
+    /// SkinRenderContext now carries this capability at the SkinDrawable level.
     fn change_state(&mut self, _state_type: beatoraja_types::main_state_type::MainStateType) {
-        // no-op: TimerOnlyMainState adapter does not carry MainController context
+        // default no-op
     }
 
     /// Select a song with the given play mode.
@@ -171,23 +182,23 @@ pub trait MainState {
 
     /// Set a timer value by ID. Only writable timers (custom timers) are allowed.
     /// Used by Lua `set_timer(id, value)` function.
-    /// Default no-op — requires mutable TimerAccess (TimerOnlyMainState has immutable ref).
+    /// Default no-op — SkinRenderContext now carries this capability.
     fn set_timer_micro(&mut self, _timer_id: i32, _micro_time: i64) {
-        // no-op: TimerOnlyMainState adapter has immutable timer reference
+        // default no-op
     }
 
     /// Play an audio file at the given path with volume and loop flag.
     /// Used by Lua `audio_play` and `audio_loop` functions.
-    /// Default no-op — requires SkinDrawable context expansion to carry audio driver.
+    /// Default no-op — SkinRenderContext now carries this capability.
     fn audio_play(&mut self, _path: &str, _volume: f32, _is_loop: bool) {
-        // no-op: TimerOnlyMainState adapter does not carry audio context
+        // default no-op
     }
 
     /// Stop an audio file at the given path.
     /// Used by Lua `audio_stop` function.
-    /// Default no-op — requires SkinDrawable context expansion to carry audio driver.
+    /// Default no-op — SkinRenderContext now carries this capability.
     fn audio_stop(&mut self, _path: &str) {
-        // no-op: TimerOnlyMainState adapter does not carry audio context
+        // default no-op
     }
 }
 
@@ -296,6 +307,8 @@ impl Timer {
         self.get_micro_timer(timer_id) != i64::MIN
     }
 }
+
+impl beatoraja_types::skin_render_context::SkinRenderContext for Timer {}
 
 impl beatoraja_types::timer_access::TimerAccess for Timer {
     fn get_now_time(&self) -> i64 {

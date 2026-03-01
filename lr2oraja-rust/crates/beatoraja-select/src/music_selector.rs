@@ -1255,6 +1255,29 @@ impl MusicSelector {
 }
 
 // ============================================================
+// SongSelectionAccess trait implementation
+// ============================================================
+
+impl beatoraja_types::song_selection_access::SongSelectionAccess for MusicSelector {
+    fn get_selected_song_data(&self) -> Option<SongData> {
+        let bar = self.get_selected_bar()?;
+        bar.as_song_bar().map(|sb| sb.get_song_data().clone())
+    }
+
+    fn get_selected_score_data(&self) -> Option<ScoreData> {
+        let bar = self.get_selected_bar()?;
+        bar.as_song_bar()
+            .and_then(|sb| sb.selectable.bar_data.get_score().cloned())
+    }
+
+    fn get_reverse_lookup_data(&self) -> Vec<String> {
+        // Reverse lookup data comes from PlayerResource via MainController.
+        // Currently returns empty; wire when PlayerResource is accessible.
+        Vec::new()
+    }
+}
+
+// ============================================================
 // MainState trait implementation
 // ============================================================
 

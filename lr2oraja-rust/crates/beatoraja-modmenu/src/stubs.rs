@@ -98,49 +98,10 @@ pub struct SkinObjectDestination {
 pub use beatoraja_skin::stubs::Rectangle;
 
 // =========================================================================
-// MusicSelector stub
+// MusicSelector — replaced with SongSelectionAccess trait
 // =========================================================================
 
-pub struct MusicSelector;
-
-impl MusicSelector {
-    pub fn get_selected_bar(&self) -> &dyn Bar {
-        // Blocked: circular dependency — modmenu cannot import select
-        static DEFAULT_BAR: DefaultBar = DefaultBar;
-        &DEFAULT_BAR
-    }
-
-    pub fn get_reverse_lookup_data(&self) -> Vec<String> {
-        // Blocked: circular dependency — modmenu cannot import select
-        Vec::new()
-    }
-}
-
-pub trait Bar {
-    fn as_any(&self) -> &dyn std::any::Any;
-}
-
-struct DefaultBar;
-impl Bar for DefaultBar {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
-
-pub struct SongBar {
-    pub song_data: Option<SongData>,
-    pub score: Option<ScoreData>,
-}
-
-impl SongBar {
-    pub fn get_song_data(&self) -> Option<&SongData> {
-        self.song_data.as_ref()
-    }
-
-    pub fn get_score(&self) -> Option<&ScoreData> {
-        self.score.as_ref()
-    }
-}
+pub use beatoraja_types::song_selection_access::SongSelectionAccess;
 
 // =========================================================================
 // SongData — real type from beatoraja-types

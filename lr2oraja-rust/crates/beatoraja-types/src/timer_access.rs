@@ -55,6 +55,8 @@ impl TimerAccess for NullTimer {
     }
 }
 
+impl crate::skin_render_context::SkinRenderContext for NullTimer {}
+
 #[cfg(test)]
 mod tests {
     use super::*;

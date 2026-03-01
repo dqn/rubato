@@ -707,8 +707,8 @@ impl MainController {
         if let Some(ref mut current) = self.current {
             let data = current.main_state_data_mut();
             if let Some(mut skin) = data.skin.take() {
-                skin.update_custom_objects_timed(&data.timer);
-                skin.draw_all_objects_timed(&data.timer);
+                skin.update_custom_objects_timed(&mut data.timer);
+                skin.draw_all_objects_timed(&mut data.timer);
                 // Put skin back
                 current.main_state_data_mut().skin = Some(skin);
             } else {
@@ -2031,14 +2031,14 @@ mod tests {
     impl SkinDrawable for MockSkinDrawable {
         fn draw_all_objects_timed(
             &mut self,
-            _timer: &dyn beatoraja_types::timer_access::TimerAccess,
+            _ctx: &mut dyn beatoraja_types::skin_render_context::SkinRenderContext,
         ) {
             self.draw_count += 1;
         }
 
         fn update_custom_objects_timed(
             &mut self,
-            _timer: &dyn beatoraja_types::timer_access::TimerAccess,
+            _ctx: &mut dyn beatoraja_types::skin_render_context::SkinRenderContext,
         ) {
             self.update_count += 1;
         }
@@ -2141,14 +2141,14 @@ mod tests {
         impl SkinDrawable for CountingSkinDrawable {
             fn draw_all_objects_timed(
                 &mut self,
-                _timer: &dyn beatoraja_types::timer_access::TimerAccess,
+                _ctx: &mut dyn beatoraja_types::skin_render_context::SkinRenderContext,
             ) {
                 self.counts.lock().unwrap().1 += 1;
             }
 
             fn update_custom_objects_timed(
                 &mut self,
-                _timer: &dyn beatoraja_types::timer_access::TimerAccess,
+                _ctx: &mut dyn beatoraja_types::skin_render_context::SkinRenderContext,
             ) {
                 self.counts.lock().unwrap().0 += 1;
             }

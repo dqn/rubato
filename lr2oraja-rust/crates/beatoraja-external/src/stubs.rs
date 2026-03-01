@@ -233,28 +233,88 @@ pub use beatoraja_core::table_data_accessor::{TableAccessor, TableDataAccessor};
 pub use beatoraja_types::imgui_notify::ImGuiNotify;
 
 // ============================================================
-// IntegerProperty / BooleanProperty / StringProperty stubs
+// skin::MainState trait impl — bridges external's concrete MainState
+// to skin's property system (resolves type mismatch, not a circular dep)
 // ============================================================
 
-/// Stub for bms.player.beatoraja.skin.property.IntegerProperty
+impl beatoraja_skin::stubs::MainState for MainState {
+    fn get_timer(&self) -> &dyn beatoraja_types::timer_access::TimerAccess {
+        static TIMER: std::sync::OnceLock<beatoraja_skin::stubs::Timer> =
+            std::sync::OnceLock::new();
+        TIMER.get_or_init(beatoraja_skin::stubs::Timer::default)
+    }
+
+    fn get_offset_value(&self, _id: i32) -> Option<&beatoraja_types::skin_offset::SkinOffset> {
+        None
+    }
+
+    fn get_main(&self) -> &beatoraja_skin::stubs::MainController {
+        static MAIN: beatoraja_skin::stubs::MainController =
+            beatoraja_skin::stubs::MainController { debug: false };
+        &MAIN
+    }
+
+    fn get_image(&self, _id: i32) -> Option<beatoraja_skin::rendering_stubs::TextureRegion> {
+        None
+    }
+
+    fn get_resource(&self) -> &beatoraja_skin::stubs::PlayerResource {
+        static RES: beatoraja_skin::stubs::PlayerResource = beatoraja_skin::stubs::PlayerResource;
+        &RES
+    }
+}
+
+// ============================================================
+// IntegerProperty / BooleanProperty / StringProperty
+// Delegate to skin's real property factories via MainState trait bridge
+// ============================================================
+
+/// Property trait wrapping skin's IntegerProperty for external's &MainState callers.
 pub trait IntegerProperty {
     fn get(&self, state: &MainState) -> i32;
 }
 
-/// Stub for bms.player.beatoraja.skin.property.BooleanProperty
+/// Property trait wrapping skin's BooleanProperty for external's &MainState callers.
 pub trait BooleanProperty {
     fn get(&self, state: &MainState) -> bool;
 }
 
-/// Stub for bms.player.beatoraja.skin.property.StringProperty
+/// Property trait wrapping skin's StringProperty for external's &MainState callers.
 pub trait StringProperty {
     fn get(&self, state: &MainState) -> String;
 }
 
-/// Stub for IntegerPropertyFactory
-pub struct IntegerPropertyFactory;
+// --- Wrapper adapters that delegate to skin's real property traits ---
 
-/// Default integer property returning 0
+struct SkinIntegerPropertyAdapter(
+    Box<dyn beatoraja_skin::property::integer_property::IntegerProperty>,
+);
+impl IntegerProperty for SkinIntegerPropertyAdapter {
+    fn get(&self, state: &MainState) -> i32 {
+        self.0.get(state)
+    }
+}
+
+struct SkinBooleanPropertyAdapter(
+    Box<dyn beatoraja_skin::property::boolean_property::BooleanProperty>,
+);
+impl BooleanProperty for SkinBooleanPropertyAdapter {
+    fn get(&self, state: &MainState) -> bool {
+        self.0.get(state)
+    }
+}
+
+struct SkinStringPropertyAdapter(
+    Box<dyn beatoraja_skin::property::string_property::StringProperty>,
+);
+impl StringProperty for SkinStringPropertyAdapter {
+    fn get(&self, state: &MainState) -> String {
+        self.0.get(state)
+    }
+}
+
+// --- Default fallbacks for IDs not found in skin's factory ---
+
 struct DefaultIntegerProperty;
 impl IntegerProperty for DefaultIntegerProperty {
     fn get(&self, _state: &MainState) -> i32 {
@@ -262,19 +322,6 @@ impl IntegerProperty for DefaultIntegerProperty {
     }
 }
 
-impl IntegerPropertyFactory {
-    pub fn get_integer_property(_id: i32) -> Box<dyn IntegerProperty> {
-        // beatoraja-skin has IntegerPropertyFactory but uses its own MainState trait;
-        // this crate's MainState is a concrete struct — type mismatch (circular dep).
-        // Blocked: circular dependency — external uses concrete MainState, skin uses trait MainState
-        Box::new(DefaultIntegerProperty)
-    }
-}
-
-/// Stub for BooleanPropertyFactory
-pub struct BooleanPropertyFactory;
-
-/// Default boolean property returning false
 struct DefaultBooleanProperty;
 impl BooleanProperty for DefaultBooleanProperty {
     fn get(&self, _state: &MainState) -> bool {
@@ -282,19 +329,6 @@ impl BooleanProperty for DefaultBooleanProperty {
     }
 }
 
-impl BooleanPropertyFactory {
-    pub fn get_boolean_property(_id: i32) -> Box<dyn BooleanProperty> {
-        // beatoraja-skin has BooleanPropertyFactory but uses its own MainState trait;
-        // this crate's MainState is a concrete struct — type mismatch (circular dep).
-        // Blocked: circular dependency — external uses concrete MainState, skin uses trait MainState
-        Box::new(DefaultBooleanProperty)
-    }
-}
-
-/// Stub for StringPropertyFactory
-pub struct StringPropertyFactory;
-
-/// Default string property returning empty string
 struct DefaultStringProperty;
 impl StringProperty for DefaultStringProperty {
     fn get(&self, _state: &MainState) -> String {
@@ -302,12 +336,35 @@ impl StringProperty for DefaultStringProperty {
     }
 }
 
+// --- Factory facades matching original API ---
+
+pub struct IntegerPropertyFactory;
+impl IntegerPropertyFactory {
+    pub fn get_integer_property(id: i32) -> Box<dyn IntegerProperty> {
+        match beatoraja_skin::property::integer_property_factory::get_integer_property_by_id(id) {
+            Some(prop) => Box::new(SkinIntegerPropertyAdapter(prop)),
+            None => Box::new(DefaultIntegerProperty),
+        }
+    }
+}
+
+pub struct BooleanPropertyFactory;
+impl BooleanPropertyFactory {
+    pub fn get_boolean_property(id: i32) -> Box<dyn BooleanProperty> {
+        match beatoraja_skin::property::boolean_property_factory::get_boolean_property(id) {
+            Some(prop) => Box::new(SkinBooleanPropertyAdapter(prop)),
+            None => Box::new(DefaultBooleanProperty),
+        }
+    }
+}
+
+pub struct StringPropertyFactory;
 impl StringPropertyFactory {
-    pub fn get_string_property(_id: i32) -> Box<dyn StringProperty> {
-        // beatoraja-skin has StringPropertyFactory but uses its own MainState trait;
-        // this crate's MainState is a concrete struct — type mismatch (circular dep).
-        // Blocked: circular dependency — external uses concrete MainState, skin uses trait MainState
-        Box::new(DefaultStringProperty)
+    pub fn get_string_property(id: i32) -> Box<dyn StringProperty> {
+        match beatoraja_skin::property::string_property_factory::get_string_property_by_id(id) {
+            Some(prop) => Box::new(SkinStringPropertyAdapter(prop)),
+            None => Box::new(DefaultStringProperty),
+        }
     }
 }
 

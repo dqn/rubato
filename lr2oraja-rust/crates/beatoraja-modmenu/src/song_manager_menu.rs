@@ -1,9 +1,9 @@
-use crate::stubs::{Bar, MusicSelector, ScoreData, SongBar, SongData};
+use crate::stubs::{ScoreData, SongData, SongSelectionAccess};
 use beatoraja_types::last_played_sort;
 
 use std::sync::Mutex;
 
-static SELECTOR: Mutex<Option<MusicSelector>> = Mutex::new(None);
+static SELECTOR: Mutex<Option<Box<dyn SongSelectionAccess>>> = Mutex::new(None);
 static CURRENT_REVERSE_LOOKUP_LIST: Mutex<Vec<String>> = Mutex::new(Vec::new());
 
 pub struct SongManagerMenu;
@@ -42,8 +42,8 @@ impl SongManagerMenu {
             });
     }
 
-    pub fn inject_music_selector(music_selector: MusicSelector) {
-        *SELECTOR.lock().unwrap() = Some(music_selector);
+    pub fn inject_music_selector(selector: Box<dyn SongSelectionAccess>) {
+        *SELECTOR.lock().unwrap() = Some(selector);
     }
 
     pub fn is_last_played_sort_enabled() -> bool {
@@ -68,20 +68,16 @@ fn update_reverse_lookup_data(current_song_data: &Option<SongData>) {
 
 fn get_current_song_data() -> Option<SongData> {
     let selector = SELECTOR.lock().unwrap();
-    if let Some(ref _sel) = *selector {
-        // if (selector.getSelectedBar() instanceof SongBar)
-        // { final SongData sd = ((SongBar) selector.getSelectedBar()).getSongData(); ... }
-        // Stubbed - would need dynamic dispatch
+    if let Some(ref sel) = *selector {
+        return sel.get_selected_song_data();
     }
     None
 }
 
 fn get_current_score_data() -> Option<ScoreData> {
     let selector = SELECTOR.lock().unwrap();
-    if let Some(ref _sel) = *selector {
-        // if (selector.getSelectedBar() instanceof SongBar)
-        // { final ScoreData sd = ((SongBar) selector.getSelectedBar()).getScore(); ... }
-        // Stubbed - would need dynamic dispatch
+    if let Some(ref sel) = *selector {
+        return sel.get_selected_score_data();
     }
     None
 }

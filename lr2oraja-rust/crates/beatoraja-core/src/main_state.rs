@@ -1,5 +1,3 @@
-use beatoraja_types::timer_access::TimerAccess;
-
 use crate::score_data_property::ScoreDataProperty;
 use crate::timer_manager::TimerManager;
 use beatoraja_types::sound_type::SoundType;
@@ -142,11 +140,18 @@ pub trait MainState {
 pub trait SkinDrawable: Send {
     /// Draw all skin objects for the current frame.
     ///
-    /// `timer` provides the full timer state (current time + per-timer-id values).
-    fn draw_all_objects_timed(&mut self, timer: &dyn TimerAccess);
+    /// `ctx` provides timer state plus optional MainController capabilities
+    /// (event execution, state changes, audio, timer writes).
+    fn draw_all_objects_timed(
+        &mut self,
+        ctx: &mut dyn beatoraja_types::skin_render_context::SkinRenderContext,
+    );
 
     /// Update custom timers and events.
-    fn update_custom_objects_timed(&mut self, timer: &dyn TimerAccess);
+    fn update_custom_objects_timed(
+        &mut self,
+        ctx: &mut dyn beatoraja_types::skin_render_context::SkinRenderContext,
+    );
 
     /// Handle mouse press events (reverse order iteration).
     fn mouse_pressed_at(&mut self, button: i32, x: i32, y: i32);

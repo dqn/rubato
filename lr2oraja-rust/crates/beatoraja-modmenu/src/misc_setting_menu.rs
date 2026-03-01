@@ -1,9 +1,7 @@
 use bms_model::mode::Mode;
 
 use crate::imgui_notify::{ImGuiNotify, NOTIFICATION_POSITIONS};
-use crate::stubs::{
-    Config, MainController, MainControllerAccess, MusicSelector, PlayConfig, read_all_player_id,
-};
+use crate::stubs::{Config, MainController, MainControllerAccess, PlayConfig, read_all_player_id};
 
 use std::sync::Mutex;
 

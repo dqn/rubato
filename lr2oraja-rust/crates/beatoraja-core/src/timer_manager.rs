@@ -169,3 +169,7 @@ impl beatoraja_types::timer_access::TimerAccess for TimerManager {
         self.is_timer_on(timer_id)
     }
 }
+
+// SkinRenderContext: uses default no-op implementations for all extended methods.
+// Real implementations will be wired through MainController in a future phase.
+impl beatoraja_types::skin_render_context::SkinRenderContext for TimerManager {}
