@@ -111,6 +111,8 @@ pub struct PracticeConfiguration {
     presscount: i64,
     model_data: Option<PracticeModelData>,
     property: PracticeProperty,
+    /// SHA256 of the current model (for save/load path)
+    sha256: String,
 }
 
 impl Default for PracticeConfiguration {
@@ -126,14 +128,36 @@ impl PracticeConfiguration {
             presscount: 0,
             model_data: None,
             property: PracticeProperty::new(),
+            sha256: String::new(),
         }
     }
 
     pub fn create(&mut self, model: &BMSModel) {
+        self.sha256 = model.get_sha256().to_string();
         self.property.judgerank = model.get_judgerank();
         self.property.endtime = model.get_last_time() + 1000;
 
-        // TODO: load from practice/<sha256>.json if exists
+        // Load saved practice property from practice/<sha256>.json if exists
+        if !self.sha256.is_empty() {
+            let path = format!("practice/{}.json", self.sha256);
+            if let Ok(data) = std::fs::read_to_string(&path)
+                && let Ok(saved) = serde_json::from_str::<PracticeProperty>(&data)
+            {
+                self.property = saved;
+                // Restore model-specific data
+                let mode = model.get_mode().cloned().unwrap_or(Mode::BEAT_7K);
+                let timeline_times: Vec<i32> = model
+                    .get_all_time_lines()
+                    .iter()
+                    .map(|tl| tl.get_time())
+                    .collect();
+                self.model_data = Some(PracticeModelData {
+                    mode,
+                    timeline_times,
+                });
+                return;
+            }
+        }
 
         if self.property.gaugecategory.is_none() {
             let mode = model.get_mode().cloned().unwrap_or(Mode::BEAT_7K);
@@ -154,8 +178,26 @@ impl PracticeConfiguration {
         }
     }
 
+    /// Save practice property to practice/<sha256>.json.
+    /// Translates: PracticeConfiguration.saveProperty()
     pub fn save_property(&self) {
-        // TODO: save to practice/<sha256>.json
+        if self.sha256.is_empty() {
+            return;
+        }
+        let path = format!("practice/{}.json", self.sha256);
+        if let Some(parent) = std::path::Path::new(&path).parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        match serde_json::to_string_pretty(&self.property) {
+            Ok(json) => {
+                if let Err(e) = std::fs::write(&path, json) {
+                    log::warn!("Failed to save practice property: {}", e);
+                }
+            }
+            Err(e) => {
+                log::warn!("Failed to serialize practice property: {}", e);
+            }
+        }
     }
 
     pub fn get_practice_property(&self) -> &PracticeProperty {

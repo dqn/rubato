@@ -474,10 +474,20 @@ impl ContextMenuBar {
             options.push(Bar::Function(Box::new(chart_viewer)));
         }
 
-        // Metadata toggle
+        // Metadata toggle — creates a new ContextMenuBar with toggled show_meta
         let meta_style = if show_meta { STYLE_TABLE } else { STYLE_SEARCH };
-        let metadata = FunctionBar::new("Metadata".to_string(), meta_style);
-        // Toggle callback needs BarManager.updateBar() — deferred
+        let mut metadata = FunctionBar::new("Metadata".to_string(), meta_style);
+        {
+            let song_clone = song.clone();
+            let new_show_meta = !show_meta;
+            metadata.set_function(Arc::new(move |selector| {
+                let mut new_menu = ContextMenuBar::new_for_song(song_clone.clone());
+                new_menu.show_meta = new_show_meta;
+                let bar = Bar::ContextMenu(Box::new(new_menu));
+                selector.manager.update_bar(Some(&bar));
+                selector.play_sound(SoundType::OptionChange);
+            }));
+        }
         options.push(Bar::Function(Box::new(metadata)));
 
         if show_meta {

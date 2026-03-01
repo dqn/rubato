@@ -92,6 +92,13 @@ pub trait MainControllerAccess {
         None
     }
 
+    /// Start IPFS download for the given song.
+    /// Returns true if the download was started, false otherwise.
+    /// The default implementation returns false (no IPFS support).
+    fn start_ipfs_download(&mut self, _song: &crate::song_data::SongData) -> bool {
+        false
+    }
+
     /// Get rival player count.
     fn get_rival_count(&self) -> usize {
         0

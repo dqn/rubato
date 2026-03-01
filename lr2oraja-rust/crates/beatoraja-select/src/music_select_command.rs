@@ -107,11 +107,28 @@ impl MusicSelectCommand {
                 }
             }
             MusicSelectCommand::DownloadIpfs => {
-                // In Java: checks directory for TableBar with URL, starts IPFS download
-                // BLOCKED: MainControllerAccess doesn't expose MusicDownloadProcessor (IPFS daemon).
-                // The real MusicDownloadProcessor is in md-processor crate but MainController
-                // in beatoraja-core uses a local stub. Needs trait bridge to wire through.
-                log::warn!("stub: DOWNLOAD_IPFS — blocked by MusicDownloadProcessor trait bridge");
+                // Check if we're inside a TableBar directory with a URL
+                let has_table_url = selector
+                    .manager
+                    .dir
+                    .iter()
+                    .any(|d| d.as_table_bar().is_some_and(|t| t.get_url().is_some()));
+                if has_table_url {
+                    if let Some(selected) = selector.manager.get_selected()
+                        && let Some(song_bar) = selected.as_song_bar()
+                    {
+                        let song = song_bar.get_song_data();
+                        if !song.get_ipfs_str().is_empty() {
+                            let song_clone = song.clone();
+                            if let Some(ref mut main) = selector.main
+                                && main.start_ipfs_download(&song_clone)
+                            {
+                                return;
+                            }
+                        }
+                    }
+                    log::info!("Download was not started.");
+                }
             }
             MusicSelectCommand::DownloadHttp => {
                 if let Some(selected) = selector.manager.get_selected()
