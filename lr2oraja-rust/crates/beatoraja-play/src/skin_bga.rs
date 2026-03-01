@@ -113,9 +113,11 @@ impl SkinBGA {
     }
 
     pub fn draw(&self) {
-        // The caller (skin rendering system) is responsible for:
-        // 1. Checking self.draw
-        // 2. Calling BGAProcessor.draw_bga() with the renderer, region, stretch type, color, blend
+        // Drawing is handled by beatoraja_skin::skin_bga_object::SkinBgaObject.
+        // The skin-level SkinBgaObject holds Arc<Mutex<dyn BgaDraw>> and implements
+        // the full BGA rendering logic via BGAProcessor.draw_bga().
+        // In practice mode, it delegates to PracticeConfiguration.draw().
+        // This play-side struct exists for stretch type and time tracking only.
     }
 
     pub fn dispose(&mut self) {

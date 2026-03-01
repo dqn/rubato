@@ -96,8 +96,10 @@ impl SkinGauge {
     }
 
     pub fn draw(&self) {
-        // TODO: Phase 7+ dependency - requires SkinObjectRenderer, TextureRegion
-        // In Java, this draws gauge parts based on animation type
+        // Drawing is handled by beatoraja_skin::skin_gauge::SkinGauge.
+        // The skin-level SkinGauge holds SkinSourceImageSet and implements
+        // the full gauge rendering logic (segmented bar with animation).
+        // This play-side struct exists for standalone gauge state only.
     }
 
     pub fn get_animation_type(&self) -> i32 {

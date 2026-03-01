@@ -36,6 +36,36 @@ static RANDOM: &[&str] = &[
 static DPRANDOM: &[&str] = &["NORMAL", "FLIP"];
 static GRAPHTYPESTR: &[&str] = &["NOTETYPE", "JUDGE", "EARLYLATE"];
 
+/// Colors used in practice configuration UI drawing.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PracticeColor {
+    Yellow,
+    Cyan,
+    Orange,
+    White,
+}
+
+/// Draw commands emitted by PracticeConfiguration.draw().
+/// The skin layer executes these using SkinObjectRenderer.
+#[derive(Clone, Debug)]
+pub enum PracticeDrawCommand {
+    /// Draw text at position with color
+    DrawText {
+        text: String,
+        x: f32,
+        y: f32,
+        color: PracticeColor,
+    },
+    /// Draw note distribution graph
+    DrawGraph {
+        graph_type: i32,
+        region: (f32, f32, f32, f32),
+        start_time: i32,
+        end_time: i32,
+        freq: f32,
+    },
+}
+
 /// Practice mode settings
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct PracticeProperty {
@@ -449,15 +479,78 @@ impl PracticeConfiguration {
         }
     }
 
-    /// Draw practice configuration UI.
-    /// Corresponds to Java draw(Rectangle r, SkinObjectRenderer sprite, long time, MainState state).
-    pub fn draw(&self, _time: i64) {
-        // TODO: Phase 7+ dependency - requires Rectangle, SkinObjectRenderer, BitmapFont, MainState
-        // In Java, this method:
-        // 1. Iterates elements, draws text with yellow (cursor) or cyan color
-        // 2. If media loaded, draws "PRESS 1KEY TO PLAY" in orange
-        // 3. Draws judge count table (PGREAT/GREAT/GOOD/BAD/POOR/KPOOR)
-        // 4. Draws practice graph at bottom quarter
+    /// Generate draw commands for practice configuration UI.
+    ///
+    /// Translated from: Java PracticeConfiguration.draw(Rectangle r, SkinObjectRenderer sprite, long time, MainState state)
+    ///
+    /// Returns a list of `PracticeDrawCommand` that the caller (skin layer)
+    /// executes using SkinObjectRenderer.
+    ///
+    /// `region`: the BGA region rectangle (x, y, width, height)
+    /// `judge_counts`: array of [total, fast, slow] for each of 6 judge types
+    /// `media_loaded`: whether the audio/BGA has finished loading
+    pub fn draw(
+        &self,
+        region: (f32, f32, f32, f32),
+        judge_counts: &[(i32, i32, i32); 6],
+        media_loaded: bool,
+    ) -> Vec<PracticeDrawCommand> {
+        let (rx, ry, rw, rh) = region;
+        let x = rx + rw / 8.0;
+        let y = ry + rh * 7.0 / 8.0;
+        let mut commands = Vec::new();
+
+        // Draw element labels
+        for i in 0..Self::ELEMENT_COUNT {
+            if self.is_element_visible(i) {
+                let color = if self.cursorpos == i {
+                    PracticeColor::Yellow
+                } else {
+                    PracticeColor::Cyan
+                };
+                commands.push(PracticeDrawCommand::DrawText {
+                    text: self.get_element_text(i),
+                    x,
+                    y: y - 22.0 * i as f32,
+                    color,
+                });
+            }
+        }
+
+        // "PRESS 1KEY TO PLAY" prompt
+        if media_loaded {
+            commands.push(PracticeDrawCommand::DrawText {
+                text: "PRESS 1KEY TO PLAY".to_string(),
+                x,
+                y: y - 276.0,
+                color: PracticeColor::Orange,
+            });
+        }
+
+        // Judge count table
+        let judge_labels = [
+            "PGREAT :", "GREAT  :", "GOOD   :", "BAD    :", "POOR   :", "KPOOR  :",
+        ];
+        for i in 0..6 {
+            let (total, fast, slow) = judge_counts[i];
+            commands.push(PracticeDrawCommand::DrawText {
+                text: format!("{} {} {} {}", judge_labels[i], total, fast, slow),
+                x: x + 250.0,
+                y: y - (i as f32 * 22.0),
+                color: PracticeColor::White,
+            });
+        }
+
+        // Graph drawing command (graph type, region, time range, frequency)
+        commands.push(PracticeDrawCommand::DrawGraph {
+            graph_type: self.property.graphtype,
+            region: (rx, ry, rw, rh / 4.0),
+            start_time: self.property.starttime,
+            end_time: self.property.endtime,
+            freq: self.property.freq as f32 / 100.0,
+        });
+
+        commands
     }
 
     /// Number of practice configuration elements (indices 0..ELEMENT_COUNT).
@@ -732,5 +825,162 @@ mod tests {
         // Release both → presscount resets
         practice.process_input(false, false, false, false, 1500);
         assert_eq!(practice.presscount, 0);
+    }
+
+    // --- draw() tests ---
+
+    #[test]
+    fn draw_emits_element_text_commands() {
+        let practice = PracticeConfiguration::new();
+        let region = (0.0, 0.0, 800.0, 600.0);
+        let judge_counts = [(0, 0, 0); 6];
+
+        let commands = practice.draw(region, &judge_counts, false);
+
+        // Should have element text commands for visible elements (indices 0..9 in SP mode)
+        let text_cmds: Vec<_> = commands
+            .iter()
+            .filter(|c| matches!(c, PracticeDrawCommand::DrawText { .. }))
+            .collect();
+        // 10 elements visible in SP (0..9) + 6 judge count lines = 16 text commands
+        // (no "PRESS 1KEY" because media_loaded is false)
+        assert_eq!(text_cmds.len(), 16);
+    }
+
+    #[test]
+    fn draw_emits_press_1key_when_media_loaded() {
+        let practice = PracticeConfiguration::new();
+        let region = (0.0, 0.0, 800.0, 600.0);
+        let judge_counts = [(0, 0, 0); 6];
+
+        let commands = practice.draw(region, &judge_counts, true);
+
+        let press_cmd = commands.iter().find(|c| match c {
+            PracticeDrawCommand::DrawText { text, .. } => text.contains("PRESS 1KEY"),
+            _ => false,
+        });
+        assert!(press_cmd.is_some());
+    }
+
+    #[test]
+    fn draw_does_not_emit_press_1key_when_not_loaded() {
+        let practice = PracticeConfiguration::new();
+        let region = (0.0, 0.0, 800.0, 600.0);
+        let judge_counts = [(0, 0, 0); 6];
+
+        let commands = practice.draw(region, &judge_counts, false);
+
+        let press_cmd = commands.iter().find(|c| match c {
+            PracticeDrawCommand::DrawText { text, .. } => text.contains("PRESS 1KEY"),
+            _ => false,
+        });
+        assert!(press_cmd.is_none());
+    }
+
+    #[test]
+    fn draw_emits_graph_command() {
+        let mut practice = PracticeConfiguration::new();
+        practice.property.graphtype = 1;
+        practice.property.starttime = 1000;
+        practice.property.endtime = 5000;
+        practice.property.freq = 100;
+        let region = (10.0, 20.0, 400.0, 300.0);
+        let judge_counts = [(0, 0, 0); 6];
+
+        let commands = practice.draw(region, &judge_counts, false);
+
+        let graph_cmd = commands
+            .iter()
+            .find(|c| matches!(c, PracticeDrawCommand::DrawGraph { .. }));
+        assert!(graph_cmd.is_some());
+
+        if let Some(PracticeDrawCommand::DrawGraph {
+            graph_type,
+            region: gr,
+            start_time,
+            end_time,
+            freq,
+        }) = graph_cmd
+        {
+            assert_eq!(*graph_type, 1);
+            assert_eq!(*start_time, 1000);
+            assert_eq!(*end_time, 5000);
+            assert!((freq - 1.0).abs() < f32::EPSILON);
+            // Region height should be rh / 4
+            assert!((gr.3 - 75.0).abs() < f32::EPSILON);
+        }
+    }
+
+    #[test]
+    fn draw_cursor_position_colors_element_yellow() {
+        let mut practice = PracticeConfiguration::new();
+        // Move cursor to element 2
+        practice.cursorpos = 2;
+        let region = (0.0, 0.0, 800.0, 600.0);
+        let judge_counts = [(0, 0, 0); 6];
+
+        let commands = practice.draw(region, &judge_counts, false);
+
+        // Element text commands: elements 0..9 visible
+        // Element at index 2 (cursorpos) should be Yellow, others Cyan
+        let element_texts: Vec<_> = commands
+            .iter()
+            .filter_map(|c| match c {
+                PracticeDrawCommand::DrawText { color, text, .. }
+                    if text.starts_with("START")
+                        || text.starts_with("END")
+                        || text.starts_with("GAUGE")
+                        || text.starts_with("JUDGE")
+                        || text.starts_with("TOTAL")
+                        || text.starts_with("FREQ")
+                        || text.starts_with("GRAPH")
+                        || text.starts_with("OPTION") =>
+                {
+                    Some(color.clone())
+                }
+                _ => None,
+            })
+            .collect();
+
+        // Element 2 should be Yellow (cursor position)
+        assert_eq!(element_texts[2], PracticeColor::Yellow);
+        // Element 0 should be Cyan (not cursor)
+        assert_eq!(element_texts[0], PracticeColor::Cyan);
+    }
+
+    #[test]
+    fn draw_judge_counts_are_white() {
+        let practice = PracticeConfiguration::new();
+        let region = (0.0, 0.0, 800.0, 600.0);
+        let judge_counts = [
+            (10, 3, 7),
+            (5, 2, 3),
+            (1, 0, 1),
+            (0, 0, 0),
+            (0, 0, 0),
+            (0, 0, 0),
+        ];
+
+        let commands = practice.draw(region, &judge_counts, false);
+
+        let white_texts: Vec<_> = commands
+            .iter()
+            .filter_map(|c| match c {
+                PracticeDrawCommand::DrawText { text, color, .. }
+                    if *color == PracticeColor::White =>
+                {
+                    Some(text.clone())
+                }
+                _ => None,
+            })
+            .collect();
+
+        // Should have 6 judge count lines
+        assert_eq!(white_texts.len(), 6);
+        // First line should contain PGREAT and the counts
+        assert!(white_texts[0].contains("PGREAT"));
+        assert!(white_texts[0].contains("10"));
+        assert!(white_texts[0].contains("3"));
+        assert!(white_texts[0].contains("7"));
     }
 }

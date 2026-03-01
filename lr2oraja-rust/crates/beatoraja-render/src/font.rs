@@ -7,10 +7,112 @@ use crate::glyph_atlas::GlyphAtlas;
 use crate::sprite_batch::SpriteBatch;
 use crate::texture::TextureRegion;
 
-/// Font data (glyph metrics, kerning, etc.).
+/// Font data (glyph metrics, kerning, etc.) parsed from AngelCode BMFont .fnt files.
 /// Corresponds to com.badlogic.gdx.graphics.g2d.BitmapFont.BitmapFontData.
 #[derive(Clone, Debug, Default)]
-pub struct BitmapFontData;
+pub struct BitmapFontData {
+    /// Paths to font texture page images (from "page" entries).
+    pub image_paths: Vec<String>,
+    /// Line height in pixels.
+    pub line_height: f32,
+    /// Baseline offset from top of line.
+    pub base: f32,
+    /// Font size as declared in .fnt header.
+    pub font_size: f32,
+    /// Texture page width.
+    pub scale_w: f32,
+    /// Texture page height.
+    pub scale_h: f32,
+    /// Glyph data keyed by character code.
+    pub glyphs: std::collections::HashMap<u32, BitmapGlyph>,
+}
+
+/// Single glyph metrics from a .fnt file "char" entry.
+#[derive(Clone, Debug, Default)]
+pub struct BitmapGlyph {
+    pub id: u32,
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
+    pub xoffset: i32,
+    pub yoffset: i32,
+    pub xadvance: i32,
+    pub page: i32,
+}
+
+impl BitmapFontData {
+    /// Parse a .fnt file (AngelCode BMFont text format).
+    pub fn from_fnt(path: &std::path::Path) -> Option<Self> {
+        let content = std::fs::read_to_string(path).ok()?;
+        Self::parse_fnt(&content, path.parent())
+    }
+
+    /// Parse .fnt content string, resolving image paths relative to `base_dir`.
+    pub fn parse_fnt(content: &str, base_dir: Option<&std::path::Path>) -> Option<Self> {
+        let mut data = Self::default();
+
+        for line in content.lines() {
+            let line = line.trim();
+            if line.starts_with("info ") {
+                data.font_size = parse_fnt_field(line, "size=").unwrap_or(0) as f32;
+            } else if line.starts_with("common ") {
+                data.line_height = parse_fnt_field(line, "lineHeight=").unwrap_or(0) as f32;
+                data.base = parse_fnt_field(line, "base=").unwrap_or(0) as f32;
+                data.scale_w = parse_fnt_field(line, "scaleW=").unwrap_or(256) as f32;
+                data.scale_h = parse_fnt_field(line, "scaleH=").unwrap_or(256) as f32;
+            } else if line.starts_with("page ") {
+                if let Some(file) = parse_fnt_string(line, "file=") {
+                    let image_path = if let Some(dir) = base_dir {
+                        dir.join(&file).to_string_lossy().to_string()
+                    } else {
+                        file
+                    };
+                    data.image_paths.push(image_path);
+                }
+            } else if line.starts_with("char ") {
+                let id = parse_fnt_field(line, "id=").unwrap_or(0) as u32;
+                let glyph = BitmapGlyph {
+                    id,
+                    x: parse_fnt_field(line, "x=").unwrap_or(0),
+                    y: parse_fnt_field(line, "y=").unwrap_or(0),
+                    width: parse_fnt_field(line, "width=").unwrap_or(0),
+                    height: parse_fnt_field(line, "height=").unwrap_or(0),
+                    xoffset: parse_fnt_field(line, "xoffset=").unwrap_or(0),
+                    yoffset: parse_fnt_field(line, "yoffset=").unwrap_or(0),
+                    xadvance: parse_fnt_field(line, "xadvance=").unwrap_or(0),
+                    page: parse_fnt_field(line, "page=").unwrap_or(0),
+                };
+                data.glyphs.insert(id, glyph);
+            }
+        }
+
+        Some(data)
+    }
+}
+
+/// Parse an integer field like "key=123" from a .fnt line.
+fn parse_fnt_field(line: &str, key: &str) -> Option<i32> {
+    let start = line.find(key)? + key.len();
+    let rest = &line[start..];
+    let end = rest
+        .find(|c: char| !c.is_ascii_digit() && c != '-')
+        .unwrap_or(rest.len());
+    rest[..end].parse().ok()
+}
+
+/// Parse a quoted string field like `file="name.png"` from a .fnt line.
+fn parse_fnt_string(line: &str, key: &str) -> Option<String> {
+    let start = line.find(key)? + key.len();
+    let rest = &line[start..];
+    if let Some(stripped) = rest.strip_prefix('"') {
+        let end = stripped.find('"')?;
+        Some(stripped[..end].to_string())
+    } else {
+        let end = rest.find(|c: char| c.is_whitespace()).unwrap_or(rest.len());
+        Some(rest[..end].to_string())
+    }
+}
 
 /// Positioned glyph for rendering.
 /// Contains the character, its pixel position, and size within the layout.

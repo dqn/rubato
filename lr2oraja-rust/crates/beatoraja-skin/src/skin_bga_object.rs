@@ -4,9 +4,11 @@
 use std::sync::{Arc, Mutex};
 
 use beatoraja_play::bga::bga_processor::{BGAProcessor, BgaRenderType, BgaRenderer};
+use beatoraja_play::practice_configuration::{PracticeColor, PracticeDrawCommand};
 use beatoraja_play::skin_bga::{
     BGAEXPAND_FULL, BGAEXPAND_KEEP_ASPECT_RATIO, BGAEXPAND_OFF, StretchType,
 };
+use beatoraja_render::color::Color;
 use beatoraja_render::texture::TextureRegion;
 
 use crate::skin_object::{SkinObjectData, SkinObjectRenderer};
@@ -98,12 +100,19 @@ impl BgaDraw for BGAProcessor {
 
 /// BGA skin object for the rendering pipeline.
 /// Translated from: SkinBGA.java
+///
+/// In practice mode, draws PracticeConfiguration UI instead of BGA.
+/// The caller sets practice draw commands via `set_practice_draw_commands()`.
 pub struct SkinBgaObject {
     pub data: SkinObjectData,
     bga_expand: i32,
     /// Shared reference to the BGA drawing implementation (BGAProcessor).
     /// Set by BMSPlayer when the skin is loaded.
     bga_draw: Option<Arc<Mutex<dyn BgaDraw>>>,
+    /// Practice mode draw commands (set by caller when in practice mode).
+    practice_commands: Vec<PracticeDrawCommand>,
+    /// Whether this BGA is currently in practice mode.
+    practice_mode: bool,
 }
 
 impl SkinBgaObject {
@@ -112,6 +121,8 @@ impl SkinBgaObject {
             data: SkinObjectData::default(),
             bga_expand,
             bga_draw: None,
+            practice_commands: Vec::new(),
+            practice_mode: false,
         }
     }
 
@@ -129,6 +140,26 @@ impl SkinBgaObject {
     /// Check if this object has a BGA drawing implementation connected.
     pub fn has_bga_draw(&self) -> bool {
         self.bga_draw.is_some()
+    }
+
+    /// Set practice mode draw commands.
+    /// Called by the game loop when in practice mode.
+    pub fn set_practice_draw_commands(&mut self, commands: Vec<PracticeDrawCommand>) {
+        self.practice_commands = commands;
+        self.practice_mode = true;
+    }
+
+    /// Set whether this BGA is in practice mode.
+    pub fn set_practice_mode(&mut self, practice: bool) {
+        self.practice_mode = practice;
+        if !practice {
+            self.practice_commands.clear();
+        }
+    }
+
+    /// Check if this BGA is in practice mode.
+    pub fn is_practice_mode(&self) -> bool {
+        self.practice_mode
     }
 
     /// Prepare BGA for rendering.
@@ -161,13 +192,46 @@ impl SkinBgaObject {
         }
     }
 
-    /// Draw BGA content.
+    /// Draw BGA content or practice configuration UI.
+    ///
     /// Translated from: Java SkinBGA.draw(SkinObjectRenderer sprite)
+    /// In Java:
+    ///   if (PRACTICE) { player.getPracticeConfiguration().draw(...) }
+    ///   else { resource.getBGAManager().drawBGA(...) }
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
-        if let Some(ref bga_draw) = self.bga_draw {
+        if self.practice_mode {
+            self.draw_practice(sprite);
+        } else if let Some(ref bga_draw) = self.bga_draw {
             let region = self.data.region.clone();
             if let Ok(mut draw) = bga_draw.lock() {
                 draw.draw_bga(sprite, &region, self.bga_expand);
+            }
+        }
+    }
+
+    /// Execute practice mode draw commands.
+    /// Translated from: Java PracticeConfiguration.draw(Rectangle, SkinObjectRenderer, long, MainState)
+    fn draw_practice(&mut self, sprite: &mut SkinObjectRenderer) {
+        for cmd in &self.practice_commands {
+            match cmd {
+                PracticeDrawCommand::DrawText { text, x, y, color } => {
+                    let c = match color {
+                        PracticeColor::Yellow => Color::new(1.0, 1.0, 0.0, 1.0),
+                        PracticeColor::Cyan => Color::new(0.0, 1.0, 1.0, 1.0),
+                        PracticeColor::Orange => Color::new(1.0, 0.65, 0.0, 1.0),
+                        PracticeColor::White => Color::new(1.0, 1.0, 1.0, 1.0),
+                    };
+                    // Draw text using sprite's font rendering.
+                    // BitmapFont is not available here (it lives in BMSPlayer/PracticeConfiguration).
+                    // Use a temporary BitmapFont for rendering.
+                    let mut font = beatoraja_render::font::BitmapFont::new();
+                    sprite.draw_font(&mut font, text, *x, *y, &c);
+                }
+                PracticeDrawCommand::DrawGraph { .. } => {
+                    // Note distribution graph drawing requires SkinNoteDistributionGraph
+                    // which is in beatoraja-skin. This will be wired when the full graph
+                    // rendering pipeline is connected.
+                }
             }
         }
     }

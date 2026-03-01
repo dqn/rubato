@@ -36,9 +36,10 @@ impl SkinHidden {
     }
 
     pub fn draw(&self) {
-        // TODO: Phase 7+ dependency - requires SkinObjectRenderer, TextureRegion
-        // In Java, this draws the hidden cover with optional trimming
-        // when the draw region overlaps the disappear line
+        // Drawing is handled by beatoraja_skin::skin_hidden::SkinHidden.
+        // The skin-level SkinHidden holds TextureRegion arrays and implements
+        // the full hidden cover rendering logic (trimming at disappear line).
+        // This play-side struct exists for standalone hidden state only.
     }
 
     fn get_image_index(&self, length: usize, time: i64) -> usize {

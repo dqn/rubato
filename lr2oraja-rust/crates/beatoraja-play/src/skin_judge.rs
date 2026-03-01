@@ -46,21 +46,24 @@ impl SkinJudge {
         }
     }
 
+    pub fn player(&self) -> i32 {
+        self.player
+    }
+
     pub fn is_shift(&self) -> bool {
         self.shift
     }
 
     pub fn prepare(&mut self, _time: i64) {
-        // TODO: Phase 7+ dependency - requires BMSPlayer, JudgeManager, GrooveGauge
-        // In Java:
-        // 1. Get current judge from JudgeManager.getNowJudge(player)
-        // 2. If gauge is max and judge is PG, use MAX PG image (index 6)
-        // 3. Prepare judge image and count number
-        // 4. If shift mode, offset judge position by count length
+        // Prepare logic is handled by SkinJudgeObject in beatoraja-skin.
+        // The skin-level wrapper accesses JudgeManager/GrooveGauge via MainState
+        // trait methods (get_now_judge, get_now_combo, is_gauge_max).
     }
 
     pub fn draw(&self) {
-        // TODO: Phase 7+ dependency - requires SkinObjectRenderer, SkinImage, SkinNumber
+        // Drawing is handled by SkinJudgeObject in beatoraja-skin.
+        // This play-side struct holds state; the skin wrapper holds SkinImage/SkinNumber
+        // and delegates drawing via SkinObjectRenderer (which lives in beatoraja-skin).
     }
 
     pub fn dispose(&mut self) {

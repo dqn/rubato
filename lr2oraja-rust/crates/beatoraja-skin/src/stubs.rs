@@ -180,6 +180,36 @@ pub trait MainState {
         false
     }
 
+    /// Returns the current judge type for the given player (1-indexed, 0 = no judge).
+    /// Used by SkinJudge to determine which judge image to display.
+    fn get_now_judge(&self, _player: i32) -> i32 {
+        0
+    }
+
+    /// Returns the current combo count for the given player.
+    /// Used by SkinJudge to display the combo number.
+    fn get_now_combo(&self, _player: i32) -> i32 {
+        0
+    }
+
+    /// Returns whether the current gauge is at max value.
+    /// Used by SkinJudge to display the MAX PG variant.
+    fn is_gauge_max(&self) -> bool {
+        false
+    }
+
+    /// Returns true if the media (audio/BGA) has finished loading.
+    /// Used by PracticeConfiguration to show the "PRESS 1KEY TO PLAY" prompt.
+    fn is_media_load_finished(&self) -> bool {
+        false
+    }
+
+    /// Returns true if this is a practice mode play.
+    /// Used by SkinBGA to decide whether to draw practice UI or BGA.
+    fn is_practice_mode(&self) -> bool {
+        false
+    }
+
     /// Set a timer value by ID. Only writable timers (custom timers) are allowed.
     /// Used by Lua `set_timer(id, value)` function.
     /// Default no-op — SkinRenderContext now carries this capability.

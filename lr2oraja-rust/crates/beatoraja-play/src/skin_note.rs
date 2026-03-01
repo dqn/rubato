@@ -110,7 +110,10 @@ impl SkinNote {
     }
 
     pub fn draw(&self) {
-        // TODO: Phase 7+ dependency - requires LaneRenderer.drawLane()
+        // Drawing is handled by SkinNoteObject in beatoraja-skin.
+        // In Java, draw() calls renderer.drawLane(sprite, time, lanes, offsets).
+        // In Rust, LaneRenderer.draw_lane() returns DrawCommand vectors,
+        // which are set on SkinNoteObject and executed during its draw().
     }
 
     pub fn dispose(&mut self) {
