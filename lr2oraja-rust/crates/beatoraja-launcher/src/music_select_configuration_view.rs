@@ -8,7 +8,6 @@ use beatoraja_select::music_selector::ChartReplicationMode;
 ///
 /// Song select configuration UI: scroll durations, analog scroll,
 /// folder lamp, song info, preview, random select, chart replication.
-#[allow(dead_code)]
 #[derive(Default)]
 pub struct MusicSelectConfigurationView {
     // @FXML private NumericSpinner<Integer> scrolldurationlow;
@@ -47,7 +46,6 @@ pub struct MusicSelectConfigurationView {
     player: Option<PlayerConfig>,
 }
 
-#[allow(dead_code)]
 impl MusicSelectConfigurationView {
     // public void initialize(URL arg0, ResourceBundle arg1)
     pub fn initialize(&mut self) {
@@ -147,5 +145,103 @@ impl MusicSelectConfigurationView {
                 player.chart_replication_mode = mode.clone();
             }
         }
+    }
+
+    pub fn render(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Scroll");
+        egui::Grid::new("music_select_scroll_grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                ui.label("Scroll Duration Low:");
+                ui.add(egui::DragValue::new(&mut self.scrolldurationlow).range(0..=10000));
+                ui.end_row();
+
+                ui.label("Scroll Duration High:");
+                ui.add(egui::DragValue::new(&mut self.scrolldurationhigh).range(0..=10000));
+                ui.end_row();
+
+                ui.label("Analog Scroll:");
+                ui.checkbox(&mut self.analog_scroll, "");
+                ui.end_row();
+
+                if self.analog_scroll {
+                    ui.label("Analog Ticks Per Scroll:");
+                    ui.add(
+                        egui::DragValue::new(&mut self.analog_ticks_per_scroll).range(1..=100),
+                    );
+                    ui.end_row();
+                }
+            });
+
+        ui.separator();
+        ui.heading("Display");
+        egui::Grid::new("music_select_display_grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                ui.label("Folder Lamp:");
+                ui.checkbox(&mut self.folderlamp, "");
+                ui.end_row();
+
+                ui.label("Use Song Info:");
+                ui.checkbox(&mut self.use_song_info, "");
+                ui.end_row();
+
+                ui.label("Show Non-Existing Bar:");
+                ui.checkbox(&mut self.shownoexistingbar, "");
+                ui.end_row();
+
+                ui.label("Song Preview:");
+                let sp_label = self
+                    .song_preview
+                    .as_ref()
+                    .map(|sp| format!("{:?}", sp))
+                    .unwrap_or_default();
+                egui::ComboBox::from_id_salt("music_select_song_preview")
+                    .selected_text(&sp_label)
+                    .show_ui(ui, |ui| {
+                        let previews = [SongPreview::NONE, SongPreview::ONCE, SongPreview::LOOP];
+                        for preview in &previews {
+                            let label = format!("{:?}", preview);
+                            let selected = sp_label == label;
+                            if ui.selectable_label(selected, &label).clicked() {
+                                self.song_preview = Some(preview.clone());
+                            }
+                        }
+                    });
+                ui.end_row();
+
+                ui.label("Skip Decide Screen:");
+                ui.checkbox(&mut self.skip_decide_screen, "");
+                ui.end_row();
+            });
+
+        ui.separator();
+        ui.heading("Search / Misc");
+        egui::Grid::new("music_select_misc_grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                ui.label("Max Search Bar Count:");
+                ui.add(egui::DragValue::new(&mut self.maxsearchbar).range(0..=1000));
+                ui.end_row();
+
+                ui.label("Random Select:");
+                ui.checkbox(&mut self.randomselect, "");
+                ui.end_row();
+
+                ui.label("Chart Replication Mode:");
+                let crm_label = self.chart_replication_mode.clone().unwrap_or_default();
+                egui::ComboBox::from_id_salt("music_select_chart_replication")
+                    .selected_text(&crm_label)
+                    .show_ui(ui, |ui| {
+                        for mode in &self.chart_replication_mode_items.clone() {
+                            ui.selectable_value(
+                                &mut self.chart_replication_mode,
+                                Some(mode.clone()),
+                                mode,
+                            );
+                        }
+                    });
+                ui.end_row();
+            });
     }
 }

@@ -2,13 +2,14 @@
 
 use beatoraja_core::audio_config::{AudioConfig, DriverType, FrequencyType};
 
+use egui;
+
 use crate::stubs::get_port_audio_devices;
 
 /// Translates: AudioConfigurationView (JavaFX → egui)
 ///
 /// Audio configuration UI with DriverType, FrequencyType combos,
 /// volume sliders, and PortAudio device selection.
-#[allow(dead_code)]
 pub struct AudioConfigurationView {
     // @FXML private ComboBox<DriverType> audio;
     audio: Option<DriverType>,
@@ -73,7 +74,6 @@ impl Default for AudioConfigurationView {
     }
 }
 
-#[allow(dead_code)]
 impl AudioConfigurationView {
     // public void initialize(URL arg0, ResourceBundle arg1)
     pub fn initialize(&mut self) {
@@ -244,5 +244,169 @@ impl AudioConfigurationView {
             }
             None => {}
         }
+    }
+
+    pub fn render(&mut self, ui: &mut egui::Ui) {
+        let old_driver_label = self
+            .audio
+            .as_ref()
+            .map(|d| format!("{:?}", d))
+            .unwrap_or_default();
+
+        ui.heading("Audio Driver");
+        egui::Grid::new("audio_driver_grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                ui.label("Driver:");
+                let driver_label = old_driver_label.clone();
+                egui::ComboBox::from_id_salt("audio_driver")
+                    .selected_text(&driver_label)
+                    .show_ui(ui, |ui| {
+                        let drivers = [DriverType::OpenAL, DriverType::PortAudio];
+                        for driver in &drivers {
+                            let label = format!("{:?}", driver);
+                            let selected = driver_label == label;
+                            if ui.selectable_label(selected, &label).clicked() {
+                                self.audio = Some(driver.clone());
+                            }
+                        }
+                    });
+                ui.end_row();
+
+                if !self.audioname_disabled {
+                    ui.label("Device:");
+                    let name_label = self.audioname.clone().unwrap_or_default();
+                    egui::ComboBox::from_id_salt("audio_device_name")
+                        .selected_text(&name_label)
+                        .show_ui(ui, |ui| {
+                            for name in &self.audioname_items.clone() {
+                                ui.selectable_value(
+                                    &mut self.audioname,
+                                    Some(name.clone()),
+                                    name,
+                                );
+                            }
+                        });
+                    ui.end_row();
+                }
+
+                if !self.audiobuffer_disabled {
+                    ui.label("Buffer Size:");
+                    ui.add(egui::DragValue::new(&mut self.audiobuffer).range(0..=65536));
+                    ui.end_row();
+                }
+
+                if !self.audiosim_disabled {
+                    ui.label("Simultaneous Sources:");
+                    ui.add(egui::DragValue::new(&mut self.audiosim).range(0..=256));
+                    ui.end_row();
+                }
+
+                ui.label("Sample Rate:");
+                let sr_label = self
+                    .audiosamplerate
+                    .map(|sr| sr.to_string())
+                    .unwrap_or_else(|| "Auto".to_string());
+                egui::ComboBox::from_id_salt("audio_sample_rate")
+                    .selected_text(&sr_label)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.audiosamplerate, None, "Auto");
+                        ui.selectable_value(&mut self.audiosamplerate, Some(44100), "44100");
+                        ui.selectable_value(&mut self.audiosamplerate, Some(48000), "48000");
+                    });
+                ui.end_row();
+            });
+
+        // Update driver settings when driver selection changes
+        let new_driver_label = self
+            .audio
+            .as_ref()
+            .map(|d| format!("{:?}", d))
+            .unwrap_or_default();
+        if old_driver_label != new_driver_label {
+            self.update_audio_driver();
+        }
+
+        ui.separator();
+        ui.heading("Volume");
+        egui::Grid::new("audio_volume_grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                ui.label("System Volume:");
+                ui.add(egui::Slider::new(&mut self.systemvolume, 0.0..=1.0));
+                ui.end_row();
+
+                ui.label("Normalize Volume:");
+                if ui.checkbox(&mut self.normalize_volume, "").changed() {
+                    self.update_normalize_volume();
+                }
+                ui.end_row();
+
+                if !self.keyvolume_disabled {
+                    ui.label("Key Volume:");
+                    ui.add(egui::Slider::new(&mut self.keyvolume, 0.0..=1.0));
+                    ui.end_row();
+                }
+
+                if !self.bgvolume_disabled {
+                    ui.label("BG Volume:");
+                    ui.add(egui::Slider::new(&mut self.bgvolume, 0.0..=1.0));
+                    ui.end_row();
+                }
+            });
+
+        ui.separator();
+        ui.heading("Frequency / Playback");
+        egui::Grid::new("audio_freq_grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                ui.label("Frequency Option:");
+                let freq_label = self
+                    .audio_freq_option
+                    .as_ref()
+                    .map(|f| format!("{:?}", f))
+                    .unwrap_or_default();
+                egui::ComboBox::from_id_salt("audio_freq_option")
+                    .selected_text(&freq_label)
+                    .show_ui(ui, |ui| {
+                        let options = [FrequencyType::UNPROCESSED, FrequencyType::FREQUENCY];
+                        for opt in &options {
+                            let label = format!("{:?}", opt);
+                            let selected = freq_label == label;
+                            if ui.selectable_label(selected, &label).clicked() {
+                                self.audio_freq_option = Some(opt.clone());
+                            }
+                        }
+                    });
+                ui.end_row();
+
+                ui.label("Fast Forward:");
+                let ff_label = self
+                    .audio_fast_forward
+                    .as_ref()
+                    .map(|f| format!("{:?}", f))
+                    .unwrap_or_default();
+                egui::ComboBox::from_id_salt("audio_fast_forward")
+                    .selected_text(&ff_label)
+                    .show_ui(ui, |ui| {
+                        let options = [FrequencyType::UNPROCESSED, FrequencyType::FREQUENCY];
+                        for opt in &options {
+                            let label = format!("{:?}", opt);
+                            let selected = ff_label == label;
+                            if ui.selectable_label(selected, &label).clicked() {
+                                self.audio_fast_forward = Some(opt.clone());
+                            }
+                        }
+                    });
+                ui.end_row();
+
+                ui.label("Loop Result Sound:");
+                ui.checkbox(&mut self.loop_result_sound, "");
+                ui.end_row();
+
+                ui.label("Loop Course Result Sound:");
+                ui.checkbox(&mut self.loop_course_result_sound, "");
+                ui.end_row();
+            });
     }
 }

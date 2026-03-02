@@ -4,13 +4,14 @@ use beatoraja_core::config::{Config, DisplayMode};
 use beatoraja_core::player_config::PlayerConfig;
 use beatoraja_core::resolution::Resolution;
 
+use egui;
+
 use crate::stubs::{MainLoader, get_monitors};
 
 /// Translates: VideoConfigurationView (JavaFX → egui)
 ///
 /// Video/display configuration UI with resolution, display mode,
 /// BGA options, VSync, max FPS, and monitor selection.
-#[allow(dead_code)]
 #[derive(Default)]
 pub struct VideoConfigurationView {
     // @FXML private ComboBox<Resolution> resolution;
@@ -52,7 +53,6 @@ const ALL_RESOLUTIONS: &[Resolution] = &[
     Resolution::ULTRAHD,
 ];
 
-#[allow(dead_code)]
 impl VideoConfigurationView {
     // public void initialize(URL location, ResourceBundle resources)
     pub fn initialize(&mut self) {
@@ -149,6 +149,126 @@ impl VideoConfigurationView {
     /// Get the current display mode.
     pub fn display_mode(&self) -> Option<&DisplayMode> {
         self.display_mode.as_ref()
+    }
+
+    pub fn render(&mut self, ui: &mut egui::Ui) {
+        let old_dm_label = self
+            .display_mode
+            .as_ref()
+            .map(|dm| format!("{:?}", dm))
+            .unwrap_or_default();
+
+        ui.heading("Display");
+        egui::Grid::new("video_display_grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                ui.label("Display Mode:");
+                let dm_label = old_dm_label.clone();
+                egui::ComboBox::from_id_salt("video_display_mode")
+                    .selected_text(&dm_label)
+                    .show_ui(ui, |ui| {
+                        let modes = [
+                            DisplayMode::FULLSCREEN,
+                            DisplayMode::BORDERLESS,
+                            DisplayMode::WINDOW,
+                        ];
+                        for mode in &modes {
+                            let label = format!("{:?}", mode);
+                            let selected = dm_label == label;
+                            if ui.selectable_label(selected, &label).clicked() {
+                                self.display_mode = Some(mode.clone());
+                            }
+                        }
+                    });
+                ui.end_row();
+
+                ui.label("Resolution:");
+                let res_label = self
+                    .resolution
+                    .map(|r| format!("{}", r))
+                    .unwrap_or_default();
+                egui::ComboBox::from_id_salt("video_resolution")
+                    .selected_text(&res_label)
+                    .show_ui(ui, |ui| {
+                        for r in &self.resolution_items.clone() {
+                            ui.selectable_value(
+                                &mut self.resolution,
+                                Some(*r),
+                                format!("{}", r),
+                            );
+                        }
+                    });
+                ui.end_row();
+
+                ui.label("Monitor:");
+                let mon_label = self.monitor.clone().unwrap_or_default();
+                egui::ComboBox::from_id_salt("video_monitor")
+                    .selected_text(&mon_label)
+                    .show_ui(ui, |ui| {
+                        for m in &self.monitor_items.clone() {
+                            ui.selectable_value(&mut self.monitor, Some(m.clone()), m);
+                        }
+                    });
+                ui.end_row();
+
+                ui.label("VSync:");
+                ui.checkbox(&mut self.vsync, "");
+                ui.end_row();
+
+                ui.label("Max FPS:");
+                ui.add(egui::DragValue::new(&mut self.max_fps).range(1..=1000));
+                ui.end_row();
+            });
+
+        // Update resolutions when display mode changes
+        let new_dm_label = self
+            .display_mode
+            .as_ref()
+            .map(|dm| format!("{:?}", dm))
+            .unwrap_or_default();
+        if old_dm_label != new_dm_label {
+            self.update_resolutions();
+        }
+
+        ui.separator();
+        ui.heading("BGA");
+        egui::Grid::new("video_bga_grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                let bga_labels = ["ON", "AUTO", "OFF"];
+                ui.label("BGA:");
+                egui::ComboBox::from_id_salt("video_bga_op")
+                    .selected_text(
+                        *bga_labels
+                            .get(self.bga_op as usize)
+                            .unwrap_or(&"Unknown"),
+                    )
+                    .show_ui(ui, |ui| {
+                        for (i, label) in bga_labels.iter().enumerate() {
+                            ui.selectable_value(&mut self.bga_op, i as i32, *label);
+                        }
+                    });
+                ui.end_row();
+
+                let expand_labels = ["Full", "Keep Aspect Ratio", "Off"];
+                ui.label("BGA Expand:");
+                egui::ComboBox::from_id_salt("video_bga_expand")
+                    .selected_text(
+                        *expand_labels
+                            .get(self.bga_expand as usize)
+                            .unwrap_or(&"Unknown"),
+                    )
+                    .show_ui(ui, |ui| {
+                        for (i, label) in expand_labels.iter().enumerate() {
+                            ui.selectable_value(&mut self.bga_expand, i as i32, *label);
+                        }
+                    });
+                ui.end_row();
+
+                ui.label("Miss Layer Time (ms):");
+                ui.add(egui::DragValue::new(&mut self.miss_layer_time).range(0..=10000));
+                ui.end_row();
+            });
     }
 
     // @FXML public void updateResolutions()
