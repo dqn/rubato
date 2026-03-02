@@ -105,3 +105,6 @@ pub mod input_processor_access;
 
 // Score handoff (Play→Result data transfer via outbox pattern)
 pub mod score_handoff;
+
+// Target property trait (core↔play bridge for score target)
+pub mod target_property_access;

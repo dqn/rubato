@@ -293,7 +293,7 @@ pub const OFFSET_COUNT: usize = OFFSET_MAX + 1;
 impl MainController {
     pub fn new(
         f: Option<PathBuf>,
-        config: Config,
+        mut config: Config,
         player: PlayerConfig,
         auto: Option<BMSPlayerMode>,
         song_updated: bool,
@@ -301,6 +301,38 @@ impl MainController {
         let mut offset = Vec::with_capacity(OFFSET_COUNT);
         for _ in 0..OFFSET_COUNT {
             offset.push(SkinOffset::new());
+        }
+
+        // IPFS directory setup (Java: MainController constructor lines 161-170)
+        if config.enable_ipfs {
+            let ipfspath = std::path::Path::new("ipfs")
+                .canonicalize()
+                .unwrap_or_else(|_| std::env::current_dir().unwrap().join("ipfs"));
+            let _ = std::fs::create_dir_all(&ipfspath);
+            if ipfspath.exists() {
+                let ipfs_str = ipfspath.to_string_lossy().to_string();
+                if !config.bmsroot.contains(&ipfs_str) {
+                    config.bmsroot.push(ipfs_str);
+                }
+            }
+        }
+
+        // HTTP download directory setup (Java: MainController constructor lines 171-180)
+        if config.enable_http {
+            let httpdl_path = std::path::Path::new(&config.download_directory)
+                .canonicalize()
+                .unwrap_or_else(|_| {
+                    std::env::current_dir()
+                        .unwrap()
+                        .join(&config.download_directory)
+                });
+            let _ = std::fs::create_dir_all(&httpdl_path);
+            if httpdl_path.exists() {
+                let http_str = httpdl_path.to_string_lossy().to_string();
+                if !config.bmsroot.contains(&http_str) {
+                    config.bmsroot.push(http_str);
+                }
+            }
         }
 
         let timer = TimerManager::new();
@@ -1254,6 +1286,12 @@ impl MainController {
         self.infodb.as_deref()
     }
 
+    /// Set the song information database.
+    /// Called from launcher layer since beatoraja-core cannot depend on beatoraja-song.
+    pub fn set_info_database(&mut self, db: Box<dyn SongInformationDb>) {
+        self.infodb = Some(db);
+    }
+
     pub fn get_music_download_processor(&self) -> Option<&MusicDownloadProcessor> {
         self.download.as_ref()
     }
@@ -1417,18 +1455,29 @@ impl MainController {
     /// }
     /// ```
     ///
-    /// Blocked: TargetProperty lives in beatoraja-play, which beatoraja-core
-    /// cannot depend on (circular dependency). TargetProperty::set_targets()
-    /// also does not exist yet. This will be wired from the launcher layer.
+    /// Translated from: Java MainController.setTargetList()
+    ///
+    /// Builds target list from player config + rival targets, then resolves
+    /// display names via beatoraja_types::target_list.
     pub fn set_target_list(&mut self) {
         // Build target list: player's target list + rival targets
         let mut targetlist: Vec<String> = self.player.targetlist.clone();
         for i in 0..self.rivals.get_rival_count() {
             targetlist.push(format!("RIVAL_{}", i + 1));
         }
-        // Store target IDs in shared state. Target names are set separately
-        // by the launcher layer which can access TargetProperty.
+
+        // Resolve display names for each target ID
+        let rivals: Vec<beatoraja_types::player_information::PlayerInformation> =
+            (0..self.rivals.get_rival_count())
+                .filter_map(|i| self.rivals.get_rival_information(i).cloned())
+                .collect();
+        let names: Vec<String> = targetlist
+            .iter()
+            .map(|id| beatoraja_types::target_list::resolve_target_name(id, &rivals))
+            .collect();
+
         beatoraja_types::target_list::set_target_ids(targetlist);
+        beatoraja_types::target_list::set_target_names(names);
     }
 
     /// Periodically save config if enough time has elapsed.

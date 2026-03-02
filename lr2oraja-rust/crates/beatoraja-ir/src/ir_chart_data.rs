@@ -71,6 +71,23 @@ impl IRChartData {
         Self::new_with_lntype(song, lntype)
     }
 
+    /// Convert IRChartData back to SongData.
+    /// Translated from: Java BarManager.java inline mapping (lines 141-152, 160-172)
+    pub fn to_song_data(&self) -> SongData {
+        let mut sd = SongData::default();
+        sd.sha256 = self.sha256.clone();
+        sd.md5 = self.md5.clone();
+        sd.title = self.title.clone();
+        sd.artist = self.artist.clone();
+        sd.genre = self.genre.clone();
+        sd.set_url(self.url.clone());
+        sd.set_appendurl(self.appendurl.clone());
+        if let Some(ref mode) = self.mode {
+            sd.mode = mode.id();
+        }
+        sd
+    }
+
     pub fn new_with_lntype(song: &SongData, lntype: i32) -> Self {
         let model = song.get_bms_model();
         let total = if let Some(m) = model {

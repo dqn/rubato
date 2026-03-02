@@ -1,4 +1,5 @@
 use beatoraja_core::table_data::TableData;
+use beatoraja_types::validatable::Validatable;
 
 use crate::ir_chart_data::IRChartData;
 use crate::ir_course_data::IRCourseData;
@@ -23,6 +24,35 @@ impl IRTableData {
             folders,
             courses,
         }
+    }
+
+    /// Convert IRTableData back to TableData.
+    /// Translated from: Java BarManager.java (lines 134-190)
+    pub fn to_table_data(&self) -> Option<TableData> {
+        use beatoraja_core::table_data::TableFolder;
+
+        let folder: Vec<TableFolder> = self
+            .folders
+            .iter()
+            .map(|f| {
+                let songs: Vec<beatoraja_types::song_data::SongData> =
+                    f.charts.iter().map(|c| c.to_song_data()).collect();
+                let mut tf = TableFolder::default();
+                tf.set_name(f.name.clone());
+                tf.songs = songs;
+                tf
+            })
+            .collect();
+
+        let course: Vec<beatoraja_core::course_data::CourseData> =
+            self.courses.iter().map(|c| c.to_course_data()).collect();
+
+        let mut td = TableData::default();
+        td.set_name(self.name.clone());
+        td.folder = folder;
+        td.course = course;
+
+        if td.validate() { Some(td) } else { None }
     }
 
     pub fn from_table_data(table: &TableData) -> Self {
@@ -97,5 +127,93 @@ pub struct IRTableFolder {
 impl IRTableFolder {
     pub fn new(name: String, charts: Vec<IRChartData>) -> Self {
         Self { name, charts }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir_course_data::IRTrophyData;
+    use beatoraja_core::course_data::CourseDataConstraint;
+
+    fn make_chart(sha256: &str, title: &str) -> IRChartData {
+        IRChartData {
+            sha256: sha256.to_string(),
+            title: title.to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_to_table_data_with_folders() {
+        let ir = IRTableData::new(
+            "Test Table".to_string(),
+            vec![IRTableFolder::new(
+                "Level 1".to_string(),
+                vec![make_chart("abc123", "Song A")],
+            )],
+            vec![],
+        );
+        let td = ir.to_table_data();
+        assert!(td.is_some());
+        let td = td.unwrap();
+        assert_eq!(td.get_name(), "Test Table");
+        assert_eq!(td.folder.len(), 1);
+        assert_eq!(td.folder[0].get_name(), "Level 1");
+        assert_eq!(td.folder[0].songs.len(), 1);
+        assert_eq!(td.folder[0].songs[0].sha256, "abc123");
+        assert_eq!(td.folder[0].songs[0].title, "Song A");
+    }
+
+    #[test]
+    fn test_to_table_data_with_courses() {
+        let ir = IRTableData::new(
+            "Course Table".to_string(),
+            vec![],
+            vec![IRCourseData {
+                name: "Dan Course".to_string(),
+                charts: vec![make_chart("def456", "Course Song")],
+                constraint: vec![CourseDataConstraint::NoSpeed],
+                trophy: vec![IRTrophyData {
+                    name: "Gold".to_string(),
+                    scorerate: 90.0,
+                    smissrate: 5.0,
+                }],
+                lntype: -1,
+            }],
+        );
+        let td = ir.to_table_data();
+        assert!(td.is_some());
+        let td = td.unwrap();
+        assert_eq!(td.get_name(), "Course Table");
+        assert_eq!(td.course.len(), 1);
+        assert_eq!(td.course[0].get_name(), "Dan Course");
+        assert!(td.course[0].release);
+        assert_eq!(td.course[0].trophy.len(), 1);
+        assert_eq!(td.course[0].trophy[0].name, Some("Gold".to_string()));
+    }
+
+    #[test]
+    fn test_to_table_data_empty_returns_none() {
+        let ir = IRTableData::new("".to_string(), vec![], vec![]);
+        // Empty name fails validation
+        assert!(ir.to_table_data().is_none());
+    }
+
+    #[test]
+    fn test_roundtrip_from_table_data_to_table_data() {
+        let ir_original = IRTableData::new(
+            "Roundtrip".to_string(),
+            vec![IRTableFolder::new(
+                "Folder".to_string(),
+                vec![make_chart("sha", "Title")],
+            )],
+            vec![],
+        );
+        let td = ir_original.to_table_data().unwrap();
+        let ir_back = IRTableData::from_table_data(&td);
+        assert_eq!(ir_back.name, "Roundtrip");
+        assert_eq!(ir_back.folders.len(), 1);
+        assert_eq!(ir_back.folders[0].charts[0].sha256, "sha");
     }
 }

@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
+use crate::skin_property::{OFFSET_ALL, OFFSET_JUDGE_1P, OFFSET_JUDGEDETAIL_1P, OFFSET_NOTES_1P};
 use crate::stubs::{MainState, Resolution};
 
 /// LR2 skin header loader
@@ -222,10 +223,9 @@ impl LR2SkinHeaderLoader {
                             ],
                         ));
 
-                        // SkinProperty offset IDs (use placeholder values)
                         self.offsets.push(CustomOffset::new(
                             "All offset(%)",
-                            0,
+                            OFFSET_ALL,
                             true,
                             true,
                             true,
@@ -235,7 +235,7 @@ impl LR2SkinHeaderLoader {
                         ));
                         self.offsets.push(CustomOffset::new(
                             "Notes offset",
-                            1,
+                            OFFSET_NOTES_1P,
                             false,
                             false,
                             false,
@@ -245,7 +245,7 @@ impl LR2SkinHeaderLoader {
                         ));
                         self.offsets.push(CustomOffset::new(
                             "Judge offset",
-                            2,
+                            OFFSET_JUDGE_1P,
                             true,
                             true,
                             true,
@@ -255,7 +255,7 @@ impl LR2SkinHeaderLoader {
                         ));
                         self.offsets.push(CustomOffset::new(
                             "Judge Detail offset",
-                            3,
+                            OFFSET_JUDGEDETAIL_1P,
                             true,
                             true,
                             true,

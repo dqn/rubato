@@ -20,6 +20,29 @@ pub struct IRCourseData {
 }
 
 impl IRCourseData {
+    /// Convert IRCourseData back to CourseData.
+    /// Translated from: Java BarManager.java inline mapping (lines 157-186)
+    pub fn to_course_data(&self) -> CourseData {
+        let songs: Vec<beatoraja_types::song_data::SongData> =
+            self.charts.iter().map(|c| c.to_song_data()).collect();
+        let trophy: Vec<TrophyData> = self
+            .trophy
+            .iter()
+            .map(|t| TrophyData {
+                name: Some(t.name.clone()),
+                scorerate: t.scorerate,
+                missrate: t.smissrate,
+            })
+            .collect();
+        let mut cd = CourseData::default();
+        cd.set_name(self.name.clone());
+        cd.set_song(songs);
+        cd.constraint = self.constraint.clone();
+        cd.trophy = trophy;
+        cd.release = true;
+        cd
+    }
+
     pub fn new(course: &CourseData) -> Self {
         Self::new_with_lntype(course, -1)
     }
