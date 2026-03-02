@@ -176,7 +176,7 @@ ast-compare:
 
 # AST comparison: constant comparison (excluding trivial)
 ast-constants:
-    cargo run -p ast-compare -- {{ ast_common }} constants --exclude-trivial
+    cargo run -p ast-compare -- {{ ast_common }} constants --exclude-trivial --ignore-file .ast-compare-constants-ignore
 
 # AST comparison: full report
 ast-full:

@@ -119,10 +119,10 @@ winit = "0.30"
 arboard = "3"
 
 # Audio device enumeration
-cpal = "0.15"
+cpal = "0.17"
 
 # Image processing
-image = "0.25"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "bmp", "gif", "ico", "tga", "tiff", "webp"] }
 
 # Testing
 tempfile = "3"

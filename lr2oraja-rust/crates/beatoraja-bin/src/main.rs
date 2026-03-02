@@ -136,9 +136,41 @@ fn launch() -> Result<()> {
 fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result<()> {
     use beatoraja_core::main_loader::MainLoader;
 
+    // Wire song database before MainLoader::play(), which calls take_score_database_accessor().
+    // In the launcher path, LauncherMainLoader::play() handles this via init_score_database_accessor().
+    // In the direct play path (-s flag or bms_path), we must do it here.
+    {
+        use beatoraja_core::config::Config;
+        let config = Config::read().unwrap_or_default();
+        match beatoraja_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
+            config.get_songpath(),
+            config.get_bmsroot(),
+        ) {
+            Ok(accessor) => {
+                MainLoader::set_score_database_accessor(Box::new(accessor));
+                info!("Song database initialized: {}", config.get_songpath());
+            }
+            Err(e) => {
+                warn!(
+                    "Song database init failed: {}. Continuing without song DB.",
+                    e
+                );
+            }
+        }
+    }
+
     // Java: MainLoader.play() handles config, illegal songs, player config, and controller creation.
     // It sets config.windowWidth/Height from resolution before creating MainController.
     let mut main_controller = MainLoader::play(bms_path, player_mode, true, None, None, false)?;
+
+    // Java: audio = new GdxSoundDriver(config.getSongResourceGen())
+    // Wire the Kira-based audio driver so keysounds, BGM, and UI sounds work.
+    {
+        let song_resource_gen = main_controller.get_config().song_resource_gen;
+        let audio_driver =
+            beatoraja_audio::gdx_sound_driver::GdxSoundDriver::new(song_resource_gen);
+        main_controller.set_audio_driver(Box::new(audio_driver));
+    }
 
     // Set the state factory so that change_state() can create concrete state instances.
     // Without this, the controller has no factory and all state transitions silently fail,
@@ -754,7 +786,12 @@ impl ApplicationHandler for BeatorajaApp {
 
     /// Called when the event loop is about to wait for new events.
     /// Request continuous redraws to match the Java game loop behavior.
-    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        // Java: MainController checks exit flag and calls Platform.exit()
+        if self.controller.is_exit_requested() {
+            event_loop.exit();
+            return;
+        }
         if let Some(window) = &self.window {
             window.request_redraw();
         }

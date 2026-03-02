@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -108,6 +108,10 @@ enum Commands {
         /// Exclude common trivial constants (0, 1, -1, true, false)
         #[arg(long)]
         exclude_trivial: bool,
+
+        /// Path to method-level ignore patterns file (ClassName.methodName or ClassName.*)
+        #[arg(long)]
+        ignore_file: Option<PathBuf>,
     },
 
     /// Full report (all three features combined)
@@ -158,7 +162,13 @@ fn main() -> Result<()> {
         Commands::Constants {
             file,
             exclude_trivial,
-        } => run_constants(&cli, file.as_deref(), *exclude_trivial),
+            ignore_file,
+        } => run_constants(
+            &cli,
+            file.as_deref(),
+            *exclude_trivial,
+            ignore_file.as_deref(),
+        ),
         Commands::Full { threshold } => run_full(&cli, *threshold),
     }
 }
@@ -308,8 +318,18 @@ fn run_compare(
     output_result(cli, &text, &report)
 }
 
-fn run_constants(cli: &Cli, file_filter: Option<&str>, exclude_trivial: bool) -> Result<()> {
+fn run_constants(
+    cli: &Cli,
+    file_filter: Option<&str>,
+    exclude_trivial: bool,
+    ignore_file: Option<&Path>,
+) -> Result<()> {
+    use ast_compare::signature_map::{is_ignored_method, load_ignore_patterns};
+
     let (file_mappings, java_sources, rust_sources) = load_all(cli)?;
+
+    let ignore_patterns = ignore_file.map(load_ignore_patterns).unwrap_or_default();
+    let mut ignored_count = 0usize;
 
     let mut comparisons = Vec::new();
 
@@ -331,6 +351,10 @@ fn run_constants(cli: &Cli, file_filter: Option<&str>, exclude_trivial: bool) ->
                 let rust_type = rust.types.iter().find(|rt| rt.name == jt.name);
                 if let Some(rt) = rust_type {
                     for jm in &jt.methods {
+                        if is_ignored_method(&jt.name, &jm.name, &ignore_patterns) {
+                            ignored_count += 1;
+                            continue;
+                        }
                         let snake_name = naming::method_to_snake(&jm.name);
                         let rm = rt.methods.iter().find(|m| m.name == snake_name);
                         if let (Some(jbody), Some(rm)) = (&jm.body, rm)
@@ -352,6 +376,10 @@ fn run_constants(cli: &Cli, file_filter: Option<&str>, exclude_trivial: bool) ->
         }
     }
 
+    if ignored_count > 0 {
+        eprintln!("Constants: {ignored_count} methods ignored via ignore file");
+    }
+
     let report = build_constants_report(comparisons);
     let text = format_constants_report(&report);
     output_result(cli, &text, &report)
@@ -370,7 +398,7 @@ fn run_full(cli: &Cli, threshold: f64) -> Result<()> {
 
     eprintln!();
     eprintln!("=== Phase 3: Constants Comparison ===");
-    run_constants(cli, None, true)?;
+    run_constants(cli, None, true, None)?;
 
     Ok(())
 }

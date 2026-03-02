@@ -68,7 +68,8 @@ pub fn get_port_audio_devices() -> anyhow::Result<Vec<DeviceInfo>> {
     let mut result = Vec::new();
     for device in devices {
         let name = device
-            .name()
+            .description()
+            .map(|d| d.name().to_string())
             .unwrap_or_else(|_| "Unknown Device".to_string());
         result.push(DeviceInfo { name });
     }

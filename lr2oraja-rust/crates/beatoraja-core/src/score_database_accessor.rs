@@ -168,13 +168,12 @@ impl ScoreDatabaseAccessor {
     pub fn get_score_data(&self, hash: &str, mode: i32) -> Option<ScoreData> {
         match self
             .conn
-            .prepare(&format!(
-                "SELECT * FROM score WHERE sha256 = '{}' AND mode = {}",
-                hash, mode
-            ))
+            .prepare("SELECT * FROM score WHERE sha256 = ?1 AND mode = ?2")
             .and_then(|mut stmt| {
-                stmt.query_map([], |row| Ok(row_to_score_data(row)))
-                    .map(|rows| rows.filter_map(|r| r.ok()).collect::<Vec<_>>())
+                stmt.query_map(rusqlite::params![hash, mode], |row| {
+                    Ok(row_to_score_data(row))
+                })
+                .map(|rows| rows.filter_map(|r| r.ok()).collect::<Vec<_>>())
             }) {
             Ok(scores) => {
                 let scores: Vec<ScoreData> = scores
@@ -218,7 +217,7 @@ impl ScoreDatabaseAccessor {
         collector: &mut dyn ScoreDataCollector,
         songs: &[SongData],
         mode: i32,
-        str_buf: &mut String,
+        _str_buf: &mut String,
         hasln: bool,
     ) {
         let result: Result<(), anyhow::Error> = (|| {
@@ -229,31 +228,39 @@ impl ScoreDatabaseAccessor {
             for i in 0..chunk_length {
                 let chunk_start = i * LOAD_CHUNK_SIZE;
                 let chunk_end = std::cmp::min(song_length, (i + 1) * LOAD_CHUNK_SIZE);
+                let mut chunk_hashes: Vec<String> = Vec::new();
                 for j in chunk_start..chunk_end {
                     let song = &songs[j];
-                    let has_uln = !song.sha256.is_empty(); // Simplified; real check needs hasUndefinedLongNote
+                    let has_uln = !song.sha256.is_empty();
                     if (hasln && has_uln) || (!hasln && !has_uln) {
-                        if !str_buf.is_empty() {
-                            str_buf.push(',');
-                        }
-                        str_buf.push('\'');
-                        str_buf.push_str(&song.sha256);
-                        str_buf.push('\'');
+                        chunk_hashes.push(song.sha256.clone());
                     }
                 }
 
-                if !str_buf.is_empty() {
+                if !chunk_hashes.is_empty() {
+                    let placeholders: Vec<String> = chunk_hashes
+                        .iter()
+                        .enumerate()
+                        .map(|(i, _)| format!("?{}", i + 1))
+                        .collect();
                     let sql = format!(
-                        "SELECT * FROM score WHERE sha256 IN ({}) AND mode = {}",
-                        str_buf, mode
+                        "SELECT * FROM score WHERE sha256 IN ({}) AND mode = ?{}",
+                        placeholders.join(","),
+                        chunk_hashes.len() + 1
                     );
+                    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = chunk_hashes
+                        .iter()
+                        .map(|h| Box::new(h.clone()) as Box<dyn rusqlite::types::ToSql>)
+                        .collect();
+                    params.push(Box::new(mode));
+                    let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+                        params.iter().map(|p| p.as_ref()).collect();
                     let mut stmt = self.conn.prepare(&sql)?;
                     let sub_scores: Vec<ScoreData> = stmt
-                        .query_map([], |row| Ok(row_to_score_data(row)))?
+                        .query_map(param_refs.as_slice(), |row| Ok(row_to_score_data(row)))?
                         .filter_map(|r| r.ok())
                         .filter(|s| s.clone().validate())
                         .collect();
-                    str_buf.clear();
                     scores.extend(sub_scores);
                 }
             }
@@ -325,20 +332,73 @@ impl ScoreDatabaseAccessor {
     }
 
     pub fn set_score_data_map(&self, map: &HashMap<String, HashMap<String, String>>) {
+        // Whitelist valid score column names to prevent SQL injection
+        const VALID_SCORE_COLUMNS: &[&str] = &[
+            "sha256",
+            "player",
+            "mode",
+            "clear",
+            "date",
+            "playcount",
+            "clearcount",
+            "epg",
+            "lpg",
+            "egr",
+            "lgr",
+            "egd",
+            "lgd",
+            "ebd",
+            "lbd",
+            "epr",
+            "lpr",
+            "ems",
+            "lms",
+            "maxcombo",
+            "notes",
+            "passnotes",
+            "minbp",
+            "avgjudge",
+            "totalDuration",
+            "avg",
+            "totalAvg",
+            "stddev",
+            "option",
+            "seed",
+            "random",
+            "judge",
+            "gauge",
+            "state",
+            "scorehash",
+            "combo",
+            "trophy",
+        ];
+
         let result: anyhow::Result<()> = (|| {
             let tx = self.conn.unchecked_transaction()?;
             for (hash, values) in map {
-                let mut vs = String::new();
+                let mut set_parts: Vec<String> = Vec::new();
+                let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+                let mut idx = 1;
+
                 for (key, val) in values {
-                    vs.push_str(&format!("{} = {},", key, val));
+                    if !VALID_SCORE_COLUMNS.contains(&key.as_str()) {
+                        log::warn!("Invalid column name for score update: {}", key);
+                        continue;
+                    }
+                    set_parts.push(format!("[{}] = ?{}", key, idx));
+                    params.push(Box::new(val.clone()));
+                    idx += 1;
                 }
-                if !vs.is_empty() {
-                    vs.truncate(vs.len() - 1);
-                    vs.push(' ');
-                    self.conn.execute(
-                        &format!("UPDATE score SET {} WHERE sha256 = '{}'", vs, hash),
-                        [],
-                    )?;
+                if !set_parts.is_empty() {
+                    let sql = format!(
+                        "UPDATE score SET {} WHERE sha256 = ?{}",
+                        set_parts.join(", "),
+                        idx
+                    );
+                    params.push(Box::new(hash.clone()));
+                    let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+                        params.iter().map(|p| p.as_ref()).collect();
+                    self.conn.execute(&sql, param_refs.as_slice())?;
                 }
             }
             tx.commit()?;
@@ -368,14 +428,19 @@ impl ScoreDatabaseAccessor {
     }
 
     pub fn get_player_datas(&self, count: i32) -> Vec<PlayerData> {
-        let sql = if count > 0 {
-            format!("SELECT * FROM player ORDER BY date DESC limit {}", count)
+        let (sql, params): (&str, Vec<Box<dyn rusqlite::types::ToSql>>) = if count > 0 {
+            (
+                "SELECT * FROM player ORDER BY date DESC LIMIT ?1",
+                vec![Box::new(count) as Box<dyn rusqlite::types::ToSql>],
+            )
         } else {
-            "SELECT * FROM player ORDER BY date DESC".to_string()
+            ("SELECT * FROM player ORDER BY date DESC", vec![])
         };
+        let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+            params.iter().map(|p| p.as_ref()).collect();
 
-        match self.conn.prepare(&sql).and_then(|mut stmt| {
-            stmt.query_map([], |row| Ok(row_to_player_data(row)))
+        match self.conn.prepare(sql).and_then(|mut stmt| {
+            stmt.query_map(param_refs.as_slice(), |row| Ok(row_to_player_data(row)))
                 .map(|rows| rows.filter_map(|r| r.ok()).collect::<Vec<_>>())
         }) {
             Ok(pds) => pds,

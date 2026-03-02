@@ -275,7 +275,10 @@ impl ScoreData {
     }
 
     pub fn get_exscore(&self) -> i32 {
-        (self.epg + self.lpg) * 2 + self.egr + self.lgr
+        (self.epg.saturating_add(self.lpg))
+            .saturating_mul(2)
+            .saturating_add(self.egr)
+            .saturating_add(self.lgr)
     }
 
     pub fn get_judge_count_total(&self, judge: i32) -> i32 {

@@ -87,8 +87,8 @@ impl SongInformationAccessor {
                 if sha256.is_empty() {
                     continue;
                 }
-                let query = format!("SELECT * FROM information WHERE sha256 IN ('{}')", sha256);
-                match self.query_informations(&query, &[]) {
+                let query = "SELECT * FROM information WHERE sha256 = ?1";
+                match self.query_informations(query, &[sha256.as_str()]) {
                     Ok(sub_infos) => {
                         let valid = remove_invalid_elements_vec(sub_infos);
                         infos.extend(valid);

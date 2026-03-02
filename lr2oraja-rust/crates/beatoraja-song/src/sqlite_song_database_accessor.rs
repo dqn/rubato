@@ -345,42 +345,78 @@ impl SQLiteSongDatabaseAccessor {
 
 impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
     fn get_song_datas(&self, key: &str, value: &str) -> Vec<SongData> {
-        let sql = format!("SELECT * FROM song WHERE {} = ?1", key);
+        // Whitelist valid column names to prevent SQL injection via key parameter
+        const VALID_COLUMNS: &[&str] = &[
+            "md5",
+            "sha256",
+            "title",
+            "subtitle",
+            "genre",
+            "artist",
+            "subartist",
+            "path",
+            "folder",
+            "parent",
+            "level",
+            "difficulty",
+            "mode",
+        ];
+        if !VALID_COLUMNS.contains(&key) {
+            log::warn!("Invalid column name for song query: {}", key);
+            return Vec::new();
+        }
+        let sql = format!("SELECT * FROM song WHERE [{}] = ?1", key);
         let songs = self.query_songs(&sql, &[&value as &dyn rusqlite::types::ToSql]);
         remove_invalid_elements_vec(songs)
     }
 
     fn get_song_datas_by_hashes(&self, hashes: &[String]) -> Vec<SongData> {
-        let mut md5str = String::new();
-        let mut sha256str = String::new();
+        let mut md5_hashes: Vec<&str> = Vec::new();
+        let mut sha256_hashes: Vec<&str> = Vec::new();
         for hash in hashes {
             if hash.len() > 32 {
-                if !sha256str.is_empty() {
-                    sha256str.push(',');
-                }
-                sha256str.push('\'');
-                sha256str.push_str(hash);
-                sha256str.push('\'');
+                sha256_hashes.push(hash);
             } else {
-                if !md5str.is_empty() {
-                    md5str.push(',');
-                }
-                md5str.push('\'');
-                md5str.push_str(hash);
-                md5str.push('\'');
+                md5_hashes.push(hash);
             }
         }
-        let sql = match (md5str.is_empty(), sha256str.is_empty()) {
-            (true, true) => return Vec::new(),
-            (false, true) => format!("SELECT * FROM song WHERE md5 IN ({})", md5str),
-            (true, false) => format!("SELECT * FROM song WHERE sha256 IN ({})", sha256str),
-            (false, false) => format!(
-                "SELECT * FROM song WHERE md5 IN ({}) OR sha256 IN ({})",
-                md5str, sha256str
-            ),
-        };
 
-        let m = self.query_songs(&sql, &[]);
+        if md5_hashes.is_empty() && sha256_hashes.is_empty() {
+            return Vec::new();
+        }
+
+        // Build parameterized IN clause
+        let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+        let mut conditions = Vec::new();
+
+        if !md5_hashes.is_empty() {
+            let placeholders: Vec<String> = md5_hashes
+                .iter()
+                .enumerate()
+                .map(|(i, _)| format!("?{}", params.len() + i + 1))
+                .collect();
+            conditions.push(format!("md5 IN ({})", placeholders.join(",")));
+            for h in &md5_hashes {
+                params.push(Box::new(h.to_string()));
+            }
+        }
+
+        if !sha256_hashes.is_empty() {
+            let placeholders: Vec<String> = sha256_hashes
+                .iter()
+                .enumerate()
+                .map(|(i, _)| format!("?{}", params.len() + i + 1))
+                .collect();
+            conditions.push(format!("sha256 IN ({})", placeholders.join(",")));
+            for h in &sha256_hashes {
+                params.push(Box::new(h.to_string()));
+            }
+        }
+
+        let sql = format!("SELECT * FROM song WHERE {}", conditions.join(" OR "));
+        let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+            params.iter().map(|p| p.as_ref()).collect();
+        let m = self.query_songs(&sql, &param_refs);
 
         // Preserve search order
         let mut sorted = m;
@@ -443,11 +479,21 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
     ) -> Vec<SongData> {
         let conn = self.conn.lock().unwrap();
         let result: anyhow::Result<Vec<SongData>> = (|| {
-            conn.execute(&format!("ATTACH DATABASE '{}' as scoredb", score), [])?;
-            conn.execute(&format!("ATTACH DATABASE '{}' as scorelogdb", scorelog), [])?;
+            // ATTACH DATABASE doesn't support parameterized paths; escape single quotes
+            let score_escaped = score.replace('\'', "''");
+            let scorelog_escaped = scorelog.replace('\'', "''");
+            conn.execute(
+                &format!("ATTACH DATABASE '{}' as scoredb", score_escaped),
+                [],
+            )?;
+            conn.execute(
+                &format!("ATTACH DATABASE '{}' as scorelogdb", scorelog_escaped),
+                [],
+            )?;
 
             let songs = if let Some(info_path) = info {
-                conn.execute(&format!("ATTACH DATABASE '{}' as infodb", info_path), [])?;
+                let info_escaped = info_path.replace('\'', "''");
+                conn.execute(&format!("ATTACH DATABASE '{}' as infodb", info_escaped), [])?;
                 let query = format!(
                     "SELECT DISTINCT md5, song.sha256 AS sha256, title, subtitle, genre, artist, subartist,path,folder,stagefile,banner,backbmp,parent,level,difficulty,\
                      maxbpm,minbpm,song.mode AS mode, judge, feature, content, song.date AS date, favorite, song.notes AS notes, adddate, preview, length, charthash\
@@ -503,7 +549,13 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
     }
 
     fn get_folder_datas(&self, key: &str, value: &str) -> Vec<FolderData> {
-        let sql = format!("SELECT * FROM folder WHERE {} = ?1", key);
+        // Whitelist valid column names to prevent SQL injection via key parameter
+        const VALID_COLUMNS: &[&str] = &["path", "parent", "title", "type", "date"];
+        if !VALID_COLUMNS.contains(&key) {
+            log::warn!("Invalid column name for folder query: {}", key);
+            return Vec::new();
+        }
+        let sql = format!("SELECT * FROM folder WHERE [{}] = ?1", key);
         self.query_folders(&sql, &[&value as &dyn rusqlite::types::ToSql])
     }
 
@@ -606,8 +658,8 @@ impl SQLiteSongDatabaseAccessor {
                 .map(|pp| pp.to_string_lossy().to_string())
                 .unwrap_or_default();
             if !self.checked_parent.contains(&parent) {
-                let query = format!("SELECT * FROM folder WHERE path = '{}'", parent);
-                let folders = self.query_folders(&query, &[]);
+                let query = "SELECT * FROM folder WHERE path = ?1";
+                let folders = self.query_folders(query, &[&parent as &dyn rusqlite::types::ToSql]);
                 if folders.is_empty() {
                     path = Some(parent);
                 }
@@ -809,16 +861,16 @@ impl BMSFolder {
 
         let crc = song_utils::crc32(&self.path.to_string_lossy(), &bmsroot_strs, &root_str);
 
-        let records_sql = format!("SELECT * FROM song WHERE folder = '{}'", crc);
+        let records_sql = "SELECT * FROM song WHERE folder = ?1";
         let mut records: Vec<Option<SongData>> = accessor
-            .query_songs(&records_sql, &[])
+            .query_songs(records_sql, &[&crc as &dyn rusqlite::types::ToSql])
             .into_iter()
             .map(Some)
             .collect();
 
-        let folders_sql = format!("SELECT * FROM folder WHERE parent = '{}'", crc);
+        let folders_sql = "SELECT * FROM folder WHERE parent = ?1";
         let mut folders: Vec<Option<FolderData>> = accessor
-            .query_folders(&folders_sql, &[])
+            .query_folders(folders_sql, &[&crc as &dyn rusqlite::types::ToSql])
             .into_iter()
             .map(Some)
             .collect();

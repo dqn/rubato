@@ -16,14 +16,11 @@ use bms_model::mode::Mode;
 // RhythmTimerProcessor: freq=0 causes integer division by zero
 // ---------------------------------------------------------------------------
 
-/// BUG: RhythmTimerProcessor::update() computes `100 / freq as i64` (lines 88, 96, 102).
-/// When freq=0, this is integer division by zero and panics unconditionally.
-///
-/// In production, freq comes from PlayConfig::freq (default 100), but there is no
-/// validation preventing freq=0 from reaching this code path.
+/// RhythmTimerProcessor::update() now guards against freq=0 (previously caused
+/// integer division by zero panic). With the fix, freq=0 skips section/quarter-note
+/// timing updates instead of panicking.
 #[test]
-#[should_panic]
-fn rhythm_timer_freq_zero_division() {
+fn rhythm_timer_freq_zero_no_panic() {
     use beatoraja_play::rhythm_timer_processor::RhythmTimerProcessor;
 
     use bms_model::time_line::TimeLine;
@@ -35,18 +32,19 @@ fn rhythm_timer_freq_zero_division() {
 
     let mut processor2 = RhythmTimerProcessor::new(&model2, false);
 
-    // Now sectiontimes has one entry. update() will evaluate:
-    //   sectiontimes[0] * (100 / freq as i64)
-    // with freq=0 → integer division by zero panic
-    processor2.update(
-        0,     // now
-        0,     // micronow
-        16667, // deltatime
-        120.0, // nowbpm (normal)
-        100,   // play_speed
-        0,     // freq = 0 → division by zero!
-        0,     // play_timer_micro
-    );
+    // freq=0 no longer panics; section timing updates are skipped.
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        processor2.update(
+            0,     // now
+            0,     // micronow
+            16667, // deltatime
+            120.0, // nowbpm (normal)
+            100,   // play_speed
+            0,     // freq = 0, previously caused division by zero
+            0,     // play_timer_micro
+        )
+    }));
+    assert!(result.is_ok(), "freq=0 should not panic");
 }
 
 /// BUG: RhythmTimerProcessor::update() line 102 computes `60000.0 / nowbpm`.

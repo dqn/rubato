@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  ci:
+  check:
     runs-on: ubuntu-latest
 
     steps:
@@ -34,15 +34,64 @@ jobs:
         working-directory: lr2oraja-rust
         run: cargo check --workspace
 
-      # Exclude golden-master (requires Java environment) and screenshot tests (require GPU)
-      - name: Run cargo test
+      - name: Run cargo fmt check
         working-directory: lr2oraja-rust
-        run: cargo test --workspace --exclude golden-master
+        run: cargo fmt --all -- --check
 
       - name: Run cargo clippy
         working-directory: lr2oraja-rust
         run: cargo clippy --workspace -- -D warnings
 
-      - name: Run cargo fmt check
+  test:
+    runs-on: ubuntu-latest
+    needs: check
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
+
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "lr2oraja-rust -> target"
+
+      # Exclude golden-master (requires Java environment) and screenshot tests (require GPU)
+      - name: Run cargo test
         working-directory: lr2oraja-rust
-        run: cargo fmt --all -- --check
+        run: cargo test --workspace --exclude golden-master
+
+  ast-compare:
+    runs-on: ubuntu-latest
+    needs: check
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
+
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "lr2oraja-rust -> target"
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Run ast-compare (method mapping)
+        working-directory: lr2oraja-rust
+        run: just ast-map
+
+      - name: Run ast-constants (constant comparison)
+        working-directory: lr2oraja-rust
+        run: just ast-constants

@@ -2113,7 +2113,7 @@ impl MainState for BMSPlayer {
             // STATE_PLAY - main gameplay
             STATE_PLAY => {
                 let deltatime = micronow - self.prevtime;
-                let deltaplay = deltatime * (100 - self.playspeed as i64) / 100;
+                let deltaplay = deltatime.saturating_mul(100 - self.playspeed as i64) / 100;
                 let freq = self.practice.get_practice_property().freq;
                 let current_play_timer = self.main_state_data.timer.get_micro_timer(TIMER_PLAY);
                 self.main_state_data

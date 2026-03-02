@@ -46,12 +46,13 @@ impl RhythmTimerProcessor {
                                 prev_index += 1;
                             }
                             prev_index -= 1;
+                            let bpm = timelines[prev_index].get_bpm();
+                            let bpm_safe = if bpm == 0.0 { 1.0 } else { bpm };
                             let time = timelines[prev_index].get_micro_time()
                                 + timelines[prev_index].get_micro_stop()
                                 + ((j + section_line_section - timelines[prev_index].get_section())
                                     * 240000000.0
-                                    / timelines[prev_index].get_bpm())
-                                    as i64;
+                                    / bpm_safe) as i64;
                             quarter_note_times.push(time);
                         }
                         j += 0.25;
@@ -81,17 +82,19 @@ impl RhythmTimerProcessor {
         freq: i32,
         play_timer_micro: i64,
     ) -> (i64, bool) {
-        self.rhythmtimer += deltatime * (100 - (nowbpm * play_speed as f64 / 60.0) as i64) / 100;
+        self.rhythmtimer +=
+            deltatime.saturating_mul(100 - (nowbpm * play_speed as f64 / 60.0) as i64) / 100;
 
         let mut rhythm_on = false;
-        if self.sections < self.sectiontimes.len()
+        if freq > 0
+            && self.sections < self.sectiontimes.len()
             && (self.sectiontimes[self.sections] * (100 / freq as i64)) <= play_timer_micro
         {
             self.sections += 1;
             rhythm_on = true;
             self.rhythmtimer = micronow;
         }
-        if !self.quarter_note_times.is_empty() {
+        if freq > 0 && !self.quarter_note_times.is_empty() {
             if self.quarter_note < self.quarter_note_times.len()
                 && (self.quarter_note_times[self.quarter_note] * (100 / freq as i64))
                     <= play_timer_micro
@@ -99,6 +102,8 @@ impl RhythmTimerProcessor {
                 self.quarter_note += 1;
                 self.now_quarter_note_time = now;
             } else if self.quarter_note == self.quarter_note_times.len()
+                && freq > 0
+                && nowbpm > 0.0
                 && ((self.now_quarter_note_time + (60000.0 / nowbpm) as i64) * (100 / freq as i64))
                     <= now
             {
@@ -117,32 +122,26 @@ impl RhythmTimerProcessor {
 mod tests {
     use super::*;
 
-    /// Phase 50b: i64 overflow in update() with extreme BPM values.
-    ///
-    /// Line 84: `deltatime * (100 - (nowbpm * play_speed as f64 / 60.0) as i64) / 100`
-    ///
-    /// With nowbpm=1e15 and play_speed=100:
-    ///   nowbpm * play_speed / 60.0 = 1.667e15
-    ///   100 - 1_666_666_666_666_666 = -1_666_666_666_666_566
-    ///   16667 * -1_666_666_666_666_566 overflows i64 (result ~-2.77e19, max i64 ~9.2e18)
-    ///
-    /// In debug mode, Rust panics on integer overflow.
+    /// Extreme BPM values no longer panic due to saturating arithmetic.
+    /// Previously this caused i64 overflow; now saturating_mul prevents the panic.
     #[test]
-    #[should_panic]
-    fn update_overflows_with_extreme_bpm() {
+    fn update_handles_extreme_bpm_without_overflow() {
         let model = BMSModel::default();
         let mut processor = RhythmTimerProcessor::new(&model, false);
 
         // nowbpm=1e15, play_speed=100, deltatime=16667 (one frame at 60fps in micros)
-        // The intermediate multiplication deltatime * (100 - huge_negative) overflows i64
-        processor.update(
-            0,     // now
-            0,     // micronow
-            16667, // deltatime (~16.6ms)
-            1e15,  // nowbpm (extreme)
-            100,   // play_speed
-            100,   // freq
-            0,     // play_timer_micro
-        );
+        // saturating_mul clamps instead of panicking.
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            processor.update(
+                0,     // now
+                0,     // micronow
+                16667, // deltatime (~16.6ms)
+                1e15,  // nowbpm (extreme)
+                100,   // play_speed
+                100,   // freq
+                0,     // play_timer_micro
+            )
+        }));
+        assert!(result.is_ok(), "should not panic with extreme BPM");
     }
 }

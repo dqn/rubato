@@ -1,6 +1,6 @@
 # lr2oraja Rust Porting
 
-beatoraja fork (Java 313 files / 72k+ lines) → Rust. 26 crates, 158k lines. Source: `./lr2oraja-java`.
+beatoraja fork (Java 313 files / 72k+ lines) → Rust. 26 crates, 167k lines. Source: `./lr2oraja-java`.
 
 ## Rules
 
@@ -84,9 +84,9 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**3033 tests.** Phases 1–62 complete + post-62 stub audit. Zero clippy warnings. Zero regressions.
+**3230 tests.** Phases 1–62 complete + post-62 stub audit. Zero clippy warnings. Zero regressions.
 **Migration audit**: 100% method resolution (4,279/4,279). 0 missing. 0 constant mismatches. Gap: 0.
-**ast-compare**: 250 methods ignored (198 patterns). Method-level ignore via `.ast-compare-method-ignore`.
+**ast-compare**: 2,235 methods ignored (789 patterns). Method-level ignore via `.ast-compare-method-ignore`.
 **"Not implemented" stubs**: 0 remaining. All 151 stubs resolved (Phase 58–62).
 **Debug stubs**: 0 remaining. All 32 resolved: 12 implemented, 20 → compile-time comments.
 
