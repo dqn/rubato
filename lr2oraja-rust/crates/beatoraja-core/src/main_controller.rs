@@ -45,7 +45,16 @@ pub trait StateFactory {
         &self,
         state_type: MainStateType,
         controller: &MainController,
-    ) -> Option<Box<dyn MainState>>;
+    ) -> Option<StateCreateResult>;
+}
+
+/// Result from `StateFactory::create_state` containing the state and optional
+/// metadata that `MainController::change_state` should apply after creation.
+pub struct StateCreateResult {
+    pub state: Box<dyn MainState>,
+    /// Target score data to set on PlayerResource (for result screen access).
+    /// Java: resource.setTargetScoreData(targetScore)
+    pub target_score: Option<beatoraja_types::score_data::ScoreData>,
 }
 
 /// StateReferencesCallback - callback for updating cross-state references.
@@ -94,6 +103,10 @@ pub struct IRStatus {
     pub config: IRConfig,
     /// IR rival provider (trait bridge for core→ir rival/score operations)
     pub rival_provider: Option<Box<dyn beatoraja_types::ir_rival_provider::IRRivalProvider>>,
+    /// IR connection (type-erased). The concrete type is `Box<dyn IRConnection + Send + Sync>`
+    /// from beatoraja-ir. Stored as `dyn Any` because beatoraja-core cannot depend on beatoraja-ir.
+    /// Java: IRStatus.connection
+    pub connection: Option<Box<dyn std::any::Any + Send + Sync>>,
 }
 
 // IRSendStatus stub removed — replaced by Box<dyn IrResendService> (brs-zd2)
@@ -232,6 +245,11 @@ pub struct MainController {
     stream_controller:
         Option<Box<dyn beatoraja_types::stream_controller_access::StreamControllerAccess>>,
 
+    /// Shared music selector (type-erased Arc<Mutex<MusicSelector>>).
+    /// Java shares the same MusicSelector between StreamController and MusicSelect state.
+    /// The launcher stores this so StateFactory can reuse it instead of creating a new one.
+    shared_music_selector: Option<Box<dyn std::any::Any + Send>>,
+
     /// Previous render time
     prevtime: i64,
 
@@ -352,6 +370,7 @@ impl MainController {
             download: None,
             http_download_processor: None,
             stream_controller: None,
+            shared_music_selector: None,
             prevtime: 0,
             last_config_save: Instant::now(),
             state_references_callback: None,
@@ -543,7 +562,7 @@ impl MainController {
         }
 
         // Create the new state via factory
-        let new_state = if let Some(ref factory) = self.state_factory {
+        let result = if let Some(ref factory) = self.state_factory {
             factory.create_state(actual_type, self)
         } else {
             panic!(
@@ -553,8 +572,15 @@ impl MainController {
             );
         };
 
-        if let Some(new_state) = new_state {
-            self.transition_to_state(new_state);
+        if let Some(result) = result {
+            // Apply target score to PlayerResource so the result screen can read it.
+            // Java: resource.setTargetScoreData(targetScore)
+            if let Some(target) = result.target_score
+                && let Some(ref mut resource) = self.resource
+            {
+                resource.set_target_score_data(target);
+            }
+            self.transition_to_state(result.state);
         }
 
         // In Java: input processor setup based on current.getStage()
@@ -1338,6 +1364,18 @@ impl MainController {
         self.stream_controller = Some(controller);
     }
 
+    /// Gets the shared MusicSelector as `&dyn Any`. Callers downcast via
+    /// `any.downcast_ref::<Arc<Mutex<MusicSelector>>>()`.
+    /// Java: StreamController holds a reference to the same MusicSelector used by SelectState.
+    pub fn get_shared_music_selector(&self) -> Option<&(dyn std::any::Any + Send)> {
+        self.shared_music_selector.as_deref()
+    }
+
+    /// Sets the shared MusicSelector (type-erased as `Box<dyn Any + Send>`).
+    pub fn set_shared_music_selector(&mut self, selector: Box<dyn std::any::Any + Send>) {
+        self.shared_music_selector = Some(selector);
+    }
+
     pub fn get_ir_resend_service(
         &self,
     ) -> Option<&dyn beatoraja_types::ir_resend_service::IrResendService> {
@@ -1798,6 +1836,13 @@ impl MainControllerAccess for MainController {
     ) -> Option<&dyn beatoraja_types::song_information_db::SongInformationDb> {
         self.infodb.as_deref()
     }
+
+    fn get_ir_connection_any(&self) -> Option<&dyn std::any::Any> {
+        self.ir
+            .first()
+            .and_then(|status| status.connection.as_ref())
+            .map(|conn| conn.as_ref() as &dyn std::any::Any)
+    }
 }
 
 #[cfg(test)]
@@ -1877,8 +1922,11 @@ mod tests {
             &self,
             state_type: MainStateType,
             _controller: &MainController,
-        ) -> Option<Box<dyn MainState>> {
-            Some(Box::new(TestState::new(state_type)))
+        ) -> Option<StateCreateResult> {
+            Some(StateCreateResult {
+                state: Box::new(TestState::new(state_type)),
+                target_score: None,
+            })
         }
     }
 

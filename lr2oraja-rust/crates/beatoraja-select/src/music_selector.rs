@@ -591,7 +591,13 @@ impl MusicSelector {
                 }
             }
             // Java L388: resource.setRankingData(currentir)
-            // TODO: propagate currentir to PlayerResource (needs set_ranking_data_any on trait)
+            if let Some(res) = main.get_player_resource_mut() {
+                let ranking_any = self
+                    .currentir
+                    .clone()
+                    .map(|rd| Box::new(rd) as Box<dyn std::any::Any + Send + Sync>);
+                res.set_ranking_data_any(ranking_any);
+            }
 
             // Set rival score
             let rival_score = current.get_rival_score().cloned();
@@ -1674,7 +1680,24 @@ impl MainState for MusicSelector {
                     } else {
                         self.currentir = cached;
                     }
-                    // TODO: trigger irc.load_song() — requires IRConnection access
+                    // Java MusicSelector L251: irc.load(this, song)
+                    if let Some(ref mut rd) = self.currentir {
+                        use beatoraja_ir::ir_chart_data::IRChartData;
+                        use beatoraja_ir::ir_connection::IRConnection;
+                        use std::sync::Arc;
+                        if let Some(conn_arc) = main.get_ir_connection_any().and_then(|any| {
+                            any.downcast_ref::<Arc<dyn IRConnection + Send + Sync>>()
+                                .cloned()
+                        }) {
+                            let chart = IRChartData::new(song);
+                            let local_score = main.read_score_data_by_hash(
+                                song.get_sha256(),
+                                song.has_long_note(),
+                                lnmode,
+                            );
+                            rd.load_song(conn_arc.as_ref(), &chart, local_score.as_ref());
+                        }
+                    }
                 }
                 // Java MusicSelector L254-263: GradeBar IR ranking data
                 if let Some(grade_bar) = current.as_grade_bar()
@@ -1696,7 +1719,19 @@ impl MainState for MusicSelector {
                     } else {
                         self.currentir = cached;
                     }
-                    // TODO: trigger irc.load_course() — requires IRConnection access
+                    // Java MusicSelector L261: irc.load(this, course)
+                    if let Some(ref mut rd) = self.currentir {
+                        use beatoraja_ir::ir_connection::IRConnection;
+                        use beatoraja_ir::ir_course_data::IRCourseData;
+                        use std::sync::Arc;
+                        if let Some(conn_arc) = main.get_ir_connection_any().and_then(|any| {
+                            any.downcast_ref::<Arc<dyn IRConnection + Send + Sync>>()
+                                .cloned()
+                        }) {
+                            let ir_course = IRCourseData::new_with_lntype(course, lnmode);
+                            rd.load_course(conn_arc.as_ref(), &ir_course, None);
+                        }
+                    }
                 }
             }
         }

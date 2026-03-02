@@ -19,9 +19,6 @@ use crate::replay_data::ReplayData;
 use crate::score_data::ScoreData;
 use crate::stubs::*;
 
-/// RankingData stub (Phase 5+ dependency: beatoraja.ir)
-pub struct RankingData;
-
 /// FloatArray stub (LibGDX equivalent)
 pub type FloatArray = Vec<f32>;
 
@@ -49,8 +46,8 @@ pub struct PlayerResource {
     rscore: Option<ScoreData>,
     /// Target score
     tscore: Option<ScoreData>,
-    /// Ranking data
-    ranking: Option<RankingData>,
+    /// Ranking data (type-erased; concrete type is beatoraja_ir::ranking_data::RankingData)
+    ranking: Option<Box<dyn Any + Send + Sync>>,
     /// Whether to update score
     update_score: bool,
     /// Whether to update course score
@@ -293,12 +290,16 @@ impl PlayerResource {
         self.tscore = Some(tscore);
     }
 
-    pub fn get_ranking_data(&self) -> Option<&RankingData> {
-        self.ranking.as_ref()
+    pub fn get_ranking_data_any(&self) -> Option<&dyn Any> {
+        self.ranking.as_ref().map(|b| b.as_ref() as &dyn Any)
     }
 
-    pub fn set_ranking_data(&mut self, ranking: RankingData) {
+    pub fn set_ranking_data_any_box(&mut self, ranking: Box<dyn Any + Send + Sync>) {
         self.ranking = Some(ranking);
+    }
+
+    pub fn clear_ranking_data(&mut self) {
+        self.ranking = None;
     }
 
     pub fn set_course_bms_files(&mut self, files: &[PathBuf]) -> bool {
@@ -910,6 +911,10 @@ impl PlayerResourceAccess for PlayerResource {
 
     fn set_bga_any(&mut self, bga: Box<dyn Any>) {
         self.bga_any = Some(bga);
+    }
+
+    fn set_ranking_data_any(&mut self, data: Option<Box<dyn Any + Send + Sync>>) {
+        self.ranking = data;
     }
 }
 

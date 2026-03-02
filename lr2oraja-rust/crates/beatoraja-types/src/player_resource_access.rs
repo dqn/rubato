@@ -259,6 +259,15 @@ pub trait PlayerResourceAccess {
     fn set_bga_any(&mut self, _bga: Box<dyn Any>) {
         // default no-op
     }
+
+    /// Set ranking data (type-erased).
+    ///
+    /// The `data` parameter should be a `Box<RankingData>` from beatoraja-ir.
+    /// Pass `None` to clear. Callers downcast via `data.downcast::<RankingData>()`.
+    /// Java: PlayerResource.setRankingData(RankingData)
+    fn set_ranking_data_any(&mut self, _data: Option<Box<dyn Any + Send + Sync>>) {
+        // default no-op
+    }
 }
 
 /// Null implementation of PlayerResourceAccess for stub contexts.

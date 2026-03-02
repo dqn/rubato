@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use crate::config::Config;
 use crate::input_processor_access::InputProcessorAccess;
 use crate::main_state_type::MainStateType;
@@ -170,6 +172,16 @@ pub trait MainControllerAccess {
     /// Get song information database reference.
     /// Java: MainController.getInfoDatabase()
     fn get_info_database(&self) -> Option<&dyn SongInformationDb> {
+        None
+    }
+
+    /// Get the first IR connection (type-erased).
+    ///
+    /// Returns a reference to the stored `Arc<dyn IRConnection + Send + Sync>` from beatoraja-ir,
+    /// erased as `&dyn Any`. Callers downcast via
+    /// `any.downcast_ref::<Arc<dyn IRConnection + Send + Sync>>()` and clone the Arc.
+    /// Java: MainController.getIRStatus()[0].connection
+    fn get_ir_connection_any(&self) -> Option<&dyn Any> {
         None
     }
 }

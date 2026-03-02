@@ -214,6 +214,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
                 .push(beatoraja_core::main_controller::IRStatus {
                     config: ir_status.config,
                     rival_provider: Some(Box::new(rival_provider)),
+                    connection: Some(Box::new(ir_status.connection.clone())),
                 });
         }
         // Wire IR resend service
@@ -222,34 +223,93 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
         main_controller.set_ir_resend_service(Box::new(resend_service));
     }
 
-    // TODO(brs-o9ti): Wire MusicDownloadProcessor and HttpDownloadProcessor initialization.
-    // Java: MainController.create() lines 496-513 creates these when config flags are set.
-    //
-    // IPFS download processor (when config.enable_ipfs):
-    //   Requires: MusicDatabaseAccessor adapter that queries the song database for file
-    //   paths by MD5 hash. The adapter needs its own song DB connection (or the MainController's
-    //   songdb field must change from Box<dyn> to Arc<dyn>) because MusicDownloadProcessor holds
-    //   Arc<dyn MusicDatabaseAccessor> and runs on a background thread.
-    //   Concrete type: md_processor::music_download_processor::MusicDownloadProcessor
-    //   Wiring: MusicDownloadProcessor::new(config.ipfsurl, adapter_arc).start(None)
-    //   Then: main_controller.set_music_download_processor(Box::new(processor))
-    //
-    // HTTP download processor (when config.enable_http):
-    //   Requires: MainControllerRef adapter (md_processor::MainControllerRef trait) that
-    //   delegates update_song() to MainController. Same Arc/ownership challenge as above.
-    //   Concrete type: md_processor::http_download_processor::HttpDownloadProcessor
-    //   Wiring: Look up download source from HttpDownloadProcessor::DOWNLOAD_SOURCES by
-    //   config.download_source, call .build(&config), then HttpDownloadProcessor::new(
-    //   main_ref_arc, source_arc, config.download_directory). Also initialize
-    //   DownloadTaskState and DownloadTaskMenu.
-    //   Then: main_controller.set_http_download_processor(Box::new(processor))
-    //
-    // Both processors exist in md-processor crate with full implementations. The blocker is
-    // creating adapter structs that bridge MainController's owned song DB (Box<dyn>) to the
-    // Arc<dyn> references these processors expect. Options:
-    //   1. Change MainController.songdb to Arc<dyn SongDatabaseAccessor> (shared ownership)
-    //   2. Open a second SQLite connection for the download processor
-    //   3. Use channel-based message passing
+    // Java: MainController.create() lines 496-513 creates download processors.
+    // Each processor runs on background threads and needs its own DB access, so we open
+    // separate SQLite connections rather than sharing MainController's Box<dyn> songdb.
+    {
+        let config = main_controller.get_config().clone();
+
+        // IPFS download processor (Java: lines 496-506)
+        if config.enable_ipfs {
+            match beatoraja_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
+                config.get_songpath(),
+                config.get_bmsroot(),
+            ) {
+                Ok(songdb) => {
+                    let adapter = Arc::new(SongDbMusicDatabaseAdapter { songdb });
+                    let processor =
+                        md_processor::music_download_processor::MusicDownloadProcessor::new(
+                            config.ipfsurl.clone(),
+                            adapter,
+                        );
+                    processor.start(None);
+                    main_controller.set_music_download_processor(Box::new(processor));
+                    info!("IPFS MusicDownloadProcessor initialized");
+                }
+                Err(e) => {
+                    warn!(
+                        "Cannot initialize MusicDownloadProcessor: song DB open failed: {}",
+                        e
+                    );
+                }
+            }
+        }
+
+        // HTTP download processor (Java: lines 508-513)
+        if config.enable_http {
+            // Look up download source by config.download_source, fall back to default
+            let source_meta = md_processor::http_download_processor::DOWNLOAD_SOURCES
+                .get(&config.download_source)
+                .copied()
+                .unwrap_or_else(|| {
+                    md_processor::http_download_processor::HttpDownloadProcessor::get_default_download_source()
+                });
+            let http_download_source: Arc<
+                dyn md_processor::http_download_source::HttpDownloadSource,
+            > = Arc::from(source_meta.build(&config));
+
+            // The MainControllerRef adapter opens its own song DB connection so the background
+            // download thread can call update_song() without borrowing MainController.
+            match beatoraja_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
+                config.get_songpath(),
+                config.get_bmsroot(),
+            ) {
+                Ok(songdb) => {
+                    let bmsroot = config.get_bmsroot().to_vec();
+                    let main_ref: Arc<dyn md_processor::MainControllerRef> =
+                        Arc::new(SongDbMainControllerRef { songdb, bmsroot });
+                    let processor = Arc::new(
+                        md_processor::http_download_processor::HttpDownloadProcessor::new(
+                            main_ref,
+                            http_download_source,
+                            config.download_directory.clone(),
+                        ),
+                    );
+
+                    // Java: DownloadTaskState.initialize(httpDownloadProcessor)
+                    md_processor::download_task_state::DownloadTaskState::initialize();
+                    // Java: DownloadTaskMenu.setProcessor(httpDownloadProcessor)
+                    beatoraja_modmenu::download_task_menu::DownloadTaskMenu::set_processor(
+                        Arc::clone(&processor),
+                    );
+
+                    main_controller.set_http_download_processor(Box::new(
+                        HttpDownloadProcessorWrapper(Arc::clone(&processor)),
+                    ));
+                    info!(
+                        "HTTP HttpDownloadProcessor initialized (source: {})",
+                        config.download_source
+                    );
+                }
+                Err(e) => {
+                    warn!(
+                        "Cannot initialize HttpDownloadProcessor: song DB open failed: {}",
+                        e
+                    );
+                }
+            }
+        }
+    }
 
     // Java: MainController.initializeStates() lines 561-564:
     //   if(player.getRequestEnable()) {
@@ -257,17 +317,17 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     //       streamController.run();
     //   }
     //
-    // TODO: In Java, the StreamController shares the same MusicSelector instance as the
-    // MusicSelect screen state, so stream request songs appear in the selector's bar list.
-    // In Rust, states are created on-demand via StateFactory, so we create a dedicated
-    // MusicSelector for the StreamController. Stream request bars won't appear in the
-    // MusicSelect state until the architecture is refactored to share a single MusicSelector
-    // instance (e.g., via Arc<Mutex<MusicSelector>> in both StateFactory and StreamController).
+    // Java: StreamController shares the same MusicSelector as the MusicSelect screen state,
+    // so stream request songs appear in the selector's bar list.
+    // In Rust, we create a shared Arc<Mutex<MusicSelector>> and store it on MainController.
+    // Both StreamController and StateFactory (MusicSelect arm) use the same instance.
     if main_controller.get_player_config().enable_request {
         let selector = beatoraja_select::music_selector::MusicSelector::with_config(
             main_controller.get_config().clone(),
         );
         let selector = std::sync::Arc::new(std::sync::Mutex::new(selector));
+        // Store the shared selector on MainController for StateFactory to retrieve
+        main_controller.set_shared_music_selector(Box::new(std::sync::Arc::clone(&selector)));
         let mut stream_controller =
             beatoraja_stream::stream_controller::StreamController::new(selector);
         stream_controller.run();
@@ -906,5 +966,68 @@ impl BeatorajaApp {
                 warn!("Failed to map screenshot buffer");
             }
         }
+    }
+}
+
+// -- Download processor adapter structs --
+
+/// Adapter: bridges `SQLiteSongDatabaseAccessor` to `md_processor::MusicDatabaseAccessor`.
+///
+/// Java equivalent: the inline lambda `(md5) -> { SongData[] s = getSongDatabase().getSongDatas(md5); ... }`
+/// in MainController.create() line 497. Opens its own SQLite connection so the IPFS download
+/// background thread can query the song DB without borrowing MainController.
+struct SongDbMusicDatabaseAdapter {
+    songdb: beatoraja_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor,
+}
+
+// Safety: SQLiteSongDatabaseAccessor uses internal Mutex<Connection>, so it is safe to send
+// across threads even though rusqlite::Connection is not Sync.
+unsafe impl Sync for SongDbMusicDatabaseAdapter {}
+
+impl md_processor::music_database_accessor::MusicDatabaseAccessor for SongDbMusicDatabaseAdapter {
+    fn get_music_paths(&self, md5: &[String]) -> Vec<String> {
+        use beatoraja_types::song_database_accessor::SongDatabaseAccessor;
+        let songs = self.songdb.get_song_datas_by_hashes(md5);
+        songs
+            .iter()
+            .filter_map(|s| s.get_path().map(|p| p.to_string()))
+            .collect()
+    }
+}
+
+/// Adapter: bridges a standalone song DB connection to `md_processor::MainControllerRef`.
+///
+/// Java equivalent: `this` (MainController) passed to HttpDownloadProcessor constructor.
+/// The only method called is `update_song(path, force)` which ultimately calls
+/// `songdb.updateSongDatas()`. We call it directly on our own connection.
+struct SongDbMainControllerRef {
+    songdb: beatoraja_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor,
+    bmsroot: Vec<String>,
+}
+
+unsafe impl Sync for SongDbMainControllerRef {}
+
+impl md_processor::MainControllerRef for SongDbMainControllerRef {
+    fn update_song(&self, path: &str, _force: bool) {
+        let update_path = if path.is_empty() { None } else { Some(path) };
+        self.songdb
+            .update_song_datas(update_path, &self.bmsroot, false, false, None);
+    }
+}
+
+/// Wrapper to implement `HttpDownloadSubmitter` for `Arc<HttpDownloadProcessor>`.
+///
+/// `DownloadTaskMenu::set_processor` needs `Arc<HttpDownloadProcessor>` directly, while
+/// `MainController::set_http_download_processor` needs `Box<dyn HttpDownloadSubmitter>`.
+/// This wrapper bridges the two ownership models.
+struct HttpDownloadProcessorWrapper(
+    Arc<md_processor::http_download_processor::HttpDownloadProcessor>,
+);
+
+impl beatoraja_types::http_download_submitter::HttpDownloadSubmitter
+    for HttpDownloadProcessorWrapper
+{
+    fn submit_md5_task(&self, md5: &str, task_name: &str) {
+        self.0.submit_md5_task(md5, task_name);
     }
 }
