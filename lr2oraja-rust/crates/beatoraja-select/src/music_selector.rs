@@ -579,28 +579,19 @@ impl MusicSelector {
                 }
             }
 
-            // Load cached IR ranking data for this song (only when IR is active)
-            if !main.get_ir_table_urls().is_empty() {
+            // Java L384-388: only create new RankingData when IR active AND currentir is null.
+            // Do NOT null out currentir when IR inactive (selectedBarMoved already set it).
+            if !main.get_ir_table_urls().is_empty() && self.currentir.is_none() {
                 use beatoraja_ir::ranking_data::RankingData;
                 let lnmode = main.get_player_config().get_lnmode();
-                let cached = main
-                    .get_ranking_data_cache()
-                    .and_then(|cache| cache.get_song_any(song, lnmode))
-                    .and_then(|any| any.downcast_ref::<RankingData>())
-                    .cloned();
-                if let Some(rd) = cached {
-                    self.currentir = Some(rd);
-                } else {
-                    // Create empty ranking data and store in cache for later IR fetch
-                    let rd = RankingData::new();
-                    self.currentir = Some(rd.clone());
-                    if let Some(cache) = main.get_ranking_data_cache_mut() {
-                        cache.put_song_any(song, lnmode, Box::new(rd));
-                    }
+                let rd = RankingData::new();
+                self.currentir = Some(rd.clone());
+                if let Some(cache) = main.get_ranking_data_cache_mut() {
+                    cache.put_song_any(song, lnmode, Box::new(rd));
                 }
-            } else {
-                self.currentir = None;
             }
+            // Java L388: resource.setRankingData(currentir)
+            // TODO: propagate currentir to PlayerResource (needs set_ranking_data_any on trait)
 
             // Set rival score
             let rival_score = current.get_rival_score().cloned();
@@ -818,55 +809,65 @@ impl MusicSelector {
             .unwrap_or_default()
             .as_millis() as i64;
 
-        // Determine ranking duration based on selected bar type
-        // Fetch currentir from ranking data cache
-        if let Some(current) = self.manager.get_selected() {
-            if let Some(song_bar) = current.as_song_bar() {
-                if song_bar.exists_song() {
-                    // Refresh currentir from cache
-                    if let Some(main) = self.main.as_ref() {
-                        use beatoraja_ir::ranking_data::RankingData;
-                        let lnmode = main.get_player_config().get_lnmode();
-                        let song = song_bar.get_song_data();
-                        self.currentir = main
-                            .get_ranking_data_cache()
-                            .and_then(|c| c.get_song_any(song, lnmode))
-                            .and_then(|a| a.downcast_ref::<RankingData>())
-                            .cloned();
-                    }
-                    let ranking_reload_dur = self.ranking_reload_duration;
-                    let ranking_dur = self.ranking_duration as i64;
-                    self.current_ranking_duration = if let Some(ref ir) = self.currentir {
-                        (ranking_reload_dur - (now_millis - ir.get_last_update_time())).max(0)
-                            + ranking_dur
+        // Java L647-662: IR ranking lookup guarded by IR status check
+        let ir_active = self
+            .main
+            .as_ref()
+            .map(|m| !m.get_ir_table_urls().is_empty())
+            .unwrap_or(false);
+
+        if ir_active {
+            if let Some(current) = self.manager.get_selected() {
+                if let Some(song_bar) = current.as_song_bar() {
+                    if song_bar.exists_song() {
+                        // Refresh currentir from cache
+                        if let Some(main) = self.main.as_ref() {
+                            use beatoraja_ir::ranking_data::RankingData;
+                            let lnmode = main.get_player_config().get_lnmode();
+                            let song = song_bar.get_song_data();
+                            self.currentir = main
+                                .get_ranking_data_cache()
+                                .and_then(|c| c.get_song_any(song, lnmode))
+                                .and_then(|a| a.downcast_ref::<RankingData>())
+                                .cloned();
+                        }
+                        let ranking_reload_dur = self.ranking_reload_duration;
+                        let ranking_dur = self.ranking_duration as i64;
+                        self.current_ranking_duration = if let Some(ref ir) = self.currentir {
+                            (ranking_reload_dur - (now_millis - ir.get_last_update_time())).max(0)
+                                + ranking_dur
+                        } else {
+                            ranking_dur
+                        };
                     } else {
-                        ranking_dur
-                    };
-                } else {
-                    self.currentir = None;
-                    self.current_ranking_duration = -1;
-                }
-            } else if let Some(grade_bar) = current.as_grade_bar() {
-                if grade_bar.exists_all_songs() {
-                    // Refresh currentir from cache for course
-                    if let Some(main) = self.main.as_ref() {
-                        use beatoraja_ir::ranking_data::RankingData;
-                        let lnmode = main.get_player_config().get_lnmode();
-                        let course = grade_bar.get_course_data();
-                        self.currentir = main
-                            .get_ranking_data_cache()
-                            .and_then(|c| c.get_course_any(course, lnmode))
-                            .and_then(|a| a.downcast_ref::<RankingData>())
-                            .cloned();
+                        self.currentir = None;
+                        self.current_ranking_duration = -1;
                     }
-                    let ranking_reload_dur = self.ranking_reload_duration;
-                    let ranking_dur = self.ranking_duration as i64;
-                    self.current_ranking_duration = if let Some(ref ir) = self.currentir {
-                        (ranking_reload_dur - (now_millis - ir.get_last_update_time())).max(0)
-                            + ranking_dur
+                } else if let Some(grade_bar) = current.as_grade_bar() {
+                    if grade_bar.exists_all_songs() {
+                        // Refresh currentir from cache for course
+                        if let Some(main) = self.main.as_ref() {
+                            use beatoraja_ir::ranking_data::RankingData;
+                            let lnmode = main.get_player_config().get_lnmode();
+                            let course = grade_bar.get_course_data();
+                            self.currentir = main
+                                .get_ranking_data_cache()
+                                .and_then(|c| c.get_course_any(course, lnmode))
+                                .and_then(|a| a.downcast_ref::<RankingData>())
+                                .cloned();
+                        }
+                        let ranking_reload_dur = self.ranking_reload_duration;
+                        let ranking_dur = self.ranking_duration as i64;
+                        self.current_ranking_duration = if let Some(ref ir) = self.currentir {
+                            (ranking_reload_dur - (now_millis - ir.get_last_update_time())).max(0)
+                                + ranking_dur
+                        } else {
+                            ranking_dur
+                        };
                     } else {
-                        ranking_dur
-                    };
+                        self.currentir = None;
+                        self.current_ranking_duration = -1;
+                    }
                 } else {
                     self.currentir = None;
                     self.current_ranking_duration = -1;
@@ -1475,8 +1476,20 @@ impl MainState for MusicSelector {
             self.preview = Some(preview);
         }
 
-        // In Java: sets input config based on musicselectinput mode
-        // Blocked on MainController input processor
+        // Configure input processor per musicselectinput mode (Java L183-188)
+        // musicselectinput: 0 -> mode7, 1 -> mode9, _ -> mode14
+        {
+            let mut input = BMSPlayerInputProcessor::new(&self.app_config, &self.config);
+            let pc = match self.config.get_musicselectinput() {
+                0 => &self.config.mode7,
+                1 => &self.config.mode9,
+                _ => &self.config.mode14,
+            };
+            input.set_keyboard_config(pc.get_keyboard_config());
+            input.set_controller_config(&mut pc.get_controller().to_vec());
+            input.set_midi_config(pc.get_midi_config());
+            self.input_processor = Some(input);
+        }
 
         self.manager.update_bar_refresh();
 
@@ -1515,12 +1528,33 @@ impl MainState for MusicSelector {
         let now_time = timer.get_now_time();
         let songbar_change_time = timer.get_timer(skin_property::TIMER_SONGBAR_CHANGE);
 
+        // Update resource with current bar's song/course data (Java MusicSelector L218-219)
+        {
+            let song_data = self
+                .manager
+                .get_selected()
+                .and_then(|b| b.as_song_bar())
+                .map(|sb| sb.get_song_data().clone());
+            let course_data = self
+                .manager
+                .get_selected()
+                .and_then(|b| b.as_grade_bar())
+                .map(|gb| gb.get_course_data().clone());
+            if let Some(ref mut main) = self.main {
+                if let Some(res) = main.get_player_resource_mut() {
+                    res.set_songdata(song_data);
+                    if let Some(cd) = course_data {
+                        res.set_course_data(cd);
+                    } else {
+                        res.clear_course_data();
+                    }
+                }
+            }
+        }
+
         // Preview music
         if let Some(current) = self.manager.get_selected() {
             if let Some(song_bar) = current.as_song_bar() {
-                // In Java: resource.setSongdata(song_data)
-                // resource.setCourseData(null)
-
                 // Preview music timing
                 if self.play.is_none()
                     && now_time > songbar_change_time + self.preview_duration as i64
@@ -1535,7 +1569,9 @@ impl MainState for MusicSelector {
                     } else {
                         false
                     };
-                    if should_start_preview {
+                    if should_start_preview
+                        && !matches!(self.app_config.song_preview, SongPreview::NONE)
+                    {
                         let song_clone = song_bar.get_song_data().clone();
                         if let Some(preview) = &mut self.preview {
                             preview.start(Some(&song_clone));
@@ -1555,11 +1591,9 @@ impl MainState for MusicSelector {
                     self.show_note_graph = true;
                 }
             } else if current.as_grade_bar().is_some() {
-                // In Java: resource.setSongdata(null)
-                // resource.setCourseData(courseData)
+                // Grade bar: songdata/courseData already set above
             } else {
-                // In Java: resource.setSongdata(null)
-                // resource.setCourseData(null)
+                // Other bar types: songdata/courseData already cleared above
             }
         }
 
@@ -1829,12 +1863,11 @@ pub enum ChartReplicationMode {
 }
 
 impl ChartReplicationMode {
+    /// Java: allMode = {NONE, RIVALCHART, RIVALOPTION} — excludes REPLAYCHART/REPLAYOPTION
     pub const ALL_MODE: &'static [ChartReplicationMode] = &[
         ChartReplicationMode::None,
         ChartReplicationMode::RivalChart,
         ChartReplicationMode::RivalOption,
-        ChartReplicationMode::ReplayChart,
-        ChartReplicationMode::ReplayOption,
     ];
 
     pub fn get(name: &str) -> ChartReplicationMode {
@@ -2381,6 +2414,7 @@ mod tests {
         fn get_songdata(&self) -> Option<&SongData> {
             None
         }
+        fn set_songdata(&mut self, _data: Option<SongData>) {}
         fn get_replay_data(&self) -> Option<&beatoraja_types::replay_data::ReplayData> {
             None
         }
@@ -2483,6 +2517,9 @@ mod tests {
         }
         fn set_course_data(&mut self, data: CourseData) {
             self.state.lock().unwrap().course_data = Some(data);
+        }
+        fn clear_course_data(&mut self) {
+            self.state.lock().unwrap().course_data = None;
         }
         fn get_course_song_data(&self) -> Vec<SongData> {
             self.state.lock().unwrap().course_song_data.clone()
