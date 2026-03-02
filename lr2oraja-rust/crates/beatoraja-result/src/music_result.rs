@@ -170,7 +170,7 @@ impl MusicResult {
             // For now, immediately mark as finished (blocking stub).
             let ir_len = self.main.get_ir_status().len();
             let ir_send_count = self.main.get_config().ir_send_count;
-            let ir_send_list = self.main.ir_send_status_mut();
+            let mut ir_send_list = self.main.ir_send_status_mut();
             let mut irsend = 0;
             let mut succeed = true;
             let mut remove_indices: Vec<usize> = Vec::new();

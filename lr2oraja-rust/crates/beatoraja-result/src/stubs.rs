@@ -45,7 +45,7 @@ pub struct MainController {
     inner: Box<dyn MainControllerAccess>,
     audio: Option<Box<dyn AudioDriver>>,
     ir_statuses: Vec<IRStatus>,
-    ir_send_statuses: Vec<IRSendStatusMain>,
+    ir_send_statuses: std::sync::Arc<std::sync::Mutex<Vec<IRSendStatusMain>>>,
     input_processor: BMSPlayerInputProcessor,
     play_data_accessor: PlayDataAccessor,
     ranking_data_cache: Box<dyn beatoraja_types::ranking_data_cache_access::RankingDataCacheAccess>,
@@ -61,7 +61,7 @@ impl MainController {
             inner,
             audio: None,
             ir_statuses: Vec::new(),
-            ir_send_statuses: Vec::new(),
+            ir_send_statuses: crate::ir_resend::shared_ir_statuses(),
             input_processor,
             play_data_accessor,
             ranking_data_cache: Box::new(beatoraja_ir::ranking_data_cache::RankingDataCache::new()),
@@ -77,7 +77,7 @@ impl MainController {
             inner,
             audio: Some(audio),
             ir_statuses: Vec::new(),
-            ir_send_statuses: Vec::new(),
+            ir_send_statuses: crate::ir_resend::shared_ir_statuses(),
             input_processor,
             play_data_accessor,
             ranking_data_cache: Box::new(beatoraja_ir::ranking_data_cache::RankingDataCache::new()),
@@ -96,7 +96,7 @@ impl MainController {
             inner,
             audio: None,
             ir_statuses,
-            ir_send_statuses: Vec::new(),
+            ir_send_statuses: crate::ir_resend::shared_ir_statuses(),
             input_processor,
             play_data_accessor,
             ranking_data_cache: Box::new(beatoraja_ir::ranking_data_cache::RankingDataCache::new()),
@@ -153,12 +153,12 @@ impl MainController {
         &self.ir_statuses
     }
 
-    pub fn ir_send_status(&self) -> &Vec<IRSendStatusMain> {
-        &self.ir_send_statuses
+    pub fn ir_send_status(&self) -> std::sync::MutexGuard<'_, Vec<IRSendStatusMain>> {
+        self.ir_send_statuses.lock().unwrap()
     }
 
-    pub fn ir_send_status_mut(&mut self) -> &mut Vec<IRSendStatusMain> {
-        &mut self.ir_send_statuses
+    pub fn ir_send_status_mut(&self) -> std::sync::MutexGuard<'_, Vec<IRSendStatusMain>> {
+        self.ir_send_statuses.lock().unwrap()
     }
 
     pub fn get_play_data_accessor(&self) -> &PlayDataAccessor {

@@ -96,15 +96,7 @@ pub struct IRStatus {
     pub rival_provider: Option<Box<dyn beatoraja_types::ir_rival_provider::IRRivalProvider>>,
 }
 
-/// IRSendStatus - holds IR score send state
-pub struct IRSendStatus {
-    // pub ir: IRConnection,   // Phase 5+
-    // pub song: SongData,     // Phase 5+
-    // pub score: ScoreData,   // Phase 5+
-    pub retry: i32,
-    pub last_try: i64,
-    pub is_sent: bool,
-}
+// IRSendStatus stub removed — replaced by Box<dyn IrResendService> (brs-zd2)
 
 // RankingDataCache stub removed — replaced by Box<dyn RankingDataCacheAccess> (brs-2v7)
 
@@ -132,14 +124,11 @@ impl ImGuiRenderer {
     pub fn dispose(&mut self) {}
 }
 
-/// MusicDownloadProcessor stub (Phase 5+)
-pub struct MusicDownloadProcessor;
+// MusicDownloadProcessor stub removed — replaced by Box<dyn MusicDownloadAccess> (brs-4ls)
 
-/// HttpDownloadProcessor stub (Phase 5+)
-pub struct HttpDownloadProcessor;
+// HttpDownloadProcessor stub removed — replaced by Box<dyn HttpDownloadSubmitter> (brs-4ls)
 
-/// StreamController stub (Phase 5+)
-pub struct StreamController;
+// StreamController stub removed — replaced by Box<dyn StreamControllerAccess> (brs-36u)
 
 pub use beatoraja_input::bms_player_input_processor::BMSPlayerInputProcessor;
 use beatoraja_input::key_command::KeyCommand;
@@ -246,21 +235,23 @@ pub struct MainController {
     /// ImGui renderer
     pub imgui: Option<ImGuiRenderer>,
 
-    /// IR send status list
-    pub ir_send_status: Vec<IRSendStatus>,
+    /// IR resend service (trait bridge for background IR score retry)
+    ir_resend_service: Option<Box<dyn beatoraja_types::ir_resend_service::IrResendService>>,
 
     /// OBS listener
     obs_listener: Option<ObsListener>,
     /// OBS client
     obs_client: Option<ObsWsClient>,
 
-    /// Download processor
-    download: Option<MusicDownloadProcessor>,
-    /// HTTP download processor
-    http_download_processor: Option<HttpDownloadProcessor>,
+    /// IPFS download processor (trait bridge for md-processor)
+    download: Option<Box<dyn beatoraja_types::music_download_access::MusicDownloadAccess>>,
+    /// HTTP download processor (trait bridge for md-processor)
+    http_download_processor:
+        Option<Box<dyn beatoraja_types::http_download_submitter::HttpDownloadSubmitter>>,
 
-    /// Stream controller
-    stream_controller: Option<StreamController>,
+    /// Stream controller (trait bridge for beatoraja-stream)
+    stream_controller:
+        Option<Box<dyn beatoraja_types::stream_controller_access::StreamControllerAccess>>,
 
     /// Previous render time
     prevtime: i64,
@@ -377,7 +368,7 @@ impl MainController {
             offset,
             state_listener,
             imgui: None,
-            ir_send_status: Vec::new(),
+            ir_resend_service: None,
             obs_listener: None,
             obs_client: None,
             download: None,
@@ -1130,11 +1121,16 @@ impl MainController {
         self.timer.switch_timer(id, on);
     }
 
-    pub fn get_http_download_processor(&self) -> Option<&HttpDownloadProcessor> {
-        self.http_download_processor.as_ref()
+    pub fn get_http_download_processor(
+        &self,
+    ) -> Option<&dyn beatoraja_types::http_download_submitter::HttpDownloadSubmitter> {
+        self.http_download_processor.as_deref()
     }
 
-    pub fn set_http_download_processor(&mut self, processor: HttpDownloadProcessor) {
+    pub fn set_http_download_processor(
+        &mut self,
+        processor: Box<dyn beatoraja_types::http_download_submitter::HttpDownloadSubmitter>,
+    ) {
         self.http_download_processor = Some(processor);
     }
 
@@ -1292,8 +1288,43 @@ impl MainController {
         self.infodb = Some(db);
     }
 
-    pub fn get_music_download_processor(&self) -> Option<&MusicDownloadProcessor> {
-        self.download.as_ref()
+    pub fn get_music_download_processor(
+        &self,
+    ) -> Option<&dyn beatoraja_types::music_download_access::MusicDownloadAccess> {
+        self.download.as_deref()
+    }
+
+    pub fn set_music_download_processor(
+        &mut self,
+        processor: Box<dyn beatoraja_types::music_download_access::MusicDownloadAccess>,
+    ) {
+        self.download = Some(processor);
+    }
+
+    pub fn get_stream_controller(
+        &self,
+    ) -> Option<&dyn beatoraja_types::stream_controller_access::StreamControllerAccess> {
+        self.stream_controller.as_deref()
+    }
+
+    pub fn set_stream_controller(
+        &mut self,
+        controller: Box<dyn beatoraja_types::stream_controller_access::StreamControllerAccess>,
+    ) {
+        self.stream_controller = Some(controller);
+    }
+
+    pub fn get_ir_resend_service(
+        &self,
+    ) -> Option<&dyn beatoraja_types::ir_resend_service::IrResendService> {
+        self.ir_resend_service.as_deref()
+    }
+
+    pub fn set_ir_resend_service(
+        &mut self,
+        service: Box<dyn beatoraja_types::ir_resend_service::IrResendService>,
+    ) {
+        self.ir_resend_service = Some(service);
     }
 
     pub fn set_imgui(&mut self, imgui: ImGuiRenderer) {
@@ -1531,7 +1562,16 @@ impl MainController {
     /// Translated from: MainController.downloadIpfsMessageRenderer(String)
     pub fn download_ipfs_message_renderer(&mut self, message: &str) {
         // In Java: spawns DownloadMessageThread that polls download.isDownload() + download.getMessage()
-        // MusicDownloadProcessor is still a stub, so we just show the initial notification directly.
+        // When download processor is available, poll its status; otherwise show initial notification.
+        if let Some(ref dl) = self.download
+            && dl.is_download()
+        {
+            let msg = dl.get_message();
+            if !msg.is_empty() {
+                beatoraja_types::imgui_notify::ImGuiNotify::info(&msg);
+                return;
+            }
+        }
         beatoraja_types::imgui_notify::ImGuiNotify::info(message);
     }
 }
@@ -1671,6 +1711,21 @@ impl MainControllerAccess for MainController {
         &mut (dyn beatoraja_types::ranking_data_cache_access::RankingDataCacheAccess + 'static),
     > {
         self.ircache.as_deref_mut()
+    }
+
+    fn get_http_downloader(
+        &self,
+    ) -> Option<&dyn beatoraja_types::http_download_submitter::HttpDownloadSubmitter> {
+        self.http_download_processor.as_deref()
+    }
+
+    fn start_ipfs_download(&mut self, song: &beatoraja_types::song_data::SongData) -> bool {
+        if let Some(ref dl) = self.download {
+            dl.start_download(song);
+            true
+        } else {
+            false
+        }
     }
 
     fn get_rival_count(&self) -> usize {

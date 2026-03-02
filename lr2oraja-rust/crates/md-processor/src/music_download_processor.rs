@@ -403,3 +403,23 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
         let _ = fs::remove_file(&dir);
     }
 }
+
+impl beatoraja_types::music_download_access::MusicDownloadAccess for MusicDownloadProcessor {
+    fn start_download(&self, song: &beatoraja_types::song_data::SongData) {
+        // SongData implements IpfsInformation, so we can clone and box it.
+        let song_clone = song.clone();
+        self.start(Some(Box::new(song_clone)));
+    }
+
+    fn dispose(&self) {
+        MusicDownloadProcessor::dispose(self);
+    }
+
+    fn is_download(&self) -> bool {
+        MusicDownloadProcessor::is_download(self)
+    }
+
+    fn get_message(&self) -> String {
+        MusicDownloadProcessor::get_message(self)
+    }
+}

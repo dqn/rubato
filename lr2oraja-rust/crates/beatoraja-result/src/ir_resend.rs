@@ -1,9 +1,45 @@
 // IR resend background loop
 // Translated from: MainController.java lines 518-548
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
+
+use beatoraja_types::ir_resend_service::IrResendService;
 
 use crate::ir_send_status::IRSendStatusMain;
+
+/// Global shared IR send status list.
+/// Both MusicResult (producer) and the resend thread (consumer) access this.
+static SHARED_IR_STATUSES: OnceLock<Arc<Mutex<Vec<IRSendStatusMain>>>> = OnceLock::new();
+
+/// Get the shared IR send status list.
+pub fn shared_ir_statuses() -> Arc<Mutex<Vec<IRSendStatusMain>>> {
+    SHARED_IR_STATUSES
+        .get_or_init(|| Arc::new(Mutex::new(Vec::new())))
+        .clone()
+}
+
+/// Concrete implementation of IrResendService.
+/// Starts the background resend thread using the shared status list.
+pub struct IrResendServiceImpl {
+    ir_send_count: i32,
+}
+
+impl IrResendServiceImpl {
+    pub fn new(ir_send_count: i32) -> Self {
+        Self { ir_send_count }
+    }
+}
+
+impl IrResendService for IrResendServiceImpl {
+    fn start(&self) {
+        start_ir_resend_thread(shared_ir_statuses(), self.ir_send_count);
+    }
+
+    fn stop(&self) {
+        // The resend thread is daemon-like (same as Java: Thread.setDaemon(true)).
+        // It will terminate when the process exits.
+    }
+}
 
 /// Start the IR resend background thread.
 ///

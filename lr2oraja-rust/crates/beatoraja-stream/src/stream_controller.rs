@@ -16,6 +16,8 @@ const PIPE_PATH: &str = r"\\.\pipe\beatoraja";
 ///
 /// Java reads from Windows named pipe `\\.\pipe\beatoraja`.
 /// On non-Windows platforms, pipe support is unavailable.
+///
+/// Implements `StreamControllerAccess` for cross-crate usage via MainController.
 pub struct StreamController {
     pub commands: Vec<Box<dyn StreamCommand>>,
     pub pipe_buffer: Option<BufReader<std::fs::File>>,
@@ -136,5 +138,15 @@ impl StreamController {
             };
             commands[i].run(data);
         }
+    }
+}
+
+impl beatoraja_types::stream_controller_access::StreamControllerAccess for StreamController {
+    fn run(&mut self) {
+        StreamController::run(self);
+    }
+
+    fn dispose(&mut self) {
+        StreamController::dispose(self);
     }
 }

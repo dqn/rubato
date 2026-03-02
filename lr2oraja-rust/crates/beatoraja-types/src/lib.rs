@@ -108,3 +108,12 @@ pub mod score_handoff;
 
 // Target property trait (core↔play bridge for score target)
 pub mod target_property_access;
+
+// IR resend service (core↔result bridge for background IR score retry)
+pub mod ir_resend_service;
+
+// Stream controller access (core↔stream bridge for named pipe listener)
+pub mod stream_controller_access;
+
+// Music download access (core↔md-processor bridge for IPFS download)
+pub mod music_download_access;
