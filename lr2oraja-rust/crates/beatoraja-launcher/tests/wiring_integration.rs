@@ -38,8 +38,13 @@ fn play_default() -> MainController {
 }
 
 fn play_with_bmsfile() -> MainController {
+    let bms_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("test-bms")
+        .join("minimal_7k.bms");
     MainLoader::play(
-        Some("test.bms".into()),
+        Some(bms_path),
         None,
         false,
         Some(Config::default()),

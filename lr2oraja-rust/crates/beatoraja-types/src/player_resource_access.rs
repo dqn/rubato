@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::path::{Path, PathBuf};
 
 use bms_model::bms_model::BMSModel;
@@ -39,6 +40,12 @@ pub trait PlayerResourceAccess {
     /// Get target score data
     fn get_target_score_data(&self) -> Option<&ScoreData>;
 
+    /// Set target score data.
+    /// Java: PlayerResource.setTargetScoreData(ScoreData)
+    fn set_target_score_data(&mut self, _score: ScoreData) {
+        // default no-op
+    }
+
     /// Get course score data
     fn get_course_score_data(&self) -> Option<&ScoreData>;
 
@@ -49,6 +56,12 @@ pub trait PlayerResourceAccess {
 
     /// Get current song data
     fn get_songdata(&self) -> Option<&SongData>;
+
+    /// Get mutable current song data
+    fn get_songdata_mut(&mut self) -> Option<&mut SongData>;
+
+    /// Set current song data (or clear with None)
+    fn set_songdata(&mut self, data: Option<SongData>);
 
     // ---- Replay data ----
 
@@ -170,6 +183,9 @@ pub trait PlayerResourceAccess {
     /// Set course data
     fn set_course_data(&mut self, data: CourseData);
 
+    /// Clear course data (set to None)
+    fn clear_course_data(&mut self);
+
     /// Get course BMS models as song data (for course data setSong)
     fn get_course_song_data(&self) -> Vec<SongData>;
 
@@ -206,6 +222,41 @@ pub trait PlayerResourceAccess {
     /// Set player data.
     /// Java: PlayerResource.setPlayerData(PlayerData)
     fn set_player_data(&mut self, _player_data: PlayerData) {
+        // default no-op
+    }
+
+    /// Set banner pixmap on BMSResource from raw RGBA8888 data.
+    /// Pass None to clear the banner.
+    /// Java: PlayerResource.getBMSResource().setBanner(Pixmap)
+    fn set_bms_banner_raw(&mut self, _data: Option<(i32, i32, Vec<u8>)>) {
+        // default no-op
+    }
+
+    /// Set stagefile pixmap on BMSResource from raw RGBA8888 data.
+    /// Pass None to clear the stagefile.
+    /// Java: PlayerResource.getBMSResource().setStagefile(Pixmap)
+    fn set_bms_stagefile_raw(&mut self, _data: Option<(i32, i32, Vec<u8>)>) {
+        // default no-op
+    }
+
+    // ---- BGA processor (type-erased) ----
+
+    /// Get the type-erased BGA processor for reuse across plays.
+    ///
+    /// The concrete type is `Arc<Mutex<BGAProcessor>>` from beatoraja-play, but it is stored
+    /// as `Box<dyn Any>` here because beatoraja-types cannot depend on beatoraja-play.
+    /// The caller (LauncherStateFactory) downcasts to the concrete type.
+    ///
+    /// Java: PlayerResource.getBGAManager() -> BMSResource.getBGAProcessor()
+    fn get_bga_any(&self) -> Option<&dyn Any> {
+        None
+    }
+
+    /// Store the type-erased BGA processor for reuse in subsequent plays.
+    ///
+    /// The caller passes `Box<Arc<Mutex<BGAProcessor>>>` erased to `Box<dyn Any>`.
+    /// Java: the BGAProcessor lives in BMSResource and is created once per PlayerResource.
+    fn set_bga_any(&mut self, _bga: Box<dyn Any>) {
         // default no-op
     }
 }
@@ -261,6 +312,10 @@ impl PlayerResourceAccess for NullPlayerResource {
     fn get_songdata(&self) -> Option<&SongData> {
         None
     }
+    fn get_songdata_mut(&mut self) -> Option<&mut SongData> {
+        None
+    }
+    fn set_songdata(&mut self, _data: Option<SongData>) {}
     fn get_replay_data(&self) -> Option<&ReplayData> {
         None
     }
@@ -346,6 +401,7 @@ impl PlayerResourceAccess for NullPlayerResource {
     fn set_rival_score_data_option(&mut self, _score: Option<ScoreData>) {}
     fn set_chart_option_data(&mut self, _option: Option<ReplayData>) {}
     fn set_course_data(&mut self, _data: CourseData) {}
+    fn clear_course_data(&mut self) {}
     fn get_course_song_data(&self) -> Vec<SongData> {
         vec![]
     }

@@ -901,6 +901,9 @@ mod tests {
         fn get_songdata(&self) -> Option<&beatoraja_types::song_data::SongData> {
             None
         }
+        fn get_songdata_mut(&mut self) -> Option<&mut beatoraja_types::song_data::SongData> {
+            None
+        }
         fn get_replay_data(&self) -> Option<&beatoraja_core::replay_data::ReplayData> {
             None
         }
@@ -999,6 +1002,8 @@ mod tests {
         ) {
         }
         fn set_course_data(&mut self, _data: beatoraja_core::course_data::CourseData) {}
+        fn clear_course_data(&mut self) {}
+        fn set_songdata(&mut self, _data: Option<beatoraja_types::song_data::SongData>) {}
         fn get_course_song_data(&self) -> Vec<beatoraja_types::song_data::SongData> {
             vec![]
         }

@@ -1,6 +1,7 @@
 use crate::layer::Layer;
 use crate::note::{Note, TYPE_CHARGENOTE, TYPE_HELLCHARGENOTE, TYPE_UNDEFINED};
 
+#[derive(Clone)]
 pub struct TimeLine {
     time: i64,
     section: f64,

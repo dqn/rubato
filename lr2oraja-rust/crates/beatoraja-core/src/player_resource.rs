@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::path::{Path, PathBuf};
 
 use beatoraja_types::player_resource_access::PlayerResourceAccess;
@@ -5,6 +6,8 @@ use bms_model::bms_model::BMSModel;
 use bms_model::bms_model_utils::set_start_note_time;
 use bms_model::chart_decoder;
 use bms_model::chart_information::ChartInformation;
+
+use beatoraja_render::pixmap::Pixmap;
 
 use crate::bms_player_mode::BMSPlayerMode;
 use crate::bms_resource::BMSResource;
@@ -99,6 +102,11 @@ pub struct PlayerResource {
     force_no_ir_send: bool,
     /// Reverse lookup data
     reverse_lookup: Vec<String>,
+    /// Type-erased BGA processor for reuse across plays.
+    /// Concrete type: `Arc<Mutex<BGAProcessor>>` from beatoraja-play.
+    /// Stored via Box<dyn Any> to avoid circular dependency (core cannot import play).
+    /// Java: BMSResource holds BGAProcessor, reused via PlayerResource.getBGAManager().
+    bga_any: Option<Box<dyn Any>>,
 }
 
 impl PlayerResource {
@@ -143,6 +151,7 @@ impl PlayerResource {
             freq_string: None,
             force_no_ir_send: false,
             reverse_lookup: Vec::new(),
+            bga_any: None,
         }
     }
 
@@ -220,7 +229,7 @@ impl PlayerResource {
     /// Load a BMS model from path, applying start note time and validation.
     /// Returns (model, margin_time).
     /// Java: PlayerResource.loadBMSModel(Path, int lnmode)
-    fn load_bms_model(path: &Path, lnmode: i32) -> Option<(BMSModel, i64)> {
+    pub fn load_bms_model(path: &Path, lnmode: i32) -> Option<(BMSModel, i64)> {
         let mut decoder = chart_decoder::get_decoder(path)?;
         let info = ChartInformation::new(Some(path.to_path_buf()), lnmode, None);
         let mut model = decoder.decode(info)?;
@@ -664,6 +673,10 @@ impl PlayerResourceAccess for PlayerResource {
         self.tscore.as_ref()
     }
 
+    fn set_target_score_data(&mut self, score: ScoreData) {
+        self.tscore = Some(score);
+    }
+
     fn get_course_score_data(&self) -> Option<&ScoreData> {
         self.cscore.as_ref()
     }
@@ -674,6 +687,14 @@ impl PlayerResourceAccess for PlayerResource {
 
     fn get_songdata(&self) -> Option<&beatoraja_types::song_data::SongData> {
         self.songdata.as_ref()
+    }
+
+    fn get_songdata_mut(&mut self) -> Option<&mut beatoraja_types::song_data::SongData> {
+        self.songdata.as_mut()
+    }
+
+    fn set_songdata(&mut self, data: Option<beatoraja_types::song_data::SongData>) {
+        self.songdata = data;
     }
 
     fn get_replay_data(&self) -> Option<&ReplayData> {
@@ -815,6 +836,10 @@ impl PlayerResourceAccess for PlayerResource {
         PlayerResource::set_course_data(self, data)
     }
 
+    fn clear_course_data(&mut self) {
+        self.coursedata = None;
+    }
+
     fn reload_bms_file(&mut self) {
         PlayerResource::reload_bms_file(self)
     }
@@ -864,6 +889,28 @@ impl PlayerResourceAccess for PlayerResource {
                 .collect(),
             None => vec![],
         }
+    }
+
+    fn set_bms_banner_raw(&mut self, data: Option<(i32, i32, Vec<u8>)>) {
+        if let Some(res) = &mut self.bmsresource {
+            let pixmap = data.map(|(w, h, d)| Pixmap::from_rgba_data(w, h, d));
+            res.set_banner(pixmap);
+        }
+    }
+
+    fn set_bms_stagefile_raw(&mut self, data: Option<(i32, i32, Vec<u8>)>) {
+        if let Some(res) = &mut self.bmsresource {
+            let pixmap = data.map(|(w, h, d)| Pixmap::from_rgba_data(w, h, d));
+            res.set_stagefile(pixmap);
+        }
+    }
+
+    fn get_bga_any(&self) -> Option<&dyn Any> {
+        self.bga_any.as_deref()
+    }
+
+    fn set_bga_any(&mut self, bga: Box<dyn Any>) {
+        self.bga_any = Some(bga);
     }
 }
 

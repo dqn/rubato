@@ -12,6 +12,10 @@ pub trait MusicDownloadAccess: Send + Sync {
     /// Dispose of the download daemon.
     fn dispose(&self);
 
+    /// Whether the download daemon thread is alive.
+    /// Java: MusicDownloadProcessor.isAlive() checks Thread.isAlive().
+    fn is_alive(&self) -> bool;
+
     /// Whether a download is currently in progress.
     fn is_download(&self) -> bool;
 

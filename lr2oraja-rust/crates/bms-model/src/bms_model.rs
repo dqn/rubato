@@ -25,6 +25,7 @@ pub enum TotalType {
     Bmson,
 }
 
+#[derive(Clone)]
 pub struct BMSModel {
     player: i32,
     mode: Option<Mode>,

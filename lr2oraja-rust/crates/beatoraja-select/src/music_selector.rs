@@ -882,9 +882,31 @@ impl MusicSelector {
         }
     }
 
+    /// Load banner and stagefile images for the currently selected song bar
+    /// onto the player resource's BMSResource.
+    /// Java: MusicSelector.loadSelectedSongImages() (L665-673)
     pub fn load_selected_song_images(&mut self) {
-        // In Java: loads banner and stagefile for selected song via resource.getBMSResource()
-        // Blocked on PlayerResource/BMSResource
+        // Extract banner/stagefile raw data from the selected bar (if it's a SongBar)
+        let (banner_data, stagefile_data) = match self.manager.get_selected() {
+            Some(Bar::Song(song_bar)) => {
+                let banner = song_bar
+                    .get_banner()
+                    .map(|p| (p.width, p.height, p.data().to_vec()));
+                let stagefile = song_bar
+                    .get_stagefile()
+                    .map(|p| (p.width, p.height, p.data().to_vec()));
+                (banner, stagefile)
+            }
+            _ => (None, None),
+        };
+
+        // Set banner and stagefile on the player resource's BMSResource
+        if let Some(main) = &mut self.main
+            && let Some(resource) = main.get_player_resource_mut()
+        {
+            resource.set_bms_banner_raw(banner_data);
+            resource.set_bms_stagefile_raw(stagefile_data);
+        }
     }
 
     /// Select a bar (open directory or set play mode).
@@ -1435,8 +1457,10 @@ impl MainState for MusicSelector {
     /// Create state — initialize DB access, song list, bar manager.
     /// Corresponds to Java MusicSelector.create()
     fn create(&mut self) {
-        // In Java: main.getSoundManager().shuffle()
-        // Blocked on MainController
+        // Java: main.getSoundManager().shuffle()
+        if let Some(ref mut main) = self.main {
+            main.shuffle_sounds();
+        }
 
         self.play = None;
         self.show_note_graph = false;
@@ -1540,14 +1564,14 @@ impl MainState for MusicSelector {
                 .get_selected()
                 .and_then(|b| b.as_grade_bar())
                 .map(|gb| gb.get_course_data().clone());
-            if let Some(ref mut main) = self.main {
-                if let Some(res) = main.get_player_resource_mut() {
-                    res.set_songdata(song_data);
-                    if let Some(cd) = course_data {
-                        res.set_course_data(cd);
-                    } else {
-                        res.clear_course_data();
-                    }
+            if let Some(ref mut main) = self.main
+                && let Some(res) = main.get_player_resource_mut()
+            {
+                res.set_songdata(song_data);
+                if let Some(cd) = course_data {
+                    res.set_course_data(cd);
+                } else {
+                    res.clear_course_data();
                 }
             }
         }
@@ -1585,8 +1609,26 @@ impl MainState for MusicSelector {
                     && now_time > songbar_change_time + self.notes_graph_duration as i64
                 {
                     if song_bar.exists_song() {
-                        // In Java: spawns thread to load BMS model
-                        // Blocked on PlayerResource.loadBMSModel
+                        // Java: spawns thread to call resource.loadBMSModel(path, lnmode)
+                        // and sets result on SongData for the density graph.
+                        // Rust: load synchronously (BMS parsing is fast).
+                        let path = song_bar
+                            .get_song_data()
+                            .get_path()
+                            .map(std::path::PathBuf::from);
+                        let lnmode = self.config.get_lnmode();
+                        if let Some(path) = path
+                            && let Some((model, _margin)) =
+                                beatoraja_core::player_resource::PlayerResource::load_bms_model(
+                                    &path, lnmode,
+                                )
+                            && let Some(ref mut main) = self.main
+                            && let Some(sd) = main
+                                .get_player_resource_mut()
+                                .and_then(|r| r.get_songdata_mut())
+                        {
+                            sd.set_bms_model(model);
+                        }
                     }
                     self.show_note_graph = true;
                 }
@@ -1615,6 +1657,7 @@ impl MainState for MusicSelector {
                 let lnmode = main.get_player_config().get_lnmode();
                 if let Some(song_bar) = current.as_song_bar()
                     && song_bar.exists_song()
+                    && self.play.is_none()
                 {
                     let song = song_bar.get_song_data();
                     let cached = main
@@ -1631,6 +1674,29 @@ impl MainState for MusicSelector {
                     } else {
                         self.currentir = cached;
                     }
+                    // TODO: trigger irc.load_song() — requires IRConnection access
+                }
+                // Java MusicSelector L254-263: GradeBar IR ranking data
+                if let Some(grade_bar) = current.as_grade_bar()
+                    && grade_bar.exists_all_songs()
+                    && self.play.is_none()
+                {
+                    let course = grade_bar.get_course_data();
+                    let cached = main
+                        .get_ranking_data_cache()
+                        .and_then(|c| c.get_course_any(course, lnmode))
+                        .and_then(|a| a.downcast_ref::<RankingData>())
+                        .cloned();
+                    if cached.is_none() {
+                        let rd = RankingData::new();
+                        self.currentir = Some(rd.clone());
+                        if let Some(cache) = main.get_ranking_data_cache_mut() {
+                            cache.put_course_any(course, lnmode, Box::new(rd));
+                        }
+                    } else {
+                        self.currentir = cached;
+                    }
+                    // TODO: trigger irc.load_course() — requires IRConnection access
                 }
             }
         }
@@ -1659,7 +1725,7 @@ impl MainState for MusicSelector {
             // Classify the selected bar type and extract needed data into locals
             enum BarAction {
                 SongChart { song: SongData, bar: Bar },
-                SongMissing,
+                SongMissing { song: SongData },
                 ExecutableChart { song: SongData, bar: Bar },
                 Grade,
                 RandomCourse,
@@ -1679,7 +1745,12 @@ impl MainState for MusicSelector {
                             is_func,
                         )
                     } else {
-                        (BarAction::SongMissing, is_func)
+                        (
+                            BarAction::SongMissing {
+                                song: song_bar.get_song_data().clone(),
+                            },
+                            is_func,
+                        )
                     }
                 } else if let Some(exec_bar) = current.as_executable_bar() {
                     (
@@ -1747,9 +1818,29 @@ impl MainState for MusicSelector {
                 BarAction::SongChart { song, bar } => {
                     self.read_chart(&song, &bar);
                 }
-                BarAction::SongMissing => {
-                    // In Java: checks IPFS/HTTP download, opens download site
-                    self.execute_event(EventType::OpenDownloadSite);
+                BarAction::SongMissing { song } => {
+                    // Java: MusicSelector lines 275-282 — IPFS/HTTP download fallback
+                    // 1. If song has IPFS hash and IPFS daemon is alive -> IPFS download
+                    // 2. Else if HTTP download processor is available -> HTTP download
+                    // 3. Else -> open download site in browser
+                    let ipfs_available = !song.get_ipfs_str().is_empty()
+                        && self
+                            .main
+                            .as_ref()
+                            .is_some_and(|m| m.is_ipfs_download_alive());
+                    let http_available = self
+                        .main
+                        .as_ref()
+                        .and_then(|m| m.get_http_downloader())
+                        .is_some();
+
+                    if ipfs_available {
+                        self.execute(MusicSelectCommand::DownloadIpfs);
+                    } else if http_available {
+                        self.execute(MusicSelectCommand::DownloadHttp);
+                    } else {
+                        self.execute_event(EventType::OpenDownloadSite);
+                    }
                 }
                 BarAction::ExecutableChart { song, bar } => {
                     self.read_chart(&song, &bar);
@@ -2412,6 +2503,9 @@ mod tests {
         }
         fn set_course_score_data(&mut self, _score: ScoreData) {}
         fn get_songdata(&self) -> Option<&SongData> {
+            None
+        }
+        fn get_songdata_mut(&mut self) -> Option<&mut SongData> {
             None
         }
         fn set_songdata(&mut self, _data: Option<SongData>) {}

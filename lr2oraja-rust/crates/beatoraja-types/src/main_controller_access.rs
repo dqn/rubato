@@ -61,6 +61,12 @@ pub trait MainControllerAccess {
         None
     }
 
+    /// Shuffle select-screen sounds (BGM, cursor, decide sounds).
+    /// Java: MainController.getSoundManager().shuffle()
+    fn shuffle_sounds(&mut self) {
+        // default no-op
+    }
+
     /// Read replay data for the given song hash.
     /// Delegates to PlayDataAccessor internally.
     fn read_replay_data(
@@ -95,6 +101,12 @@ pub trait MainControllerAccess {
         &self,
     ) -> Option<&dyn crate::http_download_submitter::HttpDownloadSubmitter> {
         None
+    }
+
+    /// Check whether the IPFS download daemon is alive.
+    /// Java: main.getMusicDownloadProcessor() != null && main.getMusicDownloadProcessor().isAlive()
+    fn is_ipfs_download_alive(&self) -> bool {
+        false
     }
 
     /// Start IPFS download for the given song.

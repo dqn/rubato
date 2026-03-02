@@ -4,6 +4,8 @@
 // Translated from: MainController.initializeStates() + createBMSPlayerState()
 // Java creates states eagerly in initializeStates(); Rust creates them on-demand via factory.
 
+use std::sync::{Arc, Mutex};
+
 use beatoraja_core::config_pkg::key_configuration::KeyConfiguration;
 use beatoraja_core::config_pkg::skin_configuration::SkinConfiguration;
 use beatoraja_core::main_controller::{MainController, StateFactory};
@@ -11,14 +13,16 @@ use beatoraja_core::main_state::{MainState, MainStateType};
 use beatoraja_core::timer_manager::TimerManager;
 use beatoraja_decide::music_decide::MusicDecide;
 use beatoraja_decide::stubs::MainControllerRef as DecideMainControllerRef;
+use beatoraja_play::bga::bga_processor::BGAProcessor;
 use beatoraja_play::bms_player::BMSPlayer;
 use beatoraja_result::course_result::CourseResult;
 use beatoraja_result::music_result::MusicResult;
 use beatoraja_result::stubs::MainController as ResultMainController;
 use beatoraja_result::stubs::PlayerResource as ResultPlayerResource;
 use beatoraja_select::music_selector::MusicSelector;
-use beatoraja_types::main_controller_access::ConfigMainControllerAccess;
-use beatoraja_types::player_resource_access::NullPlayerResource;
+use beatoraja_types::main_controller_access::{ConfigMainControllerAccess, MainControllerAccess};
+use beatoraja_types::player_resource_access::{NullPlayerResource, PlayerResourceAccess};
+use beatoraja_types::score_data::ScoreData;
 
 /// LauncherStateFactory — creates concrete state instances for all screen types.
 ///
@@ -52,6 +56,46 @@ impl Default for LauncherStateFactory {
     }
 }
 
+impl LauncherStateFactory {
+    /// Compute a target score from read-only data using StaticTargetProperty logic.
+    ///
+    /// This handles the common case where the target is a static rate (e.g., MAX, AAA, A).
+    /// For rival/IR targets that need mutable MainController access, returns None
+    /// (BMSPlayer::create() will use a zero-score fallback).
+    ///
+    /// Translated from: TargetProperty.getTargetProperty(id).getTarget(main)
+    /// (StaticTargetProperty path only)
+    fn compute_static_target_score(targetid: &str, total_notes: i32) -> Option<ScoreData> {
+        use beatoraja_play::target_property::TargetProperty;
+        // Try to resolve the target property. If it's a static type, compute inline.
+        // For non-static types (Rival, IR, NextRank), we cannot compute without &mut MainController.
+        let target = TargetProperty::get_target_property(targetid)?;
+        match target {
+            TargetProperty::Static(p) => {
+                let rivalscore = (total_notes as f64 * 2.0 * p.rate as f64 / 100.0).ceil() as i32;
+                let score = ScoreData {
+                    player: p.name.clone(),
+                    epg: rivalscore / 2,
+                    egr: rivalscore % 2,
+                    ..Default::default()
+                };
+                Some(score)
+            }
+            _ => {
+                // Rival, IR, and NextRank targets need mutable MainController access.
+                // The target score will be zero in ScoreDataProperty, which is acceptable
+                // as a fallback. A future enhancement could compute these via a different
+                // mechanism (e.g., passing &mut MainController to the factory).
+                log::warn!(
+                    "Target '{}' requires mutable MainController access; using zero target score",
+                    targetid
+                );
+                None
+            }
+        }
+    }
+}
+
 impl StateFactory for LauncherStateFactory {
     fn create_state(
         &self,
@@ -79,8 +123,60 @@ impl StateFactory for LauncherStateFactory {
             }
             MainStateType::Play => {
                 // Java: new BMSPlayer(this, resource)
-                // BMSPlayer requires a BMSModel; use default for now
-                let player = BMSPlayer::new(bms_model::bms_model::BMSModel::default());
+                // Get model from PlayerResource, fall back to default
+                let resource = controller.get_player_resource();
+                let model = resource
+                    .and_then(|r| r.get_bms_model())
+                    .cloned()
+                    .unwrap_or_default();
+                let mut player = BMSPlayer::new(model.clone());
+
+                // Reuse BGAProcessor from PlayerResource to preserve texture cache between plays.
+                // Java: bga = resource.getBGAManager() (BMSPlayer.java line 545)
+                if let Some(bga_any) = resource.and_then(|r| r.get_bga_any())
+                    && let Some(bga_arc) = bga_any.downcast_ref::<Arc<Mutex<BGAProcessor>>>()
+                {
+                    player.set_bga_processor(Arc::clone(bga_arc));
+                }
+
+                // Wire player config
+                player.set_player_config(controller.get_player_config().clone());
+
+                // Wire course mode flag
+                let is_course_mode = resource.and_then(|r| r.get_course_data()).is_some();
+                player.set_course_mode(is_course_mode);
+
+                // --- Target/rival score DB load ---
+                // Java: main.getPlayDataAccessor().readScoreData(model, config.getLnmode())
+                let lnmode = controller.get_player_config().get_lnmode();
+                let sha256 = model.get_sha256();
+                let has_ln = model.contains_undefined_long_note();
+                let db_score = controller.read_score_data_by_hash(sha256, has_ln, lnmode);
+                player.set_db_score(db_score);
+
+                // Java: resource.getRivalScoreData()
+                let rival_score = resource.and_then(|r| r.get_rival_score_data()).cloned();
+                player.set_rival_score(rival_score.clone());
+
+                // Java: TargetProperty.getTargetProperty(config.getTargetid()).getTarget(main)
+                // TargetProperty::get_target() requires &mut MainController which we don't have,
+                // so we compute a static target from read-only data when rival score is absent
+                // or in course mode.
+                if rival_score.is_none() || is_course_mode {
+                    let targetid = &controller.get_player_config().targetid;
+                    let total_notes = model.get_total_notes();
+                    let target_score = Self::compute_static_target_score(targetid, total_notes);
+                    player.set_target_score(target_score);
+                }
+                // When rival_score is present and not in course mode, create() will use
+                // rival_score as the target (matching Java behavior).
+                //
+                // TODO: Java also calls resource.setTargetScoreData(targetScore) so the
+                // result screen can read it. This requires &mut access to PlayerResource,
+                // which the factory doesn't have (only &MainController). The target score
+                // should be set on PlayerResource in MainController::change_state() after
+                // the factory returns, or the factory trait should take &mut MainController.
+
                 Some(Box::new(player))
             }
             MainStateType::Result => {

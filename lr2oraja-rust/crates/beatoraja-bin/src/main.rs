@@ -190,6 +190,58 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
         main_controller.set_ir_resend_service(Box::new(resend_service));
     }
 
+    // TODO(brs-o9ti): Wire MusicDownloadProcessor and HttpDownloadProcessor initialization.
+    // Java: MainController.create() lines 496-513 creates these when config flags are set.
+    //
+    // IPFS download processor (when config.enable_ipfs):
+    //   Requires: MusicDatabaseAccessor adapter that queries the song database for file
+    //   paths by MD5 hash. The adapter needs its own song DB connection (or the MainController's
+    //   songdb field must change from Box<dyn> to Arc<dyn>) because MusicDownloadProcessor holds
+    //   Arc<dyn MusicDatabaseAccessor> and runs on a background thread.
+    //   Concrete type: md_processor::music_download_processor::MusicDownloadProcessor
+    //   Wiring: MusicDownloadProcessor::new(config.ipfsurl, adapter_arc).start(None)
+    //   Then: main_controller.set_music_download_processor(Box::new(processor))
+    //
+    // HTTP download processor (when config.enable_http):
+    //   Requires: MainControllerRef adapter (md_processor::MainControllerRef trait) that
+    //   delegates update_song() to MainController. Same Arc/ownership challenge as above.
+    //   Concrete type: md_processor::http_download_processor::HttpDownloadProcessor
+    //   Wiring: Look up download source from HttpDownloadProcessor::DOWNLOAD_SOURCES by
+    //   config.download_source, call .build(&config), then HttpDownloadProcessor::new(
+    //   main_ref_arc, source_arc, config.download_directory). Also initialize
+    //   DownloadTaskState and DownloadTaskMenu.
+    //   Then: main_controller.set_http_download_processor(Box::new(processor))
+    //
+    // Both processors exist in md-processor crate with full implementations. The blocker is
+    // creating adapter structs that bridge MainController's owned song DB (Box<dyn>) to the
+    // Arc<dyn> references these processors expect. Options:
+    //   1. Change MainController.songdb to Arc<dyn SongDatabaseAccessor> (shared ownership)
+    //   2. Open a second SQLite connection for the download processor
+    //   3. Use channel-based message passing
+
+    // Java: MainController.initializeStates() lines 561-564:
+    //   if(player.getRequestEnable()) {
+    //       streamController = new StreamController(selector);
+    //       streamController.run();
+    //   }
+    //
+    // TODO: In Java, the StreamController shares the same MusicSelector instance as the
+    // MusicSelect screen state, so stream request songs appear in the selector's bar list.
+    // In Rust, states are created on-demand via StateFactory, so we create a dedicated
+    // MusicSelector for the StreamController. Stream request bars won't appear in the
+    // MusicSelect state until the architecture is refactored to share a single MusicSelector
+    // instance (e.g., via Arc<Mutex<MusicSelector>> in both StateFactory and StreamController).
+    if main_controller.get_player_config().enable_request {
+        let selector = beatoraja_select::music_selector::MusicSelector::with_config(
+            main_controller.get_config().clone(),
+        );
+        let selector = std::sync::Arc::new(std::sync::Mutex::new(selector));
+        let mut stream_controller =
+            beatoraja_stream::stream_controller::StreamController::new(selector);
+        stream_controller.run();
+        main_controller.set_stream_controller(Box::new(stream_controller));
+    }
+
     // Extract window config from the controller's Config
     // Java: these were set by MainLoader.play() → config.setWindowWidth/Height
     let config = main_controller.get_config();

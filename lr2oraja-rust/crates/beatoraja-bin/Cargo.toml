@@ -19,6 +19,8 @@ beatoraja-render = { workspace = true }
 beatoraja-result = { workspace = true }
 beatoraja-modmenu = { workspace = true }
 beatoraja-launcher = { workspace = true }
+beatoraja-select = { workspace = true }
+beatoraja-stream = { workspace = true }
 anyhow = { workspace = true }
 log = { workspace = true }
 clap = { workspace = true }

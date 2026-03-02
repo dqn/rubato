@@ -157,6 +157,26 @@ pub trait MainState {
     fn take_pending_reload_bms(&mut self) -> bool {
         false
     }
+
+    // --- Inbox pattern methods ---
+    // MainController pushes data back into the current state after processing outbox items.
+
+    /// Receive a reloaded BMS model from resource after reload_bms_file().
+    /// Used by practice mode to get a fresh model without a full state change.
+    fn receive_reloaded_model(&mut self, _model: bms_model::bms_model::BMSModel) {
+        // Default no-op — only BMSPlayer uses this for practice mode restart.
+    }
+
+    /// Take the BGA processor for caching on MainController/PlayerResource.
+    ///
+    /// Called during state transition when leaving Play state.
+    /// BMSPlayer overrides this to return its `Arc<Mutex<BGAProcessor>>` (type-erased)
+    /// so it can be reused when entering Play state again, preserving the texture cache.
+    ///
+    /// Java: BGAProcessor lives in BMSResource and is never destroyed between plays.
+    fn take_bga_cache(&mut self) -> Option<Box<dyn std::any::Any>> {
+        None
+    }
 }
 
 /// Trait for skin drawing integration.

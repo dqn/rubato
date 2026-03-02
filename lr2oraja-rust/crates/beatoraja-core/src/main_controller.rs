@@ -588,6 +588,13 @@ impl MainController {
 
         // Shutdown the old state
         if let Some(ref mut old_state) = self.current {
+            // Extract BGA processor cache before shutdown for reuse in subsequent plays.
+            // Java: BGAProcessor lives in BMSResource and persists across state transitions.
+            if let Some(bga_cache) = old_state.take_bga_cache()
+                && let Some(ref mut resource) = self.resource
+            {
+                resource.set_bga_any(bga_cache);
+            }
             old_state.shutdown();
             // setSkin(null) equivalent
             old_state.main_state_data_mut().skin = None;
@@ -654,8 +661,21 @@ impl MainController {
 
         // Enter initial state based on bmsfile
         if self.bmsfile.is_some() {
-            // In Java: if(resource.setBMSFile(bmsfile, auto)) changeState(PLAY) else { changeState(CONFIG); exit(); }
-            self.change_state(MainStateType::Play);
+            // Java: if(resource.setBMSFile(bmsfile, auto)) changeState(PLAY)
+            //       else { changeState(CONFIG); exit(); }
+            let bmsfile = self.bmsfile.clone().unwrap();
+            let mode = self.auto.clone().unwrap_or(BMSPlayerMode::PLAY);
+            let load_ok = self
+                .resource
+                .as_mut()
+                .map(|r| r.set_bms_file(&bmsfile, mode))
+                .unwrap_or(false);
+            if load_ok {
+                self.change_state(MainStateType::Play);
+            } else {
+                self.change_state(MainStateType::Config);
+                self.exit();
+            }
         } else {
             self.change_state(MainStateType::MusicSelect);
         }
@@ -795,8 +815,23 @@ impl MainController {
         }
 
         // Reload BMS file (before state change so new Play state gets fresh model)
-        if pending_reload && let Some(ref mut resource) = self.resource {
-            resource.reload_bms_file();
+        if pending_reload {
+            if let Some(ref mut resource) = self.resource {
+                resource.reload_bms_file();
+            }
+            // If no state change follows (practice mode restart), push the fresh model
+            // back to the current state so it can apply modifiers on a clean copy.
+            if pending_change.is_none() {
+                let fresh_model = self
+                    .resource
+                    .as_ref()
+                    .and_then(|r| r.get_bms_model().cloned());
+                if let Some(model) = fresh_model
+                    && let Some(ref mut current) = self.current
+                {
+                    current.receive_reloaded_model(model);
+                }
+            }
         }
 
         // State change (last - destroys current state)
@@ -922,6 +957,12 @@ impl MainController {
             current.dispose();
         }
         self.current = None;
+
+        // Java: if (streamController != null) { streamController.dispose(); }
+        if let Some(ref mut sc) = self.stream_controller {
+            sc.dispose();
+        }
+        self.stream_controller = None;
 
         if let Some(mut imgui) = self.imgui.take() {
             imgui.dispose();
@@ -1666,6 +1707,12 @@ impl MainControllerAccess for MainController {
             .and_then(|sm| sm.get_sound(sound).cloned())
     }
 
+    fn shuffle_sounds(&mut self) {
+        if let Some(ref mut sm) = self.sound {
+            sm.shuffle();
+        }
+    }
+
     fn read_replay_data(
         &self,
         sha256: &str,
@@ -1703,6 +1750,10 @@ impl MainControllerAccess for MainController {
         &self,
     ) -> Option<&dyn beatoraja_types::http_download_submitter::HttpDownloadSubmitter> {
         self.http_download_processor.as_deref()
+    }
+
+    fn is_ipfs_download_alive(&self) -> bool {
+        self.download.as_ref().is_some_and(|dl| dl.is_alive())
     }
 
     fn start_ipfs_download(&mut self, song: &beatoraja_types::song_data::SongData) -> bool {

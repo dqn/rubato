@@ -587,6 +587,8 @@ dependencies = [
  "beatoraja-obs",
  "beatoraja-render",
  "beatoraja-result",
+ "beatoraja-select",
+ "beatoraja-stream",
  "bytemuck",
  "chrono",
  "clap",

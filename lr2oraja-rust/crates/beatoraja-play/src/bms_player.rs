@@ -253,6 +253,20 @@ pub struct BMSPlayer {
     pending_reload_bms: bool,
     /// Input device type (for create_score_data). Set by the caller.
     device_type: beatoraja_input::bms_player_input_device::DeviceType,
+    /// Player's own score data loaded from the score DB.
+    /// Set by the caller before create(). Used to initialize ScoreDataProperty.
+    /// Java: main.getPlayDataAccessor().readScoreData(model, config.getLnmode())
+    db_score: Option<ScoreData>,
+    /// Rival score data from PlayerResource.
+    /// Set by the caller before create(). Used for target score computation.
+    /// Java: resource.getRivalScoreData()
+    rival_score: Option<ScoreData>,
+    /// Target score data (computed from TargetProperty or rival score).
+    /// Set by the caller before create(). The caller is responsible for computing
+    /// target via TargetProperty::get_target_property(config.targetid).get_target(main)
+    /// when rival_score is None or course mode is active.
+    /// Java: TargetProperty.getTargetProperty(config.getTargetid()).getTarget(main)
+    target_score: Option<ScoreData>,
 }
 
 impl BMSPlayer {
@@ -313,7 +327,31 @@ impl BMSPlayer {
             pending_score_handoff: None,
             pending_reload_bms: false,
             device_type: beatoraja_input::bms_player_input_device::DeviceType::Keyboard,
+            db_score: None,
+            rival_score: None,
+            target_score: None,
         }
+    }
+
+    /// Set the BGA processor from PlayerResource for texture cache reuse between plays.
+    ///
+    /// In Java, `BMSPlayer.create()` calls `bga = resource.getBGAManager()` to reuse the
+    /// same BGAProcessor instance (and its texture cache) across plays. Without this,
+    /// a fresh BGAProcessor is created every time in `create()`, discarding cached textures.
+    ///
+    /// The caller (LauncherStateFactory) should extract the processor from PlayerResource
+    /// via `get_bga_any()`, downcast to `Arc<Mutex<BGAProcessor>>`, and inject it here.
+    /// After `create()`, the processor is stored back via `set_bga_any()`.
+    ///
+    /// Java: BMSPlayer.java line 545 — `bga = resource.getBGAManager();`
+    pub fn set_bga_processor(&mut self, bga: Arc<Mutex<BGAProcessor>>) {
+        self.bga = bga;
+    }
+
+    /// Get the BGA processor for storing back to PlayerResource after create().
+    /// Returns the Arc so the caller can store it for reuse in subsequent plays.
+    pub fn get_bga_processor_arc(&self) -> Arc<Mutex<BGAProcessor>> {
+        Arc::clone(&self.bga)
     }
 
     /// Set the chart option override (from PlayerResource) before calling create().
@@ -531,6 +569,42 @@ impl BMSPlayer {
     /// Set the margin time in milliseconds (from resource).
     pub fn set_margin_time(&mut self, margin_time: i64) {
         self.margin_time = margin_time;
+    }
+
+    /// Set the player's own score data loaded from the score database.
+    ///
+    /// The caller should read this via `MainControllerAccess::read_score_data_by_hash()`
+    /// using the model's SHA256 hash, has-undefined-LN flag, and lnmode from PlayerConfig.
+    /// This is used in `create()` to initialize `ScoreDataProperty` with the player's
+    /// best score and ghost data.
+    ///
+    /// Java: `main.getPlayDataAccessor().readScoreData(model, config.getLnmode())`
+    pub fn set_db_score(&mut self, score: Option<ScoreData>) {
+        self.db_score = score;
+    }
+
+    /// Set the rival score data from PlayerResource.
+    ///
+    /// The caller should read this from `PlayerResourceAccess::get_rival_score_data()`.
+    /// When rival score is available and not in course mode, it will be used as the
+    /// target score in `create()`.
+    ///
+    /// Java: `resource.getRivalScoreData()`
+    pub fn set_rival_score(&mut self, score: Option<ScoreData>) {
+        self.rival_score = score;
+    }
+
+    /// Set the target score data computed from TargetProperty.
+    ///
+    /// The caller should compute this via
+    /// `TargetProperty::get_target_property(config.targetid).get_target(main)`
+    /// when rival score is None or when in course mode.
+    /// If rival score is set and not in course mode, this field is ignored
+    /// (rival score is used as the target instead).
+    ///
+    /// Java: `TargetProperty.getTargetProperty(config.getTargetid()).getTarget(main)`
+    pub fn set_target_score(&mut self, score: Option<ScoreData>) {
+        self.target_score = score;
     }
 
     /// Take the pending global pitch value, if any.
@@ -1560,6 +1634,17 @@ impl MainState for BMSPlayer {
         std::mem::take(&mut self.pending_reload_bms)
     }
 
+    fn receive_reloaded_model(&mut self, model: bms_model::bms_model::BMSModel) {
+        self.model = model;
+    }
+
+    fn take_bga_cache(&mut self) -> Option<Box<dyn std::any::Any>> {
+        // Return the Arc<Mutex<BGAProcessor>> for caching on PlayerResource.
+        // The Arc is cloned so that BMSPlayer can still hold a reference
+        // (though it will be dropped shortly after during state transition).
+        Some(Box::new(Arc::clone(&self.bga)))
+    }
+
     fn create(&mut self) {
         let mode = self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K);
         self.lane_property = Some(LaneProperty::new(&mode));
@@ -1639,7 +1724,13 @@ impl MainState for BMSPlayer {
         let rates = self.play_skin.get_note_expansion_rate();
         let use_expansion = rates[0] != 100 || rates[1] != 100;
         self.rhythm = Some(RhythmTimerProcessor::new(&self.model, use_expansion));
-        self.bga = Arc::new(Mutex::new(BGAProcessor::from_model(&self.model)));
+
+        // Reuse existing BGAProcessor (injected via set_bga_processor from PlayerResource)
+        // to preserve the texture cache between plays. Only update timelines for the new model.
+        // Java: bga = resource.getBGAManager(); (BMSPlayer.java line 545)
+        if let Ok(mut bga) = self.bga.lock() {
+            bga.set_model_timelines(&self.model);
+        }
 
         // Initialize gauge log
         if let Some(ref gauge) = self.gauge {
@@ -1651,11 +1742,69 @@ impl MainState for BMSPlayer {
             }
         }
 
-        // --- Practice mode state ---
-        // Translated from: BMSPlayer.create() Java line 553
-        // if (autoplay.mode == PRACTICE) { state = STATE_PRACTICE; }
+        // --- Score DB load + target/rival score wiring ---
+        // Translated from: BMSPlayer.create() Java lines 547-571
+        //
+        // ```java
+        // ScoreData score = main.getPlayDataAccessor().readScoreData(model, config.getLnmode());
+        // if (score == null) { score = new ScoreData(); }
+        //
+        // if (autoplay.mode == PRACTICE) {
+        //     getScoreDataProperty().setTargetScore(0, null, 0, null, model.getTotalNotes());
+        //     practice.create(model, main.getConfig());
+        //     state = STATE_PRACTICE;
+        // } else {
+        //     if (resource.getRivalScoreData() == null || resource.getCourseBMSModels() != null) {
+        //         ScoreData targetScore = TargetProperty.getTargetProperty(config.getTargetid()).getTarget(main);
+        //         resource.setTargetScoreData(targetScore);
+        //     } else {
+        //         resource.setTargetScoreData(resource.getRivalScoreData());
+        //     }
+        //     ScoreData target = resource.getTargetScoreData();
+        //     getScoreDataProperty().setTargetScore(
+        //         score.getExscore(), score.decodeGhost(),
+        //         target != null ? target.getExscore() : 0,
+        //         target != null ? target.decodeGhost() : null,
+        //         model.getTotalNotes());
+        // }
+        // ```
+        //
+        // The caller must pre-load db_score, rival_score, and target_score via
+        // set_db_score(), set_rival_score(), and set_target_score() before create().
+        let score = self.db_score.clone().unwrap_or_default();
+        log::info!("Score data loaded from score database");
+
+        let total_notes = self.model.get_total_notes();
+
         if self.play_mode.mode == beatoraja_core::bms_player_mode::Mode::Practice {
+            self.main_state_data
+                .score
+                .set_target_score_with_ghost(0, None, 0, None, total_notes);
+            self.practice.create(&self.model);
             self.state = STATE_PRACTICE;
+        } else {
+            // Determine the effective target score:
+            // - If rival score is absent or in course mode, use the pre-computed target_score
+            //   (caller should have computed via TargetProperty::get_target_property().get_target())
+            // - Otherwise, use the rival score as the target
+            let effective_target = if self.rival_score.is_none() || self.is_course_mode {
+                self.target_score.clone()
+            } else {
+                self.rival_score.clone()
+            };
+
+            let (target_exscore, target_ghost) = match effective_target {
+                Some(ref t) => (t.get_exscore(), t.decode_ghost()),
+                None => (0, None),
+            };
+
+            self.main_state_data.score.set_target_score_with_ghost(
+                score.get_exscore(),
+                score.decode_ghost(),
+                target_exscore,
+                target_ghost,
+                total_notes,
+            );
         }
     }
 
@@ -1751,8 +1900,12 @@ impl MainState for BMSPlayer {
             // STATE_PRACTICE - practice mode config
             STATE_PRACTICE => {
                 if self.main_state_data.timer.is_timer_on(TIMER_PLAY) {
-                    // Reset for practice restart
-                    // resource.reloadBMSFile(); model = resource.getBMSModel();
+                    // Reset for practice restart: reload BMS file to get a fresh model
+                    // (modifiers mutate the model during play, so we need a clean copy).
+                    // Java: resource.reloadBMSFile(); model = resource.getBMSModel();
+                    // Rust: pending flag triggers MainController to reload resource and
+                    // push fresh model back via receive_reloaded_model().
+                    self.pending_reload_bms = true;
                     if let Some(ref mut lr) = self.lanerender {
                         lr.init(&self.model);
                     }

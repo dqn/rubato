@@ -415,6 +415,10 @@ impl beatoraja_types::music_download_access::MusicDownloadAccess for MusicDownlo
         MusicDownloadProcessor::dispose(self);
     }
 
+    fn is_alive(&self) -> bool {
+        MusicDownloadProcessor::is_alive(self)
+    }
+
     fn is_download(&self) -> bool {
         MusicDownloadProcessor::is_download(self)
     }
