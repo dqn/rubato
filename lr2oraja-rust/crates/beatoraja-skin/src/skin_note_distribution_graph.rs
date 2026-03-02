@@ -260,8 +260,7 @@ impl SkinNoteDistributionGraph {
 
         // Real-time update during play (BMSPlayer check)
         // In Java: model != null && state instanceof BMSPlayer
-        // For now, this is always false since we can't check instanceof with trait objects
-        let is_bms_player = false;
+        let is_bms_player = state.is_bms_player();
 
         if is_bms_player {
             // Real-time update path (stubbed)
@@ -410,11 +409,21 @@ impl SkinNoteDistributionGraph {
                                     count += 1;
                                 } else if n.is_long() {
                                     if !n.is_end() {
-                                        // For LN start: fill from index to pair time
-                                        // Note: pair is stored as timeline index, need to get time
-                                        // This is simplified since we don't have direct pair time access
+                                        // For LN start: fill from index to pair end time
                                         let col = if mode.is_scratch_key(i) { 1 } else { 4 };
-                                        self.dist_data[index][col] += 1;
+                                        let end_index = if let Some(pair_tl_idx) = n.get_pair() {
+                                            if pair_tl_idx < tls.len() {
+                                                (tls[pair_tl_idx].get_time() / 1000) as usize
+                                            } else {
+                                                index
+                                            }
+                                        } else {
+                                            index
+                                        };
+                                        let end_index = end_index.min(self.dist_data.len() - 1);
+                                        for ln_idx in index..=end_index {
+                                            self.dist_data[ln_idx][col] += 1;
+                                        }
                                         count += 1;
                                     }
                                     if ignore_ln_end && n.is_end() {

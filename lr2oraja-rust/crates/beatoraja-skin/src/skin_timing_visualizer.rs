@@ -274,7 +274,7 @@ pub fn get_judge_area(resource: &MusicResultResource) -> Vec<Vec<i32>> {
 
     let judgerank = model.get_judgerank();
     let config = resource.get_player_config();
-    let judge_window_rate = if config.custom_judge {
+    let mut judge_window_rate = if config.custom_judge {
         vec![
             config.key_judge_window_rate_perfect_great,
             config.key_judge_window_rate_great,
@@ -287,11 +287,11 @@ pub fn get_judge_area(resource: &MusicResultResource) -> Vec<Vec<i32>> {
     for constraint in resource.get_constraint() {
         match constraint {
             beatoraja_core::course_data::CourseDataConstraint::NoGreat => {
-                // judgeWindowRate[1] = judgeWindowRate[2] = 0;
-                // Can't mutate here since it's consumed. This is a simplification.
+                judge_window_rate[1] = 0;
+                judge_window_rate[2] = 0;
             }
             beatoraja_core::course_data::CourseDataConstraint::NoGood => {
-                // judgeWindowRate[2] = 0;
+                judge_window_rate[2] = 0;
             }
             _ => {}
         }

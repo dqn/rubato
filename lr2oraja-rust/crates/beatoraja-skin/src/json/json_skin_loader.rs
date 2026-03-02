@@ -820,7 +820,7 @@ const OFFSET_NOTES_1P: i32 = 901;
 const OFFSET_JUDGE_1P: i32 = 902;
 const OFFSET_JUDGEDETAIL_1P: i32 = 903;
 
-const HEADER_TYPE_BEATORJASKIN: i32 = 0;
+const HEADER_TYPE_BEATORJASKIN: i32 = crate::skin_header::TYPE_BEATORJASKIN;
 
 const MOV_EXTENSIONS: &[&str] = &[".mpg", ".mpeg", ".avi", ".wmv", ".mp4", ".m4v", ".webm"];
 

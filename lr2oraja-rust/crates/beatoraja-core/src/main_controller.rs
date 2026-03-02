@@ -708,7 +708,10 @@ impl MainController {
         //     current.getSkin().drawAllObjects(sprite, current);
         // }
         if let Some(ref mut current) = self.current {
+            // Read state type before mutable borrow
+            let st = current.state_type();
             let data = current.main_state_data_mut();
+            data.timer.set_state_type(st);
             if let Some(mut skin) = data.skin.take() {
                 skin.update_custom_objects_timed(&mut data.timer);
                 skin.draw_all_objects_timed(&mut data.timer);

@@ -172,7 +172,7 @@ impl SkinObject {
         }
     }
 
-    pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
+    pub fn draw(&mut self, sprite: &mut SkinObjectRenderer, state: &dyn MainState) {
         match self {
             SkinObject::Image(o) => o.draw(sprite),
             SkinObject::Number(o) => o.draw(sprite),
@@ -182,11 +182,9 @@ impl SkinObject {
             SkinObject::TextFont(o) => o.draw(sprite),
             SkinObject::TextBitmap(o) => o.draw(sprite),
             SkinObject::TextImage(o) => o.draw(sprite),
-            // These types need state for draw, but the dispatch signature doesn't pass it.
-            // They will draw with cached state from prepare().
-            SkinObject::BpmGraph(_) => {}
+            SkinObject::BpmGraph(o) => o.draw(sprite, state),
             SkinObject::HitErrorVisualizer(o) => o.draw(sprite),
-            SkinObject::NoteDistributionGraph(_) => {}
+            SkinObject::NoteDistributionGraph(o) => o.draw(sprite, state),
             SkinObject::TimingDistributionGraph(o) => o.draw(sprite),
             SkinObject::TimingVisualizer(o) => o.draw(sprite),
             SkinObject::Note(o) => o.draw(sprite),
@@ -751,7 +749,7 @@ impl Skin {
             let renderer = self.renderer.as_mut().unwrap();
             for idx in &self.objectarray_indices {
                 if self.objects[*idx].is_draw() && self.objects[*idx].is_visible() {
-                    self.objects[*idx].draw(renderer);
+                    self.objects[*idx].draw(renderer, state);
                 }
             }
         }
@@ -1047,6 +1045,7 @@ struct TimerOnlyMainState<'a> {
     timer: &'a dyn beatoraja_types::timer_access::TimerAccess,
     main_controller: crate::stubs::MainController,
     resource: crate::stubs::PlayerResource,
+    state_type: Option<beatoraja_types::main_state_type::MainStateType>,
 }
 
 impl<'a> TimerOnlyMainState<'a> {
@@ -1055,6 +1054,7 @@ impl<'a> TimerOnlyMainState<'a> {
             timer,
             main_controller: crate::stubs::MainController { debug: false },
             resource: crate::stubs::PlayerResource,
+            state_type: None,
         }
     }
 
@@ -1065,6 +1065,7 @@ impl<'a> TimerOnlyMainState<'a> {
             timer: ctx,
             main_controller: crate::stubs::MainController { debug: false },
             resource: crate::stubs::PlayerResource,
+            state_type: ctx.current_state_type(),
         }
     }
 }
@@ -1088,6 +1089,10 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
 
     fn get_resource(&self) -> &crate::stubs::PlayerResource {
         &self.resource
+    }
+
+    fn is_bms_player(&self) -> bool {
+        self.state_type == Some(beatoraja_types::main_state_type::MainStateType::Play)
     }
 }
 
@@ -1325,7 +1330,7 @@ mod tests {
 
         // Phase 2: draw (via enum)
         let mut renderer = SkinObjectRenderer::new();
-        obj.draw(&mut renderer);
+        obj.draw(&mut renderer, &state);
         // Should have generated vertices
         assert_eq!(renderer.sprite.vertices().len(), 6);
     }
@@ -1363,7 +1368,7 @@ mod tests {
 
         // Phase 2: draw (stub — no panic)
         let mut renderer = SkinObjectRenderer::new();
-        obj.draw(&mut renderer);
+        obj.draw(&mut renderer, &state);
     }
 
     #[test]
@@ -1440,7 +1445,7 @@ mod tests {
 
         // Phase 2: draw
         let mut renderer = SkinObjectRenderer::new();
-        obj.draw(&mut renderer);
+        obj.draw(&mut renderer, &state);
     }
 
     #[test]
@@ -1478,7 +1483,7 @@ mod tests {
 
         // Phase 2: draw
         let mut renderer = SkinObjectRenderer::new();
-        obj.draw(&mut renderer);
+        obj.draw(&mut renderer, &state);
     }
 
     // ================================================================
@@ -1555,7 +1560,7 @@ mod tests {
 
         // draw should not panic
         let mut renderer = SkinObjectRenderer::new();
-        obj.draw(&mut renderer);
+        obj.draw(&mut renderer, &state);
 
         // dispose should not panic
         obj.dispose();

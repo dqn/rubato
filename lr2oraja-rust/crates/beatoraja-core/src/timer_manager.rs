@@ -13,6 +13,8 @@ pub struct TimerManager {
     frozen: bool,
     /// Timer array, indexed by timer ID
     timer: Vec<i64>,
+    /// Current main state type, set by MainController before skin draw
+    state_type: Option<beatoraja_types::main_state_type::MainStateType>,
 }
 
 /// SkinProperty.TIMER_MAX + 1 (Java TIMER_MAX = 2999)
@@ -30,6 +32,7 @@ impl TimerManager {
             nowmicrotime: 0,
             frozen: false,
             timer,
+            state_type: None,
         }
     }
 
@@ -127,6 +130,13 @@ impl TimerManager {
         self.nowmicrotime = self.starttime.elapsed().as_micros() as i64;
     }
 
+    pub fn set_state_type(
+        &mut self,
+        state_type: Option<beatoraja_types::main_state_type::MainStateType>,
+    ) {
+        self.state_type = state_type;
+    }
+
     pub fn set_frozen(&mut self, freeze: bool) {
         self.frozen = freeze;
     }
@@ -170,6 +180,8 @@ impl beatoraja_types::timer_access::TimerAccess for TimerManager {
     }
 }
 
-// SkinRenderContext: uses default no-op implementations for all extended methods.
-// Real implementations will be wired through MainController in a future phase.
-impl beatoraja_types::skin_render_context::SkinRenderContext for TimerManager {}
+impl beatoraja_types::skin_render_context::SkinRenderContext for TimerManager {
+    fn current_state_type(&self) -> Option<beatoraja_types::main_state_type::MainStateType> {
+        self.state_type
+    }
+}

@@ -34,4 +34,10 @@ pub trait SkinRenderContext: TimerAccess {
     fn audio_stop(&mut self, _path: &str) {
         // default no-op
     }
+
+    /// Returns the current main state type (e.g., Play, MusicSelect, Result).
+    /// Used by skin adapters to answer state-specific queries like `is_bms_player()`.
+    fn current_state_type(&self) -> Option<MainStateType> {
+        None
+    }
 }

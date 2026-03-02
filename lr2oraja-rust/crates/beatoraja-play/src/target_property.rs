@@ -487,8 +487,8 @@ impl InternetRankingTargetProperty {
                 (self.value.min(total) - 1).max(0)
             }
             IRTarget::RankRate => {
-                // top value% rank index
-                ((total * self.value / 100).max(1) - 1).max(0)
+                // top value% rank index (matches Java: totalPlayer * value / 100)
+                total * self.value / 100
             }
         }
     }
