@@ -354,7 +354,16 @@ impl PlayerResource {
             return false;
         }
         self.songdata = None;
-        // Phase 5+ dependency: setBMSFile with course model path
+        // Load the next course chart (Java: setBMSFile(Paths.get(course[courseindex].getPath()), mode))
+        let path = self
+            .course
+            .as_ref()
+            .and_then(|models| models.get(self.courseindex))
+            .and_then(|model| model.get_path());
+        let mode = self.mode.clone();
+        if let (Some(path_str), Some(mode)) = (path, mode) {
+            self.set_bms_file(Path::new(&path_str), mode);
+        }
         true
     }
 

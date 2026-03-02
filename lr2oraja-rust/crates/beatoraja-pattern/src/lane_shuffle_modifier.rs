@@ -87,28 +87,17 @@ fn lane_shuffle_modify(
                 if cloned[m] {
                     if let Some(ref note) = notes[m] {
                         if note.is_long() && note.is_end() {
-                            // Find pair in previous timelines
-                            let note_section = note.get_section();
-                            for j in (0..index).rev() {
-                                if let Some(pair_note) = &notes[m]
-                                    && pair_note.is_long()
-                                    && let Some(pair_idx) = pair_note.get_pair()
-                                {
-                                    let _ = pair_idx; // unused in this context
-                                }
-                                let prev_section = timelines[j].get_section();
-                                if (prev_section - note_section).abs() < f64::EPSILON {
-                                    // Get the LN from previous timeline at lane i
-                                    if let Some(ln_prev) = timelines[j].get_note(i as i32).cloned()
-                                        && ln_prev.is_long()
-                                    {
-                                        // Create the end note clone
-                                        timelines[index]
-                                            .set_note(i as i32, Some(notes[m].clone().unwrap()));
-                                        break;
-                                    }
-                                    break;
-                                }
+                            // Use pair index to find the start note's timeline directly
+                            // Java: ((LongNote) notes[mod]).getPair().getSection() == timelines[j].getSection()
+                            // In Rust, pair index IS the timeline index, so use it directly
+                            if let Some(pair_tl_idx) = note.get_pair()
+                                && pair_tl_idx < timelines.len()
+                                && let Some(ln_start) =
+                                    timelines[pair_tl_idx].get_note(i as i32).cloned()
+                                && ln_start.is_long()
+                            {
+                                // Clone the end note (equivalent to Java's ln.getPair())
+                                timelines[index].set_note(i as i32, Some(note.clone()));
                             }
                         } else {
                             timelines[index].set_note(i as i32, Some(note.clone()));

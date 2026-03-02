@@ -183,17 +183,69 @@ impl LR2SkinLoaderState {
     }
 }
 
-/// Get path, replacing LR2 theme paths and checking filemap for custom file substitutions
+/// Get path, replacing LR2 theme paths and checking filemap for custom file substitutions.
+/// Matches Java SkinLoader.getPath() logic: filemap starts_with matching, wildcard (*) expansion,
+/// pipe (|) separator handling, and random file selection.
 pub fn get_lr2_path(skinpath: &str, imagepath: &str, filemap: &HashMap<String, String>) -> String {
-    let resolved = imagepath
+    let mut resolved = imagepath
         .replace("LR2files\\Theme", skinpath)
         .replace('\\', "/");
-    // Check filemap for custom file substitutions
+
+    // Check filemap for custom file substitutions (Java: imagepath.startsWith(key))
     for (key, value) in filemap {
-        if resolved.contains(key.as_str()) {
-            return resolved.replace(key.as_str(), value.as_str());
+        if resolved.starts_with(key.as_str()) {
+            let foot = &resolved[key.len()..];
+            if let Some(star_pos) = resolved.rfind('*') {
+                resolved = format!("{}{}{}", &resolved[..star_pos], value, foot);
+            } else {
+                resolved = format!("{}{}", value, foot);
+            }
+            // After filemap substitution, clear resolved to skip wildcard logic (matching Java)
+            return resolved;
         }
     }
+
+    // Wildcard (*) expansion: find matching files in the directory
+    if resolved.contains('*') {
+        let mut ext = resolved[resolved.rfind('*').unwrap() + 1..].to_string();
+        // Pipe (|) separator handling for extension filtering
+        if resolved.contains('|') {
+            let star_pos = resolved.rfind('*').unwrap();
+            let pipe_pos = resolved.find('|').unwrap();
+            let last_pipe = resolved.rfind('|').unwrap();
+            if resolved.len() > last_pipe + 1 {
+                ext = format!(
+                    "{}{}",
+                    &resolved[star_pos + 1..pipe_pos],
+                    &resolved[last_pipe + 1..]
+                );
+            } else {
+                ext = resolved[star_pos + 1..pipe_pos].to_string();
+            }
+        }
+        let ext_lower = ext.to_lowercase();
+        if let Some(last_slash) = resolved.rfind('/') {
+            let dir_path = &resolved[..last_slash];
+            if let Ok(entries) = std::fs::read_dir(dir_path) {
+                let matching: Vec<String> = entries
+                    .filter_map(|e| e.ok())
+                    .filter(|e| {
+                        e.path()
+                            .to_string_lossy()
+                            .to_lowercase()
+                            .ends_with(&ext_lower)
+                    })
+                    .map(|e| e.path().to_string_lossy().into_owned())
+                    .collect();
+                if !matching.is_empty() {
+                    use rand::Rng;
+                    let idx = rand::thread_rng().gen_range(0..matching.len());
+                    return matching[idx].clone();
+                }
+            }
+        }
+    }
+
     resolved
 }
 
