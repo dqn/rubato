@@ -389,13 +389,15 @@ impl ScoreDatabaseAccessor {
         let result: anyhow::Result<()> = (|| {
             let tx = self.conn.unchecked_transaction()?;
 
-            // Calculate today's midnight unixtime
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
+            // Calculate today's local midnight unixtime
+            // Java uses Calendar.getInstance(TimeZone.getDefault()) for local timezone
+            let unixtime = chrono::Local::now()
+                .date_naive()
+                .and_hms_opt(0, 0, 0)
                 .unwrap()
-                .as_secs() as i64;
-            // Truncate to midnight (UTC)
-            let unixtime = (now / 86400) * 86400;
+                .and_local_timezone(chrono::Local)
+                .unwrap()
+                .timestamp();
 
             let mut pd_copy = pd.clone();
             pd_copy.date = unixtime;

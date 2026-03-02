@@ -2325,6 +2325,8 @@ mod tests {
     /// Mock PlayerResource that records operations.
     struct MockPlayerResource {
         state: Arc<Mutex<MockState>>,
+        course_gauge: Vec<Vec<Vec<f32>>>,
+        course_replay: Vec<beatoraja_types::replay_data::ReplayData>,
     }
 
     impl PlayerResourceAccess for MockPlayerResource {
@@ -2388,13 +2390,13 @@ mod tests {
         }
         fn add_course_gauge(&mut self, _gauge: Vec<Vec<f32>>) {}
         fn get_course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
-            unimplemented!()
+            &mut self.course_gauge
         }
         fn get_score_data_mut(&mut self) -> Option<&mut ScoreData> {
             None
         }
         fn get_course_replay_mut(&mut self) -> &mut Vec<beatoraja_types::replay_data::ReplayData> {
-            unimplemented!()
+            &mut self.course_replay
         }
         fn get_maxcombo(&self) -> i32 {
             0
@@ -2480,6 +2482,8 @@ mod tests {
         fn new(state: Arc<Mutex<MockState>>) -> Self {
             let resource = MockPlayerResource {
                 state: state.clone(),
+                course_gauge: Vec::new(),
+                course_replay: Vec::new(),
             };
             Self { state, resource }
         }

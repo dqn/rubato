@@ -332,6 +332,12 @@ ObsWsClient.createWebSocketClient       # → embedded in async connect flow
 ScoreDataCache.readScoreDatasFromSource  # → callback-based pattern (constructor closures)
 SongDatabaseAccessor.updateSongDatas    # → trait in beatoraja-types
 
+# --- Renamed constructors / factory refactoring [impl] ---
+IRSendStatus.IRSendStatus                # → IRSendStatusMain::new() (3p) and CourseIRSendStatus::new() (4p)
+AutoplayThread.AutoplayThread            # → start_bg_play() + autoplay_run() (Rust ownership model)
+AutoplayThread.run                       # → autoplay_run() (decoupled thread fn)
+LR2SkinCSVLoader.getSkinLoader           # → create_lr2_loader() (expanded params: dst, usecim, skinpath)
+
 # --- Reflection / lifecycle patterns that don't apply in Rust [arch] ---
 IRConnectionManager.getIRConnectionClass # → get_ir_connection() returns instance
 MainController.create                    # → new() + init() lifecycle (no LibGDX create)

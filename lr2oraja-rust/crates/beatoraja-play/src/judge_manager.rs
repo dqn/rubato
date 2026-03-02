@@ -26,6 +26,10 @@ pub struct JudgeConfig<'a> {
     pub autoplay: bool,
     pub judge_property: &'a JudgeProperty,
     pub lane_property: Option<&'a LaneProperty>,
+    /// Whether notes display timing auto-adjust is enabled (PlayerConfig flag).
+    pub auto_adjust_enabled: bool,
+    /// Whether the play mode is PLAY or PRACTICE (auto-adjust only works in these modes).
+    pub is_play_or_practice: bool,
 }
 
 /// Internal per-note judge state (parallel to the external notes array).
@@ -258,6 +262,12 @@ pub struct JudgeManager {
     micro_recent_judges: Vec<i64>,
     recent_judges_index: usize,
     presses_since_last_autoadjust: i32,
+    /// Whether timing auto-adjust is enabled
+    auto_adjust_enabled: bool,
+    /// Whether play mode is PLAY or PRACTICE
+    is_play_or_practice: bool,
+    /// Accumulated judge timing delta from auto-adjust (caller applies to PlayerConfig)
+    judgetiming_delta: i32,
     /// Per-lane iteration state (only used with testable API)
     lane_states: Vec<LaneIterState>,
     /// Per-note internal judge state
@@ -310,6 +320,9 @@ impl JudgeManager {
             micro_recent_judges: vec![i64::MIN; 100],
             recent_judges_index: 0,
             presses_since_last_autoadjust: 0,
+            auto_adjust_enabled: false,
+            is_play_or_practice: false,
+            judgetiming_delta: 0,
             lane_states: Vec::new(),
             note_states: Vec::new(),
             multi_bad: MultiBadCollector::new(),
@@ -470,6 +483,9 @@ impl JudgeManager {
             micro_recent_judges: vec![i64::MIN; 100],
             recent_judges_index: 0,
             presses_since_last_autoadjust: 0,
+            auto_adjust_enabled: config.auto_adjust_enabled,
+            is_play_or_practice: config.is_play_or_practice,
+            judgetiming_delta: 0,
             lane_states,
             note_states: vec![
                 NoteJudgeState {
@@ -1191,6 +1207,17 @@ impl JudgeManager {
         if !multi_bad {
             gauge.update(judge);
         }
+
+        // Timing auto-adjust (Java JudgeManager lines 754-768)
+        if self.auto_adjust_enabled && self.is_play_or_practice && judge <= 3 {
+            self.presses_since_last_autoadjust += 1;
+            if self.presses_since_last_autoadjust > 9 {
+                if mfast <= -500 || mfast >= 500 {
+                    self.judgetiming_delta += if mfast < 0 { 1 } else { -1 };
+                }
+                self.presses_since_last_autoadjust = 0;
+            }
+        }
     }
 
     // --- Legacy API (backward compat) ---
@@ -1301,6 +1328,7 @@ impl JudgeManager {
         self.micro_recent_judges = vec![i64::MIN; 100];
         self.recent_judges_index = 0;
         self.presses_since_last_autoadjust = 0;
+        self.judgetiming_delta = 0;
     }
 
     // --- Getters ---
@@ -1319,6 +1347,20 @@ impl JudgeManager {
 
     pub fn past_notes(&self) -> i32 {
         self.score.passnotes
+    }
+
+    /// Returns the accumulated judge timing delta from auto-adjust.
+    /// The caller should apply this to PlayerConfig.judgetiming and then call
+    /// `take_judgetiming_delta()` to consume it.
+    pub fn judgetiming_delta(&self) -> i32 {
+        self.judgetiming_delta
+    }
+
+    /// Consumes and resets the accumulated judge timing delta.
+    pub fn take_judgetiming_delta(&mut self) -> i32 {
+        let delta = self.judgetiming_delta;
+        self.judgetiming_delta = 0;
+        delta
     }
 
     pub fn get_recent_judges(&self) -> &[i64] {
@@ -1689,6 +1731,8 @@ mod tests {
             autoplay: true,
             judge_property: &jp,
             lane_property: None,
+            auto_adjust_enabled: false,
+            is_play_or_practice: false,
         };
         let jm = JudgeManager::from_config(&config);
 
@@ -1715,6 +1759,8 @@ mod tests {
             autoplay: true,
             judge_property: &jp,
             lane_property: None,
+            auto_adjust_enabled: false,
+            is_play_or_practice: false,
         };
         let mut jm = JudgeManager::from_config(&config);
 
@@ -1763,6 +1809,8 @@ mod tests {
             autoplay: false,
             judge_property: &jp,
             lane_property: None,
+            auto_adjust_enabled: false,
+            is_play_or_practice: false,
         };
         let mut jm = JudgeManager::from_config(&config);
 
@@ -1960,5 +2008,208 @@ mod tests {
             jm_no_great.get_judge_table(true),
             "NoGreat should be more restrictive than NoGood for scratch"
         );
+    }
+
+    // --- Timing auto-adjust tests ---
+
+    /// Helper: create a JudgeManager with auto-adjust enabled in PLAY mode,
+    /// with evenly-spaced notes for testing.
+    fn make_autoadjust_jm(note_times: &[i64]) -> (JudgeManager, Vec<JudgeNote>, GrooveGauge) {
+        let model = make_model_with_notes(note_times);
+        let notes = build_judge_notes(&model);
+        let jp = crate::judge_property::lr2();
+        let config = JudgeConfig {
+            notes: &notes,
+            mode: &Mode::BEAT_7K,
+            ln_type: 0,
+            judge_rank: 100,
+            judge_window_rate: [100, 100, 100],
+            scratch_judge_window_rate: [100, 100, 100],
+            algorithm: JudgeAlgorithm::Combo,
+            autoplay: false,
+            judge_property: &jp,
+            lane_property: None,
+            auto_adjust_enabled: true,
+            is_play_or_practice: true,
+        };
+        let jm = JudgeManager::from_config(&config);
+        let rule = BMSPlayerRule::get_bms_player_rule(&Mode::BEAT_7K);
+        let gauge = GrooveGauge::new(&model, 0, &rule.gauge);
+        (jm, notes, gauge)
+    }
+
+    #[test]
+    fn auto_adjust_increments_delta_when_consistently_late() {
+        // 10 notes spaced 200ms apart, player presses 1ms late
+        // mfast = note_time - press_time < 0 (negative = late)
+        // Java: mfast < 0 → judgetiming += 1 (compensate lateness)
+        let times: Vec<i64> = (0..10).map(|i| 200_000 * (i + 1)).collect();
+        let (mut jm, notes, mut gauge) = make_autoadjust_jm(&times);
+
+        let lp = LaneProperty::new(&Mode::BEAT_7K);
+        let key_count = lp.get_key_lane_assign().len();
+
+        // Prime with -1 update
+        jm.update(
+            -1,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+
+        // Press each note 1ms (1000μs) late => mfast = -(1000) < 0 => delta = +1
+        for i in 0..10 {
+            let note_time = 200_000 * (i as i64 + 1);
+            let press_time = note_time + 1000; // 1ms late
+            let mut keys = vec![false; key_count];
+            keys[0] = true; // Press key 0 (lane 0)
+            let mut key_times = vec![i64::MIN; key_count];
+            key_times[0] = press_time;
+            jm.update(press_time, &notes, &keys, &key_times, &mut gauge);
+        }
+
+        // After 10 good+ judgments with |mfast| >= 500, delta should be +1
+        // (mfast < 0 means late, Java compensates by increasing judgetiming)
+        assert_eq!(
+            jm.judgetiming_delta(),
+            1,
+            "late hits should increase judgetiming"
+        );
+    }
+
+    #[test]
+    fn auto_adjust_no_delta_when_disabled() {
+        let times: Vec<i64> = (0..10).map(|i| 200_000 * (i + 1)).collect();
+        let model = make_model_with_notes(&times);
+        let notes = build_judge_notes(&model);
+        let jp = crate::judge_property::lr2();
+        let config = JudgeConfig {
+            notes: &notes,
+            mode: &Mode::BEAT_7K,
+            ln_type: 0,
+            judge_rank: 100,
+            judge_window_rate: [100, 100, 100],
+            scratch_judge_window_rate: [100, 100, 100],
+            algorithm: JudgeAlgorithm::Combo,
+            autoplay: false,
+            judge_property: &jp,
+            lane_property: None,
+            auto_adjust_enabled: false,
+            is_play_or_practice: true,
+        };
+        let mut jm = JudgeManager::from_config(&config);
+        let rule = BMSPlayerRule::get_bms_player_rule(&Mode::BEAT_7K);
+        let mut gauge = GrooveGauge::new(&model, 0, &rule.gauge);
+
+        let lp = LaneProperty::new(&Mode::BEAT_7K);
+        let key_count = lp.get_key_lane_assign().len();
+
+        jm.update(
+            -1,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+
+        for i in 0..10 {
+            let note_time = 200_000 * (i as i64 + 1);
+            let press_time = note_time + 1000;
+            let mut keys = vec![false; key_count];
+            keys[0] = true;
+            let mut key_times = vec![i64::MIN; key_count];
+            key_times[0] = press_time;
+            jm.update(press_time, &notes, &keys, &key_times, &mut gauge);
+        }
+
+        assert_eq!(
+            jm.judgetiming_delta(),
+            0,
+            "disabled auto-adjust should not produce delta"
+        );
+    }
+
+    #[test]
+    fn auto_adjust_no_delta_when_not_play_mode() {
+        let times: Vec<i64> = (0..10).map(|i| 200_000 * (i + 1)).collect();
+        let model = make_model_with_notes(&times);
+        let notes = build_judge_notes(&model);
+        let jp = crate::judge_property::lr2();
+        let config = JudgeConfig {
+            notes: &notes,
+            mode: &Mode::BEAT_7K,
+            ln_type: 0,
+            judge_rank: 100,
+            judge_window_rate: [100, 100, 100],
+            scratch_judge_window_rate: [100, 100, 100],
+            algorithm: JudgeAlgorithm::Combo,
+            autoplay: false,
+            judge_property: &jp,
+            lane_property: None,
+            auto_adjust_enabled: true,
+            is_play_or_practice: false,
+        };
+        let mut jm = JudgeManager::from_config(&config);
+        let rule = BMSPlayerRule::get_bms_player_rule(&Mode::BEAT_7K);
+        let mut gauge = GrooveGauge::new(&model, 0, &rule.gauge);
+
+        let lp = LaneProperty::new(&Mode::BEAT_7K);
+        let key_count = lp.get_key_lane_assign().len();
+
+        jm.update(
+            -1,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+
+        for i in 0..10 {
+            let note_time = 200_000 * (i as i64 + 1);
+            let press_time = note_time + 1000;
+            let mut keys = vec![false; key_count];
+            keys[0] = true;
+            let mut key_times = vec![i64::MIN; key_count];
+            key_times[0] = press_time;
+            jm.update(press_time, &notes, &keys, &key_times, &mut gauge);
+        }
+
+        assert_eq!(
+            jm.judgetiming_delta(),
+            0,
+            "non-play mode should not trigger auto-adjust"
+        );
+    }
+
+    #[test]
+    fn take_judgetiming_delta_resets_accumulator() {
+        let times: Vec<i64> = (0..10).map(|i| 200_000 * (i + 1)).collect();
+        let (mut jm, notes, mut gauge) = make_autoadjust_jm(&times);
+
+        let lp = LaneProperty::new(&Mode::BEAT_7K);
+        let key_count = lp.get_key_lane_assign().len();
+
+        jm.update(
+            -1,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+
+        for i in 0..10 {
+            let note_time = 200_000 * (i as i64 + 1);
+            let press_time = note_time + 1000;
+            let mut keys = vec![false; key_count];
+            keys[0] = true;
+            let mut key_times = vec![i64::MIN; key_count];
+            key_times[0] = press_time;
+            jm.update(press_time, &notes, &keys, &key_times, &mut gauge);
+        }
+
+        let delta = jm.take_judgetiming_delta();
+        assert_ne!(delta, 0);
+        assert_eq!(jm.judgetiming_delta(), 0, "take should reset delta to 0");
     }
 }
