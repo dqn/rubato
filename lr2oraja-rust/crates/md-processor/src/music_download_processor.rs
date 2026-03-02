@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -20,10 +21,10 @@ pub struct MusicDownloadProcessor {
 }
 
 struct DaemonHandle {
-    alive: Arc<Mutex<bool>>,
-    download: Arc<Mutex<bool>>,
+    alive: Arc<AtomicBool>,
+    download: Arc<AtomicBool>,
     downloadpath: Arc<Mutex<Option<String>>>,
-    dispose: Arc<Mutex<bool>>,
+    dispose: Arc<AtomicBool>,
     join_handle: Option<thread::JoinHandle<()>>,
 }
 
@@ -42,7 +43,7 @@ impl MusicDownloadProcessor {
         let mut daemon_guard = self.daemon.lock().unwrap();
         let need_start = match &*daemon_guard {
             None => true,
-            Some(d) => !*d.alive.lock().unwrap(),
+            Some(d) => !d.alive.load(Ordering::SeqCst),
         };
         if need_start {
             {
@@ -58,10 +59,10 @@ impl MusicDownloadProcessor {
             let ipfs = self.ipfs.clone();
             let message = self.message.clone();
             let main = self.main.clone();
-            let alive = Arc::new(Mutex::new(true));
-            let download = Arc::new(Mutex::new(false));
+            let alive = Arc::new(AtomicBool::new(true));
+            let download = Arc::new(AtomicBool::new(false));
             let downloadpath: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
-            let dispose = Arc::new(Mutex::new(false));
+            let dispose = Arc::new(AtomicBool::new(false));
 
             let alive_clone = alive.clone();
             let download_clone = download.clone();
@@ -97,13 +98,12 @@ impl MusicDownloadProcessor {
 
     pub fn dispose(&self) {
         let mut daemon_guard = self.daemon.lock().unwrap();
-        if let Some(ref mut d) = *daemon_guard {
-            let is_alive = *d.alive.lock().unwrap();
-            if is_alive {
-                *d.dispose.lock().unwrap() = true;
-                if let Some(handle) = d.join_handle.take() {
-                    let _ = handle.join();
-                }
+        if let Some(ref mut d) = *daemon_guard
+            && d.alive.load(Ordering::SeqCst)
+        {
+            d.dispose.store(true, Ordering::SeqCst);
+            if let Some(handle) = d.join_handle.take() {
+                let _ = handle.join();
             }
         }
     }
@@ -112,7 +112,7 @@ impl MusicDownloadProcessor {
         let daemon_guard = self.daemon.lock().unwrap();
         match &*daemon_guard {
             None => false,
-            Some(d) => *d.download.lock().unwrap(),
+            Some(d) => d.download.load(Ordering::SeqCst),
         }
     }
 
@@ -120,7 +120,7 @@ impl MusicDownloadProcessor {
         let daemon_guard = self.daemon.lock().unwrap();
         match &*daemon_guard {
             None => false,
-            Some(d) => *d.alive.lock().unwrap(),
+            Some(d) => d.alive.load(Ordering::SeqCst),
         }
     }
 
@@ -154,14 +154,14 @@ fn download_daemon_thread_run(
     ipfs: Arc<Mutex<String>>,
     message: Arc<Mutex<String>>,
     main: Arc<dyn MusicDatabaseAccessor>,
-    alive: Arc<Mutex<bool>>,
-    download: Arc<Mutex<bool>>,
+    alive: Arc<AtomicBool>,
+    download: Arc<AtomicBool>,
     downloadpath: Arc<Mutex<Option<String>>>,
-    dispose: Arc<Mutex<bool>>,
+    dispose: Arc<AtomicBool>,
 ) {
     let mut download_ipfs_handle: Option<thread::JoinHandle<()>> = None;
-    let download_ipfs_alive: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
-    *dispose.lock().unwrap() = false;
+    let download_ipfs_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+    dispose.store(false, Ordering::SeqCst);
 
     let mut ipfspath = String::new();
     let mut path = String::new();
@@ -172,11 +172,11 @@ fn download_daemon_thread_run(
 
     let result: Result<(), Box<dyn std::error::Error>> = {
         loop {
-            if *dispose.lock().unwrap() {
+            if dispose.load(Ordering::SeqCst) {
                 break;
             }
 
-            let is_download = *download.lock().unwrap();
+            let is_download = download.load(Ordering::SeqCst);
 
             if !commands.lock().unwrap().is_empty() && !is_download {
                 let song = commands.lock().unwrap().pop_front();
@@ -221,7 +221,7 @@ fn download_daemon_thread_run(
                         let path_clone = path.clone();
                         let message_clone = message.clone();
                         let alive_flag = download_ipfs_alive.clone();
-                        *alive_flag.lock().unwrap() = true;
+                        alive_flag.store(true, Ordering::SeqCst);
                         download_ipfs_handle = Some(thread::spawn(move || {
                             download_ipfs_thread_run(
                                 &ipfs_url,
@@ -229,19 +229,19 @@ fn download_daemon_thread_run(
                                 &path_clone,
                                 message_clone,
                             );
-                            *alive_flag.lock().unwrap() = false;
+                            alive_flag.store(false, Ordering::SeqCst);
                         }));
-                        *download.lock().unwrap() = true;
+                        download.store(true, Ordering::SeqCst);
                         log::info!("BMS本体取得開始");
                     } else if !ipfspath.is_empty() && !diffpath.is_empty() {
                         log::info!("{}は既に存在します（差分取得のみ）", path);
-                        *download.lock().unwrap() = true;
+                        download.store(true, Ordering::SeqCst);
                     }
                 }
             }
 
-            let is_download = *download.lock().unwrap();
-            let ipfs_thread_alive = *download_ipfs_alive.lock().unwrap();
+            let is_download = download.load(Ordering::SeqCst);
+            let ipfs_thread_alive = download_ipfs_alive.load(Ordering::SeqCst);
 
             if is_download && (download_ipfs_handle.is_none() || !ipfs_thread_alive) {
                 if !diffpath.is_empty() {
@@ -267,7 +267,7 @@ fn download_daemon_thread_run(
                         let diff_dest = format!("ipfs{}{}", std::path::MAIN_SEPARATOR, &diffpath);
                         let message_clone = message.clone();
                         let alive_flag = download_ipfs_alive.clone();
-                        *alive_flag.lock().unwrap() = true;
+                        alive_flag.store(true, Ordering::SeqCst);
                         download_ipfs_handle = Some(thread::spawn(move || {
                             download_ipfs_thread_run(
                                 &ipfs_url,
@@ -275,7 +275,7 @@ fn download_daemon_thread_run(
                                 &diff_dest,
                                 message_clone,
                             );
-                            *alive_flag.lock().unwrap() = false;
+                            alive_flag.store(false, Ordering::SeqCst);
                         }));
                         ipfspath = String::new();
                         log::info!("差分取得開始");
@@ -292,7 +292,7 @@ fn download_daemon_thread_run(
                         }
                     };
                     *downloadpath.lock().unwrap() = dp;
-                    *download.lock().unwrap() = false;
+                    download.store(false, Ordering::SeqCst);
                     ipfspath = String::new();
                 }
             }
@@ -309,9 +309,9 @@ fn download_daemon_thread_run(
     // If download ipfs thread is still alive, we can't force-kill it in Rust
     // but we can drop the handle
     drop(download_ipfs_handle);
-    *dispose.lock().unwrap() = false;
-    *download.lock().unwrap() = false;
-    *alive.lock().unwrap() = false;
+    dispose.store(false, Ordering::SeqCst);
+    download.store(false, Ordering::SeqCst);
+    alive.store(false, Ordering::SeqCst);
 }
 
 fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc<Mutex<String>>) {

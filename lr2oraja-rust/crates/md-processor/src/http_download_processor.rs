@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -39,6 +39,8 @@ pub struct HttpDownloadProcessor {
     download_directory: String,
     // id => task
     tasks: Arc<Mutex<HashMap<i32, Arc<Mutex<DownloadTask>>>>>,
+    // O(1) duplicate URL check without iterating/locking individual tasks
+    submitted_urls: Mutex<HashSet<String>>,
     // In-memory self-add id generator
     id_generator: AtomicI32,
     // A reference to the main controller, only used for updating folder and rendering the message
@@ -55,6 +57,7 @@ impl HttpDownloadProcessor {
         HttpDownloadProcessor {
             download_directory,
             tasks: Arc::new(Mutex::new(HashMap::new())),
+            submitted_urls: Mutex::new(HashSet::new()),
             id_generator: AtomicI32::new(0),
             main,
             http_download_source,
@@ -118,14 +121,9 @@ impl HttpDownloadProcessor {
         // NOTE: The reason of using executor instead of using 'synchronized' on tasks directly is forcing
         // it to run the submit step on an different thread to get rid of the re-entrant feature of 'synchronized'.
         let download_task = {
-            let mut tasks = self.tasks.lock().unwrap();
-            // NOTE: This reject strategy works for Konmai because the download url could be considered as a unique
-            // info, but not wriggle since it doesn't offer a meta query api.
-            let already_exists = tasks.values().any(|task| {
-                let t = task.lock().unwrap();
-                t.get_url() == download_url
-            });
-            if already_exists {
+            // Check for duplicate URLs via submitted_urls set (O(1), no nested locking)
+            let mut urls = self.submitted_urls.lock().unwrap();
+            if urls.contains(&download_url) {
                 log::error!(
                     "[HttpDownloadProcessor] Rejecting download task[{}] because duplication has been found",
                     download_url
@@ -136,10 +134,13 @@ impl HttpDownloadProcessor {
             let task_id = self.id_generator.fetch_add(1, Ordering::SeqCst) + 1;
             let download_task = Arc::new(Mutex::new(DownloadTask::new(
                 task_id,
-                download_url,
+                download_url.clone(),
                 task_name.to_string(),
                 md5.to_string(),
             )));
+            urls.insert(download_url);
+            drop(urls);
+            let mut tasks = self.tasks.lock().unwrap();
             tasks.insert(task_id, download_task.clone());
             ImGuiNotify::info(&format!("New download task[{}] submitted", task_name));
             download_task
