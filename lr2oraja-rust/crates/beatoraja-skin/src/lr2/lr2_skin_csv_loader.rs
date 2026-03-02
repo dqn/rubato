@@ -4,6 +4,9 @@ use std::path::Path;
 use log::warn;
 
 use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
+use crate::skin::SkinObject;
+use crate::skin_gauge::SkinGauge;
+use crate::skin_image::SkinImage;
 use crate::stubs::{MainState, Rectangle, Resolution, Texture, TextureRegion};
 
 /// LR2 CSV skin loader base
@@ -50,6 +53,13 @@ pub struct LR2SkinCSVLoaderState {
     pub groovey: i32,
     pub line: Option<String>,
     pub imagesetarray: Vec<Vec<TextureRegion>>,
+
+    // Active skin objects (built by SRC, destination set by DST)
+    pub button: Option<SkinImage>,
+    pub onmouse: Option<SkinImage>,
+    pub gauger: Option<SkinGauge>,
+    /// Collected skin objects to add to Skin after parsing
+    pub collected_objects: Vec<SkinObject>,
 }
 
 impl LR2SkinCSVLoaderState {
@@ -108,6 +118,10 @@ impl LR2SkinCSVLoaderState {
             groovey: 0,
             line: None,
             imagesetarray: Vec::new(),
+            button: None,
+            onmouse: None,
+            gauger: None,
+            collected_objects: Vec::new(),
         }
     }
 
@@ -270,9 +284,399 @@ impl LR2SkinCSVLoaderState {
                     }
                 }
             }
+            "SRC_BUTTON" => {
+                // Finalize previous button
+                if let Some(btn) = self.button.take() {
+                    self.collected_objects.push(SkinObject::Image(btn));
+                }
+                let gr: usize = str_parts
+                    .get(2)
+                    .and_then(|s| s.trim().parse().ok())
+                    .unwrap_or(0);
+                if gr < self.imagelist.len()
+                    && matches!(self.imagelist[gr], ImageListEntry::TextureEntry(_))
+                {
+                    let values = Self::parse_int(str_parts);
+                    let divx = if values[7] > 0 { values[7] } else { 1 };
+                    let divy = if values[8] > 0 { values[8] } else { 1 };
+                    let length = values[15];
+                    let images = if length <= 0 {
+                        // Grid-based division: each cell is one animation frame
+                        let src_images = self.get_source_image(&values);
+                        match src_images {
+                            Some(imgs) => {
+                                // Each source image becomes its own frame (single-element vec)
+                                imgs.into_iter().map(|img| vec![img]).collect()
+                            }
+                            None => Vec::new(),
+                        }
+                    } else {
+                        // Split source images into `length` groups
+                        match self.get_source_image(&values) {
+                            Some(srcimg) => {
+                                let len = length as usize;
+                                let group_size = srcimg.len() / len;
+                                (0..len)
+                                    .map(|i| {
+                                        (0..group_size)
+                                            .map(|j| srcimg[i * group_size + j].clone())
+                                            .collect()
+                                    })
+                                    .collect()
+                            }
+                            None => Vec::new(),
+                        }
+                    };
+                    if !images.is_empty() {
+                        let mut btn = SkinImage::new_with_int_timer_ref_id(
+                            images, values[10], values[9], values[11],
+                        );
+                        if values[12] == 1 {
+                            btn.data.set_clickevent_by_id(values[11]);
+                            let click_type = if values[14] > 0 {
+                                0
+                            } else if values[14] < 0 {
+                                1
+                            } else {
+                                2
+                            };
+                            btn.data.set_clickevent_type(click_type);
+                        }
+                        self.button = Some(btn);
+                    }
+                }
+            }
+            "DST_BUTTON" => {
+                if let Some(ref mut button) = self.button {
+                    let values = Self::parse_int(str_parts);
+                    let dstw = self.dst.width / self.src.width;
+                    let dsth = self.dst.height / self.src.height;
+                    let offsets = Self::read_offset(str_parts, 21);
+                    button.data.set_destination_with_int_timer_ops(
+                        values[2] as i64,
+                        values[3] as f32 * dstw,
+                        self.dst.height - (values[4] + values[6]) as f32 * dsth,
+                        values[5] as f32 * dstw,
+                        values[6] as f32 * dsth,
+                        values[7],
+                        values[8],
+                        values[9],
+                        values[10],
+                        values[11],
+                        values[12],
+                        values[13],
+                        values[14],
+                        values[15],
+                        values[16],
+                        values[17],
+                        &offsets,
+                    );
+                }
+            }
+            "SRC_ONMOUSE" => {
+                // Finalize previous onmouse
+                if let Some(om) = self.onmouse.take() {
+                    self.collected_objects.push(SkinObject::Image(om));
+                }
+                let gr: usize = str_parts
+                    .get(2)
+                    .and_then(|s| s.trim().parse().ok())
+                    .unwrap_or(0);
+                if gr < self.imagelist.len()
+                    && matches!(self.imagelist[gr], ImageListEntry::TextureEntry(_))
+                {
+                    let values = Self::parse_int(str_parts);
+                    if let Some(images) = self.get_source_image(&values) {
+                        let mut om = SkinImage::new_with_int_timer(images, values[10], values[9]);
+                        // Set mouse hitbox rectangle
+                        let rect_x = values[12] as f32;
+                        let rect_y = (values[6] - values[13] - values[15]) as f32;
+                        let rect_w = values[14] as f32;
+                        let rect_h = values[15] as f32;
+                        om.data.set_mouse_rect(rect_x, rect_y, rect_w, rect_h);
+                        self.onmouse = Some(om);
+                    }
+                }
+            }
+            "DST_ONMOUSE" => {
+                if let Some(ref mut onmouse) = self.onmouse {
+                    let values = Self::parse_int(str_parts);
+                    let dstw = self.dst.width / self.src.width;
+                    let dsth = self.dst.height / self.src.height;
+                    let offsets = Self::read_offset(str_parts, 21);
+                    onmouse.data.set_destination_with_int_timer_ops(
+                        values[2] as i64,
+                        values[3] as f32 * dstw,
+                        self.dst.height - (values[4] + values[6]) as f32 * dsth,
+                        values[5] as f32 * dstw,
+                        values[6] as f32 * dsth,
+                        values[7],
+                        values[8],
+                        values[9],
+                        values[10],
+                        values[11],
+                        values[12],
+                        values[13],
+                        values[14],
+                        values[15],
+                        values[16],
+                        values[17],
+                        &offsets,
+                    );
+                }
+            }
+            "SRC_GROOVEGAUGE" | "SRC_GROOVEGAUGE_EX" => {
+                // Finalize previous gauger
+                if let Some(g) = self.gauger.take() {
+                    self.collected_objects.push(SkinObject::Gauge(g));
+                }
+                let values = Self::parse_int(str_parts);
+                let gr = values[2] as usize;
+                if gr < self.imagelist.len()
+                    && matches!(self.imagelist[gr], ImageListEntry::TextureEntry(_))
+                {
+                    let divx = if values[7] > 0 { values[7] } else { 1 };
+                    let divy = if values[8] > 0 { values[8] } else { 1 };
+                    let total = (divx * divy) as usize;
+                    let is_ex = cmd == "SRC_GROOVEGAUGE_EX";
+
+                    // Build gauge image array: gauge[state][slot] with 36 slots per state
+                    let gauge = self.build_gauge_image_array(&values, divx, divy, total, is_ex);
+
+                    self.groovex = values[11];
+                    self.groovey = values[12];
+
+                    let parts;
+                    let anim_type;
+                    let anim_range;
+                    let duration;
+                    if values[13] == 0 {
+                        // Default values (POPN_9K check omitted — would need mode context)
+                        parts = 50;
+                        anim_type = 0;
+                        anim_range = 3;
+                        duration = 33;
+                    } else {
+                        parts = values[13];
+                        anim_type = values[14];
+                        anim_range = values[15];
+                        duration = values[16] as i64;
+                    }
+                    let mut g = SkinGauge::new(
+                        gauge, values[10], values[9], parts, anim_type, anim_range, duration,
+                    );
+                    g.set_starttime(values[17]);
+                    g.set_endtime(values[18]);
+                    self.gauger = Some(g);
+                }
+            }
+            "DST_GROOVEGAUGE" => {
+                if let Some(ref mut gauger) = self.gauger {
+                    let values = Self::parse_int(str_parts);
+                    let dstw = self.dst.width / self.src.width;
+                    let dsth = self.dst.height / self.src.height;
+                    // Java: groovex/groovey control gauge tile spacing
+                    let width = if self.groovex.abs() >= 1 {
+                        self.groovex as f32 * 50.0 * dstw
+                    } else {
+                        values[5] as f32 * dstw
+                    };
+                    let height = if self.groovey.abs() >= 1 {
+                        self.groovey as f32 * 50.0 * dsth
+                    } else {
+                        values[6] as f32 * dsth
+                    };
+                    let x = values[3] as f32 * dstw
+                        - if self.groovex < 0 {
+                            self.groovex as f32 * dstw
+                        } else {
+                            0.0
+                        };
+                    let y = self.dst.height - values[4] as f32 * dsth - height;
+                    let offsets = Self::read_offset(str_parts, 21);
+                    gauger.data.set_destination_with_int_timer_ops(
+                        values[2] as i64,
+                        x,
+                        y,
+                        width,
+                        height,
+                        values[7],
+                        values[8],
+                        values[9],
+                        values[10],
+                        values[11],
+                        values[12],
+                        values[13],
+                        values[14],
+                        values[15],
+                        values[16],
+                        values[17],
+                        &offsets,
+                    );
+                }
+            }
             _ => {
                 // Other commands handled by subclass
             }
+        }
+    }
+
+    /// Build the gauge image array for SRC_GROOVEGAUGE / SRC_GROOVEGAUGE_EX.
+    ///
+    /// Returns Vec<Vec<Option<TextureRegion>>> with 36 slots per state.
+    /// The slot layout encodes 6 gauge types x 6 visual states per type:
+    ///   [lit above-border, lit below-border, unlit above, unlit below, tip above, tip below]
+    fn build_gauge_image_array(
+        &self,
+        values: &[i32; 22],
+        divx: i32,
+        divy: i32,
+        total: usize,
+        is_ex: bool,
+    ) -> Vec<Vec<Option<TextureRegion>>> {
+        let gr = values[2] as usize;
+        let tex = match &self.imagelist[gr] {
+            ImageListEntry::TextureEntry(t) => t.clone(),
+            _ => return Vec::new(),
+        };
+        let w = values[5];
+        let h = values[6];
+        let anim_type = values[14];
+
+        let make_tr = |x_idx: i32, y_idx: i32| -> TextureRegion {
+            TextureRegion::from_texture_region(
+                tex.clone(),
+                values[3] + w * x_idx / divx,
+                values[4] + h * y_idx / divy,
+                w / divx,
+                h / divy,
+            )
+        };
+
+        if is_ex {
+            if anim_type == 3 && total.is_multiple_of(12) {
+                // PMS EX: 12 images per state
+                let states = total / 12;
+                let mut gauge: Vec<Vec<Option<TextureRegion>>> = vec![vec![None; 36]; states];
+                for x in 0..divx {
+                    for y in 0..divy {
+                        let idx = (y * divx + x) as usize;
+                        let dx = idx / 12;
+                        let dy = idx % 12;
+                        if dx < states {
+                            let tr = make_tr(x, y);
+                            if dy < 4 {
+                                for &slot in &[dy, dy + 6, dy + 12, dy + 18] {
+                                    gauge[dx][slot] = Some(tr.clone());
+                                }
+                            } else if dy < 8 {
+                                for &slot in &[dy + 20, dy + 26] {
+                                    gauge[dx][slot] = Some(tr.clone());
+                                }
+                            } else if dy == 8 || dy == 9 {
+                                for &slot in &[dy - 4, dy + 2, dy + 8, dy + 14] {
+                                    gauge[dx][slot] = Some(tr.clone());
+                                }
+                            } else {
+                                // dy == 10 || dy == 11
+                                for &slot in &[dy + 18, dy + 24] {
+                                    gauge[dx][slot] = Some(tr.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+                gauge
+            } else {
+                // Standard EX: 8 images per state
+                let states = if total >= 8 { total / 8 } else { 0 };
+                let mut gauge: Vec<Vec<Option<TextureRegion>>> = vec![vec![None; 36]; states];
+                for x in 0..divx {
+                    for y in 0..divy {
+                        let idx = (y * divx + x) as usize;
+                        let dx = idx / 8;
+                        let dy = idx % 8;
+                        if dx < states {
+                            let tr = make_tr(x, y);
+                            if dy < 4 {
+                                for &slot in &[dy, dy + 6, dy + 12, dy + 18] {
+                                    gauge[dx][slot] = Some(tr.clone());
+                                }
+                                if dy < 2 {
+                                    for &slot in &[dy + 4, dy + 10, dy + 16, dy + 22] {
+                                        gauge[dx][slot] = Some(tr.clone());
+                                    }
+                                }
+                            } else {
+                                for &slot in &[dy + 20, dy + 26] {
+                                    gauge[dx][slot] = Some(tr.clone());
+                                }
+                                if dy < 6 {
+                                    for &slot in &[dy + 24, dy + 30] {
+                                        gauge[dx][slot] = Some(tr.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                gauge
+            }
+        } else if anim_type == 3 && total.is_multiple_of(6) {
+            // PMS: 6 images per state
+            let states = total / 6;
+            let mut gauge: Vec<Vec<Option<TextureRegion>>> = vec![vec![None; 36]; states];
+            for x in 0..divx {
+                for y in 0..divy {
+                    let idx = (y * divx + x) as usize;
+                    let dx = idx / 6;
+                    let dy = idx % 6;
+                    if dx < states {
+                        let tr = make_tr(x, y);
+                        for &slot in &[dy, dy + 6, dy + 12, dy + 18, dy + 24, dy + 30] {
+                            gauge[dx][slot] = Some(tr.clone());
+                        }
+                    }
+                }
+            }
+            gauge
+        } else {
+            // Standard: 4 images per state
+            let states = if total >= 4 { total / 4 } else { 0 };
+            let mut gauge: Vec<Vec<Option<TextureRegion>>> = vec![vec![None; 36]; states];
+            for x in 0..divx {
+                for y in 0..divy {
+                    let idx = (y * divx + x) as usize;
+                    let dx = idx / 4;
+                    let dy = idx % 4;
+                    if dx < states {
+                        let tr = make_tr(x, y);
+                        for &slot in &[dy, dy + 6, dy + 12, dy + 18, dy + 24, dy + 30] {
+                            gauge[dx][slot] = Some(tr.clone());
+                        }
+                        if dy < 2 {
+                            for &slot in &[dy + 4, dy + 10, dy + 16, dy + 22, dy + 28, dy + 34] {
+                                gauge[dx][slot] = Some(tr.clone());
+                            }
+                        }
+                    }
+                }
+            }
+            gauge
+        }
+    }
+
+    /// Finalize any active skin objects (button, onmouse, gauger) into collected_objects.
+    /// Call this after CSV parsing completes.
+    pub fn finalize_active_objects(&mut self) {
+        if let Some(btn) = self.button.take() {
+            self.collected_objects.push(SkinObject::Image(btn));
+        }
+        if let Some(om) = self.onmouse.take() {
+            self.collected_objects.push(SkinObject::Image(om));
+        }
+        if let Some(g) = self.gauger.take() {
+            self.collected_objects.push(SkinObject::Gauge(g));
         }
     }
 
@@ -307,6 +711,9 @@ impl LR2SkinCSVLoaderState {
                 self.process_csv_command(&cmd, &str_parts);
             }
         }
+
+        // Flush any remaining active objects
+        self.finalize_active_objects();
 
         Ok(())
     }
