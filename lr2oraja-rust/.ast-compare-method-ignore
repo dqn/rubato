@@ -1009,3 +1009,5 @@ SkinTextBitmap.draw
 SkinWidgetManager.changeSkin
 SQLiteDatabaseAccessor.validate
 TargetProperty.getTargetProperty
+# UpdateBar.set → replaced by mpsc channel send in run_loop() (synchronized method → channel pattern)
+UpdateBar.set
