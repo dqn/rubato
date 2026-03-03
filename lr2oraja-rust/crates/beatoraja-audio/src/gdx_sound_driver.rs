@@ -67,10 +67,9 @@ pub struct GdxSoundDriver {
 }
 
 impl GdxSoundDriver {
-    pub fn new(song_resource_gen: i32) -> Self {
-        let manager = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default())
-            .expect("Failed to create audio manager");
-        GdxSoundDriver {
+    pub fn new(song_resource_gen: i32) -> anyhow::Result<Self> {
+        let manager = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default())?;
+        Ok(GdxSoundDriver {
             manager,
             path_sounds: HashMap::new(),
             wav_sounds: HashMap::new(),
@@ -84,7 +83,7 @@ impl GdxSoundDriver {
             file_cache: HashMap::new(),
             additional_key_sounds: Default::default(),
             additional_key_sound_handles: Default::default(),
-        }
+        })
     }
 }
 

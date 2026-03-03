@@ -168,7 +168,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     {
         let song_resource_gen = main_controller.get_config().song_resource_gen;
         let audio_driver =
-            beatoraja_audio::gdx_sound_driver::GdxSoundDriver::new(song_resource_gen);
+            beatoraja_audio::gdx_sound_driver::GdxSoundDriver::new(song_resource_gen)?;
         main_controller.set_audio_driver(Box::new(audio_driver));
     }
 
