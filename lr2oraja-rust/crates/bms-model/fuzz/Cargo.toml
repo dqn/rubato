@@ -1,0 +1,33 @@
+[package]
+name = "bms-model-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+tempfile = "3"
+serde_json = "1"
+
+[dependencies.bms-model]
+path = ".."
+
+[[bin]]
+name = "fuzz_bms"
+path = "fuzz_targets/fuzz_bms.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_bmson"
+path = "fuzz_targets/fuzz_bmson.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_osu"
+path = "fuzz_targets/fuzz_osu.rs"
+doc = false
+
+[workspace]

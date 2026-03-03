@@ -1,0 +1,20 @@
+osu file format v14
+
+[General]
+AudioFilename: audio.mp3
+Mode: 3
+
+[Metadata]
+Title:Minimal
+Artist:Fuzzer
+Creator:Test
+Version:Normal
+
+[Difficulty]
+CircleSize:7
+
+[TimingPoints]
+0,500,4,1,0,100,1,0
+
+[HitObjects]
+256,192,1000,1,0,0:0:0:0:

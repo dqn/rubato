@@ -28,3 +28,5 @@ lr2oraja-rust/**/config_sys.json
 lr2oraja-rust/test_output.log
 lr2oraja-rust/**/songinfo.db
 .claude/tmp/
+lr2oraja-rust/crates/bms-model/fuzz/artifacts/
+lr2oraja-rust/crates/bms-model/fuzz/target/
