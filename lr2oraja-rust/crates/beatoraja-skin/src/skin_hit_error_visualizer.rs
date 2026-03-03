@@ -142,7 +142,9 @@ impl SkinHitErrorVisualizer {
             ));
         }
 
-        let shape = self.shape.as_mut().unwrap();
+        let Some(shape) = self.shape.as_mut() else {
+            return;
+        };
 
         // Clear canvas
         shape.set_color(&Color::CLEAR);
@@ -262,14 +264,15 @@ impl SkinHitErrorVisualizer {
         }
 
         if self.shapetex.is_none() {
-            let shape_ref = self.shape.as_ref().unwrap();
-            self.shapetex = Some(TextureRegion::from_texture(Texture::from_pixmap(shape_ref)));
+            if let Some(ref shape_ref) = self.shape {
+                self.shapetex = Some(TextureRegion::from_texture(Texture::from_pixmap(shape_ref)));
+            }
         } else {
             // shapetex.getTexture().draw(shape, 0, 0)
             if let Some(ref mut tex) = self.shapetex
                 && let Some(ref mut t) = tex.texture
+                && let Some(ref shape_ref) = self.shape
             {
-                let shape_ref = self.shape.as_ref().unwrap();
                 t.draw_pixmap(shape_ref, 0, 0);
             }
         }
