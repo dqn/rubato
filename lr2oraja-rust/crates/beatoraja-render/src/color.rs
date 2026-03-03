@@ -157,6 +157,261 @@ impl Rectangle {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // --- Color::new ---
+
+    #[test]
+    fn test_color_new() {
+        let c = Color::new(0.1, 0.2, 0.3, 0.4);
+        assert_eq!(c.r, 0.1);
+        assert_eq!(c.g, 0.2);
+        assert_eq!(c.b, 0.3);
+        assert_eq!(c.a, 0.4);
+    }
+
+    #[test]
+    fn test_color_default_is_white() {
+        let c = Color::default();
+        assert!(c.equals(&Color::WHITE));
+    }
+
+    // --- Color::value_of ---
+
+    #[test]
+    fn test_value_of_6digit_red() {
+        let c = Color::value_of("FF0000");
+        assert_eq!(c.r, 1.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 0.0);
+        assert_eq!(c.a, 1.0); // alpha defaults to 1.0 for 6-digit
+    }
+
+    #[test]
+    fn test_value_of_6digit_green() {
+        let c = Color::value_of("00FF00");
+        assert_eq!(c.r, 0.0);
+        assert_eq!(c.g, 1.0);
+        assert_eq!(c.b, 0.0);
+        assert_eq!(c.a, 1.0);
+    }
+
+    #[test]
+    fn test_value_of_6digit_blue() {
+        let c = Color::value_of("0000FF");
+        assert_eq!(c.r, 0.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 1.0);
+        assert_eq!(c.a, 1.0);
+    }
+
+    #[test]
+    fn test_value_of_8digit_with_alpha() {
+        let c = Color::value_of("FF000080");
+        assert_eq!(c.r, 1.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 0.0);
+        // 0x80 = 128, 128/255 ~= 0.50196
+        assert!((c.a - 128.0 / 255.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_value_of_8digit_full_alpha() {
+        let c = Color::value_of("FF0000FF");
+        assert_eq!(c.r, 1.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 0.0);
+        assert_eq!(c.a, 1.0);
+    }
+
+    #[test]
+    fn test_value_of_all_zeros() {
+        let c = Color::value_of("000000");
+        assert_eq!(c.r, 0.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 0.0);
+        assert_eq!(c.a, 1.0);
+    }
+
+    #[test]
+    fn test_value_of_all_zeros_8digit() {
+        let c = Color::value_of("00000000");
+        assert_eq!(c.r, 0.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 0.0);
+        assert_eq!(c.a, 0.0);
+    }
+
+    #[test]
+    fn test_value_of_all_ffs() {
+        let c = Color::value_of("FFFFFF");
+        assert_eq!(c.r, 1.0);
+        assert_eq!(c.g, 1.0);
+        assert_eq!(c.b, 1.0);
+        assert_eq!(c.a, 1.0);
+    }
+
+    #[test]
+    fn test_value_of_all_ffs_8digit() {
+        let c = Color::value_of("FFFFFFFF");
+        assert_eq!(c.r, 1.0);
+        assert_eq!(c.g, 1.0);
+        assert_eq!(c.b, 1.0);
+        assert_eq!(c.a, 1.0);
+    }
+
+    #[test]
+    fn test_value_of_short_string_fallback() {
+        // Strings shorter than 6 chars return fallback red
+        let c = Color::value_of("FFF");
+        assert_eq!(c.r, 1.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 0.0);
+        assert_eq!(c.a, 1.0);
+    }
+
+    #[test]
+    fn test_value_of_empty_string_fallback() {
+        let c = Color::value_of("");
+        assert_eq!(c.r, 1.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 0.0);
+        assert_eq!(c.a, 1.0);
+    }
+
+    #[test]
+    fn test_value_of_trims_whitespace() {
+        let c = Color::value_of("  FF0000  ");
+        assert_eq!(c.r, 1.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 0.0);
+    }
+
+    #[test]
+    fn test_value_of_mixed_case() {
+        let c = Color::value_of("aaBBcc");
+        // 0xAA = 170, 0xBB = 187, 0xCC = 204
+        assert!((c.r - 170.0 / 255.0).abs() < f32::EPSILON);
+        assert!((c.g - 187.0 / 255.0).abs() < f32::EPSILON);
+        assert!((c.b - 204.0 / 255.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_from_hex_is_alias_for_value_of() {
+        let a = Color::value_of("FF8040");
+        let b = Color::from_hex("FF8040");
+        assert!(a.equals(&b));
+    }
+
+    // --- Color::rgba8888 ---
+
+    #[test]
+    fn test_rgba8888_red() {
+        let packed = Color::rgba8888(1.0, 0.0, 0.0, 1.0);
+        // R=255 << 24 | G=0 << 16 | B=0 << 8 | A=255
+        assert_eq!(packed as u32, 0xFF0000FF);
+    }
+
+    #[test]
+    fn test_rgba8888_green() {
+        let packed = Color::rgba8888(0.0, 1.0, 0.0, 1.0);
+        assert_eq!(packed as u32, 0x00FF00FF);
+    }
+
+    #[test]
+    fn test_rgba8888_blue() {
+        let packed = Color::rgba8888(0.0, 0.0, 1.0, 1.0);
+        assert_eq!(packed as u32, 0x0000FFFF);
+    }
+
+    #[test]
+    fn test_rgba8888_white_opaque() {
+        let packed = Color::rgba8888(1.0, 1.0, 1.0, 1.0);
+        assert_eq!(packed as u32, 0xFFFFFFFF);
+    }
+
+    #[test]
+    fn test_rgba8888_black_transparent() {
+        let packed = Color::rgba8888(0.0, 0.0, 0.0, 0.0);
+        assert_eq!(packed, 0);
+    }
+
+    // --- Color::to_int_bits (ABGR) ---
+
+    #[test]
+    fn test_to_int_bits_abgr_layout() {
+        // a=255, b=128, g=64, r=32
+        let bits = Color::to_int_bits(255, 128, 64, 32);
+        assert_eq!(bits as u32, 0xFF804020);
+    }
+
+    // --- Roundtrip: Color -> rgba8888 -> verify components ---
+
+    #[test]
+    fn test_roundtrip_color_to_packed() {
+        let c = Color::new(0.5, 0.25, 0.75, 1.0);
+        let packed = Color::rgba8888(c.r, c.g, c.b, c.a) as u32;
+        let r = ((packed >> 24) & 0xFF) as f32 / 255.0;
+        let g = ((packed >> 16) & 0xFF) as f32 / 255.0;
+        let b = ((packed >> 8) & 0xFF) as f32 / 255.0;
+        let a = (packed & 0xFF) as f32 / 255.0;
+        // Allow tolerance for float->int->float roundtrip
+        assert!((c.r - r).abs() < 0.005);
+        assert!((c.g - g).abs() < 0.005);
+        assert!((c.b - b).abs() < 0.005);
+        assert!((c.a - a).abs() < 0.005);
+    }
+
+    // --- Color helper methods ---
+
+    #[test]
+    fn test_color_set() {
+        let mut c = Color::BLACK;
+        let src = Color::new(0.1, 0.2, 0.3, 0.4);
+        c.set(&src);
+        assert!(c.equals(&src));
+    }
+
+    #[test]
+    fn test_color_set_rgba() {
+        let mut c = Color::BLACK;
+        c.set_rgba(0.5, 0.6, 0.7, 0.8);
+        assert_eq!(c.r, 0.5);
+        assert_eq!(c.g, 0.6);
+        assert_eq!(c.b, 0.7);
+        assert_eq!(c.a, 0.8);
+    }
+
+    #[test]
+    fn test_color_to_array() {
+        let c = Color::new(0.1, 0.2, 0.3, 0.4);
+        assert_eq!(c.to_array(), [0.1, 0.2, 0.3, 0.4]);
+    }
+
+    #[test]
+    fn test_color_equals_same() {
+        let a = Color::new(0.5, 0.5, 0.5, 0.5);
+        let b = Color::new(0.5, 0.5, 0.5, 0.5);
+        assert!(a.equals(&b));
+    }
+
+    #[test]
+    fn test_color_equals_different() {
+        let a = Color::new(0.5, 0.5, 0.5, 0.5);
+        let b = Color::new(0.5, 0.5, 0.5, 0.6);
+        assert!(!a.equals(&b));
+    }
+
+    #[test]
+    fn test_color_constants() {
+        assert!(Color::WHITE.equals(&Color::new(1.0, 1.0, 1.0, 1.0)));
+        assert!(Color::BLACK.equals(&Color::new(0.0, 0.0, 0.0, 1.0)));
+        assert!(Color::CLEAR.equals(&Color::new(0.0, 0.0, 0.0, 0.0)));
+    }
+}
+
 /// 4x4 transformation matrix stored column-major.
 /// Corresponds to com.badlogic.gdx.math.Matrix4.
 #[derive(Clone, Debug)]

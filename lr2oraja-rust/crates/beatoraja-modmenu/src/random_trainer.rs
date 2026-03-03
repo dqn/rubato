@@ -148,3 +148,172 @@ impl RandomTrainer {
         random_history::add_random_history(hist_entry);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Reset all global statics to a known state before each test.
+    /// Required because RandomTrainer uses process-global Mutex statics.
+    fn reset_globals() {
+        *LANE_ORDER.lock().unwrap() = "1234567".to_string();
+        LANES_TO_RANDOM.lock().unwrap().clear();
+        *BLACK_WHITE_PERMUTE.lock().unwrap() = false;
+        *ACTIVE.lock().unwrap() = false;
+        LANE_MASK.lock().unwrap().clear();
+        *LANE_MASK.lock().unwrap() = vec![false; 7];
+        *RANDOM_SEED_MAP.lock().unwrap() = Some(HashMap::new());
+    }
+
+    // --- RandomTrainer::new ---
+
+    #[test]
+    fn test_new_initializes_defaults() {
+        reset_globals();
+        let _trainer = RandomTrainer::new();
+        let lane_order = LANE_ORDER.lock().unwrap();
+        assert_eq!(*lane_order, "1234567");
+        let seed_map = RANDOM_SEED_MAP.lock().unwrap();
+        assert!(seed_map.is_some());
+    }
+
+    // --- set/remove lane_to_random ---
+
+    #[test]
+    fn test_set_lane_to_random() {
+        reset_globals();
+        RandomTrainer::set_lane_to_random('3');
+        assert!(RandomTrainer::is_lane_to_random('3'));
+        assert!(!RandomTrainer::is_lane_to_random('5'));
+    }
+
+    #[test]
+    fn test_remove_lane_to_random() {
+        reset_globals();
+        RandomTrainer::set_lane_to_random('1');
+        RandomTrainer::set_lane_to_random('2');
+        RandomTrainer::remove_lane_to_random('1');
+        assert!(!RandomTrainer::is_lane_to_random('1'));
+        assert!(RandomTrainer::is_lane_to_random('2'));
+    }
+
+    #[test]
+    fn test_remove_lane_to_random_nonexistent_is_noop() {
+        reset_globals();
+        // Removing a lane that was never added should not panic
+        RandomTrainer::remove_lane_to_random('9');
+        assert!(!RandomTrainer::is_lane_to_random('9'));
+    }
+
+    #[test]
+    fn test_remove_lane_to_random_removes_only_first() {
+        reset_globals();
+        // Add duplicate
+        RandomTrainer::set_lane_to_random('5');
+        RandomTrainer::set_lane_to_random('5');
+        RandomTrainer::remove_lane_to_random('5');
+        // One copy should remain
+        assert!(RandomTrainer::is_lane_to_random('5'));
+    }
+
+    // --- active ---
+
+    #[test]
+    fn test_active_default_false() {
+        reset_globals();
+        assert!(!RandomTrainer::is_active());
+    }
+
+    #[test]
+    fn test_set_active() {
+        reset_globals();
+        RandomTrainer::set_active(true);
+        assert!(RandomTrainer::is_active());
+        RandomTrainer::set_active(false);
+        assert!(!RandomTrainer::is_active());
+    }
+
+    // --- lane_order ---
+
+    #[test]
+    fn test_set_lane_order() {
+        reset_globals();
+        RandomTrainer::set_lane_order("7654321");
+        let order = LANE_ORDER.lock().unwrap();
+        assert_eq!(*order, "7654321");
+    }
+
+    // --- get_lane_order (shuffling) ---
+    // Note: get_lane_order() mutates the global LANE_ORDER and tests run in parallel,
+    // so these tests verify structural invariants rather than exact values.
+
+    #[test]
+    fn test_get_lane_order_preserves_length_and_chars() {
+        reset_globals();
+        let order = RandomTrainer::get_lane_order();
+        assert_eq!(order.len(), 7);
+        // All original digits should be present (possibly reordered)
+        let mut sorted: Vec<char> = order.chars().collect();
+        sorted.sort();
+        assert_eq!(sorted, vec!['1', '2', '3', '4', '5', '6', '7']);
+    }
+
+    #[test]
+    fn test_get_lane_order_with_random_lanes_preserves_elements() {
+        reset_globals();
+        RandomTrainer::set_lane_to_random('1');
+        RandomTrainer::set_lane_to_random('3');
+        RandomTrainer::set_lane_to_random('5');
+
+        let order = RandomTrainer::get_lane_order();
+        assert_eq!(order.len(), 7);
+
+        // All 7 digits should still be present
+        let mut sorted: Vec<char> = order.chars().collect();
+        sorted.sort();
+        assert_eq!(sorted, vec!['1', '2', '3', '4', '5', '6', '7']);
+    }
+
+    #[test]
+    fn test_get_lane_order_with_black_white_permute_preserves_parity() {
+        reset_globals();
+        RandomTrainer::set_black_white_permute(true);
+
+        let order = RandomTrainer::get_lane_order();
+        let chars: Vec<char> = order.chars().collect();
+        assert_eq!(chars.len(), 7);
+
+        // Verify parity is preserved: odd digits stay at positions that originally
+        // had odd digits (0,2,4,6), even at even positions (1,3,5)
+        let odd_positions: Vec<char> = vec![chars[0], chars[2], chars[4], chars[6]];
+        let even_positions: Vec<char> = vec![chars[1], chars[3], chars[5]];
+
+        for c in &odd_positions {
+            let digit = c.to_digit(10).unwrap();
+            assert!(
+                digit % 2 == 1,
+                "odd position should have odd digit, got {}",
+                digit
+            );
+        }
+        for c in &even_positions {
+            let digit = c.to_digit(10).unwrap();
+            assert!(
+                digit % 2 == 0,
+                "even position should have even digit, got {}",
+                digit
+            );
+        }
+    }
+
+    // --- random_seed_map ---
+
+    #[test]
+    fn test_get_random_seed_map_is_some() {
+        reset_globals();
+        let _trainer = RandomTrainer::new();
+        let map = RandomTrainer::get_random_seed_map();
+        assert!(map.is_some());
+        assert!(map.unwrap().is_empty());
+    }
+}
