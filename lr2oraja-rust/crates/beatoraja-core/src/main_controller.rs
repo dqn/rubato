@@ -44,7 +44,7 @@ pub trait StateFactory {
     fn create_state(
         &self,
         state_type: MainStateType,
-        controller: &MainController,
+        controller: &mut MainController,
     ) -> Option<StateCreateResult>;
 }
 
@@ -561,16 +561,18 @@ impl MainController {
             return;
         }
 
-        // Create the new state via factory
-        let result = if let Some(ref factory) = self.state_factory {
-            factory.create_state(actual_type, self)
-        } else {
+        // Create the new state via factory.
+        // Take the factory out temporarily to avoid borrow conflict
+        // (factory is borrowed immutably, but create_state needs &mut self).
+        let factory = self.state_factory.take().unwrap_or_else(|| {
             panic!(
                 "No state factory set; cannot create state {:?}. \
                  Caller must call set_state_factory() before any state transitions.",
                 actual_type
             );
-        };
+        });
+        let result = factory.create_state(actual_type, self);
+        self.state_factory = Some(factory);
 
         if let Some(result) = result {
             // Apply target score to PlayerResource so the result screen can read it.
@@ -1921,7 +1923,7 @@ mod tests {
         fn create_state(
             &self,
             state_type: MainStateType,
-            _controller: &MainController,
+            _controller: &mut MainController,
         ) -> Option<StateCreateResult> {
             Some(StateCreateResult {
                 state: Box::new(TestState::new(state_type)),

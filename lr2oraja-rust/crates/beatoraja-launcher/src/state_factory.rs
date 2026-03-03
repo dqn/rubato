@@ -161,21 +161,19 @@ impl Default for LauncherStateFactory {
 }
 
 impl LauncherStateFactory {
-    /// Compute a target score from read-only data using StaticTargetProperty logic.
-    ///
-    /// This handles the common case where the target is a static rate (e.g., MAX, AAA, A).
-    /// For rival/IR targets that need mutable MainController access, returns None
-    /// (BMSPlayer::create() will use a zero-score fallback).
+    /// Compute a target score using the full TargetProperty pipeline.
     ///
     /// Translated from: TargetProperty.getTargetProperty(id).getTarget(main)
-    /// (StaticTargetProperty path only)
-    fn compute_static_target_score(targetid: &str, total_notes: i32) -> Option<ScoreData> {
+    fn compute_target_score(
+        targetid: &str,
+        total_notes: i32,
+        controller: &mut MainController,
+    ) -> Option<ScoreData> {
         use beatoraja_play::target_property::TargetProperty;
-        // Try to resolve the target property. If it's a static type, compute inline.
-        // For non-static types (Rival, IR, NextRank), we cannot compute without &mut MainController.
-        let target = TargetProperty::get_target_property(targetid)?;
+        let mut target = TargetProperty::get_target_property(targetid)?;
         match target {
-            TargetProperty::Static(p) => {
+            TargetProperty::Static(ref p) => {
+                // Static targets can be computed without MainController access.
                 let rivalscore = (total_notes as f64 * 2.0 * p.rate as f64 / 100.0).ceil() as i32;
                 let score = ScoreData {
                     player: p.name.clone(),
@@ -186,15 +184,9 @@ impl LauncherStateFactory {
                 Some(score)
             }
             _ => {
-                // Rival, IR, and NextRank targets need mutable MainController access.
-                // The target score will be zero in ScoreDataProperty, which is acceptable
-                // as a fallback. A future enhancement could compute these via a different
-                // mechanism (e.g., passing &mut MainController to the factory).
-                log::warn!(
-                    "Target '{}' requires mutable MainController access; using zero target score",
-                    targetid
-                );
-                None
+                // Rival, IR, and NextRank targets use the full get_target() pipeline.
+                let score = target.get_target(controller);
+                Some(score)
             }
         }
     }
@@ -204,7 +196,7 @@ impl StateFactory for LauncherStateFactory {
     fn create_state(
         &self,
         state_type: MainStateType,
-        controller: &MainController,
+        controller: &mut MainController,
     ) -> Option<StateCreateResult> {
         match state_type {
             MainStateType::MusicSelect => {
@@ -285,9 +277,9 @@ impl StateFactory for LauncherStateFactory {
                 // Java: TargetProperty.getTargetProperty(config.getTargetid()).getTarget(main)
                 // Java: resource.setTargetScoreData(targetScore)
                 let target_score = if rival_score.is_none() || is_course_mode {
-                    let targetid = &controller.get_player_config().targetid;
+                    let targetid = controller.get_player_config().targetid.clone();
                     let total_notes = model.get_total_notes();
-                    Self::compute_static_target_score(targetid, total_notes)
+                    Self::compute_target_score(&targetid, total_notes, controller)
                 } else {
                     rival_score
                 };
@@ -365,7 +357,7 @@ mod tests {
     #[test]
     fn test_create_all_state_types() {
         let factory = LauncherStateFactory::new();
-        let controller = make_test_controller();
+        let mut controller = make_test_controller();
 
         let types = [
             MainStateType::MusicSelect,
@@ -378,7 +370,7 @@ mod tests {
         ];
 
         for state_type in &types {
-            let result = factory.create_state(*state_type, &controller);
+            let result = factory.create_state(*state_type, &mut controller);
             assert!(
                 result.is_some(),
                 "Failed to create state for {:?}",
@@ -397,10 +389,10 @@ mod tests {
     #[test]
     fn test_music_select_state() {
         let factory = LauncherStateFactory::new();
-        let controller = make_test_controller();
+        let mut controller = make_test_controller();
 
         let result = factory
-            .create_state(MainStateType::MusicSelect, &controller)
+            .create_state(MainStateType::MusicSelect, &mut controller)
             .unwrap();
         assert_eq!(result.state.state_type(), Some(MainStateType::MusicSelect));
     }
@@ -408,10 +400,10 @@ mod tests {
     #[test]
     fn test_decide_state() {
         let factory = LauncherStateFactory::new();
-        let controller = make_test_controller();
+        let mut controller = make_test_controller();
 
         let result = factory
-            .create_state(MainStateType::Decide, &controller)
+            .create_state(MainStateType::Decide, &mut controller)
             .unwrap();
         assert_eq!(result.state.state_type(), Some(MainStateType::Decide));
     }
@@ -419,10 +411,10 @@ mod tests {
     #[test]
     fn test_play_state() {
         let factory = LauncherStateFactory::new();
-        let controller = make_test_controller();
+        let mut controller = make_test_controller();
 
         let result = factory
-            .create_state(MainStateType::Play, &controller)
+            .create_state(MainStateType::Play, &mut controller)
             .unwrap();
         assert_eq!(result.state.state_type(), Some(MainStateType::Play));
     }
@@ -430,10 +422,10 @@ mod tests {
     #[test]
     fn test_result_state() {
         let factory = LauncherStateFactory::new();
-        let controller = make_test_controller();
+        let mut controller = make_test_controller();
 
         let result = factory
-            .create_state(MainStateType::Result, &controller)
+            .create_state(MainStateType::Result, &mut controller)
             .unwrap();
         assert_eq!(result.state.state_type(), Some(MainStateType::Result));
     }
@@ -441,10 +433,10 @@ mod tests {
     #[test]
     fn test_course_result_state() {
         let factory = LauncherStateFactory::new();
-        let controller = make_test_controller();
+        let mut controller = make_test_controller();
 
         let result = factory
-            .create_state(MainStateType::CourseResult, &controller)
+            .create_state(MainStateType::CourseResult, &mut controller)
             .unwrap();
         assert_eq!(result.state.state_type(), Some(MainStateType::CourseResult));
     }
@@ -452,10 +444,10 @@ mod tests {
     #[test]
     fn test_config_state() {
         let factory = LauncherStateFactory::new();
-        let controller = make_test_controller();
+        let mut controller = make_test_controller();
 
         let result = factory
-            .create_state(MainStateType::Config, &controller)
+            .create_state(MainStateType::Config, &mut controller)
             .unwrap();
         assert_eq!(result.state.state_type(), Some(MainStateType::Config));
     }
@@ -463,10 +455,10 @@ mod tests {
     #[test]
     fn test_skin_config_state() {
         let factory = LauncherStateFactory::new();
-        let controller = make_test_controller();
+        let mut controller = make_test_controller();
 
         let result = factory
-            .create_state(MainStateType::SkinConfig, &controller)
+            .create_state(MainStateType::SkinConfig, &mut controller)
             .unwrap();
         assert_eq!(result.state.state_type(), Some(MainStateType::SkinConfig));
     }
