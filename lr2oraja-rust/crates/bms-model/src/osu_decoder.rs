@@ -332,7 +332,7 @@ impl OSUDecoder {
 }
 
 fn get_timing_point(timing_points: &[TimingPoints], time: i32) -> Option<&TimingPoints> {
-    let mut entry = timing_points.get(0)?;
+    let mut entry = timing_points.first()?;
     let mut last_idx = 0usize;
     while (entry.time as i32) < time {
         last_idx += 1;
@@ -423,7 +423,7 @@ fn safe_section_delta(time_delta: f64, beat_length: f64) -> f64 {
 }
 
 fn get_section(timing_points: &[TimingPoints], time: i32) -> f64 {
-    let entry = match timing_points.get(0) {
+    let entry = match timing_points.first() {
         Some(e) => e,
         None => return 0.0,
     };
