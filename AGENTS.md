@@ -84,8 +84,8 @@ lr2oraja-rust/       # Cargo workspace
 
 ## Status
 
-**3926 tests.** Phases 1–62 complete + post-62 stub audit + hardening pass + Phase 9 launcher egui + E2E lifecycle tests + bug-fix & test hardening pass (3 rounds) + round 4 bug fixes, tests, safety audit, fuzz targets + criterion benchmarks + performance optimization (BMS decoder, pattern modifier, SpriteBatch). Zero clippy warnings. Zero regressions.
-**Migration audit**: 4,279 Java methods: 4,049 resolved, 230 missing (architectural redesigns: getter→pub field, Thread→spawn, Gson→serde, etc.). 5 genuine functional gaps (2 moderate, 3 low priority).
+**3932 tests.** Phases 1–62 complete + post-62 stub audit + hardening pass + Phase 9 launcher egui + E2E lifecycle tests + bug-fix & test hardening pass (3 rounds) + round 4 bug fixes, tests, safety audit, fuzz targets + criterion benchmarks + performance optimization (BMS decoder, pattern modifier, SpriteBatch) + functional gap fixes (target score, BGI maxgen, LR2 play skin loader). Zero clippy warnings. Zero regressions.
+**Migration audit**: 4,279 Java methods: 4,049 resolved, 230 missing (architectural redesigns: getter→pub field, Thread→spawn, Gson→serde, etc.). 2 remaining functional gaps (LR2 rendering placeholders, MainState::get_image).
 **ast-compare**: 2,235 methods ignored (789 patterns). Method-level ignore via `.ast-compare-method-ignore`.
 **"Not implemented" stubs**: 0 remaining. All 151 stubs resolved (Phase 58–62).
 **Debug stubs**: 0 remaining. All 32 resolved: 12 implemented, 20 → compile-time comments.

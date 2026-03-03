@@ -31,10 +31,7 @@ fn discover_test_bms_files() -> Vec<PathBuf> {
 fn discover_real_bms_files() -> Vec<PathBuf> {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
     // Try relative path from CARGO_MANIFEST_DIR (crates/bms-model -> repo root -> bms/)
-    let candidates = [
-        manifest.join("../../../bms"),
-        manifest.join("../../bms"),
-    ];
+    let candidates = [manifest.join("../../../bms"), manifest.join("../../bms")];
 
     let base = match candidates.iter().find(|p| p.is_dir()) {
         Some(p) => p.clone(),

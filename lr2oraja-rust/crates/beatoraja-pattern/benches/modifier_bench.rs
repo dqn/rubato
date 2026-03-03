@@ -154,20 +154,24 @@ fn bench_real_bms_mirror(c: &mut Criterion) {
         let filename = path.file_name().unwrap().to_string_lossy().to_string();
         let base_model = decode_bms(path);
 
-        group.bench_with_input(BenchmarkId::new("mirror", &filename), &base_model, |b, m| {
-            b.iter_batched(
-                || {
-                    let model = m.clone();
-                    let mut modifier = LaneMirrorShuffleModifier::new(0, false);
-                    modifier.set_seed(42);
-                    (model, modifier)
-                },
-                |(mut model, mut modifier)| {
-                    modifier.modify(black_box(&mut model));
-                },
-                BatchSize::SmallInput,
-            );
-        });
+        group.bench_with_input(
+            BenchmarkId::new("mirror", &filename),
+            &base_model,
+            |b, m| {
+                b.iter_batched(
+                    || {
+                        let model = m.clone();
+                        let mut modifier = LaneMirrorShuffleModifier::new(0, false);
+                        modifier.set_seed(42);
+                        (model, modifier)
+                    },
+                    |(mut model, mut modifier)| {
+                        modifier.modify(black_box(&mut model));
+                    },
+                    BatchSize::SmallInput,
+                );
+            },
+        );
     }
     group.finish();
 }
