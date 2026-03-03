@@ -856,10 +856,10 @@ impl PlayConfigurationView {
 
         self.commit_player();
 
-        if let Some(ref config) = self.config {
-            if let Err(e) = Config::write(config) {
-                log::error!("Failed to write config: {}", e);
-            }
+        if let Some(ref config) = self.config
+            && let Err(e) = Config::write(config)
+        {
+            log::error!("Failed to write config: {}", e);
         }
 
         // tableController.commit()
@@ -945,10 +945,10 @@ impl PlayConfigurationView {
         // skinController.commit()
         self.skin_controller.commit();
 
-        if let (Some(config), Some(player)) = (&self.config, &self.player) {
-            if let Err(e) = PlayerConfig::write(&config.playerpath, player) {
-                log::error!("Failed to write player config: {}", e);
-            }
+        if let (Some(config), Some(player)) = (&self.config, &self.player)
+            && let Err(e) = PlayerConfig::write(&config.playerpath, player)
+        {
+            log::error!("Failed to write player config: {}", e);
         }
     }
 
@@ -970,12 +970,14 @@ impl PlayConfigurationView {
 
     /// Show file chooser
     /// Translates: private String showFileChooser(String title)
+    #[allow(dead_code)]
     fn show_file_chooser(title: &str) -> Option<String> {
         crate::stubs::show_file_chooser(title)
     }
 
     /// Show directory chooser
     /// Translates: private String showDirectoryChooser(String title)
+    #[allow(dead_code)]
     fn show_directory_chooser(title: &str) -> Option<String> {
         crate::stubs::show_directory_chooser(title)
     }

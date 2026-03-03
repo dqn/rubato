@@ -38,6 +38,7 @@ pub struct FolderEditorView {
     search_songs: Vec<SongData>,
     search_songs_controller: SongDataView,
     search_songs_selected_items: Vec<SongData>,
+    #[allow(dead_code)]
     search_songs_selected_index: Option<usize>,
 
     folders: Vec<TableFolder>,
@@ -48,12 +49,14 @@ pub struct FolderEditorView {
     folder_songs_controller: SongDataView,
     folder_songs_selected_index: Option<usize>,
 
+    #[allow(dead_code)]
     filepath: Option<PathBuf>,
 
     selected_folder: Option<usize>, // index into folders
 
     songdb: Option<Box<dyn SongDatabaseAccessor>>,
 
+    #[allow(dead_code)]
     courses: Vec<CourseData>,
 }
 
@@ -304,6 +307,7 @@ impl FolderEditorView {
     }
 
     /// displayChartDetailsDialog - shows chart details dialog for a song
+    #[allow(dead_code)]
     fn display_chart_details_dialog(&self, song: &SongData) {
         let extra = format!(
             "In custom folder(s):\n{}",

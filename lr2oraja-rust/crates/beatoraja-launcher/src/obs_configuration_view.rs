@@ -328,6 +328,7 @@ impl ObsConfigurationView {
     }
 
     /// handleObsClose - called when OBS connection is closed
+    #[allow(dead_code)]
     fn handle_obs_close(&mut self) {
         if self.status == "connecting" {
             self.set_connection_status("auth_fail", "Authentication failed!");
@@ -335,12 +336,14 @@ impl ObsConfigurationView {
     }
 
     /// handleVersionReceived - called when OBS version info is received
+    #[allow(dead_code)]
     fn handle_version_received(&mut self, version: &ObsVersionInfo) {
         self.set_connection_status("version_received", &version.to_string());
     }
 
     /// handleScenesReceived - called when OBS scene list is received
     /// In Java, this uses Platform.runLater() to update UI on the JavaFX thread.
+    #[allow(dead_code)]
     fn handle_scenes_received(&mut self, scenes: &[String]) {
         // Platform.runLater(() -> { ... })
         // In egui, UI updates happen on the main thread during frame rendering.
