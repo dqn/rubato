@@ -48,7 +48,9 @@ impl EventUtility {
                         let on: bool = func.call(()).unwrap_or(false);
                         let mut obs = observe_state.lock().unwrap();
                         if obs.update(on) {
-                            let _ = action.call::<LuaValue>(());
+                            if let Err(e) = action.call::<LuaValue>(()) {
+                                log::warn!("Lua callback error: {e}");
+                            }
                         }
                         Ok(())
                     })?;
@@ -64,7 +66,9 @@ impl EventUtility {
                         let value: i64 = timer_func.call(()).unwrap_or(TIMER_OFF_VALUE);
                         let mut obs = observe_state.lock().unwrap();
                         if obs.update(value) {
-                            let _ = action.call::<LuaValue>(());
+                            if let Err(e) = action.call::<LuaValue>(()) {
+                                log::warn!("Lua callback error: {e}");
+                            }
                         }
                         Ok(())
                     })?;
@@ -80,7 +84,9 @@ impl EventUtility {
                         let value: i64 = timer_func.call(()).unwrap_or(TIMER_OFF_VALUE);
                         let mut obs = observe_state.lock().unwrap();
                         if obs.update(value) {
-                            let _ = action.call::<LuaValue>(());
+                            if let Err(e) = action.call::<LuaValue>(()) {
+                                log::warn!("Lua callback error: {e}");
+                            }
                         }
                         Ok(())
                     })?;
@@ -96,7 +102,9 @@ impl EventUtility {
                         let value: i64 = timer_func.call(()).unwrap_or(TIMER_OFF_VALUE);
                         let mut obs = observe_state.lock().unwrap();
                         if obs.update(value) {
-                            let _ = action.call::<LuaValue>(());
+                            if let Err(e) = action.call::<LuaValue>(()) {
+                                log::warn!("Lua callback error: {e}");
+                            }
                         }
                         Ok(())
                     })?;
@@ -114,7 +122,9 @@ impl EventUtility {
                         let now = state.get_timer().get_now_micro_time();
                         let mut is = interval_state.lock().unwrap();
                         if is.update(min_interval, now) {
-                            let _ = action.call::<LuaValue>(());
+                            if let Err(e) = action.call::<LuaValue>(()) {
+                                log::warn!("Lua callback error: {e}");
+                            }
                         }
                         Ok(())
                     })?;
