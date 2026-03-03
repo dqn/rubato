@@ -11,20 +11,16 @@ use bms_model::bms_decoder::BMSDecoder;
 // ---------------------------------------------------------------------------
 
 /// When `#RANDOM` appears as a bare keyword without a trailing number
-/// (e.g., `#RANDOM\n` with length exactly 7), `matches_reserve_word`
-/// returns true (len 7 > len "RANDOM" = 6), but then `line[8..]` panics
-/// because index 8 exceeds the string length (7).
-///
-/// This documents a latent bug: BMS files with `#RANDOM` followed by a
-/// newline (no space, no number) will panic instead of producing a warning.
+/// (e.g., `#RANDOM\n` with length exactly 7), the parser now gracefully
+/// skips the malformed line instead of panicking on out-of-bounds slice.
 #[test]
-#[should_panic(expected = "byte index 8 is out of bounds")]
-fn bms_decoder_random_bare_keyword_panics() {
+fn bms_decoder_random_bare_keyword_handled_gracefully() {
     let mut decoder = BMSDecoder::new();
-    // "#RANDOM" is exactly 7 bytes. matches_reserve_word passes
-    // (7 > 6), but line[8..] panics since there's no index 8.
+    // "#RANDOM" is exactly 7 bytes. Previously line[8..] panicked;
+    // now line.get(8..) returns None and the line is skipped.
     let data = b"#BPM 120\n#RANDOM\n#001011:0101\n";
-    decoder.decode_bytes(data, false, None);
+    let model = decoder.decode_bytes(data, false, None);
+    assert!(model.is_some(), "should not panic on bare #RANDOM");
 }
 
 /// When `#RANDOM abc` (non-numeric value) is supplied, the parser

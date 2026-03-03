@@ -331,8 +331,8 @@ impl OSUDecoder {
     }
 }
 
-fn get_timing_point(timing_points: &[TimingPoints], time: i32) -> &TimingPoints {
-    let mut entry = &timing_points[0];
+fn get_timing_point(timing_points: &[TimingPoints], time: i32) -> Option<&TimingPoints> {
+    let mut entry = timing_points.get(0)?;
     let mut last_idx = 0usize;
     while (entry.time as i32) < time {
         last_idx += 1;
@@ -350,7 +350,7 @@ fn get_timing_point(timing_points: &[TimingPoints], time: i32) -> &TimingPoints 
             break;
         }
     }
-    entry
+    Some(entry)
 }
 
 /// Convert beat_length (ms per beat) to BPM. Returns 120.0 as fallback if beat_length is 0.
@@ -363,8 +363,10 @@ fn safe_bpm_from_beat_length(beat_length: f64) -> f64 {
 }
 
 fn get_bpm(timing_points: &[TimingPoints], time: i32) -> f64 {
-    let point = get_timing_point(timing_points, time);
-    safe_bpm_from_beat_length(point.beat_length as f64)
+    match get_timing_point(timing_points, time) {
+        Some(point) => safe_bpm_from_beat_length(point.beat_length as f64),
+        None => 120.0, // fallback BPM
+    }
 }
 
 fn get_sv(svs: &[TimingPoints], time: i32) -> f64 {
@@ -421,7 +423,10 @@ fn safe_section_delta(time_delta: f64, beat_length: f64) -> f64 {
 }
 
 fn get_section(timing_points: &[TimingPoints], time: i32) -> f64 {
-    let entry = &timing_points[0];
+    let entry = match timing_points.get(0) {
+        Some(e) => e,
+        None => return 0.0,
+    };
     if time <= entry.time as i32 {
         return safe_section_delta(time as f64, entry.beat_length as f64);
     }
@@ -561,5 +566,94 @@ mod tests {
             "expected section 1.0, got {}",
             section
         );
+    }
+
+    // --- Regression tests for fuzzer-found panics ---
+
+    #[test]
+    fn test_get_timing_point_empty_slice_returns_none() {
+        let empty: Vec<TimingPoints> = vec![];
+        assert!(
+            get_timing_point(&empty, 0).is_none(),
+            "get_timing_point should return None for empty slice"
+        );
+    }
+
+    #[test]
+    fn test_get_bpm_empty_timing_points_returns_fallback() {
+        let empty: Vec<TimingPoints> = vec![];
+        let bpm = get_bpm(&empty, 0);
+        assert_eq!(
+            bpm, 120.0,
+            "get_bpm should return fallback 120.0 for empty timing_points"
+        );
+    }
+
+    #[test]
+    fn test_get_section_empty_timing_points_returns_zero() {
+        let empty: Vec<TimingPoints> = vec![];
+        let section = get_section(&empty, 1000);
+        assert_eq!(
+            section, 0.0,
+            "get_section should return 0.0 for empty timing_points"
+        );
+    }
+
+    #[test]
+    fn test_get_sv_empty_slice_returns_default() {
+        let empty: Vec<TimingPoints> = vec![];
+        let sv = get_sv(&empty, 0);
+        assert_eq!(sv, 1.0, "get_sv should return 1.0 for empty slice");
+    }
+
+    #[test]
+    fn test_osu_parser_section_header_missing_closing_bracket() {
+        let input = b"osu file format v14\r\n\r\n[General\r\nMode: 3\r\n";
+        let mut reader = std::io::BufReader::new(std::io::Cursor::new(input.to_vec()));
+        let osu = Osu::parse(&mut reader);
+        // Should not panic; section name parsed as "General" (without ']')
+        assert_eq!(osu.general.mode, 3);
+    }
+
+    #[test]
+    fn test_osu_parser_section_header_multibyte_chars() {
+        // Section header with multi-byte UTF-8 chars and no closing bracket
+        let input = "osu file format v14\r\n\r\n[\u{65E5}\u{672C}\r\n".as_bytes();
+        let mut reader = std::io::BufReader::new(std::io::Cursor::new(input.to_vec()));
+        // Should not panic on multi-byte char boundary slicing
+        let _osu = Osu::parse(&mut reader);
+    }
+
+    #[test]
+    fn test_osu_parser_section_header_only_open_bracket() {
+        let input = b"osu file format v14\r\n\r\n[\r\n";
+        let mut reader = std::io::BufReader::new(std::io::Cursor::new(input.to_vec()));
+        // Single '[' has len < 2 so it is skipped; should not panic
+        let _osu = Osu::parse(&mut reader);
+    }
+
+    #[test]
+    fn test_osu_parser_section_header_bracket_with_one_char() {
+        let input = b"osu file format v14\r\n\r\n[X\r\n";
+        let mut reader = std::io::BufReader::new(std::io::Cursor::new(input.to_vec()));
+        // "[X" without closing bracket; should not panic
+        let _osu = Osu::parse(&mut reader);
+    }
+
+    #[test]
+    fn test_osu_parser_empty_input() {
+        let input = b"";
+        let mut reader = std::io::BufReader::new(std::io::Cursor::new(input.to_vec()));
+        let osu = Osu::parse(&mut reader);
+        assert!(osu.timing_points.is_empty());
+        assert!(osu.hit_objects.is_empty());
+    }
+
+    #[test]
+    fn test_osu_parser_garbage_input() {
+        let input = b"\xff\xfe\x00\x01\x02\x03garbage\nmore garbage\n[[[[\n";
+        let mut reader = std::io::BufReader::new(std::io::Cursor::new(input.to_vec()));
+        // Should not panic on arbitrary binary input
+        let _osu = Osu::parse(&mut reader);
     }
 }

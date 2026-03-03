@@ -179,7 +179,15 @@ impl Osu {
             }
             let line_no_space: String = line.chars().filter(|c| !c.is_whitespace()).collect();
             if line_no_space.starts_with('[') {
-                section = line_no_space[1..line_no_space.len() - 1].to_string();
+                // Use get() to avoid panics on malformed input (e.g. missing ']', multi-byte chars)
+                if let Some(inner) = line_no_space
+                    .get(1..)
+                    .and_then(|s| s.strip_suffix(']'))
+                {
+                    section = inner.to_string();
+                } else if let Some(inner) = line_no_space.get(1..) {
+                    section = inner.to_string();
+                }
                 continue;
             }
 
