@@ -3,7 +3,6 @@ use std::sync::Mutex;
 
 use beatoraja_types::random_history;
 pub use beatoraja_types::random_history::RandomHistoryEntry;
-use log::error;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 

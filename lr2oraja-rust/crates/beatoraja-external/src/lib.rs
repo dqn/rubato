@@ -1,6 +1,4 @@
 #![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
 #![allow(unreachable_code)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::needless_range_loop)]

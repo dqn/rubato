@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use log::{trace, warn};
+use log::warn;
 
 use beatoraja_core::score_data::ScoreData;
 
