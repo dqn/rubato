@@ -82,6 +82,11 @@ pub struct SpriteBatch {
     shader_type: i32,
     /// Current blend mode derived from blend_src/blend_dst
     blend_mode: BlendMode,
+    /// Persistent GPU vertex buffer, reused across frames.
+    /// Grows geometrically (doubles) when capacity is insufficient.
+    gpu_vertex_buffer: Option<wgpu::Buffer>,
+    /// Current capacity of `gpu_vertex_buffer` in bytes.
+    gpu_vertex_buffer_capacity: u64,
 }
 
 #[allow(unused_variables)]
@@ -98,6 +103,8 @@ impl SpriteBatch {
             drawing: false,
             shader_type: 0,
             blend_mode: BlendMode::Normal,
+            gpu_vertex_buffer: None,
+            gpu_vertex_buffer_capacity: 0,
         }
     }
 
@@ -175,9 +182,10 @@ impl SpriteBatch {
 
     /// Flush batched vertices to GPU via a render pass.
     ///
-    /// This is the actual GPU submission path. Creates a vertex buffer,
-    /// binds the appropriate pipeline, and issues per-batch draw calls
-    /// with the correct texture bind group for each batch.
+    /// This is the actual GPU submission path. Reuses a persistent vertex
+    /// buffer (growing geometrically when needed), binds the appropriate
+    /// pipeline, and issues per-batch draw calls with the correct texture
+    /// bind group for each batch.
     #[allow(clippy::too_many_arguments)]
     pub fn flush_to_gpu<'a>(
         &mut self,
@@ -192,18 +200,27 @@ impl SpriteBatch {
             return;
         }
 
-        // Create and write vertex buffer for all batches
+        // Reuse persistent vertex buffer; grow geometrically when needed
         let vertex_data: &[u8] = bytemuck::cast_slice(&self.vertices);
-        let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("sprite vertex buffer"),
-            size: vertex_data.len() as wgpu::BufferAddress,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        queue.write_buffer(&vertex_buffer, 0, vertex_data);
+        let required_size = vertex_data.len() as u64;
+
+        if self.gpu_vertex_buffer_capacity < required_size {
+            // Grow to at least double the current capacity, or the required size
+            let new_capacity = required_size.max(self.gpu_vertex_buffer_capacity * 2);
+            self.gpu_vertex_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("sprite vertex buffer"),
+                size: new_capacity,
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            }));
+            self.gpu_vertex_buffer_capacity = new_capacity;
+        }
+
+        let vertex_buffer = self.gpu_vertex_buffer.as_ref().unwrap();
+        queue.write_buffer(vertex_buffer, 0, vertex_data);
 
         render_pass.set_bind_group(0, uniform_bind_group, &[]);
-        render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+        render_pass.set_vertex_buffer(0, vertex_buffer.slice(..required_size));
 
         // If no draw batches recorded, fall back to single-batch rendering
         if self.draw_batches.is_empty() {
