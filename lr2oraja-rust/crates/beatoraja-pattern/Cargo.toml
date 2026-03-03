@@ -14,3 +14,8 @@ serde_json.workspace = true
 anyhow.workspace = true
 
 [dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "modifier_bench"
+harness = false
