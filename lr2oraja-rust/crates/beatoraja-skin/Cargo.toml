@@ -27,3 +27,8 @@ ffmpeg-next = { workspace = true, optional = true }
 ffmpeg = ["dep:ffmpeg-next"]
 
 [dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "skin_loader_bench"
+harness = false

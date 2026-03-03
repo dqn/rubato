@@ -832,6 +832,7 @@ dependencies = [
  "beatoraja-types",
  "bms-model",
  "chrono",
+ "criterion",
  "encoding_rs",
  "ffmpeg-next",
  "log",
