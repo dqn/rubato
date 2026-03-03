@@ -57,12 +57,18 @@ impl ReplayData {
         }
 
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        if encoder.write_all(&keyinputdata).is_err() {
+        if let Err(e) = encoder.write_all(&keyinputdata) {
+            log::warn!("Failed to compress replay key input data: {}", e);
             return;
         }
-        if let Ok(compressed) = encoder.finish() {
-            self.keyinput = Some(URL_SAFE.encode(&compressed));
-            self.keylog = Vec::new();
+        match encoder.finish() {
+            Ok(compressed) => {
+                self.keyinput = Some(URL_SAFE.encode(&compressed));
+                self.keylog = Vec::new();
+            }
+            Err(e) => {
+                log::warn!("Failed to finalize replay key input compression: {}", e);
+            }
         }
     }
 
@@ -509,6 +515,54 @@ mod tests {
             recovered.keycode
         );
         assert!(recovered.pressed, "pressed flag should survive roundtrip");
+    }
+
+    #[test]
+    fn test_shrink_empty_keylog_is_noop() {
+        let mut rd = ReplayData::new();
+        // Empty keylog should cause shrink to return early
+        rd.shrink();
+        assert!(
+            rd.keyinput.is_none(),
+            "keyinput should remain None for empty keylog"
+        );
+        assert!(rd.keylog.is_empty(), "keylog should remain empty");
+    }
+
+    #[test]
+    fn test_shrink_preserves_keylog_on_compression_success() {
+        let mut rd = ReplayData::new();
+        rd.keylog = vec![
+            KeyInputLog {
+                time: 100,
+                keycode: 0,
+                pressed: true,
+            },
+            KeyInputLog {
+                time: 200,
+                keycode: 1,
+                pressed: false,
+            },
+        ];
+
+        rd.shrink();
+        // After successful compression, keylog should be cleared and keyinput set
+        assert!(
+            rd.keylog.is_empty(),
+            "keylog should be emptied after shrink"
+        );
+        assert!(
+            rd.keyinput.is_some(),
+            "keyinput should be set after successful compression"
+        );
+
+        // Verify round-trip: validate should restore the same data
+        assert!(rd.validate());
+        assert_eq!(rd.keylog.len(), 2);
+        assert_eq!(rd.keylog[0].time, 100);
+        assert!(rd.keylog[0].pressed);
+        assert_eq!(rd.keylog[1].time, 200);
+        assert!(!rd.keylog[1].pressed);
     }
 
     #[test]

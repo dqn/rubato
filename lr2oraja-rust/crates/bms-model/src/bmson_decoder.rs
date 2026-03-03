@@ -783,9 +783,13 @@ fn ensure_timeline(
 
     let (&le_key, le_val) = tlcache.range(..y).next_back().unwrap();
     let bpm = le_val.timeline.get_bpm();
-    let time = le_val.time
-        + le_val.timeline.get_micro_stop() as f64
-        + (240000.0 * 1000.0 * ((y - le_key) as f64 / resolution)) / bpm;
+    let time = if bpm != 0.0 {
+        le_val.time
+            + le_val.timeline.get_micro_stop() as f64
+            + (240000.0 * 1000.0 * ((y - le_key) as f64 / resolution)) / bpm
+    } else {
+        le_val.time + le_val.timeline.get_micro_stop() as f64
+    };
 
     let mut tl = TimeLine::new(y as f64 / resolution, time as i64, mode_key);
     tl.set_bpm(bpm);
@@ -888,13 +892,13 @@ mod tests {
         let mut ln_end_count = 0;
         for tl in timelines {
             for lane in 0..mode_key {
-                if let Some(note) = tl.get_note(lane) {
-                    if note.is_long() {
-                        if note.is_end() {
-                            ln_end_count += 1;
-                        } else {
-                            ln_start_count += 1;
-                        }
+                if let Some(note) = tl.get_note(lane)
+                    && note.is_long()
+                {
+                    if note.is_end() {
+                        ln_end_count += 1;
+                    } else {
+                        ln_start_count += 1;
                     }
                 }
             }
@@ -953,10 +957,10 @@ mod tests {
         let mut mine_count = 0;
         for tl in timelines.iter() {
             for lane in 0..mode_key {
-                if let Some(note) = tl.get_note(lane) {
-                    if note.is_mine() {
-                        mine_count += 1;
-                    }
+                if let Some(note) = tl.get_note(lane)
+                    && note.is_mine()
+                {
+                    mine_count += 1;
                 }
             }
         }
@@ -1020,11 +1024,12 @@ mod tests {
         let mut has_ln = false;
         for tl in timelines.iter() {
             for lane in 0..mode_key {
-                if let Some(note) = tl.get_note(lane) {
-                    if note.is_long() && !note.is_end() {
-                        has_ln = true;
-                        break;
-                    }
+                if let Some(note) = tl.get_note(lane)
+                    && note.is_long()
+                    && !note.is_end()
+                {
+                    has_ln = true;
+                    break;
                 }
             }
             if has_ln {
@@ -1167,6 +1172,59 @@ mod tests {
         assert!(
             result.is_none(),
             "ChartInformation with no path should return None"
+        );
+    }
+
+    #[test]
+    fn test_ensure_timeline_bpm_zero_no_inf() {
+        // Test that ensure_timeline handles BPM=0 without producing Inf/NaN
+        let mut tlcache: BTreeMap<i32, TimeLineCache> = BTreeMap::new();
+        let mode_key = 8;
+        let resolution = 960.0;
+
+        let mut tl0 = TimeLine::new(0.0, 0, mode_key);
+        tl0.set_bpm(0.0); // BPM=0 triggers division-by-zero path
+        tlcache.insert(0, TimeLineCache::new(0.0, tl0));
+
+        // This should NOT produce Inf or NaN
+        ensure_timeline(&mut tlcache, 480, resolution, mode_key);
+
+        let entry = tlcache.get(&480).expect("timeline should be created");
+        assert!(
+            entry.time.is_finite(),
+            "time should be finite when BPM is 0, got {}",
+            entry.time
+        );
+        assert_eq!(
+            entry.time, 0.0,
+            "time should equal previous entry's time when BPM is 0"
+        );
+    }
+
+    #[test]
+    fn test_ensure_timeline_normal_bpm_computes_time() {
+        let mut tlcache: BTreeMap<i32, TimeLineCache> = BTreeMap::new();
+        let mode_key = 8;
+        let resolution = 960.0;
+
+        let mut tl0 = TimeLine::new(0.0, 0, mode_key);
+        tl0.set_bpm(120.0);
+        tlcache.insert(0, TimeLineCache::new(0.0, tl0));
+
+        ensure_timeline(&mut tlcache, 480, resolution, mode_key);
+
+        let entry = tlcache.get(&480).expect("timeline should be created");
+        assert!(
+            entry.time.is_finite(),
+            "time should be finite with normal BPM"
+        );
+        // 240000 * 1000 * (480 / 960.0) / 120.0 = 1_000_000
+        let expected = 240000.0 * 1000.0 * (480.0 / 960.0) / 120.0;
+        assert!(
+            (entry.time - expected).abs() < 1.0,
+            "time should be ~{}, got {}",
+            expected,
+            entry.time
         );
     }
 }

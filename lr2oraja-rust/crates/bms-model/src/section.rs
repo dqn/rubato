@@ -384,7 +384,11 @@ impl Section {
                 ensure_timeline(tlcache, section, mode_key);
                 let key = f64_to_key(section);
                 let bpm = tlcache.get(&key).unwrap().timeline.get_bpm();
-                let stop_us = (1000.0 * 1000.0 * 60.0 * 4.0 * stop_val / bpm) as i64;
+                let stop_us = if bpm != 0.0 {
+                    (1000.0 * 1000.0 * 60.0 * 4.0 * stop_val / bpm) as i64
+                } else {
+                    0
+                };
                 tlcache.get_mut(&key).unwrap().timeline.set_stop(stop_us);
                 st_idx += 1;
             } else {
@@ -944,9 +948,13 @@ fn ensure_timeline(tlcache: &mut BTreeMap<u64, TimeLineCache>, section: f64, mod
         let le_section = key_to_f64(k);
         scroll = v.timeline.get_scroll();
         bpm = v.timeline.get_bpm();
-        time = v.time
-            + (v.timeline.get_micro_stop() as f64)
-            + (240000.0 * 1000.0 * (section - le_section)) / bpm;
+        if bpm != 0.0 {
+            time = v.time
+                + (v.timeline.get_micro_stop() as f64)
+                + (240000.0 * 1000.0 * (section - le_section)) / bpm;
+        } else {
+            time = v.time + (v.timeline.get_micro_stop() as f64);
+        }
     }
 
     let mut tl = TimeLine::new(section, time as i64, mode_key);
@@ -1075,4 +1083,81 @@ fn has_nonzero_data(line: &str, base: i32) -> bool {
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::chart_decoder::TimeLineCache;
+
+    #[test]
+    fn test_ensure_timeline_bpm_zero_no_inf() {
+        let mut tlcache: BTreeMap<u64, TimeLineCache> = BTreeMap::new();
+        let mode_key = 8;
+        let section0 = 0.0;
+        let mut tl0 = TimeLine::new(section0, 0, mode_key);
+        // Set BPM to 0 to trigger the division-by-zero path
+        tl0.set_bpm(0.0);
+        tlcache.insert(f64_to_key(section0), TimeLineCache::new(0.0, tl0));
+
+        // This should NOT produce Inf or NaN
+        ensure_timeline(&mut tlcache, 1.0, mode_key);
+
+        let key = f64_to_key(1.0);
+        let entry = tlcache.get(&key).expect("timeline should be created");
+        assert!(
+            entry.time.is_finite(),
+            "time should be finite when BPM is 0, got {}",
+            entry.time
+        );
+        assert_eq!(
+            entry.time, 0.0,
+            "time should equal previous entry's time when BPM is 0"
+        );
+    }
+
+    #[test]
+    fn test_ensure_timeline_normal_bpm() {
+        let mut tlcache: BTreeMap<u64, TimeLineCache> = BTreeMap::new();
+        let mode_key = 8;
+        let section0 = 0.0;
+        let mut tl0 = TimeLine::new(section0, 0, mode_key);
+        tl0.set_bpm(120.0);
+        tlcache.insert(f64_to_key(section0), TimeLineCache::new(0.0, tl0));
+
+        ensure_timeline(&mut tlcache, 1.0, mode_key);
+
+        let key = f64_to_key(1.0);
+        let entry = tlcache.get(&key).expect("timeline should be created");
+        assert!(
+            entry.time.is_finite(),
+            "time should be finite with normal BPM"
+        );
+        // 240000 * 1000 * (1.0 - 0.0) / 120.0 = 2_000_000
+        let expected = 240000.0 * 1000.0 * 1.0 / 120.0;
+        assert!(
+            (entry.time - expected).abs() < 1.0,
+            "time should be ~{}, got {}",
+            expected,
+            entry.time
+        );
+    }
+
+    #[test]
+    fn test_ensure_timeline_already_exists() {
+        let mut tlcache: BTreeMap<u64, TimeLineCache> = BTreeMap::new();
+        let mode_key = 8;
+        let section0 = 0.0;
+        let mut tl0 = TimeLine::new(section0, 0, mode_key);
+        tl0.set_bpm(120.0);
+        tlcache.insert(f64_to_key(section0), TimeLineCache::new(42.0, tl0));
+
+        // Calling ensure_timeline for an existing key should be a no-op
+        ensure_timeline(&mut tlcache, section0, mode_key);
+
+        let entry = tlcache
+            .get(&f64_to_key(section0))
+            .expect("entry should exist");
+        assert_eq!(entry.time, 42.0, "existing entry should not be modified");
+    }
 }

@@ -209,14 +209,16 @@ impl OSUDecoder {
             let time = point.time as i32;
             let section = get_section(&timing_points, time);
             let tl = get_timeline(&mut timelines, time, section, mode_key);
-            tl.set_bpm(1.0 / point.beat_length as f64 * 1000.0 * 60.0);
+            tl.set_bpm(safe_bpm_from_beat_length(point.beat_length as f64));
             tl.set_scroll(get_sv(&svs, time));
         }
         for sv in &svs {
             let time = sv.time as i32;
             let section = get_section(&timing_points, time);
             let tl = get_timeline(&mut timelines, time, section, mode_key);
-            tl.set_scroll(100.0 / (-sv.beat_length as f64));
+            if sv.beat_length != 0.0 {
+                tl.set_scroll(100.0 / (-sv.beat_length as f64));
+            }
             tl.set_bpm(get_bpm(&timing_points, time));
         }
 
@@ -232,16 +234,20 @@ impl OSUDecoder {
             };
             let begin_section = get_section(&timing_points, begin_time);
             let duration = end_time - begin_time;
-            let total_sections = duration as f32 / (point.beat_length * 4.0);
+            let total_sections = if point.beat_length != 0.0 {
+                duration as f32 / (point.beat_length * 4.0)
+            } else {
+                0.0
+            };
             if total_sections > 10000.0 {
                 let first_line = get_timeline(&mut timelines, begin_time, begin_section, mode_key);
-                first_line.set_bpm(1.0 / point.beat_length as f64 * 1000.0 * 60.0);
+                first_line.set_bpm(safe_bpm_from_beat_length(point.beat_length as f64));
                 first_line.set_scroll(get_sv(&svs, begin_time));
                 first_line.set_section_line(true);
 
                 let end_sec = begin_section + total_sections as f64;
                 let last_line = get_timeline(&mut timelines, end_time, end_sec, mode_key);
-                let first_bpm = 1.0 / point.beat_length as f64 * 1000.0 * 60.0;
+                let first_bpm = safe_bpm_from_beat_length(point.beat_length as f64);
                 last_line.set_bpm(first_bpm);
                 last_line.set_scroll(get_sv(&svs, end_time));
                 last_line.set_section_line(true);
@@ -251,7 +257,7 @@ impl OSUDecoder {
                 let time = begin_time + (section_idx as f32 * point.beat_length * 4.0) as i32;
                 let section = begin_section + section_idx as f64;
                 let line = get_timeline(&mut timelines, time, section, mode_key);
-                line.set_bpm(1.0 / point.beat_length as f64 * 1000.0 * 60.0);
+                line.set_bpm(safe_bpm_from_beat_length(point.beat_length as f64));
                 line.set_scroll(get_sv(&svs, time));
                 line.set_section_line(true);
             }
@@ -347,9 +353,18 @@ fn get_timing_point(timing_points: &[TimingPoints], time: i32) -> &TimingPoints 
     entry
 }
 
+/// Convert beat_length (ms per beat) to BPM. Returns 120.0 as fallback if beat_length is 0.
+fn safe_bpm_from_beat_length(beat_length: f64) -> f64 {
+    if beat_length == 0.0 {
+        120.0
+    } else {
+        1.0 / beat_length * 1000.0 * 60.0
+    }
+}
+
 fn get_bpm(timing_points: &[TimingPoints], time: i32) -> f64 {
     let point = get_timing_point(timing_points, time);
-    1.0 / point.beat_length as f64 * 1000.0 * 60.0
+    safe_bpm_from_beat_length(point.beat_length as f64)
 }
 
 fn get_sv(svs: &[TimingPoints], time: i32) -> f64 {
@@ -377,7 +392,11 @@ fn get_sv(svs: &[TimingPoints], time: i32) -> f64 {
             break;
         }
     }
-    100.0 / (-current.beat_length as f64)
+    if current.beat_length == 0.0 {
+        1.0
+    } else {
+        100.0 / (-current.beat_length as f64)
+    }
 }
 
 fn get_timeline(
@@ -391,18 +410,31 @@ fn get_timeline(
         .or_insert_with(|| TimeLine::new(section, time as i64 * 1000, mode_key))
 }
 
+/// Safely divide by beat_length * 4.0. Returns 0.0 if beat_length is 0.
+fn safe_section_delta(time_delta: f64, beat_length: f64) -> f64 {
+    let divisor = beat_length * 4.0;
+    if divisor == 0.0 {
+        0.0
+    } else {
+        time_delta / divisor
+    }
+}
+
 fn get_section(timing_points: &[TimingPoints], time: i32) -> f64 {
     let entry = &timing_points[0];
     if time <= entry.time as i32 {
-        return time as f64 / (entry.beat_length as f64 * 4.0);
+        return safe_section_delta(time as f64, entry.beat_length as f64);
     }
-    let mut section = entry.time as f64 / (entry.beat_length as f64 * 4.0);
+    let mut section = safe_section_delta(entry.time as f64, entry.beat_length as f64);
     let mut current = entry;
     let mut last_idx = 0usize;
     while (current.time as i32) < time {
         last_idx += 1;
         if last_idx >= timing_points.len() {
-            section += (time - current.time as i32) as f64 / (current.beat_length as f64 * 4.0);
+            section += safe_section_delta(
+                (time - current.time as i32) as f64,
+                current.beat_length as f64,
+            );
             break;
         }
         let next_entry = &timing_points[last_idx];
@@ -410,12 +442,124 @@ fn get_section(timing_points: &[TimingPoints], time: i32) -> f64 {
             continue;
         }
         if next_entry.time as i32 > time {
-            section += (time - current.time as i32) as f64 / (current.beat_length as f64 * 4.0);
+            section += safe_section_delta(
+                (time - current.time as i32) as f64,
+                current.beat_length as f64,
+            );
             break;
         }
-        section += (next_entry.time as i32 - current.time as i32) as f64
-            / (current.beat_length as f64 * 4.0);
+        section += safe_section_delta(
+            (next_entry.time as i32 - current.time as i32) as f64,
+            current.beat_length as f64,
+        );
         current = next_entry;
     }
     section
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_timing_point(time: f32, beat_length: f32, uninherited: bool) -> TimingPoints {
+        TimingPoints {
+            time,
+            beat_length,
+            meter: 4,
+            sample_set: 0,
+            sample_index: 0,
+            volume: 100,
+            uninherited,
+            effects: 0,
+        }
+    }
+
+    #[test]
+    fn test_safe_bpm_from_beat_length_normal() {
+        let bpm = safe_bpm_from_beat_length(500.0); // 500ms per beat = 120 BPM
+        assert!((bpm - 120.0).abs() < 0.001, "expected 120 BPM, got {}", bpm);
+    }
+
+    #[test]
+    fn test_safe_bpm_from_beat_length_zero_returns_fallback() {
+        let bpm = safe_bpm_from_beat_length(0.0);
+        assert_eq!(
+            bpm, 120.0,
+            "BPM should fall back to 120.0 when beat_length is 0"
+        );
+    }
+
+    #[test]
+    fn test_safe_section_delta_normal() {
+        let delta = safe_section_delta(2000.0, 500.0);
+        // 2000 / (500 * 4) = 1.0
+        assert!((delta - 1.0).abs() < 0.001, "expected 1.0, got {}", delta);
+    }
+
+    #[test]
+    fn test_safe_section_delta_zero_beat_length() {
+        let delta = safe_section_delta(2000.0, 0.0);
+        assert_eq!(delta, 0.0, "should return 0.0 when beat_length is 0");
+    }
+
+    #[test]
+    fn test_get_bpm_zero_beat_length() {
+        let points = vec![make_timing_point(0.0, 0.0, true)];
+        let bpm = get_bpm(&points, 0);
+        assert_eq!(
+            bpm, 120.0,
+            "should return fallback BPM when beat_length is 0"
+        );
+    }
+
+    #[test]
+    fn test_get_bpm_normal_beat_length() {
+        let points = vec![make_timing_point(0.0, 500.0, true)];
+        let bpm = get_bpm(&points, 0);
+        assert!(
+            (bpm - 120.0).abs() < 0.001,
+            "expected 120 BPM for 500ms beat_length"
+        );
+    }
+
+    #[test]
+    fn test_get_sv_zero_beat_length() {
+        let svs = vec![make_timing_point(0.0, 0.0, false)];
+        let sv = get_sv(&svs, 0);
+        assert_eq!(sv, 1.0, "should return 1.0 when beat_length is 0");
+    }
+
+    #[test]
+    fn test_get_sv_normal() {
+        let svs = vec![make_timing_point(0.0, -100.0, false)];
+        let sv = get_sv(&svs, 0);
+        assert!(
+            (sv - 1.0).abs() < 0.001,
+            "sv should be 1.0 for beat_length -100"
+        );
+    }
+
+    #[test]
+    fn test_get_section_zero_beat_length() {
+        let points = vec![make_timing_point(0.0, 0.0, true)];
+        let section = get_section(&points, 1000);
+        assert!(
+            section.is_finite(),
+            "section should be finite, got {}",
+            section
+        );
+        assert_eq!(section, 0.0, "should return 0.0 when beat_length is 0");
+    }
+
+    #[test]
+    fn test_get_section_normal() {
+        let points = vec![make_timing_point(0.0, 500.0, true)];
+        // time=2000, beat_length=500 => section = 2000 / (500*4) = 1.0
+        let section = get_section(&points, 2000);
+        assert!(
+            (section - 1.0).abs() < 0.001,
+            "expected section 1.0, got {}",
+            section
+        );
+    }
 }

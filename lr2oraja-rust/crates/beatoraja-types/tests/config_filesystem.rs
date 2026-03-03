@@ -29,7 +29,7 @@ fn write_then_read_roundtrip() {
     Config::write_to(&config, dir.path()).unwrap();
     let loaded = Config::read_from(dir.path()).unwrap();
 
-    assert_eq!(loaded.vsync, true);
+    assert!(loaded.vsync);
     assert_eq!(loaded.max_frame_per_second, 120);
     assert_eq!(loaded.window_width, 1920);
     assert_eq!(loaded.window_height, 1080);
@@ -108,7 +108,7 @@ fn read_old_format_fallback() {
 
     let loaded = Config::read_from(dir.path()).unwrap();
 
-    assert_eq!(loaded.vsync, true);
+    assert!(loaded.vsync);
     assert_eq!(loaded.max_frame_per_second, 60);
 }
 

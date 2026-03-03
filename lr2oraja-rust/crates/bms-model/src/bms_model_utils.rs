@@ -221,3 +221,224 @@ pub fn set_start_note_time(model: &mut BMSModel, starttime: i64) -> i64 {
 
     margin_time
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mode::Mode;
+    use crate::note::Note;
+
+    /// Helper: create a BMSModel in BEAT_7K mode with given timelines.
+    fn make_model_7k(timelines: Vec<TimeLine>) -> BMSModel {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        model.set_bpm(120.0);
+        model.set_all_time_line(timelines);
+        model
+    }
+
+    // --- get_total_notes ---
+
+    #[test]
+    fn get_total_notes_normal_notes() {
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_normal(1)));
+        tl.set_note(1, Some(Note::new_normal(2)));
+        tl.set_note(2, Some(Note::new_normal(3)));
+        let model = make_model_7k(vec![tl]);
+        assert_eq!(get_total_notes(&model), 3);
+    }
+
+    #[test]
+    fn get_total_notes_empty_model() {
+        let model = BMSModel::new();
+        assert_eq!(get_total_notes(&model), 0);
+    }
+
+    #[test]
+    fn get_total_notes_key_only_excludes_scratch() {
+        // BEAT_7K: scratch key is lane 7, non-scratch lanes are 0-6
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_normal(1))); // key lane
+        tl.set_note(1, Some(Note::new_normal(2))); // key lane
+        tl.set_note(7, Some(Note::new_normal(3))); // scratch lane
+        let model = make_model_7k(vec![tl]);
+
+        let key_count = get_total_notes_with_type(&model, TOTALNOTES_KEY);
+        assert_eq!(key_count, 2); // only non-scratch normal notes
+    }
+
+    #[test]
+    fn get_total_notes_mine_only() {
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_normal(1)));
+        tl.set_note(1, Some(Note::new_mine(2, 0.5)));
+        tl.set_note(2, Some(Note::new_mine(3, 0.3)));
+        let model = make_model_7k(vec![tl]);
+
+        let mine_count = get_total_notes_with_type(&model, TOTALNOTES_MINE);
+        assert_eq!(mine_count, 2);
+    }
+
+    #[test]
+    fn get_total_notes_side_2_single_player_returns_zero() {
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_normal(1)));
+        let model = make_model_7k(vec![tl]);
+
+        // BEAT_7K is single player (player=1), so side=2 should return 0
+        let count = get_total_notes_full(&model, 0, i32::MAX, TOTALNOTES_ALL, 2);
+        assert_eq!(count, 0);
+    }
+
+    // --- get_average_notes_per_time ---
+
+    #[test]
+    fn get_average_notes_per_time_end_lte_start() {
+        let model = make_model_7k(vec![]);
+        assert_eq!(get_average_notes_per_time(&model, 100, 100), 0.0);
+        assert_eq!(get_average_notes_per_time(&model, 100, 50), 0.0);
+    }
+
+    #[test]
+    fn get_average_notes_per_time_basic() {
+        // 10 notes in a 2000ms window => 5.0 notes per 1000ms
+        let mut timelines = Vec::new();
+        for i in 0..10 {
+            // Spread notes across the 2000ms window (get_time returns micro_time/1000)
+            let micro_time = (i as i64) * 200 * 1000; // 0, 200000, 400000, ...
+            let mut tl = TimeLine::new(i as f64, micro_time, 8);
+            tl.set_note(0, Some(Note::new_normal(1)));
+            timelines.push(tl);
+        }
+        let model = make_model_7k(timelines);
+
+        let avg = get_average_notes_per_time(&model, 0, 2000);
+        assert!((avg - 5.0).abs() < f64::EPSILON);
+    }
+
+    // --- change_frequency ---
+
+    #[test]
+    fn change_frequency_doubles() {
+        let mut tl = TimeLine::new(0.0, 1_000_000, 8);
+        tl.set_bpm(120.0);
+        tl.set_stop(500_000);
+        let mut model = make_model_7k(vec![tl]);
+        model.set_bpm(120.0);
+
+        change_frequency(&mut model, 2.0);
+
+        assert!((model.get_bpm() - 240.0).abs() < f64::EPSILON);
+        let tl = &model.get_all_time_lines()[0];
+        assert!((tl.get_bpm() - 240.0).abs() < f64::EPSILON);
+        assert_eq!(tl.get_micro_time(), 500_000); // halved
+        assert_eq!(tl.get_micro_stop(), 250_000); // halved
+    }
+
+    #[test]
+    fn change_frequency_halves() {
+        let mut tl = TimeLine::new(0.0, 1_000_000, 8);
+        tl.set_bpm(120.0);
+        tl.set_stop(500_000);
+        let mut model = make_model_7k(vec![tl]);
+        model.set_bpm(120.0);
+
+        change_frequency(&mut model, 0.5);
+
+        assert!((model.get_bpm() - 60.0).abs() < f64::EPSILON);
+        let tl = &model.get_all_time_lines()[0];
+        assert!((tl.get_bpm() - 60.0).abs() < f64::EPSILON);
+        assert_eq!(tl.get_micro_time(), 2_000_000); // doubled
+        assert_eq!(tl.get_micro_stop(), 1_000_000); // doubled
+    }
+
+    // --- get_max_notes_per_time ---
+
+    #[test]
+    fn get_max_notes_per_time_clustered_notes() {
+        // 3 notes at the same time (time=0) within range=1000
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_normal(1)));
+        tl.set_note(1, Some(Note::new_normal(2)));
+        tl.set_note(2, Some(Note::new_normal(3)));
+        let model = make_model_7k(vec![tl]);
+
+        assert!((get_max_notes_per_time(&model, 1000) - 3.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn get_max_notes_per_time_empty_model() {
+        let model = make_model_7k(vec![]);
+        assert!((get_max_notes_per_time(&model, 1000)).abs() < f64::EPSILON);
+    }
+
+    // --- set_start_note_time ---
+
+    #[test]
+    fn set_start_note_time_note_before_starttime_inserts_padding() {
+        // First note is at time=0ms, starttime=1000ms
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_bpm(120.0);
+        tl.set_note(0, Some(Note::new_normal(1)));
+        let mut model = make_model_7k(vec![tl]);
+        model.set_bpm(120.0);
+
+        let margin = set_start_note_time(&mut model, 1000);
+        assert_eq!(margin, 1000);
+
+        // Should have inserted a padding timeline at the beginning
+        assert_eq!(model.get_all_time_lines().len(), 2);
+        // First timeline is the padding (time=0, section=0)
+        assert_eq!(model.get_all_time_lines()[0].get_micro_time(), 0);
+    }
+
+    #[test]
+    fn set_start_note_time_note_after_starttime_returns_zero() {
+        // First note at 2000ms, starttime=1000ms
+        let mut tl = TimeLine::new(0.0, 2_000_000, 8);
+        tl.set_bpm(120.0);
+        tl.set_note(0, Some(Note::new_normal(1)));
+        let mut model = make_model_7k(vec![tl]);
+
+        let margin = set_start_note_time(&mut model, 1000);
+        assert_eq!(margin, 0);
+        // No padding inserted
+        assert_eq!(model.get_all_time_lines().len(), 1);
+    }
+
+    #[test]
+    fn set_start_note_time_no_notes_returns_zero() {
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_bpm(120.0);
+        // No notes set
+        let mut model = make_model_7k(vec![tl]);
+
+        let margin = set_start_note_time(&mut model, 1000);
+        assert_eq!(margin, 0);
+    }
+
+    // --- constant values ---
+
+    #[test]
+    fn totalnotes_constants() {
+        assert_eq!(TOTALNOTES_ALL, 0);
+        assert_eq!(TOTALNOTES_KEY, 1);
+        assert_eq!(TOTALNOTES_LONG_KEY, 2);
+        assert_eq!(TOTALNOTES_SCRATCH, 3);
+        assert_eq!(TOTALNOTES_LONG_SCRATCH, 4);
+        assert_eq!(TOTALNOTES_MINE, 5);
+    }
+
+    #[test]
+    fn get_total_notes_scratch_only() {
+        // BEAT_7K: scratch key is lane 7
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_normal(1))); // key lane
+        tl.set_note(7, Some(Note::new_normal(2))); // scratch lane
+        let model = make_model_7k(vec![tl]);
+
+        let scratch_count = get_total_notes_with_type(&model, TOTALNOTES_SCRATCH);
+        assert_eq!(scratch_count, 1);
+    }
+}

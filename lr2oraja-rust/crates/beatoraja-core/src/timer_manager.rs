@@ -205,3 +205,140 @@ impl beatoraja_types::skin_render_context::SkinRenderContext for TimerManager {
         self.recent_judges_index
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn initial_state_timer_off() {
+        let tm = TimerManager::new();
+        assert!(!tm.is_timer_on(0));
+        assert_eq!(tm.get_micro_timer(0), i64::MIN);
+    }
+
+    #[test]
+    fn set_timer_on_then_off() {
+        let mut tm = TimerManager::new();
+        tm.set_timer_on(0);
+        assert!(tm.is_timer_on(0));
+
+        tm.set_timer_off(0);
+        assert!(!tm.is_timer_on(0));
+    }
+
+    #[test]
+    fn switch_timer_idempotency() {
+        let mut tm = TimerManager::new();
+        // Simulate time progression by setting nowmicrotime directly
+        tm.nowmicrotime = 1000;
+        tm.set_timer_on(5); // timer[5] = 1000
+
+        tm.nowmicrotime = 5000;
+        tm.switch_timer(5, true); // should NOT reset timer[5]
+        assert_eq!(tm.get_micro_timer(5), 1000); // still original value
+
+        tm.switch_timer(5, false);
+        assert!(!tm.is_timer_on(5));
+    }
+
+    #[test]
+    fn switch_timer_turns_on_when_off() {
+        let mut tm = TimerManager::new();
+        tm.nowmicrotime = 3000;
+        tm.switch_timer(10, true);
+        assert!(tm.is_timer_on(10));
+        assert_eq!(tm.get_micro_timer(10), 3000);
+    }
+
+    #[test]
+    fn get_micro_timer_negative_id() {
+        let tm = TimerManager::new();
+        assert_eq!(tm.get_micro_timer(-1), i64::MIN);
+    }
+
+    #[test]
+    fn get_micro_timer_out_of_bounds() {
+        let tm = TimerManager::new();
+        // TIMER_COUNT = 3000, so index 3000 is out of bounds
+        assert_eq!(tm.get_micro_timer(3000), i64::MIN);
+    }
+
+    #[test]
+    fn get_micro_timer_max_valid_index() {
+        let tm = TimerManager::new();
+        // Index 2999 is valid but timer is off
+        assert_eq!(tm.get_micro_timer(2999), i64::MIN);
+    }
+
+    #[test]
+    fn get_now_time_for_id_timer_on() {
+        let mut tm = TimerManager::new();
+        tm.nowmicrotime = 10000;
+        tm.set_timer_on(1); // timer[1] = 10000
+        tm.nowmicrotime = 15000;
+        // (15000 - 10000) / 1000 = 5
+        assert_eq!(tm.get_now_time_for_id(1), 5);
+    }
+
+    #[test]
+    fn get_now_time_for_id_timer_off() {
+        let tm = TimerManager::new();
+        assert_eq!(tm.get_now_time_for_id(2), 0);
+    }
+
+    #[test]
+    fn set_main_state_resets_all_timers() {
+        let mut tm = TimerManager::new();
+        tm.set_timer_on(0);
+        tm.set_timer_on(100);
+        tm.set_timer_on(2999);
+        assert!(tm.is_timer_on(0));
+        assert!(tm.is_timer_on(100));
+        assert!(tm.is_timer_on(2999));
+
+        tm.set_main_state();
+        assert!(!tm.is_timer_on(0));
+        assert!(!tm.is_timer_on(100));
+        assert!(!tm.is_timer_on(2999));
+    }
+
+    #[test]
+    fn get_now_time() {
+        let mut tm = TimerManager::new();
+        tm.nowmicrotime = 5000;
+        assert_eq!(tm.get_now_time(), 5);
+    }
+
+    #[test]
+    fn get_now_micro_time() {
+        let mut tm = TimerManager::new();
+        tm.nowmicrotime = 12345;
+        assert_eq!(tm.get_now_micro_time(), 12345);
+    }
+
+    #[test]
+    fn set_micro_timer_out_of_bounds_is_no_op() {
+        let mut tm = TimerManager::new();
+        // Should not panic
+        tm.set_micro_timer(-1, 100);
+        tm.set_micro_timer(3000, 100);
+    }
+
+    #[test]
+    fn frozen_prevents_time_update() {
+        let mut tm = TimerManager::new();
+        tm.set_frozen(true);
+        let before = tm.get_now_micro_time();
+        tm.update();
+        assert_eq!(tm.get_now_micro_time(), before);
+    }
+
+    #[test]
+    fn default_matches_new() {
+        let from_new = TimerManager::new();
+        let from_default = TimerManager::default();
+        assert_eq!(from_new.get_now_time(), from_default.get_now_time());
+        assert_eq!(from_new.timer.len(), from_default.timer.len());
+    }
+}

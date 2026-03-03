@@ -90,4 +90,46 @@ mod tests {
         let mut rng = JavaRandom::new(-1);
         assert_eq!(rng.next_int_bounded(100), 13);
     }
+
+    #[test]
+    fn java_random_next_double_seed_zero() {
+        // Verified against Java: new Random(0).nextDouble() = 0.730967787376657
+        let mut rng = JavaRandom::new(0);
+        let val = rng.next_double();
+        assert!((val - 0.730967787376657).abs() < 1e-15);
+    }
+
+    #[test]
+    fn java_random_next_double_seed_42() {
+        // Verified against Java: new Random(42).nextDouble() = 0.7275636800328681
+        let mut rng = JavaRandom::new(42);
+        let val = rng.next_double();
+        assert!((val - 0.7275636800328681).abs() < 1e-15);
+    }
+
+    #[test]
+    fn java_random_next_double_range() {
+        let mut rng = JavaRandom::new(12345);
+        for _ in 0..1000 {
+            let val = rng.next_double();
+            assert!(val >= 0.0 && val < 1.0);
+        }
+    }
+
+    #[test]
+    fn java_random_set_seed_resets_sequence() {
+        let mut rng = JavaRandom::new(42);
+        let first = rng.next_int_bounded(100);
+        rng.set_seed(42);
+        let second = rng.next_int_bounded(100);
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn java_random_bound_one_always_zero() {
+        let mut rng = JavaRandom::new(0);
+        for _ in 0..100 {
+            assert_eq!(rng.next_int_bounded(1), 0);
+        }
+    }
 }
