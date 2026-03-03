@@ -17,8 +17,8 @@ use crate::result_key_property::{ResultKey, ResultKeyProperty};
 use std::sync::Arc;
 
 use crate::stubs::{
-    BMSPlayerModeType, ControlKeys, IRConfig, IRConnection, IRCourseData, IRScoreData, IRStatus,
-    KeyCommand, MainController, PlayerResource, RankingData,
+    BMSPlayerModeType, ControlKeys, IRConnection, IRCourseData, IRScoreData, KeyCommand,
+    MainController, PlayerResource, RankingData,
 };
 use beatoraja_core::ir_config::{IR_SEND_ALWAYS, IR_SEND_COMPLETE_SONG, IR_SEND_UPDATE_SCORE};
 

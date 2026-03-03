@@ -14,7 +14,6 @@ use crate::json::json_result_skin_object_loader::JsonResultSkinObjectLoader;
 use crate::json::json_select_skin_object_loader::JsonSelectSkinObjectLoader;
 use crate::json::json_skin;
 use crate::json::json_skin_configuration_skin_object_loader::JsonSkinConfigurationSkinObjectLoader;
-use crate::json::json_skin_object_loader::JsonSkinObjectLoader;
 use crate::json::json_skin_serializer::JsonSkinSerializer;
 use crate::stubs::*;
 
@@ -320,7 +319,7 @@ impl JSONSkinLoader {
                 self.sk = Some(sk.clone());
                 self.load_json_skin_header(&sk, p)
             }
-            Err(e) => {
+            Err(_e) => {
                 // Try Shift_JIS
                 match std::fs::read(p) {
                     Ok(bytes) => {
@@ -381,7 +380,7 @@ impl JSONSkinLoader {
 
         // Process properties -> options
         let mut options: Vec<CustomOptionData> = Vec::new();
-        for (i, pr) in sk.property.iter().enumerate() {
+        for (_i, pr) in sk.property.iter().enumerate() {
             let mut op: Vec<i32> = Vec::new();
             let mut names: Vec<String> = Vec::new();
             for item in &pr.item {

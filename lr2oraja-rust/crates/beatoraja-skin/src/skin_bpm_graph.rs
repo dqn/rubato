@@ -4,7 +4,6 @@
 use std::collections::HashMap;
 
 use bms_model::bms_model::BMSModel;
-use bms_model::time_line::TimeLine;
 
 use crate::skin_object::{SkinObjectData, SkinObjectRenderer};
 use crate::stubs::{
@@ -250,7 +249,7 @@ impl SkinBPMGraph {
                     - self.min_value_log)
                     / (self.max_value_log - self.min_value_log)
                     * (height - self.line_width) as f64) as i32;
-                let x2 = x1;
+                let _x2 = x1;
                 let y2 = ((((self.bpm_data[i][0] / self.mainbpm)
                     .max(self.min_value)
                     .min(self.max_value))

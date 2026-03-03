@@ -421,7 +421,7 @@ impl SkinLuaAccessor {
         &self,
         header: &crate::lr2::lr2_skin_header_loader::LR2SkinHeaderData,
         property: &SkinConfigProperty,
-        file_path_getter: &dyn Fn(&str) -> String,
+        _file_path_getter: &dyn Fn(&str) -> String,
     ) {
         let result: Result<(), LuaError> = (|| {
             let table = self.lua.create_table()?;

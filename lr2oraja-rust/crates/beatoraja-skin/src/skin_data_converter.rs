@@ -9,8 +9,7 @@ use log::{info, warn};
 use crate::custom_event::CustomEvent;
 use crate::custom_timer::CustomTimer;
 use crate::json::json_skin_loader::{
-    CustomCategoryData, CustomFileData, CustomItemData, CustomOffsetData, CustomOptionData,
-    DestinationData, SkinData, SkinHeaderData, SkinNumberOffset, SkinObjectType, SourceData,
+    CustomCategoryData, CustomItemData, SkinData, SkinHeaderData, SkinObjectType, SourceData,
     SourceDataType,
 };
 use crate::json::json_skin_object_loader::get_source_image;

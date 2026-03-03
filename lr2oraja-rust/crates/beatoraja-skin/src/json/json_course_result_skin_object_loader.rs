@@ -1,10 +1,7 @@
 // Mechanical translation of JsonCourseResultSkinObjectLoader.java
 
-use std::path::Path;
-
-use crate::json::json_skin;
-use crate::json::json_skin_loader::{JSONSkinLoader, SkinData, SkinObjectData};
-use crate::json::json_skin_object_loader::{self, JsonSkinObjectLoader};
+use crate::json::json_skin_loader::SkinData;
+use crate::json::json_skin_object_loader::JsonSkinObjectLoader;
 
 /// Corresponds to JsonCourseResultSkinObjectLoader extends JsonSkinObjectLoader<CourseResultSkin>
 pub struct JsonCourseResultSkinObjectLoader;

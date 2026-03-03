@@ -7,7 +7,7 @@ use beatoraja_core::timer_manager::TimerManager;
 use beatoraja_skin::skin_property::{TIMER_FADEOUT, TIMER_STARTINPUT};
 use beatoraja_skin::skin_type::SkinType;
 
-use crate::stubs::{ControlKeys, MainControllerRef, NullMainController, PlayerResourceAccess};
+use crate::stubs::{ControlKeys, MainControllerRef, PlayerResourceAccess};
 
 /// MusicDecide - music decide screen state
 ///

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use crate::property::string_property::StringProperty;
 use crate::skin_object::SkinObjectRenderer;
 use crate::skin_text::{OVERFLOW_OVERFLOW, OVERFLOW_SHRINK, OVERFLOW_TRUNCATE, SkinTextData};
-use crate::stubs::{BitmapFont, Color, GlyphLayout, MainState, Rectangle, TextureRegion};
+use crate::stubs::{BitmapFont, Color, GlyphLayout, MainState, TextureRegion};
 
 pub struct SkinTextBitmap {
     pub text_data: SkinTextData,
@@ -260,7 +260,7 @@ impl SkinTextBitmap {
             None => return,
         };
 
-        let (glyphs, total_width, line_height) = font.layout_glyphs(text);
+        let (glyphs, _total_width, line_height) = font.layout_glyphs(text);
         if glyphs.is_empty() {
             return;
         }

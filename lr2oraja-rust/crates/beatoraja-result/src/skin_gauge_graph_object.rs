@@ -1,11 +1,9 @@
 // SkinGaugeGraphObject.java -> skin_gauge_graph_object.rs
 // Mechanical line-by-line translation.
 
-use crate::abstract_result::AbstractResultData;
-use crate::course_result::CourseResult;
 use crate::stubs::{
-    Color, Pixmap, PixmapFormat, PlayerResource, Rectangle, SkinObjectData, SkinObjectRenderer,
-    Texture, TextureRegion,
+    Color, Pixmap, PixmapFormat, PlayerResource, SkinObjectData, SkinObjectRenderer, Texture,
+    TextureRegion,
 };
 
 /// Gauge graph rendering object for result screen
@@ -199,7 +197,7 @@ impl SkinGaugeGraphObject {
     pub fn prepare(
         &mut self,
         time: i64,
-        gauge_type: i32,
+        _gauge_type: i32,
         result_gauge_type: i32,
         resource: &PlayerResource,
         is_course_result: bool,

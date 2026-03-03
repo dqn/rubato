@@ -124,7 +124,7 @@ impl SongBar {
                 {
                     let song_path = songs[i].as_ref().unwrap().get_path().map(|s| s.to_string());
                     elements[j].set_path_opt(song_path);
-                    if let Some(ref song) = songs[i] {
+                    if let Some(ref _song) = songs[i] {
                         let elem_clone = elements[j].clone();
                         songs[i].as_mut().unwrap().merge(&elem_clone);
                     }

@@ -79,7 +79,7 @@ impl SkinFloat {
     fn new_with_images_timer_prop(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
-        timer: Option<Box<dyn TimerProperty>>,
+        _timer: Option<Box<dyn TimerProperty>>,
         cycle: i32,
         iketa: i32,
         fketa: i32,

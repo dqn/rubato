@@ -1,9 +1,4 @@
 use crate::bar::bar::Bar;
-use crate::bar::directory_bar::DirectoryBarData;
-use crate::bar::function_bar::FunctionBar;
-use crate::bar::song_bar::SongBar;
-use crate::bar_manager::BarManager;
-use crate::bar_renderer::BarRenderer;
 use crate::music_select_command::MusicSelectCommand;
 use crate::music_select_key_property::{MusicSelectKey, MusicSelectKeyProperty};
 use crate::stubs::*;

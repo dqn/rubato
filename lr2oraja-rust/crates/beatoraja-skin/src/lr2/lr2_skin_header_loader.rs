@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
+use crate::lr2::lr2_skin_loader::LR2SkinLoaderState;
 use crate::skin_property::{OFFSET_ALL, OFFSET_JUDGE_1P, OFFSET_JUDGEDETAIL_1P, OFFSET_NOTES_1P};
 use crate::stubs::{MainState, Resolution};
 

@@ -2,7 +2,7 @@
 // Wraps beatoraja_play::SkinNote with SkinObjectData for the skin pipeline.
 // Translated from: SkinNote.java
 
-use beatoraja_play::lane_renderer::{DrawCommand, NoteImageType};
+use beatoraja_play::lane_renderer::DrawCommand;
 
 use crate::skin_object::{SkinObjectData, SkinObjectRenderer};
 use crate::stubs::MainState;

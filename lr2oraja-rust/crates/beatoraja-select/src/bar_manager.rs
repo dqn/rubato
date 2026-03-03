@@ -11,15 +11,12 @@ use serde::Deserialize;
 use crate::bar::bar::Bar;
 use crate::bar::command_bar::CommandBar;
 use crate::bar::container_bar::ContainerBar;
-use crate::bar::context_menu_bar::ContextMenuBar;
-use crate::bar::directory_bar::DirectoryBarData;
 use crate::bar::executable_bar::ExecutableBar;
 use crate::bar::folder_bar::FolderBar;
 use crate::bar::grade_bar::GradeBar;
 use crate::bar::hash_bar::HashBar;
 use crate::bar::random_course_bar::RandomCourseBar;
 use crate::bar::search_word_bar::SearchWordBar;
-use crate::bar::song_bar::SongBar;
 use crate::bar::table_bar::TableBar;
 use crate::bar_sorter::BarSorter;
 use crate::music_selector::MODE;
@@ -279,7 +276,7 @@ impl BarManager {
         // This avoids borrow issues with dir and self
         if let Some(last) = self.dir.last() {
             // We need to clone the bar to pass it since we can't borrow self.dir and self at once
-            let bar_title = last.get_title();
+            let _bar_title = last.get_title();
             // Find the matching directory bar in dir and use it
             // Use the index approach: call update_bar_at_dir_index
             return self.update_bar_at_dir_index(self.dir.len() - 1);
@@ -626,7 +623,7 @@ impl BarManager {
                         .collect();
 
                     let filtered_targets = if random_folder.get_filter().is_some() {
-                        if let Some(ref mut ctx_inner) = ctx.score_cache.as_ref() {
+                        if let Some(ref mut _ctx_inner) = ctx.score_cache.as_ref() {
                             // Filter by score data - requires mutable cache access
                             // Simplified: use targets as-is since we'd need &mut
                             random_targets

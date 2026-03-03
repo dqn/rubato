@@ -3,8 +3,8 @@
 
 use crate::skin_object::{SkinObjectData, SkinObjectRenderer};
 use crate::stubs::{
-    BMSPlayer, Color, MainState, MusicResultResource, Pixmap, PixmapFormat, PlayerResource,
-    Texture, TextureRegion,
+    Color, MainState, MusicResultResource, Pixmap, PixmapFormat, PlayerResource, Texture,
+    TextureRegion,
 };
 
 /// Judge timing visualizer

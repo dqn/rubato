@@ -1,10 +1,7 @@
 // Mechanical translation of JsonSkinConfigurationSkinObjectLoader.java
 
-use std::path::Path;
-
-use crate::json::json_skin;
-use crate::json::json_skin_loader::{JSONSkinLoader, SkinData, SkinObjectData};
-use crate::json::json_skin_object_loader::{self, JsonSkinObjectLoader};
+use crate::json::json_skin_loader::SkinData;
+use crate::json::json_skin_object_loader::JsonSkinObjectLoader;
 
 /// Corresponds to JsonSkinConfigurationSkinObjectLoader extends JsonSkinObjectLoader<SkinConfigurationSkin>
 pub struct JsonSkinConfigurationSkinObjectLoader;

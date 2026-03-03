@@ -3,10 +3,8 @@
 
 use bms_model::bms_model::BMSModel;
 use bms_model::mode::Mode;
-use bms_model::note::Note;
 
 use crate::skin_object::{SkinObjectData, SkinObjectRenderer};
-use crate::skin_property;
 use crate::stubs::{
     Color, MainState, Pixmap, PixmapFormat, Rectangle, SongData, Texture, TextureRegion,
 };

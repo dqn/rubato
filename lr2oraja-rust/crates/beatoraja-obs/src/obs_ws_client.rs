@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
@@ -464,7 +464,7 @@ impl ObsWsClient {
 
                     match output_state {
                         "OBS_WEBSOCKET_OUTPUT_STOPPED" => {
-                            let (should_restart, recording_mode, path_to_delete) = {
+                            let (should_restart, _recording_mode, path_to_delete) = {
                                 let mut guard = lock_or_recover(inner);
                                 guard.is_recording = false;
                                 guard.output_path = output_path_val.clone();

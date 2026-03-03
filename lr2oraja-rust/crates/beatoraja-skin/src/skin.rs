@@ -24,17 +24,13 @@ use crate::skin_note_distribution_graph::SkinNoteDistributionGraph;
 use crate::skin_note_object::SkinNoteObject;
 use crate::skin_number::SkinNumber;
 use crate::skin_object::{SkinObjectData, SkinObjectRenderer};
-use crate::skin_property;
 use crate::skin_slider::SkinSlider;
 use crate::skin_text_bitmap::SkinTextBitmap;
 use crate::skin_text_font::SkinTextFont;
 use crate::skin_text_image::SkinTextImage;
 use crate::skin_timing_distribution_graph::SkinTimingDistributionGraph;
 use crate::skin_timing_visualizer::SkinTimingVisualizer;
-use crate::skin_type::SkinType;
-use crate::stubs::{
-    Color, MainState, Matrix4, Resolution, SkinConfigOffset, SkinOffset, SpriteBatch, TextureRegion,
-};
+use crate::stubs::{MainState, SkinConfigOffset, SkinOffset, TextureRegion};
 
 use log::info;
 
@@ -642,7 +638,7 @@ impl Skin {
                 remove_indices.push(i);
             } else {
                 let draw_conds = self.objects[i].get_draw_condition();
-                let bp: Vec<Box<dyn BooleanProperty>> = Vec::new();
+                let _bp: Vec<Box<dyn BooleanProperty>> = Vec::new();
                 let mut should_remove = false;
 
                 // We need to work with the draw conditions
@@ -659,7 +655,7 @@ impl Skin {
                 // Now we need to rebuild the draw conditions
                 // We can't move out of the borrowed vec directly, so we use swap logic
                 // For simplicity in the translation, we just mark for removal
-                for (j, (is_static, get_val)) in static_results.iter().enumerate() {
+                for (_j, (is_static, get_val)) in static_results.iter().enumerate() {
                     if *is_static && !get_val {
                         should_remove = true;
                     }

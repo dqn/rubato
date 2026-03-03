@@ -1,8 +1,6 @@
 // Stubs for external dependencies not yet available as proper imports.
 
 use beatoraja_audio::audio_driver::AudioDriver;
-use beatoraja_core::config::Config;
-use beatoraja_core::player_config::PlayerConfig;
 use beatoraja_core::system_sound_manager::SoundType;
 
 // InputProcessorStub: replaced by pub use from beatoraja-input (Phase 18e-11)

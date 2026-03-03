@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use crate::skin_object::SkinObjectRenderer;
 use crate::skin_text::SkinTextData;
-use crate::stubs::{Color, MainState, Texture, TextureRegion};
+use crate::stubs::{MainState, Texture, TextureRegion};
 
 pub struct SkinTextImage {
     pub text_data: SkinTextData,

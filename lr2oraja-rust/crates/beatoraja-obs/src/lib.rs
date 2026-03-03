@@ -7,8 +7,6 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::type_complexity)]
 #![allow(clippy::if_same_then_else)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
 
 // Re-exports (formerly in stubs.rs)
 pub use beatoraja_types::imgui_notify::ImGuiNotify;

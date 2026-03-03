@@ -1,6 +1,5 @@
 use beatoraja_types::distribution_data::DistributionData;
 
-use crate::bar::bar::Bar;
 use crate::bar::directory_bar::DirectoryBarData;
 use crate::bar::function_bar::FunctionBar;
 use crate::bar::song_bar::SongBar;
@@ -36,7 +35,7 @@ static RANK: [&str; 28] = [
 impl SkinDistributionGraph {
     pub fn new(graph_type: i32) -> Self {
         let default_images = Self::create_default_images(graph_type);
-        let count = if graph_type == 0 { 11 } else { 28 };
+        let _count = if graph_type == 0 { 11 } else { 28 };
         Self {
             graph_type,
             current_image: default_images,
