@@ -1,0 +1,57 @@
+osu file format v14
+
+[General]
+AudioFilename: audio.mp3
+AudioLeadIn: 0
+PreviewTime: -1
+Countdown: 0
+SampleSet: Soft
+StackLeniency: 0.7
+Mode: 3
+LetterboxInBreaks: 0
+SpecialStyle: 0
+WidescreenStoryboard: 0
+
+[Editor]
+DistanceSpacing: 1
+BeatDivisor: 4
+GridSize: 4
+TimelineZoom: 1
+
+[Metadata]
+Title:Test Song
+TitleUnicode:Test Song
+Artist:Test Artist
+ArtistUnicode:Test Artist
+Creator:Test Creator
+Version:7K Hard
+Source:
+Tags:test osu mania
+BeatmapID:0
+BeatmapSetID:-1
+
+[Difficulty]
+HPDrainRate:5
+CircleSize:7
+OverallDifficulty:5
+ApproachRate:5
+SliderMultiplier:1.4
+SliderTickRate:1
+
+[Events]
+0,0,bg.jpg
+Video,0,"video.mp4"
+Sample,1000,0,"effect.wav"
+
+[TimingPoints]
+0,500,4,1,0,70,1,0
+10000,-50,4,1,0,70,0,0
+
+[HitObjects]
+36,192,0,1,0,0:0:0:0:
+109,192,0,1,0,0:0:0:0:
+182,192,500,1,0,0:0:0:0:
+256,192,500,1,0,0:0:0:0:
+329,192,1000,128,0,2000:0:0:0:0:
+402,192,1000,1,0,0:0:0:0:
+475,192,1500,1,0,0:0:0:0:
