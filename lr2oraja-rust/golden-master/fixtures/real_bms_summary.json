@@ -6,7 +6,21 @@
     "mode": "beat-7k",
     "bpm": 219.0,
     "total_notes": 1791,
-    "timeline_count": 1407
+    "timeline_count": 1407,
+    "first_note_lane": 0,
+    "first_note_time_us": 800000,
+    "last_note_time_us": 139638416,
+    "lane_distribution": [
+      273,
+      208,
+      263,
+      264,
+      256,
+      227,
+      247,
+      53
+    ],
+    "bpm_change_count": 28
   },
   {
     "filename": "_take_7H.bms",
@@ -15,7 +29,21 @@
     "mode": "beat-7k",
     "bpm": 219.0,
     "total_notes": 1131,
-    "timeline_count": 1407
+    "timeline_count": 1407,
+    "first_note_lane": 0,
+    "first_note_time_us": 800000,
+    "last_note_time_us": 139638416,
+    "lane_distribution": [
+      156,
+      147,
+      152,
+      161,
+      164,
+      154,
+      150,
+      47
+    ],
+    "bpm_change_count": 28
   },
   {
     "filename": "_take_7N.bms",
@@ -24,7 +52,21 @@
     "mode": "beat-7k",
     "bpm": 219.0,
     "total_notes": 710,
-    "timeline_count": 1407
+    "timeline_count": 1407,
+    "first_note_lane": 6,
+    "first_note_time_us": 800000,
+    "last_note_time_us": 139638416,
+    "lane_distribution": [
+      60,
+      126,
+      84,
+      136,
+      90,
+      111,
+      74,
+      29
+    ],
+    "bpm_change_count": 28
   },
   {
     "filename": "fumble_1d100.bms",
@@ -33,7 +75,21 @@
     "mode": "beat-7k",
     "bpm": 202.0,
     "total_notes": 2739,
-    "timeline_count": 1573
+    "timeline_count": 1573,
+    "first_note_lane": 0,
+    "first_note_time_us": 2376237,
+    "last_note_time_us": 163960395,
+    "lane_distribution": [
+      397,
+      341,
+      420,
+      351,
+      436,
+      371,
+      302,
+      121
+    ],
+    "bpm_change_count": 1
   },
   {
     "filename": "fumble_7a.bms",
@@ -42,7 +98,21 @@
     "mode": "beat-7k",
     "bpm": 202.0,
     "total_notes": 2015,
-    "timeline_count": 1662
+    "timeline_count": 1662,
+    "first_note_lane": 0,
+    "first_note_time_us": 2376237,
+    "last_note_time_us": 163960396,
+    "lane_distribution": [
+      338,
+      235,
+      272,
+      219,
+      283,
+      255,
+      273,
+      140
+    ],
+    "bpm_change_count": 1
   },
   {
     "filename": "fumble_7h.bms",
@@ -51,7 +121,21 @@
     "mode": "beat-7k",
     "bpm": 202.0,
     "total_notes": 1145,
-    "timeline_count": 1656
+    "timeline_count": 1656,
+    "first_note_lane": 0,
+    "first_note_time_us": 2376237,
+    "last_note_time_us": 163960396,
+    "lane_distribution": [
+      117,
+      130,
+      141,
+      173,
+      142,
+      194,
+      141,
+      107
+    ],
+    "bpm_change_count": 1
   },
   {
     "filename": "fumble_7n.bms",
@@ -60,6 +144,20 @@
     "mode": "beat-7k",
     "bpm": 202.0,
     "total_notes": 785,
-    "timeline_count": 1573
+    "timeline_count": 1573,
+    "first_note_lane": 2,
+    "first_note_time_us": 2376237,
+    "last_note_time_us": 163960396,
+    "lane_distribution": [
+      108,
+      111,
+      93,
+      98,
+      123,
+      93,
+      104,
+      55
+    ],
+    "bpm_change_count": 1
   }
 ]

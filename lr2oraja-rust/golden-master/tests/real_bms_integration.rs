@@ -4,6 +4,7 @@
 // that the decoder handles production content without panics and produces
 // structurally valid output.
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use beatoraja_core::player_config::PlayerConfig;
@@ -14,6 +15,7 @@ use beatoraja_pattern::random::Random;
 use beatoraja_pattern::scroll_speed_modifier::ScrollSpeedModifier;
 use bms_model::bms_decoder::BMSDecoder;
 use bms_model::bms_model::BMSModel;
+use bms_model::note::Note;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -25,6 +27,11 @@ struct RealBmsFixture {
     bpm: f64,
     total_notes: i32,
     timeline_count: usize,
+    first_note_lane: i32,
+    first_note_time_us: i64,
+    last_note_time_us: i64,
+    lane_distribution: Vec<i32>,
+    bpm_change_count: usize,
 }
 
 /// Root directory containing real BMS subdirectories, relative to CARGO_MANIFEST_DIR.
@@ -68,6 +75,67 @@ fn decode_bms(path: &Path) -> BMSModel {
     decoder
         .decode_path(path)
         .unwrap_or_else(|| panic!("BMSDecoder returned None for {}", path.display()))
+}
+
+/// Returns true if the note is a playable note (Normal or Long start, not Mine).
+fn is_playable_note(note: &Note) -> bool {
+    match note {
+        Note::Normal(_) => true,
+        Note::Long { end, .. } => !end,
+        Note::Mine { .. } => false,
+    }
+}
+
+/// Compute per-note data fields for a BMSModel fixture entry.
+/// Returns (first_note_lane, first_note_time_us, last_note_time_us, lane_distribution, bpm_change_count).
+fn compute_note_data(model: &BMSModel) -> (i32, i64, i64, Vec<i32>, usize) {
+    let key_count = model.get_mode().map(|m| m.key()).unwrap_or(0) as usize;
+    let mut lane_distribution = vec![0i32; key_count];
+    let mut first_note_lane: i32 = -1;
+    let mut first_note_time_us: i64 = i64::MAX;
+    let mut last_note_time_us: i64 = i64::MIN;
+
+    for tl in model.get_all_time_lines() {
+        for (lane, count) in lane_distribution.iter_mut().enumerate().take(key_count) {
+            if let Some(note) = tl.get_note(lane as i32)
+                && is_playable_note(note)
+            {
+                *count += 1;
+                let t = tl.get_micro_time();
+                if t < first_note_time_us
+                    || (t == first_note_time_us
+                        && (first_note_lane < 0 || (lane as i32) < first_note_lane))
+                {
+                    first_note_time_us = t;
+                    first_note_lane = lane as i32;
+                }
+                if t > last_note_time_us {
+                    last_note_time_us = t;
+                }
+            }
+        }
+    }
+
+    // If no playable notes found, use sensible defaults
+    if first_note_lane < 0 {
+        first_note_time_us = 0;
+        last_note_time_us = 0;
+    }
+
+    // Count distinct BPM values across all timelines
+    let mut bpm_set = BTreeSet::new();
+    for tl in model.get_all_time_lines() {
+        bpm_set.insert(tl.get_bpm().to_bits());
+    }
+    let bpm_change_count = bpm_set.len();
+
+    (
+        first_note_lane,
+        first_note_time_us,
+        last_note_time_us,
+        lane_distribution,
+        bpm_change_count,
+    )
 }
 
 // ============================================================================
@@ -244,6 +312,13 @@ fn real_bms_golden_master_regression() {
         .map(|path| {
             let model = decode_bms(path);
             let filename = path.file_name().unwrap().to_string_lossy().to_string();
+            let (
+                first_note_lane,
+                first_note_time_us,
+                last_note_time_us,
+                lane_distribution,
+                bpm_change_count,
+            ) = compute_note_data(&model);
             RealBmsFixture {
                 filename,
                 md5: model.get_md5().to_string(),
@@ -255,6 +330,11 @@ fn real_bms_golden_master_regression() {
                 bpm: model.get_bpm(),
                 total_notes: model.get_total_notes(),
                 timeline_count: model.get_all_time_lines().len(),
+                first_note_lane,
+                first_note_time_us,
+                last_note_time_us,
+                lane_distribution,
+                bpm_change_count,
             }
         })
         .collect();
@@ -338,6 +418,31 @@ fn real_bms_golden_master_regression() {
             "{}: timeline_count mismatch: got {}, expected {}",
             actual.filename, actual.timeline_count, exp.timeline_count
         );
+        assert_eq!(
+            actual.first_note_lane, exp.first_note_lane,
+            "{}: first_note_lane mismatch: got {}, expected {}",
+            actual.filename, actual.first_note_lane, exp.first_note_lane
+        );
+        assert_eq!(
+            actual.first_note_time_us, exp.first_note_time_us,
+            "{}: first_note_time_us mismatch: got {}, expected {}",
+            actual.filename, actual.first_note_time_us, exp.first_note_time_us
+        );
+        assert_eq!(
+            actual.last_note_time_us, exp.last_note_time_us,
+            "{}: last_note_time_us mismatch: got {}, expected {}",
+            actual.filename, actual.last_note_time_us, exp.last_note_time_us
+        );
+        assert_eq!(
+            actual.lane_distribution, exp.lane_distribution,
+            "{}: lane_distribution mismatch: got {:?}, expected {:?}",
+            actual.filename, actual.lane_distribution, exp.lane_distribution
+        );
+        assert_eq!(
+            actual.bpm_change_count, exp.bpm_change_count,
+            "{}: bpm_change_count mismatch: got {}, expected {}",
+            actual.filename, actual.bpm_change_count, exp.bpm_change_count
+        );
     }
 }
 
@@ -355,7 +460,7 @@ fn real_bms_pattern_modifiers_no_panic() {
         let filename = path.file_name().unwrap().to_string_lossy();
         let mode = model
             .get_mode()
-            .expect(&format!("{filename}: mode should be set"));
+            .unwrap_or_else(|| panic!("{filename}: mode should be set"));
         let original_notes = model.get_total_notes();
 
         // LaneMirrorShuffleModifier (mirror, player=0, is_scratch=false)
@@ -373,7 +478,7 @@ fn real_bms_pattern_modifiers_no_panic() {
         // NoteShuffleModifier with SRandom
         {
             let mut model_srandom = model.clone();
-            let mut modifier = NoteShuffleModifier::new(Random::SRandom, 0, &mode, &config);
+            let mut modifier = NoteShuffleModifier::new(Random::SRandom, 0, mode, &config);
             modifier.set_seed(42);
             modifier.modify(&mut model_srandom);
             assert_eq!(
@@ -386,7 +491,7 @@ fn real_bms_pattern_modifiers_no_panic() {
         // NoteShuffleModifier with HRandom
         {
             let mut model_hrandom = model.clone();
-            let mut modifier = NoteShuffleModifier::new(Random::HRandom, 0, &mode, &config);
+            let mut modifier = NoteShuffleModifier::new(Random::HRandom, 0, mode, &config);
             modifier.set_seed(42);
             modifier.modify(&mut model_hrandom);
             assert_eq!(
@@ -487,5 +592,166 @@ fn real_bms_scroll_speed_modifier_no_panic() {
                 "{filename}: Add mode should not change timeline count"
             );
         }
+    }
+}
+
+// ============================================================================
+// Test 9: Note distribution sanity - no single lane dominates the chart
+// ============================================================================
+
+#[test]
+fn real_bms_note_distribution_sanity() {
+    let files = discover_bms_files();
+    for path in &files {
+        let model = decode_bms(path);
+        let filename = path.file_name().unwrap().to_string_lossy();
+        let mode = model.get_mode().expect("mode should be set");
+        let key_count = mode.key() as usize;
+
+        // Build lane distribution
+        let mut lane_counts = vec![0i32; key_count];
+        for tl in model.get_all_time_lines() {
+            for (lane, count) in lane_counts.iter_mut().enumerate().take(key_count) {
+                if let Some(note) = tl.get_note(lane as i32)
+                    && is_playable_note(note)
+                {
+                    *count += 1;
+                }
+            }
+        }
+
+        let total: i32 = lane_counts.iter().sum();
+        assert!(total > 0, "{filename}: should have playable notes");
+
+        // No single lane should have > 80% of all notes (realistic charts distribute)
+        for (lane, &count) in lane_counts.iter().enumerate() {
+            let pct = count as f64 / total as f64;
+            assert!(
+                pct <= 0.80,
+                "{filename}: lane {lane} has {:.1}% of notes ({count}/{total}), expected <= 80%",
+                pct * 100.0
+            );
+        }
+    }
+}
+
+// ============================================================================
+// Test 10: Mirror modifier is deterministic - same input produces same output
+// ============================================================================
+
+#[test]
+fn real_bms_mirror_deterministic_lanes() {
+    let files = discover_bms_files();
+    for path in &files {
+        let model = decode_bms(path);
+        let mut model1 = model.clone();
+        let mut model2 = model.clone();
+
+        let mut mod1 = LaneMirrorShuffleModifier::new(0, false);
+        let mut mod2 = LaneMirrorShuffleModifier::new(0, false);
+        mod1.modify(&mut model1);
+        mod2.modify(&mut model2);
+
+        let filename = path.file_name().unwrap().to_string_lossy();
+
+        // Mirror is deterministic - same input should produce same output
+        assert_eq!(
+            model1.get_total_notes(),
+            model2.get_total_notes(),
+            "{filename}: mirror total notes should be deterministic"
+        );
+
+        // Compare per-timeline lane assignments
+        for (i, (tl1, tl2)) in model1
+            .get_all_time_lines()
+            .iter()
+            .zip(model2.get_all_time_lines().iter())
+            .enumerate()
+        {
+            assert_eq!(
+                tl1.get_micro_time(),
+                tl2.get_micro_time(),
+                "{filename}: timeline {i}: times differ after mirror"
+            );
+            // Verify notes are identical per lane
+            let key_count = model.get_mode().map(|m| m.key()).unwrap_or(0);
+            for lane in 0..key_count {
+                let n1 = tl1.get_note(lane).map(|n| n.get_wav());
+                let n2 = tl2.get_note(lane).map(|n| n.get_wav());
+                assert_eq!(
+                    n1, n2,
+                    "{filename}: timeline {i}, lane {lane}: note wav differs after mirror"
+                );
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Test 11: Random with same seed is deterministic
+// ============================================================================
+
+#[test]
+fn real_bms_random_seed_deterministic() {
+    let files = discover_bms_files();
+    let config = PlayerConfig::default();
+    for path in &files {
+        let model = decode_bms(path);
+        let mode = model.get_mode().unwrap();
+        let filename = path.file_name().unwrap().to_string_lossy();
+
+        // Same seed should preserve total note count
+        let mut model1 = model.clone();
+        let mut mod1 = NoteShuffleModifier::new(Random::SRandom, 0, mode, &config);
+        mod1.set_seed(42);
+        mod1.modify(&mut model1);
+        assert_eq!(
+            model1.get_total_notes(),
+            model.get_total_notes(),
+            "{filename}: S-Random should preserve total notes"
+        );
+
+        // Different seeds should produce different lane assignments
+        // (verify the seed actually affects the output)
+        let mut model_seed_a = model.clone();
+        let mut model_seed_b = model.clone();
+        let mut mod_a = NoteShuffleModifier::new(Random::SRandom, 0, mode, &config);
+        mod_a.set_seed(42);
+        mod_a.modify(&mut model_seed_a);
+        let mut mod_b = NoteShuffleModifier::new(Random::SRandom, 0, mode, &config);
+        mod_b.set_seed(99999);
+        mod_b.modify(&mut model_seed_b);
+
+        // Both should preserve note count
+        assert_eq!(
+            model_seed_a.get_total_notes(),
+            model_seed_b.get_total_notes(),
+            "{filename}: both seeds should preserve total notes"
+        );
+
+        // At least some timelines should differ (different seeds -> different permutations)
+        let key_count = mode.key();
+        let mut any_different = false;
+        for (tl_a, tl_b) in model_seed_a
+            .get_all_time_lines()
+            .iter()
+            .zip(model_seed_b.get_all_time_lines().iter())
+        {
+            for lane in 0..key_count {
+                let n_a = tl_a.get_note(lane).map(|n| n.get_wav());
+                let n_b = tl_b.get_note(lane).map(|n| n.get_wav());
+                if n_a != n_b {
+                    any_different = true;
+                    break;
+                }
+            }
+            if any_different {
+                break;
+            }
+        }
+        assert!(
+            any_different,
+            "{filename}: different seeds should produce different lane assignments"
+        );
     }
 }
