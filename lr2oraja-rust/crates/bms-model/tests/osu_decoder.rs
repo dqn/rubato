@@ -78,11 +78,7 @@ fn decode_7k_fixture_bpm() {
 
     // beat_length=500ms => BPM = 60000/500 = 120
     let bpm = model.get_bpm();
-    assert!(
-        (bpm - 120.0).abs() < 0.01,
-        "expected BPM ~120, got {}",
-        bpm
-    );
+    assert!((bpm - 120.0).abs() < 0.01, "expected BPM ~120, got {}", bpm);
 }
 
 #[test]
@@ -95,10 +91,7 @@ fn decode_7k_fixture_timing_points() {
 
     // Verify timelines contain BPM data from the uninherited timing point
     let timelines = model.get_all_time_lines();
-    assert!(
-        !timelines.is_empty(),
-        "decoded model should have timelines"
-    );
+    assert!(!timelines.is_empty(), "decoded model should have timelines");
 
     // The first timing point is at time=0ms with beat_length=500 (120 BPM).
     // After offset adjustment (+38ms), the timeline at time=38 should have BPM=120.
@@ -274,10 +267,7 @@ fn decode_7k_fixture_hashes_are_nonempty() {
         .decode_path(&path)
         .expect("should decode 7K .osu fixture");
 
-    assert!(
-        !model.get_md5().is_empty(),
-        "md5 hash should be computed"
-    );
+    assert!(!model.get_md5().is_empty(), "md5 hash should be computed");
     assert!(
         !model.get_sha256().is_empty(),
         "sha256 hash should be computed"
@@ -792,10 +782,7 @@ fn nonexistent_file_returns_none() {
     let path = PathBuf::from("/tmp/does_not_exist_osu_test_12345.osu");
     let mut decoder = OSUDecoder::new(0);
     let result = decoder.decode_path(&path);
-    assert!(
-        result.is_none(),
-        "nonexistent file should return None"
-    );
+    assert!(result.is_none(), "nonexistent file should return None");
 }
 
 // ---------------------------------------------------------------------------
@@ -809,7 +796,9 @@ fn decode_via_chart_information() {
     let path = fixture_path("osu_7k_basic.osu");
     let info = ChartInformation::new(Some(path), 0, None);
     let mut decoder = OSUDecoder::new(0);
-    let model = decoder.decode(info).expect("should decode via ChartInformation");
+    let model = decoder
+        .decode(info)
+        .expect("should decode via ChartInformation");
 
     assert_eq!(model.get_title(), "Test Song");
 }
