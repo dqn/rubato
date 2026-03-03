@@ -3,10 +3,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use crate::imgui_notify::ImGuiNotify;
 use crate::imgui_renderer;
 use crate::stubs::{
-    Config, CustomCategory, CustomCategoryItem, CustomFile, CustomOffset, CustomOption,
+    CustomCategory, CustomCategoryItem, CustomFile, CustomOffset, CustomOption,
     JSONSkinLoader, LR2SkinHeaderLoader, LuaSkinLoader, MainController, OPTION_RANDOM_VALUE,
     PlayerConfig, SkinConfig, SkinFilePath, SkinHeader, SkinOffset, SkinOption, SkinProperty,
     SkinType, TYPE_LR2SKIN, Validatable,
@@ -107,7 +106,7 @@ fn menu_header(ui: &mut egui::Ui) {
         let current_index = skins.iter().position(|s| s.get_name() == skin.get_name());
 
         // Collect skin names for the combo
-        let skin_names: Vec<String> = skins
+        let _skin_names: Vec<String> = skins
             .iter()
             .filter_map(|s| s.get_name().map(|n| n.to_string()))
             .collect();

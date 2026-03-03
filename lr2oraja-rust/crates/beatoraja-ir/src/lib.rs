@@ -1,5 +1,4 @@
 #![allow(clippy::needless_range_loop)]
-#![allow(unused_imports)]
 
 // Re-exports (formerly in stubs.rs)
 pub use beatoraja_pattern::lr2_random::LR2Random;
