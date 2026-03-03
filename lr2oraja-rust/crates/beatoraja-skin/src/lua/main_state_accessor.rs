@@ -21,11 +21,13 @@ use crate::stubs::MainState;
 pub const TIMER_OFF_VALUE: i64 = i64::MIN;
 
 /// Wrapper for raw MainState pointer to implement Send/Sync.
-/// SAFETY: The MainState is accessed single-threaded in beatoraja's skin system,
-/// and the MainState reference outlives the Lua VM.
 /// Uses *mut to support both read and write operations (set_timer, set_volume, etc.).
 #[derive(Clone, Copy)]
 struct StatePtr(*mut dyn MainState);
+// SAFETY: StatePtr contains a *mut dyn MainState raw pointer, which is !Send and !Sync
+// by default. The MainState is accessed single-threaded in beatoraja's skin system,
+// and the MainState reference outlives the Lua VM. The caller of MainStateAccessor::new()
+// guarantees no aliasing &mut references exist while Lua callbacks are invoked.
 unsafe impl Send for StatePtr {}
 unsafe impl Sync for StatePtr {}
 

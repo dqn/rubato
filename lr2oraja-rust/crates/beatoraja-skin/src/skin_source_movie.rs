@@ -22,8 +22,10 @@ struct MovieDecoder {
     time_base: ffmpeg::Rational,
 }
 
-// ffmpeg scaling::Context is !Send because it contains raw pointers to SwsContext.
-// However, MovieDecoder is only ever accessed through a Mutex, so concurrent
+// SAFETY: MovieDecoder contains ffmpeg types (scaling::Context, codec::decoder::Video,
+// format::context::Input) that are !Send due to internal raw pointers to C FFmpeg structs
+// (SwsContext, AVCodecContext, AVFormatContext). However, MovieDecoder is only ever
+// accessed through a Mutex<Option<MovieDecoder>> inside SkinSourceMovie, so concurrent
 // access is impossible. We assert Send so Mutex<MovieDecoder> can be Sync.
 #[cfg(feature = "ffmpeg")]
 unsafe impl Send for MovieDecoder {}

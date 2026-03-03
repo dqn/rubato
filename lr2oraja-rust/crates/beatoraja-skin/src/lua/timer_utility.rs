@@ -19,6 +19,10 @@ pub const TIMER_OFF_VALUE: i64 = i64::MIN;
 /// Wrapper for raw MainState pointer to implement Send/Sync.
 #[derive(Clone, Copy)]
 struct StatePtr(*const dyn MainState);
+// SAFETY: StatePtr contains a *const dyn MainState raw pointer, which is !Send and !Sync
+// by default. The pointer is only dereferenced within Lua closures that run on a single
+// thread (beatoraja's skin system is single-threaded). The caller of TimerUtility::new()
+// guarantees the MainState outlives the TimerUtility and all Lua closures exported from it.
 unsafe impl Send for StatePtr {}
 unsafe impl Sync for StatePtr {}
 

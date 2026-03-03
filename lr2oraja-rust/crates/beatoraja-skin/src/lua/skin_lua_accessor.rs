@@ -636,6 +636,9 @@ struct LuaIntegerProperty {
     creation_thread_id: std::thread::ThreadId,
 }
 
+// SAFETY: LuaIntegerProperty contains Arc<Lua> which is !Send because mlua::Lua
+// (without the "send" feature) is not thread-safe. Access is restricted to a single
+// thread; debug_assert in get() verifies this invariant at runtime in debug builds.
 unsafe impl Send for LuaIntegerProperty {}
 unsafe impl Sync for LuaIntegerProperty {}
 
@@ -673,6 +676,9 @@ struct LuaFloatProperty {
     creation_thread_id: std::thread::ThreadId,
 }
 
+// SAFETY: LuaFloatProperty contains Arc<Lua> which is !Send because mlua::Lua
+// (without the "send" feature) is not thread-safe. Access is restricted to a single
+// thread; debug_assert in get() verifies this invariant at runtime in debug builds.
 unsafe impl Send for LuaFloatProperty {}
 unsafe impl Sync for LuaFloatProperty {}
 
@@ -710,6 +716,9 @@ struct LuaStringProperty {
     creation_thread_id: std::thread::ThreadId,
 }
 
+// SAFETY: LuaStringProperty contains Arc<Lua> which is !Send because mlua::Lua
+// (without the "send" feature) is not thread-safe. Access is restricted to a single
+// thread; debug_assert in get() verifies this invariant at runtime in debug builds.
 unsafe impl Send for LuaStringProperty {}
 unsafe impl Sync for LuaStringProperty {}
 
@@ -746,6 +755,9 @@ struct LuaTimerProperty {
     creation_thread_id: std::thread::ThreadId,
 }
 
+// SAFETY: LuaTimerProperty contains Arc<Lua> which is !Send because mlua::Lua
+// (without the "send" feature) is not thread-safe. Access is restricted to a single
+// thread; debug_assert in get_micro() verifies this invariant at runtime in debug builds.
 unsafe impl Send for LuaTimerProperty {}
 unsafe impl Sync for LuaTimerProperty {}
 
@@ -783,6 +795,9 @@ struct LuaEvent {
     creation_thread_id: std::thread::ThreadId,
 }
 
+// SAFETY: LuaEvent contains Arc<Lua> which is !Send because mlua::Lua
+// (without the "send" feature) is not thread-safe. Access is restricted to a single
+// thread; debug_assert in exec() verifies this invariant at runtime in debug builds.
 unsafe impl Send for LuaEvent {}
 unsafe impl Sync for LuaEvent {}
 
@@ -814,6 +829,9 @@ struct LuaFloatWriter {
     creation_thread_id: std::thread::ThreadId,
 }
 
+// SAFETY: LuaFloatWriter contains Arc<Lua> which is !Send because mlua::Lua
+// (without the "send" feature) is not thread-safe. Access is restricted to a single
+// thread; debug_assert in set() verifies this invariant at runtime in debug builds.
 unsafe impl Send for LuaFloatWriter {}
 unsafe impl Sync for LuaFloatWriter {}
 

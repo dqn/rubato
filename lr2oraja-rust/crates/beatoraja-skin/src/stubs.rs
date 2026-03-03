@@ -264,7 +264,9 @@ impl MainController {
 /// Stub for input processor
 pub struct InputProcessor;
 
-// SAFETY: InputProcessor is a stateless unit struct.
+// SAFETY: InputProcessor is a stateless unit struct with no fields.
+// It contains no non-Send/Sync types; the impls are needed because
+// it is stored behind OnceLock which requires Send + Sync.
 unsafe impl Send for InputProcessor {}
 unsafe impl Sync for InputProcessor {}
 

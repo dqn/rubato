@@ -980,8 +980,9 @@ struct SongDbMusicDatabaseAdapter {
     songdb: beatoraja_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor,
 }
 
-// Safety: SQLiteSongDatabaseAccessor uses internal Mutex<Connection>, so it is safe to send
-// across threads even though rusqlite::Connection is not Sync.
+// SAFETY: SongDbMusicDatabaseAdapter contains SQLiteSongDatabaseAccessor which wraps
+// rusqlite::Connection behind an internal Mutex. Connection is !Sync, but the Mutex
+// serializes all access, making it safe to share across threads.
 unsafe impl Sync for SongDbMusicDatabaseAdapter {}
 
 impl md_processor::music_database_accessor::MusicDatabaseAccessor for SongDbMusicDatabaseAdapter {
@@ -1005,6 +1006,9 @@ struct SongDbMainControllerRef {
     bmsroot: Vec<String>,
 }
 
+// SAFETY: SongDbMainControllerRef contains SQLiteSongDatabaseAccessor which wraps
+// rusqlite::Connection behind an internal Mutex, and a Vec<String> (bmsroot) which is
+// inherently Sync. The Mutex serializes all DB access, making it safe to share across threads.
 unsafe impl Sync for SongDbMainControllerRef {}
 
 impl md_processor::MainControllerRef for SongDbMainControllerRef {

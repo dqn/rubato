@@ -1044,4 +1044,439 @@ mod tests {
         assert_eq!(ScoreData::TROPHY_S_RANDOM, SongTrophy::SRandom);
         assert_eq!(ScoreData::TROPHY_BATTLE, SongTrophy::Battle);
     }
+
+    // -- get_exscore() formula and rank boundary tests --
+
+    /// Helper: build a ScoreData with specific judge counts and notes.
+    fn make_score(epg: i32, lpg: i32, egr: i32, lgr: i32, notes: i32) -> ScoreData {
+        let mut sd = ScoreData::default();
+        sd.epg = epg;
+        sd.lpg = lpg;
+        sd.egr = egr;
+        sd.lgr = lgr;
+        sd.notes = notes;
+        sd
+    }
+
+    /// Compute the rank boundary rate for a given index (0..27).
+    /// rank[i] is true when rate >= i / 27.
+    /// Rate boundaries:
+    ///   0/27=F, 3/27=E, 6/27=D, 9/27=C, 12/27=B, 15/27=A,
+    ///   18/27=AA, 21/27=AAA, 24/27=MAX-
+    /// Sub-grades: i%3==1 is "-", i%3==2 is base, i%3==0 is "+" (except 0).
+    fn rank_boundary_exscore(rank_index: usize, notes: i32) -> i32 {
+        // exscore needed = ceil(rank_index / 27 * notes * 2)
+        // Using integer arithmetic to avoid float imprecision:
+        let max_ex = notes as i64 * 2;
+        let needed = (rank_index as i64 * max_ex + 26) / 27; // ceiling division
+        needed as i32
+    }
+
+    // -- get_exscore() formula verification --
+
+    #[test]
+    fn test_exscore_formula_only_perfects() {
+        // All PG: exscore = (epg + lpg) * 2
+        let sd = make_score(50, 50, 0, 0, 100);
+        assert_eq!(sd.get_exscore(), 200);
+    }
+
+    #[test]
+    fn test_exscore_formula_only_greats() {
+        // All GR: exscore = egr + lgr
+        let sd = make_score(0, 0, 60, 40, 100);
+        assert_eq!(sd.get_exscore(), 100);
+    }
+
+    #[test]
+    fn test_exscore_formula_mixed() {
+        // (10 + 20) * 2 + 30 + 40 = 60 + 70 = 130
+        let sd = make_score(10, 20, 30, 40, 100);
+        assert_eq!(sd.get_exscore(), 130);
+    }
+
+    #[test]
+    fn test_exscore_formula_single_epg() {
+        let sd = make_score(1, 0, 0, 0, 1);
+        // (1 + 0) * 2 + 0 + 0 = 2
+        assert_eq!(sd.get_exscore(), 2);
+    }
+
+    #[test]
+    fn test_exscore_formula_single_egr() {
+        let sd = make_score(0, 0, 1, 0, 1);
+        // (0 + 0) * 2 + 1 + 0 = 1
+        assert_eq!(sd.get_exscore(), 1);
+    }
+
+    // -- Zero notes (all miss / empty chart) --
+
+    #[test]
+    fn test_exscore_zero_notes_all_zero() {
+        let sd = make_score(0, 0, 0, 0, 0);
+        assert_eq!(sd.get_exscore(), 0);
+    }
+
+    #[test]
+    fn test_exscore_zero_judge_counts_nonzero_notes() {
+        // Chart has 1000 notes but all missed
+        let sd = make_score(0, 0, 0, 0, 1000);
+        assert_eq!(sd.get_exscore(), 0);
+    }
+
+    // -- All perfect (MAX) --
+
+    #[test]
+    fn test_exscore_all_perfect_100_notes() {
+        // 100 notes, all perfect great: max exscore = 200
+        let sd = make_score(100, 0, 0, 0, 100);
+        assert_eq!(sd.get_exscore(), 200);
+    }
+
+    #[test]
+    fn test_exscore_all_perfect_split_fast_slow() {
+        // 100 notes: 60 epg + 40 lpg = max exscore 200
+        let sd = make_score(60, 40, 0, 0, 100);
+        assert_eq!(sd.get_exscore(), 200);
+    }
+
+    #[test]
+    fn test_exscore_all_perfect_1000_notes() {
+        let sd = make_score(500, 500, 0, 0, 1000);
+        assert_eq!(sd.get_exscore(), 2000);
+    }
+
+    // -- Rank boundary transitions using 1000-note chart --
+    // For 1000 notes, max exscore = 2000.
+    // Boundary at index i: exscore >= ceil(i * 2000 / 27)
+    //
+    // Rank indices (every 3rd is a major boundary):
+    //   0: always true (F floor)
+    //   3: E   -> ceil(3*2000/27) = ceil(222.22) = 223
+    //   6: D   -> ceil(6*2000/27) = ceil(444.44) = 445
+    //   9: C   -> ceil(9*2000/27) = ceil(666.67) = 667
+    //  12: B   -> ceil(12*2000/27) = ceil(888.89) = 889
+    //  15: A   -> ceil(15*2000/27) = ceil(1111.11) = 1112
+    //  18: AA  -> ceil(18*2000/27) = ceil(1333.33) = 1334
+    //  21: AAA -> ceil(21*2000/27) = ceil(1555.56) = 1556
+    //  24: MAX--> ceil(24*2000/27) = ceil(1777.78) = 1778
+
+    /// Verify rank_boundary_exscore helper is correct for a few known values.
+    #[test]
+    fn test_rank_boundary_helper_sanity() {
+        // Index 0: boundary = 0
+        assert_eq!(rank_boundary_exscore(0, 1000), 0);
+        // Index 27: boundary = 2000 (max)
+        assert_eq!(rank_boundary_exscore(27, 1000), 2000);
+        // Index 9 (C): ceil(9*2000/27) = ceil(666.67) = 667
+        assert_eq!(rank_boundary_exscore(9, 1000), 667);
+        // Index 21 (AAA): ceil(21*2000/27) = ceil(1555.56) = 1556
+        assert_eq!(rank_boundary_exscore(21, 1000), 1556);
+    }
+
+    /// For each major rank boundary (E, D, C, B, A, AA, AAA, MAX-),
+    /// verify exscore exactly at, one below, and one above the boundary.
+    /// The rate = exscore / (notes * 2), and rank[i] = rate >= i/27.
+    #[test]
+    fn test_exscore_at_rank_boundaries() {
+        let notes = 1000;
+        let max_ex = notes * 2; // 2000
+
+        // Major rank boundary indices
+        let boundaries = [
+            (3, "E"),
+            (6, "D"),
+            (9, "C"),
+            (12, "B"),
+            (15, "A"),
+            (18, "AA"),
+            (21, "AAA"),
+            (24, "MAX-"),
+        ];
+
+        for (idx, name) in &boundaries {
+            let threshold = rank_boundary_exscore(*idx, notes);
+
+            // One below: should NOT qualify
+            if threshold > 0 {
+                let below = threshold - 1;
+                let rate_below = below as f32 / max_ex as f32;
+                let rank_threshold = *idx as f32 / 27.0;
+                assert!(
+                    rate_below < rank_threshold,
+                    "rank {} (idx {}): exscore {} should be below threshold (rate {:.6} < {:.6})",
+                    name,
+                    idx,
+                    below,
+                    rate_below,
+                    rank_threshold
+                );
+            }
+
+            // Exactly at: should qualify
+            let rate_at = threshold as f32 / max_ex as f32;
+            let rank_threshold = *idx as f32 / 27.0;
+            assert!(
+                rate_at >= rank_threshold,
+                "rank {} (idx {}): exscore {} should meet threshold (rate {:.6} >= {:.6})",
+                name,
+                idx,
+                threshold,
+                rate_at,
+                rank_threshold
+            );
+
+            // One above: should qualify
+            if threshold < max_ex {
+                let above = threshold + 1;
+                let rate_above = above as f32 / max_ex as f32;
+                assert!(
+                    rate_above >= rank_threshold,
+                    "rank {} (idx {}): exscore {} should exceed threshold (rate {:.6} >= {:.6})",
+                    name,
+                    idx,
+                    above,
+                    rate_above,
+                    rank_threshold
+                );
+            }
+        }
+    }
+
+    /// Verify all 27 sub-rank boundaries (including +/- variants).
+    #[test]
+    fn test_exscore_all_27_sub_rank_boundaries() {
+        let notes = 1000;
+        let max_ex = notes * 2;
+
+        for idx in 0..=26 {
+            let threshold = rank_boundary_exscore(idx, notes);
+            let rate = threshold as f32 / max_ex as f32;
+            let boundary = idx as f32 / 27.0;
+
+            assert!(
+                rate >= boundary,
+                "sub-rank {}: exscore {} rate {:.6} should >= {:.6}",
+                idx,
+                threshold,
+                rate,
+                boundary
+            );
+
+            // One below should NOT qualify (except index 0 which is always 0)
+            if threshold > 0 {
+                let rate_below = (threshold - 1) as f32 / max_ex as f32;
+                assert!(
+                    rate_below < boundary,
+                    "sub-rank {}: exscore {} rate {:.6} should < {:.6}",
+                    idx,
+                    threshold - 1,
+                    rate_below,
+                    boundary
+                );
+            }
+        }
+    }
+
+    /// Verify exscore exactly produces the right rate for AAA boundary (21/27).
+    #[test]
+    fn test_exscore_aaa_boundary_exact() {
+        // For a chart with 27 notes, max exscore = 54.
+        // AAA boundary at index 21: rate >= 21/27 = 7/9
+        // Needed exscore = 21 * 54 / 27 = 42 (exact division)
+        let sd = make_score(21, 0, 0, 0, 27);
+        // epg=21 -> exscore = 21*2 = 42
+        assert_eq!(sd.get_exscore(), 42);
+        let rate = sd.get_exscore() as f32 / (27 * 2) as f32;
+        assert!((rate - 7.0 / 9.0).abs() < 1e-6);
+    }
+
+    /// Verify one below AAA boundary does not qualify.
+    #[test]
+    fn test_exscore_aaa_boundary_one_below() {
+        // exscore 41 for 27 notes: rate = 41/54 < 21/27
+        let sd = make_score(20, 0, 1, 0, 27);
+        // epg=20, egr=1 -> exscore = 20*2 + 1 = 41
+        assert_eq!(sd.get_exscore(), 41);
+        let rate = sd.get_exscore() as f32 / (27 * 2) as f32;
+        assert!(rate < 21.0 / 27.0);
+    }
+
+    /// Verify one above AAA boundary qualifies.
+    #[test]
+    fn test_exscore_aaa_boundary_one_above() {
+        // exscore 43 for 27 notes: rate = 43/54 > 21/27
+        let sd = make_score(21, 0, 1, 0, 27);
+        // epg=21, egr=1 -> exscore = 21*2 + 1 = 43
+        assert_eq!(sd.get_exscore(), 43);
+        let rate = sd.get_exscore() as f32 / (27 * 2) as f32;
+        assert!(rate > 21.0 / 27.0);
+    }
+
+    /// MAX rank: all perfect, exscore = notes * 2.
+    #[test]
+    fn test_exscore_max_rank() {
+        let sd = make_score(500, 500, 0, 0, 1000);
+        assert_eq!(sd.get_exscore(), 2000);
+        let rate = sd.get_exscore() as f32 / (1000 * 2) as f32;
+        assert!((rate - 1.0).abs() < 1e-6);
+    }
+
+    /// F rank: all miss, exscore = 0.
+    #[test]
+    fn test_exscore_f_rank_all_miss() {
+        let sd = make_score(0, 0, 0, 0, 1000);
+        assert_eq!(sd.get_exscore(), 0);
+        // rate = 0, only rank[0] should be satisfied (0/27 = 0.0 <= 0.0)
+    }
+
+    // -- Saturating arithmetic in get_exscore() --
+
+    #[test]
+    fn test_exscore_saturating_epg_lpg_overflow() {
+        // (epg + lpg) would overflow i32 without saturating_add
+        let sd = make_score(i32::MAX, 1, 0, 0, 1000);
+        // saturating_add: i32::MAX + 1 = i32::MAX
+        // saturating_mul: i32::MAX * 2 = i32::MAX
+        // saturating_add(0).saturating_add(0) = i32::MAX
+        assert_eq!(sd.get_exscore(), i32::MAX);
+    }
+
+    #[test]
+    fn test_exscore_saturating_mul_overflow() {
+        // Even if sum fits, *2 would overflow
+        let sd = make_score(i32::MAX / 2 + 1, i32::MAX / 2 + 1, 0, 0, 1000);
+        // saturating_add: (MAX/2+1) + (MAX/2+1) = MAX/2*2 + 2 = MAX + 1 -> saturates to MAX
+        // saturating_mul: MAX * 2 -> saturates to MAX
+        assert_eq!(sd.get_exscore(), i32::MAX);
+    }
+
+    #[test]
+    fn test_exscore_saturating_add_egr_overflow() {
+        // (epg+lpg)*2 fits, but adding egr overflows
+        let sd = make_score(i32::MAX / 4, i32::MAX / 4, i32::MAX, 0, 1000);
+        // epg+lpg = MAX/4 + MAX/4 = MAX/2 (fits)
+        // (MAX/2) * 2 = MAX - 1 (just under MAX due to integer division)
+        // (MAX-1) + MAX -> saturates to MAX
+        assert_eq!(sd.get_exscore(), i32::MAX);
+    }
+
+    #[test]
+    fn test_exscore_saturating_add_lgr_overflow() {
+        // Everything fits except final lgr addition
+        let sd = make_score(0, 0, i32::MAX, i32::MAX, 1000);
+        // (0+0)*2 = 0; 0 + MAX = MAX; MAX + MAX -> saturates to MAX
+        assert_eq!(sd.get_exscore(), i32::MAX);
+    }
+
+    #[test]
+    fn test_exscore_saturating_all_max() {
+        let sd = make_score(i32::MAX, i32::MAX, i32::MAX, i32::MAX, 1000);
+        assert_eq!(sd.get_exscore(), i32::MAX);
+    }
+
+    #[test]
+    fn test_exscore_large_values_no_overflow() {
+        // Large but within range: (500000 + 500000) * 2 + 100000 + 100000 = 2200000
+        let sd = make_score(500_000, 500_000, 100_000, 100_000, 1_200_000);
+        assert_eq!(sd.get_exscore(), 2_200_000);
+    }
+
+    #[test]
+    fn test_exscore_just_under_overflow_boundary() {
+        // (epg + lpg) * 2 just barely fits in i32
+        // i32::MAX = 2_147_483_647
+        // We want (epg + lpg) * 2 = 2_147_483_646 (MAX - 1), so epg+lpg = 1_073_741_823
+        let sd = make_score(1_073_741_823, 0, 0, 0, 1000);
+        assert_eq!(sd.get_exscore(), 2_147_483_646);
+    }
+
+    #[test]
+    fn test_exscore_just_at_overflow_boundary() {
+        // (epg + lpg) * 2 + egr + lgr = i32::MAX = 2_147_483_647
+        let sd = make_score(1_073_741_823, 0, 1, 0, 1000);
+        assert_eq!(sd.get_exscore(), 2_147_483_647);
+    }
+
+    #[test]
+    fn test_exscore_one_past_overflow_boundary() {
+        // Without saturation this would overflow, but saturating keeps at MAX
+        let sd = make_score(1_073_741_823, 0, 2, 0, 1000);
+        // (1_073_741_823 + 0) * 2 = 2_147_483_646
+        // 2_147_483_646 + 2 = 2_147_483_648 -> overflows i32, saturates to MAX
+        assert_eq!(sd.get_exscore(), i32::MAX);
+    }
+
+    // -- Rank boundary transitions with small note counts --
+
+    #[test]
+    fn test_exscore_rank_boundary_single_note() {
+        // 1 note, max exscore = 2
+        // Only 3 possible exscores: 0, 1, 2
+        let sd0 = make_score(0, 0, 0, 0, 1);
+        assert_eq!(sd0.get_exscore(), 0);
+
+        let sd1 = make_score(0, 0, 1, 0, 1);
+        assert_eq!(sd1.get_exscore(), 1);
+
+        let sd2 = make_score(1, 0, 0, 0, 1);
+        assert_eq!(sd2.get_exscore(), 2);
+    }
+
+    #[test]
+    fn test_exscore_rank_boundary_27_notes_exact_divisions() {
+        // With 27 notes, max exscore = 54.
+        // Each rank boundary at index i divides exactly: i * 54 / 27 = i * 2.
+        // So rank[i] requires exscore >= i * 2.
+        for i in 0..=26 {
+            let needed = i * 2;
+            let rate = needed as f32 / 54.0;
+            let threshold = i as f32 / 27.0;
+            assert!(
+                rate >= threshold,
+                "27-note chart: rank {} needs exscore >= {}, rate {:.4} >= {:.4}",
+                i,
+                needed,
+                rate,
+                threshold
+            );
+            if needed > 0 {
+                let rate_below = (needed - 1) as f32 / 54.0;
+                assert!(
+                    rate_below < threshold,
+                    "27-note chart: rank {} exscore {} should be below (rate {:.4} < {:.4})",
+                    i,
+                    needed - 1,
+                    rate_below,
+                    threshold
+                );
+            }
+        }
+    }
+
+    /// Exscore respects that GD/BD/PR/MS do not contribute.
+    #[test]
+    fn test_exscore_ignores_gd_bd_pr_ms() {
+        let mut sd = ScoreData::default();
+        sd.egd = 100;
+        sd.lgd = 200;
+        sd.ebd = 300;
+        sd.lbd = 400;
+        sd.epr = 500;
+        sd.lpr = 600;
+        sd.ems = 700;
+        sd.lms = 800;
+        sd.notes = 3600;
+        // None of these contribute to exscore
+        assert_eq!(sd.get_exscore(), 0);
+    }
+
+    /// Exscore with asymmetric fast/slow split still calculates correctly.
+    #[test]
+    fn test_exscore_asymmetric_fast_slow() {
+        // All perfects as early, all greats as late
+        let sd = make_score(100, 0, 0, 50, 150);
+        // (100 + 0) * 2 + 0 + 50 = 250
+        assert_eq!(sd.get_exscore(), 250);
+    }
 }
