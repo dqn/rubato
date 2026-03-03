@@ -1,5 +1,7 @@
 use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
 use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
+use crate::skin_gauge_graph_object::SkinGaugeGraphObject;
+use crate::skin_note_distribution_graph::SkinNoteDistributionGraph;
 use crate::stubs::{MainState, Rectangle, Resolution};
 
 /// LR2 course result skin loader
@@ -11,8 +13,8 @@ use crate::stubs::{MainState, Rectangle, Resolution};
 pub struct LR2CourseResultSkinLoaderState {
     pub csv: LR2SkinCSVLoaderState,
     pub gauge: Rectangle,
-    pub gaugeobj: Option<()>, // SkinGaugeGraphObject placeholder
-    pub noteobj: Option<()>,  // SkinNoteDistributionGraph placeholder
+    pub gaugeobj: Option<SkinGaugeGraphObject>,
+    pub noteobj: Option<SkinNoteDistributionGraph>,
 }
 
 impl LR2CourseResultSkinLoaderState {
@@ -34,12 +36,11 @@ impl LR2CourseResultSkinLoaderState {
             }
             "SRC_GAUGECHART_1P" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
-                // gaugeobj = new SkinGaugeGraphObject()
-                // gaugeobj.setLineWidth(values[6])
-                // gaugeobj.setDelay(values[14] - values[13])
+                let mut obj = SkinGaugeGraphObject::new_default();
+                obj.set_line_width(values[6]);
+                obj.set_delay(values[14] - values[13]);
                 self.gauge = Rectangle::new(0.0, 0.0, values[11] as f32, values[12] as f32);
-                self.gaugeobj = Some(());
-                // skin.add(gaugeobj)
+                self.gaugeobj = Some(obj);
             }
             "DST_GAUGECHART_1P" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
@@ -50,10 +51,11 @@ impl LR2CourseResultSkinLoaderState {
             "SRC_NOTECHART_1P" => {
                 // #SRC_NOTECHART_1P,(index),(gr),(x),(y),(w),(h),(div_x),(div_y),(cycle),(timer),field_w,field_h,(start),(end),delay,backTexOff,orderReverse,noGap
                 let values = lr2_skin_loader::parse_int(str_parts);
-                // noteobj = new SkinNoteDistributionGraph(values[1], values[15], values[16], values[17], values[18], values[19])
+                let obj = SkinNoteDistributionGraph::new(
+                    values[1], values[15], values[16], values[17], values[18], values[19],
+                );
                 self.gauge = Rectangle::new(0.0, 0.0, values[11] as f32, values[12] as f32);
-                self.noteobj = Some(());
-                // skin.add(noteobj)
+                self.noteobj = Some(obj);
             }
             "DST_NOTECHART_1P" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
@@ -75,6 +77,7 @@ impl LR2SkinLoaderAccess for LR2CourseResultSkinLoaderState {
     }
 
     fn assemble_objects(&mut self, _skin: &mut crate::skin::Skin) {
-        // Course result skin has no LR2-specific objects beyond generic SRC/DST images.
+        // Graph objects are stored in self.gaugeobj/noteobj.
+        // Full skin.add() + setDestination() wiring deferred to rendering pipeline integration.
     }
 }

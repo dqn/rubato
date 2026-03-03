@@ -70,10 +70,7 @@ pub struct LR2PlaySkinLoaderState {
     pub laner: Vec<Option<Rectangle>>,
     pub scale: Vec<f32>,
     pub dstnote2: Vec<i32>,
-    pub lines: Vec<Option<()>>, // SkinImage placeholder
     pub linevalues: [Option<Vec<String>>; 2],
-
-    pub judge: [Option<()>; 3], // SkinJudge placeholder
 
     pub srcw: f32,
     pub srch: f32,
@@ -82,11 +79,10 @@ pub struct LR2PlaySkinLoaderState {
 
     pub gauge: Rectangle,
     pub playerr: Vec<Option<Rectangle>>,
-    pub hidden: Option<()>,
-    pub lane_cover: Option<()>,
-    pub lanerender: Option<()>,
+    pub hidden: bool,
+    pub lanerender: bool,
     pub judgeline: Option<SkinImage>,
-    pub bga: Option<()>,
+    pub bga: bool,
 
     // Accumulated play skin property values (applied by caller)
     /// Close time (ms) — set by CLOSE command
@@ -153,20 +149,17 @@ impl LR2PlaySkinLoaderState {
             laner: vec![None; 8],
             scale: vec![0.0; 8],
             dstnote2: vec![0; 8],
-            lines: vec![None; 8],
             linevalues: [None, None],
-            judge: [None, None, None],
             srcw,
             srch,
             dstw,
             dsth,
             gauge: Rectangle::default(),
             playerr: Vec::new(),
-            hidden: None,
-            lane_cover: None,
-            lanerender: None,
+            hidden: false,
+            lanerender: false,
             judgeline: None,
-            bga: None,
+            bga: false,
             play_close: None,
             play_playstart: None,
             play_loadstart: None,
@@ -221,14 +214,14 @@ impl LR2PlaySkinLoaderState {
                 // In Java: bga = new SkinBGA(c.getBgaExpand()); skin.add(bga)
                 // SkinBgaObject is created and added to the skin by the caller.
                 // Here we just signal that BGA was requested.
-                self.bga = Some(());
+                self.bga = true;
             }
             "DST_BGA" => {
                 // DST_BGA sets the destination for the BGA object.
                 // In Java: skin.setDestination(bga, 0, values[3], srch - values[4] - values[6], values[5], values[6], ...)
                 // The destination is applied by the caller using the skin's setDestination.
                 // We store the raw values for the caller.
-                if self.bga.is_some() {
+                if self.bga {
                     let _values = lr2_skin_loader::parse_int(str_parts);
                     // BGA destination will be applied by caller when connecting to Skin
                 }
@@ -378,7 +371,7 @@ impl LR2PlaySkinLoaderState {
                         ));
                         self.scale[lane] = values[6] as f32 * self.dsth / self.srch;
                     }
-                    if self.lanerender.is_none() {
+                    if !self.lanerender {
                         // Fill in missing HCN sources from LN sources
                         for i in 0..self.hcnend.len() {
                             if self.hcnend[i].is_none() {
@@ -411,7 +404,7 @@ impl LR2PlaySkinLoaderState {
                             }
                         }
                         // lanerender = new SkinNote(note, lnss, mine)
-                        self.lanerender = Some(());
+                        self.lanerender = true;
                         // lanerender.setOffsetID(readOffset(str, 21, new int[]{OFFSET_NOTES_1P}))
                         // skin.add(lanerender)
                     }
@@ -455,7 +448,7 @@ impl LR2PlaySkinLoaderState {
                     if let Some(ref mut judge_obj) = self.judge_objects[player] {
                         let _judge_image =
                             SkinImage::new_with_int_timer(images, values[10], values[9]);
-                        judge_obj.inner.set_judge(judge_idx, ());
+                        judge_obj.inner.set_judge(judge_idx);
                     }
                 }
             }
@@ -522,7 +515,7 @@ impl LR2PlaySkinLoaderState {
                     };
                     // Set judge count on the SkinJudge (placeholder)
                     if let Some(ref mut judge_obj) = self.judge_objects[player] {
-                        judge_obj.inner.set_judge_count(judge_idx, ());
+                        judge_obj.inner.set_judge_count(judge_idx);
                     }
                 }
             }
@@ -639,16 +632,16 @@ impl LR2PlaySkinLoaderState {
                 let values = lr2_skin_loader::parse_int(str_parts);
                 let _images = self.csv.get_source_image(&values);
                 // hidden = new SkinHidden(images, values[10], values[9])
-                self.hidden = Some(());
+                self.hidden = true;
             }
             "DST_HIDDEN" => {
-                if self.hidden.is_some() {
+                if self.hidden {
                     let _values = lr2_skin_loader::parse_int(str_parts);
                     // hidden.setDestination(...)
                 }
             }
             "DST_LIFT" => {
-                if self.hidden.is_some() {
+                if self.hidden {
                     let _values = lr2_skin_loader::parse_int(str_parts);
                     // hidden.setDestination(...)
                 }
@@ -1032,7 +1025,7 @@ impl LR2SkinLoaderAccess for LR2PlaySkinLoaderState {
         }
 
         // 4. Create SkinNoteObject from accumulated note source data
-        if self.lanerender.is_some() {
+        if self.lanerender {
             let lane_count = self.note.len();
             let mut note_obj = crate::skin_note_object::SkinNoteObject::new(lane_count);
             for (i, lane_rect) in self.laner.iter().enumerate() {
@@ -1052,7 +1045,7 @@ impl LR2SkinLoaderAccess for LR2PlaySkinLoaderState {
         }
 
         // 5. Create SkinBgaObject if BGA was requested
-        if self.bga.is_some() {
+        if self.bga {
             let bga_obj = crate::skin_bga_object::SkinBgaObject::new(0);
             skin.add(SkinObject::Bga(bga_obj));
         }
@@ -1192,17 +1185,17 @@ mod tests {
     #[test]
     fn test_src_bga_sets_flag() {
         let mut state = make_state();
-        assert!(state.bga.is_none());
+        assert!(!state.bga);
         state.process_play_command("SRC_BGA", &str_vec(&["SRC_BGA"]));
-        assert!(state.bga.is_some());
+        assert!(state.bga);
     }
 
     #[test]
     fn test_dst_bga_without_src_no_panic() {
         let mut state = make_state();
         state.process_play_command("DST_BGA", &make_parts("DST_BGA", &[0; 21]));
-        // No panic, bga still None
-        assert!(state.bga.is_none());
+        // No panic, bga still false
+        assert!(!state.bga);
     }
 
     // ===== SRC_NOWJUDGE / DST_NOWJUDGE =====

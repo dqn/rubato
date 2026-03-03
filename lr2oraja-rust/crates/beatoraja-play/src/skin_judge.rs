@@ -1,9 +1,9 @@
 /// Judge display skin object
 pub struct SkinJudge {
-    /// Judge images (7 types: PG, GR, GD, BD, PR, MS, PG+MAX)
-    judge: [Option<()>; 7],
-    /// Judge count numbers (7 types)
-    count: [Option<()>; 7],
+    /// Judge images present (7 types: PG, GR, GD, BD, PR, MS, PG+MAX)
+    judge: [bool; 7],
+    /// Judge count numbers present (7 types)
+    count: [bool; 7],
     /// Player index
     player: i32,
     /// Whether to shift position based on count length
@@ -17,8 +17,8 @@ pub struct SkinJudge {
 impl SkinJudge {
     pub fn new(player: i32, shift: bool) -> Self {
         SkinJudge {
-            judge: [None; 7],
-            count: [None; 7],
+            judge: [false; 7],
+            count: [false; 7],
             player,
             shift,
             now_judge: None,
@@ -27,22 +27,22 @@ impl SkinJudge {
     }
 
     pub fn get_judge(&self, index: usize) -> bool {
-        index < self.judge.len() && self.judge[index].is_some()
+        index < self.judge.len() && self.judge[index]
     }
 
-    pub fn set_judge(&mut self, index: usize, _judge: ()) {
+    pub fn set_judge(&mut self, index: usize) {
         if index < self.judge.len() {
-            self.judge[index] = Some(());
+            self.judge[index] = true;
         }
     }
 
     pub fn get_judge_count(&self, index: usize) -> bool {
-        index < self.count.len() && self.count[index].is_some()
+        index < self.count.len() && self.count[index]
     }
 
-    pub fn set_judge_count(&mut self, index: usize, _count: ()) {
+    pub fn set_judge_count(&mut self, index: usize) {
         if index < self.count.len() {
-            self.count[index] = Some(());
+            self.count[index] = true;
         }
     }
 

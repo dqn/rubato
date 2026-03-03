@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
 use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
+use crate::skin_image::SkinImage;
 use crate::stubs::{MainState, Rectangle, Resolution, TextureRegion};
 
 /// LR2 select skin loader
@@ -43,8 +44,8 @@ pub struct LR2SelectSkinLoaderState {
     pub csv: LR2SkinCSVLoaderState,
 
     pub barimage: Vec<Option<Vec<TextureRegion>>>,
-    pub barimageon: Vec<Option<()>>,  // SkinImage placeholder
-    pub barimageoff: Vec<Option<()>>, // SkinImage placeholder
+    pub barimageon: Vec<Option<SkinImage>>,
+    pub barimageoff: Vec<Option<SkinImage>>,
     pub barcycle: i32,
 
     pub gauge: Rectangle,
@@ -65,8 +66,8 @@ impl LR2SelectSkinLoaderState {
         Self {
             csv: LR2SkinCSVLoaderState::new(src, dst, usecim, skinpath),
             barimage: vec![None; 10],
-            barimageon: vec![None; BAR_COUNT],
-            barimageoff: vec![None; BAR_COUNT],
+            barimageon: (0..BAR_COUNT).map(|_| None).collect(),
+            barimageoff: (0..BAR_COUNT).map(|_| None).collect(),
             barcycle: 0,
             gauge: Rectangle::default(),
             srcw,
@@ -109,8 +110,17 @@ impl LR2SelectSkinLoaderState {
                 }
                 let idx = values[1] as usize;
                 if idx < self.barimageoff.len() && self.barimageoff[idx].is_none() {
-                    // barimageoff[values[1]] = new SkinImage(barimage, 0, barcycle, null)
-                    self.barimageoff[idx] = Some(());
+                    let images_2d: Vec<Vec<TextureRegion>> = self
+                        .barimage
+                        .iter()
+                        .map(|opt| opt.clone().unwrap_or_default())
+                        .collect();
+                    self.barimageoff[idx] = Some(SkinImage::new_with_int_timer_ref(
+                        images_2d,
+                        0,
+                        self.barcycle,
+                        None,
+                    ));
                 }
                 // barimageoff[values[1]].setDestination(...)
             }
@@ -126,8 +136,17 @@ impl LR2SelectSkinLoaderState {
                 }
                 let idx = values[1] as usize;
                 if idx < self.barimageon.len() && self.barimageon[idx].is_none() {
-                    // barimageon[values[1]] = new SkinImage(barimage, 0, barcycle, null)
-                    self.barimageon[idx] = Some(());
+                    let images_2d: Vec<Vec<TextureRegion>> = self
+                        .barimage
+                        .iter()
+                        .map(|opt| opt.clone().unwrap_or_default())
+                        .collect();
+                    self.barimageon[idx] = Some(SkinImage::new_with_int_timer_ref(
+                        images_2d,
+                        0,
+                        self.barcycle,
+                        None,
+                    ));
                 }
                 // barimageon[values[1]].setDestination(...)
             }

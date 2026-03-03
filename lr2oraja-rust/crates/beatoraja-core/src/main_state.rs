@@ -89,7 +89,7 @@ pub trait MainState {
         }
     }
 
-    fn get_image(&self, _imageid: i32) -> Option<()> {
+    fn get_image(&self, _imageid: i32) -> Option<beatoraja_render::texture::TextureRegion> {
         // Default no-op: concrete states override to return TextureRegion from PlayerResource.
         // Skin rendering uses the skin crate's MainState trait (separate from this trait).
         None

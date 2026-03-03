@@ -10,9 +10,8 @@ use crate::main_loader::MainLoader;
 use crate::player_config::PlayerConfig;
 use std::path::Path;
 
-/// TextureRegion stub (LibGDX equivalent)
-#[derive(Clone)]
-pub struct TextureRegion;
+/// TextureRegion re-exported from beatoraja-render (LibGDX equivalent)
+pub use beatoraja_render::texture::TextureRegion;
 
 /// BGAProcessor stub (Phase 5+ dependency)
 pub struct BGAProcessor;

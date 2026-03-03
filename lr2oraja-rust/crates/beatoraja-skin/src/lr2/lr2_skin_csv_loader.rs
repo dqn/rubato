@@ -3,10 +3,12 @@ use std::path::Path;
 
 use log::warn;
 
+use crate::lr2::lr2_font_loader::LR2FontLoader;
 use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
 use crate::skin::SkinObject;
 use crate::skin_gauge::SkinGauge;
 use crate::skin_image::SkinImage;
+use crate::skin_text_image::SkinTextImageSource;
 use crate::stubs::{MainState, Rectangle, Resolution, Texture, TextureRegion};
 
 /// LR2 CSV skin loader base
@@ -29,7 +31,7 @@ pub enum ImageListEntry {
 pub struct LR2SkinCSVLoaderState {
     pub base: LR2SkinLoaderState,
     pub imagelist: Vec<ImageListEntry>,
-    pub fontlist: Vec<Option<()>>, // SkinTextImageSource placeholder
+    pub fontlist: Vec<Option<SkinTextImageSource>>,
 
     /// Source resolution
     pub src: Resolution,
@@ -246,8 +248,34 @@ impl LR2SkinCSVLoaderState {
                     lr2_skin_loader::get_lr2_path(&self.skinpath, &str_parts[1], &self.filemap);
                 let path = Path::new(&imagefile);
                 if path.exists() {
-                    // LR2FontLoader would load the font here
-                    self.fontlist.push(Some(()));
+                    let mut loader = LR2FontLoader::new(self.usecim);
+                    match loader.load_font(path) {
+                        Ok(data) => {
+                            let mut source = SkinTextImageSource::new(data.usecim);
+                            source.set_size(data.size);
+                            source.set_margin(data.margin);
+                            for (i, p) in data.paths.iter().enumerate() {
+                                if let Some(p) = p {
+                                    source.set_path(i as i32, p.clone());
+                                }
+                            }
+                            for entry in &data.images {
+                                source.set_image(
+                                    entry.code,
+                                    entry.texture_index,
+                                    entry.x,
+                                    entry.y,
+                                    entry.w,
+                                    entry.h,
+                                );
+                            }
+                            self.fontlist.push(Some(source));
+                        }
+                        Err(e) => {
+                            warn!("LR2FONT load error: {} : {}", imagefile, e);
+                            self.fontlist.push(None);
+                        }
+                    }
                 } else {
                     warn!(
                         "IMAGE {} : file not found : {}",
@@ -1041,7 +1069,7 @@ SCENETIME,9999\n\
             &str_vec(&["#LR2FONT", "/nonexistent/font.lr2font"]),
         );
         assert_eq!(state.fontlist.len(), 1);
-        assert_eq!(state.fontlist[0], None);
+        assert!(state.fontlist[0].is_none());
     }
 
     #[test]
@@ -1057,7 +1085,7 @@ SCENETIME,9999\n\
             &str_vec(&["#LR2FONT", font_path.to_str().unwrap()]),
         );
         assert_eq!(state.fontlist.len(), 1);
-        assert_eq!(state.fontlist[0], Some(()));
+        assert!(state.fontlist[0].is_some());
     }
 
     // --- parse_int tests ---
