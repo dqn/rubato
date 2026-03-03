@@ -14,3 +14,8 @@ serde_json.workspace = true
 anyhow.workspace = true
 
 [dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "modifier_bench"
+harness = false

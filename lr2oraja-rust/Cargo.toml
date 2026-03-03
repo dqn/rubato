@@ -124,6 +124,9 @@ cpal = "0.17"
 # Image processing
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "bmp", "gif", "ico", "tga", "tiff", "webp"] }
 
+# Benchmarking
+criterion = { version = "0.5", features = ["html_reports"] }
+
 # Testing
 tempfile = "3"
 

@@ -14,3 +14,8 @@ log.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+criterion.workspace = true
+
+[[bench]]
+name = "decode_bench"
+harness = false
