@@ -124,12 +124,16 @@ impl TableDataAccessor {
     pub fn write(&self, td: &mut TableData) {
         let path = PathBuf::from(&self.tabledir)
             .join(format!("{}.bmt", Self::get_file_name(td.get_url())));
-        TableData::write_to_path(&path, td);
+        if let Err(e) = TableData::write_to_path(&path, td) {
+            log::warn!("Failed to write table data to {}: {:#}", path.display(), e);
+        }
     }
 
     pub fn write_with_filename(&self, td: &mut TableData, filename: &str) {
         let path = PathBuf::from(&self.tabledir).join(filename);
-        TableData::write_to_path(&path, td);
+        if let Err(e) = TableData::write_to_path(&path, td) {
+            log::warn!("Failed to write table data to {}: {:#}", path.display(), e);
+        }
     }
 
     pub fn read_all(&self) -> Vec<TableData> {

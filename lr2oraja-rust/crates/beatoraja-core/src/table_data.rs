@@ -1,6 +1,7 @@
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
+use anyhow::{Context, Result, bail};
 use flate2::Compression;
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
@@ -93,26 +94,31 @@ impl TableData {
         None
     }
 
-    pub fn write_to_path(p: &Path, td: &TableData) {
+    pub fn write_to_path(p: &Path, td: &TableData) -> Result<()> {
         let mut td = td.clone();
         td.shrink();
         let path_str = p.to_string_lossy();
-        let json = match serde_json::to_string_pretty(&td) {
-            Ok(j) => j,
-            Err(_) => return,
-        };
+        let json = serde_json::to_string_pretty(&td).context("failed to serialize table data")?;
 
         if path_str.ends_with(".bmt") {
-            if let Ok(file) = std::fs::File::create(p) {
-                let mut encoder = GzEncoder::new(BufWriter::new(file), Compression::default());
-                let _ = encoder.write_all(json.as_bytes());
-                let _ = encoder.finish();
-            }
-        } else if path_str.ends_with(".json")
-            && let Ok(mut file) = std::fs::File::create(p)
-        {
-            let _ = file.write_all(json.as_bytes());
+            let file = std::fs::File::create(p)
+                .with_context(|| format!("failed to create file: {}", p.display()))?;
+            let mut encoder = GzEncoder::new(BufWriter::new(file), Compression::default());
+            encoder
+                .write_all(json.as_bytes())
+                .with_context(|| format!("failed to write gzip data: {}", p.display()))?;
+            encoder
+                .finish()
+                .with_context(|| format!("failed to finish gzip encoding: {}", p.display()))?;
+        } else if path_str.ends_with(".json") {
+            let mut file = std::fs::File::create(p)
+                .with_context(|| format!("failed to create file: {}", p.display()))?;
+            file.write_all(json.as_bytes())
+                .with_context(|| format!("failed to write JSON data: {}", p.display()))?;
+        } else {
+            bail!("unsupported file extension: {}", p.display());
         }
+        Ok(())
     }
 }
 
@@ -163,5 +169,87 @@ impl Validatable for TableFolder {
     fn validate(&mut self) -> bool {
         self.songs.retain_mut(|s| s.validate());
         self.name.as_ref().is_some_and(|n| !n.is_empty()) && !self.songs.is_empty()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::stubs::SongData;
+
+    /// Helper to create a minimal valid TableData for testing.
+    fn make_valid_table_data() -> TableData {
+        TableData {
+            name: "test-table".to_string(),
+            url: "http://example.com/table".to_string(),
+            tag: String::new(),
+            folder: vec![TableFolder {
+                name: Some("Normal".to_string()),
+                songs: vec![{
+                    let mut s = SongData::default();
+                    s.title = "test-song".to_string();
+                    s.md5 = "d41d8cd98f00b204e9800998ecf8427e".to_string();
+                    s
+                }],
+            }],
+            course: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn write_and_read_roundtrip_bmt() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.bmt");
+        let td = make_valid_table_data();
+
+        TableData::write_to_path(&path, &td).unwrap();
+
+        let loaded = TableData::read_from_path(&path).expect("should read back .bmt");
+        assert_eq!(loaded.name, "test-table");
+        assert_eq!(loaded.folder.len(), 1);
+        assert_eq!(loaded.folder[0].songs.len(), 1);
+    }
+
+    #[test]
+    fn write_and_read_roundtrip_json() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.json");
+        let td = make_valid_table_data();
+
+        TableData::write_to_path(&path, &td).unwrap();
+
+        let loaded = TableData::read_from_path(&path).expect("should read back .json");
+        assert_eq!(loaded.name, "test-table");
+        assert_eq!(loaded.folder.len(), 1);
+    }
+
+    #[test]
+    fn write_to_path_returns_error_for_unsupported_extension() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.txt");
+        let td = make_valid_table_data();
+
+        let result = TableData::write_to_path(&path, &td);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("unsupported file extension"),
+            "error message should mention unsupported extension"
+        );
+    }
+
+    #[test]
+    fn write_to_path_returns_error_for_nonexistent_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("no/such/dir/test.bmt");
+        let td = make_valid_table_data();
+
+        let result = TableData::write_to_path(&path, &td);
+        assert!(
+            result.is_err(),
+            "writing to a nonexistent directory should fail"
+        );
     }
 }

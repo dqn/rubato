@@ -98,8 +98,14 @@ impl TableEditorView {
             ..Default::default()
         };
 
-        if let Some(ref filepath) = self.filepath {
-            TableData::write_to_path(filepath, &td);
+        if let Some(ref filepath) = self.filepath
+            && let Err(e) = TableData::write_to_path(filepath, &td)
+        {
+            log::warn!(
+                "Failed to write table data to {}: {:#}",
+                filepath.display(),
+                e
+            );
         }
     }
 
