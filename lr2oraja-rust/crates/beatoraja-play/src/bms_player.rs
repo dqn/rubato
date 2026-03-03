@@ -271,6 +271,12 @@ pub struct BMSPlayer {
 
 impl BMSPlayer {
     pub fn new(model: BMSModel) -> Self {
+        Self::new_with_resource_gen(model, 1)
+    }
+
+    /// Create a BMSPlayer with the given song_resource_gen for BGAProcessor cache sizing.
+    /// Java: BGAProcessor(256, Math.max(config.getSongResourceGen(), 1))
+    pub fn new_with_resource_gen(model: BMSModel, song_resource_gen: i32) -> Self {
         let playtime = model.get_last_note_time() + TIME_MARGIN;
         let total_notes = model.get_total_notes();
         BMSPlayer {
@@ -278,7 +284,7 @@ impl BMSPlayer {
             lanerender: None,
             lane_property: None,
             judge: JudgeManager::new(),
-            bga: Arc::new(Mutex::new(BGAProcessor::new())),
+            bga: Arc::new(Mutex::new(BGAProcessor::new_with_resource_gen(song_resource_gen))),
             gauge: None,
             playtime,
             keyinput: None,

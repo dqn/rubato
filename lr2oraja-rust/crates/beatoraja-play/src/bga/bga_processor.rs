@@ -88,7 +88,8 @@ impl Default for BGAProcessor {
 }
 
 impl BGAProcessor {
-    pub fn new() -> Self {
+    pub fn new_with_resource_gen(song_resource_gen: i32) -> Self {
+        let maxgen = song_resource_gen.max(1);
         BGAProcessor {
             progress: 0.0,
             playingbgaid: -1,
@@ -97,7 +98,7 @@ impl BGAProcessor {
             get_misslayer_duration: 500,
             misslayer: None,
             time: 0,
-            cache: Some(BGImageProcessor::new(256, 1)),
+            cache: Some(BGImageProcessor::new(256, maxgen)),
             movies: Vec::new(),
             blanktex: Texture {
                 width: 1,
@@ -112,6 +113,10 @@ impl BGAProcessor {
             rbga: false,
             rlayer: false,
         }
+    }
+
+    pub fn new() -> Self {
+        Self::new_with_resource_gen(1)
     }
 
     /// Create a BGAProcessor and load timeline data from the given model.

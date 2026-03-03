@@ -251,7 +251,8 @@ impl StateFactory for LauncherStateFactory {
                     .and_then(|r| r.get_bms_model())
                     .cloned()
                     .unwrap_or_default();
-                let mut player = BMSPlayer::new(model.clone());
+                let song_resource_gen = controller.get_config().song_resource_gen;
+                let mut player = BMSPlayer::new_with_resource_gen(model.clone(), song_resource_gen);
 
                 // Reuse BGAProcessor from PlayerResource to preserve texture cache between plays.
                 // Java: bga = resource.getBGAManager() (BMSPlayer.java line 545)
