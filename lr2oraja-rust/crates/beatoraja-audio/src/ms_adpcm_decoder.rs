@@ -38,6 +38,14 @@ impl MSADPCMDecoder {
         // each header contains two samples
         // channels * 2 + (blockSize - channels * sizeof(header)) * 2 ==> (blockSize - channels * 6) * 2
         let samples_per_block = (block_size - channels * 6) * 2 / channels;
+        if samples_per_block <= 0 {
+            bail!(
+                "MSADPCMDecoder: invalid block_align {} for {} channels (samples_per_block={})",
+                block_align,
+                channels,
+                samples_per_block
+            );
+        }
         Ok(MSADPCMDecoder {
             adapt_coeff1: vec![0; channels as usize],
             adapt_coeff2: vec![0; channels as usize],
@@ -268,6 +276,27 @@ mod tests {
             result.is_err(),
             "MSADPCMDecoder::new with channels=0 should return Err"
         );
+    }
+
+    #[test]
+    fn test_ms_adpcm_decoder_negative_samples_per_block() {
+        // block_align=1, channels=1: (1 - 6) * 2 / 1 = -10
+        let result = MSADPCMDecoder::new(1, 44100, 1);
+        assert!(result.is_err(), "negative samples_per_block should fail");
+    }
+
+    #[test]
+    fn test_ms_adpcm_decoder_zero_samples_per_block() {
+        // block_align=6, channels=1: (6 - 6) * 2 / 1 = 0
+        let result = MSADPCMDecoder::new(1, 44100, 6);
+        assert!(result.is_err(), "zero samples_per_block should fail");
+    }
+
+    #[test]
+    fn test_ms_adpcm_decoder_valid_block_align() {
+        // block_align=256, channels=1: (256 - 6) * 2 / 1 = 500
+        let result = MSADPCMDecoder::new(1, 44100, 256);
+        assert!(result.is_ok(), "valid block_align should succeed");
     }
 
     #[test]

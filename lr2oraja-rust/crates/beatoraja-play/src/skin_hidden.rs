@@ -61,7 +61,7 @@ impl SkinHidden {
     }
 
     fn get_image_index(&self, length: usize, time: i64) -> usize {
-        if self.cycle == 0 {
+        if self.cycle <= 0 {
             return 0;
         }
         if length == 0 {
@@ -70,7 +70,9 @@ impl SkinHidden {
         if time < 0 {
             return 0;
         }
-        ((time as usize * length / self.cycle as usize) % length)
+        // Reduce magnitude first to avoid overflow in time * length
+        let t = (time % self.cycle as i64) as usize;
+        (t * length / self.cycle as usize) % length
     }
 
     pub fn get_disapear_line(&self) -> f32 {
@@ -181,6 +183,22 @@ mod tests {
     fn test_image_index_negative_time() {
         let mut h = SkinHidden::new(4, 0, 1000);
         h.prepare(-100, None);
+        assert_eq!(h.image_index, 0);
+    }
+
+    #[test]
+    fn test_image_index_large_time_no_overflow() {
+        let mut h = SkinHidden::new(4, 0, 1000);
+        // Large time value that would overflow if multiplied by length directly
+        h.prepare(i64::MAX / 2, None);
+        // Should not panic; result should be valid index
+        assert!(h.image_index < 4);
+    }
+
+    #[test]
+    fn test_image_index_negative_cycle() {
+        let mut h = SkinHidden::new(4, 0, -100);
+        h.prepare(500, None);
         assert_eq!(h.image_index, 0);
     }
 

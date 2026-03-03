@@ -427,7 +427,7 @@ impl SkinConfiguration {
                 }
                 // Defer persist of the default
                 if !opt_def.option.is_empty() {
-                    let sel = selection.unwrap();
+                    let sel = selection.unwrap_or(0);
                     let value = if sel < opt_def.option.len() {
                         opt_def.option[sel]
                     } else {
@@ -1011,14 +1011,10 @@ impl SkinConfiguration {
 
     /// Ensure that `self.config` exists and has `properties`, returning a mutable reference.
     fn ensure_properties(&mut self) -> &mut SkinProperty {
-        if self.config.is_none() {
-            self.config = Some(SkinConfig::default());
-        }
-        let config = self.config.as_mut().unwrap();
-        if config.properties.is_none() {
-            config.properties = Some(SkinProperty::default());
-        }
-        config.properties.as_mut().unwrap()
+        self.config
+            .get_or_insert_with(SkinConfig::default)
+            .properties
+            .get_or_insert_with(SkinProperty::default)
     }
 
     /// Set a specific dimension on a SkinOffset by kind index.
@@ -1044,8 +1040,8 @@ impl SkinConfiguration {
 
         if path.contains('|') {
             let slash_pos = path.rfind('/').map(|i| i + 1).unwrap_or(0);
-            let pipe_first = path.find('|').unwrap();
-            let pipe_last = path.rfind('|').unwrap();
+            let pipe_first = path.find('|').expect("contains('|') guarantees Some");
+            let pipe_last = path.rfind('|').expect("contains('|') guarantees Some");
             if path.len() > pipe_last + 1 {
                 format!("{}{}", &path[slash_pos..pipe_first], &path[pipe_last + 1..])
             } else {

@@ -793,12 +793,18 @@ impl JudgeManager {
 
                             let judge;
                             if note_state != 0 {
-                                judge = if dmtime >= mjudge[4][0] && dmtime <= mjudge[4][1] {
+                                judge = if mjudge.len() > 4
+                                    && dmtime >= mjudge[4][0]
+                                    && dmtime <= mjudge[4][1]
+                                {
                                     5
                                 } else {
                                     6
                                 };
-                            } else if notes[note_idx].is_long_start() && dmtime < mjudge[2][0] {
+                            } else if mjudge.len() > 2
+                                && notes[note_idx].is_long_start()
+                                && dmtime < mjudge[2][0]
+                            {
                                 // LR2oraja: Remove late bad for LN
                                 judge = 6;
                             } else {
@@ -833,7 +839,7 @@ impl JudgeManager {
                         for i in self.multi_bad.array_start..self.multi_bad.size {
                             let bad_idx = self.multi_bad.note_list[i];
                             let bad_time = self.multi_bad.time_list[i];
-                            let vanish = self.judge_vanish[3];
+                            let vanish = self.judge_vanish.get(3).copied().unwrap_or(false);
                             self.update_micro(
                                 lane_idx, bad_idx, notes, mtime, 3, bad_time, vanish, true, gauge,
                             );
@@ -847,7 +853,12 @@ impl JudgeManager {
                                 || ln_type == TYPE_LONGNOTE
                             {
                                 // LN processing
-                                if self.judge_vanish[best_judge as usize] {
+                                if self
+                                    .judge_vanish
+                                    .get(best_judge as usize)
+                                    .copied()
+                                    .unwrap_or(false)
+                                {
                                     self.lane_states[lane_idx].lnstart_judge = best_judge;
                                     self.lane_states[lane_idx].lnstart_duration = dmtime;
                                     self.lane_states[lane_idx].processing =
@@ -872,7 +883,12 @@ impl JudgeManager {
                                 }
                             } else {
                                 // CN, HCN press processing
-                                if self.judge_vanish[best_judge as usize] {
+                                if self
+                                    .judge_vanish
+                                    .get(best_judge as usize)
+                                    .copied()
+                                    .unwrap_or(false)
+                                {
                                     self.lane_states[lane_idx].processing =
                                         notes[tnote_idx].pair_index;
                                     self.lane_states[lane_idx].releasetime = i64::MIN;
@@ -881,7 +897,11 @@ impl JudgeManager {
                                         self.sckey[sc as usize] = key as i32;
                                     }
                                 }
-                                let vanish = self.judge_vanish[best_judge as usize];
+                                let vanish = self
+                                    .judge_vanish
+                                    .get(best_judge as usize)
+                                    .copied()
+                                    .unwrap_or(false);
                                 self.update_micro(
                                     lane_idx, tnote_idx, notes, mtime, best_judge, dmtime, vanish,
                                     false, gauge,
@@ -890,7 +910,11 @@ impl JudgeManager {
                         } else {
                             // Normal note processing
                             let dmtime = notes[tnote_idx].time_us - pmtime;
-                            let vanish = self.judge_vanish[best_judge as usize];
+                            let vanish = self
+                                .judge_vanish
+                                .get(best_judge as usize)
+                                .copied()
+                                .unwrap_or(false);
                             self.update_micro(
                                 lane_idx, tnote_idx, notes, mtime, best_judge, dmtime, vanish,
                                 false, gauge,
@@ -2221,5 +2245,17 @@ mod tests {
         let delta = jm.take_judgetiming_delta();
         assert_ne!(delta, 0);
         assert_eq!(jm.judgetiming_delta(), 0, "take should reset delta to 0");
+    }
+
+    #[test]
+    fn judge_vanish_bounds_checked_with_short_vec() {
+        let mut jm = JudgeManager::new();
+        // Set a custom judge_vanish shorter than 6 elements
+        jm.judge_vanish = vec![true, false];
+        // Accessing index 3 or 5 should return false (default), not panic
+        assert!(!jm.judge_vanish.get(3).copied().unwrap_or(false));
+        assert!(!jm.judge_vanish.get(5).copied().unwrap_or(false));
+        // Index 0 should return the actual value
+        assert!(jm.judge_vanish.get(0).copied().unwrap_or(false));
     }
 }

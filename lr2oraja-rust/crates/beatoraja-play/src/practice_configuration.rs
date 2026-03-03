@@ -113,6 +113,16 @@ impl PracticeProperty {
             graphtype: 0,
         }
     }
+
+    /// Clamp all index fields to valid array bounds.
+    /// Called after deserialization to prevent out-of-bounds panics.
+    fn sanitize(&mut self) {
+        self.gaugetype = self.gaugetype.rem_euclid(GAUGE.len() as i32);
+        self.random = self.random.rem_euclid(RANDOM.len() as i32);
+        self.random2 = self.random2.rem_euclid(RANDOM.len() as i32);
+        self.doubleop = self.doubleop.rem_euclid(DPRANDOM.len() as i32);
+        self.graphtype = self.graphtype.rem_euclid(GRAPHTYPESTR.len() as i32);
+    }
 }
 
 /// Result of applying practice configuration to a model.
@@ -171,8 +181,9 @@ impl PracticeConfiguration {
         if !self.sha256.is_empty() {
             let path = format!("practice/{}.json", self.sha256);
             if let Ok(data) = std::fs::read_to_string(&path)
-                && let Ok(saved) = serde_json::from_str::<PracticeProperty>(&data)
+                && let Ok(mut saved) = serde_json::from_str::<PracticeProperty>(&data)
             {
+                saved.sanitize();
                 self.property = saved;
                 // Restore model-specific data
                 let mode = model.get_mode().cloned().unwrap_or(Mode::BEAT_7K);
@@ -457,7 +468,10 @@ impl PracticeConfiguration {
                 (self.property.endtime / 1000) % 60,
                 (self.property.endtime / 100) % 10
             ),
-            2 => format!("GAUGE TYPE : {}", GAUGE[self.property.gaugetype as usize]),
+            2 => format!(
+                "GAUGE TYPE : {}",
+                GAUGE.get(self.property.gaugetype as usize).unwrap_or(&"?")
+            ),
             3 => format!(
                 "GAUGE CATEGORY : {}",
                 self.property
@@ -470,11 +484,24 @@ impl PracticeConfiguration {
             7 => format!("FREQUENCY : {}", self.property.freq),
             8 => format!(
                 "GRAPHTYPE : {}",
-                GRAPHTYPESTR[self.property.graphtype as usize]
+                GRAPHTYPESTR
+                    .get(self.property.graphtype as usize)
+                    .unwrap_or(&"?")
             ),
-            9 => format!("OPTION-1P : {}", RANDOM[self.property.random as usize]),
-            10 => format!("OPTION-2P : {}", RANDOM[self.property.random2 as usize]),
-            11 => format!("OPTION-DP : {}", DPRANDOM[self.property.doubleop as usize]),
+            9 => format!(
+                "OPTION-1P : {}",
+                RANDOM.get(self.property.random as usize).unwrap_or(&"?")
+            ),
+            10 => format!(
+                "OPTION-2P : {}",
+                RANDOM.get(self.property.random2 as usize).unwrap_or(&"?")
+            ),
+            11 => format!(
+                "OPTION-DP : {}",
+                DPRANDOM
+                    .get(self.property.doubleop as usize)
+                    .unwrap_or(&"?")
+            ),
             _ => String::new(),
         }
     }
@@ -982,5 +1009,36 @@ mod tests {
         assert!(white_texts[0].contains("10"));
         assert!(white_texts[0].contains("3"));
         assert!(white_texts[0].contains("7"));
+    }
+
+    #[test]
+    fn test_sanitize_clamps_out_of_bounds() {
+        let mut prop = PracticeProperty::new();
+        prop.gaugetype = 100;
+        prop.random = -3;
+        prop.random2 = 15;
+        prop.doubleop = 10;
+        prop.graphtype = -1;
+        prop.sanitize();
+        assert!((prop.gaugetype as usize) < GAUGE.len());
+        assert!((prop.random as usize) < RANDOM.len());
+        assert!((prop.random2 as usize) < RANDOM.len());
+        assert!((prop.doubleop as usize) < DPRANDOM.len());
+        assert!((prop.graphtype as usize) < GRAPHTYPESTR.len());
+    }
+
+    #[test]
+    fn test_get_element_text_out_of_bounds_no_panic() {
+        let mut pc = PracticeConfiguration::default();
+        pc.property.gaugetype = 99;
+        pc.property.random = -5;
+        pc.property.random2 = 100;
+        pc.property.doubleop = 50;
+        pc.property.graphtype = -1;
+        // Should not panic, should produce "?" for out-of-bounds
+        let text = pc.get_element_text(2);
+        assert!(text.contains("?"));
+        let text = pc.get_element_text(9);
+        assert!(text.contains("?"));
     }
 }

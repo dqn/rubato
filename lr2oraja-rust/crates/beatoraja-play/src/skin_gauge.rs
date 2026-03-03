@@ -61,30 +61,34 @@ impl SkinGauge {
             None => return,
         };
 
-        match self.animation_type {
-            ANIMATION_RANDOM => {
-                if self.atime < time {
-                    self.animation = (rand_int() % (self.animation_range + 1) as u32) as i32;
-                    self.atime = time + self.duration;
+        if self.animation_range < 0 || self.duration <= 0 {
+            self.animation = 0;
+        } else {
+            match self.animation_type {
+                ANIMATION_RANDOM => {
+                    if self.atime < time {
+                        self.animation = (rand_int() % (self.animation_range + 1) as u32) as i32;
+                        self.atime = time + self.duration;
+                    }
                 }
-            }
-            ANIMATION_INCLEASE => {
-                if self.atime < time {
-                    self.animation =
-                        (self.animation + self.animation_range) % (self.animation_range + 1);
-                    self.atime = time + self.duration;
+                ANIMATION_INCLEASE => {
+                    if self.atime < time {
+                        self.animation =
+                            (self.animation + self.animation_range) % (self.animation_range + 1);
+                        self.atime = time + self.duration;
+                    }
                 }
-            }
-            ANIMATION_DECLEASE => {
-                if self.atime < time {
-                    self.animation = (self.animation + 1) % (self.animation_range + 1);
-                    self.atime = time + self.duration;
+                ANIMATION_DECLEASE => {
+                    if self.atime < time {
+                        self.animation = (self.animation + 1) % (self.animation_range + 1);
+                        self.atime = time + self.duration;
+                    }
                 }
+                ANIMATION_FLICKERING => {
+                    self.animation = (time % self.duration) as i32;
+                }
+                _ => {}
             }
-            ANIMATION_FLICKERING => {
-                self.animation = (time % self.duration) as i32;
-            }
-            _ => {}
         }
 
         self.value = gauge.get_value();
@@ -154,4 +158,72 @@ fn rand_int() -> u32 {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default()
         .subsec_nanos()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_gauge(animation_type: i32, animation_range: i32, duration: i64) -> SkinGauge {
+        SkinGauge::new(50, animation_type, animation_range, duration)
+    }
+
+    #[test]
+    fn test_flickering_zero_duration_no_panic() {
+        let mut g = make_gauge(ANIMATION_FLICKERING, 4, 0);
+        g.prepare(1000, None);
+        assert_eq!(g.animation, 0);
+    }
+
+    #[test]
+    fn test_random_negative_animation_range_no_panic() {
+        let mut g = make_gauge(ANIMATION_RANDOM, -1, 33);
+        g.prepare(1000, None);
+        assert_eq!(g.animation, 0);
+    }
+
+    #[test]
+    fn test_increase_negative_animation_range_no_panic() {
+        let mut g = make_gauge(ANIMATION_INCLEASE, -1, 33);
+        g.prepare(1000, None);
+        assert_eq!(g.animation, 0);
+    }
+
+    #[test]
+    fn test_decrease_negative_animation_range_no_panic() {
+        let mut g = make_gauge(ANIMATION_DECLEASE, -1, 33);
+        g.prepare(1000, None);
+        assert_eq!(g.animation, 0);
+    }
+
+    #[test]
+    fn test_flickering_negative_duration_no_panic() {
+        let mut g = make_gauge(ANIMATION_FLICKERING, 4, -10);
+        g.prepare(1000, None);
+        assert_eq!(g.animation, 0);
+    }
+
+    #[test]
+    fn test_normal_animation_none_gauge_no_update() {
+        // When gauge is None, prepare() returns early without updating animation.
+        // This matches the Java behavior: animation is only updated when gauge != null.
+        let mut g = make_gauge(ANIMATION_FLICKERING, 4, 100);
+        g.prepare(250, None);
+        assert_eq!(g.animation, 0);
+    }
+
+    #[test]
+    fn test_flickering_animation_with_gauge() {
+        use crate::groove_gauge::create_groove_gauge;
+        use bms_model::bms_model::BMSModel;
+        use bms_model::mode::Mode;
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+        let gauge = create_groove_gauge(&model, 2, 0, None).unwrap();
+
+        let mut g = make_gauge(ANIMATION_FLICKERING, 4, 100);
+        g.prepare(250, Some(&gauge));
+        // 250 % 100 = 50
+        assert_eq!(g.animation, 50);
+    }
 }
