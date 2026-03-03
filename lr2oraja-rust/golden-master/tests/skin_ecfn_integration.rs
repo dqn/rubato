@@ -632,3 +632,167 @@ fn skin_ecfn_play_state_diversity() {
         object_types
     );
 }
+
+// ---------------------------------------------------------------------------
+// Position Verification Tests
+// ---------------------------------------------------------------------------
+
+/// Verify that skin objects actually change position/alpha between timepoints,
+/// proving that animations are working. A frozen skin (all identical across time)
+/// indicates a regression in timer-driven destination evaluation.
+#[test]
+fn skin_ecfn_timepoint_position_delta() {
+    let time_points: &[i64] = &[0, 5000, 30000];
+
+    for combo in SNAPSHOT_COMBOS {
+        let snapshots: Vec<_> = time_points
+            .iter()
+            .map(|&t| capture_at_time(combo.skin_path, combo.state_json, t))
+            .collect();
+
+        // Group commands by object_index across timepoints.
+        // Only consider objects visible at all timepoints.
+        let cmd_count = snapshots[0].commands.len();
+        let mut changed_count = 0usize;
+        let mut compared_count = 0usize;
+
+        for idx in 0..cmd_count {
+            // Check the object exists and is visible at all timepoints.
+            let all_visible = snapshots.iter().all(|s| {
+                s.commands
+                    .get(idx)
+                    .map_or(false, |c| c.visible && c.dst.is_some())
+            });
+            if !all_visible {
+                continue;
+            }
+            compared_count += 1;
+
+            // Check if dst or alpha differs between any two timepoints.
+            let dsts: Vec<_> = snapshots
+                .iter()
+                .map(|s| {
+                    let cmd = &s.commands[idx];
+                    let d = cmd.dst.as_ref().unwrap();
+                    let a = cmd.color.as_ref().map_or(1.0, |c| c.a);
+                    (d.x, d.y, d.w, d.h, a)
+                })
+                .collect();
+
+            let any_changed = dsts.windows(2).any(|pair| {
+                let (x0, y0, w0, h0, a0) = pair[0];
+                let (x1, y1, w1, h1, a1) = pair[1];
+                (x0 - x1).abs() > 0.5
+                    || (y0 - y1).abs() > 0.5
+                    || (w0 - w1).abs() > 0.5
+                    || (h0 - h1).abs() > 0.5
+                    || (a0 - a1).abs() > 0.01
+            });
+
+            if any_changed {
+                changed_count += 1;
+            }
+        }
+
+        // At least some objects should change across timepoints.
+        // Threshold: >= 1 changed object (very conservative -- most skins have
+        // timer-driven animations that change many objects).
+        if compared_count > 0 {
+            eprintln!(
+                "  {} + {}: {}/{} objects changed across timepoints",
+                combo.skin_path, combo.state_json, changed_count, compared_count
+            );
+            assert!(
+                changed_count > 0,
+                "{} + {}: no objects changed position/alpha across t={:?} ({} visible objects compared). \
+                 Animations may be frozen.",
+                combo.skin_path,
+                combo.state_json,
+                time_points,
+                compared_count
+            );
+        }
+    }
+}
+
+/// Verify specific expected positions in the play7 skin snapshot.
+/// Checks that Image, SkinNote, and SkinJudge objects exist with valid positions.
+#[test]
+fn skin_ecfn_play_specific_positions() {
+    let snapshot = capture_at_time("play/play7.luaskin", "state_play_active.json", 5000);
+
+    // 1. Find Image objects and verify the largest one is reasonably sized.
+    //    Play skins may compose backgrounds from multiple images rather than
+    //    one full-screen image, so we check the largest by area.
+    let image_cmds: Vec<_> = snapshot
+        .commands
+        .iter()
+        .filter(|c| c.visible && c.object_type == "Image" && c.dst.is_some())
+        .collect();
+    assert!(
+        !image_cmds.is_empty(),
+        "play7: expected visible Image objects"
+    );
+    let largest_image = image_cmds
+        .iter()
+        .max_by(|a, b| {
+            let area_a = a.dst.as_ref().map_or(0.0, |d| d.w * d.h);
+            let area_b = b.dst.as_ref().map_or(0.0, |d| d.w * d.h);
+            area_a.partial_cmp(&area_b).unwrap()
+        })
+        .unwrap();
+    let largest_dst = largest_image.dst.as_ref().unwrap();
+    // The largest image should cover a significant portion of the screen.
+    assert!(
+        largest_dst.w >= 100.0 && largest_dst.h >= 100.0,
+        "play7: largest Image is too small ({}x{})",
+        largest_dst.w,
+        largest_dst.h
+    );
+
+    // 2. SkinNote objects should exist.
+    let note_cmds: Vec<_> = snapshot
+        .commands
+        .iter()
+        .filter(|c| c.object_type == "SkinNote")
+        .collect();
+    assert!(
+        !note_cmds.is_empty(),
+        "play7: expected SkinNote objects in play skin"
+    );
+
+    // 3. SkinJudge objects should exist.
+    let judge_cmds: Vec<_> = snapshot
+        .commands
+        .iter()
+        .filter(|c| c.object_type == "SkinJudge")
+        .collect();
+    assert!(
+        !judge_cmds.is_empty(),
+        "play7: expected SkinJudge objects in play skin"
+    );
+
+    // 4. Visible SkinNote objects should have y within the play area (0..1080).
+    for cmd in &note_cmds {
+        if cmd.visible {
+            if let Some(ref d) = cmd.dst {
+                assert!(
+                    d.y >= -10.0 && d.y <= 1090.0,
+                    "play7: SkinNote dst.y={} is outside play area",
+                    d.y
+                );
+            }
+        }
+    }
+
+    eprintln!(
+        "  play7 positions: largest_image=({},{},{}x{}), {} images, {} notes, {} judges",
+        largest_dst.x,
+        largest_dst.y,
+        largest_dst.w,
+        largest_dst.h,
+        image_cmds.len(),
+        note_cmds.len(),
+        judge_cmds.len()
+    );
+}
