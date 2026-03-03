@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
 use anyhow::Result;
@@ -20,6 +20,11 @@ use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 use beatoraja_core::config::Config;
 
 use beatoraja_types::imgui_notify::ImGuiNotify;
+
+/// Acquire a mutex lock, recovering from poison if a thread panicked while holding it.
+fn lock_or_recover<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(|e| e.into_inner())
+}
 
 /// ObsRecordingMode - recording mode enum
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -224,7 +229,7 @@ impl ObsWsClient {
             match result {
                 Ok(Ok(())) => Ok(()),
                 Ok(Err(e)) => {
-                    let guard = inner.lock().unwrap();
+                    let guard = lock_or_recover(&inner);
                     if guard.auto_reconnect {
                         drop(guard);
                         warn!("Initial connection failed: {}", e);
@@ -251,7 +256,7 @@ impl ObsWsClient {
 
         // Store the sink
         {
-            let mut guard = inner.lock().unwrap();
+            let mut guard = lock_or_recover(&inner);
             guard.ws_sink = Some(sink);
             guard.is_connected = true;
             guard.is_reconnecting = false;
@@ -281,7 +286,7 @@ impl ObsWsClient {
                                     warn!("OBS WebSocket error: {}", msg);
                                 }
                                 let handler = {
-                                    let guard = inner_clone.lock().unwrap();
+                                    let guard = lock_or_recover(&inner_clone);
                                     guard.on_error_handler.clone()
                                 };
                                 if let Some(handler) = handler {
@@ -331,7 +336,7 @@ impl ObsWsClient {
             2 => {
                 // Identified
                 {
-                    let mut guard = inner.lock().unwrap();
+                    let mut guard = lock_or_recover(inner);
                     guard.is_identified = true;
                 }
                 Self::send_request_inner(inner, "GetVersion").await;
@@ -351,7 +356,7 @@ impl ObsWsClient {
 
         // Custom message handler -- clone before calling to avoid re-entrancy deadlock
         let custom_handler = {
-            let guard = inner.lock().unwrap();
+            let guard = lock_or_recover(inner);
             guard.custom_message_handler.clone()
         };
         if let Some(handler) = custom_handler {
@@ -375,7 +380,7 @@ impl ObsWsClient {
             if password.is_empty() {
                 warn!("Authentication required but no password provided");
                 {
-                    let mut guard = inner.lock().unwrap();
+                    let mut guard = lock_or_recover(inner);
                     guard.auto_reconnect = false;
                 }
                 Self::do_close(inner).await;
@@ -441,7 +446,7 @@ impl ObsWsClient {
             "AuthenticationFailure" | "AuthenticationFailed" => {
                 warn!("OBS authentication failed!");
                 {
-                    let mut guard = inner.lock().unwrap();
+                    let mut guard = lock_or_recover(inner);
                     guard.auto_reconnect = false;
                 }
                 Self::do_close(inner).await;
@@ -460,7 +465,7 @@ impl ObsWsClient {
                     match output_state {
                         "OBS_WEBSOCKET_OUTPUT_STOPPED" => {
                             let (should_restart, recording_mode, path_to_delete) = {
-                                let mut guard = inner.lock().unwrap();
+                                let mut guard = lock_or_recover(inner);
                                 guard.is_recording = false;
                                 guard.output_path = output_path_val.clone();
                                 let should_restart = guard.restart_recording;
@@ -500,7 +505,7 @@ impl ObsWsClient {
                         }
                         "OBS_WEBSOCKET_OUTPUT_STARTED" => {
                             let (recording_mode, save_requested, last_output_path) = {
-                                let mut guard = inner.lock().unwrap();
+                                let mut guard = lock_or_recover(inner);
                                 guard.is_recording = true;
                                 guard.output_path = output_path_val;
                                 let rm = guard.recording_mode;
@@ -514,7 +519,7 @@ impl ObsWsClient {
                             if recording_mode != ObsRecordingMode::KeepAll {
                                 if save_requested {
                                     {
-                                        let mut guard = inner.lock().unwrap();
+                                        let mut guard = lock_or_recover(inner);
                                         guard.save_requested = false;
                                     }
                                     notify_message += ", last recording saved";
@@ -538,7 +543,7 @@ impl ObsWsClient {
                     }
 
                     let record_handler = {
-                        let guard = inner.lock().unwrap();
+                        let guard = lock_or_recover(inner);
                         guard.on_record_state_changed.clone()
                     };
                     if let Some(handler) = record_handler {
@@ -579,7 +584,7 @@ impl ObsWsClient {
                         .to_string();
 
                     let handler = {
-                        let guard = inner.lock().unwrap();
+                        let guard = lock_or_recover(inner);
                         guard.on_version_received.clone()
                     };
                     if let Some(handler) = handler {
@@ -604,7 +609,7 @@ impl ObsWsClient {
                 scene_names.reverse();
 
                 let handler = {
-                    let guard = inner.lock().unwrap();
+                    let guard = lock_or_recover(inner);
                     guard.on_scenes_received.clone()
                 };
                 if let Some(handler) = handler {
@@ -614,7 +619,7 @@ impl ObsWsClient {
             "GetRecordStatus" => {
                 if response_data.get("outputActive").is_some() {
                     let output_active = response_data["outputActive"].as_bool().unwrap_or(false);
-                    let mut guard = inner.lock().unwrap();
+                    let mut guard = lock_or_recover(inner);
                     guard.is_recording = output_active;
                 }
             }
@@ -625,7 +630,7 @@ impl ObsWsClient {
     /// Close from an inner context (used by event handlers)
     async fn do_close(inner: &Arc<Mutex<ObsWsClientInner>>) {
         {
-            let mut guard = inner.lock().unwrap();
+            let mut guard = lock_or_recover(inner);
             guard.is_shutting_down = true;
             guard.auto_reconnect = false;
             guard.ws_sink = None;
@@ -637,7 +642,7 @@ impl ObsWsClient {
     /// Handle connection close
     async fn on_close(inner: &Arc<Mutex<ObsWsClientInner>>) {
         let (was_connected, auto_reconnect, is_reconnecting, is_shutting_down) = {
-            let mut guard = inner.lock().unwrap();
+            let mut guard = lock_or_recover(inner);
             let was_connected = guard.is_connected;
             guard.is_connected = false;
             guard.is_identified = false;
@@ -651,7 +656,7 @@ impl ObsWsClient {
         };
 
         let close_handler = {
-            let guard = inner.lock().unwrap();
+            let guard = lock_or_recover(inner);
             guard.on_close_handler.clone()
         };
         if let Some(handler) = close_handler {
@@ -670,7 +675,7 @@ impl ObsWsClient {
     /// All async work is inside the tokio::spawn.
     fn schedule_reconnect(inner: &Arc<Mutex<ObsWsClientInner>>) {
         let (is_reconnecting, auto_reconnect, is_shutting_down, delay) = {
-            let guard = inner.lock().unwrap();
+            let guard = lock_or_recover(inner);
             (
                 guard.is_reconnecting,
                 guard.auto_reconnect,
@@ -684,7 +689,7 @@ impl ObsWsClient {
         }
 
         {
-            let mut guard = inner.lock().unwrap();
+            let mut guard = lock_or_recover(inner);
             guard.is_reconnecting = true;
         }
 
@@ -694,13 +699,13 @@ impl ObsWsClient {
 
             // Close existing connection
             {
-                let mut guard = inner_clone.lock().unwrap();
+                let mut guard = lock_or_recover(&inner_clone);
                 guard.ws_sink = None;
             }
 
             // Update backoff delay for next attempt
             {
-                let mut guard = inner_clone.lock().unwrap();
+                let mut guard = lock_or_recover(&inner_clone);
                 guard.current_reconnect_delay =
                     compute_next_reconnect_delay(guard.current_reconnect_delay);
 
@@ -709,7 +714,7 @@ impl ObsWsClient {
                 }
             }
             let (server_uri, password, shutdown_notify) = {
-                let guard = inner_clone.lock().unwrap();
+                let guard = lock_or_recover(&inner_clone);
                 (
                     guard.server_uri.clone(),
                     guard.password.clone(),
@@ -727,7 +732,7 @@ impl ObsWsClient {
     /// Send a raw message through the WebSocket
     async fn send_raw(inner: &Arc<Mutex<ObsWsClientInner>>, message: &str) {
         let mut sink = {
-            let mut guard = inner.lock().unwrap();
+            let mut guard = lock_or_recover(inner);
             guard.ws_sink.take()
         };
 
@@ -737,14 +742,14 @@ impl ObsWsClient {
 
         // Put sink back
         {
-            let mut guard = inner.lock().unwrap();
+            let mut guard = lock_or_recover(inner);
             guard.ws_sink = sink;
         }
     }
 
     /// Check if requests can be sent
     fn can_send_request(inner: &Arc<Mutex<ObsWsClientInner>>) -> bool {
-        let guard = inner.lock().unwrap();
+        let guard = lock_or_recover(inner);
         guard.is_connected && guard.is_identified && !guard.is_reconnecting
     }
 
@@ -777,7 +782,7 @@ impl ObsWsClient {
     /// Internal request start record
     async fn request_start_record_inner(inner: &Arc<Mutex<ObsWsClientInner>>) {
         let can_send = {
-            let guard = inner.lock().unwrap();
+            let guard = lock_or_recover(inner);
             guard.is_connected
                 && guard.is_identified
                 && !guard.is_reconnecting
@@ -792,24 +797,24 @@ impl ObsWsClient {
     // ---- Public API ----
 
     pub fn is_connected(&self) -> bool {
-        let guard = self.inner.lock().unwrap();
+        let guard = lock_or_recover(&self.inner);
         guard.is_connected
     }
 
     pub fn is_identified(&self) -> bool {
-        let guard = self.inner.lock().unwrap();
+        let guard = lock_or_recover(&self.inner);
         guard.is_identified
     }
 
     pub fn is_recording(&self) -> bool {
-        let guard = self.inner.lock().unwrap();
+        let guard = lock_or_recover(&self.inner);
         guard.is_recording
     }
 
     pub fn request_start_record(&self) {
         let inner = Arc::clone(&self.inner);
         {
-            let guard = inner.lock().unwrap();
+            let guard = lock_or_recover(&inner);
             if !(guard.is_connected && guard.is_identified && !guard.is_reconnecting)
                 || guard.is_recording
             {
@@ -826,7 +831,7 @@ impl ObsWsClient {
     pub fn request_stop_record(&self) {
         let inner = Arc::clone(&self.inner);
         {
-            let guard = inner.lock().unwrap();
+            let guard = lock_or_recover(&inner);
             if !(guard.is_connected && guard.is_identified && !guard.is_reconnecting)
                 || !guard.is_recording
             {
@@ -841,7 +846,7 @@ impl ObsWsClient {
 
     #[allow(clippy::overly_complex_bool_expr)]
     pub fn save_last_recording(&self, reason: &str) {
-        let guard = self.inner.lock().unwrap();
+        let guard = lock_or_recover(&self.inner);
         // Java: if (!this.isConnected && !canSendRequest()) — faithfully translated
         if !guard.is_connected
             && !(guard.is_connected && guard.is_identified && !guard.is_reconnecting)
@@ -865,7 +870,7 @@ impl ObsWsClient {
 
         drop(guard);
         {
-            let mut guard = self.inner.lock().unwrap();
+            let mut guard = lock_or_recover(&self.inner);
             guard.save_requested = true;
         }
         ImGuiNotify::info("OBS: Recording will be kept.");
@@ -929,7 +934,7 @@ impl ObsWsClient {
     }
 
     pub fn restart_recording(&self) {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = lock_or_recover(&self.inner);
         if !(guard.is_connected && guard.is_identified && !guard.is_reconnecting)
             || guard.restart_recording
         {
@@ -946,13 +951,13 @@ impl ObsWsClient {
     }
 
     pub fn set_auto_reconnect(&self, enabled: bool) {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = lock_or_recover(&self.inner);
         guard.auto_reconnect = enabled;
     }
 
     pub fn close(&self) {
         {
-            let mut guard = self.inner.lock().unwrap();
+            let mut guard = lock_or_recover(&self.inner);
             guard.is_shutting_down = true;
             guard.auto_reconnect = false;
             guard.ws_sink = None;
@@ -963,12 +968,12 @@ impl ObsWsClient {
     // ---- Callback setters ----
 
     pub fn set_on_close(&self, handler: impl Fn() + Send + Sync + 'static) {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = lock_or_recover(&self.inner);
         guard.on_close_handler = Some(Arc::new(handler));
     }
 
     pub fn set_on_error(&self, handler: impl Fn(String) + Send + Sync + 'static) {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = lock_or_recover(&self.inner);
         guard.on_error_handler = Some(Arc::new(handler));
     }
 
@@ -976,22 +981,22 @@ impl ObsWsClient {
         &self,
         handler: impl Fn(ObsVersionInfo) + Send + Sync + 'static,
     ) {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = lock_or_recover(&self.inner);
         guard.on_version_received = Some(Arc::new(handler));
     }
 
     pub fn set_on_scenes_received(&self, handler: impl Fn(Vec<String>) + Send + Sync + 'static) {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = lock_or_recover(&self.inner);
         guard.on_scenes_received = Some(Arc::new(handler));
     }
 
     pub fn set_on_record_state_changed(&self, handler: impl Fn(String) + Send + Sync + 'static) {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = lock_or_recover(&self.inner);
         guard.on_record_state_changed = Some(Arc::new(handler));
     }
 
     pub fn set_custom_message_handler(&self, handler: impl Fn(String) + Send + Sync + 'static) {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = lock_or_recover(&self.inner);
         guard.custom_message_handler = Some(Arc::new(handler));
     }
 }
