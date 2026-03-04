@@ -5,10 +5,10 @@
 // - ManualPerfect: all PG, gauge qualified (normal notes only, 0ms offset)
 // - ManualAllMiss: all PR/MS, max_combo=0, gauge not qualified
 
-use beatoraja_types::groove_gauge::{ASSISTEASY, EASY, EXHARD, HARD, HAZARD, NORMAL};
 use bms_model::judge_note::{JUDGE_MS, JUDGE_PG, JUDGE_PR};
 use bms_model::mode::Mode;
 use golden_master::e2e_helpers::*;
+use rubato_types::groove_gauge::{ASSISTEASY, EASY, EXHARD, HARD, HAZARD, NORMAL};
 
 fn run_autoplay_test(bms_file: &str, gauge_type: i32, label: &str) {
     let model = load_bms(bms_file);

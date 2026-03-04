@@ -10,10 +10,10 @@
 use golden_master::render_snapshot::{DrawCommand, RenderSnapshot, capture_render_snapshot};
 use golden_master::state_provider::StaticStateProvider;
 
-use beatoraja_skin::skin::{Skin, SkinObject};
-use beatoraja_skin::skin_header::SkinHeader;
-use beatoraja_skin::skin_image::SkinImage;
-use beatoraja_skin::stubs::TextureRegion;
+use rubato_skin::skin::{Skin, SkinObject};
+use rubato_skin::skin_header::SkinHeader;
+use rubato_skin::skin_image::SkinImage;
+use rubato_skin::stubs::TextureRegion;
 
 // ---------------------------------------------------------------------------
 // Helpers

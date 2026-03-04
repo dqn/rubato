@@ -36,30 +36,30 @@ beatoraja fork (Java 313 files / 72k+ lines) → Rust. 25 crates, 167k lines.
 ## Structure
 
 ```
-brs/                 # Cargo workspace (15 crates) at repo root
+rubato/              # Cargo workspace (15 crates) at repo root
   crates/
     bms-model        # BMS/BME/BML parser + model
     bms-table        # Difficulty table parser
-    beatoraja-types  # Shared types (circular dep breaker)
-    beatoraja-audio      # Audio (Kira 0.12)
-    beatoraja-input      # Keyboard/controller input (+ controller)
-    beatoraja-render     # Rendering (wgpu)
-    beatoraja-skin       # Skin loading/layout
-    beatoraja-song       # Song DB (rusqlite, + md-processor)
-    beatoraja-core       # State machine, main loop (+ pattern)
-    beatoraja-play       # Play state (gameplay)
-    beatoraja-state      # Select/Decide/Result/Modmenu/Stream states
-    beatoraja-ir         # Internet ranking
-    beatoraja-external   # Twitter, clipboard, Discord RPC, OBS WebSocket
-    beatoraja-launcher   # Launcher UI (egui)
-    beatoraja-bin        # Entry point
+    rubato-types     # Shared types (circular dep breaker)
+    rubato-audio     # Audio (Kira 0.12)
+    rubato-input     # Keyboard/controller input (+ controller)
+    rubato-render    # Rendering (wgpu)
+    rubato-skin      # Skin loading/layout
+    rubato-song      # Song DB (rusqlite, + md-processor)
+    rubato-core      # State machine, main loop (+ pattern)
+    rubato-play      # Play state (gameplay)
+    rubato-state     # Select/Decide/Result/Modmenu/Stream states
+    rubato-ir        # Internet ranking
+    rubato-external  # Twitter, clipboard, Discord RPC, OBS WebSocket
+    rubato-launcher  # Launcher UI (egui)
+    rubato-bin       # Entry point
   golden-master/   # Golden Master test infra
   test-bms/        # Test BMS files
 ```
 
 ## Key Invariants
 
-- Timing: i64 microseconds. JavaRandom LCG in `beatoraja-core::pattern` (**never** `StdRng`/`rand`). LR2 MT19937. LR2 judge: pure integer arithmetic. LongNote: index-based.
+- Timing: i64 microseconds. JavaRandom LCG in `rubato-core::pattern` (**never** `StdRng`/`rand`). LR2 MT19937. LR2 judge: pure integer arithmetic. LongNote: index-based.
 
 ## Testing
 
@@ -85,21 +85,21 @@ brs/                 # Cargo workspace (15 crates) at repo root
 - **Post-62b**: OpenIr in MusicSelector (via MainControllerAccess IR URL methods), CIM image fallback, all 31 debug stubs → compile-time comments (0 runtime stubs)
 - **Post-62c**: SongSelectionAccess trait (modmenu↔select bridge), SkinRenderContext trait (SkinDrawable expansion), DistributionData (SkinDistributionGraph bridge), external property factory adapters
 - **Post-62d**: egui launcher UI (Audio/Discord/OBS tabs, What's New/Chart Details popups, search popup InputEvent), wgpu rendering pipeline (CourseResult skin+fadeout, SkinDistributionGraph draw methods, MessageRenderer draw wiring), LR2 SkinObject assembly (assemble_objects() trait on all 6 loaders — play: judge/note/bga/line, select: bar)
-- **Post-62e**: Select crate stubs replaced with real beatoraja-skin types (SkinImage, SkinNumber, SkinText trait, SkinObjectRenderer, SkinRegion→Rectangle alias). GlyphAtlas + BitmapFont::draw() implemented with row-packing atlas and SpriteBatch glyph rendering. MessageRenderer wired with SpriteBatch + alpha pulsing animation.
+- **Post-62e**: Select crate stubs replaced with real rubato-skin types (SkinImage, SkinNumber, SkinText trait, SkinObjectRenderer, SkinRegion→Rectangle alias). GlyphAtlas + BitmapFont::draw() implemented with row-packing atlas and SpriteBatch glyph rendering. MessageRenderer wired with SpriteBatch + alpha pulsing animation.
 
 ### Permanent Stubs (intentionally unimplemented)
 
-- **Twitter4j** (`beatoraja-external`): ~446 lines, `bail!()` — API deprecated
-- **ShortDirectPCM** (`beatoraja-audio`): Java-specific DirectBuffer — unnecessary in Rust
-- **JavaFX find_parent_by_class_simple_name** (`beatoraja-launcher`): No egui equivalent
-- **randomtrainer.dat** (`beatoraja-modmenu`): Binary resource from Java, uses empty HashMap fallback
+- **Twitter4j** (`rubato-external`): ~446 lines, `bail!()` — API deprecated
+- **ShortDirectPCM** (`rubato-audio`): Java-specific DirectBuffer — unnecessary in Rust
+- **JavaFX find_parent_by_class_simple_name** (`rubato-launcher`): No egui equivalent
+- **randomtrainer.dat** (`rubato-modmenu`): Binary resource from Java, uses empty HashMap fallback
 
 ## Lessons Learned
 
 - **Encoding:** `encoding_rs::SHIFT_JIS` for MS932. **Serde:** `BPM`→`Bpm`, `URL`→`Url`, `#[serde(alias)]`.
 - **Borrow checker:** `&mut` conflicts → scoped block. Self-ref → `Option::take()`. Parent ref → callback trait.
 - **Stubs:** `stubs.rs` per crate → replace via `pub use`. Always `cargo check` after removal.
-- **Circular deps:** `beatoraja-types` for shared types. Core cannot import: song, skin, play, select, result, ir, modmenu.
+- **Circular deps:** `rubato-types` for shared types. Core cannot import: song, skin, play, select, result, ir, modmenu.
 - **Lua→JSON coercion:** 3-layer: numbers→strings, float→int truncation, empty `{}`→remove.
 - **Bar Clone:** `Box<dyn Trait>` blocks Clone → use `Arc<dyn Trait>` for shared trait objects.
 - **Property delegate pattern:** `integer_value(id)` / `float_value(id)` / `boolean_value(id)` on MainState — skin property factories delegate via ID lookup.

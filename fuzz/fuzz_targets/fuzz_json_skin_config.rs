@@ -2,7 +2,7 @@
 
 use libfuzzer_sys::fuzz_target;
 
-use beatoraja_skin::json::json_skin::Skin;
+use rubato_skin::json::json_skin::Skin;
 
 fuzz_target!(|data: &[u8]| {
     // Only process valid UTF-8 strings (JSON requires UTF-8).

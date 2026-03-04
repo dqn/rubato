@@ -8,9 +8,9 @@
 // - Extended channels (LNTYPE 2, invisible, mine combinations)
 // - BMSON BPM-crossing long notes
 
-use beatoraja_types::groove_gauge::NORMAL;
 use bms_model::judge_note::JUDGE_PG;
 use golden_master::e2e_helpers::*;
+use rubato_types::groove_gauge::NORMAL;
 
 // ============================================================================
 // Autoplay invariant tests for edge case BMS files

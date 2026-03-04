@@ -2,12 +2,12 @@
 
 use std::path::Path;
 
-use beatoraja_types::audio_config::{DriverType, FrequencyType};
-use beatoraja_types::config::{Config, DisplayMode, SongPreview};
-use beatoraja_types::player_config::PlayerConfig;
-use beatoraja_types::resolution::Resolution;
-use beatoraja_types::validatable::Validatable;
 use bms_model::mode::Mode;
+use rubato_types::audio_config::{DriverType, FrequencyType};
+use rubato_types::config::{Config, DisplayMode, SongPreview};
+use rubato_types::player_config::PlayerConfig;
+use rubato_types::resolution::Resolution;
+use rubato_types::validatable::Validatable;
 
 fn fixtures_dir() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -375,7 +375,7 @@ fn config_player_validate_after_deserialize() {
     assert_eq!(pc.lnmode, 1);
 
     // Skin array should be normalized to expected size
-    let max_skin_id = beatoraja_types::skin_type::SkinType::get_max_skin_type_id() as usize;
+    let max_skin_id = rubato_types::skin_type::SkinType::get_max_skin_type_id() as usize;
     assert_eq!(pc.skin.len(), max_skin_id + 1);
 
     // autosavereplay should remain length 4

@@ -6,10 +6,10 @@
 //
 // All offsets are in microseconds (1ms = 1000us).
 
-use beatoraja_types::groove_gauge::NORMAL;
 use bms_model::judge_note::{JUDGE_BD, JUDGE_GD, JUDGE_GR, JUDGE_MS, JUDGE_PG, JUDGE_PR};
 use bms_model::mode::Mode;
 use golden_master::e2e_helpers::*;
+use rubato_types::groove_gauge::NORMAL;
 
 // ============================================================================
 // PG/GR boundary tests (±18ms)

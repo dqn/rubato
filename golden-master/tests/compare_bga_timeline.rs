@@ -11,8 +11,8 @@
 
 use std::path::{Path, PathBuf};
 
-use beatoraja_play::bga::bga_processor::BGAProcessor;
 use bms_model::bms_decoder::BMSDecoder;
+use rubato_play::bga::bga_processor::BGAProcessor;
 
 // ---------------------------------------------------------------------------
 // Helpers

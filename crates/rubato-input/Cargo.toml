@@ -1,0 +1,15 @@
+[package]
+name = "rubato-input"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+log.workspace = true
+midir.workspace = true
+gilrs.workspace = true
+bms-model.workspace = true
+rubato-types.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

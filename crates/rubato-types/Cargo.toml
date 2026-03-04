@@ -1,0 +1,33 @@
+[package]
+name = "rubato-types"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Internal crates
+bms-model = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Logging
+log = { workspace = true }
+
+# Hashing
+sha2 = { workspace = true }
+
+# Compression (for ScoreData/ReplayData ghost encoding)
+base64 = { workspace = true }
+flate2 = { workspace = true }
+
+# AES encryption for IR config
+aes = { workspace = true }
+cbc = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+proptest = { workspace = true }

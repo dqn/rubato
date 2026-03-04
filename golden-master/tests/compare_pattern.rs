@@ -4,13 +4,13 @@
 
 use std::path::Path;
 
-use beatoraja_core::pattern::lane_shuffle_modifier::{
-    LaneCrossShuffleModifier, LaneMirrorShuffleModifier, LaneRandomShuffleModifier,
-    LaneRotateShuffleModifier, PlayerFlipModifier,
-};
 use bms_model::bms_model::BMSModel;
 use bms_model::mode::Mode;
 use golden_master::pattern_fixtures::LaneShuffleFixture;
+use rubato_core::pattern::lane_shuffle_modifier::{
+    LaneCrossShuffleModifier, LaneMirrorShuffleModifier, LaneRandomShuffleModifier,
+    LaneRotateShuffleModifier, PlayerFlipModifier,
+};
 
 fn fixture_dir() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))

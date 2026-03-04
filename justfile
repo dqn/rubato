@@ -51,11 +51,11 @@ coverage-html:
 
 # Run E2E tests (in-process + subprocess)
 e2e-test:
-    cargo test -p brs e2e_ -- --nocapture
+    cargo test -p rubato-bin e2e_ -- --nocapture
 
 # Run E2E subprocess test (requires binary build, ~30s)
 e2e-test-subprocess:
-    cargo test -p brs --test e2e_subprocess -- --ignored --nocapture
+    cargo test -p rubato-bin --test e2e_subprocess -- --ignored --nocapture
 
 # Seed fuzz corpus directories with real BMS files
 fuzz-seed:

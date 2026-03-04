@@ -2,7 +2,7 @@
 
 use libfuzzer_sys::fuzz_target;
 
-use beatoraja_skin::lr2::lr2_skin_loader::LR2SkinLoaderState;
+use rubato_skin::lr2::lr2_skin_loader::LR2SkinLoaderState;
 
 fuzz_target!(|data: &[u8]| {
     // LR2 skin files are Shift_JIS encoded CSV-like text.

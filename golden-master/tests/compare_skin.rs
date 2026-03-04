@@ -10,11 +10,11 @@
 
 use std::path::{Path, PathBuf};
 
-use beatoraja_skin::json::json_skin_loader::{
+use rubato_skin::json::json_skin_loader::{
     JSONSkinLoader, SkinConfigProperty, SkinData, SkinHeaderData,
 };
-use beatoraja_skin::lr2::lr2_skin_header_loader::LR2SkinHeaderLoader;
-use beatoraja_types::skin_type::SkinType;
+use rubato_skin::lr2::lr2_skin_header_loader::LR2SkinHeaderLoader;
+use rubato_types::skin_type::SkinType;
 
 // ---------------------------------------------------------------------------
 // Helpers

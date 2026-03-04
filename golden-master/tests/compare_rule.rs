@@ -5,10 +5,6 @@
 
 use std::path::Path;
 
-use beatoraja_play::judge_property::{self, JudgeProperty, NoteType};
-use beatoraja_types::clear_type::ClearType;
-use beatoraja_types::gauge_property::GaugeProperty;
-use beatoraja_types::groove_gauge::Gauge;
 use bms_model::bms_model::BMSModel;
 use bms_model::mode::Mode;
 use bms_model::note::Note;
@@ -16,6 +12,10 @@ use bms_model::time_line::TimeLine;
 use golden_master::rule_fixtures::{
     GaugePropertyFixture, GaugeSequenceFixture, JudgeWindowFixture,
 };
+use rubato_play::judge_property::{self, JudgeProperty, NoteType};
+use rubato_types::clear_type::ClearType;
+use rubato_types::gauge_property::GaugeProperty;
+use rubato_types::groove_gauge::Gauge;
 
 fn fixtures_dir() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))

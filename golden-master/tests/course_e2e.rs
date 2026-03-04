@@ -4,9 +4,9 @@
 // by simulating multiple songs in sequence with gauge state carried over
 // between songs (using run_course_simulation / run_course_simulation_manual).
 
-use beatoraja_types::groove_gauge::{CLASS, EXCLASS, EXHARD, EXHARDCLASS, HARD, NORMAL};
 use bms_model::judge_note::JUDGE_PG;
 use golden_master::e2e_helpers::*;
+use rubato_types::groove_gauge::{CLASS, EXCLASS, EXHARD, EXHARDCLASS, HARD, NORMAL};
 
 // ============================================================================
 // Course autoplay tests (with real gauge carryover)
@@ -122,7 +122,7 @@ fn course_failure_stops() {
 
     // No input for song 1 (all miss), autoplay for song 2 doesn't matter
     // because the course should stop after song 1.
-    let empty_log: &[beatoraja_input::key_input_log::KeyInputLog] = &[];
+    let empty_log: &[rubato_input::key_input_log::KeyInputLog] = &[];
     let course = run_course_simulation_manual(&[&model1, &model2], &[empty_log, empty_log], EXHARD);
 
     assert!(
@@ -151,7 +151,7 @@ fn course_exhardclass_failure_stops() {
     let model1 = load_bms("minimal_7k.bms");
     let model2 = load_bms("bpm_change.bms");
 
-    let empty_log: &[beatoraja_input::key_input_log::KeyInputLog] = &[];
+    let empty_log: &[rubato_input::key_input_log::KeyInputLog] = &[];
     let course =
         run_course_simulation_manual(&[&model1, &model2], &[empty_log, empty_log], EXHARDCLASS);
 

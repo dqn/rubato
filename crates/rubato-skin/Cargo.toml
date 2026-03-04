@@ -1,0 +1,35 @@
+[package]
+name = "rubato-skin"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bms-model.workspace = true
+rubato-types.workspace = true
+rubato-core.workspace = true
+rubato-play.workspace = true
+rubato-audio.workspace = true
+rubato-input.workspace = true
+rubato-song.workspace = true
+log.workspace = true
+rand.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+encoding_rs.workspace = true
+regex.workspace = true
+chrono.workspace = true
+rubato-render.workspace = true
+mlua.workspace = true
+ffmpeg-next = { workspace = true, optional = true }
+
+[features]
+ffmpeg = ["dep:ffmpeg-next"]
+
+[dev-dependencies]
+criterion.workspace = true
+proptest.workspace = true
+
+[[bench]]
+name = "skin_loader_bench"
+harness = false

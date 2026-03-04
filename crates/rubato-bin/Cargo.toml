@@ -1,0 +1,39 @@
+[package]
+name = "rubato-bin"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "rubato"
+path = "src/main.rs"
+
+[features]
+dhat-heap = ["dhat"]
+
+[dependencies]
+rubato-audio = { workspace = true }
+rubato-core = { workspace = true }
+rubato-external = { workspace = true }
+rubato-ir = { workspace = true }
+rubato-render = { workspace = true }
+rubato-song = { workspace = true }
+rubato-launcher = { workspace = true }
+rubato-state = { workspace = true }
+rubato-types = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+clap = { workspace = true }
+env_logger = { workspace = true }
+winit = { workspace = true }
+wgpu = { workspace = true }
+egui = { workspace = true }
+egui-winit = { workspace = true }
+egui-wgpu = { workspace = true }
+bytemuck = { workspace = true }
+chrono = { workspace = true }
+image = { workspace = true }
+pollster = "0.4"
+dhat = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

@@ -8,7 +8,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use beatoraja_skin::skin::{Skin, SkinObject};
+use rubato_skin::skin::{Skin, SkinObject};
 
 // ---------------------------------------------------------------------------
 // Snapshot types
@@ -144,8 +144,8 @@ pub fn should_update_snapshots() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use beatoraja_skin::skin_header::SkinHeader;
-    use beatoraja_skin::skin_image::SkinImage;
+    use rubato_skin::skin_header::SkinHeader;
+    use rubato_skin::skin_image::SkinImage;
 
     #[test]
     fn test_empty_skin_snapshot() {

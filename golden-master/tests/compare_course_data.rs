@@ -2,9 +2,9 @@
 
 use std::path::Path;
 
-use beatoraja_types::course_data::{CourseData, CourseDataConstraint};
-use beatoraja_types::validatable::Validatable;
 use golden_master::course_data_fixtures::{CourseDataFixture, CourseDataTestCase};
+use rubato_types::course_data::{CourseData, CourseDataConstraint};
+use rubato_types::validatable::Validatable;
 
 fn fixtures_dir() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))

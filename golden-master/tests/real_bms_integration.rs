@@ -7,15 +7,15 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use beatoraja_core::pattern::lane_shuffle_modifier::LaneMirrorShuffleModifier;
-use beatoraja_core::pattern::note_shuffle_modifier::NoteShuffleModifier;
-use beatoraja_core::pattern::pattern_modifier::PatternModifier;
-use beatoraja_core::pattern::random::Random;
-use beatoraja_core::pattern::scroll_speed_modifier::ScrollSpeedModifier;
-use beatoraja_core::player_config::PlayerConfig;
 use bms_model::bms_decoder::BMSDecoder;
 use bms_model::bms_model::BMSModel;
 use bms_model::note::Note;
+use rubato_core::pattern::lane_shuffle_modifier::LaneMirrorShuffleModifier;
+use rubato_core::pattern::note_shuffle_modifier::NoteShuffleModifier;
+use rubato_core::pattern::pattern_modifier::PatternModifier;
+use rubato_core::pattern::random::Random;
+use rubato_core::pattern::scroll_speed_modifier::ScrollSpeedModifier;
+use rubato_core::player_config::PlayerConfig;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]

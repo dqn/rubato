@@ -3,12 +3,12 @@
 // Tests that autoplay key logs can be recorded, serialized to JSON,
 // loaded back, and replayed to produce identical scores.
 
-use beatoraja_types::groove_gauge::{EXHARD, HARD, NORMAL};
-use beatoraja_types::replay_data::ReplayData;
-use beatoraja_types::stubs::KeyInputLog as ReplayKeyInputLog;
 use bms_model::judge_note::{JUDGE_MS, JUDGE_PG, JUDGE_PR};
 use bms_model::mode::Mode;
 use golden_master::e2e_helpers::*;
+use rubato_types::groove_gauge::{EXHARD, HARD, NORMAL};
+use rubato_types::replay_data::ReplayData;
+use rubato_types::stubs::KeyInputLog as ReplayKeyInputLog;
 
 /// Record autoplay key events from a simulation.
 ///
@@ -16,7 +16,7 @@ use golden_master::e2e_helpers::*;
 /// every note perfectly (offset 0).
 fn record_autoplay_keylog(
     model: &bms_model::bms_model::BMSModel,
-) -> Vec<beatoraja_input::key_input_log::KeyInputLog> {
+) -> Vec<rubato_input::key_input_log::KeyInputLog> {
     let jn = model.build_judge_notes();
     let mode = model.get_mode().unwrap_or(&Mode::BEAT_7K);
     create_note_press_log(&jn, mode, 0)
@@ -69,7 +69,7 @@ fn replay_json_round_trip() {
     let model = load_bms("minimal_7k.bms");
     let keylog = record_autoplay_keylog(&model);
 
-    // Convert beatoraja_input KeyInputLog to stub KeyInputLog for ReplayData
+    // Convert rubato_input KeyInputLog to stub KeyInputLog for ReplayData
     let replay_keylog: Vec<ReplayKeyInputLog> = keylog
         .iter()
         .map(|k| ReplayKeyInputLog {
@@ -148,12 +148,12 @@ fn replay_json_playback_matches() {
     let json = serde_json::to_string(&replay).unwrap();
     let loaded: ReplayData = serde_json::from_str(&json).unwrap();
 
-    // Convert loaded stub KeyInputLog back to beatoraja_input KeyInputLog
-    let loaded_keylog: Vec<beatoraja_input::key_input_log::KeyInputLog> = loaded
+    // Convert loaded stub KeyInputLog back to rubato_input KeyInputLog
+    let loaded_keylog: Vec<rubato_input::key_input_log::KeyInputLog> = loaded
         .keylog
         .iter()
         .map(|entry| {
-            beatoraja_input::key_input_log::KeyInputLog::with_data(
+            rubato_input::key_input_log::KeyInputLog::with_data(
                 entry.time,
                 entry.keycode,
                 entry.pressed,

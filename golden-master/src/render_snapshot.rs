@@ -4,11 +4,11 @@
 // engines), this captures "what to draw" as a serializable data structure.
 // Both Java and Rust generate the same JSON format for field-by-field comparison.
 
-use beatoraja_skin::skin::SkinObject;
-use beatoraja_skin::skin_object::SkinObjectData;
-use beatoraja_skin::skin_property;
-use beatoraja_skin::skin_text::SkinTextData;
-use beatoraja_skin::skin_type::SkinType;
+use rubato_skin::skin::SkinObject;
+use rubato_skin::skin_object::SkinObjectData;
+use rubato_skin::skin_property;
+use rubato_skin::skin_text::SkinTextData;
+use rubato_skin::skin_type::SkinType;
 use serde::{Deserialize, Serialize};
 
 use crate::eval;
@@ -103,7 +103,7 @@ pub enum DrawDetail {
 /// Captures a RenderSnapshot from a Skin + SkinStateProvider.
 /// Pure function — no GPU dependency.
 pub fn capture_render_snapshot(
-    skin: &beatoraja_skin::skin::Skin,
+    skin: &rubato_skin::skin::Skin,
     provider: &dyn SkinStateProvider,
 ) -> RenderSnapshot {
     let objects = skin.get_objects();
@@ -207,7 +207,7 @@ pub fn capture_render_snapshot(
     }
 }
 
-fn should_skip_for_parity(skin: &beatoraja_skin::skin::Skin, object: &SkinObject) -> bool {
+fn should_skip_for_parity(skin: &rubato_skin::skin::Skin, object: &SkinObject) -> bool {
     let skin_type = skin.header.get_skin_type();
     matches!(skin_type, Some(&SkinType::MusicSelect))
         && (is_text_with_string_id(object, skin_property::STRING_SEARCHWORD)
@@ -240,7 +240,7 @@ fn is_object_valid_for_prepare(object: &SkinObject) -> bool {
 
 fn matches_option_conditions(
     data: &SkinObjectData,
-    skin: &beatoraja_skin::skin::Skin,
+    skin: &rubato_skin::skin::Skin,
     provider: &dyn SkinStateProvider,
     skin_type: Option<&SkinType>,
 ) -> bool {
@@ -284,7 +284,7 @@ fn matches_option_conditions(
 
 fn matches_dynamic_draw_conditions(
     data: &SkinObjectData,
-    skin: &beatoraja_skin::skin::Skin,
+    skin: &rubato_skin::skin::Skin,
     provider: &dyn SkinStateProvider,
     skin_type: Option<&SkinType>,
     object_index: usize,
@@ -1036,10 +1036,10 @@ fn compare_detail(
 mod tests {
     use super::*;
     use crate::state_provider::StaticStateProvider;
-    use beatoraja_skin::skin::Skin;
-    use beatoraja_skin::skin_header::SkinHeader;
-    use beatoraja_skin::skin_image::SkinImage;
-    use beatoraja_skin::stubs::TextureRegion;
+    use rubato_skin::skin::Skin;
+    use rubato_skin::skin_header::SkinHeader;
+    use rubato_skin::skin_image::SkinImage;
+    use rubato_skin::stubs::TextureRegion;
 
     fn make_provider() -> StaticStateProvider {
         StaticStateProvider::default()

@@ -2,12 +2,12 @@
 
 use std::path::Path;
 
-use beatoraja_core::score_data::ScoreData;
-use beatoraja_core::score_data_property::ScoreDataProperty;
 use bms_model::mode::Mode;
 use golden_master::score_data_property_fixtures::{
     ScoreDataPropertyFixture, ScoreDataPropertyTestCase,
 };
+use rubato_core::score_data::ScoreData;
+use rubato_core::score_data_property::ScoreDataProperty;
 
 fn fixtures_dir() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))

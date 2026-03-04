@@ -3,12 +3,12 @@
 // Tests that MainStateAccessor, TimerUtility, and EventUtility
 // correctly export functions to Lua and produce expected results.
 
-use beatoraja_skin::lua::event_utility::{
+use rubato_skin::lua::event_utility::{
     EventMinIntervalState, EventObserveTimerOffState, EventObserveTimerOnState,
     EventObserveTimerState, EventObserveTurnTrueState, TIMER_OFF_VALUE as EVENT_TIMER_OFF,
 };
-use beatoraja_skin::lua::main_state_accessor::TIMER_OFF_VALUE as MSA_TIMER_OFF;
-use beatoraja_skin::lua::timer_utility::{
+use rubato_skin::lua::main_state_accessor::TIMER_OFF_VALUE as MSA_TIMER_OFF;
+use rubato_skin::lua::timer_utility::{
     PassiveTimerState, TIMER_OFF_VALUE as TIMER_OFF, TimerObserveBooleanState, is_timer_off,
     is_timer_on, now_timer,
 };
@@ -272,8 +272,8 @@ fn min_interval_fires_after_interval() {
 
 #[test]
 fn skin_object_type_names() {
-    use beatoraja_skin::skin::SkinObject;
-    use beatoraja_skin::skin_image::SkinImage;
+    use rubato_skin::skin::SkinObject;
+    use rubato_skin::skin_image::SkinImage;
 
     let obj = SkinObject::Image(SkinImage::new_with_image_id(0));
     assert_eq!(obj.get_type_name(), "Image");
@@ -285,8 +285,8 @@ fn skin_object_type_names() {
 
 #[test]
 fn skin_object_is_slider() {
-    use beatoraja_skin::skin::SkinObject;
-    use beatoraja_skin::skin_image::SkinImage;
+    use rubato_skin::skin::SkinObject;
+    use rubato_skin::skin_image::SkinImage;
 
     let img = SkinObject::Image(SkinImage::new_with_image_id(0));
     assert!(!img.is_slider());

@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use beatoraja_skin::stubs::{
+use rubato_skin::stubs::{
     MainController, MainState, PlayerResource, SkinOffset, TextureRegion, Timer,
 };
 use serde::{Deserialize, Serialize};
@@ -140,7 +140,7 @@ impl<'a> StaticMainStateAdapter<'a> {
 }
 
 impl MainState for StaticMainStateAdapter<'_> {
-    fn get_timer(&self) -> &dyn beatoraja_types::timer_access::TimerAccess {
+    fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
         &self.timer
     }
 

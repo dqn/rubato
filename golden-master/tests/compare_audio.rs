@@ -27,9 +27,9 @@ fn get_test_case(name: &str) -> AudioTestCase {
 /// Decode a WAV file and convert to i16 samples for comparison
 fn decode_wav_to_i16(filename: &str) -> (Vec<i16>, u16, u32) {
     let path = audio_dir().join(filename);
-    let pcm = beatoraja_audio::decode::load_audio(&path)
+    let pcm = rubato_audio::decode::load_audio(&path)
         .unwrap_or_else(|e| panic!("Failed to decode {}: {}", filename, e));
-    let i16_samples = beatoraja_audio::bms_renderer::f32_to_i16(&pcm.samples);
+    let i16_samples = rubato_audio::bms_renderer::f32_to_i16(&pcm.samples);
     (i16_samples, pcm.channels, pcm.sample_rate)
 }
 
@@ -140,10 +140,10 @@ fn wav_adpcm_mono_decode() {
 fn resample_44100_to_22050() {
     let tc = get_test_case("resample_44100_to_22050");
     let path = audio_dir().join(&tc.source_file);
-    let pcm = beatoraja_audio::decode::load_audio(&path).unwrap();
+    let pcm = rubato_audio::decode::load_audio(&path).unwrap();
 
     let resampled = pcm.change_sample_rate(tc.target_rate.unwrap());
-    let rust_samples = beatoraja_audio::bms_renderer::f32_to_i16(&resampled.samples);
+    let rust_samples = rubato_audio::bms_renderer::f32_to_i16(&resampled.samples);
 
     assert_eq!(resampled.sample_rate, tc.target_rate.unwrap());
     compare_samples(&rust_samples, &tc.samples_i16, 1, "resample_44100_to_22050");
@@ -153,10 +153,10 @@ fn resample_44100_to_22050() {
 fn resample_44100_to_48000() {
     let tc = get_test_case("resample_44100_to_48000");
     let path = audio_dir().join(&tc.source_file);
-    let pcm = beatoraja_audio::decode::load_audio(&path).unwrap();
+    let pcm = rubato_audio::decode::load_audio(&path).unwrap();
 
     let resampled = pcm.change_sample_rate(tc.target_rate.unwrap());
-    let rust_samples = beatoraja_audio::bms_renderer::f32_to_i16(&resampled.samples);
+    let rust_samples = rubato_audio::bms_renderer::f32_to_i16(&resampled.samples);
 
     assert_eq!(resampled.sample_rate, tc.target_rate.unwrap());
     compare_samples(&rust_samples, &tc.samples_i16, 1, "resample_44100_to_48000");
@@ -166,10 +166,10 @@ fn resample_44100_to_48000() {
 fn resample_48000_to_44100() {
     let tc = get_test_case("resample_48000_to_44100");
     let path = audio_dir().join(&tc.source_file);
-    let pcm = beatoraja_audio::decode::load_audio(&path).unwrap();
+    let pcm = rubato_audio::decode::load_audio(&path).unwrap();
 
     let resampled = pcm.change_sample_rate(tc.target_rate.unwrap());
-    let rust_samples = beatoraja_audio::bms_renderer::f32_to_i16(&resampled.samples);
+    let rust_samples = rubato_audio::bms_renderer::f32_to_i16(&resampled.samples);
 
     assert_eq!(resampled.sample_rate, tc.target_rate.unwrap());
     compare_samples(&rust_samples, &tc.samples_i16, 2, "resample_48000_to_44100");
@@ -181,10 +181,10 @@ fn resample_48000_to_44100() {
 fn channel_mono_to_stereo() {
     let tc = get_test_case("channel_mono_to_stereo");
     let path = audio_dir().join(&tc.source_file);
-    let pcm = beatoraja_audio::decode::load_audio(&path).unwrap();
+    let pcm = rubato_audio::decode::load_audio(&path).unwrap();
 
     let converted = pcm.change_channels(tc.target_channels.unwrap());
-    let rust_samples = beatoraja_audio::bms_renderer::f32_to_i16(&converted.samples);
+    let rust_samples = rubato_audio::bms_renderer::f32_to_i16(&converted.samples);
 
     assert_eq!(converted.channels, tc.target_channels.unwrap());
     compare_samples(&rust_samples, &tc.samples_i16, 1, "channel_mono_to_stereo");
@@ -194,10 +194,10 @@ fn channel_mono_to_stereo() {
 fn channel_stereo_to_mono() {
     let tc = get_test_case("channel_stereo_to_mono");
     let path = audio_dir().join(&tc.source_file);
-    let pcm = beatoraja_audio::decode::load_audio(&path).unwrap();
+    let pcm = rubato_audio::decode::load_audio(&path).unwrap();
 
     let converted = pcm.change_channels(tc.target_channels.unwrap());
-    let rust_samples = beatoraja_audio::bms_renderer::f32_to_i16(&converted.samples);
+    let rust_samples = rubato_audio::bms_renderer::f32_to_i16(&converted.samples);
 
     assert_eq!(converted.channels, tc.target_channels.unwrap());
     compare_samples(&rust_samples, &tc.samples_i16, 1, "channel_stereo_to_mono");
