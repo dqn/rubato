@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use log::{info, warn};
+use log::{debug, info, warn};
 
 use crate::custom_event::CustomEvent;
 use crate::custom_timer::CustomTimer;
@@ -491,7 +491,7 @@ fn convert_skin_object(
                 return None;
             }
             let binding_id = value.unwrap_or(*ref_id);
-            info!(
+            debug!(
                 "ImageSet: creating placeholder with {} image refs, binding={}",
                 images.len(),
                 binding_id
@@ -1012,7 +1012,7 @@ fn convert_skin_object(
             // Java indexmap logic maps 4/8/12 node configs to 36 gauge slots.
             // With 36 nodes, each maps 1:1 to a slot.
             let gauge_images: Vec<Vec<Option<TextureRegion>>> = Vec::new();
-            info!(
+            debug!(
                 "Gauge: creating with {} nodes, parts={}, type={} (images deferred)",
                 nodes.len(),
                 parts,
@@ -1111,7 +1111,7 @@ fn convert_skin_object(
             // In Java, this uses PomyuCharaLoader to load character sprite sheets.
             // The loader needs file system access via getSrcIdPath and dst coordinates.
             // We create a placeholder SkinImage since PomyuCharaLoader produces SkinImage.
-            info!(
+            debug!(
                 "PmChara: type={}, color={}, src={:?} (image loading deferred)",
                 chara_type, color, src
             );
@@ -1125,8 +1125,8 @@ fn convert_skin_object(
             // SearchTextRegion: In Java, this sets a Rectangle on MusicSelectSkin.
             // It's not a SkinObject itself but a property of the select skin.
             // Since we don't have MusicSelectSkin in the converter, we log and skip.
-            info!(
-                "SearchTextRegion: ({}, {}, {}, {}) — stored as skin property, not a SkinObject",
+            debug!(
+                "SearchTextRegion: ({}, {}, {}, {}) -- stored as skin property, not a SkinObject",
                 x, y, w, h
             );
             None

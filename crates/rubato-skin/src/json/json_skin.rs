@@ -28,6 +28,7 @@ pub struct Skin {
     pub offset: Vec<Offset>,
     pub source: Vec<Source>,
     pub font: Vec<Font>,
+    #[serde(deserialize_with = "deserialize_flattened_conditional_images", default)]
     pub image: Vec<Image>,
     pub imageset: Vec<ImageSet>,
     pub value: Vec<Value>,
@@ -141,6 +142,7 @@ pub struct Font {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Image {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub src: Option<String>,
     pub x: i32,
@@ -841,6 +843,7 @@ pub struct Destination {
     #[serde(default = "default_neg_one")]
     pub stretch: i32,
     pub op: Vec<i32>,
+    #[serde(deserialize_with = "deserialize_optional_i32_or_string", default)]
     pub draw: Option<i32>,
     pub dst: Vec<Animation>,
     #[serde(rename = "mouseRect")]
@@ -979,4 +982,242 @@ where
         }
     }
     deserializer.deserialize_any(I32LenientVisitor)
+}
+
+/// Deserialize an `Option<String>` that may come as a JSON string or a JSON number.
+/// JSON skins use numeric IDs (e.g., `"id": 150`) while the Rust model expects strings.
+/// Numeric values are converted to their string representation (e.g., 150 -> "150").
+fn deserialize_optional_string_from_int<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de;
+    struct OptionalStringOrIntVisitor;
+    impl<'de> de::Visitor<'de> for OptionalStringOrIntVisitor {
+        type Value = Option<String>;
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a string, integer, or null")
+        }
+        fn visit_none<E: de::Error>(self) -> Result<Option<String>, E> {
+            Ok(None)
+        }
+        fn visit_unit<E: de::Error>(self) -> Result<Option<String>, E> {
+            Ok(None)
+        }
+        fn visit_some<D2: Deserializer<'de>>(
+            self,
+            deserializer: D2,
+        ) -> Result<Option<String>, D2::Error> {
+            deserializer.deserialize_any(Self)
+        }
+        fn visit_str<E: de::Error>(self, v: &str) -> Result<Option<String>, E> {
+            Ok(Some(v.to_string()))
+        }
+        fn visit_string<E: de::Error>(self, v: String) -> Result<Option<String>, E> {
+            Ok(Some(v))
+        }
+        fn visit_i64<E: de::Error>(self, v: i64) -> Result<Option<String>, E> {
+            Ok(Some(v.to_string()))
+        }
+        fn visit_u64<E: de::Error>(self, v: u64) -> Result<Option<String>, E> {
+            Ok(Some(v.to_string()))
+        }
+        fn visit_f64<E: de::Error>(self, v: f64) -> Result<Option<String>, E> {
+            // Truncate to integer for clean conversion (150.0 -> "150")
+            if v.fract() == 0.0 {
+                Ok(Some((v as i64).to_string()))
+            } else {
+                Ok(Some(v.to_string()))
+            }
+        }
+    }
+    deserializer.deserialize_any(OptionalStringOrIntVisitor)
+}
+
+/// Deserialize an `Option<i32>` that may come as a JSON number or a Lua expression string.
+/// JSON skins can have `"draw": 1` (integer condition) or `"draw": "gauge() >= 75"` (Lua expr).
+/// Integer values are preserved; string expressions yield `None` since Lua eval is not yet implemented.
+fn deserialize_optional_i32_or_string<'de, D>(deserializer: D) -> Result<Option<i32>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de;
+    struct OptionalI32OrStringVisitor;
+    impl<'de> de::Visitor<'de> for OptionalI32OrStringVisitor {
+        type Value = Option<i32>;
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("an integer, string, or null")
+        }
+        fn visit_none<E: de::Error>(self) -> Result<Option<i32>, E> {
+            Ok(None)
+        }
+        fn visit_unit<E: de::Error>(self) -> Result<Option<i32>, E> {
+            Ok(None)
+        }
+        fn visit_some<D2: Deserializer<'de>>(
+            self,
+            deserializer: D2,
+        ) -> Result<Option<i32>, D2::Error> {
+            deserializer.deserialize_any(Self)
+        }
+        fn visit_i64<E: de::Error>(self, v: i64) -> Result<Option<i32>, E> {
+            Ok(Some(v as i32))
+        }
+        fn visit_u64<E: de::Error>(self, v: u64) -> Result<Option<i32>, E> {
+            Ok(Some(v as i32))
+        }
+        fn visit_f64<E: de::Error>(self, v: f64) -> Result<Option<i32>, E> {
+            Ok(Some(v as i32))
+        }
+        fn visit_str<E: de::Error>(self, v: &str) -> Result<Option<i32>, E> {
+            // Try parsing as integer first; if it fails, it's a Lua expression -> None
+            Ok(v.parse::<i32>().ok())
+        }
+    }
+    deserializer.deserialize_any(OptionalI32OrStringVisitor)
+}
+
+/// Deserialize a `Vec<Image>` from a JSON array that may contain either direct `Image` objects
+/// or conditional wrappers `{"if": [...], "values": [...]}`. Conditional wrappers are flattened
+/// by extracting all items from `values` (the `if` condition is ignored for now).
+fn deserialize_flattened_conditional_images<'de, D>(deserializer: D) -> Result<Vec<Image>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    /// Wrapper enum for image array items that can be either a direct Image
+    /// or a conditional block with `if` and `values` fields.
+    /// Conditional is listed first so serde tries it before Direct (which would
+    /// match any object due to Image's `#[serde(default)]`).
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum MaybeConditionalImage {
+        Conditional {
+            #[serde(rename = "if")]
+            _condition: Vec<serde_json::Value>,
+            values: Vec<Image>,
+        },
+        Direct(Image),
+    }
+
+    let items: Vec<MaybeConditionalImage> = Vec::deserialize(deserializer)?;
+    let mut result = Vec::new();
+    for item in items {
+        match item {
+            MaybeConditionalImage::Direct(img) => result.push(img),
+            MaybeConditionalImage::Conditional { values, .. } => {
+                result.extend(values);
+            }
+        }
+    }
+    Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn image_id_from_string() {
+        let json = r#"{"id": "myimage"}"#;
+        let img: Image = serde_json::from_str(json).unwrap();
+        assert_eq!(img.id, Some("myimage".to_string()));
+    }
+
+    #[test]
+    fn image_id_from_integer() {
+        let json = r#"{"id": 150}"#;
+        let img: Image = serde_json::from_str(json).unwrap();
+        assert_eq!(img.id, Some("150".to_string()));
+    }
+
+    #[test]
+    fn image_id_null() {
+        let json = r#"{"id": null}"#;
+        let img: Image = serde_json::from_str(json).unwrap();
+        assert_eq!(img.id, None);
+    }
+
+    #[test]
+    fn image_id_absent() {
+        let json = r#"{}"#;
+        let img: Image = serde_json::from_str(json).unwrap();
+        assert_eq!(img.id, None);
+    }
+
+    #[test]
+    fn destination_draw_from_integer() {
+        let json = r#"{"draw": 1}"#;
+        let dst: Destination = serde_json::from_str(json).unwrap();
+        assert_eq!(dst.draw, Some(1));
+    }
+
+    #[test]
+    fn destination_draw_from_lua_expression() {
+        let json = r#"{"draw": "gauge() >= 75"}"#;
+        let dst: Destination = serde_json::from_str(json).unwrap();
+        // Lua expressions are not yet evaluable, so they become None
+        assert_eq!(dst.draw, None);
+    }
+
+    #[test]
+    fn destination_draw_from_string_integer() {
+        let json = r#"{"draw": "42"}"#;
+        let dst: Destination = serde_json::from_str(json).unwrap();
+        // String-encoded integers are parsed successfully
+        assert_eq!(dst.draw, Some(42));
+    }
+
+    #[test]
+    fn destination_draw_null() {
+        let json = r#"{"draw": null}"#;
+        let dst: Destination = serde_json::from_str(json).unwrap();
+        assert_eq!(dst.draw, None);
+    }
+
+    #[test]
+    fn destination_draw_absent() {
+        let json = r#"{}"#;
+        let dst: Destination = serde_json::from_str(json).unwrap();
+        assert_eq!(dst.draw, None);
+    }
+
+    #[test]
+    fn skin_image_array_direct_items() {
+        let json = r#"{"image": [{"id": "a"}, {"id": 10}]}"#;
+        let skin: Skin = serde_json::from_str(json).unwrap();
+        assert_eq!(skin.image.len(), 2);
+        assert_eq!(skin.image[0].id, Some("a".to_string()));
+        assert_eq!(skin.image[1].id, Some("10".to_string()));
+    }
+
+    #[test]
+    fn skin_image_array_with_conditional() {
+        let json = r#"{
+            "image": [
+                {"id": "a"},
+                {"if": [920], "values": [{"id": "b"}, {"id": "c"}]},
+                {"id": "d"}
+            ]
+        }"#;
+        let skin: Skin = serde_json::from_str(json).unwrap();
+        assert_eq!(skin.image.len(), 4);
+        assert_eq!(skin.image[0].id, Some("a".to_string()));
+        assert_eq!(skin.image[1].id, Some("b".to_string()));
+        assert_eq!(skin.image[2].id, Some("c".to_string()));
+        assert_eq!(skin.image[3].id, Some("d".to_string()));
+    }
+
+    #[test]
+    fn skin_image_array_empty() {
+        let json = r#"{"image": []}"#;
+        let skin: Skin = serde_json::from_str(json).unwrap();
+        assert!(skin.image.is_empty());
+    }
+
+    #[test]
+    fn skin_image_array_absent() {
+        let json = r#"{}"#;
+        let skin: Skin = serde_json::from_str(json).unwrap();
+        assert!(skin.image.is_empty());
+    }
 }

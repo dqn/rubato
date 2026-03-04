@@ -632,9 +632,14 @@ impl MainController {
         self.current = Some(new_state);
 
         // In Java: timer.setMainState(newState)
+        // Java's setMainState resets all timers, restarts the clock, and turns on
+        // timer 0 (TIMER_UNDEFINED) so skin objects referencing it will draw.
         if let Some(ref mut current) = self.current {
             let st = current.state_type();
-            current.main_state_data_mut().timer.set_state_type(st);
+            let timer = &mut current.main_state_data_mut().timer;
+            timer.set_main_state();
+            timer.set_state_type(st);
+            timer.set_timer_on(0);
         }
 
         // Prepare the new state
@@ -766,6 +771,9 @@ impl MainController {
             // Read state type before mutable borrow
             let st = current.state_type();
             let data = current.main_state_data_mut();
+            // Advance the state's timer each frame (Java shares one timer;
+            // Rust has separate TimerManagers for controller and state).
+            data.timer.update();
             data.timer.set_state_type(st);
             if let Some(mut skin) = data.skin.take() {
                 skin.update_custom_objects_timed(&mut data.timer);

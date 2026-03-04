@@ -32,7 +32,7 @@ use crate::skin_timing_distribution_graph::SkinTimingDistributionGraph;
 use crate::skin_timing_visualizer::SkinTimingVisualizer;
 use crate::stubs::{MainState, SkinConfigOffset, SkinOffset, TextureRegion};
 
-use log::info;
+use log::{debug, info};
 
 /// Skin object enum for polymorphic dispatch
 // All variants mirror Java SkinObject hierarchy; NoteDistributionGraph/HitErrorVisualizer
@@ -390,6 +390,10 @@ pub struct Skin {
     renderer: Option<SkinObjectRenderer>,
     nextpreparetime: i64,
     prepareduration: i64,
+
+    /// Image registry: maps image IDs to TextureRegions.
+    /// Populated during skin loading; resolved by SkinSourceReference at draw time.
+    image_registry: HashMap<i32, TextureRegion>,
 }
 
 impl Skin {
@@ -440,11 +444,47 @@ impl Skin {
             renderer: None,
             nextpreparetime: -1,
             prepareduration: 1,
+            image_registry: Self::create_system_image_registry(),
         }
+    }
+
+    /// Create system placeholder images (BLACK=110, WHITE=111).
+    /// These are always available regardless of song selection.
+    fn create_system_image_registry() -> HashMap<i32, TextureRegion> {
+        use crate::rendering_stubs::{Pixmap, PixmapFormat, Texture};
+        use crate::skin_property::{IMAGE_BLACK, IMAGE_WHITE};
+
+        let mut registry = HashMap::new();
+
+        // 1x1 black pixel
+        let mut black_pix = Pixmap::new(1, 1, PixmapFormat::RGBA8888);
+        black_pix.set_color_rgba(0.0, 0.0, 0.0, 1.0);
+        black_pix.fill();
+        let black_tex = Texture::from_pixmap(&black_pix);
+        registry.insert(IMAGE_BLACK, TextureRegion::from_texture(black_tex));
+
+        // 1x1 white pixel
+        let mut white_pix = Pixmap::new(1, 1, PixmapFormat::RGBA8888);
+        white_pix.set_color_rgba(1.0, 1.0, 1.0, 1.0);
+        white_pix.fill();
+        let white_tex = Texture::from_pixmap(&white_pix);
+        registry.insert(IMAGE_WHITE, TextureRegion::from_texture(white_tex));
+
+        registry
     }
 
     pub fn add(&mut self, object: SkinObject) {
         self.objects.push(object);
+    }
+
+    /// Register an image by ID for SkinSourceReference resolution.
+    pub fn register_image(&mut self, id: i32, tr: TextureRegion) {
+        self.image_registry.insert(id, tr);
+    }
+
+    /// Look up a registered image by ID.
+    pub fn get_registered_image(&self, id: i32) -> Option<TextureRegion> {
+        self.image_registry.get(&id).cloned()
     }
 
     pub fn set_destination(
@@ -688,7 +728,7 @@ impl Skin {
             }
         }
 
-        info!(
+        debug!(
             "Removing SkinObjects that are confirmed not to be drawn: {} / {}",
             remove_indices.len(),
             self.objects.len()
@@ -1043,21 +1083,26 @@ struct TimerOnlyMainState<'a> {
     main_controller: crate::stubs::MainController,
     resource: crate::stubs::PlayerResource,
     state_type: Option<rubato_types::main_state_type::MainStateType>,
+    image_registry: &'a HashMap<i32, TextureRegion>,
 }
 
 impl<'a> TimerOnlyMainState<'a> {
     fn from_timer(timer: &'a dyn rubato_types::timer_access::TimerAccess) -> Self {
+        static EMPTY: std::sync::LazyLock<HashMap<i32, TextureRegion>> =
+            std::sync::LazyLock::new(HashMap::new);
         Self {
             timer,
             ctx: None,
             main_controller: crate::stubs::MainController { debug: false },
             resource: crate::stubs::PlayerResource,
             state_type: None,
+            image_registry: &EMPTY,
         }
     }
 
-    fn from_render_context(
+    fn from_render_context_with_images(
         ctx: &'a dyn rubato_types::skin_render_context::SkinRenderContext,
+        image_registry: &'a HashMap<i32, TextureRegion>,
     ) -> Self {
         Self {
             timer: ctx,
@@ -1065,6 +1110,7 @@ impl<'a> TimerOnlyMainState<'a> {
             main_controller: crate::stubs::MainController { debug: false },
             resource: crate::stubs::PlayerResource,
             state_type: ctx.current_state_type(),
+            image_registry,
         }
     }
 }
@@ -1082,8 +1128,8 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
         &self.main_controller
     }
 
-    fn get_image(&self, _id: i32) -> Option<crate::rendering_stubs::TextureRegion> {
-        None
+    fn get_image(&self, id: i32) -> Option<crate::rendering_stubs::TextureRegion> {
+        self.image_registry.get(&id).cloned()
     }
 
     fn get_resource(&self) -> &crate::stubs::PlayerResource {
@@ -1114,16 +1160,21 @@ impl rubato_core::main_state::SkinDrawable for Skin {
         &mut self,
         ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
     ) {
-        let adapter = TimerOnlyMainState::from_render_context(ctx);
+        // Take image registry out to avoid borrow conflict (&mut self vs &self.image_registry)
+        let registry = std::mem::take(&mut self.image_registry);
+        let adapter = TimerOnlyMainState::from_render_context_with_images(ctx, &registry);
         self.draw_all_objects(&adapter);
+        self.image_registry = registry;
     }
 
     fn update_custom_objects_timed(
         &mut self,
         ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
     ) {
-        let adapter = TimerOnlyMainState::from_render_context(ctx);
+        let registry = std::mem::take(&mut self.image_registry);
+        let adapter = TimerOnlyMainState::from_render_context_with_images(ctx, &registry);
         self.update_custom_objects(&adapter);
+        self.image_registry = registry;
     }
 
     fn mouse_pressed_at(&mut self, button: i32, x: i32, y: i32) {
