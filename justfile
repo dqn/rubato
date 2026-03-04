@@ -1,3 +1,7 @@
+# Run rubato (pass extra args after --)
+run *ARGS:
+    cargo run -p rubato-bin -- {{ARGS}}
+
 check:
     cargo check --workspace
 
