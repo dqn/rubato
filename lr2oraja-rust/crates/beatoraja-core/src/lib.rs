@@ -65,3 +65,6 @@ pub mod config_pkg;
 
 // Pattern modifiers (merged from beatoraja-pattern crate)
 pub mod pattern;
+
+// Robust file I/O with backup (merged from beatoraja-system crate)
+pub mod robust_file;
