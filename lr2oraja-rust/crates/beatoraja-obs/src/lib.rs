@@ -6,6 +6,8 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
+use std::sync::{Mutex, MutexGuard};
+
 // Re-exports (formerly in stubs.rs)
 pub use beatoraja_types::imgui_notify::ImGuiNotify;
 

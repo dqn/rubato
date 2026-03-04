@@ -190,7 +190,12 @@ impl BMSDecoder {
                         };
                         match arg.trim().parse::<i32>() {
                             Ok(val) => {
-                                skip.push(*crandom.last().expect("crandom non-empty checked at line 185") != val);
+                                skip.push(
+                                    *crandom
+                                        .last()
+                                        .expect("crandom non-empty checked at line 185")
+                                        != val,
+                                );
                             }
                             Err(_) => {
                                 self.log.push(DecodeLog::new(

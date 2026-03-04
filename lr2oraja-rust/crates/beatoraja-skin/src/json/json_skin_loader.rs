@@ -373,7 +373,8 @@ impl JSONSkinLoader {
         header.source_resolution = source_resolution;
 
         // Process categories
-        let mut category_items: Vec<Vec<Option<CustomItemData>>> = Vec::with_capacity(sk.category.len());
+        let mut category_items: Vec<Vec<Option<CustomItemData>>> =
+            Vec::with_capacity(sk.category.len());
         for category in &sk.category {
             category_items.push(vec![None; category.item.len()]);
         }
