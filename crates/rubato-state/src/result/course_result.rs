@@ -917,6 +917,9 @@ mod tests {
     }
 
     impl rubato_types::player_resource_access::PlayerResourceAccess for MockPlayerResourceForIR {
+        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
+            self
+        }
         fn get_config(&self) -> &rubato_types::config::Config {
             static CONFIG: std::sync::OnceLock<rubato_types::config::Config> =
                 std::sync::OnceLock::new();
@@ -1315,5 +1318,9 @@ impl rubato_core::main_state::MainState for CourseResult {
 
     fn dispose(&mut self) {
         self.dispose();
+    }
+
+    fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
+        self.resource.take_inner().map(|b| b.into_any_send())
     }
 }

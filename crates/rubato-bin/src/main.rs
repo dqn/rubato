@@ -319,9 +319,23 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     // In Rust, we create a shared Arc<Mutex<MusicSelector>> and store it on MainController.
     // Both StreamController and StateFactory (MusicSelect arm) use the same instance.
     if main_controller.get_player_config().enable_request {
-        let selector = rubato_state::select::music_selector::MusicSelector::with_config(
-            main_controller.get_config().clone(),
-        );
+        let config = main_controller.get_config();
+        let selector =
+            match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
+                config.get_songpath(),
+                config.get_bmsroot(),
+            ) {
+                Ok(db) => rubato_state::select::music_selector::MusicSelector::with_song_database(
+                    Box::new(db),
+                ),
+                Err(e) => {
+                    log::warn!(
+                        "Failed to open song database for shared MusicSelector: {}",
+                        e
+                    );
+                    rubato_state::select::music_selector::MusicSelector::with_config(config.clone())
+                }
+            };
         let selector = std::sync::Arc::new(std::sync::Mutex::new(selector));
         // Store the shared selector on MainController for StateFactory to retrieve
         main_controller.set_shared_music_selector(Box::new(std::sync::Arc::clone(&selector)));
@@ -504,11 +518,13 @@ impl ApplicationHandler for RubatoApp {
                 Ok(window) => {
                     let window = Arc::new(window);
 
-                    // Create wgpu GPU context bound to this window's surface
+                    // Create wgpu GPU context bound to this window's surface.
+                    // wgpu SurfaceConfiguration expects physical pixels, not logical.
+                    let physical = window.inner_size();
                     match pollster::block_on(GpuContext::new_with_surface(
                         Arc::clone(&window),
-                        self.width,
-                        self.height,
+                        physical.width,
+                        physical.height,
                     )) {
                         Ok(gpu) => {
                             info!("wgpu GPU context created successfully");
@@ -589,7 +605,9 @@ impl ApplicationHandler for RubatoApp {
             && let Some(window) = &self.window
         {
             let response = state.on_window_event(window, &event);
-            if response.consumed {
+            // Only skip game logic for non-critical events consumed by egui.
+            // RedrawRequested must always reach the game loop for rendering.
+            if response.consumed && !matches!(event, WindowEvent::RedrawRequested) {
                 return;
             }
         }
@@ -602,11 +620,15 @@ impl ApplicationHandler for RubatoApp {
             }
             // Java: main.resize(width, height)
             WindowEvent::Resized(size) => {
+                // Surface uses physical pixels
                 if let Some(gpu) = &mut self.gpu {
                     gpu.resize(size.width, size.height);
                 }
-                self.controller
-                    .resize(size.width as i32, size.height as i32);
+                // Game coordinate space uses logical pixels (matching skin/config resolution)
+                let scale = self.window.as_ref().map_or(1.0, |w| w.scale_factor());
+                let logical_w = (size.width as f64 / scale) as i32;
+                let logical_h = (size.height as f64 / scale) as i32;
+                self.controller.resize(logical_w, logical_h);
             }
             // Java: main.render() — called every frame via ApplicationListener.render()
             WindowEvent::RedrawRequested => {

@@ -2514,6 +2514,9 @@ mod tests {
     }
 
     impl PlayerResourceAccess for MockPlayerResource {
+        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
+            self
+        }
         fn get_config(&self) -> &rubato_types::config::Config {
             static CFG: std::sync::OnceLock<rubato_types::config::Config> =
                 std::sync::OnceLock::new();

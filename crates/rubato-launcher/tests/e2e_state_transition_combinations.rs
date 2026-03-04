@@ -201,7 +201,18 @@ fn e2e_course_play_multi_song_sequence() {
     assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
     mc.render();
 
-    // Back to Play for third song
+    // Transition to Decide to restore the PlayerResource from Result,
+    // then load the third song's BMS file.
+    // (Result returns the resource via take_player_resource_box during
+    // transition_to_state, making it available on the controller again.)
+    mc.change_state(MainStateType::Decide);
+    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Decide));
+    mc.render();
+
+    // Back to Play for third song (Decide returns resource during transition)
+    mc.change_state(MainStateType::Play);
+    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    // Resource is now back on the controller after Decide returned it.
     {
         let resource = mc
             .get_player_resource_mut()
@@ -209,9 +220,6 @@ fn e2e_course_play_multi_song_sequence() {
         let loaded = resource.set_bms_file(&bms_path, 0, 0);
         assert!(loaded, "Third song of course should load successfully");
     }
-
-    mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
     mc.render();
 
     // Course ends -> CourseResult
@@ -319,16 +327,20 @@ fn e2e_course_data_cleared_after_course_result() {
     mc.change_state(MainStateType::CourseResult);
     mc.render();
 
+    // Transition to MusicSelect to restore the PlayerResource from CourseResult.
+    // CourseResult returns the resource via take_player_resource_box during
+    // transition_to_state, making it available on the controller again.
+    mc.change_state(MainStateType::MusicSelect);
+
     // Clear course data (simulates what MusicSelector does on return)
     {
         let resource = mc
             .get_player_resource_mut()
-            .expect("PlayerResource should exist");
+            .expect("PlayerResource should exist after transition from CourseResult");
         resource.clear_course_data();
     }
 
-    // Back to MusicSelect - course data should be cleared
-    mc.change_state(MainStateType::MusicSelect);
+    // Verify course data is cleared
     {
         let resource = mc
             .get_player_resource()

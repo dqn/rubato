@@ -20,7 +20,10 @@ use crate::song_data::SongData;
 /// Methods that return types not available in beatoraja-types (e.g., BMSModel, RankingData,
 /// BMSPlayerMode) are NOT included here. Downstream crates that need those methods should
 /// keep local extension stubs until the types are unified.
-pub trait PlayerResourceAccess {
+pub trait PlayerResourceAccess: Send {
+    /// Convert a boxed trait object into `Box<dyn Any + Send>` for type-erased
+    /// take/restore of the underlying concrete type (e.g., core::PlayerResource).
+    fn into_any_send(self: Box<Self>) -> Box<dyn Any + Send>;
     // ---- Config access ----
 
     /// Get config reference
@@ -244,19 +247,19 @@ pub trait PlayerResourceAccess {
     /// Get the type-erased BGA processor for reuse across plays.
     ///
     /// The concrete type is `Arc<Mutex<BGAProcessor>>` from beatoraja-play, but it is stored
-    /// as `Box<dyn Any>` here because beatoraja-types cannot depend on beatoraja-play.
+    /// as `Box<dyn Any + Send>` here because beatoraja-types cannot depend on beatoraja-play.
     /// The caller (LauncherStateFactory) downcasts to the concrete type.
     ///
     /// Java: PlayerResource.getBGAManager() -> BMSResource.getBGAProcessor()
-    fn get_bga_any(&self) -> Option<&dyn Any> {
+    fn get_bga_any(&self) -> Option<&(dyn Any + Send)> {
         None
     }
 
     /// Store the type-erased BGA processor for reuse in subsequent plays.
     ///
-    /// The caller passes `Box<Arc<Mutex<BGAProcessor>>>` erased to `Box<dyn Any>`.
+    /// The caller passes `Box<Arc<Mutex<BGAProcessor>>>` erased to `Box<dyn Any + Send>`.
     /// Java: the BGAProcessor lives in BMSResource and is created once per PlayerResource.
-    fn set_bga_any(&mut self, _bga: Box<dyn Any>) {
+    fn set_bga_any(&mut self, _bga: Box<dyn Any + Send>) {
         // default no-op
     }
 
@@ -297,6 +300,9 @@ impl NullPlayerResource {
 }
 
 impl PlayerResourceAccess for NullPlayerResource {
+    fn into_any_send(self: Box<Self>) -> Box<dyn Any + Send> {
+        self
+    }
     fn get_config(&self) -> &Config {
         log::warn!("NullPlayerResource::get_config called — returning default");
         Self::null_config()

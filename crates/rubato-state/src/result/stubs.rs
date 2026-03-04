@@ -382,6 +382,21 @@ impl PlayerResource {
         self.ranking_data = data;
     }
 
+    pub fn set_bms_model(&mut self, model: bms_model::bms_model::BMSModel) {
+        self.bms_model = model;
+    }
+
+    pub fn set_course_bms_models(&mut self, models: Option<Vec<bms_model::bms_model::BMSModel>>) {
+        self.course_bms_models = models;
+    }
+
+    /// Take the inner PlayerResourceAccess, replacing it with a NullPlayerResource.
+    /// Used during state transition to return the resource to MainController.
+    pub fn take_inner(&mut self) -> Option<Box<dyn PlayerResourceAccess>> {
+        let null: Box<dyn PlayerResourceAccess> = Box::new(NullPlayerResource::new());
+        Some(std::mem::replace(&mut self.inner, null))
+    }
+
     pub fn get_replay_data_mut(&mut self) -> Option<&mut rubato_core::replay_data::ReplayData> {
         self.inner.get_replay_data_mut()
     }

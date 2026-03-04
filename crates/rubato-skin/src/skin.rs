@@ -783,10 +783,25 @@ impl Skin {
             }
 
             let renderer = self.renderer.as_mut().unwrap();
+            let mut draw_count = 0usize;
             for idx in &self.objectarray_indices {
                 if self.objects[*idx].is_draw() && self.objects[*idx].is_visible() {
                     self.objects[*idx].draw(renderer, state);
+                    draw_count += 1;
                 }
+            }
+
+            // TODO: remove debug log
+            use std::sync::atomic::{AtomicU64, Ordering};
+            static FRAME: AtomicU64 = AtomicU64::new(0);
+            let frame = FRAME.fetch_add(1, Ordering::Relaxed);
+            if frame.is_multiple_of(60) {
+                log::debug!(
+                    "Skin draw: objects={}, drawable={}, vertices={}",
+                    self.objectarray_indices.len(),
+                    draw_count,
+                    renderer.sprite.vertices().len(),
+                );
             }
         }
     }

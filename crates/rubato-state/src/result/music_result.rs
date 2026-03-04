@@ -880,6 +880,10 @@ impl MainState for MusicResult {
         self.main_data.skin = None;
         self.main_data.stage = None;
     }
+
+    fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
+        self.resource.take_inner().map(|b| b.into_any_send())
+    }
 }
 
 impl Default for MusicResult {

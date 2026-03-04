@@ -402,6 +402,17 @@ impl MainController {
         self.resource.as_ref()
     }
 
+    /// Take the PlayerResource out of MainController (leaving None).
+    /// Used by StateFactory to give states ownership during their lifecycle.
+    pub fn take_player_resource(&mut self) -> Option<PlayerResource> {
+        self.resource.take()
+    }
+
+    /// Restore a PlayerResource previously taken via `take_player_resource()`.
+    pub fn restore_player_resource(&mut self, resource: PlayerResource) {
+        self.resource = Some(resource);
+    }
+
     pub fn get_config(&self) -> &Config {
         &self.config
     }
@@ -623,6 +634,14 @@ impl MainController {
             {
                 resource.set_bga_any(bga_cache);
             }
+            // Restore PlayerResource from the exiting state back to MainController.
+            // States receive ownership via take_player_resource() in the factory;
+            // we reclaim it here so it's available for the next state.
+            if let Some(any_box) = old_state.take_player_resource_box()
+                && let Ok(core_resource) = any_box.downcast::<PlayerResource>()
+            {
+                self.resource = Some(*core_resource);
+            }
             old_state.shutdown();
             // setSkin(null) equivalent
             old_state.main_state_data_mut().skin = None;
@@ -659,7 +678,22 @@ impl MainController {
     /// Java lines 416-552
     pub fn create(&mut self) {
         let t = Instant::now();
-        self.sprite = Some(SpriteBatchHelper::create_sprite_batch());
+        let mut sprite = SpriteBatchHelper::create_sprite_batch();
+        // Java: SpriteBatch constructor calls setToOrtho2D(0, 0, width, height)
+        let mut ortho = rubato_render::color::Matrix4::new();
+        // wgpu NDC has y=-1 at bottom and y=1 at top, but skin coordinates
+        // use y=0 at the top of the screen. Swap bottom/top so that y=0 maps
+        // to NDC y=+1 (top) and y=height maps to NDC y=-1 (bottom).
+        ortho.set_to_ortho(
+            0.0,
+            self.config.window_width as f32,
+            self.config.window_height as f32,
+            0.0,
+            -1.0,
+            1.0,
+        );
+        sprite.set_projection_matrix(&ortho);
+        self.sprite = Some(sprite);
 
         // ImGui init: managed by beatoraja-bin (egui context), not here
 
@@ -1033,6 +1067,13 @@ impl MainController {
     ///
     /// Translated from: MainController.resize(int, int)
     pub fn resize(&mut self, width: i32, height: i32) {
+        // Update sprite batch projection to match new window size
+        // Java: SpriteBatch projection is updated via Gdx.graphics viewport
+        if let Some(ref mut sprite) = self.sprite {
+            let mut ortho = rubato_render::color::Matrix4::new();
+            ortho.set_to_ortho(0.0, width as f32, height as f32, 0.0, -1.0, 1.0);
+            sprite.set_projection_matrix(&ortho);
+        }
         if let Some(ref mut current) = self.current {
             current.resize(width, height);
         }

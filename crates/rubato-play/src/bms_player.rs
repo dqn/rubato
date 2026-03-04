@@ -1646,7 +1646,7 @@ impl MainState for BMSPlayer {
         self.model = model;
     }
 
-    fn take_bga_cache(&mut self) -> Option<Box<dyn std::any::Any>> {
+    fn take_bga_cache(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
         // Return the Arc<Mutex<BGAProcessor>> for caching on PlayerResource.
         // The Arc is cloned so that BMSPlayer can still hold a reference
         // (though it will be dropped shortly after during state transition).

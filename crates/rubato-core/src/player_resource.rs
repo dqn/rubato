@@ -98,9 +98,9 @@ pub struct PlayerResource {
     force_no_ir_send: bool,
     /// Type-erased BGA processor for reuse across plays.
     /// Concrete type: `Arc<Mutex<BGAProcessor>>` from beatoraja-play.
-    /// Stored via Box<dyn Any> to avoid circular dependency (core cannot import play).
+    /// Stored via Box<dyn Any + Send> to avoid circular dependency (core cannot import play).
     /// Java: BMSResource holds BGAProcessor, reused via PlayerResource.getBGAManager().
-    bga_any: Option<Box<dyn Any>>,
+    bga_any: Option<Box<dyn Any + Send>>,
 }
 
 impl PlayerResource {
@@ -653,6 +653,10 @@ impl PlayerResource {
 }
 
 impl PlayerResourceAccess for PlayerResource {
+    fn into_any_send(self: Box<Self>) -> Box<dyn Any + Send> {
+        self
+    }
+
     fn get_config(&self) -> &Config {
         &self.config
     }
@@ -905,11 +909,11 @@ impl PlayerResourceAccess for PlayerResource {
         }
     }
 
-    fn get_bga_any(&self) -> Option<&dyn Any> {
+    fn get_bga_any(&self) -> Option<&(dyn Any + Send)> {
         self.bga_any.as_deref()
     }
 
-    fn set_bga_any(&mut self, bga: Box<dyn Any>) {
+    fn set_bga_any(&mut self, bga: Box<dyn Any + Send>) {
         self.bga_any = Some(bga);
     }
 

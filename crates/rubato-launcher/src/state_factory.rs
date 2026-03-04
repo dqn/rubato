@@ -17,8 +17,11 @@ use rubato_state::decide::music_decide::MusicDecide;
 use rubato_state::decide::stubs::MainControllerRef as DecideMainControllerRef;
 use rubato_state::result::course_result::CourseResult;
 use rubato_state::result::music_result::MusicResult;
+use rubato_state::result::stubs::BMSPlayerMode;
+use rubato_state::result::stubs::BMSPlayerModeType;
 use rubato_state::result::stubs::MainController as ResultMainController;
 use rubato_state::result::stubs::PlayerResource as ResultPlayerResource;
+use rubato_state::result::stubs::RankingData;
 use rubato_state::select::music_selector::MusicSelector;
 use rubato_types::main_controller_access::{ConfigMainControllerAccess, MainControllerAccess};
 use rubato_types::player_resource_access::{NullPlayerResource, PlayerResourceAccess};
@@ -212,8 +215,20 @@ impl StateFactory for LauncherStateFactory {
                         target_score: None,
                     });
                 }
-                // Fallback: create a standalone selector (no stream controller)
-                let selector = MusicSelector::with_config(controller.get_config().clone());
+                // Fallback: create a standalone selector (no stream controller).
+                // Open a separate SQLite connection for the selector (same pattern
+                // as download processors in main.rs).
+                let config = controller.get_config();
+                let selector = match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
+                    config.get_songpath(),
+                    config.get_bmsroot(),
+                ) {
+                    Ok(db) => MusicSelector::with_song_database(Box::new(db)),
+                    Err(e) => {
+                        log::warn!("Failed to open song database for MusicSelector: {}", e);
+                        MusicSelector::with_config(config.clone())
+                    }
+                };
                 Some(StateCreateResult {
                     state: Box::new(selector),
                     target_score: None,
@@ -225,9 +240,15 @@ impl StateFactory for LauncherStateFactory {
                     controller.get_config().clone(),
                     controller.get_player_config().clone(),
                 );
+                let resource: Box<dyn PlayerResourceAccess> =
+                    if let Some(r) = controller.take_player_resource() {
+                        Box::new(r)
+                    } else {
+                        Box::new(NullPlayerResource::new())
+                    };
                 let decide = MusicDecide::new(
                     DecideMainControllerRef::new(Box::new(mc_access)),
-                    Box::new(NullPlayerResource::new()),
+                    resource,
                     TimerManager::new(),
                 );
                 Some(StateCreateResult {
@@ -296,9 +317,28 @@ impl StateFactory for LauncherStateFactory {
                     controller.get_config().clone(),
                     controller.get_player_config().clone(),
                 );
+                let result_resource = if let Some(core_res) = controller.take_player_resource() {
+                    let pm = core_res
+                        .get_play_mode()
+                        .cloned()
+                        .unwrap_or_else(|| BMSPlayerMode::new(BMSPlayerModeType::Play));
+                    let bm = core_res.get_bms_model().cloned().unwrap_or_default();
+                    let cm = core_res.get_course_bms_models().cloned();
+                    let ranking = core_res
+                        .get_ranking_data_any()
+                        .and_then(|a| a.downcast_ref::<RankingData>())
+                        .cloned();
+                    let mut rr = ResultPlayerResource::new(Box::new(core_res), pm);
+                    rr.set_bms_model(bm);
+                    rr.set_course_bms_models(cm);
+                    rr.set_ranking_data(ranking);
+                    rr
+                } else {
+                    ResultPlayerResource::default()
+                };
                 let result = MusicResult::new(
                     ResultMainController::new(Box::new(mc_access)),
-                    ResultPlayerResource::default(),
+                    result_resource,
                     TimerManager::new(),
                 );
                 Some(StateCreateResult {
@@ -312,9 +352,28 @@ impl StateFactory for LauncherStateFactory {
                     controller.get_config().clone(),
                     controller.get_player_config().clone(),
                 );
+                let result_resource = if let Some(core_res) = controller.take_player_resource() {
+                    let pm = core_res
+                        .get_play_mode()
+                        .cloned()
+                        .unwrap_or_else(|| BMSPlayerMode::new(BMSPlayerModeType::Play));
+                    let bm = core_res.get_bms_model().cloned().unwrap_or_default();
+                    let cm = core_res.get_course_bms_models().cloned();
+                    let ranking = core_res
+                        .get_ranking_data_any()
+                        .and_then(|a| a.downcast_ref::<RankingData>())
+                        .cloned();
+                    let mut rr = ResultPlayerResource::new(Box::new(core_res), pm);
+                    rr.set_bms_model(bm);
+                    rr.set_course_bms_models(cm);
+                    rr.set_ranking_data(ranking);
+                    rr
+                } else {
+                    ResultPlayerResource::default()
+                };
                 let course_result = CourseResult::new(
                     ResultMainController::new(Box::new(mc_access)),
-                    ResultPlayerResource::default(),
+                    result_resource,
                     TimerManager::new(),
                 );
                 Some(StateCreateResult {

@@ -7,7 +7,7 @@ use rubato_core::timer_manager::TimerManager;
 use rubato_skin::skin_property::{TIMER_FADEOUT, TIMER_STARTINPUT};
 use rubato_skin::skin_type::SkinType;
 
-use super::stubs::{ControlKeys, MainControllerRef, PlayerResourceAccess};
+use super::stubs::{ControlKeys, MainControllerRef, NullPlayerResource, PlayerResourceAccess};
 
 /// MusicDecide - music decide screen state
 ///
@@ -124,6 +124,12 @@ impl MainState for MusicDecide {
         // super.dispose()
         self.data.skin = None;
         self.data.stage = None;
+    }
+
+    fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
+        let null: Box<dyn PlayerResourceAccess> = Box::new(NullPlayerResource::new());
+        let old = std::mem::replace(&mut self.resource, null);
+        Some(old.into_any_send())
     }
 }
 

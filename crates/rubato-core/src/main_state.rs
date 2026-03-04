@@ -175,7 +175,15 @@ pub trait MainState {
     /// so it can be reused when entering Play state again, preserving the texture cache.
     ///
     /// Java: BGAProcessor lives in BMSResource and is never destroyed between plays.
-    fn take_bga_cache(&mut self) -> Option<Box<dyn std::any::Any>> {
+    fn take_bga_cache(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
+        None
+    }
+
+    /// Take the PlayerResource (type-erased) from this state.
+    ///
+    /// Called during state transition so MainController can restore the resource.
+    /// States that received a PlayerResource via the factory override this to return it.
+    fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
         None
     }
 }
