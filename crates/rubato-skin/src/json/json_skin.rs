@@ -59,6 +59,10 @@ pub struct Skin {
     #[serde(rename = "customTimers")]
     pub custom_timers: Vec<CustomTimer>,
 
+    #[serde(
+        deserialize_with = "deserialize_flattened_conditional_destinations",
+        default
+    )]
     pub destination: Vec<Destination>,
 }
 
@@ -124,6 +128,7 @@ pub struct Category {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Source {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub path: Option<String>,
 }
@@ -132,6 +137,7 @@ pub struct Source {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Font {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub path: Option<String>,
     #[serde(rename = "type")]
@@ -170,10 +176,12 @@ fn default_one() -> i32 {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ImageSet {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     #[serde(rename = "ref")]
     pub ref_id: i32,
     pub value: Option<i32>,
+    #[serde(deserialize_with = "deserialize_vec_string_from_ints", default)]
     pub images: Vec<String>,
     pub act: Option<i32>,
     pub click: i32,
@@ -183,6 +191,7 @@ pub struct ImageSet {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Value {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub src: Option<String>,
     pub x: i32,
@@ -210,6 +219,7 @@ pub struct Value {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct FloatValue {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub src: Option<String>,
     pub x: i32,
@@ -246,6 +256,7 @@ fn default_gain() -> f32 {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Text {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub font: Option<String>,
     pub size: i32,
@@ -283,6 +294,7 @@ fn default_shadow_color() -> String {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Slider {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub src: Option<String>,
     pub x: i32,
@@ -317,6 +329,7 @@ fn default_true() -> bool {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Graph {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub src: Option<String>,
     pub x: i32,
@@ -344,6 +357,7 @@ pub struct Graph {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GaugeGraph {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub color: Option<Vec<String>>,
     #[serde(rename = "assistClearBGColor", default = "default_assist_clear_bg")]
@@ -435,6 +449,7 @@ fn default_border() -> String {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct JudgeGraph {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     #[serde(rename = "type")]
     pub graph_type: i32,
@@ -458,6 +473,7 @@ fn default_500() -> i32 {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct BPMGraph {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub delay: i32,
     #[serde(rename = "lineWidth", default = "default_two")]
@@ -505,6 +521,7 @@ fn default_transition_line_color() -> String {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct HitErrorVisualizer {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub width: i32,
     #[serde(rename = "judgeWidthMillis")]
@@ -571,6 +588,7 @@ impl Default for HitErrorVisualizer {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TimingVisualizer {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub width: i32,
     #[serde(rename = "judgeWidthMillis")]
@@ -620,6 +638,7 @@ impl Default for TimingVisualizer {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TimingDistributionGraph {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub width: i32,
     #[serde(rename = "lineWidth")]
@@ -670,6 +689,7 @@ impl Default for TimingDistributionGraph {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct NoteSet {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub note: Vec<String>,
     pub lnstart: Vec<String>,
@@ -717,6 +737,7 @@ fn default_expansion_rate() -> Vec<i32> {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Gauge {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub nodes: Vec<String>,
     #[serde(default = "default_50")]
@@ -746,6 +767,7 @@ fn default_33() -> i32 {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct HiddenCover {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub src: Option<String>,
     pub x: i32,
@@ -772,6 +794,7 @@ fn default_neg_one() -> i32 {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LiftCover {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub src: Option<String>,
     pub x: i32,
@@ -794,6 +817,7 @@ pub struct LiftCover {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct BGA {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
 }
 
@@ -801,6 +825,7 @@ pub struct BGA {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Judge {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub index: i32,
     pub images: Vec<Destination>,
@@ -812,6 +837,7 @@ pub struct Judge {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SongList {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub center: i32,
     pub clickable: Vec<i32>,
@@ -831,6 +857,7 @@ pub struct SongList {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Destination {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub blend: i32,
     pub filter: i32,
@@ -899,6 +926,7 @@ impl Default for Animation {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PMchara {
+    #[serde(deserialize_with = "deserialize_optional_string_from_int", default)]
     pub id: Option<String>,
     pub src: Option<String>,
     pub color: i32,
@@ -1105,6 +1133,70 @@ where
         match item {
             MaybeConditionalImage::Direct(img) => result.push(img),
             MaybeConditionalImage::Conditional { values, .. } => {
+                result.extend(values);
+            }
+        }
+    }
+    Ok(result)
+}
+
+/// Deserialize a `Vec<String>` where elements may be JSON numbers.
+/// Numeric values are converted to their string representation.
+fn deserialize_vec_string_from_ints<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de;
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrInt {
+        Str(String),
+        Int(i64),
+        Float(f64),
+    }
+
+    let items: Vec<StringOrInt> = Vec::deserialize(deserializer)?;
+    Ok(items
+        .into_iter()
+        .map(|item| match item {
+            StringOrInt::Str(s) => s,
+            StringOrInt::Int(n) => n.to_string(),
+            StringOrInt::Float(f) => {
+                if f.fract() == 0.0 {
+                    (f as i64).to_string()
+                } else {
+                    f.to_string()
+                }
+            }
+        })
+        .collect())
+}
+
+/// Deserialize a `Vec<Destination>` from a JSON array that may contain conditional blocks.
+/// Identical logic to `deserialize_flattened_conditional_images` but for `Destination`.
+fn deserialize_flattened_conditional_destinations<'de, D>(
+    deserializer: D,
+) -> Result<Vec<Destination>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum MaybeConditionalDest {
+        Conditional {
+            #[serde(rename = "if")]
+            _condition: Vec<serde_json::Value>,
+            values: Vec<Destination>,
+        },
+        Direct(Destination),
+    }
+
+    let items: Vec<MaybeConditionalDest> = Vec::deserialize(deserializer)?;
+    let mut result = Vec::new();
+    for item in items {
+        match item {
+            MaybeConditionalDest::Direct(d) => result.push(d),
+            MaybeConditionalDest::Conditional { values, .. } => {
                 result.extend(values);
             }
         }
