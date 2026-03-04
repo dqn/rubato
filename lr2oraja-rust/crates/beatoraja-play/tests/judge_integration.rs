@@ -125,7 +125,10 @@ fn hard_gauge_dies_after_many_poors() {
         "hard gauge should be dead after many POORs, got {}",
         gg.get_value()
     );
-    assert!(!gg.is_qualified(), "dead hard gauge should not be qualified");
+    assert!(
+        !gg.is_qualified(),
+        "dead hard gauge should not be qualified"
+    );
 }
 
 // ===========================================================================
@@ -185,7 +188,11 @@ fn judge_manager_from_config_initializes_correctly() {
     }
     // Ghost should be initialized with POOR (4) for each playable note
     let ghost = jm.get_ghost();
-    assert_eq!(ghost.len(), 3, "ghost should have one entry per playable note");
+    assert_eq!(
+        ghost.len(),
+        3,
+        "ghost should have one entry per playable note"
+    );
 }
 
 #[test]
@@ -326,7 +333,10 @@ fn autoplay_log_correct_keycodes_for_multiple_lanes() {
 fn autoplay_log_generates_nothing_for_no_mode() {
     let model = BMSModel::new(); // no mode set
     let log = KeyInputLog::create_autoplay_log(&model);
-    assert!(log.is_empty(), "model without mode should produce empty log");
+    assert!(
+        log.is_empty(),
+        "model without mode should produce empty log"
+    );
 }
 
 // ===========================================================================
@@ -439,7 +449,8 @@ fn no_input_produces_all_miss() {
     // All notes should be POOR or MISS
     let miss_count = jm.get_judge_count(4) + jm.get_judge_count(5); // PR + MS
     assert_eq!(
-        miss_count, 2,
+        miss_count,
+        2,
         "2 notes with no input should all be PR/MS, got PR={} MS={}",
         jm.get_judge_count(4),
         jm.get_judge_count(5)
