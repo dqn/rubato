@@ -29,6 +29,8 @@ struct SelectRenderContext<'a> {
     timer: &'a mut TimerManager,
     player_config: &'a PlayerConfig,
     app_config: &'a Config,
+    manager: &'a BarManager,
+    selectedreplay: i32,
 }
 
 impl rubato_types::timer_access::TimerAccess for SelectRenderContext<'_> {
@@ -52,6 +54,22 @@ impl rubato_types::timer_access::TimerAccess for SelectRenderContext<'_> {
     }
 }
 
+impl SelectRenderContext<'_> {
+    fn selected_bar(&self) -> Option<&Bar> {
+        self.manager.get_selected()
+    }
+
+    fn selected_song_data(&self) -> Option<&rubato_types::song_data::SongData> {
+        self.selected_bar()?
+            .as_song_bar()
+            .map(|sb| sb.get_song_data())
+    }
+
+    fn selected_score(&self) -> Option<&rubato_types::score_data::ScoreData> {
+        self.selected_bar()?.get_score()
+    }
+}
+
 impl rubato_types::skin_render_context::SkinRenderContext for SelectRenderContext<'_> {
     fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
         Some(rubato_types::main_state_type::MainStateType::MusicSelect)
@@ -67,6 +85,231 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectRenderContex
 
     fn set_timer_micro(&mut self, timer_id: i32, micro_time: i64) {
         self.timer.set_micro_timer(timer_id, micro_time);
+    }
+
+    fn integer_value(&self, id: i32) -> i32 {
+        use rubato_types::timer_access::TimerAccess;
+        match id {
+            // Volume (0-100 scale)
+            57 => {
+                (self
+                    .app_config
+                    .get_audio_config()
+                    .map_or(0.5, |a| a.systemvolume)
+                    * 100.0) as i32
+            }
+            58 => {
+                (self
+                    .app_config
+                    .get_audio_config()
+                    .map_or(0.5, |a| a.keyvolume)
+                    * 100.0) as i32
+            }
+            59 => {
+                (self
+                    .app_config
+                    .get_audio_config()
+                    .map_or(0.5, |a| a.bgvolume)
+                    * 100.0) as i32
+            }
+            // Display timing
+            12 => self.player_config.judgetiming,
+            // Song BPM
+            90 => self.selected_song_data().map_or(0, |s| s.maxbpm),
+            91 => self.selected_song_data().map_or(0, |s| s.minbpm),
+            92 => {
+                // mainbpm: if min==max, return that; otherwise use maxbpm as approximation
+                let sd = self.selected_song_data();
+                sd.map_or(0, |s| {
+                    if s.minbpm == s.maxbpm {
+                        s.maxbpm
+                    } else {
+                        s.maxbpm
+                    }
+                })
+            }
+            // Song play/clear/fail counts
+            77 => self.selected_score().map_or(0, |s| s.get_playcount()),
+            78 => self.selected_score().map_or(0, |s| s.get_clearcount()),
+            79 => {
+                let score = self.selected_score();
+                score.map_or(0, |s| s.get_playcount() - s.get_clearcount())
+            }
+            // Song duration
+            312 => self.selected_song_data().map_or(0, |s| s.length),
+            1163 => self.selected_song_data().map_or(0, |s| s.length / 60000),
+            1164 => self
+                .selected_song_data()
+                .map_or(0, |s| (s.length % 60000) / 1000),
+            // Total notes
+            350 => self.selected_song_data().map_or(0, |s| s.notes),
+            // System time
+            20 => 60, // placeholder FPS
+            21 => {
+                let now = chrono::Local::now();
+                chrono::Datelike::year(&now)
+            }
+            22 => {
+                let now = chrono::Local::now();
+                chrono::Datelike::month(&now) as i32
+            }
+            23 => {
+                let now = chrono::Local::now();
+                chrono::Datelike::day(&now) as i32
+            }
+            24 => {
+                let now = chrono::Local::now();
+                chrono::Timelike::hour(&now) as i32
+            }
+            25 => {
+                let now = chrono::Local::now();
+                chrono::Timelike::minute(&now) as i32
+            }
+            26 => {
+                let now = chrono::Local::now();
+                chrono::Timelike::second(&now) as i32
+            }
+            // Playtime (hours/minutes/seconds from boot)
+            17 => (self.timer.get_now_time() / 3_600_000) as i32,
+            18 => ((self.timer.get_now_time() % 3_600_000) / 60_000) as i32,
+            19 => ((self.timer.get_now_time() % 60_000) / 1_000) as i32,
+            _ => 0,
+        }
+    }
+
+    fn string_value(&self, id: i32) -> String {
+        match id {
+            // Song metadata
+            10 => self
+                .selected_song_data()
+                .map_or_else(String::new, |s| s.title.clone()),
+            11 => self
+                .selected_song_data()
+                .map_or_else(String::new, |s| s.subtitle.clone()),
+            12 => self.selected_song_data().map_or_else(String::new, |s| {
+                if s.subtitle.is_empty() {
+                    s.title.clone()
+                } else {
+                    format!("{} {}", s.title, s.subtitle)
+                }
+            }),
+            13 => self
+                .selected_song_data()
+                .map_or_else(String::new, |s| s.genre.clone()),
+            14 => self
+                .selected_song_data()
+                .map_or_else(String::new, |s| s.artist.clone()),
+            15 => self
+                .selected_song_data()
+                .map_or_else(String::new, |s| s.subartist.clone()),
+            16 => self.selected_song_data().map_or_else(String::new, |s| {
+                if s.subartist.is_empty() {
+                    s.artist.clone()
+                } else {
+                    format!("{} {}", s.artist, s.subartist)
+                }
+            }),
+            // Directory
+            1000 => self.selected_bar().map_or_else(String::new, |b| {
+                if let Some(sb) = b.as_song_bar() {
+                    sb.get_song_data().folder.clone()
+                } else {
+                    String::new()
+                }
+            }),
+            // Version
+            1010 => String::from("rubato"),
+            // Song hash
+            1030 => self
+                .selected_song_data()
+                .map_or_else(String::new, |s| s.md5.clone()),
+            1031 => self
+                .selected_song_data()
+                .map_or_else(String::new, |s| s.sha256.clone()),
+            _ => String::new(),
+        }
+    }
+
+    fn boolean_value(&self, id: i32) -> bool {
+        use rubato_skin::skin_property::*;
+        match id {
+            // Bar type
+            OPTION_SONGBAR => self
+                .selected_bar()
+                .is_some_and(|b| b.as_song_bar().is_some()),
+            OPTION_FOLDERBAR => self.selected_bar().is_some_and(|b| b.is_directory_bar()),
+            OPTION_GRADEBAR => self
+                .selected_bar()
+                .is_some_and(|b| b.as_grade_bar().is_some()),
+            // Select bar clear conditions
+            OPTION_SELECT_BAR_NOT_PLAYED => {
+                self.selected_bar().is_none_or(|b| b.get_lamp(true) == 0)
+            }
+            OPTION_SELECT_BAR_FAILED => self.selected_bar().is_some_and(|b| b.get_lamp(true) == 1),
+            OPTION_SELECT_BAR_ASSIST_EASY_CLEARED => {
+                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 2)
+            }
+            OPTION_SELECT_BAR_LIGHT_ASSIST_EASY_CLEARED => {
+                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 3)
+            }
+            OPTION_SELECT_BAR_EASY_CLEARED => {
+                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 4)
+            }
+            OPTION_SELECT_BAR_NORMAL_CLEARED => {
+                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 5)
+            }
+            OPTION_SELECT_BAR_HARD_CLEARED => {
+                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 6)
+            }
+            OPTION_SELECT_BAR_EXHARD_CLEARED => {
+                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 7)
+            }
+            OPTION_SELECT_BAR_FULL_COMBO_CLEARED => {
+                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 8)
+            }
+            OPTION_SELECT_BAR_PERFECT_CLEARED => {
+                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 9)
+            }
+            OPTION_SELECT_BAR_MAX_CLEARED => {
+                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 10)
+            }
+            // Replay data (not yet wired - replay storage not implemented)
+            197 | 1197 | 1200 | 1203 => false, // OPTION_REPLAYDATA variants
+            196 | 1196 | 1199 | 1202 => true,  // OPTION_NO_REPLAYDATA variants
+            // Autoplay
+            33 => false, // OPTION_AUTOPLAYON - not in select screen
+            32 => true,  // OPTION_AUTOPLAYOFF
+            // Panels (always visible on select)
+            21 => true, // OPTION_PANEL1
+            _ => false,
+        }
+    }
+
+    fn float_value(&self, id: i32) -> f32 {
+        match id {
+            // Music select scroll position
+            1 => self.manager.get_selected_position(),
+            // Volume (0.0-1.0)
+            17 => self
+                .app_config
+                .get_audio_config()
+                .map_or(0.5, |a| a.systemvolume),
+            18 => self
+                .app_config
+                .get_audio_config()
+                .map_or(0.5, |a| a.keyvolume),
+            19 => self
+                .app_config
+                .get_audio_config()
+                .map_or(0.5, |a| a.bgvolume),
+            // Level (0.0-1.0 normalized)
+            103 => self
+                .selected_song_data()
+                .map_or(0.0, |s| s.level as f32 / 12.0),
+            // Hi-speed (from default mode7 play config)
+            310 => self.player_config.mode7.playconfig.hispeed,
+            _ => 0.0,
+        }
     }
 }
 
@@ -1690,6 +1933,8 @@ impl MainState for MusicSelector {
                     timer: &mut timer,
                     player_config: &self.config,
                     app_config: &self.app_config,
+                    manager: &self.manager,
+                    selectedreplay: self.selectedreplay,
                 };
                 skin.update_custom_objects_timed(&mut ctx);
                 skin.swap_sprite_batch(sprite);
