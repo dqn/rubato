@@ -1,7 +1,7 @@
 use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
 use crate::lr2::lr2_skin_loader;
 use crate::skin_image::SkinImage;
-use crate::stubs::{MainState, Rectangle, Resolution, TextureRegion};
+use crate::stubs::{MainState, Rectangle, Resolution, Texture, TextureRegion};
 
 /// LR2 play skin loader
 ///
@@ -832,6 +832,62 @@ impl LR2PlaySkinLoaderState {
         }
     }
 
+    /// Create a default line image at `index` from "skin/default/system.png".
+    ///
+    /// Corresponds to Java LR2PlaySkinLoader.makeDefaultLines().
+    /// Uses the DST_LINE values from the associated judge line (linevalues[index % 2])
+    /// but overrides alpha to 255 and RGB to the specified color. The height is
+    /// multiplied by `h` (1 for time lines, 2 for BPM/stop lines).
+    fn make_default_line(&mut self, index: usize, h: i32, r: i32, g: i32, b: i32) {
+        let linevalue_idx = index % 2;
+        let linevalues = match self.linevalues[linevalue_idx] {
+            Some(ref lv) => lv.clone(),
+            None => return, // No DST_LINE values available; skip (Java would NPE)
+        };
+
+        // Create a 1x1 texture region from system.png
+        let tex = Texture::new("skin/default/system.png");
+        let region = TextureRegion::from_texture_region(tex, 0, 0, 1, 1);
+        let skin_image = SkinImage::new_with_single(region);
+        self.line_images[index] = Some(skin_image);
+
+        // Parse the original DST_LINE values to extract position/timing parameters
+        let values = lr2_skin_loader::parse_int(&linevalues);
+
+        // Compute destination coordinates with resolution scaling
+        let time = values[2] as i64;
+        let x = values[3] as f32 * self.dstw / self.srcw;
+        let y = self.dsth - (values[4] + values[6]) as f32 * self.dsth / self.srch;
+        let w = values[5] as f32 * self.dstw / self.srcw;
+        let dst_h = values[6] as f32 * self.dsth / self.srch * h as f32;
+
+        let offset = LR2SkinCSVLoaderState::read_offset_with_base(
+            &linevalues,
+            21,
+            &[crate::skin_property::OFFSET_LIFT],
+        );
+
+        if let Some(ref mut li) = self.line_images[index] {
+            li.data.set_destination_with_int_timer_and_offsets(
+                time, x, y, w, dst_h, values[7],  // acc
+                255,        // alpha (overridden to full)
+                r,          // red (overridden)
+                g,          // green (overridden)
+                b,          // blue (overridden)
+                values[12], // blend
+                values[13], // filter
+                values[14], // angle
+                values[15], // center
+                values[16], // loop
+                values[17], // timer
+                values[18], // op1
+                values[19], // op2
+                values[20], // op3
+                &offset,
+            );
+        }
+    }
+
     /// Load play skin from a .lr2skin CSV file.
     ///
     /// Pipeline: initialize arrays -> parse CSV lines -> finalize -> post-process
@@ -903,10 +959,23 @@ impl LR2PlaySkinLoaderState {
             0
         };
 
-        // Time lines (lines[6..7]): create defaults if missing but judge line exists
-        // TODO: makeDefaultLines for time/BPM/stop lines when SkinImage creation from Texture is wired
-        // Java creates default line images from "skin/default/system.png" texture.
-        // For now, we count existing line_images and set placeholder Vecs on PlaySkin.
+        // Create default time/BPM/stop line images when missing but judge line exists.
+        // Java: makeDefaultLines() creates a SkinImage from "skin/default/system.png" (1x1 white pixel)
+        // with the judge line's destination but overridden color and optional height multiplier.
+        for i in 0..line_count {
+            // Time line at index i+6: h=1, cyan (64, 192, 192)
+            if self.line_images[i + 6].is_none() && self.line_images[i].is_some() {
+                self.make_default_line(i + 6, 1, 64, 192, 192);
+            }
+            // BPM line at index i+2: h=2, green (0, 192, 0)
+            if self.line_images[i + 2].is_none() && self.line_images[i].is_some() {
+                self.make_default_line(i + 2, 2, 0, 192, 0);
+            }
+            // Stop line at index i+4: h=2, yellow (192, 192, 0)
+            if self.line_images[i + 4].is_none() && self.line_images[i].is_some() {
+                self.make_default_line(i + 4, 2, 192, 192, 0);
+            }
+        }
 
         // 7. Count judge regions
         // Java: judge_reg starts at 1, increments for consecutive non-null judge entries
@@ -1580,6 +1649,202 @@ mod tests {
         assert_eq!(play_skin.get_judgeregion(), 1); // default
         // Lane region should be set (8 default rectangles)
         assert!(play_skin.get_lane_region().is_some());
+    }
+
+    // ===== make_default_line / default line images =====
+
+    /// Helper: set up a judge line at index 0 with SRC_LINE + DST_LINE and stored linevalues.
+    fn setup_judge_line(state: &mut LR2PlaySkinLoaderState) {
+        state.csv.imagelist.push(
+            crate::lr2::lr2_skin_csv_loader::ImageListEntry::TextureEntry(Texture::new("test")),
+        );
+        // SRC_LINE: index=0, imageID=0, x=0, y=0, w=10, h=10, divx=1, divy=1, cycle=0, timer=0
+        let src_parts = make_parts("SRC_LINE", &[0, 0, 0, 0, 10, 10, 1, 1, 0, 0, 0]);
+        state.process_play_command("SRC_LINE", &src_parts);
+        // DST_LINE: index=0, time=0, x=100, y=200, w=500, h=2, acc=0, a=255, r=255, g=255, b=255, ...
+        let dst_parts = make_parts(
+            "DST_LINE",
+            &[
+                0, 0, 100, 200, 500, 2, 0, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ],
+        );
+        state.process_play_command("DST_LINE", &dst_parts);
+    }
+
+    #[test]
+    fn test_make_default_line_creates_time_line_when_judge_exists() {
+        let mut state = make_state();
+        setup_judge_line(&mut state);
+        assert!(state.line_images[0].is_some()); // judge line exists
+        assert!(state.line_images[6].is_none()); // time line missing
+
+        // Simulate what load_skin does: create default time line
+        state.make_default_line(6, 1, 64, 192, 192);
+
+        assert!(
+            state.line_images[6].is_some(),
+            "time line should be created"
+        );
+        let li = state.line_images[6].as_ref().unwrap();
+        assert!(!li.data.dst.is_empty(), "destination should be set");
+    }
+
+    #[test]
+    fn test_make_default_line_creates_bpm_line() {
+        let mut state = make_state();
+        setup_judge_line(&mut state);
+        assert!(state.line_images[2].is_none()); // BPM line missing
+
+        state.make_default_line(2, 2, 0, 192, 0);
+
+        assert!(state.line_images[2].is_some(), "BPM line should be created");
+        let li = state.line_images[2].as_ref().unwrap();
+        assert!(!li.data.dst.is_empty(), "destination should be set");
+    }
+
+    #[test]
+    fn test_make_default_line_creates_stop_line() {
+        let mut state = make_state();
+        setup_judge_line(&mut state);
+        assert!(state.line_images[4].is_none()); // stop line missing
+
+        state.make_default_line(4, 2, 192, 192, 0);
+
+        assert!(
+            state.line_images[4].is_some(),
+            "stop line should be created"
+        );
+        let li = state.line_images[4].as_ref().unwrap();
+        assert!(!li.data.dst.is_empty(), "destination should be set");
+    }
+
+    #[test]
+    fn test_make_default_line_skips_when_no_linevalues() {
+        let mut state = make_state();
+        // No DST_LINE processed, so linevalues is [None, None]
+        assert!(state.linevalues[0].is_none());
+
+        state.make_default_line(6, 1, 64, 192, 192);
+
+        // Should not create anything since linevalues is unavailable
+        assert!(state.line_images[6].is_none());
+    }
+
+    #[test]
+    fn test_load_skin_creates_default_lines_when_judge_exists() {
+        let mut state = make_state();
+        setup_judge_line(&mut state);
+
+        // Simulate load_skin post-processing: count lines then create defaults
+        let line_count = if state.line_images[0].is_some() {
+            if state.line_images[1].is_some() { 2 } else { 1 }
+        } else {
+            0
+        };
+        assert_eq!(line_count, 1);
+
+        for i in 0..line_count {
+            if state.line_images[i + 6].is_none() && state.line_images[i].is_some() {
+                state.make_default_line(i + 6, 1, 64, 192, 192);
+            }
+            if state.line_images[i + 2].is_none() && state.line_images[i].is_some() {
+                state.make_default_line(i + 2, 2, 0, 192, 0);
+            }
+            if state.line_images[i + 4].is_none() && state.line_images[i].is_some() {
+                state.make_default_line(i + 4, 2, 192, 192, 0);
+            }
+        }
+
+        // Time, BPM, stop lines should be created
+        assert!(state.line_images[6].is_some(), "time line at [6]");
+        assert!(state.line_images[2].is_some(), "BPM line at [2]");
+        assert!(state.line_images[4].is_some(), "stop line at [4]");
+    }
+
+    #[test]
+    fn test_load_skin_no_defaults_when_line_count_zero() {
+        let mut state = make_state();
+        // No judge lines at all
+        assert!(state.line_images[0].is_none());
+
+        let line_count = if state.line_images[0].is_some() {
+            if state.line_images[1].is_some() { 2 } else { 1 }
+        } else {
+            0
+        };
+        assert_eq!(line_count, 0);
+
+        // Loop body never executes when line_count == 0
+        for i in 0..line_count {
+            state.make_default_line(i + 6, 1, 64, 192, 192);
+            state.make_default_line(i + 2, 2, 0, 192, 0);
+            state.make_default_line(i + 4, 2, 192, 192, 0);
+        }
+
+        // Nothing should be created
+        for slot in &state.line_images {
+            assert!(slot.is_none());
+        }
+    }
+
+    #[test]
+    fn test_existing_line_images_not_overwritten() {
+        let mut state = make_state();
+        setup_judge_line(&mut state);
+
+        // Manually create a line image at index 6 (time line)
+        // values[1]=6 means line index 6 in SRC_LINE
+        let src_parts = make_parts("SRC_LINE", &[6, 0, 0, 0, 10, 10, 1, 1, 0, 0, 0]);
+        state.process_play_command("SRC_LINE", &src_parts);
+        assert!(state.line_images[6].is_some(), "pre-existing time line");
+
+        // The condition `line_images[i + 6].is_none()` should prevent overwriting
+        let line_count = 1;
+        for i in 0..line_count {
+            if state.line_images[i + 6].is_none() && state.line_images[i].is_some() {
+                state.make_default_line(i + 6, 1, 64, 192, 192);
+            }
+        }
+
+        // The existing line image should still be there, not replaced
+        let li = state.line_images[6].as_ref().unwrap();
+        // The pre-existing image was created via SRC_LINE, so it has no destinations
+        // (DST_LINE was never called for index 6). A default line would have a destination.
+        assert!(
+            li.data.dst.is_empty(),
+            "existing image should not be overwritten"
+        );
+    }
+
+    #[test]
+    fn test_make_default_line_height_multiplier() {
+        let mut state = make_state();
+        setup_judge_line(&mut state);
+
+        // Create two default lines with different height multipliers
+        state.make_default_line(6, 1, 64, 192, 192); // h=1 (time)
+        state.make_default_line(2, 2, 0, 192, 0); // h=2 (BPM)
+
+        let time_line = state.line_images[6].as_ref().unwrap();
+        let bpm_line = state.line_images[2].as_ref().unwrap();
+
+        // Both should have destinations
+        assert!(!time_line.data.dst.is_empty());
+        assert!(!bpm_line.data.dst.is_empty());
+
+        // The BPM line (h=2) should have double the height of the time line (h=1)
+        // DST_LINE had h=2 (values[6]), scaled by dsth/srch = 1080/480 = 2.25
+        // Time: 2 * 2.25 * 1 = 4.5; BPM: 2 * 2.25 * 2 = 9.0
+        let time_dst = &time_line.data.dst[0];
+        let bpm_dst = &bpm_line.data.dst[0];
+        let time_h = time_dst.region.height;
+        let bpm_h = bpm_dst.region.height;
+        assert!(
+            (bpm_h - time_h * 2.0).abs() < 0.01,
+            "BPM height ({}) should be 2x time height ({})",
+            bpm_h,
+            time_h
+        );
     }
 }
 
