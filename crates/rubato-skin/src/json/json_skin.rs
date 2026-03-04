@@ -33,6 +33,7 @@ pub struct Skin {
     pub imageset: Vec<ImageSet>,
     pub value: Vec<Value>,
     pub floatvalue: Vec<FloatValue>,
+    #[serde(deserialize_with = "deserialize_flattened_conditional_texts", default)]
     pub text: Vec<Text>,
     pub slider: Vec<Slider>,
     pub graph: Vec<Graph>,
@@ -872,6 +873,7 @@ pub struct Destination {
     pub op: Vec<i32>,
     #[serde(deserialize_with = "deserialize_optional_i32_or_string", default)]
     pub draw: Option<i32>,
+    #[serde(deserialize_with = "deserialize_animations_with_conditionals", default)]
     pub dst: Vec<Animation>,
     #[serde(rename = "mouseRect")]
     pub mouse_rect: Option<Rect>,
@@ -1105,39 +1107,12 @@ where
     deserializer.deserialize_any(OptionalI32OrStringVisitor)
 }
 
-/// Deserialize a `Vec<Image>` from a JSON array that may contain either direct `Image` objects
-/// or conditional wrappers `{"if": [...], "values": [...]}`. Conditional wrappers are flattened
-/// by extracting all items from `values` (the `if` condition is ignored for now).
 fn deserialize_flattened_conditional_images<'de, D>(deserializer: D) -> Result<Vec<Image>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    /// Wrapper enum for image array items that can be either a direct Image
-    /// or a conditional block with `if` and `values` fields.
-    /// Conditional is listed first so serde tries it before Direct (which would
-    /// match any object due to Image's `#[serde(default)]`).
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum MaybeConditionalImage {
-        Conditional {
-            #[serde(rename = "if")]
-            _condition: Vec<serde_json::Value>,
-            values: Vec<Image>,
-        },
-        Direct(Image),
-    }
-
-    let items: Vec<MaybeConditionalImage> = Vec::deserialize(deserializer)?;
-    let mut result = Vec::new();
-    for item in items {
-        match item {
-            MaybeConditionalImage::Direct(img) => result.push(img),
-            MaybeConditionalImage::Conditional { values, .. } => {
-                result.extend(values);
-            }
-        }
-    }
-    Ok(result)
+    let items: Vec<serde_json::Value> = Vec::deserialize(deserializer)?;
+    deserialize_vec_with_conditionals(items).map_err(serde::de::Error::custom)
 }
 
 /// Deserialize a `Vec<String>` where elements may be JSON numbers.
@@ -1172,36 +1147,81 @@ where
         .collect())
 }
 
-/// Deserialize a `Vec<Destination>` from a JSON array that may contain conditional blocks.
-/// Identical logic to `deserialize_flattened_conditional_images` but for `Destination`.
+/// Generic helper: deserialize a `Vec<T>` from a JSON array that may contain two kinds
+/// of conditional blocks:
+///
+/// 1. **Object-based**: `{"if":[...], "values":[item, item, ...]}` — all items are flattened in
+/// 2. **Array-based**: `[{"if":[924],"value":{...}}, {"if":[],"value":{...}}]` — fallback
+///    (empty `if`) is used, or first entry if no fallback
+/// 3. **Direct**: a plain `T` object
+fn deserialize_vec_with_conditionals<T: serde::de::DeserializeOwned>(
+    items: Vec<serde_json::Value>,
+) -> Result<Vec<T>, String> {
+    let mut result = Vec::new();
+    for item in items {
+        if item.is_array() {
+            // Array-based conditional: [{"if":[...],"value":{...}}, ...]
+            if let Some(arr) = item.as_array() {
+                let fallback = arr
+                    .iter()
+                    .find(|entry| {
+                        entry
+                            .get("if")
+                            .and_then(|v| v.as_array())
+                            .is_some_and(|a| a.is_empty())
+                    })
+                    .or_else(|| arr.first());
+                if let Some(entry) = fallback
+                    && let Some(value) = entry.get("value")
+                {
+                    let val: T =
+                        serde_json::from_value(value.clone()).map_err(|e| e.to_string())?;
+                    result.push(val);
+                }
+            }
+        } else if item.is_object() && item.get("if").is_some() && item.get("values").is_some() {
+            // Object-based conditional: {"if":[...], "values":[...]}
+            if let Some(vals) = item.get("values").and_then(|v| v.as_array()) {
+                for v in vals {
+                    let val: T = serde_json::from_value(v.clone()).map_err(|e| e.to_string())?;
+                    result.push(val);
+                }
+            }
+        } else {
+            // Direct object
+            let val: T = serde_json::from_value(item).map_err(|e| e.to_string())?;
+            result.push(val);
+        }
+    }
+    Ok(result)
+}
+
+fn deserialize_animations_with_conditionals<'de, D>(
+    deserializer: D,
+) -> Result<Vec<Animation>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let items: Vec<serde_json::Value> = Vec::deserialize(deserializer)?;
+    deserialize_vec_with_conditionals(items).map_err(serde::de::Error::custom)
+}
+
 fn deserialize_flattened_conditional_destinations<'de, D>(
     deserializer: D,
 ) -> Result<Vec<Destination>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum MaybeConditionalDest {
-        Conditional {
-            #[serde(rename = "if")]
-            _condition: Vec<serde_json::Value>,
-            values: Vec<Destination>,
-        },
-        Direct(Destination),
-    }
+    let items: Vec<serde_json::Value> = Vec::deserialize(deserializer)?;
+    deserialize_vec_with_conditionals(items).map_err(serde::de::Error::custom)
+}
 
-    let items: Vec<MaybeConditionalDest> = Vec::deserialize(deserializer)?;
-    let mut result = Vec::new();
-    for item in items {
-        match item {
-            MaybeConditionalDest::Direct(d) => result.push(d),
-            MaybeConditionalDest::Conditional { values, .. } => {
-                result.extend(values);
-            }
-        }
-    }
-    Ok(result)
+fn deserialize_flattened_conditional_texts<'de, D>(deserializer: D) -> Result<Vec<Text>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let items: Vec<serde_json::Value> = Vec::deserialize(deserializer)?;
+    deserialize_vec_with_conditionals(items).map_err(serde::de::Error::custom)
 }
 
 #[cfg(test)]

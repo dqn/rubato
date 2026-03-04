@@ -1500,6 +1500,24 @@ mod tests {
         assert!(!skin.image.is_empty());
     }
 
+    #[test]
+    fn test_parse_default_play24_skin() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("skin/default/play24.json");
+        if !path.exists() {
+            return;
+        }
+        let content = std::fs::read_to_string(&path).unwrap();
+        let skin = parse_skin_json(&content).unwrap();
+        assert_eq!(skin.skin_type, 16);
+        assert!(!skin.destination.is_empty());
+        assert!(!skin.text.is_empty());
+    }
+
     // ---- Phase 45b: verify MINIMAL_SKIN_JSON round-trips ----
 
     #[test]
