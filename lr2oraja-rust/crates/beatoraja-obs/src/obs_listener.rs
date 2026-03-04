@@ -9,6 +9,7 @@ use beatoraja_core::main_state_listener::MainStateListener;
 use beatoraja_types::main_state_access::MainStateAccess;
 use beatoraja_types::screen_type::ScreenType;
 
+use crate::lock_or_recover;
 use crate::obs_ws_client::ObsWsClient;
 use crate::{ACTION_NONE, SCENE_NONE};
 
@@ -78,7 +79,7 @@ impl ObsListener {
 
             // Cancel any scheduled stop and execute immediately if pending
             {
-                let mut guard = scheduled_stop_task.lock().unwrap();
+                let mut guard = lock_or_recover(&scheduled_stop_task);
                 if let Some(task) = guard.take() {
                     task.abort();
                     client_clone.request_stop_record();
@@ -102,10 +103,10 @@ impl ObsListener {
                     let handle = tokio::spawn(async move {
                         tokio::time::sleep(Duration::from_millis(stop_wait as u64)).await;
                         client_for_stop.request_stop_record();
-                        let mut guard = scheduled_stop_task_clone.lock().unwrap();
+                        let mut guard = lock_or_recover(&scheduled_stop_task_clone);
                         *guard = None;
                     });
-                    let mut guard = scheduled_stop_task.lock().unwrap();
+                    let mut guard = lock_or_recover(&scheduled_stop_task);
                     *guard = Some(handle);
                 } else {
                     client_clone.send_request(action);
@@ -115,7 +116,7 @@ impl ObsListener {
     }
 
     fn cancel_scheduled_stop(&self) -> bool {
-        let mut guard = self.scheduled_stop_task.lock().unwrap();
+        let mut guard = lock_or_recover(&self.scheduled_stop_task);
         if let Some(task) = guard.take() {
             task.abort();
             return true;
@@ -181,10 +182,10 @@ impl ObsListener {
                     tokio::time::sleep(Duration::from_millis(delay as u64)).await;
                     client_clone.request_stop_record();
                     // Clear the task handle
-                    let mut guard = scheduled_stop_task.lock().unwrap();
+                    let mut guard = lock_or_recover(&scheduled_stop_task);
                     *guard = None;
                 });
-                let mut guard = self.scheduled_stop_task.lock().unwrap();
+                let mut guard = lock_or_recover(&self.scheduled_stop_task);
                 *guard = Some(handle);
             } else {
                 client.send_request(action);
@@ -195,7 +196,7 @@ impl ObsListener {
     pub fn close(&self) {
         // Cancel scheduled stop task
         {
-            let mut guard = self.scheduled_stop_task.lock().unwrap();
+            let mut guard = lock_or_recover(&self.scheduled_stop_task);
             if let Some(task) = guard.take() {
                 task.abort();
             }
@@ -270,7 +271,7 @@ mod tests {
             tokio::time::sleep(Duration::from_secs(3600)).await;
         });
         {
-            let mut guard = listener.scheduled_stop_task.lock().unwrap();
+            let mut guard = lock_or_recover(&listener.scheduled_stop_task);
             *guard = Some(handle);
         }
 
@@ -278,7 +279,7 @@ mod tests {
         assert!(listener.cancel_scheduled_stop());
 
         // After cancellation, the slot should be empty
-        let guard = listener.scheduled_stop_task.lock().unwrap();
+        let guard = lock_or_recover(&listener.scheduled_stop_task);
         assert!(guard.is_none());
     }
 
@@ -290,7 +291,7 @@ mod tests {
             tokio::time::sleep(Duration::from_secs(3600)).await;
         });
         {
-            let mut guard = listener.scheduled_stop_task.lock().unwrap();
+            let mut guard = lock_or_recover(&listener.scheduled_stop_task);
             *guard = Some(handle);
         }
 
@@ -311,14 +312,14 @@ mod tests {
         });
         assert!(!handle.is_finished());
         {
-            let mut guard = listener.scheduled_stop_task.lock().unwrap();
+            let mut guard = lock_or_recover(&listener.scheduled_stop_task);
             *guard = Some(handle);
         }
 
         listener.close();
 
         // After close, the slot should be empty
-        let guard = listener.scheduled_stop_task.lock().unwrap();
+        let guard = lock_or_recover(&listener.scheduled_stop_task);
         assert!(guard.is_none());
     }
 

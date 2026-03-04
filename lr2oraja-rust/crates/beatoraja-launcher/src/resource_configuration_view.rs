@@ -1,7 +1,7 @@
 // ResourceConfigurationView.java -> resource_configuration_view.rs
 // Mechanical line-by-line translation.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
@@ -719,7 +719,7 @@ impl ResourceConfigurationView {
             return;
         }
         // bmsroot.getItems().removeAll(removingItem);
-        let removing = self.bmsroot_selected_items.clone();
+        let removing: HashSet<&String> = self.bmsroot_selected_items.iter().collect();
         self.bmsroot.retain(|item| !removing.contains(item));
     }
 
@@ -856,11 +856,10 @@ impl ResourceConfigurationView {
     /// Translates: addUniqueTable(String[], String[])
     /// Adds unique elements of the latter to the former.
     pub fn add_unique_table(former: &[String], latter: &[String]) -> Vec<String> {
-        // List<String> resultList = new ArrayList<String>(formerList);
+        let former_set: HashSet<&String> = former.iter().collect();
         let mut result: Vec<String> = former.to_vec();
-        // for (String url : latterList) { if (!formerList.contains(url)) { resultList.add(url); } }
         for url in latter {
-            if !former.contains(url) {
+            if !former_set.contains(url) {
                 result.push(url.clone());
             }
         }
@@ -870,15 +869,12 @@ impl ResourceConfigurationView {
     /// Translates: subtractTable(String[], String[])
     /// Subtract members of the latter from the former.
     pub fn subtract_table(former: &[String], latter: &[String]) -> Vec<String> {
-        // List<String> resultList = new ArrayList<String>();
-        // for (String url : formerList) { if (!latterList.contains(url)) { resultList.add(url); } }
-        let mut result: Vec<String> = Vec::new();
-        for url in former {
-            if !latter.contains(url) {
-                result.push(url.clone());
-            }
-        }
-        result
+        let latter_set: HashSet<&String> = latter.iter().collect();
+        former
+            .iter()
+            .filter(|url| !latter_set.contains(url))
+            .cloned()
+            .collect()
     }
 
     /// Helper: move selected items up in a list
@@ -1116,5 +1112,119 @@ impl ResourceConfigurationView {
                         }
                     });
             });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- add_unique_table --
+
+    #[test]
+    fn add_unique_table_both_empty() {
+        let result = ResourceConfigurationView::add_unique_table(&[], &[]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn add_unique_table_former_empty() {
+        let latter = vec!["a".to_string(), "b".to_string()];
+        let result = ResourceConfigurationView::add_unique_table(&[], &latter);
+        assert_eq!(result, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn add_unique_table_latter_empty() {
+        let former = vec!["a".to_string(), "b".to_string()];
+        let result = ResourceConfigurationView::add_unique_table(&former, &[]);
+        assert_eq!(result, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn add_unique_table_no_overlap() {
+        let former = vec!["a".to_string(), "b".to_string()];
+        let latter = vec!["c".to_string(), "d".to_string()];
+        let result = ResourceConfigurationView::add_unique_table(&former, &latter);
+        assert_eq!(result, vec!["a", "b", "c", "d"]);
+    }
+
+    #[test]
+    fn add_unique_table_full_overlap() {
+        let former = vec!["a".to_string(), "b".to_string()];
+        let latter = vec!["a".to_string(), "b".to_string()];
+        let result = ResourceConfigurationView::add_unique_table(&former, &latter);
+        assert_eq!(result, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn add_unique_table_partial_overlap() {
+        let former = vec!["a".to_string(), "b".to_string()];
+        let latter = vec!["b".to_string(), "c".to_string()];
+        let result = ResourceConfigurationView::add_unique_table(&former, &latter);
+        assert_eq!(result, vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn add_unique_table_latter_has_duplicates() {
+        let former = vec!["a".to_string()];
+        let latter = vec!["b".to_string(), "b".to_string()];
+        let result = ResourceConfigurationView::add_unique_table(&former, &latter);
+        // Both "b" entries are added since neither is in former_set
+        assert_eq!(result, vec!["a", "b", "b"]);
+    }
+
+    // -- subtract_table --
+
+    #[test]
+    fn subtract_table_both_empty() {
+        let result = ResourceConfigurationView::subtract_table(&[], &[]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn subtract_table_former_empty() {
+        let latter = vec!["a".to_string(), "b".to_string()];
+        let result = ResourceConfigurationView::subtract_table(&[], &latter);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn subtract_table_latter_empty() {
+        let former = vec!["a".to_string(), "b".to_string()];
+        let result = ResourceConfigurationView::subtract_table(&former, &[]);
+        assert_eq!(result, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn subtract_table_no_overlap() {
+        let former = vec!["a".to_string(), "b".to_string()];
+        let latter = vec!["c".to_string(), "d".to_string()];
+        let result = ResourceConfigurationView::subtract_table(&former, &latter);
+        assert_eq!(result, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn subtract_table_full_overlap() {
+        let former = vec!["a".to_string(), "b".to_string()];
+        let latter = vec!["a".to_string(), "b".to_string()];
+        let result = ResourceConfigurationView::subtract_table(&former, &latter);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn subtract_table_partial_overlap() {
+        let former = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        let latter = vec!["b".to_string()];
+        let result = ResourceConfigurationView::subtract_table(&former, &latter);
+        assert_eq!(result, vec!["a", "c"]);
+    }
+
+    #[test]
+    fn subtract_table_former_has_duplicates() {
+        let former = vec!["a".to_string(), "a".to_string(), "b".to_string()];
+        let latter = vec!["a".to_string()];
+        let result = ResourceConfigurationView::subtract_table(&former, &latter);
+        assert_eq!(result, vec!["b"]);
     }
 }
