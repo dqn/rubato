@@ -1,4 +1,4 @@
-use discord_rpc::rich_presence::{RichPresence, RichPresenceData};
+use crate::discord_rpc::rich_presence::{RichPresence, RichPresenceData};
 
 use crate::stubs::{MainStateListener, ScreenType};
 use beatoraja_types::main_state_access::MainStateAccess;

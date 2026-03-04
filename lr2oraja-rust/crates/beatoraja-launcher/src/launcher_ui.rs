@@ -156,7 +156,7 @@ impl LauncherUi {
             );
             let action_label = config
                 .get_obs_action(&name)
-                .and_then(|a| beatoraja_obs::obs_ws_client::get_action_label(a))
+                .and_then(|a| beatoraja_external::obs::obs_ws_client::get_action_label(a))
                 .unwrap_or_else(|| ACTION_NONE.to_string());
             obs_action_selections.insert(name.clone(), action_label);
 
@@ -176,7 +176,7 @@ impl LauncherUi {
                 );
                 let action_ended = config
                     .get_obs_action("PLAY_ENDED")
-                    .and_then(|a| beatoraja_obs::obs_ws_client::get_action_label(a))
+                    .and_then(|a| beatoraja_external::obs::obs_ws_client::get_action_label(a))
                     .unwrap_or_else(|| ACTION_NONE.to_string());
                 obs_action_selections.insert("PLAY_ENDED".to_string(), action_ended);
             }
@@ -1061,7 +1061,7 @@ impl LauncherUi {
             ui.heading("State Actions");
 
             // Action labels from OBS module
-            let actions = beatoraja_obs::obs_ws_client::obs_actions();
+            let actions = beatoraja_external::obs::obs_ws_client::obs_actions();
             let action_labels: Vec<String> = std::iter::once(ACTION_NONE.to_string())
                 .chain(actions.keys().cloned())
                 .collect();
@@ -1167,7 +1167,7 @@ impl LauncherUi {
         // Commit webhook URLs
         self.config.webhook_url = self.webhook_urls.clone();
         // Commit OBS scene/action selections
-        let actions = beatoraja_obs::obs_ws_client::obs_actions();
+        let actions = beatoraja_external::obs::obs_ws_client::obs_actions();
         for state in &self.obs_states {
             if let Some(scene) = self.obs_scene_selections.get(state) {
                 let scene_val = if scene == SCENE_NONE {

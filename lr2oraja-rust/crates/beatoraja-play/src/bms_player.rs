@@ -13,17 +13,17 @@ use crate::practice_configuration::PracticeConfiguration;
 use crate::rhythm_timer_processor::RhythmTimerProcessor;
 use beatoraja_core::bms_player_mode::BMSPlayerMode;
 use beatoraja_core::main_state::{MainState, MainStateData, MainStateType};
+use beatoraja_core::pattern::autoplay_modifier::AutoplayModifier;
+use beatoraja_core::pattern::extra_note_modifier::ExtraNoteModifier;
+use beatoraja_core::pattern::lane_shuffle_modifier::{PlayerBattleModifier, PlayerFlipModifier};
+use beatoraja_core::pattern::long_note_modifier::LongNoteModifier;
+use beatoraja_core::pattern::mine_note_modifier::MineNoteModifier;
+use beatoraja_core::pattern::mode_modifier::ModeModifier;
+use beatoraja_core::pattern::pattern_modifier::{AssistLevel, PatternModifier};
+use beatoraja_core::pattern::scroll_speed_modifier::ScrollSpeedModifier;
 use beatoraja_core::player_config::PlayerConfig;
 use beatoraja_core::score_data::ScoreData;
 use beatoraja_core::timer_manager::TimerManager;
-use beatoraja_pattern::autoplay_modifier::AutoplayModifier;
-use beatoraja_pattern::extra_note_modifier::ExtraNoteModifier;
-use beatoraja_pattern::lane_shuffle_modifier::{PlayerBattleModifier, PlayerFlipModifier};
-use beatoraja_pattern::long_note_modifier::LongNoteModifier;
-use beatoraja_pattern::mine_note_modifier::MineNoteModifier;
-use beatoraja_pattern::mode_modifier::ModeModifier;
-use beatoraja_pattern::pattern_modifier::{AssistLevel, PatternModifier};
-use beatoraja_pattern::scroll_speed_modifier::ScrollSpeedModifier;
 use beatoraja_types::audio_config::FrequencyType;
 use beatoraja_types::clear_type::ClearType;
 use beatoraja_types::course_data::CourseDataConstraint;
@@ -1185,7 +1185,7 @@ impl BMSPlayer {
             log::info!("Pattern option (DP): {}", self.playinfo.doubleoption);
 
             // 2P random option
-            let mut pm2 = beatoraja_pattern::pattern_modifier::create_pattern_modifier(
+            let mut pm2 = beatoraja_core::pattern::pattern_modifier::create_pattern_modifier(
                 self.playinfo.randomoption2,
                 1,
                 &mode,
@@ -1205,7 +1205,7 @@ impl BMSPlayer {
         }
 
         // 1P random option
-        let mut pm1 = beatoraja_pattern::pattern_modifier::create_pattern_modifier(
+        let mut pm1 = beatoraja_core::pattern::pattern_modifier::create_pattern_modifier(
             self.playinfo.randomoption,
             0,
             &mode,
@@ -1999,7 +1999,7 @@ impl MainState for BMSPlayer {
                     self.model.set_total(property.total);
 
                     // Apply practice modifier (time range)
-                    let mut pm = beatoraja_pattern::practice_modifier::PracticeModifier::new(
+                    let mut pm = beatoraja_core::pattern::practice_modifier::PracticeModifier::new(
                         property.starttime as i64 * 100 / property.freq as i64,
                         property.endtime as i64 * 100 / property.freq as i64,
                     );
@@ -2009,25 +2009,27 @@ impl MainState for BMSPlayer {
                     if self.model.get_mode().map_or(1, |m| m.player()) == 2 {
                         if property.doubleop == 1 {
                             let mut flip =
-                                beatoraja_pattern::lane_shuffle_modifier::PlayerFlipModifier::new();
+                                beatoraja_core::pattern::lane_shuffle_modifier::PlayerFlipModifier::new();
                             flip.modify(&mut self.model);
                         }
-                        let mut pm2 = beatoraja_pattern::pattern_modifier::create_pattern_modifier(
-                            property.random2,
-                            1,
-                            &self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K),
-                            &self.player_config,
-                        );
+                        let mut pm2 =
+                            beatoraja_core::pattern::pattern_modifier::create_pattern_modifier(
+                                property.random2,
+                                1,
+                                &self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K),
+                                &self.player_config,
+                            );
                         pm2.modify(&mut self.model);
                     }
 
                     // 1P random option
-                    let mut pm1 = beatoraja_pattern::pattern_modifier::create_pattern_modifier(
-                        property.random,
-                        0,
-                        &self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K),
-                        &self.player_config,
-                    );
+                    let mut pm1 =
+                        beatoraja_core::pattern::pattern_modifier::create_pattern_modifier(
+                            property.random,
+                            0,
+                            &self.model.get_mode().cloned().unwrap_or(Mode::BEAT_7K),
+                            &self.player_config,
+                        );
                     pm1.modify(&mut self.model);
 
                     // Gauge, judgerank, lane init

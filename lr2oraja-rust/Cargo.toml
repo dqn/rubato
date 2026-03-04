@@ -2,26 +2,16 @@
 members = [
     "crates/bms-model",
     "crates/bms-table",
-    "crates/discord-rpc",
     "crates/beatoraja-input",
     "crates/beatoraja-audio",
-    "crates/md-processor",
     "crates/beatoraja-core",
-    "crates/beatoraja-pattern",
     "crates/beatoraja-play",
     "crates/beatoraja-skin",
-    "crates/beatoraja-select",
-    "crates/beatoraja-result",
-    "crates/beatoraja-decide",
     "crates/beatoraja-ir",
     "crates/beatoraja-external",
-    "crates/beatoraja-obs",
-    "crates/beatoraja-modmenu",
-    "crates/beatoraja-stream",
+    "crates/beatoraja-state",
     "crates/beatoraja-launcher",
     "crates/beatoraja-song",
-    "crates/beatoraja-controller",
-    "crates/beatoraja-system",
     "crates/beatoraja-bin",
     "crates/beatoraja-types",
     "crates/beatoraja-render",
@@ -37,26 +27,16 @@ edition = "2024"
 # Internal crates
 bms-model = { path = "crates/bms-model" }
 bms-table = { path = "crates/bms-table" }
-discord-rpc = { path = "crates/discord-rpc" }
 beatoraja-input = { path = "crates/beatoraja-input" }
 beatoraja-audio = { path = "crates/beatoraja-audio" }
-md-processor = { path = "crates/md-processor" }
 beatoraja-core = { path = "crates/beatoraja-core" }
-beatoraja-pattern = { path = "crates/beatoraja-pattern" }
 beatoraja-play = { path = "crates/beatoraja-play" }
 beatoraja-skin = { path = "crates/beatoraja-skin" }
-beatoraja-select = { path = "crates/beatoraja-select" }
-beatoraja-result = { path = "crates/beatoraja-result" }
-beatoraja-decide = { path = "crates/beatoraja-decide" }
 beatoraja-ir = { path = "crates/beatoraja-ir" }
 beatoraja-external = { path = "crates/beatoraja-external" }
-beatoraja-obs = { path = "crates/beatoraja-obs" }
-beatoraja-modmenu = { path = "crates/beatoraja-modmenu" }
-beatoraja-stream = { path = "crates/beatoraja-stream" }
+beatoraja-state = { path = "crates/beatoraja-state" }
 beatoraja-launcher = { path = "crates/beatoraja-launcher" }
 beatoraja-song = { path = "crates/beatoraja-song" }
-beatoraja-controller = { path = "crates/beatoraja-controller" }
-beatoraja-system = { path = "crates/beatoraja-system" }
 beatoraja-types = { path = "crates/beatoraja-types" }
 
 # Error handling

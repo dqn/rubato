@@ -188,9 +188,10 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
             main_controller.add_state_listener(Box::new(listener));
         }
         if use_obs_ws {
-            let listener = beatoraja_obs::obs_listener::ObsListener::new(cfg_clone.clone());
+            let listener =
+                beatoraja_external::obs::obs_listener::ObsListener::new(cfg_clone.clone());
             main_controller.add_state_listener(Box::new(listener));
-            let obs_client = beatoraja_obs::obs_ws_client::ObsWsClient::new(&cfg_clone);
+            let obs_client = beatoraja_external::obs::obs_ws_client::ObsWsClient::new(&cfg_clone);
             if let Ok(client) = obs_client {
                 main_controller.set_obs_client(Box::new(client));
             }
@@ -200,7 +201,8 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     // Wire IR initialization at startup
     {
         let player_config = main_controller.get_player_config().clone();
-        let ir_statuses = beatoraja_result::ir_initializer::initialize_ir_config(&player_config);
+        let ir_statuses =
+            beatoraja_state::result::ir_initializer::initialize_ir_config(&player_config);
         for ir_status in ir_statuses {
             let rival_provider = beatoraja_ir::ir_rival_provider_impl::IRRivalProviderImpl::new(
                 ir_status.connection.clone(),
@@ -219,7 +221,8 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
         }
         // Wire IR resend service
         let ir_send_count = main_controller.get_config().ir_send_count;
-        let resend_service = beatoraja_result::ir_resend::IrResendServiceImpl::new(ir_send_count);
+        let resend_service =
+            beatoraja_state::result::ir_resend::IrResendServiceImpl::new(ir_send_count);
         main_controller.set_ir_resend_service(Box::new(resend_service));
     }
 
@@ -238,7 +241,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
                 Ok(songdb) => {
                     let adapter = Arc::new(SongDbMusicDatabaseAdapter { songdb });
                     let processor =
-                        md_processor::music_download_processor::MusicDownloadProcessor::new(
+                        beatoraja_song::md_processor::music_download_processor::MusicDownloadProcessor::new(
                             config.ipfsurl.clone(),
                             adapter,
                         );
@@ -258,14 +261,14 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
         // HTTP download processor (Java: lines 508-513)
         if config.enable_http {
             // Look up download source by config.download_source, fall back to default
-            let source_meta = md_processor::http_download_processor::DOWNLOAD_SOURCES
+            let source_meta = beatoraja_song::md_processor::http_download_processor::DOWNLOAD_SOURCES
                 .get(&config.download_source)
                 .copied()
                 .unwrap_or_else(|| {
-                    md_processor::http_download_processor::HttpDownloadProcessor::get_default_download_source()
+                    beatoraja_song::md_processor::http_download_processor::HttpDownloadProcessor::get_default_download_source()
                 });
             let http_download_source: Arc<
-                dyn md_processor::http_download_source::HttpDownloadSource,
+                dyn beatoraja_song::md_processor::http_download_source::HttpDownloadSource,
             > = Arc::from(source_meta.build(&config));
 
             // The MainControllerRef adapter opens its own song DB connection so the background
@@ -276,10 +279,10 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
             ) {
                 Ok(songdb) => {
                     let bmsroot = config.get_bmsroot().to_vec();
-                    let main_ref: Arc<dyn md_processor::MainControllerRef> =
+                    let main_ref: Arc<dyn beatoraja_song::md_processor::MainControllerRef> =
                         Arc::new(SongDbMainControllerRef { songdb, bmsroot });
                     let processor = Arc::new(
-                        md_processor::http_download_processor::HttpDownloadProcessor::new(
+                        beatoraja_song::md_processor::http_download_processor::HttpDownloadProcessor::new(
                             main_ref,
                             http_download_source,
                             config.download_directory.clone(),
@@ -287,9 +290,9 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
                     );
 
                     // Java: DownloadTaskState.initialize(httpDownloadProcessor)
-                    md_processor::download_task_state::DownloadTaskState::initialize();
+                    beatoraja_song::md_processor::download_task_state::DownloadTaskState::initialize();
                     // Java: DownloadTaskMenu.setProcessor(httpDownloadProcessor)
-                    beatoraja_modmenu::download_task_menu::DownloadTaskMenu::set_processor(
+                    beatoraja_state::modmenu::download_task_menu::DownloadTaskMenu::set_processor(
                         Arc::clone(&processor),
                     );
 
@@ -322,14 +325,14 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     // In Rust, we create a shared Arc<Mutex<MusicSelector>> and store it on MainController.
     // Both StreamController and StateFactory (MusicSelect arm) use the same instance.
     if main_controller.get_player_config().enable_request {
-        let selector = beatoraja_select::music_selector::MusicSelector::with_config(
+        let selector = beatoraja_state::select::music_selector::MusicSelector::with_config(
             main_controller.get_config().clone(),
         );
         let selector = std::sync::Arc::new(std::sync::Mutex::new(selector));
         // Store the shared selector on MainController for StateFactory to retrieve
         main_controller.set_shared_music_selector(Box::new(std::sync::Arc::clone(&selector)));
         let mut stream_controller =
-            beatoraja_stream::stream_controller::StreamController::new(selector);
+            beatoraja_state::stream::stream_controller::StreamController::new(selector);
         stream_controller.run();
         main_controller.set_stream_controller(Box::new(stream_controller));
     }
@@ -659,7 +662,7 @@ impl ApplicationHandler for BeatorajaApp {
                 {
                     let raw_input = egui_state.take_egui_input(window);
                     let full_output = egui_integration.ctx.run(raw_input, |ctx| {
-                        beatoraja_modmenu::imgui_renderer::ImGuiRenderer::render_ui(ctx);
+                        beatoraja_state::modmenu::imgui_renderer::ImGuiRenderer::render_ui(ctx);
 
                         // Diagnostic overlay: show current state and skin status
                         egui::Area::new(egui::Id::new("diag_overlay"))
@@ -971,7 +974,7 @@ impl BeatorajaApp {
 
 // -- Download processor adapter structs --
 
-/// Adapter: bridges `SQLiteSongDatabaseAccessor` to `md_processor::MusicDatabaseAccessor`.
+/// Adapter: bridges `SQLiteSongDatabaseAccessor` to `beatoraja_song::md_processor::MusicDatabaseAccessor`.
 ///
 /// Java equivalent: the inline lambda `(md5) -> { SongData[] s = getSongDatabase().getSongDatas(md5); ... }`
 /// in MainController.create() line 497. Opens its own SQLite connection so the IPFS download
@@ -985,7 +988,9 @@ struct SongDbMusicDatabaseAdapter {
 // serializes all access, making it safe to share across threads.
 unsafe impl Sync for SongDbMusicDatabaseAdapter {}
 
-impl md_processor::music_database_accessor::MusicDatabaseAccessor for SongDbMusicDatabaseAdapter {
+impl beatoraja_song::md_processor::music_database_accessor::MusicDatabaseAccessor
+    for SongDbMusicDatabaseAdapter
+{
     fn get_music_paths(&self, md5: &[String]) -> Vec<String> {
         use beatoraja_types::song_database_accessor::SongDatabaseAccessor;
         let songs = self.songdb.get_song_datas_by_hashes(md5);
@@ -996,7 +1001,7 @@ impl md_processor::music_database_accessor::MusicDatabaseAccessor for SongDbMusi
     }
 }
 
-/// Adapter: bridges a standalone song DB connection to `md_processor::MainControllerRef`.
+/// Adapter: bridges a standalone song DB connection to `beatoraja_song::md_processor::MainControllerRef`.
 ///
 /// Java equivalent: `this` (MainController) passed to HttpDownloadProcessor constructor.
 /// The only method called is `update_song(path, force)` which ultimately calls
@@ -1011,7 +1016,7 @@ struct SongDbMainControllerRef {
 // inherently Sync. The Mutex serializes all DB access, making it safe to share across threads.
 unsafe impl Sync for SongDbMainControllerRef {}
 
-impl md_processor::MainControllerRef for SongDbMainControllerRef {
+impl beatoraja_song::md_processor::MainControllerRef for SongDbMainControllerRef {
     fn update_song(&self, path: &str, _force: bool) {
         let update_path = if path.is_empty() { None } else { Some(path) };
         self.songdb
@@ -1025,7 +1030,7 @@ impl md_processor::MainControllerRef for SongDbMainControllerRef {
 /// `MainController::set_http_download_processor` needs `Box<dyn HttpDownloadSubmitter>`.
 /// This wrapper bridges the two ownership models.
 struct HttpDownloadProcessorWrapper(
-    Arc<md_processor::http_download_processor::HttpDownloadProcessor>,
+    Arc<beatoraja_song::md_processor::http_download_processor::HttpDownloadProcessor>,
 );
 
 impl beatoraja_types::http_download_submitter::HttpDownloadSubmitter

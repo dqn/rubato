@@ -5,6 +5,12 @@
 
 // beatoraja-external: External integrations (screenshot, webhook, BMS search, Discord, score import)
 
+// Discord RPC (merged from discord-rpc crate)
+pub mod discord_rpc;
+
+// OBS WebSocket (merged from beatoraja-obs crate)
+pub mod obs;
+
 // Stubs for external dependencies not yet available
 pub mod stubs;
 

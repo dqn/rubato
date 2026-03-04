@@ -36,40 +36,30 @@ beatoraja fork (Java 313 files / 72k+ lines) → Rust. 25 crates, 167k lines.
 ## Structure
 
 ```
-lr2oraja-rust/       # Cargo workspace
+lr2oraja-rust/       # Cargo workspace (15 crates)
   crates/
     bms-model        # BMS/BME/BML parser + model
     bms-table        # Difficulty table parser
     beatoraja-types  # Shared types (circular dep breaker)
-    beatoraja-pattern    # Note pattern (JavaRandom LCG)
     beatoraja-audio      # Audio (Kira 0.12)
-    beatoraja-input      # Keyboard/controller input
-    beatoraja-controller # gilrs controller manager
+    beatoraja-input      # Keyboard/controller input (+ controller)
     beatoraja-render     # Rendering (wgpu)
     beatoraja-skin       # Skin loading/layout
-    beatoraja-song       # Song DB (rusqlite)
-    beatoraja-core       # State machine, main loop
+    beatoraja-song       # Song DB (rusqlite, + md-processor)
+    beatoraja-core       # State machine, main loop (+ pattern)
     beatoraja-play       # Play state (gameplay)
-    beatoraja-select     # Song select state
-    beatoraja-decide     # Song decide state
-    beatoraja-result     # Result state
-    beatoraja-modmenu    # Mod menu state
+    beatoraja-state      # Select/Decide/Result/Modmenu/Stream states
     beatoraja-ir         # Internet ranking
-    beatoraja-external   # Twitter, clipboard
-    beatoraja-obs        # OBS WebSocket
-    beatoraja-stream     # Streaming
+    beatoraja-external   # Twitter, clipboard, Discord RPC, OBS WebSocket
     beatoraja-launcher   # Launcher UI (egui)
-    beatoraja-system     # Platform utilities
     beatoraja-bin        # Entry point
-    discord-rpc          # Discord Rich Presence
-    md-processor         # Markdown processing
   golden-master/   # Golden Master test infra
   test-bms/        # Test BMS files
 ```
 
 ## Key Invariants
 
-- Timing: i64 microseconds. JavaRandom LCG in `beatoraja-pattern` (**never** `StdRng`/`rand`). LR2 MT19937. LR2 judge: pure integer arithmetic. LongNote: index-based.
+- Timing: i64 microseconds. JavaRandom LCG in `beatoraja-core::pattern` (**never** `StdRng`/`rand`). LR2 MT19937. LR2 judge: pure integer arithmetic. LongNote: index-based.
 
 ## Testing
 

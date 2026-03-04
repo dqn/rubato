@@ -4,7 +4,7 @@
 
 use std::path::Path;
 
-use beatoraja_pattern::lane_shuffle_modifier::{
+use beatoraja_core::pattern::lane_shuffle_modifier::{
     LaneCrossShuffleModifier, LaneMirrorShuffleModifier, LaneRandomShuffleModifier,
     LaneRotateShuffleModifier, PlayerFlipModifier,
 };

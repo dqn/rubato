@@ -12,7 +12,6 @@ serde_json.workspace = true
 
 # Needed by pending modules (src/pending/ and tests/pending/)
 beatoraja-play.workspace = true
-beatoraja-pattern.workspace = true
 beatoraja-core.workspace = true
 beatoraja-song.workspace = true
 beatoraja-input.workspace = true

@@ -7,8 +7,8 @@ edition.workspace = true
 anyhow.workspace = true
 log.workspace = true
 midir.workspace = true
+gilrs.workspace = true
 bms-model.workspace = true
-beatoraja-controller.workspace = true
 beatoraja-types.workspace = true
 
 [dev-dependencies]

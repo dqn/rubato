@@ -7,7 +7,6 @@ edition.workspace = true
 bms-model.workspace = true
 beatoraja-types.workspace = true
 beatoraja-core.workspace = true
-beatoraja-pattern.workspace = true
 beatoraja-audio.workspace = true
 beatoraja-render.workspace = true
 beatoraja-input.workspace = true

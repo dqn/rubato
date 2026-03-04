@@ -4,10 +4,10 @@
 
 use std::path::Path;
 
-use beatoraja_pattern::autoplay_modifier::AutoplayModifier;
-use beatoraja_pattern::pattern_modifier::{AssistLevel, PatternModifier};
-use beatoraja_pattern::practice_modifier::PracticeModifier;
-use beatoraja_pattern::scroll_speed_modifier::ScrollSpeedModifier;
+use beatoraja_core::pattern::autoplay_modifier::AutoplayModifier;
+use beatoraja_core::pattern::pattern_modifier::{AssistLevel, PatternModifier};
+use beatoraja_core::pattern::practice_modifier::PracticeModifier;
+use beatoraja_core::pattern::scroll_speed_modifier::ScrollSpeedModifier;
 use bms_model::bms_decoder::BMSDecoder;
 use bms_model::bms_model::BMSModel;
 use bms_model::note::{Note, TYPE_CHARGENOTE, TYPE_HELLCHARGENOTE, TYPE_LONGNOTE};

@@ -10,7 +10,7 @@ use std::path::Path;
 
 use serde::Deserialize;
 
-use beatoraja_pattern::lr2_random::LR2Random;
+use beatoraja_core::pattern::lr2_random::LR2Random;
 use beatoraja_types::replay_data::ReplayData;
 use beatoraja_types::stubs::KeyInputLog;
 use beatoraja_types::validatable::Validatable;

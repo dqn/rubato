@@ -2,7 +2,7 @@
 
 use beatoraja_core::config::{Config, SongPreview};
 use beatoraja_core::player_config::PlayerConfig;
-use beatoraja_select::music_selector::ChartReplicationMode;
+use beatoraja_state::select::music_selector::ChartReplicationMode;
 
 /// Translates: MusicSelectConfigurationView (JavaFX → egui)
 ///

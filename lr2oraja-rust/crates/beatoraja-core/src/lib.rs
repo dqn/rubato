@@ -62,3 +62,6 @@ pub mod table_data_accessor;
 
 // Config subpackage
 pub mod config_pkg;
+
+// Pattern modifiers (merged from beatoraja-pattern crate)
+pub mod pattern;

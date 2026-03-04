@@ -1,7 +1,7 @@
 // Translated from TrainerView.java
 
 use beatoraja_core::player_config::PlayerConfig;
-use beatoraja_modmenu::random_trainer::RandomTrainer;
+use beatoraja_state::modmenu::random_trainer::RandomTrainer;
 use egui;
 use log::warn;
 

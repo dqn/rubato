@@ -15,16 +15,11 @@ beatoraja-audio = { workspace = true }
 beatoraja-core = { workspace = true }
 beatoraja-external = { workspace = true }
 beatoraja-ir = { workspace = true }
-beatoraja-obs = { workspace = true }
 beatoraja-render = { workspace = true }
-beatoraja-result = { workspace = true }
 beatoraja-song = { workspace = true }
-beatoraja-modmenu = { workspace = true }
 beatoraja-launcher = { workspace = true }
-beatoraja-select = { workspace = true }
-beatoraja-stream = { workspace = true }
+beatoraja-state = { workspace = true }
 beatoraja-types = { workspace = true }
-md-processor = { workspace = true }
 anyhow = { workspace = true }
 log = { workspace = true }
 clap = { workspace = true }

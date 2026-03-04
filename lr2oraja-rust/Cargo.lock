@@ -485,13 +485,9 @@ dependencies = [
  "beatoraja-external",
  "beatoraja-ir",
  "beatoraja-launcher",
- "beatoraja-modmenu",
- "beatoraja-obs",
  "beatoraja-render",
- "beatoraja-result",
- "beatoraja-select",
  "beatoraja-song",
- "beatoraja-stream",
+ "beatoraja-state",
  "beatoraja-types",
  "bytemuck",
  "chrono",
@@ -503,20 +499,10 @@ dependencies = [
  "env_logger",
  "image",
  "log",
- "md-processor",
  "pollster",
  "tempfile",
  "wgpu",
  "winit",
-]
-
-[[package]]
-name = "beatoraja-controller"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "gilrs",
- "log",
 ]
 
 [[package]]
@@ -533,6 +519,7 @@ dependencies = [
  "bms-model",
  "bms-table",
  "chrono",
+ "criterion",
  "ecb",
  "flate2",
  "image",
@@ -546,40 +533,30 @@ dependencies = [
 ]
 
 [[package]]
-name = "beatoraja-decide"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "beatoraja-audio",
- "beatoraja-core",
- "beatoraja-input",
- "beatoraja-play",
- "beatoraja-skin",
- "beatoraja-types",
- "bms-model",
- "log",
-]
-
-[[package]]
 name = "beatoraja-external"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "arboard",
+ "base64",
  "beatoraja-core",
  "beatoraja-skin",
  "beatoraja-song",
  "beatoraja-types",
  "bms-model",
  "chrono",
- "discord-rpc",
+ "futures-util",
  "image",
  "log",
  "reqwest",
  "rusqlite",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
+ "tokio",
+ "tokio-tungstenite",
+ "uuid",
 ]
 
 [[package]]
@@ -587,9 +564,9 @@ name = "beatoraja-input"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "beatoraja-controller",
  "beatoraja-types",
  "bms-model",
+ "gilrs",
  "log",
  "midir",
  "tempfile",
@@ -601,7 +578,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "beatoraja-core",
- "beatoraja-pattern",
  "beatoraja-song",
  "beatoraja-types",
  "bms-model",
@@ -626,18 +602,13 @@ dependencies = [
  "arboard",
  "beatoraja-audio",
  "beatoraja-core",
- "beatoraja-decide",
  "beatoraja-external",
  "beatoraja-input",
  "beatoraja-ir",
- "beatoraja-modmenu",
- "beatoraja-obs",
  "beatoraja-play",
- "beatoraja-result",
- "beatoraja-select",
  "beatoraja-skin",
  "beatoraja-song",
- "beatoraja-stream",
+ "beatoraja-state",
  "beatoraja-types",
  "bms-model",
  "cpal",
@@ -645,7 +616,6 @@ dependencies = [
  "egui",
  "encoding_rs",
  "log",
- "md-processor",
  "open",
  "regex",
  "reqwest",
@@ -658,61 +628,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "beatoraja-modmenu"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arboard",
- "beatoraja-audio",
- "beatoraja-core",
- "beatoraja-pattern",
- "beatoraja-play",
- "beatoraja-select",
- "beatoraja-skin",
- "beatoraja-types",
- "bms-model",
- "chrono",
- "egui",
- "log",
- "md-processor",
- "rand 0.8.5",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "beatoraja-obs"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64",
- "beatoraja-core",
- "beatoraja-types",
- "futures-util",
- "log",
- "serde",
- "serde_json",
- "sha2",
- "tokio",
- "tokio-tungstenite",
-]
-
-[[package]]
-name = "beatoraja-pattern"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "beatoraja-core",
- "beatoraja-types",
- "bms-model",
- "criterion",
- "log",
- "rand 0.8.5",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "beatoraja-play"
 version = "0.1.0"
 dependencies = [
@@ -721,7 +636,6 @@ dependencies = [
  "beatoraja-core",
  "beatoraja-input",
  "beatoraja-ir",
- "beatoraja-pattern",
  "beatoraja-render",
  "beatoraja-song",
  "beatoraja-types",
@@ -748,56 +662,6 @@ dependencies = [
  "tokio",
  "wgpu",
  "winit",
-]
-
-[[package]]
-name = "beatoraja-result"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "beatoraja-audio",
- "beatoraja-core",
- "beatoraja-input",
- "beatoraja-ir",
- "beatoraja-modmenu",
- "beatoraja-play",
- "beatoraja-skin",
- "beatoraja-song",
- "beatoraja-types",
- "bms-model",
- "chrono",
- "log",
- "open",
- "rand 0.8.5",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "beatoraja-select"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arboard",
- "beatoraja-audio",
- "beatoraja-core",
- "beatoraja-input",
- "beatoraja-ir",
- "beatoraja-play",
- "beatoraja-skin",
- "beatoraja-song",
- "beatoraja-types",
- "bms-model",
- "chrono",
- "image",
- "log",
- "md-processor",
- "open",
- "rand 0.8.5",
- "regex",
- "serde",
- "serde_json",
- "tempfile",
 ]
 
 [[package]]
@@ -833,34 +697,44 @@ dependencies = [
  "beatoraja-core",
  "beatoraja-types",
  "bms-model",
+ "flate2",
  "log",
- "md-processor",
  "rayon",
+ "regex",
+ "reqwest",
  "rusqlite",
  "serde",
  "serde_json",
+ "sevenz-rust",
  "sha2",
+ "tar",
  "tempfile",
 ]
 
 [[package]]
-name = "beatoraja-stream"
+name = "beatoraja-state"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arboard",
+ "beatoraja-audio",
  "beatoraja-core",
- "beatoraja-select",
+ "beatoraja-input",
+ "beatoraja-ir",
+ "beatoraja-play",
+ "beatoraja-skin",
+ "beatoraja-song",
  "beatoraja-types",
  "bms-model",
+ "chrono",
+ "egui",
+ "image",
  "log",
-]
-
-[[package]]
-name = "beatoraja-system"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
+ "open",
+ "rand 0.8.5",
+ "regex",
+ "serde",
+ "serde_json",
  "tempfile",
 ]
 
@@ -1625,18 +1499,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "discord-rpc"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
- "serde",
- "serde_json",
- "tempfile",
- "uuid",
-]
-
-[[package]]
 name = "dispatch"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2375,7 +2237,6 @@ dependencies = [
  "beatoraja-audio",
  "beatoraja-core",
  "beatoraja-input",
- "beatoraja-pattern",
  "beatoraja-play",
  "beatoraja-render",
  "beatoraja-skin",
@@ -3187,24 +3048,6 @@ checksum = "d89e7ee0cfbedfc4da3340218492196241d89eefb6dab27de5df917a6d2e78cf"
 dependencies = [
  "cfg-if",
  "digest",
-]
-
-[[package]]
-name = "md-processor"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "beatoraja-core",
- "beatoraja-types",
- "flate2",
- "log",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "sevenz-rust",
- "tar",
- "tempfile",
 ]
 
 [[package]]

@@ -9,11 +9,11 @@ use log::{info, warn};
 
 use beatoraja_core::config::Config;
 use beatoraja_core::player_config::PlayerConfig;
+use beatoraja_song::md_processor::http_download_processor::DOWNLOAD_SOURCES;
 use beatoraja_song::song_database_update_listener::SongDatabaseUpdateListener as SongListener;
 use beatoraja_song::song_information_accessor::SongInformationAccessor;
 use beatoraja_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor;
 use bms_model::mode::Mode;
-use md_processor::http_download_processor::DOWNLOAD_SOURCES;
 
 use crate::audio_configuration_view::AudioConfigurationView;
 use crate::discord_configuration_view::DiscordConfigurationView;

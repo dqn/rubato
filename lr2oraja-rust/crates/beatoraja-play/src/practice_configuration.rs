@@ -1,9 +1,9 @@
 use crate::bms_player_rule::BMSPlayerRule;
 use crate::gauge_property::GaugeProperty;
 use crate::groove_gauge::{GrooveGauge, create_groove_gauge};
-use beatoraja_pattern::lane_shuffle_modifier::PlayerFlipModifier;
-use beatoraja_pattern::pattern_modifier::{PatternModifier, create_pattern_modifier};
-use beatoraja_pattern::practice_modifier::PracticeModifier;
+use beatoraja_core::pattern::lane_shuffle_modifier::PlayerFlipModifier;
+use beatoraja_core::pattern::pattern_modifier::{PatternModifier, create_pattern_modifier};
+use beatoraja_core::pattern::practice_modifier::PracticeModifier;
 use beatoraja_types::player_config::PlayerConfig;
 use bms_model::bms_model::BMSModel;
 use bms_model::bms_model_utils;

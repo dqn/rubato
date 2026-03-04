@@ -1,8 +1,8 @@
 #![allow(unused_imports)]
 
 // Re-exports (formerly in stubs.rs)
-pub use beatoraja_pattern::lr2_random::LR2Random;
-pub use beatoraja_pattern::random::Random;
+pub use beatoraja_core::pattern::lr2_random::LR2Random;
+pub use beatoraja_core::pattern::random::Random;
 pub use beatoraja_song::song_data::SongData;
 pub use beatoraja_types::imgui_notify::ImGuiNotify;
 pub use bms_model::bms_decoder::convert_hex_string;

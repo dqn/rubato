@@ -2,7 +2,7 @@
 //!
 //! Translated from: bms.player.beatoraja.input.BMSPlayerInputProcessor
 
-use beatoraja_controller::lwjgl3_controller_manager::Lwjgl3ControllerManager;
+use crate::controller::lwjgl3_controller_manager::Lwjgl3ControllerManager;
 
 use crate::bm_controller_input_processor::{
     BMControllerCallback, BMControllerInputProcessor, compute_analog_diff,

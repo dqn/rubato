@@ -4,7 +4,9 @@ use std::collections::HashMap;
 
 use beatoraja_core::config::Config;
 use beatoraja_core::main_state::MainStateType;
-use beatoraja_obs::obs_ws_client::{ObsVersionInfo, ObsWsClient, get_action_label, obs_actions};
+use beatoraja_external::obs::obs_ws_client::{
+    ObsVersionInfo, ObsWsClient, get_action_label, obs_actions,
+};
 use egui;
 
 use crate::play_configuration_view::PlayConfigurationView;
