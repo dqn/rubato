@@ -25,7 +25,6 @@ members = [
     "crates/beatoraja-bin",
     "crates/beatoraja-types",
     "crates/beatoraja-render",
-    "crates/ast-compare",
     "golden-master",
 ]
 resolver = "2"

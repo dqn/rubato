@@ -157,31 +157,6 @@ e2e-test:
 e2e-test-subprocess:
     cargo test -p brs --test e2e_subprocess -- --ignored --nocapture
 
-# AST comparison common args
-ast_java_roots := "--java-root ../lr2oraja-java/core/src ../lr2oraja-java/core/dependencies/jbms-parser/src ../lr2oraja-java/core/dependencies/jbmstable-parser/src"
-ast_rust_root := "--rust-root crates"
-ast_common := ast_java_roots + " " + ast_rust_root
-
-# AST comparison: generate file mapping
-ast-map:
-    cargo run -p ast-compare -- {{ ast_common }} map
-
-# AST comparison: show unmapped Java methods only
-ast-unmapped:
-    cargo run -p ast-compare -- {{ ast_common }} map --unmapped-only
-
-# AST comparison: structural comparison (below threshold)
-ast-compare:
-    cargo run -p ast-compare -- {{ ast_common }} compare
-
-# AST comparison: constant comparison (excluding trivial)
-ast-constants:
-    cargo run -p ast-compare -- {{ ast_common }} constants --exclude-trivial --ignore-file .ast-compare-constants-ignore
-
-# AST comparison: full report
-ast-full:
-    cargo run -p ast-compare -- {{ ast_common }} full
-
 # Seed fuzz corpus directories with real BMS files
 fuzz-seed:
     #!/usr/bin/env bash

@@ -152,9 +152,16 @@ impl RandomTrainer {
 mod tests {
     use super::*;
 
-    /// Reset all global statics to a known state before each test.
-    /// Required because RandomTrainer uses process-global Mutex statics.
-    fn reset_globals() {
+    /// Serializes tests that touch process-global statics.
+    /// Without this, parallel test threads race on the shared Mutex state
+    /// and `reset_globals()` in one test can stomp on another mid-execution.
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    /// Reset all global statics to a known state and return the test lock guard.
+    /// The caller must hold the returned guard for the duration of the test to
+    /// prevent other tests from mutating the shared statics concurrently.
+    fn reset_globals() -> std::sync::MutexGuard<'static, ()> {
+        let guard = TEST_LOCK.lock().unwrap();
         *LANE_ORDER.lock().unwrap() = "1234567".to_string();
         LANES_TO_RANDOM.lock().unwrap().clear();
         *BLACK_WHITE_PERMUTE.lock().unwrap() = false;
@@ -162,13 +169,14 @@ mod tests {
         LANE_MASK.lock().unwrap().clear();
         *LANE_MASK.lock().unwrap() = vec![false; 7];
         *RANDOM_SEED_MAP.lock().unwrap() = Some(HashMap::new());
+        guard
     }
 
     // --- RandomTrainer::new ---
 
     #[test]
     fn test_new_initializes_defaults() {
-        reset_globals();
+        let _g = reset_globals();
         let _trainer = RandomTrainer::new();
         let lane_order = LANE_ORDER.lock().unwrap();
         assert_eq!(*lane_order, "1234567");
@@ -180,7 +188,7 @@ mod tests {
 
     #[test]
     fn test_set_lane_to_random() {
-        reset_globals();
+        let _g = reset_globals();
         RandomTrainer::set_lane_to_random('3');
         assert!(RandomTrainer::is_lane_to_random('3'));
         assert!(!RandomTrainer::is_lane_to_random('5'));
@@ -188,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_remove_lane_to_random() {
-        reset_globals();
+        let _g = reset_globals();
         RandomTrainer::set_lane_to_random('1');
         RandomTrainer::set_lane_to_random('2');
         RandomTrainer::remove_lane_to_random('1');
@@ -198,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_remove_lane_to_random_nonexistent_is_noop() {
-        reset_globals();
+        let _g = reset_globals();
         // Removing a lane that was never added should not panic
         RandomTrainer::remove_lane_to_random('9');
         assert!(!RandomTrainer::is_lane_to_random('9'));
@@ -206,7 +214,7 @@ mod tests {
 
     #[test]
     fn test_remove_lane_to_random_removes_only_first() {
-        reset_globals();
+        let _g = reset_globals();
         // Add duplicate
         RandomTrainer::set_lane_to_random('5');
         RandomTrainer::set_lane_to_random('5');
@@ -219,13 +227,13 @@ mod tests {
 
     #[test]
     fn test_active_default_false() {
-        reset_globals();
+        let _g = reset_globals();
         assert!(!RandomTrainer::is_active());
     }
 
     #[test]
     fn test_set_active() {
-        reset_globals();
+        let _g = reset_globals();
         RandomTrainer::set_active(true);
         assert!(RandomTrainer::is_active());
         RandomTrainer::set_active(false);
@@ -236,19 +244,17 @@ mod tests {
 
     #[test]
     fn test_set_lane_order() {
-        reset_globals();
+        let _g = reset_globals();
         RandomTrainer::set_lane_order("7654321");
         let order = LANE_ORDER.lock().unwrap();
         assert_eq!(*order, "7654321");
     }
 
     // --- get_lane_order (shuffling) ---
-    // Note: get_lane_order() mutates the global LANE_ORDER and tests run in parallel,
-    // so these tests verify structural invariants rather than exact values.
 
     #[test]
     fn test_get_lane_order_preserves_length_and_chars() {
-        reset_globals();
+        let _g = reset_globals();
         let order = RandomTrainer::get_lane_order();
         assert_eq!(order.len(), 7);
         // All original digits should be present (possibly reordered)
@@ -259,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_get_lane_order_with_random_lanes_preserves_elements() {
-        reset_globals();
+        let _g = reset_globals();
         RandomTrainer::set_lane_to_random('1');
         RandomTrainer::set_lane_to_random('3');
         RandomTrainer::set_lane_to_random('5');
@@ -275,7 +281,7 @@ mod tests {
 
     #[test]
     fn test_get_lane_order_with_black_white_permute_preserves_parity() {
-        reset_globals();
+        let _g = reset_globals();
         RandomTrainer::set_black_white_permute(true);
 
         let order = RandomTrainer::get_lane_order();
@@ -309,7 +315,7 @@ mod tests {
 
     #[test]
     fn test_get_random_seed_map_is_some() {
-        reset_globals();
+        let _g = reset_globals();
         let _trainer = RandomTrainer::new();
         let map = RandomTrainer::get_random_seed_map();
         assert!(map.is_some());

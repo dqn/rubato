@@ -1,9 +1,0 @@
-pub mod constants;
-pub mod file_mapping;
-pub mod ir;
-pub mod java_parser;
-pub mod naming;
-pub mod report;
-pub mod rust_parser;
-pub mod signature_map;
-pub mod structural_compare;

@@ -67,7 +67,6 @@ lr2oraja-rust/       # Cargo workspace
     beatoraja-bin        # Entry point
     discord-rpc          # Discord Rich Presence
     md-processor         # Markdown processing
-    ast-compare          # Test: AST Java↔Rust comparison
   golden-master/   # Golden Master test infra
   test-bms/        # Test BMS files
 ```
@@ -80,13 +79,12 @@ lr2oraja-rust/       # Cargo workspace
 
 - **Test runner:** `just test` (excludes slow render snapshot tests) or `just test-all` (full).
 - **Golden Master:** `just golden-master-gen`. Fixtures: `filename.ext.json`.
-- **TDD:** Red-Green-Refactor. **ast-compare:** `just ast-map` / `just ast-compare` / `just ast-constants` / `just ast-full`.
+- **TDD:** Red-Green-Refactor.
 
 ## Status
 
 **4146 tests.** Phases 1–62 complete + post-62 stub audit + hardening pass + Phase 9 launcher egui + E2E lifecycle tests + bug-fix & test hardening pass (3 rounds) + round 4 bug fixes, tests, safety audit, fuzz targets + criterion benchmarks + performance optimization (BMS decoder, pattern modifier, SpriteBatch) + functional gap fixes (target score, BGI maxgen, LR2 play skin loader) + robustness hardening (bounds checks, div-by-zero guards, overflow prevention, PCM/skin_gauge test expansion, allow(unused) removal, panic→Result, fuzz targets) + quality hardening round 3 (Regex OnceLock, clippy allow removal across 13 crates, Color/KeyInputLog/RandomTrainer test expansion) + quality hardening round 4 (pomyu_chara_loader bounds safety, O(n²)→HashSet, OBS Mutex lock_or_recover, skin_property_mapper docs, input→judge integration tests) + quality hardening round 5 (draw loop clone removal, Vec::with_capacity hints, unwrap→expect in parsers, 34 crate-level allow directives removed across 14 crates). Zero clippy warnings. Zero regressions.
-**Migration audit**: 4,279 Java methods: 4,049 resolved, 230 missing (architectural redesigns: getter→pub field, Thread→spawn, Gson→serde, etc.). 0 remaining functional gaps.
-**ast-compare**: 2,235 methods ignored (789 patterns). Method-level ignore via `.ast-compare-method-ignore`.
+**Migration audit**: 4,279 Java methods: 4,049 resolved, 230 architectural redesigns (getter→pub field, Thread→spawn, Gson→serde, etc.). 0 remaining functional gaps. ast-compare retired (final verification: 0 missing methods).
 **"Not implemented" stubs**: 0 remaining. All 151 stubs resolved (Phase 58–62).
 **Debug stubs**: 0 remaining. All 32 resolved: 12 implemented, 20 → compile-time comments.
 
@@ -119,8 +117,6 @@ lr2oraja-rust/       # Cargo workspace
 - **Lua→JSON coercion:** 3-layer: numbers→strings, float→int truncation, empty `{}`→remove.
 - **Bar Clone:** `Box<dyn Trait>` blocks Clone → use `Arc<dyn Trait>` for shared trait objects.
 - **Property delegate pattern:** `integer_value(id)` / `float_value(id)` / `boolean_value(id)` on MainState — skin property factories delegate via ID lookup.
-- **ast-compare false positives:** ~88% of "missing" methods are architectural redesigns. Always verify Java↔Rust manually before implementing.
-- **ast-compare method-level ignore:** `.ast-compare-method-ignore` supports `ClassName.methodName` (exact) and `ClassName.*` (wildcard). Run `just ast-map` to use.
 - **Java float→int→byte truncation:** Use `as i32 as i8` in Rust (via i32 to get truncation). Direct `as i8` saturates since Rust 1.45.
 
 ## Landing the Plane (Session Completion)
