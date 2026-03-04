@@ -166,12 +166,14 @@ impl BMSDecoder {
                                 if randoms.len() - 1 < sr.len() {
                                     crandom.push(sr[randoms.len() - 1]);
                                 } else {
-                                    crandom.push((rand_f64() * (r as f64)) as i32 + 1);
-                                    srandoms.push(*crandom.last().unwrap());
+                                    let val = (rand_f64() * (r as f64)) as i32 + 1;
+                                    crandom.push(val);
+                                    srandoms.push(val);
                                 }
                             } else {
-                                crandom.push((rand_f64() * (r as f64)) as i32 + 1);
-                                srandoms.push(*crandom.last().unwrap());
+                                let val = (rand_f64() * (r as f64)) as i32 + 1;
+                                crandom.push(val);
+                                srandoms.push(val);
                             }
                         }
                         Err(_) => {
@@ -188,7 +190,7 @@ impl BMSDecoder {
                         };
                         match arg.trim().parse::<i32>() {
                             Ok(val) => {
-                                skip.push(*crandom.last().unwrap() != val);
+                                skip.push(*crandom.last().expect("crandom non-empty checked at line 185") != val);
                             }
                             Err(_) => {
                                 self.log.push(DecodeLog::new(
@@ -221,7 +223,7 @@ impl BMSDecoder {
                             format!("ENDRANDOMに対応するRANDOMが存在しません: {}", line),
                         ));
                     }
-                } else if skip.is_empty() || !*skip.last().unwrap() {
+                } else if !skip.last().copied().unwrap_or(false) {
                     let c = line.as_bytes()[1] as char;
                     let base = model.get_base();
                     if ('0'..='9').contains(&c) && line.len() > 6 {

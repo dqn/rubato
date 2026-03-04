@@ -180,11 +180,11 @@ impl SkinHeader {
                         let ext_start = custom_file.path.rfind('*').map(|i| i + 1).unwrap_or(0);
                         let ext;
                         if custom_file.path.contains('|') {
-                            let pipe_idx = custom_file.path.rfind('|').unwrap();
+                            let pipe_idx = custom_file.path.rfind('|').expect("pipe delimiter guaranteed by contains check");
                             if custom_file.path.len() > pipe_idx + 1 {
                                 let star_idx =
                                     custom_file.path.rfind('*').map(|i| i + 1).unwrap_or(0);
-                                let bar_idx = custom_file.path.find('|').unwrap();
+                                let bar_idx = custom_file.path.find('|').expect("pipe delimiter guaranteed by contains check");
                                 ext = format!(
                                     "{}{}",
                                     &custom_file.path[star_idx..bar_idx],
@@ -193,7 +193,7 @@ impl SkinHeader {
                             } else {
                                 let star_idx =
                                     custom_file.path.rfind('*').map(|i| i + 1).unwrap_or(0);
-                                let bar_idx = custom_file.path.find('|').unwrap();
+                                let bar_idx = custom_file.path.find('|').expect("pipe delimiter guaranteed by contains check");
                                 ext = custom_file.path[star_idx..bar_idx].to_string();
                             }
                         } else {
