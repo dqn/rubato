@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use anyhow::Result;
@@ -21,10 +21,7 @@ use beatoraja_core::config::Config;
 
 use beatoraja_types::imgui_notify::ImGuiNotify;
 
-/// Acquire a mutex lock, recovering from poison if a thread panicked while holding it.
-fn lock_or_recover<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(|e| e.into_inner())
-}
+use crate::lock_or_recover;
 
 /// ObsRecordingMode - recording mode enum
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
