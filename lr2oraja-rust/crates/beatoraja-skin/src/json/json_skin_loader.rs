@@ -373,16 +373,16 @@ impl JSONSkinLoader {
         header.source_resolution = source_resolution;
 
         // Process categories
-        let mut category_items: Vec<Vec<Option<CustomItemData>>> = Vec::new();
+        let mut category_items: Vec<Vec<Option<CustomItemData>>> = Vec::with_capacity(sk.category.len());
         for category in &sk.category {
             category_items.push(vec![None; category.item.len()]);
         }
 
         // Process properties -> options
-        let mut options: Vec<CustomOptionData> = Vec::new();
+        let mut options: Vec<CustomOptionData> = Vec::with_capacity(sk.property.len());
         for pr in sk.property.iter() {
-            let mut op: Vec<i32> = Vec::new();
-            let mut names: Vec<String> = Vec::new();
+            let mut op: Vec<i32> = Vec::with_capacity(pr.item.len());
+            let mut names: Vec<String> = Vec::with_capacity(pr.item.len());
             for item in &pr.item {
                 op.push(item.op);
                 names.push(item.name.clone().unwrap_or_default());
@@ -413,7 +413,7 @@ impl JSONSkinLoader {
         header.custom_options = options;
 
         // Process filepaths -> files
-        let mut files: Vec<CustomFileData> = Vec::new();
+        let mut files: Vec<CustomFileData> = Vec::with_capacity(sk.filepath.len());
         for pr in &sk.filepath {
             // Keep filepath as-is without prepending parent directory
             let file = CustomFileData {

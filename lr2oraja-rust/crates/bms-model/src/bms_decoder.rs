@@ -143,10 +143,10 @@ impl BMSDecoder {
         self.lines.clear();
         self.lines.resize_with(1000, || None);
 
-        let mut randoms: Vec<i32> = Vec::new();
-        let mut srandoms: Vec<i32> = Vec::new();
-        let mut crandom: Vec<i32> = Vec::new();
-        let mut skip: Vec<bool> = Vec::new();
+        let mut randoms: Vec<i32> = Vec::with_capacity(8);
+        let mut srandoms: Vec<i32> = Vec::with_capacity(8);
+        let mut crandom: Vec<i32> = Vec::with_capacity(8);
+        let mut skip: Vec<bool> = Vec::with_capacity(8);
 
         for line in text.lines() {
             if line.len() < 2 {

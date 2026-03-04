@@ -161,10 +161,10 @@ impl TimeBasedRandomizerState {
         select_lane: &mut dyn FnMut(&[i32], &mut JavaRandom) -> usize,
     ) -> HashMap<i32, i32> {
         let mut random_map: HashMap<i32, i32> = HashMap::new();
-        let mut note_lane: Vec<i32> = Vec::new();
-        let mut empty_lane: Vec<i32> = Vec::new();
-        let mut primary_lane: Vec<i32> = Vec::new();
-        let mut inferior_lane: Vec<i32> = Vec::new();
+        let mut note_lane: Vec<i32> = Vec::with_capacity(changeable_lane.len());
+        let mut empty_lane: Vec<i32> = Vec::with_capacity(changeable_lane.len());
+        let mut primary_lane: Vec<i32> = Vec::with_capacity(assignable_lane.len());
+        let mut inferior_lane: Vec<i32> = Vec::with_capacity(assignable_lane.len());
 
         for &cl in changeable_lane.iter() {
             let note = tl.get_note(cl);

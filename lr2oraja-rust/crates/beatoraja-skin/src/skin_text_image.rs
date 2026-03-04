@@ -125,7 +125,7 @@ impl SkinTextImage {
             region.x
         };
         let mut dx: f32 = 0.0;
-        for ch in &self.texts.clone() {
+        for ch in &self.texts {
             let tw = ch.get_region_width() as f32 * scale * region.height / source_size;
             self.text_data.data.draw_image_at_with_color(
                 sprite,
