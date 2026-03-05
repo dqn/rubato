@@ -12,6 +12,7 @@ use log::{error, info, warn};
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
+use winit::keyboard::PhysicalKey;
 use winit::window::{Window, WindowId};
 
 use rubato_core::bms_player_mode::BMSPlayerMode;
@@ -374,6 +375,10 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     let event_loop = EventLoop::new()?;
     event_loop.set_control_flow(ControlFlow::Poll);
 
+    // Initialize shared key state for winit->input bridge
+    let key_state = rubato_input::winit_input_bridge::SharedKeyState::new();
+    rubato_input::gdx_compat::set_shared_key_state(key_state.clone());
+
     let mut app = RubatoApp {
         controller: main_controller,
         window: None,
@@ -390,6 +395,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
         max_fps,
         last_frame_time: Instant::now(),
         initialized: false,
+        key_state,
     };
 
     event_loop.run_app(&mut app)?;
@@ -422,6 +428,8 @@ struct RubatoApp {
     /// Last frame time for FPS capping
     last_frame_time: Instant,
     initialized: bool,
+    /// Shared key state bridging winit keyboard events to the input system
+    key_state: rubato_input::winit_input_bridge::SharedKeyState,
 }
 
 impl ApplicationHandler for RubatoApp {
@@ -619,6 +627,18 @@ impl ApplicationHandler for RubatoApp {
         }
 
         match event {
+            // Bridge winit keyboard events to the input system
+            WindowEvent::KeyboardInput { event, .. } => {
+                if let PhysicalKey::Code(keycode) = event.physical_key {
+                    let java_key = rubato_input::winit_input_bridge::winit_keycode_to_java(
+                        winit_to_bridge_keycode(keycode),
+                    );
+                    if java_key >= 0 {
+                        self.key_state
+                            .set_key_pressed(java_key, event.state.is_pressed());
+                    }
+                }
+            }
             // Java: dispose() is called when the window is closed
             WindowEvent::CloseRequested => {
                 self.controller.dispose();
@@ -1058,5 +1078,96 @@ struct HttpDownloadProcessorWrapper(
 impl rubato_types::http_download_submitter::HttpDownloadSubmitter for HttpDownloadProcessorWrapper {
     fn submit_md5_task(&self, md5: &str, task_name: &str) {
         self.0.submit_md5_task(md5, task_name);
+    }
+}
+
+/// Convert winit's KeyCode to the bridge's WinitKeyCode enum.
+fn winit_to_bridge_keycode(
+    key: winit::keyboard::KeyCode,
+) -> rubato_input::winit_input_bridge::WinitKeyCode {
+    use rubato_input::winit_input_bridge::WinitKeyCode as B;
+    use winit::keyboard::KeyCode as W;
+    match key {
+        W::KeyA => B::KeyA,
+        W::KeyB => B::KeyB,
+        W::KeyC => B::KeyC,
+        W::KeyD => B::KeyD,
+        W::KeyE => B::KeyE,
+        W::KeyF => B::KeyF,
+        W::KeyG => B::KeyG,
+        W::KeyH => B::KeyH,
+        W::KeyI => B::KeyI,
+        W::KeyJ => B::KeyJ,
+        W::KeyK => B::KeyK,
+        W::KeyL => B::KeyL,
+        W::KeyM => B::KeyM,
+        W::KeyN => B::KeyN,
+        W::KeyO => B::KeyO,
+        W::KeyP => B::KeyP,
+        W::KeyQ => B::KeyQ,
+        W::KeyR => B::KeyR,
+        W::KeyS => B::KeyS,
+        W::KeyT => B::KeyT,
+        W::KeyU => B::KeyU,
+        W::KeyV => B::KeyV,
+        W::KeyW => B::KeyW,
+        W::KeyX => B::KeyX,
+        W::KeyY => B::KeyY,
+        W::KeyZ => B::KeyZ,
+        W::Digit0 => B::Digit0,
+        W::Digit1 => B::Digit1,
+        W::Digit2 => B::Digit2,
+        W::Digit3 => B::Digit3,
+        W::Digit4 => B::Digit4,
+        W::Digit5 => B::Digit5,
+        W::Digit6 => B::Digit6,
+        W::Digit7 => B::Digit7,
+        W::Digit8 => B::Digit8,
+        W::Digit9 => B::Digit9,
+        W::ArrowUp => B::ArrowUp,
+        W::ArrowDown => B::ArrowDown,
+        W::ArrowLeft => B::ArrowLeft,
+        W::ArrowRight => B::ArrowRight,
+        W::Home => B::Home,
+        W::End => B::End,
+        W::PageUp => B::PageUp,
+        W::PageDown => B::PageDown,
+        W::Enter => B::Enter,
+        W::Escape => B::Escape,
+        W::Backspace => B::Backspace,
+        W::Tab => B::Tab,
+        W::Space => B::Space,
+        W::Delete => B::Delete,
+        W::Insert => B::Insert,
+        W::ShiftLeft => B::ShiftLeft,
+        W::ShiftRight => B::ShiftRight,
+        W::ControlLeft => B::ControlLeft,
+        W::ControlRight => B::ControlRight,
+        W::AltLeft => B::AltLeft,
+        W::AltRight => B::AltRight,
+        W::Comma => B::Comma,
+        W::Period => B::Period,
+        W::Semicolon => B::Semicolon,
+        W::Quote => B::Quote,
+        W::Slash => B::Slash,
+        W::Backslash => B::Backslash,
+        W::Minus => B::Minus,
+        W::Equal => B::Equal,
+        W::BracketLeft => B::BracketLeft,
+        W::BracketRight => B::BracketRight,
+        W::Backquote => B::Backquote,
+        W::F1 => B::F1,
+        W::F2 => B::F2,
+        W::F3 => B::F3,
+        W::F4 => B::F4,
+        W::F5 => B::F5,
+        W::F6 => B::F6,
+        W::F7 => B::F7,
+        W::F8 => B::F8,
+        W::F9 => B::F9,
+        W::F10 => B::F10,
+        W::F11 => B::F11,
+        W::F12 => B::F12,
+        _ => B::Unknown,
     }
 }

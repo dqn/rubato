@@ -13,6 +13,7 @@ dhat-heap = ["dhat"]
 [dependencies]
 rubato-audio = { workspace = true }
 rubato-core = { workspace = true }
+rubato-input = { workspace = true }
 rubato-external = { workspace = true }
 rubato-ir = { workspace = true }
 rubato-render = { workspace = true }
