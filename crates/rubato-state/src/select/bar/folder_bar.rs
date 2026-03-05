@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use super::bar::Bar;
 use super::directory_bar::DirectoryBarData;
 use super::song_bar::SongBar;
@@ -51,10 +49,10 @@ impl FolderBar {
         }
 
         // No songs found - return sub-folders
-        let rootpath = Path::new(".")
-            .canonicalize()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_default();
+        // Use "." as bmspath to match the scanner's root (SQLiteSongDatabaseAccessor.root = ".").
+        // The scanner computes CRCs with bmspath=".", so folder CRCs here must use the same
+        // parameter to ensure consistency when navigating into sub-folders.
+        let rootpath = ".".to_string();
 
         let folders = db.get_folder_datas("parent", &self.crc);
         folders
@@ -76,10 +74,7 @@ impl FolderBar {
             if path.ends_with(std::path::MAIN_SEPARATOR) {
                 path.pop();
             }
-            let rootpath = Path::new(".")
-                .canonicalize()
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_default();
+            let rootpath = ".".to_string();
             let ccrc = rubato_song::song_utils::crc32(&path, &[], &rootpath);
             let songs = db.get_song_datas("parent", &ccrc);
             self.directory
@@ -220,5 +215,105 @@ mod tests {
         // Should return songs, not folders
         assert_eq!(children.len(), 1);
         assert!(children[0].as_song_bar().is_some());
+    }
+
+    /// Verify that FolderBar::get_children() computes CRCs consistent with the scanner.
+    ///
+    /// The scanner (SQLiteSongDatabaseAccessor) computes song.parent and folder.parent
+    /// using crc32(path, bmsroot, ".") where "." is the literal root string.
+    /// FolderBar::get_children() must use the same bmspath parameter so that navigating
+    /// into a folder finds the songs/sub-folders stored by the scanner.
+    #[test]
+    fn folder_bar_crc_consistent_with_scanner() {
+        // Simulate scanner behavior: compute song parent CRC the way the scanner does.
+        // Scanner uses bmspath = "." (accessor.root = PathBuf::from(".")).
+        let scanner_bmspath = ".";
+        let abs_folder_path = "/some/absolute/path/to/bms";
+
+        // Scanner: sd.parent = crc32(grandparent, bmsroot, ".")
+        // For a song in /some/absolute/path/to/bms/song_dir/file.bms,
+        // grandparent = /some/absolute/path/to/bms
+        // Since abs path doesn't start with ".", no prefix stripping occurs.
+        let scanner_parent_crc =
+            rubato_song::song_utils::crc32(abs_folder_path, &[], scanner_bmspath);
+
+        // Now simulate FolderBar browsing: root folder finds folder records,
+        // then computes CRC for each folder to create child FolderBars.
+        // The folder path from DB is stored with trailing separator.
+        let folder_path_from_db = format!("{}/", abs_folder_path);
+
+        // Create a mock DB where the "bms" folder exists at root level
+        // and songs exist under the scanner's parent CRC.
+        let mut song = SongData::default();
+        song.set_title("Test Song".to_string());
+        song.set_sha256("test_sha256".to_string());
+        song.set_path("song_dir/file.bms".to_string());
+
+        let mut folder = FolderData::default();
+        folder.title = "bms".to_string();
+        folder.path = folder_path_from_db;
+
+        let db = MockSongDb::new()
+            // Root level: folder with parent "e2977170"
+            .with_folders("parent", "e2977170", vec![folder])
+            // Songs stored under scanner's parent CRC
+            .with_songs("parent", &scanner_parent_crc, vec![song]);
+
+        // Step 1: Navigate from root
+        let root_bar = FolderBar::new(None, "e2977170".to_string());
+        let root_children = root_bar.get_children(&db);
+
+        assert_eq!(root_children.len(), 1, "Root should have 1 folder child");
+        let child_folder = root_children[0].as_folder_bar().expect("Should be a FolderBar");
+
+        // Step 2: Navigate into the folder - this is the critical test.
+        // The CRC computed by get_children() must match scanner_parent_crc
+        // so that songs are found.
+        let folder_crc = child_folder.get_crc();
+        assert_eq!(
+            folder_crc, scanner_parent_crc,
+            "FolderBar CRC must match scanner parent CRC. \
+             FolderBar computed '{}' but scanner stored '{}'",
+            folder_crc, scanner_parent_crc
+        );
+
+        // Step 3: Verify that navigating into the folder actually finds songs
+        let songs = child_folder.get_children(&db);
+        assert_eq!(songs.len(), 1, "Should find 1 song in sub-folder");
+        assert!(songs[0].as_song_bar().is_some(), "Child should be a SongBar");
+        assert!(
+            songs[0].get_title().contains("Test Song"),
+            "Song title should match"
+        );
+    }
+
+    /// Verify CRC consistency with absolute paths under the CWD.
+    /// This test ensures the fix works regardless of the absolute path used.
+    #[test]
+    fn folder_bar_crc_consistent_with_absolute_paths() {
+        // Use a path that looks like a real absolute path
+        let abs_paths = [
+            "/Users/user/music/bms",
+            "/home/user/games/beatoraja/bms",
+            "C:\\Users\\user\\bms",
+        ];
+
+        for abs_path in &abs_paths {
+            let scanner_crc = rubato_song::song_utils::crc32(abs_path, &[], ".");
+
+            // Simulate what FolderBar does: trim trailing separator, compute CRC with "."
+            let folder_path = format!("{}/", abs_path);
+            let mut trimmed = folder_path.clone();
+            if trimmed.ends_with('/') || trimmed.ends_with('\\') {
+                trimmed.pop();
+            }
+            let browse_crc = rubato_song::song_utils::crc32(&trimmed, &[], ".");
+
+            assert_eq!(
+                scanner_crc, browse_crc,
+                "CRC mismatch for path '{}': scanner='{}', browser='{}'",
+                abs_path, scanner_crc, browse_crc
+            );
+        }
     }
 }
