@@ -1801,6 +1801,51 @@ impl MainState for MusicSelector {
                             skin_bar.set_text(i, t);
                         }
                     }
+                    // Transfer lamp images
+                    for (i, lamp) in bar_data.barlamp.into_iter().enumerate() {
+                        if let Some(img) = lamp {
+                            skin_bar.set_lamp_image(i as i32, img);
+                        }
+                    }
+                    // Transfer player lamp images
+                    for (i, lamp) in bar_data.barmylamp.into_iter().enumerate() {
+                        if let Some(img) = lamp {
+                            skin_bar.set_player_lamp(i as i32, img);
+                        }
+                    }
+                    // Transfer rival lamp images
+                    for (i, lamp) in bar_data.barrivallamp.into_iter().enumerate() {
+                        if let Some(img) = lamp {
+                            skin_bar.set_rival_lamp(i as i32, img);
+                        }
+                    }
+                    // Transfer trophy images
+                    for (i, trophy) in bar_data.bartrophy.into_iter().enumerate() {
+                        if let Some(img) = trophy {
+                            skin_bar.set_trophy(i as i32, img);
+                        }
+                    }
+                    // Transfer label images
+                    for (i, label) in bar_data.barlabel.into_iter().enumerate() {
+                        if let Some(img) = label {
+                            skin_bar.set_label(i as i32, img);
+                        }
+                    }
+                    // Transfer distribution graph
+                    if let Some(graph_type) = bar_data.graph_type {
+                        let mut graph = if let Some(images) = bar_data.graph_images {
+                            super::skin_distribution_graph::SkinDistributionGraph::new_with_images(
+                                graph_type, images,
+                            )
+                        } else {
+                            super::skin_distribution_graph::SkinDistributionGraph::new(graph_type)
+                        };
+                        graph.region.x = bar_data.graph_region.x;
+                        graph.region.y = bar_data.graph_region.y;
+                        graph.region.width = bar_data.graph_region.width;
+                        graph.region.height = bar_data.graph_region.height;
+                        skin_bar.set_graph(graph);
+                    }
                     self.select_center_bar = bar_data.center_bar;
                     self.skin_bar = Some(skin_bar);
                     self.bar = Some(BarRenderer::new(300, 100, 5));

@@ -45,6 +45,16 @@ impl SkinDistributionGraph {
         }
     }
 
+    pub fn new_with_images(graph_type: i32, images: Vec<TextureRegion>) -> Self {
+        Self {
+            graph_type,
+            current_image: images.into_iter().map(Some).collect(),
+            current_bar: None,
+            draw: false,
+            region: SkinRegion::default(),
+        }
+    }
+
     /// Create default 1-pixel colored images for lamp/rank display.
     /// Corresponds to Java SkinDistributionGraph.createDefaultImages(int type)
     fn create_default_images(graph_type: i32) -> Vec<Option<TextureRegion>> {

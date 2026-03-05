@@ -49,6 +49,15 @@ pub struct LR2SelectSkinLoaderState {
     pub barlevel: Vec<Option<crate::skin_number::SkinNumber>>,
     pub bartext: Vec<Option<Box<dyn crate::skin_text::SkinText>>>,
 
+    pub barlamp: Vec<Option<SkinImage>>,
+    pub barmylamp: Vec<Option<SkinImage>>,
+    pub barrivallamp: Vec<Option<SkinImage>>,
+    pub bartrophy: Vec<Option<SkinImage>>,
+    pub barlabel: Vec<Option<SkinImage>>,
+    pub bargraph_type: Option<i32>,
+    pub bargraph_images: Option<Vec<TextureRegion>>,
+    pub bargraph_region: Rectangle,
+
     pub gauge: Rectangle,
 
     pub center_bar: i32,
@@ -75,6 +84,14 @@ impl LR2SelectSkinLoaderState {
             barcycle: 0,
             barlevel: (0..BARLEVEL_COUNT).map(|_| None).collect(),
             bartext: (0..BARTEXT_COUNT).map(|_| None).collect(),
+            barlamp: (0..BARLAMP_COUNT).map(|_| None).collect(),
+            barmylamp: (0..BARLAMP_COUNT).map(|_| None).collect(),
+            barrivallamp: (0..BARLAMP_COUNT).map(|_| None).collect(),
+            bartrophy: (0..BARTROPHY_COUNT).map(|_| None).collect(),
+            barlabel: (0..BARLABEL_COUNT).map(|_| None).collect(),
+            bargraph_type: None,
+            bargraph_images: None,
+            bargraph_region: Rectangle::default(),
             gauge: Rectangle::default(),
             center_bar: 0,
             clickable_bar: Vec::new(),
@@ -235,32 +252,98 @@ impl LR2SelectSkinLoaderState {
                 }
             }
             "DST_BAR_LEVEL" => {
-                let _values = lr2_skin_loader::parse_int(str_parts);
-                // skinbar.getBarlevel(values[1])?.setDestination(...)
+                let values = lr2_skin_loader::parse_int(str_parts);
+                let idx = values[1] as usize;
+                if idx < self.barlevel.len()
+                    && let Some(ref mut sn) = self.barlevel[idx]
+                {
+                    let dstw = self.csv.dst.width / self.csv.src.width;
+                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let offsets = lr2_skin_loader::read_offset(str_parts, 21);
+                    sn.data.set_destination_with_int_timer_ops(
+                        values[2] as i64,
+                        values[3] as f32 * dstw,
+                        self.csv.dst.height - (values[4] + values[6]) as f32 * dsth,
+                        values[5] as f32 * dstw,
+                        values[6] as f32 * dsth,
+                        values[7],
+                        values[8],
+                        values[9],
+                        values[10],
+                        values[11],
+                        values[12],
+                        values[13],
+                        values[14],
+                        values[15],
+                        values[16],
+                        values[17],
+                        &offsets,
+                    );
+                }
             }
             "SRC_BAR_LAMP" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
                 if values[1] < 0 || values[1] >= BARLAMP_COUNT as i32 {
                     return;
                 }
-                let _images = self.csv.get_source_image(&values);
-                // skinbar.setLamp(lampg[values[1]][0], new SkinImage(images, values[10], values[9]))
+                let images = self.csv.get_source_image(&values);
+                if let Some(images) = images {
+                    let lamp_idx = values[1] as usize;
+                    if lamp_idx < LAMPG.len() {
+                        for &lid in LAMPG[lamp_idx] {
+                            let img = SkinImage::new_with_int_timer(
+                                images.clone(),
+                                values[10],
+                                values[9],
+                            );
+                            let uid = lid as usize;
+                            if uid < self.barlamp.len() {
+                                self.barlamp[uid] = Some(img);
+                            }
+                        }
+                    }
+                }
             }
             "DST_BAR_LAMP" => {
                 let mut values = lr2_skin_loader::parse_int(str_parts);
+                if values[5] < 0 {
+                    values[3] += values[5];
+                    values[5] = -values[5];
+                }
+                if values[6] < 0 {
+                    values[4] += values[6];
+                    values[6] = -values[6];
+                }
                 let lamp_idx = values[1] as usize;
                 if lamp_idx < LAMPG.len() {
-                    let lamps = LAMPG[lamp_idx];
-                    for _i in 0..lamps.len() {
-                        if values[5] < 0 {
-                            values[3] += values[5];
-                            values[5] = -values[5];
+                    let dstw = self.csv.dst.width / self.csv.src.width;
+                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let offsets = lr2_skin_loader::read_offset(str_parts, 21);
+                    for &lid in LAMPG[lamp_idx] {
+                        let uid = lid as usize;
+                        if uid < self.barlamp.len()
+                            && let Some(ref mut lamp) = self.barlamp[uid]
+                        {
+                            lamp.data.set_destination_with_int_timer_ops(
+                                values[2] as i64,
+                                values[3] as f32 * dstw,
+                                self.csv.dst.height - (values[4] + values[6]) as f32 * dsth,
+                                values[5] as f32 * dstw,
+                                values[6] as f32 * dsth,
+                                values[7],
+                                values[8],
+                                values[9],
+                                values[10],
+                                values[11],
+                                values[12],
+                                values[13],
+                                values[14],
+                                values[15],
+                                values[16],
+                                values[17],
+                                &offsets,
+                            );
                         }
-                        if values[6] < 0 {
-                            values[4] += values[6];
-                            values[6] = -values[6];
-                        }
-                        // skinbar.getLamp(lamps[i])?.setDestination(...)
                     }
                 }
             }
@@ -269,24 +352,64 @@ impl LR2SelectSkinLoaderState {
                 if values[1] < 0 || values[1] >= BARLAMP_COUNT as i32 {
                     return;
                 }
-                let _images = self.csv.get_source_image(&values);
-                // skinbar.setPlayerLamp(...)
+                let images = self.csv.get_source_image(&values);
+                if let Some(images) = images {
+                    let lamp_idx = values[1] as usize;
+                    if lamp_idx < LAMPG.len() {
+                        for &lid in LAMPG[lamp_idx] {
+                            let img = SkinImage::new_with_int_timer(
+                                images.clone(),
+                                values[10],
+                                values[9],
+                            );
+                            let uid = lid as usize;
+                            if uid < self.barmylamp.len() {
+                                self.barmylamp[uid] = Some(img);
+                            }
+                        }
+                    }
+                }
             }
             "DST_BAR_MY_LAMP" => {
                 let mut values = lr2_skin_loader::parse_int(str_parts);
+                if values[5] < 0 {
+                    values[3] += values[5];
+                    values[5] = -values[5];
+                }
+                if values[6] < 0 {
+                    values[4] += values[6];
+                    values[6] = -values[6];
+                }
                 let lamp_idx = values[1] as usize;
                 if lamp_idx < LAMPG.len() {
-                    let lamps = LAMPG[lamp_idx];
-                    for _i in 0..lamps.len() {
-                        if values[5] < 0 {
-                            values[3] += values[5];
-                            values[5] = -values[5];
+                    let dstw = self.csv.dst.width / self.csv.src.width;
+                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let offsets = lr2_skin_loader::read_offset(str_parts, 21);
+                    for &lid in LAMPG[lamp_idx] {
+                        let uid = lid as usize;
+                        if uid < self.barmylamp.len()
+                            && let Some(ref mut lamp) = self.barmylamp[uid]
+                        {
+                            lamp.data.set_destination_with_int_timer_ops(
+                                values[2] as i64,
+                                values[3] as f32 * dstw,
+                                self.csv.dst.height - (values[4] + values[6]) as f32 * dsth,
+                                values[5] as f32 * dstw,
+                                values[6] as f32 * dsth,
+                                values[7],
+                                values[8],
+                                values[9],
+                                values[10],
+                                values[11],
+                                values[12],
+                                values[13],
+                                values[14],
+                                values[15],
+                                values[16],
+                                values[17],
+                                &offsets,
+                            );
                         }
-                        if values[6] < 0 {
-                            values[4] += values[6];
-                            values[6] = -values[6];
-                        }
-                        // skinbar.getPlayerLamp(lamps[i])?.setDestination(...)
                     }
                 }
             }
@@ -295,24 +418,64 @@ impl LR2SelectSkinLoaderState {
                 if values[1] < 0 || values[1] >= BARLAMP_COUNT as i32 {
                     return;
                 }
-                let _images = self.csv.get_source_image(&values);
-                // skinbar.setRivalLamp(...)
+                let images = self.csv.get_source_image(&values);
+                if let Some(images) = images {
+                    let lamp_idx = values[1] as usize;
+                    if lamp_idx < LAMPG.len() {
+                        for &lid in LAMPG[lamp_idx] {
+                            let img = SkinImage::new_with_int_timer(
+                                images.clone(),
+                                values[10],
+                                values[9],
+                            );
+                            let uid = lid as usize;
+                            if uid < self.barrivallamp.len() {
+                                self.barrivallamp[uid] = Some(img);
+                            }
+                        }
+                    }
+                }
             }
             "DST_BAR_RIVAL_LAMP" => {
                 let mut values = lr2_skin_loader::parse_int(str_parts);
+                if values[5] < 0 {
+                    values[3] += values[5];
+                    values[5] = -values[5];
+                }
+                if values[6] < 0 {
+                    values[4] += values[6];
+                    values[6] = -values[6];
+                }
                 let lamp_idx = values[1] as usize;
                 if lamp_idx < LAMPG.len() {
-                    let lamps = LAMPG[lamp_idx];
-                    for _i in 0..lamps.len() {
-                        if values[5] < 0 {
-                            values[3] += values[5];
-                            values[5] = -values[5];
+                    let dstw = self.csv.dst.width / self.csv.src.width;
+                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let offsets = lr2_skin_loader::read_offset(str_parts, 21);
+                    for &lid in LAMPG[lamp_idx] {
+                        let uid = lid as usize;
+                        if uid < self.barrivallamp.len()
+                            && let Some(ref mut lamp) = self.barrivallamp[uid]
+                        {
+                            lamp.data.set_destination_with_int_timer_ops(
+                                values[2] as i64,
+                                values[3] as f32 * dstw,
+                                self.csv.dst.height - (values[4] + values[6]) as f32 * dsth,
+                                values[5] as f32 * dstw,
+                                values[6] as f32 * dsth,
+                                values[7],
+                                values[8],
+                                values[9],
+                                values[10],
+                                values[11],
+                                values[12],
+                                values[13],
+                                values[14],
+                                values[15],
+                                values[16],
+                                values[17],
+                                &offsets,
+                            );
                         }
-                        if values[6] < 0 {
-                            values[4] += values[6];
-                            values[6] = -values[6];
-                        }
-                        // skinbar.getRivalLamp(lamps[i])?.setDestination(...)
                     }
                 }
             }
@@ -321,8 +484,14 @@ impl LR2SelectSkinLoaderState {
                 if values[1] < 0 || values[1] >= BARTROPHY_COUNT as i32 {
                     return;
                 }
-                let _images = self.csv.get_source_image(&values);
-                // skinbar.setTrophy(values[1], new SkinImage(images, values[10], values[9]))
+                let images = self.csv.get_source_image(&values);
+                if let Some(images) = images {
+                    let idx = values[1] as usize;
+                    let img = SkinImage::new_with_int_timer(images, values[10], values[9]);
+                    if idx < self.bartrophy.len() {
+                        self.bartrophy[idx] = Some(img);
+                    }
+                }
             }
             "DST_BAR_TROPHY" => {
                 let mut values = lr2_skin_loader::parse_int(str_parts);
@@ -334,15 +503,47 @@ impl LR2SelectSkinLoaderState {
                     values[4] += values[6];
                     values[6] = -values[6];
                 }
-                // skinbar.getTrophy(values[1])?.setDestination(...)
+                let idx = values[1] as usize;
+                if idx < self.bartrophy.len()
+                    && let Some(ref mut trophy) = self.bartrophy[idx]
+                {
+                    let dstw = self.csv.dst.width / self.csv.src.width;
+                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let offsets = lr2_skin_loader::read_offset(str_parts, 21);
+                    trophy.data.set_destination_with_int_timer_ops(
+                        values[2] as i64,
+                        values[3] as f32 * dstw,
+                        self.csv.dst.height - (values[4] + values[6]) as f32 * dsth,
+                        values[5] as f32 * dstw,
+                        values[6] as f32 * dsth,
+                        values[7],
+                        values[8],
+                        values[9],
+                        values[10],
+                        values[11],
+                        values[12],
+                        values[13],
+                        values[14],
+                        values[15],
+                        values[16],
+                        values[17],
+                        &offsets,
+                    );
+                }
             }
             "SRC_BAR_LABEL" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
                 if values[1] < 0 || values[1] >= BARLABEL_COUNT as i32 {
                     return;
                 }
-                let _images = self.csv.get_source_image(&values);
-                // skinbar.setLabel(values[1], new SkinImage(images, values[10], values[9]))
+                let images = self.csv.get_source_image(&values);
+                if let Some(images) = images {
+                    let idx = values[1] as usize;
+                    let img = SkinImage::new_with_int_timer(images, values[10], values[9]);
+                    if idx < self.barlabel.len() {
+                        self.barlabel[idx] = Some(img);
+                    }
+                }
             }
             "DST_BAR_LABEL" => {
                 let mut values = lr2_skin_loader::parse_int(str_parts);
@@ -354,12 +555,41 @@ impl LR2SelectSkinLoaderState {
                     values[4] += values[6];
                     values[6] = -values[6];
                 }
-                // skinbar.getLabel(values[1])?.setDestination(...)
+                let idx = values[1] as usize;
+                if idx < self.barlabel.len()
+                    && let Some(ref mut label) = self.barlabel[idx]
+                {
+                    let dstw = self.csv.dst.width / self.csv.src.width;
+                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let offsets = lr2_skin_loader::read_offset(str_parts, 21);
+                    label.data.set_destination_with_int_timer_ops(
+                        values[2] as i64,
+                        values[3] as f32 * dstw,
+                        self.csv.dst.height - (values[4] + values[6]) as f32 * dsth,
+                        values[5] as f32 * dstw,
+                        values[6] as f32 * dsth,
+                        values[7],
+                        values[8],
+                        values[9],
+                        values[10],
+                        values[11],
+                        values[12],
+                        values[13],
+                        values[14],
+                        values[15],
+                        values[16],
+                        values[17],
+                        &offsets,
+                    );
+                }
             }
             "SRC_BAR_GRAPH" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
-                let _images = self.csv.get_source_image(&values);
-                // Build distribution graph images and set on skinbar
+                let images = self.csv.get_source_image(&values);
+                if let Some(images) = images {
+                    self.bargraph_type = Some(values[1]);
+                    self.bargraph_images = Some(images);
+                }
             }
             "DST_BAR_GRAPH" => {
                 let mut values = lr2_skin_loader::parse_int(str_parts);
@@ -371,7 +601,14 @@ impl LR2SelectSkinLoaderState {
                     values[4] += values[6];
                     values[6] = -values[6];
                 }
-                // skinbar.getGraph()?.setDestination(...)
+                let dstw = self.csv.dst.width / self.csv.src.width;
+                let dsth = self.csv.dst.height / self.csv.src.height;
+                self.bargraph_region = Rectangle::new(
+                    values[3] as f32 * dstw,
+                    self.csv.dst.height - (values[4] + values[6]) as f32 * dsth,
+                    values[5] as f32 * dstw,
+                    values[6] as f32 * dsth,
+                );
             }
             "SRC_NOTECHART" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
@@ -414,8 +651,36 @@ impl LR2SelectSkinLoaderState {
                 }
             }
             "DST_BAR_TITLE" => {
-                let _values = lr2_skin_loader::parse_int(str_parts);
-                // skinbar.getText(values[1])?.setDestination(...)
+                let values = lr2_skin_loader::parse_int(str_parts);
+                let idx = values[1] as usize;
+                if idx < self.bartext.len()
+                    && let Some(ref mut text) = self.bartext[idx]
+                {
+                    let dstw = self.csv.dst.width / self.csv.src.width;
+                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let offsets = lr2_skin_loader::read_offset(str_parts, 21);
+                    text.get_text_data_mut()
+                        .data
+                        .set_destination_with_int_timer_ops(
+                            values[2] as i64,
+                            values[3] as f32 * dstw,
+                            self.csv.dst.height - (values[4] + values[6]) as f32 * dsth,
+                            values[5] as f32 * dstw,
+                            values[6] as f32 * dsth,
+                            values[7],
+                            values[8],
+                            values[9],
+                            values[10],
+                            values[11],
+                            values[12],
+                            values[13],
+                            values[14],
+                            values[15],
+                            values[16],
+                            values[17],
+                            &offsets,
+                        );
+                }
             }
             "SRC_BAR_RANK" | "DST_BAR_RANK" | "SRC_README" | "DST_README" => {
                 // No-op
@@ -456,6 +721,14 @@ impl LR2SkinLoaderAccess for LR2SelectSkinLoaderState {
                 clickable_bar: std::mem::take(&mut self.clickable_bar),
                 barlevel: std::mem::take(&mut self.barlevel),
                 bartext: std::mem::take(&mut self.bartext),
+                barlamp: std::mem::take(&mut self.barlamp),
+                barmylamp: std::mem::take(&mut self.barmylamp),
+                barrivallamp: std::mem::take(&mut self.barrivallamp),
+                bartrophy: std::mem::take(&mut self.bartrophy),
+                barlabel: std::mem::take(&mut self.barlabel),
+                graph_type: self.bargraph_type.take(),
+                graph_images: self.bargraph_images.take(),
+                graph_region: std::mem::take(&mut self.bargraph_region),
             });
         }
 
