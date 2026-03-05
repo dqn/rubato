@@ -88,19 +88,21 @@ static TRANSPARENT_COLOR: Color = Color {
 };
 
 fn get_graph_colors(graph_type: i32) -> Vec<Color> {
-    let data_len = DATA_LENGTH[graph_type as usize] as usize;
+    let idx = (graph_type as usize).min(DATA_LENGTH.len() - 1);
+    let data_len = DATA_LENGTH[idx] as usize;
     let mut colors = Vec::with_capacity(data_len);
     for i in 0..data_len {
-        colors.push(Color::value_of(JGRAPH[graph_type as usize][i]));
+        colors.push(Color::value_of(JGRAPH[idx][i]));
     }
     colors
 }
 
 fn get_pms_graph_colors(graph_type: i32) -> Vec<Color> {
-    let data_len = DATA_LENGTH[graph_type as usize] as usize;
+    let idx = (graph_type as usize).min(DATA_LENGTH.len() - 1);
+    let data_len = DATA_LENGTH[idx] as usize;
     let mut colors = Vec::with_capacity(data_len);
     for i in 0..data_len {
-        colors.push(Color::value_of(PMS_GRAPH_COLOR[graph_type as usize][i]));
+        colors.push(Color::value_of(PMS_GRAPH_COLOR[idx][i]));
     }
     colors
 }
@@ -151,7 +153,7 @@ impl SkinNoteDistributionGraph {
             dist_data: Vec::new(),
             chips,
             max: 20,
-            graph_type,
+            graph_type: graph_type.clamp(0, DATA_LENGTH.len() as i32 - 1),
             is_back_tex_off: back_tex_off == 1,
             delay,
             is_order_reverse: order_reverse == 1,
