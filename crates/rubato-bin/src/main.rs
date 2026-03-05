@@ -655,6 +655,34 @@ impl ApplicationHandler for RubatoApp {
                 self.key_state
                     .set_mouse_position((position.x / scale) as i32, (position.y / scale) as i32);
             }
+            // Bridge winit mouse button events to SharedKeyState
+            WindowEvent::MouseInput { state, button, .. } => {
+                let btn = match button {
+                    winit::event::MouseButton::Left => {
+                        rubato_input::winit_input_bridge::MOUSE_BUTTON_LEFT
+                    }
+                    winit::event::MouseButton::Right => {
+                        rubato_input::winit_input_bridge::MOUSE_BUTTON_RIGHT
+                    }
+                    winit::event::MouseButton::Middle => {
+                        rubato_input::winit_input_bridge::MOUSE_BUTTON_MIDDLE
+                    }
+                    _ => -1,
+                };
+                if btn >= 0 {
+                    self.key_state.set_mouse_button(btn, state.is_pressed());
+                }
+            }
+            // Bridge winit scroll events to SharedKeyState
+            WindowEvent::MouseWheel { delta, .. } => {
+                let (dx, dy) = match delta {
+                    winit::event::MouseScrollDelta::LineDelta(x, y) => (x, y),
+                    winit::event::MouseScrollDelta::PixelDelta(pos) => {
+                        (pos.x as f32 / 40.0, pos.y as f32 / 40.0)
+                    }
+                };
+                self.key_state.add_scroll(dx, dy);
+            }
             // Java: dispose() is called when the window is closed
             WindowEvent::CloseRequested => {
                 self.controller.dispose();

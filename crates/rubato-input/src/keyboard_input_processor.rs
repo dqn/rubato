@@ -485,6 +485,10 @@ impl KeyBoardInputProcesseor {
     pub fn is_reserved_key(&self, key: i32) -> bool {
         self.reserved.contains(&key)
     }
+
+    pub fn get_resolution(&self) -> &Resolution {
+        &self.resolution
+    }
 }
 
 impl BMSPlayerInputDevice for KeyBoardInputProcesseor {

@@ -31,6 +31,11 @@ struct KeyStateInner {
     /// Window size (logical pixels)
     window_width: i32,
     window_height: i32,
+    /// Mouse button pressed state (indexed by libGDX button: 0=left, 1=right, 2=middle)
+    mouse_buttons: [bool; 3],
+    /// Accumulated scroll delta (drained on read)
+    scroll_dx: f32,
+    scroll_dy: f32,
 }
 
 impl SharedKeyState {
@@ -42,6 +47,9 @@ impl SharedKeyState {
                 mouse_y: 0,
                 window_width: 1920,
                 window_height: 1080,
+                mouse_buttons: [false; 3],
+                scroll_dx: 0.0,
+                scroll_dy: 0.0,
             })),
         }
     }
@@ -108,6 +116,40 @@ impl SharedKeyState {
         // In winit, cursor position setting requires the window handle,
         // which is not available here. This is a no-op for now;
         // the actual cursor warp would be done at the winit event loop level.
+    }
+
+    /// Set mouse button state (libGDX button index: 0=left, 1=right, 2=middle).
+    pub fn set_mouse_button(&self, button: i32, pressed: bool) {
+        if button >= 0 && (button as usize) < 3 {
+            let mut inner = self.inner.lock().unwrap();
+            inner.mouse_buttons[button as usize] = pressed;
+        }
+    }
+
+    /// Query mouse button state.
+    pub fn is_mouse_button_pressed(&self, button: i32) -> bool {
+        if button < 0 || button as usize >= 3 {
+            return false;
+        }
+        let inner = self.inner.lock().unwrap();
+        inner.mouse_buttons[button as usize]
+    }
+
+    /// Accumulate scroll delta from winit MouseWheel events.
+    pub fn add_scroll(&self, dx: f32, dy: f32) {
+        let mut inner = self.inner.lock().unwrap();
+        inner.scroll_dx += dx;
+        inner.scroll_dy += dy;
+    }
+
+    /// Drain accumulated scroll delta (returns and resets to zero).
+    pub fn drain_scroll(&self) -> (f32, f32) {
+        let mut inner = self.inner.lock().unwrap();
+        let dx = inner.scroll_dx;
+        let dy = inner.scroll_dy;
+        inner.scroll_dx = 0.0;
+        inner.scroll_dy = 0.0;
+        (dx, dy)
     }
 }
 

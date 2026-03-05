@@ -663,6 +663,33 @@ impl BMSPlayerInputProcessor {
         self.scroll_x += kb_events.scroll_x;
         self.scroll_y += kb_events.scroll_y;
 
+        // Read mouse button and scroll from SharedKeyState (winit events).
+        // In Java, mouse events arrive via InputProcessor callbacks (touchDown,
+        // scrolled). In Rust, winit events are written to SharedKeyState and
+        // polled here.
+        {
+            use crate::gdx_compat::{GdxGraphics, GdxInput};
+            use crate::winit_input_bridge::MOUSE_BUTTON_LEFT;
+            let left_pressed = GdxInput::is_button_pressed(MOUSE_BUTTON_LEFT);
+            if left_pressed && !self.mousepressed {
+                self.mousepressed = true;
+                self.mousebutton = MOUSE_BUTTON_LEFT;
+                // Apply the same resolution transform as touch_down()
+                let gw = GdxGraphics::get_width();
+                let gh = GdxGraphics::get_height();
+                let res = self.kbinput.get_resolution();
+                if gw > 0 && gh > 0 {
+                    self.mousex = GdxInput::get_x() * res.width() / gw;
+                    self.mousey = res.height() - GdxInput::get_y() * res.height() / gh;
+                }
+            } else if !left_pressed && self.mousepressed {
+                self.mousepressed = false;
+            }
+            let (sdx, sdy) = GdxInput::drain_scroll();
+            self.scroll_x += sdx;
+            self.scroll_y += sdy;
+        }
+
         // Update controller state from manager
         self.controller_manager.poll_state();
         for (idx, bm) in self.bminput.iter_mut().enumerate() {

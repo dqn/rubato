@@ -58,6 +58,24 @@ impl GdxInput {
             state.set_cursor_position(x, y);
         }
     }
+
+    pub fn is_button_pressed(button: i32) -> bool {
+        let guard = SHARED_KEY_STATE.lock().unwrap();
+        if let Some(ref state) = *guard {
+            state.is_mouse_button_pressed(button)
+        } else {
+            false
+        }
+    }
+
+    pub fn drain_scroll() -> (f32, f32) {
+        let guard = SHARED_KEY_STATE.lock().unwrap();
+        if let Some(ref state) = *guard {
+            state.drain_scroll()
+        } else {
+            (0.0, 0.0)
+        }
+    }
 }
 
 /// Replacement for Gdx.graphics — reads window size from SharedKeyState when available.
