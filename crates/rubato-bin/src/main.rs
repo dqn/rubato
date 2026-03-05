@@ -619,9 +619,19 @@ impl ApplicationHandler for RubatoApp {
             && let Some(window) = &self.window
         {
             let response = state.on_window_event(window, &event);
-            // Only skip game logic for non-critical events consumed by egui.
-            // RedrawRequested must always reach the game loop for rendering.
-            if response.consumed && !matches!(event, WindowEvent::RedrawRequested) {
+            // Skip game logic only for events that egui exclusively consumes
+            // (e.g. text input into an egui widget). Keyboard, mouse, and
+            // redraw events must ALWAYS reach the game's input system.
+            if response.consumed
+                && !matches!(
+                    event,
+                    WindowEvent::RedrawRequested
+                        | WindowEvent::KeyboardInput { .. }
+                        | WindowEvent::MouseInput { .. }
+                        | WindowEvent::CursorMoved { .. }
+                        | WindowEvent::MouseWheel { .. }
+                )
+            {
                 return;
             }
         }
@@ -639,6 +649,12 @@ impl ApplicationHandler for RubatoApp {
                     }
                 }
             }
+            // Bridge winit mouse position to SharedKeyState
+            WindowEvent::CursorMoved { position, .. } => {
+                let scale = self.window.as_ref().map_or(1.0, |w| w.scale_factor());
+                self.key_state
+                    .set_mouse_position((position.x / scale) as i32, (position.y / scale) as i32);
+            }
             // Java: dispose() is called when the window is closed
             WindowEvent::CloseRequested => {
                 self.controller.dispose();
@@ -655,6 +671,8 @@ impl ApplicationHandler for RubatoApp {
                 let logical_w = (size.width as f64 / scale) as i32;
                 let logical_h = (size.height as f64 / scale) as i32;
                 self.controller.resize(logical_w, logical_h);
+                // Keep SharedKeyState window size in sync for GdxGraphics
+                self.key_state.set_window_size(logical_w, logical_h);
             }
             // Java: main.render() — called every frame via ApplicationListener.render()
             WindowEvent::RedrawRequested => {
