@@ -1941,6 +1941,11 @@ impl MainState for MusicSelector {
             self.input_processor = Some(input);
         }
 
+        // Java: musicinput = new MusicSelectInputProcessor(300, 50, MusicSelectInputProcessor.ANALOG_TICKS_PER_SCROLL)
+        if self.musicinput.is_none() {
+            self.musicinput = Some(MusicSelectInputProcessor::new(300, 50, 10));
+        }
+
         // Build context so bar_manager can query the song database.
         // Java: BarManager has direct access to MusicSelector fields; in Rust
         // we must pass them explicitly via UpdateBarContext.
