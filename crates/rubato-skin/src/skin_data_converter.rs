@@ -9,7 +9,8 @@ use log::{debug, info, warn};
 use crate::custom_event::CustomEvent;
 use crate::custom_timer::CustomTimer;
 use crate::json::json_skin_loader::{
-    CustomCategoryData, CustomItemData, SkinData, SkinHeaderData, SkinObjectType, SourceData,
+    CustomCategoryData, CustomItemData, SkinData, SkinHeaderData,
+    SkinObjectData as LoaderSkinObjectData, SkinObjectType, SongListBarData, SourceData,
     SourceDataType,
 };
 use crate::json::json_skin_object_loader::get_source_image;
@@ -363,6 +364,18 @@ pub fn convert_skin_data(
                 && let Some(obj) = skin.get_objects_mut().get_mut(obj_index)
             {
                 obj.data_mut().set_stretch_by_id(obj_data.stretch);
+            }
+
+            // For SongList, build SelectBarData from resolved bar sub-objects
+            if let SkinObjectType::SongList {
+                center,
+                clickable,
+                bar_data: Some(bar_data),
+            } = &obj_data.object_type
+            {
+                skin.select_bar_data = Some(build_select_bar_data(
+                    bar_data, *center, clickable, source_map, skin_path, usecim, scale_y,
+                ));
             }
         }
     }
@@ -1185,6 +1198,170 @@ fn get_texture_for_src(
     tex_result
 }
 
+/// Build SelectBarData from resolved JSON SongList bar sub-objects.
+/// Each sub-SkinObjectData is converted to the appropriate skin type
+/// (SkinImage, SkinNumber, SkinTextFont) and stored in SelectBarData.
+fn build_select_bar_data(
+    bar_data: &SongListBarData,
+    center: i32,
+    clickable: &[i32],
+    source_map: &mut HashMap<String, SourceData>,
+    skin_path: &Path,
+    usecim: bool,
+    scale_y: f32,
+) -> crate::select_bar_data::SelectBarData {
+    crate::select_bar_data::SelectBarData {
+        barimageon: convert_bar_sub_images(
+            &bar_data.liston,
+            source_map,
+            skin_path,
+            usecim,
+            scale_y,
+        ),
+        barimageoff: convert_bar_sub_images(
+            &bar_data.listoff,
+            source_map,
+            skin_path,
+            usecim,
+            scale_y,
+        ),
+        center_bar: center,
+        clickable_bar: clickable.to_vec(),
+        barlevel: convert_bar_sub_numbers(&bar_data.level, source_map, skin_path, usecim, scale_y),
+        bartext: convert_bar_sub_text(&bar_data.text, source_map, skin_path, usecim, scale_y),
+        barlamp: convert_bar_sub_images(&bar_data.lamp, source_map, skin_path, usecim, scale_y),
+        barmylamp: convert_bar_sub_images(
+            &bar_data.playerlamp,
+            source_map,
+            skin_path,
+            usecim,
+            scale_y,
+        ),
+        barrivallamp: convert_bar_sub_images(
+            &bar_data.rivallamp,
+            source_map,
+            skin_path,
+            usecim,
+            scale_y,
+        ),
+        bartrophy: convert_bar_sub_images(&bar_data.trophy, source_map, skin_path, usecim, scale_y),
+        barlabel: convert_bar_sub_images(&bar_data.label, source_map, skin_path, usecim, scale_y),
+        graph_type: None,
+        graph_images: None,
+        graph_region: crate::stubs::Rectangle::default(),
+    }
+}
+
+fn convert_bar_sub_images(
+    objs: &[Option<LoaderSkinObjectData>],
+    source_map: &mut HashMap<String, SourceData>,
+    skin_path: &Path,
+    usecim: bool,
+    scale_y: f32,
+) -> Vec<Option<SkinImage>> {
+    objs.iter()
+        .map(|opt_obj| {
+            let obj_data = opt_obj.as_ref()?;
+            let skin_obj = convert_skin_object(
+                &obj_data.object_type,
+                source_map,
+                skin_path,
+                usecim,
+                scale_y,
+            )?;
+            if let SkinObject::Image(mut img) = skin_obj {
+                apply_destinations(&mut img.data, &obj_data.destinations);
+                Some(img)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn convert_bar_sub_text(
+    objs: &[Option<LoaderSkinObjectData>],
+    source_map: &mut HashMap<String, SourceData>,
+    skin_path: &Path,
+    usecim: bool,
+    scale_y: f32,
+) -> Vec<Option<Box<dyn crate::skin_text::SkinText>>> {
+    objs.iter()
+        .map(|opt_obj| {
+            let obj_data = opt_obj.as_ref()?;
+            let skin_obj = convert_skin_object(
+                &obj_data.object_type,
+                source_map,
+                skin_path,
+                usecim,
+                scale_y,
+            )?;
+            if let SkinObject::TextFont(mut stf) = skin_obj {
+                apply_destinations(&mut stf.text_data.data, &obj_data.destinations);
+                Some(Box::new(stf) as Box<dyn crate::skin_text::SkinText>)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn convert_bar_sub_numbers(
+    objs: &[Option<LoaderSkinObjectData>],
+    source_map: &mut HashMap<String, SourceData>,
+    skin_path: &Path,
+    usecim: bool,
+    scale_y: f32,
+) -> Vec<Option<SkinNumber>> {
+    objs.iter()
+        .map(|opt_obj| {
+            let obj_data = opt_obj.as_ref()?;
+            let skin_obj = convert_skin_object(
+                &obj_data.object_type,
+                source_map,
+                skin_path,
+                usecim,
+                scale_y,
+            )?;
+            if let SkinObject::Number(mut num) = skin_obj {
+                apply_destinations(&mut num.data, &obj_data.destinations);
+                Some(num)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Apply destination data from loader DestinationData to a runtime SkinObjectData.
+/// Sets the initial position/size from the destination keyframes.
+fn apply_destinations(
+    data: &mut crate::skin_object::SkinObjectData,
+    destinations: &[crate::json::json_skin_loader::DestinationData],
+) {
+    for dst in destinations {
+        data.set_destination_with_int_timer_ops(
+            dst.time as i64,
+            dst.x as f32,
+            dst.y as f32,
+            dst.w as f32,
+            dst.h as f32,
+            dst.acc,
+            dst.a,
+            dst.r,
+            dst.g,
+            dst.b,
+            dst.blend,
+            dst.filter,
+            dst.angle,
+            dst.center,
+            dst.loop_val,
+            dst.timer.unwrap_or(0),
+            &dst.op,
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1904,6 +2081,7 @@ mod tests {
             &SkinObjectType::SongList {
                 center: 5,
                 clickable: vec![],
+                bar_data: None,
             },
             &mut source_map,
             path,

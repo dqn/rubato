@@ -794,7 +794,7 @@ impl JSONSkinLoader {
         }
     }
 
-    fn set_destination(
+    pub(crate) fn set_destination(
         &self,
         _skin: &mut SkinData,
         obj: &mut SkinObjectData,
@@ -1355,9 +1355,30 @@ pub enum SkinObjectType {
         side: i32,
     },
     /// SkinBar (select skin only)
-    SongList { center: i32, clickable: Vec<i32> },
+    SongList {
+        center: i32,
+        clickable: Vec<i32>,
+        /// Resolved bar sub-objects (images, text, levels, lamps, etc.)
+        /// Populated by JsonSelectSkinObjectLoader, consumed by skin_data_converter.
+        bar_data: Option<Box<SongListBarData>>,
+    },
     /// Search text region (select skin only)
     SearchTextRegion { x: f32, y: f32, w: f32, h: f32 },
+}
+
+/// Resolved bar sub-object data for JSON skin SongList.
+/// Each vec has one entry per bar slot. The converter extracts these into SelectBarData.
+#[derive(Clone, Debug, Default)]
+pub struct SongListBarData {
+    pub listoff: Vec<Option<SkinObjectData>>,
+    pub liston: Vec<Option<SkinObjectData>>,
+    pub text: Vec<Option<SkinObjectData>>,
+    pub level: Vec<Option<SkinObjectData>>,
+    pub lamp: Vec<Option<SkinObjectData>>,
+    pub playerlamp: Vec<Option<SkinObjectData>>,
+    pub rivallamp: Vec<Option<SkinObjectData>>,
+    pub trophy: Vec<Option<SkinObjectData>>,
+    pub label: Vec<Option<SkinObjectData>>,
 }
 
 /// Offset data for SkinNumber/SkinFloat per-digit offsets

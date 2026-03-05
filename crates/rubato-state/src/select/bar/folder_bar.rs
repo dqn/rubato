@@ -43,7 +43,9 @@ impl FolderBar {
     ///
     /// Translates: Java FolderBar.getChildren()
     pub fn get_children(&self, db: &dyn SongDatabaseAccessor) -> Vec<Bar> {
+        log::debug!("[FolderBar] get_children crc={}", self.crc);
         let songs = db.get_song_datas("parent", &self.crc);
+        log::debug!("[FolderBar] songs found: {}", songs.len());
         if !songs.is_empty() {
             return SongBar::to_song_bar_array(&songs);
         }
@@ -55,7 +57,8 @@ impl FolderBar {
         let rootpath = ".".to_string();
 
         let folders = db.get_folder_datas("parent", &self.crc);
-        folders
+        log::debug!("[FolderBar] folders found: {}", folders.len());
+        let result: Vec<Bar> = folders
             .into_iter()
             .map(|folder| {
                 let mut path = folder.get_path().to_string();
@@ -63,9 +66,16 @@ impl FolderBar {
                     path.pop();
                 }
                 let ccrc = rubato_song::song_utils::crc32(&path, &[], &rootpath);
+                log::debug!(
+                    "[FolderBar] sub-folder '{}' path='{}' crc={}",
+                    folder.get_title(),
+                    path,
+                    ccrc
+                );
                 Bar::Folder(Box::new(FolderBar::new(Some(folder), ccrc)))
             })
-            .collect()
+            .collect();
+        result
     }
 
     pub fn update_folder_status(&mut self, db: &dyn SongDatabaseAccessor) {
@@ -264,7 +274,9 @@ mod tests {
         let root_children = root_bar.get_children(&db);
 
         assert_eq!(root_children.len(), 1, "Root should have 1 folder child");
-        let child_folder = root_children[0].as_folder_bar().expect("Should be a FolderBar");
+        let child_folder = root_children[0]
+            .as_folder_bar()
+            .expect("Should be a FolderBar");
 
         // Step 2: Navigate into the folder - this is the critical test.
         // The CRC computed by get_children() must match scanner_parent_crc
@@ -280,7 +292,10 @@ mod tests {
         // Step 3: Verify that navigating into the folder actually finds songs
         let songs = child_folder.get_children(&db);
         assert_eq!(songs.len(), 1, "Should find 1 song in sub-folder");
-        assert!(songs[0].as_song_bar().is_some(), "Child should be a SongBar");
+        assert!(
+            songs[0].as_song_bar().is_some(),
+            "Child should be a SongBar"
+        );
         assert!(
             songs[0].get_title().contains("Test Song"),
             "Song title should match"

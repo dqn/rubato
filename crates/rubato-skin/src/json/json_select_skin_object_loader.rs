@@ -4,7 +4,9 @@
 use std::path::Path;
 
 use crate::json::json_skin;
-use crate::json::json_skin_loader::{JSONSkinLoader, SkinData, SkinObjectData, SkinObjectType};
+use crate::json::json_skin_loader::{
+    JSONSkinLoader, SkinData, SkinObjectData, SkinObjectType, SongListBarData,
+};
 use crate::json::json_skin_object_loader::{self, JsonSkinObjectLoader};
 
 /// Corresponds to JsonSelectSkinObjectLoader extends JsonSkinObjectLoader<MusicSelectSkin>
@@ -36,11 +38,14 @@ impl JsonSkinObjectLoader for JsonSelectSkinObjectLoader {
         if let Some(ref songlist) = sk.songlist
             && dst_id == songlist.id.as_deref().unwrap_or("")
         {
+            let bar_data = resolve_songlist_bar_data(loader, skin, sk, songlist, p);
+
             let obj = SkinObjectData {
                 name: songlist.id.clone(),
                 object_type: SkinObjectType::SongList {
                     center: songlist.center,
                     clickable: songlist.clickable.clone(),
+                    bar_data: Some(Box::new(bar_data)),
                 },
                 ..Default::default()
             };
@@ -48,6 +53,44 @@ impl JsonSkinObjectLoader for JsonSelectSkinObjectLoader {
         }
 
         None
+    }
+}
+
+/// Resolve each sub-destination in the SongList (listoff, liston, text, level, etc.)
+/// into SkinObjectData entries with their destinations populated.
+fn resolve_songlist_bar_data(
+    loader: &mut JSONSkinLoader,
+    skin: &SkinData,
+    sk: &json_skin::Skin,
+    songlist: &json_skin::SongList,
+    p: &Path,
+) -> SongListBarData {
+    let resolve_dests = |loader: &mut JSONSkinLoader,
+                         dests: &[json_skin::Destination]|
+     -> Vec<Option<SkinObjectData>> {
+        dests
+            .iter()
+            .map(|sub_dst| {
+                let mut obj =
+                    json_skin_object_loader::load_base_skin_object(loader, skin, sk, sub_dst, p)?;
+                // Populate destinations from the sub-destination's dst array
+                let mut dummy_skin = SkinData::new();
+                loader.set_destination(&mut dummy_skin, &mut obj, sub_dst);
+                Some(obj)
+            })
+            .collect()
+    };
+
+    SongListBarData {
+        listoff: resolve_dests(loader, &songlist.listoff),
+        liston: resolve_dests(loader, &songlist.liston),
+        text: resolve_dests(loader, &songlist.text),
+        level: resolve_dests(loader, &songlist.level),
+        lamp: resolve_dests(loader, &songlist.lamp),
+        playerlamp: resolve_dests(loader, &songlist.playerlamp),
+        rivallamp: resolve_dests(loader, &songlist.rivallamp),
+        trophy: resolve_dests(loader, &songlist.trophy),
+        label: resolve_dests(loader, &songlist.label),
     }
 }
 
