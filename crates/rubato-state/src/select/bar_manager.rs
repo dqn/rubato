@@ -280,34 +280,48 @@ impl BarManager {
         self.commands = commands;
     }
 
-    /// Refresh the current bar display.
+    /// Refresh the current bar display with song database context.
     /// Corresponds to Java BarManager.updateBar() (no-arg)
-    pub fn update_bar_refresh(&mut self) -> bool {
+    pub fn update_bar_refresh_with_context(&mut self, ctx: Option<&mut UpdateBarContext>) -> bool {
         if !self.dir.is_empty() {
-            return self.update_bar_with_last_dir();
+            return self.update_bar_with_last_dir_with_context(ctx);
         }
-        self.update_bar(None)
+        self.update_bar_with_context(None, ctx)
     }
 
-    fn update_bar_with_last_dir(&mut self) -> bool {
-        // Take the last directory bar, use it for update, then restore
-        // This avoids borrow issues with dir and self
-        if let Some(last) = self.dir.last() {
-            // We need to clone the bar to pass it since we can't borrow self.dir and self at once
-            let _bar_title = last.get_title();
-            // Find the matching directory bar in dir and use it
-            // Use the index approach: call update_bar_at_dir_index
-            return self.update_bar_at_dir_index(self.dir.len() - 1);
+    /// Refresh the current bar display (no context — songdb queries will be skipped).
+    pub fn update_bar_refresh(&mut self) -> bool {
+        self.update_bar_refresh_with_context(None)
+    }
+
+    fn update_bar_with_last_dir_with_context(
+        &mut self,
+        ctx: Option<&mut UpdateBarContext>,
+    ) -> bool {
+        if !self.dir.is_empty() {
+            return self.update_bar_at_dir_index_with_context(self.dir.len() - 1, ctx);
         }
         false
     }
 
+    fn update_bar_with_last_dir(&mut self) -> bool {
+        self.update_bar_with_last_dir_with_context(None)
+    }
+
     /// Update bar using a directory bar at the given index in self.dir.
     /// Workaround for borrow checker: can't borrow dir elements while mutating self.
-    fn update_bar_at_dir_index(&mut self, _index: usize) -> bool {
-        // The full implementation would need UpdateBarContext from MusicSelector.
-        // Without context, we just rebuild root.
-        self.update_bar(None)
+    fn update_bar_at_dir_index_with_context(
+        &mut self,
+        _index: usize,
+        ctx: Option<&mut UpdateBarContext>,
+    ) -> bool {
+        // The full implementation would need to clone dir[index] and pass it as bar.
+        // Without the dir bar, we rebuild root.
+        self.update_bar_with_context(None, ctx)
+    }
+
+    fn update_bar_at_dir_index(&mut self, index: usize) -> bool {
+        self.update_bar_at_dir_index_with_context(index, None)
     }
 
     /// Core update_bar implementation.
@@ -742,9 +756,9 @@ impl BarManager {
         // Guard against infinite recursion: only recurse if bar was not None
         if bar.is_some() {
             if !self.dir.is_empty() {
-                return self.update_bar_at_dir_index(self.dir.len() - 1);
+                return self.update_bar_at_dir_index_with_context(self.dir.len() - 1, ctx);
             } else {
-                return self.update_bar(None);
+                return self.update_bar_with_context(None, ctx);
             }
         }
         log::warn!("No songs found");
@@ -753,17 +767,24 @@ impl BarManager {
 
     /// Update bar using the currently selected bar.
     /// Workaround for borrow checker: can't pass get_selected() to update_bar().
-    pub fn update_bar_with_selected(&mut self) -> bool {
+    pub fn update_bar_with_selected_and_context(
+        &mut self,
+        ctx: Option<&mut UpdateBarContext>,
+    ) -> bool {
         if self.currentsongs.is_empty() {
             return false;
         }
         let selected_bar = self.currentsongs[self.selectedindex].clone();
-        self.update_bar(Some(&selected_bar))
+        self.update_bar_with_context(Some(&selected_bar), ctx)
+    }
+
+    pub fn update_bar_with_selected(&mut self) -> bool {
+        self.update_bar_with_selected_and_context(None)
     }
 
     /// Go up one directory level.
     /// Corresponds to Java BarManager.close()
-    pub fn close(&mut self) {
+    pub fn close_with_context(&mut self, ctx: Option<&mut UpdateBarContext>) {
         if self.dir.is_empty() {
             SongManagerMenu::force_disable_last_played_sort();
             // In Java: select.executeEvent(EventType.sort)
@@ -774,15 +795,15 @@ impl BarManager {
         let dir_len = self.dir.len();
         if dir_len <= 1 {
             // At first level: go back to root
-            self.update_bar(None);
+            self.update_bar_with_context(None, ctx);
         } else {
             // Navigate to parent directory
-            // We need to pop current and use parent
-            // Java: current = dir.removeLast(); parent = dir.last(); dir.addLast(current); updateBar(parent);
-            // Since we can't easily reference parent while modifying dir,
-            // use the index-based approach
-            self.update_bar_at_dir_index(dir_len - 2);
+            self.update_bar_at_dir_index_with_context(dir_len - 2, ctx);
         }
+    }
+
+    pub fn close(&mut self) {
+        self.close_with_context(None);
     }
 
     pub fn get_directory(&self) -> &[Box<Bar>] {

@@ -512,11 +512,36 @@ impl MusicSelector {
         self.config = config;
     }
 
+    /// Refresh the bar list with song database context.
+    /// Wraps BarManager::update_bar_refresh_with_context to supply the context
+    /// from MusicSelector fields, ensuring songdb queries are not skipped.
+    fn refresh_bar_with_context(&mut self) {
+        let mut ctx = BarManager::make_context(
+            &self.app_config,
+            &mut self.config,
+            &*self.songdb,
+            self.scorecache.as_mut(),
+        );
+        self.manager.update_bar_refresh_with_context(Some(&mut ctx));
+    }
+
+    /// Navigate into a bar (directory, folder, etc.) with song database context.
+    /// Used by MusicSelectCommand and ContextMenuBar executors.
+    pub fn update_bar_with_songdb_context(&mut self, bar: Option<&Bar>) -> bool {
+        let mut ctx = BarManager::make_context(
+            &self.app_config,
+            &mut self.config,
+            &*self.songdb,
+            self.scorecache.as_mut(),
+        );
+        self.manager.update_bar_with_context(bar, Some(&mut ctx))
+    }
+
     pub fn set_rival(&mut self, rival: Option<PlayerInformation>) {
         // In Java: finds rival index, sets rival and rival cache, updates bar
         self.rival = rival;
         self.rivalcache = None;
-        self.manager.update_bar_refresh();
+        self.refresh_bar_with_context();
         log::info!(
             "Rival changed: {}",
             self.rival.as_ref().map(|r| r.get_name()).unwrap_or("None")
@@ -573,14 +598,14 @@ impl MusicSelector {
                 let step = if arg1 >= 0 { 1 } else { MODE.len() - 1 };
                 self.config
                     .set_mode(MODE[(idx + step) % MODE.len()].clone());
-                self.manager.update_bar_refresh();
+                self.refresh_bar_with_context();
                 self.play_option_change();
             }
             EventType::Sort => {
                 let count = BarSorter::DEFAULT_SORTER.len() as i32;
                 let step = if arg1 >= 0 { 1 } else { count - 1 };
                 self.set_sort((self.get_sort() + step) % count);
-                self.manager.update_bar_refresh();
+                self.refresh_bar_with_context();
                 self.play_option_change();
             }
             EventType::Lnmode => {
@@ -1262,7 +1287,16 @@ impl MusicSelector {
     /// Corresponds to Java MusicSelector.select(Bar)
     pub fn select(&mut self, current: &Bar) {
         if current.is_directory_bar() {
-            if self.manager.update_bar(Some(current)) {
+            let mut ctx = BarManager::make_context(
+                &self.app_config,
+                &mut self.config,
+                &*self.songdb,
+                self.scorecache.as_mut(),
+            );
+            if self
+                .manager
+                .update_bar_with_context(Some(current), Some(&mut ctx))
+            {
                 self.play_sound(SoundType::FolderOpen);
             }
             self.execute(MusicSelectCommand::ResetReplay);
@@ -1395,13 +1429,25 @@ impl MusicSelector {
                     self.select_song(mode);
                 }
                 InputEvent::BarManagerClose => {
-                    self.manager.close();
+                    let mut ctx = BarManager::make_context(
+                        &self.app_config,
+                        &mut self.config,
+                        &*self.songdb,
+                        self.scorecache.as_mut(),
+                    );
+                    self.manager.close_with_context(Some(&mut ctx));
                 }
                 InputEvent::OpenDirectory => {
                     // In Java: select.getBarManager().updateBar(dirbar)
-                    // Borrow checker: can't pass self.manager.get_selected() to update_bar
-                    // Use update_bar_with_selected() which internally handles this
-                    let opened = self.manager.update_bar_with_selected();
+                    let mut ctx = BarManager::make_context(
+                        &self.app_config,
+                        &mut self.config,
+                        &*self.songdb,
+                        self.scorecache.as_mut(),
+                    );
+                    let opened = self
+                        .manager
+                        .update_bar_with_selected_and_context(Some(&mut ctx));
                     if opened {
                         self.play_sound(SoundType::FolderOpen);
                     }
@@ -1553,7 +1599,15 @@ impl MusicSelector {
             if let Some(gb) = grade_bar.as_grade_bar() {
                 let dir_string = self.manager.get_directory_string().to_string();
                 self.manager.add_random_course(gb.clone(), dir_string);
-                self.manager.update_bar(None);
+                {
+                    let mut ctx = BarManager::make_context(
+                        &self.app_config,
+                        &mut self.config,
+                        &*self.songdb,
+                        self.scorecache.as_mut(),
+                    );
+                    self.manager.update_bar_with_context(None, Some(&mut ctx));
+                }
                 self.manager.set_selected(&grade_bar);
             }
         } else {

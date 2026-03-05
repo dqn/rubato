@@ -181,7 +181,7 @@ impl MusicSelectCommand {
                                     sd.get_folder().to_string(),
                                 );
                                 let bar = Bar::SameFolder(Box::new(same));
-                                selector.manager.update_bar(Some(&bar));
+                                selector.update_bar_with_songdb_context(Some(&bar));
                                 selector.play_sound(SoundType::FolderOpen);
                             }
                         }
@@ -196,7 +196,7 @@ impl MusicSelectCommand {
                             .collect();
                         let container = ContainerBar::new(current.get_title(), songbars);
                         let bar = Bar::Container(Box::new(container));
-                        selector.manager.update_bar(Some(&bar));
+                        selector.update_bar_with_songdb_context(Some(&bar));
                         selector.play_sound(SoundType::FolderOpen);
                     }
                 }
@@ -215,7 +215,7 @@ impl MusicSelectCommand {
                             let menu =
                                 ContextMenuBar::new_for_song(song_bar.get_song_data().clone());
                             let bar = Bar::ContextMenu(Box::new(menu));
-                            selector.manager.update_bar(Some(&bar));
+                            selector.update_bar_with_songdb_context(Some(&bar));
                             selector.play_sound(SoundType::FolderOpen);
                         } else {
                             selector.select_song(BMSPlayerMode::PLAY);
@@ -224,9 +224,9 @@ impl MusicSelectCommand {
                         if !already_in_context_menu {
                             let menu = ContextMenuBar::new_for_table(table_bar.clone());
                             let bar = Bar::ContextMenu(Box::new(menu));
-                            selector.manager.update_bar(Some(&bar));
+                            selector.update_bar_with_songdb_context(Some(&bar));
                             selector.play_sound(SoundType::FolderOpen);
-                        } else if selector.manager.update_bar(Some(current)) {
+                        } else if selector.update_bar_with_songdb_context(Some(current)) {
                             selector.play_sound(SoundType::FolderOpen);
                         }
                     } else if let Some(hash_bar) = current.as_hash_bar()
@@ -242,9 +242,9 @@ impl MusicSelectCommand {
                                 hash_bar.clone(),
                             );
                             let bar = Bar::ContextMenu(Box::new(menu));
-                            selector.manager.update_bar(Some(&bar));
+                            selector.update_bar_with_songdb_context(Some(&bar));
                             selector.play_sound(SoundType::FolderOpen);
-                        } else if selector.manager.update_bar(Some(current)) {
+                        } else if selector.update_bar_with_songdb_context(Some(current)) {
                             selector.play_sound(SoundType::FolderOpen);
                         }
                     }

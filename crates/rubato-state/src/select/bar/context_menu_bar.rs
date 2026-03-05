@@ -177,7 +177,7 @@ impl ContextMenuBar {
             related.set_function(Arc::new(move |selector| {
                 let same = SameFolderBar::new(title_clone.clone(), folder_clone.clone());
                 let bar = Bar::SameFolder(Box::new(same));
-                selector.manager.update_bar(Some(&bar));
+                selector.update_bar_with_songdb_context(Some(&bar));
                 selector.play_sound(SoundType::FolderOpen);
             }));
             let folder_songs = songdb.get_song_datas("folder", &song_folder);
@@ -421,7 +421,7 @@ impl ContextMenuBar {
             leaderboard.set_function(Arc::new(move |selector| {
                 let lb = LeaderBoardBar::new(song_clone.clone(), false);
                 let bar = Bar::LeaderBoard(Box::new(lb));
-                selector.manager.update_bar(Some(&bar));
+                selector.update_bar_with_songdb_context(Some(&bar));
                 selector.play_sound(SoundType::FolderOpen);
             }));
             options.push(Bar::Function(Box::new(leaderboard)));
@@ -434,7 +434,7 @@ impl ContextMenuBar {
             lr2ir.set_function(Arc::new(move |selector| {
                 let lb = LeaderBoardBar::new(song_clone.clone(), true);
                 let bar = Bar::LeaderBoard(Box::new(lb));
-                selector.manager.update_bar(Some(&bar));
+                selector.update_bar_with_songdb_context(Some(&bar));
                 selector.play_sound(SoundType::FolderOpen);
             }));
             options.push(Bar::Function(Box::new(lr2ir)));
@@ -484,7 +484,7 @@ impl ContextMenuBar {
                 let mut new_menu = ContextMenuBar::new_for_song(song_clone.clone());
                 new_menu.show_meta = new_show_meta;
                 let bar = Bar::ContextMenu(Box::new(new_menu));
-                selector.manager.update_bar(Some(&bar));
+                selector.update_bar_with_songdb_context(Some(&bar));
                 selector.play_sound(SoundType::OptionChange);
             }));
         }
@@ -640,11 +640,11 @@ impl ContextMenuBar {
         let song = self.song.clone();
         show_tables.set_function(Arc::new(move |selector| {
             // Navigate: root → table → level → select song
-            selector.manager.update_bar(None);
+            selector.update_bar_with_songdb_context(None);
             selector.manager.set_selected(&table_bar);
-            selector.manager.update_bar(Some(&table_bar));
+            selector.update_bar_with_songdb_context(Some(&table_bar));
             selector.manager.set_selected(&level_bar);
-            selector.manager.update_bar(Some(&level_bar));
+            selector.update_bar_with_songdb_context(Some(&level_bar));
             if let Some(ref s) = song {
                 let song_bar = Bar::Song(Box::new(SongBar::new(s.clone())));
                 selector.manager.set_selected(&song_bar);

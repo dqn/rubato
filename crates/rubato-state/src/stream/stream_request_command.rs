@@ -163,7 +163,7 @@ impl UpdateBar {
             selector
                 .manager
                 .set_append_directory_bar("Stream Request".to_string(), bar);
-            let _ = selector.manager.update_bar(None);
+            let _ = selector.update_bar_with_songdb_context(None);
         }
     }
 
