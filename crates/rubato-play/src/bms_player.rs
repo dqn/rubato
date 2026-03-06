@@ -189,6 +189,64 @@ impl Default for PendingActions {
     }
 }
 
+/// Input state snapshot copied from BMSPlayerInputProcessor each frame.
+///
+/// Updated by the caller before calling render(). Contains both key/button
+/// states and controller-specific analog input data.
+pub struct PlayerInputState {
+    pub keyinput: Option<KeyInputProccessor>,
+    pub control: Option<ControlInputProcessor>,
+    pub input_start_pressed: bool,
+    pub input_select_pressed: bool,
+    pub input_key_states: Vec<bool>,
+    pub control_key_up: bool,
+    pub control_key_down: bool,
+    pub control_key_left: bool,
+    pub control_key_right: bool,
+    pub control_key_escape_pressed: bool,
+    pub control_key_num1: bool,
+    pub control_key_num2: bool,
+    pub control_key_num3: bool,
+    pub control_key_num4: bool,
+    pub input_scroll: i32,
+    pub input_is_analog: Vec<bool>,
+    pub input_analog_diff_ticks: Vec<i32>,
+    pub input_analog_recent_ms: Vec<i64>,
+    pub pending_analog_resets: Vec<usize>,
+}
+
+impl PlayerInputState {
+    pub fn new() -> Self {
+        Self {
+            keyinput: None,
+            control: None,
+            input_start_pressed: false,
+            input_select_pressed: false,
+            input_key_states: Vec::new(),
+            control_key_up: false,
+            control_key_down: false,
+            control_key_left: false,
+            control_key_right: false,
+            control_key_escape_pressed: false,
+            control_key_num1: false,
+            control_key_num2: false,
+            control_key_num3: false,
+            control_key_num4: false,
+            input_scroll: 0,
+            input_is_analog: Vec::new(),
+            input_analog_diff_ticks: Vec::new(),
+            input_analog_recent_ms: Vec::new(),
+            pending_analog_resets: Vec::new(),
+        }
+    }
+}
+
+impl Default for PlayerInputState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// BMS Player main struct
 pub struct BMSPlayer {
     model: BMSModel,
@@ -198,8 +256,8 @@ pub struct BMSPlayer {
     bga: Arc<Mutex<BGAProcessor>>,
     gauge: Option<GrooveGauge>,
     playtime: i32,
-    keyinput: Option<KeyInputProccessor>,
-    control: Option<ControlInputProcessor>,
+    /// Input state snapshot (keys, buttons, analog, controllers).
+    input: PlayerInputState,
     keysound: KeySoundProcessor,
     assist: i32,
     playspeed: i32,
@@ -256,32 +314,6 @@ pub struct BMSPlayer {
     analysis_result: Option<rubato_audio::bms_loudness_analyzer::AnalysisResult>,
     /// Whether media loading has finished (set by the caller via resource.mediaLoadFinished()).
     media_load_finished: bool,
-    /// Input state: START button pressed (from BMSPlayerInputProcessor).
-    /// Updated each frame by the caller before calling render().
-    input_start_pressed: bool,
-    /// Input state: SELECT button pressed (from BMSPlayerInputProcessor).
-    /// Updated each frame by the caller before calling render().
-    input_select_pressed: bool,
-    /// Input state: key states array (from BMSPlayerInputProcessor).
-    /// Updated each frame by the caller before calling render().
-    input_key_states: Vec<bool>,
-    /// Control key states for practice mode navigation (from InputProcessorAccess).
-    /// [up, down, left, right] = [Num8, Num2, Num4, Num6]
-    /// Updated each frame by the caller before calling render().
-    control_key_up: bool,
-    control_key_down: bool,
-    control_key_left: bool,
-    control_key_right: bool,
-    control_key_escape_pressed: bool,
-    control_key_num1: bool,
-    control_key_num2: bool,
-    control_key_num3: bool,
-    control_key_num4: bool,
-    input_scroll: i32,
-    input_is_analog: Vec<bool>,
-    input_analog_diff_ticks: Vec<i32>,
-    input_analog_recent_ms: Vec<i64>,
-    pending_analog_resets: Vec<usize>,
     /// Whether we are in course mode (resource.getCourseBMSModels() != null).
     /// Set by the caller. Quick retry is disabled during courses.
     is_course_mode: bool,
@@ -323,8 +355,7 @@ impl BMSPlayer {
             ))),
             gauge: None,
             playtime,
-            keyinput: None,
-            control: None,
+            input: PlayerInputState::new(),
             keysound: KeySoundProcessor::new(),
             assist: 0,
             playspeed: 100,
@@ -356,23 +387,6 @@ impl BMSPlayer {
             skin_name: None,
             analysis_result: None,
             media_load_finished: false,
-            input_start_pressed: false,
-            input_select_pressed: false,
-            input_key_states: Vec::new(),
-            control_key_up: false,
-            control_key_down: false,
-            control_key_left: false,
-            control_key_right: false,
-            control_key_escape_pressed: false,
-            control_key_num1: false,
-            control_key_num2: false,
-            control_key_num3: false,
-            control_key_num4: false,
-            input_scroll: 0,
-            input_is_analog: Vec::new(),
-            input_analog_diff_ticks: Vec::new(),
-            input_analog_recent_ms: Vec::new(),
-            pending_analog_resets: Vec::new(),
             is_course_mode: false,
             device_type: rubato_input::bms_player_input_device::DeviceType::Keyboard,
             db_score: None,
@@ -519,7 +533,17 @@ impl BMSPlayer {
     }
 
     pub fn keyinput(&mut self) -> Option<&mut KeyInputProccessor> {
-        self.keyinput.as_mut()
+        self.input.keyinput.as_mut()
+    }
+
+    /// Get a reference to the player input state sub-struct.
+    pub fn input_state(&self) -> &PlayerInputState {
+        &self.input
+    }
+
+    /// Get a mutable reference to the player input state sub-struct.
+    pub fn input_state_mut(&mut self) -> &mut PlayerInputState {
+        &mut self.input
     }
 
     pub fn state(&self) -> i32 {
@@ -700,7 +724,7 @@ impl BMSPlayer {
                 == 0
         {
             // No notes judged and not in course mode - abort
-            if let Some(ref mut keyinput) = self.keyinput {
+            if let Some(ref mut keyinput) = self.input.keyinput {
                 keyinput.stop_judge();
             }
             self.keysound.stop_bg_play();
@@ -1925,9 +1949,9 @@ impl MainState for BMSPlayer {
         let mode = self.model.mode().cloned().unwrap_or(Mode::BEAT_7K);
         self.lane_property = Some(LaneProperty::new(&mode));
         self.judge = JudgeManager::new();
-        self.control = Some(ControlInputProcessor::new(mode.clone()));
+        self.input.control = Some(ControlInputProcessor::new(mode.clone()));
         if let Some(ref lp) = self.lane_property {
-            self.keyinput = Some(KeyInputProccessor::new(lp));
+            self.input.keyinput = Some(KeyInputProccessor::new(lp));
         }
 
         // --- loadSkin(getSkinType()) ---
@@ -1981,7 +2005,7 @@ impl MainState for BMSPlayer {
         // }
         // ```
         if self.constraints.contains(&CourseDataConstraint::NoSpeed)
-            && let Some(ref mut control) = self.control
+            && let Some(ref mut control) = self.input.control
         {
             control.set_enable_control(false);
         }
@@ -2094,7 +2118,7 @@ impl MainState for BMSPlayer {
         }
         // startpressedtime tracking: update when START or SELECT is pressed
         // Translated from: Java BMSPlayer.render() line 590
-        if self.input_start_pressed || self.input_select_pressed {
+        if self.input.input_start_pressed || self.input.input_select_pressed {
             self.startpressedtime = micronow;
         }
 
@@ -2183,7 +2207,7 @@ impl MainState for BMSPlayer {
                     if let Some(ref mut lr) = self.lanerender {
                         lr.init(&self.model);
                     }
-                    if let Some(ref mut ki) = self.keyinput {
+                    if let Some(ref mut ki) = self.input.keyinput {
                         ki.set_key_beam_stop(false);
                     }
                     self.main_state_data.timer.set_timer_off(TIMER_PLAY);
@@ -2212,7 +2236,7 @@ impl MainState for BMSPlayer {
                         .timer
                         .set_timer_on(TIMER_PM_CHARA_2P_NEUTRAL);
                 }
-                if let Some(ref mut control) = self.control {
+                if let Some(ref mut control) = self.input.control {
                     control.set_enable_control(false);
                     control.set_enable_cursor(false);
                 }
@@ -2226,16 +2250,16 @@ impl MainState for BMSPlayer {
                 // In the Java version, these come from BMSPlayerInputProcessor control keys.
                 // For now we pass the input_start/select state as a proxy for key0 check.
                 self.practice.process_input(
-                    self.control_key_up,
-                    self.control_key_down,
-                    self.control_key_left,
-                    self.control_key_right,
+                    self.input.control_key_up,
+                    self.input.control_key_down,
+                    self.input.control_key_left,
+                    self.input.control_key_right,
                     now_millis,
                 );
 
                 // Practice start logic: press key0 while media is loaded and timers elapsed
                 // Translated from: Java BMSPlayer.render() lines 682-723
-                let key0_pressed = self.input_key_states.first().copied().unwrap_or(false);
+                let key0_pressed = self.input.input_key_states.first().copied().unwrap_or(false);
                 let load_threshold =
                     (self.play_skin.loadstart() + self.play_skin.loadend()) as i64 * 1000;
                 if key0_pressed
@@ -2244,7 +2268,7 @@ impl MainState for BMSPlayer {
                     && micronow - self.startpressedtime > 1_000_000
                 {
                     // Apply practice configuration and start play
-                    if let Some(ref mut control) = self.control {
+                    if let Some(ref mut control) = self.input.control {
                         control.set_enable_control(true);
                         control.set_enable_cursor(true);
                     }
@@ -2355,7 +2379,7 @@ impl MainState for BMSPlayer {
                     // input.setStartTime(micronow + timer.getStartMicroTime() - starttimeoffset * 1000);
                     // input.setKeyLogMarginTime(resource.getMarginTime());
                     // Java: keyinput.startJudge(model, replay != null ? replay.keylog : null, resource.getMarginTime())
-                    if let Some(ref mut ki) = self.keyinput {
+                    if let Some(ref mut ki) = self.input.keyinput {
                         let timelines = self.model.all_time_lines();
                         let last_tl_micro = timelines.last().map_or(0, |tl| tl.micro_time());
                         let keylog = self.active_replay.as_ref().map(|r| r.keylog.as_slice());
@@ -2534,18 +2558,18 @@ impl MainState for BMSPlayer {
             // STATE_FAILED
             // Translated from: Java BMSPlayer.render() lines 818-869
             STATE_FAILED => {
-                if let Some(ref mut control) = self.control {
+                if let Some(ref mut control) = self.input.control {
                     control.set_enable_control(false);
                     control.set_enable_cursor(false);
                 }
-                if let Some(ref mut ki) = self.keyinput {
+                if let Some(ref mut ki) = self.input.keyinput {
                     ki.stop_judge();
                 }
                 self.keysound.stop_bg_play();
 
                 // Quick retry check (START xor SELECT)
                 // Translated from: Java BMSPlayer.render() lines 823-838
-                if (self.input_start_pressed ^ self.input_select_pressed)
+                if (self.input.input_start_pressed ^ self.input.input_select_pressed)
                     && !self.is_course_mode
                     && self.play_mode.mode == rubato_core::bms_player_mode::Mode::Play
                 {
@@ -2608,11 +2632,11 @@ impl MainState for BMSPlayer {
             // STATE_FINISHED
             // Translated from: Java BMSPlayer.render() lines 872-911
             STATE_FINISHED => {
-                if let Some(ref mut control) = self.control {
+                if let Some(ref mut control) = self.input.control {
                     control.set_enable_control(false);
                     control.set_enable_cursor(false);
                 }
-                if let Some(ref mut ki) = self.keyinput {
+                if let Some(ref mut ki) = self.input.keyinput {
                     ki.stop_judge();
                 }
                 self.keysound.stop_bg_play();
@@ -2664,7 +2688,7 @@ impl MainState for BMSPlayer {
             STATE_ABORTED => {
                 // Quick retry check (START xor SELECT in PLAY mode, not course)
                 if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Play
-                    && (self.input_start_pressed ^ self.input_select_pressed)
+                    && (self.input.input_start_pressed ^ self.input.input_select_pressed)
                     && !self.is_course_mode
                 {
                     self.pending.pending_global_pitch = Some(1.0);
@@ -2708,11 +2732,11 @@ impl MainState for BMSPlayer {
 
         // Process control input (START+SELECT, lane cover, hispeed, etc.)
         if let (Some(mut control), Some(lanerender)) =
-            (self.control.take(), self.lanerender.as_mut())
+            (self.input.control.take(), self.lanerender.as_mut())
         {
-            let pending_analog_resets = &mut self.pending_analog_resets;
-            let input_analog_recent_ms = &mut self.input_analog_recent_ms;
-            let input_analog_diff_ticks = &mut self.input_analog_diff_ticks;
+            let pending_analog_resets = &mut self.input.pending_analog_resets;
+            let input_analog_recent_ms = &mut self.input.input_analog_recent_ms;
+            let input_analog_diff_ticks = &mut self.input.input_analog_diff_ticks;
             let mut analog_diff_and_reset = |key: usize, ms_tolerance: i32| -> i32 {
                 if key >= input_analog_recent_ms.len() || key >= input_analog_diff_ticks.len() {
                     return 0;
@@ -2731,18 +2755,18 @@ impl MainState for BMSPlayer {
             };
             let mut ctx = crate::control_input_processor::ControlInputContext {
                 lanerender,
-                start_pressed: self.input_start_pressed,
-                select_pressed: self.input_select_pressed,
-                control_key_up: self.control_key_up,
-                control_key_down: self.control_key_down,
-                control_key_escape_pressed: self.control_key_escape_pressed,
-                control_key_num1: self.control_key_num1,
-                control_key_num2: self.control_key_num2,
-                control_key_num3: self.control_key_num3,
-                control_key_num4: self.control_key_num4,
-                key_states: &self.input_key_states,
-                scroll: self.input_scroll,
-                is_analog: &self.input_is_analog,
+                start_pressed: self.input.input_start_pressed,
+                select_pressed: self.input.input_select_pressed,
+                control_key_up: self.input.control_key_up,
+                control_key_down: self.input.control_key_down,
+                control_key_escape_pressed: self.input.control_key_escape_pressed,
+                control_key_num1: self.input.control_key_num1,
+                control_key_num2: self.input.control_key_num2,
+                control_key_num3: self.input.control_key_num3,
+                control_key_num4: self.input.control_key_num4,
+                key_states: &self.input.input_key_states,
+                scroll: self.input.input_scroll,
+                is_analog: &self.input.input_is_analog,
                 analog_diff_and_reset: &mut analog_diff_and_reset,
                 is_timer_play_on,
                 is_note_end,
@@ -2758,20 +2782,20 @@ impl MainState for BMSPlayer {
                 self.set_play_speed(speed);
             }
             if result.clear_start {
-                self.input_start_pressed = false;
+                self.input.input_start_pressed = false;
             }
             if result.clear_select {
-                self.input_select_pressed = false;
+                self.input.input_select_pressed = false;
             }
             if result.reset_scroll {
-                self.input_scroll = 0;
+                self.input.input_scroll = 0;
             }
             if result.stop_play {
                 // Restore control before stopping (stop_play may need it)
-                self.control = Some(control);
+                self.input.control = Some(control);
                 self.stop_play();
             } else {
-                self.control = Some(control);
+                self.input.control = Some(control);
             }
         }
 
@@ -2779,10 +2803,10 @@ impl MainState for BMSPlayer {
         let auto_presstime = self.judge.auto_presstime().to_vec();
         let now = self.main_state_data.timer.now_time();
         let is_autoplay = self.play_mode.mode == rubato_core::bms_player_mode::Mode::Autoplay;
-        if let Some(ref mut keyinput) = self.keyinput {
+        if let Some(ref mut keyinput) = self.input.keyinput {
             let mut ctx = crate::key_input_processor::InputContext {
                 now,
-                key_states: &self.input_key_states,
+                key_states: &self.input.input_key_states,
                 auto_presstime: &auto_presstime,
                 is_autoplay,
                 timer: &mut self.main_state_data.timer,
@@ -2792,45 +2816,45 @@ impl MainState for BMSPlayer {
     }
 
     fn sync_input_from(&mut self, input: &BMSPlayerInputProcessor) {
-        self.input_start_pressed = input.start_pressed();
-        self.input_select_pressed = input.is_select_pressed();
-        self.input_key_states.clear();
-        self.input_key_states
+        self.input.input_start_pressed = input.start_pressed();
+        self.input.input_select_pressed = input.is_select_pressed();
+        self.input.input_key_states.clear();
+        self.input.input_key_states
             .extend((0..KEYSTATE_SIZE as i32).map(|i| input.key_state(i)));
-        self.control_key_up = input.control_key_state(ControlKeys::Up);
-        self.control_key_down = input.control_key_state(ControlKeys::Down);
-        self.control_key_left = input.control_key_state(ControlKeys::Left);
-        self.control_key_right = input.control_key_state(ControlKeys::Right);
-        self.control_key_escape_pressed = input.control_key_state(ControlKeys::Escape);
-        self.control_key_num1 = input.control_key_state(ControlKeys::Num1);
-        self.control_key_num2 = input.control_key_state(ControlKeys::Num2);
-        self.control_key_num3 = input.control_key_state(ControlKeys::Num3);
-        self.control_key_num4 = input.control_key_state(ControlKeys::Num4);
-        self.input_scroll = input.scroll();
-        self.input_is_analog.clear();
-        self.input_is_analog
+        self.input.control_key_up = input.control_key_state(ControlKeys::Up);
+        self.input.control_key_down = input.control_key_state(ControlKeys::Down);
+        self.input.control_key_left = input.control_key_state(ControlKeys::Left);
+        self.input.control_key_right = input.control_key_state(ControlKeys::Right);
+        self.input.control_key_escape_pressed = input.control_key_state(ControlKeys::Escape);
+        self.input.control_key_num1 = input.control_key_state(ControlKeys::Num1);
+        self.input.control_key_num2 = input.control_key_state(ControlKeys::Num2);
+        self.input.control_key_num3 = input.control_key_state(ControlKeys::Num3);
+        self.input.control_key_num4 = input.control_key_state(ControlKeys::Num4);
+        self.input.input_scroll = input.scroll();
+        self.input.input_is_analog.clear();
+        self.input.input_is_analog
             .extend((0..KEYSTATE_SIZE).map(|i| input.is_analog_input(i)));
-        self.input_analog_diff_ticks.clear();
-        self.input_analog_diff_ticks
+        self.input.input_analog_diff_ticks.clear();
+        self.input.input_analog_diff_ticks
             .extend((0..KEYSTATE_SIZE).map(|i| input.analog_diff(i)));
-        self.input_analog_recent_ms.clear();
-        self.input_analog_recent_ms
+        self.input.input_analog_recent_ms.clear();
+        self.input.input_analog_recent_ms
             .extend((0..KEYSTATE_SIZE).map(|i| input.time_since_last_analog_reset(i)));
-        self.pending_analog_resets.clear();
+        self.input.pending_analog_resets.clear();
         self.device_type = input.device_type();
     }
 
     fn sync_input_back_to(&mut self, input: &mut BMSPlayerInputProcessor) {
-        if !self.input_start_pressed {
+        if !self.input.input_start_pressed {
             input.start_changed(false);
         }
-        if !self.input_select_pressed {
+        if !self.input.input_select_pressed {
             input.set_select_pressed(false);
         }
-        if self.input_scroll == 0 {
+        if self.input.input_scroll == 0 {
             input.reset_scroll();
         }
-        for key in self.pending_analog_resets.drain(..) {
+        for key in self.input.pending_analog_resets.drain(..) {
             input.reset_analog_input(key);
         }
     }
@@ -3265,7 +3289,7 @@ mod tests {
         let mut player = BMSPlayer::new(model);
         player.state = STATE_PLAY;
         // Judge has no notes hit (all counts = 0), and keyinput needs to exist
-        player.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
+        player.input.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
         player.stop_play();
         assert_eq!(player.state(), STATE_ABORTED);
     }
@@ -5117,7 +5141,7 @@ mod tests {
         player.set_constraints(vec![CourseDataConstraint::NoSpeed]);
         player.create();
         // Verify control is disabled by checking its enable_control field
-        let control = player.control.as_ref().unwrap();
+        let control = player.input.control.as_ref().unwrap();
         assert!(!control.is_enable_control());
     }
 
@@ -5127,7 +5151,7 @@ mod tests {
         let mut player = BMSPlayer::new(model);
         player.set_constraints(vec![CourseDataConstraint::Class]);
         player.create();
-        let control = player.control.as_ref().unwrap();
+        let control = player.input.control.as_ref().unwrap();
         assert!(control.is_enable_control());
     }
 
@@ -5137,7 +5161,7 @@ mod tests {
         let mut player = BMSPlayer::new(model);
         player.set_constraints(vec![]);
         player.create();
-        let control = player.control.as_ref().unwrap();
+        let control = player.input.control.as_ref().unwrap();
         assert!(control.is_enable_control());
     }
 
@@ -5263,7 +5287,7 @@ mod tests {
             CourseDataConstraint::Mirror,
         ]);
         player.create();
-        let control = player.control.as_ref().unwrap();
+        let control = player.input.control.as_ref().unwrap();
         assert!(!control.is_enable_control());
     }
 
@@ -5382,14 +5406,14 @@ mod tests {
 
         <BMSPlayer as MainState>::sync_input_from(&mut player, &input);
 
-        assert!(player.input_start_pressed);
-        assert!(player.input_select_pressed);
-        assert_eq!(player.input_key_states.len(), KEYSTATE_SIZE);
-        assert!(player.input_key_states[0]);
-        assert!(player.control_key_up);
-        assert!(player.control_key_down);
-        assert!(player.control_key_left);
-        assert!(player.control_key_right);
+        assert!(player.input.input_start_pressed);
+        assert!(player.input.input_select_pressed);
+        assert_eq!(player.input.input_key_states.len(), KEYSTATE_SIZE);
+        assert!(player.input.input_key_states[0]);
+        assert!(player.input.control_key_up);
+        assert!(player.input.control_key_down);
+        assert!(player.input.control_key_left);
+        assert!(player.input.control_key_right);
     }
 
     #[test]
@@ -5402,8 +5426,8 @@ mod tests {
 
         input.start_changed(true);
         input.set_select_pressed(true);
-        player.input_start_pressed = false;
-        player.input_select_pressed = false;
+        player.input.input_start_pressed = false;
+        player.input.input_select_pressed = false;
 
         <BMSPlayer as MainState>::sync_input_back_to(&mut player, &mut input);
 
@@ -5416,7 +5440,7 @@ mod tests {
         let model = make_model();
         let mut player = BMSPlayer::new(model);
         player.total_notes = 1;
-        player.control = Some(ControlInputProcessor::new(Mode::BEAT_7K));
+        player.input.control = Some(ControlInputProcessor::new(Mode::BEAT_7K));
         player.lanerender = Some(LaneRenderer::new(&player.model));
         player
             .lanerender
@@ -5441,18 +5465,18 @@ mod tests {
         let expected_delta = input.analog_diff(7) as f32 * 0.001;
 
         <BMSPlayer as MainState>::sync_input_from(&mut player, &input);
-        assert!(player.input_start_pressed);
-        assert!(player.input_key_states[7]);
-        assert!(player.input_is_analog[7]);
-        assert_eq!(player.input_analog_diff_ticks[7], input.analog_diff(7));
+        assert!(player.input.input_start_pressed);
+        assert!(player.input.input_key_states[7]);
+        assert!(player.input.input_is_analog[7]);
+        assert_eq!(player.input.input_analog_diff_ticks[7], input.analog_diff(7));
         player.input();
         <BMSPlayer as MainState>::sync_input_back_to(&mut player, &mut input);
 
         <BMSPlayer as MainState>::sync_input_from(&mut player, &input);
-        assert!(player.input_start_pressed);
-        assert!(player.input_key_states[7]);
-        assert!(player.input_is_analog[7]);
-        assert_eq!(player.input_analog_diff_ticks[7], input.analog_diff(7));
+        assert!(player.input.input_start_pressed);
+        assert!(player.input.input_key_states[7]);
+        assert!(player.input.input_is_analog[7]);
+        assert_eq!(player.input.input_analog_diff_ticks[7], input.analog_diff(7));
         player.input();
         <BMSPlayer as MainState>::sync_input_back_to(&mut player, &mut input);
 
@@ -5476,7 +5500,7 @@ mod tests {
     fn startpressedtime_updates_when_start_pressed() {
         let model = make_model();
         let mut player = BMSPlayer::new(model);
-        player.input_start_pressed = true;
+        player.input.input_start_pressed = true;
         player.startpressedtime = -999;
 
         std::thread::sleep(std::time::Duration::from_millis(1));
@@ -5567,13 +5591,13 @@ mod tests {
         let mut player = BMSPlayer::new(model);
         player.state = STATE_FAILED;
         player.lanerender = Some(LaneRenderer::new(&player.model));
-        player.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
+        player.input.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
         player.set_play_mode(BMSPlayerMode::PLAY);
         player.is_course_mode = false;
 
         // START pressed, SELECT not pressed (XOR = true)
-        player.input_start_pressed = true;
-        player.input_select_pressed = false;
+        player.input.input_start_pressed = true;
+        player.input.input_select_pressed = false;
 
         player.main_state_data.timer.update();
         player.render();
@@ -5589,12 +5613,12 @@ mod tests {
         let mut player = BMSPlayer::new(model);
         player.state = STATE_FAILED;
         player.lanerender = Some(LaneRenderer::new(&player.model));
-        player.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
+        player.input.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
         player.set_play_mode(BMSPlayerMode::PLAY);
         player.is_course_mode = true;
 
-        player.input_start_pressed = true;
-        player.input_select_pressed = false;
+        player.input.input_start_pressed = true;
+        player.input.input_select_pressed = false;
 
         player.main_state_data.timer.update();
         player.render();
@@ -5615,8 +5639,8 @@ mod tests {
         player.is_course_mode = false;
 
         // SELECT pressed, START not pressed (XOR = true)
-        player.input_start_pressed = false;
-        player.input_select_pressed = true;
+        player.input.input_start_pressed = false;
+        player.input.input_select_pressed = true;
 
         player.main_state_data.timer.update();
         player.render();
@@ -5634,7 +5658,7 @@ mod tests {
         let mut player = BMSPlayer::new(model);
         player.state = STATE_FAILED;
         player.lanerender = Some(LaneRenderer::new(&player.model));
-        player.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
+        player.input.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
         player.set_play_mode(BMSPlayerMode::PRACTICE);
 
         // Set TIMER_FAILED so close time is exceeded
