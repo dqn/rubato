@@ -39,10 +39,6 @@ const BARLABEL_COUNT: usize = 3;
 /// BARTEXT_COUNT constant
 const BARTEXT_COUNT: usize = 11;
 
-fn str_at(parts: &[String], idx: usize) -> &str {
-    parts.get(idx).map(|s| s.trim()).unwrap_or("")
-}
-
 /// Select skin loader state
 pub struct LR2SelectSkinLoaderState {
     pub csv: LR2SkinCSVLoaderState,
@@ -671,85 +667,40 @@ impl LR2SelectSkinLoaderState {
                 );
             }
             "SRC_NOTECHART" => {
-                let values = lr2_skin_loader::parse_int(str_parts);
-                let obj = SkinNoteDistributionGraph::new(
-                    values[1], values[15], values[16], values[17], values[18], values[19],
+                lr2_skin_loader::process_src_notechart(
+                    str_parts,
+                    &mut self.gauge,
+                    &mut self.noteobj,
                 );
-                self.gauge = Rectangle::new(0.0, 0.0, values[11] as f32, values[12] as f32);
-                self.noteobj = Some(obj);
             }
             "DST_NOTECHART" => {
-                let values = lr2_skin_loader::parse_int(str_parts);
-                self.gauge.x = values[3] as f32;
-                self.gauge.y = self.csv.src.height - values[4] as f32;
-                if let Some(ref mut obj) = self.noteobj {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
-                    let offsets = lr2_skin_loader::read_offset(str_parts, 21);
-                    obj.data.set_destination_with_int_timer_ops(
-                        values[2] as i64,
-                        self.gauge.x * dstw,
-                        self.csv.dst.height - (values[4] as f32 + self.gauge.height) * dsth,
-                        self.gauge.width * dstw,
-                        self.gauge.height * dsth,
-                        values[7],
-                        values[8],
-                        values[9],
-                        values[10],
-                        values[11],
-                        values[12],
-                        values[13],
-                        values[14],
-                        values[15],
-                        values[16],
-                        values[17],
-                        &offsets,
-                    );
-                }
+                lr2_skin_loader::process_dst_notechart(
+                    str_parts,
+                    self.csv.src.height,
+                    self.csv.dst.width,
+                    self.csv.dst.height,
+                    self.csv.src.width,
+                    &mut self.gauge,
+                    &mut self.noteobj,
+                );
             }
             "SRC_BPMCHART" => {
-                let values = lr2_skin_loader::parse_int(str_parts);
-                let obj = SkinBPMGraph::new(
-                    values[3],
-                    values[4],
-                    str_at(str_parts, 5),
-                    str_at(str_parts, 6),
-                    str_at(str_parts, 7),
-                    str_at(str_parts, 8),
-                    str_at(str_parts, 9),
-                    str_at(str_parts, 10),
+                lr2_skin_loader::process_src_bpmchart(
+                    str_parts,
+                    &mut self.gauge,
+                    &mut self.bpmgraphobj,
                 );
-                self.gauge = Rectangle::new(0.0, 0.0, values[1] as f32, values[2] as f32);
-                self.bpmgraphobj = Some(obj);
             }
             "DST_BPMCHART" => {
-                let values = lr2_skin_loader::parse_int(str_parts);
-                self.gauge.x = values[3] as f32;
-                self.gauge.y = self.csv.src.height - values[4] as f32;
-                if let Some(ref mut obj) = self.bpmgraphobj {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
-                    let offsets = lr2_skin_loader::read_offset(str_parts, 21);
-                    obj.data.set_destination_with_int_timer_ops(
-                        values[2] as i64,
-                        self.gauge.x * dstw,
-                        self.csv.dst.height - (values[4] as f32 + self.gauge.height) * dsth,
-                        self.gauge.width * dstw,
-                        self.gauge.height * dsth,
-                        values[7],
-                        values[8],
-                        values[9],
-                        values[10],
-                        values[11],
-                        values[12],
-                        values[13],
-                        values[14],
-                        values[15],
-                        values[16],
-                        values[17],
-                        &offsets,
-                    );
-                }
+                lr2_skin_loader::process_dst_bpmchart(
+                    str_parts,
+                    self.csv.src.height,
+                    self.csv.dst.width,
+                    self.csv.dst.height,
+                    self.csv.src.width,
+                    &mut self.gauge,
+                    &mut self.bpmgraphobj,
+                );
             }
             "SRC_BAR_TITLE" => {
                 let values = lr2_skin_loader::parse_int(str_parts);

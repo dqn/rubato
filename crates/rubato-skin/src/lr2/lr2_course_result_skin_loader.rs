@@ -72,42 +72,22 @@ impl LR2CourseResultSkinLoaderState {
                 }
             }
             "SRC_NOTECHART_1P" => {
-                // #SRC_NOTECHART_1P,(index),(gr),(x),(y),(w),(h),(div_x),(div_y),(cycle),(timer),field_w,field_h,(start),(end),delay,backTexOff,orderReverse,noGap
-                let values = lr2_skin_loader::parse_int(str_parts);
-                let obj = SkinNoteDistributionGraph::new(
-                    values[1], values[15], values[16], values[17], values[18], values[19],
+                lr2_skin_loader::process_src_notechart(
+                    str_parts,
+                    &mut self.gauge,
+                    &mut self.noteobj,
                 );
-                self.gauge = Rectangle::new(0.0, 0.0, values[11] as f32, values[12] as f32);
-                self.noteobj = Some(obj);
             }
             "DST_NOTECHART_1P" => {
-                let values = lr2_skin_loader::parse_int(str_parts);
-                self.gauge.x = values[3] as f32;
-                self.gauge.y = self.csv.src.height - values[4] as f32;
-                if let Some(ref mut obj) = self.noteobj {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
-                    let offsets = lr2_skin_loader::read_offset(str_parts, 21);
-                    obj.data.set_destination_with_int_timer_ops(
-                        values[2] as i64,
-                        self.gauge.x * dstw,
-                        self.csv.dst.height - (values[4] as f32 + self.gauge.height) * dsth,
-                        self.gauge.width * dstw,
-                        self.gauge.height * dsth,
-                        values[7],
-                        values[8],
-                        values[9],
-                        values[10],
-                        values[11],
-                        values[12],
-                        values[13],
-                        values[14],
-                        values[15],
-                        values[16],
-                        values[17],
-                        &offsets,
-                    );
-                }
+                lr2_skin_loader::process_dst_notechart(
+                    str_parts,
+                    self.csv.src.height,
+                    self.csv.dst.width,
+                    self.csv.dst.height,
+                    self.csv.src.width,
+                    &mut self.gauge,
+                    &mut self.noteobj,
+                );
             }
             _ => {
                 // Delegate to CSV loader

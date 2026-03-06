@@ -1,5 +1,31 @@
 use crate::select::stubs::ScoreData;
 
+/// Dispatch a method call uniformly across all 14 Bar variants.
+///
+/// Only usable when every variant delegates to the same method with the same
+/// arguments. Methods like `lamp` and `bar_data` have variant-specific field
+/// paths and must remain as explicit match blocks.
+macro_rules! bar_dispatch {
+    ($self:expr, $method:ident $(, $arg:expr)*) => {
+        match $self {
+            Bar::Song(b) => b.$method($($arg),*),
+            Bar::Folder(b) => b.$method($($arg),*),
+            Bar::Command(b) => b.$method($($arg),*),
+            Bar::Container(b) => b.$method($($arg),*),
+            Bar::Hash(b) => b.$method($($arg),*),
+            Bar::Table(b) => b.$method($($arg),*),
+            Bar::Grade(b) => b.$method($($arg),*),
+            Bar::RandomCourse(b) => b.$method($($arg),*),
+            Bar::SearchWord(b) => b.$method($($arg),*),
+            Bar::SameFolder(b) => b.$method($($arg),*),
+            Bar::Executable(b) => b.$method($($arg),*),
+            Bar::Function(b) => b.$method($($arg),*),
+            Bar::ContextMenu(b) => b.$method($($arg),*),
+            Bar::LeaderBoard(b) => b.$method($($arg),*),
+        }
+    };
+}
+
 /// Shared data for all bar types
 /// Translates: bms.player.beatoraja.select.bar.Bar
 #[derive(Clone, Debug, Default)]
@@ -49,22 +75,7 @@ pub enum Bar {
 
 impl Bar {
     pub fn title(&self) -> String {
-        match self {
-            Bar::Song(b) => b.title(),
-            Bar::Folder(b) => b.title(),
-            Bar::Command(b) => b.title(),
-            Bar::Container(b) => b.title(),
-            Bar::Hash(b) => b.title(),
-            Bar::Table(b) => b.title(),
-            Bar::Grade(b) => b.title(),
-            Bar::RandomCourse(b) => b.title(),
-            Bar::SearchWord(b) => b.title(),
-            Bar::SameFolder(b) => b.title(),
-            Bar::Executable(b) => b.title(),
-            Bar::Function(b) => b.title(),
-            Bar::ContextMenu(b) => b.title(),
-            Bar::LeaderBoard(b) => b.title(),
-        }
+        bar_dispatch!(self, title)
     }
 
     pub fn score(&self) -> Option<&ScoreData> {

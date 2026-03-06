@@ -1,4 +1,5 @@
 use super::integer_property::IntegerProperty;
+use super::property_lookup::{find_by_id, find_by_name};
 use crate::stubs::MainState;
 
 const ID_LENGTH: usize = 65536;
@@ -10,11 +11,7 @@ pub fn integer_property_by_id(optionid: i32) -> Option<Box<dyn IntegerProperty>>
     }
 
     // Check ValueType enum
-    for vt in VALUE_TYPES.iter() {
-        if vt.id == optionid {
-            return Some(Box::new(DelegateIntegerProperty { id: vt.id }));
-        }
-    }
+    find_by_id!(VALUE_TYPES, optionid, DelegateIntegerProperty);
 
     // Check various range-based properties and switch-based properties
     // All reference BMSPlayer, MusicSelector, AbstractResult etc.
@@ -23,11 +20,7 @@ pub fn integer_property_by_id(optionid: i32) -> Option<Box<dyn IntegerProperty>>
 
 /// Returns an IntegerProperty for the given ValueType name.
 pub fn integer_property_by_name(name: &str) -> Option<Box<dyn IntegerProperty>> {
-    for vt in VALUE_TYPES.iter() {
-        if vt.name == name {
-            return Some(Box::new(DelegateIntegerProperty { id: vt.id }));
-        }
-    }
+    find_by_name!(VALUE_TYPES, name, DelegateIntegerProperty);
     None
 }
 
@@ -38,11 +31,7 @@ pub fn image_index_property_by_id(optionid: i32) -> Option<Box<dyn IntegerProper
     }
 
     // Check IndexType enum
-    for it in INDEX_TYPES.iter() {
-        if it.id == optionid {
-            return Some(Box::new(DelegateImageIndexProperty { id: it.id }));
-        }
-    }
+    find_by_id!(INDEX_TYPES, optionid, DelegateImageIndexProperty);
 
     // Judge properties (VALUE_JUDGE_1P_SCRATCH to VALUE_JUDGE_2P_KEY99)
     // SkinSelectType properties
@@ -53,11 +42,7 @@ pub fn image_index_property_by_id(optionid: i32) -> Option<Box<dyn IntegerProper
 
 /// Returns an IntegerProperty for the given IndexType name.
 pub fn image_index_property_by_name(name: &str) -> Option<Box<dyn IntegerProperty>> {
-    for it in INDEX_TYPES.iter() {
-        if it.name == name {
-            return Some(Box::new(DelegateImageIndexProperty { id: it.id }));
-        }
-    }
+    find_by_name!(INDEX_TYPES, name, DelegateImageIndexProperty);
     None
 }
 

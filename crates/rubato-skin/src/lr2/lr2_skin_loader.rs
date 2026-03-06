@@ -250,6 +250,139 @@ pub fn lr2_path(skinpath: &str, imagepath: &str, filemap: &HashMap<String, Strin
     resolved
 }
 
+/// Get a trimmed string at the given index, or "" if out of bounds.
+/// Shared helper used by LR2 play/select/result skin loaders.
+pub fn str_at(parts: &[String], idx: usize) -> &str {
+    parts.get(idx).map(|s| s.trim()).unwrap_or("")
+}
+
+/// Process a `SRC_NOTECHART` / `SRC_NOTECHART_1P` command.
+///
+/// Creates a `SkinNoteDistributionGraph` from the parsed values and stores it
+/// in `noteobj`, updating `gauge` with the field dimensions. This logic is
+/// identical across play, select, result, and course-result loaders.
+pub fn process_src_notechart(
+    str_parts: &[String],
+    gauge: &mut crate::stubs::Rectangle,
+    noteobj: &mut Option<crate::skin_note_distribution_graph::SkinNoteDistributionGraph>,
+) {
+    let values = parse_int(str_parts);
+    let obj = crate::skin_note_distribution_graph::SkinNoteDistributionGraph::new(
+        values[1], values[15], values[16], values[17], values[18], values[19],
+    );
+    *gauge = crate::stubs::Rectangle::new(0.0, 0.0, values[11] as f32, values[12] as f32);
+    *noteobj = Some(obj);
+}
+
+/// Process a `DST_NOTECHART` / `DST_NOTECHART_1P` command.
+///
+/// Sets the destination on the previously created `SkinNoteDistributionGraph`.
+/// Shared across play, select, result, and course-result loaders.
+pub fn process_dst_notechart(
+    str_parts: &[String],
+    src_height: f32,
+    dst_width: f32,
+    dst_height: f32,
+    src_width: f32,
+    gauge: &mut crate::stubs::Rectangle,
+    noteobj: &mut Option<crate::skin_note_distribution_graph::SkinNoteDistributionGraph>,
+) {
+    let values = parse_int(str_parts);
+    gauge.x = values[3] as f32;
+    gauge.y = src_height - values[4] as f32;
+    if let Some(obj) = noteobj {
+        let dstw = dst_width / src_width;
+        let dsth = dst_height / src_height;
+        let offsets = read_offset(str_parts, 21);
+        obj.data.set_destination_with_int_timer_ops(
+            values[2] as i64,
+            gauge.x * dstw,
+            dst_height - (values[4] as f32 + gauge.height) * dsth,
+            gauge.width * dstw,
+            gauge.height * dsth,
+            values[7],
+            values[8],
+            values[9],
+            values[10],
+            values[11],
+            values[12],
+            values[13],
+            values[14],
+            values[15],
+            values[16],
+            values[17],
+            &offsets,
+        );
+    }
+}
+
+/// Process a `SRC_BPMCHART` command.
+///
+/// Creates a `SkinBPMGraph` from the parsed values and stores it in
+/// `bpmgraphobj`, updating `gauge` with the field dimensions.
+/// Shared across play, select, result, and course-result loaders.
+pub fn process_src_bpmchart(
+    str_parts: &[String],
+    gauge: &mut crate::stubs::Rectangle,
+    bpmgraphobj: &mut Option<crate::skin_bpm_graph::SkinBPMGraph>,
+) {
+    let values = parse_int(str_parts);
+    let obj = crate::skin_bpm_graph::SkinBPMGraph::new(
+        values[3],
+        values[4],
+        str_at(str_parts, 5),
+        str_at(str_parts, 6),
+        str_at(str_parts, 7),
+        str_at(str_parts, 8),
+        str_at(str_parts, 9),
+        str_at(str_parts, 10),
+    );
+    *gauge = crate::stubs::Rectangle::new(0.0, 0.0, values[1] as f32, values[2] as f32);
+    *bpmgraphobj = Some(obj);
+}
+
+/// Process a `DST_BPMCHART` command.
+///
+/// Sets the destination on the previously created `SkinBPMGraph`.
+/// Shared across play, select, result, and course-result loaders.
+pub fn process_dst_bpmchart(
+    str_parts: &[String],
+    src_height: f32,
+    dst_width: f32,
+    dst_height: f32,
+    src_width: f32,
+    gauge: &mut crate::stubs::Rectangle,
+    bpmgraphobj: &mut Option<crate::skin_bpm_graph::SkinBPMGraph>,
+) {
+    let values = parse_int(str_parts);
+    gauge.x = values[3] as f32;
+    gauge.y = src_height - values[4] as f32;
+    if let Some(obj) = bpmgraphobj {
+        let dstw = dst_width / src_width;
+        let dsth = dst_height / src_height;
+        let offsets = read_offset(str_parts, 21);
+        obj.data.set_destination_with_int_timer_ops(
+            values[2] as i64,
+            gauge.x * dstw,
+            dst_height - (values[4] as f32 + gauge.height) * dsth,
+            gauge.width * dstw,
+            gauge.height * dsth,
+            values[7],
+            values[8],
+            values[9],
+            values[10],
+            values[11],
+            values[12],
+            values[13],
+            values[14],
+            values[15],
+            values[16],
+            values[17],
+            &offsets,
+        );
+    }
+}
+
 /// Parse int array from string array (matching Java parseInt behavior)
 pub fn parse_int(s: &[String]) -> [i32; 22] {
     let mut result = [0i32; 22];

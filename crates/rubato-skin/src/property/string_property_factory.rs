@@ -1,37 +1,17 @@
-use std::collections::HashMap;
-use std::sync::OnceLock;
-
+use super::property_lookup::{find_by_id, find_by_name};
 use super::string_property::StringProperty;
 use crate::stubs::MainState;
 
 /// Returns a StringProperty for the given ID.
 pub fn string_property_by_id(id: i32) -> Option<Box<dyn StringProperty>> {
-    let map = get_id_map();
-    if map.contains_key(&id) {
-        return Some(Box::new(DelegateStringProperty { id }));
-    }
+    find_by_id!(STRING_TYPES, id, DelegateStringProperty);
     None
 }
 
 /// Returns a StringProperty for the given name.
 pub fn string_property_by_name(name: &str) -> Option<Box<dyn StringProperty>> {
-    for st in STRING_TYPES.iter() {
-        if st.name == name {
-            return Some(Box::new(DelegateStringProperty { id: st.id }));
-        }
-    }
+    find_by_name!(STRING_TYPES, name, DelegateStringProperty);
     None
-}
-
-fn get_id_map() -> &'static HashMap<i32, &'static str> {
-    static ID_MAP: OnceLock<HashMap<i32, &'static str>> = OnceLock::new();
-    ID_MAP.get_or_init(|| {
-        let mut map = HashMap::new();
-        for st in STRING_TYPES.iter() {
-            map.insert(st.id, st.name);
-        }
-        map
-    })
 }
 
 struct StringTypeEntry {
