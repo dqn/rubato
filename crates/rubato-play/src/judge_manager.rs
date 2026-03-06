@@ -79,7 +79,7 @@ impl LaneIterState {
         self.seek_pos = self.base_pos;
     }
 
-    fn get_note(&mut self) -> Option<usize> {
+    fn note(&mut self) -> Option<usize> {
         if self.seek_pos < self.note_indices.len() {
             let idx = self.note_indices[self.seek_pos];
             self.seek_pos += 1;
@@ -537,7 +537,7 @@ impl JudgeManager {
             // Iterate notes from prevmtime to mtime
             #[allow(clippy::while_let_loop)]
             loop {
-                let note_idx = match self.lane_states[lane_idx].get_note() {
+                let note_idx = match self.lane_states[lane_idx].note() {
                     Some(idx) => idx,
                     None => break,
                 };
@@ -751,7 +751,7 @@ impl JudgeManager {
                     #[allow(clippy::while_let_loop)]
                     #[allow(clippy::nonminimal_bool)]
                     loop {
-                        let note_idx = match self.lane_states[lane_idx].get_note() {
+                        let note_idx = match self.lane_states[lane_idx].note() {
                             Some(idx) => idx,
                             None => break,
                         };
@@ -1107,7 +1107,7 @@ impl JudgeManager {
             self.lane_states[lane_idx].reset();
             #[allow(clippy::while_let_loop)]
             loop {
-                let note_idx = match self.lane_states[lane_idx].get_note() {
+                let note_idx = match self.lane_states[lane_idx].note() {
                     Some(idx) => idx,
                     None => break,
                 };

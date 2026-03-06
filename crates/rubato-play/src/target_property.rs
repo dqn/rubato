@@ -528,7 +528,7 @@ impl InternetRankingTargetProperty {
         match ranking_data {
             Some(ref ranking) if ranking.state() == rubato_ir::ranking_data::FINISH => {
                 if ranking.total_player() > 0 {
-                    let index = self.get_target_rank(main, ranking);
+                    let index = self.target_rank(main, ranking);
                     if let Some(ir_score) = ranking.score(index) {
                         let exscore = ir_score.exscore();
                         self.target_score.player = if ir_score.player.is_empty() {
@@ -558,7 +558,7 @@ impl InternetRankingTargetProperty {
     }
 
     /// Get the target rank index based on the IR target type.
-    fn get_target_rank(
+    fn target_rank(
         &self,
         main: &MainController,
         ranking: &rubato_ir::ranking_data::RankingData,

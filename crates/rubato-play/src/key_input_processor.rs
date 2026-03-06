@@ -213,7 +213,7 @@ impl JudgeThread {
     }
 
     /// Get the max frame time observed (for performance logging).
-    fn get_frametime(&self) -> i64 {
+    fn frametime(&self) -> i64 {
         self.frametime
     }
 }
@@ -419,7 +419,7 @@ impl KeyInputProccessor {
     pub fn stop_judge(&mut self) {
         if self.judge.is_some() {
             if let Some(ref j) = self.judge {
-                log::info!("入力パフォーマンス(max us) : {}", j.get_frametime());
+                log::info!("入力パフォーマンス(max us) : {}", j.frametime());
             }
             self.key_beam_stop = true;
             self.is_judge_started = false;
@@ -563,17 +563,17 @@ mod tests {
     #[test]
     fn test_judge_thread_frametime_tracking() {
         let mut jt = JudgeThread::new(10_000_000, None, 0);
-        assert_eq!(jt.get_frametime(), 1);
+        assert_eq!(jt.frametime(), 1);
 
         jt.tick(1_000_000);
         jt.tick(1_100_000); // delta = 100_000
-        assert_eq!(jt.get_frametime(), 100_000);
+        assert_eq!(jt.frametime(), 100_000);
 
         jt.tick(1_150_000); // delta = 50_000 (less than previous max)
-        assert_eq!(jt.get_frametime(), 100_000); // max stays
+        assert_eq!(jt.frametime(), 100_000); // max stays
 
         jt.tick(1_400_000); // delta = 250_000
-        assert_eq!(jt.get_frametime(), 250_000);
+        assert_eq!(jt.frametime(), 250_000);
     }
 
     // --- KeyInputProccessor tests ---

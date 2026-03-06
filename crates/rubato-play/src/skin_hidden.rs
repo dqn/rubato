@@ -52,7 +52,7 @@ impl SkinHidden {
             self.previous_lift = y;
         }
 
-        self.image_index = self.get_image_index(self.image_count, time);
+        self.image_index = self.image_index(self.image_count, time);
     }
 
     pub fn draw(&self) {
@@ -62,7 +62,7 @@ impl SkinHidden {
         // This play-side struct exists for standalone hidden state only.
     }
 
-    fn get_image_index(&self, length: usize, time: i64) -> usize {
+    fn image_index(&self, length: usize, time: i64) -> usize {
         if self.cycle <= 0 {
             return 0;
         }

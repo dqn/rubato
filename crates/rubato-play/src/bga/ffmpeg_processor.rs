@@ -28,7 +28,7 @@ enum Command {
 
 /// Timer observer for movie playback
 pub trait TimerObserver {
-    fn get_micro_time(&self) -> i64;
+    fn micro_time(&self) -> i64;
 }
 
 // ============================================================
@@ -529,7 +529,7 @@ impl FFmpegProcessor {
 }
 
 impl MovieProcessor for FFmpegProcessor {
-    fn get_frame(&mut self, time: i64) -> Option<Texture> {
+    fn frame(&mut self, time: i64) -> Option<Texture> {
         #[cfg(feature = "ffmpeg")]
         {
             if let Some(ref handle) = self.handle {

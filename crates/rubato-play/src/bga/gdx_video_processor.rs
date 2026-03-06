@@ -23,7 +23,7 @@ impl GdxVideoProcessor {
 }
 
 impl MovieProcessor for GdxVideoProcessor {
-    fn get_frame(&mut self, _time: i64) -> Option<Texture> {
+    fn frame(&mut self, _time: i64) -> Option<Texture> {
         None
     }
 
