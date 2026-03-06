@@ -1,3 +1,5 @@
+//! Input device abstraction for keyboard, controller, and MIDI.
+
 pub mod bm_controller_input_processor;
 pub mod bms_player_input_device;
 pub mod bms_player_input_processor;

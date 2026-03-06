@@ -1,3 +1,6 @@
+//! Core state machine, configuration management, resource handling,
+//! and pattern modifiers.
+
 // Phase 5+ type stubs
 pub mod stubs;
 

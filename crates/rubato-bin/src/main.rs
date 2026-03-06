@@ -1,3 +1,5 @@
+//! Binary entry point for the rubato BMS player application.
+
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;

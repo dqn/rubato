@@ -5,7 +5,7 @@ use rubato_render::texture::{Texture, TextureRegion};
 
 use crate::bga::bg_image_processor::BGImageProcessor;
 use crate::bga::movie_processor::MovieProcessor;
-use crate::skin_bga::StretchType;
+use crate::skin::bga::StretchType;
 
 /// Movie file extensions supported for BGA
 pub static MOV_EXTENSION: &[&str] = &[

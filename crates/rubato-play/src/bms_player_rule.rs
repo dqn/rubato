@@ -1,5 +1,5 @@
 use crate::gauge_property::GaugeProperty;
-use crate::judge_property::{JudgeProperty, JudgePropertyType};
+use crate::judge::property::{JudgeProperty, JudgePropertyType};
 use bms_model::bms_model::{BMSModel, JudgeRankType, TotalType};
 use bms_model::mode::Mode;
 

@@ -1,0 +1,9 @@
+pub mod audio_configuration_view;
+pub mod discord_configuration_view;
+pub mod input_configuration_view;
+pub mod ir_configuration_view;
+pub mod music_select_configuration_view;
+pub mod obs_configuration_view;
+pub mod stream_editor_view;
+pub mod trainer_view;
+pub mod video_configuration_view;

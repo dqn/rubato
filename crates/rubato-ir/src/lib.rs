@@ -1,3 +1,5 @@
+//! Internet Ranking (IR) client for LR2IR score submission and ranking data.
+
 // Re-exports (formerly in stubs.rs)
 pub use bms_model::bms_decoder::convert_hex_string;
 pub use rubato_core::pattern::lr2_random::LR2Random;

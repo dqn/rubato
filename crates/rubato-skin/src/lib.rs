@@ -1,63 +1,25 @@
+//! Skin format loaders (LR2 CSV, JSON, Lua), property system,
+//! and rendering object hierarchy.
+
 // Property submodule (interfaces + factories)
 pub mod property;
 
-// Rendering stubs (LibGDX graphics types — deferred to Phase 13 Bevy replacement)
+// Rendering stubs (LibGDX graphics types -- deferred to Phase 13 Bevy replacement)
 pub mod rendering_stubs;
 // Stubs for external dependencies (lifecycle types, Phase 7+)
 pub mod stubs;
 
-// Core skin types
-pub mod custom_event;
-pub mod custom_timer;
-pub mod float_formatter;
-pub mod skin_float;
+// Skin property enums (standalone, no subdir)
 pub mod skin_property;
-pub mod skin_property_mapper;
-pub mod skin_type;
-pub mod stretch_type;
 
-// Skin source types
-pub mod skin_source;
-pub mod skin_source_image;
-pub mod skin_source_image_set;
-pub mod skin_source_movie;
-pub mod skin_source_reference;
-pub mod skin_source_set;
-
-// Skin object types
-pub mod bitmap_font_batch_loader;
-pub mod bitmap_font_cache;
-pub mod pomyu_chara_loader;
-pub mod skin;
-pub mod skin_bar_object;
-pub mod skin_bga_object;
-pub mod skin_bpm_graph;
-pub mod skin_gauge;
-pub mod skin_gauge_graph_object;
-pub mod skin_graph;
-pub mod skin_header;
-pub mod skin_hidden;
-pub mod skin_hit_error_visualizer;
-pub mod skin_image;
-pub mod skin_judge_object;
-pub mod skin_loader;
-pub mod skin_note_distribution_graph;
-pub mod skin_note_object;
-pub mod skin_number;
-pub mod skin_object;
-pub mod skin_slider;
-pub mod skin_text;
-pub mod skin_text_bitmap;
-pub mod skin_text_font;
-pub mod skin_text_image;
-pub mod skin_timing_distribution_graph;
-pub mod skin_timing_visualizer;
-
-// Select-specific data extracted during skin loading
-pub mod select_bar_data;
-
-// Skin data converter (SkinData -> Skin)
-pub mod skin_data_converter;
+// Organized submodules
+pub mod core;
+pub mod graphs;
+pub mod loaders;
+pub mod objects;
+pub mod sources;
+pub mod text;
+pub mod types;
 
 // Skin loaders
 pub mod json;
@@ -67,3 +29,61 @@ pub mod lua;
 // Test helpers
 #[cfg(test)]
 pub(crate) mod test_helpers;
+
+// Backwards-compatible re-exports for moved modules
+
+// core/
+pub use core::custom_event;
+pub use core::custom_timer;
+pub use core::float_formatter;
+pub use core::skin_float;
+pub use core::skin_property_mapper;
+pub use core::stretch_type;
+
+// types/
+pub use types::select_bar_data;
+pub use types::skin;
+pub use types::skin_bar_object;
+pub use types::skin_header;
+pub use types::skin_object;
+pub use types::skin_type;
+
+// text/
+pub use text::skin_text;
+pub use text::skin_text_bitmap;
+pub use text::skin_text_font;
+pub use text::skin_text_image;
+
+// objects/
+pub use objects::skin_bga_object;
+pub use objects::skin_gauge;
+pub use objects::skin_gauge_graph_object;
+pub use objects::skin_hidden;
+pub use objects::skin_image;
+pub use objects::skin_judge_object;
+pub use objects::skin_note_object;
+pub use objects::skin_number;
+pub use objects::skin_slider;
+
+// graphs/
+pub use graphs::skin_bpm_graph;
+pub use graphs::skin_graph;
+pub use graphs::skin_hit_error_visualizer;
+pub use graphs::skin_note_distribution_graph;
+pub use graphs::skin_timing_distribution_graph;
+pub use graphs::skin_timing_visualizer;
+
+// loaders/
+pub use loaders::bitmap_font_batch_loader;
+pub use loaders::bitmap_font_cache;
+pub use loaders::pomyu_chara_loader;
+pub use loaders::skin_data_converter;
+pub use loaders::skin_loader;
+
+// sources/
+pub use sources::skin_source;
+pub use sources::skin_source_image;
+pub use sources::skin_source_image_set;
+pub use sources::skin_source_movie;
+pub use sources::skin_source_reference;
+pub use sources::skin_source_set;

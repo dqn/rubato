@@ -9,9 +9,9 @@ use rubato_core::main_state::MainStateType;
 use rubato_core::player_config::PlayerConfig;
 use rubato_skin::skin_type::SkinType;
 
-use crate::obs_configuration_view::{ACTION_NONE, SCENE_NONE};
-use crate::play_configuration_view::PlayMode;
-use crate::skin_configuration_view::{SkinConfigItem, SkinConfigurationView};
+use crate::views::config::obs_configuration_view::{ACTION_NONE, SCENE_NONE};
+use crate::views::play_configuration_view::PlayMode;
+use crate::views::skin_configuration_view::{SkinConfigItem, SkinConfigurationView};
 
 /// Tab selection for the launcher UI.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

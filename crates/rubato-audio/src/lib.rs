@@ -1,3 +1,5 @@
+//! Audio driver abstraction and PCM sound playback.
+
 pub mod abstract_audio_driver;
 pub mod audio_driver;
 pub mod bms_loudness_analyzer;

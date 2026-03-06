@@ -1,3 +1,5 @@
+//! Song database access layer using SQLite for BMS song metadata.
+
 // Music download processor (merged from md-processor crate)
 pub mod md_processor;
 

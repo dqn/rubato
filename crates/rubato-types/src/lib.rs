@@ -1,5 +1,5 @@
-// Shared types extracted from beatoraja-core to break circular dependencies.
-// beatoraja-core, beatoraja-input, and beatoraja-audio all import from this crate.
+//! Shared type definitions, configuration structures, and trait interfaces
+//! for the rubato BMS player.
 
 // Stub types (downstream phase types that cannot be directly imported)
 pub mod stubs;

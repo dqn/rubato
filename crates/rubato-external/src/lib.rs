@@ -1,3 +1,5 @@
+//! External service integrations: score import, screenshots, webhooks.
+
 // beatoraja-external: External integrations (screenshot, webhook, BMS search, Discord, score import)
 
 // Discord RPC (merged from discord-rpc crate)

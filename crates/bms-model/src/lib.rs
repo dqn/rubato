@@ -1,3 +1,5 @@
+//! BMS/bmson/osu chart format parser and data model.
+
 pub mod bms_decoder;
 pub mod bms_generator;
 pub mod bms_model;

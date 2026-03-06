@@ -1,37 +1,43 @@
+//! Configuration UI views for audio, input, skin, and gameplay settings.
+
 pub mod launcher_ui;
 pub mod platform;
 pub mod state_factory;
 pub mod stubs;
+pub mod util;
+pub mod views;
 
 pub use launcher_ui::LauncherUi;
 pub use launcher_ui::{LauncherResult, run_launcher};
 pub use state_factory::LauncherStateFactory;
 
+// Backwards-compatible re-exports for moved modules
+
 // Utility types
-pub mod controller_config_view_model;
-pub mod editable_table_view;
-pub mod javafx_utils;
-pub mod numeric_spinner;
-pub mod song_data_view;
-pub mod spinner_cell;
+pub use util::controller_config_view_model;
+pub use util::editable_table_view;
+pub use util::javafx_utils;
+pub use util::numeric_spinner;
+pub use util::song_data_view;
+pub use util::spinner_cell;
 
 // Configuration views
-pub mod audio_configuration_view;
-pub mod discord_configuration_view;
-pub mod input_configuration_view;
-pub mod ir_configuration_view;
-pub mod music_select_configuration_view;
-pub mod stream_editor_view;
-pub mod trainer_view;
-pub mod video_configuration_view;
+pub use views::config::audio_configuration_view;
+pub use views::config::discord_configuration_view;
+pub use views::config::input_configuration_view;
+pub use views::config::ir_configuration_view;
+pub use views::config::music_select_configuration_view;
+pub use views::config::obs_configuration_view;
+pub use views::config::stream_editor_view;
+pub use views::config::trainer_view;
+pub use views::config::video_configuration_view;
 
 // Editor views
-pub mod course_editor_view;
-pub mod folder_editor_view;
-pub mod obs_configuration_view;
-pub mod table_editor_view;
+pub use views::editors::course_editor_view;
+pub use views::editors::folder_editor_view;
+pub use views::editors::table_editor_view;
 
 // Main views
-pub mod play_configuration_view;
-pub mod resource_configuration_view;
-pub mod skin_configuration_view;
+pub use views::play_configuration_view;
+pub use views::resource_configuration_view;
+pub use views::skin_configuration_view;

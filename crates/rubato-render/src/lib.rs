@@ -1,3 +1,5 @@
+//! GPU rendering pipeline using wgpu for skin-based visual output.
+
 pub mod blend;
 pub mod color;
 pub mod egui_integration;

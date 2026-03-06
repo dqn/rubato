@@ -1,3 +1,5 @@
+//! BMS difficulty table parser and manager.
+
 pub mod bms_table;
 pub mod bms_table_element;
 pub mod bms_table_manager;
