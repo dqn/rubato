@@ -123,9 +123,10 @@ mod tests {
     use super::*;
 
     fn score_with_clear(clear: i32) -> ScoreData {
-        let mut sd = ScoreData::default();
-        sd.clear = clear;
-        sd
+        ScoreData {
+            clear,
+            ..Default::default()
+        }
     }
 
     #[test]

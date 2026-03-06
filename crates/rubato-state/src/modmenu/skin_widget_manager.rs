@@ -1129,7 +1129,7 @@ mod tests {
 
     #[test]
     fn test_normalize_float_negative() {
-        assert_eq!(normalize_float(-3.14), "-3.14");
+        assert_eq!(normalize_float(-2.5), "-2.5");
     }
 
     // ---- WidgetTableColumn static tests ----

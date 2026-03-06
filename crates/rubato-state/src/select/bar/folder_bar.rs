@@ -183,9 +183,11 @@ mod tests {
 
     #[test]
     fn folder_bar_get_children_returns_folder_bars_when_no_songs() {
-        let mut folder = FolderData::default();
-        folder.title = "Sub Folder".to_string();
-        folder.path = "/test/path".to_string();
+        let folder = FolderData {
+            title: "Sub Folder".to_string(),
+            path: "/test/path".to_string(),
+            ..Default::default()
+        };
 
         let db = MockSongDb::new().with_folders("parent", "test_crc", vec![folder]);
 
@@ -211,9 +213,11 @@ mod tests {
         song.set_title("Song".to_string());
         song.set_sha256("sha1".to_string());
 
-        let mut folder = FolderData::default();
-        folder.title = "Folder".to_string();
-        folder.path = "/test".to_string();
+        let folder = FolderData {
+            title: "Folder".to_string(),
+            path: "/test".to_string(),
+            ..Default::default()
+        };
 
         let db = MockSongDb::new()
             .with_songs("parent", "crc1", vec![song])
@@ -259,9 +263,11 @@ mod tests {
         song.set_sha256("test_sha256".to_string());
         song.set_path("song_dir/file.bms".to_string());
 
-        let mut folder = FolderData::default();
-        folder.title = "bms".to_string();
-        folder.path = folder_path_from_db;
+        let folder = FolderData {
+            title: "bms".to_string(),
+            path: folder_path_from_db,
+            ..Default::default()
+        };
 
         let db = MockSongDb::new()
             // Root level: folder with parent "e2977170"

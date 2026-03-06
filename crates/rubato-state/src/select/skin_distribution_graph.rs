@@ -297,8 +297,10 @@ mod tests {
     fn test_prepare_folderlamp_disabled() {
         let mut graph = SkinDistributionGraph::new(0);
         let mut state = MockMainState::default();
-        let mut config = rubato_types::config::Config::default();
-        config.folderlamp = false;
+        let config = rubato_types::config::Config {
+            folderlamp: false,
+            ..Default::default()
+        };
         state.config = Some(config);
         graph.prepare(0, &state);
         assert!(!graph.draw);
@@ -308,8 +310,10 @@ mod tests {
     fn test_prepare_folderlamp_enabled() {
         let mut graph = SkinDistributionGraph::new(1);
         let mut state = MockMainState::default();
-        let mut config = rubato_types::config::Config::default();
-        config.folderlamp = true;
+        let config = rubato_types::config::Config {
+            folderlamp: true,
+            ..Default::default()
+        };
         state.config = Some(config);
         let mut dist = DistributionData::default();
         dist.ranks[0] = 2;

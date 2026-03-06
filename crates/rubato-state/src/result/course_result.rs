@@ -953,6 +953,7 @@ impl Default for CourseResult {
 // ============================================================
 
 // Tests for CourseResult
+#[allow(clippy::items_after_test_module)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1634,18 +1635,22 @@ mod tests {
     fn test_compute_avgjudge_with_zero_notes_returns_none() {
         // Division by zero guard: notes == 0 should not compute
         // The original code skips the assignment, leaving avgjudge at its default (i64::MAX)
-        let mut score = rubato_core::score_data::ScoreData::default();
-        score.total_duration = 1000;
-        score.notes = 0;
+        let mut score = rubato_core::score_data::ScoreData {
+            total_duration: 1000,
+            notes: 0,
+            ..Default::default()
+        };
         apply_avgjudge(&mut score);
         assert_eq!(score.avgjudge, i64::MAX); // unchanged from default
     }
 
     #[test]
     fn test_compute_avgjudge_with_nonzero_notes_updates_score() {
-        let mut score = rubato_core::score_data::ScoreData::default();
-        score.total_duration = 5000;
-        score.notes = 50;
+        let mut score = rubato_core::score_data::ScoreData {
+            total_duration: 5000,
+            notes: 50,
+            ..Default::default()
+        };
         apply_avgjudge(&mut score);
         assert_eq!(score.avgjudge, 100);
     }

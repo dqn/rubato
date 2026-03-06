@@ -370,13 +370,14 @@ mod tests {
 
     /// Create a ScoreData with specific exscore components and notes
     fn make_score(epg: i32, lpg: i32, egr: i32, lgr: i32, notes: i32) -> ScoreData {
-        let mut s = ScoreData::default();
-        s.epg = epg;
-        s.lpg = lpg;
-        s.egr = egr;
-        s.lgr = lgr;
-        s.notes = notes;
-        s
+        ScoreData {
+            epg,
+            lpg,
+            egr,
+            lgr,
+            notes,
+            ..Default::default()
+        }
     }
 
     // ---- compare_score: None score handling ----
@@ -422,8 +423,10 @@ mod tests {
 
     #[test]
     fn compare_duration_first_none_second_has_score() {
-        let mut score = ScoreData::default();
-        score.avgjudge = 100;
+        let score = ScoreData {
+            avgjudge: 100,
+            ..Default::default()
+        };
         let b1 = song_bar_no_score("A");
         let b2 = song_bar_with_score("B", score);
         assert_eq!(BarSorter::Duration.compare(&b1, &b2), Ordering::Greater);
@@ -431,8 +434,10 @@ mod tests {
 
     #[test]
     fn compare_duration_first_has_score_second_none() {
-        let mut score = ScoreData::default();
-        score.avgjudge = 100;
+        let score = ScoreData {
+            avgjudge: 100,
+            ..Default::default()
+        };
         let b1 = song_bar_with_score("A", score);
         let b2 = song_bar_no_score("B");
         assert_eq!(BarSorter::Duration.compare(&b1, &b2), Ordering::Less);
@@ -440,10 +445,14 @@ mod tests {
 
     #[test]
     fn compare_duration_both_have_scores() {
-        let mut s1 = ScoreData::default();
-        s1.avgjudge = 50;
-        let mut s2 = ScoreData::default();
-        s2.avgjudge = 100;
+        let s1 = ScoreData {
+            avgjudge: 50,
+            ..Default::default()
+        };
+        let s2 = ScoreData {
+            avgjudge: 100,
+            ..Default::default()
+        };
         let b1 = song_bar_with_score("A", s1);
         let b2 = song_bar_with_score("B", s2);
         assert_eq!(BarSorter::Duration.compare(&b1, &b2), Ordering::Less);
@@ -460,8 +469,10 @@ mod tests {
 
     #[test]
     fn compare_clear_first_none() {
-        let mut score = ScoreData::default();
-        score.clear = 5;
+        let score = ScoreData {
+            clear: 5,
+            ..Default::default()
+        };
         let b1 = song_bar_no_score("A");
         let b2 = song_bar_with_score("B", score);
         assert_eq!(BarSorter::Clear.compare(&b1, &b2), Ordering::Greater);
@@ -478,8 +489,10 @@ mod tests {
 
     #[test]
     fn compare_misscount_first_none() {
-        let mut score = ScoreData::default();
-        score.minbp = 10;
+        let score = ScoreData {
+            minbp: 10,
+            ..Default::default()
+        };
         let b1 = song_bar_no_score("A");
         let b2 = song_bar_with_score("B", score);
         assert_eq!(BarSorter::MissCount.compare(&b1, &b2), Ordering::Greater);
@@ -496,8 +509,10 @@ mod tests {
 
     #[test]
     fn compare_lastupdate_first_none() {
-        let mut score = ScoreData::default();
-        score.date = 1000;
+        let score = ScoreData {
+            date: 1000,
+            ..Default::default()
+        };
         let b1 = song_bar_no_score("A");
         let b2 = song_bar_with_score("B", score);
         assert_eq!(BarSorter::LastUpdate.compare(&b1, &b2), Ordering::Greater);
@@ -517,10 +532,14 @@ mod tests {
 
     #[test]
     fn compare_rival_clear_first_no_score_second_has_both() {
-        let mut score = ScoreData::default();
-        score.clear = 5;
-        let mut rival = ScoreData::default();
-        rival.clear = 3;
+        let score = ScoreData {
+            clear: 5,
+            ..Default::default()
+        };
+        let rival = ScoreData {
+            clear: 3,
+            ..Default::default()
+        };
         let b1 = song_bar_no_score("A");
         let mut b2 = song_bar_with_score("B", score);
         b2.set_rival_score(Some(rival));
@@ -533,10 +552,14 @@ mod tests {
     #[test]
     fn compare_rival_clear_first_has_score_but_no_rival() {
         let b1 = song_bar_with_score("A", make_score(10, 10, 5, 5, 100));
-        let mut score = ScoreData::default();
-        score.clear = 5;
-        let mut rival = ScoreData::default();
-        rival.clear = 3;
+        let score = ScoreData {
+            clear: 5,
+            ..Default::default()
+        };
+        let rival = ScoreData {
+            clear: 3,
+            ..Default::default()
+        };
         let mut b2 = song_bar_with_score("B", score);
         b2.set_rival_score(Some(rival));
         // b1 has score but no rival, so pair1 = None
@@ -548,17 +571,25 @@ mod tests {
 
     #[test]
     fn compare_rival_clear_both_have_pairs() {
-        let mut s1 = ScoreData::default();
-        s1.clear = 5;
-        let mut r1 = ScoreData::default();
-        r1.clear = 3;
+        let s1 = ScoreData {
+            clear: 5,
+            ..Default::default()
+        };
+        let r1 = ScoreData {
+            clear: 3,
+            ..Default::default()
+        };
         let mut b1 = song_bar_with_score("A", s1);
         b1.set_rival_score(Some(r1));
 
-        let mut s2 = ScoreData::default();
-        s2.clear = 4;
-        let mut r2 = ScoreData::default();
-        r2.clear = 4;
+        let s2 = ScoreData {
+            clear: 4,
+            ..Default::default()
+        };
+        let r2 = ScoreData {
+            clear: 4,
+            ..Default::default()
+        };
         let mut b2 = song_bar_with_score("B", s2);
         b2.set_rival_score(Some(r2));
 
