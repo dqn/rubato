@@ -110,7 +110,7 @@ impl SkinWidgetManager {
         let mut duplicated_skin_object_name_count: HashMap<String, i32> = HashMap::new();
 
         for skin_object in all_skin_objects {
-            let skin_object_name = skin_object.get_name().map(|s| s.to_string());
+            let skin_object_name = skin_object.name().map(|s| s.to_string());
             let dsts = skin_object.get_all_destination();
             let mut destinations: Vec<SkinWidgetDestination> = Vec::new();
 
@@ -689,7 +689,7 @@ impl Event {
         }
     }
 
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         match self {
             Event::ChangeSingleField { target_name, .. } => target_name,
             Event::ToggleVisible { target_name, .. } => target_name,
@@ -991,7 +991,7 @@ impl EventHistory {
     }
 
     pub fn push_event(&mut self, event: Event) {
-        let name = event.get_name().to_string();
+        let name = event.name().to_string();
         self.target_name_to_events
             .entry(name)
             .or_default()
@@ -1057,7 +1057,7 @@ impl EventHistory {
         // Rebuild target_name_to_events from event_stack
         self.target_name_to_events.clear();
         for event in &self.event_stack {
-            let name = event.get_name().to_string();
+            let name = event.name().to_string();
             self.target_name_to_events
                 .entry(name)
                 .or_default()

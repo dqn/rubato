@@ -36,36 +36,27 @@ fn e2e_select_to_decide_to_play_to_result() {
 
     // 1. Start at MusicSelect
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     // Render a frame to exercise the render lifecycle
     mc.render();
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     // 2. Transition to Decide
     mc.change_state(MainStateType::Decide);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Decide));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Decide));
 
     // 3. Transition to Play
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
     // 4. Transition to Result
     mc.change_state(MainStateType::Result);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
 
     // 5. Back to MusicSelect (normal game flow)
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 }
 
 // ---------------------------------------------------------------------------
@@ -77,25 +68,16 @@ fn e2e_select_to_play_to_course_result() {
     let mut mc = make_controller_with_factory();
 
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
     mc.change_state(MainStateType::CourseResult);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::CourseResult)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::CourseResult));
 
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 }
 
 // ---------------------------------------------------------------------------
@@ -107,19 +89,13 @@ fn e2e_select_to_config_and_back() {
     let mut mc = make_controller_with_factory();
 
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     mc.change_state(MainStateType::Config);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Config));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Config));
 
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 }
 
 #[test]
@@ -127,19 +103,13 @@ fn e2e_select_to_skin_config_and_back() {
     let mut mc = make_controller_with_factory();
 
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     mc.change_state(MainStateType::SkinConfig);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::SkinConfig));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::SkinConfig));
 
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 }
 
 // ---------------------------------------------------------------------------
@@ -158,10 +128,7 @@ fn e2e_lifecycle_across_transitions() {
     mc.pause();
     mc.resume();
     mc.resize(1920, 1080);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     // Transition to Play (shutdown old, create+prepare new)
     mc.change_state(MainStateType::Play);
@@ -171,12 +138,12 @@ fn e2e_lifecycle_across_transitions() {
     mc.pause();
     mc.resume();
     mc.resize(1280, 720);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
     // Transition to Result
     mc.change_state(MainStateType::Result);
     mc.render();
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
 }
 
 // ---------------------------------------------------------------------------
@@ -189,11 +156,11 @@ fn e2e_dispose_clears_all_state() {
 
     mc.change_state(MainStateType::MusicSelect);
     mc.render();
-    assert!(mc.get_current_state().is_some());
+    assert!(mc.current_state().is_some());
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
-    assert!(mc.get_current_state_type().is_none());
+    assert!(mc.current_state().is_none());
+    assert!(mc.current_state_type().is_none());
 }
 
 // ---------------------------------------------------------------------------
@@ -209,14 +176,11 @@ fn e2e_skip_decide_screen() {
     mc.set_state_factory(Box::new(LauncherStateFactory::new()));
 
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     // When skip_decide_screen is true, Decide creates Play instead
     mc.change_state(MainStateType::Decide);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 }
 
 // ---------------------------------------------------------------------------
@@ -228,17 +192,11 @@ fn e2e_same_state_transition_noop() {
     let mut mc = make_controller_with_factory();
 
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     // Transitioning to the same state should be a no-op
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 }
 
 // ---------------------------------------------------------------------------
@@ -267,7 +225,7 @@ fn e2e_all_state_types_reachable() {
             *state_type
         };
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(expected),
             "Failed to enter state {:?}",
             state_type
@@ -284,16 +242,13 @@ fn e2e_create_enters_initial_state() {
     let mut mc = make_controller_with_factory();
 
     // Before create(), no state is set
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 
     // create() should initialize and enter MusicSelect (no bmsfile)
     mc.create();
 
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
-    assert!(mc.get_sprite_batch().is_some());
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
+    assert!(mc.sprite_batch().is_some());
 }
 
 // ---------------------------------------------------------------------------
@@ -316,7 +271,7 @@ fn e2e_rapid_transitions_no_panic() {
     }
 
     // Should end on SkinConfig
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::SkinConfig));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::SkinConfig));
 }
 
 // ---------------------------------------------------------------------------

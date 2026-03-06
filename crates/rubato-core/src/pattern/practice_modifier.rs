@@ -43,7 +43,7 @@ impl PatternModifier for PracticeModifier {
         }
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -61,7 +61,7 @@ impl PatternModifier for PracticeModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 }
@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn new_defaults_to_assist_level() {
         let m = PracticeModifier::new(0, 0);
-        assert_eq!(m.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(m.assist_level(), AssistLevel::Assist);
     }
 
     // -- PatternModifier trait methods --
@@ -110,13 +110,13 @@ mod tests {
     fn set_assist_level() {
         let mut m = PracticeModifier::new(0, 0);
         m.set_assist_level(AssistLevel::None);
-        assert_eq!(m.get_assist_level(), AssistLevel::None);
+        assert_eq!(m.assist_level(), AssistLevel::None);
     }
 
     #[test]
     fn get_player_default() {
         let m = PracticeModifier::new(0, 0);
-        assert_eq!(m.get_player(), 0);
+        assert_eq!(m.player(), 0);
     }
 
     // -- Notes before start are moved to background --

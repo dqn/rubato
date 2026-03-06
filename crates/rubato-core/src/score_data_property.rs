@@ -282,19 +282,19 @@ impl ScoreDataProperty {
             .is_some_and(|g| g.len() == totalnotes as usize);
     }
 
-    pub fn get_now_score(&self) -> i32 {
+    pub fn now_score(&self) -> i32 {
         self.nowpoint
     }
 
-    pub fn get_now_ex_score(&self) -> i32 {
+    pub fn now_ex_score(&self) -> i32 {
         self.nowscore
     }
 
-    pub fn get_now_best_score(&self) -> i32 {
+    pub fn now_best_score(&self) -> i32 {
         self.nowbestscore
     }
 
-    pub fn get_now_rival_score(&self) -> i32 {
+    pub fn now_rival_score(&self) -> i32 {
         self.nowrivalscore
     }
 
@@ -310,79 +310,79 @@ impl ScoreDataProperty {
         self.bestrank[index]
     }
 
-    pub fn get_now_rate(&self) -> f32 {
+    pub fn now_rate(&self) -> f32 {
         self.nowrate
     }
 
-    pub fn get_now_rate_int(&self) -> i32 {
+    pub fn now_rate_int(&self) -> i32 {
         self.nowrate_int
     }
 
-    pub fn get_now_rate_after_dot(&self) -> i32 {
+    pub fn now_rate_after_dot(&self) -> i32 {
         self.nowrate_after_dot
     }
 
-    pub fn get_rival_rate_int(&self) -> i32 {
+    pub fn rival_rate_int(&self) -> i32 {
         self.rivalrate_int
     }
 
-    pub fn get_rival_rate_after_dot(&self) -> i32 {
+    pub fn rival_rate_after_dot(&self) -> i32 {
         self.rivalrate_after_dot
     }
 
-    pub fn get_rate(&self) -> f32 {
+    pub fn rate(&self) -> f32 {
         self.rate
     }
 
-    pub fn get_next_rank(&self) -> i32 {
+    pub fn next_rank(&self) -> i32 {
         self.nextrank
     }
 
-    pub fn get_rate_int(&self) -> i32 {
+    pub fn rate_int(&self) -> i32 {
         self.rate_int
     }
 
-    pub fn get_rate_after_dot(&self) -> i32 {
+    pub fn rate_after_dot(&self) -> i32 {
         self.rate_after_dot
     }
 
-    pub fn get_best_score(&self) -> i32 {
+    pub fn best_score(&self) -> i32 {
         self.bestscore
     }
 
-    pub fn get_best_score_rate(&self) -> f32 {
+    pub fn best_score_rate(&self) -> f32 {
         self.bestscorerate
     }
 
-    pub fn get_best_rate_int(&self) -> i32 {
+    pub fn best_rate_int(&self) -> i32 {
         self.bestrate_int
     }
 
-    pub fn get_best_rate_after_dot(&self) -> i32 {
+    pub fn best_rate_after_dot(&self) -> i32 {
         self.bestrate_after_dot
     }
 
-    pub fn get_now_best_score_rate(&self) -> f32 {
+    pub fn now_best_score_rate(&self) -> f32 {
         self.nowbestscorerate
     }
 
-    pub fn get_rival_score(&self) -> i32 {
+    pub fn rival_score(&self) -> i32 {
         self.rivalscore
     }
 
-    pub fn get_rival_score_rate(&self) -> f32 {
+    pub fn rival_score_rate(&self) -> f32 {
         self.rivalscorerate
     }
 
-    pub fn get_now_rival_score_rate(&self) -> f32 {
+    pub fn now_rival_score_rate(&self) -> f32 {
         self.nowrivalscorerate
     }
 
-    pub fn get_score_data(&self) -> Option<&ScoreData> {
+    pub fn score_data(&self) -> Option<&ScoreData> {
         self.score.as_ref()
     }
 
-    pub fn get_rival_score_data(&self) -> Option<&ScoreData> {
+    pub fn rival_score_data(&self) -> Option<&ScoreData> {
         self.rival.as_ref()
     }
 }

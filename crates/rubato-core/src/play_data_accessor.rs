@@ -95,12 +95,12 @@ impl PlayDataAccessor {
     }
 
     pub fn read_player_data(&self) -> Option<PlayerData> {
-        self.scoredb.as_ref()?.get_player_data()
+        self.scoredb.as_ref()?.player_data()
     }
 
     pub fn read_today_player_data(&self) -> Option<PlayerData> {
         let scoredb = self.scoredb.as_ref()?;
-        let mut pd = scoredb.get_player_datas(2);
+        let mut pd = scoredb.player_datas(2);
         if pd.len() > 1 {
             pd[0].playcount -= pd[1].playcount;
             pd[0].clear -= pd[1].clear;
@@ -130,7 +130,7 @@ impl PlayDataAccessor {
             Some(db) => db,
             None => return,
         };
-        let mut pd = match scoredb.get_player_data() {
+        let mut pd = match scoredb.player_data() {
             Some(p) => p,
             None => return,
         };
@@ -157,7 +157,7 @@ impl PlayDataAccessor {
 
     pub fn read_score_data_by_hash(&self, hash: &str, ln: bool, lnmode: i32) -> Option<ScoreData> {
         let scoredb = self.scoredb.as_ref()?;
-        scoredb.get_score_data(hash, if ln { lnmode } else { 0 })
+        scoredb.score_data(hash, if ln { lnmode } else { 0 })
     }
 
     pub fn read_score_datas(
@@ -167,12 +167,12 @@ impl PlayDataAccessor {
         lnmode: i32,
     ) {
         if let Some(scoredb) = &self.scoredb {
-            scoredb.get_score_datas_for_songs(collector, songs, lnmode);
+            scoredb.score_datas_for_songs(collector, songs, lnmode);
         }
     }
 
     pub fn read_score_datas_sql(&self, sql: &str) -> Option<Vec<ScoreData>> {
-        self.scoredb.as_ref()?.get_score_datas(sql)
+        self.scoredb.as_ref()?.score_datas(sql)
     }
 
     #[allow(clippy::too_many_arguments, clippy::field_reassign_with_default)]
@@ -192,7 +192,7 @@ impl PlayDataAccessor {
         };
 
         let mut score = scoredb
-            .get_score_data(hash, if contains_undefined_ln { lnmode } else { 0 })
+            .score_data(hash, if contains_undefined_ln { lnmode } else { 0 })
             .unwrap_or_else(|| {
                 let mut s = ScoreData::default();
                 s.mode = if contains_undefined_ln { lnmode } else { 0 };
@@ -321,7 +321,7 @@ impl PlayDataAccessor {
             + judge * 1000
             + gauge * 10000;
 
-        let mut score = scoredb.get_score_data(&hash, mode_val).unwrap_or_else(|| {
+        let mut score = scoredb.score_data(&hash, mode_val).unwrap_or_else(|| {
             let mut s = ScoreData::default();
             s.mode = mode_val;
             s
@@ -542,7 +542,7 @@ impl PlayDataAccessor {
         format!("{}{}{}{}replay", self.playerpath, sep, self.player, sep)
     }
 
-    pub fn get_scoredb(&self) -> Option<&ScoreDatabaseAccessor> {
+    pub fn scoredb(&self) -> Option<&ScoreDatabaseAccessor> {
         self.scoredb.as_ref()
     }
 
@@ -635,7 +635,7 @@ impl PlayDataAccessor {
             + hispeed * 100
             + judge * 1000
             + gauge * 10000;
-        self.scoredb.as_ref()?.get_score_data(&hash, mode_val)
+        self.scoredb.as_ref()?.score_data(&hash, mode_val)
     }
 
     /// Write score data for a course (delegates to write_score_data_for_course).
@@ -878,11 +878,7 @@ mod tests {
         assert_eq!(expected_mode, 11121, "mode formula verification");
 
         let hash: String = hashes.join("");
-        let score = accessor
-            .scoredb
-            .as_ref()
-            .unwrap()
-            .get_score_data(&hash, 11121);
+        let score = accessor.scoredb.as_ref().unwrap().score_data(&hash, 11121);
         assert!(
             score.is_some(),
             "score should exist with mode=11121 in the database"
@@ -908,7 +904,7 @@ mod tests {
         accessor.write_score_data_for_course(&newscore, hashes, 50, false, 2, 3, &[], true);
 
         let hash: String = hashes.join("");
-        let score = accessor.scoredb.as_ref().unwrap().get_score_data(&hash, 30);
+        let score = accessor.scoredb.as_ref().unwrap().score_data(&hash, 30);
         assert!(
             score.is_some(),
             "score should exist with mode=30 (ln disabled, option=3)"
@@ -953,7 +949,7 @@ mod tests {
             .scoredb
             .as_ref()
             .unwrap()
-            .get_score_data(&hash, expected_mode);
+            .score_data(&hash, expected_mode);
         assert!(
             score.is_some(),
             "score should exist with mode={}",
@@ -1220,7 +1216,7 @@ mod tests {
 
         // Insert two player data rows (most recent first = pd[0] in DESC order)
         // The set_player_data method uses today's date, so we insert manually.
-        let conn = scoredb.get_connection();
+        let conn = scoredb.connection();
 
         // Earlier snapshot (yesterday)
         conn.execute(
@@ -1266,7 +1262,7 @@ mod tests {
         let accessor = create_test_accessor(dir.path());
 
         let scoredb = accessor.scoredb.as_ref().unwrap();
-        let conn = scoredb.get_connection();
+        let conn = scoredb.connection();
 
         conn.execute(
             "INSERT INTO player (date, playcount, clear, epg, lpg, egr, lgr, egd, lgd, ebd, lbd, epr, lpr, ems, lms, playtime, maxcombo) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
@@ -1292,7 +1288,7 @@ mod tests {
         let accessor = create_test_accessor(dir.path());
 
         let scoredb = accessor.scoredb.as_ref().unwrap();
-        let conn = scoredb.get_connection();
+        let conn = scoredb.connection();
         conn.execute("DELETE FROM player", []).unwrap();
 
         let today = accessor.read_today_player_data();
@@ -1816,7 +1812,7 @@ mod tests {
             accessor.read_score_data_by_hash("hash", false, 0).is_none(),
             "null: read_score_data_by_hash"
         );
-        assert!(accessor.get_scoredb().is_none(), "null: get_scoredb");
+        assert!(accessor.scoredb().is_none(), "null: scoredb");
     }
 
     #[test]

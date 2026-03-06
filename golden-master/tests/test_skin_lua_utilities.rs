@@ -90,14 +90,14 @@ fn timer_observe_boolean_turns_off() {
 #[test]
 fn passive_timer_starts_off() {
     let state = PassiveTimerState::new();
-    assert_eq!(state.get_timer(), TIMER_OFF);
+    assert_eq!(state.timer(), TIMER_OFF);
 }
 
 #[test]
 fn passive_timer_turn_on() {
     let mut state = PassiveTimerState::new();
     state.turn_on(5000);
-    assert_eq!(state.get_timer(), 5000);
+    assert_eq!(state.timer(), 5000);
 }
 
 #[test]
@@ -105,7 +105,7 @@ fn passive_timer_turn_on_idempotent() {
     let mut state = PassiveTimerState::new();
     state.turn_on(5000);
     state.turn_on(8000); // Should not change
-    assert_eq!(state.get_timer(), 5000);
+    assert_eq!(state.timer(), 5000);
 }
 
 #[test]
@@ -113,7 +113,7 @@ fn passive_timer_turn_on_reset() {
     let mut state = PassiveTimerState::new();
     state.turn_on(5000);
     state.turn_on_reset(8000); // Should reset
-    assert_eq!(state.get_timer(), 8000);
+    assert_eq!(state.timer(), 8000);
 }
 
 #[test]
@@ -121,7 +121,7 @@ fn passive_timer_turn_off() {
     let mut state = PassiveTimerState::new();
     state.turn_on(5000);
     state.turn_off();
-    assert_eq!(state.get_timer(), TIMER_OFF);
+    assert_eq!(state.timer(), TIMER_OFF);
 }
 
 // ===========================================================================

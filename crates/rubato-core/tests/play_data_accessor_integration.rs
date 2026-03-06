@@ -50,7 +50,7 @@ fn new_with_valid_config() {
     let accessor = PlayDataAccessor::new(&config);
 
     assert!(
-        accessor.get_scoredb().is_some(),
+        accessor.scoredb().is_some(),
         "scoredb should be Some for a valid config"
     );
 }
@@ -128,7 +128,7 @@ fn new_creates_player_directory_when_missing() {
 
     // All databases should be successfully opened
     assert!(
-        accessor.get_scoredb().is_some(),
+        accessor.scoredb().is_some(),
         "scoredb should be Some when directory is auto-created"
     );
 
@@ -153,7 +153,7 @@ fn nonexistent_dir_returns_none_dbs() {
     let accessor = PlayDataAccessor::new(&config);
 
     assert!(
-        accessor.get_scoredb().is_none(),
+        accessor.scoredb().is_none(),
         "scoredb should be None when directory does not exist"
     );
 }
@@ -167,8 +167,8 @@ fn null_accessor() {
         "null accessor read_player_data should return None"
     );
     assert!(
-        accessor.get_scoredb().is_none(),
-        "null accessor get_scoredb should return None"
+        accessor.scoredb().is_none(),
+        "null accessor scoredb should return None"
     );
 }
 

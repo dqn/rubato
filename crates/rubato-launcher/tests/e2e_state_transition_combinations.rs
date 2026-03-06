@@ -65,23 +65,20 @@ fn e2e_practice_mode_to_result() {
 
     // Enter Play state (practice mode is a variant of Play state)
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     mc.render();
 
     // Transition from Play to Result (practice session ends)
     mc.change_state(MainStateType::Result);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
     mc.render();
 
     // Return to MusicSelect
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 #[test]
@@ -100,7 +97,7 @@ fn e2e_practice_mode_lifecycle_with_render() {
 
     // Enter Play state from practice
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
     // Exercise lifecycle in practice mode
     mc.render();
@@ -111,11 +108,11 @@ fn e2e_practice_mode_lifecycle_with_render() {
 
     // Practice -> Result
     mc.change_state(MainStateType::Result);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
     mc.render();
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 #[test]
@@ -134,18 +131,15 @@ fn e2e_practice_mode_back_to_select_skipping_result() {
 
     // Practice Play -> skip Result -> back to MusicSelect
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     mc.render();
 
     // Directly return to MusicSelect (practice abort / cancel)
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 // ---------------------------------------------------------------------------
@@ -178,11 +172,11 @@ fn e2e_course_play_multi_song_sequence() {
 
     // Select -> Decide -> Play (first song in course)
     mc.change_state(MainStateType::Decide);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Decide));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Decide));
     mc.render();
 
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     mc.render();
 
     // First song finishes -> transition to Play for second song
@@ -198,7 +192,7 @@ fn e2e_course_play_multi_song_sequence() {
 
     // Force a new Play state (simulates second song transition)
     mc.change_state(MainStateType::Result);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
     mc.render();
 
     // Transition to Decide to restore the PlayerResource from Result,
@@ -206,12 +200,12 @@ fn e2e_course_play_multi_song_sequence() {
     // (Result returns the resource via take_player_resource_box during
     // transition_to_state, making it available on the controller again.)
     mc.change_state(MainStateType::Decide);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Decide));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Decide));
     mc.render();
 
     // Back to Play for third song (Decide returns resource during transition)
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     // Resource is now back on the controller after Decide returned it.
     {
         let resource = mc
@@ -224,21 +218,15 @@ fn e2e_course_play_multi_song_sequence() {
 
     // Course ends -> CourseResult
     mc.change_state(MainStateType::CourseResult);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::CourseResult)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::CourseResult));
     mc.render();
 
     // Back to MusicSelect
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 #[test]
@@ -260,7 +248,7 @@ fn e2e_course_play_to_course_result_with_renders() {
 
     // Play song 1 with sustained rendering
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     for _ in 0..5 {
         mc.render();
     }
@@ -274,23 +262,20 @@ fn e2e_course_play_to_course_result_with_renders() {
     }
     mc.change_state(MainStateType::Result);
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     for _ in 0..5 {
         mc.render();
     }
 
     // CourseResult with sustained rendering
     mc.change_state(MainStateType::CourseResult);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::CourseResult)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::CourseResult));
     for _ in 0..5 {
         mc.render();
     }
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 #[test]
@@ -312,11 +297,9 @@ fn e2e_course_data_cleared_after_course_result() {
 
     // Verify course data is set
     {
-        let resource = mc
-            .get_player_resource()
-            .expect("PlayerResource should exist");
+        let resource = mc.player_resource().expect("PlayerResource should exist");
         assert!(
-            resource.get_course_data().is_some(),
+            resource.course_data().is_some(),
             "Course data should be set before play"
         );
     }
@@ -342,11 +325,9 @@ fn e2e_course_data_cleared_after_course_result() {
 
     // Verify course data is cleared
     {
-        let resource = mc
-            .get_player_resource()
-            .expect("PlayerResource should exist");
+        let resource = mc.player_resource().expect("PlayerResource should exist");
         assert!(
-            resource.get_course_data().is_none(),
+            resource.course_data().is_none(),
             "Course data should be cleared after course result"
         );
     }
@@ -366,33 +347,27 @@ fn e2e_transitions_without_bms_data() {
 
     // Transition through all gameplay states without loading any BMS file
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
     mc.render();
 
     mc.change_state(MainStateType::Decide);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Decide));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Decide));
     mc.render();
 
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     mc.render();
 
     mc.change_state(MainStateType::Result);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
     mc.render();
 
     mc.change_state(MainStateType::CourseResult);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::CourseResult)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::CourseResult));
     mc.render();
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 #[test]
@@ -403,22 +378,19 @@ fn e2e_transitions_without_create() {
     let mut mc = make_controller_with_factory();
 
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     mc.change_state(MainStateType::Config);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Config));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Config));
 
     mc.change_state(MainStateType::SkinConfig);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::SkinConfig));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::SkinConfig));
 
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 #[test]
@@ -431,22 +403,19 @@ fn e2e_lifecycle_after_dispose_and_reinitialize() {
     mc.change_state(MainStateType::Play);
     mc.render();
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 
     // Second lifecycle (re-create after dispose)
     mc.create();
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
     mc.render();
 
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     mc.render();
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 #[test]
@@ -473,7 +442,7 @@ fn e2e_render_pause_resume_on_all_states_without_bms() {
             *state_type
         };
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(expected),
             "Failed to enter state {:?}",
             state_type
@@ -487,7 +456,7 @@ fn e2e_render_pause_resume_on_all_states_without_bms() {
         mc.render();
 
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(expected),
             "State should remain {:?} after lifecycle methods",
             expected
@@ -495,7 +464,7 @@ fn e2e_render_pause_resume_on_all_states_without_bms() {
     }
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 #[test]
@@ -508,24 +477,21 @@ fn e2e_config_screens_with_default_config() {
     mc.render();
 
     mc.change_state(MainStateType::Config);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Config));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Config));
     mc.render();
     mc.render();
 
     mc.change_state(MainStateType::SkinConfig);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::SkinConfig));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::SkinConfig));
     mc.render();
     mc.render();
 
     mc.change_state(MainStateType::Config);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Config));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Config));
     mc.render();
 
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     mc.dispose();
 }
@@ -542,7 +508,7 @@ fn e2e_rapid_select_decide_play_select_cycle() {
     for iteration in 0..10 {
         mc.change_state(MainStateType::MusicSelect);
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::MusicSelect),
             "iteration {} MusicSelect failed",
             iteration
@@ -550,7 +516,7 @@ fn e2e_rapid_select_decide_play_select_cycle() {
 
         mc.change_state(MainStateType::Decide);
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::Decide),
             "iteration {} Decide failed",
             iteration
@@ -558,7 +524,7 @@ fn e2e_rapid_select_decide_play_select_cycle() {
 
         mc.change_state(MainStateType::Play);
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::Play),
             "iteration {} Play failed",
             iteration
@@ -568,10 +534,7 @@ fn e2e_rapid_select_decide_play_select_cycle() {
     // Should still be functional after rapid cycling
     mc.change_state(MainStateType::MusicSelect);
     mc.render();
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect)
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
     mc.dispose();
 }
@@ -585,7 +548,7 @@ fn e2e_rapid_select_decide_play_result_select_cycle_with_render() {
         mc.change_state(MainStateType::MusicSelect);
         mc.render();
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::MusicSelect),
             "iteration {} MusicSelect failed",
             iteration
@@ -594,7 +557,7 @@ fn e2e_rapid_select_decide_play_result_select_cycle_with_render() {
         mc.change_state(MainStateType::Decide);
         mc.render();
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::Decide),
             "iteration {} Decide failed",
             iteration
@@ -603,7 +566,7 @@ fn e2e_rapid_select_decide_play_result_select_cycle_with_render() {
         mc.change_state(MainStateType::Play);
         mc.render();
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::Play),
             "iteration {} Play failed",
             iteration
@@ -612,7 +575,7 @@ fn e2e_rapid_select_decide_play_result_select_cycle_with_render() {
         mc.change_state(MainStateType::Result);
         mc.render();
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::Result),
             "iteration {} Result failed",
             iteration
@@ -620,7 +583,7 @@ fn e2e_rapid_select_decide_play_result_select_cycle_with_render() {
     }
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 #[test]
@@ -630,14 +593,14 @@ fn e2e_rapid_play_result_alternation() {
 
     for _ in 0..20 {
         mc.change_state(MainStateType::Play);
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
         mc.change_state(MainStateType::Result);
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
     }
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 #[test]
@@ -662,7 +625,7 @@ fn e2e_rapid_full_cycle_with_bms_data() {
         mc.change_state(MainStateType::Decide);
         mc.render();
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::Decide),
             "iteration {} Decide failed",
             iteration
@@ -671,7 +634,7 @@ fn e2e_rapid_full_cycle_with_bms_data() {
         mc.change_state(MainStateType::Play);
         mc.render();
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::Play),
             "iteration {} Play failed",
             iteration
@@ -680,7 +643,7 @@ fn e2e_rapid_full_cycle_with_bms_data() {
         mc.change_state(MainStateType::Result);
         mc.render();
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::Result),
             "iteration {} Result failed",
             iteration
@@ -689,7 +652,7 @@ fn e2e_rapid_full_cycle_with_bms_data() {
         mc.change_state(MainStateType::MusicSelect);
         mc.render();
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::MusicSelect),
             "iteration {} MusicSelect failed",
             iteration
@@ -697,7 +660,7 @@ fn e2e_rapid_full_cycle_with_bms_data() {
     }
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 #[test]
@@ -738,10 +701,10 @@ fn e2e_rapid_config_transitions_interleaved_with_gameplay() {
     }
 
     // Should end on Result
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 #[test]
@@ -768,7 +731,7 @@ fn e2e_dispose_during_mid_cycle() {
             *dispose_at
         };
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(expected),
             "Failed to enter {:?} before dispose",
             dispose_at
@@ -776,12 +739,12 @@ fn e2e_dispose_during_mid_cycle() {
 
         mc.dispose();
         assert!(
-            mc.get_current_state().is_none(),
+            mc.current_state().is_none(),
             "State should be None after dispose at {:?}",
             dispose_at
         );
         assert!(
-            mc.get_current_state_type().is_none(),
+            mc.current_state_type().is_none(),
             "State type should be None after dispose at {:?}",
             dispose_at
         );

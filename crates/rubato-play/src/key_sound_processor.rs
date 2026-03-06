@@ -19,7 +19,7 @@ pub struct BgNoteCommand {
 
 /// Shared state between the BG autoplay thread and the main thread.
 struct BgShared {
-    /// Current play time in microseconds (`get_now_micro_time_for_id(TIMER_PLAY)`).
+    /// Current play time in microseconds (`now_micro_time_for_id(TIMER_PLAY)`).
     /// Updated by the main thread each frame.
     play_time: AtomicI64,
     /// Stop flag + condvar for interruptible sleep.
@@ -152,7 +152,7 @@ impl KeySoundProcessor {
     /// Update the current play time for the BG autoplay thread.
     ///
     /// Should be called each frame from the main render loop with the value of
-    /// `timer.get_now_micro_time_for_id(TIMER_PLAY)`.
+    /// `timer.now_micro_time_for_id(TIMER_PLAY)`.
     pub fn update_play_time(&self, time: i64) {
         if let Some(ref handle) = self.handle {
             handle.shared.play_time.store(time, Ordering::Release);

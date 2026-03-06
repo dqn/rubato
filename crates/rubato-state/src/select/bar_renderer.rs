@@ -586,7 +586,7 @@ impl BarRenderer {
                 if let Some(gb) = sd.as_grade_bar()
                     && gb.exists_all_songs()
                 {
-                    for song in gb.get_song_datas() {
+                    for song in gb.song_datas() {
                         flag |= song.feature;
                     }
                 }
@@ -807,7 +807,7 @@ mod tests {
     }
 
     impl MainState for MockMainState {
-        fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             &self.timer
         }
         fn get_offset_value(&self, _id: i32) -> Option<&SkinOffset> {

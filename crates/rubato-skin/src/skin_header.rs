@@ -69,7 +69,7 @@ impl SkinHeader {
         Self::default()
     }
 
-    pub fn get_skin_type(&self) -> Option<&SkinType> {
+    pub fn skin_type(&self) -> Option<&SkinType> {
         self.mode.as_ref()
     }
 
@@ -77,7 +77,7 @@ impl SkinHeader {
         self.mode = Some(mode);
     }
 
-    pub fn get_name(&self) -> Option<&str> {
+    pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
     }
 
@@ -307,7 +307,7 @@ impl SkinConfigProperty {
         &self.file
     }
 
-    pub fn get_offset(&self) -> &[SkinConfigOffsetEntry] {
+    pub fn offset(&self) -> &[SkinConfigOffsetEntry] {
         &self.offset
     }
 }
@@ -471,7 +471,7 @@ impl CustomOffset {
         }
     }
 
-    pub fn get_offset(&self) -> Option<&SkinConfigOffset> {
+    pub fn offset(&self) -> Option<&SkinConfigOffset> {
         self.offset.as_ref()
     }
 }

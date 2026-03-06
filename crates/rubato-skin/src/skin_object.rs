@@ -683,7 +683,7 @@ impl SkinObjectData {
         }
 
         if self.fixr.is_none() {
-            self.get_rate();
+            self.rate();
             if self.dst.is_empty() {
                 self.draw = false;
                 return;
@@ -753,7 +753,7 @@ impl SkinObjectData {
             }
             return;
         }
-        self.get_rate();
+        self.rate();
         if self.dst.is_empty() {
             return;
         }
@@ -803,7 +803,7 @@ impl SkinObjectData {
             }
             return;
         }
-        self.get_rate();
+        self.rate();
         if self.dst.is_empty() {
             return;
         }
@@ -820,7 +820,7 @@ impl SkinObjectData {
         }
     }
 
-    fn get_rate(&mut self) {
+    fn rate(&mut self) {
         if self.rate != -1.0 {
             return;
         }
@@ -889,8 +889,8 @@ impl SkinObjectData {
         self.region.x += offset_x;
         self.region.y += offset_y;
         if let Some(ref mouse_rect) = self.mouse_rect {
-            let mx = state.get_main().get_input_processor().get_mouse_x() - self.region.x;
-            let my = state.get_main().get_input_processor().get_mouse_y() - self.region.y;
+            let mx = state.get_main().input_processor().get_mouse_x() - self.region.x;
+            let my = state.get_main().input_processor().get_mouse_y() - self.region.y;
             if !mouse_rect.contains(mx, my) {
                 self.draw = false;
                 return;
@@ -1176,7 +1176,7 @@ impl SkinObjectData {
         self.mouse_rect = Some(Rectangle::new(x2, y2, w2, h2));
     }
 
-    pub fn get_name(&self) -> Option<&str> {
+    pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
     }
 
@@ -1728,12 +1728,12 @@ mod tests {
 
     #[test]
     fn test_skin_object_data_empty_dst_does_not_panic() {
-        // Regression: get_rate() panicked on `self.dst.len() - 1` when dst is empty.
+        // Regression: rate() panicked on `self.dst.len() - 1` when dst is empty.
         let mut data = SkinObjectData::new();
         assert!(data.dst.is_empty());
 
         let state = crate::test_helpers::MockMainState::default();
-        // prepare() calls get_rate(), prepare_color(), prepare_angle() — all must survive empty dst.
+        // prepare() calls rate(), prepare_color(), prepare_angle() — all must survive empty dst.
         data.prepare(0, &state);
 
         // With empty dst, draw should remain false (no destination to render).

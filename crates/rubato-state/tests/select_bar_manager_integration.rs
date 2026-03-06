@@ -81,7 +81,7 @@ fn init_creates_default_random_folder() {
 
     // random/default.json likely missing in test environment; default folder is created
     assert!(
-        !manager.get_tables().is_empty() || manager.courses.is_some(),
+        !manager.tables().is_empty() || manager.courses.is_some(),
         "init() should set up courses even without table files"
     );
 }

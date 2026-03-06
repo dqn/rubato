@@ -118,7 +118,7 @@ impl Random {
         &[Random::Identity, Random::Battle]
     }
 
-    pub fn get_random(id: i32, mode: &Mode) -> Random {
+    pub fn from_id(id: i32, mode: &Mode) -> Random {
         let randoms = match mode {
             Mode::POPN_5K | Mode::POPN_9K => Random::option_pms(),
             _ => Random::option_general(),
@@ -273,43 +273,43 @@ mod tests {
         assert_eq!(Random::option_single(), &[Random::Identity, Random::Battle]);
     }
 
-    // -- get_random --
+    // -- random --
 
     #[test]
     fn get_random_id0_is_identity_for_beat7k() {
-        assert_eq!(Random::get_random(0, &Mode::BEAT_7K), Random::Identity);
+        assert_eq!(Random::from_id(0, &Mode::BEAT_7K), Random::Identity);
     }
 
     #[test]
     fn get_random_id1_is_mirror_for_beat7k() {
-        assert_eq!(Random::get_random(1, &Mode::BEAT_7K), Random::Mirror);
+        assert_eq!(Random::from_id(1, &Mode::BEAT_7K), Random::Mirror);
     }
 
     #[test]
     fn get_random_out_of_range_returns_identity() {
-        assert_eq!(Random::get_random(100, &Mode::BEAT_7K), Random::Identity);
+        assert_eq!(Random::from_id(100, &Mode::BEAT_7K), Random::Identity);
     }
 
     #[test]
     fn get_random_negative_id_returns_identity() {
-        assert_eq!(Random::get_random(-1, &Mode::BEAT_7K), Random::Identity);
+        assert_eq!(Random::from_id(-1, &Mode::BEAT_7K), Random::Identity);
     }
 
     #[test]
     fn get_random_uses_pms_for_popn() {
         // PMS option_pms()[4] = SRandomNoThreshold
         assert_eq!(
-            Random::get_random(4, &Mode::POPN_9K),
+            Random::from_id(4, &Mode::POPN_9K),
             Random::SRandomNoThreshold
         );
         // General option_general()[4] = SRandom
-        assert_eq!(Random::get_random(4, &Mode::BEAT_7K), Random::SRandom);
+        assert_eq!(Random::from_id(4, &Mode::BEAT_7K), Random::SRandom);
     }
 
     #[test]
     fn get_random_uses_pms_for_popn_5k() {
         assert_eq!(
-            Random::get_random(4, &Mode::POPN_5K),
+            Random::from_id(4, &Mode::POPN_5K),
             Random::SRandomNoThreshold
         );
     }
@@ -317,7 +317,7 @@ mod tests {
     #[test]
     fn get_random_all_general_ids_valid() {
         for i in 0..10 {
-            let r = Random::get_random(i, &Mode::BEAT_7K);
+            let r = Random::from_id(i, &Mode::BEAT_7K);
             assert_eq!(r, Random::option_general()[i as usize]);
         }
     }
@@ -325,7 +325,7 @@ mod tests {
     #[test]
     fn get_random_all_pms_ids_valid() {
         for i in 0..10 {
-            let r = Random::get_random(i, &Mode::POPN_9K);
+            let r = Random::from_id(i, &Mode::POPN_9K);
             assert_eq!(r, Random::option_pms()[i as usize]);
         }
     }

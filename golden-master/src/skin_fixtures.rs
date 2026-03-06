@@ -98,7 +98,7 @@ pub fn snapshot_from_skin(skin: &Skin) -> SkinSnapshot {
     let object_snapshots: Vec<ObjectSnapshot> = objects.iter().map(object_snapshot).collect();
 
     SkinSnapshot {
-        name: skin.header.get_name().unwrap_or_default().to_string(),
+        name: skin.header.name().unwrap_or_default().to_string(),
         resolution_w: skin.get_width(),
         resolution_h: skin.get_height(),
         option_count: skin.header.get_custom_options().len(),

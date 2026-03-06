@@ -131,7 +131,7 @@ pub trait MainState {
 
     fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
         let score = &self.main_state_data().score;
-        if let Some(sd) = score.get_score_data() {
+        if let Some(sd) = score.score_data() {
             sd.judge_count(judge, fast)
         } else {
             0
@@ -144,7 +144,7 @@ pub trait MainState {
         None
     }
 
-    fn get_sound(&self, _sound: SoundType) -> Option<String> {
+    fn sound(&self, _sound: SoundType) -> Option<String> {
         // Default no-op — concrete states override to delegate to MainControllerAccess
         None
     }

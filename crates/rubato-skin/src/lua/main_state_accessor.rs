@@ -113,7 +113,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let timer_func = lua.create_function(move |_, id: i32| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_timer().micro_timer(id))
+                Ok(state.timer().micro_timer(id))
             })?;
             table.set("timer", timer_func)?;
 
@@ -124,7 +124,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let time_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_timer().now_micro_time())
+                Ok(state.timer().now_micro_time())
             })?;
             table.set("time", time_func)?;
 
@@ -200,7 +200,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let rate_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().get_now_rate() as f64)
+                Ok(state.get_score_data_property().now_rate() as f64)
             })?;
             table.set("rate", rate_func)?;
 
@@ -208,7 +208,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let exscore_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().get_now_ex_score() as f64)
+                Ok(state.get_score_data_property().now_ex_score() as f64)
             })?;
             table.set("exscore", exscore_func)?;
 
@@ -216,7 +216,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let rate_best_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().get_now_best_score_rate() as f64)
+                Ok(state.get_score_data_property().now_best_score_rate() as f64)
             })?;
             table.set("rate_best", rate_best_func)?;
 
@@ -224,7 +224,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let exscore_best_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().get_best_score() as f64)
+                Ok(state.get_score_data_property().best_score() as f64)
             })?;
             table.set("exscore_best", exscore_best_func)?;
 
@@ -232,7 +232,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let rate_rival_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().get_rival_score_rate() as f64)
+                Ok(state.get_score_data_property().rival_score_rate() as f64)
             })?;
             table.set("rate_rival", rate_rival_func)?;
 
@@ -240,7 +240,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let exscore_rival_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().get_rival_score() as f64)
+                Ok(state.get_score_data_property().rival_score() as f64)
             })?;
             table.set("exscore_rival", exscore_rival_func)?;
 
@@ -508,7 +508,7 @@ mod tests {
     }
 
     impl MainState for LuaTestState {
-        fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             &self.timer
         }
 

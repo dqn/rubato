@@ -868,7 +868,7 @@ struct ReplayEvent(i32);
 impl Event for ReplayEvent {
     fn exec(&self, state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
         if state.is_music_selector()
-            && let Some(mode) = BMSPlayerMode::get_replay_mode(self.0)
+            && let Some(mode) = BMSPlayerMode::replay_mode(self.0)
         {
             state.select_song(mode.clone());
         }
@@ -1559,7 +1559,7 @@ mod tests {
     }
 
     impl MainState for TestMainState {
-        fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             &self.timer
         }
         fn get_offset_value(&self, _id: i32) -> Option<&SkinOffset> {

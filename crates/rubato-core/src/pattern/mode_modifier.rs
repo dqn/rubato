@@ -58,7 +58,7 @@ impl PatternModifier for ModeModifier {
                     hnotes.push(tl.hidden_note(i as i32).cloned());
                 }
 
-                let keys = PatternModifierBase::get_keys_static(&after_mode, 0, true);
+                let keys = PatternModifierBase::keys_static(&after_mode, 0, true);
                 let random = if let Some(alg) = algorithm {
                     if !keys.is_empty() {
                         alg.modify(
@@ -119,7 +119,7 @@ impl PatternModifier for ModeModifier {
         }
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -137,12 +137,12 @@ impl PatternModifier for ModeModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 }
 
-// get_keys_static is defined in lane_shuffle_modifier.rs
+// keys_static is defined in lane_shuffle_modifier.rs
 
 #[derive(Clone, Copy)]
 enum Algorithm {
@@ -622,7 +622,7 @@ mod tests {
     fn mode_modifier_new_sets_assist_light() {
         let config = PlayerConfig::default();
         let m = ModeModifier::new(Mode::BEAT_7K, Mode::POPN_9K, config);
-        assert_eq!(m.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(m.assist_level(), AssistLevel::LightAssist);
     }
 
     #[test]
@@ -646,7 +646,7 @@ mod tests {
     fn mode_modifier_get_player() {
         let config = PlayerConfig::default();
         let m = ModeModifier::new(Mode::BEAT_7K, Mode::POPN_9K, config);
-        assert_eq!(m.get_player(), 0);
+        assert_eq!(m.player(), 0);
     }
 
     // -- ModeModifier::modify changes model mode --

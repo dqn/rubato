@@ -55,7 +55,7 @@ struct QueuedControllerAccess {
 }
 
 fn ensure_controller_ranking_cache(controller: &mut MainController) {
-    if controller.get_ranking_data_cache().is_none() {
+    if controller.ranking_data_cache().is_none() {
         controller.set_ranking_data_cache(Box::new(RankingDataCache::new()));
     }
 }
@@ -66,8 +66,8 @@ impl QueuedControllerAccess {
         commands: MainControllerCommandQueue,
     ) -> Self {
         ensure_controller_ranking_cache(controller);
-        let config = controller.get_config().clone();
-        let player_config = controller.get_player_config().clone();
+        let config = controller.config().clone();
+        let player_config = controller.player_config().clone();
         let ir_connection = controller.ir_connection_any().and_then(|any| {
             any.downcast_ref::<Arc<dyn IRConnection + Send + Sync>>()
                 .cloned()
@@ -76,7 +76,7 @@ impl QueuedControllerAccess {
             .filter_map(|i| controller.rival_information(i))
             .collect();
         let ranking_data_cache = controller
-            .get_ranking_data_cache()
+            .ranking_data_cache()
             .map(|cache| cache.clone_box())
             .unwrap_or_else(|| Box::new(RankingDataCache::new()));
 
@@ -150,7 +150,7 @@ impl MainControllerAccess for QueuedControllerAccess {
     }
 
     fn sound_path(&self, sound: &SoundType) -> Option<String> {
-        self.sound.get_sound(sound).cloned()
+        self.sound.sound(sound).cloned()
     }
 
     fn play_audio_path(&mut self, path: &str, volume: f32, loop_play: bool) {
@@ -451,8 +451,8 @@ impl MainState for SharedMusicSelectorState {
         self.with_selector(|selector| selector.dispose());
     }
 
-    fn get_sound(&self, sound: SoundType) -> Option<String> {
-        self.selector.lock().unwrap().get_sound(sound)
+    fn sound(&self, sound: SoundType) -> Option<String> {
+        self.selector.lock().unwrap().sound(sound)
     }
 
     fn play_sound_loop(&mut self, sound: SoundType, loop_sound: bool) {
@@ -551,7 +551,7 @@ impl StateFactory for LauncherStateFactory {
                 // Java: selector = new MusicSelector(this, songUpdated);
                 // If a shared selector exists (created for StreamController), use it
                 // so stream request bars appear in the select screen.
-                if let Some(shared) = controller.get_shared_music_selector()
+                if let Some(shared) = controller.shared_music_selector()
                     && let Some(arc) = shared.downcast_ref::<Arc<Mutex<MusicSelector>>>()
                 {
                     let wrapper = SharedMusicSelectorState::new(Arc::clone(arc));
@@ -563,7 +563,7 @@ impl StateFactory for LauncherStateFactory {
                 // Fallback: create a standalone selector (no stream controller).
                 // Open a separate SQLite connection for the selector (same pattern
                 // as download processors in main.rs).
-                let config = controller.get_config();
+                let config = controller.config();
                 let mut selector = match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
                     &config.songpath,
                     &config.bmsroot,
@@ -578,7 +578,7 @@ impl StateFactory for LauncherStateFactory {
                 let command_queue = controller.controller_command_queue();
                 let mc_access = QueuedControllerAccess::from_controller(controller, command_queue);
                 selector.set_main_controller(Box::new(mc_access));
-                selector.set_player_config(controller.get_player_config().clone());
+                selector.set_player_config(controller.player_config().clone());
                 Some(StateCreateResult {
                     state: Box::new(selector),
                     target_score: None,
@@ -611,12 +611,12 @@ impl StateFactory for LauncherStateFactory {
             MainStateType::Play => {
                 // Java: new BMSPlayer(this, resource)
                 // Get model from PlayerResource, fall back to default
-                let resource = controller.get_player_resource();
+                let resource = controller.player_resource();
                 let model = resource
-                    .and_then(|r| r.get_bms_model())
+                    .and_then(|r| r.bms_model())
                     .cloned()
                     .unwrap_or_default();
-                let song_resource_gen = controller.get_config().song_resource_gen;
+                let song_resource_gen = controller.config().song_resource_gen;
                 let mut player = BMSPlayer::new_with_resource_gen(model.clone(), song_resource_gen);
 
                 // Reuse BGAProcessor from PlayerResource to preserve texture cache between plays.
@@ -628,63 +628,63 @@ impl StateFactory for LauncherStateFactory {
                 }
 
                 // Wire player config
-                player.set_player_config(controller.get_player_config().clone());
+                player.set_player_config(controller.player_config().clone());
 
                 // Wire course mode flag
-                let is_course_mode = resource.and_then(|r| r.get_course_data()).is_some();
+                let is_course_mode = resource.and_then(|r| r.course_data()).is_some();
                 player.set_course_mode(is_course_mode);
 
                 // Wire play mode from PlayerResource
-                if let Some(mode) = resource.and_then(|r| r.get_play_mode()).cloned() {
+                if let Some(mode) = resource.and_then(|r| r.play_mode()).cloned() {
                     player.set_play_mode(mode);
                 }
 
                 // Wire chart option (chart replication / rival replay)
-                if let Some(chart_opt) = resource.and_then(|r| r.get_chart_option()).cloned() {
+                if let Some(chart_opt) = resource.and_then(|r| r.chart_option()).cloned() {
                     player.set_chart_option(Some(chart_opt));
                 }
 
                 // Wire margin time
                 if let Some(res) = resource {
-                    player.set_margin_time(res.get_margin_time());
+                    player.set_margin_time(res.margin_time());
                 }
 
                 // Wire course constraints
                 if let Some(res) = resource {
-                    player.set_constraints(res.get_constraint());
+                    player.set_constraints(res.constraint());
                 }
 
                 // Wire guide SE from player config
-                player.set_guide_se(controller.get_player_config().is_guide_se);
+                player.set_guide_se(controller.player_config().is_guide_se);
 
                 // Wire audio config
-                if let Some(audio_config) = controller.get_config().audio_config() {
+                if let Some(audio_config) = controller.config().audio_config() {
                     player.set_fast_forward_freq_option(audio_config.fast_forward.clone());
                     player.set_bg_volume(audio_config.bgvolume);
                 }
 
                 // Wire replay data for REPLAY mode
-                if let Some(replay) = resource.and_then(|r| r.get_replay_data()).cloned() {
+                if let Some(replay) = resource.and_then(|r| r.replay_data()).cloned() {
                     player.set_active_replay(Some(replay));
                 }
 
                 // --- Target/rival score DB load ---
                 // Java: main.getPlayDataAccessor().readScoreData(model, config.getLnmode())
-                let lnmode = controller.get_player_config().lnmode;
+                let lnmode = controller.player_config().lnmode;
                 let sha256 = model.sha256();
                 let has_ln = model.contains_undefined_long_note();
                 let db_score = controller.read_score_data_by_hash(sha256, has_ln, lnmode);
                 player.set_db_score(db_score);
 
                 // Java: resource.getRivalScoreData()
-                let rival_score = resource.and_then(|r| r.get_rival_score_data()).cloned();
+                let rival_score = resource.and_then(|r| r.rival_score_data()).cloned();
                 player.set_rival_score(rival_score.clone());
 
                 // Compute target score for both BMSPlayer and PlayerResource (result screen).
                 // Java: TargetProperty.getTargetProperty(config.getTargetid()).getTarget(main)
                 // Java: resource.setTargetScoreData(targetScore)
                 let target_score = if rival_score.is_none() || is_course_mode {
-                    let targetid = controller.get_player_config().targetid.clone();
+                    let targetid = controller.player_config().targetid.clone();
                     let total_notes = model.total_notes();
                     Self::compute_target_score(&targetid, total_notes, controller)
                 } else {
@@ -694,12 +694,12 @@ impl StateFactory for LauncherStateFactory {
 
                 if let Some(skin_type) = player.skin_type()
                     && let Some(skin) = rubato_skin::skin_loader::load_skin_from_config(
-                        controller.get_config(),
-                        controller.get_player_config(),
+                        controller.config(),
+                        controller.player_config(),
                         skin_type.id(),
                     )
                 {
-                    player.set_skin_name(skin.header.get_name().map(str::to_string));
+                    player.set_skin_name(skin.header.name().map(str::to_string));
                     player.main_state_data_mut().skin = Some(Box::new(skin));
                 }
 
@@ -715,13 +715,13 @@ impl StateFactory for LauncherStateFactory {
                     QueuedControllerAccess::from_controller(controller, command_queue.clone());
                 let result_resource = if let Some(core_res) = controller.take_player_resource() {
                     let pm = core_res
-                        .get_play_mode()
+                        .play_mode()
                         .cloned()
                         .unwrap_or_else(|| BMSPlayerMode::new(BMSPlayerModeType::Play));
-                    let bm = core_res.get_bms_model().cloned().unwrap_or_default();
-                    let cm = core_res.get_course_bms_models().cloned();
+                    let bm = core_res.bms_model().cloned().unwrap_or_default();
+                    let cm = core_res.course_bms_models().cloned();
                     let ranking = core_res
-                        .get_ranking_data_any()
+                        .ranking_data_any()
                         .and_then(|a| a.downcast_ref::<RankingData>())
                         .cloned();
                     let mut rr = ResultPlayerResource::new(Box::new(core_res), pm);
@@ -752,13 +752,13 @@ impl StateFactory for LauncherStateFactory {
                     QueuedControllerAccess::from_controller(controller, command_queue.clone());
                 let result_resource = if let Some(core_res) = controller.take_player_resource() {
                     let pm = core_res
-                        .get_play_mode()
+                        .play_mode()
                         .cloned()
                         .unwrap_or_else(|| BMSPlayerMode::new(BMSPlayerModeType::Play));
-                    let bm = core_res.get_bms_model().cloned().unwrap_or_default();
-                    let cm = core_res.get_course_bms_models().cloned();
+                    let bm = core_res.bms_model().cloned().unwrap_or_default();
+                    let cm = core_res.course_bms_models().cloned();
                     let ranking = core_res
-                        .get_ranking_data_any()
+                        .ranking_data_any()
                         .and_then(|a| a.downcast_ref::<RankingData>())
                         .cloned();
                     let mut rr = ResultPlayerResource::new(Box::new(core_res), pm);
@@ -792,7 +792,7 @@ impl StateFactory for LauncherStateFactory {
             }
             MainStateType::SkinConfig => {
                 // Java: skinconfig = new SkinConfiguration(this, player);
-                let skinconfig = SkinConfiguration::new(controller, controller.get_player_config());
+                let skinconfig = SkinConfiguration::new(controller, controller.player_config());
                 Some(StateCreateResult {
                     state: Box::new(skinconfig),
                     target_score: None,
@@ -1091,31 +1091,25 @@ mod tests {
 
         // Test full state dispatch via MainController
         mc.change_state(MainStateType::MusicSelect);
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::MusicSelect)
-        );
+        assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
         mc.change_state(MainStateType::Decide);
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Decide));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Decide));
 
         mc.change_state(MainStateType::Play);
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
         mc.change_state(MainStateType::Result);
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
 
         mc.change_state(MainStateType::CourseResult);
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::CourseResult)
-        );
+        assert_eq!(mc.current_state_type(), Some(MainStateType::CourseResult));
 
         mc.change_state(MainStateType::Config);
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Config));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Config));
 
         mc.change_state(MainStateType::SkinConfig);
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::SkinConfig));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::SkinConfig));
     }
 
     #[test]
@@ -1132,18 +1126,15 @@ mod tests {
         mc.resume();
         mc.resize(1920, 1080);
 
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::MusicSelect)
-        );
+        assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
         // Transition to different state (old state should be shut down)
         mc.change_state(MainStateType::Config);
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Config));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Config));
 
         // Dispose
         mc.dispose();
-        assert!(mc.get_current_state().is_none());
+        assert!(mc.current_state().is_none());
     }
 
     #[test]
@@ -1292,7 +1283,7 @@ mod tests {
             .put_song_any(&song, 0, Box::new(RankingData::new()));
 
         let cached = controller
-            .get_ranking_data_cache()
+            .ranking_data_cache()
             .expect("controller should expose ranking cache")
             .song_any(&song, 0)
             .and_then(|any| any.downcast::<RankingData>().ok())
@@ -1327,7 +1318,7 @@ mod tests {
         mc.render();
 
         assert!(
-            mc.get_current_state()
+            mc.current_state()
                 .expect("decide state should still be current for fadeout")
                 .main_state_data()
                 .timer
@@ -1357,7 +1348,7 @@ mod tests {
         mc.change_state(MainStateType::Play);
 
         assert!(
-            mc.get_current_state()
+            mc.current_state()
                 .expect("play state should be current")
                 .main_state_data()
                 .skin

@@ -204,7 +204,7 @@ impl PlayerResource {
     /// Preserves tablename and tablelevel across clear().
     /// Java: PlayerResource.reloadBMSFile()
     pub fn reload_bms_file(&mut self) {
-        if let Some(path_str) = self.get_bms_model().and_then(|m| m.path()) {
+        if let Some(path_str) = self.bms_model().and_then(|m| m.path()) {
             let path = PathBuf::from(&path_str);
             if let Some((model, margin_time)) = Self::load_bms_model(&path, self.pconfig.lnmode) {
                 self.margin_time = margin_time;
@@ -232,15 +232,15 @@ impl PlayerResource {
         Some((model, margin_time))
     }
 
-    pub fn get_bms_model(&self) -> Option<&BMSModel> {
+    pub fn bms_model(&self) -> Option<&BMSModel> {
         self.songdata.as_ref().and_then(|sd| sd.bms_model())
     }
 
-    pub fn get_margin_time(&self) -> i64 {
+    pub fn margin_time(&self) -> i64 {
         self.margin_time
     }
 
-    pub fn get_play_mode(&self) -> Option<&BMSPlayerMode> {
+    pub fn play_mode(&self) -> Option<&BMSPlayerMode> {
         self.mode.as_ref()
     }
 
@@ -248,11 +248,11 @@ impl PlayerResource {
         self.mode = Some(mode);
     }
 
-    pub fn get_config(&self) -> &Config {
+    pub fn config(&self) -> &Config {
         &self.config
     }
 
-    pub fn get_player_config(&self) -> &PlayerConfig {
+    pub fn player_config(&self) -> &PlayerConfig {
         &self.pconfig
     }
 
@@ -264,7 +264,7 @@ impl PlayerResource {
         }
     }
 
-    pub fn get_score_data(&self) -> Option<&ScoreData> {
+    pub fn score_data(&self) -> Option<&ScoreData> {
         self.score.as_ref()
     }
 
@@ -272,7 +272,7 @@ impl PlayerResource {
         self.score = Some(score);
     }
 
-    pub fn get_rival_score_data(&self) -> Option<&ScoreData> {
+    pub fn rival_score_data(&self) -> Option<&ScoreData> {
         self.rscore.as_ref()
     }
 
@@ -280,7 +280,7 @@ impl PlayerResource {
         self.rscore = Some(rscore);
     }
 
-    pub fn get_target_score_data(&self) -> Option<&ScoreData> {
+    pub fn target_score_data(&self) -> Option<&ScoreData> {
         self.tscore.as_ref()
     }
 
@@ -288,7 +288,7 @@ impl PlayerResource {
         self.tscore = Some(tscore);
     }
 
-    pub fn get_ranking_data_any(&self) -> Option<&dyn Any> {
+    pub fn ranking_data_any(&self) -> Option<&dyn Any> {
         self.ranking.as_ref().map(|b| b.as_ref() as &dyn Any)
     }
 
@@ -317,7 +317,7 @@ impl PlayerResource {
         true
     }
 
-    pub fn get_course_bms_models(&self) -> Option<&Vec<BMSModel>> {
+    pub fn course_bms_models(&self) -> Option<&Vec<BMSModel>> {
         self.course.as_ref()
     }
 
@@ -374,11 +374,11 @@ impl PlayerResource {
         true
     }
 
-    pub fn get_course_index(&self) -> usize {
+    pub fn course_index(&self) -> usize {
         self.courseindex
     }
 
-    pub fn get_gauge(&self) -> Option<&Vec<FloatArray>> {
+    pub fn gauge(&self) -> Option<&Vec<FloatArray>> {
         self.gauge.as_ref()
     }
 
@@ -386,7 +386,7 @@ impl PlayerResource {
         self.gauge = Some(gauge);
     }
 
-    pub fn get_groove_gauge(&self) -> Option<&GrooveGauge> {
+    pub fn groove_gauge(&self) -> Option<&GrooveGauge> {
         self.groove_gauge.as_ref()
     }
 
@@ -394,7 +394,7 @@ impl PlayerResource {
         self.groove_gauge = Some(groove_gauge);
     }
 
-    pub fn get_replay_data(&self) -> Option<&ReplayData> {
+    pub fn replay_data(&self) -> Option<&ReplayData> {
         self.replay.as_ref()
     }
 
@@ -402,7 +402,7 @@ impl PlayerResource {
         self.replay = Some(replay);
     }
 
-    pub fn get_course_score_data(&self) -> Option<&ScoreData> {
+    pub fn course_score_data(&self) -> Option<&ScoreData> {
         self.cscore.as_ref()
     }
 
@@ -426,7 +426,7 @@ impl PlayerResource {
         self.update_course_score = update;
     }
 
-    pub fn get_course_data(&self) -> Option<&CourseData> {
+    pub fn course_data(&self) -> Option<&CourseData> {
         self.coursedata.as_ref()
     }
 
@@ -434,11 +434,11 @@ impl PlayerResource {
         self.coursedata = Some(coursedata);
     }
 
-    pub fn get_coursetitle(&self) -> Option<String> {
+    pub fn coursetitle(&self) -> Option<String> {
         self.coursedata.as_ref().map(|cd| cd.name().to_string())
     }
 
-    pub fn get_constraint(&self) -> Vec<CourseDataConstraint> {
+    pub fn constraint(&self) -> Vec<CourseDataConstraint> {
         if let Some(ref cd) = self.coursedata {
             cd.constraint.to_vec()
         } else {
@@ -446,7 +446,7 @@ impl PlayerResource {
         }
     }
 
-    pub fn get_course_replay(&self) -> &[ReplayData] {
+    pub fn course_replay(&self) -> &[ReplayData] {
         &self.course_replay
     }
 
@@ -454,7 +454,7 @@ impl PlayerResource {
         self.course_replay.push(rd);
     }
 
-    pub fn get_course_gauge(&self) -> &Vec<Vec<FloatArray>> {
+    pub fn course_gauge(&self) -> &Vec<Vec<FloatArray>> {
         &self.coursegauge
     }
 
@@ -462,7 +462,7 @@ impl PlayerResource {
         self.coursegauge.push(gauge);
     }
 
-    pub fn get_combo(&self) -> i32 {
+    pub fn combo(&self) -> i32 {
         self.combo
     }
 
@@ -470,7 +470,7 @@ impl PlayerResource {
         self.combo = combo;
     }
 
-    pub fn get_maxcombo(&self) -> i32 {
+    pub fn maxcombo(&self) -> i32 {
         self.maxcombo
     }
 
@@ -484,7 +484,7 @@ impl PlayerResource {
         }
     }
 
-    pub fn get_songdata(&self) -> Option<&SongData> {
+    pub fn songdata(&self) -> Option<&SongData> {
         self.songdata.as_ref()
     }
 
@@ -492,11 +492,11 @@ impl PlayerResource {
         self.songdata = Some(songdata);
     }
 
-    pub fn get_bms_resource(&self) -> Option<&BMSResource> {
+    pub fn bms_resource(&self) -> Option<&BMSResource> {
         self.bmsresource.as_ref()
     }
 
-    pub fn get_org_gauge_option(&self) -> i32 {
+    pub fn org_gauge_option(&self) -> i32 {
         self.org_gauge_option
     }
 
@@ -504,7 +504,7 @@ impl PlayerResource {
         self.org_gauge_option = org_gauge_option;
     }
 
-    pub fn get_assist(&self) -> i32 {
+    pub fn assist(&self) -> i32 {
         self.assist
     }
 
@@ -512,7 +512,7 @@ impl PlayerResource {
         self.assist = assist;
     }
 
-    pub fn get_tablename(&self) -> &str {
+    pub fn tablename(&self) -> &str {
         &self.tablename
     }
 
@@ -521,7 +521,7 @@ impl PlayerResource {
         self.tablefull = None;
     }
 
-    pub fn get_tablelevel(&self) -> &str {
+    pub fn tablelevel(&self) -> &str {
         &self.tablelevel
     }
 
@@ -537,7 +537,7 @@ impl PlayerResource {
         self.tablefull.as_ref().unwrap()
     }
 
-    pub fn get_player_data(&self) -> &PlayerData {
+    pub fn player_data(&self) -> &PlayerData {
         &self.playerdata
     }
 
@@ -545,7 +545,7 @@ impl PlayerResource {
         self.playerdata = playerdata;
     }
 
-    pub fn get_chart_option(&self) -> Option<&ReplayData> {
+    pub fn chart_option(&self) -> Option<&ReplayData> {
         self.chart_option.as_ref()
     }
 
@@ -553,7 +553,7 @@ impl PlayerResource {
         self.chart_option = Some(chart_option);
     }
 
-    pub fn get_original_mode(&self) -> Option<()> {
+    pub fn original_mode(&self) -> Option<()> {
         self.orgmode
     }
 
@@ -569,7 +569,7 @@ impl PlayerResource {
         self.freq_on = freq_on;
     }
 
-    pub fn get_freq_string(&self) -> Option<&str> {
+    pub fn freq_string(&self) -> Option<&str> {
         self.freq_string.as_deref()
     }
 
@@ -585,7 +585,7 @@ impl PlayerResource {
         self.force_no_ir_send = force;
     }
 
-    pub fn get_reverse_lookup_data(&self) -> Vec<String> {
+    pub fn reverse_lookup_data(&self) -> Vec<String> {
         let Some(songdata) = self.songdata.as_ref() else {
             return Vec::new();
         };
@@ -596,16 +596,16 @@ impl PlayerResource {
         let tds = tdaccessor.read_all();
         let mut result = Vec::new();
         for td in &tds {
-            if !url_set.contains(td.get_url()) {
+            if !url_set.contains(td.url()) {
                 continue;
             }
-            for tf in td.get_folder() {
-                let found = tf.get_song().iter().any(|ts| {
+            for tf in td.folder() {
+                let found = tf.song().iter().any(|ts| {
                     (!ts.md5.is_empty() && ts.md5 == songdata.md5)
                         || (!ts.sha256.is_empty() && ts.sha256 == songdata.sha256)
                 });
                 if found {
-                    result.push(format!("{} {}", td.get_name(), tf.get_name()));
+                    result.push(format!("{} {}", td.name(), tf.name()));
                     break;
                 }
             }
@@ -613,7 +613,7 @@ impl PlayerResource {
         result
     }
 
-    pub fn get_reverse_lookup_levels(&self) -> Vec<String> {
+    pub fn reverse_lookup_levels(&self) -> Vec<String> {
         let Some(songdata) = self.songdata.as_ref() else {
             return Vec::new();
         };
@@ -624,16 +624,16 @@ impl PlayerResource {
         let tds = tdaccessor.read_all();
         let mut result = Vec::new();
         for td in &tds {
-            if !url_set.contains(td.get_url()) {
+            if !url_set.contains(td.url()) {
                 continue;
             }
-            for tf in td.get_folder() {
-                let found = tf.get_song().iter().any(|ts| {
+            for tf in td.folder() {
+                let found = tf.song().iter().any(|ts| {
                     (!ts.md5.is_empty() && ts.md5 == songdata.md5)
                         || (!ts.sha256.is_empty() && ts.sha256 == songdata.sha256)
                 });
                 if found {
-                    result.push(tf.get_name().to_string());
+                    result.push(tf.name().to_string());
                     break;
                 }
             }
@@ -724,7 +724,7 @@ impl PlayerResourceAccess for PlayerResource {
     }
 
     fn constraint(&self) -> Vec<CourseDataConstraint> {
-        PlayerResource::get_constraint(self)
+        PlayerResource::constraint(self)
     }
 
     fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
@@ -788,11 +788,11 @@ impl PlayerResourceAccess for PlayerResource {
     }
 
     fn reverse_lookup_data(&self) -> Vec<String> {
-        PlayerResource::get_reverse_lookup_data(self)
+        PlayerResource::reverse_lookup_data(self)
     }
 
     fn reverse_lookup_levels(&self) -> Vec<String> {
-        PlayerResource::get_reverse_lookup_levels(self)
+        PlayerResource::reverse_lookup_levels(self)
     }
 
     fn clear(&mut self) {
@@ -855,7 +855,7 @@ impl PlayerResourceAccess for PlayerResource {
     }
 
     fn bms_model(&self) -> Option<&bms_model::bms_model::BMSModel> {
-        PlayerResource::get_bms_model(self)
+        PlayerResource::bms_model(self)
     }
 
     fn set_player_data(&mut self, player_data: rubato_types::player_data::PlayerData) {
@@ -863,7 +863,7 @@ impl PlayerResourceAccess for PlayerResource {
     }
 
     fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
-        match self.get_course_bms_models() {
+        match self.course_bms_models() {
             Some(models) => models
                 .iter()
                 .map(|m| {
@@ -944,7 +944,7 @@ mod tests {
         let result = resource.set_bms_file(&bms_path, BMSPlayerMode::PLAY);
         assert!(result, "set_bms_file should return true on success");
         assert!(
-            resource.get_bms_model().is_some(),
+            resource.bms_model().is_some(),
             "model should be Some after successful load"
         );
     }
@@ -961,7 +961,7 @@ mod tests {
             "set_bms_file should return false for nonexistent file"
         );
         assert!(
-            resource.get_bms_model().is_none(),
+            resource.bms_model().is_none(),
             "model should be None after failed load"
         );
     }
@@ -989,7 +989,7 @@ mod tests {
         resource.set_bms_file(&bms_path, BMSPlayerMode::PLAY);
         // margin_time is set by set_start_note_time (may be 0 if first note >= 1000ms)
         // Just verify it doesn't panic and the field is accessible
-        let _margin = resource.get_margin_time();
+        let _margin = resource.margin_time();
     }
 
     #[test]
@@ -1008,9 +1008,9 @@ mod tests {
         let result = resource.set_bms_file(&bms_path, BMSPlayerMode::PLAY);
         assert!(result, "set_bms_file should return true on success");
 
-        // get_songdata() should return Some after loading a BMS file
+        // songdata() should return Some after loading a BMS file
         let songdata = resource
-            .get_songdata()
+            .songdata()
             .expect("songdata should be Some after successful set_bms_file");
 
         // md5 should be populated from the loaded model
@@ -1020,7 +1020,7 @@ mod tests {
         let trait_songdata = PlayerResourceAccess::songdata(&resource as &dyn PlayerResourceAccess);
         assert!(
             trait_songdata.is_some(),
-            "PlayerResourceAccess::get_songdata should return Some"
+            "PlayerResourceAccess::songdata should return Some"
         );
     }
 
@@ -1041,14 +1041,14 @@ mod tests {
 
         // Model should still be loaded after reload
         assert!(
-            resource.get_bms_model().is_some(),
+            resource.bms_model().is_some(),
             "model should be Some after reload"
         );
         // Table info should be preserved
-        assert_eq!(resource.get_tablename(), "insane");
-        assert_eq!(resource.get_tablelevel(), "★12");
+        assert_eq!(resource.tablename(), "insane");
+        assert_eq!(resource.tablelevel(), "★12");
         // Other fields should be cleared
-        assert!(resource.get_score_data().is_none());
+        assert!(resource.score_data().is_none());
     }
 
     #[test]
@@ -1062,8 +1062,8 @@ mod tests {
         resource.set_tablelevel("1");
         resource.reload_bms_file();
 
-        assert_eq!(resource.get_tablename(), "test");
-        assert_eq!(resource.get_tablelevel(), "1");
+        assert_eq!(resource.tablename(), "test");
+        assert_eq!(resource.tablelevel(), "1");
     }
 
     #[test]
@@ -1077,11 +1077,11 @@ mod tests {
         let result = resource.set_course_bms_files(&files);
         assert!(result, "set_course_bms_files should return true on success");
         assert!(
-            resource.get_course_bms_models().is_some(),
+            resource.course_bms_models().is_some(),
             "course models should be Some after successful load"
         );
         assert_eq!(
-            resource.get_course_bms_models().unwrap().len(),
+            resource.course_bms_models().unwrap().len(),
             1,
             "should have loaded exactly 1 course model"
         );

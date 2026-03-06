@@ -94,7 +94,7 @@ impl PatternModifier for ScrollSpeedModifier {
         }
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -112,7 +112,7 @@ impl PatternModifier for ScrollSpeedModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 }
@@ -156,7 +156,7 @@ mod tests {
         assert_eq!(m.mode, Mode::Remove);
         assert_eq!(m.section, 4);
         assert!((m.rate - 0.5).abs() < f64::EPSILON);
-        assert_eq!(m.get_assist_level(), AssistLevel::None);
+        assert_eq!(m.assist_level(), AssistLevel::None);
     }
 
     #[test]
@@ -209,13 +209,13 @@ mod tests {
     fn set_assist_level() {
         let mut m = ScrollSpeedModifier::new();
         m.set_assist_level(AssistLevel::Assist);
-        assert_eq!(m.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(m.assist_level(), AssistLevel::Assist);
     }
 
     #[test]
     fn get_player_default() {
         let m = ScrollSpeedModifier::new();
-        assert_eq!(m.get_player(), 0);
+        assert_eq!(m.player(), 0);
     }
 
     // -- Remove mode: all timelines uniform -> AssistLevel::None --
@@ -234,7 +234,7 @@ mod tests {
         let mut modifier = ScrollSpeedModifier::new(); // Remove mode
         modifier.modify(&mut model);
 
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
     }
 
     // -- Remove mode: different BPM -> LightAssist --
@@ -252,7 +252,7 @@ mod tests {
         let mut modifier = ScrollSpeedModifier::new();
         modifier.modify(&mut model);
 
-        assert_eq!(modifier.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(modifier.assist_level(), AssistLevel::LightAssist);
 
         // After modification, all timelines should have start_bpm
         let tls = model.all_time_lines();
@@ -277,7 +277,7 @@ mod tests {
         let mut modifier = ScrollSpeedModifier::new();
         modifier.modify(&mut model);
 
-        assert_eq!(modifier.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(modifier.assist_level(), AssistLevel::LightAssist);
 
         let tls = model.all_time_lines();
         assert!((tls[0].scroll() - 1.0).abs() < f64::EPSILON);
@@ -300,7 +300,7 @@ mod tests {
         let mut modifier = ScrollSpeedModifier::new();
         modifier.modify(&mut model);
 
-        assert_eq!(modifier.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(modifier.assist_level(), AssistLevel::LightAssist);
 
         // Stop should be zeroed after modification
         let tls = model.all_time_lines();
@@ -543,7 +543,7 @@ mod tests {
         modifier.modify(&mut model);
 
         // Single timeline with same values as itself -> no assist needed
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
 
         let tls = model.all_time_lines();
         assert!((tls[0].bpm() - 130.0).abs() < f64::EPSILON);
@@ -606,7 +606,7 @@ mod tests {
         modifier.modify(&mut model);
 
         // Even the first timeline triggers LightAssist because get_stop() != 0
-        assert_eq!(modifier.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(modifier.assist_level(), AssistLevel::LightAssist);
         assert_eq!(model.all_time_lines()[0].stop(), 0);
     }
 
@@ -647,6 +647,6 @@ mod tests {
         modifier.modify(&mut model);
 
         // Add mode never modifies self.base.assist
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
     }
 }

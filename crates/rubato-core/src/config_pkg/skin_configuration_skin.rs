@@ -24,7 +24,7 @@ impl SkinConfigurationSkin {
         self.sample_bms = sample_bms;
     }
 
-    pub fn get_sample_bms(&self) -> &[String] {
+    pub fn sample_bms(&self) -> &[String] {
         &self.sample_bms
     }
 
@@ -32,7 +32,7 @@ impl SkinConfigurationSkin {
         self.default_skin_type = default_skin_type;
     }
 
-    pub fn get_default_skin_type(&self) -> i32 {
+    pub fn default_skin_type(&self) -> i32 {
         self.default_skin_type
     }
 
@@ -40,7 +40,7 @@ impl SkinConfigurationSkin {
         self.custom_offset_style = custom_offset_style;
     }
 
-    pub fn get_custom_offset_style(&self) -> i32 {
+    pub fn custom_offset_style(&self) -> i32 {
         self.custom_offset_style
     }
 
@@ -48,7 +48,7 @@ impl SkinConfigurationSkin {
         self.custom_property_count = count;
     }
 
-    pub fn get_custom_property_count(&self) -> i32 {
+    pub fn custom_property_count(&self) -> i32 {
         self.custom_property_count
     }
 }

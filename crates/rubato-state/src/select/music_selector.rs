@@ -68,19 +68,19 @@ struct SelectSkinContext<'a> {
 
 impl rubato_types::timer_access::TimerAccess for SelectSkinContext<'_> {
     fn now_time(&self) -> i64 {
-        self.timer.get_now_time()
+        self.timer.now_time()
     }
     fn now_micro_time(&self) -> i64 {
-        self.timer.get_now_micro_time()
+        self.timer.now_micro_time()
     }
     fn micro_timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_micro_timer(timer_id)
+        self.timer.micro_timer(timer_id)
     }
     fn timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_timer(timer_id)
+        self.timer.timer(timer_id)
     }
     fn now_time_for(&self, timer_id: i32) -> i64 {
-        self.timer.get_now_time_for_id(timer_id)
+        self.timer.now_time_for_id(timer_id)
     }
     fn is_timer_on(&self, timer_id: i32) -> bool {
         self.timer.is_timer_on(timer_id)
@@ -99,11 +99,11 @@ impl SelectSkinContext<'_> {
     }
 
     fn selected_score(&self) -> Option<&rubato_types::score_data::ScoreData> {
-        self.selected_bar()?.get_score()
+        self.selected_bar()?.score()
     }
 
     fn selected_rival_score(&self) -> Option<&rubato_types::score_data::ScoreData> {
-        self.selected_bar()?.get_rival_score()
+        self.selected_bar()?.rival_score()
     }
 }
 
@@ -280,9 +280,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
                 chrono::Timelike::second(&now) as i32
             }
             // Playtime (hours/minutes/seconds from boot)
-            17 => (self.timer.get_now_time() / 3_600_000) as i32,
-            18 => ((self.timer.get_now_time() % 3_600_000) / 60_000) as i32,
-            19 => ((self.timer.get_now_time() % 60_000) / 1_000) as i32,
+            17 => (self.timer.now_time() / 3_600_000) as i32,
+            18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,
+            19 => ((self.timer.now_time() % 60_000) / 1_000) as i32,
             _ => 0,
         }
     }
@@ -451,7 +451,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
 }
 
 /// Minimal adapter implementing rubato_skin::stubs::MainState for BarRenderer's RenderContext.
-/// Delegates get_timer() to a Timer snapshot; other methods use defaults.
+/// Delegates timer() to a Timer snapshot; other methods use defaults.
 struct MinimalSkinMainState<'a> {
     timer: &'a rubato_skin::stubs::Timer,
 }
@@ -463,7 +463,7 @@ impl<'a> MinimalSkinMainState<'a> {
 }
 
 impl rubato_skin::stubs::MainState for MinimalSkinMainState<'_> {
-    fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+    fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
         self.timer
     }
 
@@ -703,7 +703,7 @@ impl MusicSelector {
         self.scorecache.as_ref()
     }
 
-    pub fn get_rival_score_data_cache(&self) -> Option<&ScoreDataCache> {
+    pub fn rival_score_data_cache(&self) -> Option<&ScoreDataCache> {
         self.rivalcache.as_ref()
     }
 
@@ -967,7 +967,7 @@ impl MusicSelector {
                 } else if let Some(gradebar) =
                     self.manager.get_selected().and_then(|b| b.as_grade_bar())
                 {
-                    let cd = gradebar.get_course_data();
+                    let cd = gradebar.course_data();
                     if let Some(ref main) = self.main
                         && let Some(url) = main.ir_course_url(cd)
                         && let Err(e) = open::that(&url)
@@ -1018,7 +1018,7 @@ impl MusicSelector {
             && grade_bar.exists_all_songs()
         {
             let mut selected_mode: Option<bms_model::Mode> = None;
-            for song in grade_bar.get_song_datas() {
+            for song in grade_bar.song_datas() {
                 let song_mode = play_config_mode_from_song(song)?;
                 if let Some(current_mode) = selected_mode.as_ref() {
                     if *current_mode != song_mode {
@@ -1099,7 +1099,7 @@ impl MusicSelector {
 
                 for bar in dir {
                     if let Some(tb) = bar.as_table_bar()
-                        && let Some(url) = tb.get_url()
+                        && let Some(url) = tb.url()
                         && table_urls.iter().any(|u| u == url)
                     {
                         is_dtable = true;
@@ -1144,7 +1144,7 @@ impl MusicSelector {
                 res.set_ranking_data_any(ranking_any);
 
                 // Set rival score
-                let rival_score = current.get_rival_score().cloned();
+                let rival_score = current.rival_score().cloned();
                 res.set_rival_score_data_option(rival_score);
             }
 
@@ -1152,13 +1152,13 @@ impl MusicSelector {
             let songdata = self
                 .player_resource
                 .as_ref()
-                .and_then(|r| r.get_songdata())
+                .and_then(|r| r.songdata())
                 .cloned();
             let replay_index = self.play.as_ref().map_or(0, |p| p.id);
             let chart_option = if let Some(main_ref) = self.main.as_deref() {
                 Self::compute_chart_option(
                     &self.config,
-                    current.get_rival_score(),
+                    current.rival_score(),
                     main_ref,
                     songdata.as_ref(),
                     replay_index,
@@ -1279,7 +1279,7 @@ impl MusicSelector {
         self.panelstate = panelstate;
     }
 
-    pub fn get_song_database(&self) -> &dyn SongDatabaseAccessor {
+    pub fn song_database(&self) -> &dyn SongDatabaseAccessor {
         &*self.songdb
     }
 
@@ -1292,13 +1292,13 @@ impl MusicSelector {
         };
 
         if let Some(grade) = selected.as_grade_bar() {
-            for con in &grade.get_course_data().constraint {
+            for con in &grade.course_data().constraint {
                 if con == constraint {
                     return true;
                 }
             }
         } else if let Some(rc) = selected.as_random_course_bar() {
-            for con in &rc.get_course_data().constraint {
+            for con in &rc.course_data().constraint {
                 if *con == *constraint {
                     return true;
                 }
@@ -1404,7 +1404,7 @@ impl MusicSelector {
                         if let Some(main) = self.main.as_ref() {
                             use rubato_ir::ranking_data::RankingData;
                             let lnmode = main.player_config().lnmode;
-                            let course = grade_bar.get_course_data();
+                            let course = grade_bar.course_data();
                             self.currentir = main
                                 .ranking_data_cache()
                                 .and_then(|c| c.course_any(course, lnmode))
@@ -1445,10 +1445,10 @@ impl MusicSelector {
         let (banner_data, stagefile_data) = match self.manager.get_selected() {
             Some(Bar::Song(song_bar)) => {
                 let banner = song_bar
-                    .get_banner()
+                    .banner()
                     .map(|p| (p.width, p.height, p.data().to_vec()));
                 let stagefile = song_bar
-                    .get_stagefile()
+                    .stagefile()
                     .map(|p| (p.width, p.height, p.data().to_vec()));
                 (banner, stagefile)
             }
@@ -1744,9 +1744,9 @@ impl MusicSelector {
         }
 
         // Run lottery: query DB for each stage's SQL, then pick random songs.
-        let mut rcd = rcb.get_course_data().clone();
+        let mut rcd = rcb.course_data().clone();
         {
-            let songdb = self.get_song_database();
+            let songdb = self.song_database();
             let player_name = self.app_config.playername.as_deref().unwrap_or("default");
             let score_path = format!("{}/{}/score.db", self.app_config.playerpath, player_name);
             let scorelog_path =
@@ -1819,7 +1819,7 @@ impl MusicSelector {
             None => return false,
         };
 
-        let songs = gb.get_song_datas();
+        let songs = gb.song_datas();
         let files: Vec<PathBuf> = songs
             .iter()
             .filter_map(|s| s.path().map(PathBuf::from))
@@ -1846,7 +1846,7 @@ impl MusicSelector {
         if load_success {
             // Apply constraints for PLAY/AUTOPLAY modes only
             if mode.mode == BMSPlayerModeType::Play || mode.mode == BMSPlayerModeType::Autoplay {
-                for constraint in &gb.get_course_data().constraint {
+                for constraint in &gb.course_data().constraint {
                     match constraint {
                         CourseDataConstraint::Class => {
                             self.config.random = 0;
@@ -1892,7 +1892,7 @@ impl MusicSelector {
                 .map(|r| r.course_song_data())
                 .unwrap_or_default();
 
-            let mut course_data = gb.get_course_data().clone();
+            let mut course_data = gb.course_data().clone();
             course_data.hash = course_song_data;
 
             // resource.setCourseData, setBMSFile for first song
@@ -1911,7 +1911,7 @@ impl MusicSelector {
             if let Some(ref mut main) = self.main {
                 use rubato_ir::ranking_data::RankingData;
                 let lnmode = main.player_config().lnmode;
-                let course = gb.get_course_data();
+                let course = gb.course_data();
                 let cached = main
                     .ranking_data_cache()
                     .and_then(|c| c.course_any(course, lnmode))
@@ -1967,7 +1967,7 @@ impl rubato_types::song_selection_access::SongSelectionAccess for MusicSelector 
     fn selected_score_data(&self) -> Option<ScoreData> {
         let bar = self.get_selected_bar()?;
         bar.as_song_bar()
-            .and_then(|sb| sb.selectable.bar_data.get_score().cloned())
+            .and_then(|sb| sb.selectable.bar_data.score().cloned())
     }
 
     fn reverse_lookup_data(&self) -> Vec<String> {
@@ -2092,7 +2092,7 @@ impl MainState for MusicSelector {
         }
     }
 
-    fn get_sound(&self, sound: SoundType) -> Option<String> {
+    fn sound(&self, sound: SoundType) -> Option<String> {
         self.main.as_ref().and_then(|m| m.sound_path(&sound))
     }
 
@@ -2120,9 +2120,9 @@ impl MainState for MusicSelector {
 
     fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
         let should_handoff = self.player_resource.as_ref().is_some_and(|resource| {
-            resource.get_bms_model().is_some()
-                || resource.get_songdata().is_some()
-                || resource.get_course_data().is_some()
+            resource.bms_model().is_some()
+                || resource.songdata().is_some()
+                || resource.course_data().is_some()
         });
 
         if !should_handoff {
@@ -2186,7 +2186,7 @@ impl MainState for MusicSelector {
         // Create preview music processor
         {
             let mut preview = PreviewMusicProcessor::new(&self.app_config);
-            if let Some(sound_path) = self.get_sound(SoundType::Select) {
+            if let Some(sound_path) = self.sound(SoundType::Select) {
                 preview.set_default(&sound_path);
             }
             self.preview = Some(preview);
@@ -2236,14 +2236,14 @@ impl MainState for MusicSelector {
     /// Java: MusicSelectSkin.render() wraps MainSkin.render() with bar logic.
     fn render_skin(&mut self, sprite: &mut rubato_render::sprite_batch::SpriteBatch) {
         use rubato_skin::skin_object::SkinObjectRenderer;
-        let time = self.main_state_data.timer.get_now_time();
+        let time = self.main_state_data.timer.now_time();
 
         // Prepare skin_bar sub-objects (sets data.draw = true on bar images).
         // Must be called before bar_renderer.prepare() which checks data.draw.
         if let Some(skin_bar) = &mut self.skin_bar {
             let timer_snapshot = rubato_skin::stubs::Timer::with_timers(
-                self.main_state_data.timer.get_now_time(),
-                self.main_state_data.timer.get_now_micro_time(),
+                self.main_state_data.timer.now_time(),
+                self.main_state_data.timer.now_micro_time(),
                 self.main_state_data.timer.export_timer_array(),
             );
             let adapter = MinimalSkinMainState::new(&timer_snapshot);
@@ -2286,8 +2286,8 @@ impl MainState for MusicSelector {
         // Bar render — draw bar images, text, lamps, etc.
         {
             let timer_snapshot = rubato_skin::stubs::Timer::with_timers(
-                self.main_state_data.timer.get_now_time(),
-                self.main_state_data.timer.get_now_micro_time(),
+                self.main_state_data.timer.now_time(),
+                self.main_state_data.timer.now_micro_time(),
                 self.main_state_data.timer.export_timer_array(),
             );
             let adapter = MinimalSkinMainState::new(&timer_snapshot);
@@ -2367,18 +2367,18 @@ impl MainState for MusicSelector {
 
         // Start input timer after skin input delay
         if let Some(ref skin) = self.main_state_data.skin
-            && timer.get_now_time() > skin.get_input() as i64
+            && timer.now_time() > skin.get_input() as i64
         {
             timer.switch_timer(skin_property::TIMER_STARTINPUT, true);
         }
 
         // Initialize songbar change timer
-        if timer.get_now_time_for_id(skin_property::TIMER_SONGBAR_CHANGE) < 0 {
+        if timer.now_time_for_id(skin_property::TIMER_SONGBAR_CHANGE) < 0 {
             timer.set_timer_on(skin_property::TIMER_SONGBAR_CHANGE);
         }
 
-        let now_time = timer.get_now_time();
-        let songbar_change_time = timer.get_timer(skin_property::TIMER_SONGBAR_CHANGE);
+        let now_time = timer.now_time();
+        let songbar_change_time = timer.timer(skin_property::TIMER_SONGBAR_CHANGE);
 
         // Update resource with current bar's song/course data (Java MusicSelector L218-219)
         {
@@ -2391,7 +2391,7 @@ impl MainState for MusicSelector {
                 .manager
                 .get_selected()
                 .and_then(|b| b.as_grade_bar())
-                .map(|gb| gb.get_course_data().clone());
+                .map(|gb| gb.course_data().clone());
             if let Some(res) = self.player_resource.as_mut() {
                 PlayerResourceAccess::set_songdata(res, song_data);
                 if let Some(cd) = course_data {
@@ -2467,8 +2467,8 @@ impl MainState for MusicSelector {
         let songbar_change_time = self
             .main_state_data
             .timer
-            .get_timer(skin_property::TIMER_SONGBAR_CHANGE);
-        let now_time = self.main_state_data.timer.get_now_time();
+            .timer(skin_property::TIMER_SONGBAR_CHANGE);
+        let now_time = self.main_state_data.timer.now_time();
         if self.current_ranking_duration != -1
             && now_time > songbar_change_time + self.current_ranking_duration
         {
@@ -2522,7 +2522,7 @@ impl MainState for MusicSelector {
                     && grade_bar.exists_all_songs()
                     && self.play.is_none()
                 {
-                    let course = grade_bar.get_course_data();
+                    let course = grade_bar.course_data();
                     let cached = main
                         .ranking_data_cache()
                         .and_then(|c| c.course_any(course, lnmode))

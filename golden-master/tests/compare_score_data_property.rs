@@ -47,55 +47,55 @@ fn compare_score_data_property(
 ) -> Vec<String> {
     let mut diffs = Vec::new();
 
-    if prop.get_now_score() != tc.nowpoint {
+    if prop.now_score() != tc.nowpoint {
         diffs.push(format!(
             "nowpoint: rust={} java={}",
-            prop.get_now_score(),
+            prop.now_score(),
             tc.nowpoint
         ));
     }
 
     // Float comparisons with tolerance
-    if (prop.get_rate() - tc.rate).abs() > 0.001 {
-        diffs.push(format!("rate: rust={} java={}", prop.get_rate(), tc.rate));
+    if (prop.rate() - tc.rate).abs() > 0.001 {
+        diffs.push(format!("rate: rust={} java={}", prop.rate(), tc.rate));
     }
 
-    if prop.get_rate_int() != tc.rate_int {
+    if prop.rate_int() != tc.rate_int {
         diffs.push(format!(
             "rate_int: rust={} java={}",
-            prop.get_rate_int(),
+            prop.rate_int(),
             tc.rate_int
         ));
     }
 
-    if prop.get_rate_after_dot() != tc.rate_after_dot {
+    if prop.rate_after_dot() != tc.rate_after_dot {
         diffs.push(format!(
             "rate_after_dot: rust={} java={}",
-            prop.get_rate_after_dot(),
+            prop.rate_after_dot(),
             tc.rate_after_dot
         ));
     }
 
-    if (prop.get_now_rate() - tc.nowrate).abs() > 0.001 {
+    if (prop.now_rate() - tc.nowrate).abs() > 0.001 {
         diffs.push(format!(
             "nowrate: rust={} java={}",
-            prop.get_now_rate(),
+            prop.now_rate(),
             tc.nowrate
         ));
     }
 
-    if prop.get_now_rate_int() != tc.nowrate_int {
+    if prop.now_rate_int() != tc.nowrate_int {
         diffs.push(format!(
             "nowrate_int: rust={} java={}",
-            prop.get_now_rate_int(),
+            prop.now_rate_int(),
             tc.nowrate_int
         ));
     }
 
-    if prop.get_now_rate_after_dot() != tc.nowrate_after_dot {
+    if prop.now_rate_after_dot() != tc.nowrate_after_dot {
         diffs.push(format!(
             "nowrate_after_dot: rust={} java={}",
-            prop.get_now_rate_after_dot(),
+            prop.now_rate_after_dot(),
             tc.nowrate_after_dot
         ));
     }
@@ -112,18 +112,18 @@ fn compare_score_data_property(
         }
     }
 
-    if prop.get_next_rank() != tc.nextrank {
+    if prop.next_rank() != tc.nextrank {
         diffs.push(format!(
             "nextrank: rust={} java={}",
-            prop.get_next_rank(),
+            prop.next_rank(),
             tc.nextrank
         ));
     }
 
-    if (prop.get_best_score_rate() - tc.bestscorerate).abs() > 0.001 {
+    if (prop.best_score_rate() - tc.bestscorerate).abs() > 0.001 {
         diffs.push(format!(
             "bestscorerate: rust={} java={}",
-            prop.get_best_score_rate(),
+            prop.best_score_rate(),
             tc.bestscorerate
         ));
     }

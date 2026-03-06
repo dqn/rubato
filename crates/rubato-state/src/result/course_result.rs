@@ -131,19 +131,19 @@ struct CourseResultRenderContext<'a> {
 
 impl rubato_types::timer_access::TimerAccess for CourseResultRenderContext<'_> {
     fn now_time(&self) -> i64 {
-        self.timer.get_now_time()
+        self.timer.now_time()
     }
     fn now_micro_time(&self) -> i64 {
-        self.timer.get_now_micro_time()
+        self.timer.now_micro_time()
     }
     fn micro_timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_micro_timer(timer_id)
+        self.timer.micro_timer(timer_id)
     }
     fn timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_timer(timer_id)
+        self.timer.timer(timer_id)
     }
     fn now_time_for(&self, timer_id: i32) -> i64 {
-        self.timer.get_now_time_for_id(timer_id)
+        self.timer.now_time_for_id(timer_id)
     }
     fn is_timer_on(&self, timer_id: i32) -> bool {
         self.timer.is_timer_on(timer_id)
@@ -156,19 +156,19 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
     }
 
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
-        Some(self.resource.get_player_config())
+        Some(self.resource.player_config())
     }
 
     fn config_ref(&self) -> Option<&rubato_types::config::Config> {
-        Some(self.main.get_config())
+        Some(self.main.config())
     }
 
     fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
-        self.resource.get_replay_data()
+        self.resource.replay_data()
     }
 
     fn target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
-        self.resource.get_target_score_data()
+        self.resource.target_score_data()
     }
 
     fn score_data_ref(&self) -> Option<&rubato_core::score_data::ScoreData> {
@@ -180,7 +180,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
     }
 
     fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
-        let course = self.resource.get_course_data()?;
+        let course = self.resource.course_data()?;
         let mut current_mode: Option<bms_model::mode::Mode> = None;
         for song in &course.hash {
             let song_mode = match song.mode {
@@ -204,7 +204,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
         Some(
             &self
                 .resource
-                .get_player_config()
+                .player_config()
                 .play_config_ref(current_mode?)
                 .playconfig,
         )
@@ -241,9 +241,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
             // Total notes
             350 => self.data.score.totalnotes,
             // Playtime
-            17 => (self.timer.get_now_time() / 3_600_000) as i32,
-            18 => ((self.timer.get_now_time() % 3_600_000) / 60_000) as i32,
-            19 => ((self.timer.get_now_time() % 60_000) / 1_000) as i32,
+            17 => (self.timer.now_time() / 3_600_000) as i32,
+            18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,
+            19 => ((self.timer.now_time() % 60_000) / 1_000) as i32,
             _ => 0,
         }
     }
@@ -270,15 +270,15 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
         match id {
             10 => self
                 .resource
-                .get_songdata()
+                .songdata()
                 .map_or_else(String::new, |s| s.title.clone()),
             11 => self
                 .resource
-                .get_songdata()
+                .songdata()
                 .map_or_else(String::new, |s| s.subtitle.clone()),
             14 => self
                 .resource
-                .get_songdata()
+                .songdata()
                 .map_or_else(String::new, |s| s.artist.clone()),
             _ => String::new(),
         }
@@ -302,23 +302,23 @@ struct CourseResultMouseContext<'a> {
 
 impl rubato_types::timer_access::TimerAccess for CourseResultMouseContext<'_> {
     fn now_time(&self) -> i64 {
-        self.timer.get_now_time()
+        self.timer.now_time()
     }
 
     fn now_micro_time(&self) -> i64 {
-        self.timer.get_now_micro_time()
+        self.timer.now_micro_time()
     }
 
     fn micro_timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_micro_timer(timer_id)
+        self.timer.micro_timer(timer_id)
     }
 
     fn timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_timer(timer_id)
+        self.timer.timer(timer_id)
     }
 
     fn now_time_for(&self, timer_id: i32) -> i64 {
-        self.timer.get_now_time_for_id(timer_id)
+        self.timer.now_time_for_id(timer_id)
     }
 
     fn is_timer_on(&self, timer_id: i32) -> bool {
@@ -380,32 +380,30 @@ impl CourseResult {
 
     fn do_create(&mut self) {
         for i in 0..REPLAY_SIZE {
-            let models = self.resource.get_course_bms_models();
+            let models = self.resource.course_bms_models();
             if let Some(models) = models {
-                self.data.save_replay[i] = if self
-                    .main
-                    .get_play_data_accessor()
-                    .exists_replay_data_course(
+                self.data.save_replay[i] =
+                    if self.main.play_data_accessor().exists_replay_data_course(
                         models,
-                        self.resource.get_player_config().lnmode,
+                        self.resource.player_config().lnmode,
                         i as i32,
-                        &self.resource.get_constraint(),
+                        &self.resource.constraint(),
                     ) {
-                    ReplayStatus::Exist
-                } else {
-                    ReplayStatus::NotExist
-                };
+                        ReplayStatus::Exist
+                    } else {
+                        ReplayStatus::NotExist
+                    };
             }
         }
 
         // Fill missing course gauge data
         // Collect data first to avoid borrow conflicts
         let mut gauge_fill_data: Vec<Vec<Vec<f32>>> = Vec::new();
-        if let Some(models) = self.resource.get_course_bms_models() {
-            let course_gauge_size = self.resource.get_course_gauge().len();
+        if let Some(models) = self.resource.course_bms_models() {
+            let course_gauge_size = self.resource.course_gauge().len();
             let gauge_type_length = self
                 .resource
-                .get_groove_gauge()
+                .groove_gauge()
                 .map(|g| g.gauge_type_length())
                 .unwrap_or(9);
             for model in &models[course_gauge_size..] {
@@ -422,7 +420,7 @@ impl CourseResult {
             self.resource.get_course_gauge_mut().push(list);
         }
 
-        if let Some(mode) = self.resource.get_bms_model().mode() {
+        if let Some(mode) = self.resource.bms_model().mode() {
             self.property = ResultKeyProperty::get(mode).unwrap_or_else(ResultKeyProperty::beat_7k);
         } else {
             self.property = ResultKeyProperty::beat_7k();
@@ -431,11 +429,11 @@ impl CourseResult {
         self.update_score_database();
 
         // Replay auto save
-        if self.resource.get_play_mode().mode == BMSPlayerModeType::Play {
+        if self.resource.play_mode().mode == BMSPlayerModeType::Play {
             for i in 0..REPLAY_SIZE {
-                let auto_save = &self.resource.get_player_config().autosavereplay;
+                let auto_save = &self.resource.player_config().autosavereplay;
                 if i < auto_save.len()
-                    && let Some(new_score) = self.resource.get_course_score_data()
+                    && let Some(new_score) = self.resource.course_score_data()
                     && ReplayAutoSaveConstraint::get(auto_save[i])
                         .is_qualified(&self.data.oldscore, new_score)
                 {
@@ -446,7 +444,7 @@ impl CourseResult {
 
         self.data.gauge_type = self
             .resource
-            .get_groove_gauge()
+            .groove_gauge()
             .map(|g| g.gauge_type())
             .unwrap_or(0);
 
@@ -459,10 +457,10 @@ impl CourseResult {
 
     fn do_prepare(&mut self) {
         self.data.state = STATE_OFFLINE;
-        let newscore = self.resource.get_course_score_data().cloned();
+        let newscore = self.resource.course_score_data().cloned();
 
         self.data.ranking = if self.resource.get_ranking_data().is_some()
-            && self.resource.get_course_bms_models().is_some()
+            && self.resource.course_bms_models().is_some()
         {
             self.resource.get_ranking_data().cloned()
         } else {
@@ -470,12 +468,12 @@ impl CourseResult {
         };
         self.data.ranking_offset = 0;
 
-        let ir = self.main.get_ir_status();
-        if !ir.is_empty() && self.resource.get_play_mode().mode == BMSPlayerModeType::Play {
+        let ir = self.main.ir_status();
+        if !ir.is_empty() && self.resource.play_mode().mode == BMSPlayerModeType::Play {
             self.data.state = STATE_IR_PROCESSING;
 
             let mut uln = false;
-            if let Some(models) = self.resource.get_course_bms_models() {
+            if let Some(models) = self.resource.course_bms_models() {
                 for model in models {
                     if model.contains_undefined_long_note() {
                         uln = true;
@@ -484,7 +482,7 @@ impl CourseResult {
                 }
             }
             let lnmode = if uln {
-                self.resource.get_player_config().lnmode
+                self.resource.player_config().lnmode
             } else {
                 0
             };
@@ -494,7 +492,7 @@ impl CourseResult {
                     && !self.resource.is_force_no_ir_send()
                     && self
                         .resource
-                        .get_course_data()
+                        .course_data()
                         .map(|cd| cd.release)
                         .unwrap_or(false);
                 match irc.config.irsend {
@@ -510,7 +508,7 @@ impl CourseResult {
 
                 if send
                     && let Some(ref ns) = newscore
-                    && let Some(course_data) = self.resource.get_course_data()
+                    && let Some(course_data) = self.resource.course_data()
                 {
                     self.ir_send_status.push(CourseIRSendStatus::new(
                         irc.connection.clone(),
@@ -522,7 +520,7 @@ impl CourseResult {
             }
 
             // IR processing in background thread (Java spawns a Thread)
-            let ir_send_count = self.main.get_config().ir_send_count;
+            let ir_send_count = self.main.config().ir_send_count;
             if !self.ir_send_status.is_empty() {
                 self.data
                     .timer
@@ -531,12 +529,8 @@ impl CourseResult {
 
             // Move statuses into the thread
             let mut statuses = std::mem::take(&mut self.ir_send_status);
-            let ir_connection = self
-                .main
-                .get_ir_status()
-                .first()
-                .map(|s| s.connection.clone());
-            let course_data_for_ranking = self.resource.get_course_data().cloned();
+            let ir_connection = self.main.ir_status().first().map(|s| s.connection.clone());
+            let course_data_for_ranking = self.resource.course_data().cloned();
             let oldscore_exscore = self.data.oldscore.exscore();
             let newscore_clone = newscore.clone();
 
@@ -625,20 +619,20 @@ impl CourseResult {
             let is_clear = ns.clear != ClearType::Failed.id();
             let loop_sound = self
                 .resource
-                .get_config()
+                .config()
                 .audio
                 .as_ref()
                 .map(|ac| ac.is_loop_course_result_sound)
                 .unwrap_or(false);
             if is_clear {
-                let sound = if self.main.get_sound_path(&SoundType::CourseClear).is_some() {
+                let sound = if self.main.sound_path(&SoundType::CourseClear).is_some() {
                     SoundType::CourseClear
                 } else {
                     SoundType::ResultClear
                 };
                 self.main.play_sound(&sound, loop_sound);
             } else {
-                let sound = if self.main.get_sound_path(&SoundType::CourseFail).is_some() {
+                let sound = if self.main.sound_path(&SoundType::CourseFail).is_some() {
                     SoundType::CourseFail
                 } else {
                     SoundType::ResultFail
@@ -669,7 +663,7 @@ impl CourseResult {
     }
 
     fn do_render(&mut self) {
-        let time = self.data.timer.get_now_time();
+        let time = self.data.timer.now_time();
         self.data.timer.switch_timer(TIMER_RESULTGRAPH_BEGIN, true);
         self.data.timer.switch_timer(TIMER_RESULTGRAPH_END, true);
 
@@ -688,7 +682,7 @@ impl CourseResult {
         }
 
         if self.data.timer.is_timer_on(TIMER_FADEOUT) {
-            let fadeout_time = self.data.timer.get_now_time_for_id(TIMER_FADEOUT);
+            let fadeout_time = self.data.timer.now_time_for_id(TIMER_FADEOUT);
             let skin_fadeout = self
                 .skin
                 .as_ref()
@@ -699,7 +693,7 @@ impl CourseResult {
                     audio.stop_note(None);
                 }
                 {
-                    let input = self.main.get_input_processor();
+                    let input = self.main.input_processor();
                     input.reset_all_key_changed_time();
                 }
 
@@ -717,7 +711,7 @@ impl CourseResult {
         {
             let mut ok = false;
             for i in 0..self.property.get_assign_length() {
-                let input_processor = self.main.get_input_processor();
+                let input_processor = self.main.input_processor();
                 if self.property.get_assign(i) == Some(ResultKey::ChangeGraph)
                     && input_processor.key_state(i)
                     && input_processor.reset_key_changed_time(i)
@@ -732,7 +726,7 @@ impl CourseResult {
             }
 
             {
-                let input_processor = self.main.get_input_processor();
+                let input_processor = self.main.input_processor();
                 if input_processor.is_control_key_pressed(ControlKeys::Escape)
                     || input_processor.is_control_key_pressed(ControlKeys::Enter)
                 {
@@ -740,7 +734,7 @@ impl CourseResult {
                 }
             }
 
-            if (self.resource.get_score_data().is_none() || ok)
+            if (self.resource.score_data().is_none() || ok)
                 && (self.data.state == STATE_OFFLINE || self.data.state == STATE_IR_FINISHED)
             {
                 self.data.timer.switch_timer(TIMER_FADEOUT, true);
@@ -748,7 +742,7 @@ impl CourseResult {
             }
 
             let replay_index = {
-                let input_processor = self.main.get_input_processor();
+                let input_processor = self.main.input_processor();
                 if input_processor.is_control_key_pressed(ControlKeys::Num1) {
                     Some(0)
                 } else if input_processor.is_control_key_pressed(ControlKeys::Num2) {
@@ -766,12 +760,12 @@ impl CourseResult {
             }
 
             let open_ir = {
-                let input_processor = self.main.get_input_processor();
+                let input_processor = self.main.input_processor();
                 input_processor.is_activated(KeyCommand::OpenIr)
             };
             if open_ir
-                && let Some(ir_status) = self.main.get_ir_status().first()
-                && let Some(coursedata) = self.resource.get_course_data()
+                && let Some(ir_status) = self.main.ir_status().first()
+                && let Some(coursedata) = self.resource.course_data()
             {
                 let course = rubato_ir::ir_course_data::IRCourseData::new(coursedata);
                 if let Some(url) = ir_status.connection.get_course_url(&course)
@@ -784,11 +778,11 @@ impl CourseResult {
     }
 
     fn update_score_database(&mut self) {
-        let lnmode = self.resource.get_player_config().lnmode;
-        let random_cfg = self.resource.get_player_config().random;
-        let random2_cfg = self.resource.get_player_config().random2;
-        let doubleoption_cfg = self.resource.get_player_config().doubleoption;
-        let newscore = self.resource.get_course_score_data().cloned();
+        let lnmode = self.resource.player_config().lnmode;
+        let random_cfg = self.resource.player_config().random;
+        let random2_cfg = self.resource.player_config().random2;
+        let doubleoption_cfg = self.resource.player_config().doubleoption;
+        let newscore = self.resource.course_score_data().cloned();
         if newscore.is_none() {
             return;
         }
@@ -796,33 +790,33 @@ impl CourseResult {
 
         let dp = self
             .resource
-            .get_course_bms_models()
+            .course_bms_models()
             .map(is_double_play)
             .unwrap_or(false);
 
-        newscore.maxcombo = self.resource.get_maxcombo();
+        newscore.maxcombo = self.resource.maxcombo();
         apply_avgjudge(&mut newscore);
 
         let random = determine_random_mode(random_cfg, random2_cfg, doubleoption_cfg, dp);
 
-        if let Some(models) = self.resource.get_course_bms_models() {
-            let score = self.main.get_play_data_accessor().read_score_data_course(
+        if let Some(models) = self.resource.course_bms_models() {
+            let score = self.main.play_data_accessor().read_score_data_course(
                 models,
                 lnmode,
                 random,
-                &self.resource.get_constraint(),
+                &self.resource.constraint(),
             );
             self.data.oldscore = score.unwrap_or_default();
         }
 
         let target_exscore = self
             .resource
-            .get_target_score_data()
+            .target_score_data()
             .map(|s| s.exscore())
             .unwrap_or(0);
         let total_notes: i32 = self
             .resource
-            .get_course_bms_models()
+            .course_bms_models()
             .map(aggregate_total_notes)
             .unwrap_or(0);
         self.data
@@ -830,13 +824,13 @@ impl CourseResult {
             .set_target_score(self.data.oldscore.exscore(), target_exscore, total_notes);
         self.data.score.update_score(Some(&newscore));
 
-        if let Some(models) = self.resource.get_course_bms_models() {
-            self.main.get_play_data_accessor().write_score_data_course(
+        if let Some(models) = self.resource.course_bms_models() {
+            self.main.play_data_accessor().write_score_data_course(
                 &newscore,
                 models,
                 lnmode,
                 random,
-                &self.resource.get_constraint(),
+                &self.resource.constraint(),
                 self.resource.is_update_course_score(),
             );
         }
@@ -845,7 +839,7 @@ impl CourseResult {
     }
 
     pub fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
-        if let Some(score) = self.resource.get_course_score_data() {
+        if let Some(score) = self.resource.course_score_data() {
             match judge {
                 0 => {
                     if fast {
@@ -897,23 +891,23 @@ impl CourseResult {
     }
 
     pub fn save_replay_data(&mut self, index: usize) {
-        if self.resource.get_play_mode().mode == BMSPlayerModeType::Play
-            && self.resource.get_course_score_data().is_some()
+        if self.resource.play_mode().mode == BMSPlayerModeType::Play
+            && self.resource.course_score_data().is_some()
             && self.data.save_replay[index] != ReplayStatus::Saved
             && self.resource.is_update_course_score()
         {
             // Extract gauge value first to avoid borrow conflict
-            let gauge = self.resource.get_player_config().gauge;
+            let gauge = self.resource.player_config().gauge;
             let rd = self.resource.get_course_replay_mut();
             for replay in rd.iter_mut() {
                 replay.gauge = gauge;
             }
-            let lnmode = self.resource.get_player_config().lnmode;
-            let constraint = self.resource.get_constraint();
-            if let Some(models) = self.resource.get_course_bms_models() {
+            let lnmode = self.resource.player_config().lnmode;
+            let constraint = self.resource.constraint();
+            if let Some(models) = self.resource.course_bms_models() {
                 // Clone replays for write (write_brd_course calls shrink on each)
-                let mut replays = self.resource.get_course_replay().to_vec();
-                self.main.get_play_data_accessor().write_replay_data_course(
+                let mut replays = self.resource.course_replay().to_vec();
+                self.main.play_data_accessor().write_replay_data_course(
                     &mut replays,
                     models,
                     lnmode,
@@ -927,7 +921,7 @@ impl CourseResult {
     }
 
     pub fn get_new_score(&self) -> Option<&ScoreData> {
-        self.resource.get_course_score_data()
+        self.resource.course_score_data()
     }
 
     pub fn dispose(&mut self) {
@@ -1197,7 +1191,7 @@ mod tests {
 
         <CourseResult as MainState>::handle_skin_mouse_pressed(&mut cr, 0, 10, 10);
 
-        assert_eq!(cr.resource.get_player_config().random, 1);
+        assert_eq!(cr.resource.player_config().random, 1);
     }
 
     #[test]
@@ -1245,7 +1239,7 @@ mod tests {
     fn test_new_stores_main_and_resource() {
         let cr = make_default();
         // Verify the fields exist and are accessible
-        assert!(cr.resource.get_score_data().is_none());
+        assert!(cr.resource.score_data().is_none());
     }
 
     #[test]
@@ -1754,7 +1748,7 @@ mod tests {
 
     #[test]
     fn test_is_double_play_no_mode_set() {
-        // Model with no mode -> get_mode() returns None, unwrap_or(1) == 1, not dp
+        // Model with no mode -> mode() returns None, unwrap_or(1) == 1, not dp
         let model = bms_model::bms_model::BMSModel::default();
         assert!(!is_double_play(&[model]));
     }
@@ -1880,8 +1874,8 @@ impl rubato_core::main_state::MainState for CourseResult {
 
     fn load_skin(&mut self, skin_type: i32) {
         if let Some(skin) = rubato_skin::skin_loader::load_skin_from_config(
-            self.main.get_config(),
-            self.resource.get_player_config(),
+            self.main.config(),
+            self.resource.player_config(),
             skin_type,
         ) {
             self.skin = Some(CourseResultSkin::from_loaded_skin(&skin));

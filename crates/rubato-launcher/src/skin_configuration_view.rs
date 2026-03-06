@@ -396,7 +396,7 @@ impl SkinConfigurationView {
         // for (SkinHeader header : skinheader) { if (header.getSkinType() == mode) { result.add(header); } }
         self.skinheader
             .iter()
-            .filter(|header| header.get_skin_type() == Some(mode))
+            .filter(|header| header.skin_type() == Some(mode))
             .collect()
     }
 
@@ -422,7 +422,7 @@ impl SkinConfigurationView {
         let headers: Vec<SkinHeader> = self
             .skinheader
             .iter()
-            .filter(|h| h.get_skin_type() == Some(skin_type))
+            .filter(|h| h.skin_type() == Some(skin_type))
             .cloned()
             .collect();
         self.current_headers = headers;
@@ -481,7 +481,7 @@ impl SkinConfigurationView {
             // skin.setProperties(getProperty());
             skin.properties = Some(self.property());
             // player.getSkin()[selected.getSkinType().getId()] = skin;
-            if let Some(skin_type) = selected.get_skin_type() {
+            if let Some(skin_type) = selected.skin_type() {
                 let type_id = skin_type.id() as usize;
                 let player = self.player.as_mut().unwrap();
                 while player.skin.len() <= type_id {
@@ -512,20 +512,20 @@ impl SkinConfigurationView {
             if let Some(header) = load_skin_header(path, config) {
                 // 7/14key skinは5/10keyにも加える (add 7/14key skins as 5/10key too)
                 if header.get_type() == rubato_skin::skin_header::TYPE_LR2SKIN
-                    && let Some(skin_type) = header.get_skin_type()
+                    && let Some(skin_type) = header.skin_type()
                     && (*skin_type == SkinType::Play7Keys || *skin_type == SkinType::Play14Keys)
                 {
                     // Re-load to get a fresh copy for the 5/10key variant
                     if let Some(mut variant) = load_skin_header(path, config) {
-                        let variant_type = *variant.get_skin_type().unwrap();
+                        let variant_type = *variant.skin_type().unwrap();
                         if variant_type == SkinType::Play7Keys {
-                            let name = variant.get_name().unwrap_or("").to_string();
+                            let name = variant.name().unwrap_or("").to_string();
                             if !name.to_lowercase().contains("7key") {
                                 variant.set_name(format!("{} (7KEYS) ", name));
                             }
                             variant.set_skin_type(SkinType::Play5Keys);
                         } else if variant_type == SkinType::Play14Keys {
-                            let name = variant.get_name().unwrap_or("").to_string();
+                            let name = variant.name().unwrap_or("").to_string();
                             if !name.to_lowercase().contains("14key") {
                                 variant.set_name(format!("{} (14KEYS) ", name));
                             }
@@ -1016,7 +1016,7 @@ impl SkinConfigurationView {
     /// Helper: Get skin header display name for SkinListCell
     /// Translates: SkinListCell.updateItem(SkinHeader, boolean)
     pub fn skin_header_display_name(header: &SkinHeader) -> String {
-        let name = header.get_name().unwrap_or("");
+        let name = header.name().unwrap_or("");
         if header.get_type() == TYPE_BEATORJASKIN {
             name.to_string()
         } else {
@@ -1227,8 +1227,8 @@ mod tests {
             tmp.path()
         );
         let header = header.unwrap();
-        assert_eq!(header.get_name(), Some("Test Skin"));
-        assert_eq!(header.get_skin_type(), Some(&SkinType::Play7Keys));
+        assert_eq!(header.name(), Some("Test Skin"));
+        assert_eq!(header.skin_type(), Some(&SkinType::Play7Keys));
     }
 
     #[test]
@@ -1246,8 +1246,8 @@ mod tests {
         // Real play7.json may fail to parse due to complex fields;
         // this test verifies the loader handles it gracefully
         if let Some(header) = header {
-            assert!(header.get_name().is_some());
-            assert!(header.get_skin_type().is_some());
+            assert!(header.name().is_some());
+            assert!(header.skin_type().is_some());
         }
     }
 
@@ -1264,10 +1264,7 @@ mod tests {
 
         assert!(header.is_some(), "Lua skin header should be loaded");
         let header = header.unwrap();
-        assert!(
-            header.get_name().is_some(),
-            "Loaded header should have a name"
-        );
+        assert!(header.name().is_some(), "Loaded header should have a name");
     }
 
     #[test]
@@ -1329,7 +1326,7 @@ mod tests {
         let headers_with_types: Vec<_> = view
             .skinheader
             .iter()
-            .filter(|h| h.get_skin_type().is_some())
+            .filter(|h| h.skin_type().is_some())
             .collect();
         assert!(
             !headers_with_types.is_empty(),
@@ -1376,7 +1373,7 @@ mod tests {
         // If there are any, they should all have the correct type
         for header in &play7_headers {
             assert_eq!(
-                header.get_skin_type(),
+                header.skin_type(),
                 Some(&SkinType::Play7Keys),
                 "Filtered headers should have the correct skin type"
             );
@@ -1397,8 +1394,8 @@ mod tests {
         let header = convert_lr2_header_data(&lr2_data);
 
         assert_eq!(header.get_type(), TYPE_LR2SKIN);
-        assert_eq!(header.get_name(), Some("Test LR2 Skin"));
-        assert_eq!(header.get_skin_type(), Some(&SkinType::Play7Keys));
+        assert_eq!(header.name(), Some("Test LR2 Skin"));
+        assert_eq!(header.skin_type(), Some(&SkinType::Play7Keys));
         assert_eq!(
             header.get_path(),
             Some(&PathBuf::from("/test/skin.lr2skin"))
@@ -1497,7 +1494,7 @@ mod tests {
         assert!(header.is_some(), "LR2 skin header should be loaded");
         let header = header.unwrap();
         assert_eq!(header.get_type(), TYPE_LR2SKIN);
-        assert_eq!(header.get_name(), Some("Test LR2"));
+        assert_eq!(header.name(), Some("Test LR2"));
     }
 
     #[test]

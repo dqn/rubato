@@ -60,7 +60,7 @@ fn lane_shuffle_modify(
         Some(m) => m,
         None => return Vec::new(),
     };
-    let keys = PatternModifierBase::get_keys_static(mode, base.player, is_scratch_lane_modify);
+    let keys = PatternModifierBase::keys_static(mode, base.player, is_scratch_lane_modify);
     let lanes = mode.key() as usize;
     if keys.is_empty() {
         return Vec::new();
@@ -135,7 +135,7 @@ fn lane_shuffle_modify(
 }
 
 impl PatternModifierBase {
-    pub fn get_keys_static(mode: &Mode, player: i32, contains_scratch: bool) -> Vec<i32> {
+    pub fn keys_static(mode: &Mode, player: i32, contains_scratch: bool) -> Vec<i32> {
         if player >= mode.player() {
             return Vec::new();
         }
@@ -184,7 +184,7 @@ impl LaneMirrorShuffleModifier {
         self.show_shuffle_pattern
     }
 
-    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+    pub fn random_pattern(&self, mode: &Mode) -> Vec<i32> {
         get_random_pattern_impl(
             &self.random,
             self.show_shuffle_pattern,
@@ -206,7 +206,7 @@ impl PatternModifier for LaneMirrorShuffleModifier {
         );
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -224,7 +224,7 @@ impl PatternModifier for LaneMirrorShuffleModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 
@@ -233,7 +233,7 @@ impl PatternModifier for LaneMirrorShuffleModifier {
     }
 
     fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
-        Some(self.get_random_pattern(mode))
+        Some(self.random_pattern(mode))
     }
 }
 
@@ -287,7 +287,7 @@ impl LaneRotateShuffleModifier {
         self.show_shuffle_pattern
     }
 
-    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+    pub fn random_pattern(&self, mode: &Mode) -> Vec<i32> {
         get_random_pattern_impl(
             &self.random,
             self.show_shuffle_pattern,
@@ -309,7 +309,7 @@ impl PatternModifier for LaneRotateShuffleModifier {
         );
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -327,7 +327,7 @@ impl PatternModifier for LaneRotateShuffleModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 
@@ -336,7 +336,7 @@ impl PatternModifier for LaneRotateShuffleModifier {
     }
 
     fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
-        Some(self.get_random_pattern(mode))
+        Some(self.random_pattern(mode))
     }
 }
 
@@ -382,7 +382,7 @@ impl LaneRandomShuffleModifier {
         self.show_shuffle_pattern
     }
 
-    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+    pub fn random_pattern(&self, mode: &Mode) -> Vec<i32> {
         get_random_pattern_impl(
             &self.random,
             self.show_shuffle_pattern,
@@ -404,7 +404,7 @@ impl PatternModifier for LaneRandomShuffleModifier {
         );
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -422,7 +422,7 @@ impl PatternModifier for LaneRandomShuffleModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 
@@ -431,7 +431,7 @@ impl PatternModifier for LaneRandomShuffleModifier {
     }
 
     fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
-        Some(self.get_random_pattern(mode))
+        Some(self.random_pattern(mode))
     }
 }
 
@@ -475,7 +475,7 @@ impl PlayerFlipModifier {
         self.show_shuffle_pattern
     }
 
-    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+    pub fn random_pattern(&self, mode: &Mode) -> Vec<i32> {
         // Java: super(0, true, false) -> isScratchLaneModify = true
         get_random_pattern_impl(
             &self.random,
@@ -492,7 +492,7 @@ impl PatternModifier for PlayerFlipModifier {
         self.random = lane_shuffle_modify(&mut self.base, model, true, false, Self::make_random);
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -510,7 +510,7 @@ impl PatternModifier for PlayerFlipModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 
@@ -519,7 +519,7 @@ impl PatternModifier for PlayerFlipModifier {
     }
 
     fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
-        Some(self.get_random_pattern(mode))
+        Some(self.random_pattern(mode))
     }
 }
 
@@ -563,7 +563,7 @@ impl PlayerBattleModifier {
         self.show_shuffle_pattern
     }
 
-    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+    pub fn random_pattern(&self, mode: &Mode) -> Vec<i32> {
         // Java: super(0, true, false) -> isScratchLaneModify = true
         get_random_pattern_impl(
             &self.random,
@@ -581,7 +581,7 @@ impl PatternModifier for PlayerBattleModifier {
             Some(m) => m,
             None => return,
         };
-        let keys = PatternModifierBase::get_keys_static(mode, self.base.player, true);
+        let keys = PatternModifierBase::keys_static(mode, self.base.player, true);
         let lanes = mode.key() as usize;
         if keys.is_empty() {
             return;
@@ -631,7 +631,7 @@ impl PatternModifier for PlayerBattleModifier {
         self.random = random;
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -649,7 +649,7 @@ impl PatternModifier for PlayerBattleModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 
@@ -658,7 +658,7 @@ impl PatternModifier for PlayerBattleModifier {
     }
 
     fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
-        Some(self.get_random_pattern(mode))
+        Some(self.random_pattern(mode))
     }
 }
 
@@ -705,7 +705,7 @@ impl LaneCrossShuffleModifier {
         self.show_shuffle_pattern
     }
 
-    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+    pub fn random_pattern(&self, mode: &Mode) -> Vec<i32> {
         get_random_pattern_impl(
             &self.random,
             self.show_shuffle_pattern,
@@ -727,7 +727,7 @@ impl PatternModifier for LaneCrossShuffleModifier {
         );
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -745,7 +745,7 @@ impl PatternModifier for LaneCrossShuffleModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 
@@ -754,7 +754,7 @@ impl PatternModifier for LaneCrossShuffleModifier {
     }
 
     fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
-        Some(self.get_random_pattern(mode))
+        Some(self.random_pattern(mode))
     }
 }
 
@@ -865,7 +865,7 @@ impl LanePlayableRandomShuffleModifier {
         self.show_shuffle_pattern
     }
 
-    pub fn get_random_pattern(&self, mode: &Mode) -> Vec<i32> {
+    pub fn random_pattern(&self, mode: &Mode) -> Vec<i32> {
         get_random_pattern_impl(
             &self.random,
             self.show_shuffle_pattern,
@@ -952,7 +952,7 @@ impl PatternModifier for LanePlayableRandomShuffleModifier {
         );
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -970,7 +970,7 @@ impl PatternModifier for LanePlayableRandomShuffleModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 
@@ -979,7 +979,7 @@ impl PatternModifier for LanePlayableRandomShuffleModifier {
     }
 
     fn get_lane_shuffle_random_pattern(&self, mode: &Mode) -> Option<Vec<i32>> {
-        Some(self.get_random_pattern(mode))
+        Some(self.random_pattern(mode))
     }
 }
 
@@ -992,44 +992,44 @@ mod tests {
     use bms_model::note::Note;
     use bms_model::time_line::TimeLine;
 
-    // -- PatternModifierBase::get_keys_static --
+    // -- PatternModifierBase::keys_static --
 
     #[test]
     fn get_keys_static_beat7k_with_scratch() {
-        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_7K, 0, true);
+        let keys = PatternModifierBase::keys_static(&Mode::BEAT_7K, 0, true);
         assert_eq!(keys, vec![0, 1, 2, 3, 4, 5, 6, 7]);
     }
 
     #[test]
     fn get_keys_static_beat7k_without_scratch() {
-        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_7K, 0, false);
+        let keys = PatternModifierBase::keys_static(&Mode::BEAT_7K, 0, false);
         // Scratch key for BEAT_7K is 7
         assert_eq!(keys, vec![0, 1, 2, 3, 4, 5, 6]);
     }
 
     #[test]
     fn get_keys_static_popn9k() {
-        let keys = PatternModifierBase::get_keys_static(&Mode::POPN_9K, 0, false);
+        let keys = PatternModifierBase::keys_static(&Mode::POPN_9K, 0, false);
         // No scratch keys in POPN_9K
         assert_eq!(keys, vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
     }
 
     #[test]
     fn get_keys_static_invalid_player() {
-        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_7K, 1, false);
+        let keys = PatternModifierBase::keys_static(&Mode::BEAT_7K, 1, false);
         assert!(keys.is_empty());
     }
 
     #[test]
     fn get_keys_static_beat14k_player0() {
-        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_14K, 0, false);
+        let keys = PatternModifierBase::keys_static(&Mode::BEAT_14K, 0, false);
         // Player 0: keys 0..8, scratch at 7
         assert_eq!(keys, vec![0, 1, 2, 3, 4, 5, 6]);
     }
 
     #[test]
     fn get_keys_static_beat14k_player1() {
-        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_14K, 1, false);
+        let keys = PatternModifierBase::keys_static(&Mode::BEAT_14K, 1, false);
         // Player 1: keys 8..16, scratch at 15
         assert_eq!(keys, vec![8, 9, 10, 11, 12, 13, 14]);
     }
@@ -1039,14 +1039,14 @@ mod tests {
     #[test]
     fn mirror_modifier_creation() {
         let modifier = LaneMirrorShuffleModifier::new(0, false);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
-        assert_eq!(modifier.get_player(), 0);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
+        assert_eq!(modifier.player(), 0);
     }
 
     #[test]
     fn mirror_modifier_with_scratch_is_light_assist() {
         let modifier = LaneMirrorShuffleModifier::new(0, true);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(modifier.assist_level(), AssistLevel::LightAssist);
     }
 
     #[test]
@@ -1057,7 +1057,7 @@ mod tests {
         model.set_all_time_line(vec![TimeLine::new(0.0, 0, 8)]);
         model.set_mode(Mode::BEAT_7K);
 
-        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_7K, 0, false);
+        let keys = PatternModifierBase::keys_static(&Mode::BEAT_7K, 0, false);
         let result = LaneMirrorShuffleModifier::make_random(&keys, &model, 0);
 
         // result should be [6, 5, 4, 3, 2, 1, 0, 7]
@@ -1071,7 +1071,7 @@ mod tests {
         model.set_all_time_line(vec![TimeLine::new(0.0, 0, 8)]);
         model.set_mode(Mode::BEAT_7K);
 
-        let keys = PatternModifierBase::get_keys_static(&Mode::BEAT_7K, 0, true);
+        let keys = PatternModifierBase::keys_static(&Mode::BEAT_7K, 0, true);
         let result = LaneMirrorShuffleModifier::make_random(&keys, &model, 0);
 
         // All 8 keys reversed: [7, 6, 5, 4, 3, 2, 1, 0]
@@ -1118,7 +1118,7 @@ mod tests {
     #[test]
     fn random_modifier_creation() {
         let modifier = LaneRandomShuffleModifier::new(0, false);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
     }
 
     #[test]
@@ -1131,7 +1131,7 @@ mod tests {
             make_test_model(&mode, vec![tl])
         };
 
-        let keys = PatternModifierBase::get_keys_static(&mode, 0, false);
+        let keys = PatternModifierBase::keys_static(&mode, 0, false);
         let result1 = LaneRandomShuffleModifier::make_random(&keys, &make_model(), seed);
         let result2 = LaneRandomShuffleModifier::make_random(&keys, &make_model(), seed);
         assert_eq!(result1, result2);
@@ -1142,7 +1142,7 @@ mod tests {
         let mode = Mode::BEAT_7K;
         let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 8)]);
 
-        let keys = PatternModifierBase::get_keys_static(&mode, 0, false);
+        let keys = PatternModifierBase::keys_static(&mode, 0, false);
         let result = LaneRandomShuffleModifier::make_random(&keys, &model, 42);
 
         // result should have 8 elements (mode_key)
@@ -1162,7 +1162,7 @@ mod tests {
     #[test]
     fn rotate_modifier_creation() {
         let modifier = LaneRotateShuffleModifier::new(0, false);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
     }
 
     #[test]
@@ -1171,7 +1171,7 @@ mod tests {
         let seed: i64 = 123;
         let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 8)]);
 
-        let keys = PatternModifierBase::get_keys_static(&mode, 0, false);
+        let keys = PatternModifierBase::keys_static(&mode, 0, false);
         let result1 = LaneRotateShuffleModifier::make_random(&keys, &model, seed);
         let result2 = LaneRotateShuffleModifier::make_random(&keys, &model, seed);
         assert_eq!(result1, result2);
@@ -1182,7 +1182,7 @@ mod tests {
         let mode = Mode::BEAT_7K;
         let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 8)]);
 
-        let keys = PatternModifierBase::get_keys_static(&mode, 0, false);
+        let keys = PatternModifierBase::keys_static(&mode, 0, false);
         let result = LaneRotateShuffleModifier::make_random(&keys, &model, 99);
 
         assert_eq!(result.len(), 8);
@@ -1198,7 +1198,7 @@ mod tests {
     #[test]
     fn cross_modifier_creation() {
         let modifier = LaneCrossShuffleModifier::new(0, false);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(modifier.assist_level(), AssistLevel::LightAssist);
     }
 
     #[test]
@@ -1210,7 +1210,7 @@ mod tests {
         let mode = Mode::BEAT_7K;
         let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 8)]);
 
-        let keys = PatternModifierBase::get_keys_static(&mode, 0, false);
+        let keys = PatternModifierBase::keys_static(&mode, 0, false);
         let result = LaneCrossShuffleModifier::make_random(&keys, &model, 0);
 
         assert_eq!(result.len(), 8);
@@ -1231,8 +1231,8 @@ mod tests {
     #[test]
     fn flip_modifier_creation() {
         let modifier = PlayerFlipModifier::new();
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
-        assert_eq!(modifier.get_player(), 0);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
+        assert_eq!(modifier.player(), 0);
     }
 
     #[test]
@@ -1263,8 +1263,8 @@ mod tests {
     #[test]
     fn battle_modifier_creation() {
         let modifier = PlayerBattleModifier::new();
-        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
-        assert_eq!(modifier.get_player(), 0);
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
+        assert_eq!(modifier.player(), 0);
     }
 
     #[test]
@@ -1272,7 +1272,7 @@ mod tests {
         let mode = Mode::BEAT_7K;
         let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 8)]);
 
-        let keys = PatternModifierBase::get_keys_static(&mode, 0, true);
+        let keys = PatternModifierBase::keys_static(&mode, 0, true);
         let (result, assist) = PlayerBattleModifier::make_random(&keys, &model, 0);
         // Single player: returns empty
         assert!(result.is_empty());
@@ -1284,7 +1284,7 @@ mod tests {
         let mode = Mode::BEAT_14K;
         let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 16)]);
 
-        let keys = PatternModifierBase::get_keys_static(&mode, 0, true);
+        let keys = PatternModifierBase::keys_static(&mode, 0, true);
         let (result, _) = PlayerBattleModifier::make_random(&keys, &model, 0);
         // Should duplicate keys: [keys, keys]
         assert_eq!(result.len(), keys.len() * 2);
@@ -1309,7 +1309,7 @@ mod prop_tests {
             let mode = Mode::BEAT_7K;
             let model = make_test_model(&mode, vec![TimeLine::new(0.0, 0, 8)]);
 
-            let keys = PatternModifierBase::get_keys_static(&mode, 0, false);
+            let keys = PatternModifierBase::keys_static(&mode, 0, false);
             let result = LaneRandomShuffleModifier::make_random(&keys, &model, seed);
 
             // result should have 8 elements (mode_key for BEAT_7K)

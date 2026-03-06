@@ -45,11 +45,11 @@ impl MainControllerRef {
         }
     }
 
-    pub fn get_config(&self) -> &rubato_types::config::Config {
+    pub fn config(&self) -> &rubato_types::config::Config {
         self.inner.config()
     }
 
-    pub fn get_player_config(&self) -> &rubato_types::player_config::PlayerConfig {
+    pub fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
         self.inner.player_config()
     }
 
@@ -57,7 +57,7 @@ impl MainControllerRef {
         self.inner.change_state(state);
     }
 
-    pub fn get_input_processor(&mut self) -> &mut BMSPlayerInputProcessor {
+    pub fn input_processor(&mut self) -> &mut BMSPlayerInputProcessor {
         &mut self.input_processor
     }
 

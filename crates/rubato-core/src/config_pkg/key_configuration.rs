@@ -196,7 +196,7 @@ impl KeyConfiguration {
     /// `keyboard_keys`: key code array from KeyboardConfig.keys
     ///
     /// Java: KeyConfiguration.getKeyAssign(int index, BMSPlayerInputProcessor)
-    pub fn get_key_assign(&self, index: usize, keyboard_keys: &[i32]) -> String {
+    pub fn key_assign(&self, index: usize, keyboard_keys: &[i32]) -> String {
         if index >= KEYSA[self.mode].len() {
             return "!!!".to_string();
         }
@@ -212,19 +212,19 @@ impl KeyConfiguration {
         gdx_key_name(keycode).to_string()
     }
 
-    pub fn get_mode(&self) -> usize {
+    pub fn mode(&self) -> usize {
         self.mode
     }
 
-    pub fn get_mode_name(&self) -> &str {
+    pub fn mode_name(&self) -> &str {
         MODE[self.mode]
     }
 
-    pub fn get_keys(&self) -> &[&str] {
+    pub fn keys(&self) -> &[&str] {
         KEYS[self.mode]
     }
 
-    pub fn get_keysa(&self) -> &[i32] {
+    pub fn keysa(&self) -> &[i32] {
         KEYSA[self.mode]
     }
 
@@ -239,7 +239,7 @@ impl KeyConfiguration {
     /// Positive index: keys[index]. -1: start. -2: select. Other: 0.
     ///
     /// Java: KeyConfiguration.getKeyboardKeyAssign(int index)
-    pub fn get_keyboard_key_assign(kb: &KeyboardConfig, index: i32) -> i32 {
+    pub fn keyboard_key_assign(kb: &KeyboardConfig, index: i32) -> i32 {
         if index >= 0 {
             kb.keys.get(index as usize).copied().unwrap_or(0)
         } else if index == -1 {
@@ -255,7 +255,7 @@ impl KeyConfiguration {
     /// Positive index: keys[index]. -1: start. -2: select. Other: 0.
     ///
     /// Java: KeyConfiguration.getControllerKeyAssign(int device, int index)
-    pub fn get_controller_key_assign(
+    pub fn controller_key_assign(
         controllers: &[ControllerConfig],
         device: usize,
         index: i32,
@@ -279,7 +279,7 @@ impl KeyConfiguration {
     /// Positive index: keys[index]. -1: start. -2: select. Other: default.
     ///
     /// Java: KeyConfiguration.getMidiKeyAssign(int index)
-    pub fn get_midi_key_assign(midi: &MidiConfig, index: i32) -> MidiInput {
+    pub fn midi_key_assign(midi: &MidiConfig, index: i32) -> MidiInput {
         if index >= 0 {
             midi.keys
                 .get(index as usize)
@@ -297,7 +297,7 @@ impl KeyConfiguration {
     /// Returns the mouse scratch key string at the given index, or `default` if none.
     ///
     /// Java: KeyConfiguration.getMouseScratchKeyString(int index, String defaultKeyString)
-    pub fn get_mouse_scratch_key_string(
+    pub fn mouse_scratch_key_string(
         msc: &MouseScratchConfig,
         index: i32,
         default: Option<&str>,
@@ -718,7 +718,7 @@ mod tests {
         let pmc = make_pmc();
         let kb = &pmc.keyboard;
         // Index 0 should return the first assigned key value
-        let val = KeyConfiguration::get_keyboard_key_assign(kb, 0);
+        let val = KeyConfiguration::keyboard_key_assign(kb, 0);
         assert_eq!(val, kb.keys[0]);
     }
 
@@ -726,30 +726,27 @@ mod tests {
     fn test_get_keyboard_key_assign_start() {
         let pmc = make_pmc();
         let kb = &pmc.keyboard;
-        assert_eq!(KeyConfiguration::get_keyboard_key_assign(kb, -1), kb.start);
+        assert_eq!(KeyConfiguration::keyboard_key_assign(kb, -1), kb.start);
     }
 
     #[test]
     fn test_get_keyboard_key_assign_select() {
         let pmc = make_pmc();
         let kb = &pmc.keyboard;
-        assert_eq!(KeyConfiguration::get_keyboard_key_assign(kb, -2), kb.select);
+        assert_eq!(KeyConfiguration::keyboard_key_assign(kb, -2), kb.select);
     }
 
     #[test]
     fn test_get_keyboard_key_assign_other_negative() {
         let pmc = make_pmc();
-        assert_eq!(
-            KeyConfiguration::get_keyboard_key_assign(&pmc.keyboard, -3),
-            0
-        );
+        assert_eq!(KeyConfiguration::keyboard_key_assign(&pmc.keyboard, -3), 0);
     }
 
     #[test]
     fn test_get_keyboard_key_assign_out_of_bounds() {
         let pmc = make_pmc();
         assert_eq!(
-            KeyConfiguration::get_keyboard_key_assign(&pmc.keyboard, 9999),
+            KeyConfiguration::keyboard_key_assign(&pmc.keyboard, 9999),
             0
         );
     }
@@ -757,7 +754,7 @@ mod tests {
     #[test]
     fn test_get_controller_key_assign_positive_index() {
         let pmc = make_pmc();
-        let val = KeyConfiguration::get_controller_key_assign(&pmc.controller, 0, 0);
+        let val = KeyConfiguration::controller_key_assign(&pmc.controller, 0, 0);
         assert_eq!(val, pmc.controller[0].keys[0]);
     }
 
@@ -765,11 +762,11 @@ mod tests {
     fn test_get_controller_key_assign_start_select() {
         let pmc = make_pmc();
         assert_eq!(
-            KeyConfiguration::get_controller_key_assign(&pmc.controller, 0, -1),
+            KeyConfiguration::controller_key_assign(&pmc.controller, 0, -1),
             pmc.controller[0].start
         );
         assert_eq!(
-            KeyConfiguration::get_controller_key_assign(&pmc.controller, 0, -2),
+            KeyConfiguration::controller_key_assign(&pmc.controller, 0, -2),
             pmc.controller[0].select
         );
     }
@@ -778,7 +775,7 @@ mod tests {
     fn test_get_controller_key_assign_no_device() {
         let pmc = make_pmc();
         assert_eq!(
-            KeyConfiguration::get_controller_key_assign(&pmc.controller, 99, 0),
+            KeyConfiguration::controller_key_assign(&pmc.controller, 99, 0),
             0
         );
     }
@@ -788,7 +785,7 @@ mod tests {
         // PlayModeConfig::new(BEAT_7K) creates MIDI with enable=false (is_midi=false),
         // so all keys are None. Create an enabled MIDI config directly.
         let midi = MidiConfig::new(Mode::BEAT_7K, true);
-        let mi = KeyConfiguration::get_midi_key_assign(&midi, 0);
+        let mi = KeyConfiguration::midi_key_assign(&midi, 0);
         // BEAT_7K MIDI enabled: keys[0] = Some(MidiInput { NOTE, 53 })
         assert_eq!(mi.input_type, MidiInputType::NOTE);
         assert_eq!(mi.value, 53);
@@ -797,7 +794,7 @@ mod tests {
     #[test]
     fn test_get_midi_key_assign_start() {
         let pmc = make_pmc();
-        let mi = KeyConfiguration::get_midi_key_assign(&pmc.midi, -1);
+        let mi = KeyConfiguration::midi_key_assign(&pmc.midi, -1);
         assert_eq!(mi.input_type, MidiInputType::NOTE);
         assert_eq!(mi.value, 47);
     }
@@ -805,14 +802,14 @@ mod tests {
     #[test]
     fn test_get_midi_key_assign_select() {
         let pmc = make_pmc();
-        let mi = KeyConfiguration::get_midi_key_assign(&pmc.midi, -2);
+        let mi = KeyConfiguration::midi_key_assign(&pmc.midi, -2);
         assert_eq!(mi.input_type, MidiInputType::NOTE);
         assert_eq!(mi.value, 48);
     }
 
     #[test]
     fn test_get_midi_key_assign_other_negative() {
-        let mi = KeyConfiguration::get_midi_key_assign(&make_pmc().midi, -5);
+        let mi = KeyConfiguration::midi_key_assign(&make_pmc().midi, -5);
         assert_eq!(mi.input_type, MidiInputType::NOTE);
         assert_eq!(mi.value, 0);
     }
@@ -822,7 +819,7 @@ mod tests {
         let pmc = make_pmc();
         let msc = &pmc.keyboard.mouse_scratch_config;
         // Default mouse scratch keys are all -1, so should return default
-        let result = KeyConfiguration::get_mouse_scratch_key_string(msc, 0, Some("fallback"));
+        let result = KeyConfiguration::mouse_scratch_key_string(msc, 0, Some("fallback"));
         assert_eq!(result, Some("fallback".to_string()));
     }
 
@@ -830,7 +827,7 @@ mod tests {
     fn test_get_mouse_scratch_key_string_none_default() {
         let pmc = make_pmc();
         let msc = &pmc.keyboard.mouse_scratch_config;
-        let result = KeyConfiguration::get_mouse_scratch_key_string(msc, 0, None);
+        let result = KeyConfiguration::mouse_scratch_key_string(msc, 0, None);
         assert_eq!(result, None);
     }
 
@@ -839,7 +836,7 @@ mod tests {
         let mut pmc = make_pmc();
         // Assign mouse scratch key at index 0: 0 = "MOUSE RIGHT"
         pmc.keyboard.mouse_scratch_config.keys[0] = 0;
-        let result = KeyConfiguration::get_mouse_scratch_key_string(
+        let result = KeyConfiguration::mouse_scratch_key_string(
             &pmc.keyboard.mouse_scratch_config,
             0,
             Some("fallback"),
@@ -1104,7 +1101,7 @@ mod tests {
         assert_eq!(gdx_key_name(999), "Unknown");
     }
 
-    // -- get_key_assign tests --
+    // -- key_assign tests --
 
     #[test]
     fn test_get_key_assign_returns_key_name() {
@@ -1112,16 +1109,16 @@ mod tests {
         // KEYSA[1][0] = 0, so it reads keyboard_keys[0]
         // Key code 54 = Z
         let keys = vec![54, 47, 52, 32, 31, 34, 50, 59, 129];
-        assert_eq!(kc.get_key_assign(0, &keys), "Z");
-        assert_eq!(kc.get_key_assign(1, &keys), "S");
-        assert_eq!(kc.get_key_assign(2, &keys), "X");
+        assert_eq!(kc.key_assign(0, &keys), "Z");
+        assert_eq!(kc.key_assign(1, &keys), "S");
+        assert_eq!(kc.key_assign(2, &keys), "X");
     }
 
     #[test]
     fn test_get_key_assign_out_of_bounds() {
         let kc = make_kc(1);
         let keys = vec![54];
-        assert_eq!(kc.get_key_assign(999, &keys), "!!!");
+        assert_eq!(kc.key_assign(999, &keys), "!!!");
     }
 
     #[test]
@@ -1129,15 +1126,15 @@ mod tests {
         let kc = make_kc(1); // 7K: KEYSA[1] last two are -1, -2 (START, SELECT)
         let keys = vec![54; 9];
         // Index 9 maps to KEYSA[1][9] = -1 (START)
-        assert_eq!(kc.get_key_assign(9, &keys), "---");
+        assert_eq!(kc.key_assign(9, &keys), "---");
         // Index 10 maps to KEYSA[1][10] = -2 (SELECT)
-        assert_eq!(kc.get_key_assign(10, &keys), "---");
+        assert_eq!(kc.key_assign(10, &keys), "---");
     }
 
     #[test]
     fn test_get_key_assign_unassigned_key() {
         let kc = make_kc(1);
         let keys = vec![-1; 9]; // All unassigned
-        assert_eq!(kc.get_key_assign(0, &keys), "---");
+        assert_eq!(kc.key_assign(0, &keys), "---");
     }
 }

@@ -27,7 +27,7 @@ impl PatternModifier for NoteShuffleModifier {
     fn modify(&mut self, model: &mut BMSModel) {
         self.randomizer.set_random_seed(self.base.seed);
         let keys = match model.mode() {
-            Some(m) => self.get_keys(m, self.base.player, self.is_scratch_lane_modify),
+            Some(m) => self.keys(m, self.base.player, self.is_scratch_lane_modify),
             None => return,
         };
         self.randomizer.set_modify_lanes(&keys);
@@ -37,10 +37,10 @@ impl PatternModifier for NoteShuffleModifier {
                 self.randomizer.permutate(tl);
             }
         }
-        self.base.assist = self.randomizer.get_assist_level();
+        self.base.assist = self.randomizer.assist_level();
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -58,7 +58,7 @@ impl PatternModifier for NoteShuffleModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 }
@@ -113,14 +113,14 @@ mod tests {
     fn new_srandom_sets_player() {
         let config = default_config();
         let modifier = NoteShuffleModifier::new(Random::SRandom, 0, &Mode::BEAT_7K, &config);
-        assert_eq!(modifier.get_player(), 0);
+        assert_eq!(modifier.player(), 0);
     }
 
     #[test]
     fn new_hrandom_sets_player() {
         let config = default_config();
         let modifier = NoteShuffleModifier::new(Random::HRandom, 1, &Mode::BEAT_14K, &config);
-        assert_eq!(modifier.get_player(), 1);
+        assert_eq!(modifier.player(), 1);
     }
 
     #[test]
@@ -170,7 +170,7 @@ mod tests {
     fn initial_assist_level_is_none() {
         let config = default_config();
         let modifier = NoteShuffleModifier::new(Random::SRandom, 0, &Mode::BEAT_7K, &config);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
     }
 
     #[test]
@@ -178,7 +178,7 @@ mod tests {
         let config = default_config();
         let mut modifier = NoteShuffleModifier::new(Random::SRandom, 0, &Mode::BEAT_7K, &config);
         modifier.set_assist_level(AssistLevel::Assist);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
     }
 
     // -- Basic modification: notes are shuffled --
@@ -324,7 +324,7 @@ mod tests {
         modifier.set_seed(42);
         modifier.modify(&mut model);
 
-        assert_eq!(modifier.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(modifier.assist_level(), AssistLevel::LightAssist);
     }
 
     // -- Deterministic with same seed --

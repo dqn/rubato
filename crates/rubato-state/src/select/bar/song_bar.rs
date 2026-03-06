@@ -35,7 +35,7 @@ impl SongBar {
         self.song.path().is_some()
     }
 
-    pub fn get_banner(&self) -> Option<&Pixmap> {
+    pub fn banner(&self) -> Option<&Pixmap> {
         self.banner.as_ref()
     }
 
@@ -43,7 +43,7 @@ impl SongBar {
         self.banner = banner;
     }
 
-    pub fn get_stagefile(&self) -> Option<&Pixmap> {
+    pub fn stagefile(&self) -> Option<&Pixmap> {
         self.stagefile.as_ref()
     }
 
@@ -57,9 +57,9 @@ impl SongBar {
 
     pub fn get_lamp(&self, is_player: bool) -> i32 {
         let score = if is_player {
-            self.selectable.bar_data.get_score()
+            self.selectable.bar_data.score()
         } else {
-            self.selectable.bar_data.get_rival_score()
+            self.selectable.bar_data.rival_score()
         };
         if let Some(score) = score {
             return score.clear;

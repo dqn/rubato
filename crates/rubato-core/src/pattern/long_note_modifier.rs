@@ -132,7 +132,7 @@ impl PatternModifier for LongNoteModifier {
         }
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -150,7 +150,7 @@ impl PatternModifier for LongNoteModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 }
@@ -239,13 +239,13 @@ mod tests {
     fn set_assist_level() {
         let mut m = LongNoteModifier::new();
         m.set_assist_level(AssistLevel::Assist);
-        assert_eq!(m.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(m.assist_level(), AssistLevel::Assist);
     }
 
     #[test]
     fn get_player_default() {
         let m = LongNoteModifier::new();
-        assert_eq!(m.get_player(), 0);
+        assert_eq!(m.player(), 0);
     }
 
     // -- Mode::Remove with rate=1.0 (remove all LNs) --
@@ -281,7 +281,7 @@ mod tests {
         assert!(tls[1].note(0).is_none());
 
         // assist level should be Assist
-        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
     }
 
     // -- Mode::Remove with rate=0.0 (remove no LNs) --
@@ -310,7 +310,7 @@ mod tests {
         assert!(tls[1].note(0).unwrap().is_long());
 
         // No changes made, so assist should remain None
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
     }
 
     // -- Mode::AddLn with rate=1.0 --
@@ -341,7 +341,7 @@ mod tests {
         assert!(note1.is_long());
 
         // AddLn with TYPE_LONGNOTE does not set assist (only non-LONGNOTE types set Assist)
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
     }
 
     // -- Mode::AddCn --
@@ -369,7 +369,7 @@ mod tests {
         assert!(note1.is_long());
 
         // Non-LONGNOTE type sets Assist
-        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
     }
 
     // -- Mode::AddHcn --
@@ -393,7 +393,7 @@ mod tests {
         assert!(note0.is_long());
         assert_eq!(note0.long_note_type(), TYPE_HELLCHARGENOTE);
 
-        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
     }
 
     // -- Normal note followed by non-empty lane: no conversion --

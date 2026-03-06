@@ -273,7 +273,7 @@ impl AbstractResultData {
     }
 
     pub fn input(&mut self, main: &mut MainController) {
-        let input = main.get_input_processor();
+        let input = main.input_processor();
         let mov = -(input.scroll());
         input.reset_scroll();
         if mov != 0

@@ -300,7 +300,7 @@ impl ContextMenuBar {
 
         // Open URL
         if let Some(ref table) = self.table
-            && let Some(url) = table.get_url()
+            && let Some(url) = table.url()
         {
             let url_owned = url.to_string();
             let mut open_url = FunctionBar::new("Open URL".to_string(), STYLE_FOLDER);
@@ -327,7 +327,7 @@ impl ContextMenuBar {
 
         // Copy URL
         if let Some(ref table) = self.table
-            && let Some(url) = table.get_url()
+            && let Some(url) = table.url()
         {
             let mut copy_url = FunctionBar::new_with_text_type(
                 "Copy URL".to_string(),
@@ -350,10 +350,10 @@ impl ContextMenuBar {
                 STYLE_TEXT_NEW,
             );
             fill_missing.set_function(Arc::new(move |selector| {
-                let folders = table_clone.get_table_data().get_folder();
+                let folders = table_clone.get_table_data().folder();
                 let want: Vec<SongData> = folders
                     .iter()
-                    .flat_map(|f| f.get_song().iter().cloned())
+                    .flat_map(|f| f.song().iter().cloned())
                     .collect();
                 if let Some(downloader) = selector.main.as_ref().and_then(|m| m.http_downloader()) {
                     let fill_count =

@@ -24,11 +24,11 @@ fn wiring_score_database_accessor_open_migrate_query() {
     accessor.create_table();
 
     // Query — should return None (no data)
-    let score = accessor.get_score_data("nonexistent_hash", 0);
+    let score = accessor.score_data("nonexistent_hash", 0);
     assert!(score.is_none(), "Fresh DB should have no score data");
 
     // Query player data — create_table inserts a default PlayerData row
-    let player = accessor.get_player_data();
+    let player = accessor.player_data();
     assert!(
         player.is_some(),
         "create_table should insert a default PlayerData row"
@@ -58,7 +58,7 @@ fn wiring_score_database_accessor_insert_and_query_roundtrip() {
     accessor.set_score_data(&score);
 
     // Query it back
-    let result = accessor.get_score_data("test_hash_abc", 0);
+    let result = accessor.score_data("test_hash_abc", 0);
     assert!(result.is_some(), "Inserted score should be retrievable");
     let result = result.unwrap();
     assert_eq!(result.sha256, "test_hash_abc");

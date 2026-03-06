@@ -23,7 +23,7 @@ impl Default for MockMainState {
 }
 
 impl MainState for MockMainState {
-    fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+    fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
         &self.timer
     }
 

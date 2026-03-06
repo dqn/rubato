@@ -139,7 +139,7 @@ impl BarManager {
         for url in &config.table_url {
             for item in unsorted_tables.iter_mut() {
                 if let Some(td) = item.as_ref()
-                    && td.get_url_opt() == Some(url.as_str())
+                    && td.url_opt() == Some(url.as_str())
                 {
                     sorted_tables.push(item.take().unwrap());
                     break;
@@ -156,7 +156,7 @@ impl BarManager {
         for td in sorted_tables {
             let accessor: Arc<dyn TableAccessor> = Arc::new(DifficultyTableAccessor::new(
                 tablepath,
-                td.get_url_opt().unwrap_or(""),
+                td.url_opt().unwrap_or(""),
             ));
             table_bars.push(TableBar::new(td, accessor));
         }
@@ -671,8 +671,7 @@ impl BarManager {
                         2
                     };
                     if filtered_targets.len() >= threshold {
-                        let exec_bar =
-                            ExecutableBar::new(filtered_targets, random_folder.get_name());
+                        let exec_bar = ExecutableBar::new(filtered_targets, random_folder.name());
                         random_bars.push(Bar::Executable(Box::new(exec_bar)));
                     }
                 }
@@ -838,7 +837,7 @@ impl BarManager {
         }
     }
 
-    pub fn get_tables(&self) -> &[TableBar] {
+    pub fn tables(&self) -> &[TableBar] {
         &self.tables
     }
 
@@ -887,13 +886,13 @@ impl BarManager {
     /// Create a command bar from a CommandFolder definition.
     /// Corresponds to Java BarManager.createCommandBar(MusicSelector, CommandFolder)
     fn create_command_bar(&self, folder: &CommandFolder) -> Bar {
-        let has_subfolders = !folder.get_folder().is_empty();
+        let has_subfolders = !folder.folder().is_empty();
         let has_random_courses = !folder.get_random_course().is_empty();
 
         if has_subfolders || has_random_courses {
             let mut children: Vec<Bar> = Vec::new();
             // Recursively create child bars for sub-folders
-            for child in folder.get_folder() {
+            for child in folder.folder() {
                 children.push(self.create_command_bar(child));
             }
             // Create RandomCourseBar for random courses
@@ -903,12 +902,12 @@ impl BarManager {
                 ))));
             }
             Bar::Container(Box::new(ContainerBar::new(
-                folder.get_name().to_string(),
+                folder.name().to_string(),
                 children,
             )))
         } else {
             Bar::Command(Box::new(CommandBar::new_with_visibility(
-                folder.get_name().to_string(),
+                folder.name().to_string(),
                 folder.get_sql().unwrap_or("").to_string(),
                 folder.is_showall(),
             )))
@@ -969,10 +968,10 @@ pub struct CommandFolder {
 }
 
 impl CommandFolder {
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         self.name.as_deref().unwrap_or("")
     }
-    pub fn get_folder(&self) -> &[CommandFolder] {
+    pub fn folder(&self) -> &[CommandFolder] {
         &self.folder
     }
     pub fn get_sql(&self) -> Option<&str> {
@@ -995,7 +994,7 @@ pub struct RandomFolder {
 }
 
 impl RandomFolder {
-    pub fn get_name(&self) -> String {
+    pub fn name(&self) -> String {
         format!("[RANDOM] {}", self.name.as_deref().unwrap_or(""))
     }
 
@@ -1117,7 +1116,7 @@ impl BarContentsLoaderThread {
 
             if let Some(sd) = song_info {
                 // Load player score
-                if bar.get_score().is_none()
+                if bar.score().is_none()
                     && let Some(ref mut cache) = ctx.score_cache
                 {
                     let score = cache.read_score_data(&sd, lnmode).cloned();
@@ -1126,7 +1125,7 @@ impl BarContentsLoaderThread {
 
                 // Load rival score
                 if let Some(ref mut rival) = ctx.rival_cache
-                    && bar.get_rival_score().is_none()
+                    && bar.rival_score().is_none()
                 {
                     let rival_score = rival.read_score_data(&sd, lnmode).cloned();
                     if let Some(mut rs) = rival_score {
@@ -1287,7 +1286,7 @@ mod tests {
         // random/default.json likely doesn't exist in test, so default folder is created
         assert!(!manager.random_folder_list.is_empty());
         assert_eq!(
-            manager.random_folder_list[0].get_name(),
+            manager.random_folder_list[0].name(),
             "[RANDOM] RANDOM SELECT"
         );
     }
@@ -1538,8 +1537,8 @@ mod tests {
         loader.run(&mut bars, &mut ctx);
 
         // Score should be loaded
-        assert!(bars[0].get_score().is_some());
-        assert_eq!(bars[0].get_score().unwrap().epg, 100);
+        assert!(bars[0].score().is_some());
+        assert_eq!(bars[0].score().unwrap().epg, 100);
     }
 
     // ---- banner/stagefile loading tests ----
@@ -1584,8 +1583,8 @@ mod tests {
 
         // Banner should be loaded into the SongBar
         let sb = bars[0].as_song_bar().unwrap();
-        assert!(sb.get_banner().is_some());
-        let pix = sb.get_banner().unwrap();
+        assert!(sb.banner().is_some());
+        let pix = sb.banner().unwrap();
         assert_eq!(pix.width, 4);
         assert_eq!(pix.height, 4);
     }
@@ -1622,8 +1621,8 @@ mod tests {
 
         // Stagefile should be loaded into the SongBar
         let sb = bars[0].as_song_bar().unwrap();
-        assert!(sb.get_stagefile().is_some());
-        let pix = sb.get_stagefile().unwrap();
+        assert!(sb.stagefile().is_some());
+        let pix = sb.stagefile().unwrap();
         assert_eq!(pix.width, 4);
         assert_eq!(pix.height, 4);
     }
@@ -1658,7 +1657,7 @@ mod tests {
 
         // Banner should NOT be loaded (no pool)
         let sb = bars[0].as_song_bar().unwrap();
-        assert!(sb.get_banner().is_none());
+        assert!(sb.banner().is_none());
     }
 
     #[test]
@@ -1692,7 +1691,7 @@ mod tests {
 
         // Banner should NOT be loaded (file does not exist)
         let sb = bars[0].as_song_bar().unwrap();
-        assert!(sb.get_banner().is_none());
+        assert!(sb.banner().is_none());
     }
 
     // ---- add_search tests ----

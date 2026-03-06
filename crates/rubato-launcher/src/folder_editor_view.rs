@@ -564,8 +564,8 @@ mod tests {
         view.set_table_folder(folders);
         let result = view.table_folder();
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].get_name(), "Folder A");
-        assert_eq!(result[1].get_name(), "Folder B");
+        assert_eq!(result[0].name(), "Folder A");
+        assert_eq!(result[1].name(), "Folder B");
     }
 
     // ---- addTableFolder ----
@@ -577,7 +577,7 @@ mod tests {
 
         view.add_table_folder();
         assert_eq!(view.folders.len(), 1);
-        assert_eq!(view.folders[0].get_name(), "New Folder");
+        assert_eq!(view.folders[0].name(), "New Folder");
         assert!(view.folders[0].songs.is_empty());
     }
 
@@ -595,8 +595,8 @@ mod tests {
 
         view.remove_table_folder();
         assert_eq!(view.folders.len(), 2);
-        assert_eq!(view.folders[0].get_name(), "A");
-        assert_eq!(view.folders[1].get_name(), "C");
+        assert_eq!(view.folders[0].name(), "A");
+        assert_eq!(view.folders[1].name(), "C");
     }
 
     #[test]
@@ -622,8 +622,8 @@ mod tests {
         view.folders_selected_index = Some(1);
 
         view.move_table_folder_up();
-        assert_eq!(view.folders[0].get_name(), "B");
-        assert_eq!(view.folders[1].get_name(), "A");
+        assert_eq!(view.folders[0].name(), "B");
+        assert_eq!(view.folders[1].name(), "A");
         assert_eq!(view.folders_selected_index, Some(0));
     }
 
@@ -634,7 +634,7 @@ mod tests {
         view.folders_selected_index = Some(0);
 
         view.move_table_folder_up();
-        assert_eq!(view.folders[0].get_name(), "A");
+        assert_eq!(view.folders[0].name(), "A");
         assert_eq!(view.folders_selected_index, Some(0));
     }
 
@@ -649,8 +649,8 @@ mod tests {
         view.folders_selected_index = Some(0);
 
         view.move_table_folder_down();
-        assert_eq!(view.folders[0].get_name(), "B");
-        assert_eq!(view.folders[1].get_name(), "A");
+        assert_eq!(view.folders[0].name(), "B");
+        assert_eq!(view.folders[1].name(), "A");
         assert_eq!(view.folders_selected_index, Some(1));
     }
 
@@ -661,7 +661,7 @@ mod tests {
         view.folders_selected_index = Some(1);
 
         view.move_table_folder_down();
-        assert_eq!(view.folders[1].get_name(), "B");
+        assert_eq!(view.folders[1].name(), "B");
         assert_eq!(view.folders_selected_index, Some(1));
     }
 
@@ -774,7 +774,7 @@ mod tests {
         view.folder_songs = vec![make_song("New Song", "md5", "sha")];
 
         view.commit_folder();
-        assert_eq!(view.folders[0].get_name(), "Renamed");
+        assert_eq!(view.folders[0].name(), "Renamed");
         assert_eq!(view.folders[0].songs.len(), 1);
         assert_eq!(view.folders[0].songs[0].title, "New Song");
     }
@@ -787,7 +787,7 @@ mod tests {
         view.folder_name = "Changed".to_string();
 
         view.commit_folder();
-        assert_eq!(view.folders[0].get_name(), "Original");
+        assert_eq!(view.folders[0].name(), "Original");
     }
 
     #[test]
@@ -798,7 +798,7 @@ mod tests {
         view.folder_name = "Changed".to_string();
 
         view.commit_folder();
-        assert_eq!(view.folders[0].get_name(), "Original");
+        assert_eq!(view.folders[0].name(), "Original");
     }
 
     // ---- updateFolder ----
@@ -849,7 +849,7 @@ mod tests {
         view.folders_selected_index = Some(0);
 
         view.update_table_folder();
-        assert_eq!(view.folders[0].get_name(), "After");
+        assert_eq!(view.folders[0].name(), "After");
         assert_eq!(view.folder_name, "After");
     }
 
@@ -1003,7 +1003,7 @@ mod tests {
         // Get folder data (triggers commit)
         let folders = view.table_folder();
         assert_eq!(folders.len(), 1);
-        assert_eq!(folders[0].get_name(), "Edited Folder");
+        assert_eq!(folders[0].name(), "Edited Folder");
         assert_eq!(folders[0].songs.len(), 1);
         assert_eq!(folders[0].songs[0].title, "Test Song");
     }

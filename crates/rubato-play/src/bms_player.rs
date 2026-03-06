@@ -579,7 +579,7 @@ impl BMSPlayer {
 
     /// Set the rival score data from PlayerResource.
     ///
-    /// The caller should read this from `PlayerResourceAccess::get_rival_score_data()`.
+    /// The caller should read this from `PlayerResourceAccess::rival_score_data()`.
     /// When rival score is available and not in course mode, it will be used as the
     /// target score in `create()`.
     ///
@@ -714,7 +714,7 @@ impl BMSPlayer {
 
     /// Corresponds to Java BMSPlayer.createScoreData()
     ///
-    /// `device_type` comes from `MainController.get_input_processor().get_device_type()`.
+    /// `device_type` comes from `MainController.input_processor().get_device_type()`.
     pub fn create_score_data(
         &self,
         device_type: rubato_input::bms_player_input_device::DeviceType,
@@ -886,11 +886,11 @@ impl BMSPlayer {
             .switch_timer(TIMER_SCORE_AAA, self.main_state_data.score.qualify_rank(24));
         self.main_state_data.timer.switch_timer(
             TIMER_SCORE_BEST,
-            self.judge.score_data().exscore() >= self.main_state_data.score.get_best_score(),
+            self.judge.score_data().exscore() >= self.main_state_data.score.best_score(),
         );
         self.main_state_data.timer.switch_timer(
             TIMER_SCORE_TARGET,
-            self.judge.score_data().exscore() >= self.main_state_data.score.get_rival_score(),
+            self.judge.score_data().exscore() >= self.main_state_data.score.rival_score(),
         );
 
         self.play_skin.pomyu.pm_chara_judge = judge + 1;
@@ -1105,7 +1105,7 @@ impl BMSPlayer {
         // Apply pre-option modifiers and accumulate assist level
         for m in pre_mods.iter_mut() {
             m.modify(&mut self.model);
-            let assist_level = m.get_assist_level();
+            let assist_level = m.assist_level();
             if assist_level != AssistLevel::None {
                 self.assist = self.assist.max(if assist_level == AssistLevel::Assist {
                     2
@@ -1217,7 +1217,7 @@ impl BMSPlayer {
         for m in random_mods.iter_mut() {
             m.modify(&mut self.model);
 
-            let assist_level = m.get_assist_level();
+            let assist_level = m.assist_level();
             if assist_level != AssistLevel::None {
                 log::info!("Assist pattern option selected");
                 self.assist = self.assist.max(if assist_level == AssistLevel::Assist {
@@ -1231,7 +1231,7 @@ impl BMSPlayer {
             // Collect lane shuffle patterns for display
             if m.is_lane_shuffle_to_display() {
                 let current_mode = self.model.mode().cloned().unwrap_or(Mode::BEAT_7K);
-                let player_idx = m.get_player() as usize;
+                let player_idx = m.player() as usize;
                 if player_idx < pattern_array.len()
                     && let Some(pattern) = m.get_lane_shuffle_random_pattern(&current_mode)
                 {
@@ -1545,7 +1545,7 @@ impl BMSPlayer {
     ///
     /// Returns a list of (judge_index, Option<path>) pairs.
     /// When `is_guide_se` is true, each entry contains the resolved path from
-    /// `SystemSoundManager::get_sound_paths()` for the corresponding guide SE type.
+    /// `SystemSoundManager::sound_paths()` for the corresponding guide SE type.
     /// When false, all entries contain None (clearing the additional key sounds).
     ///
     /// The caller should apply each entry to the audio driver:
@@ -1569,7 +1569,7 @@ impl BMSPlayer {
         let mut config = Vec::with_capacity(6);
         for (i, sound_type) in guide_se_types.iter().enumerate() {
             if is_guide_se {
-                let paths = sound_manager.get_sound_paths(sound_type);
+                let paths = sound_manager.sound_paths(sound_type);
                 let path = paths.first().map(|p| p.to_string_lossy().to_string());
                 config.push((i as i32, path));
             } else {
@@ -1606,19 +1606,19 @@ struct PlayRenderContext<'a> {
 
 impl rubato_types::timer_access::TimerAccess for PlayRenderContext<'_> {
     fn now_time(&self) -> i64 {
-        self.timer.get_now_time()
+        self.timer.now_time()
     }
     fn now_micro_time(&self) -> i64 {
-        self.timer.get_now_micro_time()
+        self.timer.now_micro_time()
     }
     fn micro_timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_micro_timer(timer_id)
+        self.timer.micro_timer(timer_id)
     }
     fn timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_timer(timer_id)
+        self.timer.timer(timer_id)
     }
     fn now_time_for(&self, timer_id: i32) -> i64 {
-        self.timer.get_now_time_for_id(timer_id)
+        self.timer.now_time_for_id(timer_id)
     }
     fn is_timer_on(&self, timer_id: i32) -> bool {
         self.timer.is_timer_on(timer_id)
@@ -1683,9 +1683,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             // Total notes
             350 => self.total_notes,
             // Playtime (hours/minutes/seconds from boot)
-            17 => (self.timer.get_now_time() / 3_600_000) as i32,
-            18 => ((self.timer.get_now_time() % 3_600_000) / 60_000) as i32,
-            19 => ((self.timer.get_now_time() % 60_000) / 1_000) as i32,
+            17 => (self.timer.now_time() / 3_600_000) as i32,
+            18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,
+            19 => ((self.timer.now_time() % 60_000) / 1_000) as i32,
             // Song duration
             312 => self.playtime,
             1163 => self.playtime / 60,
@@ -1735,23 +1735,23 @@ struct PlayMouseContext<'a> {
 
 impl rubato_types::timer_access::TimerAccess for PlayMouseContext<'_> {
     fn now_time(&self) -> i64 {
-        self.timer.get_now_time()
+        self.timer.now_time()
     }
 
     fn now_micro_time(&self) -> i64 {
-        self.timer.get_now_micro_time()
+        self.timer.now_micro_time()
     }
 
     fn micro_timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_micro_timer(timer_id)
+        self.timer.micro_timer(timer_id)
     }
 
     fn timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_timer(timer_id)
+        self.timer.timer(timer_id)
     }
 
     fn now_time_for(&self, timer_id: i32) -> i64 {
-        self.timer.get_now_time_for_id(timer_id)
+        self.timer.now_time_for_id(timer_id)
     }
 
     fn is_timer_on(&self, timer_id: i32) -> bool {
@@ -2065,7 +2065,7 @@ impl MainState for BMSPlayer {
     }
 
     fn render(&mut self) {
-        let micronow = self.main_state_data.timer.get_now_micro_time();
+        let micronow = self.main_state_data.timer.now_micro_time();
 
         // Input start timer
         let input_time = self.play_skin.loadstart() as i64; // skin.getInput() in Java
@@ -2311,12 +2311,7 @@ impl MainState for BMSPlayer {
                     .skin
                     .as_ref()
                     .map_or(0, |s| s.get_fadeout()) as i64;
-                if self
-                    .main_state_data
-                    .timer
-                    .get_now_time_for_id(TIMER_FADEOUT)
-                    > skin_fadeout
-                {
+                if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
                     // input.setEnable(true); input.setStartTime(0);
                     self.pending_state_change = Some(MainStateType::MusicSelect);
                     log::info!("Practice finished, transition to MUSICSELECT");
@@ -2325,7 +2320,7 @@ impl MainState for BMSPlayer {
 
             // STATE_READY - countdown before play
             STATE_READY => {
-                if self.main_state_data.timer.get_now_time_for_id(TIMER_READY)
+                if self.main_state_data.timer.now_time_for_id(TIMER_READY)
                     > self.play_skin.playstart() as i64
                 {
                     if let Some(ref lr) = self.lanerender {
@@ -2369,7 +2364,7 @@ impl MainState for BMSPlayer {
                 let deltatime = micronow - self.prevtime;
                 let deltaplay = deltatime.saturating_mul(100 - self.playspeed as i64) / 100;
                 let freq = self.practice.practice_property().freq;
-                let current_play_timer = self.main_state_data.timer.get_micro_timer(TIMER_PLAY);
+                let current_play_timer = self.main_state_data.timer.micro_timer(TIMER_PLAY);
                 self.main_state_data
                     .timer
                     .set_micro_timer(TIMER_PLAY, current_play_timer + deltaplay);
@@ -2377,12 +2372,10 @@ impl MainState for BMSPlayer {
                 // Rhythm timer update
                 let now_bpm = self.lanerender.as_ref().map_or(120.0, |lr| lr.now_bpm());
                 if let Some(ref mut rhythm) = self.rhythm {
-                    let play_timer_micro = self
-                        .main_state_data
-                        .timer
-                        .get_now_micro_time_for_id(TIMER_PLAY);
+                    let play_timer_micro =
+                        self.main_state_data.timer.now_micro_time_for_id(TIMER_PLAY);
                     let (rhythm_timer, rhythm_on) = rhythm.update(
-                        self.main_state_data.timer.get_now_time(),
+                        self.main_state_data.timer.now_time(),
                         micronow,
                         deltatime,
                         now_bpm,
@@ -2401,10 +2394,7 @@ impl MainState for BMSPlayer {
                 // Translated from: Java AutoplayThread.run() reads player.timer.getNowMicroTime(TIMER_PLAY)
                 // and player.getAdjustedVolume() / config.getAudioConfig().getBgvolume().
                 {
-                    let play_micro = self
-                        .main_state_data
-                        .timer
-                        .get_now_micro_time_for_id(TIMER_PLAY);
+                    let play_micro = self.main_state_data.timer.now_micro_time_for_id(TIMER_PLAY);
                     self.keysound.update_play_time(play_micro);
                     let vol = if self.adjusted_volume >= 0.0 {
                         self.adjusted_volume
@@ -2414,7 +2404,7 @@ impl MainState for BMSPlayer {
                     self.keysound.update_volume(vol);
                 }
 
-                let ptime = self.main_state_data.timer.get_now_time_for_id(TIMER_PLAY);
+                let ptime = self.main_state_data.timer.now_time_for_id(TIMER_PLAY);
                 // Gauge log
                 if let Some(ref gauge) = self.gauge {
                     for i in 0..self.gaugelog.len() {
@@ -2545,7 +2535,7 @@ impl MainState for BMSPlayer {
                     self.save_config();
                     self.pending_reload_bms = true;
                     self.pending_state_change = Some(MainStateType::Play);
-                } else if self.main_state_data.timer.get_now_time_for_id(TIMER_FAILED)
+                } else if self.main_state_data.timer.now_time_for_id(TIMER_FAILED)
                     > self.play_skin.close() as i64
                 {
                     self.pending_global_pitch = Some(1.0);
@@ -2553,8 +2543,8 @@ impl MainState for BMSPlayer {
 
                     // Fill remaining gauge log with 0
                     if self.main_state_data.timer.is_timer_on(TIMER_PLAY) {
-                        let failed_time = self.main_state_data.timer.get_timer(TIMER_FAILED);
-                        let play_time = self.main_state_data.timer.get_timer(TIMER_PLAY);
+                        let failed_time = self.main_state_data.timer.timer(TIMER_FAILED);
+                        let play_time = self.main_state_data.timer.timer(TIMER_PLAY);
                         let mut l = failed_time - play_time;
                         while l < self.playtime as i64 + 500 {
                             for glog in self.gaugelog.iter_mut() {
@@ -2609,10 +2599,7 @@ impl MainState for BMSPlayer {
                 }
                 self.keysound.stop_bg_play();
 
-                if self
-                    .main_state_data
-                    .timer
-                    .get_now_time_for_id(TIMER_MUSIC_END)
+                if self.main_state_data.timer.now_time_for_id(TIMER_MUSIC_END)
                     > self.play_skin.finish_margin() as i64
                 {
                     self.main_state_data.timer.switch_timer(TIMER_FADEOUT, true);
@@ -2623,12 +2610,7 @@ impl MainState for BMSPlayer {
                     .skin
                     .as_ref()
                     .map_or(0, |s| s.get_fadeout()) as i64;
-                if self
-                    .main_state_data
-                    .timer
-                    .get_now_time_for_id(TIMER_FADEOUT)
-                    > skin_fadeout
-                {
+                if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
                     self.pending_global_pitch = Some(1.0);
                     // resource.getBGAManager().stop();
                     let score = if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Play
@@ -2679,12 +2661,7 @@ impl MainState for BMSPlayer {
                     .skin
                     .as_ref()
                     .map_or(0, |s| s.get_fadeout()) as i64;
-                if self
-                    .main_state_data
-                    .timer
-                    .get_now_time_for_id(TIMER_FADEOUT)
-                    > skin_fadeout
-                {
+                if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
                     // input.setEnable(true); input.setStartTime(0);
                     self.pending_state_change = Some(MainStateType::MusicSelect);
                     log::info!("Aborted, transition to MUSICSELECT");
@@ -2782,7 +2759,7 @@ impl MainState for BMSPlayer {
 
         // Build InputContext for key input processing.
         let auto_presstime = self.judge.auto_presstime().to_vec();
-        let now = self.main_state_data.timer.get_now_time();
+        let now = self.main_state_data.timer.now_time();
         let is_autoplay = self.play_mode.mode == rubato_core::bms_player_mode::Mode::Autoplay;
         if let Some(ref mut keyinput) = self.keyinput {
             let mut ctx = crate::key_input_processor::InputContext {
@@ -3165,13 +3142,13 @@ mod tests {
         // Update timer and render
         player.main_state_data.timer.update();
         // TIMER_READY now_time should be > 0 (= playstart)
-        // But get_now_time_for_id checks micronow - timer value, which is 0 since we just set it
+        // But now_time_for_id checks micronow - timer value, which is 0 since we just set it
         // We need some time to pass. Since playstart=0, any positive time works.
         // The condition is: timer.getNowTime(TIMER_READY) > skin.getPlaystart()
         // getNowTime(TIMER_READY) = (nowmicrotime - timer[TIMER_READY]) / 1000
         // Since we just set it, this is ~0. We need > 0.
         // Let's manually set the timer to past to simulate time passing.
-        let now = player.main_state_data.timer.get_now_micro_time();
+        let now = player.main_state_data.timer.now_micro_time();
         player
             .main_state_data
             .timer
@@ -3190,7 +3167,7 @@ mod tests {
 
         // Set TIMER_PLAY to far past so ptime is large
         player.main_state_data.timer.update();
-        let now = player.main_state_data.timer.get_now_micro_time();
+        let now = player.main_state_data.timer.now_micro_time();
         player
             .main_state_data
             .timer
@@ -3222,7 +3199,7 @@ mod tests {
 
         // Setup timers
         player.main_state_data.timer.update();
-        let now = player.main_state_data.timer.get_now_micro_time();
+        let now = player.main_state_data.timer.now_micro_time();
         player
             .main_state_data
             .timer
@@ -3562,7 +3539,7 @@ mod tests {
         // Force transition to PLAY
         player.play_skin.set_playstart(0);
         player.lanerender = Some(LaneRenderer::new(&player.model));
-        let now = player.main_state_data.timer.get_now_micro_time();
+        let now = player.main_state_data.timer.now_micro_time();
         player
             .main_state_data
             .timer
@@ -3572,7 +3549,7 @@ mod tests {
 
         // Force transition to FINISHED
         player.playtime = 0; // Instant finish
-        let now = player.main_state_data.timer.get_now_micro_time();
+        let now = player.main_state_data.timer.now_micro_time();
         player
             .main_state_data
             .timer
@@ -5514,7 +5491,7 @@ mod tests {
         player.gauge.as_mut().unwrap().set_value(0.0);
 
         player.main_state_data.timer.update();
-        let now = player.main_state_data.timer.get_now_micro_time();
+        let now = player.main_state_data.timer.now_micro_time();
         player
             .main_state_data
             .timer
@@ -5547,7 +5524,7 @@ mod tests {
         player.gauge.as_mut().unwrap().set_value(0.0);
 
         player.main_state_data.timer.update();
-        let now = player.main_state_data.timer.get_now_micro_time();
+        let now = player.main_state_data.timer.now_micro_time();
         player
             .main_state_data
             .timer
@@ -5645,7 +5622,7 @@ mod tests {
         // Set TIMER_FAILED so close time is exceeded
         player.main_state_data.timer.set_timer_on(TIMER_FAILED);
         player.main_state_data.timer.update();
-        let now = player.main_state_data.timer.get_now_micro_time();
+        let now = player.main_state_data.timer.now_micro_time();
         player
             .main_state_data
             .timer
@@ -5683,7 +5660,7 @@ mod tests {
 
         // When micronow == startpressedtime and timer 141 is off, timer 141 should be set
         player.main_state_data.timer.update();
-        let micronow = player.main_state_data.timer.get_now_micro_time();
+        let micronow = player.main_state_data.timer.now_micro_time();
         player.startpressedtime = micronow;
 
         player.render();

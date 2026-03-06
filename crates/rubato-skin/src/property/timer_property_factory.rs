@@ -17,23 +17,23 @@ struct TimerPropertyImpl {
 
 impl TimerProperty for TimerPropertyImpl {
     fn get_micro(&self, state: &dyn MainState) -> i64 {
-        state.get_timer().micro_timer(self.timer_id)
+        state.timer().micro_timer(self.timer_id)
     }
 
     fn get(&self, state: &dyn MainState) -> i64 {
-        state.get_timer().timer(self.timer_id)
+        state.timer().timer(self.timer_id)
     }
 
-    fn get_now_time(&self, state: &dyn MainState) -> i64 {
-        state.get_timer().now_time_for(self.timer_id)
+    fn now_time(&self, state: &dyn MainState) -> i64 {
+        state.timer().now_time_for(self.timer_id)
     }
 
     fn is_on(&self, state: &dyn MainState) -> bool {
-        state.get_timer().is_timer_on(self.timer_id)
+        state.timer().is_timer_on(self.timer_id)
     }
 
     fn is_off(&self, state: &dyn MainState) -> bool {
-        !state.get_timer().is_timer_on(self.timer_id)
+        !state.timer().is_timer_on(self.timer_id)
     }
 
     fn get_timer_id(&self) -> i32 {
@@ -47,7 +47,7 @@ mod tests {
     use crate::test_helpers::MockMainState;
 
     /// Timer property must return real timer values when a timer is set.
-    /// Before the fix, get_micro_timer always returned 0 (frozen animations).
+    /// Before the fix, micro_timer always returned 0 (frozen animations).
     #[test]
     fn test_timer_property_returns_real_micro_timer_value() {
         let timer_id = 10;
@@ -69,8 +69,8 @@ mod tests {
         // get should return activation time / 1000 = 500
         assert_eq!(prop.get(&state), 500);
 
-        // get_now_time should return elapsed time: (now - activation) / 1000 = 500
-        assert_eq!(prop.get_now_time(&state), 500);
+        // now_time should return elapsed time: (now - activation) / 1000 = 500
+        assert_eq!(prop.now_time(&state), 500);
     }
 
     /// Timer property for an OFF timer must return i64::MIN and report off.
@@ -85,6 +85,6 @@ mod tests {
         assert!(prop.is_off(&state), "Unset timer should be OFF");
         assert!(!prop.is_on(&state), "Unset timer should not be ON");
         assert_eq!(prop.get_micro(&state), i64::MIN);
-        assert_eq!(prop.get_now_time(&state), 0);
+        assert_eq!(prop.now_time(&state), 0);
     }
 }

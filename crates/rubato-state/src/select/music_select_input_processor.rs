@@ -378,7 +378,7 @@ impl MusicSelectInputProcessor {
                     let mode = if config.is_event_mode() {
                         BMSPlayerMode::PLAY
                     } else if ctx.selected_replay >= 0 {
-                        BMSPlayerMode::get_replay_mode(ctx.selected_replay)
+                        BMSPlayerMode::replay_mode(ctx.selected_replay)
                             .cloned()
                             .unwrap_or(BMSPlayerMode::PLAY)
                     } else {

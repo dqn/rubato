@@ -17,20 +17,20 @@ impl RandomCourseBar {
         }
     }
 
-    pub fn get_course_data(&self) -> &RandomCourseData {
+    pub fn course_data(&self) -> &RandomCourseData {
         &self.course
     }
 
     pub fn get_title(&self) -> String {
-        self.course.get_name().to_string()
+        self.course.name().to_string()
     }
 
-    pub fn get_song_datas(&self) -> Vec<SongData> {
-        self.course.get_song_datas()
+    pub fn song_datas(&self) -> Vec<SongData> {
+        self.course.song_datas()
     }
 
     pub fn exists_all_songs(&self) -> bool {
-        if self.course.get_stage().is_empty() {
+        if self.course.stage().is_empty() {
             return false;
         }
         // In Java: checks each stage for null

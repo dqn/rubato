@@ -11,7 +11,7 @@ pub struct BarData {
 }
 
 impl BarData {
-    pub fn get_score(&self) -> Option<&ScoreData> {
+    pub fn score(&self) -> Option<&ScoreData> {
         self.score.as_ref()
     }
 
@@ -19,7 +19,7 @@ impl BarData {
         self.score = score;
     }
 
-    pub fn get_rival_score(&self) -> Option<&ScoreData> {
+    pub fn rival_score(&self) -> Option<&ScoreData> {
         self.rscore.as_ref()
     }
 
@@ -67,16 +67,16 @@ impl Bar {
         }
     }
 
-    pub fn get_score(&self) -> Option<&ScoreData> {
-        self.bar_data().get_score()
+    pub fn score(&self) -> Option<&ScoreData> {
+        self.bar_data().score()
     }
 
     pub fn set_score(&mut self, score: Option<ScoreData>) {
         self.bar_data_mut().set_score(score);
     }
 
-    pub fn get_rival_score(&self) -> Option<&ScoreData> {
-        self.bar_data().get_rival_score()
+    pub fn rival_score(&self) -> Option<&ScoreData> {
+        self.bar_data().rival_score()
     }
 
     pub fn set_rival_score(&mut self, score: Option<ScoreData>) {

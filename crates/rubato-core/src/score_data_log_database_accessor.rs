@@ -78,7 +78,7 @@ impl ScoreDataLogDatabaseAccessor {
         }
     }
 
-    pub fn get_connection(&self) -> &Connection {
+    pub fn connection(&self) -> &Connection {
         &self.conn
     }
 }

@@ -210,7 +210,7 @@ impl BarSorter {
         if o1.as_song_bar().is_none() || o2.as_song_bar().is_none() {
             return Self::compare_title(o1, o2);
         }
-        match (o1.get_score(), o2.get_score()) {
+        match (o1.score(), o2.score()) {
             (None, None) => Ordering::Equal,
             (None, _) => Ordering::Greater,
             (_, None) => Ordering::Less,
@@ -222,7 +222,7 @@ impl BarSorter {
         if o1.as_song_bar().is_none() || o2.as_song_bar().is_none() {
             return Self::compare_title(o1, o2);
         }
-        let (s1, s2) = match (o1.get_score(), o2.get_score()) {
+        let (s1, s2) = match (o1.score(), o2.score()) {
             (None, None) => return Ordering::Equal,
             (None, _) => return Ordering::Greater,
             (_, None) => return Ordering::Less,
@@ -248,7 +248,7 @@ impl BarSorter {
         if o1.as_song_bar().is_none() || o2.as_song_bar().is_none() {
             return Self::compare_title(o1, o2);
         }
-        match (o1.get_score(), o2.get_score()) {
+        match (o1.score(), o2.score()) {
             (None, None) => Ordering::Equal,
             (None, _) => Ordering::Greater,
             (_, None) => Ordering::Less,
@@ -260,7 +260,7 @@ impl BarSorter {
         if o1.as_song_bar().is_none() || o2.as_song_bar().is_none() {
             return Self::compare_title(o1, o2);
         }
-        let (s1, s2) = match (o1.get_score(), o2.get_score()) {
+        let (s1, s2) = match (o1.score(), o2.score()) {
             (None, None) => return Ordering::Equal,
             (None, _) => return Ordering::Greater,
             (_, None) => return Ordering::Less,
@@ -285,7 +285,7 @@ impl BarSorter {
         if o1.as_song_bar().is_none() || o2.as_song_bar().is_none() {
             return Self::compare_title(o1, o2);
         }
-        match (o1.get_score(), o2.get_score()) {
+        match (o1.score(), o2.score()) {
             (None, None) => Ordering::Equal,
             (None, _) => Ordering::Greater,
             (_, None) => Ordering::Less,
@@ -300,11 +300,11 @@ impl BarSorter {
         if o1.as_song_bar().is_none() || o2.as_song_bar().is_none() {
             return Self::compare_title(o1, o2);
         }
-        let pair1 = match (o1.get_score(), o1.get_rival_score()) {
+        let pair1 = match (o1.score(), o1.rival_score()) {
             (Some(s), Some(r)) => Some((s, r)),
             _ => None,
         };
-        let pair2 = match (o2.get_score(), o2.get_rival_score()) {
+        let pair2 = match (o2.score(), o2.rival_score()) {
             (Some(s), Some(r)) => Some((s, r)),
             _ => None,
         };
@@ -324,11 +324,11 @@ impl BarSorter {
         if o1.as_song_bar().is_none() || o2.as_song_bar().is_none() {
             return Self::compare_title(o1, o2);
         }
-        let pair1 = match (o1.get_score(), o1.get_rival_score()) {
+        let pair1 = match (o1.score(), o1.rival_score()) {
             (Some(s), Some(r)) if s.notes > 0 && r.notes > 0 => Some((s, r)),
             _ => None,
         };
-        let pair2 = match (o2.get_score(), o2.get_rival_score()) {
+        let pair2 = match (o2.score(), o2.rival_score()) {
             (Some(s), Some(r)) if s.notes > 0 && r.notes > 0 => Some((s, r)),
             _ => None,
         };

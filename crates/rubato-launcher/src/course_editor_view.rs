@@ -353,7 +353,7 @@ impl CourseEditorView {
     /// getValue - helper to get spinner value (in Java, forces text → value conversion)
     /// In Rust, f64 fields are used directly.
     #[allow(dead_code)]
-    fn get_value(value: f64) -> f64 {
+    fn value(value: f64) -> f64 {
         // In Java:
         // spinner.getValueFactory().setValue(
         //     spinner.getValueFactory().getConverter().fromString(spinner.getEditor().getText())
@@ -1338,9 +1338,9 @@ mod tests {
 
     #[test]
     fn test_get_value_passthrough() {
-        assert_eq!(CourseEditorView::get_value(42.0), 42.0);
-        assert_eq!(CourseEditorView::get_value(0.0), 0.0);
-        assert_eq!(CourseEditorView::get_value(-1.5), -1.5);
+        assert_eq!(CourseEditorView::value(42.0), 42.0);
+        assert_eq!(CourseEditorView::value(0.0), 0.0);
+        assert_eq!(CourseEditorView::value(-1.5), -1.5);
     }
 
     // ---- round-trip: add → select → commit → get ----

@@ -50,8 +50,8 @@ impl TargetProperty {
             TargetProperty::Static(p) => p.name.clone(),
             TargetProperty::Rival(p) => {
                 let info = main
-                    .get_rival_data_accessor()
-                    .get_rival_information(p.index as usize);
+                    .rival_data_accessor()
+                    .rival_information(p.index as usize);
                 match p.target {
                     RivalTarget::Index => match info {
                         Some(info) => format!("RIVAL {}", info.name()),
@@ -110,8 +110,8 @@ impl StaticTargetProperty {
     /// Translated from: Java StaticTargetProperty.getTarget(MainController)
     fn target(&mut self, main: &MainController) -> ScoreData {
         let total_notes = main
-            .get_player_resource()
-            .and_then(|r| r.get_bms_model())
+            .player_resource()
+            .and_then(|r| r.bms_model())
             .map(|m| m.total_notes())
             .unwrap_or(0);
         let rivalscore = (total_notes as f64 * 2.0 * self.rate as f64 / 100.0).ceil() as i32;
@@ -221,10 +221,7 @@ impl RivalTargetProperty {
     /// Translated from: Java RivalTargetProperty.getTarget(MainController)
     fn target(&mut self, main: &mut MainController) -> ScoreData {
         // Extract read-only values before mutable borrows
-        let songdata = main
-            .get_player_resource()
-            .and_then(|r| r.get_songdata())
-            .cloned();
+        let songdata = main.player_resource().and_then(|r| r.songdata()).cloned();
         let songdata = match songdata {
             Some(sd) => sd,
             None => {
@@ -233,7 +230,7 @@ impl RivalTargetProperty {
                 return self.target_score.clone();
             }
         };
-        let lnmode = main.get_player_config().lnmode;
+        let lnmode = main.player_config().lnmode;
         let index = self.index as usize;
 
         let mut name: Option<String> = None;
@@ -242,8 +239,8 @@ impl RivalTargetProperty {
         match self.target {
             RivalTarget::Index => {
                 name = main
-                    .get_rival_data_accessor()
-                    .get_rival_information(index)
+                    .rival_data_accessor()
+                    .rival_information(index)
                     .map(|info| info.name().to_string());
                 score = main
                     .get_rival_data_accessor_mut()
@@ -309,13 +306,13 @@ impl RivalTargetProperty {
         songdata: &rubato_types::song_data::SongData,
         lnmode: i32,
     ) -> Vec<ScoreData> {
-        let rival_count = main.get_rival_data_accessor().get_rival_count();
+        let rival_count = main.rival_data_accessor().rival_count();
 
         // Collect rival names first (immutable borrow)
         let rival_names: Vec<Option<String>> = (0..rival_count)
             .map(|i| {
-                main.get_rival_data_accessor()
-                    .get_rival_information(i)
+                main.rival_data_accessor()
+                    .rival_information(i)
                     .map(|info| info.name().to_string())
             })
             .collect();
@@ -339,10 +336,10 @@ impl RivalTargetProperty {
 
         // Add own score with empty player name
         let own_score = main
-            .get_player_resource()
-            .and_then(|r| r.get_bms_model())
+            .player_resource()
+            .and_then(|r| r.bms_model())
             .and_then(|model| {
-                main.get_play_data_accessor()
+                main.play_data_accessor()
                     .and_then(|pda| pda.read_score_data_model(model, lnmode))
             });
 
@@ -515,10 +512,10 @@ impl InternetRankingTargetProperty {
 
         // Get ranking data from cache via dyn Any downcast
         let ranking_data = (|| -> Option<rubato_ir::ranking_data::RankingData> {
-            let resource = main.get_player_resource()?;
-            let songdata = resource.get_songdata()?;
-            let lnmode = resource.get_player_config().lnmode;
-            let cache = main.get_ranking_data_cache()?;
+            let resource = main.player_resource()?;
+            let songdata = resource.songdata()?;
+            let lnmode = resource.player_config().lnmode;
+            let cache = main.ranking_data_cache()?;
             let any = cache.song_any(songdata, lnmode)?;
             any.downcast::<rubato_ir::ranking_data::RankingData>()
                 .ok()
@@ -566,8 +563,8 @@ impl InternetRankingTargetProperty {
         let total = ranking.total_player();
         // Get the player's current exscore
         let nowscore = main
-            .get_player_resource()
-            .and_then(|r| r.get_score_data())
+            .player_resource()
+            .and_then(|r| r.score_data())
             .map(|s| s.exscore())
             .unwrap_or(0);
 
@@ -648,12 +645,12 @@ impl NextRankTargetProperty {
 
     /// Translated from: Java NextRankTargetProperty.getTarget(MainController)
     fn target(&mut self, main: &MainController) -> ScoreData {
-        let lnmode = main.get_player_config().lnmode;
-        let model = main.get_player_resource().and_then(|r| r.get_bms_model());
+        let lnmode = main.player_config().lnmode;
+        let model = main.player_resource().and_then(|r| r.bms_model());
 
         let nowscore = model
             .and_then(|m| {
-                main.get_play_data_accessor()
+                main.play_data_accessor()
                     .and_then(|pda| pda.read_score_data_model(m, lnmode))
             })
             .map(|s| s.exscore())

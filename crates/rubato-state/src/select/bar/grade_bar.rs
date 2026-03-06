@@ -24,11 +24,11 @@ impl GradeBar {
         }
     }
 
-    pub fn get_course_data(&self) -> &CourseData {
+    pub fn course_data(&self) -> &CourseData {
         &self.course
     }
 
-    pub fn get_song_datas(&self) -> &[SongData] {
+    pub fn song_datas(&self) -> &[SongData] {
         &self.course.hash
     }
 
@@ -63,7 +63,7 @@ impl GradeBar {
 
     pub fn get_trophy(&self) -> Option<&TrophyData> {
         let scores = [
-            self.selectable.bar_data.get_score(),
+            self.selectable.bar_data.score(),
             self.mscore.as_ref(),
             self.rscore.as_ref(),
         ];
@@ -92,13 +92,13 @@ impl GradeBar {
             return self
                 .selectable
                 .bar_data
-                .get_rival_score()
+                .rival_score()
                 .map(|s| s.clear)
                 .unwrap_or(0);
         }
 
         let mut result = 0;
-        if let Some(score) = self.selectable.bar_data.get_score()
+        if let Some(score) = self.selectable.bar_data.score()
             && score.clear > result
         {
             result = score.clear;

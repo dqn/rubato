@@ -112,7 +112,7 @@ impl MusicSelectCommand {
                     .manager
                     .dir
                     .iter()
-                    .any(|d| d.as_table_bar().is_some_and(|t| t.get_url().is_some()));
+                    .any(|d| d.as_table_bar().is_some_and(|t| t.url().is_some()));
                 if has_table_url {
                     if let Some(selected) = selector.manager.get_selected()
                         && let Some(song_bar) = selected.as_song_bar()
@@ -154,7 +154,7 @@ impl MusicSelectCommand {
                     && let Some(downloader) =
                         selector.main.as_ref().and_then(|m| m.http_downloader())
                 {
-                    for song in grade_bar.get_song_datas() {
+                    for song in grade_bar.song_datas() {
                         let md5 = &song.md5;
                         if !md5.is_empty() {
                             log::info!("Missing song md5: {}", md5);
@@ -186,7 +186,7 @@ impl MusicSelectCommand {
                         // Show course songs in a ContainerBar (deduplicated)
                         let mut seen = HashSet::new();
                         let songbars: Vec<Bar> = grade_bar
-                            .get_song_datas()
+                            .song_datas()
                             .iter()
                             .filter(|sd| seen.insert(sd.sha256.clone()))
                             .map(|sd| Bar::Song(Box::new(SongBar::new(sd.clone()))))

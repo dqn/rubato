@@ -22,7 +22,7 @@ impl<'a> ScoreDataImporter<'a> {
         for score in scores {
             let sha256 = &score.sha256;
             let mode = score.mode;
-            let mut oldsd = match self.scoredb.get_score_data(sha256, mode) {
+            let mut oldsd = match self.scoredb.score_data(sha256, mode) {
                 Some(existing) => existing,
                 None => ScoreData {
                     playcount: score.playcount,

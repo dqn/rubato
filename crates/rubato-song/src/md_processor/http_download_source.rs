@@ -11,7 +11,7 @@ pub trait HttpDownloadSource: Send + Sync {
     fn get_download_url_based_on_md5(&self, md5: &str) -> anyhow::Result<String>;
 
     /// Name is an unique symbol, also the option from 'otherTab'
-    fn get_name(&self) -> &str;
+    fn name(&self) -> &str;
 
     // For further implementations
 

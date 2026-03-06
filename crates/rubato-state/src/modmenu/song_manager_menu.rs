@@ -65,7 +65,7 @@ fn update_reverse_lookup_data(current_song_data: &Option<SongData>) {
 
     // Current song data is not used in this call, consider deleting upstream of this function
     // getReverseLookupData uses the selectors resource object to get data for what song is currently selected
-    *CURRENT_REVERSE_LOOKUP_LIST.lock().unwrap() = get_reverse_lookup_data();
+    *CURRENT_REVERSE_LOOKUP_LIST.lock().unwrap() = reverse_lookup_data();
 }
 
 fn get_current_song_data() -> Option<SongData> {
@@ -85,7 +85,7 @@ fn get_current_score_data() -> Option<ScoreData> {
 }
 
 #[allow(dead_code)]
-fn get_reverse_lookup_data() -> Vec<String> {
+fn reverse_lookup_data() -> Vec<String> {
     let selector = SELECTOR.lock().unwrap();
     if let Some(ref sel) = *selector {
         return sel.reverse_lookup_data();

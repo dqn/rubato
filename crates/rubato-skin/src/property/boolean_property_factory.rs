@@ -423,7 +423,7 @@ mod tests {
     }
 
     impl MainState for BoolMockState {
-        fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             &self.timer
         }
         fn get_offset_value(&self, _id: i32) -> Option<&SkinOffset> {

@@ -329,7 +329,7 @@ mod tests {
         assert!((gg.value_by_type(HARD) - 50.0).abs() < f32::EPSILON);
     }
 
-    // --- get_gauge tests ---
+    // --- gauge tests ---
 
     #[test]
     fn get_gauge_returns_current_type_gauge() {

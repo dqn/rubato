@@ -25,13 +25,7 @@ pub fn total_notes_range_type(model: &BMSModel, start: i32, end: i32, note_type:
     total_notes_full(model, start, end, note_type, 0)
 }
 
-pub fn total_notes_full(
-    model: &BMSModel,
-    start: i32,
-    end: i32,
-    note_type: i32,
-    side: i32,
-) -> i32 {
+pub fn total_notes_full(model: &BMSModel, start: i32, end: i32, note_type: i32, side: i32) -> i32 {
     let mode = match model.mode() {
         Some(m) => m,
         None => return 0,

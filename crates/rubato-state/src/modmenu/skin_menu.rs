@@ -95,7 +95,7 @@ fn menu_header(ui: &mut egui::Ui) {
     let current_skin = CURRENT_SKIN.lock().unwrap();
 
     if let Some(ref skin) = *current_skin {
-        let current_name = skin.get_name().map(|n| n.to_string()).unwrap_or_default();
+        let current_name = skin.name().map(|n| n.to_string()).unwrap_or_default();
         let current_path = skin
             .get_path()
             .map(|p| p.display().to_string())
@@ -103,12 +103,12 @@ fn menu_header(ui: &mut egui::Ui) {
         let skin_count = skins.len();
 
         // Find current index in skins list
-        let current_index = skins.iter().position(|s| s.get_name() == skin.get_name());
+        let current_index = skins.iter().position(|s| s.name() == skin.name());
 
         // Collect skin names for the combo
         let _skin_names: Vec<String> = skins
             .iter()
-            .filter_map(|s| s.get_name().map(|n| n.to_string()))
+            .filter_map(|s| s.name().map(|n| n.to_string()))
             .collect();
 
         drop(current_skin);
@@ -137,7 +137,7 @@ fn menu_header(ui: &mut egui::Ui) {
                 .show_ui(ui, |ui| {
                     let skins = SKINS.lock().unwrap();
                     for header in skins.iter() {
-                        let name = header.get_name().map(|n| n.to_string()).unwrap_or_default();
+                        let name = header.name().map(|n| n.to_string()).unwrap_or_default();
                         if ui.selectable_label(name == selected_name, &name).clicked() {
                             selected_name = name;
                         }
@@ -146,9 +146,10 @@ fn menu_header(ui: &mut egui::Ui) {
             // If a different skin was selected via combo, switch to it
             if selected_name != current_name {
                 let skins = SKINS.lock().unwrap();
-                if let Some(header) = skins.iter().find(|s| {
-                    s.get_name().map(|n| n.to_string()).unwrap_or_default() == selected_name
-                }) {
+                if let Some(header) = skins
+                    .iter()
+                    .find(|s| s.name().map(|n| n.to_string()).unwrap_or_default() == selected_name)
+                {
                     let h = header.clone();
                     drop(skins);
                     switch_current_scene_skin(h);
@@ -681,31 +682,27 @@ fn load_all_skins(skin_type: &SkinType) -> Vec<SkinHeader> {
                         Ok(mut h) => {
                             // 7/14key skin can also be used for 5/10key
                             if *skin_type == SkinType::Play5Keys
-                                && h.get_skin_type()
-                                    .is_some_and(|st| *st == SkinType::Play7Keys)
+                                && h.skin_type().is_some_and(|st| *st == SkinType::Play7Keys)
                                 && h.get_type() == TYPE_LR2SKIN
                                 && let Ok(mut h2) =
                                     loader.load_skin(path, None).map(skin_header_from_lr2_data)
                             {
                                 h2.set_skin_type(SkinType::Play5Keys);
-                                if !h2.get_name().unwrap_or("").to_lowercase().contains("7key") {
-                                    let new_name =
-                                        format!("{} (7KEYS) ", h2.get_name().unwrap_or(""));
+                                if !h2.name().unwrap_or("").to_lowercase().contains("7key") {
+                                    let new_name = format!("{} (7KEYS) ", h2.name().unwrap_or(""));
                                     h2.set_name(new_name);
                                 }
                                 h = h2;
                             }
                             if *skin_type == SkinType::Play10Keys
-                                && h.get_skin_type()
-                                    .is_some_and(|st| *st == SkinType::Play14Keys)
+                                && h.skin_type().is_some_and(|st| *st == SkinType::Play14Keys)
                                 && h.get_type() == TYPE_LR2SKIN
                                 && let Ok(mut h2) =
                                     loader.load_skin(path, None).map(skin_header_from_lr2_data)
                             {
                                 h2.set_skin_type(SkinType::Play10Keys);
-                                if !h2.get_name().unwrap_or("").to_lowercase().contains("14key") {
-                                    let new_name =
-                                        format!("{} (14KEYS) ", h2.get_name().unwrap_or(""));
+                                if !h2.name().unwrap_or("").to_lowercase().contains("14key") {
+                                    let new_name = format!("{} (14KEYS) ", h2.name().unwrap_or(""));
                                     h2.set_name(new_name);
                                 }
                                 h = h2;
@@ -721,7 +718,7 @@ fn load_all_skins(skin_type: &SkinType) -> Vec<SkinHeader> {
         }
 
         if let Some(h) = header
-            && h.get_skin_type().is_some_and(|st| st == skin_type)
+            && h.skin_type().is_some_and(|st| st == skin_type)
         {
             skins.push(h);
         }
@@ -866,7 +863,7 @@ fn load_saved_skin_settings(header: &SkinHeader) {
 
     let mut saved_properties: Option<&SkinProperty> = None;
 
-    let skin_type_id = header.get_skin_type().map(|st| st.id()).unwrap_or(0) as usize;
+    let skin_type_id = header.skin_type().map(|st| st.id()).unwrap_or(0) as usize;
     if skin_type_id < pc.skin.len()
         && let Some(ref live_config) = pc.skin[skin_type_id]
         && live_config.path().is_some_and(|p| p == skin_path)
@@ -1060,7 +1057,7 @@ fn save_current_config(next_skin: &SkinHeader) {
 
     let current_type = CURRENT_SKIN_TYPE.lock().unwrap();
     if let Some(ref st) = *current_type
-        && next_skin.get_name() == cs.get_name()
+        && next_skin.name() == cs.name()
     {
         let id = st.id() as usize;
         if id < pc.skin.len() {

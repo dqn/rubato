@@ -110,7 +110,7 @@ pub fn capture_render_snapshot(
     let mut commands = Vec::with_capacity(objects.len());
     let debug_option_prune = std::env::var_os("GM_DEBUG_OPTION_PRUNE").is_some();
     let debug_object_dump = std::env::var_os("GM_DEBUG_OBJECT_DUMP").is_some();
-    let skin_type = skin.header.get_skin_type().cloned();
+    let skin_type = skin.header.skin_type().cloned();
 
     for (idx, object) in objects.iter().enumerate() {
         let data = object.data();
@@ -208,7 +208,7 @@ pub fn capture_render_snapshot(
 }
 
 fn should_skip_for_parity(skin: &rubato_skin::skin::Skin, object: &SkinObject) -> bool {
-    let skin_type = skin.header.get_skin_type();
+    let skin_type = skin.header.skin_type();
     matches!(skin_type, Some(&SkinType::MusicSelect))
         && (is_text_with_string_id(object, skin_property::STRING_SEARCHWORD)
             || object.data().name.as_deref() == Some("irname"))

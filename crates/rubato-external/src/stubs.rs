@@ -23,7 +23,7 @@ pub use crate::pixmap_io::{BufferUtils, GdxGraphics, Pixmap, PixmapIO};
 //
 // PlayerResource:
 //   Replaced with Box<dyn PlayerResourceAccess> wrapper (Phase 18e-2).
-//   get_original_mode() is crate-local (Mode from bms-model, not on trait).
+//   original_mode() is crate-local (Mode from bms-model, not on trait).
 //
 // MainState:
 //   Real type is a trait (rubato_core::main_state::MainState), but external
@@ -72,7 +72,7 @@ pub use rubato_types::main_controller_access::NullMainController;
 
 /// Wrapper for bms.player.beatoraja.PlayerResource.
 /// Delegates to `Box<dyn PlayerResourceAccess>` for trait methods.
-/// `get_original_mode()` is crate-local (not on trait, since Mode lives in bms-model).
+/// `original_mode()` is crate-local (not on trait, since Mode lives in bms-model).
 pub struct PlayerResource {
     pub(crate) inner: Box<dyn PlayerResourceAccess>,
     original_mode: Mode,
@@ -86,7 +86,7 @@ impl PlayerResource {
         }
     }
 
-    pub fn get_config(&self) -> &Config {
+    pub fn config(&self) -> &Config {
         self.inner.config()
     }
 
@@ -174,7 +174,7 @@ impl rubato_types::main_state_access::MainStateAccess for MainState {
     }
 
     fn config(&self) -> &Config {
-        self.resource.get_config()
+        self.resource.config()
     }
 }
 
@@ -236,7 +236,7 @@ pub use rubato_types::imgui_notify::ImGuiNotify;
 // ============================================================
 
 impl rubato_skin::stubs::MainState for MainState {
-    fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+    fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
         static TIMER: std::sync::OnceLock<rubato_skin::stubs::Timer> = std::sync::OnceLock::new();
         TIMER.get_or_init(rubato_skin::stubs::Timer::default)
     }

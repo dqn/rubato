@@ -30,7 +30,7 @@ lazy_static::lazy_static! {
 
 /// Trait for score database access (avoids direct dependency on ScoreDatabaseAccessor)
 pub trait ScoreDatabaseAccess: Send + Sync {
-    fn get_score_data(&self, sha256: &str, mode: i32) -> Option<ScoreData>;
+    fn score_data(&self, sha256: &str, mode: i32) -> Option<ScoreData>;
 }
 
 type ScoreDatabaseAccessorRef = Box<dyn ScoreDatabaseAccess>;
@@ -151,7 +151,7 @@ impl LR2IRConnection {
                 } else {
                     0
                 };
-                acc.get_score_data(&chart.sha256, lntype).map(|mut s| {
+                acc.score_data(&chart.sha256, lntype).map(|mut s| {
                     // This is intentional behavior, see IRScoreData's player definition
                     // and how we use this feature in LeaderBoardBar
                     s.player = String::new();
@@ -504,7 +504,7 @@ mod tests {
         assert_eq!(entries[1].ir_score().player, "Low");
     }
 
-    // --- LR2IRConnection.get_score_data empty md5 test ---
+    // --- LR2IRConnection.score_data empty md5 test ---
 
     #[test]
     fn test_get_score_data_empty_md5_returns_empty() {

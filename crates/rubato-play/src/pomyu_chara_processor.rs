@@ -63,8 +63,8 @@ impl PomyuCharaProcessor {
         // 1P neutral check
         let neutral_time_1p = self.pm_chara_time(0);
         if timer.is_timer_on(TIMER_PM_CHARA_1P_NEUTRAL)
-            && timer.get_now_time_for_id(TIMER_PM_CHARA_1P_NEUTRAL) >= neutral_time_1p as i64
-            && timer.get_now_time_for_id(TIMER_PM_CHARA_1P_NEUTRAL) % (neutral_time_1p as i64) < 17
+            && timer.now_time_for_id(TIMER_PM_CHARA_1P_NEUTRAL) >= neutral_time_1p as i64
+            && timer.now_time_for_id(TIMER_PM_CHARA_1P_NEUTRAL) % (neutral_time_1p as i64) < 17
             && self.pm_chara_lastnotes[0] != past_notes
             && self.pm_chara_judge > 0
         {
@@ -86,8 +86,8 @@ impl PomyuCharaProcessor {
         let neutral_time_2p =
             self.pm_chara_time(TIMER_PM_CHARA_2P_NEUTRAL - TIMER_PM_CHARA_1P_NEUTRAL);
         if timer.is_timer_on(TIMER_PM_CHARA_2P_NEUTRAL)
-            && timer.get_now_time_for_id(TIMER_PM_CHARA_2P_NEUTRAL) >= neutral_time_2p as i64
-            && timer.get_now_time_for_id(TIMER_PM_CHARA_2P_NEUTRAL) % (neutral_time_2p as i64) < 17
+            && timer.now_time_for_id(TIMER_PM_CHARA_2P_NEUTRAL) >= neutral_time_2p as i64
+            && timer.now_time_for_id(TIMER_PM_CHARA_2P_NEUTRAL) % (neutral_time_2p as i64) < 17
             && self.pm_chara_lastnotes[1] != past_notes
             && self.pm_chara_judge > 0
         {
@@ -103,7 +103,7 @@ impl PomyuCharaProcessor {
         for i in TIMER_PM_CHARA_1P_FEVER..=TIMER_PM_CHARA_2P_BAD {
             if i != TIMER_PM_CHARA_2P_NEUTRAL
                 && timer.is_timer_on(i)
-                && timer.get_now_time_for_id(i)
+                && timer.now_time_for_id(i)
                     >= self.pm_chara_time(i - TIMER_PM_CHARA_1P_NEUTRAL) as i64
             {
                 if i <= TIMER_PM_CHARA_1P_BAD {

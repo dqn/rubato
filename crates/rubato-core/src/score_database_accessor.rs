@@ -108,7 +108,7 @@ impl ScoreDatabaseAccessor {
             log::error!("Exception during score database initialization: {}", e);
             return;
         }
-        if self.get_player_datas(1).is_empty() {
+        if self.player_datas(1).is_empty() {
             let pd = PlayerData::default();
             if let Err(e) = self
                 .base
@@ -121,7 +121,7 @@ impl ScoreDatabaseAccessor {
         }
     }
 
-    pub fn get_information(&self) -> Option<PlayerInformation> {
+    pub fn information(&self) -> Option<PlayerInformation> {
         match self
             .conn
             .prepare("SELECT * FROM info")
@@ -165,7 +165,7 @@ impl ScoreDatabaseAccessor {
         }
     }
 
-    pub fn get_score_data(&self, hash: &str, mode: i32) -> Option<ScoreData> {
+    pub fn score_data(&self, hash: &str, mode: i32) -> Option<ScoreData> {
         match self
             .conn
             .prepare("SELECT * FROM score WHERE sha256 = ?1 AND mode = ?2")
@@ -199,7 +199,7 @@ impl ScoreDatabaseAccessor {
     }
 
     #[allow(clippy::needless_range_loop)]
-    pub fn get_score_datas_for_songs(
+    pub fn score_datas_for_songs(
         &self,
         collector: &mut dyn ScoreDataCollector,
         songs: &[SongData],
@@ -289,7 +289,7 @@ impl ScoreDatabaseAccessor {
         }
     }
 
-    pub fn get_score_datas(&self, sql: &str) -> Option<Vec<ScoreData>> {
+    pub fn score_datas(&self, sql: &str) -> Option<Vec<ScoreData>> {
         match self
             .conn
             .prepare(&format!("SELECT * FROM score WHERE {}", sql))
@@ -418,8 +418,8 @@ impl ScoreDatabaseAccessor {
         }
     }
 
-    pub fn get_player_data(&self) -> Option<PlayerData> {
-        let pds = self.get_player_datas(1);
+    pub fn player_data(&self) -> Option<PlayerData> {
+        let pds = self.player_datas(1);
         if !pds.is_empty() {
             Some(pds.into_iter().next().unwrap())
         } else {
@@ -427,7 +427,7 @@ impl ScoreDatabaseAccessor {
         }
     }
 
-    pub fn get_player_datas(&self, count: i32) -> Vec<PlayerData> {
+    pub fn player_datas(&self, count: i32) -> Vec<PlayerData> {
         let (sql, params): (&str, Vec<Box<dyn rusqlite::types::ToSql>>) = if count > 0 {
             (
                 "SELECT * FROM player ORDER BY date DESC LIMIT ?1",
@@ -474,7 +474,7 @@ impl ScoreDatabaseAccessor {
         }
     }
 
-    pub fn get_connection(&self) -> &Connection {
+    pub fn connection(&self) -> &Connection {
         &self.conn
     }
 }
@@ -485,7 +485,7 @@ impl rubato_types::score_database_access::ScoreDatabaseAccess for ScoreDatabaseA
     }
 
     fn score_data(&self, sha256: &str, mode: i32) -> Option<ScoreData> {
-        ScoreDatabaseAccessor::get_score_data(self, sha256, mode)
+        ScoreDatabaseAccessor::score_data(self, sha256, mode)
     }
 
     fn set_score_data_slice(&self, scores: &[ScoreData]) {
@@ -672,7 +672,7 @@ mod tests {
         accessor.set_player_data(&pd);
 
         // Verify the data was written
-        let loaded = accessor.get_player_data();
+        let loaded = accessor.player_data();
         assert!(loaded.is_some());
         let loaded = loaded.unwrap();
         assert_eq!(loaded.playcount, 10);
@@ -1120,7 +1120,7 @@ mod tests {
         let sd = make_score("abc123", 0, 5);
         accessor.set_score_data(&sd);
 
-        let loaded = accessor.get_score_data("abc123", 0);
+        let loaded = accessor.score_data("abc123", 0);
         assert!(loaded.is_some(), "score should be retrievable after insert");
         let loaded = loaded.unwrap();
 
@@ -1165,19 +1165,19 @@ mod tests {
         accessor.set_score_data(&sd2);
 
         // Retrieve each independently
-        let loaded1 = accessor.get_score_data("hash_aaa", 0).unwrap();
+        let loaded1 = accessor.score_data("hash_aaa", 0).unwrap();
         assert_eq!(loaded1.sha256, "hash_aaa");
         assert_eq!(loaded1.clear, 3);
 
-        let loaded2 = accessor.get_score_data("hash_bbb", 0).unwrap();
+        let loaded2 = accessor.score_data("hash_bbb", 0).unwrap();
         assert_eq!(loaded2.sha256, "hash_bbb");
         assert_eq!(loaded2.clear, 7);
 
         // Non-existent hash returns None
-        assert!(accessor.get_score_data("hash_zzz", 0).is_none());
+        assert!(accessor.score_data("hash_zzz", 0).is_none());
 
         // Wrong mode returns None
-        assert!(accessor.get_score_data("hash_aaa", 99).is_none());
+        assert!(accessor.score_data("hash_aaa", 99).is_none());
     }
 
     #[test]
@@ -1196,11 +1196,11 @@ mod tests {
         accessor.set_score_data(&sd_high);
 
         // mode=0 returns the original clear=2 score
-        let loaded0 = accessor.get_score_data("hash_best", 0).unwrap();
+        let loaded0 = accessor.score_data("hash_best", 0).unwrap();
         assert_eq!(loaded0.clear, 2);
 
         // mode=1 returns the clear=8 score
-        let loaded1 = accessor.get_score_data("hash_best", 1).unwrap();
+        let loaded1 = accessor.score_data("hash_best", 1).unwrap();
         assert_eq!(loaded1.clear, 8);
         assert_eq!(loaded1.epg, 70);
     }
@@ -1221,7 +1221,7 @@ mod tests {
 
         let mut collector = TestCollector { calls: vec![] };
         let songs: Vec<SongData> = vec![];
-        accessor.get_score_datas_for_songs(&mut collector, &songs, 0);
+        accessor.score_datas_for_songs(&mut collector, &songs, 0);
 
         assert!(
             collector.calls.is_empty(),
@@ -1235,11 +1235,11 @@ mod tests {
 
         let sd = make_score("hash_del", 0, 5);
         accessor.set_score_data(&sd);
-        assert!(accessor.get_score_data("hash_del", 0).is_some());
+        assert!(accessor.score_data("hash_del", 0).is_some());
 
         accessor.delete_score_data("hash_del", 0);
         assert!(
-            accessor.get_score_data("hash_del", 0).is_none(),
+            accessor.score_data("hash_del", 0).is_none(),
             "score should be deleted"
         );
     }
@@ -1253,9 +1253,9 @@ mod tests {
         let sd3 = make_score("batch_3", 0, 9);
         accessor.set_score_data_batch(&[&sd1, &sd2, &sd3]);
 
-        assert_eq!(accessor.get_score_data("batch_1", 0).unwrap().clear, 3);
-        assert_eq!(accessor.get_score_data("batch_2", 0).unwrap().clear, 6);
-        assert_eq!(accessor.get_score_data("batch_3", 0).unwrap().clear, 9);
+        assert_eq!(accessor.score_data("batch_1", 0).unwrap().clear, 3);
+        assert_eq!(accessor.score_data("batch_2", 0).unwrap().clear, 6);
+        assert_eq!(accessor.score_data("batch_3", 0).unwrap().clear, 9);
     }
 
     #[test]
@@ -1268,7 +1268,7 @@ mod tests {
         accessor.set_score_data(&sd1);
         accessor.set_score_data(&sd2);
 
-        let results = accessor.get_score_datas("playcount >= 20").unwrap();
+        let results = accessor.score_datas("playcount >= 20").unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].sha256, "sql_b");
     }

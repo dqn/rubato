@@ -217,14 +217,14 @@ impl SkinGaugeGraphObject {
             self.redraw = true;
             self.current_type = current_type;
             self.gaugehistory = resource
-                .get_gauge()
+                .gauge()
                 .and_then(|gd| gd.get(self.current_type as usize))
                 .cloned()
                 .unwrap_or_default();
             self.section = Vec::new();
             if is_course_result {
                 self.gaugehistory = Vec::new();
-                for l in resource.get_course_gauge() {
+                for l in resource.course_gauge() {
                     self.gaugehistory
                         .extend_from_slice(&l[self.current_type as usize]);
                     let prev = self.section.last().copied().unwrap_or(0);
@@ -232,7 +232,7 @@ impl SkinGaugeGraphObject {
                         .push(prev + l[self.current_type as usize].len() as i32);
                 }
             }
-            if let Some(groove_gauge) = resource.get_groove_gauge() {
+            if let Some(groove_gauge) = resource.groove_gauge() {
                 let gauge = groove_gauge.gauge_by_type(self.current_type);
                 let prop = gauge.property();
                 self.gg = Some(GaugeRef {

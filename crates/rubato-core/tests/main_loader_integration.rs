@@ -161,7 +161,7 @@ fn play_returns_controller_with_config() {
     );
 
     let controller = result.unwrap();
-    let cfg = controller.get_config();
+    let cfg = controller.config();
 
     // play() sets window dimensions from resolution; default resolution is HD (1280x720)
     let expected_w = Resolution::HD.width();
@@ -202,7 +202,7 @@ fn play_sets_window_dimensions() {
     )
     .expect("play() should succeed");
 
-    let cfg = controller.get_config();
+    let cfg = controller.config();
     assert_eq!(
         cfg.window_width,
         Resolution::FULLHD.width(),
@@ -274,7 +274,7 @@ fn play_passes_songdb_to_controller() {
 
     // The controller should have received the songdb
     assert!(
-        controller.get_song_database().is_some(),
+        controller.song_database().is_some(),
         "Controller should have a song database after play() with songdb set"
     );
 }
@@ -303,7 +303,7 @@ fn play_clears_songdb_after_take() {
     .expect("first play() should succeed");
 
     assert!(
-        controller1.get_song_database().is_some(),
+        controller1.song_database().is_some(),
         "First controller should have songdb"
     );
 
@@ -319,7 +319,7 @@ fn play_clears_songdb_after_take() {
     .expect("second play() should succeed");
 
     assert!(
-        controller2.get_song_database().is_none(),
+        controller2.song_database().is_none(),
         "Second controller should NOT have songdb (already taken by first play())"
     );
 }
@@ -382,7 +382,7 @@ fn start_then_play_sequential_lifecycle() {
     );
 
     let controller = result.unwrap();
-    let cfg = controller.get_config();
+    let cfg = controller.config();
 
     // Config should be valid — window dimensions set from resolution
     assert!(cfg.window_width > 0, "window_width should be positive");
@@ -390,7 +390,7 @@ fn start_then_play_sequential_lifecycle() {
 
     // Global state should be clean
     assert_eq!(
-        MainLoader::get_illegal_song_count(),
+        MainLoader::illegal_song_count(),
         0,
         "illegal songs should be empty after clean lifecycle"
     );
@@ -420,8 +420,8 @@ fn play_twice_sequential_does_not_corrupt_state() {
     );
 
     let controller1 = result1.unwrap();
-    let w1 = controller1.get_config().window_width;
-    let h1 = controller1.get_config().window_height;
+    let w1 = controller1.config().window_width;
+    let h1 = controller1.config().window_height;
 
     // Second play() — must also succeed with independent config
     let mut config2 = Config::default();
@@ -438,8 +438,8 @@ fn play_twice_sequential_does_not_corrupt_state() {
     );
 
     let controller2 = result2.unwrap();
-    let w2 = controller2.get_config().window_width;
-    let h2 = controller2.get_config().window_height;
+    let w2 = controller2.config().window_width;
+    let h2 = controller2.config().window_height;
 
     // The two controllers should have independent configs — different resolutions
     assert_ne!(
@@ -450,7 +450,7 @@ fn play_twice_sequential_does_not_corrupt_state() {
 
     // Global state should still be clean
     assert_eq!(
-        MainLoader::get_illegal_song_count(),
+        MainLoader::illegal_song_count(),
         0,
         "illegal songs should be empty after two clean play() calls"
     );

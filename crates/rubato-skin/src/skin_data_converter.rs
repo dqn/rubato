@@ -1443,7 +1443,7 @@ mod tests {
 
         let header = convert_header_data(&header_data, &src, &dst);
 
-        assert_eq!(header.get_name(), Some("Test Skin"));
+        assert_eq!(header.name(), Some("Test Skin"));
         assert_eq!(header.get_author(), Some("Test Author"));
         assert_eq!(header.get_source_resolution().width, 1920.0);
         assert_eq!(header.get_source_resolution().height, 1080.0);
@@ -1641,7 +1641,7 @@ mod tests {
         );
 
         let skin = skin.unwrap();
-        let offset = skin.get_offset();
+        let offset = skin.offset();
         assert!(offset.contains_key(&42));
         assert_eq!(offset.get(&42).unwrap().name, "TestOffset");
     }

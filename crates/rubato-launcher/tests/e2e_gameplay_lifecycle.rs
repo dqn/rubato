@@ -57,10 +57,7 @@ fn e2e_gameplay_select_decide_play_result_with_bms() {
 
     // create() initializes PlayerResource and enters MusicSelect (no bmsfile arg)
     mc.create();
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect),
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect),);
 
     // Load BMS file onto PlayerResource (simulates song selection)
     {
@@ -78,37 +75,31 @@ fn e2e_gameplay_select_decide_play_result_with_bms() {
 
     // Render a frame in MusicSelect with BMS data loaded
     mc.render();
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect),
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect),);
 
     // Transition to Decide
     mc.change_state(MainStateType::Decide);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Decide));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Decide));
     mc.render();
 
     // Transition to Play (factory reads BMS model from PlayerResource)
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     mc.render();
 
     // Transition to Result
     mc.change_state(MainStateType::Result);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
     mc.render();
 
     // Return to MusicSelect (normal game loop)
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect),
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect),);
 
     // Clean dispose
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
-    assert!(mc.get_current_state_type().is_none());
+    assert!(mc.current_state().is_none());
+    assert!(mc.current_state_type().is_none());
 }
 
 // ---------------------------------------------------------------------------
@@ -138,29 +129,26 @@ fn e2e_gameplay_direct_bms_launch_play_to_result() {
 
     // create() loads the BMS file and enters Play directly
     mc.create();
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
     // Verify BMS model was loaded into PlayerResource
-    let has_model = mc
-        .get_player_resource()
-        .and_then(|r| r.get_bms_model())
-        .is_some();
+    let has_model = mc.player_resource().and_then(|r| r.bms_model()).is_some();
     assert!(has_model, "BMS model should be loaded in PlayerResource");
 
     // Render multiple frames in Play state
     for _ in 0..3 {
         mc.render();
     }
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
     // Transition to Result (end of song)
     mc.change_state(MainStateType::Result);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
     mc.render();
 
     // Clean dispose
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 // ---------------------------------------------------------------------------
@@ -183,7 +171,7 @@ fn e2e_gameplay_play_lifecycle_with_bms() {
 
     // Enter Play state
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
     // Exercise full lifecycle methods
     mc.render();
@@ -195,7 +183,7 @@ fn e2e_gameplay_play_lifecycle_with_bms() {
     mc.render();
 
     // State should remain Play throughout lifecycle
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 }
 
 // ---------------------------------------------------------------------------
@@ -227,12 +215,12 @@ fn e2e_gameplay_bms_model_propagates_to_play_state() {
 
     // Enter Play state - factory reads model from PlayerResource
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
     // Verify the BMS model is still accessible via PlayerResource
     let actual_notes = mc
-        .get_player_resource()
-        .and_then(|r| r.get_bms_model())
+        .player_resource()
+        .and_then(|r| r.bms_model())
         .map(|m| m.total_notes())
         .unwrap_or(0);
     assert_eq!(
@@ -261,25 +249,19 @@ fn e2e_gameplay_play_to_course_result_with_bms() {
 
     // Play -> CourseResult (course mode end-of-song path)
     mc.change_state(MainStateType::Play);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     mc.render();
 
     mc.change_state(MainStateType::CourseResult);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::CourseResult),
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::CourseResult),);
     mc.render();
 
     // Back to MusicSelect
     mc.change_state(MainStateType::MusicSelect);
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect),
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect),);
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 // ---------------------------------------------------------------------------
@@ -308,7 +290,7 @@ fn e2e_gameplay_multiple_play_sessions() {
         // Play
         mc.change_state(MainStateType::Play);
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::Play),
             "session {} Play state failed",
             session
@@ -318,7 +300,7 @@ fn e2e_gameplay_multiple_play_sessions() {
         // Result
         mc.change_state(MainStateType::Result);
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::Result),
             "session {} Result state failed",
             session
@@ -328,7 +310,7 @@ fn e2e_gameplay_multiple_play_sessions() {
         // Back to MusicSelect
         mc.change_state(MainStateType::MusicSelect);
         assert_eq!(
-            mc.get_current_state_type(),
+            mc.current_state_type(),
             Some(MainStateType::MusicSelect),
             "session {} MusicSelect state failed",
             session
@@ -336,7 +318,7 @@ fn e2e_gameplay_multiple_play_sessions() {
     }
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 // ---------------------------------------------------------------------------
@@ -365,7 +347,7 @@ fn e2e_gameplay_skip_decide_with_bms() {
     // When skip_decide_screen is true, requesting Decide creates Play instead
     mc.change_state(MainStateType::Decide);
     assert_eq!(
-        mc.get_current_state_type(),
+        mc.current_state_type(),
         Some(MainStateType::Play),
         "Decide should skip to Play when skip_decide_screen is true"
     );
@@ -373,11 +355,11 @@ fn e2e_gameplay_skip_decide_with_bms() {
 
     // Continue to Result
     mc.change_state(MainStateType::Result);
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
     mc.render();
 
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }
 
 // ---------------------------------------------------------------------------
@@ -410,7 +392,7 @@ fn e2e_gameplay_sustained_rendering_with_bms() {
         for frame in 0..10 {
             mc.render();
             assert_eq!(
-                mc.get_current_state_type(),
+                mc.current_state_type(),
                 Some(*state_type),
                 "State should remain {:?} at frame {}",
                 state_type,

@@ -330,7 +330,7 @@ mod tests {
     }
 
     impl MainState for MockMainState {
-        fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             static NULL: rubato_types::timer_access::NullTimer =
                 rubato_types::timer_access::NullTimer;
             &NULL

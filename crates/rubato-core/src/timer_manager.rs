@@ -42,43 +42,43 @@ impl TimerManager {
         }
     }
 
-    pub fn get_start_time(&self) -> i64 {
+    pub fn start_time(&self) -> i64 {
         // starttime / 1000000 in Java (nanos to millis)
         // In Rust we track relative time, so this returns 0 conceptually
         0
     }
 
-    pub fn get_start_micro_time(&self) -> i64 {
+    pub fn start_micro_time(&self) -> i64 {
         // starttime / 1000 in Java (nanos to micros)
         0
     }
 
-    pub fn get_now_time(&self) -> i64 {
+    pub fn now_time(&self) -> i64 {
         self.nowmicrotime / 1000
     }
 
-    pub fn get_now_time_for_id(&self, id: i32) -> i64 {
+    pub fn now_time_for_id(&self, id: i32) -> i64 {
         if self.is_timer_on(id) {
-            (self.nowmicrotime - self.get_micro_timer(id)) / 1000
+            (self.nowmicrotime - self.micro_timer(id)) / 1000
         } else {
             0
         }
     }
 
-    pub fn get_now_micro_time(&self) -> i64 {
+    pub fn now_micro_time(&self) -> i64 {
         self.nowmicrotime
     }
 
-    pub fn get_now_micro_time_for_id(&self, id: i32) -> i64 {
+    pub fn now_micro_time_for_id(&self, id: i32) -> i64 {
         if self.is_timer_on(id) {
-            self.nowmicrotime - self.get_micro_timer(id)
+            self.nowmicrotime - self.micro_timer(id)
         } else {
             0
         }
     }
 
-    pub fn get_timer(&self, id: i32) -> i64 {
-        self.get_micro_timer(id) / 1000
+    pub fn timer(&self, id: i32) -> i64 {
+        self.micro_timer(id) / 1000
     }
 
     /// Export a clone of the timer array for creating skin Timer snapshots.
@@ -86,7 +86,7 @@ impl TimerManager {
         self.timer.clone()
     }
 
-    pub fn get_micro_timer(&self, id: i32) -> i64 {
+    pub fn micro_timer(&self, id: i32) -> i64 {
         if id >= 0 && (id as usize) < TIMER_COUNT {
             self.timer[id as usize]
         } else {
@@ -97,7 +97,7 @@ impl TimerManager {
     }
 
     pub fn is_timer_on(&self, id: i32) -> bool {
-        self.get_micro_timer(id) != i64::MIN
+        self.micro_timer(id) != i64::MIN
     }
 
     pub fn set_timer_on(&mut self, id: i32) {
@@ -119,7 +119,7 @@ impl TimerManager {
 
     pub fn switch_timer(&mut self, id: i32, on: bool) {
         if on {
-            if self.get_micro_timer(id) == i64::MIN {
+            if self.micro_timer(id) == i64::MIN {
                 let now = self.nowmicrotime;
                 self.set_micro_timer(id, now);
             }
@@ -173,23 +173,23 @@ impl Default for TimerManager {
 
 impl rubato_types::timer_access::TimerAccess for TimerManager {
     fn now_time(&self) -> i64 {
-        self.get_now_time()
+        self.now_time()
     }
 
     fn now_micro_time(&self) -> i64 {
-        self.get_now_micro_time()
+        self.now_micro_time()
     }
 
     fn micro_timer(&self, timer_id: i32) -> i64 {
-        self.get_micro_timer(timer_id)
+        self.micro_timer(timer_id)
     }
 
     fn timer(&self, timer_id: i32) -> i64 {
-        self.get_timer(timer_id)
+        self.timer(timer_id)
     }
 
     fn now_time_for(&self, timer_id: i32) -> i64 {
-        self.get_now_time_for_id(timer_id)
+        self.now_time_for_id(timer_id)
     }
 
     fn is_timer_on(&self, timer_id: i32) -> bool {
@@ -219,7 +219,7 @@ mod tests {
     fn initial_state_timer_off() {
         let tm = TimerManager::new();
         assert!(!tm.is_timer_on(0));
-        assert_eq!(tm.get_micro_timer(0), i64::MIN);
+        assert_eq!(tm.micro_timer(0), i64::MIN);
     }
 
     #[test]
@@ -241,7 +241,7 @@ mod tests {
 
         tm.nowmicrotime = 5000;
         tm.switch_timer(5, true); // should NOT reset timer[5]
-        assert_eq!(tm.get_micro_timer(5), 1000); // still original value
+        assert_eq!(tm.micro_timer(5), 1000); // still original value
 
         tm.switch_timer(5, false);
         assert!(!tm.is_timer_on(5));
@@ -253,27 +253,27 @@ mod tests {
         tm.nowmicrotime = 3000;
         tm.switch_timer(10, true);
         assert!(tm.is_timer_on(10));
-        assert_eq!(tm.get_micro_timer(10), 3000);
+        assert_eq!(tm.micro_timer(10), 3000);
     }
 
     #[test]
     fn get_micro_timer_negative_id() {
         let tm = TimerManager::new();
-        assert_eq!(tm.get_micro_timer(-1), i64::MIN);
+        assert_eq!(tm.micro_timer(-1), i64::MIN);
     }
 
     #[test]
     fn get_micro_timer_out_of_bounds() {
         let tm = TimerManager::new();
         // TIMER_COUNT = 3000, so index 3000 is out of bounds
-        assert_eq!(tm.get_micro_timer(3000), i64::MIN);
+        assert_eq!(tm.micro_timer(3000), i64::MIN);
     }
 
     #[test]
     fn get_micro_timer_max_valid_index() {
         let tm = TimerManager::new();
         // Index 2999 is valid but timer is off
-        assert_eq!(tm.get_micro_timer(2999), i64::MIN);
+        assert_eq!(tm.micro_timer(2999), i64::MIN);
     }
 
     #[test]
@@ -283,13 +283,13 @@ mod tests {
         tm.set_timer_on(1); // timer[1] = 10000
         tm.nowmicrotime = 15000;
         // (15000 - 10000) / 1000 = 5
-        assert_eq!(tm.get_now_time_for_id(1), 5);
+        assert_eq!(tm.now_time_for_id(1), 5);
     }
 
     #[test]
     fn get_now_time_for_id_timer_off() {
         let tm = TimerManager::new();
-        assert_eq!(tm.get_now_time_for_id(2), 0);
+        assert_eq!(tm.now_time_for_id(2), 0);
     }
 
     #[test]
@@ -309,17 +309,17 @@ mod tests {
     }
 
     #[test]
-    fn get_now_time() {
+    fn now_time() {
         let mut tm = TimerManager::new();
         tm.nowmicrotime = 5000;
-        assert_eq!(tm.get_now_time(), 5);
+        assert_eq!(tm.now_time(), 5);
     }
 
     #[test]
-    fn get_now_micro_time() {
+    fn now_micro_time() {
         let mut tm = TimerManager::new();
         tm.nowmicrotime = 12345;
-        assert_eq!(tm.get_now_micro_time(), 12345);
+        assert_eq!(tm.now_micro_time(), 12345);
     }
 
     #[test]
@@ -334,16 +334,16 @@ mod tests {
     fn frozen_prevents_time_update() {
         let mut tm = TimerManager::new();
         tm.set_frozen(true);
-        let before = tm.get_now_micro_time();
+        let before = tm.now_micro_time();
         tm.update();
-        assert_eq!(tm.get_now_micro_time(), before);
+        assert_eq!(tm.now_micro_time(), before);
     }
 
     #[test]
     fn default_matches_new() {
         let from_new = TimerManager::new();
         let from_default = TimerManager::default();
-        assert_eq!(from_new.get_now_time(), from_default.get_now_time());
+        assert_eq!(from_new.now_time(), from_default.now_time());
         assert_eq!(from_new.timer.len(), from_default.timer.len());
     }
 }

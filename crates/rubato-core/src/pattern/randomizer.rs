@@ -52,11 +52,11 @@ impl RandomizerBase {
         self.mode = Some(m);
     }
 
-    pub fn get_ln_lane(&self) -> Vec<i32> {
+    pub fn ln_lane(&self) -> Vec<i32> {
         self.ln_active.values().copied().collect()
     }
 
-    pub fn get_assist_level(&self) -> AssistLevel {
+    pub fn assist_level(&self) -> AssistLevel {
         self.assist
     }
 
@@ -379,8 +379,8 @@ impl Randomizer {
         self.base_mut().set_random_seed(seed);
     }
 
-    pub fn get_assist_level(&self) -> AssistLevel {
-        self.base().get_assist_level()
+    pub fn assist_level(&self) -> AssistLevel {
+        self.base().assist_level()
     }
 
     pub fn permutate(&mut self, tl: &mut TimeLine) -> Vec<i32> {
@@ -776,7 +776,7 @@ impl NoMurioshiRandomizer {
     }
 
     fn note_count(&self, tl: &TimeLine) -> usize {
-        self.get_note_exist_lane(tl).len() + self.base.get_ln_lane().len()
+        self.get_note_exist_lane(tl).len() + self.base.ln_lane().len()
     }
 
     fn get_note_exist_lane(&self, tl: &TimeLine) -> Vec<i32> {
@@ -797,7 +797,7 @@ impl NoMurioshiRandomizer {
 
         self.flag = 2 < note_count && note_count < 7;
         if self.flag {
-            let ln_lane = self.base.get_ln_lane();
+            let ln_lane = self.base.ln_lane();
             let candidate: Vec<&Vec<i32>> = if ln_lane.is_empty() {
                 button_combination_table().iter().collect()
             } else {
@@ -1089,7 +1089,7 @@ mod tests {
         let base = RandomizerBase::new();
         assert!(base.mode.is_none());
         assert!(base.modify_lanes.is_empty());
-        assert_eq!(base.get_assist_level(), AssistLevel::None);
+        assert_eq!(base.assist_level(), AssistLevel::None);
     }
 
     #[test]
@@ -1115,14 +1115,14 @@ mod tests {
     #[test]
     fn randomizer_base_get_ln_lane_initially_empty() {
         let base = RandomizerBase::new();
-        assert!(base.get_ln_lane().is_empty());
+        assert!(base.ln_lane().is_empty());
     }
 
     #[test]
     fn randomizer_base_set_assist_level() {
         let mut base = RandomizerBase::new();
         base.set_assist_level(AssistLevel::Assist);
-        assert_eq!(base.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(base.assist_level(), AssistLevel::Assist);
     }
 
     #[test]
@@ -1258,14 +1258,14 @@ mod tests {
     fn randomizer_get_assist_level_srandom() {
         let config = PlayerConfig::default();
         let r = Randomizer::create(Random::SRandom, &Mode::BEAT_7K, &config);
-        assert_eq!(r.get_assist_level(), AssistLevel::None);
+        assert_eq!(r.assist_level(), AssistLevel::None);
     }
 
     #[test]
     fn randomizer_hrandom_has_light_assist() {
         let config = PlayerConfig::default();
         let r = Randomizer::create(Random::HRandom, &Mode::BEAT_7K, &config);
-        assert_eq!(r.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(r.assist_level(), AssistLevel::LightAssist);
     }
 
     #[test]
@@ -1280,7 +1280,7 @@ mod tests {
         let config = PlayerConfig::default();
         let mut r = Randomizer::create(Random::SRandom, &Mode::BEAT_7K, &config);
         r.base_mut().set_assist_level(AssistLevel::Assist);
-        assert_eq!(r.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(r.assist_level(), AssistLevel::Assist);
     }
 
     // -- SRandomizer --
@@ -1288,7 +1288,7 @@ mod tests {
     #[test]
     fn srandomizer_creation() {
         let r = SRandomizer::new(40, AssistLevel::None);
-        assert_eq!(r.base.get_assist_level(), AssistLevel::None);
+        assert_eq!(r.base.assist_level(), AssistLevel::None);
         assert_eq!(r.time_state.threshold, 40);
     }
 
@@ -1297,7 +1297,7 @@ mod tests {
     #[test]
     fn spiral_randomizer_default() {
         let r = SpiralRandomizer::new();
-        assert_eq!(r.base.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(r.base.assist_level(), AssistLevel::LightAssist);
         assert_eq!(r.increment, 0);
         assert_eq!(r.head, 0);
         assert_eq!(r.cycle, 0);
@@ -1314,7 +1314,7 @@ mod tests {
     #[test]
     fn all_scratch_randomizer_creation() {
         let r = AllScratchRandomizer::new(40, 100, 0);
-        assert_eq!(r.base.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(r.base.assist_level(), AssistLevel::LightAssist);
         assert_eq!(r.time_state.threshold, 100);
     }
 
@@ -1349,7 +1349,7 @@ mod tests {
     #[test]
     fn converge_randomizer_creation() {
         let r = ConvergeRandomizer::new(100, 200);
-        assert_eq!(r.base.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(r.base.assist_level(), AssistLevel::LightAssist);
         assert_eq!(r.time_state.threshold, 100);
     }
 
@@ -1358,7 +1358,7 @@ mod tests {
     #[test]
     fn no_murioshi_randomizer_creation() {
         let r = NoMurioshiRandomizer::new(100);
-        assert_eq!(r.base.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(r.base.assist_level(), AssistLevel::LightAssist);
         assert_eq!(r.time_state.threshold, 100);
     }
 

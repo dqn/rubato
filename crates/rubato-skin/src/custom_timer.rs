@@ -27,7 +27,7 @@ impl CustomTimer {
         self.id
     }
 
-    pub fn get_micro_timer(&self) -> i64 {
+    pub fn micro_timer(&self) -> i64 {
         self.time
     }
 

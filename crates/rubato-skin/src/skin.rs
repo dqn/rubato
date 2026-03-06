@@ -785,12 +785,12 @@ impl Skin {
             self.renderer = Some(SkinObjectRenderer::new());
         }
 
-        let microtime = state.get_timer().now_micro_time();
+        let microtime = state.timer().now_micro_time();
         let debug = false; // MainController.debug stubbed as false
 
         if !debug {
             if self.nextpreparetime <= microtime {
-                let time = state.get_timer().now_time();
+                let time = state.timer().now_time();
                 for idx in &self.objectarray_indices {
                     self.objects[*idx].prepare(time, state);
                 }
@@ -890,7 +890,7 @@ impl Skin {
         self.option = option;
     }
 
-    pub fn get_offset(&self) -> &HashMap<i32, SkinConfigOffset> {
+    pub fn offset(&self) -> &HashMap<i32, SkinConfigOffset> {
         &self.offset
     }
 
@@ -950,7 +950,7 @@ impl Skin {
     /// Recalculated only once per frame, so the value is guaranteed to be unique within the same frame.
     pub fn get_micro_custom_timer(&self, id: i32) -> i64 {
         if let Some(timer) = self.custom_timers.get(&id) {
-            timer.get_micro_timer()
+            timer.micro_timer()
         } else {
             i64::MIN
         }
@@ -1149,7 +1149,7 @@ impl<'a> TimerOnlyMainState<'a> {
 }
 
 impl crate::stubs::MainState for TimerOnlyMainState<'_> {
-    fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+    fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
         if let Some(ctx) = self.ctx.as_deref() {
             ctx
         } else {
@@ -1483,19 +1483,19 @@ mod tests {
 
     impl TimerAccess for RecordingSkinRenderContext {
         fn now_time(&self) -> i64 {
-            self.timer.get_now_time()
+            self.timer.now_time()
         }
 
         fn now_micro_time(&self) -> i64 {
-            self.timer.get_now_micro_time()
+            self.timer.now_micro_time()
         }
 
         fn micro_timer(&self, timer_id: i32) -> i64 {
-            self.timer.get_micro_timer(timer_id)
+            self.timer.micro_timer(timer_id)
         }
 
         fn timer(&self, timer_id: i32) -> i64 {
-            self.timer.get_timer(timer_id)
+            self.timer.timer(timer_id)
         }
 
         fn now_time_for(&self, timer_id: i32) -> i64 {
@@ -1546,8 +1546,8 @@ mod tests {
         let timer = crate::stubs::Timer::with_timers(1000, 1_000_000, Vec::new());
         let adapter = TimerOnlyMainState::from_timer(&timer);
         let state: &dyn MainState = &adapter;
-        assert_eq!(state.get_timer().now_time(), 1000);
-        assert_eq!(state.get_timer().now_micro_time(), 1_000_000);
+        assert_eq!(state.timer().now_time(), 1000);
+        assert_eq!(state.timer().now_micro_time(), 1_000_000);
         assert!(state.get_offset_value(0).is_none());
         assert!(state.get_image(0).is_none());
         assert!(!state.get_main().debug);
@@ -1574,23 +1574,23 @@ mod tests {
 
         // Timer 10 should be ON through the adapter
         assert!(
-            state.get_timer().is_timer_on(10),
+            state.timer().is_timer_on(10),
             "Timer 10 should be ON through adapter"
         );
         // Timer 20 should be OFF
         assert!(
-            !state.get_timer().is_timer_on(20),
+            !state.timer().is_timer_on(20),
             "Timer 20 should be OFF through adapter"
         );
-        // get_micro_timer for ON timer should not be i64::MIN
+        // micro_timer for ON timer should not be i64::MIN
         assert_ne!(
-            state.get_timer().micro_timer(10),
+            state.timer().micro_timer(10),
             i64::MIN,
             "ON timer should return its activation time, not i64::MIN"
         );
-        // get_micro_timer for OFF timer should be i64::MIN
+        // micro_timer for OFF timer should be i64::MIN
         assert_eq!(
-            state.get_timer().micro_timer(20),
+            state.timer().micro_timer(20),
             i64::MIN,
             "OFF timer should return i64::MIN"
         );

@@ -65,7 +65,7 @@ impl ScoreLogDatabaseAccessor {
         }
     }
 
-    pub fn get_connection(&self) -> &Connection {
+    pub fn connection(&self) -> &Connection {
         &self.conn
     }
 }
@@ -92,7 +92,7 @@ impl ScoreLog {
         Self::default()
     }
 
-    pub fn get_sha256(&self) -> Option<&str> {
+    pub fn sha256(&self) -> Option<&str> {
         self.sha256.as_deref()
     }
 
@@ -100,7 +100,7 @@ impl ScoreLog {
         self.sha256 = Some(sha256.to_string());
     }
 
-    pub fn get_mode(&self) -> i32 {
+    pub fn mode(&self) -> i32 {
         self.mode
     }
 
@@ -108,7 +108,7 @@ impl ScoreLog {
         self.mode = mode;
     }
 
-    pub fn get_clear(&self) -> i32 {
+    pub fn clear(&self) -> i32 {
         self.clear
     }
 
@@ -116,7 +116,7 @@ impl ScoreLog {
         self.clear = clear;
     }
 
-    pub fn get_oldclear(&self) -> i32 {
+    pub fn oldclear(&self) -> i32 {
         self.oldclear
     }
 
@@ -124,7 +124,7 @@ impl ScoreLog {
         self.oldclear = oldclear;
     }
 
-    pub fn get_score(&self) -> i32 {
+    pub fn score(&self) -> i32 {
         self.score
     }
 
@@ -132,7 +132,7 @@ impl ScoreLog {
         self.score = score;
     }
 
-    pub fn get_oldscore(&self) -> i32 {
+    pub fn oldscore(&self) -> i32 {
         self.oldscore
     }
 
@@ -140,7 +140,7 @@ impl ScoreLog {
         self.oldscore = oldscore;
     }
 
-    pub fn get_combo(&self) -> i32 {
+    pub fn combo(&self) -> i32 {
         self.combo
     }
 
@@ -148,7 +148,7 @@ impl ScoreLog {
         self.combo = combo;
     }
 
-    pub fn get_oldcombo(&self) -> i32 {
+    pub fn oldcombo(&self) -> i32 {
         self.oldcombo
     }
 
@@ -156,7 +156,7 @@ impl ScoreLog {
         self.oldcombo = oldcombo;
     }
 
-    pub fn get_minbp(&self) -> i32 {
+    pub fn minbp(&self) -> i32 {
         self.minbp
     }
 
@@ -164,7 +164,7 @@ impl ScoreLog {
         self.minbp = minbp;
     }
 
-    pub fn get_oldminbp(&self) -> i32 {
+    pub fn oldminbp(&self) -> i32 {
         self.oldminbp
     }
 
@@ -172,7 +172,7 @@ impl ScoreLog {
         self.oldminbp = oldminbp;
     }
 
-    pub fn get_date(&self) -> i64 {
+    pub fn date(&self) -> i64 {
         self.date
     }
 

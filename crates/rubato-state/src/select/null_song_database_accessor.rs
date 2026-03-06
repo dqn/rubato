@@ -8,7 +8,7 @@ pub struct NullSongDatabaseAccessor;
 
 impl SongDatabaseAccessor for NullSongDatabaseAccessor {
     fn song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
-        log::trace!("NullSongDatabaseAccessor.get_song_datas: returning empty result");
+        log::trace!("NullSongDatabaseAccessor.song_datas: returning empty result");
         Vec::new()
     }
     fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {

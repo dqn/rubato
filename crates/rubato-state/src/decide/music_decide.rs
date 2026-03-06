@@ -19,19 +19,19 @@ struct DecideRenderContext<'a> {
 
 impl rubato_types::timer_access::TimerAccess for DecideRenderContext<'_> {
     fn now_time(&self) -> i64 {
-        self.timer.get_now_time()
+        self.timer.now_time()
     }
     fn now_micro_time(&self) -> i64 {
-        self.timer.get_now_micro_time()
+        self.timer.now_micro_time()
     }
     fn micro_timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_micro_timer(timer_id)
+        self.timer.micro_timer(timer_id)
     }
     fn timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_timer(timer_id)
+        self.timer.timer(timer_id)
     }
     fn now_time_for(&self, timer_id: i32) -> i64 {
-        self.timer.get_now_time_for_id(timer_id)
+        self.timer.now_time_for_id(timer_id)
     }
     fn is_timer_on(&self, timer_id: i32) -> bool {
         self.timer.is_timer_on(timer_id)
@@ -44,11 +44,11 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
     }
 
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
-        Some(self.main.get_player_config())
+        Some(self.main.player_config())
     }
 
     fn config_ref(&self) -> Option<&rubato_types::config::Config> {
-        Some(self.main.get_config())
+        Some(self.main.config())
     }
 
     fn set_timer_micro(&mut self, timer_id: i32, micro_time: i64) {
@@ -83,9 +83,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
             // Song duration
             312 => self.resource.songdata().map_or(0, |s| s.length),
             // Playtime
-            17 => (self.timer.get_now_time() / 3_600_000) as i32,
-            18 => ((self.timer.get_now_time() % 3_600_000) / 60_000) as i32,
-            19 => ((self.timer.get_now_time() % 60_000) / 1_000) as i32,
+            17 => (self.timer.now_time() / 3_600_000) as i32,
+            18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,
+            19 => ((self.timer.now_time() % 60_000) / 1_000) as i32,
             _ => 0,
         }
     }
@@ -98,23 +98,23 @@ struct DecideMouseContext<'a> {
 
 impl rubato_types::timer_access::TimerAccess for DecideMouseContext<'_> {
     fn now_time(&self) -> i64 {
-        self.timer.get_now_time()
+        self.timer.now_time()
     }
 
     fn now_micro_time(&self) -> i64 {
-        self.timer.get_now_micro_time()
+        self.timer.now_micro_time()
     }
 
     fn micro_timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_micro_timer(timer_id)
+        self.timer.micro_timer(timer_id)
     }
 
     fn timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_timer(timer_id)
+        self.timer.timer(timer_id)
     }
 
     fn now_time_for(&self, timer_id: i32) -> i64 {
-        self.timer.get_now_time_for_id(timer_id)
+        self.timer.now_time_for_id(timer_id)
     }
 
     fn is_timer_on(&self, timer_id: i32) -> bool {
@@ -255,7 +255,7 @@ impl MainState for MusicDecide {
     }
 
     fn render(&mut self) {
-        let nowtime = self.data.timer.get_now_time();
+        let nowtime = self.data.timer.now_time();
         // Skin timing values; fall back to 0 when no skin is loaded so the
         // decide screen still transitions to Play instead of stalling forever.
         let input_time = self.data.skin.as_ref().map_or(0, |s| s.get_input() as i64);
@@ -270,7 +270,7 @@ impl MainState for MusicDecide {
             self.data.timer.switch_timer(TIMER_STARTINPUT, true);
         }
         if self.data.timer.is_timer_on(TIMER_FADEOUT) {
-            if self.data.timer.get_now_time_for_id(TIMER_FADEOUT) > fadeout_time {
+            if self.data.timer.now_time_for_id(TIMER_FADEOUT) > fadeout_time {
                 self.main.change_state(if self.cancel {
                     MainStateType::MusicSelect
                 } else {
@@ -289,7 +289,7 @@ impl MainState for MusicDecide {
             // Collect input state first, then release &mut borrow on self.main
             // before calling get_audio_processor_mut (avoids overlapping &mut borrows).
             let (decide, cancel) = {
-                let input = self.main.get_input_processor();
+                let input = self.main.input_processor();
                 let decide = input.key_state(0)
                     || input.key_state(2)
                     || input.key_state(4)
@@ -328,8 +328,8 @@ impl MainState for MusicDecide {
 
     fn load_skin(&mut self, skin_type: i32) {
         self.data.skin = rubato_skin::skin_loader::load_skin_from_config(
-            self.main.get_config(),
-            self.main.get_player_config(),
+            self.main.config(),
+            self.main.player_config(),
             skin_type,
         )
         .map(|skin| Box::new(skin) as Box<dyn rubato_core::main_state::SkinDrawable>);
@@ -601,7 +601,7 @@ mod tests {
     fn test_render_with_skin_nowtime_zero_no_startinput() {
         let mut decide = make_decide();
         decide.data.skin = Some(Box::new(MockSkin::new()));
-        // nowmicrotime=0 from fresh TimerManager, get_now_time()=0
+        // nowmicrotime=0 from fresh TimerManager, now_time()=0
         // skin.get_input()=0, condition is nowtime > input i.e. 0 > 0 = false
         decide.render();
         assert!(!decide.data.timer.is_timer_on(TIMER_STARTINPUT));
@@ -628,7 +628,7 @@ mod tests {
     #[test]
     fn test_render_fadeout_with_cancel_transitions_to_select() {
         let mut decide = make_decide();
-        // fadeout=-1 so that get_now_time_for_id(TIMER_FADEOUT)(=0) > fadeout(-1) is true
+        // fadeout=-1 so that now_time_for_id(TIMER_FADEOUT)(=0) > fadeout(-1) is true
         decide.data.skin = Some(Box::new(MockSkin::with_values(0, i32::MAX, -1)));
         decide.cancel = true;
         decide.data.timer.set_timer_on(TIMER_FADEOUT);
@@ -639,7 +639,7 @@ mod tests {
     #[test]
     fn test_render_fadeout_without_cancel_transitions_to_play() {
         let mut decide = make_decide();
-        // fadeout=-1 so that get_now_time_for_id(TIMER_FADEOUT)(=0) > fadeout(-1) is true
+        // fadeout=-1 so that now_time_for_id(TIMER_FADEOUT)(=0) > fadeout(-1) is true
         decide.data.skin = Some(Box::new(MockSkin::with_values(0, i32::MAX, -1)));
         decide.cancel = false;
         decide.data.timer.set_timer_on(TIMER_FADEOUT);

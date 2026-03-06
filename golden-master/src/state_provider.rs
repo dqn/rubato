@@ -140,7 +140,7 @@ impl<'a> StaticMainStateAdapter<'a> {
 }
 
 impl MainState for StaticMainStateAdapter<'_> {
-    fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+    fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
         &self.timer
     }
 

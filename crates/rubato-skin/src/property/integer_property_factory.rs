@@ -962,7 +962,7 @@ mod tests {
     }
 
     impl MainState for TestState {
-        fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             &self.timer
         }
 
