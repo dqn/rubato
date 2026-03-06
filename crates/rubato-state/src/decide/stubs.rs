@@ -61,6 +61,14 @@ impl MainControllerRef {
         &mut self.input_processor
     }
 
+    pub fn sync_input_from(&mut self, input: &BMSPlayerInputProcessor) {
+        self.input_processor.sync_runtime_state_from(input);
+    }
+
+    pub fn sync_input_back_to(&mut self, input: &mut BMSPlayerInputProcessor) {
+        input.sync_runtime_state_from(&self.input_processor);
+    }
+
     pub fn get_audio_processor_mut(&mut self) -> Option<&mut dyn AudioDriver> {
         self.audio
             .as_mut()

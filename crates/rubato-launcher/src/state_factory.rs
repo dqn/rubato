@@ -34,8 +34,8 @@ use rubato_state::select::music_selector::MusicSelector;
 use rubato_types::main_controller_access::{
     MainControllerAccess, MainControllerCommand, MainControllerCommandQueue,
 };
-use rubato_types::player_resource_access::{NullPlayerResource, PlayerResourceAccess};
 use rubato_types::player_information::PlayerInformation;
+use rubato_types::player_resource_access::{NullPlayerResource, PlayerResourceAccess};
 use rubato_types::score_data::ScoreData;
 use rubato_types::sound_type::SoundType;
 
@@ -49,15 +49,17 @@ struct QueuedControllerAccess {
     ir_connection: Option<Arc<dyn IRConnection + Send + Sync>>,
     rivals: Vec<PlayerInformation>,
     ipfs_download_alive: bool,
+    http_downloader: Option<Arc<dyn rubato_types::http_download_submitter::HttpDownloadSubmitter>>,
 }
 
 impl QueuedControllerAccess {
     fn from_controller(controller: &MainController, commands: MainControllerCommandQueue) -> Self {
         let config = controller.get_config().clone();
         let player_config = controller.get_player_config().clone();
-        let ir_connection = controller
-            .get_ir_connection_any()
-            .and_then(|any| any.downcast_ref::<Arc<dyn IRConnection + Send + Sync>>().cloned());
+        let ir_connection = controller.get_ir_connection_any().and_then(|any| {
+            any.downcast_ref::<Arc<dyn IRConnection + Send + Sync>>()
+                .cloned()
+        });
         let rivals = (0..controller.get_rival_count())
             .filter_map(|i| controller.get_rival_information(i))
             .collect();
@@ -70,6 +72,7 @@ impl QueuedControllerAccess {
             play_data_accessor: PlayDataAccessor::new(&config),
             ranking_data_cache: Box::new(RankingDataCache::new()),
             ipfs_download_alive: controller.is_ipfs_download_alive(),
+            http_downloader: controller.clone_http_download_processor(),
             config,
             player_config,
             commands,
@@ -89,7 +92,8 @@ impl MainControllerAccess for QueuedControllerAccess {
     }
 
     fn change_state(&mut self, state: MainStateType) {
-        self.commands.push(MainControllerCommand::ChangeState(state));
+        self.commands
+            .push(MainControllerCommand::ChangeState(state));
     }
 
     fn save_config(&self) {
@@ -166,8 +170,20 @@ impl MainControllerAccess for QueuedControllerAccess {
         })
     }
 
-    fn update_table(&mut self, source: Box<dyn rubato_types::table_update_source::TableUpdateSource>) {
-        self.commands.push(MainControllerCommand::UpdateTable(source));
+    fn update_table(
+        &mut self,
+        source: Box<dyn rubato_types::table_update_source::TableUpdateSource>,
+    ) {
+        self.commands
+            .push(MainControllerCommand::UpdateTable(source));
+    }
+
+    fn get_http_downloader(
+        &self,
+    ) -> Option<&dyn rubato_types::http_download_submitter::HttpDownloadSubmitter> {
+        self.http_downloader
+            .as_ref()
+            .map(|downloader| downloader.as_ref())
     }
 
     fn is_ipfs_download_alive(&self) -> bool {
@@ -205,7 +221,8 @@ impl MainControllerAccess for QueuedControllerAccess {
     }
 
     fn read_score_data_by_hash(&self, hash: &str, ln: bool, lnmode: i32) -> Option<ScoreData> {
-        self.play_data_accessor.read_score_data_by_hash(hash, ln, lnmode)
+        self.play_data_accessor
+            .read_score_data_by_hash(hash, ln, lnmode)
     }
 
     fn read_player_data(&self) -> Option<rubato_types::player_data::PlayerData> {
@@ -568,6 +585,17 @@ impl StateFactory for LauncherStateFactory {
                 };
                 player.set_target_score(target_score.clone());
 
+                if let Some(skin_type) = player.get_skin_type()
+                    && let Some(skin) = rubato_skin::skin_loader::load_skin_from_config(
+                        controller.get_config(),
+                        controller.get_player_config(),
+                        skin_type.id(),
+                    )
+                {
+                    player.set_skin_name(skin.header.get_name().map(str::to_string));
+                    player.main_state_data_mut().skin = Some(Box::new(skin));
+                }
+
                 Some(StateCreateResult {
                     state: Box::new(player),
                     target_score,
@@ -672,6 +700,7 @@ mod tests {
     use super::*;
     use rubato_core::sprite_batch_helper::SpriteBatchHelper;
     use rubato_types::skin_render_context::SkinRenderContext;
+    use std::sync::{Arc, Mutex};
 
     struct MockSkin;
 
@@ -898,22 +927,28 @@ mod tests {
         let commands = queue.drain();
         assert!(matches!(
             commands.first(),
-            Some(rubato_types::main_controller_access::MainControllerCommand::ChangeState(
-                MainStateType::Play
-            ))
+            Some(
+                rubato_types::main_controller_access::MainControllerCommand::ChangeState(
+                    MainStateType::Play
+                )
+            )
         ));
         assert!(matches!(
             commands.get(1),
-            Some(rubato_types::main_controller_access::MainControllerCommand::PlaySound(
-                SoundType::Decide,
-                false
-            ))
+            Some(
+                rubato_types::main_controller_access::MainControllerCommand::PlaySound(
+                    SoundType::Decide,
+                    false
+                )
+            )
         ));
         assert!(matches!(
             commands.get(2),
-            Some(rubato_types::main_controller_access::MainControllerCommand::StopSound(
-                SoundType::ResultClose
-            ))
+            Some(
+                rubato_types::main_controller_access::MainControllerCommand::StopSound(
+                    SoundType::ResultClose
+                )
+            )
         ));
     }
 
@@ -930,5 +965,102 @@ mod tests {
         let mut sprite = SpriteBatchHelper::create_sprite_batch();
         shared.render_skin(&mut sprite);
         assert!(shared.main_state_data().skin.is_some());
+    }
+
+    struct MockHttpDownloadSubmitter {
+        submitted: Arc<Mutex<Vec<(String, String)>>>,
+    }
+
+    impl rubato_types::http_download_submitter::HttpDownloadSubmitter for MockHttpDownloadSubmitter {
+        fn submit_md5_task(&self, md5: &str, task_name: &str) {
+            self.submitted
+                .lock()
+                .unwrap()
+                .push((md5.to_string(), task_name.to_string()));
+        }
+    }
+
+    #[test]
+    fn queued_controller_access_exposes_http_downloader() {
+        let mut controller = make_test_controller();
+        let submitted = Arc::new(Mutex::new(Vec::new()));
+        controller.set_http_download_processor(Box::new(MockHttpDownloadSubmitter {
+            submitted: Arc::clone(&submitted),
+        }));
+        let queue = controller.controller_command_queue();
+        let access = QueuedControllerAccess::from_controller(&controller, queue);
+
+        let downloader = access
+            .get_http_downloader()
+            .expect("queued access should keep the HTTP downloader connected");
+        downloader.submit_md5_task("deadbeef", "Song");
+
+        assert_eq!(
+            &*submitted.lock().unwrap(),
+            &[("deadbeef".to_string(), "Song".to_string())]
+        );
+    }
+
+    #[test]
+    fn decide_state_uses_live_controller_input() {
+        let config = Config::default();
+        let player = PlayerConfig::default();
+        let mut mc = MainController::new(None, config, player, None, false);
+        mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+        mc.change_state(MainStateType::Decide);
+
+        {
+            let state = mc
+                .get_current_state_mut()
+                .expect("decide state should be current");
+            state
+                .main_state_data_mut()
+                .timer
+                .set_timer_on(rubato_skin::skin_property::TIMER_STARTINPUT);
+        }
+        mc.get_input_processor_mut()
+            .expect("controller should own an input processor")
+            .set_key_state(0, true, 1);
+
+        mc.render();
+
+        assert!(
+            mc.get_current_state()
+                .expect("decide state should still be current for fadeout")
+                .main_state_data()
+                .timer
+                .is_timer_on(rubato_skin::skin_property::TIMER_FADEOUT),
+            "decide state should see the live controller input and enter fadeout"
+        );
+    }
+
+    #[test]
+    fn play_state_loads_skin_when_created_by_launcher() {
+        let bms_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("test-bms")
+            .join("minimal_7k.bms");
+        let config = Config::default();
+        let player = PlayerConfig::default();
+        let mut mc = MainController::new(None, config, player, None, false);
+        mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+        mc.create();
+        assert!(
+            mc.get_player_resource_mut()
+                .expect("controller should own a player resource")
+                .set_bms_file(&bms_path, 0, 0),
+            "test fixture should load into PlayerResource"
+        );
+        mc.change_state(MainStateType::Play);
+
+        assert!(
+            mc.get_current_state()
+                .expect("play state should be current")
+                .main_state_data()
+                .skin
+                .is_some(),
+            "launcher-created play state should carry a loaded skin"
+        );
     }
 }

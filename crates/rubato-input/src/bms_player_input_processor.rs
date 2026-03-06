@@ -731,6 +731,28 @@ impl BMSPlayerInputProcessor {
     pub fn dispose(&mut self) {
         self.midiinput.close();
     }
+
+    pub fn sync_runtime_state_from(&mut self, source: &Self) {
+        self.kbinput.sync_runtime_state_from(&source.kbinput);
+        self.keystate = source.keystate;
+        self.time = source.time;
+        self.is_analog = source.is_analog;
+        self.last_analog_value = source.last_analog_value;
+        self.current_analog_value = source.current_analog_value;
+        self.analog_last_reset_time = source.analog_last_reset_time;
+        self.last_key_device = source.last_key_device;
+        self.mousex = source.mousex;
+        self.mousey = source.mousey;
+        self.mousebutton = source.mousebutton;
+        self.mousepressed = source.mousepressed;
+        self.mousedragged = source.mousedragged;
+        self.mouse_moved = source.mouse_moved;
+        self.scroll_x = source.scroll_x;
+        self.scroll_y = source.scroll_y;
+        self.start_pressed = source.start_pressed;
+        self.select_pressed = source.select_pressed;
+        self.device_type = source.device_type;
+    }
 }
 
 /// Temporary struct to collect keyboard callback events

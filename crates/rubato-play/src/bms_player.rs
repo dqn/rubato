@@ -28,6 +28,8 @@ use rubato_core::pattern::scroll_speed_modifier::ScrollSpeedModifier;
 use rubato_core::player_config::PlayerConfig;
 use rubato_core::score_data::ScoreData;
 use rubato_core::timer_manager::TimerManager;
+use rubato_input::bms_player_input_processor::{BMSPlayerInputProcessor, KEYSTATE_SIZE};
+use rubato_input::keyboard_input_processor::ControlKeys;
 use rubato_types::audio_config::FrequencyType;
 use rubato_types::clear_type::ClearType;
 use rubato_types::course_data::CourseDataConstraint;
@@ -238,6 +240,12 @@ pub struct BMSPlayer {
     control_key_down: bool,
     control_key_left: bool,
     control_key_right: bool,
+    control_key_escape_pressed: bool,
+    control_key_num1: bool,
+    control_key_num2: bool,
+    control_key_num3: bool,
+    control_key_num4: bool,
+    input_scroll: i32,
     /// Pending state change to request from MainController.
     /// Set during render() when a state transition is needed.
     /// The caller should consume this via `take_pending_state_change()`.
@@ -329,6 +337,12 @@ impl BMSPlayer {
             control_key_down: false,
             control_key_left: false,
             control_key_right: false,
+            control_key_escape_pressed: false,
+            control_key_num1: false,
+            control_key_num2: false,
+            control_key_num3: false,
+            control_key_num4: false,
+            input_scroll: 0,
             pending_state_change: None,
             is_course_mode: false,
             pending_sounds: Vec::new(),
@@ -2632,15 +2646,15 @@ impl MainState for BMSPlayer {
                 lanerender,
                 start_pressed: self.input_start_pressed,
                 select_pressed: self.input_select_pressed,
-                control_key_up: false,
-                control_key_down: false,
-                control_key_escape_pressed: false,
-                control_key_num1: false,
-                control_key_num2: false,
-                control_key_num3: false,
-                control_key_num4: false,
+                control_key_up: self.control_key_up,
+                control_key_down: self.control_key_down,
+                control_key_escape_pressed: self.control_key_escape_pressed,
+                control_key_num1: self.control_key_num1,
+                control_key_num2: self.control_key_num2,
+                control_key_num3: self.control_key_num3,
+                control_key_num4: self.control_key_num4,
                 key_states: &self.input_key_states,
-                scroll: 0,
+                scroll: self.input_scroll,
                 is_analog: &[],
                 analog_diff_and_reset: &mut noop_analog,
                 is_timer_play_on,
@@ -2655,6 +2669,15 @@ impl MainState for BMSPlayer {
             // Apply result actions
             if let Some(speed) = result.play_speed {
                 self.set_play_speed(speed);
+            }
+            if result.clear_start {
+                self.input_start_pressed = false;
+            }
+            if result.clear_select {
+                self.input_select_pressed = false;
+            }
+            if result.reset_scroll {
+                self.input_scroll = 0;
             }
             if result.stop_play {
                 // Restore control before stopping (stop_play may need it)
@@ -2678,6 +2701,37 @@ impl MainState for BMSPlayer {
                 timer: &mut self.main_state_data.timer,
             };
             keyinput.input(&mut ctx);
+        }
+    }
+
+    fn sync_input_from(&mut self, input: &BMSPlayerInputProcessor) {
+        self.input_start_pressed = input.start_pressed();
+        self.input_select_pressed = input.is_select_pressed();
+        self.input_key_states.clear();
+        self.input_key_states
+            .extend((0..KEYSTATE_SIZE as i32).map(|i| input.get_key_state(i)));
+        self.control_key_up = input.get_control_key_state(ControlKeys::Up);
+        self.control_key_down = input.get_control_key_state(ControlKeys::Down);
+        self.control_key_left = input.get_control_key_state(ControlKeys::Left);
+        self.control_key_right = input.get_control_key_state(ControlKeys::Right);
+        self.control_key_escape_pressed = input.get_control_key_state(ControlKeys::Escape);
+        self.control_key_num1 = input.get_control_key_state(ControlKeys::Num1);
+        self.control_key_num2 = input.get_control_key_state(ControlKeys::Num2);
+        self.control_key_num3 = input.get_control_key_state(ControlKeys::Num3);
+        self.control_key_num4 = input.get_control_key_state(ControlKeys::Num4);
+        self.input_scroll = input.get_scroll();
+        self.device_type = input.get_device_type();
+    }
+
+    fn sync_input_back_to(&mut self, input: &mut BMSPlayerInputProcessor) {
+        if !self.input_start_pressed {
+            input.start_changed(false);
+        }
+        if !self.input_select_pressed {
+            input.set_select_pressed(false);
+        }
+        if self.input_scroll == 0 {
+            input.reset_scroll();
         }
     }
 
@@ -2708,7 +2762,11 @@ mod tests {
     use super::*;
     use bms_model::bms_model::BMSModel;
     use bms_model::mode::Mode;
+    use rubato_core::config::Config;
+    use rubato_core::player_config::PlayerConfig;
     use rubato_input::bms_player_input_device::DeviceType;
+    use rubato_input::bms_player_input_processor::{BMSPlayerInputProcessor, KEYSTATE_SIZE};
+    use rubato_input::keyboard_input_processor::ControlKeys;
 
     fn make_model() -> BMSModel {
         let mut model = BMSModel::new();
@@ -5030,6 +5088,61 @@ mod tests {
         assert!(!player.input_start_pressed);
         assert!(player.input_select_pressed);
         assert_eq!(player.input_key_states, vec![false]);
+    }
+
+    #[test]
+    fn sync_input_from_copies_live_controller_state() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        let config = Config::default();
+        let player_config = PlayerConfig::default();
+        let mut input = BMSPlayerInputProcessor::new(&config, &player_config);
+
+        input.start_changed(true);
+        input.set_select_pressed(true);
+        input.set_key_state(0, true, 1000);
+        input
+            .get_keyboard_input_processor_mut()
+            .set_key_state(ControlKeys::Up.keycode(), true);
+        input
+            .get_keyboard_input_processor_mut()
+            .set_key_state(ControlKeys::Down.keycode(), true);
+        input
+            .get_keyboard_input_processor_mut()
+            .set_key_state(ControlKeys::Left.keycode(), true);
+        input
+            .get_keyboard_input_processor_mut()
+            .set_key_state(ControlKeys::Right.keycode(), true);
+
+        <BMSPlayer as MainState>::sync_input_from(&mut player, &input);
+
+        assert!(player.input_start_pressed);
+        assert!(player.input_select_pressed);
+        assert_eq!(player.input_key_states.len(), KEYSTATE_SIZE);
+        assert!(player.input_key_states[0]);
+        assert!(player.control_key_up);
+        assert!(player.control_key_down);
+        assert!(player.control_key_left);
+        assert!(player.control_key_right);
+    }
+
+    #[test]
+    fn sync_input_back_to_clears_consumed_start_and_select() {
+        let model = make_model();
+        let mut player = BMSPlayer::new(model);
+        let config = Config::default();
+        let player_config = PlayerConfig::default();
+        let mut input = BMSPlayerInputProcessor::new(&config, &player_config);
+
+        input.start_changed(true);
+        input.set_select_pressed(true);
+        player.input_start_pressed = false;
+        player.input_select_pressed = false;
+
+        <BMSPlayer as MainState>::sync_input_back_to(&mut player, &mut input);
+
+        assert!(!input.start_pressed());
+        assert!(!input.is_select_pressed());
     }
 
     // --- startpressedtime tracking tests ---

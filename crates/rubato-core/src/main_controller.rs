@@ -242,7 +242,7 @@ pub struct MainController {
     download: Option<Box<dyn rubato_types::music_download_access::MusicDownloadAccess>>,
     /// HTTP download processor (trait bridge for md-processor)
     http_download_processor:
-        Option<Box<dyn rubato_types::http_download_submitter::HttpDownloadSubmitter>>,
+        Option<std::sync::Arc<dyn rubato_types::http_download_submitter::HttpDownloadSubmitter>>,
 
     /// Stream controller (trait bridge for beatoraja-stream)
     stream_controller:
@@ -990,8 +990,18 @@ impl MainController {
             .as_millis() as i64;
         if time > self.prevtime {
             self.prevtime = time;
+            if let Some(ref input) = self.input
+                && let Some(ref mut current) = self.current
+            {
+                current.sync_input_from(input);
+            }
             if let Some(ref mut current) = self.current {
                 current.input();
+            }
+            if let Some(ref mut input) = self.input
+                && let Some(ref mut current) = self.current
+            {
+                current.sync_input_back_to(input);
             }
             // Mouse pressed/dragged → skin
             // Java: if (input.isMousePressed()) {
@@ -1286,14 +1296,23 @@ impl MainController {
     pub fn get_http_download_processor(
         &self,
     ) -> Option<&dyn rubato_types::http_download_submitter::HttpDownloadSubmitter> {
-        self.http_download_processor.as_deref()
+        self.http_download_processor
+            .as_ref()
+            .map(|processor| processor.as_ref())
+    }
+
+    pub fn clone_http_download_processor(
+        &self,
+    ) -> Option<std::sync::Arc<dyn rubato_types::http_download_submitter::HttpDownloadSubmitter>>
+    {
+        self.http_download_processor.clone()
     }
 
     pub fn set_http_download_processor(
         &mut self,
         processor: Box<dyn rubato_types::http_download_submitter::HttpDownloadSubmitter>,
     ) {
-        self.http_download_processor = Some(processor);
+        self.http_download_processor = Some(std::sync::Arc::from(processor));
     }
 
     /// Start song database update.
@@ -1898,7 +1917,9 @@ impl MainControllerAccess for MainController {
     fn get_http_downloader(
         &self,
     ) -> Option<&dyn rubato_types::http_download_submitter::HttpDownloadSubmitter> {
-        self.http_download_processor.as_deref()
+        self.http_download_processor
+            .as_ref()
+            .map(|processor| processor.as_ref())
     }
 
     fn is_ipfs_download_alive(&self) -> bool {
@@ -2098,9 +2119,11 @@ mod tests {
         mc.change_state(MainStateType::MusicSelect);
 
         let queue = mc.controller_command_queue();
-        queue.push(rubato_types::main_controller_access::MainControllerCommand::ChangeState(
-            MainStateType::Config,
-        ));
+        queue.push(
+            rubato_types::main_controller_access::MainControllerCommand::ChangeState(
+                MainStateType::Config,
+            ),
+        );
 
         mc.process_queued_controller_commands();
 

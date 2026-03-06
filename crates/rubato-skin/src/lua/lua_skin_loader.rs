@@ -316,6 +316,16 @@ fn lua_to_json(value: &LuaValue) -> Option<serde_json::Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+
+    use rubato_core::config::Config;
+
+    fn repo_path(relative: &str) -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join(relative)
+    }
 
     #[test]
     fn test_lua_to_json_primitives() {
@@ -407,5 +417,47 @@ mod tests {
     fn test_lua_loader_default() {
         let loader = LuaSkinLoader::new();
         assert!(loader.json_loader.sk.is_none());
+    }
+
+    #[test]
+    fn test_load_default_decide_lua_skin_without_state() {
+        let mut loader = LuaSkinLoader::new_without_state(&Config::default());
+        let path = repo_path("skin/default/decide/decide.luaskin");
+
+        let header = loader
+            .load_header(&path)
+            .expect("default decide Lua skin header should load");
+        assert_eq!(header.skin_type, crate::skin_type::SkinType::Decide.id());
+
+        let skin = loader.load(
+            &path,
+            &crate::skin_type::SkinType::Decide,
+            &SkinConfigProperty,
+        );
+        assert!(
+            skin.is_some(),
+            "default decide Lua skin should load fully without MainState"
+        );
+    }
+
+    #[test]
+    fn test_load_default_play_lua_skin_without_state() {
+        let mut loader = LuaSkinLoader::new_without_state(&Config::default());
+        let path = repo_path("skin/default/play/play7.luaskin");
+
+        let header = loader
+            .load_header(&path)
+            .expect("default play Lua skin header should load");
+        assert_eq!(header.skin_type, crate::skin_type::SkinType::Play7Keys.id());
+
+        let skin = loader.load(
+            &path,
+            &crate::skin_type::SkinType::Play7Keys,
+            &SkinConfigProperty,
+        );
+        assert!(
+            skin.is_some(),
+            "default play Lua skin should load fully without MainState"
+        );
     }
 }

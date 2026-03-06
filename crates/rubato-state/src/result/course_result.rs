@@ -868,8 +868,18 @@ mod tests {
 
     #[test]
     fn test_create_calls_load_skin_with_course_result_type() {
+        let mut cr = make_default();
+        <CourseResult as MainState>::create(&mut cr);
         // Verify SkinType::CourseResult.id() matches expected value (15)
         assert_eq!(SkinType::CourseResult.id(), 15);
+        assert!(
+            cr.main_data.skin.is_some(),
+            "course result create() should load the configured course-result skin"
+        );
+        assert!(
+            cr.skin.is_some(),
+            "course result create() should wire timing metadata from the loaded skin"
+        );
     }
 
     #[test]
@@ -1453,6 +1463,34 @@ impl rubato_core::main_state::MainState for CourseResult {
 
     fn input(&mut self) {
         self.do_input();
+    }
+
+    fn sync_input_from(
+        &mut self,
+        input: &rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
+    ) {
+        self.main.sync_input_from(input);
+    }
+
+    fn sync_input_back_to(
+        &mut self,
+        input: &mut rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
+    ) {
+        self.main.sync_input_back_to(input);
+    }
+
+    fn load_skin(&mut self, skin_type: i32) {
+        if let Some(skin) = rubato_skin::skin_loader::load_skin_from_config(
+            self.main.get_config(),
+            self.resource.get_player_config(),
+            skin_type,
+        ) {
+            self.skin = Some(CourseResultSkin::from_loaded_skin(&skin));
+            self.main_data.skin = Some(Box::new(skin));
+        } else {
+            self.skin = None;
+            self.main_data.skin = None;
+        }
     }
 
     fn shutdown(&mut self) {

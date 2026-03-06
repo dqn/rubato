@@ -149,6 +149,14 @@ impl MainController {
         &mut self.input_processor
     }
 
+    pub fn sync_input_from(&mut self, input: &BMSPlayerInputProcessor) {
+        self.input_processor.sync_runtime_state_from(input);
+    }
+
+    pub fn sync_input_back_to(&mut self, input: &mut BMSPlayerInputProcessor) {
+        input.sync_runtime_state_from(&self.input_processor);
+    }
+
     pub fn get_ir_status(&self) -> &[IRStatus] {
         &self.ir_statuses
     }

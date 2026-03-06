@@ -1,5 +1,6 @@
 use crate::score_data_property::ScoreDataProperty;
 use crate::timer_manager::TimerManager;
+use rubato_input::bms_player_input_processor::BMSPlayerInputProcessor;
 use rubato_render::sprite_batch::SpriteBatch;
 use rubato_types::sound_type::SoundType;
 
@@ -38,6 +39,16 @@ pub trait MainState {
     fn render(&mut self);
 
     fn input(&mut self) {
+        // default empty
+    }
+
+    /// Sync live controller input into a state-local wrapper before `input()`.
+    fn sync_input_from(&mut self, _input: &BMSPlayerInputProcessor) {
+        // default empty
+    }
+
+    /// Flush consumed state-local input back to the controller after `input()`.
+    fn sync_input_back_to(&mut self, _input: &mut BMSPlayerInputProcessor) {
         // default empty
     }
 

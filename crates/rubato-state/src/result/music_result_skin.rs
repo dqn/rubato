@@ -17,6 +17,17 @@ impl MusicResultSkin {
         }
     }
 
+    pub fn from_loaded_skin(skin: &Skin) -> Self {
+        let mut timing_skin = Skin::new(skin.header.clone());
+        timing_skin.set_input(skin.get_input());
+        timing_skin.set_scene(skin.get_scene());
+        timing_skin.set_fadeout(skin.get_fadeout());
+        Self {
+            skin: timing_skin,
+            ranktime: 0,
+        }
+    }
+
     pub fn get_rank_time(&self) -> i32 {
         self.ranktime
     }

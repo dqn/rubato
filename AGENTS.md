@@ -105,6 +105,8 @@ rubato/              # Cargo workspace (15 crates) at repo root
 - **Property delegate pattern:** `integer_value(id)` / `float_value(id)` / `boolean_value(id)` on MainState — skin property factories delegate via ID lookup.
 - **Java float→int→byte truncation:** Use `as i32 as i8` in Rust (via i32 to get truncation). Direct `as i8` saturates since Rust 1.45.
 - **Controller wiring across crates:** When states cannot own `&mut MainController`, use a queued `MainControllerAccess` proxy plus a MainController-side drain step instead of config-only no-op adapters. Shared `Arc<Mutex<State>>` wrappers must explicitly sync `MainStateData` back and forth or skins/timers will desynchronize.
+- **Resource path resolution:** Skin/config asset paths may be stored relative to the workspace root or to `config.skinpath`. Resolve against both the configured skin root and ancestor directories of the current working directory so tests and sub-crate launches do not blank-screen on missing skins.
+- **Play input handoff:** `BMSPlayer` does not read `MainController` input implicitly. Rust-side state hooks must explicitly copy START/SELECT/key/control/scroll/device state from `BMSPlayerInputProcessor`, and write back consumed flags like START/SELECT/scroll after processing.
 
 ## Landing the Plane (Session Completion)
 

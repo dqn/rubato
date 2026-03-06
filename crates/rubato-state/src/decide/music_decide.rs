@@ -226,6 +226,29 @@ impl MainState for MusicDecide {
         }
     }
 
+    fn sync_input_from(
+        &mut self,
+        input: &rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
+    ) {
+        self.main.sync_input_from(input);
+    }
+
+    fn sync_input_back_to(
+        &mut self,
+        input: &mut rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
+    ) {
+        self.main.sync_input_back_to(input);
+    }
+
+    fn load_skin(&mut self, skin_type: i32) {
+        self.data.skin = rubato_skin::skin_loader::load_skin_from_config(
+            self.main.get_config(),
+            self.main.get_player_config(),
+            skin_type,
+        )
+        .map(|skin| Box::new(skin) as Box<dyn rubato_core::main_state::SkinDrawable>);
+    }
+
     fn dispose(&mut self) {
         // super.dispose()
         self.data.skin = None;
@@ -330,11 +353,12 @@ mod tests {
     #[test]
     fn test_create_calls_load_skin_with_decide_type() {
         let mut decide = make_decide();
-        // create() should call self.load_skin(SkinType::Decide.id()) without panic.
-        // The trait default is a no-op, so data.skin remains None.
         decide.create();
-        // Verify SkinType::Decide.id() matches expected value (6)
         assert_eq!(SkinType::Decide.id(), 6);
+        assert!(
+            decide.data.skin.is_some(),
+            "decide create() should load the configured decide skin"
+        );
     }
 
     #[test]

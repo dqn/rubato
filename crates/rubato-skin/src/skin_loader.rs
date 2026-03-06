@@ -20,6 +20,60 @@ use crate::stubs::{MainState, Texture};
 static RESOURCE: std::sync::LazyLock<std::sync::Mutex<Option<PixmapResourcePool>>> =
     std::sync::LazyLock::new(|| std::sync::Mutex::new(None));
 
+fn push_unique_path(paths: &mut Vec<PathBuf>, path: PathBuf) {
+    if !paths.iter().any(|existing| existing == &path) {
+        paths.push(path);
+    }
+}
+
+fn skin_path_candidates(config: &Config, skin_path: &Path) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    push_unique_path(&mut candidates, skin_path.to_path_buf());
+
+    if !config.skinpath.is_empty() {
+        let skin_root = PathBuf::from(&config.skinpath);
+        push_unique_path(&mut candidates, skin_root.join(skin_path));
+
+        if let Ok(stripped) = skin_path.strip_prefix("skin")
+            && !stripped.as_os_str().is_empty()
+        {
+            push_unique_path(&mut candidates, skin_root.join(stripped));
+        }
+    }
+
+    candidates
+}
+
+fn resolve_skin_path(config: &Config, skin_path: &str) -> Option<PathBuf> {
+    let requested = PathBuf::from(skin_path);
+    if requested.is_absolute() {
+        return requested.exists().then_some(requested);
+    }
+
+    let candidates = skin_path_candidates(config, &requested);
+
+    for candidate in &candidates {
+        if candidate.exists() {
+            return Some(candidate.clone());
+        }
+    }
+
+    let cwd = std::env::current_dir().ok()?;
+    for ancestor in cwd.ancestors() {
+        for candidate in &candidates {
+            if candidate.is_absolute() {
+                continue;
+            }
+            let resolved = ancestor.join(candidate);
+            if resolved.exists() {
+                return Some(resolved);
+            }
+        }
+    }
+
+    None
+}
+
 pub fn init_pixmap_resource_pool(generation: i32) {
     let mut resource = RESOURCE.lock().unwrap();
     if let Some(r) = resource.as_ref() {
@@ -67,18 +121,28 @@ pub fn load_skin_from_config(
         }
     };
 
-    let path = Path::new(&skin_path);
+    let path = match resolve_skin_path(config, &skin_path) {
+        Some(path) => path,
+        None => {
+            log::warn!(
+                "Skin path {:?} could not be resolved (skin root {:?})",
+                skin_path,
+                config.skinpath
+            );
+            return None;
+        }
+    };
     let property = crate::json::json_skin_loader::SkinConfigProperty;
 
     if skin_path.ends_with(".json") {
         let mut loader = crate::json::json_skin_loader::JSONSkinLoader::with_config(config);
-        let header = loader.load_header(path)?;
-        let data = loader.load(path, &skin_type, &property)?;
+        let header = loader.load_header(&path)?;
+        let data = loader.load(&path, &skin_type, &property)?;
         let skin = crate::skin_data_converter::convert_skin_data(
             &header,
             data,
             &mut loader.source_map,
-            path,
+            &path,
             loader.usecim,
             &loader.dstr,
         );
@@ -92,13 +156,13 @@ pub fn load_skin_from_config(
         skin
     } else if skin_path.ends_with(".luaskin") {
         let mut loader = crate::lua::lua_skin_loader::LuaSkinLoader::new_without_state(config);
-        let header = loader.load_header(path)?;
-        let data = loader.load(path, &skin_type, &property)?;
+        let header = loader.load_header(&path)?;
+        let data = loader.load(&path, &skin_type, &property)?;
         let skin = crate::skin_data_converter::convert_skin_data(
             &header,
             data,
             &mut loader.json_loader.source_map,
-            path,
+            &path,
             loader.json_loader.usecim,
             &loader.json_loader.dstr,
         );
@@ -116,7 +180,7 @@ pub fn load_skin_from_config(
             width: config.window_width as f32,
             height: config.window_height as f32,
         };
-        let skin = crate::lr2::lr2_skin_csv_loader::load_lr2_skin(path, &skin_type, dst);
+        let skin = crate::lr2::lr2_skin_csv_loader::load_lr2_skin(&path, &skin_type, dst);
 
         if let Ok(guard) = RESOURCE.lock()
             && let Some(ref r) = *guard
@@ -318,5 +382,35 @@ pub fn get_texture_with_mipmaps(path: &str, usecim: bool, use_mip_maps: bool) ->
         resource.get_and_use(path, |pixmap| {
             Texture::from_pixmap_with_mipmaps(pixmap, use_mip_maps)
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use rubato_core::player_config::PlayerConfig;
+
+    static CWD_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    #[test]
+    fn load_skin_from_config_resolves_default_decide_skin_from_package_dir() {
+        let _lock = CWD_MUTEX.lock().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        let package_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        std::env::set_current_dir(&package_dir).unwrap();
+
+        let skin = load_skin_from_config(
+            &Config::default(),
+            &PlayerConfig::default(),
+            SkinType::Decide.id(),
+        );
+
+        std::env::set_current_dir(original_dir).unwrap();
+
+        assert!(
+            skin.is_some(),
+            "default decide skin should resolve even when the process starts in a crate directory"
+        );
     }
 }

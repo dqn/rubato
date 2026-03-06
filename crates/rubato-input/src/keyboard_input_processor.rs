@@ -489,6 +489,13 @@ impl KeyBoardInputProcesseor {
     pub fn get_resolution(&self) -> &Resolution {
         &self.resolution
     }
+
+    pub fn sync_runtime_state_from(&mut self, source: &Self) {
+        self.keystate = source.keystate;
+        self.keytime = source.keytime;
+        self.keymodifiers = source.keymodifiers;
+        self.last_pressed_key = source.last_pressed_key;
+    }
 }
 
 impl BMSPlayerInputDevice for KeyBoardInputProcesseor {

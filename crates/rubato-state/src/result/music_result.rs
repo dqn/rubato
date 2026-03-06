@@ -1043,6 +1043,34 @@ impl MainState for MusicResult {
         self.do_input();
     }
 
+    fn sync_input_from(
+        &mut self,
+        input: &rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
+    ) {
+        self.main.sync_input_from(input);
+    }
+
+    fn sync_input_back_to(
+        &mut self,
+        input: &mut rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
+    ) {
+        self.main.sync_input_back_to(input);
+    }
+
+    fn load_skin(&mut self, skin_type: i32) {
+        if let Some(skin) = rubato_skin::skin_loader::load_skin_from_config(
+            self.main.get_config(),
+            self.resource.get_player_config(),
+            skin_type,
+        ) {
+            self.skin = Some(MusicResultSkin::from_loaded_skin(&skin));
+            self.main_data.skin = Some(Box::new(skin));
+        } else {
+            self.skin = None;
+            self.main_data.skin = None;
+        }
+    }
+
     fn dispose(&mut self) {
         self.main_data.skin = None;
         self.main_data.stage = None;
@@ -1135,11 +1163,16 @@ mod tests {
     #[test]
     fn test_create_calls_load_skin_with_result_type() {
         let mut mr = MusicResult::default();
-        // create() calls do_create() which calls self.load_skin(SkinType::Result.id())
-        // The trait default is a no-op stub, so data.skin remains None.
         <MusicResult as MainState>::create(&mut mr);
-        // Verify SkinType::Result.id() matches expected value (7)
         assert_eq!(rubato_skin::skin_type::SkinType::Result.id(), 7);
+        assert!(
+            mr.main_data.skin.is_some(),
+            "result create() should load the configured result skin"
+        );
+        assert!(
+            mr.skin.is_some(),
+            "result create() should wire timing metadata from the loaded skin"
+        );
     }
 
     #[test]
