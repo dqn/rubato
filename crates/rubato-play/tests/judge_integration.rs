@@ -266,7 +266,7 @@ fn autoplay_log_correct_count_for_normal_notes() {
     // But we primarily care about the press events for lane 0.
     let presses: Vec<_> = log
         .iter()
-        .filter(|l| l.get_keycode() == 0 && l.is_pressed())
+        .filter(|l| l.keycode() == 0 && l.is_pressed())
         .collect();
     assert_eq!(
         presses.len(),
@@ -283,11 +283,11 @@ fn autoplay_log_correct_timing() {
 
     let presses: Vec<_> = log
         .iter()
-        .filter(|l| l.get_keycode() == 0 && l.is_pressed())
+        .filter(|l| l.keycode() == 0 && l.is_pressed())
         .collect();
     assert_eq!(presses.len(), 2);
-    assert_eq!(presses[0].get_time(), 1_000_000, "first note at 1s");
-    assert_eq!(presses[1].get_time(), 2_000_000, "second note at 2s");
+    assert_eq!(presses[0].time(), 1_000_000, "first note at 1s");
+    assert_eq!(presses[1].time(), 2_000_000, "second note at 2s");
 }
 
 #[test]
@@ -309,24 +309,24 @@ fn autoplay_log_correct_keycodes_for_multiple_lanes() {
     // Verify press events for each lane
     let lane0_presses: Vec<_> = log
         .iter()
-        .filter(|l| l.get_keycode() == 0 && l.is_pressed())
+        .filter(|l| l.keycode() == 0 && l.is_pressed())
         .collect();
     let lane2_presses: Vec<_> = log
         .iter()
-        .filter(|l| l.get_keycode() == 2 && l.is_pressed())
+        .filter(|l| l.keycode() == 2 && l.is_pressed())
         .collect();
     let lane4_presses: Vec<_> = log
         .iter()
-        .filter(|l| l.get_keycode() == 4 && l.is_pressed())
+        .filter(|l| l.keycode() == 4 && l.is_pressed())
         .collect();
 
     assert_eq!(lane0_presses.len(), 1, "lane 0 should have 1 press");
     assert_eq!(lane2_presses.len(), 1, "lane 2 should have 1 press");
     assert_eq!(lane4_presses.len(), 1, "lane 4 should have 1 press");
 
-    assert_eq!(lane0_presses[0].get_time(), 1_000_000);
-    assert_eq!(lane2_presses[0].get_time(), 2_000_000);
-    assert_eq!(lane4_presses[0].get_time(), 3_000_000);
+    assert_eq!(lane0_presses[0].time(), 1_000_000);
+    assert_eq!(lane2_presses[0].time(), 2_000_000);
+    assert_eq!(lane4_presses[0].time(), 3_000_000);
 }
 
 #[test]

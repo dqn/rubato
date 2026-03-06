@@ -35,18 +35,18 @@ impl Controller {
         }
     }
 
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn get_button(&self, button: i32) -> bool {
+    pub fn button(&self, button: i32) -> bool {
         if button < 0 || button as usize >= self.button_state.len() {
             return false;
         }
         self.button_state[button as usize]
     }
 
-    pub fn get_axis(&self, axis: i32) -> f32 {
+    pub fn axis(&self, axis: i32) -> f32 {
         if axis < 0 || axis as usize >= self.axis_state.len() {
             return 0.0;
         }

@@ -719,12 +719,12 @@ impl CourseResult {
             for i in 0..self.property.get_assign_length() {
                 let input_processor = self.main.get_input_processor();
                 if self.property.get_assign(i) == Some(ResultKey::ChangeGraph)
-                    && input_processor.get_key_state(i)
+                    && input_processor.key_state(i)
                     && input_processor.reset_key_changed_time(i)
                 {
                     self.data.gauge_type = (self.data.gauge_type - 5) % 3 + 6;
                 } else if self.property.get_assign(i).is_some()
-                    && input_processor.get_key_state(i)
+                    && input_processor.key_state(i)
                     && input_processor.reset_key_changed_time(i)
                 {
                     ok = true;

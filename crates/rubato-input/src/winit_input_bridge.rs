@@ -73,13 +73,13 @@ impl SharedKeyState {
     }
 
     /// Get mouse X position.
-    pub fn get_mouse_x(&self) -> i32 {
+    pub fn mouse_x(&self) -> i32 {
         let inner = self.inner.lock().unwrap();
         inner.mouse_x
     }
 
     /// Get mouse Y position.
-    pub fn get_mouse_y(&self) -> i32 {
+    pub fn mouse_y(&self) -> i32 {
         let inner = self.inner.lock().unwrap();
         inner.mouse_y
     }
@@ -92,13 +92,13 @@ impl SharedKeyState {
     }
 
     /// Get window width.
-    pub fn get_window_width(&self) -> i32 {
+    pub fn window_width(&self) -> i32 {
         let inner = self.inner.lock().unwrap();
         inner.window_width
     }
 
     /// Get window height.
-    pub fn get_window_height(&self) -> i32 {
+    pub fn window_height(&self) -> i32 {
         let inner = self.inner.lock().unwrap();
         inner.window_height
     }
@@ -416,23 +416,23 @@ mod tests {
     #[test]
     fn test_shared_key_state_mouse_position() {
         let state = SharedKeyState::new();
-        assert_eq!(state.get_mouse_x(), 0);
-        assert_eq!(state.get_mouse_y(), 0);
+        assert_eq!(state.mouse_x(), 0);
+        assert_eq!(state.mouse_y(), 0);
 
         state.set_mouse_position(100, 200);
-        assert_eq!(state.get_mouse_x(), 100);
-        assert_eq!(state.get_mouse_y(), 200);
+        assert_eq!(state.mouse_x(), 100);
+        assert_eq!(state.mouse_y(), 200);
     }
 
     #[test]
     fn test_shared_key_state_window_size() {
         let state = SharedKeyState::new();
-        assert_eq!(state.get_window_width(), 1920);
-        assert_eq!(state.get_window_height(), 1080);
+        assert_eq!(state.window_width(), 1920);
+        assert_eq!(state.window_height(), 1080);
 
         state.set_window_size(1280, 720);
-        assert_eq!(state.get_window_width(), 1280);
-        assert_eq!(state.get_window_height(), 720);
+        assert_eq!(state.window_width(), 1280);
+        assert_eq!(state.window_height(), 720);
     }
 
     #[test]

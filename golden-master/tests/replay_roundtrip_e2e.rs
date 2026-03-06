@@ -73,8 +73,8 @@ fn replay_json_round_trip() {
     let replay_keylog: Vec<ReplayKeyInputLog> = keylog
         .iter()
         .map(|k| ReplayKeyInputLog {
-            time: k.get_time(),
-            keycode: k.get_keycode(),
+            time: k.time(),
+            keycode: k.keycode(),
             pressed: k.is_pressed(),
         })
         .collect();
@@ -132,8 +132,8 @@ fn replay_json_playback_matches() {
     let replay_keylog: Vec<ReplayKeyInputLog> = keylog
         .iter()
         .map(|k| ReplayKeyInputLog {
-            time: k.get_time(),
-            keycode: k.get_keycode(),
+            time: k.time(),
+            keycode: k.keycode(),
             pressed: k.is_pressed(),
         })
         .collect();

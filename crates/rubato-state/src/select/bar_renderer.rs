@@ -651,7 +651,7 @@ impl BarRenderer {
     /// Translates: Java BarRenderer.input()
     pub fn input(&mut self, ctx: &mut BarInputContext) {
         // song bar scroll on mouse wheel
-        let mut mov = -ctx.input.get_scroll();
+        let mut mov = -ctx.input.scroll();
         ctx.input.reset_scroll();
 
         // analog scroll
@@ -691,7 +691,7 @@ impl BarRenderer {
         if ctx
             .property
             .is_non_analog_pressed(ctx.input, MusicSelectKey::Up, false)
-            || ctx.input.get_control_key_state(ControlKeys::Down)
+            || ctx.input.control_key_state(ControlKeys::Down)
         {
             let l = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -711,7 +711,7 @@ impl BarRenderer {
         } else if ctx
             .property
             .is_non_analog_pressed(ctx.input, MusicSelectKey::Down, false)
-            || ctx.input.get_control_key_state(ControlKeys::Up)
+            || ctx.input.control_key_state(ControlKeys::Up)
         {
             let l = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

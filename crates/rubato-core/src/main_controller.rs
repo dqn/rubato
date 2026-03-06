@@ -1055,9 +1055,9 @@ impl MainController {
             if let Some(ref mut input) = self.input {
                 let mouse_pressed = input.is_mouse_pressed();
                 let mouse_dragged = input.is_mouse_dragged();
-                let mouse_button = input.get_mouse_button();
-                let mouse_x = input.get_mouse_x();
-                let mouse_y = input.get_mouse_y();
+                let mouse_button = input.mousebutton;
+                let mouse_x = input.mousex;
+                let mouse_y = input.mousey;
                 if mouse_pressed {
                     if let Some(ref mut current) = self.current {
                         current.handle_skin_mouse_pressed(mouse_button, mouse_x, mouse_y);

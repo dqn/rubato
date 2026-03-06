@@ -182,7 +182,7 @@ pub fn run_manual_simulation(
     let physical_key_count = lp.get_key_lane_assign().len();
 
     let mut sorted_log: Vec<&KeyInputLog> = input_log.iter().collect();
-    sorted_log.sort_by_key(|e| e.get_time());
+    sorted_log.sort_by_key(|e| e.time());
 
     let last_note_time = judge_notes
         .iter()
@@ -202,12 +202,12 @@ pub fn run_manual_simulation(
     while time <= end_time {
         let mut key_changed_times = vec![NOT_SET; physical_key_count];
 
-        while log_cursor < sorted_log.len() && sorted_log[log_cursor].get_time() <= time {
+        while log_cursor < sorted_log.len() && sorted_log[log_cursor].time() <= time {
             let event = sorted_log[log_cursor];
-            let key = event.get_keycode() as usize;
+            let key = event.keycode() as usize;
             if key < physical_key_count {
                 key_states[key] = event.is_pressed();
-                key_changed_times[key] = event.get_time();
+                key_changed_times[key] = event.time();
             }
             log_cursor += 1;
         }
@@ -385,7 +385,7 @@ pub fn run_course_simulation_manual(
         let physical_key_count = lp.get_key_lane_assign().len();
 
         let mut sorted_log: Vec<&KeyInputLog> = input_log.iter().collect();
-        sorted_log.sort_by_key(|e| e.get_time());
+        sorted_log.sort_by_key(|e| e.time());
 
         let last_note_time = judge_notes
             .iter()
@@ -404,12 +404,12 @@ pub fn run_course_simulation_manual(
         while time <= end_time {
             let mut key_changed_times = vec![NOT_SET; physical_key_count];
 
-            while log_cursor < sorted_log.len() && sorted_log[log_cursor].get_time() <= time {
+            while log_cursor < sorted_log.len() && sorted_log[log_cursor].time() <= time {
                 let event = sorted_log[log_cursor];
-                let key = event.get_keycode() as usize;
+                let key = event.keycode() as usize;
                 if key < physical_key_count {
                     key_states[key] = event.is_pressed();
-                    key_changed_times[key] = event.get_time();
+                    key_changed_times[key] = event.time();
                 }
                 log_cursor += 1;
             }

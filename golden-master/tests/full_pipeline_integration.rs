@@ -38,8 +38,8 @@ fn bms_to_replay_full_pipeline() {
     let replay_keylog: Vec<ReplayKeyInputLog> = keylog
         .iter()
         .map(|k| ReplayKeyInputLog {
-            time: k.get_time(),
-            keycode: k.get_keycode(),
+            time: k.time(),
+            keycode: k.keycode(),
             pressed: k.is_pressed(),
         })
         .collect();
@@ -102,8 +102,8 @@ fn full_pipeline_multiple_bms() {
         let replay_keylog: Vec<ReplayKeyInputLog> = keylog
             .iter()
             .map(|k| ReplayKeyInputLog {
-                time: k.get_time(),
-                keycode: k.get_keycode(),
+                time: k.time(),
+                keycode: k.keycode(),
                 pressed: k.is_pressed(),
             })
             .collect();

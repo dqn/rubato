@@ -412,7 +412,7 @@ impl BMControllerInputProcessor {
         }
     }
 
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
@@ -428,14 +428,14 @@ impl BMControllerInputProcessor {
 
         // AXIS update
         for i in 0..AXIS_LENGTH {
-            self.axis[i] = self.controller.get_axis(i as i32);
+            self.axis[i] = self.controller.axis(i as i32);
         }
 
         for button in 0..self.buttonstate.len() {
             if microtime >= self.buttontime[button] + (self.duration as i64) * 1000 {
                 let prev = self.buttonstate[button];
                 if button as i32 <= BMKeys::BUTTON_32 {
-                    self.buttonstate[button] = self.controller.get_button(button as i32);
+                    self.buttonstate[button] = self.controller.button(button as i32);
                 } else if self.jkoc {
                     if button as i32 == BMKeys::AXIS1_PLUS {
                         self.buttonstate[button] = (self.axis[0] > 0.9) || (self.axis[3] > 0.9);
@@ -500,7 +500,7 @@ impl BMControllerInputProcessor {
                 continue;
             }
             if is_analog && button >= BMKeys::AXIS1_PLUS {
-                let analog_value = self.get_analog_value(button);
+                let analog_value = self.analog_value(button);
                 callback.set_analog_state(i, true, analog_value);
             } else {
                 callback.set_analog_state(i, false, 0.0);
@@ -508,11 +508,11 @@ impl BMControllerInputProcessor {
         }
     }
 
-    fn get_analog_value(&self, button: i32) -> f32 {
+    fn analog_value(&self, button: i32) -> f32 {
         // assume isAnalog(button) == true.
         let axis_index = ((button - BMKeys::AXIS1_PLUS) / 2) as usize;
         let plus = (button - BMKeys::AXIS1_PLUS) % 2 == 0;
-        let value = self.controller.get_axis(axis_index as i32);
+        let value = self.controller.axis(axis_index as i32);
         if plus { value } else { -value }
     }
 
@@ -536,7 +536,7 @@ impl BMControllerInputProcessor {
         }
     }
 
-    pub fn get_last_pressed_button(&self) -> i32 {
+    pub fn last_pressed_button(&self) -> i32 {
         self.last_pressed_button
     }
 

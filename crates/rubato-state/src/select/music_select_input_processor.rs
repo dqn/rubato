@@ -75,7 +75,7 @@ impl MusicSelectInputProcessor {
 
         if !input.start_pressed()
             && !input.is_select_pressed()
-            && !input.get_control_key_state(ControlKeys::Num5)
+            && !input.control_key_state(ControlKeys::Num5)
         {
             // No option key input
             self.is_option_key_released = true;
@@ -146,7 +146,7 @@ impl MusicSelectInputProcessor {
             }
 
             // Mouse wheel scroll for target
-            let mut mov = -(input.get_scroll());
+            let mut mov = -(input.scroll());
             input.reset_scroll();
 
             self.analog_scroll_buffer += property
@@ -158,7 +158,7 @@ impl MusicSelectInputProcessor {
             // Target scroll via keys
             let l = now_millis();
             if property.is_non_analog_pressed(input, MusicSelectKey::TargetUp, false)
-                || input.get_control_key_state(ControlKeys::Down)
+                || input.control_key_state(ControlKeys::Down)
             {
                 if self.duration == 0 {
                     mov = 1;
@@ -171,7 +171,7 @@ impl MusicSelectInputProcessor {
                     self.angle = self.durationhigh;
                 }
             } else if property.is_non_analog_pressed(input, MusicSelectKey::TargetDown, false)
-                || input.get_control_key_state(ControlKeys::Up)
+                || input.control_key_state(ControlKeys::Up)
             {
                 if self.duration == 0 {
                     mov = -1;
@@ -251,7 +251,7 @@ impl MusicSelectInputProcessor {
                 ctx.events
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }
-        } else if input.get_control_key_state(ControlKeys::Num5)
+        } else if input.control_key_state(ControlKeys::Num5)
             || (input.start_pressed() && input.is_select_pressed())
         {
             // START+SELECT or NUM5: show detail option panel

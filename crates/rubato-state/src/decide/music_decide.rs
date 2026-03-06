@@ -290,10 +290,10 @@ impl MainState for MusicDecide {
             // before calling get_audio_processor_mut (avoids overlapping &mut borrows).
             let (decide, cancel) = {
                 let input = self.main.get_input_processor();
-                let decide = input.get_key_state(0)
-                    || input.get_key_state(2)
-                    || input.get_key_state(4)
-                    || input.get_key_state(6)
+                let decide = input.key_state(0)
+                    || input.key_state(2)
+                    || input.key_state(4)
+                    || input.key_state(6)
                     || input.is_control_key_pressed(ControlKeys::Enter);
                 let cancel = input.is_control_key_pressed(ControlKeys::Escape)
                     || (input.start_pressed() && input.is_select_pressed());

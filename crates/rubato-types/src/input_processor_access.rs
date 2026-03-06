@@ -64,18 +64,18 @@ pub enum KeyCommand {
 /// BMSPlayerInputProcessor references.
 pub trait InputProcessorAccess {
     /// Get the state of a control key (true = pressed).
-    fn get_control_key_state(&self, key: ControlKeys) -> bool;
+    fn control_key_state(&self, key: ControlKeys) -> bool;
 
     /// Check if a key command has been activated this frame.
     fn is_activated(&self, cmd: KeyCommand) -> bool;
 
     /// Get the start time of the input processor.
-    fn get_start_time(&self) -> i64 {
+    fn start_time(&self) -> i64 {
         0
     }
 
     /// Get accumulated scroll value.
-    fn get_scroll(&self) -> i32 {
+    fn scroll(&self) -> i32 {
         0
     }
 
@@ -89,7 +89,7 @@ mod tests {
 
     struct TestInput;
     impl InputProcessorAccess for TestInput {
-        fn get_control_key_state(&self, _key: ControlKeys) -> bool {
+        fn control_key_state(&self, _key: ControlKeys) -> bool {
             false
         }
         fn is_activated(&self, _cmd: KeyCommand) -> bool {
@@ -100,8 +100,8 @@ mod tests {
     #[test]
     fn test_input_processor_access_trait() {
         let input = TestInput;
-        assert!(!input.get_control_key_state(ControlKeys::Num1));
+        assert!(!input.control_key_state(ControlKeys::Num1));
         assert!(!input.is_activated(KeyCommand::ShowFps));
-        assert_eq!(input.get_start_time(), 0);
+        assert_eq!(input.start_time(), 0);
     }
 }

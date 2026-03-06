@@ -2807,28 +2807,28 @@ impl MainState for BMSPlayer {
         self.input_select_pressed = input.is_select_pressed();
         self.input_key_states.clear();
         self.input_key_states
-            .extend((0..KEYSTATE_SIZE as i32).map(|i| input.get_key_state(i)));
-        self.control_key_up = input.get_control_key_state(ControlKeys::Up);
-        self.control_key_down = input.get_control_key_state(ControlKeys::Down);
-        self.control_key_left = input.get_control_key_state(ControlKeys::Left);
-        self.control_key_right = input.get_control_key_state(ControlKeys::Right);
-        self.control_key_escape_pressed = input.get_control_key_state(ControlKeys::Escape);
-        self.control_key_num1 = input.get_control_key_state(ControlKeys::Num1);
-        self.control_key_num2 = input.get_control_key_state(ControlKeys::Num2);
-        self.control_key_num3 = input.get_control_key_state(ControlKeys::Num3);
-        self.control_key_num4 = input.get_control_key_state(ControlKeys::Num4);
-        self.input_scroll = input.get_scroll();
+            .extend((0..KEYSTATE_SIZE as i32).map(|i| input.key_state(i)));
+        self.control_key_up = input.control_key_state(ControlKeys::Up);
+        self.control_key_down = input.control_key_state(ControlKeys::Down);
+        self.control_key_left = input.control_key_state(ControlKeys::Left);
+        self.control_key_right = input.control_key_state(ControlKeys::Right);
+        self.control_key_escape_pressed = input.control_key_state(ControlKeys::Escape);
+        self.control_key_num1 = input.control_key_state(ControlKeys::Num1);
+        self.control_key_num2 = input.control_key_state(ControlKeys::Num2);
+        self.control_key_num3 = input.control_key_state(ControlKeys::Num3);
+        self.control_key_num4 = input.control_key_state(ControlKeys::Num4);
+        self.input_scroll = input.scroll();
         self.input_is_analog.clear();
         self.input_is_analog
             .extend((0..KEYSTATE_SIZE).map(|i| input.is_analog_input(i)));
         self.input_analog_diff_ticks.clear();
         self.input_analog_diff_ticks
-            .extend((0..KEYSTATE_SIZE).map(|i| input.get_analog_diff(i)));
+            .extend((0..KEYSTATE_SIZE).map(|i| input.analog_diff(i)));
         self.input_analog_recent_ms.clear();
         self.input_analog_recent_ms
-            .extend((0..KEYSTATE_SIZE).map(|i| input.get_time_since_last_analog_reset(i)));
+            .extend((0..KEYSTATE_SIZE).map(|i| input.time_since_last_analog_reset(i)));
         self.pending_analog_resets.clear();
-        self.device_type = input.get_device_type();
+        self.device_type = input.device_type();
     }
 
     fn sync_input_back_to(&mut self, input: &mut BMSPlayerInputProcessor) {
@@ -5383,16 +5383,16 @@ mod tests {
         input.set_select_pressed(true);
         input.set_key_state(0, true, 1000);
         input
-            .get_keyboard_input_processor_mut()
+            .keyboard_input_processor_mut()
             .set_key_state(ControlKeys::Up.keycode(), true);
         input
-            .get_keyboard_input_processor_mut()
+            .keyboard_input_processor_mut()
             .set_key_state(ControlKeys::Down.keycode(), true);
         input
-            .get_keyboard_input_processor_mut()
+            .keyboard_input_processor_mut()
             .set_key_state(ControlKeys::Left.keycode(), true);
         input
-            .get_keyboard_input_processor_mut()
+            .keyboard_input_processor_mut()
             .set_key_state(ControlKeys::Right.keycode(), true);
 
         <BMSPlayer as MainState>::sync_input_from(&mut player, &input);
@@ -5453,13 +5453,13 @@ mod tests {
         input.reset_analog_input(7);
         input.set_analog_state(7, true, 0.80);
         assert!(input.start_pressed());
-        let expected_delta = input.get_analog_diff(7) as f32 * 0.001;
+        let expected_delta = input.analog_diff(7) as f32 * 0.001;
 
         <BMSPlayer as MainState>::sync_input_from(&mut player, &input);
         assert!(player.input_start_pressed);
         assert!(player.input_key_states[7]);
         assert!(player.input_is_analog[7]);
-        assert_eq!(player.input_analog_diff_ticks[7], input.get_analog_diff(7));
+        assert_eq!(player.input_analog_diff_ticks[7], input.analog_diff(7));
         player.input();
         <BMSPlayer as MainState>::sync_input_back_to(&mut player, &mut input);
 
@@ -5467,7 +5467,7 @@ mod tests {
         assert!(player.input_start_pressed);
         assert!(player.input_key_states[7]);
         assert!(player.input_is_analog[7]);
-        assert_eq!(player.input_analog_diff_ticks[7], input.get_analog_diff(7));
+        assert_eq!(player.input_analog_diff_ticks[7], input.analog_diff(7));
         player.input();
         <BMSPlayer as MainState>::sync_input_back_to(&mut player, &mut input);
 
@@ -5482,7 +5482,7 @@ mod tests {
             0.5 + expected_delta,
             actual_cover
         );
-        assert_eq!(input.get_analog_diff(7), 0);
+        assert_eq!(input.analog_diff(7), 0);
     }
 
     // --- startpressedtime tracking tests ---

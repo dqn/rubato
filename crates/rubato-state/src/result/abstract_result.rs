@@ -276,7 +276,7 @@ impl AbstractResultData {
 
     pub fn input(&mut self, main: &mut MainController) {
         let input = main.get_input_processor();
-        let mov = -(input.get_scroll());
+        let mov = -(input.scroll());
         input.reset_scroll();
         if mov != 0
             && let Some(ref ranking) = self.ranking

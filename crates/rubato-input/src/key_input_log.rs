@@ -47,7 +47,7 @@ impl KeyInputLog {
         self.pressed = pressed;
     }
 
-    pub fn get_time(&self) -> i64 {
+    pub fn time(&self) -> i64 {
         if self.presstime != 0 {
             self.presstime
         } else {
@@ -55,7 +55,7 @@ impl KeyInputLog {
         }
     }
 
-    pub fn get_keycode(&self) -> i32 {
+    pub fn keycode(&self) -> i32 {
         self.keycode
     }
 
@@ -130,8 +130,8 @@ mod tests {
     #[test]
     fn test_new_defaults() {
         let log = KeyInputLog::new();
-        assert_eq!(log.get_time(), 0);
-        assert_eq!(log.get_keycode(), 0);
+        assert_eq!(log.time(), 0);
+        assert_eq!(log.keycode(), 0);
         assert!(!log.is_pressed());
     }
 
@@ -139,8 +139,8 @@ mod tests {
     fn test_default_equals_new() {
         let a = KeyInputLog::new();
         let b = KeyInputLog::default();
-        assert_eq!(a.get_time(), b.get_time());
-        assert_eq!(a.get_keycode(), b.get_keycode());
+        assert_eq!(a.time(), b.time());
+        assert_eq!(a.keycode(), b.keycode());
         assert_eq!(a.is_pressed(), b.is_pressed());
     }
 
@@ -149,16 +149,16 @@ mod tests {
     #[test]
     fn test_with_data() {
         let log = KeyInputLog::with_data(5000, 3, true);
-        assert_eq!(log.get_time(), 5000);
-        assert_eq!(log.get_keycode(), 3);
+        assert_eq!(log.time(), 5000);
+        assert_eq!(log.keycode(), 3);
         assert!(log.is_pressed());
     }
 
     #[test]
     fn test_with_data_released() {
         let log = KeyInputLog::with_data(1000, 7, false);
-        assert_eq!(log.get_time(), 1000);
-        assert_eq!(log.get_keycode(), 7);
+        assert_eq!(log.time(), 1000);
+        assert_eq!(log.keycode(), 7);
         assert!(!log.is_pressed());
     }
 
@@ -168,8 +168,8 @@ mod tests {
     fn test_set_data_overwrites() {
         let mut log = KeyInputLog::new();
         log.set_data(9999, 5, true);
-        assert_eq!(log.get_time(), 9999);
-        assert_eq!(log.get_keycode(), 5);
+        assert_eq!(log.time(), 9999);
+        assert_eq!(log.keycode(), 5);
         assert!(log.is_pressed());
     }
 
@@ -178,7 +178,7 @@ mod tests {
     #[test]
     fn test_get_time_uses_presstime_when_set() {
         let log = KeyInputLog::with_data(12345, 0, true);
-        assert_eq!(log.get_time(), 12345);
+        assert_eq!(log.time(), 12345);
     }
 
     #[test]
@@ -191,7 +191,7 @@ mod tests {
             time: 500,
         };
         // Should return time * 1000 = 500000 us
-        assert_eq!(log.get_time(), 500_000);
+        assert_eq!(log.time(), 500_000);
     }
 
     #[test]
@@ -203,7 +203,7 @@ mod tests {
             time: 999,
         };
         // presstime is non-zero, so it should be returned
-        assert_eq!(log.get_time(), 42);
+        assert_eq!(log.time(), 42);
     }
 
     // --- KeyInputLog::validate ---
@@ -219,7 +219,7 @@ mod tests {
         let valid = log.validate();
         assert!(valid);
         // presstime should now be time*1000
-        assert_eq!(log.get_time(), 300_000);
+        assert_eq!(log.time(), 300_000);
     }
 
     #[test]
@@ -240,7 +240,7 @@ mod tests {
         let mut log = KeyInputLog::with_data(5000, 1, true);
         let valid = log.validate();
         assert!(valid);
-        assert_eq!(log.get_time(), 5000);
+        assert_eq!(log.time(), 5000);
     }
 
     #[test]
@@ -299,10 +299,10 @@ mod tests {
         // Should have at least one press event for lane 0
         let presses: Vec<_> = log
             .iter()
-            .filter(|l| l.get_keycode() == 0 && l.is_pressed())
+            .filter(|l| l.keycode() == 0 && l.is_pressed())
             .collect();
         assert!(!presses.is_empty(), "should have press event for lane 0");
-        assert_eq!(presses[0].get_time(), 1_000_000);
+        assert_eq!(presses[0].time(), 1_000_000);
     }
 
     #[test]
@@ -322,17 +322,17 @@ mod tests {
         let log = KeyInputLog::create_autoplay_log(&model);
 
         // Find press at lane 2
-        let press = log.iter().find(|l| l.get_keycode() == 2 && l.is_pressed());
+        let press = log.iter().find(|l| l.keycode() == 2 && l.is_pressed());
         assert!(press.is_some(), "should have press for LN start at lane 2");
-        assert_eq!(press.unwrap().get_time(), 1_000_000);
+        assert_eq!(press.unwrap().time(), 1_000_000);
 
         // Find release at lane 2
-        let release = log.iter().find(|l| l.get_keycode() == 2 && !l.is_pressed());
+        let release = log.iter().find(|l| l.keycode() == 2 && !l.is_pressed());
         assert!(
             release.is_some(),
             "should have release for LN end at lane 2"
         );
-        assert_eq!(release.unwrap().get_time(), 2_000_000);
+        assert_eq!(release.unwrap().time(), 2_000_000);
     }
 
     #[test]
@@ -370,7 +370,7 @@ mod tests {
         // Lane 7 (scratch) should generate two release events: lane 7 and lane 8
         let scratch_releases: Vec<_> = log
             .iter()
-            .filter(|l| (l.get_keycode() == 7 || l.get_keycode() == 8) && !l.is_pressed())
+            .filter(|l| (l.keycode() == 7 || l.keycode() == 8) && !l.is_pressed())
             .collect();
         assert_eq!(scratch_releases.len(), 2);
     }

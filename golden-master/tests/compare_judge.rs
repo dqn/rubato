@@ -138,7 +138,7 @@ fn run_simulation(model: &BMSModel, tc: &JudgeTestCase) -> SimResult {
             .collect();
 
         let mut sorted_log: Vec<&KeyInputLog> = log.iter().collect();
-        sorted_log.sort_by_key(|e| e.get_time());
+        sorted_log.sort_by_key(|e| e.time());
 
         let mut key_states = vec![false; physical_key_count];
         let mut log_cursor = 0;
@@ -148,12 +148,12 @@ fn run_simulation(model: &BMSModel, tc: &JudgeTestCase) -> SimResult {
             let mut key_changed_times = vec![NOT_SET; physical_key_count];
 
             // Input log uses lane indices (keycodes); map directly to physical key indices.
-            while log_cursor < sorted_log.len() && sorted_log[log_cursor].get_time() <= time {
+            while log_cursor < sorted_log.len() && sorted_log[log_cursor].time() <= time {
                 let event = sorted_log[log_cursor];
-                let key = event.get_keycode() as usize;
+                let key = event.keycode() as usize;
                 if key < physical_key_count {
                     key_states[key] = event.is_pressed();
-                    key_changed_times[key] = event.get_time();
+                    key_changed_times[key] = event.time();
                 }
                 log_cursor += 1;
             }

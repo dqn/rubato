@@ -61,7 +61,7 @@ impl MouseScratchInput {
             }
             // Read current positions before mutably borrowing algorithms
             let positions: [i32; 2] = if let Some(ref mta) = self.mouse_to_analog {
-                [mta.get_distance_moved(true), mta.get_distance_moved(false)]
+                [mta.distance_moved(true), mta.distance_moved(false)]
             } else {
                 [0, 0]
             };
@@ -119,7 +119,7 @@ impl MouseScratchInput {
 
             for i in 0..self.keys.len() {
                 if self.keys[i] >= 0 {
-                    let value = self.get_mouse_analog_value(self.keys[i]);
+                    let value = self.mouse_analog_value(self.keys[i]);
                     callback.set_analog_state(i, true, value);
                 }
             }
@@ -178,18 +178,18 @@ impl MouseScratchInput {
         self.last_mouse_scratch = -1;
     }
 
-    fn get_mouse_analog_value(&self, mouse_input: i32) -> f32 {
+    fn mouse_analog_value(&self, mouse_input: i32) -> f32 {
         let plus = mouse_input % 2 == 0;
         let x_axis = mouse_input < 2;
         let value = if let Some(ref mta) = self.mouse_to_analog {
-            mta.get_analog_value(x_axis)
+            mta.analog_value(x_axis)
         } else {
             0.0
         };
         if plus { value } else { -value }
     }
 
-    pub fn get_last_mouse_scratch(&self) -> i32 {
+    pub fn last_mouse_scratch(&self) -> i32 {
         self.last_mouse_scratch
     }
 
@@ -224,9 +224,9 @@ impl MouseToAnalog {
     }
 
     pub fn update(&mut self) {
-        let x_distance_moved = GdxInput::get_x() - GdxGraphics::get_width() / 2;
-        let y_distance_moved = GdxInput::get_y() - GdxGraphics::get_height() / 2;
-        GdxInput::set_cursor_position(GdxGraphics::get_width() / 2, GdxGraphics::get_height() / 2);
+        let x_distance_moved = GdxInput::x() - GdxGraphics::width() / 2;
+        let y_distance_moved = GdxInput::y() - GdxGraphics::height() / 2;
+        GdxInput::set_cursor_position(GdxGraphics::width() / 2, GdxGraphics::height() / 2);
 
         self.total_x_distance_moved =
             ((self.total_x_distance_moved + x_distance_moved) % self.domain + self.domain)
@@ -236,7 +236,7 @@ impl MouseToAnalog {
                 % self.domain;
     }
 
-    pub fn get_scratch_distance(&self) -> i32 {
+    pub fn scratch_distance(&self) -> i32 {
         self.scratch_distance
     }
 
@@ -251,7 +251,7 @@ impl MouseToAnalog {
         v
     }
 
-    pub fn get_distance_moved(&self, x_axis: bool) -> i32 {
+    pub fn distance_moved(&self, x_axis: bool) -> i32 {
         if x_axis {
             self.total_x_distance_moved
         } else {
@@ -259,8 +259,8 @@ impl MouseToAnalog {
         }
     }
 
-    pub fn get_analog_value(&self, x_axis: bool) -> f32 {
-        (self.get_distance_moved(x_axis) % 256) as f32 / 128.0 - 1.0
+    pub fn analog_value(&self, x_axis: bool) -> f32 {
+        (self.distance_moved(x_axis) % 256) as f32 / 128.0 - 1.0
     }
 }
 
@@ -301,7 +301,7 @@ struct MouseScratchAlgorithmVersion1 {
 
 impl MouseScratchAlgorithmVersion1 {
     fn new(scratch_duration: i32, mouse_to_analog: &MouseToAnalog, x_axis: bool) -> Self {
-        let prev_position = mouse_to_analog.get_distance_moved(x_axis);
+        let prev_position = mouse_to_analog.distance_moved(x_axis);
         Self {
             scratch_duration,
             _x_axis: x_axis,
@@ -384,9 +384,9 @@ struct MouseScratchAlgorithmVersion2 {
 
 impl MouseScratchAlgorithmVersion2 {
     fn new(scratch_duration: i32, mouse_to_analog: &MouseToAnalog, x_axis: bool) -> Self {
-        let scratch_distance = mouse_to_analog.get_scratch_distance();
+        let scratch_distance = mouse_to_analog.scratch_distance();
         let scratch_reverse_distance = scratch_distance / 3;
-        let prev_position = mouse_to_analog.get_distance_moved(x_axis);
+        let prev_position = mouse_to_analog.distance_moved(x_axis);
         Self {
             scratch_duration,
             scratch_distance,

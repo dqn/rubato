@@ -138,7 +138,7 @@ impl BMSPlayerInputProcessor {
             let mut index = 1;
             let mut name = ctrl.name.clone();
             for bm in &bminput {
-                if bm.get_name() == name {
+                if bm.name() == name {
                     index += 1;
                     name = format!("{}-{}", ctrl.name, index);
                 }
@@ -208,9 +208,9 @@ impl BMSPlayerInputProcessor {
                 if configs[i].get_name().is_none()
                     || configs[i].get_name().is_some_and(|n| n.is_empty())
                 {
-                    configs[i].name = controller.get_name().to_string();
+                    configs[i].name = controller.name().to_string();
                 }
-                if controller.get_name() == configs[i].get_name().unwrap_or("") {
+                if controller.name() == configs[i].get_name().unwrap_or("") {
                     controller.set_config(&configs[i]);
                     controller.set_enable(true);
                     b[i] = true;
@@ -241,12 +241,12 @@ impl BMSPlayerInputProcessor {
         self.micro_margin_time = milli_margin_time * 1000;
     }
 
-    pub fn get_start_time(&self) -> i64 {
+    pub fn start_time(&self) -> i64 {
         self.starttime
     }
 
     /// Returns the key state for the specified key ID
-    pub fn get_key_state(&self, id: i32) -> bool {
+    pub fn key_state(&self, id: i32) -> bool {
         if id >= 0 && (id as usize) < self.keystate.len() {
             self.keystate[id as usize]
         } else {
@@ -263,7 +263,7 @@ impl BMSPlayerInputProcessor {
     }
 
     /// Returns the key state change time for the specified key ID
-    pub fn get_key_changed_time(&self, id: i32) -> i64 {
+    pub fn key_changed_time(&self, id: i32) -> i64 {
         if id >= 0 && (id as usize) < self.time.len() {
             self.time[id as usize]
         } else {
@@ -293,11 +293,11 @@ impl BMSPlayerInputProcessor {
         self.time.fill(i64::MIN);
     }
 
-    pub fn get_last_key_changed_device(&self) -> Option<DeviceType> {
+    pub fn last_key_changed_device(&self) -> Option<DeviceType> {
         self.last_key_device
     }
 
-    pub fn get_number_of_device(&self) -> usize {
+    pub fn number_of_device(&self) -> usize {
         self.bminput.len() + 1
     }
 
@@ -352,7 +352,7 @@ impl BMSPlayerInputProcessor {
         }
     }
 
-    pub fn get_device_type(&self) -> DeviceType {
+    pub fn device_type(&self) -> DeviceType {
         self.device_type
     }
 
@@ -383,8 +383,8 @@ impl BMSPlayerInputProcessor {
         }
     }
 
-    pub fn get_control_key_state(&self, key: ControlKeys) -> bool {
-        self.kbinput.get_key_state(key.keycode())
+    pub fn control_key_state(&self, key: ControlKeys) -> bool {
+        self.kbinput.key_state(key.keycode())
     }
 
     /// Returns true if either Alt key is currently held.
@@ -463,7 +463,7 @@ impl BMSPlayerInputProcessor {
             .as_millis() as i64;
     }
 
-    pub fn get_time_since_last_analog_reset(&self, i: usize) -> i64 {
+    pub fn time_since_last_analog_reset(&self, i: usize) -> i64 {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
@@ -471,7 +471,7 @@ impl BMSPlayerInputProcessor {
         now - self.analog_last_reset_time[i]
     }
 
-    pub fn get_analog_diff(&self, i: usize) -> i32 {
+    pub fn analog_diff(&self, i: usize) -> i32 {
         compute_analog_diff(self.last_analog_value[i], self.current_analog_value[i])
     }
 
@@ -479,16 +479,16 @@ impl BMSPlayerInputProcessor {
         self.is_analog[i]
     }
 
-    pub fn get_analog_diff_and_reset(&mut self, i: usize, ms_tolerance: i32) -> i32 {
+    pub fn analog_diff_and_reset(&mut self, i: usize, ms_tolerance: i32) -> i32 {
         let mut d_ticks = 0;
-        if self.get_time_since_last_analog_reset(i) <= ms_tolerance as i64 {
-            d_ticks = 0.max(self.get_analog_diff(i));
+        if self.time_since_last_analog_reset(i) <= ms_tolerance as i64 {
+            d_ticks = 0.max(self.analog_diff(i));
         }
         self.reset_analog_input(i);
         d_ticks
     }
 
-    pub fn get_key_input_log(&self) -> Vec<KeyInputLog> {
+    pub fn key_input_log(&self) -> Vec<KeyInputLog> {
         self.keylog.to_array()
     }
 
@@ -549,32 +549,20 @@ impl BMSPlayerInputProcessor {
         self.select_pressed = select_pressed;
     }
 
-    pub fn get_keyboard_input_processor(&self) -> &KeyBoardInputProcesseor {
+    pub fn keyboard_input_processor(&self) -> &KeyBoardInputProcesseor {
         &self.kbinput
     }
 
-    pub fn get_keyboard_input_processor_mut(&mut self) -> &mut KeyBoardInputProcesseor {
+    pub fn keyboard_input_processor_mut(&mut self) -> &mut KeyBoardInputProcesseor {
         &mut self.kbinput
     }
 
-    pub fn get_bm_input_processor(&self) -> &[BMControllerInputProcessor] {
+    pub fn bm_input_processor(&self) -> &[BMControllerInputProcessor] {
         &self.bminput
     }
 
-    pub fn get_midi_input_processor(&self) -> &MidiInputProcessor {
+    pub fn midi_input_processor(&self) -> &MidiInputProcessor {
         &self.midiinput
-    }
-
-    pub fn get_mouse_x(&self) -> i32 {
-        self.mousex
-    }
-
-    pub fn get_mouse_y(&self) -> i32 {
-        self.mousey
-    }
-
-    pub fn get_mouse_button(&self) -> i32 {
-        self.mousebutton
     }
 
     pub fn is_mouse_pressed(&self) -> bool {
@@ -601,16 +589,8 @@ impl BMSPlayerInputProcessor {
         self.mouse_moved = mouse_moved;
     }
 
-    pub fn get_scroll(&self) -> i32 {
+    pub fn scroll(&self) -> i32 {
         -(self.scroll_y as i32)
-    }
-
-    pub fn get_scroll_x(&self) -> f32 {
-        self.scroll_x
-    }
-
-    pub fn get_scroll_y(&self) -> f32 {
-        self.scroll_y
     }
 
     pub fn reset_scroll(&mut self) {
@@ -683,12 +663,12 @@ impl BMSPlayerInputProcessor {
                 self.mousepressed = true;
                 self.mousebutton = MOUSE_BUTTON_LEFT;
                 // Apply the same resolution transform as touch_down()
-                let gw = GdxGraphics::get_width();
-                let gh = GdxGraphics::get_height();
-                let res = self.kbinput.get_resolution();
+                let gw = GdxGraphics::width();
+                let gh = GdxGraphics::height();
+                let res = self.kbinput.resolution();
                 if gw > 0 && gh > 0 {
-                    self.mousex = GdxInput::get_x() * res.width() / gw;
-                    self.mousey = res.height() - GdxInput::get_y() * res.height() / gh;
+                    self.mousex = GdxInput::x() * res.width() / gw;
+                    self.mousey = res.height() - GdxInput::y() * res.height() / gh;
                 }
             } else if !left_pressed && self.mousepressed {
                 self.mousepressed = false;
@@ -908,7 +888,7 @@ mod tests {
     fn test_initial_key_states_all_false() {
         let proc = make_input_processor();
         for i in 0..KEYSTATE_SIZE as i32 {
-            assert!(!proc.get_key_state(i));
+            assert!(!proc.key_state(i));
         }
     }
 
@@ -916,12 +896,12 @@ mod tests {
     fn test_set_and_get_key_state() {
         let mut proc = make_input_processor();
         proc.set_key_state(0, true, 1000);
-        assert!(proc.get_key_state(0));
-        assert_eq!(proc.get_key_changed_time(0), 1000);
+        assert!(proc.key_state(0));
+        assert_eq!(proc.key_changed_time(0), 1000);
 
         proc.set_key_state(0, false, 2000);
-        assert!(!proc.get_key_state(0));
-        assert_eq!(proc.get_key_changed_time(0), 2000);
+        assert!(!proc.key_state(0));
+        assert_eq!(proc.key_changed_time(0), 2000);
     }
 
     #[test]
@@ -929,7 +909,7 @@ mod tests {
         let mut proc = make_input_processor();
         proc.set_key_state(5, true, 1000);
         assert!(proc.reset_key_changed_time(5));
-        assert_eq!(proc.get_key_changed_time(5), i64::MIN);
+        assert_eq!(proc.key_changed_time(5), i64::MIN);
         // Second reset should return false since already reset
         assert!(!proc.reset_key_changed_time(5));
     }
@@ -940,9 +920,9 @@ mod tests {
         proc.set_key_state(0, true, 1000);
         proc.set_key_state(1, true, 2000);
         proc.reset_all_key_state();
-        assert!(!proc.get_key_state(0));
-        assert!(!proc.get_key_state(1));
-        assert_eq!(proc.get_key_changed_time(0), i64::MIN);
+        assert!(!proc.key_state(0));
+        assert!(!proc.key_state(1));
+        assert_eq!(proc.key_changed_time(0), i64::MIN);
     }
 
     #[test]
@@ -951,8 +931,8 @@ mod tests {
         proc.set_key_state(0, true, 1000);
         proc.set_start_time(5000);
         // After setStartTime(nonzero), times should be reset
-        assert_eq!(proc.get_key_changed_time(0), i64::MIN);
-        assert_eq!(proc.get_start_time(), 5000);
+        assert_eq!(proc.key_changed_time(0), i64::MIN);
+        assert_eq!(proc.start_time(), 5000);
     }
 
     #[test]
@@ -966,12 +946,12 @@ mod tests {
     #[test]
     fn test_mouse_state() {
         let proc = make_input_processor();
-        assert_eq!(proc.get_mouse_x(), 0);
-        assert_eq!(proc.get_mouse_y(), 0);
+        assert_eq!(proc.mousex, 0);
+        assert_eq!(proc.mousey, 0);
         assert!(!proc.is_mouse_pressed());
         assert!(!proc.is_mouse_dragged());
         assert!(!proc.is_mouse_moved());
-        assert_eq!(proc.get_scroll(), 0);
+        assert_eq!(proc.scroll(), 0);
     }
 
     #[test]
@@ -993,28 +973,28 @@ mod tests {
         proc.set_key_state(0, true, 1000);
         proc.set_enable(false);
         // Disable should reset all state
-        assert!(!proc.get_key_state(0));
+        assert!(!proc.key_state(0));
     }
 
     #[test]
     fn test_get_key_state_out_of_range() {
         let proc = make_input_processor();
-        assert!(!proc.get_key_state(-1));
-        assert!(!proc.get_key_state(256));
-        assert!(!proc.get_key_state(1000));
+        assert!(!proc.key_state(-1));
+        assert!(!proc.key_state(256));
+        assert!(!proc.key_state(1000));
     }
 
     #[test]
     fn test_number_of_device() {
         let proc = make_input_processor();
         // 1 (keyboard) + 0 controllers = 1
-        assert_eq!(proc.get_number_of_device(), 1);
+        assert_eq!(proc.number_of_device(), 1);
     }
 
     #[test]
     fn test_device_type_default() {
         let proc = make_input_processor();
-        assert_eq!(proc.get_device_type(), DeviceType::Keyboard);
+        assert_eq!(proc.device_type(), DeviceType::Keyboard);
     }
 
     #[test]
@@ -1043,7 +1023,7 @@ mod tests {
         // The first key in default config maps to key index 0
         // keystate[0] should now be true
         assert!(
-            proc.get_key_state(0),
+            proc.key_state(0),
             "key Z press should be detected as key index 0"
         );
 
@@ -1063,24 +1043,24 @@ mod tests {
         // Release Z key
         shared_state.set_key_pressed(Keys::Z, false);
         proc.poll();
-        assert!(!proc.get_key_state(0), "key Z release should be detected");
+        assert!(!proc.key_state(0), "key Z release should be detected");
     }
 
     #[test]
     fn test_scroll_state() {
         let mut proc = make_input_processor();
-        assert_eq!(proc.get_scroll_x(), 0.0);
-        assert_eq!(proc.get_scroll_y(), 0.0);
+        assert_eq!(proc.scroll_x, 0.0);
+        assert_eq!(proc.scroll_y, 0.0);
 
         proc.reset_scroll();
-        assert_eq!(proc.get_scroll_x(), 0.0);
-        assert_eq!(proc.get_scroll_y(), 0.0);
+        assert_eq!(proc.scroll_x, 0.0);
+        assert_eq!(proc.scroll_y, 0.0);
     }
 
     #[test]
     fn test_key_input_log_empty_initially() {
         let proc = make_input_processor();
-        let log = proc.get_key_input_log();
+        let log = proc.key_input_log();
         assert!(log.is_empty());
     }
 

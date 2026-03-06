@@ -1502,7 +1502,7 @@ impl MusicSelector {
     pub fn process_input_with_context(&mut self, input: &mut BMSPlayerInputProcessor) {
         // Java: if (input.getControlKeyState(ControlKeys.NUM6)) main.changeState(CONFIG)
         // Java: else if (input.isActivated(OPEN_SKIN_CONFIGURATION)) main.changeState(SKINCONFIG)
-        if input.get_control_key_state(ControlKeys::Num6) {
+        if input.control_key_state(ControlKeys::Num6) {
             self.pending_state_change = Some(MainStateType::Config);
         } else if input.is_activated(KeyCommand::OpenSkinConfiguration) {
             self.pending_state_change = Some(MainStateType::SkinConfig);

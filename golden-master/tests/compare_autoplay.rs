@@ -65,20 +65,20 @@ fn compare_autoplay_logs(
         let j = &java_log[i];
 
         // Allow +/-2us tolerance for timing
-        let time_diff = (r.get_time() - j.presstime).abs();
+        let time_diff = (r.time() - j.presstime).abs();
         if time_diff > 2 {
             diffs.push(format!(
                 "{filename}[{i}] presstime: rust={} java={} (diff={})",
-                r.get_time(),
+                r.time(),
                 j.presstime,
                 time_diff
             ));
         }
 
-        if r.get_keycode() != j.keycode {
+        if r.keycode() != j.keycode {
             diffs.push(format!(
                 "{filename}[{i}] keycode: rust={} java={}",
-                r.get_keycode(),
+                r.keycode(),
                 j.keycode
             ));
         }
@@ -97,8 +97,8 @@ fn compare_autoplay_logs(
         for (i, r) in rust_log.iter().enumerate().skip(min_len).take(5) {
             diffs.push(format!(
                 "{filename}[{i}] extra rust: presstime={} keycode={} pressed={}",
-                r.get_time(),
-                r.get_keycode(),
+                r.time(),
+                r.keycode(),
                 r.is_pressed()
             ));
         }

@@ -232,7 +232,7 @@ impl SkinConfiguration {
         &mut self,
         input: &mut dyn rubato_types::input_processor_access::InputProcessorAccess,
     ) {
-        let mov = -input.get_scroll();
+        let mov = -input.scroll();
         input.reset_scroll();
         if mov != 0 && self.custom_options.is_some() {
             self.custom_option_offset = 0.max(

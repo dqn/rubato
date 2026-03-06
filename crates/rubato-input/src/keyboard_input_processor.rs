@@ -350,7 +350,7 @@ impl KeyBoardInputProcesseor {
             | (if alt { MASK_ALT } else { 0 })
     }
 
-    pub fn get_key_state(&self, keycode: i32) -> bool {
+    pub fn key_state(&self, keycode: i32) -> bool {
         self.keystate[keycode as usize]
     }
 
@@ -393,9 +393,9 @@ impl KeyBoardInputProcesseor {
 
     pub fn mouse_moved(&self, x: i32, y: i32, callback: &mut dyn KeyboardCallback) -> bool {
         callback.set_mouse_moved(true);
-        callback.set_mouse_x(x * self.resolution.width() / GdxGraphics::get_width());
+        callback.set_mouse_x(x * self.resolution.width() / GdxGraphics::width());
         callback.set_mouse_y(
-            self.resolution.height() - y * self.resolution.height() / GdxGraphics::get_height(),
+            self.resolution.height() - y * self.resolution.height() / GdxGraphics::height(),
         );
         false
     }
@@ -425,9 +425,9 @@ impl KeyBoardInputProcesseor {
         callback: &mut dyn KeyboardCallback,
     ) -> bool {
         callback.set_mouse_button(button);
-        callback.set_mouse_x(x * self.resolution.width() / GdxGraphics::get_width());
+        callback.set_mouse_x(x * self.resolution.width() / GdxGraphics::width());
         callback.set_mouse_y(
-            self.resolution.height() - y * self.resolution.height() / GdxGraphics::get_height(),
+            self.resolution.height() - y * self.resolution.height() / GdxGraphics::height(),
         );
         callback.set_mouse_pressed(true);
         false
@@ -440,9 +440,9 @@ impl KeyBoardInputProcesseor {
         _point: i32,
         callback: &mut dyn KeyboardCallback,
     ) -> bool {
-        callback.set_mouse_x(x * self.resolution.width() / GdxGraphics::get_width());
+        callback.set_mouse_x(x * self.resolution.width() / GdxGraphics::width());
         callback.set_mouse_y(
-            self.resolution.height() - y * self.resolution.height() / GdxGraphics::get_height(),
+            self.resolution.height() - y * self.resolution.height() / GdxGraphics::height(),
         );
         callback.set_mouse_dragged(true);
         false
@@ -462,7 +462,7 @@ impl KeyBoardInputProcesseor {
         false
     }
 
-    pub fn get_last_pressed_key(&self) -> i32 {
+    pub fn last_pressed_key(&self) -> i32 {
         self.last_pressed_key
     }
 
@@ -470,11 +470,11 @@ impl KeyBoardInputProcesseor {
         self.last_pressed_key = last_pressed_key;
     }
 
-    pub fn get_mouse_scratch_input(&self) -> &MouseScratchInput {
+    pub fn mouse_scratch_input(&self) -> &MouseScratchInput {
         &self.mouse_scratch_input
     }
 
-    pub fn get_mouse_scratch_input_mut(&mut self) -> &mut MouseScratchInput {
+    pub fn mouse_scratch_input_mut(&mut self) -> &mut MouseScratchInput {
         &mut self.mouse_scratch_input
     }
 
@@ -486,7 +486,7 @@ impl KeyBoardInputProcesseor {
         self.reserved.contains(&key)
     }
 
-    pub fn get_resolution(&self) -> &Resolution {
+    pub fn resolution(&self) -> &Resolution {
         &self.resolution
     }
 

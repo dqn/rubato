@@ -330,7 +330,7 @@ impl MidiInputProcessor {
         self.last_pressed_key_available
     }
 
-    pub fn get_last_pressed_key(&self) -> Option<MidiInput> {
+    pub fn last_pressed_key(&self) -> Option<MidiInput> {
         if self.last_pressed_key_available {
             Some(self.last_pressed_key.copy_from())
         } else {

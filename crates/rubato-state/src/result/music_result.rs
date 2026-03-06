@@ -630,13 +630,13 @@ impl MusicResult {
                         let input = self.main.get_input_processor();
                         for i in 0..self.property.get_assign_length() {
                             if self.property.get_assign(i) == Some(ResultKey::ReplayDifferent)
-                                && input.get_key_state(i)
+                                && input.key_state(i)
                             {
                                 key = Some(ResultKey::ReplayDifferent);
                                 break;
                             }
                             if self.property.get_assign(i) == Some(ResultKey::ReplaySame)
-                                && input.get_key_state(i)
+                                && input.key_state(i)
                             {
                                 key = Some(ResultKey::ReplaySame);
                                 break;
@@ -710,7 +710,7 @@ impl MusicResult {
                     let input_processor = self.main.get_input_processor();
                     for i in 0..self.property.get_assign_length() {
                         if self.property.get_assign(i) == Some(ResultKey::ChangeGraph)
-                            && input_processor.get_key_state(i)
+                            && input_processor.key_state(i)
                             && input_processor.reset_key_changed_time(i)
                         {
                             if self.data.gauge_type >= groove_gauge::ASSISTEASY
@@ -721,7 +721,7 @@ impl MusicResult {
                                 self.data.gauge_type = (self.data.gauge_type - 5) % 3 + 6;
                             }
                         } else if self.property.get_assign(i).is_some()
-                            && input_processor.get_key_state(i)
+                            && input_processor.key_state(i)
                             && input_processor.reset_key_changed_time(i)
                         {
                             ok = true;
