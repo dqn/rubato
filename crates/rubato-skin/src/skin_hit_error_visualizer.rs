@@ -126,8 +126,8 @@ impl SkinHitErrorVisualizer {
         }
         self.data.prepare(time, state);
 
-        self.index = state.get_recent_judges_index();
-        self.recent = state.get_recent_judges().to_vec();
+        self.index = state.recent_judges_index();
+        self.recent = state.recent_judges().to_vec();
     }
 
     #[allow(dead_code)]
@@ -309,8 +309,8 @@ impl SkinHitErrorVisualizer {
 
 /// Gets judge area from player resource.
 /// Same as SkinTimingVisualizer.getJudgeArea but with PlayerResource.
-pub fn get_judge_area(resource: &PlayerResource) -> Vec<Vec<i32>> {
-    crate::skin_timing_visualizer::get_judge_area_from_player_resource(resource)
+pub fn judge_area(resource: &PlayerResource) -> Vec<Vec<i32>> {
+    crate::skin_timing_visualizer::judge_area_from_player_resource(resource)
 }
 
 /// Validates color string - delegates to SkinTimingVisualizer.

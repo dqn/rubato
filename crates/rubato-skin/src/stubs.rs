@@ -184,12 +184,12 @@ pub trait MainState {
 
     /// Returns the recent judge timing offsets (milliseconds).
     /// 100-element circular buffer from JudgeManager.
-    fn get_recent_judges(&self) -> &[i64] {
+    fn recent_judges(&self) -> &[i64] {
         &[]
     }
 
     /// Returns the current write index into the recent judges circular buffer.
-    fn get_recent_judges_index(&self) -> usize {
+    fn recent_judges_index(&self) -> usize {
         0
     }
 
@@ -273,10 +273,10 @@ unsafe impl Send for InputProcessor {}
 unsafe impl Sync for InputProcessor {}
 
 impl InputProcessor {
-    pub fn get_mouse_x(&self) -> f32 {
+    pub fn mouse_x(&self) -> f32 {
         0.0
     }
-    pub fn get_mouse_y(&self) -> f32 {
+    pub fn mouse_y(&self) -> f32 {
         0.0
     }
 }
@@ -340,7 +340,7 @@ impl Timer {
         self.micro_timer(timer_id) / 1000
     }
 
-    pub fn get_now_time_for(&self, timer_id: i32) -> i64 {
+    pub fn now_time_for(&self, timer_id: i32) -> i64 {
         if self.is_timer_on(timer_id) {
             (self.now_micro_time - self.micro_timer(timer_id)) / 1000
         } else {
@@ -369,7 +369,7 @@ impl rubato_types::timer_access::TimerAccess for Timer {
         Timer::timer(self, timer_id)
     }
     fn now_time_for(&self, timer_id: i32) -> i64 {
-        Timer::get_now_time_for(self, timer_id)
+        Timer::now_time_for(self, timer_id)
     }
     fn is_timer_on(&self, timer_id: i32) -> bool {
         Timer::is_timer_on(self, timer_id)
@@ -410,11 +410,11 @@ impl BMSPlayer {
         crate::skin_type::SkinType::Play7Keys
     }
 
-    pub fn get_past_notes(&self) -> i32 {
+    pub fn past_notes(&self) -> i32 {
         0
     }
 
-    pub fn get_judge_manager(&self) -> &JudgeManager {
+    pub fn judge_manager(&self) -> &JudgeManager {
         &self.judge_manager
     }
 }
@@ -426,11 +426,11 @@ pub struct JudgeManager {
 }
 
 impl JudgeManager {
-    pub fn get_recent_judges_index(&self) -> usize {
+    pub fn recent_judges_index(&self) -> usize {
         self.recent_judges_index
     }
 
-    pub fn get_recent_judges(&self) -> &[i64] {
+    pub fn recent_judges(&self) -> &[i64] {
         &self.recent_judges
     }
 }
@@ -441,7 +441,7 @@ pub struct MusicResult {
 }
 
 impl MusicResult {
-    pub fn get_timing_distribution(&self) -> &TimingDistribution {
+    pub fn timing_distribution(&self) -> &TimingDistribution {
         static DEFAULT: std::sync::OnceLock<TimingDistribution> = std::sync::OnceLock::new();
         DEFAULT.get_or_init(|| TimingDistribution {
             distribution: vec![],
@@ -545,7 +545,7 @@ impl PlaySkinStub {
 pub struct SkinLoaderStub;
 
 impl SkinLoaderStub {
-    pub fn get_texture(path: &str, usecim: bool) -> Option<Texture> {
-        crate::skin_loader::get_texture(path, usecim)
+    pub fn texture(path: &str, usecim: bool) -> Option<Texture> {
+        crate::skin_loader::texture(path, usecim)
     }
 }

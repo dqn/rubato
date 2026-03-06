@@ -84,10 +84,10 @@ impl BgaDraw for BGAProcessor {
     fn draw_bga(&mut self, sprite: &mut SkinObjectRenderer, region: &Rectangle, bga_expand: i32) {
         let stretch = bga_expand_to_stretch(bga_expand);
         let color = {
-            let c = sprite.get_color();
+            let c = sprite.color();
             (c.r, c.g, c.b, c.a)
         };
-        let blend = sprite.get_blend();
+        let blend = sprite.blend();
 
         let mut adapter = SkinObjectRendererAdapter { sprite };
         BGAProcessor::draw_bga(self, &mut adapter, region, stretch, color, blend);
@@ -133,7 +133,7 @@ impl SkinBgaObject {
     }
 
     /// Get the BGA expand mode.
-    pub fn get_bga_expand(&self) -> i32 {
+    pub fn bga_expand(&self) -> i32 {
         self.bga_expand
     }
 
@@ -282,22 +282,22 @@ mod tests {
     #[test]
     fn test_new_skin_bga_object() {
         let bga = SkinBgaObject::new(BGAEXPAND_FULL);
-        assert_eq!(bga.get_bga_expand(), BGAEXPAND_FULL);
+        assert_eq!(bga.bga_expand(), BGAEXPAND_FULL);
         assert!(!bga.has_bga_draw());
     }
 
     #[test]
     fn test_new_with_different_expand_modes() {
         assert_eq!(
-            SkinBgaObject::new(BGAEXPAND_FULL).get_bga_expand(),
+            SkinBgaObject::new(BGAEXPAND_FULL).bga_expand(),
             BGAEXPAND_FULL
         );
         assert_eq!(
-            SkinBgaObject::new(BGAEXPAND_KEEP_ASPECT_RATIO).get_bga_expand(),
+            SkinBgaObject::new(BGAEXPAND_KEEP_ASPECT_RATIO).bga_expand(),
             BGAEXPAND_KEEP_ASPECT_RATIO
         );
         assert_eq!(
-            SkinBgaObject::new(BGAEXPAND_OFF).get_bga_expand(),
+            SkinBgaObject::new(BGAEXPAND_OFF).bga_expand(),
             BGAEXPAND_OFF
         );
     }

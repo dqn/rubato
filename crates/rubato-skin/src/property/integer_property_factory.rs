@@ -4,7 +4,7 @@ use crate::stubs::MainState;
 const ID_LENGTH: usize = 65536;
 
 /// Returns an IntegerProperty for the given option ID.
-pub fn get_integer_property_by_id(optionid: i32) -> Option<Box<dyn IntegerProperty>> {
+pub fn integer_property_by_id(optionid: i32) -> Option<Box<dyn IntegerProperty>> {
     if optionid < 0 || optionid as usize >= ID_LENGTH {
         return None;
     }
@@ -22,7 +22,7 @@ pub fn get_integer_property_by_id(optionid: i32) -> Option<Box<dyn IntegerProper
 }
 
 /// Returns an IntegerProperty for the given ValueType name.
-pub fn get_integer_property_by_name(name: &str) -> Option<Box<dyn IntegerProperty>> {
+pub fn integer_property_by_name(name: &str) -> Option<Box<dyn IntegerProperty>> {
     for vt in VALUE_TYPES.iter() {
         if vt.name == name {
             return Some(Box::new(DelegateIntegerProperty { id: vt.id }));
@@ -32,7 +32,7 @@ pub fn get_integer_property_by_name(name: &str) -> Option<Box<dyn IntegerPropert
 }
 
 /// Returns an IntegerProperty for image index usage.
-pub fn get_image_index_property_by_id(optionid: i32) -> Option<Box<dyn IntegerProperty>> {
+pub fn image_index_property_by_id(optionid: i32) -> Option<Box<dyn IntegerProperty>> {
     if optionid < 0 || optionid as usize >= ID_LENGTH {
         return None;
     }
@@ -52,7 +52,7 @@ pub fn get_image_index_property_by_id(optionid: i32) -> Option<Box<dyn IntegerPr
 }
 
 /// Returns an IntegerProperty for the given IndexType name.
-pub fn get_image_index_property_by_name(name: &str) -> Option<Box<dyn IntegerProperty>> {
+pub fn image_index_property_by_name(name: &str) -> Option<Box<dyn IntegerProperty>> {
     for it in INDEX_TYPES.iter() {
         if it.name == name {
             return Some(Box::new(DelegateImageIndexProperty { id: it.id }));
@@ -996,7 +996,7 @@ mod tests {
     #[test]
     fn value_refs_read_integer_value() {
         let state = TestState::new(7, 9);
-        let property = get_integer_property_by_id(42).expect("value property should exist");
+        let property = integer_property_by_id(42).expect("value property should exist");
 
         assert_eq!(property.get(&state), 7);
     }
@@ -1004,8 +1004,7 @@ mod tests {
     #[test]
     fn image_index_refs_read_image_index_value() {
         let state = TestState::new(7, 9);
-        let property =
-            get_image_index_property_by_id(42).expect("image index property should exist");
+        let property = image_index_property_by_id(42).expect("image index property should exist");
 
         assert_eq!(property.get(&state), 9);
     }

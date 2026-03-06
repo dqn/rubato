@@ -141,7 +141,7 @@ impl TimingDistribution {
         }
     }
 
-    pub fn get_timing_distribution(&self) -> &[i32] {
+    pub fn timing_distribution(&self) -> &[i32] {
         &self.dist
     }
 
@@ -268,7 +268,7 @@ impl AbstractResultData {
         &self.oldscore
     }
 
-    pub fn get_timing_distribution(&self) -> &TimingDistribution {
+    pub fn timing_distribution(&self) -> &TimingDistribution {
         &self.timing_distribution
     }
 

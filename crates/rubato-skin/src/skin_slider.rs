@@ -38,9 +38,9 @@ impl SkinSlider {
             )),
             direction: angle,
             range,
-            ref_prop: float_property_factory::get_rate_property_by_id(type_id),
+            ref_prop: float_property_factory::rate_property_by_id(type_id),
             writer: if changeable {
-                float_property_factory::get_rate_writer_by_id(type_id)
+                float_property_factory::rate_writer_by_id(type_id)
             } else {
                 None
             },
@@ -126,9 +126,9 @@ impl SkinSlider {
             )),
             direction: angle,
             range,
-            ref_prop: float_property_factory::get_rate_property_by_id(type_id),
+            ref_prop: float_property_factory::rate_property_by_id(type_id),
             writer: if changeable {
-                float_property_factory::get_rate_writer_by_id(type_id)
+                float_property_factory::rate_writer_by_id(type_id)
             } else {
                 None
             },
@@ -329,19 +329,19 @@ impl SkinSlider {
         self.data.set_disposed();
     }
 
-    pub fn get_range(&self) -> i32 {
+    pub fn range(&self) -> i32 {
         self.range
     }
 
-    pub fn get_slider_angle(&self) -> i32 {
+    pub fn slider_angle(&self) -> i32 {
         self.direction
     }
 
-    pub fn get_ref_prop(&self) -> Option<&dyn FloatProperty> {
+    pub fn ref_prop(&self) -> Option<&dyn FloatProperty> {
         self.ref_prop.as_deref()
     }
 
-    pub fn get_direction(&self) -> i32 {
+    pub fn direction(&self) -> i32 {
         self.direction
     }
 }

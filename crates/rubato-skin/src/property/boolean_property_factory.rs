@@ -10,14 +10,14 @@ pub struct BooleanPropertyFactory;
 impl BooleanPropertyFactory {
     /// Returns a BooleanProperty for the given option ID.
     /// Negative IDs produce a negated property.
-    pub fn get_boolean_property(optionid: i32) -> Option<Box<dyn BooleanProperty>> {
-        get_boolean_property(optionid)
+    pub fn boolean_property(optionid: i32) -> Option<Box<dyn BooleanProperty>> {
+        boolean_property(optionid)
     }
 }
 
 /// Returns a BooleanProperty for the given option ID.
 /// Negative IDs produce a negated property.
-pub fn get_boolean_property(optionid: i32) -> Option<Box<dyn BooleanProperty>> {
+pub fn boolean_property(optionid: i32) -> Option<Box<dyn BooleanProperty>> {
     let id = optionid.unsigned_abs() as usize;
     if id >= ID_LENGTH {
         return None;
@@ -456,11 +456,11 @@ mod tests {
         values.insert(OPTION_OFFLINE, false);
         let state = BoolMockState::new(values);
 
-        let prop42 = get_boolean_property(OPTION_GAUGE_GROOVE).expect("gauge_groove should exist");
+        let prop42 = boolean_property(OPTION_GAUGE_GROOVE).expect("gauge_groove should exist");
         assert!(prop42.get(&state));
         assert_eq!(prop42.get_id(), OPTION_GAUGE_GROOVE);
 
-        let prop50 = get_boolean_property(OPTION_OFFLINE).expect("offline should exist");
+        let prop50 = boolean_property(OPTION_OFFLINE).expect("offline should exist");
         assert!(!prop50.get(&state));
     }
 
@@ -472,7 +472,7 @@ mod tests {
 
         // Negative ID -> negated property
         let prop =
-            get_boolean_property(-OPTION_GAUGE_GROOVE).expect("negated gauge_groove should exist");
+            boolean_property(-OPTION_GAUGE_GROOVE).expect("negated gauge_groove should exist");
         // Original is true, negated should be false
         assert!(!prop.get(&state));
         assert_eq!(prop.get_id(), -OPTION_GAUGE_GROOVE);
@@ -483,7 +483,7 @@ mod tests {
         let state = BoolMockState::new(std::collections::HashMap::new());
 
         // ID 999 is not in known_ids, falls through to get_boolean_property0
-        let prop = get_boolean_property(999).expect("fallback id 999 should exist");
+        let prop = boolean_property(999).expect("fallback id 999 should exist");
         assert!(!prop.get(&state));
         assert_eq!(prop.get_id(), 999);
     }
@@ -491,15 +491,15 @@ mod tests {
     #[test]
     fn test_boolean_property_out_of_range() {
         // ID >= ID_LENGTH should return None
-        assert!(get_boolean_property(65536).is_none());
-        assert!(get_boolean_property(-65536).is_none());
+        assert!(boolean_property(65536).is_none());
+        assert!(boolean_property(-65536).is_none());
     }
 
     #[test]
     fn test_no_static_gauge_groove() {
         let state = BoolMockState::new(std::collections::HashMap::new());
         // OPTION_GAUGE_GROOVE is TYPE_NO_STATIC
-        let prop = get_boolean_property(OPTION_GAUGE_GROOVE).unwrap();
+        let prop = boolean_property(OPTION_GAUGE_GROOVE).unwrap();
         assert!(!prop.is_static(&state));
     }
 
@@ -509,7 +509,7 @@ mod tests {
     fn test_static_without_music_select_in_play_state() {
         let state = BoolMockState::new(std::collections::HashMap::new());
         // Not a MusicSelector, so should be static
-        let prop = get_boolean_property(OPTION_BGAOFF).unwrap();
+        let prop = boolean_property(OPTION_BGAOFF).unwrap();
         assert!(
             prop.is_static(&state),
             "BGAOFF should be static outside MusicSelector"
@@ -520,7 +520,7 @@ mod tests {
     fn test_static_without_music_select_in_music_selector() {
         let state = BoolMockState::new(std::collections::HashMap::new()).with_music_selector();
         // IS a MusicSelector, so should NOT be static
-        let prop = get_boolean_property(OPTION_BGAOFF).unwrap();
+        let prop = boolean_property(OPTION_BGAOFF).unwrap();
         assert!(
             !prop.is_static(&state),
             "BGAOFF should not be static in MusicSelector"
@@ -530,7 +530,7 @@ mod tests {
     #[test]
     fn test_static_on_result_in_result_state() {
         let state = BoolMockState::new(std::collections::HashMap::new()).with_result_state();
-        let prop = get_boolean_property(OPTION_1P_AAA).unwrap();
+        let prop = boolean_property(OPTION_1P_AAA).unwrap();
         assert!(
             prop.is_static(&state),
             "1P_AAA should be static on result screen"
@@ -540,7 +540,7 @@ mod tests {
     #[test]
     fn test_static_on_result_in_play_state() {
         let state = BoolMockState::new(std::collections::HashMap::new());
-        let prop = get_boolean_property(OPTION_1P_AAA).unwrap();
+        let prop = boolean_property(OPTION_1P_AAA).unwrap();
         assert!(
             !prop.is_static(&state),
             "1P_AAA should not be static outside result screen"
@@ -550,7 +550,7 @@ mod tests {
     #[test]
     fn test_static_all_always_static() {
         let state = BoolMockState::new(std::collections::HashMap::new());
-        let prop = get_boolean_property(OPTION_OFFLINE).unwrap();
+        let prop = boolean_property(OPTION_OFFLINE).unwrap();
         assert!(prop.is_static(&state), "OFFLINE should always be static");
 
         let selector_state =
@@ -564,7 +564,7 @@ mod tests {
     #[test]
     fn test_song_data_property_static_without_music_select() {
         let state = BoolMockState::new(std::collections::HashMap::new());
-        let prop = get_boolean_property(OPTION_LN).unwrap();
+        let prop = boolean_property(OPTION_LN).unwrap();
         assert!(
             prop.is_static(&state),
             "LN should be static outside MusicSelector"
@@ -575,7 +575,7 @@ mod tests {
     #[test]
     fn test_course_stage_property_static_without_music_select() {
         let state = BoolMockState::new(std::collections::HashMap::new());
-        let prop = get_boolean_property(OPTION_COURSE_STAGE1).unwrap();
+        let prop = boolean_property(OPTION_COURSE_STAGE1).unwrap();
         assert!(
             prop.is_static(&state),
             "COURSE_STAGE1 should be static outside MusicSelector"
@@ -592,7 +592,7 @@ mod tests {
     fn test_negated_preserves_staticness() {
         let state = BoolMockState::new(std::collections::HashMap::new());
         // OPTION_BGAOFF is StaticWithoutMusicSelect
-        let prop = get_boolean_property(-OPTION_BGAOFF).unwrap();
+        let prop = boolean_property(-OPTION_BGAOFF).unwrap();
         assert!(
             prop.is_static(&state),
             "Negated BGAOFF should preserve staticness"
@@ -603,7 +603,7 @@ mod tests {
     #[test]
     fn test_judge_exist_static_on_result() {
         let state = BoolMockState::new(std::collections::HashMap::new()).with_result_state();
-        let prop = get_boolean_property(OPTION_PERFECT_EXIST).unwrap();
+        let prop = boolean_property(OPTION_PERFECT_EXIST).unwrap();
         assert!(
             prop.is_static(&state),
             "PERFECT_EXIST should be static on result"
@@ -817,7 +817,7 @@ mod tests {
         ];
         for &id in &boolean_type_ids {
             assert!(
-                get_boolean_property(id).is_some(),
+                boolean_property(id).is_some(),
                 "BooleanType id {} should return Some",
                 id
             );

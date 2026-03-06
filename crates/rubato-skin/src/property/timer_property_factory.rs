@@ -3,7 +3,7 @@ use crate::stubs::MainState;
 
 /// Returns a TimerProperty for the given timer ID.
 /// Returns None if timer_id is negative.
-pub fn get_timer_property(timer_id: i32) -> Option<Box<dyn TimerProperty>> {
+pub fn timer_property(timer_id: i32) -> Option<Box<dyn TimerProperty>> {
     if timer_id < 0 {
         return None;
     }
@@ -51,7 +51,7 @@ mod tests {
     #[test]
     fn test_timer_property_returns_real_micro_timer_value() {
         let timer_id = 10;
-        let prop = get_timer_property(timer_id).unwrap();
+        let prop = timer_property(timer_id).unwrap();
 
         // Set up a state where timer 10 is ON at micro-time 500_000
         let mut state = MockMainState::default();
@@ -77,7 +77,7 @@ mod tests {
     #[test]
     fn test_timer_property_off_timer_returns_min() {
         let timer_id = 42;
-        let prop = get_timer_property(timer_id).unwrap();
+        let prop = timer_property(timer_id).unwrap();
 
         let state = MockMainState::default();
         // Timer 42 is never set, should be OFF (i64::MIN)

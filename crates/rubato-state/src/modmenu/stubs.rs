@@ -80,7 +80,7 @@ impl SkinObject {
         self.name.as_deref()
     }
 
-    pub fn get_all_destination(&self) -> &[SkinObjectDestination] {
+    pub fn all_destination(&self) -> &[SkinObjectDestination] {
         &self.destinations
     }
 }

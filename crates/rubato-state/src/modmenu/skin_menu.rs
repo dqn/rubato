@@ -97,7 +97,7 @@ fn menu_header(ui: &mut egui::Ui) {
     if let Some(ref skin) = *current_skin {
         let current_name = skin.name().map(|n| n.to_string()).unwrap_or_default();
         let current_path = skin
-            .get_path()
+            .path()
             .map(|p| p.display().to_string())
             .unwrap_or_default();
         let skin_count = skins.len();
@@ -263,7 +263,7 @@ fn skin_config_menu(ui: &mut egui::Ui) {
     drop(current_skin);
 
     let mut shown = HashSet::new();
-    let categories = skin.get_custom_categories().to_vec();
+    let categories = skin.custom_categories().to_vec();
     let has_tabs = !categories.is_empty();
 
     if has_tabs {
@@ -358,21 +358,21 @@ fn skin_config_menu(ui: &mut egui::Ui) {
 
 /// Render uncategorized options/files/offsets (items not in any category).
 fn render_uncategorized(ui: &mut egui::Ui, skin: &SkinHeader, shown: &HashSet<String>) {
-    let options = skin.get_custom_options();
+    let options = skin.custom_options();
     for option in options {
         if shown.contains(&option.name) {
             continue;
         }
         skin_config_option(ui, option);
     }
-    let files = skin.get_custom_files();
+    let files = skin.custom_files();
     for file in files {
         if shown.contains(&file.name) {
             continue;
         }
         skin_config_file(ui, file);
     }
-    let offsets = skin.get_custom_offsets();
+    let offsets = skin.custom_offsets();
     for offset in offsets {
         if shown.contains(&offset.name) {
             continue;
@@ -660,7 +660,7 @@ fn load_all_skins(skin_type: &SkinType) -> Vec<SkinHeader> {
         let mut header: Option<SkinHeader> = None;
 
         if let Some(ref cs) = *current_skin
-            && cs.get_path().is_some_and(|p| path == p)
+            && cs.path().is_some_and(|p| path == p)
         {
             header = Some(cs.clone());
         }
@@ -851,7 +851,7 @@ fn parse_custom_file(file: &CustomFile) -> Option<Vec<String>> {
 
 fn load_saved_skin_settings(header: &SkinHeader) {
     let skin_path = header
-        .get_path()
+        .path()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_default();
     let player_config = PLAYER_CONFIG.lock().unwrap();
@@ -917,7 +917,7 @@ fn get_option_setting(option: &CustomOption) -> i32 {
     {
         return value;
     }
-    option.get_default_option()
+    option.default_option()
 }
 
 fn get_file_setting(file: &CustomFile) -> Option<String> {
@@ -944,7 +944,7 @@ fn complete_property(header: &SkinHeader) -> SkinProperty {
     let mut files: Vec<Option<SkinFilePath>> = Vec::new();
     let mut offsets: Vec<Option<SkinOffset>> = Vec::new();
 
-    for option in header.get_custom_options() {
+    for option in header.custom_options() {
         let value = get_option_setting(option);
         let mut opt_map = SET_OPTIONS.lock().unwrap();
         let map = opt_map.get_or_insert_with(HashMap::new);
@@ -955,7 +955,7 @@ fn complete_property(header: &SkinHeader) -> SkinProperty {
         }));
     }
 
-    for file in header.get_custom_files() {
+    for file in header.custom_files() {
         let file_selection = parse_custom_file(file).unwrap_or_else(|| vec!["Random".to_string()]);
 
         {
@@ -1004,7 +1004,7 @@ fn complete_property(header: &SkinHeader) -> SkinProperty {
         }));
     }
 
-    for offset in header.get_custom_offsets() {
+    for offset in header.custom_offsets() {
         let value = get_offset_setting(offset);
         offsets.push(Some(SkinOffset {
             name: Some(offset.name.clone()),
@@ -1040,7 +1040,7 @@ fn save_current_config(next_skin: &SkinHeader) {
     let cs = current_skin.as_ref().unwrap();
 
     let skin_path = cs
-        .get_path()
+        .path()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_default();
     let property = complete_property(cs);
@@ -1100,7 +1100,7 @@ fn switch_current_scene_skin(header: SkinHeader) {
     let _property = complete_property(&header);
 
     let skin_path = header
-        .get_path()
+        .path()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_default();
     let mut config = SkinConfig {

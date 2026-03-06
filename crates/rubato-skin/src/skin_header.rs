@@ -85,7 +85,7 @@ impl SkinHeader {
         self.name = Some(name);
     }
 
-    pub fn get_author(&self) -> Option<&str> {
+    pub fn author(&self) -> Option<&str> {
         self.author.as_deref()
     }
 
@@ -93,7 +93,7 @@ impl SkinHeader {
         self.author = Some(author);
     }
 
-    pub fn get_custom_options(&self) -> &[CustomOption] {
+    pub fn custom_options(&self) -> &[CustomOption] {
         &self.options
     }
 
@@ -101,7 +101,7 @@ impl SkinHeader {
         self.options = options;
     }
 
-    pub fn get_custom_files(&self) -> &[CustomFile] {
+    pub fn custom_files(&self) -> &[CustomFile] {
         &self.files
     }
 
@@ -109,7 +109,7 @@ impl SkinHeader {
         self.files = files;
     }
 
-    pub fn get_path(&self) -> Option<&PathBuf> {
+    pub fn path(&self) -> Option<&PathBuf> {
         self.path.as_ref()
     }
 
@@ -117,7 +117,7 @@ impl SkinHeader {
         self.path = Some(path);
     }
 
-    pub fn get_resolution(&self) -> &Resolution {
+    pub fn resolution(&self) -> &Resolution {
         &self.resolution
     }
 
@@ -133,7 +133,7 @@ impl SkinHeader {
         self.skin_type_id = type_id;
     }
 
-    pub fn get_custom_offsets(&self) -> &[CustomOffset] {
+    pub fn custom_offsets(&self) -> &[CustomOffset] {
         &self.offsets
     }
 
@@ -141,7 +141,7 @@ impl SkinHeader {
         self.offsets = offsets;
     }
 
-    pub fn get_custom_categories(&self) -> &[CustomCategory] {
+    pub fn custom_categories(&self) -> &[CustomCategory] {
         &self.categories
     }
 
@@ -151,7 +151,7 @@ impl SkinHeader {
 
     pub fn set_skin_config_property(&mut self, property: &SkinConfigProperty) {
         for custom_option in &mut self.options {
-            let mut op = custom_option.get_default_option();
+            let mut op = custom_option.default_option();
             for option in &property.option {
                 if option.name == custom_option.name {
                     if option.value != skin_property::OPTION_RANDOM_VALUE {
@@ -268,7 +268,7 @@ impl SkinHeader {
         }
     }
 
-    pub fn get_source_resolution(&self) -> &Resolution {
+    pub fn source_resolution(&self) -> &Resolution {
         self.source_resolution.as_ref().unwrap_or(&self.resolution)
     }
 
@@ -276,7 +276,7 @@ impl SkinHeader {
         self.source_resolution = Some(source_resolution);
     }
 
-    pub fn get_destination_resolution(&self) -> &Resolution {
+    pub fn destination_resolution(&self) -> &Resolution {
         self.destination_resolution
             .as_ref()
             .unwrap_or(&self.resolution)
@@ -299,11 +299,11 @@ pub struct SkinConfigProperty {
 }
 
 impl SkinConfigProperty {
-    pub fn get_option(&self) -> &[SkinConfigOptionEntry] {
+    pub fn option(&self) -> &[SkinConfigOptionEntry] {
         &self.option
     }
 
-    pub fn get_file(&self) -> &[SkinConfigFileEntry] {
+    pub fn file(&self) -> &[SkinConfigFileEntry] {
         &self.file
     }
 
@@ -376,7 +376,7 @@ impl CustomOption {
         }
     }
 
-    pub fn get_default_option(&self) -> i32 {
+    pub fn default_option(&self) -> i32 {
         if let Some(ref def) = self.def {
             for i in 0..self.option.len() {
                 if i < self.contents.len() && self.contents[i] == *def {
@@ -391,7 +391,7 @@ impl CustomOption {
         }
     }
 
-    pub fn get_selected_option(&self) -> i32 {
+    pub fn selected_option(&self) -> i32 {
         if self.selected_index >= 0 && (self.selected_index as usize) < self.option.len() {
             self.option[self.selected_index as usize]
         } else {
@@ -423,7 +423,7 @@ impl CustomFile {
         }
     }
 
-    pub fn get_selected_filename(&self) -> Option<&str> {
+    pub fn selected_filename(&self) -> Option<&str> {
         self.filename.as_deref()
     }
 }

@@ -29,7 +29,7 @@ fn is_skin_customize_button(id: i32) -> bool {
     (BUTTON_SKIN_CUSTOMIZE1..BUTTON_SKIN_CUSTOMIZE10).contains(&id)
 }
 
-fn get_skin_customize_index(id: i32) -> i32 {
+fn skin_customize_index(id: i32) -> i32 {
     id - BUTTON_SKIN_CUSTOMIZE1
 }
 
@@ -38,7 +38,7 @@ fn is_skin_select_type_id(id: i32) -> bool {
         || (BUTTON_SKINSELECT_24KEY..=BUTTON_SKINSELECT_24KEY_BATTLE).contains(&id)
 }
 
-fn get_skin_select_type(id: i32) -> Option<SkinType> {
+fn skin_select_type(id: i32) -> Option<SkinType> {
     if (BUTTON_SKINSELECT_7KEY..=BUTTON_SKINSELECT_COURSE_RESULT).contains(&id) {
         SkinType::skin_type_by_id(id - BUTTON_SKINSELECT_7KEY)
     } else if (BUTTON_SKINSELECT_24KEY..=BUTTON_SKINSELECT_24KEY_BATTLE).contains(&id) {
@@ -854,7 +854,7 @@ impl SkinConfiguration {
             }
             _ => {
                 if is_skin_customize_button(id) {
-                    let index = get_skin_customize_index(id) + self.custom_option_offset;
+                    let index = skin_customize_index(id) + self.custom_option_offset;
                     if let Some(ref mut options) = self.custom_options {
                         let idx = index as usize;
                         if idx < options.len() {
@@ -879,7 +879,7 @@ impl SkinConfiguration {
                         }
                     }
                 } else if is_skin_select_type_id(id) {
-                    let skin_type = get_skin_select_type(id);
+                    let skin_type = skin_select_type(id);
                     self.change_skin_type(skin_type);
                 }
                 // Java: super.executeEvent(id, arg1, arg2) — default no-op in Rust
@@ -1930,9 +1930,9 @@ mod tests {
 
     #[test]
     fn test_get_skin_customize_index() {
-        assert_eq!(get_skin_customize_index(220), 0);
-        assert_eq!(get_skin_customize_index(225), 5);
-        assert_eq!(get_skin_customize_index(228), 8);
+        assert_eq!(skin_customize_index(220), 0);
+        assert_eq!(skin_customize_index(225), 5);
+        assert_eq!(skin_customize_index(228), 8);
     }
 
     #[test]
@@ -1952,11 +1952,11 @@ mod tests {
     #[test]
     fn test_get_skin_select_type() {
         // 170 = BUTTON_SKINSELECT_7KEY => SkinType id 0 = Play7Keys
-        assert_eq!(get_skin_select_type(170), Some(SkinType::Play7Keys));
+        assert_eq!(skin_select_type(170), Some(SkinType::Play7Keys));
         // 175 = Music Select => SkinType id 5 = MusicSelect
-        assert_eq!(get_skin_select_type(175), Some(SkinType::MusicSelect));
+        assert_eq!(skin_select_type(175), Some(SkinType::MusicSelect));
         // Out of range
-        assert_eq!(get_skin_select_type(0), None);
-        assert_eq!(get_skin_select_type(999), None);
+        assert_eq!(skin_select_type(0), None);
+        assert_eq!(skin_select_type(999), None);
     }
 }

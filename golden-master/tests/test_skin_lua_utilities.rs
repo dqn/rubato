@@ -276,7 +276,7 @@ fn skin_object_type_names() {
     use rubato_skin::skin_image::SkinImage;
 
     let obj = SkinObject::Image(SkinImage::new_with_image_id(0));
-    assert_eq!(obj.get_type_name(), "Image");
+    assert_eq!(obj.type_name(), "Image");
 }
 
 // ===========================================================================

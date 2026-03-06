@@ -653,7 +653,7 @@ impl BarManager {
                         })
                         .collect();
 
-                    let filtered_targets = if random_folder.get_filter().is_some() {
+                    let filtered_targets = if random_folder.filter().is_some() {
                         if let Some(ref mut _ctx_inner) = ctx.score_cache.as_ref() {
                             // Filter by score data - requires mutable cache access
                             // Simplified: use targets as-is since we'd need &mut
@@ -665,7 +665,7 @@ impl BarManager {
                         random_targets
                     };
 
-                    let threshold = if random_folder.get_filter().is_some() {
+                    let threshold = if random_folder.filter().is_some() {
                         1
                     } else {
                         2
@@ -998,7 +998,7 @@ impl RandomFolder {
         format!("[RANDOM] {}", self.name.as_deref().unwrap_or(""))
     }
 
-    pub fn get_filter(&self) -> Option<&HashMap<String, serde_json::Value>> {
+    pub fn filter(&self) -> Option<&HashMap<String, serde_json::Value>> {
         self.filter.as_ref()
     }
 

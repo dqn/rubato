@@ -420,7 +420,7 @@ impl SkinGaugeGraphObject {
         self.backtex = None;
     }
 
-    pub fn get_delay(&self) -> i32 {
+    pub fn delay(&self) -> i32 {
         self.delay
     }
 
@@ -428,7 +428,7 @@ impl SkinGaugeGraphObject {
         self.delay = delay;
     }
 
-    pub fn get_line_width(&self) -> i32 {
+    pub fn line_width(&self) -> i32 {
         self.line_width
     }
 

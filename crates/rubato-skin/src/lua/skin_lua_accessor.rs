@@ -433,11 +433,11 @@ impl SkinLuaAccessor {
             }
             table.set("file_path", file_path_table)?;
 
-            // get_path function
+            // path function
             // NOTE: We cannot capture file_path_getter into a Lua closure directly
             // because it borrows from the caller. Instead, log + skip for now.
             log::warn!(
-                "Lua skin property: get_path function not fully wired (requires closure capture)"
+                "Lua skin property: path function not fully wired (requires closure capture)"
             );
 
             // options table and enabled_options array
@@ -445,7 +445,7 @@ impl SkinLuaAccessor {
             let enabled_options_table = self.lua.create_table()?;
             let mut idx = 1;
             for option in &header.custom_options {
-                let opvalue = option.get_selected_option();
+                let opvalue = option.selected_option();
                 options_table.set(option.name.as_str(), opvalue)?;
                 enabled_options_table.set(idx, opvalue)?;
                 idx += 1;
@@ -505,13 +505,13 @@ impl SkinLuaAccessor {
             }
             table.set("file_path", file_path_table)?;
 
-            // get_path function
+            // path function
             let filemap_clone = filemap.clone();
             let get_path_fn = self.lua.create_function(move |_, path: String| {
-                let result = crate::skin_loader::get_path(&path, &filemap_clone);
+                let result = crate::skin_loader::path(&path, &filemap_clone);
                 Ok(result.to_string_lossy().to_string())
             })?;
-            table.set("get_path", get_path_fn)?;
+            table.set("path", get_path_fn)?;
 
             // options table and enabled_options array
             // Java: when selectedOption is RANDOM_VALUE (-1) or unset (0), pick first valid op.

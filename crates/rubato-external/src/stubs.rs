@@ -336,7 +336,7 @@ impl StringProperty for DefaultStringProperty {
 pub struct IntegerPropertyFactory;
 impl IntegerPropertyFactory {
     pub fn integer_property(id: i32) -> Box<dyn IntegerProperty> {
-        match rubato_skin::property::integer_property_factory::get_integer_property_by_id(id) {
+        match rubato_skin::property::integer_property_factory::integer_property_by_id(id) {
             Some(prop) => Box::new(SkinIntegerPropertyAdapter(prop)),
             None => Box::new(DefaultIntegerProperty),
         }
@@ -346,7 +346,7 @@ impl IntegerPropertyFactory {
 pub struct BooleanPropertyFactory;
 impl BooleanPropertyFactory {
     pub fn boolean_property(id: i32) -> Box<dyn BooleanProperty> {
-        match rubato_skin::property::boolean_property_factory::get_boolean_property(id) {
+        match rubato_skin::property::boolean_property_factory::boolean_property(id) {
             Some(prop) => Box::new(SkinBooleanPropertyAdapter(prop)),
             None => Box::new(DefaultBooleanProperty),
         }
@@ -356,7 +356,7 @@ impl BooleanPropertyFactory {
 pub struct StringPropertyFactory;
 impl StringPropertyFactory {
     pub fn string_property(id: i32) -> Box<dyn StringProperty> {
-        match rubato_skin::property::string_property_factory::get_string_property_by_id(id) {
+        match rubato_skin::property::string_property_factory::string_property_by_id(id) {
             Some(prop) => Box::new(SkinStringPropertyAdapter(prop)),
             None => Box::new(DefaultStringProperty),
         }

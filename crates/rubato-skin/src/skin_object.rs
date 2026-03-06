@@ -49,7 +49,7 @@ pub struct RateProperty {
 impl RateProperty {
     pub fn new(type_id: i32, min: i32, max: i32) -> Self {
         Self {
-            ref_prop: integer_property_factory::get_integer_property_by_id(type_id),
+            ref_prop: integer_property_factory::integer_property_by_id(type_id),
             min,
             max,
         }
@@ -179,7 +179,7 @@ impl SkinObjectData {
         Self::default()
     }
 
-    pub fn get_all_destination(&self) -> &[SkinObjectDestination] {
+    pub fn all_destination(&self) -> &[SkinObjectDestination] {
         &self.dst
     }
 
@@ -208,7 +208,7 @@ impl SkinObjectData {
         offset: i32,
     ) {
         let timer_prop = if timer > 0 {
-            crate::property::timer_property_factory::get_timer_property(timer)
+            crate::property::timer_property_factory::timer_property(timer)
         } else {
             None
         };
@@ -259,7 +259,7 @@ impl SkinObjectData {
         offset: &[i32],
     ) {
         let timer_prop = if timer > 0 {
-            crate::property::timer_property_factory::get_timer_property(timer)
+            crate::property::timer_property_factory::timer_property(timer)
         } else {
             None
         };
@@ -307,7 +307,7 @@ impl SkinObjectData {
         op: &[i32],
     ) {
         let timer_prop = if timer > 0 {
-            crate::property::timer_property_factory::get_timer_property(timer)
+            crate::property::timer_property_factory::timer_property(timer)
         } else {
             None
         };
@@ -341,7 +341,7 @@ impl SkinObjectData {
         draw_prop: Box<dyn BooleanProperty>,
     ) {
         let timer_prop = if timer > 0 {
-            crate::property::timer_property_factory::get_timer_property(timer)
+            crate::property::timer_property_factory::timer_property(timer)
         } else {
             None
         };
@@ -583,11 +583,11 @@ impl SkinObjectData {
         self.endtime = self.dst[self.dst.len() - 1].time;
     }
 
-    pub fn get_draw_condition(&self) -> &[Box<dyn BooleanProperty>] {
+    pub fn draw_condition(&self) -> &[Box<dyn BooleanProperty>] {
         &self.dstdraw
     }
 
-    pub fn get_option(&self) -> &[i32] {
+    pub fn option(&self) -> &[i32] {
         &self.dstop
     }
 
@@ -601,7 +601,7 @@ impl SkinObjectData {
         let mut draw: Vec<Box<dyn BooleanProperty>> = Vec::new();
         for &i in dstop {
             if i != 0 && !seen.contains(&i) {
-                if let Some(dc) = boolean_property_factory::get_boolean_property(i) {
+                if let Some(dc) = boolean_property_factory::boolean_property(i) {
                     draw.push(dc);
                 } else {
                     op.push(i);
@@ -633,11 +633,11 @@ impl SkinObjectData {
         self.stretch = stretch;
     }
 
-    pub fn get_stretch(&self) -> StretchType {
+    pub fn stretch(&self) -> StretchType {
         self.stretch
     }
 
-    pub fn get_blend(&self) -> i32 {
+    pub fn blend(&self) -> i32 {
         self.dstblend
     }
 
@@ -740,7 +740,7 @@ impl SkinObjectData {
         }
     }
 
-    pub fn get_destination(&self, _time: i64, _state: &dyn MainState) -> Option<&Rectangle> {
+    pub fn destination(&self, _time: i64, _state: &dyn MainState) -> Option<&Rectangle> {
         if self.draw { Some(&self.region) } else { None }
     }
 
@@ -791,7 +791,7 @@ impl SkinObjectData {
         }
     }
 
-    pub fn get_color(&self) -> &Color {
+    pub fn color(&self) -> &Color {
         &self.color
     }
 
@@ -889,8 +889,8 @@ impl SkinObjectData {
         self.region.x += offset_x;
         self.region.y += offset_y;
         if let Some(ref mouse_rect) = self.mouse_rect {
-            let mx = state.get_main().input_processor().get_mouse_x() - self.region.x;
-            let my = state.get_main().input_processor().get_mouse_y() - self.region.y;
+            let mx = state.get_main().input_processor().mouse_x() - self.region.x;
+            let my = state.get_main().input_processor().mouse_y() - self.region.y;
             if !mouse_rect.contains(mx, my) {
                 self.draw = false;
                 return;
@@ -1089,26 +1089,26 @@ impl SkinObjectData {
         false
     }
 
-    pub fn get_clickevent_id(&self) -> i32 {
+    pub fn clickevent_id(&self) -> i32 {
         self.clickevent
             .as_ref()
             .map(|e| e.get_event_id())
             .unwrap_or(0)
     }
 
-    pub fn get_clickevent(&self) -> Option<&dyn Event> {
+    pub fn clickevent(&self) -> Option<&dyn Event> {
         self.clickevent.as_deref()
     }
 
     pub fn set_clickevent_by_id(&mut self, clickevent: i32) {
-        self.clickevent = event_factory::get_event_by_id(clickevent);
+        self.clickevent = event_factory::event_by_id(clickevent);
     }
 
     pub fn set_clickevent(&mut self, clickevent: Box<dyn Event>) {
         self.clickevent = Some(clickevent);
     }
 
-    pub fn get_clickevent_type(&self) -> i32 {
+    pub fn clickevent_type(&self) -> i32 {
         self.clickevent_type
     }
 
@@ -1124,7 +1124,7 @@ impl SkinObjectData {
         self.relative = relative;
     }
 
-    pub fn get_offset_id(&self) -> &[i32] {
+    pub fn offset_id(&self) -> &[i32] {
         &self.offset
     }
 
@@ -1148,15 +1148,15 @@ impl SkinObjectData {
         }
     }
 
-    pub fn get_offsets(&self) -> &[Option<SkinOffset>] {
+    pub fn offsets(&self) -> &[Option<SkinOffset>] {
         &self.off
     }
 
-    pub fn get_destination_timer(&self) -> Option<&dyn TimerProperty> {
+    pub fn destination_timer(&self) -> Option<&dyn TimerProperty> {
         self.dsttimer.as_deref()
     }
 
-    pub fn get_image_type(&self) -> i32 {
+    pub fn image_type(&self) -> i32 {
         self.image_type
     }
 
@@ -1164,7 +1164,7 @@ impl SkinObjectData {
         self.image_type = image_type;
     }
 
-    pub fn get_filter(&self) -> i32 {
+    pub fn filter(&self) -> i32 {
         self.dstfilter
     }
 
@@ -1254,7 +1254,7 @@ impl SkinObjectRenderer {
         self.color.set_rgba(r, g, b, a);
     }
 
-    pub fn get_color(&self) -> &Color {
+    pub fn color(&self) -> &Color {
         &self.color
     }
 
@@ -1262,7 +1262,7 @@ impl SkinObjectRenderer {
         self.blend = blend;
     }
 
-    pub fn get_blend(&self) -> i32 {
+    pub fn blend(&self) -> i32 {
         self.blend
     }
 
@@ -1441,16 +1441,16 @@ mod tests {
         let mut renderer = SkinObjectRenderer::new();
         let red = Color::new(1.0, 0.0, 0.0, 0.5);
         renderer.set_color(&red);
-        assert_eq!(renderer.get_color().r, 1.0);
-        assert_eq!(renderer.get_color().g, 0.0);
-        assert_eq!(renderer.get_color().a, 0.5);
+        assert_eq!(renderer.color().r, 1.0);
+        assert_eq!(renderer.color().g, 0.0);
+        assert_eq!(renderer.color().a, 0.5);
     }
 
     #[test]
     fn test_skin_object_renderer_set_blend() {
         let mut renderer = SkinObjectRenderer::new();
         renderer.set_blend(2);
-        assert_eq!(renderer.get_blend(), 2);
+        assert_eq!(renderer.blend(), 2);
     }
 
     #[test]

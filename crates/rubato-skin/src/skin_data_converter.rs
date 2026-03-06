@@ -13,7 +13,7 @@ use crate::json::json_skin_loader::{
     SkinObjectData as LoaderSkinObjectData, SkinObjectType, SongListBarData, SourceData,
     SourceDataType,
 };
-use crate::json::json_skin_object_loader::get_source_image;
+use crate::json::json_skin_object_loader::source_image;
 use crate::property::boolean_property_factory;
 use crate::property::event_factory;
 use crate::property::string_property_factory;
@@ -245,7 +245,7 @@ pub fn convert_skin_data(
 
             // Add the object to the skin
             skin.add(obj);
-            let obj_index = skin.get_all_skin_objects_count() - 1;
+            let obj_index = skin.all_skin_objects_count() - 1;
 
             // Set destinations
             for dst in &obj_data.destinations {
@@ -256,12 +256,11 @@ pub fn convert_skin_data(
                     && draw_id != 0
                 {
                     let timer_prop = if timer_id > 0 {
-                        timer_property_factory::get_timer_property(timer_id)
+                        timer_property_factory::timer_property(timer_id)
                     } else {
                         None
                     };
-                    if let Some(draw_prop) = boolean_property_factory::get_boolean_property(draw_id)
-                    {
+                    if let Some(draw_prop) = boolean_property_factory::boolean_property(draw_id) {
                         skin.set_destination_with_timer_draw(
                             obj_index,
                             dst.time as i64,
@@ -289,7 +288,7 @@ pub fn convert_skin_data(
                 // Handle op-based destination
                 if !dst.op.is_empty() {
                     let timer_prop = if timer_id > 0 {
-                        timer_property_factory::get_timer_property(timer_id)
+                        timer_property_factory::timer_property(timer_id)
                     } else {
                         None
                     };
@@ -382,10 +381,10 @@ pub fn convert_skin_data(
 
     // Add custom events
     for event_data in &data.custom_events {
-        let action = event_data.action.and_then(event_factory::get_event_by_id);
+        let action = event_data.action.and_then(event_factory::event_by_id);
         let condition = event_data
             .condition
-            .and_then(boolean_property_factory::get_boolean_property);
+            .and_then(boolean_property_factory::boolean_property);
         if let Some(action) = action {
             let event = CustomEvent::new(event_data.id, action, condition, event_data.min_interval);
             skin.add_custom_event(event);
@@ -396,7 +395,7 @@ pub fn convert_skin_data(
     for timer_data in &data.custom_timers {
         let timer_func = timer_data
             .timer
-            .and_then(timer_property_factory::get_timer_property);
+            .and_then(timer_property_factory::timer_property);
         let timer = CustomTimer::new(timer_data.id, timer_func);
         skin.add_custom_timer(timer);
     }
@@ -463,7 +462,7 @@ fn convert_skin_object(
             }
 
             let tex = get_texture_for_src(src.as_deref(), source_map, skin_path, usecim)?;
-            let srcimg = get_source_image(&tex, *x, *y, *w, *h, *divx, *divy);
+            let srcimg = source_image(&tex, *x, *y, *w, *h, *divx, *divy);
 
             if *len > 1 {
                 // Multiple reference images
@@ -536,7 +535,7 @@ fn convert_skin_object(
             offsets,
         } => {
             let tex = get_texture_for_src(src.as_deref(), source_map, skin_path, usecim)?;
-            let images = get_source_image(&tex, *x, *y, *w, *h, *divx, *divy);
+            let images = source_image(&tex, *x, *y, *w, *h, *divx, *divy);
             let timer_val = timer.unwrap_or(0);
 
             let num = if images.len().is_multiple_of(24) {
@@ -670,7 +669,7 @@ fn convert_skin_object(
             let tex = get_texture_for_src(src.as_deref(), source_map, skin_path, usecim);
             tex.as_ref()?;
             let tex = tex.unwrap();
-            let images = get_source_image(&tex, *x, *y, *w, *h, *divx, *divy);
+            let images = source_image(&tex, *x, *y, *w, *h, *divx, *divy);
             let timer_val = timer.unwrap_or(0);
 
             // Create as SkinFloat using the available constructor
@@ -726,7 +725,7 @@ fn convert_skin_object(
             if let Some(font_path) = font {
                 let text_id = value.unwrap_or(*ref_id);
                 let property = if text_id >= 0 {
-                    string_property_factory::get_string_property_by_id(text_id)
+                    string_property_factory::string_property_by_id(text_id)
                 } else {
                     None
                 };
@@ -759,7 +758,7 @@ fn convert_skin_object(
             max: _,
         } => {
             let tex = get_texture_for_src(src.as_deref(), source_map, skin_path, usecim)?;
-            let images = get_source_image(&tex, *x, *y, *w, *h, *divx, *divy);
+            let images = source_image(&tex, *x, *y, *w, *h, *divx, *divy);
             let timer_val = timer.unwrap_or(0);
             let type_id = value.unwrap_or(*slider_type);
             let slider = SkinSlider::new_with_int_timer(
@@ -792,7 +791,7 @@ fn convert_skin_object(
             max,
         } => {
             let tex = get_texture_for_src(src.as_deref(), source_map, skin_path, usecim)?;
-            let images = get_source_image(&tex, *x, *y, *w, *h, *divx, *divy);
+            let images = source_image(&tex, *x, *y, *w, *h, *divx, *divy);
             let timer_val = timer.unwrap_or(0);
             if let Some(val) = value {
                 Some(SkinObject::Graph(SkinGraph::new_with_int_timer(
@@ -1072,7 +1071,7 @@ fn convert_skin_object(
             //       offsets += [OFFSET_LIFT, OFFSET_HIDDEN_COVER]
             let tex = get_texture_for_src(src.as_deref(), source_map, skin_path, usecim);
             if let Some(tex) = tex {
-                let srcimg = get_source_image(&tex, *x, *y, *w, *h, *divx, *divy);
+                let srcimg = source_image(&tex, *x, *y, *w, *h, *divx, *divy);
                 let timer_val = timer.unwrap_or(0);
                 let mut hidden = SkinHidden::new_with_int_timer(srcimg, timer_val, *cycle);
                 hidden.set_disapear_line(*disapear_line as f32 * scale_y);
@@ -1099,7 +1098,7 @@ fn convert_skin_object(
             // LiftCover: same as HiddenCover but offset list only adds OFFSET_LIFT.
             let tex = get_texture_for_src(src.as_deref(), source_map, skin_path, usecim);
             if let Some(tex) = tex {
-                let srcimg = get_source_image(&tex, *x, *y, *w, *h, *divx, *divy);
+                let srcimg = source_image(&tex, *x, *y, *w, *h, *divx, *divy);
                 let timer_val = timer.unwrap_or(0);
                 let mut hidden = SkinHidden::new_with_int_timer(srcimg, timer_val, *cycle);
                 hidden.set_disapear_line(*disapear_line as f32 * scale_y);
@@ -1218,7 +1217,7 @@ fn resolve_image_set(
         .iter()
         .filter_map(|entry| {
             let tex = get_texture_for_src(entry.src.as_deref(), source_map, skin_path, usecim)?;
-            Some(get_source_image(
+            Some(source_image(
                 &tex, entry.x, entry.y, entry.w, entry.h, entry.divx, entry.divy,
             ))
         })
@@ -1444,11 +1443,11 @@ mod tests {
         let header = convert_header_data(&header_data, &src, &dst);
 
         assert_eq!(header.name(), Some("Test Skin"));
-        assert_eq!(header.get_author(), Some("Test Author"));
-        assert_eq!(header.get_source_resolution().width, 1920.0);
-        assert_eq!(header.get_source_resolution().height, 1080.0);
-        assert_eq!(header.get_destination_resolution().width, 1920.0);
-        assert_eq!(header.get_destination_resolution().height, 1080.0);
+        assert_eq!(header.author(), Some("Test Author"));
+        assert_eq!(header.source_resolution().width, 1920.0);
+        assert_eq!(header.source_resolution().height, 1080.0);
+        assert_eq!(header.destination_resolution().width, 1920.0);
+        assert_eq!(header.destination_resolution().height, 1080.0);
     }
 
     #[test]
@@ -1469,10 +1468,10 @@ mod tests {
         let dst = make_test_dst();
         let header = convert_header_data(&header_data, &src, &dst);
 
-        assert_eq!(header.get_custom_options().len(), 1);
-        assert_eq!(header.get_custom_options()[0].name, "Option1");
-        assert_eq!(header.get_custom_options()[0].option, vec![100, 101, 102]);
-        assert_eq!(header.get_custom_options()[0].selected_index, 1);
+        assert_eq!(header.custom_options().len(), 1);
+        assert_eq!(header.custom_options()[0].name, "Option1");
+        assert_eq!(header.custom_options()[0].option, vec![100, 101, 102]);
+        assert_eq!(header.custom_options()[0].selected_index, 1);
     }
 
     #[test]
@@ -1496,9 +1495,9 @@ mod tests {
         let dst = make_test_dst();
         let header = convert_header_data(&header_data, &src, &dst);
 
-        assert_eq!(header.get_custom_offsets().len(), 1);
-        assert_eq!(header.get_custom_offsets()[0].name, "Offset1");
-        assert_eq!(header.get_custom_offsets()[0].id, 900);
+        assert_eq!(header.custom_offsets().len(), 1);
+        assert_eq!(header.custom_offsets()[0].name, "Offset1");
+        assert_eq!(header.custom_offsets()[0].id, 900);
     }
 
     // -- Test: empty SkinData -> Skin --
@@ -1521,9 +1520,9 @@ mod tests {
 
         assert!(skin.is_some());
         let skin = skin.unwrap();
-        assert_eq!(skin.get_all_skin_objects_count(), 0);
-        assert_eq!(skin.get_custom_events_count(), 0);
-        assert_eq!(skin.get_custom_timers_count(), 0);
+        assert_eq!(skin.all_skin_objects_count(), 0);
+        assert_eq!(skin.custom_events_count(), 0);
+        assert_eq!(skin.custom_timers_count(), 0);
     }
 
     // -- Test: skin with ImageById object --
@@ -1574,8 +1573,8 @@ mod tests {
 
         assert!(skin.is_some());
         let skin = skin.unwrap();
-        assert_eq!(skin.get_all_skin_objects_count(), 1);
-        assert_eq!(skin.get_objects()[0].get_type_name(), "Image");
+        assert_eq!(skin.all_skin_objects_count(), 1);
+        assert_eq!(skin.objects()[0].type_name(), "Image");
     }
 
     // -- Test: option wiring --
@@ -1605,7 +1604,7 @@ mod tests {
         );
 
         let skin = skin.unwrap();
-        let option = skin.get_option();
+        let option = skin.option();
         // 200 is not selected => 0, 201 is selected => 1
         assert_eq!(option.get(&200), Some(&0));
         assert_eq!(option.get(&201), Some(&1));
@@ -1702,7 +1701,7 @@ mod tests {
         );
 
         let skin = skin.unwrap();
-        assert_eq!(skin.get_custom_timers_count(), 2);
+        assert_eq!(skin.custom_timers_count(), 2);
     }
 
     // -- Test: conversion with destinations --
@@ -1774,10 +1773,10 @@ mod tests {
         );
 
         let skin = skin.unwrap();
-        assert_eq!(skin.get_all_skin_objects_count(), 1);
+        assert_eq!(skin.all_skin_objects_count(), 1);
         // The object should have 2 destinations set via set_destination
         // We can verify the object data has destinations
-        let obj = &skin.get_objects()[0];
+        let obj = &skin.objects()[0];
         assert_eq!(obj.data().dst.len(), 2);
     }
 
@@ -1833,9 +1832,9 @@ mod tests {
         );
 
         let skin = skin.unwrap();
-        assert_eq!(skin.get_all_skin_objects_count(), 1);
+        assert_eq!(skin.all_skin_objects_count(), 1);
         // Mouse rect is set — verify via the object's mouse_rect field
-        let obj = &skin.get_objects()[0];
+        let obj = &skin.objects()[0];
         assert!(obj.data().mouse_rect.is_some());
     }
 
@@ -1854,7 +1853,7 @@ mod tests {
             1.0,
         );
         assert!(bga.is_some());
-        assert_eq!(bga.unwrap().get_type_name(), "SkinBGA");
+        assert_eq!(bga.unwrap().type_name(), "SkinBGA");
     }
 
     #[test]
@@ -1886,7 +1885,7 @@ mod tests {
             1.0,
         );
         assert!(gg.is_some());
-        assert_eq!(gg.unwrap().get_type_name(), "SkinGaugeGraph");
+        assert_eq!(gg.unwrap().type_name(), "SkinGaugeGraph");
     }
 
     #[test]
@@ -1921,7 +1920,7 @@ mod tests {
             1.0,
         );
         assert!(gg.is_some());
-        assert_eq!(gg.unwrap().get_type_name(), "SkinGaugeGraph");
+        assert_eq!(gg.unwrap().type_name(), "SkinGaugeGraph");
     }
 
     #[test]
@@ -1945,7 +1944,7 @@ mod tests {
             1.0,
         );
         assert!(gauge.is_some());
-        assert_eq!(gauge.unwrap().get_type_name(), "SkinGauge");
+        assert_eq!(gauge.unwrap().type_name(), "SkinGauge");
     }
 
     #[test]
@@ -2021,7 +2020,7 @@ mod tests {
         );
         assert!(pm.is_some());
         // PmChara returns a placeholder SkinImage
-        assert_eq!(pm.unwrap().get_type_name(), "Image");
+        assert_eq!(pm.unwrap().type_name(), "Image");
     }
 
     #[test]
@@ -2085,7 +2084,7 @@ mod tests {
             1.0,
         );
         assert!(is.is_some());
-        assert_eq!(is.unwrap().get_type_name(), "Image");
+        assert_eq!(is.unwrap().type_name(), "Image");
     }
 
     #[test]
@@ -2095,7 +2094,7 @@ mod tests {
 
         let note = convert_skin_object(&SkinObjectType::Note, &mut source_map, path, false, 1.0);
         assert!(note.is_some());
-        assert_eq!(note.unwrap().get_type_name(), "SkinNote");
+        assert_eq!(note.unwrap().type_name(), "SkinNote");
 
         let judge = convert_skin_object(
             &SkinObjectType::Judge {
@@ -2108,7 +2107,7 @@ mod tests {
             1.0,
         );
         assert!(judge.is_some());
-        assert_eq!(judge.unwrap().get_type_name(), "SkinJudge");
+        assert_eq!(judge.unwrap().type_name(), "SkinJudge");
 
         let bar = convert_skin_object(
             &SkinObjectType::SongList {
@@ -2122,6 +2121,6 @@ mod tests {
             1.0,
         );
         assert!(bar.is_some());
-        assert_eq!(bar.unwrap().get_type_name(), "SkinBar");
+        assert_eq!(bar.unwrap().type_name(), "SkinBar");
     }
 }

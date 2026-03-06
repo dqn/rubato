@@ -302,7 +302,7 @@ impl SkinConfigurationView {
         // List<SkinConfig.Option> options = new ArrayList<>();
         let mut options: Vec<Option<SkinOption>> = Vec::new();
         // for (CustomOption option : selected.getCustomOptions()) {
-        for option in selected.get_custom_options() {
+        for option in selected.custom_options() {
             // if (optionbox.get(option) != null) {
             if let Some(&item_idx) = self.optionbox.get(&option.name)
                 && let Some(SkinConfigItem::Option {
@@ -341,7 +341,7 @@ impl SkinConfigurationView {
         // List<SkinConfig.FilePath> files = new ArrayList<>();
         let mut files: Vec<Option<SkinFilePath>> = Vec::new();
         // for (CustomFile file : selected.getCustomFiles()) {
-        for file in selected.get_custom_files() {
+        for file in selected.custom_files() {
             // if (filebox.get(file) != null) {
             if let Some(&item_idx) = self.filebox.get(&file.name)
                 && let Some(SkinConfigItem::File { selected_value, .. }) =
@@ -363,7 +363,7 @@ impl SkinConfigurationView {
         // List<SkinConfig.Offset> offsets = new ArrayList<>();
         let mut offsets: Vec<Option<SkinOffset>> = Vec::new();
         // for (CustomOffset offset : selected.getCustomOffsets()) {
-        for offset in selected.get_custom_offsets() {
+        for offset in selected.custom_offsets() {
             // if (offsetbox.get(offset) != null) {
             if let Some(&item_idx) = self.offsetbox.get(&offset.name)
                 && let Some(SkinConfigItem::Offset { values, .. }) =
@@ -437,8 +437,7 @@ impl SkinConfigurationView {
                 let mut found = false;
                 for (i, header) in self.current_headers.iter().enumerate() {
                     // if (header != null && header.getPath().equals(Paths.get(skinconf.getPath()))) {
-                    if let (Some(header_path), Some(skin_path)) =
-                        (header.get_path(), &skinconf.path)
+                    if let (Some(header_path), Some(skin_path)) = (header.path(), &skinconf.path)
                         && header_path == &PathBuf::from(skin_path)
                     {
                         // skinheaderSelector.setValue(header);
@@ -474,7 +473,7 @@ impl SkinConfigurationView {
         if let Some(selected) = self.selected.clone() {
             // SkinConfig skin = new SkinConfig(selected.getPath().toString());
             let path_str: String = selected
-                .get_path()
+                .path()
                 .map(|p: &PathBuf| p.to_string_lossy().to_string())
                 .unwrap_or_default();
             let mut skin = SkinConfig::new_with_path(&path_str);
@@ -607,7 +606,7 @@ impl SkinConfigurationView {
             if let Some(ref player) = self.player {
                 for skinc in &player.skin_history {
                     // if(skinc.getPath().equals(header.getPath().toString())) {
-                    if let (Some(skin_path), Some(header_path)) = (&skinc.path, header.get_path())
+                    if let (Some(skin_path), Some(header_path)) = (&skinc.path, header.path())
                         && skin_path == &header_path.to_string_lossy().to_string()
                     {
                         // property = skinc.getProperties();
@@ -653,7 +652,7 @@ impl SkinConfigurationView {
         for (i, history_entry) in player.skin_history.iter().enumerate() {
             // if(player.getSkinHistory()[i].getPath().equals(selected.getPath().toString())) {
             let sel_path_str: Option<String> = selected
-                .get_path()
+                .path()
                 .map(|p: &PathBuf| p.to_string_lossy().to_string());
             if let (Some(hist_path), Some(sel_path)) = (&history_entry.path, &sel_path_str)
                 && hist_path == sel_path
@@ -667,7 +666,7 @@ impl SkinConfigurationView {
         // sc.setPath(selected.getPath().toString()); sc.setProperties(property);
         let sc = SkinConfig {
             path: selected
-                .get_path()
+                .path()
                 .map(|p: &PathBuf| p.to_string_lossy().to_string()),
             properties: Some(property),
         };
@@ -702,20 +701,20 @@ impl SkinConfigurationView {
         let mut other_offsets: Vec<usize> = Vec::new(); // indices into header's custom offsets
 
         // otheritems.addAll(Arrays.asList(header.getCustomOptions()));
-        for i in 0..header.get_custom_options().len() {
+        for i in 0..header.custom_options().len() {
             other_options.push(i);
         }
         // otheritems.addAll(Arrays.asList(header.getCustomFiles()));
-        for i in 0..header.get_custom_files().len() {
+        for i in 0..header.custom_files().len() {
             other_files.push(i);
         }
         // otheritems.addAll(Arrays.asList(header.getCustomOffsets()));
-        for i in 0..header.get_custom_offsets().len() {
+        for i in 0..header.custom_offsets().len() {
             other_offsets.push(i);
         }
 
         // for(CustomCategory category : header.getCustomCategories()) {
-        for category in header.get_custom_categories() {
+        for category in header.custom_categories() {
             // items.add(category.name);
             items.push(CreateItem::Label(category.name.clone()));
             // for(Object item : category.items) { items.add(item); otheritems.remove(item); }
@@ -725,7 +724,7 @@ impl SkinConfigurationView {
                         // Find and remove from other_options
                         if let Some(pos) = other_options
                             .iter()
-                            .position(|&i| header.get_custom_options()[i].name == opt.name)
+                            .position(|&i| header.custom_options()[i].name == opt.name)
                         {
                             let idx = other_options.remove(pos);
                             items.push(CreateItem::OptionIdx(idx));
@@ -734,7 +733,7 @@ impl SkinConfigurationView {
                     CustomItemEnum::File(file) => {
                         if let Some(pos) = other_files
                             .iter()
-                            .position(|&i| header.get_custom_files()[i].name == file.name)
+                            .position(|&i| header.custom_files()[i].name == file.name)
                         {
                             let idx = other_files.remove(pos);
                             items.push(CreateItem::FileIdx(idx));
@@ -743,7 +742,7 @@ impl SkinConfigurationView {
                     CustomItemEnum::Offset(offset) => {
                         if let Some(pos) = other_offsets
                             .iter()
-                            .position(|&i| header.get_custom_offsets()[i].name == offset.name)
+                            .position(|&i| header.custom_offsets()[i].name == offset.name)
                         {
                             let idx = other_offsets.remove(pos);
                             items.push(CreateItem::OffsetIdx(idx));
@@ -783,7 +782,7 @@ impl SkinConfigurationView {
             match item {
                 CreateItem::OptionIdx(opt_idx) => {
                     // if(item instanceof CustomOption) {
-                    let option = &header.get_custom_options()[*opt_idx];
+                    let option = &header.custom_options()[*opt_idx];
                     // ComboBox<String> combo = new ComboBox<>();
                     // combo.getItems().setAll(option.contents);
                     // combo.getItems().add("Random");
@@ -848,7 +847,7 @@ impl SkinConfigurationView {
                 }
                 CreateItem::FileIdx(file_idx) => {
                     // if(item instanceof CustomFile) {
-                    let file = &header.get_custom_files()[*file_idx];
+                    let file = &header.custom_files()[*file_idx];
 
                     // String name = file.path.substring(file.path.lastIndexOf('/') + 1);
                     let mut name = file
@@ -965,7 +964,7 @@ impl SkinConfigurationView {
                 }
                 CreateItem::OffsetIdx(offset_idx) => {
                     // if(item instanceof CustomOffset) {
-                    let offset = &header.get_custom_offsets()[*offset_idx];
+                    let offset = &header.custom_offsets()[*offset_idx];
                     // final String[] values = {"x","y","w","h","r","a"};
                     // final boolean[] b = {option.x, option.y, option.w, option.h, option.r, option.a};
                     let enabled = [offset.x, offset.y, offset.w, offset.h, offset.r, offset.a];
@@ -1396,10 +1395,7 @@ mod tests {
         assert_eq!(header.get_type(), TYPE_LR2SKIN);
         assert_eq!(header.name(), Some("Test LR2 Skin"));
         assert_eq!(header.skin_type(), Some(&SkinType::Play7Keys));
-        assert_eq!(
-            header.get_path(),
-            Some(&PathBuf::from("/test/skin.lr2skin"))
-        );
+        assert_eq!(header.path(), Some(&PathBuf::from("/test/skin.lr2skin")));
     }
 
     #[test]
@@ -1419,9 +1415,9 @@ mod tests {
 
         let header = convert_lr2_header_data(&lr2_data);
 
-        assert_eq!(header.get_custom_options().len(), 1);
-        assert_eq!(header.get_custom_options()[0].name, "BGA Size");
-        assert_eq!(header.get_custom_options()[0].option, vec![30, 31]);
+        assert_eq!(header.custom_options().len(), 1);
+        assert_eq!(header.custom_options()[0].name, "BGA Size");
+        assert_eq!(header.custom_options()[0].option, vec![30, 31]);
     }
 
     #[test]
@@ -1441,13 +1437,10 @@ mod tests {
 
         let header = convert_lr2_header_data(&lr2_data);
 
-        assert_eq!(header.get_custom_files().len(), 1);
-        assert_eq!(header.get_custom_files()[0].name, "Lane");
-        assert_eq!(header.get_custom_files()[0].path, "skin/lane/*.png");
-        assert_eq!(
-            header.get_custom_files()[0].def,
-            Some("default".to_string())
-        );
+        assert_eq!(header.custom_files().len(), 1);
+        assert_eq!(header.custom_files()[0].name, "Lane");
+        assert_eq!(header.custom_files()[0].path, "skin/lane/*.png");
+        assert_eq!(header.custom_files()[0].def, Some("default".to_string()));
     }
 
     #[test]
@@ -1472,12 +1465,12 @@ mod tests {
 
         let header = convert_lr2_header_data(&lr2_data);
 
-        assert_eq!(header.get_custom_offsets().len(), 1);
-        assert_eq!(header.get_custom_offsets()[0].name, "All offset(%)");
-        assert_eq!(header.get_custom_offsets()[0].id, 0);
-        assert!(header.get_custom_offsets()[0].x);
-        assert!(header.get_custom_offsets()[0].y);
-        assert!(!header.get_custom_offsets()[0].r);
+        assert_eq!(header.custom_offsets().len(), 1);
+        assert_eq!(header.custom_offsets()[0].name, "All offset(%)");
+        assert_eq!(header.custom_offsets()[0].id, 0);
+        assert!(header.custom_offsets()[0].x);
+        assert!(header.custom_offsets()[0].y);
+        assert!(!header.custom_offsets()[0].r);
     }
 
     #[test]

@@ -5,7 +5,7 @@ use super::string_property::StringProperty;
 use crate::stubs::MainState;
 
 /// Returns a StringProperty for the given ID.
-pub fn get_string_property_by_id(id: i32) -> Option<Box<dyn StringProperty>> {
+pub fn string_property_by_id(id: i32) -> Option<Box<dyn StringProperty>> {
     let map = get_id_map();
     if map.contains_key(&id) {
         return Some(Box::new(DelegateStringProperty { id }));
@@ -14,7 +14,7 @@ pub fn get_string_property_by_id(id: i32) -> Option<Box<dyn StringProperty>> {
 }
 
 /// Returns a StringProperty for the given name.
-pub fn get_string_property_by_name(name: &str) -> Option<Box<dyn StringProperty>> {
+pub fn string_property_by_name(name: &str) -> Option<Box<dyn StringProperty>> {
     for st in STRING_TYPES.iter() {
         if st.name == name {
             return Some(Box::new(DelegateStringProperty { id: st.id }));

@@ -94,7 +94,7 @@ pub fn key_off_timer_id(player: i32, key: i32) -> i32 {
 /// Extracts the player index (0 or 1) from a per-key judge value ID.
 ///
 /// `value_id`: a value in the `VALUE_JUDGE_1P_SCRATCH..=VALUE_JUDGE_2P_KEY99` range.
-pub fn get_key_judge_value_player(value_id: i32) -> i32 {
+pub fn key_judge_value_player(value_id: i32) -> i32 {
     if (VALUE_JUDGE_1P_SCRATCH..=VALUE_JUDGE_2P_KEY9).contains(&value_id) {
         (value_id - VALUE_JUDGE_1P_SCRATCH) / 10
     } else {
@@ -106,7 +106,7 @@ pub fn get_key_judge_value_player(value_id: i32) -> i32 {
 ///
 /// `value_id`: a value in the `VALUE_JUDGE_1P_SCRATCH..=VALUE_JUDGE_2P_KEY99` range.
 /// Returns 0-9 for standard keys, 10-99 for extended keys.
-pub fn get_key_judge_value_offset(value_id: i32) -> i32 {
+pub fn key_judge_value_offset(value_id: i32) -> i32 {
     if (VALUE_JUDGE_1P_SCRATCH..=VALUE_JUDGE_2P_KEY9).contains(&value_id) {
         (value_id - VALUE_JUDGE_1P_SCRATCH) % 10
     } else {
@@ -138,7 +138,7 @@ pub fn is_skin_select_type_id(id: i32) -> bool {
 /// Converts a skin-select button ID to the corresponding `SkinType`.
 ///
 /// Returns `None` if the ID is not in a valid skin-select range.
-pub fn get_skin_select_type(id: i32) -> Option<SkinType> {
+pub fn skin_select_type(id: i32) -> Option<SkinType> {
     if (BUTTON_SKINSELECT_7KEY..=BUTTON_SKINSELECT_COURSE_RESULT).contains(&id) {
         SkinType::skin_type_by_id(id - BUTTON_SKINSELECT_7KEY)
     } else if (BUTTON_SKINSELECT_24KEY..=BUTTON_SKINSELECT_24KEY_BATTLE).contains(&id) {
@@ -165,7 +165,7 @@ pub fn is_skin_customize_button(id: i32) -> bool {
 }
 
 /// Returns the 0-based customize slot index from a skin-customize button ID.
-pub fn get_skin_customize_index(id: i32) -> i32 {
+pub fn skin_customize_index(id: i32) -> i32 {
     id - BUTTON_SKIN_CUSTOMIZE1
 }
 
@@ -175,7 +175,7 @@ pub fn is_skin_customize_category(id: i32) -> bool {
 }
 
 /// Returns the 0-based index from a skin-customize category string ID.
-pub fn get_skin_customize_category_index(id: i32) -> i32 {
+pub fn skin_customize_category_index(id: i32) -> i32 {
     id - STRING_SKIN_CUSTOMIZE_CATEGORY1
 }
 
@@ -185,7 +185,7 @@ pub fn is_skin_customize_item(id: i32) -> bool {
 }
 
 /// Returns the 0-based index from a skin-customize item string ID.
-pub fn get_skin_customize_item_index(id: i32) -> i32 {
+pub fn skin_customize_item_index(id: i32) -> i32 {
     id - STRING_SKIN_CUSTOMIZE_ITEM1
 }
 

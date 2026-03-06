@@ -106,7 +106,7 @@ pub fn capture_render_snapshot(
     skin: &rubato_skin::skin::Skin,
     provider: &dyn SkinStateProvider,
 ) -> RenderSnapshot {
-    let objects = skin.get_objects();
+    let objects = skin.objects();
     let mut commands = Vec::with_capacity(objects.len());
     let debug_option_prune = std::env::var_os("GM_DEBUG_OPTION_PRUNE").is_some();
     let debug_object_dump = std::env::var_os("GM_DEBUG_OBJECT_DUMP").is_some();
@@ -118,7 +118,7 @@ pub fn capture_render_snapshot(
             eprintln!(
                 "object idx={} type={} name={:?} timer={:?} draw_count={} op={:?}",
                 idx,
-                object.get_type_name(),
+                object.type_name(),
                 data.name,
                 data.dsttimer.as_ref().map(|t| t.get_timer_id()),
                 data.dstdraw.len(),
@@ -136,7 +136,7 @@ pub fn capture_render_snapshot(
                 eprintln!(
                     "option-pruned idx={} type={} name={:?} op={:?}",
                     idx,
-                    object.get_type_name(),
+                    object.type_name(),
                     data.name,
                     data.dstop
                 );
@@ -147,12 +147,12 @@ pub fn capture_render_snapshot(
             eprintln!(
                 "option-kept idx={} type={} name={:?} op={:?}",
                 idx,
-                object.get_type_name(),
+                object.type_name(),
                 data.name,
                 data.dstop
             );
         }
-        let object_type = object.get_type_name();
+        let object_type = object.type_name();
         let blend = data.dstblend;
 
         let resolved = eval::resolve_common(data, provider);
@@ -257,7 +257,7 @@ fn matches_option_conditions(
             return true;
         }
 
-        if let Some(&selected) = skin.get_option().get(&abs) {
+        if let Some(&selected) = skin.option().get(&abs) {
             if op > 0 { selected == 1 } else { selected == 0 }
         } else {
             false
@@ -325,7 +325,7 @@ fn matches_dynamic_draw_conditions(
             return evaluate_draw_condition(op, provider);
         }
 
-        if skin.get_option().contains_key(&abs) {
+        if skin.option().contains_key(&abs) {
             return true;
         }
 
@@ -476,7 +476,7 @@ fn is_object_renderable(
         return false;
     }
     if let SkinObject::Image(img) = object
-        && let Some(ref_prop) = img.get_ref_prop()
+        && let Some(ref_prop) = img.ref_prop()
     {
         let id = ref_prop.get_id();
         if id != i32::MIN
@@ -487,7 +487,7 @@ fn is_object_renderable(
         }
     }
     if let SkinObject::Number(num) = object
-        && let Some(ref_prop) = num.get_ref_prop()
+        && let Some(ref_prop) = num.ref_prop()
     {
         let id = ref_prop.get_id();
         if id != i32::MIN
@@ -644,7 +644,7 @@ fn resolve_detail(
     match object {
         SkinObject::Image(img) => {
             let source_index = img
-                .get_ref_prop()
+                .ref_prop()
                 .and_then(|p| {
                     let id = p.get_id();
                     if id != i32::MIN {
@@ -663,7 +663,7 @@ fn resolve_detail(
         }
         SkinObject::Number(num) => {
             let value = num
-                .get_ref_prop()
+                .ref_prop()
                 .and_then(|p| {
                     let id = p.get_id();
                     if id != i32::MIN {
@@ -692,7 +692,7 @@ fn resolve_detail(
         }
         SkinObject::Slider(slider) => {
             let value = slider
-                .get_ref_prop()
+                .ref_prop()
                 .map(|p| {
                     let id = p.get_id();
                     if id != i32::MIN {
@@ -702,12 +702,12 @@ fn resolve_detail(
                     }
                 })
                 .unwrap_or(0.0);
-            let direction = slider.get_direction();
+            let direction = slider.direction();
             Some(DrawDetail::Slider { value, direction })
         }
         SkinObject::Graph(graph) => {
             let value = graph
-                .get_ref_prop()
+                .ref_prop()
                 .map(|p| {
                     let id = p.get_id();
                     if id != i32::MIN {
@@ -717,7 +717,7 @@ fn resolve_detail(
                     }
                 })
                 .unwrap_or(0.0);
-            let direction = graph.get_direction();
+            let direction = graph.direction();
             Some(DrawDetail::Graph { value, direction })
         }
         SkinObject::Float(_) => None,

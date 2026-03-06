@@ -54,7 +54,7 @@ impl SkinTextImageSourceData {
         self.paths[idx] = Some(path);
     }
 
-    pub fn get_path(&self, index: i32) -> Option<&str> {
+    pub fn path(&self, index: i32) -> Option<&str> {
         self.paths.get(index as usize).and_then(|p| p.as_deref())
     }
 
@@ -150,7 +150,7 @@ impl LR2FontLoader {
             "R" => {
                 // reference
                 let values = Self::parse_int_font(str_parts);
-                if self.textimage.get_path(values[2]).is_some() {
+                if self.textimage.path(values[2]).is_some() {
                     let codes = Self::map_code(values[1]);
                     for code in codes {
                         self.textimage

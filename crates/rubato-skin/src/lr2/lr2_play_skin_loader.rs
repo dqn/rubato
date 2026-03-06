@@ -234,7 +234,7 @@ impl LR2PlaySkinLoaderState {
             }
             "SRC_LINE" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
-                if let Some(images) = self.csv.get_source_image(&values) {
+                if let Some(images) = self.csv.source_image(&values) {
                     let idx = values[1] as usize;
                     if idx < self.line_images.len() {
                         let skin_image =
@@ -438,7 +438,7 @@ impl LR2PlaySkinLoaderState {
                     _ => 2,
                 };
                 let values = lr2_skin_loader::parse_int(str_parts);
-                if let Some(images) = self.csv.get_source_image(&values) {
+                if let Some(images) = self.csv.source_image(&values) {
                     if self.judge_objects[player].is_none() {
                         let shift = values[11] != 1;
                         self.judge_objects[player] = Some(
@@ -505,7 +505,7 @@ impl LR2PlaySkinLoaderState {
                 let values = lr2_skin_loader::parse_int(str_parts);
                 let divx = if values[7] > 0 { values[7] } else { 1 };
                 let divy = if values[8] > 0 { values[8] } else { 1 };
-                if let Some(simages) = self.csv.get_source_image(&values) {
+                if let Some(simages) = self.csv.source_image(&values) {
                     // Rearrange flat images into [divy][divx] grid
                     let _images_2d: Vec<Vec<TextureRegion>> = (0..divy)
                         .map(|j| {
@@ -551,7 +551,7 @@ impl LR2PlaySkinLoaderState {
             }
             "SRC_JUDGELINE" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
-                if let Some(images) = self.csv.get_source_image(&values) {
+                if let Some(images) = self.csv.source_image(&values) {
                     self.judgeline =
                         Some(SkinImage::new_with_int_timer(images, values[10], values[9]));
                 }
@@ -693,7 +693,7 @@ impl LR2PlaySkinLoaderState {
             }
             "SRC_HIDDEN" | "SRC_LIFT" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
-                let _images = self.csv.get_source_image(&values);
+                let _images = self.csv.source_image(&values);
                 // hidden = new SkinHidden(images, values[10], values[9])
                 self.hidden = true;
             }
@@ -721,7 +721,7 @@ impl LR2PlaySkinLoaderState {
                     values[2] += values[4];
                     values[4] = -values[4];
                 }
-                let _imagefile = lr2_skin_loader::get_lr2_path(
+                let _imagefile = lr2_skin_loader::lr2_path(
                     &self.csv.skinpath,
                     str_parts.get(7).map_or("", |s| s.as_str()),
                     &self.csv.filemap,
@@ -761,7 +761,7 @@ impl LR2PlaySkinLoaderState {
                         values[2] += values[4];
                         values[4] = -values[4];
                     }
-                    let _imagefile = lr2_skin_loader::get_lr2_path(
+                    let _imagefile = lr2_skin_loader::lr2_path(
                         &self.csv.skinpath,
                         str_parts.get(12).map_or("", |s| s.as_str()),
                         &self.csv.filemap,
@@ -795,7 +795,7 @@ impl LR2PlaySkinLoaderState {
                 // type 0:background 1:name 2:face upper 3:face all 4:icon
                 let values = lr2_skin_loader::parse_int(str_parts);
                 if values[2] >= 0 && values[2] <= 4 {
-                    let _imagefile = lr2_skin_loader::get_lr2_path(
+                    let _imagefile = lr2_skin_loader::lr2_path(
                         &self.csv.skinpath,
                         str_parts.get(3).map_or("", |s| s.as_str()),
                         &self.csv.filemap,
@@ -888,7 +888,7 @@ impl LR2PlaySkinLoaderState {
             };
             if lane < note_array.len()
                 && note_array[lane].is_none()
-                && let Some(images) = self.csv.get_source_image(&values)
+                && let Some(images) = self.csv.source_image(&values)
             {
                 note_array[lane] = Some(SkinSourceData {
                     images: Some(images),
@@ -1008,7 +1008,7 @@ impl LR2PlaySkinLoaderState {
 
         // 4. Post-processing: lane cover Y position adjustment
         // When white number (lane cover position) is 0, reduce lane height by (dsth - laneCoverPosition).
-        let lane_cover_position = self.get_lane_cover_position();
+        let lane_cover_position = self.lane_cover_position();
         if lane_cover_position > 0.0 {
             for rect in self.laner.iter_mut().flatten() {
                 rect.height -= self.dsth - lane_cover_position;
@@ -1123,7 +1123,7 @@ impl LR2PlaySkinLoaderState {
     }
 
     /// Get lane cover position (y coordinate when white number is 0)
-    pub fn get_lane_cover_position(&self) -> f32 {
+    pub fn lane_cover_position(&self) -> f32 {
         // if skin.laneCover != null, return last destination's y
         -1.0
     }

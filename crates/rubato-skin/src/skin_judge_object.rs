@@ -104,7 +104,7 @@ impl SkinJudgeObject {
                 if self.inner.is_shift()
                     && let Some(ref mut img) = self.judge_images[judge_idx]
                 {
-                    img.data.region.x -= count.get_length() / 2.0;
+                    img.data.region.x -= count.length() / 2.0;
                 }
                 self.now_count_idx = Some(ci);
             } else {

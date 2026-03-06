@@ -199,7 +199,7 @@ impl Toast {
         &self.toast_type
     }
 
-    pub fn get_color(&self) -> [f32; 4] {
+    pub fn color(&self) -> [f32; 4] {
         match self.toast_type {
             ToastType::None => [1.0, 1.0, 1.0, 1.0],    // White
             ToastType::Success => [0.0, 1.0, 0.0, 1.0], // Green
@@ -393,7 +393,7 @@ impl ImGuiNotify {
 
             // Snapshot all toast data before UI rendering (avoids borrow issues)
             let opacity = current_toast.get_fade_percent();
-            let text_color = current_toast.get_color();
+            let text_color = current_toast.color();
             let icon = current_toast.get_icon().map(|s| s.to_string());
             let title = current_toast.get_title().to_string();
             let default_title = current_toast.get_default_title().map(|s| s.to_string());
@@ -621,26 +621,11 @@ mod tests {
 
     #[test]
     fn test_toast_get_color_mapping() {
-        assert_eq!(
-            Toast::new(ToastType::None).get_color(),
-            [1.0, 1.0, 1.0, 1.0]
-        );
-        assert_eq!(
-            Toast::new(ToastType::Success).get_color(),
-            [0.0, 1.0, 0.0, 1.0]
-        );
-        assert_eq!(
-            Toast::new(ToastType::Warning).get_color(),
-            [1.0, 1.0, 0.0, 1.0]
-        );
-        assert_eq!(
-            Toast::new(ToastType::Error).get_color(),
-            [1.0, 0.0, 0.0, 1.0]
-        );
-        assert_eq!(
-            Toast::new(ToastType::Info).get_color(),
-            [0.0, 0.616, 1.0, 1.0]
-        );
+        assert_eq!(Toast::new(ToastType::None).color(), [1.0, 1.0, 1.0, 1.0]);
+        assert_eq!(Toast::new(ToastType::Success).color(), [0.0, 1.0, 0.0, 1.0]);
+        assert_eq!(Toast::new(ToastType::Warning).color(), [1.0, 1.0, 0.0, 1.0]);
+        assert_eq!(Toast::new(ToastType::Error).color(), [1.0, 0.0, 0.0, 1.0]);
+        assert_eq!(Toast::new(ToastType::Info).color(), [0.0, 0.616, 1.0, 1.0]);
     }
 
     #[test]

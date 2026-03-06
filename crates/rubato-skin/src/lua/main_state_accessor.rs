@@ -416,7 +416,7 @@ impl MainStateAccessor {
 
 /// option function - Gets OPTION_* boolean by ID
 pub fn option_fn(state: &dyn MainState, id: i32) -> bool {
-    if let Some(prop) = boolean_property_factory::get_boolean_property(id) {
+    if let Some(prop) = boolean_property_factory::boolean_property(id) {
         prop.get(state)
     } else {
         false
@@ -425,7 +425,7 @@ pub fn option_fn(state: &dyn MainState, id: i32) -> bool {
 
 /// number function - Gets NUMBER_* integer by ID
 pub fn number_fn(state: &dyn MainState, id: i32) -> i32 {
-    if let Some(prop) = integer_property_factory::get_integer_property_by_id(id) {
+    if let Some(prop) = integer_property_factory::integer_property_by_id(id) {
         prop.get(state)
     } else {
         0
@@ -434,7 +434,7 @@ pub fn number_fn(state: &dyn MainState, id: i32) -> i32 {
 
 /// float_number function - Gets SLIDER_*/BARGRAPH_* float by ID
 pub fn float_number_fn(state: &dyn MainState, id: i32) -> f32 {
-    if let Some(prop) = float_property_factory::get_rate_property_by_id(id) {
+    if let Some(prop) = float_property_factory::rate_property_by_id(id) {
         prop.get(state)
     } else {
         0.0
@@ -443,7 +443,7 @@ pub fn float_number_fn(state: &dyn MainState, id: i32) -> f32 {
 
 /// text function - Gets STRING_* text by ID
 pub fn text_fn(state: &dyn MainState, id: i32) -> String {
-    if let Some(prop) = string_property_factory::get_string_property_by_id(id) {
+    if let Some(prop) = string_property_factory::string_property_by_id(id) {
         prop.get(state)
     } else {
         String::new()
@@ -452,7 +452,7 @@ pub fn text_fn(state: &dyn MainState, id: i32) -> String {
 
 /// event_index function - Gets event/button index by ID
 pub fn event_index_fn(state: &dyn MainState, id: i32) -> i32 {
-    if let Some(prop) = integer_property_factory::get_image_index_property_by_id(id) {
+    if let Some(prop) = integer_property_factory::image_index_property_by_id(id) {
         prop.get(state)
     } else {
         0

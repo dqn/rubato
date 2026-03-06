@@ -39,7 +39,7 @@ impl SkinTextData {
         Self {
             data: SkinObjectData::new(),
             align: ALIGN_LEFT,
-            ref_prop: string_property_factory::get_string_property_by_id(id),
+            ref_prop: string_property_factory::string_property_by_id(id),
             text: String::new(),
             constant_text: None,
             editable: false,
@@ -73,7 +73,7 @@ impl SkinTextData {
         }
     }
 
-    pub fn get_align(&self) -> i32 {
+    pub fn align(&self) -> i32 {
         self.align
     }
 
@@ -81,11 +81,11 @@ impl SkinTextData {
         self.align = align;
     }
 
-    pub fn get_text(&self) -> &str {
+    pub fn text(&self) -> &str {
         &self.text
     }
 
-    pub fn get_overflow(&self) -> i32 {
+    pub fn overflow(&self) -> i32 {
         self.overflow
     }
 
@@ -109,7 +109,7 @@ impl SkinTextData {
         self.wrapping = value;
     }
 
-    pub fn get_outline_color(&self) -> Option<&Color> {
+    pub fn outline_color(&self) -> Option<&Color> {
         self.outline_color.as_ref()
     }
 
@@ -117,7 +117,7 @@ impl SkinTextData {
         self.outline_color = Some(color);
     }
 
-    pub fn get_outline_width(&self) -> f32 {
+    pub fn outline_width(&self) -> f32 {
         self.outline_width
     }
 
@@ -125,7 +125,7 @@ impl SkinTextData {
         self.outline_width = value;
     }
 
-    pub fn get_shadow_color(&self) -> Option<&Color> {
+    pub fn shadow_color(&self) -> Option<&Color> {
         self.shadow_color.as_ref()
     }
 
@@ -133,7 +133,7 @@ impl SkinTextData {
         self.shadow_color = Some(color);
     }
 
-    pub fn get_shadow_offset(&self) -> (f32, f32) {
+    pub fn shadow_offset(&self) -> (f32, f32) {
         self.shadow_offset
     }
 
@@ -141,7 +141,7 @@ impl SkinTextData {
         self.shadow_offset = (x, y);
     }
 
-    pub fn get_shadow_smoothness(&self) -> f32 {
+    pub fn shadow_smoothness(&self) -> f32 {
         self.shadow_smoothness
     }
 
@@ -173,7 +173,7 @@ impl SkinTextData {
         }
     }
 
-    pub fn get_current_text(&self) -> Option<&str> {
+    pub fn current_text(&self) -> Option<&str> {
         self.current_text.as_deref()
     }
 

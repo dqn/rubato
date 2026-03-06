@@ -123,7 +123,7 @@ impl LR2SelectSkinLoaderState {
                     .unwrap_or(0);
                 if gr < 100 {
                     let values = lr2_skin_loader::parse_int(str_parts);
-                    let images = self.csv.get_source_image(&values);
+                    let images = self.csv.source_image(&values);
                     if let Some(images) = images {
                         let idx = values[1] as usize;
                         if idx < self.barimage.len() {
@@ -265,7 +265,7 @@ impl LR2SelectSkinLoaderState {
                 }
 
                 if divx * divy >= 10 {
-                    let images = self.csv.get_source_image(&values);
+                    let images = self.csv.source_image(&values);
                     if let Some(images) = images {
                         let idx = values[1] as usize;
                         if images.len() % 24 == 0 {
@@ -346,7 +346,7 @@ impl LR2SelectSkinLoaderState {
                 if values[1] < 0 || values[1] >= BARLAMP_COUNT as i32 {
                     return;
                 }
-                let images = self.csv.get_source_image(&values);
+                let images = self.csv.source_image(&values);
                 if let Some(images) = images {
                     let lamp_idx = values[1] as usize;
                     if lamp_idx < LAMPG.len() {
@@ -412,7 +412,7 @@ impl LR2SelectSkinLoaderState {
                 if values[1] < 0 || values[1] >= BARLAMP_COUNT as i32 {
                     return;
                 }
-                let images = self.csv.get_source_image(&values);
+                let images = self.csv.source_image(&values);
                 if let Some(images) = images {
                     let lamp_idx = values[1] as usize;
                     if lamp_idx < LAMPG.len() {
@@ -478,7 +478,7 @@ impl LR2SelectSkinLoaderState {
                 if values[1] < 0 || values[1] >= BARLAMP_COUNT as i32 {
                     return;
                 }
-                let images = self.csv.get_source_image(&values);
+                let images = self.csv.source_image(&values);
                 if let Some(images) = images {
                     let lamp_idx = values[1] as usize;
                     if lamp_idx < LAMPG.len() {
@@ -544,7 +544,7 @@ impl LR2SelectSkinLoaderState {
                 if values[1] < 0 || values[1] >= BARTROPHY_COUNT as i32 {
                     return;
                 }
-                let images = self.csv.get_source_image(&values);
+                let images = self.csv.source_image(&values);
                 if let Some(images) = images {
                     let idx = values[1] as usize;
                     let img = SkinImage::new_with_int_timer(images, values[10], values[9]);
@@ -596,7 +596,7 @@ impl LR2SelectSkinLoaderState {
                 if values[1] < 0 || values[1] >= BARLABEL_COUNT as i32 {
                     return;
                 }
-                let images = self.csv.get_source_image(&values);
+                let images = self.csv.source_image(&values);
                 if let Some(images) = images {
                     let idx = values[1] as usize;
                     let img = SkinImage::new_with_int_timer(images, values[10], values[9]);
@@ -645,7 +645,7 @@ impl LR2SelectSkinLoaderState {
             }
             "SRC_BAR_GRAPH" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
-                let images = self.csv.get_source_image(&values);
+                let images = self.csv.source_image(&values);
                 if let Some(images) = images {
                     self.bargraph_type = Some(values[1]);
                     self.bargraph_images = Some(images);

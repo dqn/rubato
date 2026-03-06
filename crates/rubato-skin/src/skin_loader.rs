@@ -252,7 +252,7 @@ pub fn load_with_config(
 
 /// Resolves a file path with wildcard and file mapping support.
 /// Corresponds to SkinLoader.getPath(String, ObjectMap<String, String>)
-pub fn get_path(imagepath: &str, filemap: &HashMap<String, String>) -> PathBuf {
+pub fn path(imagepath: &str, filemap: &HashMap<String, String>) -> PathBuf {
     let mut imagepath = imagepath.to_string();
     let mut imagefile = PathBuf::from(&imagepath);
 
@@ -308,13 +308,13 @@ pub fn get_path(imagepath: &str, filemap: &HashMap<String, String>) -> PathBuf {
 
 /// Gets a texture from a file path, optionally using CIM cache.
 /// Corresponds to SkinLoader.getTexture(String, boolean)
-pub fn get_texture(path: &str, usecim: bool) -> Option<Texture> {
-    get_texture_with_mipmaps(path, usecim, false)
+pub fn texture(path: &str, usecim: bool) -> Option<Texture> {
+    texture_with_mipmaps(path, usecim, false)
 }
 
 /// Gets a texture from a file path, with optional CIM cache and mipmaps.
 /// Corresponds to SkinLoader.getTexture(String, boolean, boolean)
-pub fn get_texture_with_mipmaps(path: &str, usecim: bool, use_mip_maps: bool) -> Option<Texture> {
+pub fn texture_with_mipmaps(path: &str, usecim: bool, use_mip_maps: bool) -> Option<Texture> {
     let resource_guard = get_resource();
     let resource = resource_guard.as_ref()?;
 

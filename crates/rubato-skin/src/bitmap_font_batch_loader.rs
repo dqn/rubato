@@ -86,7 +86,7 @@ impl BitmapFontBatchLoader {
                 if loaded_textures.contains_key(image_path) {
                     continue;
                 }
-                if let Some(tex) = skin_loader::get_texture(image_path, self.usecim) {
+                if let Some(tex) = skin_loader::texture(image_path, self.usecim) {
                     loaded_textures.insert(image_path.clone(), TextureRegion::from_texture(tex));
                 }
             }

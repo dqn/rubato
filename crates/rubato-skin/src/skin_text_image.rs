@@ -90,7 +90,7 @@ impl SkinTextImage {
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
         if self.text_data.should_update_text() {
-            let current = self.text_data.get_current_text().unwrap_or("").to_string();
+            let current = self.text_data.current_text().unwrap_or("").to_string();
             self.set_text(current);
         }
         self.draw_with_offset(sprite, 0.0, 0.0);
@@ -104,19 +104,19 @@ impl SkinTextImage {
     ) {
         let region = self.text_data.data.region.clone();
         let color = self.text_data.data.color;
-        let source_size = self.source.get_size() as f32;
+        let source_size = self.source.size() as f32;
         if source_size == 0.0 {
             return;
         }
         let width = self.textwidth * region.height / source_size
-            + self.source.get_margin() as f32 * self.texts.len() as f32;
+            + self.source.margin() as f32 * self.texts.len() as f32;
 
         let scale = if region.width < width {
             region.width / width
         } else {
             1.0
         };
-        let align = self.text_data.get_align();
+        let align = self.text_data.align();
         let x = if align == 2 {
             region.x - width * scale
         } else if align == 1 {
@@ -137,7 +137,7 @@ impl SkinTextImage {
                 &color,
                 0,
             );
-            dx += tw + self.source.get_margin() as f32 * scale;
+            dx += tw + self.source.margin() as f32 * scale;
         }
     }
 
@@ -192,7 +192,7 @@ impl SkinTextImageSource {
         }
     }
 
-    pub fn get_margin(&self) -> i32 {
+    pub fn margin(&self) -> i32 {
         self.margin
     }
 
@@ -200,7 +200,7 @@ impl SkinTextImageSource {
         self.margin = margin;
     }
 
-    pub fn get_size(&self) -> i32 {
+    pub fn size(&self) -> i32 {
         self.size
     }
 
@@ -231,7 +231,7 @@ impl SkinTextImageSource {
             .insert(index, SkinTextImageSourceRegion::new(id, x, y, w, h));
     }
 
-    pub fn get_path(&self, index: i32) -> Option<&str> {
+    pub fn path(&self, index: i32) -> Option<&str> {
         self.elements.get(&index).map(|e| e.path.as_str())
     }
 

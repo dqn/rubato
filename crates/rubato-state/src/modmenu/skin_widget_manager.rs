@@ -111,7 +111,7 @@ impl SkinWidgetManager {
 
         for skin_object in all_skin_objects {
             let skin_object_name = skin_object.name().map(|s| s.to_string());
-            let dsts = skin_object.get_all_destination();
+            let dsts = skin_object.all_destination();
             let mut destinations: Vec<SkinWidgetDestination> = Vec::new();
 
             for i in 0..dsts.len() {

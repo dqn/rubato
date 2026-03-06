@@ -30,7 +30,7 @@ impl CustomOption {
         }
     }
 
-    pub fn get_selected_option(&self) -> i32 {
+    pub fn selected_option(&self) -> i32 {
         self.selected_option
     }
 
@@ -58,7 +58,7 @@ impl CustomFile {
         }
     }
 
-    pub fn get_selected_filename(&self) -> Option<&str> {
+    pub fn selected_filename(&self) -> Option<&str> {
         self.selected_filename.as_deref()
     }
 
@@ -160,7 +160,7 @@ impl LR2SkinHeaderLoader {
         // Set up options in op map
         for option in &self.header.custom_options {
             for i in 0..option.option.len() {
-                let val = if option.get_selected_option() == option.option[i] {
+                let val = if option.selected_option() == option.option[i] {
                     1
                 } else {
                     0

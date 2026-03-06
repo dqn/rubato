@@ -147,12 +147,12 @@ impl LR2SkinCSVLoaderState {
     }
 
     /// Get source image regions from texture
-    pub fn get_source_image(&self, values: &[i32; 22]) -> Option<Vec<TextureRegion>> {
+    pub fn source_image(&self, values: &[i32; 22]) -> Option<Vec<TextureRegion>> {
         let gr = values[2] as usize;
         if gr < self.imagelist.len()
             && let ImageListEntry::TextureEntry(ref tex) = self.imagelist[gr]
         {
-            return Some(Self::get_source_image_from_texture(
+            return Some(Self::source_image_from_texture(
                 tex, values[3], values[4], values[5], values[6], values[7], values[8],
             ));
         }
@@ -161,7 +161,7 @@ impl LR2SkinCSVLoaderState {
     }
 
     /// Get source image regions from texture with coordinates
-    pub fn get_source_image_from_texture(
+    pub fn source_image_from_texture(
         image: &Texture,
         x: i32,
         y: i32,
@@ -222,7 +222,7 @@ impl LR2SkinCSVLoaderState {
             }
             "IMAGE" => {
                 let imagefile =
-                    lr2_skin_loader::get_lr2_path(&self.skinpath, &str_parts[1], &self.filemap);
+                    lr2_skin_loader::lr2_path(&self.skinpath, &str_parts[1], &self.filemap);
                 let path = Path::new(&imagefile);
                 if path.exists() {
                     let is_movie = ["mpg", "mpeg", "avi", "wmv", "mp4", "m4v"]
@@ -245,7 +245,7 @@ impl LR2SkinCSVLoaderState {
             }
             "LR2FONT" => {
                 let imagefile =
-                    lr2_skin_loader::get_lr2_path(&self.skinpath, &str_parts[1], &self.filemap);
+                    lr2_skin_loader::lr2_path(&self.skinpath, &str_parts[1], &self.filemap);
                 let path = Path::new(&imagefile);
                 if path.exists() {
                     let mut loader = LR2FontLoader::new(self.usecim);
@@ -287,7 +287,7 @@ impl LR2SkinCSVLoaderState {
             }
             "INCLUDE" => {
                 let imagefile =
-                    lr2_skin_loader::get_lr2_path(&self.skinpath, &str_parts[1], &self.filemap);
+                    lr2_skin_loader::lr2_path(&self.skinpath, &str_parts[1], &self.filemap);
                 let path = Path::new(&imagefile);
                 if path.exists() {
                     match std::fs::read(path) {
@@ -330,7 +330,7 @@ impl LR2SkinCSVLoaderState {
                     let length = values[15];
                     let images = if length <= 0 {
                         // Grid-based division: each cell is one animation frame
-                        let src_images = self.get_source_image(&values);
+                        let src_images = self.source_image(&values);
                         match src_images {
                             Some(imgs) => {
                                 // Each source image becomes its own frame (single-element vec)
@@ -340,7 +340,7 @@ impl LR2SkinCSVLoaderState {
                         }
                     } else {
                         // Split source images into `length` groups
-                        match self.get_source_image(&values) {
+                        match self.source_image(&values) {
                             Some(srcimg) => {
                                 let len = length as usize;
                                 let group_size = srcimg.len() / len;
@@ -414,7 +414,7 @@ impl LR2SkinCSVLoaderState {
                     && matches!(self.imagelist[gr], ImageListEntry::TextureEntry(_))
                 {
                     let values = Self::parse_int(str_parts);
-                    if let Some(images) = self.get_source_image(&values) {
+                    if let Some(images) = self.source_image(&values) {
                         let mut om = SkinImage::new_with_int_timer(images, values[10], values[9]);
                         // Set mouse hitbox rectangle
                         let rect_x = values[12] as f32;
@@ -864,7 +864,7 @@ pub fn load_lr2_skin(
     // Transfer header options to loader's op map
     for option in &header_data.custom_options {
         for i in 0..option.option.len() {
-            let val = if option.get_selected_option() == option.option[i] {
+            let val = if option.selected_option() == option.option[i] {
                 1
             } else {
                 0
@@ -875,7 +875,7 @@ pub fn load_lr2_skin(
 
     // Transfer custom file mappings to loader's filemap
     for file in &header_data.custom_files {
-        if let Some(filename) = file.get_selected_filename() {
+        if let Some(filename) = file.selected_filename() {
             loader
                 .csv_mut()
                 .filemap
@@ -1308,7 +1308,7 @@ SCENETIME,9999\n\
         assert!(offsets.is_empty());
     }
 
-    // --- get_source_image_from_texture tests ---
+    // --- source_image_from_texture tests ---
 
     #[test]
     fn test_get_source_image_from_texture_basic_grid() {
@@ -1317,8 +1317,7 @@ SCENETIME,9999\n\
             height: 100,
             ..Default::default()
         };
-        let images =
-            LR2SkinCSVLoaderState::get_source_image_from_texture(&tex, 0, 0, 100, 100, 2, 2);
+        let images = LR2SkinCSVLoaderState::source_image_from_texture(&tex, 0, 0, 100, 100, 2, 2);
         // 2x2 grid = 4 images
         assert_eq!(images.len(), 4);
         // First cell: (0,0) 50x50
@@ -1338,7 +1337,7 @@ SCENETIME,9999\n\
             height: 150,
             ..Default::default()
         };
-        let images = LR2SkinCSVLoaderState::get_source_image_from_texture(&tex, 0, 0, -1, -1, 1, 1);
+        let images = LR2SkinCSVLoaderState::source_image_from_texture(&tex, 0, 0, -1, -1, 1, 1);
         assert_eq!(images.len(), 1);
         assert_eq!(images[0].region_width, 200);
         assert_eq!(images[0].region_height, 150);
@@ -1352,7 +1351,7 @@ SCENETIME,9999\n\
             ..Default::default()
         };
         // divx=0, divy=0 should be treated as 1
-        let images = LR2SkinCSVLoaderState::get_source_image_from_texture(&tex, 0, 0, 64, 64, 0, 0);
+        let images = LR2SkinCSVLoaderState::source_image_from_texture(&tex, 0, 0, 64, 64, 0, 0);
         assert_eq!(images.len(), 1);
         assert_eq!(images[0].region_width, 64);
         assert_eq!(images[0].region_height, 64);
@@ -1365,19 +1364,18 @@ SCENETIME,9999\n\
             height: 64,
             ..Default::default()
         };
-        let images =
-            LR2SkinCSVLoaderState::get_source_image_from_texture(&tex, 0, 0, 64, 64, -3, -2);
+        let images = LR2SkinCSVLoaderState::source_image_from_texture(&tex, 0, 0, 64, 64, -3, -2);
         assert_eq!(images.len(), 1);
     }
 
-    // --- get_source_image tests ---
+    // --- source_image tests ---
 
     #[test]
     fn test_get_source_image_out_of_bounds_index_returns_none() {
         let state = make_state();
         // imagelist is empty, gr=0 is out of bounds
         let values = [0i32; 22];
-        assert!(state.get_source_image(&values).is_none());
+        assert!(state.source_image(&values).is_none());
     }
 
     #[test]
@@ -1386,7 +1384,7 @@ SCENETIME,9999\n\
         state.imagelist.push(ImageListEntry::Null);
         let mut values = [0i32; 22];
         values[2] = 0; // gr index
-        assert!(state.get_source_image(&values).is_none());
+        assert!(state.source_image(&values).is_none());
     }
 
     #[test]
@@ -1397,7 +1395,7 @@ SCENETIME,9999\n\
             .push(ImageListEntry::Movie("test.mp4".to_string()));
         let mut values = [0i32; 22];
         values[2] = 0; // gr index
-        assert!(state.get_source_image(&values).is_none());
+        assert!(state.source_image(&values).is_none());
     }
 
     #[test]
@@ -1417,7 +1415,7 @@ SCENETIME,9999\n\
         values[6] = 64; // h
         values[7] = 2; // divx
         values[8] = 2; // divy
-        let result = state.get_source_image(&values);
+        let result = state.source_image(&values);
         assert!(result.is_some());
         assert_eq!(result.unwrap().len(), 4); // 2x2 grid
     }

@@ -78,20 +78,20 @@ fn object_snapshot(obj: &SkinObject) -> ObjectSnapshot {
         angle: d.angle,
     });
     ObjectSnapshot {
-        kind: obj.get_type_name().to_string(),
+        kind: obj.type_name().to_string(),
         destination_count: data.dst.len(),
-        blend: data.get_blend(),
+        blend: data.blend(),
         first_dst,
     }
 }
 
 /// Converts a Skin into a SkinSnapshot for comparison.
 pub fn snapshot_from_skin(skin: &Skin) -> SkinSnapshot {
-    let objects = skin.get_objects();
+    let objects = skin.objects();
     let mut objects_by_type = BTreeMap::new();
     for obj in objects {
         *objects_by_type
-            .entry(obj.get_type_name().to_string())
+            .entry(obj.type_name().to_string())
             .or_insert(0) += 1;
     }
 
@@ -101,20 +101,20 @@ pub fn snapshot_from_skin(skin: &Skin) -> SkinSnapshot {
         name: skin.header.name().unwrap_or_default().to_string(),
         resolution_w: skin.get_width(),
         resolution_h: skin.get_height(),
-        option_count: skin.header.get_custom_options().len(),
-        file_count: skin.header.get_custom_files().len(),
-        offset_count: skin.header.get_custom_offsets().len(),
+        option_count: skin.header.custom_options().len(),
+        file_count: skin.header.custom_files().len(),
+        offset_count: skin.header.custom_offsets().len(),
         width: skin.get_width(),
         height: skin.get_height(),
-        scale_x: skin.get_scale_x(),
-        scale_y: skin.get_scale_y(),
+        scale_x: skin.scale_x(),
+        scale_y: skin.scale_y(),
         input: skin.get_input(),
         scene: skin.get_scene(),
         fadeout: skin.get_fadeout(),
         object_count: objects.len(),
         objects_by_type,
-        custom_event_count: skin.get_custom_events_count(),
-        custom_timer_count: skin.get_custom_timers_count(),
+        custom_event_count: skin.custom_events_count(),
+        custom_timer_count: skin.custom_timers_count(),
         objects: object_snapshots,
     }
 }

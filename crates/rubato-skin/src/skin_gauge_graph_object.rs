@@ -227,7 +227,7 @@ impl SkinGaugeGraphObject {
         }
     }
 
-    pub fn get_delay(&self) -> i32 {
+    pub fn delay(&self) -> i32 {
         self.delay
     }
 
@@ -235,7 +235,7 @@ impl SkinGaugeGraphObject {
         self.delay = delay;
     }
 
-    pub fn get_line_width(&self) -> i32 {
+    pub fn line_width(&self) -> i32 {
         self.line_width
     }
 
@@ -264,8 +264,8 @@ mod tests {
     #[test]
     fn test_new_default() {
         let obj = SkinGaugeGraphObject::new_default();
-        assert_eq!(obj.get_delay(), 1500);
-        assert_eq!(obj.get_line_width(), 2);
+        assert_eq!(obj.delay(), 1500);
+        assert_eq!(obj.line_width(), 2);
     }
 
     #[test]
@@ -274,8 +274,8 @@ mod tests {
             "440044", "004444", "004400", "440000", "444400", "444444", "ff00ff", "00ffff",
             "00ff00", "ff0000", "ffff00", "cccccc", "ff0000", "440000",
         );
-        assert_eq!(obj.get_delay(), 1500);
-        assert_eq!(obj.get_line_width(), 2);
+        assert_eq!(obj.delay(), 1500);
+        assert_eq!(obj.line_width(), 2);
     }
 
     #[test]
@@ -283,7 +283,7 @@ mod tests {
         let mut obj = SkinGaugeGraphObject::new_default();
         obj.set_delay(2000);
         obj.set_line_width(3);
-        assert_eq!(obj.get_delay(), 2000);
-        assert_eq!(obj.get_line_width(), 3);
+        assert_eq!(obj.delay(), 2000);
+        assert_eq!(obj.line_width(), 3);
     }
 }

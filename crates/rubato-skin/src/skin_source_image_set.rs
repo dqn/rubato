@@ -32,7 +32,7 @@ impl SkinSourceImageSet {
         cycle: i32,
     ) -> Self {
         let timer_prop: Option<Box<dyn TimerProperty>> = if timer > 0 {
-            crate::property::timer_property_factory::get_timer_property(timer)
+            crate::property::timer_property_factory::timer_property(timer)
         } else {
             None
         };
@@ -72,7 +72,7 @@ impl SkinSourceImageSet {
         }
     }
 
-    pub fn get_all_images(&self) -> &[Vec<Option<TextureRegion>>] {
+    pub fn all_images(&self) -> &[Vec<Option<TextureRegion>>] {
         &self.image
     }
 
