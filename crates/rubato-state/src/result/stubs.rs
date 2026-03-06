@@ -571,7 +571,8 @@ mod tests {
     struct CacheBackedMainControllerAccess {
         config: Config,
         player_config: PlayerConfig,
-        ranking_data_cache: Box<dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess>,
+        ranking_data_cache:
+            Box<dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess>,
     }
 
     impl CacheBackedMainControllerAccess {
@@ -619,8 +620,9 @@ mod tests {
 
         fn get_ranking_data_cache_mut(
             &mut self,
-        ) -> Option<&mut (dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess + 'static)>
-        {
+        ) -> Option<
+            &mut (dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess + 'static),
+        > {
             Some(&mut *self.ranking_data_cache)
         }
     }

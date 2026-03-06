@@ -61,7 +61,10 @@ fn ensure_controller_ranking_cache(controller: &mut MainController) {
 }
 
 impl QueuedControllerAccess {
-    fn from_controller(controller: &mut MainController, commands: MainControllerCommandQueue) -> Self {
+    fn from_controller(
+        controller: &mut MainController,
+        commands: MainControllerCommandQueue,
+    ) -> Self {
         ensure_controller_ranking_cache(controller);
         let config = controller.get_config().clone();
         let player_config = controller.get_player_config().clone();
@@ -774,11 +777,11 @@ mod tests {
     use ::bms_model::bms_model::BMSModel;
     use ::bms_model::note::Note;
     use rubato_audio::audio_driver::AudioDriver;
-    use rubato_ir::ranking_data::RankingData;
     use rubato_core::sprite_batch_helper::SpriteBatchHelper;
+    use rubato_ir::ranking_data::RankingData;
     use rubato_state::select::preview_music_processor::PreviewMusicProcessor;
-    use rubato_types::song_data::SongData;
     use rubato_types::skin_render_context::SkinRenderContext;
+    use rubato_types::song_data::SongData;
     use std::sync::{Arc, Mutex};
 
     struct MockSkin;

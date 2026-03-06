@@ -774,7 +774,9 @@ fn skin_ecfn_play_specific_positions() {
 
     // 4. Visible SkinNote objects should have y within the play area (0..1080).
     for cmd in &note_cmds {
-        if cmd.visible && let Some(ref d) = cmd.dst {
+        if cmd.visible
+            && let Some(ref d) = cmd.dst
+        {
             assert!(
                 d.y >= -10.0 && d.y <= 1090.0,
                 "play7: SkinNote dst.y={} is outside play area",

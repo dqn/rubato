@@ -1120,5 +1120,4 @@ mod tests {
         let next = compute_next_reconnect_delay(0);
         assert_eq!(next, 0);
     }
-
 }

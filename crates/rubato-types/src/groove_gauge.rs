@@ -213,12 +213,28 @@ impl GrooveGauge {
         }
     }
 
+    fn gauge_at(&self, gauge_type: i32) -> Option<&Gauge> {
+        usize::try_from(gauge_type)
+            .ok()
+            .and_then(|i| self.gauges.get(i))
+    }
+
+    fn gauge_at_mut(&mut self, gauge_type: i32) -> Option<&mut Gauge> {
+        usize::try_from(gauge_type)
+            .ok()
+            .and_then(|i| self.gauges.get_mut(i))
+    }
+
     pub fn get_value(&self) -> f32 {
-        self.gauges[self.gauge_type as usize].get_value()
+        self.gauge_at(self.gauge_type)
+            .map(|g| g.get_value())
+            .unwrap_or(0.0)
     }
 
     pub fn get_value_by_type(&self, gauge_type: i32) -> f32 {
-        self.gauges[gauge_type as usize].get_value()
+        self.gauge_at(gauge_type)
+            .map(|g| g.get_value())
+            .unwrap_or(0.0)
     }
 
     pub fn set_value(&mut self, value: f32) {
@@ -228,11 +244,15 @@ impl GrooveGauge {
     }
 
     pub fn set_value_by_type(&mut self, gauge_type: i32, value: f32) {
-        self.gauges[gauge_type as usize].set_value(value);
+        if let Some(gauge) = self.gauge_at_mut(gauge_type) {
+            gauge.set_value(value);
+        }
     }
 
     pub fn is_qualified(&self) -> bool {
-        self.gauges[self.gauge_type as usize].is_qualified()
+        self.gauge_at(self.gauge_type)
+            .map(|g| g.is_qualified())
+            .unwrap_or(false)
     }
 
     pub fn is_qualified_by_type(&self, gauge_type: i32) -> bool {
@@ -248,7 +268,11 @@ impl GrooveGauge {
     }
 
     pub fn set_type(&mut self, gauge_type: i32) {
-        self.gauge_type = gauge_type;
+        if let Ok(i) = usize::try_from(gauge_type)
+            && i < self.gauges.len()
+        {
+            self.gauge_type = gauge_type;
+        }
     }
 
     pub fn is_type_changed(&self) -> bool {
@@ -264,19 +288,25 @@ impl GrooveGauge {
     }
 
     pub fn get_clear_type(&self) -> ClearType {
-        self.gauges[self.gauge_type as usize].cleartype
+        self.gauge_at(self.gauge_type)
+            .map(|g| g.cleartype)
+            .unwrap_or(ClearType::Failed)
     }
 
     pub fn get_gauge(&self) -> &Gauge {
-        &self.gauges[self.gauge_type as usize]
+        self.gauge_at(self.gauge_type).unwrap_or(&self.gauges[0])
     }
 
     pub fn get_gauge_by_type(&self, gauge_type: i32) -> &Gauge {
-        &self.gauges[gauge_type as usize]
+        self.gauge_at(gauge_type).unwrap_or(&self.gauges[0])
     }
 
     pub fn get_gauge_by_type_mut(&mut self, gauge_type: i32) -> &mut Gauge {
-        &mut self.gauges[gauge_type as usize]
+        let idx = usize::try_from(gauge_type)
+            .ok()
+            .filter(|&i| i < self.gauges.len())
+            .unwrap_or(0);
+        &mut self.gauges[idx]
     }
 
     pub fn create_with_id(model: &BMSModel, id: i32, gauge: &GaugeProperty) -> Self {
@@ -543,6 +573,66 @@ mod tests {
         let model = make_model();
         let gg = GrooveGauge::create_with_id(&model, EASY, &GaugeProperty::FiveKeys);
         assert_eq!(gg.get_type(), EASY);
+    }
+
+    #[test]
+    fn test_groove_gauge_oob_negative_gauge_type() {
+        let model = make_model();
+        let mut gg = GrooveGauge::new(&model, NORMAL, &GaugeProperty::SevenKeys);
+
+        // set_type with negative should be no-op
+        gg.set_type(-1);
+        assert_eq!(gg.get_type(), NORMAL);
+
+        // by_type accessors with negative should not panic
+        assert_eq!(gg.get_value_by_type(-1), 0.0);
+        assert!(!gg.is_qualified_by_type(-1));
+        gg.set_value_by_type(-1, 50.0); // no-op
+
+        // get_gauge_by_type with negative falls back to gauges[0]
+        let gauge = gg.get_gauge_by_type(-1);
+        assert_eq!(
+            gauge.cleartype,
+            ClearType::get_clear_type_by_gauge(0).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_groove_gauge_oob_large_gauge_type() {
+        let model = make_model();
+        let mut gg = GrooveGauge::new(&model, NORMAL, &GaugeProperty::SevenKeys);
+
+        // set_type with too-large value should be no-op
+        gg.set_type(100);
+        assert_eq!(gg.get_type(), NORMAL);
+
+        // by_type accessors with too-large value should not panic
+        assert_eq!(gg.get_value_by_type(100), 0.0);
+        assert!(!gg.is_qualified_by_type(100));
+        gg.set_value_by_type(100, 50.0); // no-op
+
+        // get_clear_type / get_gauge fallbacks
+        assert_eq!(gg.get_clear_type(), ClearType::Normal);
+        let gauge = gg.get_gauge_by_type(100);
+        assert_eq!(
+            gauge.cleartype,
+            ClearType::get_clear_type_by_gauge(0).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_groove_gauge_oob_get_gauge_by_type_mut() {
+        let model = make_model();
+        let mut gg = GrooveGauge::new(&model, NORMAL, &GaugeProperty::SevenKeys);
+
+        // Should not panic, falls back to gauges[0]
+        let gauge = gg.get_gauge_by_type_mut(-1);
+        gauge.set_value(42.0);
+        assert_eq!(gg.get_value_by_type(0), 42.0);
+
+        let gauge = gg.get_gauge_by_type_mut(100);
+        gauge.set_value(55.0);
+        assert_eq!(gg.get_value_by_type(0), 55.0);
     }
 }
 

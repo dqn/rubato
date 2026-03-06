@@ -273,8 +273,8 @@ impl JSONSkinLoader {
     pub fn with_config(config: &rubato_core::config::Config) -> Self {
         Self {
             dstr: Resolution {
-                width: 1920.0,
-                height: 1080.0,
+                width: config.window_width as f32,
+                height: config.window_height as f32,
             },
             usecim: false,
             bga_expand: config.bga_expand,
