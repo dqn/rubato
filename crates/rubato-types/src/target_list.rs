@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::sync::Mutex;
 
 use crate::player_information::PlayerInformation;
@@ -47,23 +48,23 @@ pub fn target_name(target: &str) -> String {
 /// Rival mappings: RIVAL_1..RIVAL_4 → rivals[n-1].name().
 ///
 /// Java: TargetProperty.getTargetName()
-pub fn resolve_target_name(id: &str, rivals: &[PlayerInformation]) -> String {
+pub fn resolve_target_name<'a>(id: &'a str, rivals: &[PlayerInformation]) -> Cow<'a, str> {
     match id {
-        "RANK_AAA" => "RANK AAA-".to_string(),
-        "RANK_AA" => "RANK AA-".to_string(),
-        "RANK_A" => "RANK A-".to_string(),
-        "RANK_MAX" => "MAX-".to_string(),
-        "MYBEST" => "MY BEST".to_string(),
-        "RANK_NEXT" => "NEXT RANK".to_string(),
+        "RANK_AAA" => Cow::Borrowed("RANK AAA-"),
+        "RANK_AA" => Cow::Borrowed("RANK AA-"),
+        "RANK_A" => Cow::Borrowed("RANK A-"),
+        "RANK_MAX" => Cow::Borrowed("MAX-"),
+        "MYBEST" => Cow::Borrowed("MY BEST"),
+        "RANK_NEXT" => Cow::Borrowed("NEXT RANK"),
         _ => {
             if let Some(suffix) = id.strip_prefix("RIVAL_")
                 && let Ok(n) = suffix.parse::<usize>()
                 && n >= 1
                 && n <= rivals.len()
             {
-                return rivals[n - 1].name().to_string();
+                return Cow::Owned(rivals[n - 1].name().to_string());
             }
-            id.to_string()
+            Cow::Borrowed(id)
         }
     }
 }

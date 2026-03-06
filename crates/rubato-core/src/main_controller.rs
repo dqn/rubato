@@ -1730,7 +1730,7 @@ impl MainController {
                 .collect();
         let names: Vec<String> = targetlist
             .iter()
-            .map(|id| rubato_types::target_list::resolve_target_name(id, &rivals))
+            .map(|id| rubato_types::target_list::resolve_target_name(id, &rivals).into_owned())
             .collect();
 
         rubato_types::target_list::set_target_ids(targetlist);
