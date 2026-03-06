@@ -2886,6 +2886,12 @@ impl MainState for BMSPlayer {
         }
     }
 
+    fn sync_audio(&mut self, audio: &mut dyn rubato_audio::audio_driver::AudioDriver) {
+        for cmd in self.drain_pending_bg_notes() {
+            audio.play_note(&cmd.note, cmd.volume, 0);
+        }
+    }
+
     fn pause(&mut self) {
         // In Java, pause/resume are inherited from MainState (default empty)
         // but timer management may be needed
@@ -5785,5 +5791,91 @@ mod tests {
 
         player.set_course_mode(false);
         assert!(!player.is_course_mode);
+    }
+
+    // --- sync_audio tests ---
+
+    struct NoteTrackingAudioDriver {
+        global_pitch: f32,
+        played_notes: Vec<(i32, f32)>, // (wav, volume)
+    }
+
+    impl NoteTrackingAudioDriver {
+        fn new() -> Self {
+            Self {
+                global_pitch: 1.0,
+                played_notes: Vec::new(),
+            }
+        }
+    }
+
+    impl rubato_audio::audio_driver::AudioDriver for NoteTrackingAudioDriver {
+        fn play_path(&mut self, _path: &str, _volume: f32, _loop_play: bool) {}
+        fn set_volume_path(&mut self, _path: &str, _volume: f32) {}
+        fn is_playing_path(&self, _path: &str) -> bool {
+            false
+        }
+        fn stop_path(&mut self, _path: &str) {}
+        fn dispose_path(&mut self, _path: &str) {}
+        fn set_model(&mut self, _model: &bms_model::bms_model::BMSModel) {}
+        fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
+        fn abort(&mut self) {}
+        fn get_progress(&self) -> f32 {
+            1.0
+        }
+        fn play_note(&mut self, n: &bms_model::note::Note, volume: f32, _pitch: i32) {
+            self.played_notes.push((n.get_wav(), volume));
+        }
+        fn play_judge(&mut self, _judge: i32, _fast: bool) {}
+        fn stop_note(&mut self, _n: Option<&bms_model::note::Note>) {}
+        fn set_volume_note(&mut self, _n: &bms_model::note::Note, _volume: f32) {}
+        fn set_global_pitch(&mut self, pitch: f32) {
+            self.global_pitch = pitch;
+        }
+        fn get_global_pitch(&self) -> f32 {
+            self.global_pitch
+        }
+        fn dispose_old(&mut self) {}
+        fn dispose(&mut self) {}
+    }
+
+    #[test]
+    fn sync_audio_drains_pending_bg_notes() {
+        use bms_model::note::Note;
+        use bms_model::time_line::TimeLine;
+
+        // Build a model with a BG note at time 0
+        let mut model = make_model();
+        let mut tl = TimeLine::new(120.0, 0, 8);
+        tl.add_back_ground_note(Note::new_normal(1));
+        model.set_all_time_line(vec![tl]);
+
+        let mut player = BMSPlayer::new(model);
+
+        // Start BG play from time 0
+        player.keysound.start_bg_play(
+            &player.model,
+            0,   // offset
+            1.0, // volume
+        );
+        // Set play time so the BG thread fires the note
+        player.keysound.update_play_time(1_000_000);
+
+        // Give the BG thread time to enqueue
+        std::thread::sleep(std::time::Duration::from_millis(50));
+
+        // Before sync_audio, notes should be queued but not played
+        let mut audio = NoteTrackingAudioDriver::new();
+        assert!(audio.played_notes.is_empty());
+
+        // sync_audio should drain and play
+        player.sync_audio(&mut audio);
+        assert!(
+            !audio.played_notes.is_empty(),
+            "sync_audio should forward BG notes to AudioDriver"
+        );
+        assert_eq!(audio.played_notes[0].0, 1); // wav id
+
+        player.keysound.stop_bg_play();
     }
 }
