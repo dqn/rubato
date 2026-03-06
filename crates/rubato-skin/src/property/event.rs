@@ -1,3 +1,5 @@
+use rubato_types::event_id::EventId;
+
 use crate::stubs::MainState;
 
 /// Events can be specified for reaction to buttons, and can be defined by users in a skin.
@@ -13,8 +15,8 @@ pub trait Event: Send + Sync {
     }
 
     /// Returns the event ID.
-    /// For script-defined timers, returns `i32::MIN`.
-    fn get_event_id(&self) -> i32 {
-        i32::MIN
+    /// For script-defined timers, returns `EventId::UNDEFINED`.
+    fn get_event_id(&self) -> EventId {
+        EventId::UNDEFINED
     }
 }

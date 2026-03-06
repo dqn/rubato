@@ -1092,7 +1092,7 @@ impl SkinObjectData {
     pub fn clickevent_id(&self) -> i32 {
         self.clickevent
             .as_ref()
-            .map(|e| e.get_event_id())
+            .map(|e| e.get_event_id().as_i32())
             .unwrap_or(0)
     }
 

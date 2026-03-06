@@ -5,6 +5,7 @@ use crate::stubs::MainState;
 use rubato_core::bms_player_mode::BMSPlayerMode;
 use rubato_play::judge_algorithm::DEFAULT_ALGORITHM;
 use rubato_play::target_property::TargetProperty;
+use rubato_types::event_id::EventId;
 use rubato_types::main_state_type::MainStateType;
 use rubato_types::play_config;
 
@@ -16,14 +17,15 @@ use rubato_types::play_config;
 /// If the ID matches a built-in EventType, returns that event.
 /// Otherwise, returns a generic event that delegates to `state.execute_event()`.
 pub fn event_by_id(event_id: i32) -> Option<Box<dyn Event>> {
+    let eid = EventId::new(event_id);
     for et in EVENT_TYPES.iter() {
-        if et.id == event_id {
+        if et.id == eid {
             return Some((et.create_event)());
         }
     }
 
     // For unknown IDs, create a generic event that delegates to state.executeEvent
-    Some(Box::new(DelegateEvent { event_id }))
+    Some(Box::new(DelegateEvent { event_id: eid }))
 }
 
 /// Returns an Event for the given event name.
@@ -38,17 +40,23 @@ pub fn event_by_name(event_name: &str) -> Option<Box<dyn Event>> {
 
 /// Creates a zero-arg event that delegates to `state.execute_event()`.
 pub fn create_zero_arg_event(event_id: i32) -> Box<dyn Event> {
-    Box::new(DelegateEvent { event_id })
+    Box::new(DelegateEvent {
+        event_id: EventId::new(event_id),
+    })
 }
 
 /// Creates a one-arg event that delegates to `state.execute_event()`.
 pub fn create_one_arg_event(event_id: i32) -> Box<dyn Event> {
-    Box::new(DelegateEvent { event_id })
+    Box::new(DelegateEvent {
+        event_id: EventId::new(event_id),
+    })
 }
 
 /// Creates a two-arg event that delegates to `state.execute_event()`.
 pub fn create_two_arg_event(event_id: i32) -> Box<dyn Event> {
-    Box::new(DelegateEvent { event_id })
+    Box::new(DelegateEvent {
+        event_id: EventId::new(event_id),
+    })
 }
 
 // ============================================================
@@ -56,7 +64,7 @@ pub fn create_two_arg_event(event_id: i32) -> Box<dyn Event> {
 // ============================================================
 
 struct EventTypeEntry {
-    id: i32,
+    id: EventId,
     name: &'static str,
     create_event: fn() -> Box<dyn Event>,
 }
@@ -64,58 +72,62 @@ struct EventTypeEntry {
 static EVENT_TYPES: &[EventTypeEntry] = &[
     // --- MusicSelector navigation / mode events ---
     EventTypeEntry {
-        id: 11,
+        id: EventId(11),
         name: "mode",
         create_event: || Box::new(ModeEvent),
     },
     EventTypeEntry {
-        id: 12,
+        id: EventId(12),
         name: "sort",
         create_event: || Box::new(SortEvent),
     },
     EventTypeEntry {
-        id: 312,
+        id: EventId(312),
         name: "songbar_sort",
         create_event: || Box::new(SongbarSortEvent),
     },
     EventTypeEntry {
-        id: 13,
+        id: EventId(13),
         name: "keyconfig",
         create_event: || Box::new(StateChangeEvent(MainStateType::Config)),
     },
     EventTypeEntry {
-        id: 14,
+        id: EventId(14),
         name: "skinconfig",
         create_event: || Box::new(StateChangeEvent(MainStateType::SkinConfig)),
     },
     EventTypeEntry {
-        id: 15,
+        id: EventId(15),
         name: "play",
         create_event: || Box::new(SelectSongEvent(BMSPlayerMode::PLAY)),
     },
     EventTypeEntry {
-        id: 16,
+        id: EventId(16),
         name: "autoplay",
         create_event: || Box::new(SelectSongEvent(BMSPlayerMode::AUTOPLAY)),
     },
     EventTypeEntry {
-        id: 315,
+        id: EventId(315),
         name: "practice",
         create_event: || Box::new(SelectSongEvent(BMSPlayerMode::PRACTICE)),
     },
     // --- OS interaction events (Desktop.open / Desktop.browse) ---
     EventTypeEntry {
-        id: 17,
+        id: EventId(17),
         name: "open_document",
-        create_event: || Box::new(DelegateEvent { event_id: 17 }),
+        create_event: || {
+            Box::new(DelegateEvent {
+                event_id: EventId(17),
+            })
+        },
     },
     // --- PlayerConfig cycler events ---
     EventTypeEntry {
-        id: 40,
+        id: EventId(40),
         name: "gauge1p",
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
-                event_id: 40,
+                event_id: EventId(40),
                 get: |c| c.gauge,
                 set: |c, v| c.gauge = v,
                 count: 6,
@@ -124,11 +136,11 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         },
     },
     EventTypeEntry {
-        id: 42,
+        id: EventId(42),
         name: "option1p",
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
-                event_id: 42,
+                event_id: EventId(42),
                 get: |c| c.random,
                 set: |c, v| c.random = v,
                 count: 10,
@@ -137,11 +149,11 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         },
     },
     EventTypeEntry {
-        id: 43,
+        id: EventId(43),
         name: "option2p",
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
-                event_id: 43,
+                event_id: EventId(43),
                 get: |c| c.random2,
                 set: |c, v| c.random2 = v,
                 count: 10,
@@ -150,11 +162,11 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         },
     },
     EventTypeEntry {
-        id: 54,
+        id: EventId(54),
         name: "optiondp",
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
-                event_id: 54,
+                event_id: EventId(54),
                 get: |c| c.doubleoption,
                 set: |c, v| c.doubleoption = v,
                 count: 4,
@@ -164,11 +176,11 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
     },
     // --- PlayConfig events (hispeed, duration, etc.) ---
     EventTypeEntry {
-        id: 55,
+        id: EventId(55),
         name: "hsfix",
         create_event: || {
             Box::new(PlayConfigCycleEvent {
-                event_id: 55,
+                event_id: EventId(55),
                 get: |pc| pc.fixhispeed,
                 set: |pc, v| pc.fixhispeed = v,
                 count: 5,
@@ -176,69 +188,85 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         },
     },
     EventTypeEntry {
-        id: 57,
+        id: EventId(57),
         name: "hispeed1p",
         create_event: || Box::new(HispeedEvent),
     },
     EventTypeEntry {
-        id: 59,
+        id: EventId(59),
         name: "duration1p",
         create_event: || Box::new(DurationEvent),
     },
     EventTypeEntry {
-        id: 342,
+        id: EventId(342),
         name: "hispeedautoadjust",
         create_event: || Box::new(HispeedAutoAdjustEvent),
     },
     // --- Replay events ---
     EventTypeEntry {
-        id: 19,
+        id: EventId(19),
         name: "replay1",
         create_event: || Box::new(ReplayEvent(0)),
     },
     EventTypeEntry {
-        id: 316,
+        id: EventId(316),
         name: "replay2",
         create_event: || Box::new(ReplayEvent(1)),
     },
     EventTypeEntry {
-        id: 317,
+        id: EventId(317),
         name: "replay3",
         create_event: || Box::new(ReplayEvent(2)),
     },
     EventTypeEntry {
-        id: 318,
+        id: EventId(318),
         name: "replay4",
         create_event: || Box::new(ReplayEvent(3)),
     },
     // --- OS interaction events ---
     EventTypeEntry {
-        id: 210,
+        id: EventId(210),
         name: "open_ir",
-        create_event: || Box::new(DelegateEvent { event_id: 210 }),
+        create_event: || {
+            Box::new(DelegateEvent {
+                event_id: EventId(210),
+            })
+        },
     },
     EventTypeEntry {
-        id: 211,
+        id: EventId(211),
         name: "update_folder",
-        create_event: || Box::new(DelegateEvent { event_id: 211 }),
+        create_event: || {
+            Box::new(DelegateEvent {
+                event_id: EventId(211),
+            })
+        },
     },
     EventTypeEntry {
-        id: 212,
+        id: EventId(212),
         name: "open_with_explorer",
-        create_event: || Box::new(DelegateEvent { event_id: 212 }),
+        create_event: || {
+            Box::new(DelegateEvent {
+                event_id: EventId(212),
+            })
+        },
     },
     EventTypeEntry {
-        id: 213,
+        id: EventId(213),
         name: "open_download_site",
-        create_event: || Box::new(DelegateEvent { event_id: 213 }),
+        create_event: || {
+            Box::new(DelegateEvent {
+                event_id: EventId(213),
+            })
+        },
     },
     // --- Config cycler events (bga, bgaexpand) ---
     EventTypeEntry {
-        id: 72,
+        id: EventId(72),
         name: "bga",
         create_event: || {
             Box::new(ConfigCycleEvent {
-                event_id: 72,
+                event_id: EventId(72),
                 get: |c| c.bga,
                 set: |c, v| c.bga = v,
                 count: 3,
@@ -246,11 +274,11 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         },
     },
     EventTypeEntry {
-        id: 73,
+        id: EventId(73),
         name: "bgaexpand",
         create_event: || {
             Box::new(ConfigCycleEvent {
-                event_id: 73,
+                event_id: EventId(73),
                 get: |c| c.bga_expand,
                 set: |c, v| c.bga_expand = v,
                 count: 3,
@@ -259,28 +287,28 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
     },
     // --- Notes display timing ---
     EventTypeEntry {
-        id: 74,
+        id: EventId(74),
         name: "notesdisplaytiming",
         create_event: || Box::new(NotesDisplayTimingEvent),
     },
     EventTypeEntry {
-        id: 75,
+        id: EventId(75),
         name: "notesdisplaytimingautoadjust",
         create_event: || Box::new(NotesDisplayTimingAutoAdjustEvent),
     },
     // --- Target ---
     EventTypeEntry {
-        id: 77,
+        id: EventId(77),
         name: "target",
         create_event: || Box::new(TargetEvent),
     },
     // --- More PlayerConfig cyclers ---
     EventTypeEntry {
-        id: 78,
+        id: EventId(78),
         name: "gaugeautoshift",
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
-                event_id: 78,
+                event_id: EventId(78),
                 get: |c| c.gauge_auto_shift,
                 set: |c, v| c.gauge_auto_shift = v,
                 count: 5,
@@ -289,11 +317,11 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         },
     },
     EventTypeEntry {
-        id: 341,
+        id: EventId(341),
         name: "bottomshiftablegauge",
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
-                event_id: 341,
+                event_id: EventId(341),
                 get: |c| c.bottom_shiftable_gauge,
                 set: |c, v| c.bottom_shiftable_gauge = v,
                 count: 3,
@@ -303,381 +331,387 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
     },
     // --- Rival ---
     EventTypeEntry {
-        id: 79,
+        id: EventId(79),
         name: "rival",
         create_event: || {
             // Rival selection requires RivalDataAccessor which is not yet available
             // → delegate to state.execute_event for now
-            Box::new(DelegateEvent { event_id: 79 })
+            Box::new(DelegateEvent {
+                event_id: EventId(79),
+            })
         },
     },
     // --- Favorite events ---
     EventTypeEntry {
-        id: 90,
+        id: EventId(90),
         name: "favorite_chart",
         create_event: || {
             // Favorite chart requires SongDatabase.setSongDatas, BarManager.updateBar,
             // and ImGuiNotify which cross crate boundaries → delegate
-            Box::new(DelegateEvent { event_id: 90 })
+            Box::new(DelegateEvent {
+                event_id: EventId(90),
+            })
         },
     },
     EventTypeEntry {
-        id: 89,
+        id: EventId(89),
         name: "favorite_song",
         create_event: || {
             // Favorite song similarly requires cross-crate access → delegate
-            Box::new(DelegateEvent { event_id: 89 })
+            Box::new(DelegateEvent {
+                event_id: EventId(89),
+            })
         },
     },
     // --- Key assign events (54 entries: keyassign1..keyassign54) ---
     // In Java, changeKeyAssign is a no-op (the body only casts to KeyConfiguration
     // and does nothing). We preserve this behavior.
     EventTypeEntry {
-        id: 101,
+        id: EventId(101),
         name: "keyassign1",
         create_event: || Box::new(KeyAssignEvent(0)),
     },
     EventTypeEntry {
-        id: 102,
+        id: EventId(102),
         name: "keyassign2",
         create_event: || Box::new(KeyAssignEvent(1)),
     },
     EventTypeEntry {
-        id: 103,
+        id: EventId(103),
         name: "keyassign3",
         create_event: || Box::new(KeyAssignEvent(2)),
     },
     EventTypeEntry {
-        id: 104,
+        id: EventId(104),
         name: "keyassign4",
         create_event: || Box::new(KeyAssignEvent(3)),
     },
     EventTypeEntry {
-        id: 105,
+        id: EventId(105),
         name: "keyassign5",
         create_event: || Box::new(KeyAssignEvent(4)),
     },
     EventTypeEntry {
-        id: 106,
+        id: EventId(106),
         name: "keyassign6",
         create_event: || Box::new(KeyAssignEvent(5)),
     },
     EventTypeEntry {
-        id: 107,
+        id: EventId(107),
         name: "keyassign7",
         create_event: || Box::new(KeyAssignEvent(6)),
     },
     EventTypeEntry {
-        id: 108,
+        id: EventId(108),
         name: "keyassign8",
         create_event: || Box::new(KeyAssignEvent(7)),
     },
     EventTypeEntry {
-        id: 109,
+        id: EventId(109),
         name: "keyassign9",
         create_event: || Box::new(KeyAssignEvent(8)),
     },
     EventTypeEntry {
-        id: 110,
+        id: EventId(110),
         name: "keyassign10",
         create_event: || Box::new(KeyAssignEvent(9)),
     },
     EventTypeEntry {
-        id: 111,
+        id: EventId(111),
         name: "keyassign11",
         create_event: || Box::new(KeyAssignEvent(10)),
     },
     EventTypeEntry {
-        id: 112,
+        id: EventId(112),
         name: "keyassign12",
         create_event: || Box::new(KeyAssignEvent(11)),
     },
     EventTypeEntry {
-        id: 113,
+        id: EventId(113),
         name: "keyassign13",
         create_event: || Box::new(KeyAssignEvent(12)),
     },
     EventTypeEntry {
-        id: 114,
+        id: EventId(114),
         name: "keyassign14",
         create_event: || Box::new(KeyAssignEvent(13)),
     },
     EventTypeEntry {
-        id: 115,
+        id: EventId(115),
         name: "keyassign15",
         create_event: || Box::new(KeyAssignEvent(14)),
     },
     EventTypeEntry {
-        id: 116,
+        id: EventId(116),
         name: "keyassign16",
         create_event: || Box::new(KeyAssignEvent(15)),
     },
     EventTypeEntry {
-        id: 117,
+        id: EventId(117),
         name: "keyassign17",
         create_event: || Box::new(KeyAssignEvent(16)),
     },
     EventTypeEntry {
-        id: 118,
+        id: EventId(118),
         name: "keyassign18",
         create_event: || Box::new(KeyAssignEvent(17)),
     },
     EventTypeEntry {
-        id: 119,
+        id: EventId(119),
         name: "keyassign19",
         create_event: || Box::new(KeyAssignEvent(18)),
     },
     EventTypeEntry {
-        id: 120,
+        id: EventId(120),
         name: "keyassign20",
         create_event: || Box::new(KeyAssignEvent(19)),
     },
     EventTypeEntry {
-        id: 121,
+        id: EventId(121),
         name: "keyassign21",
         create_event: || Box::new(KeyAssignEvent(20)),
     },
     EventTypeEntry {
-        id: 122,
+        id: EventId(122),
         name: "keyassign22",
         create_event: || Box::new(KeyAssignEvent(21)),
     },
     EventTypeEntry {
-        id: 123,
+        id: EventId(123),
         name: "keyassign23",
         create_event: || Box::new(KeyAssignEvent(22)),
     },
     EventTypeEntry {
-        id: 124,
+        id: EventId(124),
         name: "keyassign24",
         create_event: || Box::new(KeyAssignEvent(23)),
     },
     EventTypeEntry {
-        id: 125,
+        id: EventId(125),
         name: "keyassign25",
         create_event: || Box::new(KeyAssignEvent(24)),
     },
     EventTypeEntry {
-        id: 126,
+        id: EventId(126),
         name: "keyassign26",
         create_event: || Box::new(KeyAssignEvent(25)),
     },
     EventTypeEntry {
-        id: 127,
+        id: EventId(127),
         name: "keyassign27",
         create_event: || Box::new(KeyAssignEvent(26)),
     },
     EventTypeEntry {
-        id: 128,
+        id: EventId(128),
         name: "keyassign28",
         create_event: || Box::new(KeyAssignEvent(27)),
     },
     EventTypeEntry {
-        id: 129,
+        id: EventId(129),
         name: "keyassign29",
         create_event: || Box::new(KeyAssignEvent(28)),
     },
     EventTypeEntry {
-        id: 130,
+        id: EventId(130),
         name: "keyassign30",
         create_event: || Box::new(KeyAssignEvent(29)),
     },
     EventTypeEntry {
-        id: 131,
+        id: EventId(131),
         name: "keyassign31",
         create_event: || Box::new(KeyAssignEvent(30)),
     },
     EventTypeEntry {
-        id: 132,
+        id: EventId(132),
         name: "keyassign32",
         create_event: || Box::new(KeyAssignEvent(31)),
     },
     EventTypeEntry {
-        id: 133,
+        id: EventId(133),
         name: "keyassign33",
         create_event: || Box::new(KeyAssignEvent(32)),
     },
     EventTypeEntry {
-        id: 134,
+        id: EventId(134),
         name: "keyassign34",
         create_event: || Box::new(KeyAssignEvent(33)),
     },
     EventTypeEntry {
-        id: 135,
+        id: EventId(135),
         name: "keyassign35",
         create_event: || Box::new(KeyAssignEvent(34)),
     },
     EventTypeEntry {
-        id: 136,
+        id: EventId(136),
         name: "keyassign36",
         create_event: || Box::new(KeyAssignEvent(35)),
     },
     EventTypeEntry {
-        id: 137,
+        id: EventId(137),
         name: "keyassign37",
         create_event: || Box::new(KeyAssignEvent(36)),
     },
     EventTypeEntry {
-        id: 138,
+        id: EventId(138),
         name: "keyassign38",
         create_event: || Box::new(KeyAssignEvent(37)),
     },
     EventTypeEntry {
-        id: 139,
+        id: EventId(139),
         name: "keyassign39",
         create_event: || Box::new(KeyAssignEvent(38)),
     },
     EventTypeEntry {
-        id: 150,
+        id: EventId(150),
         name: "keyassign40",
         create_event: || Box::new(KeyAssignEvent(39)),
     },
     EventTypeEntry {
-        id: 151,
+        id: EventId(151),
         name: "keyassign41",
         create_event: || Box::new(KeyAssignEvent(40)),
     },
     EventTypeEntry {
-        id: 152,
+        id: EventId(152),
         name: "keyassign42",
         create_event: || Box::new(KeyAssignEvent(41)),
     },
     EventTypeEntry {
-        id: 153,
+        id: EventId(153),
         name: "keyassign43",
         create_event: || Box::new(KeyAssignEvent(42)),
     },
     EventTypeEntry {
-        id: 154,
+        id: EventId(154),
         name: "keyassign44",
         create_event: || Box::new(KeyAssignEvent(43)),
     },
     EventTypeEntry {
-        id: 155,
+        id: EventId(155),
         name: "keyassign45",
         create_event: || Box::new(KeyAssignEvent(44)),
     },
     EventTypeEntry {
-        id: 156,
+        id: EventId(156),
         name: "keyassign46",
         create_event: || Box::new(KeyAssignEvent(45)),
     },
     EventTypeEntry {
-        id: 157,
+        id: EventId(157),
         name: "keyassign47",
         create_event: || Box::new(KeyAssignEvent(46)),
     },
     EventTypeEntry {
-        id: 158,
+        id: EventId(158),
         name: "keyassign48",
         create_event: || Box::new(KeyAssignEvent(47)),
     },
     EventTypeEntry {
-        id: 159,
+        id: EventId(159),
         name: "keyassign49",
         create_event: || Box::new(KeyAssignEvent(48)),
     },
     EventTypeEntry {
-        id: 160,
+        id: EventId(160),
         name: "keyassign50",
         create_event: || Box::new(KeyAssignEvent(49)),
     },
     EventTypeEntry {
-        id: 161,
+        id: EventId(161),
         name: "keyassign51",
         create_event: || Box::new(KeyAssignEvent(50)),
     },
     EventTypeEntry {
-        id: 162,
+        id: EventId(162),
         name: "keyassign52",
         create_event: || Box::new(KeyAssignEvent(51)),
     },
     EventTypeEntry {
-        id: 163,
+        id: EventId(163),
         name: "keyassign53",
         create_event: || Box::new(KeyAssignEvent(52)),
     },
     EventTypeEntry {
-        id: 164,
+        id: EventId(164),
         name: "keyassign54",
         create_event: || Box::new(KeyAssignEvent(53)),
     },
     // --- LN mode (disabled in this fork) ---
     EventTypeEntry {
-        id: 308,
+        id: EventId(308),
         name: "lnmode",
         create_event: || Box::new(LnModeEvent),
     },
     // --- Auto save replay ---
     EventTypeEntry {
-        id: 321,
+        id: EventId(321),
         name: "autosavereplay1",
         create_event: || {
             Box::new(AutoSaveReplayEvent {
                 index: 0,
-                event_id: 321,
+                event_id: EventId(321),
             })
         },
     },
     EventTypeEntry {
-        id: 322,
+        id: EventId(322),
         name: "autosavereplay2",
         create_event: || {
             Box::new(AutoSaveReplayEvent {
                 index: 1,
-                event_id: 322,
+                event_id: EventId(322),
             })
         },
     },
     EventTypeEntry {
-        id: 323,
+        id: EventId(323),
         name: "autosavereplay3",
         create_event: || {
             Box::new(AutoSaveReplayEvent {
                 index: 2,
-                event_id: 323,
+                event_id: EventId(323),
             })
         },
     },
     EventTypeEntry {
-        id: 324,
+        id: EventId(324),
         name: "autosavereplay4",
         create_event: || {
             Box::new(AutoSaveReplayEvent {
                 index: 3,
-                event_id: 324,
+                event_id: EventId(324),
             })
         },
     },
     // --- PlayConfig toggle events ---
     EventTypeEntry {
-        id: 330,
+        id: EventId(330),
         name: "lanecover",
         create_event: || {
             Box::new(PlayConfigToggleEvent {
-                event_id: 330,
+                event_id: EventId(330),
                 get: |pc| pc.enablelanecover,
                 set: |pc, v| pc.enablelanecover = v,
             })
         },
     },
     EventTypeEntry {
-        id: 331,
+        id: EventId(331),
         name: "lift",
         create_event: || {
             Box::new(PlayConfigToggleEvent {
-                event_id: 331,
+                event_id: EventId(331),
                 get: |pc| pc.enablelift,
                 set: |pc, v| pc.enablelift = v,
             })
         },
     },
     EventTypeEntry {
-        id: 332,
+        id: EventId(332),
         name: "hidden",
         create_event: || {
             Box::new(PlayConfigToggleEvent {
-                event_id: 332,
+                event_id: EventId(332),
                 get: |pc| pc.enablehidden,
                 set: |pc, v| pc.enablehidden = v,
             })
@@ -685,29 +719,29 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
     },
     // --- Judge algorithm ---
     EventTypeEntry {
-        id: 340,
+        id: EventId(340),
         name: "judgealgorithm",
         create_event: || Box::new(JudgeAlgorithmEvent),
     },
     // --- Guide SE ---
     EventTypeEntry {
-        id: 343,
+        id: EventId(343),
         name: "guidese",
         create_event: || Box::new(GuideSeEvent),
     },
     // --- Chart replication mode ---
     EventTypeEntry {
-        id: 344,
+        id: EventId(344),
         name: "chartreplicationmode",
         create_event: || Box::new(ChartReplicationModeEvent),
     },
     // --- More PlayerConfig cyclers ---
     EventTypeEntry {
-        id: 350,
+        id: EventId(350),
         name: "extranotedepth",
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
-                event_id: 350,
+                event_id: EventId(350),
                 get: |c| c.extranote_depth,
                 set: |c, v| c.extranote_depth = v,
                 count: 4,
@@ -716,11 +750,11 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         },
     },
     EventTypeEntry {
-        id: 351,
+        id: EventId(351),
         name: "minemode",
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
-                event_id: 351,
+                event_id: EventId(351),
                 get: |c| c.mine_mode,
                 set: |c, v| c.mine_mode = v,
                 count: 5,
@@ -729,11 +763,11 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         },
     },
     EventTypeEntry {
-        id: 352,
+        id: EventId(352),
         name: "scrollmode",
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
-                event_id: 352,
+                event_id: EventId(352),
                 get: |c| c.scroll_mode,
                 set: |c, v| c.scroll_mode = v,
                 count: 3,
@@ -742,11 +776,11 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         },
     },
     EventTypeEntry {
-        id: 353,
+        id: EventId(353),
         name: "longnotemode",
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
-                event_id: 353,
+                event_id: EventId(353),
                 get: |c| c.longnote_mode,
                 set: |c, v| c.longnote_mode = v,
                 count: 6,
@@ -755,11 +789,11 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         },
     },
     EventTypeEntry {
-        id: 360,
+        id: EventId(360),
         name: "seventonine_pattern",
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
-                event_id: 360,
+                event_id: EventId(360),
                 get: |c| c.seven_to_nine_pattern,
                 set: |c, v| c.seven_to_nine_pattern = v,
                 count: 7,
@@ -768,11 +802,11 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         },
     },
     EventTypeEntry {
-        id: 361,
+        id: EventId(361),
         name: "seventonine_type",
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
-                event_id: 361,
+                event_id: EventId(361),
                 get: |c| c.seven_to_nine_type,
                 set: |c, v| c.seven_to_nine_type = v,
                 count: 3,
@@ -782,11 +816,11 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
     },
     // OPTION_CONSTANT ID from SkinProperty (400)
     EventTypeEntry {
-        id: skin_property::OPTION_CONSTANT,
+        id: EventId(skin_property::OPTION_CONSTANT),
         name: "constant",
         create_event: || {
             Box::new(PlayConfigToggleEvent {
-                event_id: skin_property::OPTION_CONSTANT,
+                event_id: EventId(skin_property::OPTION_CONSTANT),
                 get: |pc| pc.enable_constant,
                 set: |pc, v| pc.enable_constant = v,
             })
@@ -801,15 +835,15 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
 // ============================================================
 
 struct DelegateEvent {
-    event_id: i32,
+    event_id: EventId,
 }
 
 impl Event for DelegateEvent {
     fn exec(&self, state: &mut dyn MainState, arg1: i32, arg2: i32) {
-        state.execute_event(self.event_id, arg1, arg2);
+        state.execute_event(self.event_id.as_i32(), arg1, arg2);
     }
 
-    fn get_event_id(&self) -> i32 {
+    fn get_event_id(&self) -> EventId {
         self.event_id
     }
 }
@@ -827,11 +861,11 @@ impl Event for StateChangeEvent {
         }
     }
 
-    fn get_event_id(&self) -> i32 {
+    fn get_event_id(&self) -> EventId {
         match self.0 {
-            MainStateType::Config => 13,
-            MainStateType::SkinConfig => 14,
-            _ => i32::MIN,
+            MainStateType::Config => EventId(13),
+            MainStateType::SkinConfig => EventId(14),
+            _ => EventId::UNDEFINED,
         }
     }
 }
@@ -849,12 +883,12 @@ impl Event for SelectSongEvent {
         }
     }
 
-    fn get_event_id(&self) -> i32 {
+    fn get_event_id(&self) -> EventId {
         match &self.0 {
-            m if *m == BMSPlayerMode::PLAY => 15,
-            m if *m == BMSPlayerMode::AUTOPLAY => 16,
-            m if *m == BMSPlayerMode::PRACTICE => 315,
-            _ => i32::MIN,
+            m if *m == BMSPlayerMode::PLAY => EventId(15),
+            m if *m == BMSPlayerMode::AUTOPLAY => EventId(16),
+            m if *m == BMSPlayerMode::PRACTICE => EventId(315),
+            _ => EventId::UNDEFINED,
         }
     }
 }
@@ -875,17 +909,17 @@ impl Event for ReplayEvent {
         // MusicResult/CourseResult replay saving is handled by execute_event delegation
         // because those types need cross-crate access
         if !state.is_music_selector() {
-            state.execute_event(self.get_event_id(), 0, 0);
+            state.execute_event(self.get_event_id().as_i32(), 0, 0);
         }
     }
 
-    fn get_event_id(&self) -> i32 {
+    fn get_event_id(&self) -> EventId {
         match self.0 {
-            0 => 19,
-            1 => 316,
-            2 => 317,
-            3 => 318,
-            _ => i32::MIN,
+            0 => EventId(19),
+            1 => EventId(316),
+            2 => EventId(317),
+            3 => EventId(318),
+            _ => EventId::UNDEFINED,
         }
     }
 }
@@ -935,8 +969,8 @@ impl Event for ModeEvent {
         state.play_option_change_sound();
     }
 
-    fn get_event_id(&self) -> i32 {
-        11
+    fn get_event_id(&self) -> EventId {
+        EventId(11)
     }
 }
 
@@ -971,8 +1005,8 @@ impl Event for SortEvent {
         state.play_option_change_sound();
     }
 
-    fn get_event_id(&self) -> i32 {
-        12
+    fn get_event_id(&self) -> EventId {
+        EventId(12)
     }
 }
 
@@ -1012,8 +1046,8 @@ impl Event for SongbarSortEvent {
         }
     }
 
-    fn get_event_id(&self) -> i32 {
-        312
+    fn get_event_id(&self) -> EventId {
+        EventId(312)
     }
 }
 
@@ -1023,7 +1057,7 @@ impl Event for SongbarSortEvent {
 // ============================================================
 
 struct PlayerConfigCycleEvent {
-    event_id: i32,
+    event_id: EventId,
     get: fn(&rubato_types::player_config::PlayerConfig) -> i32,
     set: fn(&mut rubato_types::player_config::PlayerConfig, i32),
     count: i32,
@@ -1048,7 +1082,7 @@ impl Event for PlayerConfigCycleEvent {
         state.play_option_change_sound();
     }
 
-    fn get_event_id(&self) -> i32 {
+    fn get_event_id(&self) -> EventId {
         self.event_id
     }
 }
@@ -1060,7 +1094,7 @@ impl Event for PlayerConfigCycleEvent {
 // ============================================================
 
 struct PlayConfigCycleEvent {
-    event_id: i32,
+    event_id: EventId,
     get: fn(&play_config::PlayConfig) -> i32,
     set: fn(&mut play_config::PlayConfig, i32),
     count: i32,
@@ -1084,7 +1118,7 @@ impl Event for PlayConfigCycleEvent {
         state.play_option_change_sound();
     }
 
-    fn get_event_id(&self) -> i32 {
+    fn get_event_id(&self) -> EventId {
         self.event_id
     }
 }
@@ -1095,7 +1129,7 @@ impl Event for PlayConfigCycleEvent {
 // ============================================================
 
 struct PlayConfigToggleEvent {
-    event_id: i32,
+    event_id: EventId,
     get: fn(&play_config::PlayConfig) -> bool,
     set: fn(&mut play_config::PlayConfig, bool),
 }
@@ -1113,7 +1147,7 @@ impl Event for PlayConfigToggleEvent {
         state.play_option_change_sound();
     }
 
-    fn get_event_id(&self) -> i32 {
+    fn get_event_id(&self) -> EventId {
         self.event_id
     }
 }
@@ -1124,7 +1158,7 @@ impl Event for PlayConfigToggleEvent {
 // ============================================================
 
 struct ConfigCycleEvent {
-    event_id: i32,
+    event_id: EventId,
     get: fn(&rubato_types::config::Config) -> i32,
     set: fn(&mut rubato_types::config::Config, i32),
     count: i32,
@@ -1148,7 +1182,7 @@ impl Event for ConfigCycleEvent {
         state.play_option_change_sound();
     }
 
-    fn get_event_id(&self) -> i32 {
+    fn get_event_id(&self) -> EventId {
         self.event_id
     }
 }
@@ -1177,8 +1211,8 @@ impl Event for HispeedEvent {
         }
     }
 
-    fn get_event_id(&self) -> i32 {
-        57
+    fn get_event_id(&self) -> EventId {
+        EventId(57)
     }
 }
 
@@ -1206,8 +1240,8 @@ impl Event for DurationEvent {
         }
     }
 
-    fn get_event_id(&self) -> i32 {
-        59
+    fn get_event_id(&self) -> EventId {
+        EventId(59)
     }
 }
 
@@ -1229,8 +1263,8 @@ impl Event for HispeedAutoAdjustEvent {
         state.play_option_change_sound();
     }
 
-    fn get_event_id(&self) -> i32 {
-        342
+    fn get_event_id(&self) -> EventId {
+        EventId(342)
     }
 }
 
@@ -1262,8 +1296,8 @@ impl Event for NotesDisplayTimingEvent {
         }
     }
 
-    fn get_event_id(&self) -> i32 {
-        74
+    fn get_event_id(&self) -> EventId {
+        EventId(74)
     }
 }
 
@@ -1284,8 +1318,8 @@ impl Event for NotesDisplayTimingAutoAdjustEvent {
         }
     }
 
-    fn get_event_id(&self) -> i32 {
-        75
+    fn get_event_id(&self) -> EventId {
+        EventId(75)
     }
 }
 
@@ -1331,8 +1365,8 @@ impl Event for TargetEvent {
         }
     }
 
-    fn get_event_id(&self) -> i32 {
-        77
+    fn get_event_id(&self) -> EventId {
+        EventId(77)
     }
 }
 
@@ -1348,12 +1382,12 @@ impl Event for KeyAssignEvent {
         // and does nothing inside the body. Preserved as no-op.
     }
 
-    fn get_event_id(&self) -> i32 {
+    fn get_event_id(&self) -> EventId {
         // keyassign1..39 = 101..139, keyassign40..54 = 150..164
         if self.0 < 39 {
-            101 + self.0
+            EventId(101 + self.0)
         } else {
-            150 + (self.0 - 39)
+            EventId(150 + (self.0 - 39))
         }
     }
 }
@@ -1370,8 +1404,8 @@ impl Event for LnModeEvent {
         // Java code has the logic commented out with `return;` at the top.
     }
 
-    fn get_event_id(&self) -> i32 {
-        308
+    fn get_event_id(&self) -> EventId {
+        EventId(308)
     }
 }
 
@@ -1381,7 +1415,7 @@ impl Event for LnModeEvent {
 
 struct AutoSaveReplayEvent {
     index: usize,
-    event_id: i32,
+    event_id: EventId,
 }
 
 impl Event for AutoSaveReplayEvent {
@@ -1407,7 +1441,7 @@ impl Event for AutoSaveReplayEvent {
         state.play_option_change_sound();
     }
 
-    fn get_event_id(&self) -> i32 {
+    fn get_event_id(&self) -> EventId {
         self.event_id
     }
 }
@@ -1445,8 +1479,8 @@ impl Event for JudgeAlgorithmEvent {
         state.play_option_change_sound();
     }
 
-    fn get_event_id(&self) -> i32 {
-        340
+    fn get_event_id(&self) -> EventId {
+        EventId(340)
     }
 }
 
@@ -1468,8 +1502,8 @@ impl Event for GuideSeEvent {
         state.play_option_change_sound();
     }
 
-    fn get_event_id(&self) -> i32 {
-        343
+    fn get_event_id(&self) -> EventId {
+        EventId(343)
     }
 }
 
@@ -1509,8 +1543,8 @@ impl Event for ChartReplicationModeEvent {
         }
     }
 
-    fn get_event_id(&self) -> i32 {
-        344
+    fn get_event_id(&self) -> EventId {
+        EventId(344)
     }
 }
 
@@ -1629,19 +1663,19 @@ mod tests {
     #[test]
     fn test_get_event_by_id_known() {
         let event = event_by_id(11).unwrap();
-        assert_eq!(event.get_event_id(), 11);
+        assert_eq!(event.get_event_id(), EventId(11));
     }
 
     #[test]
     fn test_get_event_by_id_unknown() {
         let event = event_by_id(9999).unwrap();
-        assert_eq!(event.get_event_id(), 9999);
+        assert_eq!(event.get_event_id(), EventId(9999));
     }
 
     #[test]
     fn test_get_event_by_name() {
         let event = event_by_name("mode").unwrap();
-        assert_eq!(event.get_event_id(), 11);
+        assert_eq!(event.get_event_id(), EventId(11));
     }
 
     #[test]
@@ -1799,7 +1833,10 @@ mod tests {
         let mut state = TestMainState::new();
         assert!(!state.play_config.enable_constant);
         let event = event_by_id(skin_property::OPTION_CONSTANT).unwrap();
-        assert_eq!(event.get_event_id(), skin_property::OPTION_CONSTANT);
+        assert_eq!(
+            event.get_event_id(),
+            EventId(skin_property::OPTION_CONSTANT)
+        );
         event.exec(&mut state, 0, 0);
         assert!(state.play_config.enable_constant);
     }
@@ -1996,13 +2033,13 @@ mod tests {
     fn test_key_assign_event_ids() {
         // Verify the ID mapping: 101-139 for indices 0-38, 150-164 for indices 39-53
         let event = event_by_name("keyassign1").unwrap();
-        assert_eq!(event.get_event_id(), 101);
+        assert_eq!(event.get_event_id(), EventId(101));
         let event = event_by_name("keyassign39").unwrap();
-        assert_eq!(event.get_event_id(), 139);
+        assert_eq!(event.get_event_id(), EventId(139));
         let event = event_by_name("keyassign40").unwrap();
-        assert_eq!(event.get_event_id(), 150);
+        assert_eq!(event.get_event_id(), EventId(150));
         let event = event_by_name("keyassign54").unwrap();
-        assert_eq!(event.get_event_id(), 164);
+        assert_eq!(event.get_event_id(), EventId(164));
     }
 
     #[test]
@@ -2165,10 +2202,10 @@ mod tests {
     #[test]
     fn test_create_helper_functions() {
         let e = create_zero_arg_event(42);
-        assert_eq!(e.get_event_id(), 42);
+        assert_eq!(e.get_event_id(), EventId(42));
         let e = create_one_arg_event(43);
-        assert_eq!(e.get_event_id(), 43);
+        assert_eq!(e.get_event_id(), EventId(43));
         let e = create_two_arg_event(44);
-        assert_eq!(e.get_event_id(), 44);
+        assert_eq!(e.get_event_id(), EventId(44));
     }
 }

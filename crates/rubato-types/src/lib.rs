@@ -69,6 +69,7 @@ pub mod song_database_accessor;
 pub mod song_information;
 
 // Semantic newtypes for type safety
+pub mod event_id;
 pub mod timer_id;
 pub mod value_id;
 
