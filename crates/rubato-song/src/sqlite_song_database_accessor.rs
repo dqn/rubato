@@ -429,13 +429,13 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
                 if hash == &a.sha256 {
                     a_index_sha256 = i as i32;
                 }
-                if hash == a.get_md5() {
+                if hash == &a.md5 {
                     a_index_md5 = i as i32;
                 }
                 if hash == &b.sha256 {
                     b_index_sha256 = i as i32;
                 }
-                if hash == b.get_md5() {
+                if hash == &b.md5 {
                     b_index_md5 = i as i32;
                 }
             }

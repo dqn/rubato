@@ -32,7 +32,7 @@ pub struct ContextMenuBar {
 
 impl ContextMenuBar {
     pub fn new_for_song(song: SongData) -> Self {
-        let title = song.get_title().to_string();
+        let title = song.title.clone();
         let mut bar = Self {
             directory: DirectoryBarData::new(true),
             song: Some(song),
@@ -170,7 +170,7 @@ impl ContextMenuBar {
         // Related — navigate to SameFolderBar showing same-folder songs
         {
             let song_title = song.full_title();
-            let song_folder = song.get_folder().to_string();
+            let song_folder = song.folder.clone();
             let mut related = FunctionBar::new("Related".to_string(), STYLE_TABLE);
             let title_clone = song_title.clone();
             let folder_clone = song_folder.clone();
@@ -232,7 +232,7 @@ impl ContextMenuBar {
         self.add_meta_entries(&mut options, self.show_meta);
 
         // Favorite Chart
-        let is_fav_chart = (song.get_favorite() & FAVORITE_CHART) != 0;
+        let is_fav_chart = (song.favorite & FAVORITE_CHART) != 0;
         let mut fav_chart = FunctionBar::new_with_text_type(
             "Favorite Chart".to_string(),
             if is_fav_chart {
@@ -251,15 +251,15 @@ impl ContextMenuBar {
             let song_for_fav = song.clone();
             fav_chart.set_function(Arc::new(move |selector| {
                 let mut sd = song_for_fav.clone();
-                let new_fav = sd.get_favorite() ^ FAVORITE_CHART;
-                sd.set_favorite(new_fav);
+                let new_fav = sd.favorite ^ FAVORITE_CHART;
+                sd.favorite = new_fav;
                 selector.songdb.set_song_datas(&[sd]);
             }));
         }
         options.push(Bar::Function(Box::new(fav_chart)));
 
         // Favorite Song
-        let is_fav_song = (song.get_favorite() & FAVORITE_SONG) != 0;
+        let is_fav_song = (song.favorite & FAVORITE_SONG) != 0;
         let mut fav_song = FunctionBar::new_with_text_type(
             "Favorite Song".to_string(),
             if is_fav_song {
@@ -278,8 +278,8 @@ impl ContextMenuBar {
             let song_for_fav = song.clone();
             fav_song.set_function(Arc::new(move |selector| {
                 let mut sd = song_for_fav.clone();
-                let new_fav = sd.get_favorite() ^ FAVORITE_SONG;
-                sd.set_favorite(new_fav);
+                let new_fav = sd.favorite ^ FAVORITE_SONG;
+                sd.favorite = new_fav;
                 selector.songdb.set_song_datas(&[sd]);
             }));
         }
@@ -449,7 +449,7 @@ impl ContextMenuBar {
             None => return,
         };
 
-        let md5 = song.get_md5();
+        let md5 = &song.md5;
 
         // Open LR2IR page
         if !md5.is_empty() {
@@ -492,7 +492,7 @@ impl ContextMenuBar {
 
         if show_meta {
             // Copy Title
-            let title = song.get_title().to_string();
+            let title = song.title.clone();
             if !title.is_empty() {
                 let mut copy_title = FunctionBar::new_with_text_type(
                     "Copy Title".to_string(),
@@ -508,7 +508,7 @@ impl ContextMenuBar {
             }
 
             // Copy MD5
-            let md5_str = song.get_md5().to_string();
+            let md5_str = song.md5.clone();
             if !md5_str.is_empty() {
                 let mut copy_md5 = FunctionBar::new_with_text_type(
                     "Copy MD5".to_string(),
@@ -524,7 +524,7 @@ impl ContextMenuBar {
             }
 
             // Copy SHA256
-            let sha256 = song.get_sha256().to_string();
+            let sha256 = song.sha256.clone();
             if !sha256.is_empty() {
                 let mut copy_sha256 = FunctionBar::new_with_text_type(
                     "Copy SHA256".to_string(),
@@ -604,8 +604,8 @@ impl ContextMenuBar {
             Some(s) => s,
             None => return,
         };
-        let md5 = song.get_md5().to_string();
-        let sha256 = song.get_sha256().to_string();
+        let md5 = &song.md5;
+        let sha256 = &song.sha256;
         if md5.is_empty() && sha256.is_empty() {
             return;
         }
@@ -614,8 +614,8 @@ impl ContextMenuBar {
             for level in table.get_levels() {
                 let mut found = false;
                 for table_song in level.get_elements() {
-                    let song_md5 = table_song.get_md5();
-                    let song_sha256 = table_song.get_sha256();
+                    let song_md5 = &table_song.md5;
+                    let song_sha256 = &table_song.sha256;
                     if (!md5.is_empty() && !song_md5.is_empty() && md5 == song_md5)
                         || (!sha256.is_empty() && !song_sha256.is_empty() && sha256 == song_sha256)
                     {
@@ -669,8 +669,8 @@ impl ContextMenuBar {
                 continue;
             }
             if let Some(m) = mode
-                && song.get_mode() != 0
-                && song.get_mode() != m.id()
+                && song.mode != 0
+                && song.mode != m.id()
             {
                 continue;
             }
@@ -697,8 +697,8 @@ impl ContextMenuBar {
         let md5_and_names: Vec<(String, String)> = want
             .iter()
             .filter_map(|sd| {
-                let md5 = sd.get_md5().to_string();
-                let title = sd.get_title().to_string();
+                let md5 = sd.md5.clone();
+                let title = sd.title.clone();
                 if !md5.is_empty() && !title.is_empty() {
                     Some((md5, title))
                 } else {
@@ -711,8 +711,7 @@ impl ContextMenuBar {
         }
         let md5_array: Vec<String> = md5_and_names.iter().map(|(md5, _)| md5.clone()).collect();
         let in_hand = songdb.get_song_datas_by_hashes(&md5_array);
-        let in_hand_md5s: HashSet<String> =
-            in_hand.iter().map(|sd| sd.get_md5().to_string()).collect();
+        let in_hand_md5s: HashSet<String> = in_hand.iter().map(|sd| sd.md5.clone()).collect();
         let missing: Vec<&(String, String)> = md5_and_names
             .iter()
             .filter(|(md5, _)| !in_hand_md5s.contains(md5))

@@ -22,7 +22,7 @@ impl SongManagerMenu {
             .show(ctx, |ui| {
                 let song_name = current_song_data
                     .as_ref()
-                    .map(|sd| sd.get_title().to_string())
+                    .map(|sd| sd.title.clone())
                     .unwrap_or_default();
 
                 let last_play_record_time = current_score_data

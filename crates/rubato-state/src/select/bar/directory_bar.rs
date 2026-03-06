@@ -99,8 +99,8 @@ impl DirectoryBarData {
                 continue;
             }
             if let Some(m) = mode
-                && song.get_mode() != 0
-                && song.get_mode() != m.id()
+                && song.mode != 0
+                && song.mode != m.id()
             {
                 continue;
             }
@@ -140,7 +140,7 @@ impl DirectoryBarData {
             if let Some(mode) = mode
                 && let Some(sb) = b.as_song_bar()
             {
-                let song_mode = sb.get_song_data().get_mode();
+                let song_mode = sb.get_song_data().mode;
                 if song_mode != 0 && song_mode != mode.id() {
                     continue;
                 }
@@ -149,11 +149,11 @@ impl DirectoryBarData {
             // Same-folder deduplication
             let mut add_bar = true;
             if !contains_same_folder && let Some(sb) = b.as_song_bar() {
-                let folder = sb.get_song_data().get_folder();
+                let folder = &sb.get_song_data().folder;
                 if !folder.is_empty() {
                     for existing in &result {
                         if let Some(existing_sb) = existing.as_song_bar() {
-                            let existing_folder = existing_sb.get_song_data().get_folder();
+                            let existing_folder = &existing_sb.get_song_data().folder;
                             if folder == existing_folder {
                                 add_bar = false;
                                 break;
@@ -179,8 +179,8 @@ mod tests {
     fn make_song_bar(title: &str, sha256: &str, mode: i32, folder: &str) -> Bar {
         let mut song = SongData::default();
         song.set_title(title.to_string());
-        song.set_sha256(sha256.to_string());
-        song.set_mode(mode);
+        song.sha256 = sha256.to_string();
+        song.mode = mode;
         song.folder = folder.to_string();
         Bar::Song(Box::new(SongBar::new(song)))
     }

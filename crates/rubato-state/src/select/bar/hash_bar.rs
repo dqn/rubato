@@ -18,10 +18,10 @@ impl HashBar {
         let elements_hash = elements
             .iter()
             .map(|e| {
-                if !e.get_sha256().is_empty() {
-                    e.get_sha256().to_string()
+                if !e.sha256.is_empty() {
+                    e.sha256.to_string()
                 } else {
-                    e.get_md5().to_string()
+                    e.md5.to_string()
                 }
             })
             .collect();
@@ -45,10 +45,10 @@ impl HashBar {
         self.elements_hash = elements
             .iter()
             .map(|e| {
-                if !e.get_sha256().is_empty() {
-                    e.get_sha256().to_string()
+                if !e.sha256.is_empty() {
+                    e.sha256.to_string()
                 } else {
-                    e.get_md5().to_string()
+                    e.md5.to_string()
                 }
             })
             .collect();
@@ -120,11 +120,11 @@ mod tests {
     fn hash_bar_get_children_returns_matched_songs() {
         let mut element = SongData::default();
         element.set_title("Element Song".to_string());
-        element.set_sha256("hash_abc".to_string());
+        element.sha256 = "hash_abc".to_string();
 
         let mut db_song = SongData::default();
         db_song.set_title("DB Song".to_string());
-        db_song.set_sha256("hash_abc".to_string());
+        db_song.sha256 = "hash_abc".to_string();
         db_song.set_path("test/path.bms".to_string());
 
         let db = MockSongDb::new(vec![db_song]);
@@ -140,7 +140,7 @@ mod tests {
     fn hash_bar_get_children_shows_missing_elements() {
         let mut element = SongData::default();
         element.set_title("Missing Song".to_string());
-        element.set_sha256("hash_missing".to_string());
+        element.sha256 = "hash_missing".to_string();
 
         let db = MockSongDb::new(vec![]); // No songs in DB
         let bar = HashBar::new("Test Hash".to_string(), vec![element]);

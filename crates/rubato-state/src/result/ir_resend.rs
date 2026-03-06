@@ -84,8 +84,8 @@ pub fn start_ir_resend_thread(
                             remove_indices.push(i);
                             log::error!(
                                 "Failed to send a score for {} {}",
-                                score.songdata.get_title(),
-                                score.songdata.get_subtitle()
+                                score.songdata.title,
+                                score.songdata.subtitle
                             );
                         }
                     }

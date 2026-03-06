@@ -302,7 +302,7 @@ impl BarRenderer {
                         && let Some(Bar::Song(sb)) = ctx.currentsongs.get(idx)
                     {
                         let song = sb.get_song_data();
-                        songstatus = if now_secs > song.get_adddate() as i64 + 3600 * 24 {
+                        songstatus = if now_secs > song.adddate as i64 + 3600 * 24 {
                             2 // SongBar(normal)
                         } else {
                             3 // SongBar(new)
@@ -442,7 +442,7 @@ impl BarRenderer {
                 if let Some(idx) = ba.sd {
                     let sd = &ctx.currentsongs[idx];
                     if let Some(song_bar) = sd.as_song_bar() {
-                        let song_md5 = song_bar.get_song_data().get_md5();
+                        let song_md5 = &song_bar.get_song_data().md5;
                         for task_arc in download_tasks.values() {
                             let task = task_arc.lock().unwrap();
                             if task.get_hash() != song_md5 {
@@ -543,7 +543,7 @@ impl BarRenderer {
                 if let Some(sb) = sd.as_song_bar() {
                     if sb.exists_song() {
                         let song = sb.get_song_data();
-                        let difficulty = song.get_difficulty();
+                        let difficulty = song.difficulty;
                         let level_idx = if (0..7).contains(&difficulty) {
                             difficulty
                         } else {
@@ -554,12 +554,7 @@ impl BarRenderer {
                             && let Some(leveln) = baro.barlevel[level_idx as usize].as_mut()
                         {
                             leveln.draw_with_value(
-                                sprite,
-                                self.time,
-                                song.get_level(),
-                                ctx.state,
-                                ba.x,
-                                ba.y,
+                                sprite, self.time, song.level, ctx.state, ba.x, ba.y,
                             );
                         }
                     }
@@ -585,14 +580,14 @@ impl BarRenderer {
                 if let Some(sb) = sd.as_song_bar()
                     && sb.exists_song()
                 {
-                    flag |= sb.get_song_data().get_feature();
+                    flag |= sb.get_song_data().feature;
                 }
 
                 if let Some(gb) = sd.as_grade_bar()
                     && gb.exists_all_songs()
                 {
                     for song in gb.get_song_datas() {
-                        flag |= song.get_feature();
+                        flag |= song.feature;
                     }
                 }
 

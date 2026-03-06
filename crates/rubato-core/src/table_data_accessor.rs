@@ -323,7 +323,7 @@ mod tests {
                 name: Some("T1".to_string()),
                 songs: vec![{
                     let mut s = crate::stubs::SongData::new();
-                    s.set_md5("abcdef0123456789abcdef0123456789".to_string());
+                    s.md5 = "abcdef0123456789abcdef0123456789".to_string();
                     s.set_title("Test Song".to_string());
                     s
                 }],
@@ -376,7 +376,7 @@ mod tests {
                     name: Some(format!("T{}1", i)),
                     songs: vec![{
                         let mut s = crate::stubs::SongData::new();
-                        s.set_md5(format!("md5hash{:032}", i));
+                        s.md5 = format!("md5hash{:032}", i);
                         s.set_title(format!("Song {}", i));
                         s
                     }],
@@ -403,7 +403,7 @@ mod tests {
                 name: Some("C1".to_string()),
                 songs: vec![{
                     let mut s = crate::stubs::SongData::new();
-                    s.set_md5("custom_md5_hash_01234567890123".to_string());
+                    s.md5 = "custom_md5_hash_01234567890123".to_string();
                     s.set_title("Custom Song".to_string());
                     s
                 }],
@@ -432,7 +432,7 @@ mod tests {
                 name: Some("N1".to_string()),
                 songs: vec![{
                     let mut s = crate::stubs::SongData::new();
-                    s.set_md5("named_md5_hash_012345678901234".to_string());
+                    s.md5 = "named_md5_hash_012345678901234".to_string();
                     s.set_title("Named Song".to_string());
                     s
                 }],
@@ -466,7 +466,7 @@ mod tests {
                 name: Some("L1".to_string()),
                 songs: vec![{
                     let mut s = crate::stubs::SongData::new();
-                    s.set_md5("local_md5_hash_01234567890123".to_string());
+                    s.md5 = "local_md5_hash_01234567890123".to_string();
                     s.set_title("Local Song".to_string());
                     s
                 }],
@@ -518,7 +518,7 @@ mod tests {
                 name: Some("E1".to_string()),
                 songs: vec![{
                     let mut s = crate::stubs::SongData::new();
-                    s.set_md5("existing_md5_hash_0123456789012".to_string());
+                    s.md5 = "existing_md5_hash_0123456789012".to_string();
                     s.set_title("Existing Song".to_string());
                     s
                 }],

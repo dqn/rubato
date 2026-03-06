@@ -151,7 +151,7 @@ pub trait SkinRenderContext: TimerAccess {
             77 => target_image_index,
             78 => player_config.map_or(-1, |config| config.gauge_auto_shift),
             89 => self.get_song_data_ref().map_or(-1, |song| {
-                let favorite = song.get_favorite();
+                let favorite = song.favorite;
                 if favorite & crate::song_data::INVISIBLE_SONG != 0 {
                     2
                 } else if favorite & crate::song_data::FAVORITE_SONG != 0 {
@@ -161,7 +161,7 @@ pub trait SkinRenderContext: TimerAccess {
                 }
             }),
             90 => self.get_song_data_ref().map_or(-1, |song| {
-                let favorite = song.get_favorite();
+                let favorite = song.favorite;
                 if favorite & crate::song_data::INVISIBLE_CHART != 0 {
                     2
                 } else if favorite & crate::song_data::FAVORITE_CHART != 0 {

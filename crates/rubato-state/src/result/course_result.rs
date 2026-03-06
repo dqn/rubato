@@ -183,7 +183,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
         let course = self.resource.get_course_data()?;
         let mut current_mode: Option<bms_model::mode::Mode> = None;
         for song in course.get_song() {
-            let song_mode = match song.get_mode() {
+            let song_mode = match song.mode {
                 5 => Some(bms_model::mode::Mode::BEAT_5K),
                 7 => Some(bms_model::mode::Mode::BEAT_7K),
                 9 => Some(bms_model::mode::Mode::POPN_9K),

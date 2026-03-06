@@ -80,9 +80,8 @@ impl MainStateListener for DiscordListener {
                         } else {
                             format!("{} {}", songdata.title, songdata.subtitle)
                         };
-                        data =
-                            data.set_details(format!("{} / {}", full_title, songdata.get_artist()));
-                        data = data.set_state(format!("Playing: {}Keys", songdata.get_mode()));
+                        data = data.set_details(format!("{} / {}", full_title, songdata.artist));
+                        data = data.set_state(format!("Playing: {}Keys", songdata.mode));
                     }
                 }
                 ScreenType::MusicResult => {

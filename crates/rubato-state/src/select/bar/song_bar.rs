@@ -73,7 +73,7 @@ impl SongBar {
         let mut seen = HashSet::new();
         let mut filtered_songs = Vec::new();
         for song in songs {
-            let key = song.get_sha256().to_string();
+            let key = song.sha256.clone();
             if seen.insert(key) {
                 filtered_songs.push(song.clone());
             }
@@ -107,8 +107,7 @@ impl SongBar {
             }
             for j in (i + 1)..songs.len() {
                 if songs[j].is_some()
-                    && songs[i].as_ref().unwrap().get_sha256()
-                        == songs[j].as_ref().unwrap().get_sha256()
+                    && songs[i].as_ref().unwrap().sha256 == songs[j].as_ref().unwrap().sha256
                 {
                     songs[j] = None;
                     count -= 1;
@@ -116,10 +115,9 @@ impl SongBar {
             }
             for element in elements.iter_mut() {
                 if element.get_path().is_none()
-                    && ((!element.get_md5().is_empty()
-                        && element.get_md5() == songs[i].as_ref().unwrap().get_md5())
-                        || (!element.get_sha256().is_empty()
-                            && element.get_sha256() == songs[i].as_ref().unwrap().get_sha256()))
+                    && ((!element.md5.is_empty() && element.md5 == songs[i].as_ref().unwrap().md5)
+                        || (!element.sha256.is_empty()
+                            && element.sha256 == songs[i].as_ref().unwrap().sha256))
                 {
                     let song_path = songs[i].as_ref().unwrap().get_path().map(|s| s.to_string());
                     element.set_path_opt(song_path);

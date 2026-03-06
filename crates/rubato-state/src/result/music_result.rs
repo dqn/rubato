@@ -86,7 +86,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
         let mode = self
             .resource
             .get_songdata()
-            .and_then(|song| match song.get_mode() {
+            .and_then(|song| match song.mode {
                 5 => Some(bms_model::mode::Mode::BEAT_5K),
                 7 => Some(bms_model::mode::Mode::BEAT_7K),
                 9 => Some(bms_model::mode::Mode::POPN_9K),

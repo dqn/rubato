@@ -607,8 +607,8 @@ impl PlayerResource {
             }
             for tf in td.get_folder() {
                 let found = tf.get_song().iter().any(|ts| {
-                    (!ts.get_md5().is_empty() && ts.get_md5() == songdata.get_md5())
-                        || (!ts.get_sha256().is_empty() && ts.get_sha256() == songdata.get_sha256())
+                    (!ts.md5.is_empty() && ts.md5 == songdata.md5)
+                        || (!ts.sha256.is_empty() && ts.sha256 == songdata.sha256)
                 });
                 if found {
                     result.push(format!("{} {}", td.get_name(), tf.get_name()));
@@ -639,8 +639,8 @@ impl PlayerResource {
             }
             for tf in td.get_folder() {
                 let found = tf.get_song().iter().any(|ts| {
-                    (!ts.get_md5().is_empty() && ts.get_md5() == songdata.get_md5())
-                        || (!ts.get_sha256().is_empty() && ts.get_sha256() == songdata.get_sha256())
+                    (!ts.md5.is_empty() && ts.md5 == songdata.md5)
+                        || (!ts.sha256.is_empty() && ts.sha256 == songdata.sha256)
                 });
                 if found {
                     result.push(tf.get_name().to_string());
@@ -1024,10 +1024,7 @@ mod tests {
             .expect("songdata should be Some after successful set_bms_file");
 
         // md5 should be populated from the loaded model
-        assert!(
-            !songdata.get_md5().is_empty(),
-            "songdata.md5 should be non-empty"
-        );
+        assert!(!songdata.md5.is_empty(), "songdata.md5 should be non-empty");
 
         // PlayerResourceAccess trait method should also return Some
         let trait_songdata =

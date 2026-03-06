@@ -383,124 +383,12 @@ impl SongData {
         (self.feature & FEATURE_SCROLL) != 0
     }
 
-    pub fn get_title(&self) -> &str {
-        &self.title
-    }
-
-    pub fn get_subtitle(&self) -> &str {
-        &self.subtitle
-    }
-
-    pub fn get_genre(&self) -> &str {
-        &self.genre
-    }
-
-    pub fn get_artist(&self) -> &str {
-        &self.artist
-    }
-
-    pub fn get_subartist(&self) -> &str {
-        &self.subartist
-    }
-
-    pub fn get_md5(&self) -> &str {
-        &self.md5
-    }
-
-    pub fn get_sha256(&self) -> &str {
-        &self.sha256
-    }
-
     pub fn get_url(&self) -> &str {
         self.url.as_deref().unwrap_or("")
     }
 
     pub fn get_appendurl(&self) -> &str {
         self.appendurl.as_deref().unwrap_or("")
-    }
-
-    pub fn get_level(&self) -> i32 {
-        self.level
-    }
-
-    pub fn get_judge(&self) -> i32 {
-        self.judge
-    }
-
-    pub fn get_minbpm(&self) -> i32 {
-        self.minbpm
-    }
-
-    pub fn get_maxbpm(&self) -> i32 {
-        self.maxbpm
-    }
-
-    pub fn get_notes(&self) -> i32 {
-        self.notes
-    }
-
-    pub fn get_mode(&self) -> i32 {
-        self.mode
-    }
-
-    pub fn get_difficulty(&self) -> i32 {
-        self.difficulty
-    }
-
-    pub fn get_favorite(&self) -> i32 {
-        self.favorite
-    }
-
-    pub fn set_favorite(&mut self, favorite: i32) {
-        self.favorite = favorite;
-    }
-
-    pub fn get_feature(&self) -> i32 {
-        self.feature
-    }
-
-    pub fn get_content(&self) -> i32 {
-        self.content
-    }
-
-    pub fn get_length(&self) -> i32 {
-        self.length
-    }
-
-    pub fn get_date(&self) -> i32 {
-        self.date
-    }
-
-    pub fn get_adddate(&self) -> i32 {
-        self.adddate
-    }
-
-    pub fn get_tag(&self) -> &str {
-        &self.tag
-    }
-
-    pub fn get_folder(&self) -> &str {
-        &self.folder
-    }
-
-    pub fn get_parent(&self) -> &str {
-        &self.parent
-    }
-
-    pub fn get_stagefile(&self) -> &str {
-        &self.stagefile
-    }
-
-    pub fn get_backbmp(&self) -> &str {
-        &self.backbmp
-    }
-
-    pub fn get_banner(&self) -> &str {
-        &self.banner
-    }
-
-    pub fn get_preview(&self) -> &str {
-        &self.preview
     }
 
     pub fn get_charthash(&self) -> Option<&str> {
@@ -511,28 +399,12 @@ impl SongData {
         self.info.as_ref()
     }
 
-    pub fn set_genre(&mut self, genre: String) {
-        self.genre = genre;
-    }
-
-    pub fn set_md5(&mut self, md5: String) {
-        self.md5 = md5;
-    }
-
-    pub fn set_sha256(&mut self, sha256: String) {
-        self.sha256 = sha256;
-    }
-
     pub fn set_url(&mut self, url: String) {
         self.url = Some(url);
     }
 
     pub fn set_appendurl(&mut self, appendurl: String) {
         self.appendurl = Some(appendurl);
-    }
-
-    pub fn set_mode(&mut self, mode: i32) {
-        self.mode = mode;
     }
 
     pub fn get_ipfs_str(&self) -> &str {
@@ -694,27 +566,27 @@ mod tests {
         let mut sd = SongData::new();
         sd.set_title("My Title".to_string());
         sd.set_subtitle("Sub".to_string());
-        sd.set_genre("Pop".to_string());
+        sd.genre = "Pop".to_string();
         sd.set_artist("Artist A".to_string());
         sd.set_subartist("Sub B".to_string());
-        sd.set_md5("md5hash".to_string());
-        sd.set_sha256("sha256hash".to_string());
+        sd.md5 = "md5hash".to_string();
+        sd.sha256 = "sha256hash".to_string();
         sd.set_url("https://url.com".to_string());
         sd.set_appendurl("https://append.com".to_string());
-        sd.set_mode(14);
-        sd.set_favorite(FAVORITE_CHART);
+        sd.mode = 14;
+        sd.favorite = FAVORITE_CHART;
 
-        assert_eq!(sd.get_title(), "My Title");
-        assert_eq!(sd.get_subtitle(), "Sub");
-        assert_eq!(sd.get_genre(), "Pop");
-        assert_eq!(sd.get_artist(), "Artist A");
-        assert_eq!(sd.get_subartist(), "Sub B");
-        assert_eq!(sd.get_md5(), "md5hash");
-        assert_eq!(sd.get_sha256(), "sha256hash");
+        assert_eq!(sd.title, "My Title");
+        assert_eq!(sd.subtitle, "Sub");
+        assert_eq!(sd.genre, "Pop");
+        assert_eq!(sd.artist, "Artist A");
+        assert_eq!(sd.subartist, "Sub B");
+        assert_eq!(sd.md5, "md5hash");
+        assert_eq!(sd.sha256, "sha256hash");
         assert_eq!(sd.get_url(), "https://url.com");
         assert_eq!(sd.get_appendurl(), "https://append.com");
-        assert_eq!(sd.get_mode(), 14);
-        assert_eq!(sd.get_favorite(), FAVORITE_CHART);
+        assert_eq!(sd.mode, 14);
+        assert_eq!(sd.favorite, FAVORITE_CHART);
     }
 
     #[test]
@@ -874,7 +746,7 @@ mod tests {
         assert!(sd.preview.is_empty());
         assert!(sd.folder.is_empty());
         // Title should still be there
-        assert_eq!(sd.get_title(), "Title");
+        assert_eq!(sd.title, "Title");
     }
 
     #[test]
@@ -885,9 +757,9 @@ mod tests {
         sd.level = 7;
 
         let cloned = sd.clone();
-        assert_eq!(cloned.get_title(), "Clone Test");
-        assert_eq!(cloned.get_md5(), "md5clone");
-        assert_eq!(cloned.get_level(), 7);
+        assert_eq!(cloned.title, "Clone Test");
+        assert_eq!(cloned.md5, "md5clone");
+        assert_eq!(cloned.level, 7);
     }
 
     #[test]

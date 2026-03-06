@@ -32,7 +32,7 @@ impl BMSSearchAccessor {
                     let mut song = SongData::default();
                     song.set_title(element.title.clone().unwrap_or_default());
                     song.set_artist(element.artist.clone().unwrap_or_default());
-                    song.set_genre(element.genre.clone().unwrap_or_default());
+                    song.genre = element.genre.clone().unwrap_or_default();
                     if let Some(ref downloads) = element.downloads
                         && !downloads.is_empty()
                         && let Some(ref url) = downloads[0].url
@@ -48,7 +48,7 @@ impl BMSSearchAccessor {
                                     && let Some(ref file) = patterns[0].file
                                     && let Some(ref hash_md5) = file.hash_md5
                                 {
-                                    song.set_md5(hash_md5.clone());
+                                    song.md5 = hash_md5.clone();
                                 }
                             }
                             Err(e) => {

@@ -61,10 +61,10 @@ impl TableBar {
         let mut hashset: HashSet<String> = HashSet::new();
         for course in courses {
             for song in course.get_song() {
-                if !song.get_sha256().is_empty() {
-                    hashset.insert(song.get_sha256().to_string());
+                if !song.sha256.is_empty() {
+                    hashset.insert(song.sha256.clone());
                 } else {
-                    hashset.insert(song.get_md5().to_string());
+                    hashset.insert(song.md5.clone());
                 }
             }
         }

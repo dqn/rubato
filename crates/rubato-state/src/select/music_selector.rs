@@ -46,7 +46,7 @@ fn normalized_play_config_mode(mode: bms_model::Mode) -> bms_model::Mode {
 }
 
 fn play_config_mode_from_song(song: &SongData) -> Option<bms_model::Mode> {
-    match song.get_mode() {
+    match song.mode {
         5 => Some(bms_model::Mode::BEAT_5K),
         7 => Some(bms_model::Mode::BEAT_7K),
         9 => Some(bms_model::Mode::POPN_9K),
@@ -1237,7 +1237,7 @@ impl MusicSelector {
             }),
             ChartReplicationMode::ReplayChart | ChartReplicationMode::ReplayOption => {
                 let sd = songdata?;
-                let sha256 = sd.get_sha256();
+                let sha256 = &sd.sha256;
                 let has_ln = sd.has_undefined_long_note();
                 let replay = main.read_replay_data(sha256, has_ln, config.lnmode, replay_index)?;
                 let mut opt = rubato_types::replay_data::ReplayData::new();
@@ -1354,7 +1354,7 @@ impl MusicSelector {
                 Some(bar) => {
                     if let Some(song_bar) = bar.as_song_bar() {
                         if let Some(preview_song) = preview.get_song_data() {
-                            song_bar.get_song_data().get_folder() != preview_song.get_folder()
+                            song_bar.get_song_data().folder != preview_song.folder
                         } else {
                             true
                         }
@@ -2426,7 +2426,7 @@ impl MainState for MusicSelector {
                         let preview_song = preview.get_song_data();
                         // In Java: song != preview.getSongData() (reference comparison)
                         match preview_song {
-                            Some(ps) => ps.get_sha256() != song_bar.get_song_data().get_sha256(),
+                            Some(ps) => ps.sha256 != song_bar.get_song_data().sha256,
                             None => true,
                         }
                     } else {
@@ -2524,7 +2524,7 @@ impl MainState for MusicSelector {
                         }) {
                             let chart = IRChartData::new(song);
                             let local_score = main.read_score_data_by_hash(
-                                song.get_sha256(),
+                                &song.sha256,
                                 song.has_long_note(),
                                 lnmode,
                             );
@@ -3029,7 +3029,7 @@ mod tests {
         selector.config.mode7.playconfig.enablelanecover = false;
         selector.config.mode5.playconfig.enablelanecover = true;
         let mut song = make_song_data("play-config", Some("/test/selected.bms"));
-        song.set_mode(bms_model::Mode::BEAT_5K.id());
+        song.mode = bms_model::Mode::BEAT_5K.id();
         set_selected_bar(&mut selector, Bar::Song(Box::new(SongBar::new(song))));
         let mut timer = TimerManager::new();
         let ctx = SelectSkinContext {
@@ -3047,7 +3047,7 @@ mod tests {
         selector.config.mode7.playconfig.judgetype = "Combo".to_string();
         selector.config.mode5.playconfig.judgetype = "Lowest".to_string();
         let mut song = make_song_data("judge-type", Some("/test/judge.bms"));
-        song.set_mode(bms_model::Mode::BEAT_5K.id());
+        song.mode = bms_model::Mode::BEAT_5K.id();
         set_selected_bar(&mut selector, Bar::Song(Box::new(SongBar::new(song))));
         let mut timer = TimerManager::new();
         let ctx = SelectSkinContext {

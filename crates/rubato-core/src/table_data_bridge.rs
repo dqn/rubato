@@ -24,10 +24,10 @@ pub fn bms_table_element_to_song_data(
     let mut song = SongData::new();
 
     if let Some(md5) = te.get_md5() {
-        song.set_md5(md5.to_lowercase());
+        song.md5 = md5.to_lowercase();
     }
     if let Some(sha256) = te.get_sha256() {
-        song.set_sha256(sha256.to_lowercase());
+        song.sha256 = sha256.to_lowercase();
     }
     if let Some(title) = te.get_title() {
         song.set_title(title.to_string());
@@ -43,7 +43,7 @@ pub fn bms_table_element_to_song_data(
         .map(|m| m.id())
         .or_else(|| default_mode.map(|m| m.id()))
         .unwrap_or(0);
-    song.set_mode(mode_id);
+    song.mode = mode_id;
 
     if let Some(url) = te.get_url() {
         song.set_url(url.to_string());
@@ -185,13 +185,13 @@ mod tests {
         let song = bms_table_element_to_song_data(&te, None);
 
         // MD5 and SHA256 should be lowercased
-        assert_eq!(song.get_md5(), "abc123def456");
-        assert_eq!(song.get_sha256(), "deadbeef1234");
-        assert_eq!(song.get_title(), "Test Song");
-        assert_eq!(song.get_artist(), "Test Artist");
+        assert_eq!(song.md5, "abc123def456");
+        assert_eq!(song.sha256, "deadbeef1234");
+        assert_eq!(song.title, "Test Song");
+        assert_eq!(song.artist, "Test Artist");
         assert_eq!(song.get_url(), "https://example.com/download");
         assert_eq!(song.get_ipfs_str(), "QmTestHash");
-        assert_eq!(song.get_mode(), 0); // no mode set
+        assert_eq!(song.mode, 0); // no mode set
     }
 
     #[test]
@@ -200,7 +200,7 @@ mod tests {
 
         let song = bms_table_element_to_song_data(&te, Some(&Mode::BEAT_7K));
 
-        assert_eq!(song.get_mode(), 7);
+        assert_eq!(song.mode, 7);
     }
 
     #[test]
@@ -210,7 +210,7 @@ mod tests {
 
         let song = bms_table_element_to_song_data(&te, Some(&Mode::BEAT_7K));
 
-        assert_eq!(song.get_mode(), 5); // element mode wins
+        assert_eq!(song.mode, 5); // element mode wins
     }
 
     #[test]
@@ -218,12 +218,12 @@ mod tests {
         let te = BmsTableElement::new();
         let song = bms_table_element_to_song_data(&te, None);
 
-        assert_eq!(song.get_md5(), "");
-        assert_eq!(song.get_sha256(), "");
-        assert_eq!(song.get_title(), "");
-        assert_eq!(song.get_artist(), "");
+        assert_eq!(song.md5, "");
+        assert_eq!(song.sha256, "");
+        assert_eq!(song.title, "");
+        assert_eq!(song.artist, "");
         assert_eq!(song.get_url(), "");
-        assert_eq!(song.get_mode(), 0);
+        assert_eq!(song.mode, 0);
     }
 
     #[test]
@@ -250,8 +250,8 @@ mod tests {
 
         let song = difficulty_table_element_to_song_data(&dte, None);
 
-        assert_eq!(song.get_md5(), "abc123");
-        assert_eq!(song.get_title(), "DTE Song");
+        assert_eq!(song.md5, "abc123");
+        assert_eq!(song.title, "DTE Song");
         assert_eq!(song.get_appendurl(), "https://example.com/diff");
         assert_eq!(song.get_append_ipfs_str(), "QmDiffHash");
     }
@@ -263,7 +263,7 @@ mod tests {
 
         let song = difficulty_table_element_to_song_data(&dte, None);
 
-        assert_eq!(song.get_md5(), "def456");
+        assert_eq!(song.md5, "def456");
         assert_eq!(song.get_appendurl(), "");
         assert_eq!(song.get_append_ipfs_str(), "");
     }
@@ -303,12 +303,12 @@ mod tests {
         // Level "1" folder
         assert_eq!(td.get_folder()[0].get_name(), "N1");
         assert_eq!(td.get_folder()[0].get_song().len(), 1);
-        assert_eq!(td.get_folder()[0].get_song()[0].get_md5(), "hash_a");
+        assert_eq!(td.get_folder()[0].get_song()[0].md5, "hash_a");
 
         // Level "2" folder
         assert_eq!(td.get_folder()[1].get_name(), "N2");
         assert_eq!(td.get_folder()[1].get_song().len(), 1);
-        assert_eq!(td.get_folder()[1].get_song()[0].get_md5(), "hash_b");
+        assert_eq!(td.get_folder()[1].get_song()[0].md5, "hash_b");
     }
 
     #[test]
@@ -343,8 +343,8 @@ mod tests {
         let cd = &td.get_course()[0];
         assert_eq!(cd.get_name(), "Dan 1st");
         assert_eq!(cd.get_song().len(), 2);
-        assert_eq!(cd.get_song()[0].get_md5(), "course_hash_1");
-        assert_eq!(cd.get_song()[1].get_md5(), "course_hash_2");
+        assert_eq!(cd.get_song()[0].md5, "course_hash_1");
+        assert_eq!(cd.get_song()[1].md5, "course_hash_2");
 
         assert_eq!(cd.get_constraint().len(), 2);
         assert_eq!(cd.get_constraint()[0], CourseDataConstraint::Mirror);
@@ -371,7 +371,7 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "https://example.com/dp");
 
-        assert_eq!(td.get_folder()[0].get_song()[0].get_mode(), 14);
+        assert_eq!(td.get_folder()[0].get_song()[0].mode, 14);
     }
 
     #[test]
@@ -451,7 +451,7 @@ mod tests {
 
         let song = bms_table_element_to_song_data(&te, None);
 
-        assert_eq!(song.get_md5(), "abcdef0123456789");
+        assert_eq!(song.md5, "abcdef0123456789");
     }
 
     #[test]
@@ -461,7 +461,7 @@ mod tests {
 
         let song = bms_table_element_to_song_data(&te, None);
 
-        assert_eq!(song.get_sha256(), "abcdef0123456789abcdef0123456789");
+        assert_eq!(song.sha256, "abcdef0123456789abcdef0123456789");
     }
 
     #[test]
@@ -472,7 +472,7 @@ mod tests {
         let song = bms_table_element_to_song_data(&te, Some(&Mode::BEAT_7K));
 
         // invalid mode string -> Mode::get_mode returns None -> falls back to default
-        assert_eq!(song.get_mode(), 7);
+        assert_eq!(song.mode, 7);
     }
 
     #[test]
@@ -482,7 +482,7 @@ mod tests {
 
         let song = bms_table_element_to_song_data(&te, None);
 
-        assert_eq!(song.get_mode(), 0);
+        assert_eq!(song.mode, 0);
     }
 
     #[test]

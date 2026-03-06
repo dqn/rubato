@@ -117,11 +117,11 @@ impl BarSorter {
         if let (Some(s1), Some(s2)) = (o1.as_song_bar(), o2.as_song_bar()) {
             let title_cmp = s1
                 .song
-                .get_title()
+                .title
                 .to_lowercase()
-                .cmp(&s2.song.get_title().to_lowercase());
+                .cmp(&s2.song.title.to_lowercase());
             if title_cmp == Ordering::Equal {
-                return s1.song.get_difficulty().cmp(&s2.song.get_difficulty());
+                return s1.song.difficulty.cmp(&s2.song.difficulty);
             }
             return title_cmp;
         }
@@ -146,9 +146,9 @@ impl BarSorter {
             return Ordering::Less;
         }
         s1.song
-            .get_artist()
+            .artist
             .to_lowercase()
-            .cmp(&s2.song.get_artist().to_lowercase())
+            .cmp(&s2.song.artist.to_lowercase())
     }
 
     fn compare_bpm(o1: &Bar, o2: &Bar) -> Ordering {
@@ -165,7 +165,7 @@ impl BarSorter {
         if !s2.exists_song() {
             return Ordering::Less;
         }
-        s1.song.get_maxbpm().cmp(&s2.song.get_maxbpm())
+        s1.song.maxbpm.cmp(&s2.song.maxbpm)
     }
 
     fn compare_length(o1: &Bar, o2: &Bar) -> Ordering {
@@ -182,7 +182,7 @@ impl BarSorter {
         if !s2.exists_song() {
             return Ordering::Less;
         }
-        s1.song.get_length().cmp(&s2.song.get_length())
+        s1.song.length.cmp(&s2.song.length)
     }
 
     fn compare_level(o1: &Bar, o2: &Bar) -> Ordering {
@@ -199,9 +199,9 @@ impl BarSorter {
         if !s2.exists_song() {
             return Ordering::Less;
         }
-        let level_sort = s1.song.get_level().cmp(&s2.song.get_level());
+        let level_sort = s1.song.level.cmp(&s2.song.level);
         if level_sort == Ordering::Equal {
-            return s1.song.get_difficulty().cmp(&s2.song.get_difficulty());
+            return s1.song.difficulty.cmp(&s2.song.difficulty);
         }
         level_sort
     }
