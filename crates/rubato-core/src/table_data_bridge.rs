@@ -23,21 +23,21 @@ pub fn bms_table_element_to_song_data(
 ) -> SongData {
     let mut song = SongData::new();
 
-    if let Some(md5) = te.get_md5() {
+    if let Some(md5) = te.md5() {
         song.md5 = md5.to_lowercase();
     }
-    if let Some(sha256) = te.get_sha256() {
+    if let Some(sha256) = te.sha256() {
         song.sha256 = sha256.to_lowercase();
     }
-    if let Some(title) = te.get_title() {
+    if let Some(title) = te.title() {
         song.set_title(title.to_string());
     }
-    if let Some(artist) = te.get_artist() {
+    if let Some(artist) = te.artist() {
         song.set_artist(artist.to_string());
     }
 
     // Resolve mode: element mode takes precedence, then default_mode
-    let element_mode = te.get_mode().and_then(Mode::get_mode);
+    let element_mode = te.mode().and_then(Mode::get_mode);
     let mode_id = element_mode
         .as_ref()
         .map(|m| m.id())
@@ -45,13 +45,13 @@ pub fn bms_table_element_to_song_data(
         .unwrap_or(0);
     song.mode = mode_id;
 
-    if let Some(url) = te.get_url() {
+    if let Some(url) = te.url() {
         song.set_url(url.to_string());
     }
-    if let Some(ipfs) = te.get_ipfs() {
+    if let Some(ipfs) = te.ipfs() {
         song.ipfs = Some(ipfs.to_string());
     }
-    if let Some(parent_hash) = te.get_parent_hash() {
+    if let Some(parent_hash) = te.parent_hash() {
         song.org_md5 = Some(parent_hash);
     }
 
@@ -68,10 +68,10 @@ pub fn difficulty_table_element_to_song_data(
 ) -> SongData {
     let mut song = bms_table_element_to_song_data(&dte.element, default_mode);
 
-    if let Some(append_url) = dte.get_append_url() {
+    if let Some(append_url) = dte.append_url() {
         song.set_appendurl(append_url.to_string());
     }
-    if let Some(append_ipfs) = dte.get_append_ipfs() {
+    if let Some(append_ipfs) = dte.append_ipfs() {
         song.appendipfs = Some(append_ipfs.to_string());
     }
 
@@ -81,25 +81,25 @@ pub fn difficulty_table_element_to_song_data(
 /// Convert a bms-table Course to a beatoraja-types CourseData.
 fn course_to_course_data(course: &Course, default_mode: Option<&Mode>) -> CourseData {
     let mut cd = CourseData::default();
-    cd.set_name(course.get_name().to_string());
+    cd.set_name(course.name().to_string());
 
     let songs: Vec<SongData> = course
-        .get_charts()
+        .charts()
         .iter()
         .map(|chart| bms_table_element_to_song_data(chart, default_mode))
         .collect();
     cd.hash = songs;
 
     let constraints: Vec<CourseDataConstraint> = course
-        .get_constraint()
+        .constraint()
         .iter()
         .filter_map(|c| CourseDataConstraint::get_value(c))
         .collect();
     cd.constraint = constraints;
 
-    if !course.get_trophy().is_empty() {
+    if !course.trophy().is_empty() {
         let trophies: Vec<TrophyData> = course
-            .get_trophy()
+            .trophy()
             .iter()
             .map(trophy_to_trophy_data)
             .collect();
@@ -112,9 +112,9 @@ fn course_to_course_data(course: &Course, default_mode: Option<&Mode>) -> Course
 /// Convert a bms-table Trophy to a beatoraja-types TrophyData.
 fn trophy_to_trophy_data(trophy: &Trophy) -> TrophyData {
     let mut td = TrophyData::default();
-    td.set_name(trophy.get_name().to_string());
-    td.missrate = trophy.get_missrate() as f32;
-    td.scorerate = trophy.get_scorerate() as f32;
+    td.set_name(trophy.name().to_string());
+    td.missrate = trophy.missrate() as f32;
+    td.scorerate = trophy.scorerate() as f32;
     td
 }
 
@@ -123,22 +123,22 @@ fn trophy_to_trophy_data(trophy: &Trophy) -> TrophyData {
 /// Translated from Java: DifficultyTableAccessor.read()
 /// Creates TableData with folders (one per level) and courses.
 pub fn difficulty_table_to_table_data(dt: &DifficultyTable, url: &str) -> TableData {
-    let default_mode = dt.table.get_mode().and_then(Mode::get_mode);
+    let default_mode = dt.table.mode().and_then(Mode::get_mode);
 
     let tag = dt
         .table
-        .get_tag()
-        .unwrap_or_else(|| dt.table.get_id().unwrap_or("").to_string());
+        .tag()
+        .unwrap_or_else(|| dt.table.id().unwrap_or("").to_string());
 
     let folders: Vec<TableFolder> = dt
-        .get_level_description()
+        .level_description()
         .iter()
         .map(|lv| {
             let folder_name = format!("{}{}", tag, lv);
             let songs: Vec<SongData> = dt
-                .get_elements()
+                .elements()
                 .iter()
-                .filter(|dte| dte.get_level() == lv)
+                .filter(|dte| dte.level() == lv)
                 .map(|dte| difficulty_table_element_to_song_data(dte, default_mode.as_ref()))
                 .collect();
             TableFolder {
@@ -149,7 +149,7 @@ pub fn difficulty_table_to_table_data(dt: &DifficultyTable, url: &str) -> TableD
         .collect();
 
     let courses: Vec<CourseData> = dt
-        .get_course()
+        .course()
         .iter()
         .flat_map(|course_list| course_list.iter())
         .map(|g| course_to_course_data(g, default_mode.as_ref()))
@@ -157,7 +157,7 @@ pub fn difficulty_table_to_table_data(dt: &DifficultyTable, url: &str) -> TableD
 
     TableData {
         url: url.to_string(),
-        name: dt.table.get_name().unwrap_or("").to_string(),
+        name: dt.table.name().unwrap_or("").to_string(),
         tag,
         folder: folders,
         course: courses,
@@ -396,7 +396,7 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "https://example.com");
 
-        // BmsTable.get_tag() returns id when no tag is set
+        // BmsTable.tag() returns id when no tag is set
         assert_eq!(td.tag, "TID");
     }
 

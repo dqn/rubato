@@ -40,7 +40,7 @@ impl<T: Clone> BmsTable<T> {
         }
     }
 
-    pub fn get_name(&self) -> Option<&str> {
+    pub fn name(&self) -> Option<&str> {
         self.values.get(NAME).and_then(|v| v.as_str())
     }
 
@@ -49,7 +49,7 @@ impl<T: Clone> BmsTable<T> {
             .insert(NAME.to_string(), Value::String(name.to_string()));
     }
 
-    pub fn get_id(&self) -> Option<&str> {
+    pub fn id(&self) -> Option<&str> {
         self.values.get(SYMBOL).and_then(|v| v.as_str())
     }
 
@@ -58,7 +58,7 @@ impl<T: Clone> BmsTable<T> {
             .insert(SYMBOL.to_string(), Value::String(id.to_string()));
     }
 
-    pub fn get_data_url(&self) -> &[String] {
+    pub fn data_url(&self) -> &[String] {
         &self.data_url
     }
 
@@ -66,7 +66,7 @@ impl<T: Clone> BmsTable<T> {
         self.data_url = datas;
     }
 
-    pub fn get_merge_configurations(&self) -> &HashMap<String, HashMap<String, String>> {
+    pub fn merge_configurations(&self) -> &HashMap<String, HashMap<String, String>> {
         &self.merge_configurations
     }
 
@@ -77,7 +77,7 @@ impl<T: Clone> BmsTable<T> {
         self.merge_configurations = merge_configurations;
     }
 
-    pub fn get_tag(&self) -> Option<String> {
+    pub fn tag(&self) -> Option<String> {
         if self.values.contains_key(TAG) {
             return self
                 .values
@@ -85,7 +85,7 @@ impl<T: Clone> BmsTable<T> {
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
         }
-        self.get_id().map(|s| s.to_string())
+        self.id().map(|s| s.to_string())
     }
 
     pub fn set_tag(&mut self, tag: &str) {
@@ -93,7 +93,7 @@ impl<T: Clone> BmsTable<T> {
             .insert(TAG.to_string(), Value::String(tag.to_string()));
     }
 
-    pub fn get_source_url(&self) -> &str {
+    pub fn source_url(&self) -> &str {
         &self.source_url
     }
 
@@ -101,11 +101,11 @@ impl<T: Clone> BmsTable<T> {
         self.source_url = source_url.to_string();
     }
 
-    pub fn get_models(&self) -> &Vec<T> {
+    pub fn models(&self) -> &Vec<T> {
         &self.models
     }
 
-    pub fn get_models_mut(&mut self) -> &mut Vec<T> {
+    pub fn models_mut(&mut self) -> &mut Vec<T> {
         &mut self.models
     }
 
@@ -143,7 +143,7 @@ impl<T: Clone> BmsTable<T> {
         self.editable = editable;
     }
 
-    pub fn get_attrmap(&self) -> HashMap<String, String> {
+    pub fn attrmap(&self) -> HashMap<String, String> {
         if let Some(v) = self.values.get(ATTR)
             && let Some(obj) = v.as_object()
         {
@@ -166,7 +166,7 @@ impl<T: Clone> BmsTable<T> {
         self.values.insert(ATTR.to_string(), Value::Object(obj));
     }
 
-    pub fn get_head_url(&self) -> &str {
+    pub fn head_url(&self) -> &str {
         &self.head_url
     }
 
@@ -174,11 +174,11 @@ impl<T: Clone> BmsTable<T> {
         self.head_url = head_url.to_string();
     }
 
-    pub fn get_lastupdate(&self) -> i64 {
+    pub fn lastupdate(&self) -> i64 {
         self.lastupdate
     }
 
-    pub fn get_access_count(&self) -> i32 {
+    pub fn access_count(&self) -> i32 {
         self.access_count
     }
 
@@ -194,11 +194,11 @@ impl<T: Clone> BmsTable<T> {
         self.auto_update = autoupdate;
     }
 
-    pub fn get_values(&self) -> &HashMap<String, Value> {
+    pub fn values(&self) -> &HashMap<String, Value> {
         &self.values
     }
 
-    pub fn get_values_mut(&mut self) -> &mut HashMap<String, Value> {
+    pub fn values_mut(&mut self) -> &mut HashMap<String, Value> {
         &mut self.values
     }
 
@@ -209,7 +209,7 @@ impl<T: Clone> BmsTable<T> {
         }
     }
 
-    pub fn get_mode(&self) -> Option<&str> {
+    pub fn mode(&self) -> Option<&str> {
         self.values.get(MODE).and_then(|v| v.as_str())
     }
 

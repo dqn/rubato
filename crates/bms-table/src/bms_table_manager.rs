@@ -43,19 +43,19 @@ impl BmsTableManager {
         }
     }
 
-    pub fn get_bms_tables(&self) -> Vec<&DifficultyTable> {
+    pub fn bms_tables(&self) -> Vec<&DifficultyTable> {
         self.table_list.iter().collect()
     }
 
-    pub fn get_table_list(&self) -> &Vec<DifficultyTable> {
+    pub fn table_list(&self) -> &Vec<DifficultyTable> {
         &self.table_list
     }
 
-    pub fn get_table_list_mut(&mut self) -> &mut Vec<DifficultyTable> {
+    pub fn table_list_mut(&mut self) -> &mut Vec<DifficultyTable> {
         &mut self.table_list
     }
 
-    pub fn get_user_list(&self) -> &HashMap<String, Vec<DifficultyTableElement>> {
+    pub fn user_list(&self) -> &HashMap<String, Vec<DifficultyTableElement>> {
         &self.user_list
     }
 
@@ -63,7 +63,7 @@ impl BmsTableManager {
         self.user_list = user_list;
     }
 
-    pub fn get_memo_map(&self) -> &HashMap<String, String> {
+    pub fn memo_map(&self) -> &HashMap<String, String> {
         &self.memo_map
     }
 
@@ -71,7 +71,7 @@ impl BmsTableManager {
         self.memo_map = memo_map;
     }
 
-    pub fn get_user_difficulty_table_elements(
+    pub fn user_difficulty_table_elements(
         &mut self,
         name: &str,
     ) -> &mut Vec<DifficultyTableElement> {

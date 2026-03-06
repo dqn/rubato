@@ -60,7 +60,7 @@ impl DifficultyTableElement {
         dte
     }
 
-    pub fn get_state(&self) -> i32 {
+    pub fn state(&self) -> i32 {
         self.state
     }
 
@@ -68,7 +68,7 @@ impl DifficultyTableElement {
         self.state = id;
     }
 
-    pub fn get_level(&self) -> &str {
+    pub fn level(&self) -> &str {
         &self.level
     }
 
@@ -83,7 +83,7 @@ impl DifficultyTableElement {
         }
     }
 
-    pub fn get_evaluation(&self) -> i32 {
+    pub fn evaluation(&self) -> i32 {
         self.eval
     }
 
@@ -91,60 +91,54 @@ impl DifficultyTableElement {
         self.eval = eval;
     }
 
-    pub fn get_package_url(&self) -> Option<&str> {
-        self.element
-            .get_values()
-            .get("url_pack")
-            .and_then(|v| v.as_str())
+    pub fn package_url(&self) -> Option<&str> {
+        self.element.values.get("url_pack").and_then(|v| v.as_str())
     }
 
     pub fn set_package_url(&mut self, url1sub: &str) {
         self.element
-            .get_values_mut()
+            .values
             .insert("url_pack".to_string(), Value::String(url1sub.to_string()));
     }
 
-    pub fn get_package_name(&self) -> Option<&str> {
+    pub fn package_name(&self) -> Option<&str> {
         self.element
-            .get_values()
+            .values
             .get("name_pack")
             .and_then(|v| v.as_str())
     }
 
     pub fn set_package_name(&mut self, url1subname: &str) {
-        self.element.get_values_mut().insert(
+        self.element.values.insert(
             "name_pack".to_string(),
             Value::String(url1subname.to_string()),
         );
     }
 
-    pub fn get_append_url(&self) -> Option<&str> {
-        self.element
-            .get_values()
-            .get("url_diff")
-            .and_then(|v| v.as_str())
+    pub fn append_url(&self) -> Option<&str> {
+        self.element.values.get("url_diff").and_then(|v| v.as_str())
     }
 
     pub fn set_append_url(&mut self, url2: &str) {
         self.element
-            .get_values_mut()
+            .values
             .insert("url_diff".to_string(), Value::String(url2.to_string()));
     }
 
-    pub fn get_append_ipfs(&self) -> Option<&str> {
+    pub fn append_ipfs(&self) -> Option<&str> {
         self.element
-            .get_values()
+            .values
             .get("ipfs_diff")
             .and_then(|v| v.as_str())
     }
 
     pub fn set_append_ipfs(&mut self, ipfs2: &str) {
         self.element
-            .get_values_mut()
+            .values
             .insert("ipfs_diff".to_string(), Value::String(ipfs2.to_string()));
     }
 
-    pub fn get_append_artist(&self) -> &str {
+    pub fn append_artist(&self) -> &str {
         &self.diffname
     }
 
@@ -152,7 +146,7 @@ impl DifficultyTableElement {
         self.diffname = url2name.to_string();
     }
 
-    pub fn get_comment(&self) -> &str {
+    pub fn comment(&self) -> &str {
         &self.comment
     }
 
@@ -160,7 +154,7 @@ impl DifficultyTableElement {
         self.comment = comment1.to_string();
     }
 
-    pub fn get_information(&self) -> &str {
+    pub fn information(&self) -> &str {
         &self.info
     }
 
@@ -168,7 +162,7 @@ impl DifficultyTableElement {
         self.info = comment2.to_string();
     }
 
-    pub fn get_proposer(&self) -> &str {
+    pub fn proposer(&self) -> &str {
         &self.proposer
     }
 
@@ -176,9 +170,9 @@ impl DifficultyTableElement {
         self.proposer = proposer.to_string();
     }
 
-    pub fn get_bmsid(&self) -> i32 {
+    pub fn bmsid(&self) -> i32 {
         let mut result: i32 = 0;
-        if let Some(v) = self.element.get_values().get("lr2_bmsid") {
+        if let Some(v) = self.element.values.get("lr2_bmsid") {
             let s = v.to_string();
             let s = s.trim_matches('"');
             if let Ok(n) = s.parse::<i32>() {
@@ -189,7 +183,7 @@ impl DifficultyTableElement {
     }
 
     pub fn set_bmsid(&mut self, bmsid: i32) {
-        self.element.get_values_mut().insert(
+        self.element.values.insert(
             "lr2_bmsid".to_string(),
             Value::Number(serde_json::Number::from(bmsid)),
         );
@@ -215,36 +209,33 @@ impl DifficultyTableElement {
         self.set_proposer(&proposer.map(value_to_string).unwrap_or_default());
     }
 
-    pub fn get_values(&self) -> HashMap<String, Value> {
-        let mut result = self.element.get_values().clone();
-        result.insert(
-            "level".to_string(),
-            Value::String(self.get_level().to_string()),
-        );
+    pub fn values(&self) -> HashMap<String, Value> {
+        let mut result = self.element.values.clone();
+        result.insert("level".to_string(), Value::String(self.level().to_string()));
         result.insert(
             "eval".to_string(),
-            Value::Number(serde_json::Number::from(self.get_evaluation())),
+            Value::Number(serde_json::Number::from(self.evaluation())),
         );
         result.insert(
             "state".to_string(),
-            Value::Number(serde_json::Number::from(self.get_state())),
+            Value::Number(serde_json::Number::from(self.state())),
         );
         result.insert(
             "name_diff".to_string(),
-            Value::String(self.get_append_artist().to_string()),
+            Value::String(self.append_artist().to_string()),
         );
         result.insert(
             "comment".to_string(),
-            Value::String(self.get_comment().to_string()),
+            Value::String(self.comment().to_string()),
         );
         result.insert(
             "tag".to_string(),
-            Value::String(self.get_information().to_string()),
+            Value::String(self.information().to_string()),
         );
-        if !self.get_proposer().is_empty() {
+        if !self.proposer().is_empty() {
             result.insert(
                 "proposer".to_string(),
-                Value::String(self.get_proposer().to_string()),
+                Value::String(self.proposer().to_string()),
             );
         } else {
             result.remove("proposer");

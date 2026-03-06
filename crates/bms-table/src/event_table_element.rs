@@ -16,7 +16,7 @@ impl EventTableElement {
         }
     }
 
-    pub fn get_artist(&self) -> Option<&str> {
+    pub fn artist(&self) -> Option<&str> {
         self.artist.as_deref()
     }
 
@@ -24,7 +24,7 @@ impl EventTableElement {
         self.artist = artist.map(|s| s.to_string());
     }
 
-    pub fn get_team(&self) -> Option<&str> {
+    pub fn team(&self) -> Option<&str> {
         self.team.as_deref()
     }
 

@@ -20,7 +20,7 @@ impl Course {
         }
     }
 
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
@@ -28,7 +28,7 @@ impl Course {
         self.name = name.to_string();
     }
 
-    pub fn get_charts(&self) -> &[BmsTableElement] {
+    pub fn charts(&self) -> &[BmsTableElement] {
         &self.charts
     }
 
@@ -36,7 +36,7 @@ impl Course {
         self.charts = charts;
     }
 
-    pub fn get_style(&self) -> &str {
+    pub fn style(&self) -> &str {
         &self.style
     }
 
@@ -44,7 +44,7 @@ impl Course {
         self.style = style.to_string();
     }
 
-    pub fn get_constraint(&self) -> &[String] {
+    pub fn constraint(&self) -> &[String] {
         &self.constraint
     }
 
@@ -52,7 +52,7 @@ impl Course {
         self.constraint = constraint;
     }
 
-    pub fn get_trophy(&self) -> &[Trophy] {
+    pub fn trophy(&self) -> &[Trophy] {
         &self.trophy
     }
 
@@ -85,7 +85,7 @@ impl Trophy {
         }
     }
 
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
@@ -93,7 +93,7 @@ impl Trophy {
         self.name = name.to_string();
     }
 
-    pub fn get_style(&self) -> &str {
+    pub fn style(&self) -> &str {
         &self.style
     }
 
@@ -101,7 +101,7 @@ impl Trophy {
         self.style = style.to_string();
     }
 
-    pub fn get_scorerate(&self) -> f64 {
+    pub fn scorerate(&self) -> f64 {
         self.scorerate
     }
 
@@ -109,7 +109,7 @@ impl Trophy {
         self.scorerate = scorerate;
     }
 
-    pub fn get_missrate(&self) -> f64 {
+    pub fn missrate(&self) -> f64 {
         self.missrate
     }
 

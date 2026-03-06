@@ -20,7 +20,7 @@ impl BmsTableElement {
         }
     }
 
-    pub fn get_title(&self) -> Option<&str> {
+    pub fn title(&self) -> Option<&str> {
         self.values.get(TITLE).and_then(|v| v.as_str())
     }
 
@@ -29,7 +29,7 @@ impl BmsTableElement {
             .insert(TITLE.to_string(), Value::String(title.to_string()));
     }
 
-    pub fn get_url(&self) -> Option<&str> {
+    pub fn url(&self) -> Option<&str> {
         self.values.get("url").and_then(|v| v.as_str())
     }
 
@@ -38,7 +38,7 @@ impl BmsTableElement {
             .insert("url".to_string(), Value::String(url1.to_string()));
     }
 
-    pub fn get_ipfs(&self) -> Option<&str> {
+    pub fn ipfs(&self) -> Option<&str> {
         self.values.get("ipfs").and_then(|v| v.as_str())
     }
 
@@ -47,7 +47,7 @@ impl BmsTableElement {
             .insert("ipfs".to_string(), Value::String(ipfs1.to_string()));
     }
 
-    pub fn get_artist(&self) -> Option<&str> {
+    pub fn artist(&self) -> Option<&str> {
         self.values.get(ARTIST).and_then(|v| v.as_str())
     }
 
@@ -56,7 +56,7 @@ impl BmsTableElement {
             .insert(ARTIST.to_string(), Value::String(url1name.to_string()));
     }
 
-    pub fn get_md5(&self) -> Option<&str> {
+    pub fn md5(&self) -> Option<&str> {
         self.values.get(MD5).and_then(|v| v.as_str())
     }
 
@@ -65,7 +65,7 @@ impl BmsTableElement {
             .insert(MD5.to_string(), Value::String(hash.to_string()));
     }
 
-    pub fn get_sha256(&self) -> Option<&str> {
+    pub fn sha256(&self) -> Option<&str> {
         self.values.get(SHA256).and_then(|v| v.as_str())
     }
 
@@ -74,7 +74,7 @@ impl BmsTableElement {
             .insert(SHA256.to_string(), Value::String(hash.to_string()));
     }
 
-    pub fn get_mode(&self) -> Option<&str> {
+    pub fn mode(&self) -> Option<&str> {
         self.values.get(MODE).and_then(|v| v.as_str())
     }
 
@@ -84,7 +84,7 @@ impl BmsTableElement {
     }
 
     #[allow(clippy::vec_init_then_push)]
-    pub fn get_parent_hash(&self) -> Option<Vec<String>> {
+    pub fn parent_hash(&self) -> Option<Vec<String>> {
         let o = self.values.get("org_md5")?;
         if let Some(s) = o.as_str() {
             let mut result: Vec<String> = Vec::new();
@@ -115,14 +115,6 @@ impl BmsTableElement {
                 self.values.insert("org_md5".to_string(), Value::Array(arr));
             }
         }
-    }
-
-    pub fn get_values(&self) -> &HashMap<String, Value> {
-        &self.values
-    }
-
-    pub fn get_values_mut(&mut self) -> &mut HashMap<String, Value> {
-        &mut self.values
     }
 
     pub fn set_values(&mut self, values: &HashMap<String, Value>) {

@@ -43,7 +43,7 @@ impl DifficultyTableParser {
         self.get_meta_tag(urlname, "bmstable").is_some()
     }
 
-    pub fn get_alternate_bms_table_url(&mut self, urlname: &str) -> Option<String> {
+    pub fn alternate_bms_table_url(&mut self, urlname: &str) -> Option<String> {
         self.get_meta_tag(urlname, "bmstable-alt")
     }
 
@@ -93,11 +93,11 @@ impl DifficultyTableParser {
 
     #[allow(clippy::unnecessary_get_then_check)]
     pub fn decode(&mut self, b: bool, diff: &mut DifficultyTable) -> Result<()> {
-        let urlname = diff.table.get_source_url().to_string();
+        let urlname = diff.table.source_url().to_string();
         let mut tableurl: Option<String> = None;
         let mut _enc: Option<String> = None;
         if urlname.is_empty() {
-            tableurl = Some(diff.table.get_head_url().to_string());
+            tableurl = Some(diff.table.head_url().to_string());
         } else {
             if !self.data.contains_key(&urlname)
                 && let Some(lines) = self.read_all_lines(&urlname)
@@ -166,7 +166,7 @@ impl DifficultyTableParser {
         save_elements: bool,
     ) -> Result<()> {
         self.decode_json_table_header_from_url(dt, jsonheader_url)?;
-        let urls = dt.table.get_data_url().to_vec();
+        let urls = dt.table.data_url().to_vec();
         if save_elements {
             dt.table.remove_all_elements();
             let mut elements: Vec<DifficultyTableElement> = Vec::new();
@@ -174,14 +174,14 @@ impl DifficultyTableParser {
             for url in &urls {
                 let conf = dt
                     .table
-                    .get_merge_configurations()
+                    .merge_configurations()
                     .get(url)
                     .cloned()
                     .unwrap_or_default();
                 let mut table = DifficultyTable::new();
 
-                let source_url = dt.table.get_source_url().to_string();
-                let head_url = dt.table.get_head_url().to_string();
+                let source_url = dt.table.source_url().to_string();
+                let head_url = dt.table.head_url().to_string();
                 let base_url = if source_url.is_empty() {
                     head_url.clone()
                 } else {
@@ -190,16 +190,16 @@ impl DifficultyTableParser {
                 let data_url = self.get_absolute_url(&base_url, url);
 
                 self.decode_json_table_data_from_url(&mut table, &data_url)?;
-                for l in &table.get_level_description() {
+                for l in &table.level_description() {
                     levels.push(l.clone());
                 }
-                for dte in table.get_elements() {
-                    let level_conf = conf.get(dte.get_level());
+                for dte in table.elements() {
+                    let level_conf = conf.get(dte.level());
                     if level_conf.is_none_or(|v| !v.is_empty()) {
                         let contains = false;
                         if !contains {
                             let mut dte = dte.clone();
-                            if let Some(new_level) = conf.get(dte.get_level()) {
+                            if let Some(new_level) = conf.get(dte.level()) {
                                 dte.set_level(Some(new_level));
                             }
                             elements.push(dte);
@@ -207,7 +207,7 @@ impl DifficultyTableParser {
                     }
                 }
             }
-            if dt.get_level_description().is_empty() {
+            if dt.level_description().is_empty() {
                 dt.set_level_description(&levels);
             }
             dt.table.set_models(elements);
@@ -280,7 +280,7 @@ impl DifficultyTableParser {
         } else {
             Vec::new()
         };
-        let data_urls = dt.table.get_data_url().to_vec();
+        let data_urls = dt.table.data_url().to_vec();
         for i in 0..data_urls.len() {
             if i == merge.len() {
                 break;
@@ -410,8 +410,8 @@ impl DifficultyTableParser {
             if accept || (has_level && (md5_ok || sha256_ok)) {
                 let mut dte = DifficultyTableElement::new();
                 dte.set_values(m);
-                if dte.element.get_mode().is_none()
-                    && let Some(mode) = dt.table.get_mode()
+                if dte.element.mode().is_none()
+                    && let Some(mode) = dt.table.mode()
                 {
                     dte.element.set_mode(mode);
                 }
@@ -440,7 +440,7 @@ impl DifficultyTableParser {
             }
         }
 
-        if dt.get_level_description().is_empty() {
+        if dt.level_description().is_empty() {
             dt.set_level_description(&levelorder);
         }
     }
@@ -450,30 +450,30 @@ impl DifficultyTableParser {
             let mut header: HashMap<String, Value> = HashMap::new();
             header.insert(
                 "name".to_string(),
-                Value::String(dt.table.get_name().unwrap_or_default().to_string()),
+                Value::String(dt.table.name().unwrap_or_default().to_string()),
             );
             header.insert(
                 "symbol".to_string(),
-                Value::String(dt.table.get_id().unwrap_or_default().to_string()),
+                Value::String(dt.table.id().unwrap_or_default().to_string()),
             );
             header.insert(
                 "tag".to_string(),
-                Value::String(dt.table.get_tag().unwrap_or_default()),
+                Value::String(dt.table.tag().unwrap_or_default()),
             );
             let levels: Vec<Value> = dt
-                .get_level_description()
+                .level_description()
                 .iter()
                 .map(|s| Value::String(s.clone()))
                 .collect();
             header.insert("level_order".to_string(), Value::Array(levels));
-            let data_urls = dt.table.get_data_url();
+            let data_urls = dt.table.data_url();
             if data_urls.len() > 1 {
                 let arr: Vec<Value> = data_urls.iter().map(|s| Value::String(s.clone())).collect();
                 header.insert("data_url".to_string(), Value::Array(arr));
             } else if data_urls.len() == 1 {
                 header.insert("data_url".to_string(), Value::String(data_urls[0].clone()));
             }
-            let attrmap = dt.table.get_attrmap();
+            let attrmap = dt.table.attrmap();
             if !attrmap.is_empty() {
                 let obj: serde_json::Map<String, Value> = attrmap
                     .into_iter()
@@ -483,16 +483,13 @@ impl DifficultyTableParser {
             }
 
             // Java: "TODO 後でcourseの仕様に合わせる" — incomplete in Java too (only name/style)
-            let course = dt.get_course();
+            let course = dt.course();
             if !course.is_empty() {
                 let mut grade: Vec<Value> = Vec::new();
                 for g in &course[0] {
                     let mut m: serde_json::Map<String, Value> = serde_json::Map::new();
-                    m.insert("name".to_string(), Value::String(g.get_name().to_string()));
-                    m.insert(
-                        "style".to_string(),
-                        Value::String(g.get_style().to_string()),
-                    );
+                    m.insert("name".to_string(), Value::String(g.name().to_string()));
+                    m.insert("style".to_string(), Value::String(g.style().to_string()));
                     grade.push(Value::Object(m));
                 }
                 header.insert("course".to_string(), Value::Array(grade));
@@ -525,8 +522,8 @@ impl DifficultyTableParser {
             dt.table.set_data_url(vec![data_filename]);
             self.encode_json_table_header(dt, jsonheader);
             let mut datas: Vec<HashMap<String, Value>> = Vec::new();
-            for te in &dt.get_elements() {
-                datas.push(te.get_values());
+            for te in &dt.elements() {
+                datas.push(te.values());
             }
             let json = serde_json::to_string_pretty(&datas)?;
             fs::write(jsondata, json)?;
@@ -672,17 +669,17 @@ impl DifficultyTableParser {
                 dt.table.add_element(result[i].clone());
             }
         }
-        if dt.get_level_description().is_empty() {
+        if dt.level_description().is_empty() {
             let mut l: Vec<String> = Vec::new();
             for i in 0..result.len() {
                 let mut b = true;
                 for j in 0..l.len() {
-                    if l[j] == result[i].get_level() {
+                    if l[j] == result[i].level() {
                         b = false;
                     }
                 }
                 if b {
-                    l.push(result[i].get_level().to_string());
+                    l.push(result[i].level().to_string());
                 }
             }
             dt.set_level_description(&l);
@@ -795,9 +792,9 @@ mod tests {
             .decode_json_table_header_from_file(&mut dt, tmp.path())
             .unwrap();
 
-        assert_eq!(dt.table.get_name().unwrap(), "Test Table");
-        assert_eq!(dt.table.get_id().unwrap(), "T");
-        assert_eq!(dt.table.get_data_url(), &["data.json".to_string()]);
+        assert_eq!(dt.table.name().unwrap(), "Test Table");
+        assert_eq!(dt.table.id().unwrap(), "T");
+        assert_eq!(dt.table.data_url(), &["data.json".to_string()]);
     }
 
     #[test]
@@ -816,7 +813,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            dt.table.get_data_url(),
+            dt.table.data_url(),
             &["data1.json".to_string(), "data2.json".to_string()]
         );
     }
@@ -839,14 +836,14 @@ mod tests {
             .decode_json_table_data_from_file(&mut dt, tmp.path())
             .unwrap();
 
-        let elements = dt.get_elements();
+        let elements = dt.elements();
         assert_eq!(elements.len(), 2);
-        assert_eq!(elements[0].element.get_title().unwrap(), "Song 1");
-        assert_eq!(elements[0].element.get_md5().unwrap(), "abc123");
-        assert_eq!(elements[0].get_level(), "5");
-        assert_eq!(elements[1].element.get_title().unwrap(), "Song 2");
-        assert_eq!(elements[1].element.get_sha256().unwrap(), "def456");
-        assert_eq!(elements[1].get_level(), "10");
+        assert_eq!(elements[0].element.title().unwrap(), "Song 1");
+        assert_eq!(elements[0].element.md5().unwrap(), "abc123");
+        assert_eq!(elements[0].level(), "5");
+        assert_eq!(elements[1].element.title().unwrap(), "Song 2");
+        assert_eq!(elements[1].element.sha256().unwrap(), "def456");
+        assert_eq!(elements[1].level(), "10");
     }
 
     #[test]
@@ -894,10 +891,10 @@ mod tests {
         // accept=false triggers filtering by level + hash length > 24
         parser.decode_json_table_data_internal(&mut dt, &data, false);
 
-        let elements = dt.get_elements();
+        let elements = dt.elements();
         assert_eq!(elements.len(), 2);
-        assert_eq!(elements[0].element.get_title().unwrap(), "Good Song");
-        assert_eq!(elements[1].element.get_title().unwrap(), "SHA Song");
+        assert_eq!(elements[0].element.title().unwrap(), "Good Song");
+        assert_eq!(elements[1].element.title().unwrap(), "SHA Song");
     }
 
     #[test]
@@ -922,11 +919,11 @@ mod tests {
             .decode_json_table_header_from_file(&mut dt2, &header_path)
             .unwrap();
 
-        assert_eq!(dt2.table.get_name().unwrap(), "Roundtrip Table");
-        assert_eq!(dt2.table.get_id().unwrap(), "RT");
-        assert_eq!(dt2.table.get_data_url(), &["data.json".to_string()]);
+        assert_eq!(dt2.table.name().unwrap(), "Roundtrip Table");
+        assert_eq!(dt2.table.id().unwrap(), "RT");
+        assert_eq!(dt2.table.data_url(), &["data.json".to_string()]);
         assert_eq!(
-            dt2.get_level_description(),
+            dt2.level_description(),
             vec!["1".to_string(), "2".to_string(), "3".to_string()]
         );
     }
@@ -1032,27 +1029,27 @@ mod tests {
             .decode_json_table_header_from_file(&mut dt, tmp.path())
             .unwrap();
 
-        let courses = dt.get_course();
+        let courses = dt.course();
         assert_eq!(courses.len(), 1); // single list wrapping both courses
         assert_eq!(courses[0].len(), 2);
 
         let course_a = &courses[0][0];
-        assert_eq!(course_a.get_name(), "Course A");
-        assert_eq!(course_a.get_style(), "7KEYS");
-        assert_eq!(course_a.get_charts().len(), 2);
-        assert_eq!(course_a.get_charts()[0].get_md5().unwrap(), "hash1");
-        assert_eq!(course_a.get_charts()[1].get_md5().unwrap(), "hash2");
-        assert_eq!(course_a.get_constraint(), &["grade_mirror", "gauge_lr2"]);
-        assert_eq!(course_a.get_trophy().len(), 1);
-        assert_eq!(course_a.get_trophy()[0].get_name(), "Gold");
-        assert_eq!(course_a.get_trophy()[0].get_missrate(), 5.0);
-        assert_eq!(course_a.get_trophy()[0].get_scorerate(), 90.0);
+        assert_eq!(course_a.name(), "Course A");
+        assert_eq!(course_a.style(), "7KEYS");
+        assert_eq!(course_a.charts().len(), 2);
+        assert_eq!(course_a.charts()[0].md5().unwrap(), "hash1");
+        assert_eq!(course_a.charts()[1].md5().unwrap(), "hash2");
+        assert_eq!(course_a.constraint(), &["grade_mirror", "gauge_lr2"]);
+        assert_eq!(course_a.trophy().len(), 1);
+        assert_eq!(course_a.trophy()[0].name(), "Gold");
+        assert_eq!(course_a.trophy()[0].missrate(), 5.0);
+        assert_eq!(course_a.trophy()[0].scorerate(), 90.0);
 
         let course_b = &courses[0][1];
-        assert_eq!(course_b.get_name(), "Course B");
-        assert_eq!(course_b.get_style(), "14KEYS");
-        assert_eq!(course_b.get_charts().len(), 1);
-        assert_eq!(course_b.get_charts()[0].get_sha256().unwrap(), "hash3");
+        assert_eq!(course_b.name(), "Course B");
+        assert_eq!(course_b.style(), "14KEYS");
+        assert_eq!(course_b.charts().len(), 1);
+        assert_eq!(course_b.charts()[0].sha256().unwrap(), "hash3");
     }
 
     #[test]
@@ -1084,13 +1081,13 @@ mod tests {
             .decode_json_table_header_from_file(&mut dt, tmp.path())
             .unwrap();
 
-        let courses = dt.get_course();
+        let courses = dt.course();
         assert_eq!(courses.len(), 2);
         assert_eq!(courses[0].len(), 2);
-        assert_eq!(courses[0][0].get_name(), "Grade 1");
-        assert_eq!(courses[0][1].get_name(), "Grade 2");
+        assert_eq!(courses[0][0].name(), "Grade 1");
+        assert_eq!(courses[0][1].name(), "Grade 2");
         assert_eq!(courses[1].len(), 1);
-        assert_eq!(courses[1][0].get_name(), "Grade 3");
+        assert_eq!(courses[1][0].name(), "Grade 3");
     }
 
     #[test]
@@ -1120,17 +1117,17 @@ mod tests {
             .decode_json_table_header_from_file(&mut dt, tmp.path())
             .unwrap();
 
-        let courses = dt.get_course();
+        let courses = dt.course();
         assert_eq!(courses.len(), 1);
         assert_eq!(courses[0].len(), 1);
         let dan = &courses[0][0];
-        assert_eq!(dan.get_name(), "Dan 1");
-        assert_eq!(dan.get_style(), "7KEYS");
-        assert_eq!(dan.get_charts().len(), 2);
-        assert_eq!(dan.get_charts()[0].get_md5().unwrap(), "md5_a");
-        assert_eq!(dan.get_charts()[1].get_md5().unwrap(), "md5_b");
+        assert_eq!(dan.name(), "Dan 1");
+        assert_eq!(dan.style(), "7KEYS");
+        assert_eq!(dan.charts().len(), 2);
+        assert_eq!(dan.charts()[0].md5().unwrap(), "md5_a");
+        assert_eq!(dan.charts()[1].md5().unwrap(), "md5_b");
         // grade format always adds these constraints
-        assert_eq!(dan.get_constraint(), &["grade_mirror", "gauge_lr2"]);
+        assert_eq!(dan.constraint(), &["grade_mirror", "gauge_lr2"]);
     }
 
     #[test]
@@ -1165,14 +1162,14 @@ mod tests {
             .decode_json_table_data_from_file(&mut dt2, &data_path)
             .unwrap();
 
-        let elements = dt2.get_elements();
+        let elements = dt2.elements();
         assert_eq!(elements.len(), 2);
-        assert_eq!(elements[0].element.get_title().unwrap(), "Song A");
-        assert_eq!(elements[0].element.get_md5().unwrap(), "hash_aaa");
-        assert_eq!(elements[0].get_level(), "5");
-        assert_eq!(elements[1].element.get_title().unwrap(), "Song B");
-        assert_eq!(elements[1].element.get_sha256().unwrap(), "hash_bbb");
-        assert_eq!(elements[1].get_level(), "10");
+        assert_eq!(elements[0].element.title().unwrap(), "Song A");
+        assert_eq!(elements[0].element.md5().unwrap(), "hash_aaa");
+        assert_eq!(elements[0].level(), "5");
+        assert_eq!(elements[1].element.title().unwrap(), "Song B");
+        assert_eq!(elements[1].element.sha256().unwrap(), "hash_bbb");
+        assert_eq!(elements[1].level(), "10");
     }
 
     #[test]
@@ -1195,7 +1192,7 @@ mod tests {
             .unwrap();
 
         // Level descriptions are populated from unique levels in order of appearance
-        let levels = dt.get_level_description();
+        let levels = dt.level_description();
         assert_eq!(levels, vec!["3".to_string(), "5".to_string()]);
     }
 
@@ -1210,8 +1207,8 @@ mod tests {
             .decode_json_table_data_from_file(&mut dt, tmp.path())
             .unwrap();
 
-        assert!(dt.get_elements().is_empty());
-        assert!(dt.get_level_description().is_empty());
+        assert!(dt.elements().is_empty());
+        assert!(dt.level_description().is_empty());
     }
 
     #[test]
@@ -1234,7 +1231,7 @@ mod tests {
             .decode_json_table_header_from_file(&mut dt2, &header_path)
             .unwrap();
         assert_eq!(
-            dt2.table.get_data_url(),
+            dt2.table.data_url(),
             &["a.json".to_string(), "b.json".to_string()]
         );
     }
@@ -1262,7 +1259,7 @@ mod tests {
             .decode_json_table_header_from_file(&mut dt, tmp.path())
             .unwrap();
 
-        let configs = dt.table.get_merge_configurations();
+        let configs = dt.table.merge_configurations();
         assert_eq!(configs.len(), 2);
         assert_eq!(configs["main.json"]["1"], "A");
         assert_eq!(configs["main.json"]["2"], "B");
