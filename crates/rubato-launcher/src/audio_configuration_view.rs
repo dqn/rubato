@@ -4,7 +4,7 @@ use rubato_core::audio_config::{AudioConfig, DriverType, FrequencyType};
 
 use egui;
 
-use crate::stubs::get_port_audio_devices;
+use crate::stubs::port_audio_devices;
 
 /// Translates: AudioConfigurationView (JavaFX → egui)
 ///
@@ -191,7 +191,7 @@ impl AudioConfigurationView {
             Some(DriverType::PortAudio) => {
                 // case PortAudio:
                 // try {
-                match get_port_audio_devices() {
+                match port_audio_devices() {
                     Ok(devices) => {
                         // DeviceInfo[] devices = PortAudioDriver.getDevices();
                         // List<String> drivers = new ArrayList<String>(devices.length);

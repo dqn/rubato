@@ -129,7 +129,7 @@ impl OptionListCell {
         OptionListCell { strings }
     }
 
-    pub fn get_text(&self, index: Option<i32>) -> String {
+    pub fn text(&self, index: Option<i32>) -> String {
         if let Some(idx) = index
             && idx >= 0
             && (idx as usize) < self.strings.len()
@@ -593,9 +593,9 @@ impl PlayConfigurationView {
     /// Check for new version
     /// Translates: private void checkNewVersion()
     pub fn check_new_version(&mut self) {
-        let mut version_checker = MainLoader::get_version_checker();
-        let message = version_checker.get_message().to_string();
-        let download_url = version_checker.get_download_url().map(|s| s.to_string());
+        let mut version_checker = MainLoader::version_checker();
+        let message = version_checker.message().to_string();
+        let download_url = version_checker.download_url().map(|s| s.to_string());
         self.newversion_text = message;
         self.newversion_url = download_url;
     }
@@ -2359,11 +2359,11 @@ mod tests {
     #[test]
     fn test_option_list_cell_get_text() {
         let cell = OptionListCell::new(vec!["A".to_string(), "B".to_string(), "C".to_string()]);
-        assert_eq!(cell.get_text(Some(0)), "A");
-        assert_eq!(cell.get_text(Some(2)), "C");
-        assert_eq!(cell.get_text(None), "");
-        assert_eq!(cell.get_text(Some(-1)), "");
-        assert_eq!(cell.get_text(Some(99)), "");
+        assert_eq!(cell.text(Some(0)), "A");
+        assert_eq!(cell.text(Some(2)), "C");
+        assert_eq!(cell.text(None), "");
+        assert_eq!(cell.text(Some(-1)), "");
+        assert_eq!(cell.text(Some(99)), "");
     }
 
     // ---- Async BMS loading tests ----

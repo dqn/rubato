@@ -23,7 +23,7 @@ impl SongDataView {
     }
 
     /// Returns the list of visible column names (for testing/inspection)
-    pub fn get_visible_columns(&self) -> &[String] {
+    pub fn visible_columns(&self) -> &[String] {
         &self.visible_columns
     }
 }
@@ -264,7 +264,7 @@ impl FolderEditorView {
     }
 
     /// getTableFolder - commits and returns all folders
-    pub fn get_table_folder(&mut self) -> Vec<TableFolder> {
+    pub fn table_folder(&mut self) -> Vec<TableFolder> {
         self.commit_folder();
         self.folders.clone()
     }
@@ -275,7 +275,7 @@ impl FolderEditorView {
     }
 
     /// getFoldersContainingSong - finds which folders contain a given song
-    pub fn get_folders_containing_song(folders: &[TableFolder], song: &SongData) -> String {
+    pub fn folders_containing_song(folders: &[TableFolder], song: &SongData) -> String {
         let mut sb = String::new();
         for folder in folders {
             let songs = &folder.songs;
@@ -311,7 +311,7 @@ impl FolderEditorView {
     fn display_chart_details_dialog(&self, song: &SongData) {
         let extra = format!(
             "In custom folder(s):\n{}",
-            Self::get_folders_containing_song(&self.folders, song)
+            Self::folders_containing_song(&self.folders, song)
         );
         TableEditorView::display_chart_details_dialog(self.songdb.as_deref(), song, &[&extra]);
     }
@@ -528,11 +528,11 @@ mod tests {
         let mut view = FolderEditorView::new();
         view.initialize();
         assert_eq!(
-            view.folder_songs_controller.get_visible_columns(),
+            view.folder_songs_controller.visible_columns(),
             &["fullTitle", "sha256"]
         );
         assert_eq!(
-            view.search_songs_controller.get_visible_columns(),
+            view.search_songs_controller.visible_columns(),
             &[
                 "fullTitle",
                 "fullArtist",
@@ -562,7 +562,7 @@ mod tests {
             make_folder("Folder B", vec![]),
         ];
         view.set_table_folder(folders);
-        let result = view.get_table_folder();
+        let result = view.table_folder();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].get_name(), "Folder A");
         assert_eq!(result[1].get_name(), "Folder B");
@@ -916,7 +916,7 @@ mod tests {
         ];
         let song = make_song("Query", "hash1", "");
 
-        let result = FolderEditorView::get_folders_containing_song(&folders, &song);
+        let result = FolderEditorView::folders_containing_song(&folders, &song);
         assert_eq!(result, "Folder A");
     }
 
@@ -928,7 +928,7 @@ mod tests {
         ];
         let song = make_song("Query", "", "sha_match");
 
-        let result = FolderEditorView::get_folders_containing_song(&folders, &song);
+        let result = FolderEditorView::folders_containing_song(&folders, &song);
         assert_eq!(result, "Folder A");
     }
 
@@ -941,7 +941,7 @@ mod tests {
         ];
         let song = make_song("Query", "hash1", "");
 
-        let result = FolderEditorView::get_folders_containing_song(&folders, &song);
+        let result = FolderEditorView::folders_containing_song(&folders, &song);
         assert_eq!(result, "Folder A, Folder B");
     }
 
@@ -953,7 +953,7 @@ mod tests {
         )];
         let song = make_song("Query", "nomatch", "nomatch");
 
-        let result = FolderEditorView::get_folders_containing_song(&folders, &song);
+        let result = FolderEditorView::folders_containing_song(&folders, &song);
         assert_eq!(result, "None");
     }
 
@@ -962,7 +962,7 @@ mod tests {
         let folders = vec![make_folder("Folder A", vec![make_song("S1", "", "")])];
         let song = make_song("Query", "", "");
 
-        let result = FolderEditorView::get_folders_containing_song(&folders, &song);
+        let result = FolderEditorView::folders_containing_song(&folders, &song);
         assert_eq!(result, "None");
     }
 
@@ -971,7 +971,7 @@ mod tests {
         let folders: Vec<TableFolder> = vec![];
         let song = make_song("Query", "hash", "sha");
 
-        let result = FolderEditorView::get_folders_containing_song(&folders, &song);
+        let result = FolderEditorView::folders_containing_song(&folders, &song);
         assert_eq!(result, "None");
     }
 
@@ -1001,7 +1001,7 @@ mod tests {
         assert_eq!(view.folder_songs.len(), 1);
 
         // Get folder data (triggers commit)
-        let folders = view.get_table_folder();
+        let folders = view.table_folder();
         assert_eq!(folders.len(), 1);
         assert_eq!(folders[0].get_name(), "Edited Folder");
         assert_eq!(folders[0].songs.len(), 1);

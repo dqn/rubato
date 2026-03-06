@@ -8,10 +8,10 @@ use rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor;
 
 // Re-export platform helpers so existing callers continue to work
 pub use crate::platform::{
-    DeviceInfo, EguiContext, MonitorInfo, VideoModeInfo, copy_to_clipboard,
-    get_cached_desktop_display_mode, get_cached_display_modes, get_cached_full_display_modes,
-    get_monitors, get_port_audio_devices, open_folder_in_file_manager, open_url_in_browser,
-    show_directory_chooser, show_file_chooser, update_monitors_from_winit,
+    DeviceInfo, EguiContext, MonitorInfo, VideoModeInfo, cached_desktop_display_mode,
+    cached_display_modes, cached_full_display_modes, copy_to_clipboard, monitors,
+    open_folder_in_file_manager, open_url_in_browser, port_audio_devices, show_directory_chooser,
+    show_file_chooser, update_monitors_from_winit,
 };
 
 // === MainLoader stubs ===
@@ -39,7 +39,7 @@ impl MainLoader {
         }
     }
 
-    pub fn get_version_checker() -> VersionChecker {
+    pub fn version_checker() -> VersionChecker {
         VersionChecker::default()
     }
 
@@ -51,8 +51,8 @@ impl MainLoader {
     /// Returns all available video modes from the primary monitor with full
     /// refresh rate and bit depth information. Uses winit-cached display modes
     /// if available, falls back to common defaults.
-    pub fn get_available_display_mode() -> Vec<DisplayMode> {
-        let full_modes = get_cached_full_display_modes();
+    pub fn available_display_mode() -> Vec<DisplayMode> {
+        let full_modes = cached_full_display_modes();
         if !full_modes.is_empty() {
             // Use full video mode info (includes refresh rate and bit depth)
             full_modes
@@ -65,7 +65,7 @@ impl MainLoader {
                 })
                 .collect()
         } else {
-            let cached = get_cached_display_modes();
+            let cached = cached_display_modes();
             if cached.is_empty() {
                 // Fallback before event loop populates the cache
                 vec![
@@ -111,8 +111,8 @@ impl MainLoader {
     /// Returns the native display mode of the primary monitor with full refresh
     /// rate and bit depth information. Falls back to 1920x1080 if cache is not
     /// yet populated.
-    pub fn get_desktop_display_mode() -> DisplayMode {
-        let (w, h) = get_cached_desktop_display_mode();
+    pub fn desktop_display_mode() -> DisplayMode {
+        let (w, h) = cached_desktop_display_mode();
         if w == 0 && h == 0 {
             // Fallback before event loop populates the cache
             DisplayMode {
@@ -123,7 +123,7 @@ impl MainLoader {
         } else {
             // Find the best mode at the desktop resolution (highest refresh rate and bit depth)
             // Java: selects mode with highest refreshRate and bitsPerPixel
-            let full_modes = get_cached_full_display_modes();
+            let full_modes = cached_full_display_modes();
             let best = full_modes
                 .iter()
                 .filter(|m| m.width == w && m.height == h)
@@ -186,14 +186,14 @@ pub struct VersionChecker {
 }
 
 impl VersionChecker {
-    pub fn get_message(&mut self) -> &str {
+    pub fn message(&mut self) -> &str {
         if self.message.is_none() {
             self.get_information();
         }
         self.message.as_deref().unwrap_or("")
     }
 
-    pub fn get_download_url(&mut self) -> Option<&str> {
+    pub fn download_url(&mut self) -> Option<&str> {
         if self.message.is_none() {
             self.get_information();
         }
@@ -463,14 +463,14 @@ mod tests {
 
     #[test]
     fn get_available_display_modes_not_empty() {
-        let modes = MainLoader::get_available_display_mode();
+        let modes = MainLoader::available_display_mode();
         assert!(!modes.is_empty());
         assert!(modes.iter().any(|m| m.width == 1920 && m.height == 1080));
     }
 
     #[test]
     fn get_desktop_display_mode_returns_1080p() {
-        let dm = MainLoader::get_desktop_display_mode();
+        let dm = MainLoader::desktop_display_mode();
         assert_eq!(dm.width, 1920);
         assert_eq!(dm.height, 1080);
     }

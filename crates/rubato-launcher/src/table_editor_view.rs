@@ -93,8 +93,8 @@ impl TableEditorView {
     pub fn commit(&mut self) {
         let td = TableData {
             name: self.table_name.clone(),
-            course: self.course_controller.get_course_data(),
-            folder: self.folder_controller.get_table_folder(),
+            course: self.course_controller.course_data(),
+            folder: self.folder_controller.table_folder(),
             ..Default::default()
         };
 
@@ -192,9 +192,9 @@ impl TableEditorView {
         }
     }
 
-    /// get_difficulty_string - converts difficulty int to display string
+    /// difficulty_string - converts difficulty int to display string
     /// Extracted from displayChartDetailsDialog for future use
-    pub fn get_difficulty_string(difficulty: i32) -> &'static str {
+    pub fn difficulty_string(difficulty: i32) -> &'static str {
         match difficulty {
             1 => "BEGINNER",
             2 => "NORMAL",
@@ -205,9 +205,9 @@ impl TableEditorView {
         }
     }
 
-    /// get_judge_string - converts judge rank to display string
+    /// judge_string - converts judge rank to display string
     /// Extracted from displayChartDetailsDialog for future use
-    pub fn get_judge_string(judge_rank: i32) -> &'static str {
+    pub fn judge_string(judge_rank: i32) -> &'static str {
         if judge_rank <= 25 {
             "VERY HARD"
         } else if judge_rank <= 50 {
@@ -221,9 +221,9 @@ impl TableEditorView {
         }
     }
 
-    /// get_bpm_string - formats BPM display string
+    /// bpm_string - formats BPM display string
     /// Extracted from displayChartDetailsDialog for future use
-    pub fn get_bpm_string(min_bpm: i32, max_bpm: i32) -> String {
+    pub fn bpm_string(min_bpm: i32, max_bpm: i32) -> String {
         if min_bpm == max_bpm {
             format!("{}bpm", max_bpm)
         } else {
@@ -231,9 +231,9 @@ impl TableEditorView {
         }
     }
 
-    /// get_time_string - formats length in milliseconds to mm:ss
+    /// time_string - formats length in milliseconds to mm:ss
     /// Extracted from displayChartDetailsDialog for future use
-    pub fn get_time_string(length_ms: i32) -> String {
+    pub fn time_string(length_ms: i32) -> String {
         format!("{}:{:02}", length_ms / 60000, (length_ms / 1000) % 60)
     }
 
@@ -416,54 +416,54 @@ mod tests {
     // ---- getDifficultyString ----
 
     #[test]
-    fn test_get_difficulty_string() {
-        assert_eq!(TableEditorView::get_difficulty_string(0), "UNKNOWN");
-        assert_eq!(TableEditorView::get_difficulty_string(1), "BEGINNER");
-        assert_eq!(TableEditorView::get_difficulty_string(2), "NORMAL");
-        assert_eq!(TableEditorView::get_difficulty_string(3), "HYPER");
-        assert_eq!(TableEditorView::get_difficulty_string(4), "ANOTHER");
-        assert_eq!(TableEditorView::get_difficulty_string(5), "INSANE");
-        assert_eq!(TableEditorView::get_difficulty_string(6), "UNKNOWN");
-        assert_eq!(TableEditorView::get_difficulty_string(-1), "UNKNOWN");
+    fn test_difficulty_string() {
+        assert_eq!(TableEditorView::difficulty_string(0), "UNKNOWN");
+        assert_eq!(TableEditorView::difficulty_string(1), "BEGINNER");
+        assert_eq!(TableEditorView::difficulty_string(2), "NORMAL");
+        assert_eq!(TableEditorView::difficulty_string(3), "HYPER");
+        assert_eq!(TableEditorView::difficulty_string(4), "ANOTHER");
+        assert_eq!(TableEditorView::difficulty_string(5), "INSANE");
+        assert_eq!(TableEditorView::difficulty_string(6), "UNKNOWN");
+        assert_eq!(TableEditorView::difficulty_string(-1), "UNKNOWN");
     }
 
     // ---- getJudgeString ----
 
     #[test]
-    fn test_get_judge_string() {
-        assert_eq!(TableEditorView::get_judge_string(0), "VERY HARD");
-        assert_eq!(TableEditorView::get_judge_string(25), "VERY HARD");
-        assert_eq!(TableEditorView::get_judge_string(26), "HARD");
-        assert_eq!(TableEditorView::get_judge_string(50), "HARD");
-        assert_eq!(TableEditorView::get_judge_string(51), "NORMAL");
-        assert_eq!(TableEditorView::get_judge_string(75), "NORMAL");
-        assert_eq!(TableEditorView::get_judge_string(76), "EASY");
-        assert_eq!(TableEditorView::get_judge_string(100), "EASY");
-        assert_eq!(TableEditorView::get_judge_string(101), "VERY EASY");
-        assert_eq!(TableEditorView::get_judge_string(200), "VERY EASY");
+    fn test_judge_string() {
+        assert_eq!(TableEditorView::judge_string(0), "VERY HARD");
+        assert_eq!(TableEditorView::judge_string(25), "VERY HARD");
+        assert_eq!(TableEditorView::judge_string(26), "HARD");
+        assert_eq!(TableEditorView::judge_string(50), "HARD");
+        assert_eq!(TableEditorView::judge_string(51), "NORMAL");
+        assert_eq!(TableEditorView::judge_string(75), "NORMAL");
+        assert_eq!(TableEditorView::judge_string(76), "EASY");
+        assert_eq!(TableEditorView::judge_string(100), "EASY");
+        assert_eq!(TableEditorView::judge_string(101), "VERY EASY");
+        assert_eq!(TableEditorView::judge_string(200), "VERY EASY");
     }
 
     // ---- getBpmString ----
 
     #[test]
-    fn test_get_bpm_string_same() {
-        assert_eq!(TableEditorView::get_bpm_string(150, 150), "150bpm");
+    fn test_bpm_string_same() {
+        assert_eq!(TableEditorView::bpm_string(150, 150), "150bpm");
     }
 
     #[test]
-    fn test_get_bpm_string_range() {
-        assert_eq!(TableEditorView::get_bpm_string(120, 180), "120-180bpm");
+    fn test_bpm_string_range() {
+        assert_eq!(TableEditorView::bpm_string(120, 180), "120-180bpm");
     }
 
     // ---- getTimeString ----
 
     #[test]
-    fn test_get_time_string() {
-        assert_eq!(TableEditorView::get_time_string(0), "0:00");
-        assert_eq!(TableEditorView::get_time_string(60000), "1:00");
-        assert_eq!(TableEditorView::get_time_string(90000), "1:30");
-        assert_eq!(TableEditorView::get_time_string(125000), "2:05");
-        assert_eq!(TableEditorView::get_time_string(3600000), "60:00");
+    fn test_time_string() {
+        assert_eq!(TableEditorView::time_string(0), "0:00");
+        assert_eq!(TableEditorView::time_string(60000), "1:00");
+        assert_eq!(TableEditorView::time_string(90000), "1:30");
+        assert_eq!(TableEditorView::time_string(125000), "2:05");
+        assert_eq!(TableEditorView::time_string(3600000), "60:00");
     }
 
     // ---- dialogAddCopiableRow ----

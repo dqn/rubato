@@ -61,8 +61,8 @@ impl SpinnerCell {
     }
 
     /// Gets the current spinner value as integer.
-    pub fn get_value(&self) -> Option<i32> {
-        if let NumericValue::Integer(v) = self.spinner.get_value() {
+    pub fn value(&self) -> Option<i32> {
+        if let NumericValue::Integer(v) = &self.spinner.value {
             Some(*v)
         } else {
             None
@@ -76,10 +76,10 @@ impl SpinnerCell {
         view_model: &mut ControllerConfigViewModel,
         column_name: &str,
     ) {
-        if let Some(value) = self.get_value() {
+        if let Some(value) = self.value() {
             match column_name {
-                "analogScratchThreshold" => view_model.set_analog_scratch_threshold(value),
-                "analogScratchMode" => view_model.set_analog_scratch_mode(value),
+                "analogScratchThreshold" => view_model.analog_scratch_threshold = value,
+                "analogScratchMode" => view_model.analog_scratch_mode = value,
                 _ => {}
             }
         }

@@ -278,10 +278,9 @@ impl InputConfigurationView {
                 if i < conf.controller.len() {
                     conf.controller[i].duration = self.inputduration;
                     conf.controller[i].jkoc_hack = self.jkoc_hack;
-                    conf.controller[i].analog_scratch = vm.get_is_analog_scratch_property();
-                    conf.controller[i]
-                        .set_analog_scratch_threshold(vm.get_analog_scratch_threshold());
-                    conf.controller[i].analog_scratch_mode = vm.get_analog_scratch_mode();
+                    conf.controller[i].analog_scratch = vm.is_analog_scratch;
+                    conf.controller[i].set_analog_scratch_threshold(vm.analog_scratch_threshold);
+                    conf.controller[i].analog_scratch_mode = vm.analog_scratch_mode;
                 }
             }
         }
@@ -379,7 +378,7 @@ impl InputConfigurationView {
 
                 for (i, vm) in self.controller_table_view.iter_mut().enumerate() {
                     ui.label(Self::play_side_string(i));
-                    ui.label(vm.get_name());
+                    ui.label(&vm.name);
                     ui.checkbox(&mut vm.is_analog_scratch, "");
                     ui.add(egui::DragValue::new(&mut vm.analog_scratch_threshold).range(1..=1000));
                     let mode_label = Self::analog_scratch_mode_to_string(vm.analog_scratch_mode);

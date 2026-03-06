@@ -104,7 +104,7 @@ impl SkinConfigurationView {
 
     // ---- Accessors for egui integration ----
 
-    pub fn get_skintype_selector(&self) -> Option<SkinType> {
+    pub fn skintype_selector(&self) -> Option<SkinType> {
         self.skintype_selector
     }
 
@@ -112,11 +112,11 @@ impl SkinConfigurationView {
         self.skintype_selector = Some(skin_type);
     }
 
-    pub fn get_current_headers(&self) -> &[SkinHeader] {
+    pub fn current_headers(&self) -> &[SkinHeader] {
         &self.current_headers
     }
 
-    pub fn get_skinheader_selector(&self) -> Option<usize> {
+    pub fn skinheader_selector(&self) -> Option<usize> {
         self.skinheader_selector
     }
 
@@ -124,11 +124,11 @@ impl SkinConfigurationView {
         self.skinheader_selector = Some(index);
     }
 
-    pub fn get_skinconfig_items_mut(&mut self) -> &mut Vec<SkinConfigItem> {
+    pub fn skinconfig_items_mut(&mut self) -> &mut Vec<SkinConfigItem> {
         &mut self.skinconfig_items
     }
 
-    pub fn get_player(&self) -> Option<&PlayerConfig> {
+    pub fn player(&self) -> Option<&PlayerConfig> {
         self.player.as_ref()
     }
 
@@ -284,13 +284,13 @@ impl SkinConfigurationView {
     }
 
     /// Translates: getSelectedHeader()
-    pub fn get_selected_header(&self) -> Option<&SkinHeader> {
+    pub fn selected_header(&self) -> Option<&SkinHeader> {
         self.selected.as_ref()
     }
 
     /// Translates: getProperty()
     /// Reads current UI state and returns a SkinProperty.
-    pub fn get_property(&self) -> SkinProperty {
+    pub fn property(&self) -> SkinProperty {
         // SkinConfig.Property property = new SkinConfig.Property();
         let mut property = SkinProperty::default();
 
@@ -391,7 +391,7 @@ impl SkinConfigurationView {
     }
 
     /// Translates: getSkinHeader(SkinType mode)
-    pub fn get_skin_header(&self, mode: &SkinType) -> Vec<&SkinHeader> {
+    pub fn skin_header(&self, mode: &SkinType) -> Vec<&SkinHeader> {
         // List<SkinHeader> result = new ArrayList<>();
         // for (SkinHeader header : skinheader) { if (header.getSkinType() == mode) { result.add(header); } }
         self.skinheader
@@ -479,7 +479,7 @@ impl SkinConfigurationView {
                 .unwrap_or_default();
             let mut skin = SkinConfig::new_with_path(&path_str);
             // skin.setProperties(getProperty());
-            skin.properties = Some(self.get_property());
+            skin.properties = Some(self.property());
             // player.getSkin()[selected.getSkinType().getId()] = skin;
             if let Some(skin_type) = selected.get_skin_type() {
                 let type_id = skin_type.id() as usize;
@@ -640,7 +640,7 @@ impl SkinConfigurationView {
         };
 
         // SkinConfig.Property property = getProperty();
-        let property = self.get_property();
+        let property = self.property();
 
         let player = match self.player.as_mut() {
             Some(p) => p,
@@ -1371,7 +1371,7 @@ mod tests {
         view.update_config(&config);
 
         // The default skin directory has play7.json which should be SkinType::Play7Keys
-        let play7_headers = view.get_skin_header(&SkinType::Play7Keys);
+        let play7_headers = view.skin_header(&SkinType::Play7Keys);
         // We don't assert specific count, but it should be filterable
         // If there are any, they should all have the correct type
         for header in &play7_headers {

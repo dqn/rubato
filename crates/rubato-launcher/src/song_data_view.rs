@@ -84,11 +84,6 @@ impl SongDataView {
         }
     }
 
-    /// Gets the column map.
-    pub fn get_column_map(&self) -> &HashMap<String, SongDataColumn> {
-        &self.column_map
-    }
-
     /// Checks if a column is visible.
     pub fn is_column_visible(&self, property_name: &str) -> bool {
         self.column_map

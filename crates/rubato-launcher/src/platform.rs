@@ -57,7 +57,7 @@ pub struct DeviceInfo {
 }
 
 /// Enumerate available audio output devices using cpal.
-pub fn get_port_audio_devices() -> anyhow::Result<Vec<DeviceInfo>> {
+pub fn port_audio_devices() -> anyhow::Result<Vec<DeviceInfo>> {
     use cpal::traits::{DeviceTrait, HostTrait};
 
     let host = cpal::default_host();
@@ -101,7 +101,7 @@ pub struct MonitorInfo {
 /// Translated from: com.badlogic.gdx.Graphics.DisplayMode
 /// Java fields: width, height, refreshRate, bitsPerPixel
 ///
-/// Used by `MainLoader::get_available_display_mode()` to provide complete
+/// Used by `MainLoader::available_display_mode()` to provide complete
 /// display mode data for fullscreen mode selection.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VideoModeInfo {
@@ -200,7 +200,7 @@ pub fn update_monitors_from_winit(event_loop: &winit::event_loop::ActiveEventLoo
 
 /// Enumerate available monitors.
 /// Uses CoreGraphics FFI on macOS; other platforms use winit-cached monitor list.
-pub fn get_monitors() -> Vec<MonitorInfo> {
+pub fn monitors() -> Vec<MonitorInfo> {
     #[cfg(target_os = "macos")]
     {
         get_monitors_macos()
@@ -220,7 +220,7 @@ pub fn get_monitors() -> Vec<MonitorInfo> {
 
 /// Get cached display modes (unique width/height pairs from primary monitor).
 /// Returns empty if cache not yet populated (call update_monitors_from_winit first).
-pub fn get_cached_display_modes() -> Vec<(u32, u32)> {
+pub fn cached_display_modes() -> Vec<(u32, u32)> {
     lock_or_recover(&CACHED_DISPLAY_MODES).clone()
 }
 
@@ -230,13 +230,13 @@ pub fn get_cached_display_modes() -> Vec<(u32, u32)> {
 /// Java returns: Graphics.DisplayMode[] with width, height, refreshRate, bitsPerPixel
 ///
 /// Returns empty if cache not yet populated (call update_monitors_from_winit first).
-pub fn get_cached_full_display_modes() -> Vec<VideoModeInfo> {
+pub fn cached_full_display_modes() -> Vec<VideoModeInfo> {
     lock_or_recover(&CACHED_FULL_DISPLAY_MODES).clone()
 }
 
 /// Get cached desktop display mode (primary monitor's native resolution).
 /// Returns (0, 0) if cache not yet populated.
-pub fn get_cached_desktop_display_mode() -> (u32, u32) {
+pub fn cached_desktop_display_mode() -> (u32, u32) {
     *lock_or_recover(&CACHED_DESKTOP_MODE)
 }
 
@@ -405,9 +405,9 @@ mod tests {
         // Before any winit initialization, caches are empty/zero
         // (Note: in a test environment, other tests may populate these, so we just
         // verify the getter doesn't panic)
-        let _ = get_cached_display_modes();
-        let _ = get_cached_full_display_modes();
-        let _ = get_cached_desktop_display_mode();
+        let _ = cached_display_modes();
+        let _ = cached_full_display_modes();
+        let _ = cached_desktop_display_mode();
     }
 
     #[test]
@@ -425,9 +425,9 @@ mod tests {
             panic!("poison desktop mode");
         }));
 
-        assert!(get_cached_display_modes().is_empty());
-        assert!(get_cached_full_display_modes().is_empty());
-        assert_eq!(get_cached_desktop_display_mode(), (0, 0));
+        assert!(cached_display_modes().is_empty());
+        assert!(cached_full_display_modes().is_empty());
+        assert_eq!(cached_desktop_display_mode(), (0, 0));
     }
 
     #[test]

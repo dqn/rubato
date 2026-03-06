@@ -6,7 +6,7 @@ use rubato_core::resolution::Resolution;
 
 use egui;
 
-use crate::stubs::{MainLoader, get_monitors};
+use crate::stubs::{MainLoader, monitors};
 
 /// Translates: VideoConfigurationView (JavaFX → egui)
 ///
@@ -65,7 +65,7 @@ impl VideoConfigurationView {
         // monitor.getItems().setAll(Arrays.stream(Lwjgl3ApplicationConfiguration.getMonitors())
         //     .map(monitor -> String.format("%s [%s, %s]", monitor.name, Integer.toString(monitor.virtualX), Integer.toString(monitor.virtualY)))
         //     .toList());
-        let monitors = get_monitors();
+        let monitors = monitors();
         self.monitor_items = monitors
             .iter()
             .map(|m| format!("{} [{}, {}]", m.name, m.virtual_x, m.virtual_y))
@@ -273,7 +273,7 @@ impl VideoConfigurationView {
         // if (displayMode.getValue() == Config.DisplayMode.FULLSCREEN) {
         if matches!(self.display_mode, Some(DisplayMode::FULLSCREEN)) {
             // Graphics.DisplayMode[] displays = MainLoader.getAvailableDisplayMode();
-            let displays = MainLoader::get_available_display_mode();
+            let displays = MainLoader::available_display_mode();
             // for(Resolution r : Resolution.values()) {
             for r in ALL_RESOLUTIONS {
                 // for(Graphics.DisplayMode display : displays) {
@@ -289,7 +289,7 @@ impl VideoConfigurationView {
             }
         } else {
             // Graphics.DisplayMode display = MainLoader.getDesktopDisplayMode();
-            let display = MainLoader::get_desktop_display_mode();
+            let display = MainLoader::desktop_display_mode();
             // for(Resolution r : Resolution.values()) {
             for r in ALL_RESOLUTIONS {
                 // if (r.width <= display.width && r.height <= display.height) {

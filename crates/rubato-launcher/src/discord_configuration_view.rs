@@ -17,11 +17,6 @@ impl WebhookInfo {
         WebhookInfo { url }
     }
 
-    // public String getUrl()
-    pub fn get_url(&self) -> &str {
-        &self.url
-    }
-
     // public void setUrl(String url)
     pub fn set_url(&mut self, url: String) {
         self.url = url;
@@ -127,7 +122,7 @@ impl DiscordConfigurationView {
         // String s = url.getText();
         let s = self.url.clone();
         // boolean find = webhookURL.getItems().stream().anyMatch(url -> url.getUrl().equals(s));
-        let find = self.webhook_url.iter().any(|w| w.get_url() == s);
+        let find = self.webhook_url.iter().any(|w| w.url == s);
         // if (!find) {
         if !find {
             // webhookURL.addItem(new WebhookInfo(url.getText()));

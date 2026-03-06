@@ -384,7 +384,7 @@ impl LauncherUi {
                 egui::ComboBox::from_id_salt("audio_device_name")
                     .selected_text(&driver_name_display)
                     .show_ui(ui, |ui| {
-                        if let Ok(devices) = crate::stubs::get_port_audio_devices() {
+                        if let Ok(devices) = crate::stubs::port_audio_devices() {
                             for device in &devices {
                                 let mut name = audio.driver_name.clone().unwrap_or_default();
                                 if ui
@@ -621,7 +621,7 @@ impl LauncherUi {
         let skin_types = SkinType::values();
         let current_type = self
             .skin_view
-            .get_skintype_selector()
+            .skintype_selector()
             .unwrap_or(SkinType::Play7Keys);
         let selected_text = SkinConfigurationView::skin_type_display_name(&current_type);
         ui.horizontal(|ui| {
@@ -645,9 +645,9 @@ impl LauncherUi {
         });
 
         // Skin header selector
-        let headers = self.skin_view.get_current_headers().to_owned();
+        let headers = self.skin_view.current_headers().to_owned();
         let header_count = headers.len();
-        let selected_idx = self.skin_view.get_skinheader_selector();
+        let selected_idx = self.skin_view.skinheader_selector();
         ui.horizontal(|ui| {
             ui.label("Skin:");
             if header_count == 0 {
@@ -676,7 +676,7 @@ impl LauncherUi {
         ui.separator();
 
         // Render dynamic skin config items (options, files, offsets)
-        let items = self.skin_view.get_skinconfig_items_mut();
+        let items = self.skin_view.skinconfig_items_mut();
         for item in items.iter_mut() {
             match item {
                 SkinConfigItem::Label(text) => {
@@ -1188,7 +1188,7 @@ impl LauncherUi {
         self.flush_ir_buffers();
         // Commit skin configuration (saves to player.skin + skin_history)
         self.skin_view.commit();
-        if let Some(updated_player) = self.skin_view.get_player() {
+        if let Some(updated_player) = self.skin_view.player() {
             self.player.skin = updated_player.skin.clone();
             self.player.skin_history = updated_player.skin_history.clone();
         }

@@ -455,11 +455,11 @@ impl ApplicationHandler for RubatoApp {
         // Sync display mode cache to core MainLoader
         {
             use rubato_core::main_loader::MainLoader;
-            let modes = rubato_launcher::stubs::get_cached_display_modes();
+            let modes = rubato_launcher::stubs::cached_display_modes();
             if !modes.is_empty() {
                 MainLoader::set_display_modes(modes);
             }
-            let desktop = rubato_launcher::stubs::get_cached_desktop_display_mode();
+            let desktop = rubato_launcher::stubs::cached_desktop_display_mode();
             if desktop != (0, 0) {
                 MainLoader::set_desktop_display_mode(desktop);
             }

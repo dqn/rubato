@@ -45,18 +45,6 @@ impl TableInfo {
         self.name_status = name_status.to_string();
     }
 
-    pub fn get_url(&self) -> &str {
-        &self.url
-    }
-
-    pub fn get_name_status(&self) -> &str {
-        &self.name_status
-    }
-
-    pub fn get_comment(&self) -> &str {
-        &self.comment
-    }
-
     /// Translates: TableInfo.toUrlArray(List<TableInfo>)
     pub fn to_url_array(list: &[TableInfo]) -> Vec<String> {
         list.iter().map(|t| t.url.clone()).collect()

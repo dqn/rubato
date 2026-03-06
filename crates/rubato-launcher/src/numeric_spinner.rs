@@ -146,11 +146,6 @@ impl NumericSpinner {
         }
     }
 
-    /// Gets the current value.
-    pub fn get_value(&self) -> &NumericValue {
-        &self.value
-    }
-
     /// Sets the value directly (used by external callers).
     /// Java: getValueFactory().setValue(item)
     pub fn set_value(&mut self, value: NumericValue) {
@@ -158,11 +153,6 @@ impl NumericSpinner {
             NumericValue::Integer(v) => self.set_value_integer(*v),
             NumericValue::Double(v) => self.set_value_double(*v),
         }
-    }
-
-    /// Gets the editor text.
-    pub fn get_editor_text(&self) -> &str {
-        &self.editor_text
     }
 
     /// Sets the editor text.

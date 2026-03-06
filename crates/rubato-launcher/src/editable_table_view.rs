@@ -158,21 +158,6 @@ impl<T: Clone> EditableTableView<T> {
         self.selected_indices = indices.iter().map(|&i| i as usize).collect();
     }
 
-    /// Gets a reference to the items.
-    pub fn get_items(&self) -> &[T] {
-        &self.items
-    }
-
-    /// Gets a mutable reference to the items.
-    pub fn get_items_mut(&mut self) -> &mut Vec<T> {
-        &mut self.items
-    }
-
-    /// Gets the selected indices.
-    pub fn get_selected_indices(&self) -> &[usize] {
-        &self.selected_indices
-    }
-
     /// Sets the selected indices.
     pub fn set_selected_indices(&mut self, indices: Vec<usize>) {
         self.selected_indices = indices;

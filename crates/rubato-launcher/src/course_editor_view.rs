@@ -174,7 +174,7 @@ impl CourseEditorView {
     }
 
     /// getCourseData - commits and returns all courses
-    pub fn get_course_data(&mut self) -> Vec<CourseData> {
+    pub fn course_data(&mut self) -> Vec<CourseData> {
         self.commit_course();
         self.courses.clone()
     }
@@ -828,11 +828,11 @@ mod tests {
         let mut view = CourseEditorView::new();
         view.initialize();
         assert_eq!(
-            view.course_songs_controller.get_visible_columns(),
+            view.course_songs_controller.visible_columns(),
             &["fullTitle", "sha256"]
         );
         assert_eq!(
-            view.search_songs_controller.get_visible_columns(),
+            view.search_songs_controller.visible_columns(),
             &[
                 "fullTitle",
                 "fullArtist",
@@ -859,7 +859,7 @@ mod tests {
         let mut view = CourseEditorView::new();
         let courses = vec![make_course("Course A"), make_course("Course B")];
         view.set_course_data(courses);
-        let result = view.get_course_data();
+        let result = view.course_data();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].name(), "Course A");
         assert_eq!(result[1].name(), "Course B");
@@ -1371,7 +1371,7 @@ mod tests {
         assert_eq!(view.course_songs.len(), 1);
 
         // Get course data (triggers commit)
-        let courses = view.get_course_data();
+        let courses = view.course_data();
         assert_eq!(courses.len(), 1);
         assert_eq!(courses[0].name(), "Edited Course");
         assert!(courses[0].release);
