@@ -259,7 +259,7 @@ impl Ranking {
             ));
         }
 
-        res.sort_by(|a, b| b.ir_score().exscore().cmp(&a.ir_score().exscore()));
+        res.sort_by_key(|b| std::cmp::Reverse(b.ir_score().exscore()));
         res
     }
 }

@@ -390,9 +390,7 @@ impl ObsConfigurationView {
 
         for (state_name, action_box) in &mut self.action_boxes {
             let previous_value = action_box.value.clone();
-            let saved_action_label = config
-                .obs_action(state_name)
-                .and_then(|a| action_label(a));
+            let saved_action_label = config.obs_action(state_name).and_then(|a| action_label(a));
 
             action_box.items.clear();
             action_box.items.push(ACTION_NONE.to_string());

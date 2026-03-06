@@ -98,11 +98,7 @@ fn course_to_course_data(course: &Course, default_mode: Option<&Mode>) -> Course
     cd.constraint = constraints;
 
     if !course.trophy().is_empty() {
-        let trophies: Vec<TrophyData> = course
-            .trophy()
-            .iter()
-            .map(trophy_to_trophy_data)
-            .collect();
+        let trophies: Vec<TrophyData> = course.trophy().iter().map(trophy_to_trophy_data).collect();
         cd.trophy = trophies;
     }
 
