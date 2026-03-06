@@ -48,22 +48,22 @@ pub enum Bar {
 }
 
 impl Bar {
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         match self {
-            Bar::Song(b) => b.get_title(),
-            Bar::Folder(b) => b.get_title(),
-            Bar::Command(b) => b.get_title(),
-            Bar::Container(b) => b.get_title(),
-            Bar::Hash(b) => b.get_title(),
-            Bar::Table(b) => b.get_title(),
-            Bar::Grade(b) => b.get_title(),
-            Bar::RandomCourse(b) => b.get_title(),
-            Bar::SearchWord(b) => b.get_title(),
-            Bar::SameFolder(b) => b.get_title(),
-            Bar::Executable(b) => b.get_title(),
-            Bar::Function(b) => b.get_title(),
-            Bar::ContextMenu(b) => b.get_title(),
-            Bar::LeaderBoard(b) => b.get_title(),
+            Bar::Song(b) => b.title(),
+            Bar::Folder(b) => b.title(),
+            Bar::Command(b) => b.title(),
+            Bar::Container(b) => b.title(),
+            Bar::Hash(b) => b.title(),
+            Bar::Table(b) => b.title(),
+            Bar::Grade(b) => b.title(),
+            Bar::RandomCourse(b) => b.title(),
+            Bar::SearchWord(b) => b.title(),
+            Bar::SameFolder(b) => b.title(),
+            Bar::Executable(b) => b.title(),
+            Bar::Function(b) => b.title(),
+            Bar::ContextMenu(b) => b.title(),
+            Bar::LeaderBoard(b) => b.title(),
         }
     }
 
@@ -83,22 +83,22 @@ impl Bar {
         self.bar_data_mut().set_rival_score(score);
     }
 
-    pub fn get_lamp(&self, is_player: bool) -> i32 {
+    pub fn lamp(&self, is_player: bool) -> i32 {
         match self {
-            Bar::Song(b) => b.get_lamp(is_player),
-            Bar::Folder(b) => b.directory.get_lamp(is_player),
-            Bar::Command(b) => b.directory.get_lamp(is_player),
-            Bar::Container(b) => b.directory.get_lamp(is_player),
-            Bar::Hash(b) => b.directory.get_lamp(is_player),
-            Bar::Table(b) => b.directory.get_lamp(is_player),
-            Bar::Grade(b) => b.get_lamp(is_player),
-            Bar::RandomCourse(b) => b.get_lamp(is_player),
-            Bar::SearchWord(b) => b.directory.get_lamp(is_player),
-            Bar::SameFolder(b) => b.directory.get_lamp(is_player),
-            Bar::Executable(b) => b.get_lamp(is_player),
-            Bar::Function(b) => b.get_lamp(is_player),
-            Bar::ContextMenu(b) => b.get_lamp(is_player),
-            Bar::LeaderBoard(b) => b.directory.get_lamp(is_player),
+            Bar::Song(b) => b.lamp(is_player),
+            Bar::Folder(b) => b.directory.lamp(is_player),
+            Bar::Command(b) => b.directory.lamp(is_player),
+            Bar::Container(b) => b.directory.lamp(is_player),
+            Bar::Hash(b) => b.directory.lamp(is_player),
+            Bar::Table(b) => b.directory.lamp(is_player),
+            Bar::Grade(b) => b.lamp(is_player),
+            Bar::RandomCourse(b) => b.lamp(is_player),
+            Bar::SearchWord(b) => b.directory.lamp(is_player),
+            Bar::SameFolder(b) => b.directory.lamp(is_player),
+            Bar::Executable(b) => b.lamp(is_player),
+            Bar::Function(b) => b.lamp(is_player),
+            Bar::ContextMenu(b) => b.lamp(is_player),
+            Bar::LeaderBoard(b) => b.directory.lamp(is_player),
         }
     }
 
@@ -334,14 +334,14 @@ mod tests {
     fn bar_clone_song() {
         let bar = Bar::Song(Box::new(SongBar::new(SongData::default())));
         let cloned = bar.clone();
-        assert_eq!(bar.get_title(), cloned.get_title());
+        assert_eq!(bar.title(), cloned.title());
     }
 
     #[test]
     fn bar_clone_folder() {
         let bar = Bar::Folder(Box::new(FolderBar::new(None, "test".to_string())));
         let cloned = bar.clone();
-        assert_eq!(bar.get_title(), cloned.get_title());
+        assert_eq!(bar.title(), cloned.title());
     }
 
     #[test]
@@ -351,7 +351,7 @@ mod tests {
             "SELECT 1".to_string(),
         )));
         let cloned = bar.clone();
-        assert_eq!(bar.get_title(), cloned.get_title());
+        assert_eq!(bar.title(), cloned.title());
     }
 
     #[test]
@@ -365,9 +365,9 @@ mod tests {
             children,
         )));
         let cloned = bar.clone();
-        assert_eq!(bar.get_title(), cloned.get_title());
+        assert_eq!(bar.title(), cloned.title());
         if let Bar::Container(ref c) = cloned {
-            assert_eq!(c.get_children().len(), 2);
+            assert_eq!(c.children().len(), 2);
         } else {
             panic!("expected Container variant");
         }
@@ -377,7 +377,7 @@ mod tests {
     fn bar_clone_hash() {
         let bar = Bar::Hash(Box::new(HashBar::new("hash".to_string(), vec![])));
         let cloned = bar.clone();
-        assert_eq!(bar.get_title(), cloned.get_title());
+        assert_eq!(bar.title(), cloned.title());
     }
 
     #[test]
@@ -386,21 +386,21 @@ mod tests {
         let accessor: Arc<dyn TableAccessor> = Arc::new(TestTableAccessor);
         let bar = Bar::Table(Box::new(TableBar::new(td, accessor)));
         let cloned = bar.clone();
-        assert_eq!(bar.get_title(), cloned.get_title());
+        assert_eq!(bar.title(), cloned.title());
     }
 
     #[test]
     fn bar_clone_grade() {
         let bar = Bar::Grade(Box::new(GradeBar::new(CourseData::default())));
         let cloned = bar.clone();
-        assert_eq!(bar.get_title(), cloned.get_title());
+        assert_eq!(bar.title(), cloned.title());
     }
 
     #[test]
     fn bar_clone_random_course() {
         let bar = Bar::RandomCourse(Box::new(RandomCourseBar::new(RandomCourseData::default())));
         let cloned = bar.clone();
-        assert_eq!(bar.get_title(), cloned.get_title());
+        assert_eq!(bar.title(), cloned.title());
     }
 
     #[test]
@@ -410,7 +410,7 @@ mod tests {
             "text".to_string(),
         )));
         let cloned = bar.clone();
-        assert_eq!(bar.get_title(), cloned.get_title());
+        assert_eq!(bar.title(), cloned.title());
     }
 
     #[test]
@@ -420,14 +420,14 @@ mod tests {
             "crc".to_string(),
         )));
         let cloned = bar.clone();
-        assert_eq!(bar.get_title(), cloned.get_title());
+        assert_eq!(bar.title(), cloned.title());
     }
 
     #[test]
     fn bar_clone_function() {
         let bar = Bar::Function(Box::new(FunctionBar::new("func".to_string(), 0)));
         let cloned = bar.clone();
-        assert_eq!(bar.get_title(), cloned.get_title());
+        assert_eq!(bar.title(), cloned.title());
     }
 
     #[test]
@@ -438,7 +438,7 @@ mod tests {
         let bar = Bar::Table(Box::new(TableBar::new(td, accessor)));
         let cloned = bar.clone();
         if let (Bar::Table(orig), Bar::Table(cloned_t)) = (&bar, &cloned) {
-            assert_eq!(orig.get_accessor().name(), cloned_t.get_accessor().name());
+            assert_eq!(orig.accessor().name(), cloned_t.accessor().name());
         } else {
             panic!("expected Table variants");
         }

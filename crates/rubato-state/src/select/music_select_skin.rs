@@ -23,7 +23,7 @@ impl MusicSelectSkin {
         }
     }
 
-    pub fn get_clickable_bar(&self) -> &[i32] {
+    pub fn clickable_bar(&self) -> &[i32] {
         &self.clickable_bar
     }
 
@@ -31,7 +31,7 @@ impl MusicSelectSkin {
         self.clickable_bar = clickable_bar;
     }
 
-    pub fn get_center_bar(&self) -> i32 {
+    pub fn center_bar(&self) -> i32 {
         self.center_bar
     }
 
@@ -39,7 +39,7 @@ impl MusicSelectSkin {
         self.center_bar = center_bar;
     }
 
-    pub fn get_search_text_region(&self) -> Option<&Rectangle> {
+    pub fn search_text_region(&self) -> Option<&Rectangle> {
         self.search.as_ref()
     }
 

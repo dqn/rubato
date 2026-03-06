@@ -173,7 +173,7 @@ mod tests {
         note.set_draw_commands(vec![DrawCommand::SetType(5)]);
         let mut sprite = SkinObjectRenderer::new();
         note.draw(&mut sprite);
-        assert_eq!(sprite.get_type(), 5);
+        assert_eq!(sprite.toast_type(), 5);
     }
 
     #[test]

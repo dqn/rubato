@@ -414,18 +414,18 @@ mod tests {
         };
 
         BgaRenderer::set_type(&mut adapter, BgaRenderType::Linear);
-        assert_eq!(sprite.get_type(), SkinObjectRenderer::TYPE_LINEAR);
+        assert_eq!(sprite.toast_type(), SkinObjectRenderer::TYPE_LINEAR);
 
         let mut adapter2 = SkinObjectRendererAdapter {
             sprite: &mut sprite,
         };
         BgaRenderer::set_type(&mut adapter2, BgaRenderType::Ffmpeg);
-        assert_eq!(sprite.get_type(), SkinObjectRenderer::TYPE_FFMPEG);
+        assert_eq!(sprite.toast_type(), SkinObjectRenderer::TYPE_FFMPEG);
 
         let mut adapter3 = SkinObjectRendererAdapter {
             sprite: &mut sprite,
         };
         BgaRenderer::set_type(&mut adapter3, BgaRenderType::Layer);
-        assert_eq!(sprite.get_type(), SkinObjectRenderer::TYPE_LAYER);
+        assert_eq!(sprite.toast_type(), SkinObjectRenderer::TYPE_LAYER);
     }
 }

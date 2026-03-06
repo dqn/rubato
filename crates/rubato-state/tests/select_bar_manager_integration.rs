@@ -58,7 +58,7 @@ fn init_creates_courses_and_commands() {
 
     // Verify first command is LAMP UPDATE with 30 entries
     if let Some(Bar::Container(c)) = manager.commands.first() {
-        assert_eq!(c.get_title(), "LAMP UPDATE");
+        assert_eq!(c.title(), "LAMP UPDATE");
         assert_eq!(c.childbar.len(), 30);
     } else {
         panic!("First command should be LAMP UPDATE ContainerBar");
@@ -66,7 +66,7 @@ fn init_creates_courses_and_commands() {
 
     // Verify second command is SCORE UPDATE with 30 entries
     if let Some(Bar::Container(c)) = manager.commands.get(1) {
-        assert_eq!(c.get_title(), "SCORE UPDATE");
+        assert_eq!(c.title(), "SCORE UPDATE");
         assert_eq!(c.childbar.len(), 30);
     } else {
         panic!("Second command should be SCORE UPDATE ContainerBar");
@@ -110,7 +110,7 @@ fn update_bar_root_displays_favorites() {
     let has_fav = manager
         .currentsongs
         .iter()
-        .any(|b| b.get_title() == "My Favorites");
+        .any(|b| b.title() == "My Favorites");
     assert!(has_fav, "Favorites bar should be in root listing");
 }
 
@@ -194,7 +194,7 @@ fn update_bar_with_context_sorts_by_title() {
         let titles: Vec<String> = manager
             .currentsongs
             .iter()
-            .filter_map(|b| b.as_song_bar().map(|sb| sb.get_song_data().title.clone()))
+            .filter_map(|b| b.as_song_bar().map(|sb| sb.song_data().title.clone()))
             .collect();
         // Verify alphabetical sort
         for i in 1..titles.len() {
@@ -288,7 +288,7 @@ fn add_search_and_display_at_root() {
     let has_search = manager
         .currentsongs
         .iter()
-        .any(|b| b.get_title() == "Recent Search");
+        .any(|b| b.title() == "Recent Search");
     assert!(has_search, "Search bar should appear at root level");
 }
 
@@ -314,7 +314,7 @@ fn add_search_bars_appear_at_root() {
     let search_count = manager
         .currentsongs
         .iter()
-        .filter(|b| b.get_title().starts_with("search_"))
+        .filter(|b| b.title().starts_with("search_"))
         .count();
     assert_eq!(
         search_count, 5,
@@ -352,7 +352,7 @@ fn add_search_deduplicates_and_shows_at_root() {
         .currentsongs
         .iter()
         .filter(|b| matches!(b, Bar::SearchWord(_)))
-        .map(|b| b.get_title())
+        .map(|b| b.title())
         .collect();
     assert_eq!(
         search_titles.len(),
@@ -362,7 +362,7 @@ fn add_search_deduplicates_and_shows_at_root() {
 }
 
 // ---------------------------------------------------------------------------
-// get_selected_position / set_selected_position
+// selected_position / set_selected_position
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -378,7 +378,7 @@ fn selected_position_round_trip() {
     manager.set_selected_position(0.5);
     assert_eq!(manager.selectedindex, 2);
 
-    let pos = manager.get_selected_position();
+    let pos = manager.selected_position();
     assert!((pos - 0.5).abs() < 0.01);
 }
 
@@ -425,7 +425,7 @@ fn multiple_favorites_appear_at_root() {
     let fav_count = manager
         .currentsongs
         .iter()
-        .filter(|b| b.get_title().starts_with("Favorites"))
+        .filter(|b| b.title().starts_with("Favorites"))
         .count();
     assert_eq!(fav_count, 3, "All 3 favorites should appear at root");
 }
@@ -446,7 +446,7 @@ fn bar_sorter_title_sorts_correctly() {
 
     let titles: Vec<String> = bars
         .iter()
-        .filter_map(|b| b.as_song_bar().map(|sb| sb.get_song_data().title.clone()))
+        .filter_map(|b| b.as_song_bar().map(|sb| sb.song_data().title.clone()))
         .collect();
     assert_eq!(titles, vec!["Alpha", "Middle", "Zebra"]);
 }
@@ -486,13 +486,13 @@ fn loader_stop_flag_set_on_update_bar() {
 #[test]
 fn get_selected_on_empty_returns_none() {
     let manager = BarManager::new();
-    assert!(manager.get_selected().is_none());
+    assert!(manager.selected().is_none());
 }
 
 #[test]
 fn get_selected_position_on_empty_returns_zero() {
     let manager = BarManager::new();
-    assert_eq!(manager.get_selected_position(), 0.0);
+    assert_eq!(manager.selected_position(), 0.0);
 }
 
 #[test]

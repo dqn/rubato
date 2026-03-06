@@ -39,19 +39,19 @@ impl DirectoryBarData {
         }
     }
 
-    pub fn get_lamps(&self) -> &[i32; 11] {
+    pub fn lamps(&self) -> &[i32; 11] {
         &self.lamps
     }
 
-    pub fn get_rival_lamps(&self) -> &[i32; 11] {
+    pub fn rival_lamps(&self) -> &[i32; 11] {
         &self.rlamps
     }
 
-    pub fn get_ranks(&self) -> &[i32; 28] {
+    pub fn ranks(&self) -> &[i32; 28] {
         &self.ranks
     }
 
-    pub fn get_lamp(&self, is_player: bool) -> i32 {
+    pub fn lamp(&self, is_player: bool) -> i32 {
         let lamps = if is_player { &self.lamps } else { &self.rlamps };
         for (i, &lamp) in lamps.iter().enumerate() {
             if lamp > 0 {
@@ -129,7 +129,7 @@ impl DirectoryBarData {
     /// If contains_same_folder is false, deduplicates SongBars by folder path.
     ///
     /// Translates: Java DirectoryBar.getChildren(Mode, boolean)
-    pub fn get_children_filtered(
+    pub fn children_filtered(
         children: &[Bar],
         mode: Option<&bms_model::Mode>,
         contains_same_folder: bool,
@@ -140,7 +140,7 @@ impl DirectoryBarData {
             if let Some(mode) = mode
                 && let Some(sb) = b.as_song_bar()
             {
-                let song_mode = sb.get_song_data().mode;
+                let song_mode = sb.song_data().mode;
                 if song_mode != 0 && song_mode != mode.id() {
                     continue;
                 }
@@ -149,11 +149,11 @@ impl DirectoryBarData {
             // Same-folder deduplication
             let mut add_bar = true;
             if !contains_same_folder && let Some(sb) = b.as_song_bar() {
-                let folder = &sb.get_song_data().folder;
+                let folder = &sb.song_data().folder;
                 if !folder.is_empty() {
                     for existing in &result {
                         if let Some(existing_sb) = existing.as_song_bar() {
-                            let existing_folder = &existing_sb.get_song_data().folder;
+                            let existing_folder = &existing_sb.song_data().folder;
                             if folder == existing_folder {
                                 add_bar = false;
                                 break;
@@ -192,7 +192,7 @@ mod tests {
             make_song_bar("B", "sha_b", 0, "/dir2"),
         ];
 
-        let result = DirectoryBarData::get_children_filtered(&children, None, true);
+        let result = DirectoryBarData::children_filtered(&children, None, true);
         assert_eq!(result.len(), 2);
     }
 
@@ -205,13 +205,13 @@ mod tests {
         ];
 
         let mode_7k = bms_model::Mode::BEAT_7K;
-        let result = DirectoryBarData::get_children_filtered(&children, Some(&mode_7k), true);
+        let result = DirectoryBarData::children_filtered(&children, Some(&mode_7k), true);
 
         // 7K Song (mode 7 matches) and Any Mode (mode 0 passes) should remain
         // 5K Song should be filtered out
         assert_eq!(result.len(), 2);
-        assert!(result[0].get_title().contains("7K Song"));
-        assert!(result[1].get_title().contains("Any Mode"));
+        assert!(result[0].title().contains("7K Song"));
+        assert!(result[1].title().contains("Any Mode"));
     }
 
     #[test]
@@ -222,12 +222,12 @@ mod tests {
             make_song_bar("Song C", "sha_c", 0, "/other_dir"),
         ];
 
-        let result = DirectoryBarData::get_children_filtered(&children, None, false);
+        let result = DirectoryBarData::children_filtered(&children, None, false);
 
         // Song A and Song B have same folder, so B should be deduplicated
         assert_eq!(result.len(), 2);
-        assert!(result[0].get_title().contains("Song A"));
-        assert!(result[1].get_title().contains("Song C"));
+        assert!(result[0].title().contains("Song A"));
+        assert!(result[1].title().contains("Song C"));
     }
 
     #[test]
@@ -237,7 +237,7 @@ mod tests {
             make_song_bar("Song B", "sha_b", 0, "/same_dir"),
         ];
 
-        let result = DirectoryBarData::get_children_filtered(&children, None, true);
+        let result = DirectoryBarData::children_filtered(&children, None, true);
         assert_eq!(result.len(), 2);
     }
 
@@ -251,7 +251,7 @@ mod tests {
         ];
 
         let mode_7k = bms_model::Mode::BEAT_7K;
-        let result = DirectoryBarData::get_children_filtered(&children, Some(&mode_7k), true);
+        let result = DirectoryBarData::children_filtered(&children, Some(&mode_7k), true);
 
         // Folder bar should pass (not a SongBar), Song with mode 5 should be filtered
         assert_eq!(result.len(), 1);

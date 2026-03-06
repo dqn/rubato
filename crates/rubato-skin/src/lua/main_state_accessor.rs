@@ -200,7 +200,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let rate_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().now_rate() as f64)
+                Ok(state.score_data_property().now_rate() as f64)
             })?;
             table.set("rate", rate_func)?;
 
@@ -208,7 +208,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let exscore_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().now_ex_score() as f64)
+                Ok(state.score_data_property().now_ex_score() as f64)
             })?;
             table.set("exscore", exscore_func)?;
 
@@ -216,7 +216,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let rate_best_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().now_best_score_rate() as f64)
+                Ok(state.score_data_property().now_best_score_rate() as f64)
             })?;
             table.set("rate_best", rate_best_func)?;
 
@@ -224,7 +224,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let exscore_best_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().best_score() as f64)
+                Ok(state.score_data_property().best_score() as f64)
             })?;
             table.set("exscore_best", exscore_best_func)?;
 
@@ -232,7 +232,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let rate_rival_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().rival_score_rate() as f64)
+                Ok(state.score_data_property().rival_score_rate() as f64)
             })?;
             table.set("rate_rival", rate_rival_func)?;
 
@@ -240,7 +240,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let exscore_rival_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().rival_score() as f64)
+                Ok(state.score_data_property().rival_score() as f64)
             })?;
             table.set("exscore_rival", exscore_rival_func)?;
 
@@ -326,7 +326,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let judge_func = lua.create_function(move |_, id: i32| {
                 let state = unsafe { &*sp.0 };
-                let total = state.get_judge_count(id, true) + state.get_judge_count(id, false);
+                let total = state.judge_count(id, true) + state.judge_count(id, false);
                 Ok(total)
             })?;
             table.set("judge", judge_func)?;
@@ -348,7 +348,7 @@ impl MainStateAccessor {
             let gauge_type_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
                 if state.is_bms_player() {
-                    Ok(state.get_gauge_type() as f64)
+                    Ok(state.gauge_type() as f64)
                 } else {
                     Ok(0.0f64)
                 }
@@ -528,11 +528,11 @@ mod tests {
             &self.resource
         }
 
-        fn get_score_data_property(&self) -> &rubato_core::score_data_property::ScoreDataProperty {
+        fn score_data_property(&self) -> &rubato_core::score_data_property::ScoreDataProperty {
             &self.score_data_property
         }
 
-        fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
+        fn judge_count(&self, judge: i32, fast: bool) -> i32 {
             *self.judge_counts.get(&(judge, fast)).unwrap_or(&0)
         }
 
@@ -540,7 +540,7 @@ mod tests {
             self.gauge_value
         }
 
-        fn get_gauge_type(&self) -> i32 {
+        fn gauge_type(&self) -> i32 {
             self.gauge_type
         }
 

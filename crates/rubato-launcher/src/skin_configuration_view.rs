@@ -510,7 +510,7 @@ impl SkinConfigurationView {
         for path in &skinpaths {
             if let Some(header) = load_skin_header(path, config) {
                 // 7/14key skinは5/10keyにも加える (add 7/14key skins as 5/10key too)
-                if header.get_type() == rubato_skin::skin_header::TYPE_LR2SKIN
+                if header.toast_type() == rubato_skin::skin_header::TYPE_LR2SKIN
                     && let Some(skin_type) = header.skin_type()
                     && (*skin_type == SkinType::Play7Keys || *skin_type == SkinType::Play14Keys)
                 {
@@ -1016,7 +1016,7 @@ impl SkinConfigurationView {
     /// Translates: SkinListCell.updateItem(SkinHeader, boolean)
     pub fn skin_header_display_name(header: &SkinHeader) -> String {
         let name = header.name().unwrap_or("");
-        if header.get_type() == TYPE_BEATORJASKIN {
+        if header.toast_type() == TYPE_BEATORJASKIN {
             name.to_string()
         } else {
             format!("{} (LR2 Skin)", name)
@@ -1392,7 +1392,7 @@ mod tests {
 
         let header = convert_lr2_header_data(&lr2_data);
 
-        assert_eq!(header.get_type(), TYPE_LR2SKIN);
+        assert_eq!(header.toast_type(), TYPE_LR2SKIN);
         assert_eq!(header.name(), Some("Test LR2 Skin"));
         assert_eq!(header.skin_type(), Some(&SkinType::Play7Keys));
         assert_eq!(header.path(), Some(&PathBuf::from("/test/skin.lr2skin")));
@@ -1486,7 +1486,7 @@ mod tests {
 
         assert!(header.is_some(), "LR2 skin header should be loaded");
         let header = header.unwrap();
-        assert_eq!(header.get_type(), TYPE_LR2SKIN);
+        assert_eq!(header.toast_type(), TYPE_LR2SKIN);
         assert_eq!(header.name(), Some("Test LR2"));
     }
 

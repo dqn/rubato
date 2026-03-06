@@ -70,11 +70,7 @@ impl MusicSelectKeyProperty {
         }
     }
 
-    pub fn get_analog_change(
-        &self,
-        input: &mut BMSPlayerInputProcessor,
-        code: MusicSelectKey,
-    ) -> i32 {
+    pub fn analog_change(&self, input: &mut BMSPlayerInputProcessor, code: MusicSelectKey) -> i32 {
         let assign = self.assign();
         let mut d_ticks = 0;
         for (i, keys) in assign.iter().enumerate() {

@@ -126,9 +126,7 @@ impl BarSorter {
             return title_cmp;
         }
 
-        o1.get_title()
-            .to_lowercase()
-            .cmp(&o2.get_title().to_lowercase())
+        o1.title().to_lowercase().cmp(&o2.title().to_lowercase())
     }
 
     fn compare_artist(o1: &Bar, o2: &Bar) -> Ordering {

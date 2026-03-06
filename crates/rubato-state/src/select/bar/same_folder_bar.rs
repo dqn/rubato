@@ -21,7 +21,7 @@ impl SameFolderBar {
         }
     }
 
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         self.title.clone()
     }
 
@@ -29,7 +29,7 @@ impl SameFolderBar {
     /// Queries the song database for songs with folder=crc.
     ///
     /// Translates: Java SameFolderBar.getChildren()
-    pub fn get_children(&self, db: &dyn SongDatabaseAccessor) -> Vec<Bar> {
+    pub fn children(&self, db: &dyn SongDatabaseAccessor) -> Vec<Bar> {
         let songs = db.song_datas("folder", &self.crc);
         SongBar::to_song_bar_array(&songs)
     }
@@ -98,7 +98,7 @@ mod tests {
         let db = MockSongDb::new().with_songs("folder", "folder_crc", vec![song1, song2]);
 
         let bar = SameFolderBar::new("Same Folder".to_string(), "folder_crc".to_string());
-        let children = bar.get_children(&db);
+        let children = bar.children(&db);
 
         assert_eq!(children.len(), 2);
         assert!(children[0].as_song_bar().is_some());
@@ -109,7 +109,7 @@ mod tests {
     fn same_folder_bar_get_children_returns_empty_when_no_songs() {
         let db = MockSongDb::new();
         let bar = SameFolderBar::new("Empty".to_string(), "no_crc".to_string());
-        let children = bar.get_children(&db);
+        let children = bar.children(&db);
         assert!(children.is_empty());
     }
 }

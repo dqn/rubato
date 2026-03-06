@@ -425,7 +425,7 @@ mod tests {
 
         let mut renderer = SkinObjectRenderer::new();
         stf.draw_with_offset(&mut renderer, 0.0, 0.0);
-        assert_eq!(renderer.get_type(), SkinObjectRenderer::TYPE_LINEAR);
+        assert_eq!(renderer.toast_type(), SkinObjectRenderer::TYPE_LINEAR);
     }
 
     // ---- Font scale restore test ----

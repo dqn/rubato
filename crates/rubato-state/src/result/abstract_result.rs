@@ -145,15 +145,15 @@ impl TimingDistribution {
         &self.dist
     }
 
-    pub fn get_average(&self) -> f32 {
+    pub fn average(&self) -> f32 {
         self.average
     }
 
-    pub fn get_std_dev(&self) -> f32 {
+    pub fn std_dev(&self) -> f32 {
         self.std_dev
     }
 
-    pub fn get_array_center(&self) -> i32 {
+    pub fn array_center(&self) -> i32 {
         self.array_center
     }
 }
@@ -212,23 +212,23 @@ impl AbstractResultData {
         }
     }
 
-    pub fn get_replay_status(&self, index: usize) -> ReplayStatus {
+    pub fn replay_status(&self, index: usize) -> ReplayStatus {
         self.save_replay[index]
     }
 
-    pub fn get_gauge_type(&self) -> i32 {
+    pub fn gauge_type(&self) -> i32 {
         self.gauge_type
     }
 
-    pub fn get_state(&self) -> i32 {
+    pub fn state(&self) -> i32 {
         self.state
     }
 
-    pub fn get_ranking_data(&self) -> Option<&RankingData> {
+    pub fn ranking_data(&self) -> Option<&RankingData> {
         self.ranking.as_ref()
     }
 
-    pub fn get_ir_rank(&self) -> i32 {
+    pub fn ir_rank(&self) -> i32 {
         if let Some(ref r) = self.ranking {
             r.rank()
         } else {
@@ -236,7 +236,7 @@ impl AbstractResultData {
         }
     }
 
-    pub fn get_old_ir_rank(&self) -> i32 {
+    pub fn old_ir_rank(&self) -> i32 {
         if let Some(ref r) = self.ranking {
             r.previous_rank()
         } else {
@@ -244,7 +244,7 @@ impl AbstractResultData {
         }
     }
 
-    pub fn get_ir_total_player(&self) -> i32 {
+    pub fn ir_total_player(&self) -> i32 {
         if let Some(ref r) = self.ranking {
             r.total_player()
         } else {
@@ -252,19 +252,19 @@ impl AbstractResultData {
         }
     }
 
-    pub fn get_average_duration(&self) -> i64 {
+    pub fn average_duration(&self) -> i64 {
         self.avgduration
     }
 
-    pub fn get_average(&self) -> i64 {
+    pub fn average(&self) -> i64 {
         self.avg
     }
 
-    pub fn get_stddev(&self) -> i64 {
+    pub fn stddev(&self) -> i64 {
         self.stddev
     }
 
-    pub fn get_old_score(&self) -> &ScoreData {
+    pub fn old_score(&self) -> &ScoreData {
         &self.oldscore
     }
 
@@ -285,11 +285,11 @@ impl AbstractResultData {
         }
     }
 
-    pub fn get_ranking_offset(&self) -> i32 {
+    pub fn ranking_offset(&self) -> i32 {
         self.ranking_offset
     }
 
-    pub fn get_ranking_position(&self) -> f32 {
+    pub fn ranking_position(&self) -> f32 {
         let ranking_max: i32 = if let Some(ref r) = self.ranking {
             let total = r.total_player();
             1i32.max(total)
@@ -311,7 +311,7 @@ impl AbstractResultData {
         }
     }
 
-    pub fn get_score_data_property(&self) -> &ScoreDataProperty {
+    pub fn score_data_property(&self) -> &ScoreDataProperty {
         &self.score
     }
 

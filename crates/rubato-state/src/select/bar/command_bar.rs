@@ -35,14 +35,14 @@ impl CommandBar {
         }
     }
 
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         self.title.clone()
     }
 
     /// Get children bars by executing SQL query against the song database.
     ///
     /// Translates: Java CommandBar.getChildren()
-    pub fn get_children(&self, db: &dyn SongDatabaseAccessor, ctx: &CommandBarContext) -> Vec<Bar> {
+    pub fn children(&self, db: &dyn SongDatabaseAccessor, ctx: &CommandBarContext) -> Vec<Bar> {
         let songs = db.song_datas_by_sql(
             &self.sql,
             ctx.score_db_path,
@@ -118,7 +118,7 @@ mod tests {
         };
 
         let bar = CommandBar::new("Recent".to_string(), "SELECT * FROM song".to_string());
-        let children = bar.get_children(&db, &ctx);
+        let children = bar.children(&db, &ctx);
 
         assert_eq!(children.len(), 1);
         assert!(children[0].as_song_bar().is_some());
@@ -134,7 +134,7 @@ mod tests {
         };
 
         let bar = CommandBar::new("Empty".to_string(), "SELECT 1".to_string());
-        let children = bar.get_children(&db, &ctx);
+        let children = bar.children(&db, &ctx);
 
         assert!(children.is_empty());
     }

@@ -24,24 +24,24 @@ impl LeaderBoardBar {
         }
     }
 
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         self.title.clone()
     }
 
     /// Get children bars for leaderboard display.
     /// Returns empty when IR connection is unavailable.
-    /// When IR data is provided via `get_children_with_ir`, creates FunctionBars.
+    /// When IR data is provided via `children_with_ir`, creates FunctionBars.
     ///
     /// Translates: Java LeaderBoardBar.getChildren()
-    pub fn get_children(&self) -> Vec<Bar> {
+    pub fn children(&self) -> Vec<Bar> {
         // IR connection required - returns empty without it.
-        // Use get_children_with_ir() when IR data is available.
+        // Use children_with_ir() when IR data is available.
         Vec::new()
     }
 
     /// Get children bars with pre-fetched IR leaderboard data.
     /// This is the functional path when IR connection is available.
-    pub fn get_children_with_ir(&self, leaderboard: &[LeaderboardEntry]) -> Vec<Bar> {
+    pub fn children_with_ir(&self, leaderboard: &[LeaderboardEntry]) -> Vec<Bar> {
         self.from_ir_score_data(leaderboard)
             .into_iter()
             .map(|fb| Bar::Function(Box::new(fb)))
@@ -49,7 +49,7 @@ impl LeaderBoardBar {
     }
 
     /// Get children bars with local score inserted into leaderboard.
-    pub fn get_children_with_ir_and_local(
+    pub fn children_with_ir_and_local(
         &self,
         local_score: &IRScoreData,
         leaderboard: &[LeaderboardEntry],

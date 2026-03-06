@@ -49,7 +49,7 @@ impl TrainerView {
         // Java: laneorder.setPromptText("1234567");
         // Prompt text is a UI hint — stored but deferred to egui rendering
         // Java: if (randomtrainer.getLaneOrder() != null)
-        let lane_order = RandomTrainer::get_lane_order();
+        let lane_order = RandomTrainer::lane_order();
         if !lane_order.is_empty() {
             // Java: laneorder.setText(randomtrainer.getLaneOrder());
             self.lane_order = lane_order;

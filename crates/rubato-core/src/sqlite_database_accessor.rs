@@ -45,7 +45,7 @@ impl Column {
         &self.name
     }
 
-    pub fn get_type(&self) -> &str {
+    pub fn toast_type(&self) -> &str {
         &self.type_name
     }
 
@@ -122,7 +122,7 @@ impl SQLiteDatabaseAccessor {
                     sql.push('[');
                     sql.push_str(column.name());
                     sql.push_str("] ");
-                    sql.push_str(column.get_type());
+                    sql.push_str(column.toast_type());
                     if column.notnull() == 1 {
                         sql.push_str(" NOT NULL");
                     }
@@ -174,7 +174,7 @@ impl SQLiteDatabaseAccessor {
                     "ALTER TABLE {} ADD COLUMN [{}] {}",
                     table.name(),
                     add.name(),
-                    add.get_type()
+                    add.toast_type()
                 );
                 if add.notnull() == 1 {
                     sql.push_str(" NOT NULL");

@@ -58,7 +58,7 @@ pub struct Skin {
 }
 
 impl Skin {
-    pub fn get_all_skin_objects(&self) -> &[SkinObject] {
+    pub fn all_skin_objects(&self) -> &[SkinObject] {
         &self.objects
     }
 }

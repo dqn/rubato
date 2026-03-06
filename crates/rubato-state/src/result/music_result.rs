@@ -351,12 +351,12 @@ impl MusicResult {
 
     fn do_prepare(&mut self) {
         self.data.state = STATE_OFFLINE;
-        let newscore_clone = self.get_new_score().cloned();
+        let newscore_clone = self.new_score().cloned();
 
-        self.data.ranking = if self.resource.get_ranking_data().is_some()
+        self.data.ranking = if self.resource.ranking_data().is_some()
             && self.resource.course_bms_models().is_none()
         {
-            self.resource.get_ranking_data().cloned()
+            self.resource.ranking_data().cloned()
         } else {
             Some(RankingData::new())
         };
@@ -514,26 +514,18 @@ impl MusicResult {
         self.data.timer.switch_timer(TIMER_RESULTGRAPH_END, true);
 
         if let Some(ref skin) = self.skin
-            && skin.get_rank_time() == 0
+            && skin.rank_time() == 0
         {
             self.data.timer.switch_timer(TIMER_RESULT_UPDATESCORE, true);
         }
-        let skin_input = self
-            .skin
-            .as_ref()
-            .map(|s| s.get_input() as i64)
-            .unwrap_or(0);
+        let skin_input = self.skin.as_ref().map(|s| s.input() as i64).unwrap_or(0);
         if time > skin_input {
             self.data.timer.switch_timer(TIMER_STARTINPUT, true);
         }
 
         if self.data.timer.is_timer_on(TIMER_FADEOUT) {
             let fadeout_time = self.data.timer.now_time_for_id(TIMER_FADEOUT);
-            let skin_fadeout = self
-                .skin
-                .as_ref()
-                .map(|s| s.get_fadeout() as i64)
-                .unwrap_or(0);
+            let skin_fadeout = self.skin.as_ref().map(|s| s.fadeout() as i64).unwrap_or(0);
             if fadeout_time > skin_fadeout {
                 if let Some(audio) = self.main.get_audio_processor_mut() {
                     audio.stop_note(None);
@@ -622,14 +614,14 @@ impl MusicResult {
                     let mut key: Option<ResultKey> = None;
                     {
                         let input = self.main.input_processor();
-                        for i in 0..self.property.get_assign_length() {
-                            if self.property.get_assign(i) == Some(ResultKey::ReplayDifferent)
+                        for i in 0..self.property.assign_length() {
+                            if self.property.assign(i) == Some(ResultKey::ReplayDifferent)
                                 && input.key_state(i)
                             {
                                 key = Some(ResultKey::ReplayDifferent);
                                 break;
                             }
-                            if self.property.get_assign(i) == Some(ResultKey::ReplaySame)
+                            if self.property.assign(i) == Some(ResultKey::ReplaySame)
                                 && input.key_state(i)
                             {
                                 key = Some(ResultKey::ReplaySame);
@@ -668,11 +660,7 @@ impl MusicResult {
                 }
             }
         } else {
-            let skin_scene = self
-                .skin
-                .as_ref()
-                .map(|s| s.get_scene() as i64)
-                .unwrap_or(0);
+            let skin_scene = self.skin.as_ref().map(|s| s.scene() as i64).unwrap_or(0);
             if time > skin_scene {
                 self.data.timer.switch_timer(TIMER_FADEOUT, true);
                 if self.has_sound(SoundType::ResultClose) {
@@ -691,19 +679,15 @@ impl MusicResult {
         if !self.data.timer.is_timer_on(TIMER_FADEOUT)
             && self.data.timer.is_timer_on(TIMER_STARTINPUT)
         {
-            let skin_input = self
-                .skin
-                .as_ref()
-                .map(|s| s.get_input() as i64)
-                .unwrap_or(0);
+            let skin_input = self.skin.as_ref().map(|s| s.input() as i64).unwrap_or(0);
             if time > skin_input {
                 let mut ok = false;
                 let mut replay_index: Option<usize> = None;
                 let mut open_ir = false;
                 {
                     let input_processor = self.main.input_processor();
-                    for i in 0..self.property.get_assign_length() {
-                        if self.property.get_assign(i) == Some(ResultKey::ChangeGraph)
+                    for i in 0..self.property.assign_length() {
+                        if self.property.assign(i) == Some(ResultKey::ChangeGraph)
                             && input_processor.key_state(i)
                             && input_processor.reset_key_changed_time(i)
                         {
@@ -714,7 +698,7 @@ impl MusicResult {
                             } else {
                                 self.data.gauge_type = (self.data.gauge_type - 5) % 3 + 6;
                             }
-                        } else if self.property.get_assign(i).is_some()
+                        } else if self.property.assign(i).is_some()
                             && input_processor.key_state(i)
                             && input_processor.reset_key_changed_time(i)
                         {
@@ -744,7 +728,7 @@ impl MusicResult {
                 }
 
                 if self.resource.score_data().is_none() || ok {
-                    let rank_time = self.skin.as_ref().map(|s| s.get_rank_time()).unwrap_or(0);
+                    let rank_time = self.skin.as_ref().map(|s| s.rank_time()).unwrap_or(0);
                     if rank_time != 0 && !self.data.timer.is_timer_on(TIMER_RESULT_UPDATESCORE) {
                         self.data.timer.switch_timer(TIMER_RESULT_UPDATESCORE, true);
                     } else if self.data.state == STATE_OFFLINE
@@ -995,7 +979,7 @@ impl MusicResult {
         }
     }
 
-    pub fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
+    pub fn judge_count(&self, judge: i32, fast: bool) -> i32 {
         if let Some(score) = self.resource.score_data() {
             match judge {
                 0 => {
@@ -1051,12 +1035,12 @@ impl MusicResult {
         self.resource.bms_model().total_notes()
     }
 
-    pub fn get_new_score(&self) -> Option<&ScoreData> {
+    pub fn new_score(&self) -> Option<&ScoreData> {
         self.resource.score_data()
     }
 
     /// Get the skin as MusicResultSkin
-    pub fn get_skin(&self) -> Option<&MusicResultSkin> {
+    pub fn skin(&self) -> Option<&MusicResultSkin> {
         self.skin.as_ref()
     }
 
@@ -1281,15 +1265,15 @@ mod tests {
 
         fn dispose_skin(&mut self) {}
 
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
 
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
 
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
 
@@ -1344,15 +1328,15 @@ mod tests {
 
         fn dispose_skin(&mut self) {}
 
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
 
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
 
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
 
@@ -1696,19 +1680,19 @@ mod tests {
     #[test]
     fn test_get_new_score_none_by_default() {
         let mr = MusicResult::default();
-        assert!(mr.get_new_score().is_none());
+        assert!(mr.new_score().is_none());
     }
 
     #[test]
     fn test_get_judge_count_no_score() {
         let mr = MusicResult::default();
         for judge in 0..6 {
-            assert_eq!(mr.get_judge_count(judge, true), 0);
-            assert_eq!(mr.get_judge_count(judge, false), 0);
+            assert_eq!(mr.judge_count(judge, true), 0);
+            assert_eq!(mr.judge_count(judge, false), 0);
         }
         // out of range
-        assert_eq!(mr.get_judge_count(6, true), 0);
-        assert_eq!(mr.get_judge_count(-1, false), 0);
+        assert_eq!(mr.judge_count(6, true), 0);
+        assert_eq!(mr.judge_count(-1, false), 0);
     }
 
     #[test]
@@ -1825,7 +1809,7 @@ mod tests {
     #[test]
     fn test_get_skin_none_initially() {
         let mr = MusicResult::default();
-        assert!(mr.get_skin().is_none());
+        assert!(mr.skin().is_none());
     }
 
     #[test]

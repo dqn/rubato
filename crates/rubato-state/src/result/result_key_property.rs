@@ -23,14 +23,14 @@ impl ResultKeyProperty {
         Self { assign: keys }
     }
 
-    pub fn get_assign(&self, index: i32) -> Option<ResultKey> {
+    pub fn assign(&self, index: i32) -> Option<ResultKey> {
         if index < 0 || index as usize >= self.assign.len() {
             return None;
         }
         self.assign[index as usize]
     }
 
-    pub fn get_assign_length(&self) -> i32 {
+    pub fn assign_length(&self) -> i32 {
         self.assign.len() as i32
     }
 

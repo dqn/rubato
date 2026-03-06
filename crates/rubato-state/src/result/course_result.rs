@@ -459,10 +459,10 @@ impl CourseResult {
         self.data.state = STATE_OFFLINE;
         let newscore = self.resource.course_score_data().cloned();
 
-        self.data.ranking = if self.resource.get_ranking_data().is_some()
+        self.data.ranking = if self.resource.ranking_data().is_some()
             && self.resource.course_bms_models().is_some()
         {
-            self.resource.get_ranking_data().cloned()
+            self.resource.ranking_data().cloned()
         } else {
             Some(RankingData::new())
         };
@@ -668,26 +668,18 @@ impl CourseResult {
         self.data.timer.switch_timer(TIMER_RESULTGRAPH_END, true);
 
         if let Some(ref skin) = self.skin
-            && skin.get_rank_time() == 0
+            && skin.rank_time() == 0
         {
             self.data.timer.switch_timer(TIMER_RESULT_UPDATESCORE, true);
         }
-        let skin_input = self
-            .skin
-            .as_ref()
-            .map(|s| s.get_input() as i64)
-            .unwrap_or(0);
+        let skin_input = self.skin.as_ref().map(|s| s.input() as i64).unwrap_or(0);
         if time > skin_input {
             self.data.timer.switch_timer(TIMER_STARTINPUT, true);
         }
 
         if self.data.timer.is_timer_on(TIMER_FADEOUT) {
             let fadeout_time = self.data.timer.now_time_for_id(TIMER_FADEOUT);
-            let skin_fadeout = self
-                .skin
-                .as_ref()
-                .map(|s| s.get_fadeout() as i64)
-                .unwrap_or(0);
+            let skin_fadeout = self.skin.as_ref().map(|s| s.fadeout() as i64).unwrap_or(0);
             if fadeout_time > skin_fadeout {
                 if let Some(audio) = self.main.get_audio_processor_mut() {
                     audio.stop_note(None);
@@ -710,14 +702,14 @@ impl CourseResult {
             && self.data.timer.is_timer_on(TIMER_STARTINPUT)
         {
             let mut ok = false;
-            for i in 0..self.property.get_assign_length() {
+            for i in 0..self.property.assign_length() {
                 let input_processor = self.main.input_processor();
-                if self.property.get_assign(i) == Some(ResultKey::ChangeGraph)
+                if self.property.assign(i) == Some(ResultKey::ChangeGraph)
                     && input_processor.key_state(i)
                     && input_processor.reset_key_changed_time(i)
                 {
                     self.data.gauge_type = (self.data.gauge_type - 5) % 3 + 6;
-                } else if self.property.get_assign(i).is_some()
+                } else if self.property.assign(i).is_some()
                     && input_processor.key_state(i)
                     && input_processor.reset_key_changed_time(i)
                 {
@@ -838,7 +830,7 @@ impl CourseResult {
         info!("Score database update complete");
     }
 
-    pub fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
+    pub fn judge_count(&self, judge: i32, fast: bool) -> i32 {
         if let Some(score) = self.resource.course_score_data() {
             match judge {
                 0 => {
@@ -920,7 +912,7 @@ impl CourseResult {
         }
     }
 
-    pub fn get_new_score(&self) -> Option<&ScoreData> {
+    pub fn new_score(&self) -> Option<&ScoreData> {
         self.resource.course_score_data()
     }
 
@@ -999,15 +991,15 @@ mod tests {
 
         fn dispose_skin(&mut self) {}
 
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
 
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
 
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
 
@@ -1062,15 +1054,15 @@ mod tests {
 
         fn dispose_skin(&mut self) {}
 
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
 
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
 
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
 

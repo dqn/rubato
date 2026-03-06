@@ -32,7 +32,7 @@ impl GradeBar {
         &self.course.hash
     }
 
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         self.course.name().to_string()
     }
 
@@ -45,7 +45,7 @@ impl GradeBar {
         true
     }
 
-    pub fn get_mirror_score(&self) -> Option<&ScoreData> {
+    pub fn mirror_score(&self) -> Option<&ScoreData> {
         self.mscore.as_ref()
     }
 
@@ -53,7 +53,7 @@ impl GradeBar {
         self.mscore = score;
     }
 
-    pub fn get_random_score(&self) -> Option<&ScoreData> {
+    pub fn random_score(&self) -> Option<&ScoreData> {
         self.rscore.as_ref()
     }
 
@@ -61,7 +61,7 @@ impl GradeBar {
         self.rscore = score;
     }
 
-    pub fn get_trophy(&self) -> Option<&TrophyData> {
+    pub fn trophy(&self) -> Option<&TrophyData> {
         let scores = [
             self.selectable.bar_data.score(),
             self.mscore.as_ref(),
@@ -87,7 +87,7 @@ impl GradeBar {
             && trophy.scorerate <= score.exscore() as f32 * 100.0 / (score.notes as f32 * 2.0)
     }
 
-    pub fn get_lamp(&self, is_player: bool) -> i32 {
+    pub fn lamp(&self, is_player: bool) -> i32 {
         if !is_player {
             return self
                 .selectable
@@ -103,12 +103,12 @@ impl GradeBar {
         {
             result = score.clear;
         }
-        if let Some(score) = self.get_mirror_score()
+        if let Some(score) = self.mirror_score()
             && score.clear > result
         {
             result = score.clear;
         }
-        if let Some(score) = self.get_random_score()
+        if let Some(score) = self.random_score()
             && score.clear > result
         {
             result = score.clear;
@@ -133,23 +133,23 @@ mod tests {
         let mut bar = GradeBar::new(CourseData::default());
 
         // No scores: returns 0
-        assert_eq!(bar.get_lamp(true), 0);
+        assert_eq!(bar.lamp(true), 0);
 
         // Player score only
         bar.selectable.bar_data.set_score(Some(score_with_clear(3)));
-        assert_eq!(bar.get_lamp(true), 3);
+        assert_eq!(bar.lamp(true), 3);
 
         // Mirror score is higher
         bar.set_mirror_score(Some(score_with_clear(5)));
-        assert_eq!(bar.get_lamp(true), 5);
+        assert_eq!(bar.lamp(true), 5);
 
         // Random score is highest
         bar.set_random_score(Some(score_with_clear(7)));
-        assert_eq!(bar.get_lamp(true), 7);
+        assert_eq!(bar.lamp(true), 7);
 
         // Player score is highest
         bar.selectable.bar_data.set_score(Some(score_with_clear(9)));
-        assert_eq!(bar.get_lamp(true), 9);
+        assert_eq!(bar.lamp(true), 9);
     }
 
     #[test]
@@ -166,7 +166,7 @@ mod tests {
             .bar_data
             .set_rival_score(Some(score_with_clear(4)));
 
-        assert_eq!(bar.get_lamp(false), 4);
+        assert_eq!(bar.lamp(false), 4);
     }
 
     #[test]
@@ -177,6 +177,6 @@ mod tests {
         bar.selectable.bar_data.set_score(Some(score_with_clear(9)));
         bar.set_mirror_score(Some(score_with_clear(8)));
 
-        assert_eq!(bar.get_lamp(false), 0);
+        assert_eq!(bar.lamp(false), 0);
     }
 }

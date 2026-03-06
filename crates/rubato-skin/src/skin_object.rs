@@ -1270,7 +1270,7 @@ impl SkinObjectRenderer {
         self.obj_type = t;
     }
 
-    pub fn get_type(&self) -> i32 {
+    pub fn toast_type(&self) -> i32 {
         self.obj_type
     }
 
@@ -1457,7 +1457,7 @@ mod tests {
     fn test_skin_object_renderer_set_type() {
         let mut renderer = SkinObjectRenderer::new();
         renderer.set_type(SkinObjectRenderer::TYPE_BILINEAR);
-        assert_eq!(renderer.get_type(), SkinObjectRenderer::TYPE_BILINEAR);
+        assert_eq!(renderer.toast_type(), SkinObjectRenderer::TYPE_BILINEAR);
     }
 
     #[test]

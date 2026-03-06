@@ -340,7 +340,7 @@ impl BarManager {
         mut ctx: Option<&mut UpdateBarContext>,
     ) -> bool {
         let prevbar_title = if !self.currentsongs.is_empty() {
-            Some(self.currentsongs[self.selectedindex].get_title())
+            Some(self.currentsongs[self.selectedindex].title())
         } else {
             None
         };
@@ -348,7 +348,7 @@ impl BarManager {
             self.currentsongs[self.selectedindex]
                 .as_song_bar()
                 .filter(|sb| sb.exists_song())
-                .map(|sb| sb.get_song_data().sha256.clone())
+                .map(|sb| sb.song_data().sha256.clone())
         } else {
             None
         };
@@ -383,7 +383,7 @@ impl BarManager {
             // In Java: l.addAll(new FolderBar(select, null, "e2977170").getChildren())
             let root_folder = FolderBar::new(None, "e2977170".to_string());
             if let Some(ref ctx) = ctx {
-                l.extend(root_folder.get_children(ctx.songdb));
+                l.extend(root_folder.children(ctx.songdb));
             }
 
             // Add courses
@@ -422,21 +422,18 @@ impl BarManager {
             }
 
             // Check if bar is already in dir, and unwind to it
-            let dir_index = self
-                .dir
-                .iter()
-                .position(|d| d.get_title() == bar.get_title());
+            let dir_index = self.dir.iter().position(|d| d.title() == bar.title());
             if let Some(idx) = dir_index {
                 while self.dir.len() > idx + 1 {
                     self.dir.pop();
                     if let Some(sb) = self.sourcebars.pop()
                         && let Some(sb) = sb
                     {
-                        sourcebar_title = Some(sb.get_title());
+                        sourcebar_title = Some(sb.title());
                         sourcebar_sha256 = sb
                             .as_song_bar()
                             .filter(|s| s.exists_song())
-                            .map(|s| s.get_song_data().sha256.clone());
+                            .map(|s| s.song_data().sha256.clone());
                         sourcebar_is_song = sb.as_song_bar().is_some();
                         _sourcebar_class_name = bar_class_name(&sb);
                     }
@@ -448,7 +445,7 @@ impl BarManager {
             if let Some(ref ctx) = ctx {
                 let songdb = ctx.songdb;
                 match bar {
-                    Bar::Folder(b) => l.extend(b.get_children(songdb)),
+                    Bar::Folder(b) => l.extend(b.children(songdb)),
                     Bar::Command(b) => {
                         let player_name = ctx.config.playername.as_deref().unwrap_or("default");
                         let score_path =
@@ -461,17 +458,17 @@ impl BarManager {
                             scorelog_db_path: &scorelog_path,
                             info_db_path: Some(&songinfo_path),
                         };
-                        l.extend(b.get_children(songdb, &cmd_ctx));
+                        l.extend(b.children(songdb, &cmd_ctx));
                     }
                     Bar::Container(b) => {
-                        l.extend(b.get_children().iter().cloned());
+                        l.extend(b.children().iter().cloned());
                     }
-                    Bar::Hash(b) => l.extend(b.get_children(songdb)),
+                    Bar::Hash(b) => l.extend(b.children(songdb)),
                     Bar::Table(b) => {
-                        l.extend(b.get_children().iter().cloned());
+                        l.extend(b.children().iter().cloned());
                     }
-                    Bar::SearchWord(b) => l.extend(b.get_children(songdb)),
-                    Bar::ContextMenu(b) => l.extend(b.get_children(&self.tables, songdb)),
+                    Bar::SearchWord(b) => l.extend(b.children(songdb)),
+                    Bar::ContextMenu(b) => l.extend(b.children(&self.tables, songdb)),
                     _ => {}
                 }
             }
@@ -483,10 +480,10 @@ impl BarManager {
             {
                 let mut ds = String::new();
                 for d in &self.dir {
-                    ds.push_str(&d.get_title());
+                    ds.push_str(&d.title());
                     ds.push_str(" > ");
                 }
-                ds.push_str(&bar.get_title());
+                ds.push_str(&bar.title());
                 ds.push_str(" > ");
                 for r in &self.random_course_result {
                     if r.dir_string == ds {
@@ -532,7 +529,7 @@ impl BarManager {
                         .iter()
                         .filter(|b| {
                             if let Some(sb) = b.as_song_bar() {
-                                if let Some(sd) = Some(sb.get_song_data()) {
+                                if let Some(sd) = Some(sb.song_data()) {
                                     let invisible =
                                         sd.favorite & (INVISIBLE_SONG | INVISIBLE_CHART);
                                     let mode_mismatch = mode.is_some()
@@ -553,7 +550,7 @@ impl BarManager {
                         let mode_clone = mode.clone();
                         l.retain(|b| {
                             if let Some(sb) = b.as_song_bar() {
-                                let sd = sb.get_song_data();
+                                let sd = sb.song_data();
                                 let invisible = sd.favorite & (INVISIBLE_SONG | INVISIBLE_CHART);
                                 let mode_mismatch = mode_clone.is_some()
                                     && sd.mode != 0
@@ -570,7 +567,7 @@ impl BarManager {
                 // No context: filter invisible songs without mode trial loop
                 l.retain(|b| {
                     if let Some(sb) = b.as_song_bar() {
-                        let sd = sb.get_song_data();
+                        let sd = sb.song_data();
                         (sd.favorite & (INVISIBLE_SONG | INVISIBLE_CHART)) == 0
                     } else {
                         true
@@ -603,7 +600,7 @@ impl BarManager {
                 let lnmode = ctx.player_config.lnmode;
                 for b in &mut l {
                     if let Some(sb) = b.as_song_bar() {
-                        let sd = sb.get_song_data();
+                        let sd = sb.song_data();
                         if cache.exists_score_data_cache(sd, lnmode) {
                             let score = cache.read_score_data(sd, lnmode).cloned();
                             b.set_score(score);
@@ -643,7 +640,7 @@ impl BarManager {
                         .iter()
                         .filter_map(|b| {
                             b.as_song_bar().and_then(|sb| {
-                                let sd = sb.get_song_data();
+                                let sd = sb.song_data();
                                 if sd.path().is_some() {
                                     Some(sd.clone())
                                 } else {
@@ -695,7 +692,7 @@ impl BarManager {
                     for i in 0..self.currentsongs.len() {
                         if let Some(sb) = self.currentsongs[i].as_song_bar()
                             && sb.exists_song()
-                            && Some(sb.get_song_data().sha256.as_str()) == target_sha
+                            && Some(sb.song_data().sha256.as_str()) == target_sha
                         {
                             self.selectedindex = i;
                             break;
@@ -703,7 +700,7 @@ impl BarManager {
                     }
                 } else if let Some(title) = target_title {
                     for i in 0..self.currentsongs.len() {
-                        if self.currentsongs[i].get_title() == title {
+                        if self.currentsongs[i].title() == title {
                             self.selectedindex = i;
                             break;
                         }
@@ -715,7 +712,7 @@ impl BarManager {
                     for i in 0..self.currentsongs.len() {
                         if let Some(sb) = self.currentsongs[i].as_song_bar()
                             && sb.exists_song()
-                            && sb.get_song_data().sha256 == sha
+                            && sb.song_data().sha256 == sha
                         {
                             self.selectedindex = i;
                             break;
@@ -724,7 +721,7 @@ impl BarManager {
                 } else {
                     for i in 0..self.currentsongs.len() {
                         if bar_class_name(&self.currentsongs[i]) == prevbar_class_name
-                            && self.currentsongs[i].get_title() == *prev_title
+                            && self.currentsongs[i].title() == *prev_title
                         {
                             self.selectedindex = i;
                             break;
@@ -742,7 +739,7 @@ impl BarManager {
             // Build directory string
             let mut dir_str = String::new();
             for d in &self.dir {
-                dir_str.push_str(&d.get_title());
+                dir_str.push_str(&d.title());
                 dir_str.push_str(" > ");
             }
             self.dir_string = dir_str;
@@ -764,7 +761,7 @@ impl BarManager {
     }
 
     /// Update bar using the currently selected bar.
-    /// Workaround for borrow checker: can't pass get_selected() to update_bar().
+    /// Workaround for borrow checker: can't pass selected() to update_bar().
     pub fn update_bar_with_selected_and_context(
         &mut self,
         ctx: Option<&mut UpdateBarContext>,
@@ -804,15 +801,15 @@ impl BarManager {
         self.close_with_context(None);
     }
 
-    pub fn get_directory(&self) -> &[Box<Bar>] {
+    pub fn directory(&self) -> &[Box<Bar>] {
         &self.dir
     }
 
-    pub fn get_directory_string(&self) -> &str {
+    pub fn directory_string(&self) -> &str {
         &self.dir_string
     }
 
-    pub fn get_selected(&self) -> Option<&Bar> {
+    pub fn selected(&self) -> Option<&Bar> {
         if self.currentsongs.is_empty() {
             None
         } else {
@@ -822,14 +819,14 @@ impl BarManager {
 
     pub fn set_selected(&mut self, bar: &Bar) {
         for i in 0..self.currentsongs.len() {
-            if self.currentsongs[i].get_title() == bar.get_title() {
+            if self.currentsongs[i].title() == bar.title() {
                 self.selectedindex = i;
                 break;
             }
         }
     }
 
-    pub fn get_selected_position(&self) -> f32 {
+    pub fn selected_position(&self) -> f32 {
         if self.currentsongs.is_empty() {
             0.0
         } else {
@@ -861,8 +858,8 @@ impl BarManager {
 
     pub fn add_search(&mut self, bar: SearchWordBar, max_count: i32) {
         // Remove existing search with same title
-        let title = bar.get_title();
-        self.search.retain(|s| s.get_title() != title);
+        let title = bar.title();
+        self.search.retain(|s| s.title() != title);
         if self.search.len() >= max_count as usize {
             self.search.remove(0);
         }
@@ -887,7 +884,7 @@ impl BarManager {
     /// Corresponds to Java BarManager.createCommandBar(MusicSelector, CommandFolder)
     fn create_command_bar(&self, folder: &CommandFolder) -> Bar {
         let has_subfolders = !folder.folder().is_empty();
-        let has_random_courses = !folder.get_random_course().is_empty();
+        let has_random_courses = !folder.random_course().is_empty();
 
         if has_subfolders || has_random_courses {
             let mut children: Vec<Bar> = Vec::new();
@@ -896,7 +893,7 @@ impl BarManager {
                 children.push(self.create_command_bar(child));
             }
             // Create RandomCourseBar for random courses
-            for rc in folder.get_random_course() {
+            for rc in folder.random_course() {
                 children.push(Bar::RandomCourse(Box::new(RandomCourseBar::new(
                     rc.clone(),
                 ))));
@@ -908,7 +905,7 @@ impl BarManager {
         } else {
             Bar::Command(Box::new(CommandBar::new_with_visibility(
                 folder.name().to_string(),
-                folder.get_sql().unwrap_or("").to_string(),
+                folder.sql().unwrap_or("").to_string(),
                 folder.is_showall(),
             )))
         }
@@ -974,10 +971,10 @@ impl CommandFolder {
     pub fn folder(&self) -> &[CommandFolder] {
         &self.folder
     }
-    pub fn get_sql(&self) -> Option<&str> {
+    pub fn sql(&self) -> Option<&str> {
         self.sql.as_deref()
     }
-    pub fn get_random_course(&self) -> &[RandomCourseData] {
+    pub fn random_course(&self) -> &[RandomCourseData] {
         &self.rcourse
     }
     pub fn is_showall(&self) -> bool {
@@ -1013,7 +1010,7 @@ impl RandomFolder {
             // This is a simplified version that handles integer comparison
             if let Some(int_value) = value.as_i64() {
                 if let Some(score) = score_data {
-                    let property_value = get_score_data_property(score, key);
+                    let property_value = score_data_property(score, key);
                     if property_value != int_value {
                         return false;
                     }
@@ -1029,7 +1026,7 @@ impl RandomFolder {
                 for part in parts {
                     let part = part.trim();
                     if let Some(score) = score_data {
-                        let property_value = get_score_data_property(score, key);
+                        let property_value = score_data_property(score, key);
                         if !evaluate_filter_expression(part, property_value) {
                             return false;
                         }
@@ -1043,7 +1040,7 @@ impl RandomFolder {
     }
 }
 
-fn get_score_data_property(score: &ScoreData, key: &str) -> i64 {
+fn score_data_property(score: &ScoreData, key: &str) -> i64 {
     match key {
         "clear" => score.clear as i64,
         "exscore" => score.exscore() as i64,
@@ -1112,7 +1109,7 @@ impl BarContentsLoaderThread {
             let song_info = bar
                 .as_song_bar()
                 .filter(|sb| sb.exists_song())
-                .map(|sb| sb.get_song_data().clone());
+                .map(|sb| sb.song_data().clone());
 
             if let Some(sd) = song_info {
                 // Load player score
@@ -1167,7 +1164,7 @@ impl BarContentsLoaderThread {
 
             // Extract song data to avoid overlapping borrows (immutable sb → mutable bar)
             let song_info = bar.as_song_bar().filter(|sb| sb.exists_song()).map(|sb| {
-                let sd = sb.get_song_data();
+                let sd = sb.song_data();
                 (
                     sd.banner.clone(),
                     sd.stagefile.clone(),
@@ -1298,7 +1295,7 @@ mod tests {
         manager.init(&config, &[]);
         // First command should be LAMP UPDATE container with 30 children
         if let Some(Bar::Container(c)) = manager.commands.first() {
-            assert_eq!(c.get_title(), "LAMP UPDATE");
+            assert_eq!(c.title(), "LAMP UPDATE");
             assert_eq!(c.childbar.len(), 30);
         } else {
             panic!("First command should be LAMP UPDATE container");
@@ -1311,7 +1308,7 @@ mod tests {
         let config = Config::default();
         manager.init(&config, &[]);
         if let Some(Bar::Container(c)) = manager.commands.get(1) {
-            assert_eq!(c.get_title(), "SCORE UPDATE");
+            assert_eq!(c.title(), "SCORE UPDATE");
             assert_eq!(c.childbar.len(), 30);
         } else {
             panic!("Second command should be SCORE UPDATE container");
@@ -1708,7 +1705,7 @@ mod tests {
         // Should cap at 10
         assert_eq!(manager.search.len(), 10);
         // First 2 should have been removed
-        assert_eq!(manager.search[0].get_title(), "search_2");
+        assert_eq!(manager.search[0].title(), "search_2");
     }
 
     #[test]
@@ -1722,8 +1719,8 @@ mod tests {
         );
 
         assert_eq!(manager.search.len(), 2);
-        assert_eq!(manager.search[0].get_title(), "baz");
-        assert_eq!(manager.search[1].get_title(), "foo");
+        assert_eq!(manager.search[0].title(), "baz");
+        assert_eq!(manager.search[1].title(), "foo");
     }
 
     // ---- create_command_bar tests ----
@@ -1740,7 +1737,7 @@ mod tests {
         };
         let bar = manager.create_command_bar(&folder);
         assert!(matches!(bar, Bar::Command(_)));
-        assert_eq!(bar.get_title(), "Test");
+        assert_eq!(bar.title(), "Test");
     }
 
     #[test]
@@ -1761,7 +1758,7 @@ mod tests {
         };
         let bar = manager.create_command_bar(&folder);
         assert!(matches!(bar, Bar::Container(_)));
-        assert_eq!(bar.get_title(), "Parent");
+        assert_eq!(bar.title(), "Parent");
     }
 
     // ---- RandomFolder.filter_song tests ----
@@ -1916,7 +1913,7 @@ mod tests {
         let mut score = ScoreData::default();
         score.date = 3_000_000_000;
         // Should return the full i64 value without truncation
-        assert_eq!(get_score_data_property(&score, "date"), 3_000_000_000_i64);
+        assert_eq!(score_data_property(&score, "date"), 3_000_000_000_i64);
     }
 
     // ---- bar_class_name tests ----
@@ -1946,7 +1943,7 @@ mod tests {
     #[test]
     fn test_get_selected_empty() {
         let manager = BarManager::new();
-        assert!(manager.get_selected().is_none());
+        assert!(manager.selected().is_none());
     }
 
     #[test]
@@ -1957,9 +1954,9 @@ mod tests {
             make_song_bar("def", Some("/d.bms")),
         ];
         manager.selectedindex = 1;
-        let selected = manager.get_selected().unwrap();
+        let selected = manager.selected().unwrap();
         assert_eq!(
-            selected.get_title(),
+            selected.title(),
             make_song_data("def", Some("/d.bms")).full_title()
         );
     }
@@ -2017,7 +2014,7 @@ mod tests {
             make_song_bar("d", Some("/d.bms")),
         ];
         manager.selectedindex = 2;
-        let pos = manager.get_selected_position();
+        let pos = manager.selected_position();
         assert!((pos - 0.5).abs() < 0.01);
     }
 
@@ -2117,7 +2114,7 @@ mod tests {
             .count();
         assert_eq!(song_count, 1, "only visible song should remain");
         assert_eq!(
-            manager.currentsongs[0].get_title(),
+            manager.currentsongs[0].title(),
             "visible_song",
             "the remaining song should be the visible one"
         );

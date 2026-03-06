@@ -35,7 +35,7 @@ impl SearchTextField {
         // In Java: disposes generator and font
     }
 
-    pub fn get_search_bounds(&self) -> Option<&Rectangle> {
+    pub fn search_bounds(&self) -> Option<&Rectangle> {
         self.search_bounds.as_ref()
     }
 }

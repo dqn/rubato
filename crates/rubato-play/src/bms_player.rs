@@ -2310,7 +2310,7 @@ impl MainState for BMSPlayer {
                     .main_state_data
                     .skin
                     .as_ref()
-                    .map_or(0, |s| s.get_fadeout()) as i64;
+                    .map_or(0, |s| s.fadeout()) as i64;
                 if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
                     // input.setEnable(true); input.setStartTime(0);
                     self.pending_state_change = Some(MainStateType::MusicSelect);
@@ -2609,7 +2609,7 @@ impl MainState for BMSPlayer {
                     .main_state_data
                     .skin
                     .as_ref()
-                    .map_or(0, |s| s.get_fadeout()) as i64;
+                    .map_or(0, |s| s.fadeout()) as i64;
                 if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
                     self.pending_global_pitch = Some(1.0);
                     // resource.getBGAManager().stop();
@@ -2660,7 +2660,7 @@ impl MainState for BMSPlayer {
                     .main_state_data
                     .skin
                     .as_ref()
-                    .map_or(0, |s| s.get_fadeout()) as i64;
+                    .map_or(0, |s| s.fadeout()) as i64;
                 if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
                     // input.setEnable(true); input.setStartTime(0);
                     self.pending_state_change = Some(MainStateType::MusicSelect);
@@ -2920,15 +2920,15 @@ mod tests {
 
         fn dispose_skin(&mut self) {}
 
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
 
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
 
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
 
@@ -2985,15 +2985,15 @@ mod tests {
 
         fn dispose_skin(&mut self) {}
 
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
 
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
 
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
 

@@ -107,7 +107,7 @@ impl SkinTextBitmap {
 
         sprite.set_blend(self.text_data.data.blend());
 
-        let source_type = self.source.get_type();
+        let source_type = self.source.toast_type();
         if source_type == SkinTextBitmapSource::TYPE_DISTANCE_FIELD
             || source_type == SkinTextBitmapSource::TYPE_COLORED_DISTANCE_FIELD
         {
@@ -433,7 +433,7 @@ impl SkinTextBitmapSource {
         self.original_size
     }
 
-    pub fn get_type(&self) -> i32 {
+    pub fn toast_type(&self) -> i32 {
         self.source_type
     }
 
@@ -603,7 +603,10 @@ mod tests {
     fn test_distance_field_type() {
         // Construct directly to avoid get_font() overwriting source_type from cache.
         let source = make_source(32.0, SkinTextBitmapSource::TYPE_DISTANCE_FIELD);
-        assert_eq!(source.get_type(), SkinTextBitmapSource::TYPE_DISTANCE_FIELD);
+        assert_eq!(
+            source.toast_type(),
+            SkinTextBitmapSource::TYPE_DISTANCE_FIELD
+        );
         let bitmap = SkinTextBitmap {
             text_data: SkinTextData::new_with_id(-1),
             source,
@@ -612,7 +615,7 @@ mod tests {
             size: 16.0,
         };
         assert_eq!(
-            bitmap.source.get_type(),
+            bitmap.source.toast_type(),
             SkinTextBitmapSource::TYPE_DISTANCE_FIELD
         );
     }

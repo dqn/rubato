@@ -95,7 +95,7 @@ impl SkinBar {
         self.barimageoff = offimage;
     }
 
-    pub fn get_bar_images(&self, on: bool, index: usize) -> Option<&SkinImage> {
+    pub fn bar_images(&self, on: bool, index: usize) -> Option<&SkinImage> {
         if index < self.barimageoff.len() {
             if on {
                 self.barimageon[index].as_ref()
@@ -107,7 +107,7 @@ impl SkinBar {
         }
     }
 
-    pub fn get_lamp(&self, id: i32) -> Option<&SkinImage> {
+    pub fn lamp(&self, id: i32) -> Option<&SkinImage> {
         if id >= 0 && (id as usize) < self.lamp.len() {
             self.lamp[id as usize].as_ref()
         } else {
@@ -115,7 +115,7 @@ impl SkinBar {
         }
     }
 
-    pub fn get_player_lamp(&self, id: i32) -> Option<&SkinImage> {
+    pub fn player_lamp(&self, id: i32) -> Option<&SkinImage> {
         if id >= 0 && (id as usize) < self.mylamp.len() {
             self.mylamp[id as usize].as_ref()
         } else {
@@ -123,7 +123,7 @@ impl SkinBar {
         }
     }
 
-    pub fn get_rival_lamp(&self, id: i32) -> Option<&SkinImage> {
+    pub fn rival_lamp(&self, id: i32) -> Option<&SkinImage> {
         if id >= 0 && (id as usize) < self.rivallamp.len() {
             self.rivallamp[id as usize].as_ref()
         } else {
@@ -131,7 +131,7 @@ impl SkinBar {
         }
     }
 
-    pub fn get_trophy(&self, id: i32) -> Option<&SkinImage> {
+    pub fn trophy(&self, id: i32) -> Option<&SkinImage> {
         if id >= 0 && (id as usize) < self.trophy.len() {
             self.trophy[id as usize].as_ref()
         } else {
@@ -139,7 +139,7 @@ impl SkinBar {
         }
     }
 
-    pub fn get_text(&self, id: usize) -> Option<&dyn SkinText> {
+    pub fn text(&self, id: usize) -> Option<&dyn SkinText> {
         if id < self.text.len() {
             self.text[id].as_deref()
         } else {
@@ -287,7 +287,7 @@ impl SkinBar {
         }
     }
 
-    pub fn get_barlevel(&self, id: i32) -> Option<&SkinNumber> {
+    pub fn barlevel(&self, id: i32) -> Option<&SkinNumber> {
         if id >= 0 && (id as usize) < self.barlevel.len() {
             self.barlevel[id as usize].as_ref()
         } else {
@@ -301,11 +301,11 @@ impl SkinBar {
         }
     }
 
-    pub fn get_position(&self) -> i32 {
+    pub fn position(&self) -> i32 {
         self.position
     }
 
-    pub fn get_label(&self, id: i32) -> Option<&SkinImage> {
+    pub fn label(&self, id: i32) -> Option<&SkinImage> {
         if id >= 0 && (id as usize) < self.label.len() {
             self.label[id as usize].as_ref()
         } else {
@@ -328,7 +328,7 @@ impl SkinBar {
         false
     }
 
-    pub fn get_graph(&self) -> Option<&SkinDistributionGraph> {
+    pub fn graph(&self) -> Option<&SkinDistributionGraph> {
         self.graph.as_ref()
     }
 
@@ -366,27 +366,27 @@ mod tests {
     #[test]
     fn test_skin_bar_position_preserved() {
         let bar = SkinBar::new(1);
-        assert_eq!(bar.get_position(), 1);
+        assert_eq!(bar.position(), 1);
     }
 
     #[test]
     fn test_skin_bar_get_bar_images_bounds() {
         let bar = SkinBar::new(0);
-        assert!(bar.get_bar_images(true, 0).is_none());
-        assert!(bar.get_bar_images(false, 0).is_none());
-        assert!(bar.get_bar_images(true, SkinBar::BAR_COUNT).is_none());
+        assert!(bar.bar_images(true, 0).is_none());
+        assert!(bar.bar_images(false, 0).is_none());
+        assert!(bar.bar_images(true, SkinBar::BAR_COUNT).is_none());
     }
 
     #[test]
     fn test_skin_bar_accessors_bounds_checked() {
         let bar = SkinBar::new(0);
-        assert!(bar.get_lamp(-1).is_none());
-        assert!(bar.get_lamp(0).is_none());
-        assert!(bar.get_lamp(SkinBar::BARLAMP_COUNT as i32).is_none());
-        assert!(bar.get_trophy(-1).is_none());
-        assert!(bar.get_trophy(0).is_none());
-        assert!(bar.get_text(SkinBar::BARTEXT_COUNT).is_none());
-        assert!(bar.get_barlevel(-1).is_none());
-        assert!(bar.get_label(-1).is_none());
+        assert!(bar.lamp(-1).is_none());
+        assert!(bar.lamp(0).is_none());
+        assert!(bar.lamp(SkinBar::BARLAMP_COUNT as i32).is_none());
+        assert!(bar.trophy(-1).is_none());
+        assert!(bar.trophy(0).is_none());
+        assert!(bar.text(SkinBar::BARTEXT_COUNT).is_none());
+        assert!(bar.barlevel(-1).is_none());
+        assert!(bar.label(-1).is_none());
     }
 }

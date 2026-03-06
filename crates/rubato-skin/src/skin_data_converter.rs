@@ -1668,9 +1668,9 @@ mod tests {
         );
 
         let skin = skin.unwrap();
-        assert_eq!(skin.get_fadeout(), 500);
-        assert_eq!(skin.get_input(), 100);
-        assert_eq!(skin.get_scene(), 60000);
+        assert_eq!(skin.fadeout(), 500);
+        assert_eq!(skin.input(), 100);
+        assert_eq!(skin.scene(), 60000);
     }
 
     // -- Test: custom event/timer registration --

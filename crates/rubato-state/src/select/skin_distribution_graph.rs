@@ -139,7 +139,7 @@ impl SkinDistributionGraph {
         offset_x: f32,
         offset_y: f32,
     ) {
-        let lamps = current.get_lamps();
+        let lamps = current.lamps();
         let empty_ranks = [0i32; 28];
         self.draw_distribution(sprite, lamps, &empty_ranks, offset_x, offset_y);
     }

@@ -858,7 +858,7 @@ impl Skin {
         }
     }
 
-    pub fn get_fadeout(&self) -> i32 {
+    pub fn fadeout(&self) -> i32 {
         self.fadeout
     }
 
@@ -866,7 +866,7 @@ impl Skin {
         self.fadeout = fadeout;
     }
 
-    pub fn get_input(&self) -> i32 {
+    pub fn input(&self) -> i32 {
         self.input
     }
 
@@ -874,7 +874,7 @@ impl Skin {
         self.input = input;
     }
 
-    pub fn get_scene(&self) -> i32 {
+    pub fn scene(&self) -> i32 {
         self.scene
     }
 
@@ -1235,7 +1235,7 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
         }
     }
 
-    fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
+    fn judge_count(&self, judge: i32, fast: bool) -> i32 {
         self.ctx
             .as_deref()
             .map_or(0, |c| c.judge_count(judge, fast))
@@ -1245,7 +1245,7 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
         self.ctx.as_deref().map_or(0.0, |c| c.gauge_value())
     }
 
-    fn get_gauge_type(&self) -> i32 {
+    fn gauge_type(&self) -> i32 {
         self.ctx.as_deref().map_or(0, |c| c.gauge_type())
     }
 
@@ -1403,15 +1403,15 @@ impl rubato_core::main_state::SkinDrawable for Skin {
         self.dispose();
     }
 
-    fn get_fadeout(&self) -> i32 {
+    fn fadeout(&self) -> i32 {
         self.fadeout
     }
 
-    fn get_input(&self) -> i32 {
+    fn input(&self) -> i32 {
         self.input
     }
 
-    fn get_scene(&self) -> i32 {
+    fn scene(&self) -> i32 {
         self.scene
     }
 
@@ -1604,9 +1604,9 @@ mod tests {
         skin.set_scene(2000);
 
         let drawable: &dyn SkinDrawable = &skin;
-        assert_eq!(drawable.get_fadeout(), 500);
-        assert_eq!(drawable.get_input(), 100);
-        assert_eq!(drawable.get_scene(), 2000);
+        assert_eq!(drawable.fadeout(), 500);
+        assert_eq!(drawable.input(), 100);
+        assert_eq!(drawable.scene(), 2000);
         // Default resolution is 640x480
         assert_eq!(drawable.get_width(), 640.0);
         assert_eq!(drawable.get_height(), 480.0);

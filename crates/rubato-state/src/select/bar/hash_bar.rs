@@ -33,11 +33,11 @@ impl HashBar {
         }
     }
 
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         self.title.clone()
     }
 
-    pub fn get_elements(&self) -> &[SongData] {
+    pub fn elements(&self) -> &[SongData] {
         &self.elements
     }
 
@@ -59,7 +59,7 @@ impl HashBar {
     /// Queries the song database by hashes and matches against elements.
     ///
     /// Translates: Java HashBar.getChildren()
-    pub fn get_children(&self, db: &dyn SongDatabaseAccessor) -> Vec<Bar> {
+    pub fn children(&self, db: &dyn SongDatabaseAccessor) -> Vec<Bar> {
         let mut songs: Vec<Option<SongData>> = db
             .song_datas_by_hashes(&self.elements_hash)
             .into_iter()
@@ -129,7 +129,7 @@ mod tests {
 
         let db = MockSongDb::new(vec![db_song]);
         let bar = HashBar::new("Test Hash".to_string(), vec![element]);
-        let children = bar.get_children(&db);
+        let children = bar.children(&db);
 
         assert!(!children.is_empty());
         // Should contain the matched song
@@ -144,7 +144,7 @@ mod tests {
 
         let db = MockSongDb::new(vec![]); // No songs in DB
         let bar = HashBar::new("Test Hash".to_string(), vec![element]);
-        let children = bar.get_children(&db);
+        let children = bar.children(&db);
 
         // Missing elements should still appear as SongBars (without path)
         assert_eq!(children.len(), 1);
@@ -155,7 +155,7 @@ mod tests {
     fn hash_bar_get_children_empty_elements() {
         let db = MockSongDb::new(vec![]);
         let bar = HashBar::new("Empty".to_string(), vec![]);
-        let children = bar.get_children(&db);
+        let children = bar.children(&db);
         assert!(children.is_empty());
     }
 }

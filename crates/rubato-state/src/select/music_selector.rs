@@ -89,13 +89,11 @@ impl rubato_types::timer_access::TimerAccess for SelectSkinContext<'_> {
 
 impl SelectSkinContext<'_> {
     fn selected_bar(&self) -> Option<&Bar> {
-        self.selector.manager.get_selected()
+        self.selector.manager.selected()
     }
 
     fn selected_song_data(&self) -> Option<&rubato_types::song_data::SongData> {
-        self.selected_bar()?
-            .as_song_bar()
-            .map(|sb| sb.get_song_data())
+        self.selected_bar()?.as_song_bar().map(|sb| sb.song_data())
     }
 
     fn selected_score(&self) -> Option<&rubato_types::score_data::ScoreData> {
@@ -165,7 +163,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
     }
 
     fn sort_image_index(&self) -> Option<i32> {
-        Some(self.selector.get_sort())
+        Some(self.selector.sort())
     }
 
     fn set_timer_micro(&mut self, timer_id: i32, micro_time: i64) {
@@ -322,7 +320,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             // Directory
             1000 => self.selected_bar().map_or_else(String::new, |b| {
                 if let Some(sb) = b.as_song_bar() {
-                    sb.get_song_data().folder.clone()
+                    sb.song_data().folder.clone()
                 } else {
                     String::new()
                 }
@@ -352,36 +350,34 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
                 .selected_bar()
                 .is_some_and(|b| b.as_grade_bar().is_some()),
             // Select bar clear conditions
-            OPTION_SELECT_BAR_NOT_PLAYED => {
-                self.selected_bar().is_none_or(|b| b.get_lamp(true) == 0)
-            }
-            OPTION_SELECT_BAR_FAILED => self.selected_bar().is_some_and(|b| b.get_lamp(true) == 1),
+            OPTION_SELECT_BAR_NOT_PLAYED => self.selected_bar().is_none_or(|b| b.lamp(true) == 0),
+            OPTION_SELECT_BAR_FAILED => self.selected_bar().is_some_and(|b| b.lamp(true) == 1),
             OPTION_SELECT_BAR_ASSIST_EASY_CLEARED => {
-                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 2)
+                self.selected_bar().is_some_and(|b| b.lamp(true) == 2)
             }
             OPTION_SELECT_BAR_LIGHT_ASSIST_EASY_CLEARED => {
-                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 3)
+                self.selected_bar().is_some_and(|b| b.lamp(true) == 3)
             }
             OPTION_SELECT_BAR_EASY_CLEARED => {
-                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 4)
+                self.selected_bar().is_some_and(|b| b.lamp(true) == 4)
             }
             OPTION_SELECT_BAR_NORMAL_CLEARED => {
-                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 5)
+                self.selected_bar().is_some_and(|b| b.lamp(true) == 5)
             }
             OPTION_SELECT_BAR_HARD_CLEARED => {
-                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 6)
+                self.selected_bar().is_some_and(|b| b.lamp(true) == 6)
             }
             OPTION_SELECT_BAR_EXHARD_CLEARED => {
-                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 7)
+                self.selected_bar().is_some_and(|b| b.lamp(true) == 7)
             }
             OPTION_SELECT_BAR_FULL_COMBO_CLEARED => {
-                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 8)
+                self.selected_bar().is_some_and(|b| b.lamp(true) == 8)
             }
             OPTION_SELECT_BAR_PERFECT_CLEARED => {
-                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 9)
+                self.selected_bar().is_some_and(|b| b.lamp(true) == 9)
             }
             OPTION_SELECT_BAR_MAX_CLEARED => {
-                self.selected_bar().is_some_and(|b| b.get_lamp(true) == 10)
+                self.selected_bar().is_some_and(|b| b.lamp(true) == 10)
             }
             // Replay data (not yet wired - replay storage not implemented)
             197 | 1197 | 1200 | 1203 => false, // OPTION_REPLAYDATA variants
@@ -398,7 +394,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
     fn float_value(&self, id: i32) -> f32 {
         match id {
             // Music select scroll position
-            1 => self.selector.manager.get_selected_position(),
+            1 => self.selector.manager.selected_position(),
             // Volume (0.0-1.0)
             17 => self
                 .selector
@@ -415,7 +411,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
                 .app_config
                 .audio_config()
                 .map_or(0.5, |a| a.bgvolume),
-            8 => self.selector.get_ranking_position(),
+            8 => self.selector.ranking_position(),
             // Level (0.0-1.0 normalized)
             103 => self
                 .selected_song_data()
@@ -695,11 +691,11 @@ impl MusicSelector {
         );
     }
 
-    pub fn get_rival(&self) -> Option<&PlayerInformation> {
+    pub fn rival(&self) -> Option<&PlayerInformation> {
         self.rival.as_ref()
     }
 
-    pub fn get_score_data_cache(&self) -> Option<&ScoreDataCache> {
+    pub fn score_data_cache(&self) -> Option<&ScoreDataCache> {
         self.scorecache.as_ref()
     }
 
@@ -707,7 +703,7 @@ impl MusicSelector {
         self.rivalcache.as_ref()
     }
 
-    pub fn get_selected_replay(&self) -> i32 {
+    pub fn selected_replay(&self) -> i32 {
         self.selectedreplay
     }
 
@@ -750,7 +746,7 @@ impl MusicSelector {
             EventType::Sort => {
                 let count = BarSorter::DEFAULT_SORTER.len() as i32;
                 let step = if arg1 >= 0 { 1 } else { count - 1 };
-                self.set_sort((self.get_sort() + step) % count);
+                self.set_sort((self.sort() + step) % count);
                 self.refresh_bar_with_context();
                 self.play_option_change();
             }
@@ -859,8 +855,8 @@ impl MusicSelector {
             }
             EventType::FavoriteSong => {
                 let next = arg1 >= 0;
-                if let Some(songbar) = self.manager.get_selected().and_then(|b| b.as_song_bar()) {
-                    let mut sd = songbar.get_song_data().clone();
+                if let Some(songbar) = self.manager.selected().and_then(|b| b.as_song_bar()) {
+                    let mut sd = songbar.song_data().clone();
                     let fav = sd.favorite;
                     let current = if fav & rubato_types::song_data::FAVORITE_SONG != 0 {
                         1
@@ -884,8 +880,8 @@ impl MusicSelector {
             }
             EventType::FavoriteChart => {
                 let next = arg1 >= 0;
-                if let Some(songbar) = self.manager.get_selected().and_then(|b| b.as_song_bar()) {
-                    let mut sd = songbar.get_song_data().clone();
+                if let Some(songbar) = self.manager.selected().and_then(|b| b.as_song_bar()) {
+                    let mut sd = songbar.song_data().clone();
                     let fav = sd.favorite;
                     let current = if fav & rubato_types::song_data::FAVORITE_CHART != 0 {
                         1
@@ -909,15 +905,15 @@ impl MusicSelector {
             }
             EventType::UpdateFolder => {
                 if let Some(ref mut main) = self.main
-                    && let Some(selected) = self.manager.get_selected()
+                    && let Some(selected) = self.manager.selected()
                 {
                     if let Some(folder) = selected.as_folder_bar()
-                        && let Some(fd) = folder.get_folder_data()
+                        && let Some(fd) = folder.folder_data()
                     {
                         let path = fd.path().to_string();
                         main.update_song(Some(&path));
                     } else if let Some(songbar) = selected.as_song_bar()
-                        && let Some(path) = songbar.get_song_data().path()
+                        && let Some(path) = songbar.song_data().path()
                         && let Some(parent) =
                             std::path::Path::new(path).parent().and_then(|p| p.to_str())
                     {
@@ -929,8 +925,8 @@ impl MusicSelector {
                 }
             }
             EventType::OpenDocument => {
-                if let Some(songbar) = self.manager.get_selected().and_then(|b| b.as_song_bar())
-                    && let Some(path) = songbar.get_song_data().path()
+                if let Some(songbar) = self.manager.selected().and_then(|b| b.as_song_bar())
+                    && let Some(path) = songbar.song_data().path()
                     && let Some(parent) = std::path::Path::new(path).parent()
                     && let Ok(entries) = std::fs::read_dir(parent)
                 {
@@ -947,8 +943,8 @@ impl MusicSelector {
                 }
             }
             EventType::OpenWithExplorer => {
-                if let Some(songbar) = self.manager.get_selected().and_then(|b| b.as_song_bar())
-                    && let Some(path) = songbar.get_song_data().path()
+                if let Some(songbar) = self.manager.selected().and_then(|b| b.as_song_bar())
+                    && let Some(path) = songbar.song_data().path()
                     && let Some(parent) = std::path::Path::new(path).parent()
                     && let Err(e) = open::that(parent)
                 {
@@ -956,8 +952,8 @@ impl MusicSelector {
                 }
             }
             EventType::OpenIr => {
-                if let Some(songbar) = self.manager.get_selected().and_then(|b| b.as_song_bar()) {
-                    let sd = songbar.get_song_data();
+                if let Some(songbar) = self.manager.selected().and_then(|b| b.as_song_bar()) {
+                    let sd = songbar.song_data();
                     if let Some(ref main) = self.main
                         && let Some(url) = main.ir_song_url(sd)
                         && let Err(e) = open::that(&url)
@@ -965,7 +961,7 @@ impl MusicSelector {
                         log::error!("Failed to open IR URL: {}", e);
                     }
                 } else if let Some(gradebar) =
-                    self.manager.get_selected().and_then(|b| b.as_grade_bar())
+                    self.manager.selected().and_then(|b| b.as_grade_bar())
                 {
                     let cd = gradebar.course_data();
                     if let Some(ref main) = self.main
@@ -977,8 +973,8 @@ impl MusicSelector {
                 }
             }
             EventType::OpenDownloadSite => {
-                if let Some(songbar) = self.manager.get_selected().and_then(|b| b.as_song_bar()) {
-                    let sd = songbar.get_song_data();
+                if let Some(songbar) = self.manager.selected().and_then(|b| b.as_song_bar()) {
+                    let sd = songbar.song_data();
                     let url = sd.url();
                     if !url.is_empty()
                         && let Err(e) = open::that(url)
@@ -1002,19 +998,13 @@ impl MusicSelector {
     }
 
     fn selected_play_config_mode(&self) -> Option<bms_model::Mode> {
-        if let Some(song_bar) = self
-            .manager
-            .get_selected()
-            .and_then(|bar| bar.as_song_bar())
+        if let Some(song_bar) = self.manager.selected().and_then(|bar| bar.as_song_bar())
             && song_bar.exists_song()
         {
-            return play_config_mode_from_song(song_bar.get_song_data());
+            return play_config_mode_from_song(song_bar.song_data());
         }
 
-        if let Some(grade_bar) = self
-            .manager
-            .get_selected()
-            .and_then(|bar| bar.as_grade_bar())
+        if let Some(grade_bar) = self.manager.selected().and_then(|bar| bar.as_grade_bar())
             && grade_bar.exists_all_songs()
         {
             let mut selected_mode: Option<bms_model::Mode> = None;
@@ -1089,7 +1079,7 @@ impl MusicSelector {
                 .map(|m| m.config().table_url.iter().map(|s| s.to_string()).collect())
                 .unwrap_or_default();
 
-            let dir = self.manager.get_directory();
+            let dir = self.manager.directory();
             if !dir.is_empty()
                 && !matches!(dir.last(), Some(bar) if matches!(**bar, Bar::SameFolder(_)))
             {
@@ -1103,10 +1093,10 @@ impl MusicSelector {
                         && table_urls.iter().any(|u| u == url)
                     {
                         is_dtable = true;
-                        tablename = Some(bar.get_title());
+                        tablename = Some(bar.title());
                     }
                     if bar.as_hash_bar().is_some() && is_dtable {
-                        tablelevel = Some(bar.get_title());
+                        tablelevel = Some(bar.title());
                         break;
                     }
                 }
@@ -1241,7 +1231,7 @@ impl MusicSelector {
         }
     }
 
-    pub fn get_sort(&self) -> i32 {
+    pub fn sort(&self) -> i32 {
         self.config.sort
     }
 
@@ -1251,7 +1241,7 @@ impl MusicSelector {
             .set_sortid(BarSorter::DEFAULT_SORTER[sort as usize].name().to_string());
     }
 
-    pub fn get_panel_state(&self) -> i32 {
+    pub fn panel_state(&self) -> i32 {
         self.panelstate
     }
 
@@ -1286,7 +1276,7 @@ impl MusicSelector {
     /// Check if the selected bar's course data contains the given constraint.
     /// Corresponds to Java MusicSelector.existsConstraint(CourseDataConstraint)
     pub fn exists_constraint(&self, constraint: &CourseDataConstraint) -> bool {
-        let selected = match self.manager.get_selected() {
+        let selected = match self.manager.selected() {
             Some(s) => s,
             None => return false,
         };
@@ -1307,15 +1297,15 @@ impl MusicSelector {
         false
     }
 
-    pub fn get_selected_bar(&self) -> Option<&Bar> {
-        self.manager.get_selected()
+    pub fn selected_bar(&self) -> Option<&Bar> {
+        self.manager.selected()
     }
 
-    pub fn get_bar_render(&self) -> Option<&BarRenderer> {
+    pub fn bar_render(&self) -> Option<&BarRenderer> {
         self.bar.as_ref()
     }
 
-    pub fn get_bar_manager(&self) -> &BarManager {
+    pub fn bar_manager(&self) -> &BarManager {
         &self.manager
     }
 
@@ -1335,13 +1325,13 @@ impl MusicSelector {
 
         // Stop preview if folder changed
         if let Some(preview) = &self.preview
-            && preview.get_song_data().is_some()
+            && preview.song_data().is_some()
         {
-            let should_stop = match self.manager.get_selected() {
+            let should_stop = match self.manager.selected() {
                 Some(bar) => {
                     if let Some(song_bar) = bar.as_song_bar() {
-                        if let Some(preview_song) = preview.get_song_data() {
-                            song_bar.get_song_data().folder != preview_song.folder
+                        if let Some(preview_song) = preview.song_data() {
+                            song_bar.song_data().folder != preview_song.folder
                         } else {
                             true
                         }
@@ -1372,14 +1362,14 @@ impl MusicSelector {
             .unwrap_or(false);
 
         if ir_active {
-            if let Some(current) = self.manager.get_selected() {
+            if let Some(current) = self.manager.selected() {
                 if let Some(song_bar) = current.as_song_bar() {
                     if song_bar.exists_song() {
                         // Refresh currentir from cache
                         if let Some(main) = self.main.as_ref() {
                             use rubato_ir::ranking_data::RankingData;
                             let lnmode = main.player_config().lnmode;
-                            let song = song_bar.get_song_data();
+                            let song = song_bar.song_data();
                             self.currentir = main
                                 .ranking_data_cache()
                                 .and_then(|c| c.song_any(song, lnmode))
@@ -1442,7 +1432,7 @@ impl MusicSelector {
     /// Java: MusicSelector.loadSelectedSongImages() (L665-673)
     pub fn load_selected_song_images(&mut self) {
         // Extract banner/stagefile raw data from the selected bar (if it's a SongBar)
-        let (banner_data, stagefile_data) = match self.manager.get_selected() {
+        let (banner_data, stagefile_data) = match self.manager.selected() {
             Some(Bar::Song(song_bar)) => {
                 let banner = song_bar
                     .banner()
@@ -1501,9 +1491,9 @@ impl MusicSelector {
         }
 
         // Classify the selected bar before borrowing musicinput
-        let selected_bar_type = BarType::classify(self.manager.get_selected());
+        let selected_bar_type = BarType::classify(self.manager.selected());
         let selected_replay = self.selectedreplay;
-        let is_top_level = self.manager.get_directory().is_empty();
+        let is_top_level = self.manager.directory().is_empty();
 
         // Take musicinput to avoid overlapping borrow on self
         let mut musicinput = match self.musicinput.take() {
@@ -1650,7 +1640,7 @@ impl MusicSelector {
         // The caller should track bar identity if precise change detection is needed.
     }
 
-    pub fn get_selected_bar_play_config(&self) -> Option<&PlayConfig> {
+    pub fn selected_bar_play_config(&self) -> Option<&PlayConfig> {
         let mode = self
             .config
             .mode()
@@ -1659,19 +1649,19 @@ impl MusicSelector {
         Some(&self.config.play_config_ref(mode).playconfig)
     }
 
-    pub fn get_current_ranking_data(&self) -> Option<&RankingData> {
+    pub fn current_ranking_data(&self) -> Option<&RankingData> {
         self.currentir.as_ref()
     }
 
-    pub fn get_current_ranking_duration(&self) -> i64 {
+    pub fn current_ranking_duration(&self) -> i64 {
         self.current_ranking_duration
     }
 
-    pub fn get_ranking_offset(&self) -> i32 {
+    pub fn ranking_offset(&self) -> i32 {
         self.ranking_offset
     }
 
-    pub fn get_ranking_position(&self) -> f32 {
+    pub fn ranking_position(&self) -> f32 {
         let ranking_max = self
             .currentir
             .as_ref()
@@ -1695,7 +1685,7 @@ impl MusicSelector {
     /// Corresponds to Java MusicSelector.readCourse(BMSPlayerMode)
     fn read_course(&mut self, mode: BMSPlayerMode) {
         // Get selected bar and check it's a GradeBar
-        let grade_bar = match self.manager.get_selected() {
+        let grade_bar = match self.manager.selected() {
             Some(bar) if bar.as_grade_bar().is_some() => bar.clone(),
             _ => {
                 log::warn!("read_course: selected bar is not a GradeBar");
@@ -1727,7 +1717,7 @@ impl MusicSelector {
     /// Corresponds to Java MusicSelector.readRandomCourse(BMSPlayerMode)
     fn read_random_course(&mut self, mode: BMSPlayerMode) {
         // Get selected bar and check it's a RandomCourseBar
-        let rc_bar = match self.manager.get_selected() {
+        let rc_bar = match self.manager.selected() {
             Some(bar) if bar.as_random_course_bar().is_some() => bar.clone(),
             _ => {
                 log::warn!("read_random_course: selected bar is not a RandomCourseBar");
@@ -1769,7 +1759,7 @@ impl MusicSelector {
 
         if self._read_course(&mode, &grade_bar) {
             if let Some(gb) = grade_bar.as_grade_bar() {
-                let dir_string = self.manager.get_directory_string().to_string();
+                let dir_string = self.manager.directory_string().to_string();
                 self.manager.add_random_course(gb.clone(), dir_string);
                 {
                     let mut ctx = BarManager::make_context(
@@ -1943,13 +1933,13 @@ impl MusicSelector {
 
     /// Get banner resource pool.
     /// Corresponds to Java MusicSelector.getBannerResource()
-    pub fn get_banner_resource(&self) -> &PixmapResourcePool {
+    pub fn banner_resource(&self) -> &PixmapResourcePool {
         &self.banners
     }
 
     /// Get stagefile resource pool.
     /// Corresponds to Java MusicSelector.getStagefileResource()
-    pub fn get_stagefile_resource(&self) -> &PixmapResourcePool {
+    pub fn stagefile_resource(&self) -> &PixmapResourcePool {
         &self.stagefiles
     }
 }
@@ -1960,12 +1950,12 @@ impl MusicSelector {
 
 impl rubato_types::song_selection_access::SongSelectionAccess for MusicSelector {
     fn selected_song_data(&self) -> Option<SongData> {
-        let bar = self.get_selected_bar()?;
-        bar.as_song_bar().map(|sb| sb.get_song_data().clone())
+        let bar = self.selected_bar()?;
+        bar.as_song_bar().map(|sb| sb.song_data().clone())
     }
 
     fn selected_score_data(&self) -> Option<ScoreData> {
-        let bar = self.get_selected_bar()?;
+        let bar = self.selected_bar()?;
         bar.as_song_bar()
             .and_then(|sb| sb.selectable.bar_data.score().cloned())
     }
@@ -2367,7 +2357,7 @@ impl MainState for MusicSelector {
 
         // Start input timer after skin input delay
         if let Some(ref skin) = self.main_state_data.skin
-            && timer.now_time() > skin.get_input() as i64
+            && timer.now_time() > skin.input() as i64
         {
             timer.switch_timer(skin_property::TIMER_STARTINPUT, true);
         }
@@ -2384,12 +2374,12 @@ impl MainState for MusicSelector {
         {
             let song_data = self
                 .manager
-                .get_selected()
+                .selected()
                 .and_then(|b| b.as_song_bar())
-                .map(|sb| sb.get_song_data().clone());
+                .map(|sb| sb.song_data().clone());
             let course_data = self
                 .manager
-                .get_selected()
+                .selected()
                 .and_then(|b| b.as_grade_bar())
                 .map(|gb| gb.course_data().clone());
             if let Some(res) = self.player_resource.as_mut() {
@@ -2403,17 +2393,17 @@ impl MainState for MusicSelector {
         }
 
         // Preview music
-        if let Some(current) = self.manager.get_selected() {
+        if let Some(current) = self.manager.selected() {
             if let Some(song_bar) = current.as_song_bar() {
                 // Preview music timing
                 if self.play.is_none()
                     && now_time > songbar_change_time + self.preview_duration as i64
                 {
                     let should_start_preview = if let Some(ref preview) = self.preview {
-                        let preview_song = preview.get_song_data();
+                        let preview_song = preview.song_data();
                         // In Java: song != preview.getSongData() (reference comparison)
                         match preview_song {
-                            Some(ps) => ps.sha256 != song_bar.get_song_data().sha256,
+                            Some(ps) => ps.sha256 != song_bar.song_data().sha256,
                             None => true,
                         }
                     } else {
@@ -2422,7 +2412,7 @@ impl MainState for MusicSelector {
                     if should_start_preview
                         && !matches!(self.app_config.song_preview, SongPreview::NONE)
                     {
-                        let song_clone = song_bar.get_song_data().clone();
+                        let song_clone = song_bar.song_data().clone();
                         if let Some(preview) = &mut self.preview {
                             preview.start(Some(&song_clone));
                         }
@@ -2438,10 +2428,7 @@ impl MainState for MusicSelector {
                         // Java: spawns thread to call resource.loadBMSModel(path, lnmode)
                         // and sets result on SongData for the density graph.
                         // Rust: load synchronously (BMS parsing is fast).
-                        let path = song_bar
-                            .get_song_data()
-                            .path()
-                            .map(std::path::PathBuf::from);
+                        let path = song_bar.song_data().path().map(std::path::PathBuf::from);
                         let lnmode = self.config.lnmode;
                         if let Some(path) = path
                             && let Some((model, _margin)) =
@@ -2474,7 +2461,7 @@ impl MainState for MusicSelector {
         {
             self.current_ranking_duration = -1;
             // Load/refresh ranking data from cache
-            if let Some(current) = self.manager.get_selected()
+            if let Some(current) = self.manager.selected()
                 && let Some(main) = self.main.as_mut()
             {
                 use rubato_ir::ranking_data::RankingData;
@@ -2483,7 +2470,7 @@ impl MainState for MusicSelector {
                     && song_bar.exists_song()
                     && self.play.is_none()
                 {
-                    let song = song_bar.get_song_data();
+                    let song = song_bar.song_data();
                     let cached = main
                         .ranking_data_cache()
                         .and_then(|c| c.song_any(song, lnmode))
@@ -2582,13 +2569,13 @@ impl MainState for MusicSelector {
                 FunctionOnly,
                 None,
             }
-            let (action, is_function_bar) = if let Some(current) = self.manager.get_selected() {
+            let (action, is_function_bar) = if let Some(current) = self.manager.selected() {
                 let is_func = current.as_function_bar().is_some();
                 if let Some(song_bar) = current.as_song_bar() {
                     if song_bar.exists_song() {
                         (
                             BarAction::SongChart {
-                                song: song_bar.get_song_data().clone(),
+                                song: song_bar.song_data().clone(),
                                 bar: current.clone(),
                             },
                             is_func,
@@ -2596,7 +2583,7 @@ impl MainState for MusicSelector {
                     } else {
                         (
                             BarAction::SongMissing {
-                                song: song_bar.get_song_data().clone(),
+                                song: song_bar.song_data().clone(),
                             },
                             is_func,
                         )
@@ -2604,7 +2591,7 @@ impl MainState for MusicSelector {
                 } else if let Some(exec_bar) = current.as_executable_bar() {
                     (
                         BarAction::ExecutableChart {
-                            song: exec_bar.get_song_data().clone(),
+                            song: exec_bar.song_data().clone(),
                             bar: current.clone(),
                         },
                         is_func,
@@ -2618,7 +2605,7 @@ impl MainState for MusicSelector {
                 {
                     let songdb = &*self.songdb;
                     let children: Vec<Bar> = match current {
-                        Bar::Folder(b) => b.get_children(songdb),
+                        Bar::Folder(b) => b.children(songdb),
                         Bar::Command(b) => {
                             let player_name =
                                 self.app_config.playername.as_deref().unwrap_or("default");
@@ -2634,15 +2621,15 @@ impl MainState for MusicSelector {
                                 scorelog_db_path: &scorelog_path,
                                 info_db_path: Some(&songinfo_path),
                             };
-                            b.get_children(songdb, &cmd_ctx)
+                            b.children(songdb, &cmd_ctx)
                         }
-                        Bar::Container(b) => b.get_children().to_vec(),
-                        Bar::Hash(b) => b.get_children(songdb),
-                        Bar::Table(b) => b.get_children().to_vec(),
-                        Bar::SearchWord(b) => b.get_children(songdb),
-                        Bar::SameFolder(b) => b.get_children(songdb),
-                        Bar::ContextMenu(b) => b.get_children(&self.manager.tables, songdb),
-                        Bar::LeaderBoard(b) => b.get_children(),
+                        Bar::Container(b) => b.children().to_vec(),
+                        Bar::Hash(b) => b.children(songdb),
+                        Bar::Table(b) => b.children().to_vec(),
+                        Bar::SearchWord(b) => b.children(songdb),
+                        Bar::SameFolder(b) => b.children(songdb),
+                        Bar::ContextMenu(b) => b.children(&self.manager.tables, songdb),
+                        Bar::LeaderBoard(b) => b.children(),
                         _ => Vec::new(),
                     };
                     let paths: Vec<PathBuf> = children
@@ -2650,7 +2637,7 @@ impl MainState for MusicSelector {
                         .filter_map(|bar| {
                             bar.as_song_bar()
                                 .filter(|sb| sb.exists_song())
-                                .and_then(|sb| sb.get_song_data().path())
+                                .and_then(|sb| sb.song_data().path())
                                 .map(PathBuf::from)
                         })
                         .collect();
@@ -2721,7 +2708,7 @@ impl MainState for MusicSelector {
             if is_function_bar {
                 let callback = self
                     .manager
-                    .get_selected()
+                    .selected()
                     .and_then(|b| b.as_function_bar())
                     .and_then(|fb| fb.function.clone());
                 if let Some(cb) = callback {
@@ -3261,7 +3248,7 @@ mod tests {
         let mut selector = MusicSelector::new();
 
         // No IR data, default values
-        assert_eq!(selector.get_ranking_position(), 0.0);
+        assert_eq!(selector.ranking_position(), 0.0);
 
         // Set position with no IR data — ranking_max = 1, so 1 * 0.5 = 0
         selector.set_ranking_position(0.5);
@@ -3289,7 +3276,7 @@ mod tests {
         selector.set_ranking_position(0.5);
         assert_eq!(selector.ranking_offset, 5); // 10 * 0.5
 
-        let pos = selector.get_ranking_position();
+        let pos = selector.ranking_position();
         assert!((pos - 0.5).abs() < 0.01);
     }
 
@@ -3779,13 +3766,13 @@ mod tests {
 
         fn prepare_skin(&mut self) {}
         fn dispose_skin(&mut self) {}
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
         fn get_width(&self) -> f32 {
@@ -4181,12 +4168,12 @@ mod tests {
 
         // Extract paths the same way render() does
         let paths: Vec<PathBuf> = if let Bar::Container(b) = &bar {
-            b.get_children()
+            b.children()
                 .iter()
                 .filter_map(|bar| {
                     bar.as_song_bar()
                         .filter(|sb| sb.exists_song())
-                        .and_then(|sb| sb.get_song_data().path())
+                        .and_then(|sb| sb.song_data().path())
                         .map(PathBuf::from)
                 })
                 .collect()

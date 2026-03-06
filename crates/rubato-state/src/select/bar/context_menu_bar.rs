@@ -46,7 +46,7 @@ impl ContextMenuBar {
     }
 
     pub fn new_for_table(table: TableBar) -> Self {
-        let title = table.get_title();
+        let title = table.title();
         let mut bar = Self {
             directory: DirectoryBarData::new(true),
             song: None,
@@ -60,7 +60,7 @@ impl ContextMenuBar {
     }
 
     pub fn new_for_table_folder(table: TableBar, folder: HashBar) -> Self {
-        let title = folder.get_title();
+        let title = folder.title();
         let mut bar = Self {
             directory: DirectoryBarData::new(true),
             song: None,
@@ -89,21 +89,21 @@ impl ContextMenuBar {
         true
     }
 
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         self.title.clone()
     }
 
-    pub fn get_lamp(&self, _is_player: bool) -> i32 {
+    pub fn lamp(&self, _is_player: bool) -> i32 {
         0
     }
 
     /// Returns the parent bar (table).
     /// Corresponds to Java ContextMenuBar.getPrevious()
-    pub fn get_previous(&self) -> Option<&TableBar> {
+    pub fn previous(&self) -> Option<&TableBar> {
         self.table.as_ref()
     }
 
-    pub fn get_children(&self, tables: &[TableBar], songdb: &dyn SongDatabaseAccessor) -> Vec<Bar> {
+    pub fn children(&self, tables: &[TableBar], songdb: &dyn SongDatabaseAccessor) -> Vec<Bar> {
         if let Some(ref song) = self.song {
             if song.path().is_some() {
                 return self.song_context(tables, songdb);
@@ -350,7 +350,7 @@ impl ContextMenuBar {
                 STYLE_TEXT_NEW,
             );
             fill_missing.set_function(Arc::new(move |selector| {
-                let folders = table_clone.get_table_data().folder();
+                let folders = table_clone.table_data().folder();
                 let want: Vec<SongData> = folders
                     .iter()
                     .flat_map(|f| f.song().iter().cloned())
@@ -378,7 +378,7 @@ impl ContextMenuBar {
 
         // Fill Missing Charts — submit download tasks for songs in this folder
         if let Some(ref folder) = self.folder {
-            let elements: Vec<SongData> = folder.get_elements().to_vec();
+            let elements: Vec<SongData> = folder.elements().to_vec();
             let mut fill_missing = FunctionBar::new_with_text_type(
                 "Fill Missing Charts".to_string(),
                 STYLE_SPECIAL,
@@ -607,9 +607,9 @@ impl ContextMenuBar {
         }
 
         for table in tables {
-            for level in table.get_levels() {
+            for level in table.levels() {
                 let mut found = false;
-                for table_song in level.get_elements() {
+                for table_song in level.elements() {
                     let song_md5 = &table_song.md5;
                     let song_sha256 = &table_song.sha256;
                     if (!md5.is_empty() && !song_md5.is_empty() && md5 == song_md5)
@@ -629,7 +629,7 @@ impl ContextMenuBar {
     /// Add a single table entry for tag display.
     /// Corresponds to Java ContextMenuBar.addTableEntry(ArrayList<Bar>, TableBar, HashBar)
     fn add_table_entry(&self, options: &mut Vec<Bar>, table: &TableBar, level: &HashBar) {
-        let entry = format!("{} {}", level.get_title(), table.get_title());
+        let entry = format!("{} {}", level.title(), table.title());
         let mut show_tables = FunctionBar::new(entry, STYLE_SEARCH);
         let table_bar = Bar::Table(Box::new(table.clone()));
         let level_bar = Bar::Hash(Box::new(level.clone()));
@@ -647,7 +647,7 @@ impl ContextMenuBar {
             }
             selector.play_sound(SoundType::FolderOpen);
         }));
-        let lamps = Self::calculate_lamps(level.get_elements(), |_| None, None);
+        let lamps = Self::calculate_lamps(level.elements(), |_| None, None);
         show_tables.set_lamps(lamps);
         options.push(Bar::Function(Box::new(show_tables)));
     }

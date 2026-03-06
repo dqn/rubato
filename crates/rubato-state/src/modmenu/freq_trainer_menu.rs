@@ -14,7 +14,7 @@ impl FreqTrainerMenu {
         *FREQ_TRAINER_ENABLED.lock().unwrap() = enabled;
     }
 
-    pub fn get_freq() -> i32 {
+    pub fn freq() -> i32 {
         *FREQ.lock().unwrap()
     }
 

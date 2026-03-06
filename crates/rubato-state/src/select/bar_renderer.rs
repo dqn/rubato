@@ -144,7 +144,7 @@ impl BarRenderer {
         for &i in ctx.clickable_bar {
             let i = i as usize;
             let on = i as i32 == ctx.center_bar;
-            let si = match baro.get_bar_images(on, i) {
+            let si = match baro.bar_images(on, i) {
                 Some(si) => si,
                 None => continue,
             };
@@ -200,7 +200,7 @@ impl BarRenderer {
             // calculate song bar position
             let ba = &mut self.bararea[i];
             let on = i as i32 == ctx.center_bar;
-            let si1 = match baro.get_bar_images(on, i) {
+            let si1 = match baro.bar_images(on, i) {
                 Some(si) => si,
                 None => continue,
             };
@@ -217,7 +217,7 @@ impl BarRenderer {
                     };
                     if next_index >= 0 {
                         let si2 =
-                            baro.get_bar_images(next_index == ctx.center_bar, next_index as usize);
+                            baro.bar_images(next_index == ctx.center_bar, next_index as usize);
                         if let Some(si2) = si2
                             && si2.data.draw
                         {
@@ -230,7 +230,7 @@ impl BarRenderer {
 
                 ba.x = (si1.data.region.x + dx) as i32 as f32;
                 ba.y = ((si1.data.region.y + dy)
-                    + if baro.get_position() == 1 {
+                    + if baro.position() == 1 {
                         si1.data.region.height
                     } else {
                         0.0
@@ -266,8 +266,8 @@ impl BarRenderer {
                         ba.value = 5;
                     }
                     Bar::Function(fb) => {
-                        ba.value = fb.get_display_bar_type();
-                        ba.text = fb.get_display_text_type() as usize;
+                        ba.value = fb.display_bar_type();
+                        ba.text = fb.display_text_type() as usize;
                     }
                     _ => {
                         ba.value = -1;
@@ -293,7 +293,7 @@ impl BarRenderer {
                 if songstatus >= 2 {
                     songstatus += 4;
                     // If not defined, use 0:normal
-                    if baro.get_text(songstatus as usize).is_none() {
+                    if baro.text(songstatus as usize).is_none() {
                         songstatus = 0;
                     }
                 } else if songstatus == 0 {
@@ -301,14 +301,14 @@ impl BarRenderer {
                     if let Some(idx) = ba.sd
                         && let Some(Bar::Song(sb)) = ctx.currentsongs.get(idx)
                     {
-                        let song = sb.get_song_data();
+                        let song = sb.song_data();
                         songstatus = if now_secs > song.adddate as i64 + 3600 * 24 {
                             2 // SongBar(normal)
                         } else {
                             3 // SongBar(new)
                         };
                         // If not defined, fallback to 0:normal or 1:new
-                        if baro.get_text(songstatus as usize).is_none() {
+                        if baro.text(songstatus as usize).is_none() {
                             songstatus = if songstatus == 3 { 1 } else { 0 };
                         }
                     }
@@ -317,7 +317,7 @@ impl BarRenderer {
                     if let Some(idx) = ba.sd
                         && let Some(Bar::Folder(fb)) = ctx.currentsongs.get(idx)
                     {
-                        let data = fb.get_folder_data();
+                        let data = fb.folder_data();
                         songstatus = if data.is_none()
                             || now_secs > data.unwrap().adddate() as i64 + 3600 * 24
                         {
@@ -326,7 +326,7 @@ impl BarRenderer {
                             5 // FolderBar(new)
                         };
                         // If not defined, fallback to 0:normal or 1:new
-                        if baro.get_text(songstatus as usize).is_none() {
+                        if baro.text(songstatus as usize).is_none() {
                             songstatus = if songstatus == 5 { 1 } else { 0 };
                         }
                     }
@@ -354,7 +354,7 @@ impl BarRenderer {
 
             self.bartextcharset.clear();
             for song in ctx.currentsongs {
-                for c in song.get_title().chars() {
+                for c in song.title().chars() {
                     self.bartextcharset.insert(c);
                 }
             }
@@ -376,7 +376,7 @@ impl BarRenderer {
         }
 
         // draw song bar
-        let position = baro.get_position();
+        let position = baro.position();
         for i in 0..self.barlength {
             let ba = &self.bararea[i];
             let on = i as i32 == ctx.center_bar;
@@ -417,12 +417,12 @@ impl BarRenderer {
             if let Some(idx) = ba.sd {
                 let sd = &ctx.currentsongs[idx];
                 if let Some(dir_data) = sd.as_directory_bar()
-                    && let Some(graph) = baro.get_graph()
+                    && let Some(graph) = baro.graph()
                     && graph.draw
                 {
                     graph.draw_directory(sprite, dir_data, ba.x, ba.y);
                 } else if let Some(fb) = sd.as_function_bar()
-                    && let Some(graph) = baro.get_graph()
+                    && let Some(graph) = baro.graph()
                     && graph.draw
                 {
                     graph.draw_function_bar(sprite, fb, ba.x, ba.y);
@@ -442,13 +442,13 @@ impl BarRenderer {
                 if let Some(idx) = ba.sd {
                     let sd = &ctx.currentsongs[idx];
                     if let Some(song_bar) = sd.as_song_bar() {
-                        let song_md5 = &song_bar.get_song_data().md5;
+                        let song_md5 = &song_bar.song_data().md5;
                         for task_arc in download_tasks.values() {
                             let task = task_arc.lock().unwrap();
                             if task.hash() != song_md5 {
                                 continue;
                             }
-                            if let Some(graph) = baro.get_graph()
+                            if let Some(graph) = baro.graph()
                                 && graph.draw
                             {
                                 graph.draw_song_bar_download(sprite, song_bar, &task, ba.x, ba.y);
@@ -468,8 +468,7 @@ impl BarRenderer {
             if let Some(idx) = ba.sd {
                 let sd = &ctx.currentsongs[idx];
                 if let Some(text) = baro.text.get_mut(ba.text).and_then(|o| o.as_mut()) {
-                    text.get_text_data_mut()
-                        .set_text(sd.get_title().to_string());
+                    text.get_text_data_mut().set_text(sd.title().to_string());
                     text.draw_with_offset(sprite, ba.x, ba.y);
                 }
             }
@@ -483,7 +482,7 @@ impl BarRenderer {
             }
             if let Some(idx) = ba.sd
                 && let Some(gb) = ctx.currentsongs[idx].as_grade_bar()
-                && let Some(trophy) = gb.get_trophy()
+                && let Some(trophy) = gb.trophy()
             {
                 for (j, trophy_name) in self.trophy.iter().enumerate() {
                     if *trophy_name == trophy.name() {
@@ -506,14 +505,14 @@ impl BarRenderer {
             if let Some(idx) = ba.sd {
                 let sd = &ctx.currentsongs[idx];
                 if ctx.rival {
-                    let player_lamp_id = sd.get_lamp(true);
+                    let player_lamp_id = sd.lamp(true);
                     if player_lamp_id >= 0
                         && (player_lamp_id as usize) < baro.mylamp.len()
                         && let Some(lamp) = baro.mylamp[player_lamp_id as usize].as_mut()
                     {
                         lamp.draw_with_offset(sprite, ba.x, ba.y);
                     }
-                    let rival_lamp_id = sd.get_lamp(false);
+                    let rival_lamp_id = sd.lamp(false);
                     if rival_lamp_id >= 0
                         && (rival_lamp_id as usize) < baro.rivallamp.len()
                         && let Some(lamp) = baro.rivallamp[rival_lamp_id as usize].as_mut()
@@ -521,7 +520,7 @@ impl BarRenderer {
                         lamp.draw_with_offset(sprite, ba.x, ba.y);
                     }
                 } else {
-                    let lamp_id = sd.get_lamp(true);
+                    let lamp_id = sd.lamp(true);
                     if lamp_id >= 0
                         && (lamp_id as usize) < baro.lamp.len()
                         && let Some(lamp) = baro.lamp[lamp_id as usize].as_mut()
@@ -542,7 +541,7 @@ impl BarRenderer {
                 let sd = &ctx.currentsongs[idx];
                 if let Some(sb) = sd.as_song_bar() {
                     if sb.exists_song() {
-                        let song = sb.get_song_data();
+                        let song = sb.song_data();
                         let difficulty = song.difficulty;
                         let level_idx = if (0..7).contains(&difficulty) {
                             difficulty
@@ -559,7 +558,7 @@ impl BarRenderer {
                         }
                     }
                 } else if let Some(fb) = sd.as_function_bar()
-                    && let Some(level) = fb.get_level()
+                    && let Some(level) = fb.level()
                     && let Some(leveln) = baro.barlevel.first_mut().and_then(|o| o.as_mut())
                 {
                     leveln.draw_with_value(sprite, self.time, level, ctx.state, ba.x, ba.y);
@@ -580,7 +579,7 @@ impl BarRenderer {
                 if let Some(sb) = sd.as_song_bar()
                     && sb.exists_song()
                 {
-                    flag |= sb.get_song_data().feature;
+                    flag |= sb.song_data().feature;
                 }
 
                 if let Some(gb) = sd.as_grade_bar()
@@ -655,12 +654,8 @@ impl BarRenderer {
         ctx.input.reset_scroll();
 
         // analog scroll
-        let analog_up = ctx
-            .property
-            .get_analog_change(ctx.input, MusicSelectKey::Up);
-        let analog_down = ctx
-            .property
-            .get_analog_change(ctx.input, MusicSelectKey::Down);
+        let analog_up = ctx.property.analog_change(ctx.input, MusicSelectKey::Up);
+        let analog_down = ctx.property.analog_change(ctx.input, MusicSelectKey::Down);
         self.analog_scroll_buffer += analog_up - analog_down;
         mov += self.analog_scroll_buffer / self.analog_ticks_per_scroll;
         self.analog_scroll_buffer %= self.analog_ticks_per_scroll;
@@ -1110,7 +1105,7 @@ mod tests {
             timer_now_time: 0,
         };
 
-        // No bar images set, so get_bar_images returns None -> no hit
+        // No bar images set, so bar_images returns None -> no hit
         let result = renderer.mouse_pressed(&bar, 0, 100, 200, &ctx);
         assert!(matches!(result, MousePressedAction::None));
     }

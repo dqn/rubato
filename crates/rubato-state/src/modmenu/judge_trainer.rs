@@ -19,7 +19,7 @@ impl JudgeTrainer {
         *ACTIVE.lock().unwrap() = active;
     }
 
-    pub fn get_judge_rank() -> i32 {
+    pub fn judge_rank() -> i32 {
         *JUDGE_RANK.lock().unwrap()
     }
 
@@ -27,7 +27,7 @@ impl JudgeTrainer {
         *JUDGE_RANK.lock().unwrap() = judge_rank;
     }
 
-    pub fn get_judge_window_rate(mode: &Mode) -> i32 {
+    pub fn judge_window_rate(mode: &Mode) -> i32 {
         // NOTE: The order of the rule is from VERY-HARD to VERY-EASY:
         // VERY-HARD | HARD | NORMAL | EASY | VERY-EASY
         //     0     |  1   |   2    |  3   |     4

@@ -2639,13 +2639,13 @@ mod tests {
         }
         fn prepare_skin(&mut self) {}
         fn dispose_skin(&mut self) {}
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
         fn get_width(&self) -> f32 {
@@ -2764,13 +2764,13 @@ mod tests {
             }
             fn prepare_skin(&mut self) {}
             fn dispose_skin(&mut self) {}
-            fn get_fadeout(&self) -> i32 {
+            fn fadeout(&self) -> i32 {
                 0
             }
-            fn get_input(&self) -> i32 {
+            fn input(&self) -> i32 {
                 0
             }
-            fn get_scene(&self) -> i32 {
+            fn scene(&self) -> i32 {
                 0
             }
             fn get_width(&self) -> f32 {
@@ -2879,13 +2879,13 @@ mod tests {
         }
         fn prepare_skin(&mut self) {}
         fn dispose_skin(&mut self) {}
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
         fn get_width(&self) -> f32 {

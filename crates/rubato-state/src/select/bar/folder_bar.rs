@@ -21,15 +21,15 @@ impl FolderBar {
         }
     }
 
-    pub fn get_folder_data(&self) -> Option<&FolderData> {
+    pub fn folder_data(&self) -> Option<&FolderData> {
         self.folder.as_ref()
     }
 
-    pub fn get_crc(&self) -> &str {
+    pub fn crc(&self) -> &str {
         &self.crc
     }
 
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         self.folder
             .as_ref()
             .map(|f| f.title().to_string())
@@ -42,8 +42,8 @@ impl FolderBar {
     /// Otherwise, returns sub-folder FolderBars.
     ///
     /// Translates: Java FolderBar.getChildren()
-    pub fn get_children(&self, db: &dyn SongDatabaseAccessor) -> Vec<Bar> {
-        log::debug!("[FolderBar] get_children crc={}", self.crc);
+    pub fn children(&self, db: &dyn SongDatabaseAccessor) -> Vec<Bar> {
+        log::debug!("[FolderBar] children crc={}", self.crc);
         let songs = db.song_datas("parent", &self.crc);
         log::debug!("[FolderBar] songs found: {}", songs.len());
         if !songs.is_empty() {
@@ -174,11 +174,11 @@ mod tests {
         let db = MockSongDb::new().with_songs("parent", "test_crc", vec![song]);
 
         let bar = FolderBar::new(None, "test_crc".to_string());
-        let children = bar.get_children(&db);
+        let children = bar.children(&db);
 
         assert_eq!(children.len(), 1);
         assert!(children[0].as_song_bar().is_some());
-        assert!(children[0].get_title().contains("Test Song"));
+        assert!(children[0].title().contains("Test Song"));
     }
 
     #[test]
@@ -192,18 +192,18 @@ mod tests {
         let db = MockSongDb::new().with_folders("parent", "test_crc", vec![folder]);
 
         let bar = FolderBar::new(None, "test_crc".to_string());
-        let children = bar.get_children(&db);
+        let children = bar.children(&db);
 
         assert_eq!(children.len(), 1);
         assert!(children[0].as_folder_bar().is_some());
-        assert_eq!(children[0].get_title(), "Sub Folder");
+        assert_eq!(children[0].title(), "Sub Folder");
     }
 
     #[test]
     fn folder_bar_get_children_returns_empty_when_no_data() {
         let db = MockSongDb::new();
         let bar = FolderBar::new(None, "nonexistent".to_string());
-        let children = bar.get_children(&db);
+        let children = bar.children(&db);
         assert!(children.is_empty());
     }
 
@@ -224,18 +224,18 @@ mod tests {
             .with_folders("parent", "crc1", vec![folder]);
 
         let bar = FolderBar::new(None, "crc1".to_string());
-        let children = bar.get_children(&db);
+        let children = bar.children(&db);
 
         // Should return songs, not folders
         assert_eq!(children.len(), 1);
         assert!(children[0].as_song_bar().is_some());
     }
 
-    /// Verify that FolderBar::get_children() computes CRCs consistent with the scanner.
+    /// Verify that FolderBar::children() computes CRCs consistent with the scanner.
     ///
     /// The scanner (SQLiteSongDatabaseAccessor) computes song.parent and folder.parent
     /// using crc32(path, bmsroot, ".") where "." is the literal root string.
-    /// FolderBar::get_children() must use the same bmspath parameter so that navigating
+    /// FolderBar::children() must use the same bmspath parameter so that navigating
     /// into a folder finds the songs/sub-folders stored by the scanner.
     #[test]
     fn folder_bar_crc_consistent_with_scanner() {
@@ -277,7 +277,7 @@ mod tests {
 
         // Step 1: Navigate from root
         let root_bar = FolderBar::new(None, "e2977170".to_string());
-        let root_children = root_bar.get_children(&db);
+        let root_children = root_bar.children(&db);
 
         assert_eq!(root_children.len(), 1, "Root should have 1 folder child");
         let child_folder = root_children[0]
@@ -285,9 +285,9 @@ mod tests {
             .expect("Should be a FolderBar");
 
         // Step 2: Navigate into the folder - this is the critical test.
-        // The CRC computed by get_children() must match scanner_parent_crc
+        // The CRC computed by children() must match scanner_parent_crc
         // so that songs are found.
-        let folder_crc = child_folder.get_crc();
+        let folder_crc = child_folder.crc();
         assert_eq!(
             folder_crc, scanner_parent_crc,
             "FolderBar CRC must match scanner parent CRC. \
@@ -296,14 +296,14 @@ mod tests {
         );
 
         // Step 3: Verify that navigating into the folder actually finds songs
-        let songs = child_folder.get_children(&db);
+        let songs = child_folder.children(&db);
         assert_eq!(songs.len(), 1, "Should find 1 song in sub-folder");
         assert!(
             songs[0].as_song_bar().is_some(),
             "Child should be a SongBar"
         );
         assert!(
-            songs[0].get_title().contains("Test Song"),
+            songs[0].title().contains("Test Song"),
             "Song title should match"
         );
     }

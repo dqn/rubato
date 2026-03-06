@@ -100,31 +100,31 @@ impl FunctionBar {
         }
     }
 
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         self.title.clone()
     }
 
-    pub fn get_subtitle(&self) -> Option<&str> {
+    pub fn subtitle(&self) -> Option<&str> {
         self.subtitle.as_deref()
     }
 
-    pub fn get_level(&self) -> Option<i32> {
+    pub fn level(&self) -> Option<i32> {
         self.level
     }
 
-    pub fn get_lamp(&self, _is_player: bool) -> i32 {
+    pub fn lamp(&self, _is_player: bool) -> i32 {
         self.lamp
     }
 
-    pub fn get_lamps(&self) -> &[i32] {
+    pub fn lamps(&self) -> &[i32] {
         &self.lamps
     }
 
-    pub fn get_display_bar_type(&self) -> i32 {
+    pub fn display_bar_type(&self) -> i32 {
         self.display_bar_type
     }
 
-    pub fn get_display_text_type(&self) -> i32 {
+    pub fn display_text_type(&self) -> i32 {
         self.display_text_type
     }
 }

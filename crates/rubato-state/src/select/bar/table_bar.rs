@@ -38,7 +38,7 @@ impl TableBar {
         bar
     }
 
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         self.td.name().to_string()
     }
 
@@ -46,7 +46,7 @@ impl TableBar {
         self.td.url_opt()
     }
 
-    pub fn get_accessor(&self) -> &dyn TableAccessor {
+    pub fn accessor(&self) -> &dyn TableAccessor {
         self.tr.as_ref()
     }
 
@@ -88,19 +88,19 @@ impl TableBar {
         self.td = td;
     }
 
-    pub fn get_levels(&self) -> &[HashBar] {
+    pub fn levels(&self) -> &[HashBar] {
         &self.levels
     }
 
-    pub fn get_grades(&self) -> &[GradeBar] {
+    pub fn grades(&self) -> &[GradeBar] {
         &self.grades
     }
 
-    pub fn get_children(&self) -> &[Bar] {
+    pub fn children(&self) -> &[Bar] {
         &self.children
     }
 
-    pub fn get_table_data(&self) -> &TableData {
+    pub fn table_data(&self) -> &TableData {
         &self.td
     }
 }

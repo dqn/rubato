@@ -973,9 +973,9 @@ mod tests {
 
         let mut skin = crate::skin::Skin::new(crate::skin_header::SkinHeader::new());
         state.apply_to_skin(&mut skin);
-        assert_eq!(skin.get_input(), 500);
-        assert_eq!(skin.get_scene(), 60000);
-        assert_eq!(skin.get_fadeout(), 200);
+        assert_eq!(skin.input(), 500);
+        assert_eq!(skin.scene(), 60000);
+        assert_eq!(skin.fadeout(), 200);
     }
 
     #[test]
@@ -988,9 +988,9 @@ mod tests {
 
         state.apply_to_skin(&mut skin);
         // None values should not overwrite existing values
-        assert_eq!(skin.get_input(), 42);
-        assert_eq!(skin.get_scene(), 99);
-        assert_eq!(skin.get_fadeout(), 77);
+        assert_eq!(skin.input(), 42);
+        assert_eq!(skin.scene(), 99);
+        assert_eq!(skin.fadeout(), 77);
     }
 
     #[test]

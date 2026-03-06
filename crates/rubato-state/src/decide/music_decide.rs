@@ -258,13 +258,9 @@ impl MainState for MusicDecide {
         let nowtime = self.data.timer.now_time();
         // Skin timing values; fall back to 0 when no skin is loaded so the
         // decide screen still transitions to Play instead of stalling forever.
-        let input_time = self.data.skin.as_ref().map_or(0, |s| s.get_input() as i64);
-        let fadeout_time = self
-            .data
-            .skin
-            .as_ref()
-            .map_or(0, |s| s.get_fadeout() as i64);
-        let scene_time = self.data.skin.as_ref().map_or(0, |s| s.get_scene() as i64);
+        let input_time = self.data.skin.as_ref().map_or(0, |s| s.input() as i64);
+        let fadeout_time = self.data.skin.as_ref().map_or(0, |s| s.fadeout() as i64);
+        let scene_time = self.data.skin.as_ref().map_or(0, |s| s.scene() as i64);
 
         if nowtime > input_time {
             self.data.timer.switch_timer(TIMER_STARTINPUT, true);
@@ -412,13 +408,13 @@ mod tests {
         }
         fn prepare_skin(&mut self) {}
         fn dispose_skin(&mut self) {}
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             self.fadeout
         }
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             self.input
         }
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             self.scene
         }
         fn get_width(&self) -> f32 {
@@ -470,15 +466,15 @@ mod tests {
 
         fn dispose_skin(&mut self) {}
 
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
 
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
 
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
 
@@ -602,7 +598,7 @@ mod tests {
         let mut decide = make_decide();
         decide.data.skin = Some(Box::new(MockSkin::new()));
         // nowmicrotime=0 from fresh TimerManager, now_time()=0
-        // skin.get_input()=0, condition is nowtime > input i.e. 0 > 0 = false
+        // skin.input()=0, condition is nowtime > input i.e. 0 > 0 = false
         decide.render();
         assert!(!decide.data.timer.is_timer_on(TIMER_STARTINPUT));
     }

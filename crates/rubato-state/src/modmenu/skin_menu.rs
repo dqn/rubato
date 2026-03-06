@@ -683,7 +683,7 @@ fn load_all_skins(skin_type: &SkinType) -> Vec<SkinHeader> {
                             // 7/14key skin can also be used for 5/10key
                             if *skin_type == SkinType::Play5Keys
                                 && h.skin_type().is_some_and(|st| *st == SkinType::Play7Keys)
-                                && h.get_type() == TYPE_LR2SKIN
+                                && h.toast_type() == TYPE_LR2SKIN
                                 && let Ok(mut h2) =
                                     loader.load_skin(path, None).map(skin_header_from_lr2_data)
                             {
@@ -696,7 +696,7 @@ fn load_all_skins(skin_type: &SkinType) -> Vec<SkinHeader> {
                             }
                             if *skin_type == SkinType::Play10Keys
                                 && h.skin_type().is_some_and(|st| *st == SkinType::Play14Keys)
-                                && h.get_type() == TYPE_LR2SKIN
+                                && h.toast_type() == TYPE_LR2SKIN
                                 && let Ok(mut h2) =
                                     loader.load_skin(path, None).map(skin_header_from_lr2_data)
                             {

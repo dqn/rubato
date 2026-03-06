@@ -153,7 +153,7 @@ pub trait MainState {
 
     /// Returns the ScoreDataProperty for the current state.
     /// Used by Lua rate/exscore/rate_best/exscore_best/rate_rival/exscore_rival functions.
-    fn get_score_data_property(&self) -> &rubato_core::score_data_property::ScoreDataProperty {
+    fn score_data_property(&self) -> &rubato_core::score_data_property::ScoreDataProperty {
         static DEFAULT: std::sync::OnceLock<rubato_core::score_data_property::ScoreDataProperty> =
             std::sync::OnceLock::new();
         DEFAULT.get_or_init(rubato_core::score_data_property::ScoreDataProperty::default)
@@ -161,7 +161,7 @@ pub trait MainState {
 
     /// Returns the total judge count for the given judge index (fast + slow).
     /// Used by Lua `judge(id)` function.
-    fn get_judge_count(&self, _judge: i32, _fast: bool) -> i32 {
+    fn judge_count(&self, _judge: i32, _fast: bool) -> i32 {
         0
     }
 
@@ -173,7 +173,7 @@ pub trait MainState {
 
     /// Returns the gauge type ID. Only meaningful for BMSPlayer states.
     /// Used by Lua `gauge_type()` function.
-    fn get_gauge_type(&self) -> i32 {
+    fn gauge_type(&self) -> i32 {
         0
     }
 

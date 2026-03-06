@@ -53,28 +53,28 @@ static WIDGET_TABLE_COLUMNS: LazyLock<Mutex<Vec<WidgetTableColumn>>> = LazyLock:
             name: "x",
             show: true,
             persistent: false,
-            getter: Some(SkinWidgetDestination::get_dst_x),
+            getter: Some(SkinWidgetDestination::dst_x),
             change_event_type: Some(EventType::ChangeX),
         },
         WidgetTableColumn {
             name: "y",
             show: true,
             persistent: false,
-            getter: Some(SkinWidgetDestination::get_dst_y),
+            getter: Some(SkinWidgetDestination::dst_y),
             change_event_type: Some(EventType::ChangeY),
         },
         WidgetTableColumn {
             name: "w",
             show: true,
             persistent: false,
-            getter: Some(SkinWidgetDestination::get_dst_w),
+            getter: Some(SkinWidgetDestination::dst_w),
             change_event_type: Some(EventType::ChangeW),
         },
         WidgetTableColumn {
             name: "h",
             show: true,
             persistent: false,
-            getter: Some(SkinWidgetDestination::get_dst_h),
+            getter: Some(SkinWidgetDestination::dst_h),
             change_event_type: Some(EventType::ChangeH),
         },
         WidgetTableColumn {
@@ -90,7 +90,7 @@ static WIDGET_TABLE_COLUMNS: LazyLock<Mutex<Vec<WidgetTableColumn>>> = LazyLock:
 pub struct SkinWidgetManager;
 
 impl SkinWidgetManager {
-    pub fn get_focus() -> bool {
+    pub fn focus() -> bool {
         rubato_types::skin_widget_focus::focus()
     }
 
@@ -105,7 +105,7 @@ impl SkinWidgetManager {
         widgets.clear();
         event_history.clear();
 
-        let all_skin_objects = skin.get_all_skin_objects();
+        let all_skin_objects = skin.all_skin_objects();
         // NOTE: We're using skin object's name as id, we need to keep name is unique
         let mut duplicated_skin_object_name_count: HashMap<String, i32> = HashMap::new();
 
@@ -372,18 +372,14 @@ fn render_skin_widgets_table(ui: &mut egui::Ui, widgets: &mut [SkinWidget]) {
                                         ui.make_persistent_id(format!("edit_popup_{}", dst.name));
                                     let edit_response = ui.button("Edit");
                                     if edit_response.clicked() {
-                                        *EDITING_WIDGET_X.lock().unwrap() = ImFloat {
-                                            value: dst.get_dst_x(),
-                                        };
-                                        *EDITING_WIDGET_Y.lock().unwrap() = ImFloat {
-                                            value: dst.get_dst_y(),
-                                        };
-                                        *EDITING_WIDGET_W.lock().unwrap() = ImFloat {
-                                            value: dst.get_dst_w(),
-                                        };
-                                        *EDITING_WIDGET_H.lock().unwrap() = ImFloat {
-                                            value: dst.get_dst_h(),
-                                        };
+                                        *EDITING_WIDGET_X.lock().unwrap() =
+                                            ImFloat { value: dst.dst_x() };
+                                        *EDITING_WIDGET_Y.lock().unwrap() =
+                                            ImFloat { value: dst.dst_y() };
+                                        *EDITING_WIDGET_W.lock().unwrap() =
+                                            ImFloat { value: dst.dst_w() };
+                                        *EDITING_WIDGET_H.lock().unwrap() =
+                                            ImFloat { value: dst.dst_h() };
                                         *RESET_MOVE_OVERLAY.lock().unwrap() = true;
                                         ui.memory_mut(|mem| mem.toggle_popup(edit_popup_id));
                                     }
@@ -478,10 +474,10 @@ fn render_edit_popup(ui: &mut egui::Ui, dst: &mut SkinWidgetDestination, _dst_id
     if move_enabled.value {
         if dst.moving_state == 0 {
             let cloned_region = Rectangle {
-                x: dst.get_dst_x(),
-                y: dst.get_dst_y(),
-                width: dst.get_dst_w(),
-                height: dst.get_dst_h(),
+                x: dst.dst_x(),
+                y: dst.dst_y(),
+                width: dst.dst_w(),
+                height: dst.dst_h(),
             };
             dst.before_move = Some(SkinObjectDestination {
                 time: 0,
@@ -507,10 +503,10 @@ fn render_edit_popup(ui: &mut egui::Ui, dst: &mut SkinWidgetDestination, _dst_id
 /// drag-moving the widget position.
 fn render_move_overlay(ui: &mut egui::Ui, dst: &mut SkinWidgetDestination) {
     let window_height = imgui_renderer::window_height() as f32;
-    let w = dst.get_dst_w();
-    let h = dst.get_dst_h();
-    let x = dst.get_dst_x();
-    let y = window_height - dst.get_dst_y() - h;
+    let w = dst.dst_w();
+    let h = dst.dst_h();
+    let x = dst.dst_x();
+    let y = window_height - dst.dst_y() - h;
 
     let move_enabled = MOVE_OVERLAY_ENABLED.lock().unwrap();
 
@@ -529,12 +525,12 @@ fn render_move_overlay(ui: &mut egui::Ui, dst: &mut SkinWidgetDestination) {
                 )),
         )
         .show(ui.ctx(), |ui| {
-            ui.label(format!("x = {:.1} y = {:.1}", x, dst.get_dst_y()));
+            ui.label(format!("x = {:.1} y = {:.1}", x, dst.dst_y()));
             ui.label(format!("w = {:.1} h = {:.1}", w, h));
 
             // NOTE: This approach is actually moving the "REAL" widget in-time
             dst.set_dst_x_with_event(x, false);
-            dst.set_dst_y_with_event(dst.get_dst_y(), false);
+            dst.set_dst_y_with_event(dst.dst_y(), false);
             dst.set_dst_w_with_event(w, false);
             dst.set_dst_h_with_event(h, false);
         });
@@ -558,7 +554,7 @@ fn render_move_overlay(ui: &mut egui::Ui, dst: &mut SkinWidgetDestination) {
 /// In Java: ImGui table showing event descriptions with clipper.
 fn render_history_table(ui: &mut egui::Ui) {
     let event_history = EVENT_HISTORY.lock().unwrap();
-    let events = event_history.get_events();
+    let events = event_history.events();
     if events.is_empty() {
         ui.label("No history");
     } else {
@@ -573,7 +569,7 @@ fn render_history_table(ui: &mut egui::Ui) {
                         ui.end_row();
                         for (i, event) in events.iter().enumerate() {
                             ui.push_id(i, |ui| {
-                                ui.label(event.get_description());
+                                ui.label(event.description());
                             });
                             ui.end_row();
                         }
@@ -606,8 +602,8 @@ fn export_changes() {
             let mut has_changed_w = false;
             let mut has_changed_h = false;
 
-            for event in event_history.get_events_by_name(&dst.name) {
-                match event.get_event_type() {
+            for event in event_history.events_by_name(&dst.name) {
+                match event.event_type() {
                     EventType::ChangeX => has_changed_x = true,
                     EventType::ChangeY => has_changed_y = true,
                     EventType::ChangeW => has_changed_w = true,
@@ -622,16 +618,16 @@ fn export_changes() {
 
             let mut sb = format!("{{dst={}", dst.name);
             if has_changed_x {
-                sb.push_str(&format!(", x={}", dst.get_dst_x()));
+                sb.push_str(&format!(", x={}", dst.dst_x()));
             }
             if has_changed_y {
-                sb.push_str(&format!(", y={}", dst.get_dst_y()));
+                sb.push_str(&format!(", y={}", dst.dst_y()));
             }
             if has_changed_x {
-                sb.push_str(&format!(", w={}", dst.get_dst_w()));
+                sb.push_str(&format!(", w={}", dst.dst_w()));
             }
             if has_changed_y {
-                sb.push_str(&format!(", h={}", dst.get_dst_h()));
+                sb.push_str(&format!(", h={}", dst.dst_h()));
             }
             sb.push('}');
             changes.push(sb);
@@ -682,7 +678,7 @@ pub enum Event {
 }
 
 impl Event {
-    pub fn get_event_type(&self) -> &EventType {
+    pub fn event_type(&self) -> &EventType {
         match self {
             Event::ChangeSingleField { event_type, .. } => event_type,
             Event::ToggleVisible { event_type, .. } => event_type,
@@ -735,7 +731,7 @@ impl Event {
         }
     }
 
-    pub fn get_description(&self) -> String {
+    pub fn description(&self) -> String {
         match self {
             Event::ChangeSingleField {
                 event_type,
@@ -825,19 +821,19 @@ impl SkinWidgetDestination {
         }
     }
 
-    pub fn get_dst_x(&self) -> f32 {
+    pub fn dst_x(&self) -> f32 {
         self.destination.region.x
     }
 
-    pub fn get_dst_y(&self) -> f32 {
+    pub fn dst_y(&self) -> f32 {
         self.destination.region.y
     }
 
-    pub fn get_dst_w(&self) -> f32 {
+    pub fn dst_w(&self) -> f32 {
         self.destination.region.width
     }
 
-    pub fn get_dst_h(&self) -> f32 {
+    pub fn dst_h(&self) -> f32 {
         self.destination.region.height
     }
 
@@ -846,7 +842,7 @@ impl SkinWidgetDestination {
     }
 
     pub fn set_dst_x_with_event(&mut self, x: f32, create_event: bool) {
-        let previous = self.get_dst_x();
+        let previous = self.dst_x();
         if create_event && ((x - previous) as f64).abs() > EPS {
             let mut history = EVENT_HISTORY.lock().unwrap();
             history.push_event(Event::ChangeSingleField {
@@ -864,7 +860,7 @@ impl SkinWidgetDestination {
     }
 
     pub fn set_dst_y_with_event(&mut self, y: f32, create_event: bool) {
-        let previous = self.get_dst_y();
+        let previous = self.dst_y();
         if create_event && ((y - previous) as f64).abs() > EPS {
             let mut history = EVENT_HISTORY.lock().unwrap();
             history.push_event(Event::ChangeSingleField {
@@ -882,7 +878,7 @@ impl SkinWidgetDestination {
     }
 
     pub fn set_dst_w_with_event(&mut self, w: f32, create_event: bool) {
-        let previous = self.get_dst_w();
+        let previous = self.dst_w();
         if create_event && ((w - previous) as f64).abs() > EPS {
             let mut history = EVENT_HISTORY.lock().unwrap();
             history.push_event(Event::ChangeSingleField {
@@ -900,7 +896,7 @@ impl SkinWidgetDestination {
     }
 
     pub fn set_dst_h_with_event(&mut self, h: f32, create_event: bool) {
-        let previous = self.get_dst_h();
+        let previous = self.dst_h();
         if create_event && ((h - previous) as f64).abs() > EPS {
             let mut history = EVENT_HISTORY.lock().unwrap();
             history.push_event(Event::ChangeSingleField {
@@ -922,10 +918,10 @@ impl SkinWidgetDestination {
             return;
         }
 
-        let next_x = self.get_dst_x();
-        let next_y = self.get_dst_y();
-        let next_w = self.get_dst_w();
-        let next_h = self.get_dst_h();
+        let next_x = self.dst_x();
+        let next_y = self.dst_y();
+        let next_w = self.dst_w();
+        let next_h = self.dst_h();
 
         // Reset the position, to mimic that we are never left the original position
         if let Some(ref bm) = self.before_move {
@@ -973,17 +969,17 @@ impl EventHistory {
 
     pub fn has_event(&self, widget_name: &str, event_type: &EventType) -> bool {
         if let Some(events) = self.target_name_to_events.get(widget_name) {
-            events.iter().any(|e| e.get_event_type() == event_type)
+            events.iter().any(|e| e.event_type() == event_type)
         } else {
             false
         }
     }
 
-    pub fn get_events(&self) -> &[Event] {
+    pub fn events(&self) -> &[Event] {
         &self.event_stack
     }
 
-    pub fn get_events_by_name(&self, name: &str) -> Vec<Event> {
+    pub fn events_by_name(&self, name: &str) -> Vec<Event> {
         self.target_name_to_events
             .get(name)
             .cloned()
@@ -1241,14 +1237,14 @@ mod tests {
         });
         // Simulate that x was actually changed to 10
         widgets[0].destinations[0].destination.region.x = 10.0;
-        assert!((widgets[0].destinations[0].get_dst_x() - 10.0).abs() < f32::EPSILON);
+        assert!((widgets[0].destinations[0].dst_x() - 10.0).abs() < f32::EPSILON);
 
         // Undo
         history.undo_n_with_widgets(1, &mut widgets);
 
         // x should be reverted to 0
-        assert!((widgets[0].destinations[0].get_dst_x() - 0.0).abs() < f32::EPSILON);
-        assert!(history.get_events().is_empty());
+        assert!((widgets[0].destinations[0].dst_x() - 0.0).abs() < f32::EPSILON);
+        assert!(history.events().is_empty());
     }
 
     #[test]
@@ -1282,10 +1278,10 @@ mod tests {
             previous: 0.0,
             current: 5.0,
         });
-        assert!(!history.get_events().is_empty());
+        assert!(!history.events().is_empty());
 
         history.clear();
-        assert!(history.get_events().is_empty());
+        assert!(history.events().is_empty());
         assert!(!history.has_event("dst1", &EventType::ChangeX));
     }
 
@@ -1311,13 +1307,13 @@ mod tests {
             current: 5.0,
         });
 
-        let dst1_events = history.get_events_by_name("dst1");
+        let dst1_events = history.events_by_name("dst1");
         assert_eq!(dst1_events.len(), 2);
 
-        let dst2_events = history.get_events_by_name("dst2");
+        let dst2_events = history.events_by_name("dst2");
         assert_eq!(dst2_events.len(), 1);
 
-        let none_events = history.get_events_by_name("nonexistent");
+        let none_events = history.events_by_name("nonexistent");
         assert!(none_events.is_empty());
     }
 
@@ -1359,7 +1355,7 @@ mod tests {
             current: 10.0,
         };
         assert_eq!(
-            event.get_description(),
+            event.description(),
             "Changed dst1's x from 0.0000 to 10.0000"
         );
     }
@@ -1372,7 +1368,7 @@ mod tests {
             widget_index: 0,
             was_visible_before: true,
         };
-        assert_eq!(event.get_description(), "Make widget1 widget invisible");
+        assert_eq!(event.description(), "Make widget1 widget invisible");
 
         let event2 = Event::ToggleVisible {
             event_type: EventType::ToggleVisible,
@@ -1380,7 +1376,7 @@ mod tests {
             widget_index: 0,
             was_visible_before: false,
         };
-        assert_eq!(event2.get_description(), "Make widget1 widget visible");
+        assert_eq!(event2.description(), "Make widget1 widget visible");
     }
 
     // ---- SkinWidgetDestination tests ----
@@ -1388,10 +1384,10 @@ mod tests {
     #[test]
     fn test_destination_getters() {
         let dst = make_dst("test", 1.0, 2.0, 3.0, 4.0);
-        assert!((dst.get_dst_x() - 1.0).abs() < f32::EPSILON);
-        assert!((dst.get_dst_y() - 2.0).abs() < f32::EPSILON);
-        assert!((dst.get_dst_w() - 3.0).abs() < f32::EPSILON);
-        assert!((dst.get_dst_h() - 4.0).abs() < f32::EPSILON);
+        assert!((dst.dst_x() - 1.0).abs() < f32::EPSILON);
+        assert!((dst.dst_y() - 2.0).abs() < f32::EPSILON);
+        assert!((dst.dst_w() - 3.0).abs() < f32::EPSILON);
+        assert!((dst.dst_h() - 4.0).abs() < f32::EPSILON);
     }
 
     #[test]

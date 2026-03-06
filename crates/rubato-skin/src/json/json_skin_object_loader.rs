@@ -13,7 +13,7 @@ use crate::stubs::*;
 /// In Java this is an abstract class parameterized by skin type.
 /// In Rust we use a trait.
 pub trait JsonSkinObjectLoader {
-    fn get_skin(&self, header: &crate::json::json_skin_loader::SkinHeaderData) -> SkinData;
+    fn skin(&self, header: &crate::json::json_skin_loader::SkinHeaderData) -> SkinData;
 
     fn load_skin_object(
         &self,

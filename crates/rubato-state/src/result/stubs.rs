@@ -400,7 +400,7 @@ impl PlayerResource {
         &self.play_mode
     }
 
-    pub fn get_ranking_data(&self) -> Option<&RankingData> {
+    pub fn ranking_data(&self) -> Option<&RankingData> {
         self.ranking_data.as_ref()
     }
 

@@ -125,7 +125,7 @@ impl SkinHeader {
         self.resolution = resolution;
     }
 
-    pub fn get_type(&self) -> i32 {
+    pub fn toast_type(&self) -> i32 {
         self.skin_type_id
     }
 

@@ -177,11 +177,11 @@ impl Toast {
         self.button_label = button_label;
     }
 
-    pub fn get_title(&self) -> &str {
+    pub fn title(&self) -> &str {
         &self.title
     }
 
-    pub fn get_default_title(&self) -> Option<&str> {
+    pub fn default_title(&self) -> Option<&str> {
         if self.title.is_empty() {
             match self.toast_type {
                 ToastType::None => None,
@@ -195,7 +195,7 @@ impl Toast {
         }
     }
 
-    pub fn get_type(&self) -> &ToastType {
+    pub fn toast_type(&self) -> &ToastType {
         &self.toast_type
     }
 
@@ -209,7 +209,7 @@ impl Toast {
         }
     }
 
-    pub fn get_icon(&self) -> Option<&str> {
+    pub fn icon(&self) -> Option<&str> {
         match self.toast_type {
             ToastType::None => None,
             ToastType::Success => Some(font_awesome_icons::CHECK_CIRCLE),
@@ -219,16 +219,16 @@ impl Toast {
         }
     }
 
-    pub fn get_content(&self) -> &str {
+    pub fn content(&self) -> &str {
         &self.content
     }
 
-    pub fn get_elapsed_time(&self) -> i64 {
+    pub fn elapsed_time(&self) -> i64 {
         self.creation_time.elapsed().as_millis() as i64
     }
 
-    pub fn get_phase(&self) -> ToastPhase {
-        let elapsed = self.get_elapsed_time();
+    pub fn phase(&self) -> ToastPhase {
+        let elapsed = self.elapsed_time();
         if elapsed > NOTIFY_FADE_IN_OUT_TIME + self.dismiss_time + NOTIFY_FADE_IN_OUT_TIME {
             ToastPhase::Expired
         } else if elapsed > NOTIFY_FADE_IN_OUT_TIME + self.dismiss_time {
@@ -240,9 +240,9 @@ impl Toast {
         }
     }
 
-    pub fn get_fade_percent(&self) -> f32 {
-        let phase = self.get_phase();
-        let elapsed = self.get_elapsed_time();
+    pub fn fade_percent(&self) -> f32 {
+        let phase = self.phase();
+        let elapsed = self.elapsed_time();
 
         if phase == ToastPhase::FadeIn {
             (elapsed as f32 / NOTIFY_FADE_IN_OUT_TIME as f32) * NOTIFY_OPACITY
@@ -255,7 +255,7 @@ impl Toast {
         }
     }
 
-    pub fn get_window_flags(&self) -> i32 {
+    pub fn window_flags(&self) -> i32 {
         0 // stub: flags handled natively by egui Area/Frame
     }
 
@@ -263,11 +263,11 @@ impl Toast {
         self.on_button_press
     }
 
-    pub fn get_button_label(&self) -> &str {
+    pub fn button_label(&self) -> &str {
         &self.button_label
     }
 
-    pub fn get_pos(&self) -> &ToastPos {
+    pub fn pos(&self) -> &ToastPos {
         &self.pos
     }
 }
@@ -380,7 +380,7 @@ impl ImGuiNotify {
             let current_toast = &notifications[i];
 
             // Remove expired toasts
-            if current_toast.get_phase() == ToastPhase::Expired {
+            if current_toast.phase() == ToastPhase::Expired {
                 notifications.remove(i);
                 continue;
             }
@@ -392,14 +392,14 @@ impl ImGuiNotify {
             }
 
             // Snapshot all toast data before UI rendering (avoids borrow issues)
-            let opacity = current_toast.get_fade_percent();
+            let opacity = current_toast.fade_percent();
             let text_color = current_toast.color();
-            let icon = current_toast.get_icon().map(|s| s.to_string());
-            let title = current_toast.get_title().to_string();
-            let default_title = current_toast.get_default_title().map(|s| s.to_string());
-            let content = current_toast.get_content().to_string();
+            let icon = current_toast.icon().map(|s| s.to_string());
+            let title = current_toast.title().to_string();
+            let default_title = current_toast.default_title().map(|s| s.to_string());
+            let content = current_toast.content().to_string();
             let has_button = current_toast.has_on_button_press();
-            let button_label = current_toast.get_button_label().to_string();
+            let button_label = current_toast.button_label().to_string();
             let window_name = format!("##TOAST{}", i);
             let toast_pos = current_toast.pos.clone();
 
@@ -597,26 +597,26 @@ mod tests {
     #[test]
     fn test_toast_default_title_uses_type_name_when_title_empty() {
         let toast = Toast::new(ToastType::Success);
-        assert_eq!(toast.get_default_title(), Some("Success"));
+        assert_eq!(toast.default_title(), Some("Success"));
 
         let toast = Toast::new(ToastType::Warning);
-        assert_eq!(toast.get_default_title(), Some("Warning"));
+        assert_eq!(toast.default_title(), Some("Warning"));
 
         let toast = Toast::new(ToastType::Error);
-        assert_eq!(toast.get_default_title(), Some("Error"));
+        assert_eq!(toast.default_title(), Some("Error"));
 
         let toast = Toast::new(ToastType::Info);
-        assert_eq!(toast.get_default_title(), Some("Info"));
+        assert_eq!(toast.default_title(), Some("Info"));
 
         let toast = Toast::new(ToastType::None);
-        assert_eq!(toast.get_default_title(), None);
+        assert_eq!(toast.default_title(), None);
     }
 
     #[test]
     fn test_toast_default_title_uses_custom_title_when_set() {
         let mut toast = Toast::new(ToastType::Success);
         toast.set_title("Custom Title".to_string());
-        assert_eq!(toast.get_default_title(), Some("Custom Title"));
+        assert_eq!(toast.default_title(), Some("Custom Title"));
     }
 
     #[test]
@@ -630,21 +630,21 @@ mod tests {
 
     #[test]
     fn test_toast_get_icon_mapping() {
-        assert_eq!(Toast::new(ToastType::None).get_icon(), None);
+        assert_eq!(Toast::new(ToastType::None).icon(), None);
         assert_eq!(
-            Toast::new(ToastType::Success).get_icon(),
+            Toast::new(ToastType::Success).icon(),
             Some(font_awesome_icons::CHECK_CIRCLE)
         );
         assert_eq!(
-            Toast::new(ToastType::Warning).get_icon(),
+            Toast::new(ToastType::Warning).icon(),
             Some(font_awesome_icons::EXCLAMATION)
         );
         assert_eq!(
-            Toast::new(ToastType::Error).get_icon(),
+            Toast::new(ToastType::Error).icon(),
             Some(font_awesome_icons::BOMB)
         );
         assert_eq!(
-            Toast::new(ToastType::Info).get_icon(),
+            Toast::new(ToastType::Info).icon(),
             Some(font_awesome_icons::INFO_CIRCLE)
         );
     }
@@ -652,8 +652,8 @@ mod tests {
     #[test]
     fn test_toast_with_content_constructor() {
         let toast = Toast::with_content(ToastType::Info, "Hello".to_string());
-        assert_eq!(toast.get_content(), "Hello");
-        assert_eq!(*toast.get_type(), ToastType::Info);
+        assert_eq!(toast.content(), "Hello");
+        assert_eq!(*toast.toast_type(), ToastType::Info);
         assert_eq!(toast.dismiss_time, NOTIFY_DEFAULT_DISMISS);
     }
 
@@ -661,7 +661,7 @@ mod tests {
     fn test_toast_with_dismiss_time_constructor() {
         let toast = Toast::with_dismiss_time(ToastType::Warning, 5000);
         assert_eq!(toast.dismiss_time, 5000);
-        assert_eq!(*toast.get_type(), ToastType::Warning);
+        assert_eq!(*toast.toast_type(), ToastType::Warning);
     }
 
     #[test]
@@ -669,8 +669,8 @@ mod tests {
         let toast =
             Toast::with_dismiss_time_and_content(ToastType::Error, 1000, "Oops".to_string());
         assert_eq!(toast.dismiss_time, 1000);
-        assert_eq!(toast.get_content(), "Oops");
-        assert_eq!(*toast.get_type(), ToastType::Error);
+        assert_eq!(toast.content(), "Oops");
+        assert_eq!(*toast.toast_type(), ToastType::Error);
     }
 
     #[test]
@@ -682,8 +682,8 @@ mod tests {
             "Action content".to_string(),
         );
         assert!(toast.has_on_button_press());
-        assert_eq!(toast.get_button_label(), "Click me");
-        assert_eq!(toast.get_content(), "Action content");
+        assert_eq!(toast.button_label(), "Click me");
+        assert_eq!(toast.content(), "Action content");
         assert_eq!(toast.dismiss_time, 2000);
     }
 
@@ -691,7 +691,7 @@ mod tests {
     fn test_toast_phase_starts_as_fade_in() {
         let toast = Toast::new(ToastType::Info);
         // Immediately after creation, phase should be FadeIn
-        assert_eq!(toast.get_phase(), ToastPhase::FadeIn);
+        assert_eq!(toast.phase(), ToastPhase::FadeIn);
     }
 
     #[test]
@@ -701,7 +701,7 @@ mod tests {
         toast.dismiss_time = 100_000; // very long dismiss
         // Since we just created it and fade-in is 150ms, within ~0ms the fade percent
         // should be close to 0 (beginning of fade-in)
-        let fade = toast.get_fade_percent();
+        let fade = toast.fade_percent();
         // At time ~0, fade_in phase: (0 / 150) * 0.9 ~ 0.0
         assert!(fade >= 0.0);
         assert!(fade <= NOTIFY_OPACITY);

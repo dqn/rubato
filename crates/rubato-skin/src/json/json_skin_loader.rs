@@ -708,7 +708,7 @@ impl JSONSkinLoader {
         Some(skin)
     }
 
-    /// Dispatches `get_skin()` to the appropriate screen-specific object loader.
+    /// Dispatches `skin()` to the appropriate screen-specific object loader.
     /// Corresponds to Java: `objectLoader.getSkin(header)`.
     fn get_skin_for_type(
         skin_type: &crate::skin_type::SkinType,
@@ -724,13 +724,13 @@ impl JSONSkinLoader {
             | SkinType::Play10Keys
             | SkinType::Play9Keys
             | SkinType::Play24Keys
-            | SkinType::Play24KeysDouble => JsonPlaySkinObjectLoader.get_skin(header),
-            SkinType::MusicSelect => JsonSelectSkinObjectLoader.get_skin(header),
-            SkinType::Decide => JsonDecideSkinObjectLoader.get_skin(header),
-            SkinType::Result => JsonResultSkinObjectLoader.get_skin(header),
-            SkinType::CourseResult => JsonCourseResultSkinObjectLoader.get_skin(header),
-            SkinType::SkinSelect => JsonSkinConfigurationSkinObjectLoader.get_skin(header),
-            _ => JsonKeyConfigurationSkinObjectLoader.get_skin(header),
+            | SkinType::Play24KeysDouble => JsonPlaySkinObjectLoader.skin(header),
+            SkinType::MusicSelect => JsonSelectSkinObjectLoader.skin(header),
+            SkinType::Decide => JsonDecideSkinObjectLoader.skin(header),
+            SkinType::Result => JsonResultSkinObjectLoader.skin(header),
+            SkinType::CourseResult => JsonCourseResultSkinObjectLoader.skin(header),
+            SkinType::SkinSelect => JsonSkinConfigurationSkinObjectLoader.skin(header),
+            _ => JsonKeyConfigurationSkinObjectLoader.skin(header),
         }
     }
 

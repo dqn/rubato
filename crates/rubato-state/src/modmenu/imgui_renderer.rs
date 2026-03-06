@@ -172,7 +172,7 @@ impl ImGuiRenderer {
         // egui context cleanup is handled by beatoraja-bin
     }
 
-    pub fn get_show_mod_menu() -> bool {
+    pub fn show_mod_menu() -> bool {
         *SHOW_MOD_MENU.lock().unwrap()
     }
 

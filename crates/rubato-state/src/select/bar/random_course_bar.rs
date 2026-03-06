@@ -21,7 +21,7 @@ impl RandomCourseBar {
         &self.course
     }
 
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         self.course.name().to_string()
     }
 
@@ -38,7 +38,7 @@ impl RandomCourseBar {
         true
     }
 
-    pub fn get_lamp(&self, _is_player: bool) -> i32 {
+    pub fn lamp(&self, _is_player: bool) -> i32 {
         0
     }
 }
