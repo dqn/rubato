@@ -457,6 +457,15 @@ fn get_screen_type(state: &MainState) -> ScreenType {
     state.get_screen_type()
 }
 
+/// Get the AbstractResult from the current state.
+/// In Java this was done via cast: ((AbstractResult) currentState)
+fn get_abstract_result(_state: &MainState) -> Option<&dyn AbstractResultAccess> {
+    log::warn!(
+        "stub: get_abstract_result — blocked by screen type hierarchy (MainState → AbstractResult cast)"
+    );
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -485,13 +494,4 @@ mod tests {
             ScreenType::Other
         );
     }
-}
-
-/// Get the AbstractResult from the current state.
-/// In Java this was done via cast: ((AbstractResult) currentState)
-fn get_abstract_result(_state: &MainState) -> Option<&dyn AbstractResultAccess> {
-    log::warn!(
-        "stub: get_abstract_result — blocked by screen type hierarchy (MainState → AbstractResult cast)"
-    );
-    None
 }

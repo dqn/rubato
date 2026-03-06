@@ -141,6 +141,11 @@ pub struct ObsWsClient {
 const INITIAL_RECONNECT_DELAY_MS: i32 = 2000;
 const MAX_RECONNECT_DELAY_MS: i32 = 15000;
 const RECONNECT_BACKOFF_MULTIPLIER: f64 = 1.25;
+const _: () = {
+    assert!(INITIAL_RECONNECT_DELAY_MS > 0);
+    assert!(MAX_RECONNECT_DELAY_MS > INITIAL_RECONNECT_DELAY_MS);
+    assert!(RECONNECT_BACKOFF_MULTIPLIER > 1.0);
+};
 
 /// Compute the next reconnect delay using exponential backoff, clamped to the maximum.
 fn compute_next_reconnect_delay(current_delay: i32) -> i32 {
@@ -1116,12 +1121,4 @@ mod tests {
         assert_eq!(next, 0);
     }
 
-    // -- Reconnect constants --
-
-    #[test]
-    fn reconnect_constants_are_sane() {
-        assert!(INITIAL_RECONNECT_DELAY_MS > 0);
-        assert!(MAX_RECONNECT_DELAY_MS > INITIAL_RECONNECT_DELAY_MS);
-        assert!(RECONNECT_BACKOFF_MULTIPLIER > 1.0);
-    }
 }
