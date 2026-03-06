@@ -350,9 +350,9 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
             };
         // Wire dependencies so the shared selector can access config, sounds, scores, etc.
         {
-            selector.set_main_controller(rubato_launcher::state_factory::new_state_main_controller_access(
-                &main_controller,
-            ));
+            selector.set_main_controller(
+                rubato_launcher::state_factory::new_state_main_controller_access(&main_controller),
+            );
             selector.set_player_config(main_controller.get_player_config().clone());
         }
         let selector = std::sync::Arc::new(std::sync::Mutex::new(selector));
