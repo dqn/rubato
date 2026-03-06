@@ -1,0 +1,9 @@
+pub mod skin_bga_object;
+pub mod skin_gauge;
+pub mod skin_gauge_graph_object;
+pub mod skin_hidden;
+pub mod skin_image;
+pub mod skin_judge_object;
+pub mod skin_note_object;
+pub mod skin_number;
+pub mod skin_slider;

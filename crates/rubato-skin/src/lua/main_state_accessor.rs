@@ -1,10 +1,10 @@
 use mlua::prelude::*;
 
+use crate::core::skin_property_mapper;
 use crate::property::boolean_property_factory;
 use crate::property::float_property_factory;
 use crate::property::integer_property_factory;
 use crate::property::string_property_factory;
-use crate::skin_property_mapper;
 use crate::stubs::MainState;
 
 /// Main state accessor for Lua
