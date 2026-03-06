@@ -93,7 +93,7 @@ impl VideoConfigurationView {
     // public void updatePlayer(PlayerConfig player)
     pub fn update_player(&mut self, player: &mut PlayerConfig) {
         // missLayerTime.getValueFactory().setValue(player.getMisslayerDuration());
-        self.miss_layer_time = player.get_misslayer_duration();
+        self.miss_layer_time = player.misslayer_duration();
     }
 
     // public void commit(Config config)

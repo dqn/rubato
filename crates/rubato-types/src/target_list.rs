@@ -24,12 +24,12 @@ pub fn set_target_names(names: Vec<String>) {
 }
 
 /// Get the current target ID list.
-pub fn get_targets() -> Vec<String> {
+pub fn targets() -> Vec<String> {
     lock_or_recover(&TARGETS).clone()
 }
 
 /// Look up the display name for a target ID.
-pub fn get_target_name(target: &str) -> String {
+pub fn target_name(target: &str) -> String {
     let targets = lock_or_recover(&TARGETS);
     let names = lock_or_recover(&TARGET_NAMES);
     for i in 0..targets.len() {
@@ -61,7 +61,7 @@ pub fn resolve_target_name(id: &str, rivals: &[PlayerInformation]) -> String {
                 && n >= 1
                 && n <= rivals.len()
             {
-                return rivals[n - 1].get_name().to_string();
+                return rivals[n - 1].name().to_string();
             }
             id.to_string()
         }
@@ -120,7 +120,7 @@ mod tests {
         set_target_ids(vec!["MYBEST".to_string()]);
         set_target_names(vec!["MY BEST".to_string()]);
 
-        assert_eq!(get_targets(), vec!["MYBEST".to_string()]);
-        assert_eq!(get_target_name("MYBEST"), "MY BEST");
+        assert_eq!(targets(), vec!["MYBEST".to_string()]);
+        assert_eq!(target_name("MYBEST"), "MY BEST");
     }
 }

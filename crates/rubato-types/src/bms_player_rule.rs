@@ -15,7 +15,7 @@ pub enum BMSPlayerRule {
 /// These values mirror JudgeWindowRule.judgerank from beatoraja-play.
 ///
 /// Java: BMSPlayerRule.getBMSPlayerRule(mode).judge.windowrule.judgerank
-fn get_judgerank_table(mode: Option<&Mode>) -> &'static [i32; 5] {
+fn judgerank_table(mode: Option<&Mode>) -> &'static [i32; 5] {
     match mode {
         Some(m) if *m == Mode::POPN_5K || *m == Mode::POPN_9K => {
             // PMS rule: [33, 50, 70, 100, 133]
@@ -45,7 +45,7 @@ impl BMSPlayerRule {
     /// Java: BMSPlayerRule.validate(BMSModel)
     pub fn validate(model: &mut BMSModel) {
         let judgerank = model.judgerank();
-        let table = get_judgerank_table(model.mode());
+        let table = judgerank_table(model.mode());
 
         match model.judgerank_type() {
             JudgeRankType::BmsRank => {

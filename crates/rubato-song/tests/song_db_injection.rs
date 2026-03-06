@@ -48,7 +48,7 @@ fn get_song_datas_by_hashes_single_quote_handled_safely() {
 
     // A hash with a single quote is now safely parameterized
     let malicious_hash = "it'sbrokenAAAAAAAAAAAAAAAAAAAAAAAAA".to_string();
-    let results = accessor.get_song_datas_by_hashes(&[malicious_hash]);
+    let results = accessor.song_datas_by_hashes(&[malicious_hash]);
 
     // No SQL error - just correctly returns empty (no matching hash)
     assert!(
@@ -75,7 +75,7 @@ fn get_song_datas_by_hashes_injection_blocked() {
 
     // Injection payload that previously broke out of IN clause
     let injected = "') OR 1=1 --AAAAAAAAAAAAAAAAAAAAAA".to_string();
-    let results = accessor.get_song_datas_by_hashes(&[injected]);
+    let results = accessor.song_datas_by_hashes(&[injected]);
 
     // Injection is blocked - the payload is treated as a literal hash value
     assert_eq!(
@@ -101,14 +101,14 @@ fn get_song_datas_column_injection_blocked() {
     accessor.set_song_datas(&[song]);
 
     // Invalid column name returns empty (not an error)
-    let results = accessor.get_song_datas("1=1 --", "ignored");
+    let results = accessor.song_datas("1=1 --", "ignored");
     assert!(
         results.is_empty(),
         "invalid column name should be rejected by whitelist"
     );
 
     // Valid column name still works
-    let results = accessor.get_song_datas("sha256", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    let results = accessor.song_datas("sha256", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     assert_eq!(results.len(), 1, "valid column name should work normally");
 }
 
@@ -121,7 +121,7 @@ fn get_folder_datas_column_injection_blocked() {
     let (accessor, _tmpdir) = create_temp_accessor();
 
     // Invalid column name returns empty (not an error)
-    let results = accessor.get_folder_datas("1=1 --", "ignored");
+    let results = accessor.folder_datas("1=1 --", "ignored");
     assert!(
         results.is_empty(),
         "invalid column name should be rejected by whitelist"
@@ -152,7 +152,7 @@ fn song_db_path_with_single_quote() {
         "songs/test.bms",
     );
     accessor.set_song_datas(&[song]);
-    let results = accessor.get_song_datas("sha256", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    let results = accessor.song_datas("sha256", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     assert_eq!(results.len(), 1, "DB with quoted path should be functional");
 
     // ATTACH DATABASE with single-quote path now uses escaping
@@ -163,7 +163,7 @@ fn song_db_path_with_single_quote() {
 
     // Previously this failed due to unescaped single quote in ATTACH path.
     // Now the path is escaped (single quotes doubled).
-    let results = accessor.get_song_datas_by_sql(
+    let results = accessor.song_datas_by_sql(
         "1=1",
         &score_path.to_string_lossy(),
         &scorelog_path.to_string_lossy(),

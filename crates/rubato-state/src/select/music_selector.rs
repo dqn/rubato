@@ -67,19 +67,19 @@ struct SelectSkinContext<'a> {
 }
 
 impl rubato_types::timer_access::TimerAccess for SelectSkinContext<'_> {
-    fn get_now_time(&self) -> i64 {
+    fn now_time(&self) -> i64 {
         self.timer.get_now_time()
     }
-    fn get_now_micro_time(&self) -> i64 {
+    fn now_micro_time(&self) -> i64 {
         self.timer.get_now_micro_time()
     }
-    fn get_micro_timer(&self, timer_id: i32) -> i64 {
+    fn micro_timer(&self, timer_id: i32) -> i64 {
         self.timer.get_micro_timer(timer_id)
     }
-    fn get_timer(&self, timer_id: i32) -> i64 {
+    fn timer(&self, timer_id: i32) -> i64 {
         self.timer.get_timer(timer_id)
     }
-    fn get_now_time_for(&self, timer_id: i32) -> i64 {
+    fn now_time_for(&self, timer_id: i32) -> i64 {
         self.timer.get_now_time_for_id(timer_id)
     }
     fn is_timer_on(&self, timer_id: i32) -> bool {
@@ -112,50 +112,48 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
         Some(rubato_types::main_state_type::MainStateType::MusicSelect)
     }
 
-    fn get_player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
+    fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         Some(&self.selector.config)
     }
 
-    fn get_player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
+    fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
         Some(&mut self.selector.config)
     }
 
-    fn get_config_ref(&self) -> Option<&rubato_types::config::Config> {
+    fn config_ref(&self) -> Option<&rubato_types::config::Config> {
         Some(&self.selector.app_config)
     }
 
-    fn get_config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
+    fn config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
         Some(&mut self.selector.app_config)
     }
 
-    fn get_selected_play_config_mut(
-        &mut self,
-    ) -> Option<&mut rubato_types::play_config::PlayConfig> {
+    fn selected_play_config_mut(&mut self) -> Option<&mut rubato_types::play_config::PlayConfig> {
         self.selector.get_selected_play_config_mut()
     }
 
-    fn get_current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
+    fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
         self.selector.get_selected_play_config_ref()
     }
 
-    fn get_target_score_data(&self) -> Option<&rubato_types::score_data::ScoreData> {
+    fn target_score_data(&self) -> Option<&rubato_types::score_data::ScoreData> {
         self.selected_rival_score()
     }
 
-    fn get_score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
+    fn score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
         self.selected_score()
     }
 
-    fn get_rival_score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
+    fn rival_score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
         self.selected_rival_score()
     }
 
-    fn get_song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
+    fn song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
         self.selected_song_data()
     }
 
-    fn get_mode_image_index(&self) -> Option<i32> {
-        let current_mode = self.selector.config.get_mode();
+    fn mode_image_index(&self) -> Option<i32> {
+        let current_mode = self.selector.config.mode();
         let mode_index = MODE.iter().position(|mode| mode.as_ref() == current_mode)?;
         let lr2_mode_indices = [0, 2, 4, 5, 1, 3];
         Some(
@@ -166,7 +164,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
         )
     }
 
-    fn get_sort_image_index(&self) -> Option<i32> {
+    fn sort_image_index(&self) -> Option<i32> {
         Some(self.selector.get_sort())
     }
 
@@ -693,7 +691,7 @@ impl MusicSelector {
         self.refresh_bar_with_context();
         log::info!(
             "Rival changed: {}",
-            self.rival.as_ref().map(|r| r.get_name()).unwrap_or("None")
+            self.rival.as_ref().map(|r| r.name()).unwrap_or("None")
         );
     }
 
@@ -736,7 +734,7 @@ impl MusicSelector {
     pub fn execute_event_with_args(&mut self, event: EventType, arg1: i32, _arg2: i32) {
         match event {
             EventType::Mode => {
-                let current_mode = self.config.get_mode().cloned();
+                let current_mode = self.config.mode().cloned();
                 let mut idx = 0;
                 for (i, m) in MODE.iter().enumerate() {
                     if *m == current_mode {
@@ -835,11 +833,11 @@ impl MusicSelector {
             }
             EventType::Rival => {
                 if let Some(ref main) = self.main {
-                    let rival_count = main.get_rival_count();
+                    let rival_count = main.rival_count();
                     // Find current rival's index in the rival list
                     let mut index: i32 = -1;
                     for i in 0..rival_count {
-                        if let Some(info) = main.get_rival_information(i)
+                        if let Some(info) = main.rival_information(i)
                             && self.rival.as_ref() == Some(&info)
                         {
                             index = i as i32;
@@ -851,7 +849,7 @@ impl MusicSelector {
                     let step = if arg1 >= 0 { 2 } else { total };
                     index = (index + step) % total - 1;
                     let new_rival = if index >= 0 {
-                        main.get_rival_information(index as usize)
+                        main.rival_information(index as usize)
                     } else {
                         None
                     };
@@ -916,10 +914,10 @@ impl MusicSelector {
                     if let Some(folder) = selected.as_folder_bar()
                         && let Some(fd) = folder.get_folder_data()
                     {
-                        let path = fd.get_path().to_string();
+                        let path = fd.path().to_string();
                         main.update_song(Some(&path));
                     } else if let Some(songbar) = selected.as_song_bar()
-                        && let Some(path) = songbar.get_song_data().get_path()
+                        && let Some(path) = songbar.get_song_data().path()
                         && let Some(parent) =
                             std::path::Path::new(path).parent().and_then(|p| p.to_str())
                     {
@@ -932,7 +930,7 @@ impl MusicSelector {
             }
             EventType::OpenDocument => {
                 if let Some(songbar) = self.manager.get_selected().and_then(|b| b.as_song_bar())
-                    && let Some(path) = songbar.get_song_data().get_path()
+                    && let Some(path) = songbar.get_song_data().path()
                     && let Some(parent) = std::path::Path::new(path).parent()
                     && let Ok(entries) = std::fs::read_dir(parent)
                 {
@@ -950,7 +948,7 @@ impl MusicSelector {
             }
             EventType::OpenWithExplorer => {
                 if let Some(songbar) = self.manager.get_selected().and_then(|b| b.as_song_bar())
-                    && let Some(path) = songbar.get_song_data().get_path()
+                    && let Some(path) = songbar.get_song_data().path()
                     && let Some(parent) = std::path::Path::new(path).parent()
                     && let Err(e) = open::that(parent)
                 {
@@ -961,7 +959,7 @@ impl MusicSelector {
                 if let Some(songbar) = self.manager.get_selected().and_then(|b| b.as_song_bar()) {
                     let sd = songbar.get_song_data();
                     if let Some(ref main) = self.main
-                        && let Some(url) = main.get_ir_song_url(sd)
+                        && let Some(url) = main.ir_song_url(sd)
                         && let Err(e) = open::that(&url)
                     {
                         log::error!("Failed to open IR URL: {}", e);
@@ -971,7 +969,7 @@ impl MusicSelector {
                 {
                     let cd = gradebar.get_course_data();
                     if let Some(ref main) = self.main
-                        && let Some(url) = main.get_ir_course_url(cd)
+                        && let Some(url) = main.ir_course_url(cd)
                         && let Err(e) = open::that(&url)
                     {
                         log::error!("Failed to open IR URL: {}", e);
@@ -981,13 +979,13 @@ impl MusicSelector {
             EventType::OpenDownloadSite => {
                 if let Some(songbar) = self.manager.get_selected().and_then(|b| b.as_song_bar()) {
                     let sd = songbar.get_song_data();
-                    let url = sd.get_url();
+                    let url = sd.url();
                     if !url.is_empty()
                         && let Err(e) = open::that(url)
                     {
                         log::error!("Failed to open download site: {}", e);
                     }
-                    let appendurl = sd.get_appendurl();
+                    let appendurl = sd.appendurl();
                     if !appendurl.is_empty()
                         && let Err(e) = open::that(appendurl)
                     {
@@ -1037,7 +1035,7 @@ impl MusicSelector {
 
         Some(normalized_play_config_mode(
             self.config
-                .get_mode()
+                .mode()
                 .cloned()
                 .unwrap_or(bms_model::Mode::BEAT_7K),
         ))
@@ -1072,7 +1070,7 @@ impl MusicSelector {
         res.clear();
 
         // resource.setBMSFile(path, play)
-        let path_str = match song.get_path() {
+        let path_str = match song.path() {
             Some(p) => p,
             None => {
                 ImGuiNotify::error("Failed to loading BMS : Song not found, or Song has error");
@@ -1088,13 +1086,7 @@ impl MusicSelector {
             let table_urls: Vec<String> = self
                 .main
                 .as_ref()
-                .map(|m| {
-                    m.get_config()
-                        .table_url
-                        .iter()
-                        .map(|s| s.to_string())
-                        .collect()
-                })
+                .map(|m| m.config().table_url.iter().map(|s| s.to_string()).collect())
                 .unwrap_or_default();
 
             let dir = self.manager.get_directory();
@@ -1131,14 +1123,14 @@ impl MusicSelector {
             // Java L384-388: only create new RankingData when IR active AND currentir is null.
             // Do NOT null out currentir when IR inactive (selectedBarMoved already set it).
             if let Some(ref mut main) = self.main
-                && main.get_ir_connection_any().is_some()
+                && main.ir_connection_any().is_some()
                 && self.currentir.is_none()
             {
                 use rubato_ir::ranking_data::RankingData;
-                let lnmode = main.get_player_config().lnmode;
+                let lnmode = main.player_config().lnmode;
                 let rd = RankingData::new();
                 self.currentir = Some(rd.clone());
-                if let Some(cache) = main.get_ranking_data_cache_mut() {
+                if let Some(cache) = main.ranking_data_cache_mut() {
                     cache.put_song_any(song, lnmode, Box::new(rd));
                 }
             }
@@ -1376,7 +1368,7 @@ impl MusicSelector {
         let ir_active = self
             .main
             .as_ref()
-            .map(|m| m.get_ir_connection_any().is_some())
+            .map(|m| m.ir_connection_any().is_some())
             .unwrap_or(false);
 
         if ir_active {
@@ -1386,11 +1378,11 @@ impl MusicSelector {
                         // Refresh currentir from cache
                         if let Some(main) = self.main.as_ref() {
                             use rubato_ir::ranking_data::RankingData;
-                            let lnmode = main.get_player_config().lnmode;
+                            let lnmode = main.player_config().lnmode;
                             let song = song_bar.get_song_data();
                             self.currentir = main
-                                .get_ranking_data_cache()
-                                .and_then(|c| c.get_song_any(song, lnmode))
+                                .ranking_data_cache()
+                                .and_then(|c| c.song_any(song, lnmode))
                                 .and_then(|a| a.downcast::<RankingData>().ok())
                                 .map(|ranking| *ranking);
                         }
@@ -1411,11 +1403,11 @@ impl MusicSelector {
                         // Refresh currentir from cache for course
                         if let Some(main) = self.main.as_ref() {
                             use rubato_ir::ranking_data::RankingData;
-                            let lnmode = main.get_player_config().lnmode;
+                            let lnmode = main.player_config().lnmode;
                             let course = grade_bar.get_course_data();
                             self.currentir = main
-                                .get_ranking_data_cache()
-                                .and_then(|c| c.get_course_any(course, lnmode))
+                                .ranking_data_cache()
+                                .and_then(|c| c.course_any(course, lnmode))
                                 .and_then(|a| a.downcast::<RankingData>().ok())
                                 .map(|ranking| *ranking);
                         }
@@ -1661,7 +1653,7 @@ impl MusicSelector {
     pub fn get_selected_bar_play_config(&self) -> Option<&PlayConfig> {
         let mode = self
             .config
-            .get_mode()
+            .mode()
             .cloned()
             .unwrap_or(bms_model::Mode::BEAT_7K);
         Some(&self.config.play_config_ref(mode).playconfig)
@@ -1717,7 +1709,7 @@ impl MusicSelector {
             if self
                 .main
                 .as_ref()
-                .and_then(|m| m.get_http_downloader())
+                .and_then(|m| m.http_downloader())
                 .is_some()
             {
                 self.execute(MusicSelectCommand::DownloadCourseHttp);
@@ -1830,7 +1822,7 @@ impl MusicSelector {
         let songs = gb.get_song_datas();
         let files: Vec<PathBuf> = songs
             .iter()
-            .filter_map(|s| s.get_path().map(PathBuf::from))
+            .filter_map(|s| s.path().map(PathBuf::from))
             .collect();
 
         if files.len() != songs.len() {
@@ -1897,7 +1889,7 @@ impl MusicSelector {
             let course_song_data = self
                 .player_resource
                 .as_ref()
-                .map(|r| r.get_course_song_data())
+                .map(|r| r.course_song_data())
                 .unwrap_or_default();
 
             let mut course_data = gb.get_course_data().clone();
@@ -1918,11 +1910,11 @@ impl MusicSelector {
             // Load/create cached IR ranking data for course
             if let Some(ref mut main) = self.main {
                 use rubato_ir::ranking_data::RankingData;
-                let lnmode = main.get_player_config().lnmode;
+                let lnmode = main.player_config().lnmode;
                 let course = gb.get_course_data();
                 let cached = main
-                    .get_ranking_data_cache()
-                    .and_then(|c| c.get_course_any(course, lnmode))
+                    .ranking_data_cache()
+                    .and_then(|c| c.course_any(course, lnmode))
                     .and_then(|a| a.downcast::<RankingData>().ok())
                     .map(|ranking| *ranking);
                 if let Some(rd) = cached {
@@ -1930,7 +1922,7 @@ impl MusicSelector {
                 } else {
                     let rd = RankingData::new();
                     self.currentir = Some(rd.clone());
-                    if let Some(cache) = main.get_ranking_data_cache_mut() {
+                    if let Some(cache) = main.ranking_data_cache_mut() {
                         cache.put_course_any(course, lnmode, Box::new(rd));
                     }
                 }
@@ -1967,18 +1959,18 @@ impl MusicSelector {
 // ============================================================
 
 impl rubato_types::song_selection_access::SongSelectionAccess for MusicSelector {
-    fn get_selected_song_data(&self) -> Option<SongData> {
+    fn selected_song_data(&self) -> Option<SongData> {
         let bar = self.get_selected_bar()?;
         bar.as_song_bar().map(|sb| sb.get_song_data().clone())
     }
 
-    fn get_selected_score_data(&self) -> Option<ScoreData> {
+    fn selected_score_data(&self) -> Option<ScoreData> {
         let bar = self.get_selected_bar()?;
         bar.as_song_bar()
             .and_then(|sb| sb.selectable.bar_data.get_score().cloned())
     }
 
-    fn get_reverse_lookup_data(&self) -> Vec<String> {
+    fn reverse_lookup_data(&self) -> Vec<String> {
         // Reverse lookup data comes from PlayerResource via MainController.
         // Currently returns empty; wire when PlayerResource is accessible.
         Vec::new()
@@ -2101,7 +2093,7 @@ impl MainState for MusicSelector {
     }
 
     fn get_sound(&self, sound: SoundType) -> Option<String> {
-        self.main.as_ref().and_then(|m| m.get_sound_path(&sound))
+        self.main.as_ref().and_then(|m| m.sound_path(&sound))
     }
 
     fn play_sound_loop(&mut self, sound: SoundType, loop_sound: bool) {
@@ -2448,7 +2440,7 @@ impl MainState for MusicSelector {
                         // Rust: load synchronously (BMS parsing is fast).
                         let path = song_bar
                             .get_song_data()
-                            .get_path()
+                            .path()
                             .map(std::path::PathBuf::from);
                         let lnmode = self.config.lnmode;
                         if let Some(path) = path
@@ -2456,10 +2448,8 @@ impl MainState for MusicSelector {
                                 rubato_core::player_resource::PlayerResource::load_bms_model(
                                     &path, lnmode,
                                 )
-                            && let Some(sd) = self
-                                .player_resource
-                                .as_mut()
-                                .and_then(|r| r.get_songdata_mut())
+                            && let Some(sd) =
+                                self.player_resource.as_mut().and_then(|r| r.songdata_mut())
                         {
                             sd.set_bms_model(model);
                         }
@@ -2488,21 +2478,21 @@ impl MainState for MusicSelector {
                 && let Some(main) = self.main.as_mut()
             {
                 use rubato_ir::ranking_data::RankingData;
-                let lnmode = main.get_player_config().lnmode;
+                let lnmode = main.player_config().lnmode;
                 if let Some(song_bar) = current.as_song_bar()
                     && song_bar.exists_song()
                     && self.play.is_none()
                 {
                     let song = song_bar.get_song_data();
                     let cached = main
-                        .get_ranking_data_cache()
-                        .and_then(|c| c.get_song_any(song, lnmode))
+                        .ranking_data_cache()
+                        .and_then(|c| c.song_any(song, lnmode))
                         .and_then(|a| a.downcast::<RankingData>().ok())
                         .map(|ranking| *ranking);
                     if cached.is_none() {
                         let rd = RankingData::new();
                         self.currentir = Some(rd.clone());
-                        if let Some(cache) = main.get_ranking_data_cache_mut() {
+                        if let Some(cache) = main.ranking_data_cache_mut() {
                             cache.put_song_any(song, lnmode, Box::new(rd));
                         }
                     } else {
@@ -2513,7 +2503,7 @@ impl MainState for MusicSelector {
                         use rubato_ir::ir_chart_data::IRChartData;
                         use rubato_ir::ir_connection::IRConnection;
                         use std::sync::Arc;
-                        if let Some(conn_arc) = main.get_ir_connection_any().and_then(|any| {
+                        if let Some(conn_arc) = main.ir_connection_any().and_then(|any| {
                             any.downcast_ref::<Arc<dyn IRConnection + Send + Sync>>()
                                 .cloned()
                         }) {
@@ -2534,14 +2524,14 @@ impl MainState for MusicSelector {
                 {
                     let course = grade_bar.get_course_data();
                     let cached = main
-                        .get_ranking_data_cache()
-                        .and_then(|c| c.get_course_any(course, lnmode))
+                        .ranking_data_cache()
+                        .and_then(|c| c.course_any(course, lnmode))
                         .and_then(|a| a.downcast::<RankingData>().ok())
                         .map(|ranking| *ranking);
                     if cached.is_none() {
                         let rd = RankingData::new();
                         self.currentir = Some(rd.clone());
-                        if let Some(cache) = main.get_ranking_data_cache_mut() {
+                        if let Some(cache) = main.ranking_data_cache_mut() {
                             cache.put_course_any(course, lnmode, Box::new(rd));
                         }
                     } else {
@@ -2552,7 +2542,7 @@ impl MainState for MusicSelector {
                         use rubato_ir::ir_connection::IRConnection;
                         use rubato_ir::ir_course_data::IRCourseData;
                         use std::sync::Arc;
-                        if let Some(conn_arc) = main.get_ir_connection_any().and_then(|any| {
+                        if let Some(conn_arc) = main.ir_connection_any().and_then(|any| {
                             any.downcast_ref::<Arc<dyn IRConnection + Send + Sync>>()
                                 .cloned()
                         }) {
@@ -2660,7 +2650,7 @@ impl MainState for MusicSelector {
                         .filter_map(|bar| {
                             bar.as_song_bar()
                                 .filter(|sb| sb.exists_song())
-                                .and_then(|sb| sb.get_song_data().get_path())
+                                .and_then(|sb| sb.get_song_data().path())
                                 .map(PathBuf::from)
                         })
                         .collect();
@@ -2682,7 +2672,7 @@ impl MainState for MusicSelector {
                     // 1. If song has IPFS hash and IPFS daemon is alive -> IPFS download
                     // 2. Else if HTTP download processor is available -> HTTP download
                     // 3. Else -> open download site in browser
-                    let ipfs_available = !song.get_ipfs_str().is_empty()
+                    let ipfs_available = !song.ipfs_str().is_empty()
                         && self
                             .main
                             .as_ref()
@@ -2690,7 +2680,7 @@ impl MainState for MusicSelector {
                     let http_available = self
                         .main
                         .as_ref()
-                        .and_then(|m| m.get_http_downloader())
+                        .and_then(|m| m.http_downloader())
                         .is_some();
 
                     if ipfs_available {
@@ -3549,86 +3539,86 @@ mod tests {
         fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
             self
         }
-        fn get_config(&self) -> &rubato_types::config::Config {
+        fn config(&self) -> &rubato_types::config::Config {
             static CFG: std::sync::OnceLock<rubato_types::config::Config> =
                 std::sync::OnceLock::new();
             CFG.get_or_init(rubato_types::config::Config::default)
         }
-        fn get_player_config(&self) -> &rubato_types::player_config::PlayerConfig {
+        fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
             static PC: std::sync::OnceLock<rubato_types::player_config::PlayerConfig> =
                 std::sync::OnceLock::new();
             PC.get_or_init(rubato_types::player_config::PlayerConfig::default)
         }
-        fn get_score_data(&self) -> Option<&ScoreData> {
+        fn score_data(&self) -> Option<&ScoreData> {
             None
         }
-        fn get_rival_score_data(&self) -> Option<&ScoreData> {
+        fn rival_score_data(&self) -> Option<&ScoreData> {
             None
         }
-        fn get_target_score_data(&self) -> Option<&ScoreData> {
+        fn target_score_data(&self) -> Option<&ScoreData> {
             None
         }
-        fn get_course_score_data(&self) -> Option<&ScoreData> {
+        fn course_score_data(&self) -> Option<&ScoreData> {
             None
         }
         fn set_course_score_data(&mut self, _score: ScoreData) {}
-        fn get_songdata(&self) -> Option<&SongData> {
+        fn songdata(&self) -> Option<&SongData> {
             None
         }
-        fn get_songdata_mut(&mut self) -> Option<&mut SongData> {
+        fn songdata_mut(&mut self) -> Option<&mut SongData> {
             None
         }
         fn set_songdata(&mut self, _data: Option<SongData>) {}
-        fn get_replay_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
+        fn replay_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
             None
         }
-        fn get_replay_data_mut(&mut self) -> Option<&mut rubato_types::replay_data::ReplayData> {
+        fn replay_data_mut(&mut self) -> Option<&mut rubato_types::replay_data::ReplayData> {
             None
         }
-        fn get_course_replay(&self) -> &[rubato_types::replay_data::ReplayData] {
+        fn course_replay(&self) -> &[rubato_types::replay_data::ReplayData] {
             &[]
         }
         fn add_course_replay(&mut self, _rd: rubato_types::replay_data::ReplayData) {}
-        fn get_course_data(&self) -> Option<&CourseData> {
+        fn course_data(&self) -> Option<&CourseData> {
             None
         }
-        fn get_course_index(&self) -> usize {
+        fn course_index(&self) -> usize {
             0
         }
         fn next_course(&mut self) -> bool {
             false
         }
-        fn get_constraint(&self) -> Vec<rubato_types::course_data::CourseDataConstraint> {
+        fn constraint(&self) -> Vec<rubato_types::course_data::CourseDataConstraint> {
             vec![]
         }
-        fn get_gauge(&self) -> Option<&Vec<Vec<f32>>> {
+        fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
             None
         }
-        fn get_groove_gauge(&self) -> Option<&rubato_types::groove_gauge::GrooveGauge> {
+        fn groove_gauge(&self) -> Option<&rubato_types::groove_gauge::GrooveGauge> {
             None
         }
-        fn get_course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
+        fn course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
             static EMPTY: Vec<Vec<Vec<f32>>> = Vec::new();
             &EMPTY
         }
         fn add_course_gauge(&mut self, _gauge: Vec<Vec<f32>>) {}
-        fn get_course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
+        fn course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
             &mut self.course_gauge
         }
-        fn get_score_data_mut(&mut self) -> Option<&mut ScoreData> {
+        fn score_data_mut(&mut self) -> Option<&mut ScoreData> {
             None
         }
-        fn get_course_replay_mut(&mut self) -> &mut Vec<rubato_types::replay_data::ReplayData> {
+        fn course_replay_mut(&mut self) -> &mut Vec<rubato_types::replay_data::ReplayData> {
             &mut self.course_replay
         }
-        fn get_maxcombo(&self) -> i32 {
+        fn maxcombo(&self) -> i32 {
             0
         }
-        fn get_org_gauge_option(&self) -> i32 {
+        fn org_gauge_option(&self) -> i32 {
             0
         }
         fn set_org_gauge_option(&mut self, _val: i32) {}
-        fn get_assist(&self) -> i32 {
+        fn assist(&self) -> i32 {
             0
         }
         fn is_update_score(&self) -> bool {
@@ -3643,10 +3633,10 @@ mod tests {
         fn is_freq_on(&self) -> bool {
             false
         }
-        fn get_reverse_lookup_data(&self) -> Vec<String> {
+        fn reverse_lookup_data(&self) -> Vec<String> {
             vec![]
         }
-        fn get_reverse_lookup_levels(&self) -> Vec<String> {
+        fn reverse_lookup_levels(&self) -> Vec<String> {
             vec![]
         }
         fn clear(&mut self) {
@@ -3682,7 +3672,7 @@ mod tests {
         fn clear_course_data(&mut self) {
             self.state.lock().unwrap().course_data = None;
         }
-        fn get_course_song_data(&self) -> Vec<SongData> {
+        fn course_song_data(&self) -> Vec<SongData> {
             self.state.lock().unwrap().course_song_data.clone()
         }
         fn set_auto_play_songs(&mut self, paths: Vec<PathBuf>, loop_play: bool) {
@@ -3713,12 +3703,12 @@ mod tests {
     }
 
     impl MainControllerAccess for MockMainController {
-        fn get_config(&self) -> &rubato_types::config::Config {
+        fn config(&self) -> &rubato_types::config::Config {
             static CFG: std::sync::OnceLock<rubato_types::config::Config> =
                 std::sync::OnceLock::new();
             CFG.get_or_init(rubato_types::config::Config::default)
         }
-        fn get_player_config(&self) -> &rubato_types::player_config::PlayerConfig {
+        fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
             static PC: std::sync::OnceLock<rubato_types::player_config::PlayerConfig> =
                 std::sync::OnceLock::new();
             PC.get_or_init(rubato_types::player_config::PlayerConfig::default)
@@ -3730,10 +3720,10 @@ mod tests {
         fn exit(&self) {}
         fn save_last_recording(&self, _reason: &str) {}
         fn update_song(&mut self, _path: Option<&str>) {}
-        fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
+        fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
             Some(&self.resource)
         }
-        fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
+        fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
             Some(&mut self.resource)
         }
         fn play_audio_path(&mut self, path: &str, _volume: f32, _loop_play: bool) {
@@ -4196,7 +4186,7 @@ mod tests {
                 .filter_map(|bar| {
                     bar.as_song_bar()
                         .filter(|sb| sb.exists_song())
-                        .and_then(|sb| sb.get_song_data().get_path())
+                        .and_then(|sb| sb.get_song_data().path())
                         .map(PathBuf::from)
                 })
                 .collect()

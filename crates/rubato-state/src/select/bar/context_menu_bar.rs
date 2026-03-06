@@ -105,7 +105,7 @@ impl ContextMenuBar {
 
     pub fn get_children(&self, tables: &[TableBar], songdb: &dyn SongDatabaseAccessor) -> Vec<Bar> {
         if let Some(ref song) = self.song {
-            if song.get_path().is_some() {
+            if song.path().is_some() {
                 return self.song_context(tables, songdb);
             } else {
                 return self.missing_song_context(tables);
@@ -180,7 +180,7 @@ impl ContextMenuBar {
                 selector.update_bar_with_songdb_context(Some(&bar));
                 selector.play_sound(SoundType::FolderOpen);
             }));
-            let folder_songs = songdb.get_song_datas("folder", &song_folder);
+            let folder_songs = songdb.song_datas("folder", &song_folder);
             let lamps = Self::calculate_lamps(&folder_songs, |_| None, None);
             related.set_lamps(lamps);
             options.push(Bar::Function(Box::new(related)));
@@ -189,7 +189,7 @@ impl ContextMenuBar {
         // Open Song Folder
         let mut open_folder = FunctionBar::new("Open Song Folder".to_string(), STYLE_FOLDER);
         {
-            let song_path = song.get_path().map(|p| p.to_string());
+            let song_path = song.path().map(|p| p.to_string());
             open_folder.set_function(Arc::new(move |_selector| {
                 if let Some(ref path) = song_path
                     && let Some(parent) = std::path::Path::new(path).parent()
@@ -203,7 +203,7 @@ impl ContextMenuBar {
 
         // Open URL
         {
-            let url = song.get_url();
+            let url = song.url();
             if !url.is_empty() {
                 let url_owned = url.to_string();
                 let mut open_url = FunctionBar::new("Open URL".to_string(), STYLE_FOLDER);
@@ -216,8 +216,8 @@ impl ContextMenuBar {
 
         // Open Append URL
         {
-            let append_url = song.get_appendurl();
-            let main_url = song.get_url();
+            let append_url = song.appendurl();
+            let main_url = song.url();
             if !append_url.is_empty() && append_url != main_url {
                 let append_url_owned = append_url.to_string();
                 let mut open_append = FunctionBar::new("Open Append URL".to_string(), STYLE_FOLDER);
@@ -355,9 +355,7 @@ impl ContextMenuBar {
                     .iter()
                     .flat_map(|f| f.get_song().iter().cloned())
                     .collect();
-                if let Some(downloader) =
-                    selector.main.as_ref().and_then(|m| m.get_http_downloader())
-                {
+                if let Some(downloader) = selector.main.as_ref().and_then(|m| m.http_downloader()) {
                     let fill_count =
                         ContextMenuBar::fill_missing_charts(&want, &*selector.songdb, downloader);
                     if fill_count == 0 {
@@ -387,9 +385,7 @@ impl ContextMenuBar {
                 STYLE_TEXT_NEW,
             );
             fill_missing.set_function(Arc::new(move |selector| {
-                if let Some(downloader) =
-                    selector.main.as_ref().and_then(|m| m.get_http_downloader())
-                {
+                if let Some(downloader) = selector.main.as_ref().and_then(|m| m.http_downloader()) {
                     let fill_count = ContextMenuBar::fill_missing_charts(
                         &elements,
                         &*selector.songdb,
@@ -540,7 +536,7 @@ impl ContextMenuBar {
             }
 
             // Copy Path
-            if let Some(path) = song.get_path() {
+            if let Some(path) = song.path() {
                 let path_str = path.to_string();
                 let mut copy_path = FunctionBar::new_with_text_type(
                     "Copy Path".to_string(),
@@ -557,7 +553,7 @@ impl ContextMenuBar {
 
             // Copy URL
             {
-                let url = song.get_url();
+                let url = song.url();
                 if !url.is_empty() {
                     let url_str = url.to_string();
                     let mut copy_url = FunctionBar::new_with_text_type(
@@ -576,8 +572,8 @@ impl ContextMenuBar {
 
             // Copy Append URL
             {
-                let append_url = song.get_appendurl();
-                let main_url = song.get_url();
+                let append_url = song.appendurl();
+                let main_url = song.url();
                 if !append_url.is_empty() && append_url != main_url {
                     let append_str = append_url.to_string();
                     let mut copy_append = FunctionBar::new_with_text_type(
@@ -665,7 +661,7 @@ impl ContextMenuBar {
     ) -> Vec<i32> {
         let mut lamps = vec![0i32; 11];
         for song in songs {
-            if song.get_path().is_none() {
+            if song.path().is_none() {
                 continue;
             }
             if let Some(m) = mode
@@ -710,7 +706,7 @@ impl ContextMenuBar {
             return 0;
         }
         let md5_array: Vec<String> = md5_and_names.iter().map(|(md5, _)| md5.clone()).collect();
-        let in_hand = songdb.get_song_datas_by_hashes(&md5_array);
+        let in_hand = songdb.song_datas_by_hashes(&md5_array);
         let in_hand_md5s: HashSet<String> = in_hand.iter().map(|sd| sd.md5.clone()).collect();
         let missing: Vec<&(String, String)> = md5_and_names
             .iter()

@@ -93,7 +93,7 @@ fn course_to_course_data(course: &Course, default_mode: Option<&Mode>) -> Course
     let constraints: Vec<CourseDataConstraint> = course
         .constraint()
         .iter()
-        .filter_map(|c| CourseDataConstraint::get_value(c))
+        .filter_map(|c| CourseDataConstraint::value(c))
         .collect();
     cd.constraint = constraints;
 
@@ -185,8 +185,8 @@ mod tests {
         assert_eq!(song.sha256, "deadbeef1234");
         assert_eq!(song.title, "Test Song");
         assert_eq!(song.artist, "Test Artist");
-        assert_eq!(song.get_url(), "https://example.com/download");
-        assert_eq!(song.get_ipfs_str(), "QmTestHash");
+        assert_eq!(song.url(), "https://example.com/download");
+        assert_eq!(song.ipfs_str(), "QmTestHash");
         assert_eq!(song.mode, 0); // no mode set
     }
 
@@ -218,7 +218,7 @@ mod tests {
         assert_eq!(song.sha256, "");
         assert_eq!(song.title, "");
         assert_eq!(song.artist, "");
-        assert_eq!(song.get_url(), "");
+        assert_eq!(song.url(), "");
         assert_eq!(song.mode, 0);
     }
 
@@ -229,7 +229,7 @@ mod tests {
 
         let song = bms_table_element_to_song_data(&te, None);
 
-        assert_eq!(song.get_org_md5_vec(), &["hash1", "hash2"]);
+        assert_eq!(song.org_md5_vec(), &["hash1", "hash2"]);
     }
 
     // ========================================
@@ -248,8 +248,8 @@ mod tests {
 
         assert_eq!(song.md5, "abc123");
         assert_eq!(song.title, "DTE Song");
-        assert_eq!(song.get_appendurl(), "https://example.com/diff");
-        assert_eq!(song.get_append_ipfs_str(), "QmDiffHash");
+        assert_eq!(song.appendurl(), "https://example.com/diff");
+        assert_eq!(song.append_ipfs_str(), "QmDiffHash");
     }
 
     #[test]
@@ -260,8 +260,8 @@ mod tests {
         let song = difficulty_table_element_to_song_data(&dte, None);
 
         assert_eq!(song.md5, "def456");
-        assert_eq!(song.get_appendurl(), "");
-        assert_eq!(song.get_append_ipfs_str(), "");
+        assert_eq!(song.appendurl(), "");
+        assert_eq!(song.append_ipfs_str(), "");
     }
 
     // ========================================
@@ -337,7 +337,7 @@ mod tests {
 
         assert_eq!(td.get_course().len(), 1);
         let cd = &td.get_course()[0];
-        assert_eq!(cd.get_name(), "Dan 1st");
+        assert_eq!(cd.name(), "Dan 1st");
         assert_eq!(cd.hash.len(), 2);
         assert_eq!(cd.hash[0].md5, "course_hash_1");
         assert_eq!(cd.hash[1].md5, "course_hash_2");
@@ -347,7 +347,7 @@ mod tests {
         assert_eq!(cd.constraint[1], CourseDataConstraint::GaugeLr2);
 
         assert_eq!(cd.trophy.len(), 1);
-        assert_eq!(cd.trophy[0].get_name(), "Gold");
+        assert_eq!(cd.trophy[0].name(), "Gold");
         assert_eq!(cd.trophy[0].missrate, 5.0);
         assert_eq!(cd.trophy[0].scorerate, 90.0);
     }
@@ -436,8 +436,8 @@ mod tests {
 
         // flat_map merges all course lists
         assert_eq!(td.get_course().len(), 2);
-        assert_eq!(td.get_course()[0].get_name(), "Course 1");
-        assert_eq!(td.get_course()[1].get_name(), "Course 2");
+        assert_eq!(td.get_course()[0].name(), "Course 1");
+        assert_eq!(td.get_course()[1].name(), "Course 2");
     }
 
     #[test]

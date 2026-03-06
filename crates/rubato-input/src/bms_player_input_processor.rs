@@ -205,12 +205,10 @@ impl BMSPlayerInputProcessor {
                 if b[i] {
                     continue;
                 }
-                if configs[i].get_name().is_none()
-                    || configs[i].get_name().is_some_and(|n| n.is_empty())
-                {
+                if configs[i].name().is_none() || configs[i].name().is_some_and(|n| n.is_empty()) {
                     configs[i].name = controller.name().to_string();
                 }
-                if controller.name() == configs[i].get_name().unwrap_or("") {
+                if controller.name() == configs[i].name().unwrap_or("") {
                     controller.set_config(&configs[i]);
                     controller.set_enable(true);
                     b[i] = true;

@@ -167,9 +167,9 @@ impl CourseEditorView {
             return;
         };
         if TableEditorView::is_md5_or_sha256_hash(&self.search) {
-            self.search_songs = songdb.get_song_datas_by_hashes(std::slice::from_ref(&self.search));
+            self.search_songs = songdb.song_datas_by_hashes(std::slice::from_ref(&self.search));
         } else if self.search.len() > 1 {
-            self.search_songs = songdb.get_song_datas_by_text(&self.search);
+            self.search_songs = songdb.song_datas_by_text(&self.search);
         }
     }
 
@@ -683,13 +683,13 @@ mod tests {
     struct MockSongDb;
 
     impl SongDatabaseAccessor for MockSongDb {
-        fn get_song_datas(&self, _key: &str, _value: &str) -> Vec<TypesSongData> {
+        fn song_datas(&self, _key: &str, _value: &str) -> Vec<TypesSongData> {
             Vec::new()
         }
-        fn get_song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<TypesSongData> {
+        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<TypesSongData> {
             Vec::new()
         }
-        fn get_song_datas_by_sql(
+        fn song_datas_by_sql(
             &self,
             _sql: &str,
             _score: &str,
@@ -699,10 +699,10 @@ mod tests {
             Vec::new()
         }
         fn set_song_datas(&self, _songs: &[TypesSongData]) {}
-        fn get_song_datas_by_text(&self, _text: &str) -> Vec<TypesSongData> {
+        fn song_datas_by_text(&self, _text: &str) -> Vec<TypesSongData> {
             Vec::new()
         }
-        fn get_folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
+        fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
             Vec::new()
         }
     }
@@ -861,8 +861,8 @@ mod tests {
         view.set_course_data(courses);
         let result = view.get_course_data();
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].get_name(), "Course A");
-        assert_eq!(result[1].get_name(), "Course B");
+        assert_eq!(result[0].name(), "Course A");
+        assert_eq!(result[1].name(), "Course B");
     }
 
     // ---- addCourseData ----
@@ -874,16 +874,16 @@ mod tests {
 
         view.add_course_data();
         assert_eq!(view.courses.len(), 1);
-        assert_eq!(view.courses[0].get_name(), "New Course");
+        assert_eq!(view.courses[0].name(), "New Course");
         assert!(!view.courses[0].release);
         assert_eq!(view.courses[0].trophy.len(), 3);
-        assert_eq!(view.courses[0].trophy[0].get_name(), "bronzemedal");
+        assert_eq!(view.courses[0].trophy[0].name(), "bronzemedal");
         assert_eq!(view.courses[0].trophy[0].missrate, 7.5);
         assert_eq!(view.courses[0].trophy[0].scorerate, 55.0);
-        assert_eq!(view.courses[0].trophy[1].get_name(), "silvermedal");
+        assert_eq!(view.courses[0].trophy[1].name(), "silvermedal");
         assert_eq!(view.courses[0].trophy[1].missrate, 5.0);
         assert_eq!(view.courses[0].trophy[1].scorerate, 70.0);
-        assert_eq!(view.courses[0].trophy[2].get_name(), "goldmedal");
+        assert_eq!(view.courses[0].trophy[2].name(), "goldmedal");
         assert_eq!(view.courses[0].trophy[2].missrate, 2.5);
         assert_eq!(view.courses[0].trophy[2].scorerate, 85.0);
     }
@@ -898,8 +898,8 @@ mod tests {
 
         view.remove_course_data();
         assert_eq!(view.courses.len(), 2);
-        assert_eq!(view.courses[0].get_name(), "A");
-        assert_eq!(view.courses[1].get_name(), "C");
+        assert_eq!(view.courses[0].name(), "A");
+        assert_eq!(view.courses[1].name(), "C");
     }
 
     #[test]
@@ -921,8 +921,8 @@ mod tests {
         view.courses_selected_index = Some(1);
 
         view.move_course_data_up();
-        assert_eq!(view.courses[0].get_name(), "B");
-        assert_eq!(view.courses[1].get_name(), "A");
+        assert_eq!(view.courses[0].name(), "B");
+        assert_eq!(view.courses[1].name(), "A");
         assert_eq!(view.courses_selected_index, Some(0));
     }
 
@@ -933,7 +933,7 @@ mod tests {
         view.courses_selected_index = Some(0);
 
         view.move_course_data_up();
-        assert_eq!(view.courses[0].get_name(), "A");
+        assert_eq!(view.courses[0].name(), "A");
         assert_eq!(view.courses_selected_index, Some(0));
     }
 
@@ -944,8 +944,8 @@ mod tests {
         view.courses_selected_index = Some(1);
 
         view.move_course_data_down();
-        assert_eq!(view.courses[1].get_name(), "C");
-        assert_eq!(view.courses[2].get_name(), "B");
+        assert_eq!(view.courses[1].name(), "C");
+        assert_eq!(view.courses[2].name(), "B");
         assert_eq!(view.courses_selected_index, Some(2));
     }
 
@@ -956,7 +956,7 @@ mod tests {
         view.courses_selected_index = Some(1);
 
         view.move_course_data_down();
-        assert_eq!(view.courses[1].get_name(), "B");
+        assert_eq!(view.courses[1].name(), "B");
         assert_eq!(view.courses_selected_index, Some(1));
     }
 
@@ -1067,7 +1067,7 @@ mod tests {
         view.release = true;
 
         view.commit_course();
-        assert_eq!(view.courses[0].get_name(), "Renamed");
+        assert_eq!(view.courses[0].name(), "Renamed");
         assert!(view.courses[0].release);
     }
 
@@ -1153,7 +1153,7 @@ mod tests {
 
         view.commit_course();
         // Should not modify anything
-        assert_eq!(view.courses[0].get_name(), "Original");
+        assert_eq!(view.courses[0].name(), "Original");
     }
 
     #[test]
@@ -1164,7 +1164,7 @@ mod tests {
         view.course_name = "Changed".to_string();
 
         view.commit_course();
-        assert_eq!(view.courses[0].get_name(), "Original");
+        assert_eq!(view.courses[0].name(), "Original");
     }
 
     // ---- updateCourse ----
@@ -1272,7 +1272,7 @@ mod tests {
 
         view.update_course_data();
         // commit_course should have saved "After"
-        assert_eq!(view.courses[0].get_name(), "After");
+        assert_eq!(view.courses[0].name(), "After");
         // Then update_course should have loaded it back
         assert_eq!(view.course_name, "After");
     }
@@ -1373,7 +1373,7 @@ mod tests {
         // Get course data (triggers commit)
         let courses = view.get_course_data();
         assert_eq!(courses.len(), 1);
-        assert_eq!(courses[0].get_name(), "Edited Course");
+        assert_eq!(courses[0].name(), "Edited Course");
         assert!(courses[0].release);
         assert!(courses[0].constraint.contains(&CourseDataConstraint::Class));
         assert_eq!(courses[0].hash.len(), 1);

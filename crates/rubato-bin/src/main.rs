@@ -1095,10 +1095,10 @@ impl rubato_song::md_processor::music_database_accessor::MusicDatabaseAccessor
 {
     fn get_music_paths(&self, md5: &[String]) -> Vec<String> {
         use rubato_types::song_database_accessor::SongDatabaseAccessor;
-        let songs = self.songdb.get_song_datas_by_hashes(md5);
+        let songs = self.songdb.song_datas_by_hashes(md5);
         songs
             .iter()
-            .filter_map(|s| s.get_path().map(|p| p.to_string()))
+            .filter_map(|s| s.path().map(|p| p.to_string()))
             .collect()
     }
 }

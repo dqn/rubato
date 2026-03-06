@@ -886,13 +886,11 @@ impl BMSPlayer {
             .switch_timer(TIMER_SCORE_AAA, self.main_state_data.score.qualify_rank(24));
         self.main_state_data.timer.switch_timer(
             TIMER_SCORE_BEST,
-            self.judge.get_score_data().get_exscore()
-                >= self.main_state_data.score.get_best_score(),
+            self.judge.get_score_data().exscore() >= self.main_state_data.score.get_best_score(),
         );
         self.main_state_data.timer.switch_timer(
             TIMER_SCORE_TARGET,
-            self.judge.get_score_data().get_exscore()
-                >= self.main_state_data.score.get_rival_score(),
+            self.judge.get_score_data().exscore() >= self.main_state_data.score.get_rival_score(),
         );
 
         self.play_skin.pomyu.pm_chara_judge = judge + 1;
@@ -1607,19 +1605,19 @@ struct PlayRenderContext<'a> {
 }
 
 impl rubato_types::timer_access::TimerAccess for PlayRenderContext<'_> {
-    fn get_now_time(&self) -> i64 {
+    fn now_time(&self) -> i64 {
         self.timer.get_now_time()
     }
-    fn get_now_micro_time(&self) -> i64 {
+    fn now_micro_time(&self) -> i64 {
         self.timer.get_now_micro_time()
     }
-    fn get_micro_timer(&self, timer_id: i32) -> i64 {
+    fn micro_timer(&self, timer_id: i32) -> i64 {
         self.timer.get_micro_timer(timer_id)
     }
-    fn get_timer(&self, timer_id: i32) -> i64 {
+    fn timer(&self, timer_id: i32) -> i64 {
         self.timer.get_timer(timer_id)
     }
-    fn get_now_time_for(&self, timer_id: i32) -> i64 {
+    fn now_time_for(&self, timer_id: i32) -> i64 {
         self.timer.get_now_time_for_id(timer_id)
     }
     fn is_timer_on(&self, timer_id: i32) -> bool {
@@ -1632,19 +1630,19 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
         Some(rubato_types::main_state_type::MainStateType::Play)
     }
 
-    fn get_player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
+    fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         Some(self.player_config)
     }
 
-    fn get_replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
+    fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
         Some(self.option_info)
     }
 
-    fn get_target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
+    fn target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
         self.target_score
     }
 
-    fn get_current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
+    fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
         Some(self.play_config)
     }
 
@@ -1652,32 +1650,32 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
         self.timer.set_micro_timer(timer_id, micro_time);
     }
 
-    fn get_now_judge(&self, player: i32) -> i32 {
+    fn now_judge(&self, player: i32) -> i32 {
         self.judge.get_now_judge(player as usize)
     }
 
-    fn get_now_combo(&self, player: i32) -> i32 {
+    fn now_combo(&self, player: i32) -> i32 {
         self.judge.get_now_combo(player as usize)
     }
 
-    fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
+    fn judge_count(&self, judge: i32, fast: bool) -> i32 {
         self.judge.get_judge_count_fast(judge, fast)
     }
 
-    fn get_gauge_value(&self) -> f32 {
+    fn gauge_value(&self) -> f32 {
         self.gauge.map_or(0.0, |g| g.value())
     }
 
-    fn get_gauge_type(&self) -> i32 {
+    fn gauge_type(&self) -> i32 {
         self.gauge.map_or(0, |g| g.gauge_type())
     }
 
-    fn get_recent_judges(&self) -> &[i64] {
-        rubato_types::skin_render_context::SkinRenderContext::get_recent_judges(self.timer)
+    fn recent_judges(&self) -> &[i64] {
+        rubato_types::skin_render_context::SkinRenderContext::recent_judges(self.timer)
     }
 
-    fn get_recent_judges_index(&self) -> usize {
-        rubato_types::skin_render_context::SkinRenderContext::get_recent_judges_index(self.timer)
+    fn recent_judges_index(&self) -> usize {
+        rubato_types::skin_render_context::SkinRenderContext::recent_judges_index(self.timer)
     }
 
     fn integer_value(&self, id: i32) -> i32 {
@@ -1736,23 +1734,23 @@ struct PlayMouseContext<'a> {
 }
 
 impl rubato_types::timer_access::TimerAccess for PlayMouseContext<'_> {
-    fn get_now_time(&self) -> i64 {
+    fn now_time(&self) -> i64 {
         self.timer.get_now_time()
     }
 
-    fn get_now_micro_time(&self) -> i64 {
+    fn now_micro_time(&self) -> i64 {
         self.timer.get_now_micro_time()
     }
 
-    fn get_micro_timer(&self, timer_id: i32) -> i64 {
+    fn micro_timer(&self, timer_id: i32) -> i64 {
         self.timer.get_micro_timer(timer_id)
     }
 
-    fn get_timer(&self, timer_id: i32) -> i64 {
+    fn timer(&self, timer_id: i32) -> i64 {
         self.timer.get_timer(timer_id)
     }
 
-    fn get_now_time_for(&self, timer_id: i32) -> i64 {
+    fn now_time_for(&self, timer_id: i32) -> i64 {
         self.timer.get_now_time_for_id(timer_id)
     }
 
@@ -1774,7 +1772,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
         self.timer.set_micro_timer(timer_id, micro_time);
     }
 
-    fn get_player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
+    fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
         Some(&mut self.player.player_config)
     }
 }
@@ -2052,12 +2050,12 @@ impl MainState for BMSPlayer {
             };
 
             let (target_exscore, target_ghost) = match effective_target {
-                Some(ref t) => (t.get_exscore(), t.decode_ghost()),
+                Some(ref t) => (t.exscore(), t.decode_ghost()),
                 None => (0, None),
             };
 
             self.main_state_data.score.set_target_score_with_ghost(
-                score.get_exscore(),
+                score.exscore(),
                 score.decode_ghost(),
                 target_exscore,
                 target_ghost,
@@ -2931,7 +2929,7 @@ mod tests {
             _x: i32,
             _y: i32,
         ) {
-            if let Some(config) = ctx.get_player_config_mut() {
+            if let Some(config) = ctx.player_config_mut() {
                 config.judgetiming += 1;
             }
         }

@@ -17,7 +17,7 @@ fn lock_or_recover<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 }
 
 /// Returns the current focus state of the skin widget manager.
-pub fn get_focus() -> bool {
+pub fn focus() -> bool {
     *lock_or_recover(&FOCUS)
 }
 
@@ -33,13 +33,13 @@ mod tests {
     #[test]
     fn test_get_focus_default_is_false() {
         set_focus(false);
-        assert!(!get_focus());
+        assert!(!focus());
     }
 
     #[test]
     fn test_get_focus_returns_true_after_set_true() {
         set_focus(true);
-        assert!(get_focus());
+        assert!(focus());
         // Clean up
         set_focus(false);
     }
@@ -48,7 +48,7 @@ mod tests {
     fn test_get_focus_returns_false_after_set_false() {
         set_focus(true);
         set_focus(false);
-        assert!(!get_focus());
+        assert!(!focus());
     }
 
     #[test]
@@ -59,8 +59,8 @@ mod tests {
         }));
 
         set_focus(true);
-        assert!(get_focus());
+        assert!(focus());
         set_focus(false);
-        assert!(!get_focus());
+        assert!(!focus());
     }
 }

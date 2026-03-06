@@ -106,7 +106,7 @@ fn validate_assigns_default_name_when_missing() {
     cd.hash = vec![make_song("Stage 1", "aaa111")];
     assert!(cd.validate());
     assert_eq!(
-        cd.get_name(),
+        cd.name(),
         "No Course Title",
         "Validation should assign default name when none is set"
     );
@@ -118,7 +118,7 @@ fn validate_assigns_default_name_when_empty() {
     cd.set_name(String::new());
     cd.hash = vec![make_song("Stage 1", "aaa111")];
     assert!(cd.validate());
-    assert_eq!(cd.get_name(), "No Course Title");
+    assert_eq!(cd.name(), "No Course Title");
 }
 
 #[test]
@@ -197,8 +197,8 @@ fn validate_removes_invalid_trophies() {
 
     let trophies = cd.trophy;
     assert_eq!(trophies.len(), 2, "Should keep only 2 valid trophies");
-    assert_eq!(trophies[0].get_name(), "Gold");
-    assert_eq!(trophies[1].get_name(), "Silver");
+    assert_eq!(trophies[0].name(), "Gold");
+    assert_eq!(trophies[1].name(), "Silver");
 }
 
 #[test]
@@ -247,7 +247,7 @@ fn course_data_full_serde_roundtrip() {
     let restored: CourseData = serde_json::from_str(&json).expect("Deserialization should succeed");
 
     // Verify name
-    assert_eq!(restored.get_name(), "Full Course");
+    assert_eq!(restored.name(), "Full Course");
 
     // Verify release
     assert!(!restored.release);
@@ -268,10 +268,10 @@ fn course_data_full_serde_roundtrip() {
 
     // Verify trophies
     assert_eq!(restored.trophy.len(), 2);
-    assert_eq!(restored.trophy[0].get_name(), "Gold");
+    assert_eq!(restored.trophy[0].name(), "Gold");
     assert_eq!(restored.trophy[0].missrate, 3.0);
     assert_eq!(restored.trophy[0].scorerate, 95.0);
-    assert_eq!(restored.trophy[1].get_name(), "Silver");
+    assert_eq!(restored.trophy[1].name(), "Silver");
 }
 
 #[test]
@@ -281,7 +281,7 @@ fn course_data_empty_serde_roundtrip() {
     let json = serde_json::to_string(&cd).unwrap();
     let restored: CourseData = serde_json::from_str(&json).unwrap();
 
-    assert_eq!(restored.get_name(), "");
+    assert_eq!(restored.name(), "");
     assert!(restored.hash.is_empty());
     assert!(restored.constraint.is_empty());
     assert!(restored.trophy.is_empty());
@@ -296,7 +296,7 @@ fn course_data_empty_serde_roundtrip() {
 fn all_constraint_names_roundtrip_via_get_value() {
     for constraint in CourseDataConstraint::values() {
         let name = constraint.name_str();
-        let resolved = CourseDataConstraint::get_value(name);
+        let resolved = CourseDataConstraint::value(name);
         assert_eq!(
             resolved,
             Some(*constraint),
@@ -331,7 +331,7 @@ fn trophy_data_serde_roundtrip() {
     let json = serde_json::to_string(&trophy).unwrap();
     let restored: TrophyData = serde_json::from_str(&json).unwrap();
 
-    assert_eq!(restored.get_name(), "Platinum");
+    assert_eq!(restored.name(), "Platinum");
     assert_eq!(restored.missrate, 2.5);
     assert_eq!(restored.scorerate, 97.5);
 }
@@ -397,7 +397,7 @@ fn end_to_end_course_pipeline() {
     let restored: CourseData = serde_json::from_str(&json).unwrap();
 
     // Step 5: Verify restored data
-    assert_eq!(restored.get_name(), "10th Dan");
+    assert_eq!(restored.name(), "10th Dan");
     assert!(restored.release);
     assert_eq!(restored.hash.len(), 4);
     assert_eq!(restored.hash[0].title, "FREEDOM DiVE");
@@ -409,5 +409,5 @@ fn end_to_end_course_pipeline() {
 
     // Trophies should all be valid
     assert_eq!(restored.trophy.len(), 3);
-    assert_eq!(restored.trophy[2].get_name(), "Full Combo");
+    assert_eq!(restored.trophy[2].name(), "Full Combo");
 }

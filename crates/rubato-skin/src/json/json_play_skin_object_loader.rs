@@ -13,7 +13,7 @@ pub struct JsonPlaySkinObjectLoader;
 impl JsonSkinObjectLoader for JsonPlaySkinObjectLoader {
     fn get_skin(&self, header: &crate::json::json_skin_loader::SkinHeaderData) -> SkinData {
         // Corresponds to Java: new PlaySkin(header)
-        let skin_type = crate::skin_type::SkinType::get_skin_type_by_id(header.skin_type)
+        let skin_type = crate::skin_type::SkinType::skin_type_by_id(header.skin_type)
             .unwrap_or(crate::skin_type::SkinType::Play7Keys);
         SkinData::from_header(header, skin_type)
     }

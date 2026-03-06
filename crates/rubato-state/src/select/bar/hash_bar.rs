@@ -61,7 +61,7 @@ impl HashBar {
     /// Translates: Java HashBar.getChildren()
     pub fn get_children(&self, db: &dyn SongDatabaseAccessor) -> Vec<Bar> {
         let mut songs: Vec<Option<SongData>> = db
-            .get_song_datas_by_hashes(&self.elements_hash)
+            .song_datas_by_hashes(&self.elements_hash)
             .into_iter()
             .map(Some)
             .collect();
@@ -70,7 +70,7 @@ impl HashBar {
     }
 
     pub fn update_folder_status(&mut self, db: &dyn SongDatabaseAccessor) {
-        let songs = db.get_song_datas_by_hashes(&self.elements_hash);
+        let songs = db.song_datas_by_hashes(&self.elements_hash);
         self.directory
             .update_folder_status_with_songs(&songs, None, |_| None);
     }
@@ -92,13 +92,13 @@ mod tests {
     }
 
     impl SongDatabaseAccessor for MockSongDb {
-        fn get_song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
+        fn song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
             Vec::new()
         }
-        fn get_song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
+        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
             self.hash_songs.clone()
         }
-        fn get_song_datas_by_sql(
+        fn song_datas_by_sql(
             &self,
             _sql: &str,
             _score: &str,
@@ -108,10 +108,10 @@ mod tests {
             Vec::new()
         }
         fn set_song_datas(&self, _songs: &[SongData]) {}
-        fn get_song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
+        fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
             Vec::new()
         }
-        fn get_folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
+        fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
             Vec::new()
         }
     }

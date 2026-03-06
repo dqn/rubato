@@ -139,15 +139,15 @@ struct StateAccessAdapter<'a> {
 }
 
 impl MainStateAccess for StateAccessAdapter<'_> {
-    fn get_screen_type(&self) -> ScreenType {
+    fn screen_type(&self) -> ScreenType {
         self.screen_type.clone()
     }
 
-    fn get_resource(&self) -> Option<&dyn PlayerResourceAccess> {
+    fn resource(&self) -> Option<&dyn PlayerResourceAccess> {
         self.resource
     }
 
-    fn get_config(&self) -> &Config {
+    fn config(&self) -> &Config {
         self.config
     }
 }
@@ -1798,7 +1798,7 @@ impl MainController {
         if let Some(ref dl) = self.download
             && dl.is_download()
         {
-            let msg = dl.get_message();
+            let msg = dl.message();
             if !msg.is_empty() {
                 rubato_types::imgui_notify::ImGuiNotify::info(&msg);
                 return;
@@ -1839,11 +1839,11 @@ pub struct DownloadMessageThread {
 }
 
 impl MainControllerAccess for MainController {
-    fn get_config(&self) -> &Config {
+    fn config(&self) -> &Config {
         &self.config
     }
 
-    fn get_player_config(&self) -> &PlayerConfig {
+    fn player_config(&self) -> &PlayerConfig {
         &self.player
     }
 
@@ -1869,13 +1869,13 @@ impl MainControllerAccess for MainController {
         }
     }
 
-    fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
+    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
         self.resource
             .as_ref()
             .map(|r| r as &dyn PlayerResourceAccess)
     }
 
-    fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
+    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
         self.resource
             .as_mut()
             .map(|r| r as &mut dyn PlayerResourceAccess)
@@ -1906,7 +1906,7 @@ impl MainControllerAccess for MainController {
         }
     }
 
-    fn get_sound_path(&self, sound: &SoundType) -> Option<String> {
+    fn sound_path(&self, sound: &SoundType) -> Option<String> {
         self.sound
             .as_ref()
             .and_then(|sm| sm.get_sound(sound).cloned())
@@ -1982,20 +1982,20 @@ impl MainControllerAccess for MainController {
         MainController::update_table(self, source);
     }
 
-    fn get_ranking_data_cache(
+    fn ranking_data_cache(
         &self,
     ) -> Option<&dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess> {
         MainController::get_ranking_data_cache(self)
     }
 
-    fn get_ranking_data_cache_mut(
+    fn ranking_data_cache_mut(
         &mut self,
     ) -> Option<&mut (dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess + 'static)>
     {
         self.ircache.as_deref_mut()
     }
 
-    fn get_http_downloader(
+    fn http_downloader(
         &self,
     ) -> Option<&dyn rubato_types::http_download_submitter::HttpDownloadSubmitter> {
         self.http_download_processor
@@ -2016,11 +2016,11 @@ impl MainControllerAccess for MainController {
         }
     }
 
-    fn get_rival_count(&self) -> usize {
+    fn rival_count(&self) -> usize {
         self.rivals.get_rival_count()
     }
 
-    fn get_rival_information(
+    fn rival_information(
         &self,
         index: usize,
     ) -> Option<rubato_types::player_information::PlayerInformation> {
@@ -2044,13 +2044,11 @@ impl MainControllerAccess for MainController {
             .and_then(|pda| pda.read_player_data())
     }
 
-    fn get_info_database(
-        &self,
-    ) -> Option<&dyn rubato_types::song_information_db::SongInformationDb> {
+    fn info_database(&self) -> Option<&dyn rubato_types::song_information_db::SongInformationDb> {
         self.infodb.as_deref()
     }
 
-    fn get_ir_connection_any(&self) -> Option<&dyn std::any::Any> {
+    fn ir_connection_any(&self) -> Option<&dyn std::any::Any> {
         self.ir
             .first()
             .and_then(|status| status.connection.as_ref())
@@ -3188,7 +3186,7 @@ mod tests {
             self.calls
                 .lock()
                 .unwrap()
-                .push((state.get_screen_type(), status));
+                .push((state.screen_type(), status));
         }
     }
 

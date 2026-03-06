@@ -100,8 +100,8 @@ impl SkinTimingDistributionGraph {
         // Texture generation happens once
         if self.tex.is_none() {
             let td = music_result.get_timing_distribution();
-            let dist = td.get_timing_distribution();
-            let center = td.get_array_center();
+            let dist = td.timing_distribution();
+            let center = td.array_center();
             let judge_area = get_judge_area(&music_result.resource);
 
             let mut max = self.max;
@@ -151,16 +151,16 @@ impl SkinTimingDistributionGraph {
             }
 
             // Average rendering
-            if self.draw_average && td.get_average() != f32::MAX {
-                let avg = td.get_average().round() as i32;
+            if self.draw_average && td.average() != f32::MAX {
+                let avg = td.average().round() as i32;
                 shape.set_color(&self.average_color);
                 shape.draw_line(self.c + avg, 0, self.c + avg, max);
             }
 
             // Deviation area rendering
-            if self.draw_dev && td.get_std_dev() != -1.0 {
-                let avg = td.get_average().round() as i32;
-                let dev = td.get_std_dev().round() as i32;
+            if self.draw_dev && td.std_dev() != -1.0 {
+                let avg = td.average().round() as i32;
+                let dev = td.std_dev().round() as i32;
                 shape.set_color(&self.dev_color);
                 shape.draw_line(self.c + avg + dev, 0, self.c + avg + dev, max);
                 shape.draw_line(self.c + avg - dev, 0, self.c + avg - dev, max);

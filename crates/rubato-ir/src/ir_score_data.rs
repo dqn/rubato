@@ -69,7 +69,7 @@ impl IRScoreData {
             sha256: score.sha256.clone(),
             lntype: score.mode,
             player: score.player.clone(),
-            clear: ClearType::get_clear_type_by_id(score.clear),
+            clear: ClearType::clear_type_by_id(score.clear),
             date: score.date,
             epg: score.epg,
             lpg: score.lpg,

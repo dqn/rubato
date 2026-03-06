@@ -87,19 +87,19 @@ impl PlayerResource {
     }
 
     pub fn get_config(&self) -> &Config {
-        self.inner.get_config()
+        self.inner.config()
     }
 
     pub fn songdata(&self) -> Option<&SongData> {
-        self.inner.get_songdata()
+        self.inner.songdata()
     }
 
     pub fn replay_data(&self) -> Option<&ReplayData> {
-        self.inner.get_replay_data()
+        self.inner.replay_data()
     }
 
     pub fn reverse_lookup_levels(&self) -> Vec<String> {
-        self.inner.get_reverse_lookup_levels()
+        self.inner.reverse_lookup_levels()
     }
 
     pub fn original_mode(&self) -> &Mode {
@@ -165,17 +165,15 @@ pub struct MainState {
 }
 
 impl rubato_types::main_state_access::MainStateAccess for MainState {
-    fn get_screen_type(&self) -> ScreenType {
+    fn screen_type(&self) -> ScreenType {
         self.screen_type.clone()
     }
 
-    fn get_resource(
-        &self,
-    ) -> Option<&dyn rubato_types::player_resource_access::PlayerResourceAccess> {
+    fn resource(&self) -> Option<&dyn rubato_types::player_resource_access::PlayerResourceAccess> {
         Some(&*self.resource.inner)
     }
 
-    fn get_config(&self) -> &Config {
+    fn config(&self) -> &Config {
         self.resource.get_config()
     }
 }
@@ -518,7 +516,7 @@ mod tests {
     #[test]
     fn main_state_default_screen_type_is_other() {
         let state = MainState::default();
-        assert_eq!(state.get_screen_type(), ScreenType::Other);
+        assert_eq!(state.screen_type(), ScreenType::Other);
     }
 
     #[test]
@@ -528,7 +526,7 @@ mod tests {
             resource: PlayerResource::default(),
             screen_type: ScreenType::MusicSelector,
         };
-        assert_eq!(state.get_screen_type(), ScreenType::MusicSelector);
+        assert_eq!(state.screen_type(), ScreenType::MusicSelector);
     }
 
     #[test]
@@ -548,7 +546,7 @@ mod tests {
                 resource: PlayerResource::default(),
                 screen_type: variant.clone(),
             };
-            assert_eq!(state.get_screen_type(), variant);
+            assert_eq!(state.screen_type(), variant);
         }
     }
 }

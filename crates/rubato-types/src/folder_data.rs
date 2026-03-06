@@ -16,15 +16,15 @@ pub struct FolderData {
 }
 
 impl FolderData {
-    pub fn get_title(&self) -> &str {
+    pub fn title(&self) -> &str {
         &self.title
     }
 
-    pub fn get_path(&self) -> &str {
+    pub fn path(&self) -> &str {
         &self.path
     }
 
-    pub fn get_adddate(&self) -> i32 {
+    pub fn adddate(&self) -> i32 {
         self.adddate
     }
 }

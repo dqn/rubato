@@ -174,7 +174,7 @@ impl Default for ScreenShotFileExporter {
 /// its screen type and exposes it via MainStateAccess::get_screen_type().
 fn get_screen_type(state: &MainState) -> ScreenType {
     use rubato_types::main_state_access::MainStateAccess;
-    state.get_screen_type()
+    state.screen_type()
 }
 
 #[cfg(test)]

@@ -289,7 +289,7 @@ impl KeyBoardInputProcesseor {
     pub fn poll(&mut self, microtime: i64, callback: &mut dyn KeyboardCallback) {
         // NOTE: For further dev came here, it's better to wrap this variable instead of
         // accessing imgui menu's field directly
-        let accept_input = !rubato_types::skin_widget_focus::get_focus();
+        let accept_input = !rubato_types::skin_widget_focus::focus();
         if accept_input && !self.textmode {
             for i in 0..self.keys.len() {
                 if self.keys[i] < 0 {

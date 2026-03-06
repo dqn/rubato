@@ -866,18 +866,18 @@ fn load_saved_skin_settings(header: &SkinHeader) {
 
     let mut saved_properties: Option<&SkinProperty> = None;
 
-    let skin_type_id = header.get_skin_type().map(|st| st.get_id()).unwrap_or(0) as usize;
+    let skin_type_id = header.get_skin_type().map(|st| st.id()).unwrap_or(0) as usize;
     if skin_type_id < pc.skin.len()
         && let Some(ref live_config) = pc.skin[skin_type_id]
-        && live_config.get_path().is_some_and(|p| p == skin_path)
+        && live_config.path().is_some_and(|p| p == skin_path)
     {
-        saved_properties = live_config.get_properties();
+        saved_properties = live_config.properties();
     }
 
     if saved_properties.is_none() {
         for saved_config in &pc.skin_history {
-            if saved_config.get_path().is_some_and(|p| p == skin_path) {
-                saved_properties = saved_config.get_properties();
+            if saved_config.path().is_some_and(|p| p == skin_path) {
+                saved_properties = saved_config.properties();
                 break;
             }
         }
@@ -1062,7 +1062,7 @@ fn save_current_config(next_skin: &SkinHeader) {
     if let Some(ref st) = *current_type
         && next_skin.get_name() == cs.get_name()
     {
-        let id = st.get_id() as usize;
+        let id = st.id() as usize;
         if id < pc.skin.len() {
             pc.skin[id] = Some(config);
         }
@@ -1070,10 +1070,7 @@ fn save_current_config(next_skin: &SkinHeader) {
     }
 
     for i in 0..pc.skin_history.len() {
-        if pc.skin_history[i]
-            .get_path()
-            .is_some_and(|p| p == skin_path)
-        {
+        if pc.skin_history[i].path().is_some_and(|p| p == skin_path) {
             pc.skin_history[i] = config;
             return;
         }
@@ -1134,7 +1131,7 @@ fn skin_header_from_json_data(data: SkinHeaderData) -> SkinHeader {
     header.set_type(data.header_type);
     header.set_path(data.path);
     header.set_name(data.name);
-    if let Some(st) = SkinType::get_skin_type_by_id(data.skin_type) {
+    if let Some(st) = SkinType::skin_type_by_id(data.skin_type) {
         header.set_skin_type(st);
     }
     let options: Vec<CustomOption> = data

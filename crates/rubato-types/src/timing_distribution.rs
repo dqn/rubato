@@ -10,19 +10,19 @@ pub struct TimingDistribution {
 }
 
 impl TimingDistribution {
-    pub fn get_timing_distribution(&self) -> &[i32] {
+    pub fn timing_distribution(&self) -> &[i32] {
         &self.distribution
     }
 
-    pub fn get_array_center(&self) -> i32 {
+    pub fn array_center(&self) -> i32 {
         self.array_center
     }
 
-    pub fn get_average(&self) -> f32 {
+    pub fn average(&self) -> f32 {
         self.average
     }
 
-    pub fn get_std_dev(&self) -> f32 {
+    pub fn std_dev(&self) -> f32 {
         self.std_dev
     }
 }
@@ -48,9 +48,9 @@ mod tests {
             average: -0.5,
             std_dev: 2.1,
         };
-        assert_eq!(td.get_timing_distribution().len(), 7);
-        assert_eq!(td.get_array_center(), 3);
-        assert!(td.get_average() < 0.0);
-        assert!(td.get_std_dev() > 0.0);
+        assert_eq!(td.timing_distribution().len(), 7);
+        assert_eq!(td.array_center(), 3);
+        assert!(td.average() < 0.0);
+        assert!(td.std_dev() > 0.0);
     }
 }

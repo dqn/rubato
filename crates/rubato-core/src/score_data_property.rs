@@ -95,7 +95,7 @@ impl ScoreDataProperty {
     pub fn update_score_and_rival(&mut self, score: Option<&ScoreData>, rival: Option<&ScoreData>) {
         self.update_score(score);
         self.rival = rival.cloned();
-        let exscore = rival.map_or(0, |r| r.get_exscore());
+        let exscore = rival.map_or(0, |r| r.exscore());
         let totalnotes = rival.map_or(0, |r| r.notes);
 
         self.rivalscore = exscore;
@@ -110,34 +110,34 @@ impl ScoreDataProperty {
 
     pub fn update_score_with_notes(&mut self, score: Option<&ScoreData>, notes: i32) {
         self.score = score.cloned();
-        let exscore = score.map_or(0, |s| s.get_exscore());
+        let exscore = score.map_or(0, |s| s.exscore());
         let totalnotes = score.map_or(0, |s| s.notes);
         if totalnotes > 0 {
             let score = score.unwrap();
             match score.playmode {
                 Mode::BEAT_5K | Mode::BEAT_10K => {
-                    self.nowpoint = ((100000i64 * score.get_judge_count_total(0) as i64
-                        + 100000i64 * score.get_judge_count_total(1) as i64
-                        + 50000i64 * score.get_judge_count_total(2) as i64)
+                    self.nowpoint = ((100000i64 * score.judge_count_total(0) as i64
+                        + 100000i64 * score.judge_count_total(1) as i64
+                        + 50000i64 * score.judge_count_total(2) as i64)
                         / totalnotes as i64) as i32;
                 }
                 Mode::BEAT_7K | Mode::BEAT_14K => {
-                    self.nowpoint = ((150000i64 * score.get_judge_count_total(0) as i64
-                        + 100000i64 * score.get_judge_count_total(1) as i64
-                        + 20000i64 * score.get_judge_count_total(2) as i64)
+                    self.nowpoint = ((150000i64 * score.judge_count_total(0) as i64
+                        + 100000i64 * score.judge_count_total(1) as i64
+                        + 20000i64 * score.judge_count_total(2) as i64)
                         / totalnotes as i64) as i32
                         + (50000i64 * score.maxcombo as i64 / totalnotes as i64) as i32;
                 }
                 Mode::POPN_5K | Mode::POPN_9K => {
-                    self.nowpoint = ((100000i64 * score.get_judge_count_total(0) as i64
-                        + 70000i64 * score.get_judge_count_total(1) as i64
-                        + 40000i64 * score.get_judge_count_total(2) as i64)
+                    self.nowpoint = ((100000i64 * score.judge_count_total(0) as i64
+                        + 70000i64 * score.judge_count_total(1) as i64
+                        + 40000i64 * score.judge_count_total(2) as i64)
                         / totalnotes as i64) as i32;
                 }
                 _ => {
-                    self.nowpoint = ((1000000i64 * score.get_judge_count_total(0) as i64
-                        + 700000i64 * score.get_judge_count_total(1) as i64
-                        + 400000i64 * score.get_judge_count_total(2) as i64)
+                    self.nowpoint = ((1000000i64 * score.judge_count_total(0) as i64
+                        + 700000i64 * score.judge_count_total(1) as i64
+                        + 400000i64 * score.judge_count_total(2) as i64)
                         / totalnotes as i64) as i32;
                 }
             }

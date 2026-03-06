@@ -140,7 +140,7 @@ impl RandomTrainer {
     }
 
     pub fn get_random_history() -> VecDeque<RandomHistoryEntry> {
-        random_history::get_random_history()
+        random_history::random_history()
     }
 
     pub fn add_random_history(hist_entry: RandomHistoryEntry) {

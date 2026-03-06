@@ -88,12 +88,12 @@ fn gauge_update_judge_index_oob_is_ignored() {
         guts: vec![],
     };
     let mut gauge = Gauge::new(&model, element, ClearType::Hard);
-    let initial = gauge.get_value();
+    let initial = gauge.value();
 
     // judge=6 is out of bounds for the 6-element gauge vec. The update should
     // be ignored rather than panicking.
     gauge.update(6, 1.0);
-    assert_eq!(gauge.get_value(), initial);
+    assert_eq!(gauge.value(), initial);
 }
 
 /// GrooveGauge::update() should ignore out-of-range judge values instead of

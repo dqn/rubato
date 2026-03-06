@@ -109,7 +109,7 @@ impl PreviewMusicProcessor {
         let mut preview_path = String::new();
         if let Some(song) = song
             && !song.preview.is_empty()
-            && let Some(song_path) = song.get_path()
+            && let Some(song_path) = song.path()
             && let Some(parent) = Path::new(song_path).parent()
         {
             preview_path = parent.join(&song.preview).to_string_lossy().to_string();

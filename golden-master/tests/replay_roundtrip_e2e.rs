@@ -42,12 +42,12 @@ fn record_and_replay_match() {
 
     // Both should have all PGREAT for normal notes
     assert_eq!(
-        manual_result.score.get_judge_count_total(JUDGE_PG),
+        manual_result.score.judge_count_total(JUDGE_PG),
         normal as i32,
         "Replayed keylog should produce all PG (PG={}, total_judge={})",
-        manual_result.score.get_judge_count_total(JUDGE_PG),
+        manual_result.score.judge_count_total(JUDGE_PG),
         (0..6)
-            .map(|j| manual_result.score.get_judge_count_total(j))
+            .map(|j| manual_result.score.judge_count_total(j))
             .sum::<i32>(),
     );
 
@@ -166,8 +166,8 @@ fn replay_json_playback_matches() {
 
     // Scores should match exactly
     assert_eq!(
-        original_result.score.get_judge_count_total(JUDGE_PG),
-        loaded_result.score.get_judge_count_total(JUDGE_PG),
+        original_result.score.judge_count_total(JUDGE_PG),
+        loaded_result.score.judge_count_total(JUDGE_PG),
         "PG count should match after JSON round-trip"
     );
     assert_eq!(
@@ -197,13 +197,13 @@ fn replay_different_gauge_same_input() {
 
     // Judgements should be identical across all gauge types
     assert_eq!(
-        normal_result.score.get_judge_count_total(JUDGE_PG),
-        hard_result.score.get_judge_count_total(JUDGE_PG),
+        normal_result.score.judge_count_total(JUDGE_PG),
+        hard_result.score.judge_count_total(JUDGE_PG),
         "PG count should be same for Normal vs Hard"
     );
     assert_eq!(
-        normal_result.score.get_judge_count_total(JUDGE_PG),
-        exhard_result.score.get_judge_count_total(JUDGE_PG),
+        normal_result.score.judge_count_total(JUDGE_PG),
+        exhard_result.score.judge_count_total(JUDGE_PG),
         "PG count should be same for Normal vs ExHard"
     );
 
@@ -245,8 +245,8 @@ fn replay_different_gauge_all_miss() {
         ("Hard", &hard_result),
         ("ExHard", &exhard_result),
     ] {
-        let miss = result.score.get_judge_count_total(JUDGE_PR)
-            + result.score.get_judge_count_total(JUDGE_MS);
+        let miss =
+            result.score.judge_count_total(JUDGE_PR) + result.score.judge_count_total(JUDGE_MS);
         assert_eq!(miss, total as i32, "{label}: all notes should be MISS/PR");
     }
 

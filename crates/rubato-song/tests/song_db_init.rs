@@ -32,9 +32,9 @@ fn new_creates_tables() {
     assert!(db_path.exists(), "Database file should be created");
 
     // Both song and folder tables should be queryable without error.
-    let songs = accessor.get_song_datas("md5", "nonexistent");
+    let songs = accessor.song_datas("md5", "nonexistent");
     assert!(songs.is_empty());
-    let folders = accessor.get_folder_datas("path", "nonexistent");
+    let folders = accessor.folder_datas("path", "nonexistent");
     assert!(folders.is_empty());
 }
 
@@ -45,11 +45,11 @@ fn insert_and_query_song() {
     let song = make_song("abc123", "Test Song", "songs/test.bms");
     accessor.set_song_datas(&[song]);
 
-    let results = accessor.get_song_datas("sha256", "abc123");
+    let results = accessor.song_datas("sha256", "abc123");
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].title, "Test Song");
     assert_eq!(results[0].sha256, "abc123");
-    assert_eq!(results[0].get_path(), Some("songs/test.bms"));
+    assert_eq!(results[0].path(), Some("songs/test.bms"));
 }
 
 #[test]
@@ -61,16 +61,16 @@ fn insert_and_query_by_text() {
     accessor.set_song_datas(&[song]);
 
     // Search by title fragment
-    let results = accessor.get_song_datas_by_text("Starlight");
+    let results = accessor.song_datas_by_text("Starlight");
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].title, "Starlight Symphony");
 
     // Search by artist
-    let results = accessor.get_song_datas_by_text("Aurora");
+    let results = accessor.song_datas_by_text("Aurora");
     assert_eq!(results.len(), 1);
 
     // Search for something that does not exist
-    let results = accessor.get_song_datas_by_text("nonexistent_query_xyz");
+    let results = accessor.song_datas_by_text("nonexistent_query_xyz");
     assert!(results.is_empty());
 }
 
@@ -78,16 +78,16 @@ fn insert_and_query_by_text() {
 fn empty_db_returns_empty() {
     let (accessor, _tmpdir) = create_temp_accessor();
 
-    let results = accessor.get_song_datas("sha256", "does_not_exist");
+    let results = accessor.song_datas("sha256", "does_not_exist");
     assert!(results.is_empty());
 
-    let results = accessor.get_song_datas("md5", "");
+    let results = accessor.song_datas("md5", "");
     assert!(results.is_empty());
 
-    let results = accessor.get_song_datas_by_hashes(&["nonexistent_hash".to_string()]);
+    let results = accessor.song_datas_by_hashes(&["nonexistent_hash".to_string()]);
     assert!(results.is_empty());
 
-    let results = accessor.get_folder_datas("path", "/no/such/folder");
+    let results = accessor.folder_datas("path", "/no/such/folder");
     assert!(results.is_empty());
 }
 
@@ -103,7 +103,7 @@ fn reopen_preserves_data() {
         accessor.set_song_datas(&[song]);
 
         // Sanity check within the same session.
-        let results = accessor.get_song_datas("sha256", "persist_sha256");
+        let results = accessor.song_datas("sha256", "persist_sha256");
         assert_eq!(results.len(), 1);
     }
     // accessor is dropped here, closing the connection.
@@ -111,9 +111,9 @@ fn reopen_preserves_data() {
     // Second session: reopen the same DB file and verify data survived.
     {
         let accessor = SQLiteSongDatabaseAccessor::new(&db_path.to_string_lossy(), &[]).unwrap();
-        let results = accessor.get_song_datas("sha256", "persist_sha256");
+        let results = accessor.song_datas("sha256", "persist_sha256");
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].title, "Persistent Song");
-        assert_eq!(results[0].get_path(), Some("songs/persist.bms"));
+        assert_eq!(results[0].path(), Some("songs/persist.bms"));
     }
 }

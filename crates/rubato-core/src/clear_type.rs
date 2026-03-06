@@ -35,18 +35,18 @@ mod tests {
 
     #[test]
     fn test_get_clear_type_by_id_valid() {
-        assert_eq!(ClearType::get_clear_type_by_id(0), ClearType::NoPlay);
-        assert_eq!(ClearType::get_clear_type_by_id(1), ClearType::Failed);
-        assert_eq!(ClearType::get_clear_type_by_id(5), ClearType::Normal);
-        assert_eq!(ClearType::get_clear_type_by_id(8), ClearType::FullCombo);
-        assert_eq!(ClearType::get_clear_type_by_id(10), ClearType::Max);
+        assert_eq!(ClearType::clear_type_by_id(0), ClearType::NoPlay);
+        assert_eq!(ClearType::clear_type_by_id(1), ClearType::Failed);
+        assert_eq!(ClearType::clear_type_by_id(5), ClearType::Normal);
+        assert_eq!(ClearType::clear_type_by_id(8), ClearType::FullCombo);
+        assert_eq!(ClearType::clear_type_by_id(10), ClearType::Max);
     }
 
     #[test]
     fn test_get_clear_type_by_id_invalid_returns_noplay() {
-        assert_eq!(ClearType::get_clear_type_by_id(-1), ClearType::NoPlay);
-        assert_eq!(ClearType::get_clear_type_by_id(11), ClearType::NoPlay);
-        assert_eq!(ClearType::get_clear_type_by_id(100), ClearType::NoPlay);
+        assert_eq!(ClearType::clear_type_by_id(-1), ClearType::NoPlay);
+        assert_eq!(ClearType::clear_type_by_id(11), ClearType::NoPlay);
+        assert_eq!(ClearType::clear_type_by_id(100), ClearType::NoPlay);
     }
 
     #[test]
@@ -68,40 +68,28 @@ mod tests {
     #[test]
     fn test_get_clear_type_by_gauge_valid() {
         assert_eq!(
-            ClearType::get_clear_type_by_gauge(0),
+            ClearType::clear_type_by_gauge(0),
             Some(ClearType::LightAssistEasy)
         );
-        assert_eq!(ClearType::get_clear_type_by_gauge(1), Some(ClearType::Easy));
+        assert_eq!(ClearType::clear_type_by_gauge(1), Some(ClearType::Easy));
+        assert_eq!(ClearType::clear_type_by_gauge(2), Some(ClearType::Normal));
+        assert_eq!(ClearType::clear_type_by_gauge(3), Some(ClearType::Hard));
+        assert_eq!(ClearType::clear_type_by_gauge(4), Some(ClearType::ExHard));
         assert_eq!(
-            ClearType::get_clear_type_by_gauge(2),
-            Some(ClearType::Normal)
-        );
-        assert_eq!(ClearType::get_clear_type_by_gauge(3), Some(ClearType::Hard));
-        assert_eq!(
-            ClearType::get_clear_type_by_gauge(4),
-            Some(ClearType::ExHard)
-        );
-        assert_eq!(
-            ClearType::get_clear_type_by_gauge(5),
+            ClearType::clear_type_by_gauge(5),
             Some(ClearType::FullCombo)
         );
         // Alternate gauge types
-        assert_eq!(
-            ClearType::get_clear_type_by_gauge(6),
-            Some(ClearType::Normal)
-        );
-        assert_eq!(ClearType::get_clear_type_by_gauge(7), Some(ClearType::Hard));
-        assert_eq!(
-            ClearType::get_clear_type_by_gauge(8),
-            Some(ClearType::ExHard)
-        );
+        assert_eq!(ClearType::clear_type_by_gauge(6), Some(ClearType::Normal));
+        assert_eq!(ClearType::clear_type_by_gauge(7), Some(ClearType::Hard));
+        assert_eq!(ClearType::clear_type_by_gauge(8), Some(ClearType::ExHard));
     }
 
     #[test]
     fn test_get_clear_type_by_gauge_invalid() {
-        assert_eq!(ClearType::get_clear_type_by_gauge(-1), None);
-        assert_eq!(ClearType::get_clear_type_by_gauge(9), None);
-        assert_eq!(ClearType::get_clear_type_by_gauge(100), None);
+        assert_eq!(ClearType::clear_type_by_gauge(-1), None);
+        assert_eq!(ClearType::clear_type_by_gauge(9), None);
+        assert_eq!(ClearType::clear_type_by_gauge(100), None);
     }
 
     #[test]

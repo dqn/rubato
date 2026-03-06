@@ -212,7 +212,7 @@ impl PlayDataAccessor {
         // Trophy handling
         let mut trophies: std::collections::HashSet<SongTrophy> = std::collections::HashSet::new();
         for c in score.trophy.chars() {
-            if let Some(t) = SongTrophy::get_trophy(c) {
+            if let Some(t) = SongTrophy::trophy(c) {
                 trophies.insert(t);
             }
         }
@@ -380,7 +380,7 @@ impl PlayDataAccessor {
             "{}{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
             self.hashkey,
             score.sha256,
-            score.get_exscore(),
+            score.exscore(),
             score.epg,
             score.lpg,
             score.egr,
@@ -427,11 +427,11 @@ impl PlayDataAccessor {
             log.sha256 = Some(hash.to_string());
             log.clear = newscore.clear;
         }
-        log.oldscore = score.get_exscore();
-        log.score = score.get_exscore();
-        if score.get_exscore() < newscore.get_exscore() && update_score {
+        log.oldscore = score.exscore();
+        log.score = score.exscore();
+        if score.exscore() < newscore.exscore() && update_score {
             log.sha256 = Some(hash.to_string());
-            log.score = newscore.get_exscore();
+            log.score = newscore.exscore();
         }
         log.oldminbp = score.minbp;
         log.minbp = score.minbp;
@@ -1585,12 +1585,8 @@ mod tests {
         );
         assert_eq!(log.oldclear, 5);
         assert_eq!(log.clear, 5, "clear should stay at old value");
-        assert_eq!(log.oldscore, score.get_exscore());
-        assert_eq!(
-            log.score,
-            score.get_exscore(),
-            "score should stay at old value"
-        );
+        assert_eq!(log.oldscore, score.exscore());
+        assert_eq!(log.score, score.exscore(), "score should stay at old value");
     }
 
     #[test]

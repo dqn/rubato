@@ -187,7 +187,7 @@ mod tests {
         let td = td.unwrap();
         assert_eq!(td.get_name(), "Course Table");
         assert_eq!(td.course.len(), 1);
-        assert_eq!(td.course[0].get_name(), "Dan Course");
+        assert_eq!(td.course[0].name(), "Dan Course");
         assert!(td.course[0].release);
         assert_eq!(td.course[0].trophy.len(), 1);
         assert_eq!(td.course[0].trophy[0].name, Some("Gold".to_string()));

@@ -27,12 +27,12 @@ fn boundary_17ms_all_pgreat() {
 
     let score = &result.score;
     assert_eq!(
-        score.get_judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_PG),
         normal as i32,
         "17ms should be within PG window (PG={}, GR={}, GD={})",
-        score.get_judge_count_total(JUDGE_PG),
-        score.get_judge_count_total(JUDGE_GR),
-        score.get_judge_count_total(JUDGE_GD),
+        score.judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_GR),
+        score.judge_count_total(JUDGE_GD),
     );
 }
 
@@ -47,15 +47,15 @@ fn boundary_19ms_no_pgreat() {
 
     let score = &result.score;
     assert_eq!(
-        score.get_judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_PG),
         0,
         "19ms should be outside PG window (PG={}, GR={}, GD={})",
-        score.get_judge_count_total(JUDGE_PG),
-        score.get_judge_count_total(JUDGE_GR),
-        score.get_judge_count_total(JUDGE_GD),
+        score.judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_GR),
+        score.judge_count_total(JUDGE_GD),
     );
     assert!(
-        score.get_judge_count_total(JUDGE_GR) > 0,
+        score.judge_count_total(JUDGE_GR) > 0,
         "19ms should be within GR window"
     );
 }
@@ -75,15 +75,15 @@ fn boundary_39ms_all_great() {
     let result = run_manual_simulation(&model, &log, NORMAL);
 
     let score = &result.score;
-    let pg_gr = score.get_judge_count_total(JUDGE_PG) + score.get_judge_count_total(JUDGE_GR);
+    let pg_gr = score.judge_count_total(JUDGE_PG) + score.judge_count_total(JUDGE_GR);
     assert_eq!(
         pg_gr,
         normal as i32,
         "39ms should be within GR window (PG={}, GR={}, GD={}, BD={})",
-        score.get_judge_count_total(JUDGE_PG),
-        score.get_judge_count_total(JUDGE_GR),
-        score.get_judge_count_total(JUDGE_GD),
-        score.get_judge_count_total(JUDGE_BD),
+        score.judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_GR),
+        score.judge_count_total(JUDGE_GD),
+        score.judge_count_total(JUDGE_BD),
     );
 }
 
@@ -98,15 +98,15 @@ fn boundary_41ms_no_great() {
 
     let score = &result.score;
     assert_eq!(
-        score.get_judge_count_total(JUDGE_PG) + score.get_judge_count_total(JUDGE_GR),
+        score.judge_count_total(JUDGE_PG) + score.judge_count_total(JUDGE_GR),
         0,
         "41ms should be outside GR window (PG={}, GR={}, GD={})",
-        score.get_judge_count_total(JUDGE_PG),
-        score.get_judge_count_total(JUDGE_GR),
-        score.get_judge_count_total(JUDGE_GD),
+        score.judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_GR),
+        score.judge_count_total(JUDGE_GD),
     );
     assert!(
-        score.get_judge_count_total(JUDGE_GD) > 0,
+        score.judge_count_total(JUDGE_GD) > 0,
         "41ms should be within GD window"
     );
 }
@@ -126,18 +126,18 @@ fn boundary_99ms_all_good() {
     let result = run_manual_simulation(&model, &log, NORMAL);
 
     let score = &result.score;
-    let pg_gr_gd = score.get_judge_count_total(JUDGE_PG)
-        + score.get_judge_count_total(JUDGE_GR)
-        + score.get_judge_count_total(JUDGE_GD);
+    let pg_gr_gd = score.judge_count_total(JUDGE_PG)
+        + score.judge_count_total(JUDGE_GR)
+        + score.judge_count_total(JUDGE_GD);
     assert_eq!(
         pg_gr_gd,
         normal as i32,
         "99ms should be within GD window (PG={}, GR={}, GD={}, BD={}, PR={})",
-        score.get_judge_count_total(JUDGE_PG),
-        score.get_judge_count_total(JUDGE_GR),
-        score.get_judge_count_total(JUDGE_GD),
-        score.get_judge_count_total(JUDGE_BD),
-        score.get_judge_count_total(JUDGE_PR),
+        score.judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_GR),
+        score.judge_count_total(JUDGE_GD),
+        score.judge_count_total(JUDGE_BD),
+        score.judge_count_total(JUDGE_PR),
     );
 }
 
@@ -152,18 +152,18 @@ fn boundary_101ms_no_good() {
 
     let score = &result.score;
     assert_eq!(
-        score.get_judge_count_total(JUDGE_PG)
-            + score.get_judge_count_total(JUDGE_GR)
-            + score.get_judge_count_total(JUDGE_GD),
+        score.judge_count_total(JUDGE_PG)
+            + score.judge_count_total(JUDGE_GR)
+            + score.judge_count_total(JUDGE_GD),
         0,
         "101ms should be outside GD window (PG={}, GR={}, GD={}, BD={})",
-        score.get_judge_count_total(JUDGE_PG),
-        score.get_judge_count_total(JUDGE_GR),
-        score.get_judge_count_total(JUDGE_GD),
-        score.get_judge_count_total(JUDGE_BD),
+        score.judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_GR),
+        score.judge_count_total(JUDGE_GD),
+        score.judge_count_total(JUDGE_BD),
     );
     assert!(
-        score.get_judge_count_total(JUDGE_BD) > 0 || score.get_judge_count_total(JUDGE_PR) > 0,
+        score.judge_count_total(JUDGE_BD) > 0 || score.judge_count_total(JUDGE_PR) > 0,
         "101ms should be in BD/PR window"
     );
 }
@@ -183,12 +183,12 @@ fn boundary_199ms_not_miss() {
 
     let score = &result.score;
     assert_eq!(
-        score.get_judge_count_total(JUDGE_MS),
+        score.judge_count_total(JUDGE_MS),
         0,
         "199ms should not be MISS (BD={}, PR={}, MS={})",
-        score.get_judge_count_total(JUDGE_BD),
-        score.get_judge_count_total(JUDGE_PR),
-        score.get_judge_count_total(JUDGE_MS),
+        score.judge_count_total(JUDGE_BD),
+        score.judge_count_total(JUDGE_PR),
+        score.judge_count_total(JUDGE_MS),
     );
 }
 
@@ -202,19 +202,19 @@ fn boundary_201ms_all_miss() {
     let result = run_manual_simulation(&model, &log, NORMAL);
 
     let score = &result.score;
-    let total: i32 = (0..6).map(|j| score.get_judge_count_total(j)).sum();
-    let miss_count = score.get_judge_count_total(JUDGE_PR) + score.get_judge_count_total(JUDGE_MS);
+    let total: i32 = (0..6).map(|j| score.judge_count_total(j)).sum();
+    let miss_count = score.judge_count_total(JUDGE_PR) + score.judge_count_total(JUDGE_MS);
     // At 201ms, key presses are beyond BD window, so notes pass without being hit
     assert_eq!(
         miss_count,
         total,
         "201ms should result in all MISS/PR (PG={}, GR={}, GD={}, BD={}, PR={}, MS={})",
-        score.get_judge_count_total(JUDGE_PG),
-        score.get_judge_count_total(JUDGE_GR),
-        score.get_judge_count_total(JUDGE_GD),
-        score.get_judge_count_total(JUDGE_BD),
-        score.get_judge_count_total(JUDGE_PR),
-        score.get_judge_count_total(JUDGE_MS),
+        score.judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_GR),
+        score.judge_count_total(JUDGE_GD),
+        score.judge_count_total(JUDGE_BD),
+        score.judge_count_total(JUDGE_PR),
+        score.judge_count_total(JUDGE_MS),
     );
 }
 
@@ -240,18 +240,18 @@ fn early_late_symmetry_25ms() {
 
     // Both should have same PG/GR distribution (within GR window)
     assert_eq!(
-        early_score.get_judge_count_total(JUDGE_PG),
-        late_score.get_judge_count_total(JUDGE_PG),
+        early_score.judge_count_total(JUDGE_PG),
+        late_score.judge_count_total(JUDGE_PG),
         "PG count should be symmetric: early={}, late={}",
-        early_score.get_judge_count_total(JUDGE_PG),
-        late_score.get_judge_count_total(JUDGE_PG),
+        early_score.judge_count_total(JUDGE_PG),
+        late_score.judge_count_total(JUDGE_PG),
     );
     assert_eq!(
-        early_score.get_judge_count_total(JUDGE_GR),
-        late_score.get_judge_count_total(JUDGE_GR),
+        early_score.judge_count_total(JUDGE_GR),
+        late_score.judge_count_total(JUDGE_GR),
         "GR count should be symmetric: early={}, late={}",
-        early_score.get_judge_count_total(JUDGE_GR),
-        late_score.get_judge_count_total(JUDGE_GR),
+        early_score.judge_count_total(JUDGE_GR),
+        late_score.judge_count_total(JUDGE_GR),
     );
 }
 
@@ -273,10 +273,10 @@ fn early_late_symmetry_50ms() {
 
     // Both should have same GD distribution (within GD window)
     assert_eq!(
-        early_score.get_judge_count_total(JUDGE_GD),
-        late_score.get_judge_count_total(JUDGE_GD),
+        early_score.judge_count_total(JUDGE_GD),
+        late_score.judge_count_total(JUDGE_GD),
         "GD count should be symmetric: early={}, late={}",
-        early_score.get_judge_count_total(JUDGE_GD),
-        late_score.get_judge_count_total(JUDGE_GD),
+        early_score.judge_count_total(JUDGE_GD),
+        late_score.judge_count_total(JUDGE_GD),
     );
 }

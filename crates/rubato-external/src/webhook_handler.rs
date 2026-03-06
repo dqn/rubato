@@ -174,8 +174,8 @@ impl WebhookHandler {
             // Score specific
             if screen_type == ScreenType::MusicResult || screen_type == ScreenType::CourseResult {
                 if let Some(result_state) = get_abstract_result(current_state) {
-                    let new_score = result_state.get_new_score();
-                    let old_score = result_state.get_old_score();
+                    let new_score = result_state.new_score();
+                    let old_score = result_state.old_score();
                     let max_score = IntegerPropertyFactory::integer_property(NUMBER_MAXSCORE)
                         .get(current_state);
 
@@ -186,8 +186,8 @@ impl WebhookHandler {
                     );
                     description += &format!(
                         "**EX SCORE: {}** {}\n",
-                        new_score.get_exscore(),
-                        Self::format_diff(new_score.get_exscore(), old_score.get_exscore())
+                        new_score.exscore(),
+                        Self::format_diff(new_score.exscore(), old_score.exscore())
                     );
                     description += &format!(
                         "**BAD/POOR: {}** {}\n",
@@ -197,15 +197,12 @@ impl WebhookHandler {
                             Self::get_bp_count(old_score)
                         )
                     );
-                    if result_state.get_ir_rank() != 0 {
+                    if result_state.ir_rank() != 0 {
                         description += &format!(
                             "**IR RANK: {}/{}** {}\n",
-                            result_state.get_ir_rank(),
-                            result_state.get_ir_total_player(),
-                            Self::format_diff(
-                                result_state.get_ir_rank(),
-                                result_state.get_old_ir_rank()
-                            )
+                            result_state.ir_rank(),
+                            result_state.ir_total_player(),
+                            Self::format_diff(result_state.ir_rank(), result_state.old_ir_rank())
                         );
                     }
                     if *current_state.resource.original_mode() == Mode::BEAT_7K
@@ -258,9 +255,7 @@ impl WebhookHandler {
 
     // BAD + POOR + EPOOR
     fn get_bp_count(score: &ScoreData) -> i32 {
-        score.get_judge_count_total(3)
-            + score.get_judge_count_total(4)
-            + score.get_judge_count_total(5)
+        score.judge_count_total(3) + score.judge_count_total(4) + score.judge_count_total(5)
     }
 
     // Calculates the number used in rank deltas. e.g. AA+76 MAX-133
@@ -311,14 +306,14 @@ impl WebhookHandler {
     }
 
     fn format_percent(new_score: &ScoreData, max_score: i32) -> String {
-        let percent = 100.0f32 * (new_score.get_exscore() as f32 / max_score as f32);
+        let percent = 100.0f32 * (new_score.exscore() as f32 / max_score as f32);
         format!("({:.2}%)", percent)
     }
 
     // Makes rank string in "[GRADE][+/-][Relative diff] ([percent]) [emoji]" format.
     // e.g "AAA-53 (86.53%) :arrow_up:"
     fn format_rank(current_state: &MainState, new_score: &ScoreData, max_score: i32) -> String {
-        let ex = new_score.get_exscore();
+        let ex = new_score.exscore();
         let percent = 100.0f32 * (ex as f32 / max_score as f32);
         let mut sb = String::new();
         let mut current_rank: i32 = 0;
@@ -337,8 +332,8 @@ impl WebhookHandler {
         }
 
         if let Some(result_state) = get_abstract_result(current_state) {
-            let old_score = result_state.get_old_score();
-            let old_percent = 100.0f32 * old_score.get_exscore() as f32 / max_score as f32;
+            let old_score = result_state.old_score();
+            let old_percent = 100.0f32 * old_score.exscore() as f32 / max_score as f32;
             for rank in &GRADE_RANKS {
                 if old_percent > rank.percent() {
                     old_rank = ((rank.numerator() / 2.0f32).floor() * 2.0f32) as i32;
@@ -455,7 +450,7 @@ static GRADE_RANKS: [GradeRank; 12] = [
 /// its screen type and exposes it via MainStateAccess::get_screen_type().
 fn get_screen_type(state: &MainState) -> ScreenType {
     use rubato_types::main_state_access::MainStateAccess;
-    state.get_screen_type()
+    state.screen_type()
 }
 
 /// Get the AbstractResult from the current state.

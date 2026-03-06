@@ -40,9 +40,9 @@ fn is_skin_select_type_id(id: i32) -> bool {
 
 fn get_skin_select_type(id: i32) -> Option<SkinType> {
     if (BUTTON_SKINSELECT_7KEY..=BUTTON_SKINSELECT_COURSE_RESULT).contains(&id) {
-        SkinType::get_skin_type_by_id(id - BUTTON_SKINSELECT_7KEY)
+        SkinType::skin_type_by_id(id - BUTTON_SKINSELECT_7KEY)
     } else if (BUTTON_SKINSELECT_24KEY..=BUTTON_SKINSELECT_24KEY_BATTLE).contains(&id) {
-        SkinType::get_skin_type_by_id(id - BUTTON_SKINSELECT_24KEY + 16)
+        SkinType::skin_type_by_id(id - BUTTON_SKINSELECT_24KEY + 16)
     } else {
         None
     }
@@ -358,7 +358,7 @@ impl SkinConfiguration {
         // Find existing entry index
         let mut index: Option<usize> = None;
         for (i, hist) in self.player.skin_history.iter().enumerate() {
-            if hist.get_path() == Some(config_path) {
+            if hist.path() == Some(config_path) {
                 index = Some(i);
                 break;
             }
@@ -672,7 +672,7 @@ impl SkinConfiguration {
             {
                 let header_path_str = header_path.to_string_lossy().to_string();
                 for hist in &self.player.skin_history {
-                    if hist.get_path() == Some(header_path_str.as_str()) {
+                    if hist.path() == Some(header_path_str.as_str()) {
                         if let Some(ref mut config) = self.config {
                             config.properties = hist.properties.clone();
                         }
@@ -714,7 +714,7 @@ impl SkinConfiguration {
         if self.config.is_none() {
             self.config = Some(SkinConfig::default());
             if let Some(ref skin_type) = self.skin_type {
-                let id = skin_type.get_id() as usize;
+                let id = skin_type.id() as usize;
                 let skin_vec = &mut self.player.skin;
                 if id < skin_vec.len() {
                     skin_vec[id] = self.config.clone();
@@ -759,7 +759,7 @@ impl SkinConfiguration {
         self.skin_type = Some(st);
 
         // Load config for this skin type from player
-        let id = st.get_id() as usize;
+        let id = st.id() as usize;
         self.config = if id < self.player.skin.len() {
             self.player.skin[id].clone()
         } else {
@@ -1264,10 +1264,7 @@ mod tests {
 
         sc.save_skin_history();
         assert_eq!(sc.player.skin_history.len(), 1);
-        assert_eq!(
-            sc.player.skin_history[0].get_path(),
-            Some("skin/play7.json")
-        );
+        assert_eq!(sc.player.skin_history[0].path(), Some("skin/play7.json"));
     }
 
     #[test]

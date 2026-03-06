@@ -65,7 +65,7 @@ impl IRCourseData {
         }
 
         Self {
-            name: course.get_name().to_string(),
+            name: course.name().to_string(),
             charts,
             constraint: constraints,
             trophy,

@@ -126,7 +126,7 @@ fn manual_perfect() {
 
     let score = &result.score;
     assert_eq!(
-        score.get_judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_PG),
         normal as i32,
         "All normal notes should be PG with exact timing"
     );
@@ -145,21 +145,21 @@ fn manual_great() {
 
     let score = &result.score;
     assert_eq!(
-        score.get_judge_count_total(JUDGE_BD),
+        score.judge_count_total(JUDGE_BD),
         0,
         "No BAD expected at 25ms offset"
     );
     assert_eq!(
-        score.get_judge_count_total(JUDGE_MS),
+        score.judge_count_total(JUDGE_MS),
         0,
         "No MISS expected at 25ms offset"
     );
     assert!(
-        score.get_judge_count_total(JUDGE_GR) > 0,
+        score.judge_count_total(JUDGE_GR) > 0,
         "Expected some GR at 25ms offset (PG={}, GR={}, GD={})",
-        score.get_judge_count_total(JUDGE_PG),
-        score.get_judge_count_total(JUDGE_GR),
-        score.get_judge_count_total(JUDGE_GD)
+        score.judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_GR),
+        score.judge_count_total(JUDGE_GD)
     );
 }
 
@@ -176,19 +176,19 @@ fn manual_good() {
 
     let score = &result.score;
     assert_eq!(
-        score.get_judge_count_total(JUDGE_MS),
+        score.judge_count_total(JUDGE_MS),
         0,
         "No MISS expected at 50ms offset"
     );
     assert!(
-        score.get_judge_count_total(JUDGE_GD) > 0,
+        score.judge_count_total(JUDGE_GD) > 0,
         "Expected some GD at 50ms offset (PG={}, GR={}, GD={}, BD={}, PR={}, MS={})",
-        score.get_judge_count_total(JUDGE_PG),
-        score.get_judge_count_total(JUDGE_GR),
-        score.get_judge_count_total(JUDGE_GD),
-        score.get_judge_count_total(JUDGE_BD),
-        score.get_judge_count_total(JUDGE_PR),
-        score.get_judge_count_total(JUDGE_MS),
+        score.judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_GR),
+        score.judge_count_total(JUDGE_GD),
+        score.judge_count_total(JUDGE_BD),
+        score.judge_count_total(JUDGE_PR),
+        score.judge_count_total(JUDGE_MS),
     );
 }
 
@@ -205,14 +205,14 @@ fn manual_bad() {
 
     let score = &result.score;
     assert!(
-        score.get_judge_count_total(JUDGE_BD) > 0 || score.get_judge_count_total(JUDGE_PR) > 0,
+        score.judge_count_total(JUDGE_BD) > 0 || score.judge_count_total(JUDGE_PR) > 0,
         "Expected some BD/PR at 150ms offset (PG={}, GR={}, GD={}, BD={}, PR={}, MS={})",
-        score.get_judge_count_total(JUDGE_PG),
-        score.get_judge_count_total(JUDGE_GR),
-        score.get_judge_count_total(JUDGE_GD),
-        score.get_judge_count_total(JUDGE_BD),
-        score.get_judge_count_total(JUDGE_PR),
-        score.get_judge_count_total(JUDGE_MS),
+        score.judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_GR),
+        score.judge_count_total(JUDGE_GD),
+        score.judge_count_total(JUDGE_BD),
+        score.judge_count_total(JUDGE_PR),
+        score.judge_count_total(JUDGE_MS),
     );
 }
 
@@ -224,17 +224,17 @@ fn manual_all_miss() {
     let result = run_manual_simulation(&model, &[], NORMAL);
 
     let score = &result.score;
-    let miss_count = score.get_judge_count_total(JUDGE_PR) + score.get_judge_count_total(JUDGE_MS);
+    let miss_count = score.judge_count_total(JUDGE_PR) + score.judge_count_total(JUDGE_MS);
     assert_eq!(
         miss_count,
         total as i32,
         "All notes should be MISS/PR with no input (PG={}, GR={}, GD={}, BD={}, PR={}, MS={})",
-        score.get_judge_count_total(JUDGE_PG),
-        score.get_judge_count_total(JUDGE_GR),
-        score.get_judge_count_total(JUDGE_GD),
-        score.get_judge_count_total(JUDGE_BD),
-        score.get_judge_count_total(JUDGE_PR),
-        score.get_judge_count_total(JUDGE_MS),
+        score.judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_GR),
+        score.judge_count_total(JUDGE_GD),
+        score.judge_count_total(JUDGE_BD),
+        score.judge_count_total(JUDGE_PR),
+        score.judge_count_total(JUDGE_MS),
     );
     assert_eq!(result.max_combo, 0, "Max combo should be 0 with no input");
 }
@@ -305,7 +305,7 @@ fn ln_autoplay_judge_count() {
     // Pure LN: 1 judgment per LN pair (end not independently judged).
     // ghost.len() matches the number of actually-judged notes.
     let expected = result.ghost.len() as i32;
-    let total_judge: i32 = (0..6).map(|j| result.score.get_judge_count_total(j)).sum();
+    let total_judge: i32 = (0..6).map(|j| result.score.judge_count_total(j)).sum();
     assert_eq!(
         total_judge, expected,
         "Judge count should match ghost length (expected={expected}, got={})",
@@ -322,7 +322,7 @@ fn scratch_autoplay_judge_count() {
     // BSS (CN type): start + end independently judged.
     // ghost.len() matches the number of actually-judged notes.
     let expected = result.ghost.len() as i32;
-    let total_judge: i32 = (0..6).map(|j| result.score.get_judge_count_total(j)).sum();
+    let total_judge: i32 = (0..6).map(|j| result.score.judge_count_total(j)).sum();
     assert_eq!(
         total_judge, expected,
         "Judge count should match ghost length (expected={expected}, got={})",

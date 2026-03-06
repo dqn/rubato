@@ -113,7 +113,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let timer_func = lua.create_function(move |_, id: i32| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_timer().get_micro_timer(id))
+                Ok(state.get_timer().micro_timer(id))
             })?;
             table.set("timer", timer_func)?;
 
@@ -124,7 +124,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let time_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_timer().get_now_micro_time())
+                Ok(state.get_timer().now_micro_time())
             })?;
             table.set("time", time_func)?;
 

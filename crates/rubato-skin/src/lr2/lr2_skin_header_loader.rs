@@ -178,7 +178,7 @@ impl LR2SkinHeaderLoader {
                 if str_parts.len() >= 4 {
                     if let Ok(type_id) = str_parts[1].trim().parse::<i32>() {
                         self.header.skin_type =
-                            crate::skin_type::SkinType::get_skin_type_by_id(type_id);
+                            crate::skin_type::SkinType::skin_type_by_id(type_id);
                     }
                     self.header.name = str_parts[2].clone();
                     self.header.author = str_parts[3].clone();

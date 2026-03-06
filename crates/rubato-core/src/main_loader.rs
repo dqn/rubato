@@ -248,7 +248,7 @@ impl MainLoader {
         if let Some(ref songdb) = *guard {
             // SongUtils.illegalsongs = ["notme"]
             let illegal_hashes: Vec<String> = vec!["notme".to_string()];
-            let songs = songdb.get_song_datas_by_hashes(&illegal_hashes);
+            let songs = songdb.song_datas_by_hashes(&illegal_hashes);
             for song in &songs {
                 Self::put_illegal_song(&song.sha256);
             }
@@ -414,11 +414,11 @@ mod tests {
     }
 
     impl SongDatabaseAccessorTrait for MockSongDb {
-        fn get_song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
+        fn song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
             self.songs.clone()
         }
 
-        fn get_song_datas_by_hashes(&self, hashes: &[String]) -> Vec<SongData> {
+        fn song_datas_by_hashes(&self, hashes: &[String]) -> Vec<SongData> {
             self.songs
                 .iter()
                 .filter(|s| hashes.contains(&s.sha256) || hashes.contains(&s.md5))
@@ -426,7 +426,7 @@ mod tests {
                 .collect()
         }
 
-        fn get_song_datas_by_sql(
+        fn song_datas_by_sql(
             &self,
             _sql: &str,
             _score: &str,
@@ -438,11 +438,11 @@ mod tests {
 
         fn set_song_datas(&self, _songs: &[SongData]) {}
 
-        fn get_song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
+        fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
             Vec::new()
         }
 
-        fn get_folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
+        fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
             Vec::new()
         }
     }

@@ -54,7 +54,7 @@ fn compare_course_data(
     }
 
     // name is Option<String> in Rust, String in fixture
-    let rust_name = rust.get_name();
+    let rust_name = rust.name();
     if rust_name != java.name {
         diffs.push(format!("name: rust={:?} java={:?}", rust_name, java.name));
     }
@@ -135,7 +135,7 @@ fn compare_course_data(
     } else {
         for (i, (rt, jt)) in rust.trophy.iter().zip(java.trophy.iter()).enumerate() {
             // TrophyData.name is Option<String>
-            let rt_name = rt.get_name();
+            let rt_name = rt.name();
             if rt_name != jt.name {
                 diffs.push(format!(
                     "trophy[{}].name: rust={:?} java={:?}",

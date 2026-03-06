@@ -99,7 +99,7 @@ pub fn load_skin_from_config(
     player_config: &PlayerConfig,
     skin_type_id: i32,
 ) -> Option<Skin> {
-    let skin_type = SkinType::get_skin_type_by_id(skin_type_id)?;
+    let skin_type = SkinType::skin_type_by_id(skin_type_id)?;
 
     // Resolve skin path: player_config.skin[id] → fallback to default
     let skin_path = player_config
@@ -107,7 +107,7 @@ pub fn load_skin_from_config(
         .get(skin_type_id as usize)
         .and_then(|sc| sc.as_ref())
         .and_then(|sc| sc.path.clone())
-        .or_else(|| rubato_types::skin_config::SkinConfig::get_default(skin_type_id).path);
+        .or_else(|| rubato_types::skin_config::SkinConfig::default_for_id(skin_type_id).path);
 
     let skin_path = match skin_path {
         Some(ref p) if !p.is_empty() => p.clone(),

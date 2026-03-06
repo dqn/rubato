@@ -209,15 +209,15 @@ impl SongInformationAccessor {
 }
 
 impl SongInformationDb for SongInformationAccessor {
-    fn get_informations(&self, sql: &str) -> Vec<SongInformation> {
+    fn informations(&self, sql: &str) -> Vec<SongInformation> {
         self.informations(sql)
     }
 
-    fn get_information(&self, sha256: &str) -> Option<SongInformation> {
+    fn information(&self, sha256: &str) -> Option<SongInformation> {
         self.information(sha256)
     }
 
-    fn get_information_for_songs(&self, songs: &mut [SongData]) {
+    fn information_for_songs(&self, songs: &mut [SongData]) {
         self.information_for_songs(songs)
     }
 

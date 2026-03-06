@@ -12,8 +12,7 @@ pub trait ScoreDatabaseAccess: Send {
     fn create_table(&self);
 
     /// Get score data for the given hash and mode.
-    fn get_score_data(&self, sha256: &str, mode: i32) -> Option<ScoreData>;
-
+    fn score_data(&self, sha256: &str, mode: i32) -> Option<ScoreData>;
     /// Write multiple score data entries.
     fn set_score_data_slice(&self, scores: &[ScoreData]);
 }
@@ -26,7 +25,7 @@ impl ScoreDatabaseAccess for NullScoreDatabaseAccess {
         log::warn!("NullScoreDatabaseAccess::create_table called — no-op");
     }
 
-    fn get_score_data(&self, _sha256: &str, _mode: i32) -> Option<ScoreData> {
+    fn score_data(&self, _sha256: &str, _mode: i32) -> Option<ScoreData> {
         log::warn!("NullScoreDatabaseAccess::get_score_data called — returning None");
         None
     }
@@ -49,7 +48,7 @@ mod tests {
     #[test]
     fn test_null_score_database_access_get_score_data() {
         let db = NullScoreDatabaseAccess;
-        assert!(db.get_score_data("abc", 0).is_none());
+        assert!(db.score_data("abc", 0).is_none());
     }
 
     #[test]

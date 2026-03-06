@@ -204,11 +204,11 @@ fn download_daemon_thread_run(
                 None
             };
             if let Some(song) = song {
-                ipfspath = song.get_ipfs();
-                diffpath = song.get_append_ipfs();
+                ipfspath = song.ipfs();
+                diffpath = song.append_ipfs();
 
                 ipfspath = normalize_ipfs_path(&ipfspath);
-                path = format!("[{}]{}", song.get_artist(), song.get_title());
+                path = format!("[{}]{}", song.artist(), song.title());
                 // path = "ipfs/" + path.replaceAll("[(\\\\|/|:|\\*|\\?|\"|<|>|\\|)]", "");
                 path = format!("ipfs/{}", path_sanitize_re.replace_all(&path, ""));
 
@@ -216,7 +216,7 @@ fn download_daemon_thread_run(
                     diffpath = normalize_ipfs_path(&diffpath);
                 }
 
-                let orgmd5 = song.get_org_md5();
+                let orgmd5 = song.org_md5();
                 orgbms = None;
                 if !orgmd5.is_empty() {
                     let s = main.get_music_paths(&orgmd5);
@@ -440,7 +440,7 @@ impl rubato_types::music_download_access::MusicDownloadAccess for MusicDownloadP
         MusicDownloadProcessor::is_download(self)
     }
 
-    fn get_message(&self) -> String {
+    fn message(&self) -> String {
         MusicDownloadProcessor::message(self)
     }
 }

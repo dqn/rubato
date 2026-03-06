@@ -130,22 +130,22 @@ mod tests {
     #[test]
     fn test_player_config_sortid_getter_setter() {
         let mut pc = PlayerConfig::default();
-        assert!(pc.get_sortid().is_none());
+        assert!(pc.sortid().is_none());
 
         pc.set_sortid("CLEAR".to_string());
-        assert_eq!(pc.get_sortid(), Some("CLEAR"));
+        assert_eq!(pc.sortid(), Some("CLEAR"));
     }
 
     #[test]
     fn test_player_config_mode_getter_setter() {
         let mut pc = PlayerConfig::default();
-        assert!(pc.get_mode().is_none());
+        assert!(pc.mode().is_none());
 
         pc.mode = Some(Mode::BEAT_7K);
-        assert_eq!(pc.get_mode(), Some(&Mode::BEAT_7K));
+        assert_eq!(pc.mode(), Some(&Mode::BEAT_7K));
 
         pc.mode = None;
-        assert!(pc.get_mode().is_none());
+        assert!(pc.mode().is_none());
     }
 
     #[test]
@@ -198,11 +198,11 @@ mod tests {
     #[test]
     fn test_player_config_misslayer_duration() {
         let mut pc = PlayerConfig::default();
-        assert_eq!(pc.get_misslayer_duration(), 500);
+        assert_eq!(pc.misslayer_duration(), 500);
 
         // Test negative clamping
         pc.misslayer_duration = -10;
-        assert_eq!(pc.get_misslayer_duration(), 0);
+        assert_eq!(pc.misslayer_duration(), 0);
         // After the call, the field is clamped to 0
         assert_eq!(pc.misslayer_duration, 0);
     }
@@ -234,10 +234,10 @@ mod tests {
     #[test]
     fn test_player_config_twitter_fields_none_by_default() {
         let pc = PlayerConfig::default();
-        assert!(pc.get_twitter_consumer_key().is_none());
-        assert!(pc.get_twitter_consumer_secret().is_none());
-        assert!(pc.get_twitter_access_token().is_none());
-        assert!(pc.get_twitter_access_token_secret().is_none());
+        assert!(pc.twitter_consumer_key().is_none());
+        assert!(pc.twitter_consumer_secret().is_none());
+        assert!(pc.twitter_access_token().is_none());
+        assert!(pc.twitter_access_token_secret().is_none());
     }
 
     #[test]
@@ -245,7 +245,7 @@ mod tests {
         let mut pc = PlayerConfig::default();
         assert!(pc.skin_history.is_empty());
 
-        let history = vec![crate::skin_config::SkinConfig::get_default(0)];
+        let history = vec![crate::skin_config::SkinConfig::default_for_id(0)];
         pc.skin_history = history.clone();
         assert_eq!(pc.skin_history.len(), 1);
     }

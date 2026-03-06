@@ -26,7 +26,7 @@ impl ScoreDataImporter {
                         .and_then(|v| v.as_str())
                         .unwrap_or_default()
                         .to_string();
-                    let song = songdb.get_song_datas_by_hashes(std::slice::from_ref(&md5));
+                    let song = songdb.song_datas_by_hashes(std::slice::from_ref(&md5));
                     #[allow(clippy::field_reassign_with_default)]
                     if !song.is_empty() {
                         let mut sd = ScoreData::default();

@@ -184,7 +184,7 @@ impl PlayerResource {
             }
             if let Some(ref mut bmsresource) = self.bmsresource {
                 bmsresource.set_bms_file(
-                    self.songdata.as_ref().unwrap().get_bms_model().unwrap(),
+                    self.songdata.as_ref().unwrap().bms_model().unwrap(),
                     f,
                     &self.config,
                     self.mode.as_ref().unwrap(),
@@ -233,7 +233,7 @@ impl PlayerResource {
     }
 
     pub fn get_bms_model(&self) -> Option<&BMSModel> {
-        self.songdata.as_ref().and_then(|sd| sd.get_bms_model())
+        self.songdata.as_ref().and_then(|sd| sd.bms_model())
     }
 
     pub fn get_margin_time(&self) -> i64 {
@@ -435,7 +435,7 @@ impl PlayerResource {
     }
 
     pub fn get_coursetitle(&self) -> Option<String> {
-        self.coursedata.as_ref().map(|cd| cd.get_name().to_string())
+        self.coursedata.as_ref().map(|cd| cd.name().to_string())
     }
 
     pub fn get_constraint(&self) -> Vec<CourseDataConstraint> {
@@ -647,27 +647,27 @@ impl PlayerResourceAccess for PlayerResource {
         self
     }
 
-    fn get_config(&self) -> &Config {
+    fn config(&self) -> &Config {
         &self.config
     }
 
-    fn get_player_config(&self) -> &PlayerConfig {
+    fn player_config(&self) -> &PlayerConfig {
         &self.pconfig
     }
 
-    fn get_player_config_mut(&mut self) -> Option<&mut PlayerConfig> {
+    fn player_config_mut(&mut self) -> Option<&mut PlayerConfig> {
         Some(&mut self.pconfig)
     }
 
-    fn get_score_data(&self) -> Option<&ScoreData> {
+    fn score_data(&self) -> Option<&ScoreData> {
         self.score.as_ref()
     }
 
-    fn get_rival_score_data(&self) -> Option<&ScoreData> {
+    fn rival_score_data(&self) -> Option<&ScoreData> {
         self.rscore.as_ref()
     }
 
-    fn get_target_score_data(&self) -> Option<&ScoreData> {
+    fn target_score_data(&self) -> Option<&ScoreData> {
         self.tscore.as_ref()
     }
 
@@ -675,7 +675,7 @@ impl PlayerResourceAccess for PlayerResource {
         self.tscore = Some(score);
     }
 
-    fn get_course_score_data(&self) -> Option<&ScoreData> {
+    fn course_score_data(&self) -> Option<&ScoreData> {
         self.cscore.as_ref()
     }
 
@@ -683,11 +683,11 @@ impl PlayerResourceAccess for PlayerResource {
         self.cscore = Some(score);
     }
 
-    fn get_songdata(&self) -> Option<&rubato_types::song_data::SongData> {
+    fn songdata(&self) -> Option<&rubato_types::song_data::SongData> {
         self.songdata.as_ref()
     }
 
-    fn get_songdata_mut(&mut self) -> Option<&mut rubato_types::song_data::SongData> {
+    fn songdata_mut(&mut self) -> Option<&mut rubato_types::song_data::SongData> {
         self.songdata.as_mut()
     }
 
@@ -695,15 +695,15 @@ impl PlayerResourceAccess for PlayerResource {
         self.songdata = data;
     }
 
-    fn get_replay_data(&self) -> Option<&ReplayData> {
+    fn replay_data(&self) -> Option<&ReplayData> {
         self.replay.as_ref()
     }
 
-    fn get_replay_data_mut(&mut self) -> Option<&mut ReplayData> {
+    fn replay_data_mut(&mut self) -> Option<&mut ReplayData> {
         self.replay.as_mut()
     }
 
-    fn get_course_replay(&self) -> &[ReplayData] {
+    fn course_replay(&self) -> &[ReplayData] {
         &self.course_replay
     }
 
@@ -711,11 +711,11 @@ impl PlayerResourceAccess for PlayerResource {
         self.course_replay.push(rd);
     }
 
-    fn get_course_data(&self) -> Option<&CourseData> {
+    fn course_data(&self) -> Option<&CourseData> {
         self.coursedata.as_ref()
     }
 
-    fn get_course_index(&self) -> usize {
+    fn course_index(&self) -> usize {
         self.courseindex
     }
 
@@ -723,19 +723,19 @@ impl PlayerResourceAccess for PlayerResource {
         PlayerResource::next_course(self)
     }
 
-    fn get_constraint(&self) -> Vec<CourseDataConstraint> {
+    fn constraint(&self) -> Vec<CourseDataConstraint> {
         PlayerResource::get_constraint(self)
     }
 
-    fn get_gauge(&self) -> Option<&Vec<Vec<f32>>> {
+    fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
         self.gauge.as_ref()
     }
 
-    fn get_groove_gauge(&self) -> Option<&rubato_types::groove_gauge::GrooveGauge> {
+    fn groove_gauge(&self) -> Option<&rubato_types::groove_gauge::GrooveGauge> {
         self.groove_gauge.as_ref()
     }
 
-    fn get_course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
+    fn course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
         &self.coursegauge
     }
 
@@ -743,23 +743,23 @@ impl PlayerResourceAccess for PlayerResource {
         self.coursegauge.push(gauge);
     }
 
-    fn get_course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
+    fn course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
         &mut self.coursegauge
     }
 
-    fn get_score_data_mut(&mut self) -> Option<&mut ScoreData> {
+    fn score_data_mut(&mut self) -> Option<&mut ScoreData> {
         self.score.as_mut()
     }
 
-    fn get_course_replay_mut(&mut self) -> &mut Vec<ReplayData> {
+    fn course_replay_mut(&mut self) -> &mut Vec<ReplayData> {
         &mut self.course_replay
     }
 
-    fn get_maxcombo(&self) -> i32 {
+    fn maxcombo(&self) -> i32 {
         self.maxcombo
     }
 
-    fn get_org_gauge_option(&self) -> i32 {
+    fn org_gauge_option(&self) -> i32 {
         self.org_gauge_option
     }
 
@@ -767,7 +767,7 @@ impl PlayerResourceAccess for PlayerResource {
         self.org_gauge_option = val;
     }
 
-    fn get_assist(&self) -> i32 {
+    fn assist(&self) -> i32 {
         self.assist
     }
 
@@ -787,11 +787,11 @@ impl PlayerResourceAccess for PlayerResource {
         self.freq_on
     }
 
-    fn get_reverse_lookup_data(&self) -> Vec<String> {
+    fn reverse_lookup_data(&self) -> Vec<String> {
         PlayerResource::get_reverse_lookup_data(self)
     }
 
-    fn get_reverse_lookup_levels(&self) -> Vec<String> {
+    fn reverse_lookup_levels(&self) -> Vec<String> {
         PlayerResource::get_reverse_lookup_levels(self)
     }
 
@@ -854,7 +854,7 @@ impl PlayerResourceAccess for PlayerResource {
         PlayerResource::next_song(self)
     }
 
-    fn get_bms_model(&self) -> Option<&bms_model::bms_model::BMSModel> {
+    fn bms_model(&self) -> Option<&bms_model::bms_model::BMSModel> {
         PlayerResource::get_bms_model(self)
     }
 
@@ -862,7 +862,7 @@ impl PlayerResourceAccess for PlayerResource {
         PlayerResource::set_player_data(self, player_data)
     }
 
-    fn get_course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
+    fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
         match self.get_course_bms_models() {
             Some(models) => models
                 .iter()
@@ -903,7 +903,7 @@ impl PlayerResourceAccess for PlayerResource {
         }
     }
 
-    fn get_bga_any(&self) -> Option<&(dyn Any + Send)> {
+    fn bga_any(&self) -> Option<&(dyn Any + Send)> {
         self.bga_any.as_deref()
     }
 
@@ -1017,8 +1017,7 @@ mod tests {
         assert!(!songdata.md5.is_empty(), "songdata.md5 should be non-empty");
 
         // PlayerResourceAccess trait method should also return Some
-        let trait_songdata =
-            PlayerResourceAccess::get_songdata(&resource as &dyn PlayerResourceAccess);
+        let trait_songdata = PlayerResourceAccess::songdata(&resource as &dyn PlayerResourceAccess);
         assert!(
             trait_songdata.is_some(),
             "PlayerResourceAccess::get_songdata should return Some"

@@ -31,11 +31,11 @@ fn run_manual_perfect_test(bms_file: &str, gauge_type: i32, label: &str) {
 
     let score = &result.score;
     assert_eq!(
-        score.get_judge_count_total(JUDGE_PG),
+        score.judge_count_total(JUDGE_PG),
         normal as i32,
         "{label}: all normal notes should be PG (PG={}, total_judge={})",
-        score.get_judge_count_total(JUDGE_PG),
-        (0..6).map(|j| score.get_judge_count_total(j)).sum::<i32>()
+        score.judge_count_total(JUDGE_PG),
+        (0..6).map(|j| score.judge_count_total(j)).sum::<i32>()
     );
     assert!(
         result.gauge_qualified,
@@ -58,13 +58,13 @@ fn run_manual_all_miss_test(bms_file: &str, gauge_type: i32, label: &str) {
     let result = run_manual_simulation(&model, &[], gauge_type);
 
     let score = &result.score;
-    let miss_count = score.get_judge_count_total(JUDGE_PR) + score.get_judge_count_total(JUDGE_MS);
+    let miss_count = score.judge_count_total(JUDGE_PR) + score.judge_count_total(JUDGE_MS);
     assert_eq!(
         miss_count,
         total as i32,
         "{label}: all notes should be PR/MS (PR={}, MS={}, total={})",
-        score.get_judge_count_total(JUDGE_PR),
-        score.get_judge_count_total(JUDGE_MS),
+        score.judge_count_total(JUDGE_PR),
+        score.judge_count_total(JUDGE_MS),
         total
     );
     assert_eq!(result.max_combo, 0, "{label}: max_combo should be 0");

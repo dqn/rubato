@@ -336,7 +336,7 @@ mod tests {
         let model = make_model();
         let gg = create_groove_gauge(&model, NORMAL, 0, None).unwrap();
         let gauge = gg.gauge();
-        assert!((gauge.get_value() - gg.value()).abs() < f32::EPSILON);
+        assert!((gauge.value() - gg.value()).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -345,7 +345,7 @@ mod tests {
         let gg = create_groove_gauge(&model, NORMAL, 0, None).unwrap();
         let hard_gauge = gg.gauge_by_type(HARD);
         // Hard gauge init = 100.0
-        assert!((hard_gauge.get_value() - 100.0).abs() < f32::EPSILON);
+        assert!((hard_gauge.value() - 100.0).abs() < f32::EPSILON);
     }
 
     // --- Gauge is_max tests ---

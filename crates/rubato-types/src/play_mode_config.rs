@@ -732,7 +732,7 @@ impl ControllerConfig {
     pub const ANALOG_SCRATCH_VER_1: i32 = ANALOG_SCRATCH_VER_1;
     pub const ANALOG_SCRATCH_VER_2: i32 = ANALOG_SCRATCH_VER_2;
 
-    pub fn get_name(&self) -> Option<&str> {
+    pub fn name(&self) -> Option<&str> {
         if self.name.is_empty() {
             None
         } else {
@@ -943,11 +943,11 @@ impl MidiConfig {
 }
 
 impl MidiConfig {
-    pub fn get_start(&self) -> Option<&MidiInput> {
+    pub fn start(&self) -> Option<&MidiInput> {
         self.start.as_ref()
     }
 
-    pub fn get_select(&self) -> Option<&MidiInput> {
+    pub fn select(&self) -> Option<&MidiInput> {
         self.select.as_ref()
     }
 }

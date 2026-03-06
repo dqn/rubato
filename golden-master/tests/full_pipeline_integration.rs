@@ -29,10 +29,7 @@ fn bms_to_replay_full_pipeline() {
 
     // Step 2: Simulate with keylog
     let original = run_manual_simulation(&model, &keylog, NORMAL);
-    assert_eq!(
-        original.score.get_judge_count_total(JUDGE_PG),
-        normal as i32
-    );
+    assert_eq!(original.score.judge_count_total(JUDGE_PG), normal as i32);
 
     // Step 3: Convert to ReplayData and JSON round-trip
     let replay_keylog: Vec<ReplayKeyInputLog> = keylog
@@ -67,8 +64,8 @@ fn bms_to_replay_full_pipeline() {
 
     // Step 7: Verify exact match
     assert_eq!(
-        original.score.get_judge_count_total(JUDGE_PG),
-        replayed.score.get_judge_count_total(JUDGE_PG),
+        original.score.judge_count_total(JUDGE_PG),
+        replayed.score.judge_count_total(JUDGE_PG),
         "PG should match after full pipeline round-trip"
     );
     assert_eq!(
@@ -129,8 +126,8 @@ fn full_pipeline_multiple_bms() {
 
         // Verify
         assert_eq!(
-            original.score.get_judge_count_total(JUDGE_PG),
-            replayed.score.get_judge_count_total(JUDGE_PG),
+            original.score.judge_count_total(JUDGE_PG),
+            replayed.score.judge_count_total(JUDGE_PG),
             "{filename}: PG mismatch after pipeline round-trip"
         );
         assert_eq!(
@@ -165,21 +162,21 @@ fn pipeline_judge_rank_affects_distribution() {
 
     // 0ms should have more PG than 25ms
     assert!(
-        result_0ms.score.get_judge_count_total(JUDGE_PG)
-            > result_25ms.score.get_judge_count_total(JUDGE_PG),
+        result_0ms.score.judge_count_total(JUDGE_PG)
+            > result_25ms.score.judge_count_total(JUDGE_PG),
         "0ms offset should have more PG ({}) than 25ms offset ({})",
-        result_0ms.score.get_judge_count_total(JUDGE_PG),
-        result_25ms.score.get_judge_count_total(JUDGE_PG)
+        result_0ms.score.judge_count_total(JUDGE_PG),
+        result_25ms.score.judge_count_total(JUDGE_PG)
     );
 
     // 0ms should have 0 GR, while 25ms should have GR > 0
     assert_eq!(
-        result_0ms.score.get_judge_count_total(JUDGE_GR),
+        result_0ms.score.judge_count_total(JUDGE_GR),
         0,
         "0ms should have no GR"
     );
     assert!(
-        result_25ms.score.get_judge_count_total(JUDGE_GR) > 0,
+        result_25ms.score.judge_count_total(JUDGE_GR) > 0,
         "25ms should have some GR"
     );
 }
@@ -205,10 +202,10 @@ fn pipeline_cross_gauge_score_consistency() {
         .collect();
 
     // All should have same PG count
-    let reference_pg = results[0].score.get_judge_count_total(JUDGE_PG);
+    let reference_pg = results[0].score.judge_count_total(JUDGE_PG);
     for (gt, result) in gauge_types.iter().zip(results.iter()) {
         assert_eq!(
-            result.score.get_judge_count_total(JUDGE_PG),
+            result.score.judge_count_total(JUDGE_PG),
             reference_pg,
             "{gt}: PG count should match Normal's"
         );

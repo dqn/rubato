@@ -484,7 +484,7 @@ impl rubato_types::score_database_access::ScoreDatabaseAccess for ScoreDatabaseA
         ScoreDatabaseAccessor::create_table(self);
     }
 
-    fn get_score_data(&self, sha256: &str, mode: i32) -> Option<ScoreData> {
+    fn score_data(&self, sha256: &str, mode: i32) -> Option<ScoreData> {
         ScoreDatabaseAccessor::get_score_data(self, sha256, mode)
     }
 

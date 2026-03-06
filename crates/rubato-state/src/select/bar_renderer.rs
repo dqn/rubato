@@ -319,7 +319,7 @@ impl BarRenderer {
                     {
                         let data = fb.get_folder_data();
                         songstatus = if data.is_none()
-                            || now_secs > data.unwrap().get_adddate() as i64 + 3600 * 24
+                            || now_secs > data.unwrap().adddate() as i64 + 3600 * 24
                         {
                             4 // FolderBar(normal)
                         } else {
@@ -486,7 +486,7 @@ impl BarRenderer {
                 && let Some(trophy) = gb.get_trophy()
             {
                 for (j, trophy_name) in self.trophy.iter().enumerate() {
-                    if *trophy_name == trophy.get_name() {
+                    if *trophy_name == trophy.name() {
                         if let Some(trophy_image) = baro.trophy.get_mut(j).and_then(|o| o.as_mut())
                         {
                             trophy_image.draw_with_offset(sprite, ba.x, ba.y);

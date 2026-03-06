@@ -26,7 +26,7 @@ impl Default for CourseData {
 }
 
 impl CourseData {
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         self.name.as_deref().unwrap_or("")
     }
 
@@ -177,7 +177,7 @@ impl CourseDataConstraint {
         ]
     }
 
-    pub fn get_value(name: &str) -> Option<CourseDataConstraint> {
+    pub fn value(name: &str) -> Option<CourseDataConstraint> {
         for constraint in CourseDataConstraint::values() {
             if constraint.name_str() == name {
                 return Some(*constraint);
@@ -204,7 +204,7 @@ impl TrophyData {
         }
     }
 
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         self.name.as_deref().unwrap_or("")
     }
 
@@ -241,10 +241,10 @@ mod tests {
     #[test]
     fn test_course_data_name_accessor() {
         let mut cd = CourseData::default();
-        assert_eq!(cd.get_name(), "");
+        assert_eq!(cd.name(), "");
 
         cd.set_name("My Course".to_string());
-        assert_eq!(cd.get_name(), "My Course");
+        assert_eq!(cd.name(), "My Course");
     }
 
     #[test]
@@ -267,7 +267,7 @@ mod tests {
         let trophy = TrophyData::new("Gold".to_string(), 5.0, 90.0);
         cd.trophy = vec![trophy];
         assert_eq!(cd.trophy.len(), 1);
-        assert_eq!(cd.trophy[0].get_name(), "Gold");
+        assert_eq!(cd.trophy[0].name(), "Gold");
     }
 
     #[test]
@@ -316,7 +316,7 @@ mod tests {
         let json = serde_json::to_string(&cd).unwrap();
         let deserialized: CourseData = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(deserialized.get_name(), "Test Course");
+        assert_eq!(deserialized.name(), "Test Course");
         assert!(!deserialized.release);
         assert_eq!(deserialized.constraint.len(), 2);
         assert_eq!(deserialized.constraint[0], CourseDataConstraint::Class);
@@ -357,18 +357,18 @@ mod tests {
     #[test]
     fn test_constraint_get_value() {
         assert_eq!(
-            CourseDataConstraint::get_value("grade"),
+            CourseDataConstraint::value("grade"),
             Some(CourseDataConstraint::Class)
         );
         assert_eq!(
-            CourseDataConstraint::get_value("no_speed"),
+            CourseDataConstraint::value("no_speed"),
             Some(CourseDataConstraint::NoSpeed)
         );
         assert_eq!(
-            CourseDataConstraint::get_value("gauge_7k"),
+            CourseDataConstraint::value("gauge_7k"),
             Some(CourseDataConstraint::Gauge7Keys)
         );
-        assert_eq!(CourseDataConstraint::get_value("nonexistent"), None);
+        assert_eq!(CourseDataConstraint::value("nonexistent"), None);
     }
 
     // -- TrophyData tests --
@@ -376,7 +376,7 @@ mod tests {
     #[test]
     fn test_trophy_data_construction() {
         let trophy = TrophyData::new("Silver".to_string(), 10.0, 80.0);
-        assert_eq!(trophy.get_name(), "Silver");
+        assert_eq!(trophy.name(), "Silver");
         assert_eq!(trophy.missrate, 10.0);
         assert_eq!(trophy.scorerate, 80.0);
     }
@@ -384,7 +384,7 @@ mod tests {
     #[test]
     fn test_trophy_data_default() {
         let trophy = TrophyData::default();
-        assert_eq!(trophy.get_name(), "");
+        assert_eq!(trophy.name(), "");
         assert_eq!(trophy.missrate, 0.0);
         assert_eq!(trophy.scorerate, 0.0);
     }
@@ -396,7 +396,7 @@ mod tests {
         trophy.missrate = 5.0;
         trophy.scorerate = 95.0;
 
-        assert_eq!(trophy.get_name(), "Gold");
+        assert_eq!(trophy.name(), "Gold");
         assert_eq!(trophy.missrate, 5.0);
         assert_eq!(trophy.scorerate, 95.0);
     }
@@ -428,7 +428,7 @@ mod tests {
         let json = serde_json::to_string(&trophy).unwrap();
         let deserialized: TrophyData = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(deserialized.get_name(), "Diamond");
+        assert_eq!(deserialized.name(), "Diamond");
         assert_eq!(deserialized.missrate, 3.5);
         assert_eq!(deserialized.scorerate, 95.0);
     }

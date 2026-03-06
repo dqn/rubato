@@ -96,7 +96,7 @@ impl UpdateBar {
     fn add_message(&self, sha256: &str) {
         let selector = self.selector.lock().unwrap();
         let escaped = Self::escape(sha256);
-        let song_datas_result = selector.songdb.get_song_datas_by_hashes(&[escaped]);
+        let song_datas_result = selector.songdb.song_datas_by_hashes(&[escaped]);
         if !song_datas_result.is_empty() {
             let data = &song_datas_result[0];
             if self
@@ -143,7 +143,7 @@ impl UpdateBar {
             }
             let selector = self.selector.lock().unwrap();
             let escaped = Self::escape(&sha256);
-            let song_datas_result = selector.songdb.get_song_datas_by_hashes(&[escaped]);
+            let song_datas_result = selector.songdb.song_datas_by_hashes(&[escaped]);
             if !song_datas_result.is_empty() {
                 self.song_datas.push(song_datas_result[0].clone());
             }

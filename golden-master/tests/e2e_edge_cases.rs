@@ -52,7 +52,7 @@ fn autoplay_ln_overlap() {
     // LN overlap edge cases may cause imperfect autoplay (e.g. simultaneous
     // LN end + normal note on the same tick can confuse the judge). Verify
     // that most notes are PG and the gauge is alive.
-    let pg = result.score.get_judge_count_total(JUDGE_PG);
+    let pg = result.score.judge_count_total(JUDGE_PG);
     assert!(
         pg as usize >= total - 2,
         "autoplay_ln_overlap: most notes should be PG (PG={pg}, total={total})"

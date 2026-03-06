@@ -18,19 +18,19 @@ struct DecideRenderContext<'a> {
 }
 
 impl rubato_types::timer_access::TimerAccess for DecideRenderContext<'_> {
-    fn get_now_time(&self) -> i64 {
+    fn now_time(&self) -> i64 {
         self.timer.get_now_time()
     }
-    fn get_now_micro_time(&self) -> i64 {
+    fn now_micro_time(&self) -> i64 {
         self.timer.get_now_micro_time()
     }
-    fn get_micro_timer(&self, timer_id: i32) -> i64 {
+    fn micro_timer(&self, timer_id: i32) -> i64 {
         self.timer.get_micro_timer(timer_id)
     }
-    fn get_timer(&self, timer_id: i32) -> i64 {
+    fn timer(&self, timer_id: i32) -> i64 {
         self.timer.get_timer(timer_id)
     }
-    fn get_now_time_for(&self, timer_id: i32) -> i64 {
+    fn now_time_for(&self, timer_id: i32) -> i64 {
         self.timer.get_now_time_for_id(timer_id)
     }
     fn is_timer_on(&self, timer_id: i32) -> bool {
@@ -43,11 +43,11 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
         Some(rubato_types::main_state_type::MainStateType::Decide)
     }
 
-    fn get_player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
+    fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         Some(self.main.get_player_config())
     }
 
-    fn get_config_ref(&self) -> Option<&rubato_types::config::Config> {
+    fn config_ref(&self) -> Option<&rubato_types::config::Config> {
         Some(self.main.get_config())
     }
 
@@ -59,15 +59,15 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
         match id {
             10 => self
                 .resource
-                .get_songdata()
+                .songdata()
                 .map_or_else(String::new, |s| s.title.clone()),
             11 => self
                 .resource
-                .get_songdata()
+                .songdata()
                 .map_or_else(String::new, |s| s.subtitle.clone()),
             14 => self
                 .resource
-                .get_songdata()
+                .songdata()
                 .map_or_else(String::new, |s| s.artist.clone()),
             _ => String::new(),
         }
@@ -76,12 +76,12 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
     fn integer_value(&self, id: i32) -> i32 {
         match id {
             // Song BPM from songdata
-            90 => self.resource.get_songdata().map_or(0, |s| s.maxbpm),
-            91 => self.resource.get_songdata().map_or(0, |s| s.minbpm),
+            90 => self.resource.songdata().map_or(0, |s| s.maxbpm),
+            91 => self.resource.songdata().map_or(0, |s| s.minbpm),
             // Total notes
-            350 => self.resource.get_songdata().map_or(0, |s| s.notes),
+            350 => self.resource.songdata().map_or(0, |s| s.notes),
             // Song duration
-            312 => self.resource.get_songdata().map_or(0, |s| s.length),
+            312 => self.resource.songdata().map_or(0, |s| s.length),
             // Playtime
             17 => (self.timer.get_now_time() / 3_600_000) as i32,
             18 => ((self.timer.get_now_time() % 3_600_000) / 60_000) as i32,
@@ -97,23 +97,23 @@ struct DecideMouseContext<'a> {
 }
 
 impl rubato_types::timer_access::TimerAccess for DecideMouseContext<'_> {
-    fn get_now_time(&self) -> i64 {
+    fn now_time(&self) -> i64 {
         self.timer.get_now_time()
     }
 
-    fn get_now_micro_time(&self) -> i64 {
+    fn now_micro_time(&self) -> i64 {
         self.timer.get_now_micro_time()
     }
 
-    fn get_micro_timer(&self, timer_id: i32) -> i64 {
+    fn micro_timer(&self, timer_id: i32) -> i64 {
         self.timer.get_micro_timer(timer_id)
     }
 
-    fn get_timer(&self, timer_id: i32) -> i64 {
+    fn timer(&self, timer_id: i32) -> i64 {
         self.timer.get_timer(timer_id)
     }
 
-    fn get_now_time_for(&self, timer_id: i32) -> i64 {
+    fn now_time_for(&self, timer_id: i32) -> i64 {
         self.timer.get_now_time_for_id(timer_id)
     }
 
@@ -183,7 +183,7 @@ impl MainState for MusicDecide {
         self.load_skin(SkinType::Decide.id());
 
         // resource.setOrgGaugeOption(resource.getPlayerConfig().getGauge())
-        let gauge = self.resource.get_player_config().gauge;
+        let gauge = self.resource.player_config().gauge;
         self.resource.set_org_gauge_option(gauge);
     }
 
@@ -510,11 +510,11 @@ mod tests {
     }
 
     impl MainControllerAccess for RecordingMainController {
-        fn get_config(&self) -> &rubato_types::config::Config {
+        fn config(&self) -> &rubato_types::config::Config {
             &self.config
         }
 
-        fn get_player_config(&self) -> &rubato_types::player_config::PlayerConfig {
+        fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
             &self.player_config
         }
 
@@ -530,13 +530,13 @@ mod tests {
 
         fn update_song(&mut self, _path: Option<&str>) {}
 
-        fn get_player_resource(
+        fn player_resource(
             &self,
         ) -> Option<&dyn rubato_types::player_resource_access::PlayerResourceAccess> {
             None
         }
 
-        fn get_player_resource_mut(
+        fn player_resource_mut(
             &mut self,
         ) -> Option<&mut dyn rubato_types::player_resource_access::PlayerResourceAccess> {
             None

@@ -142,21 +142,21 @@ impl ScoreData {
         self.player = player.unwrap_or("").to_string();
     }
 
-    pub fn get_exscore(&self) -> i32 {
+    pub fn exscore(&self) -> i32 {
         (self.epg.saturating_add(self.lpg))
             .saturating_mul(2)
             .saturating_add(self.egr)
             .saturating_add(self.lgr)
     }
 
-    pub fn get_judge_count_total(&self, judge: i32) -> i32 {
-        self.get_judge_count(judge, true) + self.get_judge_count(judge, false)
+    pub fn judge_count_total(&self, judge: i32) -> i32 {
+        self.judge_count(judge, true) + self.judge_count(judge, false)
     }
 
     /// Get judge count for a specific judge type.
     /// judge: 0=PG, 1=GR, 2=GD, 3=BD, 4=PR, 5=MS
     /// fast: true=FAST, false=SLOW
-    pub fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
+    pub fn judge_count(&self, judge: i32, fast: bool) -> i32 {
         match judge {
             0 => {
                 if fast {
@@ -329,7 +329,7 @@ impl ScoreData {
             self.seed = newscore.seed;
             update = true;
         }
-        if self.get_exscore() < newscore.get_exscore() && update_score {
+        if self.exscore() < newscore.exscore() && update_score {
             self.epg = newscore.epg;
             self.lpg = newscore.lpg;
             self.egr = newscore.egr;
@@ -429,7 +429,7 @@ impl fmt::Display for ScoreData {
         write!(f, "\"Option\": {}, ", self.option)?;
         write!(f, "\"State\": {}, ", self.state)?;
         write!(f, "\"Sha256\": \"{}\", ", self.sha256)?;
-        write!(f, "\"Exscore\": {}, ", self.get_exscore())?;
+        write!(f, "\"Exscore\": {}, ", self.exscore())?;
         write!(f, "\"Random\": {}, ", self.random)?;
         write!(f, "\"Scorehash\": \"{}\", ", self.scorehash)?;
         write!(f, "\"Assist\": {}, ", self.assist)?;
@@ -506,7 +506,7 @@ impl SongTrophy {
         ]
     }
 
-    pub fn get_trophy(c: char) -> Option<SongTrophy> {
+    pub fn trophy(c: char) -> Option<SongTrophy> {
         for trophy in SongTrophy::values() {
             if trophy.character() == c {
                 return Some(*trophy);
@@ -606,7 +606,7 @@ mod tests {
         sd.egr = 30;
         sd.lgr = 20;
         // exscore = (epg + lpg) * 2 + egr + lgr = (100+50)*2 + 30+20 = 350
-        assert_eq!(sd.get_exscore(), 350);
+        assert_eq!(sd.exscore(), 350);
     }
 
     #[test]
@@ -626,34 +626,34 @@ mod tests {
         sd.lms = 8;
 
         // PG (judge=0)
-        assert_eq!(sd.get_judge_count(0, true), 10);
-        assert_eq!(sd.get_judge_count(0, false), 20);
-        assert_eq!(sd.get_judge_count_total(0), 30);
+        assert_eq!(sd.judge_count(0, true), 10);
+        assert_eq!(sd.judge_count(0, false), 20);
+        assert_eq!(sd.judge_count_total(0), 30);
 
         // GR (judge=1)
-        assert_eq!(sd.get_judge_count(1, true), 30);
-        assert_eq!(sd.get_judge_count(1, false), 40);
-        assert_eq!(sd.get_judge_count_total(1), 70);
+        assert_eq!(sd.judge_count(1, true), 30);
+        assert_eq!(sd.judge_count(1, false), 40);
+        assert_eq!(sd.judge_count_total(1), 70);
 
         // GD (judge=2)
-        assert_eq!(sd.get_judge_count(2, true), 5);
-        assert_eq!(sd.get_judge_count(2, false), 6);
+        assert_eq!(sd.judge_count(2, true), 5);
+        assert_eq!(sd.judge_count(2, false), 6);
 
         // BD (judge=3)
-        assert_eq!(sd.get_judge_count(3, true), 3);
-        assert_eq!(sd.get_judge_count(3, false), 4);
+        assert_eq!(sd.judge_count(3, true), 3);
+        assert_eq!(sd.judge_count(3, false), 4);
 
         // PR (judge=4)
-        assert_eq!(sd.get_judge_count(4, true), 1);
-        assert_eq!(sd.get_judge_count(4, false), 2);
+        assert_eq!(sd.judge_count(4, true), 1);
+        assert_eq!(sd.judge_count(4, false), 2);
 
         // MS (judge=5)
-        assert_eq!(sd.get_judge_count(5, true), 7);
-        assert_eq!(sd.get_judge_count(5, false), 8);
+        assert_eq!(sd.judge_count(5, true), 7);
+        assert_eq!(sd.judge_count(5, false), 8);
 
         // Out of range
-        assert_eq!(sd.get_judge_count(6, true), 0);
-        assert_eq!(sd.get_judge_count(-1, false), 0);
+        assert_eq!(sd.judge_count(6, true), 0);
+        assert_eq!(sd.judge_count(-1, false), 0);
     }
 
     #[test]
@@ -814,11 +814,11 @@ mod tests {
 
     #[test]
     fn test_song_trophy_get_trophy() {
-        assert_eq!(SongTrophy::get_trophy('g'), Some(SongTrophy::Easy));
-        assert_eq!(SongTrophy::get_trophy('G'), Some(SongTrophy::Groove));
-        assert_eq!(SongTrophy::get_trophy('H'), Some(SongTrophy::ExHard));
-        assert_eq!(SongTrophy::get_trophy('B'), Some(SongTrophy::Battle));
-        assert_eq!(SongTrophy::get_trophy('z'), None);
+        assert_eq!(SongTrophy::trophy('g'), Some(SongTrophy::Easy));
+        assert_eq!(SongTrophy::trophy('G'), Some(SongTrophy::Groove));
+        assert_eq!(SongTrophy::trophy('H'), Some(SongTrophy::ExHard));
+        assert_eq!(SongTrophy::trophy('B'), Some(SongTrophy::Battle));
+        assert_eq!(SongTrophy::trophy('z'), None);
     }
 
     #[test]
@@ -826,7 +826,7 @@ mod tests {
         // Every trophy should be recoverable from its character
         for trophy in SongTrophy::values() {
             let c = trophy.character();
-            let recovered = SongTrophy::get_trophy(c);
+            let recovered = SongTrophy::trophy(c);
             assert_eq!(recovered, Some(*trophy));
         }
     }
@@ -946,35 +946,35 @@ mod tests {
     fn test_exscore_formula_only_perfects() {
         // All PG: exscore = (epg + lpg) * 2
         let sd = make_score(50, 50, 0, 0, 100);
-        assert_eq!(sd.get_exscore(), 200);
+        assert_eq!(sd.exscore(), 200);
     }
 
     #[test]
     fn test_exscore_formula_only_greats() {
         // All GR: exscore = egr + lgr
         let sd = make_score(0, 0, 60, 40, 100);
-        assert_eq!(sd.get_exscore(), 100);
+        assert_eq!(sd.exscore(), 100);
     }
 
     #[test]
     fn test_exscore_formula_mixed() {
         // (10 + 20) * 2 + 30 + 40 = 60 + 70 = 130
         let sd = make_score(10, 20, 30, 40, 100);
-        assert_eq!(sd.get_exscore(), 130);
+        assert_eq!(sd.exscore(), 130);
     }
 
     #[test]
     fn test_exscore_formula_single_epg() {
         let sd = make_score(1, 0, 0, 0, 1);
         // (1 + 0) * 2 + 0 + 0 = 2
-        assert_eq!(sd.get_exscore(), 2);
+        assert_eq!(sd.exscore(), 2);
     }
 
     #[test]
     fn test_exscore_formula_single_egr() {
         let sd = make_score(0, 0, 1, 0, 1);
         // (0 + 0) * 2 + 1 + 0 = 1
-        assert_eq!(sd.get_exscore(), 1);
+        assert_eq!(sd.exscore(), 1);
     }
 
     // -- Zero notes (all miss / empty chart) --
@@ -982,14 +982,14 @@ mod tests {
     #[test]
     fn test_exscore_zero_notes_all_zero() {
         let sd = make_score(0, 0, 0, 0, 0);
-        assert_eq!(sd.get_exscore(), 0);
+        assert_eq!(sd.exscore(), 0);
     }
 
     #[test]
     fn test_exscore_zero_judge_counts_nonzero_notes() {
         // Chart has 1000 notes but all missed
         let sd = make_score(0, 0, 0, 0, 1000);
-        assert_eq!(sd.get_exscore(), 0);
+        assert_eq!(sd.exscore(), 0);
     }
 
     // -- All perfect (MAX) --
@@ -998,20 +998,20 @@ mod tests {
     fn test_exscore_all_perfect_100_notes() {
         // 100 notes, all perfect great: max exscore = 200
         let sd = make_score(100, 0, 0, 0, 100);
-        assert_eq!(sd.get_exscore(), 200);
+        assert_eq!(sd.exscore(), 200);
     }
 
     #[test]
     fn test_exscore_all_perfect_split_fast_slow() {
         // 100 notes: 60 epg + 40 lpg = max exscore 200
         let sd = make_score(60, 40, 0, 0, 100);
-        assert_eq!(sd.get_exscore(), 200);
+        assert_eq!(sd.exscore(), 200);
     }
 
     #[test]
     fn test_exscore_all_perfect_1000_notes() {
         let sd = make_score(500, 500, 0, 0, 1000);
-        assert_eq!(sd.get_exscore(), 2000);
+        assert_eq!(sd.exscore(), 2000);
     }
 
     // -- Rank boundary transitions using 1000-note chart --
@@ -1154,8 +1154,8 @@ mod tests {
         // Needed exscore = 21 * 54 / 27 = 42 (exact division)
         let sd = make_score(21, 0, 0, 0, 27);
         // epg=21 -> exscore = 21*2 = 42
-        assert_eq!(sd.get_exscore(), 42);
-        let rate = sd.get_exscore() as f32 / (27 * 2) as f32;
+        assert_eq!(sd.exscore(), 42);
+        let rate = sd.exscore() as f32 / (27 * 2) as f32;
         assert!((rate - 7.0 / 9.0).abs() < 1e-6);
     }
 
@@ -1165,8 +1165,8 @@ mod tests {
         // exscore 41 for 27 notes: rate = 41/54 < 21/27
         let sd = make_score(20, 0, 1, 0, 27);
         // epg=20, egr=1 -> exscore = 20*2 + 1 = 41
-        assert_eq!(sd.get_exscore(), 41);
-        let rate = sd.get_exscore() as f32 / (27 * 2) as f32;
+        assert_eq!(sd.exscore(), 41);
+        let rate = sd.exscore() as f32 / (27 * 2) as f32;
         assert!(rate < 21.0 / 27.0);
     }
 
@@ -1176,8 +1176,8 @@ mod tests {
         // exscore 43 for 27 notes: rate = 43/54 > 21/27
         let sd = make_score(21, 0, 1, 0, 27);
         // epg=21, egr=1 -> exscore = 21*2 + 1 = 43
-        assert_eq!(sd.get_exscore(), 43);
-        let rate = sd.get_exscore() as f32 / (27 * 2) as f32;
+        assert_eq!(sd.exscore(), 43);
+        let rate = sd.exscore() as f32 / (27 * 2) as f32;
         assert!(rate > 21.0 / 27.0);
     }
 
@@ -1185,8 +1185,8 @@ mod tests {
     #[test]
     fn test_exscore_max_rank() {
         let sd = make_score(500, 500, 0, 0, 1000);
-        assert_eq!(sd.get_exscore(), 2000);
-        let rate = sd.get_exscore() as f32 / (1000 * 2) as f32;
+        assert_eq!(sd.exscore(), 2000);
+        let rate = sd.exscore() as f32 / (1000 * 2) as f32;
         assert!((rate - 1.0).abs() < 1e-6);
     }
 
@@ -1194,7 +1194,7 @@ mod tests {
     #[test]
     fn test_exscore_f_rank_all_miss() {
         let sd = make_score(0, 0, 0, 0, 1000);
-        assert_eq!(sd.get_exscore(), 0);
+        assert_eq!(sd.exscore(), 0);
         // rate = 0, only rank[0] should be satisfied (0/27 = 0.0 <= 0.0)
     }
 
@@ -1207,7 +1207,7 @@ mod tests {
         // saturating_add: i32::MAX + 1 = i32::MAX
         // saturating_mul: i32::MAX * 2 = i32::MAX
         // saturating_add(0).saturating_add(0) = i32::MAX
-        assert_eq!(sd.get_exscore(), i32::MAX);
+        assert_eq!(sd.exscore(), i32::MAX);
     }
 
     #[test]
@@ -1216,7 +1216,7 @@ mod tests {
         let sd = make_score(i32::MAX / 2 + 1, i32::MAX / 2 + 1, 0, 0, 1000);
         // saturating_add: (MAX/2+1) + (MAX/2+1) = MAX/2*2 + 2 = MAX + 1 -> saturates to MAX
         // saturating_mul: MAX * 2 -> saturates to MAX
-        assert_eq!(sd.get_exscore(), i32::MAX);
+        assert_eq!(sd.exscore(), i32::MAX);
     }
 
     #[test]
@@ -1226,7 +1226,7 @@ mod tests {
         // epg+lpg = MAX/4 + MAX/4 = MAX/2 (fits)
         // (MAX/2) * 2 = MAX - 1 (just under MAX due to integer division)
         // (MAX-1) + MAX -> saturates to MAX
-        assert_eq!(sd.get_exscore(), i32::MAX);
+        assert_eq!(sd.exscore(), i32::MAX);
     }
 
     #[test]
@@ -1234,20 +1234,20 @@ mod tests {
         // Everything fits except final lgr addition
         let sd = make_score(0, 0, i32::MAX, i32::MAX, 1000);
         // (0+0)*2 = 0; 0 + MAX = MAX; MAX + MAX -> saturates to MAX
-        assert_eq!(sd.get_exscore(), i32::MAX);
+        assert_eq!(sd.exscore(), i32::MAX);
     }
 
     #[test]
     fn test_exscore_saturating_all_max() {
         let sd = make_score(i32::MAX, i32::MAX, i32::MAX, i32::MAX, 1000);
-        assert_eq!(sd.get_exscore(), i32::MAX);
+        assert_eq!(sd.exscore(), i32::MAX);
     }
 
     #[test]
     fn test_exscore_large_values_no_overflow() {
         // Large but within range: (500000 + 500000) * 2 + 100000 + 100000 = 2200000
         let sd = make_score(500_000, 500_000, 100_000, 100_000, 1_200_000);
-        assert_eq!(sd.get_exscore(), 2_200_000);
+        assert_eq!(sd.exscore(), 2_200_000);
     }
 
     #[test]
@@ -1256,14 +1256,14 @@ mod tests {
         // i32::MAX = 2_147_483_647
         // We want (epg + lpg) * 2 = 2_147_483_646 (MAX - 1), so epg+lpg = 1_073_741_823
         let sd = make_score(1_073_741_823, 0, 0, 0, 1000);
-        assert_eq!(sd.get_exscore(), 2_147_483_646);
+        assert_eq!(sd.exscore(), 2_147_483_646);
     }
 
     #[test]
     fn test_exscore_just_at_overflow_boundary() {
         // (epg + lpg) * 2 + egr + lgr = i32::MAX = 2_147_483_647
         let sd = make_score(1_073_741_823, 0, 1, 0, 1000);
-        assert_eq!(sd.get_exscore(), 2_147_483_647);
+        assert_eq!(sd.exscore(), 2_147_483_647);
     }
 
     #[test]
@@ -1272,7 +1272,7 @@ mod tests {
         let sd = make_score(1_073_741_823, 0, 2, 0, 1000);
         // (1_073_741_823 + 0) * 2 = 2_147_483_646
         // 2_147_483_646 + 2 = 2_147_483_648 -> overflows i32, saturates to MAX
-        assert_eq!(sd.get_exscore(), i32::MAX);
+        assert_eq!(sd.exscore(), i32::MAX);
     }
 
     // -- Rank boundary transitions with small note counts --
@@ -1282,13 +1282,13 @@ mod tests {
         // 1 note, max exscore = 2
         // Only 3 possible exscores: 0, 1, 2
         let sd0 = make_score(0, 0, 0, 0, 1);
-        assert_eq!(sd0.get_exscore(), 0);
+        assert_eq!(sd0.exscore(), 0);
 
         let sd1 = make_score(0, 0, 1, 0, 1);
-        assert_eq!(sd1.get_exscore(), 1);
+        assert_eq!(sd1.exscore(), 1);
 
         let sd2 = make_score(1, 0, 0, 0, 1);
-        assert_eq!(sd2.get_exscore(), 2);
+        assert_eq!(sd2.exscore(), 2);
     }
 
     #[test]
@@ -1336,7 +1336,7 @@ mod tests {
         sd.lms = 800;
         sd.notes = 3600;
         // None of these contribute to exscore
-        assert_eq!(sd.get_exscore(), 0);
+        assert_eq!(sd.exscore(), 0);
     }
 
     /// Exscore with asymmetric fast/slow split still calculates correctly.
@@ -1345,7 +1345,7 @@ mod tests {
         // All perfects as early, all greats as late
         let sd = make_score(100, 0, 0, 50, 150);
         // (100 + 0) * 2 + 0 + 50 = 250
-        assert_eq!(sd.get_exscore(), 250);
+        assert_eq!(sd.exscore(), 250);
     }
 }
 

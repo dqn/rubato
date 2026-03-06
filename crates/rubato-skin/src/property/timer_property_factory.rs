@@ -17,15 +17,15 @@ struct TimerPropertyImpl {
 
 impl TimerProperty for TimerPropertyImpl {
     fn get_micro(&self, state: &dyn MainState) -> i64 {
-        state.get_timer().get_micro_timer(self.timer_id)
+        state.get_timer().micro_timer(self.timer_id)
     }
 
     fn get(&self, state: &dyn MainState) -> i64 {
-        state.get_timer().get_timer(self.timer_id)
+        state.get_timer().timer(self.timer_id)
     }
 
     fn get_now_time(&self, state: &dyn MainState) -> i64 {
-        state.get_timer().get_now_time_for(self.timer_id)
+        state.get_timer().now_time_for(self.timer_id)
     }
 
     fn is_on(&self, state: &dyn MainState) -> bool {

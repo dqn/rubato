@@ -72,7 +72,7 @@ impl RandomCourseData {
                 continue;
             }
             let sql = sql_opt.unwrap_or("1");
-            lots = songdb.get_song_datas_by_sql(sql, score_db_path, scorelog_db_path, info_db_path);
+            lots = songdb.song_datas_by_sql(sql, score_db_path, scorelog_db_path, info_db_path);
             Self::lottery_song_data(&mut results, i, &lots, is_distinct);
         }
 

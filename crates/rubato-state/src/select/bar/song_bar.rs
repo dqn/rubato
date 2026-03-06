@@ -32,7 +32,7 @@ impl SongBar {
     }
 
     pub fn exists_song(&self) -> bool {
-        self.song.get_path().is_some()
+        self.song.path().is_some()
     }
 
     pub fn get_banner(&self) -> Option<&Pixmap> {
@@ -114,12 +114,12 @@ impl SongBar {
                 }
             }
             for element in elements.iter_mut() {
-                if element.get_path().is_none()
+                if element.path().is_none()
                     && ((!element.md5.is_empty() && element.md5 == songs[i].as_ref().unwrap().md5)
                         || (!element.sha256.is_empty()
                             && element.sha256 == songs[i].as_ref().unwrap().sha256))
                 {
-                    let song_path = songs[i].as_ref().unwrap().get_path().map(|s| s.to_string());
+                    let song_path = songs[i].as_ref().unwrap().path().map(|s| s.to_string());
                     element.set_path_opt(song_path);
                     if let Some(ref _song) = songs[i] {
                         let elem_clone = element.clone();
@@ -141,7 +141,7 @@ impl SongBar {
             result.push(Bar::Song(Box::new(SongBar::new(song.clone()))));
         }
         for element in elements.iter().rev() {
-            if element.get_path().is_none() {
+            if element.path().is_none() {
                 result.push(Bar::Song(Box::new(SongBar::new(element.clone()))));
             }
         }

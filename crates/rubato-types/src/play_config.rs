@@ -83,7 +83,7 @@ impl PlayConfig {
         self.lanecovermarginlow = self.lanecovermarginlow.clamp(0.0, 1.0);
         self.lanecovermarginhigh = self.lanecovermarginhigh.clamp(0.0, 1.0);
         self.lanecoverswitchduration = self.lanecoverswitchduration.clamp(0, 1000000);
-        if JudgeAlgorithm::get_index(&self.judgetype) == -1 {
+        if JudgeAlgorithm::index(&self.judgetype) == -1 {
             self.judgetype = "Combo".to_string();
         }
     }

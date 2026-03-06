@@ -1494,11 +1494,11 @@ impl JudgeManager {
     }
 
     pub fn get_judge_count(&self, judge: i32) -> i32 {
-        self.score.get_judge_count_total(judge)
+        self.score.judge_count_total(judge)
     }
 
     pub fn get_judge_count_fast(&self, judge: i32, fast: bool) -> i32 {
-        self.score.get_judge_count(judge, fast)
+        self.score.judge_count(judge, fast)
     }
 
     pub fn get_now_judge(&self, player: usize) -> i32 {

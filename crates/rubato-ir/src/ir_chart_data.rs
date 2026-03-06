@@ -63,7 +63,7 @@ pub struct IRChartData {
 
 impl IRChartData {
     pub fn new(song: &SongData) -> Self {
-        let lntype = if let Some(model) = song.get_bms_model() {
+        let lntype = if let Some(model) = song.bms_model() {
             model.lntype()
         } else {
             0
@@ -89,7 +89,7 @@ impl IRChartData {
     }
 
     pub fn new_with_lntype(song: &SongData, lntype: i32) -> Self {
-        let model = song.get_bms_model();
+        let model = song.bms_model();
         let total = if let Some(m) = model {
             m.total() as i32
         } else {
@@ -112,8 +112,8 @@ impl IRChartData {
             subartist: song.subartist.clone(),
             md5: song.md5.clone(),
             sha256: song.sha256.clone(),
-            url: song.get_url().to_string(),
-            appendurl: song.get_appendurl().to_string(),
+            url: song.url().to_string(),
+            appendurl: song.appendurl().to_string(),
             level: song.level,
             total,
             mode,

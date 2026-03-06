@@ -17,21 +17,21 @@ impl SkinConfig {
         }
     }
 
-    pub fn get_path(&self) -> Option<&str> {
+    pub fn path(&self) -> Option<&str> {
         self.path.as_deref()
     }
 
-    pub fn get_properties(&self) -> Option<&SkinProperty> {
+    pub fn properties(&self) -> Option<&SkinProperty> {
         self.properties.as_ref()
     }
 
-    pub fn get_properties_mut(&mut self) -> Option<&mut SkinProperty> {
+    pub fn properties_mut(&mut self) -> Option<&mut SkinProperty> {
         self.properties.as_mut()
     }
 
-    pub fn get_default(id: i32) -> SkinConfig {
+    pub fn default_for_id(id: i32) -> SkinConfig {
         let mut skin = SkinConfig::default();
-        if let Some(skin_type) = SkinType::get_skin_type_by_id(id)
+        if let Some(skin_type) = SkinType::skin_type_by_id(id)
             && let Some(dskin) = SkinDefault::get(skin_type)
         {
             skin.path = Some(dskin.path.to_string());

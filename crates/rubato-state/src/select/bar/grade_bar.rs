@@ -33,12 +33,12 @@ impl GradeBar {
     }
 
     pub fn get_title(&self) -> String {
-        self.course.get_name().to_string()
+        self.course.name().to_string()
     }
 
     pub fn exists_all_songs(&self) -> bool {
         for song in &self.course.hash {
-            if song.get_path().is_none() {
+            if song.path().is_none() {
                 return false;
             }
         }
@@ -84,7 +84,7 @@ impl GradeBar {
     fn qualified(score: &ScoreData, trophy: &TrophyData) -> bool {
         score.notes != 0
             && trophy.missrate >= score.minbp as f32 * 100.0 / score.notes as f32
-            && trophy.scorerate <= score.get_exscore() as f32 * 100.0 / (score.notes as f32 * 2.0)
+            && trophy.scorerate <= score.exscore() as f32 * 100.0 / (score.notes as f32 * 2.0)
     }
 
     pub fn get_lamp(&self, is_player: bool) -> i32 {

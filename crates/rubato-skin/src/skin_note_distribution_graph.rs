@@ -202,7 +202,7 @@ impl SkinNoteDistributionGraph {
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer, state: &dyn MainState) {
         let song = state.get_resource().get_songdata();
-        let model = song.and_then(|s| s.get_bms_model());
+        let model = song.and_then(|s| s.bms_model());
 
         // Initialize chips if null
         if self.chips.is_none() {
@@ -243,9 +243,9 @@ impl SkinNoteDistributionGraph {
             self.model_set = model.is_some();
             if self.graph_type == TYPE_NORMAL {
                 if let Some(s) = song {
-                    if let Some(info) = s.get_song_information() {
+                    if let Some(info) = s.song_information() {
                         let distribution: Vec<Vec<i32>> = info
-                            .get_distribution_values()
+                            .distribution_values()
                             .iter()
                             .map(|row| row.to_vec())
                             .collect();

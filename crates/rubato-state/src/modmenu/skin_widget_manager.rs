@@ -91,7 +91,7 @@ pub struct SkinWidgetManager;
 
 impl SkinWidgetManager {
     pub fn get_focus() -> bool {
-        rubato_types::skin_widget_focus::get_focus()
+        rubato_types::skin_widget_focus::focus()
     }
 
     pub fn set_focus(focus: bool) {

@@ -130,9 +130,9 @@ impl FolderEditorView {
             return;
         };
         if TableEditorView::is_md5_or_sha256_hash(&self.search) {
-            self.search_songs = songdb.get_song_datas_by_hashes(std::slice::from_ref(&self.search));
+            self.search_songs = songdb.song_datas_by_hashes(std::slice::from_ref(&self.search));
         } else if self.search.len() > 1 {
-            self.search_songs = songdb.get_song_datas_by_text(&self.search);
+            self.search_songs = songdb.song_datas_by_text(&self.search);
         }
     }
 
@@ -458,13 +458,13 @@ mod tests {
     struct MockSongDb;
 
     impl SongDatabaseAccessor for MockSongDb {
-        fn get_song_datas(&self, _key: &str, _value: &str) -> Vec<TypesSongData> {
+        fn song_datas(&self, _key: &str, _value: &str) -> Vec<TypesSongData> {
             Vec::new()
         }
-        fn get_song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<TypesSongData> {
+        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<TypesSongData> {
             Vec::new()
         }
-        fn get_song_datas_by_sql(
+        fn song_datas_by_sql(
             &self,
             _sql: &str,
             _score: &str,
@@ -474,10 +474,10 @@ mod tests {
             Vec::new()
         }
         fn set_song_datas(&self, _songs: &[TypesSongData]) {}
-        fn get_song_datas_by_text(&self, _text: &str) -> Vec<TypesSongData> {
+        fn song_datas_by_text(&self, _text: &str) -> Vec<TypesSongData> {
             Vec::new()
         }
-        fn get_folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
+        fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
             Vec::new()
         }
     }

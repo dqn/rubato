@@ -17,13 +17,13 @@ use rubato_types::song_database_accessor::SongDatabaseAccessor as SongDatabaseAc
 struct MockSongDb;
 
 impl SongDatabaseAccessorTrait for MockSongDb {
-    fn get_song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
+    fn song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
         Vec::new()
     }
-    fn get_song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
+    fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
         Vec::new()
     }
-    fn get_song_datas_by_sql(
+    fn song_datas_by_sql(
         &self,
         _sql: &str,
         _score: &str,
@@ -33,10 +33,10 @@ impl SongDatabaseAccessorTrait for MockSongDb {
         Vec::new()
     }
     fn set_song_datas(&self, _songs: &[SongData]) {}
-    fn get_song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
+    fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
         Vec::new()
     }
-    fn get_folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
+    fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
         Vec::new()
     }
 }

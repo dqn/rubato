@@ -140,9 +140,9 @@ pub fn is_skin_select_type_id(id: i32) -> bool {
 /// Returns `None` if the ID is not in a valid skin-select range.
 pub fn get_skin_select_type(id: i32) -> Option<SkinType> {
     if (BUTTON_SKINSELECT_7KEY..=BUTTON_SKINSELECT_COURSE_RESULT).contains(&id) {
-        SkinType::get_skin_type_by_id(id - BUTTON_SKINSELECT_7KEY)
+        SkinType::skin_type_by_id(id - BUTTON_SKINSELECT_7KEY)
     } else if (BUTTON_SKINSELECT_24KEY..=BUTTON_SKINSELECT_24KEY_BATTLE).contains(&id) {
-        SkinType::get_skin_type_by_id(id - BUTTON_SKINSELECT_24KEY + 16)
+        SkinType::skin_type_by_id(id - BUTTON_SKINSELECT_24KEY + 16)
     } else {
         None
     }

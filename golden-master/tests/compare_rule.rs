@@ -64,7 +64,7 @@ fn note_type_to_enum(name: &str) -> NoteType {
 
 /// Gauge type index to ClearType mapping (matches Java gauge type ordering)
 fn gauge_index_to_clear_type(index: usize) -> ClearType {
-    ClearType::get_clear_type_by_gauge(index as i32).unwrap_or(ClearType::Failed)
+    ClearType::clear_type_by_gauge(index as i32).unwrap_or(ClearType::Failed)
 }
 
 /// Create a BMSModel with specified total and total_notes for gauge testing.
@@ -171,7 +171,7 @@ fn golden_master_gauge_properties() {
 
     for (i, tc) in fixture.test_cases.iter().enumerate() {
         let prop = mode_to_gauge_property(&tc.mode);
-        let elements = prop.get_values();
+        let elements = prop.element_values();
         let elem = &elements[tc.gauge_type_index];
         let label = format!(
             "[{i}] {}/{}/total={}/notes={}",
@@ -249,10 +249,10 @@ fn golden_master_gauge_properties() {
         // Verify Gauge initial value matches
         let cleartype = gauge_index_to_clear_type(tc.gauge_type_index);
         let gauge = Gauge::new(&model, elem.clone(), cleartype);
-        if (gauge.get_value() - tc.init).abs() > tol {
+        if (gauge.value() - tc.init).abs() > tol {
             failures.push(format!(
                 "{label}: gauge_init rust={} java={}",
-                gauge.get_value(),
+                gauge.value(),
                 tc.init
             ));
         }
@@ -302,7 +302,7 @@ fn golden_master_gauge_sequences() {
 
     for (i, tc) in fixture.test_cases.iter().enumerate() {
         let prop = mode_to_gauge_property(&tc.mode);
-        let elements = prop.get_values();
+        let elements = prop.element_values();
         let model = make_model_for_gauge(tc.total, tc.total_notes);
         let label = format!(
             "[{i}] {}/{}/total={}/notes={}",
@@ -327,7 +327,7 @@ fn golden_master_gauge_sequences() {
             let expected = &tc.values_after_each_step[step_idx];
             for (g, (rust_val, java_val)) in gauges
                 .iter()
-                .map(|g| g.get_value())
+                .map(|g| g.value())
                 .zip(expected.iter())
                 .enumerate()
             {

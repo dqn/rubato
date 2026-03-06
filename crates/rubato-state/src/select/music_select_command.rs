@@ -118,7 +118,7 @@ impl MusicSelectCommand {
                         && let Some(song_bar) = selected.as_song_bar()
                     {
                         let song = song_bar.get_song_data();
-                        if !song.get_ipfs_str().is_empty() {
+                        if !song.ipfs_str().is_empty() {
                             let song_clone = song.clone();
                             if let Some(ref mut main) = selector.main
                                 && main.start_ipfs_download(&song_clone)
@@ -139,7 +139,7 @@ impl MusicSelectCommand {
                     if !md5.is_empty() {
                         log::info!("Missing song md5: {}", md5);
                         if let Some(downloader) =
-                            selector.main.as_ref().and_then(|m| m.get_http_downloader())
+                            selector.main.as_ref().and_then(|m| m.http_downloader())
                         {
                             downloader.submit_md5_task(md5, &song.title);
                         }
@@ -152,7 +152,7 @@ impl MusicSelectCommand {
                 if let Some(selected) = selector.manager.get_selected()
                     && let Some(grade_bar) = selected.as_grade_bar()
                     && let Some(downloader) =
-                        selector.main.as_ref().and_then(|m| m.get_http_downloader())
+                        selector.main.as_ref().and_then(|m| m.http_downloader())
                 {
                     for song in grade_bar.get_song_datas() {
                         let md5 = &song.md5;
@@ -232,7 +232,7 @@ impl MusicSelectCommand {
                         let enable_http = selector
                             .main
                             .as_ref()
-                            .is_some_and(|m| m.get_config().enable_http);
+                            .is_some_and(|m| m.config().enable_http);
                         if !already_in_context_menu && enable_http {
                             let menu = ContextMenuBar::new_for_table_folder(
                                 prev_table.clone(),

@@ -225,7 +225,7 @@ impl MainStateListener for ObsListener {
             return;
         }
 
-        let screen_type = current_state.get_screen_type();
+        let screen_type = current_state.screen_type();
 
         // Convert ScreenType back to MainStateType for internal tracking
         let current_state_type = match screen_type {

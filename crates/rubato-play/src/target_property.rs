@@ -20,11 +20,11 @@ impl TargetProperty {
     }
 
     pub fn get_targets() -> Vec<String> {
-        rubato_types::target_list::get_targets()
+        rubato_types::target_list::targets()
     }
 
     pub fn get_target_name(target: &str) -> String {
-        rubato_types::target_list::get_target_name(target)
+        rubato_types::target_list::target_name(target)
     }
 
     pub fn get_target_property(id: &str) -> Option<TargetProperty> {
@@ -54,7 +54,7 @@ impl TargetProperty {
                     .get_rival_information(p.index as usize);
                 match p.target {
                     RivalTarget::Index => match info {
-                        Some(info) => format!("RIVAL {}", info.get_name()),
+                        Some(info) => format!("RIVAL {}", info.name()),
                         None => "NO RIVAL".to_string(),
                     },
                     RivalTarget::Rank => {
@@ -244,7 +244,7 @@ impl RivalTargetProperty {
                 name = main
                     .get_rival_data_accessor()
                     .get_rival_information(index)
-                    .map(|info| info.get_name().to_string());
+                    .map(|info| info.name().to_string());
                 score = main
                     .get_rival_data_accessor_mut()
                     .get_rival_score_data_cache_mut(index)
@@ -253,7 +253,7 @@ impl RivalTargetProperty {
             RivalTarget::Rank => {
                 let mut scores = Self::create_score_array_impl(main, &songdata, lnmode);
                 if !scores.is_empty() {
-                    scores.sort_by_key(|b| std::cmp::Reverse(b.get_exscore()));
+                    scores.sort_by_key(|b| std::cmp::Reverse(b.exscore()));
                     let pick = if index < scores.len() {
                         index
                     } else {
@@ -267,7 +267,7 @@ impl RivalTargetProperty {
             RivalTarget::Next => {
                 let mut scores = Self::create_score_array_impl(main, &songdata, lnmode);
                 if !scores.is_empty() {
-                    scores.sort_by_key(|b| std::cmp::Reverse(b.get_exscore()));
+                    scores.sort_by_key(|b| std::cmp::Reverse(b.exscore()));
                     // Find own score position (empty player name)
                     let mut rank = scores.len().saturating_sub(1).saturating_sub(index);
                     for (i, s) in scores.iter().enumerate() {
@@ -316,7 +316,7 @@ impl RivalTargetProperty {
             .map(|i| {
                 main.get_rival_data_accessor()
                     .get_rival_information(i)
-                    .map(|info| info.get_name().to_string())
+                    .map(|info| info.name().to_string())
             })
             .collect();
 
@@ -519,7 +519,7 @@ impl InternetRankingTargetProperty {
             let songdata = resource.get_songdata()?;
             let lnmode = resource.get_player_config().lnmode;
             let cache = main.get_ranking_data_cache()?;
-            let any = cache.get_song_any(songdata, lnmode)?;
+            let any = cache.song_any(songdata, lnmode)?;
             any.downcast::<rubato_ir::ranking_data::RankingData>()
                 .ok()
                 .map(|ranking| *ranking)
@@ -568,7 +568,7 @@ impl InternetRankingTargetProperty {
         let nowscore = main
             .get_player_resource()
             .and_then(|r| r.get_score_data())
-            .map(|s| s.get_exscore())
+            .map(|s| s.exscore())
             .unwrap_or(0);
 
         match self.target {
@@ -656,7 +656,7 @@ impl NextRankTargetProperty {
                 main.get_play_data_accessor()
                     .and_then(|pda| pda.read_score_data_model(m, lnmode))
             })
-            .map(|s| s.get_exscore())
+            .map(|s| s.exscore())
             .unwrap_or(0);
 
         let max = model.map(|m| m.total_notes() * 2).unwrap_or(0);

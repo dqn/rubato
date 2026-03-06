@@ -139,7 +139,7 @@ impl RankingData {
             }
             if let Some(ls) = localscore
                 && self.localrank == 0
-                && sorted_scores[i].exscore() <= ls.get_exscore()
+                && sorted_scores[i].exscore() <= ls.exscore()
             {
                 self.localrank = scorerankings[i];
             }

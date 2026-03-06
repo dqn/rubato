@@ -278,7 +278,7 @@ impl SongInformation {
         }
     }
 
-    pub fn get_distribution_values(&self) -> &[[i32; 7]] {
+    pub fn distribution_values(&self) -> &[[i32; 7]] {
         &self.distribution_values
     }
 
@@ -337,7 +337,7 @@ impl SongInformation {
         self.speedchange_values = result;
     }
 
-    pub fn get_speedchange_values(&self) -> &[[f64; 2]] {
+    pub fn speedchange_values(&self) -> &[[f64; 2]] {
         &self.speedchange_values
     }
 
@@ -384,7 +384,7 @@ impl SongInformation {
         self.lanenotes_values = result;
     }
 
-    pub fn get_lanenotes_values(&self) -> &[[i32; 3]] {
+    pub fn lanenotes_values(&self) -> &[[i32; 3]] {
         &self.lanenotes_values
     }
 

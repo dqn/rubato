@@ -429,7 +429,7 @@ impl SkinConfigurationView {
 
         // if (player.getSkin()[type.getId()] != null) {
         if let Some(ref player) = self.player {
-            let type_id = skin_type.get_id() as usize;
+            let type_id = skin_type.id() as usize;
             if type_id < player.skin.len()
                 && let Some(ref skinconf) = player.skin[type_id]
             {
@@ -482,7 +482,7 @@ impl SkinConfigurationView {
             skin.properties = Some(self.get_property());
             // player.getSkin()[selected.getSkinType().getId()] = skin;
             if let Some(skin_type) = selected.get_skin_type() {
-                let type_id = skin_type.get_id() as usize;
+                let type_id = skin_type.id() as usize;
                 let player = self.player.as_mut().unwrap();
                 while player.skin.len() <= type_id {
                     player.skin.push(None);
@@ -491,7 +491,7 @@ impl SkinConfigurationView {
             }
         } else if let Some(mode) = self.mode {
             // } else if (mode != null) { player.getSkin()[mode.getId()] = null; }
-            let type_id = mode.get_id() as usize;
+            let type_id = mode.id() as usize;
             let player = self.player.as_mut().unwrap();
             if type_id < player.skin.len() {
                 player.skin[type_id] = None;
@@ -1010,7 +1010,7 @@ impl SkinConfigurationView {
     /// Helper: Get skin type display name for SkinTypeCell
     /// Translates: SkinTypeCell.updateItem(SkinType, boolean)
     pub fn skin_type_display_name(skin_type: &SkinType) -> &'static str {
-        skin_type.get_name()
+        skin_type.name()
     }
 
     /// Helper: Get skin header display name for SkinListCell

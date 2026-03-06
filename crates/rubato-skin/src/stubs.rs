@@ -356,19 +356,19 @@ impl Timer {
 impl rubato_types::skin_render_context::SkinRenderContext for Timer {}
 
 impl rubato_types::timer_access::TimerAccess for Timer {
-    fn get_now_time(&self) -> i64 {
+    fn now_time(&self) -> i64 {
         self.now_time
     }
-    fn get_now_micro_time(&self) -> i64 {
+    fn now_micro_time(&self) -> i64 {
         self.now_micro_time
     }
-    fn get_micro_timer(&self, timer_id: i32) -> i64 {
+    fn micro_timer(&self, timer_id: i32) -> i64 {
         Timer::get_micro_timer(self, timer_id)
     }
-    fn get_timer(&self, timer_id: i32) -> i64 {
+    fn timer(&self, timer_id: i32) -> i64 {
         Timer::get_timer(self, timer_id)
     }
-    fn get_now_time_for(&self, timer_id: i32) -> i64 {
+    fn now_time_for(&self, timer_id: i32) -> i64 {
         Timer::get_now_time_for(self, timer_id)
     }
     fn is_timer_on(&self, timer_id: i32) -> bool {

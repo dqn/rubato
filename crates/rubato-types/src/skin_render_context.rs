@@ -56,12 +56,12 @@ pub trait SkinRenderContext: TimerAccess {
 
     /// Returns the recent judge timing offsets (milliseconds).
     /// 100-element circular buffer. Used by SkinTimingVisualizer and SkinHitErrorVisualizer.
-    fn get_recent_judges(&self) -> &[i64] {
+    fn recent_judges(&self) -> &[i64] {
         &[]
     }
 
     /// Returns the current write index into the recent judges circular buffer.
-    fn get_recent_judges_index(&self) -> usize {
+    fn recent_judges_index(&self) -> usize {
         0
     }
 
@@ -85,7 +85,7 @@ pub trait SkinRenderContext: TimerAccess {
     /// Shared default implementation for image-index refs.
     fn default_image_index_value(&self, id: i32) -> i32 {
         let bool_to_i32 = |value: bool| if value { 1 } else { 0 };
-        let player_config = self.get_player_config_ref();
+        let player_config = self.player_config_ref();
         let target_image_index = player_config.map_or(-1, |config| {
             config
                 .targetlist
@@ -96,61 +96,61 @@ pub trait SkinRenderContext: TimerAccess {
         });
 
         match id {
-            11 => self.get_mode_image_index().unwrap_or(-1),
-            12 => self.get_sort_image_index().unwrap_or(-1),
+            11 => self.mode_image_index().unwrap_or(-1),
+            12 => self.sort_image_index().unwrap_or(-1),
             40 => {
                 if matches!(
                     self.current_state_type(),
                     Some(MainStateType::Play | MainStateType::Result | MainStateType::CourseResult)
                 ) {
-                    self.get_gauge_type()
+                    self.gauge_type()
                 } else {
                     player_config.map_or(-1, |config| config.gauge)
                 }
             }
-            42 => self.get_replay_option_data().map_or_else(
+            42 => self.replay_option_data().map_or_else(
                 || player_config.map_or(-1, |config| config.random),
                 |replay| replay.randomoption,
             ),
-            43 => self.get_replay_option_data().map_or_else(
+            43 => self.replay_option_data().map_or_else(
                 || player_config.map_or(-1, |config| config.random2),
                 |replay| replay.randomoption2,
             ),
-            54 => self.get_replay_option_data().map_or_else(
+            54 => self.replay_option_data().map_or_else(
                 || player_config.map_or(-1, |config| config.doubleoption),
                 |replay| replay.doubleoption,
             ),
             55 => self
-                .get_current_play_config_ref()
+                .current_play_config_ref()
                 .map_or(-1, |config| config.fixhispeed),
-            61 => self.get_target_score_data().map_or(-1, |score| {
+            61 => self.target_score_data().map_or(-1, |score| {
                 if score.option >= 0 {
                     score.option % 10
                 } else {
                     -1
                 }
             }),
-            62 => self.get_target_score_data().map_or(-1, |score| {
+            62 => self.target_score_data().map_or(-1, |score| {
                 if score.option >= 0 {
                     (score.option / 10) % 10
                 } else {
                     -1
                 }
             }),
-            63 => self.get_target_score_data().map_or(-1, |score| {
+            63 => self.target_score_data().map_or(-1, |score| {
                 if score.option >= 0 {
                     (score.option / 100) % 10
                 } else {
                     -1
                 }
             }),
-            72 => self.get_config_ref().map_or(-1, |config| config.bga),
+            72 => self.config_ref().map_or(-1, |config| config.bga),
             75 => player_config.map_or(-1, |config| {
                 bool_to_i32(config.notes_display_timing_auto_adjust)
             }),
             77 => target_image_index,
             78 => player_config.map_or(-1, |config| config.gauge_auto_shift),
-            89 => self.get_song_data_ref().map_or(-1, |song| {
+            89 => self.song_data_ref().map_or(-1, |song| {
                 let favorite = song.favorite;
                 if favorite & crate::song_data::INVISIBLE_SONG != 0 {
                     2
@@ -160,7 +160,7 @@ pub trait SkinRenderContext: TimerAccess {
                     0
                 }
             }),
-            90 => self.get_song_data_ref().map_or(-1, |song| {
+            90 => self.song_data_ref().map_or(-1, |song| {
                 let favorite = song.favorite;
                 if favorite & crate::song_data::INVISIBLE_CHART != 0 {
                     2
@@ -176,15 +176,15 @@ pub trait SkinRenderContext: TimerAccess {
             306 => player_config.map_or(-1, |config| bool_to_i32(config.bpmguide)),
             308 => player_config.map_or(-1, |config| config.lnmode),
             330 => self
-                .get_current_play_config_ref()
+                .current_play_config_ref()
                 .map_or(-1, |config| bool_to_i32(config.enablelanecover)),
             331 => self
-                .get_current_play_config_ref()
+                .current_play_config_ref()
                 .map_or(-1, |config| bool_to_i32(config.enablelift)),
             332 => self
-                .get_current_play_config_ref()
+                .current_play_config_ref()
                 .map_or(-1, |config| bool_to_i32(config.enablehidden)),
-            340 => self.get_current_play_config_ref().map_or(-1, |config| {
+            340 => self.current_play_config_ref().map_or(-1, |config| {
                 match config.judgetype.as_str() {
                     "Combo" => 0,
                     "Duration" => 1,
@@ -197,7 +197,7 @@ pub trait SkinRenderContext: TimerAccess {
                 .unwrap_or(-1),
             341 => player_config.map_or(-1, |config| config.bottom_shiftable_gauge),
             342 => self
-                .get_current_play_config_ref()
+                .current_play_config_ref()
                 .map_or(-1, |config| bool_to_i32(config.hispeedautoadjust)),
             343 => player_config.map_or(-1, |config| bool_to_i32(config.is_guide_se)),
             350 => player_config.map_or(-1, |config| config.extranote_depth),
@@ -206,10 +206,8 @@ pub trait SkinRenderContext: TimerAccess {
             353 => player_config.map_or(-1, |config| config.longnote_mode),
             360 => player_config.map_or(-1, |config| config.seven_to_nine_pattern),
             361 => player_config.map_or(-1, |config| config.seven_to_nine_type),
-            370 => self.get_score_data_ref().map_or(-1, |score| score.clear),
-            371 => self
-                .get_rival_score_data_ref()
-                .map_or(-1, |score| score.clear),
+            370 => self.score_data_ref().map_or(-1, |score| score.clear),
+            371 => self.rival_score_data_ref().map_or(-1, |score| score.clear),
             _ => self.integer_value(id),
         }
     }
@@ -230,42 +228,42 @@ pub trait SkinRenderContext: TimerAccess {
     }
 
     /// Returns replay option data when the current state exposes it.
-    fn get_replay_option_data(&self) -> Option<&crate::replay_data::ReplayData> {
+    fn replay_option_data(&self) -> Option<&crate::replay_data::ReplayData> {
         None
     }
 
     /// Returns target score data when the current state exposes it.
-    fn get_target_score_data(&self) -> Option<&crate::score_data::ScoreData> {
+    fn target_score_data(&self) -> Option<&crate::score_data::ScoreData> {
         None
     }
 
     /// Returns the current score data when the current state exposes it.
-    fn get_score_data_ref(&self) -> Option<&crate::score_data::ScoreData> {
+    fn score_data_ref(&self) -> Option<&crate::score_data::ScoreData> {
         None
     }
 
     /// Returns the comparison score data when the current state exposes it.
-    fn get_rival_score_data_ref(&self) -> Option<&crate::score_data::ScoreData> {
+    fn rival_score_data_ref(&self) -> Option<&crate::score_data::ScoreData> {
         None
     }
 
     /// Returns the play config currently associated with the state.
-    fn get_current_play_config_ref(&self) -> Option<&crate::play_config::PlayConfig> {
+    fn current_play_config_ref(&self) -> Option<&crate::play_config::PlayConfig> {
         None
     }
 
     /// Returns the active song data when the current state exposes it.
-    fn get_song_data_ref(&self) -> Option<&crate::song_data::SongData> {
+    fn song_data_ref(&self) -> Option<&crate::song_data::SongData> {
         None
     }
 
     /// Returns the LR2 image index for the mode selector when available.
-    fn get_mode_image_index(&self) -> Option<i32> {
+    fn mode_image_index(&self) -> Option<i32> {
         None
     }
 
     /// Returns the image index for the current sort mode when available.
-    fn get_sort_image_index(&self) -> Option<i32> {
+    fn sort_image_index(&self) -> Option<i32> {
         None
     }
 
@@ -279,27 +277,27 @@ pub trait SkinRenderContext: TimerAccess {
     // ============================================================
 
     /// Returns the judge count for the given judge index.
-    fn get_judge_count(&self, _judge: i32, _fast: bool) -> i32 {
+    fn judge_count(&self, _judge: i32, _fast: bool) -> i32 {
         0
     }
 
     /// Returns the gauge value (0.0-1.0).
-    fn get_gauge_value(&self) -> f32 {
+    fn gauge_value(&self) -> f32 {
         0.0
     }
 
     /// Returns the gauge type ID.
-    fn get_gauge_type(&self) -> i32 {
+    fn gauge_type(&self) -> i32 {
         0
     }
 
     /// Returns the current judge type for the given player.
-    fn get_now_judge(&self, _player: i32) -> i32 {
+    fn now_judge(&self, _player: i32) -> i32 {
         0
     }
 
     /// Returns the current combo count for the given player.
-    fn get_now_combo(&self, _player: i32) -> i32 {
+    fn now_combo(&self, _player: i32) -> i32 {
         0
     }
 
@@ -308,27 +306,27 @@ pub trait SkinRenderContext: TimerAccess {
     // ============================================================
 
     /// Returns immutable reference to the player config.
-    fn get_player_config_ref(&self) -> Option<&crate::player_config::PlayerConfig> {
+    fn player_config_ref(&self) -> Option<&crate::player_config::PlayerConfig> {
         None
     }
 
     /// Returns mutable reference to the player config when the current state allows editing it.
-    fn get_player_config_mut(&mut self) -> Option<&mut crate::player_config::PlayerConfig> {
+    fn player_config_mut(&mut self) -> Option<&mut crate::player_config::PlayerConfig> {
         None
     }
 
     /// Returns immutable reference to the global config.
-    fn get_config_ref(&self) -> Option<&crate::config::Config> {
+    fn config_ref(&self) -> Option<&crate::config::Config> {
         None
     }
 
     /// Returns mutable reference to the global config when the current state allows editing it.
-    fn get_config_mut(&mut self) -> Option<&mut crate::config::Config> {
+    fn config_mut(&mut self) -> Option<&mut crate::config::Config> {
         None
     }
 
     /// Returns mutable reference to the selected play config when available.
-    fn get_selected_play_config_mut(&mut self) -> Option<&mut crate::play_config::PlayConfig> {
+    fn selected_play_config_mut(&mut self) -> Option<&mut crate::play_config::PlayConfig> {
         None
     }
 

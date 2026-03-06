@@ -172,23 +172,23 @@ impl Default for TimerManager {
 }
 
 impl rubato_types::timer_access::TimerAccess for TimerManager {
-    fn get_now_time(&self) -> i64 {
+    fn now_time(&self) -> i64 {
         self.get_now_time()
     }
 
-    fn get_now_micro_time(&self) -> i64 {
+    fn now_micro_time(&self) -> i64 {
         self.get_now_micro_time()
     }
 
-    fn get_micro_timer(&self, timer_id: i32) -> i64 {
+    fn micro_timer(&self, timer_id: i32) -> i64 {
         self.get_micro_timer(timer_id)
     }
 
-    fn get_timer(&self, timer_id: i32) -> i64 {
+    fn timer(&self, timer_id: i32) -> i64 {
         self.get_timer(timer_id)
     }
 
-    fn get_now_time_for(&self, timer_id: i32) -> i64 {
+    fn now_time_for(&self, timer_id: i32) -> i64 {
         self.get_now_time_for_id(timer_id)
     }
 
@@ -202,11 +202,11 @@ impl rubato_types::skin_render_context::SkinRenderContext for TimerManager {
         self.state_type
     }
 
-    fn get_recent_judges(&self) -> &[i64] {
+    fn recent_judges(&self) -> &[i64] {
         &self.recent_judges
     }
 
-    fn get_recent_judges_index(&self) -> usize {
+    fn recent_judges_index(&self) -> usize {
         self.recent_judges_index
     }
 }

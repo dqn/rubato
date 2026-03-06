@@ -123,7 +123,7 @@ impl EventUtility {
                     let interval_state = Arc::new(Mutex::new(EventMinIntervalState::new()));
                     let event_func = lua.create_function(move |_, ()| {
                         let state = unsafe { &*sp.0 };
-                        let now = state.get_timer().get_now_micro_time();
+                        let now = state.get_timer().now_micro_time();
                         let mut is = interval_state.lock().unwrap();
                         if is.update(min_interval, now)
                             && let Err(e) = action.call::<LuaValue>(())

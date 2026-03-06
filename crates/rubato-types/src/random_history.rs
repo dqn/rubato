@@ -23,11 +23,11 @@ impl RandomHistoryEntry {
         RandomHistoryEntry { title, random }
     }
 
-    pub fn get_title(&self) -> &str {
+    pub fn title(&self) -> &str {
         &self.title
     }
 
-    pub fn get_random(&self) -> &str {
+    pub fn random(&self) -> &str {
         &self.random
     }
 }
@@ -37,7 +37,7 @@ pub fn add_random_history(entry: RandomHistoryEntry) {
     history.push_front(entry);
 }
 
-pub fn get_random_history() -> VecDeque<RandomHistoryEntry> {
+pub fn random_history() -> VecDeque<RandomHistoryEntry> {
     lock_or_recover(&LANE_ORDER_HISTORY).clone()
 }
 
@@ -57,7 +57,7 @@ mod tests {
             "RANDOM".to_string(),
         ));
 
-        let history = get_random_history();
+        let history = random_history();
         assert_eq!(history.len(), 1);
         assert_eq!(history[0].title, "Song");
         assert_eq!(history[0].random, "RANDOM");

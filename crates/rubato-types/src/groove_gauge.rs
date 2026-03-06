@@ -107,7 +107,7 @@ impl Gauge {
         }
     }
 
-    pub fn get_value(&self) -> f32 {
+    pub fn value(&self) -> f32 {
         self.value
     }
 
@@ -177,13 +177,13 @@ impl GrooveGauge {
     pub const GRADE_EXHARD: i32 = EXHARDCLASS;
 
     pub fn new(model: &BMSModel, gauge_type: i32, property: &GaugeProperty) -> Self {
-        let values = property.get_values();
+        let values = property.element_values();
         let mut gauges = Vec::with_capacity(values.len());
         for (i, element) in values.into_iter().enumerate() {
             gauges.push(Gauge::new(
                 model,
                 element,
-                ClearType::get_clear_type_by_gauge(i as i32).unwrap_or(ClearType::Failed),
+                ClearType::clear_type_by_gauge(i as i32).unwrap_or(ClearType::Failed),
             ));
         }
         GrooveGauge {
@@ -205,7 +205,7 @@ impl GrooveGauge {
 
     pub fn add_value(&mut self, value: f32) {
         for gauge in &mut self.gauges {
-            let new_val = gauge.get_value() + value;
+            let new_val = gauge.value() + value;
             gauge.set_value(new_val);
         }
     }
@@ -224,14 +224,12 @@ impl GrooveGauge {
 
     pub fn value(&self) -> f32 {
         self.gauge_at(self.gauge_type)
-            .map(|g| g.get_value())
+            .map(|g| g.value())
             .unwrap_or(0.0)
     }
 
     pub fn value_by_type(&self, gauge_type: i32) -> f32 {
-        self.gauge_at(gauge_type)
-            .map(|g| g.get_value())
-            .unwrap_or(0.0)
+        self.gauge_at(gauge_type).map(|g| g.value()).unwrap_or(0.0)
     }
 
     pub fn set_value(&mut self, value: f32) {
@@ -377,7 +375,7 @@ mod tests {
             guts: vec![],
         };
         let gauge = Gauge::new(&model, element, ClearType::Hard);
-        assert_eq!(gauge.get_value(), 100.0);
+        assert_eq!(gauge.value(), 100.0);
     }
 
     #[test]
@@ -394,15 +392,15 @@ mod tests {
             guts: vec![],
         };
         let mut gauge = Gauge::new(&model, element, ClearType::Hard);
-        assert_eq!(gauge.get_value(), 50.0);
+        assert_eq!(gauge.value(), 50.0);
 
         // Set above max
         gauge.set_value(150.0);
-        assert_eq!(gauge.get_value(), 100.0);
+        assert_eq!(gauge.value(), 100.0);
 
         // Set to min
         gauge.set_value(0.0);
-        assert_eq!(gauge.get_value(), 0.0);
+        assert_eq!(gauge.value(), 0.0);
     }
 
     #[test]
@@ -421,7 +419,7 @@ mod tests {
         let mut gauge = Gauge::new(&model, element, ClearType::Hard);
         // Setting below death border kills the gauge
         gauge.set_value(1.5);
-        assert_eq!(gauge.get_value(), 0.0);
+        assert_eq!(gauge.value(), 0.0);
     }
 
     #[test]
@@ -479,12 +477,12 @@ mod tests {
             guts: vec![],
         };
         let mut gauge = Gauge::new(&model, element, ClearType::Hard);
-        assert_eq!(gauge.get_value(), 50.0);
+        assert_eq!(gauge.value(), 50.0);
 
         // Update with PG (judge=0), rate=1.0 => +0.15
         gauge.update(0, 1.0);
         let expected = (50.0 + 0.15_f32).clamp(0.0, 100.0);
-        assert!((gauge.get_value() - expected).abs() < 1e-6);
+        assert!((gauge.value() - expected).abs() < 1e-6);
     }
 
     // -- GrooveGauge tests --
@@ -588,10 +586,7 @@ mod tests {
 
         // get_gauge_by_type with negative falls back to gauges[0]
         let gauge = gg.gauge_by_type(-1);
-        assert_eq!(
-            gauge.cleartype,
-            ClearType::get_clear_type_by_gauge(0).unwrap()
-        );
+        assert_eq!(gauge.cleartype, ClearType::clear_type_by_gauge(0).unwrap());
     }
 
     #[test]
@@ -611,10 +606,7 @@ mod tests {
         // get_clear_type / get_gauge fallbacks
         assert_eq!(gg.clear_type(), ClearType::Normal);
         let gauge = gg.gauge_by_type(100);
-        assert_eq!(
-            gauge.cleartype,
-            ClearType::get_clear_type_by_gauge(0).unwrap()
-        );
+        assert_eq!(gauge.cleartype, ClearType::clear_type_by_gauge(0).unwrap());
     }
 
     #[test]
@@ -696,7 +688,7 @@ mod prop_tests {
             let mut gauge = Gauge::new(&model, element, ClearType::Hard);
             // Gauge starts at init=50.0 which is > 0, so set_value will execute
             gauge.set_value(v);
-            let result = gauge.get_value();
+            let result = gauge.value();
             // set_value clamps to [min, max], then sets to 0 if below death
             // So result is either 0.0 (dead) or in [min, max]
             prop_assert!(

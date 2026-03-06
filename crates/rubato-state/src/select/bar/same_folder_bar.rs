@@ -30,7 +30,7 @@ impl SameFolderBar {
     ///
     /// Translates: Java SameFolderBar.getChildren()
     pub fn get_children(&self, db: &dyn SongDatabaseAccessor) -> Vec<Bar> {
-        let songs = db.get_song_datas("folder", &self.crc);
+        let songs = db.song_datas("folder", &self.crc);
         SongBar::to_song_bar_array(&songs)
     }
 }
@@ -56,7 +56,7 @@ mod tests {
     }
 
     impl SongDatabaseAccessor for MockSongDb {
-        fn get_song_datas(&self, key: &str, value: &str) -> Vec<SongData> {
+        fn song_datas(&self, key: &str, value: &str) -> Vec<SongData> {
             for (k, v, songs) in &self.songs {
                 if k == key && v == value {
                     return songs.clone();
@@ -64,10 +64,10 @@ mod tests {
             }
             Vec::new()
         }
-        fn get_song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
+        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
             Vec::new()
         }
-        fn get_song_datas_by_sql(
+        fn song_datas_by_sql(
             &self,
             _sql: &str,
             _score: &str,
@@ -77,10 +77,10 @@ mod tests {
             Vec::new()
         }
         fn set_song_datas(&self, _songs: &[SongData]) {}
-        fn get_song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
+        fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
             Vec::new()
         }
-        fn get_folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
+        fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
             Vec::new()
         }
     }

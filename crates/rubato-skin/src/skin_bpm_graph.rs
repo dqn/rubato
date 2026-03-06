@@ -121,7 +121,7 @@ impl SkinBPMGraph {
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer, state: &dyn MainState) {
         let song = state.get_resource().get_songdata();
-        let model = song.and_then(|s| s.get_bms_model());
+        let model = song.and_then(|s| s.bms_model());
 
         let song_changed = match (&self.current, song) {
             (None, None) => false,
@@ -133,7 +133,7 @@ impl SkinBPMGraph {
             self.current = song.cloned();
             self.model_set = model.is_some();
             if let Some(s) = song {
-                if let Some(info) = s.get_song_information() {
+                if let Some(info) = s.song_information() {
                     self.update_graph_from_info(info);
                 } else {
                     self.update_graph_from_model(model);
@@ -165,7 +165,7 @@ impl SkinBPMGraph {
     }
 
     fn update_graph_from_info(&mut self, info: &SongInformation) {
-        let raw_data = info.get_speedchange_values();
+        let raw_data = info.speedchange_values();
         self.bpm_data = raw_data.to_vec();
         self.minbpm = f64::MAX;
         self.maxbpm = f64::MIN;

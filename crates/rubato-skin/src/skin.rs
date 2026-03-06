@@ -785,12 +785,12 @@ impl Skin {
             self.renderer = Some(SkinObjectRenderer::new());
         }
 
-        let microtime = state.get_timer().get_now_micro_time();
+        let microtime = state.get_timer().now_micro_time();
         let debug = false; // MainController.debug stubbed as false
 
         if !debug {
             if self.nextpreparetime <= microtime {
-                let time = state.get_timer().get_now_time();
+                let time = state.get_timer().now_time();
                 for idx in &self.objectarray_indices {
                     self.objects[*idx].prepare(time, state);
                 }
@@ -1200,13 +1200,11 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
     fn get_recent_judges(&self) -> &[i64] {
         self.ctx
             .as_deref()
-            .map_or(&[] as &[i64], |c| c.get_recent_judges())
+            .map_or(&[] as &[i64], |c| c.recent_judges())
     }
 
     fn get_recent_judges_index(&self) -> usize {
-        self.ctx
-            .as_deref()
-            .map_or(0, |c| c.get_recent_judges_index())
+        self.ctx.as_deref().map_or(0, |c| c.recent_judges_index())
     }
 
     fn integer_value(&self, id: i32) -> i32 {
@@ -1240,54 +1238,54 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
     fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
         self.ctx
             .as_deref()
-            .map_or(0, |c| c.get_judge_count(judge, fast))
+            .map_or(0, |c| c.judge_count(judge, fast))
     }
 
     fn get_gauge_value(&self) -> f32 {
-        self.ctx.as_deref().map_or(0.0, |c| c.get_gauge_value())
+        self.ctx.as_deref().map_or(0.0, |c| c.gauge_value())
     }
 
     fn get_gauge_type(&self) -> i32 {
-        self.ctx.as_deref().map_or(0, |c| c.get_gauge_type())
+        self.ctx.as_deref().map_or(0, |c| c.gauge_type())
     }
 
     fn get_now_judge(&self, player: i32) -> i32 {
-        self.ctx.as_deref().map_or(0, |c| c.get_now_judge(player))
+        self.ctx.as_deref().map_or(0, |c| c.now_judge(player))
     }
 
     fn get_now_combo(&self, player: i32) -> i32 {
-        self.ctx.as_deref().map_or(0, |c| c.get_now_combo(player))
+        self.ctx.as_deref().map_or(0, |c| c.now_combo(player))
     }
 
     fn get_player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         self.ctx
             .as_deref()
-            .and_then(rubato_types::skin_render_context::SkinRenderContext::get_player_config_ref)
+            .and_then(rubato_types::skin_render_context::SkinRenderContext::player_config_ref)
     }
 
     fn get_config_ref(&self) -> Option<&rubato_types::config::Config> {
         self.ctx
             .as_deref()
-            .and_then(rubato_types::skin_render_context::SkinRenderContext::get_config_ref)
+            .and_then(rubato_types::skin_render_context::SkinRenderContext::config_ref)
     }
 
     fn get_player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
         self.ctx
             .as_deref_mut()
-            .and_then(rubato_types::skin_render_context::SkinRenderContext::get_player_config_mut)
+            .and_then(rubato_types::skin_render_context::SkinRenderContext::player_config_mut)
     }
 
     fn get_config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
         self.ctx
             .as_deref_mut()
-            .and_then(rubato_types::skin_render_context::SkinRenderContext::get_config_mut)
+            .and_then(rubato_types::skin_render_context::SkinRenderContext::config_mut)
     }
 
     fn get_selected_play_config_mut(
         &mut self,
     ) -> Option<&mut rubato_types::play_config::PlayConfig> {
         self.ctx.as_deref_mut().and_then(
-            rubato_types::skin_render_context::SkinRenderContext::get_selected_play_config_mut,
+            rubato_types::skin_render_context::SkinRenderContext::selected_play_config_mut,
         )
     }
 
@@ -1484,23 +1482,23 @@ mod tests {
     }
 
     impl TimerAccess for RecordingSkinRenderContext {
-        fn get_now_time(&self) -> i64 {
+        fn now_time(&self) -> i64 {
             self.timer.get_now_time()
         }
 
-        fn get_now_micro_time(&self) -> i64 {
+        fn now_micro_time(&self) -> i64 {
             self.timer.get_now_micro_time()
         }
 
-        fn get_micro_timer(&self, timer_id: i32) -> i64 {
+        fn micro_timer(&self, timer_id: i32) -> i64 {
             self.timer.get_micro_timer(timer_id)
         }
 
-        fn get_timer(&self, timer_id: i32) -> i64 {
+        fn timer(&self, timer_id: i32) -> i64 {
             self.timer.get_timer(timer_id)
         }
 
-        fn get_now_time_for(&self, timer_id: i32) -> i64 {
+        fn now_time_for(&self, timer_id: i32) -> i64 {
             self.timer.get_now_time_for(timer_id)
         }
 
@@ -1548,8 +1546,8 @@ mod tests {
         let timer = crate::stubs::Timer::with_timers(1000, 1_000_000, Vec::new());
         let adapter = TimerOnlyMainState::from_timer(&timer);
         let state: &dyn MainState = &adapter;
-        assert_eq!(state.get_timer().get_now_time(), 1000);
-        assert_eq!(state.get_timer().get_now_micro_time(), 1_000_000);
+        assert_eq!(state.get_timer().now_time(), 1000);
+        assert_eq!(state.get_timer().now_micro_time(), 1_000_000);
         assert!(state.get_offset_value(0).is_none());
         assert!(state.get_image(0).is_none());
         assert!(!state.get_main().debug);
@@ -1586,13 +1584,13 @@ mod tests {
         );
         // get_micro_timer for ON timer should not be i64::MIN
         assert_ne!(
-            state.get_timer().get_micro_timer(10),
+            state.get_timer().micro_timer(10),
             i64::MIN,
             "ON timer should return its activation time, not i64::MIN"
         );
         // get_micro_timer for OFF timer should be i64::MIN
         assert_eq!(
-            state.get_timer().get_micro_timer(20),
+            state.get_timer().micro_timer(20),
             i64::MIN,
             "OFF timer should return i64::MIN"
         );

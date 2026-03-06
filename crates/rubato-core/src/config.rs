@@ -159,15 +159,15 @@ mod tests {
         let mut config = Config::default();
 
         // Empty password returns None
-        assert!(config.get_obs_ws_pass().is_none());
+        assert!(config.obs_ws_pass().is_none());
 
         // Whitespace-only password returns None
         config.obs_ws_pass = "   ".to_string();
-        assert!(config.get_obs_ws_pass().is_none());
+        assert!(config.obs_ws_pass().is_none());
 
         // Valid password returns Some
         config.obs_ws_pass = "secret123".to_string();
-        assert_eq!(config.get_obs_ws_pass(), Some("secret123"));
+        assert_eq!(config.obs_ws_pass(), Some("secret123"));
     }
 
     #[test]

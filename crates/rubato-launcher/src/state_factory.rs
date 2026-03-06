@@ -68,12 +68,12 @@ impl QueuedControllerAccess {
         ensure_controller_ranking_cache(controller);
         let config = controller.get_config().clone();
         let player_config = controller.get_player_config().clone();
-        let ir_connection = controller.get_ir_connection_any().and_then(|any| {
+        let ir_connection = controller.ir_connection_any().and_then(|any| {
             any.downcast_ref::<Arc<dyn IRConnection + Send + Sync>>()
                 .cloned()
         });
-        let rivals = (0..controller.get_rival_count())
-            .filter_map(|i| controller.get_rival_information(i))
+        let rivals = (0..controller.rival_count())
+            .filter_map(|i| controller.rival_information(i))
             .collect();
         let ranking_data_cache = controller
             .get_ranking_data_cache()
@@ -100,11 +100,11 @@ impl QueuedControllerAccess {
 }
 
 impl MainControllerAccess for QueuedControllerAccess {
-    fn get_config(&self) -> &rubato_types::config::Config {
+    fn config(&self) -> &rubato_types::config::Config {
         &self.config
     }
 
-    fn get_player_config(&self) -> &rubato_types::player_config::PlayerConfig {
+    fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
         &self.player_config
     }
 
@@ -131,11 +131,11 @@ impl MainControllerAccess for QueuedControllerAccess {
             .push(MainControllerCommand::UpdateSong(path.map(str::to_string)));
     }
 
-    fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
+    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
         None
     }
 
-    fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
+    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
         None
     }
 
@@ -149,7 +149,7 @@ impl MainControllerAccess for QueuedControllerAccess {
             .push(MainControllerCommand::StopSound(sound.clone()));
     }
 
-    fn get_sound_path(&self, sound: &SoundType) -> Option<String> {
+    fn sound_path(&self, sound: &SoundType) -> Option<String> {
         self.sound.get_sound(sound).cloned()
     }
 
@@ -214,16 +214,13 @@ impl MainControllerAccess for QueuedControllerAccess {
             .read_replay_data(sha256, has_ln, lnmode, index)
     }
 
-    fn get_ir_song_url(&self, song_data: &rubato_types::song_data::SongData) -> Option<String> {
+    fn ir_song_url(&self, song_data: &rubato_types::song_data::SongData) -> Option<String> {
         self.ir_connection
             .as_ref()
             .and_then(|conn| conn.get_song_url(&IRChartData::new(song_data)))
     }
 
-    fn get_ir_course_url(
-        &self,
-        course_data: &rubato_types::course_data::CourseData,
-    ) -> Option<String> {
+    fn ir_course_url(&self, course_data: &rubato_types::course_data::CourseData) -> Option<String> {
         self.ir_connection.as_ref().and_then(|conn| {
             conn.get_course_url(&IRCourseData::new_with_lntype(
                 course_data,
@@ -240,7 +237,7 @@ impl MainControllerAccess for QueuedControllerAccess {
             .push(MainControllerCommand::UpdateTable(source));
     }
 
-    fn get_http_downloader(
+    fn http_downloader(
         &self,
     ) -> Option<&dyn rubato_types::http_download_submitter::HttpDownloadSubmitter> {
         self.http_downloader
@@ -263,24 +260,24 @@ impl MainControllerAccess for QueuedControllerAccess {
         true
     }
 
-    fn get_ranking_data_cache(
+    fn ranking_data_cache(
         &self,
     ) -> Option<&dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess> {
         Some(&*self.ranking_data_cache)
     }
 
-    fn get_ranking_data_cache_mut(
+    fn ranking_data_cache_mut(
         &mut self,
     ) -> Option<&mut (dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess + 'static)>
     {
         Some(&mut *self.ranking_data_cache)
     }
 
-    fn get_rival_count(&self) -> usize {
+    fn rival_count(&self) -> usize {
         self.rivals.len()
     }
 
-    fn get_rival_information(&self, index: usize) -> Option<PlayerInformation> {
+    fn rival_information(&self, index: usize) -> Option<PlayerInformation> {
         self.rivals.get(index).cloned()
     }
 
@@ -293,7 +290,7 @@ impl MainControllerAccess for QueuedControllerAccess {
         self.play_data_accessor.read_player_data()
     }
 
-    fn get_ir_connection_any(&self) -> Option<&dyn Any> {
+    fn ir_connection_any(&self) -> Option<&dyn Any> {
         self.ir_connection.as_ref().map(|conn| conn as &dyn Any)
     }
 }
@@ -624,7 +621,7 @@ impl StateFactory for LauncherStateFactory {
 
                 // Reuse BGAProcessor from PlayerResource to preserve texture cache between plays.
                 // Java: bga = resource.getBGAManager() (BMSPlayer.java line 545)
-                if let Some(bga_any) = resource.and_then(|r| r.get_bga_any())
+                if let Some(bga_any) = resource.and_then(|r| r.bga_any())
                     && let Some(bga_arc) = bga_any.downcast_ref::<Arc<Mutex<BGAProcessor>>>()
                 {
                     player.set_bga_processor(Arc::clone(bga_arc));
@@ -1271,7 +1268,7 @@ mod tests {
         let access = QueuedControllerAccess::from_controller(&mut controller, queue);
 
         let downloader = access
-            .get_http_downloader()
+            .http_downloader()
             .expect("queued access should keep the HTTP downloader connected");
         downloader.submit_md5_task("deadbeef", "Song");
 
@@ -1290,14 +1287,14 @@ mod tests {
         let song = SongData::default();
 
         access
-            .get_ranking_data_cache_mut()
+            .ranking_data_cache_mut()
             .expect("queued access should expose ranking cache")
             .put_song_any(&song, 0, Box::new(RankingData::new()));
 
         let cached = controller
             .get_ranking_data_cache()
             .expect("controller should expose ranking cache")
-            .get_song_any(&song, 0)
+            .song_any(&song, 0)
             .and_then(|any| any.downcast::<RankingData>().ok())
             .map(|ranking| *ranking);
         assert!(
@@ -1352,7 +1349,7 @@ mod tests {
         mc.set_state_factory(Box::new(LauncherStateFactory::new()));
         mc.create();
         assert!(
-            mc.get_player_resource_mut()
+            mc.player_resource_mut()
                 .expect("controller should own a player resource")
                 .set_bms_file(&bms_path, 0, 0),
             "test fixture should load into PlayerResource"

@@ -385,7 +385,7 @@ impl PracticeConfiguration {
                                 (i + categories.len() - 1) % categories.len()
                             };
                             self.property.gaugecategory = Some(categories[next]);
-                            let values = categories[next].get_values();
+                            let values = categories[next].element_values();
                             self.property.startgauge =
                                 values[self.property.gaugetype as usize].init as i32;
                             break;
@@ -396,7 +396,7 @@ impl PracticeConfiguration {
             4 => {
                 // GAUGEVALUE
                 if let Some(category) = self.property.gaugecategory {
-                    let values = category.get_values();
+                    let values = category.element_values();
                     let max = values[self.property.gaugetype as usize].max as i32;
                     self.property.startgauge =
                         (self.property.startgauge + if inc { 1 } else { -1 }).clamp(1, max);

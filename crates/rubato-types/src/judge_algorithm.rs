@@ -19,7 +19,7 @@ impl JudgeAlgorithm {
         }
     }
 
-    pub fn get_index(name: &str) -> i32 {
+    pub fn index(name: &str) -> i32 {
         match name {
             "Combo" => 0,
             "Duration" => 1,
@@ -53,11 +53,11 @@ mod tests {
 
     #[test]
     fn test_judge_algorithm_get_index() {
-        assert_eq!(JudgeAlgorithm::get_index("Combo"), 0);
-        assert_eq!(JudgeAlgorithm::get_index("Duration"), 1);
-        assert_eq!(JudgeAlgorithm::get_index("Lowest"), 2);
-        assert_eq!(JudgeAlgorithm::get_index("Timing"), 3);
-        assert_eq!(JudgeAlgorithm::get_index("Unknown"), -1);
+        assert_eq!(JudgeAlgorithm::index("Combo"), 0);
+        assert_eq!(JudgeAlgorithm::index("Duration"), 1);
+        assert_eq!(JudgeAlgorithm::index("Lowest"), 2);
+        assert_eq!(JudgeAlgorithm::index("Timing"), 3);
+        assert_eq!(JudgeAlgorithm::index("Unknown"), -1);
     }
 
     #[test]

@@ -33,8 +33,8 @@ fn course_two_stage_autoplay() {
     assert_all_pgreat(&course.stages[1], total2, "course_stage2");
 
     // Combined PG should be sum of individual
-    let total_pg = course.stages[0].score.get_judge_count_total(JUDGE_PG)
-        + course.stages[1].score.get_judge_count_total(JUDGE_PG);
+    let total_pg = course.stages[0].score.judge_count_total(JUDGE_PG)
+        + course.stages[1].score.judge_count_total(JUDGE_PG);
     let individual_sum = total1 as i32 + total2 as i32;
     assert_eq!(
         total_pg, individual_sum,
@@ -219,8 +219,8 @@ fn course_deterministic_scores() {
         let r2 = run_autoplay_simulation(&model, NORMAL);
 
         assert_eq!(
-            r1.score.get_judge_count_total(JUDGE_PG),
-            r2.score.get_judge_count_total(JUDGE_PG),
+            r1.score.judge_count_total(JUDGE_PG),
+            r2.score.judge_count_total(JUDGE_PG),
             "{filename}: PG count should be deterministic"
         );
         assert_eq!(

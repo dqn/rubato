@@ -66,7 +66,7 @@ impl AudioConfig {
         self.normalize_volume
     }
 
-    pub fn get_driver_name(&self) -> Option<&str> {
+    pub fn driver_name(&self) -> Option<&str> {
         self.driver_name.as_deref()
     }
 }

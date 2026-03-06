@@ -203,7 +203,7 @@ impl MidiInputProcessor {
             }
         }
 
-        if let Some(start) = config.get_start() {
+        if let Some(start) = config.start() {
             self.set_handler(
                 start,
                 KeyHandler {
@@ -212,7 +212,7 @@ impl MidiInputProcessor {
                 },
             );
         }
-        if let Some(select) = config.get_select() {
+        if let Some(select) = config.select() {
             self.set_handler(
                 select,
                 KeyHandler {

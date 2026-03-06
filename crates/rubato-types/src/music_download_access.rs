@@ -20,5 +20,5 @@ pub trait MusicDownloadAccess: Send + Sync {
     fn is_download(&self) -> bool;
 
     /// Get the current download status message.
-    fn get_message(&self) -> String;
+    fn message(&self) -> String;
 }

@@ -234,11 +234,11 @@ impl SongData {
         self.model = Some(model);
     }
 
-    pub fn get_bms_model(&self) -> Option<&BMSModel> {
+    pub fn bms_model(&self) -> Option<&BMSModel> {
         self.model.as_ref()
     }
 
-    pub fn get_path(&self) -> Option<&str> {
+    pub fn path(&self) -> Option<&str> {
         if !self.path.is_empty() {
             Some(&self.path[0])
         } else if !self.path_str.is_empty() {
@@ -275,7 +275,7 @@ impl SongData {
         self.path.push(path);
     }
 
-    pub fn get_all_paths(&self) -> &[String] {
+    pub fn all_paths(&self) -> &[String] {
         &self.path
     }
 
@@ -289,7 +289,7 @@ impl SongData {
         self.fulltitle = None;
     }
 
-    pub fn get_full_title(&mut self) -> &str {
+    pub fn full_title_cached(&mut self) -> &str {
         if self.fulltitle.is_none() {
             self.fulltitle = Some(if !self.subtitle.is_empty() {
                 format!("{} {}", self.title, self.subtitle)
@@ -319,7 +319,7 @@ impl SongData {
         self.fullartist = None;
     }
 
-    pub fn get_full_artist(&mut self) -> &str {
+    pub fn full_artist(&mut self) -> &str {
         if self.fullartist.is_none() {
             self.fullartist = Some(if !self.subartist.is_empty() {
                 format!("{} {}", self.artist, self.subartist)
@@ -383,19 +383,19 @@ impl SongData {
         (self.feature & FEATURE_SCROLL) != 0
     }
 
-    pub fn get_url(&self) -> &str {
+    pub fn url(&self) -> &str {
         self.url.as_deref().unwrap_or("")
     }
 
-    pub fn get_appendurl(&self) -> &str {
+    pub fn appendurl(&self) -> &str {
         self.appendurl.as_deref().unwrap_or("")
     }
 
-    pub fn get_charthash(&self) -> Option<&str> {
+    pub fn charthash(&self) -> Option<&str> {
         self.charthash.as_deref()
     }
 
-    pub fn get_song_information(&self) -> Option<&SongInformation> {
+    pub fn song_information(&self) -> Option<&SongInformation> {
         self.info.as_ref()
     }
 
@@ -407,15 +407,15 @@ impl SongData {
         self.appendurl = Some(appendurl);
     }
 
-    pub fn get_ipfs_str(&self) -> &str {
+    pub fn ipfs_str(&self) -> &str {
         self.ipfs.as_deref().unwrap_or("")
     }
 
-    pub fn get_append_ipfs_str(&self) -> &str {
+    pub fn append_ipfs_str(&self) -> &str {
         self.appendipfs.as_deref().unwrap_or("")
     }
 
-    pub fn get_org_md5_vec(&self) -> &[String] {
+    pub fn org_md5_vec(&self) -> &[String] {
         self.org_md5.as_deref().unwrap_or(&[])
     }
 
@@ -462,23 +462,23 @@ impl Validatable for SongData {
 }
 
 impl crate::ipfs_information::IpfsInformation for SongData {
-    fn get_ipfs(&self) -> String {
+    fn ipfs(&self) -> String {
         self.ipfs.clone().unwrap_or_default()
     }
 
-    fn get_append_ipfs(&self) -> String {
+    fn append_ipfs(&self) -> String {
         self.appendipfs.clone().unwrap_or_default()
     }
 
-    fn get_title(&self) -> String {
+    fn title(&self) -> String {
         self.title.clone()
     }
 
-    fn get_artist(&self) -> String {
+    fn artist(&self) -> String {
         self.artist.clone()
     }
 
-    fn get_org_md5(&self) -> Vec<String> {
+    fn org_md5(&self) -> Vec<String> {
         self.org_md5.clone().unwrap_or_default()
     }
 }
@@ -583,8 +583,8 @@ mod tests {
         assert_eq!(sd.subartist, "Sub B");
         assert_eq!(sd.md5, "md5hash");
         assert_eq!(sd.sha256, "sha256hash");
-        assert_eq!(sd.get_url(), "https://url.com");
-        assert_eq!(sd.get_appendurl(), "https://append.com");
+        assert_eq!(sd.url(), "https://url.com");
+        assert_eq!(sd.appendurl(), "https://append.com");
         assert_eq!(sd.mode, 14);
         assert_eq!(sd.favorite, FAVORITE_CHART);
     }
@@ -630,37 +630,37 @@ mod tests {
         let mut sd = SongData::new();
         sd.set_artist("Artist".to_string());
         sd.set_subartist("Sub".to_string());
-        assert_eq!(sd.get_full_artist(), "Artist Sub");
+        assert_eq!(sd.full_artist(), "Artist Sub");
 
         sd.set_subartist("".to_string());
-        assert_eq!(sd.get_full_artist(), "Artist");
+        assert_eq!(sd.full_artist(), "Artist");
     }
 
     #[test]
     fn test_path_operations() {
         let mut sd = SongData::new();
-        assert!(sd.get_path().is_none());
+        assert!(sd.path().is_none());
 
         sd.set_path("/songs/test.bms".to_string());
-        assert_eq!(sd.get_path(), Some("/songs/test.bms"));
+        assert_eq!(sd.path(), Some("/songs/test.bms"));
 
         sd.add_another_path("/songs/test2.bms".to_string());
-        assert_eq!(sd.get_all_paths().len(), 2);
-        assert_eq!(sd.get_all_paths()[1], "/songs/test2.bms");
+        assert_eq!(sd.all_paths().len(), 2);
+        assert_eq!(sd.all_paths()[1], "/songs/test2.bms");
 
         sd.clear_path();
-        assert!(sd.get_path().is_none());
-        assert!(sd.get_all_paths().is_empty());
+        assert!(sd.path().is_none());
+        assert!(sd.all_paths().is_empty());
     }
 
     #[test]
     fn test_set_path_opt() {
         let mut sd = SongData::new();
         sd.set_path_opt(Some("/songs/a.bms".to_string()));
-        assert_eq!(sd.get_path(), Some("/songs/a.bms"));
+        assert_eq!(sd.path(), Some("/songs/a.bms"));
 
         sd.set_path_opt(None);
-        assert!(sd.get_path().is_none());
+        assert!(sd.path().is_none());
     }
 
     #[test]
@@ -718,14 +718,14 @@ mod tests {
         sd2.appendurl = Some("https://append-merged.com".to_string());
 
         sd1.merge(&sd2);
-        assert_eq!(sd1.get_url(), "https://merged.com");
-        assert_eq!(sd1.get_appendurl(), "https://append-merged.com");
+        assert_eq!(sd1.url(), "https://merged.com");
+        assert_eq!(sd1.appendurl(), "https://append-merged.com");
 
         // If sd1 already has url, merge should not overwrite
         let mut sd3 = SongData::new();
         sd3.url = Some("https://other.com".to_string());
         sd1.merge(&sd3);
-        assert_eq!(sd1.get_url(), "https://merged.com");
+        assert_eq!(sd1.url(), "https://merged.com");
     }
 
     #[test]
@@ -740,7 +740,7 @@ mod tests {
 
         sd.shrink();
 
-        assert!(sd.get_all_paths().is_empty());
+        assert!(sd.all_paths().is_empty());
         assert_eq!(sd.level, 0);
         assert_eq!(sd.notes, 0);
         assert!(sd.preview.is_empty());
@@ -765,24 +765,24 @@ mod tests {
     #[test]
     fn test_ipfs_accessors() {
         let mut sd = SongData::new();
-        assert_eq!(sd.get_ipfs_str(), "");
-        assert_eq!(sd.get_append_ipfs_str(), "");
+        assert_eq!(sd.ipfs_str(), "");
+        assert_eq!(sd.append_ipfs_str(), "");
 
         sd.ipfs = Some("Qm123".to_string());
         sd.appendipfs = Some("Qm456".to_string());
-        assert_eq!(sd.get_ipfs_str(), "Qm123");
-        assert_eq!(sd.get_append_ipfs_str(), "Qm456");
+        assert_eq!(sd.ipfs_str(), "Qm123");
+        assert_eq!(sd.append_ipfs_str(), "Qm456");
     }
 
     #[test]
     fn test_org_md5_accessor() {
         let sd = SongData::new();
-        assert!(sd.get_org_md5_vec().is_empty());
+        assert!(sd.org_md5_vec().is_empty());
 
         let mut sd2 = SongData::new();
         sd2.org_md5 = Some(vec!["md5a".to_string(), "md5b".to_string()]);
-        assert_eq!(sd2.get_org_md5_vec().len(), 2);
-        assert_eq!(sd2.get_org_md5_vec()[0], "md5a");
+        assert_eq!(sd2.org_md5_vec().len(), 2);
+        assert_eq!(sd2.org_md5_vec()[0], "md5a");
     }
 
     #[test]

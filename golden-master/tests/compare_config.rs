@@ -375,7 +375,7 @@ fn config_player_validate_after_deserialize() {
     assert_eq!(pc.lnmode, 1);
 
     // Skin array should be normalized to expected size
-    let max_skin_id = rubato_types::skin_type::SkinType::get_max_skin_type_id() as usize;
+    let max_skin_id = rubato_types::skin_type::SkinType::max_skin_type_id() as usize;
     assert_eq!(pc.skin.len(), max_skin_id + 1);
 
     // autosavereplay should remain length 4

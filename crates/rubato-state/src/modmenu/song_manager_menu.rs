@@ -71,7 +71,7 @@ fn update_reverse_lookup_data(current_song_data: &Option<SongData>) {
 fn get_current_song_data() -> Option<SongData> {
     let selector = SELECTOR.lock().unwrap();
     if let Some(ref sel) = *selector {
-        return sel.get_selected_song_data();
+        return sel.selected_song_data();
     }
     None
 }
@@ -79,7 +79,7 @@ fn get_current_song_data() -> Option<SongData> {
 fn get_current_score_data() -> Option<ScoreData> {
     let selector = SELECTOR.lock().unwrap();
     if let Some(ref sel) = *selector {
-        return sel.get_selected_score_data();
+        return sel.selected_score_data();
     }
     None
 }
@@ -88,7 +88,7 @@ fn get_current_score_data() -> Option<ScoreData> {
 fn get_reverse_lookup_data() -> Vec<String> {
     let selector = SELECTOR.lock().unwrap();
     if let Some(ref sel) = *selector {
-        return sel.get_reverse_lookup_data();
+        return sel.reverse_lookup_data();
     }
     Vec::new()
 }

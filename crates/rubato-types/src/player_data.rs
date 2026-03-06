@@ -29,14 +29,14 @@ impl PlayerData {
         Self::default()
     }
 
-    pub fn get_judge_count(&self, judge: i32) -> i64 {
-        self.get_judge_count_fast(judge, true) + self.get_judge_count_fast(judge, false)
+    pub fn judge_count(&self, judge: i32) -> i64 {
+        self.judge_count_fast(judge, true) + self.judge_count_fast(judge, false)
     }
 
     /// Get judge count for a specific judge type.
     /// judge: 0=PG, 1=GR, 2=GD, 3=BD, 4=PR, 5=MS
     /// fast: true=FAST, false=SLOW
-    pub fn get_judge_count_fast(&self, judge: i32, fast: bool) -> i64 {
+    pub fn judge_count_fast(&self, judge: i32, fast: bool) -> i64 {
         match judge {
             0 => {
                 if fast {

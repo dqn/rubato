@@ -135,10 +135,10 @@ pub struct PlayerConfig {
 
 impl Default for PlayerConfig {
     fn default() -> Self {
-        let max_skin_id = SkinType::get_max_skin_type_id();
+        let max_skin_id = SkinType::max_skin_type_id();
         let mut skin = Vec::with_capacity(max_skin_id as usize + 1);
         for i in 0..=max_skin_id {
-            skin.push(Some(SkinConfig::get_default(i)));
+            skin.push(Some(SkinConfig::default_for_id(i)));
         }
 
         PlayerConfig {
@@ -276,11 +276,11 @@ impl PlayerConfig {
         match mode_id {
             Mode::BEAT_5K => &mut self.mode5,
             Mode::BEAT_7K => &mut self.mode7,
-            Mode::BEAT_10K => self.get_mode10(),
-            Mode::BEAT_14K => self.get_mode14(),
+            Mode::BEAT_10K => self.mode10(),
+            Mode::BEAT_14K => self.mode14(),
             Mode::POPN_5K | Mode::POPN_9K => &mut self.mode9,
             Mode::KEYBOARD_24K => &mut self.mode24,
-            Mode::KEYBOARD_24K_DOUBLE => self.get_mode24double(),
+            Mode::KEYBOARD_24K_DOUBLE => self.mode24double(),
         }
     }
 
@@ -288,16 +288,16 @@ impl PlayerConfig {
         match mode_id {
             5 => &mut self.mode5,
             7 => &mut self.mode7,
-            10 => self.get_mode10(),
-            14 => self.get_mode14(),
+            10 => self.mode10(),
+            14 => self.mode14(),
             9 => &mut self.mode9,
             25 => &mut self.mode24,
-            50 => self.get_mode24double(),
+            50 => self.mode24double(),
             _ => &mut self.mode7,
         }
     }
 
-    fn get_mode10(&mut self) -> &mut PlayModeConfig {
+    fn mode10(&mut self) -> &mut PlayModeConfig {
         if self.mode10.controller.len() < 2 {
             self.mode10 = PlayModeConfig::new(Mode::BEAT_10K);
             log::warn!("mode10 PlayConfig reconstructed");
@@ -305,7 +305,7 @@ impl PlayerConfig {
         &mut self.mode10
     }
 
-    fn get_mode14(&mut self) -> &mut PlayModeConfig {
+    fn mode14(&mut self) -> &mut PlayModeConfig {
         if self.mode14.controller.len() < 2 {
             self.mode14 = PlayModeConfig::new(Mode::BEAT_14K);
             log::warn!("mode14 PlayConfig reconstructed");
@@ -313,7 +313,7 @@ impl PlayerConfig {
         &mut self.mode14
     }
 
-    fn get_mode24double(&mut self) -> &mut PlayModeConfig {
+    fn mode24double(&mut self) -> &mut PlayModeConfig {
         if self.mode24double.controller.len() < 2 {
             self.mode24double = PlayModeConfig::new(Mode::KEYBOARD_24K_DOUBLE);
             log::warn!("mode24double PlayConfig reconstructed");
@@ -321,23 +321,23 @@ impl PlayerConfig {
         &mut self.mode24double
     }
 
-    pub fn get_twitter_consumer_key(&self) -> Option<&str> {
+    pub fn twitter_consumer_key(&self) -> Option<&str> {
         self.twitter_consumer_key.as_deref()
     }
 
-    pub fn get_twitter_consumer_secret(&self) -> Option<&str> {
+    pub fn twitter_consumer_secret(&self) -> Option<&str> {
         self.twitter_consumer_secret.as_deref()
     }
 
-    pub fn get_twitter_access_token(&self) -> Option<&str> {
+    pub fn twitter_access_token(&self) -> Option<&str> {
         self.twitter_access_token.as_deref()
     }
 
-    pub fn get_twitter_access_token_secret(&self) -> Option<&str> {
+    pub fn twitter_access_token_secret(&self) -> Option<&str> {
         self.twitter_access_token_secret.as_deref()
     }
 
-    pub fn get_sortid(&self) -> Option<&str> {
+    pub fn sortid(&self) -> Option<&str> {
         self.sortid.as_deref()
     }
 
@@ -345,7 +345,7 @@ impl PlayerConfig {
         self.sortid = Some(v);
     }
 
-    pub fn get_mode(&self) -> Option<&Mode> {
+    pub fn mode(&self) -> Option<&Mode> {
         self.mode.as_ref()
     }
 
@@ -373,15 +373,15 @@ impl PlayerConfig {
         self.bpmguide
     }
 
-    pub fn get_misslayer_duration(&mut self) -> i32 {
+    pub fn misslayer_duration(&mut self) -> i32 {
         if self.misslayer_duration < 0 {
             self.misslayer_duration = 0;
         }
         self.misslayer_duration
     }
 
-    pub fn get_skin(&mut self) -> &mut Vec<Option<SkinConfig>> {
-        let max_id = SkinType::get_max_skin_type_id() as usize;
+    pub fn skin(&mut self) -> &mut Vec<Option<SkinConfig>> {
+        let max_id = SkinType::max_skin_type_id() as usize;
         if self.skin.len() <= max_id {
             self.skin.resize_with(max_id + 1, || None);
             log::warn!("skin reconstructed");
@@ -391,14 +391,14 @@ impl PlayerConfig {
 
     #[allow(clippy::field_reassign_with_default)]
     pub fn validate(&mut self) {
-        let max_skin_id = SkinType::get_max_skin_type_id() as usize;
+        let max_skin_id = SkinType::max_skin_type_id() as usize;
 
         if self.skin.len() != max_skin_id + 1 {
             self.skin.resize_with(max_skin_id + 1, || None);
         }
         for i in 0..self.skin.len() {
             if self.skin[i].is_none() {
-                self.skin[i] = Some(SkinConfig::get_default(i as i32));
+                self.skin[i] = Some(SkinConfig::default_for_id(i as i32));
             }
             if let Some(ref mut s) = self.skin[i] {
                 s.validate();
@@ -471,7 +471,7 @@ impl PlayerConfig {
         self.extranote_depth = self.extranote_depth.clamp(0, 100);
 
         if self.irconfig.is_empty() {
-            let irnames = IRConnectionManager::get_all_available_ir_connection_name();
+            let irnames = IRConnectionManager::all_available_ir_connection_name();
             self.irconfig = irnames
                 .iter()
                 .map(|name| {
@@ -550,7 +550,7 @@ impl PlayerConfig {
         Ok(player)
     }
 
-    pub fn get_config_json(player: &PlayerConfig) -> anyhow::Result<String> {
+    pub fn config_json(player: &PlayerConfig) -> anyhow::Result<String> {
         Ok(serde_json::to_string_pretty(player)?)
     }
 

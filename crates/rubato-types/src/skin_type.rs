@@ -28,14 +28,6 @@ pub enum SkinType {
 }
 
 impl SkinType {
-    pub fn get_id(&self) -> i32 {
-        self.id()
-    }
-
-    pub fn get_name(&self) -> &'static str {
-        self.name()
-    }
-
     pub fn id(&self) -> i32 {
         match self {
             SkinType::Play7Keys => 0,
@@ -132,10 +124,6 @@ impl SkinType {
         }
     }
 
-    pub fn get_mode(&self) -> Option<Mode> {
-        self.mode()
-    }
-
     pub fn is_battle(&self) -> bool {
         matches!(
             self,
@@ -146,13 +134,13 @@ impl SkinType {
         )
     }
 
-    pub fn get_skin_type_by_id(id: i32) -> Option<SkinType> {
+    pub fn skin_type_by_id(id: i32) -> Option<SkinType> {
         Self::values()
             .into_iter()
             .find(|&skin_type| skin_type.id() == id)
     }
 
-    pub fn get_max_skin_type_id() -> i32 {
+    pub fn max_skin_type_id() -> i32 {
         let mut max = -1_i32;
         for skin_type in Self::values() {
             max = max.max(skin_type.id());
@@ -226,7 +214,7 @@ mod tests {
     #[test]
     fn test_get_id_equals_id() {
         for st in SkinType::values() {
-            assert_eq!(st.get_id(), st.id());
+            assert_eq!(st.id(), st.id());
         }
     }
 
@@ -246,7 +234,7 @@ mod tests {
     #[test]
     fn test_get_name_equals_name() {
         for st in SkinType::values() {
-            assert_eq!(st.get_name(), st.name());
+            assert_eq!(st.name(), st.name());
         }
     }
 
@@ -324,28 +312,28 @@ mod tests {
     #[test]
     fn test_get_mode_equals_mode() {
         for st in SkinType::values() {
-            assert_eq!(st.get_mode(), st.mode());
+            assert_eq!(st.mode(), st.mode());
         }
     }
 
     #[test]
     fn test_get_skin_type_by_id() {
         for st in SkinType::values() {
-            let found = SkinType::get_skin_type_by_id(st.id());
+            let found = SkinType::skin_type_by_id(st.id());
             assert_eq!(found, Some(st));
         }
     }
 
     #[test]
     fn test_get_skin_type_by_id_invalid() {
-        assert_eq!(SkinType::get_skin_type_by_id(-1), None);
-        assert_eq!(SkinType::get_skin_type_by_id(19), None);
-        assert_eq!(SkinType::get_skin_type_by_id(100), None);
+        assert_eq!(SkinType::skin_type_by_id(-1), None);
+        assert_eq!(SkinType::skin_type_by_id(19), None);
+        assert_eq!(SkinType::skin_type_by_id(100), None);
     }
 
     #[test]
     fn test_get_max_skin_type_id() {
-        assert_eq!(SkinType::get_max_skin_type_id(), 18);
+        assert_eq!(SkinType::max_skin_type_id(), 18);
     }
 
     #[test]

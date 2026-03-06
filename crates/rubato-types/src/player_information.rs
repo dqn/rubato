@@ -9,7 +9,7 @@ pub struct PlayerInformation {
 }
 
 impl PlayerInformation {
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         self.name.as_deref().unwrap_or("")
     }
 }

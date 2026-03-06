@@ -77,11 +77,9 @@ impl MainControllerCommandQueue {
 /// methods should keep local extension stubs until the types are unified.
 pub trait MainControllerAccess {
     /// Get config reference
-    fn get_config(&self) -> &Config;
-
+    fn config(&self) -> &Config;
     /// Get player config reference
-    fn get_player_config(&self) -> &PlayerConfig;
-
+    fn player_config(&self) -> &PlayerConfig;
     /// Change to a different state
     fn change_state(&mut self, state: MainStateType);
 
@@ -98,11 +96,9 @@ pub trait MainControllerAccess {
     fn update_song(&mut self, path: Option<&str>);
 
     /// Get player resource (immutable)
-    fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess>;
-
+    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess>;
     /// Get player resource (mutable)
-    fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess>;
-
+    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess>;
     /// Play a system sound effect or BGM.
     fn play_sound(&mut self, _sound: &SoundType, _loop_sound: bool) {
         // default no-op
@@ -114,7 +110,7 @@ pub trait MainControllerAccess {
     }
 
     /// Check if a sound exists for the given type.
-    fn get_sound_path(&self, _sound: &SoundType) -> Option<String> {
+    fn sound_path(&self, _sound: &SoundType) -> Option<String> {
         None
     }
 
@@ -163,13 +159,13 @@ pub trait MainControllerAccess {
 
     /// Get IR song page URL for the given song data.
     /// Returns None if no IR connection is available.
-    fn get_ir_song_url(&self, _song_data: &crate::song_data::SongData) -> Option<String> {
+    fn ir_song_url(&self, _song_data: &crate::song_data::SongData) -> Option<String> {
         None
     }
 
     /// Get IR course page URL for the given course data.
     /// Returns None if no IR connection is available.
-    fn get_ir_course_url(&self, _course_data: &crate::course_data::CourseData) -> Option<String> {
+    fn ir_course_url(&self, _course_data: &crate::course_data::CourseData) -> Option<String> {
         None
     }
 
@@ -179,7 +175,7 @@ pub trait MainControllerAccess {
     }
 
     /// Get HTTP download submitter for submitting chart download tasks.
-    fn get_http_downloader(
+    fn http_downloader(
         &self,
     ) -> Option<&dyn crate::http_download_submitter::HttpDownloadSubmitter> {
         None
@@ -200,30 +196,28 @@ pub trait MainControllerAccess {
 
     /// Get input processor access.
     /// Java: MainController.getInputProcessor()
-    fn get_input_processor(&self) -> Option<&dyn InputProcessorAccess> {
+    fn input_processor(&self) -> Option<&dyn InputProcessorAccess> {
         None
     }
 
     /// Get ranking data cache (immutable).
     /// Java: MainController.getRankingDataCache()
-    fn get_ranking_data_cache(&self) -> Option<&dyn RankingDataCacheAccess> {
+    fn ranking_data_cache(&self) -> Option<&dyn RankingDataCacheAccess> {
         None
     }
 
     /// Get ranking data cache (mutable).
-    fn get_ranking_data_cache_mut(
-        &mut self,
-    ) -> Option<&mut (dyn RankingDataCacheAccess + 'static)> {
+    fn ranking_data_cache_mut(&mut self) -> Option<&mut (dyn RankingDataCacheAccess + 'static)> {
         None
     }
 
     /// Get rival player count.
-    fn get_rival_count(&self) -> usize {
+    fn rival_count(&self) -> usize {
         0
     }
 
     /// Get rival player information by index.
-    fn get_rival_information(
+    fn rival_information(
         &self,
         _index: usize,
     ) -> Option<crate::player_information::PlayerInformation> {
@@ -233,7 +227,7 @@ pub trait MainControllerAccess {
     /// Get IR table URLs for connected IR services.
     /// Returns (ir_name, table_url) pairs.
     /// Java: MainController.getIRStatus() → IRStatus.tables
-    fn get_ir_table_urls(&self) -> Vec<(String, String)> {
+    fn ir_table_urls(&self) -> Vec<(String, String)> {
         Vec::new()
     }
 
@@ -251,7 +245,7 @@ pub trait MainControllerAccess {
 
     /// Get song information database reference.
     /// Java: MainController.getInfoDatabase()
-    fn get_info_database(&self) -> Option<&dyn SongInformationDb> {
+    fn info_database(&self) -> Option<&dyn SongInformationDb> {
         None
     }
 
@@ -261,7 +255,7 @@ pub trait MainControllerAccess {
     /// erased as `&dyn Any`. Callers downcast via
     /// `any.downcast_ref::<Arc<dyn IRConnection + Send + Sync>>()` and clone the Arc.
     /// Java: MainController.getIRStatus()[0].connection
-    fn get_ir_connection_any(&self) -> Option<&dyn Any> {
+    fn ir_connection_any(&self) -> Option<&dyn Any> {
         None
     }
 }
@@ -285,11 +279,11 @@ impl NullMainController {
 }
 
 impl MainControllerAccess for NullMainController {
-    fn get_config(&self) -> &Config {
+    fn config(&self) -> &Config {
         log::warn!("NullMainController::get_config called — returning default");
         Self::null_config()
     }
-    fn get_player_config(&self) -> &PlayerConfig {
+    fn player_config(&self) -> &PlayerConfig {
         log::warn!("NullMainController::get_player_config called — returning default");
         Self::null_player_config()
     }
@@ -308,10 +302,10 @@ impl MainControllerAccess for NullMainController {
     fn update_song(&mut self, _path: Option<&str>) {
         log::warn!("NullMainController::update_song called — no-op");
     }
-    fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
+    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
         None
     }
-    fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
+    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
         None
     }
 }
@@ -334,10 +328,10 @@ impl ConfigMainControllerAccess {
 }
 
 impl MainControllerAccess for ConfigMainControllerAccess {
-    fn get_config(&self) -> &Config {
+    fn config(&self) -> &Config {
         &self.config
     }
-    fn get_player_config(&self) -> &PlayerConfig {
+    fn player_config(&self) -> &PlayerConfig {
         &self.player_config
     }
     fn change_state(&mut self, _state: MainStateType) {
@@ -347,10 +341,10 @@ impl MainControllerAccess for ConfigMainControllerAccess {
     fn exit(&self) {}
     fn save_last_recording(&self, _reason: &str) {}
     fn update_song(&mut self, _path: Option<&str>) {}
-    fn get_player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
+    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
         None
     }
-    fn get_player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
+    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
         None
     }
 }

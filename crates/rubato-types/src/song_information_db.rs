@@ -11,14 +11,11 @@ use crate::song_information::SongInformation;
 /// (beatoraja-core cannot depend on beatoraja-song).
 pub trait SongInformationDb: Send + Sync {
     /// Query informations by custom SQL WHERE clause
-    fn get_informations(&self, sql: &str) -> Vec<SongInformation>;
-
+    fn informations(&self, sql: &str) -> Vec<SongInformation>;
     /// Query single record by SHA256
-    fn get_information(&self, sha256: &str) -> Option<SongInformation>;
-
+    fn information(&self, sha256: &str) -> Option<SongInformation>;
     /// Batch-load song information for an array of songs (chunked)
-    fn get_information_for_songs(&self, songs: &mut [SongData]);
-
+    fn information_for_songs(&self, songs: &mut [SongData]);
     /// Begin update transaction
     fn start_update(&self) -> anyhow::Result<()>;
 

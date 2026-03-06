@@ -60,7 +60,7 @@ fn load_lua_skin_with_state(relative_path: &str, provider: &StaticStateProvider)
     let header = loader
         .load_header(&path)
         .unwrap_or_else(|| panic!("Failed to load Lua skin header: {}", path.display()));
-    let skin_type = SkinType::get_skin_type_by_id(header.skin_type)
+    let skin_type = SkinType::skin_type_by_id(header.skin_type)
         .unwrap_or_else(|| panic!("Unknown skin type {} in header", header.skin_type));
     let skin_data = loader
         .load_skin(&path, &skin_type, &SkinConfigProperty)
@@ -89,7 +89,7 @@ fn load_json_skin(relative_path: &str) -> Skin {
     let header = loader
         .load_header(&path)
         .unwrap_or_else(|| panic!("Failed to load JSON skin header: {}", path.display()));
-    let skin_type = SkinType::get_skin_type_by_id(header.skin_type)
+    let skin_type = SkinType::skin_type_by_id(header.skin_type)
         .unwrap_or_else(|| panic!("Unknown skin type {} in header", header.skin_type));
     let skin_data = loader
         .load_skin(&path, &skin_type, &SkinConfigProperty)

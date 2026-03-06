@@ -13,9 +13,8 @@ pub trait TargetPropertyAccess: Send + Sync {
 
     /// Get display name for this target.
     /// May vary by context (e.g., rival name lookup).
-    fn get_name_display(&self) -> String;
-
+    fn name_display(&self) -> String;
     /// Compute and return the target score data.
     /// This is called during gameplay to get the target score for comparison.
-    fn get_target_score(&mut self) -> ScoreData;
+    fn target_score(&mut self) -> ScoreData;
 }

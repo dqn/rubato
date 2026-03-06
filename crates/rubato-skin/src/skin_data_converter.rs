@@ -51,7 +51,7 @@ pub fn convert_header_data(
     let mut header = SkinHeader::new();
 
     // Map skin_type integer to SkinType enum
-    if let Some(skin_type) = SkinType::get_skin_type_by_id(data.skin_type) {
+    if let Some(skin_type) = SkinType::skin_type_by_id(data.skin_type) {
         header.set_skin_type(skin_type);
     }
 

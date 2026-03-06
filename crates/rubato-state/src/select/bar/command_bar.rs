@@ -43,7 +43,7 @@ impl CommandBar {
     ///
     /// Translates: Java CommandBar.getChildren()
     pub fn get_children(&self, db: &dyn SongDatabaseAccessor, ctx: &CommandBarContext) -> Vec<Bar> {
-        let songs = db.get_song_datas_by_sql(
+        let songs = db.song_datas_by_sql(
             &self.sql,
             ctx.score_db_path,
             ctx.scorelog_db_path,
@@ -53,7 +53,7 @@ impl CommandBar {
     }
 
     pub fn update_folder_status(&mut self, db: &dyn SongDatabaseAccessor, ctx: &CommandBarContext) {
-        let songs = db.get_song_datas_by_sql(
+        let songs = db.song_datas_by_sql(
             &self.sql,
             ctx.score_db_path,
             ctx.scorelog_db_path,
@@ -80,13 +80,13 @@ mod tests {
     }
 
     impl SongDatabaseAccessor for MockSongDb {
-        fn get_song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
+        fn song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
             Vec::new()
         }
-        fn get_song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
+        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
             Vec::new()
         }
-        fn get_song_datas_by_sql(
+        fn song_datas_by_sql(
             &self,
             _sql: &str,
             _score: &str,
@@ -96,10 +96,10 @@ mod tests {
             self.sql_songs.clone()
         }
         fn set_song_datas(&self, _songs: &[SongData]) {}
-        fn get_song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
+        fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
             Vec::new()
         }
-        fn get_folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
+        fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
             Vec::new()
         }
     }

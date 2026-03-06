@@ -1040,7 +1040,7 @@ impl PlayConfigurationView {
             self.lift = (conf.lift * 1000.0) as i32;
             self.hidden = (conf.hidden * 1000.0) as i32;
             self.judgealgorithm =
-                Some(rubato_core::stubs::JudgeAlgorithm::get_index(&conf.judgetype).max(0));
+                Some(rubato_core::stubs::JudgeAlgorithm::index(&conf.judgetype).max(0));
             self.hispeedautoadjust = conf.hispeedautoadjust;
         }
     }

@@ -45,11 +45,11 @@ pub use crate::scroll_speed_modifier;
 pub struct IRConnectionManager;
 
 impl IRConnectionManager {
-    pub fn get_all_available_ir_connection_name() -> Vec<String> {
+    pub fn all_available_ir_connection_name() -> Vec<String> {
         vec![]
     }
 
-    pub fn get_ir_connection_class(_name: &str) -> Option<()> {
+    pub fn ir_connection_class(_name: &str) -> Option<()> {
         Some(())
     }
 }

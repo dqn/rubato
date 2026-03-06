@@ -35,11 +35,9 @@ impl ReplayAutoSaveConstraint {
     pub fn is_qualified(&self, oldscore: &ScoreData, newscore: &ScoreData) -> bool {
         match self {
             ReplayAutoSaveConstraint::Nothing => false,
-            ReplayAutoSaveConstraint::ScoreUpdate => {
-                newscore.get_exscore() > oldscore.get_exscore()
-            }
+            ReplayAutoSaveConstraint::ScoreUpdate => newscore.exscore() > oldscore.exscore(),
             ReplayAutoSaveConstraint::ScoreUpdateOrEqual => {
-                newscore.get_exscore() >= oldscore.get_exscore()
+                newscore.exscore() >= oldscore.exscore()
             }
             ReplayAutoSaveConstraint::MisscountUpdate => {
                 newscore.minbp < oldscore.minbp || oldscore.clear == ClearType::NoPlay.id()
@@ -57,7 +55,7 @@ impl ReplayAutoSaveConstraint {
                 newscore.clear > oldscore.clear
                     || newscore.maxcombo > oldscore.maxcombo
                     || newscore.minbp < oldscore.minbp
-                    || newscore.get_exscore() > oldscore.get_exscore()
+                    || newscore.exscore() > oldscore.exscore()
             }
             ReplayAutoSaveConstraint::Always => true,
         }

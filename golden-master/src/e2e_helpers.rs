@@ -445,7 +445,7 @@ pub fn run_course_simulation_manual(
 /// Assert the autoplay invariant: all notes are PGREAT.
 pub fn assert_all_pgreat(result: &SimulationResult, total_notes: usize, label: &str) {
     let score = &result.score;
-    let pg_count = score.get_judge_count_total(JUDGE_PG);
+    let pg_count = score.judge_count_total(JUDGE_PG);
 
     assert!(
         pg_count > 0,
@@ -454,17 +454,17 @@ pub fn assert_all_pgreat(result: &SimulationResult, total_notes: usize, label: &
 
     for &judge in &[JUDGE_GR, JUDGE_GD, JUDGE_BD, JUDGE_PR, JUDGE_MS] {
         assert_eq!(
-            score.get_judge_count_total(judge),
+            score.judge_count_total(judge),
             0,
             "{label}: judge {judge} should be 0, got {} \
              (PG={}, GR={}, GD={}, BD={}, PR={}, MS={})",
-            score.get_judge_count_total(judge),
-            score.get_judge_count_total(JUDGE_PG),
-            score.get_judge_count_total(JUDGE_GR),
-            score.get_judge_count_total(JUDGE_GD),
-            score.get_judge_count_total(JUDGE_BD),
-            score.get_judge_count_total(JUDGE_PR),
-            score.get_judge_count_total(JUDGE_MS),
+            score.judge_count_total(judge),
+            score.judge_count_total(JUDGE_PG),
+            score.judge_count_total(JUDGE_GR),
+            score.judge_count_total(JUDGE_GD),
+            score.judge_count_total(JUDGE_BD),
+            score.judge_count_total(JUDGE_PR),
+            score.judge_count_total(JUDGE_MS),
         );
     }
 

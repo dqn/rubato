@@ -132,7 +132,7 @@ pub trait MainState {
     fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
         let score = &self.main_state_data().score;
         if let Some(sd) = score.get_score_data() {
-            sd.get_judge_count(judge, fast)
+            sd.judge_count(judge, fast)
         } else {
             0
         }

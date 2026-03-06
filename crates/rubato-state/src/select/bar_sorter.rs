@@ -239,8 +239,8 @@ impl BarSorter {
         if n2 == 0 {
             return Ordering::Less;
         }
-        let r1 = s1.get_exscore() as f32 / n1 as f32;
-        let r2 = s2.get_exscore() as f32 / n2 as f32;
+        let r1 = s1.exscore() as f32 / n1 as f32;
+        let r2 = s2.exscore() as f32 / n2 as f32;
         r1.partial_cmp(&r2).unwrap_or(Ordering::Equal)
     }
 
@@ -337,10 +337,10 @@ impl BarSorter {
             (None, _) => Ordering::Greater,
             (_, None) => Ordering::Less,
             (Some((s1, r1)), Some((s2, r2))) => {
-                let v1 = s1.get_exscore() as f32 / s1.notes as f32
-                    - r1.get_exscore() as f32 / r1.notes as f32;
-                let v2 = s2.get_exscore() as f32 / s2.notes as f32
-                    - r2.get_exscore() as f32 / r2.notes as f32;
+                let v1 =
+                    s1.exscore() as f32 / s1.notes as f32 - r1.exscore() as f32 / r1.notes as f32;
+                let v2 =
+                    s2.exscore() as f32 / s2.notes as f32 - r2.exscore() as f32 / r2.notes as f32;
                 v1.partial_cmp(&v2).unwrap_or(Ordering::Equal)
             }
         }

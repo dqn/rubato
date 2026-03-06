@@ -62,7 +62,7 @@ impl MainStateListener for DiscordListener {
                 .set_start_timestamp(now)
                 .set_large_image("bms".to_string(), String::new());
 
-            let screen_type = state.get_screen_type();
+            let screen_type = state.screen_type();
 
             match screen_type {
                 ScreenType::MusicSelector => {
@@ -72,8 +72,8 @@ impl MainStateListener for DiscordListener {
                     data = data.set_state("Decide Screen".to_string());
                 }
                 ScreenType::BMSPlayer => {
-                    if let Some(resource) = state.get_resource()
-                        && let Some(songdata) = resource.get_songdata()
+                    if let Some(resource) = state.resource()
+                        && let Some(songdata) = resource.songdata()
                     {
                         let full_title = if songdata.subtitle.is_empty() {
                             songdata.title.clone()

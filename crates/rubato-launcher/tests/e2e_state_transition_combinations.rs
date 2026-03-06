@@ -57,7 +57,7 @@ fn e2e_practice_mode_to_result() {
     // Load BMS in practice mode (mode_type 1 = Practice)
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist after create()");
         let loaded = resource.set_bms_file(&bms_path, 1, 0);
         assert!(loaded, "BMS file should load successfully in practice mode");
@@ -93,7 +93,7 @@ fn e2e_practice_mode_lifecycle_with_render() {
     // Load BMS in practice mode
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         assert!(resource.set_bms_file(&bms_path, 1, 0));
     }
@@ -127,7 +127,7 @@ fn e2e_practice_mode_back_to_select_skipping_result() {
     // Load BMS in practice mode
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         assert!(resource.set_bms_file(&bms_path, 1, 0));
     }
@@ -167,7 +167,7 @@ fn e2e_course_play_multi_song_sequence() {
     // Set up course data on PlayerResource
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         let course = CourseData::default();
         resource.set_course_data(course);
@@ -190,7 +190,7 @@ fn e2e_course_play_multi_song_sequence() {
     // then change_state(Play) again with a new model loaded.)
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         let loaded = resource.set_bms_file(&bms_path, 0, 0);
         assert!(loaded, "Second song of course should load successfully");
@@ -215,7 +215,7 @@ fn e2e_course_play_multi_song_sequence() {
     // Resource is now back on the controller after Decide returned it.
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         let loaded = resource.set_bms_file(&bms_path, 0, 0);
         assert!(loaded, "Third song of course should load successfully");
@@ -250,7 +250,7 @@ fn e2e_course_play_to_course_result_with_renders() {
     // Set up course data
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         let mut course = CourseData::default();
         course.name = Some("Test Course".to_string());
@@ -268,7 +268,7 @@ fn e2e_course_play_to_course_result_with_renders() {
     // Play song 2
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         assert!(resource.set_bms_file(&bms_path, 0, 0));
     }
@@ -302,7 +302,7 @@ fn e2e_course_data_cleared_after_course_result() {
     // Set up course data
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         let mut course = CourseData::default();
         course.name = Some("Cleanup Course".to_string());
@@ -335,7 +335,7 @@ fn e2e_course_data_cleared_after_course_result() {
     // Clear course data (simulates what MusicSelector does on return)
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist after transition from CourseResult");
         resource.clear_course_data();
     }
@@ -650,7 +650,7 @@ fn e2e_rapid_full_cycle_with_bms_data() {
         // Load BMS each iteration (simulates re-selecting a song)
         {
             let resource = mc
-                .get_player_resource_mut()
+                .player_resource_mut()
                 .expect("PlayerResource should exist");
             assert!(
                 resource.set_bms_file(&bms_path, 0, 0),

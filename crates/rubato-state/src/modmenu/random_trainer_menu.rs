@@ -31,8 +31,8 @@ impl RandomTrainerMenu {
         {
             let history = RandomTrainer::get_random_history();
             for entry in &history {
-                let _title = entry.get_title();
-                let _random = entry.get_random();
+                let _title = entry.title();
+                let _random = entry.random();
                 // Render table rows
                 // Double click to select as current random
             }

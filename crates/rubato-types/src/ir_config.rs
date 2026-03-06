@@ -80,7 +80,7 @@ impl IRConfig {
 impl Validatable for IRConfig {
     fn validate(&mut self) -> bool {
         if self.irname.is_empty()
-            || IRConnectionManager::get_ir_connection_class(&self.irname).is_none()
+            || IRConnectionManager::ir_connection_class(&self.irname).is_none()
         {
             return false;
         }

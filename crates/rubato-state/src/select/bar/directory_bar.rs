@@ -95,7 +95,7 @@ impl DirectoryBarData {
     ) {
         self.clear();
         for song in songs {
-            if song.get_path().is_none() {
+            if song.path().is_none() {
                 continue;
             }
             if let Some(m) = mode
@@ -111,7 +111,7 @@ impl DirectoryBarData {
                     self.lamps[clear] += 1;
                 }
                 if score.notes != 0 {
-                    let rank = (score.get_exscore() * 27 / (score.notes * 2)) as usize;
+                    let rank = (score.exscore() * 27 / (score.notes * 2)) as usize;
                     let rank = if rank < 28 { rank } else { 27 };
                     self.ranks[rank] += 1;
                 } else {

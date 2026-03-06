@@ -24,8 +24,8 @@ pub struct MainControllerRef {
 
 impl MainControllerRef {
     pub fn new(inner: Box<dyn MainControllerAccess>) -> Self {
-        let config = inner.get_config();
-        let player_config = inner.get_player_config();
+        let config = inner.config();
+        let player_config = inner.player_config();
         let input_processor = BMSPlayerInputProcessor::new(config, player_config);
         Self {
             inner,
@@ -35,8 +35,8 @@ impl MainControllerRef {
     }
 
     pub fn with_audio(inner: Box<dyn MainControllerAccess>, audio: Box<dyn AudioDriver>) -> Self {
-        let config = inner.get_config();
-        let player_config = inner.get_player_config();
+        let config = inner.config();
+        let player_config = inner.player_config();
         let input_processor = BMSPlayerInputProcessor::new(config, player_config);
         Self {
             inner,
@@ -46,11 +46,11 @@ impl MainControllerRef {
     }
 
     pub fn get_config(&self) -> &rubato_types::config::Config {
-        self.inner.get_config()
+        self.inner.config()
     }
 
     pub fn get_player_config(&self) -> &rubato_types::player_config::PlayerConfig {
-        self.inner.get_player_config()
+        self.inner.player_config()
     }
 
     pub fn change_state(&mut self, state: rubato_types::main_state_type::MainStateType) {

@@ -309,7 +309,7 @@ impl Config {
         self.analog_ticks_per_scroll = value.max(1);
     }
 
-    pub fn get_obs_ws_pass(&self) -> Option<&str> {
+    pub fn obs_ws_pass(&self) -> Option<&str> {
         if self.obs_ws_pass.is_empty() || self.obs_ws_pass.trim().is_empty() {
             None
         } else {
@@ -385,7 +385,7 @@ impl Config {
         self.audio.as_ref()
     }
 
-    pub fn get_config_json(config: &Config) -> anyhow::Result<String> {
+    pub fn config_json(config: &Config) -> anyhow::Result<String> {
         Ok(serde_json::to_string_pretty(config)?)
     }
 

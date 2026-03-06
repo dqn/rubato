@@ -65,13 +65,13 @@ fn e2e_gameplay_select_decide_play_result_with_bms() {
     // Load BMS file onto PlayerResource (simulates song selection)
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist after create()");
         // mode_type 0 = Play mode
         let loaded = resource.set_bms_file(&bms_path, 0, 0);
         assert!(loaded, "BMS file should load successfully");
         assert!(
-            resource.get_bms_model().is_some(),
+            resource.bms_model().is_some(),
             "BMS model should be available after loading"
         );
     }
@@ -176,7 +176,7 @@ fn e2e_gameplay_play_lifecycle_with_bms() {
     // Load BMS
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         assert!(resource.set_bms_file(&bms_path, 0, 0));
     }
@@ -212,11 +212,11 @@ fn e2e_gameplay_bms_model_propagates_to_play_state() {
     let expected_notes;
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         assert!(resource.set_bms_file(&bms_path, 0, 0));
         let model = resource
-            .get_bms_model()
+            .bms_model()
             .expect("model should be present after load");
         expected_notes = model.total_notes();
         assert!(
@@ -254,7 +254,7 @@ fn e2e_gameplay_play_to_course_result_with_bms() {
     // Load BMS
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         assert!(resource.set_bms_file(&bms_path, 0, 0));
     }
@@ -296,7 +296,7 @@ fn e2e_gameplay_multiple_play_sessions() {
         // Load BMS (simulates re-selecting the same song)
         {
             let resource = mc
-                .get_player_resource_mut()
+                .player_resource_mut()
                 .expect("PlayerResource should exist");
             assert!(
                 resource.set_bms_file(&bms_path, 0, 0),
@@ -357,7 +357,7 @@ fn e2e_gameplay_skip_decide_with_bms() {
     // Load BMS
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         assert!(resource.set_bms_file(&bms_path, 0, 0));
     }
@@ -393,7 +393,7 @@ fn e2e_gameplay_sustained_rendering_with_bms() {
     // Load BMS
     {
         let resource = mc
-            .get_player_resource_mut()
+            .player_resource_mut()
             .expect("PlayerResource should exist");
         assert!(resource.set_bms_file(&bms_path, 0, 0));
     }

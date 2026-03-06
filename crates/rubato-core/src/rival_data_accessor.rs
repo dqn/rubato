@@ -141,14 +141,14 @@ impl RivalDataAccessor {
                                         scoredb.set_score_data_batch(&refs);
                                         log::info!(
                                             "Rival score fetch complete: {}",
-                                            info_clone.get_name()
+                                            info_clone.name()
                                         );
                                     }
                                 }
                                 Err(e) => {
                                     log::warn!(
                                         "Rival score fetch failed for {}: {}",
-                                        info_clone.get_name(),
+                                        info_clone.name(),
                                         e
                                     );
                                 }
@@ -192,7 +192,7 @@ impl RivalDataAccessor {
                         && let Some(info) = scoredb.get_information()
                     {
                         let cache = Self::create_score_cache_for_db(&path_str);
-                        log::info!("Local rival score loaded: {}", info.get_name());
+                        log::info!("Local rival score loaded: {}", info.name());
                         rivals.push(info);
                         rivalcaches.push(cache);
                     }

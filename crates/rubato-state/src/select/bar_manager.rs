@@ -186,7 +186,7 @@ impl BarManager {
         let fav_courses = fav_accessor.read_all();
         self.favorites = fav_courses
             .into_iter()
-            .map(|cd| HashBar::new(cd.get_name().to_string(), cd.hash.to_vec()))
+            .map(|cd| HashBar::new(cd.name().to_string(), cd.hash.to_vec()))
             .collect();
 
         // Build command bars
@@ -515,7 +515,7 @@ impl BarManager {
             // Mode + invisible filtering
             if let Some(ref mut ctx) = ctx {
                 let mut mode_index = 0usize;
-                let current_mode = ctx.player_config.get_mode().cloned();
+                let current_mode = ctx.player_config.mode().cloned();
                 for (i, mode) in MODE.iter().enumerate() {
                     if *mode == current_mode {
                         mode_index = i;
@@ -617,7 +617,7 @@ impl BarManager {
                 if let Some(ref ctx) = ctx {
                     let sorter = ctx
                         .player_config
-                        .get_sortid()
+                        .sortid()
                         .and_then(BarSorter::value_of)
                         .unwrap_or(BarSorter::Title);
                     l.sort_by(|a, b| sorter.compare(a, b));
@@ -644,7 +644,7 @@ impl BarManager {
                         .filter_map(|b| {
                             b.as_song_bar().and_then(|sb| {
                                 let sd = sb.get_song_data();
-                                if sd.get_path().is_some() {
+                                if sd.path().is_some() {
                                     Some(sd.clone())
                                 } else {
                                     None
@@ -1047,7 +1047,7 @@ impl RandomFolder {
 fn get_score_data_property(score: &ScoreData, key: &str) -> i64 {
     match key {
         "clear" => score.clear as i64,
-        "exscore" => score.get_exscore() as i64,
+        "exscore" => score.exscore() as i64,
         "notes" => score.notes as i64,
         "minbp" => score.minbp as i64,
         "date" => score.date,
@@ -1172,7 +1172,7 @@ impl BarContentsLoaderThread {
                 (
                     sd.banner.clone(),
                     sd.stagefile.clone(),
-                    sd.get_path().map(|s| s.to_string()),
+                    sd.path().map(|s| s.to_string()),
                 )
             });
 

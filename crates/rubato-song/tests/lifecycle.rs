@@ -33,7 +33,7 @@ fn lifecycle_songdb_drop_and_reopen_preserves_data() {
         let song = make_song("lifecycle_sha", "Lifecycle Test", "songs/lifecycle.bms");
         accessor.set_song_datas(&[song]);
 
-        let results = accessor.get_song_datas("sha256", "lifecycle_sha");
+        let results = accessor.song_datas("sha256", "lifecycle_sha");
         assert_eq!(results.len(), 1, "Should find song in first session");
     }
     // accessor dropped here — connection closed
@@ -41,7 +41,7 @@ fn lifecycle_songdb_drop_and_reopen_preserves_data() {
     // Second session: reopen and verify data survived
     {
         let accessor = SQLiteSongDatabaseAccessor::new(&db_path.to_string_lossy(), &[]).unwrap();
-        let results = accessor.get_song_datas("sha256", "lifecycle_sha");
+        let results = accessor.song_datas("sha256", "lifecycle_sha");
         assert_eq!(results.len(), 1, "Song should survive across sessions");
         assert_eq!(results[0].title, "Lifecycle Test");
     }
@@ -66,7 +66,7 @@ fn lifecycle_songdb_multiple_accessors_same_file_no_conflict() {
     let song = make_song("multi_sha", "Multi Access", "songs/multi.bms");
     accessor1.set_song_datas(&[song]);
 
-    let results = accessor2.get_song_datas("sha256", "multi_sha");
+    let results = accessor2.song_datas("sha256", "multi_sha");
     assert_eq!(
         results.len(),
         1,

@@ -32,7 +32,7 @@ impl FolderBar {
     pub fn get_title(&self) -> String {
         self.folder
             .as_ref()
-            .map(|f| f.get_title().to_string())
+            .map(|f| f.title().to_string())
             .unwrap_or_default()
     }
 
@@ -44,7 +44,7 @@ impl FolderBar {
     /// Translates: Java FolderBar.getChildren()
     pub fn get_children(&self, db: &dyn SongDatabaseAccessor) -> Vec<Bar> {
         log::debug!("[FolderBar] get_children crc={}", self.crc);
-        let songs = db.get_song_datas("parent", &self.crc);
+        let songs = db.song_datas("parent", &self.crc);
         log::debug!("[FolderBar] songs found: {}", songs.len());
         if !songs.is_empty() {
             return SongBar::to_song_bar_array(&songs);
@@ -56,19 +56,19 @@ impl FolderBar {
         // parameter to ensure consistency when navigating into sub-folders.
         let rootpath = ".".to_string();
 
-        let folders = db.get_folder_datas("parent", &self.crc);
+        let folders = db.folder_datas("parent", &self.crc);
         log::debug!("[FolderBar] folders found: {}", folders.len());
         let result: Vec<Bar> = folders
             .into_iter()
             .map(|folder| {
-                let mut path = folder.get_path().to_string();
+                let mut path = folder.path().to_string();
                 if path.ends_with(std::path::MAIN_SEPARATOR) {
                     path.pop();
                 }
                 let ccrc = rubato_song::song_utils::crc32(&path, &[], &rootpath);
                 log::debug!(
                     "[FolderBar] sub-folder '{}' path='{}' crc={}",
-                    folder.get_title(),
+                    folder.title(),
                     path,
                     ccrc
                 );
@@ -80,13 +80,13 @@ impl FolderBar {
 
     pub fn update_folder_status(&mut self, db: &dyn SongDatabaseAccessor) {
         if let Some(ref folder) = self.folder {
-            let mut path = folder.get_path().to_string();
+            let mut path = folder.path().to_string();
             if path.ends_with(std::path::MAIN_SEPARATOR) {
                 path.pop();
             }
             let rootpath = ".".to_string();
             let ccrc = rubato_song::song_utils::crc32(&path, &[], &rootpath);
-            let songs = db.get_song_datas("parent", &ccrc);
+            let songs = db.song_datas("parent", &ccrc);
             self.directory
                 .update_folder_status_with_songs(&songs, None, |_| None);
         }
@@ -126,7 +126,7 @@ mod tests {
     }
 
     impl SongDatabaseAccessor for MockSongDb {
-        fn get_song_datas(&self, key: &str, value: &str) -> Vec<SongData> {
+        fn song_datas(&self, key: &str, value: &str) -> Vec<SongData> {
             for (k, v, songs) in &self.songs {
                 if k == key && v == value {
                     return songs.clone();
@@ -135,11 +135,11 @@ mod tests {
             Vec::new()
         }
 
-        fn get_song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
+        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
             Vec::new()
         }
 
-        fn get_song_datas_by_sql(
+        fn song_datas_by_sql(
             &self,
             _sql: &str,
             _score: &str,
@@ -151,11 +151,11 @@ mod tests {
 
         fn set_song_datas(&self, _songs: &[SongData]) {}
 
-        fn get_song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
+        fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
             Vec::new()
         }
 
-        fn get_folder_datas(&self, key: &str, value: &str) -> Vec<FolderData> {
+        fn folder_datas(&self, key: &str, value: &str) -> Vec<FolderData> {
             for (k, v, folders) in &self.folders {
                 if k == key && v == value {
                     return folders.clone();

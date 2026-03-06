@@ -18,19 +18,19 @@ impl ScreenShotTwitterExporter {
     pub fn new(player: &PlayerConfig) -> Self {
         Self {
             consumer_key: player
-                .get_twitter_consumer_key()
+                .twitter_consumer_key()
                 .unwrap_or_default()
                 .to_string(),
             consumer_secret: player
-                .get_twitter_consumer_secret()
+                .twitter_consumer_secret()
                 .unwrap_or_default()
                 .to_string(),
             access_token: player
-                .get_twitter_access_token()
+                .twitter_access_token()
                 .unwrap_or_default()
                 .to_string(),
             access_token_secret: player
-                .get_twitter_access_token_secret()
+                .twitter_access_token_secret()
                 .unwrap_or_default()
                 .to_string(),
         }
@@ -152,7 +152,7 @@ impl ScreenShotExporter for ScreenShotTwitterExporter {
 /// its screen type and exposes it via MainStateAccess::get_screen_type().
 fn get_screen_type(state: &MainState) -> ScreenType {
     use rubato_types::main_state_access::MainStateAccess;
-    state.get_screen_type()
+    state.screen_type()
 }
 
 #[cfg(test)]

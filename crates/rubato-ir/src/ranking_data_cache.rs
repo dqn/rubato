@@ -143,12 +143,12 @@ impl RankingDataCacheAccess for RankingDataCache {
         Box::new(self.clone())
     }
 
-    fn get_song_any(&self, song: &SongData, lnmode: i32) -> Option<Box<dyn Any>> {
+    fn song_any(&self, song: &SongData, lnmode: i32) -> Option<Box<dyn Any>> {
         self.song(song, lnmode)
             .map(|ranking| Box::new(ranking) as Box<dyn Any>)
     }
 
-    fn get_course_any(&self, course: &CourseData, lnmode: i32) -> Option<Box<dyn Any>> {
+    fn course_any(&self, course: &CourseData, lnmode: i32) -> Option<Box<dyn Any>> {
         self.course(course, lnmode)
             .map(|ranking| Box::new(ranking) as Box<dyn Any>)
     }

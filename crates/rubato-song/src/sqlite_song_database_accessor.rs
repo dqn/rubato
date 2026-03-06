@@ -293,7 +293,7 @@ impl SQLiteSongDatabaseAccessor {
                     "artist" => rusqlite::types::Value::Text(sd.artist.clone()),
                     "subartist" => rusqlite::types::Value::Text(sd.subartist.clone()),
                     "tag" => rusqlite::types::Value::Text(sd.tag.clone()),
-                    "path" => rusqlite::types::Value::Text(sd.get_path().unwrap_or("").to_string()),
+                    "path" => rusqlite::types::Value::Text(sd.path().unwrap_or("").to_string()),
                     "folder" => rusqlite::types::Value::Text(sd.folder.clone()),
                     "stagefile" => rusqlite::types::Value::Text(sd.stagefile.clone()),
                     "banner" => rusqlite::types::Value::Text(sd.banner.clone()),
@@ -344,7 +344,7 @@ impl SQLiteSongDatabaseAccessor {
 }
 
 impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
-    fn get_song_datas(&self, key: &str, value: &str) -> Vec<SongData> {
+    fn song_datas(&self, key: &str, value: &str) -> Vec<SongData> {
         // Whitelist valid column names to prevent SQL injection via key parameter
         const VALID_COLUMNS: &[&str] = &[
             "md5",
@@ -370,7 +370,7 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
         remove_invalid_elements_vec(songs)
     }
 
-    fn get_song_datas_by_hashes(&self, hashes: &[String]) -> Vec<SongData> {
+    fn song_datas_by_hashes(&self, hashes: &[String]) -> Vec<SongData> {
         let mut md5_hashes: Vec<&str> = Vec::new();
         let mut sha256_hashes: Vec<&str> = Vec::new();
         for hash in hashes {
@@ -470,7 +470,7 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
         remove_invalid_elements_vec(sorted)
     }
 
-    fn get_song_datas_by_sql(
+    fn song_datas_by_sql(
         &self,
         sql: &str,
         score: &str,
@@ -529,7 +529,7 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
         }
     }
 
-    fn get_song_datas_by_text(&self, text: &str) -> Vec<SongData> {
+    fn song_datas_by_text(&self, text: &str) -> Vec<SongData> {
         // Try FTS5 first: convert search terms to prefix-match query
         let fts_query = Self::build_fts5_query(text);
         if !fts_query.is_empty() {
@@ -548,7 +548,7 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
         remove_invalid_elements_vec(songs)
     }
 
-    fn get_folder_datas(&self, key: &str, value: &str) -> Vec<FolderData> {
+    fn folder_datas(&self, key: &str, value: &str) -> Vec<FolderData> {
         // Whitelist valid column names to prevent SQL injection via key parameter
         const VALID_COLUMNS: &[&str] = &["path", "parent", "title", "type", "date"];
         if !VALID_COLUMNS.contains(&key) {
@@ -1084,7 +1084,7 @@ impl BMSFolder {
             let mut update = true;
             for record in records.iter_mut() {
                 let matched = if let Some(rec) = record.as_ref() {
-                    rec.get_path() == Some(&pathname)
+                    rec.path() == Some(&pathname)
                 } else {
                     false
                 };
@@ -1242,7 +1242,7 @@ impl BMSFolder {
         // Delete records that no longer exist in directory
         // (matches Java: records.parallelStream().filter(Objects::nonNull).forEach(...))
         records.par_iter().flatten().for_each(|record| {
-            if let Some(path) = record.get_path() {
+            if let Some(path) = record.path() {
                 let conn = accessor.conn.lock().unwrap();
                 let _ = conn.execute("DELETE FROM song WHERE path = ?1", rusqlite::params![path]);
             }
@@ -1281,9 +1281,9 @@ mod tests {
     fn test_new_creates_tables() {
         let accessor = create_test_accessor();
         // Verify tables exist by querying them
-        let songs = accessor.get_song_datas("md5", "nonexistent");
+        let songs = accessor.song_datas("md5", "nonexistent");
         assert!(songs.is_empty());
-        let folders = accessor.get_folder_datas("path", "nonexistent");
+        let folders = accessor.folder_datas("path", "nonexistent");
         assert!(folders.is_empty());
     }
 
@@ -1293,7 +1293,7 @@ mod tests {
         let song = make_test_song("abc123", "sha_abc123", "Test Song");
         accessor.insert_song(&song).unwrap();
 
-        let results = accessor.get_song_datas("md5", "abc123");
+        let results = accessor.song_datas("md5", "abc123");
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].title, "Test Song");
         assert_eq!(results[0].md5, "abc123");
@@ -1305,7 +1305,7 @@ mod tests {
         let song = make_test_song("md5_xyz", "sha256_xyz", "SHA Test");
         accessor.insert_song(&song).unwrap();
 
-        let results = accessor.get_song_datas("sha256", "sha256_xyz");
+        let results = accessor.song_datas("sha256", "sha256_xyz");
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].title, "SHA Test");
     }
@@ -1313,7 +1313,7 @@ mod tests {
     #[test]
     fn test_get_song_datas_empty() {
         let accessor = create_test_accessor();
-        let results = accessor.get_song_datas("md5", "nonexistent");
+        let results = accessor.song_datas("md5", "nonexistent");
         assert!(results.is_empty());
     }
 
@@ -1333,7 +1333,7 @@ mod tests {
 
         // Query by sha256 hashes (> 32 chars)
         let hashes = vec![sha1, sha3];
-        let results = accessor.get_song_datas_by_hashes(&hashes);
+        let results = accessor.song_datas_by_hashes(&hashes);
         assert_eq!(results.len(), 2);
     }
 
@@ -1347,7 +1347,7 @@ mod tests {
 
         // Query by md5 hashes (<= 32 chars)
         let hashes = vec!["md5_short_1".to_string()];
-        let results = accessor.get_song_datas_by_hashes(&hashes);
+        let results = accessor.song_datas_by_hashes(&hashes);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].title, "Song Short 1");
     }
@@ -1359,14 +1359,14 @@ mod tests {
         song.artist = "DJ Test".to_string();
         accessor.insert_song(&song).unwrap();
 
-        let results = accessor.get_song_datas_by_text("Rhythm");
+        let results = accessor.song_datas_by_text("Rhythm");
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].title, "Rhythm Action");
 
-        let results = accessor.get_song_datas_by_text("DJ Test");
+        let results = accessor.song_datas_by_text("DJ Test");
         assert_eq!(results.len(), 1);
 
-        let results = accessor.get_song_datas_by_text("nonexistent");
+        let results = accessor.song_datas_by_text("nonexistent");
         assert!(results.is_empty());
     }
 
@@ -1381,11 +1381,11 @@ mod tests {
 
         accessor.set_song_datas(&songs);
 
-        let results = accessor.get_song_datas("md5", "batch_1");
+        let results = accessor.song_datas("md5", "batch_1");
         assert_eq!(results.len(), 1);
-        let results = accessor.get_song_datas("md5", "batch_2");
+        let results = accessor.song_datas("md5", "batch_2");
         assert_eq!(results.len(), 1);
-        let results = accessor.get_song_datas("md5", "batch_3");
+        let results = accessor.song_datas("md5", "batch_3");
         assert_eq!(results.len(), 1);
     }
 
@@ -1402,7 +1402,7 @@ mod tests {
         };
         accessor.insert_folder(&folder).unwrap();
 
-        let results = accessor.get_folder_datas("path", "/test/folder/");
+        let results = accessor.folder_datas("path", "/test/folder/");
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].title, "Test Folder");
         assert_eq!(results[0].date, 1000);
@@ -1411,7 +1411,7 @@ mod tests {
     #[test]
     fn test_get_folder_datas_empty() {
         let accessor = create_test_accessor();
-        let results = accessor.get_folder_datas("path", "nonexistent");
+        let results = accessor.folder_datas("path", "nonexistent");
         assert!(results.is_empty());
     }
 
@@ -1457,7 +1457,7 @@ mod tests {
         accessor.update_song_datas(None, &bmsroot, true, false, None);
 
         // Verify the song was inserted
-        let songs = accessor.get_song_datas("title", "Update Test Song");
+        let songs = accessor.song_datas("title", "Update Test Song");
         assert_eq!(songs.len(), 1);
         assert_eq!(songs[0].artist, "tester");
         assert!(songs[0].notes > 0);
@@ -1574,7 +1574,7 @@ mod tests {
         accessor.update_song_datas(None, &bmsroot, true, false, None);
 
         // Set favorite on the song
-        let songs = accessor.get_song_datas("title", "Favorite Test");
+        let songs = accessor.song_datas("title", "Favorite Test");
         assert_eq!(songs.len(), 1);
         let sha256 = songs[0].sha256.clone();
         let conn = accessor.conn.lock().unwrap();
@@ -1588,7 +1588,7 @@ mod tests {
         accessor.update_song_datas(None, &bmsroot, true, false, None);
 
         // Verify favorite is preserved
-        let songs = accessor.get_song_datas("title", "Favorite Test");
+        let songs = accessor.song_datas("title", "Favorite Test");
         assert_eq!(songs.len(), 1);
         assert_eq!(
             songs[0].favorite, 3,
@@ -1619,7 +1619,7 @@ mod tests {
 
         accessor.update_song_datas(None, &bmsroot, true, false, None);
 
-        let songs = accessor.get_song_datas("title", "Test");
+        let songs = accessor.song_datas("title", "Test");
         assert_eq!(songs.len(), 1);
         assert_eq!(
             songs[0].difficulty, 1,

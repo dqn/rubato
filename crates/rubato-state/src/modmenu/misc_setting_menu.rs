@@ -48,7 +48,7 @@ pub struct MiscSettingMenu;
 
 impl MiscSettingMenu {
     pub fn set_main(main: MainController) {
-        let config = main.get_config().clone();
+        let config = main.config().clone();
         let players = read_all_player_id("player");
         let player_idx = players
             .iter()
@@ -171,7 +171,7 @@ fn get_play_config() -> PlayConfig {
     if let Some(ref m) = *main {
         let mode = CURRENT_PLAY_MODE.lock().unwrap();
         if let Some(ref mode) = *mode {
-            let mut player_config = m.get_player_config().clone();
+            let mut player_config = m.player_config().clone();
             let play_mode_config = player_config.play_config(mode.clone());
             return play_mode_config.playconfig.clone();
         }

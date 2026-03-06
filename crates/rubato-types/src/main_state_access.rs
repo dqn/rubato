@@ -12,17 +12,14 @@ use crate::screen_type::ScreenType;
 /// Translated from Java: MainState (field access pattern for external observers)
 pub trait MainStateAccess {
     /// Get the current screen type
-    fn get_screen_type(&self) -> ScreenType;
-
+    fn screen_type(&self) -> ScreenType;
     /// Get player resource (immutable)
-    fn get_resource(&self) -> Option<&dyn PlayerResourceAccess>;
-
+    fn resource(&self) -> Option<&dyn PlayerResourceAccess>;
     /// Get config reference
-    fn get_config(&self) -> &Config;
-
+    fn config(&self) -> &Config;
     /// Get abstract result access (for result screen states).
     /// Java: instanceof AbstractResult cast
-    fn get_abstract_result(&self) -> Option<&dyn AbstractResultAccess> {
+    fn abstract_result(&self) -> Option<&dyn AbstractResultAccess> {
         None
     }
 }
@@ -39,13 +36,13 @@ mod tests {
     use super::*;
     struct TestState;
     impl MainStateAccess for TestState {
-        fn get_screen_type(&self) -> ScreenType {
+        fn screen_type(&self) -> ScreenType {
             ScreenType::Other
         }
-        fn get_resource(&self) -> Option<&dyn PlayerResourceAccess> {
+        fn resource(&self) -> Option<&dyn PlayerResourceAccess> {
             None
         }
-        fn get_config(&self) -> &Config {
+        fn config(&self) -> &Config {
             static CONFIG: std::sync::OnceLock<Config> = std::sync::OnceLock::new();
             CONFIG.get_or_init(Config::default)
         }
@@ -63,8 +60,8 @@ mod tests {
     #[test]
     fn test_main_state_access_trait() {
         let state = TestState;
-        assert_eq!(state.get_screen_type(), ScreenType::Other);
-        assert!(state.get_resource().is_none());
+        assert_eq!(state.screen_type(), ScreenType::Other);
+        assert!(state.resource().is_none());
     }
 
     #[test]
