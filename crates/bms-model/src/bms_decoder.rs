@@ -231,10 +231,10 @@ impl BMSDecoder {
                 } else if !skip.last().copied().unwrap_or(false) {
                     let c = line.as_bytes()[1] as char;
                     let base = model.get_base();
-                    if ('0'..='9').contains(&c) && line.len() > 6 {
+                    if c.is_ascii_digit() && line.len() > 6 {
                         let c2 = line.as_bytes()[2] as char;
                         let c3 = line.as_bytes()[3] as char;
-                        if ('0'..='9').contains(&c2) && ('0'..='9').contains(&c3) {
+                        if c2.is_ascii_digit() && c3.is_ascii_digit() {
                             let bar_index = ((c as usize) - ('0' as usize)) * 100
                                 + ((c2 as usize) - ('0' as usize)) * 10
                                 + ((c3 as usize) - ('0' as usize));

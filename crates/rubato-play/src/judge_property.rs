@@ -100,6 +100,7 @@ fn create_lr2(org: &[[i64; 2]], judgerank: i32, judge_window_rate: &[i32]) -> Ve
 
     // Correction if we exceed the bad windows
     for i in (0..fixmax).rev() {
+        #[allow(clippy::needless_range_loop)]
         for j in 0..2 {
             if judge[i][j].abs() > judge[i + 1][j].abs() {
                 judge[i][j] = judge[i + 1][j];
@@ -110,6 +111,7 @@ fn create_lr2(org: &[[i64; 2]], judgerank: i32, judge_window_rate: &[i32]) -> Ve
     // judgeWindowRate correction
     let limit = std::cmp::min(org.len(), 3);
     for i in 0..limit {
+        #[allow(clippy::needless_range_loop)]
         for j in 0..2 {
             judge[i][j] = judge[i][j] * judge_window_rate[i] as i64 / 100;
             if judge[i][j].abs() > judge[3][j].abs() {
@@ -157,6 +159,7 @@ impl JudgeWindowRule {
                 }
             }
 
+            #[allow(clippy::needless_range_loop)]
             for j in 0..2 {
                 if fixmin != -1 && judge[i][j].abs() < judge[fixmin as usize][j].abs() {
                     judge[i][j] = judge[fixmin as usize][j];
@@ -170,6 +173,7 @@ impl JudgeWindowRule {
         // judgeWindowRate correction
         let limit2 = std::cmp::min(org.len(), 3);
         for i in 0..limit2 {
+            #[allow(clippy::needless_range_loop)]
             for j in 0..2 {
                 judge[i][j] = judge[i][j] * judge_window_rate[i] as i64 / 100;
                 if judge[i][j].abs() > judge[3][j].abs() {

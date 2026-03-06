@@ -242,8 +242,8 @@ impl LR2SelectSkinLoaderState {
             "BAR_AVAILABLE" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
                 let mut clickable = vec![0i32; (values[2] - values[1] + 1) as usize];
-                for i in 0..clickable.len() {
-                    clickable[i] = values[1] + i as i32;
+                for (i, c) in clickable.iter_mut().enumerate() {
+                    *c = values[1] + i as i32;
                 }
                 self.clickable_bar = clickable;
             }

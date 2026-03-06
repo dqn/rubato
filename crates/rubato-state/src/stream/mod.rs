@@ -1,7 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-
 // Re-exports (formerly in stubs.rs)
 pub use rubato_types::imgui_notify::ImGuiNotify;
 

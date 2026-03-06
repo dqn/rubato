@@ -71,12 +71,12 @@ impl LR2SkinLoaderState {
 
         if cmd_upper == "#IF" {
             self.ifs = true;
-            for i in 1..str_parts.len() {
+            for part in &str_parts[1..] {
                 let mut b = false;
-                if str_parts[i].is_empty() {
+                if part.is_empty() {
                     continue;
                 }
-                let cleaned = str_parts[i].replace('!', "-");
+                let cleaned = part.replace('!', "-");
                 let cleaned: String = cleaned
                     .chars()
                     .filter(|c| c.is_ascii_digit() || *c == '-')
@@ -115,9 +115,9 @@ impl LR2SkinLoaderState {
                 self.skip = true;
             } else {
                 self.ifs = true;
-                for i in 1..str_parts.len() {
+                for part in &str_parts[1..] {
                     let mut b = false;
-                    let cleaned = str_parts[i].replace('!', "-");
+                    let cleaned = part.replace('!', "-");
                     let cleaned: String = cleaned
                         .chars()
                         .filter(|c| c.is_ascii_digit() || *c == '-')
@@ -270,8 +270,8 @@ pub fn read_offset(str_parts: &[String], start_index: usize) -> Vec<i32> {
 /// Read offset values with base offset array
 pub fn read_offset_with_base(str_parts: &[String], start_index: usize, offset: &[i32]) -> Vec<i32> {
     let mut result: Vec<i32> = offset.to_vec();
-    for i in start_index..str_parts.len() {
-        let s: String = str_parts[i]
+    for part in str_parts.get(start_index..).unwrap_or_default() {
+        let s: String = part
             .chars()
             .filter(|c| c.is_ascii_digit() || *c == '-')
             .collect();

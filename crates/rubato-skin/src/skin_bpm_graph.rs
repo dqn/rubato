@@ -45,6 +45,7 @@ pub struct SkinBPMGraph {
 }
 
 impl SkinBPMGraph {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         delay: i32,
         line_width: i32,

@@ -41,6 +41,7 @@ struct NoteJudgeState {
 
 /// Internal per-lane state for judge iteration.
 struct LaneIterState {
+    #[allow(dead_code)]
     lane: usize,
     player: usize,
     offset: usize,
@@ -111,6 +112,7 @@ impl MultiBadCollector {
         }
     }
 
+    #[allow(dead_code)]
     fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
         if !self.enabled {

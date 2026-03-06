@@ -77,8 +77,8 @@ impl MusicSelectKeyProperty {
     ) -> i32 {
         let assign = self.assign();
         let mut d_ticks = 0;
-        for i in 0..assign.len() {
-            for &index in assign[i] {
+        for (i, keys) in assign.iter().enumerate() {
+            for &index in *keys {
                 if code == index && input.is_analog_input(i) {
                     d_ticks += input.get_analog_diff_and_reset(i, 200);
                 }
@@ -94,8 +94,8 @@ impl MusicSelectKeyProperty {
         reset_state: bool,
     ) -> bool {
         let assign = self.assign();
-        for i in 0..assign.len() {
-            for &index in assign[i] {
+        for (i, keys) in assign.iter().enumerate() {
+            for &index in *keys {
                 if code == index && input.get_key_state(i as i32) {
                     if input.is_analog_input(i) {
                         continue;
@@ -118,8 +118,8 @@ impl MusicSelectKeyProperty {
         reset_state: bool,
     ) -> bool {
         let assign = self.assign();
-        for i in 0..assign.len() {
-            for &index in assign[i] {
+        for (i, keys) in assign.iter().enumerate() {
+            for &index in *keys {
                 if code == index && input.get_key_state(i as i32) {
                     if reset_state {
                         return input.reset_key_changed_time(i as i32);

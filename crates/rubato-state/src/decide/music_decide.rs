@@ -74,7 +74,6 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
     }
 
     fn integer_value(&self, id: i32) -> i32 {
-        use rubato_types::timer_access::TimerAccess;
         match id {
             // Song BPM from songdata
             90 => self.resource.get_songdata().map_or(0, |s| s.maxbpm),

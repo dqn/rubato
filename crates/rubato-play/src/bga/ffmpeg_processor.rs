@@ -7,6 +7,7 @@ use crate::Texture;
 use crate::bga::movie_processor::MovieProcessor;
 
 /// Processor status
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ProcessorStatus {
     TextureInactive,
@@ -16,6 +17,7 @@ enum ProcessorStatus {
 
 /// Commands for the movie seek thread.
 /// Translated from: FFmpegProcessor.Command
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Command {
     Play,
@@ -497,6 +499,7 @@ pub struct FFmpegProcessor {
     #[cfg(feature = "ffmpeg")]
     handle: Option<ffmpeg_impl::MovieSeekHandle>,
     /// Cached texture from last decoded frame
+    #[allow(dead_code)]
     showing_tex: Option<Texture>,
 }
 

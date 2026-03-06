@@ -1,7 +1,5 @@
 // beatoraja-modmenu: In-game mod menu (egui)
 // Translated from Java: bms.player.beatoraja.modmenu package (15 files)
-#![allow(dead_code, unused_imports, unused_variables)]
-
 pub mod download_task_menu;
 pub mod download_task_state;
 pub mod font_awesome_icons;

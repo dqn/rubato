@@ -1,8 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-#![allow(clippy::if_same_then_else)]
-
 // beatoraja-external: External integrations (screenshot, webhook, BMS search, Discord, score import)
 
 // Discord RPC (merged from discord-rpc crate)

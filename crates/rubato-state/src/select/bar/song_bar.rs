@@ -114,8 +114,7 @@ impl SongBar {
                     count -= 1;
                 }
             }
-            for j in 0..elements.len() {
-                let element = &elements[j];
+            for element in elements.iter_mut() {
                 if element.get_path().is_none()
                     && ((!element.get_md5().is_empty()
                         && element.get_md5() == songs[i].as_ref().unwrap().get_md5())
@@ -123,9 +122,9 @@ impl SongBar {
                             && element.get_sha256() == songs[i].as_ref().unwrap().get_sha256()))
                 {
                     let song_path = songs[i].as_ref().unwrap().get_path().map(|s| s.to_string());
-                    elements[j].set_path_opt(song_path);
+                    element.set_path_opt(song_path);
                     if let Some(ref _song) = songs[i] {
-                        let elem_clone = elements[j].clone();
+                        let elem_clone = element.clone();
                         songs[i].as_mut().unwrap().merge(&elem_clone);
                     }
                     noexistscount -= 1;

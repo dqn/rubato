@@ -137,11 +137,11 @@ impl BarManager {
         // Sort tables according to config table URL order
         let mut sorted_tables: Vec<TableData> = Vec::with_capacity(unsorted_tables.len());
         for url in config.get_table_url() {
-            for i in 0..unsorted_tables.len() {
-                if let Some(ref td) = unsorted_tables[i]
+            for item in unsorted_tables.iter_mut() {
+                if let Some(td) = item.as_ref()
                     && td.get_url_opt() == Some(url.as_str())
                 {
-                    sorted_tables.push(unsorted_tables[i].take().unwrap());
+                    sorted_tables.push(item.take().unwrap());
                     break;
                 }
             }
@@ -304,6 +304,7 @@ impl BarManager {
         false
     }
 
+    #[allow(dead_code)]
     fn update_bar_with_last_dir(&mut self) -> bool {
         self.update_bar_with_last_dir_with_context(None)
     }
@@ -320,6 +321,7 @@ impl BarManager {
         self.update_bar_with_context(None, ctx)
     }
 
+    #[allow(dead_code)]
     fn update_bar_at_dir_index(&mut self, index: usize) -> bool {
         self.update_bar_at_dir_index_with_context(index, None)
     }
@@ -514,8 +516,8 @@ impl BarManager {
             if let Some(ref mut ctx) = ctx {
                 let mut mode_index = 0usize;
                 let current_mode = ctx.player_config.get_mode().cloned();
-                for i in 0..MODE.len() {
-                    if MODE[i] == current_mode {
+                for (i, mode) in MODE.iter().enumerate() {
+                    if *mode == current_mode {
                         mode_index = i;
                         break;
                     }

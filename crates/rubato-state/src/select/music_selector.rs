@@ -205,7 +205,6 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
     }
 
     fn integer_value(&self, id: i32) -> i32 {
-        use rubato_types::timer_access::TimerAccess;
         match id {
             // Volume (0-100 scale)
             57 => {
@@ -238,15 +237,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             90 => self.selected_song_data().map_or(0, |s| s.maxbpm),
             91 => self.selected_song_data().map_or(0, |s| s.minbpm),
             92 => {
-                // mainbpm: if min==max, return that; otherwise use maxbpm as approximation
-                let sd = self.selected_song_data();
-                sd.map_or(0, |s| {
-                    if s.minbpm == s.maxbpm {
-                        s.maxbpm
-                    } else {
-                        s.maxbpm
-                    }
-                })
+                // mainbpm: use maxbpm as approximation
+                self.selected_song_data().map_or(0, |s| s.maxbpm)
             }
             // Song play/clear/fail counts
             77 => self.selected_score().map_or(0, |s| s.get_playcount()),

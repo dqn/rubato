@@ -1,8 +1,3 @@
-#![allow(clippy::manual_find)]
-#![allow(clippy::comparison_chain)]
-#![allow(unused_parens)]
-#![allow(dead_code)]
-
 pub mod autoplay_modifier;
 pub mod extra_note_modifier;
 pub mod java_random;

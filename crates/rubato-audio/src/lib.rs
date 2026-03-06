@@ -1,8 +1,3 @@
-#![allow(clippy::manual_find)]
-#![allow(unused_parens)]
-#![allow(clippy::comparison_chain)]
-#![allow(dead_code)]
-
 pub mod abstract_audio_driver;
 pub mod audio_driver;
 pub mod bms_loudness_analyzer;

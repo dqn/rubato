@@ -322,6 +322,7 @@ impl RivalTargetProperty {
 
         // Read rival scores (mutable borrow for cache)
         let mut scorearray = Vec::new();
+        #[allow(clippy::needless_range_loop)]
         for i in 0..rival_count {
             let score = main
                 .get_rival_data_accessor_mut()

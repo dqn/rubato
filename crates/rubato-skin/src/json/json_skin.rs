@@ -68,6 +68,7 @@ pub struct Skin {
 }
 
 impl Skin {
+    #[allow(dead_code)]
     fn default_skin_type() -> i32 {
         -1
     }
@@ -1121,7 +1122,6 @@ fn deserialize_vec_string_from_ints<'de, D>(deserializer: D) -> Result<Vec<Strin
 where
     D: Deserializer<'de>,
 {
-    use serde::de;
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum StringOrInt {

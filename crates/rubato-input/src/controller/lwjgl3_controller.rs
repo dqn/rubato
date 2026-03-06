@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use super::{Controller, ControllerListener};
 
 /// Button mapping: sequential index → gilrs::Button.

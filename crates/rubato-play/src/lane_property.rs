@@ -147,8 +147,8 @@ impl LaneProperty {
         let key = mode.key() as usize;
         let player_count = mode.player() as usize;
         let mut lane_to_player = vec![0i32; key];
-        for i in 0..key {
-            lane_to_player[i] = (i / (key / player_count)) as i32;
+        for (i, slot) in lane_to_player.iter_mut().enumerate() {
+            *slot = (i / (key / player_count)) as i32;
         }
 
         LaneProperty {

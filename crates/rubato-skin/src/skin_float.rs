@@ -76,6 +76,7 @@ impl SkinFloat {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn new_with_images_timer_prop(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
@@ -111,6 +112,7 @@ impl SkinFloat {
         s
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn new_with_images_int_timer(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
@@ -145,6 +147,7 @@ impl SkinFloat {
     }
 
     // Constructor with int timer and int id
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer_int_id(
         image: Vec<Vec<Option<TextureRegion>>>,
         timer: i32,
@@ -175,6 +178,7 @@ impl SkinFloat {
     }
 
     // Constructor with TimerProperty and int id
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer_prop_int_id(
         image: Vec<Vec<Option<TextureRegion>>>,
         timer: Option<Box<dyn TimerProperty>>,
@@ -205,6 +209,7 @@ impl SkinFloat {
     }
 
     // Constructor with int timer and FloatProperty
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer_float_prop(
         image: Vec<Vec<Option<TextureRegion>>>,
         timer: i32,
@@ -235,6 +240,7 @@ impl SkinFloat {
     }
 
     // Constructor with TimerProperty and FloatProperty
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer_prop_float_prop(
         image: Vec<Vec<Option<TextureRegion>>>,
         timer: Option<Box<dyn TimerProperty>>,
@@ -265,6 +271,7 @@ impl SkinFloat {
     }
 
     // Constructor with mimage, int timer, int id
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer_int_id_mimage(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
@@ -297,6 +304,7 @@ impl SkinFloat {
     }
 
     // Constructor with mimage, TimerProperty, int id
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer_prop_int_id_mimage(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
@@ -329,6 +337,7 @@ impl SkinFloat {
     }
 
     // Constructor with mimage, int timer, FloatProperty
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer_float_prop_mimage(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
@@ -361,6 +370,7 @@ impl SkinFloat {
     }
 
     // Constructor with mimage, TimerProperty, FloatProperty
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer_prop_float_prop_mimage(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
@@ -466,13 +476,13 @@ impl SkinFloat {
         self.image_set = Some(image.clone());
         self.shiftbase = 0;
         let digits = self.ff.calculate_and_get_digits(v.abs() as f64);
-        for nowketa in 1..digits.len() {
-            self.current_images[nowketa - 1] = if digits[nowketa] != -1 {
-                image.get(digits[nowketa] as usize).cloned()
+        for (idx, &digit) in digits[1..].iter().enumerate() {
+            self.current_images[idx] = if digit != -1 {
+                image.get(digit as usize).cloned()
             } else {
                 None
             };
-            if digits[nowketa] == -1 {
+            if digit == -1 {
                 self.shiftbase += 1;
             }
         }

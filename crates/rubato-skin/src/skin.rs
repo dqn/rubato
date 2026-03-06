@@ -32,7 +32,7 @@ use crate::skin_timing_distribution_graph::SkinTimingDistributionGraph;
 use crate::skin_timing_visualizer::SkinTimingVisualizer;
 use crate::stubs::{MainState, SkinConfigOffset, SkinOffset, TextureRegion};
 
-use log::{debug, info};
+use log::debug;
 
 /// Skin object enum for polymorphic dispatch
 // All variants mirror Java SkinObject hierarchy; NoteDistributionGraph/HitErrorVisualizer
@@ -234,6 +234,7 @@ impl SkinObject {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination(
         &mut self,
         time: i64,
@@ -263,6 +264,7 @@ impl SkinObject {
         );
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination_with_timer_ops(
         &mut self,
         time: i64,
@@ -288,6 +290,7 @@ impl SkinObject {
         );
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination_with_timer_draw(
         &mut self,
         time: i64,
@@ -382,7 +385,9 @@ pub struct Skin {
     /// Debug maps (None when not in debug mode)
     pub tempmap: Option<HashMap<String, [i64; 7]>>,
     pub pcntmap: Option<HashMap<String, [i64; 7]>>,
+    #[allow(dead_code)]
     avem_prepare: Option<HashMap<String, Vec<i64>>>,
+    #[allow(dead_code)]
     avem_draw: Option<HashMap<String, Vec<i64>>>,
     pub pcnt_prepare: i64,
     pub pcnt_draw: i64,
@@ -498,6 +503,7 @@ impl Skin {
         self.image_registry.get(&id).cloned()
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination(
         &mut self,
         obj_index: usize,
@@ -555,6 +561,7 @@ impl Skin {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination_with_timer(
         &mut self,
         obj_index: usize,
@@ -601,6 +608,7 @@ impl Skin {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination_with_timer_draw(
         &mut self,
         obj_index: usize,
@@ -695,11 +703,10 @@ impl Skin {
                 // We need to work with the draw conditions
                 // Java code checks isStatic and get for each condition
                 // This is complex with borrowing, so we collect results first
-                let cond_count = draw_conds.len();
                 let mut static_results: Vec<(bool, bool)> = Vec::new();
-                for j in 0..cond_count {
-                    let is_static = draw_conds[j].is_static(state);
-                    let get_val = draw_conds[j].get(state);
+                for cond in draw_conds {
+                    let is_static = cond.is_static(state);
+                    let get_val = cond.get(state);
                     static_results.push((is_static, get_val));
                 }
 
@@ -963,6 +970,7 @@ impl Skin {
 
     /// Add a SkinNumber with destination and register it.
     /// Corresponds to Java Skin.addNumber(21 params)
+    #[allow(clippy::too_many_arguments)]
     pub fn add_number(
         &mut self,
         number: SkinNumber,
@@ -1018,6 +1026,7 @@ impl Skin {
 
     /// Add a SkinImage from a TextureRegion with destination and register it.
     /// Corresponds to Java Skin.addImage(21 params)
+    #[allow(clippy::too_many_arguments)]
     pub fn add_image(
         &mut self,
         tr: TextureRegion,

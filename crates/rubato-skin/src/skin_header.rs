@@ -447,6 +447,7 @@ pub struct CustomOffset {
 }
 
 impl CustomOffset {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: String,
         id: i32,

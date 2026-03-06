@@ -645,6 +645,7 @@ fn refresh() {
     *READY.lock().unwrap() = true;
 }
 
+#[allow(dead_code)]
 fn load_all_skins(skin_type: &SkinType) -> Vec<SkinHeader> {
     let mut paths: Vec<PathBuf> = Vec::new();
     let skins_dir = PathBuf::from("skin");
@@ -729,6 +730,7 @@ fn load_all_skins(skin_type: &SkinType) -> Vec<SkinHeader> {
     skins
 }
 
+#[allow(dead_code)]
 fn scan_skins(path: &Path, paths: &mut Vec<PathBuf>) {
     if path.is_dir() {
         if let Ok(entries) = fs::read_dir(path) {
@@ -1126,6 +1128,7 @@ fn switch_current_scene_skin(header: SkinHeader) {
 // Conversion helpers: SkinHeaderData / LR2SkinHeaderData -> SkinHeader
 // =========================================================================
 
+#[allow(dead_code)]
 fn skin_header_from_json_data(data: SkinHeaderData) -> SkinHeader {
     let mut header = SkinHeader::new();
     header.set_type(data.header_type);
@@ -1184,6 +1187,7 @@ fn skin_header_from_json_data(data: SkinHeaderData) -> SkinHeader {
     header
 }
 
+#[allow(dead_code)]
 fn skin_header_from_lr2_data(data: LR2SkinHeaderData) -> SkinHeader {
     let mut header = SkinHeader::new();
     if let Some(path) = data.path {

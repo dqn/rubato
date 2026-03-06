@@ -332,6 +332,7 @@ impl KeyInputProccessor {
         if self.prevtime >= 0 {
             let deltatime = (ctx.now - self.prevtime) as f32 / 1000.0;
             let scratch_keys = self.lane_property.get_scratch_key_assign();
+            #[allow(clippy::needless_range_loop)]
             for s in 0..self.scratch.len() {
                 let key0 = scratch_keys[s][1];
                 let key1 = scratch_keys[s][0];

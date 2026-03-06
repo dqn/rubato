@@ -37,6 +37,7 @@ pub struct SkinTimingVisualizer {
 }
 
 impl SkinTimingVisualizer {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         width: i32,
         judge_width_millis: i32,

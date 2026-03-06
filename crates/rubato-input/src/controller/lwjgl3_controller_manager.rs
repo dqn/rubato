@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use super::lwjgl3_controller::{Lwjgl3Controller, PollResult};
 use super::{ControllerListener, ControllerManager};
 

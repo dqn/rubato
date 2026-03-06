@@ -25,6 +25,7 @@ fn init_lane_order() {
 pub struct RandomTrainerMenu;
 
 impl RandomTrainerMenu {
+    #[allow(dead_code)]
     fn random_history() {
         // if (ImGui.treeNode("Random History"))
         {
@@ -39,6 +40,7 @@ impl RandomTrainerMenu {
         // ImGui.treePop();
     }
 
+    #[allow(dead_code)]
     fn drag_and_drop_key_display() {
         let lane_order = LANE_ORDER.lock().unwrap();
         let bw_permute = *BLACK_WHITE_RANDOM_PERMUTATION.lock().unwrap();

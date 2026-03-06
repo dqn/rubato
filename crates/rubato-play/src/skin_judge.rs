@@ -9,8 +9,10 @@ pub struct SkinJudge {
     /// Whether to shift position based on count length
     shift: bool,
     /// Currently active judge
+    #[allow(dead_code)]
     now_judge: Option<usize>,
     /// Currently active count
+    #[allow(dead_code)]
     now_count: Option<usize>,
 }
 

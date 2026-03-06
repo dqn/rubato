@@ -63,11 +63,11 @@ impl LeaderBoardBar {
     /// Convert IR scores to function bars
     pub fn from_ir_score_data(&self, ir_score_data: &[LeaderboardEntry]) -> Vec<FunctionBar> {
         let mut bars = Vec::with_capacity(ir_score_data.len());
-        for i in 0..ir_score_data.len() {
+        for (i, entry) in ir_score_data.iter().enumerate() {
             bars.push(self.create_function_bar(
                 (i + 1) as i32,
-                &ir_score_data[i],
-                ir_score_data[i].get_ir_score().player.is_empty(),
+                entry,
+                entry.get_ir_score().player.is_empty(),
             ));
         }
         bars

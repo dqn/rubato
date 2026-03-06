@@ -590,6 +590,7 @@ impl JSONSkinLoader {
         self.load_json_skin(&header, &sk, skin_type, _property, p)
     }
 
+    #[allow(dead_code)]
     fn get_enabled_options(&self, header: &SkinHeaderData) -> HashSet<i32> {
         let mut enabled = HashSet::new();
         for option in &header.custom_options {
@@ -920,6 +921,7 @@ impl JSONSkinLoader {
         result_data
     }
 
+    #[allow(dead_code)]
     fn get_path(&self, path: &str) -> String {
         get_path_with_filemap(path, &self.filemap)
     }

@@ -30,6 +30,7 @@ pub struct SkinTimingDistributionGraph {
 }
 
 impl SkinTimingDistributionGraph {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         width: i32,
         line_width: i32,

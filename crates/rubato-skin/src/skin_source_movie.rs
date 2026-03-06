@@ -170,6 +170,7 @@ pub struct SkinSourceMovie {
     _timer: i32,
     _playing: bool,
     disposed: bool,
+    #[allow(dead_code)]
     region: TextureRegion,
     #[cfg(feature = "ffmpeg")]
     decoder: Mutex<Option<MovieDecoder>>,

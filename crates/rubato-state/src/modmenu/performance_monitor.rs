@@ -13,6 +13,7 @@ struct WatchStats {
 }
 
 static WATCH_DATA: Mutex<Vec<(String, WatchStats)>> = Mutex::new(Vec::new());
+#[allow(dead_code)]
 static LAST_STAT_UPDATE: Mutex<Option<Instant>> = Mutex::new(None);
 
 pub static FILTER_SHORT_THRESHOLD: Mutex<f32> = Mutex::new(1.0);
@@ -116,6 +117,7 @@ impl PerformanceMonitor {
     }
 }
 
+#[allow(dead_code)]
 fn update_watch_data() {
     let now = Instant::now();
     {
@@ -162,6 +164,7 @@ fn update_watch_data() {
     *WATCH_DATA.lock().unwrap() = new_watch_data;
 }
 
+#[allow(dead_code)]
 fn render_watch_data() {
     let watch_data = WATCH_DATA.lock().unwrap();
     for (name, data) in watch_data.iter() {
@@ -172,6 +175,7 @@ fn render_watch_data() {
     }
 }
 
+#[allow(dead_code)]
 fn render_event_table() {
     let threshold = *FILTER_SHORT_THRESHOLD.lock().unwrap();
     // ImGui.setNextItemWidth(ImGui.getContentRegionAvail().x / 5.f);
@@ -193,6 +197,7 @@ fn render_event_table() {
     }
 }
 
+#[allow(dead_code)]
 fn render_event_tree(group_id: i32, threshold: f32) {
     let event_tree = EVENT_TREE.lock().unwrap();
     if let Some(ref tree) = *event_tree {

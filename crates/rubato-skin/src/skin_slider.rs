@@ -83,6 +83,7 @@ impl SkinSlider {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer_minmax(
         image: Vec<TextureRegion>,
         timer: i32,
@@ -161,6 +162,7 @@ impl SkinSlider {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer_minmax(
         image: Vec<TextureRegion>,
         timer: Box<dyn TimerProperty>,

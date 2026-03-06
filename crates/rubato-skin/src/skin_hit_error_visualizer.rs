@@ -32,9 +32,11 @@ pub struct SkinHitErrorVisualizer {
     color_mode: bool,
     draw_decay: bool,
 
+    #[allow(dead_code)]
     model_set: bool,
     judge_area: Vec<Vec<i32>>,
 
+    #[allow(dead_code)]
     current_index: i32,
 
     index: usize,
@@ -44,6 +46,7 @@ pub struct SkinHitErrorVisualizer {
 }
 
 impl SkinHitErrorVisualizer {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         width: i32,
         judge_width_millis: i32,
@@ -127,6 +130,7 @@ impl SkinHitErrorVisualizer {
         self.recent = state.get_recent_judges().to_vec();
     }
 
+    #[allow(dead_code)]
     fn update_ema(&mut self, value: i64) {
         if let Some(ema) = self.ema {
             self.ema = Some(ema + (self.alpha * (value - ema) as f32) as i64);

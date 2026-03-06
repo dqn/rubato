@@ -230,7 +230,6 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
     }
 
     fn integer_value(&self, id: i32) -> i32 {
-        use rubato_types::timer_access::TimerAccess;
         match id {
             // EX score
             71 => self.data.score.nowscore,

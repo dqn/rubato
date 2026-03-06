@@ -38,8 +38,11 @@ pub struct SkinNoteDistributionGraph {
     is_no_gap_x: bool,
 
     /// Processed note count - only update when changed during play
+    #[allow(dead_code)]
     past_notes: i32,
+    #[allow(dead_code)]
     notes_last_update_time: i64,
+    #[allow(dead_code)]
     cursor_last_update_time: i64,
 
     starttime: i32,
@@ -91,8 +94,8 @@ fn get_graph_colors(graph_type: i32) -> Vec<Color> {
     let idx = (graph_type as usize).min(DATA_LENGTH.len() - 1);
     let data_len = DATA_LENGTH[idx] as usize;
     let mut colors = Vec::with_capacity(data_len);
-    for i in 0..data_len {
-        colors.push(Color::value_of(JGRAPH[idx][i]));
+    for color_val in &JGRAPH[idx][..data_len] {
+        colors.push(Color::value_of(color_val));
     }
     colors
 }
@@ -101,8 +104,8 @@ fn get_pms_graph_colors(graph_type: i32) -> Vec<Color> {
     let idx = (graph_type as usize).min(DATA_LENGTH.len() - 1);
     let data_len = DATA_LENGTH[idx] as usize;
     let mut colors = Vec::with_capacity(data_len);
-    for i in 0..data_len {
-        colors.push(Color::value_of(PMS_GRAPH_COLOR[idx][i]));
+    for color_val in &PMS_GRAPH_COLOR[idx][..data_len] {
+        colors.push(Color::value_of(color_val));
     }
     colors
 }
@@ -212,16 +215,16 @@ impl SkinNoteDistributionGraph {
                 get_graph_colors(self.graph_type)
             };
             let mut chips = Vec::with_capacity(graphcolor.len());
-            for i in 0..graphcolor.len() {
+            for gc in &graphcolor {
                 let mut pixmap = Pixmap::new(1, 1, PixmapFormat::RGBA8888);
                 pixmap.draw_pixel(
                     0,
                     0,
                     Color::to_int_bits(
                         255,
-                        (graphcolor[i].b * 255.0) as i32,
-                        (graphcolor[i].g * 255.0) as i32,
-                        (graphcolor[i].r * 255.0) as i32,
+                        (gc.b * 255.0) as i32,
+                        (gc.g * 255.0) as i32,
+                        (gc.r * 255.0) as i32,
                     ),
                 );
                 chips.push(pixmap);
@@ -316,6 +319,7 @@ impl SkinNoteDistributionGraph {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn draw_with_params(
         &mut self,
         sprite: &mut SkinObjectRenderer,
@@ -335,10 +339,10 @@ impl SkinNoteDistributionGraph {
     fn update_graph_from_distribution(&mut self, distribution: &[Vec<i32>]) {
         self.dist_data = distribution.to_vec();
         self.max = 20;
-        for i in 0..distribution.len() {
+        for row in distribution {
             let mut count = 0;
-            for j in 0..distribution[i].len() {
-                count += distribution[i][j];
+            for val in row {
+                count += val;
             }
             if self.max < count {
                 self.max = ((count / 10) * 10 + 10).min(100);

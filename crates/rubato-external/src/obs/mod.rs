@@ -1,11 +1,3 @@
-#![allow(clippy::manual_find)]
-#![allow(clippy::comparison_chain)]
-#![allow(dead_code)]
-#![allow(clippy::manual_clamp)]
-#![allow(clippy::if_same_then_else)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-
 use std::sync::{Mutex, MutexGuard};
 
 // Re-exports (formerly in stubs.rs)

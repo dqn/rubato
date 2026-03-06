@@ -1,8 +1,3 @@
-#![allow(clippy::needless_range_loop)]
-#![allow(dead_code)]
-#![allow(clippy::manual_clamp)]
-#![allow(clippy::if_same_then_else)]
-
 pub mod bga;
 pub mod bms_player;
 pub mod bms_player_rule;

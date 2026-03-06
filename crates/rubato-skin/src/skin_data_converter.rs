@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use log::{debug, info, warn};
+use log::{debug, warn};
 
 use crate::custom_event::CustomEvent;
 use crate::custom_timer::CustomTimer;

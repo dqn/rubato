@@ -36,6 +36,7 @@ impl<'a> PomyuCharaLoader<'a> {
         Self { skin }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn load_with_timer_property(
         &mut self,
         usecim: bool,
@@ -853,12 +854,12 @@ impl<'a> PomyuCharaLoader<'a> {
         dsth: f32,
     ) {
         // Initialize frame values
-        for i in 0..frame.len() {
-            if frame[i] == i32::MIN {
-                frame[i] = anime;
+        for f in frame.iter_mut() {
+            if *f == i32::MIN {
+                *f = anime;
             }
-            if frame[i] < 1 {
-                frame[i] = 100;
+            if *f < 1 {
+                *f = 100;
             }
         }
 
@@ -869,10 +870,8 @@ impl<'a> PomyuCharaLoader<'a> {
         // #Pattern, #Texture, #Layer render order
         let set_bmp_index = [char_bmp_index, char_tex_index, char_bmp_index];
         for pattern_index in 0..3 {
-            for pattern_data_index in 0..pattern_data[pattern_index].len() {
-                let str_parts: Vec<&str> = pattern_data[pattern_index][pattern_data_index]
-                    .split('\t')
-                    .collect();
+            for pattern_data_entry in &pattern_data[pattern_index] {
+                let str_parts: Vec<&str> = pattern_data_entry.split('\t').collect();
                 if str_parts.len() <= 1 {
                     continue;
                 }
@@ -986,8 +985,8 @@ impl<'a> PomyuCharaLoader<'a> {
 
                     // Check for hyphen interpolation flag
                     let mut hyphen_flag = false;
-                    for i in 1..dst.len() {
-                        if dst[i].contains('-') {
+                    for d in &dst[1..] {
+                        if d.contains('-') {
                             hyphen_flag = true;
                             break;
                         }
@@ -1005,9 +1004,9 @@ impl<'a> PomyuCharaLoader<'a> {
                             }
                         }
                         // Expand dst[1..] by increase_rate
-                        for i in 1..dst.len() {
+                        for d in dst[1..].iter_mut() {
                             let mut chars = Vec::new();
-                            let bytes = dst[i].as_bytes();
+                            let bytes = d.as_bytes();
                             let mut j = 0;
                             while j + 1 < bytes.len() {
                                 for _k in 0..increase_rate {
@@ -1016,7 +1015,7 @@ impl<'a> PomyuCharaLoader<'a> {
                                 }
                                 j += 2;
                             }
-                            dst[i] = chars.into_iter().collect();
+                            *d = chars.into_iter().collect();
                         }
                     }
 
@@ -1371,15 +1370,15 @@ fn pm_parse_int_radix(s: &str, radix: i32) -> i32 {
 
 fn pm_parse_str(s: &[&str]) -> Vec<String> {
     let mut list = Vec::new();
-    for i in 0..s.len() {
-        if !s[i].is_empty() {
-            if s[i].starts_with('/') {
+    for item in s {
+        if !item.is_empty() {
+            if item.starts_with('/') {
                 break;
-            } else if let Some(pos) = s[i].find("//") {
-                list.push(s[i][..pos].to_string());
+            } else if let Some(pos) = item.find("//") {
+                list.push(item[..pos].to_string());
                 break;
             } else {
-                list.push(s[i].to_string());
+                list.push(item.to_string());
             }
         }
     }

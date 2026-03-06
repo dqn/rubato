@@ -85,21 +85,21 @@ pub fn parse_int36_str(s: &str, index: usize) -> Result<i32, ()> {
 
 pub fn parse_int36(c1: char, c2: char) -> i32 {
     let mut result: i32;
-    if ('0'..='9').contains(&c1) {
+    if c1.is_ascii_digit() {
         result = ((c1 as i32) - ('0' as i32)) * 36;
-    } else if ('a'..='z').contains(&c1) {
+    } else if c1.is_ascii_lowercase() {
         result = (((c1 as i32) - ('a' as i32)) + 10) * 36;
-    } else if ('A'..='Z').contains(&c1) {
+    } else if c1.is_ascii_uppercase() {
         result = (((c1 as i32) - ('A' as i32)) + 10) * 36;
     } else {
         return -1;
     }
 
-    if ('0'..='9').contains(&c2) {
+    if c2.is_ascii_digit() {
         result += (c2 as i32) - ('0' as i32);
-    } else if ('a'..='z').contains(&c2) {
+    } else if c2.is_ascii_lowercase() {
         result += ((c2 as i32) - ('a' as i32)) + 10;
-    } else if ('A'..='Z').contains(&c2) {
+    } else if c2.is_ascii_uppercase() {
         result += ((c2 as i32) - ('A' as i32)) + 10;
     } else {
         return -1;
@@ -120,21 +120,21 @@ pub fn parse_int62_str(s: &str, index: usize) -> Result<i32, ()> {
 
 pub fn parse_int62(c1: char, c2: char) -> i32 {
     let mut result: i32;
-    if ('0'..='9').contains(&c1) {
+    if c1.is_ascii_digit() {
         result = ((c1 as i32) - ('0' as i32)) * 62;
-    } else if ('A'..='Z').contains(&c1) {
+    } else if c1.is_ascii_uppercase() {
         result = (((c1 as i32) - ('A' as i32)) + 10) * 62;
-    } else if ('a'..='z').contains(&c1) {
+    } else if c1.is_ascii_lowercase() {
         result = (((c1 as i32) - ('a' as i32)) + 36) * 62;
     } else {
         return -1;
     }
 
-    if ('0'..='9').contains(&c2) {
+    if c2.is_ascii_digit() {
         result += (c2 as i32) - ('0' as i32);
-    } else if ('A'..='Z').contains(&c2) {
+    } else if c2.is_ascii_uppercase() {
         result += ((c2 as i32) - ('A' as i32)) + 10;
-    } else if ('a'..='z').contains(&c2) {
+    } else if c2.is_ascii_lowercase() {
         result += ((c2 as i32) - ('a' as i32)) + 36;
     } else {
         return -1;

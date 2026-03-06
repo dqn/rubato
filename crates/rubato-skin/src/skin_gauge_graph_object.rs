@@ -8,6 +8,7 @@ use crate::stubs::MainState;
 use rubato_render::color::Color;
 
 /// Type-to-color-index mapping table (Java: typetable)
+#[allow(dead_code)]
 const TYPE_TABLE: [usize; 10] = [0, 1, 2, 3, 4, 5, 3, 4, 5, 3];
 
 /// Gauge transition graph rendering object.
@@ -21,12 +22,16 @@ pub struct SkinGaugeGraphObject {
     /// Line width for the graph
     line_width: i32,
     /// Background colors per gauge type (below border)
+    #[allow(dead_code)]
     graph_color: [Color; 6],
     /// Graph line colors per gauge type (below border)
+    #[allow(dead_code)]
     graph_line: [Color; 6],
     /// Background colors per gauge type (above border)
+    #[allow(dead_code)]
     border_color: [Color; 6],
     /// Graph line colors per gauge type (above border)
+    #[allow(dead_code)]
     border_line: [Color; 6],
 }
 

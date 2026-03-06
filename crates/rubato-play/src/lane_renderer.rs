@@ -617,6 +617,7 @@ impl LaneRenderer {
                 (1.0, 0.0, 0.0, 32.0 / 255.0), // red
             ];
 
+            #[allow(clippy::needless_range_loop)]
             for lane in 0..lanes.len() {
                 if lane >= ctx.judge_time_regions.len() {
                     break;
@@ -889,6 +890,7 @@ impl LaneRenderer {
             }
 
             // Per-lane note rendering
+            #[allow(clippy::needless_range_loop)]
             for lane in 0..lanes.len() {
                 let scale = lanes[lane].scale;
                 let note = tl.get_note(lane as i32);
@@ -1158,6 +1160,7 @@ impl LaneRenderer {
                 }
 
                 // Per-lane miss POOR note rendering
+                #[allow(clippy::needless_range_loop)]
                 for lane in 0..lanes.len() {
                     let scale = lanes[lane].scale;
                     if let Some(note) = tl.get_note(lane as i32).filter(|n| n.is_normal()) {

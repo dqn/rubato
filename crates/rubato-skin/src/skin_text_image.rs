@@ -176,6 +176,7 @@ pub struct SkinTextImageSource {
     size: i32,
     margin: i32,
     elements: HashMap<i32, SkinTextImageSourceElement>,
+    #[allow(dead_code)]
     usecim: bool,
     regions: HashMap<i32, SkinTextImageSourceRegion>,
 }

@@ -81,6 +81,7 @@ pub struct CustomOffset {
 }
 
 impl CustomOffset {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(name: &str, id: i32, x: bool, y: bool, w: bool, h: bool, r: bool, a: bool) -> Self {
         Self {
             name: name.to_string(),
@@ -296,15 +297,15 @@ impl LR2SkinHeaderLoader {
             "CUSTOMOPTION" => {
                 if str_parts.len() >= 3 {
                     let mut contents: Vec<String> = Vec::new();
-                    for i in 3..str_parts.len() {
-                        if !str_parts[i].is_empty() {
-                            contents.push(str_parts[i].clone());
+                    for part in &str_parts[3..] {
+                        if !part.is_empty() {
+                            contents.push(part.clone());
                         }
                     }
                     let base_op: i32 = str_parts[2].trim().parse().unwrap_or(0);
                     let mut op = vec![0i32; contents.len()];
-                    for i in 0..op.len() {
-                        op[i] = base_op + i as i32;
+                    for (i, o) in op.iter_mut().enumerate() {
+                        *o = base_op + i as i32;
                     }
                     self.options
                         .push(CustomOption::new(&str_parts[1], op, contents));

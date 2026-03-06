@@ -54,6 +54,7 @@ impl SkinNumber {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer(
         image: Vec<Vec<TextureRegion>>,
         mimage: Option<Vec<Vec<TextureRegion>>>,
@@ -90,6 +91,7 @@ impl SkinNumber {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer_ref(
         image: Vec<Vec<TextureRegion>>,
         mimage: Option<Vec<Vec<TextureRegion>>>,
@@ -126,6 +128,7 @@ impl SkinNumber {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer(
         image: Vec<Vec<TextureRegion>>,
         mimage: Option<Vec<Vec<TextureRegion>>>,
@@ -164,6 +167,7 @@ impl SkinNumber {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer_ref(
         image: Vec<Vec<TextureRegion>>,
         mimage: Option<Vec<Vec<TextureRegion>>>,

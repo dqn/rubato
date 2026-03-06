@@ -183,6 +183,7 @@ impl SkinObjectData {
         &self.dst
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination_with_int_timer_and_single_offset(
         &mut self,
         time: i64,
@@ -233,6 +234,7 @@ impl SkinObjectData {
         self.set_offset_id_single(offset);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination_with_int_timer_and_offsets(
         &mut self,
         time: i64,
@@ -283,6 +285,7 @@ impl SkinObjectData {
         self.set_offset_id(offset);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination_with_int_timer_ops(
         &mut self,
         time: i64,
@@ -316,6 +319,7 @@ impl SkinObjectData {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination_with_int_timer_draw(
         &mut self,
         time: i64,
@@ -347,6 +351,7 @@ impl SkinObjectData {
         self.dstdraw = vec![draw_prop];
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination_with_timer_ops_and_single_offset(
         &mut self,
         time: i64,
@@ -392,6 +397,7 @@ impl SkinObjectData {
         self.set_offset_id_single(offset);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination_with_timer_ops_and_offsets(
         &mut self,
         time: i64,
@@ -437,6 +443,7 @@ impl SkinObjectData {
         self.set_offset_id(offset);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination_with_timer_and_ops(
         &mut self,
         time: i64,
@@ -465,6 +472,7 @@ impl SkinObjectData {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_destination_with_timer_draw(
         &mut self,
         time: i64,
@@ -491,6 +499,7 @@ impl SkinObjectData {
         self.dstdraw = vec![draw_prop];
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn set_destination_core(
         &mut self,
         time: i64,
@@ -952,6 +961,7 @@ impl SkinObjectData {
         self.draw_image_at_with_color(sprite, image, x, y, width, height, &color, angle);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn draw_image_at_with_color(
         &mut self,
         sprite: &mut SkinObjectRenderer,
@@ -1337,6 +1347,7 @@ impl SkinObjectRenderer {
     }
 
     /// Java: sprite.draw(image, x + 0.01f, y + 0.01f, cx * w, cy * h, w, h, 1, 1, angle)
+    #[allow(clippy::too_many_arguments)]
     pub fn draw_rotated(
         &mut self,
         image: &TextureRegion,

@@ -1,5 +1,3 @@
-#![allow(unused_imports)]
-
 // Re-exports (formerly in stubs.rs)
 pub use bms_model::bms_decoder::convert_hex_string;
 pub use rubato_core::pattern::lr2_random::LR2Random;

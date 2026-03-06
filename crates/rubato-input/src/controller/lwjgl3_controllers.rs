@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 /// Corresponds to bms.player.beatoraja.controller.Lwjgl3Controllers
 ///
 /// Empty class in Java — translated as empty struct.

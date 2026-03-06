@@ -1,6 +1,3 @@
-#![allow(clippy::manual_is_ascii_check)]
-#![allow(clippy::manual_find)]
-
 pub mod bms_decoder;
 pub mod bms_generator;
 pub mod bms_model;
