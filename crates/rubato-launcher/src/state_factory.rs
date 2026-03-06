@@ -1197,7 +1197,7 @@ mod tests {
         let mut preview = PreviewMusicProcessor::new(&config);
         preview.set_default("/bgm/default.ogg");
         preview.start(None);
-        selector.preview = Some(preview);
+        selector.preview_state.preview = Some(preview);
 
         let mut shared = SharedMusicSelectorState::new(Arc::new(Mutex::new(selector)));
         let mut audio = MockAudioDriver::new();
