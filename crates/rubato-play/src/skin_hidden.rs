@@ -52,7 +52,7 @@ impl SkinHidden {
             self.previous_lift = y;
         }
 
-        self.image_index = self.get_image_index(self.image_count, time);
+        self.image_index = self.image_index(self.image_count, time);
     }
 
     pub fn draw(&self) {
@@ -62,7 +62,7 @@ impl SkinHidden {
         // This play-side struct exists for standalone hidden state only.
     }
 
-    fn get_image_index(&self, length: usize, time: i64) -> usize {
+    fn image_index(&self, length: usize, time: i64) -> usize {
         if self.cycle <= 0 {
             return 0;
         }
@@ -77,11 +77,11 @@ impl SkinHidden {
         (t * length / self.cycle as usize) % length
     }
 
-    pub fn get_disapear_line(&self) -> f32 {
+    pub fn disapear_line(&self) -> f32 {
         self.disapear_line
     }
 
-    pub fn get_disapear_line_added_lift(&self) -> f32 {
+    pub fn disapear_line_added_lift(&self) -> f32 {
         self.disapear_line_added_lift
     }
 
@@ -98,7 +98,7 @@ impl SkinHidden {
         self.is_disapear_line_link_lift = value;
     }
 
-    pub fn get_image_index_value(&self) -> usize {
+    pub fn image_index_value(&self) -> usize {
         self.image_index
     }
 
@@ -208,9 +208,9 @@ mod tests {
     fn test_set_disapear_line() {
         let mut h = SkinHidden::new(2, 0, 100);
         h.set_disapear_line(500.0);
-        assert_eq!(h.get_disapear_line(), 500.0);
+        assert_eq!(h.disapear_line(), 500.0);
         // set_disapear_line also sets disapear_line_added_lift
-        assert_eq!(h.get_disapear_line_added_lift(), 500.0);
+        assert_eq!(h.disapear_line_added_lift(), 500.0);
     }
 
     #[test]

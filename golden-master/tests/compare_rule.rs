@@ -112,7 +112,7 @@ fn golden_master_judge_windows() {
         ];
 
         // get_judge returns Vec<[i64; 2]> in microseconds — matches fixture format
-        let rust_windows = prop.get_judge(note_type, tc.judgerank, &jwr);
+        let rust_windows = prop.judge(note_type, tc.judgerank, &jwr);
 
         // Compare window count
         if rust_windows.len() != tc.windows.len() {

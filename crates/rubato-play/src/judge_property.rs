@@ -214,7 +214,7 @@ fn convert_milli(judge: &[[i64; 2]]) -> Vec<Vec<i32>> {
 }
 
 impl JudgeProperty {
-    pub fn get_note_judge(&self, judgerank: i32, judge_window_rate: &[i32]) -> Vec<Vec<i32>> {
+    pub fn note_judge(&self, judgerank: i32, judge_window_rate: &[i32]) -> Vec<Vec<i32>> {
         convert_milli(
             &self
                 .windowrule
@@ -222,11 +222,7 @@ impl JudgeProperty {
         )
     }
 
-    pub fn get_long_note_end_judge(
-        &self,
-        judgerank: i32,
-        judge_window_rate: &[i32],
-    ) -> Vec<Vec<i32>> {
+    pub fn long_note_end_judge(&self, judgerank: i32, judge_window_rate: &[i32]) -> Vec<Vec<i32>> {
         convert_milli(
             &self
                 .windowrule
@@ -234,7 +230,7 @@ impl JudgeProperty {
         )
     }
 
-    pub fn get_scratch_judge(&self, judgerank: i32, judge_window_rate: &[i32]) -> Vec<Vec<i32>> {
+    pub fn scratch_judge(&self, judgerank: i32, judge_window_rate: &[i32]) -> Vec<Vec<i32>> {
         convert_milli(
             &self
                 .windowrule
@@ -242,7 +238,7 @@ impl JudgeProperty {
         )
     }
 
-    pub fn get_long_scratch_end_judge(
+    pub fn long_scratch_end_judge(
         &self,
         judgerank: i32,
         judge_window_rate: &[i32],
@@ -254,7 +250,7 @@ impl JudgeProperty {
         )
     }
 
-    pub fn get_judge(
+    pub fn judge(
         &self,
         notetype: NoteType,
         judgerank: i32,
@@ -762,7 +758,7 @@ mod tests {
     fn get_note_judge_converts_to_milliseconds() {
         let jp = sevenkeys();
         let rate = [100, 100, 100];
-        let result = jp.get_note_judge(100, &rate);
+        let result = jp.note_judge(100, &rate);
         // Original PGREAT: [-20000, 20000] micros => [-20, 20] millis
         assert_eq!(result[0], vec![-20, 20]);
         // GREAT: [-60000, 60000] => [-60, 60]
@@ -773,8 +769,8 @@ mod tests {
     fn get_judge_returns_correct_note_type() {
         let jp = sevenkeys();
         let rate = [100, 100, 100];
-        let note_judge = jp.get_judge(NoteType::Note, 100, &rate);
-        let scratch_judge = jp.get_judge(NoteType::Scratch, 100, &rate);
+        let note_judge = jp.judge(NoteType::Note, 100, &rate);
+        let scratch_judge = jp.judge(NoteType::Scratch, 100, &rate);
         // Note and Scratch should differ for 7keys
         assert_ne!(note_judge[0], scratch_judge[0]);
     }
@@ -783,7 +779,7 @@ mod tests {
     fn get_scratch_judge_converts_to_milliseconds() {
         let jp = sevenkeys();
         let rate = [100, 100, 100];
-        let result = jp.get_scratch_judge(100, &rate);
+        let result = jp.scratch_judge(100, &rate);
         // Scratch PGREAT: [-30000, 30000] => [-30, 30]
         assert_eq!(result[0], vec![-30, 30]);
     }
@@ -808,7 +804,7 @@ mod tests {
         let jp = sevenkeys();
         // 50% rate for PG, 100% for GR, 100% for GD
         let rate = [50, 100, 100];
-        let result = jp.get_judge(NoteType::Note, 100, &rate);
+        let result = jp.judge(NoteType::Note, 100, &rate);
         // PG window should be halved: [-20000, 20000] * 50% = [-10000, 10000]
         assert_eq!(result[0], [-10000, 10000]);
         // GR window should be unchanged: [-60000, 60000]

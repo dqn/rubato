@@ -667,7 +667,7 @@ impl JSONSkinLoader {
                     if let Some(act) = image.act
                         && is_skin_customize_button(act)
                     {
-                        let index = get_skin_customize_index(act);
+                        let index = skin_customize_index(act);
                         if count <= index {
                             count = index + 1;
                         }
@@ -677,7 +677,7 @@ impl JSONSkinLoader {
                     if let Some(act) = image_set.act
                         && is_skin_customize_button(act)
                     {
-                        let index = get_skin_customize_index(act);
+                        let index = skin_customize_index(act);
                         if count <= index {
                             count = index + 1;
                         }
@@ -708,7 +708,7 @@ impl JSONSkinLoader {
         Some(skin)
     }
 
-    /// Dispatches `get_skin()` to the appropriate screen-specific object loader.
+    /// Dispatches `skin()` to the appropriate screen-specific object loader.
     /// Corresponds to Java: `objectLoader.getSkin(header)`.
     fn get_skin_for_type(
         skin_type: &crate::skin_type::SkinType,
@@ -724,13 +724,13 @@ impl JSONSkinLoader {
             | SkinType::Play10Keys
             | SkinType::Play9Keys
             | SkinType::Play24Keys
-            | SkinType::Play24KeysDouble => JsonPlaySkinObjectLoader.get_skin(header),
-            SkinType::MusicSelect => JsonSelectSkinObjectLoader.get_skin(header),
-            SkinType::Decide => JsonDecideSkinObjectLoader.get_skin(header),
-            SkinType::Result => JsonResultSkinObjectLoader.get_skin(header),
-            SkinType::CourseResult => JsonCourseResultSkinObjectLoader.get_skin(header),
-            SkinType::SkinSelect => JsonSkinConfigurationSkinObjectLoader.get_skin(header),
-            _ => JsonKeyConfigurationSkinObjectLoader.get_skin(header),
+            | SkinType::Play24KeysDouble => JsonPlaySkinObjectLoader.skin(header),
+            SkinType::MusicSelect => JsonSelectSkinObjectLoader.skin(header),
+            SkinType::Decide => JsonDecideSkinObjectLoader.skin(header),
+            SkinType::Result => JsonResultSkinObjectLoader.skin(header),
+            SkinType::CourseResult => JsonCourseResultSkinObjectLoader.skin(header),
+            SkinType::SkinSelect => JsonSkinConfigurationSkinObjectLoader.skin(header),
+            _ => JsonKeyConfigurationSkinObjectLoader.skin(header),
         }
     }
 
@@ -880,7 +880,7 @@ impl JSONSkinLoader {
         }
     }
 
-    pub fn get_source(&mut self, srcid: &str, p: &Path) -> Option<SourceDataType> {
+    pub fn source(&mut self, srcid: &str, p: &Path) -> Option<SourceDataType> {
         // Check if already loaded
         if let Some(data) = self.source_map.get(srcid) {
             if data.loaded {
@@ -922,14 +922,14 @@ impl JSONSkinLoader {
     }
 
     #[allow(dead_code)]
-    fn get_path(&self, path: &str) -> String {
+    fn path(&self, path: &str) -> String {
         get_path_with_filemap(path, &self.filemap)
     }
 
     /// Get texture for a path, using usecim setting.
     /// Corresponds to Java JSONSkinLoader.getTexture(String path) which delegates to
     /// SkinLoader.getTexture(path, usecim).
-    pub fn get_texture(&self, path: &str) -> Option<Texture> {
+    pub fn texture(&self, path: &str) -> Option<Texture> {
         if std::path::Path::new(path).exists() {
             Some(Texture::new(path))
         } else {
@@ -961,8 +961,8 @@ fn is_skin_customize_button(event_id: i32) -> bool {
     crate::skin_property_mapper::is_skin_customize_button(event_id)
 }
 
-fn get_skin_customize_index(event_id: i32) -> i32 {
-    crate::skin_property_mapper::get_skin_customize_index(event_id)
+fn skin_customize_index(event_id: i32) -> i32 {
+    crate::skin_property_mapper::skin_customize_index(event_id)
 }
 
 // Data types for skin loading results (replacing actual skin objects for now)
@@ -1764,8 +1764,8 @@ mod tests {
     #[test]
     fn test_get_skin_customize_index() {
         // Index is relative to BUTTON_SKIN_CUSTOMIZE1 (220)
-        assert_eq!(get_skin_customize_index(220), 0);
-        assert_eq!(get_skin_customize_index(221), 1);
-        assert_eq!(get_skin_customize_index(228), 8);
+        assert_eq!(skin_customize_index(220), 0);
+        assert_eq!(skin_customize_index(221), 1);
+        assert_eq!(skin_customize_index(228), 8);
     }
 }

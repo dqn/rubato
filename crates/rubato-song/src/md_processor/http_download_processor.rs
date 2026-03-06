@@ -92,7 +92,7 @@ impl HttpDownloadProcessor {
             task_name,
             md5
         );
-        let source_name = self.http_download_source.get_name().to_string();
+        let source_name = self.http_download_source.name().to_string();
         let download_url = match self.http_download_source.get_download_url_based_on_md5(md5) {
             Ok(url) => url,
             Err(e) => {
@@ -157,7 +157,7 @@ impl HttpDownloadProcessor {
     pub fn execute_download_task(&self, download_task: Arc<Mutex<DownloadTask>>) {
         let download_directory = self.download_directory.clone();
         let main = self.main.clone();
-        let source_name = self.http_download_source.get_name().to_string();
+        let source_name = self.http_download_source.name().to_string();
 
         // Java uses ExecutorService.submit() with a fixed thread pool.
         // Here we simply spawn a thread per task. A bounded thread pool could be added later.

@@ -34,7 +34,7 @@ impl KonmaiDownloadSource {
 }
 
 impl HttpDownloadSource for KonmaiDownloadSource {
-    fn get_name(&self) -> &str {
+    fn name(&self) -> &str {
         META.name()
     }
 

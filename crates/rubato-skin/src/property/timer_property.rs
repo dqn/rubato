@@ -7,12 +7,12 @@ pub trait TimerProperty: Send + Sync {
         self.get_micro(state) / 1000
     }
 
-    fn get_now_time(&self, state: &dyn MainState) -> i64 {
+    fn now_time(&self, state: &dyn MainState) -> i64 {
         let time = self.get_micro(state);
         if time == i64::MIN {
             0
         } else {
-            state.get_timer().now_time() - time / 1000
+            state.timer().now_time() - time / 1000
         }
     }
 

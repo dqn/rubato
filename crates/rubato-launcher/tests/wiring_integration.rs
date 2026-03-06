@@ -65,10 +65,7 @@ fn play_set_factory_change_state_succeeds() {
 
     mc.change_state(MainStateType::MusicSelect);
 
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect),
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect),);
 }
 
 // ---------------------------------------------------------------------------
@@ -82,10 +79,7 @@ fn play_create_enters_music_select() {
 
     mc.create();
 
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect),
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect),);
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +93,7 @@ fn play_with_bmsfile_create_enters_play() {
 
     mc.create();
 
-    assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+    assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 }
 
 // ---------------------------------------------------------------------------
@@ -126,10 +120,7 @@ fn create_then_render_first_frame() {
     mc.create();
     mc.render();
 
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect),
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect),);
 }
 
 // ---------------------------------------------------------------------------
@@ -176,7 +167,7 @@ fn create_without_audio_driver_succeeds() {
     // No audio driver set — create() should succeed (audio is optional)
     mc.create();
 
-    assert!(mc.get_current_state().is_some());
+    assert!(mc.current_state().is_some());
 }
 
 // ---------------------------------------------------------------------------
@@ -199,23 +190,17 @@ fn full_production_wiring_sequence() {
 
     // 4. create() (called from event loop's resumed())
     mc.create();
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect),
-    );
-    assert!(mc.get_sprite_batch().is_some());
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect),);
+    assert!(mc.sprite_batch().is_some());
     assert!(listener_called.load(Ordering::SeqCst));
 
     // 5. render() multiple frames
     for _ in 0..3 {
         mc.render();
     }
-    assert_eq!(
-        mc.get_current_state_type(),
-        Some(MainStateType::MusicSelect),
-    );
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect),);
 
     // 6. dispose()
     mc.dispose();
-    assert!(mc.get_current_state().is_none());
+    assert!(mc.current_state().is_none());
 }

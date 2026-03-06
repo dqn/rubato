@@ -275,7 +275,7 @@ fn run_autoplay_test(bms_file: &str) {
         assert_no_diffs(&diffs, &format!("autoplay/{}/after", tc.bms_file));
 
         // Compare assist level
-        let rust_assist = rust_assist_level_str(modifier.get_assist_level());
+        let rust_assist = rust_assist_level_str(modifier.assist_level());
         assert_eq!(
             rust_assist, tc.assist_level,
             "autoplay/{}: assist_level mismatch: rust={} java={}",
@@ -337,7 +337,7 @@ fn run_practice_test(bms_file: &str) {
         assert_no_diffs(&diffs, &format!("practice/{}/after", tc.bms_file));
 
         // Compare assist level
-        let rust_assist = rust_assist_level_str(modifier.get_assist_level());
+        let rust_assist = rust_assist_level_str(modifier.assist_level());
         assert_eq!(
             rust_assist, tc.assist_level,
             "practice/{}: assist_level mismatch: rust={} java={}",
@@ -396,7 +396,7 @@ fn run_scroll_speed_remove_test(bms_file: &str) {
         );
 
         // Compare assist level
-        let rust_assist = rust_assist_level_str(modifier.get_assist_level());
+        let rust_assist = rust_assist_level_str(modifier.assist_level());
         assert_eq!(
             rust_assist, tc.assist_level,
             "scroll_speed_remove/{}: assist_level mismatch: rust={} java={}",

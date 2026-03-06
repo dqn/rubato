@@ -29,7 +29,7 @@ fn is_skin_customize_button(id: i32) -> bool {
     (BUTTON_SKIN_CUSTOMIZE1..BUTTON_SKIN_CUSTOMIZE10).contains(&id)
 }
 
-fn get_skin_customize_index(id: i32) -> i32 {
+fn skin_customize_index(id: i32) -> i32 {
     id - BUTTON_SKIN_CUSTOMIZE1
 }
 
@@ -38,7 +38,7 @@ fn is_skin_select_type_id(id: i32) -> bool {
         || (BUTTON_SKINSELECT_24KEY..=BUTTON_SKINSELECT_24KEY_BATTLE).contains(&id)
 }
 
-fn get_skin_select_type(id: i32) -> Option<SkinType> {
+fn skin_select_type(id: i32) -> Option<SkinType> {
     if (BUTTON_SKINSELECT_7KEY..=BUTTON_SKINSELECT_COURSE_RESULT).contains(&id) {
         SkinType::skin_type_by_id(id - BUTTON_SKINSELECT_7KEY)
     } else if (BUTTON_SKINSELECT_24KEY..=BUTTON_SKINSELECT_24KEY_BATTLE).contains(&id) {
@@ -120,7 +120,7 @@ pub enum CustomItem {
 }
 
 impl CustomItem {
-    pub fn get_category_name(&self) -> &str {
+    pub fn category_name(&self) -> &str {
         match self {
             CustomItem::Option { category_name, .. } => category_name,
             CustomItem::File { category_name, .. } => category_name,
@@ -128,7 +128,7 @@ impl CustomItem {
         }
     }
 
-    pub fn get_display_value(&self) -> String {
+    pub fn display_value(&self) -> String {
         match self {
             CustomItem::Option { display_value, .. } => display_value.clone(),
             CustomItem::File { display_value, .. } => display_value.clone(),
@@ -136,7 +136,7 @@ impl CustomItem {
         }
     }
 
-    pub fn get_value(&self) -> i32 {
+    pub fn value(&self) -> i32 {
         match self {
             CustomItem::Option { selection, .. } => *selection as i32,
             CustomItem::File { selection, .. } => *selection as i32,
@@ -144,7 +144,7 @@ impl CustomItem {
         }
     }
 
-    pub fn get_min(&self) -> i32 {
+    pub fn min(&self) -> i32 {
         match self {
             CustomItem::Option { .. } => 0,
             CustomItem::File { .. } => 0,
@@ -152,7 +152,7 @@ impl CustomItem {
         }
     }
 
-    pub fn get_max(&self) -> i32 {
+    pub fn max(&self) -> i32 {
         match self {
             CustomItem::Option { contents, .. } => contents.len() as i32 - 1,
             CustomItem::File { actual_values, .. } => actual_values.len() as i32 - 1,
@@ -242,11 +242,11 @@ impl SkinConfiguration {
         }
     }
 
-    pub fn get_skin_type(&self) -> Option<SkinType> {
+    pub fn skin_type(&self) -> Option<SkinType> {
         self.skin_type
     }
 
-    pub fn get_skin_select_position(&self) -> f32 {
+    pub fn skin_select_position(&self) -> f32 {
         if self.custom_option_offset_max == 0 {
             0.0
         } else {
@@ -260,21 +260,21 @@ impl SkinConfiguration {
         }
     }
 
-    pub fn get_category_name(&self, index: usize) -> &str {
+    pub fn category_name(&self, index: usize) -> &str {
         if let Some(ref options) = self.custom_options {
             let actual_index = index + self.custom_option_offset as usize;
             if actual_index < options.len() {
-                return options[actual_index].get_category_name();
+                return options[actual_index].category_name();
             }
         }
         ""
     }
 
-    pub fn get_display_value(&self, index: usize) -> String {
+    pub fn display_value(&self, index: usize) -> String {
         if let Some(ref options) = self.custom_options {
             let actual_index = index + self.custom_option_offset as usize;
             if actual_index < options.len() {
-                return options[actual_index].get_display_value();
+                return options[actual_index].display_value();
             }
         }
         String::new()
@@ -285,7 +285,7 @@ impl SkinConfiguration {
     // ----------------------------------------------------------------
 
     /// Returns the currently selected skin header.
-    pub fn get_selected_skin_header(&self) -> Option<&SkinHeaderInfo> {
+    pub fn selected_skin_header(&self) -> Option<&SkinHeaderInfo> {
         self.selected_skin_header.as_ref()
     }
 
@@ -834,12 +834,12 @@ impl SkinConfiguration {
     }
 
     /// Get a reference to the current player config.
-    pub fn get_player(&self) -> &PlayerConfig {
+    pub fn player(&self) -> &PlayerConfig {
         &self.player
     }
 
     /// Get a mutable reference to the current player config.
-    pub fn get_player_mut(&mut self) -> &mut PlayerConfig {
+    pub fn player_mut(&mut self) -> &mut PlayerConfig {
         &mut self.player
     }
 
@@ -854,13 +854,13 @@ impl SkinConfiguration {
             }
             _ => {
                 if is_skin_customize_button(id) {
-                    let index = get_skin_customize_index(id) + self.custom_option_offset;
+                    let index = skin_customize_index(id) + self.custom_option_offset;
                     if let Some(ref mut options) = self.custom_options {
                         let idx = index as usize;
                         if idx < options.len() {
-                            let current_value = options[idx].get_value();
-                            let min = options[idx].get_min();
-                            let max = options[idx].get_max();
+                            let current_value = options[idx].value();
+                            let min = options[idx].min();
+                            let max = options[idx].max();
 
                             let new_value = if arg1 >= 0 {
                                 if current_value < max {
@@ -879,7 +879,7 @@ impl SkinConfiguration {
                         }
                     }
                 } else if is_skin_select_type_id(id) {
-                    let skin_type = get_skin_select_type(id);
+                    let skin_type = skin_select_type(id);
                     self.change_skin_type(skin_type);
                 }
                 // Java: super.executeEvent(id, arg1, arg2) — default no-op in Rust
@@ -1152,14 +1152,14 @@ mod tests {
     #[test]
     fn test_get_selected_skin_header_none() {
         let sc = make_test_skin_config();
-        assert!(sc.get_selected_skin_header().is_none());
+        assert!(sc.selected_skin_header().is_none());
     }
 
     #[test]
     fn test_get_selected_skin_header_some() {
         let mut sc = make_test_skin_config();
         sc.selected_skin_header = Some(make_test_header("skin/play7.json", SkinType::Play7Keys));
-        let header = sc.get_selected_skin_header().unwrap();
+        let header = sc.selected_skin_header().unwrap();
         assert_eq!(header.path, Some(PathBuf::from("skin/play7.json")));
         assert_eq!(header.skin_type, Some(SkinType::Play7Keys));
     }
@@ -1445,10 +1445,10 @@ mod tests {
 
         let options = sc.custom_options.as_ref().unwrap();
         assert_eq!(options.len(), 1);
-        assert_eq!(options[0].get_category_name(), "judge_type");
+        assert_eq!(options[0].category_name(), "judge_type");
         // "Normal" + "Hard" + "Easy" + "Random" = 4 display values, max = 3
-        assert_eq!(options[0].get_max(), 3);
-        assert_eq!(options[0].get_value(), 0); // default selection = 0 (Normal)
+        assert_eq!(options[0].max(), 3);
+        assert_eq!(options[0].value(), 0); // default selection = 0 (Normal)
     }
 
     #[test]
@@ -1476,7 +1476,7 @@ mod tests {
         sc.update_custom_options();
 
         let options = sc.custom_options.as_ref().unwrap();
-        assert_eq!(options[0].get_value(), 2); // Easy is at index 2
+        assert_eq!(options[0].value(), 2); // Easy is at index 2
     }
 
     #[test]
@@ -1504,8 +1504,8 @@ mod tests {
 
         let options = sc.custom_options.as_ref().unwrap();
         // Random is at index option.len() = 2
-        assert_eq!(options[0].get_value(), 2);
-        assert_eq!(options[0].get_display_value(), "Random");
+        assert_eq!(options[0].value(), 2);
+        assert_eq!(options[0].display_value(), "Random");
     }
 
     #[test]
@@ -1529,10 +1529,10 @@ mod tests {
 
         let options = sc.custom_options.as_ref().unwrap();
         assert_eq!(options.len(), 2); // x and y enabled
-        assert_eq!(options[0].get_category_name(), "judge_pos - x");
-        assert_eq!(options[1].get_category_name(), "judge_pos - y");
-        assert_eq!(options[0].get_min(), -9999);
-        assert_eq!(options[0].get_max(), 9999);
+        assert_eq!(options[0].category_name(), "judge_pos - x");
+        assert_eq!(options[1].category_name(), "judge_pos - y");
+        assert_eq!(options[0].min(), -9999);
+        assert_eq!(options[0].max(), 9999);
     }
 
     #[test]
@@ -1544,8 +1544,8 @@ mod tests {
             selection: 0,
             display_value: "A".to_string(),
         };
-        assert_eq!(item.get_value(), 0);
-        assert_eq!(item.get_display_value(), "A");
+        assert_eq!(item.value(), 0);
+        assert_eq!(item.display_value(), "A");
 
         // Simulate changing selection
         if let CustomItem::Option {
@@ -1558,8 +1558,8 @@ mod tests {
             *selection = 2;
             *display_value = contents[2].clone();
         }
-        assert_eq!(item.get_value(), 2);
-        assert_eq!(item.get_display_value(), "C");
+        assert_eq!(item.value(), 2);
+        assert_eq!(item.display_value(), "C");
     }
 
     #[test]
@@ -1572,11 +1572,11 @@ mod tests {
             max: 100,
             value: 42,
         };
-        assert_eq!(item.get_category_name(), "pos - x");
-        assert_eq!(item.get_value(), 42);
-        assert_eq!(item.get_min(), -100);
-        assert_eq!(item.get_max(), 100);
-        assert_eq!(item.get_display_value(), "42");
+        assert_eq!(item.category_name(), "pos - x");
+        assert_eq!(item.value(), 42);
+        assert_eq!(item.min(), -100);
+        assert_eq!(item.max(), 100);
+        assert_eq!(item.display_value(), "42");
     }
 
     #[test]
@@ -1626,14 +1626,14 @@ mod tests {
         ]);
         sc.custom_option_offset = 1;
 
-        assert_eq!(sc.get_category_name(0), "second");
+        assert_eq!(sc.category_name(0), "second");
     }
 
     #[test]
     fn test_get_category_name_out_of_bounds() {
         let mut sc = make_test_skin_config();
         sc.custom_options = Some(vec![]);
-        assert_eq!(sc.get_category_name(0), "");
+        assert_eq!(sc.category_name(0), "");
     }
 
     #[test]
@@ -1652,13 +1652,13 @@ mod tests {
 
         sc.set_skin_select_position(0.5);
         assert_eq!(sc.custom_option_offset, 5);
-        assert!((sc.get_skin_select_position() - 0.5).abs() < 0.01);
+        assert!((sc.skin_select_position() - 0.5).abs() < 0.01);
     }
 
     #[test]
     fn test_skin_select_position_zero_max() {
         let sc = make_test_skin_config();
-        assert_eq!(sc.get_skin_select_position(), 0.0);
+        assert_eq!(sc.skin_select_position(), 0.0);
     }
 
     #[test]
@@ -1734,8 +1734,8 @@ mod tests {
         sc.execute_event(220, 1, 0);
 
         let options = sc.custom_options.as_ref().unwrap();
-        assert_eq!(options[0].get_value(), 1); // selection moved to index 1
-        assert_eq!(options[0].get_display_value(), "Hard");
+        assert_eq!(options[0].value(), 1); // selection moved to index 1
+        assert_eq!(options[0].display_value(), "Hard");
     }
 
     #[test]
@@ -1758,8 +1758,8 @@ mod tests {
         sc.execute_event(220, -1, 0);
 
         let options = sc.custom_options.as_ref().unwrap();
-        assert_eq!(options[0].get_value(), 0);
-        assert_eq!(options[0].get_display_value(), "Normal");
+        assert_eq!(options[0].value(), 0);
+        assert_eq!(options[0].display_value(), "Normal");
     }
 
     #[test]
@@ -1778,8 +1778,8 @@ mod tests {
         sc.execute_event(220, 1, 0);
 
         let options = sc.custom_options.as_ref().unwrap();
-        assert_eq!(options[0].get_value(), 0);
-        assert_eq!(options[0].get_display_value(), "A");
+        assert_eq!(options[0].value(), 0);
+        assert_eq!(options[0].display_value(), "A");
     }
 
     #[test]
@@ -1798,8 +1798,8 @@ mod tests {
         sc.execute_event(220, -1, 0);
 
         let options = sc.custom_options.as_ref().unwrap();
-        assert_eq!(options[0].get_value(), 1);
-        assert_eq!(options[0].get_display_value(), "B");
+        assert_eq!(options[0].value(), 1);
+        assert_eq!(options[0].display_value(), "B");
     }
 
     #[test]
@@ -1828,10 +1828,10 @@ mod tests {
 
         let options = sc.custom_options.as_ref().unwrap();
         // First item should be unchanged
-        assert_eq!(options[0].get_value(), 0);
+        assert_eq!(options[0].value(), 0);
         // Second item should have incremented
-        assert_eq!(options[1].get_value(), 1);
-        assert_eq!(options[1].get_display_value(), "B");
+        assert_eq!(options[1].value(), 1);
+        assert_eq!(options[1].display_value(), "B");
     }
 
     #[test]
@@ -1876,7 +1876,7 @@ mod tests {
         sc.execute_event(220, 1, 0);
 
         let options = sc.custom_options.as_ref().unwrap();
-        assert_eq!(options[0].get_value(), 51);
+        assert_eq!(options[0].value(), 51);
     }
 
     #[test]
@@ -1930,9 +1930,9 @@ mod tests {
 
     #[test]
     fn test_get_skin_customize_index() {
-        assert_eq!(get_skin_customize_index(220), 0);
-        assert_eq!(get_skin_customize_index(225), 5);
-        assert_eq!(get_skin_customize_index(228), 8);
+        assert_eq!(skin_customize_index(220), 0);
+        assert_eq!(skin_customize_index(225), 5);
+        assert_eq!(skin_customize_index(228), 8);
     }
 
     #[test]
@@ -1952,11 +1952,11 @@ mod tests {
     #[test]
     fn test_get_skin_select_type() {
         // 170 = BUTTON_SKINSELECT_7KEY => SkinType id 0 = Play7Keys
-        assert_eq!(get_skin_select_type(170), Some(SkinType::Play7Keys));
+        assert_eq!(skin_select_type(170), Some(SkinType::Play7Keys));
         // 175 = Music Select => SkinType id 5 = MusicSelect
-        assert_eq!(get_skin_select_type(175), Some(SkinType::MusicSelect));
+        assert_eq!(skin_select_type(175), Some(SkinType::MusicSelect));
         // Out of range
-        assert_eq!(get_skin_select_type(0), None);
-        assert_eq!(get_skin_select_type(999), None);
+        assert_eq!(skin_select_type(0), None);
+        assert_eq!(skin_select_type(999), None);
     }
 }

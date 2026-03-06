@@ -284,7 +284,7 @@ impl Controller for Lwjgl3Controller {
     }
 
     /// Corresponds to Lwjgl3Controller.getName()
-    fn get_name(&self) -> &str {
+    fn name(&self) -> &str {
         &self.name
     }
 
@@ -469,7 +469,7 @@ mod tests {
     fn controller_trait_metadata_properties() {
         let ctrl = Lwjgl3Controller::new_with_state(5, 8, 19, "Xbox Controller".to_string());
 
-        assert_eq!(ctrl.get_name(), "Xbox Controller");
+        assert_eq!(ctrl.name(), "Xbox Controller");
         assert_eq!(ctrl.get_unique_id(), None);
         assert_eq!(ctrl.get_min_button_index(), 0);
         assert_eq!(ctrl.get_max_button_index(), 19);

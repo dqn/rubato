@@ -97,11 +97,11 @@ impl SkinNote {
         }
     }
 
-    pub fn get_lanes(&self) -> &[SkinLane] {
+    pub fn lanes(&self) -> &[SkinLane] {
         &self.lanes
     }
 
-    pub fn get_lanes_mut(&mut self) -> &mut [SkinLane] {
+    pub fn lanes_mut(&mut self) -> &mut [SkinLane] {
         &mut self.lanes
     }
 

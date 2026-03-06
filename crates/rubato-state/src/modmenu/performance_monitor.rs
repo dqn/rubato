@@ -133,11 +133,11 @@ fn update_watch_data() {
     *LAST_STAT_UPDATE.lock().unwrap() = Some(now);
 
     let metrics = PerformanceMetrics::get();
-    let names = metrics.get_watch_names();
+    let names = metrics.watch_names();
     let mut new_watch_data = Vec::new();
 
     for name in &names {
-        if let Some(record) = metrics.get_watch_records(name) {
+        if let Some(record) = metrics.watch_records(name) {
             if record.is_empty() {
                 new_watch_data.push((name.clone(), WatchStats { avg: 0.0, std: 0.0 }));
                 continue;

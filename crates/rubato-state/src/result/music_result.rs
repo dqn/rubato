@@ -34,19 +34,19 @@ struct ResultRenderContext<'a> {
 
 impl rubato_types::timer_access::TimerAccess for ResultRenderContext<'_> {
     fn now_time(&self) -> i64 {
-        self.timer.get_now_time()
+        self.timer.now_time()
     }
     fn now_micro_time(&self) -> i64 {
-        self.timer.get_now_micro_time()
+        self.timer.now_micro_time()
     }
     fn micro_timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_micro_timer(timer_id)
+        self.timer.micro_timer(timer_id)
     }
     fn timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_timer(timer_id)
+        self.timer.timer(timer_id)
     }
     fn now_time_for(&self, timer_id: i32) -> i64 {
-        self.timer.get_now_time_for_id(timer_id)
+        self.timer.now_time_for_id(timer_id)
     }
     fn is_timer_on(&self, timer_id: i32) -> bool {
         self.timer.is_timer_on(timer_id)
@@ -59,19 +59,19 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     }
 
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
-        Some(self.resource.get_player_config())
+        Some(self.resource.player_config())
     }
 
     fn config_ref(&self) -> Option<&rubato_types::config::Config> {
-        Some(self.main.get_config())
+        Some(self.main.config())
     }
 
     fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
-        self.resource.get_replay_data()
+        self.resource.replay_data()
     }
 
     fn target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
-        self.resource.get_target_score_data()
+        self.resource.target_score_data()
     }
 
     fn score_data_ref(&self) -> Option<&rubato_core::score_data::ScoreData> {
@@ -83,30 +83,27 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     }
 
     fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
-        let mode = self
-            .resource
-            .get_songdata()
-            .and_then(|song| match song.mode {
-                5 => Some(bms_model::mode::Mode::BEAT_5K),
-                7 => Some(bms_model::mode::Mode::BEAT_7K),
-                9 => Some(bms_model::mode::Mode::POPN_9K),
-                10 => Some(bms_model::mode::Mode::BEAT_10K),
-                14 => Some(bms_model::mode::Mode::BEAT_14K),
-                25 => Some(bms_model::mode::Mode::KEYBOARD_24K),
-                50 => Some(bms_model::mode::Mode::KEYBOARD_24K_DOUBLE),
-                _ => None,
-            })?;
+        let mode = self.resource.songdata().and_then(|song| match song.mode {
+            5 => Some(bms_model::mode::Mode::BEAT_5K),
+            7 => Some(bms_model::mode::Mode::BEAT_7K),
+            9 => Some(bms_model::mode::Mode::POPN_9K),
+            10 => Some(bms_model::mode::Mode::BEAT_10K),
+            14 => Some(bms_model::mode::Mode::BEAT_14K),
+            25 => Some(bms_model::mode::Mode::KEYBOARD_24K),
+            50 => Some(bms_model::mode::Mode::KEYBOARD_24K_DOUBLE),
+            _ => None,
+        })?;
         Some(
             &self
                 .resource
-                .get_player_config()
+                .player_config()
                 .play_config_ref(mode)
                 .playconfig,
         )
     }
 
     fn song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
-        self.resource.get_songdata()
+        self.resource.songdata()
     }
 
     fn set_timer_micro(&mut self, timer_id: i32, micro_time: i64) {
@@ -141,9 +138,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
             // Total notes
             350 => self.data.score.totalnotes,
             // Playtime (hours/minutes/seconds from boot)
-            17 => (self.timer.get_now_time() / 3_600_000) as i32,
-            18 => ((self.timer.get_now_time() % 3_600_000) / 60_000) as i32,
-            19 => ((self.timer.get_now_time() % 60_000) / 1_000) as i32,
+            17 => (self.timer.now_time() / 3_600_000) as i32,
+            18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,
+            19 => ((self.timer.now_time() % 60_000) / 1_000) as i32,
             _ => 0,
         }
     }
@@ -171,13 +168,13 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
             // Song metadata from resource
             10 => self
                 .resource
-                .get_songdata()
+                .songdata()
                 .map_or_else(String::new, |s| s.title.clone()),
             11 => self
                 .resource
-                .get_songdata()
+                .songdata()
                 .map_or_else(String::new, |s| s.subtitle.clone()),
-            12 => self.resource.get_songdata().map_or_else(String::new, |s| {
+            12 => self.resource.songdata().map_or_else(String::new, |s| {
                 if s.subtitle.is_empty() {
                     s.title.clone()
                 } else {
@@ -186,17 +183,17 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
             }),
             13 => self
                 .resource
-                .get_songdata()
+                .songdata()
                 .map_or_else(String::new, |s| s.genre.clone()),
             14 => self
                 .resource
-                .get_songdata()
+                .songdata()
                 .map_or_else(String::new, |s| s.artist.clone()),
             15 => self
                 .resource
-                .get_songdata()
+                .songdata()
                 .map_or_else(String::new, |s| s.subartist.clone()),
-            16 => self.resource.get_songdata().map_or_else(String::new, |s| {
+            16 => self.resource.songdata().map_or_else(String::new, |s| {
                 if s.subartist.is_empty() {
                     s.artist.clone()
                 } else {
@@ -225,23 +222,23 @@ struct ResultMouseContext<'a> {
 
 impl rubato_types::timer_access::TimerAccess for ResultMouseContext<'_> {
     fn now_time(&self) -> i64 {
-        self.timer.get_now_time()
+        self.timer.now_time()
     }
 
     fn now_micro_time(&self) -> i64 {
-        self.timer.get_now_micro_time()
+        self.timer.now_micro_time()
     }
 
     fn micro_timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_micro_timer(timer_id)
+        self.timer.micro_timer(timer_id)
     }
 
     fn timer(&self, timer_id: i32) -> i64 {
-        self.timer.get_timer(timer_id)
+        self.timer.timer(timer_id)
     }
 
     fn now_time_for(&self, timer_id: i32) -> i64 {
-        self.timer.get_now_time_for_id(timer_id)
+        self.timer.now_time_for_id(timer_id)
     }
 
     fn is_timer_on(&self, timer_id: i32) -> bool {
@@ -269,7 +266,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
     }
 
     fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
-        self.result.resource.get_player_config_mut()
+        self.result.resource.player_config_mut()
     }
 }
 
@@ -297,19 +294,18 @@ impl MusicResult {
 
     fn do_create(&mut self) {
         for i in 0..REPLAY_SIZE {
-            self.data.save_replay[i] =
-                if self.main.get_play_data_accessor().exists_replay_data_model(
-                    self.resource.get_bms_model(),
-                    self.resource.get_player_config().lnmode,
-                    i as i32,
-                ) {
-                    ReplayStatus::Exist
-                } else {
-                    ReplayStatus::NotExist
-                };
+            self.data.save_replay[i] = if self.main.play_data_accessor().exists_replay_data_model(
+                self.resource.bms_model(),
+                self.resource.player_config().lnmode,
+                i as i32,
+            ) {
+                ReplayStatus::Exist
+            } else {
+                ReplayStatus::NotExist
+            };
         }
 
-        if let Some(mode) = self.resource.get_bms_model().mode() {
+        if let Some(mode) = self.resource.bms_model().mode() {
             self.property = ResultKeyProperty::get(mode).unwrap_or_else(ResultKeyProperty::beat_7k);
         } else {
             self.property = ResultKeyProperty::beat_7k();
@@ -318,13 +314,12 @@ impl MusicResult {
         self.update_score_database();
 
         // Replay auto save
-        if self.resource.get_play_mode().mode == BMSPlayerModeType::Play
-            && !self.resource.is_freq_on()
+        if self.resource.play_mode().mode == BMSPlayerModeType::Play && !self.resource.is_freq_on()
         {
             for i in 0..REPLAY_SIZE {
-                let auto_save = &self.resource.get_player_config().autosavereplay;
+                let auto_save = &self.resource.player_config().autosavereplay;
                 if i < auto_save.len()
-                    && let Some(score_data) = self.resource.get_score_data()
+                    && let Some(score_data) = self.resource.score_data()
                     && ReplayAutoSaveConstraint::get(auto_save[i])
                         .is_qualified(&self.data.oldscore, score_data)
                 {
@@ -334,11 +329,11 @@ impl MusicResult {
         }
 
         // Stock replay data for course mode
-        if self.resource.get_course_bms_models().is_some() {
-            if let Some(replay_clone) = self.resource.get_replay_data().cloned() {
+        if self.resource.course_bms_models().is_some() {
+            if let Some(replay_clone) = self.resource.replay_data().cloned() {
                 self.resource.add_course_replay(replay_clone);
             }
-            if let Some(gauge) = self.resource.get_gauge() {
+            if let Some(gauge) = self.resource.gauge() {
                 let gauge_clone = gauge.clone();
                 self.resource.add_course_gauge(gauge_clone);
             }
@@ -346,7 +341,7 @@ impl MusicResult {
 
         self.data.gauge_type = self
             .resource
-            .get_groove_gauge()
+            .groove_gauge()
             .map(|g| g.gauge_type())
             .unwrap_or(0);
 
@@ -356,20 +351,20 @@ impl MusicResult {
 
     fn do_prepare(&mut self) {
         self.data.state = STATE_OFFLINE;
-        let newscore_clone = self.get_new_score().cloned();
+        let newscore_clone = self.new_score().cloned();
 
-        self.data.ranking = if self.resource.get_ranking_data().is_some()
-            && self.resource.get_course_bms_models().is_none()
+        self.data.ranking = if self.resource.ranking_data().is_some()
+            && self.resource.course_bms_models().is_none()
         {
-            self.resource.get_ranking_data().cloned()
+            self.resource.ranking_data().cloned()
         } else {
             Some(RankingData::new())
         };
         self.data.ranking_offset = 0;
 
-        let ir = self.main.get_ir_status();
+        let ir = self.main.ir_status();
         if !ir.is_empty()
-            && self.resource.get_play_mode().mode == BMSPlayerModeType::Play
+            && self.resource.play_mode().mode == BMSPlayerModeType::Play
             && !self.resource.is_freq_on()
         {
             self.data.state = STATE_IR_PROCESSING;
@@ -382,7 +377,7 @@ impl MusicResult {
                     IR_SEND_ALWAYS => {}
                     IR_SEND_COMPLETE_SONG => {
                         if let (Some(gauge_data), Some(groove_gauge)) =
-                            (self.resource.get_gauge(), self.resource.get_groove_gauge())
+                            (self.resource.gauge(), self.resource.groove_gauge())
                         {
                             let gauge = &gauge_data[groove_gauge.gauge_type() as usize];
                             send &= gauge.last().copied().unwrap_or(0.0) > 0.0;
@@ -401,7 +396,7 @@ impl MusicResult {
 
                 if send
                     && let Some(ref ns) = newscore_clone
-                    && let Some(songdata) = self.resource.get_songdata()
+                    && let Some(songdata) = self.resource.songdata()
                 {
                     pending_ir_sends.push(IRSendStatusMain::new(
                         irc.connection.clone(),
@@ -418,8 +413,8 @@ impl MusicResult {
             // In Java this spawns a Thread. In Rust we'd use tokio::spawn or std::thread::spawn.
             // The thread sends scores, fetches ranking, and updates state.
             // For now, immediately mark as finished (blocking stub).
-            let ir_len = self.main.get_ir_status().len();
-            let ir_send_count = self.main.get_config().ir_send_count;
+            let ir_len = self.main.ir_status().len();
+            let ir_send_count = self.main.config().ir_send_count;
             let mut ir_send_list = self.main.ir_send_status_mut();
             let mut irsend = 0;
             let mut succeed = true;
@@ -452,9 +447,9 @@ impl MusicResult {
                     self.data.timer.switch_timer(TIMER_IR_CONNECT_FAIL, true);
                 }
                 // Fetch ranking from IR
-                let ir_status = self.main.get_ir_status();
+                let ir_status = self.main.ir_status();
                 if !ir_status.is_empty()
-                    && let Some(songdata) = self.resource.get_songdata()
+                    && let Some(songdata) = self.resource.songdata()
                 {
                     let chart_data = rubato_ir::ir_chart_data::IRChartData::new(songdata);
                     let response = ir_status[0].connection.get_play_data(None, &chart_data);
@@ -489,12 +484,12 @@ impl MusicResult {
 
         // Play result sound
         if let Some(ref ns) = newscore_clone {
-            let cscore = self.resource.get_course_score_data();
+            let cscore = self.resource.course_score_data();
             let is_clear = ns.clear != ClearType::Failed.id()
                 && (cscore.is_none() || cscore.unwrap().clear != ClearType::Failed.id());
             let loop_sound = self
                 .resource
-                .get_config()
+                .config()
                 .audio
                 .as_ref()
                 .map(|ac| ac.is_loop_result_sound)
@@ -514,61 +509,53 @@ impl MusicResult {
     }
 
     fn do_render(&mut self) {
-        let time = self.data.timer.get_now_time();
+        let time = self.data.timer.now_time();
         self.data.timer.switch_timer(TIMER_RESULTGRAPH_BEGIN, true);
         self.data.timer.switch_timer(TIMER_RESULTGRAPH_END, true);
 
         if let Some(ref skin) = self.skin
-            && skin.get_rank_time() == 0
+            && skin.rank_time() == 0
         {
             self.data.timer.switch_timer(TIMER_RESULT_UPDATESCORE, true);
         }
-        let skin_input = self
-            .skin
-            .as_ref()
-            .map(|s| s.get_input() as i64)
-            .unwrap_or(0);
+        let skin_input = self.skin.as_ref().map(|s| s.input() as i64).unwrap_or(0);
         if time > skin_input {
             self.data.timer.switch_timer(TIMER_STARTINPUT, true);
         }
 
         if self.data.timer.is_timer_on(TIMER_FADEOUT) {
-            let fadeout_time = self.data.timer.get_now_time_for_id(TIMER_FADEOUT);
-            let skin_fadeout = self
-                .skin
-                .as_ref()
-                .map(|s| s.get_fadeout() as i64)
-                .unwrap_or(0);
+            let fadeout_time = self.data.timer.now_time_for_id(TIMER_FADEOUT);
+            let skin_fadeout = self.skin.as_ref().map(|s| s.fadeout() as i64).unwrap_or(0);
             if fadeout_time > skin_fadeout {
-                if let Some(audio) = self.main.get_audio_processor_mut() {
+                if let Some(audio) = self.main.audio_processor_mut() {
                     audio.stop_note(None);
                 }
                 {
-                    let input = self.main.get_input_processor();
+                    let input = self.main.input_processor();
                     input.reset_all_key_changed_time();
                 }
 
-                if self.resource.get_course_bms_models().is_some() {
+                if self.resource.course_bms_models().is_some() {
                     let gauge_type = self
                         .resource
-                        .get_groove_gauge()
+                        .groove_gauge()
                         .map(|g| g.gauge_type() as usize)
                         .unwrap_or(0);
                     let last_gauge = self
                         .resource
-                        .get_gauge()
+                        .gauge()
                         .and_then(|gd| gd.get(gauge_type))
                         .and_then(|g| g.last().copied())
                         .unwrap_or(0.0);
 
                     if last_gauge <= 0.0 {
-                        if self.resource.get_course_score_data().is_some() {
+                        if self.resource.course_score_data().is_some() {
                             // Add remaining course notes as POOR
                             // Collect note counts first to avoid borrow conflict
-                            let course_gauge_size = self.resource.get_course_gauge().len();
+                            let course_gauge_size = self.resource.course_gauge().len();
                             let notes_to_add: Vec<i32> = self
                                 .resource
-                                .get_course_bms_models()
+                                .course_bms_models()
                                 .map(|models| {
                                     models
                                         .iter()
@@ -579,8 +566,7 @@ impl MusicResult {
                                 })
                                 .unwrap_or_default();
                             for total_notes in notes_to_add {
-                                if let Some(mut cscore) =
-                                    self.resource.get_course_score_data().cloned()
+                                if let Some(mut cscore) = self.resource.course_score_data().cloned()
                                 {
                                     cscore.minbp += total_notes;
                                     cscore.total_duration += 1000000i64 * total_notes as i64;
@@ -595,17 +581,17 @@ impl MusicResult {
                         }
                     } else if self.resource.next_course() {
                         // Next course song
-                        let lnmode = self.resource.get_player_config().lnmode;
-                        if let Some(songdata) = self.resource.get_songdata() {
+                        let lnmode = self.resource.player_config().lnmode;
+                        if let Some(songdata) = self.resource.songdata() {
                             let songrank: Option<RankingData> = self
                                 .main
-                                .get_ranking_data_cache()
+                                .ranking_data_cache()
                                 .song_any(songdata, lnmode)
                                 .and_then(|any| any.downcast::<RankingData>().ok())
                                 .map(|ranking| *ranking);
-                            if !self.main.get_ir_status().is_empty() && songrank.is_none() {
+                            if !self.main.ir_status().is_empty() && songrank.is_none() {
                                 let new_ranking = RankingData::new();
-                                self.main.get_ranking_data_cache_mut().put_song_any(
+                                self.main.ranking_data_cache_mut().put_song_any(
                                     songdata,
                                     lnmode,
                                     Box::new(new_ranking.clone()),
@@ -622,20 +608,20 @@ impl MusicResult {
                     }
                 } else {
                     // Non-course mode
-                    let org_gauge = self.resource.get_org_gauge_option();
+                    let org_gauge = self.resource.org_gauge_option();
                     self.resource.set_player_config_gauge(org_gauge);
 
                     let mut key: Option<ResultKey> = None;
                     {
-                        let input = self.main.get_input_processor();
-                        for i in 0..self.property.get_assign_length() {
-                            if self.property.get_assign(i) == Some(ResultKey::ReplayDifferent)
+                        let input = self.main.input_processor();
+                        for i in 0..self.property.assign_length() {
+                            if self.property.assign(i) == Some(ResultKey::ReplayDifferent)
                                 && input.key_state(i)
                             {
                                 key = Some(ResultKey::ReplayDifferent);
                                 break;
                             }
-                            if self.property.get_assign(i) == Some(ResultKey::ReplaySame)
+                            if self.property.assign(i) == Some(ResultKey::ReplaySame)
                                 && input.key_state(i)
                             {
                                 key = Some(ResultKey::ReplaySame);
@@ -644,17 +630,17 @@ impl MusicResult {
                         }
                     }
 
-                    if self.resource.get_play_mode().mode == BMSPlayerModeType::Play
+                    if self.resource.play_mode().mode == BMSPlayerModeType::Play
                         && key == Some(ResultKey::ReplayDifferent)
                     {
                         info!("Replay without changing options");
                         // Replay without changing options - same chart
-                        if let Some(rd) = self.resource.get_replay_data_mut() {
+                        if let Some(rd) = self.resource.replay_data_mut() {
                             rd.randomoptionseed = -1;
                         }
                         self.resource.reload_bms_file();
                         self.main.change_state(MainStateType::Play);
-                    } else if self.resource.get_play_mode().mode == BMSPlayerModeType::Play
+                    } else if self.resource.play_mode().mode == BMSPlayerModeType::Play
                         && key == Some(ResultKey::ReplaySame)
                     {
                         // Replay with same chart
@@ -662,7 +648,7 @@ impl MusicResult {
                             info!("Replay with same chart");
                         } else {
                             info!("Cannot replay with same chart in assist mode");
-                            if let Some(rd) = self.resource.get_replay_data_mut() {
+                            if let Some(rd) = self.resource.replay_data_mut() {
                                 rd.randomoptionseed = -1;
                             }
                         }
@@ -674,11 +660,7 @@ impl MusicResult {
                 }
             }
         } else {
-            let skin_scene = self
-                .skin
-                .as_ref()
-                .map(|s| s.get_scene() as i64)
-                .unwrap_or(0);
+            let skin_scene = self.skin.as_ref().map(|s| s.scene() as i64).unwrap_or(0);
             if time > skin_scene {
                 self.data.timer.switch_timer(TIMER_FADEOUT, true);
                 if self.has_sound(SoundType::ResultClose) {
@@ -692,24 +674,20 @@ impl MusicResult {
 
     fn do_input(&mut self) {
         self.data.input(&mut self.main);
-        let time = self.data.timer.get_now_time();
+        let time = self.data.timer.now_time();
 
         if !self.data.timer.is_timer_on(TIMER_FADEOUT)
             && self.data.timer.is_timer_on(TIMER_STARTINPUT)
         {
-            let skin_input = self
-                .skin
-                .as_ref()
-                .map(|s| s.get_input() as i64)
-                .unwrap_or(0);
+            let skin_input = self.skin.as_ref().map(|s| s.input() as i64).unwrap_or(0);
             if time > skin_input {
                 let mut ok = false;
                 let mut replay_index: Option<usize> = None;
                 let mut open_ir = false;
                 {
-                    let input_processor = self.main.get_input_processor();
-                    for i in 0..self.property.get_assign_length() {
-                        if self.property.get_assign(i) == Some(ResultKey::ChangeGraph)
+                    let input_processor = self.main.input_processor();
+                    for i in 0..self.property.assign_length() {
+                        if self.property.assign(i) == Some(ResultKey::ChangeGraph)
                             && input_processor.key_state(i)
                             && input_processor.reset_key_changed_time(i)
                         {
@@ -720,7 +698,7 @@ impl MusicResult {
                             } else {
                                 self.data.gauge_type = (self.data.gauge_type - 5) % 3 + 6;
                             }
-                        } else if self.property.get_assign(i).is_some()
+                        } else if self.property.assign(i).is_some()
                             && input_processor.key_state(i)
                             && input_processor.reset_key_changed_time(i)
                         {
@@ -749,13 +727,13 @@ impl MusicResult {
                     }
                 }
 
-                if self.resource.get_score_data().is_none() || ok {
-                    let rank_time = self.skin.as_ref().map(|s| s.get_rank_time()).unwrap_or(0);
+                if self.resource.score_data().is_none() || ok {
+                    let rank_time = self.skin.as_ref().map(|s| s.rank_time()).unwrap_or(0);
                     if rank_time != 0 && !self.data.timer.is_timer_on(TIMER_RESULT_UPDATESCORE) {
                         self.data.timer.switch_timer(TIMER_RESULT_UPDATESCORE, true);
                     } else if self.data.state == STATE_OFFLINE
                         || self.data.state == STATE_IR_FINISHED
-                        || time - self.data.timer.get_timer(TIMER_IR_CONNECT_BEGIN) >= 1000
+                        || time - self.data.timer.timer(TIMER_IR_CONNECT_BEGIN) >= 1000
                     {
                         self.data.timer.switch_timer(TIMER_FADEOUT, true);
                         if self.has_sound(SoundType::ResultClose) {
@@ -771,8 +749,8 @@ impl MusicResult {
                 }
 
                 if open_ir
-                    && let Some(ir_status) = self.main.get_ir_status().first()
-                    && let Some(songdata) = self.resource.get_songdata()
+                    && let Some(ir_status) = self.main.ir_status().first()
+                    && let Some(songdata) = self.resource.songdata()
                 {
                     let chart = rubato_ir::ir_chart_data::IRChartData::new(songdata);
                     if let Some(url) = ir_status.connection.get_song_url(&chart)
@@ -786,17 +764,17 @@ impl MusicResult {
     }
 
     pub fn save_replay_data(&mut self, index: usize) {
-        if self.resource.get_play_mode().mode == BMSPlayerModeType::Play
-            && self.resource.get_course_bms_models().is_none()
-            && self.resource.get_score_data().is_some()
+        if self.resource.play_mode().mode == BMSPlayerModeType::Play
+            && self.resource.course_bms_models().is_none()
+            && self.resource.score_data().is_some()
             && self.data.save_replay[index] != ReplayStatus::Saved
             && self.resource.is_update_score()
-            && let Some(rd) = self.resource.get_replay_data()
+            && let Some(rd) = self.resource.replay_data()
         {
-            self.main.get_play_data_accessor().write_replay_data_model(
+            self.main.play_data_accessor().write_replay_data_model(
                 &mut rd.clone(),
-                self.resource.get_bms_model(),
-                self.resource.get_player_config().lnmode,
+                self.resource.bms_model(),
+                self.resource.player_config().lnmode,
                 index as i32,
             );
             self.data.save_replay[index] = ReplayStatus::Saved;
@@ -805,10 +783,10 @@ impl MusicResult {
     }
 
     fn update_score_database(&mut self) {
-        let newscore = self.resource.get_score_data().cloned();
+        let newscore = self.resource.score_data().cloned();
         if newscore.is_none() {
-            let total_notes = self.resource.get_bms_model().total_notes();
-            if let Some(mut cscore) = self.resource.get_course_score_data().cloned() {
+            let total_notes = self.resource.bms_model().total_notes();
+            if let Some(mut cscore) = self.resource.course_score_data().cloned() {
                 cscore.minbp += total_notes;
                 cscore.clear = ClearType::Failed.id();
                 self.resource.set_course_score_data(cscore);
@@ -817,21 +795,21 @@ impl MusicResult {
         }
         let newscore = newscore.unwrap();
 
-        let oldsc = self.main.get_play_data_accessor().read_score_data_model(
-            self.resource.get_bms_model(),
-            self.resource.get_player_config().lnmode,
+        let oldsc = self.main.play_data_accessor().read_score_data_model(
+            self.resource.bms_model(),
+            self.resource.player_config().lnmode,
         );
         self.data.oldscore = oldsc.unwrap_or_default();
 
         let target_exscore = self
             .resource
-            .get_target_score_data()
+            .target_score_data()
             .map(|s| s.exscore())
             .unwrap_or(0);
         self.data.score.set_target_score(
             self.data.oldscore.exscore(),
             target_exscore,
-            self.resource.get_bms_model().total_notes(),
+            self.resource.bms_model().total_notes(),
         );
         self.data.score.update_score(Some(&newscore));
 
@@ -841,7 +819,7 @@ impl MusicResult {
         self.data.stddev = newscore.stddev;
         self.data.timing_distribution.init();
 
-        let model = self.resource.get_bms_model();
+        let model = self.resource.bms_model();
         let lanes = model.mode().map(|m| m.key()).unwrap_or(8);
         for tl in model.all_time_lines() {
             for i in 0..lanes {
@@ -866,20 +844,20 @@ impl MusicResult {
         self.data.timing_distribution.statistic_value_calculate();
 
         // Course mode score accumulation
-        if self.resource.get_course_bms_models().is_some() {
+        if self.resource.course_bms_models().is_some() {
             if newscore.clear == ClearType::Failed.id()
-                && let Some(sd) = self.resource.get_score_data_mut()
+                && let Some(sd) = self.resource.score_data_mut()
             {
                 sd.clear = ClearType::NoPlay.id();
             }
-            let mut cscore = self.resource.get_course_score_data().cloned();
+            let mut cscore = self.resource.course_score_data().cloned();
             if cscore.is_none() {
                 let mut new_cscore = ScoreData {
                     minbp: 0,
                     ..Default::default()
                 };
                 let mut notes = 0;
-                if let Some(models) = self.resource.get_course_bms_models() {
+                if let Some(models) = self.resource.course_bms_models() {
                     for mo in models {
                         notes += mo.total_notes();
                     }
@@ -912,33 +890,32 @@ impl MusicResult {
 
                 let gauge_type = self
                     .resource
-                    .get_groove_gauge()
+                    .groove_gauge()
                     .map(|g| g.gauge_type() as usize)
                     .unwrap_or(0);
                 let last_gauge_val = self
                     .resource
-                    .get_gauge()
+                    .gauge()
                     .and_then(|gd| gd.get(gauge_type))
                     .and_then(|g| g.last().copied())
                     .unwrap_or(0.0);
                 if last_gauge_val > 0.0 {
-                    if self.resource.get_assist() > 0 {
-                        if self.resource.get_assist() == 1 && cs.clear != ClearType::AssistEasy.id()
-                        {
+                    if self.resource.assist() > 0 {
+                        if self.resource.assist() == 1 && cs.clear != ClearType::AssistEasy.id() {
                             cs.clear = ClearType::LightAssistEasy.id();
                         } else {
                             cs.clear = ClearType::AssistEasy.id();
                         }
                     } else if !(cs.clear == ClearType::LightAssistEasy.id()
                         || cs.clear == ClearType::AssistEasy.id())
-                        && let Some(models) = self.resource.get_course_bms_models()
-                        && self.resource.get_course_index() == models.len() - 1
+                        && let Some(models) = self.resource.course_bms_models()
+                        && self.resource.course_index() == models.len() - 1
                     {
                         let mut course_total_notes = 0;
                         for m in models {
                             course_total_notes += m.total_notes();
                         }
-                        if course_total_notes == self.resource.get_maxcombo() {
+                        if course_total_notes == self.resource.maxcombo() {
                             if cs.judge_count(2, true) + cs.judge_count(2, false) == 0 {
                                 if cs.judge_count(1, true) + cs.judge_count(1, false) == 0 {
                                     cs.clear = ClearType::Max.id();
@@ -951,7 +928,7 @@ impl MusicResult {
                         } else {
                             cs.clear = self
                                 .resource
-                                .get_groove_gauge()
+                                .groove_gauge()
                                 .map(|g| g.clear_type())
                                 .unwrap_or(ClearType::Failed)
                                 .id();
@@ -961,12 +938,12 @@ impl MusicResult {
                     cs.clear = ClearType::Failed.id();
 
                     let mut b = false;
-                    if let Some(models) = self.resource.get_course_bms_models() {
+                    if let Some(models) = self.resource.course_bms_models() {
                         for m in models {
                             if b {
                                 cs.minbp += m.total_notes();
                             }
-                            if std::ptr::eq(m, self.resource.get_bms_model()) {
+                            if std::ptr::eq(m, self.resource.bms_model()) {
                                 b = true;
                             }
                         }
@@ -978,32 +955,32 @@ impl MusicResult {
         }
 
         if FreqTrainerMenu::is_freq_trainer_enabled()
-            && let Some(sd) = self.resource.get_score_data_mut()
+            && let Some(sd) = self.resource.score_data_mut()
         {
             sd.clear = ClearType::NoPlay.id();
         }
 
-        if self.resource.get_play_mode().mode == BMSPlayerModeType::Play
+        if self.resource.play_mode().mode == BMSPlayerModeType::Play
             && !(FreqTrainerMenu::is_freq_trainer_enabled() && FreqTrainerMenu::is_freq_negative())
         {
-            if let Some(sd) = self.resource.get_score_data() {
-                self.main.get_play_data_accessor().write_score_data_model(
+            if let Some(sd) = self.resource.score_data() {
+                self.main.play_data_accessor().write_score_data_model(
                     sd,
-                    self.resource.get_bms_model(),
-                    self.resource.get_player_config().lnmode,
+                    self.resource.bms_model(),
+                    self.resource.player_config().lnmode,
                     self.resource.is_update_score(),
                 );
             }
         } else {
             info!(
                 "Play mode is {:?}, score not registered",
-                self.resource.get_play_mode().mode
+                self.resource.play_mode().mode
             );
         }
     }
 
-    pub fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
-        if let Some(score) = self.resource.get_score_data() {
+    pub fn judge_count(&self, judge: i32, fast: bool) -> i32 {
+        if let Some(score) = self.resource.score_data() {
             match judge {
                 0 => {
                     if fast {
@@ -1054,16 +1031,16 @@ impl MusicResult {
         }
     }
 
-    pub fn get_total_notes(&self) -> i32 {
-        self.resource.get_bms_model().total_notes()
+    pub fn total_notes(&self) -> i32 {
+        self.resource.bms_model().total_notes()
     }
 
-    pub fn get_new_score(&self) -> Option<&ScoreData> {
-        self.resource.get_score_data()
+    pub fn new_score(&self) -> Option<&ScoreData> {
+        self.resource.score_data()
     }
 
     /// Get the skin as MusicResultSkin
-    pub fn get_skin(&self) -> Option<&MusicResultSkin> {
+    pub fn skin(&self) -> Option<&MusicResultSkin> {
         self.skin.as_ref()
     }
 
@@ -1073,7 +1050,7 @@ impl MusicResult {
     }
 
     fn has_sound(&self, sound: SoundType) -> bool {
-        self.main.get_sound_path(&sound).is_some()
+        self.main.sound_path(&sound).is_some()
     }
 
     fn play_sound_inner(&mut self, sound: SoundType) {
@@ -1204,8 +1181,8 @@ impl MainState for MusicResult {
 
     fn load_skin(&mut self, skin_type: i32) {
         if let Some(skin) = rubato_skin::skin_loader::load_skin_from_config(
-            self.main.get_config(),
-            self.resource.get_player_config(),
+            self.main.config(),
+            self.resource.player_config(),
             skin_type,
         ) {
             self.skin = Some(MusicResultSkin::from_loaded_skin(&skin));
@@ -1288,15 +1265,15 @@ mod tests {
 
         fn dispose_skin(&mut self) {}
 
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
 
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
 
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
 
@@ -1351,15 +1328,15 @@ mod tests {
 
         fn dispose_skin(&mut self) {}
 
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
 
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
 
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
 
@@ -1673,14 +1650,14 @@ mod tests {
 
         <MusicResult as MainState>::handle_skin_mouse_pressed(&mut mr, 0, 10, 10);
 
-        assert_eq!(mr.resource.get_player_config().random, 1);
+        assert_eq!(mr.resource.player_config().random, 1);
     }
 
     #[test]
     fn test_result_render_context_uses_replay_option_for_image_index_42() {
         let mut mr = make_result_for_mouse();
         mr.resource
-            .get_replay_data_mut()
+            .replay_data_mut()
             .expect("replay data should exist")
             .randomoption = 6;
         let mut timer = TimerManager::new();
@@ -1703,25 +1680,25 @@ mod tests {
     #[test]
     fn test_get_new_score_none_by_default() {
         let mr = MusicResult::default();
-        assert!(mr.get_new_score().is_none());
+        assert!(mr.new_score().is_none());
     }
 
     #[test]
     fn test_get_judge_count_no_score() {
         let mr = MusicResult::default();
         for judge in 0..6 {
-            assert_eq!(mr.get_judge_count(judge, true), 0);
-            assert_eq!(mr.get_judge_count(judge, false), 0);
+            assert_eq!(mr.judge_count(judge, true), 0);
+            assert_eq!(mr.judge_count(judge, false), 0);
         }
         // out of range
-        assert_eq!(mr.get_judge_count(6, true), 0);
-        assert_eq!(mr.get_judge_count(-1, false), 0);
+        assert_eq!(mr.judge_count(6, true), 0);
+        assert_eq!(mr.judge_count(-1, false), 0);
     }
 
     #[test]
-    fn test_get_total_notes_default() {
+    fn test_total_notes_default() {
         let mr = MusicResult::default();
-        assert_eq!(mr.get_total_notes(), 0);
+        assert_eq!(mr.total_notes(), 0);
     }
 
     #[test]
@@ -1775,7 +1752,7 @@ mod tests {
     #[test]
     fn test_render_switches_graph_timers() {
         let mut mr = MusicResult::default();
-        // Update timer so get_now_time works
+        // Update timer so now_time works
         mr.data.timer.update();
         <MusicResult as MainState>::render(&mut mr);
         // TIMER_RESULTGRAPH_BEGIN and TIMER_RESULTGRAPH_END should be on
@@ -1832,7 +1809,7 @@ mod tests {
     #[test]
     fn test_get_skin_none_initially() {
         let mr = MusicResult::default();
-        assert!(mr.get_skin().is_none());
+        assert!(mr.skin().is_none());
     }
 
     #[test]

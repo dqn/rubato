@@ -88,7 +88,7 @@ impl Mode {
         false
     }
 
-    pub fn get_mode(hint: &str) -> Option<Mode> {
+    pub fn from_hint(hint: &str) -> Option<Mode> {
         let modes = [
             Mode::BEAT_5K,
             Mode::BEAT_7K,
@@ -193,24 +193,24 @@ mod tests {
 
     #[test]
     fn get_mode_from_hint() {
-        assert_eq!(Mode::get_mode("beat-5k"), Some(Mode::BEAT_5K));
-        assert_eq!(Mode::get_mode("beat-7k"), Some(Mode::BEAT_7K));
-        assert_eq!(Mode::get_mode("beat-10k"), Some(Mode::BEAT_10K));
-        assert_eq!(Mode::get_mode("beat-14k"), Some(Mode::BEAT_14K));
-        assert_eq!(Mode::get_mode("popn-5k"), Some(Mode::POPN_5K));
-        assert_eq!(Mode::get_mode("popn-9k"), Some(Mode::POPN_9K));
-        assert_eq!(Mode::get_mode("keyboard-24k"), Some(Mode::KEYBOARD_24K));
+        assert_eq!(Mode::from_hint("beat-5k"), Some(Mode::BEAT_5K));
+        assert_eq!(Mode::from_hint("beat-7k"), Some(Mode::BEAT_7K));
+        assert_eq!(Mode::from_hint("beat-10k"), Some(Mode::BEAT_10K));
+        assert_eq!(Mode::from_hint("beat-14k"), Some(Mode::BEAT_14K));
+        assert_eq!(Mode::from_hint("popn-5k"), Some(Mode::POPN_5K));
+        assert_eq!(Mode::from_hint("popn-9k"), Some(Mode::POPN_9K));
+        assert_eq!(Mode::from_hint("keyboard-24k"), Some(Mode::KEYBOARD_24K));
         assert_eq!(
-            Mode::get_mode("keyboard-24k-double"),
+            Mode::from_hint("keyboard-24k-double"),
             Some(Mode::KEYBOARD_24K_DOUBLE)
         );
     }
 
     #[test]
     fn get_mode_invalid_hint_returns_none() {
-        assert_eq!(Mode::get_mode("invalid"), None);
-        assert_eq!(Mode::get_mode(""), None);
-        assert_eq!(Mode::get_mode("beat-3k"), None);
+        assert_eq!(Mode::from_hint("invalid"), None);
+        assert_eq!(Mode::from_hint(""), None);
+        assert_eq!(Mode::from_hint("beat-3k"), None);
     }
 
     #[test]
@@ -239,7 +239,7 @@ mod tests {
         ];
         for mode in &modes {
             let hint = mode.hint();
-            let recovered = Mode::get_mode(hint).expect("should find mode by hint");
+            let recovered = Mode::from_hint(hint).expect("should find mode by hint");
             assert_eq!(&recovered, mode);
         }
     }

@@ -25,7 +25,7 @@ impl SkinGraph {
         Self {
             data: SkinObjectData::new(),
             source: Box::new(SkinSourceReference::new(imageid)),
-            ref_prop: float_property_factory::get_rate_property_by_id(id),
+            ref_prop: float_property_factory::rate_property_by_id(id),
             direction,
             current: TextureRegion::new(),
             current_image: None,
@@ -63,7 +63,7 @@ impl SkinGraph {
             source: Box::new(SkinSourceImage::new_with_int_timer_from_vec(
                 image, timer, cycle,
             )),
-            ref_prop: float_property_factory::get_rate_property_by_id(id),
+            ref_prop: float_property_factory::rate_property_by_id(id),
             direction,
             current: TextureRegion::new(),
             current_image: None,
@@ -107,7 +107,7 @@ impl SkinGraph {
                 Some(timer),
                 cycle,
             )),
-            ref_prop: float_property_factory::get_rate_property_by_id(id),
+            ref_prop: float_property_factory::rate_property_by_id(id),
             direction,
             current: TextureRegion::new(),
             current_image: None,
@@ -228,11 +228,11 @@ impl SkinGraph {
         }
     }
 
-    pub fn get_ref_prop(&self) -> Option<&dyn FloatProperty> {
+    pub fn ref_prop(&self) -> Option<&dyn FloatProperty> {
         self.ref_prop.as_deref()
     }
 
-    pub fn get_direction(&self) -> i32 {
+    pub fn direction(&self) -> i32 {
         self.direction
     }
 

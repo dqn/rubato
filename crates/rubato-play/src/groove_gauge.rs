@@ -30,7 +30,7 @@ pub fn create_groove_gauge(
     if id >= 0 {
         let gauge = gauge.unwrap_or_else(|| {
             let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
-            BMSPlayerRule::get_bms_player_rule(&mode).gauge
+            BMSPlayerRule::for_mode(&mode).gauge
         });
         Some(GrooveGauge::new(model, id, &gauge))
     } else {
@@ -329,7 +329,7 @@ mod tests {
         assert!((gg.value_by_type(HARD) - 50.0).abs() < f32::EPSILON);
     }
 
-    // --- get_gauge tests ---
+    // --- gauge tests ---
 
     #[test]
     fn get_gauge_returns_current_type_gauge() {

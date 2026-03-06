@@ -306,7 +306,7 @@ impl AudioDriver for GdxSoundDriver {
         let idx = if fast { 0 } else { 1 };
         match path {
             Some(p) if !p.is_empty() => {
-                self.additional_key_sounds[j][idx] = self.get_sound(p);
+                self.additional_key_sounds[j][idx] = self.sound(p);
             }
             _ => {
                 self.additional_key_sounds[j][idx] = None;
@@ -404,7 +404,7 @@ impl AudioDriver for GdxSoundDriver {
 impl GdxSoundDriver {
     /// Load and cache a sound from path.
     /// Translated from AbstractAudioDriver.getSound()
-    fn get_sound(&mut self, path: &str) -> Option<StaticSoundData> {
+    fn sound(&mut self, path: &str) -> Option<StaticSoundData> {
         if path.is_empty() {
             return None;
         }

@@ -302,7 +302,7 @@ impl SkinConfigurationView {
         // List<SkinConfig.Option> options = new ArrayList<>();
         let mut options: Vec<Option<SkinOption>> = Vec::new();
         // for (CustomOption option : selected.getCustomOptions()) {
-        for option in selected.get_custom_options() {
+        for option in selected.custom_options() {
             // if (optionbox.get(option) != null) {
             if let Some(&item_idx) = self.optionbox.get(&option.name)
                 && let Some(SkinConfigItem::Option {
@@ -341,7 +341,7 @@ impl SkinConfigurationView {
         // List<SkinConfig.FilePath> files = new ArrayList<>();
         let mut files: Vec<Option<SkinFilePath>> = Vec::new();
         // for (CustomFile file : selected.getCustomFiles()) {
-        for file in selected.get_custom_files() {
+        for file in selected.custom_files() {
             // if (filebox.get(file) != null) {
             if let Some(&item_idx) = self.filebox.get(&file.name)
                 && let Some(SkinConfigItem::File { selected_value, .. }) =
@@ -363,7 +363,7 @@ impl SkinConfigurationView {
         // List<SkinConfig.Offset> offsets = new ArrayList<>();
         let mut offsets: Vec<Option<SkinOffset>> = Vec::new();
         // for (CustomOffset offset : selected.getCustomOffsets()) {
-        for offset in selected.get_custom_offsets() {
+        for offset in selected.custom_offsets() {
             // if (offsetbox.get(offset) != null) {
             if let Some(&item_idx) = self.offsetbox.get(&offset.name)
                 && let Some(SkinConfigItem::Offset { values, .. }) =
@@ -396,7 +396,7 @@ impl SkinConfigurationView {
         // for (SkinHeader header : skinheader) { if (header.getSkinType() == mode) { result.add(header); } }
         self.skinheader
             .iter()
-            .filter(|header| header.get_skin_type() == Some(mode))
+            .filter(|header| header.skin_type() == Some(mode))
             .collect()
     }
 
@@ -422,7 +422,7 @@ impl SkinConfigurationView {
         let headers: Vec<SkinHeader> = self
             .skinheader
             .iter()
-            .filter(|h| h.get_skin_type() == Some(skin_type))
+            .filter(|h| h.skin_type() == Some(skin_type))
             .cloned()
             .collect();
         self.current_headers = headers;
@@ -437,8 +437,7 @@ impl SkinConfigurationView {
                 let mut found = false;
                 for (i, header) in self.current_headers.iter().enumerate() {
                     // if (header != null && header.getPath().equals(Paths.get(skinconf.getPath()))) {
-                    if let (Some(header_path), Some(skin_path)) =
-                        (header.get_path(), &skinconf.path)
+                    if let (Some(header_path), Some(skin_path)) = (header.path(), &skinconf.path)
                         && header_path == &PathBuf::from(skin_path)
                     {
                         // skinheaderSelector.setValue(header);
@@ -474,14 +473,14 @@ impl SkinConfigurationView {
         if let Some(selected) = self.selected.clone() {
             // SkinConfig skin = new SkinConfig(selected.getPath().toString());
             let path_str: String = selected
-                .get_path()
+                .path()
                 .map(|p: &PathBuf| p.to_string_lossy().to_string())
                 .unwrap_or_default();
             let mut skin = SkinConfig::new_with_path(&path_str);
             // skin.setProperties(getProperty());
             skin.properties = Some(self.property());
             // player.getSkin()[selected.getSkinType().getId()] = skin;
-            if let Some(skin_type) = selected.get_skin_type() {
+            if let Some(skin_type) = selected.skin_type() {
                 let type_id = skin_type.id() as usize;
                 let player = self.player.as_mut().unwrap();
                 while player.skin.len() <= type_id {
@@ -511,21 +510,21 @@ impl SkinConfigurationView {
         for path in &skinpaths {
             if let Some(header) = load_skin_header(path, config) {
                 // 7/14key skinは5/10keyにも加える (add 7/14key skins as 5/10key too)
-                if header.get_type() == rubato_skin::skin_header::TYPE_LR2SKIN
-                    && let Some(skin_type) = header.get_skin_type()
+                if header.toast_type() == rubato_skin::skin_header::TYPE_LR2SKIN
+                    && let Some(skin_type) = header.skin_type()
                     && (*skin_type == SkinType::Play7Keys || *skin_type == SkinType::Play14Keys)
                 {
                     // Re-load to get a fresh copy for the 5/10key variant
                     if let Some(mut variant) = load_skin_header(path, config) {
-                        let variant_type = *variant.get_skin_type().unwrap();
+                        let variant_type = *variant.skin_type().unwrap();
                         if variant_type == SkinType::Play7Keys {
-                            let name = variant.get_name().unwrap_or("").to_string();
+                            let name = variant.name().unwrap_or("").to_string();
                             if !name.to_lowercase().contains("7key") {
                                 variant.set_name(format!("{} (7KEYS) ", name));
                             }
                             variant.set_skin_type(SkinType::Play5Keys);
                         } else if variant_type == SkinType::Play14Keys {
-                            let name = variant.get_name().unwrap_or("").to_string();
+                            let name = variant.name().unwrap_or("").to_string();
                             if !name.to_lowercase().contains("14key") {
                                 variant.set_name(format!("{} (14KEYS) ", name));
                             }
@@ -607,7 +606,7 @@ impl SkinConfigurationView {
             if let Some(ref player) = self.player {
                 for skinc in &player.skin_history {
                     // if(skinc.getPath().equals(header.getPath().toString())) {
-                    if let (Some(skin_path), Some(header_path)) = (&skinc.path, header.get_path())
+                    if let (Some(skin_path), Some(header_path)) = (&skinc.path, header.path())
                         && skin_path == &header_path.to_string_lossy().to_string()
                     {
                         // property = skinc.getProperties();
@@ -653,7 +652,7 @@ impl SkinConfigurationView {
         for (i, history_entry) in player.skin_history.iter().enumerate() {
             // if(player.getSkinHistory()[i].getPath().equals(selected.getPath().toString())) {
             let sel_path_str: Option<String> = selected
-                .get_path()
+                .path()
                 .map(|p: &PathBuf| p.to_string_lossy().to_string());
             if let (Some(hist_path), Some(sel_path)) = (&history_entry.path, &sel_path_str)
                 && hist_path == sel_path
@@ -667,7 +666,7 @@ impl SkinConfigurationView {
         // sc.setPath(selected.getPath().toString()); sc.setProperties(property);
         let sc = SkinConfig {
             path: selected
-                .get_path()
+                .path()
                 .map(|p: &PathBuf| p.to_string_lossy().to_string()),
             properties: Some(property),
         };
@@ -702,20 +701,20 @@ impl SkinConfigurationView {
         let mut other_offsets: Vec<usize> = Vec::new(); // indices into header's custom offsets
 
         // otheritems.addAll(Arrays.asList(header.getCustomOptions()));
-        for i in 0..header.get_custom_options().len() {
+        for i in 0..header.custom_options().len() {
             other_options.push(i);
         }
         // otheritems.addAll(Arrays.asList(header.getCustomFiles()));
-        for i in 0..header.get_custom_files().len() {
+        for i in 0..header.custom_files().len() {
             other_files.push(i);
         }
         // otheritems.addAll(Arrays.asList(header.getCustomOffsets()));
-        for i in 0..header.get_custom_offsets().len() {
+        for i in 0..header.custom_offsets().len() {
             other_offsets.push(i);
         }
 
         // for(CustomCategory category : header.getCustomCategories()) {
-        for category in header.get_custom_categories() {
+        for category in header.custom_categories() {
             // items.add(category.name);
             items.push(CreateItem::Label(category.name.clone()));
             // for(Object item : category.items) { items.add(item); otheritems.remove(item); }
@@ -725,7 +724,7 @@ impl SkinConfigurationView {
                         // Find and remove from other_options
                         if let Some(pos) = other_options
                             .iter()
-                            .position(|&i| header.get_custom_options()[i].name == opt.name)
+                            .position(|&i| header.custom_options()[i].name == opt.name)
                         {
                             let idx = other_options.remove(pos);
                             items.push(CreateItem::OptionIdx(idx));
@@ -734,7 +733,7 @@ impl SkinConfigurationView {
                     CustomItemEnum::File(file) => {
                         if let Some(pos) = other_files
                             .iter()
-                            .position(|&i| header.get_custom_files()[i].name == file.name)
+                            .position(|&i| header.custom_files()[i].name == file.name)
                         {
                             let idx = other_files.remove(pos);
                             items.push(CreateItem::FileIdx(idx));
@@ -743,7 +742,7 @@ impl SkinConfigurationView {
                     CustomItemEnum::Offset(offset) => {
                         if let Some(pos) = other_offsets
                             .iter()
-                            .position(|&i| header.get_custom_offsets()[i].name == offset.name)
+                            .position(|&i| header.custom_offsets()[i].name == offset.name)
                         {
                             let idx = other_offsets.remove(pos);
                             items.push(CreateItem::OffsetIdx(idx));
@@ -783,7 +782,7 @@ impl SkinConfigurationView {
             match item {
                 CreateItem::OptionIdx(opt_idx) => {
                     // if(item instanceof CustomOption) {
-                    let option = &header.get_custom_options()[*opt_idx];
+                    let option = &header.custom_options()[*opt_idx];
                     // ComboBox<String> combo = new ComboBox<>();
                     // combo.getItems().setAll(option.contents);
                     // combo.getItems().add("Random");
@@ -848,7 +847,7 @@ impl SkinConfigurationView {
                 }
                 CreateItem::FileIdx(file_idx) => {
                     // if(item instanceof CustomFile) {
-                    let file = &header.get_custom_files()[*file_idx];
+                    let file = &header.custom_files()[*file_idx];
 
                     // String name = file.path.substring(file.path.lastIndexOf('/') + 1);
                     let mut name = file
@@ -965,7 +964,7 @@ impl SkinConfigurationView {
                 }
                 CreateItem::OffsetIdx(offset_idx) => {
                     // if(item instanceof CustomOffset) {
-                    let offset = &header.get_custom_offsets()[*offset_idx];
+                    let offset = &header.custom_offsets()[*offset_idx];
                     // final String[] values = {"x","y","w","h","r","a"};
                     // final boolean[] b = {option.x, option.y, option.w, option.h, option.r, option.a};
                     let enabled = [offset.x, offset.y, offset.w, offset.h, offset.r, offset.a];
@@ -1016,8 +1015,8 @@ impl SkinConfigurationView {
     /// Helper: Get skin header display name for SkinListCell
     /// Translates: SkinListCell.updateItem(SkinHeader, boolean)
     pub fn skin_header_display_name(header: &SkinHeader) -> String {
-        let name = header.get_name().unwrap_or("");
-        if header.get_type() == TYPE_BEATORJASKIN {
+        let name = header.name().unwrap_or("");
+        if header.toast_type() == TYPE_BEATORJASKIN {
             name.to_string()
         } else {
             format!("{} (LR2 Skin)", name)
@@ -1227,8 +1226,8 @@ mod tests {
             tmp.path()
         );
         let header = header.unwrap();
-        assert_eq!(header.get_name(), Some("Test Skin"));
-        assert_eq!(header.get_skin_type(), Some(&SkinType::Play7Keys));
+        assert_eq!(header.name(), Some("Test Skin"));
+        assert_eq!(header.skin_type(), Some(&SkinType::Play7Keys));
     }
 
     #[test]
@@ -1246,8 +1245,8 @@ mod tests {
         // Real play7.json may fail to parse due to complex fields;
         // this test verifies the loader handles it gracefully
         if let Some(header) = header {
-            assert!(header.get_name().is_some());
-            assert!(header.get_skin_type().is_some());
+            assert!(header.name().is_some());
+            assert!(header.skin_type().is_some());
         }
     }
 
@@ -1264,10 +1263,7 @@ mod tests {
 
         assert!(header.is_some(), "Lua skin header should be loaded");
         let header = header.unwrap();
-        assert!(
-            header.get_name().is_some(),
-            "Loaded header should have a name"
-        );
+        assert!(header.name().is_some(), "Loaded header should have a name");
     }
 
     #[test]
@@ -1329,7 +1325,7 @@ mod tests {
         let headers_with_types: Vec<_> = view
             .skinheader
             .iter()
-            .filter(|h| h.get_skin_type().is_some())
+            .filter(|h| h.skin_type().is_some())
             .collect();
         assert!(
             !headers_with_types.is_empty(),
@@ -1376,7 +1372,7 @@ mod tests {
         // If there are any, they should all have the correct type
         for header in &play7_headers {
             assert_eq!(
-                header.get_skin_type(),
+                header.skin_type(),
                 Some(&SkinType::Play7Keys),
                 "Filtered headers should have the correct skin type"
             );
@@ -1396,13 +1392,10 @@ mod tests {
 
         let header = convert_lr2_header_data(&lr2_data);
 
-        assert_eq!(header.get_type(), TYPE_LR2SKIN);
-        assert_eq!(header.get_name(), Some("Test LR2 Skin"));
-        assert_eq!(header.get_skin_type(), Some(&SkinType::Play7Keys));
-        assert_eq!(
-            header.get_path(),
-            Some(&PathBuf::from("/test/skin.lr2skin"))
-        );
+        assert_eq!(header.toast_type(), TYPE_LR2SKIN);
+        assert_eq!(header.name(), Some("Test LR2 Skin"));
+        assert_eq!(header.skin_type(), Some(&SkinType::Play7Keys));
+        assert_eq!(header.path(), Some(&PathBuf::from("/test/skin.lr2skin")));
     }
 
     #[test]
@@ -1422,9 +1415,9 @@ mod tests {
 
         let header = convert_lr2_header_data(&lr2_data);
 
-        assert_eq!(header.get_custom_options().len(), 1);
-        assert_eq!(header.get_custom_options()[0].name, "BGA Size");
-        assert_eq!(header.get_custom_options()[0].option, vec![30, 31]);
+        assert_eq!(header.custom_options().len(), 1);
+        assert_eq!(header.custom_options()[0].name, "BGA Size");
+        assert_eq!(header.custom_options()[0].option, vec![30, 31]);
     }
 
     #[test]
@@ -1444,13 +1437,10 @@ mod tests {
 
         let header = convert_lr2_header_data(&lr2_data);
 
-        assert_eq!(header.get_custom_files().len(), 1);
-        assert_eq!(header.get_custom_files()[0].name, "Lane");
-        assert_eq!(header.get_custom_files()[0].path, "skin/lane/*.png");
-        assert_eq!(
-            header.get_custom_files()[0].def,
-            Some("default".to_string())
-        );
+        assert_eq!(header.custom_files().len(), 1);
+        assert_eq!(header.custom_files()[0].name, "Lane");
+        assert_eq!(header.custom_files()[0].path, "skin/lane/*.png");
+        assert_eq!(header.custom_files()[0].def, Some("default".to_string()));
     }
 
     #[test]
@@ -1475,12 +1465,12 @@ mod tests {
 
         let header = convert_lr2_header_data(&lr2_data);
 
-        assert_eq!(header.get_custom_offsets().len(), 1);
-        assert_eq!(header.get_custom_offsets()[0].name, "All offset(%)");
-        assert_eq!(header.get_custom_offsets()[0].id, 0);
-        assert!(header.get_custom_offsets()[0].x);
-        assert!(header.get_custom_offsets()[0].y);
-        assert!(!header.get_custom_offsets()[0].r);
+        assert_eq!(header.custom_offsets().len(), 1);
+        assert_eq!(header.custom_offsets()[0].name, "All offset(%)");
+        assert_eq!(header.custom_offsets()[0].id, 0);
+        assert!(header.custom_offsets()[0].x);
+        assert!(header.custom_offsets()[0].y);
+        assert!(!header.custom_offsets()[0].r);
     }
 
     #[test]
@@ -1496,8 +1486,8 @@ mod tests {
 
         assert!(header.is_some(), "LR2 skin header should be loaded");
         let header = header.unwrap();
-        assert_eq!(header.get_type(), TYPE_LR2SKIN);
-        assert_eq!(header.get_name(), Some("Test LR2"));
+        assert_eq!(header.toast_type(), TYPE_LR2SKIN);
+        assert_eq!(header.name(), Some("Test LR2"));
     }
 
     #[test]

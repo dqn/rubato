@@ -9,29 +9,23 @@ pub const TOTALNOTES_SCRATCH: i32 = 3;
 pub const TOTALNOTES_LONG_SCRATCH: i32 = 4;
 pub const TOTALNOTES_MINE: i32 = 5;
 
-pub fn get_total_notes(model: &BMSModel) -> i32 {
-    get_total_notes_range(model, 0, i32::MAX)
+pub fn total_notes(model: &BMSModel) -> i32 {
+    total_notes_range(model, 0, i32::MAX)
 }
 
-pub fn get_total_notes_with_type(model: &BMSModel, note_type: i32) -> i32 {
-    get_total_notes_full(model, 0, i32::MAX, note_type, 0)
+pub fn total_notes_with_type(model: &BMSModel, note_type: i32) -> i32 {
+    total_notes_full(model, 0, i32::MAX, note_type, 0)
 }
 
-pub fn get_total_notes_range(model: &BMSModel, start: i32, end: i32) -> i32 {
-    get_total_notes_full(model, start, end, TOTALNOTES_ALL, 0)
+pub fn total_notes_range(model: &BMSModel, start: i32, end: i32) -> i32 {
+    total_notes_full(model, start, end, TOTALNOTES_ALL, 0)
 }
 
-pub fn get_total_notes_range_type(model: &BMSModel, start: i32, end: i32, note_type: i32) -> i32 {
-    get_total_notes_full(model, start, end, note_type, 0)
+pub fn total_notes_range_type(model: &BMSModel, start: i32, end: i32, note_type: i32) -> i32 {
+    total_notes_full(model, start, end, note_type, 0)
 }
 
-pub fn get_total_notes_full(
-    model: &BMSModel,
-    start: i32,
-    end: i32,
-    note_type: i32,
-    side: i32,
-) -> i32 {
+pub fn total_notes_full(model: &BMSModel, start: i32, end: i32, note_type: i32, side: i32) -> i32 {
     let mode = match model.mode() {
         Some(m) => m,
         None => return 0,
@@ -155,11 +149,11 @@ pub fn get_total_notes_full(
 
 /// Java: BMSModelUtils.getAverageNotesPerTime(BMSModel, int, int)
 /// Returns the average notes per 1000ms in the given time range.
-pub fn get_average_notes_per_time(model: &BMSModel, start: i32, end: i32) -> f64 {
+pub fn average_notes_per_time(model: &BMSModel, start: i32, end: i32) -> f64 {
     if end <= start {
         return 0.0;
     }
-    get_total_notes_range(model, start, end) as f64 * 1000.0 / (end - start) as f64
+    total_notes_range(model, start, end) as f64 * 1000.0 / (end - start) as f64
 }
 
 pub fn change_frequency(model: &mut BMSModel, freq: f32) {
@@ -171,7 +165,7 @@ pub fn change_frequency(model: &mut BMSModel, freq: f32) {
     }
 }
 
-pub fn get_max_notes_per_time(model: &BMSModel, range: i32) -> f64 {
+pub fn max_notes_per_time(model: &BMSModel, range: i32) -> f64 {
     let mut maxnotes: i32 = 0;
     let tl = model.all_time_lines();
     let lntype = model.lntype();
@@ -237,26 +231,26 @@ mod tests {
         model
     }
 
-    // --- get_total_notes ---
+    // --- total_notes ---
 
     #[test]
-    fn get_total_notes_normal_notes() {
+    fn total_notes_normal_notes() {
         let mut tl = TimeLine::new(0.0, 0, 8);
         tl.set_note(0, Some(Note::new_normal(1)));
         tl.set_note(1, Some(Note::new_normal(2)));
         tl.set_note(2, Some(Note::new_normal(3)));
         let model = make_model_7k(vec![tl]);
-        assert_eq!(get_total_notes(&model), 3);
+        assert_eq!(total_notes(&model), 3);
     }
 
     #[test]
-    fn get_total_notes_empty_model() {
+    fn total_notes_empty_model() {
         let model = BMSModel::new();
-        assert_eq!(get_total_notes(&model), 0);
+        assert_eq!(total_notes(&model), 0);
     }
 
     #[test]
-    fn get_total_notes_key_only_excludes_scratch() {
+    fn total_notes_key_only_excludes_scratch() {
         // BEAT_7K: scratch key is lane 7, non-scratch lanes are 0-6
         let mut tl = TimeLine::new(0.0, 0, 8);
         tl.set_note(0, Some(Note::new_normal(1))); // key lane
@@ -264,44 +258,44 @@ mod tests {
         tl.set_note(7, Some(Note::new_normal(3))); // scratch lane
         let model = make_model_7k(vec![tl]);
 
-        let key_count = get_total_notes_with_type(&model, TOTALNOTES_KEY);
+        let key_count = total_notes_with_type(&model, TOTALNOTES_KEY);
         assert_eq!(key_count, 2); // only non-scratch normal notes
     }
 
     #[test]
-    fn get_total_notes_mine_only() {
+    fn total_notes_mine_only() {
         let mut tl = TimeLine::new(0.0, 0, 8);
         tl.set_note(0, Some(Note::new_normal(1)));
         tl.set_note(1, Some(Note::new_mine(2, 0.5)));
         tl.set_note(2, Some(Note::new_mine(3, 0.3)));
         let model = make_model_7k(vec![tl]);
 
-        let mine_count = get_total_notes_with_type(&model, TOTALNOTES_MINE);
+        let mine_count = total_notes_with_type(&model, TOTALNOTES_MINE);
         assert_eq!(mine_count, 2);
     }
 
     #[test]
-    fn get_total_notes_side_2_single_player_returns_zero() {
+    fn total_notes_side_2_single_player_returns_zero() {
         let mut tl = TimeLine::new(0.0, 0, 8);
         tl.set_note(0, Some(Note::new_normal(1)));
         let model = make_model_7k(vec![tl]);
 
         // BEAT_7K is single player (player=1), so side=2 should return 0
-        let count = get_total_notes_full(&model, 0, i32::MAX, TOTALNOTES_ALL, 2);
+        let count = total_notes_full(&model, 0, i32::MAX, TOTALNOTES_ALL, 2);
         assert_eq!(count, 0);
     }
 
-    // --- get_average_notes_per_time ---
+    // --- average_notes_per_time ---
 
     #[test]
-    fn get_average_notes_per_time_end_lte_start() {
+    fn average_notes_per_time_end_lte_start() {
         let model = make_model_7k(vec![]);
-        assert_eq!(get_average_notes_per_time(&model, 100, 100), 0.0);
-        assert_eq!(get_average_notes_per_time(&model, 100, 50), 0.0);
+        assert_eq!(average_notes_per_time(&model, 100, 100), 0.0);
+        assert_eq!(average_notes_per_time(&model, 100, 50), 0.0);
     }
 
     #[test]
-    fn get_average_notes_per_time_basic() {
+    fn average_notes_per_time_basic() {
         // 10 notes in a 2000ms window => 5.0 notes per 1000ms
         let mut timelines = Vec::new();
         for i in 0..10 {
@@ -313,7 +307,7 @@ mod tests {
         }
         let model = make_model_7k(timelines);
 
-        let avg = get_average_notes_per_time(&model, 0, 2000);
+        let avg = average_notes_per_time(&model, 0, 2000);
         assert!((avg - 5.0).abs() < f64::EPSILON);
     }
 
@@ -353,10 +347,10 @@ mod tests {
         assert_eq!(tl.micro_stop(), 1_000_000); // doubled
     }
 
-    // --- get_max_notes_per_time ---
+    // --- max_notes_per_time ---
 
     #[test]
-    fn get_max_notes_per_time_clustered_notes() {
+    fn max_notes_per_time_clustered_notes() {
         // 3 notes at the same time (time=0) within range=1000
         let mut tl = TimeLine::new(0.0, 0, 8);
         tl.set_note(0, Some(Note::new_normal(1)));
@@ -364,13 +358,13 @@ mod tests {
         tl.set_note(2, Some(Note::new_normal(3)));
         let model = make_model_7k(vec![tl]);
 
-        assert!((get_max_notes_per_time(&model, 1000) - 3.0).abs() < f64::EPSILON);
+        assert!((max_notes_per_time(&model, 1000) - 3.0).abs() < f64::EPSILON);
     }
 
     #[test]
-    fn get_max_notes_per_time_empty_model() {
+    fn max_notes_per_time_empty_model() {
         let model = make_model_7k(vec![]);
-        assert!((get_max_notes_per_time(&model, 1000)).abs() < f64::EPSILON);
+        assert!((max_notes_per_time(&model, 1000)).abs() < f64::EPSILON);
     }
 
     // --- set_start_note_time ---
@@ -431,14 +425,14 @@ mod tests {
     }
 
     #[test]
-    fn get_total_notes_scratch_only() {
+    fn total_notes_scratch_only() {
         // BEAT_7K: scratch key is lane 7
         let mut tl = TimeLine::new(0.0, 0, 8);
         tl.set_note(0, Some(Note::new_normal(1))); // key lane
         tl.set_note(7, Some(Note::new_normal(2))); // scratch lane
         let model = make_model_7k(vec![tl]);
 
-        let scratch_count = get_total_notes_with_type(&model, TOTALNOTES_SCRATCH);
+        let scratch_count = total_notes_with_type(&model, TOTALNOTES_SCRATCH);
         assert_eq!(scratch_count, 1);
     }
 }

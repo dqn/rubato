@@ -38,26 +38,26 @@ impl TableBar {
         bar
     }
 
-    pub fn get_title(&self) -> String {
-        self.td.get_name().to_string()
+    pub fn title(&self) -> String {
+        self.td.name().to_string()
     }
 
-    pub fn get_url(&self) -> Option<&str> {
-        self.td.get_url_opt()
+    pub fn url(&self) -> Option<&str> {
+        self.td.url_opt()
     }
 
-    pub fn get_accessor(&self) -> &dyn TableAccessor {
+    pub fn accessor(&self) -> &dyn TableAccessor {
         self.tr.as_ref()
     }
 
     pub fn set_table_data(&mut self, td: TableData) {
         self.levels = td
-            .get_folder()
+            .folder()
             .iter()
-            .map(|folder| HashBar::new(folder.get_name().to_string(), folder.get_song().to_vec()))
+            .map(|folder| HashBar::new(folder.name().to_string(), folder.song().to_vec()))
             .collect();
 
-        let courses = td.get_course();
+        let courses = td.course();
         let mut hashset: HashSet<String> = HashSet::new();
         for course in courses {
             for song in &course.hash {
@@ -88,19 +88,19 @@ impl TableBar {
         self.td = td;
     }
 
-    pub fn get_levels(&self) -> &[HashBar] {
+    pub fn levels(&self) -> &[HashBar] {
         &self.levels
     }
 
-    pub fn get_grades(&self) -> &[GradeBar] {
+    pub fn grades(&self) -> &[GradeBar] {
         &self.grades
     }
 
-    pub fn get_children(&self) -> &[Bar] {
+    pub fn children(&self) -> &[Bar] {
         &self.children
     }
 
-    pub fn get_table_data(&self) -> &TableData {
+    pub fn table_data(&self) -> &TableData {
         &self.td
     }
 }

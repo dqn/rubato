@@ -91,7 +91,7 @@ impl SkinBGA {
         }
     }
 
-    pub fn get_stretch_type(&self) -> StretchType {
+    pub fn stretch_type(&self) -> StretchType {
         match self.bga_expand {
             BGAEXPAND_FULL => StretchType::Stretch,
             BGAEXPAND_KEEP_ASPECT_RATIO => StretchType::KeepAspectRatioFitInner,
@@ -101,7 +101,7 @@ impl SkinBGA {
     }
 
     /// Get the current time (set during prepare).
-    pub fn get_time(&self) -> i64 {
+    pub fn time(&self) -> i64 {
         self.time
     }
 
@@ -132,19 +132,19 @@ mod tests {
     #[test]
     fn test_stretch_type_from_expand_config() {
         assert_eq!(
-            SkinBGA::new(BGAEXPAND_FULL).get_stretch_type(),
+            SkinBGA::new(BGAEXPAND_FULL).stretch_type(),
             StretchType::Stretch
         );
         assert_eq!(
-            SkinBGA::new(BGAEXPAND_KEEP_ASPECT_RATIO).get_stretch_type(),
+            SkinBGA::new(BGAEXPAND_KEEP_ASPECT_RATIO).stretch_type(),
             StretchType::KeepAspectRatioFitInner
         );
         assert_eq!(
-            SkinBGA::new(BGAEXPAND_OFF).get_stretch_type(),
+            SkinBGA::new(BGAEXPAND_OFF).stretch_type(),
             StretchType::KeepAspectRatioNoExpanding
         );
         // Invalid defaults to Stretch
-        assert_eq!(SkinBGA::new(99).get_stretch_type(), StretchType::Stretch);
+        assert_eq!(SkinBGA::new(99).stretch_type(), StretchType::Stretch);
     }
 
     #[test]
@@ -237,8 +237,8 @@ mod tests {
     #[test]
     fn test_skin_bga_prepare_sets_time() {
         let mut bga = SkinBGA::new(BGAEXPAND_FULL);
-        assert_eq!(bga.get_time(), 0);
+        assert_eq!(bga.time(), 0);
         bga.prepare(12345);
-        assert_eq!(bga.get_time(), 12345);
+        assert_eq!(bga.time(), 12345);
     }
 }

@@ -46,9 +46,9 @@ impl SkinFloat {
         gain: f32,
     ) -> Self {
         let ff = FloatFormatter::new(iketa, fketa, is_sign_visible, zeropadding);
-        let keta = ff.get_keta_length();
-        let actual_iketa = ff.get_iketa();
-        let actual_fketa = ff.get_fketa();
+        let keta = ff.keta_length();
+        let actual_iketa = ff.iketa();
+        let actual_fketa = ff.fketa();
         let current_images = vec![None; keta as usize];
         Self {
             data: SkinObjectData::new(),
@@ -299,7 +299,7 @@ impl SkinFloat {
             space,
             gain,
         );
-        s.ref_prop = float_property_factory::get_float_property_by_id(id);
+        s.ref_prop = float_property_factory::float_property_by_id(id);
         s
     }
 
@@ -332,7 +332,7 @@ impl SkinFloat {
             space,
             gain,
         );
-        s.ref_prop = float_property_factory::get_float_property_by_id(id);
+        s.ref_prop = float_property_factory::float_property_by_id(id);
         s
     }
 
@@ -558,7 +558,7 @@ impl SkinFloat {
         }
     }
 
-    pub fn get_length(&self) -> f32 {
+    pub fn length(&self) -> f32 {
         self.length
     }
 

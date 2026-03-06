@@ -79,7 +79,7 @@ impl LaneIterState {
         self.seek_pos = self.base_pos;
     }
 
-    fn get_note(&mut self) -> Option<usize> {
+    fn note(&mut self) -> Option<usize> {
         if self.seek_pos < self.note_indices.len() {
             let idx = self.note_indices[self.seek_pos];
             self.seek_pos += 1;
@@ -344,22 +344,22 @@ impl JudgeManager {
         let keys_per_player = lane_count / player_count;
 
         // Build judge windows
-        let nmjudge = config.judge_property.get_judge(
+        let nmjudge = config.judge_property.judge(
             NoteType::Note,
             config.judge_rank,
             &config.judge_window_rate,
         );
-        let cnendmjudge = config.judge_property.get_judge(
+        let cnendmjudge = config.judge_property.judge(
             NoteType::LongnoteEnd,
             config.judge_rank,
             &config.judge_window_rate,
         );
-        let smjudge = config.judge_property.get_judge(
+        let smjudge = config.judge_property.judge(
             NoteType::Scratch,
             config.judge_rank,
             &config.scratch_judge_window_rate,
         );
-        let scnendmjudge = config.judge_property.get_judge(
+        let scnendmjudge = config.judge_property.judge(
             NoteType::LongscratchEnd,
             config.judge_rank,
             &config.scratch_judge_window_rate,
@@ -385,10 +385,10 @@ impl JudgeManager {
         }
 
         // Build LaneIterState for each lane
-        let lane_key_assign = lp.get_lane_key_assign();
-        let lane_scratch = lp.get_lane_scratch_assign();
-        let lane_skin_offset = lp.get_lane_skin_offset();
-        let lane_player = lp.get_lane_player();
+        let lane_key_assign = lp.lane_key_assign();
+        let lane_scratch = lp.lane_scratch_assign();
+        let lane_skin_offset = lp.lane_skin_offset();
+        let lane_player = lp.lane_player();
         let mut lane_states = Vec::with_capacity(lane_count);
         for lane in 0..lane_count {
             let laneassign = if lane < lane_key_assign.len() {
@@ -445,11 +445,11 @@ impl JudgeManager {
             })
             .count();
 
-        let keyassign_vec: Vec<i32> = lp.get_key_lane_assign().to_vec();
+        let keyassign_vec: Vec<i32> = lp.key_lane_assign().to_vec();
         let num_keys = keyassign_vec.len();
 
         // Scratch key count
-        let scratch_count = lp.get_scratch_key_assign().len();
+        let scratch_count = lp.scratch_key_assign().len();
 
         let mut jm = JudgeManager {
             lntype: config.ln_type,
@@ -537,7 +537,7 @@ impl JudgeManager {
             // Iterate notes from prevmtime to mtime
             #[allow(clippy::while_let_loop)]
             loop {
-                let note_idx = match self.lane_states[lane_idx].get_note() {
+                let note_idx = match self.lane_states[lane_idx].note() {
                     Some(idx) => idx,
                     None => break,
                 };
@@ -751,7 +751,7 @@ impl JudgeManager {
                     #[allow(clippy::while_let_loop)]
                     #[allow(clippy::nonminimal_bool)]
                     loop {
-                        let note_idx = match self.lane_states[lane_idx].get_note() {
+                        let note_idx = match self.lane_states[lane_idx].note() {
                             Some(idx) => idx,
                             None => break,
                         };
@@ -1107,7 +1107,7 @@ impl JudgeManager {
             self.lane_states[lane_idx].reset();
             #[allow(clippy::while_let_loop)]
             loop {
-                let note_idx = match self.lane_states[lane_idx].get_note() {
+                let note_idx = match self.lane_states[lane_idx].note() {
                     Some(idx) => idx,
                     None => break,
                 };
@@ -1272,13 +1272,13 @@ impl JudgeManager {
         });
         // BMSPlayerRule::get_bms_player_rule always returns the LR2 ruleset in the current
         // implementation (bms_player_rule_set_lr2). Map to the types-level enum accordingly.
-        let _ = BMSPlayerRule::get_bms_player_rule(&orgmode);
+        let _ = BMSPlayerRule::for_mode(&orgmode);
         self.score.rule = Some(rubato_types::bms_player_rule::BMSPlayerRule::LR2);
 
         self.ghost = vec![4; model.total_notes() as usize];
         self.lntype = model.lntype();
 
-        let rule = BMSPlayerRule::get_bms_player_rule(&orgmode);
+        let rule = BMSPlayerRule::for_mode(&orgmode);
         let judgerank = model.judgerank();
 
         let mut key_judge_window_rate = if let Some(config) = player_config {
@@ -1330,15 +1330,15 @@ impl JudgeManager {
 
         self.nmjudge = rule
             .judge
-            .get_judge(NoteType::Note, judgerank, &key_judge_window_rate);
+            .judge(NoteType::Note, judgerank, &key_judge_window_rate);
         self.cnendmjudge =
             rule.judge
-                .get_judge(NoteType::LongnoteEnd, judgerank, &key_judge_window_rate);
+                .judge(NoteType::LongnoteEnd, judgerank, &key_judge_window_rate);
         self.nreleasemargin = rule.judge.longnote_margin;
-        self.smjudge =
-            rule.judge
-                .get_judge(NoteType::Scratch, judgerank, &scratch_judge_window_rate);
-        self.scnendmjudge = rule.judge.get_judge(
+        self.smjudge = rule
+            .judge
+            .judge(NoteType::Scratch, judgerank, &scratch_judge_window_rate);
+        self.scnendmjudge = rule.judge.judge(
             NoteType::LongscratchEnd,
             judgerank,
             &scratch_judge_window_rate,
@@ -1377,7 +1377,7 @@ impl JudgeManager {
         self.score.maxcombo
     }
 
-    pub fn ghost(&self) -> Vec<usize> {
+    pub fn ghost_as_usize(&self) -> Vec<usize> {
         self.ghost.iter().map(|&g| g as usize).collect()
     }
 
@@ -1399,19 +1399,19 @@ impl JudgeManager {
         delta
     }
 
-    pub fn get_recent_judges(&self) -> &[i64] {
+    pub fn recent_judges(&self) -> &[i64] {
         &self.recent_judges
     }
 
-    pub fn get_micro_recent_judges(&self) -> &[i64] {
+    pub fn micro_recent_judges(&self) -> &[i64] {
         &self.micro_recent_judges
     }
 
-    pub fn get_recent_judges_index(&self) -> usize {
+    pub fn recent_judges_index(&self) -> usize {
         self.recent_judges_index
     }
 
-    pub fn get_recent_judge_timing(&self, player: usize) -> i64 {
+    pub fn recent_judge_timing(&self, player: usize) -> i64 {
         if player < self.judgefast.len() {
             self.judgefast[player]
         } else {
@@ -1419,7 +1419,7 @@ impl JudgeManager {
         }
     }
 
-    pub fn get_recent_judge_micro_timing(&self, player: usize) -> i64 {
+    pub fn recent_judge_micro_timing(&self, player: usize) -> i64 {
         if player < self.mjudgefast.len() {
             self.mjudgefast[player]
         } else {
@@ -1427,7 +1427,7 @@ impl JudgeManager {
         }
     }
 
-    pub fn get_processing_long_note(&self, lane: usize) -> Option<usize> {
+    pub fn processing_long_note(&self, lane: usize) -> Option<usize> {
         if lane < self.lane_states.len() {
             self.lane_states[lane].processing
         } else {
@@ -1435,7 +1435,7 @@ impl JudgeManager {
         }
     }
 
-    pub fn get_passing_long_note(&self, lane: usize) -> Option<usize> {
+    pub fn passing_long_note(&self, lane: usize) -> Option<usize> {
         if lane < self.lane_states.len() {
             self.lane_states[lane].passing
         } else {
@@ -1443,7 +1443,7 @@ impl JudgeManager {
         }
     }
 
-    pub fn get_hell_charge_judge(&self, lane: usize) -> bool {
+    pub fn hell_charge_judge(&self, lane: usize) -> bool {
         if lane < self.lane_states.len() {
             self.lane_states[lane].inclease
         } else {
@@ -1451,15 +1451,15 @@ impl JudgeManager {
         }
     }
 
-    pub fn get_auto_presstime(&self) -> &[i64] {
+    pub fn auto_presstime(&self) -> &[i64] {
         &self.auto_presstime
     }
 
-    pub fn get_combo(&self) -> i32 {
+    pub fn combo(&self) -> i32 {
         self.combo
     }
 
-    pub fn get_course_combo(&self) -> i32 {
+    pub fn course_combo(&self) -> i32 {
         self.coursecombo
     }
 
@@ -1467,7 +1467,7 @@ impl JudgeManager {
         self.coursecombo = combo;
     }
 
-    pub fn get_course_maxcombo(&self) -> i32 {
+    pub fn course_maxcombo(&self) -> i32 {
         self.coursemaxcombo
     }
 
@@ -1475,7 +1475,7 @@ impl JudgeManager {
         self.coursemaxcombo = combo;
     }
 
-    pub fn get_judge_time_region(&self, lane: usize) -> &[[i64; 2]] {
+    pub fn judge_time_region(&self, lane: usize) -> &[[i64; 2]] {
         if lane < self.lane_states.len() && self.lane_states[lane].sckey >= 0 {
             &self.smjudge
         } else {
@@ -1483,25 +1483,25 @@ impl JudgeManager {
         }
     }
 
-    pub fn get_score_data(&self) -> &ScoreData {
+    pub fn score_data(&self) -> &ScoreData {
         &self.score
     }
 
     /// Get mutable reference to score data (for testing).
     #[cfg(test)]
-    pub fn get_score_data_mut(&mut self) -> &mut ScoreData {
+    pub fn score_data_mut(&mut self) -> &mut ScoreData {
         &mut self.score
     }
 
-    pub fn get_judge_count(&self, judge: i32) -> i32 {
+    pub fn judge_count(&self, judge: i32) -> i32 {
         self.score.judge_count_total(judge)
     }
 
-    pub fn get_judge_count_fast(&self, judge: i32, fast: bool) -> i32 {
+    pub fn judge_count_fast(&self, judge: i32, fast: bool) -> i32 {
         self.score.judge_count(judge, fast)
     }
 
-    pub fn get_now_judge(&self, player: usize) -> i32 {
+    pub fn now_judge(&self, player: usize) -> i32 {
         if player < self.judgenow.len() {
             self.judgenow[player]
         } else {
@@ -1509,7 +1509,7 @@ impl JudgeManager {
         }
     }
 
-    pub fn get_now_combo(&self, player: usize) -> i32 {
+    pub fn now_combo(&self, player: usize) -> i32 {
         if player < self.judgecombo.len() {
             self.judgecombo[player]
         } else {
@@ -1517,15 +1517,11 @@ impl JudgeManager {
         }
     }
 
-    pub fn get_judge_table(&self, sc: bool) -> &[[i64; 2]] {
+    pub fn judge_table(&self, sc: bool) -> &[[i64; 2]] {
         if sc { &self.smjudge } else { &self.nmjudge }
     }
 
-    pub fn get_past_notes(&self) -> i32 {
-        self.score.passnotes
-    }
-
-    pub fn get_ghost(&self) -> &[i32] {
+    pub fn ghost(&self) -> &[i32] {
         &self.ghost
     }
 }
@@ -1542,24 +1538,24 @@ mod tests {
     #[test]
     fn new_creates_default_state() {
         let jm = JudgeManager::new();
-        assert_eq!(jm.get_combo(), 0);
-        assert_eq!(jm.get_course_combo(), 0);
-        assert_eq!(jm.get_course_maxcombo(), 0);
+        assert_eq!(jm.combo(), 0);
+        assert_eq!(jm.course_combo(), 0);
+        assert_eq!(jm.course_maxcombo(), 0);
     }
 
     #[test]
     fn default_is_same_as_new() {
         let jm1 = JudgeManager::new();
         let jm2 = JudgeManager::default();
-        assert_eq!(jm1.get_combo(), jm2.get_combo());
-        assert_eq!(jm1.get_course_combo(), jm2.get_course_combo());
-        assert_eq!(jm1.get_course_maxcombo(), jm2.get_course_maxcombo());
+        assert_eq!(jm1.combo(), jm2.combo());
+        assert_eq!(jm1.course_combo(), jm2.course_combo());
+        assert_eq!(jm1.course_maxcombo(), jm2.course_maxcombo());
     }
 
     #[test]
     fn recent_judges_initialized_to_min() {
         let jm = JudgeManager::new();
-        let judges = jm.get_recent_judges();
+        let judges = jm.recent_judges();
         assert_eq!(judges.len(), 100);
         for &j in judges {
             assert_eq!(j, i64::MIN);
@@ -1569,7 +1565,7 @@ mod tests {
     #[test]
     fn micro_recent_judges_initialized_to_min() {
         let jm = JudgeManager::new();
-        let judges = jm.get_micro_recent_judges();
+        let judges = jm.micro_recent_judges();
         assert_eq!(judges.len(), 100);
         for &j in judges {
             assert_eq!(j, i64::MIN);
@@ -1579,49 +1575,49 @@ mod tests {
     #[test]
     fn recent_judges_index_starts_at_zero() {
         let jm = JudgeManager::new();
-        assert_eq!(jm.get_recent_judges_index(), 0);
+        assert_eq!(jm.recent_judges_index(), 0);
     }
 
     #[test]
     fn set_course_combo() {
         let mut jm = JudgeManager::new();
         jm.set_course_combo(42);
-        assert_eq!(jm.get_course_combo(), 42);
+        assert_eq!(jm.course_combo(), 42);
     }
 
     #[test]
     fn set_course_maxcombo() {
         let mut jm = JudgeManager::new();
         jm.set_course_maxcombo(100);
-        assert_eq!(jm.get_course_maxcombo(), 100);
+        assert_eq!(jm.course_maxcombo(), 100);
     }
 
     #[test]
     fn get_now_judge_out_of_bounds_returns_zero() {
         let jm = JudgeManager::new();
-        assert_eq!(jm.get_now_judge(0), 0);
-        assert_eq!(jm.get_now_judge(100), 0);
+        assert_eq!(jm.now_judge(0), 0);
+        assert_eq!(jm.now_judge(100), 0);
     }
 
     #[test]
     fn get_now_combo_out_of_bounds_returns_zero() {
         let jm = JudgeManager::new();
-        assert_eq!(jm.get_now_combo(0), 0);
-        assert_eq!(jm.get_now_combo(100), 0);
+        assert_eq!(jm.now_combo(0), 0);
+        assert_eq!(jm.now_combo(100), 0);
     }
 
     #[test]
     fn get_recent_judge_timing_out_of_bounds_returns_zero() {
         let jm = JudgeManager::new();
-        assert_eq!(jm.get_recent_judge_timing(0), 0);
-        assert_eq!(jm.get_recent_judge_timing(100), 0);
+        assert_eq!(jm.recent_judge_timing(0), 0);
+        assert_eq!(jm.recent_judge_timing(100), 0);
     }
 
     #[test]
     fn get_recent_judge_micro_timing_out_of_bounds_returns_zero() {
         let jm = JudgeManager::new();
-        assert_eq!(jm.get_recent_judge_micro_timing(0), 0);
-        assert_eq!(jm.get_recent_judge_micro_timing(100), 0);
+        assert_eq!(jm.recent_judge_micro_timing(0), 0);
+        assert_eq!(jm.recent_judge_micro_timing(100), 0);
     }
 
     #[test]
@@ -1632,10 +1628,10 @@ mod tests {
         model.set_judgerank(100);
         jm.init(&model, 1, None, &[]);
 
-        assert_eq!(jm.get_now_judge(0), 0);
-        let table = jm.get_judge_table(false);
+        assert_eq!(jm.now_judge(0), 0);
+        let table = jm.judge_table(false);
         assert!(!table.is_empty());
-        let sc_table = jm.get_judge_table(true);
+        let sc_table = jm.judge_table(true);
         assert!(!sc_table.is_empty());
     }
 
@@ -1647,7 +1643,7 @@ mod tests {
         model.set_judgerank(100);
         jm.init(&model, 1, None, &[]);
 
-        let ghost = jm.get_ghost();
+        let ghost = jm.ghost();
         let total = model.total_notes() as usize;
         assert_eq!(ghost.len(), total);
         for &g in ghost {
@@ -1662,8 +1658,8 @@ mod tests {
         model.set_mode(Mode::BEAT_7K);
         jm.init(&model, 1, None, &[]);
 
-        assert_eq!(jm.get_recent_judges_index(), 0);
-        for &j in jm.get_recent_judges() {
+        assert_eq!(jm.recent_judges_index(), 0);
+        for &j in jm.recent_judges() {
             assert_eq!(j, i64::MIN);
         }
     }
@@ -1672,7 +1668,7 @@ mod tests {
     fn get_judge_count_initially_zero() {
         let jm = JudgeManager::new();
         for i in 0..6 {
-            assert_eq!(jm.get_judge_count(i), 0);
+            assert_eq!(jm.judge_count(i), 0);
         }
     }
 
@@ -1680,27 +1676,27 @@ mod tests {
     fn get_judge_count_fast_initially_zero() {
         let jm = JudgeManager::new();
         for i in 0..6 {
-            assert_eq!(jm.get_judge_count_fast(i, true), 0);
-            assert_eq!(jm.get_judge_count_fast(i, false), 0);
+            assert_eq!(jm.judge_count_fast(i, true), 0);
+            assert_eq!(jm.judge_count_fast(i, false), 0);
         }
     }
 
     #[test]
     fn get_past_notes_initially_zero() {
         let jm = JudgeManager::new();
-        assert_eq!(jm.get_past_notes(), 0);
+        assert_eq!(jm.past_notes(), 0);
     }
 
     #[test]
     fn get_auto_presstime_initially_empty() {
         let jm = JudgeManager::new();
-        assert!(jm.get_auto_presstime().is_empty());
+        assert!(jm.auto_presstime().is_empty());
     }
 
     #[test]
     fn get_score_data_returns_default() {
         let jm = JudgeManager::new();
-        let score = jm.get_score_data();
+        let score = jm.score_data();
         assert_eq!(score.maxcombo, 0);
         assert_eq!(score.epg, 0);
         assert_eq!(score.egr, 0);
@@ -1714,8 +1710,8 @@ mod tests {
         model.set_judgerank(100);
         jm.init(&model, 2, None, &[]);
 
-        assert_eq!(jm.get_now_judge(0), 0);
-        assert_eq!(jm.get_now_judge(1), 0);
+        assert_eq!(jm.now_judge(0), 0);
+        assert_eq!(jm.now_judge(1), 0);
     }
 
     #[test]
@@ -1726,7 +1722,7 @@ mod tests {
         model.set_judgerank(100);
         jm.init(&model, 1, None, &[]);
 
-        let region = jm.get_judge_time_region(0);
+        let region = jm.judge_time_region(0);
         assert!(!region.is_empty());
         assert!(region[0][0] < 0);
         assert!(region[0][1] > 0);
@@ -1774,7 +1770,7 @@ mod tests {
 
         assert_eq!(jm.score().notes, 2);
         assert_eq!(jm.ghost().len(), 2);
-        assert_eq!(jm.get_combo(), 0);
+        assert_eq!(jm.combo(), 0);
         assert_eq!(jm.past_notes(), 0);
     }
 
@@ -1805,7 +1801,7 @@ mod tests {
         let mut gauge = GrooveGauge::new(&model, GrooveGauge::NORMAL, &gp);
 
         let lp = LaneProperty::new(&Mode::BEAT_7K);
-        let key_count = lp.get_key_lane_assign().len();
+        let key_count = lp.key_lane_assign().len();
         let key_states = vec![false; key_count];
         let key_times = vec![i64::MIN; key_count];
 
@@ -1823,8 +1819,8 @@ mod tests {
         assert_eq!(jm.score().epg + jm.score().lpg, 3);
         assert_eq!(jm.max_combo(), 3);
         assert_eq!(jm.past_notes(), 3);
-        for &g in &jm.ghost() {
-            assert_eq!(g, JUDGE_PG as usize);
+        for &g in jm.ghost() {
+            assert_eq!(g, JUDGE_PG as i32);
         }
     }
 
@@ -1854,7 +1850,7 @@ mod tests {
         let mut gauge = GrooveGauge::new(&model, GrooveGauge::NORMAL, &gp);
 
         let lp = LaneProperty::new(&Mode::BEAT_7K);
-        let key_count = lp.get_key_lane_assign().len();
+        let key_count = lp.key_lane_assign().len();
         let key_states = vec![false; key_count];
         let key_times = vec![i64::MIN; key_count];
 
@@ -1868,7 +1864,7 @@ mod tests {
 
         // Note should be miss-POOR (judge=4)
         assert_eq!(jm.past_notes(), 1);
-        assert_eq!(jm.ghost()[0], JUDGE_PR as usize);
+        assert_eq!(jm.ghost()[0], JUDGE_PR as i32);
     }
 
     // --- Phase 36d: Custom judge rates and course constraints ---
@@ -1883,8 +1879,8 @@ mod tests {
         model.set_judgerank(100);
         jm.init(&model, 1, None, &[]);
 
-        let nm = jm.get_judge_table(false);
-        let sm = jm.get_judge_table(true);
+        let nm = jm.judge_table(false);
+        let sm = jm.judge_table(true);
         assert!(!nm.is_empty());
         assert!(!sm.is_empty());
 
@@ -1892,8 +1888,8 @@ mod tests {
         // a second JudgeManager initialized the same way.
         let mut jm2 = JudgeManager::new();
         jm2.init(&model, 1, None, &[]);
-        assert_eq!(jm.get_judge_table(false), jm2.get_judge_table(false));
-        assert_eq!(jm.get_judge_table(true), jm2.get_judge_table(true));
+        assert_eq!(jm.judge_table(false), jm2.judge_table(false));
+        assert_eq!(jm.judge_table(true), jm2.judge_table(true));
     }
 
     #[test]
@@ -1921,13 +1917,13 @@ mod tests {
 
         // Custom rates should produce different (narrower) judge tables
         assert_ne!(
-            jm_default.get_judge_table(false),
-            jm_custom.get_judge_table(false),
+            jm_default.judge_table(false),
+            jm_custom.judge_table(false),
             "Custom key judge rates should differ from default"
         );
         assert_ne!(
-            jm_default.get_judge_table(true),
-            jm_custom.get_judge_table(true),
+            jm_default.judge_table(true),
+            jm_custom.judge_table(true),
             "Custom scratch judge rates should differ from default"
         );
     }
@@ -1947,12 +1943,12 @@ mod tests {
         jm_with_config.init(&model, 1, Some(&config), &[]);
 
         assert_eq!(
-            jm_default.get_judge_table(false),
-            jm_with_config.get_judge_table(false),
+            jm_default.judge_table(false),
+            jm_with_config.judge_table(false),
         );
         assert_eq!(
-            jm_default.get_judge_table(true),
-            jm_with_config.get_judge_table(true),
+            jm_default.judge_table(true),
+            jm_with_config.judge_table(true),
         );
     }
 
@@ -1970,8 +1966,8 @@ mod tests {
         let mut jm_constrained = JudgeManager::new();
         jm_constrained.init(&model, 1, None, &[CourseDataConstraint::NoGreat]);
 
-        let nm_normal = jm_normal.get_judge_table(false);
-        let nm_constrained = jm_constrained.get_judge_table(false);
+        let nm_normal = jm_normal.judge_table(false);
+        let nm_constrained = jm_constrained.judge_table(false);
 
         // The NoGreat constraint zeroes rates [1] and [2], which affects
         // Great and Good windows. The PerfectGreat window (index 0) stays.
@@ -1981,8 +1977,8 @@ mod tests {
             "NoGreat should modify key judge tables"
         );
 
-        let sm_normal = jm_normal.get_judge_table(true);
-        let sm_constrained = jm_constrained.get_judge_table(true);
+        let sm_normal = jm_normal.judge_table(true);
+        let sm_constrained = jm_constrained.judge_table(true);
         assert_ne!(
             sm_normal, sm_constrained,
             "NoGreat should modify scratch judge tables"
@@ -2003,8 +1999,8 @@ mod tests {
         let mut jm_constrained = JudgeManager::new();
         jm_constrained.init(&model, 1, None, &[CourseDataConstraint::NoGood]);
 
-        let nm_normal = jm_normal.get_judge_table(false);
-        let nm_constrained = jm_constrained.get_judge_table(false);
+        let nm_normal = jm_normal.judge_table(false);
+        let nm_constrained = jm_constrained.judge_table(false);
 
         // NoGood zeroes only rate[2] (Good window), so tables should differ.
         assert_ne!(
@@ -2012,8 +2008,8 @@ mod tests {
             "NoGood should modify key judge tables"
         );
 
-        let sm_normal = jm_normal.get_judge_table(true);
-        let sm_constrained = jm_constrained.get_judge_table(true);
+        let sm_normal = jm_normal.judge_table(true);
+        let sm_constrained = jm_constrained.judge_table(true);
         assert_ne!(
             sm_normal, sm_constrained,
             "NoGood should modify scratch judge tables"
@@ -2035,13 +2031,13 @@ mod tests {
         // NoGreat zeroes both Great and Good, while NoGood only zeroes Good.
         // So their tables should differ (NoGreat is strictly more restrictive).
         assert_ne!(
-            jm_no_good.get_judge_table(false),
-            jm_no_great.get_judge_table(false),
+            jm_no_good.judge_table(false),
+            jm_no_great.judge_table(false),
             "NoGreat should be more restrictive than NoGood for key"
         );
         assert_ne!(
-            jm_no_good.get_judge_table(true),
-            jm_no_great.get_judge_table(true),
+            jm_no_good.judge_table(true),
+            jm_no_great.judge_table(true),
             "NoGreat should be more restrictive than NoGood for scratch"
         );
     }
@@ -2069,7 +2065,7 @@ mod tests {
             is_play_or_practice: true,
         };
         let jm = JudgeManager::from_config(&config);
-        let rule = BMSPlayerRule::get_bms_player_rule(&Mode::BEAT_7K);
+        let rule = BMSPlayerRule::for_mode(&Mode::BEAT_7K);
         let gauge = GrooveGauge::new(&model, 0, &rule.gauge);
         (jm, notes, gauge)
     }
@@ -2083,7 +2079,7 @@ mod tests {
         let (mut jm, notes, mut gauge) = make_autoadjust_jm(&times);
 
         let lp = LaneProperty::new(&Mode::BEAT_7K);
-        let key_count = lp.get_key_lane_assign().len();
+        let key_count = lp.key_lane_assign().len();
 
         // Prime with -1 update
         jm.update(
@@ -2135,11 +2131,11 @@ mod tests {
             is_play_or_practice: true,
         };
         let mut jm = JudgeManager::from_config(&config);
-        let rule = BMSPlayerRule::get_bms_player_rule(&Mode::BEAT_7K);
+        let rule = BMSPlayerRule::for_mode(&Mode::BEAT_7K);
         let mut gauge = GrooveGauge::new(&model, 0, &rule.gauge);
 
         let lp = LaneProperty::new(&Mode::BEAT_7K);
-        let key_count = lp.get_key_lane_assign().len();
+        let key_count = lp.key_lane_assign().len();
 
         jm.update(
             -1,
@@ -2187,11 +2183,11 @@ mod tests {
             is_play_or_practice: false,
         };
         let mut jm = JudgeManager::from_config(&config);
-        let rule = BMSPlayerRule::get_bms_player_rule(&Mode::BEAT_7K);
+        let rule = BMSPlayerRule::for_mode(&Mode::BEAT_7K);
         let mut gauge = GrooveGauge::new(&model, 0, &rule.gauge);
 
         let lp = LaneProperty::new(&Mode::BEAT_7K);
-        let key_count = lp.get_key_lane_assign().len();
+        let key_count = lp.key_lane_assign().len();
 
         jm.update(
             -1,
@@ -2224,7 +2220,7 @@ mod tests {
         let (mut jm, notes, mut gauge) = make_autoadjust_jm(&times);
 
         let lp = LaneProperty::new(&Mode::BEAT_7K);
-        let key_count = lp.get_key_lane_assign().len();
+        let key_count = lp.key_lane_assign().len();
 
         jm.update(
             -1,

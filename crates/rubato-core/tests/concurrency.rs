@@ -45,14 +45,14 @@ fn concurrency_score_db_read_access_separate_connections() {
 
     let handle1 = thread::spawn(move || {
         let accessor = ScoreDatabaseAccessor::new(&path1).unwrap();
-        let result = accessor.get_score_data("concurrent_test_hash", 0);
+        let result = accessor.score_data("concurrent_test_hash", 0);
         assert!(result.is_some(), "Thread 1 should read the score");
         assert_eq!(result.unwrap().clear, 7);
     });
 
     let handle2 = thread::spawn(move || {
         let accessor = ScoreDatabaseAccessor::new(&path2).unwrap();
-        let result = accessor.get_score_data("concurrent_test_hash", 0);
+        let result = accessor.score_data("concurrent_test_hash", 0);
         assert!(result.is_some(), "Thread 2 should read the score");
         assert_eq!(result.unwrap().clear, 7);
     });
@@ -95,7 +95,7 @@ fn concurrency_score_db_read_write_access() {
         let accessor = ScoreDatabaseAccessor::new(&path_reader).unwrap();
         // Read multiple times to increase chance of concurrent access
         for _ in 0..10 {
-            let result = accessor.get_score_data("rw_test_hash", 0);
+            let result = accessor.score_data("rw_test_hash", 0);
             assert!(result.is_some(), "Reader should find the score");
         }
     });

@@ -40,7 +40,7 @@ impl SkinHidden {
     /// Creates a SkinHidden from images with an integer timer ID.
     pub fn new_with_int_timer(image: Vec<TextureRegion>, timer: i32, cycle: i32) -> Self {
         let timer_prop: Option<Box<dyn TimerProperty>> = if timer > 0 {
-            timer_property_factory::get_timer_property(timer)
+            timer_property_factory::timer_property(timer)
         } else {
             None
         };
@@ -60,7 +60,7 @@ impl SkinHidden {
         }
     }
 
-    pub fn get_disapear_line(&self) -> f32 {
+    pub fn disapear_line(&self) -> f32 {
         self.disapear_line
     }
 
@@ -166,7 +166,7 @@ mod tests {
     fn test_new_with_int_timer() {
         let images = vec![TextureRegion::new(), TextureRegion::new()];
         let hidden = SkinHidden::new_with_int_timer(images, 0, 100);
-        assert_eq!(hidden.get_disapear_line(), -1.0);
+        assert_eq!(hidden.disapear_line(), -1.0);
         assert!(hidden.is_disapear_line_link_lift());
         assert_eq!(hidden.original_images.len(), 2);
     }
@@ -176,7 +176,7 @@ mod tests {
         let images = vec![TextureRegion::new()];
         let mut hidden = SkinHidden::new_with_int_timer(images, 0, 0);
         hidden.set_disapear_line(300.0);
-        assert_eq!(hidden.get_disapear_line(), 300.0);
+        assert_eq!(hidden.disapear_line(), 300.0);
     }
 
     #[test]

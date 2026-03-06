@@ -283,7 +283,7 @@ impl BGAProcessor {
     /// Draw BGA content to the given renderer.
     /// Translated from: Java BGAProcessor.drawBGA(SkinBGA dst, SkinObjectRenderer sprite, Rectangle r)
     ///
-    /// The `stretch` parameter comes from SkinBGA.get_stretch_type().
+    /// The `stretch` parameter comes from SkinBGA.stretch_type().
     /// The `color` and `blend` are from the SkinObject destination state.
     pub fn draw_bga(
         &mut self,
@@ -309,9 +309,9 @@ impl BGAProcessor {
             && self.time < self.misslayertime + self.get_misslayer_duration
         {
             // Draw miss layer
-            let miss_index = self.get_miss_layer_index();
+            let miss_index = self.miss_layer_index();
             if miss_index != Sequence::END {
-                let miss = self.get_bga_data(self.time, miss_index, true);
+                let miss = self.bga_data(self.time, miss_index, true);
                 if let Some(tex) = miss {
                     renderer.set_type(BgaRenderType::Linear);
                     self.draw_bga_fix_ratio(renderer, r, &tex, stretch);
@@ -321,7 +321,7 @@ impl BGAProcessor {
             // Draw BGA
             let bga_id = self.playingbgaid;
             let rbga = self.rbga;
-            let bga_tex = self.get_bga_data(self.time, bga_id, rbga);
+            let bga_tex = self.bga_data(self.time, bga_id, rbga);
             self.rbga = true;
             if let Some(tex) = bga_tex {
                 let is_movie = self.is_movie(bga_id);
@@ -339,7 +339,7 @@ impl BGAProcessor {
             // Draw layer
             let layer_id = self.playinglayerid;
             let rlayer = self.rlayer;
-            let layer_tex = self.get_bga_data(self.time, layer_id, rlayer);
+            let layer_tex = self.bga_data(self.time, layer_id, rlayer);
             self.rlayer = true;
             if let Some(tex) = layer_tex {
                 let is_movie = self.is_movie(layer_id);
@@ -355,7 +355,7 @@ impl BGAProcessor {
 
     /// Get the BGA id from the miss layer sequence for the current time.
     /// Returns Sequence::END if no valid index.
-    fn get_miss_layer_index(&self) -> i32 {
+    fn miss_layer_index(&self) -> i32 {
         if let Some(ref misslayer) = self.misslayer
             && !misslayer.sequence.is_empty()
             && !misslayer.sequence[0].is_empty()
@@ -397,7 +397,7 @@ impl BGAProcessor {
         self.movies.clear();
     }
 
-    pub fn get_progress(&self) -> f32 {
+    pub fn progress(&self) -> f32 {
         self.progress
     }
 
@@ -415,7 +415,7 @@ impl BGAProcessor {
     /// Translated from: Java BGAProcessor.getBGAData(long time, int id, boolean cont)
     ///
     /// `cont` = true means playback is continuing (don't restart), false = new BGA.
-    fn get_bga_data(&mut self, time: i64, id: i32, cont: bool) -> Option<Texture> {
+    fn bga_data(&mut self, time: i64, id: i32, cont: bool) -> Option<Texture> {
         if self.progress != 1.0 || id < 0 {
             return None;
         }
@@ -426,11 +426,11 @@ impl BGAProcessor {
             if !cont {
                 mp.play(time, false);
             }
-            return mp.get_frame(time);
+            return mp.frame(time);
         }
         // Fall back to static image cache
         if let Some(ref mut cache) = self.cache
-            && let Some(tex) = cache.get_texture(idx)
+            && let Some(tex) = cache.texture(idx)
         {
             return Some(tex.clone());
         }
@@ -514,7 +514,7 @@ mod tests {
     }
 
     impl MovieProcessor for MockMovieProcessor {
-        fn get_frame(&mut self, _time: i64) -> Option<Texture> {
+        fn frame(&mut self, _time: i64) -> Option<Texture> {
             if self.playing {
                 Some(self.frame_tex.clone())
             } else {
@@ -703,51 +703,51 @@ mod tests {
     }
 
     #[test]
-    fn test_get_bga_data_returns_none_when_not_ready() {
+    fn test_bga_data_returns_none_when_not_ready() {
         let mut proc = BGAProcessor::new();
         proc.progress = 0.5; // not finished loading
-        assert!(proc.get_bga_data(0, 0, false).is_none());
+        assert!(proc.bga_data(0, 0, false).is_none());
     }
 
     #[test]
-    fn test_get_bga_data_returns_none_for_invalid_id() {
+    fn test_bga_data_returns_none_for_invalid_id() {
         let mut proc = BGAProcessor::new();
-        assert!(proc.get_bga_data(0, -1, false).is_none());
-        assert!(proc.get_bga_data(0, -2, false).is_none());
+        assert!(proc.bga_data(0, -1, false).is_none());
+        assert!(proc.bga_data(0, -2, false).is_none());
     }
 
     #[test]
-    fn test_get_bga_data_movie_returns_frame() {
+    fn test_bga_data_movie_returns_frame() {
         let mut proc = BGAProcessor::new();
         proc.progress = 1.0; // mark as loaded
         proc.set_movie_count(2);
         proc.set_movie(1, Box::new(MockMovieProcessor::new(640, 480)));
 
-        // First call (cont=false) should trigger play + get_frame
-        let tex = proc.get_bga_data(1000, 1, false);
+        // First call (cont=false) should trigger play + frame
+        let tex = proc.bga_data(1000, 1, false);
         assert!(tex.is_some());
         let tex = tex.unwrap();
         assert_eq!(tex.width, 640);
         assert_eq!(tex.height, 480);
 
-        // Subsequent call (cont=true) should just get_frame without play
-        let tex2 = proc.get_bga_data(2000, 1, true);
+        // Subsequent call (cont=true) should just frame without play
+        let tex2 = proc.bga_data(2000, 1, true);
         assert!(tex2.is_some());
     }
 
     #[test]
-    fn test_get_bga_data_movie_not_cont_triggers_play() {
+    fn test_bga_data_movie_not_cont_triggers_play() {
         let mut proc = BGAProcessor::new();
         proc.progress = 1.0;
         proc.set_movie_count(1);
         proc.set_movie(0, Box::new(MockMovieProcessor::new(320, 240)));
 
         // cont=false: play() should be called, returns Some
-        let result1 = proc.get_bga_data(5000, 0, false);
+        let result1 = proc.bga_data(5000, 0, false);
         assert!(result1.is_some());
 
         // cont=true: play() should NOT be called again, still returns Some (already playing)
-        let result2 = proc.get_bga_data(6000, 0, true);
+        let result2 = proc.bga_data(6000, 0, true);
         assert!(result2.is_some());
     }
 
@@ -760,13 +760,13 @@ mod tests {
         proc.set_movie(2, Box::new(MockMovieProcessor::new(200, 200)));
 
         // Start playing
-        proc.get_bga_data(0, 0, false);
-        proc.get_bga_data(0, 2, false);
+        proc.bga_data(0, 0, false);
+        proc.bga_data(0, 2, false);
 
         proc.stop();
-        // After stop, get_frame should return None (movies stopped)
-        let t0 = proc.get_bga_data(100, 0, true);
-        let t2 = proc.get_bga_data(100, 2, true);
+        // After stop, frame should return None (movies stopped)
+        let t0 = proc.bga_data(100, 0, true);
+        let t2 = proc.bga_data(100, 2, true);
         assert!(t0.is_none());
         assert!(t2.is_none());
     }
@@ -943,13 +943,13 @@ mod tests {
     // =========================================================================
 
     #[test]
-    fn test_get_miss_layer_index_no_misslayer() {
+    fn test_miss_layer_index_no_misslayer() {
         let proc = BGAProcessor::new();
-        assert_eq!(proc.get_miss_layer_index(), Sequence::END);
+        assert_eq!(proc.miss_layer_index(), Sequence::END);
     }
 
     #[test]
-    fn test_get_miss_layer_index_single_sequence() {
+    fn test_miss_layer_index_single_sequence() {
         let mut proc = BGAProcessor::new();
         proc.misslayer = Some(Layer::new(
             Event::new(EventType::Miss, 0),
@@ -959,11 +959,11 @@ mod tests {
         proc.get_misslayer_duration = 500;
         proc.time = 200; // elapsed = 100
 
-        assert_eq!(proc.get_miss_layer_index(), 42);
+        assert_eq!(proc.miss_layer_index(), 42);
     }
 
     #[test]
-    fn test_get_miss_layer_index_multi_sequence() {
+    fn test_miss_layer_index_multi_sequence() {
         let mut proc = BGAProcessor::new();
         proc.misslayer = Some(Layer::new(
             Event::new(EventType::Miss, 0),
@@ -978,15 +978,15 @@ mod tests {
 
         // At time 0: index = (3-1)*0/300 = 0 -> id 10
         proc.time = 0;
-        assert_eq!(proc.get_miss_layer_index(), 10);
+        assert_eq!(proc.miss_layer_index(), 10);
 
         // At time 150: index = (3-1)*150/300 = 1 -> id 20
         proc.time = 150;
-        assert_eq!(proc.get_miss_layer_index(), 20);
+        assert_eq!(proc.miss_layer_index(), 20);
 
         // At time 299: index = (3-1)*299/300 = 1 -> id 20 (integer math)
         proc.time = 299;
-        assert_eq!(proc.get_miss_layer_index(), 20);
+        assert_eq!(proc.miss_layer_index(), 20);
     }
 
     #[test]

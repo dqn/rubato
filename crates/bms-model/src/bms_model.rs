@@ -402,7 +402,7 @@ impl BMSModel {
     }
 
     pub fn total_notes(&self) -> i32 {
-        crate::bms_model_utils::get_total_notes(self)
+        crate::bms_model_utils::total_notes(self)
     }
 
     pub fn build_judge_notes(&self) -> Vec<JudgeNote> {

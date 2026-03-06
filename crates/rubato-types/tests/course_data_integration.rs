@@ -300,7 +300,7 @@ fn all_constraint_names_roundtrip_via_get_value() {
         assert_eq!(
             resolved,
             Some(*constraint),
-            "Constraint {:?} with name '{}' should round-trip through get_value",
+            "Constraint {:?} with name '{}' should round-trip through value",
             constraint,
             name
         );

@@ -44,7 +44,7 @@ pub fn target_name(target: &str) -> String {
 ///
 /// Static mappings: RANK_AAA→"RANK AAA-", RANK_AA→"RANK AA-", RANK_A→"RANK A-",
 /// RANK_MAX→"MAX-", MYBEST→"MY BEST", RANK_NEXT→"NEXT RANK".
-/// Rival mappings: RIVAL_1..RIVAL_4 → rivals[n-1].get_name().
+/// Rival mappings: RIVAL_1..RIVAL_4 → rivals[n-1].name().
 ///
 /// Java: TargetProperty.getTargetName()
 pub fn resolve_target_name(id: &str, rivals: &[PlayerInformation]) -> String {

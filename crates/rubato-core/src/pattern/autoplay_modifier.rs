@@ -95,7 +95,7 @@ impl PatternModifier for AutoplayModifier {
         self.base.assist = assist;
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -113,7 +113,7 @@ impl PatternModifier for AutoplayModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 }
@@ -129,14 +129,14 @@ mod tests {
     #[test]
     fn autoplay_modifier_creation() {
         let modifier = AutoplayModifier::new(vec![0, 1]);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
-        assert_eq!(modifier.get_player(), 0);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
+        assert_eq!(modifier.player(), 0);
     }
 
     #[test]
     fn autoplay_modifier_with_margin() {
         let modifier = AutoplayModifier::with_margin(vec![0], 100);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
     }
 
     #[test]
@@ -158,7 +158,7 @@ mod tests {
     fn autoplay_modifier_set_assist_level() {
         let mut modifier = AutoplayModifier::new(vec![0]);
         modifier.set_assist_level(AssistLevel::LightAssist);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(modifier.assist_level(), AssistLevel::LightAssist);
     }
 
     #[test]
@@ -182,7 +182,7 @@ mod tests {
         // So ALL specified lanes are moved to background
         // Lane 1 is NOT in the lanes list, so it stays
         assert!(tls[0].note(1).is_some());
-        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
     }
 
     #[test]
@@ -196,7 +196,7 @@ mod tests {
         let mut modifier = AutoplayModifier::new(vec![0]);
         modifier.modify(&mut model);
 
-        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
     }
 
     #[test]
@@ -210,7 +210,7 @@ mod tests {
         modifier.modify(&mut model);
 
         // No notes exist in lane 0, so assist stays None
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
     }
 
     #[test]

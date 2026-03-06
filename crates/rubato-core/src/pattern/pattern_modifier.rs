@@ -19,13 +19,13 @@ pub enum AssistLevel {
 pub trait PatternModifier {
     fn modify(&mut self, model: &mut BMSModel);
 
-    fn get_assist_level(&self) -> AssistLevel;
+    fn assist_level(&self) -> AssistLevel;
     fn set_assist_level(&mut self, assist: AssistLevel);
 
     fn get_seed(&self) -> i64;
     fn set_seed(&mut self, seed: i64);
 
-    fn get_player(&self) -> i32;
+    fn player(&self) -> i32;
 
     /// Whether this modifier has a displayable lane shuffle pattern.
     /// LaneShuffleModifier subclasses override this to return true.
@@ -39,7 +39,7 @@ pub trait PatternModifier {
         None
     }
 
-    fn get_keys(&self, mode: &Mode, player: i32, contains_scratch: bool) -> Vec<i32> {
+    fn keys(&self, mode: &Mode, player: i32, contains_scratch: bool) -> Vec<i32> {
         if player >= mode.player() {
             return Vec::new();
         }
@@ -108,7 +108,7 @@ impl IdentityModifier {
 impl PatternModifier for IdentityModifier {
     fn modify(&mut self, _model: &mut BMSModel) {}
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -126,7 +126,7 @@ impl PatternModifier for IdentityModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 }
@@ -174,7 +174,7 @@ pub fn create_pattern_modifier(
     mode: &Mode,
     config: &PlayerConfig,
 ) -> Box<dyn PatternModifier> {
-    let chart_option = Random::get_random(id, mode);
+    let chart_option = Random::from_id(id, mode);
     match chart_option {
         Random::Identity => Box::new(IdentityModifier::new()),
         Random::Mirror => Box::new(LaneMirrorShuffleModifier::new(player, false)),
@@ -308,8 +308,8 @@ mod tests {
     #[test]
     fn identity_modifier_default_values() {
         let modifier = IdentityModifier::new();
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
-        assert_eq!(modifier.get_player(), 0);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
+        assert_eq!(modifier.player(), 0);
     }
 
     #[test]
@@ -338,7 +338,7 @@ mod tests {
     fn identity_modifier_set_assist_level() {
         let mut modifier = IdentityModifier::new();
         modifier.set_assist_level(AssistLevel::Assist);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
     }
 
     #[test]
@@ -358,13 +358,13 @@ mod tests {
         assert_eq!(model.all_time_lines()[0].note(0).unwrap().wav(), 1);
     }
 
-    // -- get_keys --
+    // -- keys --
 
     #[test]
     fn get_keys_beat_7k_player0_no_scratch() {
         let modifier = IdentityModifier::new();
         let mode = Mode::BEAT_7K;
-        let keys = modifier.get_keys(&mode, 0, false);
+        let keys = modifier.keys(&mode, 0, false);
         // BEAT_7K: key=8, player=1, scratch=7
         // keys 0..8 excluding scratch key 7
         assert_eq!(keys, vec![0, 1, 2, 3, 4, 5, 6]);
@@ -374,7 +374,7 @@ mod tests {
     fn get_keys_beat_7k_player0_with_scratch() {
         let modifier = IdentityModifier::new();
         let mode = Mode::BEAT_7K;
-        let keys = modifier.get_keys(&mode, 0, true);
+        let keys = modifier.keys(&mode, 0, true);
         // All keys 0..8 including scratch
         assert_eq!(keys, vec![0, 1, 2, 3, 4, 5, 6, 7]);
     }
@@ -383,7 +383,7 @@ mod tests {
     fn get_keys_popn_9k_no_scratch() {
         let modifier = IdentityModifier::new();
         let mode = Mode::POPN_9K;
-        let keys = modifier.get_keys(&mode, 0, false);
+        let keys = modifier.keys(&mode, 0, false);
         // POPN_9K: key=9, player=1, no scratch keys
         assert_eq!(keys, vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
     }
@@ -395,7 +395,7 @@ mod tests {
         // BEAT_14K: key=16, player=2
         // Player 0: startkey = 16*0/2 = 0, range = 0..8
         // Scratch keys: 7, 15 -> only 7 is in range
-        let keys = modifier.get_keys(&mode, 0, false);
+        let keys = modifier.keys(&mode, 0, false);
         assert_eq!(keys, vec![0, 1, 2, 3, 4, 5, 6]);
     }
 
@@ -405,7 +405,7 @@ mod tests {
         let mode = Mode::BEAT_14K;
         // Player 1: startkey = 16*1/2 = 8, range = 8..16
         // Scratch keys: 7, 15 -> only 15 is in range
-        let keys = modifier.get_keys(&mode, 1, false);
+        let keys = modifier.keys(&mode, 1, false);
         assert_eq!(keys, vec![8, 9, 10, 11, 12, 13, 14]);
     }
 
@@ -414,7 +414,7 @@ mod tests {
         let modifier = IdentityModifier::new();
         let mode = Mode::BEAT_7K;
         // player=1 but mode.player()=1, so player >= mode.player() -> empty
-        let keys = modifier.get_keys(&mode, 1, false);
+        let keys = modifier.keys(&mode, 1, false);
         assert!(keys.is_empty());
     }
 

@@ -32,7 +32,7 @@ pub trait Controller {
     fn get_axis(&self, axis_code: i32) -> f32;
 
     /// Returns the name of the controller.
-    fn get_name(&self) -> &str;
+    fn name(&self) -> &str;
 
     /// Returns the unique ID of the controller, if available.
     fn get_unique_id(&self) -> Option<String>;

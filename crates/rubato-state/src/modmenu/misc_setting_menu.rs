@@ -109,7 +109,7 @@ impl MiscSettingMenu {
                                 .clicked()
                             {
                                 *PLAY_MODE_VALUE.lock().unwrap() = idx;
-                                if let Some(mode) = Mode::get_mode(&play_mode_options[i]) {
+                                if let Some(mode) = Mode::from_hint(&play_mode_options[i]) {
                                     change_play_mode(&mode);
                                 }
                             }

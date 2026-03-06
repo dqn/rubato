@@ -128,7 +128,7 @@ impl BMSONDecoder {
 
         model.set_bpm(bmson_data.info.init_bpm);
         model.set_playlevel(bmson_data.info.level.to_string());
-        let mode = Mode::get_mode(&bmson_data.info.mode_hint);
+        let mode = Mode::from_hint(&bmson_data.info.mode_hint);
         if let Some(mode) = mode {
             model.set_mode(mode);
         } else {

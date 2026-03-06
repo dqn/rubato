@@ -48,7 +48,7 @@ mod tests {
             fn get_download_url_based_on_md5(&self, md5: &str) -> anyhow::Result<String> {
                 Ok(format!("https://dummy/{}", md5))
             }
-            fn get_name(&self) -> &str {
+            fn name(&self) -> &str {
                 "dummy"
             }
             fn is_allow_download_through_md5(&self) -> bool {
@@ -78,7 +78,7 @@ mod tests {
             HttpDownloadSourceMeta::new("test_source", "https://example.com/%s", dummy_builder);
         let config = Config::default();
         let source = meta.build(&config);
-        assert_eq!(source.get_name(), "dummy");
+        assert_eq!(source.name(), "dummy");
         let url = source.get_download_url_based_on_md5("abc123").unwrap();
         assert_eq!(url, "https://dummy/abc123");
     }

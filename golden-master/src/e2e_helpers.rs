@@ -67,7 +67,7 @@ pub fn count_normal_notes(notes: &[JudgeNote]) -> usize {
 pub fn run_autoplay_simulation(model: &BMSModel, gauge_type: i32) -> SimulationResult {
     let judge_notes = model.build_judge_notes();
     let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
-    let rule = BMSPlayerRule::get_bms_player_rule(&mode);
+    let rule = BMSPlayerRule::for_mode(&mode);
 
     let config = JudgeConfig {
         notes: &judge_notes,
@@ -88,7 +88,7 @@ pub fn run_autoplay_simulation(model: &BMSModel, gauge_type: i32) -> SimulationR
     let mut gauge = GrooveGauge::new(model, gauge_type, &rule.gauge);
 
     let lp = LaneProperty::new(&mode);
-    let physical_key_count = lp.get_key_lane_assign().len();
+    let physical_key_count = lp.key_lane_assign().len();
     let key_states = vec![false; physical_key_count];
     let key_times = vec![NOT_SET; physical_key_count];
 
@@ -111,7 +111,7 @@ pub fn run_autoplay_simulation(model: &BMSModel, gauge_type: i32) -> SimulationR
     SimulationResult {
         score: jm.score().clone(),
         max_combo: jm.max_combo(),
-        ghost: jm.ghost().to_vec(),
+        ghost: jm.ghost_as_usize(),
         gauge_value: gauge.value(),
         gauge_qualified: gauge.is_qualified(),
     }
@@ -125,7 +125,7 @@ pub fn run_autoplay_simulation(model: &BMSModel, gauge_type: i32) -> SimulationR
 /// required for DP modes (Beat14K) where lane indices differ from key indices.
 pub fn create_note_press_log(notes: &[JudgeNote], mode: &Mode, offset_us: i64) -> Vec<KeyInputLog> {
     let lp = LaneProperty::new(mode);
-    let lane_keys = lp.get_lane_key_assign();
+    let lane_keys = lp.lane_key_assign();
     let mut log = Vec::new();
     for note in notes {
         if !note.is_playable() {
@@ -158,7 +158,7 @@ pub fn run_manual_simulation(
 ) -> SimulationResult {
     let judge_notes = model.build_judge_notes();
     let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
-    let rule = BMSPlayerRule::get_bms_player_rule(&mode);
+    let rule = BMSPlayerRule::for_mode(&mode);
 
     let config = JudgeConfig {
         notes: &judge_notes,
@@ -179,7 +179,7 @@ pub fn run_manual_simulation(
     let mut gauge = GrooveGauge::new(model, gauge_type, &rule.gauge);
 
     let lp = LaneProperty::new(&mode);
-    let physical_key_count = lp.get_key_lane_assign().len();
+    let physical_key_count = lp.key_lane_assign().len();
 
     let mut sorted_log: Vec<&KeyInputLog> = input_log.iter().collect();
     sorted_log.sort_by_key(|e| e.time());
@@ -225,7 +225,7 @@ pub fn run_manual_simulation(
     SimulationResult {
         score: jm.score().clone(),
         max_combo: jm.max_combo(),
-        ghost: jm.ghost().to_vec(),
+        ghost: jm.ghost_as_usize(),
         gauge_value: gauge.value(),
         gauge_qualified: gauge.is_qualified(),
     }
@@ -264,7 +264,7 @@ pub fn run_course_simulation(models: &[&BMSModel], gauge_type: i32) -> CourseSim
 
         let judge_notes = model.build_judge_notes();
         let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
-        let rule = BMSPlayerRule::get_bms_player_rule(&mode);
+        let rule = BMSPlayerRule::for_mode(&mode);
 
         let config = JudgeConfig {
             notes: &judge_notes,
@@ -290,7 +290,7 @@ pub fn run_course_simulation(models: &[&BMSModel], gauge_type: i32) -> CourseSim
         }
 
         let lp = LaneProperty::new(&mode);
-        let physical_key_count = lp.get_key_lane_assign().len();
+        let physical_key_count = lp.key_lane_assign().len();
         let key_states = vec![false; physical_key_count];
         let key_times = vec![NOT_SET; physical_key_count];
 
@@ -312,7 +312,7 @@ pub fn run_course_simulation(models: &[&BMSModel], gauge_type: i32) -> CourseSim
         let result = SimulationResult {
             score: jm.score().clone(),
             max_combo: jm.max_combo(),
-            ghost: jm.ghost().to_vec(),
+            ghost: jm.ghost_as_usize(),
             gauge_value: gauge.value(),
             gauge_qualified: gauge.is_qualified(),
         };
@@ -357,7 +357,7 @@ pub fn run_course_simulation_manual(
 
         let judge_notes = model.build_judge_notes();
         let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
-        let rule = BMSPlayerRule::get_bms_player_rule(&mode);
+        let rule = BMSPlayerRule::for_mode(&mode);
 
         let config = JudgeConfig {
             notes: &judge_notes,
@@ -382,7 +382,7 @@ pub fn run_course_simulation_manual(
         }
 
         let lp = LaneProperty::new(&mode);
-        let physical_key_count = lp.get_key_lane_assign().len();
+        let physical_key_count = lp.key_lane_assign().len();
 
         let mut sorted_log: Vec<&KeyInputLog> = input_log.iter().collect();
         sorted_log.sort_by_key(|e| e.time());
@@ -427,7 +427,7 @@ pub fn run_course_simulation_manual(
         let result = SimulationResult {
             score: jm.score().clone(),
             max_combo: jm.max_combo(),
-            ghost: jm.ghost().to_vec(),
+            ghost: jm.ghost_as_usize(),
             gauge_value: gauge.value(),
             gauge_qualified: gauge.is_qualified(),
         };

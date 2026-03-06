@@ -35,7 +35,7 @@ impl HttpDownloadSource for WriggleDownloadSource {
         Ok(self.download_url.replace("%s", md5))
     }
 
-    fn get_name(&self) -> &str {
+    fn name(&self) -> &str {
         META.name()
     }
 
@@ -103,7 +103,7 @@ mod tests {
         let source = WriggleDownloadSource {
             download_url: "https://example.com/%s".to_string(),
         };
-        assert_eq!(source.get_name(), "wriggle");
+        assert_eq!(source.name(), "wriggle");
         assert!(source.is_allow_download_through_md5());
         assert!(!source.is_allow_download_through_sha256());
         assert!(!source.is_allow_meta_query());

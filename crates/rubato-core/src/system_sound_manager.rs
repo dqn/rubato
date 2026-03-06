@@ -73,7 +73,7 @@ impl SystemSoundManager {
         );
 
         for sound in SoundType::values() {
-            let paths = self.get_sound_paths(sound);
+            let paths = self.sound_paths(sound);
             if let Some(first_path) = paths.first() {
                 let newpath = first_path.to_string_lossy().to_string();
                 let oldpath = self.soundmap.get(sound).cloned();
@@ -87,11 +87,11 @@ impl SystemSoundManager {
         }
     }
 
-    pub fn get_bgm_path(&self) -> Option<&Path> {
+    pub fn bgm_path(&self) -> Option<&Path> {
         self.current_bgm_path.as_deref()
     }
 
-    pub fn get_sound_path(&self) -> Option<&Path> {
+    pub fn sound_path(&self) -> Option<&Path> {
         self.current_sound_path.as_deref()
     }
 
@@ -110,7 +110,7 @@ impl SystemSoundManager {
         }
     }
 
-    pub fn get_sound_paths(&self, sound_type: &SoundType) -> Vec<PathBuf> {
+    pub fn sound_paths(&self, sound_type: &SoundType) -> Vec<PathBuf> {
         let mut paths = Vec::new();
         let p = if sound_type.is_bgm() {
             &self.current_bgm_path
@@ -154,7 +154,7 @@ impl SystemSoundManager {
         }
     }
 
-    pub fn get_sound(&self, sound: &SoundType) -> Option<&String> {
+    pub fn sound(&self, sound: &SoundType) -> Option<&String> {
         self.soundmap.get(sound)
     }
 

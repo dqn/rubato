@@ -182,7 +182,7 @@ fn skin_ecfn_all_lua_skins_load_successfully() {
     let provider = load_state("state_default.json");
     for &skin_path in ALL_LUA_SKINS {
         let skin = load_lua_skin_with_state(skin_path, &provider);
-        let object_count = skin.get_objects().len();
+        let object_count = skin.objects().len();
         assert!(
             object_count > 0,
             "{}: loaded skin has zero objects",
@@ -195,7 +195,7 @@ fn skin_ecfn_all_lua_skins_load_successfully() {
 #[test]
 fn skin_ecfn_select_json_loads_successfully() {
     let skin = load_json_skin("select/select.json");
-    let object_count = skin.get_objects().len();
+    let object_count = skin.objects().len();
     assert!(
         object_count > 0,
         "select/select.json: loaded skin has zero objects"
@@ -208,7 +208,7 @@ fn skin_ecfn_skin_object_counts_reasonable() {
     let provider = load_state("state_default.json");
     for &skin_path in ALL_LUA_SKINS {
         let skin = load_lua_skin_with_state(skin_path, &provider);
-        let object_count = skin.get_objects().len();
+        let object_count = skin.objects().len();
         assert!(
             object_count > 10,
             "{}: expected > 10 objects, got {}",
@@ -219,9 +219,9 @@ fn skin_ecfn_skin_object_counts_reasonable() {
     // Also check JSON skin.
     let json_skin = load_json_skin("select/select.json");
     assert!(
-        json_skin.get_objects().len() > 10,
+        json_skin.objects().len() > 10,
         "select/select.json: expected > 10 objects, got {}",
-        json_skin.get_objects().len()
+        json_skin.objects().len()
     );
 }
 

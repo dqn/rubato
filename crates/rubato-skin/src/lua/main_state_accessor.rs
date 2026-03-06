@@ -113,7 +113,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let timer_func = lua.create_function(move |_, id: i32| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_timer().micro_timer(id))
+                Ok(state.timer().micro_timer(id))
             })?;
             table.set("timer", timer_func)?;
 
@@ -124,7 +124,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let time_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_timer().now_micro_time())
+                Ok(state.timer().now_micro_time())
             })?;
             table.set("time", time_func)?;
 
@@ -200,7 +200,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let rate_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().get_now_rate() as f64)
+                Ok(state.score_data_property().now_rate() as f64)
             })?;
             table.set("rate", rate_func)?;
 
@@ -208,7 +208,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let exscore_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().get_now_ex_score() as f64)
+                Ok(state.score_data_property().now_ex_score() as f64)
             })?;
             table.set("exscore", exscore_func)?;
 
@@ -216,7 +216,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let rate_best_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().get_now_best_score_rate() as f64)
+                Ok(state.score_data_property().now_best_score_rate() as f64)
             })?;
             table.set("rate_best", rate_best_func)?;
 
@@ -224,7 +224,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let exscore_best_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().get_best_score() as f64)
+                Ok(state.score_data_property().best_score() as f64)
             })?;
             table.set("exscore_best", exscore_best_func)?;
 
@@ -232,7 +232,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let rate_rival_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().get_rival_score_rate() as f64)
+                Ok(state.score_data_property().rival_score_rate() as f64)
             })?;
             table.set("rate_rival", rate_rival_func)?;
 
@@ -240,7 +240,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let exscore_rival_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.get_score_data_property().get_rival_score() as f64)
+                Ok(state.score_data_property().rival_score() as f64)
             })?;
             table.set("exscore_rival", exscore_rival_func)?;
 
@@ -326,7 +326,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let judge_func = lua.create_function(move |_, id: i32| {
                 let state = unsafe { &*sp.0 };
-                let total = state.get_judge_count(id, true) + state.get_judge_count(id, false);
+                let total = state.judge_count(id, true) + state.judge_count(id, false);
                 Ok(total)
             })?;
             table.set("judge", judge_func)?;
@@ -348,7 +348,7 @@ impl MainStateAccessor {
             let gauge_type_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
                 if state.is_bms_player() {
-                    Ok(state.get_gauge_type() as f64)
+                    Ok(state.gauge_type() as f64)
                 } else {
                     Ok(0.0f64)
                 }
@@ -416,7 +416,7 @@ impl MainStateAccessor {
 
 /// option function - Gets OPTION_* boolean by ID
 pub fn option_fn(state: &dyn MainState, id: i32) -> bool {
-    if let Some(prop) = boolean_property_factory::get_boolean_property(id) {
+    if let Some(prop) = boolean_property_factory::boolean_property(id) {
         prop.get(state)
     } else {
         false
@@ -425,7 +425,7 @@ pub fn option_fn(state: &dyn MainState, id: i32) -> bool {
 
 /// number function - Gets NUMBER_* integer by ID
 pub fn number_fn(state: &dyn MainState, id: i32) -> i32 {
-    if let Some(prop) = integer_property_factory::get_integer_property_by_id(id) {
+    if let Some(prop) = integer_property_factory::integer_property_by_id(id) {
         prop.get(state)
     } else {
         0
@@ -434,7 +434,7 @@ pub fn number_fn(state: &dyn MainState, id: i32) -> i32 {
 
 /// float_number function - Gets SLIDER_*/BARGRAPH_* float by ID
 pub fn float_number_fn(state: &dyn MainState, id: i32) -> f32 {
-    if let Some(prop) = float_property_factory::get_rate_property_by_id(id) {
+    if let Some(prop) = float_property_factory::rate_property_by_id(id) {
         prop.get(state)
     } else {
         0.0
@@ -443,7 +443,7 @@ pub fn float_number_fn(state: &dyn MainState, id: i32) -> f32 {
 
 /// text function - Gets STRING_* text by ID
 pub fn text_fn(state: &dyn MainState, id: i32) -> String {
-    if let Some(prop) = string_property_factory::get_string_property_by_id(id) {
+    if let Some(prop) = string_property_factory::string_property_by_id(id) {
         prop.get(state)
     } else {
         String::new()
@@ -452,7 +452,7 @@ pub fn text_fn(state: &dyn MainState, id: i32) -> String {
 
 /// event_index function - Gets event/button index by ID
 pub fn event_index_fn(state: &dyn MainState, id: i32) -> i32 {
-    if let Some(prop) = integer_property_factory::get_image_index_property_by_id(id) {
+    if let Some(prop) = integer_property_factory::image_index_property_by_id(id) {
         prop.get(state)
     } else {
         0
@@ -508,7 +508,7 @@ mod tests {
     }
 
     impl MainState for LuaTestState {
-        fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             &self.timer
         }
 
@@ -528,11 +528,11 @@ mod tests {
             &self.resource
         }
 
-        fn get_score_data_property(&self) -> &rubato_core::score_data_property::ScoreDataProperty {
+        fn score_data_property(&self) -> &rubato_core::score_data_property::ScoreDataProperty {
             &self.score_data_property
         }
 
-        fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
+        fn judge_count(&self, judge: i32, fast: bool) -> i32 {
             *self.judge_counts.get(&(judge, fast)).unwrap_or(&0)
         }
 
@@ -540,7 +540,7 @@ mod tests {
             self.gauge_value
         }
 
-        fn get_gauge_type(&self) -> i32 {
+        fn gauge_type(&self) -> i32 {
             self.gauge_type
         }
 

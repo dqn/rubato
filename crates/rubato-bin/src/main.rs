@@ -174,7 +174,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     // Java: audio = new GdxSoundDriver(config.getSongResourceGen())
     // Wire the Kira-based audio driver so keysounds, BGM, and UI sounds work.
     {
-        let song_resource_gen = main_controller.get_config().song_resource_gen;
+        let song_resource_gen = main_controller.config().song_resource_gen;
         let audio_driver = rubato_audio::gdx_sound_driver::GdxSoundDriver::new(song_resource_gen)?;
         main_controller.set_audio_driver(Box::new(audio_driver));
     }
@@ -187,7 +187,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     // Java: if(config.isUseDiscordRPC()) { stateListener.add(new DiscordListener()); }
     {
         let (use_discord_rpc, use_obs_ws, cfg_clone) = {
-            let cfg = main_controller.get_config();
+            let cfg = main_controller.config();
             (cfg.use_discord_rpc, cfg.use_obs_ws, cfg.clone())
         };
         if use_discord_rpc {
@@ -206,7 +206,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
 
     // Wire IR initialization at startup
     {
-        let player_config = main_controller.get_player_config().clone();
+        let player_config = main_controller.player_config().clone();
         let ir_statuses =
             rubato_state::result::ir_initializer::initialize_ir_config(&player_config);
         for ir_status in ir_statuses {
@@ -218,7 +218,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
                 ir_status.config.importrival,
             );
             main_controller
-                .get_ir_status_mut()
+                .ir_status_mut()
                 .push(rubato_core::main_controller::IRStatus {
                     config: ir_status.config,
                     rival_provider: Some(Box::new(rival_provider)),
@@ -226,7 +226,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
                 });
         }
         // Wire IR resend service
-        let ir_send_count = main_controller.get_config().ir_send_count;
+        let ir_send_count = main_controller.config().ir_send_count;
         let resend_service =
             rubato_state::result::ir_resend::IrResendServiceImpl::new(ir_send_count);
         main_controller.set_ir_resend_service(Box::new(resend_service));
@@ -236,7 +236,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     // Each processor runs on background threads and needs its own DB access, so we open
     // separate SQLite connections rather than sharing MainController's Box<dyn> songdb.
     {
-        let config = main_controller.get_config().clone();
+        let config = main_controller.config().clone();
 
         // IPFS download processor (Java: lines 496-506)
         if config.enable_ipfs {
@@ -330,8 +330,8 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     // so stream request songs appear in the selector's bar list.
     // In Rust, we create a shared Arc<Mutex<MusicSelector>> and store it on MainController.
     // Both StreamController and StateFactory (MusicSelect arm) use the same instance.
-    if main_controller.get_player_config().enable_request {
-        let config = main_controller.get_config();
+    if main_controller.player_config().enable_request {
+        let config = main_controller.config();
         let mut selector =
             match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
                 &config.songpath,
@@ -355,7 +355,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
                     &mut main_controller,
                 ),
             );
-            selector.set_player_config(main_controller.get_player_config().clone());
+            selector.set_player_config(main_controller.player_config().clone());
         }
         let selector = std::sync::Arc::new(std::sync::Mutex::new(selector));
         // Store the shared selector on MainController for StateFactory to retrieve
@@ -368,7 +368,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
 
     // Extract window config from the controller's Config
     // Java: these were set by MainLoader.play() → config.setWindowWidth/Height
-    let config = main_controller.get_config();
+    let config = main_controller.config();
     let w = config.window_width;
     let h = config.window_height;
     let vsync = config.vsync;
@@ -378,10 +378,10 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     let title = version::version_long().to_string();
 
     info!("Starting {}", version::version_long());
-    if let Some(hash) = version::get_git_commit_hash() {
+    if let Some(hash) = version::git_commit_hash() {
         info!("[Build info] Commit: {}", hash);
     }
-    if let Some(date) = version::get_build_date() {
+    if let Some(date) = version::build_date() {
         info!("[Build info] Build date: {}", date);
     }
 
@@ -468,7 +468,7 @@ impl ApplicationHandler for RubatoApp {
         if self.window.is_none() {
             // Java: Find target monitor by config.monitorName
             // Format: "MonitorName [virtualX, virtualY]"
-            let config = self.controller.get_config();
+            let config = self.controller.config();
             let monitor_name = config.monitor_name.clone();
 
             let target_monitor = if !monitor_name.is_empty() {
@@ -750,10 +750,10 @@ impl ApplicationHandler for RubatoApp {
                 }
 
                 // Gather diagnostic info before egui frame (avoids borrow conflicts)
-                let diag_state_type = self.controller.get_current_state_type();
+                let diag_state_type = self.controller.current_state_type();
                 let diag_has_skin = self
                     .controller
-                    .get_current_state()
+                    .current_state()
                     .map(|s| s.main_state_data().skin.is_some())
                     .unwrap_or(false);
 
@@ -824,7 +824,7 @@ impl ApplicationHandler for RubatoApp {
                         // before the render pass (bind groups must outlive the render pass)
                         let sprite_resources = if let Some(sprite_pipeline) = &self.sprite_pipeline
                             && let Some(texture_manager) = &mut self.texture_manager
-                            && let Some(sprite_batch) = self.controller.get_sprite_batch_mut()
+                            && let Some(sprite_batch) = self.controller.sprite_batch_mut()
                             && !sprite_batch.vertices().is_empty()
                         {
                             // Upload any new textures encountered this frame
@@ -897,7 +897,7 @@ impl ApplicationHandler for RubatoApp {
                             if let Some(ref uniform_bind_group) = sprite_resources
                                 && let Some(sprite_pipeline) = &self.sprite_pipeline
                                 && let Some(texture_manager) = &self.texture_manager
-                                && let Some(sprite_batch) = self.controller.get_sprite_batch_mut()
+                                && let Some(sprite_batch) = self.controller.sprite_batch_mut()
                             {
                                 sprite_batch.flush_to_gpu(
                                     &mut render_pass,

@@ -6,8 +6,8 @@
 // For BEAT_7K, scratch_key = &[7] (length 1).
 // If player=1, scratch_key[1] panics with index out of bounds.
 //
-// The guard in get_keys_static prevents player >= mode.player() from reaching modify(),
-// but get_random_pattern() on a manually-constructed modifier with player=1 calls
+// The guard in keys_static prevents player >= mode.player() from reaching modify(),
+// but random_pattern() on a manually-constructed modifier with player=1 calls
 // get_random_pattern_impl directly, triggering the OOB.
 
 use bms_model::mode::Mode;
@@ -23,6 +23,6 @@ fn scratch_key_oob_with_invalid_player_index_returns_zeroed_pattern() {
     // Enable show_shuffle_pattern so get_random_pattern_impl enters the scratch_key branch
     modifier.show_shuffle_pattern = true;
 
-    let pattern = modifier.get_random_pattern(&Mode::BEAT_7K);
+    let pattern = modifier.random_pattern(&Mode::BEAT_7K);
     assert_eq!(pattern, vec![0; Mode::BEAT_7K.key() as usize]);
 }

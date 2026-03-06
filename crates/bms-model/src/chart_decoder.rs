@@ -56,7 +56,7 @@ impl ChartDecoderImpl {
     }
 }
 
-pub fn get_decoder(p: &Path) -> Option<ChartDecoderImpl> {
+pub fn decoder(p: &Path) -> Option<ChartDecoderImpl> {
     let s = p
         .file_name()
         .map(|f| f.to_string_lossy().to_lowercase())
@@ -321,58 +321,58 @@ mod tests {
         assert_eq!(parse_int62_str("A", 0), Err(()));
     }
 
-    // --- get_decoder tests ---
+    // --- decoder tests ---
 
     #[test]
     fn get_decoder_bms() {
-        let dec = get_decoder(Path::new("test.bms"));
+        let dec = decoder(Path::new("test.bms"));
         assert!(matches!(dec, Some(ChartDecoderImpl::Bms(_))));
     }
 
     #[test]
     fn get_decoder_bme() {
-        let dec = get_decoder(Path::new("test.bme"));
+        let dec = decoder(Path::new("test.bme"));
         assert!(matches!(dec, Some(ChartDecoderImpl::Bms(_))));
     }
 
     #[test]
     fn get_decoder_bml() {
-        let dec = get_decoder(Path::new("test.bml"));
+        let dec = decoder(Path::new("test.bml"));
         assert!(matches!(dec, Some(ChartDecoderImpl::Bms(_))));
     }
 
     #[test]
     fn get_decoder_pms() {
-        let dec = get_decoder(Path::new("test.pms"));
+        let dec = decoder(Path::new("test.pms"));
         assert!(matches!(dec, Some(ChartDecoderImpl::Bms(_))));
     }
 
     #[test]
     fn get_decoder_bmson() {
-        let dec = get_decoder(Path::new("test.bmson"));
+        let dec = decoder(Path::new("test.bmson"));
         assert!(matches!(dec, Some(ChartDecoderImpl::Bmson(_))));
     }
 
     #[test]
     fn get_decoder_osu() {
-        let dec = get_decoder(Path::new("test.osu"));
+        let dec = decoder(Path::new("test.osu"));
         assert!(matches!(dec, Some(ChartDecoderImpl::Osu(_))));
     }
 
     #[test]
     fn get_decoder_unknown_extension() {
-        assert!(get_decoder(Path::new("test.mp3")).is_none());
+        assert!(decoder(Path::new("test.mp3")).is_none());
     }
 
     #[test]
     fn get_decoder_case_insensitive() {
-        let dec = get_decoder(Path::new("test.BMS"));
+        let dec = decoder(Path::new("test.BMS"));
         assert!(matches!(dec, Some(ChartDecoderImpl::Bms(_))));
 
-        let dec = get_decoder(Path::new("test.Bme"));
+        let dec = decoder(Path::new("test.Bme"));
         assert!(matches!(dec, Some(ChartDecoderImpl::Bms(_))));
 
-        let dec = get_decoder(Path::new("test.BMSON"));
+        let dec = decoder(Path::new("test.BMSON"));
         assert!(matches!(dec, Some(ChartDecoderImpl::Bmson(_))));
     }
 }

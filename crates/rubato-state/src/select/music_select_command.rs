@@ -38,7 +38,7 @@ impl MusicSelectCommand {
         match self {
             MusicSelectCommand::ResetReplay => {
                 // In Java: finds first existing replay for selected selectable bar
-                if let Some(selected) = selector.manager.get_selected()
+                if let Some(selected) = selector.manager.selected()
                     && let Some(selectable) = selected.as_selectable_bar()
                 {
                     for i in 0..REPLAY {
@@ -51,7 +51,7 @@ impl MusicSelectCommand {
                 selector.selectedreplay = -1;
             }
             MusicSelectCommand::NextReplay => {
-                if let Some(selected) = selector.manager.get_selected()
+                if let Some(selected) = selector.manager.selected()
                     && let Some(selectable) = selected.as_selectable_bar()
                 {
                     let current = selector.selectedreplay;
@@ -66,7 +66,7 @@ impl MusicSelectCommand {
                 }
             }
             MusicSelectCommand::PrevReplay => {
-                if let Some(selected) = selector.manager.get_selected()
+                if let Some(selected) = selector.manager.selected()
                     && let Some(selectable) = selected.as_selectable_bar()
                 {
                     let current = selector.selectedreplay;
@@ -81,10 +81,10 @@ impl MusicSelectCommand {
                 }
             }
             MusicSelectCommand::CopyMd5Hash => {
-                if let Some(selected) = selector.manager.get_selected()
+                if let Some(selected) = selector.manager.selected()
                     && let Some(song_bar) = selected.as_song_bar()
                 {
-                    let hash = &song_bar.get_song_data().md5;
+                    let hash = &song_bar.song_data().md5;
                     if !hash.is_empty()
                         && let Ok(mut clipboard) = arboard::Clipboard::new()
                     {
@@ -94,10 +94,10 @@ impl MusicSelectCommand {
                 }
             }
             MusicSelectCommand::CopySha256Hash => {
-                if let Some(selected) = selector.manager.get_selected()
+                if let Some(selected) = selector.manager.selected()
                     && let Some(song_bar) = selected.as_song_bar()
                 {
-                    let hash = &song_bar.get_song_data().sha256;
+                    let hash = &song_bar.song_data().sha256;
                     if !hash.is_empty()
                         && let Ok(mut clipboard) = arboard::Clipboard::new()
                     {
@@ -112,12 +112,12 @@ impl MusicSelectCommand {
                     .manager
                     .dir
                     .iter()
-                    .any(|d| d.as_table_bar().is_some_and(|t| t.get_url().is_some()));
+                    .any(|d| d.as_table_bar().is_some_and(|t| t.url().is_some()));
                 if has_table_url {
-                    if let Some(selected) = selector.manager.get_selected()
+                    if let Some(selected) = selector.manager.selected()
                         && let Some(song_bar) = selected.as_song_bar()
                     {
-                        let song = song_bar.get_song_data();
+                        let song = song_bar.song_data();
                         if !song.ipfs_str().is_empty() {
                             let song_clone = song.clone();
                             if let Some(ref mut main) = selector.main
@@ -131,10 +131,10 @@ impl MusicSelectCommand {
                 }
             }
             MusicSelectCommand::DownloadHttp => {
-                if let Some(selected) = selector.manager.get_selected()
+                if let Some(selected) = selector.manager.selected()
                     && let Some(song_bar) = selected.as_song_bar()
                 {
-                    let song = song_bar.get_song_data();
+                    let song = song_bar.song_data();
                     let md5 = &song.md5;
                     if !md5.is_empty() {
                         log::info!("Missing song md5: {}", md5);
@@ -149,12 +149,12 @@ impl MusicSelectCommand {
                 }
             }
             MusicSelectCommand::DownloadCourseHttp => {
-                if let Some(selected) = selector.manager.get_selected()
+                if let Some(selected) = selector.manager.selected()
                     && let Some(grade_bar) = selected.as_grade_bar()
                     && let Some(downloader) =
                         selector.main.as_ref().and_then(|m| m.http_downloader())
                 {
-                    for song in grade_bar.get_song_datas() {
+                    for song in grade_bar.song_datas() {
                         let md5 = &song.md5;
                         if !md5.is_empty() {
                             log::info!("Missing song md5: {}", md5);
@@ -164,7 +164,7 @@ impl MusicSelectCommand {
                 }
             }
             MusicSelectCommand::ShowSongsOnSameFolder => {
-                let selected = selector.manager.get_selected().cloned();
+                let selected = selector.manager.selected().cloned();
                 if let Some(ref current) = selected {
                     if let Some(song_bar) = current.as_song_bar() {
                         if song_bar.exists_song() {
@@ -175,7 +175,7 @@ impl MusicSelectCommand {
                                 .last()
                                 .is_some_and(|b| matches!(**b, Bar::SameFolder(_)));
                             if !already_in_same_folder {
-                                let sd = song_bar.get_song_data();
+                                let sd = song_bar.song_data();
                                 let same = SameFolderBar::new(sd.full_title(), sd.folder.clone());
                                 let bar = Bar::SameFolder(Box::new(same));
                                 selector.update_bar_with_songdb_context(Some(&bar));
@@ -186,12 +186,12 @@ impl MusicSelectCommand {
                         // Show course songs in a ContainerBar (deduplicated)
                         let mut seen = HashSet::new();
                         let songbars: Vec<Bar> = grade_bar
-                            .get_song_datas()
+                            .song_datas()
                             .iter()
                             .filter(|sd| seen.insert(sd.sha256.clone()))
                             .map(|sd| Bar::Song(Box::new(SongBar::new(sd.clone()))))
                             .collect();
-                        let container = ContainerBar::new(current.get_title(), songbars);
+                        let container = ContainerBar::new(current.title(), songbars);
                         let bar = Bar::Container(Box::new(container));
                         selector.update_bar_with_songdb_context(Some(&bar));
                         selector.play_sound(SoundType::FolderOpen);
@@ -200,7 +200,7 @@ impl MusicSelectCommand {
             }
             MusicSelectCommand::ShowContextMenu => {
                 // In Java: opens ContextMenuBar for song/table/hash bars
-                let selected = selector.manager.get_selected().cloned();
+                let selected = selector.manager.selected().cloned();
                 let previous = selector.manager.dir.last().map(|b| (**b).clone());
                 let already_in_context_menu = previous
                     .as_ref()
@@ -209,8 +209,7 @@ impl MusicSelectCommand {
                 if let Some(ref current) = selected {
                     if let Some(song_bar) = current.as_song_bar() {
                         if !already_in_context_menu {
-                            let menu =
-                                ContextMenuBar::new_for_song(song_bar.get_song_data().clone());
+                            let menu = ContextMenuBar::new_for_song(song_bar.song_data().clone());
                             let bar = Bar::ContextMenu(Box::new(menu));
                             selector.update_bar_with_songdb_context(Some(&bar));
                             selector.play_sound(SoundType::FolderOpen);
@@ -248,8 +247,8 @@ impl MusicSelectCommand {
                 }
             }
             MusicSelectCommand::CopyHighlightedMenuText => {
-                if let Some(selected) = selector.manager.get_selected() {
-                    let content = selected.get_title();
+                if let Some(selected) = selector.manager.selected() {
+                    let content = selected.title();
                     if !content.is_empty()
                         && let Ok(mut clipboard) = arboard::Clipboard::new()
                     {

@@ -58,7 +58,7 @@ pub struct Skin {
 }
 
 impl Skin {
-    pub fn get_all_skin_objects(&self) -> &[SkinObject] {
+    pub fn all_skin_objects(&self) -> &[SkinObject] {
         &self.objects
     }
 }
@@ -76,11 +76,11 @@ pub struct SkinObject {
 }
 
 impl SkinObject {
-    pub fn get_name(&self) -> Option<&str> {
+    pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
     }
 
-    pub fn get_all_destination(&self) -> &[SkinObjectDestination] {
+    pub fn all_destination(&self) -> &[SkinObjectDestination] {
         &self.destinations
     }
 }

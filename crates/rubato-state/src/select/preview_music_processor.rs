@@ -120,7 +120,7 @@ impl PreviewMusicProcessor {
         }
     }
 
-    pub fn get_song_data(&self) -> Option<&SongData> {
+    pub fn song_data(&self) -> Option<&SongData> {
         self.current.as_ref()
     }
 
@@ -387,7 +387,7 @@ mod tests {
         let audio = MockAudioDriver::new();
         let config = Config::default();
         let processor = PreviewMusicProcessor::new(&config);
-        assert!(processor.get_song_data().is_none());
+        assert!(processor.song_data().is_none());
     }
 
     #[test]
@@ -405,7 +405,7 @@ mod tests {
         let config = Config::default();
         let mut processor = PreviewMusicProcessor::new(&config);
         processor.start(None);
-        assert!(processor.get_song_data().is_none());
+        assert!(processor.song_data().is_none());
         // Command queue should have one entry (empty path)
         assert_eq!(processor.commands.lock().unwrap().len(), 1);
     }
@@ -419,8 +419,8 @@ mod tests {
         let mut song = SongData::default();
         song.sha256 = "abc".to_string();
         processor.start(Some(&song));
-        assert!(processor.get_song_data().is_some());
-        assert_eq!(processor.get_song_data().unwrap().sha256, "abc");
+        assert!(processor.song_data().is_some());
+        assert_eq!(processor.song_data().unwrap().sha256, "abc");
     }
 
     #[test]

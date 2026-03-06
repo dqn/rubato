@@ -93,7 +93,7 @@ impl SkinGauge {
         self.endtime = endtime;
     }
 
-    pub fn get_parts(&self) -> i32 {
+    pub fn parts(&self) -> i32 {
         self.parts
     }
 
@@ -101,15 +101,15 @@ impl SkinGauge {
         self.parts = parts;
     }
 
-    pub fn get_animation_type(&self) -> i32 {
+    pub fn animation_type(&self) -> i32 {
         self.animation_type
     }
 
-    pub fn get_animation_range(&self) -> i32 {
+    pub fn animation_range(&self) -> i32 {
         self.animation_range
     }
 
-    pub fn get_duration(&self) -> i64 {
+    pub fn duration(&self) -> i64 {
         self.duration
     }
 
@@ -236,10 +236,10 @@ mod tests {
     fn test_skin_gauge_new() {
         let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
         let gauge = SkinGauge::new(images, 0, 0, 50, ANIMATION_RANDOM, 4, 33);
-        assert_eq!(gauge.get_parts(), 50);
-        assert_eq!(gauge.get_animation_type(), ANIMATION_RANDOM);
-        assert_eq!(gauge.get_animation_range(), 4);
-        assert_eq!(gauge.get_duration(), 33);
+        assert_eq!(gauge.parts(), 50);
+        assert_eq!(gauge.animation_type(), ANIMATION_RANDOM);
+        assert_eq!(gauge.animation_range(), 4);
+        assert_eq!(gauge.duration(), 33);
     }
 
     #[test]
@@ -247,7 +247,7 @@ mod tests {
         let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
         let mut gauge = SkinGauge::new(images, 0, 0, 50, ANIMATION_RANDOM, 4, 33);
         gauge.set_parts(100);
-        assert_eq!(gauge.get_parts(), 100);
+        assert_eq!(gauge.parts(), 100);
     }
 
     #[test]

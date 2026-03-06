@@ -222,7 +222,7 @@ pub fn load_with_config(
 
     if skin_config_path.ends_with(".json") {
         // JSONSkinLoader
-        let config = _state.get_resource().get_config();
+        let config = _state.get_resource().config();
         let mut loader = crate::json::json_skin_loader::JSONSkinLoader::with_config(config);
         let result = loader.load_skin(Path::new(skin_config_path), skin_type, &property);
         // Dispose old resources after loading
@@ -234,7 +234,7 @@ pub fn load_with_config(
         result
     } else if skin_config_path.ends_with(".luaskin") {
         // LuaSkinLoader
-        let config = _state.get_resource().get_config();
+        let config = _state.get_resource().config();
         let mut loader = crate::lua::lua_skin_loader::LuaSkinLoader::new_with_state(_state, config);
         let result = loader.load_skin(Path::new(skin_config_path), skin_type, &property);
         if let Ok(guard) = RESOURCE.lock()
@@ -252,7 +252,7 @@ pub fn load_with_config(
 
 /// Resolves a file path with wildcard and file mapping support.
 /// Corresponds to SkinLoader.getPath(String, ObjectMap<String, String>)
-pub fn get_path(imagepath: &str, filemap: &HashMap<String, String>) -> PathBuf {
+pub fn path(imagepath: &str, filemap: &HashMap<String, String>) -> PathBuf {
     let mut imagepath = imagepath.to_string();
     let mut imagefile = PathBuf::from(&imagepath);
 
@@ -308,13 +308,13 @@ pub fn get_path(imagepath: &str, filemap: &HashMap<String, String>) -> PathBuf {
 
 /// Gets a texture from a file path, optionally using CIM cache.
 /// Corresponds to SkinLoader.getTexture(String, boolean)
-pub fn get_texture(path: &str, usecim: bool) -> Option<Texture> {
-    get_texture_with_mipmaps(path, usecim, false)
+pub fn texture(path: &str, usecim: bool) -> Option<Texture> {
+    texture_with_mipmaps(path, usecim, false)
 }
 
 /// Gets a texture from a file path, with optional CIM cache and mipmaps.
 /// Corresponds to SkinLoader.getTexture(String, boolean, boolean)
-pub fn get_texture_with_mipmaps(path: &str, usecim: bool, use_mip_maps: bool) -> Option<Texture> {
+pub fn texture_with_mipmaps(path: &str, usecim: bool, use_mip_maps: bool) -> Option<Texture> {
     let resource_guard = get_resource();
     let resource = resource_guard.as_ref()?;
 

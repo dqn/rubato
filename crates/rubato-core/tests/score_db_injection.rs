@@ -23,7 +23,7 @@ fn make_score(sha256: &str, mode: i32, clear: i32) -> ScoreData {
 }
 
 // -----------------------------------------------------------------------
-// get_score_data: hash injection is now blocked by parameterized query
+// score_data: hash injection is now blocked by parameterized query
 // -----------------------------------------------------------------------
 
 #[test]
@@ -35,14 +35,14 @@ fn get_score_data_hash_injection_blocked() {
     db.set_score_data(&victim);
 
     // Injection payload that previously bypassed the WHERE clause
-    let result = db.get_score_data("' OR '1'='1", 0);
+    let result = db.score_data("' OR '1'='1", 0);
     assert!(
         result.is_none(),
         "SQL injection via hash should be blocked by parameterized query"
     );
 
     // Legitimate query still works
-    let legit = db.get_score_data("victim_hash", 0);
+    let legit = db.score_data("victim_hash", 0);
     assert!(legit.is_some(), "legitimate hash query should succeed");
     assert_eq!(legit.unwrap().clear, 5);
 }
@@ -72,7 +72,7 @@ fn set_score_data_map_injection_blocked() {
 
     // Victim row should NOT be modified
     let restored = db
-        .get_score_data("victim_hash", 0)
+        .score_data("victim_hash", 0)
         .expect("victim row should still exist");
     assert_eq!(
         restored.clear, 3,
@@ -102,12 +102,12 @@ fn set_score_data_map_rejects_invalid_column() {
     // Should not panic; invalid column is silently skipped
     db.set_score_data_map(&map);
 
-    let restored = db.get_score_data("test_hash", 0).unwrap();
+    let restored = db.score_data("test_hash", 0).unwrap();
     assert_eq!(restored.clear, 5, "score should be unchanged");
 }
 
 // -----------------------------------------------------------------------
-// get_score_datas_for_songs: IN-clause injection is now blocked
+// score_datas_for_songs: IN-clause injection is now blocked
 // -----------------------------------------------------------------------
 
 struct CollectAll {
@@ -143,7 +143,7 @@ fn get_score_datas_for_songs_injection_blocked() {
     injected_song.sha256 = "') OR 1=1 --".to_string();
 
     let mut collector = CollectAll::new();
-    db.get_score_datas_for_songs(&mut collector, &[injected_song], 0);
+    db.score_datas_for_songs(&mut collector, &[injected_song], 0);
 
     // The injected song should NOT match any real scores
     let matched_scores: Vec<&ScoreData> = collector

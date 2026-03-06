@@ -14,7 +14,7 @@ impl FreqTrainerMenu {
         *FREQ_TRAINER_ENABLED.lock().unwrap() = enabled;
     }
 
-    pub fn get_freq() -> i32 {
+    pub fn freq() -> i32 {
         *FREQ.lock().unwrap()
     }
 
@@ -22,7 +22,7 @@ impl FreqTrainerMenu {
         *FREQ.lock().unwrap() < 100
     }
 
-    pub fn get_freq_string() -> String {
+    pub fn freq_string() -> String {
         let freq = *FREQ.lock().unwrap();
         let rate = freq as f32 / 100.0f32;
         format!("[{:.02}x]", rate)
@@ -113,25 +113,25 @@ mod tests {
     fn test_get_freq_string_default() {
         // Reset state to known value
         *FREQ.lock().unwrap() = 100;
-        assert_eq!(FreqTrainerMenu::get_freq_string(), "[1.00x]");
+        assert_eq!(FreqTrainerMenu::freq_string(), "[1.00x]");
     }
 
     #[test]
     fn test_get_freq_string_half_speed() {
         *FREQ.lock().unwrap() = 50;
-        assert_eq!(FreqTrainerMenu::get_freq_string(), "[0.50x]");
+        assert_eq!(FreqTrainerMenu::freq_string(), "[0.50x]");
     }
 
     #[test]
     fn test_get_freq_string_double_speed() {
         *FREQ.lock().unwrap() = 200;
-        assert_eq!(FreqTrainerMenu::get_freq_string(), "[2.00x]");
+        assert_eq!(FreqTrainerMenu::freq_string(), "[2.00x]");
     }
 
     #[test]
     fn test_get_freq_string_fractional() {
         *FREQ.lock().unwrap() = 75;
-        assert_eq!(FreqTrainerMenu::get_freq_string(), "[0.75x]");
+        assert_eq!(FreqTrainerMenu::freq_string(), "[0.75x]");
     }
 
     #[test]

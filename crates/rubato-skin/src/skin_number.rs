@@ -76,7 +76,7 @@ impl SkinNumber {
                     m, timer, cycle,
                 ))
             }),
-            ref_prop: integer_property_factory::get_integer_property_by_id(id),
+            ref_prop: integer_property_factory::integer_property_by_id(id),
             keta,
             current_images: vec![None; keta as usize],
             zeropadding,
@@ -152,7 +152,7 @@ impl SkinNumber {
                     m, 0, cycle,
                 ))
             }),
-            ref_prop: integer_property_factory::get_integer_property_by_id(id),
+            ref_prop: integer_property_factory::integer_property_by_id(id),
             keta,
             current_images: vec![None; keta as usize],
             zeropadding,
@@ -206,7 +206,7 @@ impl SkinNumber {
         }
     }
 
-    pub fn get_keta(&self) -> i32 {
+    pub fn keta(&self) -> i32 {
         self.keta
     }
 
@@ -371,11 +371,11 @@ impl SkinNumber {
         }
     }
 
-    pub fn get_length(&self) -> f32 {
+    pub fn length(&self) -> f32 {
         self.length
     }
 
-    pub fn get_ref_prop(&self) -> Option<&dyn IntegerProperty> {
+    pub fn ref_prop(&self) -> Option<&dyn IntegerProperty> {
         self.ref_prop.as_deref()
     }
 
@@ -640,7 +640,7 @@ mod tests {
         num.prepare_with_value(0, &state, 123, 0.0, 0.0);
 
         // length = (20 + 4) * (5 - 2) = 24 * 3 = 72
-        assert_eq!(num.get_length(), 72.0);
+        assert_eq!(num.length(), 72.0);
     }
 
     #[test]
@@ -653,6 +653,6 @@ mod tests {
         num.prepare_with_value(0, &state, i32::MIN, 0.0, 0.0);
 
         assert!(!num.data.draw);
-        assert_eq!(num.get_length(), 0.0);
+        assert_eq!(num.length(), 0.0);
     }
 }

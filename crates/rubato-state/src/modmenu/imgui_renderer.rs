@@ -113,8 +113,8 @@ impl ImGuiRenderer {
 
                     // Debug information
                     ui.collapsing("Endless Dream Debug Information", |ui| {
-                        let commit_hash = Version::get_git_commit_hash().unwrap_or("unknown");
-                        let build_time = version::get_build_date().unwrap_or("unknown");
+                        let commit_hash = Version::git_commit_hash().unwrap_or("unknown");
+                        let build_time = version::build_date().unwrap_or("unknown");
                         ui.label(format!("Commit hash: {}", commit_hash));
                         ui.label(format!("Build time: {}", build_time));
                     });
@@ -172,7 +172,7 @@ impl ImGuiRenderer {
         // egui context cleanup is handled by beatoraja-bin
     }
 
-    pub fn get_show_mod_menu() -> bool {
+    pub fn show_mod_menu() -> bool {
         *SHOW_MOD_MENU.lock().unwrap()
     }
 

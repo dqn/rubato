@@ -107,7 +107,7 @@ impl SkinGauge {
         // This play-side struct exists for standalone gauge state only.
     }
 
-    pub fn get_animation_type(&self) -> i32 {
+    pub fn animation_type(&self) -> i32 {
         self.animation_type
     }
 
@@ -115,7 +115,7 @@ impl SkinGauge {
         self.animation_type = animation_type;
     }
 
-    pub fn get_animation_range(&self) -> i32 {
+    pub fn animation_range(&self) -> i32 {
         self.animation_range
     }
 
@@ -123,7 +123,7 @@ impl SkinGauge {
         self.animation_range = animation_range;
     }
 
-    pub fn get_duration(&self) -> i64 {
+    pub fn duration(&self) -> i64 {
         self.duration
     }
 
@@ -131,7 +131,7 @@ impl SkinGauge {
         self.duration = duration;
     }
 
-    pub fn get_parts(&self) -> i32 {
+    pub fn parts(&self) -> i32 {
         self.parts
     }
 

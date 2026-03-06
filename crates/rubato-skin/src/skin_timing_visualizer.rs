@@ -95,14 +95,14 @@ impl SkinTimingVisualizer {
         }
         self.data.prepare(time, state);
 
-        self.index = state.get_recent_judges_index();
-        self.recent = state.get_recent_judges().to_vec();
+        self.index = state.recent_judges_index();
+        self.recent = state.recent_judges().to_vec();
 
         // if(resource.getBMSModel() != model) { ... }
         if !self.model_set {
             self.model_set = true;
             // judgeArea = getJudgeArea(resource)
-            // self.judge_area = get_judge_area(resource);
+            // self.judge_area = judge_area(resource);
 
             // BMSModel -> background texture generation
             let pwidth = self.center * 2 + 1;
@@ -265,13 +265,13 @@ pub fn color_string_validation(cs: &str) -> String {
 
 /// Gets judge area from player resource.
 /// Returns judge windows as Vec<Vec<i32>> (5 judge levels x [early, late]).
-pub fn get_judge_area(resource: &MusicResultResource) -> Vec<Vec<i32>> {
-    let model = resource.get_bms_model();
-    let mode = resource.get_original_mode();
-    let rule = rubato_play::bms_player_rule::BMSPlayerRule::get_bms_player_rule(&mode);
+pub fn judge_area(resource: &MusicResultResource) -> Vec<Vec<i32>> {
+    let model = resource.bms_model();
+    let mode = resource.original_mode();
+    let rule = rubato_play::bms_player_rule::BMSPlayerRule::for_mode(&mode);
 
     let judgerank = model.judgerank();
-    let config = resource.get_player_config();
+    let config = resource.player_config();
     let mut judge_window_rate = if config.custom_judge {
         vec![
             config.key_judge_window_rate_perfect_great,
@@ -282,7 +282,7 @@ pub fn get_judge_area(resource: &MusicResultResource) -> Vec<Vec<i32>> {
         vec![100, 100, 100]
     };
 
-    for constraint in resource.get_constraint() {
+    for constraint in resource.constraint() {
         match constraint {
             rubato_core::course_data::CourseDataConstraint::NoGreat => {
                 judge_window_rate[1] = 0;
@@ -295,17 +295,17 @@ pub fn get_judge_area(resource: &MusicResultResource) -> Vec<Vec<i32>> {
         }
     }
 
-    rule.judge.get_note_judge(judgerank, &judge_window_rate)
+    rule.judge.note_judge(judgerank, &judge_window_rate)
 }
 
 /// Gets judge area from player resource (using the PlayerResource stub).
-pub fn get_judge_area_from_player_resource(resource: &PlayerResource) -> Vec<Vec<i32>> {
-    let model = resource.get_bms_model();
-    let mode = resource.get_original_mode();
-    let rule = rubato_play::bms_player_rule::BMSPlayerRule::get_bms_player_rule(&mode);
+pub fn judge_area_from_player_resource(resource: &PlayerResource) -> Vec<Vec<i32>> {
+    let model = resource.bms_model();
+    let mode = resource.original_mode();
+    let rule = rubato_play::bms_player_rule::BMSPlayerRule::for_mode(&mode);
 
     let judgerank = model.judgerank();
-    let config = resource.get_player_config();
+    let config = resource.player_config();
     let judge_window_rate = if config.custom_judge {
         vec![
             config.key_judge_window_rate_perfect_great,
@@ -319,5 +319,5 @@ pub fn get_judge_area_from_player_resource(resource: &PlayerResource) -> Vec<Vec
     // Constraint handling would mutate judge_window_rate
     // Deferred to runtime when PlayerResource is fully available
 
-    rule.judge.get_note_judge(judgerank, &judge_window_rate)
+    rule.judge.note_judge(judgerank, &judge_window_rate)
 }

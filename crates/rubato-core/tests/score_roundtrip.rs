@@ -61,7 +61,7 @@ fn score_data_roundtrip() {
     accessor.set_score_data(&score);
 
     let restored = accessor
-        .get_score_data(&score.sha256, score.mode)
+        .score_data(&score.sha256, score.mode)
         .expect("Score should be retrievable after insert");
 
     // Verify primary key fields
@@ -134,10 +134,10 @@ fn score_data_roundtrip_with_different_mode() {
     accessor.set_score_data(&score_mode1);
 
     let restored0 = accessor
-        .get_score_data(&score_mode0.sha256, 0)
+        .score_data(&score_mode0.sha256, 0)
         .expect("Mode 0 score should exist");
     let restored1 = accessor
-        .get_score_data(&score_mode1.sha256, 1)
+        .score_data(&score_mode1.sha256, 1)
         .expect("Mode 1 score should exist");
 
     assert_eq!(restored0.mode, 0);
@@ -158,7 +158,7 @@ fn score_data_get_nonexistent_returns_none() {
         ScoreDatabaseAccessor::new(db_path.to_str().unwrap()).expect("Failed to create accessor");
     accessor.create_table();
 
-    let result = accessor.get_score_data("nonexistent_hash", 0);
+    let result = accessor.score_data("nonexistent_hash", 0);
     assert!(result.is_none());
 }
 
@@ -182,7 +182,7 @@ fn score_data_overwrite_same_key() {
     accessor.set_score_data(&score);
 
     let restored = accessor
-        .get_score_data(&score.sha256, score.mode)
+        .score_data(&score.sha256, score.mode)
         .expect("Overwritten score should exist");
 
     assert_eq!(restored.clear, 9);

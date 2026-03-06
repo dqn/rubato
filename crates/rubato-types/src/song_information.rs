@@ -4,7 +4,7 @@ use crate::validatable::Validatable;
 use bms_model::bms_model::{BMSModel, LNTYPE_LONGNOTE};
 use bms_model::bms_model_utils::{
     TOTALNOTES_KEY, TOTALNOTES_LONG_KEY, TOTALNOTES_LONG_SCRATCH, TOTALNOTES_SCRATCH,
-    get_total_notes_with_type,
+    total_notes_with_type,
 };
 
 /// Song detailed information
@@ -53,10 +53,10 @@ impl SongInformation {
     pub fn from_model(model: &BMSModel) -> Self {
         let mut info = SongInformation::new();
         info.sha256 = model.sha256().to_string();
-        info.n = get_total_notes_with_type(model, TOTALNOTES_KEY);
-        info.ln = get_total_notes_with_type(model, TOTALNOTES_LONG_KEY);
-        info.s = get_total_notes_with_type(model, TOTALNOTES_SCRATCH);
-        info.ls = get_total_notes_with_type(model, TOTALNOTES_LONG_SCRATCH);
+        info.n = total_notes_with_type(model, TOTALNOTES_KEY);
+        info.ln = total_notes_with_type(model, TOTALNOTES_LONG_KEY);
+        info.s = total_notes_with_type(model, TOTALNOTES_SCRATCH);
+        info.ls = total_notes_with_type(model, TOTALNOTES_LONG_SCRATCH);
         info.total = model.total();
 
         let mode = match model.mode() {

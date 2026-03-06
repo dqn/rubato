@@ -45,7 +45,7 @@ impl RandomTrainer {
         RandomTrainer
     }
 
-    pub fn get_lane_order() -> String {
+    pub fn lane_order() -> String {
         init_defaults();
         let mut rng = thread_rng();
 
@@ -127,7 +127,7 @@ impl RandomTrainer {
         *ACTIVE.lock().unwrap() = active;
     }
 
-    pub fn get_random_seed_map() -> Option<HashMap<i32, i64>> {
+    pub fn random_seed_map() -> Option<HashMap<i32, i64>> {
         RANDOM_SEED_MAP.lock().unwrap().clone()
     }
 
@@ -139,7 +139,7 @@ impl RandomTrainer {
         *LANE_ORDER.lock().unwrap() = number.to_string();
     }
 
-    pub fn get_random_history() -> VecDeque<RandomHistoryEntry> {
+    pub fn random_history() -> VecDeque<RandomHistoryEntry> {
         random_history::random_history()
     }
 
@@ -250,12 +250,12 @@ mod tests {
         assert_eq!(*order, "7654321");
     }
 
-    // --- get_lane_order (shuffling) ---
+    // --- lane_order (shuffling) ---
 
     #[test]
     fn test_get_lane_order_preserves_length_and_chars() {
         let _g = reset_globals();
-        let order = RandomTrainer::get_lane_order();
+        let order = RandomTrainer::lane_order();
         assert_eq!(order.len(), 7);
         // All original digits should be present (possibly reordered)
         let mut sorted: Vec<char> = order.chars().collect();
@@ -270,7 +270,7 @@ mod tests {
         RandomTrainer::set_lane_to_random('3');
         RandomTrainer::set_lane_to_random('5');
 
-        let order = RandomTrainer::get_lane_order();
+        let order = RandomTrainer::lane_order();
         assert_eq!(order.len(), 7);
 
         // All 7 digits should still be present
@@ -284,7 +284,7 @@ mod tests {
         let _g = reset_globals();
         RandomTrainer::set_black_white_permute(true);
 
-        let order = RandomTrainer::get_lane_order();
+        let order = RandomTrainer::lane_order();
         let chars: Vec<char> = order.chars().collect();
         assert_eq!(chars.len(), 7);
 
@@ -317,7 +317,7 @@ mod tests {
     fn test_get_random_seed_map_is_some() {
         let _g = reset_globals();
         let _trainer = RandomTrainer::new();
-        let map = RandomTrainer::get_random_seed_map();
+        let map = RandomTrainer::random_seed_map();
         assert!(map.is_some());
         assert!(map.unwrap().is_empty());
     }

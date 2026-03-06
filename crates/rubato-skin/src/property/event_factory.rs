@@ -15,7 +15,7 @@ use rubato_types::play_config;
 /// Returns an Event for the given event ID.
 /// If the ID matches a built-in EventType, returns that event.
 /// Otherwise, returns a generic event that delegates to `state.execute_event()`.
-pub fn get_event_by_id(event_id: i32) -> Option<Box<dyn Event>> {
+pub fn event_by_id(event_id: i32) -> Option<Box<dyn Event>> {
     for et in EVENT_TYPES.iter() {
         if et.id == event_id {
             return Some((et.create_event)());
@@ -27,7 +27,7 @@ pub fn get_event_by_id(event_id: i32) -> Option<Box<dyn Event>> {
 }
 
 /// Returns an Event for the given event name.
-pub fn get_event_by_name(event_name: &str) -> Option<Box<dyn Event>> {
+pub fn event_by_name(event_name: &str) -> Option<Box<dyn Event>> {
     for et in EVENT_TYPES.iter() {
         if et.name == event_name {
             return Some((et.create_event)());
@@ -868,7 +868,7 @@ struct ReplayEvent(i32);
 impl Event for ReplayEvent {
     fn exec(&self, state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
         if state.is_music_selector()
-            && let Some(mode) = BMSPlayerMode::get_replay_mode(self.0)
+            && let Some(mode) = BMSPlayerMode::replay_mode(self.0)
         {
             state.select_song(mode.clone());
         }
@@ -913,7 +913,7 @@ impl Event for ModeEvent {
         if !state.is_music_selector() {
             return;
         }
-        let Some(config) = state.get_player_config_mut() else {
+        let Some(config) = state.player_config_mut() else {
             return;
         };
         let current_mode = config.mode.clone();
@@ -952,7 +952,7 @@ impl Event for SortEvent {
             return;
         }
         let len = rubato_types::bar_sorter::BarSorter::DEFAULT_SORTER.len() as i32;
-        let Some(config) = state.get_player_config_mut() else {
+        let Some(config) = state.player_config_mut() else {
             return;
         };
         let current = config.sort;
@@ -989,7 +989,7 @@ impl Event for SongbarSortEvent {
         }
         let all = &rubato_types::bar_sorter::BarSorter::ALL_SORTER;
         let len = all.len();
-        let Some(config) = state.get_player_config_mut() else {
+        let Some(config) = state.player_config_mut() else {
             return;
         };
         let current_sortid = config.sortid.clone().unwrap_or_default();
@@ -1035,7 +1035,7 @@ impl Event for PlayerConfigCycleEvent {
         if self.music_selector_only && !state.is_music_selector() {
             return;
         }
-        let Some(config) = state.get_player_config_mut() else {
+        let Some(config) = state.player_config_mut() else {
             return;
         };
         let current = (self.get)(config);
@@ -1242,7 +1242,7 @@ struct NotesDisplayTimingEvent;
 
 impl Event for NotesDisplayTimingEvent {
     fn exec(&self, state: &mut dyn MainState, arg1: i32, _arg2: i32) {
-        let Some(config) = state.get_player_config_mut() else {
+        let Some(config) = state.player_config_mut() else {
             return;
         };
         let max = rubato_types::player_config::JUDGETIMING_MAX;
@@ -1275,7 +1275,7 @@ struct NotesDisplayTimingAutoAdjustEvent;
 
 impl Event for NotesDisplayTimingAutoAdjustEvent {
     fn exec(&self, state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
-        let Some(config) = state.get_player_config_mut() else {
+        let Some(config) = state.player_config_mut() else {
             return;
         };
         config.notes_display_timing_auto_adjust = !config.notes_display_timing_auto_adjust;
@@ -1297,11 +1297,11 @@ struct TargetEvent;
 
 impl Event for TargetEvent {
     fn exec(&self, state: &mut dyn MainState, arg1: i32, _arg2: i32) {
-        let Some(config) = state.get_player_config_mut() else {
+        let Some(config) = state.player_config_mut() else {
             return;
         };
         let targets = {
-            let targets = TargetProperty::get_targets();
+            let targets = TargetProperty::targets();
             if targets.is_empty() {
                 config.targetlist.clone()
             } else {
@@ -1391,7 +1391,7 @@ impl Event for AutoSaveReplayEvent {
         }
         // ReplayAutoSaveConstraint::values().len() = 11
         let length = 11;
-        let Some(config) = state.get_player_config_mut() else {
+        let Some(config) = state.player_config_mut() else {
             return;
         };
         if self.index >= config.autosavereplay.len() {
@@ -1461,7 +1461,7 @@ impl Event for GuideSeEvent {
         if !state.is_music_selector() {
             return;
         }
-        let Some(config) = state.get_player_config_mut() else {
+        let Some(config) = state.player_config_mut() else {
             return;
         };
         config.is_guide_se = !config.is_guide_se;
@@ -1487,7 +1487,7 @@ impl Event for ChartReplicationModeEvent {
         // ChartReplicationMode.values() = [NONE, RIVALCHART, RIVALOPTION]
         let values = ["NONE", "RIVALCHART", "RIVALOPTION"];
         let len = values.len();
-        let Some(config) = state.get_player_config_mut() else {
+        let Some(config) = state.player_config_mut() else {
             return;
         };
         let current_id = config.sortid.clone().unwrap_or_default();
@@ -1559,7 +1559,7 @@ mod tests {
     }
 
     impl MainState for TestMainState {
-        fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             &self.timer
         }
         fn get_offset_value(&self, _id: i32) -> Option<&SkinOffset> {
@@ -1579,9 +1579,7 @@ mod tests {
             self.is_selector
         }
 
-        fn get_player_config_mut(
-            &mut self,
-        ) -> Option<&mut rubato_types::player_config::PlayerConfig> {
+        fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
             Some(&mut self.player_config)
         }
 
@@ -1630,32 +1628,32 @@ mod tests {
 
     #[test]
     fn test_get_event_by_id_known() {
-        let event = get_event_by_id(11).unwrap();
+        let event = event_by_id(11).unwrap();
         assert_eq!(event.get_event_id(), 11);
     }
 
     #[test]
     fn test_get_event_by_id_unknown() {
-        let event = get_event_by_id(9999).unwrap();
+        let event = event_by_id(9999).unwrap();
         assert_eq!(event.get_event_id(), 9999);
     }
 
     #[test]
     fn test_get_event_by_name() {
-        let event = get_event_by_name("mode").unwrap();
+        let event = event_by_name("mode").unwrap();
         assert_eq!(event.get_event_id(), 11);
     }
 
     #[test]
     fn test_get_event_by_name_unknown() {
-        assert!(get_event_by_name("nonexistent").is_none());
+        assert!(event_by_name("nonexistent").is_none());
     }
 
     #[test]
     fn test_gauge_cycle_forward() {
         let mut state = TestMainState::new();
         state.player_config.gauge = 3;
-        let event = get_event_by_id(40).unwrap(); // gauge1p
+        let event = event_by_id(40).unwrap(); // gauge1p
         event.exec(&mut state, 1, 0); // forward
         assert_eq!(state.player_config.gauge, 4);
         assert!(state.option_change_played);
@@ -1665,7 +1663,7 @@ mod tests {
     fn test_gauge_cycle_backward() {
         let mut state = TestMainState::new();
         state.player_config.gauge = 0;
-        let event = get_event_by_id(40).unwrap(); // gauge1p
+        let event = event_by_id(40).unwrap(); // gauge1p
         event.exec(&mut state, -1, 0); // backward wraps to 5
         assert_eq!(state.player_config.gauge, 5);
     }
@@ -1674,7 +1672,7 @@ mod tests {
     fn test_option1p_cycle() {
         let mut state = TestMainState::new();
         state.player_config.random = 9;
-        let event = get_event_by_id(42).unwrap(); // option1p
+        let event = event_by_id(42).unwrap(); // option1p
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.random, 0); // wraps
     }
@@ -1684,7 +1682,7 @@ mod tests {
         let mut state = TestMainState::new();
         state.is_selector = false;
         state.player_config.random = 9;
-        let event = get_event_by_id(42).unwrap(); // option1p
+        let event = event_by_id(42).unwrap(); // option1p
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.random, 0);
     }
@@ -1693,7 +1691,7 @@ mod tests {
     fn test_option2p_cycle() {
         let mut state = TestMainState::new();
         state.player_config.random2 = 5;
-        let event = get_event_by_id(43).unwrap(); // option2p
+        let event = event_by_id(43).unwrap(); // option2p
         event.exec(&mut state, -1, 0);
         assert_eq!(state.player_config.random2, 4);
     }
@@ -1702,7 +1700,7 @@ mod tests {
     fn test_hsfix_cycle() {
         let mut state = TestMainState::new();
         state.play_config.fixhispeed = 3;
-        let event = get_event_by_id(55).unwrap(); // hsfix
+        let event = event_by_id(55).unwrap(); // hsfix
         event.exec(&mut state, 1, 0);
         assert_eq!(state.play_config.fixhispeed, 4);
     }
@@ -1712,7 +1710,7 @@ mod tests {
         let mut state = TestMainState::new();
         state.play_config.hispeed = 1.0;
         state.play_config.hispeedmargin = 0.25;
-        let event = get_event_by_id(57).unwrap(); // hispeed1p
+        let event = event_by_id(57).unwrap(); // hispeed1p
         event.exec(&mut state, 1, 0);
         assert!((state.play_config.hispeed - 1.25).abs() < 0.001);
         assert!(state.option_change_played);
@@ -1723,7 +1721,7 @@ mod tests {
         let mut state = TestMainState::new();
         state.play_config.hispeed = 1.0;
         state.play_config.hispeedmargin = 0.25;
-        let event = get_event_by_id(57).unwrap();
+        let event = event_by_id(57).unwrap();
         event.exec(&mut state, -1, 0);
         assert!((state.play_config.hispeed - 0.75).abs() < 0.001);
     }
@@ -1733,7 +1731,7 @@ mod tests {
         let mut state = TestMainState::new();
         state.play_config.hispeed = play_config::HISPEED_MAX;
         state.play_config.hispeedmargin = 0.25;
-        let event = get_event_by_id(57).unwrap();
+        let event = event_by_id(57).unwrap();
         event.exec(&mut state, 1, 0);
         assert!((state.play_config.hispeed - play_config::HISPEED_MAX).abs() < 0.001);
         // No sound since value didn't change
@@ -1744,7 +1742,7 @@ mod tests {
     fn test_duration_forward() {
         let mut state = TestMainState::new();
         state.play_config.duration = 500;
-        let event = get_event_by_id(59).unwrap(); // duration1p
+        let event = event_by_id(59).unwrap(); // duration1p
         event.exec(&mut state, 1, 0);
         assert_eq!(state.play_config.duration, 501);
     }
@@ -1753,7 +1751,7 @@ mod tests {
     fn test_duration_with_arg2() {
         let mut state = TestMainState::new();
         state.play_config.duration = 500;
-        let event = get_event_by_id(59).unwrap();
+        let event = event_by_id(59).unwrap();
         event.exec(&mut state, 1, 10); // increment by 10
         assert_eq!(state.play_config.duration, 510);
     }
@@ -1762,7 +1760,7 @@ mod tests {
     fn test_hispeed_auto_adjust_toggle() {
         let mut state = TestMainState::new();
         assert!(!state.play_config.hispeedautoadjust);
-        let event = get_event_by_id(342).unwrap();
+        let event = event_by_id(342).unwrap();
         event.exec(&mut state, 0, 0);
         assert!(state.play_config.hispeedautoadjust);
         event.exec(&mut state, 0, 0);
@@ -1773,7 +1771,7 @@ mod tests {
     fn test_lanecover_toggle() {
         let mut state = TestMainState::new();
         assert!(state.play_config.enablelanecover); // default is true
-        let event = get_event_by_id(330).unwrap();
+        let event = event_by_id(330).unwrap();
         event.exec(&mut state, 0, 0);
         assert!(!state.play_config.enablelanecover);
     }
@@ -1782,7 +1780,7 @@ mod tests {
     fn test_lift_toggle() {
         let mut state = TestMainState::new();
         assert!(!state.play_config.enablelift);
-        let event = get_event_by_id(331).unwrap();
+        let event = event_by_id(331).unwrap();
         event.exec(&mut state, 0, 0);
         assert!(state.play_config.enablelift);
     }
@@ -1791,7 +1789,7 @@ mod tests {
     fn test_hidden_toggle() {
         let mut state = TestMainState::new();
         assert!(!state.play_config.enablehidden);
-        let event = get_event_by_id(332).unwrap();
+        let event = event_by_id(332).unwrap();
         event.exec(&mut state, 0, 0);
         assert!(state.play_config.enablehidden);
     }
@@ -1800,7 +1798,7 @@ mod tests {
     fn test_constant_toggle() {
         let mut state = TestMainState::new();
         assert!(!state.play_config.enable_constant);
-        let event = get_event_by_id(skin_property::OPTION_CONSTANT).unwrap();
+        let event = event_by_id(skin_property::OPTION_CONSTANT).unwrap();
         assert_eq!(event.get_event_id(), skin_property::OPTION_CONSTANT);
         event.exec(&mut state, 0, 0);
         assert!(state.play_config.enable_constant);
@@ -1810,7 +1808,7 @@ mod tests {
     fn test_bga_cycle() {
         let mut state = TestMainState::new();
         state.config.bga = 2;
-        let event = get_event_by_id(72).unwrap();
+        let event = event_by_id(72).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.config.bga, 0); // wraps from 2
     }
@@ -1819,7 +1817,7 @@ mod tests {
     fn test_bgaexpand_cycle() {
         let mut state = TestMainState::new();
         state.config.bga_expand = 0;
-        let event = get_event_by_id(73).unwrap();
+        let event = event_by_id(73).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.config.bga_expand, 1);
     }
@@ -1828,7 +1826,7 @@ mod tests {
     fn test_notes_display_timing_forward() {
         let mut state = TestMainState::new();
         state.player_config.judgetiming = 0;
-        let event = get_event_by_id(74).unwrap();
+        let event = event_by_id(74).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.judgetiming, 1);
     }
@@ -1837,7 +1835,7 @@ mod tests {
     fn test_notes_display_timing_backward() {
         let mut state = TestMainState::new();
         state.player_config.judgetiming = 0;
-        let event = get_event_by_id(74).unwrap();
+        let event = event_by_id(74).unwrap();
         event.exec(&mut state, -1, 0);
         assert_eq!(state.player_config.judgetiming, -1);
     }
@@ -1846,7 +1844,7 @@ mod tests {
     fn test_notes_display_timing_clamp_max() {
         let mut state = TestMainState::new();
         state.player_config.judgetiming = rubato_types::player_config::JUDGETIMING_MAX;
-        let event = get_event_by_id(74).unwrap();
+        let event = event_by_id(74).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(
             state.player_config.judgetiming,
@@ -1858,7 +1856,7 @@ mod tests {
     fn test_notes_display_timing_auto_adjust() {
         let mut state = TestMainState::new();
         assert!(!state.player_config.notes_display_timing_auto_adjust);
-        let event = get_event_by_id(75).unwrap();
+        let event = event_by_id(75).unwrap();
         event.exec(&mut state, 0, 0);
         assert!(state.player_config.notes_display_timing_auto_adjust);
     }
@@ -1867,7 +1865,7 @@ mod tests {
     fn test_guide_se_toggle() {
         let mut state = TestMainState::new();
         assert!(!state.player_config.is_guide_se);
-        let event = get_event_by_id(343).unwrap();
+        let event = event_by_id(343).unwrap();
         event.exec(&mut state, 0, 0);
         assert!(state.player_config.is_guide_se);
     }
@@ -1876,7 +1874,7 @@ mod tests {
     fn test_lnmode_noop() {
         let mut state = TestMainState::new();
         state.player_config.lnmode = 0;
-        let event = get_event_by_id(308).unwrap();
+        let event = event_by_id(308).unwrap();
         event.exec(&mut state, 1, 0);
         // LN mode is disabled; value should not change
         assert_eq!(state.player_config.lnmode, 0);
@@ -1886,7 +1884,7 @@ mod tests {
     fn test_autosavereplay_cycle() {
         let mut state = TestMainState::new();
         state.player_config.autosavereplay = vec![5, 0, 0, 0];
-        let event = get_event_by_id(321).unwrap(); // autosavereplay1 (index 0)
+        let event = event_by_id(321).unwrap(); // autosavereplay1 (index 0)
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.autosavereplay[0], 6);
     }
@@ -1895,7 +1893,7 @@ mod tests {
     fn test_autosavereplay_wrap() {
         let mut state = TestMainState::new();
         state.player_config.autosavereplay = vec![10, 0, 0, 0];
-        let event = get_event_by_id(321).unwrap();
+        let event = event_by_id(321).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.autosavereplay[0], 0); // wraps at 11
     }
@@ -1903,7 +1901,7 @@ mod tests {
     #[test]
     fn test_state_change_keyconfig() {
         let mut state = TestMainState::new();
-        let event = get_event_by_id(13).unwrap(); // keyconfig
+        let event = event_by_id(13).unwrap(); // keyconfig
         event.exec(&mut state, 0, 0);
         assert_eq!(state.changed_state, Some(MainStateType::Config));
     }
@@ -1911,7 +1909,7 @@ mod tests {
     #[test]
     fn test_state_change_skinconfig() {
         let mut state = TestMainState::new();
-        let event = get_event_by_id(14).unwrap(); // skinconfig
+        let event = event_by_id(14).unwrap(); // skinconfig
         event.exec(&mut state, 0, 0);
         assert_eq!(state.changed_state, Some(MainStateType::SkinConfig));
     }
@@ -1919,7 +1917,7 @@ mod tests {
     #[test]
     fn test_play_select_song() {
         let mut state = TestMainState::new();
-        let event = get_event_by_id(15).unwrap(); // play
+        let event = event_by_id(15).unwrap(); // play
         event.exec(&mut state, 0, 0);
         assert_eq!(state.selected_song, Some(BMSPlayerMode::PLAY));
     }
@@ -1927,7 +1925,7 @@ mod tests {
     #[test]
     fn test_autoplay_select_song() {
         let mut state = TestMainState::new();
-        let event = get_event_by_id(16).unwrap(); // autoplay
+        let event = event_by_id(16).unwrap(); // autoplay
         event.exec(&mut state, 0, 0);
         assert_eq!(state.selected_song, Some(BMSPlayerMode::AUTOPLAY));
     }
@@ -1935,7 +1933,7 @@ mod tests {
     #[test]
     fn test_practice_select_song() {
         let mut state = TestMainState::new();
-        let event = get_event_by_id(315).unwrap(); // practice
+        let event = event_by_id(315).unwrap(); // practice
         event.exec(&mut state, 0, 0);
         assert_eq!(state.selected_song, Some(BMSPlayerMode::PRACTICE));
     }
@@ -1943,7 +1941,7 @@ mod tests {
     #[test]
     fn test_replay_select_song() {
         let mut state = TestMainState::new();
-        let event = get_event_by_id(19).unwrap(); // replay1
+        let event = event_by_id(19).unwrap(); // replay1
         event.exec(&mut state, 0, 0);
         assert_eq!(state.selected_song, Some(BMSPlayerMode::REPLAY_1));
     }
@@ -1952,7 +1950,7 @@ mod tests {
     fn test_mode_cycle_forward() {
         let mut state = TestMainState::new();
         state.player_config.mode = None; // index 0
-        let event = get_event_by_id(11).unwrap();
+        let event = event_by_id(11).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(
             state.player_config.mode,
@@ -1966,7 +1964,7 @@ mod tests {
     fn test_mode_cycle_backward() {
         let mut state = TestMainState::new();
         state.player_config.mode = None; // index 0
-        let event = get_event_by_id(11).unwrap();
+        let event = event_by_id(11).unwrap();
         event.exec(&mut state, -1, 0);
         assert_eq!(
             state.player_config.mode,
@@ -1978,7 +1976,7 @@ mod tests {
     fn test_sort_cycle() {
         let mut state = TestMainState::new();
         state.player_config.sort = 0;
-        let event = get_event_by_id(12).unwrap();
+        let event = event_by_id(12).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.sort, 1);
         assert!(state.bar_updated);
@@ -1988,7 +1986,7 @@ mod tests {
     #[test]
     fn test_key_assign_noop() {
         let mut state = TestMainState::new();
-        let event = get_event_by_id(101).unwrap(); // keyassign1
+        let event = event_by_id(101).unwrap(); // keyassign1
         event.exec(&mut state, 0, 0);
         // Should not modify anything
         assert!(!state.option_change_played);
@@ -1997,20 +1995,20 @@ mod tests {
     #[test]
     fn test_key_assign_event_ids() {
         // Verify the ID mapping: 101-139 for indices 0-38, 150-164 for indices 39-53
-        let event = get_event_by_name("keyassign1").unwrap();
+        let event = event_by_name("keyassign1").unwrap();
         assert_eq!(event.get_event_id(), 101);
-        let event = get_event_by_name("keyassign39").unwrap();
+        let event = event_by_name("keyassign39").unwrap();
         assert_eq!(event.get_event_id(), 139);
-        let event = get_event_by_name("keyassign40").unwrap();
+        let event = event_by_name("keyassign40").unwrap();
         assert_eq!(event.get_event_id(), 150);
-        let event = get_event_by_name("keyassign54").unwrap();
+        let event = event_by_name("keyassign54").unwrap();
         assert_eq!(event.get_event_id(), 164);
     }
 
     #[test]
     fn test_delegate_event_for_unknown_id() {
         let mut state = TestMainState::new();
-        let event = get_event_by_id(9999).unwrap();
+        let event = event_by_id(9999).unwrap();
         event.exec(&mut state, 1, 2);
         assert_eq!(state.executed_events, vec![(9999, 1, 2)]);
     }
@@ -2019,7 +2017,7 @@ mod tests {
     fn test_not_music_selector_skips() {
         let mut state = TestMainState::new();
         state.is_selector = false;
-        let event = get_event_by_id(40).unwrap(); // gauge1p
+        let event = event_by_id(40).unwrap(); // gauge1p
         event.exec(&mut state, 1, 0);
         // Should not modify config since not MusicSelector
         assert_eq!(state.player_config.gauge, 0);
@@ -2031,7 +2029,7 @@ mod tests {
         let mut state = TestMainState::new();
         state.is_selector = false;
         state.player_config.targetid = "RATE_MAX-".to_string();
-        let event = get_event_by_id(77).unwrap();
+        let event = event_by_id(77).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.targetid, "MAX");
     }
@@ -2041,7 +2039,7 @@ mod tests {
         let mut state = TestMainState::new();
         state.is_selector = false;
         state.player_config.judgetiming = 0;
-        let event = get_event_by_id(74).unwrap();
+        let event = event_by_id(74).unwrap();
         event.exec(&mut state, 1, 0);
         // notesdisplaytiming works for any state, not just MusicSelector
         assert_eq!(state.player_config.judgetiming, 1);
@@ -2053,7 +2051,7 @@ mod tests {
     fn test_extranotedepth_cycle() {
         let mut state = TestMainState::new();
         state.player_config.extranote_depth = 3;
-        let event = get_event_by_id(350).unwrap();
+        let event = event_by_id(350).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.extranote_depth, 0); // wraps at 4
     }
@@ -2062,7 +2060,7 @@ mod tests {
     fn test_minemode_cycle() {
         let mut state = TestMainState::new();
         state.player_config.mine_mode = 4;
-        let event = get_event_by_id(351).unwrap();
+        let event = event_by_id(351).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.mine_mode, 0); // wraps at 5
     }
@@ -2071,7 +2069,7 @@ mod tests {
     fn test_scrollmode_cycle() {
         let mut state = TestMainState::new();
         state.player_config.scroll_mode = 2;
-        let event = get_event_by_id(352).unwrap();
+        let event = event_by_id(352).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.scroll_mode, 0); // wraps at 3
     }
@@ -2080,7 +2078,7 @@ mod tests {
     fn test_longnotemode_cycle() {
         let mut state = TestMainState::new();
         state.player_config.longnote_mode = 5;
-        let event = get_event_by_id(353).unwrap();
+        let event = event_by_id(353).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.longnote_mode, 0); // wraps at 6
     }
@@ -2089,7 +2087,7 @@ mod tests {
     fn test_seventonine_pattern_cycle() {
         let mut state = TestMainState::new();
         state.player_config.seven_to_nine_pattern = 6;
-        let event = get_event_by_id(360).unwrap();
+        let event = event_by_id(360).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.seven_to_nine_pattern, 0); // wraps at 7
     }
@@ -2098,7 +2096,7 @@ mod tests {
     fn test_seventonine_type_cycle() {
         let mut state = TestMainState::new();
         state.player_config.seven_to_nine_type = 2;
-        let event = get_event_by_id(361).unwrap();
+        let event = event_by_id(361).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.seven_to_nine_type, 0); // wraps at 3
     }
@@ -2107,7 +2105,7 @@ mod tests {
     fn test_judge_algorithm_cycle() {
         let mut state = TestMainState::new();
         state.play_config.judgetype = "Combo".to_string();
-        let event = get_event_by_id(340).unwrap();
+        let event = event_by_id(340).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.play_config.judgetype, "Duration");
     }
@@ -2116,7 +2114,7 @@ mod tests {
     fn test_judge_algorithm_cycle_backward() {
         let mut state = TestMainState::new();
         state.play_config.judgetype = "Combo".to_string();
-        let event = get_event_by_id(340).unwrap();
+        let event = event_by_id(340).unwrap();
         event.exec(&mut state, -1, 0);
         assert_eq!(state.play_config.judgetype, "Lowest");
     }
@@ -2125,7 +2123,7 @@ mod tests {
     fn test_optiondp_cycle() {
         let mut state = TestMainState::new();
         state.player_config.doubleoption = 3;
-        let event = get_event_by_id(54).unwrap();
+        let event = event_by_id(54).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.doubleoption, 0); // wraps at 4
     }
@@ -2134,7 +2132,7 @@ mod tests {
     fn test_gaugeautoshift_cycle() {
         let mut state = TestMainState::new();
         state.player_config.gauge_auto_shift = 4;
-        let event = get_event_by_id(78).unwrap();
+        let event = event_by_id(78).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.gauge_auto_shift, 0); // wraps at 5
     }
@@ -2143,7 +2141,7 @@ mod tests {
     fn test_bottomshiftablegauge_cycle() {
         let mut state = TestMainState::new();
         state.player_config.bottom_shiftable_gauge = 2;
-        let event = get_event_by_id(341).unwrap();
+        let event = event_by_id(341).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(state.player_config.bottom_shiftable_gauge, 0); // wraps at 3
     }

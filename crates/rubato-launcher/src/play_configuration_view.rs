@@ -2773,7 +2773,7 @@ mod tests {
             &score_db_path.to_string_lossy(),
         )
         .unwrap();
-        let score = scoredb.get_score_data(
+        let score = scoredb.score_data(
             "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab",
             0,
         );
@@ -2844,7 +2844,7 @@ mod tests {
             &score_db_path.to_string_lossy(),
         )
         .unwrap();
-        let scores = scoredb.get_score_datas("1=1");
+        let scores = scoredb.score_datas("1=1");
         let count = scores.map(|v| v.len()).unwrap_or(0);
         assert_eq!(count, 0, "No scores should be imported when no songs match");
     }
@@ -2941,7 +2941,7 @@ mod tests {
         .unwrap();
 
         for i in 0..7 {
-            let score = scoredb.get_score_data(&sha256s[i], 0);
+            let score = scoredb.score_data(&sha256s[i], 0);
             assert!(score.is_some(), "Score for clear index {} should exist", i);
             let score = score.unwrap();
             assert_eq!(

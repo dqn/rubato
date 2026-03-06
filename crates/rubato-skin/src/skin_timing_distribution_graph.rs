@@ -2,7 +2,7 @@
 // Mechanical line-by-line translation.
 
 use crate::skin_object::{SkinObjectData, SkinObjectRenderer};
-use crate::skin_timing_visualizer::{color_string_validation, get_judge_area};
+use crate::skin_timing_visualizer::{color_string_validation, judge_area};
 use crate::stubs::{Color, MainState, MusicResult, Pixmap, PixmapFormat, Texture, TextureRegion};
 
 /// Judge timing distribution graph
@@ -99,10 +99,10 @@ impl SkinTimingDistributionGraph {
     ) {
         // Texture generation happens once
         if self.tex.is_none() {
-            let td = music_result.get_timing_distribution();
+            let td = music_result.timing_distribution();
             let dist = td.timing_distribution();
             let center = td.array_center();
-            let judge_area = get_judge_area(&music_result.resource);
+            let judge_area = judge_area(&music_result.resource);
 
             let mut max = self.max;
             for &d in dist {

@@ -22,29 +22,29 @@ impl RivalDataAccessor {
         }
     }
 
-    pub fn get_rival_information(&self, index: usize) -> Option<&PlayerInformation> {
+    pub fn rival_information(&self, index: usize) -> Option<&PlayerInformation> {
         self.rivals.get(index)
     }
 
     /// Get rival score data cache by index.
     ///
     /// Translated from: RivalDataAccessor.getRivalScoreDataCache(int)
-    pub fn get_rival_score_data_cache(&self, index: usize) -> Option<&ScoreDataCache> {
+    pub fn rival_score_data_cache(&self, index: usize) -> Option<&ScoreDataCache> {
         self.rivalcaches.get(index)
     }
 
-    pub fn get_rival_score_data_cache_mut(&mut self, index: usize) -> Option<&mut ScoreDataCache> {
+    pub fn rival_score_data_cache_mut(&mut self, index: usize) -> Option<&mut ScoreDataCache> {
         self.rivalcaches.get_mut(index)
     }
 
-    pub fn get_rival_count(&self) -> usize {
+    pub fn rival_count(&self) -> usize {
         self.rivals.len()
     }
 
     /// Update rival data from IR.
     /// Translates: RivalDataAccessor.update(MainController)
     pub fn update(&mut self, main: &mut MainController) {
-        let ir_status = main.get_ir_status();
+        let ir_status = main.ir_status();
         if ir_status.is_empty() {
             return;
         }
@@ -59,7 +59,7 @@ impl RivalDataAccessor {
 
         // Step 1: Import own scores if configured
         if provider.should_import_scores() {
-            let config = main.get_config();
+            let config = main.config();
             let player_name = config.playername().unwrap_or("player1");
             let score_db_path = format!("{}/{}/score.db", config.playerpath, player_name);
             match provider.fetch_own_scores() {
@@ -79,7 +79,7 @@ impl RivalDataAccessor {
             }
             // Clear import flag via mutable access
             if let Some(p) = main
-                .get_ir_status_mut()
+                .ir_status_mut()
                 .get_mut(0)
                 .and_then(|s| s.rival_provider.as_mut())
             {
@@ -89,7 +89,7 @@ impl RivalDataAccessor {
 
         // Re-borrow provider after mutable access
         let provider = match main
-            .get_ir_status()
+            .ir_status()
             .first()
             .and_then(|s| s.rival_provider.as_ref())
         {
@@ -126,7 +126,7 @@ impl RivalDataAccessor {
 
                         // Re-borrow provider for fetch
                         let provider_ref = main
-                            .get_ir_status()
+                            .ir_status()
                             .first()
                             .and_then(|s| s.rival_provider.as_ref());
                         if let Some(prov) = provider_ref {
@@ -189,7 +189,7 @@ impl RivalDataAccessor {
 
                     let path_str = path.to_string_lossy().to_string();
                     if let Ok(scoredb) = ScoreDatabaseAccessor::new(&path_str)
-                        && let Some(info) = scoredb.get_information()
+                        && let Some(info) = scoredb.information()
                     {
                         let cache = Self::create_score_cache_for_db(&path_str);
                         log::info!("Local rival score loaded: {}", info.name());
@@ -219,7 +219,7 @@ impl RivalDataAccessor {
                 };
                 ScoreDatabaseAccessor::new(&db_path_single)
                     .ok()
-                    .and_then(|db| db.get_score_data(sha256, mode))
+                    .and_then(|db| db.score_data(sha256, mode))
             }),
             Box::new(move |collector, songs, lnmode| {
                 if let Ok(db) = ScoreDatabaseAccessor::new(&db_path_multi) {
@@ -230,7 +230,7 @@ impl RivalDataAccessor {
                         } else {
                             0
                         };
-                        let score = db.get_score_data(sha256, mode);
+                        let score = db.score_data(sha256, mode);
                         collector(song, score.as_ref());
                     }
                 }

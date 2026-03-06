@@ -10,7 +10,7 @@ impl Version {
         version()
     }
 
-    pub fn get_long_version() -> &'static str {
+    pub fn long_version() -> &'static str {
         version_long()
     }
 
@@ -18,8 +18,8 @@ impl Version {
         compare_to_string(other)
     }
 
-    pub fn get_git_commit_hash() -> Option<&'static str> {
-        get_git_commit_hash()
+    pub fn git_commit_hash() -> Option<&'static str> {
+        git_commit_hash()
     }
 }
 
@@ -135,12 +135,12 @@ pub fn compare_to_string(other: Option<&str>) -> i32 {
 }
 
 /// Get current build's git commit hash
-pub fn get_git_commit_hash() -> Option<&'static str> {
+pub fn git_commit_hash() -> Option<&'static str> {
     build_meta_info().get("git_commit").map(|s| s.as_str())
 }
 
 /// Get the build time of the current build
-pub fn get_build_date() -> Option<&'static str> {
+pub fn build_date() -> Option<&'static str> {
     build_meta_info().get("build_time").map(|s| s.as_str())
 }
 
@@ -224,7 +224,7 @@ mod tests {
     #[test]
     fn test_version_struct_delegates() {
         assert_eq!(Version::get_version(), version());
-        assert_eq!(Version::get_long_version(), version_long());
+        assert_eq!(Version::long_version(), version_long());
     }
 
     #[test]
@@ -286,12 +286,12 @@ mod tests {
     #[test]
     fn test_git_commit_hash_is_none_without_build_properties() {
         // No build.properties file, so hash should be None
-        assert!(get_git_commit_hash().is_none());
+        assert!(git_commit_hash().is_none());
     }
 
     #[test]
     fn test_build_date_is_none_without_build_properties() {
-        assert!(get_build_date().is_none());
+        assert!(build_date().is_none());
     }
 
     #[test]

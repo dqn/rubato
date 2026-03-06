@@ -48,7 +48,7 @@ impl ExecutableBar {
         bar
     }
 
-    pub fn get_song_data(&self) -> SongData {
+    pub fn song_data(&self) -> SongData {
         self._get_song_data()
     }
 
@@ -77,11 +77,11 @@ impl ExecutableBar {
         }
     }
 
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         self.title.clone()
     }
 
-    pub fn get_lamp(&self, _is_player: bool) -> i32 {
+    pub fn lamp(&self, _is_player: bool) -> i32 {
         0
     }
 }

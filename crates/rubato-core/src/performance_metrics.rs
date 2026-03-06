@@ -97,12 +97,12 @@ impl PerformanceMetrics {
         }
     }
 
-    pub fn get_watch_names(&self) -> Vec<String> {
+    pub fn watch_names(&self) -> Vec<String> {
         let records = self.watch_records.lock().unwrap();
         records.keys().cloned().collect()
     }
 
-    pub fn get_watch_records(&self, name: &str) -> Option<VecDeque<(i64, i64)>> {
+    pub fn watch_records(&self, name: &str) -> Option<VecDeque<(i64, i64)>> {
         let records = self.watch_records.lock().unwrap();
         records.get(name).cloned()
     }

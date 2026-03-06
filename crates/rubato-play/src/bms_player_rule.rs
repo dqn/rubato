@@ -23,7 +23,7 @@ impl BMSPlayerRule {
         }
     }
 
-    pub fn get_bms_player_rule(mode: &Mode) -> BMSPlayerRule {
+    pub fn for_mode(mode: &Mode) -> BMSPlayerRule {
         let ruleset = bms_player_rule_set_lr2();
         for rule in &ruleset {
             if rule.mode.is_empty() {
@@ -41,7 +41,7 @@ impl BMSPlayerRule {
 
     pub fn validate(model: &mut BMSModel) {
         let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
-        let rule = Self::get_bms_player_rule(&mode);
+        let rule = Self::for_mode(&mode);
         let judgerank = model.judgerank();
         match model.judgerank_type() {
             JudgeRankType::BmsRank => {
@@ -154,20 +154,20 @@ mod tests {
             Mode::KEYBOARD_24K_DOUBLE,
         ];
         for mode in &modes {
-            let rule = BMSPlayerRule::get_bms_player_rule(mode);
+            let rule = BMSPlayerRule::for_mode(mode);
             assert_eq!(rule.gauge, GaugeProperty::Lr2);
         }
     }
 
     #[test]
     fn lr2_ruleset_returns_lr2_gauge() {
-        let rule = BMSPlayerRule::get_bms_player_rule(&Mode::BEAT_7K);
+        let rule = BMSPlayerRule::for_mode(&Mode::BEAT_7K);
         assert_eq!(rule.gauge, GaugeProperty::Lr2);
     }
 
     #[test]
     fn lr2_ruleset_has_empty_mode_list() {
-        let rule = BMSPlayerRule::get_bms_player_rule(&Mode::BEAT_7K);
+        let rule = BMSPlayerRule::for_mode(&Mode::BEAT_7K);
         assert!(rule.mode.is_empty());
     }
 

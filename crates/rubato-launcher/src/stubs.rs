@@ -188,19 +188,19 @@ pub struct VersionChecker {
 impl VersionChecker {
     pub fn message(&mut self) -> &str {
         if self.message.is_none() {
-            self.get_information();
+            self.information();
         }
         self.message.as_deref().unwrap_or("")
     }
 
     pub fn download_url(&mut self) -> Option<&str> {
         if self.message.is_none() {
-            self.get_information();
+            self.information();
         }
         self.download_url.as_deref()
     }
 
-    fn get_information(&mut self) {
+    fn information(&mut self) {
         let result = self.fetch_latest_release();
         match result {
             Ok((name, html_url)) => {

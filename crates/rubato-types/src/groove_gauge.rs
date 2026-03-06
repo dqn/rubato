@@ -603,7 +603,7 @@ mod tests {
         assert!(!gg.is_qualified_by_type(100));
         gg.set_value_by_type(100, 50.0); // no-op
 
-        // get_clear_type / get_gauge fallbacks
+        // get_clear_type / gauge fallbacks
         assert_eq!(gg.clear_type(), ClearType::Normal);
         let gauge = gg.gauge_by_type(100);
         assert_eq!(gauge.cleartype, ClearType::clear_type_by_gauge(0).unwrap());

@@ -33,7 +33,7 @@ impl GithubVersionChecker {
         }
     }
 
-    fn get_information(&self) {
+    fn information(&self) {
         // Phase 5+: HTTP request to GitHub API
         // https://api.github.com/repos/seraxis/lr2oraja-endlessdream/releases/latest
         let mut msg = self.message.lock().unwrap();
@@ -51,7 +51,7 @@ impl VersionChecker for GithubVersionChecker {
                 return msg.clone().unwrap();
             }
         }
-        self.get_information();
+        self.information();
         self.message.lock().unwrap().clone().unwrap_or_default()
     }
 
@@ -60,7 +60,7 @@ impl VersionChecker for GithubVersionChecker {
             let msg = self.message.lock().unwrap();
             if msg.is_none() {
                 drop(msg);
-                self.get_information();
+                self.information();
             }
         }
         self.dlurl.lock().unwrap().clone()
@@ -167,10 +167,10 @@ impl MainLoader {
         // }
         Self::check_illegal_songs();
 
-        if Self::get_illegal_song_count() > 0 {
+        if Self::illegal_song_count() > 0 {
             anyhow::bail!(
                 "Detected {} illegal BMS songs. Remove them, update song database and restart.",
-                Self::get_illegal_song_count()
+                Self::illegal_song_count()
             );
         }
 
@@ -255,17 +255,17 @@ impl MainLoader {
         }
     }
 
-    pub fn get_version_checker() -> &'static Mutex<Option<Box<dyn VersionChecker>>> {
+    pub fn version_checker() -> &'static Mutex<Option<Box<dyn VersionChecker>>> {
         VERSION_CHECKER.get_or_init(|| Mutex::new(Some(Box::new(GithubVersionChecker::new()))))
     }
 
     pub fn set_version_checker(checker: Box<dyn VersionChecker>) {
-        let vc = Self::get_version_checker();
+        let vc = Self::version_checker();
         let mut guard = vc.lock().unwrap();
         *guard = Some(checker);
     }
 
-    pub fn get_bms_path() -> Option<PathBuf> {
+    pub fn bms_path() -> Option<PathBuf> {
         BMS_PATH.get().and_then(|m| m.lock().unwrap().clone())
     }
 
@@ -279,7 +279,7 @@ impl MainLoader {
         songs.iter().cloned().collect()
     }
 
-    pub fn get_illegal_song_count() -> usize {
+    pub fn illegal_song_count() -> usize {
         let songs = Self::illegal_songs().lock().unwrap();
         songs.len()
     }
@@ -301,7 +301,7 @@ impl MainLoader {
     /// Translated from: MainLoader.getAvailableDisplayMode()
     /// In Java: Lwjgl3ApplicationConfiguration.getDisplayModes()
     /// In Rust: winit monitor enumeration via global cache.
-    pub fn get_available_display_mode() -> Vec<(u32, u32)> {
+    pub fn available_display_mode() -> Vec<(u32, u32)> {
         let modes = DISPLAY_MODES.lock().unwrap();
         if modes.is_empty() {
             // Fallback before winit event loop populates the cache
@@ -315,7 +315,7 @@ impl MainLoader {
     ///
     /// Translated from: MainLoader.getDesktopDisplayMode()
     /// In Java: Lwjgl3ApplicationConfiguration.getDisplayMode()
-    pub fn get_desktop_display_mode() -> (u32, u32) {
+    pub fn desktop_display_mode() -> (u32, u32) {
         let mode = *DESKTOP_MODE.lock().unwrap();
         if mode == (0, 0) {
             // Fallback before winit event loop populates the cache
@@ -463,21 +463,21 @@ mod tests {
     #[test]
     fn test_illegal_song_count() {
         let _lock = TEST_LOCK.lock().unwrap();
-        let initial_count = MainLoader::get_illegal_song_count();
+        let initial_count = MainLoader::illegal_song_count();
         MainLoader::put_illegal_song("unique_test_hash_12345");
-        assert!(MainLoader::get_illegal_song_count() > initial_count);
+        assert!(MainLoader::illegal_song_count() > initial_count);
     }
 
     #[test]
     fn test_version_checker_default() {
-        let vc = MainLoader::get_version_checker();
+        let vc = MainLoader::version_checker();
         let guard = vc.lock().unwrap();
         assert!(guard.is_some());
     }
 
     #[test]
     fn test_version_checker_message() {
-        let vc = MainLoader::get_version_checker();
+        let vc = MainLoader::version_checker();
         let guard = vc.lock().unwrap();
         let checker = guard.as_ref().unwrap();
         let msg = checker.get_message();
@@ -507,14 +507,14 @@ mod tests {
 
     #[test]
     fn test_get_available_display_mode() {
-        let modes = MainLoader::get_available_display_mode();
+        let modes = MainLoader::available_display_mode();
         assert!(!modes.is_empty());
         assert!(modes.contains(&(1920, 1080)));
     }
 
     #[test]
     fn test_get_desktop_display_mode() {
-        let mode = MainLoader::get_desktop_display_mode();
+        let mode = MainLoader::desktop_display_mode();
         assert_eq!(mode, (1920, 1080));
     }
 
@@ -569,7 +569,7 @@ mod tests {
 
         // The returned controller should have config with window dimensions
         // set from resolution (Java: config.setWindowWidth(w); config.setWindowHeight(h))
-        let cfg = controller.get_config();
+        let cfg = controller.config();
         let expected_w = Resolution::HD.width();
         let expected_h = Resolution::HD.height();
         assert_eq!(cfg.window_width, expected_w);
@@ -605,7 +605,7 @@ mod tests {
         )
         .unwrap();
 
-        let cfg = controller.get_config();
+        let cfg = controller.config();
         assert_eq!(cfg.window_width, Resolution::FULLHD.width());
         assert_eq!(cfg.window_height, Resolution::FULLHD.height());
     }
@@ -636,7 +636,7 @@ mod tests {
         assert!(taken.is_none(), "songdb should have been taken by play()");
 
         // Controller should have the songdb set
-        assert!(controller.get_song_database().is_some());
+        assert!(controller.song_database().is_some());
     }
 
     #[test]

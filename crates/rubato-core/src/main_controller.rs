@@ -386,7 +386,7 @@ impl MainController {
         }
     }
 
-    pub fn get_offset(&self, index: i32) -> Option<&SkinOffset> {
+    pub fn offset(&self, index: i32) -> Option<&SkinOffset> {
         if index >= 0 && (index as usize) < self.offset.len() {
             Some(&self.offset[index as usize])
         } else {
@@ -394,7 +394,7 @@ impl MainController {
         }
     }
 
-    pub fn get_offset_mut(&mut self, index: i32) -> Option<&mut SkinOffset> {
+    pub fn offset_mut(&mut self, index: i32) -> Option<&mut SkinOffset> {
         if index >= 0 && (index as usize) < self.offset.len() {
             Some(&mut self.offset[index as usize])
         } else {
@@ -402,7 +402,7 @@ impl MainController {
         }
     }
 
-    pub fn get_player_resource(&self) -> Option<&PlayerResource> {
+    pub fn player_resource(&self) -> Option<&PlayerResource> {
         self.resource.as_ref()
     }
 
@@ -417,39 +417,39 @@ impl MainController {
         self.resource = Some(resource);
     }
 
-    pub fn get_config(&self) -> &Config {
+    pub fn config(&self) -> &Config {
         &self.config
     }
 
-    pub fn get_player_config(&self) -> &PlayerConfig {
+    pub fn player_config(&self) -> &PlayerConfig {
         &self.player
     }
 
-    pub fn get_sprite_batch(&self) -> Option<&SpriteBatch> {
+    pub fn sprite_batch(&self) -> Option<&SpriteBatch> {
         self.sprite.as_ref()
     }
 
-    pub fn get_sprite_batch_mut(&mut self) -> Option<&mut SpriteBatch> {
+    pub fn sprite_batch_mut(&mut self) -> Option<&mut SpriteBatch> {
         self.sprite.as_mut()
     }
 
-    pub fn get_play_data_accessor(&self) -> Option<&PlayDataAccessor> {
+    pub fn play_data_accessor(&self) -> Option<&PlayDataAccessor> {
         self.playdata.as_ref()
     }
 
-    pub fn get_rival_data_accessor(&self) -> &RivalDataAccessor {
+    pub fn rival_data_accessor(&self) -> &RivalDataAccessor {
         &self.rivals
     }
 
-    pub fn get_rival_data_accessor_mut(&mut self) -> &mut RivalDataAccessor {
+    pub fn rival_data_accessor_mut(&mut self) -> &mut RivalDataAccessor {
         &mut self.rivals
     }
 
-    pub fn get_ranking_data_cache(&self) -> Option<&dyn RankingDataCacheAccess> {
+    pub fn ranking_data_cache(&self) -> Option<&dyn RankingDataCacheAccess> {
         self.ircache.as_deref()
     }
 
-    pub fn get_ranking_data_cache_mut(
+    pub fn ranking_data_cache_mut(
         &mut self,
     ) -> Option<&mut (dyn RankingDataCacheAccess + 'static)> {
         self.ircache.as_deref_mut()
@@ -459,19 +459,19 @@ impl MainController {
         self.ircache = Some(cache);
     }
 
-    pub fn get_sound_manager(&self) -> Option<&SystemSoundManager> {
+    pub fn sound_manager(&self) -> Option<&SystemSoundManager> {
         self.sound.as_ref()
     }
 
-    pub fn get_sound_manager_mut(&mut self) -> Option<&mut SystemSoundManager> {
+    pub fn sound_manager_mut(&mut self) -> Option<&mut SystemSoundManager> {
         self.sound.as_mut()
     }
 
-    pub fn get_ir_status(&self) -> &[IRStatus] {
+    pub fn ir_status(&self) -> &[IRStatus] {
         &self.ir
     }
 
-    pub fn get_ir_status_mut(&mut self) -> &mut Vec<IRStatus> {
+    pub fn ir_status_mut(&mut self) -> &mut Vec<IRStatus> {
         &mut self.ir
     }
 
@@ -482,11 +482,11 @@ impl MainController {
         self.command_queue.clone()
     }
 
-    pub fn get_timer(&self) -> &TimerManager {
+    pub fn timer(&self) -> &TimerManager {
         &self.timer
     }
 
-    pub fn get_timer_mut(&mut self) -> &mut TimerManager {
+    pub fn timer_mut(&mut self) -> &mut TimerManager {
         &mut self.timer
     }
 
@@ -951,10 +951,7 @@ impl MainController {
         // Apply sounds
         for (sound, loop_sound) in pending_sounds {
             let volume = self.config.audio.as_ref().map_or(1.0, |a| a.systemvolume);
-            let path = self
-                .sound
-                .as_ref()
-                .and_then(|sm| sm.get_sound(&sound).cloned());
+            let path = self.sound.as_ref().and_then(|sm| sm.sound(&sound).cloned());
             if let Some(path) = path
                 && let Some(ref mut audio) = self.audio
             {
@@ -993,10 +990,7 @@ impl MainController {
             // If no state change follows (practice mode restart), push the fresh model
             // back to the current state so it can apply modifiers on a clean copy.
             if pending_change.is_none() {
-                let fresh_model = self
-                    .resource
-                    .as_ref()
-                    .and_then(|r| r.get_bms_model().cloned());
+                let fresh_model = self.resource.as_ref().and_then(|r| r.bms_model().cloned());
                 if let Some(model) = fresh_model
                     && let Some(ref mut current) = self.current
                 {
@@ -1273,44 +1267,44 @@ impl MainController {
         }
     }
 
-    pub fn get_play_time(&self) -> i64 {
+    pub fn play_time(&self) -> i64 {
         self.boottime.elapsed().as_millis() as i64
     }
 
-    pub fn get_start_time(&self) -> i64 {
-        self.timer.get_start_time()
+    pub fn start_time(&self) -> i64 {
+        self.timer.start_time()
     }
 
-    pub fn get_start_micro_time(&self) -> i64 {
-        self.timer.get_start_micro_time()
+    pub fn start_micro_time(&self) -> i64 {
+        self.timer.start_micro_time()
     }
 
-    pub fn get_now_time(&self) -> i64 {
-        self.timer.get_now_time()
+    pub fn now_time(&self) -> i64 {
+        self.timer.now_time()
     }
 
-    pub fn get_now_time_for_id(&self, id: i32) -> i64 {
-        self.timer.get_now_time_for_id(id)
+    pub fn now_time_for_id(&self, id: i32) -> i64 {
+        self.timer.now_time_for_id(id)
     }
 
-    pub fn get_now_micro_time(&self) -> i64 {
-        self.timer.get_now_micro_time()
+    pub fn now_micro_time(&self) -> i64 {
+        self.timer.now_micro_time()
     }
 
-    pub fn get_now_micro_time_for_id(&self, id: i32) -> i64 {
-        self.timer.get_now_micro_time_for_id(id)
+    pub fn now_micro_time_for_id(&self, id: i32) -> i64 {
+        self.timer.now_micro_time_for_id(id)
     }
 
-    pub fn get_timer_value(&self, id: i32) -> i64 {
-        self.get_micro_timer(id) / 1000
+    pub fn timer_value(&self, id: i32) -> i64 {
+        self.micro_timer(id) / 1000
     }
 
-    pub fn get_micro_timer(&self, id: i32) -> i64 {
-        self.timer.get_micro_timer(id)
+    pub fn micro_timer(&self, id: i32) -> i64 {
+        self.timer.micro_timer(id)
     }
 
     pub fn is_timer_on(&self, id: i32) -> bool {
-        self.get_micro_timer(id) != i64::MIN
+        self.micro_timer(id) != i64::MIN
     }
 
     pub fn set_timer_on(&mut self, id: i32) {
@@ -1329,7 +1323,7 @@ impl MainController {
         self.timer.switch_timer(id, on);
     }
 
-    pub fn get_http_download_processor(
+    pub fn http_download_processor(
         &self,
     ) -> Option<&dyn rubato_types::http_download_submitter::HttpDownloadSubmitter> {
         self.http_download_processor
@@ -1392,7 +1386,7 @@ impl MainController {
     ///
     /// Translated from: MainController.getSongDatabase()
     /// In Java: return MainLoader.getScoreDatabaseAccessor()
-    pub fn get_song_database(&self) -> Option<&dyn SongDatabaseAccessorTrait> {
+    pub fn song_database(&self) -> Option<&dyn SongDatabaseAccessorTrait> {
         self.songdb.as_deref()
     }
 
@@ -1405,12 +1399,12 @@ impl MainController {
     /// Returns the current state.
     ///
     /// Translated from: MainController.getCurrentState()
-    pub fn get_current_state(&self) -> Option<&dyn MainState> {
+    pub fn current_state(&self) -> Option<&dyn MainState> {
         self.current.as_deref()
     }
 
     /// Returns a mutable reference to the current state.
-    pub fn get_current_state_mut(&mut self) -> Option<&mut dyn MainState> {
+    pub fn current_state_mut(&mut self) -> Option<&mut dyn MainState> {
         self.current
             .as_mut()
             .map(|b| &mut **b as &mut dyn MainState)
@@ -1422,36 +1416,36 @@ impl MainController {
     ///
     /// In Java this uses instanceof checks. In Rust, each concrete state
     /// implements state_type() on the MainState trait.
-    pub fn get_state_type(state: Option<&dyn MainState>) -> Option<MainStateType> {
+    pub fn state_type(state: Option<&dyn MainState>) -> Option<MainStateType> {
         state.and_then(|s| s.state_type())
     }
 
     /// Returns the current state's type.
-    pub fn get_current_state_type(&self) -> Option<MainStateType> {
-        Self::get_state_type(self.get_current_state())
+    pub fn current_state_type(&self) -> Option<MainStateType> {
+        Self::state_type(self.current_state())
     }
 
     /// Returns the input processor.
     ///
     /// Translated from: MainController.getInputProcessor()
-    pub fn get_input_processor(&self) -> Option<&BMSPlayerInputProcessor> {
+    pub fn input_processor(&self) -> Option<&BMSPlayerInputProcessor> {
         self.input.as_ref()
     }
 
     /// Returns a mutable reference to the input processor.
-    pub fn get_input_processor_mut(&mut self) -> Option<&mut BMSPlayerInputProcessor> {
+    pub fn input_processor_mut(&mut self) -> Option<&mut BMSPlayerInputProcessor> {
         self.input.as_mut()
     }
 
     /// Returns the audio processor.
     ///
     /// Translated from: MainController.getAudioProcessor()
-    pub fn get_audio_processor(&self) -> Option<&dyn AudioDriver> {
+    pub fn audio_processor(&self) -> Option<&dyn AudioDriver> {
         self.audio.as_deref()
     }
 
     /// Returns a mutable reference to the audio processor.
-    pub fn get_audio_processor_mut(&mut self) -> Option<&mut dyn AudioDriver> {
+    pub fn audio_processor_mut(&mut self) -> Option<&mut dyn AudioDriver> {
         self.audio
             .as_mut()
             .map(|b| &mut **b as &mut dyn AudioDriver)
@@ -1470,7 +1464,7 @@ impl MainController {
     /// Returns the loudness analyzer.
     ///
     /// Translated from: MainController.loudnessAnalyzer
-    pub fn get_loudness_analyzer(
+    pub fn loudness_analyzer(
         &self,
     ) -> Option<&rubato_audio::bms_loudness_analyzer::BMSLoudnessAnalyzer> {
         self.loudness_analyzer.as_ref()
@@ -1488,14 +1482,14 @@ impl MainController {
     /// Returns the current calendar time.
     ///
     /// Translated from: MainController.getCurrnetTime() [sic - Java method name has typo]
-    pub fn get_currnet_time(&self) -> i64 {
+    pub fn currnet_time(&self) -> i64 {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis() as i64
     }
 
-    pub fn get_info_database(&self) -> Option<&dyn SongInformationDb> {
+    pub fn info_database(&self) -> Option<&dyn SongInformationDb> {
         self.infodb.as_deref()
     }
 
@@ -1505,7 +1499,7 @@ impl MainController {
         self.infodb = Some(db);
     }
 
-    pub fn get_music_download_processor(
+    pub fn music_download_processor(
         &self,
     ) -> Option<&dyn rubato_types::music_download_access::MusicDownloadAccess> {
         self.download.as_deref()
@@ -1518,7 +1512,7 @@ impl MainController {
         self.download = Some(processor);
     }
 
-    pub fn get_stream_controller(
+    pub fn stream_controller(
         &self,
     ) -> Option<&dyn rubato_types::stream_controller_access::StreamControllerAccess> {
         self.stream_controller.as_deref()
@@ -1534,7 +1528,7 @@ impl MainController {
     /// Gets the shared MusicSelector as `&dyn Any`. Callers downcast via
     /// `any.downcast_ref::<Arc<Mutex<MusicSelector>>>()`.
     /// Java: StreamController holds a reference to the same MusicSelector used by SelectState.
-    pub fn get_shared_music_selector(&self) -> Option<&(dyn std::any::Any + Send)> {
+    pub fn shared_music_selector(&self) -> Option<&(dyn std::any::Any + Send)> {
         self.shared_music_selector.as_deref()
     }
 
@@ -1543,7 +1537,7 @@ impl MainController {
         self.shared_music_selector = Some(selector);
     }
 
-    pub fn get_ir_resend_service(
+    pub fn ir_resend_service(
         &self,
     ) -> Option<&dyn rubato_types::ir_resend_service::IrResendService> {
         self.ir_resend_service.as_deref()
@@ -1725,14 +1719,14 @@ impl MainController {
     pub fn set_target_list(&mut self) {
         // Build target list: player's target list + rival targets
         let mut targetlist: Vec<String> = self.player.targetlist.clone();
-        for i in 0..self.rivals.get_rival_count() {
+        for i in 0..self.rivals.rival_count() {
             targetlist.push(format!("RIVAL_{}", i + 1));
         }
 
         // Resolve display names for each target ID
         let rivals: Vec<rubato_types::player_information::PlayerInformation> =
-            (0..self.rivals.get_rival_count())
-                .filter_map(|i| self.rivals.get_rival_information(i).cloned())
+            (0..self.rivals.rival_count())
+                .filter_map(|i| self.rivals.rival_information(i).cloned())
                 .collect();
         let names: Vec<String> = targetlist
             .iter()
@@ -1761,7 +1755,7 @@ impl MainController {
     /// ```
     pub fn periodic_config_save(&mut self) {
         // Skip during play to avoid I/O during gameplay
-        if self.get_current_state_type() == Some(MainStateType::Play) {
+        if self.current_state_type() == Some(MainStateType::Play) {
             return;
         }
 
@@ -1883,10 +1877,7 @@ impl MainControllerAccess for MainController {
 
     fn play_sound(&mut self, sound: &SoundType, loop_sound: bool) {
         let volume = self.config.audio.as_ref().map_or(1.0, |a| a.systemvolume);
-        let path = self
-            .sound
-            .as_ref()
-            .and_then(|sm| sm.get_sound(sound).cloned());
+        let path = self.sound.as_ref().and_then(|sm| sm.sound(sound).cloned());
         if let Some(path) = path
             && let Some(ref mut audio) = self.audio
         {
@@ -1895,10 +1886,7 @@ impl MainControllerAccess for MainController {
     }
 
     fn stop_sound(&mut self, sound: &SoundType) {
-        let path = self
-            .sound
-            .as_ref()
-            .and_then(|sm| sm.get_sound(sound).cloned());
+        let path = self.sound.as_ref().and_then(|sm| sm.sound(sound).cloned());
         if let Some(path) = path
             && let Some(ref mut audio) = self.audio
         {
@@ -1907,9 +1895,7 @@ impl MainControllerAccess for MainController {
     }
 
     fn sound_path(&self, sound: &SoundType) -> Option<String> {
-        self.sound
-            .as_ref()
-            .and_then(|sm| sm.get_sound(sound).cloned())
+        self.sound.as_ref().and_then(|sm| sm.sound(sound).cloned())
     }
 
     fn play_audio_path(&mut self, path: &str, volume: f32, loop_play: bool) {
@@ -1985,7 +1971,7 @@ impl MainControllerAccess for MainController {
     fn ranking_data_cache(
         &self,
     ) -> Option<&dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess> {
-        MainController::get_ranking_data_cache(self)
+        MainController::ranking_data_cache(self)
     }
 
     fn ranking_data_cache_mut(
@@ -2017,14 +2003,14 @@ impl MainControllerAccess for MainController {
     }
 
     fn rival_count(&self) -> usize {
-        self.rivals.get_rival_count()
+        self.rivals.rival_count()
     }
 
     fn rival_information(
         &self,
         index: usize,
     ) -> Option<rubato_types::player_information::PlayerInformation> {
-        self.rivals.get_rival_information(index).cloned()
+        self.rivals.rival_information(index).cloned()
     }
 
     fn read_score_data_by_hash(
@@ -2241,8 +2227,8 @@ mod tests {
     #[test]
     fn test_initial_state_is_none() {
         let mc = make_test_controller();
-        assert!(mc.get_current_state().is_none());
-        assert!(mc.get_current_state_type().is_none());
+        assert!(mc.current_state().is_none());
+        assert!(mc.current_state_type().is_none());
     }
 
     #[test]
@@ -2250,11 +2236,8 @@ mod tests {
         let mut mc = make_test_controller();
         mc.change_state(MainStateType::MusicSelect);
 
-        assert!(mc.get_current_state().is_some());
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::MusicSelect)
-        );
+        assert!(mc.current_state().is_some());
+        assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
     }
 
     #[test]
@@ -2262,7 +2245,7 @@ mod tests {
         let mut mc = make_test_controller();
         mc.change_state(MainStateType::Play);
 
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     }
 
     #[test]
@@ -2270,7 +2253,7 @@ mod tests {
         let mut mc = make_test_controller();
         mc.change_state(MainStateType::Result);
 
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
     }
 
     #[test]
@@ -2278,7 +2261,7 @@ mod tests {
         let mut mc = make_test_controller();
         mc.change_state(MainStateType::Config);
 
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Config));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Config));
     }
 
     #[test]
@@ -2295,7 +2278,7 @@ mod tests {
 
         mc.process_queued_controller_commands();
 
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Config));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Config));
     }
 
     #[test]
@@ -2303,7 +2286,7 @@ mod tests {
         let mut mc = make_test_controller();
         mc.change_state(MainStateType::SkinConfig);
 
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::SkinConfig));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::SkinConfig));
     }
 
     #[test]
@@ -2312,7 +2295,7 @@ mod tests {
         mc.change_state(MainStateType::MusicSelect);
 
         // The state should have been created and prepared
-        let state = mc.get_current_state().unwrap();
+        let state = mc.current_state().unwrap();
         assert_eq!(state.state_type(), Some(MainStateType::MusicSelect));
     }
 
@@ -2322,14 +2305,11 @@ mod tests {
 
         // Enter first state
         mc.change_state(MainStateType::MusicSelect);
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::MusicSelect)
-        );
+        assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
         // Transition to a different state
         mc.change_state(MainStateType::Play);
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     }
 
     #[test]
@@ -2339,10 +2319,7 @@ mod tests {
 
         // Changing to the same state type should be a no-op
         mc.change_state(MainStateType::MusicSelect);
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::MusicSelect)
-        );
+        assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
     }
 
     #[test]
@@ -2358,7 +2335,7 @@ mod tests {
         mc.change_state(MainStateType::Decide);
 
         // With skip_decide_screen, Decide should create Play instead
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
     }
 
     #[test]
@@ -2373,7 +2350,7 @@ mod tests {
 
         mc.change_state(MainStateType::Decide);
 
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Decide));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Decide));
     }
 
     #[test]
@@ -2394,21 +2371,21 @@ mod tests {
         mc.change_state(MainStateType::MusicSelect);
 
         // No state should be set since exit() was called
-        assert!(mc.get_current_state().is_none());
+        assert!(mc.current_state().is_none());
     }
 
     #[test]
     fn test_get_state_type_static() {
         let state = TestState::new(MainStateType::Play);
         assert_eq!(
-            MainController::get_state_type(Some(&state as &dyn MainState)),
+            MainController::state_type(Some(&state as &dyn MainState)),
             Some(MainStateType::Play)
         );
     }
 
     #[test]
     fn test_get_state_type_none() {
-        assert_eq!(MainController::get_state_type(None), None);
+        assert_eq!(MainController::state_type(None), None);
     }
 
     #[test]
@@ -2420,10 +2397,7 @@ mod tests {
         mc.render();
 
         // State should still be MusicSelect
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::MusicSelect)
-        );
+        assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
     }
 
     #[test]
@@ -2434,10 +2408,7 @@ mod tests {
         mc.pause();
         mc.resume();
 
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::MusicSelect)
-        );
+        assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
     }
 
     #[test]
@@ -2447,20 +2418,17 @@ mod tests {
 
         mc.resize(1920, 1080);
 
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::MusicSelect)
-        );
+        assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
     }
 
     #[test]
     fn test_dispose_clears_current_state() {
         let mut mc = make_test_controller();
         mc.change_state(MainStateType::MusicSelect);
-        assert!(mc.get_current_state().is_some());
+        assert!(mc.current_state().is_some());
 
         mc.dispose();
-        assert!(mc.get_current_state().is_none());
+        assert!(mc.current_state().is_none());
     }
 
     #[test]
@@ -2478,25 +2446,19 @@ mod tests {
         let mut mc = make_test_controller();
 
         mc.change_state(MainStateType::MusicSelect);
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::MusicSelect)
-        );
+        assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
         mc.change_state(MainStateType::Decide);
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Decide));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Decide));
 
         mc.change_state(MainStateType::Play);
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Play));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
         mc.change_state(MainStateType::Result);
-        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Result));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
 
         mc.change_state(MainStateType::MusicSelect);
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::MusicSelect)
-        );
+        assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
     }
 
     #[test]
@@ -2535,10 +2497,7 @@ mod tests {
     fn test_course_result_state_transition() {
         let mut mc = make_test_controller();
         mc.change_state(MainStateType::CourseResult);
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::CourseResult)
-        );
+        assert_eq!(mc.current_state_type(), Some(MainStateType::CourseResult));
     }
 
     // --- Phase 22c: Render pipeline tests ---
@@ -2548,7 +2507,7 @@ mod tests {
         let mut mc = make_test_controller();
         mc.create();
         // After create(), sprite batch should be initialized
-        assert!(mc.get_sprite_batch().is_some());
+        assert!(mc.sprite_batch().is_some());
     }
 
     #[test]
@@ -2557,13 +2516,13 @@ mod tests {
         mc.create();
 
         // Before render, sprite batch should not be drawing
-        assert!(mc.get_sprite_batch().is_some());
-        assert!(!mc.get_sprite_batch().unwrap().is_drawing());
+        assert!(mc.sprite_batch().is_some());
+        assert!(!mc.sprite_batch().unwrap().is_drawing());
 
         // After render, sprite batch should have gone through begin()/end() cycle
         // and should not be drawing anymore
         mc.render();
-        assert!(!mc.get_sprite_batch().unwrap().is_drawing());
+        assert!(!mc.sprite_batch().unwrap().is_drawing());
     }
 
     #[test]
@@ -2589,10 +2548,7 @@ mod tests {
         // render() should dispatch to current state's render()
         mc.render();
 
-        assert_eq!(
-            mc.get_current_state_type(),
-            Some(MainStateType::MusicSelect)
-        );
+        assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
     }
 
     #[test]
@@ -2600,7 +2556,7 @@ mod tests {
         let mut mc = make_test_controller();
         // No state set, render should not panic
         mc.render();
-        assert!(mc.get_current_state().is_none());
+        assert!(mc.current_state().is_none());
     }
 
     #[test]
@@ -2609,7 +2565,7 @@ mod tests {
         mc.create();
 
         // Should be able to get mutable reference to sprite batch
-        let batch = mc.get_sprite_batch_mut().unwrap();
+        let batch = mc.sprite_batch_mut().unwrap();
         batch.begin();
         assert!(batch.is_drawing());
         batch.end();
@@ -2621,11 +2577,11 @@ mod tests {
         let mut mc = make_test_controller();
         mc.create();
 
-        let time_before = mc.get_now_time();
+        let time_before = mc.now_time();
         // Small sleep to ensure timer advances
         std::thread::sleep(std::time::Duration::from_millis(5));
         mc.render();
-        let time_after = mc.get_now_time();
+        let time_after = mc.now_time();
 
         // Timer should advance (or at least not go backwards)
         assert!(time_after >= time_before);
@@ -2683,13 +2639,13 @@ mod tests {
         }
         fn prepare_skin(&mut self) {}
         fn dispose_skin(&mut self) {}
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
         fn get_width(&self) -> f32 {
@@ -2744,7 +2700,7 @@ mod tests {
 
         // Verify skin methods were called by checking the skin is still present
         // (the take/put-back pattern should preserve it)
-        let state = mc.get_current_state().unwrap();
+        let state = mc.current_state().unwrap();
         assert!(
             state.main_state_data().skin.is_some(),
             "skin should be put back after render"
@@ -2763,7 +2719,7 @@ mod tests {
 
         // Should not panic when skin is None
         mc.render();
-        assert!(mc.get_current_state().is_some());
+        assert!(mc.current_state().is_some());
     }
 
     #[test]
@@ -2808,13 +2764,13 @@ mod tests {
             }
             fn prepare_skin(&mut self) {}
             fn dispose_skin(&mut self) {}
-            fn get_fadeout(&self) -> i32 {
+            fn fadeout(&self) -> i32 {
                 0
             }
-            fn get_input(&self) -> i32 {
+            fn input(&self) -> i32 {
                 0
             }
-            fn get_scene(&self) -> i32 {
+            fn scene(&self) -> i32 {
                 0
             }
             fn get_width(&self) -> f32 {
@@ -2923,13 +2879,13 @@ mod tests {
         }
         fn prepare_skin(&mut self) {}
         fn dispose_skin(&mut self) {}
-        fn get_fadeout(&self) -> i32 {
+        fn fadeout(&self) -> i32 {
             0
         }
-        fn get_input(&self) -> i32 {
+        fn input(&self) -> i32 {
             0
         }
-        fn get_scene(&self) -> i32 {
+        fn scene(&self) -> i32 {
             0
         }
         fn get_width(&self) -> f32 {
@@ -2956,7 +2912,7 @@ mod tests {
         mc.current = Some(Box::new(SkinTestState::new_with_skin(skin)));
 
         // Before render, sprite batch should be empty
-        let batch = mc.get_sprite_batch().unwrap();
+        let batch = mc.sprite_batch().unwrap();
         assert!(
             batch.vertices().is_empty(),
             "sprite batch should start empty"
@@ -2966,7 +2922,7 @@ mod tests {
         mc.render();
 
         // After render, sprite batch should contain vertices from the skin
-        let batch = mc.get_sprite_batch().unwrap();
+        let batch = mc.sprite_batch().unwrap();
         assert!(
             !batch.vertices().is_empty(),
             "after render, sprite batch should contain vertices drawn by skin"
@@ -3085,14 +3041,14 @@ mod tests {
     #[test]
     fn test_audio_driver_initially_none() {
         let mc = make_test_controller();
-        assert!(mc.get_audio_processor().is_none());
+        assert!(mc.audio_processor().is_none());
     }
 
     #[test]
     fn test_set_audio_driver() {
         let mut mc = make_test_controller();
         mc.set_audio_driver(Box::new(MockAudioDriver::new()));
-        assert!(mc.get_audio_processor().is_some());
+        assert!(mc.audio_processor().is_some());
     }
 
     #[test]
@@ -3100,7 +3056,7 @@ mod tests {
         let mut mc = make_test_controller();
         mc.set_audio_driver(Box::new(MockAudioDriver::new()));
 
-        let audio = mc.get_audio_processor().unwrap();
+        let audio = mc.audio_processor().unwrap();
         assert_eq!(audio.get_global_pitch(), 1.0);
         assert_eq!(audio.get_progress(), 1.0);
     }
@@ -3110,7 +3066,7 @@ mod tests {
         let mut mc = make_test_controller();
         mc.set_audio_driver(Box::new(MockAudioDriver::new()));
 
-        let audio = mc.get_audio_processor_mut().unwrap();
+        let audio = mc.audio_processor_mut().unwrap();
         audio.set_global_pitch(1.5);
         assert_eq!(audio.get_global_pitch(), 1.5);
     }
@@ -3120,7 +3076,7 @@ mod tests {
         let mut mc = make_test_controller();
         mc.set_audio_driver(Box::new(MockAudioDriver::new()));
 
-        let audio = mc.get_audio_processor_mut().unwrap();
+        let audio = mc.audio_processor_mut().unwrap();
         audio.play_path("/test/sound.wav", 0.8, false);
         assert!(!audio.is_playing_path("/test/sound.wav"));
     }
@@ -3340,13 +3296,13 @@ mod tests {
     #[test]
     fn test_loudness_analyzer_initialized() {
         let mc = make_test_controller();
-        assert!(mc.get_loudness_analyzer().is_some());
+        assert!(mc.loudness_analyzer().is_some());
     }
 
     #[test]
     fn test_loudness_analyzer_is_available() {
         let mc = make_test_controller();
-        let analyzer = mc.get_loudness_analyzer().unwrap();
+        let analyzer = mc.loudness_analyzer().unwrap();
         assert!(analyzer.is_available());
     }
 
@@ -3360,7 +3316,7 @@ mod tests {
     #[test]
     fn test_get_sound_manager_mut() {
         let mut mc = make_test_controller();
-        assert!(mc.get_sound_manager_mut().is_some());
+        assert!(mc.sound_manager_mut().is_some());
     }
 
     // --- exit() and save_config() tests ---

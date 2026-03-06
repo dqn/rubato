@@ -27,14 +27,14 @@ impl SearchWordBar {
         Self::new(title, text)
     }
 
-    pub fn get_text(&self) -> &str {
+    pub fn text(&self) -> &str {
         &self.text
     }
 
     /// Get children bars by searching song database by text.
     ///
     /// Translates: Java SearchWordBar.getChildren()
-    pub fn get_children(&self, db: &dyn SongDatabaseAccessor) -> Vec<Bar> {
+    pub fn children(&self, db: &dyn SongDatabaseAccessor) -> Vec<Bar> {
         let songs = db.song_datas_by_text(&self.text);
         SongBar::to_song_bar_array(&songs)
     }
@@ -45,7 +45,7 @@ impl SearchWordBar {
             .update_folder_status_with_songs(&songs, None, |_| None);
     }
 
-    pub fn get_title(&self) -> String {
+    pub fn title(&self) -> String {
         self.title.clone()
     }
 }
@@ -111,11 +111,11 @@ mod tests {
         let db = MockSongDb::new().with_text_results("freedom", vec![song]);
 
         let bar = SearchWordBar::from_text("freedom".to_string());
-        let children = bar.get_children(&db);
+        let children = bar.children(&db);
 
         assert_eq!(children.len(), 1);
         assert!(children[0].as_song_bar().is_some());
-        assert!(children[0].get_title().contains("Freedom Dive"));
+        assert!(children[0].title().contains("Freedom Dive"));
     }
 
     #[test]
@@ -123,7 +123,7 @@ mod tests {
         let db = MockSongDb::new();
 
         let bar = SearchWordBar::from_text("nonexistent".to_string());
-        let children = bar.get_children(&db);
+        let children = bar.children(&db);
 
         assert!(children.is_empty());
     }

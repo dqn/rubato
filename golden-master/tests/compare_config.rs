@@ -26,7 +26,7 @@ fn fix_mode_hint(json: &str) -> String {
     {
         // Convert hint format to enum variant: "beat-7k" -> "BEAT_7K"
         let converted = mode_val.replace('-', "_").to_uppercase();
-        if Mode::get_mode(&mode_val).is_some() {
+        if Mode::from_hint(&mode_val).is_some() {
             obj.insert("mode".to_string(), serde_json::Value::String(converted));
         }
     }

@@ -517,7 +517,7 @@ mod tests {
     }
 
     #[test]
-    fn get_total_notes_counts_normal_and_long() {
+    fn total_notes_counts_normal_and_long() {
         let mut tl = TimeLine::new(0.0, 0, 8);
         tl.set_note(0, Some(Note::new_normal(1)));
         tl.set_note(1, Some(Note::new_normal(2)));

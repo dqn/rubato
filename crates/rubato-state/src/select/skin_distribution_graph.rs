@@ -139,7 +139,7 @@ impl SkinDistributionGraph {
         offset_x: f32,
         offset_y: f32,
     ) {
-        let lamps = current.get_lamps();
+        let lamps = current.lamps();
         let empty_ranks = [0i32; 28];
         self.draw_distribution(sprite, lamps, &empty_ranks, offset_x, offset_y);
     }
@@ -330,7 +330,7 @@ mod tests {
     }
 
     impl MainState for MockMainState {
-        fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             static NULL: rubato_types::timer_access::NullTimer =
                 rubato_types::timer_access::NullTimer;
             &NULL

@@ -26,7 +26,7 @@ impl SkinSourceImage {
 
     pub fn new_with_int_timer(image: Vec<Option<TextureRegion>>, timer: i32, cycle: i32) -> Self {
         let timer_prop: Option<Box<dyn TimerProperty>> = if timer > 0 {
-            crate::property::timer_property_factory::get_timer_property(timer)
+            crate::property::timer_property_factory::timer_property(timer)
         } else {
             None
         };
@@ -59,7 +59,7 @@ impl SkinSourceImage {
         }
     }
 
-    pub fn get_images(&self) -> &[Option<TextureRegion>] {
+    pub fn images(&self) -> &[Option<TextureRegion>] {
         &self.image
     }
 

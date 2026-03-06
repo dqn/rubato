@@ -149,9 +149,8 @@ impl MusicSelectInputProcessor {
             let mut mov = -(input.scroll());
             input.reset_scroll();
 
-            self.analog_scroll_buffer += property
-                .get_analog_change(input, MusicSelectKey::TargetUp)
-                - property.get_analog_change(input, MusicSelectKey::TargetDown);
+            self.analog_scroll_buffer += property.analog_change(input, MusicSelectKey::TargetUp)
+                - property.analog_change(input, MusicSelectKey::TargetDown);
             mov += self.analog_scroll_buffer / self.analog_ticks_per_scroll;
             self.analog_scroll_buffer %= self.analog_ticks_per_scroll;
 
@@ -378,7 +377,7 @@ impl MusicSelectInputProcessor {
                     let mode = if config.is_event_mode() {
                         BMSPlayerMode::PLAY
                     } else if ctx.selected_replay >= 0 {
-                        BMSPlayerMode::get_replay_mode(ctx.selected_replay)
+                        BMSPlayerMode::replay_mode(ctx.selected_replay)
                             .cloned()
                             .unwrap_or(BMSPlayerMode::PLAY)
                     } else {

@@ -36,7 +36,7 @@ pub use rubato_core::play_data_accessor::PlayDataAccessor;
 pub use rubato_types::main_controller_access::{MainControllerAccess, NullMainController};
 
 /// Wrapper for bms.player.beatoraja.MainController.
-/// Delegates trait methods (get_config, get_player_config, change_state, save_last_recording)
+/// Delegates trait methods (config, player_config, change_state, save_last_recording)
 /// to `Box<dyn MainControllerAccess>`.
 /// Stores crate-local components whose types cannot go on the cross-crate trait:
 /// AudioDriver, BMSPlayerInputProcessor, IRStatus/IRSendStatus, PlayDataAccessor,
@@ -127,11 +127,11 @@ impl MainController {
 
     // ---- Trait-delegated methods ----
 
-    pub fn get_config(&self) -> &Config {
+    pub fn config(&self) -> &Config {
         self.inner.config()
     }
 
-    pub fn get_player_config(&self) -> &PlayerConfig {
+    pub fn player_config(&self) -> &PlayerConfig {
         self.inner.player_config()
     }
 
@@ -151,13 +151,13 @@ impl MainController {
         self.inner.stop_sound(sound);
     }
 
-    pub fn get_sound_path(&self, sound: &SoundType) -> Option<String> {
+    pub fn sound_path(&self, sound: &SoundType) -> Option<String> {
         self.inner.sound_path(sound)
     }
 
     // ---- Locally-stored components (types not on MainControllerAccess trait) ----
 
-    pub fn get_input_processor(&mut self) -> &mut BMSPlayerInputProcessor {
+    pub fn input_processor(&mut self) -> &mut BMSPlayerInputProcessor {
         &mut self.input_processor
     }
 
@@ -169,7 +169,7 @@ impl MainController {
         input.sync_runtime_state_from(&self.input_processor);
     }
 
-    pub fn get_ir_status(&self) -> &[IRStatus] {
+    pub fn ir_status(&self) -> &[IRStatus] {
         &self.ir_statuses
     }
 
@@ -181,23 +181,23 @@ impl MainController {
         self.ir_send_statuses.lock().unwrap()
     }
 
-    pub fn get_play_data_accessor(&self) -> &PlayDataAccessor {
+    pub fn play_data_accessor(&self) -> &PlayDataAccessor {
         &self.play_data_accessor
     }
 
-    pub fn get_audio_processor_mut(&mut self) -> Option<&mut dyn AudioDriver> {
+    pub fn audio_processor_mut(&mut self) -> Option<&mut dyn AudioDriver> {
         self.audio
             .as_mut()
             .map(|b| &mut **b as &mut dyn AudioDriver)
     }
 
-    pub fn get_ranking_data_cache(
+    pub fn ranking_data_cache(
         &self,
     ) -> &dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess {
         &*self.ranking_data_cache
     }
 
-    pub fn get_ranking_data_cache_mut(
+    pub fn ranking_data_cache_mut(
         &mut self,
     ) -> &mut dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess {
         &mut *self.ranking_data_cache
@@ -268,33 +268,31 @@ impl PlayerResource {
 
     // ---- Trait-delegated methods ----
 
-    pub fn get_config(&self) -> &rubato_core::config::Config {
+    pub fn config(&self) -> &rubato_core::config::Config {
         self.inner.config()
     }
 
-    pub fn get_player_config(&self) -> &rubato_core::player_config::PlayerConfig {
+    pub fn player_config(&self) -> &rubato_core::player_config::PlayerConfig {
         self.inner.player_config()
     }
 
-    pub fn get_player_config_mut(
-        &mut self,
-    ) -> Option<&mut rubato_core::player_config::PlayerConfig> {
+    pub fn player_config_mut(&mut self) -> Option<&mut rubato_core::player_config::PlayerConfig> {
         self.inner.player_config_mut()
     }
 
-    pub fn get_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
+    pub fn score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
         self.inner.score_data()
     }
 
-    pub fn get_score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
+    pub fn score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
         self.inner.score_data_mut()
     }
 
-    pub fn get_target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
+    pub fn target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
         self.inner.target_score_data()
     }
 
-    pub fn get_course_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
+    pub fn course_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
         self.inner.course_score_data()
     }
 
@@ -302,19 +300,19 @@ impl PlayerResource {
         self.inner.set_course_score_data(score);
     }
 
-    pub fn get_songdata(&self) -> Option<&rubato_types::song_data::SongData> {
+    pub fn songdata(&self) -> Option<&rubato_types::song_data::SongData> {
         self.inner.songdata()
     }
 
-    pub fn get_replay_data(&self) -> Option<&rubato_core::replay_data::ReplayData> {
+    pub fn replay_data(&self) -> Option<&rubato_core::replay_data::ReplayData> {
         self.inner.replay_data()
     }
 
-    pub fn get_course_replay(&self) -> &[rubato_core::replay_data::ReplayData] {
+    pub fn course_replay(&self) -> &[rubato_core::replay_data::ReplayData] {
         self.inner.course_replay()
     }
 
-    pub fn get_course_replay_mut(&mut self) -> &mut Vec<rubato_core::replay_data::ReplayData> {
+    pub fn course_replay_mut(&mut self) -> &mut Vec<rubato_core::replay_data::ReplayData> {
         self.inner.course_replay_mut()
     }
 
@@ -322,11 +320,11 @@ impl PlayerResource {
         self.inner.add_course_replay(replay);
     }
 
-    pub fn get_course_data(&self) -> Option<&rubato_core::course_data::CourseData> {
+    pub fn course_data(&self) -> Option<&rubato_core::course_data::CourseData> {
         self.inner.course_data()
     }
 
-    pub fn get_course_index(&self) -> usize {
+    pub fn course_index(&self) -> usize {
         self.inner.course_index()
     }
 
@@ -334,23 +332,23 @@ impl PlayerResource {
         self.inner.next_course()
     }
 
-    pub fn get_constraint(&self) -> Vec<rubato_core::course_data::CourseDataConstraint> {
+    pub fn constraint(&self) -> Vec<rubato_core::course_data::CourseDataConstraint> {
         self.inner.constraint()
     }
 
-    pub fn get_gauge(&self) -> Option<&Vec<Vec<f32>>> {
+    pub fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
         self.inner.gauge()
     }
 
-    pub fn get_groove_gauge(&self) -> Option<&GrooveGauge> {
+    pub fn groove_gauge(&self) -> Option<&GrooveGauge> {
         self.inner.groove_gauge()
     }
 
-    pub fn get_course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
+    pub fn course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
         self.inner.course_gauge()
     }
 
-    pub fn get_course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
+    pub fn course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
         self.inner.course_gauge_mut()
     }
 
@@ -358,15 +356,15 @@ impl PlayerResource {
         self.inner.add_course_gauge(gauge);
     }
 
-    pub fn get_maxcombo(&self) -> i32 {
+    pub fn maxcombo(&self) -> i32 {
         self.inner.maxcombo()
     }
 
-    pub fn get_org_gauge_option(&self) -> i32 {
+    pub fn org_gauge_option(&self) -> i32 {
         self.inner.org_gauge_option()
     }
 
-    pub fn get_assist(&self) -> i32 {
+    pub fn assist(&self) -> i32 {
         self.inner.assist()
     }
 
@@ -388,19 +386,19 @@ impl PlayerResource {
 
     // ---- Crate-local methods (not on trait — types cause circular deps) ----
 
-    pub fn get_bms_model(&self) -> &bms_model::bms_model::BMSModel {
+    pub fn bms_model(&self) -> &bms_model::bms_model::BMSModel {
         &self.bms_model
     }
 
-    pub fn get_course_bms_models(&self) -> Option<&[bms_model::bms_model::BMSModel]> {
+    pub fn course_bms_models(&self) -> Option<&[bms_model::bms_model::BMSModel]> {
         self.course_bms_models.as_deref()
     }
 
-    pub fn get_play_mode(&self) -> &BMSPlayerMode {
+    pub fn play_mode(&self) -> &BMSPlayerMode {
         &self.play_mode
     }
 
-    pub fn get_ranking_data(&self) -> Option<&RankingData> {
+    pub fn ranking_data(&self) -> Option<&RankingData> {
         self.ranking_data.as_ref()
     }
 
@@ -423,7 +421,7 @@ impl PlayerResource {
         Some(std::mem::replace(&mut self.inner, null))
     }
 
-    pub fn get_replay_data_mut(&mut self) -> Option<&mut rubato_core::replay_data::ReplayData> {
+    pub fn replay_data_mut(&mut self) -> Option<&mut rubato_core::replay_data::ReplayData> {
         self.inner.replay_data_mut()
     }
 
@@ -530,7 +528,7 @@ mod tests {
     #[test]
     fn test_main_controller_new_has_no_audio() {
         let mut mc = MainController::new(Box::new(NullMainController));
-        assert!(mc.get_audio_processor_mut().is_none());
+        assert!(mc.audio_processor_mut().is_none());
     }
 
     #[test]
@@ -539,7 +537,7 @@ mod tests {
             Box::new(NullMainController),
             Box::new(MockAudioDriver::new()),
         );
-        assert!(mc.get_audio_processor_mut().is_some());
+        assert!(mc.audio_processor_mut().is_some());
     }
 
     #[test]
@@ -548,7 +546,7 @@ mod tests {
             Box::new(NullMainController),
             Box::new(MockAudioDriver::new()),
         );
-        if let Some(audio) = mc.get_audio_processor_mut() {
+        if let Some(audio) = mc.audio_processor_mut() {
             audio.stop_note(None);
         }
         // Verify the call went through (cannot inspect mock after borrow, but no panic = pass)
@@ -560,7 +558,7 @@ mod tests {
             Box::new(NullMainController),
             Box::new(MockAudioDriver::new()),
         );
-        if let Some(audio) = mc.get_audio_processor_mut() {
+        if let Some(audio) = mc.audio_processor_mut() {
             audio.set_global_pitch(1.5);
             assert_eq!(audio.get_global_pitch(), 1.5);
         } else {
@@ -638,7 +636,7 @@ mod tests {
 
         let mc = MainController::new(Box::new(access));
         let cached = mc
-            .get_ranking_data_cache()
+            .ranking_data_cache()
             .song_any(&song, 0)
             .and_then(|any| any.downcast::<RankingData>().ok())
             .map(|ranking| *ranking);

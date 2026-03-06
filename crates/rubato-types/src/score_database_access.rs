@@ -26,7 +26,7 @@ impl ScoreDatabaseAccess for NullScoreDatabaseAccess {
     }
 
     fn score_data(&self, _sha256: &str, _mode: i32) -> Option<ScoreData> {
-        log::warn!("NullScoreDatabaseAccess::get_score_data called — returning None");
+        log::warn!("NullScoreDatabaseAccess::score_data called — returning None");
         None
     }
 

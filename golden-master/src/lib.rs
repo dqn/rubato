@@ -122,7 +122,7 @@ pub fn load_fixture(path: &Path) -> Result<Fixture> {
 
 /// Map Java mode hint string to Rust Mode
 pub fn mode_hint_to_mode(hint: &str) -> Option<Mode> {
-    Mode::get_mode(hint)
+    Mode::from_hint(hint)
 }
 
 /// Collect all playable notes (non-LN-end) from the model as flat list,

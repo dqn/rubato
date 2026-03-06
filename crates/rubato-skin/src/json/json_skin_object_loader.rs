@@ -13,7 +13,7 @@ use crate::stubs::*;
 /// In Java this is an abstract class parameterized by skin type.
 /// In Rust we use a trait.
 pub trait JsonSkinObjectLoader {
-    fn get_skin(&self, header: &crate::json::json_skin_loader::SkinHeaderData) -> SkinData;
+    fn skin(&self, header: &crate::json::json_skin_loader::SkinHeaderData) -> SkinData;
 
     fn load_skin_object(
         &self,
@@ -40,7 +40,7 @@ pub fn load_base_skin_object(
     // image
     for img in &sk.image {
         if dst_id == img.id.as_deref().unwrap_or("") {
-            let data = loader.get_source(img.src.as_deref().unwrap_or(""), p);
+            let data = loader.source(img.src.as_deref().unwrap_or(""), p);
             let is_movie = matches!(&data, Some(SourceDataType::Movie(_)));
 
             if data.is_some() {
@@ -458,7 +458,7 @@ pub fn load_base_skin_object(
 
 /// Get texture from source id and path.
 /// Corresponds to Java JsonSkinObjectLoader.getTexture(String srcid, Path p)
-pub fn get_texture(loader: &mut JSONSkinLoader, srcid: Option<&str>, p: &Path) -> Option<Texture> {
+pub fn texture(loader: &mut JSONSkinLoader, srcid: Option<&str>, p: &Path) -> Option<Texture> {
     let srcid = srcid?;
     let data = loader.source_map.get(srcid)?;
     if data.loaded {
@@ -493,7 +493,7 @@ use crate::json::json_skin_loader::get_path_with_filemap;
 
 /// Get note textures from image ids.
 /// Corresponds to Java JsonSkinObjectLoader.getNoteTexture(String[] images, Path p)
-pub fn get_note_texture(
+pub fn note_texture(
     loader: &mut JSONSkinLoader,
     images: &[String],
     p: &Path,
@@ -507,10 +507,10 @@ pub fn get_note_texture(
         let mut found = false;
         for img in &sk.image {
             if img.id.as_deref() == Some(image_id.as_str()) {
-                let tex = get_texture(loader, img.src.as_deref(), p);
+                let tex = texture(loader, img.src.as_deref(), p);
                 if let Some(tex) = tex {
                     let regions =
-                        get_source_image(&tex, img.x, img.y, img.w, img.h, img.divx, img.divy);
+                        source_image(&tex, img.x, img.y, img.w, img.h, img.divx, img.divy);
                     note_images.push(Some(regions));
                 } else {
                     note_images.push(None);
@@ -552,7 +552,7 @@ pub fn create_text(
 
 /// Get the file path for a source id.
 /// Corresponds to Java JsonSkinObjectLoader.getSrcIdPath(String srcid, Path p)
-pub fn get_src_id_path(loader: &JSONSkinLoader, srcid: Option<&str>, p: &Path) -> Option<String> {
+pub fn src_id_path(loader: &JSONSkinLoader, srcid: Option<&str>, p: &Path) -> Option<String> {
     let srcid = srcid?;
     let data = loader.source_map.get(srcid)?;
     let parent = p
@@ -564,7 +564,7 @@ pub fn get_src_id_path(loader: &JSONSkinLoader, srcid: Option<&str>, p: &Path) -
 }
 
 /// Helper: get source image regions from texture
-pub fn get_source_image(
+pub fn source_image(
     image: &Texture,
     x: i32,
     y: i32,

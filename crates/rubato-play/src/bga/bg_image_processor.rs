@@ -66,7 +66,7 @@ impl BGImageProcessor {
 
     /// Get the texture for the given BGA id, updating the cache.
     /// Returns a reference to the texture if it exists.
-    pub fn get_texture(&mut self, id: usize) -> Option<&Texture> {
+    pub fn texture(&mut self, id: usize) -> Option<&Texture> {
         let cid = id % self.cache_size;
         if self.bgacache_ids[cid] == id as i32 {
             return self.bgamap.get(id).and_then(|t| t.as_ref());

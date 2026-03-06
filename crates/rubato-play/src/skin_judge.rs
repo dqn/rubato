@@ -28,7 +28,7 @@ impl SkinJudge {
         }
     }
 
-    pub fn get_judge(&self, index: usize) -> bool {
+    pub fn judge(&self, index: usize) -> bool {
         index < self.judge.len() && self.judge[index]
     }
 
@@ -38,7 +38,7 @@ impl SkinJudge {
         }
     }
 
-    pub fn get_judge_count(&self, index: usize) -> bool {
+    pub fn judge_count(&self, index: usize) -> bool {
         index < self.count.len() && self.count[index]
     }
 

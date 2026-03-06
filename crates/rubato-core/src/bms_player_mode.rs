@@ -43,7 +43,7 @@ impl BMSPlayerMode {
         Self { mode, id }
     }
 
-    pub fn get_replay_mode(index: i32) -> Option<&'static BMSPlayerMode> {
+    pub fn replay_mode(index: i32) -> Option<&'static BMSPlayerMode> {
         match index {
             0 => Some(&BMSPlayerMode::REPLAY_1),
             1 => Some(&BMSPlayerMode::REPLAY_2),

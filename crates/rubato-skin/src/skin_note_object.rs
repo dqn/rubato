@@ -151,7 +151,7 @@ mod tests {
         }]);
         let mut sprite = SkinObjectRenderer::new();
         note.draw(&mut sprite);
-        let c = sprite.get_color();
+        let c = sprite.color();
         assert!((c.r - 0.5).abs() < f32::EPSILON);
         assert!((c.g - 0.6).abs() < f32::EPSILON);
         assert!((c.b - 0.7).abs() < f32::EPSILON);
@@ -164,7 +164,7 @@ mod tests {
         note.set_draw_commands(vec![DrawCommand::SetBlend(3)]);
         let mut sprite = SkinObjectRenderer::new();
         note.draw(&mut sprite);
-        assert_eq!(sprite.get_blend(), 3);
+        assert_eq!(sprite.blend(), 3);
     }
 
     #[test]
@@ -173,7 +173,7 @@ mod tests {
         note.set_draw_commands(vec![DrawCommand::SetType(5)]);
         let mut sprite = SkinObjectRenderer::new();
         note.draw(&mut sprite);
-        assert_eq!(sprite.get_type(), 5);
+        assert_eq!(sprite.toast_type(), 5);
     }
 
     #[test]
@@ -260,7 +260,7 @@ mod tests {
         let mut sprite = SkinObjectRenderer::new();
         note.draw(&mut sprite);
         // After all commands, color should be green
-        let c = sprite.get_color();
+        let c = sprite.color();
         assert!((c.r - 0.0).abs() < f32::EPSILON);
         assert!((c.g - 1.0).abs() < f32::EPSILON);
     }

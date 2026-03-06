@@ -37,7 +37,7 @@ pub fn bms_table_element_to_song_data(
     }
 
     // Resolve mode: element mode takes precedence, then default_mode
-    let element_mode = te.mode().and_then(Mode::get_mode);
+    let element_mode = te.mode().and_then(Mode::from_hint);
     let mode_id = element_mode
         .as_ref()
         .map(|m| m.id())
@@ -119,7 +119,7 @@ fn trophy_to_trophy_data(trophy: &Trophy) -> TrophyData {
 /// Translated from Java: DifficultyTableAccessor.read()
 /// Creates TableData with folders (one per level) and courses.
 pub fn difficulty_table_to_table_data(dt: &DifficultyTable, url: &str) -> TableData {
-    let default_mode = dt.table.mode().and_then(Mode::get_mode);
+    let default_mode = dt.table.mode().and_then(Mode::from_hint);
 
     let tag = dt
         .table
@@ -291,20 +291,20 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "https://example.com/table");
 
-        assert_eq!(td.get_name(), "Normal Table");
-        assert_eq!(td.get_url(), "https://example.com/table");
+        assert_eq!(td.name(), "Normal Table");
+        assert_eq!(td.url(), "https://example.com/table");
         assert_eq!(td.tag, "N");
-        assert_eq!(td.get_folder().len(), 2);
+        assert_eq!(td.folder().len(), 2);
 
         // Level "1" folder
-        assert_eq!(td.get_folder()[0].get_name(), "N1");
-        assert_eq!(td.get_folder()[0].get_song().len(), 1);
-        assert_eq!(td.get_folder()[0].get_song()[0].md5, "hash_a");
+        assert_eq!(td.folder()[0].name(), "N1");
+        assert_eq!(td.folder()[0].song().len(), 1);
+        assert_eq!(td.folder()[0].song()[0].md5, "hash_a");
 
         // Level "2" folder
-        assert_eq!(td.get_folder()[1].get_name(), "N2");
-        assert_eq!(td.get_folder()[1].get_song().len(), 1);
-        assert_eq!(td.get_folder()[1].get_song()[0].md5, "hash_b");
+        assert_eq!(td.folder()[1].name(), "N2");
+        assert_eq!(td.folder()[1].song().len(), 1);
+        assert_eq!(td.folder()[1].song()[0].md5, "hash_b");
     }
 
     #[test]
@@ -335,8 +335,8 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "https://example.com/course");
 
-        assert_eq!(td.get_course().len(), 1);
-        let cd = &td.get_course()[0];
+        assert_eq!(td.course().len(), 1);
+        let cd = &td.course()[0];
         assert_eq!(cd.name(), "Dan 1st");
         assert_eq!(cd.hash.len(), 2);
         assert_eq!(cd.hash[0].md5, "course_hash_1");
@@ -367,7 +367,7 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "https://example.com/dp");
 
-        assert_eq!(td.get_folder()[0].get_song()[0].mode, 14);
+        assert_eq!(td.folder()[0].song()[0].mode, 14);
     }
 
     #[test]
@@ -378,9 +378,9 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "https://example.com/empty");
 
-        assert_eq!(td.get_name(), "Empty Table");
-        assert!(td.get_folder().is_empty());
-        assert!(td.get_course().is_empty());
+        assert_eq!(td.name(), "Empty Table");
+        assert!(td.folder().is_empty());
+        assert!(td.course().is_empty());
     }
 
     #[test]
@@ -413,8 +413,8 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "url");
 
-        assert_eq!(td.get_folder().len(), 1);
-        assert_eq!(td.get_folder()[0].get_song().len(), 3);
+        assert_eq!(td.folder().len(), 1);
+        assert_eq!(td.folder()[0].song().len(), 3);
     }
 
     #[test]
@@ -435,9 +435,9 @@ mod tests {
         let td = difficulty_table_to_table_data(&dt, "url");
 
         // flat_map merges all course lists
-        assert_eq!(td.get_course().len(), 2);
-        assert_eq!(td.get_course()[0].name(), "Course 1");
-        assert_eq!(td.get_course()[1].name(), "Course 2");
+        assert_eq!(td.course().len(), 2);
+        assert_eq!(td.course()[0].name(), "Course 1");
+        assert_eq!(td.course()[1].name(), "Course 2");
     }
 
     #[test]
@@ -467,7 +467,7 @@ mod tests {
 
         let song = bms_table_element_to_song_data(&te, Some(&Mode::BEAT_7K));
 
-        // invalid mode string -> Mode::get_mode returns None -> falls back to default
+        // invalid mode string -> Mode::from_hint returns None -> falls back to default
         assert_eq!(song.mode, 7);
     }
 

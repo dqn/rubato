@@ -19,39 +19,39 @@ impl TargetProperty {
         }
     }
 
-    pub fn get_targets() -> Vec<String> {
+    pub fn targets() -> Vec<String> {
         rubato_types::target_list::targets()
     }
 
-    pub fn get_target_name(target: &str) -> String {
+    pub fn target_name(target: &str) -> String {
         rubato_types::target_list::target_name(target)
     }
 
-    pub fn get_target_property(id: &str) -> Option<TargetProperty> {
-        if let Some(target) = StaticTargetProperty::get_target_property(id) {
+    pub fn from_id(id: &str) -> Option<TargetProperty> {
+        if let Some(target) = StaticTargetProperty::from_id(id) {
             return Some(target);
         }
-        if let Some(target) = RivalTargetProperty::get_target_property(id) {
+        if let Some(target) = RivalTargetProperty::from_id(id) {
             return Some(target);
         }
-        if let Some(target) = InternetRankingTargetProperty::get_target_property(id) {
+        if let Some(target) = InternetRankingTargetProperty::from_id(id) {
             return Some(target);
         }
         if id == "RANK_NEXT" {
             return Some(TargetProperty::NextRank(NextRankTargetProperty::new()));
         }
         // fallback to MAX
-        StaticTargetProperty::get_target_property("MAX")
+        StaticTargetProperty::from_id("MAX")
     }
 
     /// Translated from: Java TargetProperty.getName(MainController)
-    pub fn get_name(&self, main: &MainController) -> String {
+    pub fn name(&self, main: &MainController) -> String {
         match self {
             TargetProperty::Static(p) => p.name.clone(),
             TargetProperty::Rival(p) => {
                 let info = main
-                    .get_rival_data_accessor()
-                    .get_rival_information(p.index as usize);
+                    .rival_data_accessor()
+                    .rival_information(p.index as usize);
                 match p.target {
                     RivalTarget::Index => match info {
                         Some(info) => format!("RIVAL {}", info.name()),
@@ -79,12 +79,12 @@ impl TargetProperty {
     }
 
     /// Translated from: Java TargetProperty.getTarget(MainController)
-    pub fn get_target(&mut self, main: &mut MainController) -> ScoreData {
+    pub fn target(&mut self, main: &mut MainController) -> ScoreData {
         match self {
-            TargetProperty::Static(p) => p.get_target(main),
-            TargetProperty::Rival(p) => p.get_target(main),
-            TargetProperty::InternetRanking(p) => p.get_target(main),
-            TargetProperty::NextRank(p) => p.get_target(main),
+            TargetProperty::Static(p) => p.target(main),
+            TargetProperty::Rival(p) => p.target(main),
+            TargetProperty::InternetRanking(p) => p.target(main),
+            TargetProperty::NextRank(p) => p.target(main),
         }
     }
 }
@@ -108,10 +108,10 @@ impl StaticTargetProperty {
     }
 
     /// Translated from: Java StaticTargetProperty.getTarget(MainController)
-    fn get_target(&mut self, main: &MainController) -> ScoreData {
+    fn target(&mut self, main: &MainController) -> ScoreData {
         let total_notes = main
-            .get_player_resource()
-            .and_then(|r| r.get_bms_model())
+            .player_resource()
+            .and_then(|r| r.bms_model())
             .map(|m| m.total_notes())
             .unwrap_or(0);
         let rivalscore = (total_notes as f64 * 2.0 * self.rate as f64 / 100.0).ceil() as i32;
@@ -121,7 +121,7 @@ impl StaticTargetProperty {
         self.target_score.clone()
     }
 
-    pub fn get_target_property(id: &str) -> Option<TargetProperty> {
+    pub fn from_id(id: &str) -> Option<TargetProperty> {
         match id {
             "RATE_A-" => Some(TargetProperty::Static(StaticTargetProperty::new(
                 "RATE_A-",
@@ -219,12 +219,9 @@ impl RivalTargetProperty {
     }
 
     /// Translated from: Java RivalTargetProperty.getTarget(MainController)
-    fn get_target(&mut self, main: &mut MainController) -> ScoreData {
+    fn target(&mut self, main: &mut MainController) -> ScoreData {
         // Extract read-only values before mutable borrows
-        let songdata = main
-            .get_player_resource()
-            .and_then(|r| r.get_songdata())
-            .cloned();
+        let songdata = main.player_resource().and_then(|r| r.songdata()).cloned();
         let songdata = match songdata {
             Some(sd) => sd,
             None => {
@@ -233,7 +230,7 @@ impl RivalTargetProperty {
                 return self.target_score.clone();
             }
         };
-        let lnmode = main.get_player_config().lnmode;
+        let lnmode = main.player_config().lnmode;
         let index = self.index as usize;
 
         let mut name: Option<String> = None;
@@ -242,12 +239,12 @@ impl RivalTargetProperty {
         match self.target {
             RivalTarget::Index => {
                 name = main
-                    .get_rival_data_accessor()
-                    .get_rival_information(index)
+                    .rival_data_accessor()
+                    .rival_information(index)
                     .map(|info| info.name().to_string());
                 score = main
-                    .get_rival_data_accessor_mut()
-                    .get_rival_score_data_cache_mut(index)
+                    .rival_data_accessor_mut()
+                    .rival_score_data_cache_mut(index)
                     .and_then(|cache| cache.read_score_data(&songdata, lnmode).cloned());
             }
             RivalTarget::Rank => {
@@ -309,13 +306,13 @@ impl RivalTargetProperty {
         songdata: &rubato_types::song_data::SongData,
         lnmode: i32,
     ) -> Vec<ScoreData> {
-        let rival_count = main.get_rival_data_accessor().get_rival_count();
+        let rival_count = main.rival_data_accessor().rival_count();
 
         // Collect rival names first (immutable borrow)
         let rival_names: Vec<Option<String>> = (0..rival_count)
             .map(|i| {
-                main.get_rival_data_accessor()
-                    .get_rival_information(i)
+                main.rival_data_accessor()
+                    .rival_information(i)
                     .map(|info| info.name().to_string())
             })
             .collect();
@@ -325,8 +322,8 @@ impl RivalTargetProperty {
         #[allow(clippy::needless_range_loop)]
         for i in 0..rival_count {
             let score = main
-                .get_rival_data_accessor_mut()
-                .get_rival_score_data_cache_mut(i)
+                .rival_data_accessor_mut()
+                .rival_score_data_cache_mut(i)
                 .and_then(|cache| cache.read_score_data(songdata, lnmode).cloned());
 
             if let Some(mut sd) = score {
@@ -339,10 +336,10 @@ impl RivalTargetProperty {
 
         // Add own score with empty player name
         let own_score = main
-            .get_player_resource()
-            .and_then(|r| r.get_bms_model())
+            .player_resource()
+            .and_then(|r| r.bms_model())
             .and_then(|model| {
-                main.get_play_data_accessor()
+                main.play_data_accessor()
                     .and_then(|pda| pda.read_score_data_model(model, lnmode))
             });
 
@@ -354,7 +351,7 @@ impl RivalTargetProperty {
         scorearray
     }
 
-    pub fn get_target_property(id: &str) -> Option<TargetProperty> {
+    pub fn from_id(id: &str) -> Option<TargetProperty> {
         if let Some(suffix) = id.strip_prefix("RIVAL_NEXT_") {
             if let Ok(index) = suffix.parse::<i32>()
                 && index > 0
@@ -486,7 +483,7 @@ impl InternetRankingTargetProperty {
     }
 
     /// Translated from: Java InternetRankingTargetProperty.getTarget(MainController)
-    fn get_target(&mut self, main: &MainController) -> ScoreData {
+    fn target(&mut self, main: &MainController) -> ScoreData {
         // Poll for async IR load result
         if let Some(rx) = self.ir_result_rx.take() {
             match rx.try_recv() {
@@ -515,10 +512,10 @@ impl InternetRankingTargetProperty {
 
         // Get ranking data from cache via dyn Any downcast
         let ranking_data = (|| -> Option<rubato_ir::ranking_data::RankingData> {
-            let resource = main.get_player_resource()?;
-            let songdata = resource.get_songdata()?;
-            let lnmode = resource.get_player_config().lnmode;
-            let cache = main.get_ranking_data_cache()?;
+            let resource = main.player_resource()?;
+            let songdata = resource.songdata()?;
+            let lnmode = resource.player_config().lnmode;
+            let cache = main.ranking_data_cache()?;
             let any = cache.song_any(songdata, lnmode)?;
             any.downcast::<rubato_ir::ranking_data::RankingData>()
                 .ok()
@@ -528,7 +525,7 @@ impl InternetRankingTargetProperty {
         match ranking_data {
             Some(ref ranking) if ranking.state() == rubato_ir::ranking_data::FINISH => {
                 if ranking.total_player() > 0 {
-                    let index = self.get_target_rank(main, ranking);
+                    let index = self.target_rank(main, ranking);
                     if let Some(ir_score) = ranking.score(index) {
                         let exscore = ir_score.exscore();
                         self.target_score.player = if ir_score.player.is_empty() {
@@ -558,7 +555,7 @@ impl InternetRankingTargetProperty {
     }
 
     /// Get the target rank index based on the IR target type.
-    fn get_target_rank(
+    fn target_rank(
         &self,
         main: &MainController,
         ranking: &rubato_ir::ranking_data::RankingData,
@@ -566,8 +563,8 @@ impl InternetRankingTargetProperty {
         let total = ranking.total_player();
         // Get the player's current exscore
         let nowscore = main
-            .get_player_resource()
-            .and_then(|r| r.get_score_data())
+            .player_resource()
+            .and_then(|r| r.score_data())
             .map(|s| s.exscore())
             .unwrap_or(0);
 
@@ -596,7 +593,7 @@ impl InternetRankingTargetProperty {
         }
     }
 
-    pub fn get_target_property(id: &str) -> Option<TargetProperty> {
+    pub fn from_id(id: &str) -> Option<TargetProperty> {
         if id.starts_with("IR_NEXT_")
             && let Ok(index) = id[8..].parse::<i32>()
             && index > 0
@@ -647,13 +644,13 @@ impl NextRankTargetProperty {
     }
 
     /// Translated from: Java NextRankTargetProperty.getTarget(MainController)
-    fn get_target(&mut self, main: &MainController) -> ScoreData {
-        let lnmode = main.get_player_config().lnmode;
-        let model = main.get_player_resource().and_then(|r| r.get_bms_model());
+    fn target(&mut self, main: &MainController) -> ScoreData {
+        let lnmode = main.player_config().lnmode;
+        let model = main.player_resource().and_then(|r| r.bms_model());
 
         let nowscore = model
             .and_then(|m| {
-                main.get_play_data_accessor()
+                main.play_data_accessor()
                     .and_then(|pda| pda.read_score_data_model(m, lnmode))
             })
             .map(|s| s.exscore())
@@ -696,7 +693,7 @@ mod tests {
 
     #[test]
     fn test_static_target_property_lookup() {
-        let target = StaticTargetProperty::get_target_property("MAX");
+        let target = StaticTargetProperty::from_id("MAX");
         assert!(target.is_some());
         let target = target.unwrap();
         assert_eq!(target.id(), "MAX");
@@ -704,7 +701,7 @@ mod tests {
 
     #[test]
     fn test_static_target_property_rate() {
-        let target = StaticTargetProperty::get_target_property("RATE_50").unwrap();
+        let target = StaticTargetProperty::from_id("RATE_50").unwrap();
         if let TargetProperty::Static(p) = target {
             assert_eq!(p.rate, 50.0);
             assert_eq!(p.name, "SCORE RATE 50%");
@@ -715,7 +712,7 @@ mod tests {
 
     #[test]
     fn test_rival_target_property_index() {
-        let target = RivalTargetProperty::get_target_property("RIVAL_1").unwrap();
+        let target = RivalTargetProperty::from_id("RIVAL_1").unwrap();
         if let TargetProperty::Rival(p) = target {
             assert_eq!(p.target, RivalTarget::Index);
             assert_eq!(p.index, 0);
@@ -726,7 +723,7 @@ mod tests {
 
     #[test]
     fn test_rival_target_property_rank() {
-        let target = RivalTargetProperty::get_target_property("RIVAL_RANK_3").unwrap();
+        let target = RivalTargetProperty::from_id("RIVAL_RANK_3").unwrap();
         if let TargetProperty::Rival(p) = target {
             assert_eq!(p.target, RivalTarget::Rank);
             assert_eq!(p.index, 2);
@@ -737,7 +734,7 @@ mod tests {
 
     #[test]
     fn test_rival_target_property_next() {
-        let target = RivalTargetProperty::get_target_property("RIVAL_NEXT_2").unwrap();
+        let target = RivalTargetProperty::from_id("RIVAL_NEXT_2").unwrap();
         if let TargetProperty::Rival(p) = target {
             assert_eq!(p.target, RivalTarget::Next);
             assert_eq!(p.index, 1);
@@ -748,13 +745,13 @@ mod tests {
 
     #[test]
     fn test_next_rank_target_property() {
-        let target = TargetProperty::get_target_property("RANK_NEXT").unwrap();
+        let target = TargetProperty::from_id("RANK_NEXT").unwrap();
         assert_eq!(target.id(), "RANK_NEXT");
     }
 
     #[test]
     fn test_ir_target_property_next() {
-        let target = InternetRankingTargetProperty::get_target_property("IR_NEXT_5").unwrap();
+        let target = InternetRankingTargetProperty::from_id("IR_NEXT_5").unwrap();
         if let TargetProperty::InternetRanking(p) = target {
             assert_eq!(p.target, IRTarget::Next);
             assert_eq!(p.value, 5);
@@ -765,7 +762,7 @@ mod tests {
 
     #[test]
     fn test_ir_target_property_rank() {
-        let target = InternetRankingTargetProperty::get_target_property("IR_RANK_10").unwrap();
+        let target = InternetRankingTargetProperty::from_id("IR_RANK_10").unwrap();
         if let TargetProperty::InternetRanking(p) = target {
             assert_eq!(p.target, IRTarget::Rank);
             assert_eq!(p.value, 10);
@@ -776,7 +773,7 @@ mod tests {
 
     #[test]
     fn test_ir_target_property_rankrate() {
-        let target = InternetRankingTargetProperty::get_target_property("IR_RANKRATE_50").unwrap();
+        let target = InternetRankingTargetProperty::from_id("IR_RANKRATE_50").unwrap();
         if let TargetProperty::InternetRanking(p) = target {
             assert_eq!(p.target, IRTarget::RankRate);
             assert_eq!(p.value, 50);
@@ -787,15 +784,15 @@ mod tests {
 
     #[test]
     fn test_fallback_to_max() {
-        let target = TargetProperty::get_target_property("UNKNOWN").unwrap();
+        let target = TargetProperty::from_id("UNKNOWN").unwrap();
         assert_eq!(target.id(), "MAX");
     }
 
     #[test]
     fn test_get_name_static() {
-        let target = StaticTargetProperty::get_target_property("MAX").unwrap();
+        let target = StaticTargetProperty::from_id("MAX").unwrap();
         let main = make_main();
-        assert_eq!(target.get_name(&main), "MAX");
+        assert_eq!(target.name(&main), "MAX");
     }
 
     #[test]
@@ -803,28 +800,28 @@ mod tests {
         let target = TargetProperty::Rival(RivalTargetProperty::new(RivalTarget::Index, 0));
         let main = make_main();
         // No rivals loaded → "NO RIVAL"
-        assert_eq!(target.get_name(&main), "NO RIVAL");
+        assert_eq!(target.name(&main), "NO RIVAL");
     }
 
     #[test]
     fn test_get_name_rival_rank() {
         let target = TargetProperty::Rival(RivalTargetProperty::new(RivalTarget::Rank, 0));
         let main = make_main();
-        assert_eq!(target.get_name(&main), "RIVAL TOP");
+        assert_eq!(target.name(&main), "RIVAL TOP");
     }
 
     #[test]
     fn test_get_name_rival_rank_nonzero() {
         let target = TargetProperty::Rival(RivalTargetProperty::new(RivalTarget::Rank, 2));
         let main = make_main();
-        assert_eq!(target.get_name(&main), "RIVAL RANK 3");
+        assert_eq!(target.name(&main), "RIVAL RANK 3");
     }
 
     #[test]
     fn test_get_name_rival_next() {
         let target = TargetProperty::Rival(RivalTargetProperty::new(RivalTarget::Next, 1));
         let main = make_main();
-        assert_eq!(target.get_name(&main), "RIVAL NEXT 2");
+        assert_eq!(target.name(&main), "RIVAL NEXT 2");
     }
 
     #[test]
@@ -832,21 +829,21 @@ mod tests {
         let target =
             TargetProperty::InternetRanking(InternetRankingTargetProperty::new(IRTarget::Next, 3));
         let main = make_main();
-        assert_eq!(target.get_name(&main), "IR NEXT 3RANK");
+        assert_eq!(target.name(&main), "IR NEXT 3RANK");
     }
 
     #[test]
     fn test_get_name_next_rank() {
         let target = TargetProperty::NextRank(NextRankTargetProperty::new());
         let main = make_main();
-        assert_eq!(target.get_name(&main), "NEXT RANK");
+        assert_eq!(target.name(&main), "NEXT RANK");
     }
 
     #[test]
     fn test_static_get_target_no_model() {
         let mut target = TargetProperty::Static(StaticTargetProperty::new("MAX", "MAX", 100.0));
         let mut main = make_main();
-        let score = target.get_target(&mut main);
+        let score = target.target(&mut main);
         // No PlayerResource → total_notes=0 → rivalscore=0
         assert_eq!(score.epg, 0);
         assert_eq!(score.egr, 0);
@@ -858,7 +855,7 @@ mod tests {
         let mut target =
             TargetProperty::InternetRanking(InternetRankingTargetProperty::new(IRTarget::Next, 1));
         let mut main = make_main();
-        let score = target.get_target(&mut main);
+        let score = target.target(&mut main);
         assert_eq!(score.player, "NO DATA");
     }
 
@@ -866,7 +863,7 @@ mod tests {
     fn test_rival_get_target_no_resource() {
         let mut target = TargetProperty::Rival(RivalTargetProperty::new(RivalTarget::Index, 0));
         let mut main = make_main();
-        let score = target.get_target(&mut main);
+        let score = target.target(&mut main);
         // No PlayerResource → no songdata → "NO RIVAL"
         assert_eq!(score.player, "NO RIVAL");
     }
@@ -875,7 +872,7 @@ mod tests {
     fn test_next_rank_get_target_no_model() {
         let mut target = TargetProperty::NextRank(NextRankTargetProperty::new());
         let mut main = make_main();
-        let score = target.get_target(&mut main);
+        let score = target.target(&mut main);
         assert_eq!(score.player, "NEXT RANK");
         // No model → max=0, nowscore=0, targetscore=0
         assert_eq!(score.epg, 0);
@@ -888,7 +885,7 @@ mod tests {
         let mut p = StaticTargetProperty::new("AAA", "RANK AAA", 100.0 * 24.0 / 27.0);
         let main = make_main();
         // No model so total_notes=0, but verify formula doesn't panic
-        let score = p.get_target(&main);
+        let score = p.target(&main);
         assert_eq!(score.player, "RANK AAA");
     }
 
@@ -898,7 +895,7 @@ mod tests {
         for ir_type in [IRTarget::Next, IRTarget::Rank, IRTarget::RankRate] {
             let mut target =
                 TargetProperty::InternetRanking(InternetRankingTargetProperty::new(ir_type, 1));
-            let score = target.get_target(&mut main);
+            let score = target.target(&mut main);
             assert_eq!(score.player, "NO DATA");
         }
     }
@@ -1072,7 +1069,7 @@ mod tests {
         prop.loading_initiated = true;
 
         let main = make_main();
-        let result = prop.get_target(&main);
+        let result = prop.target(&main);
         assert_eq!(result.player, "AsyncPlayer");
         assert_eq!(result.epg, 100);
         assert_eq!(result.egr, 1);

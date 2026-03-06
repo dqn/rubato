@@ -10,7 +10,7 @@ pub use crate::rendering_stubs::*;
 
 /// Stub for beatoraja.MainState
 pub trait MainState {
-    fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess;
+    fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess;
     fn get_offset_value(&self, id: i32) -> Option<&SkinOffset>;
     fn get_main(&self) -> &MainController;
     fn get_image(&self, id: i32) -> Option<TextureRegion>;
@@ -72,7 +72,7 @@ pub trait MainState {
 
     /// Returns mutable reference to the player config.
     /// Returns None if config is not available (e.g., stub state).
-    fn get_player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
+    fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
         None
     }
 
@@ -153,7 +153,7 @@ pub trait MainState {
 
     /// Returns the ScoreDataProperty for the current state.
     /// Used by Lua rate/exscore/rate_best/exscore_best/rate_rival/exscore_rival functions.
-    fn get_score_data_property(&self) -> &rubato_core::score_data_property::ScoreDataProperty {
+    fn score_data_property(&self) -> &rubato_core::score_data_property::ScoreDataProperty {
         static DEFAULT: std::sync::OnceLock<rubato_core::score_data_property::ScoreDataProperty> =
             std::sync::OnceLock::new();
         DEFAULT.get_or_init(rubato_core::score_data_property::ScoreDataProperty::default)
@@ -161,7 +161,7 @@ pub trait MainState {
 
     /// Returns the total judge count for the given judge index (fast + slow).
     /// Used by Lua `judge(id)` function.
-    fn get_judge_count(&self, _judge: i32, _fast: bool) -> i32 {
+    fn judge_count(&self, _judge: i32, _fast: bool) -> i32 {
         0
     }
 
@@ -173,7 +173,7 @@ pub trait MainState {
 
     /// Returns the gauge type ID. Only meaningful for BMSPlayer states.
     /// Used by Lua `gauge_type()` function.
-    fn get_gauge_type(&self) -> i32 {
+    fn gauge_type(&self) -> i32 {
         0
     }
 
@@ -184,12 +184,12 @@ pub trait MainState {
 
     /// Returns the recent judge timing offsets (milliseconds).
     /// 100-element circular buffer from JudgeManager.
-    fn get_recent_judges(&self) -> &[i64] {
+    fn recent_judges(&self) -> &[i64] {
         &[]
     }
 
     /// Returns the current write index into the recent judges circular buffer.
-    fn get_recent_judges_index(&self) -> usize {
+    fn recent_judges_index(&self) -> usize {
         0
     }
 
@@ -251,12 +251,12 @@ pub struct MainController {
 }
 
 impl MainController {
-    pub fn get_input_processor(&self) -> &InputProcessor {
+    pub fn input_processor(&self) -> &InputProcessor {
         static INPUT: std::sync::OnceLock<InputProcessor> = std::sync::OnceLock::new();
         INPUT.get_or_init(|| InputProcessor)
     }
 
-    pub fn get_config(&self) -> &rubato_core::config::Config {
+    pub fn config(&self) -> &rubato_core::config::Config {
         static CONFIG: std::sync::OnceLock<rubato_core::config::Config> =
             std::sync::OnceLock::new();
         CONFIG.get_or_init(rubato_core::config::Config::default)
@@ -273,10 +273,10 @@ unsafe impl Send for InputProcessor {}
 unsafe impl Sync for InputProcessor {}
 
 impl InputProcessor {
-    pub fn get_mouse_x(&self) -> f32 {
+    pub fn mouse_x(&self) -> f32 {
         0.0
     }
-    pub fn get_mouse_y(&self) -> f32 {
+    pub fn mouse_y(&self) -> f32 {
         0.0
     }
 }
@@ -320,15 +320,15 @@ impl Timer {
         self.timers[idx] = micro_time;
     }
 
-    pub fn get_now_time(&self) -> i64 {
+    pub fn now_time(&self) -> i64 {
         self.now_time
     }
 
-    pub fn get_now_micro_time(&self) -> i64 {
+    pub fn now_micro_time(&self) -> i64 {
         self.now_micro_time
     }
 
-    pub fn get_micro_timer(&self, timer_id: i32) -> i64 {
+    pub fn micro_timer(&self, timer_id: i32) -> i64 {
         if timer_id >= 0 && (timer_id as usize) < self.timers.len() {
             self.timers[timer_id as usize]
         } else {
@@ -336,20 +336,20 @@ impl Timer {
         }
     }
 
-    pub fn get_timer(&self, timer_id: i32) -> i64 {
-        self.get_micro_timer(timer_id) / 1000
+    pub fn timer(&self, timer_id: i32) -> i64 {
+        self.micro_timer(timer_id) / 1000
     }
 
-    pub fn get_now_time_for(&self, timer_id: i32) -> i64 {
+    pub fn now_time_for(&self, timer_id: i32) -> i64 {
         if self.is_timer_on(timer_id) {
-            (self.now_micro_time - self.get_micro_timer(timer_id)) / 1000
+            (self.now_micro_time - self.micro_timer(timer_id)) / 1000
         } else {
             0
         }
     }
 
     pub fn is_timer_on(&self, timer_id: i32) -> bool {
-        self.get_micro_timer(timer_id) != i64::MIN
+        self.micro_timer(timer_id) != i64::MIN
     }
 }
 
@@ -363,13 +363,13 @@ impl rubato_types::timer_access::TimerAccess for Timer {
         self.now_micro_time
     }
     fn micro_timer(&self, timer_id: i32) -> i64 {
-        Timer::get_micro_timer(self, timer_id)
+        Timer::micro_timer(self, timer_id)
     }
     fn timer(&self, timer_id: i32) -> i64 {
-        Timer::get_timer(self, timer_id)
+        Timer::timer(self, timer_id)
     }
     fn now_time_for(&self, timer_id: i32) -> i64 {
-        Timer::get_now_time_for(self, timer_id)
+        Timer::now_time_for(self, timer_id)
     }
     fn is_timer_on(&self, timer_id: i32) -> bool {
         Timer::is_timer_on(self, timer_id)
@@ -406,15 +406,15 @@ pub struct BMSPlayer {
 }
 
 impl BMSPlayer {
-    pub fn get_skin_type(&self) -> crate::skin_type::SkinType {
+    pub fn skin_type(&self) -> crate::skin_type::SkinType {
         crate::skin_type::SkinType::Play7Keys
     }
 
-    pub fn get_past_notes(&self) -> i32 {
+    pub fn past_notes(&self) -> i32 {
         0
     }
 
-    pub fn get_judge_manager(&self) -> &JudgeManager {
+    pub fn judge_manager(&self) -> &JudgeManager {
         &self.judge_manager
     }
 }
@@ -426,11 +426,11 @@ pub struct JudgeManager {
 }
 
 impl JudgeManager {
-    pub fn get_recent_judges_index(&self) -> usize {
+    pub fn recent_judges_index(&self) -> usize {
         self.recent_judges_index
     }
 
-    pub fn get_recent_judges(&self) -> &[i64] {
+    pub fn recent_judges(&self) -> &[i64] {
         &self.recent_judges
     }
 }
@@ -441,7 +441,7 @@ pub struct MusicResult {
 }
 
 impl MusicResult {
-    pub fn get_timing_distribution(&self) -> &TimingDistribution {
+    pub fn timing_distribution(&self) -> &TimingDistribution {
         static DEFAULT: std::sync::OnceLock<TimingDistribution> = std::sync::OnceLock::new();
         DEFAULT.get_or_init(|| TimingDistribution {
             distribution: vec![],
@@ -456,23 +456,23 @@ impl MusicResult {
 pub struct MusicResultResource;
 
 impl MusicResultResource {
-    pub fn get_bms_model(&self) -> &bms_model::bms_model::BMSModel {
+    pub fn bms_model(&self) -> &bms_model::bms_model::BMSModel {
         static MODEL: std::sync::OnceLock<bms_model::bms_model::BMSModel> =
             std::sync::OnceLock::new();
         MODEL.get_or_init(bms_model::bms_model::BMSModel::default)
     }
 
-    pub fn get_original_mode(&self) -> bms_model::mode::Mode {
+    pub fn original_mode(&self) -> bms_model::mode::Mode {
         bms_model::mode::Mode::BEAT_7K
     }
 
-    pub fn get_player_config(&self) -> &rubato_core::player_config::PlayerConfig {
+    pub fn player_config(&self) -> &rubato_core::player_config::PlayerConfig {
         static PC: std::sync::OnceLock<rubato_core::player_config::PlayerConfig> =
             std::sync::OnceLock::new();
         PC.get_or_init(rubato_core::player_config::PlayerConfig::default)
     }
 
-    pub fn get_constraint(&self) -> Vec<rubato_core::course_data::CourseDataConstraint> {
+    pub fn constraint(&self) -> Vec<rubato_core::course_data::CourseDataConstraint> {
         vec![]
     }
 }
@@ -488,32 +488,32 @@ pub use rubato_song::song_information::SongInformation;
 pub struct PlayerResource;
 
 impl PlayerResource {
-    pub fn get_songdata(&self) -> Option<&SongData> {
+    pub fn songdata(&self) -> Option<&SongData> {
         None
     }
 
-    pub fn get_bms_model(&self) -> &bms_model::bms_model::BMSModel {
+    pub fn bms_model(&self) -> &bms_model::bms_model::BMSModel {
         static MODEL: std::sync::OnceLock<bms_model::bms_model::BMSModel> =
             std::sync::OnceLock::new();
         MODEL.get_or_init(bms_model::bms_model::BMSModel::default)
     }
 
-    pub fn get_original_mode(&self) -> bms_model::mode::Mode {
+    pub fn original_mode(&self) -> bms_model::mode::Mode {
         bms_model::mode::Mode::BEAT_7K
     }
 
-    pub fn get_player_config(&self) -> &rubato_core::player_config::PlayerConfig {
+    pub fn player_config(&self) -> &rubato_core::player_config::PlayerConfig {
         static PC: std::sync::OnceLock<rubato_core::player_config::PlayerConfig> =
             std::sync::OnceLock::new();
         PC.get_or_init(rubato_core::player_config::PlayerConfig::default)
     }
 
-    pub fn get_config(&self) -> &rubato_core::config::Config {
+    pub fn config(&self) -> &rubato_core::config::Config {
         static CFG: std::sync::OnceLock<rubato_core::config::Config> = std::sync::OnceLock::new();
         CFG.get_or_init(rubato_core::config::Config::default)
     }
 
-    pub fn get_constraint(&self) -> Vec<rubato_core::course_data::CourseDataConstraint> {
+    pub fn constraint(&self) -> Vec<rubato_core::course_data::CourseDataConstraint> {
         vec![]
     }
 }
@@ -545,7 +545,7 @@ impl PlaySkinStub {
 pub struct SkinLoaderStub;
 
 impl SkinLoaderStub {
-    pub fn get_texture(path: &str, usecim: bool) -> Option<Texture> {
-        crate::skin_loader::get_texture(path, usecim)
+    pub fn texture(path: &str, usecim: bool) -> Option<Texture> {
+        crate::skin_loader::texture(path, usecim)
     }
 }

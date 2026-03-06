@@ -120,7 +120,7 @@ impl SkinBPMGraph {
     }
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer, state: &dyn MainState) {
-        let song = state.get_resource().get_songdata();
+        let song = state.get_resource().songdata();
         let model = song.and_then(|s| s.bms_model());
 
         let song_changed = match (&self.current, song) {

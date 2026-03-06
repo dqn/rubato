@@ -22,7 +22,7 @@ pub struct TableData {
 }
 
 impl TableData {
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
@@ -30,11 +30,11 @@ impl TableData {
         self.name = name;
     }
 
-    pub fn get_url(&self) -> &str {
+    pub fn url(&self) -> &str {
         &self.url
     }
 
-    pub fn get_url_opt(&self) -> Option<&str> {
+    pub fn url_opt(&self) -> Option<&str> {
         if self.url.is_empty() {
             None
         } else {
@@ -46,7 +46,7 @@ impl TableData {
         self.url = url;
     }
 
-    pub fn get_folder(&self) -> &[TableFolder] {
+    pub fn folder(&self) -> &[TableFolder] {
         &self.folder
     }
 
@@ -54,7 +54,7 @@ impl TableData {
         self.folder = folder;
     }
 
-    pub fn get_course(&self) -> &[CourseData] {
+    pub fn course(&self) -> &[CourseData] {
         &self.course
     }
 
@@ -141,7 +141,7 @@ pub struct TableFolder {
 }
 
 impl TableFolder {
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         self.name.as_deref().unwrap_or("")
     }
 
@@ -149,8 +149,8 @@ impl TableFolder {
         self.name = Some(name);
     }
 
-    /// Returns songs (named `get_song` to match Java API)
-    pub fn get_song(&self) -> &[SongData] {
+    /// Returns songs (named `song` to match Java API)
+    pub fn song(&self) -> &[SongData] {
         &self.songs
     }
 

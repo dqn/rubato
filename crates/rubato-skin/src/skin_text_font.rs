@@ -115,7 +115,7 @@ impl SkinTextFont {
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
         if self.text_data.should_update_text() {
-            let current = self.text_data.get_current_text().unwrap_or("").to_string();
+            let current = self.text_data.current_text().unwrap_or("").to_string();
             self.set_text(current);
         }
         self.draw_with_offset(sprite, 0.0, 0.0);
@@ -151,18 +151,18 @@ impl SkinTextFont {
         sprite.set_type(SkinObjectRenderer::TYPE_LINEAR);
 
         // Measure text layout to get width for alignment
-        let text = self.text_data.get_text().to_string();
+        let text = self.text_data.text().to_string();
         let color = self.text_data.data.color;
         let layout_width = self.compute_layout_width(&text, &color, region.width, region.height);
 
         // Compute x position based on alignment
-        let align = self.text_data.get_align();
+        let align = self.text_data.align();
         let x = compute_aligned_x(align, region.x, region.width, layout_width);
 
-        sprite.set_blend(self.text_data.data.get_blend());
+        sprite.set_blend(self.text_data.data.blend());
 
         // Shadow rendering: if shadow offset is non-zero, draw shadow first
-        let shadow_offset = self.text_data.get_shadow_offset();
+        let shadow_offset = self.text_data.shadow_offset();
         if shadow_offset.0 != 0.0 || shadow_offset.1 != 0.0 {
             // Java: Color c2 = new Color(c.r / 2, c.g / 2, c.b / 2, c.a)
             let shadow_color = Color::new(color.r / 2.0, color.g / 2.0, color.b / 2.0, color.a);
@@ -217,7 +217,7 @@ impl SkinTextFont {
             return measured.width;
         }
 
-        match self.text_data.get_overflow() {
+        match self.text_data.overflow() {
             OVERFLOW_OVERFLOW => {
                 let measured = font.measure(text);
                 if let Some(ref mut layout) = self.layout {
@@ -292,7 +292,7 @@ impl SkinTextFont {
         }
 
         let truncate =
-            self.text_data.get_overflow() == OVERFLOW_TRUNCATE && !self.text_data.is_wrapping();
+            self.text_data.overflow() == OVERFLOW_TRUNCATE && !self.text_data.is_wrapping();
         let angle = self.text_data.data.angle;
 
         for glyph in &glyphs {
@@ -425,7 +425,7 @@ mod tests {
 
         let mut renderer = SkinObjectRenderer::new();
         stf.draw_with_offset(&mut renderer, 0.0, 0.0);
-        assert_eq!(renderer.get_type(), SkinObjectRenderer::TYPE_LINEAR);
+        assert_eq!(renderer.toast_type(), SkinObjectRenderer::TYPE_LINEAR);
     }
 
     // ---- Font scale restore test ----

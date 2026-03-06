@@ -84,10 +84,10 @@ impl BgaDraw for BGAProcessor {
     fn draw_bga(&mut self, sprite: &mut SkinObjectRenderer, region: &Rectangle, bga_expand: i32) {
         let stretch = bga_expand_to_stretch(bga_expand);
         let color = {
-            let c = sprite.get_color();
+            let c = sprite.color();
             (c.r, c.g, c.b, c.a)
         };
-        let blend = sprite.get_blend();
+        let blend = sprite.blend();
 
         let mut adapter = SkinObjectRendererAdapter { sprite };
         BGAProcessor::draw_bga(self, &mut adapter, region, stretch, color, blend);
@@ -133,7 +133,7 @@ impl SkinBgaObject {
     }
 
     /// Get the BGA expand mode.
-    pub fn get_bga_expand(&self) -> i32 {
+    pub fn bga_expand(&self) -> i32 {
         self.bga_expand
     }
 
@@ -180,7 +180,7 @@ impl SkinBgaObject {
             // Determine BGA time:
             // In Java: s == STATE_PRELOAD || s == STATE_PRACTICE || s == STATE_READY ? -1
             //          : player.timer.getNowTime(TIMER_PLAY)
-            let timer = state.get_timer();
+            let timer = state.timer();
             let play_time = timer.now_time_for(skin_property::TIMER_PLAY);
             // If play timer is not active (returns Long.MIN_VALUE in Java, which
             // we represent as i64::MIN or a negative value), pass -1
@@ -282,22 +282,22 @@ mod tests {
     #[test]
     fn test_new_skin_bga_object() {
         let bga = SkinBgaObject::new(BGAEXPAND_FULL);
-        assert_eq!(bga.get_bga_expand(), BGAEXPAND_FULL);
+        assert_eq!(bga.bga_expand(), BGAEXPAND_FULL);
         assert!(!bga.has_bga_draw());
     }
 
     #[test]
     fn test_new_with_different_expand_modes() {
         assert_eq!(
-            SkinBgaObject::new(BGAEXPAND_FULL).get_bga_expand(),
+            SkinBgaObject::new(BGAEXPAND_FULL).bga_expand(),
             BGAEXPAND_FULL
         );
         assert_eq!(
-            SkinBgaObject::new(BGAEXPAND_KEEP_ASPECT_RATIO).get_bga_expand(),
+            SkinBgaObject::new(BGAEXPAND_KEEP_ASPECT_RATIO).bga_expand(),
             BGAEXPAND_KEEP_ASPECT_RATIO
         );
         assert_eq!(
-            SkinBgaObject::new(BGAEXPAND_OFF).get_bga_expand(),
+            SkinBgaObject::new(BGAEXPAND_OFF).bga_expand(),
             BGAEXPAND_OFF
         );
     }
@@ -414,18 +414,18 @@ mod tests {
         };
 
         BgaRenderer::set_type(&mut adapter, BgaRenderType::Linear);
-        assert_eq!(sprite.get_type(), SkinObjectRenderer::TYPE_LINEAR);
+        assert_eq!(sprite.toast_type(), SkinObjectRenderer::TYPE_LINEAR);
 
         let mut adapter2 = SkinObjectRendererAdapter {
             sprite: &mut sprite,
         };
         BgaRenderer::set_type(&mut adapter2, BgaRenderType::Ffmpeg);
-        assert_eq!(sprite.get_type(), SkinObjectRenderer::TYPE_FFMPEG);
+        assert_eq!(sprite.toast_type(), SkinObjectRenderer::TYPE_FFMPEG);
 
         let mut adapter3 = SkinObjectRendererAdapter {
             sprite: &mut sprite,
         };
         BgaRenderer::set_type(&mut adapter3, BgaRenderType::Layer);
-        assert_eq!(sprite.get_type(), SkinObjectRenderer::TYPE_LAYER);
+        assert_eq!(sprite.toast_type(), SkinObjectRenderer::TYPE_LAYER);
     }
 }

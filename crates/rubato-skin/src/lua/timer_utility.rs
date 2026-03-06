@@ -50,7 +50,7 @@ impl TimerUtility {
             // now_timer(timer_value) -> elapsed micro sec (0 if OFF)
             let now_timer_func = lua.create_function(move |_, timer_value: i64| {
                 let state = unsafe { &*sp.0 };
-                Ok(now_timer(timer_value, state.get_timer().now_micro_time()))
+                Ok(now_timer(timer_value, state.timer().now_micro_time()))
             })?;
             table.set("now_timer", now_timer_func)?;
 
@@ -69,7 +69,7 @@ impl TimerUtility {
             let timer_function_func = lua.create_function(move |lua, timer_id: i32| {
                 let timer_func = lua.create_function(move |_, ()| {
                     let state = unsafe { &*sp.0 };
-                    Ok(state.get_timer().micro_timer(timer_id))
+                    Ok(state.timer().micro_timer(timer_id))
                 })?;
                 Ok(timer_func)
             })?;
@@ -84,7 +84,7 @@ impl TimerUtility {
                         let state = unsafe { &*sp.0 };
                         let on: bool = func.call(()).unwrap_or(false);
                         let mut obs = observe_state.lock().unwrap();
-                        Ok(obs.update(on, state.get_timer().now_micro_time()))
+                        Ok(obs.update(on, state.timer().now_micro_time()))
                     })?;
                     Ok(timer_func)
                 })?;
@@ -100,7 +100,7 @@ impl TimerUtility {
                 let ps = passive_state.clone();
                 let timer_func = lua.create_function(move |_, ()| {
                     let ps = ps.lock().unwrap();
-                    Ok(ps.get_timer())
+                    Ok(ps.timer())
                 })?;
                 tbl.set("timer", timer_func)?;
 
@@ -109,7 +109,7 @@ impl TimerUtility {
                 let turn_on_func = lua.create_function(move |_, ()| {
                     let state = unsafe { &*sp.0 };
                     let mut ps = ps.lock().unwrap();
-                    ps.turn_on(state.get_timer().now_micro_time());
+                    ps.turn_on(state.timer().now_micro_time());
                     Ok(true)
                 })?;
                 tbl.set("turn_on", turn_on_func)?;
@@ -119,7 +119,7 @@ impl TimerUtility {
                 let turn_on_reset_func = lua.create_function(move |_, ()| {
                     let state = unsafe { &*sp.0 };
                     let mut ps = ps.lock().unwrap();
-                    ps.turn_on_reset(state.get_timer().now_micro_time());
+                    ps.turn_on_reset(state.timer().now_micro_time());
                     Ok(true)
                 })?;
                 tbl.set("turn_on_reset", turn_on_reset_func)?;
@@ -205,7 +205,7 @@ impl PassiveTimerState {
         }
     }
 
-    pub fn get_timer(&self) -> i64 {
+    pub fn timer(&self) -> i64 {
         self.timer_value
     }
 

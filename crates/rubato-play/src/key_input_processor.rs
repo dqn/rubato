@@ -213,14 +213,14 @@ impl JudgeThread {
     }
 
     /// Get the max frame time observed (for performance logging).
-    fn get_frametime(&self) -> i64 {
+    fn frametime(&self) -> i64 {
         self.frametime
     }
 }
 
 impl KeyInputProccessor {
     pub fn new(lane_property: &LaneProperty) -> Self {
-        let scratch_len = lane_property.get_scratch_key_assign().len();
+        let scratch_len = lane_property.scratch_key_assign().len();
         KeyInputProccessor {
             prevtime: -1,
             scratch: vec![0.0; scratch_len],
@@ -282,10 +282,10 @@ impl KeyInputProccessor {
     /// Returns scratch angle values indexed by scratch index.
     /// The caller should write `result[s]` to `main.getOffset(OFFSET_SCRATCHANGLE_1P + s).r`.
     pub fn input(&mut self, ctx: &mut InputContext) {
-        let lane_offsets = self.lane_property.get_lane_skin_offset();
-        let lane_keys = self.lane_property.get_lane_key_assign();
-        let lane_scratch = self.lane_property.get_lane_scratch_assign();
-        let lane_players = self.lane_property.get_lane_player();
+        let lane_offsets = self.lane_property.lane_skin_offset();
+        let lane_keys = self.lane_property.lane_key_assign();
+        let lane_scratch = self.lane_property.lane_scratch_assign();
+        let lane_players = self.lane_property.lane_player();
 
         for lane in 0..lane_offsets.len() {
             let offset = lane_offsets[lane];
@@ -331,7 +331,7 @@ impl KeyInputProccessor {
         // Scratch turntable animation
         if self.prevtime >= 0 {
             let deltatime = (ctx.now - self.prevtime) as f32 / 1000.0;
-            let scratch_keys = self.lane_property.get_scratch_key_assign();
+            let scratch_keys = self.lane_property.scratch_key_assign();
             #[allow(clippy::needless_range_loop)]
             for s in 0..self.scratch.len() {
                 let key0 = scratch_keys[s][1];
@@ -391,7 +391,7 @@ impl KeyInputProccessor {
     /// Returns the current scratch angle values.
     ///
     /// The caller should write `angles[s]` to `main.getOffset(OFFSET_SCRATCHANGLE_1P + s).r`.
-    pub fn get_scratch_angles(&self) -> &[f32] {
+    pub fn scratch_angles(&self) -> &[f32] {
         &self.scratch
     }
 
@@ -399,16 +399,16 @@ impl KeyInputProccessor {
     ///
     /// Translated from Java: KeyInputProccessor.inputKeyOn(lane)
     pub fn input_key_on(&mut self, lane: usize, timer: &mut TimerManager) {
-        let lane_skin_offset = self.lane_property.get_lane_skin_offset();
+        let lane_skin_offset = self.lane_property.lane_skin_offset();
         if lane >= lane_skin_offset.len() {
             return;
         }
         if !self.key_beam_stop {
             let offset = lane_skin_offset[lane];
-            let player = self.lane_property.get_lane_player()[lane];
+            let player = self.lane_property.lane_player()[lane];
             let timer_on = key_on_timer_id(player, offset);
             let timer_off = key_off_timer_id(player, offset);
-            let lane_scratch = self.lane_property.get_lane_scratch_assign();
+            let lane_scratch = self.lane_property.lane_scratch_assign();
             if !timer.is_timer_on(timer_on) || lane_scratch[lane] != -1 {
                 timer.set_timer_on(timer_on);
                 timer.set_timer_off(timer_off);
@@ -419,7 +419,7 @@ impl KeyInputProccessor {
     pub fn stop_judge(&mut self) {
         if self.judge.is_some() {
             if let Some(ref j) = self.judge {
-                log::info!("入力パフォーマンス(max us) : {}", j.get_frametime());
+                log::info!("入力パフォーマンス(max us) : {}", j.frametime());
             }
             self.key_beam_stop = true;
             self.is_judge_started = false;
@@ -563,17 +563,17 @@ mod tests {
     #[test]
     fn test_judge_thread_frametime_tracking() {
         let mut jt = JudgeThread::new(10_000_000, None, 0);
-        assert_eq!(jt.get_frametime(), 1);
+        assert_eq!(jt.frametime(), 1);
 
         jt.tick(1_000_000);
         jt.tick(1_100_000); // delta = 100_000
-        assert_eq!(jt.get_frametime(), 100_000);
+        assert_eq!(jt.frametime(), 100_000);
 
         jt.tick(1_150_000); // delta = 50_000 (less than previous max)
-        assert_eq!(jt.get_frametime(), 100_000); // max stays
+        assert_eq!(jt.frametime(), 100_000); // max stays
 
         jt.tick(1_400_000); // delta = 250_000
-        assert_eq!(jt.get_frametime(), 250_000);
+        assert_eq!(jt.frametime(), 250_000);
     }
 
     // --- KeyInputProccessor tests ---
@@ -931,7 +931,7 @@ mod tests {
         let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
         proc.input(&mut ctx);
         // scratch angles should still be 0 after first frame (prevtime was -1)
-        assert_eq!(proc.get_scratch_angles()[0], 0.0);
+        assert_eq!(proc.scratch_angles()[0], 0.0);
         // prevtime should now be 100
         assert_eq!(proc.prevtime, 100);
     }
@@ -962,7 +962,7 @@ mod tests {
         // |1.0 - 0.0| = 1.0 > deltatime(1.0) is false, so speed = target_speed = 1.0
         assert_eq!(proc.scratch_tt_graphic_speed[0], 1.0);
         // With speed=1.0 > 0: scratch += 360.0 - 1.0 * 1.0 * 270.0 = 90.0
-        assert!((proc.get_scratch_angles()[0] - 90.0).abs() < 0.01);
+        assert!((proc.scratch_angles()[0] - 90.0).abs() < 0.01);
     }
 
     #[test]
@@ -1073,7 +1073,7 @@ mod tests {
         }
         // scratch += 360.0 - 1.0 * 1.0 * 270.0 = 90.0
         // 350.0 + 90.0 = 440.0 % 360.0 = 80.0
-        assert!((proc.get_scratch_angles()[0] - 80.0).abs() < 0.01);
+        assert!((proc.scratch_angles()[0] - 80.0).abs() < 0.01);
     }
 
     #[test]
@@ -1189,7 +1189,7 @@ mod tests {
     fn test_get_scratch_angles_initial_zeros() {
         let lp = make_lane_property();
         let proc = KeyInputProccessor::new(&lp);
-        let angles = proc.get_scratch_angles();
+        let angles = proc.scratch_angles();
         assert_eq!(angles.len(), 1); // BEAT_7K has 1 scratch
         assert_eq!(angles[0], 0.0);
     }
@@ -1198,7 +1198,7 @@ mod tests {
     fn test_get_scratch_angles_beat_14k_has_two() {
         let lp = LaneProperty::new(&Mode::BEAT_14K);
         let proc = KeyInputProccessor::new(&lp);
-        let angles = proc.get_scratch_angles();
+        let angles = proc.scratch_angles();
         assert_eq!(angles.len(), 2);
     }
 
@@ -1206,7 +1206,7 @@ mod tests {
     fn test_get_scratch_angles_popn_has_none() {
         let lp = LaneProperty::new(&Mode::POPN_9K);
         let proc = KeyInputProccessor::new(&lp);
-        let angles = proc.get_scratch_angles();
+        let angles = proc.scratch_angles();
         assert_eq!(angles.len(), 0);
     }
 }

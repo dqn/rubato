@@ -142,7 +142,7 @@ impl WebhookHandler {
     ) -> HashMap<String, serde_json::Value> {
         let mut payload: HashMap<String, serde_json::Value> = HashMap::new();
 
-        let webhook_name = current_state.resource.get_config().webhook_name.as_str();
+        let webhook_name = current_state.resource.config().webhook_name.as_str();
         payload.insert(
             "username".to_string(),
             serde_json::Value::String(if webhook_name.is_empty() {
@@ -151,7 +151,7 @@ impl WebhookHandler {
                 webhook_name.to_string()
             }),
         );
-        let webhook_avatar = current_state.resource.get_config().webhook_avatar.as_str();
+        let webhook_avatar = current_state.resource.config().webhook_avatar.as_str();
         payload.insert(
             "avatar_url".to_string(),
             serde_json::Value::String(if webhook_avatar.is_empty() {
@@ -161,7 +161,7 @@ impl WebhookHandler {
             }),
         );
 
-        if current_state.resource.get_config().webhook_option == 2 {
+        if current_state.resource.config().webhook_option == 2 {
             let mut embed: HashMap<String, serde_json::Value> = HashMap::new();
             let mut author: HashMap<String, String> = HashMap::new();
 

@@ -254,11 +254,11 @@ impl LaneRenderer {
         }
     }
 
-    pub fn get_hispeed(&self) -> f32 {
+    pub fn hispeed(&self) -> f32 {
         self.hispeed
     }
 
-    pub fn get_duration(&self) -> i32 {
+    pub fn duration(&self) -> i32 {
         self.duration
     }
 
@@ -267,11 +267,11 @@ impl LaneRenderer {
         self.set_lanecover(self.lanecover);
     }
 
-    pub fn get_current_duration(&self) -> i32 {
+    pub fn current_duration(&self) -> i32 {
         self.currentduration
     }
 
-    pub fn get_hispeedmargin(&self) -> f32 {
+    pub fn hispeedmargin(&self) -> f32 {
         self.hispeedmargin
     }
 
@@ -287,7 +287,7 @@ impl LaneRenderer {
         self.enable_lift = b;
     }
 
-    pub fn get_lift_region(&self) -> f32 {
+    pub fn lift_region(&self) -> f32 {
         self.lift
     }
 
@@ -295,7 +295,7 @@ impl LaneRenderer {
         self.lift = lift_region.clamp(0.0, 1.0);
     }
 
-    pub fn get_lanecover(&self) -> f32 {
+    pub fn lanecover(&self) -> f32 {
         self.lanecover
     }
 
@@ -325,7 +325,7 @@ impl LaneRenderer {
         self.enable_lanecover
     }
 
-    pub fn get_hidden_cover(&self) -> f32 {
+    pub fn hidden_cover(&self) -> f32 {
         self.hidden
     }
 
@@ -1358,23 +1358,23 @@ impl LaneRenderer {
         }
     }
 
-    pub fn get_now_bpm(&self) -> f64 {
+    pub fn now_bpm(&self) -> f64 {
         self.nowbpm
     }
 
-    pub fn get_min_bpm(&self) -> f64 {
+    pub fn min_bpm(&self) -> f64 {
         self.minbpm
     }
 
-    pub fn get_max_bpm(&self) -> f64 {
+    pub fn max_bpm(&self) -> f64 {
         self.maxbpm
     }
 
-    pub fn get_main_bpm(&self) -> f64 {
+    pub fn main_bpm(&self) -> f64 {
         self.mainbpm
     }
 
-    pub fn get_play_config(&self) -> PlayConfig {
+    pub fn play_config(&self) -> PlayConfig {
         // Return a PlayConfig snapshot reflecting current renderer state.
         // In Java, LaneRenderer holds a PlayConfig reference and delegates to it.
         PlayConfig {
@@ -1716,7 +1716,7 @@ mod tests {
         renderer.draw_lane(&ctx, &lanes, &[]);
 
         // nowbpm should be 150 (from tl1 which is the last timeline before current time)
-        assert!((renderer.get_now_bpm() - 150.0).abs() < 0.001);
+        assert!((renderer.now_bpm() - 150.0).abs() < 0.001);
     }
 
     #[test]
@@ -1734,7 +1734,7 @@ mod tests {
 
         // region = 240000/120/1.0 / 1.0 = 2000
         // currentduration = 2000 * (1 - 0) = 2000
-        assert_eq!(renderer.get_current_duration(), 2000);
+        assert_eq!(renderer.current_duration(), 2000);
     }
 
     #[test]
@@ -1752,7 +1752,7 @@ mod tests {
         renderer.draw_lane(&ctx, &lanes, &[]);
 
         // region = 2000, currentduration = 2000 * (1 - 0.5) = 1000
-        assert_eq!(renderer.get_current_duration(), 1000);
+        assert_eq!(renderer.current_duration(), 1000);
     }
 
     #[test]

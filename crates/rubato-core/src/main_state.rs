@@ -121,17 +121,17 @@ pub trait MainState {
         // and delegation to Skin.executeCustomEvent(state, id, arg1, arg2).
     }
 
-    fn get_score_data_property(&self) -> &ScoreDataProperty {
+    fn score_data_property(&self) -> &ScoreDataProperty {
         &self.main_state_data().score
     }
 
-    fn get_score_data_property_mut(&mut self) -> &mut ScoreDataProperty {
+    fn score_data_property_mut(&mut self) -> &mut ScoreDataProperty {
         &mut self.main_state_data_mut().score
     }
 
-    fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
+    fn judge_count(&self, judge: i32, fast: bool) -> i32 {
         let score = &self.main_state_data().score;
-        if let Some(sd) = score.get_score_data() {
+        if let Some(sd) = score.score_data() {
             sd.judge_count(judge, fast)
         } else {
             0
@@ -144,7 +144,7 @@ pub trait MainState {
         None
     }
 
-    fn get_sound(&self, _sound: SoundType) -> Option<String> {
+    fn sound(&self, _sound: SoundType) -> Option<String> {
         // Default no-op — concrete states override to delegate to MainControllerAccess
         None
     }
@@ -290,13 +290,13 @@ pub trait SkinDrawable: Send {
     fn dispose_skin(&mut self);
 
     /// Get fadeout duration in milliseconds.
-    fn get_fadeout(&self) -> i32;
+    fn fadeout(&self) -> i32;
 
     /// Get input start time in milliseconds.
-    fn get_input(&self) -> i32;
+    fn input(&self) -> i32;
 
     /// Get scene time in milliseconds.
-    fn get_scene(&self) -> i32;
+    fn scene(&self) -> i32;
 
     /// Get skin width.
     fn get_width(&self) -> f32;

@@ -87,7 +87,7 @@ impl JudgeAlgorithm {
         }
     }
 
-    pub fn get_index(algorithm: &str) -> i32 {
+    pub fn index(algorithm: &str) -> i32 {
         for (i, v) in Self::values().iter().enumerate() {
             if v.name() == algorithm {
                 return i as i32;
@@ -130,16 +130,16 @@ mod tests {
 
     #[test]
     fn get_index_returns_correct_index() {
-        assert_eq!(JudgeAlgorithm::get_index("Combo"), 0);
-        assert_eq!(JudgeAlgorithm::get_index("Duration"), 1);
-        assert_eq!(JudgeAlgorithm::get_index("Lowest"), 2);
-        assert_eq!(JudgeAlgorithm::get_index("Score"), 3);
+        assert_eq!(JudgeAlgorithm::index("Combo"), 0);
+        assert_eq!(JudgeAlgorithm::index("Duration"), 1);
+        assert_eq!(JudgeAlgorithm::index("Lowest"), 2);
+        assert_eq!(JudgeAlgorithm::index("Score"), 3);
     }
 
     #[test]
     fn get_index_returns_negative_one_for_unknown() {
-        assert_eq!(JudgeAlgorithm::get_index("Unknown"), -1);
-        assert_eq!(JudgeAlgorithm::get_index(""), -1);
+        assert_eq!(JudgeAlgorithm::index("Unknown"), -1);
+        assert_eq!(JudgeAlgorithm::index(""), -1);
     }
 
     #[test]

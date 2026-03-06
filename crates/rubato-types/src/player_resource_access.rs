@@ -283,11 +283,11 @@ impl PlayerResourceAccess for NullPlayerResource {
         self
     }
     fn config(&self) -> &Config {
-        log::warn!("NullPlayerResource::get_config called — returning default");
+        log::warn!("NullPlayerResource::config called — returning default");
         Self::null_config()
     }
     fn player_config(&self) -> &PlayerConfig {
-        log::warn!("NullPlayerResource::get_player_config called — returning default");
+        log::warn!("NullPlayerResource::player_config called — returning default");
         Self::null_player_config()
     }
     fn score_data(&self) -> Option<&ScoreData> {

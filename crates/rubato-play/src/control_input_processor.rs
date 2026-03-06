@@ -383,13 +383,13 @@ impl ControlInputProcessor {
             match self.keybinds[i] {
                 -1 => {
                     if keystate && !self.hschanged[i] {
-                        let dur = lanerender.get_duration();
+                        let dur = lanerender.duration();
                         lanerender.set_duration(dur - 1);
                     }
                 }
                 1 => {
                     if keystate && !self.hschanged[i] {
-                        let dur = lanerender.get_duration();
+                        let dur = lanerender.duration();
                         lanerender.set_duration(dur + 1);
                     }
                 }
@@ -430,18 +430,18 @@ impl ControlInputProcessor {
         if lanerender.is_enable_lanecover()
             || (!lanerender.is_enable_lift() && !lanerender.is_enable_hidden())
         {
-            let lc = lanerender.get_lanecover();
+            let lc = lanerender.lanecover();
             lanerender.set_lanecover(lc + value);
         } else if lanerender.is_enable_hidden() {
-            let hc = lanerender.get_hidden_cover();
+            let hc = lanerender.hidden_cover();
             lanerender.set_hidden_cover(hc - value);
         } else if lanerender.is_enable_lift() && self.is_change_lift {
-            let lr = lanerender.get_lift_region();
+            let lr = lanerender.lift_region();
             lanerender.set_lift_region(lr - value);
         }
 
-        if self.hispeed_auto_adjust && lanerender.get_now_bpm() > 0.0 {
-            let bpm = lanerender.get_now_bpm();
+        if self.hispeed_auto_adjust && lanerender.now_bpm() > 0.0 {
+            let bpm = lanerender.now_bpm();
             lanerender.reset_hispeed(bpm);
         }
     }
@@ -525,7 +525,7 @@ impl ControlInputProcessor {
             // analog input
             let d_ticks = analog_diff_and_reset(key, 200) * if up { 1 } else { -1 };
             if d_ticks != 0 {
-                let dur = lanerender.get_duration();
+                let dur = lanerender.duration();
                 lanerender.set_duration(dur + d_ticks);
             }
         } else {
@@ -538,7 +538,7 @@ impl ControlInputProcessor {
             if keystate {
                 let l = now_millis;
                 if l - self.lanecovertiming > 50 {
-                    let dur = lanerender.get_duration();
+                    let dur = lanerender.duration();
                     lanerender.set_duration(dur + if up { 1 } else { -1 });
                     self.lanecovertiming = l;
                 }
@@ -662,7 +662,7 @@ mod tests {
         proc.input(&mut ctx);
 
         // set_cover_value(-0.01) => lanecover 0.5 + (-0.01) = 0.49
-        assert!((ctx.lanerender.get_lanecover() - 0.49).abs() < 0.001);
+        assert!((ctx.lanerender.lanecover() - 0.49).abs() < 0.001);
     }
 
     #[test]
@@ -678,7 +678,7 @@ mod tests {
         proc.input(&mut ctx);
 
         // set_cover_value(0.01) => lanecover 0.5 + 0.01 = 0.51
-        assert!((ctx.lanerender.get_lanecover() - 0.51).abs() < 0.001);
+        assert!((ctx.lanerender.lanecover() - 0.51).abs() < 0.001);
     }
 
     #[test]
@@ -703,7 +703,7 @@ mod tests {
             proc.input(&mut ctx);
         }
         // Should only change once
-        assert!((lr.get_lanecover() - 0.49).abs() < 0.001);
+        assert!((lr.lanecover() - 0.49).abs() < 0.001);
     }
 
     #[test]
@@ -720,7 +720,7 @@ mod tests {
         proc.input(&mut ctx);
 
         // Should not change
-        assert!((ctx.lanerender.get_lanecover() - 0.5).abs() < 0.001);
+        assert!((ctx.lanerender.lanecover() - 0.5).abs() < 0.001);
     }
 
     // ---------------------------------------------------------------
@@ -740,7 +740,7 @@ mod tests {
         let result = proc.input(&mut ctx);
 
         // set_cover_value(-2 * 0.005) = -0.01 => 0.5 + (-0.01) = 0.49
-        assert!((ctx.lanerender.get_lanecover() - 0.49).abs() < 0.001);
+        assert!((ctx.lanerender.lanecover() - 0.49).abs() < 0.001);
         assert!(result.reset_scroll);
     }
 
@@ -1085,7 +1085,7 @@ mod tests {
         lr.set_enable_lanecover(true);
 
         proc.set_cover_value(0.1, &mut lr);
-        assert!((lr.get_lanecover() - 0.6).abs() < 0.001);
+        assert!((lr.lanecover() - 0.6).abs() < 0.001);
     }
 
     #[test]
@@ -1098,7 +1098,7 @@ mod tests {
         // lift is off by default
 
         proc.set_cover_value(0.1, &mut lr);
-        assert!((lr.get_lanecover() - 0.6).abs() < 0.001);
+        assert!((lr.lanecover() - 0.6).abs() < 0.001);
     }
 
     #[test]
@@ -1111,7 +1111,7 @@ mod tests {
 
         // value=0.1 => hidden = 0.5 - 0.1 = 0.4
         proc.set_cover_value(0.1, &mut lr);
-        assert!((lr.get_hidden_cover() - 0.4).abs() < 0.001);
+        assert!((lr.hidden_cover() - 0.4).abs() < 0.001);
     }
 
     #[test]
@@ -1126,7 +1126,7 @@ mod tests {
 
         // value=0.1 => lift = 0.5 - 0.1 = 0.4
         proc.set_cover_value(0.1, &mut lr);
-        assert!((lr.get_lift_region() - 0.4).abs() < 0.001);
+        assert!((lr.lift_region() - 0.4).abs() < 0.001);
     }
 
     #[test]
@@ -1140,7 +1140,7 @@ mod tests {
         lr.set_lift_region(0.5);
 
         proc.set_cover_value(0.1, &mut lr);
-        assert!((lr.get_lift_region() - 0.5).abs() < 0.001);
+        assert!((lr.lift_region() - 0.5).abs() < 0.001);
     }
 
     // ---------------------------------------------------------------
@@ -1151,7 +1151,7 @@ mod tests {
     fn start_plus_key_changes_hispeed() {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
-        let initial_hispeed = lr.get_hispeed();
+        let initial_hispeed = lr.hispeed();
 
         let mut analog = noop_analog();
 
@@ -1194,7 +1194,7 @@ mod tests {
             proc.input(&mut ctx);
         }
 
-        assert!(lr.get_hispeed() > initial_hispeed);
+        assert!(lr.hispeed() > initial_hispeed);
     }
 
     // ---------------------------------------------------------------
@@ -1205,7 +1205,7 @@ mod tests {
     fn select_plus_key_changes_duration() {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
-        let initial_duration = lr.get_duration();
+        let initial_duration = lr.duration();
 
         let mut analog = noop_analog();
 
@@ -1241,7 +1241,7 @@ mod tests {
             proc.input(&mut ctx);
         }
 
-        assert_eq!(lr.get_duration(), initial_duration + 1);
+        assert_eq!(lr.duration(), initial_duration + 1);
     }
 
     // ---------------------------------------------------------------
@@ -1310,7 +1310,7 @@ mod tests {
         proc.input(&mut ctx);
 
         // Lane cover should not change
-        assert!((ctx.lanerender.get_lanecover() - 0.5).abs() < 0.001);
+        assert!((ctx.lanerender.lanecover() - 0.5).abs() < 0.001);
     }
 
     // ---------------------------------------------------------------
@@ -1359,7 +1359,7 @@ mod tests {
         );
 
         // Should have adjusted lanecover by cover_change_margin_low (0.001)
-        assert!((lr.get_lanecover() - 0.501).abs() < 0.001);
+        assert!((lr.lanecover() - 0.501).abs() < 0.001);
     }
 
     // ---------------------------------------------------------------
@@ -1390,7 +1390,7 @@ mod tests {
 
         // d_ticks = 5 * 1 (up) = 5, setCoverValue(5 * 0.001 = 0.005)
         // lanecover = 0.5 + 0.005 = 0.505
-        assert!((lr.get_lanecover() - 0.505).abs() < 0.001);
+        assert!((lr.lanecover() - 0.505).abs() < 0.001);
     }
 
     // ---------------------------------------------------------------
@@ -1401,7 +1401,7 @@ mod tests {
     fn change_duration_digital_adjusts_duration() {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
-        let initial = lr.get_duration();
+        let initial = lr.duration();
 
         let mut key_states = vec![false; 18];
         key_states[7] = true;
@@ -1419,7 +1419,7 @@ mod tests {
             1000,
         );
 
-        assert_eq!(lr.get_duration(), initial + 1);
+        assert_eq!(lr.duration(), initial + 1);
     }
 
     // ---------------------------------------------------------------
@@ -1430,7 +1430,7 @@ mod tests {
     fn change_duration_analog_adjusts_duration() {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
-        let initial = lr.get_duration();
+        let initial = lr.duration();
 
         let key_states = vec![false; 18];
         let mut is_analog = vec![false; 18];
@@ -1448,7 +1448,7 @@ mod tests {
         );
 
         // d_ticks = 3 * 1 (up) = 3
-        assert_eq!(lr.get_duration(), initial + 3);
+        assert_eq!(lr.duration(), initial + 3);
     }
 
     // ---------------------------------------------------------------
@@ -1483,7 +1483,7 @@ mod tests {
             &mut analog_fn,
             1000,
         );
-        let after_first = lr.get_lanecover();
+        let after_first = lr.lanecover();
 
         // Second call at t=1200 (1200 - 1000 > 100 => high margin; 1200 - lanecovertiming > 50)
         proc.change_cover_value(
@@ -1495,7 +1495,7 @@ mod tests {
             &mut analog_fn,
             1200,
         );
-        let after_second = lr.get_lanecover();
+        let after_second = lr.lanecover();
 
         let first_delta = after_first - 0.5;
         let second_delta = after_second - after_first;
@@ -1577,8 +1577,8 @@ mod tests {
         proc.set_cover_value(0.1, &mut lr);
 
         // Hidden gets adjusted (priority), lift stays
-        assert!((lr.get_hidden_cover() - 0.4).abs() < 0.001);
-        assert!((lr.get_lift_region() - 0.5).abs() < 0.001);
+        assert!((lr.hidden_cover() - 0.4).abs() < 0.001);
+        assert!((lr.lift_region() - 0.5).abs() < 0.001);
     }
 
     // ---------------------------------------------------------------

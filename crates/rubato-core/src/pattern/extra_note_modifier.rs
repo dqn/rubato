@@ -88,7 +88,7 @@ impl PatternModifier for ExtraNoteModifier {
         self.base.assist = assist;
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -106,7 +106,7 @@ impl PatternModifier for ExtraNoteModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 }
@@ -121,8 +121,8 @@ mod tests {
     #[test]
     fn extra_note_modifier_creation() {
         let modifier = ExtraNoteModifier::new(0, 1, false);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
-        assert_eq!(modifier.get_player(), 0);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
+        assert_eq!(modifier.player(), 0);
     }
 
     #[test]
@@ -144,7 +144,7 @@ mod tests {
     fn extra_note_modifier_set_assist_level() {
         let mut modifier = ExtraNoteModifier::new(0, 1, false);
         modifier.set_assist_level(AssistLevel::Assist);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
     }
 
     #[test]
@@ -157,7 +157,7 @@ mod tests {
         modifier.modify(&mut model);
 
         // No background notes -> no extra notes placed
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
     }
 
     #[test]
@@ -184,7 +184,7 @@ mod tests {
             }
         }
         assert!(found, "Background note should be placed on a lane");
-        assert_eq!(modifier.get_assist_level(), AssistLevel::Assist);
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
     }
 
     #[test]

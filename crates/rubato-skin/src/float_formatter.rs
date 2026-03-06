@@ -18,27 +18,27 @@ pub struct FloatFormatter {
 }
 
 impl FloatFormatter {
-    pub fn get_iketa(&self) -> i32 {
+    pub fn iketa(&self) -> i32 {
         self.iketa
     }
 
-    pub fn get_fketa(&self) -> i32 {
+    pub fn fketa(&self) -> i32 {
         self.fketa
     }
 
-    pub fn get_sign(&self) -> i32 {
+    pub fn sign(&self) -> i32 {
         self.sign
     }
 
-    pub fn get_zeropadding(&self) -> i32 {
+    pub fn zeropadding(&self) -> i32 {
         self.zeropadding
     }
 
-    pub fn get_digits(&self) -> &[i32] {
+    pub fn digits(&self) -> &[i32] {
         &self.digits
     }
 
-    pub fn get_keta_length(&self) -> i32 {
+    pub fn keta_length(&self) -> i32 {
         self.length
     }
 
@@ -145,7 +145,7 @@ mod prop_tests {
     use proptest::prelude::*;
 
     // output_length_invariant: The returned digits slice length always equals
-    // `length + 1` (i.e., `get_keta_length() + 1`), regardless of the input value.
+    // `length + 1` (i.e., `keta_length() + 1`), regardless of the input value.
     proptest! {
         #[test]
         fn output_length_invariant(
@@ -156,7 +156,7 @@ mod prop_tests {
             value in 0.0..=999999.0f64,
         ) {
             let mut formatter = FloatFormatter::new(iketa, fketa, sign, zeropadding);
-            let expected_len = (formatter.get_keta_length() + 1) as usize;
+            let expected_len = (formatter.keta_length() + 1) as usize;
             let digits = formatter.calculate_and_get_digits(value);
             prop_assert_eq!(
                 digits.len(),

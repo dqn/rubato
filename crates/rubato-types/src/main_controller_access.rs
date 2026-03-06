@@ -280,11 +280,11 @@ impl NullMainController {
 
 impl MainControllerAccess for NullMainController {
     fn config(&self) -> &Config {
-        log::warn!("NullMainController::get_config called — returning default");
+        log::warn!("NullMainController::config called — returning default");
         Self::null_config()
     }
     fn player_config(&self) -> &PlayerConfig {
-        log::warn!("NullMainController::get_player_config called — returning default");
+        log::warn!("NullMainController::player_config called — returning default");
         Self::null_player_config()
     }
     fn change_state(&mut self, _state: MainStateType) {

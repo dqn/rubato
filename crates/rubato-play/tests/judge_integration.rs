@@ -138,13 +138,13 @@ fn hard_gauge_dies_after_many_poors() {
 #[test]
 fn judge_manager_default_state() {
     let jm = JudgeManager::new();
-    assert_eq!(jm.get_combo(), 0);
-    assert_eq!(jm.get_course_combo(), 0);
-    assert_eq!(jm.get_course_maxcombo(), 0);
+    assert_eq!(jm.combo(), 0);
+    assert_eq!(jm.course_combo(), 0);
+    assert_eq!(jm.course_maxcombo(), 0);
     // All judge counts should be zero
     for judge in 0..6 {
         assert_eq!(
-            jm.get_judge_count(judge),
+            jm.judge_count(judge),
             0,
             "judge count for {} should be 0",
             judge
@@ -157,7 +157,7 @@ fn judge_manager_from_config_initializes_correctly() {
     let model = make_model_with_normal_notes(3);
     let judge_notes = model.build_judge_notes();
     let mode = Mode::BEAT_7K;
-    let rule = BMSPlayerRule::get_bms_player_rule(&mode);
+    let rule = BMSPlayerRule::for_mode(&mode);
 
     let config = JudgeConfig {
         notes: &judge_notes,
@@ -177,17 +177,17 @@ fn judge_manager_from_config_initializes_correctly() {
     let jm = JudgeManager::from_config(&config);
 
     // Initial state: no notes judged yet
-    assert_eq!(jm.get_combo(), 0);
+    assert_eq!(jm.combo(), 0);
     for judge in 0..6 {
         assert_eq!(
-            jm.get_judge_count(judge),
+            jm.judge_count(judge),
             0,
             "initial judge count for {} should be 0",
             judge
         );
     }
     // Ghost should be initialized with POOR (4) for each playable note
-    let ghost = jm.get_ghost();
+    let ghost = jm.ghost();
     assert_eq!(
         ghost.len(),
         3,
@@ -200,7 +200,7 @@ fn judge_manager_autoplay_judges_all_pgreat() {
     let model = make_model_with_normal_notes(4);
     let judge_notes = model.build_judge_notes();
     let mode = Mode::BEAT_7K;
-    let rule = BMSPlayerRule::get_bms_player_rule(&mode);
+    let rule = BMSPlayerRule::for_mode(&mode);
 
     let config = JudgeConfig {
         notes: &judge_notes,
@@ -236,17 +236,17 @@ fn judge_manager_autoplay_judges_all_pgreat() {
 
     // Autoplay should judge all 4 notes as PGREAT
     assert_eq!(
-        jm.get_judge_count(JUDGE_PG),
+        jm.judge_count(JUDGE_PG),
         4,
         "autoplay should produce 4 PGREATs, got PG={} GR={} GD={} BD={} PR={} MS={}",
-        jm.get_judge_count(0),
-        jm.get_judge_count(1),
-        jm.get_judge_count(2),
-        jm.get_judge_count(3),
-        jm.get_judge_count(4),
-        jm.get_judge_count(5),
+        jm.judge_count(0),
+        jm.judge_count(1),
+        jm.judge_count(2),
+        jm.judge_count(3),
+        jm.judge_count(4),
+        jm.judge_count(5),
     );
-    assert_eq!(jm.get_combo(), 4, "combo should be 4 after 4 PGREATs");
+    assert_eq!(jm.combo(), 4, "combo should be 4 after 4 PGREATs");
 }
 
 // ===========================================================================
@@ -352,7 +352,7 @@ fn manual_input_at_note_time_produces_pgreat() {
     assert_eq!(judge_notes[0].kind, JudgeNoteKind::Normal);
 
     let mode = Mode::BEAT_7K;
-    let rule = BMSPlayerRule::get_bms_player_rule(&mode);
+    let rule = BMSPlayerRule::for_mode(&mode);
 
     let config = JudgeConfig {
         notes: &judge_notes,
@@ -391,11 +391,11 @@ fn manual_input_at_note_time_produces_pgreat() {
 
     // The note should be judged as PGREAT (exact timing)
     assert_eq!(
-        jm.get_judge_count(JUDGE_PG),
+        jm.judge_count(JUDGE_PG),
         1,
         "exact timing should produce PGREAT"
     );
-    assert_eq!(jm.get_combo(), 1);
+    assert_eq!(jm.combo(), 1);
 
     // Gauge should have increased
     assert!(
@@ -412,7 +412,7 @@ fn no_input_produces_all_miss() {
     let model = make_model_with_normal_notes(2);
     let judge_notes = model.build_judge_notes();
     let mode = Mode::BEAT_7K;
-    let rule = BMSPlayerRule::get_bms_player_rule(&mode);
+    let rule = BMSPlayerRule::for_mode(&mode);
 
     let config = JudgeConfig {
         notes: &judge_notes,
@@ -447,13 +447,13 @@ fn no_input_produces_all_miss() {
     }
 
     // All notes should be POOR or MISS
-    let miss_count = jm.get_judge_count(4) + jm.get_judge_count(5); // PR + MS
+    let miss_count = jm.judge_count(4) + jm.judge_count(5); // PR + MS
     assert_eq!(
         miss_count,
         2,
         "2 notes with no input should all be PR/MS, got PR={} MS={}",
-        jm.get_judge_count(4),
-        jm.get_judge_count(5)
+        jm.judge_count(4),
+        jm.judge_count(5)
     );
-    assert_eq!(jm.get_combo(), 0, "combo should remain 0 with no hits");
+    assert_eq!(jm.combo(), 0, "combo should remain 0 with no hits");
 }

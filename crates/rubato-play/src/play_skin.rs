@@ -60,7 +60,7 @@ impl PlaySkin {
         }
     }
 
-    pub fn get_judgeregion(&self) -> i32 {
+    pub fn judgeregion(&self) -> i32 {
         self.judgeregion
     }
 
@@ -68,7 +68,7 @@ impl PlaySkin {
         self.judgeregion = jr;
     }
 
-    pub fn get_close(&self) -> i32 {
+    pub fn close(&self) -> i32 {
         self.close
     }
 
@@ -76,7 +76,7 @@ impl PlaySkin {
         self.close = close;
     }
 
-    pub fn get_finish_margin(&self) -> i32 {
+    pub fn finish_margin(&self) -> i32 {
         self.finish_margin
     }
 
@@ -84,7 +84,7 @@ impl PlaySkin {
         self.finish_margin = finish_margin;
     }
 
-    pub fn get_playstart(&self) -> i32 {
+    pub fn playstart(&self) -> i32 {
         self.playstart
     }
 
@@ -92,7 +92,7 @@ impl PlaySkin {
         self.playstart = playstart;
     }
 
-    pub fn get_loadstart(&self) -> i32 {
+    pub fn loadstart(&self) -> i32 {
         self.loadstart
     }
 
@@ -100,7 +100,7 @@ impl PlaySkin {
         self.loadstart = loadstart;
     }
 
-    pub fn get_loadend(&self) -> i32 {
+    pub fn loadend(&self) -> i32 {
         self.loadend
     }
 
@@ -108,7 +108,7 @@ impl PlaySkin {
         self.loadend = loadend;
     }
 
-    pub fn get_judgetimer(&self) -> i32 {
+    pub fn judgetimer(&self) -> i32 {
         self.judgetimer
     }
 
@@ -116,7 +116,7 @@ impl PlaySkin {
         self.judgetimer = judgetimer;
     }
 
-    pub fn get_note_expansion_rate(&self) -> &[i32; 2] {
+    pub fn note_expansion_rate(&self) -> &[i32; 2] {
         &self.note_expansion_rate
     }
 
@@ -124,7 +124,7 @@ impl PlaySkin {
         self.note_expansion_rate = rate;
     }
 
-    pub fn get_lane_group_region(&self) -> Option<&[Rectangle]> {
+    pub fn lane_group_region(&self) -> Option<&[Rectangle]> {
         self.lanegroupregion.as_deref()
     }
 
@@ -132,7 +132,7 @@ impl PlaySkin {
         self.lanegroupregion = r;
     }
 
-    pub fn get_lane_region(&self) -> Option<&[Rectangle]> {
+    pub fn lane_region(&self) -> Option<&[Rectangle]> {
         self.laneregion.as_deref()
     }
 
@@ -140,7 +140,7 @@ impl PlaySkin {
         self.laneregion = r;
     }
 
-    pub fn get_line(&self) -> &[()] {
+    pub fn line(&self) -> &[()] {
         &self.line
     }
 
@@ -148,7 +148,7 @@ impl PlaySkin {
         self.line = line;
     }
 
-    pub fn get_bpm_line(&self) -> &[()] {
+    pub fn bpm_line(&self) -> &[()] {
         &self.bpm
     }
 
@@ -156,7 +156,7 @@ impl PlaySkin {
         self.bpm = bpm;
     }
 
-    pub fn get_stop_line(&self) -> &[()] {
+    pub fn stop_line(&self) -> &[()] {
         &self.stop
     }
 
@@ -164,7 +164,7 @@ impl PlaySkin {
         self.stop = stop;
     }
 
-    pub fn get_time_line(&self) -> &[()] {
+    pub fn time_line(&self) -> &[()] {
         &self.time
     }
 

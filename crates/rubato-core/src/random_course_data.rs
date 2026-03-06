@@ -19,15 +19,15 @@ pub struct RandomCourseData {
 impl RandomCourseData {
     pub const EMPTY: &'static [RandomCourseData] = &[];
 
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         self.name.as_deref().unwrap_or("")
     }
 
-    pub fn get_stage(&self) -> &[RandomStageData] {
+    pub fn stage(&self) -> &[RandomStageData] {
         &self.stage
     }
 
-    pub fn get_song_datas(&self) -> Vec<SongData> {
+    pub fn song_datas(&self) -> Vec<SongData> {
         self.song_datas.clone()
     }
 
@@ -143,7 +143,7 @@ impl RandomCourseDataConstraint {
         }
     }
 
-    pub fn get_value(name: &str) -> Option<RandomCourseDataConstraint> {
+    pub fn value(name: &str) -> Option<RandomCourseDataConstraint> {
         match name {
             "distinct" => Some(RandomCourseDataConstraint::Distinct),
             _ => None,

@@ -80,7 +80,7 @@ impl SkinImage {
             images,
             timer,
             cycle,
-            integer_property_factory::get_image_index_property_by_id(ref_id),
+            integer_property_factory::image_index_property_by_id(ref_id),
         )
     }
 
@@ -146,7 +146,7 @@ impl SkinImage {
         Self {
             data: SkinObjectData::new(),
             image,
-            ref_prop: integer_property_factory::get_image_index_property_by_id(ref_id),
+            ref_prop: integer_property_factory::image_index_property_by_id(ref_id),
             current_image: None,
             removed_sources: Vec::new(),
             is_movie: false,
@@ -169,7 +169,7 @@ impl SkinImage {
     pub fn new_with_sources_ref_id(image: Vec<SkinSourceImage>, ref_id: i32) -> Self {
         Self::new_with_sources_ref(
             image,
-            integer_property_factory::get_image_index_property_by_id(ref_id),
+            integer_property_factory::image_index_property_by_id(ref_id),
         )
     }
 
@@ -191,11 +191,11 @@ impl SkinImage {
         }
     }
 
-    pub fn get_image(&self, time: i64, state: &dyn MainState) -> Option<TextureRegion> {
-        self.get_image_at(0, time, state)
+    pub fn image(&self, time: i64, state: &dyn MainState) -> Option<TextureRegion> {
+        self.image_at(0, time, state)
     }
 
-    pub fn get_image_at(
+    pub fn image_at(
         &self,
         value: usize,
         time: i64,
@@ -265,7 +265,7 @@ impl SkinImage {
         if value >= self.image.len() as i32 {
             value = 0;
         }
-        self.current_image = self.get_image_at(value as usize, time, state);
+        self.current_image = self.image_at(value as usize, time, state);
         if self.current_image.is_none() {
             self.data.draw = false;
         }
@@ -361,11 +361,11 @@ impl SkinImage {
         }
     }
 
-    pub fn get_ref_prop(&self) -> Option<&dyn IntegerProperty> {
+    pub fn ref_prop(&self) -> Option<&dyn IntegerProperty> {
         self.ref_prop.as_deref()
     }
 
-    pub fn get_source_count(&self) -> usize {
+    pub fn source_count(&self) -> usize {
         self.image.len()
     }
 

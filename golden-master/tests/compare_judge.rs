@@ -84,7 +84,7 @@ struct SimResult {
 fn run_simulation(model: &BMSModel, tc: &JudgeTestCase) -> SimResult {
     let judge_notes = model.build_judge_notes();
     let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
-    let rule = BMSPlayerRule::get_bms_player_rule(&mode);
+    let rule = BMSPlayerRule::for_mode(&mode);
 
     let config = JudgeConfig {
         notes: &judge_notes,
@@ -106,7 +106,7 @@ fn run_simulation(model: &BMSModel, tc: &JudgeTestCase) -> SimResult {
     let mut gauge = GrooveGauge::new(model, gauge_type, &rule.gauge);
 
     let lp = LaneProperty::new(&mode);
-    let physical_key_count = lp.get_key_lane_assign().len();
+    let physical_key_count = lp.key_lane_assign().len();
 
     // Prime JudgeManager: set prev_time to -1 so notes at time_us=0 are not skipped.
     let empty_states = vec![false; physical_key_count];
@@ -172,7 +172,7 @@ fn run_simulation(model: &BMSModel, tc: &JudgeTestCase) -> SimResult {
     SimResult {
         score: jm.score().clone(),
         max_combo: jm.max_combo(),
-        ghost: jm.ghost().to_vec(),
+        ghost: jm.ghost_as_usize(),
         gauge_value: gauge.value(),
         gauge_qualified: gauge.is_qualified(),
         pass_notes: jm.past_notes(),

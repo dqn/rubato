@@ -199,7 +199,7 @@ impl PracticeConfiguration {
 
         if self.property.gaugecategory.is_none() {
             let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
-            self.property.gaugecategory = Some(BMSPlayerRule::get_bms_player_rule(&mode).gauge);
+            self.property.gaugecategory = Some(BMSPlayerRule::for_mode(&mode).gauge);
         }
         let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
         let timeline_times: Vec<i32> = model.all_time_lines().iter().map(|tl| tl.time()).collect();
@@ -234,15 +234,15 @@ impl PracticeConfiguration {
         }
     }
 
-    pub fn get_practice_property(&self) -> &PracticeProperty {
+    pub fn practice_property(&self) -> &PracticeProperty {
         &self.property
     }
 
-    pub fn get_practice_property_mut(&mut self) -> &mut PracticeProperty {
+    pub fn practice_property_mut(&mut self) -> &mut PracticeProperty {
         &mut self.property
     }
 
-    pub fn get_gauge(&self, model: &BMSModel) -> Option<GrooveGauge> {
+    pub fn gauge(&self, model: &BMSModel) -> Option<GrooveGauge> {
         let gauge_category = self
             .property
             .gaugecategory
@@ -303,7 +303,7 @@ impl PracticeConfiguration {
         pm.modify(model);
 
         // Gauge
-        let gauge = self.get_gauge(model);
+        let gauge = self.gauge(model);
 
         // Judge rank
         model.set_judgerank(property.judgerank);
@@ -447,7 +447,7 @@ impl PracticeConfiguration {
         }
     }
 
-    pub fn get_element_text(&self, index: usize) -> String {
+    pub fn element_text(&self, index: usize) -> String {
         match index {
             0 => format!(
                 "START TIME : {:2}:{:02}.{:1}",
@@ -529,7 +529,7 @@ impl PracticeConfiguration {
                     PracticeColor::Cyan
                 };
                 commands.push(PracticeDrawCommand::DrawText {
-                    text: self.get_element_text(i),
+                    text: self.element_text(i),
                     x,
                     y: y - 22.0 * i as f32,
                     color,
@@ -638,7 +638,7 @@ impl PracticeConfiguration {
     }
 
     /// Get current cursor position.
-    pub fn get_cursor_pos(&self) -> usize {
+    pub fn cursor_pos(&self) -> usize {
         self.cursorpos
     }
 
@@ -785,10 +785,10 @@ mod tests {
         let mut practice = PracticeConfiguration::new();
         let model = make_timed_model(&Mode::BEAT_7K, &[0, 60000]);
         practice.create(&model);
-        assert_eq!(practice.get_cursor_pos(), 0);
+        assert_eq!(practice.cursor_pos(), 0);
 
         practice.process_input(false, true, false, false, 1000);
-        assert_eq!(practice.get_cursor_pos(), 1);
+        assert_eq!(practice.cursor_pos(), 1);
     }
 
     #[test]
@@ -796,11 +796,11 @@ mod tests {
         let mut practice = PracticeConfiguration::new();
         let model = make_timed_model(&Mode::BEAT_7K, &[0, 60000]);
         practice.create(&model);
-        assert_eq!(practice.get_cursor_pos(), 0);
+        assert_eq!(practice.cursor_pos(), 0);
 
         // UP from 0 should go to element 9 (skipping invisible 10, 11 in SP)
         practice.process_input(true, false, false, false, 1000);
-        assert_eq!(practice.get_cursor_pos(), 9);
+        assert_eq!(practice.cursor_pos(), 9);
     }
 
     #[test]
@@ -810,10 +810,10 @@ mod tests {
         let model = make_timed_model(&Mode::BEAT_7K, &[0, 60000]);
         practice.create(&model);
 
-        let start_before = practice.get_practice_property().starttime;
+        let start_before = practice.practice_property().starttime;
         // Right held = increment. presscount starts at 0, so first press triggers immediately.
         practice.process_input(false, false, false, true, 1000);
-        let start_after = practice.get_practice_property().starttime;
+        let start_after = practice.practice_property().starttime;
 
         // cursor at 0 = STARTTIME, right should increment by 100
         assert_eq!(start_after, start_before + 100);
@@ -826,10 +826,10 @@ mod tests {
         practice.create(&model);
 
         // First set starttime to something > 0 so we can decrement
-        practice.get_practice_property_mut().starttime = 500;
+        practice.practice_property_mut().starttime = 500;
 
         practice.process_input(false, false, true, false, 1000);
-        assert_eq!(practice.get_practice_property().starttime, 400);
+        assert_eq!(practice.practice_property().starttime, 400);
     }
 
     #[test]
@@ -1029,9 +1029,9 @@ mod tests {
         pc.property.doubleop = 50;
         pc.property.graphtype = -1;
         // Should not panic, should produce "?" for out-of-bounds
-        let text = pc.get_element_text(2);
+        let text = pc.element_text(2);
         assert!(text.contains("?"));
-        let text = pc.get_element_text(9);
+        let text = pc.element_text(9);
         assert!(text.contains("?"));
     }
 }

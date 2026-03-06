@@ -123,16 +123,16 @@ impl SkinObject {
         }
     }
 
-    pub fn get_draw_condition(&self) -> &[Box<dyn BooleanProperty>] {
-        self.data().get_draw_condition()
+    pub fn draw_condition(&self) -> &[Box<dyn BooleanProperty>] {
+        self.data().draw_condition()
     }
 
     pub fn set_draw_condition(&mut self, bp: Vec<Box<dyn BooleanProperty>>) {
         self.data_mut().set_draw_condition(bp);
     }
 
-    pub fn get_option(&self) -> &[i32] {
-        self.data().get_option()
+    pub fn option(&self) -> &[i32] {
+        self.data().option()
     }
 
     pub fn set_option(&mut self, op: Vec<i32>) {
@@ -320,7 +320,7 @@ impl SkinObject {
         self.data_mut().set_mouse_rect(x, y, w, h);
     }
 
-    pub fn get_type_name(&self) -> &'static str {
+    pub fn type_name(&self) -> &'static str {
         match self {
             SkinObject::Image(_) => "Image",
             SkinObject::Number(_) => "Number",
@@ -407,8 +407,8 @@ pub struct Skin {
 
 impl Skin {
     pub fn new(header: SkinHeader) -> Self {
-        let org = header.get_source_resolution().clone();
-        let dst = header.get_destination_resolution().clone();
+        let org = header.source_resolution().clone();
+        let dst = header.destination_resolution().clone();
         let width = dst.width;
         let height = dst.height;
         let dw = dst.width / org.width;
@@ -499,7 +499,7 @@ impl Skin {
     }
 
     /// Look up a registered image by ID.
-    pub fn get_registered_image(&self, id: i32) -> Option<TextureRegion> {
+    pub fn registered_image(&self, id: i32) -> Option<TextureRegion> {
         self.image_registry.get(&id).cloned()
     }
 
@@ -531,7 +531,7 @@ impl Skin {
         let dw = self.dw;
         let dh = self.dh;
         let timer_prop = if timer > 0 {
-            timer_property_factory::get_timer_property(timer)
+            timer_property_factory::timer_property(timer)
         } else {
             None
         };
@@ -663,23 +663,23 @@ impl Skin {
         }
     }
 
-    pub fn get_all_skin_objects_count(&self) -> usize {
+    pub fn all_skin_objects_count(&self) -> usize {
         self.objects.len()
     }
 
-    pub fn get_objects(&self) -> &[SkinObject] {
+    pub fn objects(&self) -> &[SkinObject] {
         &self.objects
     }
 
-    pub fn get_objects_mut(&mut self) -> &mut Vec<SkinObject> {
+    pub fn objects_mut(&mut self) -> &mut Vec<SkinObject> {
         &mut self.objects
     }
 
-    pub fn get_custom_events_count(&self) -> usize {
+    pub fn custom_events_count(&self) -> usize {
         self.custom_events.len()
     }
 
-    pub fn get_custom_timers_count(&self) -> usize {
+    pub fn custom_timers_count(&self) -> usize {
         self.custom_timers.len()
     }
 
@@ -696,7 +696,7 @@ impl Skin {
             if !self.objects[i].validate() {
                 remove_indices.push(i);
             } else {
-                let draw_conds = self.objects[i].get_draw_condition();
+                let draw_conds = self.objects[i].draw_condition();
                 let _bp: Vec<Box<dyn BooleanProperty>> = Vec::new();
                 let mut should_remove = false;
 
@@ -726,7 +726,7 @@ impl Skin {
                 }
 
                 // Check options
-                let options = self.objects[i].get_option().to_vec();
+                let options = self.objects[i].option().to_vec();
                 for op in &options {
                     if *op > 0 {
                         let value = self.option.get(op).copied().unwrap_or(-1);
@@ -785,12 +785,12 @@ impl Skin {
             self.renderer = Some(SkinObjectRenderer::new());
         }
 
-        let microtime = state.get_timer().now_micro_time();
+        let microtime = state.timer().now_micro_time();
         let debug = false; // MainController.debug stubbed as false
 
         if !debug {
             if self.nextpreparetime <= microtime {
-                let time = state.get_timer().now_time();
+                let time = state.timer().now_time();
                 for idx in &self.objectarray_indices {
                     self.objects[*idx].prepare(time, state);
                 }
@@ -858,7 +858,7 @@ impl Skin {
         }
     }
 
-    pub fn get_fadeout(&self) -> i32 {
+    pub fn fadeout(&self) -> i32 {
         self.fadeout
     }
 
@@ -866,7 +866,7 @@ impl Skin {
         self.fadeout = fadeout;
     }
 
-    pub fn get_input(&self) -> i32 {
+    pub fn input(&self) -> i32 {
         self.input
     }
 
@@ -874,7 +874,7 @@ impl Skin {
         self.input = input;
     }
 
-    pub fn get_scene(&self) -> i32 {
+    pub fn scene(&self) -> i32 {
         self.scene
     }
 
@@ -882,7 +882,7 @@ impl Skin {
         self.scene = scene;
     }
 
-    pub fn get_option(&self) -> &HashMap<i32, i32> {
+    pub fn option(&self) -> &HashMap<i32, i32> {
         &self.option
     }
 
@@ -890,7 +890,7 @@ impl Skin {
         self.option = option;
     }
 
-    pub fn get_offset(&self) -> &HashMap<i32, SkinConfigOffset> {
+    pub fn offset(&self) -> &HashMap<i32, SkinConfigOffset> {
         &self.offset
     }
 
@@ -906,15 +906,15 @@ impl Skin {
         self.height
     }
 
-    pub fn get_scale_x(&self) -> f64 {
+    pub fn scale_x(&self) -> f64 {
         self.dw as f64
     }
 
-    pub fn get_scale_y(&self) -> f64 {
+    pub fn scale_y(&self) -> f64 {
         self.dh as f64
     }
 
-    pub fn get_offset_all(&self, _state: &dyn MainState) -> Option<SkinOffset> {
+    pub fn offset_all(&self, _state: &dyn MainState) -> Option<SkinOffset> {
         // In Java, checks if state instanceof BMSPlayer and gets skin type
         // For now, returns None as we can't do instanceof with trait objects
         // The actual implementation would check play skin types:
@@ -948,9 +948,9 @@ impl Skin {
 
     /// Get custom timer value (micro sec).
     /// Recalculated only once per frame, so the value is guaranteed to be unique within the same frame.
-    pub fn get_micro_custom_timer(&self, id: i32) -> i64 {
+    pub fn micro_custom_timer(&self, id: i32) -> i64 {
         if let Some(timer) = self.custom_timers.get(&id) {
-            timer.get_micro_timer()
+            timer.micro_timer()
         } else {
             i64::MIN
         }
@@ -1149,7 +1149,7 @@ impl<'a> TimerOnlyMainState<'a> {
 }
 
 impl crate::stubs::MainState for TimerOnlyMainState<'_> {
-    fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+    fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
         if let Some(ctx) = self.ctx.as_deref() {
             ctx
         } else {
@@ -1197,13 +1197,13 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
         self.state_type == Some(rubato_types::main_state_type::MainStateType::Play)
     }
 
-    fn get_recent_judges(&self) -> &[i64] {
+    fn recent_judges(&self) -> &[i64] {
         self.ctx
             .as_deref()
             .map_or(&[] as &[i64], |c| c.recent_judges())
     }
 
-    fn get_recent_judges_index(&self) -> usize {
+    fn recent_judges_index(&self) -> usize {
         self.ctx.as_deref().map_or(0, |c| c.recent_judges_index())
     }
 
@@ -1235,7 +1235,7 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
         }
     }
 
-    fn get_judge_count(&self, judge: i32, fast: bool) -> i32 {
+    fn judge_count(&self, judge: i32, fast: bool) -> i32 {
         self.ctx
             .as_deref()
             .map_or(0, |c| c.judge_count(judge, fast))
@@ -1245,7 +1245,7 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
         self.ctx.as_deref().map_or(0.0, |c| c.gauge_value())
     }
 
-    fn get_gauge_type(&self) -> i32 {
+    fn gauge_type(&self) -> i32 {
         self.ctx.as_deref().map_or(0, |c| c.gauge_type())
     }
 
@@ -1269,7 +1269,7 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
             .and_then(rubato_types::skin_render_context::SkinRenderContext::config_ref)
     }
 
-    fn get_player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
+    fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
         self.ctx
             .as_deref_mut()
             .and_then(rubato_types::skin_render_context::SkinRenderContext::player_config_mut)
@@ -1403,15 +1403,15 @@ impl rubato_core::main_state::SkinDrawable for Skin {
         self.dispose();
     }
 
-    fn get_fadeout(&self) -> i32 {
+    fn fadeout(&self) -> i32 {
         self.fadeout
     }
 
-    fn get_input(&self) -> i32 {
+    fn input(&self) -> i32 {
         self.input
     }
 
-    fn get_scene(&self) -> i32 {
+    fn scene(&self) -> i32 {
         self.scene
     }
 
@@ -1483,23 +1483,23 @@ mod tests {
 
     impl TimerAccess for RecordingSkinRenderContext {
         fn now_time(&self) -> i64 {
-            self.timer.get_now_time()
+            self.timer.now_time()
         }
 
         fn now_micro_time(&self) -> i64 {
-            self.timer.get_now_micro_time()
+            self.timer.now_micro_time()
         }
 
         fn micro_timer(&self, timer_id: i32) -> i64 {
-            self.timer.get_micro_timer(timer_id)
+            self.timer.micro_timer(timer_id)
         }
 
         fn timer(&self, timer_id: i32) -> i64 {
-            self.timer.get_timer(timer_id)
+            self.timer.timer(timer_id)
         }
 
         fn now_time_for(&self, timer_id: i32) -> i64 {
-            self.timer.get_now_time_for(timer_id)
+            self.timer.now_time_for(timer_id)
         }
 
         fn is_timer_on(&self, timer_id: i32) -> bool {
@@ -1546,8 +1546,8 @@ mod tests {
         let timer = crate::stubs::Timer::with_timers(1000, 1_000_000, Vec::new());
         let adapter = TimerOnlyMainState::from_timer(&timer);
         let state: &dyn MainState = &adapter;
-        assert_eq!(state.get_timer().now_time(), 1000);
-        assert_eq!(state.get_timer().now_micro_time(), 1_000_000);
+        assert_eq!(state.timer().now_time(), 1000);
+        assert_eq!(state.timer().now_micro_time(), 1_000_000);
         assert!(state.get_offset_value(0).is_none());
         assert!(state.get_image(0).is_none());
         assert!(!state.get_main().debug);
@@ -1574,23 +1574,23 @@ mod tests {
 
         // Timer 10 should be ON through the adapter
         assert!(
-            state.get_timer().is_timer_on(10),
+            state.timer().is_timer_on(10),
             "Timer 10 should be ON through adapter"
         );
         // Timer 20 should be OFF
         assert!(
-            !state.get_timer().is_timer_on(20),
+            !state.timer().is_timer_on(20),
             "Timer 20 should be OFF through adapter"
         );
-        // get_micro_timer for ON timer should not be i64::MIN
+        // micro_timer for ON timer should not be i64::MIN
         assert_ne!(
-            state.get_timer().micro_timer(10),
+            state.timer().micro_timer(10),
             i64::MIN,
             "ON timer should return its activation time, not i64::MIN"
         );
-        // get_micro_timer for OFF timer should be i64::MIN
+        // micro_timer for OFF timer should be i64::MIN
         assert_eq!(
-            state.get_timer().micro_timer(20),
+            state.timer().micro_timer(20),
             i64::MIN,
             "OFF timer should return i64::MIN"
         );
@@ -1604,9 +1604,9 @@ mod tests {
         skin.set_scene(2000);
 
         let drawable: &dyn SkinDrawable = &skin;
-        assert_eq!(drawable.get_fadeout(), 500);
-        assert_eq!(drawable.get_input(), 100);
-        assert_eq!(drawable.get_scene(), 2000);
+        assert_eq!(drawable.fadeout(), 500);
+        assert_eq!(drawable.input(), 100);
+        assert_eq!(drawable.scene(), 2000);
         // Default resolution is 640x480
         assert_eq!(drawable.get_width(), 640.0);
         assert_eq!(drawable.get_height(), 480.0);
@@ -1905,7 +1905,7 @@ mod tests {
         // draw may be false because integer property returns i32::MIN by default
         // That's expected — the property factory returns None and the default is 0,
         // which IS a valid value. Let's check.
-        // The default ref_prop is from get_integer_property_by_id(0) which returns None,
+        // The default ref_prop is from integer_property_by_id(0) which returns None,
         // so value = i32::MIN... but wait, SkinNumber::prepare calls ref_prop.get() which
         // returns 0 for id=0 since no property found. Actually ref_prop is None so value = i32::MIN.
         // i32::MIN triggers early return with draw=false. That's correct behavior.
@@ -2033,7 +2033,7 @@ mod tests {
             1.0,
         );
         let obj = SkinObject::Float(sf);
-        assert_eq!(obj.get_type_name(), "Float");
+        assert_eq!(obj.type_name(), "Float");
     }
 
     #[test]

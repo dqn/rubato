@@ -86,7 +86,7 @@ fn get_song_datas_by_hashes_injection_blocked() {
 }
 
 // -----------------------------------------------------------------------
-// get_song_datas: column name injection blocked by whitelist
+// song_datas: column name injection blocked by whitelist
 // -----------------------------------------------------------------------
 
 #[test]

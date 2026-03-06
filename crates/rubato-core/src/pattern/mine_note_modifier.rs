@@ -135,7 +135,7 @@ impl PatternModifier for MineNoteModifier {
         }
     }
 
-    fn get_assist_level(&self) -> AssistLevel {
+    fn assist_level(&self) -> AssistLevel {
         self.base.assist
     }
 
@@ -153,7 +153,7 @@ impl PatternModifier for MineNoteModifier {
         }
     }
 
-    fn get_player(&self) -> i32 {
+    fn player(&self) -> i32 {
         self.base.player
     }
 }
@@ -195,14 +195,14 @@ mod tests {
     #[test]
     fn mine_note_modifier_default() {
         let modifier = MineNoteModifier::new();
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
         assert!(!modifier.mine_note_exists());
     }
 
     #[test]
     fn mine_note_modifier_with_mode() {
         let modifier = MineNoteModifier::with_mode(1);
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
     }
 
     #[test]
@@ -239,7 +239,7 @@ mod tests {
         assert!(tls[0].note(0).is_none());
         // Normal note in lane 1 should remain
         assert!(tls[0].note(1).is_some());
-        assert_eq!(modifier.get_assist_level(), AssistLevel::LightAssist);
+        assert_eq!(modifier.assist_level(), AssistLevel::LightAssist);
         assert!(modifier.mine_note_exists());
     }
 
@@ -254,7 +254,7 @@ mod tests {
         let mut modifier = MineNoteModifier::new();
         modifier.modify(&mut model);
 
-        assert_eq!(modifier.get_assist_level(), AssistLevel::None);
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
         assert!(!modifier.mine_note_exists());
     }
 

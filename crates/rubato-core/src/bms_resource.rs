@@ -116,7 +116,7 @@ impl BMSResource {
             }
         }
 
-        if MainLoader::get_illegal_song_count() == 0 {
+        if MainLoader::illegal_song_count() == 0 {
             // Audio and BGA both have caches, so always do a full reload
             // Phase 5+ dependency: spawn BGA and audio loader threads
         }
@@ -124,11 +124,11 @@ impl BMSResource {
         true
     }
 
-    pub fn get_audio_driver(&self) -> Option<&AudioDriverStub> {
+    pub fn audio_driver(&self) -> Option<&AudioDriverStub> {
         self.audio.as_ref()
     }
 
-    pub fn get_bga_processor(&self) -> Option<&BGAProcessor> {
+    pub fn bga_processor(&self) -> Option<&BGAProcessor> {
         self.bga.as_ref()
     }
 
@@ -150,15 +150,15 @@ impl BMSResource {
         true
     }
 
-    pub fn get_backbmp(&self) -> Option<&TextureRegion> {
+    pub fn backbmp(&self) -> Option<&TextureRegion> {
         self.backbmp.as_ref()
     }
 
-    pub fn get_stagefile(&self) -> Option<&TextureRegion> {
+    pub fn stagefile(&self) -> Option<&TextureRegion> {
         self.stagefile.as_ref()
     }
 
-    pub fn get_banner(&self) -> Option<&TextureRegion> {
+    pub fn banner(&self) -> Option<&TextureRegion> {
         self.banner.as_ref()
     }
 
@@ -193,12 +193,12 @@ impl BMSResource {
     }
 
     /// Get the stagefile pixmap reference.
-    pub fn get_stagefile_pix(&self) -> Option<&Pixmap> {
+    pub fn stagefile_pix(&self) -> Option<&Pixmap> {
         self.stagefile_pix.as_ref()
     }
 
     /// Get the banner pixmap reference.
-    pub fn get_banner_pix(&self) -> Option<&Pixmap> {
+    pub fn banner_pix(&self) -> Option<&Pixmap> {
         self.banner_pix.as_ref()
     }
 
@@ -234,7 +234,7 @@ mod tests {
         let mut res = make_bms_resource();
         let pixmap = make_test_pixmap(128, 40);
         res.set_banner(Some(pixmap));
-        let pix = res.get_banner_pix().unwrap();
+        let pix = res.banner_pix().unwrap();
         assert_eq!(pix.width, 128);
         assert_eq!(pix.height, 40);
     }
@@ -244,11 +244,11 @@ mod tests {
         let mut res = make_bms_resource();
         let pixmap = make_test_pixmap(128, 40);
         res.set_banner(Some(pixmap));
-        assert!(res.get_banner_pix().is_some());
+        assert!(res.banner_pix().is_some());
 
         res.set_banner(None);
-        assert!(res.get_banner_pix().is_none());
-        assert!(res.get_banner().is_none());
+        assert!(res.banner_pix().is_none());
+        assert!(res.banner().is_none());
     }
 
     #[test]
@@ -256,7 +256,7 @@ mod tests {
         let mut res = make_bms_resource();
         let pixmap = make_test_pixmap(640, 480);
         res.set_stagefile(Some(pixmap));
-        let pix = res.get_stagefile_pix().unwrap();
+        let pix = res.stagefile_pix().unwrap();
         assert_eq!(pix.width, 640);
         assert_eq!(pix.height, 480);
     }
@@ -266,19 +266,19 @@ mod tests {
         let mut res = make_bms_resource();
         let pixmap = make_test_pixmap(640, 480);
         res.set_stagefile(Some(pixmap));
-        assert!(res.get_stagefile_pix().is_some());
+        assert!(res.stagefile_pix().is_some());
 
         res.set_stagefile(None);
-        assert!(res.get_stagefile_pix().is_none());
-        assert!(res.get_stagefile().is_none());
+        assert!(res.stagefile_pix().is_none());
+        assert!(res.stagefile().is_none());
     }
 
     #[test]
     fn test_initial_state_no_pixmaps() {
         let res = make_bms_resource();
-        assert!(res.get_banner_pix().is_none());
-        assert!(res.get_stagefile_pix().is_none());
-        assert!(res.get_banner().is_none());
-        assert!(res.get_stagefile().is_none());
+        assert!(res.banner_pix().is_none());
+        assert!(res.stagefile_pix().is_none());
+        assert!(res.banner().is_none());
+        assert!(res.stagefile().is_none());
     }
 }

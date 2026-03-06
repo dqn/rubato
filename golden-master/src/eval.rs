@@ -91,7 +91,7 @@ pub fn resolve_common(
 }
 
 /// Compute interpolation rate and keyframe index.
-/// Replicates SkinObjectData::get_rate() as a pure function.
+/// Replicates SkinObjectData::rate() as a pure function.
 fn compute_rate(dst: &[SkinObjectDestination], nowtime: i64, acc: i32) -> (f32, usize) {
     let last = dst.len() - 1;
     let mut time2 = dst[last].time;

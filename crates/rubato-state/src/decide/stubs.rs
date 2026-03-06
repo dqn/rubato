@@ -45,11 +45,11 @@ impl MainControllerRef {
         }
     }
 
-    pub fn get_config(&self) -> &rubato_types::config::Config {
+    pub fn config(&self) -> &rubato_types::config::Config {
         self.inner.config()
     }
 
-    pub fn get_player_config(&self) -> &rubato_types::player_config::PlayerConfig {
+    pub fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
         self.inner.player_config()
     }
 
@@ -57,7 +57,7 @@ impl MainControllerRef {
         self.inner.change_state(state);
     }
 
-    pub fn get_input_processor(&mut self) -> &mut BMSPlayerInputProcessor {
+    pub fn input_processor(&mut self) -> &mut BMSPlayerInputProcessor {
         &mut self.input_processor
     }
 
@@ -69,7 +69,7 @@ impl MainControllerRef {
         input.sync_runtime_state_from(&self.input_processor);
     }
 
-    pub fn get_audio_processor_mut(&mut self) -> Option<&mut dyn AudioDriver> {
+    pub fn audio_processor_mut(&mut self) -> Option<&mut dyn AudioDriver> {
         self.audio
             .as_mut()
             .map(|b| &mut **b as &mut dyn AudioDriver)
@@ -134,7 +134,7 @@ mod tests {
     #[test]
     fn test_main_controller_ref_new_has_no_audio() {
         let mut mc = MainControllerRef::new(Box::new(NullMainController));
-        assert!(mc.get_audio_processor_mut().is_none());
+        assert!(mc.audio_processor_mut().is_none());
     }
 
     #[test]
@@ -143,7 +143,7 @@ mod tests {
             Box::new(NullMainController),
             Box::new(MockAudioDriver::new()),
         );
-        assert!(mc.get_audio_processor_mut().is_some());
+        assert!(mc.audio_processor_mut().is_some());
     }
 
     #[test]
@@ -152,7 +152,7 @@ mod tests {
             Box::new(NullMainController),
             Box::new(MockAudioDriver::new()),
         );
-        if let Some(audio) = mc.get_audio_processor_mut() {
+        if let Some(audio) = mc.audio_processor_mut() {
             audio.set_global_pitch(1.0);
             assert_eq!(audio.get_global_pitch(), 1.0);
         } else {
@@ -166,7 +166,7 @@ mod tests {
             Box::new(NullMainController),
             Box::new(MockAudioDriver::new()),
         );
-        if let Some(audio) = mc.get_audio_processor_mut() {
+        if let Some(audio) = mc.audio_processor_mut() {
             audio.stop_note(None);
         }
     }

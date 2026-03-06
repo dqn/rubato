@@ -113,7 +113,7 @@ impl RhythmTimerProcessor {
         (self.rhythmtimer, rhythm_on)
     }
 
-    pub fn get_now_quarter_note_time(&self) -> i64 {
+    pub fn now_quarter_note_time(&self) -> i64 {
         self.now_quarter_note_time
     }
 }

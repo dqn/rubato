@@ -234,7 +234,7 @@ impl LR2PlaySkinLoaderState {
             }
             "SRC_LINE" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
-                if let Some(images) = self.csv.get_source_image(&values) {
+                if let Some(images) = self.csv.source_image(&values) {
                     let idx = values[1] as usize;
                     if idx < self.line_images.len() {
                         let skin_image =
@@ -438,7 +438,7 @@ impl LR2PlaySkinLoaderState {
                     _ => 2,
                 };
                 let values = lr2_skin_loader::parse_int(str_parts);
-                if let Some(images) = self.csv.get_source_image(&values) {
+                if let Some(images) = self.csv.source_image(&values) {
                     if self.judge_objects[player].is_none() {
                         let shift = values[11] != 1;
                         self.judge_objects[player] = Some(
@@ -475,7 +475,7 @@ impl LR2PlaySkinLoaderState {
                 };
                 if self.judge_objects[player]
                     .as_ref()
-                    .is_some_and(|j| j.inner.get_judge(judge_idx))
+                    .is_some_and(|j| j.inner.judge(judge_idx))
                 {
                     let mut values = lr2_skin_loader::parse_int(str_parts);
                     if values[5] < 0 {
@@ -505,7 +505,7 @@ impl LR2PlaySkinLoaderState {
                 let values = lr2_skin_loader::parse_int(str_parts);
                 let divx = if values[7] > 0 { values[7] } else { 1 };
                 let divy = if values[8] > 0 { values[8] } else { 1 };
-                if let Some(simages) = self.csv.get_source_image(&values) {
+                if let Some(simages) = self.csv.source_image(&values) {
                     // Rearrange flat images into [divy][divx] grid
                     let _images_2d: Vec<Vec<TextureRegion>> = (0..divy)
                         .map(|j| {
@@ -541,7 +541,7 @@ impl LR2PlaySkinLoaderState {
                     judge_idx_raw as usize
                 };
                 if let Some(ref judge_obj) = self.judge_objects[player]
-                    && judge_obj.inner.get_judge_count(judge_idx)
+                    && judge_obj.inner.judge_count(judge_idx)
                 {
                     let _values = lr2_skin_loader::parse_int(str_parts);
                     // Combo number destination — SkinJudge currently uses ()
@@ -551,7 +551,7 @@ impl LR2PlaySkinLoaderState {
             }
             "SRC_JUDGELINE" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
-                if let Some(images) = self.csv.get_source_image(&values) {
+                if let Some(images) = self.csv.source_image(&values) {
                     self.judgeline =
                         Some(SkinImage::new_with_int_timer(images, values[10], values[9]));
                 }
@@ -693,7 +693,7 @@ impl LR2PlaySkinLoaderState {
             }
             "SRC_HIDDEN" | "SRC_LIFT" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
-                let _images = self.csv.get_source_image(&values);
+                let _images = self.csv.source_image(&values);
                 // hidden = new SkinHidden(images, values[10], values[9])
                 self.hidden = true;
             }
@@ -721,7 +721,7 @@ impl LR2PlaySkinLoaderState {
                     values[2] += values[4];
                     values[4] = -values[4];
                 }
-                let _imagefile = lr2_skin_loader::get_lr2_path(
+                let _imagefile = lr2_skin_loader::lr2_path(
                     &self.csv.skinpath,
                     str_parts.get(7).map_or("", |s| s.as_str()),
                     &self.csv.filemap,
@@ -761,7 +761,7 @@ impl LR2PlaySkinLoaderState {
                         values[2] += values[4];
                         values[4] = -values[4];
                     }
-                    let _imagefile = lr2_skin_loader::get_lr2_path(
+                    let _imagefile = lr2_skin_loader::lr2_path(
                         &self.csv.skinpath,
                         str_parts.get(12).map_or("", |s| s.as_str()),
                         &self.csv.filemap,
@@ -795,7 +795,7 @@ impl LR2PlaySkinLoaderState {
                 // type 0:background 1:name 2:face upper 3:face all 4:icon
                 let values = lr2_skin_loader::parse_int(str_parts);
                 if values[2] >= 0 && values[2] <= 4 {
-                    let _imagefile = lr2_skin_loader::get_lr2_path(
+                    let _imagefile = lr2_skin_loader::lr2_path(
                         &self.csv.skinpath,
                         str_parts.get(3).map_or("", |s| s.as_str()),
                         &self.csv.filemap,
@@ -888,7 +888,7 @@ impl LR2PlaySkinLoaderState {
             };
             if lane < note_array.len()
                 && note_array[lane].is_none()
-                && let Some(images) = self.csv.get_source_image(&values)
+                && let Some(images) = self.csv.source_image(&values)
             {
                 note_array[lane] = Some(SkinSourceData {
                     images: Some(images),
@@ -1008,7 +1008,7 @@ impl LR2PlaySkinLoaderState {
 
         // 4. Post-processing: lane cover Y position adjustment
         // When white number (lane cover position) is 0, reduce lane height by (dsth - laneCoverPosition).
-        let lane_cover_position = self.get_lane_cover_position();
+        let lane_cover_position = self.lane_cover_position();
         if lane_cover_position > 0.0 {
             for rect in self.laner.iter_mut().flatten() {
                 rect.height -= self.dsth - lane_cover_position;
@@ -1123,7 +1123,7 @@ impl LR2PlaySkinLoaderState {
     }
 
     /// Get lane cover position (y coordinate when white number is 0)
-    pub fn get_lane_cover_position(&self) -> f32 {
+    pub fn lane_cover_position(&self) -> f32 {
         // if skin.laneCover != null, return last destination's y
         -1.0
     }
@@ -1391,7 +1391,7 @@ mod tests {
         let parts = make_parts("SRC_NOWJUDGE_1P", &[5, 0, 0, 0, 10, 10, 1, 1, 0, 0, 0]);
         state.process_play_command("SRC_NOWJUDGE_1P", &parts);
         let judge = state.judge_objects[0].as_ref().unwrap();
-        assert!(judge.inner.get_judge(0));
+        assert!(judge.inner.judge(0));
     }
 
     #[test]
@@ -1404,10 +1404,10 @@ mod tests {
         let parts = make_parts("SRC_NOWJUDGE_1P", &[3, 0, 0, 0, 10, 10, 1, 1, 0, 0, 0]);
         state.process_play_command("SRC_NOWJUDGE_1P", &parts);
         let judge = state.judge_objects[0].as_ref().unwrap();
-        assert!(judge.inner.get_judge(2));
+        assert!(judge.inner.judge(2));
         // Other indices should be unset
-        assert!(!judge.inner.get_judge(0));
-        assert!(!judge.inner.get_judge(1));
+        assert!(!judge.inner.judge(0));
+        assert!(!judge.inner.judge(1));
     }
 
     // ===== SRC_NOWCOMBO =====
@@ -1426,7 +1426,7 @@ mod tests {
         let combo_parts = make_parts("SRC_NOWCOMBO_1P", &[5, 0, 0, 0, 10, 10, 10, 1, 0, 0, 0]);
         state.process_play_command("SRC_NOWCOMBO_1P", &combo_parts);
         let judge = state.judge_objects[0].as_ref().unwrap();
-        assert!(judge.inner.get_judge_count(0));
+        assert!(judge.inner.judge_count(0));
     }
 
     // ===== SRC_JUDGELINE / DST_JUDGELINE =====
@@ -1623,22 +1623,22 @@ mod tests {
 
         let mut play_skin = rubato_play::play_skin::PlaySkin::new();
         state.apply_to_play_skin(&mut play_skin);
-        assert_eq!(play_skin.get_close(), 500);
-        assert_eq!(play_skin.get_playstart(), 1000);
-        assert_eq!(play_skin.get_loadstart(), 200);
-        assert_eq!(play_skin.get_loadend(), 3000);
-        assert_eq!(play_skin.get_finish_margin(), 2000);
-        assert_eq!(play_skin.get_judgetimer(), 1);
-        assert_eq!(play_skin.get_note_expansion_rate(), &[150, 200]);
+        assert_eq!(play_skin.close(), 500);
+        assert_eq!(play_skin.playstart(), 1000);
+        assert_eq!(play_skin.loadstart(), 200);
+        assert_eq!(play_skin.loadend(), 3000);
+        assert_eq!(play_skin.finish_margin(), 2000);
+        assert_eq!(play_skin.judgetimer(), 1);
+        assert_eq!(play_skin.note_expansion_rate(), &[150, 200]);
     }
 
     #[test]
     fn test_apply_to_play_skin_none_values_preserved() {
         let state = make_state();
         let mut play_skin = rubato_play::play_skin::PlaySkin::new();
-        let orig_close = play_skin.get_close();
+        let orig_close = play_skin.close();
         state.apply_to_play_skin(&mut play_skin);
-        assert_eq!(play_skin.get_close(), orig_close);
+        assert_eq!(play_skin.close(), orig_close);
     }
 
     // ===== Unknown command delegation =====
@@ -1735,11 +1735,11 @@ mod tests {
         let mut play_skin = rubato_play::play_skin::PlaySkin::new();
         state.apply_to_play_skin(&mut play_skin);
 
-        assert_eq!(play_skin.get_close(), 500);
-        assert_eq!(play_skin.get_judgetimer(), 2);
-        assert_eq!(play_skin.get_judgeregion(), 1); // default
+        assert_eq!(play_skin.close(), 500);
+        assert_eq!(play_skin.judgetimer(), 2);
+        assert_eq!(play_skin.judgeregion(), 1); // default
         // Lane region should be set (8 default rectangles)
-        assert!(play_skin.get_lane_region().is_some());
+        assert!(play_skin.lane_region().is_some());
     }
 
     // ===== make_default_line / default line images =====

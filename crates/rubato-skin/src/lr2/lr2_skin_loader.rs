@@ -94,7 +94,7 @@ impl LR2SkinLoaderState {
                             && !self.op.contains_key(&opt.abs())
                             && let Some(state) = state
                         {
-                            let draw = BooleanPropertyFactory::get_boolean_property(opt);
+                            let draw = BooleanPropertyFactory::boolean_property(opt);
                             if let Some(ref draw) = draw {
                                 b = draw.get(state);
                             }
@@ -135,7 +135,7 @@ impl LR2SkinLoaderState {
                                 && !self.op.contains_key(&opt.abs())
                                 && let Some(state) = state
                             {
-                                let draw = BooleanPropertyFactory::get_boolean_property(opt);
+                                let draw = BooleanPropertyFactory::boolean_property(opt);
                                 if let Some(ref draw) = draw {
                                     b = draw.get(state);
                                 }
@@ -179,7 +179,7 @@ impl LR2SkinLoaderState {
         None
     }
 
-    pub fn get_option(&self) -> &HashMap<i32, i32> {
+    pub fn option(&self) -> &HashMap<i32, i32> {
         &self.op
     }
 }
@@ -187,7 +187,7 @@ impl LR2SkinLoaderState {
 /// Get path, replacing LR2 theme paths and checking filemap for custom file substitutions.
 /// Matches Java SkinLoader.getPath() logic: filemap starts_with matching, wildcard (*) expansion,
 /// pipe (|) separator handling, and random file selection.
-pub fn get_lr2_path(skinpath: &str, imagepath: &str, filemap: &HashMap<String, String>) -> String {
+pub fn lr2_path(skinpath: &str, imagepath: &str, filemap: &HashMap<String, String>) -> String {
     let mut resolved = imagepath
         .replace("LR2files\\Theme", skinpath)
         .replace('\\', "/");

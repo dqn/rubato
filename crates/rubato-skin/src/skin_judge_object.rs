@@ -104,7 +104,7 @@ impl SkinJudgeObject {
                 if self.inner.is_shift()
                     && let Some(ref mut img) = self.judge_images[judge_idx]
                 {
-                    img.data.region.x -= count.get_length() / 2.0;
+                    img.data.region.x -= count.length() / 2.0;
                 }
                 self.now_count_idx = Some(ci);
             } else {
@@ -173,7 +173,7 @@ mod tests {
     }
 
     impl MainState for JudgeMockState {
-        fn get_timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             &self.timer
         }
         fn get_offset_value(&self, _id: i32) -> Option<&SkinOffset> {
