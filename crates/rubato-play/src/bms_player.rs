@@ -1,11 +1,11 @@
 use std::sync::{Arc, Mutex};
 
 use crate::bga::bga_processor::BGAProcessor;
-use crate::control_input_processor::ControlInputProcessor;
 use crate::groove_gauge::GrooveGauge;
-use crate::judge_manager::JudgeManager;
-use crate::key_input_processor::KeyInputProccessor;
-use crate::key_sound_processor::KeySoundProcessor;
+use crate::input::control_input::ControlInputProcessor;
+use crate::input::key_input::KeyInputProccessor;
+use crate::input::key_sound::KeySoundProcessor;
+use crate::judge::manager::JudgeManager;
 use crate::lane_property::LaneProperty;
 use crate::lane_renderer::LaneRenderer;
 use crate::play_skin::PlaySkin;

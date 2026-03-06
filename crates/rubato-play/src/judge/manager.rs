@@ -1,6 +1,6 @@
 use crate::bms_player_rule::BMSPlayerRule;
-use crate::judge_algorithm::JudgeAlgorithm;
-use crate::judge_property::{JudgeProperty, MissCondition, NoteType};
+use crate::judge::algorithm::JudgeAlgorithm;
+use crate::judge::property::{JudgeProperty, MissCondition, NoteType};
 use crate::lane_property::LaneProperty;
 use bms_model::bms_model::{BMSModel, LNTYPE_LONGNOTE};
 use bms_model::judge_note::{JUDGE_PR, JudgeNote};

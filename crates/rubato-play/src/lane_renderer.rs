@@ -4,7 +4,7 @@ use bms_model::time_line::TimeLine;
 use rubato_types::play_config::PlayConfig;
 use std::collections::HashMap;
 
-use crate::skin_note::SkinLane;
+use crate::skin::note::SkinLane;
 
 /// Fix hispeed modes
 pub const FIX_HISPEED_OFF: i32 = 0;
