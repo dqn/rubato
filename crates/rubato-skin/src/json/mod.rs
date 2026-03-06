@@ -9,5 +9,6 @@ pub mod json_select_skin_object_loader;
 pub mod json_skin;
 pub mod json_skin_configuration_skin_object_loader;
 pub mod json_skin_loader;
+pub(crate) mod json_skin_loader_macros;
 pub mod json_skin_object_loader;
 pub mod json_skin_serializer;
