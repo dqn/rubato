@@ -155,6 +155,40 @@ const TIMER_PM_CHARA_2P_BAD: i32 = 907;
 const TIMER_MUSIC_END: i32 = 908;
 const TIMER_PM_CHARA_DANCE: i32 = 909;
 
+/// Pending side-effect requests produced during BMSPlayer render/state transitions.
+///
+/// Consumed by MainController each frame via the corresponding `take_*` / `drain_*` methods.
+pub struct PendingActions {
+    /// Pending state change to request from MainController.
+    pub pending_state_change: Option<MainStateType>,
+    /// Pending system sound requests.
+    pub pending_sounds: Vec<(rubato_types::sound_type::SoundType, bool)>,
+    /// Pending score handoff for Result state.
+    pub pending_score_handoff: Option<rubato_types::score_handoff::ScoreHandoff>,
+    /// Pending BMS file reload request (for quick retry).
+    pub pending_reload_bms: bool,
+    /// Pending global pitch to apply to the audio driver.
+    pub pending_global_pitch: Option<f32>,
+}
+
+impl PendingActions {
+    pub fn new() -> Self {
+        Self {
+            pending_state_change: None,
+            pending_sounds: Vec::new(),
+            pending_score_handoff: None,
+            pending_reload_bms: false,
+            pending_global_pitch: None,
+        }
+    }
+}
+
+impl Default for PendingActions {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// BMS Player main struct
 pub struct BMSPlayer {
     model: BMSModel,
@@ -191,10 +225,8 @@ pub struct BMSPlayer {
     active_replay: Option<ReplayData>,
     /// Margin time in milliseconds (from resource)
     margin_time: i64,
-    /// Pending global pitch to apply to the audio driver.
-    /// Set by BMSPlayer during state transitions; consumed by the caller.
-    /// None means no change requested.
-    pending_global_pitch: Option<f32>,
+    /// Pending side-effect requests produced during render/state transitions.
+    pending: PendingActions,
     /// Fast-forward frequency option (from AudioConfig).
     /// Cached during initialization so set_play_speed can determine
     /// whether to apply pitch changes.
@@ -250,19 +282,9 @@ pub struct BMSPlayer {
     input_analog_diff_ticks: Vec<i32>,
     input_analog_recent_ms: Vec<i64>,
     pending_analog_resets: Vec<usize>,
-    /// Pending state change to request from MainController.
-    /// Set during render() when a state transition is needed.
-    /// The caller should consume this via `take_pending_state_change()`.
-    pending_state_change: Option<MainStateType>,
     /// Whether we are in course mode (resource.getCourseBMSModels() != null).
     /// Set by the caller. Quick retry is disabled during courses.
     is_course_mode: bool,
-    /// Pending system sound requests. Consumed by MainController via drain_pending_sounds().
-    pending_sounds: Vec<(rubato_types::sound_type::SoundType, bool)>,
-    /// Pending score handoff for Result state. Consumed by MainController.
-    pending_score_handoff: Option<rubato_types::score_handoff::ScoreHandoff>,
-    /// Pending BMS file reload request (for quick retry).
-    pending_reload_bms: bool,
     /// Input device type (for create_score_data). Set by the caller.
     device_type: rubato_input::bms_player_input_device::DeviceType,
     /// Player's own score data loaded from the score DB.
@@ -322,7 +344,7 @@ impl BMSPlayer {
             total_notes,
             active_replay: None,
             margin_time: 0,
-            pending_global_pitch: None,
+            pending: PendingActions::new(),
             fast_forward_freq_option: FrequencyType::UNPROCESSED,
             bg_volume: 0.5,
             play_mode: BMSPlayerMode::PLAY,
@@ -351,11 +373,7 @@ impl BMSPlayer {
             input_analog_diff_ticks: Vec::new(),
             input_analog_recent_ms: Vec::new(),
             pending_analog_resets: Vec::new(),
-            pending_state_change: None,
             is_course_mode: false,
-            pending_sounds: Vec::new(),
-            pending_score_handoff: None,
-            pending_reload_bms: false,
             device_type: rubato_input::bms_player_input_device::DeviceType::Keyboard,
             db_score: None,
             rival_score: None,
@@ -448,7 +466,7 @@ impl BMSPlayer {
     /// Take the pending state change (if any). Returns None if no transition is pending.
     /// The caller should apply this via main.changeState().
     pub fn take_pending_state_change(&mut self) -> Option<MainStateType> {
-        self.pending_state_change.take()
+        self.pending.pending_state_change.take()
     }
 
     /// Set whether we are in course mode.
@@ -458,7 +476,7 @@ impl BMSPlayer {
 
     /// Queue a system sound to be played by MainController.
     fn queue_sound(&mut self, sound: rubato_types::sound_type::SoundType) {
-        self.pending_sounds.push((sound, false));
+        self.pending.pending_sounds.push((sound, false));
     }
 
     /// Take the side effects produced by create().
@@ -492,7 +510,7 @@ impl BMSPlayer {
         // In Java: if (config.getAudioConfig().getFastForward() == FrequencyType.FREQUENCY)
         //     main.getAudioProcessor().setGlobalPitch(playspeed / 100f);
         if self.fast_forward_freq_option == FrequencyType::FREQUENCY {
-            self.pending_global_pitch = Some(playspeed as f32 / 100.0);
+            self.pending.pending_global_pitch = Some(playspeed as f32 / 100.0);
         }
     }
 
@@ -605,7 +623,7 @@ impl BMSPlayer {
     /// After calling this, the pending value is cleared (consumed).
     /// The caller should apply the returned pitch to the audio driver.
     pub fn take_pending_global_pitch(&mut self) -> Option<f32> {
-        self.pending_global_pitch.take()
+        self.pending.pending_global_pitch.take()
     }
 
     /// Apply loudness analysis result to compute the adjusted volume.
@@ -659,7 +677,7 @@ impl BMSPlayer {
             return;
         }
         if self.state == STATE_PRELOAD || self.state == STATE_READY {
-            self.pending_global_pitch = Some(1.0);
+            self.pending.pending_global_pitch = Some(1.0);
             self.main_state_data.timer.set_timer_on(TIMER_FADEOUT);
             if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Play {
                 self.state = STATE_ABORTED;
@@ -703,7 +721,7 @@ impl BMSPlayer {
         {
             self.main_state_data.timer.set_timer_on(TIMER_FADEOUT);
         } else if self.state != STATE_FINISHED {
-            self.pending_global_pitch = Some(1.0);
+            self.pending.pending_global_pitch = Some(1.0);
             self.state = STATE_FAILED;
             self.main_state_data.timer.set_timer_on(TIMER_FAILED);
             // if resource.mediaLoadFinished() { main.getAudioProcessor().stop(null); }
@@ -1765,7 +1783,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
     }
 
     fn change_state(&mut self, state: rubato_types::main_state_type::MainStateType) {
-        self.player.pending_state_change = Some(state);
+        self.player.pending.pending_state_change = Some(state);
     }
 
     fn set_timer_micro(&mut self, timer_id: i32, micro_time: i64) {
@@ -1791,23 +1809,23 @@ impl MainState for BMSPlayer {
     }
 
     fn take_pending_state_change(&mut self) -> Option<MainStateType> {
-        self.pending_state_change.take()
+        self.pending.pending_state_change.take()
     }
 
     fn take_pending_global_pitch(&mut self) -> Option<f32> {
-        self.pending_global_pitch.take()
+        self.pending.pending_global_pitch.take()
     }
 
     fn drain_pending_sounds(&mut self) -> Vec<(rubato_types::sound_type::SoundType, bool)> {
-        std::mem::take(&mut self.pending_sounds)
+        std::mem::take(&mut self.pending.pending_sounds)
     }
 
     fn take_score_handoff(&mut self) -> Option<rubato_types::score_handoff::ScoreHandoff> {
-        self.pending_score_handoff.take()
+        self.pending.pending_score_handoff.take()
     }
 
     fn take_pending_reload_bms(&mut self) -> bool {
-        std::mem::take(&mut self.pending_reload_bms)
+        std::mem::take(&mut self.pending.pending_reload_bms)
     }
 
     fn notify_media_load_finished(&mut self) {
@@ -2161,7 +2179,7 @@ impl MainState for BMSPlayer {
                     // Java: resource.reloadBMSFile(); model = resource.getBMSModel();
                     // Rust: pending flag triggers MainController to reload resource and
                     // push fresh model back via receive_reloaded_model().
-                    self.pending_reload_bms = true;
+                    self.pending.pending_reload_bms = true;
                     if let Some(ref mut lr) = self.lanerender {
                         lr.init(&self.model);
                     }
@@ -2240,7 +2258,7 @@ impl MainState for BMSPlayer {
                             property.freq as f32 / 100.0,
                         );
                         if self.fast_forward_freq_option == FrequencyType::FREQUENCY {
-                            self.pending_global_pitch = Some(property.freq as f32 / 100.0);
+                            self.pending.pending_global_pitch = Some(property.freq as f32 / 100.0);
                         }
                     }
 
@@ -2313,7 +2331,7 @@ impl MainState for BMSPlayer {
                     .map_or(0, |s| s.fadeout()) as i64;
                 if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
                     // input.setEnable(true); input.setStartTime(0);
-                    self.pending_state_change = Some(MainStateType::MusicSelect);
+                    self.pending.pending_state_change = Some(MainStateType::MusicSelect);
                     log::info!("Practice finished, transition to MUSICSELECT");
                 }
             }
@@ -2531,14 +2549,14 @@ impl MainState for BMSPlayer {
                     && !self.is_course_mode
                     && self.play_mode.mode == rubato_core::bms_player_mode::Mode::Play
                 {
-                    self.pending_global_pitch = Some(1.0);
+                    self.pending.pending_global_pitch = Some(1.0);
                     self.save_config();
-                    self.pending_reload_bms = true;
-                    self.pending_state_change = Some(MainStateType::Play);
+                    self.pending.pending_reload_bms = true;
+                    self.pending.pending_state_change = Some(MainStateType::Play);
                 } else if self.main_state_data.timer.now_time_for_id(TIMER_FAILED)
                     > self.play_skin.close() as i64
                 {
-                    self.pending_global_pitch = Some(1.0);
+                    self.pending.pending_global_pitch = Some(1.0);
                     // if resource.mediaLoadFinished() { resource.getBGAManager().stop(); }
 
                     // Fill remaining gauge log with 0
@@ -2560,7 +2578,7 @@ impl MainState for BMSPlayer {
                     } else {
                         None
                     };
-                    self.pending_score_handoff = Some(rubato_types::score_handoff::ScoreHandoff {
+                    self.pending.pending_score_handoff = Some(rubato_types::score_handoff::ScoreHandoff {
                         score_data: score,
                         combo: self.judge.course_combo(),
                         maxcombo: self.judge.course_maxcombo(),
@@ -2575,13 +2593,13 @@ impl MainState for BMSPlayer {
                     if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice {
                         self.state = STATE_PRACTICE;
                     } else if self
-                        .pending_score_handoff
+                        .pending.pending_score_handoff
                         .as_ref()
                         .is_some_and(|h| h.score_data.is_some())
                     {
-                        self.pending_state_change = Some(MainStateType::Result);
+                        self.pending.pending_state_change = Some(MainStateType::Result);
                     } else {
-                        self.pending_state_change = Some(MainStateType::MusicSelect);
+                        self.pending.pending_state_change = Some(MainStateType::MusicSelect);
                     }
                     log::info!("Failed close, transition to result/select");
                 }
@@ -2611,7 +2629,7 @@ impl MainState for BMSPlayer {
                     .as_ref()
                     .map_or(0, |s| s.fadeout()) as i64;
                 if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
-                    self.pending_global_pitch = Some(1.0);
+                    self.pending.pending_global_pitch = Some(1.0);
                     // resource.getBGAManager().stop();
                     let score = if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Play
                         || self.play_mode.mode == rubato_core::bms_player_mode::Mode::Replay
@@ -2621,7 +2639,7 @@ impl MainState for BMSPlayer {
                         None
                     };
                     self.save_config();
-                    self.pending_score_handoff = Some(rubato_types::score_handoff::ScoreHandoff {
+                    self.pending.pending_score_handoff = Some(rubato_types::score_handoff::ScoreHandoff {
                         score_data: score,
                         combo: self.judge.course_combo(),
                         maxcombo: self.judge.course_maxcombo(),
@@ -2635,7 +2653,7 @@ impl MainState for BMSPlayer {
                     if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice {
                         self.state = STATE_PRACTICE;
                     } else {
-                        self.pending_state_change = Some(MainStateType::Result);
+                        self.pending.pending_state_change = Some(MainStateType::Result);
                     }
                     log::info!("Finished, transition to result/select");
                 }
@@ -2649,10 +2667,10 @@ impl MainState for BMSPlayer {
                     && (self.input_start_pressed ^ self.input_select_pressed)
                     && !self.is_course_mode
                 {
-                    self.pending_global_pitch = Some(1.0);
+                    self.pending.pending_global_pitch = Some(1.0);
                     self.save_config();
-                    self.pending_reload_bms = true;
-                    self.pending_state_change = Some(MainStateType::Play);
+                    self.pending.pending_reload_bms = true;
+                    self.pending.pending_state_change = Some(MainStateType::Play);
                 }
 
                 // skin.getFadeout() from the loaded skin
@@ -2663,7 +2681,7 @@ impl MainState for BMSPlayer {
                     .map_or(0, |s| s.fadeout()) as i64;
                 if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
                     // input.setEnable(true); input.setStartTime(0);
-                    self.pending_state_change = Some(MainStateType::MusicSelect);
+                    self.pending.pending_state_change = Some(MainStateType::MusicSelect);
                     log::info!("Aborted, transition to MUSICSELECT");
                 }
             }
@@ -5639,7 +5657,7 @@ mod tests {
     fn pending_state_change_consumed_once() {
         let model = make_model();
         let mut player = BMSPlayer::new(model);
-        player.pending_state_change = Some(MainStateType::Result);
+        player.pending.pending_state_change = Some(MainStateType::Result);
 
         let first = player.take_pending_state_change();
         assert_eq!(first, Some(MainStateType::Result));
