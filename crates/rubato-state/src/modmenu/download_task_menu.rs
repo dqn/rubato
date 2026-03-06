@@ -40,24 +40,23 @@ impl DownloadTaskMenu {
                     let task = task_arc.lock().unwrap();
 
                     // Column 0: Task name
-                    let name = task.get_name();
+                    let name = task.name();
                     let task_name = if name.len() > MAXIMUM_TASK_NAME_LENGTH {
                         &name[..MAXIMUM_TASK_NAME_LENGTH]
                     } else {
                         name
                     };
-                    let display =
-                        format!("{} ({})", task_name, task.get_download_task_status().name());
+                    let display = format!("{} ({})", task_name, task.download_task_status().name());
                     ui.label(&display);
 
                     // Column 1: Progress
-                    let error_message = task.get_error_message();
+                    let error_message = task.error_message();
                     if error_message.is_none() || error_message.is_some_and(|s: &str| s.is_empty())
                     {
                         let progress = format!(
                             "{}/{}",
-                            humanize_file_size(task.get_download_size()),
-                            humanize_file_size(task.get_content_length())
+                            humanize_file_size(task.download_size()),
+                            humanize_file_size(task.content_length())
                         );
                         ui.label(&progress);
                     } else {
@@ -66,7 +65,7 @@ impl DownloadTaskMenu {
                     }
 
                     // Column 2: Operation — retry button for errored tasks
-                    let is_error = task.get_download_task_status() == DownloadTaskStatus::Error;
+                    let is_error = task.download_task_status() == DownloadTaskStatus::Error;
                     drop(task); // release lock before UI interaction
                     if is_error {
                         if ui.button("Retry").clicked() {
@@ -98,8 +97,8 @@ impl DownloadTaskMenu {
             .default_pos(egui::pos2(rel_x, rel_y))
             .auto_sized()
             .show(ctx, |ui| {
-                let running = DownloadTaskState::get_running_download_tasks();
-                let expired = DownloadTaskState::get_expired_tasks();
+                let running = DownloadTaskState::running_download_tasks();
+                let expired = DownloadTaskState::expired_tasks();
                 if running.is_empty() && expired.is_empty() {
                     ui.label("No Download Task. Try selecting missing bms to submit new task!");
                 } else {

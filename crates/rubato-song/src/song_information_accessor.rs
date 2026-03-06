@@ -48,7 +48,7 @@ impl SongInformationAccessor {
         })
     }
 
-    pub fn get_informations(&self, sql: &str) -> Vec<SongInformation> {
+    pub fn informations(&self, sql: &str) -> Vec<SongInformation> {
         let query = format!("SELECT * FROM information WHERE {}", sql);
         match self.query_informations(&query, &[]) {
             Ok(infos) => remove_invalid_elements_vec(infos),
@@ -59,7 +59,7 @@ impl SongInformationAccessor {
         }
     }
 
-    pub fn get_information(&self, sha256: &str) -> Option<SongInformation> {
+    pub fn information(&self, sha256: &str) -> Option<SongInformation> {
         let query = "SELECT * FROM information WHERE sha256 = ?1";
         match self.query_informations(query, &[sha256]) {
             Ok(mut infos) => {
@@ -73,7 +73,7 @@ impl SongInformationAccessor {
         }
     }
 
-    pub fn get_information_for_songs(&self, songs: &mut [SongData]) {
+    pub fn information_for_songs(&self, songs: &mut [SongData]) {
         let song_length = songs.len();
         let chunk_length = song_length.div_ceil(LOAD_CHUNK_SIZE);
         let mut infos: Vec<SongInformation> = Vec::new();
@@ -210,15 +210,15 @@ impl SongInformationAccessor {
 
 impl SongInformationDb for SongInformationAccessor {
     fn get_informations(&self, sql: &str) -> Vec<SongInformation> {
-        self.get_informations(sql)
+        self.informations(sql)
     }
 
     fn get_information(&self, sha256: &str) -> Option<SongInformation> {
-        self.get_information(sha256)
+        self.information(sha256)
     }
 
     fn get_information_for_songs(&self, songs: &mut [SongData]) {
-        self.get_information_for_songs(songs)
+        self.information_for_songs(songs)
     }
 
     fn start_update(&self) -> anyhow::Result<()> {

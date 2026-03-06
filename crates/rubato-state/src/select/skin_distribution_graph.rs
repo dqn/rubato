@@ -152,10 +152,10 @@ impl SkinDistributionGraph {
         offset_x: f32,
         offset_y: f32,
     ) {
-        let percent: f32 = match task.get_download_task_status() {
+        let percent: f32 = match task.download_task_status() {
             DownloadTaskStatus::Prepare => 0.0,
             DownloadTaskStatus::Downloading => {
-                task.get_download_size() as f32 / task.get_content_length() as f32
+                task.download_size() as f32 / task.content_length() as f32
             }
             DownloadTaskStatus::Downloaded => 1.0,
             DownloadTaskStatus::Extracted => 1.0,
@@ -237,7 +237,7 @@ mod tests {
     fn test_download_percent_prepare() {
         let task = DownloadTask::new(1, "http://example.com".into(), "test".into(), "abc".into());
         // Prepare status → 0% progress
-        assert_eq!(task.get_download_task_status(), DownloadTaskStatus::Prepare);
+        assert_eq!(task.download_task_status(), DownloadTaskStatus::Prepare);
         let percent = compute_download_percent(&task);
         assert_eq!(percent, 0.0);
     }
@@ -361,10 +361,10 @@ mod tests {
 
     /// Helper that mirrors the logic in draw_song_bar_download
     fn compute_download_percent(task: &DownloadTask) -> f32 {
-        match task.get_download_task_status() {
+        match task.download_task_status() {
             DownloadTaskStatus::Prepare => 0.0,
             DownloadTaskStatus::Downloading => {
-                task.get_download_size() as f32 / task.get_content_length() as f32
+                task.download_size() as f32 / task.content_length() as f32
             }
             DownloadTaskStatus::Downloaded => 1.0,
             DownloadTaskStatus::Extracted => 1.0,

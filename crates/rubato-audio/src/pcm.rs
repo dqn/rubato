@@ -109,7 +109,7 @@ impl PCM {
     }
 
     pub fn load_by_name(name: &str, driver_channels: i32, driver_sample_rate: i32) -> Option<PCM> {
-        for path in audio_driver::get_paths(name) {
+        for path in audio_driver::paths(name) {
             let pcm = PCM::load(&path, driver_channels, driver_sample_rate);
             if pcm.is_some() {
                 return pcm;

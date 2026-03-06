@@ -235,8 +235,8 @@ mod tests {
         let pixmap = make_test_pixmap(128, 40);
         res.set_banner(Some(pixmap));
         let pix = res.get_banner_pix().unwrap();
-        assert_eq!(pix.get_width(), 128);
-        assert_eq!(pix.get_height(), 40);
+        assert_eq!(pix.width, 128);
+        assert_eq!(pix.height, 40);
     }
 
     #[test]
@@ -257,8 +257,8 @@ mod tests {
         let pixmap = make_test_pixmap(640, 480);
         res.set_stagefile(Some(pixmap));
         let pix = res.get_stagefile_pix().unwrap();
-        assert_eq!(pix.get_width(), 640);
-        assert_eq!(pix.get_height(), 480);
+        assert_eq!(pix.width, 640);
+        assert_eq!(pix.height, 480);
     }
 
     #[test]

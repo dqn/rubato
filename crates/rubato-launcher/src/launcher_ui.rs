@@ -156,7 +156,7 @@ impl LauncherUi {
             );
             let action_label = config
                 .obs_action(&name)
-                .and_then(|a| rubato_external::obs::obs_ws_client::get_action_label(a))
+                .and_then(|a| rubato_external::obs::obs_ws_client::action_label(a))
                 .unwrap_or_else(|| ACTION_NONE.to_string());
             obs_action_selections.insert(name.clone(), action_label);
 
@@ -173,7 +173,7 @@ impl LauncherUi {
                 );
                 let action_ended = config
                     .obs_action("PLAY_ENDED")
-                    .and_then(|a| rubato_external::obs::obs_ws_client::get_action_label(a))
+                    .and_then(|a| rubato_external::obs::obs_ws_client::action_label(a))
                     .unwrap_or_else(|| ACTION_NONE.to_string());
                 obs_action_selections.insert("PLAY_ENDED".to_string(), action_ended);
             }

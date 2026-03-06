@@ -63,19 +63,19 @@ impl DownloadTask {
         }
     }
 
-    pub fn get_id(&self) -> i32 {
+    pub fn id(&self) -> i32 {
         self.id
     }
 
-    pub fn get_url(&self) -> &str {
+    pub fn url(&self) -> &str {
         &self.url
     }
 
-    pub fn get_hash(&self) -> &str {
+    pub fn hash(&self) -> &str {
         &self.hash
     }
 
-    pub fn get_download_task_status(&self) -> DownloadTaskStatus {
+    pub fn download_task_status(&self) -> DownloadTaskStatus {
         self.download_task_status
     }
 
@@ -92,7 +92,7 @@ impl DownloadTask {
         self.download_task_status = status;
     }
 
-    pub fn get_download_size(&self) -> i64 {
+    pub fn download_size(&self) -> i64 {
         self.download_size
     }
 
@@ -100,7 +100,7 @@ impl DownloadTask {
         self.download_size = download_size;
     }
 
-    pub fn get_content_length(&self) -> i64 {
+    pub fn content_length(&self) -> i64 {
         self.content_length
     }
 
@@ -108,7 +108,7 @@ impl DownloadTask {
         self.content_length = content_length;
     }
 
-    pub fn get_error_message(&self) -> Option<&str> {
+    pub fn error_message(&self) -> Option<&str> {
         self.error_message.as_deref()
     }
 
@@ -116,11 +116,11 @@ impl DownloadTask {
         self.error_message = Some(error_message);
     }
 
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn get_time_finished(&self) -> i64 {
+    pub fn time_finished(&self) -> i64 {
         self.time_finished.load(Ordering::Acquire)
     }
 }
@@ -158,15 +158,15 @@ mod tests {
             "Test Song".to_string(),
             "abc123".to_string(),
         );
-        assert_eq!(task.get_id(), 1);
-        assert_eq!(task.get_url(), "https://example.com/song.7z");
-        assert_eq!(task.get_name(), "Test Song");
-        assert_eq!(task.get_hash(), "abc123");
-        assert_eq!(task.get_download_task_status(), DownloadTaskStatus::Prepare);
-        assert_eq!(task.get_download_size(), 0);
-        assert_eq!(task.get_content_length(), 0);
-        assert!(task.get_error_message().is_none());
-        assert_eq!(task.get_time_finished(), 0);
+        assert_eq!(task.id(), 1);
+        assert_eq!(task.url(), "https://example.com/song.7z");
+        assert_eq!(task.name(), "Test Song");
+        assert_eq!(task.hash(), "abc123");
+        assert_eq!(task.download_task_status(), DownloadTaskStatus::Prepare);
+        assert_eq!(task.download_size(), 0);
+        assert_eq!(task.content_length(), 0);
+        assert!(task.error_message().is_none());
+        assert_eq!(task.time_finished(), 0);
     }
 
     #[test]
@@ -178,18 +178,12 @@ mod tests {
             "hash_a".to_string(),
         );
         task.set_download_task_status(DownloadTaskStatus::Downloading);
-        assert_eq!(
-            task.get_download_task_status(),
-            DownloadTaskStatus::Downloading
-        );
-        assert_eq!(task.get_time_finished(), 0);
+        assert_eq!(task.download_task_status(), DownloadTaskStatus::Downloading);
+        assert_eq!(task.time_finished(), 0);
 
         task.set_download_task_status(DownloadTaskStatus::Downloaded);
-        assert_eq!(
-            task.get_download_task_status(),
-            DownloadTaskStatus::Downloaded
-        );
-        assert_eq!(task.get_time_finished(), 0);
+        assert_eq!(task.download_task_status(), DownloadTaskStatus::Downloaded);
+        assert_eq!(task.time_finished(), 0);
     }
 
     #[test]
@@ -201,11 +195,8 @@ mod tests {
             "hash_b".to_string(),
         );
         task.set_download_task_status(DownloadTaskStatus::Extracted);
-        assert_eq!(
-            task.get_download_task_status(),
-            DownloadTaskStatus::Extracted
-        );
-        assert_ne!(task.get_time_finished(), 0);
+        assert_eq!(task.download_task_status(), DownloadTaskStatus::Extracted);
+        assert_ne!(task.time_finished(), 0);
     }
 
     #[test]
@@ -217,9 +208,9 @@ mod tests {
             "hash_c".to_string(),
         );
         task.set_download_task_status(DownloadTaskStatus::Error);
-        assert_eq!(task.get_download_task_status(), DownloadTaskStatus::Error);
+        assert_eq!(task.download_task_status(), DownloadTaskStatus::Error);
         // Error (value 4) >= Extracted (value 3), so time_finished is set
-        assert_ne!(task.get_time_finished(), 0);
+        assert_ne!(task.time_finished(), 0);
     }
 
     #[test]
@@ -232,8 +223,8 @@ mod tests {
         );
         task.set_download_size(4096);
         task.set_content_length(8192);
-        assert_eq!(task.get_download_size(), 4096);
-        assert_eq!(task.get_content_length(), 8192);
+        assert_eq!(task.download_size(), 4096);
+        assert_eq!(task.content_length(), 8192);
     }
 
     #[test]
@@ -244,18 +235,18 @@ mod tests {
             "Song E".to_string(),
             "hash_e".to_string(),
         );
-        assert!(task.get_error_message().is_none());
+        assert!(task.error_message().is_none());
         task.set_error_message("Connection timeout".to_string());
-        assert_eq!(task.get_error_message(), Some("Connection timeout"));
+        assert_eq!(task.error_message(), Some("Connection timeout"));
     }
 
     #[test]
     fn empty_strings_in_constructor() {
         let task = DownloadTask::new(0, String::new(), String::new(), String::new());
-        assert_eq!(task.get_id(), 0);
-        assert_eq!(task.get_url(), "");
-        assert_eq!(task.get_name(), "");
-        assert_eq!(task.get_hash(), "");
+        assert_eq!(task.id(), 0);
+        assert_eq!(task.url(), "");
+        assert_eq!(task.name(), "");
+        assert_eq!(task.hash(), "");
     }
 
     #[test]
@@ -266,7 +257,7 @@ mod tests {
             "Song with spaces & symbols!".to_string(),
             "deadbeef".to_string(),
         );
-        assert_eq!(task.get_url(), "https://example.com/path?q=a&b=c#frag");
-        assert_eq!(task.get_name(), "Song with spaces & symbols!");
+        assert_eq!(task.url(), "https://example.com/path?q=a&b=c#frag");
+        assert_eq!(task.name(), "Song with spaces & symbols!");
     }
 }

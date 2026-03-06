@@ -44,7 +44,7 @@ impl ObsListener {
         }
     }
 
-    pub fn get_obs_client(&self) -> Option<&Arc<ObsWsClient>> {
+    pub fn obs_client(&self) -> Option<&Arc<ObsWsClient>> {
         self.obs_client.as_ref()
     }
 
@@ -339,7 +339,7 @@ mod tests {
     #[test]
     fn new_without_client_has_no_obs_client() {
         let listener = ObsListener::new_without_client(Config::default());
-        assert!(listener.get_obs_client().is_none());
+        assert!(listener.obs_client().is_none());
         assert!(listener.last_state_type.is_none());
     }
 

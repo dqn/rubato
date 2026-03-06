@@ -62,7 +62,7 @@ pub trait AudioDriver {
 /// Get all supported audio file paths for the given path.
 ///
 /// Tries the original path and alternate extensions (.wav, .flac, .ogg, .mp3).
-pub fn get_paths(path: &str) -> Vec<PathBuf> {
+pub fn paths(path: &str) -> Vec<PathBuf> {
     let exts = [".wav", ".flac", ".ogg", ".mp3"];
 
     let mut result: Vec<PathBuf> = Vec::new();

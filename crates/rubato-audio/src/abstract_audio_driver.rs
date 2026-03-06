@@ -125,15 +125,11 @@ impl<T> AbstractAudioDriverState<T> {
         }
     }
 
-    pub fn get_sample_rate(&self) -> i32 {
-        self.sample_rate
-    }
-
     pub fn set_sample_rate(&mut self, sample_rate: i32) {
         self.sample_rate = sample_rate;
     }
 
-    pub fn get_progress(&self) -> f32 {
+    pub fn progress(&self) -> f32 {
         if self.note_map_size == 0 {
             return 0.0;
         }

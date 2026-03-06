@@ -26,32 +26,31 @@ impl ScreenShotExporter for ScreenShotFileExporter {
 
         if screen_type == ScreenType::BMSPlayer {
             let tablelevel =
-                StringPropertyFactory::get_string_property(STRING_TABLE_LEVEL).get(current_state);
+                StringPropertyFactory::string_property(STRING_TABLE_LEVEL).get(current_state);
             if !tablelevel.is_empty() {
                 state_name = format!("_Play_{}", tablelevel);
             } else {
                 state_name = format!(
                     "_Play_LEVEL{}",
-                    IntegerPropertyFactory::get_integer_property(NUMBER_PLAYLEVEL)
-                        .get(current_state)
+                    IntegerPropertyFactory::integer_property(NUMBER_PLAYLEVEL).get(current_state)
                 );
             }
             let fulltitle =
-                StringPropertyFactory::get_string_property(STRING_FULLTITLE).get(current_state);
+                StringPropertyFactory::string_property(STRING_FULLTITLE).get(current_state);
             if !fulltitle.is_empty() {
                 state_name += &format!(" {}", fulltitle);
             }
         } else if screen_type == ScreenType::MusicResult || screen_type == ScreenType::CourseResult
         {
             if screen_type == ScreenType::MusicResult {
-                let tablelevel = StringPropertyFactory::get_string_property(STRING_TABLE_LEVEL)
-                    .get(current_state);
+                let tablelevel =
+                    StringPropertyFactory::string_property(STRING_TABLE_LEVEL).get(current_state);
                 if !tablelevel.is_empty() {
                     state_name += &format!("_{} ", tablelevel);
                 } else {
                     state_name += &format!(
                         "_LEVEL{} ",
-                        IntegerPropertyFactory::get_integer_property(NUMBER_PLAYLEVEL)
+                        IntegerPropertyFactory::integer_property(NUMBER_PLAYLEVEL)
                             .get(current_state)
                     );
                 }
@@ -59,18 +58,12 @@ impl ScreenShotExporter for ScreenShotFileExporter {
                 state_name += "_";
             }
             let fulltitle =
-                StringPropertyFactory::get_string_property(STRING_FULLTITLE).get(current_state);
+                StringPropertyFactory::string_property(STRING_FULLTITLE).get(current_state);
             if !fulltitle.is_empty() {
                 state_name += &fulltitle;
             }
-            state_name += &format!(
-                " {}",
-                screen_shot_exporter::get_clear_type_name(current_state)
-            );
-            state_name += &format!(
-                " {}",
-                screen_shot_exporter::get_rank_type_name(current_state)
-            );
+            state_name += &format!(" {}", screen_shot_exporter::clear_type_name(current_state));
+            state_name += &format!(" {}", screen_shot_exporter::rank_type_name(current_state));
         } else if screen_type == ScreenType::KeyConfiguration {
             state_name = "_Config".to_string();
         }
@@ -88,12 +81,12 @@ impl ScreenShotExporter for ScreenShotFileExporter {
             .replace('\t', " ");
         state_name = format!("_LR2oraja{}", state_name);
 
-        let width = GdxGraphics::get_back_buffer_width();
-        let height = GdxGraphics::get_back_buffer_height();
+        let width = GdxGraphics::back_buffer_width();
+        let height = GdxGraphics::back_buffer_height();
         let mut pixmap = Pixmap::new(width, height);
         let result: Result<bool, Box<dyn std::error::Error>> = {
             let path = format!("screenshot/{}{}.png", sdf, state_name);
-            let pixel_buf = pixmap.get_pixels();
+            let pixel_buf = pixmap.pixels();
             BufferUtils::copy(pixels, 0, pixel_buf, pixels.len());
             PixmapIO::write_png(&path, &pixmap);
             log::info!("Screenshot saved: {}", path);

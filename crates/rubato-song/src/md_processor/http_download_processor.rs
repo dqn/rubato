@@ -19,10 +19,10 @@ pub static DOWNLOAD_SOURCES: LazyLock<HashMap<String, &'static HttpDownloadSourc
         let mut map = HashMap::new();
         // Wriggle
         let wriggle_meta: &HttpDownloadSourceMeta = &wriggle_download_source::META;
-        map.insert(wriggle_meta.get_name().to_string(), wriggle_meta);
+        map.insert(wriggle_meta.name().to_string(), wriggle_meta);
         // Konmai
         let konmai_meta: &HttpDownloadSourceMeta = &konmai_download_source::META;
-        map.insert(konmai_meta.get_name().to_string(), konmai_meta);
+        map.insert(konmai_meta.name().to_string(), konmai_meta);
         map
     });
 
@@ -64,7 +64,7 @@ impl HttpDownloadProcessor {
         }
     }
 
-    pub fn get_default_download_source() -> &'static HttpDownloadSourceMeta {
+    pub fn default_download_source() -> &'static HttpDownloadSourceMeta {
         &wriggle_download_source::META
     }
 
@@ -77,7 +77,7 @@ impl HttpDownloadProcessor {
     // Would be best if this returned an immutable view over the tasks,
     // without creating a copy, in the interest of efficiency,
     // however I'm not sure if that is possible in java
-    pub fn get_all_tasks(&self) -> Arc<Mutex<HashMap<i32, Arc<Mutex<DownloadTask>>>>> {
+    pub fn all_tasks(&self) -> Arc<Mutex<HashMap<i32, Arc<Mutex<DownloadTask>>>>> {
         self.tasks.clone()
     }
 
@@ -165,9 +165,9 @@ impl HttpDownloadProcessor {
             let (task_name, download_url, hash) = {
                 let task = download_task.lock().unwrap();
                 (
-                    task.get_name().to_string(),
-                    task.get_url().to_string(),
-                    task.get_hash().to_string(),
+                    task.name().to_string(),
+                    task.url().to_string(),
+                    task.hash().to_string(),
                 )
             };
             log::info!(
@@ -272,7 +272,7 @@ fn download_file_from_url(
 ) -> anyhow::Result<PathBuf> {
     let url = {
         let t = task.lock().unwrap();
-        t.get_url().to_string()
+        t.url().to_string()
     };
 
     let response = reqwest::blocking::get(&url)?;

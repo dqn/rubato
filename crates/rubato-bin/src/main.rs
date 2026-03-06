@@ -271,7 +271,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
                 .get(&config.download_source)
                 .copied()
                 .unwrap_or_else(|| {
-                    rubato_song::md_processor::http_download_processor::HttpDownloadProcessor::get_default_download_source()
+                    rubato_song::md_processor::http_download_processor::HttpDownloadProcessor::default_download_source()
                 });
             let http_download_source: Arc<
                 dyn rubato_song::md_processor::http_download_source::HttpDownloadSource,

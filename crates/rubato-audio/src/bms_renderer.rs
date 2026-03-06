@@ -274,7 +274,7 @@ impl BMSRenderer {
             // Resolve audio file path
             let resolved_path = base_path.join(wav_name);
             let resolved_str = resolved_path.to_string_lossy().to_string();
-            let candidates = audio_driver::get_paths(&resolved_str);
+            let candidates = audio_driver::paths(&resolved_str);
 
             let mut wav_path: Option<PathBuf> = None;
             for candidate in &candidates {

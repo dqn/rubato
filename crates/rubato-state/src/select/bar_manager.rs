@@ -1586,8 +1586,8 @@ mod tests {
         let sb = bars[0].as_song_bar().unwrap();
         assert!(sb.get_banner().is_some());
         let pix = sb.get_banner().unwrap();
-        assert_eq!(pix.get_width(), 4);
-        assert_eq!(pix.get_height(), 4);
+        assert_eq!(pix.width, 4);
+        assert_eq!(pix.height, 4);
     }
 
     #[test]
@@ -1624,8 +1624,8 @@ mod tests {
         let sb = bars[0].as_song_bar().unwrap();
         assert!(sb.get_stagefile().is_some());
         let pix = sb.get_stagefile().unwrap();
-        assert_eq!(pix.get_width(), 4);
-        assert_eq!(pix.get_height(), 4);
+        assert_eq!(pix.width, 4);
+        assert_eq!(pix.height, 4);
     }
 
     #[test]

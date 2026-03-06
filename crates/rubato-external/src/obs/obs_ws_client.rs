@@ -60,14 +60,6 @@ impl ObsVersionInfo {
             ws_version,
         }
     }
-
-    pub fn get_obs_version(&self) -> &str {
-        &self.obs_version
-    }
-
-    pub fn get_ws_version(&self) -> &str {
-        &self.ws_version
-    }
 }
 
 impl std::fmt::Display for ObsVersionInfo {
@@ -85,7 +77,7 @@ pub fn obs_actions() -> HashMap<String, String> {
 }
 
 /// Get the label for a given action
-pub fn get_action_label(action: &str) -> Option<String> {
+pub fn action_label(action: &str) -> Option<String> {
     for (key, value) in obs_actions() {
         if value == action {
             return Some(key);
@@ -1047,12 +1039,12 @@ mod tests {
     #[test]
     fn version_info_display() {
         let info = ObsVersionInfo::new("30.0.0".to_string(), "5.3.0".to_string());
-        assert_eq!(info.get_obs_version(), "30.0.0");
-        assert_eq!(info.get_ws_version(), "5.3.0");
+        assert_eq!(info.obs_version.as_str(), "30.0.0");
+        assert_eq!(info.ws_version.as_str(), "5.3.0");
         assert_eq!(format!("{}", info), "OBS v30.0.0 (WS v5.3.0)");
     }
 
-    // -- obs_actions / get_action_label --
+    // -- obs_actions / action_label --
 
     #[test]
     fn obs_actions_contains_expected_entries() {
@@ -1062,20 +1054,20 @@ mod tests {
     }
 
     #[test]
-    fn get_action_label_found() {
+    fn action_label_found() {
         assert_eq!(
-            get_action_label("StopRecord"),
+            action_label("StopRecord"),
             Some("Stop Recording".to_string())
         );
         assert_eq!(
-            get_action_label("StartRecord"),
+            action_label("StartRecord"),
             Some("Start Recording".to_string())
         );
     }
 
     #[test]
-    fn get_action_label_not_found() {
-        assert_eq!(get_action_label("NonExistent"), None);
+    fn action_label_not_found() {
+        assert_eq!(action_label("NonExistent"), None);
     }
 
     // -- compute_next_reconnect_delay (exponential backoff) --

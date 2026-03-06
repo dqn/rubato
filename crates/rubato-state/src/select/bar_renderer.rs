@@ -432,7 +432,7 @@ impl BarRenderer {
 
         // download progress bars
         let download_tasks =
-            rubato_song::md_processor::download_task_state::DownloadTaskState::get_running_download_tasks();
+            rubato_song::md_processor::download_task_state::DownloadTaskState::running_download_tasks();
         if !download_tasks.is_empty() {
             for i in 0..self.barlength {
                 let ba = &self.bararea[i];
@@ -445,7 +445,7 @@ impl BarRenderer {
                         let song_md5 = &song_bar.get_song_data().md5;
                         for task_arc in download_tasks.values() {
                             let task = task_arc.lock().unwrap();
-                            if task.get_hash() != song_md5 {
+                            if task.hash() != song_md5 {
                                 continue;
                             }
                             if let Some(graph) = baro.get_graph()

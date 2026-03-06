@@ -213,7 +213,7 @@ fn get_information_for_songs_sha256_injection_blocked() {
     injected_song.title = "Injected".to_string();
 
     let mut songs = vec![injected_song];
-    accessor.get_information_for_songs(&mut songs);
+    accessor.information_for_songs(&mut songs);
 
     // With parameterized query, injection is blocked
     assert!(

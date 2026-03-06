@@ -1178,9 +1178,9 @@ impl PlayConfigurationView {
     pub fn bms_loading_state(&self) -> BmsLoadingState {
         if let Some(handle) = &self.bms_loading_handle {
             BmsLoadingState::Loading {
-                bms_files: handle.listener.get_bms_files_count(),
-                processed_files: handle.listener.get_processed_bms_files_count(),
-                new_files: handle.listener.get_new_bms_files_count(),
+                bms_files: handle.listener.bms_files_count(),
+                processed_files: handle.listener.processed_bms_files_count(),
+                new_files: handle.listener.new_bms_files_count(),
             }
         } else if let Some(result) = &self.bms_loading_result {
             match result {

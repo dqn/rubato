@@ -27,7 +27,7 @@ impl KonmaiDownloadSource {
         let override_download_url = config.override_download_url();
         let download_query_url = match override_download_url {
             Some(url) if !url.is_empty() => url.to_string(),
-            _ => META.get_default_url().to_string(),
+            _ => META.default_url().to_string(),
         };
         KonmaiDownloadSource { download_query_url }
     }
@@ -35,7 +35,7 @@ impl KonmaiDownloadSource {
 
 impl HttpDownloadSource for KonmaiDownloadSource {
     fn get_name(&self) -> &str {
-        META.get_name()
+        META.name()
     }
 
     /// Konmai backend uses a meta query endpoint instead of direct download link.
@@ -237,9 +237,9 @@ mod tests {
     #[test]
     fn meta_name_and_default_url() {
         let meta = &*META;
-        assert_eq!(meta.get_name(), "konmai");
+        assert_eq!(meta.name(), "konmai");
         assert_eq!(
-            meta.get_default_url(),
+            meta.default_url(),
             "https://bms.alvorna.com/api/hash?md5=%s"
         );
     }

@@ -150,7 +150,7 @@ mod tests {
         let path = create_test_png(dir.path(), "test.png");
 
         let pool = PixmapResourcePool::new();
-        let dims = pool.get_and_use(&path, |p| (p.get_width(), p.get_height()));
+        let dims = pool.get_and_use(&path, |p| (p.width, p.height));
         assert_eq!(dims, Some((2, 2)));
         assert!(pool.exists(&path));
         assert_eq!(pool.size(), 1);
@@ -166,7 +166,7 @@ mod tests {
         assert_eq!(pool.size(), 1);
 
         // Second call should use cache, not reload
-        let dims = pool.get_and_use(&path, |p| (p.get_width(), p.get_height()));
+        let dims = pool.get_and_use(&path, |p| (p.width, p.height));
         assert_eq!(dims, Some((2, 2)));
         assert_eq!(pool.size(), 1);
     }
@@ -237,7 +237,7 @@ mod tests {
         let pool = PixmapResourcePool::new();
         pool.get(&path);
 
-        let width = pool.with_resource(&path, |p| p.get_width());
+        let width = pool.with_resource(&path, |p| p.width);
         assert_eq!(width, Some(2));
     }
 

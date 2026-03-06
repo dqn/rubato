@@ -108,11 +108,11 @@ impl WebhookHandler {
         let mut title_string = String::new();
 
         let table_level =
-            StringPropertyFactory::get_string_property(STRING_TABLE_LEVEL).get(current_state);
+            StringPropertyFactory::string_property(STRING_TABLE_LEVEL).get(current_state);
         let full_title =
-            StringPropertyFactory::get_string_property(STRING_FULLTITLE).get(current_state);
-        let rank = screen_shot_exporter::get_rank_type_name(current_state);
-        let clear_type = screen_shot_exporter::get_clear_type_name(current_state);
+            StringPropertyFactory::string_property(STRING_FULLTITLE).get(current_state);
+        let rank = screen_shot_exporter::rank_type_name(current_state);
+        let clear_type = screen_shot_exporter::clear_type_name(current_state);
 
         if !table_level.is_empty() {
             title_string += &table_level;
@@ -176,7 +176,7 @@ impl WebhookHandler {
                 if let Some(result_state) = get_abstract_result(current_state) {
                     let new_score = result_state.get_new_score();
                     let old_score = result_state.get_old_score();
-                    let max_score = IntegerPropertyFactory::get_integer_property(NUMBER_MAXSCORE)
+                    let max_score = IntegerPropertyFactory::integer_property(NUMBER_MAXSCORE)
                         .get(current_state);
 
                     let mut description = String::new();
@@ -208,8 +208,8 @@ impl WebhookHandler {
                             )
                         );
                     }
-                    if *current_state.resource.get_original_mode() == Mode::BEAT_7K
-                        && let Some(rd) = current_state.resource.get_replay_data()
+                    if *current_state.resource.original_mode() == Mode::BEAT_7K
+                        && let Some(rd) = current_state.resource.replay_data()
                     {
                         description += &format!("**PATTERN: {}** \n", Self::format_random(rd));
                     }
@@ -223,12 +223,12 @@ impl WebhookHandler {
                     embed.insert(
                         "color".to_string(),
                         serde_json::Value::Number(serde_json::Number::from(
-                            screen_shot_exporter::get_clear_type_colour(current_state),
+                            screen_shot_exporter::clear_type_colour(current_state),
                         )),
                     );
                     author.insert(
                         "name".to_string(),
-                        StringPropertyFactory::get_string_property(STRING_TABLE_NAME)
+                        StringPropertyFactory::string_property(STRING_TABLE_NAME)
                             .get(current_state),
                     );
                     embed.insert("author".to_string(), serde_json::to_value(&author).unwrap());
@@ -288,7 +288,7 @@ impl WebhookHandler {
     }
 
     fn format_links(current_state: &MainState) -> String {
-        let Some(song) = current_state.resource.get_songdata() else {
+        let Some(song) = current_state.resource.songdata() else {
             return String::new();
         };
         let mut ss = String::new();
@@ -303,7 +303,7 @@ impl WebhookHandler {
         }
         ss += &format!(" [Chart]({}{})", charturl, md5);
 
-        let levels = current_state.resource.get_reverse_lookup_levels();
+        let levels = current_state.resource.reverse_lookup_levels();
         for level in levels {
             ss += &format!(" | {}", level);
         }
@@ -325,12 +325,12 @@ impl WebhookHandler {
         let mut old_rank: i32 = 0;
 
         for rank in &GRADE_RANKS {
-            if percent > rank.get_percent() {
-                current_rank = ((rank.get_numerator() / 2.0f32).floor() * 2.0f32) as i32;
+            if percent > rank.percent() {
+                current_rank = ((rank.numerator() / 2.0f32).floor() * 2.0f32) as i32;
                 sb += &format!(
                     "**{}{}**",
-                    rank.get_text(),
-                    Self::rank_relative_ex_diff(ex, max_score, rank.get_numerator())
+                    rank.text(),
+                    Self::rank_relative_ex_diff(ex, max_score, rank.numerator())
                 );
                 break;
             }
@@ -340,8 +340,8 @@ impl WebhookHandler {
             let old_score = result_state.get_old_score();
             let old_percent = 100.0f32 * old_score.get_exscore() as f32 / max_score as f32;
             for rank in &GRADE_RANKS {
-                if old_percent > rank.get_percent() {
-                    old_rank = ((rank.get_numerator() / 2.0f32).floor() * 2.0f32) as i32;
+                if old_percent > rank.percent() {
+                    old_rank = ((rank.numerator() / 2.0f32).floor() * 2.0f32) as i32;
                     break;
                 }
             }
@@ -422,15 +422,15 @@ impl GradeRank {
         Self { numerator, text }
     }
 
-    pub fn get_percent(&self) -> f32 {
+    pub fn percent(&self) -> f32 {
         (self.numerator / 18.0f32) * 100.0f32
     }
 
-    pub fn get_text(&self) -> &str {
+    pub fn text(&self) -> &str {
         self.text
     }
 
-    pub fn get_numerator(&self) -> f32 {
+    pub fn numerator(&self) -> f32 {
         self.numerator
     }
 }

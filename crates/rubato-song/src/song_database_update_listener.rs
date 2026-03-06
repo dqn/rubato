@@ -34,15 +34,15 @@ impl SongDatabaseUpdateListener {
         self.new_bms_files.fetch_add(count, Ordering::Relaxed);
     }
 
-    pub fn get_bms_files_count(&self) -> i32 {
+    pub fn bms_files_count(&self) -> i32 {
         self.bms_files.load(Ordering::Relaxed)
     }
 
-    pub fn get_processed_bms_files_count(&self) -> i32 {
+    pub fn processed_bms_files_count(&self) -> i32 {
         self.processed_bms_files.load(Ordering::Relaxed)
     }
 
-    pub fn get_new_bms_files_count(&self) -> i32 {
+    pub fn new_bms_files_count(&self) -> i32 {
         self.new_bms_files.load(Ordering::Relaxed)
     }
 }

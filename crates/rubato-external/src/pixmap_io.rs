@@ -19,22 +19,14 @@ impl Pixmap {
         }
     }
 
-    pub fn get_width(&self) -> i32 {
-        self.width
-    }
-
-    pub fn get_height(&self) -> i32 {
-        self.height
-    }
-
     /// Returns a mutable reference to the internal pixel buffer.
     /// Matches Java Pixmap.getPixels() which returns the internal ByteBuffer.
-    pub fn get_pixels(&mut self) -> &mut Vec<u8> {
+    pub fn pixels(&mut self) -> &mut Vec<u8> {
         &mut self.pixels
     }
 
     /// Returns a read-only reference to the pixel data.
-    pub fn get_pixel_data(&self) -> &[u8] {
+    pub fn pixel_data(&self) -> &[u8] {
         &self.pixels
     }
 
@@ -52,11 +44,11 @@ static BACK_BUFFER_WIDTH: std::sync::atomic::AtomicI32 = std::sync::atomic::Atom
 static BACK_BUFFER_HEIGHT: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(0);
 
 impl GdxGraphics {
-    pub fn get_back_buffer_width() -> i32 {
+    pub fn back_buffer_width() -> i32 {
         BACK_BUFFER_WIDTH.load(std::sync::atomic::Ordering::Relaxed)
     }
 
-    pub fn get_back_buffer_height() -> i32 {
+    pub fn back_buffer_height() -> i32 {
         BACK_BUFFER_HEIGHT.load(std::sync::atomic::Ordering::Relaxed)
     }
 
@@ -100,9 +92,9 @@ impl PixmapIO {
         use image::{ImageBuffer, Rgba};
         use std::path::Path;
 
-        let width = pixmap.get_width() as u32;
-        let height = pixmap.get_height() as u32;
-        let pixel_data = pixmap.get_pixel_data();
+        let width = pixmap.width as u32;
+        let height = pixmap.height as u32;
+        let pixel_data = pixmap.pixel_data();
 
         if pixel_data.len() != (width as usize) * (height as usize) * 4 {
             log::error!(
@@ -141,9 +133,9 @@ impl PixmapIO {
     pub fn encode_png_bytes(pixmap: &Pixmap) -> Vec<u8> {
         use image::{ImageBuffer, ImageEncoder, Rgba};
 
-        let width = pixmap.get_width() as u32;
-        let height = pixmap.get_height() as u32;
-        let pixel_data = pixmap.get_pixel_data();
+        let width = pixmap.width as u32;
+        let height = pixmap.height as u32;
+        let pixel_data = pixmap.pixel_data();
 
         if pixel_data.len() != (width as usize) * (height as usize) * 4 {
             log::error!(
@@ -187,16 +179,16 @@ mod tests {
     #[test]
     fn test_pixmap_new_creates_zero_filled_buffer() {
         let pixmap = Pixmap::new(4, 3);
-        assert_eq!(pixmap.get_width(), 4);
-        assert_eq!(pixmap.get_height(), 3);
-        assert_eq!(pixmap.get_pixel_data().len(), 4 * 3 * 4); // width * height * RGBA
-        assert!(pixmap.get_pixel_data().iter().all(|&b| b == 0));
+        assert_eq!(pixmap.width, 4);
+        assert_eq!(pixmap.height, 3);
+        assert_eq!(pixmap.pixel_data().len(), 4 * 3 * 4); // width * height * RGBA
+        assert!(pixmap.pixel_data().iter().all(|&b| b == 0));
     }
 
     #[test]
-    fn test_pixmap_get_pixels_returns_mutable_internal_buffer() {
+    fn test_pixmap_pixels_returns_mutable_internal_buffer() {
         let mut pixmap = Pixmap::new(2, 2);
-        let pixels = pixmap.get_pixels();
+        let pixels = pixmap.pixels();
         // Write some data
         pixels[0] = 255; // R
         pixels[1] = 128; // G
@@ -204,26 +196,26 @@ mod tests {
         pixels[3] = 255; // A
 
         // Verify the data persists via read-only access
-        assert_eq!(pixmap.get_pixel_data()[0], 255);
-        assert_eq!(pixmap.get_pixel_data()[1], 128);
-        assert_eq!(pixmap.get_pixel_data()[2], 64);
-        assert_eq!(pixmap.get_pixel_data()[3], 255);
+        assert_eq!(pixmap.pixel_data()[0], 255);
+        assert_eq!(pixmap.pixel_data()[1], 128);
+        assert_eq!(pixmap.pixel_data()[2], 64);
+        assert_eq!(pixmap.pixel_data()[3], 255);
     }
 
     #[test]
     fn test_pixmap_dispose_clears_data() {
         let mut pixmap = Pixmap::new(10, 10);
-        assert_eq!(pixmap.get_pixel_data().len(), 400);
+        assert_eq!(pixmap.pixel_data().len(), 400);
         pixmap.dispose();
-        assert_eq!(pixmap.get_pixel_data().len(), 0);
+        assert_eq!(pixmap.pixel_data().len(), 0);
     }
 
     #[test]
     fn test_pixmap_zero_dimensions() {
         let pixmap = Pixmap::new(0, 0);
-        assert_eq!(pixmap.get_width(), 0);
-        assert_eq!(pixmap.get_height(), 0);
-        assert_eq!(pixmap.get_pixel_data().len(), 0);
+        assert_eq!(pixmap.width, 0);
+        assert_eq!(pixmap.height, 0);
+        assert_eq!(pixmap.pixel_data().len(), 0);
     }
 
     // ============================================================
@@ -268,9 +260,9 @@ mod tests {
         // Simulate the screenshot flow: copy raw pixel data into pixmap buffer
         let raw_pixels = vec![255u8, 0, 0, 255, 0, 255, 0, 255]; // 2 RGBA pixels
         let mut pixmap = Pixmap::new(2, 1);
-        let pixel_buf = pixmap.get_pixels();
+        let pixel_buf = pixmap.pixels();
         BufferUtils::copy(&raw_pixels, 0, pixel_buf, raw_pixels.len());
-        assert_eq!(pixmap.get_pixel_data(), &[255, 0, 0, 255, 0, 255, 0, 255]);
+        assert_eq!(pixmap.pixel_data(), &[255, 0, 0, 255, 0, 255, 0, 255]);
     }
 
     // ============================================================
@@ -281,20 +273,20 @@ mod tests {
     fn test_gdx_graphics_set_and_get() {
         // Reset to known state
         GdxGraphics::set_back_buffer_size(1920, 1080);
-        assert_eq!(GdxGraphics::get_back_buffer_width(), 1920);
-        assert_eq!(GdxGraphics::get_back_buffer_height(), 1080);
+        assert_eq!(GdxGraphics::back_buffer_width(), 1920);
+        assert_eq!(GdxGraphics::back_buffer_height(), 1080);
 
         GdxGraphics::set_back_buffer_size(800, 600);
-        assert_eq!(GdxGraphics::get_back_buffer_width(), 800);
-        assert_eq!(GdxGraphics::get_back_buffer_height(), 600);
+        assert_eq!(GdxGraphics::back_buffer_width(), 800);
+        assert_eq!(GdxGraphics::back_buffer_height(), 600);
     }
 
     #[test]
     fn test_gdx_graphics_default_is_zero() {
         // Note: test order isn't guaranteed, so we just verify set works
         GdxGraphics::set_back_buffer_size(0, 0);
-        assert_eq!(GdxGraphics::get_back_buffer_width(), 0);
-        assert_eq!(GdxGraphics::get_back_buffer_height(), 0);
+        assert_eq!(GdxGraphics::back_buffer_width(), 0);
+        assert_eq!(GdxGraphics::back_buffer_height(), 0);
     }
 
     // ============================================================
@@ -309,7 +301,7 @@ mod tests {
 
         let mut pixmap = Pixmap::new(2, 2);
         // Set a red pixel at (0,0), green at (1,0), blue at (0,1), white at (1,1)
-        let pixels = pixmap.get_pixels();
+        let pixels = pixmap.pixels();
         // Pixel (0,0): red
         pixels[0] = 255;
         pixels[1] = 0;
@@ -362,7 +354,7 @@ mod tests {
     #[test]
     fn test_pixmap_io_encode_png_bytes() {
         let mut pixmap = Pixmap::new(1, 1);
-        let pixels = pixmap.get_pixels();
+        let pixels = pixmap.pixels();
         pixels[0] = 100;
         pixels[1] = 150;
         pixels[2] = 200;
@@ -389,8 +381,8 @@ mod tests {
         // 5. Verify output
 
         GdxGraphics::set_back_buffer_size(3, 2);
-        let width = GdxGraphics::get_back_buffer_width();
-        let height = GdxGraphics::get_back_buffer_height();
+        let width = GdxGraphics::back_buffer_width();
+        let height = GdxGraphics::back_buffer_height();
 
         // Simulate raw OpenGL pixel data (3x2 RGBA)
         #[rustfmt::skip]
@@ -400,7 +392,7 @@ mod tests {
         ];
 
         let mut pixmap = Pixmap::new(width, height);
-        let pixel_buf = pixmap.get_pixels();
+        let pixel_buf = pixmap.pixels();
         BufferUtils::copy(&raw_pixels, 0, pixel_buf, raw_pixels.len());
 
         let tmp_dir = tempfile::tempdir().unwrap();
@@ -418,6 +410,6 @@ mod tests {
         assert_eq!(rgba.get_pixel(0, 1).0, [128, 128, 128, 255]);
 
         pixmap.dispose();
-        assert_eq!(pixmap.get_pixel_data().len(), 0);
+        assert_eq!(pixmap.pixel_data().len(), 0);
     }
 }

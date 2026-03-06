@@ -29,11 +29,11 @@ impl HttpDownloadSourceMeta {
         (self.builder)(config)
     }
 
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn get_default_url(&self) -> &str {
+    pub fn default_url(&self) -> &str {
         &self.default_url
     }
 }
@@ -68,8 +68,8 @@ mod tests {
     fn new_stores_name_and_url() {
         let meta =
             HttpDownloadSourceMeta::new("test_source", "https://example.com/dl/%s", dummy_builder);
-        assert_eq!(meta.get_name(), "test_source");
-        assert_eq!(meta.get_default_url(), "https://example.com/dl/%s");
+        assert_eq!(meta.name(), "test_source");
+        assert_eq!(meta.default_url(), "https://example.com/dl/%s");
     }
 
     #[test]
@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn empty_name_and_url() {
         let meta = HttpDownloadSourceMeta::new("", "", dummy_builder);
-        assert_eq!(meta.get_name(), "");
-        assert_eq!(meta.get_default_url(), "");
+        assert_eq!(meta.name(), "");
+        assert_eq!(meta.default_url(), "");
     }
 }

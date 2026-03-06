@@ -5,9 +5,7 @@ use std::collections::HashMap;
 use egui;
 use rubato_core::config::Config;
 use rubato_core::main_state::MainStateType;
-use rubato_external::obs::obs_ws_client::{
-    ObsVersionInfo, ObsWsClient, get_action_label, obs_actions,
-};
+use rubato_external::obs::obs_ws_client::{ObsVersionInfo, ObsWsClient, action_label, obs_actions};
 
 use crate::play_configuration_view::PlayConfigurationView;
 
@@ -184,7 +182,7 @@ impl ObsConfigurationView {
             if let Some(action_box) = self.action_boxes.get_mut(&state) {
                 let saved_action = config.obs_action(&state);
                 let saved_action_label = if let Some(action) = saved_action {
-                    get_action_label(action)
+                    action_label(action)
                 } else {
                     None
                 };
@@ -394,7 +392,7 @@ impl ObsConfigurationView {
             let previous_value = action_box.value.clone();
             let saved_action_label = config
                 .obs_action(state_name)
-                .and_then(|a| get_action_label(a));
+                .and_then(|a| action_label(a));
 
             action_box.items.clear();
             action_box.items.push(ACTION_NONE.to_string());

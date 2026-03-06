@@ -18,15 +18,15 @@ fn download_task_construction() {
         "abc123def456".to_string(),
     );
 
-    assert_eq!(task.get_id(), 1);
-    assert_eq!(task.get_url(), "https://example.com/chart.zip");
-    assert_eq!(task.get_name(), "Test Chart Pack");
-    assert_eq!(task.get_hash(), "abc123def456");
-    assert_eq!(task.get_download_task_status(), DownloadTaskStatus::Prepare);
-    assert_eq!(task.get_download_size(), 0);
-    assert_eq!(task.get_content_length(), 0);
-    assert!(task.get_error_message().is_none());
-    assert_eq!(task.get_time_finished(), 0);
+    assert_eq!(task.id(), 1);
+    assert_eq!(task.url(), "https://example.com/chart.zip");
+    assert_eq!(task.name(), "Test Chart Pack");
+    assert_eq!(task.hash(), "abc123def456");
+    assert_eq!(task.download_task_status(), DownloadTaskStatus::Prepare);
+    assert_eq!(task.download_size(), 0);
+    assert_eq!(task.content_length(), 0);
+    assert!(task.error_message().is_none());
+    assert_eq!(task.time_finished(), 0);
 }
 
 #[test]
@@ -40,27 +40,18 @@ fn download_task_status_transitions() {
 
     // Prepare -> Downloading
     task.set_download_task_status(DownloadTaskStatus::Downloading);
-    assert_eq!(
-        task.get_download_task_status(),
-        DownloadTaskStatus::Downloading
-    );
-    assert_eq!(task.get_time_finished(), 0); // Not finished yet
+    assert_eq!(task.download_task_status(), DownloadTaskStatus::Downloading);
+    assert_eq!(task.time_finished(), 0); // Not finished yet
 
     // Downloading -> Downloaded
     task.set_download_task_status(DownloadTaskStatus::Downloaded);
-    assert_eq!(
-        task.get_download_task_status(),
-        DownloadTaskStatus::Downloaded
-    );
+    assert_eq!(task.download_task_status(), DownloadTaskStatus::Downloaded);
 
     // Downloaded -> Extracted (sets time_finished)
     task.set_download_task_status(DownloadTaskStatus::Extracted);
-    assert_eq!(
-        task.get_download_task_status(),
-        DownloadTaskStatus::Extracted
-    );
+    assert_eq!(task.download_task_status(), DownloadTaskStatus::Extracted);
     assert!(
-        task.get_time_finished() > 0,
+        task.time_finished() > 0,
         "time_finished should be set after Extracted"
     );
 }
@@ -77,8 +68,8 @@ fn download_task_error_message() {
     task.set_download_task_status(DownloadTaskStatus::Error);
     task.set_error_message("connection timed out".to_string());
 
-    assert_eq!(task.get_download_task_status(), DownloadTaskStatus::Error);
-    assert_eq!(task.get_error_message(), Some("connection timed out"));
+    assert_eq!(task.download_task_status(), DownloadTaskStatus::Error);
+    assert_eq!(task.error_message(), Some("connection timed out"));
 }
 
 #[test]
@@ -93,8 +84,8 @@ fn download_task_size_tracking() {
     task.set_content_length(1_000_000);
     task.set_download_size(500_000);
 
-    assert_eq!(task.get_content_length(), 1_000_000);
-    assert_eq!(task.get_download_size(), 500_000);
+    assert_eq!(task.content_length(), 1_000_000);
+    assert_eq!(task.download_size(), 500_000);
 }
 
 // ---------------------------------------------------------------------------

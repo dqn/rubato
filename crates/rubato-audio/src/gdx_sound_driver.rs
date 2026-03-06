@@ -99,7 +99,7 @@ impl AudioDriver for GdxSoundDriver {
         }
 
         // Try to load and play
-        let candidates = crate::audio_driver::get_paths(path);
+        let candidates = crate::audio_driver::paths(path);
         for candidate in &candidates {
             match StaticSoundData::from_file(candidate) {
                 Ok(sound_data) => match self.manager.play(sound_data) {
@@ -235,7 +235,7 @@ impl AudioDriver for GdxSoundDriver {
             let newly_loaded: Vec<(String, StaticSoundData)> = paths_vec
                 .par_iter()
                 .filter_map(|abs_path| {
-                    let candidates = crate::audio_driver::get_paths(abs_path);
+                    let candidates = crate::audio_driver::paths(abs_path);
                     for candidate in &candidates {
                         if let Ok(data) = StaticSoundData::from_file(candidate) {
                             return Some((abs_path.clone(), data));
@@ -411,7 +411,7 @@ impl GdxSoundDriver {
         if let Some(data) = self.sound_cache.get(path) {
             return Some(data.clone());
         }
-        let candidates = crate::audio_driver::get_paths(path);
+        let candidates = crate::audio_driver::paths(path);
         for candidate in &candidates {
             if let Ok(sound_data) = StaticSoundData::from_file(candidate) {
                 self.sound_cache

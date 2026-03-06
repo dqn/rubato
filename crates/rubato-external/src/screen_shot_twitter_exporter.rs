@@ -47,50 +47,49 @@ impl ScreenShotExporter for ScreenShotTwitterExporter {
 
         if screen_type == ScreenType::BMSPlayer {
             let tablename =
-                StringPropertyFactory::get_string_property(STRING_TABLE_NAME).get(current_state);
+                StringPropertyFactory::string_property(STRING_TABLE_NAME).get(current_state);
             let tablelevel =
-                StringPropertyFactory::get_string_property(STRING_TABLE_LEVEL).get(current_state);
+                StringPropertyFactory::string_property(STRING_TABLE_LEVEL).get(current_state);
 
             if !tablename.is_empty() {
                 builder += &tablelevel;
             } else {
                 builder += &format!(
                     "LEVEL{}",
-                    IntegerPropertyFactory::get_integer_property(NUMBER_PLAYLEVEL)
-                        .get(current_state)
+                    IntegerPropertyFactory::integer_property(NUMBER_PLAYLEVEL).get(current_state)
                 );
             }
             let fulltitle =
-                StringPropertyFactory::get_string_property(STRING_FULLTITLE).get(current_state);
+                StringPropertyFactory::string_property(STRING_FULLTITLE).get(current_state);
             if !fulltitle.is_empty() {
                 builder += &format!(" {}", fulltitle);
             }
         } else if screen_type == ScreenType::MusicResult || screen_type == ScreenType::CourseResult
         {
             if screen_type == ScreenType::MusicResult {
-                let tablename = StringPropertyFactory::get_string_property(STRING_TABLE_NAME)
-                    .get(current_state);
-                let tablelevel = StringPropertyFactory::get_string_property(STRING_TABLE_LEVEL)
-                    .get(current_state);
+                let tablename =
+                    StringPropertyFactory::string_property(STRING_TABLE_NAME).get(current_state);
+                let tablelevel =
+                    StringPropertyFactory::string_property(STRING_TABLE_LEVEL).get(current_state);
                 if !tablename.is_empty() {
                     builder += &tablelevel;
                 } else {
                     builder += &format!(
                         "LEVEL{}",
-                        IntegerPropertyFactory::get_integer_property(NUMBER_PLAYLEVEL)
+                        IntegerPropertyFactory::integer_property(NUMBER_PLAYLEVEL)
                             .get(current_state)
                     );
                 }
             }
             let fulltitle =
-                StringPropertyFactory::get_string_property(STRING_FULLTITLE).get(current_state);
+                StringPropertyFactory::string_property(STRING_FULLTITLE).get(current_state);
             if !fulltitle.is_empty() {
                 builder += &format!(" {}", fulltitle);
             }
             builder += " ";
-            builder += &screen_shot_exporter::get_clear_type_name(current_state);
+            builder += &screen_shot_exporter::clear_type_name(current_state);
             builder += " ";
-            builder += &screen_shot_exporter::get_rank_type_name(current_state);
+            builder += &screen_shot_exporter::rank_type_name(current_state);
         } else if screen_type == ScreenType::KeyConfiguration {
             // empty
         }
@@ -114,14 +113,14 @@ impl ScreenShotExporter for ScreenShotTwitterExporter {
             .set_o_auth_access_token(&self.access_token)
             .set_o_auth_access_token_secret(&self.access_token_secret);
         let twitter_factory = TwitterFactory::new(cb.build());
-        let twitter = twitter_factory.get_instance();
+        let twitter = twitter_factory.instance();
 
-        let width = GdxGraphics::get_back_buffer_width();
-        let height = GdxGraphics::get_back_buffer_height();
+        let width = GdxGraphics::back_buffer_width();
+        let height = GdxGraphics::back_buffer_height();
         let mut pixmap = Pixmap::new(width, height);
         let result: Result<bool, Box<dyn std::error::Error>> = (|| {
             // create png byte stream
-            let pixel_buf = pixmap.get_pixels();
+            let pixel_buf = pixmap.pixels();
             BufferUtils::copy(pixels, 0, pixel_buf, pixels.len());
             let image_bytes = PixmapIO::encode_png_bytes(&pixmap);
 
@@ -129,7 +128,7 @@ impl ScreenShotExporter for ScreenShotTwitterExporter {
             let mediastatus = twitter.upload_media("from beatoraja", &image_bytes)?;
             log::info!("Twitter Media Upload:{}", mediastatus);
             let mut update = StatusUpdate::new(text.clone());
-            update.set_media_ids(vec![mediastatus.get_media_id()]);
+            update.set_media_ids(vec![mediastatus.media_id]);
             let status = twitter.update_status(&update)?;
             log::info!("Twitter Post:{}", status);
             pixmap.dispose();

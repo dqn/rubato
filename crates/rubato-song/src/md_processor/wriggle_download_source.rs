@@ -23,7 +23,7 @@ impl WriggleDownloadSource {
         let override_download_url = config.override_download_url();
         let download_url = match override_download_url {
             Some(url) if !url.is_empty() => url.to_string(),
-            _ => META.get_default_url().to_string(),
+            _ => META.default_url().to_string(),
         };
         WriggleDownloadSource { download_url }
     }
@@ -36,7 +36,7 @@ impl HttpDownloadSource for WriggleDownloadSource {
     }
 
     fn get_name(&self) -> &str {
-        META.get_name()
+        META.name()
     }
 
     fn is_allow_download_through_md5(&self) -> bool {
@@ -59,9 +59,9 @@ mod tests {
     #[test]
     fn meta_name_and_default_url() {
         let meta = &*META;
-        assert_eq!(meta.get_name(), "wriggle");
+        assert_eq!(meta.name(), "wriggle");
         assert_eq!(
-            meta.get_default_url(),
+            meta.default_url(),
             "https://bms.wrigglebug.xyz/download/package/%s"
         );
     }

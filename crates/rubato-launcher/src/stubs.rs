@@ -329,15 +329,15 @@ impl SongDatabaseUpdateListener {
         self.new_bms_files.fetch_add(count, Ordering::Relaxed);
     }
 
-    pub fn get_bms_files_count(&self) -> i32 {
+    pub fn bms_files_count(&self) -> i32 {
         self.bms_files.load(Ordering::Relaxed)
     }
 
-    pub fn get_processed_bms_files_count(&self) -> i32 {
+    pub fn processed_bms_files_count(&self) -> i32 {
         self.processed_bms_files.load(Ordering::Relaxed)
     }
 
-    pub fn get_new_bms_files_count(&self) -> i32 {
+    pub fn new_bms_files_count(&self) -> i32 {
         self.new_bms_files.load(Ordering::Relaxed)
     }
 }
@@ -376,9 +376,9 @@ mod tests {
     #[test]
     fn song_database_update_listener_default() {
         let listener = SongDatabaseUpdateListener::default();
-        assert_eq!(listener.get_bms_files_count(), 0);
-        assert_eq!(listener.get_processed_bms_files_count(), 0);
-        assert_eq!(listener.get_new_bms_files_count(), 0);
+        assert_eq!(listener.bms_files_count(), 0);
+        assert_eq!(listener.processed_bms_files_count(), 0);
+        assert_eq!(listener.new_bms_files_count(), 0);
     }
 
     #[test]
@@ -386,13 +386,13 @@ mod tests {
         let listener = SongDatabaseUpdateListener::default();
         listener.add_bms_files_count(10);
         listener.add_bms_files_count(5);
-        assert_eq!(listener.get_bms_files_count(), 15);
+        assert_eq!(listener.bms_files_count(), 15);
 
         listener.add_processed_bms_files_count(3);
-        assert_eq!(listener.get_processed_bms_files_count(), 3);
+        assert_eq!(listener.processed_bms_files_count(), 3);
 
         listener.add_new_bms_files_count(2);
-        assert_eq!(listener.get_new_bms_files_count(), 2);
+        assert_eq!(listener.new_bms_files_count(), 2);
     }
 
     #[test]

@@ -33,12 +33,12 @@ impl DownloadTaskState {
         })
     }
 
-    pub fn get_running_download_tasks() -> HashMap<i32, Arc<Mutex<DownloadTask>>> {
+    pub fn running_download_tasks() -> HashMap<i32, Arc<Mutex<DownloadTask>>> {
         let inner = Self::get_inner().lock().unwrap();
         inner.running_download_tasks.clone()
     }
 
-    pub fn get_expired_tasks() -> HashMap<i32, Arc<Mutex<DownloadTask>>> {
+    pub fn expired_tasks() -> HashMap<i32, Arc<Mutex<DownloadTask>>> {
         let inner = Self::get_inner().lock().unwrap();
         inner.expired_tasks.clone()
     }
@@ -56,7 +56,7 @@ impl DownloadTaskState {
         }
         inner.last_snapshot = now;
 
-        let tasks_arc = processor.get_all_tasks();
+        let tasks_arc = processor.all_tasks();
         let tasks = tasks_arc.lock().unwrap();
         if tasks.len() == inner.expired_tasks.len() {
             return;
@@ -69,11 +69,11 @@ impl DownloadTaskState {
             }
 
             let task = task_arc.lock().unwrap();
-            let _state = task.get_download_task_status();
+            let _state = task.download_task_status();
             let finished =
-                task.get_download_task_status().value() >= DownloadTaskStatus::Extracted.value();
+                task.download_task_status().value() >= DownloadTaskStatus::Extracted.value();
             let elapsed_nanos = now.elapsed().as_nanos() as i64;
-            let expired = finished && (5_000_000_000i64 < elapsed_nanos - task.get_time_finished());
+            let expired = finished && (5_000_000_000i64 < elapsed_nanos - task.time_finished());
 
             if expired {
                 inner.running_download_tasks.remove(&id);

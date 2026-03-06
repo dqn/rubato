@@ -90,19 +90,19 @@ impl PlayerResource {
         self.inner.get_config()
     }
 
-    pub fn get_songdata(&self) -> Option<&SongData> {
+    pub fn songdata(&self) -> Option<&SongData> {
         self.inner.get_songdata()
     }
 
-    pub fn get_replay_data(&self) -> Option<&ReplayData> {
+    pub fn replay_data(&self) -> Option<&ReplayData> {
         self.inner.get_replay_data()
     }
 
-    pub fn get_reverse_lookup_levels(&self) -> Vec<String> {
+    pub fn reverse_lookup_levels(&self) -> Vec<String> {
         self.inner.get_reverse_lookup_levels()
     }
 
-    pub fn get_original_mode(&self) -> &Mode {
+    pub fn original_mode(&self) -> &Mode {
         &self.original_mode
     }
 }
@@ -337,7 +337,7 @@ impl StringProperty for DefaultStringProperty {
 
 pub struct IntegerPropertyFactory;
 impl IntegerPropertyFactory {
-    pub fn get_integer_property(id: i32) -> Box<dyn IntegerProperty> {
+    pub fn integer_property(id: i32) -> Box<dyn IntegerProperty> {
         match rubato_skin::property::integer_property_factory::get_integer_property_by_id(id) {
             Some(prop) => Box::new(SkinIntegerPropertyAdapter(prop)),
             None => Box::new(DefaultIntegerProperty),
@@ -347,7 +347,7 @@ impl IntegerPropertyFactory {
 
 pub struct BooleanPropertyFactory;
 impl BooleanPropertyFactory {
-    pub fn get_boolean_property(id: i32) -> Box<dyn BooleanProperty> {
+    pub fn boolean_property(id: i32) -> Box<dyn BooleanProperty> {
         match rubato_skin::property::boolean_property_factory::get_boolean_property(id) {
             Some(prop) => Box::new(SkinBooleanPropertyAdapter(prop)),
             None => Box::new(DefaultBooleanProperty),
@@ -357,7 +357,7 @@ impl BooleanPropertyFactory {
 
 pub struct StringPropertyFactory;
 impl StringPropertyFactory {
-    pub fn get_string_property(id: i32) -> Box<dyn StringProperty> {
+    pub fn string_property(id: i32) -> Box<dyn StringProperty> {
         match rubato_skin::property::string_property_factory::get_string_property_by_id(id) {
             Some(prop) => Box::new(SkinStringPropertyAdapter(prop)),
             None => Box::new(DefaultStringProperty),
@@ -405,7 +405,7 @@ impl TwitterFactory {
         Self
     }
 
-    pub fn get_instance(&self) -> Twitter {
+    pub fn instance(&self) -> Twitter {
         Twitter
     }
 }
@@ -470,12 +470,6 @@ pub struct UploadedMedia {
 impl std::fmt::Display for UploadedMedia {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "UploadedMedia(id={})", self.media_id)
-    }
-}
-
-impl UploadedMedia {
-    pub fn get_media_id(&self) -> i64 {
-        self.media_id
     }
 }
 

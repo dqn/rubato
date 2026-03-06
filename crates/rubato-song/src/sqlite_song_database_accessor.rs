@@ -690,7 +690,7 @@ impl SQLiteSongDatabaseAccessor {
             .unwrap_or_default()
             .as_millis();
 
-        let count = listener.get_bms_files_count();
+        let count = listener.bms_files_count();
         if count > 0 {
             log::info!(
                 "Song update completed: Time - {}ms, per song - {}ms",
@@ -1486,13 +1486,13 @@ mod tests {
         // First update
         let listener1 = SongDatabaseUpdateListener::new();
         accessor.update_song_datas_with_listener(None, &bmsroot, false, false, None, &listener1);
-        assert_eq!(listener1.get_new_bms_files_count(), 1);
+        assert_eq!(listener1.new_bms_files_count(), 1);
 
         // Second update (no changes) - should skip
         let listener2 = SongDatabaseUpdateListener::new();
         accessor.update_song_datas_with_listener(None, &bmsroot, false, false, None, &listener2);
-        assert_eq!(listener2.get_new_bms_files_count(), 0);
-        assert_eq!(listener2.get_bms_files_count(), 1);
+        assert_eq!(listener2.new_bms_files_count(), 0);
+        assert_eq!(listener2.bms_files_count(), 1);
     }
 
     #[test]
