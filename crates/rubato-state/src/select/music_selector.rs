@@ -957,7 +957,7 @@ impl MusicSelector {
             // Java L384-388: only create new RankingData when IR active AND currentir is null.
             // Do NOT null out currentir when IR inactive (selectedBarMoved already set it).
             if let Some(ref mut main) = self.main
-                && !main.get_ir_table_urls().is_empty()
+                && main.get_ir_connection_any().is_some()
                 && self.currentir.is_none()
             {
                 use rubato_ir::ranking_data::RankingData;
@@ -1202,7 +1202,7 @@ impl MusicSelector {
         let ir_active = self
             .main
             .as_ref()
-            .map(|m| !m.get_ir_table_urls().is_empty())
+            .map(|m| m.get_ir_connection_any().is_some())
             .unwrap_or(false);
 
         if ir_active {
@@ -1947,6 +1947,16 @@ impl MainState for MusicSelector {
     }
 
     fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
+        let should_handoff = self.player_resource.as_ref().is_some_and(|resource| {
+            resource.get_bms_model().is_some()
+                || resource.get_songdata().is_some()
+                || resource.get_course_data().is_some()
+        });
+
+        if !should_handoff {
+            return None;
+        }
+
         self.player_resource
             .take()
             .map(|r| Box::new(r) as Box<dyn std::any::Any + Send>)
@@ -2231,9 +2241,9 @@ impl MainState for MusicSelector {
                                 rubato_core::player_resource::PlayerResource::load_bms_model(
                                     &path, lnmode,
                                 )
-                            && let Some(ref mut main) = self.main
-                            && let Some(sd) = main
-                                .get_player_resource_mut()
+                            && let Some(sd) = self
+                                .player_resource
+                                .as_mut()
                                 .and_then(|r| r.get_songdata_mut())
                         {
                             sd.set_bms_model(model);

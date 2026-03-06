@@ -1642,6 +1642,7 @@ fn create_lr2_loader(
 pub fn load_lr2_skin(
     path: &std::path::Path,
     skin_type: &crate::skin_type::SkinType,
+    dst: Resolution,
 ) -> Option<crate::skin::Skin> {
     use crate::skin_header::{self, SkinHeader};
 
@@ -1693,10 +1694,6 @@ pub fn load_lr2_skin(
         width: 640.0,
         height: 480.0,
     });
-    let dst = Resolution {
-        width: 1920.0,
-        height: 1080.0,
-    };
     let mut loader = create_lr2_loader(skin_type, src, dst, false, skinpath)?;
 
     // Transfer header options to loader's op map

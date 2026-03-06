@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::sync::{Arc, Mutex};
 
 use crate::config::Config;
 use crate::input_processor_access::InputProcessorAccess;
@@ -11,6 +12,49 @@ use crate::replay_data::ReplayData;
 use crate::score_data::ScoreData;
 use crate::song_information_db::SongInformationDb;
 use crate::sound_type::SoundType;
+
+/// Cross-crate side-effect commands issued by state-facing MainController proxies.
+///
+/// Rust states cannot hold a live `&mut MainController` due to ownership rules, so launcher-side
+/// proxies enqueue these commands and MainController drains them at safe points.
+pub enum MainControllerCommand {
+    ChangeState(MainStateType),
+    SaveConfig,
+    Exit,
+    SaveLastRecording(String),
+    UpdateSong(Option<String>),
+    PlaySound(SoundType, bool),
+    StopSound(SoundType),
+    ShuffleSounds,
+    UpdateTable(Box<dyn crate::table_update_source::TableUpdateSource>),
+    StartIpfsDownload(crate::song_data::SongData),
+    SetGlobalPitch(f32),
+    StopAllNotes,
+}
+
+/// Shared command queue for state-facing MainController proxies.
+#[derive(Clone, Default)]
+pub struct MainControllerCommandQueue {
+    inner: Arc<Mutex<Vec<MainControllerCommand>>>,
+}
+
+impl MainControllerCommandQueue {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn push(&self, command: MainControllerCommand) {
+        self.inner.lock().unwrap().push(command);
+    }
+
+    pub fn drain(&self) -> Vec<MainControllerCommand> {
+        std::mem::take(&mut *self.inner.lock().unwrap())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.inner.lock().unwrap().is_empty()
+    }
+}
 
 /// Trait interface for MainController access.
 ///

@@ -112,7 +112,11 @@ pub fn load_skin_from_config(
         skin
     } else {
         // LR2 CSV skin
-        let skin = crate::lr2::lr2_skin_csv_loader::load_lr2_skin(path, &skin_type);
+        let dst = crate::stubs::Resolution {
+            width: config.window_width as f32,
+            height: config.window_height as f32,
+        };
+        let skin = crate::lr2::lr2_skin_csv_loader::load_lr2_skin(path, &skin_type, dst);
 
         if let Ok(guard) = RESOURCE.lock()
             && let Some(ref r) = *guard

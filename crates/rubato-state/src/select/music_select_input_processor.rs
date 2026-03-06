@@ -355,7 +355,10 @@ impl MusicSelectInputProcessor {
             {
                 ctx.events
                     .push(InputEvent::Execute(MusicSelectCommand::ShowContextMenu));
-            } else if current_bar_type == BarType::Selectable {
+            } else if matches!(
+                current_bar_type,
+                BarType::Selectable | BarType::Song | BarType::Table | BarType::Hash
+            ) {
                 if property.is_pressed(input, MusicSelectKey::Play, true)
                     || input.is_control_key_pressed(ControlKeys::Right)
                     || input.is_control_key_pressed(ControlKeys::Enter)

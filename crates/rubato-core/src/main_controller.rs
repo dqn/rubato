@@ -226,6 +226,9 @@ pub struct MainController {
     /// State listeners
     state_listener: Vec<Box<dyn MainStateListener>>,
 
+    /// Deferred controller commands from state-facing access proxies.
+    command_queue: rubato_types::main_controller_access::MainControllerCommandQueue,
+
     /// ImGui renderer (trait bridge for beatoraja-modmenu)
     pub imgui: Option<Box<dyn rubato_types::imgui_access::ImGuiAccess>>,
 
@@ -364,6 +367,7 @@ impl MainController {
             infodb: None,
             offset,
             state_listener,
+            command_queue: rubato_types::main_controller_access::MainControllerCommandQueue::new(),
             imgui: None,
             ir_resend_service: None,
             obs_client: None,
@@ -469,6 +473,13 @@ impl MainController {
 
     pub fn get_ir_status_mut(&mut self) -> &mut Vec<IRStatus> {
         &mut self.ir
+    }
+
+    /// Clone the shared controller command queue used by launcher-side state proxies.
+    pub fn controller_command_queue(
+        &self,
+    ) -> rubato_types::main_controller_access::MainControllerCommandQueue {
+        self.command_queue.clone()
     }
 
     pub fn get_timer(&self) -> &TimerManager {
@@ -666,7 +677,56 @@ impl MainController {
             current.prepare();
         }
 
+        self.process_queued_controller_commands();
+
         self.update_main_state_listener(0);
+    }
+
+    fn process_queued_controller_commands(&mut self) {
+        use rubato_types::main_controller_access::MainControllerCommand;
+
+        let mut pending_change: Option<MainStateType> = None;
+        for command in self.command_queue.drain() {
+            match command {
+                MainControllerCommand::ChangeState(state) => pending_change = Some(state),
+                MainControllerCommand::SaveConfig => self.save_config(),
+                MainControllerCommand::Exit => self.exit(),
+                MainControllerCommand::SaveLastRecording(reason) => {
+                    self.save_last_recording(&reason);
+                }
+                MainControllerCommand::UpdateSong(Some(path)) => self.update_song(&path),
+                MainControllerCommand::UpdateSong(None) => {}
+                MainControllerCommand::PlaySound(sound, loop_sound) => {
+                    <Self as MainControllerAccess>::play_sound(self, &sound, loop_sound);
+                }
+                MainControllerCommand::StopSound(sound) => {
+                    <Self as MainControllerAccess>::stop_sound(self, &sound);
+                }
+                MainControllerCommand::ShuffleSounds => {
+                    <Self as MainControllerAccess>::shuffle_sounds(self);
+                }
+                MainControllerCommand::UpdateTable(source) => {
+                    self.update_table(source);
+                }
+                MainControllerCommand::StartIpfsDownload(song) => {
+                    let _ = <Self as MainControllerAccess>::start_ipfs_download(self, &song);
+                }
+                MainControllerCommand::SetGlobalPitch(pitch) => {
+                    if let Some(ref mut audio) = self.audio {
+                        audio.set_global_pitch(pitch);
+                    }
+                }
+                MainControllerCommand::StopAllNotes => {
+                    if let Some(ref mut audio) = self.audio {
+                        audio.stop_note(None);
+                    }
+                }
+            }
+        }
+
+        if let Some(state) = pending_change {
+            self.change_state(state);
+        }
     }
 
     /// Main create lifecycle method.
@@ -907,6 +967,8 @@ impl MainController {
         if let Some(state_type) = pending_change {
             self.change_state(state_type);
         }
+
+        self.process_queued_controller_commands();
 
         self.periodic_config_save();
 
@@ -2026,6 +2088,21 @@ mod tests {
     fn test_change_state_to_config() {
         let mut mc = make_test_controller();
         mc.change_state(MainStateType::Config);
+
+        assert_eq!(mc.get_current_state_type(), Some(MainStateType::Config));
+    }
+
+    #[test]
+    fn test_process_queued_change_state_command_transitions_current_state() {
+        let mut mc = make_test_controller();
+        mc.change_state(MainStateType::MusicSelect);
+
+        let queue = mc.controller_command_queue();
+        queue.push(rubato_types::main_controller_access::MainControllerCommand::ChangeState(
+            MainStateType::Config,
+        ));
+
+        mc.process_queued_controller_commands();
 
         assert_eq!(mc.get_current_state_type(), Some(MainStateType::Config));
     }
