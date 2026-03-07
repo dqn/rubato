@@ -60,7 +60,7 @@ pub struct BGAProcessor {
     playinglayerid: i32,
     /// Miss layer display start time
     misslayertime: i64,
-    get_misslayer_duration: i64,
+    pub get_misslayer_duration: i64,
     /// Current miss layer sequence
     misslayer: Option<Layer>,
     /// Current time in milliseconds (matching Java BGAProcessor.time)
@@ -376,11 +376,7 @@ impl BGAProcessor {
         // Duration is set via set_misslayer_duration() during init from PlayerConfig.
     }
 
-    /// Set miss layer duration (from PlayerConfig).
-    pub fn set_misslayer_duration(&mut self, duration: i64) {
-        self.get_misslayer_duration = duration;
-    }
-
+    /// Stop all BGA playback.
     pub fn stop(&mut self) {
         for mp in self.movies.iter_mut().flatten() {
             mp.stop();

@@ -1147,7 +1147,7 @@ mod tests {
             Box::new(MockPlayerResourceForIR::new_with_course_score()),
             crate::result::stubs::BMSPlayerMode::new(BMSPlayerModeType::Play),
         );
-        resource.set_course_bms_models(Some(vec![bms_model::bms_model::BMSModel::default()]));
+        resource.course_bms_models = Some(vec![bms_model::bms_model::BMSModel::default()]);
         resource
             .course_replay_mut()
             .push(rubato_core::replay_data::ReplayData::default());

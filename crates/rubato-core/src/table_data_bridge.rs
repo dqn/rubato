@@ -30,7 +30,7 @@ pub fn bms_table_element_to_song_data(
         song.sha256 = sha256.to_lowercase();
     }
     if let Some(title) = te.title() {
-        song.set_title(title.to_string());
+        song.title = title.to_string();
     }
     if let Some(artist) = te.artist() {
         song.set_artist(artist.to_string());

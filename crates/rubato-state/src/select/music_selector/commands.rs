@@ -49,11 +49,6 @@ impl MusicSelector {
         self.main = Some(main);
     }
 
-    /// Set the player config (play options, key bindings, etc.).
-    pub fn set_player_config(&mut self, config: PlayerConfig) {
-        self.config = config;
-    }
-
     /// Refresh the bar list with song database context.
     /// Wraps BarManager::update_bar_refresh_with_context to supply the context
     /// from MusicSelector fields, ensuring songdb queries are not skipped.
@@ -104,10 +99,6 @@ impl MusicSelector {
 
     pub fn selected_replay(&self) -> i32 {
         self.selectedreplay
-    }
-
-    pub fn set_selected_replay(&mut self, index: i32) {
-        self.selectedreplay = index;
     }
 
     pub fn execute(&mut self, command: MusicSelectCommand) {

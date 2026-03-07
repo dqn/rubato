@@ -1118,7 +1118,7 @@ fn convert_lr2_header_data(
 
     let mut header = SkinHeader::default();
 
-    header.set_type(TYPE_LR2SKIN);
+    header.skin_type_id = TYPE_LR2SKIN;
 
     if let Some(skin_type) = data.skin_type {
         header.set_skin_type(skin_type);
@@ -1132,7 +1132,7 @@ fn convert_lr2_header_data(
     }
 
     if let Some(ref res) = data.resolution {
-        header.set_resolution(res.clone());
+        header.resolution = res.clone();
         header.set_source_resolution(res.clone());
     }
 
@@ -1142,7 +1142,7 @@ fn convert_lr2_header_data(
         .iter()
         .map(convert_lr2_custom_option)
         .collect();
-    header.set_custom_options(options);
+    header.options = options;
 
     // Convert custom files
     let files: Vec<CustomFile> = data
@@ -1150,7 +1150,7 @@ fn convert_lr2_header_data(
         .iter()
         .map(convert_lr2_custom_file)
         .collect();
-    header.set_custom_files(files);
+    header.files = files;
 
     // Convert custom offsets
     let offsets: Vec<CustomOffset> = data
@@ -1158,7 +1158,7 @@ fn convert_lr2_header_data(
         .iter()
         .map(convert_lr2_custom_offset)
         .collect();
-    header.set_custom_offsets(offsets);
+    header.offsets = offsets;
 
     header
 }
@@ -1499,11 +1499,11 @@ mod tests {
         std::fs::write(lane_dir.join("notes.txt"), []).unwrap();
 
         let mut header = SkinHeader::new();
-        header.set_custom_files(vec![CustomFile::new(
+        header.files = vec![CustomFile::new(
             "Lane".to_string(),
             format!("{}/lane*.png", lane_dir.to_string_lossy()),
             Some("lane_default".to_string()),
-        )]);
+        )];
 
         let mut view = SkinConfigurationView::new();
         view.create(&header, None);

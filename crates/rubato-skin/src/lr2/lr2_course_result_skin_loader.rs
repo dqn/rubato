@@ -37,8 +37,8 @@ impl LR2CourseResultSkinLoaderState {
             "SRC_GAUGECHART_1P" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
                 let mut obj = SkinGaugeGraphObject::new_default();
-                obj.set_line_width(values[6]);
-                obj.set_delay(values[14] - values[13]);
+                obj.line_width = values[6];
+                obj.delay = values[14] - values[13];
                 self.gauge = Rectangle::new(0.0, 0.0, values[11] as f32, values[12] as f32);
                 self.gaugeobj = Some(obj);
             }

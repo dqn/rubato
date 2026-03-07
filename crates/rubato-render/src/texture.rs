@@ -358,22 +358,6 @@ impl TextureRegion {
         }
     }
 
-    pub fn set_region_x(&mut self, x: i32) {
-        self.region_x = x;
-    }
-
-    pub fn set_region_y(&mut self, y: i32) {
-        self.region_y = y;
-    }
-
-    pub fn set_region_width(&mut self, width: i32) {
-        self.region_width = width;
-    }
-
-    pub fn set_region_height(&mut self, height: i32) {
-        self.region_height = height;
-    }
-
     pub fn set_texture(&mut self, texture: Texture) {
         self.texture = Some(texture);
     }

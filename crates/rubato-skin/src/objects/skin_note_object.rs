@@ -20,7 +20,7 @@ pub struct SkinNoteObject {
     pub inner: rubato_play::skin_note::SkinNote,
     /// Draw commands from the last LaneRenderer.draw_lane() call.
     /// Set by the caller before draw() is invoked.
-    draw_commands: Vec<DrawCommand>,
+    pub draw_commands: Vec<DrawCommand>,
 }
 
 impl SkinNoteObject {
@@ -32,12 +32,8 @@ impl SkinNoteObject {
         }
     }
 
-    /// Set draw commands from LaneRenderer.draw_lane().
+    /// Prepare the note object for rendering.
     /// Called by the game loop (BMSPlayer) after computing lane rendering.
-    pub fn set_draw_commands(&mut self, commands: Vec<DrawCommand>) {
-        self.draw_commands = commands;
-    }
-
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
         self.data.prepare(time, state);
         self.inner.prepare(time);
@@ -60,10 +56,10 @@ impl SkinNoteObject {
                     sprite.set_color_rgba(*r, *g, *b, *a);
                 }
                 DrawCommand::SetBlend(blend) => {
-                    sprite.set_blend(*blend);
+                    sprite.blend = *blend;
                 }
                 DrawCommand::SetType(t) => {
-                    sprite.set_type(*t);
+                    sprite.obj_type = *t;
                 }
                 DrawCommand::DrawNote {
                     lane: _,
@@ -136,19 +132,19 @@ mod tests {
             },
             DrawCommand::SetBlend(2),
         ];
-        note.set_draw_commands(commands);
+        note.draw_commands = commands;
         assert_eq!(note.draw_commands.len(), 2);
     }
 
     #[test]
     fn test_draw_set_color_command() {
         let mut note = SkinNoteObject::new(7);
-        note.set_draw_commands(vec![DrawCommand::SetColor {
+        note.draw_commands = vec![DrawCommand::SetColor {
             r: 0.5,
             g: 0.6,
             b: 0.7,
             a: 0.8,
-        }]);
+        }];
         let mut sprite = SkinObjectRenderer::new();
         note.draw(&mut sprite);
         let c = sprite.color();
@@ -161,7 +157,7 @@ mod tests {
     #[test]
     fn test_draw_set_blend_command() {
         let mut note = SkinNoteObject::new(7);
-        note.set_draw_commands(vec![DrawCommand::SetBlend(3)]);
+        note.draw_commands = vec![DrawCommand::SetBlend(3)];
         let mut sprite = SkinObjectRenderer::new();
         note.draw(&mut sprite);
         assert_eq!(sprite.blend(), 3);
@@ -170,7 +166,7 @@ mod tests {
     #[test]
     fn test_draw_set_type_command() {
         let mut note = SkinNoteObject::new(7);
-        note.set_draw_commands(vec![DrawCommand::SetType(5)]);
+        note.draw_commands = vec![DrawCommand::SetType(5)];
         let mut sprite = SkinObjectRenderer::new();
         note.draw(&mut sprite);
         assert_eq!(sprite.toast_type(), 5);
@@ -179,14 +175,14 @@ mod tests {
     #[test]
     fn test_draw_note_command_does_not_panic() {
         let mut note = SkinNoteObject::new(7);
-        note.set_draw_commands(vec![DrawCommand::DrawNote {
+        note.draw_commands = vec![DrawCommand::DrawNote {
             lane: 0,
             x: 10.0,
             y: 20.0,
             w: 30.0,
             h: 5.0,
             image_type: NoteImageType::Normal,
-        }]);
+        }];
         let mut sprite = SkinObjectRenderer::new();
         // Should not panic even though we use a placeholder texture
         note.draw(&mut sprite);
@@ -195,14 +191,14 @@ mod tests {
     #[test]
     fn test_draw_long_note_command_does_not_panic() {
         let mut note = SkinNoteObject::new(7);
-        note.set_draw_commands(vec![DrawCommand::DrawLongNote {
+        note.draw_commands = vec![DrawCommand::DrawLongNote {
             lane: 0,
             x: 10.0,
             y: 50.0,
             w: 30.0,
             h: 100.0,
             image_index: 0,
-        }]);
+        }];
         let mut sprite = SkinObjectRenderer::new();
         note.draw(&mut sprite);
     }
@@ -210,7 +206,7 @@ mod tests {
     #[test]
     fn test_draw_section_line_is_noop() {
         let mut note = SkinNoteObject::new(7);
-        note.set_draw_commands(vec![DrawCommand::DrawSectionLine { y_offset: 100 }]);
+        note.draw_commands = vec![DrawCommand::DrawSectionLine { y_offset: 100 }];
         let mut sprite = SkinObjectRenderer::new();
         // Should not panic, currently a no-op
         note.draw(&mut sprite);
@@ -226,7 +222,7 @@ mod tests {
     #[test]
     fn test_draw_multiple_commands_in_sequence() {
         let mut note = SkinNoteObject::new(7);
-        note.set_draw_commands(vec![
+        note.draw_commands = vec![
             DrawCommand::SetColor {
                 r: 1.0,
                 g: 0.0,
@@ -256,7 +252,7 @@ mod tests {
                 h: 5.0,
                 image_type: NoteImageType::Processed,
             },
-        ]);
+        ];
         let mut sprite = SkinObjectRenderer::new();
         note.draw(&mut sprite);
         // After all commands, color should be green

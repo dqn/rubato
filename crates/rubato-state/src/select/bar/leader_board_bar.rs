@@ -146,7 +146,7 @@ impl LeaderBoardBar {
 
         let mut bar = FunctionBar::new(title, display_type);
         bar.selectable.bar_data.score = Some(score_data.convert_to_score_data());
-        bar.set_lamp(score_data.clear.id());
+        bar.lamp = score_data.clear.id();
         // Function callback for ghost battle would go here
         // In Java: sets up LR2 ghost battle on click
         bar

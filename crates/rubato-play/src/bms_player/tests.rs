@@ -1979,7 +1979,7 @@ fn freq_trainer_scales_chart_timing() {
 fn set_play_speed_sets_pending_pitch_when_frequency_type() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_fast_forward_freq_option(FrequencyType::FREQUENCY);
+    player.fast_forward_freq_option = FrequencyType::FREQUENCY;
     player.set_play_speed(150);
     assert_eq!(player.take_pending_global_pitch(), Some(1.5));
 }
@@ -1988,7 +1988,7 @@ fn set_play_speed_sets_pending_pitch_when_frequency_type() {
 fn set_play_speed_no_pending_pitch_when_unprocessed() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_fast_forward_freq_option(FrequencyType::UNPROCESSED);
+    player.fast_forward_freq_option = FrequencyType::UNPROCESSED;
     player.set_play_speed(150);
     assert_eq!(player.take_pending_global_pitch(), None);
 }
@@ -1997,7 +1997,7 @@ fn set_play_speed_no_pending_pitch_when_unprocessed() {
 fn take_pending_global_pitch_clears_after_read() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_fast_forward_freq_option(FrequencyType::FREQUENCY);
+    player.fast_forward_freq_option = FrequencyType::FREQUENCY;
     player.set_play_speed(200);
     assert_eq!(player.take_pending_global_pitch(), Some(2.0));
     // Second call should be None (consumed)
@@ -2126,7 +2126,7 @@ fn build_guide_se_config_enabled_returns_six_entries() {
 fn set_fast_forward_freq_option_stored() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_fast_forward_freq_option(FrequencyType::FREQUENCY);
+    player.fast_forward_freq_option = FrequencyType::FREQUENCY;
     player.set_play_speed(75);
     assert_eq!(player.take_pending_global_pitch(), Some(0.75));
 }
@@ -2189,7 +2189,7 @@ fn create_side_effects_skin_type_14k() {
 fn create_side_effects_input_mode_play() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_play_mode(BMSPlayerMode::PLAY);
+    player.play_mode = BMSPlayerMode::PLAY;
     player.create();
     let effects = player.take_create_side_effects().unwrap();
     assert_eq!(
@@ -2202,7 +2202,7 @@ fn create_side_effects_input_mode_play() {
 fn create_side_effects_input_mode_practice() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_play_mode(BMSPlayerMode::PRACTICE);
+    player.play_mode = BMSPlayerMode::PRACTICE;
     player.create();
     let effects = player.take_create_side_effects().unwrap();
     assert_eq!(
@@ -2215,7 +2215,7 @@ fn create_side_effects_input_mode_practice() {
 fn create_side_effects_input_mode_autoplay() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_play_mode(BMSPlayerMode::AUTOPLAY);
+    player.play_mode = BMSPlayerMode::AUTOPLAY;
     player.create();
     let effects = player.take_create_side_effects().unwrap();
     assert_eq!(effects.input_mode_action, InputModeAction::DisableInput);
@@ -2225,7 +2225,7 @@ fn create_side_effects_input_mode_autoplay() {
 fn create_side_effects_input_mode_replay() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_play_mode(BMSPlayerMode::REPLAY_1);
+    player.play_mode = BMSPlayerMode::REPLAY_1;
     player.create();
     let effects = player.take_create_side_effects().unwrap();
     assert_eq!(effects.input_mode_action, InputModeAction::DisableInput);
@@ -2235,7 +2235,7 @@ fn create_side_effects_input_mode_replay() {
 fn create_side_effects_guide_se_disabled() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_guide_se(false);
+    player.is_guide_se = false;
     player.create();
     let effects = player.take_create_side_effects().unwrap();
     assert!(!effects.is_guide_se);
@@ -2245,7 +2245,7 @@ fn create_side_effects_guide_se_disabled() {
 fn create_side_effects_guide_se_enabled() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_guide_se(true);
+    player.is_guide_se = true;
     player.create();
     let effects = player.take_create_side_effects().unwrap();
     assert!(effects.is_guide_se);
@@ -2255,7 +2255,7 @@ fn create_side_effects_guide_se_enabled() {
 fn create_no_speed_disables_control() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_constraints(vec![CourseDataConstraint::NoSpeed]);
+    player.constraints = vec![CourseDataConstraint::NoSpeed];
     player.create();
     // Verify control is disabled by checking its enable_control field
     let control = player.input.control.as_ref().unwrap();
@@ -2266,7 +2266,7 @@ fn create_no_speed_disables_control() {
 fn create_without_no_speed_keeps_control_enabled() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_constraints(vec![CourseDataConstraint::Class]);
+    player.constraints = vec![CourseDataConstraint::Class];
     player.create();
     let control = player.input.control.as_ref().unwrap();
     assert!(control.is_enable_control());
@@ -2276,7 +2276,7 @@ fn create_without_no_speed_keeps_control_enabled() {
 fn create_empty_constraints_keeps_control_enabled() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_constraints(vec![]);
+    player.constraints = vec![];
     player.create();
     let control = player.input.control.as_ref().unwrap();
     assert!(control.is_enable_control());
@@ -2286,7 +2286,7 @@ fn create_empty_constraints_keeps_control_enabled() {
 fn create_practice_mode_sets_state_practice() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_play_mode(BMSPlayerMode::PRACTICE);
+    player.play_mode = BMSPlayerMode::PRACTICE;
     player.create();
     assert_eq!(player.state(), PlayState::Practice);
 }
@@ -2295,7 +2295,7 @@ fn create_practice_mode_sets_state_practice() {
 fn create_play_mode_keeps_state_preload() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_play_mode(BMSPlayerMode::PLAY);
+    player.play_mode = BMSPlayerMode::PLAY;
     player.create();
     assert_eq!(player.state(), PlayState::Preload);
 }
@@ -2324,7 +2324,7 @@ fn create_note_expansion_rate_custom_triggers_expansion() {
 fn set_play_mode_and_get() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_play_mode(BMSPlayerMode::AUTOPLAY);
+    player.play_mode = BMSPlayerMode::AUTOPLAY;
     assert_eq!(
         player.play_mode().mode,
         rubato_core::bms_player_mode::Mode::Autoplay
@@ -2335,10 +2335,7 @@ fn set_play_mode_and_get() {
 fn set_constraints_and_get() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_constraints(vec![
-        CourseDataConstraint::NoSpeed,
-        CourseDataConstraint::Class,
-    ]);
+    player.constraints = vec![CourseDataConstraint::NoSpeed, CourseDataConstraint::Class];
     assert_eq!(player.constraints().len(), 2);
     assert!(
         player
@@ -2385,7 +2382,7 @@ fn create_input_mode_5k_model_with_play_mode() {
     model.set_mode(Mode::BEAT_5K);
     model.judgerank = 100;
     let mut player = BMSPlayer::new(model);
-    player.set_play_mode(BMSPlayerMode::PLAY);
+    player.play_mode = BMSPlayerMode::PLAY;
     player.create();
     let effects = player.take_create_side_effects().unwrap();
     assert_eq!(
@@ -2398,11 +2395,11 @@ fn create_input_mode_5k_model_with_play_mode() {
 fn create_no_speed_among_multiple_constraints() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.set_constraints(vec![
+    player.constraints = vec![
         CourseDataConstraint::Class,
         CourseDataConstraint::NoSpeed,
         CourseDataConstraint::Mirror,
-    ]);
+    ];
     player.create();
     let control = player.input.control.as_ref().unwrap();
     assert!(!control.is_enable_control());
@@ -2415,7 +2412,7 @@ fn save_config_skips_when_no_speed_constraint() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.lanerender = Some(LaneRenderer::new(&player.model));
-    player.set_constraints(vec![CourseDataConstraint::NoSpeed]);
+    player.constraints = vec![CourseDataConstraint::NoSpeed];
 
     // Set a known state on the lane renderer
     let pc_before = player
@@ -2563,7 +2560,7 @@ fn analog_cover_change_uses_live_input_and_flushes_reset_back() {
         .lanerender
         .as_mut()
         .expect("lane renderer")
-        .set_enable_lanecover(true);
+        .enable_lanecover = true;
     player
         .lanerender
         .as_mut()
@@ -2715,7 +2712,7 @@ fn quick_retry_in_failed_state_with_start_xor_select() {
     player.state = PlayState::Failed;
     player.lanerender = Some(LaneRenderer::new(&player.model));
     player.input.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
-    player.set_play_mode(BMSPlayerMode::PLAY);
+    player.play_mode = BMSPlayerMode::PLAY;
     player.is_course_mode = false;
 
     // START pressed, SELECT not pressed (XOR = true)
@@ -2737,7 +2734,7 @@ fn no_quick_retry_in_course_mode() {
     player.state = PlayState::Failed;
     player.lanerender = Some(LaneRenderer::new(&player.model));
     player.input.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
-    player.set_play_mode(BMSPlayerMode::PLAY);
+    player.play_mode = BMSPlayerMode::PLAY;
     player.is_course_mode = true;
 
     player.input.input_start_pressed = true;
@@ -2758,7 +2755,7 @@ fn aborted_quick_retry_with_start_xor_select() {
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Aborted;
     player.lanerender = Some(LaneRenderer::new(&player.model));
-    player.set_play_mode(BMSPlayerMode::PLAY);
+    player.play_mode = BMSPlayerMode::PLAY;
     player.is_course_mode = false;
 
     // SELECT pressed, START not pressed (XOR = true)
@@ -2782,7 +2779,7 @@ fn failed_transitions_to_practice_in_practice_mode() {
     player.state = PlayState::Failed;
     player.lanerender = Some(LaneRenderer::new(&player.model));
     player.input.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
-    player.set_play_mode(BMSPlayerMode::PRACTICE);
+    player.play_mode = BMSPlayerMode::PRACTICE;
 
     // Set TIMER_FAILED so close time is exceeded
     player.main_state_data.timer.set_timer_on(TIMER_FAILED);
@@ -2857,7 +2854,7 @@ fn set_player_config_persists() {
         ..Default::default()
     };
 
-    player.set_player_config(config);
+    player.player_config = config;
 
     assert!(!player.player_config().display_settings.chart_preview);
     assert!(player.player_config().select_settings.is_window_hold);
@@ -2871,10 +2868,10 @@ fn set_course_mode_persists() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
 
-    player.set_course_mode(true);
+    player.is_course_mode = true;
     assert!(player.is_course_mode);
 
-    player.set_course_mode(false);
+    player.is_course_mode = false;
     assert!(!player.is_course_mode);
 }
 

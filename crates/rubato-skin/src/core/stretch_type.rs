@@ -176,8 +176,8 @@ fn fit_width_trimmed(rectangle: &mut Rectangle, scale: f32, image: &mut TextureR
     if rectangle.width < width {
         let cx = image.region_x as f32 + image.region_width as f32 * 0.5;
         let w = rectangle.width / scale;
-        image.set_region_x((cx - w * 0.5) as i32);
-        image.set_region_width(w as i32);
+        image.region_x = (cx - w * 0.5) as i32;
+        image.region_width = w as i32;
     } else {
         fit_width(rectangle, width);
     }
@@ -188,8 +188,8 @@ fn fit_height_trimmed(rectangle: &mut Rectangle, scale: f32, image: &mut Texture
     if rectangle.height < height {
         let cy = image.region_y as f32 + image.region_height as f32 * 0.5;
         let h = rectangle.height / scale;
-        image.set_region_y((cy - h * 0.5) as i32);
-        image.set_region_height(h as i32);
+        image.region_y = (cy - h * 0.5) as i32;
+        image.region_height = h as i32;
     } else {
         fit_height(rectangle, height);
     }

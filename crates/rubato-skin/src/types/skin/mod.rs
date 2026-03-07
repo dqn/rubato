@@ -128,7 +128,7 @@ impl SkinObject {
     }
 
     pub fn set_draw_condition(&mut self, bp: Vec<Box<dyn BooleanProperty>>) {
-        self.data_mut().set_draw_condition(bp);
+        self.data_mut().dstdraw = bp;
     }
 
     pub fn option(&self) -> &[i32] {
@@ -136,7 +136,7 @@ impl SkinObject {
     }
 
     pub fn set_option(&mut self, op: Vec<i32>) {
-        self.data_mut().set_option(op);
+        self.data_mut().dstop = op;
     }
 
     pub fn load(&mut self) {

@@ -46,8 +46,8 @@ pub struct MainController {
     audio: Option<Box<dyn AudioDriver>>,
     ir_statuses: Vec<IRStatus>,
     ir_send_statuses: std::sync::Arc<std::sync::Mutex<Vec<IRSendStatusMain>>>,
-    input_processor: BMSPlayerInputProcessor,
-    play_data_accessor: PlayDataAccessor,
+    pub input_processor: BMSPlayerInputProcessor,
+    pub play_data_accessor: PlayDataAccessor,
     ranking_data_cache: Box<dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess>,
 }
 
@@ -113,16 +113,6 @@ impl MainController {
             play_data_accessor,
             ranking_data_cache,
         }
-    }
-
-    /// Set a pre-configured input processor (replaces the default).
-    pub fn set_input_processor(&mut self, processor: BMSPlayerInputProcessor) {
-        self.input_processor = processor;
-    }
-
-    /// Set a pre-configured play data accessor (replaces the default).
-    pub fn set_play_data_accessor(&mut self, accessor: PlayDataAccessor) {
-        self.play_data_accessor = accessor;
     }
 
     // ---- Trait-delegated methods ----
@@ -253,10 +243,10 @@ pub use rubato_types::groove_gauge::GrooveGauge;
 /// Crate-local methods provide access to non-trait types (BMSModel, BMSPlayerMode, RankingData).
 pub struct PlayerResource {
     inner: Box<dyn PlayerResourceAccess>,
-    bms_model: bms_model::bms_model::BMSModel,
-    course_bms_models: Option<Vec<bms_model::bms_model::BMSModel>>,
+    pub bms_model: bms_model::bms_model::BMSModel,
+    pub course_bms_models: Option<Vec<bms_model::bms_model::BMSModel>>,
     play_mode: BMSPlayerMode,
-    ranking_data: Option<RankingData>,
+    pub ranking_data: Option<RankingData>,
 }
 
 impl PlayerResource {
@@ -404,18 +394,6 @@ impl PlayerResource {
 
     pub fn ranking_data(&self) -> Option<&RankingData> {
         self.ranking_data.as_ref()
-    }
-
-    pub fn set_ranking_data(&mut self, data: Option<RankingData>) {
-        self.ranking_data = data;
-    }
-
-    pub fn set_bms_model(&mut self, model: bms_model::bms_model::BMSModel) {
-        self.bms_model = model;
-    }
-
-    pub fn set_course_bms_models(&mut self, models: Option<Vec<bms_model::bms_model::BMSModel>>) {
-        self.course_bms_models = models;
     }
 
     /// Take the inner PlayerResourceAccess, replacing it with a NullPlayerResource.

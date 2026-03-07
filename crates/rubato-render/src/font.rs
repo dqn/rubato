@@ -131,7 +131,7 @@ use std::sync::Arc;
 
 pub struct BitmapFont {
     font: Option<Arc<ab_glyph::FontVec>>,
-    scale: f32,
+    pub scale: f32,
     color: [f32; 4],
     atlas: Option<GlyphAtlas>,
 }
@@ -199,10 +199,6 @@ impl BitmapFont {
 
     pub fn scale(&self) -> f32 {
         self.scale
-    }
-
-    pub fn set_scale(&mut self, scale: f32) {
-        self.scale = scale;
     }
 
     pub fn set_color(&mut self, color: &Color) {

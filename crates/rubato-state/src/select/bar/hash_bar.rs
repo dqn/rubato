@@ -119,11 +119,11 @@ mod tests {
     #[test]
     fn hash_bar_get_children_returns_matched_songs() {
         let mut element = SongData::default();
-        element.set_title("Element Song".to_string());
+        element.title = "Element Song".to_string();
         element.sha256 = "hash_abc".to_string();
 
         let mut db_song = SongData::default();
-        db_song.set_title("DB Song".to_string());
+        db_song.title = "DB Song".to_string();
         db_song.sha256 = "hash_abc".to_string();
         db_song.set_path("test/path.bms".to_string());
 
@@ -139,7 +139,7 @@ mod tests {
     #[test]
     fn hash_bar_get_children_shows_missing_elements() {
         let mut element = SongData::default();
-        element.set_title("Missing Song".to_string());
+        element.title = "Missing Song".to_string();
         element.sha256 = "hash_missing".to_string();
 
         let db = MockSongDb::new(vec![]); // No songs in DB

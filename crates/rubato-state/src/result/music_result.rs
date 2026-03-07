@@ -597,9 +597,9 @@ impl MusicResult {
                                     lnmode,
                                     Box::new(new_ranking.clone()),
                                 );
-                                self.resource.set_ranking_data(Some(new_ranking));
+                                self.resource.ranking_data = Some(new_ranking);
                             } else {
-                                self.resource.set_ranking_data(songrank);
+                                self.resource.ranking_data = songrank;
                             }
                         }
                         self.main.change_state(MainStateType::Play);

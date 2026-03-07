@@ -110,40 +110,16 @@ impl SkinGauge {
         self.animation_type
     }
 
-    pub fn set_animation_type(&mut self, animation_type: i32) {
-        self.animation_type = animation_type;
-    }
-
     pub fn animation_range(&self) -> i32 {
         self.animation_range
-    }
-
-    pub fn set_animation_range(&mut self, animation_range: i32) {
-        self.animation_range = animation_range;
     }
 
     pub fn duration(&self) -> i64 {
         self.duration
     }
 
-    pub fn set_duration(&mut self, duration: i64) {
-        self.duration = duration;
-    }
-
     pub fn parts(&self) -> i32 {
         self.parts
-    }
-
-    pub fn set_parts(&mut self, parts: i32) {
-        self.parts = parts;
-    }
-
-    pub fn set_starttime(&mut self, starttime: i32) {
-        self.starttime = starttime;
-    }
-
-    pub fn set_endtime(&mut self, endtime: i32) {
-        self.endtime = endtime;
     }
 
     pub fn dispose(&mut self) {

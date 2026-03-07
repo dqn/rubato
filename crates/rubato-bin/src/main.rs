@@ -361,7 +361,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
                     &mut main_controller,
                 ),
             );
-            selector.set_player_config(main_controller.player_config().clone());
+            selector.config = main_controller.player_config().clone();
         }
         let selector = std::sync::Arc::new(std::sync::Mutex::new(selector));
         // Store the shared selector on MainController for StateFactory to retrieve

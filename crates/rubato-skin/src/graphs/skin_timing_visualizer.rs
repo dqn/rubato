@@ -30,7 +30,7 @@ pub struct SkinTimingVisualizer {
     draw_decay: bool,
 
     model_set: bool,
-    judge_area: Vec<Vec<i32>>,
+    pub judge_area: Vec<Vec<i32>>,
 
     index: usize,
     recent: Vec<i64>,
@@ -246,10 +246,6 @@ impl SkinTimingVisualizer {
     pub fn set_recent_judges(&mut self, index: usize, recent: Vec<i64>) {
         self.index = index;
         self.recent = recent;
-    }
-
-    pub fn set_judge_area(&mut self, judge_area: Vec<Vec<i32>>) {
-        self.judge_area = judge_area;
     }
 }
 

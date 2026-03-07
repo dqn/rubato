@@ -13,9 +13,9 @@ pub struct SkinGaugeGraphObject {
     /// Graph texture
     shapetex: Option<TextureRegion>,
     /// Delay time for gauge graph rendering (ms)
-    delay: i32,
+    pub delay: i32,
     /// Graph line width
-    line_width: i32,
+    pub line_width: i32,
 
     /// Background color below border
     graphcolor: [Color; 6],
@@ -424,16 +424,8 @@ impl SkinGaugeGraphObject {
         self.delay
     }
 
-    pub fn set_delay(&mut self, delay: i32) {
-        self.delay = delay;
-    }
-
     pub fn line_width(&self) -> i32 {
         self.line_width
-    }
-
-    pub fn set_line_width(&mut self, line_width: i32) {
-        self.line_width = line_width;
     }
 
     pub fn dispose(&mut self) {

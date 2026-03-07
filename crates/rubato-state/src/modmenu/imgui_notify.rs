@@ -156,30 +156,6 @@ impl Toast {
         toast
     }
 
-    pub fn set_title(&mut self, title: String) {
-        self.title = title;
-    }
-
-    pub fn set_content(&mut self, content: String) {
-        self.content = content;
-    }
-
-    pub fn set_type(&mut self, toast_type: ToastType) {
-        self.toast_type = toast_type;
-    }
-
-    pub fn set_pos(&mut self, pos: ToastPos) {
-        self.pos = pos;
-    }
-
-    pub fn set_on_button_press(&mut self, has_press: bool) {
-        self.on_button_press = has_press;
-    }
-
-    pub fn set_button_label(&mut self, button_label: String) {
-        self.button_label = button_label;
-    }
-
     pub fn title(&self) -> &str {
         &self.title
     }
@@ -620,7 +596,7 @@ mod tests {
     #[test]
     fn test_toast_default_title_uses_custom_title_when_set() {
         let mut toast = Toast::new(ToastType::Success);
-        toast.set_title("Custom Title".to_string());
+        toast.title = "Custom Title".to_string();
         assert_eq!(toast.default_title(), Some("Custom Title"));
     }
 

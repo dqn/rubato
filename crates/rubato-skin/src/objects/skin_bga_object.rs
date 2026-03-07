@@ -45,7 +45,7 @@ impl BgaRenderer for SkinObjectRendererAdapter<'_> {
     }
 
     fn set_blend(&mut self, blend: i32) {
-        self.sprite.set_blend(blend);
+        self.sprite.blend = blend;
     }
 
     fn set_type(&mut self, render_type: BgaRenderType) {
@@ -54,7 +54,7 @@ impl BgaRenderer for SkinObjectRendererAdapter<'_> {
             BgaRenderType::Ffmpeg => SkinObjectRenderer::TYPE_FFMPEG,
             BgaRenderType::Layer => SkinObjectRenderer::TYPE_LAYER,
         };
-        self.sprite.set_type(type_id);
+        self.sprite.obj_type = type_id;
     }
 
     fn draw(&mut self, image: &TextureRegion, x: f32, y: f32, w: f32, h: f32) {

@@ -484,10 +484,6 @@ impl StatusUpdate {
             media_ids: Vec::new(),
         }
     }
-
-    pub fn set_media_ids(&mut self, ids: Vec<i64>) {
-        self.media_ids = ids;
-    }
 }
 
 /// Stub for twitter4j.Status

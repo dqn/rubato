@@ -587,10 +587,6 @@ impl SkinObjectData {
         &self.dstop
     }
 
-    pub fn set_option(&mut self, dstop: Vec<i32>) {
-        self.dstop = dstop;
-    }
-
     pub fn set_draw_condition_from_ops(&mut self, dstop: &[i32]) {
         let mut seen = HashSet::new();
         let mut op = Vec::new();
@@ -609,10 +605,6 @@ impl SkinObjectData {
         self.dstdraw = draw;
     }
 
-    pub fn set_draw_condition(&mut self, dstdraw: Vec<Box<dyn BooleanProperty>>) {
-        self.dstdraw = dstdraw;
-    }
-
     pub fn set_stretch_by_id(&mut self, stretch: i32) {
         if stretch < 0 {
             return;
@@ -623,10 +615,6 @@ impl SkinObjectData {
                 return;
             }
         }
-    }
-
-    pub fn set_stretch(&mut self, stretch: StretchType) {
-        self.stretch = stretch;
     }
 
     pub fn stretch(&self) -> StretchType {
@@ -906,8 +894,8 @@ impl SkinObjectData {
         self.stretch
             .stretch_rect(&mut self.tmp_rect, &mut self.tmp_image, image);
         sprite.set_color(&self.color);
-        sprite.set_blend(self.dstblend);
-        sprite.set_type(
+        sprite.blend = self.dstblend;
+        sprite.obj_type =
             if self.dstfilter != 0 && self.image_type == SkinObjectRenderer::TYPE_NORMAL {
                 if self.tmp_rect.width == self.tmp_image.region_width as f32
                     && self.tmp_rect.height == self.tmp_image.region_height as f32
@@ -918,8 +906,7 @@ impl SkinObjectData {
                 }
             } else {
                 self.image_type
-            },
-        );
+            };
 
         if self.angle != 0 {
             sprite.draw_rotated(
@@ -976,8 +963,8 @@ impl SkinObjectData {
         self.stretch
             .stretch_rect(&mut self.tmp_rect, &mut self.tmp_image, image);
         sprite.set_color(color);
-        sprite.set_blend(self.dstblend);
-        sprite.set_type(
+        sprite.blend = self.dstblend;
+        sprite.obj_type =
             if self.dstfilter != 0 && self.image_type == SkinObjectRenderer::TYPE_NORMAL {
                 if self.tmp_rect.width == self.tmp_image.region_width as f32
                     && self.tmp_rect.height == self.tmp_image.region_height as f32
@@ -988,8 +975,7 @@ impl SkinObjectData {
                 }
             } else {
                 self.image_type
-            },
-        );
+            };
 
         if angle != 0 {
             sprite.draw_rotated(
@@ -1108,16 +1094,8 @@ impl SkinObjectData {
         self.clickevent_type
     }
 
-    pub fn set_clickevent_type(&mut self, clickevent_type: i32) {
-        self.clickevent_type = clickevent_type;
-    }
-
     pub fn is_relative(&self) -> bool {
         self.relative
-    }
-
-    pub fn set_relative(&mut self, relative: bool) {
-        self.relative = relative;
     }
 
     pub fn offset_id(&self) -> &[i32] {
@@ -1156,16 +1134,8 @@ impl SkinObjectData {
         self.image_type
     }
 
-    pub fn set_image_type(&mut self, image_type: i32) {
-        self.image_type = image_type;
-    }
-
     pub fn filter(&self) -> i32 {
         self.dstfilter
-    }
-
-    pub fn set_filter(&mut self, filter: i32) {
-        self.dstfilter = filter;
     }
 
     pub fn set_mouse_rect(&mut self, x2: f32, y2: f32, w2: f32, h2: f32) {
@@ -1230,7 +1200,7 @@ impl SkinObjectRenderer {
     pub fn new() -> Self {
         let mut sprite = SpriteBatch::new();
         // Java: sprite.setShader(shaders[current]); sprite.setColor(Color.WHITE);
-        sprite.set_shader_type(Self::TYPE_NORMAL);
+        sprite.shader_type = Self::TYPE_NORMAL;
         sprite.set_color(&Color::new(1.0, 1.0, 1.0, 1.0));
         Self {
             color: Color::new(1.0, 1.0, 1.0, 1.0),
@@ -1254,16 +1224,8 @@ impl SkinObjectRenderer {
         &self.color
     }
 
-    pub fn set_blend(&mut self, blend: i32) {
-        self.blend = blend;
-    }
-
     pub fn blend(&self) -> i32 {
         self.blend
-    }
-
-    pub fn set_type(&mut self, t: i32) {
-        self.obj_type = t;
     }
 
     pub fn toast_type(&self) -> i32 {
@@ -1283,7 +1245,7 @@ impl SkinObjectRenderer {
     fn pre_draw(&mut self) {
         // Java: if(shaders[current] != shaders[type]) { sprite.setShader(shaders[type]); current = type; }
         if self.current_shader != self.obj_type {
-            self.sprite.set_shader_type(self.obj_type);
+            self.sprite.shader_type = self.obj_type;
             self.current_shader = self.obj_type;
         }
 
@@ -1445,14 +1407,14 @@ mod tests {
     #[test]
     fn test_skin_object_renderer_set_blend() {
         let mut renderer = SkinObjectRenderer::new();
-        renderer.set_blend(2);
+        renderer.blend = 2;
         assert_eq!(renderer.blend(), 2);
     }
 
     #[test]
     fn test_skin_object_renderer_set_type() {
         let mut renderer = SkinObjectRenderer::new();
-        renderer.set_type(SkinObjectRenderer::TYPE_BILINEAR);
+        renderer.obj_type = SkinObjectRenderer::TYPE_BILINEAR;
         assert_eq!(renderer.toast_type(), SkinObjectRenderer::TYPE_BILINEAR);
     }
 
@@ -1469,7 +1431,7 @@ mod tests {
     #[test]
     fn test_skin_object_renderer_pre_draw_sets_blend_additive() {
         let mut renderer = SkinObjectRenderer::new();
-        renderer.set_blend(2); // Additive
+        renderer.blend = 2; // Additive
         let region = TextureRegion::new();
         renderer.draw(&region, 0.0, 0.0, 10.0, 10.0);
         // After post_draw, blend should be reset to Normal
@@ -1488,7 +1450,7 @@ mod tests {
         // Initially TYPE_NORMAL
         assert_eq!(renderer.current_shader, SkinObjectRenderer::TYPE_NORMAL);
         // Set type to FFMPEG
-        renderer.set_type(SkinObjectRenderer::TYPE_FFMPEG);
+        renderer.obj_type = SkinObjectRenderer::TYPE_FFMPEG;
         let region = TextureRegion::new();
         renderer.draw(&region, 0.0, 0.0, 10.0, 10.0);
         // After pre_draw, current_shader should match obj_type
@@ -1752,7 +1714,7 @@ mod tests {
     #[test]
     fn test_skin_object_renderer_draw_texture_applies_blend() {
         let mut renderer = SkinObjectRenderer::new();
-        renderer.set_blend(2); // Additive
+        renderer.blend = 2; // Additive
         let tex = Texture::default();
         renderer.draw_texture(&tex, 0.0, 0.0, 10.0, 10.0);
         // After post_draw, blend is reset to Normal
@@ -1764,7 +1726,7 @@ mod tests {
     #[test]
     fn test_skin_object_renderer_draw_texture_shader_switching() {
         let mut renderer = SkinObjectRenderer::new();
-        renderer.set_type(SkinObjectRenderer::TYPE_LINEAR);
+        renderer.obj_type = SkinObjectRenderer::TYPE_LINEAR;
         let tex = Texture::default();
         renderer.draw_texture(&tex, 0.0, 0.0, 10.0, 10.0);
         assert_eq!(renderer.current_shader, SkinObjectRenderer::TYPE_LINEAR);
@@ -1817,7 +1779,7 @@ mod tests {
     #[test]
     fn test_skin_object_renderer_draw_font_shader_switching() {
         let mut renderer = SkinObjectRenderer::new();
-        renderer.set_type(SkinObjectRenderer::TYPE_LINEAR);
+        renderer.obj_type = SkinObjectRenderer::TYPE_LINEAR;
         let mut font = BitmapFont::new();
         let white = Color::new(1.0, 1.0, 1.0, 1.0);
         renderer.draw_font(&mut font, "Test", 0.0, 0.0, &white);

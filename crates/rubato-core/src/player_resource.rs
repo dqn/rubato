@@ -31,7 +31,7 @@ pub struct PlayerResource {
     /// Original BMS mode
     orgmode: Option<()>,
     /// Player data
-    playerdata: PlayerData,
+    pub playerdata: PlayerData,
     /// Config reference
     config: Config,
     /// Player config reference
@@ -49,9 +49,9 @@ pub struct PlayerResource {
     /// Ranking data (type-erased; concrete type is rubato_ir::ranking_data::RankingData)
     ranking: Option<Box<dyn Any + Send + Sync>>,
     /// Whether to update score
-    update_score: bool,
+    pub update_score: bool,
     /// Whether to update course score
-    update_course_score: bool,
+    pub update_course_score: bool,
     /// Groove gauge (Phase 5+ stub)
     groove_gauge: Option<GrooveGauge>,
     /// Gauge transition log
@@ -81,7 +81,7 @@ pub struct PlayerResource {
     /// Max combo count (for course play carry-over)
     pub maxcombo: i32,
     /// Original gauge option
-    org_gauge_option: i32,
+    pub org_gauge_option: i32,
     /// Assist flag
     pub assist: i32,
     /// Table name for current song
@@ -91,11 +91,11 @@ pub struct PlayerResource {
     /// Full table name (cached)
     tablefull: Option<String>,
     /// Frequency on
-    freq_on: bool,
+    pub freq_on: bool,
     /// Frequency string
     freq_string: Option<String>,
     /// Force no IR send
-    force_no_ir_send: bool,
+    pub force_no_ir_send: bool,
     /// Type-erased BGA processor for reuse across plays.
     /// Concrete type: `Arc<Mutex<BGAProcessor>>` from beatoraja-play.
     /// Stored via Box<dyn Any + Send> to avoid circular dependency (core cannot import play).
@@ -425,16 +425,8 @@ impl PlayerResource {
         self.update_score
     }
 
-    pub fn set_update_score(&mut self, b: bool) {
-        self.update_score = b;
-    }
-
     pub fn is_update_course_score(&self) -> bool {
         self.update_course_score
-    }
-
-    pub fn set_update_course_score(&mut self, update: bool) {
-        self.update_course_score = update;
     }
 
     pub fn course_data(&self) -> Option<&CourseData> {
@@ -503,10 +495,6 @@ impl PlayerResource {
         self.org_gauge_option
     }
 
-    pub fn set_org_gauge_option(&mut self, org_gauge_option: i32) {
-        self.org_gauge_option = org_gauge_option;
-    }
-
     pub fn assist(&self) -> i32 {
         self.assist
     }
@@ -540,10 +528,6 @@ impl PlayerResource {
         &self.playerdata
     }
 
-    pub fn set_player_data(&mut self, playerdata: PlayerData) {
-        self.playerdata = playerdata;
-    }
-
     pub fn chart_option(&self) -> Option<&ReplayData> {
         self.chart_option.as_ref()
     }
@@ -564,10 +548,6 @@ impl PlayerResource {
         self.freq_on
     }
 
-    pub fn set_freq_on(&mut self, freq_on: bool) {
-        self.freq_on = freq_on;
-    }
-
     pub fn freq_string(&self) -> Option<&str> {
         self.freq_string.as_deref()
     }
@@ -578,10 +558,6 @@ impl PlayerResource {
 
     pub fn is_force_no_ir_send(&self) -> bool {
         self.force_no_ir_send
-    }
-
-    pub fn set_force_no_ir_send(&mut self, force: bool) {
-        self.force_no_ir_send = force;
     }
 
     pub fn reverse_lookup_data(&self) -> Vec<String> {
@@ -870,7 +846,7 @@ impl PlayerResourceAccess for PlayerResource {
     }
 
     fn set_player_data(&mut self, player_data: rubato_types::player_data::PlayerData) {
-        PlayerResource::set_player_data(self, player_data)
+        self.playerdata = player_data;
     }
 
     fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
@@ -880,7 +856,7 @@ impl PlayerResourceAccess for PlayerResource {
                 .map(|m| {
                     // Build SongData from model metadata without consuming the model
                     let mut sd = rubato_types::song_data::SongData::default();
-                    sd.set_title(m.get_title().to_string());
+                    sd.title = m.get_title().to_string();
                     sd.set_subtitle(m.sub_title().to_string());
                     sd.genre = m.genre().to_string();
                     sd.set_artist(m.artist().to_string());

@@ -354,7 +354,7 @@ mod tests {
     /// Create a SongBar with no score
     fn song_bar_no_score(title: &str) -> Bar {
         let mut sd = SongData::default();
-        sd.set_title(title.to_string());
+        sd.title = title.to_string();
         sd.set_path("/dummy".to_string());
         Bar::Song(Box::new(SongBar::new(sd)))
     }

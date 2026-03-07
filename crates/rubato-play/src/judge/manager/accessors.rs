@@ -220,16 +220,8 @@ impl JudgeManager {
         self.coursecombo
     }
 
-    pub fn set_course_combo(&mut self, combo: i32) {
-        self.coursecombo = combo;
-    }
-
     pub fn course_maxcombo(&self) -> i32 {
         self.coursemaxcombo
-    }
-
-    pub fn set_course_maxcombo(&mut self, combo: i32) {
-        self.coursemaxcombo = combo;
     }
 
     pub fn judge_time_region(&self, lane: usize) -> &[[i64; 2]] {

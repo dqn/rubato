@@ -85,7 +85,7 @@ pub struct KeyInputProccessor {
     scratch_tt_graphic_speed: Vec<f32>,
     lane_property: LaneProperty,
     is_judge_started: bool,
-    key_beam_stop: bool,
+    pub key_beam_stop: bool,
     judge: Option<JudgeThread>,
 }
 
@@ -432,10 +432,6 @@ impl KeyInputProccessor {
     /// Returns whether the judge has been started and is still active.
     pub fn is_judge_started(&self) -> bool {
         self.is_judge_started
-    }
-
-    pub fn set_key_beam_stop(&mut self, input_stop: bool) {
-        self.key_beam_stop = input_stop;
     }
 }
 
@@ -870,7 +866,7 @@ mod tests {
     fn test_input_key_beam_stop_prevents_beam() {
         let lp = make_lane_property();
         let mut proc = KeyInputProccessor::new(&lp);
-        proc.set_key_beam_stop(true);
+        proc.key_beam_stop = true;
         let mut timer = make_timer();
 
         let mut key_states = vec![false; 9];
@@ -1169,7 +1165,7 @@ mod tests {
     fn test_input_key_on_key_beam_stop_prevents_timer() {
         let lp = make_lane_property();
         let mut proc = KeyInputProccessor::new(&lp);
-        proc.set_key_beam_stop(true);
+        proc.key_beam_stop = true;
         let mut timer = make_timer();
 
         proc.input_key_on(0, &mut timer);

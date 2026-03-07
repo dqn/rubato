@@ -49,16 +49,8 @@ impl GradeBar {
         self.mscore.as_ref()
     }
 
-    pub fn set_mirror_score(&mut self, score: Option<ScoreData>) {
-        self.mscore = score;
-    }
-
     pub fn random_score(&self) -> Option<&ScoreData> {
         self.rscore.as_ref()
-    }
-
-    pub fn set_random_score(&mut self, score: Option<ScoreData>) {
-        self.rscore = score;
     }
 
     pub fn trophy(&self) -> Option<&TrophyData> {
@@ -136,19 +128,19 @@ mod tests {
         assert_eq!(bar.lamp(true), 0);
 
         // Player score only
-        bar.selectable.bar_data.set_score(Some(score_with_clear(3)));
+        bar.selectable.bar_data.score = Some(score_with_clear(3));
         assert_eq!(bar.lamp(true), 3);
 
         // Mirror score is higher
-        bar.set_mirror_score(Some(score_with_clear(5)));
+        bar.mscore = Some(score_with_clear(5));
         assert_eq!(bar.lamp(true), 5);
 
         // Random score is highest
-        bar.set_random_score(Some(score_with_clear(7)));
+        bar.rscore = Some(score_with_clear(7));
         assert_eq!(bar.lamp(true), 7);
 
         // Player score is highest
-        bar.selectable.bar_data.set_score(Some(score_with_clear(9)));
+        bar.selectable.bar_data.score = Some(score_with_clear(9));
         assert_eq!(bar.lamp(true), 9);
     }
 
@@ -157,14 +149,12 @@ mod tests {
         let mut bar = GradeBar::new(CourseData::default());
 
         // Set player scores (should be ignored for rival)
-        bar.selectable.bar_data.set_score(Some(score_with_clear(9)));
-        bar.set_mirror_score(Some(score_with_clear(8)));
-        bar.set_random_score(Some(score_with_clear(7)));
+        bar.selectable.bar_data.score = Some(score_with_clear(9));
+        bar.mscore = Some(score_with_clear(8));
+        bar.rscore = Some(score_with_clear(7));
 
         // Set rival score
-        bar.selectable
-            .bar_data
-            .set_rival_score(Some(score_with_clear(4)));
+        bar.selectable.bar_data.rscore = Some(score_with_clear(4));
 
         assert_eq!(bar.lamp(false), 4);
     }
@@ -174,8 +164,8 @@ mod tests {
         let mut bar = GradeBar::new(CourseData::default());
 
         // Set player scores but no rival score
-        bar.selectable.bar_data.set_score(Some(score_with_clear(9)));
-        bar.set_mirror_score(Some(score_with_clear(8)));
+        bar.selectable.bar_data.score = Some(score_with_clear(9));
+        bar.mscore = Some(score_with_clear(8));
 
         assert_eq!(bar.lamp(false), 0);
     }

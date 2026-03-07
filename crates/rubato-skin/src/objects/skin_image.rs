@@ -155,7 +155,7 @@ impl SkinImage {
 
     pub fn new_with_movie(movie: SkinSourceMovie) -> Self {
         let mut data = SkinObjectData::new();
-        data.set_image_type(SkinObjectRenderer::TYPE_FFMPEG);
+        data.image_type = SkinObjectRenderer::TYPE_FFMPEG;
         Self {
             data,
             image: vec![Some(Box::new(movie))],
@@ -274,7 +274,7 @@ impl SkinImage {
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
         if let Some(ref current_image) = self.current_image.clone() {
             if self.is_movie {
-                self.data.set_image_type(3);
+                self.data.image_type = 3;
                 let region = self.data.region.clone();
                 self.data.draw_image_at(
                     sprite,
@@ -284,7 +284,7 @@ impl SkinImage {
                     region.width,
                     region.height,
                 );
-                self.data.set_image_type(0);
+                self.data.image_type = 0;
             } else {
                 let region = self.data.region.clone();
                 self.data.draw_image_at(
@@ -307,7 +307,7 @@ impl SkinImage {
     ) {
         if let Some(ref current_image) = self.current_image.clone() {
             if self.is_movie {
-                self.data.set_image_type(3);
+                self.data.image_type = 3;
                 let region = self.data.region.clone();
                 self.data.draw_image_at(
                     sprite,
@@ -317,7 +317,7 @@ impl SkinImage {
                     region.width,
                     region.height,
                 );
-                self.data.set_image_type(0);
+                self.data.image_type = 0;
             } else {
                 let region = self.data.region.clone();
                 self.data.draw_image_at(
@@ -482,7 +482,7 @@ mod tests {
             removed_sources: Vec::new(),
             is_movie: true,
         };
-        img.data.set_image_type(SkinObjectRenderer::TYPE_FFMPEG);
+        img.data.image_type = SkinObjectRenderer::TYPE_FFMPEG;
         setup_data(&mut img.data, 0.0, 0.0, 100.0, 100.0);
         // Manually set draw=true and region since we bypass prepare
         img.data.draw = true;
@@ -579,7 +579,7 @@ mod tests {
             removed_sources: Vec::new(),
             is_movie: true,
         };
-        img.data.set_image_type(SkinObjectRenderer::TYPE_FFMPEG);
+        img.data.image_type = SkinObjectRenderer::TYPE_FFMPEG;
         // Manually set draw state
         img.data.draw = true;
         img.data.region = Rectangle::new(100.0, 200.0, 320.0, 240.0);

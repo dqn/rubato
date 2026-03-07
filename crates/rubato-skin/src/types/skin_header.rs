@@ -13,7 +13,7 @@ use crate::types::skin_type::SkinType;
 #[derive(Clone)]
 pub struct SkinHeader {
     /// Skin type constant
-    skin_type_id: i32,
+    pub skin_type_id: i32,
     /// Skin file path
     path: Option<PathBuf>,
     /// Skin type enum
@@ -23,15 +23,15 @@ pub struct SkinHeader {
     /// Skin author
     author: Option<String>,
     /// Custom options
-    options: Vec<CustomOption>,
+    pub options: Vec<CustomOption>,
     /// Custom files
-    files: Vec<CustomFile>,
+    pub files: Vec<CustomFile>,
     /// Custom offsets
-    offsets: Vec<CustomOffset>,
+    pub offsets: Vec<CustomOffset>,
     /// Custom categories
-    categories: Vec<CustomCategory>,
+    pub categories: Vec<CustomCategory>,
     /// Skin resolution
-    resolution: Resolution,
+    pub resolution: Resolution,
     /// Source resolution
     source_resolution: Option<Resolution>,
     /// Destination resolution
@@ -97,16 +97,8 @@ impl SkinHeader {
         &self.options
     }
 
-    pub fn set_custom_options(&mut self, options: Vec<CustomOption>) {
-        self.options = options;
-    }
-
     pub fn custom_files(&self) -> &[CustomFile] {
         &self.files
-    }
-
-    pub fn set_custom_files(&mut self, files: Vec<CustomFile>) {
-        self.files = files;
     }
 
     pub fn path(&self) -> Option<&PathBuf> {
@@ -121,32 +113,16 @@ impl SkinHeader {
         &self.resolution
     }
 
-    pub fn set_resolution(&mut self, resolution: Resolution) {
-        self.resolution = resolution;
-    }
-
     pub fn toast_type(&self) -> i32 {
         self.skin_type_id
-    }
-
-    pub fn set_type(&mut self, type_id: i32) {
-        self.skin_type_id = type_id;
     }
 
     pub fn custom_offsets(&self) -> &[CustomOffset] {
         &self.offsets
     }
 
-    pub fn set_custom_offsets(&mut self, offsets: Vec<CustomOffset>) {
-        self.offsets = offsets;
-    }
-
     pub fn custom_categories(&self) -> &[CustomCategory] {
         &self.categories
-    }
-
-    pub fn set_custom_categories(&mut self, categories: Vec<CustomCategory>) {
-        self.categories = categories;
     }
 
     pub fn set_skin_config_property(&mut self, property: &SkinConfigProperty) {

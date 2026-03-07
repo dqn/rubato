@@ -173,8 +173,8 @@ impl crate::skin_text::SkinText for SkinTextImage {
 }
 
 pub struct SkinTextImageSource {
-    size: i32,
-    margin: i32,
+    pub size: i32,
+    pub margin: i32,
     elements: HashMap<i32, SkinTextImageSourceElement>,
     _usecim: bool,
     regions: HashMap<i32, SkinTextImageSourceRegion>,
@@ -195,16 +195,8 @@ impl SkinTextImageSource {
         self.margin
     }
 
-    pub fn set_margin(&mut self, margin: i32) {
-        self.margin = margin;
-    }
-
     pub fn size(&self) -> i32 {
         self.size
-    }
-
-    pub fn set_size(&mut self, size: i32) {
-        self.size = size;
     }
 
     pub fn get_image(&mut self, index: i32) -> Option<TextureRegion> {
@@ -292,8 +284,8 @@ mod tests {
         margin: i32,
     ) -> SkinTextImageSource {
         let mut source = SkinTextImageSource::new(false);
-        source.set_size(size);
-        source.set_margin(margin);
+        source.size = size;
+        source.margin = margin;
 
         let tex = Texture {
             width: 512,
@@ -391,7 +383,7 @@ mod tests {
     fn test_skin_text_image_draw_alignment_right() {
         let source = make_source_with_glyphs(&[('X', 10)], 20, 0);
         let mut sti = SkinTextImage::new(source);
-        sti.text_data.set_align(2); // right
+        sti.text_data.align = 2; // right
         setup_data(&mut sti.text_data.data, 100.0, 0.0, 200.0, 20.0);
 
         sti.set_text("X".to_string());
@@ -415,7 +407,7 @@ mod tests {
     fn test_skin_text_image_draw_alignment_center() {
         let source = make_source_with_glyphs(&[('Y', 10)], 20, 0);
         let mut sti = SkinTextImage::new(source);
-        sti.text_data.set_align(1); // center
+        sti.text_data.align = 1; // center
         setup_data(&mut sti.text_data.data, 100.0, 0.0, 200.0, 20.0);
 
         sti.set_text("Y".to_string());

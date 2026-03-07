@@ -10,7 +10,7 @@ pub struct SkinHidden {
     /// Disappear line y-coordinate (computed, with lift)
     disapear_line_added_lift: f32,
     /// Whether disappear line is linked to lift
-    is_disapear_line_link_lift: bool,
+    pub is_disapear_line_link_lift: bool,
     _previous_y: f32,
     previous_lift: f32,
     _timer: i32,
@@ -92,10 +92,6 @@ impl SkinHidden {
         self.is_disapear_line_link_lift
     }
 
-    pub fn set_disapear_line_link_lift(&mut self, value: bool) {
-        self.is_disapear_line_link_lift = value;
-    }
-
     pub fn image_index_value(&self) -> usize {
         self.image_index
     }
@@ -150,7 +146,7 @@ mod tests {
     fn test_prepare_lift_disabled() {
         let mut h = SkinHidden::new(2, 0, 100);
         h.set_disapear_line(300.0);
-        h.set_disapear_line_link_lift(false);
+        h.is_disapear_line_link_lift = false;
         h.prepare(50, Some(10.0));
         // Lift disabled → disapear_line_added_lift stays at initial value
         assert_eq!(h.disapear_line_added_lift, 300.0);

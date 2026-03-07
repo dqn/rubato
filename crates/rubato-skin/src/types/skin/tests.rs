@@ -172,9 +172,9 @@ fn test_timer_manager_values_flow_through_to_skin_adapter() {
 #[test]
 fn test_skin_drawable_getter_delegation() {
     let mut skin = make_test_skin();
-    skin.set_fadeout(500);
-    skin.set_input(100);
-    skin.set_scene(2000);
+    skin.fadeout = 500;
+    skin.input = 100;
+    skin.scene = 2000;
 
     let drawable: &dyn SkinDrawable = &skin;
     assert_eq!(drawable.fadeout(), 500);

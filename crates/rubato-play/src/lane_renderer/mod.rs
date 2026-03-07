@@ -141,7 +141,7 @@ pub struct LaneGroupRegion {
 /// Lane renderer
 pub struct LaneRenderer {
     basehispeed: f32,
-    hispeedmargin: f32,
+    pub hispeedmargin: f32,
     /// Filtered timeline indices (indexes into BMSModel.timelines)
     timeline_indices: Vec<usize>,
     pos: usize,
@@ -161,9 +161,9 @@ pub struct LaneRenderer {
     lanecover: f32,
     lift: f32,
     hidden: f32,
-    enable_lanecover: bool,
-    enable_lift: bool,
-    enable_hidden: bool,
+    pub enable_lanecover: bool,
+    pub enable_lift: bool,
+    pub enable_hidden: bool,
     enable_constant: bool,
     constant_fadein_time: f32,
     fixhispeed: i32,
@@ -275,16 +275,8 @@ impl LaneRenderer {
         self.hispeedmargin
     }
 
-    pub fn set_hispeedmargin(&mut self, hispeedmargin: f32) {
-        self.hispeedmargin = hispeedmargin;
-    }
-
     pub fn is_enable_lift(&self) -> bool {
         self.enable_lift
-    }
-
-    pub fn set_enable_lift(&mut self, b: bool) {
-        self.enable_lift = b;
     }
 
     pub fn lift_region(&self) -> f32 {
@@ -317,10 +309,6 @@ impl LaneRenderer {
         self.reset_hispeed(basebpm);
     }
 
-    pub fn set_enable_lanecover(&mut self, b: bool) {
-        self.enable_lanecover = b;
-    }
-
     pub fn is_enable_lanecover(&self) -> bool {
         self.enable_lanecover
     }
@@ -331,10 +319,6 @@ impl LaneRenderer {
 
     pub fn set_hidden_cover(&mut self, hidden_cover: f32) {
         self.hidden = hidden_cover.clamp(0.0, 1.0);
-    }
-
-    pub fn set_enable_hidden(&mut self, b: bool) {
-        self.enable_hidden = b;
     }
 
     pub fn is_enable_hidden(&self) -> bool {

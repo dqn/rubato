@@ -149,11 +149,6 @@ impl NumericSpinner {
         }
     }
 
-    /// Sets the editor text.
-    pub fn set_editor_text(&mut self, text: String) {
-        self.editor_text = text;
-    }
-
     /// Renders the spinner as an egui DragValue widget.
     /// Returns true if the value changed.
     pub fn show(&mut self, ui: &mut egui::Ui) -> bool {

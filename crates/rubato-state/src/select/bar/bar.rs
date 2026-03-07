@@ -41,16 +41,8 @@ impl BarData {
         self.score.as_ref()
     }
 
-    pub fn set_score(&mut self, score: Option<ScoreData>) {
-        self.score = score;
-    }
-
     pub fn rival_score(&self) -> Option<&ScoreData> {
         self.rscore.as_ref()
-    }
-
-    pub fn set_rival_score(&mut self, score: Option<ScoreData>) {
-        self.rscore = score;
     }
 }
 
@@ -83,7 +75,7 @@ impl Bar {
     }
 
     pub fn set_score(&mut self, score: Option<ScoreData>) {
-        self.bar_data_mut().set_score(score);
+        self.bar_data_mut().score = score;
     }
 
     pub fn rival_score(&self) -> Option<&ScoreData> {
@@ -91,7 +83,7 @@ impl Bar {
     }
 
     pub fn set_rival_score(&mut self, score: Option<ScoreData>) {
-        self.bar_data_mut().set_rival_score(score);
+        self.bar_data_mut().rscore = score;
     }
 
     pub fn lamp(&self, is_player: bool) -> i32 {

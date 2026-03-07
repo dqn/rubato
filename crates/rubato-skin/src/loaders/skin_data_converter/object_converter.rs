@@ -6,7 +6,7 @@ fn set_click_event_from_type(obj: &mut SkinObject, obj_type: &SkinObjectType) {
             ..
         } => {
             obj.data_mut().set_clickevent_by_id(*act_id);
-            obj.data_mut().set_clickevent_type(*click);
+            obj.data_mut().clickevent_type = *click;
         }
         SkinObjectType::ImageSet {
             act: Some(act_id),
@@ -14,7 +14,7 @@ fn set_click_event_from_type(obj: &mut SkinObject, obj_type: &SkinObjectType) {
             ..
         } => {
             obj.data_mut().set_clickevent_by_id(*act_id);
-            obj.data_mut().set_clickevent_type(*click);
+            obj.data_mut().clickevent_type = *click;
         }
         _ => {}
     }
@@ -637,8 +637,8 @@ fn convert_skin_object(
                 *range,
                 *cycle as i64,
             );
-            gauge.set_starttime(*starttime);
-            gauge.set_endtime(*endtime);
+            gauge.starttime = *starttime;
+            gauge.endtime = *endtime;
             Some(SkinObject::Gauge(gauge))
         }
         SkinObjectType::Note => {
@@ -669,7 +669,7 @@ fn convert_skin_object(
                 let timer_val = timer.unwrap_or(0);
                 let mut hidden = SkinHidden::new_with_int_timer(srcimg, timer_val, *cycle);
                 hidden.set_disapear_line(*disapear_line as f32 * scale_y);
-                hidden.set_disapear_line_link_lift(*is_disapear_line_link_lift);
+                hidden.is_disapear_line_link_lift = *is_disapear_line_link_lift;
                 Some(SkinObject::Hidden(hidden))
             } else {
                 warn!("HiddenCover: texture source {:?} not found", src);
@@ -696,7 +696,7 @@ fn convert_skin_object(
                 let timer_val = timer.unwrap_or(0);
                 let mut hidden = SkinHidden::new_with_int_timer(srcimg, timer_val, *cycle);
                 hidden.set_disapear_line(*disapear_line as f32 * scale_y);
-                hidden.set_disapear_line_link_lift(*is_disapear_line_link_lift);
+                hidden.is_disapear_line_link_lift = *is_disapear_line_link_lift;
                 Some(SkinObject::Hidden(hidden))
             } else {
                 warn!("LiftCover: texture source {:?} not found", src);

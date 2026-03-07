@@ -107,7 +107,7 @@ mod tests {
     #[test]
     fn command_bar_get_children_returns_sql_results() {
         let mut song = SongData::default();
-        song.set_title("SQL Result Song".to_string());
+        song.title = "SQL Result Song".to_string();
         song.sha256 = "sql_hash".to_string();
 
         let db = MockSongDb::new(vec![song]);

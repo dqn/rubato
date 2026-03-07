@@ -97,7 +97,7 @@ impl UpdateBar {
             selector,
             max_length,
         };
-        update_bar.bar.directory.set_sortable(false);
+        update_bar.bar.directory.sortable = false;
         update_bar
     }
 

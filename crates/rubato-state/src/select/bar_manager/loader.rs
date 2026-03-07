@@ -277,7 +277,7 @@ impl BarContentsLoaderThread {
                             if let Some(pix) = pixmap
                                 && let Some(sb) = bar.as_song_bar_mut()
                             {
-                                sb.set_banner(Some(pix));
+                                sb.banner = Some(pix);
                             }
                         } else {
                             log::debug!("Banner loading skipped (no pool): {:?}", banner_path);
@@ -302,7 +302,7 @@ impl BarContentsLoaderThread {
                             if let Some(pix) = pixmap
                                 && let Some(sb) = bar.as_song_bar_mut()
                             {
-                                sb.set_stagefile(Some(pix));
+                                sb.stagefile = Some(pix);
                             }
                         } else {
                             log::debug!("Stagefile loading skipped (no pool): {:?}", stage_path);

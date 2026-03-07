@@ -23,7 +23,7 @@ pub struct SkinHidden {
     /// Disappear line y-coordinate with lift applied
     disapear_line_added_lift: f32,
     /// Whether disappear line links to lift offset
-    is_disapear_line_link_lift: bool,
+    pub is_disapear_line_link_lift: bool,
     /// Previous y position (for caching trimmed images)
     previous_y: f32,
     /// Previous lift value (for detecting lift changes)
@@ -71,10 +71,6 @@ impl SkinHidden {
 
     pub fn is_disapear_line_link_lift(&self) -> bool {
         self.is_disapear_line_link_lift
-    }
-
-    pub fn set_disapear_line_link_lift(&mut self, link: bool) {
-        self.is_disapear_line_link_lift = link;
     }
 
     fn get_image_index(&self, length: usize, time: i64, state: &dyn MainState) -> usize {
@@ -183,7 +179,7 @@ mod tests {
     fn test_set_disapear_line_link_lift() {
         let images = vec![TextureRegion::new()];
         let mut hidden = SkinHidden::new_with_int_timer(images, 0, 0);
-        hidden.set_disapear_line_link_lift(false);
+        hidden.is_disapear_line_link_lift = false;
         assert!(!hidden.is_disapear_line_link_lift());
     }
 

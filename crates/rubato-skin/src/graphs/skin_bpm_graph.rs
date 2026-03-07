@@ -150,7 +150,7 @@ impl SkinBPMGraph {
                 self.time as f32 / self.delay as f32
             };
             let tex_width = shapetex.texture.as_ref().map(|t| t.width).unwrap_or(0);
-            shapetex.set_region_width((tex_width as f32 * render) as i32);
+            shapetex.region_width = (tex_width as f32 * render) as i32;
             let region = self.data.region.clone();
             let shapetex_clone = shapetex.clone();
             self.data.draw_image_at(

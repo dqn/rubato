@@ -67,10 +67,6 @@ impl DirectoryBarData {
         self.sortable
     }
 
-    pub fn set_sortable(&mut self, val: bool) {
-        self.sortable = val;
-    }
-
     pub fn clear(&mut self) {
         self.lamps.fill(0);
         self.rlamps.fill(0);
@@ -176,7 +172,7 @@ mod tests {
 
     fn make_song_bar(title: &str, sha256: &str, mode: i32, folder: &str) -> Bar {
         let mut song = SongData::default();
-        song.set_title(title.to_string());
+        song.title = title.to_string();
         song.sha256 = sha256.to_string();
         song.mode = mode;
         song.folder = folder.to_string();

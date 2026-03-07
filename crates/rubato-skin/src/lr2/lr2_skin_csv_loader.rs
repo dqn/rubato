@@ -252,8 +252,8 @@ impl LR2SkinCSVLoaderState {
                     match loader.load_font(path) {
                         Ok(data) => {
                             let mut source = SkinTextImageSource::new(data.usecim);
-                            source.set_size(data.size);
-                            source.set_margin(data.margin);
+                            source.size = data.size;
+                            source.margin = data.margin;
                             for (i, p) in data.paths.iter().enumerate() {
                                 if let Some(p) = p {
                                     source.set_path(i as i32, p.clone());
@@ -368,7 +368,7 @@ impl LR2SkinCSVLoaderState {
                             } else {
                                 2
                             };
-                            btn.data.set_clickevent_type(click_type);
+                            btn.data.clickevent_type = click_type;
                         }
                         self.button = Some(btn);
                     }
@@ -493,8 +493,8 @@ impl LR2SkinCSVLoaderState {
                     let mut g = SkinGauge::new(
                         gauge, values[10], values[9], parts, anim_type, anim_range, duration,
                     );
-                    g.set_starttime(values[17]);
-                    g.set_endtime(values[18]);
+                    g.starttime = values[17];
+                    g.endtime = values[18];
                     self.gauger = Some(g);
                 }
             }
@@ -713,13 +713,13 @@ impl LR2SkinCSVLoaderState {
     /// STARTINPUT, SCENETIME, FADEOUT values to the Skin object.
     pub fn apply_to_skin(&self, skin: &mut crate::skin::Skin) {
         if let Some(input) = self.skin_input {
-            skin.set_input(input);
+            skin.input = input;
         }
         if let Some(scene) = self.skin_scene {
-            skin.set_scene(scene);
+            skin.scene = scene;
         }
         if let Some(fadeout) = self.skin_fadeout {
-            skin.set_fadeout(fadeout);
+            skin.fadeout = fadeout;
         }
     }
 
@@ -819,7 +819,7 @@ pub fn load_lr2_skin(
 
     // 2. Build SkinHeader from LR2SkinHeaderData
     let mut skin_header = SkinHeader::new();
-    skin_header.set_type(skin_header::TYPE_LR2SKIN);
+    skin_header.skin_type_id = skin_header::TYPE_LR2SKIN;
     if let Some(st) = header_data.skin_type {
         skin_header.set_skin_type(st);
     }
@@ -827,7 +827,7 @@ pub fn load_lr2_skin(
     skin_header.set_author(header_data.author.clone());
     skin_header.set_path(path.to_path_buf());
     if let Some(ref res) = header_data.resolution {
-        skin_header.set_resolution(res.clone());
+        skin_header.resolution = res.clone();
     }
     // Convert lr2_skin_header_loader custom types -> skin_header custom types
     let options: Vec<skin_header::CustomOption> = header_data
@@ -837,19 +837,19 @@ pub fn load_lr2_skin(
             skin_header::CustomOption::new(o.name.clone(), o.option.clone(), o.contents.clone())
         })
         .collect();
-    skin_header.set_custom_options(options);
+    skin_header.options = options;
     let files: Vec<skin_header::CustomFile> = header_data
         .custom_files
         .iter()
         .map(|f| skin_header::CustomFile::new(f.name.clone(), f.path.clone(), f.def.clone()))
         .collect();
-    skin_header.set_custom_files(files);
+    skin_header.files = files;
     let offsets: Vec<skin_header::CustomOffset> = header_data
         .custom_offsets
         .iter()
         .map(|o| skin_header::CustomOffset::new(o.name.clone(), o.id, o.x, o.y, o.w, o.h, o.r, o.a))
         .collect();
-    skin_header.set_custom_offsets(offsets);
+    skin_header.offsets = offsets;
 
     // 3. Create Skin
     let mut skin = crate::skin::Skin::new(skin_header);
@@ -982,9 +982,9 @@ mod tests {
     fn test_apply_to_skin_none_values_not_overwritten() {
         let state = make_state();
         let mut skin = crate::skin::Skin::new(crate::skin_header::SkinHeader::new());
-        skin.set_input(42);
-        skin.set_scene(99);
-        skin.set_fadeout(77);
+        skin.input = 42;
+        skin.scene = 99;
+        skin.fadeout = 77;
 
         state.apply_to_skin(&mut skin);
         // None values should not overwrite existing values

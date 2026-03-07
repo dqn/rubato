@@ -145,10 +145,10 @@ impl SkinTextFont {
         // factor relative to the configured font size.
         let region = self.text_data.data.region.clone();
         let original_scale = font.scale();
-        font.set_scale(region.height);
+        font.scale = region.height;
 
         // Java: sprite.setType(SkinObjectRenderer.TYPE_LINEAR)
-        sprite.set_type(SkinObjectRenderer::TYPE_LINEAR);
+        sprite.obj_type = SkinObjectRenderer::TYPE_LINEAR;
 
         // Measure text layout to get width for alignment
         let text = self.text_data.text().to_string();
@@ -159,7 +159,7 @@ impl SkinTextFont {
         let align = self.text_data.align();
         let x = compute_aligned_x(align, region.x, region.width, layout_width);
 
-        sprite.set_blend(self.text_data.data.blend());
+        sprite.blend = self.text_data.data.blend();
 
         // Shadow rendering: if shadow offset is non-zero, draw shadow first
         let shadow_offset = self.text_data.shadow_offset();
@@ -190,7 +190,7 @@ impl SkinTextFont {
 
         // Java: font.getData().setScale(1) — restore original scale
         if let Some(f) = self.font.as_mut() {
-            f.set_scale(original_scale);
+            f.scale = original_scale;
         }
     }
 
@@ -237,7 +237,7 @@ impl SkinTextFont {
                     // Java: font.getData().setScale(scaleX * r.getWidth() / actualWidth, scaleY)
                     if let Some(f) = self.font.as_mut() {
                         let current_scale = f.scale();
-                        f.set_scale(current_scale * region_width / actual_width);
+                        f.scale = current_scale * region_width / actual_width;
                         let shrunk = f.measure(text);
                         if let Some(ref mut layout) = self.layout {
                             layout.width = shrunk.width;

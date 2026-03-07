@@ -17,14 +17,14 @@ pub struct Skin {
     /// Removed skin objects
     removes: Vec<SkinObject>,
     /// Input start time (ms)
-    input: i32,
+    pub input: i32,
     /// Scene time (ms)
-    scene: i32,
+    pub scene: i32,
     /// Fadeout time (ms)
-    fadeout: i32,
+    pub fadeout: i32,
 
-    option: HashMap<i32, i32>,
-    offset: HashMap<i32, SkinConfigOffset>,
+    pub option: HashMap<i32, i32>,
+    pub offset: HashMap<i32, SkinConfigOffset>,
 
     custom_events: HashMap<i32, CustomEvent>,
     custom_timers: HashMap<i32, CustomTimer>,
@@ -492,40 +492,20 @@ impl Skin {
         self.fadeout
     }
 
-    pub fn set_fadeout(&mut self, fadeout: i32) {
-        self.fadeout = fadeout;
-    }
-
     pub fn input(&self) -> i32 {
         self.input
-    }
-
-    pub fn set_input(&mut self, input: i32) {
-        self.input = input;
     }
 
     pub fn scene(&self) -> i32 {
         self.scene
     }
 
-    pub fn set_scene(&mut self, scene: i32) {
-        self.scene = scene;
-    }
-
     pub fn option(&self) -> &HashMap<i32, i32> {
         &self.option
     }
 
-    pub fn set_option(&mut self, option: HashMap<i32, i32>) {
-        self.option = option;
-    }
-
     pub fn offset(&self) -> &HashMap<i32, SkinConfigOffset> {
         &self.offset
-    }
-
-    pub fn set_offset(&mut self, offset: HashMap<i32, SkinConfigOffset>) {
-        self.offset = offset;
     }
 
     pub fn get_width(&self) -> f32 {

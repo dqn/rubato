@@ -31,7 +31,7 @@ impl BMSSearchAccessor {
                 let mut songs: Vec<SongData> = Vec::new();
                 for element in &elements {
                     let mut song = SongData::default();
-                    song.set_title(element.title.clone().unwrap_or_default());
+                    song.title = element.title.clone().unwrap_or_default();
                     song.set_artist(element.artist.clone().unwrap_or_default());
                     song.genre = element.genre.clone().unwrap_or_default();
                     if let Some(ref downloads) = element.downloads

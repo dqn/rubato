@@ -38,14 +38,6 @@ impl SkinTextImageSourceData {
         }
     }
 
-    pub fn set_size(&mut self, size: i32) {
-        self.size = size;
-    }
-
-    pub fn set_margin(&mut self, margin: i32) {
-        self.margin = margin;
-    }
-
     pub fn set_path(&mut self, index: i32, path: String) {
         let idx = index as usize;
         while self.paths.len() <= idx {
@@ -121,7 +113,7 @@ impl LR2FontLoader {
                 if str_parts.len() > 1
                     && let Ok(v) = str_parts[1].trim().parse::<i32>()
                 {
-                    self.textimage.set_size(v);
+                    self.textimage.size = v;
                 }
             }
             "M" => {
@@ -129,7 +121,7 @@ impl LR2FontLoader {
                 if str_parts.len() > 1
                     && let Ok(v) = str_parts[1].trim().parse::<i32>()
                 {
-                    self.textimage.set_margin(v);
+                    self.textimage.margin = v;
                 }
             }
             "T" => {

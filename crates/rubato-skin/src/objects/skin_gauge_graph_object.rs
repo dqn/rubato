@@ -17,9 +17,9 @@ const _TYPE_TABLE: [usize; 10] = [0, 1, 2, 3, 4, 5, 3, 4, 5, 3];
 pub struct SkinGaugeGraphObject {
     pub data: SkinObjectData,
     /// Delay before graph is fully drawn (ms)
-    delay: i32,
+    pub delay: i32,
     /// Line width for the graph
-    line_width: i32,
+    pub line_width: i32,
     /// Background colors per gauge type (below border)
     _graph_color: [Color; 6],
     /// Graph line colors per gauge type (below border)
@@ -226,16 +226,8 @@ impl SkinGaugeGraphObject {
         self.delay
     }
 
-    pub fn set_delay(&mut self, delay: i32) {
-        self.delay = delay;
-    }
-
     pub fn line_width(&self) -> i32 {
         self.line_width
-    }
-
-    pub fn set_line_width(&mut self, line_width: i32) {
-        self.line_width = line_width;
     }
 
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
@@ -276,8 +268,8 @@ mod tests {
     #[test]
     fn test_set_delay_and_line_width() {
         let mut obj = SkinGaugeGraphObject::new_default();
-        obj.set_delay(2000);
-        obj.set_line_width(3);
+        obj.delay = 2000;
+        obj.line_width = 3;
         assert_eq!(obj.delay(), 2000);
         assert_eq!(obj.line_width(), 3);
     }

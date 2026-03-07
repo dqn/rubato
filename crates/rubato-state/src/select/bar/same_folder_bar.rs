@@ -88,11 +88,11 @@ mod tests {
     #[test]
     fn same_folder_bar_get_children_returns_songs_in_folder() {
         let mut song1 = SongData::default();
-        song1.set_title("Song A".to_string());
+        song1.title = "Song A".to_string();
         song1.sha256 = "sha_a".to_string();
 
         let mut song2 = SongData::default();
-        song2.set_title("Song B".to_string());
+        song2.title = "Song B".to_string();
         song2.sha256 = "sha_b".to_string();
 
         let db = MockSongDb::new().with_songs("folder", "folder_crc", vec![song1, song2]);

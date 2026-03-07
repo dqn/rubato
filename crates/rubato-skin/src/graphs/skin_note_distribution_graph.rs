@@ -275,7 +275,7 @@ impl SkinNoteDistributionGraph {
             }
             if let Some(ref mut shapetex) = self.shapetex.clone() {
                 let tex_width = shapetex.texture.as_ref().map(|t| t.width).unwrap_or(0);
-                shapetex.set_region_width((tex_width as f32 * self.render) as i32);
+                shapetex.region_width = (tex_width as f32 * self.render) as i32;
                 let region = self.data.region.clone();
                 self.data.draw_image_at(
                     sprite,
@@ -300,7 +300,7 @@ impl SkinNoteDistributionGraph {
             }
             if let Some(ref mut shapetex) = self.shapetex.clone() {
                 let tex_width = shapetex.texture.as_ref().map(|t| t.width).unwrap_or(0);
-                shapetex.set_region_width((tex_width as f32 * self.render) as i32);
+                shapetex.region_width = (tex_width as f32 * self.render) as i32;
                 let region = self.data.region.clone();
                 self.data.draw_image_at(
                     sprite,

@@ -51,14 +51,14 @@ fn recent_judges_index_starts_at_zero() {
 #[test]
 fn set_course_combo() {
     let mut jm = JudgeManager::new();
-    jm.set_course_combo(42);
+    jm.coursecombo = 42;
     assert_eq!(jm.course_combo(), 42);
 }
 
 #[test]
 fn set_course_maxcombo() {
     let mut jm = JudgeManager::new();
-    jm.set_course_maxcombo(100);
+    jm.coursemaxcombo = 100;
     assert_eq!(jm.course_maxcombo(), 100);
 }
 

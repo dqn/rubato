@@ -56,7 +56,7 @@ const MAX_VERTICES: usize = MAX_SPRITES * 6;
 #[derive(Debug)]
 struct DrawBatch {
     texture_key: Option<Arc<str>>,
-    shader_type: i32,
+    pub shader_type: i32,
     blend_mode: BlendMode,
     vertex_start: u32,
     vertex_count: u32,
@@ -79,7 +79,7 @@ pub struct SpriteBatch {
     projection: [f32; 16],
     drawing: bool,
     /// Current shader type (matches SkinObjectRenderer TYPE_* constants)
-    shader_type: i32,
+    pub shader_type: i32,
     /// Current blend mode derived from blend_src/blend_dst
     blend_mode: BlendMode,
     /// Persistent GPU vertex buffer, reused across frames.
@@ -124,12 +124,8 @@ impl SpriteBatch {
         // Shader switching is handled by shader_type in the render pipeline.
     }
 
-    /// Set the shader type for subsequent draw calls.
+    /// Get the shader type for subsequent draw calls.
     /// Matches Java SkinObjectRenderer shader switching.
-    pub fn set_shader_type(&mut self, shader_type: i32) {
-        self.shader_type = shader_type;
-    }
-
     pub fn shader_type(&self) -> i32 {
         self.shader_type
     }
@@ -577,7 +573,7 @@ mod tests {
     fn test_sprite_batch_shader_type() {
         let mut batch = SpriteBatch::new();
         assert_eq!(batch.shader_type(), 0);
-        batch.set_shader_type(3);
+        batch.shader_type = 3;
         assert_eq!(batch.shader_type(), 3);
     }
 

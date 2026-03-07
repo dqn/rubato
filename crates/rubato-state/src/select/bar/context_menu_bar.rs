@@ -41,7 +41,7 @@ impl ContextMenuBar {
             show_meta: false,
             title,
         };
-        bar.directory.set_sortable(false);
+        bar.directory.sortable = false;
         bar
     }
 
@@ -55,7 +55,7 @@ impl ContextMenuBar {
             show_meta: false,
             title,
         };
-        bar.directory.set_sortable(false);
+        bar.directory.sortable = false;
         bar
     }
 
@@ -69,7 +69,7 @@ impl ContextMenuBar {
             show_meta: false,
             title,
         };
-        bar.directory.set_sortable(false);
+        bar.directory.sortable = false;
         bar
     }
 
@@ -182,7 +182,7 @@ impl ContextMenuBar {
             }));
             let folder_songs = songdb.song_datas("folder", &song_folder);
             let lamps = Self::calculate_lamps(&folder_songs, |_| None, None);
-            related.set_lamps(lamps);
+            related.lamps = lamps;
             options.push(Bar::Function(Box::new(related)));
         }
 
@@ -648,7 +648,7 @@ impl ContextMenuBar {
             selector.play_sound(SoundType::FolderOpen);
         }));
         let lamps = Self::calculate_lamps(level.elements(), |_| None, None);
-        show_tables.set_lamps(lamps);
+        show_tables.lamps = lamps;
         options.push(Bar::Function(Box::new(show_tables)));
     }
 

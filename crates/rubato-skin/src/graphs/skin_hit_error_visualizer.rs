@@ -33,7 +33,7 @@ pub struct SkinHitErrorVisualizer {
     draw_decay: bool,
 
     _model_set: bool,
-    judge_area: Vec<Vec<i32>>,
+    pub judge_area: Vec<Vec<i32>>,
 
     _current_index: i32,
 
@@ -297,10 +297,6 @@ impl SkinHitErrorVisualizer {
     pub fn set_recent_judges(&mut self, index: usize, recent: Vec<i64>) {
         self.index = index;
         self.recent = recent;
-    }
-
-    pub fn set_judge_area(&mut self, judge_area: Vec<Vec<i32>>) {
-        self.judge_area = judge_area;
     }
 }
 

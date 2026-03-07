@@ -78,22 +78,6 @@ impl FunctionBar {
         self.level = Some(level);
     }
 
-    pub fn set_lamp(&mut self, lamp: i32) {
-        self.lamp = lamp;
-    }
-
-    pub fn set_lamps(&mut self, lamps: Vec<i32>) {
-        self.lamps = lamps;
-    }
-
-    pub fn set_display_bar_type(&mut self, display_bar_type: i32) {
-        self.display_bar_type = display_bar_type;
-    }
-
-    pub fn set_display_text_type(&mut self, display_text_type: i32) {
-        self.display_text_type = display_text_type;
-    }
-
     pub fn accept(&self, selector: &mut crate::select::music_selector::MusicSelector) {
         if let Some(ref f) = self.function {
             f(selector);

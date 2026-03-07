@@ -16,7 +16,7 @@ pub struct CustomOption {
     pub name: String,
     pub option: Vec<i32>,
     pub contents: Vec<String>,
-    selected_option: i32,
+    pub selected_option: i32,
 }
 
 impl CustomOption {
@@ -33,10 +33,6 @@ impl CustomOption {
     pub fn selected_option(&self) -> i32 {
         self.selected_option
     }
-
-    pub fn set_selected_option(&mut self, value: i32) {
-        self.selected_option = value;
-    }
 }
 
 /// Custom file definition
@@ -45,7 +41,7 @@ pub struct CustomFile {
     pub name: String,
     pub path: String,
     pub def: Option<String>,
-    selected_filename: Option<String>,
+    pub selected_filename: Option<String>,
 }
 
 impl CustomFile {
@@ -60,10 +56,6 @@ impl CustomFile {
 
     pub fn selected_filename(&self) -> Option<&str> {
         self.selected_filename.as_deref()
-    }
-
-    pub fn set_selected_filename(&mut self, filename: Option<String>) {
-        self.selected_filename = filename;
     }
 }
 

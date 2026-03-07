@@ -158,11 +158,6 @@ impl<T: Clone> EditableTableView<T> {
         self.selected_indices = indices.iter().map(|&i| i as usize).collect();
     }
 
-    /// Sets the selected indices.
-    pub fn set_selected_indices(&mut self, indices: Vec<usize>) {
-        self.selected_indices = indices;
-    }
-
     /// Renders the add/remove/move-up/move-down control buttons via egui.
     /// `add_item_fn` is called when the user clicks "Add" and should return the new item.
     /// Returns true if the items list was modified.

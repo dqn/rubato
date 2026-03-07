@@ -128,7 +128,7 @@ impl ScreenShotExporter for ScreenShotTwitterExporter {
             let mediastatus = twitter.upload_media("from beatoraja", &image_bytes)?;
             log::info!("Twitter Media Upload:{}", mediastatus);
             let mut update = StatusUpdate::new(text.clone());
-            update.set_media_ids(vec![mediastatus.media_id]);
+            update.media_ids = vec![mediastatus.media_id];
             let status = twitter.update_status(&update)?;
             log::info!("Twitter Post:{}", status);
             pixmap.dispose();

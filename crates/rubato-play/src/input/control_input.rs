@@ -76,8 +76,8 @@ pub struct ControlInputProcessor {
     lane_cover_start_timing: i64,
     exitpressedtime: i64,
     exit_press_duration: i64,
-    enable_control: bool,
-    enable_cursor: bool,
+    pub enable_control: bool,
+    pub enable_cursor: bool,
     is_change_lift: bool,
     cover_change_margin_low: f32,
     cover_change_margin_high: f32,
@@ -145,17 +145,9 @@ impl ControlInputProcessor {
         self.exit_press_duration = exit_press_duration;
     }
 
-    pub fn set_enable_control(&mut self, b: bool) {
-        self.enable_control = b;
-    }
-
     /// Returns whether control input (speed changes etc.) is enabled.
     pub fn is_enable_control(&self) -> bool {
         self.enable_control
-    }
-
-    pub fn set_enable_cursor(&mut self, b: bool) {
-        self.enable_cursor = b;
     }
 
     /// Main input processing method.
@@ -221,7 +213,7 @@ impl ControlInputProcessor {
                     let stime = ctx.now_millis;
                     if stime < self.startpressedtime + 500 {
                         let enabled = ctx.lanerender.is_enable_lanecover();
-                        ctx.lanerender.set_enable_lanecover(!enabled);
+                        ctx.lanerender.enable_lanecover = !enabled;
                         self.startpressedtime = 0;
                     } else {
                         self.startpressedtime = stime;
@@ -251,7 +243,7 @@ impl ControlInputProcessor {
                     let stime = ctx.now_millis;
                     if stime < self.selectpressedtime + 500 {
                         let enabled = ctx.lanerender.is_enable_hidden();
-                        ctx.lanerender.set_enable_hidden(!enabled);
+                        ctx.lanerender.enable_hidden = !enabled;
                         self.selectpressedtime = 0;
                     } else {
                         self.selectpressedtime = stime;
@@ -654,7 +646,7 @@ mod tests {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
         lr.set_lanecover(0.5);
-        lr.set_enable_lanecover(true);
+        lr.enable_lanecover = true;
 
         let mut analog = noop_analog();
         let mut ctx = make_context(&mut lr, &mut *analog);
@@ -670,7 +662,7 @@ mod tests {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
         lr.set_lanecover(0.5);
-        lr.set_enable_lanecover(true);
+        lr.enable_lanecover = true;
 
         let mut analog = noop_analog();
         let mut ctx = make_context(&mut lr, &mut *analog);
@@ -686,7 +678,7 @@ mod tests {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
         lr.set_lanecover(0.5);
-        lr.set_enable_lanecover(true);
+        lr.enable_lanecover = true;
 
         let mut analog = noop_analog();
 
@@ -709,10 +701,10 @@ mod tests {
     #[test]
     fn cursor_disabled_when_enable_cursor_false() {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
-        proc.set_enable_cursor(false);
+        proc.enable_cursor = false;
         let mut lr = make_lanerender();
         lr.set_lanecover(0.5);
-        lr.set_enable_lanecover(true);
+        lr.enable_lanecover = true;
 
         let mut analog = noop_analog();
         let mut ctx = make_context(&mut lr, &mut *analog);
@@ -732,7 +724,7 @@ mod tests {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
         lr.set_lanecover(0.5);
-        lr.set_enable_lanecover(true);
+        lr.enable_lanecover = true;
 
         let mut analog = noop_analog();
         let mut ctx = make_context(&mut lr, &mut *analog);
@@ -752,7 +744,7 @@ mod tests {
     fn start_double_press_toggles_lanecover() {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
-        lr.set_enable_lanecover(false);
+        lr.enable_lanecover = false;
 
         let mut analog = noop_analog();
 
@@ -785,7 +777,7 @@ mod tests {
     fn start_single_press_does_not_toggle_lanecover() {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
-        lr.set_enable_lanecover(false);
+        lr.enable_lanecover = false;
 
         let mut analog = noop_analog();
 
@@ -822,7 +814,7 @@ mod tests {
     fn select_double_press_toggles_hidden() {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
-        lr.set_enable_hidden(false);
+        lr.enable_hidden = false;
 
         let mut analog = noop_analog();
 
@@ -1082,7 +1074,7 @@ mod tests {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
         lr.set_lanecover(0.5);
-        lr.set_enable_lanecover(true);
+        lr.enable_lanecover = true;
 
         proc.set_cover_value(0.1, &mut lr);
         assert!((lr.lanecover() - 0.6).abs() < 0.001);
@@ -1093,8 +1085,8 @@ mod tests {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
         lr.set_lanecover(0.5);
-        lr.set_enable_lanecover(false);
-        lr.set_enable_hidden(false);
+        lr.enable_lanecover = false;
+        lr.enable_hidden = false;
         // lift is off by default
 
         proc.set_cover_value(0.1, &mut lr);
@@ -1105,8 +1097,8 @@ mod tests {
     fn set_cover_value_adjusts_hidden_when_hidden_on_lanecover_off() {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
-        lr.set_enable_lanecover(false);
-        lr.set_enable_hidden(true);
+        lr.enable_lanecover = false;
+        lr.enable_hidden = true;
         lr.set_hidden_cover(0.5);
 
         // value=0.1 => hidden = 0.5 - 0.1 = 0.4
@@ -1119,9 +1111,9 @@ mod tests {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         proc.is_change_lift = true;
         let mut lr = make_lanerender();
-        lr.set_enable_lanecover(false);
-        lr.set_enable_hidden(false);
-        lr.set_enable_lift(true);
+        lr.enable_lanecover = false;
+        lr.enable_hidden = false;
+        lr.enable_lift = true;
         lr.set_lift_region(0.5);
 
         // value=0.1 => lift = 0.5 - 0.1 = 0.4
@@ -1134,9 +1126,9 @@ mod tests {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         proc.is_change_lift = false;
         let mut lr = make_lanerender();
-        lr.set_enable_lanecover(false);
-        lr.set_enable_hidden(false);
-        lr.set_enable_lift(true);
+        lr.enable_lanecover = false;
+        lr.enable_hidden = false;
+        lr.enable_lift = true;
         lr.set_lift_region(0.5);
 
         proc.set_cover_value(0.1, &mut lr);
@@ -1252,7 +1244,7 @@ mod tests {
     fn window_hold_triggers_start_logic() {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
-        lr.set_enable_lanecover(false);
+        lr.enable_lanecover = false;
 
         let mut analog = noop_analog();
 
@@ -1296,11 +1288,11 @@ mod tests {
     #[test]
     fn enable_control_false_disables_cursor_and_start_select() {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
-        proc.set_enable_control(false);
+        proc.enable_control = false;
 
         let mut lr = make_lanerender();
         lr.set_lanecover(0.5);
-        lr.set_enable_lanecover(true);
+        lr.enable_lanecover = true;
 
         let mut analog = noop_analog();
         let mut ctx = make_context(&mut lr, &mut *analog);
@@ -1337,7 +1329,7 @@ mod tests {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
         lr.set_lanecover(0.5);
-        lr.set_enable_lanecover(true);
+        lr.enable_lanecover = true;
 
         // For BEAT_7K: keybind index 7 = 2 (scratch up), index 8 = -2 (scratch down)
         // We simulate the digital scratch key being pressed
@@ -1371,7 +1363,7 @@ mod tests {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
         lr.set_lanecover(0.5);
-        lr.set_enable_lanecover(true);
+        lr.enable_lanecover = true;
 
         let key_states = vec![false; 18];
         let mut is_analog = vec![false; 18];
@@ -1463,7 +1455,7 @@ mod tests {
         proc.cover_change_margin_high = 0.01;
         let mut lr = make_lanerender();
         lr.set_lanecover(0.5);
-        lr.set_enable_lanecover(true);
+        lr.enable_lanecover = true;
 
         let mut key_states = vec![false; 18];
         key_states[7] = true;
@@ -1522,7 +1514,7 @@ mod tests {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         let mut lr = make_lanerender();
         lr.set_lanecover(0.5);
-        lr.set_enable_lanecover(true);
+        lr.enable_lanecover = true;
 
         let is_analog = vec![false; 18];
         let mut analog_fn = |_key: usize, _ms: i32| -> i32 { 0 };
@@ -1568,9 +1560,9 @@ mod tests {
         let mut proc = ControlInputProcessor::new(Mode::BEAT_7K);
         proc.is_change_lift = true;
         let mut lr = make_lanerender();
-        lr.set_enable_lanecover(false);
-        lr.set_enable_hidden(true);
-        lr.set_enable_lift(true);
+        lr.enable_lanecover = false;
+        lr.enable_hidden = true;
+        lr.enable_lift = true;
         lr.set_hidden_cover(0.5);
         lr.set_lift_region(0.5);
 

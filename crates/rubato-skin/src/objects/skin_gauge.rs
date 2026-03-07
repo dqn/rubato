@@ -32,7 +32,7 @@ pub struct SkinGauge {
     /// Animation interval in milliseconds
     duration: i64,
     /// Number of gauge parts/segments
-    parts: i32,
+    pub parts: i32,
     /// Current animation frame
     animation: i32,
     /// Next animation update time
@@ -48,9 +48,9 @@ pub struct SkinGauge {
     /// Cached images from source
     images: Vec<TextureRegion>,
     /// Result screen: gauge fill animation start time (ms)
-    starttime: i32,
+    pub starttime: i32,
     /// Result screen: gauge fill animation end time (ms)
-    endtime: i32,
+    pub endtime: i32,
 }
 
 impl SkinGauge {
@@ -85,20 +85,8 @@ impl SkinGauge {
         }
     }
 
-    pub fn set_starttime(&mut self, starttime: i32) {
-        self.starttime = starttime;
-    }
-
-    pub fn set_endtime(&mut self, endtime: i32) {
-        self.endtime = endtime;
-    }
-
     pub fn parts(&self) -> i32 {
         self.parts
-    }
-
-    pub fn set_parts(&mut self, parts: i32) {
-        self.parts = parts;
     }
 
     pub fn animation_type(&self) -> i32 {
@@ -175,8 +163,8 @@ impl SkinGauge {
             self.gauge_type
         }) * 6;
 
-        sprite.set_blend(self.data.dstblend);
-        sprite.set_type(0); // TYPE_NORMAL
+        sprite.blend = self.data.dstblend;
+        sprite.obj_type = 0; // TYPE_NORMAL
 
         match self.animation_type {
             ANIMATION_RANDOM | ANIMATION_INCREASE | ANIMATION_DECREASE => {
@@ -246,7 +234,7 @@ mod tests {
     fn test_skin_gauge_set_parts() {
         let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
         let mut gauge = SkinGauge::new(images, 0, 0, 50, ANIMATION_RANDOM, 4, 33);
-        gauge.set_parts(100);
+        gauge.parts = 100;
         assert_eq!(gauge.parts(), 100);
     }
 
@@ -273,8 +261,8 @@ mod tests {
     fn test_skin_gauge_starttime_endtime() {
         let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
         let mut gauge = SkinGauge::new(images, 0, 0, 50, ANIMATION_RANDOM, 4, 33);
-        gauge.set_starttime(100);
-        gauge.set_endtime(2000);
+        gauge.starttime = 100;
+        gauge.endtime = 2000;
         assert_eq!(gauge.starttime, 100);
         assert_eq!(gauge.endtime, 2000);
     }

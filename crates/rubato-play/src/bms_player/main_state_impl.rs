@@ -189,7 +189,7 @@ impl MainState for BMSPlayer {
         if self.constraints.contains(&CourseDataConstraint::NoSpeed)
             && let Some(ref mut control) = self.input.control
         {
-            control.set_enable_control(false);
+            control.enable_control = false;
         }
 
         self.judge.init(&self.model, 0, None, &[]);
@@ -394,7 +394,7 @@ impl MainState for BMSPlayer {
                         lr.init(&self.model);
                     }
                     if let Some(ref mut ki) = self.input.keyinput {
-                        ki.set_key_beam_stop(false);
+                        ki.key_beam_stop = false;
                     }
                     self.main_state_data.timer.set_timer_off(TIMER_PLAY);
                     self.main_state_data.timer.set_timer_off(TIMER_RHYTHM);
@@ -423,8 +423,8 @@ impl MainState for BMSPlayer {
                         .set_timer_on(TIMER_PM_CHARA_2P_NEUTRAL);
                 }
                 if let Some(ref mut control) = self.input.control {
-                    control.set_enable_control(false);
-                    control.set_enable_cursor(false);
+                    control.enable_control = false;
+                    control.enable_cursor = false;
                 }
                 // Process practice input navigation (UP/DOWN/LEFT/RIGHT)
                 // Translated from: Java BMSPlayer.render() line 680
@@ -460,8 +460,8 @@ impl MainState for BMSPlayer {
                 {
                     // Apply practice configuration and start play
                     if let Some(ref mut control) = self.input.control {
-                        control.set_enable_control(true);
-                        control.set_enable_cursor(true);
+                        control.enable_control = true;
+                        control.enable_cursor = true;
                     }
 
                     let property = self.practice.practice_property().clone();
@@ -764,8 +764,8 @@ impl MainState for BMSPlayer {
             // Translated from: Java BMSPlayer.render() lines 818-869
             PlayState::Failed => {
                 if let Some(ref mut control) = self.input.control {
-                    control.set_enable_control(false);
-                    control.set_enable_cursor(false);
+                    control.enable_control = false;
+                    control.enable_cursor = false;
                 }
                 if let Some(ref mut ki) = self.input.keyinput {
                     ki.stop_judge();
@@ -840,8 +840,8 @@ impl MainState for BMSPlayer {
             // Translated from: Java BMSPlayer.render() lines 872-911
             PlayState::Finished => {
                 if let Some(ref mut control) = self.input.control {
-                    control.set_enable_control(false);
-                    control.set_enable_cursor(false);
+                    control.enable_control = false;
+                    control.enable_cursor = false;
                 }
                 if let Some(ref mut ki) = self.input.keyinput {
                     ki.stop_judge();

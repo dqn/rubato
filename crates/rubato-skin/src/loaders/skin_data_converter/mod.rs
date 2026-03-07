@@ -58,13 +58,13 @@ pub fn convert_header_data(
     header.set_name(data.name.clone());
     header.set_author(data.author.clone());
     header.set_path(data.path.clone());
-    header.set_type(data.header_type);
+    header.skin_type_id = data.header_type;
 
     // Set resolutions
-    header.set_resolution(Resolution {
+    header.resolution = Resolution {
         width: src.width,
         height: src.height,
-    });
+    };
     header.set_source_resolution(src.clone());
     header.set_destination_resolution(dst.clone());
 
@@ -92,7 +92,7 @@ pub fn convert_header_data(
             opt
         })
         .collect();
-    header.set_custom_options(options);
+    header.options = options;
 
     // Convert custom files
     let files: Vec<CustomFile> = data
@@ -104,7 +104,7 @@ pub fn convert_header_data(
             cf
         })
         .collect();
-    header.set_custom_files(files);
+    header.files = files;
 
     // Convert custom offsets
     let offsets: Vec<CustomOffset> = data
@@ -112,7 +112,7 @@ pub fn convert_header_data(
         .iter()
         .map(|o| CustomOffset::new(o.name.clone(), o.id, o.x, o.y, o.w, o.h, o.r, o.a))
         .collect();
-    header.set_custom_offsets(offsets);
+    header.offsets = offsets;
 
     // Convert custom categories
     let categories: Vec<CustomCategory> = data
@@ -120,7 +120,7 @@ pub fn convert_header_data(
         .iter()
         .map(convert_category_data)
         .collect();
-    header.set_custom_categories(categories);
+    header.categories = categories;
 
     header
 }
@@ -202,7 +202,7 @@ pub fn convert_skin_data(
             );
         }
     }
-    skin.set_option(op);
+    skin.option = op;
 
     // Wire offsets: for each custom offset, get the SkinConfigOffset
     let mut offset: HashMap<i32, SkinConfigOffset> = HashMap::new();
@@ -216,12 +216,12 @@ pub fn convert_skin_data(
             },
         );
     }
-    skin.set_offset(offset);
+    skin.offset = offset;
 
     // Set skin timing
-    skin.set_fadeout(data.fadeout);
-    skin.set_input(data.input);
-    skin.set_scene(data.scene);
+    skin.fadeout = data.fadeout;
+    skin.input = data.input;
+    skin.scene = data.scene;
 
     // Convert each SkinObjectData to a SkinObject
     for obj_data in &data.objects {

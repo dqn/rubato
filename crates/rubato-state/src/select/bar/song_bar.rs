@@ -43,16 +43,8 @@ impl SongBar {
         self.banner.as_ref()
     }
 
-    pub fn set_banner(&mut self, banner: Option<Pixmap>) {
-        self.banner = banner;
-    }
-
     pub fn stagefile(&self) -> Option<&Pixmap> {
         self.stagefile.as_ref()
-    }
-
-    pub fn set_stagefile(&mut self, stagefile: Option<Pixmap>) {
-        self.stagefile = stagefile;
     }
 
     pub fn title(&self) -> &str {

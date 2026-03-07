@@ -1145,10 +1145,10 @@ impl LR2SkinLoaderAccess for LR2PlaySkinLoaderState {
 
         // 7. Apply play-specific timing to skin
         if let Some(close) = self.play_close {
-            skin.set_scene(close);
+            skin.scene = close;
         }
         if let Some(margin) = self.play_finish_margin {
-            skin.set_fadeout(margin);
+            skin.fadeout = margin;
         }
 
         log::debug!("LR2PlaySkinLoader: assembled objects into skin");

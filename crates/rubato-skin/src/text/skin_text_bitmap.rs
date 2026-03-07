@@ -91,7 +91,7 @@ impl SkinTextBitmap {
 
         // Java: font.getData().setScale(scale)
         let original_scale = font.scale();
-        font.set_scale(original_size * scale);
+        font.scale = original_size * scale;
 
         let region = &self.text_data.data.region;
         let align = self.text_data.align();
@@ -105,14 +105,14 @@ impl SkinTextBitmap {
             region.x
         };
 
-        sprite.set_blend(self.text_data.data.blend());
+        sprite.blend = self.text_data.data.blend();
 
         let source_type = self.source.toast_type();
         if source_type == SkinTextBitmapSource::TYPE_DISTANCE_FIELD
             || source_type == SkinTextBitmapSource::TYPE_COLORED_DISTANCE_FIELD
         {
             // Distance field rendering path
-            sprite.set_type(SkinObjectRenderer::TYPE_DISTANCE_FIELD);
+            sprite.obj_type = SkinObjectRenderer::TYPE_DISTANCE_FIELD;
             let color = self.text_data.data.color;
             let text = self.text_data.text().to_string();
             let region_width = self.text_data.data.region.width;
@@ -131,7 +131,7 @@ impl SkinTextBitmap {
             );
         } else {
             // Standard rendering path
-            sprite.set_type(SkinObjectRenderer::TYPE_BILINEAR);
+            sprite.obj_type = SkinObjectRenderer::TYPE_BILINEAR;
 
             let shadow_offset = self.text_data.shadow_offset();
             let text = self.text_data.text().to_string();
@@ -172,7 +172,7 @@ impl SkinTextBitmap {
 
         // Java: font.getData().setScale(1)
         if let Some(f) = self.font.as_mut() {
-            f.set_scale(original_scale);
+            f.scale = original_scale;
         }
     }
 
@@ -216,7 +216,7 @@ impl SkinTextBitmap {
                     // Scale down font horizontally to fit
                     if let Some(f) = self.font.as_mut() {
                         let current_scale = f.scale();
-                        f.set_scale(current_scale * region_width / actual_width);
+                        f.scale = current_scale * region_width / actual_width;
                         let shrunk = f.measure(text);
                         self.layout.width = shrunk.width;
                         self.layout.height = shrunk.height;
@@ -437,10 +437,6 @@ impl SkinTextBitmapSource {
         self.source_type
     }
 
-    pub fn set_type(&mut self, source_type: i32) {
-        self.source_type = source_type;
-    }
-
     pub fn page_width(&self) -> f32 {
         self.page_width
     }
@@ -512,7 +508,7 @@ mod tests {
     fn test_alignment_left() {
         let source = make_source(32.0, SkinTextBitmapSource::TYPE_STANDARD);
         let mut bitmap = SkinTextBitmap::new(source, 16.0);
-        bitmap.text_data.set_align(0); // LEFT
+        bitmap.text_data.align = 0; // LEFT
         bitmap.text_data.data.region = Rectangle::new(100.0, 50.0, 200.0, 30.0);
         // align=0: x = region.x = 100.0
         let align = bitmap.text_data.align();
@@ -531,7 +527,7 @@ mod tests {
     fn test_alignment_center() {
         let source = make_source(32.0, SkinTextBitmapSource::TYPE_STANDARD);
         let mut bitmap = SkinTextBitmap::new(source, 16.0);
-        bitmap.text_data.set_align(1); // CENTER
+        bitmap.text_data.align = 1; // CENTER
         bitmap.text_data.data.region = Rectangle::new(100.0, 50.0, 200.0, 30.0);
         let align = bitmap.text_data.align();
         let region = &bitmap.text_data.data.region;
@@ -549,7 +545,7 @@ mod tests {
     fn test_alignment_right() {
         let source = make_source(32.0, SkinTextBitmapSource::TYPE_STANDARD);
         let mut bitmap = SkinTextBitmap::new(source, 16.0);
-        bitmap.text_data.set_align(2); // RIGHT
+        bitmap.text_data.align = 2; // RIGHT
         bitmap.text_data.data.region = Rectangle::new(100.0, 50.0, 200.0, 30.0);
         let align = bitmap.text_data.align();
         let region = &bitmap.text_data.data.region;
@@ -568,13 +564,13 @@ mod tests {
         let source = make_source(32.0, SkinTextBitmapSource::TYPE_STANDARD);
         let mut bitmap = SkinTextBitmap::new(source, 16.0);
 
-        bitmap.text_data.set_overflow(OVERFLOW_OVERFLOW);
+        bitmap.text_data.overflow = OVERFLOW_OVERFLOW;
         assert_eq!(bitmap.text_data.overflow(), OVERFLOW_OVERFLOW);
 
-        bitmap.text_data.set_overflow(OVERFLOW_SHRINK);
+        bitmap.text_data.overflow = OVERFLOW_SHRINK;
         assert_eq!(bitmap.text_data.overflow(), OVERFLOW_SHRINK);
 
-        bitmap.text_data.set_overflow(OVERFLOW_TRUNCATE);
+        bitmap.text_data.overflow = OVERFLOW_TRUNCATE;
         assert_eq!(bitmap.text_data.overflow(), OVERFLOW_TRUNCATE);
     }
 
@@ -649,7 +645,7 @@ mod tests {
         let source = make_source(32.0, SkinTextBitmapSource::TYPE_STANDARD);
         let mut bitmap = SkinTextBitmap::new(source, 16.0);
         assert!(!bitmap.text_data.is_wrapping());
-        bitmap.text_data.set_wrapping(true);
+        bitmap.text_data.wrapping = true;
         assert!(bitmap.text_data.is_wrapping());
     }
 

@@ -27,23 +27,11 @@ impl MusicSelectSkin {
         &self.clickable_bar
     }
 
-    pub fn set_clickable_bar(&mut self, clickable_bar: Vec<i32>) {
-        self.clickable_bar = clickable_bar;
-    }
-
     pub fn center_bar(&self) -> i32 {
         self.center_bar
     }
 
-    pub fn set_center_bar(&mut self, center_bar: i32) {
-        self.center_bar = center_bar;
-    }
-
     pub fn search_text_region(&self) -> Option<&Rectangle> {
         self.search.as_ref()
-    }
-
-    pub fn set_search_text_region(&mut self, r: Option<Rectangle>) {
-        self.search = r;
     }
 }

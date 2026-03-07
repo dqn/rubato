@@ -77,10 +77,6 @@ impl SkinTextData {
         self.align
     }
 
-    pub fn set_align(&mut self, align: i32) {
-        self.align = align;
-    }
-
     pub fn text(&self) -> &str {
         &self.text
     }
@@ -89,24 +85,12 @@ impl SkinTextData {
         self.overflow
     }
 
-    pub fn set_overflow(&mut self, value: i32) {
-        self.overflow = value;
-    }
-
     pub fn is_editable(&self) -> bool {
         self.editable
     }
 
-    pub fn set_editable(&mut self, editable: bool) {
-        self.editable = editable;
-    }
-
     pub fn is_wrapping(&self) -> bool {
         self.wrapping
-    }
-
-    pub fn set_wrapping(&mut self, value: bool) {
-        self.wrapping = value;
     }
 
     pub fn outline_color(&self) -> Option<&Color> {
@@ -119,10 +103,6 @@ impl SkinTextData {
 
     pub fn outline_width(&self) -> f32 {
         self.outline_width
-    }
-
-    pub fn set_outline_width(&mut self, value: f32) {
-        self.outline_width = value;
     }
 
     pub fn shadow_color(&self) -> Option<&Color> {
@@ -143,10 +123,6 @@ impl SkinTextData {
 
     pub fn shadow_smoothness(&self) -> f32 {
         self.shadow_smoothness
-    }
-
-    pub fn set_shadow_smoothness(&mut self, value: f32) {
-        self.shadow_smoothness = value;
     }
 
     pub fn set_constant_text(&mut self, constant_text: String) {

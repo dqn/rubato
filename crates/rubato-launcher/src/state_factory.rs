@@ -580,7 +580,7 @@ impl StateFactory for LauncherStateFactory {
                 let command_queue = controller.controller_command_queue();
                 let mc_access = QueuedControllerAccess::from_controller(controller, command_queue);
                 selector.set_main_controller(Box::new(mc_access));
-                selector.set_player_config(controller.player_config().clone());
+                selector.config = controller.player_config().clone();
                 Some(StateCreateResult {
                     state: Box::new(selector),
                     target_score: None,
@@ -727,9 +727,9 @@ impl StateFactory for LauncherStateFactory {
                         .and_then(|a| a.downcast_ref::<RankingData>())
                         .cloned();
                     let mut rr = ResultPlayerResource::new(Box::new(core_res), pm);
-                    rr.set_bms_model(bm);
-                    rr.set_course_bms_models(cm);
-                    rr.set_ranking_data(ranking);
+                    rr.bms_model = bm;
+                    rr.course_bms_models = cm;
+                    rr.ranking_data = ranking;
                     rr
                 } else {
                     ResultPlayerResource::default()
@@ -764,9 +764,9 @@ impl StateFactory for LauncherStateFactory {
                         .and_then(|a| a.downcast_ref::<RankingData>())
                         .cloned();
                     let mut rr = ResultPlayerResource::new(Box::new(core_res), pm);
-                    rr.set_bms_model(bm);
-                    rr.set_course_bms_models(cm);
-                    rr.set_ranking_data(ranking);
+                    rr.bms_model = bm;
+                    rr.course_bms_models = cm;
+                    rr.ranking_data = ranking;
                     rr
                 } else {
                     ResultPlayerResource::default()
