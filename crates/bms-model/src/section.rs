@@ -1136,13 +1136,11 @@ fn set_long_note_pair_sections(
 
 fn split_data(line: &str, base: i32, log: &mut Vec<DecodeLog>, title: &str) -> Vec<i32> {
     let findex = line.find(':').map(|i| i + 1).unwrap_or(0);
-    let lindex = line.len();
-    let split = (lindex - findex) / 2;
     let bytes = line.as_bytes();
-    let mut result = Vec::with_capacity(split);
-    for i in 0..split {
-        let c1 = bytes[findex + i * 2] as char;
-        let c2 = bytes[findex + i * 2 + 1] as char;
+    let mut result = Vec::with_capacity((bytes.len() - findex) / 2);
+    for pair in bytes[findex..].chunks_exact(2) {
+        let c1 = pair[0] as char;
+        let c2 = pair[1] as char;
         let val = if base == 62 {
             chart_decoder::parse_int62(c1, c2)
         } else {
@@ -1168,13 +1166,13 @@ fn process_data_collect(
     title: &str,
 ) -> Vec<(f64, i32)> {
     let findex = line.find(':').map(|i| i + 1).unwrap_or(0);
-    let lindex = line.len();
-    let split = (lindex - findex) / 2;
     let bytes = line.as_bytes();
+    let pairs = &bytes[findex..];
+    let split = pairs.len() / 2;
     let mut results = Vec::new();
-    for i in 0..split {
-        let c1 = bytes[findex + i * 2] as char;
-        let c2 = bytes[findex + i * 2 + 1] as char;
+    for (i, pair) in pairs.chunks_exact(2).enumerate() {
+        let c1 = pair[0] as char;
+        let c2 = pair[1] as char;
         let result = if base == 62 {
             chart_decoder::parse_int62(c1, c2)
         } else {
@@ -1194,15 +1192,10 @@ fn process_data_collect(
 
 fn has_nonzero_data(line: &str, base: i32) -> bool {
     let findex = line.find(':').map(|i| i + 1).unwrap_or(0);
-    let lindex = line.len();
-    let split = (lindex - findex) / 2;
     let bytes = line.as_bytes();
-    for i in 0..split {
-        if findex + i * 2 + 1 >= bytes.len() {
-            break;
-        }
-        let c1 = bytes[findex + i * 2] as char;
-        let c2 = bytes[findex + i * 2 + 1] as char;
+    for pair in bytes[findex..].chunks_exact(2) {
+        let c1 = pair[0] as char;
+        let c2 = pair[1] as char;
         let result = if base == 62 {
             chart_decoder::parse_int62(c1, c2)
         } else {

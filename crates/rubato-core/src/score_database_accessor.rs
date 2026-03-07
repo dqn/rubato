@@ -214,7 +214,6 @@ impl ScoreDatabaseAccessor {
         self.get_score_datas_inner(collector, songs, 0, &mut str_buf, false);
     }
 
-    #[allow(clippy::needless_range_loop)]
     fn get_score_datas_inner(
         &self,
         collector: &mut dyn ScoreDataCollector,
@@ -224,16 +223,11 @@ impl ScoreDatabaseAccessor {
         hasln: bool,
     ) {
         let result: Result<(), anyhow::Error> = (|| {
-            let song_length = songs.len();
-            let chunk_length = song_length.div_ceil(LOAD_CHUNK_SIZE);
             let mut scores: Vec<ScoreData> = Vec::new();
 
-            for i in 0..chunk_length {
-                let chunk_start = i * LOAD_CHUNK_SIZE;
-                let chunk_end = std::cmp::min(song_length, (i + 1) * LOAD_CHUNK_SIZE);
+            for chunk in songs.chunks(LOAD_CHUNK_SIZE) {
                 let mut chunk_hashes: Vec<String> = Vec::new();
-                for j in chunk_start..chunk_end {
-                    let song = &songs[j];
+                for song in chunk {
                     let has_uln = !song.sha256.is_empty();
                     if (hasln && has_uln) || (!hasln && !has_uln) {
                         chunk_hashes.push(song.sha256.clone());

@@ -220,10 +220,11 @@ impl PCMLoader {
 
         let sample_frame = self.channels * self.bits_per_sample / 8;
         while bytes > sample_frame {
-            let mut zero = true;
-            for i in 0..sample_frame {
-                zero &= self.pcm_data[(bytes - i - 1) as usize] == 0x00;
-            }
+            let frame_start = (bytes - sample_frame) as usize;
+            let frame_end = bytes as usize;
+            let zero = self.pcm_data[frame_start..frame_end]
+                .iter()
+                .all(|&b| b == 0x00);
             if zero {
                 bytes -= sample_frame;
             } else {

@@ -79,21 +79,15 @@ impl SongInformationAccessor {
     }
 
     pub fn information_for_songs(&self, songs: &mut [SongData]) {
-        let song_length = songs.len();
-        let chunk_length = song_length.div_ceil(LOAD_CHUNK_SIZE);
         let mut infos: Vec<SongInformation> = Vec::new();
 
-        for i in 0..chunk_length {
-            let chunk_start = i * LOAD_CHUNK_SIZE;
-            let chunk_end = song_length.min((i + 1) * LOAD_CHUNK_SIZE);
-
-            for song in songs.iter().take(chunk_end).skip(chunk_start) {
-                let sha256 = song.sha256.clone();
-                if sha256.is_empty() {
+        for chunk in songs.chunks(LOAD_CHUNK_SIZE) {
+            for song in chunk {
+                if song.sha256.is_empty() {
                     continue;
                 }
                 let query = "SELECT * FROM information WHERE sha256 = ?1";
-                match self.query_informations(query, &[sha256.as_str()]) {
+                match self.query_informations(query, &[song.sha256.as_str()]) {
                     Ok(sub_infos) => {
                         let valid = remove_invalid_elements_vec(sub_infos);
                         infos.extend(valid);

@@ -52,16 +52,17 @@ impl FloatPCM {
                     (short_val as f32) / i16::MAX as f32
                 })
                 .collect(),
-            24 => pcm
-                .chunks_exact(3)
-                .map(|chunk| {
-                    // Java: (((pcm.get(i*3) & 0xff) << 8) | ((pcm.get(i*3+1) & 0xff) << 16) | ((pcm.get(i*3+2) & 0xff) << 24)) / Integer.MAX_VALUE
-                    let val = ((chunk[0] as i32 & 0xff) << 8)
-                        | ((chunk[1] as i32 & 0xff) << 16)
-                        | ((chunk[2] as i32 & 0xff) << 24);
-                    (val as f32) / i32::MAX as f32
-                })
-                .collect(),
+            24 => {
+                // Java: (((pcm.get(i*3) & 0xff) << 8) | ((pcm.get(i*3+1) & 0xff) << 16) | ((pcm.get(i*3+2) & 0xff) << 24)) / Integer.MAX_VALUE
+                pcm.chunks_exact(3)
+                    .map(|chunk| {
+                        let val = ((chunk[0] as i32 & 0xff) << 8)
+                            | ((chunk[1] as i32 & 0xff) << 16)
+                            | ((chunk[2] as i32 & 0xff) << 24);
+                        (val as f32) / i32::MAX as f32
+                    })
+                    .collect()
+            }
             32 => pcm
                 .chunks_exact(4)
                 .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
@@ -196,10 +197,11 @@ impl FloatPCM {
         let mut length =
             ((duration * self.sample_rate as i64 / 1000000) * self.channels as i64) as i32;
         while length > self.channels {
-            let mut zero = true;
-            for i in 0..self.channels {
-                zero &= self.sample[(self.start + start + length - i - 1) as usize] == 0.0;
-            }
+            let frame_start = (self.start + start + length - self.channels) as usize;
+            let frame_end = (self.start + start + length) as usize;
+            let zero = self.sample[frame_start..frame_end]
+                .iter()
+                .all(|&s| s == 0.0);
             if zero {
                 length -= self.channels;
             } else {

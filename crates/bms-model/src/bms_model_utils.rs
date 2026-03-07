@@ -169,10 +169,10 @@ pub fn max_notes_per_time(model: &BMSModel, range: i32) -> f64 {
     let mut maxnotes: i32 = 0;
     let tl = &model.timelines;
     let lntype = model.lntype();
-    for i in 0..tl.len() {
+    for (i, tl_i) in tl.iter().enumerate() {
         let mut notes = 0;
         let mut j = i;
-        while j < tl.len() && tl[j].time() < tl[i].time() + range {
+        while j < tl.len() && tl[j].time() < tl_i.time() + range {
             notes += tl[j].total_notes_with_lntype(lntype);
             j += 1;
         }

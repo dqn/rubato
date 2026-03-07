@@ -134,11 +134,10 @@ impl BMSLoudnessAnalyzer {
 
         // Convert PCM bytes (little-endian i16) to i16 slice
         let pcm_data = &result.pcm_data;
-        let total = pcm_data.len() / 2;
-        let mut samples = vec![0i16; total];
-        for i in 0..total {
-            samples[i] = i16::from_le_bytes([pcm_data[i * 2], pcm_data[i * 2 + 1]]);
-        }
+        let samples: Vec<i16> = pcm_data
+            .chunks_exact(2)
+            .map(|chunk| i16::from_le_bytes([chunk[0], chunk[1]]))
+            .collect();
 
         state
             .add_frames_i16(&samples)

@@ -53,16 +53,18 @@ impl BytePCM {
                 // Java: pcm.get(i * 3 + 2) -- takes highest byte of each 24-bit sample
                 pcm.chunks_exact(3).map(|chunk| chunk[2]).collect()
             }
-            32 => pcm
-                .chunks_exact(4)
-                .map(|chunk| {
-                    let f = f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
-                    // Java: (byte)(pcm.getFloat() * Byte.MAX_VALUE)
-                    // float→int truncates toward zero, int→byte truncates to low 8 bits.
-                    // Rust `as i8` saturates (since 1.45), so go via i32 first.
-                    ((f * i8::MAX as f32) as i32 as i8) as u8
-                })
-                .collect(),
+            32 => {
+                pcm.chunks_exact(4)
+                    .map(|chunk| {
+                        let f = f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+                        // Java float->i8 truncation semantics: (byte)(pcm.getFloat() * Byte.MAX_VALUE)
+                        // float->int truncates toward zero, int->byte truncates to low 8 bits.
+                        // SAFETY: lossy narrowing matches Java behavior -- Rust `as i8` saturates
+                        // (since 1.45), so go via i32 first to get truncation.
+                        ((f * i8::MAX as f32) as i32 as i8) as u8
+                    })
+                    .collect()
+            }
             _ => {
                 bail!(
                     "{} bits per samples isn't supported",
@@ -135,8 +137,10 @@ impl BytePCM {
                     && (((position + 1) * self.channels as i64 + j as i64) as usize)
                         < self.sample.len()
                 {
-                    // Java's byte is signed; assigning byte→short does sign extension.
-                    // u8→i8→i16 matches Java's sign-extended promotion.
+                    // Java float->i8 truncation semantics: Java's byte is signed;
+                    // assigning byte->short does sign extension.
+                    // SAFETY: lossy narrowing matches Java behavior -- u8->i8->i16
+                    // replicates Java's sign-extended promotion.
                     let sample1 = self.sample[(position * self.channels as i64 + j as i64) as usize]
                         as i8 as i16;
                     let sample2 = self.sample
@@ -195,10 +199,9 @@ impl BytePCM {
         let mut length =
             ((duration * self.sample_rate as i64 / 1000000) * self.channels as i64) as i32;
         while length > self.channels {
-            let mut zero = true;
-            for i in 0..self.channels {
-                zero &= self.sample[(self.start + start + length - i - 1) as usize] == 0;
-            }
+            let frame_start = (self.start + start + length - self.channels) as usize;
+            let frame_end = (self.start + start + length) as usize;
+            let zero = self.sample[frame_start..frame_end].iter().all(|&b| b == 0);
             if zero {
                 length -= self.channels;
             } else {

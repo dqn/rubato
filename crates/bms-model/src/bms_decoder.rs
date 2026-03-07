@@ -690,9 +690,7 @@ fn matches_reserve_word(line: &str, s: &str) -> bool {
     }
     let line_bytes = line.as_bytes();
     let s_bytes = s.as_bytes();
-    for i in 0..len {
-        let c = line_bytes[i + 1];
-        let c2 = s_bytes[i];
+    for (&c, &c2) in line_bytes[1..].iter().zip(s_bytes.iter()) {
         if c != c2 && c != c2 + 32 {
             return false;
         }
