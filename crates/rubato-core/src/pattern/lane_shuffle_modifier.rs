@@ -464,8 +464,9 @@ impl PlayerFlipModifier {
         let mode_key = model.mode().map(|m| m.key()).unwrap_or(0) as usize;
         let mut result: Vec<i32> = (0..mode_key as i32).collect();
         if model.mode().map(|m| m.player()).unwrap_or(0) == 2 {
-            for i in 0..result.len() {
-                result[i] = ((i + result.len() / 2) % result.len()) as i32;
+            let len = result.len();
+            for (i, item) in result.iter_mut().enumerate() {
+                *item = ((i + len / 2) % len) as i32;
             }
         }
         result

@@ -41,56 +41,38 @@ impl FloatPCM {
     }
 
     pub fn load_pcm(loader: &crate::pcm::PCMLoader) -> Result<FloatPCM> {
-        let sample: Vec<f32>;
-        let bytes = loader.pcm_data.len();
         let pcm = &loader.pcm_data;
 
-        match loader.bits_per_sample {
-            8 => {
-                let mut s = vec![0f32; bytes];
-                for i in 0..s.len() {
-                    s[i] = (pcm[i] as f32 - 128.0) / 128.0;
-                }
-                sample = s;
-            }
-            16 => {
-                let mut s = vec![0f32; bytes / 2];
-                for i in 0..s.len() {
-                    let short_val = i16::from_le_bytes([pcm[i * 2], pcm[i * 2 + 1]]);
-                    s[i] = (short_val as f32) / i16::MAX as f32;
-                }
-                sample = s;
-            }
-            24 => {
-                let mut s = vec![0f32; bytes / 3];
-                for i in 0..s.len() {
+        let sample: Vec<f32> = match loader.bits_per_sample {
+            8 => pcm.iter().map(|&b| (b as f32 - 128.0) / 128.0).collect(),
+            16 => pcm
+                .chunks_exact(2)
+                .map(|chunk| {
+                    let short_val = i16::from_le_bytes([chunk[0], chunk[1]]);
+                    (short_val as f32) / i16::MAX as f32
+                })
+                .collect(),
+            24 => pcm
+                .chunks_exact(3)
+                .map(|chunk| {
                     // Java: (((pcm.get(i*3) & 0xff) << 8) | ((pcm.get(i*3+1) & 0xff) << 16) | ((pcm.get(i*3+2) & 0xff) << 24)) / Integer.MAX_VALUE
-                    let val = ((pcm[i * 3] as i32 & 0xff) << 8)
-                        | ((pcm[i * 3 + 1] as i32 & 0xff) << 16)
-                        | ((pcm[i * 3 + 2] as i32 & 0xff) << 24);
-                    s[i] = (val as f32) / i32::MAX as f32;
-                }
-                sample = s;
-            }
-            32 => {
-                let mut s = vec![0f32; bytes / 4];
-                for i in 0..s.len() {
-                    s[i] = f32::from_le_bytes([
-                        pcm[i * 4],
-                        pcm[i * 4 + 1],
-                        pcm[i * 4 + 2],
-                        pcm[i * 4 + 3],
-                    ]);
-                }
-                sample = s;
-            }
+                    let val = ((chunk[0] as i32 & 0xff) << 8)
+                        | ((chunk[1] as i32 & 0xff) << 16)
+                        | ((chunk[2] as i32 & 0xff) << 24);
+                    (val as f32) / i32::MAX as f32
+                })
+                .collect(),
+            32 => pcm
+                .chunks_exact(4)
+                .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+                .collect(),
             _ => {
                 bail!(
                     "{} bits per samples isn't supported",
                     loader.bits_per_sample
                 );
             }
-        }
+        };
 
         Ok(FloatPCM::new(
             loader.channels,

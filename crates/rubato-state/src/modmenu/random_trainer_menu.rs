@@ -115,8 +115,8 @@ impl RandomTrainerMenu {
                 // Key display
                 ui.horizontal(|ui| {
                     let lane_order = LANE_ORDER.lock().expect("LANE_ORDER lock poisoned");
-                    for i in 0..lane_order.len() {
-                        let lane_char = lane_order[i].chars().next().unwrap_or('1');
+                    for lane_item in lane_order.iter() {
+                        let lane_char = lane_item.chars().next().unwrap_or('1');
                         let is_random =
                             crate::modmenu::random_trainer::RandomTrainer::is_lane_to_random(
                                 lane_char,
@@ -124,7 +124,7 @@ impl RandomTrainerMenu {
                         let label = if is_random {
                             "?".to_string()
                         } else {
-                            lane_order[i].clone()
+                            lane_item.clone()
                         };
                         let color = if is_random {
                             egui::Color32::from_rgb(255, 100, 150) // pink

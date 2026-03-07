@@ -73,14 +73,12 @@ impl<'a> PomyuCharaLoader<'a> {
                 if data.len() > 1 {
                     motion = pm_parse_int(&data[1]);
                 }
-                for i in 0..dst.len() {
-                    if data.len() > i + 2 {
-                        // replaceAll("[^0-9a-zA-Z-]", "")
-                        dst[i] = data[i + 2]
-                            .chars()
-                            .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
-                            .collect();
-                    }
+                for (dest, src) in dst.iter_mut().zip(data.iter().skip(2)) {
+                    // replaceAll("[^0-9a-zA-Z-]", "")
+                    *dest = src
+                        .chars()
+                        .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
+                        .collect();
                 }
 
                 let mut timer = i32::MIN;

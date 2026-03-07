@@ -42,53 +42,35 @@ impl ShortPCM {
     }
 
     pub fn load_pcm(loader: &crate::pcm::PCMLoader) -> Result<ShortPCM> {
-        let sample: Vec<i16>;
-        let bytes = loader.pcm_data.len();
         let pcm = &loader.pcm_data;
 
-        match loader.bits_per_sample {
-            8 => {
-                let mut s = vec![0i16; bytes];
-                for i in 0..s.len() {
-                    s[i] = ((pcm[i] as i16) - 128) * 256;
-                }
-                sample = s;
-            }
-            16 => {
-                let mut s = vec![0i16; bytes / 2];
-                for i in 0..s.len() {
-                    s[i] = i16::from_le_bytes([pcm[i * 2], pcm[i * 2 + 1]]);
-                }
-                sample = s;
-            }
-            24 => {
-                let mut s = vec![0i16; bytes / 3];
-                for i in 0..s.len() {
+        let sample: Vec<i16> = match loader.bits_per_sample {
+            8 => pcm.iter().map(|&b| ((b as i16) - 128) * 256).collect(),
+            16 => pcm
+                .chunks_exact(2)
+                .map(|chunk| i16::from_le_bytes([chunk[0], chunk[1]]))
+                .collect(),
+            24 => pcm
+                .chunks_exact(3)
+                .map(|chunk| {
                     // Java: pcm.getShort(i * 3 + 1) -- reads 2 bytes at offset i*3+1
-                    s[i] = i16::from_le_bytes([pcm[i * 3 + 1], pcm[i * 3 + 2]]);
-                }
-                sample = s;
-            }
-            32 => {
-                let mut s = vec![0i16; bytes / 4];
-                for i in 0..s.len() {
-                    let f = f32::from_le_bytes([
-                        pcm[i * 4],
-                        pcm[i * 4 + 1],
-                        pcm[i * 4 + 2],
-                        pcm[i * 4 + 3],
-                    ]);
-                    s[i] = (f * i16::MAX as f32) as i16;
-                }
-                sample = s;
-            }
+                    i16::from_le_bytes([chunk[1], chunk[2]])
+                })
+                .collect(),
+            32 => pcm
+                .chunks_exact(4)
+                .map(|chunk| {
+                    let f = f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+                    (f * i16::MAX as f32) as i16
+                })
+                .collect(),
             _ => {
                 bail!(
                     "{} bits per samples isn't supported",
                     loader.bits_per_sample
                 );
             }
-        }
+        };
 
         Ok(ShortPCM::new(
             loader.channels,

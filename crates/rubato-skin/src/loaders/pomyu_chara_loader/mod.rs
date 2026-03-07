@@ -289,20 +289,20 @@ impl<'a> PomyuCharaLoader<'a> {
                                 && (parsed as usize) < xywh.len()
                                 && data.len() > xywh[0].len()
                             {
-                                for i in 0..xywh[0].len() {
-                                    xywh[parsed as usize][i] = pm_parse_int(&data[i + 1]);
+                                for (dest, src) in xywh[parsed as usize].iter_mut().zip(&data[1..]) {
+                                    *dest = pm_parse_int(src);
                                 }
                             }
                         } else if str_parts[0].eq_ignore_ascii_case("#CharFaceUpperSize") {
                             if data.len() > char_face_upper_xywh.len() {
-                                for i in 0..char_face_upper_xywh.len() {
-                                    char_face_upper_xywh[i] = pm_parse_int(&data[i + 1]);
+                                for (dest, src) in char_face_upper_xywh.iter_mut().zip(&data[1..]) {
+                                    *dest = pm_parse_int(src);
                                 }
                             }
                         } else if str_parts[0].eq_ignore_ascii_case("#CharFaceAllSize") {
                             if data.len() > char_face_all_xywh.len() {
-                                for i in 0..char_face_all_xywh.len() {
-                                    char_face_all_xywh[i] = pm_parse_int(&data[i + 1]);
+                                for (dest, src) in char_face_all_xywh.iter_mut().zip(&data[1..]) {
+                                    *dest = pm_parse_int(src);
                                 }
                             }
                         } else if str_parts[0].eq_ignore_ascii_case("#Loop") && data.len() > 2 {

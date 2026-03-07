@@ -91,8 +91,7 @@ impl RandomizerBase {
 
         let mut notes: Vec<Option<Note>> = vec![None; mode_key];
         let mut hnotes: Vec<Option<Note>> = vec![None; mode_key];
-        for i in 0..self.modify_lanes.len() {
-            let lane = self.modify_lanes[i];
+        for &lane in &self.modify_lanes {
             notes[lane as usize] = tl.note(lane).cloned();
             hnotes[lane as usize] = tl.hidden_note(lane).cloned();
         }
@@ -509,17 +508,17 @@ impl SpiralRandomizer {
 
         if changeable.len() == self.cycle {
             self.head = (self.head + self.increment) % self.cycle;
-            for i in 0..self.base.modify_lanes.len() {
+            for (i, &lane) in self.base.modify_lanes.iter().enumerate() {
                 rotate_map.insert(
-                    self.base.modify_lanes[i],
+                    lane,
                     self.base.modify_lanes[(i + self.head) % self.cycle],
                 );
             }
         } else {
-            for i in 0..self.base.modify_lanes.len() {
-                if changeable.contains(&self.base.modify_lanes[i]) {
+            for (i, &lane) in self.base.modify_lanes.iter().enumerate() {
+                if changeable.contains(&lane) {
                     rotate_map.insert(
-                        self.base.modify_lanes[i],
+                        lane,
                         self.base.modify_lanes[(i + self.head) % self.cycle],
                     );
                 }

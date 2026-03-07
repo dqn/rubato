@@ -712,8 +712,8 @@ impl BarManager {
             } else if let Some(ref prev_title) = prevbar_title {
                 if prevbar_is_song && prevbar_sha256.is_some() {
                     let sha = prevbar_sha256.as_deref().expect("as_deref");
-                    for i in 0..self.currentsongs.len() {
-                        if let Some(sb) = self.currentsongs[i].as_song_bar()
+                    for (i, bar) in self.currentsongs.iter().enumerate() {
+                        if let Some(sb) = bar.as_song_bar()
                             && sb.exists_song()
                             && sb.song_data().sha256 == sha
                         {

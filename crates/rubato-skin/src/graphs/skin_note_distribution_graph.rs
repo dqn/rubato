@@ -539,8 +539,8 @@ impl SkinNoteDistributionGraph {
                     }
                 }
             } else if !refresh {
-                for i in 0..self.dist_data.len() {
-                    if !self.dist_data[i].is_empty() && self.dist_data[i][0] > 0 {
+                for (i, data) in self.dist_data.iter().enumerate() {
+                    if !data.is_empty() && data[0] > 0 {
                         start = i.saturating_sub(2);
                         end = (i + 3).min(self.dist_data.len());
                         break;

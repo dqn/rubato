@@ -41,53 +41,35 @@ impl BytePCM {
     }
 
     pub fn load_pcm(loader: &crate::pcm::PCMLoader) -> Result<BytePCM> {
-        let sample: Vec<u8>;
-        let bytes = loader.pcm_data.len();
         let pcm = &loader.pcm_data;
 
-        match loader.bits_per_sample {
-            8 => {
-                sample = pcm.to_vec();
-            }
+        let sample: Vec<u8> = match loader.bits_per_sample {
+            8 => pcm.to_vec(),
             16 => {
-                let mut s = vec![0u8; bytes / 2];
-                for i in 0..s.len() {
-                    // Java: pcm.get(i * 2 + 1) -- takes high byte of each 16-bit sample
-                    s[i] = pcm[i * 2 + 1];
-                }
-                sample = s;
+                // Java: pcm.get(i * 2 + 1) -- takes high byte of each 16-bit sample
+                pcm.chunks_exact(2).map(|chunk| chunk[1]).collect()
             }
             24 => {
-                let mut s = vec![0u8; bytes / 3];
-                for i in 0..s.len() {
-                    // Java: pcm.get(i * 3 + 2) -- takes highest byte of each 24-bit sample
-                    s[i] = pcm[i * 3 + 2];
-                }
-                sample = s;
+                // Java: pcm.get(i * 3 + 2) -- takes highest byte of each 24-bit sample
+                pcm.chunks_exact(3).map(|chunk| chunk[2]).collect()
             }
-            32 => {
-                let mut s = vec![0u8; bytes / 4];
-                for i in 0..s.len() {
-                    let f = f32::from_le_bytes([
-                        pcm[i * 4],
-                        pcm[i * 4 + 1],
-                        pcm[i * 4 + 2],
-                        pcm[i * 4 + 3],
-                    ]);
+            32 => pcm
+                .chunks_exact(4)
+                .map(|chunk| {
+                    let f = f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
                     // Java: (byte)(pcm.getFloat() * Byte.MAX_VALUE)
                     // float→int truncates toward zero, int→byte truncates to low 8 bits.
                     // Rust `as i8` saturates (since 1.45), so go via i32 first.
-                    s[i] = ((f * i8::MAX as f32) as i32 as i8) as u8;
-                }
-                sample = s;
-            }
+                    ((f * i8::MAX as f32) as i32 as i8) as u8
+                })
+                .collect(),
             _ => {
                 bail!(
                     "{} bits per samples isn't supported",
                     loader.bits_per_sample
                 );
             }
-        }
+        };
 
         Ok(BytePCM::new(
             loader.channels,
