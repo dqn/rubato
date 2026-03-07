@@ -118,7 +118,7 @@ fn course_construction() {
     assert_eq!(course.name(), "Dan Course A");
 
     course.set_style("7KEYS");
-    assert_eq!(course.get_style(), "7KEYS");
+    assert_eq!(*course.get_style(), bms_table::course::CourseStyle::Keys7);
 
     course.constraint = vec!["GAUGE_LR2".to_string()];
     assert_eq!(course.constraint(), &["GAUGE_LR2".to_string()]);
@@ -142,7 +142,7 @@ fn trophy_construction() {
     trophy.missrate = 5.0;
 
     assert_eq!(trophy.name(), "Gold Trophy");
-    assert_eq!(trophy.style(), "gold");
+    assert_eq!(*trophy.style(), bms_table::course::TrophyStyle::Gold);
     assert!((trophy.scorerate() - 90.0).abs() < f64::EPSILON);
     assert!((trophy.missrate - 5.0).abs() < f64::EPSILON);
 }
