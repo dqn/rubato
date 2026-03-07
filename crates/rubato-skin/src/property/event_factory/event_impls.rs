@@ -1,11 +1,20 @@
+use super::Event;
+use crate::stubs::MainState;
+use rubato_core::bms_player_mode::BMSPlayerMode;
+use rubato_play::judge_algorithm::DEFAULT_ALGORITHM;
+use rubato_play::target_property::TargetProperty;
+use rubato_types::event_id::EventId;
+use rubato_types::main_state_type::MainStateType;
+use rubato_types::play_config;
+
 // ============================================================
 // Delegate Event: forwards to state.execute_event()
 // Used for events that require types not available in beatoraja-skin
 // (e.g., SongDatabase, BarManager, Desktop, IRConnection, etc.)
 // ============================================================
 
-struct DelegateEvent {
-    event_id: EventId,
+pub(super) struct DelegateEvent {
+    pub(super) event_id: EventId,
 }
 
 impl Event for DelegateEvent {
@@ -22,7 +31,7 @@ impl Event for DelegateEvent {
 // State change events (keyconfig, skinconfig)
 // ============================================================
 
-struct StateChangeEvent(MainStateType);
+pub(super) struct StateChangeEvent(pub(super) MainStateType);
 
 impl Event for StateChangeEvent {
     fn exec(&self, state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
@@ -44,7 +53,7 @@ impl Event for StateChangeEvent {
 // Select song events (play, autoplay, practice)
 // ============================================================
 
-struct SelectSongEvent(BMSPlayerMode);
+pub(super) struct SelectSongEvent(pub(super) BMSPlayerMode);
 
 impl Event for SelectSongEvent {
     fn exec(&self, state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
@@ -67,7 +76,7 @@ impl Event for SelectSongEvent {
 // Replay events
 // ============================================================
 
-struct ReplayEvent(i32);
+pub(super) struct ReplayEvent(pub(super) i32);
 
 impl Event for ReplayEvent {
     fn exec(&self, state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
@@ -110,7 +119,7 @@ static MODE_FILTER: [Option<bms_model::mode::Mode>; 8] = [
     Some(bms_model::mode::Mode::KEYBOARD_24K_DOUBLE),
 ];
 
-struct ModeEvent;
+pub(super) struct ModeEvent;
 
 impl Event for ModeEvent {
     fn exec(&self, state: &mut dyn MainState, arg1: i32, _arg2: i32) {
@@ -148,7 +157,7 @@ impl Event for ModeEvent {
 // Sort event: cycle through default sorters
 // ============================================================
 
-struct SortEvent;
+pub(super) struct SortEvent;
 
 impl Event for SortEvent {
     fn exec(&self, state: &mut dyn MainState, arg1: i32, _arg2: i32) {
@@ -184,7 +193,7 @@ impl Event for SortEvent {
 // Songbar sort event: cycle through ALL sorters by sortid
 // ============================================================
 
-struct SongbarSortEvent;
+pub(super) struct SongbarSortEvent;
 
 impl Event for SongbarSortEvent {
     fn exec(&self, state: &mut dyn MainState, arg1: i32, _arg2: i32) {
@@ -226,12 +235,12 @@ impl Event for SongbarSortEvent {
 // Cycles a PlayerConfig integer field through [0..count)
 // ============================================================
 
-struct PlayerConfigCycleEvent {
-    event_id: EventId,
-    get: fn(&rubato_types::player_config::PlayerConfig) -> i32,
-    set: fn(&mut rubato_types::player_config::PlayerConfig, i32),
-    count: i32,
-    music_selector_only: bool,
+pub(super) struct PlayerConfigCycleEvent {
+    pub(super) event_id: EventId,
+    pub(super) get: fn(&rubato_types::player_config::PlayerConfig) -> i32,
+    pub(super) set: fn(&mut rubato_types::player_config::PlayerConfig, i32),
+    pub(super) count: i32,
+    pub(super) music_selector_only: bool,
 }
 
 impl Event for PlayerConfigCycleEvent {
@@ -263,11 +272,11 @@ impl Event for PlayerConfigCycleEvent {
 // Only available for MusicSelector (needs getSelectedBarPlayConfig)
 // ============================================================
 
-struct PlayConfigCycleEvent {
-    event_id: EventId,
-    get: fn(&play_config::PlayConfig) -> i32,
-    set: fn(&mut play_config::PlayConfig, i32),
-    count: i32,
+pub(super) struct PlayConfigCycleEvent {
+    pub(super) event_id: EventId,
+    pub(super) get: fn(&play_config::PlayConfig) -> i32,
+    pub(super) set: fn(&mut play_config::PlayConfig, i32),
+    pub(super) count: i32,
 }
 
 impl Event for PlayConfigCycleEvent {
@@ -298,10 +307,10 @@ impl Event for PlayConfigCycleEvent {
 // Toggles a PlayConfig boolean field
 // ============================================================
 
-struct PlayConfigToggleEvent {
-    event_id: EventId,
-    get: fn(&play_config::PlayConfig) -> bool,
-    set: fn(&mut play_config::PlayConfig, bool),
+pub(super) struct PlayConfigToggleEvent {
+    pub(super) event_id: EventId,
+    pub(super) get: fn(&play_config::PlayConfig) -> bool,
+    pub(super) set: fn(&mut play_config::PlayConfig, bool),
 }
 
 impl Event for PlayConfigToggleEvent {
@@ -327,11 +336,11 @@ impl Event for PlayConfigToggleEvent {
 // Cycles a Config integer field through [0..count)
 // ============================================================
 
-struct ConfigCycleEvent {
-    event_id: EventId,
-    get: fn(&rubato_types::config::Config) -> i32,
-    set: fn(&mut rubato_types::config::Config, i32),
-    count: i32,
+pub(super) struct ConfigCycleEvent {
+    pub(super) event_id: EventId,
+    pub(super) get: fn(&rubato_types::config::Config) -> i32,
+    pub(super) set: fn(&mut rubato_types::config::Config, i32),
+    pub(super) count: i32,
 }
 
 impl Event for ConfigCycleEvent {
@@ -361,7 +370,7 @@ impl Event for ConfigCycleEvent {
 // Hispeed event
 // ============================================================
 
-struct HispeedEvent;
+pub(super) struct HispeedEvent;
 
 impl Event for HispeedEvent {
     fn exec(&self, state: &mut dyn MainState, arg1: i32, _arg2: i32) {
@@ -390,7 +399,7 @@ impl Event for HispeedEvent {
 // Duration event
 // ============================================================
 
-struct DurationEvent;
+pub(super) struct DurationEvent;
 
 impl Event for DurationEvent {
     fn exec(&self, state: &mut dyn MainState, arg1: i32, arg2: i32) {
@@ -419,7 +428,7 @@ impl Event for DurationEvent {
 // Hispeed auto-adjust toggle
 // ============================================================
 
-struct HispeedAutoAdjustEvent;
+pub(super) struct HispeedAutoAdjustEvent;
 
 impl Event for HispeedAutoAdjustEvent {
     fn exec(&self, state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
@@ -442,7 +451,7 @@ impl Event for HispeedAutoAdjustEvent {
 // Notes display timing event
 // ============================================================
 
-struct NotesDisplayTimingEvent;
+pub(super) struct NotesDisplayTimingEvent;
 
 impl Event for NotesDisplayTimingEvent {
     fn exec(&self, state: &mut dyn MainState, arg1: i32, _arg2: i32) {
@@ -479,7 +488,7 @@ impl Event for NotesDisplayTimingEvent {
 // Notes display timing auto-adjust toggle
 // ============================================================
 
-struct NotesDisplayTimingAutoAdjustEvent;
+pub(super) struct NotesDisplayTimingAutoAdjustEvent;
 
 impl Event for NotesDisplayTimingAutoAdjustEvent {
     fn exec(&self, state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
@@ -502,7 +511,7 @@ impl Event for NotesDisplayTimingAutoAdjustEvent {
 // Target event: cycle through target IDs
 // ============================================================
 
-struct TargetEvent;
+pub(super) struct TargetEvent;
 
 impl Event for TargetEvent {
     fn exec(&self, state: &mut dyn MainState, arg1: i32, _arg2: i32) {
@@ -549,7 +558,7 @@ impl Event for TargetEvent {
 // Key assign event (no-op, matches Java behavior)
 // ============================================================
 
-struct KeyAssignEvent(i32);
+pub(super) struct KeyAssignEvent(pub(super) i32);
 
 impl Event for KeyAssignEvent {
     fn exec(&self, _state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
@@ -571,7 +580,7 @@ impl Event for KeyAssignEvent {
 // LN mode event (disabled in this fork)
 // ============================================================
 
-struct LnModeEvent;
+pub(super) struct LnModeEvent;
 
 impl Event for LnModeEvent {
     fn exec(&self, _state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
@@ -588,9 +597,9 @@ impl Event for LnModeEvent {
 // Auto save replay event
 // ============================================================
 
-struct AutoSaveReplayEvent {
-    index: usize,
-    event_id: EventId,
+pub(super) struct AutoSaveReplayEvent {
+    pub(super) index: usize,
+    pub(super) event_id: EventId,
 }
 
 impl Event for AutoSaveReplayEvent {
@@ -625,7 +634,7 @@ impl Event for AutoSaveReplayEvent {
 // Judge algorithm event
 // ============================================================
 
-struct JudgeAlgorithmEvent;
+pub(super) struct JudgeAlgorithmEvent;
 
 impl Event for JudgeAlgorithmEvent {
     fn exec(&self, state: &mut dyn MainState, arg1: i32, _arg2: i32) {
@@ -663,7 +672,7 @@ impl Event for JudgeAlgorithmEvent {
 // Guide SE toggle
 // ============================================================
 
-struct GuideSeEvent;
+pub(super) struct GuideSeEvent;
 
 impl Event for GuideSeEvent {
     fn exec(&self, state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
@@ -686,7 +695,7 @@ impl Event for GuideSeEvent {
 // Chart replication mode event
 // ============================================================
 
-struct ChartReplicationModeEvent;
+pub(super) struct ChartReplicationModeEvent;
 
 impl Event for ChartReplicationModeEvent {
     fn exec(&self, state: &mut dyn MainState, arg1: i32, _arg2: i32) {
