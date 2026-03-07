@@ -15,20 +15,20 @@ fn initialized_view() -> PlayConfigurationView {
 fn test_initialize_sets_combo_box_labels() {
     let view = initialized_view();
 
-    assert_eq!(view.score_options_labels.len(), 10);
-    assert_eq!(view.score_options_labels[0], "OFF");
-    assert_eq!(view.score_options_labels[1], "MIRROR");
+    assert_eq!(view.input.score_options_labels.len(), 10);
+    assert_eq!(view.input.score_options_labels[0], "OFF");
+    assert_eq!(view.input.score_options_labels[1], "MIRROR");
 
-    assert_eq!(view.double_options_labels.len(), 4);
-    assert_eq!(view.gauge_options_labels.len(), 6);
-    assert_eq!(view.fixhispeed_labels.len(), 5);
-    assert_eq!(view.lntype_labels.len(), 3);
-    assert_eq!(view.gaugeautoshift_labels.len(), 5);
-    assert_eq!(view.bottomshiftablegauge_labels.len(), 3);
+    assert_eq!(view.input.double_options_labels.len(), 4);
+    assert_eq!(view.gauge.gauge_options_labels.len(), 6);
+    assert_eq!(view.input.fixhispeed_labels.len(), 5);
+    assert_eq!(view.input.lntype_labels.len(), 3);
+    assert_eq!(view.gauge.gaugeautoshift_labels.len(), 5);
+    assert_eq!(view.gauge.bottomshiftablegauge_labels.len(), 3);
     assert_eq!(view.minemode_labels.len(), 5);
     assert_eq!(view.scrollmode_labels.len(), 3);
     assert_eq!(view.longnotemode_labels.len(), 6);
-    assert_eq!(view.judgealgorithm_labels.len(), 3);
+    assert_eq!(view.judge.judgealgorithm_labels.len(), 3);
     assert_eq!(view.autosave_labels.len(), 11);
 }
 
@@ -602,11 +602,11 @@ fn test_update_player_commit_player_roundtrip() {
 
     view.player = Some(player);
     view.playername = "TestPlayer".to_string();
-    view.scoreop = Some(3);
-    view.scoreop2 = Some(5);
-    view.doubleop = Some(1);
-    view.gaugeop = Some(2);
-    view.lntype = Some(1);
+    view.input.scoreop = Some(3);
+    view.input.scoreop2 = Some(5);
+    view.input.doubleop = Some(1);
+    view.gauge.gaugeop = Some(2);
+    view.input.lntype = Some(1);
     view.playconfig = Some(PlayMode::BEAT_7K);
 
     view.commit_player();

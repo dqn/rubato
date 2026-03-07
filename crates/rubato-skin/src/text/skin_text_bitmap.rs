@@ -93,7 +93,7 @@ impl SkinTextBitmap {
         let original_scale = font.scale();
         font.scale = original_size * scale;
 
-        let region = &self.text_data.data.region;
+        let region = &self.text_data.data.draw_state.region;
         let align = self.text_data.align();
         // Java: final float x = (getAlign() == 2 ? region.x - region.width
         //       : (getAlign() == 1 ? region.x - region.width / 2 : region.x));
@@ -113,11 +113,11 @@ impl SkinTextBitmap {
         {
             // Distance field rendering path
             sprite.obj_type = SkinObjectRenderer::TYPE_DISTANCE_FIELD;
-            let color = self.text_data.data.color;
+            let color = self.text_data.data.draw_state.color;
             let text = self.text_data.text().to_string();
-            let region_width = self.text_data.data.region.width;
-            let region_height = self.text_data.data.region.height;
-            let region_y = self.text_data.data.region.y;
+            let region_width = self.text_data.data.draw_state.region.width;
+            let region_height = self.text_data.data.draw_state.region.height;
+            let region_y = self.text_data.data.draw_state.region.y;
             let layout_width =
                 self.compute_layout_width(&text, &color, region_width, region_height);
             self.draw_text_glyphs(
@@ -135,10 +135,10 @@ impl SkinTextBitmap {
 
             let shadow_offset = self.text_data.shadow_offset();
             let text = self.text_data.text().to_string();
-            let color = self.text_data.data.color;
-            let region_width = self.text_data.data.region.width;
-            let region_height = self.text_data.data.region.height;
-            let region_y = self.text_data.data.region.y;
+            let color = self.text_data.data.draw_state.color;
+            let region_width = self.text_data.data.draw_state.region.width;
+            let region_height = self.text_data.data.draw_state.region.height;
+            let region_y = self.text_data.data.draw_state.region.y;
 
             // Shadow rendering: if shadow offset is non-zero, draw shadow first
             if shadow_offset.0 != 0.0 || shadow_offset.1 != 0.0 {
@@ -268,7 +268,7 @@ impl SkinTextBitmap {
         let truncate =
             self.text_data.overflow() == OVERFLOW_TRUNCATE && !self.text_data.is_wrapping();
 
-        let angle = self.text_data.data.angle;
+        let angle = self.text_data.data.draw_state.angle;
 
         for glyph in &glyphs {
             let gx = x + glyph.x;
@@ -509,10 +509,10 @@ mod tests {
         let source = make_source(32.0, SkinTextBitmapSource::TYPE_STANDARD);
         let mut bitmap = SkinTextBitmap::new(source, 16.0);
         bitmap.text_data.align = 0; // LEFT
-        bitmap.text_data.data.region = Rectangle::new(100.0, 50.0, 200.0, 30.0);
+        bitmap.text_data.data.draw_state.region = Rectangle::new(100.0, 50.0, 200.0, 30.0);
         // align=0: x = region.x = 100.0
         let align = bitmap.text_data.align();
-        let region = &bitmap.text_data.data.region;
+        let region = &bitmap.text_data.data.draw_state.region;
         let x = if align == 2 {
             region.x - region.width
         } else if align == 1 {
@@ -528,9 +528,9 @@ mod tests {
         let source = make_source(32.0, SkinTextBitmapSource::TYPE_STANDARD);
         let mut bitmap = SkinTextBitmap::new(source, 16.0);
         bitmap.text_data.align = 1; // CENTER
-        bitmap.text_data.data.region = Rectangle::new(100.0, 50.0, 200.0, 30.0);
+        bitmap.text_data.data.draw_state.region = Rectangle::new(100.0, 50.0, 200.0, 30.0);
         let align = bitmap.text_data.align();
-        let region = &bitmap.text_data.data.region;
+        let region = &bitmap.text_data.data.draw_state.region;
         let x = if align == 2 {
             region.x - region.width
         } else if align == 1 {
@@ -546,9 +546,9 @@ mod tests {
         let source = make_source(32.0, SkinTextBitmapSource::TYPE_STANDARD);
         let mut bitmap = SkinTextBitmap::new(source, 16.0);
         bitmap.text_data.align = 2; // RIGHT
-        bitmap.text_data.data.region = Rectangle::new(100.0, 50.0, 200.0, 30.0);
+        bitmap.text_data.data.draw_state.region = Rectangle::new(100.0, 50.0, 200.0, 30.0);
         let align = bitmap.text_data.align();
-        let region = &bitmap.text_data.data.region;
+        let region = &bitmap.text_data.data.draw_state.region;
         let x = if align == 2 {
             region.x - region.width
         } else if align == 1 {
@@ -669,7 +669,7 @@ mod tests {
             layout: GlyphLayout::new(),
             size: 16.0,
         };
-        bitmap.text_data.data.region = Rectangle::new(0.0, 0.0, 200.0, 30.0);
+        bitmap.text_data.data.draw_state.region = Rectangle::new(0.0, 0.0, 200.0, 30.0);
         // Text is empty "" which gets set to " " — but font has no actual glyphs loaded
         // so layout_glyphs returns empty, and no vertices are generated
         let mut renderer = SkinObjectRenderer::new();

@@ -92,7 +92,7 @@ impl SkinHidden {
 
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
         if self.original_images.is_empty() {
-            self.data.draw = false;
+            self.data.draw_state.draw = false;
             return;
         }
 
@@ -112,7 +112,7 @@ impl SkinHidden {
     }
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
-        let region = &self.data.region;
+        let region = &self.data.draw_state.region;
         let dl = self.disapear_line_added_lift;
 
         // If top of region is below disappear line, don't draw

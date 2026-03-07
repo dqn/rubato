@@ -6,7 +6,7 @@ fn set_click_event_from_type(obj: &mut SkinObject, obj_type: &SkinObjectType) {
             ..
         } => {
             obj.data_mut().set_clickevent_by_id(*act_id);
-            obj.data_mut().clickevent_type = *click;
+            obj.data_mut().timer.clickevent_type = *click;
         }
         SkinObjectType::ImageSet {
             act: Some(act_id),
@@ -14,7 +14,7 @@ fn set_click_event_from_type(obj: &mut SkinObject, obj_type: &SkinObjectType) {
             ..
         } => {
             obj.data_mut().set_clickevent_by_id(*act_id);
-            obj.data_mut().clickevent_type = *click;
+            obj.data_mut().timer.clickevent_type = *click;
         }
         _ => {}
     }

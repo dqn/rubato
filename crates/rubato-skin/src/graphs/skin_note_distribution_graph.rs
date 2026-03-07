@@ -182,8 +182,8 @@ impl SkinNoteDistributionGraph {
     ) {
         self.data.prepare(time, state);
         if let Some(r) = r {
-            self.data.region.set(r);
-            self.data.draw = true;
+            self.data.draw_state.region.set(r);
+            self.data.draw_state.draw = true;
         }
         self.starttime = starttime;
         self.endtime = endtime;
@@ -263,7 +263,7 @@ impl SkinNoteDistributionGraph {
         if is_bms_player {
             // Real-time update path (stubbed)
             if let Some(ref backtex) = self.backtex.clone() {
-                let region = self.data.region.clone();
+                let region = self.data.draw_state.region.clone();
                 self.data.draw_image_at(
                     sprite,
                     backtex,
@@ -276,7 +276,7 @@ impl SkinNoteDistributionGraph {
             if let Some(ref mut shapetex) = self.shapetex.clone() {
                 let tex_width = shapetex.texture.as_ref().map(|t| t.width).unwrap_or(0);
                 shapetex.region_width = (tex_width as f32 * self.render) as i32;
-                let region = self.data.region.clone();
+                let region = self.data.draw_state.region.clone();
                 self.data.draw_image_at(
                     sprite,
                     shapetex,
@@ -288,7 +288,7 @@ impl SkinNoteDistributionGraph {
             }
         } else {
             if let Some(ref backtex) = self.backtex.clone() {
-                let region = self.data.region.clone();
+                let region = self.data.draw_state.region.clone();
                 self.data.draw_image_at(
                     sprite,
                     backtex,
@@ -301,7 +301,7 @@ impl SkinNoteDistributionGraph {
             if let Some(ref mut shapetex) = self.shapetex.clone() {
                 let tex_width = shapetex.texture.as_ref().map(|t| t.width).unwrap_or(0);
                 shapetex.region_width = (tex_width as f32 * self.render) as i32;
-                let region = self.data.region.clone();
+                let region = self.data.draw_state.region.clone();
                 self.data.draw_image_at(
                     sprite,
                     shapetex,
@@ -326,7 +326,7 @@ impl SkinNoteDistributionGraph {
         freq: f32,
     ) {
         self.prepare_with_region(time, state, Some(r), starttime, endtime, freq);
-        if self.data.draw {
+        if self.data.draw_state.draw {
             self.draw(sprite, state);
         }
     }

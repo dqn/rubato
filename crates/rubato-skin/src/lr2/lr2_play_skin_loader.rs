@@ -1422,7 +1422,7 @@ mod tests {
         );
         state.process_play_command("DST_JUDGELINE", &dst_parts);
         let jl = state.judgeline.as_ref().unwrap();
-        assert!(!jl.data.dst.is_empty());
+        assert!(!jl.data.dest.dst.is_empty());
     }
 
     // ===== SRC_LINE / DST_LINE =====
@@ -1470,7 +1470,7 @@ mod tests {
         );
         state.process_play_command("DST_LINE", &dst_parts);
         let li = state.line_images[0].as_ref().unwrap();
-        assert!(!li.data.dst.is_empty());
+        assert!(!li.data.dest.dst.is_empty());
     }
 
     #[test]
@@ -1491,7 +1491,7 @@ mod tests {
         );
         state.process_play_command("DST_LINE", &dst_parts);
         let li = state.line_images[0].as_ref().unwrap();
-        assert!(!li.data.dst.is_empty());
+        assert!(!li.data.dest.dst.is_empty());
     }
 
     // ===== PM_CHARA commands =====
@@ -1730,7 +1730,7 @@ mod tests {
             "time line should be created"
         );
         let li = state.line_images[6].as_ref().unwrap();
-        assert!(!li.data.dst.is_empty(), "destination should be set");
+        assert!(!li.data.dest.dst.is_empty(), "destination should be set");
     }
 
     #[test]
@@ -1743,7 +1743,7 @@ mod tests {
 
         assert!(state.line_images[2].is_some(), "BPM line should be created");
         let li = state.line_images[2].as_ref().unwrap();
-        assert!(!li.data.dst.is_empty(), "destination should be set");
+        assert!(!li.data.dest.dst.is_empty(), "destination should be set");
     }
 
     #[test]
@@ -1759,7 +1759,7 @@ mod tests {
             "stop line should be created"
         );
         let li = state.line_images[4].as_ref().unwrap();
-        assert!(!li.data.dst.is_empty(), "destination should be set");
+        assert!(!li.data.dest.dst.is_empty(), "destination should be set");
     }
 
     #[test]
@@ -1855,7 +1855,7 @@ mod tests {
         // The pre-existing image was created via SRC_LINE, so it has no destinations
         // (DST_LINE was never called for index 6). A default line would have a destination.
         assert!(
-            li.data.dst.is_empty(),
+            li.data.dest.dst.is_empty(),
             "existing image should not be overwritten"
         );
     }
@@ -1873,14 +1873,14 @@ mod tests {
         let bpm_line = state.line_images[2].as_ref().unwrap();
 
         // Both should have destinations
-        assert!(!time_line.data.dst.is_empty());
-        assert!(!bpm_line.data.dst.is_empty());
+        assert!(!time_line.data.dest.dst.is_empty());
+        assert!(!bpm_line.data.dest.dst.is_empty());
 
         // The BPM line (h=2) should have double the height of the time line (h=1)
         // DST_LINE had h=2 (values[6]), scaled by dsth/srch = 1080/480 = 2.25
         // Time: 2 * 2.25 * 1 = 4.5; BPM: 2 * 2.25 * 2 = 9.0
-        let time_dst = &time_line.data.dst[0];
-        let bpm_dst = &bpm_line.data.dst[0];
+        let time_dst = &time_line.data.dest.dst[0];
+        let bpm_dst = &bpm_line.data.dest.dst[0];
         let time_h = time_dst.region.height;
         let bpm_h = bpm_dst.region.height;
         assert!(

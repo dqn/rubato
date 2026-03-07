@@ -201,7 +201,7 @@ fn main_state_data_accessible() {
 fn handle_skin_mouse_pressed_uses_live_play_context() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.main_state_data.skin = Some(Box::new(PlayerConfigMutatingSkin));
+    player.play.main_state_data.skin = Some(Box::new(PlayerConfigMutatingSkin));
     player.player_config.judge_settings.judgetiming = 0;
 
     <BMSPlayer as MainState>::handle_skin_mouse_pressed(&mut player, 0, 10, 10);
@@ -216,7 +216,7 @@ fn render_skin_uses_play_option_for_image_index_42() {
     player.player_config.play_settings.random = 1;
     player.score.playinfo.randomoption = 6;
     let observed = Arc::new(AtomicI32::new(-1));
-    player.main_state_data.skin = Some(Box::new(ProbeImageIndexSkin {
+    player.play.main_state_data.skin = Some(Box::new(ProbeImageIndexSkin {
         id: 42,
         observed: observed.clone(),
     }));
@@ -233,7 +233,7 @@ fn render_skin_uses_target_visual_index_for_image_index_77() {
     let mut player = BMSPlayer::new(model);
     player.player_config.select_settings.targetid = "MAX".to_string();
     let observed = Arc::new(AtomicI32::new(-1));
-    player.main_state_data.skin = Some(Box::new(ProbeImageIndexSkin {
+    player.play.main_state_data.skin = Some(Box::new(ProbeImageIndexSkin {
         id: 77,
         observed: observed.clone(),
     }));
@@ -250,8 +250,8 @@ fn render_skin_uses_target_visual_index_for_image_index_77() {
 fn state_preload_transitions_to_ready() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.play_skin.loadstart = 0;
-    player.play_skin.loadend = 0;
+    player.play.play_skin.loadstart = 0;
+    player.play.play_skin.loadend = 0;
     player.media_load_finished = true;
 
     // The PRELOAD->READY transition requires:
@@ -275,7 +275,7 @@ fn state_preload_transitions_to_ready() {
     // But micronow(~0) > load_threshold(0) requires micronow > 0, which may be 0.
     // So let's update the timer to get a small positive value.
     std::thread::sleep(std::time::Duration::from_millis(2));
-    player.main_state_data.timer.update();
+    player.play.main_state_data.timer.update();
 
     player.render();
     assert_eq!(player.state(), PlayState::Ready);
@@ -286,12 +286,12 @@ fn state_ready_transitions_to_play() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Ready;
-    player.play_skin.playstart = 0; // Instant transition
-    player.main_state_data.timer.set_timer_on(TIMER_READY);
-    player.lanerender = Some(LaneRenderer::new(&player.model));
+    player.play.play_skin.playstart = 0; // Instant transition
+    player.play.main_state_data.timer.set_timer_on(TIMER_READY);
+    player.play.lanerender = Some(LaneRenderer::new(&player.play.model));
 
     // Update timer and render
-    player.main_state_data.timer.update();
+    player.play.main_state_data.timer.update();
     // TIMER_READY now_time should be > 0 (= playstart)
     // But now_time_for_id checks micronow - timer value, which is 0 since we just set it
     // We need some time to pass. Since playstart=0, any positive time works.
@@ -299,8 +299,9 @@ fn state_ready_transitions_to_play() {
     // getNowTime(TIMER_READY) = (nowmicrotime - timer[TIMER_READY]) / 1000
     // Since we just set it, this is ~0. We need > 0.
     // Let's manually set the timer to past to simulate time passing.
-    let now = player.main_state_data.timer.now_micro_time();
+    let now = player.play.main_state_data.timer.now_micro_time();
     player
+        .play
         .main_state_data
         .timer
         .set_micro_timer(TIMER_READY, now - 2000); // 2ms ago
@@ -314,12 +315,13 @@ fn state_play_transitions_to_finished_when_playtime_exceeded() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Play;
-    player.playtime = 0; // Instant finish
+    player.play.playtime = 0; // Instant finish
 
     // Set TIMER_PLAY to far past so ptime is large
-    player.main_state_data.timer.update();
-    let now = player.main_state_data.timer.now_micro_time();
+    player.play.main_state_data.timer.update();
+    let now = player.play.main_state_data.timer.now_micro_time();
     player
+        .play
         .main_state_data
         .timer
         .set_micro_timer(TIMER_PLAY, now - 2_000_000); // 2 seconds ago
@@ -334,24 +336,25 @@ fn state_play_transitions_to_failed_on_zero_gauge() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Play;
-    player.playtime = 999_999; // Long playtime so we don't finish
+    player.play.playtime = 999_999; // Long playtime so we don't finish
 
     // Create a gauge at 0 value
     let gauge = crate::groove_gauge::create_groove_gauge(
-        &player.model,
+        &player.play.model,
         rubato_types::groove_gauge::HARD,
         0,
         None,
     )
     .unwrap();
-    player.gauge = Some(gauge);
+    player.play.gauge = Some(gauge);
     // Set gauge to 0
-    player.gauge.as_mut().unwrap().set_value(0.0);
+    player.play.gauge.as_mut().unwrap().set_value(0.0);
 
     // Setup timers
-    player.main_state_data.timer.update();
-    let now = player.main_state_data.timer.now_micro_time();
+    player.play.main_state_data.timer.update();
+    let now = player.play.main_state_data.timer.now_micro_time();
     player
+        .play
         .main_state_data
         .timer
         .set_micro_timer(TIMER_PLAY, now - 1000);
@@ -370,7 +373,7 @@ fn stop_play_from_practice_goes_to_practice_finished() {
     player.state = PlayState::Practice;
     player.stop_play();
     assert_eq!(player.state(), PlayState::PracticeFinished);
-    assert!(player.main_state_data.timer.is_timer_on(TIMER_FADEOUT));
+    assert!(player.play.main_state_data.timer.is_timer_on(TIMER_FADEOUT));
 }
 
 #[test]
@@ -380,7 +383,7 @@ fn stop_play_from_preload_goes_to_aborted() {
     player.state = PlayState::Preload;
     player.stop_play();
     assert_eq!(player.state(), PlayState::Aborted);
-    assert!(player.main_state_data.timer.is_timer_on(TIMER_FADEOUT));
+    assert!(player.play.main_state_data.timer.is_timer_on(TIMER_FADEOUT));
 }
 
 #[test]
@@ -408,7 +411,7 @@ fn stop_play_ignores_if_already_failed_timer() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Play;
-    player.main_state_data.timer.set_timer_on(TIMER_FAILED);
+    player.play.main_state_data.timer.set_timer_on(TIMER_FAILED);
     let prev_state = player.state;
     player.stop_play();
     // State should not change because TIMER_FAILED is already on
@@ -604,9 +607,9 @@ fn create_score_data_sets_device_type_midi() {
 fn update_judge_updates_pomyu_chara_judge() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.gauge = Some(
+    player.play.gauge = Some(
         crate::groove_gauge::create_groove_gauge(
-            &player.model,
+            &player.play.model,
             rubato_types::groove_gauge::NORMAL,
             0,
             None,
@@ -614,10 +617,10 @@ fn update_judge_updates_pomyu_chara_judge() {
         .unwrap(),
     );
     player.update_judge(0, 1_000_000); // PGREAT
-    assert_eq!(player.play_skin.pomyu.pm_chara_judge, 1);
+    assert_eq!(player.play.play_skin.pomyu.pm_chara_judge, 1);
 
     player.update_judge(2, 2_000_000); // GOOD
-    assert_eq!(player.play_skin.pomyu.pm_chara_judge, 3);
+    assert_eq!(player.play.play_skin.pomyu.pm_chara_judge, 3);
 }
 
 // --- set_play_speed tests ---
@@ -683,18 +686,19 @@ fn lifecycle_preload_ready_play_finished() {
 
     // Force transition to READY
     player.startpressedtime = -2_000_000;
-    player.play_skin.loadstart = 0;
-    player.play_skin.loadend = 0;
+    player.play.play_skin.loadstart = 0;
+    player.play.play_skin.loadend = 0;
     std::thread::sleep(std::time::Duration::from_millis(2));
-    player.main_state_data.timer.update();
+    player.play.main_state_data.timer.update();
     player.render();
     assert_eq!(player.state(), PlayState::Ready);
 
     // Force transition to PLAY
-    player.play_skin.playstart = 0;
-    player.lanerender = Some(LaneRenderer::new(&player.model));
-    let now = player.main_state_data.timer.now_micro_time();
+    player.play.play_skin.playstart = 0;
+    player.play.lanerender = Some(LaneRenderer::new(&player.play.model));
+    let now = player.play.main_state_data.timer.now_micro_time();
     player
+        .play
         .main_state_data
         .timer
         .set_micro_timer(TIMER_READY, now - 2000);
@@ -702,9 +706,10 @@ fn lifecycle_preload_ready_play_finished() {
     assert_eq!(player.state(), PlayState::Play);
 
     // Force transition to FINISHED
-    player.playtime = 0; // Instant finish
-    let now = player.main_state_data.timer.now_micro_time();
+    player.play.playtime = 0; // Instant finish
+    let now = player.play.main_state_data.timer.now_micro_time();
     player
+        .play
         .main_state_data
         .timer
         .set_micro_timer(TIMER_PLAY, now - 2_000_000);
@@ -720,8 +725,8 @@ fn dispose_clears_skin_and_stage() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.dispose();
-    assert!(player.main_state_data.skin.is_none());
-    assert!(player.main_state_data.stage.is_none());
+    assert!(player.play.main_state_data.skin.is_none());
+    assert!(player.play.main_state_data.stage.is_none());
 }
 
 // --- build_pattern_modifiers tests ---
@@ -1862,7 +1867,7 @@ fn freq_trainer_course_mode_returns_none() {
 fn freq_trainer_freq_150_adjusts_playtime() {
     let model = make_model_with_time(10000);
     let mut player = BMSPlayer::new(model);
-    let last_note_time = player.model.last_note_time();
+    let last_note_time = player.play.model.last_note_time();
 
     let result = player.apply_freq_trainer(150, true, false, &FrequencyType::FREQUENCY);
     assert!(result.is_some());
@@ -1876,7 +1881,7 @@ fn freq_trainer_freq_150_adjusts_playtime() {
 fn freq_trainer_freq_50_adjusts_playtime() {
     let model = make_model_with_time(10000);
     let mut player = BMSPlayer::new(model);
-    let last_note_time = player.model.last_note_time();
+    let last_note_time = player.play.model.last_note_time();
 
     let result = player.apply_freq_trainer(50, true, false, &FrequencyType::FREQUENCY);
     assert!(result.is_some());
@@ -1964,7 +1969,7 @@ fn freq_trainer_scales_chart_timing() {
 
     // BPM should be scaled by 1.5
     let expected_bpm = original_bpm * 1.5;
-    let actual_bpm = player.model.bpm;
+    let actual_bpm = player.play.model.bpm;
     assert!(
         (actual_bpm - expected_bpm).abs() < 0.001,
         "BPM should be scaled: expected {}, got {}",
@@ -1979,7 +1984,7 @@ fn freq_trainer_scales_chart_timing() {
 fn set_play_speed_sets_pending_pitch_when_frequency_type() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.fast_forward_freq_option = FrequencyType::FREQUENCY;
+    player.audio.fast_forward_freq_option = FrequencyType::FREQUENCY;
     player.set_play_speed(150);
     assert_eq!(player.take_pending_global_pitch(), Some(1.5));
 }
@@ -1988,7 +1993,7 @@ fn set_play_speed_sets_pending_pitch_when_frequency_type() {
 fn set_play_speed_no_pending_pitch_when_unprocessed() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.fast_forward_freq_option = FrequencyType::UNPROCESSED;
+    player.audio.fast_forward_freq_option = FrequencyType::UNPROCESSED;
     player.set_play_speed(150);
     assert_eq!(player.take_pending_global_pitch(), None);
 }
@@ -1997,7 +2002,7 @@ fn set_play_speed_no_pending_pitch_when_unprocessed() {
 fn take_pending_global_pitch_clears_after_read() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.fast_forward_freq_option = FrequencyType::FREQUENCY;
+    player.audio.fast_forward_freq_option = FrequencyType::FREQUENCY;
     player.set_play_speed(200);
     assert_eq!(player.take_pending_global_pitch(), Some(2.0));
     // Second call should be None (consumed)
@@ -2045,8 +2050,8 @@ fn stop_play_failed_path_sets_pending_pitch_to_one() {
 
     // Simulate some notes judged (not finished but notes exist)
     // Force the judge counts so we enter the failed branch
-    player.judge.score_data_mut().judge_counts.epg = 5; // 5 early PGreats
-    player.total_notes = 100; // not all past
+    player.play.judge.score_data_mut().judge_counts.epg = 5; // 5 early PGreats
+    player.play.total_notes = 100; // not all past
     player.stop_play();
     assert_eq!(player.state, PlayState::Failed);
     assert_eq!(player.take_pending_global_pitch(), Some(1.0));
@@ -2126,7 +2131,7 @@ fn build_guide_se_config_enabled_returns_six_entries() {
 fn set_fast_forward_freq_option_stored() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.fast_forward_freq_option = FrequencyType::FREQUENCY;
+    player.audio.fast_forward_freq_option = FrequencyType::FREQUENCY;
     player.set_play_speed(75);
     assert_eq!(player.take_pending_global_pitch(), Some(0.75));
 }
@@ -2315,7 +2320,7 @@ fn create_note_expansion_rate_custom_triggers_expansion() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     // Set custom expansion rate before create
-    player.play_skin.note_expansion_rate = [120, 100];
+    player.play.play_skin.note_expansion_rate = [120, 100];
     player.create();
     assert!(player.rhythm.is_some());
 }
@@ -2411,7 +2416,7 @@ fn create_no_speed_among_multiple_constraints() {
 fn save_config_skips_when_no_speed_constraint() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.lanerender = Some(LaneRenderer::new(&player.model));
+    player.play.lanerender = Some(LaneRenderer::new(&player.play.model));
     player.constraints = vec![CourseDataConstraint::NoSpeed];
 
     // Set a known state on the lane renderer
@@ -2436,7 +2441,7 @@ fn save_config_skips_when_no_speed_constraint() {
 fn save_config_saves_lane_renderer_state() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.lanerender = Some(LaneRenderer::new(&player.model));
+    player.play.lanerender = Some(LaneRenderer::new(&player.play.model));
 
     // Default fixhispeed is FIX_HISPEED_MAINBPM (not OFF), so duration should be saved
     player.save_config();
@@ -2446,7 +2451,7 @@ fn save_config_saves_lane_renderer_state() {
         .play_config_ref(Mode::BEAT_7K)
         .playconfig;
     // Duration should be set from lane renderer (default duration)
-    let lr_duration = player.lanerender.as_ref().unwrap().duration();
+    let lr_duration = player.play.lanerender.as_ref().unwrap().duration();
     assert_eq!(pc.duration, lr_duration);
 }
 
@@ -2454,7 +2459,7 @@ fn save_config_saves_lane_renderer_state() {
 fn save_config_saves_hispeed_when_fixhispeed_off() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.lanerender = Some(LaneRenderer::new(&player.model));
+    player.play.lanerender = Some(LaneRenderer::new(&player.play.model));
 
     // Set fixhispeed to OFF
     player
@@ -2469,7 +2474,7 @@ fn save_config_saves_hispeed_when_fixhispeed_off() {
         .player_config
         .play_config_ref(Mode::BEAT_7K)
         .playconfig;
-    let lr_hispeed = player.lanerender.as_ref().unwrap().hispeed();
+    let lr_hispeed = player.play.lanerender.as_ref().unwrap().hispeed();
     assert_eq!(pc.hispeed, lr_hispeed);
 }
 
@@ -2479,13 +2484,13 @@ fn save_config_saves_hispeed_when_fixhispeed_off() {
 fn preload_does_not_transition_when_media_not_loaded() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.play_skin.loadstart = 0;
-    player.play_skin.loadend = 0;
+    player.play.play_skin.loadstart = 0;
+    player.play.play_skin.loadend = 0;
     player.media_load_finished = false; // Media not loaded
     player.startpressedtime = -2_000_000;
 
     std::thread::sleep(std::time::Duration::from_millis(2));
-    player.main_state_data.timer.update();
+    player.play.main_state_data.timer.update();
     player.render();
 
     // Should stay in PRELOAD because media not loaded
@@ -2553,15 +2558,17 @@ fn sync_input_back_to_clears_consumed_start_and_select() {
 fn analog_cover_change_uses_live_input_and_flushes_reset_back() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.total_notes = 1;
+    player.play.total_notes = 1;
     player.input.control = Some(ControlInputProcessor::new(Mode::BEAT_7K));
-    player.lanerender = Some(LaneRenderer::new(&player.model));
+    player.play.lanerender = Some(LaneRenderer::new(&player.play.model));
     player
+        .play
         .lanerender
         .as_mut()
         .expect("lane renderer")
         .enable_lanecover = true;
     player
+        .play
         .lanerender
         .as_mut()
         .expect("lane renderer")
@@ -2601,6 +2608,7 @@ fn analog_cover_change_uses_live_input_and_flushes_reset_back() {
     <BMSPlayer as MainState>::sync_input_back_to(&mut player, &mut input);
 
     let actual_cover = player
+        .play
         .lanerender
         .as_ref()
         .expect("lane renderer")
@@ -2624,7 +2632,7 @@ fn startpressedtime_updates_when_start_pressed() {
     player.startpressedtime = -999;
 
     std::thread::sleep(std::time::Duration::from_millis(1));
-    player.main_state_data.timer.update();
+    player.play.main_state_data.timer.update();
     player.render();
 
     // startpressedtime should have been updated to micronow
@@ -2638,23 +2646,24 @@ fn gauge_autoshift_continue_does_not_fail() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Play;
-    player.playtime = 999_999;
+    player.play.playtime = 999_999;
     player.player_config.play_settings.gauge_auto_shift =
         rubato_types::player_config::GAUGEAUTOSHIFT_CONTINUE;
 
     let gauge = crate::groove_gauge::create_groove_gauge(
-        &player.model,
+        &player.play.model,
         rubato_types::groove_gauge::HARD,
         0,
         None,
     )
     .unwrap();
-    player.gauge = Some(gauge);
-    player.gauge.as_mut().unwrap().set_value(0.0);
+    player.play.gauge = Some(gauge);
+    player.play.gauge.as_mut().unwrap().set_value(0.0);
 
-    player.main_state_data.timer.update();
-    let now = player.main_state_data.timer.now_micro_time();
+    player.play.main_state_data.timer.update();
+    let now = player.play.main_state_data.timer.now_micro_time();
     player
+        .play
         .main_state_data
         .timer
         .set_micro_timer(TIMER_PLAY, now - 1000);
@@ -2671,23 +2680,24 @@ fn gauge_autoshift_survival_to_groove_shifts_type() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Play;
-    player.playtime = 999_999;
+    player.play.playtime = 999_999;
     player.player_config.play_settings.gauge_auto_shift =
         rubato_types::player_config::GAUGEAUTOSHIFT_SURVIVAL_TO_GROOVE;
 
     let gauge = crate::groove_gauge::create_groove_gauge(
-        &player.model,
+        &player.play.model,
         rubato_types::groove_gauge::HARD,
         0,
         None,
     )
     .unwrap();
-    player.gauge = Some(gauge);
-    player.gauge.as_mut().unwrap().set_value(0.0);
+    player.play.gauge = Some(gauge);
+    player.play.gauge.as_mut().unwrap().set_value(0.0);
 
-    player.main_state_data.timer.update();
-    let now = player.main_state_data.timer.now_micro_time();
+    player.play.main_state_data.timer.update();
+    let now = player.play.main_state_data.timer.now_micro_time();
     player
+        .play
         .main_state_data
         .timer
         .set_micro_timer(TIMER_PLAY, now - 1000);
@@ -2698,7 +2708,7 @@ fn gauge_autoshift_survival_to_groove_shifts_type() {
     // Should shift to NORMAL gauge type, not FAILED
     assert_eq!(player.state(), PlayState::Play);
     assert_eq!(
-        player.gauge.as_ref().unwrap().gauge_type(),
+        player.play.gauge.as_ref().unwrap().gauge_type(),
         rubato_types::groove_gauge::NORMAL
     );
 }
@@ -2710,7 +2720,7 @@ fn quick_retry_in_failed_state_with_start_xor_select() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Failed;
-    player.lanerender = Some(LaneRenderer::new(&player.model));
+    player.play.lanerender = Some(LaneRenderer::new(&player.play.model));
     player.input.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
     player.play_mode = BMSPlayerMode::PLAY;
     player.is_course_mode = false;
@@ -2719,7 +2729,7 @@ fn quick_retry_in_failed_state_with_start_xor_select() {
     player.input.input_start_pressed = true;
     player.input.input_select_pressed = false;
 
-    player.main_state_data.timer.update();
+    player.play.main_state_data.timer.update();
     player.render();
 
     // Should request transition to PLAY (quick retry)
@@ -2732,7 +2742,7 @@ fn no_quick_retry_in_course_mode() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Failed;
-    player.lanerender = Some(LaneRenderer::new(&player.model));
+    player.play.lanerender = Some(LaneRenderer::new(&player.play.model));
     player.input.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
     player.play_mode = BMSPlayerMode::PLAY;
     player.is_course_mode = true;
@@ -2740,7 +2750,7 @@ fn no_quick_retry_in_course_mode() {
     player.input.input_start_pressed = true;
     player.input.input_select_pressed = false;
 
-    player.main_state_data.timer.update();
+    player.play.main_state_data.timer.update();
     player.render();
 
     // Quick retry should NOT trigger in course mode
@@ -2754,7 +2764,7 @@ fn aborted_quick_retry_with_start_xor_select() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Aborted;
-    player.lanerender = Some(LaneRenderer::new(&player.model));
+    player.play.lanerender = Some(LaneRenderer::new(&player.play.model));
     player.play_mode = BMSPlayerMode::PLAY;
     player.is_course_mode = false;
 
@@ -2762,7 +2772,7 @@ fn aborted_quick_retry_with_start_xor_select() {
     player.input.input_start_pressed = false;
     player.input.input_select_pressed = true;
 
-    player.main_state_data.timer.update();
+    player.play.main_state_data.timer.update();
     player.render();
 
     // Should request transition to PLAY
@@ -2777,19 +2787,20 @@ fn failed_transitions_to_practice_in_practice_mode() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Failed;
-    player.lanerender = Some(LaneRenderer::new(&player.model));
+    player.play.lanerender = Some(LaneRenderer::new(&player.play.model));
     player.input.keyinput = Some(KeyInputProccessor::new(&LaneProperty::new(&Mode::BEAT_7K)));
     player.play_mode = BMSPlayerMode::PRACTICE;
 
     // Set TIMER_FAILED so close time is exceeded
-    player.main_state_data.timer.set_timer_on(TIMER_FAILED);
-    player.main_state_data.timer.update();
-    let now = player.main_state_data.timer.now_micro_time();
+    player.play.main_state_data.timer.set_timer_on(TIMER_FAILED);
+    player.play.main_state_data.timer.update();
+    let now = player.play.main_state_data.timer.now_micro_time();
     player
+        .play
         .main_state_data
         .timer
         .set_micro_timer(TIMER_FAILED, now - 10_000_000);
-    player.play_skin.close = 0;
+    player.play.play_skin.close = 0;
 
     player.render();
 
@@ -2821,14 +2832,20 @@ fn chart_preview_sets_timer_141_when_enabled() {
     player.startpressedtime = 0;
 
     // When micronow == startpressedtime and timer 141 is off, timer 141 should be set
-    player.main_state_data.timer.update();
-    let micronow = player.main_state_data.timer.now_micro_time();
+    player.play.main_state_data.timer.update();
+    let micronow = player.play.main_state_data.timer.now_micro_time();
     player.startpressedtime = micronow;
 
     player.render();
 
     // Timer 141 should have been set
-    assert!(player.main_state_data.timer.is_timer_on(TimerId::new(141)));
+    assert!(
+        player
+            .play
+            .main_state_data
+            .timer
+            .is_timer_on(TimerId::new(141))
+    );
 }
 
 // --- player config wiring tests ---
@@ -2935,13 +2952,13 @@ fn sync_audio_drains_pending_bg_notes() {
     let mut player = BMSPlayer::new(model);
 
     // Start BG play from time 0
-    player.keysound.start_bg_play(
-        &player.model,
+    player.audio.keysound.start_bg_play(
+        &player.play.model,
         0,   // offset
         1.0, // volume
     );
     // Set play time so the BG thread fires the note
-    player.keysound.update_play_time(1_000_000);
+    player.audio.keysound.update_play_time(1_000_000);
 
     // Give the BG thread time to enqueue
     std::thread::sleep(std::time::Duration::from_millis(50));
@@ -2958,5 +2975,5 @@ fn sync_audio_drains_pending_bg_notes() {
     );
     assert_eq!(audio.played_notes[0].0, 1); // wav id
 
-    player.keysound.stop_bg_play();
+    player.audio.keysound.stop_bg_play();
 }

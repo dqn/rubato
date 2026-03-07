@@ -155,7 +155,7 @@ impl SkinImage {
 
     pub fn new_with_movie(movie: SkinSourceMovie) -> Self {
         let mut data = SkinObjectData::new();
-        data.image_type = SkinObjectRenderer::TYPE_FFMPEG;
+        data.timer.image_type = SkinObjectRenderer::TYPE_FFMPEG;
         Self {
             data,
             image: vec![Some(Box::new(movie))],
@@ -257,7 +257,7 @@ impl SkinImage {
         offset_y: f32,
     ) {
         if value < 0 {
-            self.data.draw = false;
+            self.data.draw_state.draw = false;
             return;
         }
         self.data
@@ -267,15 +267,15 @@ impl SkinImage {
         }
         self.current_image = self.image_at(value as usize, time, state);
         if self.current_image.is_none() {
-            self.data.draw = false;
+            self.data.draw_state.draw = false;
         }
     }
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
         if let Some(ref current_image) = self.current_image.clone() {
             if self.is_movie {
-                self.data.image_type = 3;
-                let region = self.data.region.clone();
+                self.data.timer.image_type = 3;
+                let region = self.data.draw_state.region.clone();
                 self.data.draw_image_at(
                     sprite,
                     current_image,
@@ -284,9 +284,9 @@ impl SkinImage {
                     region.width,
                     region.height,
                 );
-                self.data.image_type = 0;
+                self.data.timer.image_type = 0;
             } else {
-                let region = self.data.region.clone();
+                let region = self.data.draw_state.region.clone();
                 self.data.draw_image_at(
                     sprite,
                     current_image,
@@ -307,8 +307,8 @@ impl SkinImage {
     ) {
         if let Some(ref current_image) = self.current_image.clone() {
             if self.is_movie {
-                self.data.image_type = 3;
-                let region = self.data.region.clone();
+                self.data.timer.image_type = 3;
+                let region = self.data.draw_state.region.clone();
                 self.data.draw_image_at(
                     sprite,
                     current_image,
@@ -317,9 +317,9 @@ impl SkinImage {
                     region.width,
                     region.height,
                 );
-                self.data.image_type = 0;
+                self.data.timer.image_type = 0;
             } else {
-                let region = self.data.region.clone();
+                let region = self.data.draw_state.region.clone();
                 self.data.draw_image_at(
                     sprite,
                     current_image,
@@ -341,7 +341,7 @@ impl SkinImage {
         offset_y: f32,
     ) {
         self.prepare_with_offset(time, state, offset_x, offset_y);
-        if self.data.draw {
+        if self.data.draw_state.draw {
             self.draw(sprite);
         }
     }
@@ -356,7 +356,7 @@ impl SkinImage {
         offset_y: f32,
     ) {
         self.prepare_with_value(time, state, value, offset_x, offset_y);
-        if self.data.draw {
+        if self.data.draw_state.draw {
             self.draw(sprite);
         }
     }
@@ -437,7 +437,7 @@ mod tests {
 
         let state = MockMainState::default();
         img.prepare(0, &state);
-        assert!(img.data.draw);
+        assert!(img.data.draw_state.draw);
 
         let mut renderer = SkinObjectRenderer::new();
         img.draw(&mut renderer);
@@ -482,18 +482,18 @@ mod tests {
             removed_sources: Vec::new(),
             is_movie: true,
         };
-        img.data.image_type = SkinObjectRenderer::TYPE_FFMPEG;
+        img.data.timer.image_type = SkinObjectRenderer::TYPE_FFMPEG;
         setup_data(&mut img.data, 0.0, 0.0, 100.0, 100.0);
         // Manually set draw=true and region since we bypass prepare
-        img.data.draw = true;
-        img.data.region = Rectangle::new(0.0, 0.0, 100.0, 100.0);
-        img.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        img.data.draw_state.draw = true;
+        img.data.draw_state.region = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        img.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
 
         let mut renderer = SkinObjectRenderer::new();
         img.draw(&mut renderer);
 
         // After draw, imageType should be reset to 0 (Java behavior: setImageType(3) then setImageType(0))
-        assert_eq!(img.data.image_type, 0);
+        assert_eq!(img.data.timer.image_type, 0);
         // Renderer should have had TYPE_FFMPEG (3) set during draw
         assert_eq!(
             renderer.sprite.shader_type(),
@@ -512,7 +512,7 @@ mod tests {
         img.prepare(0, &state);
 
         // Should not draw since source returns None
-        assert!(!img.data.draw);
+        assert!(!img.data.draw_state.draw);
     }
 
     #[test]
@@ -525,8 +525,8 @@ mod tests {
         img.prepare(0, &state);
 
         // Color should be white after prepare (255,255,255,255)
-        assert_eq!(img.data.color.r, 1.0);
-        assert_eq!(img.data.color.a, 1.0);
+        assert_eq!(img.data.draw_state.color.r, 1.0);
+        assert_eq!(img.data.draw_state.color.a, 1.0);
 
         let mut renderer = SkinObjectRenderer::new();
         img.draw(&mut renderer);
@@ -542,23 +542,23 @@ mod tests {
         let region = make_region(32, 32);
         let mut img = SkinImage::new_with_single(region);
         // Set alpha=0 so draw_image_at returns early
-        img.data.dst.push(SkinObjectDestination::new(
+        img.data.dest.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 100.0, 100.0),
             Color::new(1.0, 1.0, 1.0, 0.0),
             0,
             0,
         ));
-        img.data.starttime = 0;
-        img.data.endtime = 0;
-        img.data.fixr = Some(Rectangle::new(0.0, 0.0, 100.0, 100.0));
-        img.data.fixc = Some(Color::new(1.0, 1.0, 1.0, 0.0));
-        img.data.fixa = 0;
+        img.data.dest.starttime = 0;
+        img.data.dest.endtime = 0;
+        img.data.draw_state.fixr = Some(Rectangle::new(0.0, 0.0, 100.0, 100.0));
+        img.data.draw_state.fixc = Some(Color::new(1.0, 1.0, 1.0, 0.0));
+        img.data.draw_state.fixa = 0;
 
         let state = MockMainState::default();
         img.prepare(0, &state);
-        assert!(img.data.draw);
-        assert_eq!(img.data.color.a, 0.0);
+        assert!(img.data.draw_state.draw);
+        assert_eq!(img.data.draw_state.color.a, 0.0);
 
         let mut renderer = SkinObjectRenderer::new();
         img.draw(&mut renderer);
@@ -579,17 +579,17 @@ mod tests {
             removed_sources: Vec::new(),
             is_movie: true,
         };
-        img.data.image_type = SkinObjectRenderer::TYPE_FFMPEG;
+        img.data.timer.image_type = SkinObjectRenderer::TYPE_FFMPEG;
         // Manually set draw state
-        img.data.draw = true;
-        img.data.region = Rectangle::new(100.0, 200.0, 320.0, 240.0);
-        img.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        img.data.draw_state.draw = true;
+        img.data.draw_state.region = Rectangle::new(100.0, 200.0, 320.0, 240.0);
+        img.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
 
         let mut renderer = SkinObjectRenderer::new();
         img.draw_with_offset(&mut renderer, 10.0, 5.0);
 
         // After draw_with_offset for movie: imageType should be reset to 0
-        assert_eq!(img.data.image_type, 0);
+        assert_eq!(img.data.timer.image_type, 0);
         assert_eq!(renderer.sprite.vertices().len(), 6);
         // Position: (100+10, 200+5) = (110, 205) + 0.01
         let v0 = &renderer.sprite.vertices()[0];

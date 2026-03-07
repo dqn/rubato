@@ -237,7 +237,7 @@ pub fn convert_skin_data(
         if let Some(mut obj) = skin_obj {
             // Set name on the underlying SkinObjectData
             if let Some(ref name) = obj_data.name {
-                obj.data_mut().name = Some(name.clone());
+                obj.data_mut().timer.name = Some(name.clone());
             }
 
             // Set click event from object type

@@ -86,7 +86,7 @@ impl BMSPlayer {
 
         // Apply pre-option modifiers and accumulate assist level
         for m in pre_mods.iter_mut() {
-            m.modify(&mut self.model);
+            m.modify(&mut self.play.model);
             let assist_level = m.assist_level();
             if assist_level != AssistLevel::None {
                 self.assist = self.assist.max(if assist_level == AssistLevel::Assist {
@@ -100,7 +100,7 @@ impl BMSPlayer {
 
         // -- Phase 2: DP battle mode handling (doubleoption >= 2) --
         if self.score.playinfo.doubleoption >= 2 {
-            let mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
+            let mode = self.play.model.mode().copied().unwrap_or(Mode::BEAT_7K);
             if mode == Mode::BEAT_5K || mode == Mode::BEAT_7K || mode == Mode::KEYBOARD_24K {
                 // Convert SP mode to DP mode
                 let new_mode = match mode {
@@ -109,18 +109,18 @@ impl BMSPlayer {
                     Mode::KEYBOARD_24K => Mode::KEYBOARD_24K_DOUBLE,
                     _ => unreachable!(),
                 };
-                self.model.set_mode(new_mode);
+                self.play.model.set_mode(new_mode);
 
                 // Apply PlayerBattleModifier
                 let mut battle_mod = PlayerBattleModifier::new();
-                battle_mod.modify(&mut self.model);
+                battle_mod.modify(&mut self.play.model);
 
                 // If doubleoption == 3, also add AutoplayModifier for scratch keys
                 if self.score.playinfo.doubleoption == 3 {
-                    let dp_mode = self.model.mode().copied().unwrap_or(Mode::BEAT_14K);
+                    let dp_mode = self.play.model.mode().copied().unwrap_or(Mode::BEAT_14K);
                     let scratch_keys = dp_mode.scratch_key().to_vec();
                     let mut autoplay_mod = AutoplayModifier::new(scratch_keys);
-                    autoplay_mod.modify(&mut self.model);
+                    autoplay_mod.modify(&mut self.play.model);
                 }
 
                 self.assist = self.assist.max(1);
@@ -134,7 +134,7 @@ impl BMSPlayer {
 
         // -- Phase 3: Random option modifiers --
         // This section corresponds to Java lines 384-447
-        let mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
+        let mode = self.play.model.mode().copied().unwrap_or(Mode::BEAT_7K);
         let player_count = mode.player();
         let mut pattern_array: Vec<Option<Vec<i32>>> = vec![None; player_count as usize];
 
@@ -197,7 +197,7 @@ impl BMSPlayer {
 
         // Apply all random modifiers
         for m in random_mods.iter_mut() {
-            m.modify(&mut self.model);
+            m.modify(&mut self.play.model);
 
             let assist_level = m.assist_level();
             if assist_level != AssistLevel::None {
@@ -212,7 +212,7 @@ impl BMSPlayer {
 
             // Collect lane shuffle patterns for display
             if m.is_lane_shuffle_to_display() {
-                let current_mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
+                let current_mode = self.play.model.mode().copied().unwrap_or(Mode::BEAT_7K);
                 let player_idx = m.player() as usize;
                 if player_idx < pattern_array.len()
                     && let Some(pattern) = m.get_lane_shuffle_random_pattern(&current_mode)
@@ -243,11 +243,11 @@ impl BMSPlayer {
     }
 
     pub fn play_skin(&self) -> &PlaySkin {
-        &self.play_skin
+        &self.play.play_skin
     }
 
     pub fn play_skin_mut(&mut self) -> &mut PlaySkin {
-        &mut self.play_skin
+        &mut self.play.play_skin
     }
 
     pub fn gaugelog(&self) -> &[Vec<f32>] {
@@ -386,7 +386,7 @@ impl BMSPlayer {
         resource_replay_seed: i64,
         resource_rand: &[i32],
     ) -> Option<Vec<i32>> {
-        let model_random = self.model.random().map(|r| r.to_vec());
+        let model_random = self.play.model.random().map(|r| r.to_vec());
         if let Some(ref random) = model_random
             && !random.is_empty()
         {
@@ -401,7 +401,7 @@ impl BMSPlayer {
 
             if !self.score.playinfo.rand.is_empty() {
                 // Return rand to the caller for model reload via PlayerResource.
-                // Caller should: resource.load_bms_model(rand), then update self.model
+                // Caller should: resource.load_bms_model(rand), then update self.play.model
                 // and self.score.playinfo.rand = model.random().
                 log::info!("譜面分岐 : {:?}", self.score.playinfo.rand);
                 return Some(self.score.playinfo.rand.clone());
@@ -429,7 +429,9 @@ impl BMSPlayer {
 
         // BPM Guide check (Java lines 269-272)
         // BPM変化がなければBPMガイドなし
-        if config.display_settings.bpmguide && (self.model.get_min_bpm() < self.model.max_bpm()) {
+        if config.display_settings.bpmguide
+            && (self.play.model.get_min_bpm() < self.play.model.max_bpm())
+        {
             self.assist = self.assist.max(1);
             score = false;
         }
@@ -453,7 +455,7 @@ impl BMSPlayer {
         // Constant speed check (Java lines 297-301)
         // Constant considered as assist in Endless Dream
         // This is a community discussion result, see https://github.com/seraxis/lr2oraja-endlessdream/issues/42
-        let mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
+        let mode = self.play.model.mode().copied().unwrap_or(Mode::BEAT_7K);
         if config.play_config_ref(mode).playconfig.enable_constant {
             self.assist = self.assist.max(2);
             score = false;
@@ -485,10 +487,10 @@ impl BMSPlayer {
         }
 
         // Adjust playtime: (lastNoteTime + 1000) * 100 / freq + TIME_MARGIN
-        self.playtime = (self.model.last_note_time() + 1000) * 100 / freq + TIME_MARGIN;
+        self.play.playtime = (self.play.model.last_note_time() + 1000) * 100 / freq + TIME_MARGIN;
 
         // Scale chart timing
-        bms_model_utils::change_frequency(&mut self.model, freq as f32 / 100.0);
+        bms_model_utils::change_frequency(&mut self.play.model, freq as f32 / 100.0);
 
         // Determine global pitch
         let global_pitch = match freq_option {

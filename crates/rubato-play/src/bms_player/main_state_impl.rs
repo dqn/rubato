@@ -7,11 +7,11 @@ impl MainState for BMSPlayer {
     }
 
     fn main_state_data(&self) -> &MainStateData {
-        &self.main_state_data
+        &self.play.main_state_data
     }
 
     fn main_state_data_mut(&mut self) -> &mut MainStateData {
-        &mut self.main_state_data
+        &mut self.play.main_state_data
     }
 
     fn take_pending_state_change(&mut self) -> Option<MainStateType> {
@@ -39,42 +39,43 @@ impl MainState for BMSPlayer {
     }
 
     fn receive_reloaded_model(&mut self, model: bms_model::bms_model::BMSModel) {
-        self.model = model;
+        self.play.model = model;
     }
 
     fn take_bga_cache(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
         // Return the Arc<Mutex<BGAProcessor>> for caching on PlayerResource.
         // The Arc is cloned so that BMSPlayer can still hold a reference
         // (though it will be dropped shortly after during state transition).
-        Some(Box::new(Arc::clone(&self.bga)))
+        Some(Box::new(Arc::clone(&self.play.bga)))
     }
 
     fn render_skin(&mut self, sprite: &mut rubato_render::sprite_batch::SpriteBatch) {
-        let mut skin = match self.main_state_data.skin.take() {
+        let mut skin = match self.play.main_state_data.skin.take() {
             Some(s) => s,
             None => return,
         };
-        let mut timer = std::mem::take(&mut self.main_state_data.timer);
+        let mut timer = std::mem::take(&mut self.play.main_state_data.timer);
 
         {
             let mut ctx = PlayRenderContext {
                 timer: &mut timer,
-                judge: &self.judge,
-                gauge: self.gauge.as_ref(),
+                judge: &self.play.judge,
+                gauge: self.play.gauge.as_ref(),
                 player_config: &self.player_config,
                 option_info: &self.score.playinfo,
                 play_config: &self
                     .player_config
                     .play_config_ref(
-                        self.model
+                        self.play
+                            .model
                             .mode()
                             .cloned()
                             .unwrap_or(bms_model::mode::Mode::BEAT_7K),
                     )
                     .playconfig,
                 target_score: self.score.target_score.as_ref(),
-                playtime: self.playtime,
-                total_notes: self.total_notes,
+                playtime: self.play.playtime,
+                total_notes: self.play.total_notes,
                 play_mode: self.play_mode,
                 state: self.state,
                 media_load_finished: self.media_load_finished,
@@ -85,16 +86,16 @@ impl MainState for BMSPlayer {
             skin.swap_sprite_batch(sprite);
         }
 
-        self.main_state_data.timer = timer;
-        self.main_state_data.skin = Some(skin);
+        self.play.main_state_data.timer = timer;
+        self.play.main_state_data.skin = Some(skin);
     }
 
     fn handle_skin_mouse_pressed(&mut self, button: i32, x: i32, y: i32) {
-        let mut skin = match self.main_state_data.skin.take() {
+        let mut skin = match self.play.main_state_data.skin.take() {
             Some(s) => s,
             None => return,
         };
-        let mut timer = std::mem::take(&mut self.main_state_data.timer);
+        let mut timer = std::mem::take(&mut self.play.main_state_data.timer);
 
         {
             let mut ctx = PlayMouseContext {
@@ -104,16 +105,16 @@ impl MainState for BMSPlayer {
             skin.mouse_pressed_at(&mut ctx, button, x, y);
         }
 
-        self.main_state_data.timer = timer;
-        self.main_state_data.skin = Some(skin);
+        self.play.main_state_data.timer = timer;
+        self.play.main_state_data.skin = Some(skin);
     }
 
     fn handle_skin_mouse_dragged(&mut self, button: i32, x: i32, y: i32) {
-        let mut skin = match self.main_state_data.skin.take() {
+        let mut skin = match self.play.main_state_data.skin.take() {
             Some(s) => s,
             None => return,
         };
-        let mut timer = std::mem::take(&mut self.main_state_data.timer);
+        let mut timer = std::mem::take(&mut self.play.main_state_data.timer);
 
         {
             let mut ctx = PlayMouseContext {
@@ -123,16 +124,16 @@ impl MainState for BMSPlayer {
             skin.mouse_dragged_at(&mut ctx, button, x, y);
         }
 
-        self.main_state_data.timer = timer;
-        self.main_state_data.skin = Some(skin);
+        self.play.main_state_data.timer = timer;
+        self.play.main_state_data.skin = Some(skin);
     }
 
     fn create(&mut self) {
-        let mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
-        self.lane_property = Some(LaneProperty::new(&mode));
-        self.judge = JudgeManager::new();
+        let mode = self.play.model.mode().copied().unwrap_or(Mode::BEAT_7K);
+        self.play.lane_property = Some(LaneProperty::new(&mode));
+        self.play.judge = JudgeManager::new();
         self.input.control = Some(ControlInputProcessor::new(mode));
-        if let Some(ref lp) = self.lane_property {
+        if let Some(ref lp) = self.play.lane_property {
             self.input.keyinput = Some(KeyInputProccessor::new(lp));
         }
 
@@ -177,7 +178,7 @@ impl MainState for BMSPlayer {
             skin_type,
         });
 
-        self.lanerender = Some(LaneRenderer::new(&self.model));
+        self.play.lanerender = Some(LaneRenderer::new(&self.play.model));
 
         // --- NO_SPEED constraint ---
         // Translated from: BMSPlayer.create() Java lines 533-538
@@ -192,7 +193,7 @@ impl MainState for BMSPlayer {
             control.enable_control = false;
         }
 
-        self.judge.init(&self.model, 0, None, &[]);
+        self.play.judge.init(&self.play.model, 0, None, &[]);
 
         // --- Note expansion rate from PlaySkin ---
         // Translated from: BMSPlayer.create() Java line 542-543
@@ -201,24 +202,24 @@ impl MainState for BMSPlayer {
         //     (getSkin() instanceof PlaySkin) ? ((PlaySkin) getSkin()).getNoteExpansionRate()[0] != 100
         //         || ((PlaySkin) getSkin()).getNoteExpansionRate()[1] != 100 : false);
         // ```
-        let rates = self.play_skin.get_note_expansion_rate();
+        let rates = self.play.play_skin.get_note_expansion_rate();
         let use_expansion = rates[0] != 100 || rates[1] != 100;
-        self.rhythm = Some(RhythmTimerProcessor::new(&self.model, use_expansion));
+        self.rhythm = Some(RhythmTimerProcessor::new(&self.play.model, use_expansion));
 
         // Reuse existing BGAProcessor (injected via set_bga_processor from PlayerResource)
         // to preserve the texture cache between plays. Only update timelines for the new model.
         // Java: bga = resource.getBGAManager(); (BMSPlayer.java line 545)
-        if let Ok(mut bga) = self.bga.lock() {
-            bga.set_model_timelines(&self.model);
+        if let Ok(mut bga) = self.play.bga.lock() {
+            bga.set_model_timelines(&self.play.model);
         }
 
         // Initialize gauge log
-        if let Some(ref gauge) = self.gauge {
+        if let Some(ref gauge) = self.play.gauge {
             let gauge_type_len = gauge.gauge_type_length();
             self.gaugelog = Vec::with_capacity(gauge_type_len);
             for _ in 0..gauge_type_len {
                 self.gaugelog
-                    .push(Vec::with_capacity((self.playtime / 500 + 2) as usize));
+                    .push(Vec::with_capacity((self.play.playtime / 500 + 2) as usize));
             }
         }
 
@@ -254,13 +255,17 @@ impl MainState for BMSPlayer {
         let score = self.score.db_score.clone().unwrap_or_default();
         log::info!("Score data loaded from score database");
 
-        let total_notes = self.model.total_notes();
+        let total_notes = self.play.model.total_notes();
 
         if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice {
-            self.main_state_data
-                .score
-                .set_target_score_with_ghost(0, None, 0, None, total_notes);
-            self.practice.create(&self.model);
+            self.play.main_state_data.score.set_target_score_with_ghost(
+                0,
+                None,
+                0,
+                None,
+                total_notes,
+            );
+            self.practice.create(&self.play.model);
             self.state = PlayState::Practice;
         } else {
             // Determine the effective target score:
@@ -278,7 +283,7 @@ impl MainState for BMSPlayer {
                 None => (0, None),
             };
 
-            self.main_state_data.score.set_target_score_with_ghost(
+            self.play.main_state_data.score.set_target_score_with_ghost(
                 score.exscore(),
                 score.decode_ghost(),
                 target_exscore,
@@ -289,12 +294,13 @@ impl MainState for BMSPlayer {
     }
 
     fn render(&mut self) {
-        let micronow = self.main_state_data.timer.now_micro_time();
+        let micronow = self.play.main_state_data.timer.now_micro_time();
 
         // Input start timer
-        let input_time = self.play_skin.get_loadstart() as i64; // skin.getInput() in Java
+        let input_time = self.play.play_skin.get_loadstart() as i64; // skin.getInput() in Java
         if micronow > input_time * 1000 {
-            self.main_state_data
+            self.play
+                .main_state_data
                 .timer
                 .switch_timer(TIMER_STARTINPUT, true);
         }
@@ -310,17 +316,28 @@ impl MainState for BMSPlayer {
                 // Chart preview handling
                 // Translated from: Java BMSPlayer.render() lines 598-604
                 if self.player_config.display_settings.chart_preview {
-                    if self.main_state_data.timer.is_timer_on(TimerId::new(141))
+                    if self
+                        .play
+                        .main_state_data
+                        .timer
+                        .is_timer_on(TimerId::new(141))
                         && micronow > self.startpressedtime
                     {
-                        self.main_state_data.timer.set_timer_off(TimerId::new(141));
-                        if let Some(ref mut lr) = self.lanerender {
-                            lr.init(&self.model);
+                        self.play
+                            .main_state_data
+                            .timer
+                            .set_timer_off(TimerId::new(141));
+                        if let Some(ref mut lr) = self.play.lanerender {
+                            lr.init(&self.play.model);
                         }
-                    } else if !self.main_state_data.timer.is_timer_on(TimerId::new(141))
+                    } else if !self
+                        .play
+                        .main_state_data
+                        .timer
+                        .is_timer_on(TimerId::new(141))
                         && micronow == self.startpressedtime
                     {
-                        self.main_state_data.timer.set_micro_timer(
+                        self.play.main_state_data.timer.set_micro_timer(
                             TimerId::new(141),
                             micronow - self.starttimeoffset * 1000,
                         );
@@ -328,8 +345,10 @@ impl MainState for BMSPlayer {
                 }
 
                 // Check if media loaded and load timers elapsed
-                let load_threshold =
-                    (self.play_skin.get_loadstart() + self.play_skin.get_loadend()) as i64 * 1000;
+                let load_threshold = (self.play.play_skin.get_loadstart()
+                    + self.play.play_skin.get_loadend())
+                    as i64
+                    * 1000;
                 // Translated from: Java BMSPlayer.render() lines 607-608
                 if self.media_load_finished
                     && micronow > load_threshold
@@ -337,45 +356,53 @@ impl MainState for BMSPlayer {
                 {
                     // Chart preview cleanup on transition
                     if self.player_config.display_settings.chart_preview {
-                        self.main_state_data.timer.set_timer_off(TimerId::new(141));
-                        if let Some(ref mut lr) = self.lanerender {
-                            lr.init(&self.model);
+                        self.play
+                            .main_state_data
+                            .timer
+                            .set_timer_off(TimerId::new(141));
+                        if let Some(ref mut lr) = self.play.lanerender {
+                            lr.init(&self.play.model);
                         }
                     }
 
                     // Loudness analysis check (Java BMSPlayer.render() lines 615-641)
                     if !self.score.analysis_checked {
-                        self.adjusted_volume = -1.0;
+                        self.audio.adjusted_volume = -1.0;
                         self.score.analysis_checked = true;
                         if let Some(result) = self.score.analysis_result.take() {
-                            let config_key_volume = self.bg_volume;
+                            let config_key_volume = self.audio.bg_volume;
                             self.apply_loudness_analysis(&result, config_key_volume);
                         }
                     }
 
-                    self.bga
+                    self.play
+                        .bga
                         .lock()
                         .expect("bga lock poisoned")
                         .prepare(&() as &dyn std::any::Any);
                     self.state = PlayState::Ready;
-                    self.main_state_data.timer.set_timer_on(TIMER_READY);
+                    self.play.main_state_data.timer.set_timer_on(TIMER_READY);
                     self.queue_sound(rubato_types::sound_type::SoundType::PlayReady);
                     log::info!("PlayState::Ready");
                 }
                 // PM character neutral timer
                 if !self
+                    .play
                     .main_state_data
                     .timer
                     .is_timer_on(TIMER_PM_CHARA_1P_NEUTRAL)
                     || !self
+                        .play
                         .main_state_data
                         .timer
                         .is_timer_on(TIMER_PM_CHARA_2P_NEUTRAL)
                 {
-                    self.main_state_data
+                    self.play
+                        .main_state_data
                         .timer
                         .set_timer_on(TIMER_PM_CHARA_1P_NEUTRAL);
-                    self.main_state_data
+                    self.play
+                        .main_state_data
                         .timer
                         .set_timer_on(TIMER_PM_CHARA_2P_NEUTRAL);
                 }
@@ -383,42 +410,52 @@ impl MainState for BMSPlayer {
 
             // PlayState::Practice - practice mode config
             PlayState::Practice => {
-                if self.main_state_data.timer.is_timer_on(TIMER_PLAY) {
+                if self.play.main_state_data.timer.is_timer_on(TIMER_PLAY) {
                     // Reset for practice restart: reload BMS file to get a fresh model
                     // (modifiers mutate the model during play, so we need a clean copy).
                     // Java: resource.reloadBMSFile(); model = resource.getBMSModel();
                     // Rust: pending flag triggers MainController to reload resource and
                     // push fresh model back via receive_reloaded_model().
                     self.pending.pending_reload_bms = true;
-                    if let Some(ref mut lr) = self.lanerender {
-                        lr.init(&self.model);
+                    if let Some(ref mut lr) = self.play.lanerender {
+                        lr.init(&self.play.model);
                     }
                     if let Some(ref mut ki) = self.input.keyinput {
                         ki.key_beam_stop = false;
                     }
-                    self.main_state_data.timer.set_timer_off(TIMER_PLAY);
-                    self.main_state_data.timer.set_timer_off(TIMER_RHYTHM);
-                    self.main_state_data.timer.set_timer_off(TIMER_FAILED);
-                    self.main_state_data.timer.set_timer_off(TIMER_FADEOUT);
-                    self.main_state_data.timer.set_timer_off(TIMER_ENDOFNOTE_1P);
+                    self.play.main_state_data.timer.set_timer_off(TIMER_PLAY);
+                    self.play.main_state_data.timer.set_timer_off(TIMER_RHYTHM);
+                    self.play.main_state_data.timer.set_timer_off(TIMER_FAILED);
+                    self.play.main_state_data.timer.set_timer_off(TIMER_FADEOUT);
+                    self.play
+                        .main_state_data
+                        .timer
+                        .set_timer_off(TIMER_ENDOFNOTE_1P);
 
                     for raw in TIMER_PM_CHARA_1P_NEUTRAL.as_i32()..=TIMER_PM_CHARA_DANCE.as_i32() {
-                        self.main_state_data.timer.set_timer_off(TimerId::new(raw));
+                        self.play
+                            .main_state_data
+                            .timer
+                            .set_timer_off(TimerId::new(raw));
                     }
                 }
                 if !self
+                    .play
                     .main_state_data
                     .timer
                     .is_timer_on(TIMER_PM_CHARA_1P_NEUTRAL)
                     || !self
+                        .play
                         .main_state_data
                         .timer
                         .is_timer_on(TIMER_PM_CHARA_2P_NEUTRAL)
                 {
-                    self.main_state_data
+                    self.play
+                        .main_state_data
                         .timer
                         .set_timer_on(TIMER_PM_CHARA_1P_NEUTRAL);
-                    self.main_state_data
+                    self.play
+                        .main_state_data
                         .timer
                         .set_timer_on(TIMER_PM_CHARA_2P_NEUTRAL);
                 }
@@ -451,8 +488,10 @@ impl MainState for BMSPlayer {
                     .first()
                     .copied()
                     .unwrap_or(false);
-                let load_threshold =
-                    (self.play_skin.get_loadstart() + self.play_skin.get_loadend()) as i64 * 1000;
+                let load_threshold = (self.play.play_skin.get_loadstart()
+                    + self.play.play_skin.get_loadend())
+                    as i64
+                    * 1000;
                 if key0_pressed
                     && self.media_load_finished
                     && micronow > load_threshold
@@ -469,72 +508,73 @@ impl MainState for BMSPlayer {
                     // Apply frequency if != 100
                     if property.freq != 100 {
                         bms_model_utils::change_frequency(
-                            &mut self.model,
+                            &mut self.play.model,
                             property.freq as f32 / 100.0,
                         );
-                        if self.fast_forward_freq_option == FrequencyType::FREQUENCY {
+                        if self.audio.fast_forward_freq_option == FrequencyType::FREQUENCY {
                             self.pending.pending_global_pitch = Some(property.freq as f32 / 100.0);
                         }
                     }
 
-                    self.model.total = property.total;
+                    self.play.model.total = property.total;
 
                     // Apply practice modifier (time range)
                     let mut pm = rubato_core::pattern::practice_modifier::PracticeModifier::new(
                         property.starttime as i64 * 100 / property.freq as i64,
                         property.endtime as i64 * 100 / property.freq as i64,
                     );
-                    pm.modify(&mut self.model);
+                    pm.modify(&mut self.play.model);
 
                     // DP options
-                    if self.model.mode().map_or(1, |m| m.player()) == 2 {
+                    if self.play.model.mode().map_or(1, |m| m.player()) == 2 {
                         if property.doubleop == 1 {
                             let mut flip =
                                 rubato_core::pattern::lane_shuffle_modifier::PlayerFlipModifier::new();
-                            flip.modify(&mut self.model);
+                            flip.modify(&mut self.play.model);
                         }
                         let mut pm2 =
                             rubato_core::pattern::pattern_modifier::create_pattern_modifier(
                                 property.random2,
                                 1,
-                                &self.model.mode().copied().unwrap_or(Mode::BEAT_7K),
+                                &self.play.model.mode().copied().unwrap_or(Mode::BEAT_7K),
                                 &self.player_config,
                             );
-                        pm2.modify(&mut self.model);
+                        pm2.modify(&mut self.play.model);
                     }
 
                     // 1P random option
                     let mut pm1 = rubato_core::pattern::pattern_modifier::create_pattern_modifier(
                         property.random,
                         0,
-                        &self.model.mode().copied().unwrap_or(Mode::BEAT_7K),
+                        &self.play.model.mode().copied().unwrap_or(Mode::BEAT_7K),
                         &self.player_config,
                     );
-                    pm1.modify(&mut self.model);
+                    pm1.modify(&mut self.play.model);
 
                     // Gauge, judgerank, lane init
-                    self.gauge = self.practice.gauge(&self.model);
-                    self.model.judgerank = property.judgerank;
-                    if let Some(ref mut lr) = self.lanerender {
-                        lr.init(&self.model);
+                    self.play.gauge = self.practice.gauge(&self.play.model);
+                    self.play.model.judgerank = property.judgerank;
+                    if let Some(ref mut lr) = self.play.lanerender {
+                        lr.init(&self.play.model);
                     }
-                    self.play_skin.pomyu.init();
+                    self.play.play_skin.pomyu.init();
 
                     self.starttimeoffset = if property.starttime > 1000 {
                         (property.starttime as i64 - 1000) * 100 / property.freq as i64
                     } else {
                         0
                     };
-                    self.playtime = ((property.endtime as i64 + 1000) * 100 / property.freq as i64)
-                        as i32
+                    self.play.playtime = ((property.endtime as i64 + 1000) * 100
+                        / property.freq as i64) as i32
                         + TIME_MARGIN;
 
-                    self.bga
+                    self.play
+                        .bga
                         .lock()
                         .expect("bga lock poisoned")
                         .prepare(&() as &dyn std::any::Any);
                     self.state = PlayState::Ready;
-                    self.main_state_data.timer.set_timer_on(TIMER_READY);
+                    self.play.main_state_data.timer.set_timer_on(TIMER_READY);
                     log::info!("Practice -> PlayState::Ready");
                 }
             }
@@ -543,11 +583,18 @@ impl MainState for BMSPlayer {
             // Translated from: Java BMSPlayer.render() lines 726-731
             PlayState::PracticeFinished => {
                 let skin_fadeout = self
+                    .play
                     .main_state_data
                     .skin
                     .as_ref()
                     .map_or(0, |s| s.fadeout()) as i64;
-                if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
+                if self
+                    .play
+                    .main_state_data
+                    .timer
+                    .now_time_for_id(TIMER_FADEOUT)
+                    > skin_fadeout
+                {
                     // input.setEnable(true); input.setStartTime(0);
                     self.pending.pending_state_change = Some(MainStateType::MusicSelect);
                     log::info!("Practice finished, transition to MUSICSELECT");
@@ -556,17 +603,19 @@ impl MainState for BMSPlayer {
 
             // PlayState::Ready - countdown before play
             PlayState::Ready => {
-                if self.main_state_data.timer.now_time_for_id(TIMER_READY)
-                    > self.play_skin.get_playstart() as i64
+                if self.play.main_state_data.timer.now_time_for_id(TIMER_READY)
+                    > self.play.play_skin.get_playstart() as i64
                 {
-                    if let Some(ref lr) = self.lanerender {
+                    if let Some(ref lr) = self.play.lanerender {
                         self.score.replay_config = Some(lr.play_config().clone());
                     }
                     self.state = PlayState::Play;
-                    self.main_state_data
+                    self.play
+                        .main_state_data
                         .timer
                         .set_micro_timer(TIMER_PLAY, micronow - self.starttimeoffset * 1000);
-                    self.main_state_data
+                    self.play
+                        .main_state_data
                         .timer
                         .set_micro_timer(TIMER_RHYTHM, micronow - self.starttimeoffset * 1000);
 
@@ -574,24 +623,24 @@ impl MainState for BMSPlayer {
                     // input.setKeyLogMarginTime(resource.getMarginTime());
                     // Java: keyinput.startJudge(model, replay != null ? replay.keylog : null, resource.getMarginTime())
                     if let Some(ref mut ki) = self.input.keyinput {
-                        let timelines = &self.model.timelines;
+                        let timelines = &self.play.model.timelines;
                         let last_tl_micro = timelines.last().map_or(0, |tl| tl.micro_time());
                         let keylog = self
                             .score
                             .active_replay
                             .as_ref()
                             .map(|r| r.keylog.as_slice());
-                        ki.start_judge(last_tl_micro, keylog, self.margin_time);
+                        ki.start_judge(last_tl_micro, keylog, self.play.margin_time);
                     }
                     // Resolve initial BG volume: use adjusted_volume if >= 0,
                     // otherwise fall back to bg_volume from AudioConfig.
-                    let initial_bg_vol = if self.adjusted_volume >= 0.0 {
-                        self.adjusted_volume
+                    let initial_bg_vol = if self.audio.adjusted_volume >= 0.0 {
+                        self.audio.adjusted_volume
                     } else {
-                        self.bg_volume
+                        self.audio.bg_volume
                     };
-                    self.keysound.start_bg_play(
-                        &self.model,
+                    self.audio.keysound.start_bg_play(
+                        &self.play.model,
                         self.starttimeoffset * 1000,
                         initial_bg_vol,
                     );
@@ -604,18 +653,26 @@ impl MainState for BMSPlayer {
                 let deltatime = micronow - self.prevtime;
                 let deltaplay = deltatime.saturating_mul(100 - self.playspeed as i64) / 100;
                 let freq = self.practice.practice_property().freq;
-                let current_play_timer = self.main_state_data.timer.micro_timer(TIMER_PLAY);
-                self.main_state_data
+                let current_play_timer = self.play.main_state_data.timer.micro_timer(TIMER_PLAY);
+                self.play
+                    .main_state_data
                     .timer
                     .set_micro_timer(TIMER_PLAY, current_play_timer + deltaplay);
 
                 // Rhythm timer update
-                let now_bpm = self.lanerender.as_ref().map_or(120.0, |lr| lr.now_bpm());
+                let now_bpm = self
+                    .play
+                    .lanerender
+                    .as_ref()
+                    .map_or(120.0, |lr| lr.now_bpm());
                 if let Some(ref mut rhythm) = self.rhythm {
-                    let play_timer_micro =
-                        self.main_state_data.timer.now_micro_time_for_id(TIMER_PLAY);
+                    let play_timer_micro = self
+                        .play
+                        .main_state_data
+                        .timer
+                        .now_micro_time_for_id(TIMER_PLAY);
                     let (rhythm_timer, rhythm_on) = rhythm.update(
-                        self.main_state_data.timer.now_time(),
+                        self.play.main_state_data.timer.now_time(),
                         micronow,
                         deltatime,
                         now_bpm,
@@ -624,7 +681,8 @@ impl MainState for BMSPlayer {
                         play_timer_micro,
                     );
                     if rhythm_on {
-                        self.main_state_data
+                        self.play
+                            .main_state_data
                             .timer
                             .set_micro_timer(TIMER_RHYTHM, rhythm_timer);
                     }
@@ -634,60 +692,73 @@ impl MainState for BMSPlayer {
                 // Translated from: Java AutoplayThread.run() reads player.timer.getNowMicroTime(TIMER_PLAY)
                 // and player.getAdjustedVolume() / config.getAudioConfig().getBgvolume().
                 {
-                    let play_micro = self.main_state_data.timer.now_micro_time_for_id(TIMER_PLAY);
-                    self.keysound.update_play_time(play_micro);
-                    let vol = if self.adjusted_volume >= 0.0 {
-                        self.adjusted_volume
+                    let play_micro = self
+                        .play
+                        .main_state_data
+                        .timer
+                        .now_micro_time_for_id(TIMER_PLAY);
+                    self.audio.keysound.update_play_time(play_micro);
+                    let vol = if self.audio.adjusted_volume >= 0.0 {
+                        self.audio.adjusted_volume
                     } else {
-                        self.bg_volume
+                        self.audio.bg_volume
                     };
-                    self.keysound.update_volume(vol);
+                    self.audio.keysound.update_volume(vol);
                 }
 
-                let ptime = self.main_state_data.timer.now_time_for_id(TIMER_PLAY);
+                let ptime = self.play.main_state_data.timer.now_time_for_id(TIMER_PLAY);
                 // Gauge log
-                if let Some(ref gauge) = self.gauge {
+                if let Some(ref gauge) = self.play.gauge {
                     for (i, log) in self.gaugelog.iter_mut().enumerate() {
                         if log.len() as i64 <= ptime / 500 {
                             let val = gauge.value_by_type(i as i32);
                             log.push(val);
                         }
                     }
-                    self.main_state_data
+                    self.play
+                        .main_state_data
                         .timer
                         .switch_timer(TIMER_GAUGE_MAX_1P, gauge.gauge().is_max());
                 }
 
                 // pomyu timer update
                 // Translated from: Java BMSPlayer.render() line 766
-                let past_notes = self.judge.past_notes();
-                let gauge_is_max = self.gauge.as_ref().is_some_and(|g| g.gauge().is_max());
-                self.play_skin.pomyu.update_timer(
-                    &mut self.main_state_data.timer,
+                let past_notes = self.play.judge.past_notes();
+                let gauge_is_max = self.play.gauge.as_ref().is_some_and(|g| g.gauge().is_max());
+                self.play.play_skin.pomyu.update_timer(
+                    &mut self.play.main_state_data.timer,
                     past_notes,
                     gauge_is_max,
                 );
 
                 // Check play time elapsed
-                if (self.playtime as i64) < ptime {
+                if (self.play.playtime as i64) < ptime {
                     self.state = PlayState::Finished;
-                    self.main_state_data.timer.set_timer_on(TIMER_MUSIC_END);
+                    self.play
+                        .main_state_data
+                        .timer
+                        .set_timer_on(TIMER_MUSIC_END);
                     for raw in TIMER_PM_CHARA_1P_NEUTRAL.as_i32()..=TIMER_PM_CHARA_2P_BAD.as_i32() {
-                        self.main_state_data.timer.set_timer_off(TimerId::new(raw));
+                        self.play
+                            .main_state_data
+                            .timer
+                            .set_timer_off(TimerId::new(raw));
                     }
-                    self.main_state_data
+                    self.play
+                        .main_state_data
                         .timer
                         .set_timer_off(TIMER_PM_CHARA_DANCE);
                     log::info!("PlayState::Finished");
-                } else if (self.playtime - TIME_MARGIN) as i64 <= ptime {
-                    self.main_state_data
+                } else if (self.play.playtime - TIME_MARGIN) as i64 <= ptime {
+                    self.play
+                        .main_state_data
                         .timer
                         .switch_timer(TIMER_ENDOFNOTE_1P, true);
                 }
 
                 // Stage failed check with gauge auto shift
                 // Translated from: Java BMSPlayer.render() lines 782-815
-                if let Some(ref mut gauge) = self.gauge {
+                if let Some(ref mut gauge) = self.play.gauge {
                     let gas = self.player_config.play_settings.gauge_auto_shift;
                     use rubato_types::groove_gauge::{CLASS, EXHARDCLASS, HAZARD, NORMAL};
                     use rubato_types::player_config::{
@@ -741,7 +812,7 @@ impl MainState for BMSPlayer {
                             GAUGEAUTOSHIFT_NONE => {
                                 // FAILED transition
                                 self.state = PlayState::Failed;
-                                self.main_state_data.timer.set_timer_on(TIMER_FAILED);
+                                self.play.main_state_data.timer.set_timer_on(TIMER_FAILED);
                                 // if resource.mediaLoadFinished() { main.getAudioProcessor().stop(null); }
                                 self.queue_sound(rubato_types::sound_type::SoundType::PlayStop);
                                 log::info!("PlayState::Failed");
@@ -770,7 +841,7 @@ impl MainState for BMSPlayer {
                 if let Some(ref mut ki) = self.input.keyinput {
                     ki.stop_judge();
                 }
-                self.keysound.stop_bg_play();
+                self.audio.keysound.stop_bg_play();
 
                 // Quick retry check (START xor SELECT)
                 // Translated from: Java BMSPlayer.render() lines 823-838
@@ -782,18 +853,22 @@ impl MainState for BMSPlayer {
                     self.save_config();
                     self.pending.pending_reload_bms = true;
                     self.pending.pending_state_change = Some(MainStateType::Play);
-                } else if self.main_state_data.timer.now_time_for_id(TIMER_FAILED)
-                    > self.play_skin.get_close() as i64
+                } else if self
+                    .play
+                    .main_state_data
+                    .timer
+                    .now_time_for_id(TIMER_FAILED)
+                    > self.play.play_skin.get_close() as i64
                 {
                     self.pending.pending_global_pitch = Some(1.0);
                     // if resource.mediaLoadFinished() { resource.getBGAManager().stop(); }
 
                     // Fill remaining gauge log with 0
-                    if self.main_state_data.timer.is_timer_on(TIMER_PLAY) {
-                        let failed_time = self.main_state_data.timer.timer(TIMER_FAILED);
-                        let play_time = self.main_state_data.timer.timer(TIMER_PLAY);
+                    if self.play.main_state_data.timer.is_timer_on(TIMER_PLAY) {
+                        let failed_time = self.play.main_state_data.timer.timer(TIMER_FAILED);
+                        let play_time = self.play.main_state_data.timer.timer(TIMER_PLAY);
                         let mut l = failed_time - play_time;
-                        while l < self.playtime as i64 + 500 {
+                        while l < self.play.playtime as i64 + 500 {
                             for glog in self.gaugelog.iter_mut() {
                                 glog.push(0.0);
                             }
@@ -810,10 +885,10 @@ impl MainState for BMSPlayer {
                     self.pending.pending_score_handoff =
                         Some(rubato_types::score_handoff::ScoreHandoff {
                             score_data: score,
-                            combo: self.judge.course_combo(),
-                            maxcombo: self.judge.course_maxcombo(),
+                            combo: self.play.judge.course_combo(),
+                            maxcombo: self.play.judge.course_maxcombo(),
                             gauge: self.gaugelog.clone(),
-                            groove_gauge: self.gauge.clone(),
+                            groove_gauge: self.play.gauge.clone(),
                             assist: self.assist,
                         });
                     // input.setEnable(true); input.setStartTime(0);
@@ -846,20 +921,34 @@ impl MainState for BMSPlayer {
                 if let Some(ref mut ki) = self.input.keyinput {
                     ki.stop_judge();
                 }
-                self.keysound.stop_bg_play();
+                self.audio.keysound.stop_bg_play();
 
-                if self.main_state_data.timer.now_time_for_id(TIMER_MUSIC_END)
-                    > self.play_skin.get_finish_margin() as i64
+                if self
+                    .play
+                    .main_state_data
+                    .timer
+                    .now_time_for_id(TIMER_MUSIC_END)
+                    > self.play.play_skin.get_finish_margin() as i64
                 {
-                    self.main_state_data.timer.switch_timer(TIMER_FADEOUT, true);
+                    self.play
+                        .main_state_data
+                        .timer
+                        .switch_timer(TIMER_FADEOUT, true);
                 }
                 // skin.getFadeout() from the loaded skin
                 let skin_fadeout = self
+                    .play
                     .main_state_data
                     .skin
                     .as_ref()
                     .map_or(0, |s| s.fadeout()) as i64;
-                if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
+                if self
+                    .play
+                    .main_state_data
+                    .timer
+                    .now_time_for_id(TIMER_FADEOUT)
+                    > skin_fadeout
+                {
                     self.pending.pending_global_pitch = Some(1.0);
                     // resource.getBGAManager().stop();
                     let score = if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Play
@@ -873,10 +962,10 @@ impl MainState for BMSPlayer {
                     self.pending.pending_score_handoff =
                         Some(rubato_types::score_handoff::ScoreHandoff {
                             score_data: score,
-                            combo: self.judge.course_combo(),
-                            maxcombo: self.judge.course_maxcombo(),
+                            combo: self.play.judge.course_combo(),
+                            maxcombo: self.play.judge.course_maxcombo(),
                             gauge: self.gaugelog.clone(),
-                            groove_gauge: self.gauge.clone(),
+                            groove_gauge: self.play.gauge.clone(),
                             assist: self.assist,
                         });
                     // input.setEnable(true); input.setStartTime(0);
@@ -907,11 +996,18 @@ impl MainState for BMSPlayer {
 
                 // skin.getFadeout() from the loaded skin
                 let skin_fadeout = self
+                    .play
                     .main_state_data
                     .skin
                     .as_ref()
                     .map_or(0, |s| s.fadeout()) as i64;
-                if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
+                if self
+                    .play
+                    .main_state_data
+                    .timer
+                    .now_time_for_id(TIMER_FADEOUT)
+                    > skin_fadeout
+                {
                     // input.setEnable(true); input.setStartTime(0);
                     self.pending.pending_state_change = Some(MainStateType::MusicSelect);
                     log::info!("Aborted, transition to MUSICSELECT");
@@ -922,15 +1018,16 @@ impl MainState for BMSPlayer {
         self.prevtime = micronow;
 
         // Copy recent judge data to timer for SkinTimingVisualizer/SkinHitErrorVisualizer
-        self.main_state_data
-            .timer
-            .set_recent_judges(self.judge.recent_judges_index(), self.judge.recent_judges());
+        self.play.main_state_data.timer.set_recent_judges(
+            self.play.judge.recent_judges_index(),
+            self.play.judge.recent_judges(),
+        );
     }
 
     fn input(&mut self) {
         // Compute values before taking mutable borrows
         let is_note_end = self.is_note_end();
-        let is_timer_play_on = self.main_state_data.timer.is_timer_on(TIMER_PLAY);
+        let is_timer_play_on = self.play.main_state_data.timer.is_timer_on(TIMER_PLAY);
         let now_millis = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
@@ -938,7 +1035,7 @@ impl MainState for BMSPlayer {
 
         // Process control input (START+SELECT, lane cover, hispeed, etc.)
         if let (Some(mut control), Some(lanerender)) =
-            (self.input.control.take(), self.lanerender.as_mut())
+            (self.input.control.take(), self.play.lanerender.as_mut())
         {
             let pending_analog_resets = &mut self.input.pending_analog_resets;
             let input_analog_recent_ms = &mut self.input.input_analog_recent_ms;
@@ -1006,8 +1103,8 @@ impl MainState for BMSPlayer {
         }
 
         // Build InputContext for key input processing.
-        let auto_presstime = self.judge.auto_presstime().to_vec();
-        let now = self.main_state_data.timer.now_time();
+        let auto_presstime = self.play.judge.auto_presstime().to_vec();
+        let now = self.play.main_state_data.timer.now_time();
         let is_autoplay = self.play_mode.mode == rubato_core::bms_player_mode::Mode::Autoplay;
         if let Some(ref mut keyinput) = self.input.keyinput {
             let mut ctx = crate::key_input_processor::InputContext {
@@ -1015,7 +1112,7 @@ impl MainState for BMSPlayer {
                 key_states: &self.input.input_key_states,
                 auto_presstime: &auto_presstime,
                 is_autoplay,
-                timer: &mut self.main_state_data.timer,
+                timer: &mut self.play.main_state_data.timer,
             };
             keyinput.input(&mut ctx);
         }
@@ -1086,10 +1183,10 @@ impl MainState for BMSPlayer {
 
     fn dispose(&mut self) {
         // Call default MainState dispose
-        self.main_state_data.skin = None;
-        self.main_state_data.stage = None;
+        self.play.main_state_data.skin = None;
+        self.play.main_state_data.stage = None;
 
-        if let Some(ref mut lr) = self.lanerender {
+        if let Some(ref mut lr) = self.play.lanerender {
             lr.dispose();
         }
         self.practice.dispose();

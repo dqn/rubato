@@ -73,10 +73,10 @@ mod tests {
 
         // Phase 1: prepare — mutates internal state
         bar.prepare(0, &state);
-        assert!(bar.data.draw);
-        assert_eq!(bar.data.region.x, 10.0);
-        assert_eq!(bar.data.region.y, 20.0);
-        assert_eq!(bar.data.region.width, 300.0);
+        assert!(bar.data.draw_state.draw);
+        assert_eq!(bar.data.draw_state.region.x, 10.0);
+        assert_eq!(bar.data.draw_state.region.y, 20.0);
+        assert_eq!(bar.data.draw_state.region.width, 300.0);
 
         // Phase 2: draw — reads pre-computed state (stub does nothing but verifies signature)
         let mut renderer = SkinObjectRenderer::new();
@@ -90,7 +90,7 @@ mod tests {
         let bar = SkinBarObject::new(0);
         // No destinations set, so validate would fail, but prepare with no dst
         // won't set draw=true either
-        assert!(!bar.data.draw);
+        assert!(!bar.data.draw_state.draw);
     }
 
     #[test]

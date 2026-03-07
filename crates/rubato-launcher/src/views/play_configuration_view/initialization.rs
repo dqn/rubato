@@ -9,45 +9,71 @@ impl PlayConfigurationView {
             players_selected: None,
             playername: String::new(),
             playconfig: None,
-            hispeed: 1.0,
             lr2configuration_hgap: 25.0,
             lr2configuration_vgap: 4.0,
             lr2configurationassist_hgap: 25.0,
             lr2configurationassist_vgap: 4.0,
-            fixhispeed: None,
-            gvalue: 500,
-            enable_constant: false,
-            const_fadein_time: 100,
-            hispeedmargin: 0.25,
-            hispeedautoadjust: false,
-            scoreop: None,
-            scoreop2: None,
-            doubleop: None,
-            gaugeop: None,
-            lntype: None,
-            enable_lanecover: true,
-            lanecover: 200,
-            lanecovermarginlow: 1,
-            lanecovermarginhigh: 10,
-            lanecoverswitchduration: 500,
-            enable_lift: false,
-            lift: 100,
-            enable_hidden: false,
-            hidden: 100,
-            bgmpath: String::new(),
-            soundpath: String::new(),
-            notesdisplaytiming: 0,
-            notesdisplaytimingautoadjust: false,
-            bpmguide: false,
-            gaugeautoshift: None,
-            bottomshiftablegauge: None,
-            customjudge: false,
-            njudgepg: 400,
-            njudgegr: 400,
-            njudgegd: 100,
-            sjudgepg: 400,
-            sjudgegr: 400,
-            sjudgegd: 100,
+            gauge: GaugeSettings {
+                gaugeop: None,
+                gaugeautoshift: None,
+                bottomshiftablegauge: None,
+                gauge_options_labels: Vec::new(),
+                gaugeautoshift_labels: Vec::new(),
+                bottomshiftablegauge_labels: Vec::new(),
+            },
+            judge: JudgeSettings {
+                customjudge: false,
+                njudgepg: 400,
+                njudgegr: 400,
+                njudgegd: 100,
+                sjudgepg: 400,
+                sjudgegr: 400,
+                sjudgegd: 100,
+                judgealgorithm: None,
+                notesdisplaytiming: 0,
+                notesdisplaytimingautoadjust: false,
+                bpmguide: false,
+                judgealgorithm_labels: Vec::new(),
+            },
+            lane: LaneSettings {
+                enable_lanecover: true,
+                lanecover: 200,
+                lanecovermarginlow: 1,
+                lanecovermarginhigh: 10,
+                lanecoverswitchduration: 500,
+                enable_lift: false,
+                lift: 100,
+                enable_hidden: false,
+                hidden: 100,
+            },
+            display: DisplaySettings {
+                judgeregion: false,
+                markprocessednote: false,
+                showhiddennote: false,
+                showpastnote: false,
+                target: Vec::new(),
+                target_selected: None,
+                chartpreview: true,
+                guidese: false,
+                extranotedepth: 0,
+            },
+            input: InputSettings {
+                hispeed: 1.0,
+                fixhispeed: None,
+                gvalue: 500,
+                enable_constant: false,
+                const_fadein_time: 100,
+                hispeedmargin: 0.25,
+                hispeedautoadjust: false,
+                scoreop: None,
+                scoreop2: None,
+                doubleop: None,
+                lntype: None,
+                score_options_labels: Vec::new(),
+                double_options_labels: Vec::new(),
+                fixhispeed_labels: Vec::new(),
+                lntype_labels: Vec::new(),
+            },
             minemode: None,
             scrollmode: None,
             longnotemode: None,
@@ -57,22 +83,20 @@ impl PlayConfigurationView {
             seventoninepattern: None,
             seventoninetype: None,
             exitpressduration: 1000,
-            chartpreview: true,
-            guidese: false,
             windowhold: false,
-            extranotedepth: 0,
-            judgeregion: false,
-            markprocessednote: false,
-            showhiddennote: false,
-            showpastnote: false,
-            target: Vec::new(),
-            target_selected: None,
-            judgealgorithm: None,
+            seven_to_nine_pattern_labels: Vec::new(),
+            seven_to_nine_type_labels: Vec::new(),
+            minemode_labels: Vec::new(),
+            scrollmode_labels: Vec::new(),
+            longnotemode_labels: Vec::new(),
             autosavereplay1: None,
             autosavereplay2: None,
             autosavereplay3: None,
             autosavereplay4: None,
+            autosave_labels: Vec::new(),
             usecim: false,
+            bgmpath: String::new(),
+            soundpath: String::new(),
             txt_twitter_consumer_key: String::new(),
             txt_twitter_consumer_secret: String::new(),
             txt_twitter_authenticated_visible: false,
@@ -87,20 +111,6 @@ impl PlayConfigurationView {
             default_download_url: String::new(),
             override_download_url: String::new(),
             clipboard_screenshot: false,
-            score_options_labels: Vec::new(),
-            double_options_labels: Vec::new(),
-            seven_to_nine_pattern_labels: Vec::new(),
-            seven_to_nine_type_labels: Vec::new(),
-            gauge_options_labels: Vec::new(),
-            fixhispeed_labels: Vec::new(),
-            lntype_labels: Vec::new(),
-            gaugeautoshift_labels: Vec::new(),
-            bottomshiftablegauge_labels: Vec::new(),
-            minemode_labels: Vec::new(),
-            scrollmode_labels: Vec::new(),
-            longnotemode_labels: Vec::new(),
-            judgealgorithm_labels: Vec::new(),
-            autosave_labels: Vec::new(),
             video_controller: VideoConfigurationView::default(),
             audio_controller: AudioConfigurationView::default(),
             input_controller: InputConfigurationView::default(),
@@ -164,9 +174,9 @@ impl PlayConfigurationView {
             "RANDOM-EX",
             "S-RANDOM-EX",
         ];
-        self.score_options_labels = Self::init_combo_box_labels(&score_options);
+        self.input.score_options_labels = Self::init_combo_box_labels(&score_options);
 
-        self.double_options_labels =
+        self.input.double_options_labels =
             Self::init_combo_box_labels(&["OFF", "FLIP", "BATTLE", "BATTLE AS"]);
 
         self.seven_to_nine_pattern_labels = Self::init_combo_box_labels(&[
@@ -183,7 +193,7 @@ impl PlayConfigurationView {
         self.seven_to_nine_type_labels =
             Self::init_combo_box_labels(&["OFF", "NO MASHING", "ALTERNATION"]);
 
-        self.gauge_options_labels = Self::init_combo_box_labels(&[
+        self.gauge.gauge_options_labels = Self::init_combo_box_labels(&[
             "ASSIST EASY",
             "EASY",
             "NORMAL",
@@ -192,13 +202,13 @@ impl PlayConfigurationView {
             "HAZARD",
         ]);
 
-        self.fixhispeed_labels =
+        self.input.fixhispeed_labels =
             Self::init_combo_box_labels(&["OFF", "START BPM", "MAX BPM", "MAIN BPM", "MIN BPM"]);
 
-        self.lntype_labels =
+        self.input.lntype_labels =
             Self::init_combo_box_labels(&["LONG NOTE", "CHARGE NOTE", "HELL CHARGE NOTE"]);
 
-        self.gaugeautoshift_labels = Self::init_combo_box_labels(&[
+        self.gauge.gaugeautoshift_labels = Self::init_combo_box_labels(&[
             "NONE",
             "CONTINUE",
             "SURVIVAL TO GROOVE",
@@ -206,7 +216,7 @@ impl PlayConfigurationView {
             "SELECT TO UNDER",
         ]);
 
-        self.bottomshiftablegauge_labels =
+        self.gauge.bottomshiftablegauge_labels =
             Self::init_combo_box_labels(&["ASSIST EASY", "EASY", "NORMAL"]);
 
         self.minemode_labels =
@@ -219,7 +229,8 @@ impl PlayConfigurationView {
         ]);
 
         // These would normally come from resource bundle
-        self.judgealgorithm_labels = Self::init_combo_box_labels(&["LR2", "AC", "BOTTOM PRIORITY"]);
+        self.judge.judgealgorithm_labels =
+            Self::init_combo_box_labels(&["LR2", "AC", "BOTTOM PRIORITY"]);
 
         self.autosave_labels = Self::init_combo_box_labels(&[
             "NONE",
@@ -238,7 +249,7 @@ impl PlayConfigurationView {
         self.http_download_source = DOWNLOAD_SOURCES.keys().cloned().collect();
 
         // Sub-controller init calls: these methods set up internal state
-        // (table columns, combo box items, etc.) — actual rendering is egui.
+        // (table columns, combo box items, etc.) -- actual rendering is egui.
         // We pass `self` as a dummy since the parameter is unused in Rust.
         // NOTE: We cannot pass `&self` here because `self` is `&mut`.
         // The init methods use `_main` (unused), so we pass a default-constructed instance.

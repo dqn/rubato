@@ -246,10 +246,10 @@ impl SkinGaugeGraphObject {
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
         // Copy region dimensions to avoid borrow conflicts
-        let region_x = self.object_data.region.x;
-        let region_y = self.object_data.region.y;
-        let region_width = self.object_data.region.width;
-        let region_height = self.object_data.region.height;
+        let region_x = self.object_data.draw_state.region.x;
+        let region_y = self.object_data.draw_state.region.y;
+        let region_width = self.object_data.draw_state.region.width;
+        let region_height = self.object_data.draw_state.region.height;
 
         {
             let needs_dispose = if let Some(ref shapetex) = self.shapetex {

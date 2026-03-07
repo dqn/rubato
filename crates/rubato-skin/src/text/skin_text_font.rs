@@ -143,7 +143,7 @@ impl SkinTextFont {
         // We set the absolute pixel size to region.height so that glyphs fill the
         // destination height. The ratio region.height / parameter.size is the scale
         // factor relative to the configured font size.
-        let region = self.text_data.data.region.clone();
+        let region = self.text_data.data.draw_state.region.clone();
         let original_scale = font.scale();
         font.scale = region.height;
 
@@ -152,7 +152,7 @@ impl SkinTextFont {
 
         // Measure text layout to get width for alignment
         let text = self.text_data.text().to_string();
-        let color = self.text_data.data.color;
+        let color = self.text_data.data.draw_state.color;
         let layout_width = self.compute_layout_width(&text, &color, region.width, region.height);
 
         // Compute x position based on alignment
@@ -293,7 +293,7 @@ impl SkinTextFont {
 
         let truncate =
             self.text_data.overflow() == OVERFLOW_TRUNCATE && !self.text_data.is_wrapping();
-        let angle = self.text_data.data.angle;
+        let angle = self.text_data.data.draw_state.angle;
 
         for glyph in &glyphs {
             let gx = x + glyph.x;
@@ -391,8 +391,8 @@ mod tests {
             parameter: FreeTypeFontParameter::default(),
             prepared_fonts: None,
         };
-        stf.text_data.data.draw = true;
-        stf.text_data.data.region = Rectangle::new(0.0, 0.0, 200.0, 30.0);
+        stf.text_data.data.draw_state.draw = true;
+        stf.text_data.data.draw_state.region = Rectangle::new(0.0, 0.0, 200.0, 30.0);
         let mut renderer = SkinObjectRenderer::new();
         stf.draw_with_offset(&mut renderer, 0.0, 0.0);
         // No font => no rendering
@@ -402,9 +402,9 @@ mod tests {
     #[test]
     fn test_draw_with_offset_zero_param_size_returns_early() {
         let mut stf = make_font(0);
-        stf.text_data.data.draw = true;
-        stf.text_data.data.region = Rectangle::new(0.0, 0.0, 200.0, 30.0);
-        stf.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        stf.text_data.data.draw_state.draw = true;
+        stf.text_data.data.draw_state.region = Rectangle::new(0.0, 0.0, 200.0, 30.0);
+        stf.text_data.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
         stf.text_data.set_text("A".to_string());
         let mut renderer = SkinObjectRenderer::new();
         stf.draw_with_offset(&mut renderer, 0.0, 0.0);
@@ -418,9 +418,9 @@ mod tests {
     fn test_renderer_type_set_to_linear() {
         // Java: sprite.setType(SkinObjectRenderer.TYPE_LINEAR)
         let mut stf = make_font(30);
-        stf.text_data.data.draw = true;
-        stf.text_data.data.region = Rectangle::new(0.0, 0.0, 500.0, 30.0);
-        stf.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        stf.text_data.data.draw_state.draw = true;
+        stf.text_data.data.draw_state.region = Rectangle::new(0.0, 0.0, 500.0, 30.0);
+        stf.text_data.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
         stf.text_data.set_text("X".to_string());
 
         let mut renderer = SkinObjectRenderer::new();
@@ -434,9 +434,9 @@ mod tests {
     fn test_font_scale_restored_after_draw() {
         // Java: saves original scale, sets region.height, restores at end
         let mut stf = make_font(20);
-        stf.text_data.data.draw = true;
-        stf.text_data.data.region = Rectangle::new(0.0, 0.0, 500.0, 40.0);
-        stf.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        stf.text_data.data.draw_state.draw = true;
+        stf.text_data.data.draw_state.region = Rectangle::new(0.0, 0.0, 500.0, 40.0);
+        stf.text_data.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
         stf.text_data.set_text("Test".to_string());
 
         let original_scale = stf.font.as_ref().unwrap().scale();

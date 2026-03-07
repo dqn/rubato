@@ -170,12 +170,12 @@ impl SkinGraph {
 
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
         self.data.prepare(time, state);
-        if !self.data.draw {
+        if !self.data.draw_state.draw {
             return;
         }
         self.current_image = self.source.get_image(time, state);
         if self.current_image.is_none() {
-            self.data.draw = false;
+            self.data.draw_state.draw = false;
             return;
         }
         self.current_value = if let Some(ref r) = self.ref_prop {
@@ -197,7 +197,7 @@ impl SkinGraph {
                     current_image.region_width,
                     (current_image.region_height as f32 * self.current_value) as i32,
                 );
-                let region = self.data.region.clone();
+                let region = self.data.draw_state.region.clone();
                 self.data.draw_image_at(
                     sprite,
                     &self.current,
@@ -215,7 +215,7 @@ impl SkinGraph {
                     (current_image.region_width as f32 * self.current_value) as i32,
                     current_image.region_height,
                 );
-                let region = self.data.region.clone();
+                let region = self.data.draw_state.region.clone();
                 self.data.draw_image_at(
                     sprite,
                     &self.current,

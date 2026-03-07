@@ -151,7 +151,7 @@ impl SkinBPMGraph {
             };
             let tex_width = shapetex.texture.as_ref().map(|t| t.width).unwrap_or(0);
             shapetex.region_width = (tex_width as f32 * render) as i32;
-            let region = self.data.region.clone();
+            let region = self.data.draw_state.region.clone();
             let shapetex_clone = shapetex.clone();
             self.data.draw_image_at(
                 sprite,
@@ -230,8 +230,8 @@ impl SkinBPMGraph {
         let shape: Pixmap = if self.bpm_data.len() < 2 {
             Pixmap::new(1, 1, PixmapFormat::RGBA8888)
         } else {
-            let width = self.data.region.width.abs() as i32;
-            let height = self.data.region.height.abs() as i32;
+            let width = self.data.draw_state.region.width.abs() as i32;
+            let height = self.data.draw_state.region.height.abs() as i32;
             let mut shape_pixmap = Pixmap::new(width, height, PixmapFormat::RGBA8888);
 
             let mut last_time = self.bpm_data[self.bpm_data.len() - 1][1] as i32;

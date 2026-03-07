@@ -102,8 +102,8 @@ impl SkinTextImage {
         offset_x: f32,
         offset_y: f32,
     ) {
-        let region = self.text_data.data.region.clone();
-        let color = self.text_data.data.color;
+        let region = self.text_data.data.draw_state.region.clone();
+        let color = self.text_data.data.draw_state.color;
         let source_size = self.source.size() as f32;
         if source_size == 0.0 {
             return;
@@ -358,9 +358,9 @@ mod tests {
         assert_eq!(sti.textwidth, 50.0); // 20 + 30
 
         // Manually set draw state
-        sti.text_data.data.draw = true;
-        sti.text_data.data.region = Rectangle::new(100.0, 200.0, 500.0, 40.0);
-        sti.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        sti.text_data.data.draw_state.draw = true;
+        sti.text_data.data.draw_state.region = Rectangle::new(100.0, 200.0, 500.0, 40.0);
+        sti.text_data.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
 
         let mut renderer = SkinObjectRenderer::new();
         sti.draw_with_offset(&mut renderer, 0.0, 0.0);
@@ -387,9 +387,9 @@ mod tests {
         setup_data(&mut sti.text_data.data, 100.0, 0.0, 200.0, 20.0);
 
         sti.set_text("X".to_string());
-        sti.text_data.data.draw = true;
-        sti.text_data.data.region = Rectangle::new(100.0, 0.0, 200.0, 20.0);
-        sti.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        sti.text_data.data.draw_state.draw = true;
+        sti.text_data.data.draw_state.region = Rectangle::new(100.0, 0.0, 200.0, 20.0);
+        sti.text_data.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
 
         let mut renderer = SkinObjectRenderer::new();
         sti.draw_with_offset(&mut renderer, 0.0, 0.0);
@@ -411,9 +411,9 @@ mod tests {
         setup_data(&mut sti.text_data.data, 100.0, 0.0, 200.0, 20.0);
 
         sti.set_text("Y".to_string());
-        sti.text_data.data.draw = true;
-        sti.text_data.data.region = Rectangle::new(100.0, 0.0, 200.0, 20.0);
-        sti.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        sti.text_data.data.draw_state.draw = true;
+        sti.text_data.data.draw_state.region = Rectangle::new(100.0, 0.0, 200.0, 20.0);
+        sti.text_data.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
 
         let mut renderer = SkinObjectRenderer::new();
         sti.draw_with_offset(&mut renderer, 0.0, 0.0);
@@ -443,9 +443,9 @@ mod tests {
         // textwidth = 200 (5 glyphs * 40)
         assert_eq!(sti.textwidth, 200.0);
 
-        sti.text_data.data.draw = true;
-        sti.text_data.data.region = Rectangle::new(0.0, 0.0, 100.0, 20.0);
-        sti.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        sti.text_data.data.draw_state.draw = true;
+        sti.text_data.data.draw_state.region = Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        sti.text_data.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
 
         let mut renderer = SkinObjectRenderer::new();
         sti.draw_with_offset(&mut renderer, 0.0, 0.0);
@@ -474,9 +474,9 @@ mod tests {
         setup_data(&mut sti.text_data.data, 10.0, 20.0, 500.0, 40.0);
 
         sti.set_text("AB".to_string());
-        sti.text_data.data.draw = true;
-        sti.text_data.data.region = Rectangle::new(10.0, 20.0, 500.0, 40.0);
-        sti.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        sti.text_data.data.draw_state.draw = true;
+        sti.text_data.data.draw_state.region = Rectangle::new(10.0, 20.0, 500.0, 40.0);
+        sti.text_data.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
 
         let mut renderer = SkinObjectRenderer::new();
         sti.draw_with_offset(&mut renderer, 0.0, 0.0);
@@ -499,9 +499,9 @@ mod tests {
         setup_data(&mut sti.text_data.data, 50.0, 60.0, 200.0, 32.0);
 
         sti.set_text("Z".to_string());
-        sti.text_data.data.draw = true;
-        sti.text_data.data.region = Rectangle::new(50.0, 60.0, 200.0, 32.0);
-        sti.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        sti.text_data.data.draw_state.draw = true;
+        sti.text_data.data.draw_state.region = Rectangle::new(50.0, 60.0, 200.0, 32.0);
+        sti.text_data.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
 
         let mut renderer = SkinObjectRenderer::new();
         sti.draw_with_offset(&mut renderer, 7.0, 11.0);
@@ -519,9 +519,9 @@ mod tests {
         // source size=0 should return early without drawing
         let source = make_source_with_glyphs(&[('A', 20)], 0, 0);
         let mut sti = SkinTextImage::new(source);
-        sti.text_data.data.draw = true;
-        sti.text_data.data.region = Rectangle::new(0.0, 0.0, 100.0, 32.0);
-        sti.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        sti.text_data.data.draw_state.draw = true;
+        sti.text_data.data.draw_state.region = Rectangle::new(0.0, 0.0, 100.0, 32.0);
+        sti.text_data.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
 
         let mut renderer = SkinObjectRenderer::new();
         sti.draw_with_offset(&mut renderer, 0.0, 0.0);
@@ -539,9 +539,9 @@ mod tests {
         setup_data(&mut sti.text_data.data, 0.0, 0.0, 500.0, 80.0);
 
         sti.set_text("A".to_string());
-        sti.text_data.data.draw = true;
-        sti.text_data.data.region = Rectangle::new(0.0, 0.0, 500.0, 80.0);
-        sti.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        sti.text_data.data.draw_state.draw = true;
+        sti.text_data.data.draw_state.region = Rectangle::new(0.0, 0.0, 500.0, 80.0);
+        sti.text_data.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
 
         let mut renderer = SkinObjectRenderer::new();
         sti.draw_with_offset(&mut renderer, 0.0, 0.0);

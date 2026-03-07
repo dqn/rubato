@@ -27,7 +27,7 @@ fn play_configuration_view_new_defaults() {
     let view = PlayConfigurationView::new();
 
     assert!(!view.exit_requested);
-    assert_eq!(view.hispeed, 1.0);
+    assert_eq!(view.input.hispeed, 1.0);
     assert_eq!(view.playername, "");
     assert!(view.players.is_empty());
 }

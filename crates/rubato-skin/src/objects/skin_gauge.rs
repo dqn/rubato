@@ -149,7 +149,7 @@ impl SkinGauge {
             return;
         }
 
-        let region = &self.data.region;
+        let region = &self.data.draw_state.region;
         let notes = if self.value > 0.0 {
             ((self.value * self.parts as f32 / self.max) as i32).max(1)
         } else {
@@ -163,7 +163,7 @@ impl SkinGauge {
             self.gauge_type
         }) * 6;
 
-        sprite.blend = self.data.dstblend;
+        sprite.blend = self.data.timer.dstblend;
         sprite.obj_type = 0; // TYPE_NORMAL
 
         match self.animation_type {
@@ -524,7 +524,7 @@ mod tests {
         gauge.border = 80.0;
         gauge.gauge_type = 0;
         gauge.animation = 1;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.draw_state.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -537,7 +537,7 @@ mod tests {
         gauge.value = 0.0;
         gauge.max = 100.0;
         gauge.border = 80.0;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.draw_state.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -551,7 +551,7 @@ mod tests {
         gauge.max = 100.0;
         gauge.border = 80.0;
         gauge.gauge_type = 0;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.draw_state.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -566,7 +566,7 @@ mod tests {
         gauge.border = 80.0;
         gauge.gauge_type = 0;
         gauge.animation = 2;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.draw_state.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -581,7 +581,7 @@ mod tests {
         gauge.border = 80.0;
         gauge.gauge_type = 0;
         gauge.animation = 1;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.draw_state.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -598,7 +598,7 @@ mod tests {
         gauge.border = 80.0;
         gauge.gauge_type = 6;
         gauge.animation = 0;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.draw_state.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -610,7 +610,7 @@ mod tests {
         let mut gauge = SkinGauge::new(images, 0, 0, 10, 99, 2, 100);
         gauge.images = vec![TextureRegion::new(); 6];
         gauge.value = 50.0;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.draw_state.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         // Should not panic, just does nothing for unknown animation type
         gauge.draw(&mut renderer);
@@ -626,7 +626,7 @@ mod tests {
         gauge.max = 100.0;
         gauge.border = 80.0;
         gauge.gauge_type = 0;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.draw_state.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         // Some segments will compute img_idx >= 3, those should be skipped
         gauge.draw(&mut renderer);
@@ -680,7 +680,7 @@ mod tests {
         gauge.max = 100.0;
         gauge.border = 80.0;
         gauge.gauge_type = 0;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.draw_state.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }

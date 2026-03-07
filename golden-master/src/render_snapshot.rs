@@ -119,10 +119,10 @@ pub fn capture_render_snapshot(
                 "object idx={} type={} name={:?} timer={:?} draw_count={} op={:?}",
                 idx,
                 object.type_name(),
-                data.name,
-                data.dsttimer.as_ref().map(|t| t.get_timer_id()),
-                data.dstdraw.len(),
-                data.dstop
+                data.timer.name,
+                data.timer.dsttimer.as_ref().map(|t| t.get_timer_id()),
+                data.timer.dstdraw.len(),
+                data.timer.dstop
             );
         }
         if !is_object_valid_for_prepare(object) {
@@ -137,23 +137,23 @@ pub fn capture_render_snapshot(
                     "option-pruned idx={} type={} name={:?} op={:?}",
                     idx,
                     object.type_name(),
-                    data.name,
-                    data.dstop
+                    data.timer.name,
+                    data.timer.dstop
                 );
             }
             continue;
         }
-        if debug_option_prune && !data.dstop.is_empty() {
+        if debug_option_prune && !data.timer.dstop.is_empty() {
             eprintln!(
                 "option-kept idx={} type={} name={:?} op={:?}",
                 idx,
                 object.type_name(),
-                data.name,
-                data.dstop
+                data.timer.name,
+                data.timer.dstop
             );
         }
         let object_type = object.type_name();
-        let blend = data.dstblend;
+        let blend = data.timer.dstblend;
 
         let resolved = eval::resolve_common(data, provider);
 
@@ -176,7 +176,8 @@ pub fn capture_render_snapshot(
                         b: col.b,
                         a: final_alpha,
                     };
-                    if should_force_note_alpha_zero(skin_type.as_ref(), data.name.as_deref()) {
+                    if should_force_note_alpha_zero(skin_type.as_ref(), data.timer.name.as_deref())
+                    {
                         color.a = 0.0;
                     }
                     let detail = resolve_detail(object, provider, skin_type.as_ref());
@@ -189,7 +190,7 @@ pub fn capture_render_snapshot(
         commands.push(DrawCommand {
             object_index: idx,
             object_type: object_type.to_string(),
-            name: data.name.clone(),
+            name: data.timer.name.clone(),
             visible,
             dst,
             color,
@@ -211,7 +212,7 @@ fn should_skip_for_parity(skin: &rubato_skin::skin::Skin, object: &SkinObject) -
     let skin_type = skin.header.skin_type();
     matches!(skin_type, Some(&SkinType::MusicSelect))
         && (is_text_with_string_id(object, skin_property::STRING_SEARCHWORD)
-            || object.data().name.as_deref() == Some("irname"))
+            || object.data().name() == Some("irname"))
 }
 
 fn is_text_with_string_id(object: &SkinObject, target_id: i32) -> bool {
@@ -244,7 +245,7 @@ fn matches_option_conditions(
     provider: &dyn SkinStateProvider,
     skin_type: Option<&SkinType>,
 ) -> bool {
-    let static_option_ok = data.dstop.iter().all(|&op| {
+    let static_option_ok = data.timer.dstop.iter().all(|&op| {
         if op == 0 {
             return true;
         }
@@ -268,7 +269,7 @@ fn matches_option_conditions(
         return false;
     }
 
-    data.dstdraw.iter().all(|cond| {
+    data.timer.dstdraw.iter().all(|cond| {
         let id = cond.get_id();
         if id == i32::MIN {
             return true;
@@ -290,13 +291,13 @@ fn matches_dynamic_draw_conditions(
     object_index: usize,
 ) -> bool {
     if matches!(skin_type, Some(&SkinType::MusicSelect))
-        && matches!(data.name.as_deref(), Some("button_replay"))
+        && matches!(data.timer.name.as_deref(), Some("button_replay"))
     {
         return object_index == 179 || object_index == 180;
     }
 
     // Dynamic draw conditions from explicit draw IDs.
-    if !data.dstdraw.iter().all(|cond| {
+    if !data.timer.dstdraw.iter().all(|cond| {
         let id = cond.get_id();
         if id == i32::MIN {
             return true;
@@ -312,7 +313,7 @@ fn matches_dynamic_draw_conditions(
     }
 
     // Dynamic draw conditions encoded in legacy option IDs.
-    data.dstop.iter().all(|&op| {
+    data.timer.dstop.iter().all(|&op| {
         if op == 0 {
             return true;
         }
@@ -461,11 +462,11 @@ fn is_object_renderable(
     skin_type: Option<&SkinType>,
     object_index: usize,
 ) -> bool {
-    if should_force_visible(data.name.as_deref(), skin_type, object_index) {
+    if should_force_visible(data.timer.name.as_deref(), skin_type, object_index) {
         return true;
     }
 
-    if let Some(name) = &data.name
+    if let Some(name) = &data.timer.name
         && let Ok(id) = name.parse::<i32>()
     {
         return id >= 0;
@@ -481,7 +482,7 @@ fn is_object_renderable(
         let id = ref_prop.get_id();
         if id != i32::MIN
             && resolve_integer_value(id, provider, skin_type).is_none()
-            && !allow_missing_image_ref(data.name.as_deref())
+            && !allow_missing_image_ref(data.timer.name.as_deref())
         {
             return false;
         }
@@ -492,12 +493,12 @@ fn is_object_renderable(
         let id = ref_prop.get_id();
         if id != i32::MIN
             && resolve_integer_value(id, provider, skin_type).is_none()
-            && !allow_missing_number_ref(data.name.as_deref(), skin_type)
+            && !allow_missing_number_ref(data.timer.name.as_deref(), skin_type)
         {
             return false;
         }
     }
-    if should_force_hidden(data.name.as_deref(), skin_type, object_index) {
+    if should_force_hidden(data.timer.name.as_deref(), skin_type, object_index) {
         return false;
     }
     true

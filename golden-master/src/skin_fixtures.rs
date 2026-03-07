@@ -68,7 +68,7 @@ pub struct DstSnapshot {
 
 fn object_snapshot(obj: &SkinObject) -> ObjectSnapshot {
     let data = obj.data();
-    let first_dst = data.dst.first().map(|d| DstSnapshot {
+    let first_dst = data.dest.dst.first().map(|d| DstSnapshot {
         time: d.time,
         x: d.region.x,
         y: d.region.y,
@@ -79,7 +79,7 @@ fn object_snapshot(obj: &SkinObject) -> ObjectSnapshot {
     });
     ObjectSnapshot {
         kind: obj.type_name().to_string(),
-        destination_count: data.dst.len(),
+        destination_count: data.dest.dst.len(),
         blend: data.blend(),
         first_dst,
     }

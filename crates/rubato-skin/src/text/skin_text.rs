@@ -137,7 +137,7 @@ impl SkinTextData {
             self.constant_text.clone()
         };
         if self.current_text.is_none() || self.current_text.as_ref().is_none_or(|t| t.is_empty()) {
-            self.data.draw = false;
+            self.data.draw_state.draw = false;
         }
     }
 

@@ -243,7 +243,7 @@ impl SkinNumber {
     ) {
         if value == i32::MIN || value == i32::MAX {
             self.length = 0.0;
-            self.data.draw = false;
+            self.data.draw_state.draw = false;
             return;
         }
         let images: Option<Vec<TextureRegion>> = if value >= 0 || self.mimage.is_none() {
@@ -255,12 +255,12 @@ impl SkinNumber {
         };
         if images.is_none() {
             self.length = 0.0;
-            self.data.draw = false;
+            self.data.draw_state.draw = false;
             return;
         }
         self.data
             .prepare_with_offset(time, state, offset_x, offset_y);
-        if !self.data.draw {
+        if !self.data.draw_state.draw {
             self.length = 0.0;
             return;
         }
@@ -305,7 +305,7 @@ impl SkinNumber {
                 abs_value /= 10;
             }
         }
-        let region_width = self.data.region.width;
+        let region_width = self.data.draw_state.region.width;
         self.length = (region_width + self.space as f32)
             * (self.current_images.len() as f32 - self.shiftbase as f32);
         self.shift = if self.align == 0 {
@@ -320,7 +320,7 @@ impl SkinNumber {
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
         for (j, current_img) in self.current_images.iter().enumerate() {
             if let Some(ref img) = current_img.clone() {
-                let region = self.data.region.clone();
+                let region = self.data.draw_state.region.clone();
                 if let Some(ref offsets) = self.offsets {
                     if j < offsets.len() {
                         self.data.draw_image_at(
@@ -366,7 +366,7 @@ impl SkinNumber {
         offset_y: f32,
     ) {
         self.prepare_with_value(time, state, value, offset_x, offset_y);
-        if self.data.draw {
+        if self.data.draw_state.draw {
             self.draw(sprite);
         }
     }
@@ -445,12 +445,12 @@ mod tests {
         setup_data(&mut num.data, 10.0, 20.0, 24.0, 32.0);
 
         // Directly prepare with value
-        num.data.draw = true;
-        num.data.region = Rectangle::new(10.0, 20.0, 24.0, 32.0);
-        num.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        num.data.draw_state.draw = true;
+        num.data.draw_state.region = Rectangle::new(10.0, 20.0, 24.0, 32.0);
+        num.data.draw_state.color = Color::new(1.0, 1.0, 1.0, 1.0);
         num.value = i32::MIN; // Force recalculation
         num.prepare_with_value(0, &MockMainState::default(), 5, 0.0, 0.0);
-        assert!(num.data.draw);
+        assert!(num.data.draw_state.draw);
 
         let mut renderer = SkinObjectRenderer::new();
         num.draw(&mut renderer);
@@ -468,7 +468,7 @@ mod tests {
 
         let state = MockMainState::default();
         num.prepare_with_value(0, &state, 123, 0.0, 0.0);
-        assert!(num.data.draw);
+        assert!(num.data.draw_state.draw);
 
         let mut renderer = SkinObjectRenderer::new();
         num.draw(&mut renderer);
@@ -498,7 +498,7 @@ mod tests {
 
         let state = MockMainState::default();
         num.prepare_with_value(0, &state, 5, 0.0, 0.0);
-        assert!(num.data.draw);
+        assert!(num.data.draw_state.draw);
 
         // shiftbase=2, align=1 (right) => shift = 24 * 2 = 48
         assert_eq!(num.shift, 48.0);
@@ -652,7 +652,7 @@ mod tests {
         let state = MockMainState::default();
         num.prepare_with_value(0, &state, i32::MIN, 0.0, 0.0);
 
-        assert!(!num.data.draw);
+        assert!(!num.data.draw_state.draw);
         assert_eq!(num.length(), 0.0);
     }
 }

@@ -181,7 +181,7 @@ impl SkinTimingVisualizer {
                     Some(l) => l,
                     None => continue,
                 };
-                let region = &self.data.region;
+                let region = &self.data.draw_state.region;
                 if self.draw_decay {
                     let x = region.x
                         + (region.width - self.line_width as f32) / 2.0

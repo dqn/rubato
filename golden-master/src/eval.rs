@@ -31,7 +31,7 @@ pub fn resolve_common(
     data: &SkinObjectData,
     provider: &dyn SkinStateProvider,
 ) -> Option<(EvalRect, EvalColor, i32, f32)> {
-    if data.dst.is_empty() {
+    if data.dest.dst.is_empty() {
         return None;
     }
 
@@ -39,6 +39,7 @@ pub fn resolve_common(
 
     // Timer check: extract timer_id, look up in provider.
     let timer_id = data
+        .timer
         .dsttimer
         .as_ref()
         .map(|t| t.get_timer_id())
@@ -51,32 +52,33 @@ pub fn resolve_common(
     }
 
     // Loop handling (replicates SkinObjectData::prepare_region loop logic).
-    let lasttime = data.endtime;
-    if data.dstloop == -1 {
-        if time > data.endtime {
+    let lasttime = data.dest.endtime;
+    if data.dest.dstloop == -1 {
+        if time > data.dest.endtime {
             time = -1;
         }
-    } else if lasttime > 0 && time > data.dstloop as i64 {
-        if lasttime == data.dstloop as i64 {
-            time = data.dstloop as i64;
+    } else if lasttime > 0 && time > data.dest.dstloop as i64 {
+        if lasttime == data.dest.dstloop as i64 {
+            time = data.dest.dstloop as i64;
         } else {
-            time = (time - data.dstloop as i64) % (lasttime - data.dstloop as i64)
-                + data.dstloop as i64;
+            time = (time - data.dest.dstloop as i64) % (lasttime - data.dest.dstloop as i64)
+                + data.dest.dstloop as i64;
         }
     }
-    if data.starttime > time {
+    if data.dest.starttime > time {
         return None;
     }
 
     // Resolve offsets from provider.
     let offsets: Vec<Option<SkinOffset>> = data
+        .dest
         .offset
         .iter()
         .map(|&id| provider.offset_value(id))
         .collect();
 
     // Compute interpolation rate and keyframe index.
-    let (rate, index) = compute_rate(&data.dst, time, data.acc);
+    let (rate, index) = compute_rate(&data.dest.dst, time, data.dest.acc);
 
     // Region interpolation.
     let rect = compute_region(data, rate, index, &offsets);
@@ -122,7 +124,7 @@ fn compute_region(
     index: usize,
     offsets: &[Option<SkinOffset>],
 ) -> EvalRect {
-    let mut rect = if let Some(ref fixr) = data.fixr {
+    let mut rect = if let Some(ref fixr) = data.draw_state.fixr {
         // Fixed region: use directly, apply offsets if any.
         EvalRect {
             x: fixr.x,
@@ -131,16 +133,16 @@ fn compute_region(
             h: fixr.height,
         }
     } else if rate == 0.0 {
-        let r = &data.dst[index].region;
+        let r = &data.dest.dst[index].region;
         EvalRect {
             x: r.x,
             y: r.y,
             w: r.width,
             h: r.height,
         }
-    } else if data.acc == 3 {
+    } else if data.dest.acc == 3 {
         // Discrete mode: snap to current keyframe.
-        let r = &data.dst[index].region;
+        let r = &data.dest.dst[index].region;
         EvalRect {
             x: r.x,
             y: r.y,
@@ -149,8 +151,8 @@ fn compute_region(
         }
     } else {
         // Interpolate between keyframes.
-        let r1 = &data.dst[index].region;
-        let r2 = &data.dst[index + 1].region;
+        let r1 = &data.dest.dst[index].region;
+        let r2 = &data.dest.dst[index + 1].region;
         EvalRect {
             x: r1.x + (r2.x - r1.x) * rate,
             y: r1.y + (r2.y - r1.y) * rate,
@@ -161,7 +163,7 @@ fn compute_region(
 
     // Apply offsets.
     for off in offsets.iter().flatten() {
-        if !data.relative {
+        if !data.dest.relative {
             rect.x += off.x - off.w / 2.0;
             rect.y += off.y - off.h / 2.0;
         }
@@ -182,7 +184,7 @@ fn compute_color(
     index: usize,
     offsets: &[Option<SkinOffset>],
 ) -> (EvalColor, f32) {
-    if let Some(ref fixc) = data.fixc {
+    if let Some(ref fixc) = data.draw_state.fixc {
         let mut alpha = fixc.a;
         for off in offsets.iter().flatten() {
             alpha += off.a / 255.0;
@@ -199,7 +201,7 @@ fn compute_color(
     }
 
     if rate == 0.0 {
-        let c = &data.dst[index].color;
+        let c = &data.dest.dst[index].color;
         let mut alpha = c.a;
         // Alpha offset applied only for rate==0 (matches Java).
         for off in offsets.iter().flatten() {
@@ -214,9 +216,9 @@ fn compute_color(
             },
             alpha,
         )
-    } else if data.acc == 3 {
+    } else if data.dest.acc == 3 {
         // Discrete: no offset applied (matches Java early return).
-        let c = &data.dst[index].color;
+        let c = &data.dest.dst[index].color;
         (
             EvalColor {
                 r: c.r,
@@ -227,8 +229,8 @@ fn compute_color(
         )
     } else {
         // Interpolated: no offset applied (matches Java early return).
-        let c1 = &data.dst[index].color;
-        let c2 = &data.dst[index + 1].color;
+        let c1 = &data.dest.dst[index].color;
+        let c2 = &data.dest.dst[index + 1].color;
         (
             EvalColor {
                 r: c1.r + (c2.r - c1.r) * rate,
@@ -248,13 +250,14 @@ fn compute_angle(
     index: usize,
     offsets: &[Option<SkinOffset>],
 ) -> i32 {
-    let mut angle = if data.fixa != i32::MIN {
-        data.fixa
-    } else if rate == 0.0 || data.acc == 3 {
-        data.dst[index].angle
+    let mut angle = if data.draw_state.fixa != i32::MIN {
+        data.draw_state.fixa
+    } else if rate == 0.0 || data.dest.acc == 3 {
+        data.dest.dst[index].angle
     } else {
-        (data.dst[index].angle as f32
-            + (data.dst[index + 1].angle - data.dst[index].angle) as f32 * rate) as i32
+        (data.dest.dst[index].angle as f32
+            + (data.dest.dst[index + 1].angle - data.dest.dst[index].angle) as f32 * rate)
+            as i32
     };
 
     for off in offsets.iter().flatten() {

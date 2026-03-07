@@ -198,12 +198,12 @@ impl SkinSlider {
 
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
         self.data.prepare(time, state);
-        if !self.data.draw {
+        if !self.data.draw_state.draw {
             return;
         }
         self.current_image = self.source.get_image(time, state);
         if self.current_image.is_none() {
-            self.data.draw = false;
+            self.data.draw_state.draw = false;
             return;
         }
         self.current_value = if let Some(ref r) = self.ref_prop {
@@ -215,7 +215,7 @@ impl SkinSlider {
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
         if let Some(ref current_image) = self.current_image.clone() {
-            let region = self.data.region.clone();
+            let region = self.data.draw_state.region.clone();
             let range = self.range as f32;
             let cv = self.current_value;
             let x = region.x
@@ -247,7 +247,7 @@ impl SkinSlider {
         y: i32,
     ) -> bool {
         if let Some(ref writer) = self.writer {
-            let region = &self.data.region;
+            let region = &self.data.draw_state.region;
             let range = self.range as f32;
             match self.direction {
                 0 => {

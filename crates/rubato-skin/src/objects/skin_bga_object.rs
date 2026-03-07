@@ -174,7 +174,7 @@ impl SkinBgaObject {
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
         self.data.prepare(time, state);
 
-        if self.data.draw
+        if self.data.draw_state.draw
             && let Some(ref bga_draw) = self.bga_draw
         {
             // Determine BGA time:
@@ -202,7 +202,7 @@ impl SkinBgaObject {
         if self.practice_mode {
             self.draw_practice(sprite);
         } else if let Some(ref bga_draw) = self.bga_draw {
-            let region = self.data.region.clone();
+            let region = self.data.draw_state.region.clone();
             if let Ok(mut draw) = bga_draw.lock() {
                 draw.draw_bga(sprite, &region, self.bga_expand);
             }
@@ -319,7 +319,7 @@ mod tests {
         bga.set_bga_draw(mock.clone());
 
         // Set up region on data
-        bga.data.region = Rectangle::new(10.0, 20.0, 300.0, 200.0);
+        bga.data.draw_state.region = Rectangle::new(10.0, 20.0, 300.0, 200.0);
 
         let mut sprite = SkinObjectRenderer::new();
         bga.draw(&mut sprite);
@@ -398,7 +398,7 @@ mod tests {
         assert!(bga.has_bga_draw());
 
         // Set up region
-        bga.data.region = Rectangle::new(0.0, 0.0, 640.0, 480.0);
+        bga.data.draw_state.region = Rectangle::new(0.0, 0.0, 640.0, 480.0);
 
         let mut sprite = SkinObjectRenderer::new();
         // Should not panic — no BGA data but draws blank

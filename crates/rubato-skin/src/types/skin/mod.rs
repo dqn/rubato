@@ -128,7 +128,7 @@ impl SkinObject {
     }
 
     pub fn set_draw_condition(&mut self, bp: Vec<Box<dyn BooleanProperty>>) {
-        self.data_mut().dstdraw = bp;
+        self.data_mut().timer.dstdraw = bp;
     }
 
     pub fn option(&self) -> &[i32] {
@@ -136,7 +136,7 @@ impl SkinObject {
     }
 
     pub fn set_option(&mut self, op: Vec<i32>) {
-        self.data_mut().dstop = op;
+        self.data_mut().timer.dstop = op;
     }
 
     pub fn load(&mut self) {
@@ -194,11 +194,11 @@ impl SkinObject {
     }
 
     pub fn is_draw(&self) -> bool {
-        self.data().draw
+        self.data().draw_state.draw
     }
 
     pub fn is_visible(&self) -> bool {
-        self.data().visible
+        self.data().draw_state.visible
     }
 
     pub fn mouse_pressed(&self, state: &mut dyn MainState, button: i32, x: i32, y: i32) -> bool {

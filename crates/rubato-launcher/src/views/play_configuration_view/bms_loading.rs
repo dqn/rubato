@@ -12,30 +12,30 @@ impl PlayConfigurationView {
         if let Some(ref pc) = self.pc {
             let mode = pc.to_mode();
             let conf = &mut player.play_config(mode).playconfig;
-            conf.hispeed = self.hispeed as f32;
-            conf.duration = self.gvalue;
-            conf.enable_constant = self.enable_constant;
-            conf.constant_fadein_time = self.const_fadein_time;
-            conf.hispeedmargin = self.hispeedmargin as f32;
-            conf.fixhispeed = self.fixhispeed.unwrap_or(0);
-            conf.enablelanecover = self.enable_lanecover;
-            conf.lanecover = self.lanecover as f32 / 1000.0;
-            conf.lanecovermarginlow = self.lanecovermarginlow as f32 / 1000.0;
-            conf.lanecovermarginhigh = self.lanecovermarginhigh as f32 / 1000.0;
-            conf.lanecoverswitchduration = self.lanecoverswitchduration;
-            conf.enablelift = self.enable_lift;
-            conf.enablehidden = self.enable_hidden;
-            conf.lift = self.lift as f32 / 1000.0;
-            conf.hidden = self.hidden as f32 / 1000.0;
-            // judgealgorithm → judgetype
+            conf.hispeed = self.input.hispeed as f32;
+            conf.duration = self.input.gvalue;
+            conf.enable_constant = self.input.enable_constant;
+            conf.constant_fadein_time = self.input.const_fadein_time;
+            conf.hispeedmargin = self.input.hispeedmargin as f32;
+            conf.fixhispeed = self.input.fixhispeed.unwrap_or(0);
+            conf.enablelanecover = self.lane.enable_lanecover;
+            conf.lanecover = self.lane.lanecover as f32 / 1000.0;
+            conf.lanecovermarginlow = self.lane.lanecovermarginlow as f32 / 1000.0;
+            conf.lanecovermarginhigh = self.lane.lanecovermarginhigh as f32 / 1000.0;
+            conf.lanecoverswitchduration = self.lane.lanecoverswitchduration;
+            conf.enablelift = self.lane.enable_lift;
+            conf.enablehidden = self.lane.enable_hidden;
+            conf.lift = self.lane.lift as f32 / 1000.0;
+            conf.hidden = self.lane.hidden as f32 / 1000.0;
+            // judgealgorithm -> judgetype
             // JudgeAlgorithm.values()[judgealgorithm.getValue()].name()
-            if let Some(alg_idx) = self.judgealgorithm {
+            if let Some(alg_idx) = self.judge.judgealgorithm {
                 let judge_algs = rubato_core::stubs::JudgeAlgorithm::values();
                 if (alg_idx as usize) < judge_algs.len() {
                     conf.judgetype = judge_algs[alg_idx as usize].name().to_string();
                 }
             }
-            conf.hispeedautoadjust = self.hispeedautoadjust;
+            conf.hispeedautoadjust = self.input.hispeedautoadjust;
         }
 
         self.pc = self.playconfig;
@@ -43,24 +43,24 @@ impl PlayConfigurationView {
         if let Some(ref pc) = self.pc {
             let mode = pc.to_mode();
             let conf = &player.play_config(mode).playconfig.clone();
-            self.hispeed = conf.hispeed as f64;
-            self.gvalue = conf.duration;
-            self.enable_constant = conf.enable_constant;
-            self.const_fadein_time = conf.constant_fadein_time;
-            self.hispeedmargin = conf.hispeedmargin as f64;
-            self.fixhispeed = Some(conf.fixhispeed);
-            self.enable_lanecover = conf.enablelanecover;
-            self.lanecover = (conf.lanecover * 1000.0) as i32;
-            self.lanecovermarginlow = (conf.lanecovermarginlow * 1000.0) as i32;
-            self.lanecovermarginhigh = (conf.lanecovermarginhigh * 1000.0) as i32;
-            self.lanecoverswitchduration = conf.lanecoverswitchduration;
-            self.enable_lift = conf.enablelift;
-            self.enable_hidden = conf.enablehidden;
-            self.lift = (conf.lift * 1000.0) as i32;
-            self.hidden = (conf.hidden * 1000.0) as i32;
-            self.judgealgorithm =
+            self.input.hispeed = conf.hispeed as f64;
+            self.input.gvalue = conf.duration;
+            self.input.enable_constant = conf.enable_constant;
+            self.input.const_fadein_time = conf.constant_fadein_time;
+            self.input.hispeedmargin = conf.hispeedmargin as f64;
+            self.input.fixhispeed = Some(conf.fixhispeed);
+            self.lane.enable_lanecover = conf.enablelanecover;
+            self.lane.lanecover = (conf.lanecover * 1000.0) as i32;
+            self.lane.lanecovermarginlow = (conf.lanecovermarginlow * 1000.0) as i32;
+            self.lane.lanecovermarginhigh = (conf.lanecovermarginhigh * 1000.0) as i32;
+            self.lane.lanecoverswitchduration = conf.lanecoverswitchduration;
+            self.lane.enable_lift = conf.enablelift;
+            self.lane.enable_hidden = conf.enablehidden;
+            self.lane.lift = (conf.lift * 1000.0) as i32;
+            self.lane.hidden = (conf.hidden * 1000.0) as i32;
+            self.judge.judgealgorithm =
                 Some(rubato_core::stubs::JudgeAlgorithm::index(&conf.judgetype).max(0));
-            self.hispeedautoadjust = conf.hispeedautoadjust;
+            self.input.hispeedautoadjust = conf.hispeedautoadjust;
         }
     }
 

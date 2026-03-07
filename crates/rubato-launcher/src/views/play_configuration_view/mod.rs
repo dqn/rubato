@@ -117,7 +117,7 @@ impl std::fmt::Display for PlayMode {
     }
 }
 
-/// OptionListCell — translates the JavaFX ListCell<Integer>
+/// OptionListCell -- translates the JavaFX ListCell<Integer>
 /// In egui, we just store the label mapping.
 #[derive(Clone, Debug)]
 pub struct OptionListCell {
@@ -140,11 +140,87 @@ impl OptionListCell {
     }
 }
 
+/// Gauge-related configuration settings.
+#[derive(Default)]
+pub struct GaugeSettings {
+    pub gaugeop: Option<i32>,
+    pub gaugeautoshift: Option<i32>,
+    pub bottomshiftablegauge: Option<i32>,
+    pub gauge_options_labels: Vec<String>,
+    pub gaugeautoshift_labels: Vec<String>,
+    pub bottomshiftablegauge_labels: Vec<String>,
+}
+
+/// Judge/timing-related configuration settings.
+#[derive(Default)]
+pub struct JudgeSettings {
+    pub customjudge: bool,
+    pub njudgepg: i32,
+    pub njudgegr: i32,
+    pub njudgegd: i32,
+    pub sjudgepg: i32,
+    pub sjudgegr: i32,
+    pub sjudgegd: i32,
+    pub judgealgorithm: Option<i32>,
+    pub notesdisplaytiming: i32,
+    pub notesdisplaytimingautoadjust: bool,
+    pub bpmguide: bool,
+    pub judgealgorithm_labels: Vec<String>,
+}
+
+/// Lane cover/lift/hidden configuration settings.
+#[derive(Default)]
+pub struct LaneSettings {
+    pub enable_lanecover: bool,
+    pub lanecover: i32,
+    pub lanecovermarginlow: i32,
+    pub lanecovermarginhigh: i32,
+    pub lanecoverswitchduration: i32,
+    pub enable_lift: bool,
+    pub lift: i32,
+    pub enable_hidden: bool,
+    pub hidden: i32,
+}
+
+/// Display-related configuration settings.
+#[derive(Default)]
+pub struct DisplaySettings {
+    pub judgeregion: bool,
+    pub markprocessednote: bool,
+    pub showhiddennote: bool,
+    pub showpastnote: bool,
+    pub target: Vec<String>,
+    pub target_selected: Option<String>,
+    pub chartpreview: bool,
+    pub guidese: bool,
+    pub extranotedepth: i32,
+}
+
+/// Hi-speed/score input configuration settings.
+#[derive(Default)]
+pub struct InputSettings {
+    pub hispeed: f64,
+    pub fixhispeed: Option<i32>,
+    pub gvalue: i32,
+    pub enable_constant: bool,
+    pub const_fadein_time: i32,
+    pub hispeedmargin: f64,
+    pub hispeedautoadjust: bool,
+    pub scoreop: Option<i32>,
+    pub scoreop2: Option<i32>,
+    pub doubleop: Option<i32>,
+    pub lntype: Option<i32>,
+    pub score_options_labels: Vec<String>,
+    pub double_options_labels: Vec<String>,
+    pub fixhispeed_labels: Vec<String>,
+    pub lntype_labels: Vec<String>,
+}
+
 /// Beatoraja configuration dialog
 ///
 /// Translated from PlayConfigurationView.java
 pub struct PlayConfigurationView {
-    // UI fields (JavaFX widgets → egui state)
+    // UI fields (JavaFX widgets -> egui state)
     pub newversion_text: String,
     pub newversion_url: Option<String>,
 
@@ -156,60 +232,18 @@ pub struct PlayConfigurationView {
     // Play config selector
     pub playconfig: Option<PlayMode>,
 
-    // Hi-speed
-    pub hispeed: f64,
-
     // Layout spacing (grid)
     pub lr2configuration_hgap: f64,
     pub lr2configuration_vgap: f64,
     pub lr2configurationassist_hgap: f64,
     pub lr2configurationassist_vgap: f64,
 
-    // Fix hispeed
-    pub fixhispeed: Option<i32>,
-    pub gvalue: i32,
-    pub enable_constant: bool,
-    pub const_fadein_time: i32,
-    pub hispeedmargin: f64,
-    pub hispeedautoadjust: bool,
-
-    // Score options
-    pub scoreop: Option<i32>,
-    pub scoreop2: Option<i32>,
-    pub doubleop: Option<i32>,
-    pub gaugeop: Option<i32>,
-    pub lntype: Option<i32>,
-
-    // Lane cover
-    pub enable_lanecover: bool,
-    pub lanecover: i32,
-    pub lanecovermarginlow: i32,
-    pub lanecovermarginhigh: i32,
-    pub lanecoverswitchduration: i32,
-    pub enable_lift: bool,
-    pub lift: i32,
-    pub enable_hidden: bool,
-    pub hidden: i32,
-
-    // Paths
-    pub bgmpath: String,
-    pub soundpath: String,
-
-    // Timing
-    pub notesdisplaytiming: i32,
-    pub notesdisplaytimingautoadjust: bool,
-    pub bpmguide: bool,
-    pub gaugeautoshift: Option<i32>,
-    pub bottomshiftablegauge: Option<i32>,
-
-    // Custom judge
-    pub customjudge: bool,
-    pub njudgepg: i32,
-    pub njudgegr: i32,
-    pub njudgegd: i32,
-    pub sjudgepg: i32,
-    pub sjudgegr: i32,
-    pub sjudgegd: i32,
+    // Sub-structs for grouped settings
+    pub gauge: GaugeSettings,
+    pub judge: JudgeSettings,
+    pub lane: LaneSettings,
+    pub display: DisplaySettings,
+    pub input: InputSettings,
 
     // Mine/scroll/LN modes
     pub minemode: Option<i32>,
@@ -221,30 +255,28 @@ pub struct PlayConfigurationView {
     pub seventoninepattern: Option<i32>,
     pub seventoninetype: Option<i32>,
     pub exitpressduration: i32,
-    pub chartpreview: bool,
-    pub guidese: bool,
     pub windowhold: bool,
-    pub extranotedepth: i32,
 
-    // Visual options
-    pub judgeregion: bool,
-    pub markprocessednote: bool,
-    pub showhiddennote: bool,
-    pub showpastnote: bool,
-    pub target: Vec<String>,
-    pub target_selected: Option<String>,
-
-    // Judge algorithm
-    pub judgealgorithm: Option<i32>,
+    // Mine/scroll/LN labels
+    pub seven_to_nine_pattern_labels: Vec<String>,
+    pub seven_to_nine_type_labels: Vec<String>,
+    pub minemode_labels: Vec<String>,
+    pub scrollmode_labels: Vec<String>,
+    pub longnotemode_labels: Vec<String>,
 
     // Auto save replay
     pub autosavereplay1: Option<i32>,
     pub autosavereplay2: Option<i32>,
     pub autosavereplay3: Option<i32>,
     pub autosavereplay4: Option<i32>,
+    pub autosave_labels: Vec<String>,
 
     // CIM
     pub usecim: bool,
+
+    // Paths
+    pub bgmpath: String,
+    pub soundpath: String,
 
     // Twitter
     pub txt_twitter_consumer_key: String,
@@ -267,22 +299,6 @@ pub struct PlayConfigurationView {
 
     // Clipboard screenshot
     pub clipboard_screenshot: bool,
-
-    // ComboBox option labels
-    pub score_options_labels: Vec<String>,
-    pub double_options_labels: Vec<String>,
-    pub seven_to_nine_pattern_labels: Vec<String>,
-    pub seven_to_nine_type_labels: Vec<String>,
-    pub gauge_options_labels: Vec<String>,
-    pub fixhispeed_labels: Vec<String>,
-    pub lntype_labels: Vec<String>,
-    pub gaugeautoshift_labels: Vec<String>,
-    pub bottomshiftablegauge_labels: Vec<String>,
-    pub minemode_labels: Vec<String>,
-    pub scrollmode_labels: Vec<String>,
-    pub longnotemode_labels: Vec<String>,
-    pub judgealgorithm_labels: Vec<String>,
-    pub autosave_labels: Vec<String>,
 
     // Sub-controllers
     pub video_controller: VideoConfigurationView,

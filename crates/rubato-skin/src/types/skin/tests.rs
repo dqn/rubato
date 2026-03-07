@@ -265,8 +265,12 @@ fn test_timer_only_main_state_delegates_mutating_context_methods() {
 fn test_mouse_pressed_dispatches_click_event_through_render_context() {
     let mut skin = make_test_skin();
     let mut image = SkinImage::new_empty();
-    image.data.draw = true;
-    image.data.region.set_xywh(0.0, 0.0, 100.0, 100.0);
+    image.data.draw_state.draw = true;
+    image
+        .data
+        .draw_state
+        .region
+        .set_xywh(0.0, 0.0, 100.0, 100.0);
     image.data.set_clickevent_by_id(13);
     skin.add(SkinObject::Image(image));
     skin.objectarray_indices.push(0);
@@ -586,7 +590,7 @@ fn test_skin_float_in_enum_data_access() {
     assert!(!obj.is_draw());
 
     // data_mut() should also work
-    obj.data_mut().visible = false;
+    obj.data_mut().draw_state.visible = false;
     assert!(!obj.is_visible());
 }
 

@@ -69,7 +69,7 @@ fn build_interpolation_modes_skin() -> Skin {
         let image = make_image();
         let mut obj = SkinObject::Image(image);
         let data = obj.data_mut();
-        data.name = Some(name.to_string());
+        data.timer.name = Some(name.to_string());
 
         // Keyframe 1: time=0, x=0, y=0, w=10, h=10
         data.set_destination_with_int_timer_ops(
@@ -128,7 +128,7 @@ fn build_loop_variants_skin() -> Skin {
         let image = make_image();
         let mut obj = SkinObject::Image(image);
         let data = obj.data_mut();
-        data.name = Some("loop_default".to_string());
+        data.timer.name = Some("loop_default".to_string());
         data.set_destination_with_int_timer_ops(
             0,
             0.0,
@@ -176,7 +176,7 @@ fn build_loop_variants_skin() -> Skin {
         let image = make_image();
         let mut obj = SkinObject::Image(image);
         let data = obj.data_mut();
-        data.name = Some("loop_mid".to_string());
+        data.timer.name = Some("loop_mid".to_string());
         data.set_destination_with_int_timer_ops(
             0,
             0.0,
@@ -223,7 +223,7 @@ fn build_loop_variants_skin() -> Skin {
         let image = make_image();
         let mut obj = SkinObject::Image(image);
         let data = obj.data_mut();
-        data.name = Some("play_once".to_string());
+        data.timer.name = Some("play_once".to_string());
         data.set_destination_with_int_timer_ops(
             0,
             0.0,
@@ -287,7 +287,7 @@ fn build_draw_conditions_skin() -> Skin {
         let image = make_image();
         let mut obj = SkinObject::Image(image);
         let data = obj.data_mut();
-        data.name = Some(name.to_string());
+        data.timer.name = Some(name.to_string());
         // Single keyframe: always at x=10, y=0, w=10, h=10
         // Draw condition set via op on the first call
         data.set_destination_with_int_timer_ops(

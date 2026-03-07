@@ -368,7 +368,7 @@ impl LR2SkinCSVLoaderState {
                             } else {
                                 2
                             };
-                            btn.data.clickevent_type = click_type;
+                            btn.data.timer.clickevent_type = click_type;
                         }
                         self.button = Some(btn);
                     }

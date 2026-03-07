@@ -154,8 +154,8 @@ impl BarRenderer {
                 % ctx.currentsongs.len();
 
             // After prepare(), data.region contains the interpolated destination rectangle
-            if si.data.draw {
-                let r = &si.data.region;
+            if si.data.draw_state.draw {
+                let r = &si.data.draw_state.region;
                 if r.x <= x as f32
                     && r.x + r.width >= x as f32
                     && r.y <= y as f32
@@ -205,7 +205,7 @@ impl BarRenderer {
                 None => continue,
             };
 
-            if si1.data.draw {
+            if si1.data.draw_state.draw {
                 let mut dx: f32 = 0.0;
                 let mut dy: f32 = 0.0;
 
@@ -219,19 +219,20 @@ impl BarRenderer {
                         let si2 =
                             baro.bar_images(next_index == ctx.center_bar, next_index as usize);
                         if let Some(si2) = si2
-                            && si2.data.draw
+                            && si2.data.draw_state.draw
                         {
-                            dx = (si2.data.region.x - si1.data.region.x)
+                            dx = (si2.data.draw_state.region.x - si1.data.draw_state.region.x)
                                 * angle_lerp.clamp(-1.0, 1.0);
-                            dy = (si2.data.region.y - si1.data.region.y) * angle_lerp;
+                            dy = (si2.data.draw_state.region.y - si1.data.draw_state.region.y)
+                                * angle_lerp;
                         }
                     }
                 }
 
-                ba.x = (si1.data.region.x + dx) as i32 as f32;
-                ba.y = ((si1.data.region.y + dy)
+                ba.x = (si1.data.draw_state.region.x + dx) as i32 as f32;
+                ba.y = ((si1.data.draw_state.region.y + dy)
                     + if baro.position() == 1 {
-                        si1.data.region.height
+                        si1.data.draw_state.region.height
                     } else {
                         0.0
                     }) as i32 as f32;
@@ -391,9 +392,9 @@ impl BarRenderer {
                 None => continue,
             };
 
-            if si.data.draw {
+            if si.data.draw_state.draw {
                 let position_offset = if position == 1 {
-                    si.data.region.height
+                    si.data.draw_state.region.height
                 } else {
                     0.0
                 };
@@ -402,8 +403,8 @@ impl BarRenderer {
                     self.time,
                     ctx.state,
                     ba.value,
-                    ba.x - si.data.region.x,
-                    ba.y - si.data.region.y - position_offset,
+                    ba.x - si.data.draw_state.region.x,
+                    ba.y - si.data.draw_state.region.y - position_offset,
                 );
             }
         }
@@ -779,8 +780,8 @@ mod tests {
     /// Uses a default TextureRegion (no real texture, but valid for layout tests).
     fn make_test_image(x: f32, y: f32, w: f32, h: f32) -> SkinImage {
         let mut img = SkinImage::new_with_single(TextureRegion::default());
-        img.data.draw = true;
-        img.data.region = Rectangle::new(x, y, w, h);
+        img.data.draw_state.draw = true;
+        img.data.draw_state.region = Rectangle::new(x, y, w, h);
         img
     }
 

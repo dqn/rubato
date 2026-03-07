@@ -11,17 +11,23 @@ impl BMSPlayer {
         let playtime = model.last_note_time() + TIME_MARGIN;
         let total_notes = model.total_notes();
         BMSPlayer {
-            model,
-            lanerender: None,
-            lane_property: None,
-            judge: JudgeManager::new(),
-            bga: Arc::new(Mutex::new(BGAProcessor::new_with_resource_gen(
-                song_resource_gen,
-            ))),
-            gauge: None,
-            playtime,
+            play: PlayContext {
+                model,
+                lanerender: None,
+                lane_property: None,
+                judge: JudgeManager::new(),
+                bga: Arc::new(Mutex::new(BGAProcessor::new_with_resource_gen(
+                    song_resource_gen,
+                ))),
+                gauge: None,
+                playtime,
+                play_skin: PlaySkin::new(),
+                main_state_data: MainStateData::new(TimerManager::new()),
+                total_notes,
+                margin_time: 0,
+            },
+            audio: AudioContext::new(),
             input: PlayerInputState::new(),
-            keysound: KeySoundProcessor::new(),
             assist: 0,
             playspeed: 100,
             state: PlayState::Preload,
@@ -30,16 +36,9 @@ impl BMSPlayer {
             starttimeoffset: 0,
             rhythm: None,
             startpressedtime: 0,
-            adjusted_volume: -1.0,
             score: PlayerScoreState::new(),
             gaugelog: Vec::new(),
-            play_skin: PlaySkin::new(),
-            main_state_data: MainStateData::new(TimerManager::new()),
-            total_notes,
-            margin_time: 0,
             pending: PendingActions::new(),
-            fast_forward_freq_option: FrequencyType::UNPROCESSED,
-            bg_volume: 0.5,
             play_mode: BMSPlayerMode::PLAY,
             constraints: Vec::new(),
             is_guide_se: false,
@@ -63,15 +62,15 @@ impl BMSPlayer {
     /// via `get_bga_any()`, downcast to `Arc<Mutex<BGAProcessor>>`, and inject it here.
     /// After `create()`, the processor is stored back via `set_bga_any()`.
     ///
-    /// Java: BMSPlayer.java line 545 — `bga = resource.getBGAManager();`
+    /// Java: BMSPlayer.java line 545 -- `bga = resource.getBGAManager();`
     pub fn set_bga_processor(&mut self, bga: Arc<Mutex<BGAProcessor>>) {
-        self.bga = bga;
+        self.play.bga = bga;
     }
 
     /// Get the BGA processor for storing back to PlayerResource after create().
     /// Returns the Arc so the caller can store it for reuse in subsequent plays.
     pub fn bga_processor_arc(&self) -> Arc<Mutex<BGAProcessor>> {
-        Arc::clone(&self.bga)
+        Arc::clone(&self.play.bga)
     }
 
     /// Set the chart option override (from PlayerResource) before calling create().
@@ -162,13 +161,13 @@ impl BMSPlayer {
     /// Set the fast-forward frequency option for pitch control.
     /// Should be called during initialization from AudioConfig.
     pub fn set_fast_forward_freq_option(&mut self, freq_option: FrequencyType) {
-        self.fast_forward_freq_option = freq_option;
+        self.audio.fast_forward_freq_option = freq_option;
     }
 
     /// Set the BG note volume from AudioConfig.bgvolume.
     /// Should be called during initialization.
     pub fn set_bg_volume(&mut self, volume: f32) {
-        self.bg_volume = volume;
+        self.audio.bg_volume = volume;
     }
 
     /// Set play speed and optionally request global pitch change.
@@ -181,7 +180,7 @@ impl BMSPlayer {
         self.playspeed = playspeed;
         // In Java: if (config.getAudioConfig().getFastForward() == FrequencyType.FREQUENCY)
         //     main.getAudioProcessor().setGlobalPitch(playspeed / 100f);
-        if self.fast_forward_freq_option == FrequencyType::FREQUENCY {
+        if self.audio.fast_forward_freq_option == FrequencyType::FREQUENCY {
             self.pending.pending_global_pitch = Some(playspeed as f32 / 100.0);
         }
     }
@@ -209,7 +208,7 @@ impl BMSPlayer {
     }
 
     pub fn adjusted_volume(&self) -> f32 {
-        self.adjusted_volume
+        self.audio.adjusted_volume
     }
 
     /// Drain pending BG note commands from the autoplay thread.
@@ -217,41 +216,41 @@ impl BMSPlayer {
     /// The caller should call `AudioDriver::play_note(note, volume, 0)` for each
     /// returned command. This should be called each frame from the main render loop.
     pub fn drain_pending_bg_notes(&self) -> Vec<crate::key_sound_processor::BgNoteCommand> {
-        self.keysound.drain_pending_bg_notes()
+        self.audio.keysound.drain_pending_bg_notes()
     }
 
     pub fn lanerender(&self) -> Option<&LaneRenderer> {
-        self.lanerender.as_ref()
+        self.play.lanerender.as_ref()
     }
 
     pub fn lanerender_mut(&mut self) -> Option<&mut LaneRenderer> {
-        self.lanerender.as_mut()
+        self.play.lanerender.as_mut()
     }
 
     pub fn lane_property(&self) -> Option<&LaneProperty> {
-        self.lane_property.as_ref()
+        self.play.lane_property.as_ref()
     }
 
     pub fn judge_manager(&self) -> &JudgeManager {
-        &self.judge
+        &self.play.judge
     }
 
     pub fn judge_manager_mut(&mut self) -> &mut JudgeManager {
-        &mut self.judge
+        &mut self.play.judge
     }
 
     pub fn gauge(&self) -> Option<&GrooveGauge> {
-        self.gauge.as_ref()
+        self.play.gauge.as_ref()
     }
 
     pub fn gauge_mut(&mut self) -> Option<&mut GrooveGauge> {
-        self.gauge.as_mut()
+        self.play.gauge.as_mut()
     }
 
     /// Get a shared reference to the BGA processor.
     /// Used by the skin system to connect the SkinBgaObject for BGA rendering.
     pub fn bga_processor(&self) -> &Arc<Mutex<BGAProcessor>> {
-        &self.bga
+        &self.play.bga
     }
 
     /// Set the active replay data for keylog playback.
@@ -262,7 +261,7 @@ impl BMSPlayer {
 
     /// Set the margin time in milliseconds (from resource).
     pub fn set_margin_time(&mut self, margin_time: i64) {
-        self.margin_time = margin_time;
+        self.play.margin_time = margin_time;
     }
 
     /// Set the player's own score data loaded from the score database.
@@ -321,19 +320,20 @@ impl BMSPlayer {
     ) -> f32 {
         self.score.analysis_checked = true;
         if analysis_result.success {
-            self.adjusted_volume = analysis_result.calculate_adjusted_volume(config_key_volume);
+            self.audio.adjusted_volume =
+                analysis_result.calculate_adjusted_volume(config_key_volume);
             log::info!(
                 "Volume set to {} ({} LUFS)",
-                self.adjusted_volume,
+                self.audio.adjusted_volume,
                 analysis_result.loudness_lufs
             );
         } else {
-            self.adjusted_volume = -1.0;
+            self.audio.adjusted_volume = -1.0;
             if let Some(ref msg) = analysis_result.error_message {
                 log::warn!("Loudness analysis failed: {}", msg);
             }
         }
-        self.adjusted_volume
+        self.audio.adjusted_volume
     }
 
     /// Check if loudness analysis has been applied.

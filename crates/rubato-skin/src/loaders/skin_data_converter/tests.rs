@@ -379,7 +379,7 @@ fn test_convert_with_destinations() {
     // The object should have 2 destinations set via set_destination
     // We can verify the object data has destinations
     let obj = &skin.objects()[0];
-    assert_eq!(obj.data().dst.len(), 2);
+    assert_eq!(obj.data().dest.dst.len(), 2);
 }
 
 // -- Test: mouse rect --
@@ -437,7 +437,7 @@ fn test_convert_with_mouse_rect() {
     assert_eq!(skin.all_skin_objects_count(), 1);
     // Mouse rect is set — verify via the object's mouse_rect field
     let obj = &skin.objects()[0];
-    assert!(obj.data().mouse_rect.is_some());
+    assert!(obj.data().timer.mouse_rect.is_some());
 }
 
 // -- Test: stub types return None --

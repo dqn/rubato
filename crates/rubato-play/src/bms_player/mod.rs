@@ -288,18 +288,61 @@ impl Default for PlayerScoreState {
     }
 }
 
+/// Audio subsystem state for the play session.
+pub struct AudioContext {
+    pub(super) keysound: KeySoundProcessor,
+    /// Adjusted key volume from loudness analysis. -1.0 if not yet analyzed.
+    pub(super) adjusted_volume: f32,
+    /// Fast-forward frequency option (from AudioConfig).
+    /// Cached during initialization so set_play_speed can determine
+    /// whether to apply pitch changes.
+    pub(super) fast_forward_freq_option: FrequencyType,
+    /// BG note volume from AudioConfig.bgvolume.
+    /// Used as fallback when adjusted_volume < 0.
+    /// Set before create() by the caller.
+    pub(super) bg_volume: f32,
+}
+
+impl AudioContext {
+    pub fn new() -> Self {
+        Self {
+            keysound: KeySoundProcessor::new(),
+            adjusted_volume: -1.0,
+            fast_forward_freq_option: FrequencyType::UNPROCESSED,
+            bg_volume: 0.5,
+        }
+    }
+}
+
+impl Default for AudioContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Play context: model, renderer, skin, and core game state.
+pub struct PlayContext {
+    pub(super) model: BMSModel,
+    pub(super) lanerender: Option<LaneRenderer>,
+    pub(super) lane_property: Option<LaneProperty>,
+    pub(super) judge: JudgeManager,
+    pub(super) bga: Arc<Mutex<BGAProcessor>>,
+    pub(super) gauge: Option<GrooveGauge>,
+    pub(super) playtime: i32,
+    pub(super) play_skin: PlaySkin,
+    pub(super) main_state_data: MainStateData,
+    pub(super) total_notes: i32,
+    pub(super) margin_time: i64,
+}
+
 /// BMS Player main struct
 pub struct BMSPlayer {
-    model: BMSModel,
-    lanerender: Option<LaneRenderer>,
-    lane_property: Option<LaneProperty>,
-    judge: JudgeManager,
-    bga: Arc<Mutex<BGAProcessor>>,
-    gauge: Option<GrooveGauge>,
-    playtime: i32,
+    /// Play context: model, renderer, skin, and core game state.
+    play: PlayContext,
+    /// Audio subsystem state.
+    audio: AudioContext,
     /// Input state snapshot (keys, buttons, analog, controllers).
     input: PlayerInputState,
-    keysound: KeySoundProcessor,
     assist: i32,
     playspeed: i32,
     state: PlayState,
@@ -308,29 +351,12 @@ pub struct BMSPlayer {
     starttimeoffset: i64,
     rhythm: Option<RhythmTimerProcessor>,
     startpressedtime: i64,
-    adjusted_volume: f32,
     /// Score, replay, and analysis state.
     score: PlayerScoreState,
     /// Gauge log per gauge type
     gaugelog: Vec<Vec<f32>>,
-    /// Skin for play screen
-    play_skin: PlaySkin,
-    /// MainState shared data
-    main_state_data: MainStateData,
-    /// Total notes in song (from songdata)
-    total_notes: i32,
-    /// Margin time in milliseconds (from resource)
-    margin_time: i64,
     /// Pending side-effect requests produced during render/state transitions.
     pending: PendingActions,
-    /// Fast-forward frequency option (from AudioConfig).
-    /// Cached during initialization so set_play_speed can determine
-    /// whether to apply pitch changes.
-    fast_forward_freq_option: FrequencyType,
-    /// BG note volume from AudioConfig.bgvolume.
-    /// Used as fallback when adjusted_volume < 0.
-    /// Set before create() by the caller.
-    bg_volume: f32,
     /// Play mode (PLAY, PRACTICE, AUTOPLAY, REPLAY).
     /// Set before create() by the caller. Determines input processor mode.
     play_mode: BMSPlayerMode,
