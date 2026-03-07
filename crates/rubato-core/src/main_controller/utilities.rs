@@ -323,10 +323,6 @@ impl MainController {
         self.integration.ir_resend_service = Some(service);
     }
 
-    pub fn set_imgui(&mut self, imgui: Box<dyn rubato_types::imgui_access::ImGuiAccess>) {
-        self.integration.imgui = Some(imgui);
-    }
-
     /// Load a new player profile, re-initialize states and IR config.
     ///
     /// Translated from: MainController.loadNewProfile(PlayerConfig)

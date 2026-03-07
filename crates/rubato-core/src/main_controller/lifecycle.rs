@@ -347,11 +347,9 @@ impl MainController {
                     log::info!("Twitter post requested (API deprecated, no-op)");
                 }
 
-                // Mod menu toggle
-                if input.is_activated(KeyCommand::ToggleModMenu)
-                    && let Some(ref mut imgui) = self.integration.imgui
-                {
-                    imgui.toggle_menu();
+                // Mod menu toggle (ImGui overlay not implemented)
+                if input.is_activated(KeyCommand::ToggleModMenu) {
+                    log::debug!("Mod menu toggle requested (no ImGui overlay)");
                 }
             }
         }
@@ -384,9 +382,6 @@ impl MainController {
         }
         self.integration.stream_controller = None;
 
-        if let Some(mut imgui) = self.integration.imgui.take() {
-            imgui.dispose();
-        }
         if let Some(mut resource) = self.resource.take() {
             resource.dispose();
         }
