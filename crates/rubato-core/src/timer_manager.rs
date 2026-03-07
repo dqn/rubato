@@ -188,7 +188,12 @@ impl rubato_types::timer_access::TimerAccess for TimerManager {
     }
 }
 
-impl rubato_types::skin_render_context::SkinRenderContext for TimerManager {
+impl rubato_types::skin_render_context::SkinEventHandler for TimerManager {}
+impl rubato_types::skin_render_context::SkinAudioControl for TimerManager {}
+impl rubato_types::skin_render_context::SkinConfigAccess for TimerManager {}
+impl rubato_types::skin_render_context::SkinPropertyProvider for TimerManager {}
+
+impl rubato_types::skin_render_context::SkinStateQuery for TimerManager {
     fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
         self.state_type
     }

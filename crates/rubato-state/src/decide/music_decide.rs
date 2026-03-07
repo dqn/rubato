@@ -38,11 +38,21 @@ impl rubato_types::timer_access::TimerAccess for DecideRenderContext<'_> {
     }
 }
 
-impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContext<'_> {
+impl rubato_types::skin_render_context::SkinEventHandler for DecideRenderContext<'_> {
+    fn set_timer_micro(&mut self, timer_id: rubato_types::timer_id::TimerId, micro_time: i64) {
+        self.timer.set_micro_timer(timer_id, micro_time);
+    }
+}
+
+impl rubato_types::skin_render_context::SkinAudioControl for DecideRenderContext<'_> {}
+
+impl rubato_types::skin_render_context::SkinStateQuery for DecideRenderContext<'_> {
     fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
         Some(rubato_types::main_state_type::MainStateType::Decide)
     }
+}
 
+impl rubato_types::skin_render_context::SkinConfigAccess for DecideRenderContext<'_> {
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         Some(self.main.player_config())
     }
@@ -50,11 +60,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
     fn config_ref(&self) -> Option<&rubato_types::config::Config> {
         Some(self.main.config())
     }
+}
 
-    fn set_timer_micro(&mut self, timer_id: rubato_types::timer_id::TimerId, micro_time: i64) {
-        self.timer.set_micro_timer(timer_id, micro_time);
-    }
-
+impl rubato_types::skin_render_context::SkinPropertyProvider for DecideRenderContext<'_> {
     fn string_value(&self, id: i32) -> String {
         match id {
             10 => self
@@ -122,11 +130,7 @@ impl rubato_types::timer_access::TimerAccess for DecideMouseContext<'_> {
     }
 }
 
-impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext<'_> {
-    fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
-        Some(rubato_types::main_state_type::MainStateType::Decide)
-    }
-
+impl rubato_types::skin_render_context::SkinEventHandler for DecideMouseContext<'_> {
     fn change_state(&mut self, state: rubato_types::main_state_type::MainStateType) {
         self.main.change_state(state);
     }
@@ -135,6 +139,17 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
         self.timer.set_micro_timer(timer_id, micro_time);
     }
 }
+
+impl rubato_types::skin_render_context::SkinAudioControl for DecideMouseContext<'_> {}
+impl rubato_types::skin_render_context::SkinPropertyProvider for DecideMouseContext<'_> {}
+
+impl rubato_types::skin_render_context::SkinStateQuery for DecideMouseContext<'_> {
+    fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
+        Some(rubato_types::main_state_type::MainStateType::Decide)
+    }
+}
+
+impl rubato_types::skin_render_context::SkinConfigAccess for DecideMouseContext<'_> {}
 
 /// MusicDecide - music decide screen state
 ///

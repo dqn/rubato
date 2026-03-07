@@ -70,7 +70,7 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
     fn is_music_selector(&self) -> bool {
         self.ctx
             .as_deref()
-            .is_some_and(rubato_types::skin_render_context::SkinRenderContext::is_music_selector)
+            .is_some_and(rubato_types::skin_render_context::SkinStateQuery::is_music_selector)
             || self.state_type == Some(rubato_types::main_state_type::MainStateType::MusicSelect)
     }
 

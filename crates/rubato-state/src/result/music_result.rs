@@ -53,11 +53,38 @@ impl rubato_types::timer_access::TimerAccess for ResultRenderContext<'_> {
     }
 }
 
-impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContext<'_> {
+impl rubato_types::skin_render_context::SkinEventHandler for ResultRenderContext<'_> {
+    fn set_timer_micro(&mut self, timer_id: rubato_types::timer_id::TimerId, micro_time: i64) {
+        self.timer.set_micro_timer(timer_id, micro_time);
+    }
+}
+
+impl rubato_types::skin_render_context::SkinAudioControl for ResultRenderContext<'_> {}
+
+impl rubato_types::skin_render_context::SkinStateQuery for ResultRenderContext<'_> {
     fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
         Some(rubato_types::main_state_type::MainStateType::Result)
     }
 
+    fn gauge_value(&self) -> f32 {
+        // Return final gauge value from score data
+        self.data.oldscore.play_option.gauge as f32 / 100.0
+    }
+
+    fn gauge_type(&self) -> i32 {
+        self.data.gauge_type
+    }
+
+    fn judge_count(&self, judge: i32, fast: bool) -> i32 {
+        self.data
+            .score
+            .score
+            .as_ref()
+            .map_or(0, |s| s.judge_count(judge, fast))
+    }
+}
+
+impl rubato_types::skin_render_context::SkinConfigAccess for ResultRenderContext<'_> {
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         Some(self.resource.player_config())
     }
@@ -65,7 +92,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     fn config_ref(&self) -> Option<&rubato_types::config::Config> {
         Some(self.main.config())
     }
+}
 
+impl rubato_types::skin_render_context::SkinPropertyProvider for ResultRenderContext<'_> {
     fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
         self.resource.replay_data()
     }
@@ -104,27 +133,6 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
 
     fn song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
         self.resource.songdata()
-    }
-
-    fn set_timer_micro(&mut self, timer_id: rubato_types::timer_id::TimerId, micro_time: i64) {
-        self.timer.set_micro_timer(timer_id, micro_time);
-    }
-
-    fn gauge_value(&self) -> f32 {
-        // Return final gauge value from score data
-        self.data.oldscore.play_option.gauge as f32 / 100.0
-    }
-
-    fn gauge_type(&self) -> i32 {
-        self.data.gauge_type
-    }
-
-    fn judge_count(&self, judge: i32, fast: bool) -> i32 {
-        self.data
-            .score
-            .score
-            .as_ref()
-            .map_or(0, |s| s.judge_count(judge, fast))
     }
 
     fn integer_value(&self, id: i32) -> i32 {
@@ -246,11 +254,7 @@ impl rubato_types::timer_access::TimerAccess for ResultMouseContext<'_> {
     }
 }
 
-impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext<'_> {
-    fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
-        Some(rubato_types::main_state_type::MainStateType::Result)
-    }
-
+impl rubato_types::skin_render_context::SkinEventHandler for ResultMouseContext<'_> {
     fn execute_event(&mut self, id: i32, _arg1: i32, _arg2: i32) {
         if let Some(index) = replay_index_from_event_id(id) {
             self.result.save_replay_data(index);
@@ -264,7 +268,18 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
     fn set_timer_micro(&mut self, timer_id: rubato_types::timer_id::TimerId, micro_time: i64) {
         self.timer.set_micro_timer(timer_id, micro_time);
     }
+}
 
+impl rubato_types::skin_render_context::SkinAudioControl for ResultMouseContext<'_> {}
+impl rubato_types::skin_render_context::SkinPropertyProvider for ResultMouseContext<'_> {}
+
+impl rubato_types::skin_render_context::SkinStateQuery for ResultMouseContext<'_> {
+    fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
+        Some(rubato_types::main_state_type::MainStateType::Result)
+    }
+}
+
+impl rubato_types::skin_render_context::SkinConfigAccess for ResultMouseContext<'_> {
     fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
         self.result.resource.player_config_mut()
     }

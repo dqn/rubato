@@ -1,15 +1,12 @@
 use crate::main_state_type::MainStateType;
 use crate::timer_access::TimerAccess;
 
-/// Extended context for skin rendering that provides timer access plus
-/// additional capabilities (event execution, state changes, audio, timers).
-///
-/// Replaces the 5 no-op methods that were on skin's MainState trait, enabling
-/// proper delegation when MainController context is available during rendering.
-///
-/// All methods have default no-op implementations for adapters that only carry
-/// timer data (e.g., TimerOnlyMainState).
-pub trait SkinRenderContext: TimerAccess {
+// ============================================================
+// Sub-trait 1: SkinEventHandler (Event/state control)
+// ============================================================
+
+/// Event and state control methods for skin rendering.
+pub trait SkinEventHandler {
     /// Execute a custom skin event by ID with arguments.
     fn execute_event(&mut self, _id: i32, _arg1: i32, _arg2: i32) {
         // default no-op
@@ -24,7 +21,14 @@ pub trait SkinRenderContext: TimerAccess {
     fn set_timer_micro(&mut self, _timer_id: crate::timer_id::TimerId, _micro_time: i64) {
         // default no-op
     }
+}
 
+// ============================================================
+// Sub-trait 2: SkinAudioControl (Audio)
+// ============================================================
+
+/// Audio playback control methods for skin rendering.
+pub trait SkinAudioControl {
     /// Play an audio file at the given path with volume and loop flag.
     fn audio_play(&mut self, _path: &str, _volume: f32, _is_loop: bool) {
         // default no-op
@@ -35,40 +39,20 @@ pub trait SkinRenderContext: TimerAccess {
         // default no-op
     }
 
-    /// Returns the current main state type (e.g., Play, MusicSelect, Result).
-    /// Used by skin adapters to answer state-specific queries like `is_bms_player()`.
-    fn current_state_type(&self) -> Option<MainStateType> {
-        None
+    /// Plays the option change sound for click/slider-driven config changes.
+    fn play_option_change_sound(&mut self) {
+        // default no-op
     }
+}
 
-    /// Returns true when the current skin context is the music select screen.
-    fn is_music_selector(&self) -> bool {
-        self.current_state_type() == Some(MainStateType::MusicSelect)
-    }
+// ============================================================
+// Sub-trait 3: SkinPropertyProvider (Property values)
+// ============================================================
 
-    /// Returns true when the current skin context is a result screen.
-    fn is_result_state(&self) -> bool {
-        matches!(
-            self.current_state_type(),
-            Some(MainStateType::Result | MainStateType::CourseResult)
-        )
-    }
-
-    /// Returns the recent judge timing offsets (milliseconds).
-    /// 100-element circular buffer. Used by SkinTimingVisualizer and SkinHitErrorVisualizer.
-    fn recent_judges(&self) -> &[i64] {
-        &[]
-    }
-
-    /// Returns the current write index into the recent judges circular buffer.
-    fn recent_judges_index(&self) -> usize {
-        0
-    }
-
-    // ============================================================
-    // Property value delegation (skin property factories)
-    // ============================================================
-
+/// Property value provider methods for skin rendering.
+/// This is the largest group, covering integer/float/bool/string lookups
+/// and helper methods for `default_image_index_value`.
+pub trait SkinPropertyProvider: SkinStateQuery + SkinConfigAccess {
     /// Returns the integer property value for the given ID.
     /// Delegate properties call this via MainState::integer_value().
     fn integer_value(&self, _id: i32) -> i32 {
@@ -246,6 +230,11 @@ pub trait SkinRenderContext: TimerAccess {
         String::new()
     }
 
+    /// Sets the float property value for the given ID.
+    fn set_float_value(&mut self, _id: i32, _value: f32) {
+        // default no-op
+    }
+
     /// Returns replay option data when the current state exposes it.
     fn replay_option_data(&self) -> Option<&crate::replay_data::ReplayData> {
         None
@@ -285,15 +274,43 @@ pub trait SkinRenderContext: TimerAccess {
     fn sort_image_index(&self) -> Option<i32> {
         None
     }
+}
 
-    /// Sets the float property value for the given ID.
-    fn set_float_value(&mut self, _id: i32, _value: f32) {
-        // default no-op
+// ============================================================
+// Sub-trait 4: SkinStateQuery (State queries + gameplay)
+// ============================================================
+
+/// State query and gameplay data methods for skin rendering.
+pub trait SkinStateQuery {
+    /// Returns the current main state type (e.g., Play, MusicSelect, Result).
+    /// Used by skin adapters to answer state-specific queries like `is_bms_player()`.
+    fn current_state_type(&self) -> Option<MainStateType> {
+        None
     }
 
-    // ============================================================
-    // Gameplay state queries
-    // ============================================================
+    /// Returns true when the current skin context is the music select screen.
+    fn is_music_selector(&self) -> bool {
+        self.current_state_type() == Some(MainStateType::MusicSelect)
+    }
+
+    /// Returns true when the current skin context is a result screen.
+    fn is_result_state(&self) -> bool {
+        matches!(
+            self.current_state_type(),
+            Some(MainStateType::Result | MainStateType::CourseResult)
+        )
+    }
+
+    /// Returns the recent judge timing offsets (milliseconds).
+    /// 100-element circular buffer. Used by SkinTimingVisualizer and SkinHitErrorVisualizer.
+    fn recent_judges(&self) -> &[i64] {
+        &[]
+    }
+
+    /// Returns the current write index into the recent judges circular buffer.
+    fn recent_judges_index(&self) -> usize {
+        0
+    }
 
     /// Returns the judge count for the given judge index.
     fn judge_count(&self, _judge: i32, _fast: bool) -> i32 {
@@ -319,11 +336,14 @@ pub trait SkinRenderContext: TimerAccess {
     fn now_combo(&self, _player: i32) -> i32 {
         0
     }
+}
 
-    // ============================================================
-    // Config access
-    // ============================================================
+// ============================================================
+// Sub-trait 5: SkinConfigAccess (Config access)
+// ============================================================
 
+/// Config access methods for skin rendering.
+pub trait SkinConfigAccess {
     /// Returns immutable reference to the player config.
     fn player_config_ref(&self) -> Option<&crate::player_config::PlayerConfig> {
         None
@@ -349,11 +369,6 @@ pub trait SkinRenderContext: TimerAccess {
         None
     }
 
-    /// Plays the option change sound for click/slider-driven config changes.
-    fn play_option_change_sound(&mut self) {
-        // default no-op
-    }
-
     /// Refreshes bar UI after a config change on music select.
     fn update_bar_after_change(&mut self) {
         // default no-op
@@ -364,4 +379,36 @@ pub trait SkinRenderContext: TimerAccess {
     fn select_song_mode(&mut self, _event_id: i32) {
         // default no-op
     }
+}
+
+// ============================================================
+// Super-trait: SkinRenderContext
+// ============================================================
+
+/// Extended context for skin rendering that provides timer access plus
+/// additional capabilities (event execution, state changes, audio, timers).
+///
+/// Replaces the 5 no-op methods that were on skin's MainState trait, enabling
+/// proper delegation when MainController context is available during rendering.
+///
+/// Automatically implemented for any type that implements all sub-traits.
+pub trait SkinRenderContext:
+    TimerAccess
+    + SkinEventHandler
+    + SkinAudioControl
+    + SkinPropertyProvider
+    + SkinStateQuery
+    + SkinConfigAccess
+{
+}
+
+impl<
+        T: TimerAccess
+            + SkinEventHandler
+            + SkinAudioControl
+            + SkinPropertyProvider
+            + SkinStateQuery
+            + SkinConfigAccess,
+    > SkinRenderContext for T
+{
 }

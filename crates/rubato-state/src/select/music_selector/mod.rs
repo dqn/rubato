@@ -105,11 +105,35 @@ impl SelectSkinContext<'_> {
     }
 }
 
-impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<'_> {
+impl rubato_types::skin_render_context::SkinEventHandler for SelectSkinContext<'_> {
+    fn set_timer_micro(&mut self, timer_id: rubato_types::timer_id::TimerId, micro_time: i64) {
+        self.timer.set_micro_timer(timer_id, micro_time);
+    }
+
+    fn execute_event(&mut self, id: i32, arg1: i32, arg2: i32) {
+        if let Some(event) = delegated_event_type_from_id(id) {
+            self.selector.execute_event_with_args(event, arg1, arg2);
+        }
+    }
+
+    fn change_state(&mut self, state: MainStateType) {
+        self.selector.pending_state_change = Some(state);
+    }
+}
+
+impl rubato_types::skin_render_context::SkinAudioControl for SelectSkinContext<'_> {
+    fn play_option_change_sound(&mut self) {
+        self.selector.play_option_change();
+    }
+}
+
+impl rubato_types::skin_render_context::SkinStateQuery for SelectSkinContext<'_> {
     fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
         Some(rubato_types::main_state_type::MainStateType::MusicSelect)
     }
+}
 
+impl rubato_types::skin_render_context::SkinConfigAccess for SelectSkinContext<'_> {
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         Some(&self.selector.config)
     }
@@ -130,6 +154,24 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
         self.selector.get_selected_play_config_mut()
     }
 
+    fn update_bar_after_change(&mut self) {
+        self.selector.refresh_bar_with_context();
+    }
+
+    fn select_song_mode(&mut self, event_id: i32) {
+        let mode = match event_id {
+            15 => Some(BMSPlayerMode::PLAY),
+            16 => Some(BMSPlayerMode::AUTOPLAY),
+            315 => Some(BMSPlayerMode::PRACTICE),
+            _ => None,
+        };
+        if let Some(mode) = mode {
+            self.selector.select_song(mode);
+        }
+    }
+}
+
+impl rubato_types::skin_render_context::SkinPropertyProvider for SelectSkinContext<'_> {
     fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
         self.selector.get_selected_play_config_ref()
     }
@@ -164,40 +206,6 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
 
     fn sort_image_index(&self) -> Option<i32> {
         Some(self.selector.sort())
-    }
-
-    fn set_timer_micro(&mut self, timer_id: rubato_types::timer_id::TimerId, micro_time: i64) {
-        self.timer.set_micro_timer(timer_id, micro_time);
-    }
-
-    fn execute_event(&mut self, id: i32, arg1: i32, arg2: i32) {
-        if let Some(event) = delegated_event_type_from_id(id) {
-            self.selector.execute_event_with_args(event, arg1, arg2);
-        }
-    }
-
-    fn change_state(&mut self, state: MainStateType) {
-        self.selector.pending_state_change = Some(state);
-    }
-
-    fn play_option_change_sound(&mut self) {
-        self.selector.play_option_change();
-    }
-
-    fn update_bar_after_change(&mut self) {
-        self.selector.refresh_bar_with_context();
-    }
-
-    fn select_song_mode(&mut self, event_id: i32) {
-        let mode = match event_id {
-            15 => Some(BMSPlayerMode::PLAY),
-            16 => Some(BMSPlayerMode::AUTOPLAY),
-            315 => Some(BMSPlayerMode::PRACTICE),
-            _ => None,
-        };
-        if let Some(mode) = mode {
-            self.selector.select_song(mode);
-        }
     }
 
     fn integer_value(&self, id: i32) -> i32 {

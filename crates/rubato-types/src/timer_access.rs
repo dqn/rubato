@@ -52,7 +52,11 @@ impl TimerAccess for NullTimer {
     }
 }
 
-impl crate::skin_render_context::SkinRenderContext for NullTimer {}
+impl crate::skin_render_context::SkinEventHandler for NullTimer {}
+impl crate::skin_render_context::SkinAudioControl for NullTimer {}
+impl crate::skin_render_context::SkinPropertyProvider for NullTimer {}
+impl crate::skin_render_context::SkinStateQuery for NullTimer {}
+impl crate::skin_render_context::SkinConfigAccess for NullTimer {}
 
 #[cfg(test)]
 mod tests {

@@ -354,7 +354,11 @@ impl Timer {
     }
 }
 
-impl rubato_types::skin_render_context::SkinRenderContext for Timer {}
+impl rubato_types::skin_render_context::SkinEventHandler for Timer {}
+impl rubato_types::skin_render_context::SkinAudioControl for Timer {}
+impl rubato_types::skin_render_context::SkinPropertyProvider for Timer {}
+impl rubato_types::skin_render_context::SkinStateQuery for Timer {}
+impl rubato_types::skin_render_context::SkinConfigAccess for Timer {}
 
 impl rubato_types::timer_access::TimerAccess for Timer {
     fn now_time(&self) -> i64 {
