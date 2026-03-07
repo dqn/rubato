@@ -956,7 +956,7 @@ impl SkinConfigurationView {
                     let offset = &header.custom_offsets()[*offset_idx];
                     // final String[] values = {"x","y","w","h","r","a"};
                     // final boolean[] b = {option.x, option.y, option.w, option.h, option.r, option.a};
-                    let enabled = [offset.x, offset.y, offset.w, offset.h, offset.r, offset.a];
+                    let enabled = [offset.flags.x, offset.flags.y, offset.flags.w, offset.flags.h, offset.flags.r, offset.flags.a];
 
                     // SkinConfig.Offset offset = null;
                     // for(SkinConfig.Offset o : property.getOffset()) { if(o.name.equals(option.name)) { offset = o; break; } }
@@ -1184,7 +1184,7 @@ fn convert_lr2_custom_file(
 fn convert_lr2_custom_offset(
     o: &rubato_skin::lr2::lr2_skin_header_loader::CustomOffset,
 ) -> rubato_skin::skin_header::CustomOffset {
-    rubato_skin::skin_header::CustomOffset::new(o.name.clone(), o.id, o.x, o.y, o.w, o.h, o.r, o.a)
+    rubato_skin::skin_header::CustomOffset::new(o.name.clone(), o.id, o.flags)
 }
 
 #[cfg(test)]
@@ -1454,12 +1454,7 @@ mod tests {
             custom_offsets: vec![LR2CustomOffset::new(
                 "All offset(%)",
                 0,
-                true,
-                true,
-                true,
-                true,
-                false,
-                false,
+                rubato_skin::skin_header::OffsetFlags::new(true, true, true, true, false, false),
             )],
             ..Default::default()
         };
@@ -1469,9 +1464,9 @@ mod tests {
         assert_eq!(header.custom_offsets().len(), 1);
         assert_eq!(header.custom_offsets()[0].name, "All offset(%)");
         assert_eq!(header.custom_offsets()[0].id, 0);
-        assert!(header.custom_offsets()[0].x);
-        assert!(header.custom_offsets()[0].y);
-        assert!(!header.custom_offsets()[0].r);
+        assert!(header.custom_offsets()[0].flags.x);
+        assert!(header.custom_offsets()[0].flags.y);
+        assert!(!header.custom_offsets()[0].flags.r);
     }
 
     #[test]

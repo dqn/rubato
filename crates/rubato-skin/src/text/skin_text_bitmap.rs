@@ -3,6 +3,7 @@
 
 use std::path::PathBuf;
 
+use crate::loaders::skin_loader::TextureLoadMode;
 use crate::property::string_property::StringProperty;
 use crate::stubs::{BitmapFont, Color, GlyphLayout, MainState, TextureRegion};
 use crate::text::skin_text::{OVERFLOW_OVERFLOW, OVERFLOW_SHRINK, OVERFLOW_TRUNCATE, SkinTextData};
@@ -315,8 +316,7 @@ pub struct CacheableBitmapFont {
 }
 
 pub struct SkinTextBitmapSource {
-    pub usecim: bool,
-    pub use_mip_maps: bool,
+    pub texture_load_mode: TextureLoadMode,
     pub font_path: PathBuf,
     pub font: Option<BitmapFont>,
     pub original_size: f32,
@@ -331,13 +331,12 @@ impl SkinTextBitmapSource {
     pub const TYPE_COLORED_DISTANCE_FIELD: i32 = 2;
 
     pub fn new(font_path: PathBuf, usecim: bool) -> Self {
-        Self::new_with_mipmaps(font_path, usecim, true)
+        Self::new_with_mode(font_path, TextureLoadMode::from_flags(usecim, true))
     }
 
-    pub fn new_with_mipmaps(font_path: PathBuf, usecim: bool, use_mip_maps: bool) -> Self {
+    pub fn new_with_mode(font_path: PathBuf, texture_load_mode: TextureLoadMode) -> Self {
         Self {
-            usecim,
-            use_mip_maps,
+            texture_load_mode,
             font_path,
             font: None,
             original_size: 0.0,
@@ -460,8 +459,7 @@ mod tests {
 
     fn make_source(original_size: f32, source_type: i32) -> SkinTextBitmapSource {
         SkinTextBitmapSource {
-            usecim: false,
-            use_mip_maps: true,
+            texture_load_mode: TextureLoadMode::MipMaps,
             font_path: PathBuf::from("test.fnt"),
             font: None,
             original_size,

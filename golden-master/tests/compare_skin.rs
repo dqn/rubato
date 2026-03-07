@@ -263,8 +263,8 @@ fn lr2_csv_header() {
     assert!(lift_offset.is_some(), "LiftOffset should exist");
     let lift_offset = lift_offset.unwrap();
     assert_eq!(lift_offset.id, 3);
-    assert!(!lift_offset.x, "not editable_x");
-    assert!(lift_offset.y, "editable_y");
+    assert!(!lift_offset.flags.x, "not editable_x");
+    assert!(lift_offset.flags.y, "editable_y");
 }
 
 // ===========================================================================

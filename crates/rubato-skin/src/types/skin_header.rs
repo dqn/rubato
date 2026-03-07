@@ -402,6 +402,30 @@ impl CustomFile {
     }
 }
 
+/// Which offset axes are user-adjustable.
+///
+/// Each flag controls whether the corresponding axis can be modified
+/// in the skin offset configuration UI:
+/// - `x`, `y`: position offsets
+/// - `w`, `h`: size offsets
+/// - `r`: rotation offset
+/// - `a`: alpha (opacity) offset
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct OffsetFlags {
+    pub x: bool,
+    pub y: bool,
+    pub w: bool,
+    pub h: bool,
+    pub r: bool,
+    pub a: bool,
+}
+
+impl OffsetFlags {
+    pub fn new(x: bool, y: bool, w: bool, h: bool, r: bool, a: bool) -> Self {
+        Self { x, y, w, h, r, a }
+    }
+}
+
 /// Custom offset (user-adjustable offset)
 #[derive(Clone)]
 pub struct CustomOffset {
@@ -409,38 +433,18 @@ pub struct CustomOffset {
     pub name: String,
     /// Offset ID
     pub id: i32,
-    /// Whether each value can be changed
-    pub x: bool,
-    pub y: bool,
-    pub w: bool,
-    pub h: bool,
-    pub r: bool,
-    pub a: bool,
+    /// Which axes are adjustable
+    pub flags: OffsetFlags,
     /// Offset value
     pub offset: Option<SkinConfigOffset>,
 }
 
 impl CustomOffset {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        name: String,
-        id: i32,
-        x: bool,
-        y: bool,
-        w: bool,
-        h: bool,
-        r: bool,
-        a: bool,
-    ) -> Self {
+    pub fn new(name: String, id: i32, flags: OffsetFlags) -> Self {
         Self {
             name,
             id,
-            x,
-            y,
-            w,
-            h,
-            r,
-            a,
+            flags,
             offset: None,
         }
     }

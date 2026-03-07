@@ -38,7 +38,7 @@ use crate::text::skin_text_font::SkinTextFont;
 use crate::types::skin::{Skin, SkinObject};
 use crate::types::skin_bar_object::SkinBarObject;
 use crate::types::skin_header::{
-    CustomCategory, CustomFile, CustomItemEnum, CustomOffset, CustomOption, SkinHeader,
+    CustomCategory, CustomFile, CustomItemEnum, CustomOffset, CustomOption, OffsetFlags, SkinHeader,
 };
 use crate::types::skin_type::SkinType;
 
@@ -110,7 +110,7 @@ pub fn convert_header_data(
     let offsets: Vec<CustomOffset> = data
         .custom_offsets
         .iter()
-        .map(|o| CustomOffset::new(o.name.clone(), o.id, o.x, o.y, o.w, o.h, o.r, o.a))
+        .map(|o| CustomOffset::new(o.name.clone(), o.id, OffsetFlags::new(o.x, o.y, o.w, o.h, o.r, o.a)))
         .collect();
     header.offsets = offsets;
 
@@ -156,12 +156,7 @@ fn convert_category_data(cat: &CustomCategoryData) -> CustomCategory {
             CustomItemData::Offset(o) => CustomItemEnum::Offset(CustomOffset::new(
                 o.name.clone(),
                 o.id,
-                o.x,
-                o.y,
-                o.w,
-                o.h,
-                o.r,
-                o.a,
+                OffsetFlags::new(o.x, o.y, o.w, o.h, o.r, o.a),
             )),
         })
         .collect();

@@ -12,6 +12,7 @@ use super::stubs::{
 };
 use rubato_skin::json::json_skin_loader::{CustomItemData, SkinHeaderData};
 use rubato_skin::lr2::lr2_skin_header_loader::LR2SkinHeaderData;
+use rubato_skin::skin_header::OffsetFlags;
 
 static MAIN: Mutex<Option<MainController>> = Mutex::new(None);
 static PLAYER_CONFIG: Mutex<Option<PlayerConfig>> = Mutex::new(None);
@@ -617,20 +618,20 @@ fn skin_config_offset(ui: &mut egui::Ui, offset: &CustomOffset) {
 
         ui.indent("offset-indent", |ui| {
             // Row 1: X, W, a
-            if offset.x || offset.w || offset.a {
+            if offset.flags.x || offset.flags.w || offset.flags.a {
                 ui.horizontal(|ui| {
-                    spawn_drag_int(ui, "X", offset.x, &mut value.x);
-                    spawn_drag_int(ui, "W", offset.w, &mut value.w);
-                    spawn_drag_int(ui, "a", offset.a, &mut value.a);
+                    spawn_drag_int(ui, "X", offset.flags.x, &mut value.x);
+                    spawn_drag_int(ui, "W", offset.flags.w, &mut value.w);
+                    spawn_drag_int(ui, "a", offset.flags.a, &mut value.a);
                 });
             }
 
             // Row 2: Y, H, R
-            if offset.y || offset.h || offset.r {
+            if offset.flags.y || offset.flags.h || offset.flags.r {
                 ui.horizontal(|ui| {
-                    spawn_drag_int(ui, "Y", offset.y, &mut value.y);
-                    spawn_drag_int(ui, "H", offset.h, &mut value.h);
-                    spawn_drag_int(ui, "R", offset.r, &mut value.r);
+                    spawn_drag_int(ui, "Y", offset.flags.y, &mut value.y);
+                    spawn_drag_int(ui, "H", offset.flags.h, &mut value.h);
+                    spawn_drag_int(ui, "R", offset.flags.r, &mut value.r);
                 });
             }
         });
@@ -1166,7 +1167,7 @@ fn skin_header_from_json_data(data: SkinHeaderData) -> SkinHeader {
     let offsets: Vec<CustomOffset> = data
         .custom_offsets
         .into_iter()
-        .map(|co| CustomOffset::new(co.name, co.id, co.x, co.y, co.w, co.h, co.r, co.a))
+        .map(|co| CustomOffset::new(co.name, co.id, OffsetFlags::new(co.x, co.y, co.w, co.h, co.r, co.a)))
         .collect();
     header.offsets = offsets;
     let categories: Vec<CustomCategory> = data
@@ -1184,7 +1185,7 @@ fn skin_header_from_json_data(data: SkinHeaderData) -> SkinHeader {
                         CustomCategoryItem::File(CustomFile::new(cf.name, cf.path, cf.def))
                     }
                     CustomItemData::Offset(co) => CustomCategoryItem::Offset(CustomOffset::new(
-                        co.name, co.id, co.x, co.y, co.w, co.h, co.r, co.a,
+                        co.name, co.id, OffsetFlags::new(co.x, co.y, co.w, co.h, co.r, co.a),
                     )),
                 })
                 .collect();
@@ -1227,7 +1228,7 @@ fn skin_header_from_lr2_data(data: LR2SkinHeaderData) -> SkinHeader {
     let offsets: Vec<CustomOffset> = data
         .custom_offsets
         .into_iter()
-        .map(|co| CustomOffset::new(co.name, co.id, co.x, co.y, co.w, co.h, co.r, co.a))
+        .map(|co| CustomOffset::new(co.name, co.id, co.flags))
         .collect();
     header.offsets = offsets;
     header
