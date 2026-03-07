@@ -228,7 +228,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
                     * 100.0) as i32
             }
             // Display timing
-            12 => self.selector.config.judgetiming,
+            12 => self.selector.config.judge_settings.judgetiming,
             // Song BPM
             90 => self.selected_song_data().map_or(0, |s| s.maxbpm),
             91 => self.selected_song_data().map_or(0, |s| s.minbpm),

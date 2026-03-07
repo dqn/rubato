@@ -151,32 +151,34 @@ impl MusicSelector {
             }
             EventType::Lnmode => {
                 let step = if arg1 >= 0 { 1 } else { 2 };
-                self.config.lnmode = (self.config.get_lnmode() + step) % 3;
+                self.config.play_settings.lnmode = (self.config.get_lnmode() + step) % 3;
                 self.play_option_change();
             }
             EventType::Option1p => {
                 let step = if arg1 >= 0 { 1 } else { 9 };
-                self.config.random = (self.config.get_random() + step) % 10;
+                self.config.play_settings.random = (self.config.get_random() + step) % 10;
                 self.play_option_change();
             }
             EventType::Option2p => {
                 let step = if arg1 >= 0 { 1 } else { 9 };
-                self.config.random2 = (self.config.get_random2() + step) % 10;
+                self.config.play_settings.random2 = (self.config.get_random2() + step) % 10;
                 self.play_option_change();
             }
             EventType::Optiondp => {
                 let step = if arg1 >= 0 { 1 } else { 3 };
-                self.config.doubleoption = (self.config.get_doubleoption() + step) % 4;
+                self.config.play_settings.doubleoption =
+                    (self.config.get_doubleoption() + step) % 4;
                 self.play_option_change();
             }
             EventType::Gauge1p => {
                 let step = if arg1 >= 0 { 1 } else { 5 };
-                self.config.gauge = (self.config.gauge + step) % 6;
+                self.config.play_settings.gauge = (self.config.play_settings.gauge + step) % 6;
                 self.play_option_change();
             }
             EventType::GaugeAutoShift => {
                 let step = if arg1 >= 0 { 1 } else { 4 };
-                self.config.gauge_auto_shift = (self.config.gauge_auto_shift + step) % 5;
+                self.config.play_settings.gauge_auto_shift =
+                    (self.config.play_settings.gauge_auto_shift + step) % 5;
                 self.play_option_change();
             }
             EventType::Hsfix => {
@@ -202,12 +204,13 @@ impl MusicSelector {
             }
             EventType::NotesDisplayTiming => {
                 let step = if arg1 >= 0 { 1 } else { -1 };
-                self.config.judgetiming = (self.config.judgetiming + step).clamp(-500, 500);
+                self.config.judge_settings.judgetiming =
+                    (self.config.judge_settings.judgetiming + step).clamp(-500, 500);
                 self.play_option_change();
             }
             EventType::NotesDisplayTimingAutoAdjust => {
-                self.config.notes_display_timing_auto_adjust =
-                    !self.config.notes_display_timing_auto_adjust;
+                self.config.judge_settings.notes_display_timing_auto_adjust =
+                    !self.config.judge_settings.notes_display_timing_auto_adjust;
                 self.play_option_change();
             }
             EventType::Target => {
@@ -215,14 +218,14 @@ impl MusicSelector {
                 if !targets.is_empty() {
                     let mut index = targets.len();
                     for (i, t) in targets.iter().enumerate() {
-                        if t == &self.config.targetid {
+                        if t == &self.config.select_settings.targetid {
                             index = i;
                             break;
                         }
                     }
                     let step = if arg1 >= 0 { 1 } else { targets.len() - 1 };
                     let new_index = (index + step) % targets.len();
-                    self.config.targetid = targets[new_index].clone();
+                    self.config.select_settings.targetid = targets[new_index].clone();
                 }
                 self.play_option_change();
             }

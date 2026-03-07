@@ -453,7 +453,7 @@ impl MainController {
     /// }
     /// ```
     pub fn trigger_ln_warning(&self) {
-        let ln_mode_name = match self.player.lnmode {
+        let ln_mode_name = match self.player.play_settings.lnmode {
             1 => "CN",
             2 => "HCN",
             _ => "LN",
@@ -491,7 +491,7 @@ impl MainController {
     /// display names via rubato_types::target_list.
     pub fn set_target_list(&mut self) {
         // Build target list: player's target list + rival targets
-        let mut targetlist: Vec<String> = self.player.targetlist.clone();
+        let mut targetlist: Vec<String> = self.player.select_settings.targetlist.clone();
         for i in 0..self.db.rivals.rival_count() {
             targetlist.push(format!("RIVAL_{}", i + 1));
         }

@@ -330,9 +330,9 @@ impl BMSPlayer {
     /// these values from replay) and before `build_pattern_modifiers` (which
     /// uses the final values).
     pub fn init_playinfo_from_config(&mut self, config: &PlayerConfig) {
-        self.score.playinfo.randomoption = config.random;
-        self.score.playinfo.randomoption2 = config.random2;
-        self.score.playinfo.doubleoption = config.doubleoption;
+        self.score.playinfo.randomoption = config.play_settings.random;
+        self.score.playinfo.randomoption2 = config.play_settings.random2;
+        self.score.playinfo.doubleoption = config.play_settings.doubleoption;
     }
 
     /// Get option information (replay data with random options).

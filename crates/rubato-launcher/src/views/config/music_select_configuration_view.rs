@@ -127,10 +127,10 @@ impl MusicSelectConfigurationView {
         // (In Rust, Option is used)
 
         // randomselect.setSelected(player.isRandomSelect());
-        self.randomselect = player.is_random_select;
+        self.randomselect = player.select_settings.is_random_select;
 
         // chartReplicationMode.setValue(player.getChartReplicationMode());
-        self.chart_replication_mode = Some(player.chart_replication_mode.clone());
+        self.chart_replication_mode = Some(player.play_settings.chart_replication_mode.clone());
     }
 
     // public void commitPlayer()
@@ -138,11 +138,11 @@ impl MusicSelectConfigurationView {
         // if(player == null) { return; }
         if let Some(ref mut player) = self.player {
             // player.setRandomSelect(randomselect.isSelected());
-            player.is_random_select = self.randomselect;
+            player.select_settings.is_random_select = self.randomselect;
 
             // player.setChartReplicationMode(chartReplicationMode.getValue());
             if let Some(ref mode) = self.chart_replication_mode {
-                player.chart_replication_mode = mode.clone();
+                player.play_settings.chart_replication_mode = mode.clone();
             }
         }
     }

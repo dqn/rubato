@@ -273,11 +273,11 @@ pub fn judge_area(resource: &MusicResultResource) -> Vec<Vec<i32>> {
 
     let judgerank = model.judgerank();
     let config = resource.player_config();
-    let mut judge_window_rate = if config.custom_judge {
+    let mut judge_window_rate = if config.judge_settings.custom_judge {
         vec![
-            config.key_judge_window_rate_perfect_great,
-            config.key_judge_window_rate_great,
-            config.key_judge_window_rate_good,
+            config.judge_settings.key_judge_window_rate_perfect_great,
+            config.judge_settings.key_judge_window_rate_great,
+            config.judge_settings.key_judge_window_rate_good,
         ]
     } else {
         vec![100, 100, 100]
@@ -307,11 +307,11 @@ pub fn judge_area_from_player_resource(resource: &PlayerResource) -> Vec<Vec<i32
 
     let judgerank = model.judgerank();
     let config = resource.player_config();
-    let judge_window_rate = if config.custom_judge {
+    let judge_window_rate = if config.judge_settings.custom_judge {
         vec![
-            config.key_judge_window_rate_perfect_great,
-            config.key_judge_window_rate_great,
-            config.key_judge_window_rate_good,
+            config.judge_settings.key_judge_window_rate_perfect_great,
+            config.judge_settings.key_judge_window_rate_great,
+            config.judge_settings.key_judge_window_rate_good,
         ]
     } else {
         vec![100, 100, 100]

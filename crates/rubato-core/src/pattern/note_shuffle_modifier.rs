@@ -271,7 +271,7 @@ mod tests {
         let mut config = default_config();
         // Set a high threshold BPM so threshold_millis is large,
         // making it very unlikely to place consecutive notes on the same lane.
-        config.hran_threshold_bpm = 30; // threshold = ceil(15000/30) = 500ms
+        config.play_settings.hran_threshold_bpm = 30; // threshold = ceil(15000/30) = 500ms
         // Create timelines with small time gaps (100ms apart) and single notes.
         // With a 500ms threshold, each note should end up on a different lane
         // than the previous one.

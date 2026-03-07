@@ -10,46 +10,49 @@ mod tests {
         let pc = PlayerConfig::default();
         assert!(pc.id.is_none());
         assert_eq!(pc.name, "NO NAME");
-        assert_eq!(pc.gauge, 0);
-        assert_eq!(pc.random, 0);
-        assert_eq!(pc.random2, 0);
-        assert_eq!(pc.doubleoption, 0);
-        assert_eq!(pc.chart_replication_mode, "RIVALCHART");
-        assert_eq!(pc.targetid, "MAX");
-        assert_eq!(pc.judgetiming, 0);
-        assert!(!pc.notes_display_timing_auto_adjust);
+        assert_eq!(pc.play_settings.gauge, 0);
+        assert_eq!(pc.play_settings.random, 0);
+        assert_eq!(pc.play_settings.random2, 0);
+        assert_eq!(pc.play_settings.doubleoption, 0);
+        assert_eq!(pc.play_settings.chart_replication_mode, "RIVALCHART");
+        assert_eq!(pc.select_settings.targetid, "MAX");
+        assert_eq!(pc.judge_settings.judgetiming, 0);
+        assert!(!pc.judge_settings.notes_display_timing_auto_adjust);
         assert!(pc.mode.is_none());
-        assert_eq!(pc.lnmode, 0);
-        assert!(!pc.forcedcnendings);
-        assert!(!pc.custom_judge);
-        assert!(!pc.bpmguide);
-        assert!(!pc.showjudgearea);
-        assert!(!pc.markprocessednote);
+        assert_eq!(pc.play_settings.lnmode, 0);
+        assert!(!pc.play_settings.forcedcnendings);
+        assert!(!pc.judge_settings.custom_judge);
+        assert!(!pc.display_settings.bpmguide);
+        assert!(!pc.display_settings.showjudgearea);
+        assert!(!pc.display_settings.markprocessednote);
     }
 
     #[test]
     fn test_player_config_default_judge_window_rates() {
         let pc = PlayerConfig::default();
-        assert_eq!(pc.key_judge_window_rate_perfect_great, 400);
-        assert_eq!(pc.key_judge_window_rate_great, 400);
-        assert_eq!(pc.key_judge_window_rate_good, 100);
-        assert_eq!(pc.scratch_judge_window_rate_perfect_great, 400);
-        assert_eq!(pc.scratch_judge_window_rate_great, 400);
-        assert_eq!(pc.scratch_judge_window_rate_good, 100);
+        assert_eq!(pc.judge_settings.key_judge_window_rate_perfect_great, 400);
+        assert_eq!(pc.judge_settings.key_judge_window_rate_great, 400);
+        assert_eq!(pc.judge_settings.key_judge_window_rate_good, 100);
+        assert_eq!(
+            pc.judge_settings.scratch_judge_window_rate_perfect_great,
+            400
+        );
+        assert_eq!(pc.judge_settings.scratch_judge_window_rate_great, 400);
+        assert_eq!(pc.judge_settings.scratch_judge_window_rate_good, 100);
     }
 
     #[test]
     fn test_player_config_default_target_list_not_empty() {
         let pc = PlayerConfig::default();
-        assert!(!pc.targetlist.is_empty());
-        assert!(pc.targetlist.contains(&"MAX".to_string()));
+        assert!(!pc.select_settings.targetlist.is_empty());
+        assert!(pc.select_settings.targetlist.contains(&"MAX".to_string()));
     }
 
     #[test]
     fn test_player_config_default_autosave_replay() {
         let pc = PlayerConfig::default();
-        assert_eq!(pc.autosavereplay.len(), 4);
-        assert!(pc.autosavereplay.iter().all(|&v| v == 0));
+        assert_eq!(pc.misc_settings.autosavereplay.len(), 4);
+        assert!(pc.misc_settings.autosavereplay.iter().all(|&v| v == 0));
     }
 
     #[test]
@@ -57,18 +60,18 @@ mod tests {
         let mut pc = PlayerConfig::default();
         pc.id = Some("player1".to_string());
         pc.name = "TestPlayer".to_string();
-        pc.gauge = 3;
-        pc.random = 2;
-        pc.judgetiming = 50;
+        pc.play_settings.gauge = 3;
+        pc.play_settings.random = 2;
+        pc.judge_settings.judgetiming = 50;
 
         let json = serde_json::to_string(&pc).unwrap();
         let deserialized: PlayerConfig = serde_json::from_str(&json).unwrap();
 
         assert_eq!(deserialized.id, Some("player1".to_string()));
         assert_eq!(deserialized.name, "TestPlayer");
-        assert_eq!(deserialized.gauge, 3);
-        assert_eq!(deserialized.random, 2);
-        assert_eq!(deserialized.judgetiming, 50);
+        assert_eq!(deserialized.play_settings.gauge, 3);
+        assert_eq!(deserialized.play_settings.random, 2);
+        assert_eq!(deserialized.judge_settings.judgetiming, 50);
     }
 
     #[test]
@@ -76,53 +79,56 @@ mod tests {
         let pc: PlayerConfig = serde_json::from_str("{}").unwrap();
         let default = PlayerConfig::default();
         assert_eq!(pc.name, default.name);
-        assert_eq!(pc.gauge, default.gauge);
-        assert_eq!(pc.judgetiming, default.judgetiming);
+        assert_eq!(pc.play_settings.gauge, default.play_settings.gauge);
+        assert_eq!(
+            pc.judge_settings.judgetiming,
+            default.judge_settings.judgetiming
+        );
     }
 
     #[test]
     fn test_player_config_gauge_getter() {
         let mut pc = PlayerConfig::default();
-        pc.gauge = 5;
-        assert_eq!(pc.gauge, 5);
+        pc.play_settings.gauge = 5;
+        assert_eq!(pc.play_settings.gauge, 5);
     }
 
     #[test]
     fn test_player_config_random_getter_setter() {
         let mut pc = PlayerConfig::default();
 
-        pc.random = 3;
+        pc.play_settings.random = 3;
         assert_eq!(pc.get_random(), 3);
 
-        pc.random2 = 5;
+        pc.play_settings.random2 = 5;
         assert_eq!(pc.get_random2(), 5);
     }
 
     #[test]
     fn test_player_config_doubleoption_getter_setter() {
         let mut pc = PlayerConfig::default();
-        pc.doubleoption = 2;
+        pc.play_settings.doubleoption = 2;
         assert_eq!(pc.get_doubleoption(), 2);
     }
 
     #[test]
     fn test_player_config_judgetiming_getter() {
         let mut pc = PlayerConfig::default();
-        pc.judgetiming = -100;
-        assert_eq!(pc.judgetiming, -100);
+        pc.judge_settings.judgetiming = -100;
+        assert_eq!(pc.judge_settings.judgetiming, -100);
     }
 
     #[test]
     fn test_player_config_lnmode_getter_setter() {
         let mut pc = PlayerConfig::default();
-        pc.lnmode = 2;
+        pc.play_settings.lnmode = 2;
         assert_eq!(pc.get_lnmode(), 2);
     }
 
     #[test]
     fn test_player_config_sort_getter_setter() {
         let mut pc = PlayerConfig::default();
-        pc.sort = 3;
+        pc.select_settings.sort = 3;
         assert_eq!(pc.get_sort(), 3);
     }
 
@@ -157,40 +163,40 @@ mod tests {
         assert!(!pc.is_markprocessednote());
         assert!(!pc.is_bpmguide());
 
-        pc.event_mode = true;
+        pc.select_settings.event_mode = true;
         assert!(pc.is_event_mode());
 
-        pc.custom_judge = true;
+        pc.judge_settings.custom_judge = true;
         assert!(pc.is_custom_judge());
 
-        pc.showjudgearea = true;
+        pc.display_settings.showjudgearea = true;
         assert!(pc.is_showjudgearea());
 
-        pc.markprocessednote = true;
+        pc.display_settings.markprocessednote = true;
         assert!(pc.is_markprocessednote());
 
-        pc.bpmguide = true;
+        pc.display_settings.bpmguide = true;
         assert!(pc.is_bpmguide());
     }
 
     #[test]
     fn test_player_config_scroll_mode_getter_setter() {
         let mut pc = PlayerConfig::default();
-        pc.scroll_mode = 2;
+        pc.display_settings.scroll_mode = 2;
         assert_eq!(pc.get_scroll_mode(), 2);
     }
 
     #[test]
     fn test_player_config_longnote_mode_getter_setter() {
         let mut pc = PlayerConfig::default();
-        pc.longnote_mode = 1;
+        pc.note_modifier_settings.longnote_mode = 1;
         assert_eq!(pc.get_longnote_mode(), 1);
     }
 
     #[test]
     fn test_player_config_mine_mode_getter_setter() {
         let mut pc = PlayerConfig::default();
-        pc.mine_mode = 1;
+        pc.play_settings.mine_mode = 1;
         assert_eq!(pc.get_mine_mode(), 1);
     }
 
@@ -200,34 +206,34 @@ mod tests {
         assert_eq!(pc.get_misslayer_duration(), 500);
 
         // Test negative clamping
-        pc.misslayer_duration = -10;
+        pc.display_settings.misslayer_duration = -10;
         assert_eq!(pc.get_misslayer_duration(), 0);
         // After the call, the field is clamped to 0
-        assert_eq!(pc.misslayer_duration, 0);
+        assert_eq!(pc.display_settings.misslayer_duration, 0);
     }
 
     #[test]
     fn test_player_config_chart_replication_mode() {
         let pc = PlayerConfig::default();
-        assert_eq!(pc.chart_replication_mode, "RIVALCHART");
+        assert_eq!(pc.play_settings.chart_replication_mode, "RIVALCHART");
     }
 
     #[test]
     fn test_player_config_gauge_auto_shift() {
         let pc = PlayerConfig::default();
-        assert_eq!(pc.gauge_auto_shift, GAUGEAUTOSHIFT_NONE);
+        assert_eq!(pc.play_settings.gauge_auto_shift, GAUGEAUTOSHIFT_NONE);
     }
 
     #[test]
     fn test_player_config_targetid() {
         let pc = PlayerConfig::default();
-        assert_eq!(pc.targetid, "MAX");
+        assert_eq!(pc.select_settings.targetid, "MAX");
     }
 
     #[test]
     fn test_player_config_musicselectinput() {
         let pc = PlayerConfig::default();
-        assert_eq!(pc.musicselectinput, 0);
+        assert_eq!(pc.select_settings.musicselectinput, 0);
     }
 
     #[test]

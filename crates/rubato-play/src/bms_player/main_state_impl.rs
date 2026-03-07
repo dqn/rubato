@@ -309,7 +309,7 @@ impl MainState for BMSPlayer {
             PlayState::Preload => {
                 // Chart preview handling
                 // Translated from: Java BMSPlayer.render() lines 598-604
-                if self.player_config.chart_preview {
+                if self.player_config.display_settings.chart_preview {
                     if self.main_state_data.timer.is_timer_on(TimerId::new(141))
                         && micronow > self.startpressedtime
                     {
@@ -336,7 +336,7 @@ impl MainState for BMSPlayer {
                     && micronow - self.startpressedtime > 1_000_000
                 {
                     // Chart preview cleanup on transition
-                    if self.player_config.chart_preview {
+                    if self.player_config.display_settings.chart_preview {
                         self.main_state_data.timer.set_timer_off(TimerId::new(141));
                         if let Some(ref mut lr) = self.lanerender {
                             lr.init(&self.model);
@@ -688,7 +688,7 @@ impl MainState for BMSPlayer {
                 // Stage failed check with gauge auto shift
                 // Translated from: Java BMSPlayer.render() lines 782-815
                 if let Some(ref mut gauge) = self.gauge {
-                    let gas = self.player_config.gauge_auto_shift;
+                    let gas = self.player_config.play_settings.gauge_auto_shift;
                     use rubato_types::groove_gauge::{CLASS, EXHARDCLASS, HAZARD, NORMAL};
                     use rubato_types::player_config::{
                         GAUGEAUTOSHIFT_BESTCLEAR, GAUGEAUTOSHIFT_CONTINUE, GAUGEAUTOSHIFT_NONE,
@@ -706,20 +706,27 @@ impl MainState for BMSPlayer {
                         } else {
                             // SELECT_TO_UNDER
                             if gauge.is_course_gauge() {
-                                (self.player_config.gauge.clamp(NORMAL, EXHARDCLASS) + CLASS
+                                (self
+                                    .player_config
+                                    .play_settings
+                                    .gauge
+                                    .clamp(NORMAL, EXHARDCLASS)
+                                    + CLASS
                                     - NORMAL)
                                     .min(EXHARDCLASS)
                                     + 1
                             } else {
-                                self.player_config.gauge.min(HAZARD) + 1
+                                self.player_config.play_settings.gauge.min(HAZARD) + 1
                             }
                         };
                         let start_type = if gauge.is_course_gauge() {
                             CLASS
-                        } else if gauge.gauge_type() < self.player_config.bottom_shiftable_gauge {
+                        } else if gauge.gauge_type()
+                            < self.player_config.play_settings.bottom_shiftable_gauge
+                        {
                             gauge.gauge_type()
                         } else {
-                            self.player_config.bottom_shiftable_gauge
+                            self.player_config.play_settings.bottom_shiftable_gauge
                         };
                         let mut best_type = start_type;
                         for i in start_type..len {
@@ -969,7 +976,7 @@ impl MainState for BMSPlayer {
                 analog_diff_and_reset: &mut analog_diff_and_reset,
                 is_timer_play_on,
                 is_note_end,
-                window_hold: self.player_config.is_window_hold,
+                window_hold: self.player_config.select_settings.is_window_hold,
                 autoplay_mode: self.play_mode.mode,
                 now_millis,
             };

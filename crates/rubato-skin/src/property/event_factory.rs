@@ -128,8 +128,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
                 event_id: EventId(40),
-                get: |c| c.gauge,
-                set: |c, v| c.gauge = v,
+                get: |c| c.play_settings.gauge,
+                set: |c, v| c.play_settings.gauge = v,
                 count: 6,
                 music_selector_only: true,
             })
@@ -141,8 +141,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
                 event_id: EventId(42),
-                get: |c| c.random,
-                set: |c, v| c.random = v,
+                get: |c| c.play_settings.random,
+                set: |c, v| c.play_settings.random = v,
                 count: 10,
                 music_selector_only: false,
             })
@@ -154,8 +154,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
                 event_id: EventId(43),
-                get: |c| c.random2,
-                set: |c, v| c.random2 = v,
+                get: |c| c.play_settings.random2,
+                set: |c, v| c.play_settings.random2 = v,
                 count: 10,
                 music_selector_only: true,
             })
@@ -167,8 +167,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
                 event_id: EventId(54),
-                get: |c| c.doubleoption,
-                set: |c, v| c.doubleoption = v,
+                get: |c| c.play_settings.doubleoption,
+                set: |c, v| c.play_settings.doubleoption = v,
                 count: 4,
                 music_selector_only: true,
             })
@@ -309,8 +309,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
                 event_id: EventId(78),
-                get: |c| c.gauge_auto_shift,
-                set: |c, v| c.gauge_auto_shift = v,
+                get: |c| c.play_settings.gauge_auto_shift,
+                set: |c, v| c.play_settings.gauge_auto_shift = v,
                 count: 5,
                 music_selector_only: true,
             })
@@ -322,8 +322,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
                 event_id: EventId(341),
-                get: |c| c.bottom_shiftable_gauge,
-                set: |c, v| c.bottom_shiftable_gauge = v,
+                get: |c| c.play_settings.bottom_shiftable_gauge,
+                set: |c, v| c.play_settings.bottom_shiftable_gauge = v,
                 count: 3,
                 music_selector_only: true,
             })
@@ -742,8 +742,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
                 event_id: EventId(350),
-                get: |c| c.extranote_depth,
-                set: |c, v| c.extranote_depth = v,
+                get: |c| c.display_settings.extranote_depth,
+                set: |c, v| c.display_settings.extranote_depth = v,
                 count: 4,
                 music_selector_only: true,
             })
@@ -755,8 +755,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
                 event_id: EventId(351),
-                get: |c| c.mine_mode,
-                set: |c, v| c.mine_mode = v,
+                get: |c| c.play_settings.mine_mode,
+                set: |c, v| c.play_settings.mine_mode = v,
                 count: 5,
                 music_selector_only: true,
             })
@@ -768,8 +768,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
                 event_id: EventId(352),
-                get: |c| c.scroll_mode,
-                set: |c, v| c.scroll_mode = v,
+                get: |c| c.display_settings.scroll_mode,
+                set: |c, v| c.display_settings.scroll_mode = v,
                 count: 3,
                 music_selector_only: true,
             })
@@ -781,8 +781,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
                 event_id: EventId(353),
-                get: |c| c.longnote_mode,
-                set: |c, v| c.longnote_mode = v,
+                get: |c| c.note_modifier_settings.longnote_mode,
+                set: |c, v| c.note_modifier_settings.longnote_mode = v,
                 count: 6,
                 music_selector_only: true,
             })
@@ -794,8 +794,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
                 event_id: EventId(360),
-                get: |c| c.seven_to_nine_pattern,
-                set: |c, v| c.seven_to_nine_pattern = v,
+                get: |c| c.note_modifier_settings.seven_to_nine_pattern,
+                set: |c, v| c.note_modifier_settings.seven_to_nine_pattern = v,
                 count: 7,
                 music_selector_only: true,
             })
@@ -807,8 +807,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(PlayerConfigCycleEvent {
                 event_id: EventId(361),
-                get: |c| c.seven_to_nine_type,
-                set: |c, v| c.seven_to_nine_type = v,
+                get: |c| c.note_modifier_settings.seven_to_nine_type,
+                set: |c, v| c.note_modifier_settings.seven_to_nine_type = v,
                 count: 3,
                 music_selector_only: true,
             })
@@ -989,14 +989,14 @@ impl Event for SortEvent {
         let Some(config) = state.player_config_mut() else {
             return;
         };
-        let current = config.sort;
+        let current = config.select_settings.sort;
         let next = if arg1 >= 0 {
             (current + 1) % len
         } else {
             (current + len - 1) % len
         };
-        config.sort = next;
-        config.sortid = Some(
+        config.select_settings.sort = next;
+        config.select_settings.sortid = Some(
             rubato_types::bar_sorter::BarSorter::DEFAULT_SORTER[next as usize]
                 .name()
                 .to_string(),
@@ -1026,7 +1026,7 @@ impl Event for SongbarSortEvent {
         let Some(config) = state.player_config_mut() else {
             return;
         };
-        let current_sortid = config.sortid.clone().unwrap_or_default();
+        let current_sortid = config.select_settings.sortid.clone().unwrap_or_default();
         let mut found_idx = None;
         for (i, s) in all.iter().enumerate() {
             if s.name() == current_sortid {
@@ -1040,7 +1040,7 @@ impl Event for SongbarSortEvent {
             } else {
                 (idx + len - 1) % len
             };
-            config.sortid = Some(all[next_idx].name().to_string());
+            config.select_settings.sortid = Some(all[next_idx].name().to_string());
             state.update_bar_after_change();
             state.play_option_change_sound();
         }
@@ -1282,14 +1282,18 @@ impl Event for NotesDisplayTimingEvent {
         let max = rubato_types::player_config::JUDGETIMING_MAX;
         let min = rubato_types::player_config::JUDGETIMING_MIN;
         let inc = if arg1 >= 0 {
-            if config.judgetiming < max { 1 } else { 0 }
-        } else if config.judgetiming > min {
+            if config.judge_settings.judgetiming < max {
+                1
+            } else {
+                0
+            }
+        } else if config.judge_settings.judgetiming > min {
             -1
         } else {
             0
         };
         if inc != 0 {
-            config.judgetiming += inc;
+            config.judge_settings.judgetiming += inc;
             if state.is_music_selector() {
                 state.play_option_change_sound();
             }
@@ -1312,7 +1316,8 @@ impl Event for NotesDisplayTimingAutoAdjustEvent {
         let Some(config) = state.player_config_mut() else {
             return;
         };
-        config.notes_display_timing_auto_adjust = !config.notes_display_timing_auto_adjust;
+        config.judge_settings.notes_display_timing_auto_adjust =
+            !config.judge_settings.notes_display_timing_auto_adjust;
         if state.is_music_selector() {
             state.play_option_change_sound();
         }
@@ -1337,7 +1342,7 @@ impl Event for TargetEvent {
         let targets = {
             let targets = TargetProperty::targets();
             if targets.is_empty() {
-                config.targetlist.clone()
+                config.select_settings.targetlist.clone()
             } else {
                 targets
             }
@@ -1347,7 +1352,7 @@ impl Event for TargetEvent {
         }
         let mut index = 0;
         for (i, t) in targets.iter().enumerate() {
-            if *t == config.targetid {
+            if *t == config.select_settings.targetid {
                 index = i;
                 break;
             }
@@ -1358,7 +1363,7 @@ impl Event for TargetEvent {
         } else {
             (index + len - 1) % len
         };
-        config.targetid = targets[next].clone();
+        config.select_settings.targetid = targets[next].clone();
         state.play_option_change_sound();
         if state.is_music_selector() {
             state.update_bar_after_change();
@@ -1428,16 +1433,16 @@ impl Event for AutoSaveReplayEvent {
         let Some(config) = state.player_config_mut() else {
             return;
         };
-        if self.index >= config.autosavereplay.len() {
+        if self.index >= config.misc_settings.autosavereplay.len() {
             return;
         }
-        let current = config.autosavereplay[self.index];
+        let current = config.misc_settings.autosavereplay[self.index];
         let next = if arg1 >= 0 {
             (current + 1) % length
         } else {
             (current + length - 1) % length
         };
-        config.autosavereplay[self.index] = next;
+        config.misc_settings.autosavereplay[self.index] = next;
         state.play_option_change_sound();
     }
 
@@ -1498,7 +1503,7 @@ impl Event for GuideSeEvent {
         let Some(config) = state.player_config_mut() else {
             return;
         };
-        config.is_guide_se = !config.is_guide_se;
+        config.display_settings.is_guide_se = !config.display_settings.is_guide_se;
         state.play_option_change_sound();
     }
 
@@ -1524,7 +1529,7 @@ impl Event for ChartReplicationModeEvent {
         let Some(config) = state.player_config_mut() else {
             return;
         };
-        let current_id = config.sortid.clone().unwrap_or_default();
+        let current_id = config.select_settings.sortid.clone().unwrap_or_default();
         let mut found = false;
         for (i, name) in values.iter().enumerate() {
             if *name == current_id {
@@ -1533,7 +1538,7 @@ impl Event for ChartReplicationModeEvent {
                 } else {
                     (i + len - 1) % len
                 };
-                config.sortid = Some(values[next].to_string());
+                config.select_settings.sortid = Some(values[next].to_string());
                 found = true;
                 break;
             }
@@ -1686,48 +1691,48 @@ mod tests {
     #[test]
     fn test_gauge_cycle_forward() {
         let mut state = TestMainState::new();
-        state.player_config.gauge = 3;
+        state.player_config.play_settings.gauge = 3;
         let event = event_by_id(40).unwrap(); // gauge1p
         event.exec(&mut state, 1, 0); // forward
-        assert_eq!(state.player_config.gauge, 4);
+        assert_eq!(state.player_config.play_settings.gauge, 4);
         assert!(state.option_change_played);
     }
 
     #[test]
     fn test_gauge_cycle_backward() {
         let mut state = TestMainState::new();
-        state.player_config.gauge = 0;
+        state.player_config.play_settings.gauge = 0;
         let event = event_by_id(40).unwrap(); // gauge1p
         event.exec(&mut state, -1, 0); // backward wraps to 5
-        assert_eq!(state.player_config.gauge, 5);
+        assert_eq!(state.player_config.play_settings.gauge, 5);
     }
 
     #[test]
     fn test_option1p_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.random = 9;
+        state.player_config.play_settings.random = 9;
         let event = event_by_id(42).unwrap(); // option1p
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.random, 0); // wraps
+        assert_eq!(state.player_config.play_settings.random, 0); // wraps
     }
 
     #[test]
     fn test_option1p_cycle_not_music_selector() {
         let mut state = TestMainState::new();
         state.is_selector = false;
-        state.player_config.random = 9;
+        state.player_config.play_settings.random = 9;
         let event = event_by_id(42).unwrap(); // option1p
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.random, 0);
+        assert_eq!(state.player_config.play_settings.random, 0);
     }
 
     #[test]
     fn test_option2p_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.random2 = 5;
+        state.player_config.play_settings.random2 = 5;
         let event = event_by_id(43).unwrap(); // option2p
         event.exec(&mut state, -1, 0);
-        assert_eq!(state.player_config.random2, 4);
+        assert_eq!(state.player_config.play_settings.random2, 4);
     }
 
     #[test]
@@ -1862,29 +1867,30 @@ mod tests {
     #[test]
     fn test_notes_display_timing_forward() {
         let mut state = TestMainState::new();
-        state.player_config.judgetiming = 0;
+        state.player_config.judge_settings.judgetiming = 0;
         let event = event_by_id(74).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.judgetiming, 1);
+        assert_eq!(state.player_config.judge_settings.judgetiming, 1);
     }
 
     #[test]
     fn test_notes_display_timing_backward() {
         let mut state = TestMainState::new();
-        state.player_config.judgetiming = 0;
+        state.player_config.judge_settings.judgetiming = 0;
         let event = event_by_id(74).unwrap();
         event.exec(&mut state, -1, 0);
-        assert_eq!(state.player_config.judgetiming, -1);
+        assert_eq!(state.player_config.judge_settings.judgetiming, -1);
     }
 
     #[test]
     fn test_notes_display_timing_clamp_max() {
         let mut state = TestMainState::new();
-        state.player_config.judgetiming = rubato_types::player_config::JUDGETIMING_MAX;
+        state.player_config.judge_settings.judgetiming =
+            rubato_types::player_config::JUDGETIMING_MAX;
         let event = event_by_id(74).unwrap();
         event.exec(&mut state, 1, 0);
         assert_eq!(
-            state.player_config.judgetiming,
+            state.player_config.judge_settings.judgetiming,
             rubato_types::player_config::JUDGETIMING_MAX
         );
     }
@@ -1892,47 +1898,57 @@ mod tests {
     #[test]
     fn test_notes_display_timing_auto_adjust() {
         let mut state = TestMainState::new();
-        assert!(!state.player_config.notes_display_timing_auto_adjust);
+        assert!(
+            !state
+                .player_config
+                .judge_settings
+                .notes_display_timing_auto_adjust
+        );
         let event = event_by_id(75).unwrap();
         event.exec(&mut state, 0, 0);
-        assert!(state.player_config.notes_display_timing_auto_adjust);
+        assert!(
+            state
+                .player_config
+                .judge_settings
+                .notes_display_timing_auto_adjust
+        );
     }
 
     #[test]
     fn test_guide_se_toggle() {
         let mut state = TestMainState::new();
-        assert!(!state.player_config.is_guide_se);
+        assert!(!state.player_config.display_settings.is_guide_se);
         let event = event_by_id(343).unwrap();
         event.exec(&mut state, 0, 0);
-        assert!(state.player_config.is_guide_se);
+        assert!(state.player_config.display_settings.is_guide_se);
     }
 
     #[test]
     fn test_lnmode_noop() {
         let mut state = TestMainState::new();
-        state.player_config.lnmode = 0;
+        state.player_config.play_settings.lnmode = 0;
         let event = event_by_id(308).unwrap();
         event.exec(&mut state, 1, 0);
         // LN mode is disabled; value should not change
-        assert_eq!(state.player_config.lnmode, 0);
+        assert_eq!(state.player_config.play_settings.lnmode, 0);
     }
 
     #[test]
     fn test_autosavereplay_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.autosavereplay = vec![5, 0, 0, 0];
+        state.player_config.misc_settings.autosavereplay = vec![5, 0, 0, 0];
         let event = event_by_id(321).unwrap(); // autosavereplay1 (index 0)
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.autosavereplay[0], 6);
+        assert_eq!(state.player_config.misc_settings.autosavereplay[0], 6);
     }
 
     #[test]
     fn test_autosavereplay_wrap() {
         let mut state = TestMainState::new();
-        state.player_config.autosavereplay = vec![10, 0, 0, 0];
+        state.player_config.misc_settings.autosavereplay = vec![10, 0, 0, 0];
         let event = event_by_id(321).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.autosavereplay[0], 0); // wraps at 11
+        assert_eq!(state.player_config.misc_settings.autosavereplay[0], 0); // wraps at 11
     }
 
     #[test]
@@ -2012,10 +2028,10 @@ mod tests {
     #[test]
     fn test_sort_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.sort = 0;
+        state.player_config.select_settings.sort = 0;
         let event = event_by_id(12).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.sort, 1);
+        assert_eq!(state.player_config.select_settings.sort, 1);
         assert!(state.bar_updated);
         assert!(state.option_change_played);
     }
@@ -2057,7 +2073,7 @@ mod tests {
         let event = event_by_id(40).unwrap(); // gauge1p
         event.exec(&mut state, 1, 0);
         // Should not modify config since not MusicSelector
-        assert_eq!(state.player_config.gauge, 0);
+        assert_eq!(state.player_config.play_settings.gauge, 0);
         assert!(!state.option_change_played);
     }
 
@@ -2065,21 +2081,21 @@ mod tests {
     fn test_target_cycle_not_music_selector() {
         let mut state = TestMainState::new();
         state.is_selector = false;
-        state.player_config.targetid = "RATE_MAX-".to_string();
+        state.player_config.select_settings.targetid = "RATE_MAX-".to_string();
         let event = event_by_id(77).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.targetid, "MAX");
+        assert_eq!(state.player_config.select_settings.targetid, "MAX");
     }
 
     #[test]
     fn test_notes_display_timing_works_for_any_state() {
         let mut state = TestMainState::new();
         state.is_selector = false;
-        state.player_config.judgetiming = 0;
+        state.player_config.judge_settings.judgetiming = 0;
         let event = event_by_id(74).unwrap();
         event.exec(&mut state, 1, 0);
         // notesdisplaytiming works for any state, not just MusicSelector
-        assert_eq!(state.player_config.judgetiming, 1);
+        assert_eq!(state.player_config.judge_settings.judgetiming, 1);
         // But sound is only played for MusicSelector
         assert!(!state.option_change_played);
     }
@@ -2087,55 +2103,73 @@ mod tests {
     #[test]
     fn test_extranotedepth_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.extranote_depth = 3;
+        state.player_config.display_settings.extranote_depth = 3;
         let event = event_by_id(350).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.extranote_depth, 0); // wraps at 4
+        assert_eq!(state.player_config.display_settings.extranote_depth, 0); // wraps at 4
     }
 
     #[test]
     fn test_minemode_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.mine_mode = 4;
+        state.player_config.play_settings.mine_mode = 4;
         let event = event_by_id(351).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.mine_mode, 0); // wraps at 5
+        assert_eq!(state.player_config.play_settings.mine_mode, 0); // wraps at 5
     }
 
     #[test]
     fn test_scrollmode_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.scroll_mode = 2;
+        state.player_config.display_settings.scroll_mode = 2;
         let event = event_by_id(352).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.scroll_mode, 0); // wraps at 3
+        assert_eq!(state.player_config.display_settings.scroll_mode, 0); // wraps at 3
     }
 
     #[test]
     fn test_longnotemode_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.longnote_mode = 5;
+        state.player_config.note_modifier_settings.longnote_mode = 5;
         let event = event_by_id(353).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.longnote_mode, 0); // wraps at 6
+        assert_eq!(state.player_config.note_modifier_settings.longnote_mode, 0); // wraps at 6
     }
 
     #[test]
     fn test_seventonine_pattern_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.seven_to_nine_pattern = 6;
+        state
+            .player_config
+            .note_modifier_settings
+            .seven_to_nine_pattern = 6;
         let event = event_by_id(360).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.seven_to_nine_pattern, 0); // wraps at 7
+        assert_eq!(
+            state
+                .player_config
+                .note_modifier_settings
+                .seven_to_nine_pattern,
+            0
+        ); // wraps at 7
     }
 
     #[test]
     fn test_seventonine_type_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.seven_to_nine_type = 2;
+        state
+            .player_config
+            .note_modifier_settings
+            .seven_to_nine_type = 2;
         let event = event_by_id(361).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.seven_to_nine_type, 0); // wraps at 3
+        assert_eq!(
+            state
+                .player_config
+                .note_modifier_settings
+                .seven_to_nine_type,
+            0
+        ); // wraps at 3
     }
 
     #[test]
@@ -2159,28 +2193,28 @@ mod tests {
     #[test]
     fn test_optiondp_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.doubleoption = 3;
+        state.player_config.play_settings.doubleoption = 3;
         let event = event_by_id(54).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.doubleoption, 0); // wraps at 4
+        assert_eq!(state.player_config.play_settings.doubleoption, 0); // wraps at 4
     }
 
     #[test]
     fn test_gaugeautoshift_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.gauge_auto_shift = 4;
+        state.player_config.play_settings.gauge_auto_shift = 4;
         let event = event_by_id(78).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.gauge_auto_shift, 0); // wraps at 5
+        assert_eq!(state.player_config.play_settings.gauge_auto_shift, 0); // wraps at 5
     }
 
     #[test]
     fn test_bottomshiftablegauge_cycle() {
         let mut state = TestMainState::new();
-        state.player_config.bottom_shiftable_gauge = 2;
+        state.player_config.play_settings.bottom_shiftable_gauge = 2;
         let event = event_by_id(341).unwrap();
         event.exec(&mut state, 1, 0);
-        assert_eq!(state.player_config.bottom_shiftable_gauge, 0); // wraps at 3
+        assert_eq!(state.player_config.play_settings.bottom_shiftable_gauge, 0); // wraps at 3
     }
 
     #[test]

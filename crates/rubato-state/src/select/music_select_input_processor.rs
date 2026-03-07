@@ -70,8 +70,9 @@ impl MusicSelectInputProcessor {
             ctx.events.push(InputEvent::ExecuteEvent(EventType::Sort));
         }
 
-        let property = &MusicSelectKeyProperty::VALUES
-            [config.musicselectinput as usize % MusicSelectKeyProperty::VALUES.len()];
+        let property = &MusicSelectKeyProperty::VALUES[config.select_settings.musicselectinput
+            as usize
+            % MusicSelectKeyProperty::VALUES.len()];
 
         if !input.start_pressed()
             && !input.is_select_pressed()
@@ -216,22 +217,23 @@ impl MusicSelectInputProcessor {
             }
 
             if property.is_pressed(input, MusicSelectKey::JudgeWindowUp, true) {
-                config.custom_judge = !config.is_custom_judge();
+                config.judge_settings.custom_judge = !config.is_custom_judge();
                 ctx.events
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }
             if property.is_pressed(input, MusicSelectKey::Constant, true) {
-                config.scroll_mode = if config.get_scroll_mode() == 1 { 0 } else { 1 };
+                config.display_settings.scroll_mode =
+                    if config.get_scroll_mode() == 1 { 0 } else { 1 };
                 ctx.events
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }
             if property.is_pressed(input, MusicSelectKey::JudgeArea, true) {
-                config.showjudgearea = !config.is_showjudgearea();
+                config.display_settings.showjudgearea = !config.is_showjudgearea();
                 ctx.events
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }
             if property.is_pressed(input, MusicSelectKey::LegacyNote, true) {
-                config.longnote_mode = if config.get_longnote_mode() == 1 {
+                config.note_modifier_settings.longnote_mode = if config.get_longnote_mode() == 1 {
                     0
                 } else {
                     1
@@ -240,17 +242,17 @@ impl MusicSelectInputProcessor {
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }
             if property.is_pressed(input, MusicSelectKey::MarkNote, true) {
-                config.markprocessednote = !config.is_markprocessednote();
+                config.display_settings.markprocessednote = !config.is_markprocessednote();
                 ctx.events
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }
             if property.is_pressed(input, MusicSelectKey::BpmGuide, true) {
-                config.bpmguide = !config.is_bpmguide();
+                config.display_settings.bpmguide = !config.is_bpmguide();
                 ctx.events
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }
             if property.is_pressed(input, MusicSelectKey::Nomine, true) {
-                config.mine_mode = if config.get_mine_mode() == 1 { 0 } else { 1 };
+                config.play_settings.mine_mode = if config.get_mine_mode() == 1 { 0 } else { 1 };
                 ctx.events
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }

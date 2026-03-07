@@ -230,7 +230,7 @@ impl RivalTargetProperty {
                 return self.target_score.clone();
             }
         };
-        let lnmode = main.player_config().lnmode;
+        let lnmode = main.player_config().play_settings.lnmode;
         let index = self.index as usize;
 
         let mut name: Option<String> = None;
@@ -515,7 +515,7 @@ impl InternetRankingTargetProperty {
         let ranking_data = (|| -> Option<rubato_ir::ranking_data::RankingData> {
             let resource = main.player_resource()?;
             let songdata = resource.songdata()?;
-            let lnmode = resource.player_config().lnmode;
+            let lnmode = resource.player_config().play_settings.lnmode;
             let cache = main.ranking_data_cache()?;
             let any = cache.song_any(songdata, lnmode)?;
             any.downcast::<rubato_ir::ranking_data::RankingData>()
@@ -646,7 +646,7 @@ impl NextRankTargetProperty {
 
     /// Translated from: Java NextRankTargetProperty.getTarget(MainController)
     fn target(&mut self, main: &MainController) -> ScoreData {
-        let lnmode = main.player_config().lnmode;
+        let lnmode = main.player_config().play_settings.lnmode;
         let model = main.player_resource().and_then(|r| r.bms_model());
 
         let nowscore = model

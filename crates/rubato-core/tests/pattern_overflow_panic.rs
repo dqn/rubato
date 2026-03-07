@@ -69,7 +69,10 @@ fn mode_modifier_hran_threshold_bpm_zero_handled() {
     use rubato_types::player_config::PlayerConfig;
 
     let config = PlayerConfig {
-        hran_threshold_bpm: 0,
+        play_settings: rubato_types::player_config::PlaySettings {
+            hran_threshold_bpm: 0,
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -92,7 +95,10 @@ fn mode_modifier_hran_threshold_bpm_negative_handled() {
     use rubato_types::player_config::PlayerConfig;
 
     let config = PlayerConfig {
-        hran_threshold_bpm: -100,
+        play_settings: rubato_types::player_config::PlaySettings {
+            hran_threshold_bpm: -100,
+            ..Default::default()
+        },
         ..Default::default()
     };
 

@@ -22,37 +22,53 @@ pub const GAUGEAUTOSHIFT_SURVIVAL_TO_GROOVE: i32 = 2;
 pub const GAUGEAUTOSHIFT_BESTCLEAR: i32 = 3;
 pub const GAUGEAUTOSHIFT_SELECT_TO_UNDER: i32 = 4;
 
+/// Play-related settings (gauge, random, option modes)
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
-pub struct PlayerConfig {
-    pub id: Option<String>,
-    pub name: String,
+pub struct PlaySettings {
     pub gauge: i32,
     pub random: i32,
     pub random2: i32,
     pub doubleoption: i32,
     #[serde(rename = "chartReplicationMode")]
     pub chart_replication_mode: String,
-    pub targetid: String,
-    pub targetlist: Vec<String>,
+    pub lnmode: i32,
+    pub forcedcnendings: bool,
+    #[serde(rename = "gaugeAutoShift")]
+    pub gauge_auto_shift: i32,
+    #[serde(rename = "bottomShiftableGauge")]
+    pub bottom_shiftable_gauge: i32,
+    #[serde(rename = "hranThresholdBpm", alias = "hranThresholdBPM")]
+    pub hran_threshold_bpm: i32,
+    #[serde(rename = "mineMode")]
+    pub mine_mode: i32,
+}
+
+impl Default for PlaySettings {
+    fn default() -> Self {
+        Self {
+            gauge: 0,
+            random: 0,
+            random2: 0,
+            doubleoption: 0,
+            chart_replication_mode: "RIVALCHART".to_string(),
+            lnmode: 0,
+            forcedcnendings: false,
+            gauge_auto_shift: GAUGEAUTOSHIFT_NONE,
+            bottom_shiftable_gauge: GrooveGauge::ASSISTEASY,
+            hran_threshold_bpm: 120,
+            mine_mode: 0,
+        }
+    }
+}
+
+/// Judge timing and window rate settings
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct JudgeSettings {
     pub judgetiming: i32,
     #[serde(rename = "notesDisplayTimingAutoAdjust")]
     pub notes_display_timing_auto_adjust: bool,
-    pub mode: Option<Mode>,
-    #[serde(rename = "misslayerDuration")]
-    pub misslayer_duration: i32,
-    pub lnmode: i32,
-    pub forcedcnendings: bool,
-    #[serde(rename = "scrollMode")]
-    pub scroll_mode: i32,
-    #[serde(rename = "scrollSection")]
-    pub scroll_section: i32,
-    #[serde(rename = "scrollRate")]
-    pub scroll_rate: f64,
-    #[serde(rename = "longnoteMode")]
-    pub longnote_mode: i32,
-    #[serde(rename = "longnoteRate")]
-    pub longnote_rate: f64,
     #[serde(rename = "customJudge")]
     pub custom_judge: bool,
     #[serde(rename = "keyJudgeWindowRatePerfectGreat")]
@@ -67,87 +83,114 @@ pub struct PlayerConfig {
     pub scratch_judge_window_rate_great: i32,
     #[serde(rename = "scratchJudgeWindowRateGood")]
     pub scratch_judge_window_rate_good: i32,
-    #[serde(rename = "mineMode")]
-    pub mine_mode: i32,
+}
+
+impl Default for JudgeSettings {
+    fn default() -> Self {
+        Self {
+            judgetiming: 0,
+            notes_display_timing_auto_adjust: false,
+            custom_judge: false,
+            key_judge_window_rate_perfect_great: 400,
+            key_judge_window_rate_great: 400,
+            key_judge_window_rate_good: 100,
+            scratch_judge_window_rate_perfect_great: 400,
+            scratch_judge_window_rate_great: 400,
+            scratch_judge_window_rate_good: 100,
+        }
+    }
+}
+
+/// Display and visual settings
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct DisplaySettings {
     pub bpmguide: bool,
+    pub showjudgearea: bool,
+    pub markprocessednote: bool,
+    pub showhiddennote: bool,
+    pub showpastnote: bool,
+    #[serde(rename = "chartPreview")]
+    pub chart_preview: bool,
+    #[serde(rename = "isGuideSe", alias = "isGuideSE")]
+    pub is_guide_se: bool,
+    #[serde(rename = "misslayerDuration")]
+    pub misslayer_duration: i32,
     #[serde(rename = "extranoteType")]
     pub extranote_type: i32,
     #[serde(rename = "extranoteDepth")]
     pub extranote_depth: i32,
     #[serde(rename = "extranoteScratch")]
     pub extranote_scratch: bool,
-    pub showjudgearea: bool,
-    pub markprocessednote: bool,
-    #[serde(rename = "hranThresholdBpm", alias = "hranThresholdBPM")]
-    pub hran_threshold_bpm: i32,
-    #[serde(rename = "gaugeAutoShift")]
-    pub gauge_auto_shift: i32,
-    #[serde(rename = "bottomShiftableGauge")]
-    pub bottom_shiftable_gauge: i32,
-    pub autosavereplay: Vec<i32>,
+    #[serde(rename = "scrollMode")]
+    pub scroll_mode: i32,
+    #[serde(rename = "scrollSection")]
+    pub scroll_section: i32,
+    #[serde(rename = "scrollRate")]
+    pub scroll_rate: f64,
+}
+
+impl Default for DisplaySettings {
+    fn default() -> Self {
+        Self {
+            bpmguide: false,
+            showjudgearea: false,
+            markprocessednote: false,
+            showhiddennote: false,
+            showpastnote: false,
+            chart_preview: true,
+            is_guide_se: false,
+            misslayer_duration: 500,
+            extranote_type: 0,
+            extranote_depth: 0,
+            extranote_scratch: false,
+            scroll_mode: 0,
+            scroll_section: 4,
+            scroll_rate: 0.5,
+        }
+    }
+}
+
+/// Note modifier settings (longnote, 7-to-9 conversion)
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct NoteModifierSettings {
+    #[serde(rename = "longnoteMode")]
+    pub longnote_mode: i32,
+    #[serde(rename = "longnoteRate")]
+    pub longnote_rate: f64,
     #[serde(rename = "sevenToNinePattern")]
     pub seven_to_nine_pattern: i32,
     #[serde(rename = "sevenToNineType")]
     pub seven_to_nine_type: i32,
-    #[serde(rename = "exitPressDuration")]
-    pub exit_press_duration: i32,
-    #[serde(rename = "isGuideSe", alias = "isGuideSE")]
-    pub is_guide_se: bool,
-    #[serde(rename = "isWindowHold")]
-    pub is_window_hold: bool,
-    #[serde(rename = "isRandomSelect")]
-    pub is_random_select: bool,
-    pub skin: Vec<Option<SkinConfig>>,
-    #[serde(rename = "skinHistory")]
-    pub skin_history: Vec<SkinConfig>,
-    pub mode5: PlayModeConfig,
-    pub mode7: PlayModeConfig,
-    pub mode10: PlayModeConfig,
-    pub mode14: PlayModeConfig,
-    pub mode9: PlayModeConfig,
-    pub mode24: PlayModeConfig,
-    pub mode24double: PlayModeConfig,
-    pub showhiddennote: bool,
-    pub showpastnote: bool,
-    #[serde(rename = "chartPreview")]
-    pub chart_preview: bool,
+}
+
+/// Music select and sorting settings
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct SelectSettings {
     pub sort: i32,
     pub sortid: Option<String>,
     pub musicselectinput: i32,
-    pub irconfig: Vec<Option<IRConfig>>,
-    #[serde(rename = "twitterConsumerKey")]
-    pub twitter_consumer_key: Option<String>,
-    #[serde(rename = "twitterConsumerSecret")]
-    pub twitter_consumer_secret: Option<String>,
-    #[serde(rename = "twitterAccessToken")]
-    pub twitter_access_token: Option<String>,
-    #[serde(rename = "twitterAccessTokenSecret")]
-    pub twitter_access_token_secret: Option<String>,
-    #[serde(rename = "enableRequest")]
-    pub enable_request: bool,
-    #[serde(rename = "notifyRequest")]
-    pub notify_request: bool,
-    #[serde(rename = "maxRequestCount")]
-    pub max_request_count: i32,
+    #[serde(rename = "isRandomSelect")]
+    pub is_random_select: bool,
+    #[serde(rename = "isWindowHold")]
+    pub is_window_hold: bool,
     #[serde(rename = "eventMode")]
     pub event_mode: bool,
+    pub targetid: String,
+    pub targetlist: Vec<String>,
 }
 
-impl Default for PlayerConfig {
+impl Default for SelectSettings {
     fn default() -> Self {
-        let max_skin_id = SkinType::max_skin_type_id();
-        let skin: Vec<Option<SkinConfig>> = (0..=max_skin_id)
-            .map(|i| Some(SkinConfig::default_for_id(i)))
-            .collect();
-
-        PlayerConfig {
-            id: None,
-            name: "NO NAME".to_string(),
-            gauge: 0,
-            random: 0,
-            random2: 0,
-            doubleoption: 0,
-            chart_replication_mode: "RIVALCHART".to_string(),
+        Self {
+            sort: 0,
+            sortid: None,
+            musicselectinput: 0,
+            is_random_select: false,
+            is_window_hold: false,
+            event_mode: false,
             targetid: "MAX".to_string(),
             targetlist: vec![
                 "RATE_A-",
@@ -195,41 +238,93 @@ impl Default for PlayerConfig {
             .iter()
             .map(|s| s.to_string())
             .collect(),
-            judgetiming: 0,
-            notes_display_timing_auto_adjust: false,
-            mode: None,
-            misslayer_duration: 500,
-            lnmode: 0,
-            forcedcnendings: false,
-            scroll_mode: 0,
-            scroll_section: 4,
-            scroll_rate: 0.5,
-            longnote_mode: 0,
-            longnote_rate: 1.0,
-            custom_judge: false,
-            key_judge_window_rate_perfect_great: 400,
-            key_judge_window_rate_great: 400,
-            key_judge_window_rate_good: 100,
-            scratch_judge_window_rate_perfect_great: 400,
-            scratch_judge_window_rate_great: 400,
-            scratch_judge_window_rate_good: 100,
-            mine_mode: 0,
-            bpmguide: false,
-            extranote_type: 0,
-            extranote_depth: 0,
-            extranote_scratch: false,
-            showjudgearea: false,
-            markprocessednote: false,
-            hran_threshold_bpm: 120,
-            gauge_auto_shift: GAUGEAUTOSHIFT_NONE,
-            bottom_shiftable_gauge: GrooveGauge::ASSISTEASY,
+        }
+    }
+}
+
+/// Miscellaneous settings (replay, exit)
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct MiscSettings {
+    pub autosavereplay: Vec<i32>,
+    #[serde(rename = "exitPressDuration")]
+    pub exit_press_duration: i32,
+}
+
+impl Default for MiscSettings {
+    fn default() -> Self {
+        Self {
             autosavereplay: vec![0; 4],
-            seven_to_nine_pattern: 0,
-            seven_to_nine_type: 0,
             exit_press_duration: 1000,
-            is_guide_se: false,
-            is_window_hold: false,
-            is_random_select: false,
+        }
+    }
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct PlayerConfig {
+    pub id: Option<String>,
+    pub name: String,
+    #[serde(flatten)]
+    pub play_settings: PlaySettings,
+    #[serde(flatten)]
+    pub judge_settings: JudgeSettings,
+    #[serde(flatten)]
+    pub display_settings: DisplaySettings,
+    #[serde(flatten)]
+    pub note_modifier_settings: NoteModifierSettings,
+    #[serde(flatten)]
+    pub select_settings: SelectSettings,
+    #[serde(flatten)]
+    pub misc_settings: MiscSettings,
+    pub mode: Option<Mode>,
+    pub skin: Vec<Option<SkinConfig>>,
+    #[serde(rename = "skinHistory")]
+    pub skin_history: Vec<SkinConfig>,
+    pub mode5: PlayModeConfig,
+    pub mode7: PlayModeConfig,
+    pub mode10: PlayModeConfig,
+    pub mode14: PlayModeConfig,
+    pub mode9: PlayModeConfig,
+    pub mode24: PlayModeConfig,
+    pub mode24double: PlayModeConfig,
+    pub irconfig: Vec<Option<IRConfig>>,
+    #[serde(rename = "twitterConsumerKey")]
+    pub twitter_consumer_key: Option<String>,
+    #[serde(rename = "twitterConsumerSecret")]
+    pub twitter_consumer_secret: Option<String>,
+    #[serde(rename = "twitterAccessToken")]
+    pub twitter_access_token: Option<String>,
+    #[serde(rename = "twitterAccessTokenSecret")]
+    pub twitter_access_token_secret: Option<String>,
+    #[serde(rename = "enableRequest")]
+    pub enable_request: bool,
+    #[serde(rename = "notifyRequest")]
+    pub notify_request: bool,
+    #[serde(rename = "maxRequestCount")]
+    pub max_request_count: i32,
+}
+
+impl Default for PlayerConfig {
+    fn default() -> Self {
+        let max_skin_id = SkinType::max_skin_type_id();
+        let skin: Vec<Option<SkinConfig>> = (0..=max_skin_id)
+            .map(|i| Some(SkinConfig::default_for_id(i)))
+            .collect();
+
+        PlayerConfig {
+            id: None,
+            name: "NO NAME".to_string(),
+            play_settings: PlaySettings::default(),
+            judge_settings: JudgeSettings::default(),
+            display_settings: DisplaySettings::default(),
+            note_modifier_settings: NoteModifierSettings {
+                longnote_rate: 1.0,
+                ..Default::default()
+            },
+            select_settings: SelectSettings::default(),
+            misc_settings: MiscSettings::default(),
+            mode: None,
             skin,
             skin_history: Vec::new(),
             mode5: PlayModeConfig::new(Mode::BEAT_5K),
@@ -239,12 +334,6 @@ impl Default for PlayerConfig {
             mode9: PlayModeConfig::new(Mode::POPN_9K),
             mode24: PlayModeConfig::new(Mode::KEYBOARD_24K),
             mode24double: PlayModeConfig::new(Mode::KEYBOARD_24K_DOUBLE),
-            showhiddennote: false,
-            showpastnote: false,
-            chart_preview: true,
-            sort: 0,
-            sortid: None,
-            musicselectinput: 0,
             irconfig: Vec::new(),
             twitter_consumer_key: None,
             twitter_consumer_secret: None,
@@ -253,7 +342,6 @@ impl Default for PlayerConfig {
             enable_request: false,
             notify_request: false,
             max_request_count: 30,
-            event_mode: false,
         }
     }
 }
@@ -340,89 +428,89 @@ impl PlayerConfig {
         &self.skin_history
     }
     pub fn get_gauge(&self) -> i32 {
-        self.gauge
+        self.play_settings.gauge
     }
 
     pub fn get_random(&self) -> i32 {
-        self.random
+        self.play_settings.random
     }
     pub fn get_random2(&self) -> i32 {
-        self.random2
+        self.play_settings.random2
     }
     pub fn get_doubleoption(&self) -> i32 {
-        self.doubleoption
+        self.play_settings.doubleoption
     }
     pub fn get_judgetiming(&self) -> i32 {
-        self.judgetiming
+        self.judge_settings.judgetiming
     }
 
     pub fn get_lnmode(&self) -> i32 {
-        self.lnmode
+        self.play_settings.lnmode
     }
     pub fn get_sort(&self) -> i32 {
-        self.sort
+        self.select_settings.sort
     }
     pub fn get_sortid(&self) -> Option<&str> {
-        self.sortid.as_deref()
+        self.select_settings.sortid.as_deref()
     }
 
     pub fn set_sortid(&mut self, v: String) {
-        self.sortid = Some(v);
+        self.select_settings.sortid = Some(v);
     }
 
     pub fn mode(&self) -> Option<&Mode> {
         self.mode.as_ref()
     }
     pub fn is_event_mode(&self) -> bool {
-        self.event_mode
+        self.select_settings.event_mode
     }
 
     pub fn is_random_select(&self) -> bool {
-        self.is_random_select
+        self.select_settings.is_random_select
     }
 
     pub fn is_custom_judge(&self) -> bool {
-        self.custom_judge
+        self.judge_settings.custom_judge
     }
     pub fn get_scroll_mode(&self) -> i32 {
-        self.scroll_mode
+        self.display_settings.scroll_mode
     }
     pub fn is_showjudgearea(&self) -> bool {
-        self.showjudgearea
+        self.display_settings.showjudgearea
     }
     pub fn get_longnote_mode(&self) -> i32 {
-        self.longnote_mode
+        self.note_modifier_settings.longnote_mode
     }
     pub fn is_markprocessednote(&self) -> bool {
-        self.markprocessednote
+        self.display_settings.markprocessednote
     }
     pub fn is_bpmguide(&self) -> bool {
-        self.bpmguide
+        self.display_settings.bpmguide
     }
     pub fn get_mine_mode(&self) -> i32 {
-        self.mine_mode
+        self.play_settings.mine_mode
     }
     pub fn get_chart_replication_mode(&self) -> &str {
-        &self.chart_replication_mode
+        &self.play_settings.chart_replication_mode
     }
 
     pub fn get_gauge_auto_shift(&self) -> i32 {
-        self.gauge_auto_shift
+        self.play_settings.gauge_auto_shift
     }
 
     pub fn get_bottom_shiftable_gauge(&self) -> i32 {
-        self.bottom_shiftable_gauge
+        self.play_settings.bottom_shiftable_gauge
     }
 
     pub fn get_targetid(&self) -> &str {
-        &self.targetid
+        &self.select_settings.targetid
     }
 
     pub fn get_misslayer_duration(&mut self) -> i32 {
-        if self.misslayer_duration < 0 {
-            self.misslayer_duration = 0;
+        if self.display_settings.misslayer_duration < 0 {
+            self.display_settings.misslayer_duration = 0;
         }
-        self.misslayer_duration
+        self.display_settings.misslayer_duration
     }
 
     pub fn skin(&mut self) -> &mut Vec<Option<SkinConfig>> {
@@ -458,61 +546,89 @@ impl PlayerConfig {
         self.mode24double.validate(52);
 
         let max_sort = BarSorter::DEFAULT_SORTER.len() as i32 - 1;
-        self.sort = self.sort.clamp(0, max_sort);
-        if self.sortid.is_none() {
-            self.sortid = Some(
-                BarSorter::DEFAULT_SORTER[self.sort as usize]
+        self.select_settings.sort = self.select_settings.sort.clamp(0, max_sort);
+        if self.select_settings.sortid.is_none() {
+            self.select_settings.sortid = Some(
+                BarSorter::DEFAULT_SORTER[self.select_settings.sort as usize]
                     .name()
                     .to_string(),
             );
         }
 
-        self.gauge = self.gauge.clamp(0, 5);
-        self.random = self.random.clamp(0, 9);
-        self.random2 = self.random2.clamp(0, 9);
-        self.doubleoption = self.doubleoption.clamp(0, 3);
-        if self.chart_replication_mode.is_empty() {
-            self.chart_replication_mode = "NONE".to_string();
+        self.play_settings.gauge = self.play_settings.gauge.clamp(0, 5);
+        self.play_settings.random = self.play_settings.random.clamp(0, 9);
+        self.play_settings.random2 = self.play_settings.random2.clamp(0, 9);
+        self.play_settings.doubleoption = self.play_settings.doubleoption.clamp(0, 3);
+        if self.play_settings.chart_replication_mode.is_empty() {
+            self.play_settings.chart_replication_mode = "NONE".to_string();
         }
-        if self.targetid.is_empty() {
-            self.targetid = "MAX".to_string();
+        if self.select_settings.targetid.is_empty() {
+            self.select_settings.targetid = "MAX".to_string();
         }
-        if self.targetlist.is_empty() {
+        if self.select_settings.targetlist.is_empty() {
             // keep as-is if non-empty, otherwise leave empty
         }
-        self.judgetiming = self.judgetiming.clamp(JUDGETIMING_MIN, JUDGETIMING_MAX);
-        self.misslayer_duration = self.misslayer_duration.clamp(0, 5000);
-        self.lnmode = self.lnmode.clamp(0, 2);
-        self.key_judge_window_rate_perfect_great =
-            self.key_judge_window_rate_perfect_great.clamp(25, 400);
-        self.key_judge_window_rate_great = self.key_judge_window_rate_great.clamp(0, 400);
-        self.key_judge_window_rate_good = self.key_judge_window_rate_good.clamp(0, 400);
-        self.scratch_judge_window_rate_perfect_great =
-            self.scratch_judge_window_rate_perfect_great.clamp(25, 400);
-        self.scratch_judge_window_rate_great = self.scratch_judge_window_rate_great.clamp(0, 400);
-        self.scratch_judge_window_rate_good = self.scratch_judge_window_rate_good.clamp(0, 400);
-        self.hran_threshold_bpm = self.hran_threshold_bpm.clamp(1, 1000);
+        self.judge_settings.judgetiming = self
+            .judge_settings
+            .judgetiming
+            .clamp(JUDGETIMING_MIN, JUDGETIMING_MAX);
+        self.display_settings.misslayer_duration =
+            self.display_settings.misslayer_duration.clamp(0, 5000);
+        self.play_settings.lnmode = self.play_settings.lnmode.clamp(0, 2);
+        self.judge_settings.key_judge_window_rate_perfect_great = self
+            .judge_settings
+            .key_judge_window_rate_perfect_great
+            .clamp(25, 400);
+        self.judge_settings.key_judge_window_rate_great = self
+            .judge_settings
+            .key_judge_window_rate_great
+            .clamp(0, 400);
+        self.judge_settings.key_judge_window_rate_good =
+            self.judge_settings.key_judge_window_rate_good.clamp(0, 400);
+        self.judge_settings.scratch_judge_window_rate_perfect_great = self
+            .judge_settings
+            .scratch_judge_window_rate_perfect_great
+            .clamp(25, 400);
+        self.judge_settings.scratch_judge_window_rate_great = self
+            .judge_settings
+            .scratch_judge_window_rate_great
+            .clamp(0, 400);
+        self.judge_settings.scratch_judge_window_rate_good = self
+            .judge_settings
+            .scratch_judge_window_rate_good
+            .clamp(0, 400);
+        self.play_settings.hran_threshold_bpm =
+            self.play_settings.hran_threshold_bpm.clamp(1, 1000);
 
-        if self.autosavereplay.len() != 4 {
-            self.autosavereplay.resize(4, 0);
+        if self.misc_settings.autosavereplay.len() != 4 {
+            self.misc_settings.autosavereplay.resize(4, 0);
         }
-        self.seven_to_nine_pattern = self.seven_to_nine_pattern.clamp(0, 6);
-        self.seven_to_nine_type = self.seven_to_nine_type.clamp(0, 2);
-        self.exit_press_duration = self.exit_press_duration.clamp(0, 100000);
+        self.note_modifier_settings.seven_to_nine_pattern = self
+            .note_modifier_settings
+            .seven_to_nine_pattern
+            .clamp(0, 6);
+        self.note_modifier_settings.seven_to_nine_type =
+            self.note_modifier_settings.seven_to_nine_type.clamp(0, 2);
+        self.misc_settings.exit_press_duration =
+            self.misc_settings.exit_press_duration.clamp(0, 100000);
 
-        self.scroll_mode = self
+        self.display_settings.scroll_mode = self
+            .display_settings
             .scroll_mode
             .clamp(0, scroll_speed_modifier::Mode::values().len() as i32);
-        self.scroll_section = self.scroll_section.clamp(1, 1024);
-        self.scroll_rate = self.scroll_rate.clamp(0.0, 1.0);
-        self.longnote_mode = self
+        self.display_settings.scroll_section = self.display_settings.scroll_section.clamp(1, 1024);
+        self.display_settings.scroll_rate = self.display_settings.scroll_rate.clamp(0.0, 1.0);
+        self.note_modifier_settings.longnote_mode = self
+            .note_modifier_settings
             .longnote_mode
             .clamp(0, long_note_modifier::Mode::values().len() as i32);
-        self.longnote_rate = self.longnote_rate.clamp(0.0, 1.0);
-        self.mine_mode = self
+        self.note_modifier_settings.longnote_rate =
+            self.note_modifier_settings.longnote_rate.clamp(0.0, 1.0);
+        self.play_settings.mine_mode = self
+            .play_settings
             .mine_mode
             .clamp(0, mine_note_modifier::Mode::values().len() as i32);
-        self.extranote_depth = self.extranote_depth.clamp(0, 100);
+        self.display_settings.extranote_depth = self.display_settings.extranote_depth.clamp(0, 100);
 
         if self.irconfig.is_empty() {
             let irnames = IRConnectionManager::all_available_ir_connection_name();

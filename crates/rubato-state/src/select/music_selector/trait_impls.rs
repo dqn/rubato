@@ -218,7 +218,7 @@ impl MainState for MusicSelector {
         // Update score cache for previously played song
         if let Some(ref song) = self.playedsong {
             if let Some(ref mut cache) = self.ranking.scorecache {
-                cache.update(song, self.config.lnmode);
+                cache.update(song, self.config.play_settings.lnmode);
             }
             self.playedsong = None;
         }
@@ -226,7 +226,7 @@ impl MainState for MusicSelector {
         if let Some(ref course) = self.playedcourse.take() {
             for sd in &course.hash {
                 if let Some(ref mut cache) = self.ranking.scorecache {
-                    cache.update(sd, self.config.lnmode);
+                    cache.update(sd, self.config.play_settings.lnmode);
                 }
             }
         }
@@ -244,7 +244,7 @@ impl MainState for MusicSelector {
         // musicselectinput: 0 -> mode7, 1 -> mode9, _ -> mode14
         {
             let mut input = BMSPlayerInputProcessor::new(&self.app_config, &self.config);
-            let pc = match self.config.musicselectinput {
+            let pc = match self.config.select_settings.musicselectinput {
                 0 => &self.config.mode7,
                 1 => &self.config.mode9,
                 _ => &self.config.mode14,
@@ -344,7 +344,7 @@ impl MainState for MusicSelector {
 
             let currentsongs = &self.manager.currentsongs;
             let rival = self.rival.is_some();
-            let lnmode = self.config.lnmode;
+            let lnmode = self.config.play_settings.lnmode;
             let center_bar = self.bar_rendering.select_center_bar;
 
             if let (Some(bar_renderer), Some(skin_bar)) = (
@@ -494,7 +494,7 @@ impl MainState for MusicSelector {
                         // and sets result on SongData for the density graph.
                         // Rust: load synchronously (BMS parsing is fast).
                         let path = song_bar.song_data().path().map(std::path::PathBuf::from);
-                        let lnmode = self.config.lnmode;
+                        let lnmode = self.config.play_settings.lnmode;
                         if let Some(path) = path
                             && let Some((model, _margin)) =
                                 rubato_core::player_resource::PlayerResource::load_bms_model(
@@ -530,7 +530,7 @@ impl MainState for MusicSelector {
                 && let Some(main) = self.main.as_mut()
             {
                 use rubato_ir::ranking_data::RankingData;
-                let lnmode = main.player_config().lnmode;
+                let lnmode = main.player_config().play_settings.lnmode;
                 if let Some(song_bar) = current.as_song_bar()
                     && song_bar.exists_song()
                     && self.play.is_none()

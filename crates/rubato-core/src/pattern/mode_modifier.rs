@@ -34,17 +34,17 @@ impl PatternModifier for ModeModifier {
         let mut last_note_time = vec![-100i32; lanes];
         let mut end_ln_note_time = vec![-1i32; lanes];
 
-        if self.config.hran_threshold_bpm <= 0 {
+        if self.config.play_settings.hran_threshold_bpm <= 0 {
             self.hran_threshold = 0;
         } else {
             self.hran_threshold =
-                (15000.0f32 / self.config.hran_threshold_bpm as f32).ceil() as i32;
+                (15000.0f32 / self.config.play_settings.hran_threshold_bpm as f32).ceil() as i32;
         }
 
         let after_mode = self.after_mode;
         let hran_threshold = self.hran_threshold;
-        let seven_to_nine_pattern = self.config.seven_to_nine_pattern;
-        let seven_to_nine_type = self.config.seven_to_nine_type;
+        let seven_to_nine_pattern = self.config.note_modifier_settings.seven_to_nine_pattern;
+        let seven_to_nine_type = self.config.note_modifier_settings.seven_to_nine_type;
 
         let timelines = model.all_time_lines_mut();
         // Pre-compute timeline index → time for LN end note pair lookup
@@ -668,8 +668,8 @@ mod tests {
     #[test]
     fn modify_7k_to_9k_remaps_notes() {
         let mut config = PlayerConfig::default();
-        config.seven_to_nine_pattern = 0; // default pattern
-        config.seven_to_nine_type = 0;
+        config.note_modifier_settings.seven_to_nine_pattern = 0; // default pattern
+        config.note_modifier_settings.seven_to_nine_type = 0;
 
         // Create a BEAT_7K model with notes on lanes 0..7
         let mut tl = TimeLine::new(0.0, 0, 8);
@@ -706,9 +706,9 @@ mod tests {
     #[test]
     fn hran_threshold_bpm_zero_sets_threshold_zero() {
         let mut config = PlayerConfig::default();
-        config.hran_threshold_bpm = 0;
-        config.seven_to_nine_pattern = 0;
-        config.seven_to_nine_type = 0;
+        config.play_settings.hran_threshold_bpm = 0;
+        config.note_modifier_settings.seven_to_nine_pattern = 0;
+        config.note_modifier_settings.seven_to_nine_type = 0;
 
         let tl = TimeLine::new(0.0, 0, 8);
         let mut model = make_test_model(&Mode::BEAT_7K, vec![tl]);

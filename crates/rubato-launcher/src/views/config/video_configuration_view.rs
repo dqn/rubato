@@ -123,7 +123,7 @@ impl VideoConfigurationView {
     // public void commitPlayer(PlayerConfig player)
     pub fn commit_player(&self, player: &mut PlayerConfig) {
         // player.setMisslayerDuration(missLayerTime.getValue());
-        player.misslayer_duration = self.miss_layer_time;
+        player.display_settings.misslayer_duration = self.miss_layer_time;
     }
 
     /// Get the current resolution items (available resolutions for the current display mode).
@@ -419,7 +419,10 @@ mod tests {
     fn update_and_commit_player_roundtrip() {
         let mut view = VideoConfigurationView::default();
         let mut player = PlayerConfig {
-            misslayer_duration: 500,
+            display_settings: rubato_types::player_config::DisplaySettings {
+                misslayer_duration: 500,
+                ..Default::default()
+            },
             ..Default::default()
         };
 
@@ -427,7 +430,7 @@ mod tests {
 
         let mut out_player = PlayerConfig::default();
         view.commit_player(&mut out_player);
-        assert_eq!(out_player.misslayer_duration, 500);
+        assert_eq!(out_player.display_settings.misslayer_duration, 500);
     }
 
     // --- update_resolutions() logic tests ---

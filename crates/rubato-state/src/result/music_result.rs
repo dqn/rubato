@@ -296,7 +296,7 @@ impl MusicResult {
         for i in 0..REPLAY_SIZE {
             self.data.save_replay[i] = if self.main.play_data_accessor().exists_replay_data_model(
                 self.resource.bms_model(),
-                self.resource.player_config().lnmode,
+                self.resource.player_config().play_settings.lnmode,
                 i as i32,
             ) {
                 ReplayStatus::Exist
@@ -317,7 +317,7 @@ impl MusicResult {
         if self.resource.play_mode().mode == BMSPlayerModeType::Play && !self.resource.is_freq_on()
         {
             for i in 0..REPLAY_SIZE {
-                let auto_save = &self.resource.player_config().autosavereplay;
+                let auto_save = &self.resource.player_config().misc_settings.autosavereplay;
                 if i < auto_save.len()
                     && let Some(score_data) = self.resource.score_data()
                     && ReplayAutoSaveConstraint::get(auto_save[i])
@@ -581,7 +581,7 @@ impl MusicResult {
                         }
                     } else if self.resource.next_course() {
                         // Next course song
-                        let lnmode = self.resource.player_config().lnmode;
+                        let lnmode = self.resource.player_config().play_settings.lnmode;
                         if let Some(songdata) = self.resource.songdata() {
                             let songrank: Option<RankingData> = self
                                 .main
@@ -774,7 +774,7 @@ impl MusicResult {
             self.main.play_data_accessor().write_replay_data_model(
                 &mut rd.clone(),
                 self.resource.bms_model(),
-                self.resource.player_config().lnmode,
+                self.resource.player_config().play_settings.lnmode,
                 index as i32,
             );
             self.data.save_replay[index] = ReplayStatus::Saved;
@@ -797,7 +797,7 @@ impl MusicResult {
 
         let oldsc = self.main.play_data_accessor().read_score_data_model(
             self.resource.bms_model(),
-            self.resource.player_config().lnmode,
+            self.resource.player_config().play_settings.lnmode,
         );
         self.data.oldscore = oldsc.unwrap_or_default();
 
@@ -967,7 +967,7 @@ impl MusicResult {
                 self.main.play_data_accessor().write_score_data_model(
                     sd,
                     self.resource.bms_model(),
-                    self.resource.player_config().lnmode,
+                    self.resource.player_config().play_settings.lnmode,
                     self.resource.is_update_score(),
                 );
             }
@@ -1311,7 +1311,7 @@ mod tests {
             _y: i32,
         ) {
             if let Some(config) = ctx.player_config_mut() {
-                config.random = (config.random + 1) % 10;
+                config.play_settings.random = (config.play_settings.random + 1) % 10;
             }
         }
 
@@ -1650,7 +1650,7 @@ mod tests {
 
         <MusicResult as MainState>::handle_skin_mouse_pressed(&mut mr, 0, 10, 10);
 
-        assert_eq!(mr.resource.player_config().random, 1);
+        assert_eq!(mr.resource.player_config().play_settings.random, 1);
     }
 
     #[test]

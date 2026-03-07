@@ -54,7 +54,7 @@ impl SkinDrawable for PlayerConfigMutatingSkin {
         _y: i32,
     ) {
         if let Some(config) = ctx.player_config_mut() {
-            config.judgetiming += 1;
+            config.judge_settings.judgetiming += 1;
         }
     }
 
@@ -202,18 +202,18 @@ fn handle_skin_mouse_pressed_uses_live_play_context() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.main_state_data.skin = Some(Box::new(PlayerConfigMutatingSkin));
-    player.player_config.judgetiming = 0;
+    player.player_config.judge_settings.judgetiming = 0;
 
     <BMSPlayer as MainState>::handle_skin_mouse_pressed(&mut player, 0, 10, 10);
 
-    assert_eq!(player.player_config.judgetiming, 1);
+    assert_eq!(player.player_config.judge_settings.judgetiming, 1);
 }
 
 #[test]
 fn render_skin_uses_play_option_for_image_index_42() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.player_config.random = 1;
+    player.player_config.play_settings.random = 1;
     player.score.playinfo.randomoption = 6;
     let observed = Arc::new(AtomicI32::new(-1));
     player.main_state_data.skin = Some(Box::new(ProbeImageIndexSkin {
@@ -231,7 +231,7 @@ fn render_skin_uses_play_option_for_image_index_42() {
 fn render_skin_uses_target_visual_index_for_image_index_77() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
-    player.player_config.targetid = "MAX".to_string();
+    player.player_config.select_settings.targetid = "MAX".to_string();
     let observed = Arc::new(AtomicI32::new(-1));
     player.main_state_data.skin = Some(Box::new(ProbeImageIndexSkin {
         id: 77,
@@ -748,7 +748,7 @@ fn build_pattern_modifiers_scroll_mode() {
 
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.scroll_mode = 1; // Enable scroll speed modifier (Remove mode)
+    config.display_settings.scroll_mode = 1; // Enable scroll speed modifier (Remove mode)
     player.build_pattern_modifiers(&config);
     // ScrollSpeedModifier in Remove mode sets LightAssist if BPM changes exist;
     // with a single-BPM model it sets None. Either way, the modifier was applied.
@@ -760,7 +760,7 @@ fn build_pattern_modifiers_longnote_mode() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.longnote_mode = 1; // Enable LN modifier (Remove mode)
+    config.note_modifier_settings.longnote_mode = 1; // Enable LN modifier (Remove mode)
     player.build_pattern_modifiers(&config);
     // LongNoteModifier in Remove mode sets Assist if LNs exist.
     // With empty model, no LNs, so assist stays None.
@@ -771,7 +771,7 @@ fn build_pattern_modifiers_mine_mode() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.mine_mode = 1; // Enable mine modifier (Remove mode)
+    config.play_settings.mine_mode = 1; // Enable mine modifier (Remove mode)
     player.build_pattern_modifiers(&config);
     // MineNoteModifier in Remove mode sets LightAssist if mine notes exist.
 }
@@ -781,7 +781,7 @@ fn build_pattern_modifiers_extranote() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.extranote_depth = 1; // Enable extra note modifier
+    config.display_settings.extranote_depth = 1; // Enable extra note modifier
     player.build_pattern_modifiers(&config);
 }
 
@@ -793,7 +793,7 @@ fn build_pattern_modifiers_dp_battle_converts_sp_to_dp() {
     let mut player = BMSPlayer::new(model);
 
     let mut config = make_default_config();
-    config.doubleoption = 2;
+    config.play_settings.doubleoption = 2;
     player.score.playinfo.doubleoption = 2;
 
     let score = player.build_pattern_modifiers(&config);
@@ -813,7 +813,7 @@ fn build_pattern_modifiers_dp_battle_with_autoplay_scratch() {
     let mut player = BMSPlayer::new(model);
 
     let mut config = make_default_config();
-    config.doubleoption = 3; // Battle + L-ASSIST (autoplay scratch)
+    config.play_settings.doubleoption = 3; // Battle + L-ASSIST (autoplay scratch)
     player.score.playinfo.doubleoption = 3;
 
     player.build_pattern_modifiers(&config);
@@ -830,7 +830,7 @@ fn build_pattern_modifiers_dp_battle_non_sp_resets_doubleoption() {
     let mut player = BMSPlayer::new(model);
 
     let mut config = make_default_config();
-    config.doubleoption = 2;
+    config.play_settings.doubleoption = 2;
     player.score.playinfo.doubleoption = 2;
 
     player.build_pattern_modifiers(&config);
@@ -847,7 +847,7 @@ fn build_pattern_modifiers_dp_flip() {
     let mut player = BMSPlayer::new(model);
 
     let mut config = make_default_config();
-    config.doubleoption = 1;
+    config.play_settings.doubleoption = 1;
     player.score.playinfo.doubleoption = 1;
 
     player.build_pattern_modifiers(&config);
@@ -899,7 +899,7 @@ fn build_pattern_modifiers_7to9() {
     let model = make_model(); // BEAT_7K
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.seven_to_nine_pattern = 1; // Enable 7to9
+    config.note_modifier_settings.seven_to_nine_pattern = 1; // Enable 7to9
 
     player.build_pattern_modifiers(&config);
     // Mode should be changed from BEAT_7K to POPN_9K
@@ -919,7 +919,7 @@ fn build_pattern_modifiers_assist_accumulates_light() {
 
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.mine_mode = 1; // Remove mines -> LightAssist
+    config.play_settings.mine_mode = 1; // Remove mines -> LightAssist
 
     let score = player.build_pattern_modifiers(&config);
     assert_eq!(
@@ -937,7 +937,7 @@ fn build_pattern_modifiers_5k_battle() {
     let mut player = BMSPlayer::new(model);
 
     let mut config = make_default_config();
-    config.doubleoption = 2;
+    config.play_settings.doubleoption = 2;
     player.score.playinfo.doubleoption = 2;
 
     player.build_pattern_modifiers(&config);
@@ -1050,7 +1050,7 @@ fn build_pattern_modifiers_lane_shuffle_pattern_saved() {
 
     let mut config = make_default_config();
     // Random (id=2) creates LaneRandomShuffleModifier with show_shuffle_pattern=true
-    config.random = 2;
+    config.play_settings.random = 2;
     player.score.playinfo.randomoption = 2;
 
     player.build_pattern_modifiers(&config);
@@ -1435,7 +1435,7 @@ fn non_modifier_assist_bpmguide_uniform_bpm_no_assist() {
     let model = make_model_uniform_bpm();
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.bpmguide = true; // BPM guide enabled
+    config.display_settings.bpmguide = true; // BPM guide enabled
 
     let score = player.calculate_non_modifier_assist(&config);
     // Uniform BPM: min == max → BPM guide has no effect
@@ -1448,7 +1448,7 @@ fn non_modifier_assist_bpmguide_variable_bpm_sets_light_assist() {
     let model = make_model_variable_bpm();
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.bpmguide = true; // BPM guide enabled
+    config.display_settings.bpmguide = true; // BPM guide enabled
 
     let score = player.calculate_non_modifier_assist(&config);
     // Variable BPM: min < max → assist = max(0, 1) = 1
@@ -1475,14 +1475,16 @@ fn non_modifier_assist_custom_judge_all_rates_lte_100_no_assist() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.custom_judge = true;
+    config.judge_settings.custom_judge = true;
     // Set all rates to <= 100
-    config.key_judge_window_rate_perfect_great = 100;
-    config.key_judge_window_rate_great = 100;
-    config.key_judge_window_rate_good = 100;
-    config.scratch_judge_window_rate_perfect_great = 100;
-    config.scratch_judge_window_rate_great = 100;
-    config.scratch_judge_window_rate_good = 100;
+    config.judge_settings.key_judge_window_rate_perfect_great = 100;
+    config.judge_settings.key_judge_window_rate_great = 100;
+    config.judge_settings.key_judge_window_rate_good = 100;
+    config
+        .judge_settings
+        .scratch_judge_window_rate_perfect_great = 100;
+    config.judge_settings.scratch_judge_window_rate_great = 100;
+    config.judge_settings.scratch_judge_window_rate_good = 100;
 
     let score = player.calculate_non_modifier_assist(&config);
     assert_eq!(player.assist, 0);
@@ -1494,14 +1496,16 @@ fn non_modifier_assist_custom_judge_one_rate_over_100_sets_assist() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.custom_judge = true;
+    config.judge_settings.custom_judge = true;
     // Only one rate > 100
-    config.key_judge_window_rate_perfect_great = 101;
-    config.key_judge_window_rate_great = 50;
-    config.key_judge_window_rate_good = 50;
-    config.scratch_judge_window_rate_perfect_great = 50;
-    config.scratch_judge_window_rate_great = 50;
-    config.scratch_judge_window_rate_good = 50;
+    config.judge_settings.key_judge_window_rate_perfect_great = 101;
+    config.judge_settings.key_judge_window_rate_great = 50;
+    config.judge_settings.key_judge_window_rate_good = 50;
+    config
+        .judge_settings
+        .scratch_judge_window_rate_perfect_great = 50;
+    config.judge_settings.scratch_judge_window_rate_great = 50;
+    config.judge_settings.scratch_judge_window_rate_good = 50;
 
     let score = player.calculate_non_modifier_assist(&config);
     assert_eq!(player.assist, 2);
@@ -1516,13 +1520,15 @@ fn non_modifier_assist_custom_judge_scratch_rate_over_100_sets_assist() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.custom_judge = true;
-    config.key_judge_window_rate_perfect_great = 50;
-    config.key_judge_window_rate_great = 50;
-    config.key_judge_window_rate_good = 50;
-    config.scratch_judge_window_rate_perfect_great = 50;
-    config.scratch_judge_window_rate_great = 50;
-    config.scratch_judge_window_rate_good = 200; // Only scratch good > 100
+    config.judge_settings.custom_judge = true;
+    config.judge_settings.key_judge_window_rate_perfect_great = 50;
+    config.judge_settings.key_judge_window_rate_great = 50;
+    config.judge_settings.key_judge_window_rate_good = 50;
+    config
+        .judge_settings
+        .scratch_judge_window_rate_perfect_great = 50;
+    config.judge_settings.scratch_judge_window_rate_great = 50;
+    config.judge_settings.scratch_judge_window_rate_good = 200; // Only scratch good > 100
 
     let score = player.calculate_non_modifier_assist(&config);
     assert_eq!(player.assist, 2);
@@ -1534,9 +1540,9 @@ fn non_modifier_assist_custom_judge_disabled_no_assist() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.custom_judge = false; // Disabled
+    config.judge_settings.custom_judge = false; // Disabled
     // Even with high rates, custom judge is off
-    config.key_judge_window_rate_perfect_great = 400;
+    config.judge_settings.key_judge_window_rate_perfect_great = 400;
 
     let score = player.calculate_non_modifier_assist(&config);
     assert_eq!(player.assist, 0);
@@ -1572,7 +1578,7 @@ fn non_modifier_assist_accumulates_bpmguide_and_constant() {
     let model = make_model_variable_bpm();
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.bpmguide = true;
+    config.display_settings.bpmguide = true;
     config.mode7.playconfig.enable_constant = true;
 
     let score = player.calculate_non_modifier_assist(&config);
@@ -1643,9 +1649,9 @@ fn init_playinfo_from_config_copies_random_options() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.random = 3;
-    config.random2 = 5;
-    config.doubleoption = 2;
+    config.play_settings.random = 3;
+    config.play_settings.random2 = 5;
+    config.play_settings.doubleoption = 2;
 
     player.init_playinfo_from_config(&config);
 
@@ -1672,7 +1678,7 @@ fn init_playinfo_from_config_does_not_touch_seeds() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     let mut config = make_default_config();
-    config.random = 2;
+    config.play_settings.random = 2;
 
     player.init_playinfo_from_config(&config);
 
@@ -1693,9 +1699,9 @@ fn e2e_dp_flow_config_init_build_encode() {
     let mut player = BMSPlayer::new(model);
 
     let mut config = make_default_config();
-    config.random = 2;
-    config.random2 = 3;
-    config.doubleoption = 1;
+    config.play_settings.random = 2;
+    config.play_settings.random2 = 3;
+    config.play_settings.doubleoption = 1;
 
     // Step 1: init from config
     player.init_playinfo_from_config(&config);
@@ -1722,9 +1728,9 @@ fn e2e_dp_flow_replay_overrides_config() {
     let mut player = BMSPlayer::new(model);
 
     let mut config = make_default_config();
-    config.random = 2;
-    config.random2 = 3;
-    config.doubleoption = 1;
+    config.play_settings.random = 2;
+    config.play_settings.random2 = 3;
+    config.play_settings.doubleoption = 1;
 
     // Step 1: init from config
     player.init_playinfo_from_config(&config);
@@ -1764,9 +1770,9 @@ fn e2e_sp_mode_ignores_2p_options() {
     let mut player = BMSPlayer::new(model);
 
     let mut config = make_default_config();
-    config.random = 3;
-    config.random2 = 5; // Should be irrelevant in SP
-    config.doubleoption = 1; // Should be irrelevant in SP
+    config.play_settings.random = 3;
+    config.play_settings.random2 = 5; // Should be irrelevant in SP
+    config.play_settings.doubleoption = 1; // Should be irrelevant in SP
 
     // Step 1: init from config
     player.init_playinfo_from_config(&config);
@@ -1792,9 +1798,9 @@ fn e2e_dp_battle_mode_config_init_build_encode() {
     let mut player = BMSPlayer::new(model);
 
     let mut config = make_default_config();
-    config.random = 1;
-    config.random2 = 4;
-    config.doubleoption = 2;
+    config.play_settings.random = 1;
+    config.play_settings.random2 = 4;
+    config.play_settings.doubleoption = 2;
 
     // Step 1: init from config
     player.init_playinfo_from_config(&config);
@@ -2633,7 +2639,8 @@ fn gauge_autoshift_continue_does_not_fail() {
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Play;
     player.playtime = 999_999;
-    player.player_config.gauge_auto_shift = rubato_types::player_config::GAUGEAUTOSHIFT_CONTINUE;
+    player.player_config.play_settings.gauge_auto_shift =
+        rubato_types::player_config::GAUGEAUTOSHIFT_CONTINUE;
 
     let gauge = crate::groove_gauge::create_groove_gauge(
         &player.model,
@@ -2665,7 +2672,7 @@ fn gauge_autoshift_survival_to_groove_shifts_type() {
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Play;
     player.playtime = 999_999;
-    player.player_config.gauge_auto_shift =
+    player.player_config.play_settings.gauge_auto_shift =
         rubato_types::player_config::GAUGEAUTOSHIFT_SURVIVAL_TO_GROOVE;
 
     let gauge = crate::groove_gauge::create_groove_gauge(
@@ -2810,7 +2817,7 @@ fn chart_preview_sets_timer_141_when_enabled() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Preload;
-    player.player_config.chart_preview = true;
+    player.player_config.display_settings.chart_preview = true;
     player.startpressedtime = 0;
 
     // When micronow == startpressedtime and timer 141 is off, timer 141 should be set
@@ -2832,17 +2839,26 @@ fn set_player_config_persists() {
     let mut player = BMSPlayer::new(model);
 
     let config = PlayerConfig {
-        chart_preview: false,
-        is_window_hold: true,
-        gauge_auto_shift: 3,
+        display_settings: rubato_types::player_config::DisplaySettings {
+            chart_preview: false,
+            ..Default::default()
+        },
+        select_settings: rubato_types::player_config::SelectSettings {
+            is_window_hold: true,
+            ..Default::default()
+        },
+        play_settings: rubato_types::player_config::PlaySettings {
+            gauge_auto_shift: 3,
+            ..Default::default()
+        },
         ..Default::default()
     };
 
     player.set_player_config(config);
 
-    assert!(!player.player_config().chart_preview);
-    assert!(player.player_config().is_window_hold);
-    assert_eq!(player.player_config().gauge_auto_shift, 3);
+    assert!(!player.player_config().display_settings.chart_preview);
+    assert!(player.player_config().select_settings.is_window_hold);
+    assert_eq!(player.player_config().play_settings.gauge_auto_shift, 3);
 }
 
 // --- course mode tests ---

@@ -374,13 +374,15 @@ fn init_custom_judge_rates_differ_from_default() {
 
     // Custom judge with narrower windows
     let mut config = PlayerConfig::default();
-    config.custom_judge = true;
-    config.key_judge_window_rate_perfect_great = 50;
-    config.key_judge_window_rate_great = 50;
-    config.key_judge_window_rate_good = 50;
-    config.scratch_judge_window_rate_perfect_great = 50;
-    config.scratch_judge_window_rate_great = 50;
-    config.scratch_judge_window_rate_good = 50;
+    config.judge_settings.custom_judge = true;
+    config.judge_settings.key_judge_window_rate_perfect_great = 50;
+    config.judge_settings.key_judge_window_rate_great = 50;
+    config.judge_settings.key_judge_window_rate_good = 50;
+    config
+        .judge_settings
+        .scratch_judge_window_rate_perfect_great = 50;
+    config.judge_settings.scratch_judge_window_rate_great = 50;
+    config.judge_settings.scratch_judge_window_rate_good = 50;
 
     let mut jm_custom = JudgeManager::new();
     jm_custom.init(&model, 1, Some(&config), &[]);

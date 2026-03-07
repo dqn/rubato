@@ -894,7 +894,7 @@ fn test_render_produces_vertices_via_skin() {
 fn test_trigger_ln_warning_lnmode_0_is_ln_no_warning() {
     // lnmode=0 → "LN" → no warning (default)
     let mut mc = make_test_controller();
-    mc.player.lnmode = 0;
+    mc.player.play_settings.lnmode = 0;
     // Should not panic; "LN" mode does not trigger warning
     mc.trigger_ln_warning();
 }
@@ -903,7 +903,7 @@ fn test_trigger_ln_warning_lnmode_0_is_ln_no_warning() {
 fn test_trigger_ln_warning_lnmode_1_is_cn() {
     // lnmode=1 → "CN" → warning triggered
     let mut mc = make_test_controller();
-    mc.player.lnmode = 1;
+    mc.player.play_settings.lnmode = 1;
     mc.trigger_ln_warning();
     // No assertion on log output, but should not panic
 }
@@ -912,7 +912,7 @@ fn test_trigger_ln_warning_lnmode_1_is_cn() {
 fn test_trigger_ln_warning_lnmode_2_is_hcn() {
     // lnmode=2 → "HCN" → warning triggered
     let mut mc = make_test_controller();
-    mc.player.lnmode = 2;
+    mc.player.play_settings.lnmode = 2;
     mc.trigger_ln_warning();
 }
 
@@ -920,7 +920,7 @@ fn test_trigger_ln_warning_lnmode_2_is_hcn() {
 fn test_trigger_ln_warning_lnmode_3_is_ln_no_warning() {
     // lnmode=3 → default "LN" → no warning
     let mut mc = make_test_controller();
-    mc.player.lnmode = 3;
+    mc.player.play_settings.lnmode = 3;
     mc.trigger_ln_warning();
 }
 

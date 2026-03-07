@@ -88,9 +88,10 @@ pub trait SkinRenderContext: TimerAccess {
         let player_config = self.player_config_ref();
         let target_image_index = player_config.map_or(-1, |config| {
             config
+                .select_settings
                 .targetlist
                 .iter()
-                .position(|target| target == &config.targetid)
+                .position(|target| target == &config.select_settings.targetid)
                 .map(|index| index.min(10) as i32)
                 .unwrap_or(0)
         });
@@ -105,19 +106,19 @@ pub trait SkinRenderContext: TimerAccess {
                 ) {
                     self.gauge_type()
                 } else {
-                    player_config.map_or(-1, |config| config.gauge)
+                    player_config.map_or(-1, |config| config.play_settings.gauge)
                 }
             }
             42 => self.replay_option_data().map_or_else(
-                || player_config.map_or(-1, |config| config.random),
+                || player_config.map_or(-1, |config| config.play_settings.random),
                 |replay| replay.randomoption,
             ),
             43 => self.replay_option_data().map_or_else(
-                || player_config.map_or(-1, |config| config.random2),
+                || player_config.map_or(-1, |config| config.play_settings.random2),
                 |replay| replay.randomoption2,
             ),
             54 => self.replay_option_data().map_or_else(
-                || player_config.map_or(-1, |config| config.doubleoption),
+                || player_config.map_or(-1, |config| config.play_settings.doubleoption),
                 |replay| replay.doubleoption,
             ),
             55 => self
@@ -146,10 +147,10 @@ pub trait SkinRenderContext: TimerAccess {
             }),
             72 => self.config_ref().map_or(-1, |config| config.render.bga),
             75 => player_config.map_or(-1, |config| {
-                bool_to_i32(config.notes_display_timing_auto_adjust)
+                bool_to_i32(config.judge_settings.notes_display_timing_auto_adjust)
             }),
             77 => target_image_index,
-            78 => player_config.map_or(-1, |config| config.gauge_auto_shift),
+            78 => player_config.map_or(-1, |config| config.play_settings.gauge_auto_shift),
             89 => self.song_data_ref().map_or(-1, |song| {
                 let favorite = song.favorite;
                 if favorite & crate::song_data::INVISIBLE_SONG != 0 {
@@ -170,11 +171,17 @@ pub trait SkinRenderContext: TimerAccess {
                     0
                 }
             }),
-            301 => player_config.map_or(-1, |config| bool_to_i32(config.custom_judge)),
-            303 => player_config.map_or(-1, |config| bool_to_i32(config.showjudgearea)),
-            305 => player_config.map_or(-1, |config| bool_to_i32(config.markprocessednote)),
-            306 => player_config.map_or(-1, |config| bool_to_i32(config.bpmguide)),
-            308 => player_config.map_or(-1, |config| config.lnmode),
+            301 => {
+                player_config.map_or(-1, |config| bool_to_i32(config.judge_settings.custom_judge))
+            }
+            303 => player_config.map_or(-1, |config| {
+                bool_to_i32(config.display_settings.showjudgearea)
+            }),
+            305 => player_config.map_or(-1, |config| {
+                bool_to_i32(config.display_settings.markprocessednote)
+            }),
+            306 => player_config.map_or(-1, |config| bool_to_i32(config.display_settings.bpmguide)),
+            308 => player_config.map_or(-1, |config| config.play_settings.lnmode),
             330 => self
                 .current_play_config_ref()
                 .map_or(-1, |config| bool_to_i32(config.enablelanecover)),
@@ -193,19 +200,31 @@ pub trait SkinRenderContext: TimerAccess {
                 }
             }),
             321..=324 => player_config
-                .and_then(|config| config.autosavereplay.get((id - 321) as usize).copied())
+                .and_then(|config| {
+                    config
+                        .misc_settings
+                        .autosavereplay
+                        .get((id - 321) as usize)
+                        .copied()
+                })
                 .unwrap_or(-1),
-            341 => player_config.map_or(-1, |config| config.bottom_shiftable_gauge),
+            341 => player_config.map_or(-1, |config| config.play_settings.bottom_shiftable_gauge),
             342 => self
                 .current_play_config_ref()
                 .map_or(-1, |config| bool_to_i32(config.hispeedautoadjust)),
-            343 => player_config.map_or(-1, |config| bool_to_i32(config.is_guide_se)),
-            350 => player_config.map_or(-1, |config| config.extranote_depth),
-            351 => player_config.map_or(-1, |config| config.mine_mode),
-            352 => player_config.map_or(-1, |config| config.scroll_mode),
-            353 => player_config.map_or(-1, |config| config.longnote_mode),
-            360 => player_config.map_or(-1, |config| config.seven_to_nine_pattern),
-            361 => player_config.map_or(-1, |config| config.seven_to_nine_type),
+            343 => player_config.map_or(-1, |config| {
+                bool_to_i32(config.display_settings.is_guide_se)
+            }),
+            350 => player_config.map_or(-1, |config| config.display_settings.extranote_depth),
+            351 => player_config.map_or(-1, |config| config.play_settings.mine_mode),
+            352 => player_config.map_or(-1, |config| config.display_settings.scroll_mode),
+            353 => player_config.map_or(-1, |config| config.note_modifier_settings.longnote_mode),
+            360 => player_config.map_or(-1, |config| {
+                config.note_modifier_settings.seven_to_nine_pattern
+            }),
+            361 => player_config.map_or(-1, |config| {
+                config.note_modifier_settings.seven_to_nine_type
+            }),
             370 => self.score_data_ref().map_or(-1, |score| score.clear),
             371 => self.rival_score_data_ref().map_or(-1, |score| score.clear),
             _ => self.integer_value(id),

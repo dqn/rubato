@@ -132,8 +132,8 @@ fn test_sync_audio_ticks_preview_processor() {
 #[test]
 fn test_select_skin_context_uses_sort_for_image_index_12() {
     let mut selector = MusicSelector::new();
-    selector.config.sort = 5;
-    selector.config.judgetiming = 17;
+    selector.config.select_settings.sort = 5;
+    selector.config.judge_settings.judgetiming = 17;
     let mut timer = TimerManager::new();
     let ctx = SelectSkinContext {
         timer: &mut timer,
@@ -146,7 +146,7 @@ fn test_select_skin_context_uses_sort_for_image_index_12() {
 #[test]
 fn test_select_skin_context_uses_random_for_image_index_42() {
     let mut selector = MusicSelector::new();
-    selector.config.random = 4;
+    selector.config.play_settings.random = 4;
     let mut timer = TimerManager::new();
     let ctx = SelectSkinContext {
         timer: &mut timer,
@@ -242,7 +242,7 @@ fn test_select_skin_context_uses_rival_clear_for_image_index_371() {
 #[test]
 fn test_select_skin_context_uses_target_visual_index_for_image_index_77() {
     let mut selector = MusicSelector::new();
-    selector.config.targetid = "MAX".to_string();
+    selector.config.select_settings.targetid = "MAX".to_string();
     let mut timer = TimerManager::new();
     let ctx = SelectSkinContext {
         timer: &mut timer,
@@ -1139,9 +1139,9 @@ fn test_read_course_class_constraint_resets_random() {
 
     let mut selector = MusicSelector::new();
     // Set non-zero random options
-    selector.config.random = 3;
-    selector.config.random2 = 4;
-    selector.config.doubleoption = 2;
+    selector.config.play_settings.random = 3;
+    selector.config.play_settings.random2 = 4;
+    selector.config.play_settings.doubleoption = 2;
 
     let course = CourseData {
         name: Some("Class Course".to_string()),
@@ -1155,13 +1155,16 @@ fn test_read_course_class_constraint_resets_random() {
 
     selector.read_course(BMSPlayerMode::PLAY);
 
-    assert_eq!(selector.config.random, 0, "CLASS should reset random to 0");
     assert_eq!(
-        selector.config.random2, 0,
+        selector.config.play_settings.random, 0,
+        "CLASS should reset random to 0"
+    );
+    assert_eq!(
+        selector.config.play_settings.random2, 0,
         "CLASS should reset random2 to 0"
     );
     assert_eq!(
-        selector.config.doubleoption, 0,
+        selector.config.play_settings.doubleoption, 0,
         "CLASS should reset doubleoption to 0"
     );
 }
@@ -1179,7 +1182,7 @@ fn test_internal_read_course_ln_constraint() {
     let path_str = bms_path.to_string_lossy().to_string();
 
     let mut selector = MusicSelector::new();
-    selector.config.lnmode = 2;
+    selector.config.play_settings.lnmode = 2;
 
     let course = CourseData {
         name: Some("LN Course".to_string()),
@@ -1194,7 +1197,7 @@ fn test_internal_read_course_ln_constraint() {
 
     assert!(result, "_read_course should return true on success");
     assert_eq!(
-        selector.config.lnmode, 0,
+        selector.config.play_settings.lnmode, 0,
         "LN constraint should set lnmode to 0"
     );
 }
@@ -1208,7 +1211,7 @@ fn test_internal_read_course_autoplay_applies_constraints() {
     let path_str = bms_path.to_string_lossy().to_string();
 
     let mut selector = MusicSelector::new();
-    selector.config.random = 5;
+    selector.config.play_settings.random = 5;
 
     let course = CourseData {
         name: Some("Class Course".to_string()),
@@ -1224,7 +1227,7 @@ fn test_internal_read_course_autoplay_applies_constraints() {
     assert!(result);
     // AUTOPLAY applies CLASS constraint (same as PLAY)
     assert_eq!(
-        selector.config.random, 0,
+        selector.config.play_settings.random, 0,
         "AUTOPLAY should apply CLASS constraint and reset random"
     );
 }
@@ -1238,7 +1241,7 @@ fn test_internal_read_course_replay_skips_constraints() {
     let path_str = bms_path.to_string_lossy().to_string();
 
     let mut selector = MusicSelector::new();
-    selector.config.random = 5;
+    selector.config.play_settings.random = 5;
 
     let course = CourseData {
         name: Some("Class Course".to_string()),
@@ -1253,7 +1256,10 @@ fn test_internal_read_course_replay_skips_constraints() {
 
     assert!(result);
     // REPLAY should NOT apply constraints
-    assert_eq!(selector.config.random, 5, "REPLAY should not reset random");
+    assert_eq!(
+        selector.config.play_settings.random, 5,
+        "REPLAY should not reset random"
+    );
 }
 
 // ============================================================

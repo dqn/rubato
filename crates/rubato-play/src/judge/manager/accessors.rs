@@ -39,9 +39,9 @@ impl JudgeManager {
         let mut key_judge_window_rate = if let Some(config) = player_config {
             if config.is_custom_judge() {
                 [
-                    config.key_judge_window_rate_perfect_great,
-                    config.key_judge_window_rate_great,
-                    config.key_judge_window_rate_good,
+                    config.judge_settings.key_judge_window_rate_perfect_great,
+                    config.judge_settings.key_judge_window_rate_great,
+                    config.judge_settings.key_judge_window_rate_good,
                 ]
             } else {
                 [100, 100, 100]
@@ -52,9 +52,11 @@ impl JudgeManager {
         let mut scratch_judge_window_rate = if let Some(config) = player_config {
             if config.is_custom_judge() {
                 [
-                    config.scratch_judge_window_rate_perfect_great,
-                    config.scratch_judge_window_rate_great,
-                    config.scratch_judge_window_rate_good,
+                    config
+                        .judge_settings
+                        .scratch_judge_window_rate_perfect_great,
+                    config.judge_settings.scratch_judge_window_rate_great,
+                    config.judge_settings.scratch_judge_window_rate_good,
                 ]
             } else {
                 [100, 100, 100]

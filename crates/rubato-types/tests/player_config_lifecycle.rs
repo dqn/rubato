@@ -136,8 +136,11 @@ fn read_write_roundtrip() {
     let player = PlayerConfig {
         id: Some("roundtrip_player".to_string()),
         name: "test".to_string(),
-        gauge: 3,
-        random: 5,
+        play_settings: rubato_types::player_config::PlaySettings {
+            gauge: 3,
+            random: 5,
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -149,8 +152,8 @@ fn read_write_roundtrip() {
 
     assert_eq!(read_back.id, Some("roundtrip_player".to_string()));
     assert_eq!(read_back.name, "test");
-    assert_eq!(read_back.gauge, 3);
-    assert_eq!(read_back.random, 5);
+    assert_eq!(read_back.play_settings.gauge, 3);
+    assert_eq!(read_back.play_settings.random, 5);
 }
 
 #[test]
@@ -170,8 +173,8 @@ fn read_nonexistent_returns_default() {
 
     // Other fields should be defaults
     assert_eq!(player.name, "NO NAME");
-    assert_eq!(player.gauge, 0);
-    assert_eq!(player.random, 0);
+    assert_eq!(player.play_settings.gauge, 0);
+    assert_eq!(player.play_settings.random, 0);
 }
 
 // ---------------------------------------------------------------------------

@@ -238,7 +238,7 @@ impl Randomizer {
     }
 
     pub fn create_with_side(r: Random, play_side: i32, mode: &Mode, config: &PlayerConfig) -> Self {
-        let threshold_bpm = config.hran_threshold_bpm;
+        let threshold_bpm = config.play_settings.hran_threshold_bpm;
         let threshold_millis;
         if threshold_bpm > 0 {
             threshold_millis = (15000.0f32 / threshold_bpm as f32).ceil() as i32;
@@ -1399,7 +1399,7 @@ mod tests {
     #[test]
     fn randomizer_with_custom_threshold_bpm() {
         let mut config = PlayerConfig::default();
-        config.hran_threshold_bpm = 150;
+        config.play_settings.hran_threshold_bpm = 150;
         let r = Randomizer::create(Random::HRandom, &Mode::BEAT_7K, &config);
         // threshold_millis = ceil(15000.0 / 150) = 100
         let sr = r
@@ -1411,7 +1411,7 @@ mod tests {
     #[test]
     fn randomizer_with_zero_threshold_bpm() {
         let mut config = PlayerConfig::default();
-        config.hran_threshold_bpm = 0;
+        config.play_settings.hran_threshold_bpm = 0;
         let r = Randomizer::create(Random::HRandom, &Mode::BEAT_7K, &config);
         let sr = r
             .as_srandom()
@@ -1422,7 +1422,7 @@ mod tests {
     #[test]
     fn randomizer_with_negative_threshold_uses_default() {
         let mut config = PlayerConfig::default();
-        config.hran_threshold_bpm = -1;
+        config.play_settings.hran_threshold_bpm = -1;
         let r = Randomizer::create(Random::HRandom, &Mode::BEAT_7K, &config);
         let sr = r
             .as_srandom()

@@ -765,7 +765,7 @@ impl LauncherUi {
             ui.end_row();
 
             ui.label("Target:");
-            ui.label(self.player.targetid.to_string());
+            ui.label(self.player.select_settings.targetid.to_string());
             ui.end_row();
         });
     }

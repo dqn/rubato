@@ -83,7 +83,7 @@ impl MusicSelector {
         if bar_renderer_do_input {
             // Take bar out of self to avoid overlapping borrows with self.manager and input
             if let Some(mut bar) = self.bar_rendering.bar.take() {
-                let property_idx = self.config.musicselectinput as usize;
+                let property_idx = self.config.select_settings.musicselectinput as usize;
                 let property = &MusicSelectKeyProperty::VALUES
                     [property_idx.min(MusicSelectKeyProperty::VALUES.len() - 1)];
                 let mut bar_input_ctx = crate::select::bar_renderer::BarInputContext {
@@ -401,36 +401,36 @@ impl MusicSelector {
                 for constraint in &gb.course_data().constraint {
                     match constraint {
                         CourseDataConstraint::Class => {
-                            self.config.random = 0;
-                            self.config.random2 = 0;
-                            self.config.doubleoption = 0;
+                            self.config.play_settings.random = 0;
+                            self.config.play_settings.random2 = 0;
+                            self.config.play_settings.doubleoption = 0;
                         }
                         CourseDataConstraint::Mirror => {
                             if self.config.get_random() == 1 {
-                                self.config.random2 = 1;
-                                self.config.doubleoption = 1;
+                                self.config.play_settings.random2 = 1;
+                                self.config.play_settings.doubleoption = 1;
                             } else {
-                                self.config.random = 0;
-                                self.config.random2 = 0;
-                                self.config.doubleoption = 0;
+                                self.config.play_settings.random = 0;
+                                self.config.play_settings.random2 = 0;
+                                self.config.play_settings.doubleoption = 0;
                             }
                         }
                         CourseDataConstraint::Random => {
                             if self.config.get_random() > 5 {
-                                self.config.random = 0;
+                                self.config.play_settings.random = 0;
                             }
                             if self.config.get_random2() > 5 {
-                                self.config.random2 = 0;
+                                self.config.play_settings.random2 = 0;
                             }
                         }
                         CourseDataConstraint::Ln => {
-                            self.config.lnmode = 0;
+                            self.config.play_settings.lnmode = 0;
                         }
                         CourseDataConstraint::Cn => {
-                            self.config.lnmode = 1;
+                            self.config.play_settings.lnmode = 1;
                         }
                         CourseDataConstraint::Hcn => {
-                            self.config.lnmode = 2;
+                            self.config.play_settings.lnmode = 2;
                         }
                         _ => {}
                     }
@@ -465,7 +465,7 @@ impl MusicSelector {
             // Load/create cached IR ranking data for course
             if let Some(ref mut main) = self.main {
                 use rubato_ir::ranking_data::RankingData;
-                let lnmode = main.player_config().lnmode;
+                let lnmode = main.player_config().play_settings.lnmode;
                 let course = gb.course_data();
                 let cached = main
                     .ranking_data_cache()

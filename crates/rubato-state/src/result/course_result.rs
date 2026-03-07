@@ -385,7 +385,7 @@ impl CourseResult {
                 self.data.save_replay[i] =
                     if self.main.play_data_accessor().exists_replay_data_course(
                         models,
-                        self.resource.player_config().lnmode,
+                        self.resource.player_config().play_settings.lnmode,
                         i as i32,
                         &self.resource.constraint(),
                     ) {
@@ -431,7 +431,7 @@ impl CourseResult {
         // Replay auto save
         if self.resource.play_mode().mode == BMSPlayerModeType::Play {
             for i in 0..REPLAY_SIZE {
-                let auto_save = &self.resource.player_config().autosavereplay;
+                let auto_save = &self.resource.player_config().misc_settings.autosavereplay;
                 if i < auto_save.len()
                     && let Some(new_score) = self.resource.course_score_data()
                     && ReplayAutoSaveConstraint::get(auto_save[i])
@@ -482,7 +482,7 @@ impl CourseResult {
                 }
             }
             let lnmode = if uln {
-                self.resource.player_config().lnmode
+                self.resource.player_config().play_settings.lnmode
             } else {
                 0
             };
@@ -770,10 +770,10 @@ impl CourseResult {
     }
 
     fn update_score_database(&mut self) {
-        let lnmode = self.resource.player_config().lnmode;
-        let random_cfg = self.resource.player_config().random;
-        let random2_cfg = self.resource.player_config().random2;
-        let doubleoption_cfg = self.resource.player_config().doubleoption;
+        let lnmode = self.resource.player_config().play_settings.lnmode;
+        let random_cfg = self.resource.player_config().play_settings.random;
+        let random2_cfg = self.resource.player_config().play_settings.random2;
+        let doubleoption_cfg = self.resource.player_config().play_settings.doubleoption;
         let newscore = self.resource.course_score_data().cloned();
         if newscore.is_none() {
             return;
@@ -889,12 +889,12 @@ impl CourseResult {
             && self.resource.is_update_course_score()
         {
             // Extract gauge value first to avoid borrow conflict
-            let gauge = self.resource.player_config().gauge;
+            let gauge = self.resource.player_config().play_settings.gauge;
             let rd = self.resource.course_replay_mut();
             for replay in rd.iter_mut() {
                 replay.gauge = gauge;
             }
-            let lnmode = self.resource.player_config().lnmode;
+            let lnmode = self.resource.player_config().play_settings.lnmode;
             let constraint = self.resource.constraint();
             if let Some(models) = self.resource.course_bms_models() {
                 // Clone replays for write (write_brd_course calls shrink on each)
@@ -1037,7 +1037,7 @@ mod tests {
             _y: i32,
         ) {
             if let Some(config) = ctx.player_config_mut() {
-                config.random = (config.random + 1) % 10;
+                config.play_settings.random = (config.play_settings.random + 1) % 10;
             }
         }
 
@@ -1183,7 +1183,7 @@ mod tests {
 
         <CourseResult as MainState>::handle_skin_mouse_pressed(&mut cr, 0, 10, 10);
 
-        assert_eq!(cr.resource.player_config().random, 1);
+        assert_eq!(cr.resource.player_config().play_settings.random, 1);
     }
 
     #[test]

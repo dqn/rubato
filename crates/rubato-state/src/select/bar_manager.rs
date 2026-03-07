@@ -602,7 +602,7 @@ impl BarManager {
             if let Some(ref mut ctx) = ctx
                 && let Some(ref mut cache) = ctx.score_cache
             {
-                let lnmode = ctx.player_config.lnmode;
+                let lnmode = ctx.player_config.play_settings.lnmode;
                 for b in &mut l {
                     if let Some(sb) = b.as_song_bar() {
                         let sd = sb.song_data();
@@ -1097,7 +1097,7 @@ impl BarContentsLoaderThread {
     /// Run the loader on the given bars.
     /// Corresponds to Java BarContentsLoaderThread.run()
     pub fn run(&self, bars: &mut [Bar], ctx: &mut LoaderContext) {
-        let lnmode = ctx.player_config.lnmode;
+        let lnmode = ctx.player_config.play_settings.lnmode;
 
         // Phase 1: Load scores
         for bar in bars.iter_mut() {

@@ -563,25 +563,40 @@ fn test_update_player_commit_player_roundtrip() {
 
     let player = PlayerConfig {
         name: "TestPlayer".to_string(),
-        random: 3,
-        random2: 5,
-        doubleoption: 1,
-        gauge: 2,
-        lnmode: 1,
-        judgetiming: 10,
-        bpmguide: true,
-        custom_judge: true,
-        key_judge_window_rate_perfect_great: 500,
-        mine_mode: 2,
-        scroll_mode: 1,
-        longnote_mode: 3,
-        forcedcnendings: true,
-        longnote_rate: 1.5,
-        showjudgearea: true,
-        markprocessednote: true,
-        showhiddennote: true,
-        showpastnote: true,
-        autosavereplay: vec![1, 2, 3, 4],
+        play_settings: rubato_types::player_config::PlaySettings {
+            random: 3,
+            random2: 5,
+            doubleoption: 1,
+            gauge: 2,
+            lnmode: 1,
+            forcedcnendings: true,
+            mine_mode: 2,
+            ..Default::default()
+        },
+        judge_settings: rubato_types::player_config::JudgeSettings {
+            judgetiming: 10,
+            custom_judge: true,
+            key_judge_window_rate_perfect_great: 500,
+            ..Default::default()
+        },
+        display_settings: rubato_types::player_config::DisplaySettings {
+            bpmguide: true,
+            scroll_mode: 1,
+            showjudgearea: true,
+            markprocessednote: true,
+            showhiddennote: true,
+            showpastnote: true,
+            ..Default::default()
+        },
+        note_modifier_settings: rubato_types::player_config::NoteModifierSettings {
+            longnote_mode: 3,
+            longnote_rate: 1.5,
+            ..Default::default()
+        },
+        misc_settings: rubato_types::player_config::MiscSettings {
+            autosavereplay: vec![1, 2, 3, 4],
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -598,11 +613,11 @@ fn test_update_player_commit_player_roundtrip() {
 
     let committed = view.player.as_ref().unwrap();
     assert_eq!(committed.name, "TestPlayer");
-    assert_eq!(committed.random, 3);
-    assert_eq!(committed.random2, 5);
-    assert_eq!(committed.doubleoption, 1);
-    assert_eq!(committed.gauge, 2);
-    assert_eq!(committed.lnmode, 1);
+    assert_eq!(committed.play_settings.random, 3);
+    assert_eq!(committed.play_settings.random2, 5);
+    assert_eq!(committed.play_settings.doubleoption, 1);
+    assert_eq!(committed.play_settings.gauge, 2);
+    assert_eq!(committed.play_settings.lnmode, 1);
 }
 
 // ---- LR2 score import tests ----

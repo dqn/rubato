@@ -252,66 +252,72 @@ fn config_player_deserialize() {
     // Basic fields
     assert_eq!(pc.id.as_deref(), Some("player_001"));
     assert_eq!(pc.name, "TestPlayer");
-    assert_eq!(pc.gauge, 3);
-    assert_eq!(pc.random, 5);
-    assert_eq!(pc.random2, 2);
-    assert_eq!(pc.doubleoption, 1);
-    assert_eq!(pc.chart_replication_mode, "NONE");
-    assert_eq!(pc.targetid, "RATE_AA");
-    assert_eq!(pc.targetlist, vec!["RATE_A", "RATE_AA", "MAX"]);
-    assert_eq!(pc.judgetiming, -15);
-    assert!(pc.notes_display_timing_auto_adjust);
+    assert_eq!(pc.play_settings.gauge, 3);
+    assert_eq!(pc.play_settings.random, 5);
+    assert_eq!(pc.play_settings.random2, 2);
+    assert_eq!(pc.play_settings.doubleoption, 1);
+    assert_eq!(pc.play_settings.chart_replication_mode, "NONE");
+    assert_eq!(pc.select_settings.targetid, "RATE_AA");
+    assert_eq!(
+        pc.select_settings.targetlist,
+        vec!["RATE_A", "RATE_AA", "MAX"]
+    );
+    assert_eq!(pc.judge_settings.judgetiming, -15);
+    assert!(pc.judge_settings.notes_display_timing_auto_adjust);
     assert_eq!(pc.mode, Some(Mode::BEAT_7K));
-    assert_eq!(pc.misslayer_duration, 300);
-    assert_eq!(pc.lnmode, 1);
-    assert!(pc.forcedcnendings);
+    assert_eq!(pc.display_settings.misslayer_duration, 300);
+    assert_eq!(pc.play_settings.lnmode, 1);
+    assert!(pc.play_settings.forcedcnendings);
 
     // Scroll/longnote/mine
-    assert_eq!(pc.scroll_mode, 1);
-    assert_eq!(pc.scroll_section, 8);
-    assert!((pc.scroll_rate - 0.75).abs() < 0.001);
-    assert_eq!(pc.longnote_mode, 2);
-    assert!((pc.longnote_rate - 0.8).abs() < 0.001);
-    assert_eq!(pc.mine_mode, 2);
+    assert_eq!(pc.display_settings.scroll_mode, 1);
+    assert_eq!(pc.display_settings.scroll_section, 8);
+    assert!((pc.display_settings.scroll_rate - 0.75).abs() < 0.001);
+    assert_eq!(pc.note_modifier_settings.longnote_mode, 2);
+    assert!((pc.note_modifier_settings.longnote_rate - 0.8).abs() < 0.001);
+    assert_eq!(pc.play_settings.mine_mode, 2);
 
     // Custom judge
-    assert!(pc.custom_judge);
-    assert_eq!(pc.key_judge_window_rate_perfect_great, 200);
-    assert_eq!(pc.key_judge_window_rate_great, 150);
-    assert_eq!(pc.key_judge_window_rate_good, 50);
-    assert_eq!(pc.scratch_judge_window_rate_perfect_great, 300);
-    assert_eq!(pc.scratch_judge_window_rate_great, 250);
-    assert_eq!(pc.scratch_judge_window_rate_good, 80);
+    assert!(pc.judge_settings.custom_judge);
+    assert_eq!(pc.judge_settings.key_judge_window_rate_perfect_great, 200);
+    assert_eq!(pc.judge_settings.key_judge_window_rate_great, 150);
+    assert_eq!(pc.judge_settings.key_judge_window_rate_good, 50);
+    assert_eq!(
+        pc.judge_settings.scratch_judge_window_rate_perfect_great,
+        300
+    );
+    assert_eq!(pc.judge_settings.scratch_judge_window_rate_great, 250);
+    assert_eq!(pc.judge_settings.scratch_judge_window_rate_good, 80);
 
     // Assist
-    assert!(pc.bpmguide);
-    assert_eq!(pc.extranote_type, 1);
-    assert_eq!(pc.extranote_depth, 5);
-    assert!(pc.extranote_scratch);
+    assert!(pc.display_settings.bpmguide);
+    assert_eq!(pc.display_settings.extranote_type, 1);
+    assert_eq!(pc.display_settings.extranote_depth, 5);
+    assert!(pc.display_settings.extranote_scratch);
 
     // Display
-    assert!(pc.showjudgearea);
-    assert!(pc.markprocessednote);
+    assert!(pc.display_settings.showjudgearea);
+    assert!(pc.display_settings.markprocessednote);
 
     // H-RANDOM/gauge auto shift
-    assert_eq!(pc.hran_threshold_bpm, 180);
-    assert_eq!(pc.gauge_auto_shift, 2);
-    assert_eq!(pc.bottom_shiftable_gauge, 1);
+    assert_eq!(pc.play_settings.hran_threshold_bpm, 180);
+    assert_eq!(pc.play_settings.gauge_auto_shift, 2);
+    assert_eq!(pc.play_settings.bottom_shiftable_gauge, 1);
 
     // Auto-save replay (Vec<i32>, not Option<Vec<i32>>)
-    assert_eq!(pc.autosavereplay, vec![1, 0, 1, 0]);
+    assert_eq!(pc.misc_settings.autosavereplay, vec![1, 0, 1, 0]);
 
     // 7to9
-    assert_eq!(pc.seven_to_nine_pattern, 3);
-    assert_eq!(pc.seven_to_nine_type, 1);
+    assert_eq!(pc.note_modifier_settings.seven_to_nine_pattern, 3);
+    assert_eq!(pc.note_modifier_settings.seven_to_nine_type, 1);
 
     // Exit
-    assert_eq!(pc.exit_press_duration, 2000);
+    assert_eq!(pc.misc_settings.exit_press_duration, 2000);
 
     // Misc flags
-    assert!(pc.is_guide_se);
-    assert!(pc.is_window_hold);
-    assert!(pc.is_random_select);
+    assert!(pc.display_settings.is_guide_se);
+    assert!(pc.select_settings.is_window_hold);
+    assert!(pc.select_settings.is_random_select);
 
     // Mode7 PlayConfig
     let mode7 = &pc.mode7;
@@ -350,12 +356,12 @@ fn config_player_deserialize() {
     assert_eq!(mode7.controller[0].analog_scratch_threshold, 30);
 
     // Display/sort
-    assert!(pc.showhiddennote);
-    assert!(pc.showpastnote);
-    assert!(!pc.chart_preview);
-    assert_eq!(pc.sort, 3);
-    assert_eq!(pc.sortid.as_deref(), Some("TITLE"));
-    assert_eq!(pc.musicselectinput, 1);
+    assert!(pc.display_settings.showhiddennote);
+    assert!(pc.display_settings.showpastnote);
+    assert!(!pc.display_settings.chart_preview);
+    assert_eq!(pc.select_settings.sort, 3);
+    assert_eq!(pc.select_settings.sortid.as_deref(), Some("TITLE"));
+    assert_eq!(pc.select_settings.musicselectinput, 1);
 
     // IR config (Vec<Option<IRConfig>>, not Option<Vec<IRConfig>>)
     let irconfigs: Vec<_> = pc.irconfig.iter().filter_map(|c| c.as_ref()).collect();
@@ -371,7 +377,7 @@ fn config_player_deserialize() {
     assert!(pc.enable_request);
     assert!(pc.notify_request);
     assert_eq!(pc.max_request_count, 50);
-    assert!(pc.event_mode);
+    assert!(pc.select_settings.event_mode);
 }
 
 #[test]
@@ -386,18 +392,18 @@ fn config_player_validate_after_deserialize() {
     pc.validate();
 
     // Values within valid range should remain unchanged after validation
-    assert_eq!(pc.gauge, 3);
-    assert_eq!(pc.random, 5);
-    assert_eq!(pc.judgetiming, -15);
-    assert_eq!(pc.sort, 3);
-    assert_eq!(pc.lnmode, 1);
+    assert_eq!(pc.play_settings.gauge, 3);
+    assert_eq!(pc.play_settings.random, 5);
+    assert_eq!(pc.judge_settings.judgetiming, -15);
+    assert_eq!(pc.select_settings.sort, 3);
+    assert_eq!(pc.play_settings.lnmode, 1);
 
     // Skin array should be normalized to expected size
     let max_skin_id = rubato_types::skin_type::SkinType::max_skin_type_id() as usize;
     assert_eq!(pc.skin.len(), max_skin_id + 1);
 
     // autosavereplay should remain length 4
-    assert_eq!(pc.autosavereplay.len(), 4);
+    assert_eq!(pc.misc_settings.autosavereplay.len(), 4);
 }
 
 #[test]
@@ -414,10 +420,16 @@ fn config_player_serde_round_trip() {
     let pc2: PlayerConfig = serde_json::from_str(&json).unwrap();
 
     assert_eq!(pc.name, pc2.name);
-    assert_eq!(pc.gauge, pc2.gauge);
-    assert_eq!(pc.random, pc2.random);
-    assert_eq!(pc.judgetiming, pc2.judgetiming);
-    assert_eq!(pc.targetlist, pc2.targetlist);
+    assert_eq!(pc.play_settings.gauge, pc2.play_settings.gauge);
+    assert_eq!(pc.play_settings.random, pc2.play_settings.random);
+    assert_eq!(
+        pc.judge_settings.judgetiming,
+        pc2.judge_settings.judgetiming
+    );
+    assert_eq!(
+        pc.select_settings.targetlist,
+        pc2.select_settings.targetlist
+    );
     assert_eq!(
         pc.mode7.playconfig.judgetype,
         pc2.mode7.playconfig.judgetype

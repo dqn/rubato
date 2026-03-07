@@ -223,7 +223,7 @@ impl MainControllerAccess for QueuedControllerAccess {
         self.ir_connection.as_ref().and_then(|conn| {
             conn.get_course_url(&IRCourseData::new_with_lntype(
                 course_data,
-                self.player_config.lnmode,
+                self.player_config.play_settings.lnmode,
             ))
         })
     }
@@ -657,7 +657,7 @@ impl StateFactory for LauncherStateFactory {
                 }
 
                 // Wire guide SE from player config
-                player.set_guide_se(controller.player_config().is_guide_se);
+                player.set_guide_se(controller.player_config().display_settings.is_guide_se);
 
                 // Wire audio config
                 if let Some(audio_config) = controller.config().audio_config() {
@@ -672,7 +672,7 @@ impl StateFactory for LauncherStateFactory {
 
                 // --- Target/rival score DB load ---
                 // Java: main.getPlayDataAccessor().readScoreData(model, config.getLnmode())
-                let lnmode = controller.player_config().lnmode;
+                let lnmode = controller.player_config().play_settings.lnmode;
                 let sha256 = model.sha256();
                 let has_ln = model.contains_undefined_long_note();
                 let db_score = controller.read_score_data_by_hash(sha256, has_ln, lnmode);
@@ -686,7 +686,7 @@ impl StateFactory for LauncherStateFactory {
                 // Java: TargetProperty.getTargetProperty(config.getTargetid()).getTarget(main)
                 // Java: resource.setTargetScoreData(targetScore)
                 let target_score = if rival_score.is_none() || is_course_mode {
-                    let targetid = controller.player_config().targetid.clone();
+                    let targetid = controller.player_config().select_settings.targetid.clone();
                     let total_notes = model.total_notes();
                     Self::compute_target_score(&targetid, total_notes, controller)
                 } else {

@@ -183,7 +183,7 @@ impl MainState for MusicDecide {
         self.load_skin(SkinType::Decide.id());
 
         // resource.setOrgGaugeOption(resource.getPlayerConfig().getGauge())
-        let gauge = self.resource.player_config().gauge;
+        let gauge = self.resource.player_config().play_settings.gauge;
         self.resource.set_org_gauge_option(gauge);
     }
 

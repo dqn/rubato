@@ -158,53 +158,55 @@ impl PlayConfigurationView {
         // musicselectController.updatePlayer(player)
         self.music_select_controller.update_player(&player);
 
-        self.scoreop = Some(player.random);
-        self.scoreop2 = Some(player.random2);
-        self.doubleop = Some(player.doubleoption);
-        self.seventoninepattern = Some(player.seven_to_nine_pattern);
-        self.seventoninetype = Some(player.seven_to_nine_type);
-        self.exitpressduration = player.exit_press_duration;
-        self.chartpreview = player.chart_preview;
-        self.guidese = player.is_guide_se;
-        self.windowhold = player.is_window_hold;
-        self.gaugeop = Some(player.gauge);
-        self.lntype = Some(player.lnmode);
+        self.scoreop = Some(player.play_settings.random);
+        self.scoreop2 = Some(player.play_settings.random2);
+        self.doubleop = Some(player.play_settings.doubleoption);
+        self.seventoninepattern = Some(player.note_modifier_settings.seven_to_nine_pattern);
+        self.seventoninetype = Some(player.note_modifier_settings.seven_to_nine_type);
+        self.exitpressduration = player.misc_settings.exit_press_duration;
+        self.chartpreview = player.display_settings.chart_preview;
+        self.guidese = player.display_settings.is_guide_se;
+        self.windowhold = player.select_settings.is_window_hold;
+        self.gaugeop = Some(player.play_settings.gauge);
+        self.lntype = Some(player.play_settings.lnmode);
 
-        self.notesdisplaytiming = player.judgetiming;
-        self.notesdisplaytimingautoadjust = player.notes_display_timing_auto_adjust;
+        self.notesdisplaytiming = player.judge_settings.judgetiming;
+        self.notesdisplaytimingautoadjust = player.judge_settings.notes_display_timing_auto_adjust;
 
-        self.bpmguide = player.bpmguide;
-        self.gaugeautoshift = Some(player.gauge_auto_shift);
-        self.bottomshiftablegauge = Some(player.bottom_shiftable_gauge);
+        self.bpmguide = player.display_settings.bpmguide;
+        self.gaugeautoshift = Some(player.play_settings.gauge_auto_shift);
+        self.bottomshiftablegauge = Some(player.play_settings.bottom_shiftable_gauge);
 
-        self.customjudge = player.custom_judge;
-        self.njudgepg = player.key_judge_window_rate_perfect_great;
-        self.njudgegr = player.key_judge_window_rate_great;
-        self.njudgegd = player.key_judge_window_rate_good;
-        self.sjudgepg = player.scratch_judge_window_rate_perfect_great;
-        self.sjudgegr = player.scratch_judge_window_rate_great;
-        self.sjudgegd = player.scratch_judge_window_rate_good;
-        self.minemode = Some(player.mine_mode);
-        self.scrollmode = Some(player.scroll_mode);
-        self.longnotemode = Some(player.longnote_mode);
-        self.forcedcnendings = player.forcedcnendings;
-        self.longnoterate = player.longnote_rate;
-        self.hranthresholdbpm = player.hran_threshold_bpm;
-        self.judgeregion = player.showjudgearea;
-        self.markprocessednote = player.markprocessednote;
-        self.extranotedepth = player.extranote_depth;
+        self.customjudge = player.judge_settings.custom_judge;
+        self.njudgepg = player.judge_settings.key_judge_window_rate_perfect_great;
+        self.njudgegr = player.judge_settings.key_judge_window_rate_great;
+        self.njudgegd = player.judge_settings.key_judge_window_rate_good;
+        self.sjudgepg = player
+            .judge_settings
+            .scratch_judge_window_rate_perfect_great;
+        self.sjudgegr = player.judge_settings.scratch_judge_window_rate_great;
+        self.sjudgegd = player.judge_settings.scratch_judge_window_rate_good;
+        self.minemode = Some(player.play_settings.mine_mode);
+        self.scrollmode = Some(player.display_settings.scroll_mode);
+        self.longnotemode = Some(player.note_modifier_settings.longnote_mode);
+        self.forcedcnendings = player.play_settings.forcedcnendings;
+        self.longnoterate = player.note_modifier_settings.longnote_rate;
+        self.hranthresholdbpm = player.play_settings.hran_threshold_bpm;
+        self.judgeregion = player.display_settings.showjudgearea;
+        self.markprocessednote = player.display_settings.markprocessednote;
+        self.extranotedepth = player.display_settings.extranote_depth;
 
-        if player.autosavereplay.len() >= 4 {
-            self.autosavereplay1 = Some(player.autosavereplay[0]);
-            self.autosavereplay2 = Some(player.autosavereplay[1]);
-            self.autosavereplay3 = Some(player.autosavereplay[2]);
-            self.autosavereplay4 = Some(player.autosavereplay[3]);
+        if player.misc_settings.autosavereplay.len() >= 4 {
+            self.autosavereplay1 = Some(player.misc_settings.autosavereplay[0]);
+            self.autosavereplay2 = Some(player.misc_settings.autosavereplay[1]);
+            self.autosavereplay3 = Some(player.misc_settings.autosavereplay[2]);
+            self.autosavereplay4 = Some(player.misc_settings.autosavereplay[3]);
         }
 
-        self.target = player.targetlist.clone();
-        self.target_selected = Some(player.targetid.clone());
-        self.showhiddennote = player.showhiddennote;
-        self.showpastnote = player.showpastnote;
+        self.target = player.select_settings.targetlist.clone();
+        self.target_selected = Some(player.select_settings.targetid.clone());
+        self.showhiddennote = player.display_settings.showhiddennote;
+        self.showpastnote = player.display_settings.showpastnote;
 
         // irController.update(player)
         self.ir_controller.update(&mut player);
@@ -306,53 +308,57 @@ impl PlayConfigurationView {
             // videoController.commitPlayer(player)
             self.video_controller.commit_player(player);
 
-            player.random = self.scoreop.unwrap_or(0);
-            player.random2 = self.scoreop2.unwrap_or(0);
-            player.doubleoption = self.doubleop.unwrap_or(0);
-            player.seven_to_nine_pattern = self.seventoninepattern.unwrap_or(0);
-            player.seven_to_nine_type = self.seventoninetype.unwrap_or(0);
-            player.exit_press_duration = self.exitpressduration;
-            player.chart_preview = self.chartpreview;
-            player.is_guide_se = self.guidese;
-            player.is_window_hold = self.windowhold;
-            player.gauge = self.gaugeop.unwrap_or(0);
-            player.lnmode = self.lntype.unwrap_or(0);
-            player.judgetiming = self.notesdisplaytiming;
-            player.notes_display_timing_auto_adjust = self.notesdisplaytimingautoadjust;
+            player.play_settings.random = self.scoreop.unwrap_or(0);
+            player.play_settings.random2 = self.scoreop2.unwrap_or(0);
+            player.play_settings.doubleoption = self.doubleop.unwrap_or(0);
+            player.note_modifier_settings.seven_to_nine_pattern =
+                self.seventoninepattern.unwrap_or(0);
+            player.note_modifier_settings.seven_to_nine_type = self.seventoninetype.unwrap_or(0);
+            player.misc_settings.exit_press_duration = self.exitpressduration;
+            player.display_settings.chart_preview = self.chartpreview;
+            player.display_settings.is_guide_se = self.guidese;
+            player.select_settings.is_window_hold = self.windowhold;
+            player.play_settings.gauge = self.gaugeop.unwrap_or(0);
+            player.play_settings.lnmode = self.lntype.unwrap_or(0);
+            player.judge_settings.judgetiming = self.notesdisplaytiming;
+            player.judge_settings.notes_display_timing_auto_adjust =
+                self.notesdisplaytimingautoadjust;
 
-            player.bpmguide = self.bpmguide;
-            player.gauge_auto_shift = self.gaugeautoshift.unwrap_or(0);
-            player.bottom_shiftable_gauge = self.bottomshiftablegauge.unwrap_or(0);
-            player.custom_judge = self.customjudge;
-            player.key_judge_window_rate_perfect_great = self.njudgepg;
-            player.key_judge_window_rate_great = self.njudgegr;
-            player.key_judge_window_rate_good = self.njudgegd;
-            player.scratch_judge_window_rate_perfect_great = self.sjudgepg;
-            player.scratch_judge_window_rate_great = self.sjudgegr;
-            player.scratch_judge_window_rate_good = self.sjudgegd;
-            player.mine_mode = self.minemode.unwrap_or(0);
-            player.scroll_mode = self.scrollmode.unwrap_or(0);
-            player.longnote_mode = self.longnotemode.unwrap_or(0);
-            player.forcedcnendings = self.forcedcnendings;
-            player.longnote_rate = self.longnoterate;
-            player.hran_threshold_bpm = self.hranthresholdbpm;
-            player.markprocessednote = self.markprocessednote;
-            player.extranote_depth = self.extranotedepth;
+            player.display_settings.bpmguide = self.bpmguide;
+            player.play_settings.gauge_auto_shift = self.gaugeautoshift.unwrap_or(0);
+            player.play_settings.bottom_shiftable_gauge = self.bottomshiftablegauge.unwrap_or(0);
+            player.judge_settings.custom_judge = self.customjudge;
+            player.judge_settings.key_judge_window_rate_perfect_great = self.njudgepg;
+            player.judge_settings.key_judge_window_rate_great = self.njudgegr;
+            player.judge_settings.key_judge_window_rate_good = self.njudgegd;
+            player
+                .judge_settings
+                .scratch_judge_window_rate_perfect_great = self.sjudgepg;
+            player.judge_settings.scratch_judge_window_rate_great = self.sjudgegr;
+            player.judge_settings.scratch_judge_window_rate_good = self.sjudgegd;
+            player.play_settings.mine_mode = self.minemode.unwrap_or(0);
+            player.display_settings.scroll_mode = self.scrollmode.unwrap_or(0);
+            player.note_modifier_settings.longnote_mode = self.longnotemode.unwrap_or(0);
+            player.play_settings.forcedcnendings = self.forcedcnendings;
+            player.note_modifier_settings.longnote_rate = self.longnoterate;
+            player.play_settings.hran_threshold_bpm = self.hranthresholdbpm;
+            player.display_settings.markprocessednote = self.markprocessednote;
+            player.display_settings.extranote_depth = self.extranotedepth;
 
-            player.autosavereplay = vec![
+            player.misc_settings.autosavereplay = vec![
                 self.autosavereplay1.unwrap_or(0),
                 self.autosavereplay2.unwrap_or(0),
                 self.autosavereplay3.unwrap_or(0),
                 self.autosavereplay4.unwrap_or(0),
             ];
 
-            player.showjudgearea = self.judgeregion;
+            player.display_settings.showjudgearea = self.judgeregion;
             if let Some(ref target) = self.target_selected {
-                player.targetid = target.clone();
+                player.select_settings.targetid = target.clone();
             }
 
-            player.showhiddennote = self.showhiddennote;
-            player.showpastnote = self.showpastnote;
+            player.display_settings.showhiddennote = self.showhiddennote;
+            player.display_settings.showpastnote = self.showpastnote;
         }
 
         // musicselectController.commitPlayer()

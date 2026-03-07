@@ -105,7 +105,7 @@ pub struct PlayerResource {
 
 impl PlayerResource {
     pub fn new(config: Config, pconfig: PlayerConfig) -> Self {
-        let org_gauge_option = pconfig.gauge;
+        let org_gauge_option = pconfig.play_settings.gauge;
         let bmsresource = Some(BMSResource::new(&config, &pconfig));
         Self {
             margin_time: 0,
@@ -168,7 +168,7 @@ impl PlayerResource {
     pub fn set_bms_file(&mut self, f: &Path, mode: BMSPlayerMode) -> bool {
         self.mode = Some(mode);
         self.replay = Some(ReplayData::new());
-        let result = Self::load_bms_model(f, self.pconfig.lnmode);
+        let result = Self::load_bms_model(f, self.pconfig.play_settings.lnmode);
         if let Some((model, margin_time)) = result {
             if model.timelines.is_empty() {
                 return false;
@@ -210,7 +210,9 @@ impl PlayerResource {
     pub fn reload_bms_file(&mut self) {
         if let Some(path_str) = self.bms_model().and_then(|m| m.path()) {
             let path = PathBuf::from(&path_str);
-            if let Some((model, margin_time)) = Self::load_bms_model(&path, self.pconfig.lnmode) {
+            if let Some((model, margin_time)) =
+                Self::load_bms_model(&path, self.pconfig.play_settings.lnmode)
+            {
                 self.margin_time = margin_time;
                 let songdata = SongData::new_from_model(model, false);
                 self.songdata = Some(songdata);
@@ -309,7 +311,7 @@ impl PlayerResource {
     }
 
     pub fn set_course_bms_files(&mut self, files: &[PathBuf]) -> bool {
-        let lnmode = self.pconfig.lnmode;
+        let lnmode = self.pconfig.play_settings.lnmode;
         let mut models = Vec::with_capacity(files.len());
         for f in files {
             match Self::load_bms_model(f, lnmode) {
@@ -852,7 +854,7 @@ impl PlayerResourceAccess for PlayerResource {
     }
 
     fn set_player_config_gauge(&mut self, gauge: i32) {
-        self.pconfig.gauge = gauge;
+        self.pconfig.play_settings.gauge = gauge;
     }
 
     fn set_auto_play_songs(&mut self, paths: Vec<PathBuf>, loop_play: bool) {

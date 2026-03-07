@@ -139,7 +139,7 @@ impl MusicSelector {
                 && self.ranking.currentir.is_none()
             {
                 use rubato_ir::ranking_data::RankingData;
-                let lnmode = main.player_config().lnmode;
+                let lnmode = main.player_config().play_settings.lnmode;
                 let rd = RankingData::new();
                 self.ranking.currentir = Some(rd.clone());
                 if let Some(cache) = main.ranking_data_cache_mut() {
@@ -219,7 +219,7 @@ impl MusicSelector {
         songdata: Option<&SongData>,
         replay_index: i32,
     ) -> Option<rubato_types::replay_data::ReplayData> {
-        let mode = ChartReplicationMode::get(&config.chart_replication_mode);
+        let mode = ChartReplicationMode::get(&config.play_settings.chart_replication_mode);
         match mode {
             ChartReplicationMode::None => None,
             ChartReplicationMode::RivalChart => rival_score.map(|rival| {
@@ -242,7 +242,12 @@ impl MusicSelector {
                 let sd = songdata?;
                 let sha256 = &sd.sha256;
                 let has_ln = sd.has_undefined_long_note();
-                let replay = main.read_replay_data(sha256, has_ln, config.lnmode, replay_index)?;
+                let replay = main.read_replay_data(
+                    sha256,
+                    has_ln,
+                    config.play_settings.lnmode,
+                    replay_index,
+                )?;
                 let mut opt = rubato_types::replay_data::ReplayData::new();
                 opt.randomoption = replay.randomoption;
                 opt.randomoption2 = replay.randomoption2;
@@ -258,11 +263,11 @@ impl MusicSelector {
     }
 
     pub fn sort(&self) -> i32 {
-        self.config.sort
+        self.config.select_settings.sort
     }
 
     pub fn set_sort(&mut self, sort: i32) {
-        self.config.sort = sort;
+        self.config.select_settings.sort = sort;
         self.config
             .set_sortid(BarSorter::DEFAULT_SORTER[sort as usize].name().to_string());
     }
@@ -402,7 +407,7 @@ impl MusicSelector {
                         // Refresh currentir from cache
                         if let Some(main) = self.main.as_ref() {
                             use rubato_ir::ranking_data::RankingData;
-                            let lnmode = main.player_config().lnmode;
+                            let lnmode = main.player_config().play_settings.lnmode;
                             let song = song_bar.song_data();
                             self.ranking.currentir = main
                                 .ranking_data_cache()
@@ -428,7 +433,7 @@ impl MusicSelector {
                         // Refresh currentir from cache for course
                         if let Some(main) = self.main.as_ref() {
                             use rubato_ir::ranking_data::RankingData;
-                            let lnmode = main.player_config().lnmode;
+                            let lnmode = main.player_config().play_settings.lnmode;
                             let course = grade_bar.course_data();
                             self.ranking.currentir = main
                                 .ranking_data_cache()

@@ -26,7 +26,7 @@ impl BMSPlayer {
             const IDENTITY: i32 = 0; // Random::Identity ordinal
             const MIRROR: i32 = 1; // Random::Mirror ordinal
             const RANDOM: i32 = 2; // Random::Random ordinal
-            if config.random == MIRROR {
+            if config.play_settings.random == MIRROR {
                 match gb.random {
                     IDENTITY => self.score.playinfo.randomoption = MIRROR,
                     MIRROR => self.score.playinfo.randomoption = IDENTITY,
@@ -58,27 +58,29 @@ impl BMSPlayer {
         // -- Phase 1: Pre-option modifiers (scroll, LN, mine, extra) --
         let mut pre_mods: Vec<Box<dyn PatternModifier>> = Vec::new();
 
-        if config.scroll_mode > 0 {
+        if config.display_settings.scroll_mode > 0 {
             pre_mods.push(Box::new(ScrollSpeedModifier::with_params(
-                config.scroll_mode - 1,
-                config.scroll_section,
-                config.scroll_rate,
+                config.display_settings.scroll_mode - 1,
+                config.display_settings.scroll_section,
+                config.display_settings.scroll_rate,
             )));
         }
-        if config.longnote_mode > 0 {
+        if config.note_modifier_settings.longnote_mode > 0 {
             pre_mods.push(Box::new(LongNoteModifier::with_params(
-                config.longnote_mode - 1,
-                config.longnote_rate,
+                config.note_modifier_settings.longnote_mode - 1,
+                config.note_modifier_settings.longnote_rate,
             )));
         }
-        if config.mine_mode > 0 {
-            pre_mods.push(Box::new(MineNoteModifier::with_mode(config.mine_mode - 1)));
+        if config.play_settings.mine_mode > 0 {
+            pre_mods.push(Box::new(MineNoteModifier::with_mode(
+                config.play_settings.mine_mode - 1,
+            )));
         }
-        if config.extranote_depth > 0 {
+        if config.display_settings.extranote_depth > 0 {
             pre_mods.push(Box::new(ExtraNoteModifier::new(
-                config.extranote_type,
-                config.extranote_depth,
-                config.extranote_scratch,
+                config.display_settings.extranote_type,
+                config.display_settings.extranote_depth,
+                config.display_settings.extranote_scratch,
             )));
         }
 
@@ -188,7 +190,7 @@ impl BMSPlayer {
         );
 
         // 7to9 mode
-        if config.seven_to_nine_pattern >= 1 && mode == Mode::BEAT_7K {
+        if config.note_modifier_settings.seven_to_nine_pattern >= 1 && mode == Mode::BEAT_7K {
             let mode_mod = ModeModifier::new(Mode::BEAT_7K, Mode::POPN_9K, config.clone());
             random_mods.push(Box::new(mode_mod));
         }
@@ -427,19 +429,22 @@ impl BMSPlayer {
 
         // BPM Guide check (Java lines 269-272)
         // BPM変化がなければBPMガイドなし
-        if config.bpmguide && (self.model.get_min_bpm() < self.model.max_bpm()) {
+        if config.display_settings.bpmguide && (self.model.get_min_bpm() < self.model.max_bpm()) {
             self.assist = self.assist.max(1);
             score = false;
         }
 
         // Custom Judge check (Java lines 275-280)
-        if config.custom_judge
-            && (config.key_judge_window_rate_perfect_great > 100
-                || config.key_judge_window_rate_great > 100
-                || config.key_judge_window_rate_good > 100
-                || config.scratch_judge_window_rate_perfect_great > 100
-                || config.scratch_judge_window_rate_great > 100
-                || config.scratch_judge_window_rate_good > 100)
+        if config.judge_settings.custom_judge
+            && (config.judge_settings.key_judge_window_rate_perfect_great > 100
+                || config.judge_settings.key_judge_window_rate_great > 100
+                || config.judge_settings.key_judge_window_rate_good > 100
+                || config
+                    .judge_settings
+                    .scratch_judge_window_rate_perfect_great
+                    > 100
+                || config.judge_settings.scratch_judge_window_rate_great > 100
+                || config.judge_settings.scratch_judge_window_rate_good > 100)
         {
             self.assist = self.assist.max(2);
             score = false;

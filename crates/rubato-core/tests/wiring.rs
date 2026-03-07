@@ -78,16 +78,16 @@ fn wiring_player_config_defaults_without_file() {
     assert_eq!(pc.name, "NO NAME");
 
     // Gauge should be 0 (normal)
-    assert_eq!(pc.gauge, 0);
+    assert_eq!(pc.play_settings.gauge, 0);
 
     // Judge timing should be 0 (no offset)
-    assert_eq!(pc.judgetiming, 0);
+    assert_eq!(pc.judge_settings.judgetiming, 0);
 
     // Target list should not be empty
-    assert!(!pc.targetlist.is_empty());
+    assert!(!pc.select_settings.targetlist.is_empty());
 
     // Autosave replay should have 4 slots, all 0
-    assert_eq!(pc.autosavereplay.len(), 4);
+    assert_eq!(pc.misc_settings.autosavereplay.len(), 4);
 }
 
 /// PlayerConfig::read_player_config from a nonexistent path returns defaults
