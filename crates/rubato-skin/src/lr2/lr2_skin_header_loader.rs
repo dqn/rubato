@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::lr2::lr2_skin_loader::LR2SkinLoaderState;
 use crate::skin_property::{OFFSET_ALL, OFFSET_JUDGE_1P, OFFSET_JUDGEDETAIL_1P, OFFSET_NOTES_1P};
 use crate::stubs::{MainState, Resolution};
+use crate::types::skin_header::OffsetFlags;
 
 /// LR2 skin header loader
 ///
@@ -64,26 +65,15 @@ impl CustomFile {
 pub struct CustomOffset {
     pub name: String,
     pub id: i32,
-    pub x: bool,
-    pub y: bool,
-    pub w: bool,
-    pub h: bool,
-    pub r: bool,
-    pub a: bool,
+    pub flags: crate::types::skin_header::OffsetFlags,
 }
 
 impl CustomOffset {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(name: &str, id: i32, x: bool, y: bool, w: bool, h: bool, r: bool, a: bool) -> Self {
+    pub fn new(name: &str, id: i32, flags: crate::types::skin_header::OffsetFlags) -> Self {
         Self {
             name: name.to_string(),
             id,
-            x,
-            y,
-            w,
-            h,
-            r,
-            a,
+            flags,
         }
     }
 }
@@ -219,42 +209,22 @@ impl LR2SkinHeaderLoader {
                         self.offsets.push(CustomOffset::new(
                             "All offset(%)",
                             OFFSET_ALL,
-                            true,
-                            true,
-                            true,
-                            true,
-                            false,
-                            false,
+                            OffsetFlags::new(true, true, true, true, false, false),
                         ));
                         self.offsets.push(CustomOffset::new(
                             "Notes offset",
                             OFFSET_NOTES_1P,
-                            false,
-                            false,
-                            false,
-                            true,
-                            false,
-                            false,
+                            OffsetFlags::new(false, false, false, true, false, false),
                         ));
                         self.offsets.push(CustomOffset::new(
                             "Judge offset",
                             OFFSET_JUDGE_1P,
-                            true,
-                            true,
-                            true,
-                            true,
-                            false,
-                            true,
+                            OffsetFlags::new(true, true, true, true, false, true),
                         ));
                         self.offsets.push(CustomOffset::new(
                             "Judge Detail offset",
                             OFFSET_JUDGEDETAIL_1P,
-                            true,
-                            true,
-                            true,
-                            true,
-                            false,
-                            true,
+                            OffsetFlags::new(true, true, true, true, false, true),
                         ));
                     }
                 }
@@ -327,12 +297,7 @@ impl LR2SkinHeaderLoader {
                     self.offsets.push(CustomOffset::new(
                         &str_parts[1],
                         id,
-                        op[0],
-                        op[1],
-                        op[2],
-                        op[3],
-                        op[4],
-                        op[5],
+                        OffsetFlags::new(op[0], op[1], op[2], op[3], op[4], op[5]),
                     ));
                 }
             }
