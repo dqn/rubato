@@ -918,7 +918,7 @@ mod tests {
             .expect("decode_path should return Some for longnote bmson");
 
         let timelines = &model.timelines;
-        let mode_key = model.mode().unwrap().key();
+        let mode_key = model.mode().expect("get mode succeeded").key();
 
         // Collect all long notes (start and end) across all timelines
         let mut ln_start_count = 0;
@@ -981,7 +981,7 @@ mod tests {
             .expect("decode_path should return Some for mine_invisible bmson");
 
         let timelines = &model.timelines;
-        let mode_key = model.mode().unwrap().key();
+        let mode_key = model.mode().expect("get mode succeeded").key();
 
         // Check for mine notes
         let mut mine_count = 0;
@@ -1038,7 +1038,7 @@ mod tests {
             .expect("decode_path should return Some for bpm_ln_cross bmson");
 
         let timelines = &model.timelines;
-        let mode_key = model.mode().unwrap().key();
+        let mode_key = model.mode().expect("get mode succeeded").key();
 
         // Verify BPM changes exist: 120 -> 180 -> 60 -> 120
         let bpm_values: Vec<f64> = timelines.iter().map(|tl| tl.bpm).collect();
