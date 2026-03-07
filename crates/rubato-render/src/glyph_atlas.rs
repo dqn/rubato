@@ -9,7 +9,7 @@ use ab_glyph::{Font, GlyphId, PxScale};
 use crate::texture::{Texture, TextureRegion};
 
 /// Cached glyph information within the atlas.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct CachedGlyph {
     /// X position in the atlas texture (pixels).
     pub atlas_x: u32,
@@ -82,7 +82,7 @@ impl GlyphAtlas {
     ) -> Option<CachedGlyph> {
         let key = (glyph_id, scale.to_bits());
         if let Some(cached) = self.cache.get(&key) {
-            return Some(cached.clone());
+            return Some(*cached);
         }
 
         // Rasterize the glyph
@@ -144,7 +144,7 @@ impl GlyphAtlas {
             bearing_x: bounds.min.x,
             bearing_y: bounds.min.y,
         };
-        self.cache.insert(key, cached.clone());
+        self.cache.insert(key, cached);
 
         // Mark atlas as needing texture upload (deferred to flush)
         self.dirty = true;

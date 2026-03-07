@@ -863,10 +863,10 @@ impl MusicResult {
                     }
                 }
                 new_cscore.notes = notes;
-                new_cscore.device_type = newscore.device_type.clone();
+                new_cscore.device_type = newscore.device_type;
                 new_cscore.option = newscore.option;
-                new_cscore.judge_algorithm = newscore.judge_algorithm.clone();
-                new_cscore.rule = newscore.rule.clone();
+                new_cscore.judge_algorithm = newscore.judge_algorithm;
+                new_cscore.rule = newscore.rule;
                 self.resource.set_course_score_data(new_cscore.clone());
                 cscore = Some(new_cscore);
             }

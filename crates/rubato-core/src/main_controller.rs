@@ -79,7 +79,7 @@ pub trait StateReferencesCallback: Send {
 }
 
 /// SkinOffset - offset values for skin objects
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SkinOffset {
     pub x: f32,
     pub y: f32,
@@ -140,7 +140,7 @@ struct StateAccessAdapter<'a> {
 
 impl MainStateAccess for StateAccessAdapter<'_> {
     fn screen_type(&self) -> ScreenType {
-        self.screen_type.clone()
+        self.screen_type
     }
 
     fn resource(&self) -> Option<&dyn PlayerResourceAccess> {
@@ -816,7 +816,7 @@ impl MainController {
             // Java: if(resource.setBMSFile(bmsfile, auto)) changeState(PLAY)
             //       else { changeState(CONFIG); exit(); }
             let bmsfile = self.bmsfile.clone().expect("bmsfile is Some");
-            let mode = self.auto.clone().unwrap_or(BMSPlayerMode::PLAY);
+            let mode = self.auto.unwrap_or(BMSPlayerMode::PLAY);
             let load_ok = self
                 .resource
                 .as_mut()

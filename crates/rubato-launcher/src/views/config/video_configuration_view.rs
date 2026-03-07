@@ -75,7 +75,7 @@ impl VideoConfigurationView {
     // public void update(Config config)
     pub fn update(&mut self, config: &Config) {
         // displayMode.setValue(config.getDisplaymode());
-        self.display_mode = Some(config.displaymode.clone());
+        self.display_mode = Some(config.displaymode);
         // resolution.setValue(config.getResolution());
         self.resolution = Some(config.resolution);
         // vSync.setSelected(config.isVsync());
@@ -104,7 +104,7 @@ impl VideoConfigurationView {
         }
         // config.setDisplaymode(displayMode.getValue());
         if let Some(ref dm) = self.display_mode {
-            config.displaymode = dm.clone();
+            config.displaymode = *dm;
         }
         // config.setVsync(vSync.isSelected());
         config.vsync = self.vsync;
@@ -176,7 +176,7 @@ impl VideoConfigurationView {
                             let label = format!("{:?}", mode);
                             let selected = dm_label == label;
                             if ui.selectable_label(selected, &label).clicked() {
-                                self.display_mode = Some(mode.clone());
+                                self.display_mode = Some(*mode);
                             }
                         }
                     });

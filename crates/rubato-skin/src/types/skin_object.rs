@@ -672,7 +672,7 @@ impl SkinObjectData {
         self.index = -1;
         for (off, &offset) in self.off.iter_mut().zip(self.offset.iter()) {
             *off = if let Some(s) = state {
-                s.get_offset_value(offset).cloned()
+                s.get_offset_value(offset).copied()
             } else {
                 None
             };

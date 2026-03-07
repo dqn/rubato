@@ -282,12 +282,13 @@ impl KeyConfiguration {
         if index >= 0 {
             midi.keys
                 .get(index as usize)
-                .and_then(|m| m.clone())
+                .copied()
+                .flatten()
                 .unwrap_or_default()
         } else if index == -1 {
-            midi.start.clone().unwrap_or_default()
+            midi.start.unwrap_or_default()
         } else if index == -2 {
-            midi.select.clone().unwrap_or_default()
+            midi.select.unwrap_or_default()
         } else {
             MidiInput::default()
         }

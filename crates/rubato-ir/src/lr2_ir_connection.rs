@@ -251,7 +251,7 @@ impl Ranking {
     pub fn to_rubato_score_data(&self, model: &IRChartData) -> Vec<LeaderboardEntry> {
         let mut res: Vec<LeaderboardEntry> = Vec::new();
         for s in &self.score {
-            let mode = model.mode.clone().unwrap_or(Mode::BEAT_7K);
+            let mode = model.mode.unwrap_or(Mode::BEAT_7K);
             let mut tmp = ScoreData::new(mode);
             tmp.sha256 = model.sha256.clone();
             tmp.player = s.name.clone().unwrap_or_default();

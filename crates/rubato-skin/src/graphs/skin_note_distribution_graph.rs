@@ -368,7 +368,7 @@ impl SkinNoteDistributionGraph {
             }
         }
 
-        let mode = model.mode().cloned();
+        let mode = model.mode().copied();
         // #LNMODE is explicitly set to 1 (LN)
         // or #LNMODE is undefined and getLntype (which reflects playconfig) is LN (0)
         let ignore_ln_end = model.lnmode == 1

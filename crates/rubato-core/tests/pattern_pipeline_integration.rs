@@ -119,7 +119,7 @@ fn identity_modifier_preserves_notes() {
 fn mirror_modifier_reverses_lanes() {
     let mut model = parse_minimal_7k();
 
-    let mode = model.mode().cloned().expect("Model should have a mode");
+    let mode = model.mode().copied().expect("Model should have a mode");
 
     // Record the note wav values per lane for each timeline (before mirror)
     let mode_key = mode.key();

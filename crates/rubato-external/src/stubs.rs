@@ -166,7 +166,7 @@ pub struct MainState {
 
 impl rubato_types::main_state_access::MainStateAccess for MainState {
     fn screen_type(&self) -> ScreenType {
-        self.screen_type.clone()
+        self.screen_type
     }
 
     fn resource(&self) -> Option<&dyn rubato_types::player_resource_access::PlayerResourceAccess> {

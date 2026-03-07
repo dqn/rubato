@@ -92,9 +92,9 @@ impl IRScoreData {
             seed: score.seed,
             assist: score.assist,
             gauge: score.gauge,
-            device_type: score.device_type.clone(),
-            judge_algorithm: score.judge_algorithm.clone(),
-            rule: score.rule.clone(),
+            device_type: score.device_type,
+            judge_algorithm: score.judge_algorithm,
+            rule: score.rule,
             skin: score.skin.clone(),
         }
     }
@@ -136,7 +136,7 @@ impl IRScoreData {
             seed: self.seed,
             assist: self.assist,
             gauge: self.gauge,
-            device_type: self.device_type.clone(),
+            device_type: self.device_type,
             ..Default::default()
         }
     }

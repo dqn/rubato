@@ -1,6 +1,6 @@
 // scroll_speed_modifier::Mode - moved from stubs.rs (Phase 30a)
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Mode {
     Off,
     Variable,

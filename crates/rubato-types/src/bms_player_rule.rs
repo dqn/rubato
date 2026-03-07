@@ -5,7 +5,7 @@ use bms_model::bms_model::{JudgeRankType, TotalType};
 use bms_model::mode::Mode;
 
 /// BMS player rule (LR2 or Beatoraja)
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum BMSPlayerRule {
     LR2,
     Beatoraja,

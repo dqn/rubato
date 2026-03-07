@@ -2,7 +2,7 @@ use rubato_render::font::BitmapFont;
 use rubato_render::sprite_batch::SpriteBatch;
 
 /// Color - RGBA color (LibGDX equivalent)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Color {
     pub r: f32,
     pub g: f32,

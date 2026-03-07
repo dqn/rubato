@@ -178,7 +178,7 @@ impl ScoreDatabaseAccessor {
             Ok(scores) => {
                 let scores: Vec<ScoreData> = scores
                     .into_iter()
-                    .filter(|s| s.clone().validate())
+                    .filter_map(|mut s| if s.validate() { Some(s) } else { None })
                     .collect();
                 if scores.is_empty() {
                     return None;
@@ -259,7 +259,7 @@ impl ScoreDatabaseAccessor {
                     let sub_scores: Vec<ScoreData> = stmt
                         .query_map(param_refs.as_slice(), |row| Ok(row_to_score_data(row)))?
                         .filter_map(|r| r.ok())
-                        .filter(|s| s.clone().validate())
+                        .filter_map(|mut s| if s.validate() { Some(s) } else { None })
                         .collect();
                     scores.extend(sub_scores);
                 }
@@ -300,7 +300,7 @@ impl ScoreDatabaseAccessor {
             Ok(scores) => Some(
                 scores
                     .into_iter()
-                    .filter(|s| s.clone().validate())
+                    .filter_map(|mut s| if s.validate() { Some(s) } else { None })
                     .collect(),
             ),
             Err(e) => {
@@ -459,7 +459,7 @@ impl ScoreDatabaseAccessor {
             // Java uses Calendar.getInstance(TimeZone.getDefault()) for local timezone
             let unixtime = local_midnight_timestamp();
 
-            let mut pd_copy = pd.clone();
+            let mut pd_copy = *pd;
             pd_copy.date = unixtime;
 
             self.base

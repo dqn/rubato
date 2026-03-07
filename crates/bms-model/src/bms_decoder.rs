@@ -77,8 +77,8 @@ impl BMSDecoder {
 
     pub fn decode(&mut self, info: ChartInformation) -> Option<BMSModel> {
         self.lntype = info.lntype;
-        let path = info.path.clone();
-        let selected_randoms = info.selected_randoms.clone();
+        let path = info.path;
+        let selected_randoms = info.selected_randoms;
         match path {
             Some(ref p) => match std::fs::read(p) {
                 Ok(data) => {
@@ -640,7 +640,7 @@ impl BMSDecoder {
         let final_selected_random = if let Some(sr) = selected_random {
             sr.to_vec()
         } else {
-            srandoms.clone()
+            srandoms
         };
 
         model.set_chart_information(ChartInformation::new(

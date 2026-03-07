@@ -95,7 +95,7 @@ impl IRChartData {
         } else {
             0
         };
-        let mode = model.and_then(|m| m.mode().cloned());
+        let mode = model.and_then(|m| m.mode().copied());
 
         let mut values = HashMap::new();
         if let Some(m) = model {

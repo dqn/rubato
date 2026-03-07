@@ -61,7 +61,7 @@ struct BmsLoadingHandle {
 
 /// PlayMode enum
 /// Translated from PlayConfigurationView.PlayMode
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum PlayMode {
     BEAT_5K,
@@ -1017,7 +1017,7 @@ impl PlayConfigurationView {
             conf.hispeedautoadjust = self.hispeedautoadjust;
         }
 
-        self.pc = self.playconfig.clone();
+        self.pc = self.playconfig;
 
         if let Some(ref pc) = self.pc {
             let mode = pc.to_mode();

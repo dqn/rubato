@@ -42,7 +42,7 @@ impl BMSONDecoder {
 
     pub fn decode(&mut self, info: ChartInformation) -> Option<BMSModel> {
         self.lntype = info.lntype;
-        let path = info.path.clone()?;
+        let path = info.path?;
         self.decode_path(&path)
     }
 

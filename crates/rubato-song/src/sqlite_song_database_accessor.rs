@@ -857,9 +857,8 @@ impl BMSFolder {
         property: &SongDatabaseUpdaterProperty,
     ) -> anyhow::Result<()> {
         let root_str = accessor.root.to_string_lossy().to_string();
-        let bmsroot_strs: Vec<String> = self.bmsroot.clone();
 
-        let crc = song_utils::crc32(&self.path.to_string_lossy(), &bmsroot_strs, &root_str);
+        let crc = song_utils::crc32(&self.path.to_string_lossy(), &self.bmsroot, &root_str);
 
         let records_sql = "SELECT * FROM song WHERE folder = ?1";
         let mut records: Vec<Option<SongData>> = accessor
@@ -1019,7 +1018,7 @@ impl BMSFolder {
                     .to_string_lossy()
                     .to_string(),
                 path: s,
-                parent: song_utils::crc32(&parentpath.to_string_lossy(), &bmsroot_strs, &root_str),
+                parent: song_utils::crc32(&parentpath.to_string_lossy(), &self.bmsroot, &root_str),
                 date: folder_date,
                 adddate: property.updatetime as i32,
                 ..Default::default()
@@ -1060,8 +1059,6 @@ impl BMSFolder {
         let mut bmsondecoder: Option<BMSONDecoder> = None;
         let mut osudecoder: Option<OSUDecoder> = None;
         let root_str = accessor.root.to_string_lossy().to_string();
-        let bmsroot_strs: Vec<String> = self.bmsroot.clone();
-
         for bmsfile_path in &self.bmsfiles {
             let last_modified_time: i64 = fs::metadata(bmsfile_path)
                 .and_then(|m| m.modified())
@@ -1218,11 +1215,11 @@ impl BMSFolder {
 
                 if let Some(parent_path) = bmsfile_path.parent() {
                     sd.folder =
-                        song_utils::crc32(&parent_path.to_string_lossy(), &bmsroot_strs, &root_str);
+                        song_utils::crc32(&parent_path.to_string_lossy(), &self.bmsroot, &root_str);
                     if let Some(grandparent) = parent_path.parent() {
                         sd.parent = song_utils::crc32(
                             &grandparent.to_string_lossy(),
-                            &bmsroot_strs,
+                            &self.bmsroot,
                             &root_str,
                         );
                     }

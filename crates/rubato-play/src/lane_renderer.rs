@@ -70,7 +70,7 @@ pub enum DrawCommand {
 }
 
 /// Note image types for DrawNote command
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NoteImageType {
     Normal,
     Processed,
@@ -1400,7 +1400,7 @@ impl LaneRenderer {
 }
 
 /// Offset values passed to draw_lane (simplified from SkinOffset)
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DrawLaneOffset {
     pub x: f32,
     pub y: f32,
@@ -1422,7 +1422,7 @@ pub struct DrawLaneResult {
 }
 
 /// Hidden cover state calculated by draw_lane()
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct HiddenCoverResult {
     /// Whether hidden cover is visible (false = alpha -255 in Java)
     pub visible: bool,

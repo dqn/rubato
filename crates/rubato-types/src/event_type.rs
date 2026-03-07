@@ -2,7 +2,7 @@
 ///
 /// Translated from Java: bms.player.beatoraja.skin.property.EventFactory.EventType
 /// (subset used by MusicSelector / MusicSelectInputProcessor)
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EventType {
     Mode,
     Sort,

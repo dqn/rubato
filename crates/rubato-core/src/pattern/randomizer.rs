@@ -277,7 +277,7 @@ impl Randomizer {
             _ => panic!("Unexpected value: {:?}", r),
         };
 
-        randomizer.set_mode(mode.clone());
+        randomizer.set_mode(*mode);
         randomizer
     }
 

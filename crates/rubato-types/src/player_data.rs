@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::validatable::Validatable;
 
 /// Player data
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub struct PlayerData {
     pub date: i64,
     pub playcount: i64,

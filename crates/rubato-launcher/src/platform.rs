@@ -103,7 +103,7 @@ pub struct MonitorInfo {
 ///
 /// Used by `MainLoader::get_available_display_mode()` to provide complete
 /// display mode data for fullscreen mode selection.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct VideoModeInfo {
     pub width: u32,
     pub height: u32,

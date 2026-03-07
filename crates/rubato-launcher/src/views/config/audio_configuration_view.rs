@@ -93,7 +93,7 @@ impl AudioConfigurationView {
         self.config = Some(config.clone());
 
         // audio.setValue(config.getDriver());
-        self.audio = Some(config.driver.clone());
+        self.audio = Some(config.driver);
         // audiobuffer.getValueFactory().setValue(config.getDeviceBufferSize());
         self.audiobuffer = config.device_buffer_size;
         // audiosim.getValueFactory().setValue(config.getDeviceSimultaneousSources());
@@ -105,9 +105,9 @@ impl AudioConfigurationView {
             None
         };
         // audioFreqOption.setValue(config.getFreqOption());
-        self.audio_freq_option = Some(config.freq_option.clone());
+        self.audio_freq_option = Some(config.freq_option);
         // audioFastForward.setValue(config.getFastForward());
-        self.audio_fast_forward = Some(config.fast_forward.clone());
+        self.audio_fast_forward = Some(config.fast_forward);
         // systemvolume.setValue((double)config.getSystemvolume());
         self.systemvolume = config.systemvolume as f64;
         // keyvolume.setValue((double)config.getKeyvolume());
@@ -130,7 +130,7 @@ impl AudioConfigurationView {
         if let Some(ref mut config) = self.config {
             // config.setDriver(audio.getValue());
             if let Some(ref driver) = self.audio {
-                config.driver = driver.clone();
+                config.driver = *driver;
             }
             // config.setDriverName(audioname.getValue());
             config.driver_name = self.audioname.clone();
@@ -142,11 +142,11 @@ impl AudioConfigurationView {
             config.sample_rate = self.audiosamplerate.unwrap_or(0);
             // config.setFreqOption(audioFreqOption.getValue());
             if let Some(ref freq) = self.audio_freq_option {
-                config.freq_option = freq.clone();
+                config.freq_option = *freq;
             }
             // config.setFastForward(audioFastForward.getValue());
             if let Some(ref ff) = self.audio_fast_forward {
-                config.fast_forward = ff.clone();
+                config.fast_forward = *ff;
             }
             // config.setSystemvolume((float) systemvolume.getValue());
             config.systemvolume = self.systemvolume as f32;
@@ -267,7 +267,7 @@ impl AudioConfigurationView {
                             let label = format!("{:?}", driver);
                             let selected = driver_label == label;
                             if ui.selectable_label(selected, &label).clicked() {
-                                self.audio = Some(driver.clone());
+                                self.audio = Some(*driver);
                             }
                         }
                     });
@@ -370,7 +370,7 @@ impl AudioConfigurationView {
                             let label = format!("{:?}", opt);
                             let selected = freq_label == label;
                             if ui.selectable_label(selected, &label).clicked() {
-                                self.audio_freq_option = Some(opt.clone());
+                                self.audio_freq_option = Some(*opt);
                             }
                         }
                     });
@@ -390,7 +390,7 @@ impl AudioConfigurationView {
                             let label = format!("{:?}", opt);
                             let selected = ff_label == label;
                             if ui.selectable_label(selected, &label).clicked() {
-                                self.audio_fast_forward = Some(opt.clone());
+                                self.audio_fast_forward = Some(*opt);
                             }
                         }
                     });

@@ -1,7 +1,7 @@
 // JudgeAlgorithm - moved from stubs.rs (Phase 30a)
 
 /// Judge algorithm for score evaluation
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum JudgeAlgorithm {
     Combo,
     Duration,

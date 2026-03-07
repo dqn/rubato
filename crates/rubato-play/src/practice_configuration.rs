@@ -186,7 +186,7 @@ impl PracticeConfiguration {
                 saved.sanitize();
                 self.property = saved;
                 // Restore model-specific data
-                let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
+                let mode = model.mode().copied().unwrap_or(Mode::BEAT_7K);
                 let timeline_times: Vec<i32> = model.timelines.iter().map(|tl| tl.time()).collect();
                 self.model_data = Some(PracticeModelData {
                     mode,
@@ -197,10 +197,10 @@ impl PracticeConfiguration {
         }
 
         if self.property.gaugecategory.is_none() {
-            let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
+            let mode = model.mode().copied().unwrap_or(Mode::BEAT_7K);
             self.property.gaugecategory = Some(BMSPlayerRule::for_mode(&mode).gauge);
         }
-        let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
+        let mode = model.mode().copied().unwrap_or(Mode::BEAT_7K);
         let timeline_times: Vec<i32> = model.timelines.iter().map(|tl| tl.time()).collect();
         self.model_data = Some(PracticeModelData {
             mode,
@@ -287,7 +287,7 @@ impl PracticeConfiguration {
         pm.modify(model);
 
         // DP modifiers
-        let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
+        let mode = model.mode().copied().unwrap_or(Mode::BEAT_7K);
         if mode.player() == 2 {
             if property.doubleop == 1 {
                 PlayerFlipModifier::new().modify(model);

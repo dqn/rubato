@@ -1,7 +1,7 @@
 /// SkinObject.SkinOffset — shared offset applied to skin objects.
 ///
 /// Translated from Java: bms.player.beatoraja.skin.SkinObject.SkinOffset
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct SkinOffset {
     pub x: f32,
     pub y: f32,

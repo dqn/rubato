@@ -29,7 +29,7 @@ static SET_OFFSETS: Mutex<Option<HashMap<String, OffsetValue>>> = Mutex::new(Non
 static SKINS: Mutex<Vec<SkinHeader>> = Mutex::new(Vec::new());
 static DIRTY_CONFIG: Mutex<bool> = Mutex::new(false);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct OffsetValue {
     pub x: i32,
     pub y: i32,
@@ -946,9 +946,8 @@ fn get_file_setting(file: &CustomFile) -> Option<String> {
 fn get_offset_setting(offset: &CustomOffset) -> OffsetValue {
     let mut offsets = SET_OFFSETS.lock().expect("SET_OFFSETS lock poisoned");
     let map = offsets.get_or_insert_with(HashMap::new);
-    map.entry(offset.name.clone())
+    *map.entry(offset.name.clone())
         .or_insert_with(|| OffsetValue::new(0, 0, 0, 0, 0, 0))
-        .clone()
 }
 
 fn complete_property(header: &SkinHeader) -> SkinProperty {

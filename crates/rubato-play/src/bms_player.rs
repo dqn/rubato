@@ -41,7 +41,7 @@ pub static TIME_MARGIN: i32 = 5000;
 
 /// Key state flags for replay mode.
 /// Corresponds to Java `main.getInputProcessor().getKeyState(N)` checks.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ReplayKeyState {
     /// Key1 held: replay pattern mode (copy options + seeds + rand)
     pub pattern_key: bool,
@@ -967,16 +967,16 @@ impl BMSPlayer {
     }
 
     pub fn mode(&self) -> Mode {
-        self.model.mode().cloned().unwrap_or(Mode::BEAT_7K)
+        self.model.mode().copied().unwrap_or(Mode::BEAT_7K)
     }
 
     /// Get skin type matching the current model mode.
     /// Corresponds to Java getSkinType() which iterates SkinType.values().
     pub fn skin_type(&self) -> Option<SkinType> {
-        let model_mode = self.model.mode().cloned().unwrap_or(Mode::BEAT_7K);
+        let model_mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
         SkinType::values()
             .into_iter()
-            .find(|&skin_type| skin_type.mode() == Some(model_mode.clone()))
+            .find(|&skin_type| skin_type.mode() == Some(model_mode))
     }
 
     /// Save play config from lane renderer state.
@@ -1004,7 +1004,7 @@ impl BMSPlayer {
         let hidden = lr.hidden_cover();
 
         // 3. Get PlayConfig from playerConfig.getPlayConfig(mode).getPlayconfig()
-        let mode = self.model.mode().cloned().unwrap_or(Mode::BEAT_7K);
+        let mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
         let pc = &mut self.player_config.play_config(mode).playconfig;
 
         // 4. If fixhispeed != OFF: save duration; else save hispeed
@@ -1177,7 +1177,7 @@ impl BMSPlayer {
 
         // -- Phase 2: DP battle mode handling (doubleoption >= 2) --
         if self.score.playinfo.doubleoption >= 2 {
-            let mode = self.model.mode().cloned().unwrap_or(Mode::BEAT_7K);
+            let mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
             if mode == Mode::BEAT_5K || mode == Mode::BEAT_7K || mode == Mode::KEYBOARD_24K {
                 // Convert SP mode to DP mode
                 let new_mode = match mode {
@@ -1194,7 +1194,7 @@ impl BMSPlayer {
 
                 // If doubleoption == 3, also add AutoplayModifier for scratch keys
                 if self.score.playinfo.doubleoption == 3 {
-                    let dp_mode = self.model.mode().cloned().unwrap_or(Mode::BEAT_14K);
+                    let dp_mode = self.model.mode().copied().unwrap_or(Mode::BEAT_14K);
                     let scratch_keys = dp_mode.scratch_key().to_vec();
                     let mut autoplay_mod = AutoplayModifier::new(scratch_keys);
                     autoplay_mod.modify(&mut self.model);
@@ -1211,7 +1211,7 @@ impl BMSPlayer {
 
         // -- Phase 3: Random option modifiers --
         // This section corresponds to Java lines 384-447
-        let mode = self.model.mode().cloned().unwrap_or(Mode::BEAT_7K);
+        let mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
         let player_count = mode.player();
         let mut pattern_array: Vec<Option<Vec<i32>>> = vec![None; player_count as usize];
 
@@ -1289,7 +1289,7 @@ impl BMSPlayer {
 
             // Collect lane shuffle patterns for display
             if m.is_lane_shuffle_to_display() {
-                let current_mode = self.model.mode().cloned().unwrap_or(Mode::BEAT_7K);
+                let current_mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
                 let player_idx = m.player() as usize;
                 if player_idx < pattern_array.len()
                     && let Some(pattern) = m.get_lane_shuffle_random_pattern(&current_mode)
@@ -1527,7 +1527,7 @@ impl BMSPlayer {
         // Constant speed check (Java lines 297-301)
         // Constant considered as assist in Endless Dream
         // This is a community discussion result, see https://github.com/seraxis/lr2oraja-endlessdream/issues/42
-        let mode = self.model.mode().cloned().unwrap_or(Mode::BEAT_7K);
+        let mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
         if config.play_config_ref(mode).playconfig.enable_constant {
             self.assist = self.assist.max(2);
             score = false;
@@ -1910,7 +1910,7 @@ impl MainState for BMSPlayer {
                 target_score: self.score.target_score.as_ref(),
                 playtime: self.playtime,
                 total_notes: self.total_notes,
-                play_mode: self.play_mode.clone(),
+                play_mode: self.play_mode,
                 state: self.state,
                 media_load_finished: self.media_load_finished,
             };
@@ -1963,10 +1963,10 @@ impl MainState for BMSPlayer {
     }
 
     fn create(&mut self) {
-        let mode = self.model.mode().cloned().unwrap_or(Mode::BEAT_7K);
+        let mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
         self.lane_property = Some(LaneProperty::new(&mode));
         self.judge = JudgeManager::new();
-        self.input.control = Some(ControlInputProcessor::new(mode.clone()));
+        self.input.control = Some(ControlInputProcessor::new(mode));
         if let Some(ref lp) = self.lane_property {
             self.input.keyinput = Some(KeyInputProccessor::new(lp));
         }
@@ -2332,7 +2332,7 @@ impl MainState for BMSPlayer {
                             rubato_core::pattern::pattern_modifier::create_pattern_modifier(
                                 property.random2,
                                 1,
-                                &self.model.mode().cloned().unwrap_or(Mode::BEAT_7K),
+                                &self.model.mode().copied().unwrap_or(Mode::BEAT_7K),
                                 &self.player_config,
                             );
                         pm2.modify(&mut self.model);
@@ -2342,7 +2342,7 @@ impl MainState for BMSPlayer {
                     let mut pm1 = rubato_core::pattern::pattern_modifier::create_pattern_modifier(
                         property.random,
                         0,
-                        &self.model.mode().cloned().unwrap_or(Mode::BEAT_7K),
+                        &self.model.mode().copied().unwrap_or(Mode::BEAT_7K),
                         &self.player_config,
                     );
                     pm1.modify(&mut self.model);

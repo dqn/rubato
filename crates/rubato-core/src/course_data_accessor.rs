@@ -53,7 +53,7 @@ impl CourseDataAccessor {
             if let Ok(courses) = serde_json::from_reader::<_, Vec<CourseData>>(reader) {
                 let valid: Vec<CourseData> = courses
                     .into_iter()
-                    .filter(|c| c.clone().validate())
+                    .filter_map(|mut c| if c.validate() { Some(c) } else { None })
                     .collect();
                 return valid;
             }

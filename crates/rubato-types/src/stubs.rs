@@ -61,7 +61,7 @@ impl IRConnectionManager {
 /// Stub for beatoraja.input.BMSPlayerInputDevice.Type
 pub mod bms_player_input_device {
     #[allow(non_camel_case_types)]
-    #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
     pub enum Type {
         BM_CONTROLLER,
         KEYBOARD,

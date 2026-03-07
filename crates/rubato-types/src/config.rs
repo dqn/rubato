@@ -21,7 +21,7 @@ pub const BGAEXPAND_FULL: i32 = 0;
 pub const BGAEXPAND_KEEP_ASPECT_RATIO: i32 = 1;
 pub const BGAEXPAND_OFF: i32 = 2;
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, Default)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize, Default)]
 pub enum DisplayMode {
     FULLSCREEN,
     BORDERLESS,
@@ -29,7 +29,7 @@ pub enum DisplayMode {
     WINDOW,
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, Default)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize, Default)]
 pub enum SongPreview {
     NONE,
     ONCE,

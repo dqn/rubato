@@ -80,7 +80,7 @@ impl MusicSelectConfigurationView {
         // shownoexistingbar.setSelected(config.isShowNoSongExistingBar());
         self.shownoexistingbar = config.show_no_song_existing_bar;
         // songPreview.setValue(config.getSongPreview());
-        self.song_preview = Some(config.song_preview.clone());
+        self.song_preview = Some(config.song_preview);
 
         // maxsearchbar.getValueFactory().setValue(config.getMaxSearchBarCount());
         self.maxsearchbar = config.max_search_bar_count;
@@ -109,7 +109,7 @@ impl MusicSelectConfigurationView {
             config.show_no_song_existing_bar = self.shownoexistingbar;
             // config.setSongPreview(songPreview.getValue());
             if let Some(ref sp) = self.song_preview {
-                config.song_preview = sp.clone();
+                config.song_preview = *sp;
             }
 
             // config.setMaxSearchBarCount(maxsearchbar.getValue());
@@ -202,7 +202,7 @@ impl MusicSelectConfigurationView {
                             let label = format!("{:?}", preview);
                             let selected = sp_label == label;
                             if ui.selectable_label(selected, &label).clicked() {
-                                self.song_preview = Some(preview.clone());
+                                self.song_preview = Some(*preview);
                             }
                         }
                     });

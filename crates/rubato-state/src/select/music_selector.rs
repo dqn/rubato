@@ -749,7 +749,7 @@ impl MusicSelector {
     pub fn execute_event_with_args(&mut self, event: EventType, arg1: i32, _arg2: i32) {
         match event {
             EventType::Mode => {
-                let current_mode = self.config.mode().cloned();
+                let current_mode = self.config.mode().copied();
                 let mut idx = 0;
                 for (i, m) in MODE.iter().enumerate() {
                     if *m == current_mode {
@@ -758,7 +758,7 @@ impl MusicSelector {
                     }
                 }
                 let step = if arg1 >= 0 { 1 } else { MODE.len() - 1 };
-                self.config.mode = MODE[(idx + step) % MODE.len()].clone();
+                self.config.mode = MODE[(idx + step) % MODE.len()];
                 self.refresh_bar_with_context();
                 self.play_option_change();
             }
@@ -2750,7 +2750,7 @@ impl MainState for MusicSelector {
                     let mode = if play_mode.mode == BMSPlayerModeType::Practice {
                         BMSPlayerMode::PLAY
                     } else {
-                        play_mode.clone()
+                        play_mode
                     };
                     self.read_course(mode);
                 }
@@ -2758,7 +2758,7 @@ impl MainState for MusicSelector {
                     let mode = if play_mode.mode == BMSPlayerModeType::Practice {
                         BMSPlayerMode::PLAY
                     } else {
-                        play_mode.clone()
+                        play_mode
                     };
                     self.read_random_course(mode);
                 }

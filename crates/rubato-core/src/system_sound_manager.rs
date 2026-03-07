@@ -82,7 +82,7 @@ impl SystemSoundManager {
                 }
                 // In Java: main.getAudioProcessor().dispose(oldpath)
                 // Phase 5+ dependency
-                self.soundmap.insert(sound.clone(), newpath);
+                self.soundmap.insert(*sound, newpath);
             }
         }
     }

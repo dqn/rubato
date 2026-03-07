@@ -879,7 +879,7 @@ struct SelectSongEvent(BMSPlayerMode);
 impl Event for SelectSongEvent {
     fn exec(&self, state: &mut dyn MainState, _arg1: i32, _arg2: i32) {
         if state.is_music_selector() {
-            state.select_song(self.0.clone());
+            state.select_song(self.0);
         }
     }
 
@@ -904,7 +904,7 @@ impl Event for ReplayEvent {
         if state.is_music_selector()
             && let Some(mode) = BMSPlayerMode::replay_mode(self.0)
         {
-            state.select_song(mode.clone());
+            state.select_song(*mode);
         }
         // MusicResult/CourseResult replay saving is handled by execute_event delegation
         // because those types need cross-crate access
@@ -950,7 +950,7 @@ impl Event for ModeEvent {
         let Some(config) = state.player_config_mut() else {
             return;
         };
-        let current_mode = config.mode.clone();
+        let current_mode = config.mode;
         let mut mode_idx = 0;
         for (i, m) in MODE_FILTER.iter().enumerate() {
             if *m == current_mode {
@@ -964,7 +964,7 @@ impl Event for ModeEvent {
         } else {
             (mode_idx + len - 1) % len
         };
-        config.mode = MODE_FILTER[next_idx].clone();
+        config.mode = MODE_FILTER[next_idx];
         state.update_bar_after_change();
         state.play_option_change_sound();
     }

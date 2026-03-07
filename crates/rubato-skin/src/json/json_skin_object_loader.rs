@@ -633,7 +633,7 @@ pub fn parse_hex_color(hex: &str, fallback: Color) -> Color {
 pub fn set_destination_on_object(obj: &mut SkinObjectData, dst: &json_skin::Destination) {
     let mut prev: Option<json_skin::Animation> = None;
     for a_orig in &dst.dst {
-        let mut a = a_orig.clone();
+        let mut a = *a_orig;
         if let Some(ref p) = prev {
             a.time = if a.time == i32::MIN { p.time } else { a.time };
             a.x = if a.x == i32::MIN { p.x } else { a.x };

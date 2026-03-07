@@ -518,14 +518,14 @@ impl BarManager {
             // Mode + invisible filtering
             if let Some(ref mut ctx) = ctx {
                 let mut mode_index = 0usize;
-                let current_mode = ctx.player_config.mode().cloned();
+                let current_mode = ctx.player_config.mode().copied();
                 if let Some(pos) = MODE.iter().position(|m| *m == current_mode) {
                     mode_index = pos;
                 }
 
                 for trial_count in 0..MODE.len() {
                     let mode = &MODE[(mode_index + trial_count) % MODE.len()];
-                    ctx.player_config.mode = mode.clone();
+                    ctx.player_config.mode = *mode;
 
                     let before_len = l.len();
                     let remove_count = l
@@ -550,7 +550,7 @@ impl BarManager {
 
                     if before_len != remove_count {
                         // Remove filtered songs and break
-                        let mode_clone = mode.clone();
+                        let mode_clone = *mode;
                         l.retain(|b| {
                             if let Some(sb) = b.as_song_bar() {
                                 let sd = sb.song_data();

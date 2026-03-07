@@ -273,7 +273,7 @@ impl Section {
     ) {
         let lnobj = model.lnobj();
         let lnmode = model.lnmode;
-        let mode = model.mode().cloned();
+        let mode = model.mode().copied();
         let cassign: &[i32; 18] = if mode.as_ref() == Some(&Mode::POPN_9K) {
             &CHANNELASSIGN_POPN
         } else if mode.as_ref() == Some(&Mode::BEAT_7K) || mode.as_ref() == Some(&Mode::BEAT_14K) {
@@ -759,10 +759,8 @@ impl Section {
                             startln[key_usize] = None;
                         } else {
                             // LN end processing
-                            let start_info = startln[key_usize]
-                                .as_ref()
-                                .expect("initialized above")
-                                .clone();
+                            let start_info =
+                                *startln[key_usize].as_ref().expect("initialized above");
                             let keys_desc: Vec<u64> = tlcache.keys().rev().cloned().collect();
                             for &ekey in &keys_desc {
                                 let e_section = tlcache
@@ -1038,13 +1036,13 @@ impl Section {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct LnInfo {
     pub start_section: f64,
     pub end_section: f64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct StartLnInfo {
     pub section: f64,
     pub wav: i32,

@@ -2,7 +2,7 @@ use std::sync::Mutex;
 
 static BATTLE: Mutex<Option<Settings>> = Mutex::new(None);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Settings {
     pub random: i32,
     pub lanes: i32,

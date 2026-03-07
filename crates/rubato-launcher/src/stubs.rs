@@ -246,7 +246,7 @@ impl VersionChecker {
 /// Populated from winit's VideoMode via `update_monitors_from_winit()`.
 /// The `refresh_rate_millihertz` and `bit_depth` fields are used when
 /// selecting the best fullscreen mode (Java: highest refreshRate and bitsPerPixel).
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct DisplayMode {
     pub width: i32,
     pub height: i32,

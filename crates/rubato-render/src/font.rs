@@ -28,7 +28,7 @@ pub struct BitmapFontData {
 }
 
 /// Single glyph metrics from a .fnt file "char" entry.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BitmapGlyph {
     pub id: u32,
     pub x: i32,
@@ -116,7 +116,7 @@ fn parse_fnt_string(line: &str, key: &str) -> Option<String> {
 
 /// Positioned glyph for rendering.
 /// Contains the character, its pixel position, and size within the layout.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct PositionedGlyph {
     pub ch: char,
     pub x: f32,
@@ -338,7 +338,7 @@ impl BitmapFont {
 
 /// Pre-measured text layout.
 /// Corresponds to com.badlogic.gdx.graphics.g2d.GlyphLayout.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GlyphLayout {
     pub width: f32,
     pub height: f32,

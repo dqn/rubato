@@ -5,7 +5,7 @@
 /// Stub for beatoraja.select.BarSorter
 pub struct BarSorter;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct BarSorterEntry {
     pub(crate) name: &'static str,
 }

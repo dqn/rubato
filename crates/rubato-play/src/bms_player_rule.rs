@@ -40,7 +40,7 @@ impl BMSPlayerRule {
     }
 
     pub fn validate(model: &mut BMSModel) {
-        let mode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
+        let mode = model.mode().copied().unwrap_or(Mode::BEAT_7K);
         let rule = Self::for_mode(&mode);
         let judgerank = model.judgerank();
         match model.judgerank_type() {

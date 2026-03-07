@@ -197,9 +197,9 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
             main_controller.add_state_listener(Box::new(listener));
         }
         if use_obs_ws {
-            let listener = rubato_external::obs::obs_listener::ObsListener::new(cfg_clone.clone());
-            main_controller.add_state_listener(Box::new(listener));
             let obs_client = rubato_external::obs::obs_ws_client::ObsWsClient::new(&cfg_clone);
+            let listener = rubato_external::obs::obs_listener::ObsListener::new(cfg_clone);
+            main_controller.add_state_listener(Box::new(listener));
             if let Ok(client) = obs_client {
                 main_controller.set_obs_client(Box::new(client));
             }
@@ -374,7 +374,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     let w = config.window_width;
     let h = config.window_height;
     let vsync = config.vsync;
-    let display_mode = config.displaymode.clone();
+    let display_mode = config.displaymode;
     let max_fps = config.max_frame_per_second;
     // Java: gdxConfig.setTitle(MainController.getVersion())
     let title = version::version_long().to_string();

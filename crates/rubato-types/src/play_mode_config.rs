@@ -48,10 +48,10 @@ impl Default for PlayModeConfig {
 impl PlayModeConfig {
     pub fn new(mode: Mode) -> Self {
         let is_midi = mode == Mode::KEYBOARD_24K || mode == Mode::KEYBOARD_24K_DOUBLE;
-        let keyboard = KeyboardConfig::new(mode.clone(), !is_midi);
+        let keyboard = KeyboardConfig::new(mode, !is_midi);
         let player_count = mode.player() as usize;
         let controller: Vec<ControllerConfig> = (0..player_count)
-            .map(|i| ControllerConfig::new_with_mode(mode.clone(), i as i32, false))
+            .map(|i| ControllerConfig::new_with_mode(mode, i as i32, false))
             .collect();
         let midi = MidiConfig::new(mode, is_midi);
         PlayModeConfig {
@@ -200,7 +200,7 @@ impl Default for KeyboardConfig {
 impl KeyboardConfig {
     pub fn new(mode: Mode, enable: bool) -> Self {
         let mut config = KeyboardConfig {
-            mouse_scratch_config: MouseScratchConfig::new(mode.clone()),
+            mouse_scratch_config: MouseScratchConfig::new(mode),
             keys: Vec::new(),
             start: 0,
             select: 0,
@@ -770,7 +770,7 @@ impl Default for MidiConfig {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
 pub enum MidiInputType {
     #[default]
     NOTE,
@@ -778,7 +778,7 @@ pub enum MidiInputType {
     CONTROL_CHANGE,
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct MidiInput {
     #[serde(rename = "type")]
@@ -801,7 +801,7 @@ impl MidiInput {
     }
 
     pub fn copy_from(&self) -> Self {
-        self.clone()
+        *self
     }
 }
 

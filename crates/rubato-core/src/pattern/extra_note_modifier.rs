@@ -27,7 +27,7 @@ impl PatternModifier for ExtraNoteModifier {
         let mode_key = model.mode().map(|m| m.key()).unwrap_or(0);
         let scratch = self.scratch;
 
-        let mode = model.mode().cloned();
+        let mode = model.mode().copied();
         let timelines = model.all_time_lines_mut();
         let mut lns = vec![false; mode_key as usize];
         let mut blank = vec![false; mode_key as usize];

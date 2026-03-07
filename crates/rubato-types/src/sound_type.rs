@@ -1,7 +1,7 @@
 /// SoundType - system sound types
 ///
 /// Moved from beatoraja-core to beatoraja-types to allow use in MainControllerAccess trait.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SoundType {
     Scratch,
     FolderOpen,

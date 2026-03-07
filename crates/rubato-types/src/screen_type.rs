@@ -7,7 +7,7 @@ use crate::main_state_type::MainStateType;
 /// for unknown/unsupported screen types.
 ///
 /// Translated from: Java instanceof checks in ScreenShotExporter, DiscordListener, etc.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ScreenType {
     MusicSelector,
     MusicDecide,

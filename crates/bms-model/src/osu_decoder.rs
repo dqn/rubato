@@ -29,7 +29,7 @@ impl OSUDecoder {
 
     pub fn decode(&mut self, info: ChartInformation) -> Option<BMSModel> {
         self.lntype = info.lntype;
-        let path = info.path.clone()?;
+        let path = info.path?;
         self.decode_path(&path)
     }
 
@@ -144,10 +144,10 @@ impl OSUDecoder {
         let mut svs: Vec<TimingPoints> = Vec::new();
 
         for i in 0..osu.timing_points.len() {
-            let mut point = osu.timing_points[i].clone();
+            let mut point = osu.timing_points[i];
             point.time += offset as f32;
             if point.uninherited {
-                timing_points.push(point.clone());
+                timing_points.push(point);
 
                 let sv = TimingPoints {
                     time: point.time,

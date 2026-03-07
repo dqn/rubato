@@ -1,5 +1,5 @@
 /// BMS player mode
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BMSPlayerMode {
     pub mode: Mode,
     pub id: i32,

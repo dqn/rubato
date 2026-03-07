@@ -61,28 +61,28 @@ impl Default for BMSInfo {
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct BarLine {
     pub y: i32,
     pub k: i32,
 }
 
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct BpmEvent {
     pub y: i32,
     pub bpm: f64,
 }
 
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct StopEvent {
     pub y: i32,
     pub duration: i64,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(default)]
 pub struct ScrollEvent {
     pub y: i32,
@@ -95,7 +95,7 @@ impl Default for ScrollEvent {
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct Note {
     pub y: i32,
@@ -106,7 +106,7 @@ pub struct Note {
     pub up: bool,
 }
 
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct MineNote {
     pub y: i32,
@@ -131,7 +131,7 @@ pub struct BGAHeader {
     pub name: String,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(default)]
 pub struct Sequence {
     pub time: i64,

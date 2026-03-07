@@ -57,7 +57,7 @@ pub struct InputContext<'a> {
 
 /// A single key state change to replay.
 /// Produced by JudgeThread::tick() for the caller to apply.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ReplayKeyEvent {
     pub keycode: i32,
     pub pressed: bool,
@@ -90,7 +90,7 @@ pub struct KeyInputProccessor {
 }
 
 /// Replay keylog entry — lightweight copy of the DTO fields needed for replay.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 struct ReplayKeylogEntry {
     /// Press time in microseconds
     time: i64,

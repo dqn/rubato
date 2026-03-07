@@ -802,7 +802,7 @@ impl JSONSkinLoader {
     ) {
         let mut prev: Option<json_skin::Animation> = None;
         for a_orig in &dst.dst {
-            let mut a = a_orig.clone();
+            let mut a = *a_orig;
             if let Some(ref p) = prev {
                 a.time = if a.time == i32::MIN { p.time } else { a.time };
                 a.x = if a.x == i32::MIN { p.x } else { a.x };
@@ -1401,7 +1401,7 @@ pub struct SongListBarData {
 }
 
 /// Offset data for SkinNumber/SkinFloat per-digit offsets
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SkinNumberOffset {
     pub x: i32,
     pub y: i32,

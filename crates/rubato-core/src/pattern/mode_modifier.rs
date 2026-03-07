@@ -27,7 +27,7 @@ impl ModeModifier {
 
 impl PatternModifier for ModeModifier {
     fn modify(&mut self, model: &mut BMSModel) {
-        model.set_mode(self.after_mode.clone());
+        model.set_mode(self.after_mode);
         let algorithm = Algorithm::get(&self.before_mode, &self.after_mode);
         let lanes = self.after_mode.key() as usize;
         let mut ln = vec![-1i32; lanes];
@@ -41,7 +41,7 @@ impl PatternModifier for ModeModifier {
                 (15000.0f32 / self.config.hran_threshold_bpm as f32).ceil() as i32;
         }
 
-        let after_mode = self.after_mode.clone();
+        let after_mode = self.after_mode;
         let hran_threshold = self.hran_threshold;
         let seven_to_nine_pattern = self.config.seven_to_nine_pattern;
         let seven_to_nine_type = self.config.seven_to_nine_type;

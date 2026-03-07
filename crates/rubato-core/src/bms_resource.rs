@@ -165,7 +165,6 @@ impl BMSResource {
     /// Set the stagefile pixmap.
     /// Java: BMSResource.setStagefile(Pixmap pixmap)
     pub fn set_stagefile(&mut self, pixmap: Option<Pixmap>) {
-        let _old_stagefile = self.stagefile.clone();
         if let Some(p) = pixmap {
             // Store pixmap for later TextureRegion creation (Phase 29a rendering)
             self.stagefile_pix = Some(p);
@@ -180,7 +179,6 @@ impl BMSResource {
     /// Set the banner pixmap.
     /// Java: BMSResource.setBanner(Pixmap pixmap)
     pub fn set_banner(&mut self, pixmap: Option<Pixmap>) {
-        let _old_banner = self.banner.clone();
         if let Some(p) = pixmap {
             // Store pixmap for later TextureRegion creation (Phase 29a rendering)
             self.banner_pix = Some(p);

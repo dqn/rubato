@@ -216,8 +216,8 @@ impl PlayerResource {
                 self.songdata = Some(songdata);
             }
         }
-        let name = self.tablename.clone();
-        let lev = self.tablelevel.clone();
+        let name = std::mem::take(&mut self.tablename);
+        let lev = std::mem::take(&mut self.tablelevel);
         self.clear();
         self.tablename = name;
         self.tablelevel = lev;
@@ -335,13 +335,13 @@ impl PlayerResource {
     }
 
     pub fn next_song(&mut self) -> bool {
-        if self.bms_paths.is_none() {
-            return false;
-        }
-        let paths = self.bms_paths.as_ref().expect("bms_paths is Some").clone();
+        let paths_len = match self.bms_paths.as_ref() {
+            Some(p) => p.len(),
+            None => return false,
+        };
         let org_index = self.courseindex;
         loop {
-            if self.courseindex == paths.len() {
+            if self.courseindex == paths_len {
                 if self.loop_play {
                     self.courseindex = 0;
                 } else {
@@ -349,7 +349,8 @@ impl PlayerResource {
                 }
             }
             self.songdata = None;
-            let path = paths[self.courseindex].clone();
+            let path =
+                self.bms_paths.as_ref().expect("bms_paths is Some")[self.courseindex].clone();
             self.courseindex += 1;
             if self.set_bms_file(&path, BMSPlayerMode::AUTOPLAY) {
                 return true;
@@ -375,7 +376,7 @@ impl PlayerResource {
             .as_ref()
             .and_then(|models| models.get(self.courseindex))
             .and_then(|model| model.path());
-        let mode = self.mode.clone();
+        let mode = self.mode;
         if let (Some(path_str), Some(mode)) = (path, mode) {
             self.set_bms_file(Path::new(&path_str), mode);
         }

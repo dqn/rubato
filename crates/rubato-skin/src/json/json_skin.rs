@@ -880,7 +880,7 @@ pub struct Destination {
 }
 
 /// Corresponds to JsonSkin.Rect
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Rect {
     pub x: i32,
@@ -890,7 +890,7 @@ pub struct Rect {
 }
 
 /// Corresponds to JsonSkin.Animation
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Animation {
     pub time: i32,

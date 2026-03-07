@@ -141,12 +141,11 @@ impl MainControllerAccess for QueuedControllerAccess {
 
     fn play_sound(&mut self, sound: &SoundType, loop_sound: bool) {
         self.commands
-            .push(MainControllerCommand::PlaySound(sound.clone(), loop_sound));
+            .push(MainControllerCommand::PlaySound(*sound, loop_sound));
     }
 
     fn stop_sound(&mut self, sound: &SoundType) {
-        self.commands
-            .push(MainControllerCommand::StopSound(sound.clone()));
+        self.commands.push(MainControllerCommand::StopSound(*sound));
     }
 
     fn sound_path(&self, sound: &SoundType) -> Option<String> {
@@ -638,7 +637,7 @@ impl StateFactory for LauncherStateFactory {
                 player.set_course_mode(is_course_mode);
 
                 // Wire play mode from PlayerResource
-                if let Some(mode) = resource.and_then(|r| r.play_mode()).cloned() {
+                if let Some(mode) = resource.and_then(|r| r.play_mode()).copied() {
                     player.set_play_mode(mode);
                 }
 
@@ -662,7 +661,7 @@ impl StateFactory for LauncherStateFactory {
 
                 // Wire audio config
                 if let Some(audio_config) = controller.config().audio_config() {
-                    player.set_fast_forward_freq_option(audio_config.fast_forward.clone());
+                    player.set_fast_forward_freq_option(audio_config.fast_forward);
                     player.set_bg_volume(audio_config.bgvolume);
                 }
 

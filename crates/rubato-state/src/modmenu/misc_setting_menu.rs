@@ -200,7 +200,7 @@ fn get_play_config() -> PlayConfig {
             .expect("CURRENT_PLAY_MODE lock poisoned");
         if let Some(ref mode) = *mode {
             let mut player_config = m.player_config().clone();
-            let play_mode_config = player_config.play_config(mode.clone());
+            let play_mode_config = player_config.play_config(*mode);
             return play_mode_config.playconfig.clone();
         }
     }
@@ -211,7 +211,7 @@ fn get_play_config() -> PlayConfig {
 fn change_play_mode(mode: &Mode) {
     *CURRENT_PLAY_MODE
         .lock()
-        .expect("CURRENT_PLAY_MODE lock poisoned") = Some(mode.clone());
+        .expect("CURRENT_PLAY_MODE lock poisoned") = Some(*mode);
     let conf = get_play_config();
 
     *ENABLE_LIFT.lock().expect("ENABLE_LIFT lock poisoned") = conf.is_enablelift();

@@ -12,7 +12,7 @@ impl Layer {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Event {
     pub event_type: EventType,
     pub interval: i32,
@@ -27,14 +27,14 @@ impl Event {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EventType {
     Always,
     Play,
     Miss,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Sequence {
     pub time: i64,
     pub id: i32,

@@ -11,7 +11,7 @@ use crate::util::controller_config_view_model::ControllerConfigViewModel;
 /// PlayMode enum
 /// Translates: PlayConfigurationView.PlayMode (inner enum)
 /// Defined here to avoid circular dependency on play_configuration_view.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[allow(non_camel_case_types)]
 pub enum PlayMode {
     BEAT_5K,
@@ -139,8 +139,8 @@ impl InputConfigurationView {
         // commitMode();
         self.commit_mode();
         // updateMode(inputconfig.getValue());
-        if let Some(ref mode) = self.inputconfig.clone() {
-            self.update_mode(mode);
+        if let Some(mode) = self.inputconfig {
+            self.update_mode(&mode);
         }
     }
 
@@ -165,7 +165,7 @@ impl InputConfigurationView {
     // public void updateMode(PlayConfigurationView.PlayMode mode)
     pub fn update_mode(&mut self, mode: &PlayMode) {
         // this.mode = mode;
-        self.mode = Some(mode.clone());
+        self.mode = Some(*mode);
 
         // PlayModeConfig conf = player.getPlayConfig(Mode.valueOf(mode.name()));
         let bms_mode = mode.to_mode();
@@ -241,7 +241,7 @@ impl InputConfigurationView {
     // public void commitMode()
     pub fn commit_mode(&mut self) {
         // if (mode != null) {
-        if let Some(ref mode) = self.mode.clone() {
+        if let Some(mode) = self.mode {
             // PlayModeConfig conf = player.getPlayConfig(Mode.valueOf(mode.name()));
             let bms_mode = mode.to_mode();
             let player = self
@@ -332,7 +332,7 @@ impl InputConfigurationView {
                     for mode in PlayMode::values() {
                         let selected = self.inputconfig.as_ref() == Some(mode);
                         if ui.selectable_label(selected, mode.display_name()).clicked() {
-                            self.inputconfig = Some(mode.clone());
+                            self.inputconfig = Some(*mode);
                             self.change_mode();
                         }
                     }

@@ -72,7 +72,7 @@ pub struct Metadata {
     pub beatmap_set_id: i32,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Difficulty {
     pub hp_drain_rate: f32,
     pub circle_size: f32,
@@ -89,7 +89,7 @@ pub struct Events {
     pub event_params: Vec<String>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct TimingPoints {
     pub time: f32,
     pub beat_length: f32,
@@ -121,7 +121,7 @@ pub struct HitObjects {
     pub hit_sample: HitSample,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RGB {
     pub red: i32,
     pub green: i32,
