@@ -2,7 +2,6 @@ use std::any::Any;
 use std::sync::{Arc, Mutex};
 
 use crate::config::Config;
-use crate::input_processor_access::InputProcessorAccess;
 use crate::main_state_type::MainStateType;
 use crate::player_config::PlayerConfig;
 use crate::player_data::PlayerData;
@@ -192,12 +191,6 @@ pub trait MainControllerAccess {
     /// The default implementation returns false (no IPFS support).
     fn start_ipfs_download(&mut self, _song: &crate::song_data::SongData) -> bool {
         false
-    }
-
-    /// Get input processor access.
-    /// Java: MainController.getInputProcessor()
-    fn input_processor(&self) -> Option<&dyn InputProcessorAccess> {
-        None
     }
 
     /// Get ranking data cache (immutable).

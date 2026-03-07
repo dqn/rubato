@@ -106,8 +106,7 @@ pub mod score_data_cache;
 // Ranking data cache trait (core↔ir bridge for IR ranking cache)
 pub mod ranking_data_cache_access;
 
-// Input processor access (keyboard control keys + commands)
-pub mod input_processor_access;
+// input_processor_access removed: trait had 0 real implementations
 
 // Score handoff (Play→Result data transfer via outbox pattern)
 pub mod score_handoff;

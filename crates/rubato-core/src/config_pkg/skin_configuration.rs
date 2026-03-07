@@ -224,23 +224,6 @@ impl SkinConfiguration {
         // See beatoraja-launcher/src/launcher_ui.rs render_skin_tab() for the implementation.
     }
 
-    /// Handle scroll input for navigating skin custom option lists.
-    ///
-    /// Java: SkinConfiguration.input()
-    pub fn input_internal(
-        &mut self,
-        input: &mut dyn rubato_types::input_processor_access::InputProcessorAccess,
-    ) {
-        let mov = -input.scroll();
-        input.reset_scroll();
-        if mov != 0 && self.custom_options.is_some() {
-            self.custom_option_offset = 0.max(
-                self.custom_option_offset_max
-                    .min(self.custom_option_offset + mov),
-            );
-        }
-    }
-
     pub fn skin_type(&self) -> Option<SkinType> {
         self.skin_type
     }
@@ -1082,9 +1065,7 @@ impl MainState for SkinConfiguration {
     }
 
     fn input(&mut self) {
-        // input_internal requires InputProcessorAccess which is not available
-        // through the MainState::input() trait method. Scroll input handling
-        // is deferred to the launcher's egui SkinConfigurationView.
+        // Scroll input handling is deferred to the launcher's egui SkinConfigurationView.
     }
 
     fn dispose(&mut self) {
