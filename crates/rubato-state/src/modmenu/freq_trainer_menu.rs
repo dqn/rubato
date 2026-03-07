@@ -1,4 +1,3 @@
-use rubato_types::sync_utils::lock_or_recover;
 use std::sync::Mutex;
 
 static FREQ_TRAINER_ENABLED: Mutex<bool> = Mutex::new(false);
@@ -8,23 +7,27 @@ pub struct FreqTrainerMenu;
 
 impl FreqTrainerMenu {
     pub fn is_freq_trainer_enabled() -> bool {
-        *lock_or_recover(&FREQ_TRAINER_ENABLED)
+        *FREQ_TRAINER_ENABLED
+            .lock()
+            .expect("FREQ_TRAINER_ENABLED lock poisoned")
     }
 
     pub fn set_freq_trainer_enabled(enabled: bool) {
-        *lock_or_recover(&FREQ_TRAINER_ENABLED) = enabled;
+        *FREQ_TRAINER_ENABLED
+            .lock()
+            .expect("FREQ_TRAINER_ENABLED lock poisoned") = enabled;
     }
 
     pub fn get_freq() -> i32 {
-        *lock_or_recover(&FREQ)
+        *FREQ.lock().expect("FREQ lock poisoned")
     }
 
     pub fn is_freq_negative() -> bool {
-        *lock_or_recover(&FREQ) < 100
+        *FREQ.lock().expect("FREQ lock poisoned") < 100
     }
 
     pub fn get_freq_string() -> String {
-        let freq = *lock_or_recover(&FREQ);
+        let freq = *FREQ.lock().expect("FREQ lock poisoned");
         let rate = freq as f32 / 100.0f32;
         format!("[{:.02}x]", rate)
     }
@@ -50,7 +53,7 @@ impl FreqTrainerMenu {
                             format!("{}%", value)
                         };
                         if ui.button(&label).clicked() {
-                            let mut freq = lock_or_recover(&FREQ);
+                            let mut freq = FREQ.lock().expect("FREQ lock poisoned");
                             if *value == 100 {
                                 *freq = 100;
                             } else {
@@ -60,14 +63,14 @@ impl FreqTrainerMenu {
                     }
                 });
 
-                let mut freq = *lock_or_recover(&FREQ);
+                let mut freq = *FREQ.lock().expect("FREQ lock poisoned");
                 ui.add(egui::Slider::new(&mut freq, 50..=200).text("%"));
-                *lock_or_recover(&FREQ) = clamp(freq);
+                *FREQ.lock().expect("FREQ lock poisoned") = clamp(freq);
 
                 ui.separator();
                 ui.label("Controls");
                 ui.indent("freq_controls", |ui| {
-                    let mut enabled = *lock_or_recover(&FREQ_TRAINER_ENABLED);
+                    let mut enabled = *FREQ_TRAINER_ENABLED.lock().expect("FREQ_TRAINER_ENABLED lock poisoned");
                     ui.horizontal(|ui| {
                         ui.checkbox(&mut enabled, "Rate Enabled");
                         crate::modmenu::imgui_renderer::ImGuiRenderer::help_marker(
@@ -75,7 +78,7 @@ impl FreqTrainerMenu {
                             "When enabled positive rate scores will save locally, negative rate scores never save.",
                         );
                     });
-                    *lock_or_recover(&FREQ_TRAINER_ENABLED) = enabled;
+                    *FREQ_TRAINER_ENABLED.lock().expect("FREQ_TRAINER_ENABLED lock poisoned") = enabled;
                 });
             });
     }

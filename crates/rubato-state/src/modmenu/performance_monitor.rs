@@ -1,6 +1,5 @@
 use rubato_core::performance_metrics::{EventResult, PerformanceMetrics};
 
-use rubato_types::sync_utils::lock_or_recover;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Instant;
@@ -27,14 +26,18 @@ impl PerformanceMonitor {
     pub fn show_ui(ctx: &egui::Context) {
         let now = Instant::now();
         {
-            let last_update = lock_or_recover(&LAST_EVENT_UPDATE);
+            let last_update = LAST_EVENT_UPDATE
+                .lock()
+                .expect("LAST_EVENT_UPDATE lock poisoned");
             let should_reload = match &*last_update {
                 None => true,
                 Some(t) => now.duration_since(*t).as_nanos() > 500_000_000,
             };
             if should_reload {
                 drop(last_update);
-                *lock_or_recover(&LAST_EVENT_UPDATE) = Some(now);
+                *LAST_EVENT_UPDATE
+                    .lock()
+                    .expect("LAST_EVENT_UPDATE lock poisoned") = Some(now);
                 Self::reload_event_tree();
             }
         }
@@ -44,7 +47,7 @@ impl PerformanceMonitor {
             .open(&mut open)
             .show(ctx, |ui| {
                 ui.collapsing("Watch", |ui| {
-                    let watch_data = lock_or_recover(&WATCH_DATA);
+                    let watch_data = WATCH_DATA.lock().expect("WATCH_DATA lock poisoned");
                     if watch_data.is_empty() {
                         ui.label("No watch data");
                     } else {
@@ -64,23 +67,33 @@ impl PerformanceMonitor {
                 });
 
                 ui.collapsing("Events", |ui| {
-                    let tree = lock_or_recover(&EVENT_TREE);
+                    let tree = EVENT_TREE.lock().expect("EVENT_TREE lock poisoned");
                     if let Some(ref tree) = *tree {
-                        let threshold = *lock_or_recover(&FILTER_SHORT_THRESHOLD);
+                        let threshold = *FILTER_SHORT_THRESHOLD
+                            .lock()
+                            .expect("FILTER_SHORT_THRESHOLD lock poisoned");
                         ui.horizontal(|ui| {
                             ui.label("Filter threshold (ms):");
                             let mut t = threshold;
                             ui.add(egui::DragValue::new(&mut t).speed(0.1));
-                            *lock_or_recover(&FILTER_SHORT_THRESHOLD) = t;
+                            *FILTER_SHORT_THRESHOLD
+                                .lock()
+                                .expect("FILTER_SHORT_THRESHOLD lock poisoned") = t;
                         });
                         ui.horizontal(|ui| {
-                            let mut sort = *lock_or_recover(&SORT_BY_DURATION);
+                            let mut sort = *SORT_BY_DURATION
+                                .lock()
+                                .expect("SORT_BY_DURATION lock poisoned");
                             ui.checkbox(&mut sort, "Sort by duration");
-                            *lock_or_recover(&SORT_BY_DURATION) = sort;
+                            *SORT_BY_DURATION
+                                .lock()
+                                .expect("SORT_BY_DURATION lock poisoned") = sort;
                         });
                         // Render root events
                         if let Some(roots) = tree.get(&-1) {
-                            let sort_by_duration = *lock_or_recover(&SORT_BY_DURATION);
+                            let sort_by_duration = *SORT_BY_DURATION
+                                .lock()
+                                .expect("SORT_BY_DURATION lock poisoned");
                             let mut events: Vec<_> = roots.iter().collect();
                             if sort_by_duration {
                                 events.sort_unstable_by(|a, b| b.duration.cmp(&a.duration));
@@ -105,7 +118,10 @@ impl PerformanceMonitor {
         let mut new_tree: HashMap<i32, Vec<EventResult>> = HashMap::new();
         let metrics = PerformanceMetrics::get();
         let events = {
-            let results = lock_or_recover(&metrics.event_results);
+            let results = metrics
+                .event_results
+                .lock()
+                .expect("event_results lock poisoned");
             results.clone()
         };
         for event in &events {
@@ -114,7 +130,7 @@ impl PerformanceMonitor {
                 .or_default()
                 .push(event.clone());
         }
-        *lock_or_recover(&EVENT_TREE) = Some(new_tree);
+        *EVENT_TREE.lock().expect("EVENT_TREE lock poisoned") = Some(new_tree);
     }
 }
 
@@ -122,7 +138,9 @@ impl PerformanceMonitor {
 fn update_watch_data() {
     let now = Instant::now();
     {
-        let last_update = lock_or_recover(&LAST_STAT_UPDATE);
+        let last_update = LAST_STAT_UPDATE
+            .lock()
+            .expect("LAST_STAT_UPDATE lock poisoned");
         let should_update = match &*last_update {
             None => true,
             Some(t) => now.duration_since(*t).as_nanos() > 100_000_000,
@@ -131,7 +149,9 @@ fn update_watch_data() {
             return;
         }
     }
-    *lock_or_recover(&LAST_STAT_UPDATE) = Some(now);
+    *LAST_STAT_UPDATE
+        .lock()
+        .expect("LAST_STAT_UPDATE lock poisoned") = Some(now);
 
     let metrics = PerformanceMetrics::get();
     let names = metrics.get_watch_names();
@@ -162,12 +182,12 @@ fn update_watch_data() {
         }
     }
 
-    *lock_or_recover(&WATCH_DATA) = new_watch_data;
+    *WATCH_DATA.lock().expect("WATCH_DATA lock poisoned") = new_watch_data;
 }
 
 #[allow(dead_code)]
 fn render_watch_data() {
-    let watch_data = lock_or_recover(&WATCH_DATA);
+    let watch_data = WATCH_DATA.lock().expect("WATCH_DATA lock poisoned");
     for (name, data) in watch_data.iter() {
         let _text1 = name.clone();
         let _text2 = format!("avg = {:.1}us, std = {:.1}us", data.avg, data.std);
@@ -178,7 +198,9 @@ fn render_watch_data() {
 
 #[allow(dead_code)]
 fn render_event_table() {
-    let threshold = *lock_or_recover(&FILTER_SHORT_THRESHOLD);
+    let threshold = *FILTER_SHORT_THRESHOLD
+        .lock()
+        .expect("FILTER_SHORT_THRESHOLD lock poisoned");
     // ImGui.setNextItemWidth(ImGui.getContentRegionAvail().x / 5.f);
     // ImGui.sliderFloat("Filter short events", filterShortThreshold, 0.0f, 4.0f);
 
@@ -200,14 +222,16 @@ fn render_event_table() {
 
 #[allow(dead_code)]
 fn render_event_tree(group_id: i32, threshold: f32) {
-    let event_tree = lock_or_recover(&EVENT_TREE);
+    let event_tree = EVENT_TREE.lock().expect("EVENT_TREE lock poisoned");
     if let Some(ref tree) = *event_tree {
         if !tree.contains_key(&group_id) {
             return;
         }
 
         if let Some(group) = tree.get(&group_id) {
-            let sort_by_duration = *lock_or_recover(&SORT_BY_DURATION);
+            let sort_by_duration = *SORT_BY_DURATION
+                .lock()
+                .expect("SORT_BY_DURATION lock poisoned");
             let mut events: Vec<_> = group.iter().collect();
             if sort_by_duration {
                 events.sort_unstable_by(|a, b| b.duration.cmp(&a.duration));

@@ -241,34 +241,39 @@ pub fn compare_model(model: &BMSModel, fixture: &Fixture) -> Vec<String> {
     let mut diffs = Vec::new();
 
     // Metadata
-    if model.title != fixture.metadata.title {
+    if model.get_title() != fixture.metadata.title {
         diffs.push(format!(
             "title: rust={:?} java={:?}",
-            model.title, fixture.metadata.title
+            model.get_title(),
+            fixture.metadata.title
         ));
     }
-    if model.sub_title != fixture.metadata.subtitle {
+    if model.sub_title() != fixture.metadata.subtitle {
         diffs.push(format!(
             "subtitle: rust={:?} java={:?}",
-            model.sub_title, fixture.metadata.subtitle
+            model.sub_title(),
+            fixture.metadata.subtitle
         ));
     }
-    if model.artist != fixture.metadata.artist {
+    if model.artist() != fixture.metadata.artist {
         diffs.push(format!(
             "artist: rust={:?} java={:?}",
-            model.artist, fixture.metadata.artist
+            model.artist(),
+            fixture.metadata.artist
         ));
     }
-    if model.subartist != fixture.metadata.sub_artist {
+    if model.sub_artist() != fixture.metadata.sub_artist {
         diffs.push(format!(
             "sub_artist: rust={:?} java={:?}",
-            model.subartist, fixture.metadata.sub_artist
+            model.sub_artist(),
+            fixture.metadata.sub_artist
         ));
     }
-    if model.genre != fixture.metadata.genre {
+    if model.genre() != fixture.metadata.genre {
         diffs.push(format!(
             "genre: rust={:?} java={:?}",
-            model.genre, fixture.metadata.genre
+            model.genre(),
+            fixture.metadata.genre
         ));
     }
     if (model.bpm - fixture.metadata.initial_bpm).abs() > 0.001 {
@@ -277,10 +282,11 @@ pub fn compare_model(model: &BMSModel, fixture: &Fixture) -> Vec<String> {
             model.bpm, fixture.metadata.initial_bpm
         ));
     }
-    if model.judgerank != fixture.metadata.judge_rank {
+    if model.judgerank() != fixture.metadata.judge_rank {
         diffs.push(format!(
             "judge_rank: rust={} java={}",
-            model.judgerank, fixture.metadata.judge_rank
+            model.judgerank(),
+            fixture.metadata.judge_rank
         ));
     }
     if (model.total - fixture.metadata.total).abs() > 0.001 {
@@ -289,10 +295,11 @@ pub fn compare_model(model: &BMSModel, fixture: &Fixture) -> Vec<String> {
             model.total, fixture.metadata.total
         ));
     }
-    if fixture.metadata.player > 0 && model.player != fixture.metadata.player {
+    if fixture.metadata.player > 0 && model.player() != fixture.metadata.player {
         diffs.push(format!(
             "player: rust={} java={}",
-            model.player, fixture.metadata.player
+            model.player(),
+            fixture.metadata.player
         ));
     }
     if let Some(mode) = model.mode()
@@ -310,28 +317,32 @@ pub fn compare_model(model: &BMSModel, fixture: &Fixture) -> Vec<String> {
             model.lnmode, fixture.metadata.ln_type
         ));
     }
-    if model.banner != fixture.metadata.banner {
+    if model.banner() != fixture.metadata.banner {
         diffs.push(format!(
             "banner: rust={:?} java={:?}",
-            model.banner, fixture.metadata.banner
+            model.banner(),
+            fixture.metadata.banner
         ));
     }
-    if model.stagefile != fixture.metadata.stagefile {
+    if model.stagefile() != fixture.metadata.stagefile {
         diffs.push(format!(
             "stagefile: rust={:?} java={:?}",
-            model.stagefile, fixture.metadata.stagefile
+            model.stagefile(),
+            fixture.metadata.stagefile
         ));
     }
-    if model.backbmp != fixture.metadata.backbmp {
+    if model.backbmp() != fixture.metadata.backbmp {
         diffs.push(format!(
             "backbmp: rust={:?} java={:?}",
-            model.backbmp, fixture.metadata.backbmp
+            model.backbmp(),
+            fixture.metadata.backbmp
         ));
     }
-    if model.preview != fixture.metadata.preview {
+    if model.preview() != fixture.metadata.preview {
         diffs.push(format!(
             "preview: rust={:?} java={:?}",
-            model.preview, fixture.metadata.preview
+            model.preview(),
+            fixture.metadata.preview
         ));
     }
 
@@ -353,16 +364,18 @@ pub fn compare_model(model: &BMSModel, fixture: &Fixture) -> Vec<String> {
     }
 
     // Hashes
-    if model.md5 != fixture.hashes.md5 {
+    if model.md5() != fixture.hashes.md5 {
         diffs.push(format!(
             "md5: rust={} java={}",
-            model.md5, fixture.hashes.md5
+            model.md5(),
+            fixture.hashes.md5
         ));
     }
-    if model.sha256 != fixture.hashes.sha256 {
+    if model.sha256() != fixture.hashes.sha256 {
         diffs.push(format!(
             "sha256: rust={} java={}",
-            model.sha256, fixture.hashes.sha256
+            model.sha256(),
+            fixture.hashes.sha256
         ));
     }
 

@@ -169,10 +169,10 @@ pub fn max_notes_per_time(model: &BMSModel, range: i32) -> f64 {
     let mut maxnotes: i32 = 0;
     let tl = &model.timelines;
     let lntype = model.lntype();
-    for (i, tl_i) in tl.iter().enumerate() {
+    for i in 0..tl.len() {
         let mut notes = 0;
         let mut j = i;
-        while j < tl.len() && tl[j].time() < tl_i.time() + range {
+        while j < tl.len() && tl[j].time() < tl[i].time() + range {
             notes += tl[j].total_notes_with_lntype(lntype);
             j += 1;
         }
@@ -196,7 +196,7 @@ pub fn set_start_note_time(model: &mut BMSModel, starttime: i64) -> i64 {
     if margin_time > 0 {
         let first_bpm = model.timelines[0].bpm;
         let margin_section = (margin_time as f64) * first_bpm / 240000.0;
-        for tl in model.timelines.iter_mut() {
+        for tl in model.all_time_lines_mut() {
             tl.set_section(tl.get_section() + margin_section);
             tl.set_micro_time(tl.micro_time() + margin_time * 1000);
         }
@@ -204,7 +204,7 @@ pub fn set_start_note_time(model: &mut BMSModel, starttime: i64) -> i64 {
         let mode_key = model.mode().map(|m| m.key()).unwrap_or(0);
         let bpm = model.bpm;
 
-        let mut old_timelines = std::mem::take(&mut model.timelines);
+        let mut old_timelines = model.take_all_time_lines();
         let mut new_timelines: Vec<TimeLine> = Vec::with_capacity(old_timelines.len() + 1);
         let mut first = TimeLine::new(0.0, 0, mode_key);
         first.bpm = bpm;

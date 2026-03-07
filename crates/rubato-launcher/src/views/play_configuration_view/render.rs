@@ -70,19 +70,19 @@ impl PlayConfigurationView {
 
                 ui.label("Hi-Speed:");
                 ui.add(
-                    egui::DragValue::new(&mut self.input.hispeed)
+                    egui::DragValue::new(&mut self.hispeed)
                         .range(0.01..=20.0)
                         .speed(0.01),
                 );
                 ui.end_row();
 
                 ui.label("Hi-Speed Auto Adjust:");
-                ui.checkbox(&mut self.input.hispeedautoadjust, "");
+                ui.checkbox(&mut self.hispeedautoadjust, "");
                 ui.end_row();
 
                 ui.label("Hi-Speed Margin:");
                 ui.add(
-                    egui::DragValue::new(&mut self.input.hispeedmargin)
+                    egui::DragValue::new(&mut self.hispeedmargin)
                         .range(0.0..=10.0)
                         .speed(0.01),
                 );
@@ -92,24 +92,22 @@ impl PlayConfigurationView {
                 Self::render_combo_i32(
                     ui,
                     "pcv_fixhispeed",
-                    &mut self.input.fixhispeed,
-                    &self.input.fixhispeed_labels,
+                    &mut self.fixhispeed,
+                    &self.fixhispeed_labels,
                 );
                 ui.end_row();
 
                 ui.label("Green Value:");
-                ui.add(egui::DragValue::new(&mut self.input.gvalue).range(0..=9999));
+                ui.add(egui::DragValue::new(&mut self.gvalue).range(0..=9999));
                 ui.end_row();
 
                 ui.label("Constant Mode:");
-                ui.checkbox(&mut self.input.enable_constant, "");
+                ui.checkbox(&mut self.enable_constant, "");
                 ui.end_row();
 
-                if self.input.enable_constant {
+                if self.enable_constant {
                     ui.label("Constant Fade-in (ms):");
-                    ui.add(
-                        egui::DragValue::new(&mut self.input.const_fadein_time).range(0..=10000),
-                    );
+                    ui.add(egui::DragValue::new(&mut self.const_fadein_time).range(0..=10000));
                     ui.end_row();
                 }
             });
@@ -125,8 +123,8 @@ impl PlayConfigurationView {
                 Self::render_combo_i32(
                     ui,
                     "pcv_scoreop",
-                    &mut self.input.scoreop,
-                    &self.input.score_options_labels,
+                    &mut self.scoreop,
+                    &self.score_options_labels,
                 );
                 ui.end_row();
 
@@ -134,8 +132,8 @@ impl PlayConfigurationView {
                 Self::render_combo_i32(
                     ui,
                     "pcv_scoreop2",
-                    &mut self.input.scoreop2,
-                    &self.input.score_options_labels,
+                    &mut self.scoreop2,
+                    &self.score_options_labels,
                 );
                 ui.end_row();
 
@@ -143,8 +141,8 @@ impl PlayConfigurationView {
                 Self::render_combo_i32(
                     ui,
                     "pcv_doubleop",
-                    &mut self.input.doubleop,
-                    &self.input.double_options_labels,
+                    &mut self.doubleop,
+                    &self.double_options_labels,
                 );
                 ui.end_row();
 
@@ -152,18 +150,13 @@ impl PlayConfigurationView {
                 Self::render_combo_i32(
                     ui,
                     "pcv_gaugeop",
-                    &mut self.gauge.gaugeop,
-                    &self.gauge.gauge_options_labels,
+                    &mut self.gaugeop,
+                    &self.gauge_options_labels,
                 );
                 ui.end_row();
 
                 ui.label("LN Type:");
-                Self::render_combo_i32(
-                    ui,
-                    "pcv_lntype",
-                    &mut self.input.lntype,
-                    &self.input.lntype_labels,
-                );
+                Self::render_combo_i32(ui, "pcv_lntype", &mut self.lntype, &self.lntype_labels);
                 ui.end_row();
             });
 
@@ -175,49 +168,46 @@ impl PlayConfigurationView {
             .num_columns(2)
             .show(ui, |ui| {
                 ui.label("Enable Lane Cover:");
-                ui.checkbox(&mut self.lane.enable_lanecover, "");
+                ui.checkbox(&mut self.enable_lanecover, "");
                 ui.end_row();
 
-                if self.lane.enable_lanecover {
+                if self.enable_lanecover {
                     ui.label("Lane Cover:");
-                    ui.add(egui::DragValue::new(&mut self.lane.lanecover).range(0..=1000));
+                    ui.add(egui::DragValue::new(&mut self.lanecover).range(0..=1000));
                     ui.end_row();
 
                     ui.label("Margin Low:");
-                    ui.add(egui::DragValue::new(&mut self.lane.lanecovermarginlow).range(0..=1000));
+                    ui.add(egui::DragValue::new(&mut self.lanecovermarginlow).range(0..=1000));
                     ui.end_row();
 
                     ui.label("Margin High:");
-                    ui.add(
-                        egui::DragValue::new(&mut self.lane.lanecovermarginhigh).range(0..=1000),
-                    );
+                    ui.add(egui::DragValue::new(&mut self.lanecovermarginhigh).range(0..=1000));
                     ui.end_row();
 
                     ui.label("Switch Duration:");
                     ui.add(
-                        egui::DragValue::new(&mut self.lane.lanecoverswitchduration)
-                            .range(0..=10000),
+                        egui::DragValue::new(&mut self.lanecoverswitchduration).range(0..=10000),
                     );
                     ui.end_row();
                 }
 
                 ui.label("Enable Lift:");
-                ui.checkbox(&mut self.lane.enable_lift, "");
+                ui.checkbox(&mut self.enable_lift, "");
                 ui.end_row();
 
-                if self.lane.enable_lift {
+                if self.enable_lift {
                     ui.label("Lift:");
-                    ui.add(egui::DragValue::new(&mut self.lane.lift).range(0..=1000));
+                    ui.add(egui::DragValue::new(&mut self.lift).range(0..=1000));
                     ui.end_row();
                 }
 
                 ui.label("Enable Hidden:");
-                ui.checkbox(&mut self.lane.enable_hidden, "");
+                ui.checkbox(&mut self.enable_hidden, "");
                 ui.end_row();
 
-                if self.lane.enable_hidden {
+                if self.enable_hidden {
                     ui.label("Hidden:");
-                    ui.add(egui::DragValue::new(&mut self.lane.hidden).range(0..=1000));
+                    ui.add(egui::DragValue::new(&mut self.hidden).range(0..=1000));
                     ui.end_row();
                 }
             });
@@ -230,23 +220,23 @@ impl PlayConfigurationView {
             .num_columns(2)
             .show(ui, |ui| {
                 ui.label("Notes Display Timing:");
-                ui.add(egui::DragValue::new(&mut self.judge.notesdisplaytiming).range(-999..=999));
+                ui.add(egui::DragValue::new(&mut self.notesdisplaytiming).range(-999..=999));
                 ui.end_row();
 
                 ui.label("Auto Adjust:");
-                ui.checkbox(&mut self.judge.notesdisplaytimingautoadjust, "");
+                ui.checkbox(&mut self.notesdisplaytimingautoadjust, "");
                 ui.end_row();
 
                 ui.label("BPM Guide:");
-                ui.checkbox(&mut self.judge.bpmguide, "");
+                ui.checkbox(&mut self.bpmguide, "");
                 ui.end_row();
 
                 ui.label("Gauge Auto Shift:");
                 Self::render_combo_i32(
                     ui,
                     "pcv_gaugeautoshift",
-                    &mut self.gauge.gaugeautoshift,
-                    &self.gauge.gaugeautoshift_labels,
+                    &mut self.gaugeautoshift,
+                    &self.gaugeautoshift_labels,
                 );
                 ui.end_row();
 
@@ -254,8 +244,8 @@ impl PlayConfigurationView {
                 Self::render_combo_i32(
                     ui,
                     "pcv_bottomshiftablegauge",
-                    &mut self.gauge.bottomshiftablegauge,
-                    &self.gauge.bottomshiftablegauge_labels,
+                    &mut self.bottomshiftablegauge,
+                    &self.bottomshiftablegauge_labels,
                 );
                 ui.end_row();
 
@@ -263,8 +253,8 @@ impl PlayConfigurationView {
                 Self::render_combo_i32(
                     ui,
                     "pcv_judgealgorithm",
-                    &mut self.judge.judgealgorithm,
-                    &self.judge.judgealgorithm_labels,
+                    &mut self.judgealgorithm,
+                    &self.judgealgorithm_labels,
                 );
                 ui.end_row();
             });
@@ -277,32 +267,32 @@ impl PlayConfigurationView {
             .num_columns(2)
             .show(ui, |ui| {
                 ui.label("Enable Custom Judge:");
-                ui.checkbox(&mut self.judge.customjudge, "");
+                ui.checkbox(&mut self.customjudge, "");
                 ui.end_row();
 
-                if self.judge.customjudge {
+                if self.customjudge {
                     ui.label("Normal PG:");
-                    ui.add(egui::DragValue::new(&mut self.judge.njudgepg).range(0..=9999));
+                    ui.add(egui::DragValue::new(&mut self.njudgepg).range(0..=9999));
                     ui.end_row();
 
                     ui.label("Normal GR:");
-                    ui.add(egui::DragValue::new(&mut self.judge.njudgegr).range(0..=9999));
+                    ui.add(egui::DragValue::new(&mut self.njudgegr).range(0..=9999));
                     ui.end_row();
 
                     ui.label("Normal GD:");
-                    ui.add(egui::DragValue::new(&mut self.judge.njudgegd).range(0..=9999));
+                    ui.add(egui::DragValue::new(&mut self.njudgegd).range(0..=9999));
                     ui.end_row();
 
                     ui.label("Scratch PG:");
-                    ui.add(egui::DragValue::new(&mut self.judge.sjudgepg).range(0..=9999));
+                    ui.add(egui::DragValue::new(&mut self.sjudgepg).range(0..=9999));
                     ui.end_row();
 
                     ui.label("Scratch GR:");
-                    ui.add(egui::DragValue::new(&mut self.judge.sjudgegr).range(0..=9999));
+                    ui.add(egui::DragValue::new(&mut self.sjudgegr).range(0..=9999));
                     ui.end_row();
 
                     ui.label("Scratch GD:");
-                    ui.add(egui::DragValue::new(&mut self.judge.sjudgegd).range(0..=9999));
+                    ui.add(egui::DragValue::new(&mut self.sjudgegd).range(0..=9999));
                     ui.end_row();
                 }
             });
@@ -376,7 +366,7 @@ impl PlayConfigurationView {
                 ui.end_row();
 
                 ui.label("Extra Note Depth:");
-                ui.add(egui::DragValue::new(&mut self.display.extranotedepth).range(0..=100));
+                ui.add(egui::DragValue::new(&mut self.extranotedepth).range(0..=100));
                 ui.end_row();
             });
 
@@ -388,36 +378,35 @@ impl PlayConfigurationView {
             .num_columns(2)
             .show(ui, |ui| {
                 ui.label("Judge Region:");
-                ui.checkbox(&mut self.display.judgeregion, "");
+                ui.checkbox(&mut self.judgeregion, "");
                 ui.end_row();
 
                 ui.label("Mark Processed Note:");
-                ui.checkbox(&mut self.display.markprocessednote, "");
+                ui.checkbox(&mut self.markprocessednote, "");
                 ui.end_row();
 
                 ui.label("Show Hidden Note:");
-                ui.checkbox(&mut self.display.showhiddennote, "");
+                ui.checkbox(&mut self.showhiddennote, "");
                 ui.end_row();
 
                 ui.label("Show Past Note:");
-                ui.checkbox(&mut self.display.showpastnote, "");
+                ui.checkbox(&mut self.showpastnote, "");
                 ui.end_row();
 
                 ui.label("Target:");
                 {
                     let selected_text = self
-                        .display
                         .target_selected
                         .clone()
                         .unwrap_or_else(|| "(none)".to_string());
                     egui::ComboBox::from_id_salt("pcv_target")
                         .selected_text(&selected_text)
                         .show_ui(ui, |ui| {
-                            for t in &self.display.target {
+                            for t in &self.target {
                                 let is_selected =
-                                    self.display.target_selected.as_deref() == Some(t.as_str());
+                                    self.target_selected.as_deref() == Some(t.as_str());
                                 if ui.selectable_label(is_selected, t).clicked() {
-                                    self.display.target_selected = Some(t.clone());
+                                    self.target_selected = Some(t.clone());
                                 }
                             }
                         });
@@ -481,11 +470,11 @@ impl PlayConfigurationView {
                 ui.end_row();
 
                 ui.label("Chart Preview:");
-                ui.checkbox(&mut self.display.chartpreview, "");
+                ui.checkbox(&mut self.chartpreview, "");
                 ui.end_row();
 
                 ui.label("Guide SE:");
-                ui.checkbox(&mut self.display.guidese, "");
+                ui.checkbox(&mut self.guidese, "");
                 ui.end_row();
 
                 ui.label("Window Hold:");

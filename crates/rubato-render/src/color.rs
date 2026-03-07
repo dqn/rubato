@@ -1,11 +1,6 @@
 // Color, Rectangle, Matrix4 — pure data types for rendering.
 // Drop-in replacements for the same types in rendering_stubs.rs.
 
-/// Bit shift amounts for packing/unpacking RGBA and ABGR integers.
-const SHIFT_HIGH: i32 = 24;
-const SHIFT_MID_HIGH: i32 = 16;
-const SHIFT_MID_LOW: i32 = 8;
-
 /// RGBA color with float components in [0.0, 1.0].
 /// Corresponds to com.badlogic.gdx.graphics.Color.
 #[derive(Clone, Copy, Debug)]
@@ -77,16 +72,16 @@ impl Color {
 
     /// Packs r, g, b, a into an integer (Color.rgba8888 equivalent)
     pub fn rgba8888(r: f32, g: f32, b: f32, a: f32) -> i32 {
-        ((255.0 * r) as i32) << SHIFT_HIGH
-            | ((255.0 * g) as i32) << SHIFT_MID_HIGH
-            | ((255.0 * b) as i32) << SHIFT_MID_LOW
+        ((255.0 * r) as i32) << 24
+            | ((255.0 * g) as i32) << 16
+            | ((255.0 * b) as i32) << 8
             | ((255.0 * a) as i32)
     }
 
     /// Corresponds to com.badlogic.gdx.graphics.Color.toIntBits(a, b, g, r)
     /// Note: LibGDX's toIntBits packs as ABGR
     pub fn to_int_bits(a: i32, b: i32, g: i32, r: i32) -> i32 {
-        (a << SHIFT_HIGH) | (b << SHIFT_MID_HIGH) | (g << SHIFT_MID_LOW) | r
+        (a << 24) | (b << 16) | (g << 8) | r
     }
 
     pub fn set(&mut self, other: &Color) {

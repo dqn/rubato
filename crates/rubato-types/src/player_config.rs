@@ -1,6 +1,5 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::Context;
 use bms_model::mode::Mode;
 
 use crate::config::Config;
@@ -673,12 +672,7 @@ impl PlayerConfig {
     pub fn init(config: &mut Config) -> anyhow::Result<()> {
         let playerpath = Path::new(&config.paths.playerpath);
         if !playerpath.exists() {
-            std::fs::create_dir_all(playerpath).with_context(|| {
-                format!(
-                    "failed to create player directory: {}",
-                    playerpath.display()
-                )
-            })?;
+            std::fs::create_dir_all(playerpath)?;
         }
 
         if read_all_player_id(&config.paths.playerpath).is_empty() {
@@ -718,7 +712,7 @@ impl PlayerConfig {
     }
 
     pub fn config_json(player: &PlayerConfig) -> anyhow::Result<String> {
-        serde_json::to_string_pretty(player).context("failed to serialize player config to JSON")
+        Ok(serde_json::to_string_pretty(player)?)
     }
 
     pub fn validate_player_config(playerid: &str, mut player: PlayerConfig) -> PlayerConfig {
@@ -731,17 +725,10 @@ impl PlayerConfig {
         let id = player.id.as_deref().unwrap_or("unknown");
         let path = PathBuf::from(format!("{}/{}/config_player.json", playerpath, id));
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).with_context(|| {
-                format!(
-                    "failed to create player config directory: {}",
-                    parent.display()
-                )
-            })?;
+            std::fs::create_dir_all(parent)?;
         }
-        let json = serde_json::to_string_pretty(player)
-            .context("failed to serialize player config to JSON")?;
-        std::fs::write(&path, json.as_bytes())
-            .with_context(|| format!("failed to write player config: {}", path.display()))?;
+        let json = serde_json::to_string_pretty(player)?;
+        std::fs::write(path, json.as_bytes())?;
         Ok(())
     }
 }
@@ -766,14 +753,12 @@ pub fn create_player(playerpath: &str, playerid: &str) -> anyhow::Result<()> {
     if p.exists() {
         return Ok(());
     }
-    std::fs::create_dir(&p)
-        .with_context(|| format!("failed to create player directory: {}", p.display()))?;
+    std::fs::create_dir(&p)?;
     let player = PlayerConfig {
         id: Some(playerid.to_string()),
         ..Default::default()
     };
-    PlayerConfig::write(playerpath, &player)
-        .with_context(|| format!("failed to write initial config for player '{}'", playerid))?;
+    PlayerConfig::write(playerpath, &player)?;
     Ok(())
 }
 
@@ -816,10 +801,8 @@ fn load_player_config(
 }
 
 fn load_player_config_from_old_path(path: &Path) -> anyhow::Result<PlayerConfig> {
-    let data = std::fs::read_to_string(path)
-        .with_context(|| format!("failed to read old player config: {}", path.display()))?;
-    let player: PlayerConfig = serde_json::from_str(&data)
-        .with_context(|| format!("failed to parse old player config: {}", path.display()))?;
+    let data = std::fs::read_to_string(path)?;
+    let player: PlayerConfig = serde_json::from_str(&data)?;
     Ok(player)
 }
 

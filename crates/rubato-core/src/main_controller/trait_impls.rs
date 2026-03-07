@@ -1,6 +1,6 @@
 use super::*;
 
-impl ControllerConfigAccess for MainController {
+impl MainControllerAccess for MainController {
     fn config(&self) -> &Config {
         &self.config
     }
@@ -8,9 +8,7 @@ impl ControllerConfigAccess for MainController {
     fn player_config(&self) -> &PlayerConfig {
         &self.player
     }
-}
 
-impl StateTransitionAccess for MainController {
     fn change_state(&mut self, state: MainStateType) {
         MainController::change_state(self, state);
     }
@@ -32,9 +30,19 @@ impl StateTransitionAccess for MainController {
             MainController::update_song(self, p);
         }
     }
-}
 
-impl AudioSystemAccess for MainController {
+    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
+        self.resource
+            .as_ref()
+            .map(|r| r as &dyn PlayerResourceAccess)
+    }
+
+    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
+        self.resource
+            .as_mut()
+            .map(|r| r as &mut dyn PlayerResourceAccess)
+    }
+
     fn play_sound(&mut self, sound: &SoundType, loop_sound: bool) {
         let volume = self.config.audio.as_ref().map_or(1.0, |a| a.systemvolume);
         let path = self.sound.as_ref().and_then(|sm| sm.sound(sound).cloned());
@@ -108,43 +116,7 @@ impl AudioSystemAccess for MainController {
             sm.shuffle();
         }
     }
-}
 
-impl IRConnectionAccess for MainController {
-    fn ranking_data_cache(
-        &self,
-    ) -> Option<&dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess> {
-        MainController::ranking_data_cache(self)
-    }
-
-    fn ranking_data_cache_mut(
-        &mut self,
-    ) -> Option<&mut (dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess + 'static)>
-    {
-        self.db.ircache.as_deref_mut()
-    }
-
-    fn rival_count(&self) -> usize {
-        self.db.rivals.rival_count()
-    }
-
-    fn rival_information(
-        &self,
-        index: usize,
-    ) -> Option<rubato_types::player_information::PlayerInformation> {
-        self.db.rivals.rival_information(index).cloned()
-    }
-
-    fn ir_connection_any(&self) -> Option<&dyn std::any::Any> {
-        self.db
-            .ir
-            .first()
-            .and_then(|status| status.connection.as_ref())
-            .map(|conn| conn.as_ref() as &dyn std::any::Any)
-    }
-}
-
-impl DataReadAccess for MainController {
     fn read_replay_data(
         &self,
         sha256: &str,
@@ -163,6 +135,19 @@ impl DataReadAccess for MainController {
         source: Box<dyn rubato_types::table_update_source::TableUpdateSource>,
     ) {
         MainController::update_table(self, source);
+    }
+
+    fn ranking_data_cache(
+        &self,
+    ) -> Option<&dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess> {
+        MainController::ranking_data_cache(self)
+    }
+
+    fn ranking_data_cache_mut(
+        &mut self,
+    ) -> Option<&mut (dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess + 'static)>
+    {
+        self.db.ircache.as_deref_mut()
     }
 
     fn http_downloader(
@@ -190,6 +175,17 @@ impl DataReadAccess for MainController {
         }
     }
 
+    fn rival_count(&self) -> usize {
+        self.db.rivals.rival_count()
+    }
+
+    fn rival_information(
+        &self,
+        index: usize,
+    ) -> Option<rubato_types::player_information::PlayerInformation> {
+        self.db.rivals.rival_information(index).cloned()
+    }
+
     fn read_score_data_by_hash(
         &self,
         hash: &str,
@@ -212,18 +208,12 @@ impl DataReadAccess for MainController {
     fn info_database(&self) -> Option<&dyn rubato_types::song_information_db::SongInformationDb> {
         self.db.infodb.as_deref()
     }
-}
 
-impl MainControllerAccess for MainController {
-    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-        self.resource
-            .as_ref()
-            .map(|r| r as &dyn PlayerResourceAccess)
-    }
-
-    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-        self.resource
-            .as_mut()
-            .map(|r| r as &mut dyn PlayerResourceAccess)
+    fn ir_connection_any(&self) -> Option<&dyn std::any::Any> {
+        self.db
+            .ir
+            .first()
+            .and_then(|status| status.connection.as_ref())
+            .map(|conn| conn.as_ref() as &dyn std::any::Any)
     }
 }

@@ -5,7 +5,6 @@ use std::time::Instant;
 use super::download_task::{DownloadTask, DownloadTaskStatus};
 use super::http_download_processor::HttpDownloadProcessor;
 
-use rubato_types::sync_utils::lock_or_recover;
 use std::sync::OnceLock;
 
 /// Global state for running and expired download tasks.
@@ -35,12 +34,12 @@ impl DownloadTaskState {
     }
 
     pub fn get_running_download_tasks() -> HashMap<i32, Arc<Mutex<DownloadTask>>> {
-        let inner = lock_or_recover(Self::get_inner());
+        let inner = Self::get_inner().lock().expect("lock poisoned");
         inner.running_download_tasks.clone()
     }
 
     pub fn get_expired_tasks() -> HashMap<i32, Arc<Mutex<DownloadTask>>> {
-        let inner = lock_or_recover(Self::get_inner());
+        let inner = Self::get_inner().lock().expect("lock poisoned");
         inner.expired_tasks.clone()
     }
 
@@ -49,7 +48,7 @@ impl DownloadTaskState {
     }
 
     pub fn update(processor: &HttpDownloadProcessor) {
-        let mut inner = lock_or_recover(Self::get_inner());
+        let mut inner = Self::get_inner().lock().expect("lock poisoned");
         let now = Instant::now();
         // no reason to check very often (1s)
         if now.duration_since(inner.last_snapshot).as_nanos() < 1_000_000_000 {
@@ -58,7 +57,7 @@ impl DownloadTaskState {
         inner.last_snapshot = now;
 
         let tasks_arc = processor.all_tasks();
-        let tasks = lock_or_recover(&tasks_arc);
+        let tasks = tasks_arc.lock().expect("tasks_arc lock poisoned");
         if tasks.len() == inner.expired_tasks.len() {
             return;
         }
@@ -69,7 +68,7 @@ impl DownloadTaskState {
                 continue;
             }
 
-            let task = lock_or_recover(task_arc);
+            let task = task_arc.lock().expect("task_arc lock poisoned");
             let _state = task.download_task_status();
             let finished =
                 task.download_task_status().value() >= DownloadTaskStatus::Extracted.value();

@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use crate::stubs::{BitmapFont, BitmapFontData, TextureRegion};
-use rubato_types::sync_utils::lock_or_recover;
 
 /// BitmapFont cache
 ///
@@ -24,7 +23,7 @@ pub struct CacheableBitmapFont {
 
 pub fn has(path: Option<&PathBuf>) -> bool {
     if let Some(path) = path {
-        let store = lock_or_recover(&CACHE_STORE);
+        let store = CACHE_STORE.lock().expect("CACHE_STORE lock poisoned");
         store.contains_key(path)
     } else {
         false
@@ -32,11 +31,11 @@ pub fn has(path: Option<&PathBuf>) -> bool {
 }
 
 pub fn set(path: PathBuf, font: CacheableBitmapFont) {
-    let mut store = lock_or_recover(&CACHE_STORE);
+    let mut store = CACHE_STORE.lock().expect("CACHE_STORE lock poisoned");
     store.insert(path, font);
 }
 
 pub fn get(path: &PathBuf) -> Option<CacheableBitmapFont> {
-    let store = lock_or_recover(&CACHE_STORE);
+    let store = CACHE_STORE.lock().expect("CACHE_STORE lock poisoned");
     store.get(path).cloned()
 }

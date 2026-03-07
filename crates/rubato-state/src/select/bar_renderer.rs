@@ -5,7 +5,6 @@ use super::bar_manager::BarManager;
 use super::music_select_key_property::{MusicSelectKey, MusicSelectKeyProperty};
 use super::skin_bar::SkinBar;
 use super::stubs::*;
-use rubato_types::sync_utils::lock_or_recover;
 
 /// Bar area data for rendering
 struct BarArea {
@@ -155,8 +154,8 @@ impl BarRenderer {
                 % ctx.currentsongs.len();
 
             // After prepare(), data.region contains the interpolated destination rectangle
-            if si.data.draw_state.draw {
-                let r = &si.data.draw_state.region;
+            if si.data.draw {
+                let r = &si.data.region;
                 if r.x <= x as f32
                     && r.x + r.width >= x as f32
                     && r.y <= y as f32
@@ -206,7 +205,7 @@ impl BarRenderer {
                 None => continue,
             };
 
-            if si1.data.draw_state.draw {
+            if si1.data.draw {
                 let mut dx: f32 = 0.0;
                 let mut dy: f32 = 0.0;
 
@@ -220,20 +219,19 @@ impl BarRenderer {
                         let si2 =
                             baro.bar_images(next_index == ctx.center_bar, next_index as usize);
                         if let Some(si2) = si2
-                            && si2.data.draw_state.draw
+                            && si2.data.draw
                         {
-                            dx = (si2.data.draw_state.region.x - si1.data.draw_state.region.x)
+                            dx = (si2.data.region.x - si1.data.region.x)
                                 * angle_lerp.clamp(-1.0, 1.0);
-                            dy = (si2.data.draw_state.region.y - si1.data.draw_state.region.y)
-                                * angle_lerp;
+                            dy = (si2.data.region.y - si1.data.region.y) * angle_lerp;
                         }
                     }
                 }
 
-                ba.x = (si1.data.draw_state.region.x + dx) as i32 as f32;
-                ba.y = ((si1.data.draw_state.region.y + dy)
+                ba.x = (si1.data.region.x + dx) as i32 as f32;
+                ba.y = ((si1.data.region.y + dy)
                     + if baro.position() == 1 {
-                        si1.data.draw_state.region.height
+                        si1.data.region.height
                     } else {
                         0.0
                     }) as i32 as f32;
@@ -393,9 +391,9 @@ impl BarRenderer {
                 None => continue,
             };
 
-            if si.data.draw_state.draw {
+            if si.data.draw {
                 let position_offset = if position == 1 {
-                    si.data.draw_state.region.height
+                    si.data.region.height
                 } else {
                     0.0
                 };
@@ -404,8 +402,8 @@ impl BarRenderer {
                     self.time,
                     ctx.state,
                     ba.value,
-                    ba.x - si.data.draw_state.region.x,
-                    ba.y - si.data.draw_state.region.y - position_offset,
+                    ba.x - si.data.region.x,
+                    ba.y - si.data.region.y - position_offset,
                 );
             }
         }
@@ -446,7 +444,7 @@ impl BarRenderer {
                     if let Some(song_bar) = sd.as_song_bar() {
                         let song_md5 = &song_bar.song_data().md5;
                         for task_arc in download_tasks.values() {
-                            let task = lock_or_recover(task_arc);
+                            let task = task_arc.lock().expect("task_arc lock poisoned");
                             if task.hash() != song_md5 {
                                 continue;
                             }
@@ -781,8 +779,8 @@ mod tests {
     /// Uses a default TextureRegion (no real texture, but valid for layout tests).
     fn make_test_image(x: f32, y: f32, w: f32, h: f32) -> SkinImage {
         let mut img = SkinImage::new_with_single(TextureRegion::default());
-        img.data.draw_state.draw = true;
-        img.data.draw_state.region = Rectangle::new(x, y, w, h);
+        img.data.draw = true;
+        img.data.region = Rectangle::new(x, y, w, h);
         img
     }
 

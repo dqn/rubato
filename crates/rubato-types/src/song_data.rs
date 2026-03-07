@@ -148,33 +148,33 @@ impl SongData {
 
     pub fn set_bms_model(&mut self, model: BMSModel) {
         // BMSPlayerRule::validate(&model) - stubbed, no-op
-        self.set_title(model.title.to_string());
-        self.set_subtitle(model.sub_title.to_string());
-        self.genre = model.genre.to_string();
-        self.set_artist(model.artist.to_string());
-        self.set_subartist(model.subartist.to_string());
+        self.set_title(model.get_title().to_string());
+        self.set_subtitle(model.sub_title().to_string());
+        self.genre = model.genre().to_string();
+        self.set_artist(model.artist().to_string());
+        self.set_subartist(model.sub_artist().to_string());
         if let Some(p) = model.path() {
             self.path.push(p);
         }
-        self.md5 = model.md5.to_string();
-        self.sha256 = model.sha256.to_string();
-        self.banner = model.banner.to_string();
+        self.md5 = model.md5().to_string();
+        self.sha256 = model.sha256().to_string();
+        self.banner = model.banner().to_string();
 
-        self.stagefile = model.stagefile.to_string();
-        self.backbmp = model.backbmp.to_string();
+        self.stagefile = model.stagefile().to_string();
+        self.backbmp = model.backbmp().to_string();
         if self.preview.is_empty() {
-            self.preview = model.preview.to_string();
+            self.preview = model.preview().to_string();
         }
 
-        if let Ok(l) = model.playlevel.parse::<i32>() {
+        if let Ok(l) = model.get_playlevel().parse::<i32>() {
             self.level = l;
         }
 
         self.mode = model.mode().map(|m| m.id()).unwrap_or(0);
         if self.difficulty == 0 {
-            self.difficulty = model.difficulty;
+            self.difficulty = model.difficulty();
         }
-        self.judge = model.judgerank;
+        self.judge = model.judgerank();
         self.minbpm = model.get_min_bpm() as i32;
         self.maxbpm = model.max_bpm() as i32;
         self.feature = 0;
@@ -217,11 +217,13 @@ impl SongData {
         if !model.bgamap.is_empty() {
             self.content |= CONTENT_BGA;
         }
-        if self.length >= 30000 && (model.wavmap.len() as i32) <= (self.length / (50 * 1000)) + 3 {
+        if self.length >= 30000
+            && (model.wav_list().len() as i32) <= (self.length / (50 * 1000)) + 3
+        {
             self.content |= CONTENT_NOKEYSOUND;
         }
 
-        self.info = Some(SongInformation::from(&model));
+        self.info = Some(SongInformation::from_model(&model));
 
         let chart_string = model.to_chart_string();
         let mut hasher = Sha256::new();
@@ -387,6 +389,85 @@ impl SongData {
 
     pub fn appendurl(&self) -> &str {
         self.appendurl.as_deref().unwrap_or("")
+    }
+
+    pub fn get_level(&self) -> i32 {
+        self.level
+    }
+
+    pub fn get_judge(&self) -> i32 {
+        self.judge
+    }
+
+    pub fn get_minbpm(&self) -> i32 {
+        self.minbpm
+    }
+
+    pub fn get_maxbpm(&self) -> i32 {
+        self.maxbpm
+    }
+
+    pub fn get_notes(&self) -> i32 {
+        self.notes
+    }
+
+    pub fn get_mode(&self) -> i32 {
+        self.mode
+    }
+
+    pub fn get_difficulty(&self) -> i32 {
+        self.difficulty
+    }
+
+    pub fn get_favorite(&self) -> i32 {
+        self.favorite
+    }
+    pub fn get_feature(&self) -> i32 {
+        self.feature
+    }
+
+    pub fn get_content(&self) -> i32 {
+        self.content
+    }
+
+    pub fn get_length(&self) -> i32 {
+        self.length
+    }
+
+    pub fn get_date(&self) -> i32 {
+        self.date
+    }
+
+    pub fn get_adddate(&self) -> i32 {
+        self.adddate
+    }
+
+    pub fn get_tag(&self) -> &str {
+        &self.tag
+    }
+
+    pub fn get_folder(&self) -> &str {
+        &self.folder
+    }
+
+    pub fn get_parent(&self) -> &str {
+        &self.parent
+    }
+
+    pub fn get_stagefile(&self) -> &str {
+        &self.stagefile
+    }
+
+    pub fn get_backbmp(&self) -> &str {
+        &self.backbmp
+    }
+
+    pub fn get_banner(&self) -> &str {
+        &self.banner
+    }
+
+    pub fn get_preview(&self) -> &str {
+        &self.preview
     }
 
     pub fn get_charthash(&self) -> Option<&str> {

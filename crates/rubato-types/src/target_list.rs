@@ -2,10 +2,16 @@ use std::borrow::Cow;
 use std::sync::Mutex;
 
 use crate::player_information::PlayerInformation;
-use crate::sync_utils::lock_or_recover;
 
 static TARGETS: Mutex<Vec<String>> = Mutex::new(Vec::new());
 static TARGET_NAMES: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+fn lock_or_recover<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    match mutex.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    }
+}
 
 /// Set the target ID list.
 pub fn set_target_ids(targets: Vec<String>) {

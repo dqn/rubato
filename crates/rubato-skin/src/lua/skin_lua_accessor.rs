@@ -14,7 +14,6 @@ use crate::property::integer_property::IntegerProperty;
 use crate::property::string_property::StringProperty;
 use crate::property::timer_property::TimerProperty;
 use crate::stubs::MainState;
-use rubato_types::sync_utils::lock_or_recover;
 
 /// Lua skin accessor
 ///
@@ -609,7 +608,7 @@ impl BooleanProperty for LuaBooleanProperty {
             self.creation_thread_id,
             "LuaBooleanProperty must be accessed on the thread where it was created"
         );
-        let key = lock_or_recover(&self.func_key);
+        let key = self.func_key.lock().expect("func_key lock poisoned");
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => match func.call::<LuaValue>(()) {
                 Ok(val) => match val {
@@ -650,7 +649,7 @@ impl IntegerProperty for LuaIntegerProperty {
             self.creation_thread_id,
             "LuaIntegerProperty must be accessed on the thread where it was created"
         );
-        let key = lock_or_recover(&self.func_key);
+        let key = self.func_key.lock().expect("func_key lock poisoned");
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => match func.call::<LuaValue>(()) {
                 Ok(val) => match val {
@@ -690,7 +689,7 @@ impl FloatProperty for LuaFloatProperty {
             self.creation_thread_id,
             "LuaFloatProperty must be accessed on the thread where it was created"
         );
-        let key = lock_or_recover(&self.func_key);
+        let key = self.func_key.lock().expect("func_key lock poisoned");
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => match func.call::<LuaValue>(()) {
                 Ok(val) => match val {
@@ -730,7 +729,7 @@ impl StringProperty for LuaStringProperty {
             self.creation_thread_id,
             "LuaStringProperty must be accessed on the thread where it was created"
         );
-        let key = lock_or_recover(&self.func_key);
+        let key = self.func_key.lock().expect("func_key lock poisoned");
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => match func.call::<LuaValue>(()) {
                 Ok(val) => match val {
@@ -769,7 +768,7 @@ impl TimerProperty for LuaTimerProperty {
             self.creation_thread_id,
             "LuaTimerProperty must be accessed on the thread where it was created"
         );
-        let key = lock_or_recover(&self.func_key);
+        let key = self.func_key.lock().expect("func_key lock poisoned");
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => match func.call::<LuaValue>(()) {
                 Ok(val) => match val {
@@ -809,7 +808,7 @@ impl Event for LuaEvent {
             self.creation_thread_id,
             "LuaEvent must be accessed on the thread where it was created"
         );
-        let key = lock_or_recover(&self.func_key);
+        let key = self.func_key.lock().expect("func_key lock poisoned");
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => {
                 // Pass both args; Lua functions ignore extra args
@@ -843,7 +842,7 @@ impl FloatWriter for LuaFloatWriter {
             self.creation_thread_id,
             "LuaFloatWriter must be accessed on the thread where it was created"
         );
-        let key = lock_or_recover(&self.func_key);
+        let key = self.func_key.lock().expect("func_key lock poisoned");
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => {
                 if let Err(e) = func.call::<LuaValue>(value) {

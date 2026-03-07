@@ -5,7 +5,6 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rubato_types::random_history;
 pub use rubato_types::random_history::RandomHistoryEntry;
-use rubato_types::sync_utils::lock_or_recover;
 
 static LANE_ORDER: Mutex<String> = Mutex::new(String::new());
 static LANES_TO_RANDOM: Mutex<Vec<char>> = Mutex::new(Vec::new());
@@ -15,11 +14,11 @@ static LANE_MASK: Mutex<Vec<bool>> = Mutex::new(Vec::new());
 static RANDOM_SEED_MAP: Mutex<Option<HashMap<i32, i64>>> = Mutex::new(None);
 
 fn init_defaults() {
-    let mut lane_order = lock_or_recover(&LANE_ORDER);
+    let mut lane_order = LANE_ORDER.lock().expect("LANE_ORDER lock poisoned");
     if lane_order.is_empty() {
         *lane_order = "1234567".to_string();
     }
-    let mut lane_mask = lock_or_recover(&LANE_MASK);
+    let mut lane_mask = LANE_MASK.lock().expect("LANE_MASK lock poisoned");
     if lane_mask.is_empty() {
         *lane_mask = vec![false; 7];
     }
@@ -36,7 +35,9 @@ impl Default for RandomTrainer {
 impl RandomTrainer {
     pub fn new() -> Self {
         init_defaults();
-        let mut seed_map = lock_or_recover(&RANDOM_SEED_MAP);
+        let mut seed_map = RANDOM_SEED_MAP
+            .lock()
+            .expect("RANDOM_SEED_MAP lock poisoned");
         if seed_map.is_none() {
             // In Java this loads from a serialized resource file "resources/randomtrainer.dat"
             // We stub this as an empty map since the binary resource is not available
@@ -50,9 +51,13 @@ impl RandomTrainer {
         init_defaults();
         let mut rng = thread_rng();
 
-        let black_white_permute = *lock_or_recover(&BLACK_WHITE_PERMUTE);
-        let mut lane_order = lock_or_recover(&LANE_ORDER);
-        let lanes_to_random = lock_or_recover(&LANES_TO_RANDOM);
+        let black_white_permute = *BLACK_WHITE_PERMUTE
+            .lock()
+            .expect("BLACK_WHITE_PERMUTE lock poisoned");
+        let mut lane_order = LANE_ORDER.lock().expect("LANE_ORDER lock poisoned");
+        let lanes_to_random = LANES_TO_RANDOM
+            .lock()
+            .expect("LANES_TO_RANDOM lock poisoned");
 
         if black_white_permute {
             let mut black: Vec<char> = Vec::new();
@@ -100,40 +105,51 @@ impl RandomTrainer {
     }
 
     pub fn is_lane_to_random(lane: char) -> bool {
-        let lanes = lock_or_recover(&LANES_TO_RANDOM);
+        let lanes = LANES_TO_RANDOM
+            .lock()
+            .expect("LANES_TO_RANDOM lock poisoned");
         lanes.contains(&lane)
     }
 
     pub fn set_lane_to_random(lane: char) {
-        let mut lanes = lock_or_recover(&LANES_TO_RANDOM);
+        let mut lanes = LANES_TO_RANDOM
+            .lock()
+            .expect("LANES_TO_RANDOM lock poisoned");
         lanes.push(lane);
     }
 
     pub fn remove_lane_to_random(lane: char) {
-        let mut lanes = lock_or_recover(&LANES_TO_RANDOM);
+        let mut lanes = LANES_TO_RANDOM
+            .lock()
+            .expect("LANES_TO_RANDOM lock poisoned");
         if let Some(pos) = lanes.iter().position(|&c| c == lane) {
             lanes.remove(pos);
         }
     }
 
     pub fn is_active() -> bool {
-        *lock_or_recover(&ACTIVE)
+        *ACTIVE.lock().expect("ACTIVE lock poisoned")
     }
 
     pub fn set_active(active: bool) {
-        *lock_or_recover(&ACTIVE) = active;
+        *ACTIVE.lock().expect("ACTIVE lock poisoned") = active;
     }
 
     pub fn get_random_seed_map() -> Option<HashMap<i32, i64>> {
-        lock_or_recover(&RANDOM_SEED_MAP).clone()
+        RANDOM_SEED_MAP
+            .lock()
+            .expect("RANDOM_SEED_MAP lock poisoned")
+            .clone()
     }
 
     pub fn set_black_white_permute(black_white_permute: bool) {
-        *lock_or_recover(&BLACK_WHITE_PERMUTE) = black_white_permute;
+        *BLACK_WHITE_PERMUTE
+            .lock()
+            .expect("BLACK_WHITE_PERMUTE lock poisoned") = black_white_permute;
     }
 
     pub fn set_lane_order(number: &str) {
-        *lock_or_recover(&LANE_ORDER) = number.to_string();
+        *LANE_ORDER.lock().expect("LANE_ORDER lock poisoned") = number.to_string();
     }
 
     pub fn random_history() -> VecDeque<RandomHistoryEntry> {

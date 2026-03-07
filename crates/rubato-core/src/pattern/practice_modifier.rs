@@ -25,7 +25,7 @@ impl PatternModifier for PracticeModifier {
         let totalnotes = model.total_notes();
         let mode_key = model.mode().map(|m| m.key()).unwrap_or(0);
 
-        let timelines = &mut model.timelines;
+        let timelines = model.all_time_lines_mut();
         let tl_len = timelines.len();
         for tl_idx in 0..tl_len {
             let time = timelines[tl_idx].time();
@@ -38,7 +38,7 @@ impl PatternModifier for PracticeModifier {
 
         let new_total_notes = model.total_notes();
         if totalnotes > 0 {
-            let total = model.total;
+            let total = model.get_total();
             model.total = total * new_total_notes as f64 / totalnotes as f64;
         }
     }

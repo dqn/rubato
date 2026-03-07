@@ -7,9 +7,14 @@
 
 use std::sync::Mutex;
 
-use crate::sync_utils::lock_or_recover;
-
 static FOCUS: Mutex<bool> = Mutex::new(false);
+
+fn lock_or_recover<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    match mutex.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    }
+}
 
 /// Returns the current focus state of the skin widget manager.
 pub fn focus() -> bool {

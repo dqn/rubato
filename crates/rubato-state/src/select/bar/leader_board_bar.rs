@@ -93,7 +93,8 @@ impl LeaderBoardBar {
             inserted = true;
         }
 
-        for (i, entry) in leaderboard.iter().enumerate() {
+        for i in 0..leaderboard.len() {
+            let entry = &leaderboard[i];
             let score = entry.ir_score();
             bars.push(self.create_function_bar(id + 1, entry, false));
             id += 1;

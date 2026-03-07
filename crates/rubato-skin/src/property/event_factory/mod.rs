@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-use std::sync::LazyLock;
-
 use super::event::Event;
 use crate::skin_property;
 
@@ -12,30 +9,15 @@ use rubato_types::main_state_type::MainStateType;
 // Public factory API
 // ============================================================
 
-/// Lazily-built index from EventId to position in EVENT_TYPES for O(1) lookup.
-static EVENT_ID_INDEX: LazyLock<HashMap<EventId, usize>> = LazyLock::new(|| {
-    EVENT_TYPES
-        .iter()
-        .enumerate()
-        .map(|(i, et)| (et.id, i))
-        .collect()
-});
-
-/// Lazily-built index from event name to position in EVENT_TYPES for O(1) lookup.
-static EVENT_NAME_INDEX: LazyLock<HashMap<&'static str, usize>> = LazyLock::new(|| {
-    EVENT_TYPES
-        .iter()
-        .enumerate()
-        .map(|(i, et)| (et.name, i))
-        .collect()
-});
-
 /// Returns an Event for the given event ID.
-/// Uses a HashMap for O(1) lookup instead of linear search.
+/// If the ID matches a built-in EventType, returns that event.
+/// Otherwise, returns a generic event that delegates to `state.execute_event()`.
 pub fn event_by_id(event_id: i32) -> Option<Box<dyn Event>> {
     let eid = EventId::new(event_id);
-    if let Some(&idx) = EVENT_ID_INDEX.get(&eid) {
-        return Some((EVENT_TYPES[idx].create_event)());
+    for et in EVENT_TYPES.iter() {
+        if et.id == eid {
+            return Some((et.create_event)());
+        }
     }
 
     // For unknown IDs, create a generic event that delegates to state.executeEvent
@@ -43,10 +25,11 @@ pub fn event_by_id(event_id: i32) -> Option<Box<dyn Event>> {
 }
 
 /// Returns an Event for the given event name.
-/// Uses a HashMap for O(1) lookup instead of linear search.
 pub fn event_by_name(event_name: &str) -> Option<Box<dyn Event>> {
-    if let Some(&idx) = EVENT_NAME_INDEX.get(event_name) {
-        return Some((EVENT_TYPES[idx].create_event)());
+    for et in EVENT_TYPES.iter() {
+        if et.name == event_name {
+            return Some((et.create_event)());
+        }
     }
     None
 }

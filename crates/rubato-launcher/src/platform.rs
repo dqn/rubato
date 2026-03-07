@@ -117,7 +117,12 @@ static CACHED_FULL_DISPLAY_MODES: std::sync::Mutex<Vec<VideoModeInfo>> =
     std::sync::Mutex::new(Vec::new());
 static CACHED_DESKTOP_MODE: std::sync::Mutex<(u32, u32)> = std::sync::Mutex::new((0, 0));
 
-use rubato_types::sync_utils::lock_or_recover;
+fn lock_or_recover<T>(mutex: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    match mutex.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    }
+}
 
 /// Update cached monitor list and display modes from winit's ActiveEventLoop.
 /// Call this from the event loop's `resumed()` handler.

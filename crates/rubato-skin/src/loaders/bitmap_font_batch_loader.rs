@@ -9,7 +9,7 @@ use log::warn;
 
 use crate::json::json_skin;
 use crate::loaders::bitmap_font_cache::{self, CacheableBitmapFont};
-use crate::loaders::skin_loader::{self, TextureLoadMode};
+use crate::loaders::skin_loader;
 use crate::stubs::{BitmapFont, BitmapFontData, TextureRegion};
 
 /// Parallelized bitmap font preloader.
@@ -17,7 +17,8 @@ use crate::stubs::{BitmapFont, BitmapFontData, TextureRegion};
 ///
 /// Translated from BitmapFontBatchLoader.java
 pub struct BitmapFontBatchLoader {
-    texture_load_mode: TextureLoadMode,
+    usecim: bool,
+    _use_mip_maps: bool,
     font_paths: HashMap<PathBuf, i32>,
     font_data: HashMap<PathBuf, BitmapFontData>,
 }
@@ -30,11 +31,7 @@ struct FontSizes {
 }
 
 impl BitmapFontBatchLoader {
-    pub fn new(
-        skin: &json_skin::Skin,
-        skin_path: &Path,
-        texture_load_mode: TextureLoadMode,
-    ) -> Self {
+    pub fn new(skin: &json_skin::Skin, skin_path: &Path, usecim: bool, use_mip_maps: bool) -> Self {
         let mut font_paths: HashMap<PathBuf, i32> = HashMap::new();
 
         let skin_parent = skin_path.parent().unwrap_or(Path::new(""));
@@ -62,7 +59,8 @@ impl BitmapFontBatchLoader {
         }
 
         Self {
-            texture_load_mode,
+            usecim,
+            _use_mip_maps: use_mip_maps,
             font_paths,
             font_data: HashMap::new(),
         }
@@ -87,8 +85,7 @@ impl BitmapFontBatchLoader {
                 if loaded_textures.contains_key(image_path) {
                     continue;
                 }
-                if let Some(tex) = skin_loader::texture(image_path, self.texture_load_mode.usecim())
-                {
+                if let Some(tex) = skin_loader::texture(image_path, self.usecim) {
                     loaded_textures.insert(image_path.clone(), TextureRegion::from_texture(tex));
                 }
             }

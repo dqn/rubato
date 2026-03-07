@@ -1,5 +1,4 @@
 use rubato_core::course_data::{CourseData, CourseDataConstraint, TrophyData};
-use rubato_types::song_data::SongData;
 
 use crate::ir_chart_data::IRChartData;
 
@@ -20,11 +19,13 @@ pub struct IRCourseData {
     pub lntype: i32,
 }
 
-impl From<&IRCourseData> for CourseData {
-    fn from(ir: &IRCourseData) -> Self {
+impl IRCourseData {
+    /// Convert IRCourseData back to CourseData.
+    /// Translated from: Java BarManager.java inline mapping (lines 157-186)
+    pub fn to_course_data(&self) -> CourseData {
         let songs: Vec<rubato_types::song_data::SongData> =
-            ir.charts.iter().map(SongData::from).collect();
-        let trophy: Vec<TrophyData> = ir
+            self.charts.iter().map(|c| c.to_song_data()).collect();
+        let trophy: Vec<TrophyData> = self
             .trophy
             .iter()
             .map(|t| TrophyData {
@@ -34,22 +35,12 @@ impl From<&IRCourseData> for CourseData {
             })
             .collect();
         let mut cd = CourseData::default();
-        cd.set_name(ir.name.clone());
+        cd.set_name(self.name.clone());
         cd.hash = songs;
-        cd.constraint = ir.constraint.clone();
+        cd.constraint = self.constraint.clone();
         cd.trophy = trophy;
         cd.release = true;
         cd
-    }
-}
-
-impl IRCourseData {
-    /// Convert IRCourseData back to CourseData.
-    ///
-    /// Thin wrapper around the `From<&IRCourseData> for CourseData` trait impl.
-    /// Translated from: Java BarManager.java inline mapping (lines 157-186)
-    pub fn to_course_data(&self) -> CourseData {
-        CourseData::from(self)
     }
 
     pub fn new(course: &CourseData) -> Self {

@@ -86,7 +86,7 @@ impl Section {
         scrolltable: &BTreeMap<i32, f64>,
         log: &mut Vec<DecodeLog>,
     ) -> Self {
-        let base = model.base;
+        let base = model.get_base();
         let mut rate = 1.0;
         let mut poor: Vec<i32> = Vec::new();
         let mut channellines: Vec<String> = Vec::with_capacity(lines.len());
@@ -130,7 +130,7 @@ impl Section {
                     }
                 }
                 BPM_CHANGE => {
-                    let results = process_data_collect(line, base, log, &model.title);
+                    let results = process_data_collect(line, base, log, model.get_title());
                     for (pos, mut data) in results {
                         if base == 62 {
                             let s = chart_decoder::to_base62(data);
@@ -145,7 +145,7 @@ impl Section {
                     }
                 }
                 POOR_PLAY => {
-                    poor = split_data(line, base, log, &model.title);
+                    poor = split_data(line, base, log, model.get_title());
                     let mut singleid: i32 = 0;
                     for &id in &poor {
                         if id != 0 {
@@ -162,7 +162,7 @@ impl Section {
                     }
                 }
                 BPM_CHANGE_EXTEND => {
-                    let results = process_data_collect(line, base, log, &model.title);
+                    let results = process_data_collect(line, base, log, model.get_title());
                     for (pos, data) in results {
                         if let Some(&bpm) = bpmtable.get(&data) {
                             bpmchange.insert(f64_key(pos), bpm);
@@ -175,7 +175,7 @@ impl Section {
                     }
                 }
                 STOP => {
-                    let results = process_data_collect(line, base, log, &model.title);
+                    let results = process_data_collect(line, base, log, model.get_title());
                     for (pos, data) in results {
                         if let Some(&st) = stoptable.get(&data) {
                             stop_map.insert(f64_key(pos), st);
@@ -188,7 +188,7 @@ impl Section {
                     }
                 }
                 c if c == SCROLL => {
-                    let results = process_data_collect(line, base, log, &model.title);
+                    let results = process_data_collect(line, base, log, model.get_title());
                     for (pos, data) in results {
                         if let Some(&st) = scrolltable.get(&data) {
                             scroll_map.insert(f64_key(pos), st);
@@ -271,7 +271,7 @@ impl Section {
         startln: &mut Vec<Option<StartLnInfo>>,
         log: &mut Vec<DecodeLog>,
     ) {
-        let lnobj = model.lnobj;
+        let lnobj = model.lnobj();
         let lnmode = model.lnmode;
         let mode = model.mode().copied();
         let cassign: &[i32; 18] = if mode.as_ref() == Some(&Mode::POPN_9K) {
@@ -281,7 +281,7 @@ impl Section {
         } else {
             &CHANNELASSIGN_BEAT5
         };
-        let base = model.base;
+        let base = model.get_base();
         let mode_key = mode.as_ref().map(|m| m.key()).unwrap_or(0);
 
         // section line
@@ -442,7 +442,7 @@ impl Section {
             }
 
             if channel == P1_KEY_BASE {
-                let results = process_data_collect(line, base, log, &model.title);
+                let results = process_data_collect(line, base, log, model.get_title());
                 for (pos, data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -629,7 +629,7 @@ impl Section {
                     }
                 }
             } else if channel == P1_INVISIBLE_KEY_BASE {
-                let results = process_data_collect(line, base, log, &model.title);
+                let results = process_data_collect(line, base, log, model.get_title());
                 for (pos, data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -646,7 +646,7 @@ impl Section {
                         .set_hidden_note(key, Some(Note::new_normal(wav_val)));
                 }
             } else if channel == P1_LONG_KEY_BASE {
-                let results = process_data_collect(line, base, log, &model.title);
+                let results = process_data_collect(line, base, log, model.get_title());
                 for (pos, data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -909,7 +909,7 @@ impl Section {
                     }
                 }
             } else if channel == P1_MINE_KEY_BASE {
-                let results = process_data_collect(line, base, log, &model.title);
+                let results = process_data_collect(line, base, log, model.get_title());
                 for (pos, mut data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -973,7 +973,7 @@ impl Section {
                     }
                 }
             } else if channel == LANE_AUTOPLAY {
-                let results = process_data_collect(line, base, log, &model.title);
+                let results = process_data_collect(line, base, log, model.get_title());
                 for (pos, data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -990,7 +990,7 @@ impl Section {
                         .add_back_ground_note(Note::new_normal(wav_val));
                 }
             } else if channel == BGA_PLAY {
-                let results = process_data_collect(line, base, log, &model.title);
+                let results = process_data_collect(line, base, log, model.get_title());
                 for (pos, data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -1007,7 +1007,7 @@ impl Section {
                         .bga = bga_val;
                 }
             } else if channel == LAYER_PLAY {
-                let results = process_data_collect(line, base, log, &model.title);
+                let results = process_data_collect(line, base, log, model.get_title());
                 for (pos, data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -1136,11 +1136,13 @@ fn set_long_note_pair_sections(
 
 fn split_data(line: &str, base: i32, log: &mut Vec<DecodeLog>, title: &str) -> Vec<i32> {
     let findex = line.find(':').map(|i| i + 1).unwrap_or(0);
+    let lindex = line.len();
+    let split = (lindex - findex) / 2;
     let bytes = line.as_bytes();
-    let mut result = Vec::with_capacity((bytes.len() - findex) / 2);
-    for pair in bytes[findex..].chunks_exact(2) {
-        let c1 = pair[0] as char;
-        let c2 = pair[1] as char;
+    let mut result = Vec::with_capacity(split);
+    for i in 0..split {
+        let c1 = bytes[findex + i * 2] as char;
+        let c2 = bytes[findex + i * 2 + 1] as char;
         let val = if base == 62 {
             chart_decoder::parse_int62(c1, c2)
         } else {
@@ -1166,13 +1168,13 @@ fn process_data_collect(
     title: &str,
 ) -> Vec<(f64, i32)> {
     let findex = line.find(':').map(|i| i + 1).unwrap_or(0);
+    let lindex = line.len();
+    let split = (lindex - findex) / 2;
     let bytes = line.as_bytes();
-    let pairs = &bytes[findex..];
-    let split = pairs.len() / 2;
     let mut results = Vec::new();
-    for (i, pair) in pairs.chunks_exact(2).enumerate() {
-        let c1 = pair[0] as char;
-        let c2 = pair[1] as char;
+    for i in 0..split {
+        let c1 = bytes[findex + i * 2] as char;
+        let c2 = bytes[findex + i * 2 + 1] as char;
         let result = if base == 62 {
             chart_decoder::parse_int62(c1, c2)
         } else {
@@ -1192,10 +1194,15 @@ fn process_data_collect(
 
 fn has_nonzero_data(line: &str, base: i32) -> bool {
     let findex = line.find(':').map(|i| i + 1).unwrap_or(0);
+    let lindex = line.len();
+    let split = (lindex - findex) / 2;
     let bytes = line.as_bytes();
-    for pair in bytes[findex..].chunks_exact(2) {
-        let c1 = pair[0] as char;
-        let c2 = pair[1] as char;
+    for i in 0..split {
+        if findex + i * 2 + 1 >= bytes.len() {
+            break;
+        }
+        let c1 = bytes[findex + i * 2] as char;
+        let c2 = bytes[findex + i * 2 + 1] as char;
         let result = if base == 62 {
             chart_decoder::parse_int62(c1, c2)
         } else {

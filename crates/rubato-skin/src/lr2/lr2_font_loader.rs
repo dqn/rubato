@@ -1,7 +1,5 @@
 use std::path::Path;
 
-use anyhow::Context;
-
 use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
 
 /// LR2 font loader
@@ -64,22 +62,6 @@ impl SkinTextImageSourceData {
     }
 }
 
-/// LR2 font code for the wave dash / fullwidth tilde pair (code 288).
-const WAVE_DASH: i32 = 0x301C;
-const FULLWIDTH_TILDE: i32 = 0xFF5E;
-
-/// Shift_JIS encoding offsets for two-byte code point ranges.
-const SJIS_HIGH_OFFSET: i32 = 49281;
-const SJIS_LOW_OFFSET: i32 = 32832;
-
-/// Boundary between the two Shift_JIS two-byte ranges.
-const SJIS_HIGH_RANGE_START: i32 = 8127;
-/// Boundary between single-byte and two-byte Shift_JIS codes.
-const SJIS_TWO_BYTE_START: i32 = 256;
-
-/// LR2 font code that maps to wave dash / fullwidth tilde.
-const WAVE_DASH_FONT_CODE: i32 = 288;
-
 /// LR2 font loader
 pub struct LR2FontLoader {
     pub textimage: SkinTextImageSourceData,
@@ -100,8 +82,7 @@ impl LR2FontLoader {
         self.textimage = SkinTextImageSourceData::new(self.usecim);
         self.path = Some(p.to_path_buf());
 
-        let raw_bytes = std::fs::read(p)
-            .with_context(|| format!("failed to read LR2 font file: {}", p.display()))?;
+        let raw_bytes = std::fs::read(p)?;
         let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&raw_bytes);
         let content = decoded.into_owned();
 
@@ -179,16 +160,16 @@ impl LR2FontLoader {
 
     /// Map LR2 font code to Unicode code point(s)
     fn map_code(code: i32) -> Vec<i32> {
-        if code == WAVE_DASH_FONT_CODE {
-            return vec![WAVE_DASH, FULLWIDTH_TILDE];
+        if code == 288 {
+            return vec![0x0000301c, 0x0000ff5e];
         }
 
         let sjisbyte: Vec<u8>;
-        if code >= SJIS_HIGH_RANGE_START {
-            let sjiscode = (code + SJIS_HIGH_OFFSET) as u16;
+        if code >= 8127 {
+            let sjiscode = (code + 49281) as u16;
             sjisbyte = vec![(sjiscode >> 8) as u8, (sjiscode & 0xff) as u8];
-        } else if code >= SJIS_TWO_BYTE_START {
-            let sjiscode = (code + SJIS_LOW_OFFSET) as u16;
+        } else if code >= 256 {
+            let sjiscode = (code + 32832) as u16;
             sjisbyte = vec![(sjiscode >> 8) as u8, (sjiscode & 0xff) as u8];
         } else {
             sjisbyte = vec![(code & 0xff) as u8];

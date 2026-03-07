@@ -18,8 +18,9 @@ pub enum ScreenType {
     Other,
 }
 
-impl From<MainStateType> for ScreenType {
-    fn from(state: MainStateType) -> Self {
+impl ScreenType {
+    /// Convert from MainStateType
+    pub fn from_state_type(state: MainStateType) -> Self {
         match state {
             MainStateType::MusicSelect => ScreenType::MusicSelector,
             MainStateType::Decide => ScreenType::MusicDecide,
@@ -32,15 +33,6 @@ impl From<MainStateType> for ScreenType {
     }
 }
 
-impl ScreenType {
-    /// Convert from MainStateType.
-    ///
-    /// Thin wrapper around the `From<MainStateType>` trait impl.
-    pub fn from_state_type(state: MainStateType) -> Self {
-        Self::from(state)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -48,28 +40,31 @@ mod tests {
     #[test]
     fn test_screen_type_from_state_type() {
         assert_eq!(
-            ScreenType::from(MainStateType::MusicSelect),
+            ScreenType::from_state_type(MainStateType::MusicSelect),
             ScreenType::MusicSelector
         );
         assert_eq!(
-            ScreenType::from(MainStateType::Decide),
+            ScreenType::from_state_type(MainStateType::Decide),
             ScreenType::MusicDecide
         );
-        assert_eq!(ScreenType::from(MainStateType::Play), ScreenType::BMSPlayer);
         assert_eq!(
-            ScreenType::from(MainStateType::Result),
+            ScreenType::from_state_type(MainStateType::Play),
+            ScreenType::BMSPlayer
+        );
+        assert_eq!(
+            ScreenType::from_state_type(MainStateType::Result),
             ScreenType::MusicResult
         );
         assert_eq!(
-            ScreenType::from(MainStateType::CourseResult),
+            ScreenType::from_state_type(MainStateType::CourseResult),
             ScreenType::CourseResult
         );
         assert_eq!(
-            ScreenType::from(MainStateType::Config),
+            ScreenType::from_state_type(MainStateType::Config),
             ScreenType::KeyConfiguration
         );
         assert_eq!(
-            ScreenType::from(MainStateType::SkinConfig),
+            ScreenType::from_state_type(MainStateType::SkinConfig),
             ScreenType::Other
         );
     }

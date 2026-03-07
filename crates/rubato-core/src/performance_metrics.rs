@@ -3,8 +3,6 @@ use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
 
-use rubato_types::sync_utils::lock_or_recover;
-
 static INSTANCE: OnceLock<PerformanceMetrics> = OnceLock::new();
 
 /// PerformanceMetrics - tracks performance events and watch measurements
@@ -54,11 +52,17 @@ impl PerformanceMetrics {
     pub fn event(&self, event_name: &str) -> EventBlock {
         let id = NEXT_EVENT_ID.fetch_add(1, Ordering::Relaxed);
         let parent = {
-            let blocks = lock_or_recover(&self.active_blocks);
+            let blocks = self
+                .active_blocks
+                .lock()
+                .expect("active_blocks lock poisoned");
             blocks.last().copied().unwrap_or(0)
         };
         {
-            let mut blocks = lock_or_recover(&self.active_blocks);
+            let mut blocks = self
+                .active_blocks
+                .lock()
+                .expect("active_blocks lock poisoned");
             blocks.push(id);
         }
         EventBlock {
@@ -78,7 +82,10 @@ impl PerformanceMetrics {
     }
 
     pub fn submit_watch_result(&self, name: &str, time: i64, duration: i64) {
-        let mut records = lock_or_recover(&self.watch_records);
+        let mut records = self
+            .watch_records
+            .lock()
+            .expect("watch_records lock poisoned");
         let deque = records.entry(name.to_string()).or_default();
         deque.push_back((time, duration));
     }
@@ -87,7 +94,10 @@ impl PerformanceMetrics {
     pub fn commit(&self) {
         let now = self.nanos();
         let keep = now - 3_000_000_000;
-        let mut records = lock_or_recover(&self.watch_records);
+        let mut records = self
+            .watch_records
+            .lock()
+            .expect("watch_records lock poisoned");
         for (_k, v) in records.iter_mut() {
             while let Some(&(time, _)) = v.front() {
                 if time < keep {
@@ -100,12 +110,18 @@ impl PerformanceMetrics {
     }
 
     pub fn get_watch_names(&self) -> Vec<String> {
-        let records = lock_or_recover(&self.watch_records);
+        let records = self
+            .watch_records
+            .lock()
+            .expect("watch_records lock poisoned");
         records.keys().cloned().collect()
     }
 
     pub fn get_watch_records(&self, name: &str) -> Option<VecDeque<(i64, i64)>> {
-        let records = lock_or_recover(&self.watch_records);
+        let records = self
+            .watch_records
+            .lock()
+            .expect("watch_records lock poisoned");
         records.get(name).cloned()
     }
 }
@@ -123,7 +139,10 @@ impl Drop for EventBlock {
         let metrics = PerformanceMetrics::get();
         let end_time = metrics.nanos();
         {
-            let mut blocks = lock_or_recover(&metrics.active_blocks);
+            let mut blocks = metrics
+                .active_blocks
+                .lock()
+                .expect("active_blocks lock poisoned");
             blocks.pop();
         }
         let result = EventResult {
@@ -137,7 +156,10 @@ impl Drop for EventBlock {
                 .unwrap_or("unknown")
                 .to_string(),
         };
-        let mut results = lock_or_recover(&metrics.event_results);
+        let mut results = metrics
+            .event_results
+            .lock()
+            .expect("event_results lock poisoned");
         results.push(result);
     }
 }

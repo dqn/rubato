@@ -246,7 +246,7 @@ mod tests {
 
         res.set_banner(None);
         assert!(res.banner_pix().is_none());
-        assert!(res.banner.is_none());
+        assert!(res.banner().is_none());
     }
 
     #[test]
@@ -268,7 +268,7 @@ mod tests {
 
         res.set_stagefile(None);
         assert!(res.stagefile_pix().is_none());
-        assert!(res.stagefile.is_none());
+        assert!(res.stagefile().is_none());
     }
 
     #[test]
@@ -276,7 +276,7 @@ mod tests {
         let res = make_bms_resource();
         assert!(res.banner_pix().is_none());
         assert!(res.stagefile_pix().is_none());
-        assert!(res.banner.is_none());
-        assert!(res.stagefile.is_none());
+        assert!(res.banner().is_none());
+        assert!(res.stagefile().is_none());
     }
 }

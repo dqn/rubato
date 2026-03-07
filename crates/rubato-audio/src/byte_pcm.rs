@@ -41,29 +41,41 @@ impl BytePCM {
     }
 
     pub fn load_pcm(loader: &crate::pcm::PCMLoader) -> Result<BytePCM> {
+        let sample: Vec<u8>;
+        let bytes = loader.pcm_data.len();
         let pcm = &loader.pcm_data;
 
-        let sample: Vec<u8> = match loader.bits_per_sample {
-            8 => pcm.to_vec(),
+        match loader.bits_per_sample {
+            8 => {
+                sample = pcm.to_vec();
+            }
             16 => {
-                // Java: pcm.get(i * 2 + 1) -- takes high byte of each 16-bit sample
-                pcm.chunks_exact(2).map(|chunk| chunk[1]).collect()
+                let mut s = vec![0u8; bytes / 2];
+                for i in 0..s.len() {
+                    // Java: pcm.get(i * 2 + 1) -- takes high byte of each 16-bit sample
+                    s[i] = pcm[i * 2 + 1];
+                }
+                sample = s;
             }
             24 => {
-                // Java: pcm.get(i * 3 + 2) -- takes highest byte of each 24-bit sample
-                pcm.chunks_exact(3).map(|chunk| chunk[2]).collect()
+                let mut s = vec![0u8; bytes / 3];
+                for i in 0..s.len() {
+                    // Java: pcm.get(i * 3 + 2) -- takes highest byte of each 24-bit sample
+                    s[i] = pcm[i * 3 + 2];
+                }
+                sample = s;
             }
             32 => {
-                pcm.chunks_exact(4)
+                sample = pcm
+                    .chunks_exact(4)
                     .map(|chunk| {
                         let f = f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
-                        // Java float->i8 truncation semantics: (byte)(pcm.getFloat() * Byte.MAX_VALUE)
-                        // float->int truncates toward zero, int->byte truncates to low 8 bits.
-                        // SAFETY: lossy narrowing matches Java behavior -- Rust `as i8` saturates
-                        // (since 1.45), so go via i32 first to get truncation.
+                        // Java: (byte)(pcm.getFloat() * Byte.MAX_VALUE)
+                        // float→int truncates toward zero, int→byte truncates to low 8 bits.
+                        // Rust `as i8` saturates (since 1.45), so go via i32 first.
                         ((f * i8::MAX as f32) as i32 as i8) as u8
                     })
-                    .collect()
+                    .collect();
             }
             _ => {
                 bail!(
@@ -71,7 +83,7 @@ impl BytePCM {
                     loader.bits_per_sample
                 );
             }
-        };
+        }
 
         Ok(BytePCM::new(
             loader.channels,
@@ -201,7 +213,7 @@ impl BytePCM {
         while length > self.channels {
             let frame_start = (self.start + start + length - self.channels) as usize;
             let frame_end = (self.start + start + length) as usize;
-            let zero = self.sample[frame_start..frame_end].iter().all(|&b| b == 0);
+            let zero = self.sample[frame_start..frame_end].iter().all(|&s| s == 0);
             if zero {
                 length -= self.channels;
             } else {

@@ -106,10 +106,14 @@ pub mod score_data_cache;
 // Ranking data cache trait (core↔ir bridge for IR ranking cache)
 pub mod ranking_data_cache_access;
 
-// input_processor_access removed: trait had 0 real implementations
+// Input processor access (keyboard control keys + commands)
+pub mod input_processor_access;
 
 // Score handoff (Play→Result data transfer via outbox pattern)
 pub mod score_handoff;
+
+// Target property trait (core↔play bridge for score target)
+pub mod target_property_access;
 
 // IR resend service (core↔result bridge for background IR score retry)
 pub mod ir_resend_service;
@@ -123,12 +127,5 @@ pub mod music_download_access;
 // OBS WebSocket access (core↔obs bridge)
 pub mod obs_access;
 
-// Shared synchronization utilities (lock_or_recover, etc.)
-pub mod sync_utils;
-
 // ImGui overlay access (core↔modmenu bridge)
 pub mod imgui_access;
-
-// Facade modules grouping related types by domain.
-// Original module paths remain fully supported for backward compatibility.
-pub mod facade;

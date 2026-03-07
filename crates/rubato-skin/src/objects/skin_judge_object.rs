@@ -53,10 +53,10 @@ impl SkinJudgeObject {
 
     /// Translated from: Java SkinJudge.prepare(long time, MainState state)
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
-        let player = self.inner.player;
+        let player = self.inner.player();
         let judgenow = state.get_now_judge(player) - 1;
         if judgenow < 0 {
-            self.data.draw_state.draw = false;
+            self.data.draw = false;
             return;
         }
         self.data.prepare(time, state);
@@ -83,12 +83,12 @@ impl SkinJudgeObject {
         // Prepare judge image
         if let Some(ref mut img) = self.judge_images[judge_idx] {
             img.prepare(time, state);
-            if !img.data.draw_state.draw {
-                self.data.draw_state.draw = false;
+            if !img.data.draw {
+                self.data.draw = false;
                 return;
             }
         } else {
-            self.data.draw_state.draw = false;
+            self.data.draw = false;
             return;
         }
 
@@ -102,14 +102,13 @@ impl SkinJudgeObject {
                     .as_ref()
                     .expect("judge_images entry is Some")
                     .data
-                    .draw_state
                     .region;
                 count.prepare_with_value(time, state, combo, judge_region.x, judge_region.y);
                 // Shift judge image by half the count length if shift mode is on
                 if self.inner.is_shift()
                     && let Some(ref mut img) = self.judge_images[judge_idx]
                 {
-                    img.data.draw_state.region.x -= count.length() / 2.0;
+                    img.data.region.x -= count.length() / 2.0;
                 }
                 self.now_count_idx = Some(ci);
             } else {
@@ -125,7 +124,7 @@ impl SkinJudgeObject {
         // Draw count number first (behind judge image)
         if let Some(ci) = self.now_count_idx
             && let Some(ref mut count) = self.judge_counts[ci]
-            && count.data.draw_state.draw
+            && count.data.draw
         {
             count.draw(sprite);
         }
@@ -280,7 +279,7 @@ mod tests {
         // now_judge returns 0 (no judge), so judgenow - 1 = -1 → draw = false
         let state = JudgeMockState::new(0, 0, false);
         judge.prepare(1000, &state);
-        assert!(!judge.data.draw_state.draw);
+        assert!(!judge.data.draw);
     }
 
     #[test]
@@ -289,7 +288,7 @@ mod tests {
         // now_judge=1 → judgenow=0 (PG), but no image set → draw = false
         let state = JudgeMockState::new(1, 5, false);
         judge.prepare(1000, &state);
-        assert!(!judge.data.draw_state.draw);
+        assert!(!judge.data.draw);
     }
 
     #[test]

@@ -55,7 +55,7 @@ pub struct SkinConfigurationView {
     skinconfig_items: Vec<SkinConfigItem>,
 
     // private PlayerConfig player;
-    pub(crate) player: Option<PlayerConfig>,
+    player: Option<PlayerConfig>,
 
     // private SkinType mode = null;
     mode: Option<SkinType>,
@@ -470,21 +470,18 @@ impl SkinConfigurationView {
         }
 
         // if (selected != null) {
-        if let Some(selected) = self.selected.as_ref() {
-            let (path_str, skin_type_id) = {
-                let path_str: String = selected
-                    .path()
-                    .map(|p: &PathBuf| p.to_string_lossy().to_string())
-                    .unwrap_or_default();
-                let skin_type_id = selected.skin_type().map(|st| st.id() as usize);
-                (path_str, skin_type_id)
-            };
+        if let Some(selected) = self.selected.clone() {
             // SkinConfig skin = new SkinConfig(selected.getPath().toString());
+            let path_str: String = selected
+                .path()
+                .map(|p: &PathBuf| p.to_string_lossy().to_string())
+                .unwrap_or_default();
             let mut skin = SkinConfig::new_with_path(&path_str);
             // skin.setProperties(getProperty());
             skin.properties = Some(self.property());
             // player.getSkin()[selected.getSkinType().getId()] = skin;
-            if let Some(type_id) = skin_type_id {
+            if let Some(skin_type) = selected.skin_type() {
+                let type_id = skin_type.id() as usize;
                 let player = self.player.as_mut().expect("player is Some");
                 while player.skin.len() <= type_id {
                     player.skin.push(None);
@@ -621,7 +618,8 @@ impl SkinConfigurationView {
         }
         // skinconfig.setContent(create(header, property));
         if let Some(header) = header {
-            self.create(header, property.as_ref());
+            let header_clone = header.clone();
+            self.create(&header_clone, property.as_ref());
         } else {
             self.selected = None;
             self.skinconfig_items.clear();
@@ -635,14 +633,10 @@ impl SkinConfigurationView {
     /// Saves current skin config to skin history.
     pub fn commit_skin_header(&mut self) {
         // if(selected != null) {
-        let sel_path_str: Option<String> = self
-            .selected
-            .as_ref()
-            .and_then(|s| s.path())
-            .map(|p: &PathBuf| p.to_string_lossy().to_string());
-        if self.selected.is_none() {
-            return;
-        }
+        let selected = match self.selected.clone() {
+            Some(s) => s,
+            None => return,
+        };
 
         // SkinConfig.Property property = getProperty();
         let property = self.property();
@@ -657,6 +651,9 @@ impl SkinConfigurationView {
         // for(int i = 0; i < player.getSkinHistory().length; i++) {
         for (i, history_entry) in player.skin_history.iter().enumerate() {
             // if(player.getSkinHistory()[i].getPath().equals(selected.getPath().toString())) {
+            let sel_path_str: Option<String> = selected
+                .path()
+                .map(|p: &PathBuf| p.to_string_lossy().to_string());
             if let (Some(hist_path), Some(sel_path)) = (&history_entry.path, &sel_path_str)
                 && hist_path == sel_path
             {
@@ -668,7 +665,9 @@ impl SkinConfigurationView {
         // SkinConfig sc = new SkinConfig();
         // sc.setPath(selected.getPath().toString()); sc.setProperties(property);
         let sc = SkinConfig {
-            path: sel_path_str,
+            path: selected
+                .path()
+                .map(|p: &PathBuf| p.to_string_lossy().to_string()),
             properties: Some(property),
         };
 
@@ -955,14 +954,7 @@ impl SkinConfigurationView {
                     let offset = &header.custom_offsets()[*offset_idx];
                     // final String[] values = {"x","y","w","h","r","a"};
                     // final boolean[] b = {option.x, option.y, option.w, option.h, option.r, option.a};
-                    let enabled = [
-                        offset.flags.x,
-                        offset.flags.y,
-                        offset.flags.w,
-                        offset.flags.h,
-                        offset.flags.r,
-                        offset.flags.a,
-                    ];
+                    let enabled = [offset.x, offset.y, offset.w, offset.h, offset.r, offset.a];
 
                     // SkinConfig.Offset offset = null;
                     // for(SkinConfig.Offset o : property.getOffset()) { if(o.name.equals(option.name)) { offset = o; break; } }
@@ -1190,7 +1182,7 @@ fn convert_lr2_custom_file(
 fn convert_lr2_custom_offset(
     o: &rubato_skin::lr2::lr2_skin_header_loader::CustomOffset,
 ) -> rubato_skin::skin_header::CustomOffset {
-    rubato_skin::skin_header::CustomOffset::new(o.name.clone(), o.id, o.flags)
+    rubato_skin::skin_header::CustomOffset::new(o.name.clone(), o.id, o.x, o.y, o.w, o.h, o.r, o.a)
 }
 
 #[cfg(test)]
@@ -1460,7 +1452,12 @@ mod tests {
             custom_offsets: vec![LR2CustomOffset::new(
                 "All offset(%)",
                 0,
-                rubato_skin::skin_header::OffsetFlags::new(true, true, true, true, false, false),
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
             )],
             ..Default::default()
         };
@@ -1470,9 +1467,9 @@ mod tests {
         assert_eq!(header.custom_offsets().len(), 1);
         assert_eq!(header.custom_offsets()[0].name, "All offset(%)");
         assert_eq!(header.custom_offsets()[0].id, 0);
-        assert!(header.custom_offsets()[0].flags.x);
-        assert!(header.custom_offsets()[0].flags.y);
-        assert!(!header.custom_offsets()[0].flags.r);
+        assert!(header.custom_offsets()[0].x);
+        assert!(header.custom_offsets()[0].y);
+        assert!(!header.custom_offsets()[0].r);
     }
 
     #[test]

@@ -70,14 +70,14 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
     fn is_music_selector(&self) -> bool {
         self.ctx
             .as_deref()
-            .is_some_and(rubato_types::skin_render_context::SkinStateQuery::is_music_selector)
+            .is_some_and(rubato_types::skin_render_context::SkinRenderContext::is_music_selector)
             || self.state_type == Some(rubato_types::main_state_type::MainStateType::MusicSelect)
     }
 
     fn is_result_state(&self) -> bool {
         self.ctx
             .as_deref()
-            .is_some_and(<dyn rubato_types::skin_render_context::SkinRenderContext>::is_result_state)
+            .is_some_and(rubato_types::skin_render_context::SkinRenderContext::is_result_state)
             || matches!(
                 self.state_type,
                 Some(
@@ -154,32 +154,32 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
     fn get_player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         self.ctx
             .as_deref()
-            .and_then(<dyn rubato_types::skin_render_context::SkinRenderContext>::player_config_ref)
+            .and_then(rubato_types::skin_render_context::SkinRenderContext::player_config_ref)
     }
 
     fn get_config_ref(&self) -> Option<&rubato_types::config::Config> {
         self.ctx
             .as_deref()
-            .and_then(<dyn rubato_types::skin_render_context::SkinRenderContext>::config_ref)
+            .and_then(rubato_types::skin_render_context::SkinRenderContext::config_ref)
     }
 
     fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
         self.ctx
             .as_deref_mut()
-            .and_then(<dyn rubato_types::skin_render_context::SkinRenderContext>::player_config_mut)
+            .and_then(rubato_types::skin_render_context::SkinRenderContext::player_config_mut)
     }
 
     fn get_config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
         self.ctx
             .as_deref_mut()
-            .and_then(<dyn rubato_types::skin_render_context::SkinRenderContext>::config_mut)
+            .and_then(rubato_types::skin_render_context::SkinRenderContext::config_mut)
     }
 
     fn get_selected_play_config_mut(
         &mut self,
     ) -> Option<&mut rubato_types::play_config::PlayConfig> {
         self.ctx.as_deref_mut().and_then(
-            <dyn rubato_types::skin_render_context::SkinRenderContext>::selected_play_config_mut,
+            rubato_types::skin_render_context::SkinRenderContext::selected_play_config_mut,
         )
     }
 

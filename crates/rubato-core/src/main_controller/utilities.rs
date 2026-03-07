@@ -18,7 +18,7 @@ impl MainController {
             // Create adapter that bridges MainState → MainStateAccess
             let screen_type = current
                 .state_type()
-                .map(ScreenType::from)
+                .map(ScreenType::from_state_type)
                 .unwrap_or(ScreenType::Other);
             let resource = self
                 .resource
@@ -321,6 +321,10 @@ impl MainController {
         service: Box<dyn rubato_types::ir_resend_service::IrResendService>,
     ) {
         self.integration.ir_resend_service = Some(service);
+    }
+
+    pub fn set_imgui(&mut self, imgui: Box<dyn rubato_types::imgui_access::ImGuiAccess>) {
+        self.integration.imgui = Some(imgui);
     }
 
     /// Load a new player profile, re-initialize states and IR config.

@@ -5,7 +5,6 @@ use std::time::Duration;
 
 use bms_model::bms_model::BMSModel;
 use bms_model::note::Note;
-use rubato_types::sync_utils::lock_or_recover;
 
 /// A BG note that needs to be played by the audio driver.
 ///
@@ -139,7 +138,11 @@ impl KeySoundProcessor {
     pub fn stop_bg_play(&mut self) {
         if let Some(ref mut handle) = self.handle {
             {
-                let mut guard = lock_or_recover(&handle.shared.stop_flag);
+                let mut guard = handle
+                    .shared
+                    .stop_flag
+                    .lock()
+                    .expect("stop_flag lock poisoned");
                 *guard = true;
             }
             handle.shared.stop_signal.notify_one();
@@ -180,7 +183,11 @@ impl KeySoundProcessor {
     /// The caller should call `AudioDriver::play_note(note, volume, 0)` for each.
     pub fn drain_pending_bg_notes(&self) -> Vec<BgNoteCommand> {
         if let Some(ref handle) = self.handle {
-            let mut pending = lock_or_recover(&handle.shared.pending_notes);
+            let mut pending = handle
+                .shared
+                .pending_notes
+                .lock()
+                .expect("pending_notes lock poisoned");
             std::mem::take(&mut *pending)
         } else {
             Vec::new()
@@ -215,7 +222,7 @@ fn autoplay_run(shared: Arc<BgShared>, entries: Vec<BgTimelineEntry>, starttime:
     }
 
     loop {
-        if *lock_or_recover(&shared.stop_flag) {
+        if *shared.stop_flag.lock().expect("stop_flag lock poisoned") {
             break;
         }
 
@@ -235,7 +242,10 @@ fn autoplay_run(shared: Arc<BgShared>, entries: Vec<BgTimelineEntry>, starttime:
                 .collect();
 
             {
-                let mut pending = lock_or_recover(&shared.pending_notes);
+                let mut pending = shared
+                    .pending_notes
+                    .lock()
+                    .expect("pending_notes lock poisoned");
                 pending.extend(cmds);
             }
             p += 1;
@@ -247,7 +257,7 @@ fn autoplay_run(shared: Arc<BgShared>, entries: Vec<BgTimelineEntry>, starttime:
             let sleeptime = entries[p].micro_time - time;
             if sleeptime > 0 {
                 // Java: Thread.sleep(sleeptime / 1000) — converts micros to millis.
-                let guard = lock_or_recover(&shared.stop_flag);
+                let guard = shared.stop_flag.lock().expect("stop_flag lock poisoned");
                 if !*guard {
                     let _ = shared
                         .stop_signal

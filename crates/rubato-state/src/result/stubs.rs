@@ -5,7 +5,6 @@ use rubato_audio::audio_driver::AudioDriver;
 use rubato_types::config::Config;
 use rubato_types::player_config::PlayerConfig;
 use rubato_types::sound_type::SoundType;
-use rubato_types::sync_utils::lock_or_recover;
 
 // ============================================================
 // Re-exports from real crates (Phase 11 stub replacements)
@@ -34,10 +33,7 @@ pub use rubato_core::play_data_accessor::PlayDataAccessor;
 // ============================================================
 
 // MainControllerAccess: real trait from beatoraja-types (Phase 41b)
-pub use rubato_types::main_controller_access::{
-    AudioSystemAccess, ControllerConfigAccess, DataReadAccess, IRConnectionAccess,
-    MainControllerAccess, NullMainController, StateTransitionAccess,
-};
+pub use rubato_types::main_controller_access::{MainControllerAccess, NullMainController};
 
 /// Wrapper for bms.player.beatoraja.MainController.
 /// Delegates trait methods (config, player_config, change_state, save_last_recording)
@@ -168,11 +164,15 @@ impl MainController {
     }
 
     pub fn ir_send_status(&self) -> std::sync::MutexGuard<'_, Vec<IRSendStatusMain>> {
-        lock_or_recover(&self.ir_send_statuses)
+        self.ir_send_statuses
+            .lock()
+            .expect("ir_send_statuses lock poisoned")
     }
 
     pub fn ir_send_status_mut(&self) -> std::sync::MutexGuard<'_, Vec<IRSendStatusMain>> {
-        lock_or_recover(&self.ir_send_statuses)
+        self.ir_send_statuses
+            .lock()
+            .expect("ir_send_statuses lock poisoned")
     }
 
     pub fn play_data_accessor(&self) -> &PlayDataAccessor {
@@ -565,7 +565,7 @@ mod tests {
         }
     }
 
-    impl ControllerConfigAccess for CacheBackedMainControllerAccess {
+    impl MainControllerAccess for CacheBackedMainControllerAccess {
         fn config(&self) -> &Config {
             &self.config
         }
@@ -573,19 +573,25 @@ mod tests {
         fn player_config(&self) -> &PlayerConfig {
             &self.player_config
         }
-    }
 
-    impl StateTransitionAccess for CacheBackedMainControllerAccess {
         fn change_state(&mut self, _state: rubato_core::main_state::MainStateType) {}
+
         fn save_config(&self) {}
+
         fn exit(&self) {}
+
         fn save_last_recording(&self, _tag: &str) {}
+
         fn update_song(&mut self, _path: Option<&str>) {}
-    }
 
-    impl AudioSystemAccess for CacheBackedMainControllerAccess {}
+        fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
+            None
+        }
 
-    impl IRConnectionAccess for CacheBackedMainControllerAccess {
+        fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
+            None
+        }
+
         fn ranking_data_cache(
             &self,
         ) -> Option<&dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess> {
@@ -598,18 +604,6 @@ mod tests {
             &mut (dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess + 'static),
         > {
             Some(&mut *self.ranking_data_cache)
-        }
-    }
-
-    impl DataReadAccess for CacheBackedMainControllerAccess {}
-
-    impl MainControllerAccess for CacheBackedMainControllerAccess {
-        fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-            None
-        }
-
-        fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-            None
         }
     }
 

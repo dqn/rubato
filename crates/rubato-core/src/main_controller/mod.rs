@@ -6,10 +6,7 @@ pub(crate) use log::info;
 
 pub(crate) use rubato_audio::audio_driver::AudioDriver;
 pub(crate) use rubato_types::imgui_notify::ImGuiNotify;
-pub(crate) use rubato_types::main_controller_access::{
-    AudioSystemAccess, ControllerConfigAccess, DataReadAccess, IRConnectionAccess,
-    MainControllerAccess, StateTransitionAccess,
-};
+pub(crate) use rubato_types::main_controller_access::MainControllerAccess;
 pub(crate) use rubato_types::main_state_access::MainStateAccess;
 pub(crate) use rubato_types::player_resource_access::PlayerResourceAccess;
 pub(crate) use rubato_types::ranking_data_cache_access::RankingDataCacheAccess;
@@ -119,6 +116,7 @@ pub struct IRStatus {
 // SongInformationAccessor: stub replaced by SongInformationDb trait (Phase 27c)
 
 // ObsListener/ObsWsClient stubs replaced by Box<dyn ObsAccess> (Phase 4)
+// ImGuiRenderer stub replaced by Box<dyn ImGuiAccess> (Phase 4)
 
 // MusicDownloadProcessor stub removed — replaced by Box<dyn MusicDownloadAccess> (brs-4ls)
 
@@ -191,9 +189,10 @@ pub struct DatabaseState {
     pub ir: Vec<IRStatus>,
 }
 
-/// External integration state (OBS, IR, downloads, streaming).
+/// External integration state (ImGui, OBS, IR, downloads, streaming).
 #[derive(Default)]
 pub struct IntegrationState {
+    pub imgui: Option<Box<dyn rubato_types::imgui_access::ImGuiAccess>>,
     pub ir_resend_service: Option<Box<dyn rubato_types::ir_resend_service::IrResendService>>,
     pub obs_client: Option<Box<dyn rubato_types::obs_access::ObsAccess>>,
     pub download: Option<Box<dyn rubato_types::music_download_access::MusicDownloadAccess>>,

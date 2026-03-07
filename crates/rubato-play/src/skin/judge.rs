@@ -5,7 +5,7 @@ pub struct SkinJudge {
     /// Judge count numbers present (7 types)
     count: [bool; 7],
     /// Player index
-    pub player: i32,
+    player: i32,
     /// Whether to shift position based on count length
     shift: bool,
     /// Currently active judge

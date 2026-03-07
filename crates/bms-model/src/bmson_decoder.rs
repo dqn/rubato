@@ -62,9 +62,9 @@ impl BMSONDecoder {
         };
 
         let bmson_data: bmson::Bmson = serde_json::from_slice(&file_bytes).ok()?;
-        model.sha256 = sha256_hash;
+        model.set_sha256(sha256_hash);
 
-        model.title = bmson_data.info.title.clone();
+        model.set_title(&bmson_data.info.title);
         let subtitle = bmson_data.info.subtitle.as_deref().unwrap_or("");
         let chart_name = bmson_data.info.chart_name.as_deref().unwrap_or("");
         let sub_title = format!(
@@ -81,8 +81,8 @@ impl BMSONDecoder {
                 String::new()
             }
         );
-        model.sub_title = sub_title;
-        model.artist = bmson_data.info.artist.clone();
+        model.set_sub_title(sub_title);
+        model.set_artist(&bmson_data.info.artist);
         let mut subartist = String::new();
         for s in &bmson_data.info.subartists {
             if !subartist.is_empty() {
@@ -90,8 +90,8 @@ impl BMSONDecoder {
             }
             subartist.push_str(s);
         }
-        model.subartist = subartist;
-        model.genre = bmson_data.info.genre.clone();
+        model.set_sub_artist(subartist);
+        model.set_genre(&bmson_data.info.genre);
 
         if bmson_data.info.judge_rank < 0 {
             self.log.push(DecodeLog::new(
@@ -127,7 +127,7 @@ impl BMSONDecoder {
         }
 
         model.bpm = bmson_data.info.init_bpm;
-        model.playlevel = bmson_data.info.level.to_string();
+        model.set_playlevel(bmson_data.info.level.to_string());
         let mode = Mode::from_hint(&bmson_data.info.mode_hint);
         if let Some(mode) = mode {
             model.set_mode(mode);
@@ -157,10 +157,10 @@ impl BMSONDecoder {
         // lnup: keyed by (x, y) of the bmson Note, storing wav/starttime/duration
         let mut lnup: HashMap<(i32, i32), LnUpInfo> = HashMap::new();
 
-        model.banner = bmson_data.info.banner_image.clone();
-        model.backbmp = bmson_data.info.back_image.clone();
-        model.stagefile = bmson_data.info.eyecatch_image.clone();
-        model.preview = bmson_data.info.preview_music.clone();
+        model.set_banner(&bmson_data.info.banner_image);
+        model.set_backbmp(&bmson_data.info.back_image);
+        model.set_stagefile(&bmson_data.info.eyecatch_image);
+        model.set_preview(&bmson_data.info.preview_music);
 
         let mut basetl = TimeLine::new(0.0, 0, mode_key);
         basetl.bpm = model.bpm;
@@ -852,12 +852,13 @@ mod tests {
             "mode should be BEAT_7K for mode_hint 'beat-7k'"
         );
         assert_eq!(
-            model.title.as_str(),
+            model.get_title(),
             "Minimal 7K Bmson Test",
             "title should match bmson info.title"
         );
         assert_eq!(
-            model.artist, "brs-test",
+            model.artist(),
+            "brs-test",
             "artist should match bmson info.artist"
         );
         assert!(
@@ -869,14 +870,17 @@ mod tests {
             8,
             "minimal 7k fixture has 8 normal notes across 2 sound channels"
         );
-        assert!(!model.sha256.is_empty(), "SHA-256 hash should be computed");
+        assert!(
+            !model.sha256().is_empty(),
+            "SHA-256 hash should be computed"
+        );
         assert_eq!(
-            model.wavmap.len(),
+            model.wav_list().len(),
             2,
             "two sound channels should produce two wav entries"
         );
-        assert_eq!(model.wavmap[0], "kick.wav");
-        assert_eq!(model.wavmap[1], "snare.wav");
+        assert_eq!(model.wav_list()[0], "kick.wav");
+        assert_eq!(model.wav_list()[1], "snare.wav");
     }
 
     #[test]
@@ -1179,7 +1183,7 @@ mod tests {
             .expect("decode via ChartInformation should return Some");
 
         assert_eq!(
-            model.title.as_str(),
+            model.get_title(),
             "Minimal 7K Bmson Test",
             "title should match when decoding via ChartInformation"
         );

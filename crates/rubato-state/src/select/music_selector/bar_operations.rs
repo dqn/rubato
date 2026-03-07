@@ -476,12 +476,10 @@ impl MusicSelector {
         let (banner_data, stagefile_data) = match self.manager.selected() {
             Some(Bar::Song(song_bar)) => {
                 let banner = song_bar
-                    .banner
-                    .as_ref()
+                    .banner()
                     .map(|p| (p.width, p.height, p.data().to_vec()));
                 let stagefile = song_bar
-                    .stagefile
-                    .as_ref()
+                    .stagefile()
                     .map(|p| (p.width, p.height, p.data().to_vec()));
                 (banner, stagefile)
             }

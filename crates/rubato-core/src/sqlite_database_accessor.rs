@@ -1,4 +1,3 @@
-use anyhow::Context;
 use rusqlite::{Connection, params};
 
 // SQLite column definition
@@ -229,8 +228,7 @@ impl SQLiteDatabaseAccessor {
         }
         sql.push_str(");");
 
-        conn.execute(&sql, rusqlite::params_from_iter(params_vec.iter()))
-            .with_context(|| format!("failed to insert into table '{}'", tablename))?;
+        conn.execute(&sql, rusqlite::params_from_iter(params_vec.iter()))?;
         Ok(())
     }
 

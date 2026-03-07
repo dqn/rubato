@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use rubato_types::sync_utils::lock_or_recover;
-
 /// ShaderProgram stub (LibGDX equivalent)
 pub struct ShaderProgram {
     pub name: String,
@@ -37,7 +35,7 @@ pub struct ShaderManager;
 
 impl ShaderManager {
     pub fn get_shader(name: &str) -> Option<()> {
-        let shaders = lock_or_recover(SHADERS.get());
+        let shaders = SHADERS.get().lock().expect("lock poisoned");
         if !shaders.contains_key(name) {
             // In Java:
             // ShaderProgram shader = new ShaderProgram(
@@ -55,7 +53,7 @@ impl ShaderManager {
     }
 
     pub fn dispose() {
-        let mut shaders = lock_or_recover(SHADERS.get());
+        let mut shaders = SHADERS.get().lock().expect("lock poisoned");
         for (_name, mut shader) in shaders.drain() {
             shader.dispose();
         }

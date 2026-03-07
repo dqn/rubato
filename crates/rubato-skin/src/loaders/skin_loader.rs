@@ -11,44 +11,6 @@ use rubato_core::player_config::PlayerConfig;
 use crate::stubs::{MainState, Texture};
 use crate::types::skin::Skin;
 use crate::types::skin_type::SkinType;
-use rubato_types::sync_utils::lock_or_recover;
-
-/// Texture loading mode combining CIM caching and mipmap generation options.
-///
-/// Replaces the `(usecim: bool, use_mip_maps: bool)` parameter pair.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TextureLoadMode {
-    /// No CIM cache, no mipmaps.
-    Default,
-    /// Use CIM cache, no mipmaps.
-    Cim,
-    /// No CIM cache, generate mipmaps.
-    MipMaps,
-    /// Use CIM cache and generate mipmaps.
-    CimWithMipMaps,
-}
-
-impl TextureLoadMode {
-    /// Construct from the legacy `(usecim, use_mip_maps)` pair.
-    pub fn from_flags(usecim: bool, use_mip_maps: bool) -> Self {
-        match (usecim, use_mip_maps) {
-            (false, false) => Self::Default,
-            (true, false) => Self::Cim,
-            (false, true) => Self::MipMaps,
-            (true, true) => Self::CimWithMipMaps,
-        }
-    }
-
-    /// Whether CIM image caching is enabled.
-    pub fn usecim(self) -> bool {
-        matches!(self, Self::Cim | Self::CimWithMipMaps)
-    }
-
-    /// Whether mipmap generation is enabled.
-    pub fn use_mip_maps(self) -> bool {
-        matches!(self, Self::MipMaps | Self::CimWithMipMaps)
-    }
-}
 
 /// Skin image resource pool
 /// Translated from SkinLoader.java
@@ -113,7 +75,7 @@ fn resolve_skin_path(config: &Config, skin_path: &str) -> Option<PathBuf> {
 }
 
 pub fn init_pixmap_resource_pool(generation: i32) {
-    let mut resource = lock_or_recover(&RESOURCE);
+    let mut resource = RESOURCE.lock().expect("RESOURCE lock poisoned");
     if let Some(r) = resource.as_ref() {
         r.dispose();
     }
@@ -121,7 +83,7 @@ pub fn init_pixmap_resource_pool(generation: i32) {
 }
 
 pub fn get_resource() -> std::sync::MutexGuard<'static, Option<PixmapResourcePool>> {
-    let mut resource = lock_or_recover(&RESOURCE);
+    let mut resource = RESOURCE.lock().expect("RESOURCE lock poisoned");
     if resource.is_none() {
         *resource = Some(PixmapResourcePool::new());
     }
@@ -347,14 +309,12 @@ pub fn path(imagepath: &str, filemap: &HashMap<String, String>) -> PathBuf {
 /// Gets a texture from a file path, optionally using CIM cache.
 /// Corresponds to SkinLoader.getTexture(String, boolean)
 pub fn texture(path: &str, usecim: bool) -> Option<Texture> {
-    texture_with_mipmaps(path, TextureLoadMode::from_flags(usecim, false))
+    texture_with_mipmaps(path, usecim, false)
 }
 
 /// Gets a texture from a file path, with optional CIM cache and mipmaps.
 /// Corresponds to SkinLoader.getTexture(String, boolean, boolean)
-pub fn texture_with_mipmaps(path: &str, mode: TextureLoadMode) -> Option<Texture> {
-    let usecim = mode.usecim();
-    let use_mip_maps = mode.use_mip_maps();
+pub fn texture_with_mipmaps(path: &str, usecim: bool, use_mip_maps: bool) -> Option<Texture> {
     let resource_guard = get_resource();
     let resource = resource_guard.as_ref()?;
 

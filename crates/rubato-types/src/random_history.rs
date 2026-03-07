@@ -1,9 +1,14 @@
 use std::collections::VecDeque;
 use std::sync::Mutex;
 
-use crate::sync_utils::lock_or_recover;
-
 static LANE_ORDER_HISTORY: Mutex<VecDeque<RandomHistoryEntry>> = Mutex::new(VecDeque::new());
+
+fn lock_or_recover<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    match mutex.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    }
+}
 
 /// Shared random history entry type -- used by both beatoraja-pattern and beatoraja-modmenu.
 /// Moved here from beatoraja-modmenu to break circular dependency.

@@ -72,7 +72,7 @@ impl TimerAccess for RecordingSkinRenderContext {
     }
 }
 
-impl rubato_types::skin_render_context::SkinEventHandler for RecordingSkinRenderContext {
+impl SkinRenderContext for RecordingSkinRenderContext {
     fn execute_event(&mut self, id: i32, arg1: i32, arg2: i32) {
         self.executed_events.push((id, arg1, arg2));
     }
@@ -84,9 +84,7 @@ impl rubato_types::skin_render_context::SkinEventHandler for RecordingSkinRender
     fn set_timer_micro(&mut self, timer_id: rubato_types::timer_id::TimerId, micro_time: i64) {
         self.timer_writes.push((timer_id.as_i32(), micro_time));
     }
-}
 
-impl rubato_types::skin_render_context::SkinAudioControl for RecordingSkinRenderContext {
     fn audio_play(&mut self, path: &str, volume: f32, is_loop: bool) {
         self.audio_plays.push((path.to_string(), volume, is_loop));
     }
@@ -94,21 +92,15 @@ impl rubato_types::skin_render_context::SkinAudioControl for RecordingSkinRender
     fn audio_stop(&mut self, path: &str) {
         self.audio_stops.push(path.to_string());
     }
-}
 
-impl rubato_types::skin_render_context::SkinStateQuery for RecordingSkinRenderContext {
     fn current_state_type(&self) -> Option<MainStateType> {
         Some(self.state_type)
     }
-}
 
-impl rubato_types::skin_render_context::SkinPropertyProvider for RecordingSkinRenderContext {
     fn set_float_value(&mut self, id: i32, value: f32) {
         self.float_writes.push((id, value));
     }
 }
-
-impl rubato_types::skin_render_context::SkinConfigAccess for RecordingSkinRenderContext {}
 
 fn make_test_skin() -> Skin {
     Skin::new(SkinHeader::new())
@@ -273,12 +265,8 @@ fn test_timer_only_main_state_delegates_mutating_context_methods() {
 fn test_mouse_pressed_dispatches_click_event_through_render_context() {
     let mut skin = make_test_skin();
     let mut image = SkinImage::new_empty();
-    image.data.draw_state.draw = true;
-    image
-        .data
-        .draw_state
-        .region
-        .set_xywh(0.0, 0.0, 100.0, 100.0);
+    image.data.draw = true;
+    image.data.region.set_xywh(0.0, 0.0, 100.0, 100.0);
     image.data.set_clickevent_by_id(13);
     skin.add(SkinObject::Image(image));
     skin.objectarray_indices.push(0);
@@ -598,7 +586,7 @@ fn test_skin_float_in_enum_data_access() {
     assert!(!obj.is_draw());
 
     // data_mut() should also work
-    obj.data_mut().draw_state.visible = false;
+    obj.data_mut().visible = false;
     assert!(!obj.is_visible());
 }
 

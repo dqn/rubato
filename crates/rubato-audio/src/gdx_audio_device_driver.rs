@@ -155,7 +155,7 @@ impl AudioDriver for GdxAudioDeviceDriver {
             self.volume = 1.0;
         }
 
-        let wav_list = &model.wavmap;
+        let wav_list = model.wav_list();
         if wav_list.is_empty() {
             return;
         }

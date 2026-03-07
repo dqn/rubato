@@ -51,14 +51,14 @@ fn recent_judges_index_starts_at_zero() {
 #[test]
 fn set_course_combo() {
     let mut jm = JudgeManager::new();
-    jm.scoring.coursecombo = 42;
+    jm.coursecombo = 42;
     assert_eq!(jm.course_combo(), 42);
 }
 
 #[test]
 fn set_course_maxcombo() {
     let mut jm = JudgeManager::new();
-    jm.scoring.coursemaxcombo = 100;
+    jm.coursemaxcombo = 100;
     assert_eq!(jm.course_maxcombo(), 100);
 }
 
@@ -721,11 +721,10 @@ fn take_judgetiming_delta_resets_accumulator() {
 fn judge_vanish_bounds_checked_with_short_vec() {
     let mut jm = JudgeManager::new();
     // Set a custom judge_vanish shorter than 6 elements
-    jm.set_judge_vanish_for_test(vec![true, false]);
+    jm.judge_vanish = vec![true, false];
     // Accessing index 3 or 5 should return false (default), not panic
-    let vanish = jm.judge_vanish_ref();
-    assert!(!vanish.get(3).copied().unwrap_or(false));
-    assert!(!vanish.get(5).copied().unwrap_or(false));
+    assert!(!jm.judge_vanish.get(3).copied().unwrap_or(false));
+    assert!(!jm.judge_vanish.get(5).copied().unwrap_or(false));
     // Index 0 should return the actual value
-    assert!(vanish.first().copied().unwrap_or(false));
+    assert!(jm.judge_vanish.first().copied().unwrap_or(false));
 }

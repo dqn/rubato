@@ -20,10 +20,7 @@ pub use rubato_types::validatable::Validatable;
 // MainController — replaced with NullMainController from beatoraja-types
 // =========================================================================
 
-pub use rubato_types::main_controller_access::{
-    AudioSystemAccess, ControllerConfigAccess, DataReadAccess, IRConnectionAccess,
-    MainControllerAccess, NullMainController, StateTransitionAccess,
-};
+pub use rubato_types::main_controller_access::{MainControllerAccess, NullMainController};
 
 /// Type alias for backward compatibility — callers use `MainController`.
 pub type MainController = NullMainController;

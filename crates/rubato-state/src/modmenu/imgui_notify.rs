@@ -1,7 +1,6 @@
 use super::font_awesome_icons;
 use super::imgui_renderer;
 
-use rubato_types::sync_utils::lock_or_recover;
 use std::sync::Mutex;
 use std::time::Instant;
 
@@ -104,7 +103,10 @@ pub struct Toast {
 
 impl Toast {
     pub fn new(toast_type: ToastType) -> Self {
-        let pos = lock_or_recover(&DEFAULT_TOAST_POS).clone();
+        let pos = DEFAULT_TOAST_POS
+            .lock()
+            .expect("DEFAULT_TOAST_POS lock poisoned")
+            .clone();
         Toast {
             toast_type,
             pos,
@@ -253,12 +255,12 @@ pub struct ImGuiNotify;
 
 impl ImGuiNotify {
     pub fn insert_notification(toast: Toast) {
-        let mut notifications = lock_or_recover(&NOTIFICATIONS);
+        let mut notifications = NOTIFICATIONS.lock().expect("NOTIFICATIONS lock poisoned");
         notifications.push(toast);
     }
 
     pub fn remove_notification(index: usize) {
-        let mut notifications = lock_or_recover(&NOTIFICATIONS);
+        let mut notifications = NOTIFICATIONS.lock().expect("NOTIFICATIONS lock poisoned");
         if index < notifications.len() {
             notifications.remove(index);
         }
@@ -336,7 +338,9 @@ impl ImGuiNotify {
     pub fn set_notification_position(index: usize) {
         if index < NOTIFICATION_POSITIONS.len() {
             let pos = ToastPos::from_name(NOTIFICATION_POSITIONS[index]);
-            *lock_or_recover(&DEFAULT_TOAST_POS) = pos;
+            *DEFAULT_TOAST_POS
+                .lock()
+                .expect("DEFAULT_TOAST_POS lock poisoned") = pos;
         }
     }
 
@@ -346,7 +350,7 @@ impl ImGuiNotify {
     /// Renders each active toast as a positioned egui Area with a styled frame,
     /// including icon, title, content, separator, dismiss button, and action button.
     pub fn render_notifications_ui(ctx: &egui::Context) {
-        let mut notifications = lock_or_recover(&NOTIFICATIONS);
+        let mut notifications = NOTIFICATIONS.lock().expect("NOTIFICATIONS lock poisoned");
         let mut height: f32 = 0.0;
         let text_wrap_width = imgui_renderer::window_width() as f32 / NOTIFY_TEXT_WRAP_FRACTION;
 

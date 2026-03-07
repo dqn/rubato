@@ -6,7 +6,7 @@ fn set_click_event_from_type(obj: &mut SkinObject, obj_type: &SkinObjectType) {
             ..
         } => {
             obj.data_mut().set_clickevent_by_id(*act_id);
-            obj.data_mut().timer.clickevent_type = *click;
+            obj.data_mut().clickevent_type = *click;
         }
         SkinObjectType::ImageSet {
             act: Some(act_id),
@@ -14,7 +14,7 @@ fn set_click_event_from_type(obj: &mut SkinObject, obj_type: &SkinObjectType) {
             ..
         } => {
             obj.data_mut().set_clickevent_by_id(*act_id);
-            obj.data_mut().timer.clickevent_type = *click;
+            obj.data_mut().clickevent_type = *click;
         }
         _ => {}
     }
@@ -773,20 +773,26 @@ fn get_texture_for_src(
         .unwrap_or_default();
     let image_path = format!("{}/{}", parent, data_path);
 
-    if std::path::Path::new(&image_path).exists() {
-        let tex = crate::stubs::Texture::new(&image_path);
-        let tex_result = tex.clone();
-        if let Some(data) = source_map.get_mut(src_id) {
-            data.data = Some(SourceDataType::Texture(tex));
-            data.loaded = true;
-        }
-        Some(tex_result)
+    let result = if std::path::Path::new(&image_path).exists() {
+        Some(SourceDataType::Texture(crate::stubs::Texture::new(
+            &image_path,
+        )))
     } else {
-        if let Some(data) = source_map.get_mut(src_id) {
-            data.loaded = true;
-        }
         None
+    };
+
+    let tex_result = match &result {
+        Some(SourceDataType::Texture(tex)) => Some(tex.clone()),
+        _ => None,
+    };
+
+    // Cache the result
+    if let Some(data) = source_map.get_mut(src_id) {
+        data.data = result;
+        data.loaded = true;
     }
+
+    tex_result
 }
 
 /// Resolve an ImageSet into a multi-source SkinImage with actual textures.

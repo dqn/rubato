@@ -1,4 +1,3 @@
-use anyhow::Context;
 use rusqlite::Connection;
 
 use crate::score_data::ScoreData;
@@ -13,8 +12,7 @@ pub struct ScoreDataLogDatabaseAccessor {
 
 impl ScoreDataLogDatabaseAccessor {
     pub fn new(path: &str) -> anyhow::Result<Self> {
-        let conn = Connection::open(path)
-            .with_context(|| format!("failed to open score data log database: {}", path))?;
+        let conn = Connection::open(path)?;
         conn.pragma_update(None, "synchronous", "OFF")?;
         conn.pragma_update(None, "cache_size", 2000)?;
 
@@ -54,8 +52,7 @@ impl ScoreDataLogDatabaseAccessor {
         )];
 
         let base = SQLiteDatabaseAccessor::new(tables);
-        base.validate(&conn)
-            .context("failed to validate score data log database schema")?;
+        base.validate(&conn)?;
 
         Ok(Self { conn, base })
     }

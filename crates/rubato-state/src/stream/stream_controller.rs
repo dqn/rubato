@@ -6,7 +6,6 @@ use crate::select::music_selector::MusicSelector;
 
 use super::stream_command::StreamCommand;
 use super::stream_request_command::StreamRequestCommand;
-use rubato_types::sync_utils::lock_or_recover;
 
 /// Windows named pipe path for beatoraja stream commands.
 #[cfg(windows)]
@@ -96,7 +95,7 @@ impl StreamController {
                 match line_result {
                     Ok(line) => {
                         log::info!("Received: {}", line);
-                        let mut cmds = lock_or_recover(&commands_clone);
+                        let mut cmds = commands_clone.lock().expect("commands_clone lock poisoned");
                         Self::execute_commands(&mut cmds, &line);
                     }
                     Err(e) => {

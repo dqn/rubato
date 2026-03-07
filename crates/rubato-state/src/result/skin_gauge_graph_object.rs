@@ -246,10 +246,10 @@ impl SkinGaugeGraphObject {
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
         // Copy region dimensions to avoid borrow conflicts
-        let region_x = self.object_data.draw_state.region.x;
-        let region_y = self.object_data.draw_state.region.y;
-        let region_width = self.object_data.draw_state.region.width;
-        let region_height = self.object_data.draw_state.region.height;
+        let region_x = self.object_data.region.x;
+        let region_y = self.object_data.region.y;
+        let region_width = self.object_data.region.width;
+        let region_height = self.object_data.region.height;
 
         {
             let needs_dispose = if let Some(ref shapetex) = self.shapetex {
@@ -303,7 +303,7 @@ impl SkinGaugeGraphObject {
                 let mut last_y: i32 = -1;
                 let line_width = self.line_width;
 
-                for (i, &f2) in self.gaugehistory.iter().enumerate() {
+                for i in 0..self.gaugehistory.len() {
                     if self.section.contains(&(i as i32)) {
                         shape.set_color(&Color::value_of("ffffff"));
                         shape.draw_line(
@@ -315,6 +315,7 @@ impl SkinGaugeGraphObject {
                             height,
                         );
                     }
+                    let f2 = self.gaugehistory[i];
                     if let Some(f1_val) = f1 {
                         let x1 = (width as f32 * (i as f32 - 1.0) / self.gaugehistory.len() as f32)
                             as i32;

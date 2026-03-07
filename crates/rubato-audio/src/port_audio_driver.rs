@@ -44,8 +44,7 @@ pub struct PortAudioDriver {
 
 impl PortAudioDriver {
     pub fn new(song_resource_gen: i32) -> anyhow::Result<Self> {
-        let manager = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default())
-            .map_err(|e| anyhow::anyhow!("failed to initialize PortAudio audio manager: {}", e))?;
+        let manager = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default())?;
         Ok(PortAudioDriver {
             manager,
             path_sounds: HashMap::new(),
@@ -139,7 +138,7 @@ impl AudioDriver for PortAudioDriver {
             self.volume = 1.0;
         }
 
-        let wav_list = &model.wavmap;
+        let wav_list = model.wav_list();
         if wav_list.is_empty() {
             return;
         }

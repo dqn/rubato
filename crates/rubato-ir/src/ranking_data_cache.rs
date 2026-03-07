@@ -1,6 +1,6 @@
 use std::any::Any;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use log::warn;
 use sha2::{Digest, Sha256};
@@ -8,7 +8,6 @@ use sha2::{Digest, Sha256};
 use rubato_core::course_data::CourseData;
 use rubato_core::stubs::SongData;
 use rubato_types::ranking_data_cache_access::RankingDataCacheAccess;
-use rubato_types::sync_utils::lock_or_recover;
 
 use crate::convert_hex_string;
 use crate::ranking_data::RankingData;
@@ -26,6 +25,13 @@ struct RankingDataCacheInner {
     scorecache: [HashMap<String, RankingData>; 4],
     /// Course score cache: indexed by lnmode (0-3)
     cscorecache: [HashMap<String, RankingData>; 4],
+}
+
+fn lock_or_recover<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    match mutex.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    }
 }
 
 impl Default for RankingDataCache {

@@ -18,7 +18,7 @@ impl JudgeManager {
         // --- Pass-through loop ---
         for lane_idx in 0..lane_count {
             self.lane_states[lane_idx].mark(
-                ((self.prevmtime + self.windows.mjudgestart - 100000) / 1000) as i32,
+                ((self.prevmtime + self.mjudgestart - 100000) / 1000) as i32,
                 notes,
             );
             let mut next_inclease = false;
@@ -88,10 +88,8 @@ impl JudgeManager {
                                 self.lane_states[lane_idx].mpassingcount = 0;
                                 let player = self.lane_states[lane_idx].player;
                                 let offset = self.lane_states[lane_idx].offset;
-                                if player < self.scoring.judge.len()
-                                    && offset < self.scoring.judge[player].len()
-                                {
-                                    self.scoring.judge[player][offset] = 8;
+                                if player < self.judge.len() && offset < self.judge[player].len() {
+                                    self.judge[player][offset] = 8;
                                 }
                             } else {
                                 self.update_micro(
@@ -210,7 +208,7 @@ impl JudgeManager {
                             && key as i32 != self.sckey[sc as usize]
                         {
                             // BSS end processing
-                            let mjudge = &self.windows.scnendmjudge;
+                            let mjudge = &self.scnendmjudge;
                             let dmtime = notes[proc_idx].time_us - pmtime;
                             let mut j = 0;
                             while j < mjudge.len()
@@ -237,9 +235,9 @@ impl JudgeManager {
                 } else {
                     // No LN processing - find target note
                     let mjudge = if sc >= 0 {
-                        self.windows.smjudge.clone()
+                        self.smjudge.clone()
                     } else {
-                        self.windows.nmjudge.clone()
+                        self.nmjudge.clone()
                     };
                     self.lane_states[lane_idx].reset();
                     let mut tnote: Option<usize> = None;
@@ -256,10 +254,10 @@ impl JudgeManager {
                             None => break,
                         };
                         let dmtime = notes[note_idx].time_us - pmtime;
-                        if dmtime >= self.windows.mjudgeend {
+                        if dmtime >= self.mjudgeend {
                             break;
                         }
-                        if dmtime < self.windows.mjudgestart {
+                        if dmtime < self.mjudgestart {
                             continue;
                         }
                         // Skip mine notes and LN end notes
@@ -372,10 +370,10 @@ impl JudgeManager {
                                     }
                                     let player = self.lane_states[lane_idx].player;
                                     let offset = self.lane_states[lane_idx].offset;
-                                    if player < self.scoring.judge.len()
-                                        && offset < self.scoring.judge[player].len()
+                                    if player < self.judge.len()
+                                        && offset < self.judge[player].len()
                                     {
-                                        self.scoring.judge[player][offset] = 8;
+                                        self.judge[player][offset] = 8;
                                     }
                                 } else {
                                     self.update_micro(
@@ -426,10 +424,8 @@ impl JudgeManager {
                         // Empty POOR - no matching note
                         let player = self.lane_states[lane_idx].player;
                         let offset = self.lane_states[lane_idx].offset;
-                        if player < self.scoring.judge.len()
-                            && offset < self.scoring.judge[player].len()
-                        {
-                            self.scoring.judge[player][offset] = 0;
+                        if player < self.judge.len() && offset < self.judge[player].len() {
+                            self.judge[player][offset] = 0;
                         }
                     }
                 }
@@ -438,9 +434,9 @@ impl JudgeManager {
                 if let Some(proc_idx) = self.lane_states[lane_idx].processing {
                     let proc_ln_type = notes[proc_idx].ln_type;
                     let mjudge = if sc >= 0 {
-                        &self.windows.scnendmjudge
+                        &self.scnendmjudge
                     } else {
-                        &self.windows.cnendmjudge
+                        &self.cnendmjudge
                     };
                     let dmtime = notes[proc_idx].time_us - pmtime;
                     let mut judge = 0;
@@ -526,14 +522,14 @@ impl JudgeManager {
         for lane_idx in 0..lane_count {
             let sc = self.lane_states[lane_idx].sckey;
             let mjudge = if sc >= 0 {
-                self.windows.smjudge.clone()
+                self.smjudge.clone()
             } else {
-                self.windows.nmjudge.clone()
+                self.nmjudge.clone()
             };
             let releasemargin = if sc >= 0 {
-                self.windows.sreleasemargin
+                self.sreleasemargin
             } else {
-                self.windows.nreleasemargin
+                self.nreleasemargin
             };
 
             // LN end processing
@@ -688,11 +684,11 @@ impl JudgeManager {
             return;
         }
         if judge_vanish {
-            if (self.scoring.score.passnotes as usize) < self.scoring.ghost.len() {
-                self.scoring.ghost[self.scoring.score.passnotes as usize] = judge;
+            if (self.score.passnotes as usize) < self.ghost.len() {
+                self.ghost[self.score.passnotes as usize] = judge;
             }
             self.note_states[note_idx].state = judge + 1;
-            self.scoring.score.passnotes += 1;
+            self.score.passnotes += 1;
         }
         if self.miss == MissCondition::One
             && judge == 4
@@ -701,31 +697,30 @@ impl JudgeManager {
             return;
         }
         self.note_states[note_idx].play_time = mfast;
-        self.scoring.score.add_judge_count(judge, mfast >= 0, 1);
+        self.score.add_judge_count(judge, mfast >= 0, 1);
 
         if judge < 4 {
-            self.auto_adjust.recent_judges_index =
-                (self.auto_adjust.recent_judges_index + 1) % self.auto_adjust.recent_judges.len();
-            self.auto_adjust.recent_judges[self.auto_adjust.recent_judges_index] = mfast / 1000;
-            self.auto_adjust.micro_recent_judges[self.auto_adjust.recent_judges_index] = mfast;
+            self.recent_judges_index = (self.recent_judges_index + 1) % self.recent_judges.len();
+            self.recent_judges[self.recent_judges_index] = mfast / 1000;
+            self.micro_recent_judges[self.recent_judges_index] = mfast;
         }
 
         if (judge as usize) < self.combocond.len() && self.combocond[judge as usize] && judge < 5 {
-            self.scoring.combo += 1;
-            self.scoring.score.maxcombo = self.scoring.score.maxcombo.max(self.scoring.combo);
-            self.scoring.coursecombo += 1;
-            self.scoring.coursemaxcombo = self.scoring.coursemaxcombo.max(self.scoring.coursecombo);
+            self.combo += 1;
+            self.score.maxcombo = self.score.maxcombo.max(self.combo);
+            self.coursecombo += 1;
+            self.coursemaxcombo = self.coursemaxcombo.max(self.coursecombo);
         }
         if (judge as usize) < self.combocond.len() && !self.combocond[judge as usize] {
-            self.scoring.combo = 0;
-            self.scoring.coursecombo = 0;
+            self.combo = 0;
+            self.coursecombo = 0;
         }
 
         if judge != 4 {
             let player = self.lane_states[lane_idx].player;
             let offset = self.lane_states[lane_idx].offset;
-            if player < self.scoring.judge.len() && offset < self.scoring.judge[player].len() {
-                self.scoring.judge[player][offset] = if judge == 0 {
+            if player < self.judge.len() && offset < self.judge[player].len() {
+                self.judge[player][offset] = if judge == 0 {
                     1
                 } else {
                     judge * 2 + if mfast > 0 { 0 } else { 1 }
@@ -738,16 +733,13 @@ impl JudgeManager {
         }
 
         // Timing auto-adjust (Java JudgeManager lines 754-768)
-        if self.auto_adjust.auto_adjust_enabled
-            && self.auto_adjust.is_play_or_practice
-            && judge <= 3
-        {
-            self.auto_adjust.presses_since_last_autoadjust += 1;
-            if self.auto_adjust.presses_since_last_autoadjust > 9 {
+        if self.auto_adjust_enabled && self.is_play_or_practice && judge <= 3 {
+            self.presses_since_last_autoadjust += 1;
+            if self.presses_since_last_autoadjust > 9 {
                 if mfast <= -500 || mfast >= 500 {
-                    self.auto_adjust.judgetiming_delta += if mfast < 0 { 1 } else { -1 };
+                    self.judgetiming_delta += if mfast < 0 { 1 } else { -1 };
                 }
-                self.auto_adjust.presses_since_last_autoadjust = 0;
+                self.presses_since_last_autoadjust = 0;
             }
         }
     }

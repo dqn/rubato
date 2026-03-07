@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use anyhow::Context;
 use rusqlite::Connection;
 
 use crate::player_data::PlayerData;
@@ -27,10 +26,8 @@ pub struct ScoreDatabaseAccessor {
 
 impl ScoreDatabaseAccessor {
     pub fn new(path: &str) -> anyhow::Result<Self> {
-        let conn = Connection::open(path)
-            .with_context(|| format!("failed to open score database: {}", path))?;
-        conn.execute_batch("PRAGMA shared_cache = ON")
-            .context("failed to set score database pragmas")?;
+        let conn = Connection::open(path)?;
+        conn.execute_batch("PRAGMA shared_cache = ON")?;
         conn.pragma_update(None, "synchronous", "OFF")?;
         conn.pragma_update(None, "cache_size", 2000)?;
 
@@ -214,6 +211,7 @@ impl ScoreDatabaseAccessor {
         self.get_score_datas_inner(collector, songs, 0, &mut str_buf, false);
     }
 
+    #[allow(clippy::needless_range_loop)]
     fn get_score_datas_inner(
         &self,
         collector: &mut dyn ScoreDataCollector,
@@ -223,11 +221,16 @@ impl ScoreDatabaseAccessor {
         hasln: bool,
     ) {
         let result: Result<(), anyhow::Error> = (|| {
+            let song_length = songs.len();
+            let chunk_length = song_length.div_ceil(LOAD_CHUNK_SIZE);
             let mut scores: Vec<ScoreData> = Vec::new();
 
-            for chunk in songs.chunks(LOAD_CHUNK_SIZE) {
+            for i in 0..chunk_length {
+                let chunk_start = i * LOAD_CHUNK_SIZE;
+                let chunk_end = std::cmp::min(song_length, (i + 1) * LOAD_CHUNK_SIZE);
                 let mut chunk_hashes: Vec<String> = Vec::new();
-                for song in chunk {
+                for j in chunk_start..chunk_end {
+                    let song = &songs[j];
                     let has_uln = !song.sha256.is_empty();
                     if (hasln && has_uln) || (!hasln && !has_uln) {
                         chunk_hashes.push(song.sha256.clone());

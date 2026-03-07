@@ -10,10 +10,7 @@ pub use rubato_input::bms_player_input_processor::BMSPlayerInputProcessor;
 pub use rubato_input::keyboard_input_processor::ControlKeys;
 
 // MainControllerAccess: real trait from beatoraja-types (Phase 41b)
-pub use rubato_types::main_controller_access::{
-    AudioSystemAccess, ControllerConfigAccess, DataReadAccess, IRConnectionAccess,
-    MainControllerAccess, NullMainController, StateTransitionAccess,
-};
+pub use rubato_types::main_controller_access::{MainControllerAccess, NullMainController};
 
 /// Wrapper for MainController reference.
 /// Delegates trait methods (change_state) to `Box<dyn MainControllerAccess>`.

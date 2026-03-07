@@ -136,7 +136,7 @@ pub fn apply_modify_log(model: &mut BMSModel, log: &[PatternModifyLog]) {
     let mode_key = model.mode().map(|m| m.key()).unwrap_or(0);
     let lanes = mode_key as usize;
 
-    let timelines = &mut model.timelines;
+    let timelines = model.all_time_lines_mut();
     for tl in timelines.iter_mut() {
         let mut pm: Option<&PatternModifyLog> = None;
         for pms in log {
@@ -205,7 +205,7 @@ pub(crate) fn make_test_model(mode: &Mode, timelines: Vec<TimeLine>) -> BMSModel
     model
 }
 
-pub(crate) fn move_to_background(tls: &mut [TimeLine], tl_index: usize, lane: i32) {
+pub fn move_to_background(tls: &mut [TimeLine], tl_index: usize, lane: i32) {
     let note = tls[tl_index].note(lane).cloned();
     if let Some(ref n) = note {
         if n.is_long() {
@@ -309,7 +309,7 @@ mod tests {
     fn identity_modifier_default_values() {
         let modifier = IdentityModifier::new();
         assert_eq!(modifier.assist_level(), AssistLevel::None);
-        assert_eq!(modifier.player, 0);
+        assert_eq!(modifier.player(), 0);
     }
 
     #[test]
@@ -348,7 +348,7 @@ mod tests {
         model.timelines = vec![tl];
         model.set_mode(Mode::BEAT_7K);
         let note = Note::new_normal(1);
-        &mut model.timelines[0].set_note(0, Some(note));
+        model.all_time_lines_mut()[0].set_note(0, Some(note));
 
         let mut modifier = IdentityModifier::new();
         modifier.modify(&mut model);
@@ -413,7 +413,7 @@ mod tests {
     fn get_keys_invalid_player_returns_empty() {
         let modifier = IdentityModifier::new();
         let mode = Mode::BEAT_7K;
-        // player=1 but mode.player=1, so player >= mode.player -> empty
+        // player=1 but mode.player()=1, so player >= mode.player() -> empty
         let keys = modifier.keys(&mode, 1, false);
         assert!(keys.is_empty());
     }

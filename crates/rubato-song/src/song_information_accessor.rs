@@ -1,6 +1,5 @@
 use std::sync::Mutex;
 
-use anyhow::Context;
 use bms_model::bms_model::BMSModel;
 use rubato_core::sqlite_database_accessor::{Column, SQLiteDatabaseAccessor, Table};
 use rubato_core::validatable::remove_invalid_elements_vec;
@@ -9,7 +8,6 @@ use rusqlite::Connection;
 
 use crate::song_data::SongData;
 use crate::song_information::SongInformation;
-use rubato_types::sync_utils::lock_or_recover;
 
 const LOAD_CHUNK_SIZE: usize = 1000;
 
@@ -40,12 +38,9 @@ impl SongInformationAccessor {
             ],
         )]);
 
-        let conn = Connection::open(filepath)
-            .with_context(|| format!("failed to open song information database: {}", filepath))?;
-        conn.execute_batch("PRAGMA shared_cache = ON; PRAGMA synchronous = OFF;")
-            .context("failed to set song information database pragmas")?;
-        base.validate(&conn)
-            .context("failed to validate song information database schema")?;
+        let conn = Connection::open(filepath)?;
+        conn.execute_batch("PRAGMA shared_cache = ON; PRAGMA synchronous = OFF;")?;
+        base.validate(&conn)?;
 
         Ok(Self {
             base,
@@ -79,15 +74,21 @@ impl SongInformationAccessor {
     }
 
     pub fn information_for_songs(&self, songs: &mut [SongData]) {
+        let song_length = songs.len();
+        let chunk_length = song_length.div_ceil(LOAD_CHUNK_SIZE);
         let mut infos: Vec<SongInformation> = Vec::new();
 
-        for chunk in songs.chunks(LOAD_CHUNK_SIZE) {
-            for song in chunk {
-                if song.sha256.is_empty() {
+        for i in 0..chunk_length {
+            let chunk_start = i * LOAD_CHUNK_SIZE;
+            let chunk_end = song_length.min((i + 1) * LOAD_CHUNK_SIZE);
+
+            for song in songs.iter().take(chunk_end).skip(chunk_start) {
+                let sha256 = song.sha256.clone();
+                if sha256.is_empty() {
                     continue;
                 }
                 let query = "SELECT * FROM information WHERE sha256 = ?1";
-                match self.query_informations(query, &[song.sha256.as_str()]) {
+                match self.query_informations(query, &[sha256.as_str()]) {
                     Ok(sub_infos) => {
                         let valid = remove_invalid_elements_vec(sub_infos);
                         infos.extend(valid);
@@ -110,20 +111,20 @@ impl SongInformationAccessor {
     }
 
     pub fn start_update(&self) -> anyhow::Result<()> {
-        let conn = lock_or_recover(&self.conn);
+        let conn = self.conn.lock().expect("conn lock poisoned");
         conn.execute_batch("BEGIN TRANSACTION")?;
         Ok(())
     }
 
     pub fn update(&self, model: &BMSModel) {
-        let info = SongInformation::from(model);
+        let info = SongInformation::from_model(model);
         if let Err(e) = self.insert_information(&info) {
             log::error!("Error inserting information: {}", e);
         }
     }
 
     pub fn end_update(&self) {
-        let conn = lock_or_recover(&self.conn);
+        let conn = self.conn.lock().expect("conn lock poisoned");
         if let Err(e) = conn.execute_batch("COMMIT") {
             log::error!("Error committing update: {}", e);
         }
@@ -134,7 +135,7 @@ impl SongInformationAccessor {
         sql: &str,
         params: &[&str],
     ) -> anyhow::Result<Vec<SongInformation>> {
-        let conn = lock_or_recover(&self.conn);
+        let conn = self.conn.lock().expect("conn lock poisoned");
         let mut stmt = conn.prepare(sql)?;
         let param_values: Vec<&dyn rusqlite::types::ToSql> = params
             .iter()
@@ -181,7 +182,7 @@ impl SongInformationAccessor {
     }
 
     fn insert_information(&self, info: &SongInformation) -> anyhow::Result<()> {
-        let conn = lock_or_recover(&self.conn);
+        let conn = self.conn.lock().expect("conn lock poisoned");
         self.base.insert_with_values(
             &conn,
             "information",

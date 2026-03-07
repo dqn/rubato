@@ -31,7 +31,7 @@ impl PatternModifier for NoteShuffleModifier {
             None => return,
         };
         self.randomizer.set_modify_lanes(&keys);
-        let timelines = &mut model.timelines;
+        let timelines = model.all_time_lines_mut();
         for tl in timelines.iter_mut() {
             if tl.exist_note() || tl.exist_hidden_note() {
                 self.randomizer.permutate(tl);

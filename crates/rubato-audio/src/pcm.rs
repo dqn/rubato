@@ -1,7 +1,7 @@
 use std::io::{self, Read};
 use std::path::Path;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 use log::warn;
 
 use crate::audio_driver;
@@ -193,14 +193,11 @@ impl PCMLoader {
         let name = p.to_string_lossy().to_lowercase();
 
         if name.ends_with(".wav") {
-            self.load_wav(p)
-                .with_context(|| format!("failed to load WAV file: {}", p.display()))?;
+            self.load_wav(p)?;
         } else if name.ends_with(".ogg") {
-            self.load_ogg(p)
-                .with_context(|| format!("failed to load OGG file: {}", p.display()))?;
+            self.load_ogg(p)?;
         } else if name.ends_with(".mp3") || name.ends_with(".flac") {
-            self.load_symphonia(p)
-                .with_context(|| format!("failed to load audio file: {}", p.display()))?;
+            self.load_symphonia(p)?;
         } else {
             bail!("{}: unsupported format", p.display());
         }
@@ -246,10 +243,8 @@ impl PCMLoader {
     fn load_ogg(&mut self, p: &Path) -> Result<()> {
         use lewton::inside_ogg::OggStreamReader;
 
-        let file = std::fs::File::open(p)
-            .with_context(|| format!("failed to open OGG file: {}", p.display()))?;
-        let mut reader = OggStreamReader::new(file)
-            .with_context(|| format!("failed to initialize OGG reader: {}", p.display()))?;
+        let file = std::fs::File::open(p)?;
+        let mut reader = OggStreamReader::new(file)?;
 
         self.channels = reader.ident_hdr.audio_channels as i32;
         self.sample_rate = reader.ident_hdr.audio_sample_rate as i32;
@@ -277,8 +272,7 @@ impl PCMLoader {
         use symphonia::core::meta::MetadataOptions;
         use symphonia::core::probe::Hint;
 
-        let file = std::fs::File::open(p)
-            .with_context(|| format!("failed to open audio file: {}", p.display()))?;
+        let file = std::fs::File::open(p)?;
         let mss = MediaSourceStream::new(Box::new(file), Default::default());
         let mut hint = Hint::new();
         if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
@@ -401,8 +395,7 @@ impl PCMLoader {
     }
 
     fn load_wav(&mut self, p: &Path) -> Result<()> {
-        let data = std::fs::read(p)
-            .with_context(|| format!("failed to read WAV file: {}", p.display()))?;
+        let data = std::fs::read(p)?;
         let mut wav = WavReader::new(&data)?;
 
         match wav.format_type {

@@ -1,7 +1,6 @@
 use super::stubs::{ScoreData, SongData, SongSelectionAccess};
 use rubato_types::last_played_sort;
 
-use rubato_types::sync_utils::lock_or_recover;
 use std::sync::Mutex;
 
 static SELECTOR: Mutex<Option<Box<dyn SongSelectionAccess>>> = Mutex::new(None);
@@ -45,7 +44,7 @@ impl SongManagerMenu {
     }
 
     pub fn inject_music_selector(selector: Box<dyn SongSelectionAccess>) {
-        *lock_or_recover(&SELECTOR) = Some(selector);
+        *SELECTOR.lock().expect("SELECTOR lock poisoned") = Some(selector);
     }
 
     pub fn is_last_played_sort_enabled() -> bool {
@@ -60,17 +59,22 @@ impl SongManagerMenu {
 #[allow(dead_code)]
 fn update_reverse_lookup_data(current_song_data: &Option<SongData>) {
     if current_song_data.is_none() {
-        lock_or_recover(&CURRENT_REVERSE_LOOKUP_LIST).clear();
+        CURRENT_REVERSE_LOOKUP_LIST
+            .lock()
+            .expect("CURRENT_REVERSE_LOOKUP_LIST lock poisoned")
+            .clear();
         return;
     }
 
     // Current song data is not used in this call, consider deleting upstream of this function
     // getReverseLookupData uses the selectors resource object to get data for what song is currently selected
-    *lock_or_recover(&CURRENT_REVERSE_LOOKUP_LIST) = get_reverse_lookup_data();
+    *CURRENT_REVERSE_LOOKUP_LIST
+        .lock()
+        .expect("CURRENT_REVERSE_LOOKUP_LIST lock poisoned") = get_reverse_lookup_data();
 }
 
 fn get_current_song_data() -> Option<SongData> {
-    let selector = lock_or_recover(&SELECTOR);
+    let selector = SELECTOR.lock().expect("SELECTOR lock poisoned");
     if let Some(ref sel) = *selector {
         return sel.selected_song_data();
     }
@@ -78,7 +82,7 @@ fn get_current_song_data() -> Option<SongData> {
 }
 
 fn get_current_score_data() -> Option<ScoreData> {
-    let selector = lock_or_recover(&SELECTOR);
+    let selector = SELECTOR.lock().expect("SELECTOR lock poisoned");
     if let Some(ref sel) = *selector {
         return sel.selected_score_data();
     }
@@ -86,7 +90,7 @@ fn get_current_score_data() -> Option<ScoreData> {
 }
 
 fn get_reverse_lookup_data() -> Vec<String> {
-    let selector = lock_or_recover(&SELECTOR);
+    let selector = SELECTOR.lock().expect("SELECTOR lock poisoned");
     if let Some(ref sel) = *selector {
         return sel.reverse_lookup_data();
     }

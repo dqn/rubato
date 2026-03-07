@@ -3,7 +3,6 @@ use std::sync::{Arc, Mutex};
 use mlua::prelude::*;
 
 use crate::stubs::MainState;
-use rubato_types::sync_utils::lock_or_recover;
 
 /// Event utility for Lua
 ///
@@ -51,7 +50,7 @@ impl EventUtility {
                     let observe_state = Arc::new(Mutex::new(EventObserveTurnTrueState::new()));
                     let event_func = lua.create_function(move |_, ()| {
                         let on: bool = func.call(()).unwrap_or(false);
-                        let mut obs = lock_or_recover(&observe_state);
+                        let mut obs = observe_state.lock().expect("observe_state lock poisoned");
                         if obs.update(on)
                             && let Err(e) = action.call::<LuaValue>(())
                         {
@@ -69,7 +68,7 @@ impl EventUtility {
                     let observe_state = Arc::new(Mutex::new(EventObserveTimerState::new()));
                     let event_func = lua.create_function(move |_, ()| {
                         let value: i64 = timer_func.call(()).unwrap_or(TIMER_OFF_VALUE);
-                        let mut obs = lock_or_recover(&observe_state);
+                        let mut obs = observe_state.lock().expect("observe_state lock poisoned");
                         if obs.update(value)
                             && let Err(e) = action.call::<LuaValue>(())
                         {
@@ -87,7 +86,7 @@ impl EventUtility {
                     let observe_state = Arc::new(Mutex::new(EventObserveTimerOnState::new()));
                     let event_func = lua.create_function(move |_, ()| {
                         let value: i64 = timer_func.call(()).unwrap_or(TIMER_OFF_VALUE);
-                        let mut obs = lock_or_recover(&observe_state);
+                        let mut obs = observe_state.lock().expect("observe_state lock poisoned");
                         if obs.update(value)
                             && let Err(e) = action.call::<LuaValue>(())
                         {
@@ -105,7 +104,7 @@ impl EventUtility {
                     let observe_state = Arc::new(Mutex::new(EventObserveTimerOffState::new()));
                     let event_func = lua.create_function(move |_, ()| {
                         let value: i64 = timer_func.call(()).unwrap_or(TIMER_OFF_VALUE);
-                        let mut obs = lock_or_recover(&observe_state);
+                        let mut obs = observe_state.lock().expect("observe_state lock poisoned");
                         if obs.update(value)
                             && let Err(e) = action.call::<LuaValue>(())
                         {
@@ -125,7 +124,7 @@ impl EventUtility {
                     let event_func = lua.create_function(move |_, ()| {
                         let state = unsafe { &*sp.0 };
                         let now = state.timer().now_micro_time();
-                        let mut is = lock_or_recover(&interval_state);
+                        let mut is = interval_state.lock().expect("interval_state lock poisoned");
                         if is.update(min_interval, now)
                             && let Err(e) = action.call::<LuaValue>(())
                         {

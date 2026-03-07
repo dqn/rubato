@@ -35,7 +35,7 @@ pub(crate) struct FileCacheEntry {
 /// Convert linear volume (0.0-1.0) to decibels for Kira.
 /// Kira uses Decibels type where 0 dB = no change, negative = quieter.
 /// Formula: dB = 20 * log10(amplitude)
-pub(crate) fn linear_to_db(volume: f32) -> f32 {
+pub fn linear_to_db(volume: f32) -> f32 {
     if volume <= 0.0 {
         -60.0 // Kira's silence threshold
     } else {
@@ -68,8 +68,7 @@ pub struct GdxSoundDriver {
 
 impl GdxSoundDriver {
     pub fn new(song_resource_gen: i32) -> anyhow::Result<Self> {
-        let manager = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default())
-            .map_err(|e| anyhow::anyhow!("failed to initialize audio manager: {}", e))?;
+        let manager = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default())?;
         Ok(GdxSoundDriver {
             manager,
             path_sounds: HashMap::new(),
@@ -163,7 +162,7 @@ impl AudioDriver for GdxSoundDriver {
             self.volume = 1.0;
         }
 
-        let wav_list = &model.wavmap;
+        let wav_list = model.wav_list();
         if wav_list.is_empty() {
             return;
         }
