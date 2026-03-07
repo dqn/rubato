@@ -230,7 +230,7 @@ impl BMSDecoder {
                     }
                 } else if !skip.last().copied().unwrap_or(false) {
                     let c = line.as_bytes()[1] as char;
-                    let base = model.get_base();
+                    let base = model.base;
                     if c.is_ascii_digit() && line.len() > 6 {
                         let c2 = line.as_bytes()[2] as char;
                         let c3 = line.as_bytes()[3] as char;
@@ -502,7 +502,7 @@ impl BMSDecoder {
                     && line.len() > index + 1
                 {
                     model
-                        .values_mut()
+                        .values
                         .insert(line[1..index].to_string(), line[index + 1..].to_string());
                 }
             } else if first_char == '@'
@@ -510,7 +510,7 @@ impl BMSDecoder {
                 && line.len() > index + 1
             {
                 model
-                    .values_mut()
+                    .values
                     .insert(line[1..index].to_string(), line[index + 1..].to_string());
             }
         }
@@ -585,7 +585,7 @@ impl BMSDecoder {
                 ));
                 if status.section != f64::MIN {
                     // Find the timeline in model's timelines and clear the note
-                    for tl in model.all_time_lines_mut() {
+                    for tl in model.timelines.iter_mut() {
                         if tl.get_section() == status.section {
                             tl.set_note(i as i32, None);
                             break;
@@ -629,8 +629,8 @@ impl BMSDecoder {
 
         let md5_result = md5_hasher.finalize();
         let sha256_result = sha256_hasher.finalize();
-        model.set_md5(convert_hex_string(&md5_result));
-        model.set_sha256(convert_hex_string(&sha256_result));
+        model.md5 = convert_hex_string(&md5_result);
+        model.sha256 = convert_hex_string(&sha256_result);
 
         self.log.push(DecodeLog::new(
             State::Info,
@@ -753,42 +753,42 @@ fn process_command_word(line: &str, model: &mut BMSModel, log: &mut Vec<DecodeLo
         CmdDef {
             name: "GENRE",
             handler: |model, arg| {
-                model.set_genre(arg);
+                model.genre = arg.to_string();
                 None
             },
         },
         CmdDef {
             name: "TITLE",
             handler: |model, arg| {
-                model.set_title(arg);
+                model.title = arg.to_string();
                 None
             },
         },
         CmdDef {
             name: "SUBTITLE",
             handler: |model, arg| {
-                model.set_sub_title(arg);
+                model.sub_title = arg.to_string();
                 None
             },
         },
         CmdDef {
             name: "ARTIST",
             handler: |model, arg| {
-                model.set_artist(arg);
+                model.artist = arg.to_string();
                 None
             },
         },
         CmdDef {
             name: "SUBARTIST",
             handler: |model, arg| {
-                model.set_sub_artist(arg);
+                model.subartist = arg.to_string();
                 None
             },
         },
         CmdDef {
             name: "PLAYLEVEL",
             handler: |model, arg| {
-                model.set_playlevel(arg);
+                model.playlevel = arg.to_string();
                 None
             },
         },
@@ -884,28 +884,28 @@ fn process_command_word(line: &str, model: &mut BMSModel, log: &mut Vec<DecodeLo
         CmdDef {
             name: "STAGEFILE",
             handler: |model, arg| {
-                model.set_stagefile(normalize_path_separators(arg).into_owned());
+                model.stagefile = normalize_path_separators(arg).into_owned();
                 None
             },
         },
         CmdDef {
             name: "BACKBMP",
             handler: |model, arg| {
-                model.set_backbmp(normalize_path_separators(arg).into_owned());
+                model.backbmp = normalize_path_separators(arg).into_owned();
                 None
             },
         },
         CmdDef {
             name: "PREVIEW",
             handler: |model, arg| {
-                model.set_preview(normalize_path_separators(arg).into_owned());
+                model.preview = normalize_path_separators(arg).into_owned();
                 None
             },
         },
         CmdDef {
             name: "LNOBJ",
             handler: |model, arg| {
-                if model.get_base() == 62 {
+                if model.base == 62 {
                     match chart_decoder::parse_int62_str(arg, 0) {
                         Ok(v) => model.lnobj = v,
                         Err(_) => {
@@ -972,7 +972,7 @@ fn process_command_word(line: &str, model: &mut BMSModel, log: &mut Vec<DecodeLo
         CmdDef {
             name: "BANNER",
             handler: |model, arg| {
-                model.set_banner(normalize_path_separators(arg).into_owned());
+                model.banner = normalize_path_separators(arg).into_owned();
                 None
             },
         },
@@ -1121,7 +1121,7 @@ mod tests {
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
         let model = model.unwrap();
-        assert_eq!(model.get_title(), "My Song");
+        assert_eq!(model.title.as_str(), "My Song");
     }
 
     #[test]
@@ -1149,7 +1149,7 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#PLAYLEVEL 12"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().get_playlevel(), "12");
+        assert_eq!(model.unwrap().playlevel.as_str(), "12");
     }
 
     #[test]
@@ -1336,7 +1336,7 @@ mod tests {
         assert!(model.is_some());
         let model = model.unwrap();
         assert_eq!(
-            model.get_values().get("URL"),
+            model.values.get("URL"),
             Some(&"http://example.com".to_string())
         );
     }
@@ -1348,7 +1348,7 @@ mod tests {
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
         let model = model.unwrap();
-        let wav_list = model.wav_list();
+        let wav_list = model.wavmap.as_slice();
         assert!(!wav_list.is_empty());
         // Backslash should be converted to forward slash
         assert!(wav_list.iter().any(|w| w == "sound/kick.wav"));
@@ -1368,10 +1368,10 @@ mod tests {
         ]);
         let model = decoder.decode_bytes(&data, false, None).unwrap();
 
-        assert_eq!(model.get_title(), "Combined Test");
+        assert_eq!(model.title.as_str(), "Combined Test");
         assert_eq!(model.artist(), "Multi Artist");
         assert!((model.bpm - 180.0).abs() < f64::EPSILON);
-        assert_eq!(model.get_playlevel(), "7");
+        assert_eq!(model.playlevel.as_str(), "7");
         assert_eq!(model.genre(), "Trance");
         assert!((model.total - 350.0).abs() < f64::EPSILON);
         assert_eq!(model.judgerank(), 2);
@@ -1385,7 +1385,7 @@ mod tests {
         let mut log = Vec::new();
         let handled = process_command_word("#TITLE Hello World", &mut model, &mut log);
         assert!(handled);
-        assert_eq!(model.get_title(), "Hello World");
+        assert_eq!(model.title.as_str(), "Hello World");
         assert!(log.is_empty());
     }
 
@@ -1454,7 +1454,7 @@ mod tests {
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
         assert_eq!(
-            model.unwrap().get_title(),
+            model.unwrap().title.as_str(),
             "\u{8868}\u{793a}\u{30c6}\u{30b9}\u{30c8}"
         );
     }
@@ -1491,7 +1491,7 @@ mod tests {
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
         let model = model.unwrap();
-        let wav_list = model.wav_list();
+        let wav_list = model.wavmap.as_slice();
         assert!(wav_list.iter().any(|w| w.contains(".wav")));
     }
 
@@ -1560,7 +1560,7 @@ mod tests {
         );
         assert!(handled);
         assert_eq!(
-            model.get_title(),
+            model.title.as_str(),
             "\u{8868}\u{793a}\u{30c6}\u{30b9}\u{30c8}"
         );
     }
@@ -1599,7 +1599,7 @@ mod tests {
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
         let model = model.unwrap();
-        assert_eq!(model.get_title(), "\u{661f}\u{306e}\u{5668}");
+        assert_eq!(model.title.as_str(), "\u{661f}\u{306e}\u{5668}");
         assert_eq!(model.artist(), "\u{4f5c}\u{66f2}\u{8005}");
         assert_eq!(model.genre(), "\u{30c8}\u{30e9}\u{30f3}\u{30b9}");
         assert!((model.bpm - 140.0).abs() < f64::EPSILON);

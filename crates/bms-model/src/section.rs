@@ -86,7 +86,7 @@ impl Section {
         scrolltable: &BTreeMap<i32, f64>,
         log: &mut Vec<DecodeLog>,
     ) -> Self {
-        let base = model.get_base();
+        let base = model.base;
         let mut rate = 1.0;
         let mut poor: Vec<i32> = Vec::new();
         let mut channellines: Vec<String> = Vec::with_capacity(lines.len());
@@ -130,7 +130,7 @@ impl Section {
                     }
                 }
                 BPM_CHANGE => {
-                    let results = process_data_collect(line, base, log, model.get_title());
+                    let results = process_data_collect(line, base, log, &model.title);
                     for (pos, mut data) in results {
                         if base == 62 {
                             let s = chart_decoder::to_base62(data);
@@ -145,7 +145,7 @@ impl Section {
                     }
                 }
                 POOR_PLAY => {
-                    poor = split_data(line, base, log, model.get_title());
+                    poor = split_data(line, base, log, &model.title);
                     let mut singleid: i32 = 0;
                     for &id in &poor {
                         if id != 0 {
@@ -162,7 +162,7 @@ impl Section {
                     }
                 }
                 BPM_CHANGE_EXTEND => {
-                    let results = process_data_collect(line, base, log, model.get_title());
+                    let results = process_data_collect(line, base, log, &model.title);
                     for (pos, data) in results {
                         if let Some(&bpm) = bpmtable.get(&data) {
                             bpmchange.insert(f64_key(pos), bpm);
@@ -175,7 +175,7 @@ impl Section {
                     }
                 }
                 STOP => {
-                    let results = process_data_collect(line, base, log, model.get_title());
+                    let results = process_data_collect(line, base, log, &model.title);
                     for (pos, data) in results {
                         if let Some(&st) = stoptable.get(&data) {
                             stop_map.insert(f64_key(pos), st);
@@ -188,7 +188,7 @@ impl Section {
                     }
                 }
                 c if c == SCROLL => {
-                    let results = process_data_collect(line, base, log, model.get_title());
+                    let results = process_data_collect(line, base, log, &model.title);
                     for (pos, data) in results {
                         if let Some(&st) = scrolltable.get(&data) {
                             scroll_map.insert(f64_key(pos), st);
@@ -281,7 +281,7 @@ impl Section {
         } else {
             &CHANNELASSIGN_BEAT5
         };
-        let base = model.get_base();
+        let base = model.base;
         let mode_key = mode.as_ref().map(|m| m.key()).unwrap_or(0);
 
         // section line
@@ -442,7 +442,7 @@ impl Section {
             }
 
             if channel == P1_KEY_BASE {
-                let results = process_data_collect(line, base, log, model.get_title());
+                let results = process_data_collect(line, base, log, &model.title);
                 for (pos, data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -629,7 +629,7 @@ impl Section {
                     }
                 }
             } else if channel == P1_INVISIBLE_KEY_BASE {
-                let results = process_data_collect(line, base, log, model.get_title());
+                let results = process_data_collect(line, base, log, &model.title);
                 for (pos, data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -646,7 +646,7 @@ impl Section {
                         .set_hidden_note(key, Some(Note::new_normal(wav_val)));
                 }
             } else if channel == P1_LONG_KEY_BASE {
-                let results = process_data_collect(line, base, log, model.get_title());
+                let results = process_data_collect(line, base, log, &model.title);
                 for (pos, data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -909,7 +909,7 @@ impl Section {
                     }
                 }
             } else if channel == P1_MINE_KEY_BASE {
-                let results = process_data_collect(line, base, log, model.get_title());
+                let results = process_data_collect(line, base, log, &model.title);
                 for (pos, mut data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -973,7 +973,7 @@ impl Section {
                     }
                 }
             } else if channel == LANE_AUTOPLAY {
-                let results = process_data_collect(line, base, log, model.get_title());
+                let results = process_data_collect(line, base, log, &model.title);
                 for (pos, data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -990,7 +990,7 @@ impl Section {
                         .add_back_ground_note(Note::new_normal(wav_val));
                 }
             } else if channel == BGA_PLAY {
-                let results = process_data_collect(line, base, log, model.get_title());
+                let results = process_data_collect(line, base, log, &model.title);
                 for (pos, data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);
@@ -1007,7 +1007,7 @@ impl Section {
                         .bga = bga_val;
                 }
             } else if channel == LAYER_PLAY {
-                let results = process_data_collect(line, base, log, model.get_title());
+                let results = process_data_collect(line, base, log, &model.title);
                 for (pos, data) in results {
                     let section = self.sectionnum + self.rate * pos;
                     ensure_timeline(tlcache, section, mode_key);

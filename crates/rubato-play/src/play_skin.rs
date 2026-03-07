@@ -60,59 +60,11 @@ impl PlaySkin {
         }
     }
 
-    pub fn judgeregion(&self) -> i32 {
-        self.judgeregion
-    }
-
-    pub fn get_close(&self) -> i32 {
-        self.close
-    }
-
-    pub fn get_finish_margin(&self) -> i32 {
-        self.finish_margin
-    }
-
-    pub fn get_playstart(&self) -> i32 {
-        self.playstart
-    }
-
-    pub fn get_loadstart(&self) -> i32 {
-        self.loadstart
-    }
-
-    pub fn get_loadend(&self) -> i32 {
-        self.loadend
-    }
-
-    pub fn get_judgetimer(&self) -> i32 {
-        self.judgetimer
-    }
-
-    pub fn get_note_expansion_rate(&self) -> &[i32; 2] {
-        &self.note_expansion_rate
-    }
-
-    pub fn get_lane_group_region(&self) -> Option<&[Rectangle]> {
+    pub fn lane_group_region(&self) -> Option<&[Rectangle]> {
         self.lanegroupregion.as_deref()
     }
 
-    pub fn get_lane_region(&self) -> Option<&[Rectangle]> {
+    pub fn lane_region(&self) -> Option<&[Rectangle]> {
         self.laneregion.as_deref()
-    }
-
-    pub fn get_line(&self) -> &[()] {
-        &self.line
-    }
-
-    pub fn get_bpm_line(&self) -> &[()] {
-        &self.bpm
-    }
-
-    pub fn get_stop_line(&self) -> &[()] {
-        &self.stop
-    }
-
-    pub fn get_time_line(&self) -> &[()] {
-        &self.time
     }
 }

@@ -59,24 +59,24 @@ impl OSUDecoder {
         }
 
         let mut model = BMSModel::new();
-        model.set_md5(md5_hash);
-        model.set_sha256(sha256_hash);
+        model.md5 = md5_hash;
+        model.sha256 = sha256_hash;
 
         if osu.general.mode != 3 {
             return None;
         }
 
         let keymode = osu.difficulty.circle_size as i32;
-        model.set_title(&osu.metadata.title);
-        model.set_sub_title(format!("[{}]", osu.metadata.version));
-        model.set_artist(&osu.metadata.artist);
-        model.set_sub_artist(&osu.metadata.creator);
-        model.set_genre(format!("{}K", keymode));
+        model.title = osu.metadata.title.clone();
+        model.sub_title = format!("[{}]", osu.metadata.version);
+        model.artist = osu.metadata.artist.clone();
+        model.subartist = osu.metadata.creator.clone();
+        model.genre = format!("{}K", keymode);
         model.judgerank = 3;
         model.judgerank_type = JudgeRankType::BmsRank;
         model.total = 0.0;
         model.total_type = TotalType::Bms;
-        model.set_playlevel("");
+        model.playlevel = String::new();
 
         let mapping: Vec<i32> = match keymode {
             4 => vec![0, 2, 4, 6, -1, -1, -1, -1],
@@ -101,7 +101,7 @@ impl OSUDecoder {
             _ => return None,
         }
 
-        model.set_banner("");
+        model.banner = String::new();
 
         let offset: i32 = 38;
         let mut bga_list: Vec<String> = Vec::new();
@@ -114,8 +114,8 @@ impl OSUDecoder {
             match event.event_type.as_str() {
                 "0" => {
                     if !event.event_params.is_empty() {
-                        model.set_backbmp(&event.event_params[0]);
-                        model.set_stagefile(&event.event_params[0]);
+                        model.backbmp = event.event_params[0].clone();
+                        model.stagefile = event.event_params[0].clone();
                     }
                 }
                 "1" | "Video" => {
@@ -136,7 +136,7 @@ impl OSUDecoder {
                 _ => continue,
             }
         }
-        model.set_preview(&osu.general.audio_filename);
+        model.preview = osu.general.audio_filename.clone();
 
         let mode_key = model.mode().map(|m| m.key()).unwrap_or(0);
         let mut timelines: BTreeMap<i32, TimeLine> = BTreeMap::new();

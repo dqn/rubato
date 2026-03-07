@@ -60,8 +60,8 @@ fn decode_7k_fixture_metadata() {
         .decode_path(&path)
         .expect("should decode 7K .osu fixture");
 
-    assert_eq!(model.get_title(), "Test Song");
-    assert_eq!(model.sub_title(), "[7K Hard]");
+    assert_eq!(model.title.as_str(), "Test Song");
+    assert_eq!(model.sub_title.as_str(), "[7K Hard]");
     assert_eq!(model.artist(), "Test Artist");
     assert_eq!(model.sub_artist(), "Test Creator");
     assert_eq!(model.genre(), "7K");
@@ -785,5 +785,5 @@ fn decode_via_chart_information() {
         .decode(info)
         .expect("should decode via ChartInformation");
 
-    assert_eq!(model.get_title(), "Test Song");
+    assert_eq!(model.title.as_str(), "Test Song");
 }

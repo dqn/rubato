@@ -201,7 +201,7 @@ impl MainState for BMSPlayer {
         //     (getSkin() instanceof PlaySkin) ? ((PlaySkin) getSkin()).getNoteExpansionRate()[0] != 100
         //         || ((PlaySkin) getSkin()).getNoteExpansionRate()[1] != 100 : false);
         // ```
-        let rates = self.play_skin.get_note_expansion_rate();
+        let rates = &self.play_skin.note_expansion_rate;
         let use_expansion = rates[0] != 100 || rates[1] != 100;
         self.rhythm = Some(RhythmTimerProcessor::new(&self.model, use_expansion));
 
@@ -292,7 +292,7 @@ impl MainState for BMSPlayer {
         let micronow = self.main_state_data.timer.now_micro_time();
 
         // Input start timer
-        let input_time = self.play_skin.get_loadstart() as i64; // skin.getInput() in Java
+        let input_time = self.play_skin.loadstart as i64; // skin.getInput() in Java
         if micronow > input_time * 1000 {
             self.main_state_data
                 .timer
@@ -329,7 +329,7 @@ impl MainState for BMSPlayer {
 
                 // Check if media loaded and load timers elapsed
                 let load_threshold =
-                    (self.play_skin.get_loadstart() + self.play_skin.get_loadend()) as i64 * 1000;
+                    (self.play_skin.loadstart + self.play_skin.loadend) as i64 * 1000;
                 // Translated from: Java BMSPlayer.render() lines 607-608
                 if self.media_load_finished
                     && micronow > load_threshold
@@ -452,7 +452,7 @@ impl MainState for BMSPlayer {
                     .copied()
                     .unwrap_or(false);
                 let load_threshold =
-                    (self.play_skin.get_loadstart() + self.play_skin.get_loadend()) as i64 * 1000;
+                    (self.play_skin.loadstart + self.play_skin.loadend) as i64 * 1000;
                 if key0_pressed
                     && self.media_load_finished
                     && micronow > load_threshold
@@ -557,7 +557,7 @@ impl MainState for BMSPlayer {
             // PlayState::Ready - countdown before play
             PlayState::Ready => {
                 if self.main_state_data.timer.now_time_for_id(TIMER_READY)
-                    > self.play_skin.get_playstart() as i64
+                    > self.play_skin.playstart as i64
                 {
                     if let Some(ref lr) = self.lanerender {
                         self.score.replay_config = Some(lr.play_config().clone());
@@ -783,7 +783,7 @@ impl MainState for BMSPlayer {
                     self.pending.pending_reload_bms = true;
                     self.pending.pending_state_change = Some(MainStateType::Play);
                 } else if self.main_state_data.timer.now_time_for_id(TIMER_FAILED)
-                    > self.play_skin.get_close() as i64
+                    > self.play_skin.close as i64
                 {
                     self.pending.pending_global_pitch = Some(1.0);
                     // if resource.mediaLoadFinished() { resource.getBGAManager().stop(); }
@@ -849,7 +849,7 @@ impl MainState for BMSPlayer {
                 self.keysound.stop_bg_play();
 
                 if self.main_state_data.timer.now_time_for_id(TIMER_MUSIC_END)
-                    > self.play_skin.get_finish_margin() as i64
+                    > self.play_skin.finish_margin as i64
                 {
                     self.main_state_data.timer.switch_timer(TIMER_FADEOUT, true);
                 }
