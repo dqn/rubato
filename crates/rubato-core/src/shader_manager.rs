@@ -35,7 +35,7 @@ pub struct ShaderManager;
 
 impl ShaderManager {
     pub fn get_shader(name: &str) -> Option<()> {
-        let shaders = SHADERS.get().lock().unwrap();
+        let shaders = SHADERS.get().lock().expect("lock poisoned");
         if !shaders.contains_key(name) {
             // In Java:
             // ShaderProgram shader = new ShaderProgram(
@@ -53,7 +53,7 @@ impl ShaderManager {
     }
 
     pub fn dispose() {
-        let mut shaders = SHADERS.get().lock().unwrap();
+        let mut shaders = SHADERS.get().lock().expect("lock poisoned");
         for (_name, mut shader) in shaders.drain() {
             shader.dispose();
         }

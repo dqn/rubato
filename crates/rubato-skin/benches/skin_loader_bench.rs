@@ -102,7 +102,8 @@ fn bench_skin_json_parse(c: &mut Criterion) {
 
     c.bench_function("skin_json_parse", |b| {
         b.iter(|| {
-            let skin: json_skin::Skin = serde_json::from_str(black_box(&json)).unwrap();
+            let skin: json_skin::Skin =
+                serde_json::from_str(black_box(&json)).expect("JSON deserialization");
             black_box(skin);
         });
     });
@@ -112,11 +113,12 @@ fn bench_skin_json_parse(c: &mut Criterion) {
 /// This isolates the schema-level deserialization cost from JSON tokenization.
 fn bench_skin_json_from_value(c: &mut Criterion) {
     let json = sample_skin_json();
-    let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+    let value: serde_json::Value = serde_json::from_str(&json).expect("JSON deserialization");
 
     c.bench_function("skin_json_from_value", |b| {
         b.iter(|| {
-            let skin: json_skin::Skin = serde_json::from_value(black_box(value.clone())).unwrap();
+            let skin: json_skin::Skin =
+                serde_json::from_value(black_box(value.clone())).expect("JSON value conversion");
             black_box(skin);
         });
     });
@@ -146,7 +148,8 @@ fn bench_destination_parse(c: &mut Criterion) {
 
     c.bench_function("destination_parse_20_keyframes", |b| {
         b.iter(|| {
-            let dst: json_skin::Destination = serde_json::from_str(black_box(&dst_json)).unwrap();
+            let dst: json_skin::Destination =
+                serde_json::from_str(black_box(&dst_json)).expect("JSON deserialization");
             black_box(dst);
         });
     });
@@ -175,21 +178,24 @@ fn bench_lenient_i32_deserialize(c: &mut Criterion) {
 
     c.bench_function("lenient_i32_from_number", |b| {
         b.iter(|| {
-            let evt: json_skin::CustomEvent = serde_json::from_str(black_box(from_number)).unwrap();
+            let evt: json_skin::CustomEvent =
+                serde_json::from_str(black_box(from_number)).expect("JSON deserialization");
             black_box(evt);
         });
     });
 
     c.bench_function("lenient_i32_from_string", |b| {
         b.iter(|| {
-            let evt: json_skin::CustomEvent = serde_json::from_str(black_box(from_string)).unwrap();
+            let evt: json_skin::CustomEvent =
+                serde_json::from_str(black_box(from_string)).expect("JSON deserialization");
             black_box(evt);
         });
     });
 
     c.bench_function("lenient_i32_from_float", |b| {
         b.iter(|| {
-            let evt: json_skin::CustomEvent = serde_json::from_str(black_box(from_float)).unwrap();
+            let evt: json_skin::CustomEvent =
+                serde_json::from_str(black_box(from_float)).expect("JSON deserialization");
             black_box(evt);
         });
     });

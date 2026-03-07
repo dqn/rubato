@@ -75,7 +75,7 @@ fn resolve_skin_path(config: &Config, skin_path: &str) -> Option<PathBuf> {
 }
 
 pub fn init_pixmap_resource_pool(generation: i32) {
-    let mut resource = RESOURCE.lock().unwrap();
+    let mut resource = RESOURCE.lock().expect("RESOURCE lock poisoned");
     if let Some(r) = resource.as_ref() {
         r.dispose();
     }
@@ -83,7 +83,7 @@ pub fn init_pixmap_resource_pool(generation: i32) {
 }
 
 pub fn get_resource() -> std::sync::MutexGuard<'static, Option<PixmapResourcePool>> {
-    let mut resource = RESOURCE.lock().unwrap();
+    let mut resource = RESOURCE.lock().expect("RESOURCE lock poisoned");
     if resource.is_none() {
         *resource = Some(PixmapResourcePool::new());
     }

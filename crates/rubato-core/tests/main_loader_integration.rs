@@ -387,7 +387,7 @@ fn start_then_play_sequential_lifecycle() {
 
     // Global state should be clean
     assert_eq!(
-        MainLoader::illegal_song_count(),
+        MainLoader::get_illegal_song_count(),
         0,
         "illegal songs should be empty after clean lifecycle"
     );
@@ -447,7 +447,7 @@ fn play_twice_sequential_does_not_corrupt_state() {
 
     // Global state should still be clean
     assert_eq!(
-        MainLoader::illegal_song_count(),
+        MainLoader::get_illegal_song_count(),
         0,
         "illegal songs should be empty after two clean play() calls"
     );

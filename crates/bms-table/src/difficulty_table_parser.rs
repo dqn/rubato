@@ -1007,13 +1007,13 @@ mod tests {
                 ]
             }}"#
         )
-        .unwrap();
+        .expect("unwrap");
 
         let parser = DifficultyTableParser::new();
         let mut dt = DifficultyTable::new();
         parser
             .decode_json_table_header_from_file(&mut dt, tmp.path())
-            .unwrap();
+            .expect("JSON decode");
 
         let courses = dt.course();
         assert_eq!(courses.len(), 1); // single list wrapping both courses
@@ -1023,8 +1023,8 @@ mod tests {
         assert_eq!(course_a.name(), "Course A");
         assert_eq!(course_a.style(), "7KEYS");
         assert_eq!(course_a.charts().len(), 2);
-        assert_eq!(course_a.charts()[0].md5().unwrap(), "hash1");
-        assert_eq!(course_a.charts()[1].md5().unwrap(), "hash2");
+        assert_eq!(course_a.charts()[0].md5().expect("md5"), "hash1");
+        assert_eq!(course_a.charts()[1].md5().expect("md5"), "hash2");
         assert_eq!(course_a.constraint(), &["grade_mirror", "gauge_lr2"]);
         assert_eq!(course_a.trophy().len(), 1);
         assert_eq!(course_a.trophy()[0].name(), "Gold");
@@ -1035,7 +1035,7 @@ mod tests {
         assert_eq!(course_b.name(), "Course B");
         assert_eq!(course_b.style(), "14KEYS");
         assert_eq!(course_b.charts().len(), 1);
-        assert_eq!(course_b.charts()[0].sha256().unwrap(), "hash3");
+        assert_eq!(course_b.charts()[0].sha256().expect("sha256"), "hash3");
     }
 
     #[test]
@@ -1095,13 +1095,13 @@ mod tests {
                 ]
             }}"#
         )
-        .unwrap();
+        .expect("unwrap");
 
         let parser = DifficultyTableParser::new();
         let mut dt = DifficultyTable::new();
         parser
             .decode_json_table_header_from_file(&mut dt, tmp.path())
-            .unwrap();
+            .expect("JSON decode");
 
         let courses = dt.course();
         assert_eq!(courses.len(), 1);
@@ -1110,8 +1110,8 @@ mod tests {
         assert_eq!(dan.name(), "Dan 1");
         assert_eq!(dan.style(), "7KEYS");
         assert_eq!(dan.charts().len(), 2);
-        assert_eq!(dan.charts()[0].md5().unwrap(), "md5_a");
-        assert_eq!(dan.charts()[1].md5().unwrap(), "md5_b");
+        assert_eq!(dan.charts()[0].md5().expect("md5"), "md5_a");
+        assert_eq!(dan.charts()[1].md5().expect("md5"), "md5_b");
         // grade format always adds these constraints
         assert_eq!(dan.constraint(), &["grade_mirror", "gauge_lr2"]);
     }

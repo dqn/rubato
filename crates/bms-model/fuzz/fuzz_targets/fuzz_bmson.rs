@@ -15,7 +15,7 @@ fuzz_target!(|data: &[u8]| {
     // The decoder reads the file, runs serde_json::from_slice, then processes
     // the result. For invalid JSON it returns None; for valid JSON with
     // extreme/unexpected values we want to verify no panics occur.
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("fuzz.bmson");
     if let Ok(mut f) = std::fs::File::create(&path) {
         if f.write_all(data).is_ok() {

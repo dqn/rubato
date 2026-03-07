@@ -219,9 +219,9 @@ impl MouseToAnalog {
     }
 
     pub fn update(&mut self) {
-        let x_distance_moved = GdxInput::x() - GdxGraphics::width() / 2;
-        let y_distance_moved = GdxInput::y() - GdxGraphics::height() / 2;
-        GdxInput::set_cursor_position(GdxGraphics::width() / 2, GdxGraphics::height() / 2);
+        let x_distance_moved = GdxInput::get_x() - GdxGraphics::get_width() / 2;
+        let y_distance_moved = GdxInput::get_y() - GdxGraphics::get_height() / 2;
+        GdxInput::set_cursor_position(GdxGraphics::get_width() / 2, GdxGraphics::get_height() / 2);
 
         self.total_x_distance_moved =
             ((self.total_x_distance_moved + x_distance_moved) % self.domain + self.domain)

@@ -203,7 +203,7 @@ impl SkinNoteDistributionGraph {
         if self.chips.is_none() {
             let is_pms = self.graph_type != TYPE_NORMAL
                 && model.is_some()
-                && model.unwrap().mode() == Some(&Mode::POPN_9K);
+                && model.expect("model").mode() == Some(&Mode::POPN_9K);
             let graphcolor = if is_pms {
                 get_pms_graph_colors(self.graph_type)
             } else {

@@ -51,14 +51,14 @@ impl MusicDownloadProcessor {
     }
 
     pub fn start(&self, song: Option<Box<dyn IpfsInformation>>) {
-        let mut daemon_guard = self.daemon.lock().unwrap();
+        let mut daemon_guard = self.daemon.lock().expect("daemon lock poisoned");
         let need_start = match &*daemon_guard {
             None => true,
             Some(d) => !d.alive.load(Ordering::SeqCst),
         };
         if need_start {
             {
-                let mut ipfs = self.ipfs.lock().unwrap();
+                let mut ipfs = self.ipfs.lock().expect("ipfs lock poisoned");
                 if ipfs.is_empty() {
                     *ipfs = "https://gateway.ipfs.io/".to_string();
                 }
@@ -102,13 +102,13 @@ impl MusicDownloadProcessor {
             });
         }
         if let Some(song) = song {
-            let mut cmds = self.commands.lock().unwrap();
+            let mut cmds = self.commands.lock().expect("commands lock poisoned");
             cmds.push_back(song);
         }
     }
 
     pub fn dispose(&self) {
-        let mut daemon_guard = self.daemon.lock().unwrap();
+        let mut daemon_guard = self.daemon.lock().expect("daemon lock poisoned");
         if let Some(ref mut d) = *daemon_guard
             && d.alive.load(Ordering::SeqCst)
         {
@@ -120,7 +120,7 @@ impl MusicDownloadProcessor {
     }
 
     pub fn is_download(&self) -> bool {
-        let daemon_guard = self.daemon.lock().unwrap();
+        let daemon_guard = self.daemon.lock().expect("daemon lock poisoned");
         match &*daemon_guard {
             None => false,
             Some(d) => d.download.load(Ordering::SeqCst),
@@ -128,34 +128,38 @@ impl MusicDownloadProcessor {
     }
 
     pub fn is_alive(&self) -> bool {
-        let daemon_guard = self.daemon.lock().unwrap();
+        let daemon_guard = self.daemon.lock().expect("daemon lock poisoned");
         match &*daemon_guard {
             None => false,
             Some(d) => d.alive.load(Ordering::SeqCst),
         }
     }
 
-    pub fn downloadpath(&self) -> Option<String> {
-        let daemon_guard = self.daemon.lock().unwrap();
+    pub fn get_downloadpath(&self) -> Option<String> {
+        let daemon_guard = self.daemon.lock().expect("daemon lock poisoned");
         match &*daemon_guard {
             None => None,
-            Some(d) => d.downloadpath.lock().unwrap().clone(),
+            Some(d) => d
+                .downloadpath
+                .lock()
+                .expect("downloadpath lock poisoned")
+                .clone(),
         }
     }
 
     pub fn set_downloadpath(&self, downloadpath: String) {
-        let daemon_guard = self.daemon.lock().unwrap();
+        let daemon_guard = self.daemon.lock().expect("daemon lock poisoned");
         if let Some(ref d) = *daemon_guard {
-            *d.downloadpath.lock().unwrap() = Some(downloadpath);
+            *d.downloadpath.lock().expect("downloadpath lock poisoned") = Some(downloadpath);
         }
     }
 
-    pub fn message(&self) -> String {
-        self.message.lock().unwrap().clone()
+    pub fn get_message(&self) -> String {
+        self.message.lock().expect("message lock poisoned").clone()
     }
 
     pub fn set_message(&self, message: String) {
-        *self.message.lock().unwrap() = message;
+        *self.message.lock().expect("message lock poisoned") = message;
     }
 }
 
@@ -187,7 +191,7 @@ fn download_daemon_thread_run(
     let mut diffpath = String::new();
     #[allow(unused_assignments)]
     let mut orgbms: Option<PathBuf> = None;
-    let path_sanitize_re = regex::Regex::new(r#"[(\\/|:*?"<>|)]"#).unwrap();
+    let path_sanitize_re = regex::Regex::new(r#"[(\\/|:*?"<>|)]"#).expect("valid regex");
 
     let result: Result<(), Box<dyn std::error::Error>> = {
         loop {
@@ -199,7 +203,7 @@ fn download_daemon_thread_run(
 
             // Single lock acquisition: check + pop atomically (avoids TOCTOU race)
             let song = if !is_download {
-                commands.lock().unwrap().pop_front()
+                commands.lock().expect("commands lock poisoned").pop_front()
             } else {
                 None
             };
@@ -234,7 +238,7 @@ fn download_daemon_thread_run(
                     }
                 }
                 if !ipfspath.is_empty() && orgbms.is_none() {
-                    let ipfs_url = ipfs.lock().unwrap().clone();
+                    let ipfs_url = ipfs.lock().expect("ipfs lock poisoned").clone();
                     let ipfspath_clone = ipfspath.clone();
                     let path_clone = path.clone();
                     let message_clone = message.clone();
@@ -279,7 +283,7 @@ fn download_daemon_thread_run(
                         }
                         diffpath = String::new();
                     } else {
-                        let ipfs_url = ipfs.lock().unwrap().clone();
+                        let ipfs_url = ipfs.lock().expect("ipfs lock poisoned").clone();
                         let diffpath_clone = diffpath.clone();
                         let diff_dest = format!("ipfs{}{}", std::path::MAIN_SEPARATOR, &diffpath);
                         let message_clone = message.clone();
@@ -308,7 +312,7 @@ fn download_daemon_thread_run(
                             None
                         }
                     };
-                    *downloadpath.lock().unwrap() = dp;
+                    *downloadpath.lock().expect("downloadpath lock poisoned") = dp;
                     download.store(false, Ordering::SeqCst);
                     ipfspath = String::new();
                 }
@@ -332,7 +336,7 @@ fn download_daemon_thread_run(
 }
 
 fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc<Mutex<String>>) {
-    *message.lock().unwrap() = format!("downloading:{}", path);
+    *message.lock().expect("message lock poisoned") = format!("downloading:{}", path);
 
     // Download tar.gz from IPFS gateway
     let url_str = format!(
@@ -355,7 +359,7 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
                             let end = std::cmp::min(offset + chunk_size, data.len());
                             let count = end - offset;
                             total += count as i64;
-                            *message.lock().unwrap() =
+                            *message.lock().expect("message lock poisoned") =
                                 format!("downloading:{} {}MB", path, total / 1024 / 1024);
                             if out.write_all(&data[offset..end]).is_err() {
                                 break;
@@ -441,7 +445,7 @@ impl rubato_types::music_download_access::MusicDownloadAccess for MusicDownloadP
     }
 
     fn message(&self) -> String {
-        MusicDownloadProcessor::message(self)
+        MusicDownloadProcessor::get_message(self)
     }
 }
 

@@ -63,7 +63,10 @@ fn bench_decode_bms(c: &mut Criterion) {
     let files = discover_test_bms_files();
     assert!(!files.is_empty(), "No .bms files found in test-bms/");
     let first = &files[0];
-    let filename = first.file_name().unwrap().to_string_lossy();
+    let filename = first
+        .file_name()
+        .expect("path has file name")
+        .to_string_lossy();
 
     c.bench_function(&format!("decode_bms/{filename}"), |b| {
         b.iter(|| {
@@ -79,7 +82,10 @@ fn bench_decode_bytes_only(c: &mut Criterion) {
     let files = discover_test_bms_files();
     assert!(!files.is_empty(), "No .bms files found in test-bms/");
     let first = &files[0];
-    let filename = first.file_name().unwrap().to_string_lossy();
+    let filename = first
+        .file_name()
+        .expect("path has file name")
+        .to_string_lossy();
     let bytes = std::fs::read(first).expect("Failed to read BMS file");
 
     c.bench_function(&format!("decode_bytes/{filename}"), |b| {
@@ -101,7 +107,11 @@ fn bench_real_bms_decode_path(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("real_bms_decode_path");
     for path in &files {
-        let filename = path.file_name().unwrap().to_string_lossy().to_string();
+        let filename = path
+            .file_name()
+            .expect("path has file name")
+            .to_string_lossy()
+            .to_string();
         group.bench_with_input(BenchmarkId::new("decode_path", &filename), path, |b, p| {
             b.iter(|| {
                 let mut decoder = BMSDecoder::new();
@@ -121,7 +131,11 @@ fn bench_real_bms_decode_bytes(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("real_bms_decode_bytes");
     for path in &files {
-        let filename = path.file_name().unwrap().to_string_lossy().to_string();
+        let filename = path
+            .file_name()
+            .expect("path has file name")
+            .to_string_lossy()
+            .to_string();
         let bytes = std::fs::read(path).expect("Failed to read BMS file");
         group.bench_with_input(
             BenchmarkId::new("decode_bytes", &filename),

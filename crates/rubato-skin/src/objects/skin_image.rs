@@ -216,7 +216,7 @@ impl SkinImage {
                 if source.validate() {
                     exist = true;
                 } else {
-                    let removed = slot.take().unwrap();
+                    let removed = slot.take().expect("take");
                     self.removed_sources.push(removed);
                 }
             }

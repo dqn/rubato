@@ -482,7 +482,7 @@ impl ResourceConfigurationView {
         let intermediate = Self::subtract_table(&intermediate, &config.table_url);
         // config.setAvailableURL(intermediate);
         config.available_url = intermediate.clone();
-        self.config.as_mut().unwrap().available_url = intermediate.clone();
+        self.config.as_mut().expect("config is Some").available_url = intermediate.clone();
         // TableInfo.populateList(tableurl.getItems(), config.getTableURL());
         TableInfo::populate_list(&mut self.tableurl, &config.table_url);
         // TableInfo.populateList(available_tables.getItems(), config.getAvailableURL());

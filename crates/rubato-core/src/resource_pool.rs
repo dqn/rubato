@@ -49,7 +49,10 @@ where
 
     /// Returns true if the key exists in the pool
     pub fn exists(&self, key: &K) -> bool {
-        let map = self.resource_map.lock().unwrap();
+        let map = self
+            .resource_map
+            .lock()
+            .expect("resource_map lock poisoned");
         map.contains_key(key)
     }
 
@@ -59,7 +62,10 @@ where
     where
         F: FnOnce(&K) -> Option<V>,
     {
-        let mut map = self.resource_map.lock().unwrap();
+        let mut map = self
+            .resource_map
+            .lock()
+            .expect("resource_map lock poisoned");
         if let Some(elem) = map.get_mut(key) {
             elem.generation = 0;
             return Some(());
@@ -76,7 +82,10 @@ where
     /// Get a reference to the resource by key (if it exists in pool).
     /// Does NOT attempt to load.
     pub fn get_cached(&self, key: &K) -> bool {
-        let mut map = self.resource_map.lock().unwrap();
+        let mut map = self
+            .resource_map
+            .lock()
+            .expect("resource_map lock poisoned");
         if let Some(elem) = map.get_mut(key) {
             elem.generation = 0;
             true
@@ -91,7 +100,10 @@ where
     where
         F: FnMut(V),
     {
-        let mut map = self.resource_map.lock().unwrap();
+        let mut map = self
+            .resource_map
+            .lock()
+            .expect("resource_map lock poisoned");
         let mut removes = Vec::new();
 
         for (key, value) in map.iter_mut() {
@@ -111,7 +123,10 @@ where
 
     /// Returns the number of resources currently in the pool
     pub fn size(&self) -> usize {
-        let map = self.resource_map.lock().unwrap();
+        let map = self
+            .resource_map
+            .lock()
+            .expect("resource_map lock poisoned");
         map.len()
     }
 
@@ -120,7 +135,10 @@ where
     where
         F: FnMut(V),
     {
-        let mut map = self.resource_map.lock().unwrap();
+        let mut map = self
+            .resource_map
+            .lock()
+            .expect("resource_map lock poisoned");
         for (_, elem) in map.drain() {
             dispose_fn(elem.resource);
         }
@@ -131,7 +149,10 @@ where
     where
         F2: FnOnce(&V) -> R,
     {
-        let map = self.resource_map.lock().unwrap();
+        let map = self
+            .resource_map
+            .lock()
+            .expect("resource_map lock poisoned");
         map.get(key).map(|elem| f(&elem.resource))
     }
 
@@ -140,7 +161,10 @@ where
     where
         F2: FnOnce(&mut V) -> R,
     {
-        let mut map = self.resource_map.lock().unwrap();
+        let mut map = self
+            .resource_map
+            .lock()
+            .expect("resource_map lock poisoned");
         map.get_mut(key).map(|elem| f(&mut elem.resource))
     }
 
@@ -152,7 +176,10 @@ where
         L: FnOnce(&K) -> Option<V>,
         F2: FnOnce(&V) -> R,
     {
-        let mut map = self.resource_map.lock().unwrap();
+        let mut map = self
+            .resource_map
+            .lock()
+            .expect("resource_map lock poisoned");
         if let Some(elem) = map.get_mut(key) {
             elem.generation = 0;
             return Some(f(&elem.resource));

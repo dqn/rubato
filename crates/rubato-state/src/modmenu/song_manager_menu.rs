@@ -44,7 +44,7 @@ impl SongManagerMenu {
     }
 
     pub fn inject_music_selector(selector: Box<dyn SongSelectionAccess>) {
-        *SELECTOR.lock().unwrap() = Some(selector);
+        *SELECTOR.lock().expect("SELECTOR lock poisoned") = Some(selector);
     }
 
     pub fn is_last_played_sort_enabled() -> bool {
@@ -59,17 +59,22 @@ impl SongManagerMenu {
 #[allow(dead_code)]
 fn update_reverse_lookup_data(current_song_data: &Option<SongData>) {
     if current_song_data.is_none() {
-        CURRENT_REVERSE_LOOKUP_LIST.lock().unwrap().clear();
+        CURRENT_REVERSE_LOOKUP_LIST
+            .lock()
+            .expect("CURRENT_REVERSE_LOOKUP_LIST lock poisoned")
+            .clear();
         return;
     }
 
     // Current song data is not used in this call, consider deleting upstream of this function
     // getReverseLookupData uses the selectors resource object to get data for what song is currently selected
-    *CURRENT_REVERSE_LOOKUP_LIST.lock().unwrap() = reverse_lookup_data();
+    *CURRENT_REVERSE_LOOKUP_LIST
+        .lock()
+        .expect("CURRENT_REVERSE_LOOKUP_LIST lock poisoned") = get_reverse_lookup_data();
 }
 
 fn get_current_song_data() -> Option<SongData> {
-    let selector = SELECTOR.lock().unwrap();
+    let selector = SELECTOR.lock().expect("SELECTOR lock poisoned");
     if let Some(ref sel) = *selector {
         return sel.selected_song_data();
     }
@@ -77,16 +82,15 @@ fn get_current_song_data() -> Option<SongData> {
 }
 
 fn get_current_score_data() -> Option<ScoreData> {
-    let selector = SELECTOR.lock().unwrap();
+    let selector = SELECTOR.lock().expect("SELECTOR lock poisoned");
     if let Some(ref sel) = *selector {
         return sel.selected_score_data();
     }
     None
 }
 
-#[allow(dead_code)]
-fn reverse_lookup_data() -> Vec<String> {
-    let selector = SELECTOR.lock().unwrap();
+fn get_reverse_lookup_data() -> Vec<String> {
+    let selector = SELECTOR.lock().expect("SELECTOR lock poisoned");
     if let Some(ref sel) = *selector {
         return sel.reverse_lookup_data();
     }

@@ -266,7 +266,7 @@ impl RichPresenceData {
         if self.timestamps.is_none() {
             self.timestamps = Some(Timestamps::default());
         }
-        self.timestamps.as_mut().unwrap().start = Some(start);
+        self.timestamps.as_mut().expect("timestamps is Some").start = Some(start);
         self
     }
 
@@ -282,7 +282,7 @@ impl RichPresenceData {
         if self.timestamps.is_none() {
             self.timestamps = Some(Timestamps::default());
         }
-        self.timestamps.as_mut().unwrap().end = Some(end);
+        self.timestamps.as_mut().expect("timestamps is Some").end = Some(end);
         self
     }
 
@@ -299,7 +299,7 @@ impl RichPresenceData {
         if self.assets.is_none() {
             self.assets = Some(Assets::default());
         }
-        let assets = self.assets.as_mut().unwrap();
+        let assets = self.assets.as_mut().expect("assets is Some");
         assets.large_image = Some(key);
         assets.large_text = Some(text);
         self
@@ -318,7 +318,7 @@ impl RichPresenceData {
         if self.assets.is_none() {
             self.assets = Some(Assets::default());
         }
-        let assets = self.assets.as_mut().unwrap();
+        let assets = self.assets.as_mut().expect("assets is Some");
         assets.small_image = Some(key);
         assets.small_text = Some(text);
         self
@@ -337,7 +337,7 @@ impl RichPresenceData {
         if self.party.is_none() {
             self.party = Some(Party::default());
         }
-        let party = self.party.as_mut().unwrap();
+        let party = self.party.as_mut().expect("party is Some");
         party.id = Some(id);
         party.size = Some(vec![size, max]);
         self
@@ -357,7 +357,7 @@ impl RichPresenceData {
         if self.secrets.is_none() {
             self.secrets = Some(Secrets::default());
         }
-        let secrets = self.secrets.as_mut().unwrap();
+        let secrets = self.secrets.as_mut().expect("secrets is Some");
         secrets.match_key = Some(match_key);
         secrets.join = Some(join);
         secrets.spectate = Some(spectate);

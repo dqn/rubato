@@ -1075,7 +1075,10 @@ impl MusicSelector {
                 self.config.clone(),
             ));
         }
-        let res = self.player_resource.as_mut().unwrap();
+        let res = self
+            .player_resource
+            .as_mut()
+            .expect("player_resource is Some");
         res.clear();
 
         // resource.setBMSFile(path, play)
@@ -1120,7 +1123,10 @@ impl MusicSelector {
                     }
                 }
 
-                let res = self.player_resource.as_mut().unwrap();
+                let res = self
+                    .player_resource
+                    .as_mut()
+                    .expect("player_resource is Some");
                 if let Some(ref name) = tablename {
                     res.set_tablename(name);
                 }
@@ -1145,7 +1151,10 @@ impl MusicSelector {
             }
             // Java L388: resource.setRankingData(currentir)
             {
-                let res = self.player_resource.as_mut().unwrap();
+                let res = self
+                    .player_resource
+                    .as_mut()
+                    .expect("player_resource is Some");
                 let ranking_any = self
                     .ranking
                     .currentir
@@ -1178,7 +1187,7 @@ impl MusicSelector {
             };
             self.player_resource
                 .as_mut()
-                .unwrap()
+                .expect("player_resource is Some")
                 .set_chart_option_data(chart_option);
 
             self.playedsong = Some(song.clone());
@@ -1725,7 +1734,7 @@ impl MusicSelector {
             }
         };
 
-        let gb = grade_bar.as_grade_bar().unwrap();
+        let gb = grade_bar.as_grade_bar().expect("as_grade_bar");
         if !gb.exists_all_songs() {
             log::info!("段位の楽曲が揃っていません (course songs are not all available)");
             if self
@@ -1757,7 +1766,7 @@ impl MusicSelector {
             }
         };
 
-        let rcb = rc_bar.as_random_course_bar().unwrap();
+        let rcb = rc_bar.as_random_course_bar().expect("as_random_course_bar");
         if !rcb.exists_all_songs() {
             log::info!(
                 "ランダムコースの楽曲が揃っていません (random course songs not all available)"
@@ -1824,7 +1833,10 @@ impl MusicSelector {
                 self.config.clone(),
             ));
         }
-        let res = self.player_resource.as_mut().unwrap();
+        let res = self
+            .player_resource
+            .as_mut()
+            .expect("player_resource is Some");
         res.clear();
         res.set_auto_play_songs(paths, false);
         if res.next_song() {
@@ -1859,7 +1871,10 @@ impl MusicSelector {
                 self.config.clone(),
             ));
         }
-        let res = self.player_resource.as_mut().unwrap();
+        let res = self
+            .player_resource
+            .as_mut()
+            .expect("player_resource is Some");
         res.clear();
 
         // resource.setCourseBMSFiles(files)
@@ -1920,7 +1935,10 @@ impl MusicSelector {
             // resource.setCourseData, setBMSFile for first song
             let (mode_type, mode_id) = Self::encode_bms_player_mode(Some(mode));
             {
-                let res = self.player_resource.as_mut().unwrap();
+                let res = self
+                    .player_resource
+                    .as_mut()
+                    .expect("player_resource is Some");
                 res.set_course_data(course_data.clone());
                 if !files.is_empty() {
                     PlayerResourceAccess::set_bms_file(res, &files[0], mode_type, mode_id);
@@ -1951,7 +1969,10 @@ impl MusicSelector {
             }
             // Set rival score/chart option to None for course play
             {
-                let res = self.player_resource.as_mut().unwrap();
+                let res = self
+                    .player_resource
+                    .as_mut()
+                    .expect("player_resource is Some");
                 res.set_rival_score_data_option(None);
                 res.set_chart_option_data(None);
             }

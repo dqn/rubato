@@ -76,20 +76,20 @@ fn lifecycle_illegal_songs_can_be_cleared_and_repopulated() {
 
     // Ensure clean state
     MainLoader::clear_illegal_songs();
-    assert_eq!(MainLoader::illegal_song_count(), 0);
+    assert_eq!(MainLoader::get_illegal_song_count(), 0);
 
     // Add some illegal songs
     MainLoader::put_illegal_song("hash_a");
     MainLoader::put_illegal_song("hash_b");
-    assert_eq!(MainLoader::illegal_song_count(), 2);
+    assert_eq!(MainLoader::get_illegal_song_count(), 2);
 
     // Clear and verify
     MainLoader::clear_illegal_songs();
-    assert_eq!(MainLoader::illegal_song_count(), 0);
+    assert_eq!(MainLoader::get_illegal_song_count(), 0);
 
     // Re-add after clear
     MainLoader::put_illegal_song("hash_c");
-    assert_eq!(MainLoader::illegal_song_count(), 1);
+    assert_eq!(MainLoader::get_illegal_song_count(), 1);
 
     // Clean up
     MainLoader::clear_illegal_songs();

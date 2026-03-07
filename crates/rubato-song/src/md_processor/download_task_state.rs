@@ -33,13 +33,13 @@ impl DownloadTaskState {
         })
     }
 
-    pub fn running_download_tasks() -> HashMap<i32, Arc<Mutex<DownloadTask>>> {
-        let inner = Self::get_inner().lock().unwrap();
+    pub fn get_running_download_tasks() -> HashMap<i32, Arc<Mutex<DownloadTask>>> {
+        let inner = Self::get_inner().lock().expect("lock poisoned");
         inner.running_download_tasks.clone()
     }
 
-    pub fn expired_tasks() -> HashMap<i32, Arc<Mutex<DownloadTask>>> {
-        let inner = Self::get_inner().lock().unwrap();
+    pub fn get_expired_tasks() -> HashMap<i32, Arc<Mutex<DownloadTask>>> {
+        let inner = Self::get_inner().lock().expect("lock poisoned");
         inner.expired_tasks.clone()
     }
 
@@ -48,7 +48,7 @@ impl DownloadTaskState {
     }
 
     pub fn update(processor: &HttpDownloadProcessor) {
-        let mut inner = Self::get_inner().lock().unwrap();
+        let mut inner = Self::get_inner().lock().expect("lock poisoned");
         let now = Instant::now();
         // no reason to check very often (1s)
         if now.duration_since(inner.last_snapshot).as_nanos() < 1_000_000_000 {
@@ -57,7 +57,7 @@ impl DownloadTaskState {
         inner.last_snapshot = now;
 
         let tasks_arc = processor.all_tasks();
-        let tasks = tasks_arc.lock().unwrap();
+        let tasks = tasks_arc.lock().expect("tasks_arc lock poisoned");
         if tasks.len() == inner.expired_tasks.len() {
             return;
         }
@@ -68,7 +68,7 @@ impl DownloadTaskState {
                 continue;
             }
 
-            let task = task_arc.lock().unwrap();
+            let task = task_arc.lock().expect("task_arc lock poisoned");
             let _state = task.download_task_status();
             let finished =
                 task.download_task_status().value() >= DownloadTaskStatus::Extracted.value();

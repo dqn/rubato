@@ -8,7 +8,7 @@ static LANE_ORDER: Mutex<Vec<String>> = Mutex::new(Vec::new());
 static TRACK_RAN_WHEN_DISABLED: Mutex<bool> = Mutex::new(false);
 
 fn init_lane_order() {
-    let mut lo = LANE_ORDER.lock().unwrap();
+    let mut lo = LANE_ORDER.lock().expect("LANE_ORDER lock poisoned");
     if lo.is_empty() {
         *lo = vec![
             "1".to_string(),
@@ -42,8 +42,10 @@ impl RandomTrainerMenu {
 
     #[allow(dead_code)]
     fn drag_and_drop_key_display() {
-        let lane_order = LANE_ORDER.lock().unwrap();
-        let bw_permute = *BLACK_WHITE_RANDOM_PERMUTATION.lock().unwrap();
+        let lane_order = LANE_ORDER.lock().expect("LANE_ORDER lock poisoned");
+        let bw_permute = *BLACK_WHITE_RANDOM_PERMUTATION
+            .lock()
+            .expect("BLACK_WHITE_RANDOM_PERMUTATION lock poisoned");
 
         for lane in lane_order.iter() {
             let lane_char = lane.chars().next().unwrap_or('1');
@@ -112,9 +114,9 @@ impl RandomTrainerMenu {
             .show(ctx, |ui| {
                 // Key display
                 ui.horizontal(|ui| {
-                    let lane_order = LANE_ORDER.lock().unwrap();
-                    for lane in lane_order.iter() {
-                        let lane_char = lane.chars().next().unwrap_or('1');
+                    let lane_order = LANE_ORDER.lock().expect("LANE_ORDER lock poisoned");
+                    for i in 0..lane_order.len() {
+                        let lane_char = lane_order[i].chars().next().unwrap_or('1');
                         let is_random =
                             crate::modmenu::random_trainer::RandomTrainer::is_lane_to_random(
                                 lane_char,
@@ -122,7 +124,7 @@ impl RandomTrainerMenu {
                         let label = if is_random {
                             "?".to_string()
                         } else {
-                            lane.clone()
+                            lane_order[i].clone()
                         };
                         let color = if is_random {
                             egui::Color32::from_rgb(255, 100, 150) // pink
@@ -142,15 +144,21 @@ impl RandomTrainerMenu {
                 ui.separator();
                 ui.label("Controls");
                 ui.indent("random_controls", |ui| {
-                    let mut enabled = RANDOM_TRAINER_ENABLED.lock().unwrap();
+                    let mut enabled = RANDOM_TRAINER_ENABLED
+                        .lock()
+                        .expect("RANDOM_TRAINER_ENABLED lock poisoned");
                     ui.checkbox(&mut enabled, "Trainer Enabled");
                     drop(enabled);
 
-                    let mut track = TRACK_RAN_WHEN_DISABLED.lock().unwrap();
+                    let mut track = TRACK_RAN_WHEN_DISABLED
+                        .lock()
+                        .expect("TRACK_RAN_WHEN_DISABLED lock poisoned");
                     ui.checkbox(&mut track, "Track Current Random");
                     drop(track);
 
-                    let mut bw = BLACK_WHITE_RANDOM_PERMUTATION.lock().unwrap();
+                    let mut bw = BLACK_WHITE_RANDOM_PERMUTATION
+                        .lock()
+                        .expect("BLACK_WHITE_RANDOM_PERMUTATION lock poisoned");
                     ui.checkbox(&mut bw, "Black/White Random Select");
                     drop(bw);
                 });
@@ -168,7 +176,9 @@ impl RandomTrainerMenu {
                 });
 
                 // Sync state
-                let trainer_enabled = *RANDOM_TRAINER_ENABLED.lock().unwrap();
+                let trainer_enabled = *RANDOM_TRAINER_ENABLED
+                    .lock()
+                    .expect("RANDOM_TRAINER_ENABLED lock poisoned");
                 crate::modmenu::random_trainer::RandomTrainer::set_active(trainer_enabled);
                 if trainer_enabled {
                     let current = get_lane_order_string();
@@ -178,14 +188,16 @@ impl RandomTrainerMenu {
                     }
                 }
 
-                let bw = *BLACK_WHITE_RANDOM_PERMUTATION.lock().unwrap();
+                let bw = *BLACK_WHITE_RANDOM_PERMUTATION
+                    .lock()
+                    .expect("BLACK_WHITE_RANDOM_PERMUTATION lock poisoned");
                 crate::modmenu::random_trainer::RandomTrainer::set_black_white_permute(bw);
             });
     }
 }
 
 fn change_lane_order(random: &str) {
-    let mut lane_order = LANE_ORDER.lock().unwrap();
+    let mut lane_order = LANE_ORDER.lock().expect("LANE_ORDER lock poisoned");
     let chars: Vec<char> = random.chars().collect();
     for (slot, &ch) in lane_order.iter_mut().zip(chars.iter()) {
         *slot = ch.to_string();
@@ -193,7 +205,7 @@ fn change_lane_order(random: &str) {
 }
 
 fn get_lane_order_string() -> String {
-    let lane_order = LANE_ORDER.lock().unwrap();
+    let lane_order = LANE_ORDER.lock().expect("LANE_ORDER lock poisoned");
     lane_order.join("")
 }
 

@@ -40,7 +40,7 @@ impl TableEditorView {
     /// Hexadecimal pattern for md5/sha256 validation
     /// Java: private static final Pattern hexadecimalPattern = Pattern.compile("[0-9a-fA-F]*");
     fn hexadecimal_pattern() -> Regex {
-        Regex::new(r"^[0-9a-fA-F]*$").unwrap()
+        Regex::new(r"^[0-9a-fA-F]*$").expect("valid regex")
     }
 
     /// Constructor

@@ -99,7 +99,7 @@ impl PCM {
 
         if let Some(ref p) = pcm {
             if p.validate() {
-                return Ok(pcm.unwrap());
+                return Ok(pcm.expect("pcm"));
             } else {
                 warn!("Failed to load audio file: {:?}", p);
                 bail!("Failed to load audio file");

@@ -99,9 +99,9 @@ impl SkinWidgetManager {
     }
 
     pub fn change_skin(skin: &Skin) {
-        let _lock = LOCK.lock().unwrap();
-        let mut widgets = WIDGETS.lock().unwrap();
-        let mut event_history = EVENT_HISTORY.lock().unwrap();
+        let _lock = LOCK.lock().expect("LOCK lock poisoned");
+        let mut widgets = WIDGETS.lock().expect("WIDGETS lock poisoned");
+        let mut event_history = EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
         widgets.clear();
         event_history.clear();
 
@@ -150,13 +150,13 @@ impl SkinWidgetManager {
     /// In Java: ImGui window with tab bar (SkinWidgets + History), column settings,
     /// cursor position overlay.
     pub fn show_ui(ctx: &egui::Context) {
-        let _lock = LOCK.lock().unwrap();
+        let _lock = LOCK.lock().expect("LOCK lock poisoned");
         let mut open = true;
         egui::Window::new("Skin Widgets")
             .open(&mut open)
             .auto_sized()
             .show(ctx, |ui| {
-                let mut widgets = WIDGETS.lock().unwrap();
+                let mut widgets = WIDGETS.lock().expect("WIDGETS lock poisoned");
                 if widgets.is_empty() {
                     ui.label("No skin is loaded");
                 } else {
@@ -182,11 +182,14 @@ impl SkinWidgetManager {
                         // SkinWidgets tab
                         ui.horizontal(|ui| {
                             if ui.button("Undo").clicked() {
-                                let mut event_history = EVENT_HISTORY.lock().unwrap();
+                                let mut event_history =
+                                    EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
                                 event_history.undo_with_widgets(&mut widgets);
                             }
                             render_prefer_column_setting(ui);
-                            let mut show_cursor = SHOW_CURSOR_POSITION.lock().unwrap();
+                            let mut show_cursor = SHOW_CURSOR_POSITION
+                                .lock()
+                                .expect("SHOW_CURSOR_POSITION lock poisoned");
                             ui.checkbox(&mut show_cursor.value, "Show Position");
                             drop(show_cursor);
                             if ui.button("Export").clicked() {
@@ -201,7 +204,9 @@ impl SkinWidgetManager {
                     }
 
                     // Overlay cursor position
-                    let show_cursor = SHOW_CURSOR_POSITION.lock().unwrap();
+                    let show_cursor = SHOW_CURSOR_POSITION
+                        .lock()
+                        .expect("SHOW_CURSOR_POSITION lock poisoned");
                     if show_cursor.value {
                         let window_height = imgui_renderer::window_height() as f32;
                         if let Some(pos) = ui.ctx().input(|i| i.pointer.interact_pos()) {
@@ -232,7 +237,9 @@ fn render_prefer_column_setting(ui: &mut egui::Ui) {
         &response,
         egui::PopupCloseBehavior::CloseOnClick,
         |ui| {
-            let mut columns = WIDGET_TABLE_COLUMNS.lock().unwrap();
+            let mut columns = WIDGET_TABLE_COLUMNS
+                .lock()
+                .expect("WIDGET_TABLE_COLUMNS lock poisoned");
             for column in columns.iter_mut() {
                 if column.persistent {
                     continue;
@@ -249,7 +256,9 @@ fn render_prefer_column_setting(ui: &mut egui::Ui) {
 /// In Java: ImGui table with tree nodes, columns for x/y/w/h, edit popup, move overlay.
 fn render_skin_widgets_table(ui: &mut egui::Ui, widgets: &mut [SkinWidget]) {
     // NOTE: This will create a snapshot for us, which can kinda prevent us step into race condition
-    let columns = WIDGET_TABLE_COLUMNS.lock().unwrap();
+    let columns = WIDGET_TABLE_COLUMNS
+        .lock()
+        .expect("WIDGET_TABLE_COLUMNS lock poisoned");
     let showing_columns: Vec<(usize, &WidgetTableColumn)> = columns
         .iter()
         .enumerate()
@@ -261,7 +270,9 @@ fn render_skin_widgets_table(ui: &mut egui::Ui, widgets: &mut [SkinWidget]) {
     }
     drop(columns);
 
-    let columns = WIDGET_TABLE_COLUMNS.lock().unwrap();
+    let columns = WIDGET_TABLE_COLUMNS
+        .lock()
+        .expect("WIDGET_TABLE_COLUMNS lock poisoned");
     let showing_columns: Vec<(usize, &WidgetTableColumn)> = columns
         .iter()
         .enumerate()
@@ -311,11 +322,13 @@ fn render_skin_widgets_table(ui: &mut egui::Ui, widgets: &mut [SkinWidget]) {
 
                         // Last column (Operation): Toggle button
                         if col_size >= 2 {
-                            let event_history = EVENT_HISTORY.lock().unwrap();
+                            let event_history =
+                                EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
                             let was_visible = widget.skin_object.visible;
                             drop(event_history);
                             if ui.button("Toggle").clicked() {
-                                let mut event_history = EVENT_HISTORY.lock().unwrap();
+                                let mut event_history =
+                                    EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
                                 event_history.push_event(Event::ToggleVisible {
                                     event_type: EventType::ToggleVisible,
                                     target_name: widget.name.clone(),
@@ -342,8 +355,11 @@ fn render_skin_widgets_table(ui: &mut egui::Ui, widgets: &mut [SkinWidget]) {
                                 ui.label(dst_label);
 
                                 // Middle columns: float values
-                                let event_history = EVENT_HISTORY.lock().unwrap();
-                                let columns_ref = WIDGET_TABLE_COLUMNS.lock().unwrap();
+                                let event_history =
+                                    EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
+                                let columns_ref = WIDGET_TABLE_COLUMNS
+                                    .lock()
+                                    .expect("WIDGET_TABLE_COLUMNS lock poisoned");
                                 let showing_mid: Vec<&WidgetTableColumn> =
                                     columns_ref.iter().filter(|col| col.show).collect();
                                 // Columns from index 1 to col_size-2 (exclusive of first and last)
@@ -372,15 +388,25 @@ fn render_skin_widgets_table(ui: &mut egui::Ui, widgets: &mut [SkinWidget]) {
                                         ui.make_persistent_id(format!("edit_popup_{}", dst.name));
                                     let edit_response = ui.button("Edit");
                                     if edit_response.clicked() {
-                                        *EDITING_WIDGET_X.lock().unwrap() =
+                                        *EDITING_WIDGET_X
+                                            .lock()
+                                            .expect("EDITING_WIDGET_X lock poisoned") =
                                             ImFloat { value: dst.dst_x() };
-                                        *EDITING_WIDGET_Y.lock().unwrap() =
+                                        *EDITING_WIDGET_Y
+                                            .lock()
+                                            .expect("EDITING_WIDGET_Y lock poisoned") =
                                             ImFloat { value: dst.dst_y() };
-                                        *EDITING_WIDGET_W.lock().unwrap() =
+                                        *EDITING_WIDGET_W
+                                            .lock()
+                                            .expect("EDITING_WIDGET_W lock poisoned") =
                                             ImFloat { value: dst.dst_w() };
-                                        *EDITING_WIDGET_H.lock().unwrap() =
+                                        *EDITING_WIDGET_H
+                                            .lock()
+                                            .expect("EDITING_WIDGET_H lock poisoned") =
                                             ImFloat { value: dst.dst_h() };
-                                        *RESET_MOVE_OVERLAY.lock().unwrap() = true;
+                                        *RESET_MOVE_OVERLAY
+                                            .lock()
+                                            .expect("RESET_MOVE_OVERLAY lock poisoned") = true;
                                         ui.memory_mut(|mem| mem.toggle_popup(edit_popup_id));
                                     }
 
@@ -423,28 +449,36 @@ fn render_edit_popup(ui: &mut egui::Ui, dst: &mut SkinWidgetDestination, _dst_id
     ui.label("Edit Skin Widget");
     ui.separator();
 
-    let mut x = EDITING_WIDGET_X.lock().unwrap();
+    let mut x = EDITING_WIDGET_X
+        .lock()
+        .expect("EDITING_WIDGET_X lock poisoned");
     ui.horizontal(|ui| {
         ui.label("x");
         ui.add(egui::DragValue::new(&mut x.value).speed(1.0));
     });
     drop(x);
 
-    let mut y = EDITING_WIDGET_Y.lock().unwrap();
+    let mut y = EDITING_WIDGET_Y
+        .lock()
+        .expect("EDITING_WIDGET_Y lock poisoned");
     ui.horizontal(|ui| {
         ui.label("y");
         ui.add(egui::DragValue::new(&mut y.value).speed(1.0));
     });
     drop(y);
 
-    let mut w = EDITING_WIDGET_W.lock().unwrap();
+    let mut w = EDITING_WIDGET_W
+        .lock()
+        .expect("EDITING_WIDGET_W lock poisoned");
     ui.horizontal(|ui| {
         ui.label("w");
         ui.add(egui::DragValue::new(&mut w.value).speed(1.0));
     });
     drop(w);
 
-    let mut h = EDITING_WIDGET_H.lock().unwrap();
+    let mut h = EDITING_WIDGET_H
+        .lock()
+        .expect("EDITING_WIDGET_H lock poisoned");
     ui.horizontal(|ui| {
         ui.label("h");
         ui.add(egui::DragValue::new(&mut h.value).speed(1.0));
@@ -452,21 +486,47 @@ fn render_edit_popup(ui: &mut egui::Ui, dst: &mut SkinWidgetDestination, _dst_id
     drop(h);
 
     if ui.button("Submit").clicked() {
-        dst.set_dst_x(EDITING_WIDGET_X.lock().unwrap().value);
-        dst.set_dst_y(EDITING_WIDGET_Y.lock().unwrap().value);
-        dst.set_dst_w(EDITING_WIDGET_W.lock().unwrap().value);
-        dst.set_dst_h(EDITING_WIDGET_H.lock().unwrap().value);
+        dst.set_dst_x(
+            EDITING_WIDGET_X
+                .lock()
+                .expect("EDITING_WIDGET_X lock poisoned")
+                .value,
+        );
+        dst.set_dst_y(
+            EDITING_WIDGET_Y
+                .lock()
+                .expect("EDITING_WIDGET_Y lock poisoned")
+                .value,
+        );
+        dst.set_dst_w(
+            EDITING_WIDGET_W
+                .lock()
+                .expect("EDITING_WIDGET_W lock poisoned")
+                .value,
+        );
+        dst.set_dst_h(
+            EDITING_WIDGET_H
+                .lock()
+                .expect("EDITING_WIDGET_H lock poisoned")
+                .value,
+        );
     }
 
     // Move overlay checkbox
-    let mut move_enabled = MOVE_OVERLAY_ENABLED.lock().unwrap();
+    let mut move_enabled = MOVE_OVERLAY_ENABLED
+        .lock()
+        .expect("MOVE_OVERLAY_ENABLED lock poisoned");
     let old_move = move_enabled.value;
     ui.checkbox(&mut move_enabled.value, "Move");
     let just_enabled = move_enabled.value && !old_move;
-    let reset = *RESET_MOVE_OVERLAY.lock().unwrap();
+    let reset = *RESET_MOVE_OVERLAY
+        .lock()
+        .expect("RESET_MOVE_OVERLAY lock poisoned");
 
     if just_enabled || reset {
-        *RESET_MOVE_OVERLAY.lock().unwrap() = false;
+        *RESET_MOVE_OVERLAY
+            .lock()
+            .expect("RESET_MOVE_OVERLAY lock poisoned") = false;
         // Position would be set via ImGui.setNextWindowPos/Size in Java
         // In egui, the overlay window position is set when creating the Area below
     }
@@ -508,7 +568,9 @@ fn render_move_overlay(ui: &mut egui::Ui, dst: &mut SkinWidgetDestination) {
     let x = dst.dst_x();
     let y = window_height - dst.dst_y() - h;
 
-    let move_enabled = MOVE_OVERLAY_ENABLED.lock().unwrap();
+    let move_enabled = MOVE_OVERLAY_ENABLED
+        .lock()
+        .expect("MOVE_OVERLAY_ENABLED lock poisoned");
 
     egui::Window::new("widget-overlay-popup")
         .fixed_pos(egui::pos2(x, y))
@@ -553,7 +615,7 @@ fn render_move_overlay(ui: &mut egui::Ui, dst: &mut SkinWidgetDestination) {
 /// Translated from: SkinWidgetManager.renderHistoryTable()
 /// In Java: ImGui table showing event descriptions with clipper.
 fn render_history_table(ui: &mut egui::Ui) {
-    let event_history = EVENT_HISTORY.lock().unwrap();
+    let event_history = EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
     let events = event_history.events();
     if events.is_empty() {
         ui.label("No history");
@@ -591,8 +653,8 @@ fn draw_float_value_column(ui: &mut egui::Ui, _index: usize, modified: bool, val
 }
 
 fn export_changes() {
-    let widgets = WIDGETS.lock().unwrap();
-    let event_history = EVENT_HISTORY.lock().unwrap();
+    let widgets = WIDGETS.lock().expect("WIDGETS lock poisoned");
+    let event_history = EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
     let mut changes: Vec<String> = Vec::new();
 
     for widget in widgets.iter() {
@@ -844,7 +906,7 @@ impl SkinWidgetDestination {
     pub fn set_dst_x_with_event(&mut self, x: f32, create_event: bool) {
         let previous = self.dst_x();
         if create_event && ((x - previous) as f64).abs() > EPS {
-            let mut history = EVENT_HISTORY.lock().unwrap();
+            let mut history = EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
             history.push_event(Event::ChangeSingleField {
                 event_type: EventType::ChangeX,
                 target_name: self.name.clone(),
@@ -862,7 +924,7 @@ impl SkinWidgetDestination {
     pub fn set_dst_y_with_event(&mut self, y: f32, create_event: bool) {
         let previous = self.dst_y();
         if create_event && ((y - previous) as f64).abs() > EPS {
-            let mut history = EVENT_HISTORY.lock().unwrap();
+            let mut history = EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
             history.push_event(Event::ChangeSingleField {
                 event_type: EventType::ChangeY,
                 target_name: self.name.clone(),
@@ -880,7 +942,7 @@ impl SkinWidgetDestination {
     pub fn set_dst_w_with_event(&mut self, w: f32, create_event: bool) {
         let previous = self.dst_w();
         if create_event && ((w - previous) as f64).abs() > EPS {
-            let mut history = EVENT_HISTORY.lock().unwrap();
+            let mut history = EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
             history.push_event(Event::ChangeSingleField {
                 event_type: EventType::ChangeW,
                 target_name: self.name.clone(),
@@ -898,7 +960,7 @@ impl SkinWidgetDestination {
     pub fn set_dst_h_with_event(&mut self, h: f32, create_event: bool) {
         let previous = self.dst_h();
         if create_event && ((h - previous) as f64).abs() > EPS {
-            let mut history = EVENT_HISTORY.lock().unwrap();
+            let mut history = EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
             history.push_event(Event::ChangeSingleField {
                 event_type: EventType::ChangeH,
                 target_name: self.name.clone(),

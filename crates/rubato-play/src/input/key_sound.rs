@@ -138,7 +138,11 @@ impl KeySoundProcessor {
     pub fn stop_bg_play(&mut self) {
         if let Some(ref mut handle) = self.handle {
             {
-                let mut guard = handle.shared.stop_flag.lock().unwrap();
+                let mut guard = handle
+                    .shared
+                    .stop_flag
+                    .lock()
+                    .expect("stop_flag lock poisoned");
                 *guard = true;
             }
             handle.shared.stop_signal.notify_one();
@@ -179,7 +183,11 @@ impl KeySoundProcessor {
     /// The caller should call `AudioDriver::play_note(note, volume, 0)` for each.
     pub fn drain_pending_bg_notes(&self) -> Vec<BgNoteCommand> {
         if let Some(ref handle) = self.handle {
-            let mut pending = handle.shared.pending_notes.lock().unwrap();
+            let mut pending = handle
+                .shared
+                .pending_notes
+                .lock()
+                .expect("pending_notes lock poisoned");
             std::mem::take(&mut *pending)
         } else {
             Vec::new()
@@ -214,7 +222,7 @@ fn autoplay_run(shared: Arc<BgShared>, entries: Vec<BgTimelineEntry>, starttime:
     }
 
     loop {
-        if *shared.stop_flag.lock().unwrap() {
+        if *shared.stop_flag.lock().expect("stop_flag lock poisoned") {
             break;
         }
 
@@ -234,7 +242,10 @@ fn autoplay_run(shared: Arc<BgShared>, entries: Vec<BgTimelineEntry>, starttime:
                 .collect();
 
             {
-                let mut pending = shared.pending_notes.lock().unwrap();
+                let mut pending = shared
+                    .pending_notes
+                    .lock()
+                    .expect("pending_notes lock poisoned");
                 pending.extend(cmds);
             }
             p += 1;
@@ -246,7 +257,7 @@ fn autoplay_run(shared: Arc<BgShared>, entries: Vec<BgTimelineEntry>, starttime:
             let sleeptime = entries[p].micro_time - time;
             if sleeptime > 0 {
                 // Java: Thread.sleep(sleeptime / 1000) — converts micros to millis.
-                let guard = shared.stop_flag.lock().unwrap();
+                let guard = shared.stop_flag.lock().expect("stop_flag lock poisoned");
                 if !*guard {
                     let _ = shared
                         .stop_signal

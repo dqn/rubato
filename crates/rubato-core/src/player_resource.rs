@@ -184,10 +184,14 @@ impl PlayerResource {
             }
             if let Some(ref mut bmsresource) = self.bmsresource {
                 bmsresource.set_bms_file(
-                    self.songdata.as_ref().unwrap().bms_model().unwrap(),
+                    self.songdata
+                        .as_ref()
+                        .expect("songdata is Some")
+                        .bms_model()
+                        .expect("get_bms_model"),
                     f,
                     &self.config,
-                    self.mode.as_ref().unwrap(),
+                    self.mode.as_ref().expect("mode is Some"),
                 );
             }
             true
@@ -330,7 +334,7 @@ impl PlayerResource {
         if self.bms_paths.is_none() {
             return false;
         }
-        let paths = self.bms_paths.as_ref().unwrap().clone();
+        let paths = self.bms_paths.as_ref().expect("bms_paths is Some").clone();
         let org_index = self.courseindex;
         loop {
             if self.courseindex == paths.len() {
@@ -534,7 +538,7 @@ impl PlayerResource {
         if self.tablefull.is_none() {
             self.tablefull = Some(format!("{}{}", self.tablelevel, self.tablename));
         }
-        self.tablefull.as_ref().unwrap()
+        self.tablefull.as_ref().expect("tablefull is Some")
     }
 
     pub fn player_data(&self) -> &PlayerData {

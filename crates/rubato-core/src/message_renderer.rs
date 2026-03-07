@@ -36,7 +36,7 @@ impl Message {
     pub fn new(text: &str, time: i64, color: Color, message_type: i32) -> Self {
         let now_millis = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("system clock")
             .as_millis() as i64;
         Self {
             time: time + now_millis,
@@ -86,7 +86,7 @@ impl Message {
     pub fn is_expired(&self) -> bool {
         let now_millis = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("system clock")
             .as_millis() as i64;
         self.time < now_millis
     }
@@ -103,7 +103,7 @@ impl Message {
         // Alpha pulsing: Java MathUtils.sinDeg((System.currentTimeMillis() % 1440) / 4.0f) * 0.3f + 0.7f
         let now_millis = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("system clock")
             .as_millis() as f32;
         let alpha = ((now_millis % 1440.0) / 4.0).to_radians().sin() * 0.3 + 0.7;
 
@@ -170,7 +170,7 @@ impl MessageRenderer {
         let mut message = Message::new(text, time, color, message_type);
         message.init(&self.fontpath);
         self.messages.push(message);
-        self.messages.last().unwrap()
+        self.messages.last().expect("non-empty")
     }
 
     pub fn dispose(&mut self) {

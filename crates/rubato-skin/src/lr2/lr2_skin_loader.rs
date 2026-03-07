@@ -208,12 +208,12 @@ pub fn lr2_path(skinpath: &str, imagepath: &str, filemap: &HashMap<String, Strin
 
     // Wildcard (*) expansion: find matching files in the directory
     if resolved.contains('*') {
-        let mut ext = resolved[resolved.rfind('*').unwrap() + 1..].to_string();
+        let mut ext = resolved[resolved.rfind('*').expect("contains '*'") + 1..].to_string();
         // Pipe (|) separator handling for extension filtering
         if resolved.contains('|') {
-            let star_pos = resolved.rfind('*').unwrap();
-            let pipe_pos = resolved.find('|').unwrap();
-            let last_pipe = resolved.rfind('|').unwrap();
+            let star_pos = resolved.rfind('*').expect("contains '*'");
+            let pipe_pos = resolved.find('|').expect("contains '|'");
+            let last_pipe = resolved.rfind('|').expect("contains '|'");
             if resolved.len() > last_pipe + 1 {
                 ext = format!(
                     "{}{}",

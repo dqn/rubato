@@ -137,7 +137,7 @@ impl ScoreDatabaseAccessor {
             }) {
             Ok(info) => {
                 if !info.is_empty() {
-                    Some(info.into_iter().next().unwrap())
+                    Some(info.into_iter().next().expect("iterator has next"))
                 } else {
                     None
                 }
@@ -185,7 +185,7 @@ impl ScoreDatabaseAccessor {
                 }
                 let mut best: Option<ScoreData> = None;
                 for s in scores {
-                    if best.is_none() || s.clear > best.as_ref().unwrap().clear {
+                    if best.is_none() || s.clear > best.as_ref().expect("best is Some").clear {
                         best = Some(s);
                     }
                 }
@@ -421,7 +421,7 @@ impl ScoreDatabaseAccessor {
     pub fn player_data(&self) -> Option<PlayerData> {
         let pds = self.player_datas(1);
         if !pds.is_empty() {
-            Some(pds.into_iter().next().unwrap())
+            Some(pds.into_iter().next().expect("iterator has next"))
         } else {
             None
         }
@@ -596,7 +596,7 @@ fn local_midnight_timestamp() -> i64 {
     let naive_midnight = chrono::Local::now()
         .date_naive()
         .and_hms_opt(0, 0, 0)
-        .unwrap();
+        .expect("valid time");
     naive_midnight
         .and_local_timezone(chrono::Local)
         .earliest()

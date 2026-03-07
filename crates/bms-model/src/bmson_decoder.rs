@@ -208,7 +208,7 @@ impl BMSONDecoder {
                 ensure_timeline(&mut tlcache, scrolly, resolution, mode_key);
                 tlcache
                     .get_mut(&scrolly)
-                    .unwrap()
+                    .expect("timeline in cache")
                     .timeline
                     .set_scroll(scroll_events[scrollpos].rate);
                 scrollpos += 1;
@@ -217,7 +217,7 @@ impl BMSONDecoder {
                     ensure_timeline(&mut tlcache, bpmy, resolution, mode_key);
                     tlcache
                         .get_mut(&bpmy)
-                        .unwrap()
+                        .expect("timeline in cache")
                         .timeline
                         .set_bpm(bpm_events[bpmpos].bpm);
                 } else {
@@ -233,7 +233,7 @@ impl BMSONDecoder {
             } else if stopy != i32::MAX {
                 if stop_events[stoppos].duration >= 0 {
                     ensure_timeline(&mut tlcache, stopy, resolution, mode_key);
-                    let tl = &mut tlcache.get_mut(&stopy).unwrap().timeline;
+                    let tl = &mut tlcache.get_mut(&stopy).expect("timeline in cache").timeline;
                     let bpm = tl.bpm();
                     tl.set_stop(
                         ((1000.0 * 1000.0 * 60.0 * 4.0 * stop_events[stoppos].duration as f64)
@@ -257,7 +257,7 @@ impl BMSONDecoder {
             ensure_timeline(&mut tlcache, bl.y, resolution, mode_key);
             tlcache
                 .get_mut(&bl.y)
-                .unwrap()
+                .expect("timeline in cache")
                 .timeline
                 .set_section_line(true);
         }
@@ -298,8 +298,16 @@ impl BMSONDecoder {
                 ensure_timeline(&mut tlcache, n_y, resolution, mode_key);
                 if let Some(next_y_val) = next_y {
                     ensure_timeline(&mut tlcache, next_y_val, resolution, mode_key);
-                    let next_time = tlcache.get(&next_y_val).unwrap().timeline.micro_time();
-                    let cur_time = tlcache.get(&n_y).unwrap().timeline.micro_time();
+                    let next_time = tlcache
+                        .get(&next_y_val)
+                        .expect("timeline in cache")
+                        .timeline
+                        .micro_time();
+                    let cur_time = tlcache
+                        .get(&n_y)
+                        .expect("timeline in cache")
+                        .timeline
+                        .micro_time();
                     duration = next_time - cur_time;
                 }
 
@@ -313,7 +321,7 @@ impl BMSONDecoder {
                     let bg_note = Note::new_normal_with_start_duration(id, starttime, duration);
                     tlcache
                         .get_mut(&n_y)
-                        .unwrap()
+                        .expect("timeline in cache")
                         .timeline
                         .add_back_ground_note(bg_note);
                 } else if n_up {
@@ -327,7 +335,10 @@ impl BMSONDecoder {
                         for ln_info in lns {
                             if section == ln_info.end_section {
                                 // Modify the end note on the timeline
-                                let end_tl = &mut tlcache.get_mut(&ln_info.end_y).unwrap().timeline;
+                                let end_tl = &mut tlcache
+                                    .get_mut(&ln_info.end_y)
+                                    .expect("timeline in cache")
+                                    .timeline;
                                 if let Some(end_note) = end_tl.note_mut(key) {
                                     end_note.set_wav(id);
                                     end_note.set_micro_starttime(starttime);
@@ -372,7 +383,7 @@ impl BMSONDecoder {
                         let bg_note = Note::new_normal_with_start_duration(id, starttime, duration);
                         tlcache
                             .get_mut(&n_y)
-                            .unwrap()
+                            .expect("timeline in cache")
                             .timeline
                             .add_back_ground_note(bg_note);
                     } else if n_l > 0 {
@@ -381,13 +392,17 @@ impl BMSONDecoder {
                         ensure_timeline(&mut tlcache, end_y, resolution, mode_key);
                         let ln = Note::new_long_with_start_duration(id, starttime, duration);
 
-                        let tl_has_note = tlcache.get(&n_y).unwrap().timeline.exist_note_at(key);
+                        let tl_has_note = tlcache
+                            .get(&n_y)
+                            .expect("timeline in cache")
+                            .timeline
+                            .exist_note_at(key);
 
                         if tl_has_note {
                             // Layer note check
                             let tl_note_is_long = tlcache
                                 .get(&n_y)
-                                .unwrap()
+                                .expect("timeline in cache")
                                 .timeline
                                 .note(key)
                                 .map(|en| en.is_long())
@@ -400,8 +415,11 @@ impl BMSONDecoder {
                                 {
                                     lns.iter()
                                         .find(|info| {
-                                            let start_sec =
-                                                tlcache.get(&n_y).unwrap().timeline.section();
+                                            let start_sec = tlcache
+                                                .get(&n_y)
+                                                .expect("timeline in cache")
+                                                .timeline
+                                                .section();
                                             (info.start_section - start_sec).abs() < f64::EPSILON
                                         })
                                         .map(|info| info.end_y)
@@ -417,10 +435,10 @@ impl BMSONDecoder {
                                 // Add layered note
                                 tlcache
                                     .get_mut(&n_y)
-                                    .unwrap()
+                                    .expect("timeline in cache")
                                     .timeline
                                     .note_mut(key)
-                                    .unwrap()
+                                    .expect("note exists")
                                     .add_layered_note(ln);
                             } else {
                                 self.log.push(DecodeLog::new(
@@ -456,13 +474,13 @@ impl BMSONDecoder {
                                     Note::new_normal_with_start_duration(id, starttime, duration);
                                 tlcache
                                     .get_mut(&n_y)
-                                    .unwrap()
+                                    .expect("timeline in cache")
                                     .timeline
                                     .add_back_ground_note(bg_note);
                             } else {
                                 tlcache
                                     .get_mut(&n_y)
-                                    .unwrap()
+                                    .expect("timeline in cache")
                                     .timeline
                                     .set_note(key, Some(ln));
 
@@ -479,7 +497,7 @@ impl BMSONDecoder {
 
                                 tlcache
                                     .get_mut(&end_y)
-                                    .unwrap()
+                                    .expect("timeline in cache")
                                     .timeline
                                     .set_note(key, Some(lnend));
 
@@ -491,30 +509,38 @@ impl BMSONDecoder {
                                 };
                                 tlcache
                                     .get_mut(&n_y)
-                                    .unwrap()
+                                    .expect("timeline in cache")
                                     .timeline
                                     .note_mut(key)
-                                    .unwrap()
+                                    .expect("note exists")
                                     .set_long_note_type(ln_type);
 
                                 // Mark end note
                                 tlcache
                                     .get_mut(&end_y)
-                                    .unwrap()
+                                    .expect("timeline in cache")
                                     .timeline
                                     .note_mut(key)
-                                    .unwrap()
+                                    .expect("note exists")
                                     .set_end(true);
                                 tlcache
                                     .get_mut(&end_y)
-                                    .unwrap()
+                                    .expect("timeline in cache")
                                     .timeline
                                     .note_mut(key)
-                                    .unwrap()
+                                    .expect("note exists")
                                     .set_long_note_type(ln_type);
 
-                                let start_section = tlcache.get(&n_y).unwrap().timeline.section();
-                                let end_section = tlcache.get(&end_y).unwrap().timeline.section();
+                                let start_section = tlcache
+                                    .get(&n_y)
+                                    .expect("timeline in cache")
+                                    .timeline
+                                    .section();
+                                let end_section = tlcache
+                                    .get(&end_y)
+                                    .expect("timeline in cache")
+                                    .timeline
+                                    .section();
 
                                 while lnlist.len() <= key_usize {
                                     lnlist.push(None);
@@ -522,16 +548,18 @@ impl BMSONDecoder {
                                 if lnlist[key_usize].is_none() {
                                     lnlist[key_usize] = Some(Vec::new());
                                 }
-                                lnlist[key_usize].as_mut().unwrap().push(BmsonLnInfo {
-                                    start_section,
-                                    end_section,
-                                    end_y,
-                                });
+                                lnlist[key_usize].as_mut().expect("initialized above").push(
+                                    BmsonLnInfo {
+                                        start_section,
+                                        end_section,
+                                        end_y,
+                                    },
+                                );
                             }
                         }
                     } else {
                         // Normal note
-                        let tl = &tlcache.get(&n_y).unwrap().timeline;
+                        let tl = &tlcache.get(&n_y).expect("timeline in cache").timeline;
                         if tl.exist_note_at(key) {
                             let is_normal = tl.note(key).map(|n| n.is_normal()).unwrap_or(false);
                             if is_normal {
@@ -539,10 +567,10 @@ impl BMSONDecoder {
                                     Note::new_normal_with_start_duration(id, starttime, duration);
                                 tlcache
                                     .get_mut(&n_y)
-                                    .unwrap()
+                                    .expect("timeline in cache")
                                     .timeline
                                     .note_mut(key)
-                                    .unwrap()
+                                    .expect("note exists")
                                     .add_layered_note(layered);
                             } else {
                                 self.log.push(DecodeLog::new(
@@ -558,7 +586,7 @@ impl BMSONDecoder {
                                 Note::new_normal_with_start_duration(id, starttime, duration);
                             tlcache
                                 .get_mut(&n_y)
-                                .unwrap()
+                                .expect("timeline in cache")
                                 .timeline
                                 .set_note(key, Some(normal));
                         }
@@ -585,7 +613,7 @@ impl BMSONDecoder {
                     let hidden = Note::new_normal(id);
                     tlcache
                         .get_mut(&n.y)
-                        .unwrap()
+                        .expect("timeline in cache")
                         .timeline
                         .set_hidden_note(key, Some(hidden));
                 }
@@ -628,7 +656,12 @@ impl BMSONDecoder {
                                 n.x, n.y
                             ),
                         ));
-                    } else if tlcache.get(&n.y).unwrap().timeline.exist_note_at(key) {
+                    } else if tlcache
+                        .get(&n.y)
+                        .expect("timeline in cache")
+                        .timeline
+                        .exist_note_at(key)
+                    {
                         self.log.push(DecodeLog::new(
                             State::Warning,
                             format!(
@@ -640,7 +673,7 @@ impl BMSONDecoder {
                         let mine = Note::new_mine(id, n.damage);
                         tlcache
                             .get_mut(&n.y)
-                            .unwrap()
+                            .expect("timeline in cache")
                             .timeline
                             .set_note(key, Some(mine));
                     }
@@ -683,7 +716,11 @@ impl BMSONDecoder {
                 for bn in bga_events {
                     ensure_timeline(&mut tlcache, bn.y, resolution, mode_key);
                     if let Some(&mapped_id) = idmap.get(&bn.id) {
-                        tlcache.get_mut(&bn.y).unwrap().timeline.set_bga(mapped_id);
+                        tlcache
+                            .get_mut(&bn.y)
+                            .expect("timeline in cache")
+                            .timeline
+                            .set_bga(mapped_id);
                     }
                 }
             }
@@ -712,7 +749,7 @@ impl BMSONDecoder {
                     }
                     tlcache
                         .get_mut(&bn.y)
-                        .unwrap()
+                        .expect("timeline in cache")
                         .timeline
                         .set_eventlayer(vec![Layer::new(event, seqs)]);
                 }
@@ -734,7 +771,7 @@ impl BMSONDecoder {
                     };
                     tlcache
                         .get_mut(&bn.y)
-                        .unwrap()
+                        .expect("timeline in cache")
                         .timeline
                         .set_eventlayer(vec![Layer::new(event, seqs)]);
                 }
@@ -778,7 +815,7 @@ fn ensure_timeline(
         return;
     }
 
-    let (&le_key, le_val) = tlcache.range(..y).next_back().unwrap();
+    let (&le_key, le_val) = tlcache.range(..y).next_back().expect("next_back");
     let bpm = le_val.timeline.bpm();
     let time = if bpm != 0.0 {
         le_val.time

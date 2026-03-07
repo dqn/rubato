@@ -17,7 +17,7 @@ impl DownloadTaskMenu {
     ///
     /// Translated from: DownloadTaskMenu.setProcessor(HttpDownloadProcessor)
     pub fn set_processor(processor: Arc<HttpDownloadProcessor>) {
-        let mut guard = PROCESSOR.lock().unwrap();
+        let mut guard = PROCESSOR.lock().expect("PROCESSOR lock poisoned");
         *guard = Some(processor);
     }
 
@@ -37,7 +37,7 @@ impl DownloadTaskMenu {
                 ui.end_row();
 
                 for task_arc in tasks {
-                    let task = task_arc.lock().unwrap();
+                    let task = task_arc.lock().expect("task_arc lock poisoned");
 
                     // Column 0: Task name
                     let name = task.name();
@@ -69,7 +69,7 @@ impl DownloadTaskMenu {
                     drop(task); // release lock before UI interaction
                     if is_error {
                         if ui.button("Retry").clicked() {
-                            let processor = PROCESSOR.lock().unwrap();
+                            let processor = PROCESSOR.lock().expect("PROCESSOR lock poisoned");
                             if let Some(ref proc) = *processor {
                                 proc.retry_download_task(task_arc.clone());
                             }
@@ -97,8 +97,8 @@ impl DownloadTaskMenu {
             .default_pos(egui::pos2(rel_x, rel_y))
             .auto_sized()
             .show(ctx, |ui| {
-                let running = DownloadTaskState::running_download_tasks();
-                let expired = DownloadTaskState::expired_tasks();
+                let running = DownloadTaskState::get_running_download_tasks();
+                let expired = DownloadTaskState::get_expired_tasks();
                 if running.is_empty() && expired.is_empty() {
                     ui.label("No Download Task. Try selecting missing bms to submit new task!");
                 } else {

@@ -111,23 +111,47 @@ impl SongBar {
             }
             for j in (i + 1)..songs.len() {
                 if songs[j].is_some()
-                    && songs[i].as_ref().unwrap().sha256 == songs[j].as_ref().unwrap().sha256
+                    && songs[i]
+                        .as_ref()
+                        .expect("song is Some after is_none guard")
+                        .sha256
+                        == songs[j]
+                            .as_ref()
+                            .expect("song is Some after is_none guard")
+                            .sha256
                 {
                     songs[j] = None;
                     count -= 1;
                 }
             }
-            for element in elements.iter_mut() {
+            for j in 0..elements.len() {
+                let element = &elements[j];
                 if element.path().is_none()
-                    && ((!element.md5.is_empty() && element.md5 == songs[i].as_ref().unwrap().md5)
+                    && ((!element.md5.is_empty()
+                        && element.md5
+                            == songs[i]
+                                .as_ref()
+                                .expect("song is Some after is_none guard")
+                                .md5)
                         || (!element.sha256.is_empty()
-                            && element.sha256 == songs[i].as_ref().unwrap().sha256))
+                            && element.sha256
+                                == songs[i]
+                                    .as_ref()
+                                    .expect("song is Some after is_none guard")
+                                    .sha256))
                 {
-                    let song_path = songs[i].as_ref().unwrap().path().map(|s| s.to_string());
-                    element.set_path_opt(song_path);
+                    let song_path = songs[i]
+                        .as_ref()
+                        .expect("song is Some after is_none guard")
+                        .path()
+                        .map(|s| s.to_string());
+                    elements[j].set_path_opt(song_path);
                     if let Some(ref _song) = songs[i] {
-                        let elem_clone = element.clone();
-                        songs[i].as_mut().unwrap().merge(&elem_clone);
+                        let elem_clone = elements[j].clone();
+                        songs[i]
+                            .as_mut()
+                            .expect("song is Some after is_none guard")
+                            .merge(&elem_clone);
                     }
                     noexistscount -= 1;
                     break;

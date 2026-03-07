@@ -216,7 +216,10 @@ impl SpriteBatch {
             self.gpu_vertex_buffer_capacity = new_capacity;
         }
 
-        let vertex_buffer = self.gpu_vertex_buffer.as_ref().unwrap();
+        let vertex_buffer = self
+            .gpu_vertex_buffer
+            .as_ref()
+            .expect("gpu_vertex_buffer is Some");
         queue.write_buffer(vertex_buffer, 0, vertex_data);
 
         render_pass.set_bind_group(0, uniform_bind_group, &[]);

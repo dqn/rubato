@@ -319,7 +319,7 @@ impl BarRenderer {
                     {
                         let data = fb.folder_data();
                         songstatus = if data.is_none()
-                            || now_secs > data.unwrap().adddate() as i64 + 3600 * 24
+                            || now_secs > data.expect("data").adddate() as i64 + 3600 * 24
                         {
                             4 // FolderBar(normal)
                         } else {
@@ -432,7 +432,7 @@ impl BarRenderer {
 
         // download progress bars
         let download_tasks =
-            rubato_song::md_processor::download_task_state::DownloadTaskState::running_download_tasks();
+            rubato_song::md_processor::download_task_state::DownloadTaskState::get_running_download_tasks();
         if !download_tasks.is_empty() {
             for i in 0..self.barlength {
                 let ba = &self.bararea[i];
@@ -444,7 +444,7 @@ impl BarRenderer {
                     if let Some(song_bar) = sd.as_song_bar() {
                         let song_md5 = &song_bar.song_data().md5;
                         for task_arc in download_tasks.values() {
-                            let task = task_arc.lock().unwrap();
+                            let task = task_arc.lock().expect("task_arc lock poisoned");
                             if task.hash() != song_md5 {
                                 continue;
                             }

@@ -244,7 +244,7 @@ impl BMSDecoder {
                                 }
                                 self.lines[bar_index]
                                     .as_mut()
-                                    .unwrap()
+                                    .expect("initialized above")
                                     .push(line.to_owned());
                                 maxsec = if maxsec > bar_index {
                                     maxsec
@@ -703,8 +703,8 @@ fn matches_reserve_word(line: &str, s: &str) -> bool {
 pub fn convert_hex_string(data: &[u8]) -> String {
     let mut sb = String::with_capacity(data.len() * 2);
     for &b in data {
-        sb.push(char::from_digit(((b >> 4) & 0xf) as u32, 16).unwrap());
-        sb.push(char::from_digit((b & 0xf) as u32, 16).unwrap());
+        sb.push(char::from_digit(((b >> 4) & 0xf) as u32, 16).expect("valid hex digit"));
+        sb.push(char::from_digit((b & 0xf) as u32, 16).expect("valid hex digit"));
     }
     sb
 }

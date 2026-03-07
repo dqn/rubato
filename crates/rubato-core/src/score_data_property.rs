@@ -113,7 +113,7 @@ impl ScoreDataProperty {
         let exscore = score.map_or(0, |s| s.exscore());
         let totalnotes = score.map_or(0, |s| s.notes);
         if totalnotes > 0 {
-            let score = score.unwrap();
+            let score = score.expect("score");
             match score.playmode {
                 Mode::BEAT_5K | Mode::BEAT_10K => {
                     self.nowpoint = ((100000i64 * score.judge_count_total(0) as i64

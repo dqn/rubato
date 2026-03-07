@@ -116,7 +116,7 @@ impl BMSResource {
             }
         }
 
-        if MainLoader::illegal_song_count() == 0 {
+        if MainLoader::get_illegal_song_count() == 0 {
             // Audio and BGA both have caches, so always do a full reload
             // Phase 5+ dependency: spawn BGA and audio loader threads
         }

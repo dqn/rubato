@@ -111,7 +111,7 @@ impl SongInformationAccessor {
     }
 
     pub fn start_update(&self) -> anyhow::Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().expect("conn lock poisoned");
         conn.execute_batch("BEGIN TRANSACTION")?;
         Ok(())
     }
@@ -124,7 +124,7 @@ impl SongInformationAccessor {
     }
 
     pub fn end_update(&self) {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().expect("conn lock poisoned");
         if let Err(e) = conn.execute_batch("COMMIT") {
             log::error!("Error committing update: {}", e);
         }
@@ -135,7 +135,7 @@ impl SongInformationAccessor {
         sql: &str,
         params: &[&str],
     ) -> anyhow::Result<Vec<SongInformation>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().expect("conn lock poisoned");
         let mut stmt = conn.prepare(sql)?;
         let param_values: Vec<&dyn rusqlite::types::ToSql> = params
             .iter()
@@ -182,7 +182,7 @@ impl SongInformationAccessor {
     }
 
     fn insert_information(&self, info: &SongInformation) -> anyhow::Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().expect("conn lock poisoned");
         self.base.insert_with_values(
             &conn,
             "information",

@@ -23,8 +23,12 @@ pub struct ExecutableBar {
 
 impl Clone for ExecutableBar {
     fn clone(&self) -> Self {
-        let queue = self.queue.lock().unwrap().clone();
-        let current_song = self.current_song.lock().unwrap().clone();
+        let queue = self.queue.lock().expect("queue lock poisoned").clone();
+        let current_song = self
+            .current_song
+            .lock()
+            .expect("current_song lock poisoned")
+            .clone();
         Self {
             selectable: self.selectable.clone(),
             title: self.title.clone(),
@@ -53,23 +57,26 @@ impl ExecutableBar {
     }
 
     fn _get_song_data(&self) -> SongData {
-        let mut queue = self.queue.lock().unwrap();
+        let mut queue = self.queue.lock().expect("queue lock poisoned");
         if queue.is_empty() {
             drop(queue);
             self.create_index_queue();
-            queue = self.queue.lock().unwrap();
+            queue = self.queue.lock().expect("queue lock poisoned");
         }
 
         // In Java: if (state instanceof MusicSelector || currentSong == null)
         // Simplified: always get next random song
-        let mut current = self.current_song.lock().unwrap();
-        let index = queue.pop_front().unwrap();
+        let mut current = self
+            .current_song
+            .lock()
+            .expect("current_song lock poisoned");
+        let index = queue.pop_front().expect("pop_front");
         *current = Some(self.songs[index].clone());
-        current.as_ref().unwrap().clone()
+        current.as_ref().expect("current is Some").clone()
     }
 
     fn create_index_queue(&self) {
-        let mut queue = self.queue.lock().unwrap();
+        let mut queue = self.queue.lock().expect("queue lock poisoned");
         queue.clear();
         for _ in 0..(QUEUE_LENGTH - 1) {
             let index = (rand::random::<f64>() * self.songs.len() as f64) as usize;

@@ -778,7 +778,7 @@ impl CourseResult {
         if newscore.is_none() {
             return;
         }
-        let mut newscore = newscore.unwrap();
+        let mut newscore = newscore.expect("newscore");
 
         let dp = self
             .resource

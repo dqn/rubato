@@ -101,7 +101,7 @@ pub struct MonitorInfo {
 /// Translated from: com.badlogic.gdx.Graphics.DisplayMode
 /// Java fields: width, height, refreshRate, bitsPerPixel
 ///
-/// Used by `MainLoader::available_display_mode()` to provide complete
+/// Used by `MainLoader::get_available_display_mode()` to provide complete
 /// display mode data for fullscreen mode selection.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VideoModeInfo {

@@ -214,7 +214,7 @@ impl SkinTextImageSource {
         }
         let element = self.elements.get_mut(&region.id)?;
         element.texture.as_ref()?;
-        let tex = element.texture.as_ref().unwrap();
+        let tex = element.texture.as_ref().expect("texture is Some");
         region.image = Some(TextureRegion::from_texture_region(
             tex.clone(),
             region.x,

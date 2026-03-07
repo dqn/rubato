@@ -169,9 +169,9 @@ impl OSUDecoder {
                 }
             } else {
                 if !svs.is_empty() {
-                    let last_sv = svs.last().unwrap();
+                    let last_sv = svs.last().expect("non-empty");
                     if (last_sv.time - point.time).abs() < f32::EPSILON {
-                        svs.last_mut().unwrap().beat_length = point.beat_length;
+                        svs.last_mut().expect("last_mut").beat_length = point.beat_length;
                         continue;
                     }
                 }

@@ -15,7 +15,7 @@ fuzz_target!(|data: &[u8]| {
 
     // Layer 2: Exercise the full OSU decoder pipeline via a temp file.
     // This also exercises Shift_JIS decoding and hash computation.
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("fuzz.osu");
     if let Ok(mut f) = std::fs::File::create(&path) {
         if f.write_all(data).is_ok() {

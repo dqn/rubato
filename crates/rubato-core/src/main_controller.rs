@@ -306,7 +306,7 @@ impl MainController {
         if config.enable_ipfs {
             let ipfspath = std::path::Path::new("ipfs")
                 .canonicalize()
-                .unwrap_or_else(|_| std::env::current_dir().unwrap().join("ipfs"));
+                .unwrap_or_else(|_| std::env::current_dir().expect("current_dir").join("ipfs"));
             let _ = std::fs::create_dir_all(&ipfspath);
             if ipfspath.exists() {
                 let ipfs_str = ipfspath.to_string_lossy().to_string();
@@ -322,7 +322,7 @@ impl MainController {
                 .canonicalize()
                 .unwrap_or_else(|_| {
                     std::env::current_dir()
-                        .unwrap()
+                        .expect("current_dir")
                         .join(&config.download_directory)
                 });
             let _ = std::fs::create_dir_all(&httpdl_path);
@@ -815,7 +815,7 @@ impl MainController {
         if self.bmsfile.is_some() {
             // Java: if(resource.setBMSFile(bmsfile, auto)) changeState(PLAY)
             //       else { changeState(CONFIG); exit(); }
-            let bmsfile = self.bmsfile.clone().unwrap();
+            let bmsfile = self.bmsfile.clone().expect("bmsfile is Some");
             let mode = self.auto.clone().unwrap_or(BMSPlayerMode::PLAY);
             let load_ok = self
                 .resource

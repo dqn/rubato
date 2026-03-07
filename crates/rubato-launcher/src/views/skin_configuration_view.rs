@@ -482,7 +482,7 @@ impl SkinConfigurationView {
             // player.getSkin()[selected.getSkinType().getId()] = skin;
             if let Some(skin_type) = selected.skin_type() {
                 let type_id = skin_type.id() as usize;
-                let player = self.player.as_mut().unwrap();
+                let player = self.player.as_mut().expect("player is Some");
                 while player.skin.len() <= type_id {
                     player.skin.push(None);
                 }
@@ -491,7 +491,7 @@ impl SkinConfigurationView {
         } else if let Some(mode) = self.mode {
             // } else if (mode != null) { player.getSkin()[mode.getId()] = null; }
             let type_id = mode.id() as usize;
-            let player = self.player.as_mut().unwrap();
+            let player = self.player.as_mut().expect("player is Some");
             if type_id < player.skin.len() {
                 player.skin[type_id] = None;
             }
@@ -516,7 +516,7 @@ impl SkinConfigurationView {
                 {
                     // Re-load to get a fresh copy for the 5/10key variant
                     if let Some(mut variant) = load_skin_header(path, config) {
-                        let variant_type = *variant.skin_type().unwrap();
+                        let variant_type = *variant.skin_type().expect("skin_type");
                         if variant_type == SkinType::Play7Keys {
                             let name = variant.name().unwrap_or("").to_string();
                             if !name.to_lowercase().contains("7key") {
@@ -846,9 +846,9 @@ impl SkinConfigurationView {
 
                     // if(file.path.contains("|")) {
                     if file.path.contains('|') {
-                        let last_pipe = file.path.rfind('|').unwrap();
+                        let last_pipe = file.path.rfind('|').expect("contains '|'");
                         let last_slash = file.path.rfind('/').map(|i| i + 1).unwrap_or(0);
-                        let first_pipe = file.path.find('|').unwrap();
+                        let first_pipe = file.path.find('|').expect("contains '|'");
                         // if(file.path.length() > file.path.lastIndexOf('|') + 1) {
                         if file.path.len() > last_pipe + 1 {
                             // name = file.path.substring(file.path.lastIndexOf('/') + 1, file.path.indexOf('|'))

@@ -98,7 +98,11 @@ impl SkinJudgeObject {
         if let Some(ci) = count_idx {
             if let Some(ref mut count) = self.judge_counts[ci] {
                 let combo = state.get_now_combo(player);
-                let judge_region = &self.judge_images[judge_idx].as_ref().unwrap().data.region;
+                let judge_region = &self.judge_images[judge_idx]
+                    .as_ref()
+                    .expect("judge_images entry is Some")
+                    .data
+                    .region;
                 count.prepare_with_value(time, state, combo, judge_region.x, judge_region.y);
                 // Shift judge image by half the count length if shift mode is on
                 if self.inner.is_shift()

@@ -906,7 +906,10 @@ impl BMSPlayer {
     /// Corresponds to Java BMSPlayer.update(int judge, long time)
     pub fn update_judge(&mut self, judge: i32, time: i64) {
         if self.judge.combo() == 0 {
-            self.bga.lock().unwrap().set_misslayer_tme(time);
+            self.bga
+                .lock()
+                .expect("bga lock poisoned")
+                .set_misslayer_tme(time);
         }
         if let Some(ref mut gauge) = self.gauge {
             gauge.update(judge);
@@ -2181,7 +2184,10 @@ impl MainState for BMSPlayer {
                         }
                     }
 
-                    self.bga.lock().unwrap().prepare(&() as &dyn std::any::Any);
+                    self.bga
+                        .lock()
+                        .expect("bga lock poisoned")
+                        .prepare(&() as &dyn std::any::Any);
                     self.state = STATE_READY;
                     self.main_state_data.timer.set_timer_on(TIMER_READY);
                     self.queue_sound(rubato_types::sound_type::SoundType::PlayReady);
@@ -2354,7 +2360,10 @@ impl MainState for BMSPlayer {
                         as i32
                         + TIME_MARGIN;
 
-                    self.bga.lock().unwrap().prepare(&() as &dyn std::any::Any);
+                    self.bga
+                        .lock()
+                        .expect("bga lock poisoned")
+                        .prepare(&() as &dyn std::any::Any);
                     self.state = STATE_READY;
                     self.main_state_data.timer.set_timer_on(TIMER_READY);
                     log::info!("Practice -> STATE_READY");

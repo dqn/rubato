@@ -114,9 +114,15 @@ impl PatternModifier for LongNoteModifier {
                             assist = AssistLevel::Assist;
                         }
 
-                        let wav = timelines[i].note(lane).unwrap().wav();
-                        let start = timelines[i].note(lane).unwrap().micro_starttime();
-                        let duration = timelines[i].note(lane).unwrap().micro_duration();
+                        let wav = timelines[i].note(lane).expect("note exists").wav();
+                        let start = timelines[i]
+                            .note(lane)
+                            .expect("note exists")
+                            .micro_starttime();
+                        let duration = timelines[i]
+                            .note(lane)
+                            .expect("note exists")
+                            .micro_duration();
 
                         let mut lnstart = Note::new_long_with_start_duration(wav, start, duration);
                         lnstart.set_long_note_type(lntype);

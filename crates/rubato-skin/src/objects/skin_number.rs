@@ -264,7 +264,7 @@ impl SkinNumber {
             self.length = 0.0;
             return;
         }
-        let image = images.unwrap();
+        let image = images.expect("images");
 
         if self.value != value || self.image_set.as_ref() != Some(&image) {
             self.value = value;

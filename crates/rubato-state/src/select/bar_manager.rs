@@ -705,12 +705,15 @@ impl BarManager {
                 }
             } else if let Some(ref prev_title) = prevbar_title {
                 if prevbar_is_song && prevbar_sha256.is_some() {
-                    let sha = prevbar_sha256.as_deref().unwrap();
-                    if let Some(pos) = self.currentsongs.iter().position(|bar| {
-                        bar.as_song_bar()
-                            .is_some_and(|sb| sb.exists_song() && sb.song_data().sha256 == sha)
-                    }) {
-                        self.selectedindex = pos;
+                    let sha = prevbar_sha256.as_deref().expect("as_deref");
+                    for i in 0..self.currentsongs.len() {
+                        if let Some(sb) = self.currentsongs[i].as_song_bar()
+                            && sb.exists_song()
+                            && sb.song_data().sha256 == sha
+                        {
+                            self.selectedindex = i;
+                            break;
+                        }
                     }
                 } else if let Some(pos) = self.currentsongs.iter().position(|bar| {
                     bar_class_name(bar) == prevbar_class_name && bar.title() == *prev_title

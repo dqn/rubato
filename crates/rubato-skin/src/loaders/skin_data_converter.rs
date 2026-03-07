@@ -668,7 +668,7 @@ fn convert_skin_object(
             warn!("Float conversion creates placeholder (full SkinFloat image splitting deferred)");
             let tex = get_texture_for_src(src.as_deref(), source_map, skin_path, usecim);
             tex.as_ref()?;
-            let tex = tex.unwrap();
+            let tex = tex.expect("tex");
             let images = source_image(&tex, *x, *y, *w, *h, *divx, *divy);
             let timer_val = timer.unwrap_or(0);
 

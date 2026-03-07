@@ -490,7 +490,7 @@ impl PlayerConfig {
             if name_i.is_none() {
                 continue;
             }
-            let name_i = name_i.unwrap();
+            let name_i = name_i.expect("name_i");
             for j in (i + 1)..self.irconfig.len() {
                 if let Some(ref mut cfg_j) = self.irconfig[j]
                     && cfg_j.irname == name_i

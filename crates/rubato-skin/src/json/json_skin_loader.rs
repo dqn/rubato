@@ -890,7 +890,7 @@ impl JSONSkinLoader {
         }
 
         // Extract path before mutable borrow
-        let data_path = self.source_map.get(srcid).unwrap().path.clone();
+        let data_path = self.source_map.get(srcid).expect("key exists").path.clone();
         let parent = p
             .parent()
             .map(|pp| pp.to_string_lossy().to_string())

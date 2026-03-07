@@ -95,7 +95,7 @@ impl StreamController {
                 match line_result {
                     Ok(line) => {
                         log::info!("Received: {}", line);
-                        let mut cmds = commands_clone.lock().unwrap();
+                        let mut cmds = commands_clone.lock().expect("commands_clone lock poisoned");
                         Self::execute_commands(&mut cmds, &line);
                     }
                     Err(e) => {

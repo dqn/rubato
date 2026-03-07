@@ -97,7 +97,7 @@ impl ScoreDataImporter {
         let mut stmt = conn.prepare("SELECT * FROM score")?;
         let column_count = stmt.column_count();
         let column_names: Vec<String> = (0..column_count)
-            .map(|i| stmt.column_name(i).unwrap().to_string())
+            .map(|i| stmt.column_name(i).expect("column name").to_string())
             .collect();
         let rows = stmt.query_map([], |row| {
             let mut map = HashMap::new();

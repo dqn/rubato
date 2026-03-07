@@ -656,12 +656,12 @@ impl BMSPlayerInputProcessor {
                 self.mousepressed = true;
                 self.mousebutton = MOUSE_BUTTON_LEFT;
                 // Apply the same resolution transform as touch_down()
-                let gw = GdxGraphics::width();
-                let gh = GdxGraphics::height();
+                let gw = GdxGraphics::get_width();
+                let gh = GdxGraphics::get_height();
                 let res = self.kbinput.resolution();
                 if gw > 0 && gh > 0 {
-                    self.mousex = GdxInput::x() * res.width() / gw;
-                    self.mousey = res.height() - GdxInput::y() * res.height() / gh;
+                    self.mousex = GdxInput::get_x() * res.width() / gw;
+                    self.mousey = res.height() - GdxInput::get_y() * res.height() / gh;
                 }
             } else if !left_pressed && self.mousepressed {
                 self.mousepressed = false;

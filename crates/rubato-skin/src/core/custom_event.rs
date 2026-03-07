@@ -43,7 +43,7 @@ impl CustomEvent {
             return;
         }
 
-        let condition = self.condition.as_ref().unwrap();
+        let condition = self.condition.as_ref().expect("condition is Some");
         if condition.get(state)
             && (self.last_execute_time == i64::MIN
                 || (state.timer().now_micro_time() - self.last_execute_time) / 1000

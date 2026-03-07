@@ -486,7 +486,7 @@ impl MusicResult {
         if let Some(ref ns) = newscore_clone {
             let cscore = self.resource.course_score_data();
             let is_clear = ns.clear != ClearType::Failed.id()
-                && (cscore.is_none() || cscore.unwrap().clear != ClearType::Failed.id());
+                && (cscore.is_none() || cscore.expect("cscore").clear != ClearType::Failed.id());
             let loop_sound = self
                 .resource
                 .config()
@@ -793,7 +793,7 @@ impl MusicResult {
             }
             return;
         }
-        let newscore = newscore.unwrap();
+        let newscore = newscore.expect("newscore");
 
         let oldsc = self.main.play_data_accessor().read_score_data_model(
             self.resource.bms_model(),
@@ -1605,7 +1605,7 @@ mod tests {
     fn make_test_config(label: &str) -> rubato_types::config::Config {
         let unique = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("system clock")
             .as_nanos();
         let mut config = rubato_types::config::Config::default();
         let player_dir = std::env::temp_dir().join(format!("rubato-{label}-{unique}"));

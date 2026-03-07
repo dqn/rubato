@@ -9,12 +9,12 @@ pub struct Settings {
 }
 
 pub fn consume() -> Option<Settings> {
-    let mut lock = BATTLE.lock().unwrap();
+    let mut lock = BATTLE.lock().expect("BATTLE lock poisoned");
     lock.take()
 }
 
 pub fn setup(random: i32, lane_sequence: i32) {
-    let mut lock = BATTLE.lock().unwrap();
+    let mut lock = BATTLE.lock().expect("BATTLE lock poisoned");
     *lock = Some(Settings {
         random,
         lanes: lane_sequence,

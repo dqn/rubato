@@ -297,7 +297,7 @@ impl SongData {
                 self.title.clone()
             });
         }
-        self.fulltitle.as_ref().unwrap()
+        self.fulltitle.as_ref().expect("fulltitle is Some")
     }
 
     /// Non-mutating version of get_full_title (computes without caching)
@@ -327,7 +327,7 @@ impl SongData {
                 self.artist.clone()
             });
         }
-        self.fullartist.as_ref().unwrap()
+        self.fullartist.as_ref().expect("fullartist is Some")
     }
 
     pub fn has_document(&self) -> bool {

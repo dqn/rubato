@@ -798,7 +798,7 @@ impl Skin {
                     * self.prepareduration;
             }
 
-            let renderer = self.renderer.as_mut().unwrap();
+            let renderer = self.renderer.as_mut().expect("renderer is Some");
             for idx in &self.objectarray_indices {
                 if self.objects[*idx].is_draw() && self.objects[*idx].is_visible() {
                     self.objects[*idx].draw(renderer, state);
@@ -1410,7 +1410,10 @@ impl rubato_core::main_state::SkinDrawable for Skin {
         if self.renderer.is_none() {
             self.renderer = Some(SkinObjectRenderer::new());
         }
-        std::mem::swap(&mut self.renderer.as_mut().unwrap().sprite, batch);
+        std::mem::swap(
+            &mut self.renderer.as_mut().expect("renderer is Some").sprite,
+            batch,
+        );
     }
 }
 

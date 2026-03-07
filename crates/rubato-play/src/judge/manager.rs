@@ -142,7 +142,7 @@ impl MultiBadCollector {
         if !self.enabled || tnote.is_none() {
             return;
         }
-        let tnote_idx = tnote.unwrap();
+        let tnote_idx = tnote.expect("tnote");
 
         // Find tnote's dmtime in the collector
         let mut tdmtime: i64 = -1;
@@ -660,7 +660,7 @@ impl JudgeManager {
             if passing.is_none() {
                 continue;
             }
-            let passing_idx = passing.unwrap();
+            let passing_idx = passing.expect("passing");
             if self.note_states[passing_idx].state == 0 {
                 continue;
             }

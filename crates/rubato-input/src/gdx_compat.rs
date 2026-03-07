@@ -11,13 +11,17 @@ static SHARED_KEY_STATE: Mutex<Option<SharedKeyState>> = Mutex::new(None);
 
 /// Set the global shared key state. Can be called multiple times (later calls replace earlier).
 pub fn set_shared_key_state(state: SharedKeyState) {
-    let mut guard = SHARED_KEY_STATE.lock().unwrap();
+    let mut guard = SHARED_KEY_STATE
+        .lock()
+        .expect("SHARED_KEY_STATE lock poisoned");
     *guard = Some(state);
 }
 
 /// Get the global shared key state, if set.
-pub fn shared_key_state() -> Option<SharedKeyState> {
-    let guard = SHARED_KEY_STATE.lock().unwrap();
+pub fn get_shared_key_state() -> Option<SharedKeyState> {
+    let guard = SHARED_KEY_STATE
+        .lock()
+        .expect("SHARED_KEY_STATE lock poisoned");
     guard.clone()
 }
 
@@ -26,7 +30,9 @@ pub struct GdxInput;
 
 impl GdxInput {
     pub fn is_key_pressed(keycode: i32) -> bool {
-        let guard = SHARED_KEY_STATE.lock().unwrap();
+        let guard = SHARED_KEY_STATE
+            .lock()
+            .expect("SHARED_KEY_STATE lock poisoned");
         if let Some(ref state) = *guard {
             state.is_key_pressed(keycode)
         } else {
@@ -34,33 +40,41 @@ impl GdxInput {
         }
     }
 
-    pub fn x() -> i32 {
-        let guard = SHARED_KEY_STATE.lock().unwrap();
+    pub fn get_x() -> i32 {
+        let guard = SHARED_KEY_STATE
+            .lock()
+            .expect("SHARED_KEY_STATE lock poisoned");
         if let Some(ref state) = *guard {
-            state.mouse_x()
+            state.get_mouse_x()
         } else {
             0
         }
     }
 
-    pub fn y() -> i32 {
-        let guard = SHARED_KEY_STATE.lock().unwrap();
+    pub fn get_y() -> i32 {
+        let guard = SHARED_KEY_STATE
+            .lock()
+            .expect("SHARED_KEY_STATE lock poisoned");
         if let Some(ref state) = *guard {
-            state.mouse_y()
+            state.get_mouse_y()
         } else {
             0
         }
     }
 
     pub fn set_cursor_position(x: i32, y: i32) {
-        let guard = SHARED_KEY_STATE.lock().unwrap();
+        let guard = SHARED_KEY_STATE
+            .lock()
+            .expect("SHARED_KEY_STATE lock poisoned");
         if let Some(ref state) = *guard {
             state.set_cursor_position(x, y);
         }
     }
 
     pub fn is_button_pressed(button: i32) -> bool {
-        let guard = SHARED_KEY_STATE.lock().unwrap();
+        let guard = SHARED_KEY_STATE
+            .lock()
+            .expect("SHARED_KEY_STATE lock poisoned");
         if let Some(ref state) = *guard {
             state.is_mouse_button_pressed(button)
         } else {
@@ -69,7 +83,9 @@ impl GdxInput {
     }
 
     pub fn drain_scroll() -> (f32, f32) {
-        let guard = SHARED_KEY_STATE.lock().unwrap();
+        let guard = SHARED_KEY_STATE
+            .lock()
+            .expect("SHARED_KEY_STATE lock poisoned");
         if let Some(ref state) = *guard {
             state.drain_scroll()
         } else {
@@ -82,19 +98,23 @@ impl GdxInput {
 pub struct GdxGraphics;
 
 impl GdxGraphics {
-    pub fn width() -> i32 {
-        let guard = SHARED_KEY_STATE.lock().unwrap();
+    pub fn get_width() -> i32 {
+        let guard = SHARED_KEY_STATE
+            .lock()
+            .expect("SHARED_KEY_STATE lock poisoned");
         if let Some(ref state) = *guard {
-            state.window_width()
+            state.get_window_width()
         } else {
             1920
         }
     }
 
-    pub fn height() -> i32 {
-        let guard = SHARED_KEY_STATE.lock().unwrap();
+    pub fn get_height() -> i32 {
+        let guard = SHARED_KEY_STATE
+            .lock()
+            .expect("SHARED_KEY_STATE lock poisoned");
         if let Some(ref state) = *guard {
-            state.window_height()
+            state.get_window_height()
         } else {
             1080
         }

@@ -873,7 +873,10 @@ impl NoMurioshiRandomizer {
                                 .collect();
                             if !l.is_empty() {
                                 let chosen = l[rng.next_int_bounded(l.len() as i32) as usize];
-                                return lane.iter().position(|&x| x == chosen).unwrap();
+                                return lane
+                                    .iter()
+                                    .position(|&x| x == chosen)
+                                    .expect("position found");
                             }
                         }
                         rng.next_int_bounded(lane.len() as i32) as usize
@@ -906,7 +909,10 @@ impl NoMurioshiRandomizer {
                     .collect();
                 if !l.is_empty() {
                     let chosen = l[rng.next_int_bounded(l.len() as i32) as usize];
-                    return lane.iter().position(|&x| x == chosen).unwrap();
+                    return lane
+                        .iter()
+                        .position(|&x| x == chosen)
+                        .expect("position found");
                 }
             }
             rng.next_int_bounded(lane.len() as i32) as usize
@@ -1015,7 +1021,7 @@ impl ConvergeRandomizer {
                 .copied()
                 .collect();
             let l = gya[rng.next_int_bounded(gya.len() as i32) as usize];
-            lane.iter().position(|&x| x == l).unwrap()
+            lane.iter().position(|&x| x == l).expect("position found")
         };
 
         let random_map = self.time_state.time_based_shuffle(

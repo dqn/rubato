@@ -14,11 +14,11 @@ static LANE_MASK: Mutex<Vec<bool>> = Mutex::new(Vec::new());
 static RANDOM_SEED_MAP: Mutex<Option<HashMap<i32, i64>>> = Mutex::new(None);
 
 fn init_defaults() {
-    let mut lane_order = LANE_ORDER.lock().unwrap();
+    let mut lane_order = LANE_ORDER.lock().expect("LANE_ORDER lock poisoned");
     if lane_order.is_empty() {
         *lane_order = "1234567".to_string();
     }
-    let mut lane_mask = LANE_MASK.lock().unwrap();
+    let mut lane_mask = LANE_MASK.lock().expect("LANE_MASK lock poisoned");
     if lane_mask.is_empty() {
         *lane_mask = vec![false; 7];
     }
@@ -35,7 +35,9 @@ impl Default for RandomTrainer {
 impl RandomTrainer {
     pub fn new() -> Self {
         init_defaults();
-        let mut seed_map = RANDOM_SEED_MAP.lock().unwrap();
+        let mut seed_map = RANDOM_SEED_MAP
+            .lock()
+            .expect("RANDOM_SEED_MAP lock poisoned");
         if seed_map.is_none() {
             // In Java this loads from a serialized resource file "resources/randomtrainer.dat"
             // We stub this as an empty map since the binary resource is not available
@@ -49,9 +51,13 @@ impl RandomTrainer {
         init_defaults();
         let mut rng = thread_rng();
 
-        let black_white_permute = *BLACK_WHITE_PERMUTE.lock().unwrap();
-        let mut lane_order = LANE_ORDER.lock().unwrap();
-        let lanes_to_random = LANES_TO_RANDOM.lock().unwrap();
+        let black_white_permute = *BLACK_WHITE_PERMUTE
+            .lock()
+            .expect("BLACK_WHITE_PERMUTE lock poisoned");
+        let mut lane_order = LANE_ORDER.lock().expect("LANE_ORDER lock poisoned");
+        let lanes_to_random = LANES_TO_RANDOM
+            .lock()
+            .expect("LANES_TO_RANDOM lock poisoned");
 
         if black_white_permute {
             let mut black: Vec<char> = Vec::new();
@@ -99,40 +105,51 @@ impl RandomTrainer {
     }
 
     pub fn is_lane_to_random(lane: char) -> bool {
-        let lanes = LANES_TO_RANDOM.lock().unwrap();
+        let lanes = LANES_TO_RANDOM
+            .lock()
+            .expect("LANES_TO_RANDOM lock poisoned");
         lanes.contains(&lane)
     }
 
     pub fn set_lane_to_random(lane: char) {
-        let mut lanes = LANES_TO_RANDOM.lock().unwrap();
+        let mut lanes = LANES_TO_RANDOM
+            .lock()
+            .expect("LANES_TO_RANDOM lock poisoned");
         lanes.push(lane);
     }
 
     pub fn remove_lane_to_random(lane: char) {
-        let mut lanes = LANES_TO_RANDOM.lock().unwrap();
+        let mut lanes = LANES_TO_RANDOM
+            .lock()
+            .expect("LANES_TO_RANDOM lock poisoned");
         if let Some(pos) = lanes.iter().position(|&c| c == lane) {
             lanes.remove(pos);
         }
     }
 
     pub fn is_active() -> bool {
-        *ACTIVE.lock().unwrap()
+        *ACTIVE.lock().expect("ACTIVE lock poisoned")
     }
 
     pub fn set_active(active: bool) {
-        *ACTIVE.lock().unwrap() = active;
+        *ACTIVE.lock().expect("ACTIVE lock poisoned") = active;
     }
 
-    pub fn random_seed_map() -> Option<HashMap<i32, i64>> {
-        RANDOM_SEED_MAP.lock().unwrap().clone()
+    pub fn get_random_seed_map() -> Option<HashMap<i32, i64>> {
+        RANDOM_SEED_MAP
+            .lock()
+            .expect("RANDOM_SEED_MAP lock poisoned")
+            .clone()
     }
 
     pub fn set_black_white_permute(black_white_permute: bool) {
-        *BLACK_WHITE_PERMUTE.lock().unwrap() = black_white_permute;
+        *BLACK_WHITE_PERMUTE
+            .lock()
+            .expect("BLACK_WHITE_PERMUTE lock poisoned") = black_white_permute;
     }
 
     pub fn set_lane_order(number: &str) {
-        *LANE_ORDER.lock().unwrap() = number.to_string();
+        *LANE_ORDER.lock().expect("LANE_ORDER lock poisoned") = number.to_string();
     }
 
     pub fn random_history() -> VecDeque<RandomHistoryEntry> {
@@ -313,7 +330,7 @@ mod tests {
     fn test_get_random_seed_map_is_some() {
         let _g = reset_globals();
         let _trainer = RandomTrainer::new();
-        let map = RandomTrainer::random_seed_map();
+        let map = RandomTrainer::get_random_seed_map();
         assert!(map.is_some());
         assert!(map.unwrap().is_empty());
     }

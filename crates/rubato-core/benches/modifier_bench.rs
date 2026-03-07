@@ -151,7 +151,11 @@ fn bench_real_bms_mirror(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("real_bms_mirror");
     for path in &files {
-        let filename = path.file_name().unwrap().to_string_lossy().to_string();
+        let filename = path
+            .file_name()
+            .expect("path has file name")
+            .to_string_lossy()
+            .to_string();
         let base_model = decode_bms(path);
 
         group.bench_with_input(
@@ -185,7 +189,11 @@ fn bench_real_bms_random(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("real_bms_random");
     for path in &files {
-        let filename = path.file_name().unwrap().to_string_lossy().to_string();
+        let filename = path
+            .file_name()
+            .expect("path has file name")
+            .to_string_lossy()
+            .to_string();
         let base_model = decode_bms(path);
 
         group.bench_with_input(
@@ -221,7 +229,11 @@ fn bench_real_bms_srandom(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("real_bms_srandom");
     for path in &files {
-        let filename = path.file_name().unwrap().to_string_lossy().to_string();
+        let filename = path
+            .file_name()
+            .expect("path has file name")
+            .to_string_lossy()
+            .to_string();
         let base_model = decode_bms(path);
         let mode = base_model
             .mode()

@@ -166,7 +166,10 @@ impl WebhookHandler {
 
             let mut image: HashMap<String, String> = HashMap::new();
             image.insert("url".to_string(), "attachment://screenshot.png".to_string());
-            embed.insert("image".to_string(), serde_json::to_value(&image).unwrap());
+            embed.insert(
+                "image".to_string(),
+                serde_json::to_value(&image).expect("JSON value conversion"),
+            );
 
             let screen_type = get_screen_type(current_state);
 
@@ -227,7 +230,10 @@ impl WebhookHandler {
                         StringPropertyFactory::string_property(STRING_TABLE_NAME)
                             .get(current_state),
                     );
-                    embed.insert("author".to_string(), serde_json::to_value(&author).unwrap());
+                    embed.insert(
+                        "author".to_string(),
+                        serde_json::to_value(&author).expect("JSON value conversion"),
+                    );
                     embed.insert(
                         "description".to_string(),
                         serde_json::Value::String(description),
@@ -236,16 +242,22 @@ impl WebhookHandler {
                         "text".to_string(),
                         "LR2oraja ~Endless Dream~ Scorecard".to_string(),
                     );
-                    embed.insert("footer".to_string(), serde_json::to_value(&footer).unwrap());
+                    embed.insert(
+                        "footer".to_string(),
+                        serde_json::to_value(&footer).expect("JSON value conversion"),
+                    );
                 }
             } else {
                 author.insert("name".to_string(), "LR2oraja ~Endless Dream~".to_string());
-                embed.insert("author".to_string(), serde_json::to_value(&author).unwrap());
+                embed.insert(
+                    "author".to_string(),
+                    serde_json::to_value(&author).expect("JSON value conversion"),
+                );
             }
 
             payload.insert(
                 "embeds".to_string(),
-                serde_json::to_value(vec![embed]).unwrap(),
+                serde_json::to_value(vec![embed]).expect("JSON value conversion"),
             );
         }
 

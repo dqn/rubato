@@ -212,7 +212,7 @@ fn rand_f64() -> f64 {
     use std::time::SystemTime;
     let nanos = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
+        .expect("system clock")
         .subsec_nanos();
     (nanos as f64) / (u32::MAX as f64)
 }

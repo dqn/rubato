@@ -333,7 +333,7 @@ impl PracticeConfiguration {
                     let times = &md.timeline_times;
                     if inc {
                         if !times.is_empty()
-                            && self.property.starttime + 2000 <= *times.last().unwrap()
+                            && self.property.starttime + 2000 <= *times.last().expect("non-empty")
                         {
                             self.property.starttime += 100;
                         }
@@ -351,7 +351,7 @@ impl PracticeConfiguration {
                     let times = &md.timeline_times;
                     if inc {
                         if !times.is_empty()
-                            && self.property.endtime <= *times.last().unwrap() + 1000
+                            && self.property.endtime <= *times.last().expect("non-empty") + 1000
                         {
                             self.property.endtime += 100;
                         }

@@ -78,7 +78,7 @@ impl BmsTableManager {
         if !self.user_list.contains_key(name) {
             self.user_list.insert(name.to_string(), Vec::new());
         }
-        self.user_list.get_mut(name).unwrap()
+        self.user_list.get_mut(name).expect("key exists")
     }
 
     pub fn set_table_list(&mut self, table_list: Vec<DifficultyTable>) {

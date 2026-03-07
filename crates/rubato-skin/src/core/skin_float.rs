@@ -464,13 +464,16 @@ impl SkinFloat {
         // super.prepare(time, state, offsetX, offsetY) would be called here
         self.draw = true;
 
-        let image = images.as_ref().unwrap().get_images(_time, _state);
+        let image = images
+            .as_ref()
+            .expect("images is Some")
+            .get_images(_time, _state);
         if image.is_none() {
             self.length = 0.0;
             self.draw = false;
             return;
         }
-        let image = image.unwrap();
+        let image = image.expect("image");
 
         self.value = v;
         self.image_set = Some(image.clone());

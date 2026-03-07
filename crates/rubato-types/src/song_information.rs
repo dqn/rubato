@@ -227,7 +227,7 @@ impl SongInformation {
         bpm_entries.sort_by(|a, b| {
             f64::from_bits(*a.0)
                 .partial_cmp(&f64::from_bits(*b.0))
-                .unwrap()
+                .expect("f64 comparison")
         });
         for (&bpm_bits, &count) in bpm_entries {
             if count >= maxcount {

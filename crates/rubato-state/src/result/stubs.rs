@@ -174,11 +174,15 @@ impl MainController {
     }
 
     pub fn ir_send_status(&self) -> std::sync::MutexGuard<'_, Vec<IRSendStatusMain>> {
-        self.ir_send_statuses.lock().unwrap()
+        self.ir_send_statuses
+            .lock()
+            .expect("ir_send_statuses lock poisoned")
     }
 
     pub fn ir_send_status_mut(&self) -> std::sync::MutexGuard<'_, Vec<IRSendStatusMain>> {
-        self.ir_send_statuses.lock().unwrap()
+        self.ir_send_statuses
+            .lock()
+            .expect("ir_send_statuses lock poisoned")
     }
 
     pub fn play_data_accessor(&self) -> &PlayDataAccessor {

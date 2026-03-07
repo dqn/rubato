@@ -110,7 +110,7 @@ impl SQLiteSongDatabaseAccessor {
     }
 
     fn create_table(&self) -> anyhow::Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().expect("conn lock poisoned");
         self.base.validate(&conn)?;
 
         // Check if sha256 is primary key in song table (migration check)
@@ -185,7 +185,7 @@ impl SQLiteSongDatabaseAccessor {
     }
 
     fn query_songs(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql]) -> Vec<SongData> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().expect("conn lock poisoned");
         match Self::query_songs_with_conn(&conn, sql, params) {
             Ok(songs) => songs,
             Err(e) => {
@@ -243,7 +243,7 @@ impl SQLiteSongDatabaseAccessor {
     }
 
     fn query_folders(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql]) -> Vec<FolderData> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().expect("conn lock poisoned");
         match Self::query_folders_with_conn(&conn, sql, params) {
             Ok(folders) => folders,
             Err(e) => {
@@ -281,7 +281,7 @@ impl SQLiteSongDatabaseAccessor {
     }
 
     fn insert_song(&self, sd: &SongData) -> anyhow::Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().expect("conn lock poisoned");
         self.base
             .insert_with_values(&conn, "song", &|name: &str| -> rusqlite::types::Value {
                 match name {
@@ -323,7 +323,7 @@ impl SQLiteSongDatabaseAccessor {
     }
 
     fn insert_folder(&self, fd: &FolderData) -> anyhow::Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().expect("conn lock poisoned");
         self.base
             .insert_with_values(&conn, "folder", &|name: &str| -> rusqlite::types::Value {
                 match name {
@@ -477,7 +477,7 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
         scorelog: &str,
         info: Option<&str>,
     ) -> Vec<SongData> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().expect("conn lock poisoned");
         let result: anyhow::Result<Vec<SongData>> = (|| {
             // ATTACH DATABASE doesn't support parameterized paths; escape single quotes
             let score_escaped = score.replace('\'', "''");
@@ -561,7 +561,7 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
 
     fn set_song_datas(&self, songs: &[SongData]) {
         {
-            let conn = self.conn.lock().unwrap();
+            let conn = self.conn.lock().expect("conn lock poisoned");
             if let Err(e) = conn.execute_batch("BEGIN TRANSACTION") {
                 log::error!("Error starting transaction: {}", e);
                 return;
@@ -574,7 +574,7 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
             }
         }
 
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().expect("conn lock poisoned");
         if let Err(e) = conn.execute_batch("COMMIT") {
             log::error!("Error committing transaction: {}", e);
         }
@@ -738,7 +738,7 @@ impl<'a> SongDatabaseUpdater<'a> {
 
         // Acquire lock for transaction setup and tag/favorite preservation
         {
-            let conn = accessor.conn.lock().unwrap();
+            let conn = accessor.conn.lock().expect("conn lock poisoned");
             if let Err(e) = conn.execute_batch("BEGIN TRANSACTION") {
                 log::error!("Error starting transaction: {}", e);
                 return;
@@ -819,7 +819,7 @@ impl<'a> SongDatabaseUpdater<'a> {
             }
         });
 
-        let conn = accessor.conn.lock().unwrap();
+        let conn = accessor.conn.lock().expect("conn lock poisoned");
         let _ = conn.execute_batch("COMMIT");
 
         if let Some(info) = self.info {
@@ -1034,7 +1034,7 @@ impl BMSFolder {
         // (matches Java: folders.parallelStream().filter(Objects::nonNull).forEach(...))
         folders.into_par_iter().flatten().for_each(|folder| {
             let delete_path = format!("{}%", folder.path);
-            let conn = accessor.conn.lock().unwrap();
+            let conn = accessor.conn.lock().expect("conn lock poisoned");
             let _ = conn.execute(
                 "DELETE FROM folder WHERE path LIKE ?1",
                 rusqlite::params![delete_path],
@@ -1108,7 +1108,11 @@ impl BMSFolder {
                 if bmsondecoder.is_none() {
                     bmsondecoder = Some(BMSONDecoder::new(LNTYPE_LONGNOTE));
                 }
-                match bmsondecoder.as_mut().unwrap().decode_path(bmsfile_path) {
+                match bmsondecoder
+                    .as_mut()
+                    .expect("bmsondecoder is Some")
+                    .decode_path(bmsfile_path)
+                {
                     Some(m) => Some(m),
                     None => {
                         log::error!("Error while decoding bmson at path: {}", pathname);
@@ -1119,7 +1123,11 @@ impl BMSFolder {
                 if osudecoder.is_none() {
                     osudecoder = Some(OSUDecoder::new(LNTYPE_LONGNOTE));
                 }
-                match osudecoder.as_mut().unwrap().decode_path(bmsfile_path) {
+                match osudecoder
+                    .as_mut()
+                    .expect("osudecoder is Some")
+                    .decode_path(bmsfile_path)
+                {
                     Some(m) => Some(m),
                     None => {
                         log::error!("Error while decoding osu at path: {}", pathname);
@@ -1130,7 +1138,11 @@ impl BMSFolder {
                 if bmsdecoder.is_none() {
                     bmsdecoder = Some(BMSDecoder::new_with_lntype(LNTYPE_LONGNOTE));
                 }
-                match bmsdecoder.as_mut().unwrap().decode_path(bmsfile_path) {
+                match bmsdecoder
+                    .as_mut()
+                    .expect("bmsdecoder is Some")
+                    .decode_path(bmsfile_path)
+                {
                     Some(m) => Some(m),
                     None => {
                         log::error!("Error while decoding bms at path: {}", pathname);
@@ -1231,7 +1243,7 @@ impl BMSFolder {
 
                 new_count += 1;
             } else {
-                let conn = accessor.conn.lock().unwrap();
+                let conn = accessor.conn.lock().expect("conn lock poisoned");
                 let _ = conn.execute(
                     "DELETE FROM song WHERE path = ?1",
                     rusqlite::params![pathname],
@@ -1243,7 +1255,7 @@ impl BMSFolder {
         // (matches Java: records.parallelStream().filter(Objects::nonNull).forEach(...))
         records.par_iter().flatten().for_each(|record| {
             if let Some(path) = record.path() {
-                let conn = accessor.conn.lock().unwrap();
+                let conn = accessor.conn.lock().expect("conn lock poisoned");
                 let _ = conn.execute("DELETE FROM song WHERE path = ?1", rusqlite::params![path]);
             }
         });

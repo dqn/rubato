@@ -23,7 +23,11 @@ pub struct StreamRequestCommand {
 
 impl StreamRequestCommand {
     pub fn new(selector: Arc<Mutex<MusicSelector>>) -> Self {
-        let max_length = selector.lock().unwrap().config.max_request_count;
+        let max_length = selector
+            .lock()
+            .expect("selector lock poisoned")
+            .config
+            .max_request_count;
         let (tx, rx) = mpsc::channel();
         let selector_clone = Arc::clone(&selector);
         let updater_thread = Some(thread::spawn(move || {
@@ -78,7 +82,11 @@ pub struct UpdateBar {
 
 impl UpdateBar {
     pub fn new(selector: Arc<Mutex<MusicSelector>>) -> Self {
-        let max_length = selector.lock().unwrap().config.max_request_count;
+        let max_length = selector
+            .lock()
+            .expect("selector lock poisoned")
+            .config
+            .max_request_count;
         let bar = HashBar::new("Stream Request".to_string(), vec![]);
         // In Java: this.bar.setSortable(false)
         // HashBar uses DirectoryBarData which has set_sortable
@@ -94,7 +102,7 @@ impl UpdateBar {
     }
 
     fn add_message(&self, sha256: &str) {
-        let selector = self.selector.lock().unwrap();
+        let selector = self.selector.lock().expect("selector lock poisoned");
         let escaped = Self::escape(sha256);
         let song_datas_result = selector.songdb.song_datas_by_hashes(&[escaped]);
         if !song_datas_result.is_empty() {
@@ -141,7 +149,7 @@ impl UpdateBar {
                 // Already added, skip
                 continue;
             }
-            let selector = self.selector.lock().unwrap();
+            let selector = self.selector.lock().expect("selector lock poisoned");
             let escaped = Self::escape(&sha256);
             let song_datas_result = selector.songdb.song_datas_by_hashes(&[escaped]);
             if !song_datas_result.is_empty() {
@@ -155,7 +163,7 @@ impl UpdateBar {
 
         if !self.song_datas.is_empty() {
             self.bar.set_elements(self.song_datas.clone());
-            let mut selector = self.selector.lock().unwrap();
+            let mut selector = self.selector.lock().expect("selector lock poisoned");
             let bar = Bar::Hash(Box::new(HashBar::new(
                 "Stream Request".to_string(),
                 self.song_datas.clone(),

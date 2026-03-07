@@ -610,7 +610,7 @@ impl PlayConfigurationView {
     /// Translates: public void update(Config config)
     pub fn update(&mut self, config: Config) {
         self.config = Some(config);
-        let config = self.config.as_ref().unwrap();
+        let config = self.config.as_ref().expect("config is Some");
 
         // Show the What's New popup upon version change
         let current_version = Version::get_version().to_string();
@@ -623,7 +623,7 @@ impl PlayConfigurationView {
             }
         }
 
-        let config = self.config.as_ref().unwrap();
+        let config = self.config.as_ref().expect("config is Some");
         let playerpath = config.playerpath.clone();
         self.players = rubato_core::player_config::read_all_player_id(&playerpath);
 
@@ -644,7 +644,7 @@ impl PlayConfigurationView {
         // skinController.update(config)
         // These take &mut Config, so we temporarily take ownership
         {
-            let mut config = self.config.take().unwrap();
+            let mut config = self.config.take().expect("take");
             self.resource_controller.update(&mut config);
             self.discord_controller.update(&mut config);
             self.skin_controller.update_config(&config);
@@ -653,7 +653,7 @@ impl PlayConfigurationView {
             self.config = Some(config);
         }
 
-        let config = self.config.as_ref().unwrap();
+        let config = self.config.as_ref().expect("config is Some");
         self.usecim = config.cache_skin_image;
         self.clipboard_screenshot = config.set_clipboard_screenshot;
 
@@ -874,7 +874,7 @@ impl PlayConfigurationView {
         }
 
         {
-            let player = self.player.as_mut().unwrap();
+            let player = self.player.as_mut().expect("player is Some");
 
             if !self.playername.is_empty() {
                 player.name = self.playername.clone();
@@ -1202,7 +1202,7 @@ impl PlayConfigurationView {
             .is_some_and(|h| h.join_handle.is_finished());
 
         if finished {
-            let handle = self.bms_loading_handle.take().unwrap();
+            let handle = self.bms_loading_handle.take().expect("take");
             match handle.join_handle.join() {
                 Ok(Ok(())) => {
                     self.song_updated = true;

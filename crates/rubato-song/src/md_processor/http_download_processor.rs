@@ -68,8 +68,9 @@ impl HttpDownloadProcessor {
         &wriggle_download_source::META
     }
 
-    fn _get_task_by_id(&self, task_id: i32) -> Option<Arc<Mutex<DownloadTask>>> {
-        let tasks = self.tasks.lock().unwrap();
+    #[allow(dead_code)]
+    fn get_task_by_id(&self, task_id: i32) -> Option<Arc<Mutex<DownloadTask>>> {
+        let tasks = self.tasks.lock().expect("tasks lock poisoned");
         tasks.get(&task_id).cloned()
     }
 
@@ -121,7 +122,10 @@ impl HttpDownloadProcessor {
         // it to run the submit step on an different thread to get rid of the re-entrant feature of 'synchronized'.
         let download_task = {
             // Check for duplicate URLs via submitted_urls set (O(1), no nested locking)
-            let mut urls = self.submitted_urls.lock().unwrap();
+            let mut urls = self
+                .submitted_urls
+                .lock()
+                .expect("submitted_urls lock poisoned");
             if urls.contains(&download_url) {
                 log::error!(
                     "[HttpDownloadProcessor] Rejecting download task[{}] because duplication has been found",
@@ -139,7 +143,7 @@ impl HttpDownloadProcessor {
             )));
             urls.insert(download_url);
             drop(urls);
-            let mut tasks = self.tasks.lock().unwrap();
+            let mut tasks = self.tasks.lock().expect("tasks lock poisoned");
             tasks.insert(task_id, download_task.clone());
             ImGuiNotify::info(&format!("New download task[{}] submitted", task_name));
             download_task
@@ -162,7 +166,7 @@ impl HttpDownloadProcessor {
         // Here we simply spawn a thread per task. A bounded thread pool could be added later.
         thread::spawn(move || {
             let (task_name, download_url, hash) = {
-                let task = download_task.lock().unwrap();
+                let task = download_task.lock().expect("download_task lock poisoned");
                 (
                     task.name().to_string(),
                     task.url().to_string(),
@@ -175,7 +179,7 @@ impl HttpDownloadProcessor {
                 download_url
             );
             {
-                let mut task = download_task.lock().unwrap();
+                let mut task = download_task.lock().expect("download_task lock poisoned");
                 task.set_download_task_status(DownloadTaskStatus::Downloading);
             }
             // 1) Download file from remote http server
@@ -197,11 +201,11 @@ impl HttpDownloadProcessor {
             };
             if result.is_none() {
                 // Download failed, skip the remaining steps
-                let mut task = download_task.lock().unwrap();
+                let mut task = download_task.lock().expect("download_task lock poisoned");
                 task.set_download_task_status(DownloadTaskStatus::Error);
                 return;
             }
-            let result = result.unwrap();
+            let result = result.expect("result");
             // 2) Extract the compressed archive & update download directory automatically
             let mut successfully_extracted = false;
             let mut bms_directory: Option<String> = None;
@@ -209,7 +213,7 @@ impl HttpDownloadProcessor {
                 Ok(dir) => {
                     bms_directory = dir;
                     successfully_extracted = true;
-                    let mut task = download_task.lock().unwrap();
+                    let mut task = download_task.lock().expect("download_task lock poisoned");
                     task.set_download_task_status(DownloadTaskStatus::Extracted);
                 }
                 Err(e) => {
@@ -243,7 +247,7 @@ impl HttpDownloadProcessor {
     /// Retry a download task
     pub fn retry_download_task(&self, download_task: Arc<Mutex<DownloadTask>>) {
         {
-            let mut task = download_task.lock().unwrap();
+            let mut task = download_task.lock().expect("download_task lock poisoned");
             task.set_download_task_status(DownloadTaskStatus::Prepare);
         }
         self.execute_download_task(download_task);
@@ -270,7 +274,7 @@ fn download_file_from_url(
     source_name: &str,
 ) -> anyhow::Result<PathBuf> {
     let url = {
-        let t = task.lock().unwrap();
+        let t = task.lock().expect("task lock poisoned");
         t.url().to_string()
     };
 
@@ -296,7 +300,7 @@ fn download_file_from_url(
         .to_string();
     let mut candidate_file_name = String::new();
     if !content_disposition.is_empty() {
-        let re = Regex::new(r#"filename="?([^"]+)"?"#).unwrap();
+        let re = Regex::new(r#"filename="?([^"]+)"?"#).expect("valid regex");
         if let Some(caps) = re.captures(&content_disposition)
             && let Some(m) = caps.get(1)
         {
@@ -329,7 +333,7 @@ fn download_file_from_url(
         download_bytes += read as i64;
         offset = end;
         {
-            let mut t = task.lock().unwrap();
+            let mut t = task.lock().expect("task lock poisoned");
             t.set_download_size(download_bytes);
             t.set_content_length(content_length);
         }
@@ -340,7 +344,7 @@ fn download_file_from_url(
         result.display()
     );
     {
-        let mut t = task.lock().unwrap();
+        let mut t = task.lock().expect("task lock poisoned");
         t.set_download_task_status(DownloadTaskStatus::Downloaded);
     }
 

@@ -12,19 +12,19 @@ pub struct JudgeTrainer;
 
 impl JudgeTrainer {
     pub fn is_active() -> bool {
-        *ACTIVE.lock().unwrap()
+        *ACTIVE.lock().expect("ACTIVE lock poisoned")
     }
 
     pub fn set_active(active: bool) {
-        *ACTIVE.lock().unwrap() = active;
+        *ACTIVE.lock().expect("ACTIVE lock poisoned") = active;
     }
 
-    pub fn judge_rank() -> i32 {
-        *JUDGE_RANK.lock().unwrap()
+    pub fn get_judge_rank() -> i32 {
+        *JUDGE_RANK.lock().expect("JUDGE_RANK lock poisoned")
     }
 
     pub fn set_judge_rank(judge_rank: i32) {
-        *JUDGE_RANK.lock().unwrap() = judge_rank;
+        *JUDGE_RANK.lock().expect("JUDGE_RANK lock poisoned") = judge_rank;
     }
 
     pub fn judge_window_rate(mode: &Mode) -> i32 {
@@ -36,7 +36,7 @@ impl JudgeTrainer {
         // Therefore, we need a transformation:
         // EASY 0 -> 3 | NORMAL: 1 -> 2 | HARD: 2 -> 1 | VERY-HARD: 3 -> 0
         // We can observe that the sum is always 3
-        let judge_rank = *JUDGE_RANK.lock().unwrap();
+        let judge_rank = *JUDGE_RANK.lock().expect("JUDGE_RANK lock poisoned");
         let rule = BMSPlayerRule::for_mode(mode);
         rule.judge.windowrule.judgerank[(3 - judge_rank) as usize]
     }

@@ -358,7 +358,7 @@ impl Section {
             let sc = sce.map(|(k, _)| k).unwrap_or(2.0);
 
             if sc <= st && sc <= bc {
-                let scroll_val = sce.unwrap().1;
+                let scroll_val = sce.expect("sce").1;
                 let section = self.sectionnum + sc * self.rate;
                 ensure_timeline(tlcache, section, mode_key);
                 let tl = &mut tlcache
@@ -368,7 +368,7 @@ impl Section {
                 tl.set_scroll(scroll_val);
                 sc_idx += 1;
             } else if bc <= st {
-                let bpm_val = bce.unwrap().1;
+                let bpm_val = bce.expect("bce").1;
                 let section = self.sectionnum + bc * self.rate;
                 ensure_timeline(tlcache, section, mode_key);
                 let tl = &mut tlcache
@@ -378,8 +378,8 @@ impl Section {
                 tl.set_bpm(bpm_val);
                 bc_idx += 1;
             } else if st <= 1.0 {
-                let stop_val = ste.unwrap().1;
-                let ste_key = ste.unwrap().0;
+                let stop_val = ste.expect("ste").1;
+                let ste_key = ste.expect("ste").0;
                 let section = self.sectionnum + ste_key * self.rate;
                 ensure_timeline(tlcache, section, mode_key);
                 let key = f64_to_key(section);
@@ -547,10 +547,12 @@ impl Section {
                                 if lnlist[key_usize].is_none() {
                                     lnlist[key_usize] = Some(Vec::new());
                                 }
-                                lnlist[key_usize].as_mut().unwrap().push(LnInfo {
-                                    start_section,
-                                    end_section,
-                                });
+                                lnlist[key_usize].as_mut().expect("initialized above").push(
+                                    LnInfo {
+                                        start_section,
+                                        end_section,
+                                    },
+                                );
                                 break;
                             } else if note_is_long_no_pair {
                                 let tl2_section = tlcache
@@ -585,10 +587,12 @@ impl Section {
                                 if lnlist[key_usize].is_none() {
                                     lnlist[key_usize] = Some(Vec::new());
                                 }
-                                lnlist[key_usize].as_mut().unwrap().push(LnInfo {
-                                    start_section: tl2_section,
-                                    end_section: tl_section_display,
-                                });
+                                lnlist[key_usize].as_mut().expect("initialized above").push(
+                                    LnInfo {
+                                        start_section: tl2_section,
+                                        end_section: tl_section_display,
+                                    },
+                                );
                                 while startln.len() <= key_usize {
                                     startln.push(None);
                                 }
@@ -755,7 +759,10 @@ impl Section {
                             startln[key_usize] = None;
                         } else {
                             // LN end processing
-                            let start_info = startln[key_usize].as_ref().unwrap().clone();
+                            let start_info = startln[key_usize]
+                                .as_ref()
+                                .expect("initialized above")
+                                .clone();
                             let keys_desc: Vec<u64> = tlcache.keys().rev().cloned().collect();
                             for &ekey in &keys_desc {
                                 let e_section = tlcache
@@ -802,10 +809,12 @@ impl Section {
                                     if lnlist[key_usize].is_none() {
                                         lnlist[key_usize] = Some(Vec::new());
                                     }
-                                    lnlist[key_usize].as_mut().unwrap().push(LnInfo {
-                                        start_section: start_info.section,
-                                        end_section,
-                                    });
+                                    lnlist[key_usize].as_mut().expect("initialized above").push(
+                                        LnInfo {
+                                            start_section: start_info.section,
+                                            end_section,
+                                        },
+                                    );
 
                                     startln[key_usize] = None;
                                     break;
@@ -872,7 +881,10 @@ impl Section {
                             ),
                         ));
                     } else {
-                        let start_section = startln[key_usize].as_ref().unwrap().section;
+                        let start_section = startln[key_usize]
+                            .as_ref()
+                            .expect("initialized above")
+                            .section;
                         if start_section != f64::MIN {
                             let start_key = f64_to_key(start_section);
                             if tlcache.contains_key(&start_key) {

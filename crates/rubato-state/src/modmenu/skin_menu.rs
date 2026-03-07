@@ -49,25 +49,25 @@ pub struct SkinMenu;
 
 impl SkinMenu {
     pub fn init(main: MainController, player_config: PlayerConfig) {
-        *MAIN.lock().unwrap() = Some(main);
-        *PLAYER_CONFIG.lock().unwrap() = Some(player_config);
+        *MAIN.lock().expect("MAIN lock poisoned") = Some(main);
+        *PLAYER_CONFIG.lock().expect("PLAYER_CONFIG lock poisoned") = Some(player_config);
     }
 
     pub fn invalidate() {
-        *READY.lock().unwrap() = false;
+        *READY.lock().expect("READY lock poisoned") = false;
     }
 
     /// Render the skin configuration window using egui.
     ///
     /// Translated from: SkinMenu.show(ImBoolean)
     pub fn show_ui(ctx: &egui::Context) {
-        let main = MAIN.lock().unwrap();
+        let main = MAIN.lock().expect("MAIN lock poisoned");
         if main.is_none() {
             return;
         }
         drop(main);
 
-        let ready = *READY.lock().unwrap();
+        let ready = *READY.lock().expect("READY lock poisoned");
         if !ready {
             refresh();
         }
@@ -91,8 +91,8 @@ impl SkinMenu {
 ///
 /// Translated from: SkinMenu.menuHeader()
 fn menu_header(ui: &mut egui::Ui) {
-    let skins = SKINS.lock().unwrap();
-    let current_skin = CURRENT_SKIN.lock().unwrap();
+    let skins = SKINS.lock().expect("SKINS lock poisoned");
+    let current_skin = CURRENT_SKIN.lock().expect("CURRENT_SKIN lock poisoned");
 
     if let Some(ref skin) = *current_skin {
         let current_name = skin.name().map(|n| n.to_string()).unwrap_or_default();
@@ -121,7 +121,7 @@ fn menu_header(ui: &mut egui::Ui) {
                 && let Some(idx) = current_index
             {
                 let new_idx = (idx + skin_count - 1) % skin_count;
-                let skins = SKINS.lock().unwrap();
+                let skins = SKINS.lock().expect("SKINS lock poisoned");
                 if new_idx < skins.len() {
                     let header = skins[new_idx].clone();
                     drop(skins);
@@ -135,7 +135,7 @@ fn menu_header(ui: &mut egui::Ui) {
                 .selected_text(&selected_name)
                 .width(ui.available_width() * 0.5)
                 .show_ui(ui, |ui| {
-                    let skins = SKINS.lock().unwrap();
+                    let skins = SKINS.lock().expect("SKINS lock poisoned");
                     for header in skins.iter() {
                         let name = header.name().map(|n| n.to_string()).unwrap_or_default();
                         if ui.selectable_label(name == selected_name, &name).clicked() {
@@ -145,7 +145,7 @@ fn menu_header(ui: &mut egui::Ui) {
                 });
             // If a different skin was selected via combo, switch to it
             if selected_name != current_name {
-                let skins = SKINS.lock().unwrap();
+                let skins = SKINS.lock().expect("SKINS lock poisoned");
                 if let Some(header) = skins
                     .iter()
                     .find(|s| s.name().map(|n| n.to_string()).unwrap_or_default() == selected_name)
@@ -160,7 +160,7 @@ fn menu_header(ui: &mut egui::Ui) {
             if ui.button("\u{25B6}").clicked()
                 && let Some(idx) = current_index
             {
-                let skins = SKINS.lock().unwrap();
+                let skins = SKINS.lock().expect("SKINS lock poisoned");
                 let new_idx = (idx + 1) % skins.len();
                 if new_idx < skins.len() {
                     let header = skins[new_idx].clone();
@@ -181,15 +181,15 @@ fn menu_header(ui: &mut egui::Ui) {
 
         // Save / Live Editing / Reset / Freeze timers
         ui.horizontal(|ui| {
-            let is_dirty = *DIRTY_CONFIG.lock().unwrap();
-            let live_editing = *LIVE_EDITING.lock().unwrap();
+            let is_dirty = *DIRTY_CONFIG.lock().expect("DIRTY_CONFIG lock poisoned");
+            let live_editing = *LIVE_EDITING.lock().expect("LIVE_EDITING lock poisoned");
             let save_available = is_dirty && !live_editing;
 
             // Save button
             ui.add_enabled_ui(save_available, |ui| {
                 let save_requested = ui.button(" Save ").clicked();
                 if save_requested || (is_dirty && live_editing) {
-                    let current_skin = CURRENT_SKIN.lock().unwrap();
+                    let current_skin = CURRENT_SKIN.lock().expect("CURRENT_SKIN lock poisoned");
                     if let Some(ref cs) = *current_skin {
                         let h = cs.clone();
                         drop(current_skin);
@@ -199,11 +199,11 @@ fn menu_header(ui: &mut egui::Ui) {
             });
 
             // Live Editing checkbox
-            let mut le = *LIVE_EDITING.lock().unwrap();
+            let mut le = *LIVE_EDITING.lock().expect("LIVE_EDITING lock poisoned");
             if ui.checkbox(&mut le, "Live Editing").changed() {
                 dirty(true);
             }
-            *LIVE_EDITING.lock().unwrap() = le;
+            *LIVE_EDITING.lock().expect("LIVE_EDITING lock poisoned") = le;
 
             // Reset button with confirmation popup
             let reset_popup_id = ui.make_persistent_id("skin-setting-reset-confirmation");
@@ -223,7 +223,8 @@ fn menu_header(ui: &mut egui::Ui) {
                     ui.horizontal(|ui| {
                         if ui.button(" Confirm ").clicked() {
                             reset_current_skin_config();
-                            let current_skin = CURRENT_SKIN.lock().unwrap();
+                            let current_skin =
+                                CURRENT_SKIN.lock().expect("CURRENT_SKIN lock poisoned");
                             if let Some(ref cs) = *current_skin {
                                 let h = cs.clone();
                                 drop(current_skin);
@@ -237,12 +238,12 @@ fn menu_header(ui: &mut egui::Ui) {
             );
 
             // Freeze timers checkbox
-            let mut ft = *FREEZE_TIMERS.lock().unwrap();
+            let mut ft = *FREEZE_TIMERS.lock().expect("FREEZE_TIMERS lock poisoned");
             if ui.checkbox(&mut ft, "Freeze timers").changed() {
                 // main.getTimer().setFrozen(freezeTimers) — stub
                 log::info!("Freeze timers: {}", ft);
             }
-            *FREEZE_TIMERS.lock().unwrap() = ft;
+            *FREEZE_TIMERS.lock().expect("FREEZE_TIMERS lock poisoned") = ft;
         });
     } else {
         drop(current_skin);
@@ -255,11 +256,11 @@ fn menu_header(ui: &mut egui::Ui) {
 ///
 /// Translated from: SkinMenu.skinConfigMenu()
 fn skin_config_menu(ui: &mut egui::Ui) {
-    let current_skin = CURRENT_SKIN.lock().unwrap();
+    let current_skin = CURRENT_SKIN.lock().expect("CURRENT_SKIN lock poisoned");
     if current_skin.is_none() {
         return;
     }
-    let skin = current_skin.as_ref().unwrap().clone();
+    let skin = current_skin.as_ref().expect("current_skin is Some").clone();
     drop(current_skin);
 
     let mut shown = HashSet::new();
@@ -424,7 +425,9 @@ fn skin_config_option(ui: &mut egui::Ui, option: &CustomOption) {
                             .selectable_label(content == &chosen, content.as_str())
                             .clicked()
                         {
-                            if let Some(ref mut opts) = *SET_OPTIONS.lock().unwrap() {
+                            if let Some(ref mut opts) =
+                                *SET_OPTIONS.lock().expect("SET_OPTIONS lock poisoned")
+                            {
                                 opts.insert(option.name.clone(), option.option[i]);
                             }
                             dirty(true);
@@ -432,7 +435,9 @@ fn skin_config_option(ui: &mut egui::Ui, option: &CustomOption) {
                         }
                     }
                     if ui.selectable_label("Random" == chosen, "Random").clicked() {
-                        if let Some(ref mut opts) = *SET_OPTIONS.lock().unwrap() {
+                        if let Some(ref mut opts) =
+                            *SET_OPTIONS.lock().expect("SET_OPTIONS lock poisoned")
+                        {
                             opts.insert(option.name.clone(), OPTION_RANDOM_VALUE);
                         }
                         dirty(true);
@@ -448,11 +453,14 @@ fn skin_config_option(ui: &mut egui::Ui, option: &CustomOption) {
 
             if arrow_changed {
                 if selected as usize == option.contents.len() {
-                    if let Some(ref mut opts) = *SET_OPTIONS.lock().unwrap() {
+                    if let Some(ref mut opts) =
+                        *SET_OPTIONS.lock().expect("SET_OPTIONS lock poisoned")
+                    {
                         opts.insert(option.name.clone(), OPTION_RANDOM_VALUE);
                     }
                 } else if (selected as usize) < option.option.len()
-                    && let Some(ref mut opts) = *SET_OPTIONS.lock().unwrap()
+                    && let Some(ref mut opts) =
+                        *SET_OPTIONS.lock().expect("SET_OPTIONS lock poisoned")
                 {
                     opts.insert(option.name.clone(), option.option[selected as usize]);
                 }
@@ -483,7 +491,7 @@ fn skin_config_option_radio(ui: &mut egui::Ui, option: &CustomOption) {
         });
 
         if value != original_value {
-            if let Some(ref mut opts) = *SET_OPTIONS.lock().unwrap() {
+            if let Some(ref mut opts) = *SET_OPTIONS.lock().expect("SET_OPTIONS lock poisoned") {
                 opts.insert(option.name.clone(), value);
             }
             dirty(true);
@@ -504,13 +512,15 @@ fn option_index(option: &CustomOption, value: i32) -> i32 {
 /// Translated from: SkinMenu.skinConfigFile(CustomFile)
 fn skin_config_file(ui: &mut egui::Ui, file: &CustomFile) {
     let selection = get_file_setting(file);
-    let available = AVAILABLE_FILES.lock().unwrap();
+    let available = AVAILABLE_FILES
+        .lock()
+        .expect("AVAILABLE_FILES lock poisoned");
     if selection.is_none() || available.as_ref().and_then(|m| m.get(&file.name)).is_none() {
         return;
     }
     let choices = available
         .as_ref()
-        .unwrap()
+        .expect("available checked above")
         .get(&file.name)
         .cloned()
         .unwrap_or_default();
@@ -526,7 +536,7 @@ fn skin_config_file(ui: &mut egui::Ui, file: &CustomFile) {
             // Left arrow
             if ui.button("\u{25C0}").clicked() {
                 index = (index + max - 1) % max;
-                if let Some(ref mut files) = *SET_FILES.lock().unwrap() {
+                if let Some(ref mut files) = *SET_FILES.lock().expect("SET_FILES lock poisoned") {
                     files.insert(file.name.clone(), choices[index].clone());
                 }
                 dirty(true);
@@ -543,7 +553,9 @@ fn skin_config_file(ui: &mut egui::Ui, file: &CustomFile) {
                             .selectable_label(path == &selection, path.as_str())
                             .clicked()
                         {
-                            if let Some(ref mut files) = *SET_FILES.lock().unwrap() {
+                            if let Some(ref mut files) =
+                                *SET_FILES.lock().expect("SET_FILES lock poisoned")
+                            {
                                 files.insert(file.name.clone(), path.clone());
                             }
                             dirty(true);
@@ -554,7 +566,7 @@ fn skin_config_file(ui: &mut egui::Ui, file: &CustomFile) {
             // Right arrow
             if ui.button("\u{25B6}").clicked() {
                 index = (index + 1) % max;
-                if let Some(ref mut files) = *SET_FILES.lock().unwrap() {
+                if let Some(ref mut files) = *SET_FILES.lock().expect("SET_FILES lock poisoned") {
                     files.insert(file.name.clone(), choices[index].clone());
                 }
                 dirty(true);
@@ -625,16 +637,18 @@ fn skin_config_offset(ui: &mut egui::Ui, offset: &CustomOffset) {
     });
 
     // Write back the modified offset values
-    let mut offsets = SET_OFFSETS.lock().unwrap();
+    let mut offsets = SET_OFFSETS.lock().expect("SET_OFFSETS lock poisoned");
     let map = offsets.get_or_insert_with(HashMap::new);
     map.insert(offset.name.clone(), value);
 }
 
 fn refresh() {
-    *SET_OPTIONS.lock().unwrap() = None;
-    *AVAILABLE_FILES.lock().unwrap() = None;
-    *SET_FILES.lock().unwrap() = None;
-    *SET_OFFSETS.lock().unwrap() = None;
+    *SET_OPTIONS.lock().expect("SET_OPTIONS lock poisoned") = None;
+    *AVAILABLE_FILES
+        .lock()
+        .expect("AVAILABLE_FILES lock poisoned") = None;
+    *SET_FILES.lock().expect("SET_FILES lock poisoned") = None;
+    *SET_OFFSETS.lock().expect("SET_OFFSETS lock poisoned") = None;
 
     // observedState = main.getCurrentState();
     // SkinHeader currentSceneSkin = observedState.getSkin().header;
@@ -642,7 +656,7 @@ fn refresh() {
     // currentSkin = null;
     // switchCurrentSceneSkin(currentSceneSkin);
     // skins = loadAllSkins(currentSkinType);
-    *READY.lock().unwrap() = true;
+    *READY.lock().expect("READY lock poisoned") = true;
 }
 
 #[allow(dead_code)]
@@ -652,7 +666,7 @@ fn load_all_skins(skin_type: &SkinType) -> Vec<SkinHeader> {
     scan_skins(&skins_dir, &mut paths);
 
     let mut skins: Vec<SkinHeader> = Vec::new();
-    let current_skin = CURRENT_SKIN.lock().unwrap();
+    let current_skin = CURRENT_SKIN.lock().expect("CURRENT_SKIN lock poisoned");
 
     for path in &paths {
         let path_string = path.to_string_lossy().to_lowercase();
@@ -673,7 +687,7 @@ fn load_all_skins(skin_type: &SkinType) -> Vec<SkinHeader> {
                 let _ = loader.load_header(path);
                 // header stays None -- lua skin loader not yet fully implemented
             } else if path_string.ends_with(".lr2skin") {
-                let main = MAIN.lock().unwrap();
+                let main = MAIN.lock().expect("MAIN lock poisoned");
                 if main.is_some() {
                     drop(main);
                     let mut loader = LR2SkinHeaderLoader::new("");
@@ -798,9 +812,9 @@ fn parse_custom_file(file: &CustomFile) -> Option<Vec<String>> {
     };
 
     let name = if file.path.contains('|') {
-        let pipe_idx = file.path.rfind('|').unwrap();
+        let pipe_idx = file.path.rfind('|').expect("contains '|'");
         if file.path.len() > pipe_idx + 1 {
-            let first_pipe = file.path.find('|').unwrap();
+            let first_pipe = file.path.find('|').expect("contains '|'");
             let start = if last_slash.is_some() {
                 last_slash_idx + 1
             } else {
@@ -812,7 +826,7 @@ fn parse_custom_file(file: &CustomFile) -> Option<Vec<String>> {
                 &file.path[pipe_idx + 1..]
             )
         } else {
-            let first_pipe = file.path.find('|').unwrap();
+            let first_pipe = file.path.find('|').expect("contains '|'");
             let start = if last_slash.is_some() {
                 last_slash_idx + 1
             } else {
@@ -853,12 +867,12 @@ fn load_saved_skin_settings(header: &SkinHeader) {
         .path()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_default();
-    let player_config = PLAYER_CONFIG.lock().unwrap();
+    let player_config = PLAYER_CONFIG.lock().expect("PLAYER_CONFIG lock poisoned");
 
     if player_config.is_none() {
         return;
     }
-    let pc = player_config.as_ref().unwrap();
+    let pc = player_config.as_ref().expect("player_config is Some");
 
     let mut saved_properties: Option<&SkinProperty> = None;
 
@@ -880,7 +894,7 @@ fn load_saved_skin_settings(header: &SkinHeader) {
     }
 
     if let Some(props) = saved_properties {
-        let mut options = SET_OPTIONS.lock().unwrap();
+        let mut options = SET_OPTIONS.lock().expect("SET_OPTIONS lock poisoned");
         let opt_map = options.get_or_insert_with(HashMap::new);
         for option in props.option.iter().flatten() {
             if let Some(ref name) = option.name {
@@ -888,7 +902,7 @@ fn load_saved_skin_settings(header: &SkinHeader) {
             }
         }
 
-        let mut files = SET_FILES.lock().unwrap();
+        let mut files = SET_FILES.lock().expect("SET_FILES lock poisoned");
         let file_map = files.get_or_insert_with(HashMap::new);
         for file in props.file.iter().flatten() {
             if let (Some(name), Some(path)) = (&file.name, &file.path) {
@@ -896,7 +910,7 @@ fn load_saved_skin_settings(header: &SkinHeader) {
             }
         }
 
-        let mut offsets = SET_OFFSETS.lock().unwrap();
+        let mut offsets = SET_OFFSETS.lock().expect("SET_OFFSETS lock poisoned");
         let offset_map = offsets.get_or_insert_with(HashMap::new);
         for offset in props.offset.iter().flatten() {
             if let Some(ref name) = offset.name {
@@ -910,7 +924,7 @@ fn load_saved_skin_settings(header: &SkinHeader) {
 }
 
 fn get_option_setting(option: &CustomOption) -> i32 {
-    let options = SET_OPTIONS.lock().unwrap();
+    let options = SET_OPTIONS.lock().expect("SET_OPTIONS lock poisoned");
     if let Some(ref map) = *options
         && let Some(&value) = map.get(&option.name)
     {
@@ -920,7 +934,7 @@ fn get_option_setting(option: &CustomOption) -> i32 {
 }
 
 fn get_file_setting(file: &CustomFile) -> Option<String> {
-    let files = SET_FILES.lock().unwrap();
+    let files = SET_FILES.lock().expect("SET_FILES lock poisoned");
     if let Some(ref map) = *files
         && let Some(path) = map.get(&file.name)
     {
@@ -930,7 +944,7 @@ fn get_file_setting(file: &CustomFile) -> Option<String> {
 }
 
 fn get_offset_setting(offset: &CustomOffset) -> OffsetValue {
-    let mut offsets = SET_OFFSETS.lock().unwrap();
+    let mut offsets = SET_OFFSETS.lock().expect("SET_OFFSETS lock poisoned");
     let map = offsets.get_or_insert_with(HashMap::new);
     map.entry(offset.name.clone())
         .or_insert_with(|| OffsetValue::new(0, 0, 0, 0, 0, 0))
@@ -945,7 +959,7 @@ fn complete_property(header: &SkinHeader) -> SkinProperty {
 
     for option in header.custom_options() {
         let value = get_option_setting(option);
-        let mut opt_map = SET_OPTIONS.lock().unwrap();
+        let mut opt_map = SET_OPTIONS.lock().expect("SET_OPTIONS lock poisoned");
         let map = opt_map.get_or_insert_with(HashMap::new);
         map.insert(option.name.clone(), value);
         options.push(Some(SkinOption {
@@ -958,13 +972,15 @@ fn complete_property(header: &SkinHeader) -> SkinProperty {
         let file_selection = parse_custom_file(file).unwrap_or_else(|| vec!["Random".to_string()]);
 
         {
-            let mut available = AVAILABLE_FILES.lock().unwrap();
+            let mut available = AVAILABLE_FILES
+                .lock()
+                .expect("AVAILABLE_FILES lock poisoned");
             let map = available.get_or_insert_with(HashMap::new);
             map.insert(file.name.clone(), file_selection.clone());
         }
 
         let mut selection = {
-            let files_map = SET_FILES.lock().unwrap();
+            let files_map = SET_FILES.lock().expect("SET_FILES lock poisoned");
             files_map.as_ref().and_then(|m| m.get(&file.name).cloned())
         };
 
@@ -992,7 +1008,7 @@ fn complete_property(header: &SkinHeader) -> SkinProperty {
 
         let sel = selection.unwrap_or_default();
         {
-            let mut files_map = SET_FILES.lock().unwrap();
+            let mut files_map = SET_FILES.lock().expect("SET_FILES lock poisoned");
             let map = files_map.get_or_insert_with(HashMap::new);
             map.insert(file.name.clone(), sel.clone());
         }
@@ -1025,18 +1041,18 @@ fn complete_property(header: &SkinHeader) -> SkinProperty {
 
 fn dirty(flag: bool) {
     if flag {
-        *DIRTY_CONFIG.lock().unwrap() = true;
+        *DIRTY_CONFIG.lock().expect("DIRTY_CONFIG lock poisoned") = true;
     }
 }
 
 fn save_current_config(next_skin: &SkinHeader) {
-    *DIRTY_CONFIG.lock().unwrap() = false;
+    *DIRTY_CONFIG.lock().expect("DIRTY_CONFIG lock poisoned") = false;
 
-    let current_skin = CURRENT_SKIN.lock().unwrap();
+    let current_skin = CURRENT_SKIN.lock().expect("CURRENT_SKIN lock poisoned");
     if current_skin.is_none() {
         return;
     }
-    let cs = current_skin.as_ref().unwrap();
+    let cs = current_skin.as_ref().expect("current_skin is Some");
 
     let skin_path = cs
         .path()
@@ -1048,13 +1064,15 @@ fn save_current_config(next_skin: &SkinHeader) {
         properties: Some(property),
     };
 
-    let mut player_config = PLAYER_CONFIG.lock().unwrap();
+    let mut player_config = PLAYER_CONFIG.lock().expect("PLAYER_CONFIG lock poisoned");
     if player_config.is_none() {
         return;
     }
-    let pc = player_config.as_mut().unwrap();
+    let pc = player_config.as_mut().expect("player_config is Some");
 
-    let current_type = CURRENT_SKIN_TYPE.lock().unwrap();
+    let current_type = CURRENT_SKIN_TYPE
+        .lock()
+        .expect("CURRENT_SKIN_TYPE lock poisoned");
     if let Some(ref st) = *current_type
         && next_skin.name() == cs.name()
     {
@@ -1079,15 +1097,17 @@ fn save_current_config(next_skin: &SkinHeader) {
 }
 
 fn reset_current_skin_config() {
-    *SET_OPTIONS.lock().unwrap() = Some(HashMap::new());
-    *AVAILABLE_FILES.lock().unwrap() = Some(HashMap::new());
-    *SET_FILES.lock().unwrap() = Some(HashMap::new());
-    *SET_OFFSETS.lock().unwrap() = Some(HashMap::new());
+    *SET_OPTIONS.lock().expect("SET_OPTIONS lock poisoned") = Some(HashMap::new());
+    *AVAILABLE_FILES
+        .lock()
+        .expect("AVAILABLE_FILES lock poisoned") = Some(HashMap::new());
+    *SET_FILES.lock().expect("SET_FILES lock poisoned") = Some(HashMap::new());
+    *SET_OFFSETS.lock().expect("SET_OFFSETS lock poisoned") = Some(HashMap::new());
 }
 
 fn switch_current_scene_skin(header: SkinHeader) {
     {
-        let current = CURRENT_SKIN.lock().unwrap();
+        let current = CURRENT_SKIN.lock().expect("CURRENT_SKIN lock poisoned");
         if current.is_some() {
             drop(current);
             save_current_config(&header);
@@ -1097,7 +1117,7 @@ fn switch_current_scene_skin(header: SkinHeader) {
     reset_current_skin_config();
     load_saved_skin_settings(&header);
 
-    *CURRENT_SKIN.lock().unwrap() = Some(header.clone());
+    *CURRENT_SKIN.lock().expect("CURRENT_SKIN lock poisoned") = Some(header.clone());
     let _property = complete_property(&header);
 
     let skin_path = header
