@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::sync::LazyLock;
+
 use super::event::Event;
 use crate::skin_property;
 use crate::stubs::MainState;
@@ -13,15 +16,22 @@ use rubato_types::play_config;
 // Public factory API
 // ============================================================
 
+/// Lazily-built index from EventId to position in EVENT_TYPES for O(1) lookup.
+static EVENT_ID_INDEX: LazyLock<HashMap<EventId, usize>> = LazyLock::new(|| {
+    EVENT_TYPES
+        .iter()
+        .enumerate()
+        .map(|(i, et)| (et.id, i))
+        .collect()
+});
+
 /// Returns an Event for the given event ID.
 /// If the ID matches a built-in EventType, returns that event.
 /// Otherwise, returns a generic event that delegates to `state.execute_event()`.
 pub fn event_by_id(event_id: i32) -> Option<Box<dyn Event>> {
     let eid = EventId::new(event_id);
-    for et in EVENT_TYPES.iter() {
-        if et.id == eid {
-            return Some((et.create_event)());
-        }
+    if let Some(&idx) = EVENT_ID_INDEX.get(&eid) {
+        return Some((EVENT_TYPES[idx].create_event)());
     }
 
     // For unknown IDs, create a generic event that delegates to state.executeEvent

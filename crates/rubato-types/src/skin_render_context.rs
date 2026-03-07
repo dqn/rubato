@@ -83,22 +83,29 @@ pub trait SkinRenderContext: TimerAccess {
     }
 
     /// Shared default implementation for image-index refs.
+    ///
+    /// Arms are grouped into helper methods by functional domain.
     fn default_image_index_value(&self, id: i32) -> i32 {
-        let bool_to_i32 = |value: bool| if value { 1 } else { 0 };
-        let player_config = self.player_config_ref();
-        let target_image_index = player_config.map_or(-1, |config| {
-            config
-                .select_settings
-                .targetlist
-                .iter()
-                .position(|target| target == &config.select_settings.targetid)
-                .map(|index| index.min(10) as i32)
-                .unwrap_or(0)
-        });
-
         match id {
             11 => self.mode_image_index().unwrap_or(-1),
             12 => self.sort_image_index().unwrap_or(-1),
+            40 | 42 | 43 | 54 | 55 => self.play_option_image_index(id),
+            61..=63 => self.target_option_image_index(id),
+            72 | 75 | 77 | 78 => self.config_image_index(id),
+            89 | 90 => self.favorite_image_index(id),
+            301 | 303 | 305 | 306 | 308 => self.display_option_image_index(id),
+            321..=324 => self.autosave_replay_image_index(id),
+            330..=332 | 340..=343 => self.play_config_image_index(id),
+            350..=353 | 360 | 361 => self.note_option_image_index(id),
+            370 | 371 => self.clear_image_index(id),
+            _ => self.integer_value(id),
+        }
+    }
+
+    /// Gauge type, random options, double option, hispeed fix.
+    fn play_option_image_index(&self, id: i32) -> i32 {
+        let player_config = self.player_config_ref();
+        match id {
             40 => {
                 if matches!(
                     self.current_state_type(),
@@ -124,107 +131,147 @@ pub trait SkinRenderContext: TimerAccess {
             55 => self
                 .current_play_config_ref()
                 .map_or(-1, |config| config.fixhispeed),
-            61 => self.target_score_data().map_or(-1, |score| {
-                if score.play_option.option >= 0 {
-                    score.play_option.option % 10
-                } else {
-                    -1
-                }
-            }),
-            62 => self.target_score_data().map_or(-1, |score| {
-                if score.play_option.option >= 0 {
-                    (score.play_option.option / 10) % 10
-                } else {
-                    -1
-                }
-            }),
-            63 => self.target_score_data().map_or(-1, |score| {
-                if score.play_option.option >= 0 {
-                    (score.play_option.option / 100) % 10
-                } else {
-                    -1
-                }
-            }),
+            _ => self.integer_value(id),
+        }
+    }
+
+    /// Target score option digit extraction (ones, tens, hundreds).
+    fn target_option_image_index(&self, id: i32) -> i32 {
+        let divisor = match id {
+            61 => 1,
+            62 => 10,
+            63 => 100,
+            _ => return self.integer_value(id),
+        };
+        self.target_score_data().map_or(-1, |score| {
+            if score.play_option.option >= 0 {
+                (score.play_option.option / divisor) % 10
+            } else {
+                -1
+            }
+        })
+    }
+
+    /// BGA, timing auto-adjust, target index, gauge auto-shift.
+    fn config_image_index(&self, id: i32) -> i32 {
+        let player_config = self.player_config_ref();
+        match id {
             72 => self.config_ref().map_or(-1, |config| config.render.bga),
             75 => player_config.map_or(-1, |config| {
-                bool_to_i32(config.judge_settings.notes_display_timing_auto_adjust)
+                i32::from(config.judge_settings.notes_display_timing_auto_adjust)
             }),
-            77 => target_image_index,
+            77 => player_config.map_or(-1, |config| {
+                config
+                    .select_settings
+                    .targetlist
+                    .iter()
+                    .position(|target| target == &config.select_settings.targetid)
+                    .map(|index| index.min(10) as i32)
+                    .unwrap_or(0)
+            }),
             78 => player_config.map_or(-1, |config| config.play_settings.gauge_auto_shift),
-            89 => self.song_data_ref().map_or(-1, |song| {
-                let favorite = song.favorite;
-                if favorite & crate::song_data::INVISIBLE_SONG != 0 {
-                    2
-                } else if favorite & crate::song_data::FAVORITE_SONG != 0 {
-                    1
-                } else {
-                    0
-                }
-            }),
-            90 => self.song_data_ref().map_or(-1, |song| {
-                let favorite = song.favorite;
-                if favorite & crate::song_data::INVISIBLE_CHART != 0 {
-                    2
-                } else if favorite & crate::song_data::FAVORITE_CHART != 0 {
-                    1
-                } else {
-                    0
-                }
-            }),
-            301 => {
-                player_config.map_or(-1, |config| bool_to_i32(config.judge_settings.custom_judge))
+            _ => self.integer_value(id),
+        }
+    }
+
+    /// Song/chart favorite status.
+    fn favorite_image_index(&self, id: i32) -> i32 {
+        self.song_data_ref().map_or(-1, |song| {
+            let favorite = song.favorite;
+            let (invisible_mask, favorite_mask) = match id {
+                89 => (
+                    crate::song_data::INVISIBLE_SONG,
+                    crate::song_data::FAVORITE_SONG,
+                ),
+                90 => (
+                    crate::song_data::INVISIBLE_CHART,
+                    crate::song_data::FAVORITE_CHART,
+                ),
+                _ => return self.integer_value(id),
+            };
+            if favorite & invisible_mask != 0 {
+                2
+            } else if favorite & favorite_mask != 0 {
+                1
+            } else {
+                0
             }
-            303 => player_config.map_or(-1, |config| {
-                bool_to_i32(config.display_settings.showjudgearea)
-            }),
-            305 => player_config.map_or(-1, |config| {
-                bool_to_i32(config.display_settings.markprocessednote)
-            }),
-            306 => player_config.map_or(-1, |config| bool_to_i32(config.display_settings.bpmguide)),
-            308 => player_config.map_or(-1, |config| config.play_settings.lnmode),
+        })
+    }
+
+    /// Custom judge, judge area, mark processed note, BPM guide, LN mode.
+    fn display_option_image_index(&self, id: i32) -> i32 {
+        let player_config = self.player_config_ref();
+        match id {
+            301 => player_config.map_or(-1, |c| i32::from(c.judge_settings.custom_judge)),
+            303 => player_config.map_or(-1, |c| i32::from(c.display_settings.showjudgearea)),
+            305 => player_config.map_or(-1, |c| i32::from(c.display_settings.markprocessednote)),
+            306 => player_config.map_or(-1, |c| i32::from(c.display_settings.bpmguide)),
+            308 => player_config.map_or(-1, |c| c.play_settings.lnmode),
+            _ => self.integer_value(id),
+        }
+    }
+
+    /// Autosave replay array (IDs 321..=324).
+    fn autosave_replay_image_index(&self, id: i32) -> i32 {
+        self.player_config_ref()
+            .and_then(|config| {
+                config
+                    .misc_settings
+                    .autosavereplay
+                    .get((id - 321) as usize)
+                    .copied()
+            })
+            .unwrap_or(-1)
+    }
+
+    /// Lane cover, lift, hidden, judge type, bottom-shiftable gauge, hispeed auto-adjust, guide SE.
+    fn play_config_image_index(&self, id: i32) -> i32 {
+        let player_config = self.player_config_ref();
+        match id {
             330 => self
                 .current_play_config_ref()
-                .map_or(-1, |config| bool_to_i32(config.enablelanecover)),
+                .map_or(-1, |pc| i32::from(pc.enablelanecover)),
             331 => self
                 .current_play_config_ref()
-                .map_or(-1, |config| bool_to_i32(config.enablelift)),
+                .map_or(-1, |pc| i32::from(pc.enablelift)),
             332 => self
                 .current_play_config_ref()
-                .map_or(-1, |config| bool_to_i32(config.enablehidden)),
-            340 => self.current_play_config_ref().map_or(-1, |config| {
-                match config.judgetype.as_str() {
+                .map_or(-1, |pc| i32::from(pc.enablehidden)),
+            340 => self.current_play_config_ref().map_or(-1, |pc| {
+                match pc.judgetype.as_str() {
                     "Combo" => 0,
                     "Duration" => 1,
                     "Lowest" => 2,
                     _ => -1,
                 }
             }),
-            321..=324 => player_config
-                .and_then(|config| {
-                    config
-                        .misc_settings
-                        .autosavereplay
-                        .get((id - 321) as usize)
-                        .copied()
-                })
-                .unwrap_or(-1),
-            341 => player_config.map_or(-1, |config| config.play_settings.bottom_shiftable_gauge),
+            341 => player_config.map_or(-1, |c| c.play_settings.bottom_shiftable_gauge),
             342 => self
                 .current_play_config_ref()
-                .map_or(-1, |config| bool_to_i32(config.hispeedautoadjust)),
-            343 => player_config.map_or(-1, |config| {
-                bool_to_i32(config.display_settings.is_guide_se)
-            }),
-            350 => player_config.map_or(-1, |config| config.display_settings.extranote_depth),
-            351 => player_config.map_or(-1, |config| config.play_settings.mine_mode),
-            352 => player_config.map_or(-1, |config| config.display_settings.scroll_mode),
-            353 => player_config.map_or(-1, |config| config.note_modifier_settings.longnote_mode),
-            360 => player_config.map_or(-1, |config| {
-                config.note_modifier_settings.seven_to_nine_pattern
-            }),
-            361 => player_config.map_or(-1, |config| {
-                config.note_modifier_settings.seven_to_nine_type
-            }),
+                .map_or(-1, |pc| i32::from(pc.hispeedautoadjust)),
+            343 => player_config.map_or(-1, |c| i32::from(c.display_settings.is_guide_se)),
+            _ => self.integer_value(id),
+        }
+    }
+
+    /// Extra note depth, mine mode, scroll mode, long note mode, 7-to-9 pattern/type.
+    fn note_option_image_index(&self, id: i32) -> i32 {
+        let player_config = self.player_config_ref();
+        match id {
+            350 => player_config.map_or(-1, |c| c.display_settings.extranote_depth),
+            351 => player_config.map_or(-1, |c| c.play_settings.mine_mode),
+            352 => player_config.map_or(-1, |c| c.display_settings.scroll_mode),
+            353 => player_config.map_or(-1, |c| c.note_modifier_settings.longnote_mode),
+            360 => player_config.map_or(-1, |c| c.note_modifier_settings.seven_to_nine_pattern),
+            361 => player_config.map_or(-1, |c| c.note_modifier_settings.seven_to_nine_type),
+            _ => self.integer_value(id),
+        }
+    }
+
+    /// Score/rival clear status.
+    fn clear_image_index(&self, id: i32) -> i32 {
+        match id {
             370 => self.score_data_ref().map_or(-1, |score| score.clear),
             371 => self.rival_score_data_ref().map_or(-1, |score| score.clear),
             _ => self.integer_value(id),
