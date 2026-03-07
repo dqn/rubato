@@ -1,3 +1,5 @@
+use anyhow::Context;
+
 use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
 use crate::lr2::lr2_skin_loader;
 use crate::skin_bpm_graph::SkinBPMGraph;
@@ -945,7 +947,8 @@ impl LR2PlaySkinLoaderState {
 
         // 2. Read and parse CSV file, routing commands through process_play_command
         //    which handles play-specific commands and delegates the rest to the CSV loader.
-        let raw_bytes = std::fs::read(path)?;
+        let raw_bytes = std::fs::read(path)
+            .with_context(|| format!("failed to read LR2 play skin file: {}", path.display()))?;
         let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&raw_bytes);
         let content = decoded.into_owned();
 

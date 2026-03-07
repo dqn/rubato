@@ -4,6 +4,7 @@ use super::http_download_source_meta::HttpDownloadSourceMeta;
 
 use std::sync::LazyLock;
 
+use anyhow::Context;
 use serde::Deserialize;
 
 /// Corresponds to KonmaiDownloadSource in Java
@@ -45,7 +46,8 @@ impl HttpDownloadSource for KonmaiDownloadSource {
     fn get_download_url_based_on_md5(&self, md5: &str) -> anyhow::Result<String> {
         let meta_url = self.download_query_url.replace("%s", md5);
         // Note: Server side doesn't provide auth currently
-        let response = reqwest::blocking::get(&meta_url)?;
+        let response = reqwest::blocking::get(&meta_url)
+            .with_context(|| format!("failed to fetch Konmai meta URL: {}", meta_url))?;
         let response_code = response.status();
 
         // Konmai backend doesn't offer an 404 status code
@@ -59,7 +61,9 @@ impl HttpDownloadSource for KonmaiDownloadSource {
             ));
         }
 
-        let resp_data: RespData<ChartMeta> = response.json()?;
+        let resp_data: RespData<ChartMeta> = response
+            .json()
+            .context("failed to parse Konmai JSON response")?;
         // Instead, Konmai returns an empty 'song_url' or 'result: fail' to indicate song is not exist
         if resp_data.result.as_deref() != Some(SUCCESS_RESULT) {
             return Err(anyhow::anyhow!(

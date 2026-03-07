@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use anyhow::Context;
+
 use crate::lr2::lr2_skin_loader::LR2SkinLoaderState;
 use crate::skin_property::{OFFSET_ALL, OFFSET_JUDGE_1P, OFFSET_JUDGEDETAIL_1P, OFFSET_NOTES_1P};
 use crate::stubs::{MainState, Resolution};
@@ -135,7 +137,8 @@ impl LR2SkinHeaderLoader {
 
         self.header.path = Some(f.to_path_buf());
 
-        let raw_bytes = std::fs::read(f)?;
+        let raw_bytes = std::fs::read(f)
+            .with_context(|| format!("failed to read LR2 skin header file: {}", f.display()))?;
         let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&raw_bytes);
         let content = decoded.into_owned();
 

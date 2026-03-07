@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use futures_util::{SinkExt, StreamExt};
@@ -149,7 +149,8 @@ impl ObsWsClient {
     pub fn new(config: &Config) -> Result<Self> {
         let server_uri = format!("ws://{}:{}", config.obs.obs_ws_host, config.obs.obs_ws_port);
         let password = config.obs.obs_ws_pass.clone();
-        let recording_mode = ObsRecordingMode::from_value(config.obs.obs_ws_rec_mode)?;
+        let recording_mode = ObsRecordingMode::from_value(config.obs.obs_ws_rec_mode)
+            .context("invalid OBS recording mode in config")?;
         let shutdown_notify = Arc::new(Notify::new());
 
         let inner = Arc::new(Mutex::new(ObsWsClientInner {
@@ -245,7 +246,8 @@ impl ObsWsClient {
         password: &str,
         shutdown_notify: Arc<Notify>,
     ) -> Result<()> {
-        let (ws_stream, _) = connect_async(server_uri).await?;
+        let (ws_stream, _) = connect_async(server_uri).await
+            .with_context(|| format!("failed to connect to OBS WebSocket at {}", server_uri))?;
         let (sink, mut stream) = ws_stream.split();
 
         // Store the sink

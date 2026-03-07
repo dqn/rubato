@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
+use anyhow::Context;
 use log::warn;
 
 use crate::lr2::lr2_font_loader::LR2FontLoader;
@@ -729,7 +730,8 @@ impl LR2SkinCSVLoaderState {
         path: &Path,
         _state: Option<&dyn MainState>,
     ) -> anyhow::Result<()> {
-        let raw_bytes = std::fs::read(path)?;
+        let raw_bytes = std::fs::read(path)
+            .with_context(|| format!("failed to read LR2 skin CSV file: {}", path.display()))?;
         let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&raw_bytes);
         let content = decoded.into_owned();
 

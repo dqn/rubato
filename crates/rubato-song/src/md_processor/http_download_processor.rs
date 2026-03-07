@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::thread;
 
+use anyhow::Context;
 use regex::Regex;
 
 use super::download_task::{DownloadTask, DownloadTaskStatus};
@@ -278,7 +279,8 @@ fn download_file_from_url(
         t.url().to_string()
     };
 
-    let response = reqwest::blocking::get(&url)?;
+    let response = reqwest::blocking::get(&url)
+        .with_context(|| format!("failed to download file from URL: {}", url))?;
     let response_code = response.status();
     if response_code != reqwest::StatusCode::OK {
         if response_code == reqwest::StatusCode::NOT_FOUND {
@@ -316,11 +318,12 @@ fn download_file_from_url(
     let result = Path::new(download_directory).join(&file_name);
 
     // Read body in chunks
-    let bytes = response.bytes()?;
+    let bytes = response.bytes().context("failed to read response body bytes")?;
     let total = bytes.len() as i64;
 
     // Write to file
-    let mut fos = fs::File::create(&result)?;
+    let mut fos = fs::File::create(&result)
+        .with_context(|| format!("failed to create download file: {}", result.display()))?;
     // Note: We can bind the buffer to the worker thread instead of creating & releasing it repeatedly
     let chunk_size = 8192;
     let mut download_bytes: i64 = 0;
@@ -329,7 +332,8 @@ fn download_file_from_url(
     while offset < data.len() {
         let end = std::cmp::min(offset + chunk_size, data.len());
         let read = end - offset;
-        fos.write_all(&data[offset..end])?;
+        fos.write_all(&data[offset..end])
+            .context("failed to write download chunk to file")?;
         download_bytes += read as i64;
         offset = end;
         {
@@ -369,7 +373,8 @@ fn extract_compressed_file(
         .unwrap_or_else(|| PathBuf::from(download_directory));
 
     if !dest.exists() {
-        fs::create_dir_all(&dest)?;
+        fs::create_dir_all(&dest)
+            .with_context(|| format!("failed to create extraction directory: {}", dest.display()))?;
     }
 
     sevenz_rust::decompress_file(file, &dest)
