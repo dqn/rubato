@@ -3,6 +3,12 @@
 
 use crate::color::Color;
 
+/// Bit shift amounts for packing/unpacking RGBA8888 integers.
+const SHIFT_R: i32 = 24;
+const SHIFT_G: i32 = 16;
+const SHIFT_B: i32 = 8;
+const MASK_CHANNEL: i32 = 0xFF;
+
 /// Pixel format enum matching rendering_stubs::PixmapFormat.
 #[derive(Clone, Debug)]
 pub enum PixmapFormat {
@@ -144,10 +150,10 @@ impl Pixmap {
     /// Set color from packed RGBA8888 integer.
     pub fn set_color_int(&mut self, color: i32) {
         self.current_color = [
-            ((color >> 24) & 0xFF) as u8,
-            ((color >> 16) & 0xFF) as u8,
-            ((color >> 8) & 0xFF) as u8,
-            (color & 0xFF) as u8,
+            ((color >> SHIFT_R) & MASK_CHANNEL) as u8,
+            ((color >> SHIFT_G) & MASK_CHANNEL) as u8,
+            ((color >> SHIFT_B) & MASK_CHANNEL) as u8,
+            (color & MASK_CHANNEL) as u8,
         ];
     }
 
@@ -215,10 +221,10 @@ impl Pixmap {
         }
         let idx = ((y as usize) * (self.width as usize) + (x as usize)) * 4;
         if idx + 3 < self.data.len() {
-            self.data[idx] = ((color >> 24) & 0xFF) as u8;
-            self.data[idx + 1] = ((color >> 16) & 0xFF) as u8;
-            self.data[idx + 2] = ((color >> 8) & 0xFF) as u8;
-            self.data[idx + 3] = (color & 0xFF) as u8;
+            self.data[idx] = ((color >> SHIFT_R) & MASK_CHANNEL) as u8;
+            self.data[idx + 1] = ((color >> SHIFT_G) & MASK_CHANNEL) as u8;
+            self.data[idx + 2] = ((color >> SHIFT_B) & MASK_CHANNEL) as u8;
+            self.data[idx + 3] = (color & MASK_CHANNEL) as u8;
         }
     }
 
@@ -229,9 +235,9 @@ impl Pixmap {
         }
         let idx = ((y as usize) * (self.width as usize) + (x as usize)) * 4;
         if idx + 3 < self.data.len() {
-            ((self.data[idx] as i32) << 24)
-                | ((self.data[idx + 1] as i32) << 16)
-                | ((self.data[idx + 2] as i32) << 8)
+            ((self.data[idx] as i32) << SHIFT_R)
+                | ((self.data[idx + 1] as i32) << SHIFT_G)
+                | ((self.data[idx + 2] as i32) << SHIFT_B)
                 | (self.data[idx + 3] as i32)
         } else {
             0
