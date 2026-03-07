@@ -205,7 +205,7 @@ pub(crate) fn make_test_model(mode: &Mode, timelines: Vec<TimeLine>) -> BMSModel
     model
 }
 
-pub fn move_to_background(tls: &mut [TimeLine], tl_index: usize, lane: i32) {
+pub(crate) fn move_to_background(tls: &mut [TimeLine], tl_index: usize, lane: i32) {
     let note = tls[tl_index].note(lane).cloned();
     if let Some(ref n) = note {
         if n.is_long() {

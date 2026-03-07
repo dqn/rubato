@@ -195,12 +195,12 @@ pub fn skin_customize_item_index(id: i32) -> i32 {
 }
 
 /// Returns whether the event ID is in the user-defined custom event range (1000-1999).
-pub fn is_custom_event_id(id: i32) -> bool {
+pub(crate) fn is_custom_event_id(id: i32) -> bool {
     (EVENT_CUSTOM_BEGIN..=EVENT_CUSTOM_END).contains(&id)
 }
 
 /// Returns whether the event ID can be triggered by a skin (currently always true).
-pub fn is_event_runnable_by_skin(id: i32) -> bool {
+pub(crate) fn is_event_runnable_by_skin(id: i32) -> bool {
     if is_custom_event_id(id) {
         return true;
     }
@@ -208,11 +208,11 @@ pub fn is_event_runnable_by_skin(id: i32) -> bool {
 }
 
 /// Returns whether the timer ID is in the user-defined custom timer range (10000-19999).
-pub fn is_custom_timer_id(id: TimerId) -> bool {
+pub(crate) fn is_custom_timer_id(id: TimerId) -> bool {
     (TIMER_CUSTOM_BEGIN..=TIMER_CUSTOM_END).contains(&id)
 }
 
 /// Returns whether the timer ID can be written by a skin (only custom timers).
-pub fn is_timer_writable_by_skin(id: TimerId) -> bool {
+pub(crate) fn is_timer_writable_by_skin(id: TimerId) -> bool {
     is_custom_timer_id(id)
 }

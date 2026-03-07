@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::sync::OnceLock;
+
 use super::event::Event;
 use crate::skin_property;
 use crate::stubs::MainState;
@@ -14,14 +17,14 @@ use rubato_types::play_config;
 // ============================================================
 
 /// Returns an Event for the given event ID.
+/// Uses a HashMap for O(1) lookup instead of linear search.
 /// If the ID matches a built-in EventType, returns that event.
 /// Otherwise, returns a generic event that delegates to `state.execute_event()`.
 pub fn event_by_id(event_id: i32) -> Option<Box<dyn Event>> {
     let eid = EventId::new(event_id);
-    for et in EVENT_TYPES.iter() {
-        if et.id == eid {
-            return Some((et.create_event)());
-        }
+    let id_map = id_map();
+    if let Some(idx) = id_map.get(&eid) {
+        return Some((EVENT_TYPES[*idx].create_event)());
     }
 
     // For unknown IDs, create a generic event that delegates to state.executeEvent
@@ -29,11 +32,11 @@ pub fn event_by_id(event_id: i32) -> Option<Box<dyn Event>> {
 }
 
 /// Returns an Event for the given event name.
+/// Uses a HashMap for O(1) lookup instead of linear search.
 pub fn event_by_name(event_name: &str) -> Option<Box<dyn Event>> {
-    for et in EVENT_TYPES.iter() {
-        if et.name == event_name {
-            return Some((et.create_event)());
-        }
+    let name_map = name_map();
+    if let Some(idx) = name_map.get(event_name) {
+        return Some((EVENT_TYPES[*idx].create_event)());
     }
     None
 }
@@ -56,6 +59,34 @@ pub fn create_one_arg_event(event_id: i32) -> Box<dyn Event> {
 pub fn create_two_arg_event(event_id: i32) -> Box<dyn Event> {
     Box::new(DelegateEvent {
         event_id: EventId::new(event_id),
+    })
+}
+
+// ============================================================
+// Lazily-initialized lookup maps (O(1) dispatch)
+// ============================================================
+
+/// Returns a lazily-initialized HashMap from EventId -> index into EVENT_TYPES.
+fn id_map() -> &'static HashMap<EventId, usize> {
+    static ID_MAP: OnceLock<HashMap<EventId, usize>> = OnceLock::new();
+    ID_MAP.get_or_init(|| {
+        let mut map = HashMap::with_capacity(EVENT_TYPES.len());
+        for (i, et) in EVENT_TYPES.iter().enumerate() {
+            map.insert(et.id, i);
+        }
+        map
+    })
+}
+
+/// Returns a lazily-initialized HashMap from event name -> index into EVENT_TYPES.
+fn name_map() -> &'static HashMap<&'static str, usize> {
+    static NAME_MAP: OnceLock<HashMap<&'static str, usize>> = OnceLock::new();
+    NAME_MAP.get_or_init(|| {
+        let mut map = HashMap::with_capacity(EVENT_TYPES.len());
+        for (i, et) in EVENT_TYPES.iter().enumerate() {
+            map.insert(et.name, i);
+        }
+        map
     })
 }
 
@@ -335,7 +366,7 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         name: "rival",
         create_event: || {
             // Rival selection requires RivalDataAccessor which is not yet available
-            // → delegate to state.execute_event for now
+            // -> delegate to state.execute_event for now
             Box::new(DelegateEvent {
                 event_id: EventId(79),
             })
@@ -347,7 +378,7 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         name: "favorite_chart",
         create_event: || {
             // Favorite chart requires SongDatabase.setSongDatas, BarManager.updateBar,
-            // and ImGuiNotify which cross crate boundaries → delegate
+            // and ImGuiNotify which cross crate boundaries -> delegate
             Box::new(DelegateEvent {
                 event_id: EventId(90),
             })
@@ -357,7 +388,7 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         id: EventId(89),
         name: "favorite_song",
         create_event: || {
-            // Favorite song similarly requires cross-crate access → delegate
+            // Favorite song similarly requires cross-crate access -> delegate
             Box::new(DelegateEvent {
                 event_id: EventId(89),
             })

@@ -876,7 +876,7 @@ impl LanePlayableRandomShuffleModifier {
     }
 }
 
-pub fn search_for_no_murioshi_lane_combinations(
+pub(crate) fn search_for_no_murioshi_lane_combinations(
     original_pattern_list: &HashSet<i32>,
     _keys: &[i32],
 ) -> Vec<Vec<i32>> {

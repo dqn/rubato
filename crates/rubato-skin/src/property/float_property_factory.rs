@@ -4,7 +4,7 @@ use super::property_lookup::{find_by_id, find_by_name};
 use crate::stubs::MainState;
 
 /// Returns a FloatProperty for the given RateType ID.
-pub fn rate_property_by_id(optionid: i32) -> Option<Box<dyn FloatProperty>> {
+pub(crate) fn rate_property_by_id(optionid: i32) -> Option<Box<dyn FloatProperty>> {
     find_by_id!(RATE_TYPES, optionid, DelegateFloatProperty);
     None
 }
@@ -17,7 +17,7 @@ pub fn rate_property_by_name(name: &str) -> Option<Box<dyn FloatProperty>> {
 
 /// Returns a FloatWriter for the given RateType ID.
 /// Unlike other lookups, this also requires `has_writer` to be true.
-pub fn rate_writer_by_id(id: i32) -> Option<Box<dyn FloatWriter>> {
+pub(crate) fn rate_writer_by_id(id: i32) -> Option<Box<dyn FloatWriter>> {
     for rt in RATE_TYPES.iter() {
         if rt.id == id && rt.has_writer {
             return Some(Box::new(DelegateFloatWriter { id: rt.id }));
@@ -38,7 +38,7 @@ pub fn rate_writer_by_name(name: &str) -> Option<Box<dyn FloatWriter>> {
 }
 
 /// Returns a FloatProperty for the given FloatType or RateType ID.
-pub fn float_property_by_id(optionid: i32) -> Option<Box<dyn FloatProperty>> {
+pub(crate) fn float_property_by_id(optionid: i32) -> Option<Box<dyn FloatProperty>> {
     find_by_id!(FLOAT_TYPES, optionid, DelegateFloatProperty);
     find_by_id!(RATE_TYPES, optionid, DelegateFloatProperty);
     None

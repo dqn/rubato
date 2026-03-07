@@ -57,7 +57,7 @@ where
 }
 
 /// Reads and parses the backup file (.bak) for the given original path.
-pub fn load_backup<T, F>(original: &Path, parser: F) -> Result<T>
+pub(crate) fn load_backup<T, F>(original: &Path, parser: F) -> Result<T>
 where
     F: Fn(&[u8]) -> std::result::Result<T, ParseError>,
 {
@@ -150,7 +150,7 @@ pub fn write(file: &Path, data: &[u8]) -> Result<()> {
 ///
 /// Equivalent to Java's `FileChannel.open(file, CREATE, TRUNCATE_EXISTING, WRITE)`
 /// followed by `FileChannel.force(true)`.
-pub fn write_file(file: &Path, data: &[u8]) -> Result<()> {
+pub(crate) fn write_file(file: &Path, data: &[u8]) -> Result<()> {
     let mut f = fs::File::create(file)
         .with_context(|| format!("Failed to create file: {}", file.display()))?;
     f.write_all(data)

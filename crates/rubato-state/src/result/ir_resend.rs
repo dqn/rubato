@@ -12,7 +12,7 @@ use super::ir_send_status::IRSendStatusMain;
 static SHARED_IR_STATUSES: OnceLock<Arc<Mutex<Vec<IRSendStatusMain>>>> = OnceLock::new();
 
 /// Get the shared IR send status list.
-pub fn shared_ir_statuses() -> Arc<Mutex<Vec<IRSendStatusMain>>> {
+pub(crate) fn shared_ir_statuses() -> Arc<Mutex<Vec<IRSendStatusMain>>> {
     SHARED_IR_STATUSES
         .get_or_init(|| Arc::new(Mutex::new(Vec::new())))
         .clone()
@@ -52,7 +52,7 @@ impl IrResendService for IrResendServiceImpl {
 ///
 /// `ir_send_status` is the shared list of pending sends.
 /// `ir_send_count` is the maximum retry count from config.
-pub fn start_ir_resend_thread(
+pub(crate) fn start_ir_resend_thread(
     ir_send_status: Arc<Mutex<Vec<IRSendStatusMain>>>,
     ir_send_count: i32,
 ) {

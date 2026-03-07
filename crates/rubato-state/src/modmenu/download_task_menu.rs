@@ -126,7 +126,7 @@ impl DownloadTaskMenu {
     }
 }
 
-pub fn humanize_file_size(bytes: i64) -> String {
+pub(crate) fn humanize_file_size(bytes: i64) -> String {
     let thresh: i64 = 1000;
     if bytes.abs() < thresh {
         return format!("{} B", bytes);

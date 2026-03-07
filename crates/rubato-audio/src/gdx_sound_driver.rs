@@ -35,7 +35,7 @@ pub(crate) struct FileCacheEntry {
 /// Convert linear volume (0.0-1.0) to decibels for Kira.
 /// Kira uses Decibels type where 0 dB = no change, negative = quieter.
 /// Formula: dB = 20 * log10(amplitude)
-pub fn linear_to_db(volume: f32) -> f32 {
+pub(crate) fn linear_to_db(volume: f32) -> f32 {
     if volume <= 0.0 {
         -60.0 // Kira's silence threshold
     } else {

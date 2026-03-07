@@ -129,3 +129,7 @@ pub mod obs_access;
 
 // ImGui overlay access (core↔modmenu bridge)
 pub mod imgui_access;
+
+// Facade modules grouping related types by domain.
+// Original module paths remain fully supported for backward compatibility.
+pub mod facade;

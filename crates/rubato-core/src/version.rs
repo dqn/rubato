@@ -34,7 +34,7 @@ static UNQUALIFIED_VERSION: OnceLock<String> = OnceLock::new();
 static VERSION_LONG: OnceLock<String> = OnceLock::new();
 static BUILD_META_INFO: OnceLock<HashMap<String, String>> = OnceLock::new();
 
-pub fn unqualified_version() -> &'static str {
+pub(crate) fn unqualified_version() -> &'static str {
     UNQUALIFIED_VERSION
         .get_or_init(|| format!("{}.{}.{}", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH))
 }

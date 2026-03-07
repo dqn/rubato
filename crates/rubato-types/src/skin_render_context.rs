@@ -83,6 +83,13 @@ pub trait SkinRenderContext: TimerAccess {
     }
 
     /// Shared default implementation for image-index refs.
+    ///
+    /// NOTE: This match statement is intentionally kept as-is rather than converted
+    /// to a lookup table. Each arm calls different `self` methods with distinct
+    /// Option-chaining logic (player_config, current_play_config, song_data, etc.),
+    /// making function-pointer tables impractical without introducing trait-object
+    /// overhead or complex generic indirection. The match is the most readable and
+    /// maintainable representation of this heterogeneous dispatch.
     fn default_image_index_value(&self, id: i32) -> i32 {
         let bool_to_i32 = |value: bool| if value { 1 } else { 0 };
         let player_config = self.player_config_ref();

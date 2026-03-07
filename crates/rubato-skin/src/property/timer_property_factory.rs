@@ -4,7 +4,7 @@ use rubato_types::timer_id::TimerId;
 
 /// Returns a TimerProperty for the given timer ID.
 /// Returns None if timer_id is negative.
-pub fn timer_property(timer_id: i32) -> Option<Box<dyn TimerProperty>> {
+pub(crate) fn timer_property(timer_id: i32) -> Option<Box<dyn TimerProperty>> {
     if timer_id < 0 {
         return None;
     }

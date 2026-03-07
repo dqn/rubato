@@ -17,7 +17,7 @@ use rubato_types::course_data::{CourseData, CourseDataConstraint, TrophyData};
 /// Convert a BmsTableElement to SongData.
 ///
 /// Translated from Java: TableDataAccessor.toSongData(BMSTableElement, Mode)
-pub fn bms_table_element_to_song_data(
+pub(crate) fn bms_table_element_to_song_data(
     te: &BmsTableElement,
     default_mode: Option<&Mode>,
 ) -> SongData {
@@ -62,7 +62,7 @@ pub fn bms_table_element_to_song_data(
 ///
 /// Extends bms_table_element_to_song_data with DifficultyTableElement-specific fields
 /// (appendurl, appendipfs).
-pub fn difficulty_table_element_to_song_data(
+pub(crate) fn difficulty_table_element_to_song_data(
     dte: &DifficultyTableElement,
     default_mode: Option<&Mode>,
 ) -> SongData {
@@ -122,7 +122,7 @@ fn trophy_to_trophy_data(trophy: &Trophy) -> TrophyData {
 ///
 /// Translated from Java: DifficultyTableAccessor.read()
 /// Creates TableData with folders (one per level) and courses.
-pub fn difficulty_table_to_table_data(dt: &DifficultyTable, url: &str) -> TableData {
+pub(crate) fn difficulty_table_to_table_data(dt: &DifficultyTable, url: &str) -> TableData {
     let default_mode = dt.table.mode().and_then(Mode::from_hint);
 
     let tag = dt

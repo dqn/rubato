@@ -12,7 +12,7 @@ pub trait ScreenShotExporter {
 
 /// Returns the clear type name string for the current state.
 /// Translated from Java: ScreenShotExporter.getClearTypeName (static default method)
-pub fn clear_type_name(current_state: &MainState) -> String {
+pub(crate) fn clear_type_name(current_state: &MainState) -> String {
     let clear_type_name: [&str; 11] = [
         "NO PLAY",
         "FAILED",
@@ -37,7 +37,7 @@ pub fn clear_type_name(current_state: &MainState) -> String {
 
 /// Returns the clear type colour as an integer for the current state.
 /// Translated from Java: ScreenShotExporter.getClearTypeColour (static default method)
-pub fn clear_type_colour(current_state: &MainState) -> i32 {
+pub(crate) fn clear_type_colour(current_state: &MainState) -> i32 {
     let clear_type_rgb: [&str; 11] = [
         "7F7F7F", "8A0000", "9F39CF", "C467D5", "00D70F", "229AFF", "FDFDFD", "FFDB00", "78FFF7",
         "A7F583", "F0F0FF",
@@ -53,7 +53,7 @@ pub fn clear_type_colour(current_state: &MainState) -> i32 {
 
 /// Returns the rank type name string for the current state.
 /// Translated from Java: ScreenShotExporter.getRankTypeName (static default method)
-pub fn rank_type_name(current_state: &MainState) -> String {
+pub(crate) fn rank_type_name(current_state: &MainState) -> String {
     let mut rank_type_name = String::new();
     if BooleanPropertyFactory::boolean_property(OPTION_RESULT_AAA_1P).get(current_state) {
         rank_type_name += "AAA";
