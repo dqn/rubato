@@ -246,7 +246,8 @@ impl ObsWsClient {
         password: &str,
         shutdown_notify: Arc<Notify>,
     ) -> Result<()> {
-        let (ws_stream, _) = connect_async(server_uri).await
+        let (ws_stream, _) = connect_async(server_uri)
+            .await
             .with_context(|| format!("failed to connect to OBS WebSocket at {}", server_uri))?;
         let (sink, mut stream) = ws_stream.split();
 

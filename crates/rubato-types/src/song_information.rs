@@ -48,7 +48,7 @@ pub struct SongInformation {
 impl From<&BMSModel> for SongInformation {
     fn from(model: &BMSModel) -> Self {
         let mut info = SongInformation::new();
-        info.sha256 = model.sha256().to_string();
+        info.sha256 = model.sha256.to_string();
         info.n = total_notes_with_type(model, TOTALNOTES_KEY);
         info.ln = total_notes_with_type(model, TOTALNOTES_LONG_KEY);
         info.s = total_notes_with_type(model, TOTALNOTES_SCRATCH);

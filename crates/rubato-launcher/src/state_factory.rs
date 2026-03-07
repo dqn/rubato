@@ -34,8 +34,7 @@ use rubato_state::result::stubs::RankingData;
 use rubato_state::select::music_selector::MusicSelector;
 use rubato_types::main_controller_access::{
     AudioSystemAccess, ControllerConfigAccess, DataReadAccess, IRConnectionAccess,
-    MainControllerAccess, MainControllerCommand, MainControllerCommandQueue,
-    StateTransitionAccess,
+    MainControllerAccess, MainControllerCommand, MainControllerCommandQueue, StateTransitionAccess,
 };
 use rubato_types::player_information::PlayerInformation;
 use rubato_types::player_resource_access::{NullPlayerResource, PlayerResourceAccess};
@@ -464,8 +463,7 @@ impl MainState for SharedMusicSelectorState {
     }
 
     fn sound(&self, sound: SoundType) -> Option<String> {
-        lock_or_recover(&self.selector)
-            .sound(sound)
+        lock_or_recover(&self.selector).sound(sound)
     }
 
     fn play_sound_loop(&mut self, sound: SoundType, loop_sound: bool) {
@@ -684,7 +682,7 @@ impl StateFactory for LauncherStateFactory {
                 // --- Target/rival score DB load ---
                 // Java: main.getPlayDataAccessor().readScoreData(model, config.getLnmode())
                 let lnmode = controller.player_config().play_settings.lnmode;
-                let sha256 = model.sha256();
+                let sha256 = &model.sha256;
                 let has_ln = model.contains_undefined_long_note();
                 let db_score = controller.read_score_data_by_hash(sha256, has_ln, lnmode);
                 player.set_db_score(db_score);

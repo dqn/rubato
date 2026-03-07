@@ -35,8 +35,11 @@ impl IRTableData {
             .folders
             .iter()
             .map(|f| {
-                let songs: Vec<rubato_types::song_data::SongData> =
-                    f.charts.iter().map(rubato_types::song_data::SongData::from).collect();
+                let songs: Vec<rubato_types::song_data::SongData> = f
+                    .charts
+                    .iter()
+                    .map(rubato_types::song_data::SongData::from)
+                    .collect();
                 TableFolder {
                     name: Some(f.name.clone()),
                     songs,
@@ -44,8 +47,11 @@ impl IRTableData {
             })
             .collect();
 
-        let course: Vec<rubato_core::course_data::CourseData> =
-            self.courses.iter().map(rubato_core::course_data::CourseData::from).collect();
+        let course: Vec<rubato_core::course_data::CourseData> = self
+            .courses
+            .iter()
+            .map(rubato_core::course_data::CourseData::from)
+            .collect();
 
         let mut td = TableData {
             name: self.name.clone(),

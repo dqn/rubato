@@ -90,8 +90,9 @@ impl ReplayData {
     /// Calls shrink() before serialization, matching Java PlayDataAccessor.wrireReplayData().
     pub fn write_brd(&mut self, path: &Path) -> Result<()> {
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create replay directory: {}", parent.display()))?;
+            fs::create_dir_all(parent).with_context(|| {
+                format!("failed to create replay directory: {}", parent.display())
+            })?;
         }
         self.shrink();
         let file = fs::File::create(path)
@@ -122,8 +123,12 @@ impl ReplayData {
     /// Calls shrink() on each element, matching Java PlayDataAccessor.wrireReplayData(ReplayData[], ...).
     pub fn write_brd_course(rds: &mut [ReplayData], path: &Path) -> Result<()> {
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create course replay directory: {}", parent.display()))?;
+            fs::create_dir_all(parent).with_context(|| {
+                format!(
+                    "failed to create course replay directory: {}",
+                    parent.display()
+                )
+            })?;
         }
         for rd in rds.iter_mut() {
             rd.shrink();

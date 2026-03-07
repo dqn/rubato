@@ -25,9 +25,7 @@ pub struct ExecutableBar {
 impl Clone for ExecutableBar {
     fn clone(&self) -> Self {
         let queue = lock_or_recover(&self.queue).clone();
-        let current_song = self
-            .lock_or_recover(&current_song)
-            .clone();
+        let current_song = lock_or_recover(&self.current_song).clone();
         Self {
             selectable: self.selectable.clone(),
             title: self.title.clone(),
@@ -65,8 +63,7 @@ impl ExecutableBar {
 
         // In Java: if (state instanceof MusicSelector || currentSong == null)
         // Simplified: always get next random song
-        let mut current = self
-            .lock_or_recover(&current_song);
+        let mut current = lock_or_recover(&self.current_song);
         let index = queue.pop_front().expect("pop_front");
         *current = Some(self.songs[index].clone());
         current.as_ref().expect("current is Some").clone()

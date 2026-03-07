@@ -258,7 +258,7 @@ impl BMSRenderer {
         info!("Loading audio files...");
 
         let mut result: HashMap<i32, PCM> = HashMap::new();
-        let wav_list = model.wav_list();
+        let wav_list = &model.wavmap;
         let model_path = match model.path() {
             Some(p) => p,
             None => return result,

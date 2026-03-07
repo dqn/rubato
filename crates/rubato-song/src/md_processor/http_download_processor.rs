@@ -124,8 +124,7 @@ impl HttpDownloadProcessor {
         // it to run the submit step on an different thread to get rid of the re-entrant feature of 'synchronized'.
         let download_task = {
             // Check for duplicate URLs via submitted_urls set (O(1), no nested locking)
-            let mut urls = self
-                .lock_or_recover(&submitted_urls);
+            let mut urls = lock_or_recover(&self.submitted_urls);
             if urls.contains(&download_url) {
                 log::error!(
                     "[HttpDownloadProcessor] Rejecting download task[{}] because duplication has been found",
@@ -274,7 +273,7 @@ fn download_file_from_url(
     source_name: &str,
 ) -> anyhow::Result<PathBuf> {
     let url = {
-        let t = lock_or_recover(&task);
+        let t = lock_or_recover(task);
         t.url().to_string()
     };
 
@@ -317,7 +316,9 @@ fn download_file_from_url(
     let result = Path::new(download_directory).join(&file_name);
 
     // Read body in chunks
-    let bytes = response.bytes().context("failed to read response body bytes")?;
+    let bytes = response
+        .bytes()
+        .context("failed to read response body bytes")?;
     let total = bytes.len() as i64;
 
     // Write to file
@@ -336,7 +337,7 @@ fn download_file_from_url(
         download_bytes += read as i64;
         offset = end;
         {
-            let mut t = lock_or_recover(&task);
+            let mut t = lock_or_recover(task);
             t.download_size = download_bytes;
             t.content_length = content_length;
         }
@@ -347,7 +348,7 @@ fn download_file_from_url(
         result.display()
     );
     {
-        let mut t = lock_or_recover(&task);
+        let mut t = lock_or_recover(task);
         t.set_download_task_status(DownloadTaskStatus::Downloaded);
     }
 
@@ -372,8 +373,9 @@ fn extract_compressed_file(
         .unwrap_or_else(|| PathBuf::from(download_directory));
 
     if !dest.exists() {
-        fs::create_dir_all(&dest)
-            .with_context(|| format!("failed to create extraction directory: {}", dest.display()))?;
+        fs::create_dir_all(&dest).with_context(|| {
+            format!("failed to create extraction directory: {}", dest.display())
+        })?;
     }
 
     sevenz_rust::decompress_file(file, &dest)

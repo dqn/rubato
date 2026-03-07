@@ -6,7 +6,7 @@
 // For BEAT_7K, scratch_key = &[7] (length 1).
 // If player=1, scratch_key[1] panics with index out of bounds.
 //
-// The guard in keys_static prevents player >= mode.player() from reaching modify(),
+// The guard in keys_static prevents player >= mode.player from reaching modify(),
 // but random_pattern() on a manually-constructed modifier with player=1 calls
 // get_random_pattern_impl directly, triggering the OOB.
 

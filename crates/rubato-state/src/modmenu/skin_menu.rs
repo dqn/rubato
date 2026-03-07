@@ -225,8 +225,7 @@ fn menu_header(ui: &mut egui::Ui) {
                     ui.horizontal(|ui| {
                         if ui.button(" Confirm ").clicked() {
                             reset_current_skin_config();
-                            let current_skin =
-                                lock_or_recover(&CURRENT_SKIN);
+                            let current_skin = lock_or_recover(&CURRENT_SKIN);
                             if let Some(ref cs) = *current_skin {
                                 let h = cs.clone();
                                 drop(current_skin);
@@ -427,9 +426,7 @@ fn skin_config_option(ui: &mut egui::Ui, option: &CustomOption) {
                             .selectable_label(content == &chosen, content.as_str())
                             .clicked()
                         {
-                            if let Some(ref mut opts) =
-                                *lock_or_recover(&SET_OPTIONS)
-                            {
+                            if let Some(ref mut opts) = *lock_or_recover(&SET_OPTIONS) {
                                 opts.insert(option.name.clone(), option.option[i]);
                             }
                             dirty(true);
@@ -437,9 +434,7 @@ fn skin_config_option(ui: &mut egui::Ui, option: &CustomOption) {
                         }
                     }
                     if ui.selectable_label("Random" == chosen, "Random").clicked() {
-                        if let Some(ref mut opts) =
-                            *lock_or_recover(&SET_OPTIONS)
-                        {
+                        if let Some(ref mut opts) = *lock_or_recover(&SET_OPTIONS) {
                             opts.insert(option.name.clone(), OPTION_RANDOM_VALUE);
                         }
                         dirty(true);
@@ -455,14 +450,11 @@ fn skin_config_option(ui: &mut egui::Ui, option: &CustomOption) {
 
             if arrow_changed {
                 if selected as usize == option.contents.len() {
-                    if let Some(ref mut opts) =
-                        *lock_or_recover(&SET_OPTIONS)
-                    {
+                    if let Some(ref mut opts) = *lock_or_recover(&SET_OPTIONS) {
                         opts.insert(option.name.clone(), OPTION_RANDOM_VALUE);
                     }
                 } else if (selected as usize) < option.option.len()
-                    && let Some(ref mut opts) =
-                        *lock_or_recover(&SET_OPTIONS)
+                    && let Some(ref mut opts) = *lock_or_recover(&SET_OPTIONS)
                 {
                     opts.insert(option.name.clone(), option.option[selected as usize]);
                 }
@@ -553,9 +545,7 @@ fn skin_config_file(ui: &mut egui::Ui, file: &CustomFile) {
                             .selectable_label(path == &selection, path.as_str())
                             .clicked()
                         {
-                            if let Some(ref mut files) =
-                                *lock_or_recover(&SET_FILES)
-                            {
+                            if let Some(ref mut files) = *lock_or_recover(&SET_FILES) {
                                 files.insert(file.name.clone(), path.clone());
                             }
                             dirty(true);
@@ -1158,7 +1148,13 @@ fn skin_header_from_json_data(data: SkinHeaderData) -> SkinHeader {
     let offsets: Vec<CustomOffset> = data
         .custom_offsets
         .into_iter()
-        .map(|co| CustomOffset::new(co.name, co.id, OffsetFlags::new(co.x, co.y, co.w, co.h, co.r, co.a)))
+        .map(|co| {
+            CustomOffset::new(
+                co.name,
+                co.id,
+                OffsetFlags::new(co.x, co.y, co.w, co.h, co.r, co.a),
+            )
+        })
         .collect();
     header.offsets = offsets;
     let categories: Vec<CustomCategory> = data
@@ -1176,7 +1172,9 @@ fn skin_header_from_json_data(data: SkinHeaderData) -> SkinHeader {
                         CustomCategoryItem::File(CustomFile::new(cf.name, cf.path, cf.def))
                     }
                     CustomItemData::Offset(co) => CustomCategoryItem::Offset(CustomOffset::new(
-                        co.name, co.id, OffsetFlags::new(co.x, co.y, co.w, co.h, co.r, co.a),
+                        co.name,
+                        co.id,
+                        OffsetFlags::new(co.x, co.y, co.w, co.h, co.r, co.a),
                     )),
                 })
                 .collect();

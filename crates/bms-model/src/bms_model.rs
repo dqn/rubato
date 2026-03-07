@@ -846,9 +846,7 @@ mod tests {
         let mut model = BMSModel::new();
         assert!(model.values.is_empty());
 
-        model
-            .values
-            .insert("key1".to_string(), "val1".to_string());
+        model.values.insert("key1".to_string(), "val1".to_string());
         assert_eq!(model.values.get("key1").unwrap(), "val1");
     }
 

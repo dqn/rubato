@@ -509,18 +509,12 @@ impl SpiralRandomizer {
         if changeable.len() == self.cycle {
             self.head = (self.head + self.increment) % self.cycle;
             for (i, &lane) in self.base.modify_lanes.iter().enumerate() {
-                rotate_map.insert(
-                    lane,
-                    self.base.modify_lanes[(i + self.head) % self.cycle],
-                );
+                rotate_map.insert(lane, self.base.modify_lanes[(i + self.head) % self.cycle]);
             }
         } else {
             for (i, &lane) in self.base.modify_lanes.iter().enumerate() {
                 if changeable.contains(&lane) {
-                    rotate_map.insert(
-                        lane,
-                        self.base.modify_lanes[(i + self.head) % self.cycle],
-                    );
+                    rotate_map.insert(lane, self.base.modify_lanes[(i + self.head) % self.cycle]);
                 }
             }
         }

@@ -53,9 +53,7 @@ impl VersionChecker for GithubVersionChecker {
             }
         }
         self.information();
-        lock_or_recover(&self.message)
-            .clone()
-            .unwrap_or_default()
+        lock_or_recover(&self.message).clone().unwrap_or_default()
     }
 
     fn get_download_url(&self) -> Option<String> {
@@ -264,14 +262,12 @@ impl MainLoader {
 
     pub fn set_version_checker(checker: Box<dyn VersionChecker>) {
         let vc = Self::version_checker();
-        let mut guard = lock_or_recover(&vc);
+        let mut guard = lock_or_recover(vc);
         *guard = Some(checker);
     }
 
     pub fn get_bms_path() -> Option<PathBuf> {
-        BMS_PATH
-            .get()
-            .and_then(|m| lock_or_recover(&m).clone())
+        BMS_PATH.get().and_then(|m| lock_or_recover(m).clone())
     }
 
     pub fn put_illegal_song(hash: &str) {

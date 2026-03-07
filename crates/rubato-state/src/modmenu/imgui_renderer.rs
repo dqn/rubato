@@ -9,8 +9,8 @@ use super::skin_menu::SkinMenu;
 use super::skin_widget_manager::SkinWidgetManager;
 use super::stubs::{Version, version};
 
-use std::sync::Mutex;
 use rubato_types::sync_utils::lock_or_recover;
+use std::sync::Mutex;
 
 static WINDOW_WIDTH: Mutex<i32> = Mutex::new(0);
 static WINDOW_HEIGHT: Mutex<i32> = Mutex::new(0);
@@ -128,38 +128,31 @@ impl ImGuiRenderer {
             if *lock_or_recover(&SHOW_FREQ_PLUS) {
                 FreqTrainerMenu::show_ui(ctx);
             }
-            if *lock_or_recover(&SHOW_RANDOM_TRAINER)
-            {
+            if *lock_or_recover(&SHOW_RANDOM_TRAINER) {
                 RandomTrainerMenu::show_ui(ctx);
             }
-            if *lock_or_recover(&SHOW_JUDGE_TRAINER)
-            {
+            if *lock_or_recover(&SHOW_JUDGE_TRAINER) {
                 JudgeTrainerMenu::show_ui(ctx);
             }
-            if *lock_or_recover(&SHOW_SONG_MANAGER)
-            {
+            if *lock_or_recover(&SHOW_SONG_MANAGER) {
                 crate::modmenu::song_manager_menu::SongManagerMenu::show_ui(ctx);
             }
-            if *lock_or_recover(&SHOW_DOWNLOAD_MENU)
-            {
+            if *lock_or_recover(&SHOW_DOWNLOAD_MENU) {
                 DownloadTaskMenu::show_ui(ctx);
             }
-            if *lock_or_recover(&SHOW_SKIN_WIDGET_MANAGER)
-            {
+            if *lock_or_recover(&SHOW_SKIN_WIDGET_MANAGER) {
                 SkinWidgetManager::set_focus(true);
                 SkinWidgetManager::show_ui(ctx);
             } else {
                 SkinWidgetManager::set_focus(false);
             }
-            if *lock_or_recover(&SHOW_PERFORMANCE_MONITOR)
-            {
+            if *lock_or_recover(&SHOW_PERFORMANCE_MONITOR) {
                 PerformanceMonitor::show_ui(ctx);
             }
             if *lock_or_recover(&SHOW_SKIN_MENU) {
                 SkinMenu::show_ui(ctx);
             }
-            if *lock_or_recover(&SHOW_MISC_SETTING)
-            {
+            if *lock_or_recover(&SHOW_MISC_SETTING) {
                 MiscSettingMenu::show_ui(ctx);
             }
         }

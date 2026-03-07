@@ -55,7 +55,7 @@ pub struct SkinConfigurationView {
     skinconfig_items: Vec<SkinConfigItem>,
 
     // private PlayerConfig player;
-    player: Option<PlayerConfig>,
+    pub(crate) player: Option<PlayerConfig>,
 
     // private SkinType mode = null;
     mode: Option<SkinType>,
@@ -470,9 +470,8 @@ impl SkinConfigurationView {
         }
 
         // if (selected != null) {
-        if self.selected.is_some() {
+        if let Some(selected) = self.selected.as_ref() {
             let (path_str, skin_type_id) = {
-                let selected = self.selected.as_ref().expect("selected is Some");
                 let path_str: String = selected
                     .path()
                     .map(|p: &PathBuf| p.to_string_lossy().to_string())
@@ -956,7 +955,14 @@ impl SkinConfigurationView {
                     let offset = &header.custom_offsets()[*offset_idx];
                     // final String[] values = {"x","y","w","h","r","a"};
                     // final boolean[] b = {option.x, option.y, option.w, option.h, option.r, option.a};
-                    let enabled = [offset.flags.x, offset.flags.y, offset.flags.w, offset.flags.h, offset.flags.r, offset.flags.a];
+                    let enabled = [
+                        offset.flags.x,
+                        offset.flags.y,
+                        offset.flags.w,
+                        offset.flags.h,
+                        offset.flags.r,
+                        offset.flags.a,
+                    ];
 
                     // SkinConfig.Offset offset = null;
                     // for(SkinConfig.Offset o : property.getOffset()) { if(o.name.equals(option.name)) { offset = o; break; } }

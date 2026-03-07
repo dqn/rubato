@@ -24,9 +24,7 @@ pub struct StreamRequestCommand {
 
 impl StreamRequestCommand {
     pub fn new(selector: Arc<Mutex<MusicSelector>>) -> Self {
-        let max_length = lock_or_recover(&selector)
-            .config
-            .max_request_count;
+        let max_length = lock_or_recover(&selector).config.max_request_count;
         let (tx, rx) = mpsc::channel();
         let selector_clone = Arc::clone(&selector);
         let updater_thread = Some(thread::spawn(move || {
@@ -81,9 +79,7 @@ pub struct UpdateBar {
 
 impl UpdateBar {
     pub fn new(selector: Arc<Mutex<MusicSelector>>) -> Self {
-        let max_length = lock_or_recover(&selector)
-            .config
-            .max_request_count;
+        let max_length = lock_or_recover(&selector).config.max_request_count;
         let bar = HashBar::new("Stream Request".to_string(), vec![]);
         // In Java: this.bar.setSortable(false)
         // HashBar uses DirectoryBarData which has set_sortable

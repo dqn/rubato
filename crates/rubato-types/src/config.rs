@@ -658,8 +658,8 @@ impl Config {
     /// Write config to a specific directory as `config_sys.json`.
     pub fn write_to(config: &Config, dir: &Path) -> anyhow::Result<()> {
         let configpath = dir.join("config_sys.json");
-        let json = serde_json::to_string_pretty(config)
-            .context("failed to serialize config to JSON")?;
+        let json =
+            serde_json::to_string_pretty(config).context("failed to serialize config to JSON")?;
         std::fs::write(&configpath, json.as_bytes())
             .with_context(|| format!("failed to write config file: {}", configpath.display()))?;
         Ok(())

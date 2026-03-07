@@ -292,60 +292,6 @@ pub trait MainControllerAccess:
     fn player_resource(&self) -> Option<&dyn PlayerResourceAccess>;
     /// Get player resource (mutable).
     fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess>;
-
-    /// Get ranking data cache (immutable).
-    /// Java: MainController.getRankingDataCache()
-    fn ranking_data_cache(&self) -> Option<&dyn RankingDataCacheAccess> {
-        None
-    }
-
-    /// Get ranking data cache (mutable).
-    fn ranking_data_cache_mut(&mut self) -> Option<&mut (dyn RankingDataCacheAccess + 'static)> {
-        None
-    }
-
-    /// Get rival player count.
-    fn rival_count(&self) -> usize {
-        0
-    }
-
-    /// Get rival player information by index.
-    fn rival_information(
-        &self,
-        _index: usize,
-    ) -> Option<crate::player_information::PlayerInformation> {
-        None
-    }
-
-    /// Get IR table URLs for connected IR services.
-    /// Returns (ir_name, table_url) pairs.
-    /// Java: MainController.getIRStatus() → IRStatus.tables
-    fn ir_table_urls(&self) -> Vec<(String, String)> {
-        Vec::new()
-    }
-
-    /// Read score data for a given song hash.
-    /// Java: PlayDataAccessor.readScoreData(hash, ln, lnmode)
-    fn read_score_data_by_hash(&self, _hash: &str, _ln: bool, _lnmode: i32) -> Option<ScoreData> {
-        None
-    }
-
-    /// Read player data (aggregate play statistics).
-    /// Java: PlayDataAccessor.readPlayerData()
-    fn read_player_data(&self) -> Option<PlayerData> {
-        None
-    }
-
-    /// Get song information database reference.
-    /// Java: MainController.getInfoDatabase()
-    fn info_database(&self) -> Option<&dyn SongInformationDb> {
-        None
-    }
-
-    /// Get the first IR connection (type-erased).
-    fn ir_connection_any(&self) -> Option<&dyn Any> {
-        None
-    }
 }
 
 // ---------------------------------------------------------------------------

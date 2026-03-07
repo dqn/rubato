@@ -1,5 +1,5 @@
-use std::sync::Mutex;
 use rubato_types::sync_utils::lock_or_recover;
+use std::sync::Mutex;
 
 static FREQ_TRAINER_ENABLED: Mutex<bool> = Mutex::new(false);
 static FREQ: Mutex<i32> = Mutex::new(100);

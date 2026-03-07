@@ -35,7 +35,7 @@ impl JudgeManager {
         self.lntype = model.lntype();
 
         let rule = BMSPlayerRule::for_mode(&orgmode);
-        let judgerank = model.judgerank();
+        let judgerank = model.judgerank;
 
         let mut key_judge_window_rate = if let Some(config) = player_config {
             if config.is_custom_judge() {
@@ -93,9 +93,9 @@ impl JudgeManager {
             rule.judge
                 .judge(NoteType::LongnoteEnd, judgerank, &key_judge_window_rate);
         self.windows.nreleasemargin = rule.judge.longnote_margin;
-        self.windows.smjudge = rule
-            .judge
-            .judge(NoteType::Scratch, judgerank, &scratch_judge_window_rate);
+        self.windows.smjudge =
+            rule.judge
+                .judge(NoteType::Scratch, judgerank, &scratch_judge_window_rate);
         self.windows.scnendmjudge = rule.judge.judge(
             NoteType::LongscratchEnd,
             judgerank,
@@ -116,8 +116,7 @@ impl JudgeManager {
 
         let player_count = orgmode.player();
         let keys_per_player = orgmode.key() / player_count;
-        self.scoring.judge =
-            vec![vec![0; keys_per_player as usize + 1]; player_count as usize];
+        self.scoring.judge = vec![vec![0; keys_per_player as usize + 1]; player_count as usize];
 
         self.auto_adjust.recent_judges = vec![i64::MIN; 100];
         self.auto_adjust.micro_recent_judges = vec![i64::MIN; 100];

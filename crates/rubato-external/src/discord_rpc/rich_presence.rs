@@ -70,7 +70,9 @@ impl RichPresence {
     /// }
     /// ```
     pub fn connect(&mut self) -> Result<()> {
-        self.connection.connect().context("failed to connect to Discord IPC")?;
+        self.connection
+            .connect()
+            .context("failed to connect to Discord IPC")?;
         self.handshake().context("Discord IPC handshake failed")?;
         self.connected = true;
         Ok(())
@@ -93,9 +95,13 @@ impl RichPresence {
             "client_id": self.client_id
         });
 
-        self.send_packet(0, &serde_json::to_string(&handshake)
-            .context("failed to serialize Discord handshake payload")?)?;
-        let _response = self.receive_packet()
+        self.send_packet(
+            0,
+            &serde_json::to_string(&handshake)
+                .context("failed to serialize Discord handshake payload")?,
+        )?;
+        let _response = self
+            .receive_packet()
             .context("failed to receive Discord handshake response")?;
         Ok(())
     }
@@ -119,7 +125,8 @@ impl RichPresence {
         buffer.extend_from_slice(&op_code.to_le_bytes());
         buffer.extend_from_slice(&(payload_bytes.len() as i32).to_le_bytes());
         buffer.extend_from_slice(payload_bytes);
-        self.connection.write(&buffer)
+        self.connection
+            .write(&buffer)
             .context("failed to write to Discord IPC")?;
         Ok(())
     }
@@ -137,12 +144,16 @@ impl RichPresence {
     /// }
     /// ```
     fn receive_packet(&mut self) -> Result<Vec<u8>> {
-        let header = self.connection.read(8)
+        let header = self
+            .connection
+            .read(8)
             .context("failed to read Discord IPC packet header")?;
         let _op_code = i32::from_le_bytes([header[0], header[1], header[2], header[3]]);
         let length = i32::from_le_bytes([header[4], header[5], header[6], header[7]]);
 
-        let payload = self.connection.read(length as usize)
+        let payload = self
+            .connection
+            .read(length as usize)
             .context("failed to read Discord IPC packet payload")?;
         Ok(payload)
     }
@@ -177,9 +188,13 @@ impl RichPresence {
             },
         };
 
-        self.send_packet(1, &serde_json::to_string(&payload)
-            .context("failed to serialize Discord activity payload")?)?;
-        let _response = self.receive_packet()
+        self.send_packet(
+            1,
+            &serde_json::to_string(&payload)
+                .context("failed to serialize Discord activity payload")?,
+        )?;
+        let _response = self
+            .receive_packet()
             .context("failed to receive Discord activity update response")?;
         Ok(())
     }

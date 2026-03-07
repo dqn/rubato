@@ -60,7 +60,7 @@ impl PatternModifier for ScrollSpeedModifier {
     fn modify(&mut self, model: &mut BMSModel) {
         if self.mode == Mode::Remove {
             let mut assist = AssistLevel::None;
-            let timelines = model.all_time_lines_mut();
+            let timelines = &mut model.timelines;
 
             let start_bpm = timelines[0].bpm;
             let start_scroll = timelines[0].scroll;
@@ -76,7 +76,7 @@ impl PatternModifier for ScrollSpeedModifier {
             }
             self.base.assist = assist;
         } else {
-            let timelines = model.all_time_lines_mut();
+            let timelines = &mut model.timelines;
             let base = timelines[0].scroll;
             let mut current = base;
             let mut sectioncount = 0;

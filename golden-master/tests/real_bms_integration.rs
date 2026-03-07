@@ -191,11 +191,11 @@ fn real_bms_metadata_is_populated() {
         let filename = path.file_name().unwrap().to_string_lossy();
 
         assert!(
-            !model.get_title().is_empty(),
+            !model.title.is_empty(),
             "{filename}: title should be non-empty"
         );
         assert!(
-            !model.artist().is_empty(),
+            !model.artist.is_empty(),
             "{filename}: artist should be non-empty"
         );
     }
@@ -253,8 +253,8 @@ fn real_bms_hashes_are_stable() {
         let model = decode_bms(path);
         let filename = path.file_name().unwrap().to_string_lossy();
 
-        let md5 = model.md5();
-        let sha256 = model.sha256();
+        let md5 = &model.md5;
+        let sha256 = &model.sha256;
 
         // MD5 should be 32 hex characters
         assert_eq!(
@@ -283,13 +283,11 @@ fn real_bms_hashes_are_stable() {
         // Decode a second time and verify hashes are deterministic
         let model2 = decode_bms(path);
         assert_eq!(
-            md5,
-            model2.md5(),
+            md5, &model2.md5,
             "{filename}: MD5 should be stable across decodes"
         );
         assert_eq!(
-            sha256,
-            model2.sha256(),
+            sha256, &model2.sha256,
             "{filename}: SHA-256 should be stable across decodes"
         );
     }
@@ -317,8 +315,8 @@ fn real_bms_golden_master_regression() {
             ) = compute_note_data(&model);
             RealBmsFixture {
                 filename,
-                md5: model.md5().to_string(),
-                sha256: model.sha256().to_string(),
+                md5: model.md5.clone(),
+                sha256: model.sha256.clone(),
                 mode: model
                     .mode()
                     .map(|m| m.hint().to_string())

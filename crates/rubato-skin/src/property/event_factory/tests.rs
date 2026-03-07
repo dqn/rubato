@@ -1,5 +1,6 @@
 use super::*;
-use crate::stubs::{MainController, PlayerResource, SkinOffset, TextureRegion, Timer};
+use crate::stubs::{MainController, MainState, PlayerResource, SkinOffset, TextureRegion, Timer};
+use rubato_types::play_config;
 
 /// Test implementation of MainState that provides mutable config access
 struct TestMainState {

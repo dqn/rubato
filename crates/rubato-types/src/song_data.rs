@@ -148,33 +148,33 @@ impl SongData {
 
     pub fn set_bms_model(&mut self, model: BMSModel) {
         // BMSPlayerRule::validate(&model) - stubbed, no-op
-        self.set_title(model.get_title().to_string());
-        self.set_subtitle(model.sub_title().to_string());
-        self.genre = model.genre().to_string();
-        self.set_artist(model.artist().to_string());
-        self.set_subartist(model.sub_artist().to_string());
+        self.set_title(model.title.to_string());
+        self.set_subtitle(model.sub_title.to_string());
+        self.genre = model.genre.to_string();
+        self.set_artist(model.artist.to_string());
+        self.set_subartist(model.subartist.to_string());
         if let Some(p) = model.path() {
             self.path.push(p);
         }
-        self.md5 = model.md5().to_string();
-        self.sha256 = model.sha256().to_string();
-        self.banner = model.banner().to_string();
+        self.md5 = model.md5.to_string();
+        self.sha256 = model.sha256.to_string();
+        self.banner = model.banner.to_string();
 
-        self.stagefile = model.stagefile().to_string();
-        self.backbmp = model.backbmp().to_string();
+        self.stagefile = model.stagefile.to_string();
+        self.backbmp = model.backbmp.to_string();
         if self.preview.is_empty() {
-            self.preview = model.preview().to_string();
+            self.preview = model.preview.to_string();
         }
 
-        if let Ok(l) = model.get_playlevel().parse::<i32>() {
+        if let Ok(l) = model.playlevel.parse::<i32>() {
             self.level = l;
         }
 
         self.mode = model.mode().map(|m| m.id()).unwrap_or(0);
         if self.difficulty == 0 {
-            self.difficulty = model.difficulty();
+            self.difficulty = model.difficulty;
         }
-        self.judge = model.judgerank();
+        self.judge = model.judgerank;
         self.minbpm = model.get_min_bpm() as i32;
         self.maxbpm = model.max_bpm() as i32;
         self.feature = 0;
@@ -217,9 +217,7 @@ impl SongData {
         if !model.bgamap.is_empty() {
             self.content |= CONTENT_BGA;
         }
-        if self.length >= 30000
-            && (model.wav_list().len() as i32) <= (self.length / (50 * 1000)) + 3
-        {
+        if self.length >= 30000 && (model.wavmap.len() as i32) <= (self.length / (50 * 1000)) + 3 {
             self.content |= CONTENT_NOKEYSOUND;
         }
 

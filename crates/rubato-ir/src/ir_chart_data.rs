@@ -107,7 +107,7 @@ impl IRChartData {
 
         let mut values = HashMap::new();
         if let Some(m) = model {
-            for (k, v) in m.get_values() {
+            for (k, v) in &m.values {
                 values.insert(k.clone(), v.clone());
             }
         }

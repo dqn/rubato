@@ -714,8 +714,7 @@ impl JudgeManager {
             self.scoring.combo += 1;
             self.scoring.score.maxcombo = self.scoring.score.maxcombo.max(self.scoring.combo);
             self.scoring.coursecombo += 1;
-            self.scoring.coursemaxcombo =
-                self.scoring.coursemaxcombo.max(self.scoring.coursecombo);
+            self.scoring.coursemaxcombo = self.scoring.coursemaxcombo.max(self.scoring.coursecombo);
         }
         if (judge as usize) < self.combocond.len() && !self.combocond[judge as usize] {
             self.scoring.combo = 0;

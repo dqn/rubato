@@ -51,7 +51,7 @@ fn bga_parse_model_has_bga_data() {
         .expect("Failed to parse BMS");
 
     // BGA list should contain the BMP definitions
-    let bga_list = model.get_bga_list();
+    let bga_list = &model.bgamap;
     assert_eq!(bga_list.len(), 5, "should have 5 BMP definitions");
     assert_eq!(bga_list[0], "bg1.bmp");
     assert_eq!(bga_list[1], "bg2.bmp");

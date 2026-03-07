@@ -84,7 +84,7 @@ fn run_simulation(model: &BMSModel, tc: &ReplayE2ETestCase) -> SimResult {
         notes: &judge_notes,
         mode: &mode,
         ln_type: model.lntype(),
-        judge_rank: model.judgerank(),
+        judge_rank: model.judgerank,
         judge_window_rate: [100, 100, 100],
         scratch_judge_window_rate: [100, 100, 100],
         algorithm: JudgeAlgorithm::Combo,

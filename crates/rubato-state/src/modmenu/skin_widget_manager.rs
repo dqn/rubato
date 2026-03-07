@@ -4,9 +4,9 @@ use super::stubs::{
     Clipboard, ImBoolean, ImFloat, Rectangle, Skin, SkinObject, SkinObjectDestination,
 };
 
+use rubato_types::sync_utils::lock_or_recover;
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
-use rubato_types::sync_utils::lock_or_recover;
 
 const EPS: f64 = 1e-5;
 
@@ -183,8 +183,7 @@ impl SkinWidgetManager {
                         // SkinWidgets tab
                         ui.horizontal(|ui| {
                             if ui.button("Undo").clicked() {
-                                let mut event_history =
-                                    lock_or_recover(&EVENT_HISTORY);
+                                let mut event_history = lock_or_recover(&EVENT_HISTORY);
                                 event_history.undo_with_widgets(&mut widgets);
                             }
                             render_prefer_column_setting(ui);
@@ -313,13 +312,11 @@ fn render_skin_widgets_table(ui: &mut egui::Ui, widgets: &mut [SkinWidget]) {
 
                         // Last column (Operation): Toggle button
                         if col_size >= 2 {
-                            let event_history =
-                                lock_or_recover(&EVENT_HISTORY);
+                            let event_history = lock_or_recover(&EVENT_HISTORY);
                             let was_visible = widget.skin_object.visible;
                             drop(event_history);
                             if ui.button("Toggle").clicked() {
-                                let mut event_history =
-                                    lock_or_recover(&EVENT_HISTORY);
+                                let mut event_history = lock_or_recover(&EVENT_HISTORY);
                                 event_history.push_event(Event::ToggleVisible {
                                     event_type: EventType::ToggleVisible,
                                     target_name: widget.name.clone(),
@@ -346,8 +343,7 @@ fn render_skin_widgets_table(ui: &mut egui::Ui, widgets: &mut [SkinWidget]) {
                                 ui.label(dst_label);
 
                                 // Middle columns: float values
-                                let event_history =
-                                    lock_or_recover(&EVENT_HISTORY);
+                                let event_history = lock_or_recover(&EVENT_HISTORY);
                                 let columns_ref = lock_or_recover(&WIDGET_TABLE_COLUMNS);
                                 let showing_mid: Vec<&WidgetTableColumn> =
                                     columns_ref.iter().filter(|col| col.show).collect();
@@ -457,22 +453,10 @@ fn render_edit_popup(ui: &mut egui::Ui, dst: &mut SkinWidgetDestination, _dst_id
     drop(h);
 
     if ui.button("Submit").clicked() {
-        dst.set_dst_x(
-            lock_or_recover(&EDITING_WIDGET_X)
-                .value,
-        );
-        dst.set_dst_y(
-            lock_or_recover(&EDITING_WIDGET_Y)
-                .value,
-        );
-        dst.set_dst_w(
-            lock_or_recover(&EDITING_WIDGET_W)
-                .value,
-        );
-        dst.set_dst_h(
-            lock_or_recover(&EDITING_WIDGET_H)
-                .value,
-        );
+        dst.set_dst_x(lock_or_recover(&EDITING_WIDGET_X).value);
+        dst.set_dst_y(lock_or_recover(&EDITING_WIDGET_Y).value);
+        dst.set_dst_w(lock_or_recover(&EDITING_WIDGET_W).value);
+        dst.set_dst_h(lock_or_recover(&EDITING_WIDGET_H).value);
     }
 
     // Move overlay checkbox

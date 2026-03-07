@@ -1,10 +1,12 @@
 use bms_model::mode::Mode;
 
 use super::imgui_notify::{ImGuiNotify, NOTIFICATION_POSITIONS};
-use super::stubs::{Config, MainController, MainControllerAccess, PlayConfig, read_all_player_id};
+use super::stubs::{
+    Config, ControllerConfigAccess, MainController, PlayConfig, read_all_player_id,
+};
 
-use std::sync::Mutex;
 use rubato_types::sync_utils::lock_or_recover;
+use std::sync::Mutex;
 
 static MAIN: Mutex<Option<MainController>> = Mutex::new(None);
 static CONFIG: Mutex<Option<Config>> = Mutex::new(None);
@@ -129,8 +131,7 @@ impl MiscSettingMenu {
                     *lock_or_recover(&LIFT_VALUE) = lift_val;
                 }
 
-                let mut hidden_enabled =
-                    *lock_or_recover(&ENABLE_HIDDEN);
+                let mut hidden_enabled = *lock_or_recover(&ENABLE_HIDDEN);
                 ui.checkbox(&mut hidden_enabled, "Enable Hidden");
                 *lock_or_recover(&ENABLE_HIDDEN) = hidden_enabled;
                 if hidden_enabled {
@@ -152,8 +153,7 @@ impl MiscSettingMenu {
                 ui.checkbox(&mut constant, "Enable Constant");
                 *lock_or_recover(&ENABLE_CONSTANT) = constant;
                 if constant {
-                    let mut constant_val =
-                        *lock_or_recover(&CONSTANT_VALUE);
+                    let mut constant_val = *lock_or_recover(&CONSTANT_VALUE);
                     ui.add(
                         egui::Slider::new(&mut constant_val, 0..=5000).text("Fade-in Time (ms)"),
                     );

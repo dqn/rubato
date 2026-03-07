@@ -37,7 +37,8 @@ impl ScoreLogDatabaseAccessor {
         )];
 
         let base = SQLiteDatabaseAccessor::new(tables);
-        base.validate(&conn).context("failed to validate score log database schema")?;
+        base.validate(&conn)
+            .context("failed to validate score log database schema")?;
 
         Ok(Self { conn, base })
     }

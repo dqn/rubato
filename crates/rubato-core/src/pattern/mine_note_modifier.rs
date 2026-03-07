@@ -70,7 +70,7 @@ impl PatternModifier for MineNoteModifier {
 
         if self.mode == Mode::Remove {
             let mut assist = AssistLevel::None;
-            let timelines = model.all_time_lines_mut();
+            let timelines = &mut model.timelines;
             for tl in timelines.iter_mut() {
                 for lane in 0..mode_key {
                     if let Some(note) = tl.note(lane)
@@ -85,7 +85,7 @@ impl PatternModifier for MineNoteModifier {
             self.base.assist = assist;
         } else {
             let mut rng = JavaRandom::new(self.base.seed);
-            let timelines = model.all_time_lines_mut();
+            let timelines = &mut model.timelines;
             let mut ln = vec![false; mode_key as usize];
             let mut blank = vec![false; mode_key as usize];
 

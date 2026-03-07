@@ -289,7 +289,8 @@ impl<'a> PomyuCharaLoader<'a> {
                                 && (parsed as usize) < xywh.len()
                                 && data.len() > xywh[0].len()
                             {
-                                for (dest, src) in xywh[parsed as usize].iter_mut().zip(&data[1..]) {
+                                for (dest, src) in xywh[parsed as usize].iter_mut().zip(&data[1..])
+                                {
                                     *dest = pm_parse_int(src);
                                 }
                             }

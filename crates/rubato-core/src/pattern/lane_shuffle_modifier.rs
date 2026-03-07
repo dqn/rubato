@@ -73,13 +73,10 @@ fn lane_shuffle_modify(
         for &r in &random[..random.len() - 1] {
             random_sb.push_str(&(r + 1).to_string());
         }
-        add_random_history(RandomHistoryEntry::new(
-            model.get_title().to_string(),
-            random_sb,
-        ));
+        add_random_history(RandomHistoryEntry::new(model.title.to_string(), random_sb));
     }
 
-    let timelines = model.all_time_lines_mut();
+    let timelines = &mut model.timelines;
     for index in 0..timelines.len() {
         let tl = &timelines[index];
         if tl.exist_note() || tl.exist_hidden_note() {
@@ -593,7 +590,7 @@ impl PatternModifier for PlayerBattleModifier {
             return;
         }
 
-        let timelines = model.all_time_lines_mut();
+        let timelines = &mut model.timelines;
         for tl in timelines.iter_mut() {
             if tl.exist_note() || tl.exist_hidden_note() {
                 // Take all notes out of the timeline (move, not clone)

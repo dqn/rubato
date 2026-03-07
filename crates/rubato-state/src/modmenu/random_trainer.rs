@@ -4,8 +4,8 @@ use std::sync::Mutex;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rubato_types::random_history;
-use rubato_types::sync_utils::lock_or_recover;
 pub use rubato_types::random_history::RandomHistoryEntry;
+use rubato_types::sync_utils::lock_or_recover;
 
 static LANE_ORDER: Mutex<String> = Mutex::new(String::new());
 static LANES_TO_RANDOM: Mutex<Vec<char>> = Mutex::new(Vec::new());
@@ -125,8 +125,7 @@ impl RandomTrainer {
     }
 
     pub fn get_random_seed_map() -> Option<HashMap<i32, i64>> {
-        lock_or_recover(&RANDOM_SEED_MAP)
-            .clone()
+        lock_or_recover(&RANDOM_SEED_MAP).clone()
     }
 
     pub fn set_black_white_permute(black_white_permute: bool) {

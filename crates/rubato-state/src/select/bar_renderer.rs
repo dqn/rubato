@@ -445,7 +445,7 @@ impl BarRenderer {
                     if let Some(song_bar) = sd.as_song_bar() {
                         let song_md5 = &song_bar.song_data().md5;
                         for task_arc in download_tasks.values() {
-                            let task = lock_or_recover(&task_arc);
+                            let task = lock_or_recover(task_arc);
                             if task.hash() != song_md5 {
                                 continue;
                             }

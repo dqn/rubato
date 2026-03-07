@@ -62,9 +62,9 @@ fn decode_7k_fixture_metadata() {
 
     assert_eq!(model.title.as_str(), "Test Song");
     assert_eq!(model.sub_title.as_str(), "[7K Hard]");
-    assert_eq!(model.artist(), "Test Artist");
-    assert_eq!(model.sub_artist(), "Test Creator");
-    assert_eq!(model.genre(), "7K");
+    assert_eq!(model.artist, "Test Artist");
+    assert_eq!(model.subartist, "Test Creator");
+    assert_eq!(model.genre, "7K");
     assert_eq!(model.mode(), Some(&Mode::BEAT_7K));
 }
 
@@ -236,8 +236,8 @@ fn decode_7k_fixture_events() {
         .expect("should decode 7K .osu fixture");
 
     // Event type "0" sets backbmp/stagefile
-    assert_eq!(model.backbmp(), "bg.jpg");
-    assert_eq!(model.stagefile(), "bg.jpg");
+    assert_eq!(model.backbmp, "bg.jpg");
+    assert_eq!(model.stagefile, "bg.jpg");
 
     // Video event adds to bga_list
     let bga_list = &model.bgamap;
@@ -248,7 +248,7 @@ fn decode_7k_fixture_events() {
     );
 
     // Audio preview set from general.audio_filename
-    assert_eq!(model.preview(), "audio.mp3");
+    assert_eq!(model.preview, "audio.mp3");
 }
 
 // ---------------------------------------------------------------------------
@@ -263,12 +263,12 @@ fn decode_7k_fixture_hashes_are_nonempty() {
         .decode_path(&path)
         .expect("should decode 7K .osu fixture");
 
-    assert!(!model.md5().is_empty(), "md5 hash should be computed");
-    assert!(!model.sha256().is_empty(), "sha256 hash should be computed");
+    assert!(!model.md5.is_empty(), "md5 hash should be computed");
+    assert!(!model.sha256.is_empty(), "sha256 hash should be computed");
     // MD5 is always 32 hex chars
-    assert_eq!(model.md5().len(), 32, "md5 should be 32 hex chars");
+    assert_eq!(model.md5.len(), 32, "md5 should be 32 hex chars");
     // SHA256 is always 64 hex chars
-    assert_eq!(model.sha256().len(), 64, "sha256 should be 64 hex chars");
+    assert_eq!(model.sha256.len(), 64, "sha256 should be 64 hex chars");
 }
 
 // ---------------------------------------------------------------------------
@@ -309,7 +309,7 @@ CircleSize:4
         .expect("should decode 4K .osu");
 
     assert_eq!(model.mode(), Some(&Mode::BEAT_7K));
-    assert_eq!(model.genre(), "4K");
+    assert_eq!(model.genre, "4K");
 }
 
 #[test]
@@ -347,7 +347,7 @@ CircleSize:5
         .expect("should decode 5K .osu");
 
     assert_eq!(model.mode(), Some(&Mode::BEAT_5K));
-    assert_eq!(model.genre(), "5K");
+    assert_eq!(model.genre, "5K");
 }
 
 #[test]
@@ -389,7 +389,7 @@ CircleSize:9
         .expect("should decode 9K .osu");
 
     assert_eq!(model.mode(), Some(&Mode::POPN_9K));
-    assert_eq!(model.genre(), "9K");
+    assert_eq!(model.genre, "9K");
 }
 
 // ---------------------------------------------------------------------------
@@ -744,7 +744,7 @@ fn wav_list_includes_audio_and_samples() {
         .decode_path(&path)
         .expect("should decode 7K .osu fixture");
 
-    let wav_list = model.wav_list();
+    let wav_list = &model.wavmap;
     // First entry should be the general audio filename
     assert_eq!(
         wav_list[0], "audio.mp3",

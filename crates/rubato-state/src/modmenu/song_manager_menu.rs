@@ -1,8 +1,8 @@
 use super::stubs::{ScoreData, SongData, SongSelectionAccess};
 use rubato_types::last_played_sort;
 
-use std::sync::Mutex;
 use rubato_types::sync_utils::lock_or_recover;
+use std::sync::Mutex;
 
 static SELECTOR: Mutex<Option<Box<dyn SongSelectionAccess>>> = Mutex::new(None);
 #[allow(dead_code)]
@@ -60,8 +60,7 @@ impl SongManagerMenu {
 #[allow(dead_code)]
 fn update_reverse_lookup_data(current_song_data: &Option<SongData>) {
     if current_song_data.is_none() {
-        lock_or_recover(&CURRENT_REVERSE_LOOKUP_LIST)
-            .clear();
+        lock_or_recover(&CURRENT_REVERSE_LOOKUP_LIST).clear();
         return;
     }
 

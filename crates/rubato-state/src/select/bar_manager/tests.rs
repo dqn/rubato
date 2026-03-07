@@ -338,8 +338,8 @@ fn test_loader_loads_banner_via_pool() {
 
     // Banner should be loaded into the SongBar
     let sb = bars[0].as_song_bar().unwrap();
-    assert!(sb.banner().is_some());
-    let pix = sb.banner().unwrap();
+    assert!(sb.banner.is_some());
+    let pix = sb.banner.as_ref().unwrap();
     assert_eq!(pix.width, 4);
     assert_eq!(pix.height, 4);
 }
@@ -376,8 +376,8 @@ fn test_loader_loads_stagefile_via_pool() {
 
     // Stagefile should be loaded into the SongBar
     let sb = bars[0].as_song_bar().unwrap();
-    assert!(sb.stagefile().is_some());
-    let pix = sb.stagefile().unwrap();
+    assert!(sb.stagefile.is_some());
+    let pix = sb.stagefile.as_ref().unwrap();
     assert_eq!(pix.width, 4);
     assert_eq!(pix.height, 4);
 }
@@ -412,7 +412,7 @@ fn test_loader_no_pool_skips_banner_loading() {
 
     // Banner should NOT be loaded (no pool)
     let sb = bars[0].as_song_bar().unwrap();
-    assert!(sb.banner().is_none());
+    assert!(sb.banner.is_none());
 }
 
 #[test]
@@ -446,7 +446,7 @@ fn test_loader_nonexistent_banner_file_not_loaded() {
 
     // Banner should NOT be loaded (file does not exist)
     let sb = bars[0].as_song_bar().unwrap();
-    assert!(sb.banner().is_none());
+    assert!(sb.banner.is_none());
 }
 
 // ---- add_search tests ----

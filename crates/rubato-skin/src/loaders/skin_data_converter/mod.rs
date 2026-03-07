@@ -110,7 +110,13 @@ pub fn convert_header_data(
     let offsets: Vec<CustomOffset> = data
         .custom_offsets
         .iter()
-        .map(|o| CustomOffset::new(o.name.clone(), o.id, OffsetFlags::new(o.x, o.y, o.w, o.h, o.r, o.a)))
+        .map(|o| {
+            CustomOffset::new(
+                o.name.clone(),
+                o.id,
+                OffsetFlags::new(o.x, o.y, o.w, o.h, o.r, o.a),
+            )
+        })
         .collect();
     header.offsets = offsets;
 

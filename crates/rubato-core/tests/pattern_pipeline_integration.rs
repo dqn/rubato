@@ -70,8 +70,8 @@ fn parse_minimal_7k_produces_valid_model() {
     );
 
     // Verify metadata
-    assert_eq!(model.get_title(), "Minimal 7K Test");
-    assert_eq!(model.artist(), "brs-test");
+    assert_eq!(model.title, "Minimal 7K Test");
+    assert_eq!(model.artist, "brs-test");
     assert!((model.bpm - 120.0).abs() < f64::EPSILON);
 }
 

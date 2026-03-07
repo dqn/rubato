@@ -1,8 +1,8 @@
 use bms_model::mode::Mode;
 use rubato_play::bms_player_rule::BMSPlayerRule;
 
-use std::sync::Mutex;
 use rubato_types::sync_utils::lock_or_recover;
+use std::sync::Mutex;
 
 pub const JUDGE_OPTIONS: [&str; 4] = ["EASY", "NORMAL", "HARD", "VERY_HARD"];
 

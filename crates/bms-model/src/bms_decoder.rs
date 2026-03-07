@@ -610,7 +610,7 @@ impl BMSDecoder {
                 "最後のノート定義から30秒以上の余白があります",
             ));
         }
-        if model.player() > 1
+        if model.player > 1
             && (model.mode() == Some(&Mode::BEAT_5K) || model.mode() == Some(&Mode::BEAT_7K))
         {
             self.log.push(DecodeLog::new(
@@ -618,7 +618,7 @@ impl BMSDecoder {
                 "#PLAYER定義が2以上にもかかわらず2P側のノーツ定義が一切ありません",
             ));
         }
-        if model.player() == 1
+        if model.player == 1
             && (model.mode() == Some(&Mode::BEAT_10K) || model.mode() == Some(&Mode::BEAT_14K))
         {
             self.log.push(DecodeLog::new(
@@ -1130,7 +1130,7 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#ARTIST DJ Test"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().artist(), "DJ Test");
+        assert_eq!(model.unwrap().artist, "DJ Test");
     }
 
     #[test]
@@ -1158,7 +1158,7 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#GENRE Hardcore"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().genre(), "Hardcore");
+        assert_eq!(model.unwrap().genre, "Hardcore");
     }
 
     #[test]
@@ -1167,7 +1167,7 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#SUBTITLE [SPA]"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().sub_title(), "[SPA]");
+        assert_eq!(model.unwrap().sub_title, "[SPA]");
     }
 
     #[test]
@@ -1176,7 +1176,7 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#SUBARTIST feat. Vocalist"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().sub_artist(), "feat. Vocalist");
+        assert_eq!(model.unwrap().subartist, "feat. Vocalist");
     }
 
     #[test]
@@ -1196,7 +1196,7 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#DIFFICULTY 4"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().difficulty(), 4);
+        assert_eq!(model.unwrap().difficulty, 4);
     }
 
     #[test]
@@ -1206,8 +1206,8 @@ mod tests {
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
         let model = model.unwrap();
-        assert_eq!(model.judgerank(), 3);
-        assert_eq!(model.judgerank_type(), &JudgeRankType::BmsRank);
+        assert_eq!(model.judgerank, 3);
+        assert_eq!(model.judgerank_type, JudgeRankType::BmsRank);
     }
 
     #[test]
@@ -1217,7 +1217,7 @@ mod tests {
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
         // Backslash should be converted to forward slash
-        assert_eq!(model.unwrap().stagefile(), "bg/stage.bmp");
+        assert_eq!(model.unwrap().stagefile, "bg/stage.bmp");
     }
 
     #[test]
@@ -1226,7 +1226,7 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#BANNER banner.png"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().banner(), "banner.png");
+        assert_eq!(model.unwrap().banner, "banner.png");
     }
 
     #[test]
@@ -1235,7 +1235,7 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#PREVIEW preview.ogg"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().preview(), "preview.ogg");
+        assert_eq!(model.unwrap().preview, "preview.ogg");
     }
 
     #[test]
@@ -1273,12 +1273,12 @@ mod tests {
         assert!(model.is_some());
         let model = model.unwrap();
         // MD5 hash should be 32 hex characters
-        assert_eq!(model.md5().len(), 32);
+        assert_eq!(model.md5.len(), 32);
         // SHA256 hash should be 64 hex characters
-        assert_eq!(model.sha256().len(), 64);
+        assert_eq!(model.sha256.len(), 64);
         // Should only contain hex digits
-        assert!(model.md5().chars().all(|c| c.is_ascii_hexdigit()));
-        assert!(model.sha256().chars().all(|c| c.is_ascii_hexdigit()));
+        assert!(model.md5.chars().all(|c| c.is_ascii_hexdigit()));
+        assert!(model.sha256.chars().all(|c| c.is_ascii_hexdigit()));
     }
 
     #[test]
@@ -1287,7 +1287,7 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#PLAYER 1"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().player(), 1);
+        assert_eq!(model.unwrap().player, 1);
     }
 
     #[test]
@@ -1306,8 +1306,8 @@ mod tests {
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
         let model = model.unwrap();
-        assert_eq!(model.judgerank(), 100);
-        assert_eq!(model.judgerank_type(), &JudgeRankType::BmsDefexrank);
+        assert_eq!(model.judgerank, 100);
+        assert_eq!(model.judgerank_type, JudgeRankType::BmsDefexrank);
     }
 
     #[test]
@@ -1316,7 +1316,7 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#BASE 62"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().get_base(), 62);
+        assert_eq!(model.unwrap().base, 62);
     }
 
     #[test]
@@ -1325,7 +1325,7 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#BACKBMP img\\back.bmp"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().backbmp(), "img/back.bmp");
+        assert_eq!(model.unwrap().backbmp, "img/back.bmp");
     }
 
     #[test]
@@ -1369,12 +1369,12 @@ mod tests {
         let model = decoder.decode_bytes(&data, false, None).unwrap();
 
         assert_eq!(model.title.as_str(), "Combined Test");
-        assert_eq!(model.artist(), "Multi Artist");
+        assert_eq!(model.artist, "Multi Artist");
         assert!((model.bpm - 180.0).abs() < f64::EPSILON);
         assert_eq!(model.playlevel.as_str(), "7");
-        assert_eq!(model.genre(), "Trance");
+        assert_eq!(model.genre, "Trance");
         assert!((model.total - 350.0).abs() < f64::EPSILON);
-        assert_eq!(model.judgerank(), 2);
+        assert_eq!(model.judgerank, 2);
     }
 
     // --- process_command_word tests ---
@@ -1395,7 +1395,7 @@ mod tests {
         let mut log = Vec::new();
         let handled = process_command_word("#ARTIST Test Artist", &mut model, &mut log);
         assert!(handled);
-        assert_eq!(model.artist(), "Test Artist");
+        assert_eq!(model.artist, "Test Artist");
     }
 
     #[test]
@@ -1412,7 +1412,7 @@ mod tests {
         let mut log = Vec::new();
         let handled = process_command_word("#PLAYER 1", &mut model, &mut log);
         assert!(handled);
-        assert_eq!(model.player(), 1);
+        assert_eq!(model.player, 1);
         assert!(log.is_empty());
     }
 
@@ -1465,7 +1465,7 @@ mod tests {
         let data = make_bms_bytes_sjis(&["#BPM 120", "#ARTIST \u{97f3}\u{697d}\u{5bb6}"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().artist(), "\u{97f3}\u{697d}\u{5bb6}");
+        assert_eq!(model.unwrap().artist, "\u{97f3}\u{697d}\u{5bb6}");
     }
 
     #[test]
@@ -1478,7 +1478,7 @@ mod tests {
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
         assert_eq!(
-            model.unwrap().genre(),
+            model.unwrap().genre,
             "\u{30cf}\u{30fc}\u{30c9}\u{30b3}\u{30a2}"
         );
     }
@@ -1512,7 +1512,7 @@ mod tests {
         let data = make_bms_bytes_sjis(&["#BPM 120", "#STAGEFILE \u{753b}\u{50cf}/stage.bmp"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert!(model.unwrap().stagefile().contains("stage.bmp"));
+        assert!(model.unwrap().stagefile.contains("stage.bmp"));
     }
 
     #[test]
@@ -1575,7 +1575,7 @@ mod tests {
             &mut log,
         );
         assert!(handled);
-        assert_eq!(model.genre(), "\u{30cf}\u{30fc}\u{30c9}\u{30b3}\u{30a2}");
+        assert_eq!(model.genre, "\u{30cf}\u{30fc}\u{30c9}\u{30b3}\u{30a2}");
     }
 
     #[test]
@@ -1600,8 +1600,8 @@ mod tests {
         assert!(model.is_some());
         let model = model.unwrap();
         assert_eq!(model.title.as_str(), "\u{661f}\u{306e}\u{5668}");
-        assert_eq!(model.artist(), "\u{4f5c}\u{66f2}\u{8005}");
-        assert_eq!(model.genre(), "\u{30c8}\u{30e9}\u{30f3}\u{30b9}");
+        assert_eq!(model.artist, "\u{4f5c}\u{66f2}\u{8005}");
+        assert_eq!(model.genre, "\u{30c8}\u{30e9}\u{30f3}\u{30b9}");
         assert!((model.bpm - 140.0).abs() < f64::EPSILON);
     }
 }

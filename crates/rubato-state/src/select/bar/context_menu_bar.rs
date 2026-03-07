@@ -174,7 +174,8 @@ impl ContextMenuBar {
             let title_for_closure = song.full_title();
             let folder_for_closure = song_folder.clone();
             related.set_function(Arc::new(move |selector| {
-                let same = SameFolderBar::new(title_for_closure.clone(), folder_for_closure.clone());
+                let same =
+                    SameFolderBar::new(title_for_closure.clone(), folder_for_closure.clone());
                 let bar = Bar::SameFolder(Box::new(same));
                 selector.update_bar_with_songdb_context(Some(&bar));
                 selector.play_sound(SoundType::FolderOpen);

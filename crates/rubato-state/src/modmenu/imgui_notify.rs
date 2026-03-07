@@ -1,9 +1,9 @@
 use super::font_awesome_icons;
 use super::imgui_renderer;
 
+use rubato_types::sync_utils::lock_or_recover;
 use std::sync::Mutex;
 use std::time::Instant;
-use rubato_types::sync_utils::lock_or_recover;
 
 pub const NOTIFY_PADDING_X: f32 = 20.0;
 pub const NOTIFY_PADDING_Y: f32 = 20.0;
@@ -104,8 +104,7 @@ pub struct Toast {
 
 impl Toast {
     pub fn new(toast_type: ToastType) -> Self {
-        let pos = lock_or_recover(&DEFAULT_TOAST_POS)
-            .clone();
+        let pos = lock_or_recover(&DEFAULT_TOAST_POS).clone();
         Toast {
             toast_type,
             pos,

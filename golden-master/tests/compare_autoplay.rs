@@ -136,7 +136,7 @@ fn ensure_timelines_match_fixture(model: &mut BMSModel, timeline_times: &[i64]) 
     }
 
     // Take all existing timelines, add empty timelines for missing times, re-sort
-    let mut timelines = model.take_all_time_lines();
+    let mut timelines = std::mem::take(&mut model.timelines);
     for &t in &missing {
         let mut tl = TimeLine::new(0.0, t, keys);
         // Set BPM from nearest existing timeline

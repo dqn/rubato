@@ -30,7 +30,11 @@ struct FontSizes {
 }
 
 impl BitmapFontBatchLoader {
-    pub fn new(skin: &json_skin::Skin, skin_path: &Path, texture_load_mode: TextureLoadMode) -> Self {
+    pub fn new(
+        skin: &json_skin::Skin,
+        skin_path: &Path,
+        texture_load_mode: TextureLoadMode,
+    ) -> Self {
         let mut font_paths: HashMap<PathBuf, i32> = HashMap::new();
 
         let skin_parent = skin_path.parent().unwrap_or(Path::new(""));
@@ -83,7 +87,8 @@ impl BitmapFontBatchLoader {
                 if loaded_textures.contains_key(image_path) {
                     continue;
                 }
-                if let Some(tex) = skin_loader::texture(image_path, self.texture_load_mode.usecim()) {
+                if let Some(tex) = skin_loader::texture(image_path, self.texture_load_mode.usecim())
+                {
                     loaded_textures.insert(image_path.clone(), TextureRegion::from_texture(tex));
                 }
             }

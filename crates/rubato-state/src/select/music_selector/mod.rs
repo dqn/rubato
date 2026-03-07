@@ -6,7 +6,7 @@ pub(crate) use rubato_core::pixmap_resource_pool::PixmapResourcePool;
 pub(crate) use rubato_core::timer_manager::TimerManager;
 pub(crate) use rubato_ir::ranking_data;
 pub(crate) use rubato_types::main_controller_access::MainControllerAccess;
-pub(crate) use rubato_types::player_resource_access::PlayerResourceAccess;
+pub(crate) use rubato_types::player_resource_access::{PlayerResourceAccess, SongDataAccess};
 
 pub(crate) use super::bar::bar::Bar;
 pub(crate) use super::bar::grade_bar::GradeBar;

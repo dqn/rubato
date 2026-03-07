@@ -183,19 +183,19 @@ impl MainController {
                 MainControllerCommand::UpdateSong(Some(path)) => self.update_song(&path),
                 MainControllerCommand::UpdateSong(None) => {}
                 MainControllerCommand::PlaySound(sound, loop_sound) => {
-                    <Self as MainControllerAccess>::play_sound(self, &sound, loop_sound);
+                    <Self as AudioSystemAccess>::play_sound(self, &sound, loop_sound);
                 }
                 MainControllerCommand::StopSound(sound) => {
-                    <Self as MainControllerAccess>::stop_sound(self, &sound);
+                    <Self as AudioSystemAccess>::stop_sound(self, &sound);
                 }
                 MainControllerCommand::ShuffleSounds => {
-                    <Self as MainControllerAccess>::shuffle_sounds(self);
+                    <Self as AudioSystemAccess>::shuffle_sounds(self);
                 }
                 MainControllerCommand::UpdateTable(source) => {
                     self.update_table(source);
                 }
                 MainControllerCommand::StartIpfsDownload(song) => {
-                    let _ = <Self as MainControllerAccess>::start_ipfs_download(self, &song);
+                    let _ = <Self as DataReadAccess>::start_ipfs_download(self, &song);
                 }
                 MainControllerCommand::SetGlobalPitch(pitch) => {
                     if let Some(ref mut audio) = self.audio {

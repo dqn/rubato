@@ -38,7 +38,7 @@ impl DownloadTaskMenu {
                 ui.end_row();
 
                 for task_arc in tasks {
-                    let task = lock_or_recover(&task_arc);
+                    let task = lock_or_recover(task_arc);
 
                     // Column 0: Task name
                     let name = task.name();

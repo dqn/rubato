@@ -1,7 +1,7 @@
 use super::random_trainer::RandomTrainer;
 
-use std::sync::Mutex;
 use rubato_types::sync_utils::lock_or_recover;
+use std::sync::Mutex;
 
 static RANDOM_TRAINER_ENABLED: Mutex<bool> = Mutex::new(false);
 static BLACK_WHITE_RANDOM_PERMUTATION: Mutex<bool> = Mutex::new(false);

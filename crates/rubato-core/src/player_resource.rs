@@ -712,16 +712,16 @@ impl SongDataAccess for PlayerResource {
                 .map(|m| {
                     // Build SongData from model metadata without consuming the model
                     let mut sd = rubato_types::song_data::SongData::default();
-                    sd.title = m.get_title().to_string();
-                    sd.set_subtitle(m.sub_title().to_string());
-                    sd.genre = m.genre().to_string();
-                    sd.set_artist(m.artist().to_string());
-                    sd.set_subartist(m.sub_artist().to_string());
+                    sd.title = m.title.to_string();
+                    sd.set_subtitle(m.sub_title.to_string());
+                    sd.genre = m.genre.to_string();
+                    sd.set_artist(m.artist.to_string());
+                    sd.set_subartist(m.subartist.to_string());
                     if let Some(p) = m.path() {
                         sd.set_path(p);
                     }
-                    sd.md5 = m.md5().to_string();
-                    sd.sha256 = m.sha256().to_string();
+                    sd.md5 = m.md5.to_string();
+                    sd.sha256 = m.sha256.to_string();
                     sd.notes = m.total_notes();
                     sd.length = m.last_time();
                     sd.mode = m.mode().map(|mode| mode.id()).unwrap_or(0);

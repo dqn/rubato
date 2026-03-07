@@ -181,7 +181,7 @@ impl OSUDecoder {
 
         model.bpm = get_bpm(&timing_points, 0);
 
-        bga_list.push(model.backbmp().to_string());
+        bga_list.push(model.backbmp.to_string());
         let bgm_tl = get_timeline(&mut timelines, 0, 0.0, mode_key);
         let bgm = Note::new_normal_with_start_duration(0, 0, 0);
         bgm_tl.add_back_ground_note(bgm);

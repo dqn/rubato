@@ -226,6 +226,7 @@ impl MultiBadCollector {
 }
 
 /// Judge timing windows and thresholds for notes and scratches.
+#[derive(Default)]
 pub struct JudgeWindows {
     /// Note judge table
     pub nmjudge: Vec<[i64; 2]>,
@@ -240,22 +241,8 @@ pub struct JudgeWindows {
     pub sreleasemargin: i64,
 }
 
-impl Default for JudgeWindows {
-    fn default() -> Self {
-        Self {
-            nmjudge: Vec::new(),
-            mjudgestart: 0,
-            mjudgeend: 0,
-            cnendmjudge: Vec::new(),
-            nreleasemargin: 0,
-            smjudge: Vec::new(),
-            scnendmjudge: Vec::new(),
-            sreleasemargin: 0,
-        }
-    }
-}
-
 /// Score, combo, and judge display state.
+#[derive(Default)]
 pub struct ScoreAccumulator {
     pub score: ScoreData,
     pub combo: i32,
@@ -271,23 +258,6 @@ pub struct ScoreAccumulator {
     /// Judge timing difference (ms, + is early)
     pub judgefast: Vec<i64>,
     pub mjudgefast: Vec<i64>,
-}
-
-impl Default for ScoreAccumulator {
-    fn default() -> Self {
-        Self {
-            score: ScoreData::default(),
-            combo: 0,
-            coursecombo: 0,
-            coursemaxcombo: 0,
-            ghost: Vec::new(),
-            judge: Vec::new(),
-            judgenow: Vec::new(),
-            judgecombo: Vec::new(),
-            judgefast: Vec::new(),
-            mjudgefast: Vec::new(),
-        }
-    }
 }
 
 /// Timing auto-adjust state (Java JudgeManager lines 754-768).

@@ -140,9 +140,7 @@ impl MusicDownloadProcessor {
         let daemon_guard = lock_or_recover(&self.daemon);
         match &*daemon_guard {
             None => None,
-            Some(d) => d
-                .lock_or_recover(&downloadpath)
-                .clone(),
+            Some(d) => lock_or_recover(&d.downloadpath).clone(),
         }
     }
 

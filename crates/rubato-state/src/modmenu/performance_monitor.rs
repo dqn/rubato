@@ -1,9 +1,9 @@
 use rubato_core::performance_metrics::{EventResult, PerformanceMetrics};
 
+use rubato_types::sync_utils::lock_or_recover;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Instant;
-use rubato_types::sync_utils::lock_or_recover;
 
 static EVENT_TREE: Mutex<Option<HashMap<i32, Vec<EventResult>>>> = Mutex::new(None);
 static LAST_EVENT_UPDATE: Mutex<Option<Instant>> = Mutex::new(None);
@@ -105,8 +105,7 @@ impl PerformanceMonitor {
         let mut new_tree: HashMap<i32, Vec<EventResult>> = HashMap::new();
         let metrics = PerformanceMetrics::get();
         let events = {
-            let results = metrics
-                .lock_or_recover(&event_results);
+            let results = lock_or_recover(&metrics.event_results);
             results.clone()
         };
         for event in &events {

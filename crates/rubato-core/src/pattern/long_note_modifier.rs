@@ -71,7 +71,7 @@ impl PatternModifier for LongNoteModifier {
 
         if self.mode == Mode::Remove {
             let mut assist = AssistLevel::None;
-            let timelines = model.all_time_lines_mut();
+            let timelines = &mut model.timelines;
             for tl in timelines.iter_mut() {
                 for lane in 0..mode_key {
                     if let Some(note) = tl.note(lane)
@@ -92,7 +92,7 @@ impl PatternModifier for LongNoteModifier {
         } else {
             let mut assist = AssistLevel::None;
 
-            let timelines = model.all_time_lines_mut();
+            let timelines = &mut model.timelines;
             let tl_len = timelines.len();
             for i in 0..tl_len - 1 {
                 for lane in 0..mode_key {

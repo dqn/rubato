@@ -208,8 +208,7 @@ impl BMSPlayer {
     /// Corresponds to Java BMSPlayer.update(int judge, long time)
     pub fn update_judge(&mut self, judge: i32, time: i64) {
         if self.judge.combo() == 0 {
-            lock_or_recover(&self.bga)
-                .set_misslayer_tme(time);
+            lock_or_recover(&self.bga).set_misslayer_tme(time);
         }
         if let Some(ref mut gauge) = self.gauge {
             gauge.update(judge);

@@ -1202,7 +1202,7 @@ impl LauncherUi {
         self.flush_ir_buffers();
         // Commit skin configuration (saves to player.skin + skin_history)
         self.skin_view.commit();
-        if let Some(updated_player) = self.skin_view.player() {
+        if let Some(ref updated_player) = self.skin_view.player {
             self.player.skin = updated_player.skin.clone();
             self.player.skin_history = updated_player.skin_history.clone();
         }
@@ -1344,7 +1344,7 @@ mod tests {
         player.name = "test_player".to_string();
         let ui = LauncherUi::new(config, player);
 
-        assert_eq!(ui.player().name, "test_player");
+        assert_eq!(ui.player.name, "test_player");
     }
 
     #[test]

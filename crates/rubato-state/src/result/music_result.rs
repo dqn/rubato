@@ -1241,7 +1241,7 @@ mod tests {
         MainControllerAccess, StateTransitionAccess,
     };
     use rubato_types::player_resource_access::PlayerResourceAccess;
-    use rubato_types::skin_render_context::SkinRenderContext;
+    use rubato_types::skin_render_context::SkinPropertyProvider;
     use std::path::{Path, PathBuf};
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -1447,11 +1447,7 @@ mod tests {
         }
     }
 
-    impl PlayerResourceAccess for MouseResultResourceAccess {
-        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
-            self
-        }
-
+    impl rubato_types::player_resource_access::PlayerConfigAccess for MouseResultResourceAccess {
         fn config(&self) -> &rubato_types::config::Config {
             &self.config
         }
@@ -1463,9 +1459,15 @@ mod tests {
         fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
             Some(&mut self.player_config)
         }
+    }
 
+    impl rubato_types::player_resource_access::ScoreDataAccess for MouseResultResourceAccess {
         fn score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
             self.score_data.as_ref()
+        }
+
+        fn score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
+            self.score_data.as_mut()
         }
 
         fn rival_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
@@ -1481,7 +1483,9 @@ mod tests {
         }
 
         fn set_course_score_data(&mut self, _score: rubato_core::score_data::ScoreData) {}
+    }
 
+    impl rubato_types::player_resource_access::SongDataAccess for MouseResultResourceAccess {
         fn songdata(&self) -> Option<&rubato_types::song_data::SongData> {
             self.song_data.as_ref()
         }
@@ -1492,22 +1496,6 @@ mod tests {
 
         fn set_songdata(&mut self, data: Option<rubato_types::song_data::SongData>) {
             self.song_data = data;
-        }
-
-        fn replay_data(&self) -> Option<&rubato_core::replay_data::ReplayData> {
-            self.replay_data.as_ref()
-        }
-
-        fn replay_data_mut(&mut self) -> Option<&mut rubato_core::replay_data::ReplayData> {
-            self.replay_data.as_mut()
-        }
-
-        fn course_replay(&self) -> &[rubato_core::replay_data::ReplayData] {
-            &self.course_replay
-        }
-
-        fn add_course_replay(&mut self, rd: rubato_core::replay_data::ReplayData) {
-            self.course_replay.push(rd);
         }
 
         fn course_data(&self) -> Option<&rubato_types::course_data::CourseData> {
@@ -1526,6 +1514,34 @@ mod tests {
             vec![]
         }
 
+        fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
+            vec![]
+        }
+    }
+
+    impl rubato_types::player_resource_access::ReplayAccess for MouseResultResourceAccess {
+        fn replay_data(&self) -> Option<&rubato_core::replay_data::ReplayData> {
+            self.replay_data.as_ref()
+        }
+
+        fn replay_data_mut(&mut self) -> Option<&mut rubato_core::replay_data::ReplayData> {
+            self.replay_data.as_mut()
+        }
+
+        fn course_replay(&self) -> &[rubato_core::replay_data::ReplayData] {
+            &self.course_replay
+        }
+
+        fn course_replay_mut(&mut self) -> &mut Vec<rubato_core::replay_data::ReplayData> {
+            &mut self.course_replay
+        }
+
+        fn add_course_replay(&mut self, rd: rubato_core::replay_data::ReplayData) {
+            self.course_replay.push(rd);
+        }
+    }
+
+    impl rubato_types::player_resource_access::GaugeAccess for MouseResultResourceAccess {
         fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
             None
         }
@@ -1538,22 +1554,16 @@ mod tests {
             &self.course_gauge
         }
 
-        fn add_course_gauge(&mut self, gauge: Vec<Vec<f32>>) {
-            self.course_gauge.push(gauge);
-        }
-
         fn course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
             &mut self.course_gauge
         }
 
-        fn score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
-            self.score_data.as_mut()
+        fn add_course_gauge(&mut self, gauge: Vec<Vec<f32>>) {
+            self.course_gauge.push(gauge);
         }
+    }
 
-        fn course_replay_mut(&mut self) -> &mut Vec<rubato_core::replay_data::ReplayData> {
-            &mut self.course_replay
-        }
-
+    impl rubato_types::player_resource_access::PlayerStateQuery for MouseResultResourceAccess {
         fn maxcombo(&self) -> i32 {
             0
         }
@@ -1591,6 +1601,12 @@ mod tests {
         fn reverse_lookup_levels(&self) -> Vec<String> {
             vec![]
         }
+    }
+
+    impl PlayerResourceAccess for MouseResultResourceAccess {
+        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
+            self
+        }
 
         fn clear(&mut self) {}
 
@@ -1621,10 +1637,6 @@ mod tests {
 
         fn clear_course_data(&mut self) {
             self.course_data = None;
-        }
-
-        fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
-            vec![]
         }
     }
 

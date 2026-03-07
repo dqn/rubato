@@ -857,8 +857,7 @@ mod tests {
             "title should match bmson info.title"
         );
         assert_eq!(
-            model.artist(),
-            "brs-test",
+            model.artist, "brs-test",
             "artist should match bmson info.artist"
         );
         assert!(
@@ -870,10 +869,7 @@ mod tests {
             8,
             "minimal 7k fixture has 8 normal notes across 2 sound channels"
         );
-        assert!(
-            !model.sha256().is_empty(),
-            "SHA-256 hash should be computed"
-        );
+        assert!(!model.sha256.is_empty(), "SHA-256 hash should be computed");
         assert_eq!(
             model.wavmap.len(),
             2,

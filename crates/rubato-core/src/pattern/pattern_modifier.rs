@@ -136,7 +136,7 @@ pub fn apply_modify_log(model: &mut BMSModel, log: &[PatternModifyLog]) {
     let mode_key = model.mode().map(|m| m.key()).unwrap_or(0);
     let lanes = mode_key as usize;
 
-    let timelines = model.all_time_lines_mut();
+    let timelines = &mut model.timelines;
     for tl in timelines.iter_mut() {
         let mut pm: Option<&PatternModifyLog> = None;
         for pms in log {
@@ -348,7 +348,7 @@ mod tests {
         model.timelines = vec![tl];
         model.set_mode(Mode::BEAT_7K);
         let note = Note::new_normal(1);
-        model.all_time_lines_mut()[0].set_note(0, Some(note));
+        &mut model.timelines[0].set_note(0, Some(note));
 
         let mut modifier = IdentityModifier::new();
         modifier.modify(&mut model);

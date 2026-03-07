@@ -29,7 +29,7 @@ impl PatternModifier for AutoplayModifier {
         let mut assist = AssistLevel::None;
         let mode_key = model.mode().map(|m| m.key()).unwrap_or(0) as usize;
 
-        let timelines = model.all_time_lines_mut();
+        let timelines = &mut model.timelines;
         let tl_len = timelines.len();
         let mut pos = 0usize;
         let mut lns = vec![false; mode_key];

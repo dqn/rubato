@@ -354,8 +354,7 @@ impl MainState for BMSPlayer {
                         }
                     }
 
-                    lock_or_recover(&self.bga)
-                        .prepare(&() as &dyn std::any::Any);
+                    lock_or_recover(&self.bga).prepare(&() as &dyn std::any::Any);
                     self.state = PlayState::Ready;
                     self.main_state_data.timer.set_timer_on(TIMER_READY);
                     self.queue_sound(rubato_types::sound_type::SoundType::PlayReady);
@@ -528,8 +527,7 @@ impl MainState for BMSPlayer {
                         as i32
                         + TIME_MARGIN;
 
-                    lock_or_recover(&self.bga)
-                        .prepare(&() as &dyn std::any::Any);
+                    lock_or_recover(&self.bga).prepare(&() as &dyn std::any::Any);
                     self.state = PlayState::Ready;
                     self.main_state_data.timer.set_timer_on(TIMER_READY);
                     log::info!("Practice -> PlayState::Ready");

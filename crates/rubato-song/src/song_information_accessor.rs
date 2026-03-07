@@ -44,7 +44,8 @@ impl SongInformationAccessor {
             .with_context(|| format!("failed to open song information database: {}", filepath))?;
         conn.execute_batch("PRAGMA shared_cache = ON; PRAGMA synchronous = OFF;")
             .context("failed to set song information database pragmas")?;
-        base.validate(&conn).context("failed to validate song information database schema")?;
+        base.validate(&conn)
+            .context("failed to validate song information database schema")?;
 
         Ok(Self {
             base,

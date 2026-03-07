@@ -5,8 +5,8 @@ use std::time::Instant;
 use super::download_task::{DownloadTask, DownloadTaskStatus};
 use super::http_download_processor::HttpDownloadProcessor;
 
-use std::sync::OnceLock;
 use rubato_types::sync_utils::lock_or_recover;
+use std::sync::OnceLock;
 
 /// Global state for running and expired download tasks.
 /// Corresponds to DownloadTaskState.java
@@ -69,7 +69,7 @@ impl DownloadTaskState {
                 continue;
             }
 
-            let task = lock_or_recover(&task_arc);
+            let task = lock_or_recover(task_arc);
             let _state = task.download_task_status();
             let finished =
                 task.download_task_status().value() >= DownloadTaskStatus::Extracted.value();

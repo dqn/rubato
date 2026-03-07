@@ -78,7 +78,7 @@ impl BMSLoudnessAnalyzer {
     /// Translated from: BMSLoudnessAnalyzer.analyze(BMSModel)
     pub fn analyze(&self, model: &BMSModel) -> AnalysisResult {
         // Check cache first
-        let hash = model.sha256();
+        let hash = &model.sha256;
         if !hash.is_empty()
             && let Some(cached) = Self::read_from_cache(&self.cache_dir, hash)
         {

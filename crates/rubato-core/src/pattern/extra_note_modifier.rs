@@ -28,7 +28,7 @@ impl PatternModifier for ExtraNoteModifier {
         let scratch = self.scratch;
 
         let mode = model.mode().copied();
-        let timelines = model.all_time_lines_mut();
+        let timelines = &mut model.timelines;
         let mut lns = vec![false; mode_key as usize];
         let mut blank = vec![false; mode_key as usize];
         let mut lastnote: Vec<Option<Note>> = vec![None; mode_key as usize];

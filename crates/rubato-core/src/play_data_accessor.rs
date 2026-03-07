@@ -555,7 +555,7 @@ impl PlayDataAccessor {
 
     /// Read score data for a single BMSModel (delegates to read_score_data_by_hash).
     pub fn read_score_data_model(&self, model: &BMSModel, lnmode: i32) -> Option<ScoreData> {
-        let hash = model.sha256();
+        let hash = &model.sha256;
         let ln = model.contains_undefined_long_note();
         self.read_score_data_by_hash(hash, ln, lnmode)
     }
@@ -568,7 +568,7 @@ impl PlayDataAccessor {
         lnmode: i32,
         update_score: bool,
     ) {
-        let hash = model.sha256();
+        let hash = &model.sha256;
         let contains_undefined_ln = model.contains_undefined_long_note();
         let total_notes = model.total_notes();
         // Calculate last note time in microseconds
@@ -598,7 +598,7 @@ impl PlayDataAccessor {
     /// Check if replay data exists for a single BMSModel.
     pub fn exists_replay_data_model(&self, model: &BMSModel, lnmode: i32, index: i32) -> bool {
         let ln = model.contains_undefined_long_note();
-        self.exists_replay_data(model.sha256(), ln, lnmode, index)
+        self.exists_replay_data(&model.sha256, ln, lnmode, index)
     }
 
     /// Write replay data for a single BMSModel.
@@ -610,12 +610,12 @@ impl PlayDataAccessor {
         index: i32,
     ) {
         let ln = model.contains_undefined_long_note();
-        self.write_replay_data(rd, model.sha256(), ln, lnmode, index);
+        self.write_replay_data(rd, &model.sha256, ln, lnmode, index);
     }
 
     /// Delete score data for a single BMSModel.
     pub fn delete_score_data_model(&self, model: &BMSModel, lnmode: i32) {
-        self.delete_score_data(model.sha256(), model.contains_undefined_long_note(), lnmode);
+        self.delete_score_data(&model.sha256, model.contains_undefined_long_note(), lnmode);
     }
 
     // ========================================================================
@@ -652,7 +652,7 @@ impl PlayDataAccessor {
         constraint: &[CourseDataConstraint],
         update_score: bool,
     ) {
-        let hashes: Vec<&str> = models.iter().map(|m| m.sha256()).collect();
+        let hashes: Vec<&str> = models.iter().map(|m| m.sha256.as_str()).collect();
         let total_notes: i32 = models.iter().map(|m| m.total_notes()).sum();
         let ln = models.iter().any(|m| m.contains_undefined_long_note());
         self.write_score_data_for_course(
@@ -675,7 +675,7 @@ impl PlayDataAccessor {
         index: i32,
         constraint: &[CourseDataConstraint],
     ) -> bool {
-        let hashes: Vec<String> = models.iter().map(|m| m.sha256().to_string()).collect();
+        let hashes: Vec<String> = models.iter().map(|m| m.sha256.to_string()).collect();
         let hash_refs: Vec<&str> = hashes.iter().map(|s| s.as_str()).collect();
         let ln = models.iter().any(|m| m.contains_undefined_long_note());
         let path = format!(
@@ -696,7 +696,7 @@ impl PlayDataAccessor {
         if !self.exists_replay_data_course(models, lnmode, index, constraint) {
             return None;
         }
-        let hashes: Vec<String> = models.iter().map(|m| m.sha256().to_string()).collect();
+        let hashes: Vec<String> = models.iter().map(|m| m.sha256.to_string()).collect();
         let hash_refs: Vec<&str> = hashes.iter().map(|s| s.as_str()).collect();
         let ln = models.iter().any(|m| m.contains_undefined_long_note());
         let path = format!(
@@ -721,7 +721,7 @@ impl PlayDataAccessor {
         index: i32,
         constraint: &[CourseDataConstraint],
     ) {
-        let hashes: Vec<String> = models.iter().map(|m| m.sha256().to_string()).collect();
+        let hashes: Vec<String> = models.iter().map(|m| m.sha256.to_string()).collect();
         let hash_refs: Vec<&str> = hashes.iter().map(|s| s.as_str()).collect();
         let ln = models.iter().any(|m| m.contains_undefined_long_note());
         let path = format!(
@@ -798,7 +798,7 @@ impl PlayDataAccessor {
     fn course_hash(models: &[BMSModel]) -> String {
         models
             .iter()
-            .map(|m| m.sha256())
+            .map(|m| m.sha256.as_str())
             .collect::<Vec<_>>()
             .join("")
     }

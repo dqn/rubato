@@ -55,10 +55,7 @@ mod tests {
             ScreenType::from(MainStateType::Decide),
             ScreenType::MusicDecide
         );
-        assert_eq!(
-            ScreenType::from(MainStateType::Play),
-            ScreenType::BMSPlayer
-        );
+        assert_eq!(ScreenType::from(MainStateType::Play), ScreenType::BMSPlayer);
         assert_eq!(
             ScreenType::from(MainStateType::Result),
             ScreenType::MusicResult

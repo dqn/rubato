@@ -53,7 +53,7 @@ impl SkinJudgeObject {
 
     /// Translated from: Java SkinJudge.prepare(long time, MainState state)
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
-        let player = self.inner.player();
+        let player = self.inner.player;
         let judgenow = state.get_now_judge(player) - 1;
         if judgenow < 0 {
             self.data.draw = false;

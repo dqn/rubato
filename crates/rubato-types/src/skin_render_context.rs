@@ -222,14 +222,14 @@ pub trait SkinPropertyProvider: SkinStateQuery + SkinConfigAccess {
             332 => self
                 .current_play_config_ref()
                 .map_or(-1, |pc| i32::from(pc.enablehidden)),
-            340 => self.current_play_config_ref().map_or(-1, |pc| {
-                match pc.judgetype.as_str() {
+            340 => self
+                .current_play_config_ref()
+                .map_or(-1, |pc| match pc.judgetype.as_str() {
                     "Combo" => 0,
                     "Duration" => 1,
                     "Lowest" => 2,
                     _ => -1,
-                }
-            }),
+                }),
             341 => player_config.map_or(-1, |c| c.play_settings.bottom_shiftable_gauge),
             342 => self
                 .current_play_config_ref()
@@ -450,12 +450,12 @@ pub trait SkinRenderContext:
 }
 
 impl<
-        T: TimerAccess
-            + SkinEventHandler
-            + SkinAudioControl
-            + SkinPropertyProvider
-            + SkinStateQuery
-            + SkinConfigAccess,
-    > SkinRenderContext for T
+    T: TimerAccess
+        + SkinEventHandler
+        + SkinAudioControl
+        + SkinPropertyProvider
+        + SkinStateQuery
+        + SkinConfigAccess,
+> SkinRenderContext for T
 {
 }

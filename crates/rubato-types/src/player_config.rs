@@ -673,8 +673,12 @@ impl PlayerConfig {
     pub fn init(config: &mut Config) -> anyhow::Result<()> {
         let playerpath = Path::new(&config.paths.playerpath);
         if !playerpath.exists() {
-            std::fs::create_dir_all(playerpath)
-                .with_context(|| format!("failed to create player directory: {}", playerpath.display()))?;
+            std::fs::create_dir_all(playerpath).with_context(|| {
+                format!(
+                    "failed to create player directory: {}",
+                    playerpath.display()
+                )
+            })?;
         }
 
         if read_all_player_id(&config.paths.playerpath).is_empty() {
@@ -727,8 +731,12 @@ impl PlayerConfig {
         let id = player.id.as_deref().unwrap_or("unknown");
         let path = PathBuf::from(format!("{}/{}/config_player.json", playerpath, id));
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create player config directory: {}", parent.display()))?;
+            std::fs::create_dir_all(parent).with_context(|| {
+                format!(
+                    "failed to create player config directory: {}",
+                    parent.display()
+                )
+            })?;
         }
         let json = serde_json::to_string_pretty(player)
             .context("failed to serialize player config to JSON")?;

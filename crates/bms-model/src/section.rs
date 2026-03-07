@@ -271,7 +271,7 @@ impl Section {
         startln: &mut Vec<Option<StartLnInfo>>,
         log: &mut Vec<DecodeLog>,
     ) {
-        let lnobj = model.lnobj();
+        let lnobj = model.lnobj;
         let lnmode = model.lnmode;
         let mode = model.mode().copied();
         let cassign: &[i32; 18] = if mode.as_ref() == Some(&Mode::POPN_9K) {

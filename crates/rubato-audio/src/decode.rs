@@ -56,9 +56,10 @@ impl AudioData {
 /// No driver-specific channel/sample rate conversion is applied.
 pub fn load_audio(path: &Path) -> Result<AudioData> {
     let mut loader = PCMLoader::new();
-    loader.load_pcm(path)
+    loader
+        .load_pcm(path)
         .with_context(|| format!("failed to load PCM data from: {}", path.display()))?;
-    let float_pcm = FloatPCM::load_pcm(&loader)
-        .context("failed to convert PCM data to float samples")?;
+    let float_pcm =
+        FloatPCM::load_pcm(&loader).context("failed to convert PCM data to float samples")?;
     Ok(AudioData::from_float_pcm(&float_pcm))
 }

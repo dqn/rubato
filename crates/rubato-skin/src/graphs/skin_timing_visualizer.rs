@@ -267,7 +267,7 @@ pub fn judge_area(resource: &MusicResultResource) -> Vec<Vec<i32>> {
     let mode = resource.original_mode();
     let rule = rubato_play::bms_player_rule::BMSPlayerRule::for_mode(&mode);
 
-    let judgerank = model.judgerank();
+    let judgerank = model.judgerank;
     let config = resource.player_config();
     let mut judge_window_rate = if config.judge_settings.custom_judge {
         vec![
@@ -301,7 +301,7 @@ pub fn judge_area_from_player_resource(resource: &PlayerResource) -> Vec<Vec<i32
     let mode = resource.original_mode();
     let rule = rubato_play::bms_player_rule::BMSPlayerRule::for_mode(&mode);
 
-    let judgerank = model.judgerank();
+    let judgerank = model.judgerank;
     let config = resource.player_config();
     let judge_window_rate = if config.judge_settings.custom_judge {
         vec![

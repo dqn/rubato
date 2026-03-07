@@ -46,7 +46,7 @@ impl PatternModifier for ModeModifier {
         let seven_to_nine_pattern = self.config.note_modifier_settings.seven_to_nine_pattern;
         let seven_to_nine_type = self.config.note_modifier_settings.seven_to_nine_type;
 
-        let timelines = model.all_time_lines_mut();
+        let timelines = &mut model.timelines;
         // Pre-compute timeline index → time for LN end note pair lookup
         let tl_times: Vec<i32> = timelines.iter().map(|tl| tl.time()).collect();
         for tl in timelines.iter_mut() {
