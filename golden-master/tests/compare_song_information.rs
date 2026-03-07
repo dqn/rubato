@@ -1,4 +1,4 @@
-// Golden master tests: compare Rust SongInformation::from_model() against Java SongInformation fixture export.
+// Golden master tests: compare Rust SongInformation::from(&BMSModel) against Java SongInformation fixture export.
 
 use std::path::Path;
 
@@ -206,7 +206,7 @@ fn run_song_information_test(bms_name: &str) {
     let model = BMSDecoder::new()
         .decode_path(&bms_path)
         .expect("Failed to parse BMS");
-    let info = SongInformation::from_model(&model);
+    let info = SongInformation::from(&model);
 
     assert_song_information_matches(&info, test_case, bms_name);
 }
@@ -225,7 +225,7 @@ fn run_song_information_test_with_randoms(bms_name: &str, randoms: &[i32]) {
 
     let info = ChartInformation::new(Some(bms_path), LNTYPE_LONGNOTE, Some(randoms.to_vec()));
     let model = BMSDecoder::new().decode(info).expect("Failed to parse BMS");
-    let song_info = SongInformation::from_model(&model);
+    let song_info = SongInformation::from(&model);
 
     assert_song_information_matches(&song_info, test_case, bms_name);
 }
@@ -245,7 +245,7 @@ fn run_song_information_test_bmson(bmson_name: &str) {
     let model = BMSONDecoder::new(LNTYPE_LONGNOTE)
         .decode_path(&bmson_path)
         .expect("Failed to parse bmson");
-    let info = SongInformation::from_model(&model);
+    let info = SongInformation::from(&model);
 
     assert_song_information_matches(&info, test_case, bmson_name);
 }

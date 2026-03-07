@@ -18,7 +18,7 @@ impl MainController {
             // Create adapter that bridges MainState → MainStateAccess
             let screen_type = current
                 .state_type()
-                .map(ScreenType::from_state_type)
+                .map(ScreenType::from)
                 .unwrap_or(ScreenType::Other);
             let resource = self
                 .resource

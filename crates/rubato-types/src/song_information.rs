@@ -45,12 +45,8 @@ pub struct SongInformation {
     pub lanenotes_values: Vec<[i32; 3]>,
 }
 
-impl SongInformation {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn from_model(model: &BMSModel) -> Self {
+impl From<&BMSModel> for SongInformation {
+    fn from(model: &BMSModel) -> Self {
         let mut info = SongInformation::new();
         info.sha256 = model.sha256().to_string();
         info.n = total_notes_with_type(model, TOTALNOTES_KEY);
@@ -247,6 +243,19 @@ impl SongInformation {
         info.set_lanenotes_values(&lanenotes_arr);
 
         info
+    }
+}
+
+impl SongInformation {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Construct from a BMSModel.
+    ///
+    /// Thin wrapper around the `From<&BMSModel>` trait impl.
+    pub fn from_model(model: &BMSModel) -> Self {
+        Self::from(model)
     }
 
     pub fn set_distribution(&mut self, distribution: String) {

@@ -223,7 +223,7 @@ impl SongData {
             self.content |= CONTENT_NOKEYSOUND;
         }
 
-        self.info = Some(SongInformation::from_model(&model));
+        self.info = Some(SongInformation::from(&model));
 
         let chart_string = model.to_chart_string();
         let mut hasher = Sha256::new();

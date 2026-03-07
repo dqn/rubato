@@ -1,5 +1,17 @@
 use crate::stubs::{Rectangle, TextureRegion};
 
+/// Error returned when an integer does not map to a valid [`StretchType`] variant.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct InvalidStretchTypeId(pub i32);
+
+impl std::fmt::Display for InvalidStretchTypeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "invalid StretchType id: {}", self.0)
+    }
+}
+
+impl std::error::Error for InvalidStretchTypeId {}
+
 /// Image stretch type (StretchType.java)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum StretchType {
@@ -14,6 +26,27 @@ pub enum StretchType {
     KeepAspectRatioNoExpanding,
     NoResize,
     NoResizeTrimmed,
+}
+
+impl TryFrom<i32> for StretchType {
+    type Error = InvalidStretchTypeId;
+
+    fn try_from(id: i32) -> Result<Self, Self::Error> {
+        match id {
+            0 => Ok(StretchType::Stretch),
+            1 => Ok(StretchType::KeepAspectRatioFitInner),
+            2 => Ok(StretchType::KeepAspectRatioFitOuter),
+            3 => Ok(StretchType::KeepAspectRatioFitOuterTrimmed),
+            4 => Ok(StretchType::KeepAspectRatioFitWidth),
+            5 => Ok(StretchType::KeepAspectRatioFitWidthTrimmed),
+            6 => Ok(StretchType::KeepAspectRatioFitHeight),
+            7 => Ok(StretchType::KeepAspectRatioFitHeightTrimmed),
+            8 => Ok(StretchType::KeepAspectRatioNoExpanding),
+            9 => Ok(StretchType::NoResize),
+            10 => Ok(StretchType::NoResizeTrimmed),
+            _ => Err(InvalidStretchTypeId(id)),
+        }
+    }
 }
 
 impl StretchType {
@@ -33,21 +66,11 @@ impl StretchType {
         }
     }
 
+    /// Convert from integer id.
+    ///
+    /// Thin wrapper around the `TryFrom<i32>` trait impl.
     pub fn from_id(id: i32) -> Option<StretchType> {
-        match id {
-            0 => Some(StretchType::Stretch),
-            1 => Some(StretchType::KeepAspectRatioFitInner),
-            2 => Some(StretchType::KeepAspectRatioFitOuter),
-            3 => Some(StretchType::KeepAspectRatioFitOuterTrimmed),
-            4 => Some(StretchType::KeepAspectRatioFitWidth),
-            5 => Some(StretchType::KeepAspectRatioFitWidthTrimmed),
-            6 => Some(StretchType::KeepAspectRatioFitHeight),
-            7 => Some(StretchType::KeepAspectRatioFitHeightTrimmed),
-            8 => Some(StretchType::KeepAspectRatioNoExpanding),
-            9 => Some(StretchType::NoResize),
-            10 => Some(StretchType::NoResizeTrimmed),
-            _ => None,
-        }
+        StretchType::try_from(id).ok()
     }
 
     pub fn values() -> &'static [StretchType] {

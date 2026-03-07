@@ -61,6 +61,23 @@ pub struct IRChartData {
     pub values: HashMap<String, String>,
 }
 
+impl From<&IRChartData> for SongData {
+    fn from(chart: &IRChartData) -> Self {
+        let mut sd = SongData::default();
+        sd.sha256 = chart.sha256.clone();
+        sd.md5 = chart.md5.clone();
+        sd.title = chart.title.clone();
+        sd.artist = chart.artist.clone();
+        sd.genre = chart.genre.clone();
+        sd.set_url(chart.url.clone());
+        sd.set_appendurl(chart.appendurl.clone());
+        if let Some(ref mode) = chart.mode {
+            sd.mode = mode.id();
+        }
+        sd
+    }
+}
+
 impl IRChartData {
     pub fn new(song: &SongData) -> Self {
         let lntype = if let Some(model) = song.bms_model() {
@@ -72,20 +89,11 @@ impl IRChartData {
     }
 
     /// Convert IRChartData back to SongData.
+    ///
+    /// Thin wrapper around the `From<&IRChartData> for SongData` trait impl.
     /// Translated from: Java BarManager.java inline mapping (lines 141-152, 160-172)
     pub fn to_song_data(&self) -> SongData {
-        let mut sd = SongData::default();
-        sd.sha256 = self.sha256.clone();
-        sd.md5 = self.md5.clone();
-        sd.title = self.title.clone();
-        sd.artist = self.artist.clone();
-        sd.genre = self.genre.clone();
-        sd.set_url(self.url.clone());
-        sd.set_appendurl(self.appendurl.clone());
-        if let Some(ref mode) = self.mode {
-            sd.mode = mode.id();
-        }
-        sd
+        SongData::from(self)
     }
 
     pub fn new_with_lntype(song: &SongData, lntype: i32) -> Self {
