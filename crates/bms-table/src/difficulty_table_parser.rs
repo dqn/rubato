@@ -1034,7 +1034,7 @@ mod tests {
 
         let course_a = &courses[0][0];
         assert_eq!(course_a.name(), "Course A");
-        assert_eq!(course_a.get_style(), "7KEYS");
+        assert_eq!(course_a.get_style().as_str(), "7KEYS");
         assert_eq!(course_a.charts().len(), 2);
         assert_eq!(course_a.charts()[0].md5().expect("md5"), "hash1");
         assert_eq!(course_a.charts()[1].md5().expect("md5"), "hash2");
@@ -1046,7 +1046,7 @@ mod tests {
 
         let course_b = &courses[0][1];
         assert_eq!(course_b.name(), "Course B");
-        assert_eq!(course_b.get_style(), "14KEYS");
+        assert_eq!(course_b.get_style().as_str(), "14KEYS");
         assert_eq!(course_b.charts().len(), 1);
         assert_eq!(course_b.charts()[0].sha256().expect("sha256"), "hash3");
     }
@@ -1121,7 +1121,7 @@ mod tests {
         assert_eq!(courses[0].len(), 1);
         let dan = &courses[0][0];
         assert_eq!(dan.name(), "Dan 1");
-        assert_eq!(dan.get_style(), "7KEYS");
+        assert_eq!(dan.get_style().as_str(), "7KEYS");
         assert_eq!(dan.charts().len(), 2);
         assert_eq!(dan.charts()[0].md5().expect("md5"), "md5_a");
         assert_eq!(dan.charts()[1].md5().expect("md5"), "md5_b");
