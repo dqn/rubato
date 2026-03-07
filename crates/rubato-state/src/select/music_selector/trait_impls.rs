@@ -446,7 +446,7 @@ impl MainState for MusicSelector {
                 .and_then(|b| b.as_grade_bar())
                 .map(|gb| gb.course_data().clone());
             if let Some(res) = self.player_resource.as_mut() {
-                PlayerResourceAccess::set_songdata(res, song_data);
+                res.set_songdata(song_data);
                 if let Some(cd) = course_data {
                     res.set_course_data(cd);
                 } else {
