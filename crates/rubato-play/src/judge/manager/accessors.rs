@@ -11,15 +11,15 @@ impl JudgeManager {
         constraints: &[CourseDataConstraint],
     ) {
         self.prevmtime = 0;
-        self.judgenow = vec![0; judgeregion as usize];
-        self.judgecombo = vec![0; judgeregion as usize];
-        self.judgefast = vec![0; judgeregion as usize];
-        self.mjudgefast = vec![0; judgeregion as usize];
+        self.scoring.judgenow = vec![0; judgeregion as usize];
+        self.scoring.judgecombo = vec![0; judgeregion as usize];
+        self.scoring.judgefast = vec![0; judgeregion as usize];
+        self.scoring.mjudgefast = vec![0; judgeregion as usize];
 
         let orgmode = model.mode().cloned().unwrap_or(Mode::BEAT_7K);
-        self.score = ScoreData::default();
-        self.score.notes = model.total_notes();
-        self.score.play_option.judge_algorithm = Some(match self.algorithm {
+        self.scoring.score = ScoreData::default();
+        self.scoring.score.notes = model.total_notes();
+        self.scoring.score.play_option.judge_algorithm = Some(match self.algorithm {
             JudgeAlgorithm::Combo => rubato_types::judge_algorithm::JudgeAlgorithm::Combo,
             JudgeAlgorithm::Duration => rubato_types::judge_algorithm::JudgeAlgorithm::Duration,
             JudgeAlgorithm::Lowest => rubato_types::judge_algorithm::JudgeAlgorithm::Lowest,
@@ -28,9 +28,10 @@ impl JudgeManager {
         // BMSPlayerRule::get_bms_player_rule always returns the LR2 ruleset in the current
         // implementation (bms_player_rule_set_lr2). Map to the types-level enum accordingly.
         let _ = BMSPlayerRule::for_mode(&orgmode);
-        self.score.play_option.rule = Some(rubato_types::bms_player_rule::BMSPlayerRule::LR2);
+        self.scoring.score.play_option.rule =
+            Some(rubato_types::bms_player_rule::BMSPlayerRule::LR2);
 
-        self.ghost = vec![4; model.total_notes() as usize];
+        self.scoring.ghost = vec![4; model.total_notes() as usize];
         self.lntype = model.lntype();
 
         let rule = BMSPlayerRule::for_mode(&orgmode);
@@ -85,100 +86,101 @@ impl JudgeManager {
         self.miss = rule.judge.miss;
         self.judge_vanish = rule.judge.judge_vanish.clone();
 
-        self.nmjudge = rule
+        self.windows.nmjudge = rule
             .judge
             .judge(NoteType::Note, judgerank, &key_judge_window_rate);
-        self.cnendmjudge =
+        self.windows.cnendmjudge =
             rule.judge
                 .judge(NoteType::LongnoteEnd, judgerank, &key_judge_window_rate);
-        self.nreleasemargin = rule.judge.longnote_margin;
-        self.smjudge = rule
+        self.windows.nreleasemargin = rule.judge.longnote_margin;
+        self.windows.smjudge = rule
             .judge
             .judge(NoteType::Scratch, judgerank, &scratch_judge_window_rate);
-        self.scnendmjudge = rule.judge.judge(
+        self.windows.scnendmjudge = rule.judge.judge(
             NoteType::LongscratchEnd,
             judgerank,
             &scratch_judge_window_rate,
         );
-        self.sreleasemargin = rule.judge.longscratch_margin;
+        self.windows.sreleasemargin = rule.judge.longscratch_margin;
 
-        self.mjudgestart = 0;
-        self.mjudgeend = 0;
-        for l in &self.nmjudge {
-            self.mjudgestart = self.mjudgestart.min(l[0]);
-            self.mjudgeend = self.mjudgeend.max(l[1]);
+        self.windows.mjudgestart = 0;
+        self.windows.mjudgeend = 0;
+        for l in &self.windows.nmjudge {
+            self.windows.mjudgestart = self.windows.mjudgestart.min(l[0]);
+            self.windows.mjudgeend = self.windows.mjudgeend.max(l[1]);
         }
-        for l in &self.smjudge {
-            self.mjudgestart = self.mjudgestart.min(l[0]);
-            self.mjudgeend = self.mjudgeend.max(l[1]);
+        for l in &self.windows.smjudge {
+            self.windows.mjudgestart = self.windows.mjudgestart.min(l[0]);
+            self.windows.mjudgeend = self.windows.mjudgeend.max(l[1]);
         }
 
         let player_count = orgmode.player();
         let keys_per_player = orgmode.key() / player_count;
-        self.judge = vec![vec![0; keys_per_player as usize + 1]; player_count as usize];
+        self.scoring.judge =
+            vec![vec![0; keys_per_player as usize + 1]; player_count as usize];
 
-        self.recent_judges = vec![i64::MIN; 100];
-        self.micro_recent_judges = vec![i64::MIN; 100];
-        self.recent_judges_index = 0;
-        self.presses_since_last_autoadjust = 0;
-        self.judgetiming_delta = 0;
+        self.auto_adjust.recent_judges = vec![i64::MIN; 100];
+        self.auto_adjust.micro_recent_judges = vec![i64::MIN; 100];
+        self.auto_adjust.recent_judges_index = 0;
+        self.auto_adjust.presses_since_last_autoadjust = 0;
+        self.auto_adjust.judgetiming_delta = 0;
     }
 
     // --- Getters ---
 
     pub fn score(&self) -> &ScoreData {
-        &self.score
+        &self.scoring.score
     }
 
     pub fn max_combo(&self) -> i32 {
-        self.score.maxcombo
+        self.scoring.score.maxcombo
     }
 
     pub fn ghost_as_usize(&self) -> Vec<usize> {
-        self.ghost.iter().map(|&g| g as usize).collect()
+        self.scoring.ghost.iter().map(|&g| g as usize).collect()
     }
 
     pub fn past_notes(&self) -> i32 {
-        self.score.passnotes
+        self.scoring.score.passnotes
     }
 
     /// Returns the accumulated judge timing delta from auto-adjust.
     /// The caller should apply this to PlayerConfig.judgetiming and then call
     /// `take_judgetiming_delta()` to consume it.
     pub fn judgetiming_delta(&self) -> i32 {
-        self.judgetiming_delta
+        self.auto_adjust.judgetiming_delta
     }
 
     /// Consumes and resets the accumulated judge timing delta.
     pub fn take_judgetiming_delta(&mut self) -> i32 {
-        let delta = self.judgetiming_delta;
-        self.judgetiming_delta = 0;
+        let delta = self.auto_adjust.judgetiming_delta;
+        self.auto_adjust.judgetiming_delta = 0;
         delta
     }
 
     pub fn recent_judges(&self) -> &[i64] {
-        &self.recent_judges
+        &self.auto_adjust.recent_judges
     }
 
     pub fn micro_recent_judges(&self) -> &[i64] {
-        &self.micro_recent_judges
+        &self.auto_adjust.micro_recent_judges
     }
 
     pub fn recent_judges_index(&self) -> usize {
-        self.recent_judges_index
+        self.auto_adjust.recent_judges_index
     }
 
     pub fn recent_judge_timing(&self, player: usize) -> i64 {
-        if player < self.judgefast.len() {
-            self.judgefast[player]
+        if player < self.scoring.judgefast.len() {
+            self.scoring.judgefast[player]
         } else {
             0
         }
     }
 
     pub fn recent_judge_micro_timing(&self, player: usize) -> i64 {
-        if player < self.mjudgefast.len() {
-            self.mjudgefast[player]
+        if player < self.scoring.mjudgefast.len() {
+            self.scoring.mjudgefast[player]
         } else {
             0
         }
@@ -213,64 +215,80 @@ impl JudgeManager {
     }
 
     pub fn combo(&self) -> i32 {
-        self.combo
+        self.scoring.combo
     }
 
     pub fn course_combo(&self) -> i32 {
-        self.coursecombo
+        self.scoring.coursecombo
     }
 
     pub fn course_maxcombo(&self) -> i32 {
-        self.coursemaxcombo
+        self.scoring.coursemaxcombo
     }
 
     pub fn judge_time_region(&self, lane: usize) -> &[[i64; 2]] {
         if lane < self.lane_states.len() && self.lane_states[lane].sckey >= 0 {
-            &self.smjudge
+            &self.windows.smjudge
         } else {
-            &self.nmjudge
+            &self.windows.nmjudge
         }
     }
 
     pub fn score_data(&self) -> &ScoreData {
-        &self.score
+        &self.scoring.score
     }
 
     /// Get mutable reference to score data (for testing).
     #[cfg(test)]
     pub fn score_data_mut(&mut self) -> &mut ScoreData {
-        &mut self.score
+        &mut self.scoring.score
     }
 
     pub fn judge_count(&self, judge: i32) -> i32 {
-        self.score.judge_count_total(judge)
+        self.scoring.score.judge_count_total(judge)
     }
 
     pub fn judge_count_fast(&self, judge: i32, fast: bool) -> i32 {
-        self.score.judge_count(judge, fast)
+        self.scoring.score.judge_count(judge, fast)
     }
 
     pub fn now_judge(&self, player: usize) -> i32 {
-        if player < self.judgenow.len() {
-            self.judgenow[player]
+        if player < self.scoring.judgenow.len() {
+            self.scoring.judgenow[player]
         } else {
             0
         }
     }
 
     pub fn now_combo(&self, player: usize) -> i32 {
-        if player < self.judgecombo.len() {
-            self.judgecombo[player]
+        if player < self.scoring.judgecombo.len() {
+            self.scoring.judgecombo[player]
         } else {
             0
         }
     }
 
     pub fn judge_table(&self, sc: bool) -> &[[i64; 2]] {
-        if sc { &self.smjudge } else { &self.nmjudge }
+        if sc {
+            &self.windows.smjudge
+        } else {
+            &self.windows.nmjudge
+        }
     }
 
     pub fn ghost(&self) -> &[i32] {
-        &self.ghost
+        &self.scoring.ghost
+    }
+
+    /// Test-only: set judge_vanish for testing bounds checking.
+    #[cfg(test)]
+    pub fn set_judge_vanish_for_test(&mut self, vanish: Vec<bool>) {
+        self.judge_vanish = vanish;
+    }
+
+    /// Test-only: get judge_vanish reference.
+    #[cfg(test)]
+    pub fn judge_vanish_ref(&self) -> &[bool] {
+        &self.judge_vanish
     }
 }

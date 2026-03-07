@@ -225,36 +225,111 @@ impl MultiBadCollector {
     }
 }
 
+/// Judge timing windows and thresholds for notes and scratches.
+pub struct JudgeWindows {
+    /// Note judge table
+    pub nmjudge: Vec<[i64; 2]>,
+    pub mjudgestart: i64,
+    pub mjudgeend: i64,
+    /// CN end judge table
+    pub cnendmjudge: Vec<[i64; 2]>,
+    pub nreleasemargin: i64,
+    /// Scratch judge table
+    pub smjudge: Vec<[i64; 2]>,
+    pub scnendmjudge: Vec<[i64; 2]>,
+    pub sreleasemargin: i64,
+}
+
+impl Default for JudgeWindows {
+    fn default() -> Self {
+        Self {
+            nmjudge: Vec::new(),
+            mjudgestart: 0,
+            mjudgeend: 0,
+            cnendmjudge: Vec::new(),
+            nreleasemargin: 0,
+            smjudge: Vec::new(),
+            scnendmjudge: Vec::new(),
+            sreleasemargin: 0,
+        }
+    }
+}
+
+/// Score, combo, and judge display state.
+pub struct ScoreAccumulator {
+    pub score: ScoreData,
+    pub combo: i32,
+    pub coursecombo: i32,
+    pub coursemaxcombo: i32,
+    /// Ghost record
+    pub ghost: Vec<i32>,
+    /// Judge laser color per player per lane
+    pub judge: Vec<Vec<i32>>,
+    /// Current judge display
+    pub judgenow: Vec<i32>,
+    pub judgecombo: Vec<i32>,
+    /// Judge timing difference (ms, + is early)
+    pub judgefast: Vec<i64>,
+    pub mjudgefast: Vec<i64>,
+}
+
+impl Default for ScoreAccumulator {
+    fn default() -> Self {
+        Self {
+            score: ScoreData::default(),
+            combo: 0,
+            coursecombo: 0,
+            coursemaxcombo: 0,
+            ghost: Vec::new(),
+            judge: Vec::new(),
+            judgenow: Vec::new(),
+            judgecombo: Vec::new(),
+            judgefast: Vec::new(),
+            mjudgefast: Vec::new(),
+        }
+    }
+}
+
+/// Timing auto-adjust state (Java JudgeManager lines 754-768).
+pub struct AutoAdjustState {
+    /// Recent 100 note judge timings
+    pub recent_judges: Vec<i64>,
+    pub micro_recent_judges: Vec<i64>,
+    pub recent_judges_index: usize,
+    pub presses_since_last_autoadjust: i32,
+    /// Whether timing auto-adjust is enabled
+    pub auto_adjust_enabled: bool,
+    /// Whether play mode is PLAY or PRACTICE
+    pub is_play_or_practice: bool,
+    /// Accumulated judge timing delta from auto-adjust (caller applies to PlayerConfig)
+    pub judgetiming_delta: i32,
+}
+
+impl Default for AutoAdjustState {
+    fn default() -> Self {
+        Self {
+            recent_judges: vec![i64::MIN; 100],
+            micro_recent_judges: vec![i64::MIN; 100],
+            recent_judges_index: 0,
+            presses_since_last_autoadjust: 0,
+            auto_adjust_enabled: false,
+            is_play_or_practice: false,
+            judgetiming_delta: 0,
+        }
+    }
+}
+
 /// Note judge manager
 pub struct JudgeManager {
     lntype: LnType,
-    score: ScoreData,
-    combo: i32,
-    coursecombo: i32,
-    coursemaxcombo: i32,
-    /// Judge laser color per player per lane
-    judge: Vec<Vec<i32>>,
-    /// Current judge display
-    judgenow: Vec<i32>,
-    judgecombo: Vec<i32>,
-    /// Ghost record
-    ghost: Vec<i32>,
-    /// Judge timing difference (ms, + is early)
-    judgefast: Vec<i64>,
-    mjudgefast: Vec<i64>,
+    /// Score, combo, and display state.
+    pub(crate) scoring: ScoreAccumulator,
+    /// Judge timing windows and thresholds.
+    pub(crate) windows: JudgeWindows,
+    /// Timing auto-adjust state.
+    pub(crate) auto_adjust: AutoAdjustState,
     keyassign: Vec<i32>,
     sckey: Vec<i32>,
-    /// Note judge table
-    nmjudge: Vec<[i64; 2]>,
-    mjudgestart: i64,
-    mjudgeend: i64,
-    /// CN end judge table
-    cnendmjudge: Vec<[i64; 2]>,
-    nreleasemargin: i64,
-    /// Scratch judge table
-    smjudge: Vec<[i64; 2]>,
-    scnendmjudge: Vec<[i64; 2]>,
-    sreleasemargin: i64,
     /// PMS combo condition
     combocond: Vec<bool>,
     miss: MissCondition,
@@ -265,17 +340,6 @@ pub struct JudgeManager {
     auto_presstime: Vec<i64>,
     auto_minduration: i64,
     algorithm: JudgeAlgorithm,
-    /// Recent 100 note judge timings
-    recent_judges: Vec<i64>,
-    micro_recent_judges: Vec<i64>,
-    recent_judges_index: usize,
-    presses_since_last_autoadjust: i32,
-    /// Whether timing auto-adjust is enabled
-    auto_adjust_enabled: bool,
-    /// Whether play mode is PLAY or PRACTICE
-    is_play_or_practice: bool,
-    /// Accumulated judge timing delta from auto-adjust (caller applies to PlayerConfig)
-    judgetiming_delta: i32,
     /// Per-lane iteration state (only used with testable API)
     lane_states: Vec<LaneIterState>,
     /// Per-note internal judge state
