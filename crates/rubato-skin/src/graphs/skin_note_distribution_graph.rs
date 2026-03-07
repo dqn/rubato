@@ -528,7 +528,7 @@ impl SkinNoteDistributionGraph {
                         i += 10;
                     }
 
-                    for i in 0..self.dist_data.len() {
+                    for (i, _) in self.dist_data.iter().enumerate() {
                         if i % 60 == 0 {
                             back.set_color_rgba(0.25, 0.25, 0.25, 1.0);
                             back.draw_line(i as i32 * 5, 0, i as i32 * 5, self.max * 5);
