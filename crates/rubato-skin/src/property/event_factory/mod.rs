@@ -3,14 +3,10 @@ use std::sync::LazyLock;
 
 use super::event::Event;
 use crate::skin_property;
-use crate::stubs::MainState;
 
 use rubato_core::bms_player_mode::BMSPlayerMode;
-use rubato_play::judge_algorithm::DEFAULT_ALGORITHM;
-use rubato_play::target_property::TargetProperty;
 use rubato_types::event_id::EventId;
 use rubato_types::main_state_type::MainStateType;
-use rubato_types::play_config;
 
 // ============================================================
 // Public factory API
@@ -838,7 +834,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
     },
 ];
 
-include!("event_impls.rs");
+mod event_impls;
+use event_impls::*;
 
 #[cfg(test)]
 mod tests;
