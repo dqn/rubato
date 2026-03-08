@@ -46,12 +46,7 @@ impl JudgeManager {
             }
 
             // Iterate notes from prevmtime to mtime
-            #[allow(clippy::while_let_loop)]
-            loop {
-                let note_idx = match self.lane_states[lane_idx].note() {
-                    Some(idx) => idx,
-                    None => break,
-                };
+            while let Some(note_idx) = self.lane_states[lane_idx].note() {
                 if notes[note_idx].time_us > mtime {
                     break;
                 }
@@ -290,13 +285,7 @@ impl JudgeManager {
                     self.multi_bad.set_judge(&mjudge);
 
                     // Scan notes for best match
-                    #[allow(clippy::while_let_loop)]
-                    #[allow(clippy::nonminimal_bool)]
-                    loop {
-                        let note_idx = match self.lane_states[lane_idx].note() {
-                            Some(idx) => idx,
-                            None => break,
-                        };
+                    while let Some(note_idx) = self.lane_states[lane_idx].note() {
                         let dmtime = notes[note_idx].time_us - pmtime;
                         if dmtime >= self.mjudgeend {
                             break;
@@ -328,8 +317,7 @@ impl JudgeManager {
                             // MissCondition::One check
                             if self.miss == MissCondition::One
                                 && (note_state != 0
-                                    || (note_state == 0
-                                        && note_play_time != 0
+                                    || (note_play_time != 0
                                         && (dmtime > mjudge[2][1] || dmtime < mjudge[2][0])))
                             {
                                 continue;
@@ -683,12 +671,7 @@ impl JudgeManager {
 
             // Miss POOR detection
             self.lane_states[lane_idx].reset();
-            #[allow(clippy::while_let_loop)]
-            loop {
-                let note_idx = match self.lane_states[lane_idx].note() {
-                    Some(idx) => idx,
-                    None => break,
-                };
+            while let Some(note_idx) = self.lane_states[lane_idx].note() {
                 if notes[note_idx].time_us >= mtime + mjudge[3][0] {
                     break;
                 }

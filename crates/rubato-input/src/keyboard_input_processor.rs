@@ -122,21 +122,20 @@ impl ControlKeys {
         }
     }
 
-    #[allow(clippy::match_like_matches_macro)]
     pub fn text(&self) -> bool {
-        match self {
-            ControlKeys::Num0 => true,
-            ControlKeys::Num1 => true,
-            ControlKeys::Num2 => true,
-            ControlKeys::Num3 => true,
-            ControlKeys::Num4 => true,
-            ControlKeys::Num5 => true,
-            ControlKeys::Num6 => true,
-            ControlKeys::Num7 => true,
-            ControlKeys::Num8 => true,
-            ControlKeys::Num9 => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            ControlKeys::Num0
+                | ControlKeys::Num1
+                | ControlKeys::Num2
+                | ControlKeys::Num3
+                | ControlKeys::Num4
+                | ControlKeys::Num5
+                | ControlKeys::Num6
+                | ControlKeys::Num7
+                | ControlKeys::Num8
+                | ControlKeys::Num9
+        )
     }
 
     pub fn values() -> &'static [ControlKeys] {

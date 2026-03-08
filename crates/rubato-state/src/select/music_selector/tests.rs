@@ -1,4 +1,3 @@
-#[allow(clippy::field_reassign_with_default)]
 use super::*;
 use crate::select::bar::bar::Bar;
 use crate::select::bar::grade_bar::GradeBar;

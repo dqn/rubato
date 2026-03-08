@@ -821,13 +821,14 @@ impl ObsWsClient {
         });
     }
 
-    #[allow(clippy::nonminimal_bool)]
     pub fn request_stop_record(&self) {
         let inner = Arc::clone(&self.inner);
         {
             let guard = lock_or_recover(&inner);
-            if !(guard.is_connected && guard.is_identified && !guard.is_reconnecting)
-                || !guard.is_recording
+            if !(guard.is_connected
+                && guard.is_identified
+                && !guard.is_reconnecting
+                && guard.is_recording)
             {
                 return;
             }

@@ -1,4 +1,3 @@
-#[allow(clippy::field_reassign_with_default)]
 use super::*;
 use crate::config::SelectConfig;
 use crate::config_pkg::key_configuration::KeyConfiguration;

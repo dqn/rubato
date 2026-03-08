@@ -165,7 +165,6 @@ impl Default for SharedKeyState {
 /// winit uses platform-independent physical key codes.
 ///
 /// Returns -1 if the key has no mapping.
-#[allow(clippy::match_same_arms)]
 pub fn winit_keycode_to_java(key: WinitKeyCode) -> i32 {
     match key {
         // Letters

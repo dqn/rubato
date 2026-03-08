@@ -83,13 +83,10 @@ impl BmsTableElement {
             .insert(MODE.to_string(), Value::String(mode.to_string()));
     }
 
-    #[allow(clippy::vec_init_then_push)]
     pub fn parent_hash(&self) -> Option<Vec<String>> {
         let o = self.values.get("org_md5")?;
         if let Some(s) = o.as_str() {
-            let mut result: Vec<String> = Vec::new();
-            result.push(s.to_string());
-            return Some(result);
+            return Some(vec![s.to_string()]);
         }
         if let Some(arr) = o.as_array() {
             let result: Vec<String> = arr

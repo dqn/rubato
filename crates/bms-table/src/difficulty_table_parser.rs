@@ -91,7 +91,6 @@ impl DifficultyTableParser {
         None
     }
 
-    #[allow(clippy::unnecessary_get_then_check)]
     pub fn decode(&mut self, b: bool, diff: &mut DifficultyTable) -> Result<()> {
         let urlname = diff.table.source_url.clone();
         let mut tableurl: Option<String> = None;
@@ -141,7 +140,6 @@ impl DifficultyTableParser {
         Ok(())
     }
 
-    #[allow(clippy::manual_strip)]
     fn get_absolute_url(&self, source: &str, path: &str) -> String {
         let urldir = if let Some(idx) = source.rfind('/') {
             &source[..idx + 1]
@@ -149,8 +147,8 @@ impl DifficultyTableParser {
             source
         };
         if !path.starts_with("http") && !path.starts_with(urldir) {
-            let p = if path.starts_with("./") {
-                &path[2..]
+            let p = if let Some(stripped) = path.strip_prefix("./") {
+                stripped
             } else {
                 path
             };
