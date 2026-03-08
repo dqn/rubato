@@ -145,7 +145,9 @@ pub trait SkinRenderContext: TimerAccess {
                     -1
                 }
             }),
-            72 => self.config_ref().map_or(-1, |config| config.render.bga),
+            72 => self
+                .config_ref()
+                .map_or(-1, |config| config.render.bga as i32),
             75 => player_config.map_or(-1, |config| {
                 bool_to_i32(config.judge_settings.notes_display_timing_auto_adjust)
             }),

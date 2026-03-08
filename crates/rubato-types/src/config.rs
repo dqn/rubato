@@ -13,13 +13,94 @@ pub const PLAYERPATH_DEFAULT: &str = "player";
 pub const SKINPATH_DEFAULT: &str = "skin";
 pub const DEFAULT_DOWNLOAD_DIRECTORY: &str = "http_download";
 
-pub const BGA_ON: i32 = 0;
-pub const BGA_AUTO: i32 = 1;
-pub const BGA_OFF: i32 = 2;
+/// BGA display mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[repr(i32)]
+pub enum BgaMode {
+    #[default]
+    On = 0,
+    Auto = 1,
+    Off = 2,
+}
 
-pub const BGAEXPAND_FULL: i32 = 0;
-pub const BGAEXPAND_KEEP_ASPECT_RATIO: i32 = 1;
-pub const BGAEXPAND_OFF: i32 = 2;
+impl From<i32> for BgaMode {
+    fn from(v: i32) -> Self {
+        match v {
+            0 => Self::On,
+            1 => Self::Auto,
+            2 => Self::Off,
+            _ => Self::default(),
+        }
+    }
+}
+
+impl From<BgaMode> for i32 {
+    fn from(v: BgaMode) -> Self {
+        v as i32
+    }
+}
+
+impl serde::Serialize for BgaMode {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_i32(*self as i32)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for BgaMode {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let v = i32::deserialize(deserializer)?;
+        Ok(Self::from(v))
+    }
+}
+
+/// BGA expand (aspect ratio) mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[repr(i32)]
+pub enum BgaExpand {
+    Full = 0,
+    #[default]
+    KeepAspectRatio = 1,
+    Off = 2,
+}
+
+impl From<i32> for BgaExpand {
+    fn from(v: i32) -> Self {
+        match v {
+            0 => Self::Full,
+            1 => Self::KeepAspectRatio,
+            2 => Self::Off,
+            _ => Self::default(),
+        }
+    }
+}
+
+impl From<BgaExpand> for i32 {
+    fn from(v: BgaExpand) -> Self {
+        v as i32
+    }
+}
+
+impl serde::Serialize for BgaExpand {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_i32(*self as i32)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for BgaExpand {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let v = i32::deserialize(deserializer)?;
+        Ok(Self::from(v))
+    }
+}
+
+// Legacy constants for backward compatibility
+pub const BGA_ON: BgaMode = BgaMode::On;
+pub const BGA_AUTO: BgaMode = BgaMode::Auto;
+pub const BGA_OFF: BgaMode = BgaMode::Off;
+
+pub const BGAEXPAND_FULL: BgaExpand = BgaExpand::Full;
+pub const BGAEXPAND_KEEP_ASPECT_RATIO: BgaExpand = BgaExpand::KeepAspectRatio;
+pub const BGAEXPAND_OFF: BgaExpand = BgaExpand::Off;
 
 #[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize, Default)]
 pub enum DisplayMode {
@@ -194,9 +275,9 @@ impl Default for PathConfig {
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct RenderConfig {
-    pub bga: i32,
+    pub bga: BgaMode,
     #[serde(rename = "bgaExpand")]
-    pub bga_expand: i32,
+    pub bga_expand: BgaExpand,
     pub frameskip: i32,
     #[serde(rename = "skinPixmapGen")]
     pub skin_pixmap_gen: i32,
@@ -560,11 +641,11 @@ impl Config {
         self.select.max_search_bar_count
     }
 
-    pub fn get_bga(&self) -> i32 {
+    pub fn get_bga(&self) -> BgaMode {
         self.render.bga
     }
 
-    pub fn get_bga_expand(&self) -> i32 {
+    pub fn get_bga_expand(&self) -> BgaExpand {
         self.render.bga_expand
     }
 
@@ -719,8 +800,7 @@ impl Validatable for Config {
         }
         self.paths.table_url = remove_empty_strings(&self.paths.table_url);
 
-        self.render.bga = self.render.bga.clamp(0, 2);
-        self.render.bga_expand = self.render.bga_expand.clamp(0, 2);
+        // BGA mode and expand are enums; deserialization already validates via From<i32>.
         if self.network.ipfsurl.is_empty() {
             self.network.ipfsurl = "https://gateway.ipfs.io/".to_string();
         }

@@ -18,7 +18,7 @@ pub use rubato_skin::stubs::TextureRegion;
 // ============================================================
 
 pub use rubato_core::audio_config::AudioConfig;
-pub use rubato_core::config::{Config, SongPreview};
+pub use rubato_core::config::{BgaMode, Config, SongPreview};
 pub use rubato_core::play_config::PlayConfig;
 pub use rubato_core::player_config::PlayerConfig;
 pub use rubato_core::score_data::ScoreData;

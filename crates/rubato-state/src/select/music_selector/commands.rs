@@ -190,7 +190,8 @@ impl MusicSelector {
             }
             EventType::Bga => {
                 let step = if arg1 >= 0 { 1 } else { 2 };
-                self.app_config.render.bga = (self.app_config.render.bga + step) % 3;
+                self.app_config.render.bga =
+                    BgaMode::from((self.app_config.render.bga as i32 + step) % 3);
                 self.play_option_change();
             }
             EventType::NotesDisplayTiming => {

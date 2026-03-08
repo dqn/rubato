@@ -267,8 +267,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(ConfigCycleEvent {
                 event_id: EventId(72),
-                get: |c| c.render.bga,
-                set: |c, v| c.render.bga = v,
+                get: |c| c.render.bga as i32,
+                set: |c, v| c.render.bga = rubato_types::config::BgaMode::from(v),
                 count: 3,
             })
         },
@@ -279,8 +279,8 @@ static EVENT_TYPES: &[EventTypeEntry] = &[
         create_event: || {
             Box::new(ConfigCycleEvent {
                 event_id: EventId(73),
-                get: |c| c.render.bga_expand,
-                set: |c, v| c.render.bga_expand = v,
+                get: |c| c.render.bga_expand as i32,
+                set: |c, v| c.render.bga_expand = rubato_types::config::BgaExpand::from(v),
                 count: 3,
             })
         },

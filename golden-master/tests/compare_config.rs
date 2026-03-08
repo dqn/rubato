@@ -122,8 +122,11 @@ fn config_system_deserialize() {
     );
 
     // BGA/resource
-    assert_eq!(config.render.bga, 1);
-    assert_eq!(config.render.bga_expand, 2);
+    assert_eq!(config.render.bga, rubato_types::config::BgaMode::Auto);
+    assert_eq!(
+        config.render.bga_expand,
+        rubato_types::config::BgaExpand::Off
+    );
     assert_eq!(config.render.frameskip, 0);
     assert!(config.updatesong);
     assert_eq!(config.render.skin_pixmap_gen, 8);
@@ -200,8 +203,11 @@ fn config_system_validate_after_deserialize() {
     assert_eq!(config.display.window_height, 1080);
     assert_eq!(config.display.max_frame_per_second, 120);
     assert_eq!(config.select.scrolldurationlow, 200);
-    assert_eq!(config.render.bga, 1);
-    assert_eq!(config.render.bga_expand, 2);
+    assert_eq!(config.render.bga, rubato_types::config::BgaMode::Auto);
+    assert_eq!(
+        config.render.bga_expand,
+        rubato_types::config::BgaExpand::Off
+    );
 }
 
 #[test]

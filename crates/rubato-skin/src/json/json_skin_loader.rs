@@ -277,7 +277,7 @@ impl JSONSkinLoader {
                 height: config.display.window_height as f32,
             },
             usecim: false,
-            bga_expand: config.render.bga_expand,
+            bga_expand: config.render.bga_expand as i32,
             sk: None,
             source_map: HashMap::new(),
             bitmap_source_map: HashMap::new(),

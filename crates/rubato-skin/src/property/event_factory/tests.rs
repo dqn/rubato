@@ -288,19 +288,22 @@ fn test_constant_toggle() {
 #[test]
 fn test_bga_cycle() {
     let mut state = TestMainState::new();
-    state.config.render.bga = 2;
+    state.config.render.bga = rubato_types::config::BgaMode::Off;
     let event = event_by_id(72).unwrap();
     event.exec(&mut state, 1, 0);
-    assert_eq!(state.config.render.bga, 0); // wraps from 2
+    assert_eq!(state.config.render.bga, rubato_types::config::BgaMode::On); // wraps from Off
 }
 
 #[test]
 fn test_bgaexpand_cycle() {
     let mut state = TestMainState::new();
-    state.config.render.bga_expand = 0;
+    state.config.render.bga_expand = rubato_types::config::BgaExpand::Full;
     let event = event_by_id(73).unwrap();
     event.exec(&mut state, 1, 0);
-    assert_eq!(state.config.render.bga_expand, 1);
+    assert_eq!(
+        state.config.render.bga_expand,
+        rubato_types::config::BgaExpand::KeepAspectRatio
+    );
 }
 
 #[test]

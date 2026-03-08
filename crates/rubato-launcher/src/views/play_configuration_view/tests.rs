@@ -50,7 +50,7 @@ fn test_update_delegates_to_video_controller() {
             ..Default::default()
         },
         render: rubato_core::config::RenderConfig {
-            bga: 2,
+            bga: rubato_types::config::BgaMode::Off,
             ..Default::default()
         },
         ..Default::default()
@@ -64,7 +64,7 @@ fn test_update_delegates_to_video_controller() {
     view.video_controller.commit(&mut out_config);
     assert!(out_config.display.vsync);
     assert_eq!(out_config.display.max_frame_per_second, 120);
-    assert_eq!(out_config.render.bga, 2);
+    assert_eq!(out_config.render.bga, rubato_types::config::BgaMode::Off);
 }
 
 #[test]

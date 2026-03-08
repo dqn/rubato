@@ -83,9 +83,9 @@ impl VideoConfigurationView {
         // monitor.setValue(config.getMonitorName());
         self.monitor = Some(config.integration.monitor_name.clone());
         // bgaOp.getSelectionModel().select(config.getBga());
-        self.bga_op = config.render.bga;
+        self.bga_op = config.render.bga as i32;
         // bgaExpand.getSelectionModel().select(config.getBgaExpand());
-        self.bga_expand = config.render.bga_expand;
+        self.bga_expand = config.render.bga_expand as i32;
         // maxFps.getValueFactory().setValue(config.getMaxFramePerSecond());
         self.max_fps = config.display.max_frame_per_second;
     }
@@ -113,9 +113,9 @@ impl VideoConfigurationView {
             config.integration.monitor_name = m.clone();
         }
         // config.setBga(bgaOp.getSelectionModel().getSelectedIndex());
-        config.render.bga = self.bga_op;
+        config.render.bga = rubato_types::config::BgaMode::from(self.bga_op);
         // config.setBgaExpand(bgaExpand.getSelectionModel().getSelectedIndex());
-        config.render.bga_expand = self.bga_expand;
+        config.render.bga_expand = rubato_types::config::BgaExpand::from(self.bga_expand);
         // config.setMaxFramePerSecond(maxFps.getValue());
         config.display.max_frame_per_second = self.max_fps;
     }
@@ -317,7 +317,9 @@ impl VideoConfigurationView {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_core::config::{BGA_ON, DisplayConfig, IntegrationConfig, RenderConfig};
+    use rubato_core::config::{
+        BGA_ON, BgaExpand, BgaMode, DisplayConfig, IntegrationConfig, RenderConfig,
+    };
 
     // --- Default / initialization tests ---
 
@@ -359,8 +361,8 @@ mod tests {
                 ..IntegrationConfig::default()
             },
             render: RenderConfig {
-                bga: 2,
-                bga_expand: 1,
+                bga: BgaMode::Off,
+                bga_expand: BgaExpand::KeepAspectRatio,
                 ..RenderConfig::default()
             },
             ..Config::default()
@@ -390,8 +392,8 @@ mod tests {
                 ..IntegrationConfig::default()
             },
             render: RenderConfig {
-                bga: 2,
-                bga_expand: 0,
+                bga: BgaMode::Off,
+                bga_expand: BgaExpand::Full,
                 ..RenderConfig::default()
             },
             ..Config::default()
@@ -408,8 +410,8 @@ mod tests {
         assert_eq!(output.display.resolution, Resolution::HD);
         assert!(output.display.vsync);
         assert_eq!(output.integration.monitor_name, "Display 1 [0, 0]");
-        assert_eq!(output.render.bga, 2);
-        assert_eq!(output.render.bga_expand, 0);
+        assert_eq!(output.render.bga, BgaMode::Off);
+        assert_eq!(output.render.bga_expand, BgaExpand::Full);
         assert_eq!(output.display.max_frame_per_second, 144);
     }
 
