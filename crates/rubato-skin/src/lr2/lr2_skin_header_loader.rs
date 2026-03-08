@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use rubato_types::offset_capabilities::OffsetCapabilities;
+
 use crate::lr2::lr2_skin_loader::LR2SkinLoaderState;
 use crate::skin_property::{OFFSET_ALL, OFFSET_JUDGE_1P, OFFSET_JUDGEDETAIL_1P, OFFSET_NOTES_1P};
 use crate::stubs::{MainState, Resolution};
@@ -64,26 +66,15 @@ impl CustomFile {
 pub struct CustomOffset {
     pub name: String,
     pub id: i32,
-    pub x: bool,
-    pub y: bool,
-    pub w: bool,
-    pub h: bool,
-    pub r: bool,
-    pub a: bool,
+    pub caps: OffsetCapabilities,
 }
 
 impl CustomOffset {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(name: &str, id: i32, x: bool, y: bool, w: bool, h: bool, r: bool, a: bool) -> Self {
+    pub fn new(name: &str, id: i32, caps: OffsetCapabilities) -> Self {
         Self {
             name: name.to_string(),
             id,
-            x,
-            y,
-            w,
-            h,
-            r,
-            a,
+            caps,
         }
     }
 }
@@ -219,42 +210,45 @@ impl LR2SkinHeaderLoader {
                         self.offsets.push(CustomOffset::new(
                             "All offset(%)",
                             OFFSET_ALL,
-                            true,
-                            true,
-                            true,
-                            true,
-                            false,
-                            false,
+                            OffsetCapabilities {
+                                x: true,
+                                y: true,
+                                w: true,
+                                h: true,
+                                ..Default::default()
+                            },
                         ));
                         self.offsets.push(CustomOffset::new(
                             "Notes offset",
                             OFFSET_NOTES_1P,
-                            false,
-                            false,
-                            false,
-                            true,
-                            false,
-                            false,
+                            OffsetCapabilities {
+                                h: true,
+                                ..Default::default()
+                            },
                         ));
                         self.offsets.push(CustomOffset::new(
                             "Judge offset",
                             OFFSET_JUDGE_1P,
-                            true,
-                            true,
-                            true,
-                            true,
-                            false,
-                            true,
+                            OffsetCapabilities {
+                                x: true,
+                                y: true,
+                                w: true,
+                                h: true,
+                                a: true,
+                                ..Default::default()
+                            },
                         ));
                         self.offsets.push(CustomOffset::new(
                             "Judge Detail offset",
                             OFFSET_JUDGEDETAIL_1P,
-                            true,
-                            true,
-                            true,
-                            true,
-                            false,
-                            true,
+                            OffsetCapabilities {
+                                x: true,
+                                y: true,
+                                w: true,
+                                h: true,
+                                a: true,
+                                ..Default::default()
+                            },
                         ));
                     }
                 }
@@ -327,12 +321,14 @@ impl LR2SkinHeaderLoader {
                     self.offsets.push(CustomOffset::new(
                         &str_parts[1],
                         id,
-                        op[0],
-                        op[1],
-                        op[2],
-                        op[3],
-                        op[4],
-                        op[5],
+                        OffsetCapabilities {
+                            x: op[0],
+                            y: op[1],
+                            w: op[2],
+                            h: op[3],
+                            r: op[4],
+                            a: op[5],
+                        },
                     ));
                 }
             }

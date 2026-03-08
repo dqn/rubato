@@ -129,3 +129,6 @@ pub mod obs_access;
 
 // ImGui overlay access (core↔modmenu bridge)
 pub mod imgui_access;
+
+// Offset capabilities (shared boolean group for custom skin offsets)
+pub mod offset_capabilities;

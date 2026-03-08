@@ -110,7 +110,7 @@ pub fn convert_header_data(
     let offsets: Vec<CustomOffset> = data
         .custom_offsets
         .iter()
-        .map(|o| CustomOffset::new(o.name.clone(), o.id, o.x, o.y, o.w, o.h, o.r, o.a))
+        .map(|o| CustomOffset::new(o.name.clone(), o.id, o.caps))
         .collect();
     header.offsets = offsets;
 
@@ -153,16 +153,9 @@ fn convert_category_data(cat: &CustomCategoryData) -> CustomCategory {
                 cf.filename = f.selected_filename.clone();
                 CustomItemEnum::File(cf)
             }
-            CustomItemData::Offset(o) => CustomItemEnum::Offset(CustomOffset::new(
-                o.name.clone(),
-                o.id,
-                o.x,
-                o.y,
-                o.w,
-                o.h,
-                o.r,
-                o.a,
-            )),
+            CustomItemData::Offset(o) => {
+                CustomItemEnum::Offset(CustomOffset::new(o.name.clone(), o.id, o.caps))
+            }
         })
         .collect();
     CustomCategory::new(cat.name.clone(), items)

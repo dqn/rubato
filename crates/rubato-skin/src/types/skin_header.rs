@@ -3,6 +3,8 @@
 
 use std::path::PathBuf;
 
+use rubato_types::offset_capabilities::OffsetCapabilities;
+
 use crate::skin_property;
 use crate::stubs::{Resolution, SkinConfigOffset};
 use crate::types::skin_type::SkinType;
@@ -409,38 +411,18 @@ pub struct CustomOffset {
     pub name: String,
     /// Offset ID
     pub id: i32,
-    /// Whether each value can be changed
-    pub x: bool,
-    pub y: bool,
-    pub w: bool,
-    pub h: bool,
-    pub r: bool,
-    pub a: bool,
+    /// Which offset dimensions can be changed
+    pub caps: OffsetCapabilities,
     /// Offset value
     pub offset: Option<SkinConfigOffset>,
 }
 
 impl CustomOffset {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        name: String,
-        id: i32,
-        x: bool,
-        y: bool,
-        w: bool,
-        h: bool,
-        r: bool,
-        a: bool,
-    ) -> Self {
+    pub fn new(name: String, id: i32, caps: OffsetCapabilities) -> Self {
         Self {
             name,
             id,
-            x,
-            y,
-            w,
-            h,
-            r,
-            a,
+            caps,
             offset: None,
         }
     }

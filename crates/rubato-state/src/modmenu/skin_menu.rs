@@ -617,20 +617,20 @@ fn skin_config_offset(ui: &mut egui::Ui, offset: &CustomOffset) {
 
         ui.indent("offset-indent", |ui| {
             // Row 1: X, W, a
-            if offset.x || offset.w || offset.a {
+            if offset.caps.x || offset.caps.w || offset.caps.a {
                 ui.horizontal(|ui| {
-                    spawn_drag_int(ui, "X", offset.x, &mut value.x);
-                    spawn_drag_int(ui, "W", offset.w, &mut value.w);
-                    spawn_drag_int(ui, "a", offset.a, &mut value.a);
+                    spawn_drag_int(ui, "X", offset.caps.x, &mut value.x);
+                    spawn_drag_int(ui, "W", offset.caps.w, &mut value.w);
+                    spawn_drag_int(ui, "a", offset.caps.a, &mut value.a);
                 });
             }
 
             // Row 2: Y, H, R
-            if offset.y || offset.h || offset.r {
+            if offset.caps.y || offset.caps.h || offset.caps.r {
                 ui.horizontal(|ui| {
-                    spawn_drag_int(ui, "Y", offset.y, &mut value.y);
-                    spawn_drag_int(ui, "H", offset.h, &mut value.h);
-                    spawn_drag_int(ui, "R", offset.r, &mut value.r);
+                    spawn_drag_int(ui, "Y", offset.caps.y, &mut value.y);
+                    spawn_drag_int(ui, "H", offset.caps.h, &mut value.h);
+                    spawn_drag_int(ui, "R", offset.caps.r, &mut value.r);
                 });
             }
         });
@@ -1166,7 +1166,7 @@ fn skin_header_from_json_data(data: SkinHeaderData) -> SkinHeader {
     let offsets: Vec<CustomOffset> = data
         .custom_offsets
         .into_iter()
-        .map(|co| CustomOffset::new(co.name, co.id, co.x, co.y, co.w, co.h, co.r, co.a))
+        .map(|co| CustomOffset::new(co.name, co.id, co.caps))
         .collect();
     header.offsets = offsets;
     let categories: Vec<CustomCategory> = data
@@ -1183,9 +1183,9 @@ fn skin_header_from_json_data(data: SkinHeaderData) -> SkinHeader {
                     CustomItemData::File(cf) => {
                         CustomCategoryItem::File(CustomFile::new(cf.name, cf.path, cf.def))
                     }
-                    CustomItemData::Offset(co) => CustomCategoryItem::Offset(CustomOffset::new(
-                        co.name, co.id, co.x, co.y, co.w, co.h, co.r, co.a,
-                    )),
+                    CustomItemData::Offset(co) => {
+                        CustomCategoryItem::Offset(CustomOffset::new(co.name, co.id, co.caps))
+                    }
                 })
                 .collect();
             CustomCategory::new(cc.name, items)
@@ -1227,7 +1227,7 @@ fn skin_header_from_lr2_data(data: LR2SkinHeaderData) -> SkinHeader {
     let offsets: Vec<CustomOffset> = data
         .custom_offsets
         .into_iter()
-        .map(|co| CustomOffset::new(co.name, co.id, co.x, co.y, co.w, co.h, co.r, co.a))
+        .map(|co| CustomOffset::new(co.name, co.id, co.caps))
         .collect();
     header.offsets = offsets;
     header
