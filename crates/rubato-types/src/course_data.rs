@@ -33,9 +33,6 @@ impl CourseData {
     pub fn set_name(&mut self, name: String) {
         self.name = Some(name);
     }
-    pub fn get_trophy(&self) -> &[TrophyData] {
-        &self.trophy
-    }
     pub fn set_course_song_models(&mut self, _models: &[SongData]) {
         // Java compat stub
     }
@@ -234,8 +231,8 @@ mod tests {
 
         let trophy = TrophyData::new("Gold".to_string(), 5.0, 90.0);
         cd.trophy = vec![trophy];
-        assert_eq!(cd.get_trophy().len(), 1);
-        assert_eq!(cd.get_trophy()[0].name(), "Gold");
+        assert_eq!(cd.trophy.len(), 1);
+        assert_eq!(cd.trophy[0].name(), "Gold");
     }
 
     #[test]

@@ -98,17 +98,17 @@ mod tests {
         let mut pc = PlayerConfig::default();
 
         pc.play_settings.random = 3;
-        assert_eq!(pc.get_random(), 3);
+        assert_eq!(pc.play_settings.random, 3);
 
         pc.play_settings.random2 = 5;
-        assert_eq!(pc.get_random2(), 5);
+        assert_eq!(pc.play_settings.random2, 5);
     }
 
     #[test]
     fn test_player_config_doubleoption_getter_setter() {
         let mut pc = PlayerConfig::default();
         pc.play_settings.doubleoption = 2;
-        assert_eq!(pc.get_doubleoption(), 2);
+        assert_eq!(pc.play_settings.doubleoption, 2);
     }
 
     #[test]
@@ -122,23 +122,23 @@ mod tests {
     fn test_player_config_lnmode_getter_setter() {
         let mut pc = PlayerConfig::default();
         pc.play_settings.lnmode = 2;
-        assert_eq!(pc.get_lnmode(), 2);
+        assert_eq!(pc.play_settings.lnmode, 2);
     }
 
     #[test]
     fn test_player_config_sort_getter_setter() {
         let mut pc = PlayerConfig::default();
         pc.select_settings.sort = 3;
-        assert_eq!(pc.get_sort(), 3);
+        assert_eq!(pc.select_settings.sort, 3);
     }
 
     #[test]
     fn test_player_config_sortid_getter_setter() {
         let mut pc = PlayerConfig::default();
-        assert!(pc.get_sortid().is_none());
+        assert!(pc.select_settings.sortid.is_none());
 
-        pc.set_sortid("CLEAR".to_string());
-        assert_eq!(pc.get_sortid(), Some("CLEAR"));
+        pc.select_settings.sortid = Some("CLEAR".to_string());
+        assert_eq!(pc.select_settings.sortid.as_deref(), Some("CLEAR"));
     }
 
     #[test]
@@ -156,48 +156,48 @@ mod tests {
     #[test]
     fn test_player_config_boolean_getters() {
         let mut pc = PlayerConfig::default();
-        assert!(!pc.is_event_mode());
-        assert!(!pc.is_random_select());
-        assert!(!pc.is_custom_judge());
-        assert!(!pc.is_showjudgearea());
-        assert!(!pc.is_markprocessednote());
-        assert!(!pc.is_bpmguide());
+        assert!(!pc.select_settings.event_mode);
+        assert!(!pc.select_settings.is_random_select);
+        assert!(!pc.judge_settings.custom_judge);
+        assert!(!pc.display_settings.showjudgearea);
+        assert!(!pc.display_settings.markprocessednote);
+        assert!(!pc.display_settings.bpmguide);
 
         pc.select_settings.event_mode = true;
-        assert!(pc.is_event_mode());
+        assert!(pc.select_settings.event_mode);
 
         pc.judge_settings.custom_judge = true;
-        assert!(pc.is_custom_judge());
+        assert!(pc.judge_settings.custom_judge);
 
         pc.display_settings.showjudgearea = true;
-        assert!(pc.is_showjudgearea());
+        assert!(pc.display_settings.showjudgearea);
 
         pc.display_settings.markprocessednote = true;
-        assert!(pc.is_markprocessednote());
+        assert!(pc.display_settings.markprocessednote);
 
         pc.display_settings.bpmguide = true;
-        assert!(pc.is_bpmguide());
+        assert!(pc.display_settings.bpmguide);
     }
 
     #[test]
     fn test_player_config_scroll_mode_getter_setter() {
         let mut pc = PlayerConfig::default();
         pc.display_settings.scroll_mode = 2;
-        assert_eq!(pc.get_scroll_mode(), 2);
+        assert_eq!(pc.display_settings.scroll_mode, 2);
     }
 
     #[test]
     fn test_player_config_longnote_mode_getter_setter() {
         let mut pc = PlayerConfig::default();
         pc.note_modifier_settings.longnote_mode = 1;
-        assert_eq!(pc.get_longnote_mode(), 1);
+        assert_eq!(pc.note_modifier_settings.longnote_mode, 1);
     }
 
     #[test]
     fn test_player_config_mine_mode_getter_setter() {
         let mut pc = PlayerConfig::default();
         pc.play_settings.mine_mode = 1;
-        assert_eq!(pc.get_mine_mode(), 1);
+        assert_eq!(pc.play_settings.mine_mode, 1);
     }
 
     #[test]
@@ -252,7 +252,7 @@ mod tests {
 
         let history = vec![crate::skin_config::SkinConfig::default_for_id(0)];
         pc.skin_history = history.clone();
-        assert_eq!(pc.get_skin_history().len(), 1);
+        assert_eq!(pc.skin_history.len(), 1);
     }
 
     #[test]

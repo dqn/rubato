@@ -200,8 +200,8 @@ pub fn capture_render_snapshot(
     }
 
     RenderSnapshot {
-        skin_width: skin.get_width(),
-        skin_height: skin.get_height(),
+        skin_width: skin.width,
+        skin_height: skin.height,
         time_ms: provider.now_time_ms(),
         commands,
     }

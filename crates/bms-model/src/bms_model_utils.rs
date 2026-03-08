@@ -159,7 +159,7 @@ pub fn average_notes_per_time(model: &BMSModel, start: i32, end: i32) -> f64 {
 pub fn change_frequency(model: &mut BMSModel, freq: f32) {
     model.bpm *= freq as f64;
     for tl in &mut model.timelines {
-        tl.bpm = tl.get_bpm() * (freq as f64);
+        tl.bpm *= freq as f64;
         tl.stop = (tl.micro_stop() as f64 / (freq as f64)) as i64;
         tl.set_micro_time((tl.micro_time() as f64 / (freq as f64)) as i64);
     }

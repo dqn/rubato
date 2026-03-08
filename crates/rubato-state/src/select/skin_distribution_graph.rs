@@ -139,7 +139,7 @@ impl SkinDistributionGraph {
         let percent: f32 = match task.download_task_status() {
             DownloadTaskStatus::Prepare => 0.0,
             DownloadTaskStatus::Downloading => {
-                task.download_size() as f32 / task.get_content_length() as f32
+                task.download_size as f32 / task.content_length as f32
             }
             DownloadTaskStatus::Downloaded => 1.0,
             DownloadTaskStatus::Extracted => 1.0,
@@ -354,7 +354,7 @@ mod tests {
         match task.download_task_status() {
             DownloadTaskStatus::Prepare => 0.0,
             DownloadTaskStatus::Downloading => {
-                task.download_size() as f32 / task.get_content_length() as f32
+                task.download_size as f32 / task.content_length as f32
             }
             DownloadTaskStatus::Downloaded => 1.0,
             DownloadTaskStatus::Extracted => 1.0,

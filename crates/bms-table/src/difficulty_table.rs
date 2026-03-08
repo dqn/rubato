@@ -22,12 +22,12 @@ impl DifficultyTable {
 
     pub fn new_with_source_url(source_url: &str) -> Self {
         let mut dt = Self::new();
-        dt.table.set_source_url(source_url);
+        dt.table.source_url = source_url.to_string();
         dt
     }
 
     pub fn elements(&self) -> Vec<DifficultyTableElement> {
-        self.table.models().clone()
+        self.table.models.clone()
     }
 
     #[allow(dead_code)]
@@ -39,7 +39,7 @@ impl DifficultyTable {
     }
 
     pub fn level_description(&self) -> Vec<String> {
-        if let Some(l) = self.table.get_values().get(LEVEL_ORDER)
+        if let Some(l) = self.table.values.get(LEVEL_ORDER)
             && let Some(arr) = l.as_array()
         {
             return arr.iter().map(value_to_string).collect();
@@ -53,7 +53,7 @@ impl DifficultyTable {
             .map(|s| Value::String(s.clone()))
             .collect();
         self.table
-            .values_mut()
+            .values
             .insert(LEVEL_ORDER.to_string(), Value::Array(arr));
     }
 
@@ -116,9 +116,9 @@ mod tests {
     #[test]
     fn bms_table_element_default_fields() {
         let elem = DifficultyTableElement::new();
-        assert_eq!(elem.get_level(), "");
-        assert_eq!(elem.state(), 0);
-        assert_eq!(elem.evaluation(), 0);
+        assert_eq!(elem.level, "");
+        assert_eq!(elem.state, 0);
+        assert_eq!(elem.eval, 0);
         assert_eq!(elem.comment(), "");
         assert_eq!(elem.information(), "");
         assert_eq!(elem.proposer(), "");
@@ -134,7 +134,7 @@ mod tests {
         elem.set_proposer("tester");
         elem.set_bmsid(42);
 
-        assert_eq!(elem.get_level(), "12");
+        assert_eq!(elem.level, "12");
         assert_eq!(elem.comment(), "test comment");
         assert_eq!(elem.information(), "test info");
         assert_eq!(elem.proposer(), "tester");

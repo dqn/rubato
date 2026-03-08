@@ -468,110 +468,6 @@ impl Config {
         self.playername.as_deref()
     }
 
-    pub fn is_set_clipboard_screenshot(&self) -> bool {
-        self.integration.set_clipboard_screenshot
-    }
-
-    pub fn set_clipboard_when_screenshot(&mut self, value: bool) {
-        self.integration.set_clipboard_screenshot = value;
-    }
-
-    pub fn get_scroll_duration_low(&self) -> i32 {
-        self.select.scrolldurationlow
-    }
-
-    pub fn set_scroll_duration_low(&mut self, value: i32) {
-        self.select.scrolldurationlow = value;
-    }
-
-    pub fn get_scroll_duration_high(&self) -> i32 {
-        self.select.scrolldurationhigh
-    }
-
-    pub fn set_scroll_duration_high(&mut self, value: i32) {
-        self.select.scrolldurationhigh = value;
-    }
-
-    pub fn get_webhook_option(&self) -> i32 {
-        self.integration.webhook_option
-    }
-
-    pub fn get_webhook_url(&self) -> &[String] {
-        &self.integration.webhook_url
-    }
-
-    pub fn get_webhook_name(&self) -> &str {
-        &self.integration.webhook_name
-    }
-
-    pub fn get_webhook_avatar(&self) -> &str {
-        &self.integration.webhook_avatar
-    }
-
-    pub fn get_bmsroot(&self) -> &[String] {
-        &self.paths.bmsroot
-    }
-
-    pub fn get_table_url(&self) -> &[String] {
-        &self.paths.table_url
-    }
-
-    pub fn get_songpath(&self) -> &str {
-        &self.paths.songpath
-    }
-
-    pub fn get_songinfopath(&self) -> &str {
-        &self.paths.songinfopath
-    }
-
-    pub fn get_tablepath(&self) -> &str {
-        &self.paths.tablepath
-    }
-
-    pub fn get_playerpath(&self) -> &str {
-        &self.paths.playerpath
-    }
-
-    pub fn get_skinpath(&self) -> &str {
-        &self.paths.skinpath
-    }
-
-    pub fn get_bgmpath(&self) -> &str {
-        &self.paths.bgmpath
-    }
-
-    pub fn get_soundpath(&self) -> &str {
-        &self.paths.soundpath
-    }
-
-    pub fn get_systemfontpath(&self) -> &str {
-        &self.paths.systemfontpath
-    }
-
-    pub fn get_messagefontpath(&self) -> &str {
-        &self.paths.messagefontpath
-    }
-
-    pub fn get_max_frame_per_second(&self) -> i32 {
-        self.display.max_frame_per_second
-    }
-
-    pub fn get_max_search_bar_count(&self) -> i32 {
-        self.select.max_search_bar_count
-    }
-
-    pub fn get_bga(&self) -> i32 {
-        self.render.bga
-    }
-
-    pub fn get_bga_expand(&self) -> i32 {
-        self.render.bga_expand
-    }
-
-    pub fn get_frameskip(&self) -> i32 {
-        self.render.frameskip
-    }
-
     pub fn get_override_download_url(&self) -> Option<&str> {
         if self.network.override_download_url.is_empty() {
             None
@@ -580,28 +476,8 @@ impl Config {
         }
     }
 
-    pub fn download_directory(&self) -> &str {
-        &self.network.download_directory
-    }
-
-    pub fn monitor_name(&self) -> &str {
-        &self.integration.monitor_name
-    }
-
-    pub fn is_analog_scroll(&self) -> bool {
-        self.select.analog_scroll
-    }
-
-    pub fn resolution(&self) -> Resolution {
-        self.display.resolution
-    }
-
     pub fn audio_config(&self) -> Option<&AudioConfig> {
         self.audio.as_ref()
-    }
-
-    pub fn song_resource_gen(&self) -> i32 {
-        self.render.song_resource_gen
     }
 
     pub fn config_json(config: &Config) -> anyhow::Result<String> {

@@ -160,7 +160,7 @@ impl BMSPlayerInputProcessor {
         let midi_config = MidiConfig::default();
         midiinput.set_config(&midi_config);
 
-        let analog_scroll = config.is_analog_scroll();
+        let analog_scroll = config.select.analog_scroll;
 
         Self {
             enable: true,

@@ -88,56 +88,6 @@ impl PlayConfig {
         }
     }
 
-    pub fn is_enablelift(&self) -> bool {
-        self.enablelift
-    }
-    pub fn get_lift(&self) -> f32 {
-        self.lift
-    }
-    pub fn is_enablehidden(&self) -> bool {
-        self.enablehidden
-    }
-    pub fn get_hidden(&self) -> f32 {
-        self.hidden
-    }
-    pub fn is_enablelanecover(&self) -> bool {
-        self.enablelanecover
-    }
-    pub fn get_lanecover(&self) -> f32 {
-        self.lanecover
-    }
-    pub fn get_lanecovermarginlow(&self) -> f32 {
-        self.lanecovermarginlow
-    }
-    pub fn get_lanecovermarginhigh(&self) -> f32 {
-        self.lanecovermarginhigh
-    }
-    pub fn get_lanecoverswitchduration(&self) -> i32 {
-        self.lanecoverswitchduration
-    }
-    pub fn is_enable_constant(&self) -> bool {
-        self.enable_constant
-    }
-    pub fn get_constant_fadein_time(&self) -> i32 {
-        self.constant_fadein_time
-    }
-    pub fn get_hispeed(&self) -> f32 {
-        self.hispeed
-    }
-    pub fn get_duration(&self) -> i32 {
-        self.duration
-    }
-    pub fn get_fixhispeed(&self) -> i32 {
-        self.fixhispeed
-    }
-    pub fn get_hispeedmargin(&self) -> f32 {
-        self.hispeedmargin
-    }
-
-    pub fn is_hispeedautoadjust(&self) -> bool {
-        self.hispeedautoadjust
-    }
-
     pub fn judgetype(&self) -> &str {
         for alg in JudgeAlgorithm::values() {
             if alg.name() == self.judgetype {

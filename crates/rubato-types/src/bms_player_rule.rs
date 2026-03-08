@@ -44,10 +44,10 @@ impl BMSPlayerRule {
     ///
     /// Java: BMSPlayerRule.validate(BMSModel)
     pub fn validate(model: &mut BMSModel) {
-        let judgerank = model.judgerank();
+        let judgerank = model.judgerank;
         let table = judgerank_table(model.mode());
 
-        match model.judgerank_type() {
+        match &model.judgerank_type {
             JudgeRankType::BmsRank => {
                 let idx = if (0..5).contains(&judgerank) {
                     judgerank as usize
@@ -73,14 +73,14 @@ impl BMSPlayerRule {
 
         match model.total_type {
             TotalType::Bms => {
-                if model.get_total() <= 0.0 {
+                if model.total <= 0.0 {
                     model.total = calculate_default_total(model.total_notes());
                 }
             }
             TotalType::Bmson => {
                 let default_total = calculate_default_total(model.total_notes());
-                if model.get_total() > 0.0 {
-                    model.total = model.get_total() / 100.0 * default_total;
+                if model.total > 0.0 {
+                    model.total = model.total / 100.0 * default_total;
                 } else {
                     model.total = default_total;
                 }
@@ -145,8 +145,8 @@ mod tests {
         BMSPlayerRule::validate(&mut model);
 
         // Rank 2 with normal table → 75
-        assert_eq!(model.judgerank(), 75);
-        assert_eq!(model.judgerank_type(), &JudgeRankType::BmsonJudgerank);
+        assert_eq!(model.judgerank, 75);
+        assert_eq!(model.judgerank_type, JudgeRankType::BmsonJudgerank);
         assert_eq!(model.total_type, TotalType::Bms);
         // Total was > 0, should be unchanged
         assert!((model.total - 300.0).abs() < 0.001);
@@ -163,7 +163,7 @@ mod tests {
         BMSPlayerRule::validate(&mut model);
 
         // Out of range → defaults to index 2 → 75
-        assert_eq!(model.judgerank(), 75);
+        assert_eq!(model.judgerank, 75);
     }
 
     #[test]
@@ -177,7 +177,7 @@ mod tests {
         BMSPlayerRule::validate(&mut model);
 
         // 150 * 75 / 100 = 112
-        assert_eq!(model.judgerank(), 112);
+        assert_eq!(model.judgerank, 112);
     }
 
     #[test]
@@ -191,7 +191,7 @@ mod tests {
         BMSPlayerRule::validate(&mut model);
 
         // 0 → default to 100
-        assert_eq!(model.judgerank(), 100);
+        assert_eq!(model.judgerank, 100);
     }
 
     #[test]

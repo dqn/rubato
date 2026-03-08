@@ -6,7 +6,7 @@ use crate::stubs::MainState;
 ///
 /// Translated from CustomEvent.java
 pub struct CustomEvent {
-    id: i32,
+    pub id: i32,
     action: Box<dyn Event>,
     condition: Option<Box<dyn BooleanProperty>>,
     min_interval: i32,
@@ -27,10 +27,6 @@ impl CustomEvent {
             min_interval,
             last_execute_time: i64::MIN,
         }
-    }
-
-    pub fn get_id(&self) -> i32 {
-        self.id
     }
 
     pub fn execute(&mut self, state: &mut dyn MainState, arg1: i32, arg2: i32) {

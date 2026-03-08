@@ -92,12 +92,6 @@ impl DownloadTask {
         self.download_task_status = status;
     }
 
-    pub fn download_size(&self) -> i64 {
-        self.download_size
-    }
-    pub fn get_content_length(&self) -> i64 {
-        self.content_length
-    }
     pub fn get_error_message(&self) -> Option<&str> {
         self.error_message.as_deref()
     }
@@ -153,8 +147,8 @@ mod tests {
         assert_eq!(task.name(), "Test Song");
         assert_eq!(task.hash(), "abc123");
         assert_eq!(task.download_task_status(), DownloadTaskStatus::Prepare);
-        assert_eq!(task.download_size(), 0);
-        assert_eq!(task.get_content_length(), 0);
+        assert_eq!(task.download_size, 0);
+        assert_eq!(task.content_length, 0);
         assert!(task.get_error_message().is_none());
         assert_eq!(task.time_finished(), 0);
     }
@@ -213,8 +207,8 @@ mod tests {
         );
         task.download_size = 4096;
         task.content_length = 8192;
-        assert_eq!(task.download_size(), 4096);
-        assert_eq!(task.get_content_length(), 8192);
+        assert_eq!(task.download_size, 4096);
+        assert_eq!(task.content_length, 8192);
     }
 
     #[test]

@@ -406,7 +406,7 @@ impl MusicSelector {
                             self.config.play_settings.doubleoption = 0;
                         }
                         CourseDataConstraint::Mirror => {
-                            if self.config.get_random() == 1 {
+                            if self.config.play_settings.random == 1 {
                                 self.config.play_settings.random2 = 1;
                                 self.config.play_settings.doubleoption = 1;
                             } else {
@@ -416,10 +416,10 @@ impl MusicSelector {
                             }
                         }
                         CourseDataConstraint::Random => {
-                            if self.config.get_random() > 5 {
+                            if self.config.play_settings.random > 5 {
                                 self.config.play_settings.random = 0;
                             }
-                            if self.config.get_random2() > 5 {
+                            if self.config.play_settings.random2 > 5 {
                                 self.config.play_settings.random2 = 0;
                             }
                         }

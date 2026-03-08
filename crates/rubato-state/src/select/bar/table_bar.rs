@@ -39,7 +39,7 @@ impl TableBar {
     }
 
     pub fn title(&self) -> &str {
-        self.td.name()
+        &self.td.name
     }
 
     pub fn url(&self) -> Option<&str> {
@@ -52,12 +52,12 @@ impl TableBar {
 
     pub fn set_table_data(&mut self, td: TableData) {
         self.levels = td
-            .get_folder()
+            .folder
             .iter()
-            .map(|folder| HashBar::new(folder.name().to_string(), folder.get_song().to_vec()))
+            .map(|folder| HashBar::new(folder.name().to_string(), folder.songs.to_vec()))
             .collect();
 
-        let courses = td.get_course();
+        let courses = &td.course;
         let mut hashset: HashSet<String> = HashSet::new();
         for course in courses {
             for song in &course.hash {

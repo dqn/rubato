@@ -424,86 +424,8 @@ impl PlayerConfig {
         self.twitter_access_token_secret.as_deref()
     }
 
-    pub fn get_skin_history(&self) -> &[SkinConfig] {
-        &self.skin_history
-    }
-    pub fn get_gauge(&self) -> i32 {
-        self.play_settings.gauge
-    }
-
-    pub fn get_random(&self) -> i32 {
-        self.play_settings.random
-    }
-    pub fn get_random2(&self) -> i32 {
-        self.play_settings.random2
-    }
-    pub fn get_doubleoption(&self) -> i32 {
-        self.play_settings.doubleoption
-    }
-    pub fn get_judgetiming(&self) -> i32 {
-        self.judge_settings.judgetiming
-    }
-
-    pub fn get_lnmode(&self) -> i32 {
-        self.play_settings.lnmode
-    }
-    pub fn get_sort(&self) -> i32 {
-        self.select_settings.sort
-    }
-    pub fn get_sortid(&self) -> Option<&str> {
-        self.select_settings.sortid.as_deref()
-    }
-
-    pub fn set_sortid(&mut self, v: String) {
-        self.select_settings.sortid = Some(v);
-    }
-
     pub fn mode(&self) -> Option<&Mode> {
         self.mode.as_ref()
-    }
-    pub fn is_event_mode(&self) -> bool {
-        self.select_settings.event_mode
-    }
-
-    pub fn is_random_select(&self) -> bool {
-        self.select_settings.is_random_select
-    }
-
-    pub fn is_custom_judge(&self) -> bool {
-        self.judge_settings.custom_judge
-    }
-    pub fn get_scroll_mode(&self) -> i32 {
-        self.display_settings.scroll_mode
-    }
-    pub fn is_showjudgearea(&self) -> bool {
-        self.display_settings.showjudgearea
-    }
-    pub fn get_longnote_mode(&self) -> i32 {
-        self.note_modifier_settings.longnote_mode
-    }
-    pub fn is_markprocessednote(&self) -> bool {
-        self.display_settings.markprocessednote
-    }
-    pub fn is_bpmguide(&self) -> bool {
-        self.display_settings.bpmguide
-    }
-    pub fn get_mine_mode(&self) -> i32 {
-        self.play_settings.mine_mode
-    }
-    pub fn get_chart_replication_mode(&self) -> &str {
-        &self.play_settings.chart_replication_mode
-    }
-
-    pub fn get_gauge_auto_shift(&self) -> i32 {
-        self.play_settings.gauge_auto_shift
-    }
-
-    pub fn get_bottom_shiftable_gauge(&self) -> i32 {
-        self.play_settings.bottom_shiftable_gauge
-    }
-
-    pub fn get_targetid(&self) -> &str {
-        &self.select_settings.targetid
     }
 
     pub fn get_misslayer_duration(&mut self) -> i32 {

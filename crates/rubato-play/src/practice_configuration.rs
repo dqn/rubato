@@ -174,7 +174,7 @@ impl PracticeConfiguration {
 
     pub fn create(&mut self, model: &BMSModel) {
         self.sha256 = model.sha256().to_string();
-        self.property.judgerank = model.judgerank();
+        self.property.judgerank = model.judgerank;
         self.property.endtime = model.last_time() + 1000;
 
         // Load saved practice property from practice/<sha256>.json if exists
@@ -692,7 +692,7 @@ mod tests {
         // total overwritten
         assert!((model.total - 250.0).abs() < f64::EPSILON);
         // judgerank overwritten
-        assert_eq!(model.judgerank(), 80);
+        assert_eq!(model.judgerank, 80);
         // starttimeoffset: starttime(0) <= 1000 → 0
         assert_eq!(result.starttimeoffset, 0);
         // playtime: (10000 + 1000) * 100 / 100 = 11000

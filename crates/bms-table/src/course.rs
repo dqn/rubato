@@ -4,7 +4,7 @@ use crate::bms_table_element::BmsTableElement;
 pub struct Course {
     name: String,
     pub charts: Vec<BmsTableElement>,
-    style: String,
+    pub style: String,
     pub constraint: Vec<String>,
     pub trophy: Vec<Trophy>,
 }
@@ -31,19 +31,12 @@ impl Course {
     pub fn charts(&self) -> &[BmsTableElement] {
         &self.charts
     }
-    pub fn get_style(&self) -> &str {
-        &self.style
-    }
-
     pub fn set_style(&mut self, style: &str) {
         self.style = style.to_string();
     }
 
     pub fn constraint(&self) -> &[String] {
         &self.constraint
-    }
-    pub fn get_trophy(&self) -> &[Trophy] {
-        &self.trophy
     }
 }
 
@@ -85,13 +78,6 @@ impl Trophy {
 
     pub fn set_style(&mut self, style: &str) {
         self.style = style.to_string();
-    }
-
-    pub fn scorerate(&self) -> f64 {
-        self.scorerate
-    }
-    pub fn get_missrate(&self) -> f64 {
-        self.missrate
     }
 }
 

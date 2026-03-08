@@ -99,37 +99,6 @@ impl ScoreLog {
     pub fn set_sha256(&mut self, sha256: &str) {
         self.sha256 = Some(sha256.to_string());
     }
-
-    pub fn mode(&self) -> i32 {
-        self.mode
-    }
-    pub fn get_clear(&self) -> i32 {
-        self.clear
-    }
-    pub fn get_oldclear(&self) -> i32 {
-        self.oldclear
-    }
-    pub fn get_score(&self) -> i32 {
-        self.score
-    }
-    pub fn get_oldscore(&self) -> i32 {
-        self.oldscore
-    }
-    pub fn get_combo(&self) -> i32 {
-        self.combo
-    }
-    pub fn get_oldcombo(&self) -> i32 {
-        self.oldcombo
-    }
-    pub fn get_minbp(&self) -> i32 {
-        self.minbp
-    }
-    pub fn get_oldminbp(&self) -> i32 {
-        self.oldminbp
-    }
-    pub fn get_date(&self) -> i64 {
-        self.date
-    }
 }
 
 impl Validatable for ScoreLog {

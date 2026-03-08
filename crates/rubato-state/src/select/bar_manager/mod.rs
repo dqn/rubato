@@ -617,7 +617,9 @@ impl BarManager {
                 if let Some(ref ctx) = ctx {
                     let sorter = ctx
                         .player_config
-                        .get_sortid()
+                        .select_settings
+                        .sortid
+                        .as_deref()
                         .and_then(BarSorter::value_of)
                         .unwrap_or(BarSorter::Title);
                     l.sort_by(|a, b| sorter.compare(a, b));
@@ -632,7 +634,7 @@ impl BarManager {
 
             // Random select bars
             if let Some(ref ctx) = ctx
-                && ctx.player_config.is_random_select()
+                && ctx.player_config.select_settings.is_random_select
                 && !bar
                     .map(|b| matches!(b, Bar::ContextMenu(_)))
                     .unwrap_or(false)

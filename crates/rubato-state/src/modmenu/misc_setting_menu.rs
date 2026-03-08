@@ -214,15 +214,15 @@ fn change_play_mode(mode: &Mode) {
         .expect("CURRENT_PLAY_MODE lock poisoned") = Some(*mode);
     let conf = get_play_config();
 
-    *ENABLE_LIFT.lock().expect("ENABLE_LIFT lock poisoned") = conf.is_enablelift();
+    *ENABLE_LIFT.lock().expect("ENABLE_LIFT lock poisoned") = conf.enablelift;
     *LIFT_VALUE.lock().expect("LIFT_VALUE lock poisoned") = (conf.lift * 1000.0) as i32;
 
-    *ENABLE_HIDDEN.lock().expect("ENABLE_HIDDEN lock poisoned") = conf.is_enablehidden();
+    *ENABLE_HIDDEN.lock().expect("ENABLE_HIDDEN lock poisoned") = conf.enablehidden;
     *HIDDEN_VALUE.lock().expect("HIDDEN_VALUE lock poisoned") = (conf.hidden * 1000.0) as i32;
 
     *ENABLE_LANECOVER
         .lock()
-        .expect("ENABLE_LANECOVER lock poisoned") = conf.is_enablelanecover();
+        .expect("ENABLE_LANECOVER lock poisoned") = conf.enablelanecover;
     *LANECOVER_VALUE
         .lock()
         .expect("LANECOVER_VALUE lock poisoned") = (conf.lanecover * 1000.0) as i32;
@@ -238,7 +238,7 @@ fn change_play_mode(mode: &Mode) {
 
     *ENABLE_CONSTANT
         .lock()
-        .expect("ENABLE_CONSTANT lock poisoned") = conf.is_enable_constant();
+        .expect("ENABLE_CONSTANT lock poisoned") = conf.enable_constant;
     *CONSTANT_VALUE.lock().expect("CONSTANT_VALUE lock poisoned") = conf.constant_fadein_time;
 }
 

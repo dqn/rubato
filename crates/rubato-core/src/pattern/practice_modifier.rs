@@ -38,7 +38,7 @@ impl PatternModifier for PracticeModifier {
 
         let new_total_notes = model.total_notes();
         if totalnotes > 0 {
-            let total = model.get_total();
+            let total = model.total;
             model.total = total * new_total_notes as f64 / totalnotes as f64;
         }
     }

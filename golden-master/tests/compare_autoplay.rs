@@ -141,9 +141,9 @@ fn ensure_timelines_match_fixture(model: &mut BMSModel, timeline_times: &[i64]) 
         let mut tl = TimeLine::new(0.0, t, keys);
         // Set BPM from nearest existing timeline
         if let Some(nearest) = timelines.iter().rfind(|tl| tl.micro_time() <= t) {
-            tl.bpm = nearest.get_bpm();
+            tl.bpm = nearest.bpm;
         } else if let Some(first) = timelines.first() {
-            tl.bpm = first.get_bpm();
+            tl.bpm = first.bpm;
         }
         timelines.push(tl);
     }

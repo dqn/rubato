@@ -77,7 +77,7 @@ impl IRTableData {
         }
 
         Self {
-            name: table.name().to_string(),
+            name: table.name.clone(),
             folders,
             courses,
         }
@@ -159,7 +159,7 @@ mod tests {
         let td = ir.to_table_data();
         assert!(td.is_some());
         let td = td.unwrap();
-        assert_eq!(td.name(), "Test Table");
+        assert_eq!(td.name, "Test Table");
         assert_eq!(td.folder.len(), 1);
         assert_eq!(td.folder[0].name(), "Level 1");
         assert_eq!(td.folder[0].songs.len(), 1);
@@ -187,7 +187,7 @@ mod tests {
         let td = ir.to_table_data();
         assert!(td.is_some());
         let td = td.unwrap();
-        assert_eq!(td.name(), "Course Table");
+        assert_eq!(td.name, "Course Table");
         assert_eq!(td.course.len(), 1);
         assert_eq!(td.course[0].name(), "Dan Course");
         assert!(td.course[0].release);

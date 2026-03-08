@@ -63,7 +63,7 @@ fn bga_parse_model_has_bga_data() {
     let timelines_with_bga: Vec<_> = model
         .timelines
         .iter()
-        .filter(|tl| tl.bga() != -1 || tl.layer != -1)
+        .filter(|tl| tl.bga != -1 || tl.layer != -1)
         .collect();
     assert!(
         timelines_with_bga.len() >= 5,

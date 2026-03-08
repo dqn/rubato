@@ -138,11 +138,11 @@ impl BGAProcessor {
 
         let mut tls = Vec::new();
         for tl in &model.timelines {
-            if tl.bga() != -1 || tl.layer != -1 || !tl.eventlayer.is_empty() {
+            if tl.bga != -1 || tl.layer != -1 || !tl.eventlayer.is_empty() {
                 tls.push(BgaTimeline {
                     // Java TimeLine.getTime() returns (int)(time / 1000) i.e. milliseconds
                     time_ms: tl.time() as i64,
-                    bga: tl.bga(),
+                    bga: tl.bga,
                     layer: tl.layer,
                     eventlayer: tl.eventlayer.to_vec(),
                 });

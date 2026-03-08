@@ -77,7 +77,7 @@ pub struct SpriteBatch {
     blend_src: i32,
     blend_dst: i32,
     projection: [f32; 16],
-    drawing: bool,
+    pub drawing: bool,
     /// Current shader type (matches SkinObjectRenderer TYPE_* constants)
     pub shader_type: i32,
     /// Current blend mode derived from blend_src/blend_dst
@@ -256,11 +256,6 @@ impl SpriteBatch {
     /// Get the projection matrix values.
     pub fn projection(&self) -> &[f32; 16] {
         &self.projection
-    }
-
-    /// Check if the batch is currently drawing (between begin/end).
-    pub fn is_drawing(&self) -> bool {
-        self.drawing
     }
 
     /// Draw a full texture at (x, y) with size (w, h).
@@ -446,7 +441,7 @@ mod tests {
     fn test_sprite_batch_new() {
         let batch = SpriteBatch::new();
         assert!(batch.vertices().is_empty());
-        assert!(!batch.is_drawing());
+        assert!(!batch.drawing);
         assert_eq!(batch.blend_mode(), BlendMode::Normal);
     }
 
@@ -454,9 +449,9 @@ mod tests {
     fn test_sprite_batch_begin_end() {
         let mut batch = SpriteBatch::new();
         batch.begin();
-        assert!(batch.is_drawing());
+        assert!(batch.drawing);
         batch.end();
-        assert!(!batch.is_drawing());
+        assert!(!batch.drawing);
     }
 
     #[test]

@@ -475,12 +475,12 @@ fn test_render_sprite_batch_begin_end_lifecycle() {
 
     // Before render, sprite batch should not be drawing
     assert!(mc.sprite_batch().is_some());
-    assert!(!mc.sprite_batch().unwrap().is_drawing());
+    assert!(!mc.sprite_batch().unwrap().drawing);
 
     // After render, sprite batch should have gone through begin()/end() cycle
     // and should not be drawing anymore
     mc.render();
-    assert!(!mc.sprite_batch().unwrap().is_drawing());
+    assert!(!mc.sprite_batch().unwrap().drawing);
 }
 
 #[test]
@@ -525,9 +525,9 @@ fn test_sprite_batch_mut_accessor() {
     // Should be able to get mutable reference to sprite batch
     let batch = mc.sprite_batch_mut().unwrap();
     batch.begin();
-    assert!(batch.is_drawing());
+    assert!(batch.drawing);
     batch.end();
-    assert!(!batch.is_drawing());
+    assert!(!batch.drawing);
 }
 
 #[test]

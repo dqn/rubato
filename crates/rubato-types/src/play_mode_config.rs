@@ -432,10 +432,6 @@ impl MouseScratchConfig {
 impl MouseScratchConfig {
     pub const MOUSE_SCRATCH_VER_1: i32 = MOUSE_SCRATCH_VER_1;
     pub const MOUSE_SCRATCH_VER_2: i32 = MOUSE_SCRATCH_VER_2;
-
-    pub fn is_mouse_scratch_enabled(&self) -> bool {
-        self.mouse_scratch_enabled
-    }
 }
 
 // -- ControllerConfig --
@@ -730,26 +726,6 @@ impl ControllerConfig {
         } else {
             Some(&self.name)
         }
-    }
-    pub fn get_start(&self) -> i32 {
-        self.start
-    }
-
-    pub fn get_select(&self) -> i32 {
-        self.select
-    }
-
-    pub fn get_duration(&self) -> i32 {
-        self.duration
-    }
-
-    #[allow(non_snake_case)]
-    pub fn get_jkoc(&self) -> bool {
-        self.jkoc_hack
-    }
-
-    pub fn is_analog_scratch(&self) -> bool {
-        self.analog_scratch
     }
 }
 

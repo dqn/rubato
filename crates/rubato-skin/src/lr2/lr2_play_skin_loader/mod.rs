@@ -700,7 +700,7 @@ mod tests {
 
         assert_eq!(play_skin.close, 500);
         assert_eq!(play_skin.judgetimer, 2);
-        assert_eq!(play_skin.judgeregion(), 1); // default
+        assert_eq!(play_skin.judgeregion, 1); // default
         // Lane region should be set (8 default rectangles)
         assert!(play_skin.get_lane_region().is_some());
     }

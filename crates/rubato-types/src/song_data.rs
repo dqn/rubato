@@ -174,7 +174,7 @@ impl SongData {
         if self.difficulty == 0 {
             self.difficulty = model.difficulty();
         }
-        self.judge = model.judgerank();
+        self.judge = model.judgerank;
         self.minbpm = model.get_min_bpm() as i32;
         self.maxbpm = model.max_bpm() as i32;
         self.feature = 0;
@@ -391,98 +391,8 @@ impl SongData {
         self.appendurl.as_deref().unwrap_or("")
     }
 
-    pub fn get_level(&self) -> i32 {
-        self.level
-    }
-
-    pub fn get_judge(&self) -> i32 {
-        self.judge
-    }
-
-    pub fn get_minbpm(&self) -> i32 {
-        self.minbpm
-    }
-
-    pub fn get_maxbpm(&self) -> i32 {
-        self.maxbpm
-    }
-
-    pub fn get_notes(&self) -> i32 {
-        self.notes
-    }
-
-    pub fn get_mode(&self) -> i32 {
-        self.mode
-    }
-
-    pub fn get_difficulty(&self) -> i32 {
-        self.difficulty
-    }
-
-    pub fn get_favorite(&self) -> i32 {
-        self.favorite
-    }
-    pub fn get_feature(&self) -> i32 {
-        self.feature
-    }
-
-    pub fn get_content(&self) -> i32 {
-        self.content
-    }
-
-    pub fn get_length(&self) -> i32 {
-        self.length
-    }
-
-    pub fn get_date(&self) -> i32 {
-        self.date
-    }
-
-    pub fn get_adddate(&self) -> i32 {
-        self.adddate
-    }
-
-    pub fn get_tag(&self) -> &str {
-        &self.tag
-    }
-
-    pub fn get_folder(&self) -> &str {
-        &self.folder
-    }
-
-    pub fn get_parent(&self) -> &str {
-        &self.parent
-    }
-
-    pub fn get_stagefile(&self) -> &str {
-        &self.stagefile
-    }
-
-    pub fn get_backbmp(&self) -> &str {
-        &self.backbmp
-    }
-
-    pub fn get_banner(&self) -> &str {
-        &self.banner
-    }
-
-    pub fn get_preview(&self) -> &str {
-        &self.preview
-    }
-
-    pub fn get_charthash(&self) -> Option<&str> {
-        self.charthash.as_deref()
-    }
-
     pub fn song_information(&self) -> Option<&SongInformation> {
         self.info.as_ref()
-    }
-    pub fn set_url(&mut self, url: String) {
-        self.url = Some(url);
-    }
-
-    pub fn set_appendurl(&mut self, appendurl: String) {
-        self.appendurl = Some(appendurl);
     }
     pub fn get_ipfs_str(&self) -> &str {
         self.ipfs.as_deref().unwrap_or("")
@@ -648,8 +558,8 @@ mod tests {
         sd.set_subartist("Sub B".to_string());
         sd.md5 = "md5hash".to_string();
         sd.sha256 = "sha256hash".to_string();
-        sd.set_url("https://url.com".to_string());
-        sd.set_appendurl("https://append.com".to_string());
+        sd.url = Some("https://url.com".to_string());
+        sd.appendurl = Some("https://append.com".to_string());
         sd.mode = 14;
         sd.favorite = FAVORITE_CHART;
 

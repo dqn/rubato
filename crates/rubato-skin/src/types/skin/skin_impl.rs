@@ -2,9 +2,9 @@
 pub struct Skin {
     pub header: SkinHeader,
     /// Width
-    width: f32,
+    pub width: f32,
     /// Height
-    height: f32,
+    pub height: f32,
     /// Width ratio from source
     dw: f32,
     /// Height ratio from source
@@ -508,13 +508,6 @@ impl Skin {
         &self.offset
     }
 
-    pub fn get_width(&self) -> f32 {
-        self.width
-    }
-
-    pub fn get_height(&self) -> f32 {
-        self.height
-    }
 
     pub fn scale_x(&self) -> f64 {
         self.dw as f64
@@ -535,7 +528,7 @@ impl Skin {
     }
 
     pub fn add_custom_event(&mut self, event: CustomEvent) {
-        let id = event.get_id();
+        let id = event.id;
         self.custom_events.insert(id, event);
     }
 
@@ -552,7 +545,7 @@ impl Skin {
     }
 
     pub fn add_custom_timer(&mut self, timer: CustomTimer) {
-        let id = timer.get_id();
+        let id = timer.id;
         self.custom_timers.insert(id, timer);
     }
 

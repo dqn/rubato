@@ -55,8 +55,8 @@ impl DownloadTaskMenu {
                     {
                         let progress = format!(
                             "{}/{}",
-                            humanize_file_size(task.download_size()),
-                            humanize_file_size(task.get_content_length())
+                            humanize_file_size(task.download_size),
+                            humanize_file_size(task.content_length)
                         );
                         ui.label(&progress);
                     } else {

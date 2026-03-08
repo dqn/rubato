@@ -5,7 +5,7 @@ use crate::stubs::MainState;
 ///
 /// Translated from CustomTimer.java
 pub struct CustomTimer {
-    id: i32,
+    pub id: i32,
     timer_func: Option<Box<dyn TimerProperty>>,
     time: i64,
 }
@@ -21,10 +21,6 @@ impl CustomTimer {
 
     pub fn is_passive(&self) -> bool {
         self.timer_func.is_none()
-    }
-
-    pub fn get_id(&self) -> i32 {
-        self.id
     }
 
     pub fn micro_timer(&self) -> i64 {

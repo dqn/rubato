@@ -22,25 +22,12 @@ pub struct TableData {
 }
 
 impl TableData {
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-    pub fn get_url(&self) -> &str {
-        &self.url
-    }
-
     pub fn url_opt(&self) -> Option<&str> {
         if self.url.is_empty() {
             None
         } else {
             Some(&self.url)
         }
-    }
-    pub fn get_folder(&self) -> &[TableFolder] {
-        &self.folder
-    }
-    pub fn get_course(&self) -> &[CourseData] {
-        &self.course
     }
     pub fn shrink(&mut self) {
         for c in &mut self.course {
@@ -123,10 +110,6 @@ pub struct TableFolder {
 impl TableFolder {
     pub fn name(&self) -> &str {
         self.name.as_deref().unwrap_or("")
-    }
-    /// Returns songs (named `get_song` to match Java API)
-    pub fn get_song(&self) -> &[SongData] {
-        &self.songs
     }
     pub fn shrink(&mut self) {
         for song in &mut self.songs {

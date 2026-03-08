@@ -42,8 +42,8 @@ impl BMSPlayerRule {
     pub fn validate(model: &mut BMSModel) {
         let mode = model.mode().copied().unwrap_or(Mode::BEAT_7K);
         let rule = Self::for_mode(&mode);
-        let judgerank = model.judgerank();
-        match model.judgerank_type() {
+        let judgerank = model.judgerank;
+        match &model.judgerank_type {
             JudgeRankType::BmsRank => {
                 let new_rank = if (0..5).contains(&judgerank) {
                     rule.judge.windowrule.judgerank[judgerank as usize]
@@ -71,7 +71,7 @@ impl BMSPlayerRule {
         match model.total_type {
             TotalType::Bms => {
                 // TOTAL undefined case
-                if model.get_total() <= 0.0 {
+                if model.total <= 0.0 {
                     model.total = calculate_default_total(&mode, totalnotes);
                 }
             }
@@ -279,7 +279,7 @@ mod tests {
         // BMS rank 2 is default (judgerank_type is BmsRank)
         BMSPlayerRule::validate(&mut model);
         // After validation, should be BmsonJudgerank
-        assert_eq!(model.judgerank_type(), &JudgeRankType::BmsonJudgerank);
+        assert_eq!(model.judgerank_type, JudgeRankType::BmsonJudgerank);
     }
 
     #[test]
@@ -289,7 +289,7 @@ mod tests {
         // Default judgerank = 2 (BmsRank), LR2 judgerank table: [25, 50, 75, 100, 75]
         // Index 2 => 75
         BMSPlayerRule::validate(&mut model);
-        assert_eq!(model.judgerank(), 75);
+        assert_eq!(model.judgerank, 75);
     }
 
     #[test]
@@ -299,7 +299,7 @@ mod tests {
         model.judgerank = 10; // out of range 0..5
         BMSPlayerRule::validate(&mut model);
         // Should use judgerank[2] = 75 as fallback
-        assert_eq!(model.judgerank(), 75);
+        assert_eq!(model.judgerank, 75);
     }
 
     #[test]
@@ -318,7 +318,7 @@ mod tests {
         model.judgerank_type = JudgeRankType::BmsonJudgerank;
         BMSPlayerRule::validate(&mut model);
         // Positive BmsonJudgerank preserved as-is
-        assert_eq!(model.judgerank(), 120);
+        assert_eq!(model.judgerank, 120);
     }
 
     #[test]
@@ -328,6 +328,6 @@ mod tests {
         model.judgerank = 0;
         model.judgerank_type = JudgeRankType::BmsonJudgerank;
         BMSPlayerRule::validate(&mut model);
-        assert_eq!(model.judgerank(), 100);
+        assert_eq!(model.judgerank, 100);
     }
 }

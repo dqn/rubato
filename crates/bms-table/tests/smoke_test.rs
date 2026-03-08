@@ -22,19 +22,19 @@ fn difficulty_table_default() {
     assert!(dt.table.name().is_none());
     assert!(dt.table.id().is_none());
     assert!(dt.table.get_tag().is_none());
-    assert!(dt.table.data_url().is_empty());
-    assert!(dt.table.models().is_empty());
-    assert!(!dt.table.is_editable());
-    assert!(dt.table.is_auto_update());
-    assert_eq!(dt.table.lastupdate(), 0);
-    assert_eq!(dt.table.access_count(), 0);
+    assert!(dt.table.data_url.is_empty());
+    assert!(dt.table.models.is_empty());
+    assert!(!dt.table.editable);
+    assert!(dt.table.auto_update);
+    assert_eq!(dt.table.lastupdate, 0);
+    assert_eq!(dt.table.access_count, 0);
 }
 
 #[test]
 fn difficulty_table_with_source_url_and_elements() {
     let mut dt = DifficultyTable::new_with_source_url("https://example.com/table.html");
 
-    assert_eq!(dt.table.source_url(), "https://example.com/table.html");
+    assert_eq!(dt.table.source_url, "https://example.com/table.html");
 
     // Add an element
     let mut elem = DifficultyTableElement::new_with_params(
@@ -54,11 +54,11 @@ fn difficulty_table_with_source_url_and_elements() {
 
     let elements = dt.elements();
     assert_eq!(elements.len(), 1);
-    assert_eq!(elements[0].get_level(), "12");
+    assert_eq!(elements[0].level, "12");
     assert_eq!(elements[0].element.title(), Some("Test Song"));
     assert_eq!(elements[0].bmsid(), 42);
-    assert_eq!(elements[0].state(), 1);
-    assert_eq!(elements[0].evaluation(), 5);
+    assert_eq!(elements[0].state, 1);
+    assert_eq!(elements[0].eval, 5);
     assert_eq!(elements[0].comment(), "hard chart");
 }
 
@@ -118,7 +118,7 @@ fn course_construction() {
     assert_eq!(course.name(), "Dan Course A");
 
     course.set_style("7KEYS");
-    assert_eq!(course.get_style(), "7KEYS");
+    assert_eq!(course.style, "7KEYS");
 
     course.constraint = vec!["GAUGE_LR2".to_string()];
     assert_eq!(course.constraint(), &["GAUGE_LR2".to_string()]);
@@ -143,6 +143,6 @@ fn trophy_construction() {
 
     assert_eq!(trophy.name(), "Gold Trophy");
     assert_eq!(trophy.style(), "gold");
-    assert!((trophy.scorerate() - 90.0).abs() < f64::EPSILON);
+    assert!((trophy.scorerate - 90.0).abs() < f64::EPSILON);
     assert!((trophy.missrate - 5.0).abs() < f64::EPSILON);
 }

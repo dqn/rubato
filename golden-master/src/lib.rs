@@ -282,11 +282,10 @@ pub fn compare_model(model: &BMSModel, fixture: &Fixture) -> Vec<String> {
             model.bpm, fixture.metadata.initial_bpm
         ));
     }
-    if model.judgerank() != fixture.metadata.judge_rank {
+    if model.judgerank != fixture.metadata.judge_rank {
         diffs.push(format!(
             "judge_rank: rust={} java={}",
-            model.judgerank(),
-            fixture.metadata.judge_rank
+            model.judgerank, fixture.metadata.judge_rank
         ));
     }
     if (model.total - fixture.metadata.total).abs() > 0.001 {
@@ -295,11 +294,10 @@ pub fn compare_model(model: &BMSModel, fixture: &Fixture) -> Vec<String> {
             model.total, fixture.metadata.total
         ));
     }
-    if fixture.metadata.player > 0 && model.player() != fixture.metadata.player {
+    if fixture.metadata.player > 0 && model.player != fixture.metadata.player {
         diffs.push(format!(
             "player: rust={} java={}",
-            model.player(),
-            fixture.metadata.player
+            model.player, fixture.metadata.player
         ));
     }
     if let Some(mode) = model.mode()

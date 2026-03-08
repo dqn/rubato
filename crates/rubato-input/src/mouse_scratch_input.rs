@@ -131,7 +131,7 @@ impl MouseScratchInput {
         self._duration = config.duration;
         self.control = vec![msconfig.start, msconfig.select];
 
-        self.mouse_scratch_enabled = msconfig.is_mouse_scratch_enabled();
+        self.mouse_scratch_enabled = msconfig.mouse_scratch_enabled;
         self._mouse_scratch_time_threshold = msconfig.mouse_scratch_time_threshold;
         self._mouse_scratch_distance = msconfig.mouse_scratch_distance;
         if self.mouse_scratch_enabled {

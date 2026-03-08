@@ -382,7 +382,7 @@ impl BMControllerInputProcessor {
         self.duration = controller_config.duration;
         self.jkoc = controller_config.jkoc_hack;
 
-        if controller_config.is_analog_scratch() {
+        if controller_config.analog_scratch {
             let mut analog_scratch_algorithm: Vec<Box<dyn AnalogScratchAlgorithm>> =
                 Vec::with_capacity(AXIS_LENGTH);
             let analog_scratch_threshold = controller_config.analog_scratch_threshold;

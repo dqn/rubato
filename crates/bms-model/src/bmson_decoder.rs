@@ -234,7 +234,7 @@ impl BMSONDecoder {
                 if stop_events[stoppos].duration >= 0 {
                     ensure_timeline(&mut tlcache, stopy, resolution, mode_key);
                     let tl = &mut tlcache.get_mut(&stopy).expect("timeline in cache").timeline;
-                    let bpm = tl.get_bpm();
+                    let bpm = tl.bpm;
                     tl.stop =
                         ((1000.0 * 1000.0 * 60.0 * 4.0 * stop_events[stoppos].duration as f64)
                             / (bpm * resolution)) as i64;

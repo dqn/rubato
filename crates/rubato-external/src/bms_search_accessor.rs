@@ -38,7 +38,7 @@ impl BMSSearchAccessor {
                         && !downloads.is_empty()
                         && let Some(ref url) = downloads[0].url
                     {
-                        song.set_url(url.clone());
+                        song.url = Some(url.clone());
                     }
 
                     // MD5 fetch

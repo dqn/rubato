@@ -84,7 +84,7 @@ pub struct BMSModel {
     pub from_osu: bool,
     pub timelines: Vec<TimeLine>,
     info: Option<ChartInformation>,
-    values: HashMap<String, String>,
+    pub values: HashMap<String, String>,
 }
 
 impl Default for BMSModel {
@@ -129,9 +129,6 @@ impl BMSModel {
         }
     }
 
-    pub fn player(&self) -> i32 {
-        self.player
-    }
     pub fn get_title(&self) -> &str {
         &self.title
     }
@@ -186,9 +183,6 @@ impl BMSModel {
         &self.banner
     }
 
-    pub fn bpm(&self) -> f64 {
-        self.bpm
-    }
     pub fn get_playlevel(&self) -> &str {
         &self.playlevel
     }
@@ -197,15 +191,6 @@ impl BMSModel {
         self.playlevel = playlevel.into();
     }
 
-    pub fn judgerank(&self) -> i32 {
-        self.judgerank
-    }
-    pub fn get_total(&self) -> f64 {
-        self.total
-    }
-    pub fn get_volwav(&self) -> i32 {
-        self.volwav
-    }
     pub fn get_min_bpm(&self) -> f64 {
         let mut bpm = self.bpm;
         for time in &self.timelines {
@@ -256,8 +241,8 @@ impl BMSModel {
                 if tl.exist_note_at(lane)
                     || tl.hidden_note(lane).is_some()
                     || !tl.back_ground_notes().is_empty()
-                    || tl.bga() != -1
-                    || tl.get_layer() != -1
+                    || tl.bga != -1
+                    || tl.layer != -1
                 {
                     return tl.milli_time();
                 }
@@ -392,9 +377,6 @@ impl BMSModel {
         crate::judge_note::build_judge_notes(self)
     }
 
-    pub fn is_from_osu(&self) -> bool {
-        self.from_osu
-    }
     pub fn contains_undefined_long_note(&self) -> bool {
         let keys = self.mode.as_ref().map(|m| m.key()).unwrap_or(0);
         for tl in &self.timelines {
@@ -449,16 +431,6 @@ impl BMSModel {
     pub fn lnobj(&self) -> i32 {
         self.lnobj
     }
-    pub fn get_lnmode(&self) -> i32 {
-        self.lnmode
-    }
-    pub fn get_values(&self) -> &HashMap<String, String> {
-        &self.values
-    }
-
-    pub fn values_mut(&mut self) -> &mut HashMap<String, String> {
-        &mut self.values
-    }
 
     pub fn to_chart_string(&self) -> String {
         let mode = match &self.mode {
@@ -486,7 +458,7 @@ impl BMSModel {
                 tlsb.push_str(&format!("S({})", tl.stop()));
                 write = true;
             }
-            if tl.get_section_line() {
+            if tl.section_line {
                 tlsb.push('L');
                 write = true;
             }
@@ -528,12 +500,6 @@ impl BMSModel {
         sb
     }
 
-    pub fn judgerank_type(&self) -> &JudgeRankType {
-        &self.judgerank_type
-    }
-    pub fn get_total_type(&self) -> &TotalType {
-        &self.total_type
-    }
     pub fn get_base(&self) -> i32 {
         self.base
     }
@@ -563,7 +529,7 @@ mod tests {
     #[test]
     fn new_defaults() {
         let model = BMSModel::new();
-        assert_eq!(model.player(), 0);
+        assert_eq!(model.player, 0);
         assert!(model.mode().is_none());
         assert_eq!(model.get_title(), "");
         assert_eq!(model.sub_title(), "");
@@ -577,8 +543,8 @@ mod tests {
         assert!((model.bpm).abs() < f64::EPSILON);
         assert_eq!(model.get_playlevel(), "");
         assert_eq!(model.difficulty(), 0);
-        assert_eq!(model.judgerank(), 2);
-        assert_eq!(model.judgerank_type(), &JudgeRankType::BmsRank);
+        assert_eq!(model.judgerank, 2);
+        assert_eq!(model.judgerank_type, JudgeRankType::BmsRank);
         assert!((model.total - 100.0).abs() < f64::EPSILON);
         assert_eq!(model.total_type, TotalType::Bmson);
         assert_eq!(model.volwav, 0);
@@ -589,7 +555,7 @@ mod tests {
         assert_eq!(model.get_base(), 36);
         assert_eq!(model.lnmode, crate::note::TYPE_UNDEFINED);
         assert_eq!(model.lnobj(), -1);
-        assert!(!model.is_from_osu());
+        assert!(!model.from_osu);
         assert!(model.timelines.is_empty());
     }
 
@@ -598,7 +564,7 @@ mod tests {
         let from_new = BMSModel::new();
         let from_default = BMSModel::default();
         assert_eq!(from_new.get_title(), from_default.get_title());
-        assert_eq!(from_new.player(), from_default.player());
+        assert_eq!(from_new.player, from_default.player);
         assert_eq!(from_new.get_base(), from_default.get_base());
     }
 
@@ -727,21 +693,21 @@ mod tests {
     fn total_set_and_get() {
         let mut model = BMSModel::new();
         model.total = 300.0;
-        assert!((model.get_total() - 300.0).abs() < f64::EPSILON);
+        assert!((model.total - 300.0).abs() < f64::EPSILON);
     }
 
     #[test]
     fn total_type_set_and_get() {
         let mut model = BMSModel::new();
         model.total_type = TotalType::Bms;
-        assert_eq!(model.get_total_type(), &TotalType::Bms);
+        assert_eq!(model.total_type, TotalType::Bms);
     }
 
     #[test]
     fn volwav_set_and_get() {
         let mut model = BMSModel::new();
         model.volwav = 100;
-        assert_eq!(model.get_volwav(), 100);
+        assert_eq!(model.volwav, 100);
     }
 
     #[test]
@@ -797,7 +763,7 @@ mod tests {
     fn from_osu_set_and_get() {
         let mut model = BMSModel::new();
         model.from_osu = true;
-        assert!(model.is_from_osu());
+        assert!(model.from_osu);
     }
 
     #[test]
@@ -844,7 +810,7 @@ mod tests {
     fn lnmode_set_and_get() {
         let mut model = BMSModel::new();
         model.lnmode = 2;
-        assert_eq!(model.get_lnmode(), 2);
+        assert_eq!(model.lnmode, 2);
     }
 
     #[test]
@@ -1011,12 +977,10 @@ mod tests {
     #[test]
     fn values_map() {
         let mut model = BMSModel::new();
-        assert!(model.get_values().is_empty());
+        assert!(model.values.is_empty());
 
-        model
-            .values_mut()
-            .insert("key1".to_string(), "val1".to_string());
-        assert_eq!(model.get_values().get("key1").unwrap(), "val1");
+        model.values.insert("key1".to_string(), "val1".to_string());
+        assert_eq!(model.values.get("key1").unwrap(), "val1");
     }
 
     #[test]

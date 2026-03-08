@@ -217,23 +217,12 @@ impl MusicSelectInputProcessor {
             }
 
             if property.is_pressed(input, MusicSelectKey::JudgeWindowUp, true) {
-                config.judge_settings.custom_judge = !config.is_custom_judge();
+                config.judge_settings.custom_judge = !config.judge_settings.custom_judge;
                 ctx.events
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }
             if property.is_pressed(input, MusicSelectKey::Constant, true) {
-                config.display_settings.scroll_mode =
-                    if config.get_scroll_mode() == 1 { 0 } else { 1 };
-                ctx.events
-                    .push(InputEvent::PlaySound(SoundType::OptionChange));
-            }
-            if property.is_pressed(input, MusicSelectKey::JudgeArea, true) {
-                config.display_settings.showjudgearea = !config.is_showjudgearea();
-                ctx.events
-                    .push(InputEvent::PlaySound(SoundType::OptionChange));
-            }
-            if property.is_pressed(input, MusicSelectKey::LegacyNote, true) {
-                config.note_modifier_settings.longnote_mode = if config.get_longnote_mode() == 1 {
+                config.display_settings.scroll_mode = if config.display_settings.scroll_mode == 1 {
                     0
                 } else {
                     1
@@ -241,18 +230,38 @@ impl MusicSelectInputProcessor {
                 ctx.events
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }
+            if property.is_pressed(input, MusicSelectKey::JudgeArea, true) {
+                config.display_settings.showjudgearea = !config.display_settings.showjudgearea;
+                ctx.events
+                    .push(InputEvent::PlaySound(SoundType::OptionChange));
+            }
+            if property.is_pressed(input, MusicSelectKey::LegacyNote, true) {
+                config.note_modifier_settings.longnote_mode =
+                    if config.note_modifier_settings.longnote_mode == 1 {
+                        0
+                    } else {
+                        1
+                    };
+                ctx.events
+                    .push(InputEvent::PlaySound(SoundType::OptionChange));
+            }
             if property.is_pressed(input, MusicSelectKey::MarkNote, true) {
-                config.display_settings.markprocessednote = !config.is_markprocessednote();
+                config.display_settings.markprocessednote =
+                    !config.display_settings.markprocessednote;
                 ctx.events
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }
             if property.is_pressed(input, MusicSelectKey::BpmGuide, true) {
-                config.display_settings.bpmguide = !config.is_bpmguide();
+                config.display_settings.bpmguide = !config.display_settings.bpmguide;
                 ctx.events
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }
             if property.is_pressed(input, MusicSelectKey::Nomine, true) {
-                config.play_settings.mine_mode = if config.get_mine_mode() == 1 { 0 } else { 1 };
+                config.play_settings.mine_mode = if config.play_settings.mine_mode == 1 {
+                    0
+                } else {
+                    1
+                };
                 ctx.events
                     .push(InputEvent::PlaySound(SoundType::OptionChange));
             }
@@ -366,21 +375,21 @@ impl MusicSelectInputProcessor {
                 {
                     ctx.events.push(InputEvent::SelectSong(BMSPlayerMode::PLAY));
                 } else if property.is_pressed(input, MusicSelectKey::Practice, true) {
-                    let mode = if config.is_event_mode() {
+                    let mode = if config.select_settings.event_mode {
                         BMSPlayerMode::PLAY
                     } else {
                         BMSPlayerMode::PRACTICE
                     };
                     ctx.events.push(InputEvent::SelectSong(mode));
                 } else if property.is_pressed(input, MusicSelectKey::Auto, true) {
-                    let mode = if config.is_event_mode() {
+                    let mode = if config.select_settings.event_mode {
                         BMSPlayerMode::PLAY
                     } else {
                         BMSPlayerMode::AUTOPLAY
                     };
                     ctx.events.push(InputEvent::SelectSong(mode));
                 } else if property.is_pressed(input, MusicSelectKey::Replay, true) {
-                    let mode = if config.is_event_mode() {
+                    let mode = if config.select_settings.event_mode {
                         BMSPlayerMode::PLAY
                     } else if ctx.selected_replay >= 0 {
                         BMSPlayerMode::replay_mode(ctx.selected_replay)

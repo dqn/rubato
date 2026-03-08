@@ -1068,7 +1068,7 @@ fn ensure_timeline(tlcache: &mut BTreeMap<u64, TimeLineCache>, section: f64, mod
 
     for (&k, v) in tlcache.range(..key).rev().take(1) {
         let le_section = key_to_f64(k);
-        scroll = v.timeline.get_scroll();
+        scroll = v.timeline.scroll;
         bpm = v.timeline.bpm;
         if bpm != 0.0 {
             time = v.time

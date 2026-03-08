@@ -16,7 +16,7 @@ pub struct DifficultyTableElement {
     pub element: BmsTableElement,
     pub state: i32,
     pub eval: i32,
-    level: String,
+    pub level: String,
     diffname: String,
     comment: String,
     info: String,
@@ -60,13 +60,6 @@ impl DifficultyTableElement {
         dte
     }
 
-    pub fn state(&self) -> i32 {
-        self.state
-    }
-    pub fn get_level(&self) -> &str {
-        &self.level
-    }
-
     pub fn set_level(&mut self, did: Option<&str>) {
         match did {
             None => {
@@ -78,9 +71,6 @@ impl DifficultyTableElement {
         }
     }
 
-    pub fn evaluation(&self) -> i32 {
-        self.eval
-    }
     pub fn get_package_url(&self) -> Option<&str> {
         self.element.values.get("url_pack").and_then(|v| v.as_str())
     }
@@ -201,17 +191,14 @@ impl DifficultyTableElement {
 
     pub fn values(&self) -> HashMap<String, Value> {
         let mut result = self.element.values.clone();
-        result.insert(
-            "level".to_string(),
-            Value::String(self.get_level().to_string()),
-        );
+        result.insert("level".to_string(), Value::String(self.level.clone()));
         result.insert(
             "eval".to_string(),
-            Value::Number(serde_json::Number::from(self.evaluation())),
+            Value::Number(serde_json::Number::from(self.eval)),
         );
         result.insert(
             "state".to_string(),
-            Value::Number(serde_json::Number::from(self.state())),
+            Value::Number(serde_json::Number::from(self.state)),
         );
         result.insert(
             "name_diff".to_string(),

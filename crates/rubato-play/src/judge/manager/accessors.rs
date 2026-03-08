@@ -34,10 +34,10 @@ impl JudgeManager {
         self.lntype = model.lntype();
 
         let rule = BMSPlayerRule::for_mode(&orgmode);
-        let judgerank = model.judgerank();
+        let judgerank = model.judgerank;
 
         let mut key_judge_window_rate = if let Some(config) = player_config {
-            if config.is_custom_judge() {
+            if config.judge_settings.custom_judge {
                 [
                     config.judge_settings.key_judge_window_rate_perfect_great,
                     config.judge_settings.key_judge_window_rate_great,
@@ -50,7 +50,7 @@ impl JudgeManager {
             [100, 100, 100]
         };
         let mut scratch_judge_window_rate = if let Some(config) = player_config {
-            if config.is_custom_judge() {
+            if config.judge_settings.custom_judge {
                 [
                     config
                         .judge_settings

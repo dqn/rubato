@@ -99,13 +99,13 @@ pub fn snapshot_from_skin(skin: &Skin) -> SkinSnapshot {
 
     SkinSnapshot {
         name: skin.header.name().unwrap_or_default().to_string(),
-        resolution_w: skin.get_width(),
-        resolution_h: skin.get_height(),
+        resolution_w: skin.width,
+        resolution_h: skin.height,
         option_count: skin.header.custom_options().len(),
         file_count: skin.header.custom_files().len(),
         offset_count: skin.header.custom_offsets().len(),
-        width: skin.get_width(),
-        height: skin.get_height(),
+        width: skin.width,
+        height: skin.height,
         scale_x: skin.scale_x(),
         scale_y: skin.scale_y(),
         input: skin.input(),

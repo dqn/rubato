@@ -103,7 +103,7 @@ impl TableDataAccessor {
                         continue;
                     }
                     if let Some(td) = TableData::read_from_path(&entry.path()) {
-                        file_name_to_table_name.insert(filename, td.name().to_string());
+                        file_name_to_table_name.insert(filename, td.name.clone());
                     }
                 }
             }
@@ -122,8 +122,8 @@ impl TableDataAccessor {
     }
 
     pub fn write(&self, td: &mut TableData) {
-        let path = PathBuf::from(&self.tabledir)
-            .join(format!("{}.bmt", Self::get_file_name(td.get_url())));
+        let path =
+            PathBuf::from(&self.tabledir).join(format!("{}.bmt", Self::get_file_name(&td.url)));
         if let Err(e) = TableData::write_to_path(&path, td) {
             log::warn!("Failed to write table data to {}: {:#}", path.display(), e);
         }
@@ -179,9 +179,9 @@ impl TableDataAccessor {
         let mut dtp = bms_table::difficulty_table_parser::DifficultyTableParser::new();
         let mut dt = bms_table::difficulty_table::DifficultyTable::new();
         if url.ends_with(".json") {
-            dt.table.set_head_url(url);
+            dt.table.head_url = url.to_string();
         } else {
-            dt.table.set_source_url(url);
+            dt.table.source_url = url.to_string();
         }
         match dtp.decode(true, &mut dt) {
             Ok(()) => {
@@ -236,9 +236,9 @@ impl TableAccessor for DifficultyTableAccessor {
         let mut dtp = bms_table::difficulty_table_parser::DifficultyTableParser::new();
         let mut dt = bms_table::difficulty_table::DifficultyTable::new();
         if self.url.ends_with(".json") {
-            dt.table.set_head_url(&self.url);
+            dt.table.head_url = self.url.clone();
         } else {
-            dt.table.set_source_url(&self.url);
+            dt.table.source_url = self.url.clone();
         }
         match dtp.decode(true, &mut dt) {
             Ok(()) => {
@@ -336,11 +336,11 @@ mod tests {
         let cached = accessor.read_cache("https://example.com/table");
         assert!(cached.is_some());
         let cached = cached.unwrap();
-        assert_eq!(cached.name(), "Test Table");
-        assert_eq!(cached.get_url(), "https://example.com/table");
+        assert_eq!(cached.name, "Test Table");
+        assert_eq!(cached.url, "https://example.com/table");
         assert_eq!(cached.tag, "T");
-        assert_eq!(cached.get_folder().len(), 1);
-        assert_eq!(cached.get_folder()[0].name(), "T1");
+        assert_eq!(cached.folder.len(), 1);
+        assert_eq!(cached.folder[0].name(), "T1");
     }
 
     #[test]
@@ -415,7 +415,7 @@ mod tests {
 
         let read_back = accessor.read("custom.bmt");
         assert!(read_back.is_some());
-        assert_eq!(read_back.unwrap().name(), "Custom Table");
+        assert_eq!(read_back.unwrap().name, "Custom Table");
     }
 
     #[test]
@@ -534,7 +534,7 @@ mod tests {
         // The existing table should still be there, unchanged
         let cached = accessor.read_cache(url);
         assert!(cached.is_some());
-        assert_eq!(cached.unwrap().name(), "Existing Table");
+        assert_eq!(cached.unwrap().name, "Existing Table");
     }
 
     #[test]

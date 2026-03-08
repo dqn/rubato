@@ -46,7 +46,7 @@ pub fn bms_table_element_to_song_data(
     song.mode = mode_id;
 
     if let Some(url) = te.url() {
-        song.set_url(url.to_string());
+        song.url = Some(url.to_string());
     }
     if let Some(ipfs) = te.ipfs() {
         song.ipfs = Some(ipfs.to_string());
@@ -69,7 +69,7 @@ pub fn difficulty_table_element_to_song_data(
     let mut song = bms_table_element_to_song_data(&dte.element, default_mode);
 
     if let Some(append_url) = dte.append_url() {
-        song.set_appendurl(append_url.to_string());
+        song.appendurl = Some(append_url.to_string());
     }
     if let Some(append_ipfs) = dte.append_ipfs() {
         song.appendipfs = Some(append_ipfs.to_string());
@@ -97,12 +97,8 @@ fn course_to_course_data(course: &Course, default_mode: Option<&Mode>) -> Course
         .collect();
     cd.constraint = constraints;
 
-    if !course.get_trophy().is_empty() {
-        let trophies: Vec<TrophyData> = course
-            .get_trophy()
-            .iter()
-            .map(trophy_to_trophy_data)
-            .collect();
+    if !course.trophy.is_empty() {
+        let trophies: Vec<TrophyData> = course.trophy.iter().map(trophy_to_trophy_data).collect();
         cd.trophy = trophies;
     }
 
@@ -113,8 +109,8 @@ fn course_to_course_data(course: &Course, default_mode: Option<&Mode>) -> Course
 fn trophy_to_trophy_data(trophy: &Trophy) -> TrophyData {
     let mut td = TrophyData::default();
     td.set_name(trophy.name().to_string());
-    td.missrate = trophy.get_missrate() as f32;
-    td.scorerate = trophy.scorerate() as f32;
+    td.missrate = trophy.missrate as f32;
+    td.scorerate = trophy.scorerate as f32;
     td
 }
 
@@ -138,7 +134,7 @@ pub fn difficulty_table_to_table_data(dt: &DifficultyTable, url: &str) -> TableD
             let songs: Vec<SongData> = dt
                 .elements()
                 .iter()
-                .filter(|dte| dte.get_level() == lv)
+                .filter(|dte| dte.level == *lv)
                 .map(|dte| difficulty_table_element_to_song_data(dte, default_mode.as_ref()))
                 .collect();
             TableFolder {
@@ -295,20 +291,20 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "https://example.com/table");
 
-        assert_eq!(td.name(), "Normal Table");
-        assert_eq!(td.get_url(), "https://example.com/table");
+        assert_eq!(td.name, "Normal Table");
+        assert_eq!(td.url, "https://example.com/table");
         assert_eq!(td.tag, "N");
-        assert_eq!(td.get_folder().len(), 2);
+        assert_eq!(td.folder.len(), 2);
 
         // Level "1" folder
-        assert_eq!(td.get_folder()[0].name(), "N1");
-        assert_eq!(td.get_folder()[0].get_song().len(), 1);
-        assert_eq!(td.get_folder()[0].get_song()[0].md5, "hash_a");
+        assert_eq!(td.folder[0].name(), "N1");
+        assert_eq!(td.folder[0].songs.len(), 1);
+        assert_eq!(td.folder[0].songs[0].md5, "hash_a");
 
         // Level "2" folder
-        assert_eq!(td.get_folder()[1].name(), "N2");
-        assert_eq!(td.get_folder()[1].get_song().len(), 1);
-        assert_eq!(td.get_folder()[1].get_song()[0].md5, "hash_b");
+        assert_eq!(td.folder[1].name(), "N2");
+        assert_eq!(td.folder[1].songs.len(), 1);
+        assert_eq!(td.folder[1].songs[0].md5, "hash_b");
     }
 
     #[test]
@@ -339,8 +335,8 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "https://example.com/course");
 
-        assert_eq!(td.get_course().len(), 1);
-        let cd = &td.get_course()[0];
+        assert_eq!(td.course.len(), 1);
+        let cd = &td.course[0];
         assert_eq!(cd.name(), "Dan 1st");
         assert_eq!(cd.hash.len(), 2);
         assert_eq!(cd.hash[0].md5, "course_hash_1");
@@ -371,7 +367,7 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "https://example.com/dp");
 
-        assert_eq!(td.get_folder()[0].get_song()[0].mode, 14);
+        assert_eq!(td.folder[0].songs[0].mode, 14);
     }
 
     #[test]
@@ -382,9 +378,9 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "https://example.com/empty");
 
-        assert_eq!(td.name(), "Empty Table");
-        assert!(td.get_folder().is_empty());
-        assert!(td.get_course().is_empty());
+        assert_eq!(td.name, "Empty Table");
+        assert!(td.folder.is_empty());
+        assert!(td.course.is_empty());
     }
 
     #[test]
@@ -417,8 +413,8 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "url");
 
-        assert_eq!(td.get_folder().len(), 1);
-        assert_eq!(td.get_folder()[0].get_song().len(), 3);
+        assert_eq!(td.folder.len(), 1);
+        assert_eq!(td.folder[0].songs.len(), 3);
     }
 
     #[test]
@@ -439,9 +435,9 @@ mod tests {
         let td = difficulty_table_to_table_data(&dt, "url");
 
         // flat_map merges all course lists
-        assert_eq!(td.get_course().len(), 2);
-        assert_eq!(td.get_course()[0].name(), "Course 1");
-        assert_eq!(td.get_course()[1].name(), "Course 2");
+        assert_eq!(td.course.len(), 2);
+        assert_eq!(td.course[0].name(), "Course 1");
+        assert_eq!(td.course[1].name(), "Course 2");
     }
 
     #[test]

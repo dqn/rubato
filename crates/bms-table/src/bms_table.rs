@@ -12,14 +12,14 @@ pub const MODE: &str = "mode";
 
 #[derive(Debug, Clone)]
 pub struct BmsTable<T> {
-    values: HashMap<String, Value>,
-    source_url: String,
-    head_url: String,
+    pub values: HashMap<String, Value>,
+    pub source_url: String,
+    pub head_url: String,
     pub data_url: Vec<String>,
     pub auto_update: bool,
     pub merge_configurations: HashMap<String, HashMap<String, String>>,
-    lastupdate: i64,
-    models: Vec<T>,
+    pub lastupdate: i64,
+    pub models: Vec<T>,
     pub editable: bool,
     pub access_count: i32,
 }
@@ -58,12 +58,6 @@ impl<T: Clone> BmsTable<T> {
             .insert(SYMBOL.to_string(), Value::String(id.to_string()));
     }
 
-    pub fn data_url(&self) -> &[String] {
-        &self.data_url
-    }
-    pub fn get_merge_configurations(&self) -> &HashMap<String, HashMap<String, String>> {
-        &self.merge_configurations
-    }
     pub fn get_tag(&self) -> Option<String> {
         if self.values.contains_key(TAG) {
             return self
@@ -78,22 +72,6 @@ impl<T: Clone> BmsTable<T> {
     pub fn set_tag(&mut self, tag: &str) {
         self.values
             .insert(TAG.to_string(), Value::String(tag.to_string()));
-    }
-
-    pub fn source_url(&self) -> &str {
-        &self.source_url
-    }
-
-    pub fn set_source_url(&mut self, source_url: &str) {
-        self.source_url = source_url.to_string();
-    }
-
-    pub fn models(&self) -> &Vec<T> {
-        &self.models
-    }
-
-    pub fn models_mut(&mut self) -> &mut Vec<T> {
-        &mut self.models
     }
 
     pub fn set_models(&mut self, models: Vec<T>) {
@@ -122,9 +100,6 @@ impl<T: Clone> BmsTable<T> {
         self.models.clear();
     }
 
-    pub fn is_editable(&self) -> bool {
-        self.editable
-    }
     pub fn get_attrmap(&self) -> HashMap<String, String> {
         if let Some(v) = self.values.get(ATTR)
             && let Some(obj) = v.as_object()
@@ -146,32 +121,6 @@ impl<T: Clone> BmsTable<T> {
             .map(|(k, v)| (k, Value::String(v)))
             .collect();
         self.values.insert(ATTR.to_string(), Value::Object(obj));
-    }
-
-    pub fn head_url(&self) -> &str {
-        &self.head_url
-    }
-
-    pub fn set_head_url(&mut self, head_url: &str) {
-        self.head_url = head_url.to_string();
-    }
-
-    pub fn lastupdate(&self) -> i64 {
-        self.lastupdate
-    }
-
-    pub fn access_count(&self) -> i32 {
-        self.access_count
-    }
-    pub fn is_auto_update(&self) -> bool {
-        self.auto_update
-    }
-    pub fn get_values(&self) -> &HashMap<String, Value> {
-        &self.values
-    }
-
-    pub fn values_mut(&mut self) -> &mut HashMap<String, Value> {
-        &mut self.values
     }
 
     pub fn set_values(&mut self, values: &HashMap<String, Value>) {

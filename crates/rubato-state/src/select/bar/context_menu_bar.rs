@@ -251,7 +251,7 @@ impl ContextMenuBar {
             let song_for_fav = song.clone();
             fav_chart.set_function(Arc::new(move |selector| {
                 let mut sd = song_for_fav.clone();
-                let new_fav = sd.get_favorite() ^ FAVORITE_CHART;
+                let new_fav = sd.favorite ^ FAVORITE_CHART;
                 sd.favorite = new_fav;
                 selector.songdb.set_song_datas(&[sd]);
             }));
@@ -278,7 +278,7 @@ impl ContextMenuBar {
             let song_for_fav = song.clone();
             fav_song.set_function(Arc::new(move |selector| {
                 let mut sd = song_for_fav.clone();
-                let new_fav = sd.get_favorite() ^ FAVORITE_SONG;
+                let new_fav = sd.favorite ^ FAVORITE_SONG;
                 sd.favorite = new_fav;
                 selector.songdb.set_song_datas(&[sd]);
             }));
@@ -350,10 +350,10 @@ impl ContextMenuBar {
                 STYLE_TEXT_NEW,
             );
             fill_missing.set_function(Arc::new(move |selector| {
-                let folders = table_clone.table_data().get_folder();
+                let folders = &table_clone.table_data().folder;
                 let want: Vec<SongData> = folders
                     .iter()
-                    .flat_map(|f| f.get_song().iter().cloned())
+                    .flat_map(|f| f.songs.iter().cloned())
                     .collect();
                 if let Some(downloader) = selector.main.as_ref().and_then(|m| m.http_downloader()) {
                     let fill_count =

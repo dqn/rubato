@@ -268,8 +268,8 @@ impl MusicSelector {
 
     pub fn set_sort(&mut self, sort: i32) {
         self.config.select_settings.sort = sort;
-        self.config
-            .set_sortid(BarSorter::DEFAULT_SORTER[sort as usize].name().to_string());
+        self.config.select_settings.sortid =
+            Some(BarSorter::DEFAULT_SORTER[sort as usize].name().to_string());
     }
 
     pub fn panel_state(&self) -> i32 {

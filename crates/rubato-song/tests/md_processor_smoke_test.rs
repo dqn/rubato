@@ -23,8 +23,8 @@ fn download_task_construction() {
     assert_eq!(task.name(), "Test Chart Pack");
     assert_eq!(task.hash(), "abc123def456");
     assert_eq!(task.download_task_status(), DownloadTaskStatus::Prepare);
-    assert_eq!(task.download_size(), 0);
-    assert_eq!(task.get_content_length(), 0);
+    assert_eq!(task.download_size, 0);
+    assert_eq!(task.content_length, 0);
     assert!(task.get_error_message().is_none());
     assert_eq!(task.time_finished(), 0);
 }
@@ -84,8 +84,8 @@ fn download_task_size_tracking() {
     task.content_length = 1_000_000;
     task.download_size = 500_000;
 
-    assert_eq!(task.get_content_length(), 1_000_000);
-    assert_eq!(task.download_size(), 500_000);
+    assert_eq!(task.content_length, 1_000_000);
+    assert_eq!(task.download_size, 500_000);
 }
 
 // ---------------------------------------------------------------------------

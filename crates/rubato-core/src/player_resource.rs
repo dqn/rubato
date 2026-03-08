@@ -85,7 +85,7 @@ pub struct PlayerResource {
     /// Assist flag
     pub assist: i32,
     /// Table name for current song
-    tablename: String,
+    pub tablename: String,
     /// Table level for current song
     tablelevel: String,
     /// Full table name (cached)
@@ -421,14 +421,6 @@ impl PlayerResource {
         self.cscore = Some(cscore);
     }
 
-    pub fn is_update_score(&self) -> bool {
-        self.update_score
-    }
-
-    pub fn is_update_course_score(&self) -> bool {
-        self.update_course_score
-    }
-
     pub fn course_data(&self) -> Option<&CourseData> {
         self.coursedata.as_ref()
     }
@@ -465,14 +457,6 @@ impl PlayerResource {
         self.coursegauge.push(gauge);
     }
 
-    pub fn combo(&self) -> i32 {
-        self.combo
-    }
-
-    pub fn get_maxcombo(&self) -> i32 {
-        self.maxcombo
-    }
-
     pub fn dispose(&mut self) {
         if let Some(mut bmsresource) = self.bmsresource.take() {
             bmsresource.dispose();
@@ -489,18 +473,6 @@ impl PlayerResource {
 
     pub fn bms_resource(&self) -> Option<&BMSResource> {
         self.bmsresource.as_ref()
-    }
-
-    pub fn org_gauge_option(&self) -> i32 {
-        self.org_gauge_option
-    }
-
-    pub fn assist(&self) -> i32 {
-        self.assist
-    }
-
-    pub fn get_tablename(&self) -> &str {
-        &self.tablename
     }
 
     pub fn set_tablename(&mut self, tablename: &str) {
@@ -544,20 +516,12 @@ impl PlayerResource {
         self.orgmode = Some(orgmode);
     }
 
-    pub fn is_freq_on(&self) -> bool {
-        self.freq_on
-    }
-
     pub fn freq_string(&self) -> Option<&str> {
         self.freq_string.as_deref()
     }
 
     pub fn set_freq_string(&mut self, freq_string: String) {
         self.freq_string = Some(freq_string);
-    }
-
-    pub fn is_force_no_ir_send(&self) -> bool {
-        self.force_no_ir_send
     }
 
     pub fn reverse_lookup_data(&self) -> Vec<String> {
@@ -577,16 +541,16 @@ impl PlayerResource {
         let tds = tdaccessor.read_all();
         let mut result = Vec::new();
         for td in &tds {
-            if !url_set.contains(td.get_url()) {
+            if !url_set.contains(td.url.as_str()) {
                 continue;
             }
-            for tf in td.get_folder() {
-                let found = tf.get_song().iter().any(|ts| {
+            for tf in &td.folder {
+                let found = tf.songs.iter().any(|ts| {
                     (!ts.md5.is_empty() && ts.md5 == songdata.md5)
                         || (!ts.sha256.is_empty() && ts.sha256 == songdata.sha256)
                 });
                 if found {
-                    result.push(format!("{} {}", td.name(), tf.name()));
+                    result.push(format!("{} {}", td.name, tf.name()));
                     break;
                 }
             }
@@ -611,11 +575,11 @@ impl PlayerResource {
         let tds = tdaccessor.read_all();
         let mut result = Vec::new();
         for td in &tds {
-            if !url_set.contains(td.get_url()) {
+            if !url_set.contains(td.url.as_str()) {
                 continue;
             }
-            for tf in td.get_folder() {
-                let found = tf.get_song().iter().any(|ts| {
+            for tf in &td.folder {
+                let found = tf.songs.iter().any(|ts| {
                     (!ts.md5.is_empty() && ts.md5 == songdata.md5)
                         || (!ts.sha256.is_empty() && ts.sha256 == songdata.sha256)
                 });
@@ -1032,7 +996,7 @@ mod tests {
             "model should be Some after reload"
         );
         // Table info should be preserved
-        assert_eq!(resource.get_tablename(), "insane");
+        assert_eq!(resource.tablename.as_str(), "insane");
         assert_eq!(resource.tablelevel(), "★12");
         // Other fields should be cleared
         assert!(resource.score_data().is_none());
@@ -1049,7 +1013,7 @@ mod tests {
         resource.set_tablelevel("1");
         resource.reload_bms_file();
 
-        assert_eq!(resource.get_tablename(), "test");
+        assert_eq!(resource.tablename.as_str(), "test");
         assert_eq!(resource.tablelevel(), "1");
     }
 

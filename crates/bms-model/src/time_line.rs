@@ -186,22 +186,6 @@ impl TimeLine {
     pub fn back_ground_notes(&self) -> &[Note] {
         &self.bgnotes
     }
-    pub fn get_bpm(&self) -> f64 {
-        self.bpm
-    }
-    pub fn get_section_line(&self) -> bool {
-        self.section_line
-    }
-
-    pub fn bga(&self) -> i32 {
-        self.bga
-    }
-    pub fn get_layer(&self) -> i32 {
-        self.layer
-    }
-    pub fn get_eventlayer(&self) -> &[Layer] {
-        &self.eventlayer
-    }
     pub fn get_section(&self) -> f64 {
         self.section
     }
@@ -229,9 +213,6 @@ impl TimeLine {
 
     pub fn micro_stop(&self) -> i64 {
         self.stop
-    }
-    pub fn get_scroll(&self) -> f64 {
-        self.scroll
     }
     pub fn take_note(&mut self, lane: i32) -> Option<Note> {
         let idx = lane as usize;
@@ -323,28 +304,28 @@ mod tests {
         assert!((tl.bpm).abs() < f64::EPSILON);
 
         tl.bpm = 150.0;
-        assert!((tl.get_bpm() - 150.0).abs() < f64::EPSILON);
+        assert!((tl.bpm - 150.0).abs() < f64::EPSILON);
     }
 
     #[test]
     fn section_line_set_and_get() {
         let mut tl = TimeLine::new(0.0, 0, 8);
-        assert!(!tl.get_section_line());
+        assert!(!tl.section_line);
 
         tl.section_line = true;
-        assert!(tl.get_section_line());
+        assert!(tl.section_line);
     }
 
     #[test]
     fn bga_and_layer_set_and_get() {
         let mut tl = TimeLine::new(0.0, 0, 8);
-        assert_eq!(tl.bga(), -1);
-        assert_eq!(tl.get_layer(), -1);
+        assert_eq!(tl.bga, -1);
+        assert_eq!(tl.layer, -1);
 
         tl.bga = 5;
         tl.layer = 3;
         assert_eq!(tl.bga, 5);
-        assert_eq!(tl.get_layer(), 3);
+        assert_eq!(tl.layer, 3);
     }
 
     #[test]
@@ -361,10 +342,10 @@ mod tests {
     #[test]
     fn scroll_default_and_set() {
         let mut tl = TimeLine::new(0.0, 0, 8);
-        assert!((tl.get_scroll() - 1.0).abs() < f64::EPSILON);
+        assert!((tl.scroll - 1.0).abs() < f64::EPSILON);
 
         tl.scroll = 2.0;
-        assert!((tl.get_scroll() - 2.0).abs() < f64::EPSILON);
+        assert!((tl.scroll - 2.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -493,10 +474,10 @@ mod tests {
         use crate::layer::{Event, EventType, Layer};
 
         let mut tl = TimeLine::new(0.0, 0, 8);
-        assert!(tl.get_eventlayer().is_empty());
+        assert!(tl.eventlayer.is_empty());
 
         let layers = vec![Layer::new(Event::new(EventType::Always, 0), vec![])];
         tl.eventlayer = layers;
-        assert_eq!(tl.get_eventlayer().len(), 1);
+        assert_eq!(tl.eventlayer.len(), 1);
     }
 }
