@@ -1,34 +1,58 @@
+/// Parameters for loading a pomyu character play type animation.
+struct LoadPlayTypeParams<'a> {
+    pub _usecim: bool,
+    pub _chp: &'a str,
+    pub char_bmp: &'a mut [Option<Texture>; 8],
+    pub transparent_flag: &'a mut [bool; 8],
+    pub xywh: &'a [[i32; 4]],
+    pub frame: &'a mut [i32; 20],
+    pub anime: i32,
+    pub size: &'a [i32; 2],
+    pub loop_val: &'a mut [i32; 20],
+    pub set_color: i32,
+    pub increase_rate_threshold: i32,
+    pub pattern_data: &'a [Vec<String>],
+    pub char_bmp_index: usize,
+    pub char_tex_index: usize,
+    pub set_motion: i32,
+    pub dsttimer: i32,
+    pub dst_op1: i32,
+    pub dst_op2: i32,
+    pub dst_op3: i32,
+    pub dst_offset: i32,
+    pub side: i32,
+    pub dstx: f32,
+    pub dsty: f32,
+    pub dstw: f32,
+    pub dsth: f32,
+}
+
 impl<'a> PomyuCharaLoader<'a> {
 
-    #[allow(clippy::too_many_arguments)]
-    fn load_play_type(
-        &mut self,
-        _usecim: bool,
-        _chp: &str,
-        char_bmp: &mut [Option<Texture>; 8],
-        transparent_flag: &mut [bool; 8],
-        xywh: &[[i32; 4]],
-        frame: &mut [i32; 20],
-        anime: i32,
-        size: &[i32; 2],
-        loop_val: &mut [i32; 20],
-        set_color: i32,
-        increase_rate_threshold: i32,
-        pattern_data: &[Vec<String>],
-        char_bmp_index: usize,
-        char_tex_index: usize,
-        set_motion: i32,
-        dsttimer: i32,
-        dst_op1: i32,
-        dst_op2: i32,
-        dst_op3: i32,
-        dst_offset: i32,
-        side: i32,
-        dstx: f32,
-        dsty: f32,
-        dstw: f32,
-        dsth: f32,
-    ) {
+    fn load_play_type(&mut self, p: LoadPlayTypeParams<'_>) {
+        let char_bmp = p.char_bmp;
+        let transparent_flag = p.transparent_flag;
+        let xywh = p.xywh;
+        let frame = p.frame;
+        let anime = p.anime;
+        let size = p.size;
+        let loop_val = p.loop_val;
+        let set_color = p.set_color;
+        let increase_rate_threshold = p.increase_rate_threshold;
+        let pattern_data = p.pattern_data;
+        let char_bmp_index = p.char_bmp_index;
+        let char_tex_index = p.char_tex_index;
+        let set_motion = p.set_motion;
+        let dsttimer = p.dsttimer;
+        let dst_op1 = p.dst_op1;
+        let dst_op2 = p.dst_op2;
+        let dst_op3 = p.dst_op3;
+        let dst_offset = p.dst_offset;
+        let side = p.side;
+        let dstx = p.dstx;
+        let dsty = p.dsty;
+        let dstw = p.dstw;
+        let dsth = p.dsth;
         // Initialize frame values
         for f in frame.iter_mut() {
             if *f == i32::MIN {

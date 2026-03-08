@@ -10,6 +10,30 @@ use crate::sources::skin_source_image::SkinSourceImage;
 use crate::stubs::{MainState, TextureRegion};
 use crate::types::skin_object::{RateProperty, SkinObjectData, SkinObjectRenderer};
 
+/// Parameters for constructing a SkinSlider with integer timer and min/max rate.
+pub struct SliderIntTimerMinmaxParams {
+    pub image: Vec<TextureRegion>,
+    pub timer: i32,
+    pub cycle: i32,
+    pub angle: i32,
+    pub range: i32,
+    pub type_id: i32,
+    pub min: i32,
+    pub max: i32,
+}
+
+/// Parameters for constructing a SkinSlider with timer property and min/max rate.
+pub struct SliderTimerMinmaxParams {
+    pub image: Vec<TextureRegion>,
+    pub timer: Box<dyn TimerProperty>,
+    pub cycle: i32,
+    pub angle: i32,
+    pub range: i32,
+    pub type_id: i32,
+    pub min: i32,
+    pub max: i32,
+}
+
 pub struct SkinSlider {
     pub data: SkinObjectData,
     source: Box<dyn SkinSource>,
@@ -83,25 +107,21 @@ impl SkinSlider {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn new_with_int_timer_minmax(
-        image: Vec<TextureRegion>,
-        timer: i32,
-        cycle: i32,
-        angle: i32,
-        range: i32,
-        type_id: i32,
-        min: i32,
-        max: i32,
-    ) -> Self {
+    pub fn new_with_int_timer_minmax(params: SliderIntTimerMinmaxParams) -> Self {
         Self {
             data: SkinObjectData::new(),
             source: Box::new(SkinSourceImage::new_with_int_timer_from_vec(
-                image, timer, cycle,
+                params.image,
+                params.timer,
+                params.cycle,
             )),
-            direction: angle,
-            range,
-            ref_prop: Some(Box::new(RateProperty::new(type_id, min, max))),
+            direction: params.angle,
+            range: params.range,
+            ref_prop: Some(Box::new(RateProperty::new(
+                params.type_id,
+                params.min,
+                params.max,
+            ))),
             writer: None,
             current_image: None,
             current_value: 0.0,
@@ -162,27 +182,21 @@ impl SkinSlider {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn new_with_timer_minmax(
-        image: Vec<TextureRegion>,
-        timer: Box<dyn TimerProperty>,
-        cycle: i32,
-        angle: i32,
-        range: i32,
-        type_id: i32,
-        min: i32,
-        max: i32,
-    ) -> Self {
+    pub fn new_with_timer_minmax(params: SliderTimerMinmaxParams) -> Self {
         Self {
             data: SkinObjectData::new(),
             source: Box::new(SkinSourceImage::new_with_timer_from_vec(
-                image,
-                Some(timer),
-                cycle,
+                params.image,
+                Some(params.timer),
+                params.cycle,
             )),
-            direction: angle,
-            range,
-            ref_prop: Some(Box::new(RateProperty::new(type_id, min, max))),
+            direction: params.angle,
+            range: params.range,
+            ref_prop: Some(Box::new(RateProperty::new(
+                params.type_id,
+                params.min,
+                params.max,
+            ))),
             writer: None,
             current_image: None,
             current_value: 0.0,

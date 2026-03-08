@@ -1,5 +1,17 @@
 use crate::stubs::{BitmapFont, Color, GlyphLayout, SpriteBatch, Texture, TextureRegion};
 
+/// Parameters for drawing a rotated texture region.
+pub struct DrawRotatedParams<'a> {
+    pub image: &'a TextureRegion,
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+    pub cx: f32,
+    pub cy: f32,
+    pub angle: i32,
+}
+
 /// Corresponds to Skin.SkinObjectRenderer in Java.
 ///
 /// Manages shader switching, blend state, and color for sprite draw calls.
@@ -145,31 +157,20 @@ impl SkinObjectRenderer {
     }
 
     /// Java: sprite.draw(image, x + 0.01f, y + 0.01f, cx * w, cy * h, w, h, 1, 1, angle)
-    #[allow(clippy::too_many_arguments)]
-    pub fn draw_rotated(
-        &mut self,
-        image: &TextureRegion,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
-        cx: f32,
-        cy: f32,
-        angle: i32,
-    ) {
-        self.set_filter(image);
+    pub fn draw_rotated(&mut self, params: DrawRotatedParams<'_>) {
+        self.set_filter(params.image);
         self.pre_draw();
         self.sprite.draw_region_rotated(
-            image,
-            x + 0.01,
-            y + 0.01,
-            cx * w,
-            cy * h,
-            w,
-            h,
+            params.image,
+            params.x + 0.01,
+            params.y + 0.01,
+            params.cx * params.w,
+            params.cy * params.h,
+            params.w,
+            params.h,
             1.0,
             1.0,
-            angle as f32,
+            params.angle as f32,
         );
         self.post_draw();
     }

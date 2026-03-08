@@ -81,16 +81,16 @@ impl MusicDownloadProcessor {
             let dispose_clone = dispose.clone();
 
             let join_handle = thread::spawn(move || {
-                download_daemon_thread_run(
+                download_daemon_thread_run(DownloadDaemonState {
                     commands,
                     ipfs,
                     message,
                     main,
-                    alive_clone,
-                    download_clone,
-                    downloadpath_clone,
-                    dispose_clone,
-                );
+                    alive: alive_clone,
+                    download: download_clone,
+                    downloadpath: downloadpath_clone,
+                    dispose: dispose_clone,
+                });
             });
 
             *daemon_guard = Some(DaemonHandle {
@@ -171,17 +171,27 @@ fn normalize_ipfs_path(path: &str) -> String {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn download_daemon_thread_run(
-    commands: Arc<Mutex<VecDeque<Box<dyn IpfsInformation>>>>,
-    ipfs: Arc<Mutex<String>>,
-    message: Arc<Mutex<String>>,
-    main: Arc<dyn MusicDatabaseAccessor>,
-    alive: Arc<AtomicBool>,
-    download: Arc<AtomicBool>,
-    downloadpath: Arc<Mutex<Option<String>>>,
-    dispose: Arc<AtomicBool>,
-) {
+/// Shared state for the download daemon thread.
+struct DownloadDaemonState {
+    pub commands: Arc<Mutex<VecDeque<Box<dyn IpfsInformation>>>>,
+    pub ipfs: Arc<Mutex<String>>,
+    pub message: Arc<Mutex<String>>,
+    pub main: Arc<dyn MusicDatabaseAccessor>,
+    pub alive: Arc<AtomicBool>,
+    pub download: Arc<AtomicBool>,
+    pub downloadpath: Arc<Mutex<Option<String>>>,
+    pub dispose: Arc<AtomicBool>,
+}
+
+fn download_daemon_thread_run(state: DownloadDaemonState) {
+    let commands = state.commands;
+    let ipfs = state.ipfs;
+    let message = state.message;
+    let main = state.main;
+    let alive = state.alive;
+    let download = state.download;
+    let downloadpath = state.downloadpath;
+    let dispose = state.dispose;
     let mut download_ipfs_handle: Option<thread::JoinHandle<()>> = None;
     let download_ipfs_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     dispose.store(false, Ordering::SeqCst);

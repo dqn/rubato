@@ -5,7 +5,7 @@ use crate::stubs::{
     Color, MainState, MusicResultResource, Pixmap, PixmapFormat, PlayerResource, Texture,
     TextureRegion,
 };
-use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
+use crate::types::skin_object::{DrawImageAtParams, SkinObjectData, SkinObjectRenderer};
 
 /// Judge timing visualizer
 ///
@@ -196,13 +196,15 @@ impl SkinTimingVisualizer {
                     };
                     self.data.draw_image_at_with_color(
                         sprite,
-                        &line,
-                        x,
-                        y,
-                        self.line_width as f32,
-                        h,
-                        &color,
-                        0,
+                        &DrawImageAtParams {
+                            image: &line,
+                            x,
+                            y,
+                            width: self.line_width as f32,
+                            height: h,
+                            color: &color,
+                            angle: 0,
+                        },
                     );
                 } else {
                     let x = region.x
@@ -217,13 +219,15 @@ impl SkinTimingVisualizer {
                     };
                     self.data.draw_image_at_with_color(
                         sprite,
-                        &line,
-                        x,
-                        y,
-                        self.line_width as f32,
-                        h,
-                        &color,
-                        0,
+                        &DrawImageAtParams {
+                            image: &line,
+                            x,
+                            y,
+                            width: self.line_width as f32,
+                            height: h,
+                            color: &color,
+                            angle: 0,
+                        },
                     );
                 }
             }

@@ -16,6 +16,19 @@ use crate::skin_property;
 use crate::stubs::{BitmapFont, GlyphLayout, Texture};
 use crate::stubs::{Color, MainState, Rectangle, SkinOffset, TextureRegion};
 
+pub use renderer::DrawRotatedParams;
+
+/// Parameters for drawing an image at a specific position with color and rotation.
+pub struct DrawImageAtParams<'a> {
+    pub image: &'a TextureRegion,
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+    pub color: &'a Color,
+    pub angle: i32,
+}
+
 /// SkinObjectDestination (inner class of SkinObject)
 #[derive(Clone, Debug)]
 pub struct SkinObjectDestination {
@@ -908,16 +921,16 @@ impl SkinObjectData {
             };
 
         if self.angle != 0 {
-            sprite.draw_rotated(
-                &self.tmp_image,
-                self.tmp_rect.x,
-                self.tmp_rect.y,
-                self.tmp_rect.width,
-                self.tmp_rect.height,
-                self.centerx,
-                self.centery,
-                self.angle,
-            );
+            sprite.draw_rotated(DrawRotatedParams {
+                image: &self.tmp_image,
+                x: self.tmp_rect.x,
+                y: self.tmp_rect.y,
+                w: self.tmp_rect.width,
+                h: self.tmp_rect.height,
+                cx: self.centerx,
+                cy: self.centery,
+                angle: self.angle,
+            });
         } else {
             sprite.draw(
                 &self.tmp_image,
@@ -940,28 +953,33 @@ impl SkinObjectData {
     ) {
         let color = self.color;
         let angle = self.angle;
-        self.draw_image_at_with_color(sprite, image, x, y, width, height, &color, angle);
+        self.draw_image_at_with_color(
+            sprite,
+            &DrawImageAtParams {
+                image,
+                x,
+                y,
+                width,
+                height,
+                color: &color,
+                angle,
+            },
+        );
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn draw_image_at_with_color(
         &mut self,
         sprite: &mut SkinObjectRenderer,
-        image: &TextureRegion,
-        x: f32,
-        y: f32,
-        width: f32,
-        height: f32,
-        color: &Color,
-        angle: i32,
+        params: &DrawImageAtParams<'_>,
     ) {
-        if color.a == 0.0 {
+        if params.color.a == 0.0 {
             return;
         }
-        self.tmp_rect.set_xywh(x, y, width, height);
+        self.tmp_rect
+            .set_xywh(params.x, params.y, params.width, params.height);
         self.stretch
-            .stretch_rect(&mut self.tmp_rect, &mut self.tmp_image, image);
-        sprite.set_color(color);
+            .stretch_rect(&mut self.tmp_rect, &mut self.tmp_image, params.image);
+        sprite.set_color(params.color);
         sprite.blend = self.dstblend;
         sprite.obj_type =
             if self.dstfilter != 0 && self.image_type == SkinObjectRenderer::TYPE_NORMAL {
@@ -976,17 +994,17 @@ impl SkinObjectData {
                 self.image_type
             };
 
-        if angle != 0 {
-            sprite.draw_rotated(
-                &self.tmp_image,
-                self.tmp_rect.x,
-                self.tmp_rect.y,
-                self.tmp_rect.width,
-                self.tmp_rect.height,
-                self.centerx,
-                self.centery,
-                angle,
-            );
+        if params.angle != 0 {
+            sprite.draw_rotated(DrawRotatedParams {
+                image: &self.tmp_image,
+                x: self.tmp_rect.x,
+                y: self.tmp_rect.y,
+                w: self.tmp_rect.width,
+                h: self.tmp_rect.height,
+                cx: self.centerx,
+                cy: self.centery,
+                angle: params.angle,
+            });
         } else {
             sprite.draw(
                 &self.tmp_image,
@@ -1260,7 +1278,16 @@ mod tests {
     fn test_skin_object_renderer_draw_rotated_generates_vertices() {
         let mut renderer = SkinObjectRenderer::new();
         let region = TextureRegion::new();
-        renderer.draw_rotated(&region, 10.0, 20.0, 100.0, 50.0, 0.5, 0.5, 45);
+        renderer.draw_rotated(DrawRotatedParams {
+            image: &region,
+            x: 10.0,
+            y: 20.0,
+            w: 100.0,
+            h: 50.0,
+            cx: 0.5,
+            cy: 0.5,
+            angle: 45,
+        });
         assert_eq!(renderer.sprite.vertices().len(), 6);
     }
 

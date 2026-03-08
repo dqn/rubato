@@ -16,29 +16,31 @@ pub struct LR2GhostData {
     poor: i32,
 }
 
+/// Parameters for constructing LR2GhostData.
+struct LR2GhostDataParams {
+    pub random: Random,
+    pub seed: i32,
+    pub lanes: i32,
+    pub judgements: Vec<i32>,
+    pub pgreat: i32,
+    pub great: i32,
+    pub good: i32,
+    pub bad: i32,
+    pub poor: i32,
+}
+
 impl LR2GhostData {
-    #[allow(clippy::too_many_arguments)]
-    fn new(
-        random: Random,
-        seed: i32,
-        lanes: i32,
-        judgements: Vec<i32>,
-        pgreat: i32,
-        great: i32,
-        good: i32,
-        bad: i32,
-        poor: i32,
-    ) -> Self {
+    fn new(params: LR2GhostDataParams) -> Self {
         Self {
-            random,
-            seed,
-            lane_order: lanes,
-            judgements,
-            pgreat,
-            great,
-            good,
-            bad,
-            poor,
+            random: params.random,
+            seed: params.seed,
+            lane_order: params.lanes,
+            judgements: params.judgements,
+            pgreat: params.pgreat,
+            great: params.great,
+            good: params.good,
+            bad: params.bad,
+            poor: params.poor,
         }
     }
 
@@ -163,17 +165,17 @@ impl LR2GhostData {
             }
         }
 
-        Some(Self::new(
-            random_option,
+        Some(Self::new(LR2GhostDataParams {
+            random: random_option,
             seed,
-            encoded_lanes,
+            lanes: encoded_lanes,
             judgements,
             pgreat,
             great,
             good,
             bad,
             poor,
-        ))
+        }))
     }
 
     pub fn decode_play_ghost(data: &str) -> Vec<i32> {

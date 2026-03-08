@@ -11,6 +11,18 @@ pub const STATE_RECOMMEND: i32 = 4;
 pub const STATE_DELETE: i32 = 5;
 pub const STATE_REVIVE: i32 = 6;
 
+/// Parameters for constructing a DifficultyTableElement.
+pub struct DifficultyTableElementParams<'a> {
+    pub did: &'a str,
+    pub title: &'a str,
+    pub bmsid: i32,
+    pub url1: &'a str,
+    pub url2: &'a str,
+    pub comment: &'a str,
+    pub hash: &'a str,
+    pub ipfs: &'a str,
+}
+
 #[derive(Debug, Clone)]
 pub struct DifficultyTableElement {
     pub element: BmsTableElement,
@@ -37,26 +49,16 @@ impl DifficultyTableElement {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn new_with_params(
-        did: &str,
-        title: &str,
-        bmsid: i32,
-        url1: &str,
-        url2: &str,
-        comment: &str,
-        hash: &str,
-        ipfs: &str,
-    ) -> Self {
+    pub fn new_with_params(params: &DifficultyTableElementParams<'_>) -> Self {
         let mut dte = Self::new();
-        dte.set_level(Some(did));
-        dte.element.set_title(title);
-        dte.set_bmsid(bmsid);
-        dte.element.set_url(url1);
-        dte.set_append_url(url2);
-        dte.set_comment(comment);
-        dte.element.set_md5(hash);
-        dte.element.set_ipfs(ipfs);
+        dte.set_level(Some(params.did));
+        dte.element.set_title(params.title);
+        dte.set_bmsid(params.bmsid);
+        dte.element.set_url(params.url1);
+        dte.set_append_url(params.url2);
+        dte.set_comment(params.comment);
+        dte.element.set_md5(params.hash);
+        dte.element.set_ipfs(params.ipfs);
         dte
     }
 

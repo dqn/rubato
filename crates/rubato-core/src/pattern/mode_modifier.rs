@@ -5,6 +5,18 @@ use bms_model::note::Note;
 
 use crate::pattern::pattern_modifier::{AssistLevel, PatternModifier, PatternModifierBase};
 
+/// Parameters for Algorithm::modify.
+pub(crate) struct AlgorithmModifyParams<'a> {
+    pub _keys: &'a [i32],
+    pub activeln: &'a [i32],
+    pub _notes: &'a [Option<Note>],
+    pub last_note_time: &'a [i32],
+    pub now: i32,
+    pub duration: i32,
+    pub seven_to_nine_pattern: i32,
+    pub seven_to_nine_type: i32,
+}
+
 pub struct ModeModifier {
     pub base: PatternModifierBase,
     config: PlayerConfig,
@@ -61,16 +73,16 @@ impl PatternModifier for ModeModifier {
                 let keys = PatternModifierBase::keys_static(&after_mode, 0, true);
                 let random = if let Some(alg) = algorithm {
                     if !keys.is_empty() {
-                        alg.modify(
-                            &keys,
-                            &ln,
-                            &notes,
-                            &last_note_time,
-                            tl.time(),
-                            hran_threshold,
+                        alg.modify(&AlgorithmModifyParams {
+                            _keys: &keys,
+                            activeln: &ln,
+                            _notes: &notes,
+                            last_note_time: &last_note_time,
+                            now: tl.time(),
+                            duration: hran_threshold,
                             seven_to_nine_pattern,
                             seven_to_nine_type,
-                        )
+                        })
                     } else {
                         keys
                     }
@@ -158,18 +170,13 @@ impl Algorithm {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn modify(
-        &self,
-        _keys: &[i32],
-        activeln: &[i32],
-        _notes: &[Option<Note>],
-        last_note_time: &[i32],
-        now: i32,
-        duration: i32,
-        seven_to_nine_pattern: i32,
-        seven_to_nine_type: i32,
-    ) -> Vec<i32> {
+    fn modify(&self, params: &AlgorithmModifyParams<'_>) -> Vec<i32> {
+        let activeln = params.activeln;
+        let last_note_time = params.last_note_time;
+        let now = params.now;
+        let duration = params.duration;
+        let seven_to_nine_pattern = params.seven_to_nine_pattern;
+        let seven_to_nine_type = params.seven_to_nine_type;
         match self {
             Algorithm::SevenToNine => {
                 #[allow(clippy::eq_op)]
@@ -283,16 +290,16 @@ mod tests {
         let notes: Vec<Option<Note>> = vec![None; 9];
         let last_note_time = vec![-100i32; 9];
 
-        let result = alg.modify(
-            &[0, 1, 2, 3, 4, 5, 6, 7, 8],
-            &activeln,
-            &notes,
-            &last_note_time,
-            0,   // now
-            125, // duration
-            0,   // seven_to_nine_pattern=0 (default)
-            0,   // seven_to_nine_type=0
-        );
+        let result = alg.modify(&AlgorithmModifyParams {
+            _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+            activeln: &activeln,
+            _notes: &notes,
+            last_note_time: &last_note_time,
+            now: 0,
+            duration: 125,
+            seven_to_nine_pattern: 0,
+            seven_to_nine_type: 0,
+        });
 
         assert_eq!(result.len(), 9);
         // key_lane=2, so result[2..9] = 0..7
@@ -316,16 +323,16 @@ mod tests {
         let notes: Vec<Option<Note>> = vec![None; 9];
         let last_note_time = vec![-100i32; 9];
 
-        let result = alg.modify(
-            &[0, 1, 2, 3, 4, 5, 6, 7, 8],
-            &activeln,
-            &notes,
-            &last_note_time,
-            0,
-            125,
-            1, // pattern=1
-            0, // type=0
-        );
+        let result = alg.modify(&AlgorithmModifyParams {
+            _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+            activeln: &activeln,
+            _notes: &notes,
+            last_note_time: &last_note_time,
+            now: 0,
+            duration: 125,
+            seven_to_nine_pattern: 1,
+            seven_to_nine_type: 0,
+        });
 
         assert_eq!(result.len(), 9);
         // key_lane=1, so result[1..8] = 0..7
@@ -349,16 +356,16 @@ mod tests {
         let notes: Vec<Option<Note>> = vec![None; 9];
         let last_note_time = vec![-100i32; 9];
 
-        let result = alg.modify(
-            &[0, 1, 2, 3, 4, 5, 6, 7, 8],
-            &activeln,
-            &notes,
-            &last_note_time,
-            0,
-            125,
-            4, // pattern=4
-            0, // type=0
-        );
+        let result = alg.modify(&AlgorithmModifyParams {
+            _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+            activeln: &activeln,
+            _notes: &notes,
+            last_note_time: &last_note_time,
+            now: 0,
+            duration: 125,
+            seven_to_nine_pattern: 4,
+            seven_to_nine_type: 0,
+        });
 
         assert_eq!(result.len(), 9);
         // key_lane=0, so result[0..7] = 0..7
@@ -382,16 +389,17 @@ mod tests {
         let notes: Vec<Option<Note>> = vec![None; 9];
         let last_note_time = vec![-100i32; 9];
 
-        let result = alg.modify(
-            &[0, 1, 2, 3, 4, 5, 6, 7, 8],
-            &activeln,
-            &notes,
-            &last_note_time,
+        let result = alg.modify(&AlgorithmModifyParams {
+            _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+            activeln: &activeln,
+            _notes: &notes,
+            last_note_time: &last_note_time,
+            now: 0,
+            duration: 125,
+            seven_to_nine_pattern: 5,
+            seven_to_nine_type: // pattern=5
             0,
-            125,
-            5, // pattern=5
-            0,
-        );
+        });
 
         assert_eq!(result.len(), 9);
         // key_lane=0, so result[0..7] = 0..7
@@ -417,16 +425,16 @@ mod tests {
         last_note_time[1] = 0; // now - 0 = 1000 > duration(125) -> sc gets 7
         last_note_time[0] = 900; // now - 900 = 100
 
-        let result = alg.modify(
-            &[0, 1, 2, 3, 4, 5, 6, 7, 8],
-            &activeln,
-            &notes,
-            &last_note_time,
-            1000, // now
-            125,  // duration
-            0,    // pattern=0 (sc_lane=1, rest_lane=0)
-            1,    // type=1
-        );
+        let result = alg.modify(&AlgorithmModifyParams {
+            _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+            activeln: &activeln,
+            _notes: &notes,
+            last_note_time: &last_note_time,
+            now: 1000,
+            duration: 125,
+            seven_to_nine_pattern: 0,
+            seven_to_nine_type: 1,
+        });
 
         assert_eq!(result[1], 7); // sc_lane gets 7
         assert_eq!(result[0], 8); // rest_lane gets 8
@@ -444,16 +452,16 @@ mod tests {
         last_note_time[1] = 800; // now - 800 = 200 (older)
         last_note_time[0] = 900; // now - 900 = 100 (more recent)
 
-        let result = alg.modify(
-            &[0, 1, 2, 3, 4, 5, 6, 7, 8],
-            &activeln,
-            &notes,
-            &last_note_time,
-            1000, // now
-            125,  // duration (now - sc = 200 > 125)
-            0,
-            1, // type=1
-        );
+        let result = alg.modify(&AlgorithmModifyParams {
+            _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+            activeln: &activeln,
+            _notes: &notes,
+            last_note_time: &last_note_time,
+            now: 1000,
+            duration: 125,
+            seven_to_nine_pattern: 0,
+            seven_to_nine_type: 1,
+        });
 
         // sc exceeds duration threshold -> sc gets 7
         assert_eq!(result[1], 7);
@@ -471,16 +479,16 @@ mod tests {
         last_note_time[1] = 950; // sc: now - 950 = 50 <= duration(125) and 50 < 100
         last_note_time[0] = 900; // rest: now - 900 = 100
 
-        let result = alg.modify(
-            &[0, 1, 2, 3, 4, 5, 6, 7, 8],
-            &activeln,
-            &notes,
-            &last_note_time,
-            1000,
-            125,
-            0,
-            1, // type=1
-        );
+        let result = alg.modify(&AlgorithmModifyParams {
+            _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+            activeln: &activeln,
+            _notes: &notes,
+            last_note_time: &last_note_time,
+            now: 1000,
+            duration: 125,
+            seven_to_nine_pattern: 0,
+            seven_to_nine_type: 1,
+        });
 
         // sc is more recent and within duration -> rest gets swapped
         assert_eq!(result[1], 8); // sc gets 8
@@ -499,16 +507,16 @@ mod tests {
         last_note_time[1] = 500; // sc: now - 500 = 500
         last_note_time[0] = 800; // rest: now - 800 = 200
 
-        let result = alg.modify(
-            &[0, 1, 2, 3, 4, 5, 6, 7, 8],
-            &activeln,
-            &notes,
-            &last_note_time,
-            1000,
-            125,
-            0,
-            2, // type=2
-        );
+        let result = alg.modify(&AlgorithmModifyParams {
+            _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+            activeln: &activeln,
+            _notes: &notes,
+            last_note_time: &last_note_time,
+            now: 1000,
+            duration: 125,
+            seven_to_nine_pattern: 0,
+            seven_to_nine_type: 2,
+        });
 
         // sc is older (500 >= 200) -> sc gets 7
         assert_eq!(result[1], 7);
@@ -525,16 +533,16 @@ mod tests {
         last_note_time[1] = 900; // sc: now - 900 = 100
         last_note_time[0] = 500; // rest: now - 500 = 500
 
-        let result = alg.modify(
-            &[0, 1, 2, 3, 4, 5, 6, 7, 8],
-            &activeln,
-            &notes,
-            &last_note_time,
-            1000,
-            125,
-            0,
-            2, // type=2
-        );
+        let result = alg.modify(&AlgorithmModifyParams {
+            _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+            activeln: &activeln,
+            _notes: &notes,
+            last_note_time: &last_note_time,
+            now: 1000,
+            duration: 125,
+            seven_to_nine_pattern: 0,
+            seven_to_nine_type: 2,
+        });
 
         // rest is older (100 < 500) -> rest gets 7, sc gets 8
         assert_eq!(result[1], 8);
@@ -552,16 +560,17 @@ mod tests {
         let notes: Vec<Option<Note>> = vec![None; 9];
         let last_note_time = vec![-100i32; 9];
 
-        let result = alg.modify(
-            &[0, 1, 2, 3, 4, 5, 6, 7, 8],
-            &activeln,
-            &notes,
-            &last_note_time,
+        let result = alg.modify(&AlgorithmModifyParams {
+            _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+            activeln: &activeln,
+            _notes: &notes,
+            last_note_time: &last_note_time,
+            now: 0,
+            duration: 125,
+            seven_to_nine_pattern: 0,
+            seven_to_nine_type: // pattern=0
             0,
-            125,
-            0, // pattern=0
-            0,
-        );
+        });
 
         assert_eq!(result[1], 7); // sc gets 7
         assert_eq!(result[0], 8); // rest gets 8
@@ -576,16 +585,16 @@ mod tests {
         let notes: Vec<Option<Note>> = vec![None; 9];
         let last_note_time = vec![-100i32; 9];
 
-        let result = alg.modify(
-            &[0, 1, 2, 3, 4, 5, 6, 7, 8],
-            &activeln,
-            &notes,
-            &last_note_time,
-            0,
-            125,
-            0,
-            0,
-        );
+        let result = alg.modify(&AlgorithmModifyParams {
+            _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+            activeln: &activeln,
+            _notes: &notes,
+            last_note_time: &last_note_time,
+            now: 0,
+            duration: 125,
+            seven_to_nine_pattern: 0,
+            seven_to_nine_type: 0,
+        });
 
         assert_eq!(result[1], 8); // sc gets 8
         assert_eq!(result[0], 7); // rest gets 7
@@ -600,16 +609,16 @@ mod tests {
         let notes: Vec<Option<Note>> = vec![None; 9];
         let last_note_time = vec![-100i32; 9];
 
-        let result = alg.modify(
-            &[0, 1, 2, 3, 4, 5, 6, 7, 8],
-            &activeln,
-            &notes,
-            &last_note_time,
-            0,
-            125,
-            0,
-            0,
-        );
+        let result = alg.modify(&AlgorithmModifyParams {
+            _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+            activeln: &activeln,
+            _notes: &notes,
+            last_note_time: &last_note_time,
+            now: 0,
+            duration: 125,
+            seven_to_nine_pattern: 0,
+            seven_to_nine_type: 0,
+        });
 
         // activeln[sc_lane=1] == -1 (not 7), so sc gets 8, rest gets 7
         assert_eq!(result[1], 8);

@@ -6,7 +6,18 @@ use std::path::PathBuf;
 use crate::property::string_property::StringProperty;
 use crate::stubs::{BitmapFont, Color, GlyphLayout, MainState, TextureRegion};
 use crate::text::skin_text::{OVERFLOW_OVERFLOW, OVERFLOW_SHRINK, OVERFLOW_TRUNCATE, SkinTextData};
-use crate::types::skin_object::SkinObjectRenderer;
+use crate::types::skin_object::{DrawImageAtParams, SkinObjectRenderer};
+
+/// Parameters for drawing text glyphs at a specific position.
+struct DrawTextGlyphsParams<'a> {
+    pub sprite: &'a mut SkinObjectRenderer,
+    pub text: &'a str,
+    pub color: &'a Color,
+    pub x: f32,
+    pub y: f32,
+    pub _layout_width: f32,
+    pub region_width: f32,
+}
 
 pub struct SkinTextBitmap {
     pub text_data: SkinTextData,
@@ -120,15 +131,15 @@ impl SkinTextBitmap {
             let region_y = self.text_data.data.region.y;
             let layout_width =
                 self.compute_layout_width(&text, &color, region_width, region_height);
-            self.draw_text_glyphs(
+            self.draw_text_glyphs(DrawTextGlyphsParams {
                 sprite,
-                &text,
-                &color,
-                x + offset_x,
-                region_y + offset_y + region_height,
-                layout_width,
+                text: &text,
+                color: &color,
+                x: x + offset_x,
+                y: region_y + offset_y + region_height,
+                _layout_width: layout_width,
                 region_width,
-            );
+            });
         } else {
             // Standard rendering path
             sprite.obj_type = SkinObjectRenderer::TYPE_BILINEAR;
@@ -145,29 +156,29 @@ impl SkinTextBitmap {
                 let shadow_color = Color::new(color.r / 2.0, color.g / 2.0, color.b / 2.0, color.a);
                 let layout_width =
                     self.compute_layout_width(&text, &shadow_color, region_width, region_height);
-                self.draw_text_glyphs(
+                self.draw_text_glyphs(DrawTextGlyphsParams {
                     sprite,
-                    &text,
-                    &shadow_color,
-                    x + shadow_offset.0 + offset_x,
-                    region_y - shadow_offset.1 + offset_y + region_height,
-                    layout_width,
+                    text: &text,
+                    color: &shadow_color,
+                    x: x + shadow_offset.0 + offset_x,
+                    y: region_y - shadow_offset.1 + offset_y + region_height,
+                    _layout_width: layout_width,
                     region_width,
-                );
+                });
             }
 
             // Main text rendering
             let layout_width =
                 self.compute_layout_width(&text, &color, region_width, region_height);
-            self.draw_text_glyphs(
+            self.draw_text_glyphs(DrawTextGlyphsParams {
                 sprite,
-                &text,
-                &color,
-                x + offset_x,
-                region_y + offset_y + region_height,
-                layout_width,
+                text: &text,
+                color: &color,
+                x: x + offset_x,
+                y: region_y + offset_y + region_height,
+                _layout_width: layout_width,
                 region_width,
-            );
+            });
         }
 
         // Java: font.getData().setScale(1)
@@ -244,17 +255,13 @@ impl SkinTextBitmap {
     /// Draw text glyphs at the given position.
     /// Uses BitmapFont.layout_glyphs() to get per-glyph positions,
     /// then draws each glyph as a TextureRegion via SkinObjectData.draw_image_at_with_color().
-    #[allow(clippy::too_many_arguments)]
-    fn draw_text_glyphs(
-        &mut self,
-        sprite: &mut SkinObjectRenderer,
-        text: &str,
-        color: &Color,
-        x: f32,
-        y: f32,
-        _layout_width: f32,
-        region_width: f32,
-    ) {
+    fn draw_text_glyphs(&mut self, params: DrawTextGlyphsParams<'_>) {
+        let sprite = params.sprite;
+        let text = params.text;
+        let color = params.color;
+        let x = params.x;
+        let y = params.y;
+        let region_width = params.region_width;
         let font = match self.font.as_ref() {
             Some(f) => f,
             None => return,
@@ -288,13 +295,15 @@ impl SkinTextBitmap {
             let glyph_region = TextureRegion::new();
             self.text_data.data.draw_image_at_with_color(
                 sprite,
-                &glyph_region,
-                gx,
-                gy,
-                gw,
-                gh,
-                color,
-                angle,
+                &DrawImageAtParams {
+                    image: &glyph_region,
+                    x: gx,
+                    y: gy,
+                    width: gw,
+                    height: gh,
+                    color,
+                    angle,
+                },
             );
         }
     }
