@@ -169,8 +169,8 @@ impl LaneMirrorShuffleModifier {
     pub fn make_random(keys: &[i32], model: &BMSModel, _seed: i64) -> Vec<i32> {
         let mode_key = model.mode().map(|m| m.key()).unwrap_or(0);
         let mut result: Vec<i32> = (0..mode_key).collect();
-        for lane in 0..keys.len() {
-            result[keys[lane] as usize] = keys[keys.len() - 1 - lane];
+        for (i, &key) in keys.iter().enumerate() {
+            result[key as usize] = keys[keys.len() - 1 - i];
         }
         result
     }
@@ -267,8 +267,8 @@ impl LaneRotateShuffleModifier {
         let inc = rand.next_int_bounded(2) == 1;
         let start = rand.next_int_bounded(keys.len() as i32 - 1) as usize + if inc { 1 } else { 0 };
         let mut rlane = start;
-        for lane in 0..keys.len() {
-            result[keys[lane] as usize] = keys[rlane];
+        for &key in keys {
+            result[key as usize] = keys[rlane];
             if inc {
                 rlane = (rlane + 1) % keys.len();
             } else {
@@ -365,9 +365,9 @@ impl LaneRandomShuffleModifier {
         let mut l: Vec<i32> = keys.to_vec();
         let mode_key = model.mode().map(|m| m.key()).unwrap_or(0);
         let mut result: Vec<i32> = (0..mode_key).collect();
-        for lane in 0..keys.len() {
+        for &key in keys {
             let r = rand.next_int_bounded(l.len() as i32) as usize;
-            result[keys[lane] as usize] = l[r];
+            result[key as usize] = l[r];
             l.remove(r);
         }
         result
