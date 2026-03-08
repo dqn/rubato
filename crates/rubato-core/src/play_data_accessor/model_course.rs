@@ -39,15 +39,15 @@ impl PlayDataAccessor {
             }
             time
         };
-        self.write_score_data(
-            newscore,
+        let ctx = super::core::ScoreWriteContext {
             hash,
             contains_undefined_ln,
             total_notes,
             lnmode,
             update_score,
             last_note_time_us,
-        );
+        };
+        self.write_score_data(newscore, &ctx);
     }
 
     /// Check if replay data exists for a single BMSModel.
@@ -97,7 +97,6 @@ impl PlayDataAccessor {
     }
 
     /// Write score data for a course (delegates to write_score_data_for_course).
-    #[allow(clippy::too_many_arguments)]
     pub fn write_score_data_course(
         &self,
         newscore: &ScoreData,
@@ -110,16 +109,16 @@ impl PlayDataAccessor {
         let hashes: Vec<&str> = models.iter().map(|m| m.sha256()).collect();
         let total_notes: i32 = models.iter().map(|m| m.total_notes()).sum();
         let ln = models.iter().any(|m| m.contains_undefined_long_note());
-        self.write_score_data_for_course(
-            newscore,
-            &hashes,
+        let ctx = super::core::CourseScoreWriteContext {
+            hashes: &hashes,
             total_notes,
             ln,
             lnmode,
             option,
             constraint,
             update_score,
-        );
+        };
+        self.write_score_data_for_course(newscore, &ctx);
     }
 
     /// Check if replay data exists for a course.

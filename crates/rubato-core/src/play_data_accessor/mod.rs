@@ -26,6 +26,8 @@ pub struct PlayDataAccessor {
 mod core;
 mod model_course;
 
+pub use self::core::{CourseScoreWriteContext, ScoreWriteContext};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -72,10 +74,16 @@ mod tests {
         ];
 
         accessor.write_score_data_for_course(
-            &newscore, hashes, 100, true, // ln
-            1,    // lnmode
-            2,    // option
-            constraint, true,
+            &newscore,
+            &core::CourseScoreWriteContext {
+                hashes,
+                total_notes: 100,
+                ln: true,
+                lnmode: 1,
+                option: 2,
+                constraint,
+                update_score: true,
+            },
         );
 
         // Read it back: the mode value should be 11121
@@ -106,7 +114,18 @@ mod tests {
 
         // No constraints, option=3, ln=false, lnmode=2
         // mode = 0 + 3*10 + 0 + 0 + 0 = 30
-        accessor.write_score_data_for_course(&newscore, hashes, 50, false, 2, 3, &[], true);
+        accessor.write_score_data_for_course(
+            &newscore,
+            &core::CourseScoreWriteContext {
+                hashes,
+                total_notes: 50,
+                ln: false,
+                lnmode: 2,
+                option: 3,
+                constraint: &[],
+                update_score: true,
+            },
+        );
 
         let hash: String = hashes.join("");
         let score = accessor.scoredb.as_ref().unwrap().score_data(&hash, 30);
@@ -144,7 +163,18 @@ mod tests {
             CourseDataConstraint::Gauge24Keys,
         ];
 
-        accessor.write_score_data_for_course(&newscore, hashes, 10, true, 1, 3, constraint, true);
+        accessor.write_score_data_for_course(
+            &newscore,
+            &core::CourseScoreWriteContext {
+                hashes,
+                total_notes: 10,
+                ln: true,
+                lnmode: 1,
+                option: 3,
+                constraint,
+                update_score: true,
+            },
+        );
 
         let expected_mode = 1 + 3 * 10 + 100 + 2 * 1000 + 5 * 10000;
         assert_eq!(expected_mode, 52131, "mode value for all constraint types");
@@ -525,7 +555,17 @@ mod tests {
         score1.minbp = 5;
         score1.maxcombo = 80;
 
-        accessor.write_score_data(&score1, &hash, false, 100, 0, true, 60_000_000);
+        accessor.write_score_data(
+            &score1,
+            &core::ScoreWriteContext {
+                hash: &hash,
+                contains_undefined_ln: false,
+                total_notes: 100,
+                lnmode: 0,
+                update_score: true,
+                last_note_time_us: 60_000_000,
+            },
+        );
 
         let saved1 = accessor.read_score_data_by_hash(&hash, false, 0).unwrap();
         let trophies1: std::collections::HashSet<char> = saved1.trophy.chars().collect();
@@ -551,7 +591,17 @@ mod tests {
         score2.minbp = 3;
         score2.maxcombo = 90;
 
-        accessor.write_score_data(&score2, &hash, false, 100, 0, true, 60_000_000);
+        accessor.write_score_data(
+            &score2,
+            &core::ScoreWriteContext {
+                hash: &hash,
+                contains_undefined_ln: false,
+                total_notes: 100,
+                lnmode: 0,
+                update_score: true,
+                last_note_time_us: 60_000_000,
+            },
+        );
 
         let saved2 = accessor.read_score_data_by_hash(&hash, false, 0).unwrap();
         let trophies2: std::collections::HashSet<char> = saved2.trophy.chars().collect();
@@ -597,7 +647,17 @@ mod tests {
         score.minbp = 2;
         score.maxcombo = 80;
 
-        accessor.write_score_data(&score, &hash, false, 100, 0, true, 60_000_000);
+        accessor.write_score_data(
+            &score,
+            &core::ScoreWriteContext {
+                hash: &hash,
+                contains_undefined_ln: false,
+                total_notes: 100,
+                lnmode: 0,
+                update_score: true,
+                last_note_time_us: 60_000_000,
+            },
+        );
 
         let saved = accessor.read_score_data_by_hash(&hash, false, 0).unwrap();
         let trophies: std::collections::HashSet<char> = saved.trophy.chars().collect();
@@ -633,7 +693,17 @@ mod tests {
         score.minbp = 5;
         score.maxcombo = 80;
 
-        accessor.write_score_data(&score, &hash, false, 100, 0, true, 60_000_000);
+        accessor.write_score_data(
+            &score,
+            &core::ScoreWriteContext {
+                hash: &hash,
+                contains_undefined_ln: false,
+                total_notes: 100,
+                lnmode: 0,
+                update_score: true,
+                last_note_time_us: 60_000_000,
+            },
+        );
 
         let saved = accessor.read_score_data_by_hash(&hash, false, 0).unwrap();
         let trophies: std::collections::HashSet<char> = saved.trophy.chars().collect();
@@ -1026,8 +1096,29 @@ mod tests {
 
         let score = ScoreData::default();
         // These should all be no-ops without panicking
-        accessor.write_score_data(&score, "hash", false, 100, 0, true, 60_000_000);
-        accessor.write_score_data_for_course(&score, &["h1", "h2"], 100, false, 0, 0, &[], true);
+        accessor.write_score_data(
+            &score,
+            &core::ScoreWriteContext {
+                hash: "hash",
+                contains_undefined_ln: false,
+                total_notes: 100,
+                lnmode: 0,
+                update_score: true,
+                last_note_time_us: 60_000_000,
+            },
+        );
+        accessor.write_score_data_for_course(
+            &score,
+            &core::CourseScoreWriteContext {
+                hashes: &["h1", "h2"],
+                total_notes: 100,
+                ln: false,
+                lnmode: 0,
+                option: 0,
+                constraint: &[],
+                update_score: true,
+            },
+        );
         accessor.update_player_data(&score, 60);
         accessor.delete_score_data("hash", false, 0);
     }

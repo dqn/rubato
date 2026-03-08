@@ -18,17 +18,18 @@ impl<'a> PomyuCharaLoader<'a> {
         char_bmp_index: usize,
         char_tex_index: usize,
         set_motion: i32,
-        dsttimer: i32,
-        dst_op1: i32,
-        dst_op2: i32,
-        dst_op3: i32,
-        dst_offset: i32,
-        side: i32,
-        dstx: f32,
-        dsty: f32,
-        dstw: f32,
-        dsth: f32,
+        dst: &PomyuCharaDestination,
     ) {
+        let dsttimer = dst.timer;
+        let dst_op1 = dst.op1;
+        let dst_op2 = dst.op2;
+        let dst_op3 = dst.op3;
+        let dst_offset = dst.offset;
+        let side = dst.side;
+        let dstx = dst.x;
+        let dsty = dst.y;
+        let dstw = dst.w;
+        let dsth = dst.h;
         // Initialize frame values
         for f in frame.iter_mut() {
             if *f == i32::MIN {

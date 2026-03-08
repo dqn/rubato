@@ -343,21 +343,24 @@ fn test_load_type_constants() {
 fn test_load_invalid_load_type_returns_none() {
     let mut skin = PlaySkinStub::new();
     let mut loader = PomyuCharaLoader::new(&mut skin);
+    let dst = PomyuCharaDestination {
+        x: 0.0,
+        y: 0.0,
+        w: 100.0,
+        h: 100.0,
+        side: 0,
+        timer: 0,
+        op1: 0,
+        op2: 0,
+        op3: 0,
+        offset: 0,
+    };
     let result = loader.load(
         false,
         Path::new("/nonexistent/path.chp"),
         99, // invalid load_type (outside 0..=15)
         0,
-        0.0,
-        0.0,
-        100.0,
-        100.0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
+        &dst,
     );
     assert!(result.is_none(), "load_type=99 should return None");
 }
@@ -366,21 +369,24 @@ fn test_load_invalid_load_type_returns_none() {
 fn test_load_negative_load_type_returns_none() {
     let mut skin = PlaySkinStub::new();
     let mut loader = PomyuCharaLoader::new(&mut skin);
+    let dst = PomyuCharaDestination {
+        x: 0.0,
+        y: 0.0,
+        w: 100.0,
+        h: 100.0,
+        side: 0,
+        timer: 0,
+        op1: 0,
+        op2: 0,
+        op3: 0,
+        offset: 0,
+    };
     let result = loader.load(
         false,
         Path::new("/nonexistent/path.chp"),
         -1, // negative load_type
         0,
-        0.0,
-        0.0,
-        100.0,
-        100.0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
+        &dst,
     );
     assert!(result.is_none(), "load_type=-1 should return None");
 }
@@ -389,21 +395,24 @@ fn test_load_negative_load_type_returns_none() {
 fn test_load_nonexistent_path_returns_none() {
     let mut skin = PlaySkinStub::new();
     let mut loader = PomyuCharaLoader::new(&mut skin);
+    let dst = PomyuCharaDestination {
+        x: 0.0,
+        y: 0.0,
+        w: 100.0,
+        h: 100.0,
+        side: 0,
+        timer: 0,
+        op1: 0,
+        op2: 0,
+        op3: 0,
+        offset: 0,
+    };
     let result = loader.load(
         false,
         Path::new("/definitely/does/not/exist/file.chp"),
         PLAY, // valid load_type
         0,
-        0.0,
-        0.0,
-        100.0,
-        100.0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
+        &dst,
     );
     assert!(
         result.is_none(),
@@ -415,22 +424,25 @@ fn test_load_nonexistent_path_returns_none() {
 fn test_load_nonexistent_directory_returns_none() {
     let mut skin = PlaySkinStub::new();
     let mut loader = PomyuCharaLoader::new(&mut skin);
+    let dst = PomyuCharaDestination {
+        x: 0.0,
+        y: 0.0,
+        w: 100.0,
+        h: 100.0,
+        side: 0,
+        timer: 0,
+        op1: 0,
+        op2: 0,
+        op3: 0,
+        offset: 0,
+    };
     // Path without .chp extension triggers directory search mode
     let result = loader.load(
         false,
         Path::new("/definitely/does/not/exist/dir/"),
         PLAY,
         0,
-        0.0,
-        0.0,
-        100.0,
-        100.0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
+        &dst,
     );
     assert!(
         result.is_none(),

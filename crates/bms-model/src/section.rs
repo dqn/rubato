@@ -63,6 +63,19 @@ fn key_f64(k: F64Key) -> f64 {
     f64::from_bits(k)
 }
 
+/// Lookup tables for BPM, STOP, and SCROLL definitions.
+pub struct SectionLookupTables<'a> {
+    pub bpm: &'a BTreeMap<i32, f64>,
+    pub stop: &'a BTreeMap<i32, f64>,
+    pub scroll: &'a BTreeMap<i32, f64>,
+}
+
+/// Wav and BGA mapping arrays used by make_time_lines.
+pub struct TimeLineMaps<'a> {
+    pub wavmap: &'a [i32],
+    pub bgamap: &'a [i32],
+}
+
 pub struct Section {
     rate: f64,
     poor: Vec<i32>,
@@ -74,18 +87,18 @@ pub struct Section {
 }
 
 impl Section {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         model: &mut BMSModel,
         prev_sectionnum: f64,
         prev_rate: f64,
         is_first: bool,
         lines: &[String],
-        bpmtable: &BTreeMap<i32, f64>,
-        stoptable: &BTreeMap<i32, f64>,
-        scrolltable: &BTreeMap<i32, f64>,
+        tables: &SectionLookupTables<'_>,
         log: &mut Vec<DecodeLog>,
     ) -> Self {
+        let bpmtable = tables.bpm;
+        let stoptable = tables.stop;
+        let scrolltable = tables.scroll;
         let base = model.get_base();
         let mut rate = 1.0;
         let mut poor: Vec<i32> = Vec::new();
@@ -260,17 +273,17 @@ impl Section {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn make_time_lines(
         &self,
         model: &mut BMSModel,
-        wavmap: &[i32],
-        bgamap: &[i32],
+        maps: &TimeLineMaps<'_>,
         tlcache: &mut BTreeMap<u64, TimeLineCache>,
         lnlist: &mut Vec<Option<Vec<LnInfo>>>,
         startln: &mut Vec<Option<StartLnInfo>>,
         log: &mut Vec<DecodeLog>,
     ) {
+        let wavmap = maps.wavmap;
+        let bgamap = maps.bgamap;
         let lnobj = model.lnobj();
         let lnmode = model.lnmode;
         let mode = model.mode().copied();

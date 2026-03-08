@@ -52,6 +52,24 @@ mod ffmpeg_impl {
         pub height: u32,
     }
 
+    /// Mutable video playback state shared across handle_command / restart.
+    struct VideoPlaybackState {
+        eof: bool,
+        loop_play: bool,
+        offset: i64,
+        framecount: i64,
+        current_ts_us: i64,
+    }
+
+    /// Immutable stream metadata used by grab_frame / convert_frame.
+    struct VideoStreamInfo {
+        stream_index: usize,
+        width: u32,
+        height: u32,
+        time_base_num: i64,
+        time_base_den: i64,
+    }
+
     /// Shared state between FFmpegProcessor and MovieSeekThread.
     pub(super) struct SharedState {
         pub status: ProcessorStatus,
@@ -179,16 +197,25 @@ mod ffmpeg_impl {
             filepath
         );
 
-        let mut eof = true;
-        let mut loop_play = false;
-        let mut offset: i64 = 0;
-        let mut framecount: i64 = 0;
-        let mut current_ts_us: i64 = 0;
+        let mut state = VideoPlaybackState {
+            eof: true,
+            loop_play: false,
+            offset: 0,
+            framecount: 0,
+            current_ts_us: 0,
+        };
+        let stream_info = VideoStreamInfo {
+            stream_index: video_stream_index,
+            width,
+            height,
+            time_base_num,
+            time_base_den,
+        };
         let fpsd_i64 = fpsd as i64;
 
         // Main loop — translated from MovieSeekThread.run()
         loop {
-            if eof {
+            if state.eof {
                 // Set status to inactive
                 if let Ok(mut s) = shared.lock() {
                     if s.status != ProcessorStatus::Disposed {
@@ -198,17 +225,8 @@ mod ffmpeg_impl {
                 // Wait for command (blocking, like Java Thread.sleep(3600000) + interrupt)
                 match cmd_rx.recv() {
                     Ok(cmd) => {
-                        if !handle_command(
-                            cmd,
-                            &mut eof,
-                            &mut loop_play,
-                            &mut offset,
-                            &mut framecount,
-                            &mut current_ts_us,
-                            &time,
-                            &mut input_context,
-                            &mut decoder,
-                        ) {
+                        if !handle_command(cmd, &mut state, &time, &mut input_context, &mut decoder)
+                        {
                             break; // Halt
                         }
                         continue;
@@ -218,46 +236,29 @@ mod ffmpeg_impl {
             }
 
             let current_time = time.load(Ordering::Relaxed);
-            let microtime = current_time * 1000 + offset;
+            let microtime = current_time * 1000 + state.offset;
 
-            if microtime >= current_ts_us {
+            if microtime >= state.current_ts_us {
                 // Catch up: grab frames until video position >= playback time
                 // Translated from: while (microtime >= grabber.getTimestamp() || framecount % fpsd != 0)
                 let mut latest_pixels: Option<Vec<u8>> = None;
                 loop {
                     // Break condition: caught up AND at display interval
-                    if microtime < current_ts_us && framecount % fpsd_i64 == 0 {
+                    if microtime < state.current_ts_us && state.framecount % fpsd_i64 == 0 {
                         break;
                     }
-                    match grab_frame(
-                        &mut input_context,
-                        &mut decoder,
-                        &mut scaler,
-                        video_stream_index,
-                        width,
-                        height,
-                        time_base_num,
-                        time_base_den,
-                    ) {
+                    match grab_frame(&mut input_context, &mut decoder, &mut scaler, &stream_info) {
                         Some((pixels, ts_us)) => {
-                            current_ts_us = ts_us;
-                            framecount += 1;
+                            state.current_ts_us = ts_us;
+                            state.framecount += 1;
                             latest_pixels = Some(pixels);
                         }
                         None => {
                             // End of file
-                            eof = true;
-                            if loop_play {
+                            state.eof = true;
+                            if state.loop_play {
                                 // Auto-restart (like Java: commands.offerLast(Command.LOOP))
-                                restart(
-                                    &mut eof,
-                                    &mut offset,
-                                    &mut framecount,
-                                    &mut current_ts_us,
-                                    &time,
-                                    &mut input_context,
-                                    &mut decoder,
-                                );
+                                restart(&mut state, &time, &mut input_context, &mut decoder);
                             }
                             break;
                         }
@@ -271,8 +272,8 @@ mod ffmpeg_impl {
                         if s.status != ProcessorStatus::Disposed {
                             s.frame = Some(DecodedFrame {
                                 pixels,
-                                width,
-                                height,
+                                width: stream_info.width,
+                                height: stream_info.height,
                             });
                             s.status = ProcessorStatus::TextureActive;
                         }
@@ -281,21 +282,12 @@ mod ffmpeg_impl {
             } else {
                 // Video is ahead of playback — sleep with command check
                 // Translated from: sleep((grabber.getTimestamp() - microtime) / 1000 - 1)
-                let sleep_us = (current_ts_us - microtime).max(1000);
+                let sleep_us = (state.current_ts_us - microtime).max(1000);
                 let sleep_ms = ((sleep_us / 1000) - 1).max(1) as u64;
                 match cmd_rx.recv_timeout(Duration::from_millis(sleep_ms.min(100))) {
                     Ok(cmd) => {
-                        if !handle_command(
-                            cmd,
-                            &mut eof,
-                            &mut loop_play,
-                            &mut offset,
-                            &mut framecount,
-                            &mut current_ts_us,
-                            &time,
-                            &mut input_context,
-                            &mut decoder,
-                        ) {
+                        if !handle_command(cmd, &mut state, &time, &mut input_context, &mut decoder)
+                        {
                             break;
                         }
                         continue;
@@ -307,17 +299,7 @@ mod ffmpeg_impl {
 
             // Non-blocking command check (like Java: if (!commands.isEmpty()) { ... })
             while let Ok(cmd) = cmd_rx.try_recv() {
-                if !handle_command(
-                    cmd,
-                    &mut eof,
-                    &mut loop_play,
-                    &mut offset,
-                    &mut framecount,
-                    &mut current_ts_us,
-                    &time,
-                    &mut input_context,
-                    &mut decoder,
-                ) {
+                if !handle_command(cmd, &mut state, &time, &mut input_context, &mut decoder) {
                     log::info!("Video resource released: {}", filepath);
                     return;
                 }
@@ -329,47 +311,26 @@ mod ffmpeg_impl {
 
     /// Process a command. Returns false if Halt (thread should exit).
     /// Translated from: the switch(commands.pollFirst()) block in MovieSeekThread.run()
-    #[allow(clippy::too_many_arguments)]
     fn handle_command(
         cmd: Command,
-        eof: &mut bool,
-        loop_play: &mut bool,
-        offset: &mut i64,
-        framecount: &mut i64,
-        current_ts_us: &mut i64,
+        state: &mut VideoPlaybackState,
         time: &Arc<AtomicI64>,
         input_context: &mut ffmpeg::format::context::Input,
         decoder: &mut ffmpeg::codec::decoder::Video,
     ) -> bool {
         match cmd {
             Command::Play => {
-                *loop_play = false;
-                restart(
-                    eof,
-                    offset,
-                    framecount,
-                    current_ts_us,
-                    time,
-                    input_context,
-                    decoder,
-                );
+                state.loop_play = false;
+                restart(state, time, input_context, decoder);
                 true
             }
             Command::Loop => {
-                *loop_play = true;
-                restart(
-                    eof,
-                    offset,
-                    framecount,
-                    current_ts_us,
-                    time,
-                    input_context,
-                    decoder,
-                );
+                state.loop_play = true;
+                restart(state, time, input_context, decoder);
                 true
             }
             Command::Stop => {
-                *eof = true;
+                state.eof = true;
                 true
             }
             Command::Halt => false,
@@ -379,65 +340,43 @@ mod ffmpeg_impl {
     /// Restart video from beginning.
     /// Translated from: MovieSeekThread.restart()
     fn restart(
-        eof: &mut bool,
-        offset: &mut i64,
-        framecount: &mut i64,
-        current_ts_us: &mut i64,
+        state: &mut VideoPlaybackState,
         time: &Arc<AtomicI64>,
         input_context: &mut ffmpeg::format::context::Input,
         decoder: &mut ffmpeg::codec::decoder::Video,
     ) {
         let _ = input_context.seek(0, ..0);
         decoder.flush();
-        *eof = false;
+        state.eof = false;
         let current_time = time.load(Ordering::Relaxed);
-        *offset = -current_time * 1000;
-        *framecount = 1;
-        *current_ts_us = 0;
+        state.offset = -current_time * 1000;
+        state.framecount = 1;
+        state.current_ts_us = 0;
     }
 
     /// Grab one decoded video frame from the stream.
     /// Translated from: grabber.grabImage() in MovieSeekThread
-    #[allow(clippy::too_many_arguments)]
     fn grab_frame(
         input_context: &mut ffmpeg::format::context::Input,
         decoder: &mut ffmpeg::codec::decoder::Video,
         scaler: &mut ffmpeg::software::scaling::Context,
-        video_stream_index: usize,
-        width: u32,
-        height: u32,
-        time_base_num: i64,
-        time_base_den: i64,
+        info: &VideoStreamInfo,
     ) -> Option<(Vec<u8>, i64)> {
         let mut decoded_frame = ffmpeg::frame::Video::empty();
 
         // Try to receive buffered frames first
         if decoder.receive_frame(&mut decoded_frame).is_ok() {
-            return convert_frame(
-                &decoded_frame,
-                scaler,
-                width,
-                height,
-                time_base_num,
-                time_base_den,
-            );
+            return convert_frame(&decoded_frame, scaler, info);
         }
 
         // Read packets until we decode a video frame
         for (stream, packet) in input_context.packets() {
-            if stream.index() != video_stream_index {
+            if stream.index() != info.stream_index {
                 continue;
             }
             let _ = decoder.send_packet(&packet);
             if decoder.receive_frame(&mut decoded_frame).is_ok() {
-                return convert_frame(
-                    &decoded_frame,
-                    scaler,
-                    width,
-                    height,
-                    time_base_num,
-                    time_base_den,
-                );
+                return convert_frame(&decoded_frame, scaler, info);
             }
         }
 
@@ -448,10 +387,7 @@ mod ffmpeg_impl {
     fn convert_frame(
         frame: &ffmpeg::frame::Video,
         scaler: &mut ffmpeg::software::scaling::Context,
-        width: u32,
-        height: u32,
-        time_base_num: i64,
-        time_base_den: i64,
+        info: &VideoStreamInfo,
     ) -> Option<(Vec<u8>, i64)> {
         let mut rgba_frame = ffmpeg::frame::Video::empty();
         if scaler.run(frame, &mut rgba_frame).is_err() {
@@ -460,8 +396,8 @@ mod ffmpeg_impl {
 
         let data = rgba_frame.data(0);
         let stride = rgba_frame.stride(0);
-        let w = width as usize;
-        let h = height as usize;
+        let w = info.width as usize;
+        let h = info.height as usize;
 
         // Copy row-by-row in case stride != width * 4
         let mut pixels = Vec::with_capacity(w * h * 4);
@@ -475,8 +411,8 @@ mod ffmpeg_impl {
 
         // Convert frame timestamp to microseconds
         let ts = frame.timestamp().unwrap_or(0);
-        let ts_us = if time_base_num > 0 && time_base_den > 0 {
-            ts * 1_000_000 * time_base_num / time_base_den
+        let ts_us = if info.time_base_num > 0 && info.time_base_den > 0 {
+            ts * 1_000_000 * info.time_base_num / info.time_base_den
         } else {
             0
         };
