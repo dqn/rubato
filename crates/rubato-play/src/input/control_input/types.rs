@@ -41,6 +41,15 @@ pub struct ControlInputContext<'a> {
     pub now_millis: i64,
 }
 
+/// Context for scratch-input-driven value changes (cover/duration).
+pub struct ScratchInputContext<'a> {
+    pub key: usize,
+    pub up: bool,
+    pub key_states: &'a [bool],
+    pub is_analog: &'a [bool],
+    pub now_millis: i64,
+}
+
 /// Actions produced by ControlInputProcessor.input() that need to be
 /// applied by the caller (BMSPlayer).
 #[derive(Debug, Default)]

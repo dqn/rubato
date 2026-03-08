@@ -273,22 +273,26 @@ impl ControlInputProcessor {
                     }
                 }
                 2 => self.change_cover_value(
-                    i,
-                    true,
-                    key_states,
+                    &ScratchInputContext {
+                        key: i,
+                        up: true,
+                        key_states,
+                        is_analog,
+                        now_millis,
+                    },
                     lanerender,
-                    is_analog,
                     analog_diff_and_reset,
-                    now_millis,
                 ),
                 -2 => self.change_cover_value(
-                    i,
-                    false,
-                    key_states,
+                    &ScratchInputContext {
+                        key: i,
+                        up: false,
+                        key_states,
+                        is_analog,
+                        now_millis,
+                    },
                     lanerender,
-                    is_analog,
                     analog_diff_and_reset,
-                    now_millis,
                 ),
                 _ => {}
             }
@@ -327,22 +331,26 @@ impl ControlInputProcessor {
                     }
                 }
                 2 => self.change_duration(
-                    i,
-                    true,
-                    key_states,
+                    &ScratchInputContext {
+                        key: i,
+                        up: true,
+                        key_states,
+                        is_analog,
+                        now_millis,
+                    },
                     lanerender,
-                    is_analog,
                     analog_diff_and_reset,
-                    now_millis,
                 ),
                 -2 => self.change_duration(
-                    i,
-                    false,
-                    key_states,
+                    &ScratchInputContext {
+                        key: i,
+                        up: false,
+                        key_states,
+                        is_analog,
+                        now_millis,
+                    },
                     lanerender,
-                    is_analog,
                     analog_diff_and_reset,
-                    now_millis,
                 ),
                 _ => {}
             }
@@ -382,38 +390,33 @@ impl ControlInputProcessor {
     /// Change cover value by scratch input (START + Scratch).
     ///
     /// Translated from: Java changeCoverValue(int key, boolean up)
-    #[allow(clippy::too_many_arguments)]
     fn change_cover_value(
         &mut self,
-        key: usize,
-        up: bool,
-        key_states: &[bool],
+        scratch: &ScratchInputContext,
         lanerender: &mut LaneRenderer,
-        is_analog: &[bool],
         analog_diff_and_reset: &mut dyn FnMut(usize, i32) -> i32,
-        now_millis: i64,
     ) {
-        let key_is_analog = if key < is_analog.len() {
-            is_analog[key]
+        let key_is_analog = if scratch.key < scratch.is_analog.len() {
+            scratch.is_analog[scratch.key]
         } else {
             false
         };
 
         if key_is_analog {
             // analog input
-            let d_ticks = analog_diff_and_reset(key, 200) * if up { 1 } else { -1 };
+            let d_ticks = analog_diff_and_reset(scratch.key, 200) * if scratch.up { 1 } else { -1 };
             if d_ticks != 0 {
                 self.set_cover_value(d_ticks as f32 * self.cover_change_margin_low, lanerender);
             }
         } else {
             // non-analog (digital) input
-            let keystate = if key < key_states.len() {
-                key_states[key]
+            let keystate = if scratch.key < scratch.key_states.len() {
+                scratch.key_states[scratch.key]
             } else {
                 false
             };
             if keystate {
-                let l = now_millis;
+                let l = scratch.now_millis;
                 if self.lane_cover_start_timing == i64::MIN {
                     self.lane_cover_start_timing = l;
                 }
@@ -424,7 +427,7 @@ impl ControlInputProcessor {
                         } else {
                             self.cover_change_margin_low
                         };
-                    let sign = if up { 1.0 } else { -1.0 };
+                    let sign = if scratch.up { 1.0 } else { -1.0 };
                     self.set_cover_value(sign * margin, lanerender);
                     self.lanecovertiming = l;
                 }
@@ -437,42 +440,37 @@ impl ControlInputProcessor {
     /// Change duration by scratch input (SELECT + Scratch).
     ///
     /// Translated from: Java changeDuration(int key, boolean up)
-    #[allow(clippy::too_many_arguments)]
     fn change_duration(
         &mut self,
-        key: usize,
-        up: bool,
-        key_states: &[bool],
+        scratch: &ScratchInputContext,
         lanerender: &mut LaneRenderer,
-        is_analog: &[bool],
         analog_diff_and_reset: &mut dyn FnMut(usize, i32) -> i32,
-        now_millis: i64,
     ) {
-        let key_is_analog = if key < is_analog.len() {
-            is_analog[key]
+        let key_is_analog = if scratch.key < scratch.is_analog.len() {
+            scratch.is_analog[scratch.key]
         } else {
             false
         };
 
         if key_is_analog {
             // analog input
-            let d_ticks = analog_diff_and_reset(key, 200) * if up { 1 } else { -1 };
+            let d_ticks = analog_diff_and_reset(scratch.key, 200) * if scratch.up { 1 } else { -1 };
             if d_ticks != 0 {
                 let dur = lanerender.duration();
                 lanerender.set_duration(dur + d_ticks);
             }
         } else {
             // non-analog (digital) input
-            let keystate = if key < key_states.len() {
-                key_states[key]
+            let keystate = if scratch.key < scratch.key_states.len() {
+                scratch.key_states[scratch.key]
             } else {
                 false
             };
             if keystate {
-                let l = now_millis;
+                let l = scratch.now_millis;
                 if l - self.lanecovertiming > 50 {
                     let dur = lanerender.duration();
-                    lanerender.set_duration(dur + if up { 1 } else { -1 });
+                    lanerender.set_duration(dur + if scratch.up { 1 } else { -1 });
                     self.lanecovertiming = l;
                 }
             }
@@ -1282,13 +1280,15 @@ mod tests {
         // Set lanecovertiming far in the past so the >50ms check passes
         proc.lanecovertiming = 0;
         proc.change_cover_value(
-            7,
-            true,
-            &key_states,
+            &ScratchInputContext {
+                key: 7,
+                up: true,
+                key_states: &key_states,
+                is_analog: &is_analog,
+                now_millis: 1000,
+            },
             &mut lr,
-            &is_analog,
             &mut analog_fn,
-            1000,
         );
 
         // Should have adjusted lanecover by cover_change_margin_low (0.001)
@@ -1312,13 +1312,15 @@ mod tests {
         let mut analog_fn = |_key: usize, _ms: i32| -> i32 { 5 }; // 5 ticks
 
         proc.change_cover_value(
-            7,
-            true,
-            &key_states,
+            &ScratchInputContext {
+                key: 7,
+                up: true,
+                key_states: &key_states,
+                is_analog: &is_analog,
+                now_millis: 100,
+            },
             &mut lr,
-            &is_analog,
             &mut analog_fn,
-            100,
         );
 
         // d_ticks = 5 * 1 (up) = 5, setCoverValue(5 * 0.001 = 0.005)
@@ -1343,13 +1345,15 @@ mod tests {
 
         proc.lanecovertiming = 0;
         proc.change_duration(
-            7,
-            true,
-            &key_states,
+            &ScratchInputContext {
+                key: 7,
+                up: true,
+                key_states: &key_states,
+                is_analog: &is_analog,
+                now_millis: 1000,
+            },
             &mut lr,
-            &is_analog,
             &mut analog_fn,
-            1000,
         );
 
         assert_eq!(lr.duration(), initial + 1);
@@ -1371,13 +1375,15 @@ mod tests {
         let mut analog_fn = |_key: usize, _ms: i32| -> i32 { 3 }; // 3 ticks
 
         proc.change_duration(
-            7,
-            true,
-            &key_states,
+            &ScratchInputContext {
+                key: 7,
+                up: true,
+                key_states: &key_states,
+                is_analog: &is_analog,
+                now_millis: 100,
+            },
             &mut lr,
-            &is_analog,
             &mut analog_fn,
-            100,
         );
 
         // d_ticks = 3 * 1 (up) = 3
@@ -1408,25 +1414,29 @@ mod tests {
         proc.lanecovertiming = 0;
         proc.lane_cover_start_timing = i64::MIN;
         proc.change_cover_value(
-            7,
-            true,
-            &key_states,
+            &ScratchInputContext {
+                key: 7,
+                up: true,
+                key_states: &key_states,
+                is_analog: &is_analog,
+                now_millis: 1000,
+            },
             &mut lr,
-            &is_analog,
             &mut analog_fn,
-            1000,
         );
         let after_first = lr.lanecover();
 
         // Second call at t=1200 (1200 - 1000 > 100 => high margin; 1200 - lanecovertiming > 50)
         proc.change_cover_value(
-            7,
-            true,
-            &key_states,
+            &ScratchInputContext {
+                key: 7,
+                up: true,
+                key_states: &key_states,
+                is_analog: &is_analog,
+                now_millis: 1200,
+            },
             &mut lr,
-            &is_analog,
             &mut analog_fn,
-            1200,
         );
         let after_second = lr.lanecover();
 
@@ -1466,26 +1476,30 @@ mod tests {
         proc.lanecovertiming = 0;
         proc.lane_cover_start_timing = i64::MIN;
         proc.change_cover_value(
-            7,
-            true,
-            &key_states,
+            &ScratchInputContext {
+                key: 7,
+                up: true,
+                key_states: &key_states,
+                is_analog: &is_analog,
+                now_millis: 1000,
+            },
             &mut lr,
-            &is_analog,
             &mut analog_fn,
-            1000,
         );
         assert_ne!(proc.lane_cover_start_timing, i64::MIN);
 
         // Release key
         key_states[7] = false;
         proc.change_cover_value(
-            7,
-            true,
-            &key_states,
+            &ScratchInputContext {
+                key: 7,
+                up: true,
+                key_states: &key_states,
+                is_analog: &is_analog,
+                now_millis: 1200,
+            },
             &mut lr,
-            &is_analog,
             &mut analog_fn,
-            1200,
         );
         assert_eq!(proc.lane_cover_start_timing, i64::MIN);
     }
