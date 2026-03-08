@@ -235,11 +235,7 @@ impl SQLiteSongDatabaseAccessor {
             sd.file.charthash = row.get::<_, Option<String>>(28).unwrap_or(None);
             Ok(sd)
         })?;
-        let mut result = Vec::new();
-        for sd in rows.flatten() {
-            result.push(sd);
-        }
-        Ok(result)
+        Ok(rows.flatten().collect())
     }
 
     fn query_folders(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql]) -> Vec<FolderData> {
@@ -273,11 +269,7 @@ impl SQLiteSongDatabaseAccessor {
                 max: row.get::<_, i32>(9).unwrap_or(0),
             })
         })?;
-        let mut result = Vec::new();
-        for fd in rows.flatten() {
-            result.push(fd);
-        }
-        Ok(result)
+        Ok(rows.flatten().collect())
     }
 
     fn insert_song(&self, sd: &SongData) -> anyhow::Result<()> {
@@ -416,11 +408,10 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
         let sql = format!("SELECT * FROM song WHERE {}", conditions.join(" OR "));
         let param_refs: Vec<&dyn rusqlite::types::ToSql> =
             params.iter().map(|p| p.as_ref()).collect();
-        let m = self.query_songs(&sql, &param_refs);
+        let mut songs = self.query_songs(&sql, &param_refs);
 
         // Preserve search order
-        let mut sorted = m;
-        sorted.sort_by(|a, b| {
+        songs.sort_by(|a, b| {
             let mut a_index_sha256 = -1i32;
             let mut a_index_md5 = -1i32;
             let mut b_index_sha256 = -1i32;
@@ -467,7 +458,7 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
             b_index.cmp(&a_index)
         });
 
-        remove_invalid_elements_vec(sorted)
+        remove_invalid_elements_vec(songs)
     }
 
     fn song_datas_by_sql(
@@ -901,9 +892,9 @@ impl BMSFolder {
                             || s.ends_with(".flac"))
                     {
                         if s.starts_with("preview_auto_generator") {
-                            auto_preview_file = Some(filename.clone());
+                            auto_preview_file = Some(filename);
                         } else {
-                            self.previewpath = Some(filename.clone());
+                            self.previewpath = Some(filename);
                         }
                     }
                     if s.ends_with(".bms")
