@@ -267,7 +267,7 @@ impl BarContentsLoaderThread {
                 (
                     sd.file.banner.clone(),
                     sd.file.stagefile.clone(),
-                    sd.path().map(|s| s.to_string()),
+                    sd.file.path().map(|s| s.to_string()),
                 )
             });
 

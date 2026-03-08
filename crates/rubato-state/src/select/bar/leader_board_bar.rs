@@ -15,7 +15,7 @@ pub struct LeaderBoardBar {
 
 impl LeaderBoardBar {
     pub fn new(song_data: SongData, from_lr2ir: bool) -> Self {
-        let title = song_data.full_title();
+        let title = song_data.metadata.full_title();
         Self {
             directory: DirectoryBarData::default(),
             song_data,

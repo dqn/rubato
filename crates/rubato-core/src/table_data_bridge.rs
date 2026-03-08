@@ -33,7 +33,7 @@ pub fn bms_table_element_to_song_data(
         song.metadata.title = title.to_string();
     }
     if let Some(artist) = te.artist() {
-        song.set_artist(artist.to_string());
+        song.metadata.set_artist(artist.to_string());
     }
 
     // Resolve mode: element mode takes precedence, then default_mode
@@ -229,7 +229,7 @@ mod tests {
 
         let song = bms_table_element_to_song_data(&te, None);
 
-        assert_eq!(song.org_md5_vec(), &["hash1", "hash2"]);
+        assert_eq!(song.file.org_md5_vec(), &["hash1", "hash2"]);
     }
 
     // ========================================

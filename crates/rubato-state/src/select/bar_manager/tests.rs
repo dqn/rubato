@@ -5,7 +5,7 @@ fn make_song_data(sha256: &str, path: Option<&str>) -> SongData {
     let mut sd = SongData::default();
     sd.file.sha256 = sha256.to_string();
     if let Some(p) = path {
-        sd.set_path(p.to_string());
+        sd.file.set_path(p.to_string());
     }
     sd
 }
@@ -316,7 +316,7 @@ fn test_loader_loads_banner_via_pool() {
     std::fs::write(&song_file, b"").unwrap();
     let mut sd = SongData::default();
     sd.file.sha256 = "bannerhash".to_string();
-    sd.set_path(song_file.to_string_lossy().to_string());
+    sd.file.set_path(song_file.to_string_lossy().to_string());
     sd.file.banner = "banner.png".to_string();
     let mut bars = vec![Bar::Song(Box::new(SongBar::new(sd)))];
 
@@ -354,7 +354,7 @@ fn test_loader_loads_stagefile_via_pool() {
     std::fs::write(&song_file, b"").unwrap();
     let mut sd = SongData::default();
     sd.file.sha256 = "stagefilehash".to_string();
-    sd.set_path(song_file.to_string_lossy().to_string());
+    sd.file.set_path(song_file.to_string_lossy().to_string());
     sd.file.stagefile = "stagefile.png".to_string();
     let mut bars = vec![Bar::Song(Box::new(SongBar::new(sd)))];
 
@@ -391,7 +391,7 @@ fn test_loader_no_pool_skips_banner_loading() {
     std::fs::write(&song_file, b"").unwrap();
     let mut sd = SongData::default();
     sd.file.sha256 = "nopoolhash".to_string();
-    sd.set_path(song_file.to_string_lossy().to_string());
+    sd.file.set_path(song_file.to_string_lossy().to_string());
     sd.file.banner = "banner.png".to_string();
     let mut bars = vec![Bar::Song(Box::new(SongBar::new(sd)))];
 
@@ -424,7 +424,7 @@ fn test_loader_nonexistent_banner_file_not_loaded() {
     std::fs::write(&song_file, b"").unwrap();
     let mut sd = SongData::default();
     sd.file.sha256 = "missinghash".to_string();
-    sd.set_path(song_file.to_string_lossy().to_string());
+    sd.file.set_path(song_file.to_string_lossy().to_string());
     sd.file.banner = "banner.png".to_string();
     let mut bars = vec![Bar::Song(Box::new(SongBar::new(sd)))];
 
@@ -715,7 +715,7 @@ fn test_get_selected_with_songs() {
     let selected = manager.selected().unwrap();
     assert_eq!(
         selected.title(),
-        make_song_data("def", Some("/d.bms")).full_title()
+        make_song_data("def", Some("/d.bms")).metadata.full_title()
     );
 }
 

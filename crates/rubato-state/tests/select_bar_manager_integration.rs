@@ -26,7 +26,7 @@ fn make_song_data(sha256: &str, title: &str, artist: &str, path: &str) -> SongDa
     sd.file.sha256 = sha256.to_string();
     sd.metadata.title = title.to_string();
     sd.metadata.artist = artist.to_string();
-    sd.set_path(path.to_string());
+    sd.file.set_path(path.to_string());
     sd
 }
 

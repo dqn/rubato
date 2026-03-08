@@ -648,7 +648,7 @@ impl BarManager {
                         .filter_map(|b| {
                             b.as_song_bar().and_then(|sb| {
                                 let sd = sb.song_data();
-                                if sd.path().is_some() {
+                                if sd.file.path().is_some() {
                                     Some(sd.clone())
                                 } else {
                                     None

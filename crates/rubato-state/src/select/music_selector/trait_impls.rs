@@ -493,7 +493,7 @@ impl MainState for MusicSelector {
                         // Java: spawns thread to call resource.loadBMSModel(path, lnmode)
                         // and sets result on SongData for the density graph.
                         // Rust: load synchronously (BMS parsing is fast).
-                        let path = song_bar.song_data().path().map(std::path::PathBuf::from);
+                        let path = song_bar.song_data().file.path().map(std::path::PathBuf::from);
                         let lnmode = self.config.play_settings.lnmode;
                         if let Some(path) = path
                             && let Some((model, _margin)) =
@@ -562,7 +562,7 @@ impl MainState for MusicSelector {
                             let chart = IRChartData::new(song);
                             let local_score = main.read_score_data_by_hash(
                                 &song.file.sha256,
-                                song.has_long_note(),
+                                song.chart.has_long_note(),
                                 lnmode,
                             );
                             rd.load_song(conn_arc.as_ref(), &chart, local_score.as_ref());
@@ -709,7 +709,7 @@ impl MainState for MusicSelector {
                         .filter_map(|bar| {
                             bar.as_song_bar()
                                 .filter(|sb| sb.exists_song())
-                                .and_then(|sb| sb.song_data().path())
+                                .and_then(|sb| sb.song_data().file.path())
                                 .map(PathBuf::from)
                         })
                         .collect();

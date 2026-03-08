@@ -72,7 +72,7 @@ impl MusicSelector {
         res.clear();
 
         // resource.setBMSFile(path, play)
-        let path_str = match song.path() {
+        let path_str = match song.file.path() {
             Some(p) => p,
             None => {
                 ImGuiNotify::error("Failed to loading BMS : Song not found, or Song has error");
@@ -241,7 +241,7 @@ impl MusicSelector {
             ChartReplicationMode::ReplayChart | ChartReplicationMode::ReplayOption => {
                 let sd = songdata?;
                 let sha256 = &sd.file.sha256;
-                let has_ln = sd.has_undefined_long_note();
+                let has_ln = sd.chart.has_undefined_long_note();
                 let replay = main.read_replay_data(
                     sha256,
                     has_ln,

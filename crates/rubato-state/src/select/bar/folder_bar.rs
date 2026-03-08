@@ -265,7 +265,7 @@ mod tests {
         let mut song = SongData::default();
         song.metadata.title = "Test Song".to_string();
         song.file.sha256 = "test_sha256".to_string();
-        song.set_path("song_dir/file.bms".to_string());
+        song.file.set_path("song_dir/file.bms".to_string());
 
         let folder = FolderData {
             title: "bms".to_string(),

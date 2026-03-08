@@ -371,7 +371,7 @@ impl MusicSelector {
         let songs = gb.song_datas();
         let files: Vec<PathBuf> = songs
             .iter()
-            .filter_map(|s| s.path().map(PathBuf::from))
+            .filter_map(|s| s.file.path().map(PathBuf::from))
             .collect();
 
         if files.len() != songs.len() {

@@ -17,7 +17,7 @@ fn make_song(sha256: &str, title: &str, path: &str) -> SongData {
     let mut sd = SongData::new();
     sd.file.sha256 = sha256.to_string();
     sd.metadata.title = title.to_string();
-    sd.set_path(path.to_string());
+    sd.file.set_path(path.to_string());
     sd
 }
 
@@ -49,7 +49,7 @@ fn insert_and_query_song() {
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].metadata.title, "Test Song");
     assert_eq!(results[0].file.sha256, "abc123");
-    assert_eq!(results[0].path(), Some("songs/test.bms"));
+    assert_eq!(results[0].file.path(), Some("songs/test.bms"));
 }
 
 #[test]
@@ -114,6 +114,6 @@ fn reopen_preserves_data() {
         let results = accessor.song_datas("sha256", "persist_sha256");
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].metadata.title, "Persistent Song");
-        assert_eq!(results[0].path(), Some("songs/persist.bms"));
+        assert_eq!(results[0].file.path(), Some("songs/persist.bms"));
     }
 }

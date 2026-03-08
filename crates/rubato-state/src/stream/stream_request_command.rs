@@ -121,11 +121,11 @@ impl UpdateBar {
                     > 1
             {
                 // Already added, skip
-                ImGuiNotify::warning(&format!("{} has already been added", data.full_title()));
+                ImGuiNotify::warning(&format!("{} has already been added", data.metadata.full_title()));
             }
             ImGuiNotify::info(&format!(
                 "Added {} to stream request list",
-                data.full_title()
+                data.metadata.full_title()
             ));
         } else {
             ImGuiNotify::warning("Doesn't have requested song in collection");

@@ -176,7 +176,7 @@ impl MusicSelectCommand {
                                 .is_some_and(|b| matches!(**b, Bar::SameFolder(_)));
                             if !already_in_same_folder {
                                 let sd = song_bar.song_data();
-                                let same = SameFolderBar::new(sd.full_title(), sd.folder.clone());
+                                let same = SameFolderBar::new(sd.metadata.full_title(), sd.folder.clone());
                                 let bar = Bar::SameFolder(Box::new(same));
                                 selector.update_bar_with_songdb_context(Some(&bar));
                                 selector.play_sound(SoundType::FolderOpen);

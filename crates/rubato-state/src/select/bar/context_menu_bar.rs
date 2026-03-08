@@ -105,7 +105,7 @@ impl ContextMenuBar {
 
     pub fn children(&self, tables: &[TableBar], songdb: &dyn SongDatabaseAccessor) -> Vec<Bar> {
         if let Some(ref song) = self.song {
-            if song.path().is_some() {
+            if song.file.path().is_some() {
                 return self.song_context(tables, songdb);
             } else {
                 return self.missing_song_context(tables);
@@ -169,7 +169,7 @@ impl ContextMenuBar {
 
         // Related — navigate to SameFolderBar showing same-folder songs
         {
-            let song_title = song.full_title();
+            let song_title = song.metadata.full_title();
             let song_folder = song.folder.clone();
             let mut related = FunctionBar::new("Related".to_string(), STYLE_TABLE);
             let title_clone = song_title.clone();
@@ -189,7 +189,7 @@ impl ContextMenuBar {
         // Open Song Folder
         let mut open_folder = FunctionBar::new("Open Song Folder".to_string(), STYLE_FOLDER);
         {
-            let song_path = song.path().map(|p| p.to_string());
+            let song_path = song.file.path().map(|p| p.to_string());
             open_folder.set_function(Arc::new(move |_selector| {
                 if let Some(ref path) = song_path
                     && let Some(parent) = std::path::Path::new(path).parent()
@@ -536,7 +536,7 @@ impl ContextMenuBar {
             }
 
             // Copy Path
-            if let Some(path) = song.path() {
+            if let Some(path) = song.file.path() {
                 let path_str = path.to_string();
                 let mut copy_path = FunctionBar::new_with_text_type(
                     "Copy Path".to_string(),
@@ -661,7 +661,7 @@ impl ContextMenuBar {
     ) -> Vec<i32> {
         let mut lamps = vec![0i32; 11];
         for song in songs {
-            if song.path().is_none() {
+            if song.file.path().is_none() {
                 continue;
             }
             if let Some(m) = mode

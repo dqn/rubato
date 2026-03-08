@@ -38,7 +38,7 @@ impl GradeBar {
 
     pub fn exists_all_songs(&self) -> bool {
         for song in &self.course.hash {
-            if song.path().is_none() {
+            if song.file.path().is_none() {
                 return false;
             }
         }

@@ -11,7 +11,7 @@ pub struct SongBar {
     pub selectable: SelectableBarData,
     /// Song data
     pub song: SongData,
-    /// Cached title (computed from song.full_title())
+    /// Cached title (computed from song.metadata.full_title())
     title: String,
     /// Banner data
     pub banner: Option<Pixmap>,
@@ -21,7 +21,7 @@ pub struct SongBar {
 
 impl SongBar {
     pub fn new(song: SongData) -> Self {
-        let title = song.full_title();
+        let title = song.metadata.full_title();
         Self {
             selectable: SelectableBarData::default(),
             title,
@@ -36,7 +36,7 @@ impl SongBar {
     }
 
     pub fn exists_song(&self) -> bool {
-        self.song.path().is_some()
+        self.song.file.path().is_some()
     }
 
     pub fn banner(&self) -> Option<&Pixmap> {
@@ -94,7 +94,7 @@ impl SongBar {
         let mut noexistscount = elements.len() as i32;
 
         for element in elements.iter_mut() {
-            element.clear_path();
+            element.file.clear_path();
         }
 
         for i in 0..songs.len() {
@@ -119,7 +119,7 @@ impl SongBar {
                 }
             }
             for element in elements.iter_mut() {
-                if element.path().is_none()
+                if element.file.path().is_none()
                     && ((!element.file.md5.is_empty()
                         && element.file.md5
                             == songs[i]
@@ -138,9 +138,9 @@ impl SongBar {
                     let song_path = songs[i]
                         .as_ref()
                         .expect("song is Some after is_none guard")
-                        .path()
+                        .file.path()
                         .map(|s| s.to_string());
-                    element.set_path_opt(song_path);
+                    element.file.set_path_opt(song_path);
                     if let Some(ref _song) = songs[i] {
                         let elem_clone = element.clone();
                         songs[i]
@@ -164,7 +164,7 @@ impl SongBar {
             result.push(Bar::Song(Box::new(SongBar::new(song.clone()))));
         }
         for element in elements.iter().rev() {
-            if element.path().is_none() {
+            if element.file.path().is_none() {
                 result.push(Bar::Song(Box::new(SongBar::new(element.clone()))));
             }
         }

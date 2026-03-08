@@ -212,7 +212,7 @@ impl SQLiteSongDatabaseAccessor {
             sd.metadata.subartist = row.get::<_, String>(6).unwrap_or_default();
             sd.metadata.tag = row.get::<_, String>(7).unwrap_or_default();
             let path: String = row.get::<_, String>(8).unwrap_or_default();
-            sd.set_path(path);
+            sd.file.set_path(path);
             sd.folder = row.get::<_, String>(9).unwrap_or_default();
             sd.file.stagefile = row.get::<_, String>(10).unwrap_or_default();
             sd.file.banner = row.get::<_, String>(11).unwrap_or_default();
@@ -293,7 +293,7 @@ impl SQLiteSongDatabaseAccessor {
                     "artist" => rusqlite::types::Value::Text(sd.metadata.artist.clone()),
                     "subartist" => rusqlite::types::Value::Text(sd.metadata.subartist.clone()),
                     "tag" => rusqlite::types::Value::Text(sd.metadata.tag.clone()),
-                    "path" => rusqlite::types::Value::Text(sd.path().unwrap_or("").to_string()),
+                    "path" => rusqlite::types::Value::Text(sd.file.path().unwrap_or("").to_string()),
                     "folder" => rusqlite::types::Value::Text(sd.folder.clone()),
                     "stagefile" => rusqlite::types::Value::Text(sd.file.stagefile.clone()),
                     "banner" => rusqlite::types::Value::Text(sd.file.banner.clone()),
@@ -1081,7 +1081,7 @@ impl BMSFolder {
             let mut update = true;
             for record in records.iter_mut() {
                 let matched = if let Some(rec) = record.as_ref() {
-                    rec.path() == Some(&pathname)
+                    rec.file.path() == Some(&pathname)
                 } else {
                     false
                 };
@@ -1220,7 +1220,7 @@ impl BMSFolder {
                 }
 
                 sd.metadata.tag = tag;
-                sd.set_path(pathname.clone());
+                sd.file.set_path(pathname.clone());
 
                 if let Some(parent_path) = bmsfile_path.parent() {
                     sd.folder =
@@ -1260,7 +1260,7 @@ impl BMSFolder {
         // Delete records that no longer exist in directory
         // (matches Java: records.parallelStream().filter(Objects::nonNull).forEach(...))
         records.par_iter().flatten().for_each(|record| {
-            if let Some(path) = record.path() {
+            if let Some(path) = record.file.path() {
                 let conn = accessor.conn.lock().expect("conn lock poisoned");
                 let _ = conn.execute("DELETE FROM song WHERE path = ?1", rusqlite::params![path]);
             }
@@ -1291,7 +1291,7 @@ mod tests {
         sd.file.md5 = md5.to_string();
         sd.file.sha256 = sha256.to_string();
         sd.metadata.title = title.to_string();
-        sd.set_path(format!("test/{}.bms", title));
+        sd.file.set_path(format!("test/{}.bms", title));
         sd
     }
 

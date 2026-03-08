@@ -1113,7 +1113,7 @@ impl rubato_song::md_processor::music_database_accessor::MusicDatabaseAccessor
         let songs = self.songdb.song_datas_by_hashes(md5);
         songs
             .iter()
-            .filter_map(|s| s.path().map(|p| p.to_string()))
+            .filter_map(|s| s.file.path().map(|p| p.to_string()))
             .collect()
     }
 }

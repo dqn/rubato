@@ -828,7 +828,7 @@ mod tests {
         let mut sd = SongData::default();
         sd.file.sha256 = sha256.to_string();
         if let Some(p) = path {
-            sd.set_path(p.to_string());
+            sd.file.set_path(p.to_string());
         }
         sd
     }
@@ -1002,7 +1002,7 @@ mod tests {
         // Create a song bar with a non-empty title
         let mut sd = SongData::default();
         sd.file.sha256 = "abc".to_string();
-        sd.set_path("/path.bms".to_string());
+        sd.file.set_path("/path.bms".to_string());
         sd.metadata.title = "Test Song Title".to_string();
         let songs = vec![Bar::Song(Box::new(SongBar::new(sd)))];
 

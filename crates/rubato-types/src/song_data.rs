@@ -392,118 +392,6 @@ impl SongData {
         self.model.as_ref()
     }
 
-    // --- Delegation methods for FileInfo ---
-
-    pub fn path(&self) -> Option<&str> {
-        self.file.path()
-    }
-
-    pub fn set_path(&mut self, path: String) {
-        self.file.set_path(path);
-    }
-
-    pub fn clear_path(&mut self) {
-        self.file.clear_path();
-    }
-
-    pub fn set_path_opt(&mut self, path: Option<String>) {
-        self.file.set_path_opt(path);
-    }
-
-    pub fn add_another_path(&mut self, path: String) {
-        self.file.add_another_path(path);
-    }
-
-    pub fn all_paths(&self) -> &[String] {
-        self.file.all_paths()
-    }
-
-    pub fn org_md5_vec(&self) -> &[String] {
-        self.file.org_md5_vec()
-    }
-
-    // --- Delegation methods for SongMetadata ---
-
-    pub fn set_title(&mut self, title: String) {
-        self.metadata.set_title(title);
-    }
-
-    pub fn set_subtitle(&mut self, subtitle: String) {
-        self.metadata.set_subtitle(subtitle);
-    }
-
-    pub fn full_title_cached(&mut self) -> &str {
-        self.metadata.full_title_cached()
-    }
-
-    pub fn full_title(&self) -> String {
-        self.metadata.full_title()
-    }
-
-    pub fn set_artist(&mut self, artist: String) {
-        self.metadata.set_artist(artist);
-    }
-
-    pub fn set_subartist(&mut self, subartist: String) {
-        self.metadata.set_subartist(subartist);
-    }
-
-    pub fn full_artist(&mut self) -> &str {
-        self.metadata.full_artist()
-    }
-
-    // --- Delegation methods for ChartInfo ---
-
-    pub fn has_document(&self) -> bool {
-        self.chart.has_document()
-    }
-
-    pub fn has_bga(&self) -> bool {
-        self.chart.has_bga()
-    }
-
-    pub fn has_preview(&self) -> bool {
-        self.chart.has_preview()
-    }
-
-    pub fn has_random_sequence(&self) -> bool {
-        self.chart.has_random_sequence()
-    }
-
-    pub fn has_mine_note(&self) -> bool {
-        self.chart.has_mine_note()
-    }
-
-    pub fn has_undefined_long_note(&self) -> bool {
-        self.chart.has_undefined_long_note()
-    }
-
-    pub fn has_long_note(&self) -> bool {
-        self.chart.has_long_note()
-    }
-
-    pub fn has_charge_note(&self) -> bool {
-        self.chart.has_charge_note()
-    }
-
-    pub fn has_hell_charge_note(&self) -> bool {
-        self.chart.has_hell_charge_note()
-    }
-
-    pub fn has_any_long_note(&self) -> bool {
-        self.chart.has_any_long_note()
-    }
-
-    pub fn is_bpmstop(&self) -> bool {
-        self.chart.is_bpmstop()
-    }
-
-    pub fn has_scroll_change(&self) -> bool {
-        self.chart.has_scroll_change()
-    }
-
-    // --- Remaining methods on SongData ---
-
     pub fn url(&self) -> &str {
         self.url.as_deref().unwrap_or("")
     }
@@ -762,10 +650,10 @@ mod tests {
     fn test_field_accessors() {
         let mut sd = SongData::new();
         sd.metadata.title = "My Title".to_string();
-        sd.set_subtitle("Sub".to_string());
+        sd.metadata.set_subtitle("Sub".to_string());
         sd.metadata.genre = "Pop".to_string();
-        sd.set_artist("Artist A".to_string());
-        sd.set_subartist("Sub B".to_string());
+        sd.metadata.set_artist("Artist A".to_string());
+        sd.metadata.set_subartist("Sub B".to_string());
         sd.file.md5 = "md5hash".to_string();
         sd.file.sha256 = "sha256hash".to_string();
         sd.set_url("https://url.com".to_string());
@@ -790,11 +678,11 @@ mod tests {
     fn test_full_title_with_subtitle() {
         let mut sd = SongData::new();
         sd.metadata.title = "Main".to_string();
-        sd.set_subtitle("Extra".to_string());
+        sd.metadata.set_subtitle("Extra".to_string());
 
-        assert_eq!(sd.full_title(), "Main Extra");
+        assert_eq!(sd.metadata.full_title(), "Main Extra");
         // Also test the mutable caching version
-        assert_eq!(sd.full_title(), "Main Extra");
+        assert_eq!(sd.metadata.full_title(), "Main Extra");
     }
 
     #[test]
@@ -802,62 +690,62 @@ mod tests {
         let mut sd = SongData::new();
         sd.metadata.title = "Main".to_string();
 
-        assert_eq!(sd.full_title(), "Main");
-        assert_eq!(sd.full_title(), "Main");
+        assert_eq!(sd.metadata.full_title(), "Main");
+        assert_eq!(sd.metadata.full_title(), "Main");
     }
 
     #[test]
     fn test_full_title_cache_invalidation() {
         let mut sd = SongData::new();
-        sd.set_title("A".to_string());
-        sd.set_subtitle("B".to_string());
-        assert_eq!(sd.full_title(), "A B");
+        sd.metadata.set_title("A".to_string());
+        sd.metadata.set_subtitle("B".to_string());
+        assert_eq!(sd.metadata.full_title(), "A B");
 
         // Changing title should invalidate cache
-        sd.set_title("C".to_string());
-        assert_eq!(sd.full_title(), "C B");
+        sd.metadata.set_title("C".to_string());
+        assert_eq!(sd.metadata.full_title(), "C B");
 
         // Changing subtitle should invalidate cache
-        sd.set_subtitle("D".to_string());
-        assert_eq!(sd.full_title(), "C D");
+        sd.metadata.set_subtitle("D".to_string());
+        assert_eq!(sd.metadata.full_title(), "C D");
     }
 
     #[test]
     fn test_full_artist() {
         let mut sd = SongData::new();
-        sd.set_artist("Artist".to_string());
-        sd.set_subartist("Sub".to_string());
-        assert_eq!(sd.full_artist(), "Artist Sub");
+        sd.metadata.set_artist("Artist".to_string());
+        sd.metadata.set_subartist("Sub".to_string());
+        assert_eq!(sd.metadata.full_artist(), "Artist Sub");
 
-        sd.set_subartist("".to_string());
-        assert_eq!(sd.full_artist(), "Artist");
+        sd.metadata.set_subartist("".to_string());
+        assert_eq!(sd.metadata.full_artist(), "Artist");
     }
 
     #[test]
     fn test_path_operations() {
         let mut sd = SongData::new();
-        assert!(sd.path().is_none());
+        assert!(sd.file.path().is_none());
 
-        sd.set_path("/songs/test.bms".to_string());
-        assert_eq!(sd.path(), Some("/songs/test.bms"));
+        sd.file.set_path("/songs/test.bms".to_string());
+        assert_eq!(sd.file.path(), Some("/songs/test.bms"));
 
-        sd.add_another_path("/songs/test2.bms".to_string());
-        assert_eq!(sd.all_paths().len(), 2);
-        assert_eq!(sd.all_paths()[1], "/songs/test2.bms");
+        sd.file.add_another_path("/songs/test2.bms".to_string());
+        assert_eq!(sd.file.all_paths().len(), 2);
+        assert_eq!(sd.file.all_paths()[1], "/songs/test2.bms");
 
-        sd.clear_path();
-        assert!(sd.path().is_none());
-        assert!(sd.all_paths().is_empty());
+        sd.file.clear_path();
+        assert!(sd.file.path().is_none());
+        assert!(sd.file.all_paths().is_empty());
     }
 
     #[test]
     fn test_set_path_opt() {
         let mut sd = SongData::new();
-        sd.set_path_opt(Some("/songs/a.bms".to_string()));
-        assert_eq!(sd.path(), Some("/songs/a.bms"));
+        sd.file.set_path_opt(Some("/songs/a.bms".to_string()));
+        assert_eq!(sd.file.path(), Some("/songs/a.bms"));
 
-        sd.set_path_opt(None);
-        assert!(sd.path().is_none());
+        sd.file.set_path_opt(None);
+        assert!(sd.file.path().is_none());
     }
 
     #[test]
@@ -865,16 +753,16 @@ mod tests {
         let mut sd = SongData::new();
         sd.chart.feature = FEATURE_LONGNOTE | FEATURE_MINENOTE | FEATURE_STOPSEQUENCE;
 
-        assert!(sd.has_long_note());
-        assert!(sd.has_mine_note());
-        assert!(sd.is_bpmstop());
-        assert!(sd.has_any_long_note());
+        assert!(sd.chart.has_long_note());
+        assert!(sd.chart.has_mine_note());
+        assert!(sd.chart.is_bpmstop());
+        assert!(sd.chart.has_any_long_note());
 
-        assert!(!sd.has_undefined_long_note());
-        assert!(!sd.has_charge_note());
-        assert!(!sd.has_hell_charge_note());
-        assert!(!sd.has_random_sequence());
-        assert!(!sd.has_scroll_change());
+        assert!(!sd.chart.has_undefined_long_note());
+        assert!(!sd.chart.has_charge_note());
+        assert!(!sd.chart.has_hell_charge_note());
+        assert!(!sd.chart.has_random_sequence());
+        assert!(!sd.chart.has_scroll_change());
     }
 
     #[test]
@@ -882,9 +770,9 @@ mod tests {
         let mut sd = SongData::new();
         sd.chart.content = CONTENT_TEXT | CONTENT_BGA;
 
-        assert!(sd.has_document());
-        assert!(sd.has_bga());
-        assert!(!sd.has_preview());
+        assert!(sd.chart.has_document());
+        assert!(sd.chart.has_bga());
+        assert!(!sd.chart.has_preview());
     }
 
     #[test]
@@ -929,15 +817,15 @@ mod tests {
     fn test_shrink() {
         let mut sd = SongData::new();
         sd.metadata.title = "Title".to_string();
-        sd.set_subtitle("Sub".to_string());
-        sd.set_path("/path".to_string());
+        sd.metadata.set_subtitle("Sub".to_string());
+        sd.file.set_path("/path".to_string());
         sd.chart.level = 10;
         sd.chart.notes = 500;
         sd.file.preview = "preview.ogg".to_string();
 
         sd.shrink();
 
-        assert!(sd.all_paths().is_empty());
+        assert!(sd.file.all_paths().is_empty());
         assert_eq!(sd.chart.level, 0);
         assert_eq!(sd.chart.notes, 0);
         assert!(sd.file.preview.is_empty());
@@ -974,12 +862,12 @@ mod tests {
     #[test]
     fn test_org_md5_accessor() {
         let sd = SongData::new();
-        assert!(sd.org_md5_vec().is_empty());
+        assert!(sd.file.org_md5_vec().is_empty());
 
         let mut sd2 = SongData::new();
         sd2.file.org_md5 = Some(vec!["md5a".to_string(), "md5b".to_string()]);
-        assert_eq!(sd2.org_md5_vec().len(), 2);
-        assert_eq!(sd2.org_md5_vec()[0], "md5a");
+        assert_eq!(sd2.file.org_md5_vec().len(), 2);
+        assert_eq!(sd2.file.org_md5_vec()[0], "md5a");
     }
 
     #[test]

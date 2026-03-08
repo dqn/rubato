@@ -381,7 +381,7 @@ impl FolderEditorView {
                 .show(ui, |ui| {
                     for (i, song) in self.folder_songs.iter().enumerate() {
                         let selected = self.folder_songs_selected_index == Some(i);
-                        let label = format!("{} [{}]", song.full_title(), &song.file.sha256);
+                        let label = format!("{} [{}]", song.metadata.full_title(), &song.file.sha256);
                         if ui.selectable_label(selected, &label).clicked() {
                             self.folder_songs_selected_index = Some(i);
                         }
@@ -418,7 +418,7 @@ impl FolderEditorView {
                         .any(|s| s.file.sha256 == song.file.sha256 && s.file.md5 == song.file.md5);
                     let label = format!(
                         "{} - {} [{}]",
-                        song.full_title(),
+                        song.metadata.full_title(),
                         song.metadata.artist,
                         &song.file.sha256,
                     );

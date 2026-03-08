@@ -307,7 +307,7 @@ impl MusicSelector {
                         let path = fd.path().to_string();
                         main.update_song(Some(&path));
                     } else if let Some(songbar) = selected.as_song_bar()
-                        && let Some(path) = songbar.song_data().path()
+                        && let Some(path) = songbar.song_data().file.path()
                         && let Some(parent) =
                             std::path::Path::new(path).parent().and_then(|p| p.to_str())
                     {
@@ -320,7 +320,7 @@ impl MusicSelector {
             }
             EventType::OpenDocument => {
                 if let Some(songbar) = self.manager.selected().and_then(|b| b.as_song_bar())
-                    && let Some(path) = songbar.song_data().path()
+                    && let Some(path) = songbar.song_data().file.path()
                     && let Some(parent) = std::path::Path::new(path).parent()
                     && let Ok(entries) = std::fs::read_dir(parent)
                 {
@@ -338,7 +338,7 @@ impl MusicSelector {
             }
             EventType::OpenWithExplorer => {
                 if let Some(songbar) = self.manager.selected().and_then(|b| b.as_song_bar())
-                    && let Some(path) = songbar.song_data().path()
+                    && let Some(path) = songbar.song_data().file.path()
                     && let Some(parent) = std::path::Path::new(path).parent()
                     && let Err(e) = open::that(parent)
                 {

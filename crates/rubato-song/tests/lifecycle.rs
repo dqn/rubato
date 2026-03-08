@@ -15,7 +15,7 @@ fn make_song(sha256: &str, title: &str, path: &str) -> SongData {
     let mut sd = SongData::new();
     sd.file.sha256 = sha256.to_string();
     sd.metadata.title = title.to_string();
-    sd.set_path(path.to_string());
+    sd.file.set_path(path.to_string());
     sd
 }
 

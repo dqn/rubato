@@ -73,7 +73,7 @@ fn make_song_data(sha256: &str, path: Option<&str>) -> SongData {
     let mut sd = SongData::default();
     sd.file.sha256 = sha256.to_string();
     if let Some(p) = path {
-        sd.set_path(p.to_string());
+        sd.file.set_path(p.to_string());
     }
     sd
 }
@@ -1369,7 +1369,7 @@ fn test_directory_autoplay_path_extraction_from_container_bar() {
             .filter_map(|bar| {
                 bar.as_song_bar()
                     .filter(|sb| sb.exists_song())
-                    .and_then(|sb| sb.song_data().path())
+                    .and_then(|sb| sb.song_data().file.path())
                     .map(PathBuf::from)
             })
             .collect()

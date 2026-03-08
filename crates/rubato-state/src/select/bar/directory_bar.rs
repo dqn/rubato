@@ -89,7 +89,7 @@ impl DirectoryBarData {
     ) {
         self.clear();
         for song in songs {
-            if song.path().is_none() {
+            if song.file.path().is_none() {
                 continue;
             }
             if let Some(m) = mode

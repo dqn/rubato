@@ -667,7 +667,7 @@ fn populate_song_db(songdb_path: &str, bmsroot: &str, songs: &[(&str, &str, i32)
             // SongData::validate() requires title to be non-empty
             sd.metadata.title = "test".to_string();
             // Each song needs a unique path (primary key in song table)
-            sd.set_path(format!("/test/song_{i}.bms"));
+            sd.file.set_path(format!("/test/song_{i}.bms"));
             sd
         })
         .collect();

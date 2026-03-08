@@ -125,7 +125,7 @@ mod tests {
         let mut db_song = SongData::default();
         db_song.metadata.title = "DB Song".to_string();
         db_song.file.sha256 = "hash_abc".to_string();
-        db_song.set_path("test/path.bms".to_string());
+        db_song.file.set_path("test/path.bms".to_string());
 
         let db = MockSongDb::new(vec![db_song]);
         let bar = HashBar::new("Test Hash".to_string(), vec![element]);
