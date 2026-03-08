@@ -5,7 +5,7 @@
 // accessors.
 
 use rubato_core::config::Config;
-use rubato_core::play_data_accessor::PlayDataAccessor;
+use rubato_core::play_data_accessor::{PlayDataAccessor, ScoreWriteContext};
 use rubato_core::score_data::ScoreData;
 
 /// Helper: create a Config pointing at a tempdir with the given player name.
@@ -89,7 +89,17 @@ fn write_then_read_score() {
 
     // contains_undefined_ln = false, total_notes = 305, lnmode = 0,
     // update_score = true, last_note_time_us = 120_000_000 (2 min)
-    accessor.write_score_data(&newscore, hash, false, 305, 0, true, 120_000_000);
+    accessor.write_score_data(
+        &newscore,
+        &ScoreWriteContext {
+            hash,
+            contains_undefined_ln: false,
+            total_notes: 305,
+            lnmode: 0,
+            update_score: true,
+            last_note_time_us: 120_000_000,
+        },
+    );
 
     let restored = accessor
         .read_score_data_by_hash(hash, false, 0)

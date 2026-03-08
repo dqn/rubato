@@ -1,3 +1,13 @@
+/// Lane region geometry and rendering metadata.
+pub struct LaneRegion {
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+    pub scale: f32,
+    pub dstnote2: i32,
+}
+
 /// Note skin object
 pub struct SkinNote {
     lanes: Vec<SkinLane>,
@@ -73,24 +83,14 @@ impl SkinNote {
         SkinNote { lanes, time: 0 }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn set_lane_region(
-        &mut self,
-        index: usize,
-        x: f32,
-        y: f32,
-        width: f32,
-        height: f32,
-        scale: f32,
-        dstnote2: i32,
-    ) {
+    pub fn set_lane_region(&mut self, index: usize, region: &LaneRegion) {
         if index < self.lanes.len() {
-            self.lanes[index].region_x = x;
-            self.lanes[index].region_y = y;
-            self.lanes[index].region_width = width;
-            self.lanes[index].region_height = height;
-            self.lanes[index].scale = scale;
-            self.lanes[index].dstnote2 = dstnote2;
+            self.lanes[index].region_x = region.x;
+            self.lanes[index].region_y = region.y;
+            self.lanes[index].region_width = region.width;
+            self.lanes[index].region_height = region.height;
+            self.lanes[index].scale = region.scale;
+            self.lanes[index].dstnote2 = region.dstnote2;
         }
     }
 

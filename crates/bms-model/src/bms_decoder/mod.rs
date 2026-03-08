@@ -526,15 +526,18 @@ impl BMSDecoder {
             let empty_lines: Vec<String> = Vec::new();
             let lines_ref = self.lines[i].as_deref().unwrap_or(&empty_lines);
             let is_first = i == 0;
+            let tables = section::SectionLookupTables {
+                bpm: &self.bpmtable,
+                stop: &self.stoptable,
+                scroll: &self.scrolltable,
+            };
             let section = Section::new(
                 &mut model,
                 prev_sectionnum,
                 prev_rate,
                 is_first,
                 lines_ref,
-                &self.bpmtable,
-                &self.stoptable,
-                &self.scrolltable,
+                &tables,
                 &mut self.log,
             );
             prev_sectionnum = section.sectionnum();
@@ -551,11 +554,14 @@ impl BMSDecoder {
         basetl.bpm = model.bpm;
         tlcache.insert(f64_to_key(0.0), TimeLineCache::new(0.0, basetl));
 
+        let tl_maps = section::TimeLineMaps {
+            wavmap: &self.wm,
+            bgamap: &self.bm,
+        };
         for section in &sections {
             section.make_time_lines(
                 &mut model,
-                &self.wm,
-                &self.bm,
+                &tl_maps,
                 &mut tlcache,
                 &mut lnlist,
                 &mut lnendstatus,

@@ -27,6 +27,20 @@ pub const LOSE: i32 = 13;
 pub const OJAMA: i32 = 14;
 pub const DANCE: i32 = 15;
 
+/// Destination parameters for Pomyu character rendering.
+pub struct PomyuCharaDestination {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+    pub side: i32,
+    pub timer: i32,
+    pub op1: i32,
+    pub op2: i32,
+    pub op3: i32,
+    pub offset: i32,
+}
+
 pub struct PomyuCharaLoader<'a> {
     skin: &'a mut PlaySkinStub,
 }
@@ -36,43 +50,22 @@ impl<'a> PomyuCharaLoader<'a> {
         Self { skin }
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn load_with_timer_property(
         &mut self,
         usecim: bool,
         imagefile: &Path,
         load_type: i32,
         color: i32,
-        dstx: f32,
-        dsty: f32,
-        dstw: f32,
-        dsth: f32,
-        side: i32,
         dsttimer: &dyn TimerProperty,
-        dst_op1: i32,
-        dst_op2: i32,
-        dst_op3: i32,
-        dst_offset: i32,
+        dst: &PomyuCharaDestination,
     ) -> Option<SkinImage> {
-        self.load(
-            usecim,
-            imagefile,
-            load_type,
-            color,
-            dstx,
-            dsty,
-            dstw,
-            dsth,
-            side,
-            dsttimer.get_timer_id(),
-            dst_op1,
-            dst_op2,
-            dst_op3,
-            dst_offset,
-        )
+        let dst_with_timer = PomyuCharaDestination {
+            timer: dsttimer.get_timer_id(),
+            ..*dst
+        };
+        self.load(usecim, imagefile, load_type, color, &dst_with_timer)
     }
 
-    #[allow(clippy::too_many_arguments)]
     #[allow(unused_assignments)]
     pub fn load(
         &mut self,
@@ -80,17 +73,18 @@ impl<'a> PomyuCharaLoader<'a> {
         imagefile: &Path,
         load_type: i32,
         color: i32,
-        dstx: f32,
-        dsty: f32,
-        dstw: f32,
-        dsth: f32,
-        side: i32,
-        dsttimer: i32,
-        dst_op1: i32,
-        dst_op2: i32,
-        dst_op3: i32,
-        dst_offset: i32,
+        dst: &PomyuCharaDestination,
     ) -> Option<SkinImage> {
+        let dstx = dst.x;
+        let dsty = dst.y;
+        let dstw = dst.w;
+        let dsth = dst.h;
+        let side = dst.side;
+        let dsttimer = dst.timer;
+        let dst_op1 = dst.op1;
+        let dst_op2 = dst.op2;
+        let dst_op3 = dst.op3;
+        let dst_offset = dst.offset;
         // type 0:play 1:char background 2:name image 3:face(upper) 4:face(all) 5:select CG
         // 6:NEUTRAL 7:FEVER 8:GREAT 9:GOOD 10:BAD 11:FEVERWIN 12:WIN 13:LOSE 14:OJAMA 15:DANCE
         if !(0..=15).contains(&load_type) {
@@ -347,6 +341,18 @@ impl<'a> PomyuCharaLoader<'a> {
         }
 
         let mut set_motion = i32::MIN;
+        let load_dst = PomyuCharaDestination {
+            x: dstx,
+            y: dsty,
+            w: dstw,
+            h: dsth,
+            side,
+            timer: dsttimer,
+            op1: dst_op1,
+            op2: dst_op2,
+            op3: dst_op3,
+            offset: dst_offset,
+        };
 
         match load_type {
             BACKGROUND => {
@@ -495,16 +501,7 @@ impl<'a> PomyuCharaLoader<'a> {
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    dsttimer,
-                    dst_op1,
-                    dst_op2,
-                    dst_op3,
-                    dst_offset,
-                    side,
-                    dstx,
-                    dsty,
-                    dstw,
-                    dsth,
+                    &load_dst,
                 );
                 return None;
             }
@@ -526,16 +523,7 @@ impl<'a> PomyuCharaLoader<'a> {
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    dsttimer,
-                    dst_op1,
-                    dst_op2,
-                    dst_op3,
-                    dst_offset,
-                    side,
-                    dstx,
-                    dsty,
-                    dstw,
-                    dsth,
+                    &load_dst,
                 );
                 return None;
             }
@@ -557,16 +545,7 @@ impl<'a> PomyuCharaLoader<'a> {
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    dsttimer,
-                    dst_op1,
-                    dst_op2,
-                    dst_op3,
-                    dst_offset,
-                    side,
-                    dstx,
-                    dsty,
-                    dstw,
-                    dsth,
+                    &load_dst,
                 );
                 return None;
             }
@@ -588,16 +567,7 @@ impl<'a> PomyuCharaLoader<'a> {
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    dsttimer,
-                    dst_op1,
-                    dst_op2,
-                    dst_op3,
-                    dst_offset,
-                    side,
-                    dstx,
-                    dsty,
-                    dstw,
-                    dsth,
+                    &load_dst,
                 );
                 return None;
             }
@@ -619,16 +589,7 @@ impl<'a> PomyuCharaLoader<'a> {
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    dsttimer,
-                    dst_op1,
-                    dst_op2,
-                    dst_op3,
-                    dst_offset,
-                    side,
-                    dstx,
-                    dsty,
-                    dstw,
-                    dsth,
+                    &load_dst,
                 );
                 return None;
             }
@@ -650,16 +611,7 @@ impl<'a> PomyuCharaLoader<'a> {
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    dsttimer,
-                    dst_op1,
-                    dst_op2,
-                    dst_op3,
-                    dst_offset,
-                    side,
-                    dstx,
-                    dsty,
-                    dstw,
-                    dsth,
+                    &load_dst,
                 );
                 return None;
             }
@@ -681,16 +633,7 @@ impl<'a> PomyuCharaLoader<'a> {
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    dsttimer,
-                    dst_op1,
-                    dst_op2,
-                    dst_op3,
-                    dst_offset,
-                    side,
-                    dstx,
-                    dsty,
-                    dstw,
-                    dsth,
+                    &load_dst,
                 );
                 return None;
             }
@@ -712,16 +655,7 @@ impl<'a> PomyuCharaLoader<'a> {
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    dsttimer,
-                    dst_op1,
-                    dst_op2,
-                    dst_op3,
-                    dst_offset,
-                    side,
-                    dstx,
-                    dsty,
-                    dstw,
-                    dsth,
+                    &load_dst,
                 );
                 return None;
             }
@@ -743,16 +677,7 @@ impl<'a> PomyuCharaLoader<'a> {
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    dsttimer,
-                    dst_op1,
-                    dst_op2,
-                    dst_op3,
-                    dst_offset,
-                    side,
-                    dstx,
-                    dsty,
-                    dstw,
-                    dsth,
+                    &load_dst,
                 );
                 return None;
             }
@@ -774,16 +699,7 @@ impl<'a> PomyuCharaLoader<'a> {
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    dsttimer,
-                    dst_op1,
-                    dst_op2,
-                    dst_op3,
-                    dst_offset,
-                    side,
-                    dstx,
-                    dsty,
-                    dstw,
-                    dsth,
+                    &load_dst,
                 );
                 return None;
             }
@@ -805,16 +721,7 @@ impl<'a> PomyuCharaLoader<'a> {
                     char_bmp_index,
                     char_tex_index,
                     i32::MIN,
-                    dsttimer,
-                    dst_op1,
-                    dst_op2,
-                    dst_op3,
-                    dst_offset,
-                    side,
-                    dstx,
-                    dsty,
-                    dstw,
-                    dsth,
+                    &load_dst,
                 );
                 return None;
             }

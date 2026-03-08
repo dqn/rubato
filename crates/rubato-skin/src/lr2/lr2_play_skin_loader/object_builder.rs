@@ -207,12 +207,14 @@ impl LR2SkinLoaderAccess for LR2PlaySkinLoaderState {
                 if let Some(rect) = lane_rect {
                     note_obj.inner.set_lane_region(
                         i,
-                        rect.x,
-                        rect.y,
-                        rect.width,
-                        rect.height,
-                        *self.scale.get(i).unwrap_or(&1.0),
-                        *self.dstnote2.get(i).unwrap_or(&0),
+                        &rubato_play::skin::note::LaneRegion {
+                            x: rect.x,
+                            y: rect.y,
+                            width: rect.width,
+                            height: rect.height,
+                            scale: *self.scale.get(i).unwrap_or(&1.0),
+                            dstnote2: *self.dstnote2.get(i).unwrap_or(&0),
+                        },
                     );
                 }
             }

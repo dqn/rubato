@@ -15,6 +15,27 @@ use crate::score_log_database_accessor::{ScoreLog, ScoreLogDatabaseAccessor};
 
 use super::{PlayDataAccessor, REPLAY};
 
+/// Context for writing a single-song score entry.
+pub struct ScoreWriteContext<'a> {
+    pub hash: &'a str,
+    pub contains_undefined_ln: bool,
+    pub total_notes: i32,
+    pub lnmode: i32,
+    pub update_score: bool,
+    pub last_note_time_us: i64,
+}
+
+/// Context for writing a course score entry.
+pub struct CourseScoreWriteContext<'a> {
+    pub hashes: &'a [&'a str],
+    pub total_notes: i32,
+    pub ln: bool,
+    pub lnmode: i32,
+    pub option: i32,
+    pub constraint: &'a [CourseDataConstraint],
+    pub update_score: bool,
+}
+
 impl PlayDataAccessor {
     /// Creates a no-op PlayDataAccessor with no database connections.
     /// All read methods return None/false; all write methods do nothing.
@@ -163,21 +184,18 @@ impl PlayDataAccessor {
         self.scoredb.as_ref()?.score_datas(sql)
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn write_score_data(
-        &self,
-        newscore: &ScoreData,
-        hash: &str,
-        contains_undefined_ln: bool,
-        total_notes: i32,
-        lnmode: i32,
-        update_score: bool,
-        last_note_time_us: i64,
-    ) {
+    pub fn write_score_data(&self, newscore: &ScoreData, ctx: &ScoreWriteContext<'_>) {
         let scoredb = match &self.scoredb {
             Some(db) => db,
             None => return,
         };
+
+        let hash = ctx.hash;
+        let contains_undefined_ln = ctx.contains_undefined_ln;
+        let total_notes = ctx.total_notes;
+        let lnmode = ctx.lnmode;
+        let update_score = ctx.update_score;
+        let last_note_time_us = ctx.last_note_time_us;
 
         let mut score = scoredb
             .score_data(hash, if contains_undefined_ln { lnmode } else { 0 })
@@ -286,22 +304,23 @@ impl PlayDataAccessor {
         log::info!("Score database update completed");
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn write_score_data_for_course(
         &self,
         newscore: &ScoreData,
-        hashes: &[&str],
-        total_notes: i32,
-        ln: bool,
-        lnmode: i32,
-        option: i32,
-        constraint: &[CourseDataConstraint],
-        update_score: bool,
+        ctx: &CourseScoreWriteContext<'_>,
     ) {
         let scoredb = match &self.scoredb {
             Some(db) => db,
             None => return,
         };
+
+        let hashes = ctx.hashes;
+        let total_notes = ctx.total_notes;
+        let ln = ctx.ln;
+        let lnmode = ctx.lnmode;
+        let option = ctx.option;
+        let constraint = ctx.constraint;
+        let update_score = ctx.update_score;
 
         let hash: String = hashes.join("");
         let (hispeed, judge, gauge) = Self::compute_constraint_values(constraint);
