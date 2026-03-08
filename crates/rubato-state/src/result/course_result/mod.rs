@@ -1254,123 +1254,12 @@ mod tests {
 }
 
 impl rubato_core::main_state::MainState for CourseResult {
-    fn state_type(&self) -> Option<rubato_core::main_state::MainStateType> {
-        Some(rubato_core::main_state::MainStateType::CourseResult)
-    }
-
-    fn main_state_data(&self) -> &rubato_core::main_state::MainStateData {
-        &self.main_data
-    }
-
-    fn main_state_data_mut(&mut self) -> &mut rubato_core::main_state::MainStateData {
-        &mut self.main_data
-    }
-
-    fn create(&mut self) {
-        self.do_create();
-    }
-
-    fn prepare(&mut self) {
-        self.do_prepare();
-    }
-
-    fn render(&mut self) {
-        self.do_render();
-    }
-
-    fn render_skin(&mut self, sprite: &mut rubato_render::sprite_batch::SpriteBatch) {
-        let mut skin = match self.main_data.skin.take() {
-            Some(s) => s,
-            None => return,
-        };
-        let mut timer = std::mem::take(&mut self.main_data.timer);
-
-        {
-            let mut ctx = CourseResultRenderContext {
-                timer: &mut timer,
-                data: &self.data,
-                resource: &self.resource,
-                main: &self.main,
-            };
-            skin.update_custom_objects_timed(&mut ctx);
-            skin.swap_sprite_batch(sprite);
-            skin.draw_all_objects_timed(&mut ctx);
-            skin.swap_sprite_batch(sprite);
-        }
-
-        self.main_data.timer = timer;
-        self.main_data.skin = Some(skin);
-    }
-
-    fn handle_skin_mouse_pressed(&mut self, button: i32, x: i32, y: i32) {
-        let mut skin = match self.main_data.skin.take() {
-            Some(s) => s,
-            None => return,
-        };
-        let mut timer = std::mem::take(&mut self.main_data.timer);
-
-        {
-            let mut ctx = CourseResultMouseContext {
-                timer: &mut timer,
-                result: self,
-            };
-            skin.mouse_pressed_at(&mut ctx, button, x, y);
-        }
-
-        self.main_data.timer = timer;
-        self.main_data.skin = Some(skin);
-    }
-
-    fn handle_skin_mouse_dragged(&mut self, button: i32, x: i32, y: i32) {
-        let mut skin = match self.main_data.skin.take() {
-            Some(s) => s,
-            None => return,
-        };
-        let mut timer = std::mem::take(&mut self.main_data.timer);
-
-        {
-            let mut ctx = CourseResultMouseContext {
-                timer: &mut timer,
-                result: self,
-            };
-            skin.mouse_dragged_at(&mut ctx, button, x, y);
-        }
-
-        self.main_data.timer = timer;
-        self.main_data.skin = Some(skin);
-    }
-
-    fn input(&mut self) {
-        self.do_input();
-    }
-
-    fn sync_input_from(
-        &mut self,
-        input: &rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
-    ) {
-        self.main.sync_input_from(input);
-    }
-
-    fn sync_input_back_to(
-        &mut self,
-        input: &mut rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
-    ) {
-        self.main.sync_input_back_to(input);
-    }
-
-    fn load_skin(&mut self, skin_type: i32) {
-        if let Some(skin) = rubato_skin::skin_loader::load_skin_from_config(
-            self.main.config(),
-            self.resource.player_config(),
-            skin_type,
-        ) {
-            self.skin = Some(ResultSkinData::from_loaded_skin(&skin));
-            self.main_data.skin = Some(Box::new(skin));
-        } else {
-            self.skin = None;
-            self.main_data.skin = None;
-        }
-    }
+    super::impl_result_main_state!(
+        CourseResult,
+        CourseResult,
+        CourseResultRenderContext,
+        CourseResultMouseContext
+    );
 
     fn shutdown(&mut self) {
         self.shutdown();
@@ -1378,9 +1267,5 @@ impl rubato_core::main_state::MainState for CourseResult {
 
     fn dispose(&mut self) {
         self.dispose();
-    }
-
-    fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
-        self.resource.take_inner().map(|b| b.into_any_send())
     }
 }
