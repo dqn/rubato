@@ -6,6 +6,15 @@ use std::sync::Arc;
 
 use crate::render_pipeline::SpriteRenderPipeline;
 
+/// GPU resources needed for texture upload operations.
+pub struct TextureUploadContext<'a> {
+    pub device: &'a wgpu::Device,
+    pub queue: &'a wgpu::Queue,
+    pub texture_layout: &'a wgpu::BindGroupLayout,
+    pub sampler_nearest: &'a wgpu::Sampler,
+    pub sampler_linear: &'a wgpu::Sampler,
+}
+
 /// Cached GPU texture entry: wgpu texture + two bind groups (nearest/linear sampler).
 struct GpuTextureEntry {
     _texture: wgpu::Texture,
@@ -118,18 +127,13 @@ impl GpuTextureManager {
 
     /// Upload a texture to the GPU if not already cached.
     /// Returns the cache key.
-    #[allow(clippy::too_many_arguments)]
     pub fn ensure_uploaded(
         &mut self,
         key: &Arc<str>,
         width: u32,
         height: u32,
         rgba_data: &[u8],
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        texture_layout: &wgpu::BindGroupLayout,
-        sampler_nearest: &wgpu::Sampler,
-        sampler_linear: &wgpu::Sampler,
+        ctx: &TextureUploadContext<'_>,
     ) {
         if self.entries.contains_key(key) {
             return;
@@ -139,7 +143,7 @@ impl GpuTextureManager {
             return;
         }
 
-        let max_dim = device.limits().max_texture_dimension_2d;
+        let max_dim = ctx.device.limits().max_texture_dimension_2d;
         if width > max_dim || height > max_dim {
             log::warn!(
                 "Texture '{}' dimensions {}x{} exceed GPU limit {}; skipping upload",
@@ -167,7 +171,7 @@ impl GpuTextureManager {
             height,
             depth_or_array_layers: 1,
         };
-        let wgpu_texture = device.create_texture(&wgpu::TextureDescriptor {
+        let wgpu_texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("skin texture"),
             size,
             mip_level_count: 1,
@@ -177,7 +181,7 @@ impl GpuTextureManager {
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
-        queue.write_texture(
+        ctx.queue.write_texture(
             wgpu::TexelCopyTextureInfo {
                 texture: &wgpu_texture,
                 mip_level: 0,
@@ -194,9 +198,9 @@ impl GpuTextureManager {
         );
         let view = wgpu_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let bind_group_nearest = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group_nearest = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("skin texture bind group (nearest)"),
-            layout: texture_layout,
+            layout: ctx.texture_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -204,14 +208,14 @@ impl GpuTextureManager {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: wgpu::BindingResource::Sampler(sampler_nearest),
+                    resource: wgpu::BindingResource::Sampler(ctx.sampler_nearest),
                 },
             ],
         });
 
-        let bind_group_linear = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group_linear = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("skin texture bind group (linear)"),
-            layout: texture_layout,
+            layout: ctx.texture_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -219,7 +223,7 @@ impl GpuTextureManager {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: wgpu::BindingResource::Sampler(sampler_linear),
+                    resource: wgpu::BindingResource::Sampler(ctx.sampler_linear),
                 },
             ],
         });

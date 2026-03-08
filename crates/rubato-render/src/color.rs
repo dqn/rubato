@@ -430,56 +430,57 @@ impl Default for Matrix4 {
     }
 }
 
+/// Translation, quaternion rotation, and scale for Matrix4::set.
+pub struct TransformComponents {
+    pub tx: f32,
+    pub ty: f32,
+    pub tz: f32,
+    pub qx: f32,
+    pub qy: f32,
+    pub qz: f32,
+    pub qw: f32,
+    pub sx: f32,
+    pub sy: f32,
+    pub sz: f32,
+}
+
 impl Matrix4 {
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Set from translation, quaternion rotation, and scale.
-    #[allow(clippy::too_many_arguments)]
-    pub fn set(
-        &mut self,
-        tx: f32,
-        ty: f32,
-        tz: f32,
-        qx: f32,
-        qy: f32,
-        qz: f32,
-        qw: f32,
-        sx: f32,
-        sy: f32,
-        sz: f32,
-    ) {
+    pub fn set(&mut self, t: &TransformComponents) {
         // Convert quaternion to rotation matrix, apply scale and translation
-        let xx = qx * qx;
-        let xy = qx * qy;
-        let xz = qx * qz;
-        let xw = qx * qw;
-        let yy = qy * qy;
-        let yz = qy * qz;
-        let yw = qy * qw;
-        let zz = qz * qz;
-        let zw = qz * qw;
+        let xx = t.qx * t.qx;
+        let xy = t.qx * t.qy;
+        let xz = t.qx * t.qz;
+        let xw = t.qx * t.qw;
+        let yy = t.qy * t.qy;
+        let yz = t.qy * t.qz;
+        let yw = t.qy * t.qw;
+        let zz = t.qz * t.qz;
+        let zw = t.qz * t.qw;
 
         // Column-major order (same as LibGDX)
-        self.values[0] = sx * (1.0 - 2.0 * (yy + zz));
-        self.values[1] = sx * 2.0 * (xy + zw);
-        self.values[2] = sx * 2.0 * (xz - yw);
+        self.values[0] = t.sx * (1.0 - 2.0 * (yy + zz));
+        self.values[1] = t.sx * 2.0 * (xy + zw);
+        self.values[2] = t.sx * 2.0 * (xz - yw);
         self.values[3] = 0.0;
 
-        self.values[4] = sy * 2.0 * (xy - zw);
-        self.values[5] = sy * (1.0 - 2.0 * (xx + zz));
-        self.values[6] = sy * 2.0 * (yz + xw);
+        self.values[4] = t.sy * 2.0 * (xy - zw);
+        self.values[5] = t.sy * (1.0 - 2.0 * (xx + zz));
+        self.values[6] = t.sy * 2.0 * (yz + xw);
         self.values[7] = 0.0;
 
-        self.values[8] = sz * 2.0 * (xz + yw);
-        self.values[9] = sz * 2.0 * (yz - xw);
-        self.values[10] = sz * (1.0 - 2.0 * (xx + yy));
+        self.values[8] = t.sz * 2.0 * (xz + yw);
+        self.values[9] = t.sz * 2.0 * (yz - xw);
+        self.values[10] = t.sz * (1.0 - 2.0 * (xx + yy));
         self.values[11] = 0.0;
 
-        self.values[12] = tx;
-        self.values[13] = ty;
-        self.values[14] = tz;
+        self.values[12] = t.tx;
+        self.values[13] = t.ty;
+        self.values[14] = t.tz;
         self.values[15] = 1.0;
     }
 

@@ -5,7 +5,7 @@ use bms_model::bms_model::BMSModel;
 use bms_model::mode::Mode;
 
 use crate::stubs::{
-    Color, MainState, Pixmap, PixmapFormat, Rectangle, SongData, Texture, TextureRegion,
+    BlitRect, Color, MainState, Pixmap, PixmapFormat, Rectangle, SongData, Texture, TextureRegion,
 };
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
@@ -595,14 +595,18 @@ impl SkinNoteDistributionGraph {
                             if index < chips.len() {
                                 shape.draw_pixmap(
                                     &chips[index],
-                                    0,
-                                    0,
-                                    1,
-                                    1,
-                                    i as i32 * 5,
-                                    j * 5,
-                                    4 + if self.is_no_gap_x { 1 } else { 0 },
-                                    4 + if self.is_no_gap { 1 } else { 0 },
+                                    BlitRect {
+                                        x: 0,
+                                        y: 0,
+                                        w: 1,
+                                        h: 1,
+                                    },
+                                    BlitRect {
+                                        x: i as i32 * 5,
+                                        y: j * 5,
+                                        w: 4 + if self.is_no_gap_x { 1 } else { 0 },
+                                        h: 4 + if self.is_no_gap { 1 } else { 0 },
+                                    },
                                 );
                             }
                             j += 1;
@@ -627,14 +631,18 @@ impl SkinNoteDistributionGraph {
                             if index < chips.len() {
                                 shape.draw_pixmap(
                                     &chips[index],
-                                    0,
-                                    0,
-                                    1,
-                                    1,
-                                    i as i32 * 5,
-                                    j * 5,
-                                    4 + if self.is_no_gap_x { 1 } else { 0 },
-                                    4 + if self.is_no_gap { 1 } else { 0 },
+                                    BlitRect {
+                                        x: 0,
+                                        y: 0,
+                                        w: 1,
+                                        h: 1,
+                                    },
+                                    BlitRect {
+                                        x: i as i32 * 5,
+                                        y: j * 5,
+                                        w: 4 + if self.is_no_gap_x { 1 } else { 0 },
+                                        h: 4 + if self.is_no_gap { 1 } else { 0 },
+                                    },
                                 );
                             }
                             j += 1;

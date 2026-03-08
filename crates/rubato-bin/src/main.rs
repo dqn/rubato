@@ -841,11 +841,13 @@ impl ApplicationHandler for RubatoApp {
                                     tex.width,
                                     tex.height,
                                     &tex.rgba_data,
-                                    &gpu.device,
-                                    &gpu.queue,
-                                    &sprite_pipeline.texture_layout,
-                                    &sprite_pipeline.sampler_nearest,
-                                    &sprite_pipeline.sampler_linear,
+                                    &rubato_render::gpu_texture_manager::TextureUploadContext {
+                                        device: &gpu.device,
+                                        queue: &gpu.queue,
+                                        texture_layout: &sprite_pipeline.texture_layout,
+                                        sampler_nearest: &sprite_pipeline.sampler_nearest,
+                                        sampler_linear: &sprite_pipeline.sampler_linear,
+                                    },
                                 );
                             }
 
@@ -881,6 +883,22 @@ impl ApplicationHandler for RubatoApp {
 
                         // Render pass: clear screen + SpriteBatch GPU flush
                         // Java: Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT) + SpriteBatch draw
+                        // Build GpuRenderContext before render_pass so it outlives the pass
+                        let gpu_ctx = if let Some(ref uniform_bind_group) = sprite_resources
+                            && let Some(sprite_pipeline) = &self.sprite_pipeline
+                            && let Some(texture_manager) = &self.texture_manager
+                        {
+                            Some(rubato_render::sprite_batch::GpuRenderContext {
+                                device: &gpu.device,
+                                queue: &gpu.queue,
+                                pipeline: sprite_pipeline,
+                                uniform_bind_group,
+                                texture_manager,
+                            })
+                        } else {
+                            None
+                        };
+
                         {
                             let mut render_pass =
                                 encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -900,19 +918,10 @@ impl ApplicationHandler for RubatoApp {
 
                             // Flush SpriteBatch vertices to GPU via the render pipeline
                             // Java: SpriteBatch.flush() submits batched quads to GL
-                            if let Some(ref uniform_bind_group) = sprite_resources
-                                && let Some(sprite_pipeline) = &self.sprite_pipeline
-                                && let Some(texture_manager) = &self.texture_manager
+                            if let Some(ref gpu_ctx) = gpu_ctx
                                 && let Some(sprite_batch) = self.controller.sprite_batch_mut()
                             {
-                                sprite_batch.flush_to_gpu(
-                                    &mut render_pass,
-                                    &gpu.device,
-                                    &gpu.queue,
-                                    sprite_pipeline,
-                                    uniform_bind_group,
-                                    texture_manager,
-                                );
+                                sprite_batch.flush_to_gpu(&mut render_pass, gpu_ctx);
                             }
                         }
 

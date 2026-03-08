@@ -11,6 +11,36 @@ use crate::render_pipeline::SpriteRenderPipeline;
 use crate::shader::ShaderProgram;
 use crate::texture::{Texture, TextureRegion};
 
+/// Transform parameters for rotated sprite drawing.
+pub struct SpriteTransform {
+    pub x: f32,
+    pub y: f32,
+    pub center_x: f32,
+    pub center_y: f32,
+    pub width: f32,
+    pub height: f32,
+    pub scale_x: f32,
+    pub scale_y: f32,
+    pub angle: f32,
+}
+
+/// UV coordinate rectangle.
+pub(crate) struct UVRect {
+    pub u1: f32,
+    pub v1: f32,
+    pub u2: f32,
+    pub v2: f32,
+}
+
+/// GPU resources needed for flushing sprite batches.
+pub struct GpuRenderContext<'a> {
+    pub device: &'a wgpu::Device,
+    pub queue: &'a wgpu::Queue,
+    pub pipeline: &'a SpriteRenderPipeline,
+    pub uniform_bind_group: &'a wgpu::BindGroup,
+    pub texture_manager: &'a GpuTextureManager,
+}
+
 /// Vertex for a 2D sprite quad.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -182,15 +212,10 @@ impl SpriteBatch {
     /// buffer (growing geometrically when needed), binds the appropriate
     /// pipeline, and issues per-batch draw calls with the correct texture
     /// bind group for each batch.
-    #[allow(clippy::too_many_arguments)]
     pub fn flush_to_gpu<'a>(
         &mut self,
         render_pass: &mut wgpu::RenderPass<'a>,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        pipeline: &'a SpriteRenderPipeline,
-        uniform_bind_group: &'a wgpu::BindGroup,
-        texture_manager: &'a GpuTextureManager,
+        ctx: &'a GpuRenderContext<'a>,
     ) {
         if self.vertices.is_empty() {
             return;
@@ -203,7 +228,7 @@ impl SpriteBatch {
         if self.gpu_vertex_buffer_capacity < required_size {
             // Grow to at least double the current capacity, or the required size
             let new_capacity = required_size.max(self.gpu_vertex_buffer_capacity * 2);
-            self.gpu_vertex_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
+            self.gpu_vertex_buffer = Some(ctx.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("sprite vertex buffer"),
                 size: new_capacity,
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
@@ -216,15 +241,16 @@ impl SpriteBatch {
             .gpu_vertex_buffer
             .as_ref()
             .expect("gpu_vertex_buffer is Some");
-        queue.write_buffer(vertex_buffer, 0, vertex_data);
+        ctx.queue.write_buffer(vertex_buffer, 0, vertex_data);
 
-        render_pass.set_bind_group(0, uniform_bind_group, &[]);
+        render_pass.set_bind_group(0, ctx.uniform_bind_group, &[]);
         render_pass.set_vertex_buffer(0, vertex_buffer.slice(..required_size));
 
         // If no draw batches recorded, fall back to single-batch rendering
         if self.draw_batches.is_empty() {
-            let bind_group = texture_manager.bind_group(None, self.shader_type);
-            if let Some(render_pipeline) = pipeline.pipeline(self.shader_type, self.blend_mode) {
+            let bind_group = ctx.texture_manager.bind_group(None, self.shader_type);
+            if let Some(render_pipeline) = ctx.pipeline.pipeline(self.shader_type, self.blend_mode)
+            {
                 render_pass.set_pipeline(render_pipeline);
                 render_pass.set_bind_group(1, bind_group, &[]);
                 render_pass.draw(0..self.vertices.len() as u32, 0..1);
@@ -235,10 +261,11 @@ impl SpriteBatch {
                 if batch.vertex_count == 0 {
                     continue;
                 }
-                let bind_group =
-                    texture_manager.bind_group(batch.texture_key.as_ref(), batch.shader_type);
+                let bind_group = ctx
+                    .texture_manager
+                    .bind_group(batch.texture_key.as_ref(), batch.shader_type);
                 if let Some(render_pipeline) =
-                    pipeline.pipeline(batch.shader_type, batch.blend_mode)
+                    ctx.pipeline.pipeline(batch.shader_type, batch.blend_mode)
                 {
                     render_pass.set_pipeline(render_pipeline);
                     render_pass.set_bind_group(1, bind_group, &[]);
@@ -261,7 +288,18 @@ impl SpriteBatch {
     /// Draw a full texture at (x, y) with size (w, h).
     pub fn draw_texture(&mut self, texture: &Texture, x: f32, y: f32, w: f32, h: f32) {
         self.record_texture(texture);
-        self.push_quad(x, y, w, h, 0.0, 0.0, 1.0, 1.0);
+        self.push_quad(
+            x,
+            y,
+            w,
+            h,
+            UVRect {
+                u1: 0.0,
+                v1: 0.0,
+                u2: 1.0,
+                v2: 1.0,
+            },
+        );
     }
 
     /// Draw a texture region at (x, y) with size (w, h).
@@ -271,39 +309,49 @@ impl SpriteBatch {
         } else {
             self.ensure_batch(None);
         }
-        self.push_quad(x, y, w, h, region.u, region.v, region.u2, region.v2);
+        self.push_quad(
+            x,
+            y,
+            w,
+            h,
+            UVRect {
+                u1: region.u,
+                v1: region.v,
+                u2: region.u2,
+                v2: region.v2,
+            },
+        );
     }
 
     /// Draw a texture region with rotation and scale.
-    #[allow(clippy::too_many_arguments)]
-    pub fn draw_region_rotated(
-        &mut self,
-        region: &TextureRegion,
-        x: f32,
-        y: f32,
-        cx: f32,
-        cy: f32,
-        w: f32,
-        h: f32,
-        sx: f32,
-        sy: f32,
-        angle: f32,
-    ) {
+    pub fn draw_region_rotated(&mut self, region: &TextureRegion, transform: &SpriteTransform) {
         if let Some(tex) = &region.texture {
             self.record_texture(tex);
         } else {
             self.ensure_batch(None);
         }
 
-        let cos = angle.to_radians().cos();
-        let sin = angle.to_radians().sin();
+        let cos = transform.angle.to_radians().cos();
+        let sin = transform.angle.to_radians().sin();
 
         // Compute corner offsets from origin, apply scale
         let corners: [(f32, f32); 4] = [
-            (-cx * sx, -cy * sy),
-            ((w - cx) * sx, -cy * sy),
-            ((w - cx) * sx, (h - cy) * sy),
-            (-cx * sx, (h - cy) * sy),
+            (
+                -transform.center_x * transform.scale_x,
+                -transform.center_y * transform.scale_y,
+            ),
+            (
+                (transform.width - transform.center_x) * transform.scale_x,
+                -transform.center_y * transform.scale_y,
+            ),
+            (
+                (transform.width - transform.center_x) * transform.scale_x,
+                (transform.height - transform.center_y) * transform.scale_y,
+            ),
+            (
+                -transform.center_x * transform.scale_x,
+                (transform.height - transform.center_y) * transform.scale_y,
+            ),
         ];
 
         let color = self.current_color;
@@ -314,8 +362,8 @@ impl SpriteBatch {
         let vertex_count_before = self.vertices.len();
         for &idx in &[0, 1, 2, 0, 2, 3] {
             let (ox, oy) = corners[idx];
-            let px = x + cx + ox * cos - oy * sin;
-            let py = y + cy + ox * sin + oy * cos;
+            let px = transform.x + transform.center_x + ox * cos - oy * sin;
+            let py = transform.y + transform.center_y + ox * sin + oy * cos;
             self.vertices.push(SpriteVertex {
                 position: [px, py],
                 tex_coord: [uvs[idx].0, uvs[idx].1],
@@ -389,39 +437,38 @@ impl SpriteBatch {
     }
 
     /// Push a simple axis-aligned quad.
-    #[allow(clippy::too_many_arguments)]
-    fn push_quad(&mut self, x: f32, y: f32, w: f32, h: f32, u1: f32, v1: f32, u2: f32, v2: f32) {
+    fn push_quad(&mut self, x: f32, y: f32, w: f32, h: f32, uv: UVRect) {
         let color = self.current_color;
         // Two triangles: top-left, top-right, bottom-right, top-left, bottom-right, bottom-left
         let verts = [
             SpriteVertex {
                 position: [x, y],
-                tex_coord: [u1, v1],
+                tex_coord: [uv.u1, uv.v1],
                 color,
             },
             SpriteVertex {
                 position: [x + w, y],
-                tex_coord: [u2, v1],
+                tex_coord: [uv.u2, uv.v1],
                 color,
             },
             SpriteVertex {
                 position: [x + w, y + h],
-                tex_coord: [u2, v2],
+                tex_coord: [uv.u2, uv.v2],
                 color,
             },
             SpriteVertex {
                 position: [x, y],
-                tex_coord: [u1, v1],
+                tex_coord: [uv.u1, uv.v1],
                 color,
             },
             SpriteVertex {
                 position: [x + w, y + h],
-                tex_coord: [u2, v2],
+                tex_coord: [uv.u2, uv.v2],
                 color,
             },
             SpriteVertex {
                 position: [x, y + h],
-                tex_coord: [u1, v2],
+                tex_coord: [uv.u1, uv.v2],
                 color,
             },
         ];
@@ -593,7 +640,18 @@ mod tests {
             ..Default::default()
         };
         batch.draw_region_rotated(
-            &region, 100.0, 100.0, 32.0, 32.0, 64.0, 64.0, 1.0, 1.0, 45.0,
+            &region,
+            &SpriteTransform {
+                x: 100.0,
+                y: 100.0,
+                center_x: 32.0,
+                center_y: 32.0,
+                width: 64.0,
+                height: 64.0,
+                scale_x: 1.0,
+                scale_y: 1.0,
+                angle: 45.0,
+            },
         );
         assert_eq!(batch.vertices().len(), 6);
     }

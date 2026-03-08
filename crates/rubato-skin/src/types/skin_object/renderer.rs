@@ -161,15 +161,17 @@ impl SkinObjectRenderer {
         self.pre_draw();
         self.sprite.draw_region_rotated(
             image,
-            x + 0.01,
-            y + 0.01,
-            cx * w,
-            cy * h,
-            w,
-            h,
-            1.0,
-            1.0,
-            angle as f32,
+            &rubato_render::sprite_batch::SpriteTransform {
+                x: x + 0.01,
+                y: y + 0.01,
+                center_x: cx * w,
+                center_y: cy * h,
+                width: w,
+                height: h,
+                scale_x: 1.0,
+                scale_y: 1.0,
+                angle: angle as f32,
+            },
         );
         self.post_draw();
     }

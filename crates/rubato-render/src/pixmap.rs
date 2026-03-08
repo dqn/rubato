@@ -3,6 +3,14 @@
 
 use crate::color::Color;
 
+/// Source/destination rectangles for pixmap blitting.
+pub struct BlitRect {
+    pub x: i32,
+    pub y: i32,
+    pub w: i32,
+    pub h: i32,
+}
+
 /// Pixel format enum matching rendering_stubs::PixmapFormat.
 #[derive(Clone, Debug)]
 pub enum PixmapFormat {
@@ -70,29 +78,17 @@ impl Pixmap {
 
     /// Blit source pixmap region into this pixmap with scaling.
     /// Corresponds to Pixmap.drawPixmap(src, sx, sy, sw, sh, dx, dy, dw, dh).
-    #[allow(clippy::too_many_arguments)]
-    pub fn draw_pixmap(
-        &mut self,
-        src: &Pixmap,
-        sx: i32,
-        sy: i32,
-        sw: i32,
-        sh: i32,
-        dx: i32,
-        dy: i32,
-        dw: i32,
-        dh: i32,
-    ) {
-        if sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0 {
+    pub fn draw_pixmap(&mut self, src: &Pixmap, src_rect: BlitRect, dst_rect: BlitRect) {
+        if src_rect.w <= 0 || src_rect.h <= 0 || dst_rect.w <= 0 || dst_rect.h <= 0 {
             return;
         }
-        for dest_y in 0..dh {
-            for dest_x in 0..dw {
-                let px = dx + dest_x;
-                let py = dy + dest_y;
+        for dest_y in 0..dst_rect.h {
+            for dest_x in 0..dst_rect.w {
+                let px = dst_rect.x + dest_x;
+                let py = dst_rect.y + dest_y;
                 // Map destination pixel back to source
-                let src_x = sx + (dest_x * sw) / dw;
-                let src_y = sy + (dest_y * sh) / dh;
+                let src_x = src_rect.x + (dest_x * src_rect.w) / dst_rect.w;
+                let src_y = src_rect.y + (dest_y * src_rect.h) / dst_rect.h;
                 if src_x >= 0
                     && src_x < src.width
                     && src_y >= 0
