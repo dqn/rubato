@@ -9,6 +9,7 @@ beatoraja fork (Java 313 files / 72k+ lines) → Rust. 25 crates, 167k lines.
 - Explicit type conversions — every implicit Java cast → explicit Rust cast.
 - After completing a phase/task, update TODO.md and AGENTS.md.
 - Worktree isolation: **always merge worktree branches before sending shutdown requests**.
+- Worktree cleanup: **always run `rm -rf target/` inside a worktree before removing it** to avoid multi-GB disk waste. Each worktree's `target/` can be 4+ GB.
 
 ## Type Mapping
 
