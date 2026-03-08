@@ -1,5 +1,18 @@
 use super::*;
 
+/// Parameters for the internal judge update (update_micro).
+struct UpdateMicroParams<'a> {
+    pub lane_idx: usize,
+    pub note_idx: usize,
+    pub notes: &'a [JudgeNote],
+    pub _mtime: i64,
+    pub judge: i32,
+    pub mfast: i64,
+    pub judge_vanish: bool,
+    pub multi_bad: bool,
+    pub gauge: &'a mut GrooveGauge,
+}
+
 impl JudgeManager {
     /// Main judge update loop (testable API).
     ///
@@ -70,9 +83,17 @@ impl JudgeManager {
                     if notes[note_idx].is_normal() && self.note_states[note_idx].state == 0 {
                         let first_key = self.lane_states[lane_idx].laneassign[0];
                         self.auto_presstime[first_key] = mtime;
-                        self.update_micro(
-                            lane_idx, note_idx, notes, mtime, 0, 0, true, false, gauge,
-                        );
+                        self.update_micro(UpdateMicroParams {
+                            lane_idx,
+                            note_idx,
+                            notes,
+                            _mtime: mtime,
+                            judge: 0,
+                            mfast: 0,
+                            judge_vanish: true,
+                            multi_bad: false,
+                            gauge,
+                        });
                     }
                     if notes[note_idx].is_long() {
                         let ln_type = notes[note_idx].ln_type;
@@ -92,9 +113,17 @@ impl JudgeManager {
                                     self.judge[player][offset] = 8;
                                 }
                             } else {
-                                self.update_micro(
-                                    lane_idx, note_idx, notes, mtime, 0, 0, true, false, gauge,
-                                );
+                                self.update_micro(UpdateMicroParams {
+                                    lane_idx,
+                                    note_idx,
+                                    notes,
+                                    _mtime: mtime,
+                                    judge: 0,
+                                    mfast: 0,
+                                    judge_vanish: true,
+                                    multi_bad: false,
+                                    gauge,
+                                });
                             }
                             let pair_idx = notes[note_idx].pair_index;
                             self.lane_states[lane_idx].processing = pair_idx;
@@ -112,9 +141,17 @@ impl JudgeManager {
                                 self.auto_presstime[first_key] = i64::MIN;
                                 self.auto_presstime[second_key] = mtime;
                             }
-                            self.update_micro(
-                                lane_idx, note_idx, notes, mtime, 0, 0, true, false, gauge,
-                            );
+                            self.update_micro(UpdateMicroParams {
+                                lane_idx,
+                                note_idx,
+                                notes,
+                                _mtime: mtime,
+                                judge: 0,
+                                mfast: 0,
+                                judge_vanish: true,
+                                multi_bad: false,
+                                gauge,
+                            });
                             self.lane_states[lane_idx].processing = None;
                         }
                     }
@@ -216,10 +253,17 @@ impl JudgeManager {
                             {
                                 j += 1;
                             }
-                            self.update_micro(
-                                lane_idx, proc_idx, notes, mtime, j as i32, dmtime, true, false,
+                            self.update_micro(UpdateMicroParams {
+                                lane_idx,
+                                note_idx: proc_idx,
+                                notes,
+                                _mtime: mtime,
+                                judge: j as i32,
+                                mfast: dmtime,
+                                judge_vanish: true,
+                                multi_bad: false,
                                 gauge,
-                            );
+                            });
                             self.lane_states[lane_idx].processing = None;
                             self.lane_states[lane_idx].releasetime = i64::MIN;
                             self.lane_states[lane_idx].lnend_judge = i32::MIN;
@@ -340,9 +384,17 @@ impl JudgeManager {
                             let bad_idx = self.multi_bad.note_list[i];
                             let bad_time = self.multi_bad.time_list[i];
                             let vanish = self.judge_vanish.get(3).copied().unwrap_or(false);
-                            self.update_micro(
-                                lane_idx, bad_idx, notes, mtime, 3, bad_time, vanish, true, gauge,
-                            );
+                            self.update_micro(UpdateMicroParams {
+                                lane_idx,
+                                note_idx: bad_idx,
+                                notes,
+                                _mtime: mtime,
+                                judge: 3,
+                                mfast: bad_time,
+                                judge_vanish: vanish,
+                                multi_bad: true,
+                                gauge,
+                            });
                         }
 
                         if notes[tnote_idx].is_long_start() {
@@ -376,10 +428,17 @@ impl JudgeManager {
                                         self.judge[player][offset] = 8;
                                     }
                                 } else {
-                                    self.update_micro(
-                                        lane_idx, tnote_idx, notes, mtime, best_judge, dmtime,
-                                        false, false, gauge,
-                                    );
+                                    self.update_micro(UpdateMicroParams {
+                                        lane_idx,
+                                        note_idx: tnote_idx,
+                                        notes,
+                                        _mtime: mtime,
+                                        judge: best_judge,
+                                        mfast: dmtime,
+                                        judge_vanish: false,
+                                        multi_bad: false,
+                                        gauge,
+                                    });
                                 }
                             } else {
                                 // CN, HCN press processing
@@ -402,10 +461,17 @@ impl JudgeManager {
                                     .get(best_judge as usize)
                                     .copied()
                                     .unwrap_or(false);
-                                self.update_micro(
-                                    lane_idx, tnote_idx, notes, mtime, best_judge, dmtime, vanish,
-                                    false, gauge,
-                                );
+                                self.update_micro(UpdateMicroParams {
+                                    lane_idx,
+                                    note_idx: tnote_idx,
+                                    notes,
+                                    _mtime: mtime,
+                                    judge: best_judge,
+                                    mfast: dmtime,
+                                    judge_vanish: vanish,
+                                    multi_bad: false,
+                                    gauge,
+                                });
                             }
                         } else {
                             // Normal note processing
@@ -415,10 +481,17 @@ impl JudgeManager {
                                 .get(best_judge as usize)
                                 .copied()
                                 .unwrap_or(false);
-                            self.update_micro(
-                                lane_idx, tnote_idx, notes, mtime, best_judge, dmtime, vanish,
-                                false, gauge,
-                            );
+                            self.update_micro(UpdateMicroParams {
+                                lane_idx,
+                                note_idx: tnote_idx,
+                                notes,
+                                _mtime: mtime,
+                                judge: best_judge,
+                                mfast: dmtime,
+                                judge_vanish: vanish,
+                                multi_bad: false,
+                                gauge,
+                            });
                         }
                     } else {
                         // Empty POOR - no matching note
@@ -465,10 +538,17 @@ impl JudgeManager {
                                 self.lane_states[lane_idx].releasetime = mtime;
                                 self.lane_states[lane_idx].lnend_judge = judge;
                             } else {
-                                self.update_micro(
-                                    lane_idx, proc_idx, notes, mtime, judge, dmtime, true, false,
+                                self.update_micro(UpdateMicroParams {
+                                    lane_idx,
+                                    note_idx: proc_idx,
+                                    notes,
+                                    _mtime: mtime,
+                                    judge,
+                                    mfast: dmtime,
+                                    judge_vanish: true,
+                                    multi_bad: false,
                                     gauge,
-                                );
+                                });
                                 self.lane_states[lane_idx].processing = None;
                                 self.lane_states[lane_idx].releasetime = i64::MIN;
                                 self.lane_states[lane_idx].lnend_judge = i32::MIN;
@@ -497,17 +577,17 @@ impl JudgeManager {
                                 // Get pair of processing note for LN
                                 let pair_of_proc = notes[proc_idx].pair_index;
                                 let judge_note = pair_of_proc.unwrap_or(proc_idx);
-                                self.update_micro(
+                                self.update_micro(UpdateMicroParams {
                                     lane_idx,
-                                    judge_note,
+                                    note_idx: judge_note,
                                     notes,
-                                    mtime,
-                                    judge.min(3),
-                                    dmtime,
-                                    true,
-                                    false,
+                                    _mtime: mtime,
+                                    judge: judge.min(3),
+                                    mfast: dmtime,
+                                    judge_vanish: true,
+                                    multi_bad: false,
                                     gauge,
-                                );
+                                });
                                 self.lane_states[lane_idx].processing = None;
                                 self.lane_states[lane_idx].releasetime = i64::MIN;
                                 self.lane_states[lane_idx].lnend_judge = i32::MIN;
@@ -545,17 +625,17 @@ impl JudgeManager {
                         let lnend_judge = self.lane_states[lane_idx].lnend_judge;
                         let release_dmtime =
                             notes[proc_idx].time_us - self.lane_states[lane_idx].releasetime;
-                        self.update_micro(
+                        self.update_micro(UpdateMicroParams {
                             lane_idx,
-                            pair_of_proc,
+                            note_idx: pair_of_proc,
                             notes,
-                            mtime,
-                            lnend_judge,
-                            release_dmtime,
-                            true,
-                            false,
+                            _mtime: mtime,
+                            judge: lnend_judge,
+                            mfast: release_dmtime,
+                            judge_vanish: true,
+                            multi_bad: false,
                             gauge,
-                        );
+                        });
                         self.lane_states[lane_idx].processing = None;
                         self.lane_states[lane_idx].releasetime = i64::MIN;
                         self.lane_states[lane_idx].lnend_judge = i32::MIN;
@@ -563,17 +643,17 @@ impl JudgeManager {
                         let pair_of_proc = notes[proc_idx].pair_index.unwrap_or(proc_idx);
                         let lnstart_judge = self.lane_states[lane_idx].lnstart_judge;
                         let lnstart_duration = self.lane_states[lane_idx].lnstart_duration;
-                        self.update_micro(
+                        self.update_micro(UpdateMicroParams {
                             lane_idx,
-                            pair_of_proc,
+                            note_idx: pair_of_proc,
                             notes,
-                            mtime,
-                            lnstart_judge,
-                            lnstart_duration,
-                            true,
-                            false,
+                            _mtime: mtime,
+                            judge: lnstart_judge,
+                            mfast: lnstart_duration,
+                            judge_vanish: true,
+                            multi_bad: false,
                             gauge,
-                        );
+                        });
                         self.lane_states[lane_idx].processing = None;
                         self.lane_states[lane_idx].releasetime = i64::MIN;
                         self.lane_states[lane_idx].lnend_judge = i32::MIN;
@@ -584,17 +664,17 @@ impl JudgeManager {
                     let lnend_judge = self.lane_states[lane_idx].lnend_judge;
                     let release_dmtime =
                         notes[proc_idx].time_us - self.lane_states[lane_idx].releasetime;
-                    self.update_micro(
+                    self.update_micro(UpdateMicroParams {
                         lane_idx,
-                        proc_idx,
+                        note_idx: proc_idx,
                         notes,
-                        mtime,
-                        lnend_judge,
-                        release_dmtime,
-                        true,
-                        false,
+                        _mtime: mtime,
+                        judge: lnend_judge,
+                        mfast: release_dmtime,
+                        judge_vanish: true,
+                        multi_bad: false,
                         gauge,
-                    );
+                    });
                     self.lane_states[lane_idx].processing = None;
                     self.lane_states[lane_idx].releasetime = i64::MIN;
                     self.lane_states[lane_idx].lnend_judge = i32::MIN;
@@ -615,9 +695,17 @@ impl JudgeManager {
                 let mjud = notes[note_idx].time_us - mtime;
 
                 if notes[note_idx].is_normal() && self.note_states[note_idx].state == 0 {
-                    self.update_micro(
-                        lane_idx, note_idx, notes, mtime, 4, mjud, true, false, gauge,
-                    );
+                    self.update_micro(UpdateMicroParams {
+                        lane_idx,
+                        note_idx,
+                        notes,
+                        _mtime: mtime,
+                        judge: 4,
+                        mfast: mjud,
+                        judge_vanish: true,
+                        multi_bad: false,
+                        gauge,
+                    });
                 } else if notes[note_idx].is_long() {
                     let ln_type = notes[note_idx].ln_type;
                     if notes[note_idx].is_long_start() && self.note_states[note_idx].state == 0 {
@@ -625,22 +713,46 @@ impl JudgeManager {
                             || ln_type == TYPE_CHARGENOTE
                             || ln_type == TYPE_HELLCHARGENOTE
                         {
-                            self.update_micro(
-                                lane_idx, note_idx, notes, mtime, 4, mjud, true, false, gauge,
-                            );
+                            self.update_micro(UpdateMicroParams {
+                                lane_idx,
+                                note_idx,
+                                notes,
+                                _mtime: mtime,
+                                judge: 4,
+                                mfast: mjud,
+                                judge_vanish: true,
+                                multi_bad: false,
+                                gauge,
+                            });
                             if let Some(pair_idx) = notes[note_idx].pair_index {
-                                self.update_micro(
-                                    lane_idx, pair_idx, notes, mtime, 4, mjud, true, false, gauge,
-                                );
+                                self.update_micro(UpdateMicroParams {
+                                    lane_idx,
+                                    note_idx: pair_idx,
+                                    notes,
+                                    _mtime: mtime,
+                                    judge: 4,
+                                    mfast: mjud,
+                                    judge_vanish: true,
+                                    multi_bad: false,
+                                    gauge,
+                                });
                             }
                         }
                         if ((self.lntype == LNTYPE_LONGNOTE && ln_type == TYPE_UNDEFINED)
                             || ln_type == TYPE_LONGNOTE)
                             && self.lane_states[lane_idx].processing != notes[note_idx].pair_index
                         {
-                            self.update_micro(
-                                lane_idx, note_idx, notes, mtime, 4, mjud, true, false, gauge,
-                            );
+                            self.update_micro(UpdateMicroParams {
+                                lane_idx,
+                                note_idx,
+                                notes,
+                                _mtime: mtime,
+                                judge: 4,
+                                mfast: mjud,
+                                judge_vanish: true,
+                                multi_bad: false,
+                                gauge,
+                            });
                         }
                     }
                     if ((self.lntype != LNTYPE_LONGNOTE && ln_type == TYPE_UNDEFINED)
@@ -649,9 +761,17 @@ impl JudgeManager {
                         && notes[note_idx].is_long_end()
                         && self.note_states[note_idx].state == 0
                     {
-                        self.update_micro(
-                            lane_idx, note_idx, notes, mtime, 4, mjud, true, false, gauge,
-                        );
+                        self.update_micro(UpdateMicroParams {
+                            lane_idx,
+                            note_idx,
+                            notes,
+                            _mtime: mtime,
+                            judge: 4,
+                            mfast: mjud,
+                            judge_vanish: true,
+                            multi_bad: false,
+                            gauge,
+                        });
                         self.lane_states[lane_idx].processing = None;
                         self.lane_states[lane_idx].releasetime = i64::MIN;
                         self.lane_states[lane_idx].lnend_judge = i32::MIN;
@@ -666,19 +786,15 @@ impl JudgeManager {
     }
 
     /// Internal judge update: records score, combo, ghost, and gauge changes.
-    #[allow(clippy::too_many_arguments)]
-    fn update_micro(
-        &mut self,
-        lane_idx: usize,
-        note_idx: usize,
-        notes: &[JudgeNote],
-        _mtime: i64,
-        judge: i32,
-        mfast: i64,
-        judge_vanish: bool,
-        multi_bad: bool,
-        gauge: &mut GrooveGauge,
-    ) {
+    fn update_micro(&mut self, p: UpdateMicroParams<'_>) {
+        let lane_idx = p.lane_idx;
+        let note_idx = p.note_idx;
+        let notes = p.notes;
+        let judge = p.judge;
+        let mfast = p.mfast;
+        let judge_vanish = p.judge_vanish;
+        let multi_bad = p.multi_bad;
+        let gauge = p.gauge;
         let _ = notes; // used for type info if needed in future
         if note_idx >= self.note_states.len() {
             return;

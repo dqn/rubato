@@ -1,5 +1,16 @@
 use bms_model::bms_model::BMSModel;
 
+/// Parameters for updating the rhythm timer.
+pub struct RhythmUpdateParams {
+    pub now: i64,
+    pub micronow: i64,
+    pub deltatime: i64,
+    pub nowbpm: f64,
+    pub play_speed: i32,
+    pub freq: i32,
+    pub play_timer_micro: i64,
+}
+
 /// Rhythm timer processor for section timing and quarter note tracking
 pub struct RhythmTimerProcessor {
     sectiontimes: Vec<i64>,
@@ -71,17 +82,14 @@ impl RhythmTimerProcessor {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn update(
-        &mut self,
-        now: i64,
-        micronow: i64,
-        deltatime: i64,
-        nowbpm: f64,
-        play_speed: i32,
-        freq: i32,
-        play_timer_micro: i64,
-    ) -> (i64, bool) {
+    pub fn update(&mut self, params: &RhythmUpdateParams) -> (i64, bool) {
+        let now = params.now;
+        let micronow = params.micronow;
+        let deltatime = params.deltatime;
+        let nowbpm = params.nowbpm;
+        let play_speed = params.play_speed;
+        let freq = params.freq;
+        let play_timer_micro = params.play_timer_micro;
         self.rhythmtimer +=
             deltatime.saturating_mul(100 - (nowbpm * play_speed as f64 / 60.0) as i64) / 100;
 
@@ -132,15 +140,15 @@ mod tests {
         // nowbpm=1e15, play_speed=100, deltatime=16667 (one frame at 60fps in micros)
         // saturating_mul clamps instead of panicking.
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            processor.update(
-                0,     // now
-                0,     // micronow
-                16667, // deltatime (~16.6ms)
-                1e15,  // nowbpm (extreme)
-                100,   // play_speed
-                100,   // freq
-                0,     // play_timer_micro
-            )
+            processor.update(&RhythmUpdateParams {
+                now: 0,
+                micronow: 0,
+                deltatime: 16667,
+                nowbpm: 1e15,
+                play_speed: 100,
+                freq: 100,
+                play_timer_micro: 0,
+            })
         }));
         assert!(result.is_ok(), "should not panic with extreme BPM");
     }

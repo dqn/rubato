@@ -422,20 +422,22 @@ fn convert_skin_object(
                 SkinGaugeGraphObject::new_from_colors(colors)
             } else {
                 SkinGaugeGraphObject::new_from_color_strings(
-                    assist_clear_bg_color,
-                    assist_and_easy_fail_bg_color,
-                    groove_fail_bg_color,
-                    groove_clear_and_hard_bg_color,
-                    ex_hard_bg_color,
-                    hazard_bg_color,
-                    assist_clear_line_color,
-                    assist_and_easy_fail_line_color,
-                    groove_fail_line_color,
-                    groove_clear_and_hard_line_color,
-                    ex_hard_line_color,
-                    hazard_line_color,
-                    borderline_color,
-                    border_color,
+                    &crate::objects::skin_gauge_graph_object::GaugeGraphColorStrings {
+                        assist_clear_bg: assist_clear_bg_color,
+                        assist_easy_fail_bg: assist_and_easy_fail_bg_color,
+                        groove_fail_bg: groove_fail_bg_color,
+                        groove_clear_hard_bg: groove_clear_and_hard_bg_color,
+                        ex_hard_bg: ex_hard_bg_color,
+                        hazard_bg: hazard_bg_color,
+                        assist_clear_line: assist_clear_line_color,
+                        assist_easy_fail_line: assist_and_easy_fail_line_color,
+                        groove_fail_line: groove_fail_line_color,
+                        groove_clear_hard_line: groove_clear_and_hard_line_color,
+                        ex_hard_line: ex_hard_line_color,
+                        hazard_line: hazard_line_color,
+                        borderline_color,
+                        border_color,
+                    },
                 )
             };
             Some(SkinObject::GaugeGraph(gg))

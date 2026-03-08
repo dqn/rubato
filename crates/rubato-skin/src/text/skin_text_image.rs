@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use crate::stubs::{MainState, Texture, TextureRegion};
 use crate::text::skin_text::SkinTextData;
-use crate::types::skin_object::SkinObjectRenderer;
+use crate::types::skin_object::{DrawImageAtParams, SkinObjectRenderer};
 
 pub struct SkinTextImage {
     pub text_data: SkinTextData,
@@ -129,13 +129,15 @@ impl SkinTextImage {
             let tw = ch.region_width as f32 * scale * region.height / source_size;
             self.text_data.data.draw_image_at_with_color(
                 sprite,
-                ch,
-                x + dx + offset_x,
-                region.y + offset_y,
-                tw,
-                region.height,
-                &color,
-                0,
+                &DrawImageAtParams {
+                    image: ch,
+                    x: x + dx + offset_x,
+                    y: region.y + offset_y,
+                    width: tw,
+                    height: region.height,
+                    color: &color,
+                    angle: 0,
+                },
             );
             dx += tw + self.source.margin() as f32 * scale;
         }

@@ -21,7 +21,7 @@ use rubato_types::groove_gauge::{Gauge, GrooveGauge, HARD, NORMAL};
 /// timing updates instead of panicking.
 #[test]
 fn rhythm_timer_freq_zero_no_panic() {
-    use rubato_play::rhythm_timer_processor::RhythmTimerProcessor;
+    use rubato_play::rhythm_timer_processor::{RhythmTimerProcessor, RhythmUpdateParams};
 
     use bms_model::time_line::TimeLine;
     let mut tl = TimeLine::new(0.0, 0, 8);
@@ -34,15 +34,15 @@ fn rhythm_timer_freq_zero_no_panic() {
 
     // freq=0 no longer panics; section timing updates are skipped.
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        processor2.update(
-            0,     // now
-            0,     // micronow
-            16667, // deltatime
-            120.0, // nowbpm (normal)
-            100,   // play_speed
-            0,     // freq = 0, previously caused division by zero
-            0,     // play_timer_micro
-        )
+        processor2.update(&RhythmUpdateParams {
+            now: 0,
+            micronow: 0,
+            deltatime: 16667,
+            nowbpm: 120.0,
+            play_speed: 100,
+            freq: 0, // previously caused division by zero
+            play_timer_micro: 0,
+        })
     }));
     assert!(result.is_ok(), "freq=0 should not panic");
 }

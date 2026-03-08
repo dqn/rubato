@@ -486,244 +486,244 @@ impl<'a> PomyuCharaLoader<'a> {
                 if set_motion == i32::MIN {
                     set_motion = 1;
                 }
-                self.load_play_type(
-                    usecim,
-                    &chp,
-                    &mut char_bmp,
-                    &mut transparent_flag,
-                    &xywh,
-                    &mut frame,
+                self.load_play_type(LoadPlayTypeParams {
+                    _usecim: usecim,
+                    _chp: &chp,
+                    char_bmp: &mut char_bmp,
+                    transparent_flag: &mut transparent_flag,
+                    xywh: &xywh,
+                    frame: &mut frame,
                     anime,
-                    &size,
-                    &mut loop_val,
+                    size: &size,
+                    loop_val: &mut loop_val,
                     set_color,
                     increase_rate_threshold,
-                    &pattern_data,
+                    pattern_data: &pattern_data,
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    &load_dst,
-                );
+                    dst: &load_dst,
+                });
                 return None;
             }
             FEVER => {
                 set_motion = 6;
-                self.load_play_type(
-                    usecim,
-                    &chp,
-                    &mut char_bmp,
-                    &mut transparent_flag,
-                    &xywh,
-                    &mut frame,
+                self.load_play_type(LoadPlayTypeParams {
+                    _usecim: usecim,
+                    _chp: &chp,
+                    char_bmp: &mut char_bmp,
+                    transparent_flag: &mut transparent_flag,
+                    xywh: &xywh,
+                    frame: &mut frame,
                     anime,
-                    &size,
-                    &mut loop_val,
+                    size: &size,
+                    loop_val: &mut loop_val,
                     set_color,
                     increase_rate_threshold,
-                    &pattern_data,
+                    pattern_data: &pattern_data,
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    &load_dst,
-                );
+                    dst: &load_dst,
+                });
                 return None;
             }
             GREAT => {
                 set_motion = 7;
-                self.load_play_type(
-                    usecim,
-                    &chp,
-                    &mut char_bmp,
-                    &mut transparent_flag,
-                    &xywh,
-                    &mut frame,
+                self.load_play_type(LoadPlayTypeParams {
+                    _usecim: usecim,
+                    _chp: &chp,
+                    char_bmp: &mut char_bmp,
+                    transparent_flag: &mut transparent_flag,
+                    xywh: &xywh,
+                    frame: &mut frame,
                     anime,
-                    &size,
-                    &mut loop_val,
+                    size: &size,
+                    loop_val: &mut loop_val,
                     set_color,
                     increase_rate_threshold,
-                    &pattern_data,
+                    pattern_data: &pattern_data,
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    &load_dst,
-                );
+                    dst: &load_dst,
+                });
                 return None;
             }
             GOOD => {
                 set_motion = 8;
-                self.load_play_type(
-                    usecim,
-                    &chp,
-                    &mut char_bmp,
-                    &mut transparent_flag,
-                    &xywh,
-                    &mut frame,
+                self.load_play_type(LoadPlayTypeParams {
+                    _usecim: usecim,
+                    _chp: &chp,
+                    char_bmp: &mut char_bmp,
+                    transparent_flag: &mut transparent_flag,
+                    xywh: &xywh,
+                    frame: &mut frame,
                     anime,
-                    &size,
-                    &mut loop_val,
+                    size: &size,
+                    loop_val: &mut loop_val,
                     set_color,
                     increase_rate_threshold,
-                    &pattern_data,
+                    pattern_data: &pattern_data,
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    &load_dst,
-                );
+                    dst: &load_dst,
+                });
                 return None;
             }
             BAD => {
                 set_motion = 10;
-                self.load_play_type(
-                    usecim,
-                    &chp,
-                    &mut char_bmp,
-                    &mut transparent_flag,
-                    &xywh,
-                    &mut frame,
+                self.load_play_type(LoadPlayTypeParams {
+                    _usecim: usecim,
+                    _chp: &chp,
+                    char_bmp: &mut char_bmp,
+                    transparent_flag: &mut transparent_flag,
+                    xywh: &xywh,
+                    frame: &mut frame,
                     anime,
-                    &size,
-                    &mut loop_val,
+                    size: &size,
+                    loop_val: &mut loop_val,
                     set_color,
                     increase_rate_threshold,
-                    &pattern_data,
+                    pattern_data: &pattern_data,
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    &load_dst,
-                );
+                    dst: &load_dst,
+                });
                 return None;
             }
             FEVERWIN => {
                 set_motion = 17;
-                self.load_play_type(
-                    usecim,
-                    &chp,
-                    &mut char_bmp,
-                    &mut transparent_flag,
-                    &xywh,
-                    &mut frame,
+                self.load_play_type(LoadPlayTypeParams {
+                    _usecim: usecim,
+                    _chp: &chp,
+                    char_bmp: &mut char_bmp,
+                    transparent_flag: &mut transparent_flag,
+                    xywh: &xywh,
+                    frame: &mut frame,
                     anime,
-                    &size,
-                    &mut loop_val,
+                    size: &size,
+                    loop_val: &mut loop_val,
                     set_color,
                     increase_rate_threshold,
-                    &pattern_data,
+                    pattern_data: &pattern_data,
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    &load_dst,
-                );
+                    dst: &load_dst,
+                });
                 return None;
             }
             WIN => {
                 set_motion = 15;
-                self.load_play_type(
-                    usecim,
-                    &chp,
-                    &mut char_bmp,
-                    &mut transparent_flag,
-                    &xywh,
-                    &mut frame,
+                self.load_play_type(LoadPlayTypeParams {
+                    _usecim: usecim,
+                    _chp: &chp,
+                    char_bmp: &mut char_bmp,
+                    transparent_flag: &mut transparent_flag,
+                    xywh: &xywh,
+                    frame: &mut frame,
                     anime,
-                    &size,
-                    &mut loop_val,
+                    size: &size,
+                    loop_val: &mut loop_val,
                     set_color,
                     increase_rate_threshold,
-                    &pattern_data,
+                    pattern_data: &pattern_data,
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    &load_dst,
-                );
+                    dst: &load_dst,
+                });
                 return None;
             }
             LOSE => {
                 set_motion = 16;
-                self.load_play_type(
-                    usecim,
-                    &chp,
-                    &mut char_bmp,
-                    &mut transparent_flag,
-                    &xywh,
-                    &mut frame,
+                self.load_play_type(LoadPlayTypeParams {
+                    _usecim: usecim,
+                    _chp: &chp,
+                    char_bmp: &mut char_bmp,
+                    transparent_flag: &mut transparent_flag,
+                    xywh: &xywh,
+                    frame: &mut frame,
                     anime,
-                    &size,
-                    &mut loop_val,
+                    size: &size,
+                    loop_val: &mut loop_val,
                     set_color,
                     increase_rate_threshold,
-                    &pattern_data,
+                    pattern_data: &pattern_data,
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    &load_dst,
-                );
+                    dst: &load_dst,
+                });
                 return None;
             }
             OJAMA => {
                 set_motion = 3;
-                self.load_play_type(
-                    usecim,
-                    &chp,
-                    &mut char_bmp,
-                    &mut transparent_flag,
-                    &xywh,
-                    &mut frame,
+                self.load_play_type(LoadPlayTypeParams {
+                    _usecim: usecim,
+                    _chp: &chp,
+                    char_bmp: &mut char_bmp,
+                    transparent_flag: &mut transparent_flag,
+                    xywh: &xywh,
+                    frame: &mut frame,
                     anime,
-                    &size,
-                    &mut loop_val,
+                    size: &size,
+                    loop_val: &mut loop_val,
                     set_color,
                     increase_rate_threshold,
-                    &pattern_data,
+                    pattern_data: &pattern_data,
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    &load_dst,
-                );
+                    dst: &load_dst,
+                });
                 return None;
             }
             DANCE => {
                 set_motion = 14;
-                self.load_play_type(
-                    usecim,
-                    &chp,
-                    &mut char_bmp,
-                    &mut transparent_flag,
-                    &xywh,
-                    &mut frame,
+                self.load_play_type(LoadPlayTypeParams {
+                    _usecim: usecim,
+                    _chp: &chp,
+                    char_bmp: &mut char_bmp,
+                    transparent_flag: &mut transparent_flag,
+                    xywh: &xywh,
+                    frame: &mut frame,
                     anime,
-                    &size,
-                    &mut loop_val,
+                    size: &size,
+                    loop_val: &mut loop_val,
                     set_color,
                     increase_rate_threshold,
-                    &pattern_data,
+                    pattern_data: &pattern_data,
                     char_bmp_index,
                     char_tex_index,
                     set_motion,
-                    &load_dst,
-                );
+                    dst: &load_dst,
+                });
                 return None;
             }
             PLAY => {
                 // PLAY type: setMotion stays i32::MIN
-                self.load_play_type(
-                    usecim,
-                    &chp,
-                    &mut char_bmp,
-                    &mut transparent_flag,
-                    &xywh,
-                    &mut frame,
+                self.load_play_type(LoadPlayTypeParams {
+                    _usecim: usecim,
+                    _chp: &chp,
+                    char_bmp: &mut char_bmp,
+                    transparent_flag: &mut transparent_flag,
+                    xywh: &xywh,
+                    frame: &mut frame,
                     anime,
-                    &size,
-                    &mut loop_val,
+                    size: &size,
+                    loop_val: &mut loop_val,
                     set_color,
                     increase_rate_threshold,
-                    &pattern_data,
+                    pattern_data: &pattern_data,
                     char_bmp_index,
                     char_tex_index,
-                    i32::MIN,
-                    &load_dst,
-                );
+                    set_motion: i32::MIN,
+                    dst: &load_dst,
+                });
                 return None;
             }
             _ => {}

@@ -10,6 +10,24 @@ use rubato_render::color::Color;
 /// Type-to-color-index mapping table (Java: typetable)
 const _TYPE_TABLE: [usize; 10] = [0, 1, 2, 3, 4, 5, 3, 4, 5, 3];
 
+/// Color strings for constructing a gauge graph from hex color values.
+pub struct GaugeGraphColorStrings<'a> {
+    pub assist_clear_bg: &'a str,
+    pub assist_easy_fail_bg: &'a str,
+    pub groove_fail_bg: &'a str,
+    pub groove_clear_hard_bg: &'a str,
+    pub ex_hard_bg: &'a str,
+    pub hazard_bg: &'a str,
+    pub assist_clear_line: &'a str,
+    pub assist_easy_fail_line: &'a str,
+    pub groove_fail_line: &'a str,
+    pub groove_clear_hard_line: &'a str,
+    pub ex_hard_line: &'a str,
+    pub hazard_line: &'a str,
+    pub borderline_color: &'a str,
+    pub border_color: &'a str,
+}
+
 /// Gauge transition graph rendering object.
 ///
 /// Corresponds to Java `SkinGaugeGraphObject`.
@@ -156,23 +174,7 @@ impl SkinGaugeGraphObject {
     /// Creates a SkinGaugeGraphObject from JSON color strings.
     ///
     /// Corresponds to Java constructor with 14 string parameters.
-    #[allow(clippy::too_many_arguments)]
-    pub fn new_from_color_strings(
-        assist_clear_bg: &str,
-        assist_easy_fail_bg: &str,
-        groove_fail_bg: &str,
-        groove_clear_hard_bg: &str,
-        ex_hard_bg: &str,
-        hazard_bg: &str,
-        assist_clear_line: &str,
-        assist_easy_fail_line: &str,
-        groove_fail_line: &str,
-        groove_clear_hard_line: &str,
-        ex_hard_line: &str,
-        hazard_line: &str,
-        borderline_color: &str,
-        border_color_str: &str,
-    ) -> Self {
+    pub fn new_from_color_strings(colors: &GaugeGraphColorStrings<'_>) -> Self {
         let fallback = Color::BLACK;
 
         let mut graph_color = [Color::BLACK; 6];
@@ -181,28 +183,28 @@ impl SkinGaugeGraphObject {
         let mut border_line = [Color::BLACK; 6];
 
         // Below-border background colors
-        graph_color[0] = parse_hex_color(assist_clear_bg, fallback);
-        graph_color[1] = parse_hex_color(assist_easy_fail_bg, fallback);
-        graph_color[2] = parse_hex_color(groove_fail_bg, fallback);
+        graph_color[0] = parse_hex_color(colors.assist_clear_bg, fallback);
+        graph_color[1] = parse_hex_color(colors.assist_easy_fail_bg, fallback);
+        graph_color[2] = parse_hex_color(colors.groove_fail_bg, fallback);
 
         // Above-border background colors
-        border_color[3] = parse_hex_color(groove_clear_hard_bg, fallback);
-        border_color[4] = parse_hex_color(ex_hard_bg, fallback);
-        border_color[5] = parse_hex_color(hazard_bg, fallback);
+        border_color[3] = parse_hex_color(colors.groove_clear_hard_bg, fallback);
+        border_color[4] = parse_hex_color(colors.ex_hard_bg, fallback);
+        border_color[5] = parse_hex_color(colors.hazard_bg, fallback);
 
         // Below-border line colors
-        graph_line[0] = parse_hex_color(assist_clear_line, fallback);
-        graph_line[1] = parse_hex_color(assist_easy_fail_line, fallback);
-        graph_line[2] = parse_hex_color(groove_fail_line, fallback);
+        graph_line[0] = parse_hex_color(colors.assist_clear_line, fallback);
+        graph_line[1] = parse_hex_color(colors.assist_easy_fail_line, fallback);
+        graph_line[2] = parse_hex_color(colors.groove_fail_line, fallback);
 
         // Above-border line colors
-        border_line[3] = parse_hex_color(groove_clear_hard_line, fallback);
-        border_line[4] = parse_hex_color(ex_hard_line, fallback);
-        border_line[5] = parse_hex_color(hazard_line, fallback);
+        border_line[3] = parse_hex_color(colors.groove_clear_hard_line, fallback);
+        border_line[4] = parse_hex_color(colors.ex_hard_line, fallback);
+        border_line[5] = parse_hex_color(colors.hazard_line, fallback);
 
         // Shared border colors for types 0-2
-        let bl = parse_hex_color(borderline_color, fallback);
-        let bc = parse_hex_color(border_color_str, fallback);
+        let bl = parse_hex_color(colors.borderline_color, fallback);
+        let bc = parse_hex_color(colors.border_color, fallback);
         for i in 0..3 {
             border_line[i] = bl;
             border_color[i] = bc;
@@ -257,10 +259,22 @@ mod tests {
 
     #[test]
     fn test_new_from_color_strings() {
-        let obj = SkinGaugeGraphObject::new_from_color_strings(
-            "440044", "004444", "004400", "440000", "444400", "444444", "ff00ff", "00ffff",
-            "00ff00", "ff0000", "ffff00", "cccccc", "ff0000", "440000",
-        );
+        let obj = SkinGaugeGraphObject::new_from_color_strings(&GaugeGraphColorStrings {
+            assist_clear_bg: "440044",
+            assist_easy_fail_bg: "004444",
+            groove_fail_bg: "004400",
+            groove_clear_hard_bg: "440000",
+            ex_hard_bg: "444400",
+            hazard_bg: "444444",
+            assist_clear_line: "ff00ff",
+            assist_easy_fail_line: "00ffff",
+            groove_fail_line: "00ff00",
+            groove_clear_hard_line: "ff0000",
+            ex_hard_line: "ffff00",
+            hazard_line: "cccccc",
+            borderline_color: "ff0000",
+            border_color: "440000",
+        });
         assert_eq!(obj.delay(), 1500);
         assert_eq!(obj.line_width(), 2);
     }

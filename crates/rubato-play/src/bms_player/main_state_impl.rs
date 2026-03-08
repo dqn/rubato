@@ -614,15 +614,16 @@ impl MainState for BMSPlayer {
                 if let Some(ref mut rhythm) = self.rhythm {
                     let play_timer_micro =
                         self.main_state_data.timer.now_micro_time_for_id(TIMER_PLAY);
-                    let (rhythm_timer, rhythm_on) = rhythm.update(
-                        self.main_state_data.timer.now_time(),
-                        micronow,
-                        deltatime,
-                        now_bpm,
-                        self.playspeed,
-                        freq,
-                        play_timer_micro,
-                    );
+                    let (rhythm_timer, rhythm_on) =
+                        rhythm.update(&crate::rhythm_timer_processor::RhythmUpdateParams {
+                            now: self.main_state_data.timer.now_time(),
+                            micronow,
+                            deltatime,
+                            nowbpm: now_bpm,
+                            play_speed: self.playspeed,
+                            freq,
+                            play_timer_micro,
+                        });
                     if rhythm_on {
                         self.main_state_data
                             .timer

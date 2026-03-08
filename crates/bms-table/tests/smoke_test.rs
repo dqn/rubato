@@ -38,14 +38,16 @@ fn difficulty_table_with_source_url_and_elements() {
 
     // Add an element
     let mut elem = DifficultyTableElement::new_with_params(
-        "12",
-        "Test Song",
-        42,
-        "https://example.com/dl",
-        "https://example.com/diff",
-        "hard chart",
-        "abc123",
-        "",
+        &bms_table::difficulty_table_element::DifficultyTableElementParams {
+            did: "12",
+            title: "Test Song",
+            bmsid: 42,
+            url1: "https://example.com/dl",
+            url2: "https://example.com/diff",
+            comment: "hard chart",
+            hash: "abc123",
+            ipfs: "",
+        },
     );
     elem.state = 1;
     elem.eval = 5;

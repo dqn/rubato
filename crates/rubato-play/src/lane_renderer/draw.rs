@@ -1,3 +1,15 @@
+/// Parameters for drawing a long note (CN/HCN/LN).
+struct DrawLongNoteParams<'a> {
+    pub lane: usize,
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+    pub scale: f32,
+    pub note: &'a Note,
+    pub pair_tl_idx: usize,
+}
+
 impl LaneRenderer {
     /// Main lane drawing method. Ported from Java LaneRenderer.drawLane() (713 lines).
     ///
@@ -552,14 +564,16 @@ impl LaneRenderer {
                                             self.draw_long_note_commands(
                                                 &mut commands,
                                                 ctx,
-                                                lane,
-                                                dstx,
-                                                ln_y,
-                                                dstw,
-                                                ln_height,
-                                                dsth,
-                                                note,
-                                                *pair_tl_idx,
+                                                &DrawLongNoteParams {
+                                                    lane,
+                                                    x: dstx,
+                                                    y: ln_y,
+                                                    width: dstw,
+                                                    height: ln_height,
+                                                    scale: dsth,
+                                                    note,
+                                                    pair_tl_idx: *pair_tl_idx,
+                                                },
                                             );
                                         }
                                     }
@@ -754,20 +768,20 @@ impl LaneRenderer {
     ///   CN/LN: 0=start, 1=end, 2=active_body, 3=inactive_body
     ///   HCN:   4=start, 5=end, 6=active_body, 7=inactive_body,
     ///          8=hell_ok_body, 9=hell_ng_body
-    #[allow(clippy::too_many_arguments)]
     fn draw_long_note_commands(
         &self,
         commands: &mut Vec<DrawCommand>,
         ctx: &DrawLaneContext,
-        lane: usize,
-        x: f32,
-        y: f32,
-        width: f32,
-        height: f32,
-        scale: f32,
-        note: &Note,
-        pair_tl_idx: usize,
+        params: &DrawLongNoteParams<'_>,
     ) {
+        let lane = params.lane;
+        let x = params.x;
+        let y = params.y;
+        let width = params.width;
+        let height = params.height;
+        let scale = params.scale;
+        let note = params.note;
+        let pair_tl_idx = params.pair_tl_idx;
         let Note::Long { note_type, .. } = note else {
             return;
         };

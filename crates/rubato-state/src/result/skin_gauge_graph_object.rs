@@ -6,6 +6,24 @@ use super::stubs::{
     TextureRegion,
 };
 
+/// Color strings for constructing a gauge graph from hex color values.
+pub struct GaugeGraphStringColors<'a> {
+    pub assist_clear_bg_color: &'a str,
+    pub assist_and_easy_fail_bg_color: &'a str,
+    pub groove_fail_bg_color: &'a str,
+    pub groove_clear_and_hard_bg_color: &'a str,
+    pub ex_hard_bg_color: &'a str,
+    pub hazard_bg_color: &'a str,
+    pub assist_clear_line_color: &'a str,
+    pub assist_and_easy_fail_line_color: &'a str,
+    pub groove_fail_line_color: &'a str,
+    pub groove_clear_and_hard_line_color: &'a str,
+    pub ex_hard_line_color: &'a str,
+    pub hazard_line_color: &'a str,
+    pub borderline_color: &'a str,
+    pub border_color: &'a str,
+}
+
 /// Gauge graph rendering object for result screen
 pub struct SkinGaugeGraphObject {
     /// Background texture
@@ -132,44 +150,28 @@ impl SkinGaugeGraphObject {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn new_with_string_colors(
-        assist_clear_bg_color: &str,
-        assist_and_easy_fail_bg_color: &str,
-        groove_fail_bg_color: &str,
-        groove_clear_and_hard_bg_color: &str,
-        ex_hard_bg_color: &str,
-        hazard_bg_color: &str,
-        assist_clear_line_color: &str,
-        assist_and_easy_fail_line_color: &str,
-        groove_fail_line_color: &str,
-        groove_clear_and_hard_line_color: &str,
-        ex_hard_line_color: &str,
-        hazard_line_color: &str,
-        borderline_color: &str,
-        border_color: &str,
-    ) -> Self {
+    pub fn new_with_string_colors(colors: &GaugeGraphStringColors<'_>) -> Self {
         let mut graphcolor: [Color; 6] = Default::default();
         let mut graphline: [Color; 6] = Default::default();
         let mut borderline: [Color; 6] = Default::default();
         let mut bordercolor: [Color; 6] = Default::default();
 
-        graphcolor[0] = Color::value_of(assist_clear_bg_color);
-        graphcolor[1] = Color::value_of(assist_and_easy_fail_bg_color);
-        graphcolor[2] = Color::value_of(groove_fail_bg_color);
-        bordercolor[3] = Color::value_of(groove_clear_and_hard_bg_color);
-        bordercolor[4] = Color::value_of(ex_hard_bg_color);
-        bordercolor[5] = Color::value_of(hazard_bg_color);
-        graphline[0] = Color::value_of(assist_clear_line_color);
-        graphline[1] = Color::value_of(assist_and_easy_fail_line_color);
-        graphline[2] = Color::value_of(groove_fail_line_color);
-        borderline[3] = Color::value_of(groove_clear_and_hard_line_color);
-        borderline[4] = Color::value_of(ex_hard_line_color);
-        borderline[5] = Color::value_of(hazard_line_color);
+        graphcolor[0] = Color::value_of(colors.assist_clear_bg_color);
+        graphcolor[1] = Color::value_of(colors.assist_and_easy_fail_bg_color);
+        graphcolor[2] = Color::value_of(colors.groove_fail_bg_color);
+        bordercolor[3] = Color::value_of(colors.groove_clear_and_hard_bg_color);
+        bordercolor[4] = Color::value_of(colors.ex_hard_bg_color);
+        bordercolor[5] = Color::value_of(colors.hazard_bg_color);
+        graphline[0] = Color::value_of(colors.assist_clear_line_color);
+        graphline[1] = Color::value_of(colors.assist_and_easy_fail_line_color);
+        graphline[2] = Color::value_of(colors.groove_fail_line_color);
+        borderline[3] = Color::value_of(colors.groove_clear_and_hard_line_color);
+        borderline[4] = Color::value_of(colors.ex_hard_line_color);
+        borderline[5] = Color::value_of(colors.hazard_line_color);
 
         for i in 0..3 {
-            borderline[i] = Color::value_of(borderline_color);
-            bordercolor[i] = Color::value_of(border_color);
+            borderline[i] = Color::value_of(colors.borderline_color);
+            bordercolor[i] = Color::value_of(colors.border_color);
         }
         graphline[3..6].clone_from_slice(&borderline[3..6]);
         graphcolor[3..6].clone_from_slice(&bordercolor[3..6]);

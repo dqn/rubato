@@ -1,35 +1,49 @@
+/// Parameters for loading a pomyu character play type animation.
+struct LoadPlayTypeParams<'a> {
+    pub _usecim: bool,
+    pub _chp: &'a str,
+    pub char_bmp: &'a mut [Option<Texture>; 8],
+    pub transparent_flag: &'a mut [bool; 8],
+    pub xywh: &'a [[i32; 4]],
+    pub frame: &'a mut [i32; 20],
+    pub anime: i32,
+    pub size: &'a [i32; 2],
+    pub loop_val: &'a mut [i32; 20],
+    pub set_color: i32,
+    pub increase_rate_threshold: i32,
+    pub pattern_data: &'a [Vec<String>],
+    pub char_bmp_index: usize,
+    pub char_tex_index: usize,
+    pub set_motion: i32,
+    pub dst: &'a PomyuCharaDestination,
+}
+
 impl<'a> PomyuCharaLoader<'a> {
 
-    #[allow(clippy::too_many_arguments)]
-    fn load_play_type(
-        &mut self,
-        _usecim: bool,
-        _chp: &str,
-        char_bmp: &mut [Option<Texture>; 8],
-        transparent_flag: &mut [bool; 8],
-        xywh: &[[i32; 4]],
-        frame: &mut [i32; 20],
-        anime: i32,
-        size: &[i32; 2],
-        loop_val: &mut [i32; 20],
-        set_color: i32,
-        increase_rate_threshold: i32,
-        pattern_data: &[Vec<String>],
-        char_bmp_index: usize,
-        char_tex_index: usize,
-        set_motion: i32,
-        dst: &PomyuCharaDestination,
-    ) {
-        let dsttimer = dst.timer;
-        let dst_op1 = dst.op1;
-        let dst_op2 = dst.op2;
-        let dst_op3 = dst.op3;
-        let dst_offset = dst.offset;
-        let side = dst.side;
-        let dstx = dst.x;
-        let dsty = dst.y;
-        let dstw = dst.w;
-        let dsth = dst.h;
+    fn load_play_type(&mut self, p: LoadPlayTypeParams<'_>) {
+        let char_bmp = p.char_bmp;
+        let transparent_flag = p.transparent_flag;
+        let xywh = p.xywh;
+        let frame = p.frame;
+        let anime = p.anime;
+        let size = p.size;
+        let loop_val = p.loop_val;
+        let set_color = p.set_color;
+        let increase_rate_threshold = p.increase_rate_threshold;
+        let pattern_data = p.pattern_data;
+        let char_bmp_index = p.char_bmp_index;
+        let char_tex_index = p.char_tex_index;
+        let set_motion = p.set_motion;
+        let dsttimer = p.dst.timer;
+        let dst_op1 = p.dst.op1;
+        let dst_op2 = p.dst.op2;
+        let dst_op3 = p.dst.op3;
+        let dst_offset = p.dst.offset;
+        let side = p.dst.side;
+        let dstx = p.dst.x;
+        let dsty = p.dst.y;
+        let dstw = p.dst.w;
+        let dsth = p.dst.h;
         // Initialize frame values
         for f in frame.iter_mut() {
             if *f == i32::MIN {
