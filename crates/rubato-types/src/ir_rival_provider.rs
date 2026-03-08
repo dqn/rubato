@@ -36,7 +36,7 @@ pub trait IRRivalProvider: Send + Sync {
     /// Fetch a specific rival's scores from IR (already converted to ScoreData)
     fn fetch_rival_scores(&self, rival: &RivalInfo) -> anyhow::Result<Vec<ScoreData>>;
     /// IR service name (used for file naming: "rival/{irname}{id}.db")
-    fn ir_name(&self) -> String;
+    fn ir_name(&self) -> &str;
     /// Score hash identifier for import
-    fn score_hash(&self) -> String;
+    fn score_hash(&self) -> &str;
 }

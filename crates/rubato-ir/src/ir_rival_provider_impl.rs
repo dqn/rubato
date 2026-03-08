@@ -113,11 +113,11 @@ impl IRRivalProvider for IRRivalProviderImpl {
         }
     }
 
-    fn ir_name(&self) -> String {
-        self.ir_name.clone()
+    fn ir_name(&self) -> &str {
+        &self.ir_name
     }
 
-    fn score_hash(&self) -> String {
-        self.ir_name.clone()
+    fn score_hash(&self) -> &str {
+        &self.ir_name
     }
 }

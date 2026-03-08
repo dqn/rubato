@@ -97,12 +97,11 @@ impl IRChartData {
         };
         let mode = model.and_then(|m| m.mode().copied());
 
-        let mut values = HashMap::new();
-        if let Some(m) = model {
-            for (k, v) in &m.values {
-                values.insert(k.clone(), v.clone());
-            }
-        }
+        let values = if let Some(m) = model {
+            m.values.clone()
+        } else {
+            HashMap::new()
+        };
 
         Self {
             title: song.metadata.title.clone(),

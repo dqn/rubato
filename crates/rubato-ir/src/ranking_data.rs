@@ -114,21 +114,19 @@ impl RankingData {
         let mut sorted_scores: Vec<IRScoreData> = scores.to_vec();
         sorted_scores.sort_by_key(|s| std::cmp::Reverse(s.exscore()));
 
-        let mut scorerankings = vec![0i32; sorted_scores.len()];
-        for i in 0..scorerankings.len() {
-            scorerankings[i] =
-                if i > 0 && sorted_scores[i].exscore() == sorted_scores[i - 1].exscore() {
-                    scorerankings[i - 1]
-                } else {
-                    (i + 1) as i32
-                };
+        let mut scorerankings = Vec::with_capacity(sorted_scores.len());
+        for (i, score) in sorted_scores.iter().enumerate() {
+            let ranking = if i > 0 && score.exscore() == sorted_scores[i - 1].exscore() {
+                scorerankings[i - 1]
+            } else {
+                (i + 1) as i32
+            };
+            scorerankings.push(ranking);
         }
 
         if !first_update {
             self.prevrank = self.irrank;
         }
-        self.scores = Some(sorted_scores.clone());
-        self.scorerankings = Some(scorerankings.clone());
         self.irtotal = sorted_scores.len() as i32;
         self.lamps = [0; 11];
         self.irrank = 0;
@@ -148,6 +146,9 @@ impl RankingData {
                 self.lamps[clear_id] += 1;
             }
         }
+
+        self.scores = Some(sorted_scores);
+        self.scorerankings = Some(scorerankings);
 
         if first_update && self.localrank != 0 {
             self.prevrank = std::cmp::max(self.irrank, self.localrank);

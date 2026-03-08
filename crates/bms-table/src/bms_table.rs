@@ -59,12 +59,8 @@ impl<T: Clone> BmsTable<T> {
     }
 
     pub fn get_tag(&self) -> Option<String> {
-        if self.values.contains_key(TAG) {
-            return self
-                .values
-                .get(TAG)
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
+        if let Some(tag) = self.values.get(TAG).and_then(|v| v.as_str()) {
+            return Some(tag.to_string());
         }
         self.id().map(|s| s.to_string())
     }
@@ -75,10 +71,7 @@ impl<T: Clone> BmsTable<T> {
     }
 
     pub fn set_models(&mut self, models: Vec<T>) {
-        self.models.clear();
-        for m in models {
-            self.models.push(m);
-        }
+        self.models = models;
     }
 
     pub fn add_element(&mut self, dte: T) {
@@ -124,10 +117,7 @@ impl<T: Clone> BmsTable<T> {
     }
 
     pub fn set_values(&mut self, values: &HashMap<String, Value>) {
-        self.values.clear();
-        for (k, v) in values {
-            self.values.insert(k.clone(), v.clone());
-        }
+        self.values.clone_from(values);
     }
 
     pub fn mode(&self) -> Option<&str> {
