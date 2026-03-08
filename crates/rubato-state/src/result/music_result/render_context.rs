@@ -1,8 +1,8 @@
-use rubato_core::clear_type::ClearType;
 use rubato_core::timer_manager::TimerManager;
 
 use super::MusicResult;
 use crate::result::abstract_result::AbstractResultData;
+use crate::result::shared_render_context;
 use crate::result::stubs::{MainController, PlayerResource};
 
 /// Render context adapter for result screen skin rendering.
@@ -41,27 +41,27 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     }
 
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
-        Some(self.resource.player_config())
+        shared_render_context::player_config_ref(self.resource)
     }
 
     fn config_ref(&self) -> Option<&rubato_types::config::Config> {
-        Some(self.main.config())
+        shared_render_context::config_ref(self.main)
     }
 
     fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
-        self.resource.replay_data()
+        shared_render_context::replay_option_data(self.resource)
     }
 
     fn target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
-        self.resource.target_score_data()
+        shared_render_context::target_score_data(self.resource)
     }
 
     fn score_data_ref(&self) -> Option<&rubato_core::score_data::ScoreData> {
-        self.data.score.score.as_ref()
+        shared_render_context::score_data_ref(self.data)
     }
 
     fn rival_score_data_ref(&self) -> Option<&rubato_core::score_data::ScoreData> {
-        Some(&self.data.oldscore)
+        shared_render_context::rival_score_data_ref(self.data)
     }
 
     fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
@@ -88,7 +88,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     }
 
     fn song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
-        self.resource.songdata()
+        shared_render_context::song_data_ref(self.resource)
     }
 
     fn set_timer_micro(&mut self, timer_id: rubato_types::timer_id::TimerId, micro_time: i64) {
@@ -96,56 +96,27 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     }
 
     fn gauge_value(&self) -> f32 {
-        // Return final gauge value from score data
-        self.data.oldscore.play_option.gauge as f32 / 100.0
+        shared_render_context::gauge_value(self.data)
     }
 
     fn gauge_type(&self) -> i32 {
-        self.data.gauge_type
+        shared_render_context::gauge_type(self.data)
     }
 
     fn judge_count(&self, judge: i32, fast: bool) -> i32 {
-        self.data
-            .score
-            .score
-            .as_ref()
-            .map_or(0, |s| s.judge_count(judge, fast))
+        shared_render_context::judge_count(self.data, judge, fast)
     }
 
     fn integer_value(&self, id: i32) -> i32 {
-        match id {
-            // EX score
-            71 => self.data.score.nowscore,
-            // Max combo
-            75 => self.data.score.score.as_ref().map_or(0, |s| s.maxcombo),
-            // Miss count
-            76 => self.data.score.score.as_ref().map_or(0, |s| s.minbp),
-            // Total notes
-            350 => self.data.score.totalnotes,
-            // Playtime (hours/minutes/seconds from boot)
-            17 => (self.timer.now_time() / 3_600_000) as i32,
-            18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,
-            19 => ((self.timer.now_time() % 60_000) / 1_000) as i32,
-            _ => 0,
-        }
+        shared_render_context::integer_value(self.data, self.timer.now_time(), id)
     }
 
     fn float_value(&self, id: i32) -> f32 {
-        match id {
-            // Score rate
-            1102 => self.data.score.rate,
-            _ => 0.0,
-        }
+        shared_render_context::float_value(self.data, id)
     }
 
     fn boolean_value(&self, id: i32) -> bool {
-        match id {
-            // Clear result
-            90 => self.data.oldscore.clear >= ClearType::AssistEasy as i32,
-            // Fail result
-            91 => self.data.oldscore.clear < ClearType::AssistEasy as i32,
-            _ => false,
-        }
+        shared_render_context::boolean_value(self.data, id)
     }
 
     fn string_value(&self, id: i32) -> String {
@@ -190,16 +161,6 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     }
 }
 
-pub(super) fn replay_index_from_event_id(event_id: i32) -> Option<usize> {
-    match event_id {
-        19 => Some(0),
-        316 => Some(1),
-        317 => Some(2),
-        318 => Some(3),
-        _ => None,
-    }
-}
-
 pub(super) struct ResultMouseContext<'a> {
     pub(super) timer: &'a mut TimerManager,
     pub(super) result: &'a mut MusicResult,
@@ -237,7 +198,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
     }
 
     fn execute_event(&mut self, id: i32, _arg1: i32, _arg2: i32) {
-        if let Some(index) = replay_index_from_event_id(id) {
+        if let Some(index) = shared_render_context::replay_index_from_event_id(id) {
             self.result.save_replay_data(index);
         }
     }

@@ -13,6 +13,7 @@ pub mod course_result;
 pub mod music_result;
 pub mod result_key_property;
 pub mod result_skin_data;
+pub(crate) mod shared_render_context;
 pub mod skin_gauge_graph_object;
 
 // Backward-compatible re-exports: both old skin modules now alias ResultSkinData.
