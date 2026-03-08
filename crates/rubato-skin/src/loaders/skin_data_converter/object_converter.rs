@@ -470,16 +470,16 @@ fn convert_skin_object(
             stop_line_color,
             transition_line_color,
         } => {
-            let graph = SkinBPMGraph::new(
-                *delay,
-                *line_width,
+            let graph = SkinBPMGraph::new(crate::skin_bpm_graph::BpmGraphConfig {
+                delay: *delay,
+                line_width: *line_width,
                 main_bpm_color,
                 min_bpm_color,
                 max_bpm_color,
                 other_bpm_color,
                 stop_line_color,
                 transition_line_color,
-            );
+            });
             Some(SkinObject::BpmGraph(graph))
         }
 
@@ -503,26 +503,27 @@ fn convert_skin_object(
             transparent,
             draw_decay,
         } => {
-            let viz = SkinHitErrorVisualizer::new(
-                *width,
-                *judge_width_millis,
-                *line_width,
-                *color_mode,
-                *hiterror_mode,
-                *ema_mode,
-                line_color,
-                center_color,
-                pg_color,
-                gr_color,
-                gd_color,
-                bd_color,
-                pr_color,
-                ema_color,
-                *alpha,
-                *window_length,
-                *transparent,
-                *draw_decay,
-            );
+            let viz =
+                SkinHitErrorVisualizer::new(crate::skin_hit_error_visualizer::HitErrorVisualizerConfig {
+                    width: *width,
+                    judge_width_millis: *judge_width_millis,
+                    line_width: *line_width,
+                    color_mode: *color_mode,
+                    hiterror_mode: *hiterror_mode,
+                    ema_mode: *ema_mode,
+                    line_color,
+                    center_color,
+                    pg_color,
+                    gr_color,
+                    gd_color,
+                    bd_color,
+                    pr_color,
+                    ema_color,
+                    alpha: *alpha,
+                    window_length: *window_length,
+                    transparent: *transparent,
+                    draw_decay: *draw_decay,
+                });
             Some(SkinObject::HitErrorVisualizer(viz))
         }
 
@@ -540,20 +541,21 @@ fn convert_skin_object(
             transparent,
             draw_decay,
         } => {
-            let viz = SkinTimingVisualizer::new(
-                *width,
-                *judge_width_millis,
-                *line_width,
-                line_color,
-                center_color,
-                pg_color,
-                gr_color,
-                gd_color,
-                bd_color,
-                pr_color,
-                *transparent,
-                *draw_decay,
-            );
+            let viz =
+                SkinTimingVisualizer::new(crate::skin_timing_visualizer::TimingVisualizerConfig {
+                    width: *width,
+                    judge_width_millis: *judge_width_millis,
+                    line_width: *line_width,
+                    line_color,
+                    center_color,
+                    pg_color,
+                    gr_color,
+                    gd_color,
+                    bd_color,
+                    pr_color,
+                    transparent: *transparent,
+                    draw_decay: *draw_decay,
+                });
             Some(SkinObject::TimingVisualizer(viz))
         }
 
@@ -572,18 +574,20 @@ fn convert_skin_object(
             draw_dev,
         } => {
             let graph = SkinTimingDistributionGraph::new(
-                *width,
-                *line_width,
-                graph_color,
-                average_color,
-                dev_color,
-                pg_color,
-                gr_color,
-                gd_color,
-                bd_color,
-                pr_color,
-                *draw_average,
-                *draw_dev,
+                crate::skin_timing_distribution_graph::TimingDistributionGraphConfig {
+                    width: *width,
+                    line_width: *line_width,
+                    graph_color,
+                    average_color,
+                    dev_color,
+                    pg_color,
+                    gr_color,
+                    gd_color,
+                    bd_color,
+                    pr_color,
+                    draw_average: *draw_average,
+                    draw_dev: *draw_dev,
+                },
             );
             Some(SkinObject::TimingDistributionGraph(graph))
         }

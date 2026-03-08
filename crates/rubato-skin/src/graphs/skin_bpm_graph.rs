@@ -10,6 +10,18 @@ use crate::stubs::{
 };
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
+/// Configuration for constructing a `SkinBPMGraph`.
+pub struct BpmGraphConfig<'a> {
+    pub delay: i32,
+    pub line_width: i32,
+    pub main_bpm_color: &'a str,
+    pub min_bpm_color: &'a str,
+    pub max_bpm_color: &'a str,
+    pub other_bpm_color: &'a str,
+    pub stop_line_color: &'a str,
+    pub transition_line_color: &'a str,
+}
+
 /// BPM transition graph
 pub struct SkinBPMGraph {
     pub data: SkinObjectData,
@@ -45,17 +57,7 @@ pub struct SkinBPMGraph {
 }
 
 impl SkinBPMGraph {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        delay: i32,
-        line_width: i32,
-        main_bpm_color: &str,
-        min_bpm_color: &str,
-        max_bpm_color: &str,
-        other_bpm_color: &str,
-        stop_line_color: &str,
-        transition_line_color: &str,
-    ) -> Self {
+    pub fn new(config: BpmGraphConfig<'_>) -> Self {
         let min_value = 1.0_f64 / 8.0;
         let max_value = 8.0_f64;
 
@@ -66,8 +68,12 @@ impl SkinBPMGraph {
             state_ref: false,
             model_set: false,
             current: None,
-            delay: if delay > 0 { delay } else { 0 },
-            line_width: if line_width > 0 { line_width } else { 2 },
+            delay: if config.delay > 0 { config.delay } else { 0 },
+            line_width: if config.line_width > 0 {
+                config.line_width
+            } else {
+                2
+            },
             main_line_color: Color::value_of("00ff00"),
             min_line_color: Color::value_of("0000ff"),
             max_line_color: Color::value_of("ff0000"),
@@ -84,12 +90,12 @@ impl SkinBPMGraph {
             max_value_log: max_value.log10(),
         };
 
-        let main_bpm_color_string = sanitize_hex_color(main_bpm_color);
-        let min_bpm_color_string = sanitize_hex_color(min_bpm_color);
-        let max_bpm_color_string = sanitize_hex_color(max_bpm_color);
-        let other_bpm_color_string = sanitize_hex_color(other_bpm_color);
-        let stop_line_color_string = sanitize_hex_color(stop_line_color);
-        let transition_line_color_string = sanitize_hex_color(transition_line_color);
+        let main_bpm_color_string = sanitize_hex_color(config.main_bpm_color);
+        let min_bpm_color_string = sanitize_hex_color(config.min_bpm_color);
+        let max_bpm_color_string = sanitize_hex_color(config.max_bpm_color);
+        let other_bpm_color_string = sanitize_hex_color(config.other_bpm_color);
+        let stop_line_color_string = sanitize_hex_color(config.stop_line_color);
+        let transition_line_color_string = sanitize_hex_color(config.transition_line_color);
 
         if !main_bpm_color_string.is_empty() {
             s.main_line_color = Color::value_of(&main_bpm_color_string);

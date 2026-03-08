@@ -327,16 +327,16 @@ pub fn process_src_bpmchart(
     bpmgraphobj: &mut Option<crate::skin_bpm_graph::SkinBPMGraph>,
 ) {
     let values = parse_int(str_parts);
-    let obj = crate::skin_bpm_graph::SkinBPMGraph::new(
-        values[3],
-        values[4],
-        str_at(str_parts, 5),
-        str_at(str_parts, 6),
-        str_at(str_parts, 7),
-        str_at(str_parts, 8),
-        str_at(str_parts, 9),
-        str_at(str_parts, 10),
-    );
+    let obj = crate::skin_bpm_graph::SkinBPMGraph::new(crate::skin_bpm_graph::BpmGraphConfig {
+        delay: values[3],
+        line_width: values[4],
+        main_bpm_color: str_at(str_parts, 5),
+        min_bpm_color: str_at(str_parts, 6),
+        max_bpm_color: str_at(str_parts, 7),
+        other_bpm_color: str_at(str_parts, 8),
+        stop_line_color: str_at(str_parts, 9),
+        transition_line_color: str_at(str_parts, 10),
+    });
     *gauge = crate::stubs::Rectangle::new(0.0, 0.0, values[1] as f32, values[2] as f32);
     *bpmgraphobj = Some(obj);
 }

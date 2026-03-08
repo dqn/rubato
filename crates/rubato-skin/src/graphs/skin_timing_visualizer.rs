@@ -7,6 +7,22 @@ use crate::stubs::{
 };
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
+/// Configuration for constructing a `SkinTimingVisualizer`.
+pub struct TimingVisualizerConfig<'a> {
+    pub width: i32,
+    pub judge_width_millis: i32,
+    pub line_width: i32,
+    pub line_color: &'a str,
+    pub center_color: &'a str,
+    pub pg_color: &'a str,
+    pub gr_color: &'a str,
+    pub gd_color: &'a str,
+    pub bd_color: &'a str,
+    pub pr_color: &'a str,
+    pub transparent: i32,
+    pub draw_decay: i32,
+}
+
 /// Judge timing visualizer
 ///
 /// Translated from SkinTimingVisualizer.java
@@ -37,38 +53,24 @@ pub struct SkinTimingVisualizer {
 }
 
 impl SkinTimingVisualizer {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        width: i32,
-        judge_width_millis: i32,
-        line_width: i32,
-        line_color: &str,
-        center_color: &str,
-        pg_color: &str,
-        gr_color: &str,
-        gd_color: &str,
-        bd_color: &str,
-        pr_color: &str,
-        transparent: i32,
-        draw_decay: i32,
-    ) -> Self {
-        let line_width = line_width.clamp(1, 4);
-        let center = judge_width_millis;
-        let judge_width_rate = width as f32 / (judge_width_millis as f32 * 2.0 + 1.0);
-        let line_color_val = Color::value_of(&color_string_validation(line_color));
-        let center_color_val = Color::value_of(&color_string_validation(center_color));
+    pub fn new(config: TimingVisualizerConfig<'_>) -> Self {
+        let line_width = config.line_width.clamp(1, 4);
+        let center = config.judge_width_millis;
+        let judge_width_rate = config.width as f32 / (config.judge_width_millis as f32 * 2.0 + 1.0);
+        let line_color_val = Color::value_of(&color_string_validation(config.line_color));
+        let center_color_val = Color::value_of(&color_string_validation(config.center_color));
         let j_color = vec![
-            Color::value_of(&color_string_validation(pg_color)),
-            Color::value_of(&color_string_validation(gr_color)),
-            Color::value_of(&color_string_validation(gd_color)),
-            Color::value_of(&color_string_validation(bd_color)),
-            if transparent == 1 {
+            Color::value_of(&color_string_validation(config.pg_color)),
+            Color::value_of(&color_string_validation(config.gr_color)),
+            Color::value_of(&color_string_validation(config.gd_color)),
+            Color::value_of(&color_string_validation(config.bd_color)),
+            if config.transparent == 1 {
                 Color::CLEAR
             } else {
-                Color::value_of(pr_color)
+                Color::value_of(config.pr_color)
             },
         ];
-        let draw_decay = draw_decay == 1;
+        let draw_decay = config.draw_decay == 1;
 
         Self {
             data: SkinObjectData::new(),

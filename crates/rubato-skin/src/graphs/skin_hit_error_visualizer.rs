@@ -7,6 +7,28 @@ use crate::stubs::{
 };
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
+/// Configuration for constructing a `SkinHitErrorVisualizer`.
+pub struct HitErrorVisualizerConfig<'a> {
+    pub width: i32,
+    pub judge_width_millis: i32,
+    pub line_width: i32,
+    pub color_mode: i32,
+    pub hiterror_mode: i32,
+    pub ema_mode: i32,
+    pub line_color: &'a str,
+    pub center_color: &'a str,
+    pub pg_color: &'a str,
+    pub gr_color: &'a str,
+    pub gd_color: &'a str,
+    pub bd_color: &'a str,
+    pub pr_color: &'a str,
+    pub ema_color: &'a str,
+    pub alpha: f32,
+    pub window_length: i32,
+    pub transparent: i32,
+    pub draw_decay: i32,
+}
+
 /// Early/Late HitError Visualization with EMA
 ///
 /// Translated from SkinHitErrorVisualizer.java
@@ -44,49 +66,29 @@ pub struct SkinHitErrorVisualizer {
 }
 
 impl SkinHitErrorVisualizer {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        width: i32,
-        judge_width_millis: i32,
-        line_width: i32,
-        color_mode: i32,
-        hiterror_mode: i32,
-        ema_mode: i32,
-        line_color: &str,
-        center_color: &str,
-        pg_color: &str,
-        gr_color: &str,
-        gd_color: &str,
-        bd_color: &str,
-        pr_color: &str,
-        ema_color: &str,
-        alpha: f32,
-        window_length: i32,
-        transparent: i32,
-        draw_decay: i32,
-    ) -> Self {
-        let line_width = line_width.clamp(1, 4);
-        let center = judge_width_millis;
-        let judge_width_rate = width as f32 / (judge_width_millis as f32 * 2.0 + 1.0);
-        let line_color_val = Color::value_of(&color_string_validation(line_color));
-        let center_color_val = Color::value_of(&color_string_validation(center_color));
-        let ema_color_val = Color::value_of(&color_string_validation(ema_color));
+    pub fn new(config: HitErrorVisualizerConfig<'_>) -> Self {
+        let line_width = config.line_width.clamp(1, 4);
+        let center = config.judge_width_millis;
+        let judge_width_rate = config.width as f32 / (config.judge_width_millis as f32 * 2.0 + 1.0);
+        let line_color_val = Color::value_of(&color_string_validation(config.line_color));
+        let center_color_val = Color::value_of(&color_string_validation(config.center_color));
+        let ema_color_val = Color::value_of(&color_string_validation(config.ema_color));
         let j_color = vec![
-            Color::value_of(&color_string_validation(pg_color)),
-            Color::value_of(&color_string_validation(gr_color)),
-            Color::value_of(&color_string_validation(gd_color)),
-            Color::value_of(&color_string_validation(bd_color)),
-            if transparent == 1 {
+            Color::value_of(&color_string_validation(config.pg_color)),
+            Color::value_of(&color_string_validation(config.gr_color)),
+            Color::value_of(&color_string_validation(config.gd_color)),
+            Color::value_of(&color_string_validation(config.bd_color)),
+            if config.transparent == 1 {
                 Color::CLEAR
             } else {
-                Color::value_of(pr_color)
+                Color::value_of(config.pr_color)
             },
         ];
-        let hiterror_mode = hiterror_mode == 1;
-        let color_mode = color_mode == 1;
-        let draw_decay = draw_decay == 1;
-        let window_length = if window_length < 100 {
-            window_length
+        let hiterror_mode = config.hiterror_mode == 1;
+        let color_mode = config.color_mode == 1;
+        let draw_decay = config.draw_decay == 1;
+        let window_length = if config.window_length < 100 {
+            config.window_length
         } else {
             100
         };
@@ -100,10 +102,10 @@ impl SkinHitErrorVisualizer {
             center_color: center_color_val,
             ema_color: ema_color_val,
             line_width,
-            width,
+            width: config.width,
             center,
             window_length,
-            ema_mode,
+            ema_mode: config.ema_mode,
             judge_width_rate,
             hiterror_mode,
             color_mode,
@@ -114,7 +116,7 @@ impl SkinHitErrorVisualizer {
             index: 0,
             recent: Vec::new(),
             ema: Some(0),
-            alpha,
+            alpha: config.alpha,
         }
     }
 

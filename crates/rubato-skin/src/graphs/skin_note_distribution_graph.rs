@@ -9,6 +9,16 @@ use crate::stubs::{
 };
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
+/// Parameters for `SkinNoteDistributionGraph::draw_with_params`.
+pub struct NoteDistributionDrawParams<'a> {
+    pub time: i64,
+    pub state: &'a dyn MainState,
+    pub region: &'a Rectangle,
+    pub starttime: i32,
+    pub endtime: i32,
+    pub freq: f32,
+}
+
 /// Note distribution graph
 pub struct SkinNoteDistributionGraph {
     pub data: SkinObjectData,
@@ -314,20 +324,21 @@ impl SkinNoteDistributionGraph {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn draw_with_params(
         &mut self,
         sprite: &mut SkinObjectRenderer,
-        time: i64,
-        state: &dyn MainState,
-        r: &Rectangle,
-        starttime: i32,
-        endtime: i32,
-        freq: f32,
+        params: NoteDistributionDrawParams<'_>,
     ) {
-        self.prepare_with_region(time, state, Some(r), starttime, endtime, freq);
+        self.prepare_with_region(
+            params.time,
+            params.state,
+            Some(params.region),
+            params.starttime,
+            params.endtime,
+            params.freq,
+        );
         if self.data.draw {
-            self.draw(sprite, state);
+            self.draw(sprite, params.state);
         }
     }
 

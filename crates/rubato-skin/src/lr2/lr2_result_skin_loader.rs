@@ -121,18 +121,20 @@ impl LR2ResultSkinLoaderState {
                 // #SRC_TIMINGCHART_1P,(index),(gr),(x),width,height,lineWidth,graphColor,averageColor,devColor,PGColor,GRColor,GDColor,BDColor,PRColor,drawAverage,drawDev
                 let values = lr2_skin_loader::parse_int(str_parts);
                 let obj = SkinTimingDistributionGraph::new(
-                    values[4],
-                    values[6],
-                    str_at(str_parts, 7),
-                    str_at(str_parts, 8),
-                    str_at(str_parts, 9),
-                    str_at(str_parts, 10),
-                    str_at(str_parts, 11),
-                    str_at(str_parts, 12),
-                    str_at(str_parts, 13),
-                    str_at(str_parts, 14),
-                    values[15],
-                    values[16],
+                    crate::skin_timing_distribution_graph::TimingDistributionGraphConfig {
+                        width: values[4],
+                        line_width: values[6],
+                        graph_color: str_at(str_parts, 7),
+                        average_color: str_at(str_parts, 8),
+                        dev_color: str_at(str_parts, 9),
+                        pg_color: str_at(str_parts, 10),
+                        gr_color: str_at(str_parts, 11),
+                        gd_color: str_at(str_parts, 12),
+                        bd_color: str_at(str_parts, 13),
+                        pr_color: str_at(str_parts, 14),
+                        draw_average: values[15],
+                        draw_dev: values[16],
+                    },
                 );
                 self.gauge = Rectangle::new(0.0, 0.0, values[4] as f32, values[5] as f32);
                 self.timinggraphobj = Some(obj);

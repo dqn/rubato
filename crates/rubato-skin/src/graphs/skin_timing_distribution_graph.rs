@@ -5,6 +5,22 @@ use crate::graphs::skin_timing_visualizer::{color_string_validation, judge_area}
 use crate::stubs::{Color, MainState, MusicResult, Pixmap, PixmapFormat, Texture, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
+/// Configuration for constructing a `SkinTimingDistributionGraph`.
+pub struct TimingDistributionGraphConfig<'a> {
+    pub width: i32,
+    pub line_width: i32,
+    pub graph_color: &'a str,
+    pub average_color: &'a str,
+    pub dev_color: &'a str,
+    pub pg_color: &'a str,
+    pub gr_color: &'a str,
+    pub gd_color: &'a str,
+    pub bd_color: &'a str,
+    pub pr_color: &'a str,
+    pub draw_average: i32,
+    pub draw_dev: i32,
+}
+
 /// Judge timing distribution graph
 ///
 /// Translated from SkinTimingDistributionGraph.java
@@ -30,37 +46,23 @@ pub struct SkinTimingDistributionGraph {
 }
 
 impl SkinTimingDistributionGraph {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        width: i32,
-        line_width: i32,
-        graph_color: &str,
-        average_color: &str,
-        dev_color: &str,
-        pg_color: &str,
-        gr_color: &str,
-        gd_color: &str,
-        bd_color: &str,
-        pr_color: &str,
-        draw_average: i32,
-        draw_dev: i32,
-    ) -> Self {
-        let w = if 1 < width { width } else { 1 };
-        let lw = line_width.clamp(1, width);
+    pub fn new(config: TimingDistributionGraphConfig<'_>) -> Self {
+        let w = if 1 < config.width { config.width } else { 1 };
+        let lw = config.line_width.clamp(1, config.width);
         let gx = w / lw;
         let c = gx / 2;
-        let graph_color_val = Color::value_of(&color_string_validation(graph_color));
-        let average_color_val = Color::value_of(&color_string_validation(average_color));
-        let dev_color_val = Color::value_of(&color_string_validation(dev_color));
+        let graph_color_val = Color::value_of(&color_string_validation(config.graph_color));
+        let average_color_val = Color::value_of(&color_string_validation(config.average_color));
+        let dev_color_val = Color::value_of(&color_string_validation(config.dev_color));
         let j_color = vec![
-            Color::value_of(&color_string_validation(pg_color)),
-            Color::value_of(&color_string_validation(gr_color)),
-            Color::value_of(&color_string_validation(gd_color)),
-            Color::value_of(&color_string_validation(bd_color)),
-            Color::value_of(&color_string_validation(pr_color)),
+            Color::value_of(&color_string_validation(config.pg_color)),
+            Color::value_of(&color_string_validation(config.gr_color)),
+            Color::value_of(&color_string_validation(config.gd_color)),
+            Color::value_of(&color_string_validation(config.bd_color)),
+            Color::value_of(&color_string_validation(config.pr_color)),
         ];
-        let draw_average = draw_average == 1;
-        let draw_dev = draw_dev == 1;
+        let draw_average = config.draw_average == 1;
+        let draw_dev = config.draw_dev == 1;
 
         Self {
             data: SkinObjectData::new(),
