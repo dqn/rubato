@@ -1,25 +1,19 @@
-// LauncherStateFactory — concrete StateFactory implementation.
+// LauncherStateFactory -- concrete StateFactory implementation.
 // Creates all 6 screen state types for MainController state dispatch.
 //
 // Translated from: MainController.initializeStates() + createBMSPlayerState()
 // Java creates states eagerly in initializeStates(); Rust creates them on-demand via factory.
 
-use std::any::Any;
-use std::collections::HashSet;
+mod queued_access;
+mod shared_selector;
+
 use std::sync::{Arc, Mutex};
 
-use rubato_audio::audio_driver::AudioDriver;
 use rubato_core::config_pkg::key_configuration::KeyConfiguration;
 use rubato_core::config_pkg::skin_configuration::SkinConfiguration;
 use rubato_core::main_controller::{MainController, StateCreateResult, StateFactory};
-use rubato_core::main_state::{MainState, MainStateData, MainStateType};
-use rubato_core::play_data_accessor::PlayDataAccessor;
-use rubato_core::system_sound_manager::SystemSoundManager;
+use rubato_core::main_state::{MainState, MainStateType};
 use rubato_core::timer_manager::TimerManager;
-use rubato_ir::ir_chart_data::IRChartData;
-use rubato_ir::ir_connection::IRConnection;
-use rubato_ir::ir_course_data::IRCourseData;
-use rubato_ir::ranking_data_cache::RankingDataCache;
 use rubato_play::bga::bga_processor::BGAProcessor;
 use rubato_play::bms_player::BMSPlayer;
 use rubato_state::decide::music_decide::MusicDecide;
@@ -32,453 +26,16 @@ use rubato_state::result::stubs::MainController as ResultMainController;
 use rubato_state::result::stubs::PlayerResource as ResultPlayerResource;
 use rubato_state::result::stubs::RankingData;
 use rubato_state::select::music_selector::MusicSelector;
-use rubato_types::main_controller_access::{
-    MainControllerAccess, MainControllerCommand, MainControllerCommandQueue,
-};
-use rubato_types::player_information::PlayerInformation;
-use rubato_types::player_resource_access::{NullPlayerResource, PlayerResourceAccess};
+use rubato_types::main_controller_access::MainControllerAccess as _;
+use rubato_types::player_resource_access::NullPlayerResource;
+use rubato_types::player_resource_access::PlayerResourceAccess as _;
 use rubato_types::score_data::ScoreData;
-use rubato_types::sound_type::SoundType;
 
-struct QueuedControllerAccess {
-    config: rubato_core::config::Config,
-    player_config: rubato_core::player_config::PlayerConfig,
-    commands: MainControllerCommandQueue,
-    sound: SystemSoundManager,
-    play_data_accessor: PlayDataAccessor,
-    ranking_data_cache: Box<dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess>,
-    ir_connection: Option<Arc<dyn IRConnection + Send + Sync>>,
-    rivals: Vec<PlayerInformation>,
-    ipfs_download_alive: bool,
-    http_downloader: Option<Arc<dyn rubato_types::http_download_submitter::HttpDownloadSubmitter>>,
-    active_audio_paths: HashSet<String>,
-}
+pub use queued_access::new_state_main_controller_access;
+use queued_access::{QueuedAudioDriver, QueuedControllerAccess};
+use shared_selector::SharedMusicSelectorState;
 
-fn ensure_controller_ranking_cache(controller: &mut MainController) {
-    if controller.ranking_data_cache().is_none() {
-        controller.set_ranking_data_cache(Box::new(RankingDataCache::new()));
-    }
-}
-
-impl QueuedControllerAccess {
-    fn from_controller(
-        controller: &mut MainController,
-        commands: MainControllerCommandQueue,
-    ) -> Self {
-        ensure_controller_ranking_cache(controller);
-        let config = controller.config().clone();
-        let player_config = controller.player_config().clone();
-        let ir_connection = controller.ir_connection_any().and_then(|any| {
-            any.downcast_ref::<Arc<dyn IRConnection + Send + Sync>>()
-                .cloned()
-        });
-        let rivals = (0..controller.rival_count())
-            .filter_map(|i| controller.rival_information(i))
-            .collect();
-        let ranking_data_cache = controller
-            .ranking_data_cache()
-            .map(|cache| cache.clone_box())
-            .unwrap_or_else(|| Box::new(RankingDataCache::new()));
-
-        Self {
-            sound: SystemSoundManager::new(
-                Some(config.paths.bgmpath.as_str()),
-                Some(config.paths.soundpath.as_str()),
-            ),
-            play_data_accessor: PlayDataAccessor::new(&config),
-            ranking_data_cache,
-            ipfs_download_alive: controller.is_ipfs_download_alive(),
-            http_downloader: controller.clone_http_download_processor(),
-            config,
-            player_config,
-            commands,
-            ir_connection,
-            rivals,
-            active_audio_paths: HashSet::new(),
-        }
-    }
-}
-
-impl MainControllerAccess for QueuedControllerAccess {
-    fn config(&self) -> &rubato_types::config::Config {
-        &self.config
-    }
-
-    fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
-        &self.player_config
-    }
-
-    fn change_state(&mut self, state: MainStateType) {
-        self.commands
-            .push(MainControllerCommand::ChangeState(state));
-    }
-
-    fn save_config(&self) {
-        self.commands.push(MainControllerCommand::SaveConfig);
-    }
-
-    fn exit(&self) {
-        self.commands.push(MainControllerCommand::Exit);
-    }
-
-    fn save_last_recording(&self, reason: &str) {
-        self.commands
-            .push(MainControllerCommand::SaveLastRecording(reason.to_string()));
-    }
-
-    fn update_song(&mut self, path: Option<&str>) {
-        self.commands
-            .push(MainControllerCommand::UpdateSong(path.map(str::to_string)));
-    }
-
-    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-        None
-    }
-
-    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-        None
-    }
-
-    fn play_sound(&mut self, sound: &SoundType, loop_sound: bool) {
-        self.commands
-            .push(MainControllerCommand::PlaySound(*sound, loop_sound));
-    }
-
-    fn stop_sound(&mut self, sound: &SoundType) {
-        self.commands.push(MainControllerCommand::StopSound(*sound));
-    }
-
-    fn sound_path(&self, sound: &SoundType) -> Option<String> {
-        self.sound.sound(sound).cloned()
-    }
-
-    fn play_audio_path(&mut self, path: &str, volume: f32, loop_play: bool) {
-        if path.is_empty() {
-            return;
-        }
-        self.active_audio_paths.insert(path.to_string());
-        self.commands.push(MainControllerCommand::PlayAudioPath(
-            path.to_string(),
-            volume,
-            loop_play,
-        ));
-    }
-
-    fn set_audio_path_volume(&mut self, path: &str, volume: f32) {
-        if path.is_empty() {
-            return;
-        }
-        self.commands
-            .push(MainControllerCommand::SetAudioPathVolume(
-                path.to_string(),
-                volume,
-            ));
-    }
-
-    fn is_audio_path_playing(&self, path: &str) -> bool {
-        self.active_audio_paths.contains(path)
-    }
-
-    fn stop_audio_path(&mut self, path: &str) {
-        if path.is_empty() {
-            return;
-        }
-        self.active_audio_paths.remove(path);
-        self.commands
-            .push(MainControllerCommand::StopAudioPath(path.to_string()));
-    }
-
-    fn dispose_audio_path(&mut self, path: &str) {
-        if path.is_empty() {
-            return;
-        }
-        self.active_audio_paths.remove(path);
-        self.commands
-            .push(MainControllerCommand::DisposeAudioPath(path.to_string()));
-    }
-
-    fn shuffle_sounds(&mut self) {
-        self.sound.shuffle();
-        self.commands.push(MainControllerCommand::ShuffleSounds);
-    }
-
-    fn read_replay_data(
-        &self,
-        sha256: &str,
-        has_ln: bool,
-        lnmode: i32,
-        index: i32,
-    ) -> Option<rubato_types::replay_data::ReplayData> {
-        self.play_data_accessor
-            .read_replay_data(sha256, has_ln, lnmode, index)
-    }
-
-    fn ir_song_url(&self, song_data: &rubato_types::song_data::SongData) -> Option<String> {
-        self.ir_connection
-            .as_ref()
-            .and_then(|conn| conn.get_song_url(&IRChartData::new(song_data)))
-    }
-
-    fn ir_course_url(&self, course_data: &rubato_types::course_data::CourseData) -> Option<String> {
-        self.ir_connection.as_ref().and_then(|conn| {
-            conn.get_course_url(&IRCourseData::new_with_lntype(
-                course_data,
-                self.player_config.play_settings.lnmode,
-            ))
-        })
-    }
-
-    fn update_table(
-        &mut self,
-        source: Box<dyn rubato_types::table_update_source::TableUpdateSource>,
-    ) {
-        self.commands
-            .push(MainControllerCommand::UpdateTable(source));
-    }
-
-    fn http_downloader(
-        &self,
-    ) -> Option<&dyn rubato_types::http_download_submitter::HttpDownloadSubmitter> {
-        self.http_downloader
-            .as_ref()
-            .map(|downloader| downloader.as_ref())
-    }
-
-    fn is_ipfs_download_alive(&self) -> bool {
-        self.ipfs_download_alive
-    }
-
-    fn start_ipfs_download(&mut self, song: &rubato_types::song_data::SongData) -> bool {
-        if !self.ipfs_download_alive {
-            return false;
-        }
-        self.commands
-            .push(MainControllerCommand::StartIpfsDownload(Box::new(
-                song.clone(),
-            )));
-        true
-    }
-
-    fn ranking_data_cache(
-        &self,
-    ) -> Option<&dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess> {
-        Some(&*self.ranking_data_cache)
-    }
-
-    fn ranking_data_cache_mut(
-        &mut self,
-    ) -> Option<&mut (dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess + 'static)>
-    {
-        Some(&mut *self.ranking_data_cache)
-    }
-
-    fn rival_count(&self) -> usize {
-        self.rivals.len()
-    }
-
-    fn rival_information(&self, index: usize) -> Option<PlayerInformation> {
-        self.rivals.get(index).cloned()
-    }
-
-    fn read_score_data_by_hash(&self, hash: &str, ln: bool, lnmode: i32) -> Option<ScoreData> {
-        self.play_data_accessor
-            .read_score_data_by_hash(hash, ln, lnmode)
-    }
-
-    fn read_player_data(&self) -> Option<rubato_types::player_data::PlayerData> {
-        self.play_data_accessor.read_player_data()
-    }
-
-    fn ir_connection_any(&self) -> Option<&dyn Any> {
-        self.ir_connection.as_ref().map(|conn| conn as &dyn Any)
-    }
-}
-
-pub fn new_state_main_controller_access(
-    controller: &mut MainController,
-) -> Box<dyn MainControllerAccess + Send> {
-    Box::new(QueuedControllerAccess::from_controller(
-        controller,
-        controller.controller_command_queue(),
-    ))
-}
-
-struct QueuedAudioDriver {
-    commands: MainControllerCommandQueue,
-    global_pitch: f32,
-}
-
-impl QueuedAudioDriver {
-    fn new(commands: MainControllerCommandQueue) -> Self {
-        Self {
-            commands,
-            global_pitch: 1.0,
-        }
-    }
-}
-
-impl AudioDriver for QueuedAudioDriver {
-    fn play_path(&mut self, _path: &str, _volume: f32, _loop_play: bool) {}
-    fn set_volume_path(&mut self, _path: &str, _volume: f32) {}
-    fn is_playing_path(&self, _path: &str) -> bool {
-        false
-    }
-    fn stop_path(&mut self, _path: &str) {}
-    fn dispose_path(&mut self, _path: &str) {}
-    fn set_model(&mut self, _model: &bms_model::bms_model::BMSModel) {}
-    fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
-    fn abort(&mut self) {}
-    fn get_progress(&self) -> f32 {
-        1.0
-    }
-    fn play_note(&mut self, _n: &bms_model::note::Note, _volume: f32, _pitch: i32) {}
-    fn play_judge(&mut self, _judge: i32, _fast: bool) {}
-    fn stop_note(&mut self, _n: Option<&bms_model::note::Note>) {
-        self.commands.push(MainControllerCommand::StopAllNotes);
-    }
-    fn set_volume_note(&mut self, _n: &bms_model::note::Note, _volume: f32) {}
-    fn set_global_pitch(&mut self, pitch: f32) {
-        self.global_pitch = pitch;
-        self.commands
-            .push(MainControllerCommand::SetGlobalPitch(pitch));
-    }
-    fn get_global_pitch(&self) -> f32 {
-        self.global_pitch
-    }
-    fn dispose_old(&mut self) {}
-    fn dispose(&mut self) {}
-}
-
-/// Wrapper that delegates MainState methods to a shared `Arc<Mutex<MusicSelector>>`.
-///
-/// Java: StreamController and MusicSelect screen share the same MusicSelector instance.
-/// In Rust, both hold an `Arc<Mutex<MusicSelector>>` so stream request bars appear in the
-/// select screen's bar list.
-///
-/// The wrapper owns a local `MainStateData` for the `main_state_data()` / `main_state_data_mut()`
-/// trait methods (which return references and cannot go through a Mutex). Lifecycle methods
-/// (create, render, etc.) delegate through the Arc<Mutex<>> to the shared selector.
-struct SharedMusicSelectorState {
-    selector: Arc<Mutex<MusicSelector>>,
-    /// Local state data for skin/score property access.
-    /// Synced from the shared selector on create() and after render().
-    state_data: MainStateData,
-}
-
-impl SharedMusicSelectorState {
-    fn new(selector: Arc<Mutex<MusicSelector>>) -> Self {
-        let state_data = {
-            let mut selector_guard = selector.lock().expect("selector lock poisoned");
-            std::mem::replace(
-                &mut selector_guard.main_state_data,
-                MainStateData::new(TimerManager::new()),
-            )
-        };
-        Self {
-            selector,
-            state_data,
-        }
-    }
-
-    fn with_selector<R>(&mut self, f: impl FnOnce(&mut MusicSelector) -> R) -> R {
-        let mut selector = self.selector.lock().expect("selector lock poisoned");
-        std::mem::swap(&mut self.state_data, &mut selector.main_state_data);
-        let result = f(&mut selector);
-        std::mem::swap(&mut self.state_data, &mut selector.main_state_data);
-        result
-    }
-}
-
-impl MainState for SharedMusicSelectorState {
-    fn state_type(&self) -> Option<MainStateType> {
-        Some(MainStateType::MusicSelect)
-    }
-
-    fn main_state_data(&self) -> &MainStateData {
-        &self.state_data
-    }
-
-    fn main_state_data_mut(&mut self) -> &mut MainStateData {
-        &mut self.state_data
-    }
-
-    fn create(&mut self) {
-        self.with_selector(|selector| selector.create());
-    }
-
-    fn prepare(&mut self) {
-        self.with_selector(|selector| selector.prepare());
-    }
-
-    fn shutdown(&mut self) {
-        self.with_selector(|selector| selector.shutdown());
-    }
-
-    fn render(&mut self) {
-        self.with_selector(|selector| selector.render());
-    }
-
-    fn input(&mut self) {
-        self.with_selector(|selector| selector.input());
-    }
-
-    fn sync_audio(&mut self, audio: &mut dyn rubato_audio::audio_driver::AudioDriver) {
-        self.with_selector(|selector| selector.sync_audio(audio));
-    }
-
-    fn pause(&mut self) {
-        self.with_selector(|selector| selector.pause());
-    }
-
-    fn resume(&mut self) {
-        self.with_selector(|selector| selector.resume());
-    }
-
-    fn resize(&mut self, width: i32, height: i32) {
-        self.with_selector(|selector| selector.resize(width, height));
-    }
-
-    fn handle_skin_mouse_pressed(&mut self, button: i32, x: i32, y: i32) {
-        self.with_selector(|selector| selector.handle_skin_mouse_pressed(button, x, y));
-    }
-
-    fn handle_skin_mouse_dragged(&mut self, button: i32, x: i32, y: i32) {
-        self.with_selector(|selector| selector.handle_skin_mouse_dragged(button, x, y));
-    }
-
-    fn dispose(&mut self) {
-        self.with_selector(|selector| selector.dispose());
-    }
-
-    fn sound(&self, sound: SoundType) -> Option<String> {
-        self.selector
-            .lock()
-            .expect("selector lock poisoned")
-            .sound(sound)
-    }
-
-    fn play_sound_loop(&mut self, sound: SoundType, loop_sound: bool) {
-        self.with_selector(|selector| selector.play_sound_loop(sound, loop_sound));
-    }
-
-    fn stop_sound(&mut self, sound: SoundType) {
-        self.with_selector(|selector| selector.stop_sound(sound));
-    }
-
-    fn load_skin(&mut self, skin_type: i32) {
-        self.with_selector(|selector| selector.load_skin(skin_type));
-    }
-
-    fn render_skin(&mut self, sprite: &mut rubato_core::sprite_batch_helper::SpriteBatch) {
-        self.with_selector(|selector| selector.render_skin(sprite));
-    }
-
-    fn take_pending_state_change(&mut self) -> Option<MainStateType> {
-        self.with_selector(|selector| selector.take_pending_state_change())
-    }
-}
-
-/// LauncherStateFactory — creates concrete state instances for all screen types.
+/// LauncherStateFactory -- creates concrete state instances for all screen types.
 ///
 /// This is the concrete implementation of StateFactory that lives in beatoraja-launcher,
 /// which has access to all screen state crates. Core cannot import these directly due
@@ -591,7 +148,7 @@ impl StateFactory for LauncherStateFactory {
                 let command_queue = controller.controller_command_queue();
                 let mc_access =
                     QueuedControllerAccess::from_controller(controller, command_queue.clone());
-                let resource: Box<dyn PlayerResourceAccess> =
+                let resource: Box<dyn rubato_types::player_resource_access::PlayerResourceAccess> =
                     if let Some(r) = controller.take_player_resource() {
                         Box::new(r)
                     } else {
@@ -813,8 +370,10 @@ mod tests {
     use rubato_core::sprite_batch_helper::SpriteBatchHelper;
     use rubato_ir::ranking_data::RankingData;
     use rubato_state::select::preview_music_processor::PreviewMusicProcessor;
+    use rubato_types::main_controller_access::MainControllerAccess;
     use rubato_types::skin_render_context::SkinRenderContext;
     use rubato_types::song_data::SongData;
+    use rubato_types::sound_type::SoundType;
     use std::sync::{Arc, Mutex};
 
     struct MockSkin;
@@ -967,6 +526,7 @@ mod tests {
         }
     }
     use rubato_core::config::Config;
+    use rubato_core::main_state::MainStateData;
     use rubato_core::player_config::PlayerConfig;
 
     fn make_test_controller() -> MainController {
@@ -1274,7 +834,9 @@ mod tests {
     #[test]
     fn queued_controller_access_shares_ranking_cache_with_controller() {
         let mut controller = make_test_controller();
-        controller.set_ranking_data_cache(Box::new(RankingDataCache::new()));
+        controller.set_ranking_data_cache(Box::new(
+            rubato_ir::ranking_data_cache::RankingDataCache::new(),
+        ));
         let queue = controller.controller_command_queue();
         let mut access = QueuedControllerAccess::from_controller(&mut controller, queue);
         let song = SongData::default();
@@ -1282,13 +844,17 @@ mod tests {
         access
             .ranking_data_cache_mut()
             .expect("queued access should expose ranking cache")
-            .put_song_any(&song, 0, Box::new(RankingData::new()));
+            .put_song_any(
+                &song,
+                0,
+                Box::new(rubato_ir::ranking_data::RankingData::new()),
+            );
 
         let cached = controller
             .ranking_data_cache()
             .expect("controller should expose ranking cache")
             .song_any(&song, 0)
-            .and_then(|any| any.downcast::<RankingData>().ok())
+            .and_then(|any| any.downcast::<rubato_ir::ranking_data::RankingData>().ok())
             .map(|ranking| *ranking);
         assert!(
             cached.is_some(),
