@@ -9,6 +9,14 @@ use crate::sources::skin_source_set::SkinSourceSet;
 use crate::stubs::{MainState, SkinOffset, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
+/// Display configuration for integer number rendering.
+pub struct NumberDisplayConfig {
+    pub keta: i32,
+    pub zeropadding: i32,
+    pub space: i32,
+    pub align: i32,
+}
+
 pub struct SkinNumber {
     pub data: SkinObjectData,
     image: Box<dyn SkinSourceSet>,
@@ -54,17 +62,13 @@ impl SkinNumber {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer(
         image: Vec<Vec<TextureRegion>>,
         mimage: Option<Vec<Vec<TextureRegion>>>,
         timer: i32,
         cycle: i32,
-        keta: i32,
-        zeropadding: i32,
-        space: i32,
+        config: NumberDisplayConfig,
         id: i32,
-        align: i32,
     ) -> Self {
         Self {
             data: SkinObjectData::new(),
@@ -77,11 +81,11 @@ impl SkinNumber {
                 ))
             }),
             ref_prop: integer_property_factory::integer_property_by_id(id),
-            keta,
-            current_images: vec![None; keta as usize],
-            zeropadding,
-            space,
-            align,
+            current_images: vec![None; config.keta as usize],
+            keta: config.keta,
+            zeropadding: config.zeropadding,
+            space: config.space,
+            align: config.align,
             value: i32::MIN,
             shiftbase: 0,
             offsets: None,
@@ -91,17 +95,13 @@ impl SkinNumber {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer_ref(
         image: Vec<Vec<TextureRegion>>,
         mimage: Option<Vec<Vec<TextureRegion>>>,
         timer: i32,
         cycle: i32,
-        keta: i32,
-        zeropadding: i32,
-        space: i32,
+        config: NumberDisplayConfig,
         ref_prop: Box<dyn IntegerProperty>,
-        align: i32,
     ) -> Self {
         Self {
             data: SkinObjectData::new(),
@@ -114,11 +114,11 @@ impl SkinNumber {
                 ))
             }),
             ref_prop: Some(ref_prop),
-            keta,
-            current_images: vec![None; keta as usize],
-            zeropadding,
-            space,
-            align,
+            current_images: vec![None; config.keta as usize],
+            keta: config.keta,
+            zeropadding: config.zeropadding,
+            space: config.space,
+            align: config.align,
             value: i32::MIN,
             shiftbase: 0,
             offsets: None,
@@ -128,17 +128,13 @@ impl SkinNumber {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer(
         image: Vec<Vec<TextureRegion>>,
         mimage: Option<Vec<Vec<TextureRegion>>>,
         timer: Box<dyn TimerProperty>,
         cycle: i32,
-        keta: i32,
-        zeropadding: i32,
-        space: i32,
+        config: NumberDisplayConfig,
         id: i32,
-        align: i32,
     ) -> Self {
         Self {
             data: SkinObjectData::new(),
@@ -153,11 +149,11 @@ impl SkinNumber {
                 ))
             }),
             ref_prop: integer_property_factory::integer_property_by_id(id),
-            keta,
-            current_images: vec![None; keta as usize],
-            zeropadding,
-            space,
-            align,
+            current_images: vec![None; config.keta as usize],
+            keta: config.keta,
+            zeropadding: config.zeropadding,
+            space: config.space,
+            align: config.align,
             value: i32::MIN,
             shiftbase: 0,
             offsets: None,
@@ -167,17 +163,13 @@ impl SkinNumber {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer_ref(
         image: Vec<Vec<TextureRegion>>,
         mimage: Option<Vec<Vec<TextureRegion>>>,
         timer: Box<dyn TimerProperty>,
         cycle: i32,
-        keta: i32,
-        zeropadding: i32,
-        space: i32,
+        config: NumberDisplayConfig,
         ref_prop: Box<dyn IntegerProperty>,
-        align: i32,
     ) -> Self {
         Self {
             data: SkinObjectData::new(),
@@ -192,11 +184,11 @@ impl SkinNumber {
                 ))
             }),
             ref_prop: Some(ref_prop),
-            keta,
-            current_images: vec![None; keta as usize],
-            zeropadding,
-            space,
-            align,
+            current_images: vec![None; config.keta as usize],
+            keta: config.keta,
+            zeropadding: config.zeropadding,
+            space: config.space,
+            align: config.align,
             value: i32::MIN,
             shiftbase: 0,
             offsets: None,
@@ -440,8 +432,19 @@ mod tests {
     #[test]
     fn test_skin_number_draw_basic_single_digit() {
         // Value=5, keta=1, left-aligned
-        let mut num =
-            SkinNumber::new_with_int_timer(make_digit_images(), None, 0, 0, 1, 0, 0, 0, 0);
+        let mut num = SkinNumber::new_with_int_timer(
+            make_digit_images(),
+            None,
+            0,
+            0,
+            NumberDisplayConfig {
+                keta: 1,
+                zeropadding: 0,
+                space: 0,
+                align: 0,
+            },
+            0,
+        );
         setup_data(&mut num.data, 10.0, 20.0, 24.0, 32.0);
 
         // Directly prepare with value
@@ -462,8 +465,19 @@ mod tests {
     #[test]
     fn test_skin_number_draw_multi_digit_spacing() {
         // Value=123, keta=3, space=2, left-aligned (align=0)
-        let mut num =
-            SkinNumber::new_with_int_timer(make_digit_images(), None, 0, 0, 3, 1, 2, 0, 0);
+        let mut num = SkinNumber::new_with_int_timer(
+            make_digit_images(),
+            None,
+            0,
+            0,
+            NumberDisplayConfig {
+                keta: 3,
+                zeropadding: 1,
+                space: 2,
+                align: 0,
+            },
+            0,
+        );
         setup_data(&mut num.data, 100.0, 50.0, 24.0, 32.0);
 
         let state = MockMainState::default();
@@ -492,8 +506,19 @@ mod tests {
         // shift = (region.width + space) * shiftbase
         // For value=5, keta=3: digits=[None, None, 5] => shiftbase=2
         // shift = (24 + 0) * 2 = 48
-        let mut num =
-            SkinNumber::new_with_int_timer(make_digit_images(), None, 0, 0, 3, 0, 0, 0, 1);
+        let mut num = SkinNumber::new_with_int_timer(
+            make_digit_images(),
+            None,
+            0,
+            0,
+            NumberDisplayConfig {
+                keta: 3,
+                zeropadding: 0,
+                space: 0,
+                align: 1,
+            },
+            0,
+        );
         setup_data(&mut num.data, 100.0, 50.0, 24.0, 32.0);
 
         let state = MockMainState::default();
@@ -518,8 +543,19 @@ mod tests {
         // Value=5, keta=3, zeropadding=0, align=2 (center)
         // shift = (region.width + space) * 0.5 * shiftbase
         // shiftbase=2 => shift = 24 * 0.5 * 2 = 24
-        let mut num =
-            SkinNumber::new_with_int_timer(make_digit_images(), None, 0, 0, 3, 0, 0, 0, 2);
+        let mut num = SkinNumber::new_with_int_timer(
+            make_digit_images(),
+            None,
+            0,
+            0,
+            NumberDisplayConfig {
+                keta: 3,
+                zeropadding: 0,
+                space: 0,
+                align: 2,
+            },
+            0,
+        );
         setup_data(&mut num.data, 100.0, 50.0, 24.0, 32.0);
 
         let state = MockMainState::default();
@@ -542,8 +578,19 @@ mod tests {
     fn test_skin_number_draw_alignment_left() {
         // Value=5, keta=3, zeropadding=0, align=0 (left)
         // shift = 0
-        let mut num =
-            SkinNumber::new_with_int_timer(make_digit_images(), None, 0, 0, 3, 0, 0, 0, 0);
+        let mut num = SkinNumber::new_with_int_timer(
+            make_digit_images(),
+            None,
+            0,
+            0,
+            NumberDisplayConfig {
+                keta: 3,
+                zeropadding: 0,
+                space: 0,
+                align: 0,
+            },
+            0,
+        );
         setup_data(&mut num.data, 100.0, 50.0, 24.0, 32.0);
 
         let state = MockMainState::default();
@@ -564,8 +611,19 @@ mod tests {
     #[test]
     fn test_skin_number_draw_zero_padded() {
         // Value=5, keta=3, zeropadding=1, all digits should show (zero-filled)
-        let mut num =
-            SkinNumber::new_with_int_timer(make_digit_images(), None, 0, 0, 3, 1, 0, 0, 0);
+        let mut num = SkinNumber::new_with_int_timer(
+            make_digit_images(),
+            None,
+            0,
+            0,
+            NumberDisplayConfig {
+                keta: 3,
+                zeropadding: 1,
+                space: 0,
+                align: 0,
+            },
+            0,
+        );
         setup_data(&mut num.data, 0.0, 0.0, 24.0, 32.0);
 
         let state = MockMainState::default();
@@ -581,8 +639,19 @@ mod tests {
     #[test]
     fn test_skin_number_draw_with_offsets() {
         // Value=42, keta=2, with per-digit offsets
-        let mut num =
-            SkinNumber::new_with_int_timer(make_digit_images(), None, 0, 0, 2, 1, 0, 0, 0);
+        let mut num = SkinNumber::new_with_int_timer(
+            make_digit_images(),
+            None,
+            0,
+            0,
+            NumberDisplayConfig {
+                keta: 2,
+                zeropadding: 1,
+                space: 0,
+                align: 0,
+            },
+            0,
+        );
         setup_data(&mut num.data, 10.0, 20.0, 24.0, 32.0);
 
         let offsets = vec![
@@ -632,8 +701,19 @@ mod tests {
     fn test_skin_number_length_calculation() {
         // Value=123, keta=5, space=4, zeropadding=0
         // shiftbase=2 (two leading nulls), length = (width+space) * (keta-shiftbase)
-        let mut num =
-            SkinNumber::new_with_int_timer(make_digit_images(), None, 0, 0, 5, 0, 4, 0, 0);
+        let mut num = SkinNumber::new_with_int_timer(
+            make_digit_images(),
+            None,
+            0,
+            0,
+            NumberDisplayConfig {
+                keta: 5,
+                zeropadding: 0,
+                space: 4,
+                align: 0,
+            },
+            0,
+        );
         setup_data(&mut num.data, 0.0, 0.0, 20.0, 32.0);
 
         let state = MockMainState::default();
@@ -645,8 +725,19 @@ mod tests {
 
     #[test]
     fn test_skin_number_draw_invalid_value() {
-        let mut num =
-            SkinNumber::new_with_int_timer(make_digit_images(), None, 0, 0, 3, 0, 0, 0, 0);
+        let mut num = SkinNumber::new_with_int_timer(
+            make_digit_images(),
+            None,
+            0,
+            0,
+            NumberDisplayConfig {
+                keta: 3,
+                zeropadding: 0,
+                space: 0,
+                align: 0,
+            },
+            0,
+        );
         setup_data(&mut num.data, 0.0, 0.0, 24.0, 32.0);
 
         let state = MockMainState::default();

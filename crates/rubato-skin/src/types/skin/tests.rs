@@ -448,8 +448,19 @@ fn test_skin_object_enum_two_phase_bar() {
 fn test_skin_object_enum_two_phase_number() {
     // Phase 40a: verify SkinObject::Number follows prepare/draw two-phase via enum
     let digits: Vec<Vec<TextureRegion>> = vec![(0..12).map(|_| make_region(24, 32)).collect()];
-    let mut num =
-        crate::skin_number::SkinNumber::new_with_int_timer(digits, None, 0, 0, 3, 1, 0, 0, 0);
+    let mut num = crate::skin_number::SkinNumber::new_with_int_timer(
+        digits,
+        None,
+        0,
+        0,
+        crate::skin_number::NumberDisplayConfig {
+            keta: 3,
+            zeropadding: 1,
+            space: 0,
+            align: 0,
+        },
+        0,
+    );
     num.data.set_destination_with_int_timer_ops(
         0,
         0.0,

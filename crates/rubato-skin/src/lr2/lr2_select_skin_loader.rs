@@ -277,10 +277,12 @@ impl LR2SelectSkinLoaderState {
                                 Some(mimages),
                                 values[9],
                                 values[10],
-                                divx,
-                                values[11],
-                                0,
-                                0,
+                                crate::skin_number::NumberDisplayConfig {
+                                    keta: divx,
+                                    zeropadding: values[11],
+                                    space: 0,
+                                    align: 0,
+                                },
                                 0,
                             );
                             if idx < self.barlevel.len() {
@@ -295,7 +297,17 @@ impl LR2SelectSkinLoaderState {
                                 nimages.push(images[base..base + d].to_vec());
                             }
                             let sn = crate::skin_number::SkinNumber::new_with_int_timer(
-                                nimages, None, values[9], values[10], divx, values[11], 0, 0, 0,
+                                nimages,
+                                None,
+                                values[9],
+                                values[10],
+                                crate::skin_number::NumberDisplayConfig {
+                                    keta: divx,
+                                    zeropadding: values[11],
+                                    space: 0,
+                                    align: 0,
+                                },
+                                0,
                             );
                             if idx < self.barlevel.len() {
                                 self.barlevel[idx] = Some(sn);

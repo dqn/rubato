@@ -147,29 +147,22 @@ fn convert_skin_object(
                     pn.push(p_row);
                     mn.push(m_row);
                 }
+                let config = NumberDisplayConfig {
+                    keta: *digit,
+                    zeropadding: *zeropadding,
+                    space: *space,
+                    align: *align,
+                };
                 if let Some(val) = value {
-                    SkinNumber::new_with_int_timer(
-                        pn,
-                        Some(mn),
-                        timer_val,
-                        *cycle,
-                        *digit,
-                        *zeropadding,
-                        *space,
-                        *val,
-                        *align,
-                    )
+                    SkinNumber::new_with_int_timer(pn, Some(mn), timer_val, *cycle, config, *val)
                 } else {
                     SkinNumber::new_with_int_timer(
                         pn,
                         Some(mn),
                         timer_val,
                         *cycle,
-                        *digit,
-                        *zeropadding,
-                        *space,
+                        config,
                         *ref_id,
-                        *align,
                     )
                 }
             } else {
@@ -189,29 +182,17 @@ fn convert_skin_object(
                     nimages.push(row);
                 }
                 let actual_padding = if d > 10 { 2 } else { *padding };
+                let config = NumberDisplayConfig {
+                    keta: *digit,
+                    zeropadding: actual_padding,
+                    space: *space,
+                    align: *align,
+                };
                 if let Some(val) = value {
-                    SkinNumber::new_with_int_timer(
-                        nimages,
-                        None,
-                        timer_val,
-                        *cycle,
-                        *digit,
-                        actual_padding,
-                        *space,
-                        *val,
-                        *align,
-                    )
+                    SkinNumber::new_with_int_timer(nimages, None, timer_val, *cycle, config, *val)
                 } else {
                     SkinNumber::new_with_int_timer(
-                        nimages,
-                        None,
-                        timer_val,
-                        *cycle,
-                        *digit,
-                        actual_padding,
-                        *space,
-                        *ref_id,
-                        *align,
+                        nimages, None, timer_val, *cycle, config, *ref_id,
                     )
                 }
             };

@@ -151,6 +151,7 @@ impl SkinJudgeObject {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::objects::skin_number::NumberDisplayConfig;
     use crate::stubs::{MainController, PlayerResource, SkinOffset, TextureRegion, Timer};
 
     /// Mock MainState with configurable judge/combo values for testing SkinJudgeObject.
@@ -235,11 +236,13 @@ mod tests {
             None,                                 // no minus images
             0,                                    // timer
             0,                                    // cycle
-            1,                                    // keta (digits)
-            0,                                    // zeropadding
-            0,                                    // space
-            0,                                    // id
-            0,                                    // align
+            NumberDisplayConfig {
+                keta: 1,
+                zeropadding: 0,
+                space: 0,
+                align: 0,
+            },
+            0, // id
         )
     }
 

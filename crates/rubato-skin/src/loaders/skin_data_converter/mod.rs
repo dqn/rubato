@@ -27,7 +27,7 @@ use crate::objects::skin_hidden::SkinHidden;
 use crate::objects::skin_image::SkinImage;
 use crate::objects::skin_judge_object::SkinJudgeObject;
 use crate::objects::skin_note_object::SkinNoteObject;
-use crate::objects::skin_number::SkinNumber;
+use crate::objects::skin_number::{NumberDisplayConfig, SkinNumber};
 use crate::objects::skin_slider::SkinSlider;
 use crate::property::boolean_property_factory;
 use crate::property::event_factory;
