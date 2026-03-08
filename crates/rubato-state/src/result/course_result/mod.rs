@@ -15,8 +15,8 @@ use super::abstract_result::{
     AbstractResultData, REPLAY_SIZE, ReplayAutoSaveConstraint, ReplayStatus, STATE_IR_FINISHED,
     STATE_IR_PROCESSING, STATE_OFFLINE,
 };
-use super::course_result_skin::CourseResultSkin;
 use super::result_key_property::{ResultKey, ResultKeyProperty};
+use super::result_skin_data::ResultSkinData;
 
 use super::stubs::{
     BMSPlayerModeType, ControlKeys, IRCourseData, KeyCommand, MainController, PlayerResource,
@@ -37,7 +37,7 @@ pub struct CourseResult {
     pub resource: PlayerResource,
     ir_send_status: Vec<CourseIRSendStatus>,
     property: ResultKeyProperty,
-    skin: Option<CourseResultSkin>,
+    skin: Option<ResultSkinData>,
 }
 
 impl CourseResult {
@@ -121,11 +121,7 @@ impl CourseResult {
             }
         }
 
-        self.data.gauge_type = self
-            .resource
-            .groove_gauge()
-            .map(|g| g.gauge_type())
-            .unwrap_or(0);
+        self.data.gauge_type = super::result_common::set_gauge_type(&self.resource);
 
         // loadSkin(SkinType.COURSE_RESULT)
         rubato_core::main_state::MainState::load_skin(
@@ -338,7 +334,7 @@ impl CourseResult {
     }
 
     fn stop_sound_inner(&mut self, sound: SoundType) {
-        self.main.stop_sound(&sound);
+        super::result_common::stop_sound(&mut self.main, &sound);
     }
 
     fn do_render(&mut self) {
@@ -620,195 +616,14 @@ impl Default for CourseResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::result::test_helpers::{
+        ExecuteEventSkin, PlayerConfigMutatingSkin, TestMainControllerAccess, make_test_config,
+    };
     use rubato_core::main_state::MainState;
-    use rubato_core::main_state::SkinDrawable;
-    use rubato_core::sprite_batch_helper::SpriteBatch;
     use rubato_skin::skin_property::{TIMER_RESULTGRAPH_BEGIN, TIMER_STARTINPUT};
     use rubato_skin::skin_type::SkinType;
-    use rubato_types::main_controller_access::MainControllerAccess;
     use rubato_types::player_resource_access::PlayerResourceAccess;
     use rubato_types::skin_render_context::SkinRenderContext;
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    struct ExecuteEventSkin {
-        event_id: i32,
-    }
-
-    impl SkinDrawable for ExecuteEventSkin {
-        fn draw_all_objects_timed(
-            &mut self,
-            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
-        ) {
-        }
-
-        fn update_custom_objects_timed(
-            &mut self,
-            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
-        ) {
-        }
-
-        fn mouse_pressed_at(
-            &mut self,
-            ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
-            _button: i32,
-            _x: i32,
-            _y: i32,
-        ) {
-            ctx.execute_event(self.event_id, 0, 0);
-        }
-
-        fn mouse_dragged_at(
-            &mut self,
-            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
-            _button: i32,
-            _x: i32,
-            _y: i32,
-        ) {
-        }
-
-        fn prepare_skin(&mut self) {}
-
-        fn dispose_skin(&mut self) {}
-
-        fn fadeout(&self) -> i32 {
-            0
-        }
-
-        fn input(&self) -> i32 {
-            0
-        }
-
-        fn scene(&self) -> i32 {
-            0
-        }
-
-        fn get_width(&self) -> f32 {
-            0.0
-        }
-
-        fn get_height(&self) -> f32 {
-            0.0
-        }
-
-        fn swap_sprite_batch(&mut self, _batch: &mut SpriteBatch) {}
-    }
-
-    struct PlayerConfigMutatingSkin;
-
-    impl SkinDrawable for PlayerConfigMutatingSkin {
-        fn draw_all_objects_timed(
-            &mut self,
-            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
-        ) {
-        }
-
-        fn update_custom_objects_timed(
-            &mut self,
-            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
-        ) {
-        }
-
-        fn mouse_pressed_at(
-            &mut self,
-            ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
-            _button: i32,
-            _x: i32,
-            _y: i32,
-        ) {
-            if let Some(config) = ctx.player_config_mut() {
-                config.play_settings.random = (config.play_settings.random + 1) % 10;
-            }
-        }
-
-        fn mouse_dragged_at(
-            &mut self,
-            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
-            _button: i32,
-            _x: i32,
-            _y: i32,
-        ) {
-        }
-
-        fn prepare_skin(&mut self) {}
-
-        fn dispose_skin(&mut self) {}
-
-        fn fadeout(&self) -> i32 {
-            0
-        }
-
-        fn input(&self) -> i32 {
-            0
-        }
-
-        fn scene(&self) -> i32 {
-            0
-        }
-
-        fn get_width(&self) -> f32 {
-            0.0
-        }
-
-        fn get_height(&self) -> f32 {
-            0.0
-        }
-
-        fn swap_sprite_batch(&mut self, _batch: &mut SpriteBatch) {}
-    }
-
-    struct TestMainControllerAccess {
-        config: rubato_types::config::Config,
-        player_config: rubato_types::player_config::PlayerConfig,
-    }
-
-    impl TestMainControllerAccess {
-        fn new(config: rubato_types::config::Config) -> Self {
-            Self {
-                config,
-                player_config: rubato_types::player_config::PlayerConfig::default(),
-            }
-        }
-    }
-
-    impl MainControllerAccess for TestMainControllerAccess {
-        fn config(&self) -> &rubato_types::config::Config {
-            &self.config
-        }
-
-        fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
-            &self.player_config
-        }
-
-        fn change_state(&mut self, _state: rubato_core::main_state::MainStateType) {}
-
-        fn save_config(&self) {}
-
-        fn exit(&self) {}
-
-        fn save_last_recording(&self, _reason: &str) {}
-
-        fn update_song(&mut self, _path: Option<&str>) {}
-
-        fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-            None
-        }
-
-        fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-            None
-        }
-    }
-
-    fn make_test_config(label: &str) -> rubato_types::config::Config {
-        let unique = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let mut config = rubato_types::config::Config::default();
-        let player_dir = std::env::temp_dir().join(format!("rubato-{label}-{unique}"));
-        config.paths.playerpath = player_dir.to_string_lossy().into_owned();
-        config.playername = Some("mouse-course-result".to_string());
-        config
-    }
 
     fn make_default() -> CourseResult {
         CourseResult::new(
@@ -1439,123 +1254,12 @@ mod tests {
 }
 
 impl rubato_core::main_state::MainState for CourseResult {
-    fn state_type(&self) -> Option<rubato_core::main_state::MainStateType> {
-        Some(rubato_core::main_state::MainStateType::CourseResult)
-    }
-
-    fn main_state_data(&self) -> &rubato_core::main_state::MainStateData {
-        &self.main_data
-    }
-
-    fn main_state_data_mut(&mut self) -> &mut rubato_core::main_state::MainStateData {
-        &mut self.main_data
-    }
-
-    fn create(&mut self) {
-        self.do_create();
-    }
-
-    fn prepare(&mut self) {
-        self.do_prepare();
-    }
-
-    fn render(&mut self) {
-        self.do_render();
-    }
-
-    fn render_skin(&mut self, sprite: &mut rubato_render::sprite_batch::SpriteBatch) {
-        let mut skin = match self.main_data.skin.take() {
-            Some(s) => s,
-            None => return,
-        };
-        let mut timer = std::mem::take(&mut self.main_data.timer);
-
-        {
-            let mut ctx = CourseResultRenderContext {
-                timer: &mut timer,
-                data: &self.data,
-                resource: &self.resource,
-                main: &self.main,
-            };
-            skin.update_custom_objects_timed(&mut ctx);
-            skin.swap_sprite_batch(sprite);
-            skin.draw_all_objects_timed(&mut ctx);
-            skin.swap_sprite_batch(sprite);
-        }
-
-        self.main_data.timer = timer;
-        self.main_data.skin = Some(skin);
-    }
-
-    fn handle_skin_mouse_pressed(&mut self, button: i32, x: i32, y: i32) {
-        let mut skin = match self.main_data.skin.take() {
-            Some(s) => s,
-            None => return,
-        };
-        let mut timer = std::mem::take(&mut self.main_data.timer);
-
-        {
-            let mut ctx = CourseResultMouseContext {
-                timer: &mut timer,
-                result: self,
-            };
-            skin.mouse_pressed_at(&mut ctx, button, x, y);
-        }
-
-        self.main_data.timer = timer;
-        self.main_data.skin = Some(skin);
-    }
-
-    fn handle_skin_mouse_dragged(&mut self, button: i32, x: i32, y: i32) {
-        let mut skin = match self.main_data.skin.take() {
-            Some(s) => s,
-            None => return,
-        };
-        let mut timer = std::mem::take(&mut self.main_data.timer);
-
-        {
-            let mut ctx = CourseResultMouseContext {
-                timer: &mut timer,
-                result: self,
-            };
-            skin.mouse_dragged_at(&mut ctx, button, x, y);
-        }
-
-        self.main_data.timer = timer;
-        self.main_data.skin = Some(skin);
-    }
-
-    fn input(&mut self) {
-        self.do_input();
-    }
-
-    fn sync_input_from(
-        &mut self,
-        input: &rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
-    ) {
-        self.main.sync_input_from(input);
-    }
-
-    fn sync_input_back_to(
-        &mut self,
-        input: &mut rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
-    ) {
-        self.main.sync_input_back_to(input);
-    }
-
-    fn load_skin(&mut self, skin_type: i32) {
-        if let Some(skin) = rubato_skin::skin_loader::load_skin_from_config(
-            self.main.config(),
-            self.resource.player_config(),
-            skin_type,
-        ) {
-            self.skin = Some(CourseResultSkin::from_loaded_skin(&skin));
-            self.main_data.skin = Some(Box::new(skin));
-        } else {
-            self.skin = None;
-            self.main_data.skin = None;
-        }
-    }
+    super::impl_result_main_state!(
+        CourseResult,
+        CourseResult,
+        CourseResultRenderContext,
+        CourseResultMouseContext
+    );
 
     fn shutdown(&mut self) {
         self.shutdown();
@@ -1563,9 +1267,5 @@ impl rubato_core::main_state::MainState for CourseResult {
 
     fn dispose(&mut self) {
         self.dispose();
-    }
-
-    fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
-        self.resource.take_inner().map(|b| b.into_any_send())
     }
 }
