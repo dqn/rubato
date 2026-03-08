@@ -91,8 +91,7 @@ impl RandomizerBase {
 
         let mut notes: Vec<Option<Note>> = vec![None; mode_key];
         let mut hnotes: Vec<Option<Note>> = vec![None; mode_key];
-        for i in 0..self.modify_lanes.len() {
-            let lane = self.modify_lanes[i];
+        for &lane in &self.modify_lanes {
             notes[lane as usize] = tl.note(lane).cloned();
             hnotes[lane as usize] = tl.hidden_note(lane).cloned();
         }

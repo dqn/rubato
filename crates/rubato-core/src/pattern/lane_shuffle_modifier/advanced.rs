@@ -36,8 +36,10 @@ impl PlayerFlipModifier {
         let mode_key = model.mode().map(|m| m.key()).unwrap_or(0) as usize;
         let mut result: Vec<i32> = (0..mode_key as i32).collect();
         if model.mode().map(|m| m.player()).unwrap_or(0) == 2 {
-            for i in 0..result.len() {
-                result[i] = ((i + result.len() / 2) % result.len()) as i32;
+            let len = result.len();
+            let half = len / 2;
+            for (i, slot) in result.iter_mut().enumerate() {
+                *slot = ((i + half) % len) as i32;
             }
         }
         result
@@ -454,11 +456,7 @@ pub fn search_for_no_murioshi_lane_combinations(
 ) -> Vec<Vec<i32>> {
     let mut no_murioshi_lane_combinations: Vec<Vec<i32>> = Vec::new();
     let mut indexes = [0usize; 9];
-    let mut lane_numbers = [0i32; 9];
-    for i in 0..9 {
-        lane_numbers[i] = i as i32;
-        indexes[i] = 0;
-    }
+    let mut lane_numbers: [i32; 9] = std::array::from_fn(|i| i as i32);
 
     let murioshi_chords: Vec<Vec<i32>> = vec![
         vec![1, 4, 7],
