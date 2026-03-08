@@ -15,8 +15,8 @@ use super::abstract_result::{
     AbstractResultData, REPLAY_SIZE, ReplayAutoSaveConstraint, ReplayStatus, STATE_IR_FINISHED,
     STATE_IR_PROCESSING, STATE_OFFLINE,
 };
-use super::course_result_skin::CourseResultSkin;
 use super::result_key_property::{ResultKey, ResultKeyProperty};
+use super::result_skin_data::ResultSkinData;
 
 use super::stubs::{
     BMSPlayerModeType, ControlKeys, IRCourseData, KeyCommand, MainController, PlayerResource,
@@ -37,7 +37,7 @@ pub struct CourseResult {
     pub resource: PlayerResource,
     ir_send_status: Vec<CourseIRSendStatus>,
     property: ResultKeyProperty,
-    skin: Option<CourseResultSkin>,
+    skin: Option<ResultSkinData>,
 }
 
 impl CourseResult {
@@ -1549,7 +1549,7 @@ impl rubato_core::main_state::MainState for CourseResult {
             self.resource.player_config(),
             skin_type,
         ) {
-            self.skin = Some(CourseResultSkin::from_loaded_skin(&skin));
+            self.skin = Some(ResultSkinData::from_loaded_skin(&skin));
             self.main_data.skin = Some(Box::new(skin));
         } else {
             self.skin = None;

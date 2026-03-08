@@ -15,8 +15,8 @@ use super::abstract_result::{
     AbstractResultData, REPLAY_SIZE, ReplayAutoSaveConstraint, ReplayStatus, STATE_IR_FINISHED,
     STATE_IR_PROCESSING, STATE_OFFLINE,
 };
-use super::music_result_skin::MusicResultSkin;
 use super::result_key_property::{ResultKey, ResultKeyProperty};
+use super::result_skin_data::ResultSkinData;
 use super::stubs::{
     BMSPlayerModeType, ControlKeys, FreqTrainerMenu, IRSendStatusMain, KeyCommand, MainController,
     NullMainController, PlayerResource, RankingData,
@@ -33,7 +33,7 @@ pub struct MusicResult {
     pub main: MainController,
     pub resource: PlayerResource,
     property: ResultKeyProperty,
-    skin: Option<MusicResultSkin>,
+    skin: Option<ResultSkinData>,
 }
 
 impl MusicResult {
@@ -797,13 +797,13 @@ impl MusicResult {
         self.resource.score_data()
     }
 
-    /// Get the skin as MusicResultSkin
-    pub fn skin(&self) -> Option<&MusicResultSkin> {
+    /// Get the skin as ResultSkinData
+    pub fn skin(&self) -> Option<&ResultSkinData> {
         self.skin.as_ref()
     }
 
     /// Set the skin
-    pub fn set_skin(&mut self, skin: MusicResultSkin) {
+    pub fn set_skin(&mut self, skin: ResultSkinData) {
         self.skin = Some(skin);
     }
 
@@ -943,7 +943,7 @@ impl MainState for MusicResult {
             self.resource.player_config(),
             skin_type,
         ) {
-            self.skin = Some(MusicResultSkin::from_loaded_skin(&skin));
+            self.skin = Some(ResultSkinData::from_loaded_skin(&skin));
             self.main_data.skin = Some(Box::new(skin));
         } else {
             self.skin = None;

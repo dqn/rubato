@@ -1,15 +1,15 @@
-// CourseResultSkin.java -> course_result_skin.rs
-// Mechanical line-by-line translation.
+// Unified result skin data (replaces MusicResultSkin and CourseResultSkin).
+// Both were structurally identical; this single type serves both music and course result screens.
 
 use super::stubs::{Skin, SkinHeader};
 
-/// Course result skin
-pub struct CourseResultSkin {
+/// Result skin timing metadata shared by music and course result screens.
+pub struct ResultSkinData {
     pub skin: Skin,
     pub ranktime: i32,
 }
 
-impl CourseResultSkin {
+impl ResultSkinData {
     pub fn new(header: SkinHeader) -> Self {
         Self {
             skin: Skin::new(header),
