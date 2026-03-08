@@ -84,12 +84,7 @@ pub struct CustomFileDef {
 #[derive(Clone, Debug)]
 pub struct CustomOffsetDef {
     pub name: String,
-    pub x: bool,
-    pub y: bool,
-    pub w: bool,
-    pub h: bool,
-    pub r: bool,
-    pub a: bool,
+    pub caps: rubato_types::offset_capabilities::OffsetCapabilities,
 }
 
 /// UI item for skin configuration (replaces Java inner classes CustomItemBase hierarchy).
@@ -600,12 +595,12 @@ impl SkinConfiguration {
 
         for offset_def in &header.custom_offsets {
             let flags = [
-                offset_def.x,
-                offset_def.y,
-                offset_def.w,
-                offset_def.h,
-                offset_def.r,
-                offset_def.a,
+                offset_def.caps.x,
+                offset_def.caps.y,
+                offset_def.caps.w,
+                offset_def.caps.h,
+                offset_def.caps.r,
+                offset_def.caps.a,
             ];
 
             let mut offset_values = [0i32; 6];
@@ -1502,12 +1497,11 @@ mod tests {
         sc.selected_skin_header = Some(SkinHeaderInfo {
             custom_offsets: vec![CustomOffsetDef {
                 name: "judge_pos".to_string(),
-                x: true,
-                y: true,
-                w: false,
-                h: false,
-                r: false,
-                a: false,
+                caps: rubato_types::offset_capabilities::OffsetCapabilities {
+                    x: true,
+                    y: true,
+                    ..Default::default()
+                },
             }],
             ..SkinHeaderInfo::default()
         });

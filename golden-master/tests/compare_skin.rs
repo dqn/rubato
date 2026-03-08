@@ -159,12 +159,12 @@ fn json_options_header() {
     assert_eq!(header.custom_offsets.len(), 1, "offset count");
     assert_eq!(header.custom_offsets[0].name, "Judge Position");
     assert_eq!(header.custom_offsets[0].id, 50);
-    assert!(header.custom_offsets[0].x, "editable_x");
-    assert!(header.custom_offsets[0].y, "editable_y");
-    assert!(!header.custom_offsets[0].w, "not editable_w");
-    assert!(!header.custom_offsets[0].h, "not editable_h");
-    assert!(!header.custom_offsets[0].r, "not editable_r");
-    assert!(!header.custom_offsets[0].a, "not editable_a");
+    assert!(header.custom_offsets[0].caps.x, "editable_x");
+    assert!(header.custom_offsets[0].caps.y, "editable_y");
+    assert!(!header.custom_offsets[0].caps.w, "not editable_w");
+    assert!(!header.custom_offsets[0].caps.h, "not editable_h");
+    assert!(!header.custom_offsets[0].caps.r, "not editable_r");
+    assert!(!header.custom_offsets[0].caps.a, "not editable_a");
 }
 
 #[test]
@@ -263,8 +263,8 @@ fn lr2_csv_header() {
     assert!(lift_offset.is_some(), "LiftOffset should exist");
     let lift_offset = lift_offset.unwrap();
     assert_eq!(lift_offset.id, 3);
-    assert!(!lift_offset.x, "not editable_x");
-    assert!(lift_offset.y, "editable_y");
+    assert!(!lift_offset.caps.x, "not editable_x");
+    assert!(lift_offset.caps.y, "editable_y");
 }
 
 // ===========================================================================

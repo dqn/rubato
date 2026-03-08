@@ -314,9 +314,15 @@ pub struct CacheableBitmapFont {
     pub page_height: f32,
 }
 
-pub struct SkinTextBitmapSource {
-    pub usecim: bool,
+/// Options controlling how bitmap font textures are loaded.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct TextureLoadOptions {
+    pub use_cim: bool,
     pub use_mip_maps: bool,
+}
+
+pub struct SkinTextBitmapSource {
+    pub texture_options: TextureLoadOptions,
     pub font_path: PathBuf,
     pub font: Option<BitmapFont>,
     pub original_size: f32,
@@ -331,13 +337,28 @@ impl SkinTextBitmapSource {
     pub const TYPE_COLORED_DISTANCE_FIELD: i32 = 2;
 
     pub fn new(font_path: PathBuf, usecim: bool) -> Self {
-        Self::new_with_mipmaps(font_path, usecim, true)
+        Self::new_with_options(
+            font_path,
+            TextureLoadOptions {
+                use_cim: usecim,
+                use_mip_maps: true,
+            },
+        )
     }
 
     pub fn new_with_mipmaps(font_path: PathBuf, usecim: bool, use_mip_maps: bool) -> Self {
+        Self::new_with_options(
+            font_path,
+            TextureLoadOptions {
+                use_cim: usecim,
+                use_mip_maps,
+            },
+        )
+    }
+
+    pub fn new_with_options(font_path: PathBuf, texture_options: TextureLoadOptions) -> Self {
         Self {
-            usecim,
-            use_mip_maps,
+            texture_options,
             font_path,
             font: None,
             original_size: 0.0,
@@ -460,8 +481,10 @@ mod tests {
 
     fn make_source(original_size: f32, source_type: i32) -> SkinTextBitmapSource {
         SkinTextBitmapSource {
-            usecim: false,
-            use_mip_maps: true,
+            texture_options: TextureLoadOptions {
+                use_cim: false,
+                use_mip_maps: true,
+            },
             font_path: PathBuf::from("test.fnt"),
             font: None,
             original_size,
