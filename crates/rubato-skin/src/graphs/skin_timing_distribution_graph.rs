@@ -185,7 +185,7 @@ impl SkinTimingDistributionGraph {
             shape.dispose();
         }
 
-        if let Some(ref tex) = self.tex.clone() {
+        if let Some(ref tex) = self.tex {
             self.data.draw_image(sprite, tex);
         }
     }

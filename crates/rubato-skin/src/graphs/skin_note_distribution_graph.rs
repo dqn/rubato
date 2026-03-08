@@ -577,7 +577,7 @@ impl SkinNoteDistributionGraph {
         }
 
         // Draw note distribution chips
-        if let Some(ref chips) = self.chips.clone()
+        if let Some(ref chips) = self.chips
             && let Some(ref mut shape) = self.shape
         {
             for i in start..end {
