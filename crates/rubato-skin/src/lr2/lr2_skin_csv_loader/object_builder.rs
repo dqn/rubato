@@ -101,7 +101,7 @@ pub fn load_lr2_skin(
     let offsets: Vec<skin_header::CustomOffset> = header_data
         .custom_offsets
         .iter()
-        .map(|o| skin_header::CustomOffset::new(o.name.clone(), o.id, o.x, o.y, o.w, o.h, o.r, o.a))
+        .map(|o| skin_header::CustomOffset::new(o.name.clone(), o.id, o.caps))
         .collect();
     skin_header.offsets = offsets;
 

@@ -416,12 +416,12 @@ impl SkinConfiguration {
 
         for offset_def in &header.custom_offsets {
             let flags = [
-                offset_def.x,
-                offset_def.y,
-                offset_def.w,
-                offset_def.h,
-                offset_def.r,
-                offset_def.a,
+                offset_def.caps.x,
+                offset_def.caps.y,
+                offset_def.caps.w,
+                offset_def.caps.h,
+                offset_def.caps.r,
+                offset_def.caps.a,
             ];
 
             let mut offset_values = [0i32; 6];

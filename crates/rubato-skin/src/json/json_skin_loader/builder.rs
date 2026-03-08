@@ -270,12 +270,14 @@ impl JSONSkinLoader {
             let offset = CustomOffsetData {
                 name: pr.name.clone().unwrap_or_default(),
                 id: pr.id,
-                x: pr.x,
-                y: pr.y,
-                w: pr.w,
-                h: pr.h,
-                r: pr.r,
-                a: pr.a,
+                caps: rubato_types::offset_capabilities::OffsetCapabilities {
+                    x: pr.x,
+                    y: pr.y,
+                    w: pr.w,
+                    h: pr.h,
+                    r: pr.r,
+                    a: pr.a,
+                },
             };
 
             for (cat_idx, category) in sk.category.iter().enumerate() {
@@ -298,42 +300,45 @@ impl JSONSkinLoader {
             offsets.push(CustomOffsetData {
                 name: "All offset(%)".to_string(),
                 id: OFFSET_ALL,
-                x: true,
-                y: true,
-                w: true,
-                h: true,
-                r: false,
-                a: false,
+                caps: rubato_types::offset_capabilities::OffsetCapabilities {
+                    x: true,
+                    y: true,
+                    w: true,
+                    h: true,
+                    ..Default::default()
+                },
             });
             offsets.push(CustomOffsetData {
                 name: "Notes offset".to_string(),
                 id: OFFSET_NOTES_1P,
-                x: false,
-                y: false,
-                w: false,
-                h: true,
-                r: false,
-                a: false,
+                caps: rubato_types::offset_capabilities::OffsetCapabilities {
+                    h: true,
+                    ..Default::default()
+                },
             });
             offsets.push(CustomOffsetData {
                 name: "Judge offset".to_string(),
                 id: OFFSET_JUDGE_1P,
-                x: true,
-                y: true,
-                w: true,
-                h: true,
-                r: false,
-                a: true,
+                caps: rubato_types::offset_capabilities::OffsetCapabilities {
+                    x: true,
+                    y: true,
+                    w: true,
+                    h: true,
+                    a: true,
+                    ..Default::default()
+                },
             });
             offsets.push(CustomOffsetData {
                 name: "Judge Detail offset".to_string(),
                 id: OFFSET_JUDGEDETAIL_1P,
-                x: true,
-                y: true,
-                w: true,
-                h: true,
-                r: false,
-                a: true,
+                caps: rubato_types::offset_capabilities::OffsetCapabilities {
+                    x: true,
+                    y: true,
+                    w: true,
+                    h: true,
+                    a: true,
+                    ..Default::default()
+                },
             });
         }
         header.custom_offsets = offsets;

@@ -442,12 +442,11 @@ mod tests {
         sc.selected_skin_header = Some(SkinHeaderInfo {
             custom_offsets: vec![CustomOffsetDef {
                 name: "judge_pos".to_string(),
-                x: true,
-                y: true,
-                w: false,
-                h: false,
-                r: false,
-                a: false,
+                caps: rubato_types::offset_capabilities::OffsetCapabilities {
+                    x: true,
+                    y: true,
+                    ..Default::default()
+                },
             }],
             ..SkinHeaderInfo::default()
         });

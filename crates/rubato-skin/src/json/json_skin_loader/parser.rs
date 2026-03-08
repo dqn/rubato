@@ -223,12 +223,7 @@ pub struct CustomFileData {
 pub struct CustomOffsetData {
     pub name: String,
     pub id: i32,
-    pub x: bool,
-    pub y: bool,
-    pub w: bool,
-    pub h: bool,
-    pub r: bool,
-    pub a: bool,
+    pub caps: rubato_types::offset_capabilities::OffsetCapabilities,
 }
 
 #[derive(Clone, Debug)]

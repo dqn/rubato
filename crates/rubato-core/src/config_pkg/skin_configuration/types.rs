@@ -76,12 +76,7 @@ pub struct CustomFileDef {
 #[derive(Clone, Debug)]
 pub struct CustomOffsetDef {
     pub name: String,
-    pub x: bool,
-    pub y: bool,
-    pub w: bool,
-    pub h: bool,
-    pub r: bool,
-    pub a: bool,
+    pub caps: rubato_types::offset_capabilities::OffsetCapabilities,
 }
 
 /// UI item for skin configuration (replaces Java inner classes CustomItemBase hierarchy).
