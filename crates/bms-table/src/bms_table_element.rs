@@ -115,10 +115,7 @@ impl BmsTableElement {
     }
 
     pub fn set_values(&mut self, values: &HashMap<String, Value>) {
-        self.values.clear();
-        for (k, v) in values {
-            self.values.insert(k.clone(), v.clone());
-        }
+        self.values.clone_from(values);
     }
 }
 

@@ -518,7 +518,7 @@ impl DifficultyTableParser {
             dt.table.data_url = vec![data_filename];
             self.encode_json_table_header(dt, jsonheader);
             let mut datas: Vec<HashMap<String, Value>> = Vec::new();
-            for te in &dt.elements() {
+            for te in dt.elements() {
                 datas.push(te.values());
             }
             let json = serde_json::to_string_pretty(&datas)?;

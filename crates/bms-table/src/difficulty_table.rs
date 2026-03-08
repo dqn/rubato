@@ -26,8 +26,8 @@ impl DifficultyTable {
         dt
     }
 
-    pub fn elements(&self) -> Vec<DifficultyTableElement> {
-        self.table.models.clone()
+    pub fn elements(&self) -> &[DifficultyTableElement] {
+        &self.table.models
     }
 
     #[allow(dead_code)]
