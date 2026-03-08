@@ -7,6 +7,17 @@ use crate::sources::skin_source_set::SkinSourceSet;
 use crate::stubs::{MainState, Rectangle, SkinOffset, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
+/// Display configuration for float number rendering.
+pub struct FloatDisplayConfig {
+    pub iketa: i32,
+    pub fketa: i32,
+    pub is_sign_visible: bool,
+    pub align: i32,
+    pub zeropadding: i32,
+    pub space: i32,
+    pub gain: f32,
+}
+
 /// Float number skin object
 ///
 /// Translated from SkinFloat.java
@@ -36,16 +47,13 @@ pub struct SkinFloat {
 }
 
 impl SkinFloat {
-    fn new_base(
-        iketa: i32,
-        fketa: i32,
-        is_sign_visible: bool,
-        align: i32,
-        zeropadding: i32,
-        space: i32,
-        gain: f32,
-    ) -> Self {
-        let ff = FloatFormatter::new(iketa, fketa, is_sign_visible, zeropadding);
+    fn new_base(display: FloatDisplayConfig) -> Self {
+        let ff = FloatFormatter::new(
+            display.iketa,
+            display.fketa,
+            display.is_sign_visible,
+            display.zeropadding,
+        );
         let keta = ff.keta_length();
         let actual_iketa = ff.iketa();
         let actual_fketa = ff.fketa();
@@ -58,12 +66,12 @@ impl SkinFloat {
             ref_prop: None,
             iketa: actual_iketa,
             fketa: actual_fketa,
-            is_sign_visible,
-            gain,
+            is_sign_visible: display.is_sign_visible,
+            gain: display.gain,
             keta,
-            zeropadding,
-            space,
-            align,
+            zeropadding: display.zeropadding,
+            space: display.space,
+            align: display.align,
             value: f32::MIN,
             shiftbase: 0,
             offsets: None,
@@ -76,29 +84,14 @@ impl SkinFloat {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn new_with_images_timer_prop(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
         _timer: Option<Box<dyn TimerProperty>>,
         cycle: i32,
-        iketa: i32,
-        fketa: i32,
-        is_sign_visible: bool,
-        align: i32,
-        zeropadding: i32,
-        space: i32,
-        gain: f32,
+        display: FloatDisplayConfig,
     ) -> Self {
-        let mut s = Self::new_base(
-            iketa,
-            fketa,
-            is_sign_visible,
-            align,
-            zeropadding,
-            space,
-            gain,
-        );
+        let mut s = Self::new_base(display);
         // Note: SkinSourceImageSet needs timer cloning which isn't trivial with Box<dyn TimerProperty>
         // For now, create without timer
         s.image = Some(Box::new(SkinSourceImageSet::new_with_timer(
@@ -112,29 +105,14 @@ impl SkinFloat {
         s
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn new_with_images_int_timer(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
         timer: i32,
         cycle: i32,
-        iketa: i32,
-        fketa: i32,
-        is_sign_visible: bool,
-        align: i32,
-        zeropadding: i32,
-        space: i32,
-        gain: f32,
+        display: FloatDisplayConfig,
     ) -> Self {
-        let mut s = Self::new_base(
-            iketa,
-            fketa,
-            is_sign_visible,
-            align,
-            zeropadding,
-            space,
-            gain,
-        );
+        let mut s = Self::new_base(display);
         s.image = Some(Box::new(SkinSourceImageSet::new_with_int_timer(
             image, timer, cycle,
         )));
@@ -147,257 +125,101 @@ impl SkinFloat {
     }
 
     // Constructor with int timer and int id
-    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer_int_id(
         image: Vec<Vec<Option<TextureRegion>>>,
         timer: i32,
         cycle: i32,
-        iketa: i32,
-        fketa: i32,
-        is_sign_visible: bool,
-        align: i32,
-        zeropadding: i32,
-        space: i32,
+        display: FloatDisplayConfig,
         id: i32,
-        gain: f32,
     ) -> Self {
-        Self::new_with_int_timer_int_id_mimage(
-            image,
-            None,
-            timer,
-            cycle,
-            iketa,
-            fketa,
-            is_sign_visible,
-            align,
-            zeropadding,
-            space,
-            id,
-            gain,
-        )
+        Self::new_with_int_timer_int_id_mimage(image, None, timer, cycle, display, id)
     }
 
     // Constructor with TimerProperty and int id
-    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer_prop_int_id(
         image: Vec<Vec<Option<TextureRegion>>>,
         timer: Option<Box<dyn TimerProperty>>,
         cycle: i32,
-        iketa: i32,
-        fketa: i32,
-        is_sign_visible: bool,
-        align: i32,
-        zeropadding: i32,
-        space: i32,
+        display: FloatDisplayConfig,
         id: i32,
-        gain: f32,
     ) -> Self {
-        Self::new_with_timer_prop_int_id_mimage(
-            image,
-            None,
-            timer,
-            cycle,
-            iketa,
-            fketa,
-            is_sign_visible,
-            align,
-            zeropadding,
-            space,
-            id,
-            gain,
-        )
+        Self::new_with_timer_prop_int_id_mimage(image, None, timer, cycle, display, id)
     }
 
     // Constructor with int timer and FloatProperty
-    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer_float_prop(
         image: Vec<Vec<Option<TextureRegion>>>,
         timer: i32,
         cycle: i32,
-        iketa: i32,
-        fketa: i32,
-        is_sign_visible: bool,
-        align: i32,
-        zeropadding: i32,
-        space: i32,
+        display: FloatDisplayConfig,
         ref_prop: Box<dyn FloatProperty>,
-        gain: f32,
     ) -> Self {
-        Self::new_with_int_timer_float_prop_mimage(
-            image,
-            None,
-            timer,
-            cycle,
-            iketa,
-            fketa,
-            is_sign_visible,
-            align,
-            zeropadding,
-            space,
-            ref_prop,
-            gain,
-        )
+        Self::new_with_int_timer_float_prop_mimage(image, None, timer, cycle, display, ref_prop)
     }
 
     // Constructor with TimerProperty and FloatProperty
-    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer_prop_float_prop(
         image: Vec<Vec<Option<TextureRegion>>>,
         timer: Option<Box<dyn TimerProperty>>,
         cycle: i32,
-        iketa: i32,
-        fketa: i32,
-        is_sign_visible: bool,
-        align: i32,
-        zeropadding: i32,
-        space: i32,
+        display: FloatDisplayConfig,
         ref_prop: Box<dyn FloatProperty>,
-        gain: f32,
     ) -> Self {
-        Self::new_with_timer_prop_float_prop_mimage(
-            image,
-            None,
-            timer,
-            cycle,
-            iketa,
-            fketa,
-            is_sign_visible,
-            align,
-            zeropadding,
-            space,
-            ref_prop,
-            gain,
-        )
+        Self::new_with_timer_prop_float_prop_mimage(image, None, timer, cycle, display, ref_prop)
     }
 
     // Constructor with mimage, int timer, int id
-    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer_int_id_mimage(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
         timer: i32,
         cycle: i32,
-        iketa: i32,
-        fketa: i32,
-        is_sign_visible: bool,
-        align: i32,
-        zeropadding: i32,
-        space: i32,
+        display: FloatDisplayConfig,
         id: i32,
-        gain: f32,
     ) -> Self {
-        let mut s = Self::new_with_images_int_timer(
-            image,
-            mimage,
-            timer,
-            cycle,
-            iketa,
-            fketa,
-            is_sign_visible,
-            align,
-            zeropadding,
-            space,
-            gain,
-        );
+        let mut s = Self::new_with_images_int_timer(image, mimage, timer, cycle, display);
         s.ref_prop = float_property_factory::float_property_by_id(id);
         s
     }
 
     // Constructor with mimage, TimerProperty, int id
-    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer_prop_int_id_mimage(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
         timer: Option<Box<dyn TimerProperty>>,
         cycle: i32,
-        iketa: i32,
-        fketa: i32,
-        is_sign_visible: bool,
-        align: i32,
-        zeropadding: i32,
-        space: i32,
+        display: FloatDisplayConfig,
         id: i32,
-        gain: f32,
     ) -> Self {
-        let mut s = Self::new_with_images_timer_prop(
-            image,
-            mimage,
-            timer,
-            cycle,
-            iketa,
-            fketa,
-            is_sign_visible,
-            align,
-            zeropadding,
-            space,
-            gain,
-        );
+        let mut s = Self::new_with_images_timer_prop(image, mimage, timer, cycle, display);
         s.ref_prop = float_property_factory::float_property_by_id(id);
         s
     }
 
     // Constructor with mimage, int timer, FloatProperty
-    #[allow(clippy::too_many_arguments)]
     pub fn new_with_int_timer_float_prop_mimage(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
         timer: i32,
         cycle: i32,
-        iketa: i32,
-        fketa: i32,
-        is_sign_visible: bool,
-        align: i32,
-        zeropadding: i32,
-        space: i32,
+        display: FloatDisplayConfig,
         ref_prop: Box<dyn FloatProperty>,
-        gain: f32,
     ) -> Self {
-        let mut s = Self::new_with_images_int_timer(
-            image,
-            mimage,
-            timer,
-            cycle,
-            iketa,
-            fketa,
-            is_sign_visible,
-            align,
-            zeropadding,
-            space,
-            gain,
-        );
+        let mut s = Self::new_with_images_int_timer(image, mimage, timer, cycle, display);
         s.ref_prop = Some(ref_prop);
         s
     }
 
     // Constructor with mimage, TimerProperty, FloatProperty
-    #[allow(clippy::too_many_arguments)]
     pub fn new_with_timer_prop_float_prop_mimage(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
         timer: Option<Box<dyn TimerProperty>>,
         cycle: i32,
-        iketa: i32,
-        fketa: i32,
-        is_sign_visible: bool,
-        align: i32,
-        zeropadding: i32,
-        space: i32,
+        display: FloatDisplayConfig,
         ref_prop: Box<dyn FloatProperty>,
-        gain: f32,
     ) -> Self {
-        let mut s = Self::new_with_images_timer_prop(
-            image,
-            mimage,
-            timer,
-            cycle,
-            iketa,
-            fketa,
-            is_sign_visible,
-            align,
-            zeropadding,
-            space,
-            gain,
-        );
+        let mut s = Self::new_with_images_timer_prop(image, mimage, timer, cycle, display);
         s.ref_prop = Some(ref_prop);
         s
     }

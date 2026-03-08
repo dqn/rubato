@@ -570,14 +570,16 @@ fn test_skin_float_in_enum_data_access() {
         vec![vec![None; 12]],
         0,
         0,
-        3,
-        2,
-        false,
+        crate::skin_float::FloatDisplayConfig {
+            iketa: 3,
+            fketa: 2,
+            is_sign_visible: false,
+            align: 0,
+            zeropadding: 0,
+            space: 0,
+            gain: 1.0,
+        },
         0,
-        0,
-        0,
-        0,
-        1.0,
     );
     let mut obj = SkinObject::Float(sf);
 
@@ -596,14 +598,16 @@ fn test_skin_float_type_name() {
         vec![vec![None; 12]],
         0,
         0,
-        3,
-        2,
-        false,
+        crate::skin_float::FloatDisplayConfig {
+            iketa: 3,
+            fketa: 2,
+            is_sign_visible: false,
+            align: 0,
+            zeropadding: 0,
+            space: 0,
+            gain: 1.0,
+        },
         0,
-        0,
-        0,
-        0,
-        1.0,
     );
     let obj = SkinObject::Float(sf);
     assert_eq!(obj.type_name(), "Float");
@@ -616,14 +620,16 @@ fn test_skin_float_prepare_draw_dispose() {
         vec![vec![None; 12]],
         0,
         0,
-        3,
-        2,
-        false,
+        crate::skin_float::FloatDisplayConfig {
+            iketa: 3,
+            fketa: 2,
+            is_sign_visible: false,
+            align: 0,
+            zeropadding: 0,
+            space: 0,
+            gain: 1.0,
+        },
         0,
-        0,
-        0,
-        0,
-        1.0,
     );
     let mut obj = SkinObject::Float(sf);
     let state = crate::test_helpers::MockMainState::default();
@@ -645,14 +651,16 @@ fn test_skin_float_validate_returns_true() {
         vec![vec![None; 12]],
         0,
         0,
-        3,
-        2,
-        false,
+        crate::skin_float::FloatDisplayConfig {
+            iketa: 3,
+            fketa: 2,
+            is_sign_visible: false,
+            align: 0,
+            zeropadding: 0,
+            space: 0,
+            gain: 1.0,
+        },
         0,
-        0,
-        0,
-        0,
-        1.0,
     );
     let mut obj = SkinObject::Float(sf);
     // Float uses wildcard arm which defaults to true
