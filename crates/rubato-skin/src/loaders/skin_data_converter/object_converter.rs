@@ -288,14 +288,16 @@ fn convert_skin_object(
                 image_opts,
                 timer_val,
                 *cycle,
-                *iketa,
-                *fketa,
-                *is_signvisible,
-                *align,
-                *zeropadding,
-                *space,
+                crate::skin_float::FloatDisplayConfig {
+                    iketa: *iketa,
+                    fketa: *fketa,
+                    is_sign_visible: *is_signvisible,
+                    align: *align,
+                    zeropadding: *zeropadding,
+                    space: *space,
+                    gain: *gain,
+                },
                 prop_id,
-                *gain,
             );
             Some(SkinObject::Float(sf))
         }
