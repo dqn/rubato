@@ -141,7 +141,7 @@ impl LR2PlaySkinLoaderState {
         let lane_rects: Vec<Rectangle> = self
             .laner
             .iter()
-            .map(|opt| opt.clone().unwrap_or_default())
+            .map(|opt| opt.unwrap_or_default())
             .collect();
         if !lane_rects.is_empty() {
             play_skin.laneregion = Some(lane_rects);
@@ -151,7 +151,7 @@ impl LR2PlaySkinLoaderState {
         let group_rects: Vec<Rectangle> = self
             .playerr
             .iter()
-            .map(|opt| opt.clone().unwrap_or_default())
+            .map(|opt| opt.unwrap_or_default())
             .collect();
         if !group_rects.is_empty() {
             play_skin.lanegroupregion = Some(group_rects);

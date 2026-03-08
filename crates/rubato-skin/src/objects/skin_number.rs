@@ -319,8 +319,8 @@ impl SkinNumber {
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
         for (j, current_img) in self.current_images.iter().enumerate() {
-            if let Some(ref img) = current_img.clone() {
-                let region = self.data.region.clone();
+            if let Some(img) = current_img {
+                let region = self.data.region;
                 if let Some(ref offsets) = self.offsets {
                     if j < offsets.len() {
                         self.data.draw_image_at(

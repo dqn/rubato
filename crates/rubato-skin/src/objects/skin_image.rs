@@ -272,10 +272,10 @@ impl SkinImage {
     }
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
-        if let Some(ref current_image) = self.current_image.clone() {
+        if let Some(ref current_image) = self.current_image {
             if self.is_movie {
                 self.data.image_type = 3;
-                let region = self.data.region.clone();
+                let region = self.data.region;
                 self.data.draw_image_at(
                     sprite,
                     current_image,
@@ -286,7 +286,7 @@ impl SkinImage {
                 );
                 self.data.image_type = 0;
             } else {
-                let region = self.data.region.clone();
+                let region = self.data.region;
                 self.data.draw_image_at(
                     sprite,
                     current_image,
@@ -305,10 +305,10 @@ impl SkinImage {
         offset_x: f32,
         offset_y: f32,
     ) {
-        if let Some(ref current_image) = self.current_image.clone() {
+        if let Some(ref current_image) = self.current_image {
             if self.is_movie {
                 self.data.image_type = 3;
-                let region = self.data.region.clone();
+                let region = self.data.region;
                 self.data.draw_image_at(
                     sprite,
                     current_image,
@@ -319,7 +319,7 @@ impl SkinImage {
                 );
                 self.data.image_type = 0;
             } else {
-                let region = self.data.region.clone();
+                let region = self.data.region;
                 self.data.draw_image_at(
                     sprite,
                     current_image,

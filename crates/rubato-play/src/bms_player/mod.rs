@@ -92,7 +92,7 @@ pub struct FreqTrainerResult {
 ///     input.setEnable(false);
 /// }
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InputModeAction {
     /// PLAY or PRACTICE mode: caller should call `input.set_play_config(mode)` with the
     /// BMS model mode.

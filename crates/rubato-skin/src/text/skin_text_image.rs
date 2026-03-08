@@ -102,7 +102,7 @@ impl SkinTextImage {
         offset_x: f32,
         offset_y: f32,
     ) {
-        let region = self.text_data.data.region.clone();
+        let region = self.text_data.data.region;
         let color = self.text_data.data.color;
         let source_size = self.source.size() as f32;
         if source_size == 0.0 {

@@ -32,7 +32,7 @@ pub const NOTIFICATION_POSITIONS: [&str; 7] = [
 static DEFAULT_TOAST_POS: Mutex<ToastPos> = Mutex::new(ToastPos::TopLeft);
 static NOTIFICATIONS: Mutex<Vec<Toast>> = Mutex::new(Vec::new());
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ToastType {
     None,
     Success,
@@ -41,7 +41,7 @@ pub enum ToastType {
     Info,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ToastPhase {
     FadeIn,
     Wait,
@@ -49,7 +49,7 @@ pub enum ToastPhase {
     Expired,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ToastPos {
     TopLeft,
     TopCenter,
@@ -127,10 +127,9 @@ pub struct Toast {
 
 impl Toast {
     pub fn new(toast_type: ToastType) -> Self {
-        let pos = DEFAULT_TOAST_POS
+        let pos = *DEFAULT_TOAST_POS
             .lock()
-            .expect("DEFAULT_TOAST_POS lock poisoned")
-            .clone();
+            .expect("DEFAULT_TOAST_POS lock poisoned");
         Toast {
             toast_type,
             pos,
@@ -406,7 +405,7 @@ impl ImGuiNotify {
             let has_button = current_toast.has_on_button_press();
             let button_label = current_toast.button_label().to_string();
             let window_name = format!("##TOAST{}", i);
-            let toast_pos = current_toast.pos.clone();
+            let toast_pos = current_toast.pos;
 
             let (toast_x, toast_y) = get_toast_pos(&toast_pos, height);
             // Apply pivot offset: shift by pivot * estimated window size

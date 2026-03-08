@@ -37,7 +37,7 @@ static DPRANDOM: &[&str] = &["NORMAL", "FLIP"];
 static GRAPHTYPESTR: &[&str] = &["NOTETYPE", "JUDGE", "EARLYLATE"];
 
 /// Colors used in practice configuration UI drawing.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PracticeColor {
     Yellow,
     Cyan,

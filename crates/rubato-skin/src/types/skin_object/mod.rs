@@ -531,7 +531,7 @@ impl SkinObjectData {
             acc,
         );
         if self.dst.is_empty() {
-            self.fixr = Some(obj.region.clone());
+            self.fixr = Some(obj.region);
             self.fixc = Some(obj.color);
             self.fixa = obj.angle;
         } else {
@@ -1459,7 +1459,7 @@ mod tests {
         assert!(data.draw);
 
         // Between phases: caller can read the cached state
-        let cached_region = data.region.clone();
+        let cached_region = data.region;
         let _cached_color = data.color;
         assert_eq!(cached_region.x, 50.0);
         assert_eq!(cached_region.width, 200.0);

@@ -151,7 +151,7 @@ impl SkinBPMGraph {
             };
             let tex_width = shapetex.texture.as_ref().map(|t| t.width).unwrap_or(0);
             shapetex.region_width = (tex_width as f32 * render) as i32;
-            let region = self.data.region.clone();
+            let region = self.data.region;
             let shapetex_clone = shapetex.clone();
             self.data.draw_image_at(
                 sprite,

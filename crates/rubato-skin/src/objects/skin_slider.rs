@@ -214,8 +214,8 @@ impl SkinSlider {
     }
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
-        if let Some(ref current_image) = self.current_image.clone() {
-            let region = self.data.region.clone();
+        if let Some(ref current_image) = self.current_image {
+            let region = self.data.region;
             let range = self.range as f32;
             let cv = self.current_value;
             let x = region.x

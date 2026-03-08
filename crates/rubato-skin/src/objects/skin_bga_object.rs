@@ -202,7 +202,7 @@ impl SkinBgaObject {
         if self.practice_mode {
             self.draw_practice(sprite);
         } else if let Some(ref bga_draw) = self.bga_draw {
-            let region = self.data.region.clone();
+            let region = self.data.region;
             if let Ok(mut draw) = bga_draw.lock() {
                 draw.draw_bga(sprite, &region, self.bga_expand);
             }

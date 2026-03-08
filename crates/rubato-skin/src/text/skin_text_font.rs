@@ -143,7 +143,7 @@ impl SkinTextFont {
         // We set the absolute pixel size to region.height so that glyphs fill the
         // destination height. The ratio region.height / parameter.size is the scale
         // factor relative to the configured font size.
-        let region = self.text_data.data.region.clone();
+        let region = self.text_data.data.region;
         let original_scale = font.scale();
         font.scale = region.height;
 
