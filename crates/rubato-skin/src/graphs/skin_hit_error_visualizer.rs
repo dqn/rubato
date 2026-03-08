@@ -280,7 +280,7 @@ impl SkinHitErrorVisualizer {
             }
         }
 
-        if let Some(ref shapetex) = self.shapetex.clone() {
+        if let Some(ref shapetex) = self.shapetex {
             self.data.draw_image(sprite, shapetex);
         }
     }

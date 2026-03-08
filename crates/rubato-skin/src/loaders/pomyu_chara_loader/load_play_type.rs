@@ -88,10 +88,10 @@ impl<'a> PomyuCharaLoader<'a> {
                 if data.len() > 1 {
                     motion = pm_parse_int(&data[1]);
                 }
-                for i in 0..dst.len() {
+                for (i, slot) in dst.iter_mut().enumerate() {
                     if data.len() > i + 2 {
                         // replaceAll("[^0-9a-zA-Z-]", "")
-                        dst[i] = data[i + 2]
+                        *slot = data[i + 2]
                             .chars()
                             .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
                             .collect();

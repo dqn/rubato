@@ -169,7 +169,7 @@ impl SkinTimingVisualizer {
     }
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
-        if let Some(ref backtex) = self.backtex.clone() {
+        if let Some(ref backtex) = self.backtex {
             self.data.draw_image(sprite, backtex);
         }
         let recent_len = self.recent.len();
@@ -179,8 +179,8 @@ impl SkinTimingVisualizer {
         for i in 0..recent_len {
             let j = (self.index + i + 1) % recent_len;
             if -(self.center as i64) <= self.recent[j] && self.recent[j] <= self.center as i64 {
-                let line = match self.line.clone() {
-                    Some(l) => l,
+                let line = match self.line {
+                    Some(ref l) => l,
                     None => continue,
                 };
                 let region = &self.data.region;
@@ -199,7 +199,7 @@ impl SkinTimingVisualizer {
                     self.data.draw_image_at_with_color(
                         sprite,
                         &DrawImageAtParams {
-                            image: &line,
+                            image: line,
                             x,
                             y,
                             width: self.line_width as f32,
@@ -222,7 +222,7 @@ impl SkinTimingVisualizer {
                     self.data.draw_image_at_with_color(
                         sprite,
                         &DrawImageAtParams {
-                            image: &line,
+                            image: line,
                             x,
                             y,
                             width: self.line_width as f32,
