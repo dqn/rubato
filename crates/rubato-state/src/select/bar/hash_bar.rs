@@ -18,10 +18,10 @@ impl HashBar {
         let elements_hash = elements
             .iter()
             .map(|e| {
-                if !e.sha256.is_empty() {
-                    e.sha256.to_string()
+                if !e.file.sha256.is_empty() {
+                    e.file.sha256.to_string()
                 } else {
-                    e.md5.to_string()
+                    e.file.md5.to_string()
                 }
             })
             .collect();
@@ -45,10 +45,10 @@ impl HashBar {
         self.elements_hash = elements
             .iter()
             .map(|e| {
-                if !e.sha256.is_empty() {
-                    e.sha256.to_string()
+                if !e.file.sha256.is_empty() {
+                    e.file.sha256.to_string()
                 } else {
-                    e.md5.to_string()
+                    e.file.md5.to_string()
                 }
             })
             .collect();
@@ -119,12 +119,12 @@ mod tests {
     #[test]
     fn hash_bar_get_children_returns_matched_songs() {
         let mut element = SongData::default();
-        element.title = "Element Song".to_string();
-        element.sha256 = "hash_abc".to_string();
+        element.metadata.title = "Element Song".to_string();
+        element.file.sha256 = "hash_abc".to_string();
 
         let mut db_song = SongData::default();
-        db_song.title = "DB Song".to_string();
-        db_song.sha256 = "hash_abc".to_string();
+        db_song.metadata.title = "DB Song".to_string();
+        db_song.file.sha256 = "hash_abc".to_string();
         db_song.set_path("test/path.bms".to_string());
 
         let db = MockSongDb::new(vec![db_song]);
@@ -139,8 +139,8 @@ mod tests {
     #[test]
     fn hash_bar_get_children_shows_missing_elements() {
         let mut element = SongData::default();
-        element.title = "Missing Song".to_string();
-        element.sha256 = "hash_missing".to_string();
+        element.metadata.title = "Missing Song".to_string();
+        element.file.sha256 = "hash_missing".to_string();
 
         let db = MockSongDb::new(vec![]); // No songs in DB
         let bar = HashBar::new("Test Hash".to_string(), vec![element]);

@@ -72,7 +72,7 @@ impl AudioDriver for MockAudioDriver {
 
 fn make_song_data(sha256: &str, path: Option<&str>) -> SongData {
     let mut sd = SongData::default();
-    sd.sha256 = sha256.to_string();
+    sd.file.sha256 = sha256.to_string();
     if let Some(p) = path {
         sd.set_path(p.to_string());
     }
@@ -176,7 +176,7 @@ fn test_select_skin_context_uses_selected_song_play_config_for_image_index_330()
     selector.config.mode7.playconfig.enablelanecover = false;
     selector.config.mode5.playconfig.enablelanecover = true;
     let mut song = make_song_data("play-config", Some("/test/selected.bms"));
-    song.mode = bms_model::Mode::BEAT_5K.id();
+    song.chart.mode = bms_model::Mode::BEAT_5K.id();
     set_selected_bar(&mut selector, Bar::Song(Box::new(SongBar::new(song))));
     let mut timer = TimerManager::new();
     let ctx = SelectSkinContext {
@@ -194,7 +194,7 @@ fn test_select_skin_context_uses_selected_song_judge_algorithm_for_image_index_3
     selector.config.mode7.playconfig.judgetype = "Combo".to_string();
     selector.config.mode5.playconfig.judgetype = "Lowest".to_string();
     let mut song = make_song_data("judge-type", Some("/test/judge.bms"));
-    song.mode = bms_model::Mode::BEAT_5K.id();
+    song.chart.mode = bms_model::Mode::BEAT_5K.id();
     set_selected_bar(&mut selector, Bar::Song(Box::new(SongBar::new(song))));
     let mut timer = TimerManager::new();
     let ctx = SelectSkinContext {
@@ -1002,7 +1002,10 @@ fn test_read_chart_success_clears_resource_and_transitions() {
         "should transition to DECIDE on success"
     );
     assert_eq!(
-        selector.playedsong.as_ref().map(|sd| sd.sha256.as_str()),
+        selector
+            .playedsong
+            .as_ref()
+            .map(|sd| sd.file.sha256.as_str()),
         Some("abc123"),
         "playedsong should be set"
     );

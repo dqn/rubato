@@ -231,9 +231,9 @@ impl ScoreDatabaseAccessor {
                 let mut chunk_hashes: Vec<String> = Vec::new();
                 for j in chunk_start..chunk_end {
                     let song = &songs[j];
-                    let has_uln = !song.sha256.is_empty();
+                    let has_uln = !song.file.sha256.is_empty();
                     if (hasln && has_uln) || (!hasln && !has_uln) {
-                        chunk_hashes.push(song.sha256.clone());
+                        chunk_hashes.push(song.file.sha256.clone());
                     }
                 }
 
@@ -266,9 +266,9 @@ impl ScoreDatabaseAccessor {
             }
 
             for song in songs {
-                let has_uln = !song.sha256.is_empty();
+                let has_uln = !song.file.sha256.is_empty();
                 if (hasln && has_uln) || (!hasln && !has_uln) {
-                    let sha = song.sha256.as_str();
+                    let sha = song.file.sha256.as_str();
                     let mut found = false;
                     for score in &scores {
                         if sha == score.sha256 {
@@ -1232,7 +1232,7 @@ mod tests {
         impl ScoreDataCollector for TestCollector {
             fn collect(&mut self, song: &SongData, score: Option<&ScoreData>) {
                 self.calls
-                    .push((song.sha256.clone(), score.map(|s| s.clear)));
+                    .push((song.file.sha256.clone(), score.map(|s| s.clear)));
             }
         }
 

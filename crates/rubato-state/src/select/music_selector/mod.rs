@@ -46,7 +46,7 @@ fn normalized_play_config_mode(mode: bms_model::Mode) -> bms_model::Mode {
 }
 
 fn play_config_mode_from_song(song: &SongData) -> Option<bms_model::Mode> {
-    match song.mode {
+    match song.chart.mode {
         5 => Some(bms_model::Mode::BEAT_5K),
         7 => Some(bms_model::Mode::BEAT_7K),
         9 => Some(bms_model::Mode::POPN_9K),
@@ -230,11 +230,11 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             // Display timing
             12 => self.selector.config.judge_settings.judgetiming,
             // Song BPM
-            90 => self.selected_song_data().map_or(0, |s| s.maxbpm),
-            91 => self.selected_song_data().map_or(0, |s| s.minbpm),
+            90 => self.selected_song_data().map_or(0, |s| s.chart.maxbpm),
+            91 => self.selected_song_data().map_or(0, |s| s.chart.minbpm),
             92 => {
                 // mainbpm: use maxbpm as approximation
-                self.selected_song_data().map_or(0, |s| s.maxbpm)
+                self.selected_song_data().map_or(0, |s| s.chart.maxbpm)
             }
             // Song play/clear/fail counts
             77 => self.selected_score().map_or(0, |s| s.playcount),
@@ -244,13 +244,15 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
                 score.map_or(0, |s| s.playcount - s.clearcount)
             }
             // Song duration
-            312 => self.selected_song_data().map_or(0, |s| s.length),
-            1163 => self.selected_song_data().map_or(0, |s| s.length / 60000),
+            312 => self.selected_song_data().map_or(0, |s| s.chart.length),
+            1163 => self
+                .selected_song_data()
+                .map_or(0, |s| s.chart.length / 60000),
             1164 => self
                 .selected_song_data()
-                .map_or(0, |s| (s.length % 60000) / 1000),
+                .map_or(0, |s| (s.chart.length % 60000) / 1000),
             // Total notes
-            350 => self.selected_song_data().map_or(0, |s| s.notes),
+            350 => self.selected_song_data().map_or(0, |s| s.chart.notes),
             // System time
             20 => 60, // placeholder FPS
             21 => {
@@ -290,31 +292,31 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             // Song metadata
             10 => self
                 .selected_song_data()
-                .map_or_else(String::new, |s| s.title.clone()),
+                .map_or_else(String::new, |s| s.metadata.title.clone()),
             11 => self
                 .selected_song_data()
-                .map_or_else(String::new, |s| s.subtitle.clone()),
+                .map_or_else(String::new, |s| s.metadata.subtitle.clone()),
             12 => self.selected_song_data().map_or_else(String::new, |s| {
-                if s.subtitle.is_empty() {
-                    s.title.clone()
+                if s.metadata.subtitle.is_empty() {
+                    s.metadata.title.clone()
                 } else {
-                    format!("{} {}", s.title, s.subtitle)
+                    format!("{} {}", s.metadata.title, s.metadata.subtitle)
                 }
             }),
             13 => self
                 .selected_song_data()
-                .map_or_else(String::new, |s| s.genre.clone()),
+                .map_or_else(String::new, |s| s.metadata.genre.clone()),
             14 => self
                 .selected_song_data()
-                .map_or_else(String::new, |s| s.artist.clone()),
+                .map_or_else(String::new, |s| s.metadata.artist.clone()),
             15 => self
                 .selected_song_data()
-                .map_or_else(String::new, |s| s.subartist.clone()),
+                .map_or_else(String::new, |s| s.metadata.subartist.clone()),
             16 => self.selected_song_data().map_or_else(String::new, |s| {
-                if s.subartist.is_empty() {
-                    s.artist.clone()
+                if s.metadata.subartist.is_empty() {
+                    s.metadata.artist.clone()
                 } else {
-                    format!("{} {}", s.artist, s.subartist)
+                    format!("{} {}", s.metadata.artist, s.metadata.subartist)
                 }
             }),
             // Directory
@@ -330,10 +332,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             // Song hash
             1030 => self
                 .selected_song_data()
-                .map_or_else(String::new, |s| s.md5.clone()),
+                .map_or_else(String::new, |s| s.file.md5.clone()),
             1031 => self
                 .selected_song_data()
-                .map_or_else(String::new, |s| s.sha256.clone()),
+                .map_or_else(String::new, |s| s.file.sha256.clone()),
             _ => String::new(),
         }
     }
@@ -415,7 +417,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             // Level (0.0-1.0 normalized)
             103 => self
                 .selected_song_data()
-                .map_or(0.0, |s| s.level as f32 / 12.0),
+                .map_or(0.0, |s| s.chart.level as f32 / 12.0),
             // Hi-speed (from default mode7 play config)
             310 => self.selector.config.mode7.playconfig.hispeed,
             _ => 0.0,

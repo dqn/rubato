@@ -105,8 +105,8 @@ mod tests {
     #[test]
     fn search_word_bar_get_children_returns_matching_songs() {
         let mut song = SongData::default();
-        song.title = "Freedom Dive".to_string();
-        song.sha256 = "fd_hash".to_string();
+        song.metadata.title = "Freedom Dive".to_string();
+        song.file.sha256 = "fd_hash".to_string();
 
         let db = MockSongDb::new().with_text_results("freedom", vec![song]);
 

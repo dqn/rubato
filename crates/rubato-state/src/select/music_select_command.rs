@@ -84,7 +84,7 @@ impl MusicSelectCommand {
                 if let Some(selected) = selector.manager.selected()
                     && let Some(song_bar) = selected.as_song_bar()
                 {
-                    let hash = &song_bar.song_data().md5;
+                    let hash = &song_bar.song_data().file.md5;
                     if !hash.is_empty()
                         && let Ok(mut clipboard) = arboard::Clipboard::new()
                     {
@@ -97,7 +97,7 @@ impl MusicSelectCommand {
                 if let Some(selected) = selector.manager.selected()
                     && let Some(song_bar) = selected.as_song_bar()
                 {
-                    let hash = &song_bar.song_data().sha256;
+                    let hash = &song_bar.song_data().file.sha256;
                     if !hash.is_empty()
                         && let Ok(mut clipboard) = arboard::Clipboard::new()
                     {
@@ -135,13 +135,13 @@ impl MusicSelectCommand {
                     && let Some(song_bar) = selected.as_song_bar()
                 {
                     let song = song_bar.song_data();
-                    let md5 = &song.md5;
+                    let md5 = &song.file.md5;
                     if !md5.is_empty() {
                         log::info!("Missing song md5: {}", md5);
                         if let Some(downloader) =
                             selector.main.as_ref().and_then(|m| m.http_downloader())
                         {
-                            downloader.submit_md5_task(md5, &song.title);
+                            downloader.submit_md5_task(md5, &song.metadata.title);
                         }
                     } else {
                         log::info!("Not a valid song bar? Skipped...");
@@ -155,10 +155,10 @@ impl MusicSelectCommand {
                         selector.main.as_ref().and_then(|m| m.http_downloader())
                 {
                     for song in grade_bar.song_datas() {
-                        let md5 = &song.md5;
+                        let md5 = &song.file.md5;
                         if !md5.is_empty() {
                             log::info!("Missing song md5: {}", md5);
-                            downloader.submit_md5_task(md5, &song.title);
+                            downloader.submit_md5_task(md5, &song.metadata.title);
                         }
                     }
                 }
@@ -188,7 +188,7 @@ impl MusicSelectCommand {
                         let songbars: Vec<Bar> = grade_bar
                             .song_datas()
                             .iter()
-                            .filter(|sd| seen.insert(sd.sha256.clone()))
+                            .filter(|sd| seen.insert(sd.file.sha256.clone()))
                             .map(|sd| Bar::Song(Box::new(SongBar::new(sd.clone()))))
                             .collect();
                         let container = ContainerBar::new(current.title().to_owned(), songbars);

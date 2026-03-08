@@ -124,7 +124,8 @@ impl CollectAll {
 
 impl ScoreDataCollector for CollectAll {
     fn collect(&mut self, song: &SongData, score: Option<&ScoreData>) {
-        self.results.push((song.sha256.clone(), score.cloned()));
+        self.results
+            .push((song.file.sha256.clone(), score.cloned()));
     }
 }
 
@@ -140,7 +141,7 @@ fn get_score_datas_for_songs_injection_blocked() {
 
     // Crafted sha256 that previously broke out of IN clause
     let mut injected_song = SongData::default();
-    injected_song.sha256 = "') OR 1=1 --".to_string();
+    injected_song.file.sha256 = "') OR 1=1 --".to_string();
 
     let mut collector = CollectAll::new();
     db.score_datas_for_songs(&mut collector, &[injected_song], 0);

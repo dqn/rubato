@@ -38,7 +38,7 @@ impl IRSendStatusMain {
     ///
     /// Translated from: MainController.IRSendStatus.send()
     pub fn send(&mut self) -> bool {
-        log::info!("IRへスコア送信中 : {}", self.songdata.title);
+        log::info!("IRへスコア送信中 : {}", self.songdata.metadata.title);
         self.last_try = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
@@ -48,7 +48,7 @@ impl IRSendStatusMain {
         let send1 = self.connection.send_play_data(&chart_data, &score_data);
         self.retry += 1;
         if send1.is_succeeded() {
-            log::info!("IRスコア送信完了 : {}", self.songdata.title);
+            log::info!("IRスコア送信完了 : {}", self.songdata.metadata.title);
             self.is_sent = true;
             true
         } else {
@@ -179,8 +179,8 @@ mod tests {
 
     fn make_test_song() -> SongData {
         let mut song = SongData::default();
-        song.title = "Test Song".to_string();
-        song.subtitle = "Test Sub".to_string();
+        song.metadata.title = "Test Song".to_string();
+        song.metadata.subtitle = "Test Sub".to_string();
         song
     }
 

@@ -23,9 +23,9 @@ use rubato_types::song_data::SongData;
 
 fn make_song_data(sha256: &str, title: &str, artist: &str, path: &str) -> SongData {
     let mut sd = SongData::default();
-    sd.sha256 = sha256.to_string();
-    sd.title = title.to_string();
-    sd.artist = artist.to_string();
+    sd.file.sha256 = sha256.to_string();
+    sd.metadata.title = title.to_string();
+    sd.metadata.artist = artist.to_string();
     sd.set_path(path.to_string());
     sd
 }
@@ -194,7 +194,10 @@ fn update_bar_with_context_sorts_by_title() {
         let titles: Vec<String> = manager
             .currentsongs
             .iter()
-            .filter_map(|b| b.as_song_bar().map(|sb| sb.song_data().title.clone()))
+            .filter_map(|b| {
+                b.as_song_bar()
+                    .map(|sb| sb.song_data().metadata.title.clone())
+            })
             .collect();
         // Verify alphabetical sort
         for i in 1..titles.len() {
@@ -446,7 +449,10 @@ fn bar_sorter_title_sorts_correctly() {
 
     let titles: Vec<String> = bars
         .iter()
-        .filter_map(|b| b.as_song_bar().map(|sb| sb.song_data().title.clone()))
+        .filter_map(|b| {
+            b.as_song_bar()
+                .map(|sb| sb.song_data().metadata.title.clone())
+        })
         .collect();
     assert_eq!(titles, vec!["Alpha", "Middle", "Zebra"]);
 }

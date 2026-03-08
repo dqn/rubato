@@ -107,8 +107,8 @@ mod tests {
     #[test]
     fn command_bar_get_children_returns_sql_results() {
         let mut song = SongData::default();
-        song.title = "SQL Result Song".to_string();
-        song.sha256 = "sql_hash".to_string();
+        song.metadata.title = "SQL Result Song".to_string();
+        song.file.sha256 = "sql_hash".to_string();
 
         let db = MockSongDb::new(vec![song]);
         let ctx = CommandBarContext {

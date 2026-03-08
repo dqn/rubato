@@ -44,7 +44,7 @@ impl SongDatabaseAccessor for MockSongDb {
     fn song_datas_by_hashes(&self, hashes: &[String]) -> Vec<SongData> {
         self.songs
             .iter()
-            .filter(|s| hashes.contains(&s.sha256) || hashes.contains(&s.md5))
+            .filter(|s| hashes.contains(&s.file.sha256) || hashes.contains(&s.file.md5))
             .cloned()
             .collect()
     }

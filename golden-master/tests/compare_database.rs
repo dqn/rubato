@@ -46,47 +46,50 @@ fn find_test_case<'a>(fixture: &'a DatabaseFixture, filename: &str) -> &'a SongD
 fn compare_song_data(rust: &SongData, java: &SongDataFixture) -> Vec<String> {
     let mut diffs = Vec::new();
 
-    if rust.md5 != java.md5 {
-        diffs.push(format!("md5: rust={:?} java={:?}", rust.md5, java.md5));
+    if rust.file.md5 != java.md5 {
+        diffs.push(format!("md5: rust={:?} java={:?}", rust.file.md5, java.md5));
     }
-    if rust.sha256 != java.sha256 {
+    if rust.file.sha256 != java.sha256 {
         diffs.push(format!(
             "sha256: rust={:?} java={:?}",
-            rust.sha256, java.sha256
+            rust.file.sha256, java.sha256
         ));
     }
-    if rust.title != java.title {
+    if rust.metadata.title != java.title {
         diffs.push(format!(
             "title: rust={:?} java={:?}",
-            rust.title, java.title
+            rust.metadata.title, java.title
         ));
     }
-    if rust.subtitle != java.subtitle {
+    if rust.metadata.subtitle != java.subtitle {
         diffs.push(format!(
             "subtitle: rust={:?} java={:?}",
-            rust.subtitle, java.subtitle
+            rust.metadata.subtitle, java.subtitle
         ));
     }
-    if rust.genre != java.genre {
+    if rust.metadata.genre != java.genre {
         diffs.push(format!(
             "genre: rust={:?} java={:?}",
-            rust.genre, java.genre
+            rust.metadata.genre, java.genre
         ));
     }
-    if rust.artist != java.artist {
+    if rust.metadata.artist != java.artist {
         diffs.push(format!(
             "artist: rust={:?} java={:?}",
-            rust.artist, java.artist
+            rust.metadata.artist, java.artist
         ));
     }
-    if rust.subartist != java.subartist {
+    if rust.metadata.subartist != java.subartist {
         diffs.push(format!(
             "subartist: rust={:?} java={:?}",
-            rust.subartist, java.subartist
+            rust.metadata.subartist, java.subartist
         ));
     }
-    if rust.tag != java.tag {
-        diffs.push(format!("tag: rust={:?} java={:?}", rust.tag, java.tag));
+    if rust.metadata.tag != java.tag {
+        diffs.push(format!(
+            "tag: rust={:?} java={:?}",
+            rust.metadata.tag, java.tag
+        ));
     }
     // path is set by new_from_model in Rust but not in Java fixture export;
     // skip comparison when Java path is empty (database layer sets it later)
@@ -100,28 +103,28 @@ fn compare_song_data(rust: &SongData, java: &SongDataFixture) -> Vec<String> {
             rust.folder, java.folder
         ));
     }
-    if rust.banner != java.banner {
+    if rust.file.banner != java.banner {
         diffs.push(format!(
             "banner: rust={:?} java={:?}",
-            rust.banner, java.banner
+            rust.file.banner, java.banner
         ));
     }
-    if rust.stagefile != java.stagefile {
+    if rust.file.stagefile != java.stagefile {
         diffs.push(format!(
             "stagefile: rust={:?} java={:?}",
-            rust.stagefile, java.stagefile
+            rust.file.stagefile, java.stagefile
         ));
     }
-    if rust.backbmp != java.backbmp {
+    if rust.file.backbmp != java.backbmp {
         diffs.push(format!(
             "backbmp: rust={:?} java={:?}",
-            rust.backbmp, java.backbmp
+            rust.file.backbmp, java.backbmp
         ));
     }
-    if rust.preview != java.preview {
+    if rust.file.preview != java.preview {
         diffs.push(format!(
             "preview: rust={:?} java={:?}",
-            rust.preview, java.preview
+            rust.file.preview, java.preview
         ));
     }
     if rust.parent != java.parent {
@@ -130,53 +133,68 @@ fn compare_song_data(rust: &SongData, java: &SongDataFixture) -> Vec<String> {
             rust.parent, java.parent
         ));
     }
-    if rust.level != java.level {
-        diffs.push(format!("level: rust={} java={}", rust.level, java.level));
+    if rust.chart.level != java.level {
+        diffs.push(format!(
+            "level: rust={} java={}",
+            rust.chart.level, java.level
+        ));
     }
-    if rust.mode != java.mode {
-        diffs.push(format!("mode: rust={} java={}", rust.mode, java.mode));
+    if rust.chart.mode != java.mode {
+        diffs.push(format!("mode: rust={} java={}", rust.chart.mode, java.mode));
     }
-    if rust.difficulty != java.difficulty {
+    if rust.chart.difficulty != java.difficulty {
         diffs.push(format!(
             "difficulty: rust={} java={}",
-            rust.difficulty, java.difficulty
+            rust.chart.difficulty, java.difficulty
         ));
     }
-    if rust.judge != java.judge {
-        diffs.push(format!("judge: rust={} java={}", rust.judge, java.judge));
+    if rust.chart.judge != java.judge {
+        diffs.push(format!(
+            "judge: rust={} java={}",
+            rust.chart.judge, java.judge
+        ));
     }
-    if rust.minbpm != java.minbpm {
-        diffs.push(format!("minbpm: rust={} java={}", rust.minbpm, java.minbpm));
+    if rust.chart.minbpm != java.minbpm {
+        diffs.push(format!(
+            "minbpm: rust={} java={}",
+            rust.chart.minbpm, java.minbpm
+        ));
     }
-    if rust.maxbpm != java.maxbpm {
-        diffs.push(format!("maxbpm: rust={} java={}", rust.maxbpm, java.maxbpm));
+    if rust.chart.maxbpm != java.maxbpm {
+        diffs.push(format!(
+            "maxbpm: rust={} java={}",
+            rust.chart.maxbpm, java.maxbpm
+        ));
     }
     // length: allow ±1ms tolerance (Java getLastTime vs Rust total_time_us/1000)
-    if (rust.length - java.length).abs() > 1 {
+    if (rust.chart.length - java.length).abs() > 1 {
         diffs.push(format!(
             "length: rust={} java={} (diff={})",
-            rust.length,
+            rust.chart.length,
             java.length,
-            rust.length - java.length
+            rust.chart.length - java.length
         ));
     }
-    if rust.notes != java.notes {
-        diffs.push(format!("notes: rust={} java={}", rust.notes, java.notes));
+    if rust.chart.notes != java.notes {
+        diffs.push(format!(
+            "notes: rust={} java={}",
+            rust.chart.notes, java.notes
+        ));
     }
-    if rust.feature != java.feature {
+    if rust.chart.feature != java.feature {
         diffs.push(format!(
             "feature: rust={:#010b} java={:#010b} (rust={} java={})",
-            rust.feature, java.feature, rust.feature, java.feature
+            rust.chart.feature, java.feature, rust.chart.feature, java.feature
         ));
     }
-    if rust.content != java.content {
+    if rust.chart.content != java.content {
         diffs.push(format!(
             "content: rust={:#010b} java={:#010b} (rust={} java={})",
-            rust.content, java.content, rust.content, java.content
+            rust.chart.content, java.content, rust.chart.content, java.content
         ));
     }
-    if rust.date != java.date {
-        diffs.push(format!("date: rust={} java={}", rust.date, java.date));
+    if rust.chart.date != java.date {
+        diffs.push(format!("date: rust={} java={}", rust.chart.date, java.date));
     }
     if rust.favorite != java.favorite {
         diffs.push(format!(
@@ -184,15 +202,15 @@ fn compare_song_data(rust: &SongData, java: &SongDataFixture) -> Vec<String> {
             rust.favorite, java.favorite
         ));
     }
-    if rust.adddate != java.adddate {
+    if rust.chart.adddate != java.adddate {
         diffs.push(format!(
             "adddate: rust={} java={}",
-            rust.adddate, java.adddate
+            rust.chart.adddate, java.adddate
         ));
     }
     // charthash is set by new_from_model in Rust but not in Java fixture export;
     // skip comparison when Java charthash is empty
-    let rust_charthash = rust.charthash.as_deref().unwrap_or("");
+    let rust_charthash = rust.file.charthash.as_deref().unwrap_or("");
     if !java.charthash.is_empty() && rust_charthash != java.charthash {
         diffs.push(format!(
             "charthash: rust={:?} java={:?}",

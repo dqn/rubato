@@ -273,10 +273,10 @@ impl FolderEditorView {
         for folder in folders {
             let songs = &folder.songs;
             for ts in songs {
-                let ts_md5 = ts.md5.as_str();
-                let song_md5 = song.md5.as_str();
-                let ts_sha256 = ts.sha256.as_str();
-                let song_sha256 = song.sha256.as_str();
+                let ts_md5 = ts.file.md5.as_str();
+                let song_md5 = song.file.md5.as_str();
+                let ts_sha256 = ts.file.sha256.as_str();
+                let song_sha256 = song.file.sha256.as_str();
 
                 if (!ts_md5.is_empty() && !song_md5.is_empty() && ts_md5 == song_md5)
                     || (!ts_sha256.is_empty()
@@ -381,7 +381,7 @@ impl FolderEditorView {
                 .show(ui, |ui| {
                     for (i, song) in self.folder_songs.iter().enumerate() {
                         let selected = self.folder_songs_selected_index == Some(i);
-                        let label = format!("{} [{}]", song.full_title(), &song.sha256);
+                        let label = format!("{} [{}]", song.full_title(), &song.file.sha256);
                         if ui.selectable_label(selected, &label).clicked() {
                             self.folder_songs_selected_index = Some(i);
                         }
@@ -415,13 +415,18 @@ impl FolderEditorView {
                     let is_selected = self
                         .search_songs_selected_items
                         .iter()
-                        .any(|s| s.sha256 == song.sha256 && s.md5 == song.md5);
-                    let label =
-                        format!("{} - {} [{}]", song.full_title(), song.artist, &song.sha256,);
+                        .any(|s| s.file.sha256 == song.file.sha256 && s.file.md5 == song.file.md5);
+                    let label = format!(
+                        "{} - {} [{}]",
+                        song.full_title(),
+                        song.metadata.artist,
+                        &song.file.sha256,
+                    );
                     if ui.selectable_label(is_selected, &label).clicked() {
                         if is_selected {
-                            self.search_songs_selected_items
-                                .retain(|s| s.sha256 != song.sha256 || s.md5 != song.md5);
+                            self.search_songs_selected_items.retain(|s| {
+                                s.file.sha256 != song.file.sha256 || s.file.md5 != song.file.md5
+                            });
                         } else {
                             self.search_songs_selected_items
                                 .push(self.search_songs[i].clone());
@@ -475,9 +480,9 @@ mod tests {
 
     fn make_song(title: &str, md5: &str, sha256: &str) -> SongData {
         let mut sd = SongData::new();
-        sd.title = title.to_string();
-        sd.md5 = md5.to_string();
-        sd.sha256 = sha256.to_string();
+        sd.metadata.title = title.to_string();
+        sd.file.md5 = md5.to_string();
+        sd.file.sha256 = sha256.to_string();
         sd
     }
 
@@ -668,8 +673,8 @@ mod tests {
 
         view.add_song_data();
         assert_eq!(view.folder_songs.len(), 2);
-        assert_eq!(view.folder_songs[0].title, "Song 1");
-        assert_eq!(view.folder_songs[1].title, "Song 2");
+        assert_eq!(view.folder_songs[0].metadata.title, "Song 1");
+        assert_eq!(view.folder_songs[1].metadata.title, "Song 2");
     }
 
     #[test]
@@ -684,8 +689,8 @@ mod tests {
 
         view.remove_song_data();
         assert_eq!(view.folder_songs.len(), 2);
-        assert_eq!(view.folder_songs[0].title, "S1");
-        assert_eq!(view.folder_songs[1].title, "S3");
+        assert_eq!(view.folder_songs[0].metadata.title, "S1");
+        assert_eq!(view.folder_songs[1].metadata.title, "S3");
     }
 
     #[test]
@@ -711,8 +716,8 @@ mod tests {
         view.folder_songs_selected_index = Some(2);
 
         view.move_song_data_up();
-        assert_eq!(view.folder_songs[1].title, "C");
-        assert_eq!(view.folder_songs[2].title, "B");
+        assert_eq!(view.folder_songs[1].metadata.title, "C");
+        assert_eq!(view.folder_songs[2].metadata.title, "B");
         assert_eq!(view.folder_songs_selected_index, Some(1));
     }
 
@@ -723,7 +728,7 @@ mod tests {
         view.folder_songs_selected_index = Some(0);
 
         view.move_song_data_up();
-        assert_eq!(view.folder_songs[0].title, "A");
+        assert_eq!(view.folder_songs[0].metadata.title, "A");
         assert_eq!(view.folder_songs_selected_index, Some(0));
     }
 
@@ -738,8 +743,8 @@ mod tests {
         view.folder_songs_selected_index = Some(0);
 
         view.move_song_data_down();
-        assert_eq!(view.folder_songs[0].title, "B");
-        assert_eq!(view.folder_songs[1].title, "A");
+        assert_eq!(view.folder_songs[0].metadata.title, "B");
+        assert_eq!(view.folder_songs[1].metadata.title, "A");
         assert_eq!(view.folder_songs_selected_index, Some(1));
     }
 
@@ -750,7 +755,7 @@ mod tests {
         view.folder_songs_selected_index = Some(1);
 
         view.move_song_data_down();
-        assert_eq!(view.folder_songs[1].title, "B");
+        assert_eq!(view.folder_songs[1].metadata.title, "B");
         assert_eq!(view.folder_songs_selected_index, Some(1));
     }
 
@@ -767,7 +772,7 @@ mod tests {
         view.commit_folder();
         assert_eq!(view.folders[0].name(), "Renamed");
         assert_eq!(view.folders[0].songs.len(), 1);
-        assert_eq!(view.folders[0].songs[0].title, "New Song");
+        assert_eq!(view.folders[0].songs[0].metadata.title, "New Song");
     }
 
     #[test]
@@ -817,7 +822,7 @@ mod tests {
         assert_eq!(view.selected_folder, Some(0));
         assert_eq!(view.folder_name, "Test Folder");
         assert_eq!(view.folder_songs.len(), 1);
-        assert_eq!(view.folder_songs[0].title, "S1");
+        assert_eq!(view.folder_songs[0].metadata.title, "S1");
     }
 
     #[test]
@@ -996,6 +1001,6 @@ mod tests {
         assert_eq!(folders.len(), 1);
         assert_eq!(folders[0].name(), "Edited Folder");
         assert_eq!(folders[0].songs.len(), 1);
-        assert_eq!(folders[0].songs[0].title, "Test Song");
+        assert_eq!(folders[0].songs[0].metadata.title, "Test Song");
     }
 }

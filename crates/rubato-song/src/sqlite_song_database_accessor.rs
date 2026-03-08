@@ -203,36 +203,36 @@ impl SQLiteSongDatabaseAccessor {
         let mut stmt = conn.prepare(sql)?;
         let rows = stmt.query_map(params, |row| {
             let mut sd = SongData::new();
-            sd.md5 = row.get::<_, String>(0).unwrap_or_default();
-            sd.sha256 = row.get::<_, String>(1).unwrap_or_default();
-            sd.title = row.get::<_, String>(2).unwrap_or_default();
-            sd.subtitle = row.get::<_, String>(3).unwrap_or_default();
-            sd.genre = row.get::<_, String>(4).unwrap_or_default();
-            sd.artist = row.get::<_, String>(5).unwrap_or_default();
-            sd.subartist = row.get::<_, String>(6).unwrap_or_default();
-            sd.tag = row.get::<_, String>(7).unwrap_or_default();
+            sd.file.md5 = row.get::<_, String>(0).unwrap_or_default();
+            sd.file.sha256 = row.get::<_, String>(1).unwrap_or_default();
+            sd.metadata.title = row.get::<_, String>(2).unwrap_or_default();
+            sd.metadata.subtitle = row.get::<_, String>(3).unwrap_or_default();
+            sd.metadata.genre = row.get::<_, String>(4).unwrap_or_default();
+            sd.metadata.artist = row.get::<_, String>(5).unwrap_or_default();
+            sd.metadata.subartist = row.get::<_, String>(6).unwrap_or_default();
+            sd.metadata.tag = row.get::<_, String>(7).unwrap_or_default();
             let path: String = row.get::<_, String>(8).unwrap_or_default();
             sd.set_path(path);
             sd.folder = row.get::<_, String>(9).unwrap_or_default();
-            sd.stagefile = row.get::<_, String>(10).unwrap_or_default();
-            sd.banner = row.get::<_, String>(11).unwrap_or_default();
-            sd.backbmp = row.get::<_, String>(12).unwrap_or_default();
-            sd.preview = row.get::<_, String>(13).unwrap_or_default();
+            sd.file.stagefile = row.get::<_, String>(10).unwrap_or_default();
+            sd.file.banner = row.get::<_, String>(11).unwrap_or_default();
+            sd.file.backbmp = row.get::<_, String>(12).unwrap_or_default();
+            sd.file.preview = row.get::<_, String>(13).unwrap_or_default();
             sd.parent = row.get::<_, String>(14).unwrap_or_default();
-            sd.level = row.get::<_, i32>(15).unwrap_or(0);
-            sd.difficulty = row.get::<_, i32>(16).unwrap_or(0);
-            sd.maxbpm = row.get::<_, i32>(17).unwrap_or(0);
-            sd.minbpm = row.get::<_, i32>(18).unwrap_or(0);
-            sd.length = row.get::<_, i32>(19).unwrap_or(0);
-            sd.mode = row.get::<_, i32>(20).unwrap_or(0);
-            sd.judge = row.get::<_, i32>(21).unwrap_or(0);
-            sd.feature = row.get::<_, i32>(22).unwrap_or(0);
-            sd.content = row.get::<_, i32>(23).unwrap_or(0);
-            sd.date = row.get::<_, i32>(24).unwrap_or(0);
+            sd.chart.level = row.get::<_, i32>(15).unwrap_or(0);
+            sd.chart.difficulty = row.get::<_, i32>(16).unwrap_or(0);
+            sd.chart.maxbpm = row.get::<_, i32>(17).unwrap_or(0);
+            sd.chart.minbpm = row.get::<_, i32>(18).unwrap_or(0);
+            sd.chart.length = row.get::<_, i32>(19).unwrap_or(0);
+            sd.chart.mode = row.get::<_, i32>(20).unwrap_or(0);
+            sd.chart.judge = row.get::<_, i32>(21).unwrap_or(0);
+            sd.chart.feature = row.get::<_, i32>(22).unwrap_or(0);
+            sd.chart.content = row.get::<_, i32>(23).unwrap_or(0);
+            sd.chart.date = row.get::<_, i32>(24).unwrap_or(0);
             sd.favorite = row.get::<_, i32>(25).unwrap_or(0);
-            sd.adddate = row.get::<_, i32>(26).unwrap_or(0);
-            sd.notes = row.get::<_, i32>(27).unwrap_or(0);
-            sd.charthash = row.get::<_, Option<String>>(28).unwrap_or(None);
+            sd.chart.adddate = row.get::<_, i32>(26).unwrap_or(0);
+            sd.chart.notes = row.get::<_, i32>(27).unwrap_or(0);
+            sd.file.charthash = row.get::<_, Option<String>>(28).unwrap_or(None);
             Ok(sd)
         })?;
         let mut result = Vec::new();
@@ -285,35 +285,35 @@ impl SQLiteSongDatabaseAccessor {
         self.base
             .insert_with_values(&conn, "song", &|name: &str| -> rusqlite::types::Value {
                 match name {
-                    "md5" => rusqlite::types::Value::Text(sd.md5.clone()),
-                    "sha256" => rusqlite::types::Value::Text(sd.sha256.clone()),
-                    "title" => rusqlite::types::Value::Text(sd.title.clone()),
-                    "subtitle" => rusqlite::types::Value::Text(sd.subtitle.clone()),
-                    "genre" => rusqlite::types::Value::Text(sd.genre.clone()),
-                    "artist" => rusqlite::types::Value::Text(sd.artist.clone()),
-                    "subartist" => rusqlite::types::Value::Text(sd.subartist.clone()),
-                    "tag" => rusqlite::types::Value::Text(sd.tag.clone()),
+                    "md5" => rusqlite::types::Value::Text(sd.file.md5.clone()),
+                    "sha256" => rusqlite::types::Value::Text(sd.file.sha256.clone()),
+                    "title" => rusqlite::types::Value::Text(sd.metadata.title.clone()),
+                    "subtitle" => rusqlite::types::Value::Text(sd.metadata.subtitle.clone()),
+                    "genre" => rusqlite::types::Value::Text(sd.metadata.genre.clone()),
+                    "artist" => rusqlite::types::Value::Text(sd.metadata.artist.clone()),
+                    "subartist" => rusqlite::types::Value::Text(sd.metadata.subartist.clone()),
+                    "tag" => rusqlite::types::Value::Text(sd.metadata.tag.clone()),
                     "path" => rusqlite::types::Value::Text(sd.path().unwrap_or("").to_string()),
                     "folder" => rusqlite::types::Value::Text(sd.folder.clone()),
-                    "stagefile" => rusqlite::types::Value::Text(sd.stagefile.clone()),
-                    "banner" => rusqlite::types::Value::Text(sd.banner.clone()),
-                    "backbmp" => rusqlite::types::Value::Text(sd.backbmp.clone()),
-                    "preview" => rusqlite::types::Value::Text(sd.preview.clone()),
+                    "stagefile" => rusqlite::types::Value::Text(sd.file.stagefile.clone()),
+                    "banner" => rusqlite::types::Value::Text(sd.file.banner.clone()),
+                    "backbmp" => rusqlite::types::Value::Text(sd.file.backbmp.clone()),
+                    "preview" => rusqlite::types::Value::Text(sd.file.preview.clone()),
                     "parent" => rusqlite::types::Value::Text(sd.parent.clone()),
-                    "level" => rusqlite::types::Value::Integer(sd.level as i64),
-                    "difficulty" => rusqlite::types::Value::Integer(sd.difficulty as i64),
-                    "maxbpm" => rusqlite::types::Value::Integer(sd.maxbpm as i64),
-                    "minbpm" => rusqlite::types::Value::Integer(sd.minbpm as i64),
-                    "length" => rusqlite::types::Value::Integer(sd.length as i64),
-                    "mode" => rusqlite::types::Value::Integer(sd.mode as i64),
-                    "judge" => rusqlite::types::Value::Integer(sd.judge as i64),
-                    "feature" => rusqlite::types::Value::Integer(sd.feature as i64),
-                    "content" => rusqlite::types::Value::Integer(sd.content as i64),
-                    "date" => rusqlite::types::Value::Integer(sd.date as i64),
+                    "level" => rusqlite::types::Value::Integer(sd.chart.level as i64),
+                    "difficulty" => rusqlite::types::Value::Integer(sd.chart.difficulty as i64),
+                    "maxbpm" => rusqlite::types::Value::Integer(sd.chart.maxbpm as i64),
+                    "minbpm" => rusqlite::types::Value::Integer(sd.chart.minbpm as i64),
+                    "length" => rusqlite::types::Value::Integer(sd.chart.length as i64),
+                    "mode" => rusqlite::types::Value::Integer(sd.chart.mode as i64),
+                    "judge" => rusqlite::types::Value::Integer(sd.chart.judge as i64),
+                    "feature" => rusqlite::types::Value::Integer(sd.chart.feature as i64),
+                    "content" => rusqlite::types::Value::Integer(sd.chart.content as i64),
+                    "date" => rusqlite::types::Value::Integer(sd.chart.date as i64),
                     "favorite" => rusqlite::types::Value::Integer(sd.favorite as i64),
-                    "adddate" => rusqlite::types::Value::Integer(sd.adddate as i64),
-                    "notes" => rusqlite::types::Value::Integer(sd.notes as i64),
-                    "charthash" => match &sd.charthash {
+                    "adddate" => rusqlite::types::Value::Integer(sd.chart.adddate as i64),
+                    "notes" => rusqlite::types::Value::Integer(sd.chart.notes as i64),
+                    "charthash" => match &sd.file.charthash {
                         Some(h) => rusqlite::types::Value::Text(h.clone()),
                         None => rusqlite::types::Value::Null,
                     },
@@ -426,16 +426,16 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
             let mut b_index_sha256 = -1i32;
             let mut b_index_md5 = -1i32;
             for (i, hash) in hashes.iter().enumerate() {
-                if hash == &a.sha256 {
+                if hash == &a.file.sha256 {
                     a_index_sha256 = i as i32;
                 }
-                if hash == &a.md5 {
+                if hash == &a.file.md5 {
                     a_index_md5 = i as i32;
                 }
-                if hash == &b.sha256 {
+                if hash == &b.file.sha256 {
                     b_index_sha256 = i as i32;
                 }
-                if hash == &b.md5 {
+                if hash == &b.file.md5 {
                     b_index_md5 = i as i32;
                 }
             }
@@ -1087,7 +1087,7 @@ impl BMSFolder {
                 };
                 if matched {
                     if let Some(rec) = record.as_ref()
-                        && rec.date == last_modified_time as i32
+                        && rec.chart.date == last_modified_time as i32
                     {
                         update = false;
                     }
@@ -1155,51 +1155,60 @@ impl BMSFolder {
 
             let mut sd = SongData::new_from_model(model, self.txt);
 
-            if sd.notes != 0 || !sd.model.as_ref().is_none_or(|m| m.wav_list().is_empty()) {
-                if sd.difficulty == 0 {
-                    let fulltitle = format!("{}{}", sd.title, sd.subtitle).to_lowercase();
-                    let diffname = sd.subtitle.to_lowercase();
+            if sd.chart.notes != 0 || !sd.model.as_ref().is_none_or(|m| m.wav_list().is_empty()) {
+                if sd.chart.difficulty == 0 {
+                    let fulltitle =
+                        format!("{}{}", sd.metadata.title, sd.metadata.subtitle).to_lowercase();
+                    let diffname = sd.metadata.subtitle.to_lowercase();
                     if diffname.contains("beginner") {
-                        sd.difficulty = 1;
+                        sd.chart.difficulty = 1;
                     } else if diffname.contains("normal") {
-                        sd.difficulty = 2;
+                        sd.chart.difficulty = 2;
                     } else if diffname.contains("hyper") {
-                        sd.difficulty = 3;
+                        sd.chart.difficulty = 3;
                     } else if diffname.contains("another") {
-                        sd.difficulty = 4;
+                        sd.chart.difficulty = 4;
                     } else if diffname.contains("insane") || diffname.contains("leggendaria") {
-                        sd.difficulty = 5;
+                        sd.chart.difficulty = 5;
                     } else if fulltitle.contains("beginner") {
-                        sd.difficulty = 1;
+                        sd.chart.difficulty = 1;
                     } else if fulltitle.contains("normal") {
-                        sd.difficulty = 2;
+                        sd.chart.difficulty = 2;
                     } else if fulltitle.contains("hyper") {
-                        sd.difficulty = 3;
+                        sd.chart.difficulty = 3;
                     } else if fulltitle.contains("another") {
-                        sd.difficulty = 4;
+                        sd.chart.difficulty = 4;
                     } else if fulltitle.contains("insane") || fulltitle.contains("leggendaria") {
-                        sd.difficulty = 5;
-                    } else if sd.notes < 250 {
-                        sd.difficulty = 1;
-                    } else if sd.notes < 600 {
-                        sd.difficulty = 2;
-                    } else if sd.notes < 1000 {
-                        sd.difficulty = 3;
-                    } else if sd.notes < 2000 {
-                        sd.difficulty = 4;
+                        sd.chart.difficulty = 5;
+                    } else if sd.chart.notes < 250 {
+                        sd.chart.difficulty = 1;
+                    } else if sd.chart.notes < 600 {
+                        sd.chart.difficulty = 2;
+                    } else if sd.chart.notes < 1000 {
+                        sd.chart.difficulty = 3;
+                    } else if sd.chart.notes < 2000 {
+                        sd.chart.difficulty = 4;
                     } else {
-                        sd.difficulty = 5;
+                        sd.chart.difficulty = 5;
                     }
                 }
 
-                if sd.preview.is_empty()
+                if sd.file.preview.is_empty()
                     && let Some(ref preview) = self.previewpath
                 {
-                    sd.preview = preview.clone();
+                    sd.file.preview = preview.clone();
                 }
 
-                let tag = property.tags.get(&sd.sha256).cloned().unwrap_or_default();
-                let favorite = property.favorites.get(&sd.sha256).copied().unwrap_or(0);
+                let tag = property
+                    .tags
+                    .get(&sd.file.sha256)
+                    .cloned()
+                    .unwrap_or_default();
+                let favorite = property
+                    .favorites
+                    .get(&sd.file.sha256)
+                    .copied()
+                    .unwrap_or(0);
 
                 // Plugin updates
                 for plugin in &accessor.plugins {
@@ -1210,7 +1219,7 @@ impl BMSFolder {
                     }
                 }
 
-                sd.tag = tag;
+                sd.metadata.tag = tag;
                 sd.set_path(pathname.clone());
 
                 if let Some(parent_path) = bmsfile_path.parent() {
@@ -1224,9 +1233,9 @@ impl BMSFolder {
                         );
                     }
                 }
-                sd.date = last_modified_time as i32;
+                sd.chart.date = last_modified_time as i32;
                 sd.favorite = favorite;
-                sd.adddate = property.updatetime as i32;
+                sd.chart.adddate = property.updatetime as i32;
 
                 if let Err(e) = accessor.insert_song(&sd) {
                     log::error!("Error inserting song: {}", e);
@@ -1279,9 +1288,9 @@ mod tests {
 
     fn make_test_song(md5: &str, sha256: &str, title: &str) -> SongData {
         let mut sd = SongData::new();
-        sd.md5 = md5.to_string();
-        sd.sha256 = sha256.to_string();
-        sd.title = title.to_string();
+        sd.file.md5 = md5.to_string();
+        sd.file.sha256 = sha256.to_string();
+        sd.metadata.title = title.to_string();
         sd.set_path(format!("test/{}.bms", title));
         sd
     }
@@ -1304,8 +1313,8 @@ mod tests {
 
         let results = accessor.song_datas("md5", "abc123");
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].title, "Test Song");
-        assert_eq!(results[0].md5, "abc123");
+        assert_eq!(results[0].metadata.title, "Test Song");
+        assert_eq!(results[0].file.md5, "abc123");
     }
 
     #[test]
@@ -1316,7 +1325,7 @@ mod tests {
 
         let results = accessor.song_datas("sha256", "sha256_xyz");
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].title, "SHA Test");
+        assert_eq!(results[0].metadata.title, "SHA Test");
     }
 
     #[test]
@@ -1358,19 +1367,19 @@ mod tests {
         let hashes = vec!["md5_short_1".to_string()];
         let results = accessor.song_datas_by_hashes(&hashes);
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].title, "Song Short 1");
+        assert_eq!(results[0].metadata.title, "Song Short 1");
     }
 
     #[test]
     fn test_get_song_datas_by_text() {
         let accessor = create_test_accessor();
         let mut song = make_test_song("m1", "s1", "Rhythm Action");
-        song.artist = "DJ Test".to_string();
+        song.metadata.artist = "DJ Test".to_string();
         accessor.insert_song(&song).unwrap();
 
         let results = accessor.song_datas_by_text("Rhythm");
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].title, "Rhythm Action");
+        assert_eq!(results[0].metadata.title, "Rhythm Action");
 
         let results = accessor.song_datas_by_text("DJ Test");
         assert_eq!(results.len(), 1);
@@ -1430,7 +1439,7 @@ mod tests {
         struct TestPlugin;
         impl SongDatabaseAccessorPlugin for TestPlugin {
             fn update(&self, _model: &BMSModel, song: &mut SongData) {
-                song.tag = "plugin_tag".to_string();
+                song.metadata.tag = "plugin_tag".to_string();
             }
         }
         accessor.add_plugin(Box::new(TestPlugin));
@@ -1468,8 +1477,8 @@ mod tests {
         // Verify the song was inserted
         let songs = accessor.song_datas("title", "Update Test Song");
         assert_eq!(songs.len(), 1);
-        assert_eq!(songs[0].artist, "tester");
-        assert!(songs[0].notes > 0);
+        assert_eq!(songs[0].metadata.artist, "tester");
+        assert!(songs[0].chart.notes > 0);
     }
 
     #[test]
@@ -1585,7 +1594,7 @@ mod tests {
         // Set favorite on the song
         let songs = accessor.song_datas("title", "Favorite Test");
         assert_eq!(songs.len(), 1);
-        let sha256 = songs[0].sha256.clone();
+        let sha256 = songs[0].file.sha256.clone();
         let conn = accessor.conn.lock().unwrap();
         let _ = conn.execute(
             "UPDATE song SET favorite = 3 WHERE sha256 = ?1",
@@ -1631,7 +1640,7 @@ mod tests {
         let songs = accessor.song_datas("title", "Test");
         assert_eq!(songs.len(), 1);
         assert_eq!(
-            songs[0].difficulty, 1,
+            songs[0].chart.difficulty, 1,
             "Beginner subtitle should set difficulty to 1"
         );
     }

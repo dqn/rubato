@@ -110,7 +110,7 @@ impl UpdateBar {
             if self
                 .song_datas
                 .iter()
-                .filter(|song| song.sha256 == sha256)
+                .filter(|song| song.file.sha256 == sha256)
                 .count()
                 > 0
                 || self
@@ -142,7 +142,7 @@ impl UpdateBar {
             if self
                 .song_datas
                 .iter()
-                .filter(|song| song.sha256 == sha256)
+                .filter(|song| song.file.sha256 == sha256)
                 .count()
                 > 0
             {

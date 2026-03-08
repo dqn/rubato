@@ -546,8 +546,8 @@ impl PlayerResource {
             }
             for tf in &td.folder {
                 let found = tf.songs.iter().any(|ts| {
-                    (!ts.md5.is_empty() && ts.md5 == songdata.md5)
-                        || (!ts.sha256.is_empty() && ts.sha256 == songdata.sha256)
+                    (!ts.file.md5.is_empty() && ts.file.md5 == songdata.file.md5)
+                        || (!ts.file.sha256.is_empty() && ts.file.sha256 == songdata.file.sha256)
                 });
                 if found {
                     result.push(format!("{} {}", td.name, tf.name()));
@@ -580,8 +580,8 @@ impl PlayerResource {
             }
             for tf in &td.folder {
                 let found = tf.songs.iter().any(|ts| {
-                    (!ts.md5.is_empty() && ts.md5 == songdata.md5)
-                        || (!ts.sha256.is_empty() && ts.sha256 == songdata.sha256)
+                    (!ts.file.md5.is_empty() && ts.file.md5 == songdata.file.md5)
+                        || (!ts.file.sha256.is_empty() && ts.file.sha256 == songdata.file.sha256)
                 });
                 if found {
                     result.push(tf.name().to_string());
@@ -820,19 +820,19 @@ impl PlayerResourceAccess for PlayerResource {
                 .map(|m| {
                     // Build SongData from model metadata without consuming the model
                     let mut sd = rubato_types::song_data::SongData::default();
-                    sd.title = m.get_title().to_string();
+                    sd.metadata.title = m.get_title().to_string();
                     sd.set_subtitle(m.sub_title().to_string());
-                    sd.genre = m.genre().to_string();
+                    sd.metadata.genre = m.genre().to_string();
                     sd.set_artist(m.artist().to_string());
                     sd.set_subartist(m.sub_artist().to_string());
                     if let Some(p) = m.path() {
                         sd.set_path(p);
                     }
-                    sd.md5 = m.md5().to_string();
-                    sd.sha256 = m.sha256().to_string();
-                    sd.notes = m.total_notes();
-                    sd.length = m.last_time();
-                    sd.mode = m.mode().map(|mode| mode.id()).unwrap_or(0);
+                    sd.file.md5 = m.md5().to_string();
+                    sd.file.sha256 = m.sha256().to_string();
+                    sd.chart.notes = m.total_notes();
+                    sd.chart.length = m.last_time();
+                    sd.chart.mode = m.mode().map(|mode| mode.id()).unwrap_or(0);
                     sd
                 })
                 .collect(),
@@ -965,7 +965,10 @@ mod tests {
             .expect("songdata should be Some after successful set_bms_file");
 
         // md5 should be populated from the loaded model
-        assert!(!songdata.md5.is_empty(), "songdata.md5 should be non-empty");
+        assert!(
+            !songdata.file.md5.is_empty(),
+            "songdata.file.md5 should be non-empty"
+        );
 
         // PlayerResourceAccess trait method should also return Some
         let trait_songdata = PlayerResourceAccess::songdata(&resource as &dyn PlayerResourceAccess);

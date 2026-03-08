@@ -93,8 +93,8 @@ impl DirectoryBarData {
                 continue;
             }
             if let Some(m) = mode
-                && song.mode != 0
-                && song.mode != m.id()
+                && song.chart.mode != 0
+                && song.chart.mode != m.id()
             {
                 continue;
             }
@@ -134,7 +134,7 @@ impl DirectoryBarData {
             if let Some(mode) = mode
                 && let Some(sb) = b.as_song_bar()
             {
-                let song_mode = sb.song_data().mode;
+                let song_mode = sb.song_data().chart.mode;
                 if song_mode != 0 && song_mode != mode.id() {
                     continue;
                 }
@@ -172,9 +172,9 @@ mod tests {
 
     fn make_song_bar(title: &str, sha256: &str, mode: i32, folder: &str) -> Bar {
         let mut song = SongData::default();
-        song.title = title.to_string();
-        song.sha256 = sha256.to_string();
-        song.mode = mode;
+        song.metadata.title = title.to_string();
+        song.file.sha256 = sha256.to_string();
+        song.chart.mode = mode;
         song.folder = folder.to_string();
         Bar::Song(Box::new(SongBar::new(song)))
     }

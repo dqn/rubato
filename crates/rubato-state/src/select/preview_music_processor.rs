@@ -108,11 +108,14 @@ impl PreviewMusicProcessor {
 
         let mut preview_path = String::new();
         if let Some(song) = song
-            && !song.preview.is_empty()
+            && !song.file.preview.is_empty()
             && let Some(song_path) = song.path()
             && let Some(parent) = Path::new(song_path).parent()
         {
-            preview_path = parent.join(&song.preview).to_string_lossy().to_string();
+            preview_path = parent
+                .join(&song.file.preview)
+                .to_string_lossy()
+                .to_string();
         }
 
         if let Ok(mut cmds) = self.commands.lock() {
@@ -417,10 +420,10 @@ mod tests {
         let mut processor = PreviewMusicProcessor::new(&config);
 
         let mut song = SongData::default();
-        song.sha256 = "abc".to_string();
+        song.file.sha256 = "abc".to_string();
         processor.start(Some(&song));
         assert!(processor.song_data().is_some());
-        assert_eq!(processor.song_data().unwrap().sha256, "abc");
+        assert_eq!(processor.song_data().unwrap().file.sha256, "abc");
     }
 
     #[test]

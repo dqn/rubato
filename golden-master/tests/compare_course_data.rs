@@ -83,22 +83,22 @@ fn compare_course_data(
         ));
     } else {
         for (i, (rs, js)) in rust.hash.iter().zip(java.hash.iter()).enumerate() {
-            if rs.sha256 != js.sha256 {
+            if rs.file.sha256 != js.sha256 {
                 diffs.push(format!(
                     "hash[{}].sha256: rust={:?} java={:?}",
-                    i, rs.sha256, js.sha256
+                    i, rs.file.sha256, js.sha256
                 ));
             }
-            if rs.md5 != js.md5 {
+            if rs.file.md5 != js.md5 {
                 diffs.push(format!(
                     "hash[{}].md5: rust={:?} java={:?}",
-                    i, rs.md5, js.md5
+                    i, rs.file.md5, js.md5
                 ));
             }
-            if rs.title != js.title {
+            if rs.metadata.title != js.title {
                 diffs.push(format!(
                     "hash[{}].title: rust={:?} java={:?}",
-                    i, rs.title, js.title
+                    i, rs.metadata.title, js.title
                 ));
             }
         }

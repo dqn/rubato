@@ -43,7 +43,7 @@ impl ScoreDataCache {
     /// Read score data for the given song and LN mode
     pub fn read_score_data(&mut self, song: &SongData, lnmode: i32) -> Option<&ScoreData> {
         let cacheindex = Self::cache_index(song, lnmode);
-        let sha256 = &song.sha256;
+        let sha256 = &song.file.sha256;
         if !self.scorecache[cacheindex].contains_key(sha256.as_str()) {
             let score = (self.read_single)(song, lnmode);
             self.scorecache[cacheindex].insert(sha256.clone(), score);
@@ -64,7 +64,7 @@ impl ScoreDataCache {
 
         for song in songs {
             let cacheindex = Self::cache_index(song, lnmode);
-            let sha256 = &song.sha256;
+            let sha256 = &song.file.sha256;
             if self.scorecache[cacheindex].contains_key(sha256.as_str()) {
                 let score = self.scorecache[cacheindex]
                     .get(sha256.as_str())
@@ -86,7 +86,7 @@ impl ScoreDataCache {
         let combined_collector = |song: &SongData, score: Option<&ScoreData>| {
             let cacheindex = Self::cache_index(song, lnmode_copy);
             if let Ok(mut results) = cached_results.lock() {
-                results.push((cacheindex, song.sha256.clone(), score.cloned()));
+                results.push((cacheindex, song.file.sha256.clone(), score.cloned()));
             }
             collector(song, score);
         };
@@ -101,7 +101,7 @@ impl ScoreDataCache {
 
     pub fn exists_score_data_cache(&self, song: &SongData, lnmode: i32) -> bool {
         let cacheindex = Self::cache_index(song, lnmode);
-        self.scorecache[cacheindex].contains_key(song.sha256.as_str())
+        self.scorecache[cacheindex].contains_key(song.file.sha256.as_str())
     }
 
     pub fn clear(&mut self) {
@@ -113,6 +113,6 @@ impl ScoreDataCache {
     pub fn update(&mut self, song: &SongData, lnmode: i32) {
         let cacheindex = Self::cache_index(song, lnmode);
         let score = (self.read_single)(song, lnmode);
-        self.scorecache[cacheindex].insert(song.sha256.clone(), score);
+        self.scorecache[cacheindex].insert(song.file.sha256.clone(), score);
     }
 }

@@ -87,9 +87,9 @@ impl IRTableData {
 /// Create IRChartData from rubato_core::stubs::SongData
 fn create_ir_chart_data_from_core_song(song: &rubato_core::stubs::SongData) -> IRChartData {
     IRChartData {
-        md5: song.md5.clone(),
-        sha256: song.sha256.clone(),
-        title: song.title.clone(),
+        md5: song.file.md5.clone(),
+        sha256: song.file.sha256.clone(),
+        title: song.metadata.title.clone(),
         subtitle: String::new(),
         genre: String::new(),
         artist: String::new(),
@@ -163,8 +163,8 @@ mod tests {
         assert_eq!(td.folder.len(), 1);
         assert_eq!(td.folder[0].name(), "Level 1");
         assert_eq!(td.folder[0].songs.len(), 1);
-        assert_eq!(td.folder[0].songs[0].sha256, "abc123");
-        assert_eq!(td.folder[0].songs[0].title, "Song A");
+        assert_eq!(td.folder[0].songs[0].file.sha256, "abc123");
+        assert_eq!(td.folder[0].songs[0].metadata.title, "Song A");
     }
 
     #[test]

@@ -240,7 +240,7 @@ impl MusicSelector {
             }),
             ChartReplicationMode::ReplayChart | ChartReplicationMode::ReplayOption => {
                 let sd = songdata?;
-                let sha256 = &sd.sha256;
+                let sha256 = &sd.file.sha256;
                 let has_ln = sd.has_undefined_long_note();
                 let replay = main.read_replay_data(
                     sha256,

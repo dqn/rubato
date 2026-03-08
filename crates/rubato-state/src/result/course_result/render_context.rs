@@ -65,7 +65,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
         let course = self.resource.course_data()?;
         let mut current_mode: Option<bms_model::mode::Mode> = None;
         for song in &course.hash {
-            let song_mode = match song.mode {
+            let song_mode = match song.chart.mode {
                 5 => Some(bms_model::mode::Mode::BEAT_5K),
                 7 => Some(bms_model::mode::Mode::BEAT_7K),
                 9 => Some(bms_model::mode::Mode::POPN_9K),
@@ -153,15 +153,15 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
             10 => self
                 .resource
                 .songdata()
-                .map_or_else(String::new, |s| s.title.clone()),
+                .map_or_else(String::new, |s| s.metadata.title.clone()),
             11 => self
                 .resource
                 .songdata()
-                .map_or_else(String::new, |s| s.subtitle.clone()),
+                .map_or_else(String::new, |s| s.metadata.subtitle.clone()),
             14 => self
                 .resource
                 .songdata()
-                .map_or_else(String::new, |s| s.artist.clone()),
+                .map_or_else(String::new, |s| s.metadata.artist.clone()),
             _ => String::new(),
         }
     }

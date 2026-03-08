@@ -117,11 +117,12 @@ impl BarSorter {
         if let (Some(s1), Some(s2)) = (o1.as_song_bar(), o2.as_song_bar()) {
             let title_cmp = s1
                 .song
+                .metadata
                 .title
                 .to_lowercase()
-                .cmp(&s2.song.title.to_lowercase());
+                .cmp(&s2.song.metadata.title.to_lowercase());
             if title_cmp == Ordering::Equal {
-                return s1.song.difficulty.cmp(&s2.song.difficulty);
+                return s1.song.chart.difficulty.cmp(&s2.song.chart.difficulty);
             }
             return title_cmp;
         }
@@ -144,9 +145,10 @@ impl BarSorter {
             return Ordering::Less;
         }
         s1.song
+            .metadata
             .artist
             .to_lowercase()
-            .cmp(&s2.song.artist.to_lowercase())
+            .cmp(&s2.song.metadata.artist.to_lowercase())
     }
 
     fn compare_bpm(o1: &Bar, o2: &Bar) -> Ordering {
@@ -163,7 +165,7 @@ impl BarSorter {
         if !s2.exists_song() {
             return Ordering::Less;
         }
-        s1.song.maxbpm.cmp(&s2.song.maxbpm)
+        s1.song.chart.maxbpm.cmp(&s2.song.chart.maxbpm)
     }
 
     fn compare_length(o1: &Bar, o2: &Bar) -> Ordering {
@@ -180,7 +182,7 @@ impl BarSorter {
         if !s2.exists_song() {
             return Ordering::Less;
         }
-        s1.song.length.cmp(&s2.song.length)
+        s1.song.chart.length.cmp(&s2.song.chart.length)
     }
 
     fn compare_level(o1: &Bar, o2: &Bar) -> Ordering {
@@ -197,9 +199,9 @@ impl BarSorter {
         if !s2.exists_song() {
             return Ordering::Less;
         }
-        let level_sort = s1.song.level.cmp(&s2.song.level);
+        let level_sort = s1.song.chart.level.cmp(&s2.song.chart.level);
         if level_sort == Ordering::Equal {
-            return s1.song.difficulty.cmp(&s2.song.difficulty);
+            return s1.song.chart.difficulty.cmp(&s2.song.chart.difficulty);
         }
         level_sort
     }
@@ -354,7 +356,7 @@ mod tests {
     /// Create a SongBar with no score
     fn song_bar_no_score(title: &str) -> Bar {
         let mut sd = SongData::default();
-        sd.title = title.to_string();
+        sd.metadata.title = title.to_string();
         sd.set_path("/dummy".to_string());
         Bar::Song(Box::new(SongBar::new(sd)))
     }

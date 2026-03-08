@@ -60,15 +60,15 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
             10 => self
                 .resource
                 .songdata()
-                .map_or_else(String::new, |s| s.title.clone()),
+                .map_or_else(String::new, |s| s.metadata.title.clone()),
             11 => self
                 .resource
                 .songdata()
-                .map_or_else(String::new, |s| s.subtitle.clone()),
+                .map_or_else(String::new, |s| s.metadata.subtitle.clone()),
             14 => self
                 .resource
                 .songdata()
-                .map_or_else(String::new, |s| s.artist.clone()),
+                .map_or_else(String::new, |s| s.metadata.artist.clone()),
             _ => String::new(),
         }
     }
@@ -76,12 +76,12 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
     fn integer_value(&self, id: i32) -> i32 {
         match id {
             // Song BPM from songdata
-            90 => self.resource.songdata().map_or(0, |s| s.maxbpm),
-            91 => self.resource.songdata().map_or(0, |s| s.minbpm),
+            90 => self.resource.songdata().map_or(0, |s| s.chart.maxbpm),
+            91 => self.resource.songdata().map_or(0, |s| s.chart.minbpm),
             // Total notes
-            350 => self.resource.songdata().map_or(0, |s| s.notes),
+            350 => self.resource.songdata().map_or(0, |s| s.chart.notes),
             // Song duration
-            312 => self.resource.songdata().map_or(0, |s| s.length),
+            312 => self.resource.songdata().map_or(0, |s| s.chart.length),
             // Playtime
             17 => (self.timer.now_time() / 3_600_000) as i32,
             18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,

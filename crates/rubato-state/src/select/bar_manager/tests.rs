@@ -3,7 +3,7 @@ use crate::select::bar::song_bar::SongBar;
 
 fn make_song_data(sha256: &str, path: Option<&str>) -> SongData {
     let mut sd = SongData::default();
-    sd.sha256 = sha256.to_string();
+    sd.file.sha256 = sha256.to_string();
     if let Some(p) = path {
         sd.set_path(p.to_string());
     }
@@ -315,9 +315,9 @@ fn test_loader_loads_banner_via_pool() {
     let song_file = dir.path().join("test.bms");
     std::fs::write(&song_file, b"").unwrap();
     let mut sd = SongData::default();
-    sd.sha256 = "bannerhash".to_string();
+    sd.file.sha256 = "bannerhash".to_string();
     sd.set_path(song_file.to_string_lossy().to_string());
-    sd.banner = "banner.png".to_string();
+    sd.file.banner = "banner.png".to_string();
     let mut bars = vec![Bar::Song(Box::new(SongBar::new(sd)))];
 
     let stop = Arc::new(AtomicBool::new(false));
@@ -353,9 +353,9 @@ fn test_loader_loads_stagefile_via_pool() {
     let song_file = dir.path().join("test.bms");
     std::fs::write(&song_file, b"").unwrap();
     let mut sd = SongData::default();
-    sd.sha256 = "stagefilehash".to_string();
+    sd.file.sha256 = "stagefilehash".to_string();
     sd.set_path(song_file.to_string_lossy().to_string());
-    sd.stagefile = "stagefile.png".to_string();
+    sd.file.stagefile = "stagefile.png".to_string();
     let mut bars = vec![Bar::Song(Box::new(SongBar::new(sd)))];
 
     let stop = Arc::new(AtomicBool::new(false));
@@ -390,9 +390,9 @@ fn test_loader_no_pool_skips_banner_loading() {
     let song_file = dir.path().join("test.bms");
     std::fs::write(&song_file, b"").unwrap();
     let mut sd = SongData::default();
-    sd.sha256 = "nopoolhash".to_string();
+    sd.file.sha256 = "nopoolhash".to_string();
     sd.set_path(song_file.to_string_lossy().to_string());
-    sd.banner = "banner.png".to_string();
+    sd.file.banner = "banner.png".to_string();
     let mut bars = vec![Bar::Song(Box::new(SongBar::new(sd)))];
 
     let stop = Arc::new(AtomicBool::new(false));
@@ -423,9 +423,9 @@ fn test_loader_nonexistent_banner_file_not_loaded() {
     let song_file = dir.path().join("test.bms");
     std::fs::write(&song_file, b"").unwrap();
     let mut sd = SongData::default();
-    sd.sha256 = "missinghash".to_string();
+    sd.file.sha256 = "missinghash".to_string();
     sd.set_path(song_file.to_string_lossy().to_string());
-    sd.banner = "banner.png".to_string();
+    sd.file.banner = "banner.png".to_string();
     let mut bars = vec![Bar::Song(Box::new(SongBar::new(sd)))];
 
     let stop = Arc::new(AtomicBool::new(false));
@@ -837,13 +837,13 @@ fn test_invisible_filtering_with_context() {
     let mut manager = BarManager::new();
 
     let mut visible = make_song_data("visible_song", Some("/v.bms"));
-    visible.title = "visible_song".to_string();
+    visible.metadata.title = "visible_song".to_string();
     visible.favorite = 0;
-    visible.mode = 0;
+    visible.chart.mode = 0;
     let mut invisible = make_song_data("invisible_song", Some("/i.bms"));
-    invisible.title = "invisible_song".to_string();
+    invisible.metadata.title = "invisible_song".to_string();
     invisible.favorite = INVISIBLE_SONG;
-    invisible.mode = 0;
+    invisible.chart.mode = 0;
 
     let children = vec![
         Bar::Song(Box::new(SongBar::new(visible))),

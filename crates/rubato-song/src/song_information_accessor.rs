@@ -83,7 +83,7 @@ impl SongInformationAccessor {
             let chunk_end = song_length.min((i + 1) * LOAD_CHUNK_SIZE);
 
             for song in songs.iter().take(chunk_end).skip(chunk_start) {
-                let sha256 = song.sha256.clone();
+                let sha256 = song.file.sha256.clone();
                 if sha256.is_empty() {
                     continue;
                 }
@@ -102,7 +102,7 @@ impl SongInformationAccessor {
 
         for song in songs.iter_mut() {
             for info in &infos {
-                if info.sha256 == song.sha256 {
+                if info.sha256 == song.file.sha256 {
                     song.info = Some(info.clone());
                     break;
                 }

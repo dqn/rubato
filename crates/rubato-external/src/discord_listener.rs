@@ -75,13 +75,14 @@ impl MainStateListener for DiscordListener {
                     if let Some(resource) = state.resource()
                         && let Some(songdata) = resource.songdata()
                     {
-                        let full_title = if songdata.subtitle.is_empty() {
-                            songdata.title.clone()
+                        let full_title = if songdata.metadata.subtitle.is_empty() {
+                            songdata.metadata.title.clone()
                         } else {
-                            format!("{} {}", songdata.title, songdata.subtitle)
+                            format!("{} {}", songdata.metadata.title, songdata.metadata.subtitle)
                         };
-                        data = data.set_details(format!("{} / {}", full_title, songdata.artist));
-                        data = data.set_state(format!("Playing: {}Keys", songdata.mode));
+                        data = data
+                            .set_details(format!("{} / {}", full_title, songdata.metadata.artist));
+                        data = data.set_state(format!("Playing: {}Keys", songdata.chart.mode));
                     }
                 }
                 ScreenType::MusicResult => {

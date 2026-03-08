@@ -308,7 +308,7 @@ impl WebhookHandler {
             return String::new();
         };
         let mut ss = String::new();
-        let md5 = &song.md5;
+        let md5 = &song.file.md5;
         let lr2ir = "http://www.dream-pro.info/~lavalse/LR2IR/search.cgi?mode=ranking&bmsmd5=";
         if !md5.is_empty() {
             ss += &format!(" [LR2IR]({}{})", lr2ir, md5);

@@ -302,7 +302,7 @@ impl BarRenderer {
                         && let Some(Bar::Song(sb)) = ctx.currentsongs.get(idx)
                     {
                         let song = sb.song_data();
-                        songstatus = if now_secs > song.adddate as i64 + 3600 * 24 {
+                        songstatus = if now_secs > song.chart.adddate as i64 + 3600 * 24 {
                             2 // SongBar(normal)
                         } else {
                             3 // SongBar(new)
@@ -442,7 +442,7 @@ impl BarRenderer {
                 if let Some(idx) = ba.sd {
                     let sd = &ctx.currentsongs[idx];
                     if let Some(song_bar) = sd.as_song_bar() {
-                        let song_md5 = &song_bar.song_data().md5;
+                        let song_md5 = &song_bar.song_data().file.md5;
                         for task_arc in download_tasks.values() {
                             let task = task_arc.lock().expect("task_arc lock poisoned");
                             if task.hash() != song_md5 {
@@ -542,7 +542,7 @@ impl BarRenderer {
                 if let Some(sb) = sd.as_song_bar() {
                     if sb.exists_song() {
                         let song = sb.song_data();
-                        let difficulty = song.difficulty;
+                        let difficulty = song.chart.difficulty;
                         let level_idx = if (0..7).contains(&difficulty) {
                             difficulty
                         } else {
@@ -553,7 +553,12 @@ impl BarRenderer {
                             && let Some(leveln) = baro.barlevel[level_idx as usize].as_mut()
                         {
                             leveln.draw_with_value(
-                                sprite, self.time, song.level, ctx.state, ba.x, ba.y,
+                                sprite,
+                                self.time,
+                                song.chart.level,
+                                ctx.state,
+                                ba.x,
+                                ba.y,
                             );
                         }
                     }
@@ -579,14 +584,14 @@ impl BarRenderer {
                 if let Some(sb) = sd.as_song_bar()
                     && sb.exists_song()
                 {
-                    flag |= sb.song_data().feature;
+                    flag |= sb.song_data().chart.feature;
                 }
 
                 if let Some(gb) = sd.as_grade_bar()
                     && gb.exists_all_songs()
                 {
                     for song in gb.song_datas() {
-                        flag |= song.feature;
+                        flag |= song.chart.feature;
                     }
                 }
 
@@ -821,7 +826,7 @@ mod tests {
 
     fn make_song_data(sha256: &str, path: Option<&str>) -> SongData {
         let mut sd = SongData::default();
-        sd.sha256 = sha256.to_string();
+        sd.file.sha256 = sha256.to_string();
         if let Some(p) = path {
             sd.set_path(p.to_string());
         }
@@ -996,9 +1001,9 @@ mod tests {
 
         // Create a song bar with a non-empty title
         let mut sd = SongData::default();
-        sd.sha256 = "abc".to_string();
+        sd.file.sha256 = "abc".to_string();
         sd.set_path("/path.bms".to_string());
-        sd.title = "Test Song Title".to_string();
+        sd.metadata.title = "Test Song Title".to_string();
         let songs = vec![Bar::Song(Box::new(SongBar::new(sd)))];
 
         let state = MockMainState::default();

@@ -53,8 +53,8 @@ impl ScoreDataImporter {
                             .get("clearcount")
                             .and_then(|v| v.as_i64())
                             .unwrap_or(0) as i32;
-                        sd.sha256 = song[0].sha256.clone();
-                        sd.notes = song[0].notes;
+                        sd.sha256 = song[0].file.sha256.clone();
+                        sd.notes = song[0].chart.notes;
                         result.push(sd);
                     }
                 }

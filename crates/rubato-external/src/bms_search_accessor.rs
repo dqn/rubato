@@ -31,9 +31,9 @@ impl BMSSearchAccessor {
                 let mut songs: Vec<SongData> = Vec::new();
                 for element in &elements {
                     let mut song = SongData::default();
-                    song.title = element.title.clone().unwrap_or_default();
+                    song.metadata.title = element.title.clone().unwrap_or_default();
                     song.set_artist(element.artist.clone().unwrap_or_default());
-                    song.genre = element.genre.clone().unwrap_or_default();
+                    song.metadata.genre = element.genre.clone().unwrap_or_default();
                     if let Some(ref downloads) = element.downloads
                         && !downloads.is_empty()
                         && let Some(ref url) = downloads[0].url
@@ -49,7 +49,7 @@ impl BMSSearchAccessor {
                                     && let Some(ref file) = patterns[0].file
                                     && let Some(ref hash_md5) = file.hash_md5
                                 {
-                                    song.md5 = hash_md5.clone();
+                                    song.file.md5 = hash_md5.clone();
                                 }
                             }
                             Err(e) => {

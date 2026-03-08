@@ -10,8 +10,8 @@ use rubato_types::validatable::Validatable;
 /// Helper: create a valid SongData with the given title and md5 hash.
 fn make_song(title: &str, md5: &str) -> SongData {
     let mut song = SongData::new();
-    song.title = title.to_string();
-    song.md5 = md5.to_string();
+    song.metadata.title = title.to_string();
+    song.file.md5 = md5.to_string();
     song
 }
 
@@ -128,19 +128,19 @@ fn validate_assigns_default_titles_to_untitled_songs() {
 
     // Create songs with empty titles but valid hashes
     let mut song1 = SongData::new();
-    song1.md5 = "hash1".to_string();
+    song1.file.md5 = "hash1".to_string();
     // title is empty
 
     let mut song2 = SongData::new();
-    song2.md5 = "hash2".to_string();
+    song2.file.md5 = "hash2".to_string();
     // title is empty
 
     cd.hash = vec![song1, song2];
     assert!(cd.validate());
 
     // Songs should have been assigned default titles
-    assert_eq!(cd.hash[0].title, "course 1");
-    assert_eq!(cd.hash[1].title, "course 2");
+    assert_eq!(cd.hash[0].metadata.title, "course 1");
+    assert_eq!(cd.hash[1].metadata.title, "course 2");
 }
 
 #[test]
@@ -208,7 +208,7 @@ fn validate_fails_for_song_without_hash() {
 
     // Song with title but no md5/sha256
     let mut invalid_song = SongData::new();
-    invalid_song.title = "No Hash".to_string();
+    invalid_song.metadata.title = "No Hash".to_string();
     // md5 and sha256 are both empty
 
     cd.hash = vec![invalid_song];
@@ -254,10 +254,10 @@ fn course_data_full_serde_roundtrip() {
 
     // Verify songs
     assert_eq!(restored.hash.len(), 3);
-    assert_eq!(restored.hash[0].title, "Stage 1");
-    assert_eq!(restored.hash[0].md5, "hash_a");
-    assert_eq!(restored.hash[1].title, "Stage 2");
-    assert_eq!(restored.hash[2].title, "Stage 3");
+    assert_eq!(restored.hash[0].metadata.title, "Stage 1");
+    assert_eq!(restored.hash[0].file.md5, "hash_a");
+    assert_eq!(restored.hash[1].metadata.title, "Stage 2");
+    assert_eq!(restored.hash[2].metadata.title, "Stage 3");
 
     // Verify constraints
     assert_eq!(restored.constraint.len(), 4);
@@ -400,8 +400,8 @@ fn end_to_end_course_pipeline() {
     assert_eq!(restored.name(), "10th Dan");
     assert!(restored.release);
     assert_eq!(restored.hash.len(), 4);
-    assert_eq!(restored.hash[0].title, "FREEDOM DiVE");
-    assert_eq!(restored.hash[3].md5, "jkl234mno567");
+    assert_eq!(restored.hash[0].metadata.title, "FREEDOM DiVE");
+    assert_eq!(restored.hash[3].file.md5, "jkl234mno567");
     assert!(restored.is_class_course());
 
     // Constraints should have been deduplicated to one per type

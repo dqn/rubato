@@ -84,8 +84,8 @@ pub fn start_ir_resend_thread(
                             remove_indices.push(i);
                             log::error!(
                                 "Failed to send a score for {} {}",
-                                score.songdata.title,
-                                score.songdata.subtitle
+                                score.songdata.metadata.title,
+                                score.songdata.metadata.subtitle
                             );
                         }
                     }
@@ -181,7 +181,7 @@ mod tests {
         // so the backoff condition (now - 0 >= 4^1 * 1000 = 4000ms) is met
         let conn: Arc<dyn IRConnection + Send + Sync> = Arc::new(MockIRSuccess::new());
         let mut song = SongData::default();
-        song.title = "Test".to_string();
+        song.metadata.title = "Test".to_string();
         let score = rubato_core::score_data::ScoreData::default();
         let mut status = IRSendStatusMain::new(conn, &song, &score);
         status.retry = 1;
@@ -223,7 +223,7 @@ mod tests {
     fn test_ir_send_status_removed_after_max_retries() {
         let conn: Arc<dyn IRConnection + Send + Sync> = Arc::new(MockIRSuccess::new());
         let mut song = SongData::default();
-        song.title = "Test".to_string();
+        song.metadata.title = "Test".to_string();
         let score = rubato_core::score_data::ScoreData::default();
         let mut status = IRSendStatusMain::new(conn, &song, &score);
         // Set retry count above the limit

@@ -467,7 +467,7 @@ impl MainState for MusicSelector {
                         let preview_song = preview.song_data();
                         // In Java: song != preview.getSongData() (reference comparison)
                         match preview_song {
-                            Some(ps) => ps.sha256 != song_bar.song_data().sha256,
+                            Some(ps) => ps.file.sha256 != song_bar.song_data().file.sha256,
                             None => true,
                         }
                     } else {
@@ -561,7 +561,7 @@ impl MainState for MusicSelector {
                         }) {
                             let chart = IRChartData::new(song);
                             let local_score = main.read_score_data_by_hash(
-                                &song.sha256,
+                                &song.file.sha256,
                                 song.has_long_note(),
                                 lnmode,
                             );

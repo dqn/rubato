@@ -140,8 +140,8 @@ mod tests {
                 name: Some("Normal".to_string()),
                 songs: vec![{
                     let mut s = SongData::default();
-                    s.title = "test-song".to_string();
-                    s.md5 = "d41d8cd98f00b204e9800998ecf8427e".to_string();
+                    s.metadata.title = "test-song".to_string();
+                    s.file.md5 = "d41d8cd98f00b204e9800998ecf8427e".to_string();
                     s
                 }],
             }],

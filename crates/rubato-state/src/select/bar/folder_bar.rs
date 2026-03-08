@@ -172,8 +172,8 @@ mod tests {
     #[test]
     fn folder_bar_get_children_returns_song_bars_when_songs_exist() {
         let mut song = SongData::default();
-        song.title = "Test Song".to_string();
-        song.sha256 = "abc123".to_string();
+        song.metadata.title = "Test Song".to_string();
+        song.file.sha256 = "abc123".to_string();
 
         let db = MockSongDb::new().with_songs("parent", "test_crc", vec![song]);
 
@@ -214,8 +214,8 @@ mod tests {
     #[test]
     fn folder_bar_get_children_prefers_songs_over_folders() {
         let mut song = SongData::default();
-        song.title = "Song".to_string();
-        song.sha256 = "sha1".to_string();
+        song.metadata.title = "Song".to_string();
+        song.file.sha256 = "sha1".to_string();
 
         let folder = FolderData {
             title: "Folder".to_string(),
@@ -263,8 +263,8 @@ mod tests {
         // Create a mock DB where the "bms" folder exists at root level
         // and songs exist under the scanner's parent CRC.
         let mut song = SongData::default();
-        song.title = "Test Song".to_string();
-        song.sha256 = "test_sha256".to_string();
+        song.metadata.title = "Test Song".to_string();
+        song.file.sha256 = "test_sha256".to_string();
         song.set_path("song_dir/file.bms".to_string());
 
         let folder = FolderData {

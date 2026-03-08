@@ -25,8 +25,8 @@ fn create_temp_accessor() -> (SQLiteSongDatabaseAccessor, tempfile::TempDir) {
 /// Build a minimal valid SongData.
 fn make_song(sha256: &str, title: &str, path: &str) -> SongData {
     let mut sd = SongData::new();
-    sd.sha256 = sha256.to_string();
-    sd.title = title.to_string();
+    sd.file.sha256 = sha256.to_string();
+    sd.metadata.title = title.to_string();
     sd.set_path(path.to_string());
     sd
 }
@@ -209,8 +209,8 @@ fn get_information_for_songs_sha256_injection_blocked() {
 
     // Injection payload that previously broke out of IN clause
     let mut injected_song = SongData::new();
-    injected_song.sha256 = "') OR 1=1 --".to_string();
-    injected_song.title = "Injected".to_string();
+    injected_song.file.sha256 = "') OR 1=1 --".to_string();
+    injected_song.metadata.title = "Injected".to_string();
 
     let mut songs = vec![injected_song];
     accessor.information_for_songs(&mut songs);

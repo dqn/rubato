@@ -352,7 +352,7 @@ impl BarManager {
             self.currentsongs[self.selectedindex]
                 .as_song_bar()
                 .filter(|sb| sb.exists_song())
-                .map(|sb| sb.song_data().sha256.clone())
+                .map(|sb| sb.song_data().file.sha256.clone())
         } else {
             None
         };
@@ -437,7 +437,7 @@ impl BarManager {
                         sourcebar_sha256 = sb
                             .as_song_bar()
                             .filter(|s| s.exists_song())
-                            .map(|s| s.song_data().sha256.clone());
+                            .map(|s| s.song_data().file.sha256.clone());
                         sourcebar_is_song = sb.as_song_bar().is_some();
                         _sourcebar_class_name = bar_class_name(&sb);
                     }
@@ -536,8 +536,9 @@ impl BarManager {
                                     let invisible =
                                         sd.favorite & (INVISIBLE_SONG | INVISIBLE_CHART);
                                     let mode_mismatch = mode.is_some()
-                                        && sd.mode != 0
-                                        && sd.mode != mode.as_ref().map(|m| m.id()).unwrap_or(0);
+                                        && sd.chart.mode != 0
+                                        && sd.chart.mode
+                                            != mode.as_ref().map(|m| m.id()).unwrap_or(0);
                                     (!show_invisible_charts && invisible != 0) || mode_mismatch
                                 } else {
                                     false
@@ -556,8 +557,9 @@ impl BarManager {
                                 let sd = sb.song_data();
                                 let invisible = sd.favorite & (INVISIBLE_SONG | INVISIBLE_CHART);
                                 let mode_mismatch = mode_clone.is_some()
-                                    && sd.mode != 0
-                                    && sd.mode != mode_clone.as_ref().map(|m| m.id()).unwrap_or(0);
+                                    && sd.chart.mode != 0
+                                    && sd.chart.mode
+                                        != mode_clone.as_ref().map(|m| m.id()).unwrap_or(0);
                                 (show_invisible_charts || invisible == 0) && !mode_mismatch
                             } else {
                                 true
@@ -696,7 +698,8 @@ impl BarManager {
                 if sourcebar_is_song && target_sha.is_some() {
                     if let Some(pos) = self.currentsongs.iter().position(|bar| {
                         bar.as_song_bar().is_some_and(|sb| {
-                            sb.exists_song() && Some(sb.song_data().sha256.as_str()) == target_sha
+                            sb.exists_song()
+                                && Some(sb.song_data().file.sha256.as_str()) == target_sha
                         })
                     }) {
                         self.selectedindex = pos;
@@ -715,7 +718,7 @@ impl BarManager {
                     for i in 0..self.currentsongs.len() {
                         if let Some(sb) = self.currentsongs[i].as_song_bar()
                             && sb.exists_song()
-                            && sb.song_data().sha256 == sha
+                            && sb.song_data().file.sha256 == sha
                         {
                             self.selectedindex = i;
                             break;

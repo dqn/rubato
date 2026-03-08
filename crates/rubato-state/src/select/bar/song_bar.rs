@@ -69,7 +69,7 @@ impl SongBar {
         let mut seen = HashSet::new();
         let mut filtered_songs = Vec::new();
         for song in songs {
-            let key = song.sha256.clone();
+            let key = song.file.sha256.clone();
             if seen.insert(key) {
                 filtered_songs.push(song.clone());
             }
@@ -106,10 +106,12 @@ impl SongBar {
                     && songs[i]
                         .as_ref()
                         .expect("song is Some after is_none guard")
+                        .file
                         .sha256
                         == songs[j]
                             .as_ref()
                             .expect("song is Some after is_none guard")
+                            .file
                             .sha256
                 {
                     songs[j] = None;
@@ -118,17 +120,19 @@ impl SongBar {
             }
             for element in elements.iter_mut() {
                 if element.path().is_none()
-                    && ((!element.md5.is_empty()
-                        && element.md5
+                    && ((!element.file.md5.is_empty()
+                        && element.file.md5
                             == songs[i]
                                 .as_ref()
                                 .expect("song is Some after is_none guard")
+                                .file
                                 .md5)
-                        || (!element.sha256.is_empty()
-                            && element.sha256
+                        || (!element.file.sha256.is_empty()
+                            && element.file.sha256
                                 == songs[i]
                                     .as_ref()
                                     .expect("song is Some after is_none guard")
+                                    .file
                                     .sha256))
                 {
                     let song_path = songs[i]

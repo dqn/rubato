@@ -13,8 +13,8 @@ use rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor;
 /// Helper: build a minimal valid SongData.
 fn make_song(sha256: &str, title: &str, path: &str) -> SongData {
     let mut sd = SongData::new();
-    sd.sha256 = sha256.to_string();
-    sd.title = title.to_string();
+    sd.file.sha256 = sha256.to_string();
+    sd.metadata.title = title.to_string();
     sd.set_path(path.to_string());
     sd
 }
@@ -43,7 +43,7 @@ fn lifecycle_songdb_drop_and_reopen_preserves_data() {
         let accessor = SQLiteSongDatabaseAccessor::new(&db_path.to_string_lossy(), &[]).unwrap();
         let results = accessor.song_datas("sha256", "lifecycle_sha");
         assert_eq!(results.len(), 1, "Song should survive across sessions");
-        assert_eq!(results[0].title, "Lifecycle Test");
+        assert_eq!(results[0].metadata.title, "Lifecycle Test");
     }
 }
 

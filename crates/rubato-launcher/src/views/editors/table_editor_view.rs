@@ -142,12 +142,12 @@ impl TableEditorView {
         let mut grid_data: Vec<(String, String)> = Vec::new();
 
         // dialogAddCopiableRow(gridPane, 0, "Title", song.getFullTitle());
-        Self::dialog_add_copiable_row(&mut grid_data, 0, "Title", &song.title);
-        Self::dialog_add_copiable_row(&mut grid_data, 1, "Artist", &song.artist);
-        Self::dialog_add_copiable_row(&mut grid_data, 2, "Genre", &song.genre);
+        Self::dialog_add_copiable_row(&mut grid_data, 0, "Title", &song.metadata.title);
+        Self::dialog_add_copiable_row(&mut grid_data, 1, "Artist", &song.metadata.artist);
+        Self::dialog_add_copiable_row(&mut grid_data, 2, "Genre", &song.metadata.genre);
 
-        Self::dialog_add_copiable_row(&mut grid_data, 3, "MD5 Hash", &song.md5);
-        Self::dialog_add_copiable_row(&mut grid_data, 4, "SHA256 Hash", &song.sha256);
+        Self::dialog_add_copiable_row(&mut grid_data, 3, "MD5 Hash", &song.file.md5);
+        Self::dialog_add_copiable_row(&mut grid_data, 4, "SHA256 Hash", &song.file.sha256);
 
         // if (song.getPath() == null && songdb != null) {
         //     // Try to find actual song in songdb
@@ -337,9 +337,9 @@ mod tests {
 
     fn make_song(title: &str, md5: &str, sha256: &str) -> SongData {
         let mut sd = SongData::new();
-        sd.title = title.to_string();
-        sd.md5 = md5.to_string();
-        sd.sha256 = sha256.to_string();
+        sd.metadata.title = title.to_string();
+        sd.file.md5 = md5.to_string();
+        sd.file.sha256 = sha256.to_string();
         sd
     }
 

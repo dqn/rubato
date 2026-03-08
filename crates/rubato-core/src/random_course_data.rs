@@ -107,7 +107,7 @@ impl RandomCourseData {
                 match &song_datas[j] {
                     None => break,
                     Some(prev) => {
-                        if candidate.sha256 == prev.sha256 {
+                        if candidate.file.sha256 == prev.file.sha256 {
                             temp_lots.remove(ri);
                             is_duplicate = true;
                             break;

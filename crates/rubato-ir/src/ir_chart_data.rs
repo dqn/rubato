@@ -75,15 +75,15 @@ impl IRChartData {
     /// Translated from: Java BarManager.java inline mapping (lines 141-152, 160-172)
     pub fn to_song_data(&self) -> SongData {
         let mut sd = SongData::default();
-        sd.sha256 = self.sha256.clone();
-        sd.md5 = self.md5.clone();
-        sd.title = self.title.clone();
-        sd.artist = self.artist.clone();
-        sd.genre = self.genre.clone();
+        sd.file.sha256 = self.sha256.clone();
+        sd.file.md5 = self.md5.clone();
+        sd.metadata.title = self.title.clone();
+        sd.metadata.artist = self.artist.clone();
+        sd.metadata.genre = self.genre.clone();
         sd.url = Some(self.url.clone());
         sd.appendurl = Some(self.appendurl.clone());
         if let Some(ref mode) = self.mode {
-            sd.mode = mode.id();
+            sd.chart.mode = mode.id();
         }
         sd
     }
@@ -105,22 +105,22 @@ impl IRChartData {
         }
 
         Self {
-            title: song.title.clone(),
-            subtitle: song.subtitle.clone(),
-            genre: song.genre.clone(),
-            artist: song.artist.clone(),
-            subartist: song.subartist.clone(),
-            md5: song.md5.clone(),
-            sha256: song.sha256.clone(),
+            title: song.metadata.title.clone(),
+            subtitle: song.metadata.subtitle.clone(),
+            genre: song.metadata.genre.clone(),
+            artist: song.metadata.artist.clone(),
+            subartist: song.metadata.subartist.clone(),
+            md5: song.file.md5.clone(),
+            sha256: song.file.sha256.clone(),
             url: song.url().to_string(),
             appendurl: song.appendurl().to_string(),
-            level: song.level,
+            level: song.chart.level,
             total,
             mode,
-            judge: song.judge,
-            minbpm: song.minbpm,
-            maxbpm: song.maxbpm,
-            notes: song.notes,
+            judge: song.chart.judge,
+            minbpm: song.chart.minbpm,
+            maxbpm: song.chart.maxbpm,
+            notes: song.chart.notes,
             has_undefined_ln: song.has_undefined_long_note(),
             has_ln: song.has_long_note(),
             has_cn: song.has_charge_note(),

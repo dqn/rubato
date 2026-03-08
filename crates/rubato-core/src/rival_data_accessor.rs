@@ -212,7 +212,7 @@ impl RivalDataAccessor {
 
         ScoreDataCache::new(
             Box::new(move |song, lnmode| {
-                let sha256 = &song.sha256;
+                let sha256 = &song.file.sha256;
                 let mode = if song.has_undefined_long_note() {
                     lnmode
                 } else {
@@ -225,7 +225,7 @@ impl RivalDataAccessor {
             Box::new(move |collector, songs, lnmode| {
                 if let Ok(db) = ScoreDatabaseAccessor::new(&db_path_multi) {
                     for song in songs {
-                        let sha256 = &song.sha256;
+                        let sha256 = &song.file.sha256;
                         let mode = if song.has_undefined_long_note() {
                             lnmode
                         } else {

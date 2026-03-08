@@ -661,11 +661,11 @@ fn populate_song_db(songdb_path: &str, bmsroot: &str, songs: &[(&str, &str, i32)
         .enumerate()
         .map(|(i, &(md5, sha256, notes))| {
             let mut sd = SongData::new();
-            sd.md5 = md5.to_string();
-            sd.sha256 = sha256.to_string();
-            sd.notes = notes;
+            sd.file.md5 = md5.to_string();
+            sd.file.sha256 = sha256.to_string();
+            sd.chart.notes = notes;
             // SongData::validate() requires title to be non-empty
-            sd.title = "test".to_string();
+            sd.metadata.title = "test".to_string();
             // Each song needs a unique path (primary key in song table)
             sd.set_path(format!("/test/song_{i}.bms"));
             sd

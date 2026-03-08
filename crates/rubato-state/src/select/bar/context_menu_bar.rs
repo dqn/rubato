@@ -32,7 +32,7 @@ pub struct ContextMenuBar {
 
 impl ContextMenuBar {
     pub fn new_for_song(song: SongData) -> Self {
-        let title = song.title.clone();
+        let title = song.metadata.title.clone();
         let mut bar = Self {
             directory: DirectoryBarData::new(true),
             song: Some(song),
@@ -445,7 +445,7 @@ impl ContextMenuBar {
             None => return,
         };
 
-        let md5 = &song.md5;
+        let md5 = &song.file.md5;
 
         // Open LR2IR page
         if !md5.is_empty() {
@@ -488,7 +488,7 @@ impl ContextMenuBar {
 
         if show_meta {
             // Copy Title
-            let title = song.title.clone();
+            let title = song.metadata.title.clone();
             if !title.is_empty() {
                 let mut copy_title = FunctionBar::new_with_text_type(
                     "Copy Title".to_string(),
@@ -504,7 +504,7 @@ impl ContextMenuBar {
             }
 
             // Copy MD5
-            let md5_str = song.md5.clone();
+            let md5_str = song.file.md5.clone();
             if !md5_str.is_empty() {
                 let mut copy_md5 = FunctionBar::new_with_text_type(
                     "Copy MD5".to_string(),
@@ -520,7 +520,7 @@ impl ContextMenuBar {
             }
 
             // Copy SHA256
-            let sha256 = song.sha256.clone();
+            let sha256 = song.file.sha256.clone();
             if !sha256.is_empty() {
                 let mut copy_sha256 = FunctionBar::new_with_text_type(
                     "Copy SHA256".to_string(),
@@ -600,8 +600,8 @@ impl ContextMenuBar {
             Some(s) => s,
             None => return,
         };
-        let md5 = &song.md5;
-        let sha256 = &song.sha256;
+        let md5 = &song.file.md5;
+        let sha256 = &song.file.sha256;
         if md5.is_empty() && sha256.is_empty() {
             return;
         }
@@ -610,8 +610,8 @@ impl ContextMenuBar {
             for level in table.levels() {
                 let mut found = false;
                 for table_song in level.elements() {
-                    let song_md5 = &table_song.md5;
-                    let song_sha256 = &table_song.sha256;
+                    let song_md5 = &table_song.file.md5;
+                    let song_sha256 = &table_song.file.sha256;
                     if (!md5.is_empty() && !song_md5.is_empty() && md5 == song_md5)
                         || (!sha256.is_empty() && !song_sha256.is_empty() && sha256 == song_sha256)
                     {
@@ -665,8 +665,8 @@ impl ContextMenuBar {
                 continue;
             }
             if let Some(m) = mode
-                && song.mode != 0
-                && song.mode != m.id()
+                && song.chart.mode != 0
+                && song.chart.mode != m.id()
             {
                 continue;
             }
@@ -693,8 +693,8 @@ impl ContextMenuBar {
         let md5_and_names: Vec<(String, String)> = want
             .iter()
             .filter_map(|sd| {
-                let md5 = sd.md5.clone();
-                let title = sd.title.clone();
+                let md5 = sd.file.md5.clone();
+                let title = sd.metadata.title.clone();
                 if !md5.is_empty() && !title.is_empty() {
                     Some((md5, title))
                 } else {
@@ -707,7 +707,7 @@ impl ContextMenuBar {
         }
         let md5_array: Vec<String> = md5_and_names.iter().map(|(md5, _)| md5.clone()).collect();
         let in_hand = songdb.song_datas_by_hashes(&md5_array);
-        let in_hand_md5s: HashSet<String> = in_hand.iter().map(|sd| sd.md5.clone()).collect();
+        let in_hand_md5s: HashSet<String> = in_hand.iter().map(|sd| sd.file.md5.clone()).collect();
         let missing: Vec<&(String, String)> = md5_and_names
             .iter()
             .filter(|(md5, _)| !in_hand_md5s.contains(md5))

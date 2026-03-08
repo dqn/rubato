@@ -15,8 +15,8 @@ fn create_temp_accessor() -> (SQLiteSongDatabaseAccessor, TempDir) {
 /// SongData::validate() requires non-empty title AND at least one of md5/sha256.
 fn make_song(sha256: &str, title: &str, path: &str) -> SongData {
     let mut sd = SongData::new();
-    sd.sha256 = sha256.to_string();
-    sd.title = title.to_string();
+    sd.file.sha256 = sha256.to_string();
+    sd.metadata.title = title.to_string();
     sd.set_path(path.to_string());
     sd
 }
@@ -47,8 +47,8 @@ fn insert_and_query_song() {
 
     let results = accessor.song_datas("sha256", "abc123");
     assert_eq!(results.len(), 1);
-    assert_eq!(results[0].title, "Test Song");
-    assert_eq!(results[0].sha256, "abc123");
+    assert_eq!(results[0].metadata.title, "Test Song");
+    assert_eq!(results[0].file.sha256, "abc123");
     assert_eq!(results[0].path(), Some("songs/test.bms"));
 }
 
@@ -57,13 +57,13 @@ fn insert_and_query_by_text() {
     let (accessor, _tmpdir) = create_temp_accessor();
 
     let mut song = make_song("sha_text1", "Starlight Symphony", "songs/starlight.bms");
-    song.artist = "Aurora".to_string();
+    song.metadata.artist = "Aurora".to_string();
     accessor.set_song_datas(&[song]);
 
     // Search by title fragment
     let results = accessor.song_datas_by_text("Starlight");
     assert_eq!(results.len(), 1);
-    assert_eq!(results[0].title, "Starlight Symphony");
+    assert_eq!(results[0].metadata.title, "Starlight Symphony");
 
     // Search by artist
     let results = accessor.song_datas_by_text("Aurora");
@@ -113,7 +113,7 @@ fn reopen_preserves_data() {
         let accessor = SQLiteSongDatabaseAccessor::new(&db_path.to_string_lossy(), &[]).unwrap();
         let results = accessor.song_datas("sha256", "persist_sha256");
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].title, "Persistent Song");
+        assert_eq!(results[0].metadata.title, "Persistent Song");
         assert_eq!(results[0].path(), Some("songs/persist.bms"));
     }
 }

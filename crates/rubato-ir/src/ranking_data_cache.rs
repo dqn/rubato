@@ -85,7 +85,7 @@ impl RankingDataCache {
         } else {
             3
         };
-        let sha256 = song.sha256.clone();
+        let sha256 = song.file.sha256.clone();
         lock_or_recover(&self.inner).scorecache[cacheindex]
             .get(&sha256)
             .cloned()
@@ -106,7 +106,7 @@ impl RankingDataCache {
     /// Put ranking data for a song with given LN mode.
     pub fn put_song(&mut self, song: &SongData, lnmode: i32, iras: RankingData) {
         let cacheindex = Self::song_cache_index(song, lnmode);
-        let sha256 = song.sha256.clone();
+        let sha256 = song.file.sha256.clone();
         lock_or_recover(&self.inner).scorecache[cacheindex].insert(sha256, iras);
     }
 
@@ -121,7 +121,7 @@ impl RankingDataCache {
     fn create_course_hash(&self, course: &CourseData) -> Option<String> {
         let mut sb = String::new();
         for song in &course.hash {
-            let sha256 = song.sha256.clone();
+            let sha256 = song.file.sha256.clone();
             if sha256.len() == 64 {
                 sb.push_str(&sha256);
             } else {

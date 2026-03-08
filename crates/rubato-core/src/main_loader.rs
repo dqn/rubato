@@ -257,7 +257,7 @@ impl MainLoader {
             let illegal_hashes: Vec<String> = vec!["notme".to_string()];
             let songs = songdb.song_datas_by_hashes(&illegal_hashes);
             for song in &songs {
-                Self::put_illegal_song(&song.sha256);
+                Self::put_illegal_song(&song.file.sha256);
             }
         }
     }
@@ -429,7 +429,7 @@ mod tests {
         fn song_datas_by_hashes(&self, hashes: &[String]) -> Vec<SongData> {
             self.songs
                 .iter()
-                .filter(|s| hashes.contains(&s.sha256) || hashes.contains(&s.md5))
+                .filter(|s| hashes.contains(&s.file.sha256) || hashes.contains(&s.file.md5))
                 .cloned()
                 .collect()
         }
@@ -538,8 +538,8 @@ mod tests {
         let _lock = TEST_LOCK.lock().unwrap();
         // Create a song with sha256 = "notme"
         let mut song = SongData::new();
-        song.sha256 = "notme".to_string();
-        song.title = "Illegal Song".to_string();
+        song.file.sha256 = "notme".to_string();
+        song.metadata.title = "Illegal Song".to_string();
 
         let mock = Box::new(MockSongDb::with_songs(vec![song]));
         MainLoader::set_score_database_accessor(mock);

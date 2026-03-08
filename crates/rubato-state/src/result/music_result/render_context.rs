@@ -65,16 +65,19 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     }
 
     fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
-        let mode = self.resource.songdata().and_then(|song| match song.mode {
-            5 => Some(bms_model::mode::Mode::BEAT_5K),
-            7 => Some(bms_model::mode::Mode::BEAT_7K),
-            9 => Some(bms_model::mode::Mode::POPN_9K),
-            10 => Some(bms_model::mode::Mode::BEAT_10K),
-            14 => Some(bms_model::mode::Mode::BEAT_14K),
-            25 => Some(bms_model::mode::Mode::KEYBOARD_24K),
-            50 => Some(bms_model::mode::Mode::KEYBOARD_24K_DOUBLE),
-            _ => None,
-        })?;
+        let mode = self
+            .resource
+            .songdata()
+            .and_then(|song| match song.chart.mode {
+                5 => Some(bms_model::mode::Mode::BEAT_5K),
+                7 => Some(bms_model::mode::Mode::BEAT_7K),
+                9 => Some(bms_model::mode::Mode::POPN_9K),
+                10 => Some(bms_model::mode::Mode::BEAT_10K),
+                14 => Some(bms_model::mode::Mode::BEAT_14K),
+                25 => Some(bms_model::mode::Mode::KEYBOARD_24K),
+                50 => Some(bms_model::mode::Mode::KEYBOARD_24K_DOUBLE),
+                _ => None,
+            })?;
         Some(
             &self
                 .resource
@@ -151,35 +154,35 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
             10 => self
                 .resource
                 .songdata()
-                .map_or_else(String::new, |s| s.title.clone()),
+                .map_or_else(String::new, |s| s.metadata.title.clone()),
             11 => self
                 .resource
                 .songdata()
-                .map_or_else(String::new, |s| s.subtitle.clone()),
+                .map_or_else(String::new, |s| s.metadata.subtitle.clone()),
             12 => self.resource.songdata().map_or_else(String::new, |s| {
-                if s.subtitle.is_empty() {
-                    s.title.clone()
+                if s.metadata.subtitle.is_empty() {
+                    s.metadata.title.clone()
                 } else {
-                    format!("{} {}", s.title, s.subtitle)
+                    format!("{} {}", s.metadata.title, s.metadata.subtitle)
                 }
             }),
             13 => self
                 .resource
                 .songdata()
-                .map_or_else(String::new, |s| s.genre.clone()),
+                .map_or_else(String::new, |s| s.metadata.genre.clone()),
             14 => self
                 .resource
                 .songdata()
-                .map_or_else(String::new, |s| s.artist.clone()),
+                .map_or_else(String::new, |s| s.metadata.artist.clone()),
             15 => self
                 .resource
                 .songdata()
-                .map_or_else(String::new, |s| s.subartist.clone()),
+                .map_or_else(String::new, |s| s.metadata.subartist.clone()),
             16 => self.resource.songdata().map_or_else(String::new, |s| {
-                if s.subartist.is_empty() {
-                    s.artist.clone()
+                if s.metadata.subartist.is_empty() {
+                    s.metadata.artist.clone()
                 } else {
-                    format!("{} {}", s.artist, s.subartist)
+                    format!("{} {}", s.metadata.artist, s.metadata.subartist)
                 }
             }),
             _ => String::new(),
