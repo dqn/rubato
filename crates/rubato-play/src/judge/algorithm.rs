@@ -1,3 +1,6 @@
+use std::fmt;
+use std::str::FromStr;
+
 use bms_model::note::Note;
 
 /// Judge algorithm
@@ -11,6 +14,31 @@ pub enum JudgeAlgorithm {
     Lowest,
     /// Score priority
     Score,
+}
+
+impl FromStr for JudgeAlgorithm {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Combo" => Ok(Self::Combo),
+            "Duration" => Ok(Self::Duration),
+            "Lowest" => Ok(Self::Lowest),
+            "Score" => Ok(Self::Score),
+            _ => anyhow::bail!("unknown JudgeAlgorithm: {}", s),
+        }
+    }
+}
+
+impl fmt::Display for JudgeAlgorithm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Combo => write!(f, "Combo"),
+            Self::Duration => write!(f, "Duration"),
+            Self::Lowest => write!(f, "Lowest"),
+            Self::Score => write!(f, "Score"),
+        }
+    }
 }
 
 pub static DEFAULT_ALGORITHM: &[JudgeAlgorithm] = &[
@@ -88,21 +116,15 @@ impl JudgeAlgorithm {
     }
 
     pub fn index(algorithm: &str) -> i32 {
-        for (i, v) in Self::values().iter().enumerate() {
-            if v.name() == algorithm {
-                return i as i32;
-            }
-        }
-        -1
+        Self::values()
+            .iter()
+            .position(|v| v.to_string() == algorithm)
+            .map(|i| i as i32)
+            .unwrap_or(-1)
     }
 
     pub fn from_name(name: &str) -> Option<JudgeAlgorithm> {
-        for v in Self::values() {
-            if v.name() == name {
-                return Some(*v);
-            }
-        }
-        None
+        name.parse().ok()
     }
 }
 
@@ -167,6 +189,50 @@ mod tests {
         assert_eq!(JudgeAlgorithm::from_name("Unknown"), None);
         assert_eq!(JudgeAlgorithm::from_name(""), None);
         assert_eq!(JudgeAlgorithm::from_name("combo"), None); // case-sensitive
+    }
+
+    #[test]
+    fn from_str_returns_correct_variant() {
+        assert_eq!(
+            "Combo".parse::<JudgeAlgorithm>().unwrap(),
+            JudgeAlgorithm::Combo
+        );
+        assert_eq!(
+            "Duration".parse::<JudgeAlgorithm>().unwrap(),
+            JudgeAlgorithm::Duration
+        );
+        assert_eq!(
+            "Lowest".parse::<JudgeAlgorithm>().unwrap(),
+            JudgeAlgorithm::Lowest
+        );
+        assert_eq!(
+            "Score".parse::<JudgeAlgorithm>().unwrap(),
+            JudgeAlgorithm::Score
+        );
+    }
+
+    #[test]
+    fn from_str_returns_err_for_unknown() {
+        assert!("Unknown".parse::<JudgeAlgorithm>().is_err());
+        assert!("".parse::<JudgeAlgorithm>().is_err());
+        assert!("combo".parse::<JudgeAlgorithm>().is_err()); // case-sensitive
+    }
+
+    #[test]
+    fn display_returns_correct_strings() {
+        assert_eq!(JudgeAlgorithm::Combo.to_string(), "Combo");
+        assert_eq!(JudgeAlgorithm::Duration.to_string(), "Duration");
+        assert_eq!(JudgeAlgorithm::Lowest.to_string(), "Lowest");
+        assert_eq!(JudgeAlgorithm::Score.to_string(), "Score");
+    }
+
+    #[test]
+    fn display_from_str_round_trip() {
+        for alg in JudgeAlgorithm::values() {
+            let s = alg.to_string();
+            let parsed: JudgeAlgorithm = s.parse().unwrap();
+            assert_eq!(*alg, parsed);
+        }
     }
 
     #[test]

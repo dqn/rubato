@@ -1,4 +1,6 @@
 use std::cmp::Ordering;
+use std::fmt;
+use std::str::FromStr;
 
 use super::bar::bar::Bar;
 
@@ -18,6 +20,47 @@ pub enum BarSorter {
     LastUpdate,
     RivalCompareClear,
     RivalCompareScore,
+}
+
+impl FromStr for BarSorter {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "TITLE" => Ok(Self::Title),
+            "ARTIST" => Ok(Self::Artist),
+            "BPM" => Ok(Self::Bpm),
+            "LENGTH" => Ok(Self::Length),
+            "LEVEL" => Ok(Self::Level),
+            "CLEAR" => Ok(Self::Clear),
+            "SCORE" => Ok(Self::Score),
+            "MISSCOUNT" => Ok(Self::MissCount),
+            "DURATION" => Ok(Self::Duration),
+            "LASTUPDATE" => Ok(Self::LastUpdate),
+            "RIVALCOMPARE_CLEAR" => Ok(Self::RivalCompareClear),
+            "RIVALCOMPARE_SCORE" => Ok(Self::RivalCompareScore),
+            _ => anyhow::bail!("unknown BarSorter: {}", s),
+        }
+    }
+}
+
+impl fmt::Display for BarSorter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Title => write!(f, "TITLE"),
+            Self::Artist => write!(f, "ARTIST"),
+            Self::Bpm => write!(f, "BPM"),
+            Self::Length => write!(f, "LENGTH"),
+            Self::Level => write!(f, "LEVEL"),
+            Self::Clear => write!(f, "CLEAR"),
+            Self::Score => write!(f, "SCORE"),
+            Self::MissCount => write!(f, "MISSCOUNT"),
+            Self::Duration => write!(f, "DURATION"),
+            Self::LastUpdate => write!(f, "LASTUPDATE"),
+            Self::RivalCompareClear => write!(f, "RIVALCOMPARE_CLEAR"),
+            Self::RivalCompareScore => write!(f, "RIVALCOMPARE_SCORE"),
+        }
+    }
 }
 
 impl BarSorter {
@@ -65,21 +108,7 @@ impl BarSorter {
     }
 
     pub fn value_of(name: &str) -> Option<BarSorter> {
-        match name {
-            "TITLE" => Some(BarSorter::Title),
-            "ARTIST" => Some(BarSorter::Artist),
-            "BPM" => Some(BarSorter::Bpm),
-            "LENGTH" => Some(BarSorter::Length),
-            "LEVEL" => Some(BarSorter::Level),
-            "CLEAR" => Some(BarSorter::Clear),
-            "SCORE" => Some(BarSorter::Score),
-            "MISSCOUNT" => Some(BarSorter::MissCount),
-            "DURATION" => Some(BarSorter::Duration),
-            "LASTUPDATE" => Some(BarSorter::LastUpdate),
-            "RIVALCOMPARE_CLEAR" => Some(BarSorter::RivalCompareClear),
-            "RIVALCOMPARE_SCORE" => Some(BarSorter::RivalCompareScore),
-            _ => None,
-        }
+        name.parse().ok()
     }
 
     pub fn compare(&self, o1: &Bar, o2: &Bar) -> Ordering {

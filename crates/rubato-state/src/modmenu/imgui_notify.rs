@@ -1,6 +1,8 @@
 use super::font_awesome_icons;
 use super::imgui_renderer;
 
+use std::fmt;
+use std::str::FromStr;
 use std::sync::Mutex;
 use std::time::Instant;
 
@@ -58,6 +60,37 @@ pub enum ToastPos {
     Center,
 }
 
+impl FromStr for ToastPos {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "TopLeft" => Ok(Self::TopLeft),
+            "TopCenter" => Ok(Self::TopCenter),
+            "TopRight" => Ok(Self::TopRight),
+            "BottomLeft" => Ok(Self::BottomLeft),
+            "BottomCenter" => Ok(Self::BottomCenter),
+            "BottomRight" => Ok(Self::BottomRight),
+            "Center" => Ok(Self::Center),
+            _ => anyhow::bail!("unknown ToastPos: {}", s),
+        }
+    }
+}
+
+impl fmt::Display for ToastPos {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::TopLeft => write!(f, "TopLeft"),
+            Self::TopCenter => write!(f, "TopCenter"),
+            Self::TopRight => write!(f, "TopRight"),
+            Self::BottomLeft => write!(f, "BottomLeft"),
+            Self::BottomCenter => write!(f, "BottomCenter"),
+            Self::BottomRight => write!(f, "BottomRight"),
+            Self::Center => write!(f, "Center"),
+        }
+    }
+}
+
 impl ToastPos {
     pub fn pivot_x(&self) -> f32 {
         match self {
@@ -76,16 +109,7 @@ impl ToastPos {
     }
 
     pub fn from_name(name: &str) -> ToastPos {
-        match name {
-            "TopLeft" => ToastPos::TopLeft,
-            "TopCenter" => ToastPos::TopCenter,
-            "TopRight" => ToastPos::TopRight,
-            "BottomLeft" => ToastPos::BottomLeft,
-            "BottomCenter" => ToastPos::BottomCenter,
-            "BottomRight" => ToastPos::BottomRight,
-            "Center" => ToastPos::Center,
-            _ => ToastPos::TopLeft,
-        }
+        name.parse().unwrap_or(ToastPos::TopLeft)
     }
 }
 
