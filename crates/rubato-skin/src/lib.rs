@@ -87,3 +87,11 @@ pub use sources::skin_source_image_set;
 pub use sources::skin_source_movie;
 pub use sources::skin_source_reference;
 pub use sources::skin_source_set;
+
+/// Division that returns 0.0 when the divisor is 0.0.
+/// Prevents NaN/Inf from malformed skin data (e.g. zero-width src resolution).
+#[inline]
+pub(crate) fn safe_div_f32(a: f32, b: f32) -> f32 {
+    if b == 0.0 { 0.0 } else { a / b }
+}
+

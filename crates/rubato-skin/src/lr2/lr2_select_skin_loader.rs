@@ -1,5 +1,6 @@
 use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
 use crate::lr2::lr2_skin_loader::{self};
+use crate::safe_div_f32;
 use crate::skin_bpm_graph::SkinBPMGraph;
 use crate::skin_image::SkinImage;
 use crate::skin_note_distribution_graph::SkinNoteDistributionGraph;
@@ -158,8 +159,8 @@ impl LR2SelectSkinLoaderState {
                 if idx < self.barimageoff.len()
                     && let Some(ref mut img) = self.barimageoff[idx]
                 {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let dstw = safe_div_f32(self.csv.dst.width, self.csv.src.width);
+                    let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                     let offsets = lr2_skin_loader::read_offset(str_parts, 21);
                     img.data.set_destination_with_int_timer_ops(
                         &DestinationParams {
@@ -211,8 +212,8 @@ impl LR2SelectSkinLoaderState {
                 if idx < self.barimageon.len()
                     && let Some(ref mut img) = self.barimageon[idx]
                 {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let dstw = safe_div_f32(self.csv.dst.width, self.csv.src.width);
+                    let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                     let offsets = lr2_skin_loader::read_offset(str_parts, 21);
                     img.data.set_destination_with_int_timer_ops(
                         &DestinationParams {
@@ -328,8 +329,8 @@ impl LR2SelectSkinLoaderState {
                 if idx < self.barlevel.len()
                     && let Some(ref mut sn) = self.barlevel[idx]
                 {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let dstw = safe_div_f32(self.csv.dst.width, self.csv.src.width);
+                    let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                     let offsets = lr2_skin_loader::read_offset(str_parts, 21);
                     sn.data.set_destination_with_int_timer_ops(
                         &DestinationParams {
@@ -389,8 +390,8 @@ impl LR2SelectSkinLoaderState {
                 }
                 let lamp_idx = values[1] as usize;
                 if lamp_idx < LAMPG.len() {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let dstw = safe_div_f32(self.csv.dst.width, self.csv.src.width);
+                    let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                     let offsets = lr2_skin_loader::read_offset(str_parts, 21);
                     for &lid in LAMPG[lamp_idx] {
                         let uid = lid as usize;
@@ -457,8 +458,8 @@ impl LR2SelectSkinLoaderState {
                 }
                 let lamp_idx = values[1] as usize;
                 if lamp_idx < LAMPG.len() {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let dstw = safe_div_f32(self.csv.dst.width, self.csv.src.width);
+                    let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                     let offsets = lr2_skin_loader::read_offset(str_parts, 21);
                     for &lid in LAMPG[lamp_idx] {
                         let uid = lid as usize;
@@ -525,8 +526,8 @@ impl LR2SelectSkinLoaderState {
                 }
                 let lamp_idx = values[1] as usize;
                 if lamp_idx < LAMPG.len() {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let dstw = safe_div_f32(self.csv.dst.width, self.csv.src.width);
+                    let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                     let offsets = lr2_skin_loader::read_offset(str_parts, 21);
                     for &lid in LAMPG[lamp_idx] {
                         let uid = lid as usize;
@@ -586,8 +587,8 @@ impl LR2SelectSkinLoaderState {
                 if idx < self.bartrophy.len()
                     && let Some(ref mut trophy) = self.bartrophy[idx]
                 {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let dstw = safe_div_f32(self.csv.dst.width, self.csv.src.width);
+                    let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                     let offsets = lr2_skin_loader::read_offset(str_parts, 21);
                     trophy.data.set_destination_with_int_timer_ops(
                         &DestinationParams {
@@ -640,8 +641,8 @@ impl LR2SelectSkinLoaderState {
                 if idx < self.barlabel.len()
                     && let Some(ref mut label) = self.barlabel[idx]
                 {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let dstw = safe_div_f32(self.csv.dst.width, self.csv.src.width);
+                    let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                     let offsets = lr2_skin_loader::read_offset(str_parts, 21);
                     label.data.set_destination_with_int_timer_ops(
                         &DestinationParams {
@@ -684,8 +685,8 @@ impl LR2SelectSkinLoaderState {
                     values[4] += values[6];
                     values[6] = -values[6];
                 }
-                let dstw = self.csv.dst.width / self.csv.src.width;
-                let dsth = self.csv.dst.height / self.csv.src.height;
+                let dstw = safe_div_f32(self.csv.dst.width, self.csv.src.width);
+                let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                 self.bargraph_region = Rectangle::new(
                     values[3] as f32 * dstw,
                     self.csv.dst.height - (values[4] + values[6]) as f32 * dsth,
@@ -751,8 +752,8 @@ impl LR2SelectSkinLoaderState {
                 if idx < self.bartext.len()
                     && let Some(ref mut text) = self.bartext[idx]
                 {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let dstw = safe_div_f32(self.csv.dst.width, self.csv.src.width);
+                    let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                     let offsets = lr2_skin_loader::read_offset(str_parts, 21);
                     text.get_text_data_mut()
                         .data

@@ -143,6 +143,25 @@ fn constant_alpha_negative_limit_fadein() {
     assert!((alpha.unwrap() - 0.5).abs() < 0.001);
 }
 
+#[test]
+fn constant_alpha_zero_limit_no_fadein_window() {
+    // When alpha_limit == 0.0 (constant_fadein_time == 0), there is no fade-in window.
+    // Notes past target are hidden (None), notes before target are fully visible.
+    // The division by zero is unreachable because the condition check prevents it.
+    let alpha = LaneRenderer::calc_constant_alpha(2_000_000, 500_000, 500, 0.0);
+    assert_eq!(
+        alpha, None,
+        "zero alpha_limit: past target should be hidden"
+    );
+
+    let alpha = LaneRenderer::calc_constant_alpha(500_000, 1_000_000, 500, 0.0);
+    assert_eq!(
+        alpha,
+        Some(1.0),
+        "zero alpha_limit: before target should be fully visible"
+    );
+}
+
 // =========================================================================
 // calc_note_expansion tests
 // =========================================================================

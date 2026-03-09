@@ -20,8 +20,11 @@ pub fn crc32(path: &str, rootdirs: &[String], bmspath: &str) -> String {
     let previous_crc32: u32 = 0;
     let mut crc: u32 = !previous_crc32; // same as previousCrc32 ^ 0xFFFFFFFF
 
+    // Java's getBytes() on Windows uses MS932 (Shift_JIS). Encode the path
+    // as Shift_JIS bytes to match Java's CRC computation for Japanese paths.
     let bytes_str = format!("{}\\\0", path);
-    for b in bytes_str.as_bytes() {
+    let (encoded, _, _) = encoding_rs::SHIFT_JIS.encode(&bytes_str);
+    for b in encoded.iter() {
         crc ^= *b as u32;
         for _ in 0..8 {
             if (crc & 1) != 0 {
@@ -78,13 +81,63 @@ mod tests {
 
     #[test]
     fn crc32_non_ascii_japanese_path() {
-        // Non-ASCII (multi-byte UTF-8) path without bmspath stripping.
+        // Non-ASCII path encoded as Shift_JIS bytes before hashing.
         let result = raw_crc32("音楽/曲データ");
         assert!(!result.is_empty());
         // Deterministic.
         assert_eq!(result, raw_crc32("音楽/曲データ"));
         // Different from ASCII path.
         assert_ne!(result, raw_crc32("ascii/path"));
+    }
+
+    #[test]
+    fn crc32_japanese_path_uses_shift_jis_encoding() {
+        // Verify that CRC is computed over Shift_JIS bytes, not UTF-8.
+        // "音" is 0xE9 0x9F 0xB3 in UTF-8 but 0x89 0xB9 in Shift_JIS.
+        // If encoding were UTF-8, the hash would be different.
+        let path = "音";
+        let result = raw_crc32(path);
+
+        // Manually compute CRC over Shift_JIS-encoded bytes to verify.
+        let bytes_str = format!("{}\\\0", path);
+        let (sjis_bytes, _, _) = encoding_rs::SHIFT_JIS.encode(&bytes_str);
+
+        let polynomial: u32 = 0xEDB88320;
+        let mut crc: u32 = 0xFFFFFFFF;
+        for b in sjis_bytes.iter() {
+            crc ^= *b as u32;
+            for _ in 0..8 {
+                if (crc & 1) != 0 {
+                    crc = (crc >> 1) ^ polynomial;
+                } else {
+                    crc >>= 1;
+                }
+            }
+        }
+        let expected = format!("{:x}", !crc);
+        assert_eq!(
+            result, expected,
+            "CRC should be computed over Shift_JIS bytes"
+        );
+
+        // Also verify it differs from a naive UTF-8 computation.
+        let utf8_bytes = bytes_str.as_bytes();
+        let mut crc_utf8: u32 = 0xFFFFFFFF;
+        for b in utf8_bytes {
+            crc_utf8 ^= *b as u32;
+            for _ in 0..8 {
+                if (crc_utf8 & 1) != 0 {
+                    crc_utf8 = (crc_utf8 >> 1) ^ polynomial;
+                } else {
+                    crc_utf8 >>= 1;
+                }
+            }
+        }
+        let utf8_result = format!("{:x}", !crc_utf8);
+        assert_ne!(
+            result, utf8_result,
+            "Shift_JIS CRC should differ from UTF-8 CRC for Japanese text"
+        );
     }
 
     #[test]

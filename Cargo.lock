@@ -4356,6 +4356,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bms-model",
+ "encoding_rs",
  "flate2",
  "log",
  "rayon",

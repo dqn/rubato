@@ -1,5 +1,6 @@
 use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
 use crate::lr2::lr2_skin_loader::{self};
+use crate::safe_div_f32;
 use crate::skin_gauge_graph_object::SkinGaugeGraphObject;
 use crate::skin_note_distribution_graph::SkinNoteDistributionGraph;
 use crate::skin_object::DestinationParams;
@@ -48,8 +49,8 @@ impl LR2CourseResultSkinLoaderState {
                 self.gauge.x = values[3] as f32;
                 self.gauge.y = self.csv.src.height - values[4] as f32;
                 if let Some(ref mut obj) = self.gaugeobj {
-                    let dstw = self.csv.dst.width / self.csv.src.width;
-                    let dsth = self.csv.dst.height / self.csv.src.height;
+                    let dstw = safe_div_f32(self.csv.dst.width, self.csv.src.width);
+                    let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                     let offsets = lr2_skin_loader::read_offset(str_parts, 21);
                     obj.data.set_destination_with_int_timer_ops(
                         &DestinationParams {

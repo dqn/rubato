@@ -91,33 +91,33 @@ impl Validatable for CourseData {
 /// Course data constraint
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CourseDataConstraint {
-    #[serde(alias = "grade")]
+    #[serde(rename = "grade")]
     Class,
-    #[serde(alias = "grade_mirror")]
+    #[serde(rename = "grade_mirror")]
     Mirror,
-    #[serde(alias = "grade_random")]
+    #[serde(rename = "grade_random")]
     Random,
-    #[serde(alias = "no_speed")]
+    #[serde(rename = "no_speed")]
     NoSpeed,
-    #[serde(alias = "no_good")]
+    #[serde(rename = "no_good")]
     NoGood,
-    #[serde(alias = "no_great")]
+    #[serde(rename = "no_great")]
     NoGreat,
-    #[serde(alias = "gauge_lr2")]
+    #[serde(rename = "gauge_lr2")]
     GaugeLr2,
-    #[serde(alias = "gauge_5k")]
+    #[serde(rename = "gauge_5k")]
     Gauge5Keys,
-    #[serde(alias = "gauge_7k")]
+    #[serde(rename = "gauge_7k")]
     Gauge7Keys,
-    #[serde(alias = "gauge_9k")]
+    #[serde(rename = "gauge_9k")]
     Gauge9Keys,
-    #[serde(alias = "gauge_24k")]
+    #[serde(rename = "gauge_24k")]
     Gauge24Keys,
-    #[serde(alias = "ln")]
+    #[serde(rename = "ln")]
     Ln,
-    #[serde(alias = "cn")]
+    #[serde(rename = "cn")]
     Cn,
-    #[serde(alias = "hcn")]
+    #[serde(rename = "hcn")]
     Hcn,
 }
 
@@ -396,5 +396,61 @@ mod tests {
         assert_eq!(deserialized.name(), "Diamond");
         assert_eq!(deserialized.missrate, 3.5);
         assert_eq!(deserialized.scorerate, 95.0);
+    }
+
+    // -- CourseDataConstraint serde rename tests --
+
+    #[test]
+    fn test_constraint_serializes_as_lowercase_java_name() {
+        // With #[serde(rename = "...")], serialization must produce the Java name,
+        // not PascalCase.
+        let json = serde_json::to_string(&CourseDataConstraint::Class).unwrap();
+        assert_eq!(json, r#""grade""#);
+
+        let json = serde_json::to_string(&CourseDataConstraint::Mirror).unwrap();
+        assert_eq!(json, r#""grade_mirror""#);
+
+        let json = serde_json::to_string(&CourseDataConstraint::Gauge5Keys).unwrap();
+        assert_eq!(json, r#""gauge_5k""#);
+
+        let json = serde_json::to_string(&CourseDataConstraint::Hcn).unwrap();
+        assert_eq!(json, r#""hcn""#);
+    }
+
+    #[test]
+    fn test_constraint_deserializes_from_lowercase_java_name() {
+        let c: CourseDataConstraint = serde_json::from_str(r#""grade""#).unwrap();
+        assert_eq!(c, CourseDataConstraint::Class);
+
+        let c: CourseDataConstraint = serde_json::from_str(r#""no_speed""#).unwrap();
+        assert_eq!(c, CourseDataConstraint::NoSpeed);
+
+        let c: CourseDataConstraint = serde_json::from_str(r#""gauge_24k""#).unwrap();
+        assert_eq!(c, CourseDataConstraint::Gauge24Keys);
+
+        let c: CourseDataConstraint = serde_json::from_str(r#""ln""#).unwrap();
+        assert_eq!(c, CourseDataConstraint::Ln);
+    }
+
+    #[test]
+    fn test_constraint_all_variants_serde_roundtrip() {
+        for constraint in CourseDataConstraint::values() {
+            let json = serde_json::to_string(constraint).unwrap();
+            let restored: CourseDataConstraint = serde_json::from_str(&json).unwrap();
+            assert_eq!(
+                restored, *constraint,
+                "Constraint {:?} should round-trip through serde with Java name",
+                constraint
+            );
+            // Verify the serialized form matches name_str()
+            let expected_json = format!("\"{}\"", constraint.name_str());
+            assert_eq!(
+                json,
+                expected_json,
+                "Constraint {:?} should serialize as {:?}",
+                constraint,
+                constraint.name_str()
+            );
+        }
     }
 }
