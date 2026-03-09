@@ -593,6 +593,8 @@ impl CourseResult {
 
     pub fn dispose(&mut self) {
         // super.dispose() equivalent
+        self.main_data.skin = None;
+        self.main_data.stage = None;
     }
 }
 
@@ -779,6 +781,19 @@ mod tests {
             cr.state_type(),
             Some(rubato_core::main_state::MainStateType::CourseResult)
         );
+    }
+
+    #[test]
+    fn test_dispose_clears_skin_and_stage() {
+        let mut cr = make_default();
+        // Assign a skin so we can verify it gets cleared
+        cr.main_data.skin = Some(Box::new(ExecuteEventSkin { event_id: 0 }));
+        cr.main_data.stage = Some(rubato_core::main_state::StageStub);
+
+        <CourseResult as MainState>::dispose(&mut cr);
+
+        assert!(cr.main_data.skin.is_none(), "dispose should clear skin");
+        assert!(cr.main_data.stage.is_none(), "dispose should clear stage");
     }
 
     // ---- IR processing tests ----
