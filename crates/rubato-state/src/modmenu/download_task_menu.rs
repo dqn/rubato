@@ -10,6 +10,21 @@ pub const MAXIMUM_TASK_NAME_LENGTH: usize = 10;
 
 static PROCESSOR: Mutex<Option<Arc<HttpDownloadProcessor>>> = Mutex::new(None);
 
+/// Returns the largest byte index `<= index` that is on a UTF-8 char boundary.
+/// Equivalent to `str::floor_char_boundary` (stable since Rust 1.91), provided
+/// here to stay compatible with MSRV 1.89.
+fn floor_char_boundary(s: &str, index: usize) -> usize {
+    if index >= s.len() {
+        return s.len();
+    }
+    let mut i = index;
+    // Walk backwards until we find a byte that is not a UTF-8 continuation byte.
+    while i > 0 && !s.is_char_boundary(i) {
+        i -= 1;
+    }
+    i
+}
+
 pub struct DownloadTaskMenu;
 
 impl DownloadTaskMenu {
@@ -42,7 +57,8 @@ impl DownloadTaskMenu {
                     // Column 0: Task name
                     let name = task.name();
                     let task_name = if name.len() > MAXIMUM_TASK_NAME_LENGTH {
-                        &name[..MAXIMUM_TASK_NAME_LENGTH]
+                        let end = floor_char_boundary(name, MAXIMUM_TASK_NAME_LENGTH);
+                        &name[..end]
                     } else {
                         name
                     };
@@ -198,5 +214,72 @@ mod tests {
     #[test]
     fn test_maximum_task_name_length_constant() {
         assert_eq!(MAXIMUM_TASK_NAME_LENGTH, 10);
+    }
+
+    /// Helper that mirrors the truncation logic in render_task_table.
+    fn truncate_task_name(name: &str) -> &str {
+        if name.len() > MAXIMUM_TASK_NAME_LENGTH {
+            let end = floor_char_boundary(name, MAXIMUM_TASK_NAME_LENGTH);
+            &name[..end]
+        } else {
+            name
+        }
+    }
+
+    #[test]
+    fn test_truncate_task_name_ascii_short() {
+        // ASCII string shorter than limit is returned as-is.
+        assert_eq!(truncate_task_name("hello"), "hello");
+    }
+
+    #[test]
+    fn test_truncate_task_name_ascii_exact() {
+        // ASCII string exactly at limit is returned as-is.
+        assert_eq!(truncate_task_name("0123456789"), "0123456789");
+    }
+
+    #[test]
+    fn test_truncate_task_name_ascii_over() {
+        // ASCII string over limit is truncated at byte 10.
+        assert_eq!(truncate_task_name("0123456789abc"), "0123456789");
+    }
+
+    #[test]
+    fn test_truncate_task_name_japanese_no_panic() {
+        // Japanese text where byte position 10 falls mid-character.
+        // Each CJK character is 3 bytes in UTF-8, so 4 chars = 12 bytes.
+        // floor_char_boundary(10) should round down to byte 9 (3 chars).
+        let name = "\u{5929}\u{7A7A}\u{306E}\u{57CE}"; // "天空の城" (12 bytes)
+        assert_eq!(name.len(), 12);
+        let truncated = truncate_task_name(name);
+        // Must not panic, and must be valid UTF-8 with at most 10 bytes.
+        assert!(truncated.len() <= MAXIMUM_TASK_NAME_LENGTH);
+        assert_eq!(truncated, "天空の"); // 9 bytes (3 chars * 3 bytes)
+    }
+
+    #[test]
+    fn test_truncate_task_name_mixed_multibyte() {
+        // Mixed ASCII + Japanese where boundary falls mid-character.
+        // "abc天空" = 3 + 3 + 3 + 3 + 3 = wait, let's be precise:
+        // 'a'=1, 'b'=1, 'c'=1, '天'=3, '空'=3, 'の'=3, '城'=3 = 15 bytes
+        let name = "abc天空の城";
+        assert_eq!(name.len(), 15);
+        let truncated = truncate_task_name(name);
+        // floor_char_boundary(10) on "abc天空の城":
+        // bytes 0-2: "abc", byte 3-5: "天", byte 6-8: "空", byte 9-11: "の"
+        // byte 10 is mid-char for "の", so floor rounds to byte 9.
+        assert_eq!(truncated, "abc天空"); // 9 bytes
+        assert!(truncated.len() <= MAXIMUM_TASK_NAME_LENGTH);
+    }
+
+    #[test]
+    fn test_truncate_task_name_emoji() {
+        // Emoji are 4 bytes each. "🎵🎶🎷" = 12 bytes.
+        // floor_char_boundary(10) should round to byte 8 (2 emoji).
+        let name = "🎵🎶🎷";
+        assert_eq!(name.len(), 12);
+        let truncated = truncate_task_name(name);
+        assert_eq!(truncated, "🎵🎶"); // 8 bytes
+        assert!(truncated.len() <= MAXIMUM_TASK_NAME_LENGTH);
     }
 }
