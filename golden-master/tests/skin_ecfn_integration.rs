@@ -37,6 +37,9 @@ fn ecfn_skins_available() -> bool {
     if dir.exists() {
         true
     } else {
+        // NOTE: golden-master is currently excluded from CI (requires Java + ECFN skin
+        // assets). The CI guard is defense-in-depth for when golden-master is added to CI.
+        // The UPDATE_ECFN_TIMEPOINT_SNAPSHOTS guard prevents silent no-op fixture updates.
         if std::env::var_os("CI").is_some()
             || std::env::var_os("UPDATE_ECFN_TIMEPOINT_SNAPSHOTS").is_some()
         {

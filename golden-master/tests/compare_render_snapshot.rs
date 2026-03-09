@@ -59,6 +59,8 @@ fn ecfn_skins_available() -> bool {
     if dir.exists() {
         true
     } else {
+        // NOTE: golden-master is currently excluded from CI (requires Java + ECFN skin
+        // assets). This guard is defense-in-depth for when golden-master is added to CI.
         if std::env::var_os("CI").is_some() {
             panic!(
                 "ECFN skins not found at {} (failing in CI to avoid false-positive passes)",
