@@ -59,6 +59,13 @@ impl SkinNoteObject {
     /// additional skin resources (line images, fonts) that are resolved by
     /// the caller or deferred.
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
+        #[cfg(debug_assertions)]
+        if self.draw_commands.is_empty() {
+            log::warn!(
+                "SkinNoteObject::draw() called with empty draw_commands \
+                 - compute_note_draw_commands() may not have been called"
+            );
+        }
         for cmd in &self.draw_commands {
             match cmd {
                 DrawCommand::SetColor { r, g, b, a } => {

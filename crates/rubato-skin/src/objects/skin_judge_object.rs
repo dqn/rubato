@@ -37,6 +37,11 @@ impl SkinJudgeObject {
         }
     }
 
+    /// Read-only access to judge images for wiring validation.
+    pub(crate) fn judge_images(&self) -> &[Option<SkinImage>; 7] {
+        &self.judge_images
+    }
+
     /// Set a judge image for the given index.
     pub fn set_judge_image(&mut self, index: usize, image: SkinImage) {
         if index < self.judge_images.len() {

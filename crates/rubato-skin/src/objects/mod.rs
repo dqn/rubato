@@ -7,3 +7,4 @@ pub mod skin_judge_object;
 pub mod skin_note_object;
 pub mod skin_number;
 pub mod skin_slider;
+pub mod wiring_check;

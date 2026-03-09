@@ -150,6 +150,12 @@ impl SkinObjectRenderer {
     /// Java: sprite.draw(image, x + 0.01f, y + 0.01f, w, h)
     /// The 0.01 offset is a workaround for a Windows TextureRegion rendering issue.
     pub fn draw(&mut self, image: &TextureRegion, x: f32, y: f32, w: f32, h: f32) {
+        #[cfg(debug_assertions)]
+        if image.texture.is_none() && image.region_width == 0 {
+            log::debug!(
+                "draw() called with empty TextureRegion at ({x}, {y}, {w}x{h}) - texture not wired"
+            );
+        }
         self.set_filter(image);
         self.pre_draw();
         self.sprite.draw_region(image, x + 0.01, y + 0.01, w, h);

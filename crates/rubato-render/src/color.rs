@@ -485,6 +485,10 @@ impl Matrix4 {
     }
 
     /// Create an orthographic projection matrix.
+    ///
+    /// For Y-up convention (matching Java LibGDX), call as:
+    ///   `set_to_ortho(0.0, width, 0.0, height, -1.0, 1.0)`
+    /// This produces `values[5] > 0` (positive Y scale) and `values[13] == -1.0`.
     pub fn set_to_ortho(
         &mut self,
         left: f32,
@@ -506,5 +510,68 @@ impl Matrix4 {
         self.values[13] = -(top + bottom) / tmb;
         self.values[14] = -(far + near) / fmn;
         self.values[15] = 1.0;
+    }
+}
+
+#[cfg(test)]
+mod matrix4_tests {
+    use super::*;
+
+    // --- Y-convention invariant tests ---
+    // These would have caught bug #1: Y-coordinate inversion when the projection
+    // matrix was set up with Y-down instead of Y-up convention.
+
+    #[test]
+    fn ortho_y_up_has_positive_y_scale() {
+        let mut m = Matrix4::new();
+        // Y-up convention: bottom=0, top=height
+        m.set_to_ortho(0.0, 1280.0, 0.0, 720.0, -1.0, 1.0);
+        assert!(
+            m.values[5] > 0.0,
+            "Y-up projection must have positive Y scale (values[5]={}, expected > 0)",
+            m.values[5]
+        );
+    }
+
+    #[test]
+    fn ortho_y_down_has_negative_y_scale() {
+        let mut m = Matrix4::new();
+        // Y-down convention: bottom=height, top=0 (WRONG for this project)
+        m.set_to_ortho(0.0, 1280.0, 720.0, 0.0, -1.0, 1.0);
+        assert!(
+            m.values[5] < 0.0,
+            "Y-down projection has negative Y scale (values[5]={})",
+            m.values[5]
+        );
+    }
+
+    #[test]
+    fn ortho_y_up_translation() {
+        let mut m = Matrix4::new();
+        m.set_to_ortho(0.0, 1280.0, 0.0, 720.0, -1.0, 1.0);
+        // For Y-up with left=0,right=w,bottom=0,top=h:
+        // values[13] = -(top + bottom) / (top - bottom) = -(h + 0) / (h - 0) = -1.0
+        assert!(
+            (m.values[13] - (-1.0)).abs() < f32::EPSILON,
+            "Y-up projection translation values[13] should be -1.0, got {}",
+            m.values[13]
+        );
+    }
+
+    #[test]
+    fn main_controller_projection_is_y_up() {
+        // Reproduces the exact call from lifecycle.rs
+        let mut ortho = Matrix4::new();
+        let width = 1920.0f32;
+        let height = 1080.0f32;
+        ortho.set_to_ortho(0.0, width, 0.0, height, -1.0, 1.0);
+
+        // Y scale must be positive (Y-up)
+        assert!(
+            ortho.values[5] > 0.0,
+            "main controller projection must be Y-up"
+        );
+        // X scale must be positive
+        assert!(ortho.values[0] > 0.0, "X scale must be positive");
     }
 }
