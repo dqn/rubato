@@ -59,6 +59,12 @@ fn ecfn_skins_available() -> bool {
     if dir.exists() {
         true
     } else {
+        if std::env::var_os("CI").is_some() {
+            panic!(
+                "ECFN skins not found at {} (failing in CI to avoid false-positive passes)",
+                dir.display()
+            );
+        }
         eprintln!("Skipping: ECFN skins not found at {}", dir.display());
         false
     }

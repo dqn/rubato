@@ -37,6 +37,14 @@ fn ecfn_skins_available() -> bool {
     if dir.exists() {
         true
     } else {
+        if std::env::var_os("CI").is_some()
+            || std::env::var_os("UPDATE_ECFN_TIMEPOINT_SNAPSHOTS").is_some()
+        {
+            panic!(
+                "ECFN skins not found at {} (failing because CI or UPDATE_ECFN_TIMEPOINT_SNAPSHOTS is set)",
+                dir.display()
+            );
+        }
         eprintln!("Skipping: ECFN skins not found at {}", dir.display());
         false
     }
