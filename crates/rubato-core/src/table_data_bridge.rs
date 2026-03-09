@@ -123,7 +123,7 @@ pub fn difficulty_table_to_table_data(dt: &DifficultyTable, url: &str) -> TableD
 
     let tag = dt
         .table
-        .get_tag()
+        .tag()
         .unwrap_or_else(|| dt.table.id().unwrap_or("").to_string());
 
     let folders: Vec<TableFolder> = dt
@@ -186,7 +186,7 @@ mod tests {
         assert_eq!(song.metadata.title, "Test Song");
         assert_eq!(song.metadata.artist, "Test Artist");
         assert_eq!(song.url(), "https://example.com/download");
-        assert_eq!(song.get_ipfs_str(), "QmTestHash");
+        assert_eq!(song.ipfs_str(), "QmTestHash");
         assert_eq!(song.chart.mode, 0); // no mode set
     }
 
@@ -392,7 +392,7 @@ mod tests {
 
         let td = difficulty_table_to_table_data(&dt, "https://example.com");
 
-        // BmsTable.get_tag() returns id when no tag is set
+        // BmsTable.tag() returns id when no tag is set
         assert_eq!(td.tag, "TID");
     }
 

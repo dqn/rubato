@@ -135,7 +135,7 @@ impl MusicDownloadProcessor {
         }
     }
 
-    pub fn get_downloadpath(&self) -> Option<String> {
+    pub fn downloadpath(&self) -> Option<String> {
         let daemon_guard = self.daemon.lock().expect("daemon lock poisoned");
         match &*daemon_guard {
             None => None,
@@ -154,7 +154,7 @@ impl MusicDownloadProcessor {
         }
     }
 
-    pub fn get_message(&self) -> String {
+    pub fn message(&self) -> String {
         self.message.lock().expect("message lock poisoned").clone()
     }
 
@@ -455,7 +455,7 @@ impl rubato_types::music_download_access::MusicDownloadAccess for MusicDownloadP
     }
 
     fn message(&self) -> String {
-        MusicDownloadProcessor::get_message(self)
+        MusicDownloadProcessor::message(self)
     }
 }
 

@@ -164,7 +164,7 @@ impl LaneRenderer {
                     let tl = &all_tl[timelines[i]];
                     if tl.micro_time() >= microtime {
                         let prev_section = if i > 0 {
-                            all_tl[timelines[i - 1]].get_section()
+                            all_tl[timelines[i - 1]].section()
                         } else {
                             0.0
                         };
@@ -182,7 +182,7 @@ impl LaneRenderer {
 
                         let denom = tl.micro_time() - prev_microtime;
                         let rate = if denom != 0 {
-                            (tl.get_section() - prev_section) * prev_scroll * rxhs / denom as f64
+                            (tl.section() - prev_section) * prev_scroll * rxhs / denom as f64
                         } else {
                             0.0
                         };
@@ -504,11 +504,11 @@ impl LaneRenderer {
                                         // Calculate long note body height
                                         let mut dy: f64 = 0.0;
                                         let mut prev_tl_ref = tl;
-                                        let pair_section = pair_tl.get_section();
+                                        let pair_section = pair_tl.section();
 
                                         for j in (i + 1)..tl_count {
                                             let now_tl = &all_tl[timelines[j]];
-                                            if prev_tl_ref.get_section() == pair_section {
+                                            if prev_tl_ref.section() == pair_section {
                                                 break;
                                             }
                                             if now_tl.micro_time() >= microtime {
@@ -516,8 +516,8 @@ impl LaneRenderer {
                                                     + prev_tl_ref.micro_stop()
                                                     > microtime
                                                 {
-                                                    dy += (now_tl.get_section()
-                                                        - prev_tl_ref.get_section())
+                                                    dy += (now_tl.section()
+                                                        - prev_tl_ref.section())
                                                         * prev_tl_ref.scroll
                                                         * rxhs;
                                                 } else {
@@ -526,8 +526,8 @@ impl LaneRenderer {
                                                         - prev_tl_ref.micro_time()
                                                         - prev_tl_ref.micro_stop();
                                                     if total_time != 0 {
-                                                        dy += (now_tl.get_section()
-                                                            - prev_tl_ref.get_section())
+                                                        dy += (now_tl.section()
+                                                            - prev_tl_ref.section())
                                                             * prev_tl_ref.scroll
                                                             * (time_diff as f64
                                                                 / total_time as f64)

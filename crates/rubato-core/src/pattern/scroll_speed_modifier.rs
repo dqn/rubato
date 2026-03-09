@@ -399,9 +399,9 @@ mod tests {
 
         let tls = model.timelines;
         // tl[0]: 120.0 * 0 / 240_000_000 = 0.0
-        assert!((tls[0].get_section() - 0.0).abs() < f64::EPSILON);
+        assert!((tls[0].section() - 0.0).abs() < f64::EPSILON);
         // tl[1]: 120.0 * 2_000_000 / 240_000_000 = 1.0
-        assert!((tls[1].get_section() - 1.0).abs() < f64::EPSILON);
+        assert!((tls[1].section() - 1.0).abs() < f64::EPSILON);
     }
 
     // -- Add mode: section count advances and scroll changes --

@@ -186,7 +186,7 @@ impl TimeLine {
     pub fn back_ground_notes(&self) -> &[Note] {
         &self.bgnotes
     }
-    pub fn get_section(&self) -> f64 {
+    pub fn section(&self) -> f64 {
         self.section
     }
 
@@ -240,7 +240,7 @@ mod tests {
     #[test]
     fn new_creates_timeline_with_correct_values() {
         let tl = TimeLine::new(1.5, 2000, 8);
-        assert!((tl.get_section() - 1.5).abs() < f64::EPSILON);
+        assert!((tl.section() - 1.5).abs() < f64::EPSILON);
         assert_eq!(tl.micro_time(), 2000);
         assert_eq!(tl.milli_time(), 2);
         assert_eq!(tl.time(), 2);
@@ -407,7 +407,7 @@ mod tests {
 
         tl.set_section(5.5);
 
-        assert!((tl.get_section() - 5.5).abs() < f64::EPSILON);
+        assert!((tl.section() - 5.5).abs() < f64::EPSILON);
         assert!((tl.note(0).unwrap().section() - 5.5).abs() < f64::EPSILON);
         assert!((tl.hidden_note(1).unwrap().section() - 5.5).abs() < f64::EPSILON);
         assert!((tl.back_ground_notes()[0].section() - 5.5).abs() < f64::EPSILON);

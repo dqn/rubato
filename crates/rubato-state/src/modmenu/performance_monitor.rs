@@ -154,7 +154,7 @@ fn update_watch_data() {
         .expect("LAST_STAT_UPDATE lock poisoned") = Some(now);
 
     let metrics = PerformanceMetrics::get();
-    let names = metrics.get_watch_names();
+    let names = metrics.watch_names();
     let mut new_watch_data = Vec::new();
 
     for name in &names {

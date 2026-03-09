@@ -25,7 +25,7 @@ fn download_task_construction() {
     assert_eq!(task.download_task_status(), DownloadTaskStatus::Prepare);
     assert_eq!(task.download_size, 0);
     assert_eq!(task.content_length, 0);
-    assert!(task.get_error_message().is_none());
+    assert!(task.error_message().is_none());
     assert_eq!(task.time_finished(), 0);
 }
 
@@ -69,7 +69,7 @@ fn download_task_error_message() {
     task.set_error_message("connection timed out".to_string());
 
     assert_eq!(task.download_task_status(), DownloadTaskStatus::Error);
-    assert_eq!(task.get_error_message(), Some("connection timed out"));
+    assert_eq!(task.error_message(), Some("connection timed out"));
 }
 
 #[test]

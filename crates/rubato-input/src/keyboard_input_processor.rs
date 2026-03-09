@@ -463,7 +463,7 @@ impl KeyBoardInputProcesseor {
     pub fn last_pressed_key(&self) -> i32 {
         self.last_pressed_key
     }
-    pub fn get_mouse_scratch_input(&self) -> &MouseScratchInput {
+    pub fn mouse_scratch_input(&self) -> &MouseScratchInput {
         &self.mouse_scratch_input
     }
 

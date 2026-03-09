@@ -1038,7 +1038,7 @@ impl MainState for BMSPlayer {
         self.input.control_key_num2 = input.control_key_state(ControlKeys::Num2);
         self.input.control_key_num3 = input.control_key_state(ControlKeys::Num3);
         self.input.control_key_num4 = input.control_key_state(ControlKeys::Num4);
-        self.input.input_scroll = input.get_scroll();
+        self.input.input_scroll = input.scroll();
         self.input.input_is_analog.clear();
         self.input
             .input_is_analog

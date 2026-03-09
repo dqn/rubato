@@ -45,7 +45,7 @@ impl GdxInput {
             .lock()
             .expect("SHARED_KEY_STATE lock poisoned");
         if let Some(ref state) = *guard {
-            state.get_mouse_x()
+            state.mouse_x()
         } else {
             0
         }
@@ -56,7 +56,7 @@ impl GdxInput {
             .lock()
             .expect("SHARED_KEY_STATE lock poisoned");
         if let Some(ref state) = *guard {
-            state.get_mouse_y()
+            state.mouse_y()
         } else {
             0
         }
@@ -103,7 +103,7 @@ impl GdxGraphics {
             .lock()
             .expect("SHARED_KEY_STATE lock poisoned");
         if let Some(ref state) = *guard {
-            state.get_window_width()
+            state.window_width()
         } else {
             1920
         }
@@ -114,7 +114,7 @@ impl GdxGraphics {
             .lock()
             .expect("SHARED_KEY_STATE lock poisoned");
         if let Some(ref state) = *guard {
-            state.get_window_height()
+            state.window_height()
         } else {
             1080
         }

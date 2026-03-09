@@ -327,7 +327,7 @@ impl SongData {
             self.chart.difficulty = model.difficulty;
         }
         self.chart.judge = model.judgerank;
-        self.chart.minbpm = model.get_min_bpm() as i32;
+        self.chart.minbpm = model.min_bpm() as i32;
         self.chart.maxbpm = model.max_bpm() as i32;
         self.chart.feature = 0;
 
@@ -404,7 +404,7 @@ impl SongData {
         self.url = Some(url);
     }
 
-    pub fn get_ipfs_str(&self) -> &str {
+    pub fn ipfs_str(&self) -> &str {
         self.ipfs.as_deref().unwrap_or("")
     }
 
@@ -756,12 +756,12 @@ mod tests {
     #[test]
     fn test_ipfs_accessors() {
         let mut sd = SongData::new();
-        assert_eq!(sd.get_ipfs_str(), "");
+        assert_eq!(sd.ipfs_str(), "");
         assert_eq!(sd.append_ipfs_str(), "");
 
         sd.ipfs = Some("Qm123".to_string());
         sd.appendipfs = Some("Qm456".to_string());
-        assert_eq!(sd.get_ipfs_str(), "Qm123");
+        assert_eq!(sd.ipfs_str(), "Qm123");
         assert_eq!(sd.append_ipfs_str(), "Qm456");
     }
 

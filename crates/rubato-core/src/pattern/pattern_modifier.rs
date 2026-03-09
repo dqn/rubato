@@ -147,7 +147,7 @@ pub fn apply_modify_log(model: &mut BMSModel, log: &[PatternModifyLog]) {
     for tl in timelines.iter_mut() {
         let mut pm: Option<&PatternModifyLog> = None;
         for pms in log {
-            if pms.section == tl.get_section() {
+            if pms.section == tl.section() {
                 pm = Some(pms);
                 break;
             }

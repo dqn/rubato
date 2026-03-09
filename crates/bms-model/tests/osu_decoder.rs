@@ -211,7 +211,7 @@ fn decode_7k_fixture_sections_are_monotonically_increasing() {
         .expect("should decode 7K .osu fixture");
 
     let timelines = &&model.timelines;
-    let sections: Vec<f64> = timelines.iter().map(|tl| tl.get_section()).collect();
+    let sections: Vec<f64> = timelines.iter().map(|tl| tl.section()).collect();
 
     for window in sections.windows(2) {
         assert!(

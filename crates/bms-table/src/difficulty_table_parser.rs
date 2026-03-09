@@ -449,7 +449,7 @@ impl DifficultyTableParser {
             );
             header.insert(
                 "tag".to_string(),
-                Value::String(dt.table.get_tag().unwrap_or_default()),
+                Value::String(dt.table.tag().unwrap_or_default()),
             );
             let levels: Vec<Value> = dt
                 .level_description()
@@ -471,7 +471,7 @@ impl DifficultyTableParser {
                     Value::String(dt.table.data_url[0].clone()),
                 );
             }
-            let attrmap = dt.table.get_attrmap();
+            let attrmap = dt.table.attrmap();
             if !attrmap.is_empty() {
                 let obj: serde_json::Map<String, Value> = attrmap
                     .into_iter()

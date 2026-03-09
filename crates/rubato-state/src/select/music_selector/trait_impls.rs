@@ -735,7 +735,7 @@ impl MainState for MusicSelector {
                     // 1. If song has IPFS hash and IPFS daemon is alive -> IPFS download
                     // 2. Else if HTTP download processor is available -> HTTP download
                     // 3. Else -> open download site in browser
-                    let ipfs_available = !song.get_ipfs_str().is_empty()
+                    let ipfs_available = !song.ipfs_str().is_empty()
                         && self
                             .main
                             .as_ref()

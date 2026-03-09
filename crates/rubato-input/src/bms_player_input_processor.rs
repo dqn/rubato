@@ -537,7 +537,7 @@ impl BMSPlayerInputProcessor {
     pub fn is_select_pressed(&self) -> bool {
         self.select_pressed
     }
-    pub fn get_keyboard_input_processor(&self) -> &KeyBoardInputProcesseor {
+    pub fn keyboard_input_processor(&self) -> &KeyBoardInputProcesseor {
         &self.kbinput
     }
 
@@ -572,7 +572,7 @@ impl BMSPlayerInputProcessor {
     pub fn is_mouse_moved(&self) -> bool {
         self.mouse_moved
     }
-    pub fn get_scroll(&self) -> i32 {
+    pub fn scroll(&self) -> i32 {
         -(self.scroll_y as i32)
     }
 
@@ -983,7 +983,7 @@ mod tests {
         assert!(!proc.is_mouse_pressed());
         assert!(!proc.is_mouse_dragged());
         assert!(!proc.is_mouse_moved());
-        assert_eq!(proc.get_scroll(), 0);
+        assert_eq!(proc.scroll(), 0);
     }
 
     #[test]

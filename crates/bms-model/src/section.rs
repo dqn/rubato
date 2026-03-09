@@ -99,7 +99,7 @@ impl Section {
         let bpmtable = tables.bpm;
         let stoptable = tables.stop;
         let scrolltable = tables.scroll;
-        let base = model.get_base();
+        let base = model.base();
         let mut rate = 1.0;
         let mut poor: Vec<i32> = Vec::new();
         let mut channellines: Vec<String> = Vec::with_capacity(lines.len());
@@ -294,7 +294,7 @@ impl Section {
         } else {
             &CHANNELASSIGN_BEAT5
         };
-        let base = model.get_base();
+        let base = model.base();
         let mode_key = mode.as_ref().map(|m| m.key()).unwrap_or(0);
 
         // section line
@@ -486,14 +486,14 @@ impl Section {
                             .get(&tl_key)
                             .expect("timeline key must exist")
                             .timeline
-                            .get_section();
+                            .section();
                         let keys_desc: Vec<u64> = tlcache.keys().rev().cloned().collect();
                         for &ekey in &keys_desc {
                             let e_section = tlcache
                                 .get(&ekey)
                                 .expect("timeline key must exist")
                                 .timeline
-                                .get_section();
+                                .section();
                             if e_section >= tl_section {
                                 continue;
                             }
@@ -545,12 +545,12 @@ impl Section {
                                     .get(&ekey)
                                     .expect("timeline key must exist")
                                     .timeline
-                                    .get_section();
+                                    .section();
                                 let end_section = tlcache
                                     .get(&tl_key)
                                     .expect("timeline key must exist")
                                     .timeline
-                                    .get_section();
+                                    .section();
                                 set_long_note_pair_sections(tlcache, ekey, tl_key, key);
 
                                 let key_usize = key as usize;
@@ -572,12 +572,12 @@ impl Section {
                                     .get(&ekey)
                                     .expect("timeline key must exist")
                                     .timeline
-                                    .get_section();
+                                    .section();
                                 let tl_section_display = tlcache
                                     .get(&tl_key)
                                     .expect("timeline key must exist")
                                     .timeline
-                                    .get_section();
+                                    .section();
                                 log.push(DecodeLog::new(
                                     State::Warning,
                                     format!(
@@ -668,7 +668,7 @@ impl Section {
                         .get(&tl_key)
                         .expect("timeline key must exist")
                         .timeline
-                        .get_section();
+                        .section();
                     let key_usize = key as usize;
 
                     let mut insideln = false;
@@ -754,7 +754,7 @@ impl Section {
                                 .get(&tl_key)
                                 .expect("timeline key must exist")
                                 .timeline
-                                .get_section();
+                                .section();
                             tlcache
                                 .get_mut(&tl_key)
                                 .expect("timeline key must exist")
@@ -780,7 +780,7 @@ impl Section {
                                     .get(&ekey)
                                     .expect("timeline key must exist")
                                     .timeline
-                                    .get_section();
+                                    .section();
                                 if e_section >= tl_section {
                                     continue;
                                 }
@@ -816,7 +816,7 @@ impl Section {
                                         .get(&tl_key)
                                         .expect("timeline key must exist")
                                         .timeline
-                                        .get_section();
+                                        .section();
                                     if lnlist[key_usize].is_none() {
                                         lnlist[key_usize] = Some(Vec::new());
                                     }
@@ -931,7 +931,7 @@ impl Section {
                         .get(&tl_key)
                         .expect("timeline key must exist")
                         .timeline
-                        .get_section();
+                        .section();
                     let key_usize = key as usize;
 
                     let mut insideln = tlcache
@@ -1108,12 +1108,12 @@ fn set_long_note_pair_sections(
         .get(&end_key)
         .expect("timeline key must exist")
         .timeline
-        .get_section();
+        .section();
     let start_section = tlcache
         .get(&start_key)
         .expect("timeline key must exist")
         .timeline
-        .get_section();
+        .section();
 
     // Read start note type first
     let start_type = tlcache

@@ -58,7 +58,7 @@ impl<T: Clone> BmsTable<T> {
             .insert(SYMBOL.to_string(), Value::String(id.to_string()));
     }
 
-    pub fn get_tag(&self) -> Option<String> {
+    pub fn tag(&self) -> Option<String> {
         if let Some(tag) = self.values.get(TAG).and_then(|v| v.as_str()) {
             return Some(tag.to_string());
         }
@@ -93,7 +93,7 @@ impl<T: Clone> BmsTable<T> {
         self.models.clear();
     }
 
-    pub fn get_attrmap(&self) -> HashMap<String, String> {
+    pub fn attrmap(&self) -> HashMap<String, String> {
         if let Some(v) = self.values.get(ATTR)
             && let Some(obj) = v.as_object()
         {

@@ -418,7 +418,7 @@ impl BMSONDecoder {
                                                 .get(&n_y)
                                                 .expect("timeline in cache")
                                                 .timeline
-                                                .get_section();
+                                                .section();
                                             (info.start_section - start_sec).abs() < f64::EPSILON
                                         })
                                         .map(|info| info.end_y)
@@ -534,12 +534,12 @@ impl BMSONDecoder {
                                     .get(&n_y)
                                     .expect("timeline in cache")
                                     .timeline
-                                    .get_section();
+                                    .section();
                                 let end_section = tlcache
                                     .get(&end_y)
                                     .expect("timeline in cache")
                                     .timeline
-                                    .get_section();
+                                    .section();
 
                                 while lnlist.len() <= key_usize {
                                     lnlist.push(None);

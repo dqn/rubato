@@ -129,7 +129,7 @@ impl BMSModel {
         }
     }
 
-    pub fn get_min_bpm(&self) -> f64 {
+    pub fn min_bpm(&self) -> f64 {
         self.timelines
             .iter()
             .map(|tl| tl.bpm)
@@ -186,7 +186,7 @@ impl BMSModel {
         0
     }
 
-    pub fn get_full_title(&self) -> String {
+    pub fn full_title(&self) -> String {
         let mut s = self.title.clone();
         if !self.sub_title.is_empty() {
             s.push(' ');
@@ -355,7 +355,7 @@ impl BMSModel {
         sb
     }
 
-    pub fn get_base(&self) -> i32 {
+    pub fn base(&self) -> i32 {
         self.base
     }
 
@@ -407,7 +407,7 @@ mod tests {
         assert_eq!(model.sha256, "");
         assert!(model.wavmap.is_empty());
         assert!(model.bgamap.is_empty());
-        assert_eq!(model.get_base(), 36);
+        assert_eq!(model.base(), 36);
         assert_eq!(model.lnmode, crate::note::TYPE_UNDEFINED);
         assert_eq!(model.lnobj, -1);
         assert!(!model.from_osu);
@@ -420,7 +420,7 @@ mod tests {
         let from_default = BMSModel::default();
         assert_eq!(from_new.title, from_default.title);
         assert_eq!(from_new.player, from_default.player);
-        assert_eq!(from_new.get_base(), from_default.get_base());
+        assert_eq!(from_new.base(), from_default.base());
     }
 
     #[test]
@@ -459,7 +459,7 @@ mod tests {
     fn full_title_without_subtitle() {
         let mut model = BMSModel::new();
         model.title = "Main Title".into();
-        assert_eq!(model.get_full_title(), "Main Title");
+        assert_eq!(model.full_title(), "Main Title");
     }
 
     #[test]
@@ -467,7 +467,7 @@ mod tests {
         let mut model = BMSModel::new();
         model.title = "Main Title".into();
         model.sub_title = "[ANOTHER]".into();
-        assert_eq!(model.get_full_title(), "Main Title [ANOTHER]");
+        assert_eq!(model.full_title(), "Main Title [ANOTHER]");
     }
 
     #[test]
@@ -641,17 +641,17 @@ mod tests {
     fn base_set_62() {
         let mut model = BMSModel::new();
         model.set_base(62);
-        assert_eq!(model.get_base(), 62);
+        assert_eq!(model.base(), 62);
     }
 
     #[test]
     fn base_set_non62_defaults_to_36() {
         let mut model = BMSModel::new();
         model.set_base(16);
-        assert_eq!(model.get_base(), 36);
+        assert_eq!(model.base(), 36);
 
         model.set_base(100);
-        assert_eq!(model.get_base(), 36);
+        assert_eq!(model.base(), 36);
     }
 
     #[test]
@@ -721,7 +721,7 @@ mod tests {
         tl3.bpm = 150.0;
         model.timelines = vec![tl1, tl2, tl3];
 
-        assert!((model.get_min_bpm() - 100.0).abs() < f64::EPSILON);
+        assert!((model.min_bpm() - 100.0).abs() < f64::EPSILON);
         assert!((model.max_bpm() - 200.0).abs() < f64::EPSILON);
     }
 
@@ -730,7 +730,7 @@ mod tests {
         let mut model = BMSModel::new();
         model.bpm = 130.0;
 
-        assert!((model.get_min_bpm() - 130.0).abs() < f64::EPSILON);
+        assert!((model.min_bpm() - 130.0).abs() < f64::EPSILON);
         assert!((model.max_bpm() - 130.0).abs() < f64::EPSILON);
     }
 

@@ -21,7 +21,7 @@ fn difficulty_table_default() {
     assert!(dt.course().is_empty());
     assert!(dt.table.name().is_none());
     assert!(dt.table.id().is_none());
-    assert!(dt.table.get_tag().is_none());
+    assert!(dt.table.tag().is_none());
     assert!(dt.table.data_url.is_empty());
     assert!(dt.table.models.is_empty());
     assert!(!dt.table.editable);

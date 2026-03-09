@@ -20,7 +20,7 @@ pub static META: LazyLock<HttpDownloadSourceMeta> = LazyLock::new(|| {
 impl WriggleDownloadSource {
     pub fn new(config: &Config) -> Self {
         // override download url if user ask to do so
-        let override_download_url = config.get_override_download_url();
+        let override_download_url = config.override_download_url();
         let download_url = match override_download_url {
             Some(url) if !url.is_empty() => url.to_string(),
             _ => META.default_url().to_string(),

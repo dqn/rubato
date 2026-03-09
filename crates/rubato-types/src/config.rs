@@ -549,7 +549,7 @@ impl Config {
         self.playername.as_deref()
     }
 
-    pub fn get_override_download_url(&self) -> Option<&str> {
+    pub fn override_download_url(&self) -> Option<&str> {
         if self.network.override_download_url.is_empty() {
             None
         } else {

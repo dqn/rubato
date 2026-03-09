@@ -231,7 +231,7 @@ impl BMSDecoder {
                     }
                 } else if !skip.last().copied().unwrap_or(false) {
                     let c = line.as_bytes()[1] as char;
-                    let base = model.get_base();
+                    let base = model.base();
                     if c.is_ascii_digit() && line.len() > 6 {
                         let c2 = line.as_bytes()[2] as char;
                         let c3 = line.as_bytes()[3] as char;
@@ -593,7 +593,7 @@ impl BMSDecoder {
                 if status.section != f64::MIN {
                     // Find the timeline in model's timelines and clear the note
                     for tl in &mut model.timelines {
-                        if tl.get_section() == status.section {
+                        if tl.section() == status.section {
                             tl.set_note(i as i32, None);
                             break;
                         }
@@ -971,7 +971,7 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#BASE 62"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().get_base(), 62);
+        assert_eq!(model.unwrap().base(), 62);
     }
 
     #[test]

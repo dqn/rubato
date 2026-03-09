@@ -92,7 +92,7 @@ impl DownloadTask {
         self.download_task_status = status;
     }
 
-    pub fn get_error_message(&self) -> Option<&str> {
+    pub fn error_message(&self) -> Option<&str> {
         self.error_message.as_deref()
     }
 
@@ -149,7 +149,7 @@ mod tests {
         assert_eq!(task.download_task_status(), DownloadTaskStatus::Prepare);
         assert_eq!(task.download_size, 0);
         assert_eq!(task.content_length, 0);
-        assert!(task.get_error_message().is_none());
+        assert!(task.error_message().is_none());
         assert_eq!(task.time_finished(), 0);
     }
 
@@ -219,9 +219,9 @@ mod tests {
             "Song E".to_string(),
             "hash_e".to_string(),
         );
-        assert!(task.get_error_message().is_none());
+        assert!(task.error_message().is_none());
         task.set_error_message("Connection timeout".to_string());
-        assert_eq!(task.get_error_message(), Some("Connection timeout"));
+        assert_eq!(task.error_message(), Some("Connection timeout"));
     }
 
     #[test]

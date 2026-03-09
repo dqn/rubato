@@ -383,10 +383,10 @@ pub fn compare_model(model: &BMSModel, fixture: &Fixture) -> Vec<String> {
         ));
     }
 
-    if (model.get_min_bpm() - fixture.statistics.min_bpm).abs() > 0.001 {
+    if (model.min_bpm() - fixture.statistics.min_bpm).abs() > 0.001 {
         diffs.push(format!(
             "min_bpm: rust={} java={}",
-            model.get_min_bpm(),
+            model.min_bpm(),
             fixture.statistics.min_bpm
         ));
     }

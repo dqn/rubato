@@ -58,7 +58,7 @@ impl BmsTableManager {
     pub fn user_list(&self) -> &HashMap<String, Vec<DifficultyTableElement>> {
         &self.user_list
     }
-    pub fn get_memo_map(&self) -> &HashMap<String, String> {
+    pub fn memo_map(&self) -> &HashMap<String, String> {
         &self.memo_map
     }
     pub fn get_user_difficulty_table_elements(

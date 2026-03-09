@@ -221,7 +221,7 @@ impl LaneRenderer {
         }
         self.timeline_indices = indices;
 
-        self.minbpm = model.get_min_bpm();
+        self.minbpm = model.min_bpm();
         self.maxbpm = model.max_bpm();
 
         // Find main BPM (BPM with most notes)
@@ -343,7 +343,7 @@ impl LaneRenderer {
     pub fn calc_y_offset(tl: &TimeLine, prev_tl: &TimeLine, microtime: i64, rxhs: f64) -> f64 {
         if prev_tl.micro_time() + prev_tl.micro_stop() > microtime {
             // During a stop: full section distance
-            (tl.get_section() - prev_tl.get_section()) * prev_tl.scroll * rxhs
+            (tl.section() - prev_tl.section()) * prev_tl.scroll * rxhs
         } else {
             // Normal scrolling: proportional to time remaining
             let time_diff = tl.micro_time() - microtime;
@@ -351,7 +351,7 @@ impl LaneRenderer {
             if total_time == 0 {
                 0.0
             } else {
-                (tl.get_section() - prev_tl.get_section())
+                (tl.section() - prev_tl.section())
                     * prev_tl.scroll
                     * (time_diff as f64 / total_time as f64)
                     * rxhs
@@ -364,7 +364,7 @@ impl LaneRenderer {
         if tl.micro_time() == 0 {
             0.0
         } else {
-            tl.get_section() * (tl.micro_time() - microtime) as f64 / tl.micro_time() as f64 * rxhs
+            tl.section() * (tl.micro_time() - microtime) as f64 / tl.micro_time() as f64 * rxhs
         }
     }
 

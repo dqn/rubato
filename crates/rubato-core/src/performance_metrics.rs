@@ -109,7 +109,7 @@ impl PerformanceMetrics {
         }
     }
 
-    pub fn get_watch_names(&self) -> Vec<String> {
+    pub fn watch_names(&self) -> Vec<String> {
         let records = self
             .watch_records
             .lock()

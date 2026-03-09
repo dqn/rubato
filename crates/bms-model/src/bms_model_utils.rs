@@ -197,7 +197,7 @@ pub fn set_start_note_time(model: &mut BMSModel, starttime: i64) -> i64 {
         let first_bpm = model.timelines[0].bpm;
         let margin_section = (margin_time as f64) * first_bpm / 240000.0;
         for tl in &mut model.timelines {
-            tl.set_section(tl.get_section() + margin_section);
+            tl.set_section(tl.section() + margin_section);
             tl.set_micro_time(tl.micro_time() + margin_time * 1000);
         }
 

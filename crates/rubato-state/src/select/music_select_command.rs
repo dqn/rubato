@@ -118,7 +118,7 @@ impl MusicSelectCommand {
                         && let Some(song_bar) = selected.as_song_bar()
                     {
                         let song = song_bar.song_data();
-                        if !song.get_ipfs_str().is_empty() {
+                        if !song.ipfs_str().is_empty() {
                             let song_clone = song.clone();
                             if let Some(ref mut main) = selector.main
                                 && main.start_ipfs_download(&song_clone)

@@ -237,18 +237,15 @@ mod tests {
     }
 
     #[test]
-    fn test_config_get_override_download_url() {
+    fn test_config_override_download_url() {
         let mut config = Config::default();
 
         // Empty returns None
-        assert!(config.get_override_download_url().is_none());
+        assert!(config.override_download_url().is_none());
 
         // Non-empty returns Some
         config.network.override_download_url = "https://example.com".to_string();
-        assert_eq!(
-            config.get_override_download_url(),
-            Some("https://example.com")
-        );
+        assert_eq!(config.override_download_url(), Some("https://example.com"));
     }
 
     #[test]

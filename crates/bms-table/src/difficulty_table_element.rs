@@ -73,7 +73,7 @@ impl DifficultyTableElement {
         }
     }
 
-    pub fn get_package_url(&self) -> Option<&str> {
+    pub fn package_url(&self) -> Option<&str> {
         self.element.values.get("url_pack").and_then(|v| v.as_str())
     }
 

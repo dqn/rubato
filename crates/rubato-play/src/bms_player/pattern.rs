@@ -429,7 +429,7 @@ impl BMSPlayer {
 
         // BPM Guide check (Java lines 269-272)
         // BPM変化がなければBPMガイドなし
-        if config.display_settings.bpmguide && (self.model.get_min_bpm() < self.model.max_bpm()) {
+        if config.display_settings.bpmguide && (self.model.min_bpm() < self.model.max_bpm()) {
             self.assist = self.assist.max(1);
             score = false;
         }

@@ -147,7 +147,7 @@ impl MusicSelectInputProcessor {
             }
 
             // Mouse wheel scroll for target
-            let mut mov = -(input.get_scroll());
+            let mut mov = -(input.scroll());
             input.reset_scroll();
 
             self.analog_scroll_buffer += property.analog_change(input, MusicSelectKey::TargetUp)

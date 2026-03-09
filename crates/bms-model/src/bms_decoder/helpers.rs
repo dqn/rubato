@@ -254,7 +254,7 @@ pub(super) fn process_command_word(
         CmdDef {
             name: "LNOBJ",
             handler: |model, arg| {
-                if model.get_base() == 62 {
+                if model.base() == 62 {
                     match chart_decoder::parse_int62_str(arg, 0) {
                         Ok(v) => model.lnobj = v,
                         Err(_) => {

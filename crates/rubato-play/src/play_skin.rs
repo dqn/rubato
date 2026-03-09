@@ -60,11 +60,11 @@ impl PlaySkin {
         }
     }
 
-    pub fn get_lane_group_region(&self) -> Option<&[Rectangle]> {
+    pub fn lane_group_region(&self) -> Option<&[Rectangle]> {
         self.lanegroupregion.as_deref()
     }
 
-    pub fn get_lane_region(&self) -> Option<&[Rectangle]> {
+    pub fn lane_region(&self) -> Option<&[Rectangle]> {
         self.laneregion.as_deref()
     }
 }

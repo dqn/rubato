@@ -224,7 +224,7 @@ impl SkinBPMGraph {
             }
 
             self.bpm_data = speed_list;
-            self.minbpm = model.get_min_bpm();
+            self.minbpm = model.min_bpm();
             self.maxbpm = model.max_bpm();
         } else {
             self.bpm_data = Vec::new();

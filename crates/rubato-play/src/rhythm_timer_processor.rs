@@ -34,18 +34,18 @@ impl RhythmTimerProcessor {
 
                 if use_quarter_note_time {
                     quarter_note_times.push(timelines[i].micro_time());
-                    let section_line_section = timelines[i].get_section();
+                    let section_line_section = timelines[i].section();
                     let mut next_section_line_section =
-                        timelines[i].get_section() - section_line_section;
+                        timelines[i].section() - section_line_section;
                     let mut last = false;
                     for j in (i + 1)..timelines.len() {
                         if timelines[j].section_line {
                             next_section_line_section =
-                                timelines[j].get_section() - section_line_section;
+                                timelines[j].section() - section_line_section;
                             break;
                         } else if j == timelines.len() - 1 {
                             next_section_line_section =
-                                timelines[j].get_section() - section_line_section;
+                                timelines[j].section() - section_line_section;
                             last = true;
                         }
                     }
@@ -53,7 +53,7 @@ impl RhythmTimerProcessor {
                     while j <= next_section_line_section {
                         if last || j != next_section_line_section {
                             let mut prev_index = i;
-                            while timelines[prev_index].get_section() - section_line_section < j {
+                            while timelines[prev_index].section() - section_line_section < j {
                                 prev_index += 1;
                             }
                             prev_index -= 1;
@@ -61,7 +61,7 @@ impl RhythmTimerProcessor {
                             let bpm_safe = if bpm == 0.0 { 1.0 } else { bpm };
                             let time = timelines[prev_index].micro_time()
                                 + timelines[prev_index].micro_stop()
-                                + ((j + section_line_section - timelines[prev_index].get_section())
+                                + ((j + section_line_section - timelines[prev_index].section())
                                     * 240000000.0
                                     / bpm_safe) as i64;
                             quarter_note_times.push(time);
