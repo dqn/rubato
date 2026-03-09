@@ -570,11 +570,9 @@ impl PlayerConfig {
             if self.irconfig[i].is_none() {
                 continue;
             }
-            let name_i = self.irconfig[i].as_ref().map(|c| c.irname.clone());
-            if name_i.is_none() {
+            let Some(name_i) = self.irconfig[i].as_ref().map(|c| c.irname.clone()) else {
                 continue;
-            }
-            let name_i = name_i.expect("name_i");
+            };
             for j in (i + 1)..self.irconfig.len() {
                 if let Some(ref mut cfg_j) = self.irconfig[j]
                     && cfg_j.irname == name_i

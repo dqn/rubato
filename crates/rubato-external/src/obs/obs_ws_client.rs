@@ -839,13 +839,12 @@ impl ObsWsClient {
         });
     }
 
-    #[allow(clippy::overly_complex_bool_expr)]
     pub fn save_last_recording(&self, reason: &str) {
         let guard = lock_or_recover(&self.inner);
-        // Java: if (!this.isConnected && !canSendRequest()) — faithfully translated
-        if !guard.is_connected
-            && !(guard.is_connected && guard.is_identified && !guard.is_reconnecting)
-        {
+        // Java original: if (!this.isConnected && !canSendRequest())
+        // Simplified: the second conjunct is always true when !is_connected,
+        // so the condition reduces to just !is_connected.
+        if !guard.is_connected {
             return;
         }
 

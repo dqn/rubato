@@ -1,7 +1,4 @@
 #[cfg(test)]
-use std::path::PathBuf;
-
-#[cfg(test)]
 use crate::clear_type::ClearType;
 #[cfg(test)]
 use crate::course_data::CourseDataConstraint;

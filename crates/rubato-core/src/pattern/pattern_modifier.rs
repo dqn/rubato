@@ -191,7 +191,14 @@ pub fn create_pattern_modifier(
             RandomUnit::Note => {
                 Box::new(NoteShuffleModifier::new(chart_option, player, mode, config))
             }
-            _ => panic!("Unexpected value: {:?}", chart_option.unit()),
+            other => {
+                log::warn!(
+                    "Unhandled Random variant {:?} with unit {:?}, using identity modifier",
+                    chart_option,
+                    other
+                );
+                Box::new(IdentityModifier::new())
+            }
         },
     }
 }
@@ -348,7 +355,7 @@ mod tests {
         model.timelines = vec![tl];
         model.set_mode(Mode::BEAT_7K);
         let note = Note::new_normal(1);
-        &mut model.timelines[0].set_note(0, Some(note));
+        model.timelines[0].set_note(0, Some(note));
 
         let mut modifier = IdentityModifier::new();
         modifier.modify(&mut model);

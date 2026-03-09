@@ -28,12 +28,18 @@ impl GaugeModifier {
         match self {
             GaugeModifier::Total => {
                 if f > 0.0 {
+                    if model.total_notes() == 0 {
+                        return f;
+                    }
                     f * model.total as f32 / model.total_notes() as f32
                 } else {
                     f
                 }
             }
             GaugeModifier::LimitIncrement => {
+                if model.total_notes() == 0 {
+                    return f;
+                }
                 let pg = (0.15f32)
                     .min(((2.0 * model.total - 320.0) / model.total_notes() as f64) as f32)
                     .max(0.0);
@@ -324,10 +330,8 @@ mod tests {
     fn test_gauge_modifier_total_positive() {
         let model = make_model();
         let result = GaugeModifier::Total.modify(1.0, &model);
-        // f * total / total_notes; total_notes = 0 for empty model
-        // 1.0 * 300.0 / 0 = inf (or NaN), but let us check with notes > 0
-        // With 0 notes, this would be inf; that's the Java behavior too
-        assert!(result.is_infinite() || result.is_nan() || result > 0.0);
+        // total_notes = 0 for empty model, so modifier returns f unchanged
+        assert_eq!(result, 1.0);
     }
 
     #[test]

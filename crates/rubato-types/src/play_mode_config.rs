@@ -400,21 +400,22 @@ impl MouseScratchConfig {
     }
 
     pub fn key_string(&self, index: usize) -> Option<&'static str> {
-        if self.keys[index] == -1 {
+        let key = self.keys[index];
+        if key < 0 || (key as usize) >= MOUSESCRATCH_STRING.len() {
             return None;
         }
-        Some(MOUSESCRATCH_STRING[self.keys[index] as usize])
+        Some(MOUSESCRATCH_STRING[key as usize])
     }
 
     pub fn start_string(&self) -> Option<&'static str> {
-        if self.start == -1 {
+        if self.start < 0 || (self.start as usize) >= MOUSESCRATCH_STRING.len() {
             return None;
         }
         Some(MOUSESCRATCH_STRING[self.start as usize])
     }
 
     pub fn select_string(&self) -> Option<&'static str> {
-        if self.select == -1 {
+        if self.select < 0 || (self.select as usize) >= MOUSESCRATCH_STRING.len() {
             return None;
         }
         Some(MOUSESCRATCH_STRING[self.select as usize])

@@ -21,6 +21,9 @@ use rubato_types::imgui_notify::ImGuiNotify;
 ///
 /// This class is not a real IR connection, but the original repo is. It keeps the
 /// original form to make things easier.
+// Accepted trade-off: plain HTTP, matching the Java original. The LR2IR server
+// does not support HTTPS. Credentials (IR account ID/password) are transmitted
+// unencrypted. Users should be aware of this limitation.
 static IR_URL: &str = "http://dream-pro.info/~lavalse/LR2IR/2";
 
 lazy_static::lazy_static! {
@@ -60,7 +63,10 @@ impl LR2IRConnection {
 
     fn make_post_request(uri: &str, data: &str) -> Option<String> {
         let url = format!("{}{}", IR_URL, uri);
-        let client = reqwest::blocking::Client::new();
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .unwrap_or_else(|_| reqwest::blocking::Client::new());
         match client
             .post(&url)
             .header("Content-Type", "application/x-www-form-urlencoded")
@@ -100,11 +106,14 @@ impl LR2IRConnection {
     ///
     /// Returns a pair: (local_score, leaderboard_entries).
     /// The local score can be None.
-    pub fn score_data(chart: &IRChartData) -> (Option<IRScoreData>, Vec<LeaderboardEntry>) {
+    pub fn score_data(
+        chart: &IRChartData,
+        player_id: &str,
+    ) -> (Option<IRScoreData>, Vec<LeaderboardEntry>) {
         if chart.md5.is_empty() {
             return (None, Vec::new());
         }
-        let request_url = format!("songmd5={}&id={}&lastupdate=", chart.md5, "114328");
+        let request_url = format!("songmd5={}&id={}&lastupdate=", chart.md5, player_id);
 
         let score_data = {
             let cache = LR2_IR_RANKING_CACHE
@@ -543,7 +552,7 @@ mod tests {
             has_stop: false,
             values: std::collections::HashMap::new(),
         };
-        let (local, entries) = LR2IRConnection::score_data(&chart);
+        let (local, entries) = LR2IRConnection::score_data(&chart, "0");
         assert!(local.is_none());
         assert!(entries.is_empty());
     }

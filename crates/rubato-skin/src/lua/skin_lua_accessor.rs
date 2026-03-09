@@ -593,7 +593,7 @@ struct LuaBooleanProperty {
 }
 
 // SAFETY: The Lua VM is accessed single-threaded in beatoraja's skin system.
-// debug_assert in get() verifies this invariant at runtime in debug builds.
+// assert in get() verifies this invariant at runtime in all builds.
 unsafe impl Send for LuaBooleanProperty {}
 unsafe impl Sync for LuaBooleanProperty {}
 
@@ -603,7 +603,7 @@ impl BooleanProperty for LuaBooleanProperty {
     }
 
     fn get(&self, _state: &dyn MainState) -> bool {
-        debug_assert_eq!(
+        assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaBooleanProperty must be accessed on the thread where it was created"
@@ -638,13 +638,13 @@ struct LuaIntegerProperty {
 
 // SAFETY: LuaIntegerProperty contains Arc<Lua> which is !Send because mlua::Lua
 // (without the "send" feature) is not thread-safe. Access is restricted to a single
-// thread; debug_assert in get() verifies this invariant at runtime in debug builds.
+// thread; assert in get() verifies this invariant at runtime in all builds.
 unsafe impl Send for LuaIntegerProperty {}
 unsafe impl Sync for LuaIntegerProperty {}
 
 impl IntegerProperty for LuaIntegerProperty {
     fn get(&self, _state: &dyn MainState) -> i32 {
-        debug_assert_eq!(
+        assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaIntegerProperty must be accessed on the thread where it was created"
@@ -678,13 +678,13 @@ pub struct LuaFloatProperty {
 
 // SAFETY: LuaFloatProperty contains Arc<Lua> which is !Send because mlua::Lua
 // (without the "send" feature) is not thread-safe. Access is restricted to a single
-// thread; debug_assert in get() verifies this invariant at runtime in debug builds.
+// thread; assert in get() verifies this invariant at runtime in all builds.
 unsafe impl Send for LuaFloatProperty {}
 unsafe impl Sync for LuaFloatProperty {}
 
 impl FloatProperty for LuaFloatProperty {
     fn get(&self, _state: &dyn MainState) -> f32 {
-        debug_assert_eq!(
+        assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaFloatProperty must be accessed on the thread where it was created"
@@ -718,13 +718,13 @@ struct LuaStringProperty {
 
 // SAFETY: LuaStringProperty contains Arc<Lua> which is !Send because mlua::Lua
 // (without the "send" feature) is not thread-safe. Access is restricted to a single
-// thread; debug_assert in get() verifies this invariant at runtime in debug builds.
+// thread; assert in get() verifies this invariant at runtime in all builds.
 unsafe impl Send for LuaStringProperty {}
 unsafe impl Sync for LuaStringProperty {}
 
 impl StringProperty for LuaStringProperty {
     fn get(&self, _state: &dyn MainState) -> String {
-        debug_assert_eq!(
+        assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaStringProperty must be accessed on the thread where it was created"
@@ -757,13 +757,13 @@ pub struct LuaTimerProperty {
 
 // SAFETY: LuaTimerProperty contains Arc<Lua> which is !Send because mlua::Lua
 // (without the "send" feature) is not thread-safe. Access is restricted to a single
-// thread; debug_assert in get_micro() verifies this invariant at runtime in debug builds.
+// thread; assert in get_micro() verifies this invariant at runtime in all builds.
 unsafe impl Send for LuaTimerProperty {}
 unsafe impl Sync for LuaTimerProperty {}
 
 impl TimerProperty for LuaTimerProperty {
     fn get_micro(&self, _state: &dyn MainState) -> i64 {
-        debug_assert_eq!(
+        assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaTimerProperty must be accessed on the thread where it was created"
@@ -996,10 +996,9 @@ mod tests {
         }
     }
 
-    /// Verify that the debug_assert fires when a Lua property is accessed from a
-    /// different thread than where it was created. This test only runs in debug mode.
+    /// Verify that the thread-safety assert fires when a Lua property is accessed from a
+    /// different thread than where it was created.
     #[test]
-    #[cfg(debug_assertions)]
     fn boolean_property_panics_on_wrong_thread() {
         let accessor = SkinLuaAccessor::new(true);
         let prop = accessor
@@ -1007,7 +1006,7 @@ mod tests {
             .expect("should load boolean property");
         let state = MockMainState::default();
 
-        // Access from a different thread should panic due to debug_assert
+        // Access from a different thread should panic due to thread-safety assert
         let handle = std::thread::spawn(move || {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 prop.get(&state);
@@ -1020,9 +1019,8 @@ mod tests {
         handle.join().expect("thread should complete");
     }
 
-    /// Verify that the debug_assert fires for integer property on wrong thread.
+    /// Verify that the thread-safety assert fires for integer property on wrong thread.
     #[test]
-    #[cfg(debug_assertions)]
     fn integer_property_panics_on_wrong_thread() {
         let accessor = SkinLuaAccessor::new(true);
         let prop = accessor

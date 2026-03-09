@@ -1,11 +1,7 @@
 #[cfg(test)]
 use std::path::PathBuf;
 
-#[cfg(test)]
-use crate::main_controller::MainController;
 use crate::main_state::MainStateData;
-#[cfg(test)]
-use crate::main_state::{MainState, MainStateType};
 use crate::player_config::PlayerConfig;
 use crate::skin_config::SkinConfig;
 #[cfg(test)]

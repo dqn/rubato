@@ -273,7 +273,13 @@ impl Randomizer {
             Random::SRandomPlayable => {
                 Randomizer::NoMurioshi(NoMurioshiRandomizer::new(threshold_millis))
             }
-            _ => panic!("Unexpected value: {:?}", r),
+            other => {
+                log::warn!(
+                    "Unhandled Random variant {:?} for Randomizer, using SRandom as fallback",
+                    other
+                );
+                Randomizer::SRandom(SRandomizer::new(SRAN_THRESHOLD, AssistLevel::None))
+            }
         };
 
         randomizer.set_mode(*mode);

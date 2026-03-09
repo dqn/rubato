@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::atomic::{AtomicI32, AtomicUsize, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::thread;
 
@@ -43,6 +43,8 @@ pub struct HttpDownloadProcessor {
     submitted_urls: Mutex<HashSet<String>>,
     // In-memory self-add id generator
     id_generator: AtomicI32,
+    // Active download thread count, enforces MAXIMUM_DOWNLOAD_COUNT
+    active_downloads: Arc<AtomicUsize>,
     // A reference to the main controller, only used for updating folder and rendering the message
     main: Arc<dyn MainControllerRef>,
     http_download_source: Arc<dyn HttpDownloadSource>,
@@ -57,6 +59,7 @@ impl HttpDownloadProcessor {
         HttpDownloadProcessor {
             download_directory,
             tasks: Arc::new(Mutex::new(HashMap::new())),
+            active_downloads: Arc::new(AtomicUsize::new(0)),
             submitted_urls: Mutex::new(HashSet::new()),
             id_generator: AtomicI32::new(0),
             main,
@@ -158,13 +161,30 @@ impl HttpDownloadProcessor {
     /// 3. Update download directory
     /// 4. Delete the archive file
     pub fn execute_download_task(&self, download_task: Arc<Mutex<DownloadTask>>) {
+        if self.active_downloads.load(Ordering::Acquire) >= MAXIMUM_DOWNLOAD_COUNT {
+            log::warn!(
+                "[HttpDownloadProcessor] Maximum concurrent downloads ({}) reached, rejecting task",
+                MAXIMUM_DOWNLOAD_COUNT
+            );
+            let mut task = download_task.lock().expect("download_task lock poisoned");
+            task.set_download_task_status(DownloadTaskStatus::Error);
+            return;
+        }
+
         let download_directory = self.download_directory.clone();
         let main = self.main.clone();
         let source_name = self.http_download_source.name().to_string();
+        let active_downloads = self.active_downloads.clone();
+        active_downloads.fetch_add(1, Ordering::AcqRel);
 
-        // Java uses ExecutorService.submit() with a fixed thread pool.
-        // Here we simply spawn a thread per task. A bounded thread pool could be added later.
         thread::spawn(move || {
+            struct DownloadGuard(Arc<AtomicUsize>);
+            impl Drop for DownloadGuard {
+                fn drop(&mut self) {
+                    self.0.fetch_sub(1, Ordering::AcqRel);
+                }
+            }
+            let _guard = DownloadGuard(active_downloads);
             let (task_name, download_url, hash) = {
                 let task = download_task.lock().expect("download_task lock poisoned");
                 (
@@ -308,7 +328,11 @@ fn download_file_from_url(
         }
     }
     if !candidate_file_name.is_empty() {
-        file_name = candidate_file_name;
+        // Sanitize filename to prevent path traversal from malicious Content-Disposition headers
+        file_name = std::path::Path::new(&candidate_file_name)
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or(candidate_file_name);
     }
 
     let content_length = response.content_length().map(|l| l as i64).unwrap_or(-1);

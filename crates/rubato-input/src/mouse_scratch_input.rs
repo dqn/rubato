@@ -89,7 +89,10 @@ impl MouseScratchInput {
             }
 
             for (i, &axis) in self.keys.iter().enumerate() {
-                if axis >= 0 && self.mouse_scratch_changed[axis as usize] {
+                if axis >= 0
+                    && (axis as usize) < self.mouse_scratch_changed.len()
+                    && self.mouse_scratch_changed[axis as usize]
+                {
                     callback.key_changed_from_keyboard(
                         microtime,
                         i,
@@ -101,6 +104,7 @@ impl MouseScratchInput {
 
             if !self.control.is_empty()
                 && self.control[0] >= 0
+                && (self.control[0] as usize) < self.mouse_scratch_changed.len()
                 && self.mouse_scratch_changed[self.control[0] as usize]
             {
                 callback.start_changed(self.mouse_scratch_state[self.control[0] as usize]);
@@ -109,6 +113,7 @@ impl MouseScratchInput {
 
             if self.control.len() > 1
                 && self.control[1] >= 0
+                && (self.control[1] as usize) < self.mouse_scratch_changed.len()
                 && self.mouse_scratch_changed[self.control[1] as usize]
             {
                 callback.set_select_pressed(self.mouse_scratch_state[self.control[1] as usize]);
