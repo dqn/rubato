@@ -240,6 +240,14 @@ pub trait MainState {
     fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
         None
     }
+
+    /// Return the BMS model if this state owns one.
+    ///
+    /// Used by MainController to call audio.set_model() during state transition
+    /// so keysounds are loaded before playback begins.
+    fn bms_model(&self) -> Option<&bms_model::bms_model::BMSModel> {
+        None
+    }
 }
 
 /// Trait for skin drawing integration.

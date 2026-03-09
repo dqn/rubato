@@ -951,6 +951,7 @@ struct MockAudioDriver {
     global_pitch: f32,
     play_count: i32,
     stop_count: i32,
+    set_model_count: i32,
 }
 
 impl MockAudioDriver {
@@ -959,6 +960,7 @@ impl MockAudioDriver {
             global_pitch: 1.0,
             play_count: 0,
             stop_count: 0,
+            set_model_count: 0,
         }
     }
 }
@@ -975,7 +977,9 @@ impl AudioDriver for MockAudioDriver {
         self.stop_count += 1;
     }
     fn dispose_path(&mut self, _path: &str) {}
-    fn set_model(&mut self, _model: &BMSModel) {}
+    fn set_model(&mut self, _model: &BMSModel) {
+        self.set_model_count += 1;
+    }
     fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
     fn abort(&mut self) {}
     fn get_progress(&self) -> f32 {
@@ -1391,4 +1395,110 @@ fn test_save_config_writes_player_config_json() {
 fn test_is_exit_requested_initially_false() {
     let mc = make_test_controller();
     assert!(!mc.is_exit_requested());
+}
+
+// --- set_model wiring test ---
+
+use std::sync::atomic::{AtomicI32, Ordering as AtomicOrdering};
+
+/// A test state that owns a BMSModel and exposes it via bms_model().
+struct ModelTestState {
+    state_data: MainStateData,
+    model: BMSModel,
+}
+
+impl ModelTestState {
+    fn new() -> Self {
+        Self {
+            state_data: MainStateData::new(TimerManager::new()),
+            model: BMSModel::new(),
+        }
+    }
+}
+
+impl MainState for ModelTestState {
+    fn state_type(&self) -> Option<MainStateType> {
+        Some(MainStateType::Play)
+    }
+
+    fn main_state_data(&self) -> &MainStateData {
+        &self.state_data
+    }
+
+    fn main_state_data_mut(&mut self) -> &mut MainStateData {
+        &mut self.state_data
+    }
+
+    fn create(&mut self) {}
+    fn render(&mut self) {}
+
+    fn bms_model(&self) -> Option<&BMSModel> {
+        Some(&self.model)
+    }
+}
+
+/// Mock AudioDriver that uses a shared counter for set_model calls.
+struct SetModelTrackingAudioDriver {
+    set_model_count: Arc<AtomicI32>,
+}
+
+impl AudioDriver for SetModelTrackingAudioDriver {
+    fn play_path(&mut self, _path: &str, _volume: f32, _loop_play: bool) {}
+    fn set_volume_path(&mut self, _path: &str, _volume: f32) {}
+    fn is_playing_path(&self, _path: &str) -> bool {
+        false
+    }
+    fn stop_path(&mut self, _path: &str) {}
+    fn dispose_path(&mut self, _path: &str) {}
+    fn set_model(&mut self, _model: &BMSModel) {
+        self.set_model_count.fetch_add(1, AtomicOrdering::SeqCst);
+    }
+    fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
+    fn abort(&mut self) {}
+    fn get_progress(&self) -> f32 {
+        1.0
+    }
+    fn play_note(&mut self, _n: &Note, _volume: f32, _pitch: i32) {}
+    fn play_judge(&mut self, _judge: i32, _fast: bool) {}
+    fn stop_note(&mut self, _n: Option<&Note>) {}
+    fn set_volume_note(&mut self, _n: &Note, _volume: f32) {}
+    fn set_global_pitch(&mut self, _pitch: f32) {}
+    fn get_global_pitch(&self) -> f32 {
+        1.0
+    }
+    fn dispose_old(&mut self) {}
+    fn dispose(&mut self) {}
+}
+
+struct ModelTestStateFactory;
+
+impl StateFactory for ModelTestStateFactory {
+    fn create_state(
+        &self,
+        _state_type: MainStateType,
+        _controller: &mut MainController,
+    ) -> Option<StateCreateResult> {
+        Some(StateCreateResult {
+            state: Box::new(ModelTestState::new()),
+            target_score: None,
+        })
+    }
+}
+
+#[test]
+fn test_transition_to_play_calls_audio_set_model() {
+    let set_model_count = Arc::new(AtomicI32::new(0));
+    let mut mc = make_test_controller();
+    mc.set_audio_driver(Box::new(SetModelTrackingAudioDriver {
+        set_model_count: Arc::clone(&set_model_count),
+    }));
+    mc.set_state_factory(Box::new(ModelTestStateFactory));
+
+    mc.change_state(MainStateType::Play);
+
+    assert_eq!(
+        set_model_count.load(AtomicOrdering::SeqCst),
+        1,
+        "audio.set_model() must be called when transitioning to a state that has a BMSModel"
+    );
 }

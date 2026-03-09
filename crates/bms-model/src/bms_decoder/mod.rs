@@ -161,7 +161,7 @@ impl BMSDecoder {
                         continue;
                     };
                     match arg.trim().parse::<i32>() {
-                        Ok(r) => {
+                        Ok(r) if r >= 1 => {
                             randoms.push(r);
                             if let Some(sr) = selected_random {
                                 if randoms.len() - 1 < sr.len() {
@@ -176,6 +176,12 @@ impl BMSDecoder {
                                 crandom.push(val);
                                 srandoms.push(val);
                             }
+                        }
+                        Ok(_) => {
+                            self.log.push(DecodeLog::new(
+                                State::Warning,
+                                "#RANDOMの値は1以上である必要があります",
+                            ));
                         }
                         Err(_) => {
                             self.log.push(DecodeLog::new(
@@ -1255,5 +1261,59 @@ mod tests {
         assert_eq!(model.artist, "\u{4f5c}\u{66f2}\u{8005}");
         assert_eq!(model.genre, "\u{30c8}\u{30e9}\u{30f3}\u{30b9}");
         assert!((model.bpm - 140.0).abs() < f64::EPSILON);
+    }
+
+    // --- #RANDOM validation regression tests ---
+
+    #[test]
+    fn random_negative_value_rejected() {
+        // #RANDOM -5 is invalid (must be >= 1). The decoder should log a
+        // warning and not push to crandom, so the subsequent #IF has no
+        // matching RANDOM context.
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#WAV01 kick.wav",
+            "#RANDOM -5",
+            "#IF 1",
+            "#00111:01",
+            "#ENDIF",
+            "#ENDRANDOM",
+        ]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        // Verify that the decoder emitted a warning about invalid #RANDOM value.
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.state == State::Warning && l.message.contains("#RANDOM")),
+            "Expected warning log about invalid #RANDOM value"
+        );
+    }
+
+    #[test]
+    fn random_zero_value_rejected() {
+        // #RANDOM 0 is invalid (must be >= 1). Same behavior as negative.
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#WAV01 kick.wav",
+            "#RANDOM 0",
+            "#IF 1",
+            "#00111:01",
+            "#ENDIF",
+            "#ENDRANDOM",
+        ]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        // Verify that the decoder emitted a warning about invalid #RANDOM value.
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.state == State::Warning && l.message.contains("#RANDOM")),
+            "Expected warning log about invalid #RANDOM value"
+        );
     }
 }

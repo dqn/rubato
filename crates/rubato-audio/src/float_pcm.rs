@@ -214,6 +214,9 @@ impl FloatPCM {
     ///
     /// Translated from: FloatPCM.slice
     pub fn slice(&self, starttime: i64, duration: i64) -> Option<FloatPCM> {
+        if starttime < 0 {
+            return None;
+        }
         let mut duration = duration;
         if duration == 0
             || starttime + duration

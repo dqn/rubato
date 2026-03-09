@@ -114,6 +114,16 @@ impl MainController {
         // Create the new state
         new_state.create();
 
+        // Load keysounds from the BMS model into the audio driver.
+        // Java: audio.setModel(model) is called during resource loading in BMSPlayer;
+        // in Rust the audio driver is owned by MainController, so we call it here
+        // after create() has set up the model.
+        if let Some(model) = new_state.bms_model()
+            && let Some(ref mut audio) = self.audio
+        {
+            audio.set_model(model);
+        }
+
         // In Java: if(newState.getSkin() != null) { newState.getSkin().prepare(newState); }
         if let Some(ref mut skin) = new_state.main_state_data_mut().skin {
             skin.prepare_skin();

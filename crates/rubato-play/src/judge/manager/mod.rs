@@ -132,7 +132,7 @@ impl MultiBadCollector {
     }
 
     fn add(&mut self, note_idx: usize, dmtime: i64) {
-        if !self.enabled {
+        if !self.enabled || self.size >= 256 {
             return;
         }
         self.note_list.push(note_idx);
@@ -147,7 +147,7 @@ impl MultiBadCollector {
         let tnote_idx = tnote.expect("tnote");
 
         // Find tnote's dmtime in the collector
-        let mut tdmtime: i64 = -1;
+        let mut tdmtime: Option<i64> = None;
         for (&note, &time) in self
             .note_list
             .iter()
@@ -155,13 +155,13 @@ impl MultiBadCollector {
             .take(self.size)
         {
             if note == tnote_idx {
-                tdmtime = time;
+                tdmtime = Some(time);
             }
         }
-        if tdmtime == -1 {
+        let Some(tdmtime) = tdmtime else {
             // tnote not in collector - should not happen
             return;
-        }
+        };
 
         let good_start = self.mjudge[2][0];
         let good_end = self.mjudge[2][1];

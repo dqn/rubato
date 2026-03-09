@@ -728,3 +728,73 @@ fn judge_vanish_bounds_checked_with_short_vec() {
     // Index 0 should return the actual value
     assert!(jm.judge_vanish.first().copied().unwrap_or(false));
 }
+
+// --- MultiBadCollector regression tests ---
+
+#[test]
+fn multi_bad_capacity_guard() {
+    let mut collector = MultiBadCollector::new();
+    for i in 0..257 {
+        collector.add(i, i as i64 * 100);
+    }
+    // Capacity is capped at 256; the 257th add should be rejected.
+    assert_eq!(collector.size, 256);
+    assert_eq!(collector.note_list.len(), 256);
+    assert_eq!(collector.time_list.len(), 256);
+}
+
+#[test]
+fn multi_bad_filter_with_minus_one_dmtime() {
+    // Regression: filter() must find a note whose dmtime is -1,
+    // not treat -1 as "not found".
+    let mut collector = MultiBadCollector::new();
+    // Set up mjudge windows: good = [-50, 50], bad = [-200, 200]
+    collector.set_judge(&[
+        [-1000, 1000], // PG
+        [-500, 500],   // GR
+        [-50, 50],     // GD (good)
+        [-200, 200],   // BD (bad)
+        [-300, 300],   // PR
+    ]);
+
+    // Add two notes: note 0 with dmtime=-1 (the target), note 1 with dmtime=-100
+    collector.add(0, -1);
+    collector.add(1, -100);
+
+    // Build a minimal JudgeNote slice (filter reads notes but only uses indices here)
+    let notes = vec![
+        JudgeNote {
+            time_us: 1000,
+            end_time_us: 0,
+            lane: 0,
+            wav: 1,
+            kind: bms_model::judge_note::JudgeNoteKind::Normal,
+            ln_type: 0,
+            damage: 0.0,
+            pair_index: None,
+        },
+        JudgeNote {
+            time_us: 2000,
+            end_time_us: 0,
+            lane: 1,
+            wav: 1,
+            kind: bms_model::judge_note::JudgeNoteKind::Normal,
+            ln_type: 0,
+            damage: 0.0,
+            pair_index: None,
+        },
+    ];
+
+    // Filter with note 0 as the target note (tnote).
+    // dmtime=-1 is within bad range [-200, 200] but also within good range [-50, 50],
+    // so note 0 is excluded as tnote, and note 1 (dmtime=-100) is in bad but not good
+    // range, so it should be kept.
+    collector.filter(Some(0), &notes);
+
+    // The key assertion: filter did NOT early-return (which would happen if
+    // dmtime=-1 were treated as "not found"). Note 1 with dmtime=-100 is in
+    // bad range [-200, 200] and NOT in good range [-50, 50], so it survives.
+    assert_eq!(collector.size, 1);
+    assert_eq!(collector.note_list[0], 1);
+    assert_eq!(collector.time_list[0], -100);
+}

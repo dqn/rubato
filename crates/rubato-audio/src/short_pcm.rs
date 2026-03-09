@@ -203,6 +203,9 @@ impl ShortPCM {
     ///
     /// Translated from: ShortPCM.slice
     pub fn slice(&self, starttime: i64, duration: i64) -> Option<ShortPCM> {
+        if starttime < 0 {
+            return None;
+        }
         let mut duration = duration;
         if duration == 0
             || starttime + duration
@@ -529,6 +532,15 @@ mod tests {
         let pcm = ShortPCM::new(1, 44100, 0, 4, vec![100, 200, 300, 400]);
         let result = pcm.change_frequency(2.0);
         assert_eq!(result.sample.len(), 2);
+    }
+
+    #[test]
+    fn slice_negative_starttime_returns_none() {
+        // Regression: negative starttime must return None immediately,
+        // not attempt arithmetic that could underflow or produce garbage.
+        let pcm = ShortPCM::new(1, 44100, 0, 4, vec![500, 250, 100, 50]);
+        let result = pcm.slice(-1000, 0);
+        assert!(result.is_none());
     }
 }
 

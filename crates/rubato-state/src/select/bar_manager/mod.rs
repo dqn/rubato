@@ -660,10 +660,12 @@ impl BarManager {
                         })
                         .collect();
 
+                    // TODO: Implement actual filter evaluation using score_cache and songdb.
+                    // Currently bypassed: random_folder.filter() criteria are ignored and all
+                    // targets are returned unfiltered. Needs &mut score_cache to evaluate
+                    // filter keys against each song's score data.
                     let filtered_targets = if random_folder.filter().is_some() {
                         if let Some(ref mut _ctx_inner) = ctx.score_cache.as_ref() {
-                            // Filter by score data - requires mutable cache access
-                            // Simplified: use targets as-is since we'd need &mut
                             random_targets
                         } else {
                             random_targets

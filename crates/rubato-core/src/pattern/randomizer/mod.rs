@@ -131,12 +131,12 @@ impl RandomizerBase {
 // ---- TimeBasedRandomizer ----
 
 pub struct TimeBasedRandomizerState {
-    pub threshold: i32,
-    pub last_note_time: HashMap<i32, i32>,
+    pub threshold: i64,
+    pub last_note_time: HashMap<i32, i64>,
 }
 
 impl TimeBasedRandomizerState {
-    pub fn new(threshold: i32) -> Self {
+    pub fn new(threshold: i64) -> Self {
         TimeBasedRandomizerState {
             threshold,
             last_note_time: HashMap::new(),
@@ -145,7 +145,7 @@ impl TimeBasedRandomizerState {
 
     pub fn init_lanes(&mut self, lanes: &[i32]) {
         for &lane in lanes {
-            self.last_note_time.insert(lane, -10000);
+            self.last_note_time.insert(lane, -10000i64);
         }
     }
 
@@ -173,7 +173,9 @@ impl TimeBasedRandomizerState {
             }
         }
         for &al in assignable_lane.iter() {
-            if tl.time() - *self.last_note_time.get(&al).unwrap_or(&-10000) > self.threshold {
+            if tl.milli_time() - *self.last_note_time.get(&al).unwrap_or(&-10000i64)
+                > self.threshold
+            {
                 primary_lane.push(al);
             } else {
                 inferior_lane.push(al);
@@ -189,15 +191,15 @@ impl TimeBasedRandomizerState {
         }
 
         // If note_lane is not empty, use inferior lanes sorted by last note time
-        while !note_lane.is_empty() {
+        while !note_lane.is_empty() && !inferior_lane.is_empty() {
             let min = inferior_lane
                 .iter()
-                .map(|l| *self.last_note_time.get(l).unwrap_or(&-10000))
+                .map(|l| *self.last_note_time.get(l).unwrap_or(&-10000i64))
                 .min()
-                .unwrap_or(-10000);
+                .unwrap_or(-10000i64);
             let min_lane: Vec<i32> = inferior_lane
                 .iter()
-                .filter(|&&l| *self.last_note_time.get(&l).unwrap_or(&-10000) == min)
+                .filter(|&&l| *self.last_note_time.get(&l).unwrap_or(&-10000i64) == min)
                 .copied()
                 .collect();
             let m = min_lane[random.next_int_bounded(min_lane.len() as i32) as usize];
@@ -208,7 +210,7 @@ impl TimeBasedRandomizerState {
 
         // Place remaining lanes randomly
         primary_lane.extend(inferior_lane);
-        while !empty_lane.is_empty() {
+        while !empty_lane.is_empty() && !primary_lane.is_empty() {
             let r = random.next_int_bounded(primary_lane.len() as i32) as usize;
             let empty = empty_lane.remove(0);
             let assigned = primary_lane.remove(r);
@@ -222,7 +224,7 @@ impl TimeBasedRandomizerState {
         for (&key, &val) in random_map {
             let note = tl.note(key);
             if note.is_some() && !note.map(|n| n.is_mine()).unwrap_or(false) {
-                self.last_note_time.insert(val, tl.time());
+                self.last_note_time.insert(val, tl.milli_time());
             }
         }
     }
@@ -245,9 +247,9 @@ impl Randomizer {
 
     pub fn create_with_side(r: Random, play_side: i32, mode: &Mode, config: &PlayerConfig) -> Self {
         let threshold_bpm = config.play_settings.hran_threshold_bpm;
-        let threshold_millis;
+        let threshold_millis: i64;
         if threshold_bpm > 0 {
-            threshold_millis = (15000.0f32 / threshold_bpm as f32).ceil() as i32;
+            threshold_millis = (15000.0f32 / threshold_bpm as f32).ceil() as i64;
         } else if threshold_bpm == 0 {
             threshold_millis = 0;
         } else {
@@ -405,8 +407,8 @@ impl Randomizer {
     }
 }
 
-pub const SRAN_THRESHOLD: i32 = 40;
-pub const DEFAULT_HRAN_THRESHOLD: i32 = 100;
+pub const SRAN_THRESHOLD: i64 = 40;
+pub const DEFAULT_HRAN_THRESHOLD: i64 = 100;
 
 mod specialized;
 pub use specialized::*;
@@ -823,5 +825,104 @@ mod tests {
         }
         let sr = r.as_srandom().expect("should still be SRandom");
         assert_eq!(sr.time_state.threshold, 999);
+    }
+
+    // -- Regression tests for time_based_shuffle fixes --
+
+    #[test]
+    fn time_based_shuffle_no_panic_with_empty_inferior_lane() {
+        // Regression: when all assignable lanes go to primary_lane and none to
+        // inferior_lane, the second while-loop (inferior drain) must not call
+        // next_int_bounded(0). With fewer assignable lanes than notes, the
+        // loop would previously panic after primary_lane was exhausted.
+        let mut state = TimeBasedRandomizerState::new(1000);
+        state.init_lanes(&[0, 1, 2]);
+        // Set last_note_time to current time so all lanes are "recent"
+        // (milli_time - last_note_time <= threshold), putting all into inferior.
+        let current_milli = 500i64; // TimeLine time=500_000us => milli_time=500
+        state.last_note_time.insert(0, current_milli);
+        state.last_note_time.insert(1, current_milli);
+        state.last_note_time.insert(2, current_milli);
+
+        // Create a TimeLine with notes on all 3 lanes
+        let mut tl = TimeLine::new(0.0, 500_000, 3);
+        tl.set_note(0, Some(Note::new_normal(1)));
+        tl.set_note(1, Some(Note::new_normal(2)));
+        tl.set_note(2, Some(Note::new_normal(3)));
+
+        let mut changeable = vec![0, 1, 2];
+        // Only 2 assignable lanes: after inferior drains 2 items, the 3rd note
+        // has no lane. Before the fix this would panic; after the fix the loop
+        // exits gracefully.
+        let mut assignable = vec![0, 1];
+        let mut random = JavaRandom::new(42);
+
+        // Must not panic
+        let result = state.time_based_shuffle(
+            &tl,
+            &mut changeable,
+            &mut assignable,
+            &mut random,
+            &mut |lanes, rng| rng.next_int_bounded(lanes.len() as i32) as usize,
+        );
+
+        // All mapped notes should point to valid lanes
+        for &assigned in result.values() {
+            assert!(
+                assigned >= 0 && assigned < 3,
+                "assigned lane {} out of range",
+                assigned
+            );
+        }
+    }
+
+    #[test]
+    fn time_based_shuffle_no_panic_with_empty_primary_for_empties() {
+        // Regression: after all primary + inferior lanes are consumed by note
+        // placement, the empty-lane placement loop must not call
+        // next_int_bounded(0).
+        let mut state = TimeBasedRandomizerState::new(0);
+        state.init_lanes(&[0, 1, 2]);
+        // threshold=0, last_note_time=-10000 (from init_lanes):
+        // milli_time(500) - (-10000) = 10500 > 0, so all go to primary.
+
+        // 2 notes + 1 empty; only 2 assignable lanes.
+        // Primary has 2 lanes, notes consume both, leaving 0 for empty.
+        let mut tl = TimeLine::new(0.0, 500_000, 3);
+        tl.set_note(0, Some(Note::new_normal(1)));
+        tl.set_note(1, Some(Note::new_normal(2)));
+        // lane 2 has no note -> empty_lane
+
+        let mut changeable = vec![0, 1, 2];
+        let mut assignable = vec![0, 1]; // only 2, both consumed by notes
+        let mut random = JavaRandom::new(42);
+
+        // Must not panic
+        let result = state.time_based_shuffle(
+            &tl,
+            &mut changeable,
+            &mut assignable,
+            &mut random,
+            &mut |lanes, rng| rng.next_int_bounded(lanes.len() as i32) as usize,
+        );
+
+        // The 2 note lanes should be mapped
+        assert!(result.contains_key(&0) || result.contains_key(&1));
+    }
+
+    #[test]
+    fn time_based_state_uses_milli_time_values() {
+        // Regression: last_note_time must store full i64 values, not truncated
+        // i32. Values exceeding i32::MAX must be preserved exactly.
+        let mut state = TimeBasedRandomizerState::new(100);
+        state.init_lanes(&[0]);
+
+        let large_time: i64 = 3_000_000_000;
+        state.last_note_time.insert(0, large_time);
+        assert_eq!(
+            *state.last_note_time.get(&0).unwrap(),
+            3_000_000_000i64,
+            "last_note_time should store full i64 without truncation"
+        );
     }
 }

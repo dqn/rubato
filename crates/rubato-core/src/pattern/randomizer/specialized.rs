@@ -16,7 +16,7 @@ pub struct SRandomizer {
 }
 
 impl SRandomizer {
-    pub fn new(threshold: i32, assist: AssistLevel) -> Self {
+    pub fn new(threshold: i64, assist: AssistLevel) -> Self {
         let mut base = RandomizerBase::new();
         base.assist = assist;
         SRandomizer {
@@ -182,7 +182,7 @@ impl SpiralRandomizer {
 pub struct AllScratchRandomizer {
     pub base: RandomizerBase,
     pub time_state: TimeBasedRandomizerState,
-    scratch_threshold: i32,
+    scratch_threshold: i64,
     pub(super) scratch_lane: Vec<i32>,
     scratch_index: usize,
     modify_side: i32,
@@ -193,7 +193,7 @@ const SIDE_1P: i32 = 0;
 const SIDE_2P: i32 = 1;
 
 impl AllScratchRandomizer {
-    pub fn new(s: i32, k: i32, modify_side: i32) -> Self {
+    pub fn new(s: i64, k: i64, modify_side: i32) -> Self {
         let mut base = RandomizerBase::new();
         base.assist = AssistLevel::LightAssist;
         AllScratchRandomizer {
@@ -228,12 +228,12 @@ impl AllScratchRandomizer {
         // Try to assign to scratch lane first
         if !self.scratch_lane.is_empty()
             && assignable.contains(&self.scratch_lane[self.scratch_index])
-            && tl.time()
+            && tl.milli_time()
                 - *self
                     .time_state
                     .last_note_time
                     .get(&self.scratch_lane[self.scratch_index])
-                    .unwrap_or(&-10000)
+                    .unwrap_or(&-10000i64)
                 > self.scratch_threshold
         {
             let mut l: i32 = -1;
@@ -369,7 +369,7 @@ pub(super) fn button_combination_table() -> &'static Vec<Vec<i32>> {
 }
 
 impl NoMurioshiRandomizer {
-    pub fn new(threshold: i32) -> Self {
+    pub fn new(threshold: i64) -> Self {
         let mut base = RandomizerBase::new();
         base.assist = AssistLevel::LightAssist;
         NoMurioshiRandomizer {
@@ -418,7 +418,7 @@ impl NoMurioshiRandomizer {
                     .time_state
                     .last_note_time
                     .iter()
-                    .filter(|(_lane, time)| tl.time() - **time < threshold)
+                    .filter(|(_lane, time)| tl.milli_time() - **time < threshold)
                     .map(|(&lane, _)| lane)
                     .collect();
 
@@ -584,12 +584,12 @@ impl NoMurioshiRandomizer {
 pub struct ConvergeRandomizer {
     pub base: RandomizerBase,
     pub time_state: TimeBasedRandomizerState,
-    threshold2: i32,
+    threshold2: i64,
     pub(super) renda_count: HashMap<i32, i32>,
 }
 
 impl ConvergeRandomizer {
-    pub fn new(threshold1: i32, threshold2: i32) -> Self {
+    pub fn new(threshold1: i64, threshold2: i64) -> Self {
         let mut base = RandomizerBase::new();
         base.assist = AssistLevel::LightAssist;
         ConvergeRandomizer {
@@ -603,9 +603,16 @@ impl ConvergeRandomizer {
     pub fn permutate(&mut self, tl: &mut TimeLine) -> Vec<i32> {
         // Reset renda count for non-renda lanes
         let threshold2 = self.threshold2;
-        let time = tl.time();
+        let time = tl.milli_time();
         for (&key, count) in self.renda_count.iter_mut() {
-            if time - *self.time_state.last_note_time.get(&key).unwrap_or(&-10000) > threshold2 {
+            if time
+                - *self
+                    .time_state
+                    .last_note_time
+                    .get(&key)
+                    .unwrap_or(&-10000i64)
+                > threshold2
+            {
                 *count = 0;
             }
         }

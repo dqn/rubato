@@ -202,6 +202,9 @@ impl BytePCM {
     ///
     /// Translated from: BytePCM.slice
     pub fn slice(&self, starttime: i64, duration: i64) -> Option<BytePCM> {
+        if starttime < 0 {
+            return None;
+        }
         let mut duration = duration;
         if duration == 0
             || starttime + duration

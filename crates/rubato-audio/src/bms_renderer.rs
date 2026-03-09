@@ -90,7 +90,7 @@ impl BMSRenderer {
 
         for tl in timelines {
             let time = tl.milli_time();
-            if time >= end_time {
+            if time > end_time {
                 break;
             }
             for note in tl.back_ground_notes() {
@@ -159,11 +159,11 @@ impl BMSRenderer {
         }
 
         // Mix PCM data
-        self.mix_pcm(&render_pcm, start_sample as i32, mix_buffer);
+        self.mix_pcm(&render_pcm, start_sample, mix_buffer);
         true
     }
 
-    fn mix_pcm(&self, pcm: &PCM, start_sample: i32, mix_buffer: &mut [f32]) {
+    fn mix_pcm(&self, pcm: &PCM, start_sample: i64, mix_buffer: &mut [f32]) {
         let mut pcm_owned: PCM;
         let pcm = if pcm.sample_rate() != self.sample_rate {
             pcm_owned = pcm.change_sample_rate(self.sample_rate);
@@ -194,12 +194,16 @@ impl BMSRenderer {
     fn mix_short_pcm(
         &self,
         pcm: &crate::short_pcm::ShortPCM,
-        start_sample: i32,
+        start_sample: i64,
         mix_buffer: &mut [f32],
     ) {
         let samples = &pcm.sample;
         let mut src_index = pcm.start as usize;
-        let mut dst_index = (start_sample * self.channels) as usize;
+        let dst_start = start_sample * self.channels as i64;
+        if dst_start < 0 {
+            return;
+        }
+        let mut dst_index = dst_start as usize;
         let len = pcm.len as usize;
 
         for _i in 0..len {
@@ -215,12 +219,16 @@ impl BMSRenderer {
     fn mix_float_pcm(
         &self,
         pcm: &crate::float_pcm::FloatPCM,
-        start_sample: i32,
+        start_sample: i64,
         mix_buffer: &mut [f32],
     ) {
         let samples = &pcm.sample;
         let mut src_index = pcm.start as usize;
-        let mut dst_index = (start_sample * self.channels) as usize;
+        let dst_start = start_sample * self.channels as i64;
+        if dst_start < 0 {
+            return;
+        }
+        let mut dst_index = dst_start as usize;
         let len = pcm.len as usize;
 
         for _i in 0..len {
@@ -236,12 +244,16 @@ impl BMSRenderer {
     fn mix_byte_pcm(
         &self,
         pcm: &crate::byte_pcm::BytePCM,
-        start_sample: i32,
+        start_sample: i64,
         mix_buffer: &mut [f32],
     ) {
         let samples = &pcm.sample;
         let mut src_index = pcm.start as usize;
-        let mut dst_index = (start_sample * self.channels) as usize;
+        let dst_start = start_sample * self.channels as i64;
+        if dst_start < 0 {
+            return;
+        }
+        let mut dst_index = dst_start as usize;
         let len = pcm.len as usize;
 
         for _i in 0..len {
