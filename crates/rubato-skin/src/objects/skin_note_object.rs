@@ -69,10 +69,10 @@ impl SkinNoteObject {
                     h,
                     image_type: _,
                 } => {
-                    // Note drawing: requires per-lane texture images.
-                    // The SkinLane holds has_note/has_longnote flags but not actual
-                    // TextureRegion references in the current architecture.
-                    // Until lane images are wired, emit a placeholder quad.
+                    // Known rendering gap: DrawNote ignores image_type and uses an empty
+                    // TextureRegion. SkinLane holds has_note/has_longnote flags but not actual
+                    // texture references. Fix: store resolved note textures (Normal/Processed/
+                    // Mine/Hidden) in SkinLane and select the correct one based on image_type.
                     let region = crate::stubs::TextureRegion::new();
                     sprite.draw(&region, *x, *y, *w, *h);
                 }

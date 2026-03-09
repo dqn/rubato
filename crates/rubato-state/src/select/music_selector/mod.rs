@@ -135,6 +135,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
     }
 
     fn target_score_data(&self) -> Option<&rubato_types::score_data::ScoreData> {
+        // TODO: Should resolve from config.select_settings.targetid, not just rival.
+        // When targetid is MAX/RANK_NEXT/IR target, this returns rival score instead of
+        // the configured target score. Full fix requires TargetProperty integration in select state.
         self.selected_rival_score()
     }
 

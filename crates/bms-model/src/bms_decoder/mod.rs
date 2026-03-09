@@ -639,11 +639,6 @@ impl BMSDecoder {
         model.md5 = convert_hex_string(&md5_result);
         model.sha256 = convert_hex_string(&sha256_result);
 
-        self.log.push(DecodeLog::new(
-            State::Info,
-            "#PLAYER定義が1にもかかわらず2P側のノーツ定義が存在します",
-        ));
-
         let final_selected_random = if let Some(sr) = selected_random {
             sr.to_vec()
         } else {

@@ -120,8 +120,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
         match id {
             // Gauge value (0.0-1.0)
             1107 => self.gauge.map_or(0.0, |g| g.value()),
-            // Hi-speed
-            310 => self.player_config.mode7.playconfig.hispeed,
+            // Hi-speed (from active play config, not always mode7)
+            310 => self.play_config.hispeed,
             _ => 0.0,
         }
     }

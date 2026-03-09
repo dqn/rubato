@@ -194,7 +194,9 @@ impl DifficultyTableParser {
                 for dte in table.elements() {
                     let level_conf = conf.get(dte.level.as_str());
                     if level_conf.is_none_or(|v| !v.is_empty()) {
-                        let contains = false;
+                        let contains = elements.iter().any(|e| {
+                            e.element.md5() == dte.element.md5() && e.element.md5().is_some()
+                        });
                         if !contains {
                             let mut dte = dte.clone();
                             if let Some(new_level) = conf.get(dte.level.as_str()) {

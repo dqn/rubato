@@ -66,12 +66,21 @@ pub fn paths(path: &str) -> Vec<PathBuf> {
     let exts = [".wav", ".flac", ".ogg", ".mp3"];
 
     let mut result: Vec<PathBuf> = Vec::new();
-    let index = path.rfind('.');
-    let name = &path[0..index.unwrap_or(path.len())];
-    let ext = if let Some(idx) = index {
-        &path[idx..path.len()]
-    } else {
-        ""
+    let p_path = Path::new(path);
+    let ext = p_path
+        .extension()
+        .map(|e| format!(".{}", e.to_string_lossy()))
+        .unwrap_or_default();
+    let name = {
+        let stem = p_path
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_default();
+        if let Some(parent) = p_path.parent() {
+            parent.join(&stem).to_string_lossy().to_string()
+        } else {
+            stem
+        }
     };
 
     let p = Path::new(path);

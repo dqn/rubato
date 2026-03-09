@@ -339,30 +339,24 @@ fn download_file_from_url(
 
     let result = Path::new(download_directory).join(&file_name);
 
-    // Read body in chunks
-    let bytes = response.bytes()?;
-    let total = bytes.len() as i64;
-
-    // Write to file
+    // Stream body in chunks to avoid buffering entire archive in memory
     let mut fos = fs::File::create(&result)?;
-    // Note: We can bind the buffer to the worker thread instead of creating & releasing it repeatedly
-    let chunk_size = 8192;
     let mut download_bytes: i64 = 0;
-    let data = bytes.as_ref();
-    let mut offset = 0;
-    while offset < data.len() {
-        let end = std::cmp::min(offset + chunk_size, data.len());
-        let read = end - offset;
-        fos.write_all(&data[offset..end])?;
+    let mut buf = [0u8; 8192];
+    let mut reader = response;
+    loop {
+        let read = std::io::Read::read(&mut reader, &mut buf)?;
+        if read == 0 {
+            break;
+        }
+        fos.write_all(&buf[..read])?;
         download_bytes += read as i64;
-        offset = end;
         {
             let mut t = task.lock().expect("mutex poisoned");
             t.download_size = download_bytes;
             t.content_length = content_length;
         }
     }
-    let _ = total;
     log::info!(
         "[HttpDownloadProcessor] Download successfully to {}",
         result.display()

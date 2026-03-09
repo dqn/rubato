@@ -3,7 +3,7 @@
 //! Translated from: bms.player.beatoraja.input.MouseScratchInput
 
 use crate::keyboard_input_processor::KeyboardCallback;
-use crate::stubs::{GdxGraphics, GdxInput, KeyboardConfig, MouseScratchConfig};
+use crate::stubs::{GdxInput, KeyboardConfig, MouseScratchConfig};
 
 const _MOUSESCRATCH_RIGHT: usize = 0;
 const _MOUSESCRATCH_LEFT: usize = 1;
@@ -201,6 +201,10 @@ pub struct MouseToAnalog {
 
     total_x_distance_moved: i32,
     total_y_distance_moved: i32,
+    // Track previous mouse position for delta computation
+    // (replaces set_cursor_position recenter which is a no-op in winit)
+    prev_x: i32,
+    prev_y: i32,
 }
 
 impl MouseToAnalog {
@@ -215,13 +219,18 @@ impl MouseToAnalog {
             domain,
             total_x_distance_moved: 0,
             total_y_distance_moved: 0,
+            prev_x: GdxInput::get_x(),
+            prev_y: GdxInput::get_y(),
         }
     }
 
     pub fn update(&mut self) {
-        let x_distance_moved = GdxInput::get_x() - GdxGraphics::get_width() / 2;
-        let y_distance_moved = GdxInput::get_y() - GdxGraphics::get_height() / 2;
-        GdxInput::set_cursor_position(GdxGraphics::get_width() / 2, GdxGraphics::get_height() / 2);
+        let cur_x = GdxInput::get_x();
+        let cur_y = GdxInput::get_y();
+        let x_distance_moved = cur_x - self.prev_x;
+        let y_distance_moved = cur_y - self.prev_y;
+        self.prev_x = cur_x;
+        self.prev_y = cur_y;
 
         self.total_x_distance_moved =
             ((self.total_x_distance_moved + x_distance_moved) % self.domain + self.domain)

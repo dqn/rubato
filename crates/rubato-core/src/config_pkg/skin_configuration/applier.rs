@@ -618,9 +618,18 @@ impl SkinConfiguration {
     /// The callback receives a path and returns zero or more `SkinHeaderInfo` entries
     /// (LR2 7/14-key skins may produce a second 5/10-key variant).
     pub fn load_all_skins(&mut self, loader: &dyn Fn(&Path) -> Vec<SkinHeaderInfo>) {
+        self.load_all_skins_from(Path::new("skin"), loader);
+    }
+
+    /// Load skins from a specific skin root directory.
+    pub fn load_all_skins_from(
+        &mut self,
+        skin_root: &Path,
+        loader: &dyn Fn(&Path) -> Vec<SkinHeaderInfo>,
+    ) {
         self.all_skins = Vec::new();
         let mut skin_paths: Vec<PathBuf> = Vec::new();
-        Self::scan_skins(Path::new("skin"), &mut skin_paths);
+        Self::scan_skins(skin_root, &mut skin_paths);
 
         for path in &skin_paths {
             let path_str = path.to_string_lossy().to_lowercase();

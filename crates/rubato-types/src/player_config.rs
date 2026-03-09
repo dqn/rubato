@@ -591,9 +591,14 @@ impl PlayerConfig {
             std::fs::create_dir_all(playerpath)?;
         }
 
+        // Design: init() only auto-selects "player1" when creating a fresh player directory.
+        // When players already exist but playername is None, the caller (MainLoader) falls
+        // back to "default". This is intentional - init does not auto-select existing players.
         if read_all_player_id(&config.paths.playerpath).is_empty() {
             create_player(&config.paths.playerpath, "player1")?;
             // Copy score data if exists
+            // Java parity: resolved relative to CWD (the beatoraja installation directory).
+            // Requires the launcher to set CWD to the config root for migration to work.
             let parent_score_db = PathBuf::from("playerscore.db");
             if parent_score_db.exists() {
                 let dest = PathBuf::from(format!("{}/player1/score.db", config.paths.playerpath));

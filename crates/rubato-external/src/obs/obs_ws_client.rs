@@ -126,7 +126,7 @@ pub struct ObsWsClient {
     request_id_counter: AtomicI64,
     server_uri: String,
     shutdown_notify: Arc<Notify>,
-    runtime: tokio::runtime::Handle,
+    runtime: tokio::runtime::Runtime,
 }
 
 // Constants
@@ -177,7 +177,10 @@ impl ObsWsClient {
             custom_message_handler: None,
         }));
 
-        let runtime = tokio::runtime::Handle::current();
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_all()
+            .build()?;
 
         Ok(Self {
             inner,
@@ -196,7 +199,7 @@ impl ObsWsClient {
         let password = self.password.clone();
         let shutdown_notify = Arc::clone(&self.shutdown_notify);
 
-        self.runtime.spawn(async move {
+        self.runtime.handle().spawn(async move {
             match Self::do_connect(inner, &server_uri, &password, shutdown_notify).await {
                 Ok(()) => {}
                 Err(_e) => {
@@ -213,7 +216,7 @@ impl ObsWsClient {
         let password = self.password.clone();
         let shutdown_notify = Arc::clone(&self.shutdown_notify);
 
-        self.runtime.block_on(async move {
+        self.runtime.handle().block_on(async move {
             let result = tokio::time::timeout(
                 Duration::from_secs(5),
                 Self::do_connect(inner.clone(), &server_uri, &password, shutdown_notify),
@@ -816,7 +819,7 @@ impl ObsWsClient {
             }
         }
         let inner_clone = Arc::clone(&self.inner);
-        self.runtime.spawn(async move {
+        self.runtime.handle().spawn(async move {
             Self::send_request_inner(&inner_clone, "StartRecord").await;
         });
     }
@@ -834,7 +837,7 @@ impl ObsWsClient {
             }
         }
         let inner_clone = Arc::clone(&self.inner);
-        self.runtime.spawn(async move {
+        self.runtime.handle().spawn(async move {
             Self::send_request_inner(&inner_clone, "StopRecord").await;
         });
     }
@@ -890,7 +893,7 @@ impl ObsWsClient {
         match serde_json::to_string(&request) {
             Ok(msg) => {
                 let inner = Arc::clone(&self.inner);
-                self.runtime.spawn(async move {
+                self.runtime.handle().spawn(async move {
                     Self::send_raw(&inner, &msg).await;
                 });
             }
@@ -917,7 +920,7 @@ impl ObsWsClient {
         match serde_json::to_string(&request) {
             Ok(msg) => {
                 let inner = Arc::clone(&self.inner);
-                self.runtime.spawn(async move {
+                self.runtime.handle().spawn(async move {
                     Self::send_raw(&inner, &msg).await;
                 });
             }

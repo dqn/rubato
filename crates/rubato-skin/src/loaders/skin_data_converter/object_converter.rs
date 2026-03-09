@@ -605,9 +605,11 @@ fn convert_skin_object(
             endtime,
         } => {
             // Gauge conversion: creates a SkinGauge with gauge image tiles.
-            // Node IDs reference sk.image[] entries, which aren't available here.
-            // We create the gauge structure with empty images; the node textures
-            // require threading sk through the converter (deferred).
+            // Known rendering gap: gauge_images is empty because node IDs reference sk.image[]
+            // entries which aren't threaded through the converter. SkinGauge::draw() exits
+            // immediately when images are empty, so the gauge is invisible on JSON play skins.
+            // Fix: pass the resolved image map into this converter, or resolve images in a
+            // post-processing pass after the converter has access to the full skin image set.
             //
             // Java indexmap logic maps 4/8/12 node configs to 36 gauge slots.
             // With 36 nodes, each maps 1:1 to a slot.
@@ -862,6 +864,8 @@ fn build_select_bar_data(
         ),
         bartrophy: convert_bar_sub_images(&bar_data.trophy, source_map, skin_path, usecim, scale_y),
         barlabel: convert_bar_sub_images(&bar_data.label, source_map, skin_path, usecim, scale_y),
+        // Known rendering gap: songlist.graph from JSON select skins is not propagated.
+        // Fix: resolve bar_data.graph into graph_type/graph_images/graph_region here.
         graph_type: None,
         graph_images: None,
         graph_region: crate::stubs::Rectangle::default(),

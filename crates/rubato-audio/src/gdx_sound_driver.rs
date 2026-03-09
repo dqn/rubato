@@ -274,7 +274,12 @@ impl AudioDriver for GdxSoundDriver {
                         let start_frame = (starttime * sample_rate / 1_000_000) as usize;
                         let duration_frames = (duration * sample_rate / 1_000_000) as usize;
                         let total_frames = base_sound.frames.len();
-                        let end_frame = (start_frame + duration_frames).min(total_frames);
+                        // duration == 0 means "play from offset to EOF" (BMSON convention)
+                        let end_frame = if duration_frames == 0 {
+                            total_frames
+                        } else {
+                            (start_frame + duration_frames).min(total_frames)
+                        };
 
                         if start_frame < total_frames {
                             let mut sliced = base_sound.clone();
@@ -495,10 +500,9 @@ impl GdxSoundDriver {
         }
 
         // Non-sliced: play full sound
+        // Allow overlapping plays of the same wav_id (e.g., drum hits, BGM tails).
+        // Dropping the old handle does NOT stop it in Kira; the sound keeps playing.
         if let Some(sound_data) = self.wav_sounds.get(&wav_id) {
-            if let Some(mut old_handle) = self.wav_handles.remove(&wav_id) {
-                old_handle.stop(Tween::default());
-            }
             let sound = sound_data.clone();
             match self.manager.play(sound) {
                 Ok(mut handle) => {

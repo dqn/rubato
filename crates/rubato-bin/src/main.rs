@@ -43,7 +43,8 @@ struct Args {
     #[arg(short = 'p', long)]
     practice: bool,
 
-    /// Replay mode (1-4)
+    /// Replay mode (1-4). Unlike Java beatoraja, bare `-r` without a value is not supported;
+    /// use `-r1` or `--replay 1` explicitly (clap 4.x requires a value).
     #[arg(short = 'r', long, value_name = "NUM")]
     replay: Option<u8>,
 
@@ -751,9 +752,7 @@ impl ApplicationHandler for RubatoApp {
                         window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(monitor)));
                     }
                 }
-                if rubato_core::window_command::take_screenshot_request() {
-                    self.capture_screenshot(gpu, window);
-                }
+                let screenshot_requested = rubato_core::window_command::take_screenshot_request();
 
                 // Gather diagnostic info before egui frame (avoids borrow conflicts)
                 let diag_state_type = self.controller.current_state_type();
@@ -949,6 +948,12 @@ impl ApplicationHandler for RubatoApp {
                         }
 
                         gpu.queue.submit(std::iter::once(encoder.finish()));
+
+                        // Capture screenshot after render pass, before present
+                        if screenshot_requested {
+                            self.capture_screenshot(gpu, &output.texture);
+                        }
+
                         output.present();
                     }
                     Err(e) => {
@@ -984,14 +989,11 @@ impl ApplicationHandler for RubatoApp {
 }
 
 impl RubatoApp {
-    /// Capture the current frame and save as a PNG screenshot.
-    fn capture_screenshot(&self, gpu: &GpuContext, _window: &Window) {
+    /// Capture the rendered frame and save as a PNG screenshot.
+    /// Must be called after the render pass with the rendered texture.
+    fn capture_screenshot(&self, gpu: &GpuContext, texture: &wgpu::Texture) {
         let Some(ref surface_config) = gpu.surface_config else {
             warn!("Cannot capture screenshot: no surface config");
-            return;
-        };
-        let Some(ref surface) = gpu.surface else {
-            warn!("Cannot capture screenshot: no surface");
             return;
         };
         let width = surface_config.width;
@@ -1001,7 +1003,7 @@ impl RubatoApp {
             return;
         }
 
-        // Create a buffer to read pixels from the surface
+        // Create a buffer to read pixels from the rendered texture
         let bytes_per_row = (width * 4 + 255) & !255; // align to 256 bytes
         let buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("screenshot_buffer"),
@@ -1009,15 +1011,6 @@ impl RubatoApp {
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         });
-
-        // Get the current surface texture
-        let surface_texture = match surface.get_current_texture() {
-            Ok(t) => t,
-            Err(e) => {
-                warn!("Cannot capture screenshot: {}", e);
-                return;
-            }
-        };
 
         let mut encoder = gpu
             .device
@@ -1027,7 +1020,7 @@ impl RubatoApp {
 
         encoder.copy_texture_to_buffer(
             wgpu::TexelCopyTextureInfo {
-                texture: &surface_texture.texture,
+                texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,

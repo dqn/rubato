@@ -492,7 +492,7 @@ impl BMSPlayerInputDevice for KeyBoardInputProcesseor {
     }
 
     fn clear(&mut self) {
-        // Arrays.fill(keystate, false);
+        self.keystate.fill(false);
         self.keytime.fill(i64::MIN);
         self.last_pressed_key = -1;
         self.mouse_scratch_input.clear();
