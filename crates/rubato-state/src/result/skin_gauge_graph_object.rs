@@ -305,24 +305,21 @@ impl SkinGaugeGraphObject {
                 let mut last_y: i32 = -1;
                 let line_width = self.line_width;
 
-                for i in 0..self.gaugehistory.len() {
+                let gauge_len = self.gaugehistory.len() as f32;
+                for (i, &f2) in self.gaugehistory.iter().enumerate() {
                     if self.section.contains(&(i as i32)) {
                         shape.set_color(&Color::value_of("ffffff"));
                         shape.draw_line(
-                            (width as f32 * (i as f32 - 1.0) / self.gaugehistory.len() as f32)
-                                as i32,
+                            (width as f32 * (i as f32 - 1.0) / gauge_len) as i32,
                             0,
-                            (width as f32 * (i as f32 - 1.0) / self.gaugehistory.len() as f32)
-                                as i32,
+                            (width as f32 * (i as f32 - 1.0) / gauge_len) as i32,
                             height,
                         );
                     }
-                    let f2 = self.gaugehistory[i];
                     if let Some(f1_val) = f1 {
-                        let x1 = (width as f32 * (i as f32 - 1.0) / self.gaugehistory.len() as f32)
-                            as i32;
+                        let x1 = (width as f32 * (i as f32 - 1.0) / gauge_len) as i32;
                         let y1 = ((f1_val / max) * (height - line_width) as f32) as i32;
-                        let x2 = (width as f32 * i as f32 / self.gaugehistory.len() as f32) as i32;
+                        let x2 = (width as f32 * i as f32 / gauge_len) as i32;
                         let y2 = ((f2 / max) * (height - line_width) as f32) as i32;
                         let yb = ((border / max) * (height - line_width) as f32) as i32;
                         last_gauge = f2;
