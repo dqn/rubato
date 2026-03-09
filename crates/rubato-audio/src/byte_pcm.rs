@@ -178,6 +178,9 @@ impl BytePCM {
     ///
     /// Translated from: BytePCM.changeChannels
     pub fn change_channels(&self, channels: i32) -> BytePCM {
+        if self.channels == 0 {
+            return BytePCM::new(channels, self.sample_rate, 0, 0, Vec::new());
+        }
         let mut samples = vec![0u8; self.sample.len() * channels as usize / self.channels as usize];
 
         for i in 0i64..(samples.len() as i64 / channels as i64) {

@@ -39,7 +39,9 @@ pub fn initialize_ir_config(player: &PlayerConfig) -> Vec<IRStatus> {
                 // Java: try { ir.login(new IRAccount(...)) }
                 //        catch (IllegalArgumentException) { ir.login(userid, password) }
                 // In Rust, the default login() panics like Java's IllegalArgumentException.
-                // Use catch_unwind to match the Java try/catch pattern.
+                // Accepted trade-off: catch_unwind for control flow is not idiomatic Rust, but
+                // changing IRConnection::login() to return Result would require modifying all
+                // implementations. This faithfully ports the Java try/catch pattern.
                 let account = IRAccount::new(userid.clone(), password.clone(), String::new());
                 let login_result =
                     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| ir.login(&account)));

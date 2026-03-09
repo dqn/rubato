@@ -189,6 +189,9 @@ impl FloatPCM {
     ///
     /// Translated from: FloatPCM.changeChannels
     pub fn change_channels(&self, channels: i32) -> FloatPCM {
+        if self.channels == 0 {
+            return FloatPCM::new(channels, self.sample_rate, 0, 0, Vec::new());
+        }
         let mut samples =
             vec![0f32; self.sample.len() * channels as usize / self.channels as usize];
 

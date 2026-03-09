@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::pattern::java_random::JavaRandom;
 use crate::pattern::pattern_modifier::{AssistLevel, PatternModifier, PatternModifierBase};
 use bms_model::bms_model::BMSModel;
 use bms_model::mode::Mode;
@@ -353,7 +354,7 @@ impl LanePlayableRandomShuffleModifier {
         }
     }
 
-    pub fn make_random(keys: &[i32], model: &BMSModel, _seed: i64) -> Vec<i32> {
+    pub fn make_random(keys: &[i32], model: &BMSModel, seed: i64) -> Vec<i32> {
         let mode = match model.mode() {
             Some(m) => m,
             None => return Vec::new(),
@@ -420,14 +421,15 @@ impl LanePlayableRandomShuffleModifier {
 
         log::info!("No-murioshi pattern count: {}", kouho_pattern_list.len());
 
+        let mut rng = JavaRandom::new(seed);
         let mut result = vec![0i32; 9];
         if !kouho_pattern_list.is_empty() {
-            let r = (rand::random::<f64>() * kouho_pattern_list.len() as f64) as usize;
+            let r = (rng.next_double() * kouho_pattern_list.len() as f64) as usize;
             for (i, &kouho) in kouho_pattern_list[r].iter().enumerate().take(9) {
                 result[kouho as usize] = i as i32;
             }
         } else {
-            let mirror = (rand::random::<f64>() * 2.0) as i32;
+            let mirror = (rng.next_double() * 2.0) as i32;
             for (i, slot) in result.iter_mut().enumerate().take(9) {
                 *slot = if mirror == 0 { i as i32 } else { 8 - i as i32 };
             }

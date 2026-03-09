@@ -134,7 +134,7 @@ impl SQLiteSongDatabaseAccessor {
                      md5, sha256, title, subtitle, genre, artist, subartist, tag, path,\
                      folder, stagefile, banner, backbmp, preview, parent, level, difficulty,\
                      maxbpm, minbpm, length, mode, judge, feature, content,\
-                     date, favorite, notes, adddate, charthash \
+                     date, favorite, adddate, notes, charthash \
                      FROM old_song GROUP BY path HAVING MAX(adddate)",
                     [],
                 )?;

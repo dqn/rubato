@@ -178,6 +178,9 @@ impl ShortPCM {
     ///
     /// Translated from: ShortPCM.changeChannels
     pub fn change_channels(&self, channels: i32) -> ShortPCM {
+        if self.channels == 0 {
+            return ShortPCM::new(channels, self.sample_rate, 0, 0, Vec::new());
+        }
         let mut samples =
             vec![0i16; self.sample.len() * channels as usize / self.channels as usize];
 
