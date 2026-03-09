@@ -259,6 +259,17 @@ impl MainState for BMSPlayer {
         self.judge.init(&self.model, 0, None, &[]);
         self.judge_notes = bms_model::judge_note::build_judge_notes(&self.model);
 
+        // --- Gauge initialization ---
+        // Translated from: BMSPlayer.create() Java line ~540
+        // gauge = GrooveGauge.create(model, gauge_type, grade)
+        // For practice mode, gauge is initialized later in the practice loop (line 581).
+        if self.play_mode.mode != rubato_core::bms_player_mode::Mode::Practice {
+            let gauge_type = self.player_config.play_settings.gauge;
+            let grade = if self.is_course_mode { 1 } else { 0 };
+            self.gauge =
+                crate::groove_gauge::create_groove_gauge(&self.model, gauge_type, grade, None);
+        }
+
         // --- Note expansion rate from PlaySkin ---
         // Translated from: BMSPlayer.create() Java line 542-543
         // ```java

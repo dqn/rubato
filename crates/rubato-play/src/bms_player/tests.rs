@@ -2960,3 +2960,57 @@ fn sync_audio_drains_pending_bg_notes() {
 
     player.keysound.stop_bg_play();
 }
+
+// --- Gauge initialization in create() ---
+
+#[test]
+fn create_initializes_gauge_for_play_mode() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.play_mode = BMSPlayerMode::PLAY;
+    player.player_config.play_settings.gauge = crate::groove_gauge::NORMAL;
+    player.create();
+    assert!(
+        player.gauge.is_some(),
+        "gauge should be initialized for Play mode"
+    );
+}
+
+#[test]
+fn create_initializes_gauge_for_autoplay_mode() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.play_mode = BMSPlayerMode::AUTOPLAY;
+    player.player_config.play_settings.gauge = crate::groove_gauge::NORMAL;
+    player.create();
+    assert!(
+        player.gauge.is_some(),
+        "gauge should be initialized for Autoplay mode"
+    );
+}
+
+#[test]
+fn create_initializes_gauge_for_replay_mode() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.play_mode = BMSPlayerMode::REPLAY_1;
+    player.player_config.play_settings.gauge = crate::groove_gauge::NORMAL;
+    player.create();
+    assert!(
+        player.gauge.is_some(),
+        "gauge should be initialized for Replay mode"
+    );
+}
+
+#[test]
+fn create_does_not_initialize_gauge_for_practice_mode() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.play_mode = BMSPlayerMode::PRACTICE;
+    player.create();
+    // Practice mode gauge is set later during practice configuration
+    assert!(
+        player.gauge.is_none(),
+        "gauge should not be initialized in create() for Practice mode"
+    );
+}
