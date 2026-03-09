@@ -1,5 +1,6 @@
 .DS_Store
 target/
+.beads/
 /.agent
 bms/
 .worktrees/
