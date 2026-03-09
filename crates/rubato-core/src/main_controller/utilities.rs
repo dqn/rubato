@@ -574,3 +574,70 @@ impl MainController {
         rubato_types::imgui_notify::ImGuiNotify::info(message);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rubato_types::table_update_source::TableUpdateSource;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+    use std::time::Duration;
+
+    struct MockTableSource {
+        name: String,
+        refreshed: Arc<AtomicBool>,
+    }
+
+    impl TableUpdateSource for MockTableSource {
+        fn source_name(&self) -> String {
+            self.name.clone()
+        }
+        fn refresh(&self) {
+            self.refreshed.store(true, Ordering::Release);
+        }
+    }
+
+    #[test]
+    fn table_update_thread_completes() {
+        let refreshed = Arc::new(AtomicBool::new(false));
+        let source: Box<dyn TableUpdateSource> = Box::new(MockTableSource {
+            name: "test-table".to_string(),
+            refreshed: Arc::clone(&refreshed),
+        });
+
+        // Replicate the update_table pattern: spawn thread with source
+        let handle = std::thread::spawn(move || {
+            source.refresh();
+        });
+
+        handle.join().expect("table update thread should complete");
+        assert!(
+            refreshed.load(Ordering::Acquire),
+            "refresh() should have been called"
+        );
+    }
+
+    #[test]
+    fn table_update_thread_completes_within_timeout() {
+        let refreshed = Arc::new(AtomicBool::new(false));
+        let source: Box<dyn TableUpdateSource> = Box::new(MockTableSource {
+            name: "slow-table".to_string(),
+            refreshed: Arc::clone(&refreshed),
+        });
+
+        std::thread::spawn(move || {
+            source.refresh();
+        });
+
+        // Poll with timeout to detect hangs
+        let deadline = std::time::Instant::now() + Duration::from_secs(2);
+        while !refreshed.load(Ordering::Acquire) {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "table update thread should complete within 2 seconds"
+            );
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    }
+}

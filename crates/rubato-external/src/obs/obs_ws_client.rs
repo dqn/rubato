@@ -1158,6 +1158,70 @@ mod tests {
     }
 
     #[test]
+    fn test_close_notifies_shutdown() {
+        let config = make_test_config();
+        let client = ObsWsClient::new(&config).expect("failed to create client");
+
+        // Spawn a task on the client's runtime that waits for shutdown notification.
+        // Use a ready channel so we know the task is awaiting the notify before we
+        // call close(), avoiding a race between spawn and notify_waiters().
+        let notify = Arc::clone(&client.shutdown_notify);
+        let (tx, rx) = std::sync::mpsc::channel();
+        let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+        let handle = client.runtime.handle().clone();
+        handle.spawn(async move {
+            let future = notify.notified();
+            tokio::pin!(future);
+            // Enable the future so it registers with the Notify
+            future.as_mut().enable();
+            let _ = ready_tx.send(());
+            future.await;
+            let _ = tx.send(());
+        });
+
+        // Wait for the spawned task to be ready (registered with the Notify)
+        ready_rx
+            .recv_timeout(std::time::Duration::from_secs(2))
+            .expect("spawned task should become ready");
+
+        // close() should trigger the shutdown notification
+        client.close();
+
+        // The spawned task should have received the notification
+        let result = rx.recv_timeout(std::time::Duration::from_secs(2));
+        assert!(
+            result.is_ok(),
+            "shutdown_notify should wake spawned tasks on close()"
+        );
+    }
+
+    #[test]
+    fn test_close_sets_shutting_down_flag() {
+        let config = make_test_config();
+        let client = ObsWsClient::new(&config).expect("failed to create client");
+
+        {
+            let guard = lock_or_recover(&client.inner);
+            assert!(!guard.is_shutting_down);
+            assert!(guard.auto_reconnect);
+        }
+
+        client.close();
+
+        {
+            let guard = lock_or_recover(&client.inner);
+            assert!(
+                guard.is_shutting_down,
+                "close() should set is_shutting_down"
+            );
+            assert!(
+                !guard.auto_reconnect,
+                "close() should disable auto_reconnect"
+            );
+        }
+    }
+
+    #[test]
     fn test_save_last_recording_disconnected() {
         let config = make_test_config();
         let client = ObsWsClient::new(&config).expect("failed to create client");
