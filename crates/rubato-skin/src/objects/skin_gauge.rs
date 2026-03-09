@@ -104,6 +104,10 @@ impl SkinGauge {
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
         self.data.prepare(time, state);
 
+        // Sync gauge value and type from game state
+        self.value = state.get_gauge_value();
+        self.gauge_type = state.gauge_type();
+
         // Update animation
         if self.animation_range < 0 || self.duration <= 0 {
             self.animation = 0;
@@ -686,6 +690,96 @@ mod tests {
     }
 
     // --- Default values test ---
+
+    // --- prepare() gauge value sync tests ---
+    // These verify the fix for the gauge value wiring bug:
+    // SkinGauge.prepare() was not reading gauge value from MainState,
+    // causing the gauge display to always show 0% regardless of actual state.
+
+    /// MockMainState with configurable gauge value and type.
+    struct GaugeMockState {
+        gauge_value: f32,
+        gauge_type: i32,
+    }
+
+    impl crate::stubs::MainState for GaugeMockState {
+        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+            static TIMER: std::sync::OnceLock<crate::stubs::Timer> = std::sync::OnceLock::new();
+            TIMER.get_or_init(crate::stubs::Timer::default)
+        }
+        fn get_offset_value(&self, _id: i32) -> Option<&crate::stubs::SkinOffset> {
+            None
+        }
+        fn get_main(&self) -> &crate::stubs::MainController {
+            // Safety: we never dereference this in tests
+            static MC: crate::stubs::MainController = crate::stubs::MainController { debug: false };
+            &MC
+        }
+        fn get_image(&self, _id: i32) -> Option<TextureRegion> {
+            None
+        }
+        fn get_resource(&self) -> &crate::stubs::PlayerResource {
+            static PR: crate::stubs::PlayerResource = crate::stubs::PlayerResource;
+            &PR
+        }
+        fn get_gauge_value(&self) -> f32 {
+            self.gauge_value
+        }
+        fn gauge_type(&self) -> i32 {
+            self.gauge_type
+        }
+    }
+
+    #[test]
+    fn prepare_syncs_gauge_value_from_state() {
+        let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
+        let mut gauge = SkinGauge::new(images, 0, 0, 10, ANIMATION_RANDOM, 2, 100);
+        assert!(
+            (gauge.value - 0.0).abs() < f32::EPSILON,
+            "initial value should be 0"
+        );
+
+        let state = GaugeMockState {
+            gauge_value: 75.0,
+            gauge_type: 2,
+        };
+        gauge.prepare(100, &state);
+
+        assert!(
+            (gauge.value - 75.0).abs() < f32::EPSILON,
+            "prepare() should sync gauge value from MainState, got {}",
+            gauge.value
+        );
+        assert_eq!(
+            gauge.gauge_type, 2,
+            "prepare() should sync gauge type from MainState"
+        );
+    }
+
+    #[test]
+    fn prepare_updates_gauge_value_each_frame() {
+        let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
+        let mut gauge = SkinGauge::new(images, 0, 0, 10, ANIMATION_RANDOM, 2, 100);
+
+        // Frame 1: gauge at 50%
+        let state1 = GaugeMockState {
+            gauge_value: 50.0,
+            gauge_type: 0,
+        };
+        gauge.prepare(100, &state1);
+        assert!((gauge.value - 50.0).abs() < f32::EPSILON);
+
+        // Frame 2: gauge drops to 30%
+        let state2 = GaugeMockState {
+            gauge_value: 30.0,
+            gauge_type: 0,
+        };
+        gauge.prepare(200, &state2);
+        assert!(
+            (gauge.value - 30.0).abs() < f32::EPSILON,
+            "value should update each frame"
+        );
+    }
 
     #[test]
     fn default_gauge_state() {
