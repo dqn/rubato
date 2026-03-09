@@ -137,6 +137,7 @@ impl SkinHeader {
                     } else if !custom_option.option.is_empty() {
                         let idx =
                             (rand::random::<f64>() * custom_option.option.len() as f64) as usize;
+                        let idx = idx.min(custom_option.option.len() - 1);
                         op = custom_option.option[idx];
                     }
                     break;
@@ -205,6 +206,7 @@ impl SkinHeader {
                             }
                             if !l.is_empty() {
                                 let idx = (rand::random::<f64>() * l.len() as f64) as usize;
+                                let idx = idx.min(l.len() - 1);
                                 if let Some(filename) = l[idx].file_name() {
                                     custom_file.filename =
                                         Some(filename.to_string_lossy().into_owned());

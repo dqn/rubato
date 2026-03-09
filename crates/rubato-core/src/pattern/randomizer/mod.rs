@@ -26,7 +26,14 @@ impl Default for RandomizerBase {
 
 impl RandomizerBase {
     pub fn new() -> Self {
-        let seed = (rand::random::<f64>() * 65536.0 * 65536.0 * 65536.0) as i64;
+        let seed = {
+            use std::time::SystemTime;
+            let nanos = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos();
+            (nanos % (65536 * 65536 * 65536)) as i64
+        };
         RandomizerBase {
             mode: None,
             modify_lanes: Vec::new(),
@@ -339,6 +346,10 @@ impl Randomizer {
             }
             Randomizer::Spiral(r) => {
                 r.base.set_modify_lanes(lanes);
+                // Accepted trade-off: first next_int_bounded call's value is always
+                // overwritten (by line below or the else branch), consuming one extra
+                // RNG step. Without the Java source, we cannot verify whether this
+                // matches the original's RNG sequence. Preserved as-is for safety.
                 r.increment = r
                     .base
                     .random

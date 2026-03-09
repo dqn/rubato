@@ -60,7 +60,14 @@ impl Default for PatternModifierBase {
     fn default() -> Self {
         PatternModifierBase {
             assist: AssistLevel::None,
-            seed: (rand::random::<f64>() * 65536.0 * 256.0) as i64,
+            seed: {
+                use std::time::SystemTime;
+                let nanos = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos();
+                (nanos % (65536 * 256)) as i64
+            },
             player: 0,
         }
     }

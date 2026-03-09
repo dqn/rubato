@@ -78,8 +78,12 @@ impl ExecutableBar {
     fn create_index_queue(&self) {
         let mut queue = self.queue.lock().expect("queue lock poisoned");
         queue.clear();
+        if self.songs.is_empty() {
+            return;
+        }
         for _ in 0..(QUEUE_LENGTH - 1) {
             let index = (rand::random::<f64>() * self.songs.len() as f64) as usize;
+            let index = index.min(self.songs.len() - 1);
             queue.push_back(index);
         }
     }
