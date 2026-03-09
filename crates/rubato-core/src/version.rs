@@ -80,8 +80,8 @@ pub fn compare_to_string(other: Option<&str>) -> i32 {
     let other_patch;
 
     // check for pre-release
-    if &other[0..3] == "pre" {
-        let version_parts = version_string_to_int_array(&other[3..]);
+    if let Some(rest) = other.strip_prefix("pre") {
+        let version_parts = version_string_to_int_array(rest);
         // If the other version string is malformed (too few parts), this static version trumps it
         if version_parts.len() != 3 {
             return 1;
@@ -299,5 +299,26 @@ mod tests {
         assert_eq!(BuildType::Prerelease, BuildType::Prerelease);
         assert_eq!(BuildType::Stable, BuildType::Stable);
         assert_ne!(BuildType::Prerelease, BuildType::Stable);
+    }
+
+    #[test]
+    fn test_compare_to_string_non_ascii_does_not_panic() {
+        // Non-ASCII input with byte length >= 3 must not panic on slicing
+        let result = compare_to_string(Some("\u{00e4}\u{00f6}\u{00fc}"));
+        assert_eq!(result, 1);
+    }
+
+    #[test]
+    fn test_compare_to_string_multibyte_does_not_panic() {
+        // Multi-byte UTF-8: 3 chars but 9 bytes
+        let result = compare_to_string(Some("\u{3042}\u{3044}\u{3046}"));
+        assert_eq!(result, 1);
+    }
+
+    #[test]
+    fn test_compare_to_string_pre_prefix_with_non_ascii_suffix() {
+        // "pre" followed by non-ASCII: must not panic when slicing the rest
+        let result = compare_to_string(Some("pre\u{00e4}.\u{00f6}.\u{00fc}"));
+        assert_eq!(result, 1);
     }
 }

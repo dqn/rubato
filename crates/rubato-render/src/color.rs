@@ -51,7 +51,7 @@ impl Color {
     pub fn value_of(hex: &str) -> Self {
         let hex = hex.trim();
         let len = hex.len();
-        if len < 6 {
+        if len < 6 || !hex.is_ascii() {
             return Color::new(1.0, 0.0, 0.0, 1.0); // fallback red
         }
         let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255) as f32 / 255.0;
@@ -409,6 +409,36 @@ mod tests {
         assert!(Color::WHITE.equals(&Color::new(1.0, 1.0, 1.0, 1.0)));
         assert!(Color::BLACK.equals(&Color::new(0.0, 0.0, 0.0, 1.0)));
         assert!(Color::CLEAR.equals(&Color::new(0.0, 0.0, 0.0, 0.0)));
+    }
+
+    #[test]
+    fn test_value_of_non_ascii_returns_fallback() {
+        // Non-ASCII input must not panic; should return fallback red
+        let c = Color::value_of("\u{00e4}\u{00f6}\u{00fc}abc");
+        assert_eq!(c.r, 1.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 0.0);
+        assert_eq!(c.a, 1.0);
+    }
+
+    #[test]
+    fn test_value_of_multibyte_chars_returns_fallback() {
+        // Multi-byte UTF-8 characters: byte length >= 6 but not valid hex
+        let c = Color::value_of("\u{3042}\u{3044}\u{3046}"); // Japanese hiragana
+        assert_eq!(c.r, 1.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 0.0);
+        assert_eq!(c.a, 1.0);
+    }
+
+    #[test]
+    fn test_value_of_emoji_returns_fallback() {
+        // Emoji: 4 bytes each, so 2 emoji = 8 bytes >= 6, but slicing panics without guard
+        let c = Color::value_of("\u{1F600}\u{1F601}");
+        assert_eq!(c.r, 1.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 0.0);
+        assert_eq!(c.a, 1.0);
     }
 }
 
