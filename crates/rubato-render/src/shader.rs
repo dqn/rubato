@@ -84,6 +84,16 @@ fn fs_layer(in: VertexOutput) -> @location(0) vec4<f32> {
         return in.color * c4;
     }
 }
+
+// Distance field shader: SDF text rendering
+// Java: SkinObjectRenderer TYPE_DISTANCE_FIELD
+@fragment
+fn fs_distance_field(in: VertexOutput) -> @location(0) vec4<f32> {
+    let distance = textureSample(t_diffuse, s_diffuse, in.tex_coord).a;
+    let smoothing = fwidth(distance) * 0.5;
+    let alpha = smoothstep(0.5 - smoothing, 0.5 + smoothing, distance);
+    return vec4<f32>(in.color.rgb, in.color.a * alpha);
+}
 "#;
 
 /// Bilinear filter WGSL shader.

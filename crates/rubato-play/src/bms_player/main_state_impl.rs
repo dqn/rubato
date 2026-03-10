@@ -29,6 +29,18 @@ impl MainState for BMSPlayer {
         self.pending.pending_score_handoff.take()
     }
 
+    fn take_state_create_effects(&mut self) -> Option<rubato_core::main_state::StateCreateEffects> {
+        let effects = self.create_side_effects.take()?;
+        Some(rubato_core::main_state::StateCreateEffects {
+            play_config_mode: match effects.input_mode_action {
+                InputModeAction::SetPlayConfig(mode) => Some(mode),
+                _ => None,
+            },
+            disable_input: matches!(effects.input_mode_action, InputModeAction::DisableInput),
+            guide_se: effects.is_guide_se,
+        })
+    }
+
     fn take_pending_reload_bms(&mut self) -> bool {
         std::mem::take(&mut self.pending.pending_reload_bms)
     }

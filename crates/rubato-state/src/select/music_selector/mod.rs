@@ -103,6 +103,12 @@ impl SelectSkinContext<'_> {
     fn selected_rival_score(&self) -> Option<&rubato_types::score_data::ScoreData> {
         self.selected_bar()?.rival_score()
     }
+
+    fn selected_replay_exists(&self, slot: i32) -> bool {
+        self.selected_bar()
+            .and_then(|b| b.as_selectable_bar())
+            .is_some_and(|sb| sb.exists_replay(slot))
+    }
 }
 
 impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<'_> {
@@ -392,9 +398,15 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             OPTION_SELECT_BAR_MAX_CLEARED => {
                 self.selected_bar().is_some_and(|b| b.lamp(true) == 10)
             }
-            // Replay data (not yet wired - replay storage not implemented)
-            197 | 1197 | 1200 | 1203 => false, // OPTION_REPLAYDATA variants
-            196 | 1196 | 1199 | 1202 => true,  // OPTION_NO_REPLAYDATA variants
+            // Replay data availability per slot
+            OPTION_REPLAYDATA => self.selected_replay_exists(0),
+            OPTION_REPLAYDATA2 => self.selected_replay_exists(1),
+            OPTION_REPLAYDATA3 => self.selected_replay_exists(2),
+            OPTION_REPLAYDATA4 => self.selected_replay_exists(3),
+            OPTION_NO_REPLAYDATA => !self.selected_replay_exists(0),
+            OPTION_NO_REPLAYDATA2 => !self.selected_replay_exists(1),
+            OPTION_NO_REPLAYDATA3 => !self.selected_replay_exists(2),
+            OPTION_NO_REPLAYDATA4 => !self.selected_replay_exists(3),
             // Autoplay
             33 => false, // OPTION_AUTOPLAYON - not in select screen
             32 => true,  // OPTION_AUTOPLAYOFF

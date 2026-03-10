@@ -200,12 +200,18 @@ impl SkinLuaAccessor {
             }
             table.set("file_path", file_path_table)?;
 
-            // path function
-            // NOTE: We cannot capture file_path_getter into a Lua closure directly
-            // because it borrows from the caller. Instead, log + skip for now.
-            log::warn!(
-                "Lua skin property: path function not fully wired (requires closure capture)"
-            );
+            // path function: resolve custom file paths
+            // Build a filemap from property files (name -> path)
+            let filemap: std::collections::HashMap<String, String> = property
+                .files
+                .iter()
+                .map(|f| (f.name.clone(), f.path.clone()))
+                .collect();
+            let get_path_fn = self.lua.create_function(move |_, path: String| {
+                let result = crate::skin_loader::path(&path, &filemap);
+                Ok(result.to_string_lossy().to_string())
+            })?;
+            table.set("path", get_path_fn)?;
 
             // options table and enabled_options array
             let options_table = self.lua.create_table()?;

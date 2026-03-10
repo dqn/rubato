@@ -108,9 +108,12 @@ impl SpriteRenderPipeline {
             (&bilinear_shader, "fs_bilinear", SHADER_TYPE_BILINEAR),
             (&main_shader, "fs_ffmpeg", SHADER_TYPE_FFMPEG),
             (&main_shader, "fs_layer", SHADER_TYPE_LAYER),
-            // TYPE_DISTANCE_FIELD uses fs_main for now (distance field shader is complex,
-            // and the Java version requires uniforms not yet wired)
-            (&main_shader, "fs_main", SHADER_TYPE_DISTANCE_FIELD),
+            // TYPE_DISTANCE_FIELD: SDF text rendering with smoothstep anti-aliasing
+            (
+                &main_shader,
+                "fs_distance_field",
+                SHADER_TYPE_DISTANCE_FIELD,
+            ),
         ];
 
         let vertex_buffers = [SpriteVertex::desc()];

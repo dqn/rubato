@@ -3,7 +3,7 @@ use super::imgui_renderer;
 
 use std::fmt;
 use std::str::FromStr;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 pub const NOTIFY_PADDING_X: f32 = 20.0;
@@ -113,7 +113,6 @@ impl ToastPos {
     }
 }
 
-#[derive(Clone, Debug)]
 pub struct Toast {
     pub toast_type: ToastType,
     pub pos: ToastPos,
@@ -121,8 +120,38 @@ pub struct Toast {
     pub content: String,
     pub dismiss_time: i64,
     pub creation_time: Instant,
-    pub on_button_press: bool, // stub: in Java this is Runnable; true = has callback
+    pub on_button_press: Option<Arc<dyn Fn() + Send + Sync>>,
     pub button_label: String,
+}
+
+impl Clone for Toast {
+    fn clone(&self) -> Self {
+        Self {
+            toast_type: self.toast_type,
+            pos: self.pos,
+            title: self.title.clone(),
+            content: self.content.clone(),
+            dismiss_time: self.dismiss_time,
+            creation_time: self.creation_time,
+            on_button_press: self.on_button_press.clone(),
+            button_label: self.button_label.clone(),
+        }
+    }
+}
+
+impl fmt::Debug for Toast {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Toast")
+            .field("toast_type", &self.toast_type)
+            .field("pos", &self.pos)
+            .field("title", &self.title)
+            .field("content", &self.content)
+            .field("dismiss_time", &self.dismiss_time)
+            .field("creation_time", &self.creation_time)
+            .field("on_button_press", &self.on_button_press.is_some())
+            .field("button_label", &self.button_label)
+            .finish()
+    }
 }
 
 impl Toast {
@@ -137,7 +166,7 @@ impl Toast {
             content: String::new(),
             dismiss_time: NOTIFY_DEFAULT_DISMISS,
             creation_time: Instant::now(),
-            on_button_press: false,
+            on_button_press: None,
             button_label: String::new(),
         }
     }
@@ -170,11 +199,12 @@ impl Toast {
         dismiss_time: i64,
         button_label: String,
         content: String,
+        on_press: Box<dyn Fn() + Send + Sync>,
     ) -> Self {
         let mut toast = Self::new(toast_type);
         toast.dismiss_time = dismiss_time;
         toast.button_label = button_label;
-        toast.on_button_press = true;
+        toast.on_button_press = Some(Arc::from(on_press));
         toast.content = content;
         toast
     }
@@ -262,7 +292,7 @@ impl Toast {
     }
 
     pub fn has_on_button_press(&self) -> bool {
-        self.on_button_press
+        self.on_button_press.is_some()
     }
 
     pub fn button_label(&self) -> &str {
@@ -348,13 +378,14 @@ impl ImGuiNotify {
         toast_type: ToastType,
         content: &str,
         button_label: &str,
-        _on_button_press: Box<dyn Fn() + Send>,
+        on_button_press: Box<dyn Fn() + Send + Sync>,
     ) {
         Self::insert_notification(Toast::with_button(
             toast_type,
             NOTIFY_DEFAULT_DISMISS,
             button_label.to_string(),
             content.to_string(),
+            on_button_press,
         ));
     }
 
@@ -403,6 +434,7 @@ impl ImGuiNotify {
             let default_title = current_toast.default_title().map(|s| s.to_string());
             let content = current_toast.content().to_string();
             let has_button = current_toast.has_on_button_press();
+            let on_press_fn = current_toast.on_button_press.clone();
             let button_label = current_toast.button_label().to_string();
             let window_name = format!("##TOAST{}", i);
             let toast_pos = current_toast.pos;
@@ -488,10 +520,9 @@ impl ImGuiNotify {
                         if has_button
                             && !button_label.is_empty()
                             && ui.button(&button_label).clicked()
+                            && let Some(ref callback) = on_press_fn
                         {
-                            // In Java this would call onButtonPress.run()
-                            // Callback not yet wired (stub: on_button_press is bool)
-                            log::info!("Toast action button pressed: {}", button_label);
+                            callback();
                         }
                     });
                 });
@@ -684,6 +715,7 @@ mod tests {
             2000,
             "Click me".to_string(),
             "Action content".to_string(),
+            Box::new(|| {}),
         );
         assert!(toast.has_on_button_press());
         assert_eq!(toast.button_label(), "Click me");

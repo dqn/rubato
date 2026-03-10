@@ -304,9 +304,10 @@ impl LR2PlaySkinLoaderState {
                         values[1] as usize
                     };
                     if let Some(ref mut judge_obj) = self.judge_objects[player] {
-                        let _judge_image =
+                        let judge_image =
                             SkinImage::new_with_int_timer(images, values[10], values[9]);
                         judge_obj.inner.set_judge(judge_idx);
+                        judge_obj.set_judge_image(judge_idx, judge_image);
                     }
                 }
             }
@@ -338,15 +339,36 @@ impl LR2PlaySkinLoaderState {
                         values[4] += values[6];
                         values[6] = -values[6];
                     }
-                    // Judge image destination — SkinJudge currently uses () placeholders
-                    // for judge images, so actual destination cannot be set on the inner
-                    // SkinImage yet. The coordinate transform is computed here for when
-                    // SkinJudge is upgraded to hold real SkinImage objects.
-                    let _x = values[3] as f32 * safe_div_f32(self.dstw, self.srcw);
-                    let _y = self.dsth
-                        - (values[4] + values[6]) as f32 * safe_div_f32(self.dsth, self.srch);
-                    let _w = values[5] as f32 * safe_div_f32(self.dstw, self.srcw);
-                    let _h = values[6] as f32 * safe_div_f32(self.dsth, self.srch);
+                    if let Some(ref mut judge_obj) = self.judge_objects[player]
+                        && let Some(img) = judge_obj.judge_image_mut(judge_idx)
+                    {
+                        img.data.set_destination_with_int_timer_and_offsets(
+                            &DestinationParams {
+                                time: values[2] as i64,
+                                x: values[3] as f32 * safe_div_f32(self.dstw, self.srcw),
+                                y: self.dsth
+                                    - (values[4] + values[6]) as f32
+                                        * safe_div_f32(self.dsth, self.srch),
+                                w: values[5] as f32 * safe_div_f32(self.dstw, self.srcw),
+                                h: values[6] as f32 * safe_div_f32(self.dsth, self.srch),
+                                acc: values[7],
+                                a: values[8],
+                                r: values[9],
+                                g: values[10],
+                                b: values[11],
+                                blend: values[12],
+                                filter: values[13],
+                                angle: values[14],
+                                center: values[15],
+                                loop_val: values[16],
+                            },
+                            values[17],
+                            values[18],
+                            values[19],
+                            values[20],
+                            &[],
+                        );
+                    }
                 }
             }
             "SRC_NOWCOMBO_1P" | "SRC_NOWCOMBO_2P" | "SRC_NOWCOMBO_3P" => {
@@ -360,7 +382,7 @@ impl LR2PlaySkinLoaderState {
                 let divy = if values[8] > 0 { values[8] } else { 1 };
                 if let Some(simages) = self.csv.source_image(&values) {
                     // Rearrange flat images into [divy][divx] grid
-                    let _images_2d: Vec<Vec<TextureRegion>> = (0..divy)
+                    let images_2d: Vec<Vec<TextureRegion>> = (0..divy)
                         .map(|j| {
                             (0..divx)
                                 .map(|i| simages[(j * divx + i) as usize].clone())
@@ -372,9 +394,22 @@ impl LR2PlaySkinLoaderState {
                     } else {
                         values[1] as usize
                     };
-                    // Set judge count on the SkinJudge (placeholder)
                     if let Some(ref mut judge_obj) = self.judge_objects[player] {
+                        let number = crate::objects::skin_number::SkinNumber::new_with_int_timer(
+                            images_2d,
+                            None,
+                            values[10],
+                            values[9],
+                            crate::objects::skin_number::NumberDisplayConfig {
+                                keta: 0,
+                                zeropadding: 0,
+                                space: 0,
+                                align: 2,
+                            },
+                            0,
+                        );
                         judge_obj.inner.set_judge_count(judge_idx);
+                        judge_obj.set_judge_count(judge_idx, number);
                     }
                 }
             }
@@ -393,13 +428,46 @@ impl LR2PlaySkinLoaderState {
                 } else {
                     judge_idx_raw as usize
                 };
-                if let Some(ref judge_obj) = self.judge_objects[player]
+                if let Some(ref mut judge_obj) = self.judge_objects[player]
                     && judge_obj.inner.judge_count(judge_idx)
                 {
-                    let _values = lr2_skin_loader::parse_int(str_parts);
-                    // Combo number destination — SkinJudge currently uses ()
-                    // placeholders for count SkinNumbers. Coordinate transform is
-                    // deferred until SkinJudge stores real SkinNumber objects.
+                    let mut values = lr2_skin_loader::parse_int(str_parts);
+                    if values[5] < 0 {
+                        values[3] += values[5];
+                        values[5] = -values[5];
+                    }
+                    if values[6] < 0 {
+                        values[4] += values[6];
+                        values[6] = -values[6];
+                    }
+                    if let Some(num) = judge_obj.judge_count_mut(judge_idx) {
+                        num.data.set_destination_with_int_timer_and_offsets(
+                            &DestinationParams {
+                                time: values[2] as i64,
+                                x: values[3] as f32 * safe_div_f32(self.dstw, self.srcw),
+                                y: self.dsth
+                                    - (values[4] + values[6]) as f32
+                                        * safe_div_f32(self.dsth, self.srch),
+                                w: values[5] as f32 * safe_div_f32(self.dstw, self.srcw),
+                                h: values[6] as f32 * safe_div_f32(self.dsth, self.srch),
+                                acc: values[7],
+                                a: values[8],
+                                r: values[9],
+                                g: values[10],
+                                b: values[11],
+                                blend: values[12],
+                                filter: values[13],
+                                angle: values[14],
+                                center: values[15],
+                                loop_val: values[16],
+                            },
+                            values[17],
+                            values[18],
+                            values[19],
+                            values[20],
+                            &[],
+                        );
+                    }
                 }
             }
             "SRC_JUDGELINE" => {

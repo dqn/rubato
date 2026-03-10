@@ -114,6 +114,28 @@ impl MainController {
         // Create the new state
         new_state.create();
 
+        // Apply create side effects (input mode, guide SE)
+        // Java: BMSPlayer.create() directly modifies input processor; in Rust the
+        // side effects are queued and applied here since create() can't access
+        // MainController's input processor.
+        if let Some(effects) = new_state.take_state_create_effects() {
+            if effects.disable_input {
+                if let Some(ref mut input) = self.input {
+                    input.set_enable(false);
+                }
+            } else if let Some(mode) = effects.play_config_mode
+                && let Some(ref mut input) = self.input
+            {
+                input.set_play_config(self.player.play_config(mode));
+            }
+            // TODO: Wire guide SE paths to audio driver
+            // Java: audio.setAdditionalKeySound(judge, true/false, path)
+            // Requires AudioDriver::set_additional_key_sound() implementation
+            if effects.guide_se {
+                log::debug!("Guide SE requested; audio wiring not yet implemented");
+            }
+        }
+
         // Load keysounds from the BMS model into the audio driver.
         // Java: audio.setModel(model) is called during resource loading in BMSPlayer;
         // in Rust the audio driver is owned by MainController, so we call it here

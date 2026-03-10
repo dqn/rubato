@@ -56,6 +56,24 @@ impl SkinJudgeObject {
         }
     }
 
+    /// Get mutable reference to a judge image for destination wiring.
+    pub fn judge_image_mut(&mut self, index: usize) -> Option<&mut SkinImage> {
+        if index < self.judge_images.len() {
+            self.judge_images[index].as_mut()
+        } else {
+            None
+        }
+    }
+
+    /// Get mutable reference to a judge count number for destination wiring.
+    pub fn judge_count_mut(&mut self, index: usize) -> Option<&mut SkinNumber> {
+        if index < self.judge_counts.len() {
+            self.judge_counts[index].as_mut()
+        } else {
+            None
+        }
+    }
+
     /// Translated from: Java SkinJudge.prepare(long time, MainState state)
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
         let player = self.inner.player();

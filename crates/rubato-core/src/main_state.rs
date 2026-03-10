@@ -8,6 +8,22 @@ use rubato_types::sound_type::SoundType;
 // MainStateType moved to beatoraja-types (Phase 15d)
 pub use rubato_types::main_state_type::MainStateType;
 
+/// Side effects from state creation that MainController must apply.
+///
+/// Populated by `BMSPlayer::create()` and consumed by `transition_to_state()`.
+/// Since `create()` takes only `&mut self`, it cannot directly access external
+/// systems (input processor, audio driver). Instead, it stores the needed actions
+/// here and the controller applies them after `create()` returns.
+pub struct StateCreateEffects {
+    /// If Some, call `input.set_play_config()` with this mode's play config.
+    /// Used for PLAY and PRACTICE modes.
+    pub play_config_mode: Option<bms_model::mode::Mode>,
+    /// If true, call `input.set_enable(false)` for AUTOPLAY/REPLAY.
+    pub disable_input: bool,
+    /// If true, guide SE should be loaded into the audio driver.
+    pub guide_se: bool,
+}
+
 /// MainState - abstract class for each state in the player
 ///
 /// In Java this is an abstract class with fields. In Rust we use a trait
@@ -199,6 +215,13 @@ pub trait MainState {
 
     /// Take pending score handoff data for PlayerResource.
     fn take_score_handoff(&mut self) -> Option<rubato_types::score_handoff::ScoreHandoff> {
+        None
+    }
+
+    /// Take side effects produced by create() for the controller to apply.
+    ///
+    /// BMSPlayer overrides this to return input mode actions and guide SE flags.
+    fn take_state_create_effects(&mut self) -> Option<StateCreateEffects> {
         None
     }
 
