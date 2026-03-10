@@ -113,9 +113,18 @@ pub struct LauncherUi {
     /// Set to true when the user clicks "Exit".
     /// Java: PlayConfigurationView.exit() calls commit() + System.exit(0)
     exit_requested: bool,
+    /// Set to true when the user clicks "Load All BMS".
+    load_all_bms_requested: bool,
+    /// Set to true when the user clicks "Load Diff BMS".
+    load_diff_bms_requested: bool,
+    /// Set to true when the user clicks "Import Score".
+    import_score_requested: bool,
     /// Shared flag for play_requested, survives after eframe drops the App.
     /// Used by run_launcher() to detect whether play should be launched.
     shared_play_requested: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    shared_load_all_bms: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    shared_load_diff_bms: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    shared_import_score: std::sync::Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl LauncherUi {
@@ -204,19 +213,31 @@ impl LauncherUi {
             chart_details_data: Vec::new(),
             play_requested: false,
             exit_requested: false,
+            load_all_bms_requested: false,
+            load_diff_bms_requested: false,
+            import_score_requested: false,
             shared_play_requested: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            shared_load_all_bms: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            shared_load_diff_bms: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            shared_import_score: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
         }
     }
 
-    /// Create a LauncherUi with a shared play_requested flag.
-    /// Used by run_launcher() to detect play requests after eframe drops the App.
-    fn new_with_shared_flag(
+    /// Create a LauncherUi with shared flags.
+    /// Used by run_launcher() to detect requests after eframe drops the App.
+    fn new_with_shared_flags(
         config: Config,
         player: PlayerConfig,
         shared_play_requested: std::sync::Arc<std::sync::atomic::AtomicBool>,
+        shared_load_all_bms: std::sync::Arc<std::sync::atomic::AtomicBool>,
+        shared_load_diff_bms: std::sync::Arc<std::sync::atomic::AtomicBool>,
+        shared_import_score: std::sync::Arc<std::sync::atomic::AtomicBool>,
     ) -> Self {
         let mut ui = Self::new(config, player);
         ui.shared_play_requested = shared_play_requested;
+        ui.shared_load_all_bms = shared_load_all_bms;
+        ui.shared_load_diff_bms = shared_load_diff_bms;
+        ui.shared_import_score = shared_import_score;
         ui
     }
 
@@ -224,6 +245,21 @@ impl LauncherUi {
     /// Java: PlayConfigurationView.start() triggers MainLoader.play()
     pub fn is_play_requested(&self) -> bool {
         self.play_requested
+    }
+
+    /// Returns true if the user has clicked "Load All BMS".
+    pub fn is_load_all_bms_requested(&self) -> bool {
+        self.load_all_bms_requested
+    }
+
+    /// Returns true if the user has clicked "Load Diff BMS".
+    pub fn is_load_diff_bms_requested(&self) -> bool {
+        self.load_diff_bms_requested
+    }
+
+    /// Returns true if the user has clicked "Import Score".
+    pub fn is_import_score_requested(&self) -> bool {
+        self.import_score_requested
     }
 
     /// Returns a clone of the current Config.
@@ -318,12 +354,18 @@ impl LauncherUi {
                     log::info!("Start requested");
                 }
                 if ui.button("Load All BMS").clicked() {
+                    self.commit_config();
+                    self.load_all_bms_requested = true;
                     log::info!("Load All BMS requested");
                 }
                 if ui.button("Load Diff BMS").clicked() {
+                    self.commit_config();
+                    self.load_diff_bms_requested = true;
                     log::info!("Load Diff BMS requested");
                 }
                 if ui.button("Import Score").clicked() {
+                    self.commit_config();
+                    self.import_score_requested = true;
                     log::info!("Import Score requested");
                 }
                 if ui.button("Exit").clicked() {
@@ -390,6 +432,8 @@ impl LauncherUi {
 
     fn commit_config(&mut self) {
         self.config.playername = Some(self.player_name.clone());
+        // Sync player.id so PlayerConfig::write() saves to the correct profile directory
+        self.player.id = Some(self.player_name.clone());
         // Commit webhook URLs
         self.config.integration.webhook_url = self.webhook_urls.clone();
         // Commit OBS scene/action selections
@@ -457,9 +501,21 @@ impl eframe::App for LauncherUi {
     /// eframe calls on_exit() when the window is being closed.
     fn on_exit(&mut self) {
         self.commit_config();
-        // Persist play_requested to the shared atomic flag so run_launcher() can read it.
+        // Persist flags to shared atomics so run_launcher() can read them.
         self.shared_play_requested
             .store(self.play_requested, std::sync::atomic::Ordering::Release);
+        self.shared_load_all_bms.store(
+            self.load_all_bms_requested,
+            std::sync::atomic::Ordering::Release,
+        );
+        self.shared_load_diff_bms.store(
+            self.load_diff_bms_requested,
+            std::sync::atomic::Ordering::Release,
+        );
+        self.shared_import_score.store(
+            self.import_score_requested,
+            std::sync::atomic::Ordering::Release,
+        );
     }
 }
 
@@ -471,6 +527,9 @@ pub struct LauncherResult {
     pub config: Config,
     pub player: PlayerConfig,
     pub play_requested: bool,
+    pub load_all_bms_requested: bool,
+    pub load_diff_bms_requested: bool,
+    pub import_score_requested: bool,
 }
 
 /// Launch the egui configuration window using eframe.
@@ -485,11 +544,20 @@ pub fn run_launcher(
     player: PlayerConfig,
     title: &str,
 ) -> anyhow::Result<LauncherResult> {
-    // Shared atomic flag: survives after eframe drops the App.
+    // Shared atomic flags: survive after eframe drops the App.
     let shared_play_requested = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let shared_clone = shared_play_requested.clone();
+    let shared_load_all_bms = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let shared_load_diff_bms = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let shared_import_score = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
 
-    let launcher = LauncherUi::new_with_shared_flag(config, player, shared_clone);
+    let launcher = LauncherUi::new_with_shared_flags(
+        config,
+        player,
+        shared_play_requested.clone(),
+        shared_load_all_bms.clone(),
+        shared_load_diff_bms.clone(),
+        shared_import_score.clone(),
+    );
 
     // Java: primaryStage.setScene(scene); primaryStage.show();
     // eframe::run_native() blocks until the window is closed.
@@ -517,9 +585,16 @@ pub fn run_launcher(
     let player = PlayerConfig::read_player_config(playerpath, playername)
         .unwrap_or_else(|_| PlayerConfig::default());
 
+    let load_all_bms_requested = shared_load_all_bms.load(std::sync::atomic::Ordering::Acquire);
+    let load_diff_bms_requested = shared_load_diff_bms.load(std::sync::atomic::Ordering::Acquire);
+    let import_score_requested = shared_import_score.load(std::sync::atomic::Ordering::Acquire);
+
     Ok(LauncherResult {
         config,
         player,
         play_requested,
+        load_all_bms_requested,
+        load_diff_bms_requested,
+        import_score_requested,
     })
 }

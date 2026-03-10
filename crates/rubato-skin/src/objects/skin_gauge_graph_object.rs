@@ -3,12 +3,12 @@
 // Gauge transition graph object (result screen).
 
 use crate::json::json_skin_object_loader::parse_hex_color;
-use crate::stubs::MainState;
+use crate::stubs::{MainState, Pixmap, PixmapFormat, Texture, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 use rubato_render::color::Color;
 
 /// Type-to-color-index mapping table (Java: typetable)
-const _TYPE_TABLE: [usize; 10] = [0, 1, 2, 3, 4, 5, 3, 4, 5, 3];
+const TYPE_TABLE: [usize; 10] = [0, 1, 2, 3, 4, 5, 3, 4, 5, 3];
 
 /// Color strings for constructing a gauge graph from hex color values.
 pub struct GaugeGraphColorStrings<'a> {
@@ -39,13 +39,25 @@ pub struct SkinGaugeGraphObject {
     /// Line width for the graph
     pub line_width: i32,
     /// Background colors per gauge type (below border)
-    _graph_color: [Color; 6],
+    graph_color: [Color; 6],
     /// Graph line colors per gauge type (below border)
-    _graph_line: [Color; 6],
+    graph_line: [Color; 6],
     /// Background colors per gauge type (above border)
-    _border_color: [Color; 6],
+    border_color: [Color; 6],
     /// Graph line colors per gauge type (above border)
-    _border_line: [Color; 6],
+    border_line: [Color; 6],
+
+    // Runtime state for gauge graph rendering
+    current_type: i32,
+    color: usize,
+    gaugehistory: Vec<f32>,
+    section: Vec<i32>,
+    border: f32,
+    max: f32,
+    render: f32,
+    redraw: bool,
+    backtex: Option<TextureRegion>,
+    shapetex: Option<TextureRegion>,
 }
 
 impl SkinGaugeGraphObject {
@@ -114,10 +126,20 @@ impl SkinGaugeGraphObject {
             data: SkinObjectData::new(),
             delay: 1500,
             line_width: 2,
-            _graph_color: graph_color,
-            _graph_line: graph_line,
-            _border_color: border_color,
-            _border_line: border_line,
+            graph_color,
+            graph_line,
+            border_color,
+            border_line,
+            current_type: -1,
+            color: 0,
+            gaugehistory: Vec::new(),
+            section: Vec::new(),
+            border: 80.0,
+            max: 100.0,
+            render: 0.0,
+            redraw: false,
+            backtex: None,
+            shapetex: None,
         }
     }
 
@@ -164,10 +186,20 @@ impl SkinGaugeGraphObject {
             data: SkinObjectData::new(),
             delay: 1500,
             line_width: 2,
-            _graph_color: graph_color,
-            _graph_line: graph_line,
-            _border_color: border_color,
-            _border_line: border_line,
+            graph_color,
+            graph_line,
+            border_color,
+            border_line,
+            current_type: -1,
+            color: 0,
+            gaugehistory: Vec::new(),
+            section: Vec::new(),
+            border: 80.0,
+            max: 100.0,
+            render: 0.0,
+            redraw: false,
+            backtex: None,
+            shapetex: None,
         }
     }
 
@@ -217,10 +249,20 @@ impl SkinGaugeGraphObject {
             data: SkinObjectData::new(),
             delay: 1500,
             line_width: 2,
-            _graph_color: graph_color,
-            _graph_line: graph_line,
-            _border_color: border_color,
-            _border_line: border_line,
+            graph_color,
+            graph_line,
+            border_color,
+            border_line,
+            current_type: -1,
+            color: 0,
+            gaugehistory: Vec::new(),
+            section: Vec::new(),
+            border: 80.0,
+            max: 100.0,
+            render: 0.0,
+            redraw: false,
+            backtex: None,
+            shapetex: None,
         }
     }
 
@@ -234,15 +276,231 @@ impl SkinGaugeGraphObject {
 
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
         self.data.prepare(time, state);
-        // Gauge history rendering is deferred to wgpu pixel drawing pipeline.
-        // The prepare step in Java reads gauge history from PlayerResource,
-        // which is not yet accessible from the skin layer.
+
+        self.render = if time >= self.delay as i64 {
+            1.0
+        } else if self.delay > 0 {
+            time as f32 / self.delay as f32
+        } else {
+            1.0
+        };
+
+        let current_type = state.result_gauge_type();
+        if self.current_type != current_type {
+            self.redraw = true;
+            self.current_type = current_type;
+
+            self.gaugehistory = state
+                .gauge_history()
+                .and_then(|gh| gh.get(self.current_type as usize))
+                .cloned()
+                .unwrap_or_default();
+
+            self.section = Vec::new();
+            let course_history = state.course_gauge_history();
+            if !course_history.is_empty() {
+                self.gaugehistory = Vec::new();
+                for stage in course_history {
+                    if let Some(type_history) = stage.get(self.current_type as usize) {
+                        self.gaugehistory.extend_from_slice(type_history);
+                        let prev = self.section.last().copied().unwrap_or(0);
+                        self.section.push(prev + type_history.len() as i32);
+                    }
+                }
+            }
+
+            if let Some((border, max)) = state.gauge_border_max() {
+                self.border = border;
+                self.max = max;
+            }
+        }
     }
 
-    pub fn draw(&mut self, _sprite: &mut SkinObjectRenderer) {
-        // Gauge graph drawing requires pixel-level Pixmap operations (Java: Pixmap.fillRectangle).
-        // In Rust, this will be implemented via wgpu compute/render pass when the
-        // rendering pipeline is ready. For now, this is a no-op.
+    pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
+        if self.gaugehistory.is_empty() {
+            return;
+        }
+
+        let region_x = self.data.region.x;
+        let region_y = self.data.region.y;
+        let region_width = self.data.region.width;
+        let region_height = self.data.region.height;
+
+        // Check if texture needs recreation
+        let needs_dispose = if let Some(ref shapetex) = self.shapetex {
+            if !self.redraw {
+                if let Some(tex) = shapetex.texture.as_ref() {
+                    tex.width != region_width as i32 || tex.height != region_height as i32
+                } else {
+                    false
+                }
+            } else {
+                true
+            }
+        } else {
+            false
+        };
+        if needs_dispose {
+            self.dispose_textures();
+        }
+
+        if self.shapetex.is_none() {
+            self.redraw = false;
+            let width = region_width as i32;
+            let height = region_height as i32;
+
+            let type_idx = self.current_type as usize;
+            self.color = if type_idx < TYPE_TABLE.len() {
+                TYPE_TABLE[type_idx]
+            } else {
+                0
+            };
+
+            // Create background pixmap
+            let mut shape = Pixmap::new(width, height, PixmapFormat::RGBA8888);
+            shape.set_color(&self.graph_color[self.color]);
+            shape.fill();
+
+            let border = self.border;
+            let max = self.max;
+            if max > 0.0 {
+                shape.set_color(&self.border_color[self.color]);
+                shape.fill_rectangle(
+                    0,
+                    (height as f32 * border / max) as i32,
+                    width,
+                    (height as f32 * (max - border) / max) as i32,
+                );
+            }
+
+            self.backtex = Some(TextureRegion::from_texture(Texture::from_pixmap(&shape)));
+            shape.dispose();
+
+            // Create graph pixmap
+            let mut shape = Pixmap::new(width, height, PixmapFormat::RGBA8888);
+            let mut f1: Option<f32> = None;
+            let mut last_gauge: f32 = -1.0;
+            let mut last_x: i32 = -1;
+            let mut last_y: i32 = -1;
+            let line_width = self.line_width;
+
+            let gauge_len = self.gaugehistory.len() as f32;
+            if gauge_len > 0.0 && max > 0.0 {
+                for (i, &f2) in self.gaugehistory.iter().enumerate() {
+                    if self.section.contains(&(i as i32)) {
+                        shape.set_color(&Color::value_of("ffffff"));
+                        shape.draw_line(
+                            (width as f32 * (i as f32 - 1.0) / gauge_len) as i32,
+                            0,
+                            (width as f32 * (i as f32 - 1.0) / gauge_len) as i32,
+                            height,
+                        );
+                    }
+                    if let Some(f1_val) = f1 {
+                        let x1 = (width as f32 * (i as f32 - 1.0) / gauge_len) as i32;
+                        let y1 = ((f1_val / max) * (height - line_width) as f32) as i32;
+                        let x2 = (width as f32 * i as f32 / gauge_len) as i32;
+                        let y2 = ((f2 / max) * (height - line_width) as f32) as i32;
+                        let yb = ((border / max) * (height - line_width) as f32) as i32;
+                        last_gauge = f2;
+                        last_x = x2;
+                        last_y = y2;
+                        if f1_val < border {
+                            if f2 < border {
+                                shape.set_color(&self.graph_line[self.color]);
+                                shape.fill_rectangle(
+                                    x1,
+                                    y1.min(y2),
+                                    line_width,
+                                    (y2 - y1).abs() + line_width,
+                                );
+                                shape.fill_rectangle(x1, y2, x2 - x1, line_width);
+                            } else {
+                                shape.set_color(&self.graph_line[self.color]);
+                                shape.fill_rectangle(x1, y1, line_width, yb - y1);
+                                shape.set_color(&self.border_line[self.color]);
+                                shape.fill_rectangle(x1, yb, line_width, y2 - yb + line_width);
+                                shape.fill_rectangle(x1, y2, x2 - x1, line_width);
+                            }
+                        } else if f2 >= border {
+                            shape.set_color(&self.border_line[self.color]);
+                            shape.fill_rectangle(
+                                x1,
+                                y1.min(y2),
+                                line_width,
+                                (y2 - y1).abs() + line_width,
+                            );
+                            shape.fill_rectangle(x1, y2, x2 - x1, line_width);
+                        } else {
+                            shape.set_color(&self.border_line[self.color]);
+                            shape.fill_rectangle(x1, yb, line_width, y1 - yb + line_width);
+                            shape.set_color(&self.graph_line[self.color]);
+                            shape.fill_rectangle(x1, y2, line_width, yb - y2);
+                            shape.fill_rectangle(x1, y2, x2 - x1, line_width);
+                        }
+                    }
+                    f1 = Some(f2);
+                }
+
+                if last_gauge != -1.0 {
+                    if last_gauge < border {
+                        shape.set_color(&self.graph_line[self.color]);
+                    } else {
+                        shape.set_color(&self.border_line[self.color]);
+                    }
+                    shape.fill_rectangle(last_x, last_y, width - last_x, line_width);
+                }
+            }
+
+            self.shapetex = Some(TextureRegion::from_texture(Texture::from_pixmap(&shape)));
+            shape.dispose();
+        }
+
+        // Draw background
+        if let Some(ref backtex) = self.backtex {
+            sprite.draw(
+                backtex,
+                region_x,
+                region_y + region_height,
+                region_width,
+                -region_height,
+            );
+        }
+        // Draw graph with render progress
+        if let Some(ref mut shapetex) = self.shapetex {
+            shapetex.set_region_from(
+                0,
+                0,
+                (region_width * self.render) as i32,
+                region_height as i32,
+            );
+            sprite.draw(
+                shapetex,
+                region_x,
+                region_y + region_height,
+                region_width * self.render,
+                -region_height,
+            );
+        }
+    }
+
+    fn dispose_textures(&mut self) {
+        if let Some(ref mut tex) = self.shapetex
+            && let Some(t) = tex.texture.as_mut()
+        {
+            t.dispose();
+        }
+        self.shapetex = None;
+        if let Some(ref mut tex) = self.backtex
+            && let Some(t) = tex.texture.as_mut()
+        {
+            t.dispose();
+        }
+        self.backtex = None;
+    }
+
+    pub fn dispose(&mut self) {
+        self.dispose_textures();
     }
 }
 

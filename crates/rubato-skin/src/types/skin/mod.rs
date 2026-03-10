@@ -181,7 +181,7 @@ impl SkinObject {
             SkinObject::BpmGraph(o) => o.draw(sprite, state),
             SkinObject::HitErrorVisualizer(o) => o.draw(sprite),
             SkinObject::NoteDistributionGraph(o) => o.draw(sprite, state),
-            SkinObject::TimingDistributionGraph(o) => o.draw(sprite),
+            SkinObject::TimingDistributionGraph(o) => o.draw(sprite, state),
             SkinObject::TimingVisualizer(o) => o.draw(sprite),
             SkinObject::Note(o) => o.draw(sprite),
             SkinObject::Bar(o) => o.draw(sprite),

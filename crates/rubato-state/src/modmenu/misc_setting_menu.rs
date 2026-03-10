@@ -1,7 +1,9 @@
 use bms_model::mode::Mode;
 
 use super::imgui_notify::{ImGuiNotify, NOTIFICATION_POSITIONS};
-use super::stubs::{Config, MainController, MainControllerAccess, PlayConfig, read_all_player_id};
+use super::stubs::{
+    Config, MainController, MainControllerAccess, PlayConfig, PlayerConfig, read_all_player_id,
+};
 
 use std::sync::Mutex;
 
@@ -267,7 +269,25 @@ fn profile_switcher_ui(ui: &mut egui::Ui) {
             });
 
         if ui.button("Switch").clicked() {
-            // Profile switch logic (deferred: requires MainController integration)
+            // Read the selected player profile and update config.
+            // Full MainController.loadNewProfile() integration is deferred
+            // (requires command queue wiring from modmenu).
+            let sel = selected as usize;
+            if sel < players.len() {
+                let player_id = &players[sel];
+                match PlayerConfig::read_player_config("player", player_id) {
+                    Ok(new_pc) => {
+                        let mut config = CONFIG.lock().expect("CONFIG lock poisoned");
+                        if let Some(ref mut c) = *config {
+                            c.playername = new_pc.id.clone();
+                        }
+                        log::info!("Profile switched to: {}", player_id);
+                    }
+                    Err(e) => {
+                        log::error!("Failed to read player config '{}': {}", player_id, e);
+                    }
+                }
+            }
         }
         if ui.button("Reload list").clicked() {
             load_players();

@@ -237,6 +237,9 @@ impl MainController {
                         audio.dispose_path(&path);
                     }
                 }
+                MainControllerCommand::LoadNewProfile(pc) => {
+                    self.load_new_profile(*pc);
+                }
             }
         }
 

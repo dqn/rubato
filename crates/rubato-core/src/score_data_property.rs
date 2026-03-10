@@ -266,16 +266,28 @@ impl ScoreDataProperty {
         self.rivalscore = rivalscore;
         self.rival_ghost = rival_ghost;
         self.totalnotes = totalnotes;
-        self.bestscorerate = (bestscore as f32) / (totalnotes * 2) as f32;
-        self.bestrate_int = (self.bestscorerate * 100.0) as i32;
-        self.bestrate_after_dot = ((self.bestscorerate * 10000.0) as i32) % 100;
-        self.rivalscorerate = (rivalscore as f32) / (totalnotes * 2) as f32;
-        let bestrank_len = self.bestrank.len();
-        for (i, bestrank) in self.bestrank.iter_mut().enumerate() {
-            *bestrank = self.bestscorerate >= 1f32 * i as f32 / bestrank_len as f32;
+        if totalnotes == 0 {
+            self.bestscorerate = 0.0;
+            self.bestrate_int = 0;
+            self.bestrate_after_dot = 0;
+            self.rivalscorerate = 0.0;
+            for bestrank in self.bestrank.iter_mut() {
+                *bestrank = false;
+            }
+            self.rivalrate_int = 0;
+            self.rivalrate_after_dot = 0;
+        } else {
+            self.bestscorerate = (bestscore as f32) / (totalnotes * 2) as f32;
+            self.bestrate_int = (self.bestscorerate * 100.0) as i32;
+            self.bestrate_after_dot = ((self.bestscorerate * 10000.0) as i32) % 100;
+            self.rivalscorerate = (rivalscore as f32) / (totalnotes * 2) as f32;
+            let bestrank_len = self.bestrank.len();
+            for (i, bestrank) in self.bestrank.iter_mut().enumerate() {
+                *bestrank = self.bestscorerate >= 1f32 * i as f32 / bestrank_len as f32;
+            }
+            self.rivalrate_int = (self.rivalscorerate * 100.0) as i32;
+            self.rivalrate_after_dot = ((self.rivalscorerate * 10000.0) as i32) % 100;
         }
-        self.rivalrate_int = (self.rivalscorerate * 100.0) as i32;
-        self.rivalrate_after_dot = ((self.rivalscorerate * 10000.0) as i32) % 100;
 
         // If ghost and notes count differ (notes changed due to random branching), don't use ghost
         self.use_best_ghost = self

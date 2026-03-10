@@ -1,7 +1,9 @@
 // SkinTimingDistributionGraph.java -> skin_timing_distribution_graph.rs
 // Mechanical line-by-line translation.
 
-use crate::graphs::skin_timing_visualizer::{color_string_validation, judge_area};
+use crate::graphs::skin_timing_visualizer::{
+    color_string_validation, judge_area, judge_area_from_player_resource,
+};
 use crate::stubs::{Color, MainState, MusicResult, Pixmap, PixmapFormat, Texture, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
@@ -190,10 +192,100 @@ impl SkinTimingDistributionGraph {
         }
     }
 
-    pub fn draw(&mut self, _sprite: &mut SkinObjectRenderer) {
+    pub fn draw(&mut self, sprite: &mut SkinObjectRenderer, state: &dyn MainState) {
         // In Java, draw() accesses this.state (MusicResult) directly.
-        // In Rust, we need the MusicResult passed explicitly via draw_with_music_result().
-        log::warn!("SkinTimingDistributionGraph::draw() called without MusicResult reference");
+        // In Rust, we get timing distribution and judge area from MainState.
+        if !self.state_set {
+            return;
+        }
+
+        if self.tex.is_none() {
+            let td = match state.get_timing_distribution() {
+                Some(td) => td,
+                None => return,
+            };
+            let dist = td.timing_distribution();
+            let center = td.array_center();
+            let judge_area = judge_area_from_player_resource(state.get_resource());
+
+            let mut max = self.max;
+            for &d in dist {
+                if max < d {
+                    max = (d / 10) * 10 + 10;
+                }
+            }
+            self.max = max;
+
+            let mut shape = Pixmap::new(self.gx, max, PixmapFormat::RGBA8888);
+            shape.set_color(&self.j_color[0]);
+            shape.fill_rectangle(self.c, 0, 1, max);
+
+            let mut beforex1 = self.c;
+            let mut beforex2 = self.c + 1;
+            for (i, color) in self.j_color.iter().enumerate() {
+                shape.set_color(color);
+                let x1 = if let Some(area) = judge_area.get(i) {
+                    self.c + area[0].clamp(-self.c, self.c)
+                } else {
+                    self.c
+                };
+                let x2 = if let Some(area) = judge_area.get(i) {
+                    self.c + area[1].clamp(-self.c, self.c) + 1
+                } else {
+                    self.c + 1
+                };
+
+                if beforex1 > x1 {
+                    shape.fill_rectangle(x1, 0, (x1 - beforex1).abs(), max);
+                    beforex1 = x1;
+                }
+
+                if x2 > beforex2 {
+                    shape.fill_rectangle(beforex2, 0, (x2 - beforex2).abs(), max);
+                    beforex2 = x2;
+                }
+            }
+
+            shape.set_color_rgba(0.0, 0.0, 0.0, 0.25);
+            let mut x = self.c % 10;
+            while x < self.c * 2 + 1 {
+                shape.draw_line(x, 0, x, 1);
+                x += 10;
+            }
+
+            if self.draw_average && td.average() != f32::MAX {
+                let avg = td.average().round() as i32;
+                shape.set_color(&self.average_color);
+                shape.draw_line(self.c + avg, 0, self.c + avg, max);
+            }
+
+            if self.draw_dev && td.std_dev() != -1.0 {
+                let avg = td.average().round() as i32;
+                let dev = td.std_dev().round() as i32;
+                shape.set_color(&self.dev_color);
+                shape.draw_line(self.c + avg + dev, 0, self.c + avg + dev, max);
+                shape.draw_line(self.c + avg - dev, 0, self.c + avg - dev, max);
+            }
+
+            shape.set_color(&self.graph_color);
+            let mut i = -self.c;
+            while i < self.gx - self.c {
+                if -center < i && i < center {
+                    let idx = (center + i) as usize;
+                    if idx < dist.len() {
+                        shape.fill_rectangle(self.c + i, max - dist[idx], 1, dist[idx]);
+                    }
+                }
+                i += 1;
+            }
+
+            self.tex = Some(TextureRegion::from_texture(Texture::from_pixmap(&shape)));
+            shape.dispose();
+        }
+
+        if let Some(ref tex) = self.tex {
+            self.data.draw_image(sprite, tex);
+        }
     }
 
     pub fn dispose(&mut self) {

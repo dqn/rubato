@@ -70,6 +70,12 @@ pub trait MainState {
         false
     }
 
+    /// Returns the timing distribution data for result screens.
+    /// Used by SkinTimingDistributionGraph to render the judge timing histogram.
+    fn get_timing_distribution(&self) -> Option<&TimingDistribution> {
+        None
+    }
+
     /// Returns mutable reference to the player config.
     /// Returns None if config is not available (e.g., stub state).
     fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
@@ -175,6 +181,29 @@ pub trait MainState {
     /// Used by Lua `gauge_type()` function.
     fn gauge_type(&self) -> i32 {
         0
+    }
+
+    /// Returns gauge history per gauge type for result screen gauge graph rendering.
+    /// Each inner Vec<f32> is the gauge value at each note timing.
+    fn gauge_history(&self) -> Option<&Vec<Vec<f32>>> {
+        None
+    }
+
+    /// Returns course gauge history for course result screens.
+    /// Outer: stages, middle: gauge types, inner: gauge values.
+    fn course_gauge_history(&self) -> &[Vec<Vec<f32>>] {
+        &[]
+    }
+
+    /// Returns the gauge border (clear threshold) and max values.
+    /// Returns (border, max) for the current groove gauge.
+    fn gauge_border_max(&self) -> Option<(f32, f32)> {
+        None
+    }
+
+    /// Returns the result screen gauge type (may differ from play gauge type).
+    fn result_gauge_type(&self) -> i32 {
+        self.gauge_type()
     }
 
     /// Returns true if this state is a BMSPlayer (gameplay state).

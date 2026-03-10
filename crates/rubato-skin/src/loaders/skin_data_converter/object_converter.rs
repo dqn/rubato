@@ -461,6 +461,9 @@ pub(super) fn convert_skin_object(
             *cycle,
             *starttime,
             *endtime,
+            source_map,
+            skin_path,
+            usecim,
         ),
 
         SkinObjectType::Note => {
@@ -1087,6 +1090,7 @@ fn convert_timing_distribution_graph(
     Some(SkinObject::TimingDistributionGraph(graph))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn convert_gauge(
     nodes: &[String],
     parts: i32,
@@ -1095,20 +1099,44 @@ fn convert_gauge(
     cycle: i32,
     starttime: i32,
     endtime: i32,
+    source_map: &mut HashMap<String, SourceData>,
+    skin_path: &Path,
+    usecim: bool,
 ) -> Option<SkinObject> {
-    // Gauge conversion: creates a SkinGauge with gauge image tiles.
-    // Known rendering gap: gauge_images is empty because node IDs reference sk.image[]
-    // entries which aren't threaded through the converter. SkinGauge::draw() exits
-    // immediately when images are empty, so the gauge is invisible on JSON play skins.
-    // Fix: pass the resolved image map into this converter, or resolve images in a
-    // post-processing pass after the converter has access to the full skin image set.
-    //
+    // Resolve gauge node IDs to TextureRegion images via source_map.
+    // Each node string references a source entry; resolve to a full-texture TextureRegion.
     // Java indexmap logic maps 4/8/12 node configs to 36 gauge slots.
     // With 36 nodes, each maps 1:1 to a slot.
-    let gauge_images: Vec<Vec<Option<TextureRegion>>> = Vec::new();
+    let mut resolved_nodes: Vec<Option<TextureRegion>> = Vec::with_capacity(nodes.len());
+    for node_id in nodes {
+        let tex = get_texture_for_src(Some(node_id), source_map, skin_path, usecim);
+        resolved_nodes.push(tex.map(TextureRegion::from_texture));
+    }
+
+    // Build gauge_images: 36 slots, each containing a single-element vec
+    // (no animation frames from JSON sources).
+    let gauge_images: Vec<Vec<Option<TextureRegion>>> = if resolved_nodes.len() == 36 {
+        // 1:1 mapping
+        resolved_nodes.into_iter().map(|tr| vec![tr]).collect()
+    } else if !resolved_nodes.is_empty() {
+        // Expand fewer nodes to 36 slots by repeating.
+        // The pattern repeats: each node set represents one gauge visual state.
+        let mut images = Vec::with_capacity(36);
+        for i in 0..36 {
+            let idx = i % resolved_nodes.len();
+            images.push(vec![resolved_nodes[idx].clone()]);
+        }
+        images
+    } else {
+        Vec::new()
+    };
     debug!(
-        "Gauge: creating with {} nodes, parts={}, type={} (images deferred)",
+        "Gauge: creating with {} nodes ({} resolved images), parts={}, type={}",
         nodes.len(),
+        gauge_images
+            .iter()
+            .filter(|v| v.iter().any(|t| t.is_some()))
+            .count(),
         parts,
         gauge_type
     );

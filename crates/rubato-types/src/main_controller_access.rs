@@ -34,6 +34,7 @@ pub enum MainControllerCommand {
     SetAudioPathVolume(String, f32),
     StopAudioPath(String),
     DisposeAudioPath(String),
+    LoadNewProfile(Box<crate::player_config::PlayerConfig>),
 }
 
 /// Shared command queue for state-facing MainController proxies.
