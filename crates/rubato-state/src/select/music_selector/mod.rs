@@ -142,13 +142,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
         } else if targetid == "MYBEST" {
             // MYBEST target uses the player's own best score
             self.selected_score()
-        } else if targetid.starts_with("RATE_") || targetid == "MAX" {
-            // Static rate targets use the pre-computed cached target score
-            self.selector.cached_target_score.as_ref()
         } else {
-            // IR-based targets (IR_NEXT_*, IR_RANK_*) and RANK_NEXT cannot be
-            // resolved without MainController context; return None.
-            None
+            // Static rate targets, IR-based targets, and RANK_NEXT all use
+            // the pre-computed cached target score
+            self.selector.cached_target_score.as_ref()
         }
     }
 

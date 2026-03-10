@@ -569,10 +569,14 @@ impl MainState for MusicSelector {
                             let chart = IRChartData::new(song);
                             let local_score = main.read_score_data_by_hash(
                                 &song.file.sha256,
-                                song.chart.has_long_note(),
+                                song.chart.has_undefined_long_note(),
                                 lnmode,
                             );
                             rd.load_song(conn_arc.as_ref(), &chart, local_score.as_ref());
+                            // Write back loaded ranking data to the cache
+                            if let Some(cache) = main.ranking_data_cache_mut() {
+                                cache.put_song_any(song, lnmode, Box::new(rd.clone()));
+                            }
                         }
                     }
                 }
@@ -607,6 +611,10 @@ impl MainState for MusicSelector {
                         }) {
                             let ir_course = IRCourseData::new_with_lntype(course, lnmode);
                             rd.load_course(conn_arc.as_ref(), &ir_course, None);
+                            // Write back loaded ranking data to the cache
+                            if let Some(cache) = main.ranking_data_cache_mut() {
+                                cache.put_course_any(course, lnmode, Box::new(rd.clone()));
+                            }
                         }
                     }
                 }

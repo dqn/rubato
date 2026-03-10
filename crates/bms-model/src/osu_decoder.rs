@@ -49,8 +49,8 @@ impl OSUDecoder {
             convert_hex_string(&hasher.finalize())
         };
 
-        // Decode as MS932 (Shift_JIS superset)
-        let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&file_bytes);
+        // .osu files are UTF-8 text
+        let decoded = String::from_utf8_lossy(&file_bytes);
         let mut reader = BufReader::new(Cursor::new(decoded.as_bytes().to_vec()));
         let osu = Osu::parse(&mut reader);
 

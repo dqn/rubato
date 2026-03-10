@@ -265,9 +265,10 @@ impl MusicSelector {
     /// Recompute cached_target_score based on config.select_settings.targetid
     /// and the selected song's total notes. Called before rendering.
     pub(super) fn refresh_cached_target_score(&mut self) {
-        let targetid = &self.config.select_settings.targetid;
-        // Only cache computed scores for static rate targets.
+        let targetid = self.config.select_settings.targetid.clone();
         // MYBEST and RIVAL targets are resolved via existing bar data (no cache needed).
+
+        // Static rate targets
         let rate = match targetid.as_str() {
             "RATE_A-" => Some(100.0_f64 * 17.0 / 27.0),
             "RATE_A" => Some(100.0_f64 * 18.0 / 27.0),
@@ -280,22 +281,127 @@ impl MusicSelector {
             "RATE_AAA+" => Some(100.0_f64 * 25.0 / 27.0),
             "RATE_MAX-" => Some(100.0_f64 * 26.0 / 27.0),
             "MAX" => Some(100.0_f64),
-            _ => None,
+            _ => {
+                // Handle custom RATE_<float> targets (e.g. "RATE_85.5")
+                if let Some(suffix) = targetid.strip_prefix("RATE_")
+                    && let Ok(val) = suffix.parse::<f64>()
+                    && (0.0..=100.0).contains(&val)
+                {
+                    Some(val)
+                } else {
+                    None
+                }
+            }
         };
 
-        self.cached_target_score = rate.and_then(|rate| {
-            let total_notes = self
+        if let Some(rate) = rate {
+            self.cached_target_score = self
                 .manager
                 .selected()
                 .and_then(|b| b.as_song_bar())
-                .map(|sb| sb.song_data().chart.notes)?;
-            // Same formula as StaticTargetProperty::target()
-            let exscore = (total_notes as f64 * 2.0 * rate / 100.0).ceil() as i32;
-            let mut score = rubato_types::score_data::ScoreData::default();
-            score.judge_counts.epg = exscore / 2;
-            score.judge_counts.egr = exscore % 2;
-            Some(score)
-        });
+                .map(|sb| sb.song_data().chart.notes)
+                .map(|total_notes| {
+                    // Same formula as StaticTargetProperty::target()
+                    let exscore = (total_notes as f64 * 2.0 * rate / 100.0).ceil() as i32;
+                    let mut score = rubato_types::score_data::ScoreData::default();
+                    score.judge_counts.epg = exscore / 2;
+                    score.judge_counts.egr = exscore % 2;
+                    score
+                });
+            return;
+        }
+
+        // RANK_NEXT target: compute next rank threshold from local score
+        if targetid == "RANK_NEXT" {
+            self.cached_target_score =
+                self.manager
+                    .selected()
+                    .and_then(|b| b.as_song_bar())
+                    .map(|sb| {
+                        let total_notes = sb.song_data().chart.notes;
+                        let max = total_notes * 2;
+                        let nowscore = sb
+                            .selectable
+                            .bar_data
+                            .score()
+                            .map(|s| s.exscore())
+                            .unwrap_or(0);
+                        let mut targetscore = max;
+                        for i in 15..27 {
+                            let target = (max as f64 * i as f64 / 27.0).ceil() as i32;
+                            if nowscore < target {
+                                targetscore = target;
+                                break;
+                            }
+                        }
+                        let mut score = rubato_types::score_data::ScoreData::default();
+                        score.judge_counts.epg = targetscore / 2;
+                        score.judge_counts.egr = targetscore % 2;
+                        score
+                    });
+            return;
+        }
+
+        // IR-based targets: resolve from ranking data if available
+        if targetid.starts_with("IR_") {
+            self.cached_target_score = self.resolve_ir_target_score(&targetid);
+            return;
+        }
+
+        self.cached_target_score = None;
+    }
+
+    /// Resolve an IR-based target score from the current ranking data.
+    fn resolve_ir_target_score(
+        &self,
+        targetid: &str,
+    ) -> Option<rubato_types::score_data::ScoreData> {
+        let rd = self.ranking.currentir.as_ref()?;
+        if rd.state() != rubato_ir::ranking_data::FINISH || rd.total_player() == 0 {
+            return None;
+        }
+        let total = rd.total_player();
+
+        // Determine target index from the IR target type
+        let target_index = if let Some(suffix) = targetid.strip_prefix("IR_NEXT_")
+            && let Ok(value) = suffix.parse::<i32>()
+        {
+            // On the select screen, nowscore is the local best score
+            let nowscore = self
+                .manager
+                .selected()
+                .and_then(|b| b.as_song_bar())
+                .and_then(|sb| sb.selectable.bar_data.score())
+                .map(|s| s.exscore())
+                .unwrap_or(0);
+            let mut idx = 0;
+            for i in 0..total {
+                if let Some(score) = rd.score(i)
+                    && score.exscore() <= nowscore
+                {
+                    idx = (i - value).max(0);
+                    break;
+                }
+            }
+            idx
+        } else if let Some(suffix) = targetid.strip_prefix("IR_RANKRATE_")
+            && let Ok(value) = suffix.parse::<i32>()
+        {
+            total * value / 100
+        } else if let Some(suffix) = targetid.strip_prefix("IR_RANK_")
+            && let Ok(value) = suffix.parse::<i32>()
+        {
+            (value.min(total) - 1).max(0)
+        } else {
+            return None;
+        };
+
+        let ir_score = rd.score(target_index)?;
+        let exscore = ir_score.exscore();
+        let mut score = rubato_types::score_data::ScoreData::default();
+        score.judge_counts.epg = exscore / 2;
+        score.judge_counts.egr = exscore % 2;
+        Some(score)
     }
 
     pub fn sort(&self) -> i32 {

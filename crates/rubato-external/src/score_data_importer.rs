@@ -55,7 +55,18 @@ impl ScoreDataImporter {
                             .unwrap_or(0) as i32;
                         sd.sha256 = song[0].file.sha256.clone();
                         sd.notes = song[0].chart.notes;
-                        result.push(sd);
+                        // LR2 had no LN mode concept. For songs with undefined LN,
+                        // import the score under all LN modes (0/1/2) so it is visible
+                        // regardless of the user's current lnmode setting.
+                        if song[0].chart.has_undefined_long_note() {
+                            for lnmode in 0..3 {
+                                let mut sd_ln = sd.clone();
+                                sd_ln.mode = lnmode;
+                                result.push(sd_ln);
+                            }
+                        } else {
+                            result.push(sd);
+                        }
                     }
                 }
 
