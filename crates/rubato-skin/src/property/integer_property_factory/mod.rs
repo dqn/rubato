@@ -4,8 +4,11 @@ use super::integer_property::IntegerProperty;
 use super::property_lookup::{find_by_id, find_by_name};
 use crate::stubs::MainState;
 
+mod index_types;
 mod value_type_data;
-use value_type_data::{INDEX_TYPES, VALUE_TYPES};
+mod value_types;
+use index_types::INDEX_TYPES;
+use value_types::VALUE_TYPES;
 
 const ID_LENGTH: usize = 65536;
 
