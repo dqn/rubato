@@ -91,35 +91,35 @@ mod tests {
     #[test]
     fn test_startinput_parses_value() {
         let mut state = make_state();
-        state.process_csv_command("STARTINPUT", &str_vec(&["STARTINPUT", "1000"]));
+        state.process_csv_command("STARTINPUT", &str_vec(&["STARTINPUT", "1000"]), None);
         assert_eq!(state.skin_input, Some(1000));
     }
 
     #[test]
     fn test_startinput_empty_parts_no_panic() {
         let mut state = make_state();
-        state.process_csv_command("STARTINPUT", &str_vec(&["STARTINPUT"]));
+        state.process_csv_command("STARTINPUT", &str_vec(&["STARTINPUT"]), None);
         assert_eq!(state.skin_input, None);
     }
 
     #[test]
     fn test_scenetime_parses_value() {
         let mut state = make_state();
-        state.process_csv_command("SCENETIME", &str_vec(&["SCENETIME", "5000"]));
+        state.process_csv_command("SCENETIME", &str_vec(&["SCENETIME", "5000"]), None);
         assert_eq!(state.skin_scene, Some(5000));
     }
 
     #[test]
     fn test_fadeout_parses_value() {
         let mut state = make_state();
-        state.process_csv_command("FADEOUT", &str_vec(&["FADEOUT", "300"]));
+        state.process_csv_command("FADEOUT", &str_vec(&["FADEOUT", "300"]), None);
         assert_eq!(state.skin_fadeout, Some(300));
     }
 
     #[test]
     fn test_fadeout_invalid_value_returns_none() {
         let mut state = make_state();
-        state.process_csv_command("FADEOUT", &str_vec(&["FADEOUT", "abc"]));
+        state.process_csv_command("FADEOUT", &str_vec(&["FADEOUT", "abc"]), None);
         assert_eq!(state.skin_fadeout, None);
     }
 
@@ -127,7 +127,7 @@ mod tests {
     fn test_stretch_parses_value() {
         let mut state = make_state();
         assert_eq!(state.stretch, -1);
-        state.process_csv_command("STRETCH", &str_vec(&["STRETCH", "2"]));
+        state.process_csv_command("STRETCH", &str_vec(&["STRETCH", "2"]), None);
         assert_eq!(state.stretch, 2);
     }
 
@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn test_unknown_command_no_panic() {
         let mut state = make_state();
-        state.process_csv_command("NONEXISTENT", &str_vec(&["NONEXISTENT", "1"]));
+        state.process_csv_command("NONEXISTENT", &str_vec(&["NONEXISTENT", "1"]), None);
         // Should not panic, no state changed
         assert_eq!(state.skin_input, None);
     }
@@ -310,7 +310,11 @@ SCENETIME,9999\n\
     #[test]
     fn test_image_command_nonexistent_file_pushes_null() {
         let mut state = make_state();
-        state.process_csv_command("IMAGE", &str_vec(&["#IMAGE", "/nonexistent/image.png"]));
+        state.process_csv_command(
+            "IMAGE",
+            &str_vec(&["#IMAGE", "/nonexistent/image.png"]),
+            None,
+        );
         assert_eq!(state.imagelist.len(), 1);
         assert!(matches!(state.imagelist[0], ImageListEntry::Null));
     }
@@ -324,7 +328,11 @@ SCENETIME,9999\n\
         std::fs::write(&movie_path, b"fake movie data").unwrap();
 
         let mut state = make_state();
-        state.process_csv_command("IMAGE", &str_vec(&["#IMAGE", movie_path.to_str().unwrap()]));
+        state.process_csv_command(
+            "IMAGE",
+            &str_vec(&["#IMAGE", movie_path.to_str().unwrap()]),
+            None,
+        );
         assert_eq!(state.imagelist.len(), 1);
         assert!(matches!(state.imagelist[0], ImageListEntry::Movie(_)));
     }
@@ -350,7 +358,11 @@ SCENETIME,9999\n\
         std::fs::write(&png_path, png_data).unwrap();
 
         let mut state = make_state();
-        state.process_csv_command("IMAGE", &str_vec(&["#IMAGE", png_path.to_str().unwrap()]));
+        state.process_csv_command(
+            "IMAGE",
+            &str_vec(&["#IMAGE", png_path.to_str().unwrap()]),
+            None,
+        );
         assert_eq!(state.imagelist.len(), 1);
         assert!(matches!(
             state.imagelist[0],
@@ -366,6 +378,7 @@ SCENETIME,9999\n\
             state.process_csv_command(
                 "IMAGE",
                 &str_vec(&["#IMAGE", &format!("/nonexistent/img{}.png", i)]),
+                None,
             );
         }
         assert_eq!(state.imagelist.len(), 5);
@@ -385,6 +398,7 @@ SCENETIME,9999\n\
         state.process_csv_command(
             "LR2FONT",
             &str_vec(&["#LR2FONT", "/nonexistent/font.lr2font"]),
+            None,
         );
         assert_eq!(state.fontlist.len(), 1);
         assert!(state.fontlist[0].is_none());
@@ -401,6 +415,7 @@ SCENETIME,9999\n\
         state.process_csv_command(
             "LR2FONT",
             &str_vec(&["#LR2FONT", font_path.to_str().unwrap()]),
+            None,
         );
         assert_eq!(state.fontlist.len(), 1);
         assert!(state.fontlist[0].is_some());
@@ -601,14 +616,14 @@ SCENETIME,9999\n\
     #[test]
     fn test_stretch_invalid_value_defaults_to_minus_one() {
         let mut state = make_state();
-        state.process_csv_command("STRETCH", &str_vec(&["STRETCH", "abc"]));
+        state.process_csv_command("STRETCH", &str_vec(&["STRETCH", "abc"]), None);
         assert_eq!(state.stretch, -1);
     }
 
     #[test]
     fn test_stretch_empty_parts_unchanged() {
         let mut state = make_state();
-        state.process_csv_command("STRETCH", &str_vec(&["STRETCH"]));
+        state.process_csv_command("STRETCH", &str_vec(&["STRETCH"]), None);
         assert_eq!(state.stretch, -1);
     }
 
@@ -617,29 +632,29 @@ SCENETIME,9999\n\
     #[test]
     fn test_startinput_negative_value() {
         let mut state = make_state();
-        state.process_csv_command("STARTINPUT", &str_vec(&["STARTINPUT", "-100"]));
+        state.process_csv_command("STARTINPUT", &str_vec(&["STARTINPUT", "-100"]), None);
         assert_eq!(state.skin_input, Some(-100));
     }
 
     #[test]
     fn test_scenetime_zero_value() {
         let mut state = make_state();
-        state.process_csv_command("SCENETIME", &str_vec(&["SCENETIME", "0"]));
+        state.process_csv_command("SCENETIME", &str_vec(&["SCENETIME", "0"]), None);
         assert_eq!(state.skin_scene, Some(0));
     }
 
     #[test]
     fn test_fadeout_whitespace_trimmed() {
         let mut state = make_state();
-        state.process_csv_command("FADEOUT", &str_vec(&["FADEOUT", "  500  "]));
+        state.process_csv_command("FADEOUT", &str_vec(&["FADEOUT", "  500  "]), None);
         assert_eq!(state.skin_fadeout, Some(500));
     }
 
     #[test]
     fn test_multiple_commands_last_value_wins() {
         let mut state = make_state();
-        state.process_csv_command("SCENETIME", &str_vec(&["SCENETIME", "1000"]));
-        state.process_csv_command("SCENETIME", &str_vec(&["SCENETIME", "2000"]));
+        state.process_csv_command("SCENETIME", &str_vec(&["SCENETIME", "1000"]), None);
+        state.process_csv_command("SCENETIME", &str_vec(&["SCENETIME", "2000"]), None);
         assert_eq!(state.skin_scene, Some(2000));
     }
 
@@ -704,6 +719,7 @@ SCENETIME,9999\n\
         state.process_csv_command(
             "INCLUDE",
             &str_vec(&["#INCLUDE", "/nonexistent/include.lr2skin"]),
+            None,
         );
         // Should silently skip
         assert_eq!(state.skin_scene, None);
@@ -722,6 +738,7 @@ SCENETIME,9999\n\
         state.process_csv_command(
             "INCLUDE",
             &str_vec(&["#INCLUDE", inc_path.to_str().unwrap()]),
+            None,
         );
         assert_eq!(state.skin_scene, Some(7777));
         assert_eq!(state.skin_fadeout, Some(333));

@@ -436,7 +436,7 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
         } else if !PathBuf::from(path).exists() {
             let _ = fs::rename(&dir, PathBuf::from(path));
         }
-        let _ = fs::remove_file(&dir);
+        let _ = fs::remove_dir_all(&dir).or_else(|_| fs::remove_file(&dir));
     }
 }
 

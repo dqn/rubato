@@ -21,7 +21,7 @@ impl LR2DecideSkinLoaderState {
 
     /// Process decide-specific commands (none - all delegated to CSV loader)
     pub fn process_decide_command(&mut self, cmd: &str, str_parts: &[String]) {
-        self.csv.process_csv_command(cmd, str_parts);
+        self.csv.process_csv_command(cmd, str_parts, None);
     }
 }
 

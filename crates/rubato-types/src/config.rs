@@ -650,6 +650,7 @@ impl Validatable for Config {
         self.display.prepare_frame_per_second =
             self.display.prepare_frame_per_second.clamp(0, 100000);
         self.select.max_search_bar_count = self.select.max_search_bar_count.clamp(1, 100);
+        self.select.analog_ticks_per_scroll = self.select.analog_ticks_per_scroll.clamp(1, 100);
 
         self.select.scrolldurationlow = self.select.scrolldurationlow.clamp(2, 1000);
         self.select.scrolldurationhigh = self.select.scrolldurationhigh.clamp(1, 1000);

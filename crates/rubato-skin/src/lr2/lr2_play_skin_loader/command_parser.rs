@@ -1,5 +1,6 @@
 use crate::lr2::lr2_skin_csv_loader::LR2SkinCSVLoaderState;
 use crate::lr2::lr2_skin_loader;
+use crate::safe_div_f32;
 use crate::skin_image::SkinImage;
 use crate::skin_object::DestinationParams;
 use crate::stubs::{Rectangle, Texture, TextureRegion};
@@ -104,11 +105,12 @@ impl LR2PlaySkinLoaderState {
                         li.data.set_destination_with_int_timer_and_offsets(
                             &DestinationParams {
                                 time: values[2] as i64,
-                                x: values[3] as f32 * self.dstw / self.srcw,
+                                x: values[3] as f32 * safe_div_f32(self.dstw, self.srcw),
                                 y: self.dsth
-                                    - (values[4] + values[6]) as f32 * self.dsth / self.srch,
-                                w: values[5] as f32 * self.dstw / self.srcw,
-                                h: values[6] as f32 * self.dsth / self.srch,
+                                    - (values[4] + values[6]) as f32
+                                        * safe_div_f32(self.dsth, self.srch),
+                                w: values[5] as f32 * safe_div_f32(self.dstw, self.srcw),
+                                h: values[6] as f32 * safe_div_f32(self.dsth, self.srch),
                                 acc: values[7],
                                 a: values[8],
                                 r: values[9],
@@ -131,10 +133,12 @@ impl LR2PlaySkinLoaderState {
                     let player_idx = idx % 2;
                     if player_idx < self.playerr.len() && self.playerr[player_idx].is_some() {
                         self.playerr[player_idx] = Some(Rectangle::new(
-                            values[3] as f32 * self.dstw / self.srcw,
-                            self.dsth - (values[4] + values[6]) as f32 * self.dsth / self.srch,
-                            values[5] as f32 * self.dstw / self.srcw,
-                            (values[4] + values[6]) as f32 * self.dsth / self.srch,
+                            values[3] as f32 * safe_div_f32(self.dstw, self.srcw),
+                            self.dsth
+                                - (values[4] + values[6]) as f32
+                                    * safe_div_f32(self.dsth, self.srch),
+                            values[5] as f32 * safe_div_f32(self.dstw, self.srcw),
+                            (values[4] + values[6]) as f32 * safe_div_f32(self.dsth, self.srch),
                         ));
                     }
                     self.linevalues[idx % 2] = Some(str_parts.to_vec());
@@ -213,12 +217,14 @@ impl LR2PlaySkinLoaderState {
                     let lane = lane as usize;
                     if lane < self.laner.len() && self.laner[lane].is_none() {
                         self.laner[lane] = Some(Rectangle::new(
-                            values[3] as f32 * self.dstw / self.srcw,
-                            self.dsth - (values[4] + values[6]) as f32 * self.dsth / self.srch,
-                            values[5] as f32 * self.dstw / self.srcw,
-                            (values[4] + values[6]) as f32 * self.dsth / self.srch,
+                            values[3] as f32 * safe_div_f32(self.dstw, self.srcw),
+                            self.dsth
+                                - (values[4] + values[6]) as f32
+                                    * safe_div_f32(self.dsth, self.srch),
+                            values[5] as f32 * safe_div_f32(self.dstw, self.srcw),
+                            (values[4] + values[6]) as f32 * safe_div_f32(self.dsth, self.srch),
                         ));
-                        self.scale[lane] = values[6] as f32 * self.dsth / self.srch;
+                        self.scale[lane] = values[6] as f32 * safe_div_f32(self.dsth, self.srch);
                     }
                     if !self.lanerender {
                         // Fill in missing HCN sources from LN sources
@@ -264,8 +270,9 @@ impl LR2PlaySkinLoaderState {
             "DST_NOTE2" => {
                 if str_parts.len() > 1 {
                     let y: i32 = str_parts[1].trim().parse().unwrap_or(0);
-                    let val =
-                        (self.dsth - (y as f32 * self.dsth / self.srch + self.scale[0])) as i32;
+                    let val = (self.dsth
+                        - (y as f32 * safe_div_f32(self.dsth, self.srch) + self.scale[0]))
+                        as i32;
                     self.dstnote2.fill(val);
                 }
             }
@@ -335,10 +342,11 @@ impl LR2PlaySkinLoaderState {
                     // for judge images, so actual destination cannot be set on the inner
                     // SkinImage yet. The coordinate transform is computed here for when
                     // SkinJudge is upgraded to hold real SkinImage objects.
-                    let _x = values[3] as f32 * self.dstw / self.srcw;
-                    let _y = self.dsth - (values[4] + values[6]) as f32 * self.dsth / self.srch;
-                    let _w = values[5] as f32 * self.dstw / self.srcw;
-                    let _h = values[6] as f32 * self.dsth / self.srch;
+                    let _x = values[3] as f32 * safe_div_f32(self.dstw, self.srcw);
+                    let _y = self.dsth
+                        - (values[4] + values[6]) as f32 * safe_div_f32(self.dsth, self.srch);
+                    let _w = values[5] as f32 * safe_div_f32(self.dstw, self.srcw);
+                    let _h = values[6] as f32 * safe_div_f32(self.dsth, self.srch);
                 }
             }
             "SRC_NOWCOMBO_1P" | "SRC_NOWCOMBO_2P" | "SRC_NOWCOMBO_3P" => {
@@ -421,11 +429,12 @@ impl LR2PlaySkinLoaderState {
                         jl.data.set_destination_with_int_timer_and_offsets(
                             &DestinationParams {
                                 time: values[2] as i64,
-                                x: values[3] as f32 * self.dstw / self.srcw,
+                                x: values[3] as f32 * safe_div_f32(self.dstw, self.srcw),
                                 y: self.dsth
-                                    - (values[4] + values[6]) as f32 * self.dsth / self.srch,
-                                w: values[5] as f32 * self.dstw / self.srcw,
-                                h: values[6] as f32 * self.dsth / self.srch,
+                                    - (values[4] + values[6]) as f32
+                                        * safe_div_f32(self.dsth, self.srch),
+                                w: values[5] as f32 * safe_div_f32(self.dstw, self.srcw),
+                                h: values[6] as f32 * safe_div_f32(self.dsth, self.srch),
                                 acc: values[7],
                                 a: values[8],
                                 r: values[9],
@@ -535,10 +544,11 @@ impl LR2PlaySkinLoaderState {
                 } else {
                     1
                 };
-                let _dstx = values[1] as f32 * self.dstw / self.srcw;
-                let _dsty = self.dsth - (values[2] + values[4]) as f32 * self.dsth / self.srch;
-                let _dstw = values[3] as f32 * self.dstw / self.srcw;
-                let _dsth_val = values[4] as f32 * self.dsth / self.srch;
+                let _dstx = values[1] as f32 * safe_div_f32(self.dstw, self.srcw);
+                let _dsty =
+                    self.dsth - (values[2] + values[4]) as f32 * safe_div_f32(self.dsth, self.srch);
+                let _dstw = values[3] as f32 * safe_div_f32(self.dstw, self.srcw);
+                let _dsth_val = values[4] as f32 * safe_div_f32(self.dsth, self.srch);
                 self.pmchara_entries.push(PmCharaEntry::Chara {
                     side: _side,
                     imagefile: _imagefile,
@@ -575,10 +585,11 @@ impl LR2PlaySkinLoaderState {
                     } else {
                         1
                     };
-                    let _dstx = values[1] as f32 * self.dstw / self.srcw;
-                    let _dsty = self.dsth - (values[2] + values[4]) as f32 * self.dsth / self.srch;
-                    let _dstw = values[3] as f32 * self.dstw / self.srcw;
-                    let _dsth_val = values[4] as f32 * self.dsth / self.srch;
+                    let _dstx = values[1] as f32 * safe_div_f32(self.dstw, self.srcw);
+                    let _dsty = self.dsth
+                        - (values[2] + values[4]) as f32 * safe_div_f32(self.dsth, self.srch);
+                    let _dstw = values[3] as f32 * safe_div_f32(self.dstw, self.srcw);
+                    let _dsth_val = values[4] as f32 * safe_div_f32(self.dsth, self.srch);
                     self.pmchara_entries.push(PmCharaEntry::Animation {
                         load_type: _load_type,
                         imagefile: _imagefile,
@@ -627,10 +638,11 @@ impl LR2PlaySkinLoaderState {
                     values[4] += values[6];
                     values[6] = -values[6];
                 }
-                let dstx = values[3] as f32 * self.dstw / self.srcw;
-                let dsty = self.dsth - (values[4] + values[6]) as f32 * self.dsth / self.srch;
-                let dstw = values[5] as f32 * self.dstw / self.srcw;
-                let dsth_val = values[6] as f32 * self.dsth / self.srch;
+                let dstx = values[3] as f32 * safe_div_f32(self.dstw, self.srcw);
+                let dsty =
+                    self.dsth - (values[4] + values[6]) as f32 * safe_div_f32(self.dsth, self.srch);
+                let dstw = values[5] as f32 * safe_div_f32(self.dstw, self.srcw);
+                let dsth_val = values[6] as f32 * safe_div_f32(self.dsth, self.srch);
                 self.pmchara_entries.push(PmCharaEntry::DstImage {
                     dst: Rectangle {
                         x: dstx,
@@ -642,7 +654,7 @@ impl LR2PlaySkinLoaderState {
             }
             _ => {
                 // Delegate to CSV loader
-                self.csv.process_csv_command(cmd, str_parts);
+                self.csv.process_csv_command(cmd, str_parts, None);
             }
         }
     }
@@ -726,10 +738,10 @@ impl LR2PlaySkinLoaderState {
 
         // Compute destination coordinates with resolution scaling
         let time = values[2] as i64;
-        let x = values[3] as f32 * self.dstw / self.srcw;
-        let y = self.dsth - (values[4] + values[6]) as f32 * self.dsth / self.srch;
-        let w = values[5] as f32 * self.dstw / self.srcw;
-        let dst_h = values[6] as f32 * self.dsth / self.srch * h as f32;
+        let x = values[3] as f32 * safe_div_f32(self.dstw, self.srcw);
+        let y = self.dsth - (values[4] + values[6]) as f32 * safe_div_f32(self.dsth, self.srch);
+        let w = values[5] as f32 * safe_div_f32(self.dstw, self.srcw);
+        let dst_h = values[6] as f32 * safe_div_f32(self.dsth, self.srch) * h as f32;
 
         let offset = LR2SkinCSVLoaderState::read_offset_with_base(
             &linevalues,

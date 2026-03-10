@@ -5,6 +5,7 @@ use log::warn;
 
 use crate::lr2::lr2_font_loader::LR2FontLoader;
 use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
+use crate::safe_div_f32;
 use crate::skin::SkinObject;
 use crate::skin_gauge::SkinGauge;
 use crate::skin_image::SkinImage;
@@ -148,7 +149,12 @@ impl LR2SkinCSVLoaderState {
     }
 
     /// Process a CSV command
-    pub fn process_csv_command(&mut self, cmd: &str, str_parts: &[String]) {
+    pub fn process_csv_command(
+        &mut self,
+        cmd: &str,
+        str_parts: &[String],
+        state: Option<&dyn MainState>,
+    ) {
         match cmd {
             "STARTINPUT" => {
                 if str_parts.len() > 1 {
@@ -260,13 +266,10 @@ impl LR2SkinCSVLoaderState {
                             let content = decoded.into_owned();
                             for line in content.lines() {
                                 self.line = Some(line.to_string());
-                                // Note: state=None means #IF conditionals in included files
-                                // won't evaluate against MainState. This matches common usage
-                                // where INCLUDE files contain unconditional definitions.
                                 if let Some((cmd, parts)) =
-                                    self.base.process_line_directives(line, None)
+                                    self.base.process_line_directives(line, state)
                                 {
-                                    self.process_csv_command(&cmd, &parts);
+                                    self.process_csv_command(&cmd, &parts, state);
                                 }
                             }
                         }
@@ -341,8 +344,8 @@ impl LR2SkinCSVLoaderState {
             "DST_BUTTON" => {
                 if let Some(ref mut button) = self.button {
                     let values = Self::parse_int(str_parts);
-                    let dstw = self.dst.width / self.src.width;
-                    let dsth = self.dst.height / self.src.height;
+                    let dstw = safe_div_f32(self.dst.width, self.src.width);
+                    let dsth = safe_div_f32(self.dst.height, self.src.height);
                     let offsets = Self::read_offset(str_parts, 21);
                     button.data.set_destination_with_int_timer_ops(
                         &DestinationParams {
@@ -395,8 +398,8 @@ impl LR2SkinCSVLoaderState {
             "DST_ONMOUSE" => {
                 if let Some(ref mut onmouse) = self.onmouse {
                     let values = Self::parse_int(str_parts);
-                    let dstw = self.dst.width / self.src.width;
-                    let dsth = self.dst.height / self.src.height;
+                    let dstw = safe_div_f32(self.dst.width, self.src.width);
+                    let dsth = safe_div_f32(self.dst.height, self.src.height);
                     let offsets = Self::read_offset(str_parts, 21);
                     onmouse.data.set_destination_with_int_timer_ops(
                         &DestinationParams {
@@ -469,8 +472,8 @@ impl LR2SkinCSVLoaderState {
             "DST_GROOVEGAUGE" => {
                 if let Some(ref mut gauger) = self.gauger {
                     let values = Self::parse_int(str_parts);
-                    let dstw = self.dst.width / self.src.width;
-                    let dsth = self.dst.height / self.src.height;
+                    let dstw = safe_div_f32(self.dst.width, self.src.width);
+                    let dsth = safe_div_f32(self.dst.height, self.src.height);
                     // Java: groovex/groovey control gauge tile spacing
                     let width = if self.groovex.abs() >= 1 {
                         self.groovex as f32 * 50.0 * dstw
@@ -694,19 +697,15 @@ impl LR2SkinCSVLoaderState {
     }
 
     /// Load skin from file (corresponds to loadSkin0)
-    pub fn load_skin0(
-        &mut self,
-        path: &Path,
-        _state: Option<&dyn MainState>,
-    ) -> anyhow::Result<()> {
+    pub fn load_skin0(&mut self, path: &Path, state: Option<&dyn MainState>) -> anyhow::Result<()> {
         let raw_bytes = std::fs::read(path)?;
         let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&raw_bytes);
         let content = decoded.into_owned();
 
         for line in content.lines() {
             self.line = Some(line.to_string());
-            if let Some((cmd, str_parts)) = self.base.process_line_directives(line, _state) {
-                self.process_csv_command(&cmd, &str_parts);
+            if let Some((cmd, str_parts)) = self.base.process_line_directives(line, state) {
+                self.process_csv_command(&cmd, &str_parts, state);
             }
         }
 

@@ -95,7 +95,7 @@ impl LR2CourseResultSkinLoaderState {
             }
             _ => {
                 // Delegate to CSV loader
-                self.csv.process_csv_command(cmd, str_parts);
+                self.csv.process_csv_command(cmd, str_parts, None);
             }
         }
     }

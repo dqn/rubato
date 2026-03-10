@@ -226,24 +226,26 @@ pub fn lr2_path(skinpath: &str, imagepath: &str, filemap: &HashMap<String, Strin
             }
         }
         let ext_lower = ext.to_lowercase();
-        if let Some(last_slash) = resolved.rfind('/') {
-            let dir_path = &resolved[..last_slash];
-            if let Ok(entries) = std::fs::read_dir(dir_path) {
-                let matching: Vec<String> = entries
-                    .filter_map(|e| e.ok())
-                    .filter(|e| {
-                        e.path()
-                            .to_string_lossy()
-                            .to_lowercase()
-                            .ends_with(&ext_lower)
-                    })
-                    .map(|e| e.path().to_string_lossy().into_owned())
-                    .collect();
-                if !matching.is_empty() {
-                    use rand::Rng;
-                    let idx = rand::thread_rng().gen_range(0..matching.len());
-                    return matching[idx].clone();
-                }
+        let dir_path = if let Some(last_slash) = resolved.rfind('/') {
+            &resolved[..last_slash]
+        } else {
+            "."
+        };
+        if let Ok(entries) = std::fs::read_dir(dir_path) {
+            let matching: Vec<String> = entries
+                .filter_map(|e| e.ok())
+                .filter(|e| {
+                    e.path()
+                        .to_string_lossy()
+                        .to_lowercase()
+                        .ends_with(&ext_lower)
+                })
+                .map(|e| e.path().to_string_lossy().into_owned())
+                .collect();
+            if !matching.is_empty() {
+                use rand::Rng;
+                let idx = rand::thread_rng().gen_range(0..matching.len());
+                return matching[idx].clone();
             }
         }
     }
@@ -292,8 +294,8 @@ pub fn process_dst_notechart(
     gauge.x = values[3] as f32;
     gauge.y = src_height - values[4] as f32;
     if let Some(obj) = noteobj {
-        let dstw = dst_width / src_width;
-        let dsth = dst_height / src_height;
+        let dstw = crate::safe_div_f32(dst_width, src_width);
+        let dsth = crate::safe_div_f32(dst_height, src_height);
         let offsets = read_offset(str_parts, 21);
         obj.data.set_destination_with_int_timer_ops(
             &DestinationParams {
@@ -361,8 +363,8 @@ pub fn process_dst_bpmchart(
     gauge.x = values[3] as f32;
     gauge.y = src_height - values[4] as f32;
     if let Some(obj) = bpmgraphobj {
-        let dstw = dst_width / src_width;
-        let dsth = dst_height / src_height;
+        let dstw = crate::safe_div_f32(dst_width, src_width);
+        let dsth = crate::safe_div_f32(dst_height, src_height);
         let offsets = read_offset(str_parts, 21);
         obj.data.set_destination_with_int_timer_ops(
             &DestinationParams {
