@@ -27,6 +27,11 @@ use rubato_render::gpu_context::GpuContext;
 use rubato_render::gpu_texture_manager::GpuTextureManager;
 use rubato_render::render_pipeline::SpriteRenderPipeline;
 
+mod keymap;
+mod subsystem_init;
+
+use keymap::winit_to_bridge_keycode;
+
 /// rubato - BMS player
 #[derive(Parser, Debug)]
 #[command(name = "rubato", version, about = "rubato - BMS player")]
@@ -136,242 +141,23 @@ fn launch() -> Result<()> {
 fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result<()> {
     use rubato_core::main_loader::MainLoader;
 
-    // Wire song database before MainLoader::play(), which calls take_score_database_accessor().
-    // In the launcher path, LauncherMainLoader::play() handles this via init_score_database_accessor().
-    // In the direct play path (-s flag or bms_path), we must do it here.
-    {
-        use rubato_core::config::Config;
-        use rubato_types::validatable::Validatable;
-        let mut config = Config::read().unwrap_or_default();
-        config.validate();
-        if config.paths.bmsroot.is_empty() {
-            warn!("No bmsroot configured - song scan will find nothing");
-        }
-        match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
-            &config.paths.songpath,
-            &config.paths.bmsroot,
-        ) {
-            Ok(accessor) => {
-                // Scan BMS files and populate song.db so the select screen has songs.
-                // Java: MainLoader calls updateSongDatas() before creating the controller.
-                // In the launcher path this happens via the egui "Start" button, but in
-                // the direct play path we must do it here.
-                info!("Scanning BMS files from configured paths...");
-                accessor.update_song_datas(None, &config.paths.bmsroot, false, false, None);
-                info!("Song database initialized: {}", &config.paths.songpath);
-                MainLoader::set_score_database_accessor(Box::new(accessor));
-            }
-            Err(e) => {
-                warn!(
-                    "Song database init failed: {}. Continuing without song DB.",
-                    e
-                );
-            }
-        }
-    }
+    subsystem_init::init_song_database();
 
     // Java: MainLoader.play() handles config, illegal songs, player config, and controller creation.
     // It sets config.windowWidth/Height from resolution before creating MainController.
     let mut main_controller = MainLoader::play(bms_path, player_mode, true, None, None, false)?;
 
-    // Java: audio = new GdxSoundDriver(config.getSongResourceGen())
-    // Wire the Kira-based audio driver so keysounds, BGM, and UI sounds work.
-    {
-        let song_resource_gen = main_controller.config().render.song_resource_gen;
-        let audio_driver = rubato_audio::gdx_sound_driver::GdxSoundDriver::new(song_resource_gen)?;
-        main_controller.set_audio_driver(Box::new(audio_driver));
-    }
+    subsystem_init::init_audio_driver(&mut main_controller)?;
 
     // Set the state factory so that change_state() can create concrete state instances.
     // Without this, the controller has no factory and all state transitions silently fail,
     // resulting in a black screen.
     main_controller.set_state_factory(Box::new(LauncherStateFactory::new()));
 
-    // Java: if(config.isUseDiscordRPC()) { stateListener.add(new DiscordListener()); }
-    {
-        let (use_discord_rpc, use_obs_ws, cfg_clone) = {
-            let cfg = main_controller.config();
-            (
-                cfg.integration.use_discord_rpc,
-                cfg.obs.use_obs_ws,
-                cfg.clone(),
-            )
-        };
-        if use_discord_rpc {
-            let listener = rubato_external::discord_listener::DiscordListener::new();
-            main_controller.add_state_listener(Box::new(listener));
-        }
-        if use_obs_ws {
-            let obs_client = rubato_external::obs::obs_ws_client::ObsWsClient::new(&cfg_clone);
-            let listener = rubato_external::obs::obs_listener::ObsListener::new(cfg_clone);
-            main_controller.add_state_listener(Box::new(listener));
-            if let Ok(client) = obs_client {
-                main_controller.set_obs_client(Box::new(client));
-            }
-        }
-    }
-
-    // Wire IR initialization at startup
-    {
-        let player_config = main_controller.player_config().clone();
-        let ir_statuses =
-            rubato_state::result::ir_initializer::initialize_ir_config(&player_config);
-        for ir_status in ir_statuses {
-            let rival_provider = rubato_ir::ir_rival_provider_impl::IRRivalProviderImpl::new(
-                ir_status.connection.clone(),
-                ir_status.player.clone(),
-                ir_status.config.irname.clone(),
-                ir_status.config.importscore,
-                ir_status.config.importrival,
-            );
-            main_controller
-                .ir_status_mut()
-                .push(rubato_core::main_controller::IRStatus {
-                    config: ir_status.config,
-                    rival_provider: Some(Box::new(rival_provider)),
-                    connection: Some(Box::new(ir_status.connection.clone())),
-                });
-        }
-        // Wire IR resend service
-        let ir_send_count = main_controller.config().network.ir_send_count;
-        let resend_service =
-            rubato_state::result::ir_resend::IrResendServiceImpl::new(ir_send_count);
-        main_controller.set_ir_resend_service(Box::new(resend_service));
-    }
-
-    // Java: MainController.create() lines 496-513 creates download processors.
-    // Each processor runs on background threads and needs its own DB access, so we open
-    // separate SQLite connections rather than sharing MainController's Box<dyn> songdb.
-    {
-        let config = main_controller.config().clone();
-
-        // IPFS download processor (Java: lines 496-506)
-        if config.network.enable_ipfs {
-            match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
-                &config.paths.songpath,
-                &config.paths.bmsroot,
-            ) {
-                Ok(songdb) => {
-                    let adapter = Arc::new(SongDbMusicDatabaseAdapter { songdb });
-                    let processor =
-                        rubato_song::md_processor::music_download_processor::MusicDownloadProcessor::new(
-                            config.network.ipfsurl.clone(),
-                            adapter,
-                        );
-                    processor.start(None);
-                    main_controller.set_music_download_processor(Box::new(processor));
-                    info!("IPFS MusicDownloadProcessor initialized");
-                }
-                Err(e) => {
-                    warn!(
-                        "Cannot initialize MusicDownloadProcessor: song DB open failed: {}",
-                        e
-                    );
-                }
-            }
-        }
-
-        // HTTP download processor (Java: lines 508-513)
-        if config.network.enable_http {
-            // Look up download source by config.network.download_source, fall back to default
-            let source_meta = rubato_song::md_processor::http_download_processor::DOWNLOAD_SOURCES
-                .get(&config.network.download_source)
-                .copied()
-                .unwrap_or_else(|| {
-                    rubato_song::md_processor::http_download_processor::HttpDownloadProcessor::default_download_source()
-                });
-            let http_download_source: Arc<
-                dyn rubato_song::md_processor::http_download_source::HttpDownloadSource,
-            > = Arc::from(source_meta.build(&config));
-
-            // The MainControllerRef adapter opens its own song DB connection so the background
-            // download thread can call update_song() without borrowing MainController.
-            match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
-                &config.paths.songpath,
-                &config.paths.bmsroot,
-            ) {
-                Ok(songdb) => {
-                    let bmsroot = config.paths.bmsroot.clone();
-                    let main_ref: Arc<dyn rubato_song::md_processor::MainControllerRef> =
-                        Arc::new(SongDbMainControllerRef { songdb, bmsroot });
-                    let processor = Arc::new(
-                        rubato_song::md_processor::http_download_processor::HttpDownloadProcessor::new(
-                            main_ref,
-                            http_download_source,
-                            config.network.download_directory.clone(),
-                        ),
-                    );
-
-                    // Java: DownloadTaskState.initialize(httpDownloadProcessor)
-                    rubato_song::md_processor::download_task_state::DownloadTaskState::initialize();
-                    // Java: DownloadTaskMenu.setProcessor(httpDownloadProcessor)
-                    rubato_state::modmenu::download_task_menu::DownloadTaskMenu::set_processor(
-                        Arc::clone(&processor),
-                    );
-
-                    main_controller.set_http_download_processor(Box::new(
-                        HttpDownloadProcessorWrapper(Arc::clone(&processor)),
-                    ));
-                    info!(
-                        "HTTP HttpDownloadProcessor initialized (source: {})",
-                        config.network.download_source
-                    );
-                }
-                Err(e) => {
-                    warn!(
-                        "Cannot initialize HttpDownloadProcessor: song DB open failed: {}",
-                        e
-                    );
-                }
-            }
-        }
-    }
-
-    // Java: MainController.initializeStates() lines 561-564:
-    //   if(player.getRequestEnable()) {
-    //       streamController = new StreamController(selector);
-    //       streamController.run();
-    //   }
-    //
-    // Java: StreamController shares the same MusicSelector as the MusicSelect screen state,
-    // so stream request songs appear in the selector's bar list.
-    // In Rust, we create a shared Arc<Mutex<MusicSelector>> and store it on MainController.
-    // Both StreamController and StateFactory (MusicSelect arm) use the same instance.
-    if main_controller.player_config().enable_request {
-        let config = main_controller.config();
-        let mut selector =
-            match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
-                &config.paths.songpath,
-                &config.paths.bmsroot,
-            ) {
-                Ok(db) => rubato_state::select::music_selector::MusicSelector::with_song_database(
-                    Box::new(db),
-                ),
-                Err(e) => {
-                    log::warn!(
-                        "Failed to open song database for shared MusicSelector: {}",
-                        e
-                    );
-                    rubato_state::select::music_selector::MusicSelector::with_config(config.clone())
-                }
-            };
-        // Wire dependencies so the shared selector can access config, sounds, scores, etc.
-        {
-            selector.set_main_controller(
-                rubato_launcher::state_factory::new_state_main_controller_access(
-                    &mut main_controller,
-                ),
-            );
-            selector.config = main_controller.player_config().clone();
-        }
-        let selector = std::sync::Arc::new(std::sync::Mutex::new(selector));
-        // Store the shared selector on MainController for StateFactory to retrieve
-        main_controller.set_shared_music_selector(Box::new(std::sync::Arc::clone(&selector)));
-        let mut stream_controller =
-            rubato_state::stream::stream_controller::StreamController::new(selector);
-        stream_controller.run();
-        main_controller.set_stream_controller(Box::new(stream_controller));
-    }
+    subsystem_init::init_state_listeners(&mut main_controller);
+    subsystem_init::init_ir_config(&mut main_controller);
+    subsystem_init::init_download_processors(&mut main_controller);
+    subsystem_init::init_stream_controller(&mut main_controller);
 
     // Extract window config from the controller's Config
     // Java: these were set by MainLoader.play() → config.setWindowWidth/Height
@@ -472,150 +258,8 @@ impl ApplicationHandler for RubatoApp {
             }
         }
 
-        if self.window.is_none() {
-            // Java: Find target monitor by config.monitorName
-            // Format: "MonitorName [virtualX, virtualY]"
-            let config = self.controller.config();
-            let monitor_name = config.integration.monitor_name.clone();
-
-            let target_monitor = if !monitor_name.is_empty() {
-                event_loop.available_monitors().find(|handle| {
-                    let name = handle.name().unwrap_or_default();
-                    let pos = handle.position();
-                    let formatted = format!("{} [{}, {}]", name, pos.x, pos.y);
-                    formatted == monitor_name
-                })
-            } else {
-                None
-            };
-
-            // Java: gdxConfig.setWindowedMode(w, h); gdxConfig.setTitle(MainController.getVersion())
-            let decorated = !matches!(
-                self.display_mode,
-                DisplayMode::FULLSCREEN | DisplayMode::BORDERLESS
-            );
-            let mut window_attributes = Window::default_attributes()
-                .with_title(&self.title)
-                .with_inner_size(winit::dpi::LogicalSize::new(self.width, self.height))
-                .with_decorations(decorated);
-
-            if matches!(self.display_mode, DisplayMode::FULLSCREEN) {
-                // Java: MainLoader.play() lines 177-208 — fullscreen setup
-                // Find best matching video mode on target (or primary) monitor
-                let monitor = target_monitor
-                    .clone()
-                    .or_else(|| event_loop.primary_monitor());
-
-                if let Some(monitor) = monitor {
-                    // Java: find display mode matching w,h with highest refreshRate and bitsPerPixel
-                    let best_mode = monitor
-                        .video_modes()
-                        .filter(|m| m.size().width == self.width && m.size().height == self.height)
-                        .max_by_key(|m| (m.refresh_rate_millihertz(), m.bit_depth()));
-
-                    if let Some(mode) = best_mode {
-                        info!(
-                            "Fullscreen: {}x{} @{}mHz on monitor",
-                            mode.size().width,
-                            mode.size().height,
-                            mode.refresh_rate_millihertz()
-                        );
-                        window_attributes = window_attributes
-                            .with_fullscreen(Some(winit::window::Fullscreen::Exclusive(mode)));
-                    } else {
-                        warn!(
-                            "Resolution {}x{} not available for exclusive fullscreen, using borderless",
-                            self.width, self.height
-                        );
-                        window_attributes = window_attributes.with_fullscreen(Some(
-                            winit::window::Fullscreen::Borderless(Some(monitor)),
-                        ));
-                    }
-                }
-            } else if matches!(self.display_mode, DisplayMode::BORDERLESS) {
-                // Java: borderless mode with target monitor
-                let monitor = target_monitor
-                    .clone()
-                    .or_else(|| event_loop.primary_monitor());
-                if let Some(monitor) = monitor {
-                    window_attributes = window_attributes.with_fullscreen(Some(
-                        winit::window::Fullscreen::Borderless(Some(monitor)),
-                    ));
-                }
-            } else if let Some(ref monitor) = target_monitor {
-                // Java: windowed mode — position at target monitor origin
-                let pos = monitor.position();
-                window_attributes = window_attributes
-                    .with_position(winit::dpi::PhysicalPosition::new(pos.x, pos.y));
-            }
-
-            match event_loop.create_window(window_attributes) {
-                Ok(window) => {
-                    let window = Arc::new(window);
-
-                    // Create wgpu GPU context bound to this window's surface.
-                    // wgpu SurfaceConfiguration expects physical pixels, not logical.
-                    let physical = window.inner_size();
-                    match pollster::block_on(GpuContext::new_with_surface(
-                        Arc::clone(&window),
-                        physical.width,
-                        physical.height,
-                    )) {
-                        Ok(gpu) => {
-                            info!("wgpu GPU context created successfully");
-
-                            // Create sprite render pipeline for skin object rendering
-                            // Java: ShaderManager creates shader programs for SpriteBatch
-                            let sprite_pipeline =
-                                SpriteRenderPipeline::new(&gpu.device, gpu.surface_format());
-                            info!(
-                                "SpriteRenderPipeline created with {} pipelines",
-                                sprite_pipeline.pipeline_count()
-                            );
-
-                            // Create GPU texture manager for skin image rendering
-                            let texture_manager = GpuTextureManager::new(
-                                &gpu.device,
-                                &gpu.queue,
-                                &sprite_pipeline.texture_layout,
-                                &sprite_pipeline.sampler_nearest,
-                                &sprite_pipeline.sampler_linear,
-                            );
-                            self.texture_manager = Some(texture_manager);
-
-                            self.sprite_pipeline = Some(sprite_pipeline);
-
-                            // Initialize egui integration
-                            // Java: ImGui.createContext() + imGuiGl3.init() + imGuiGlfw.init()
-                            let egui_integration =
-                                EguiIntegration::new(&gpu.device, gpu.surface_format());
-                            let egui_state = egui_winit::State::new(
-                                egui_integration.ctx.clone(),
-                                egui::ViewportId::ROOT,
-                                event_loop,
-                                Some(window.scale_factor() as f32),
-                                None,
-                                Some(gpu.device.limits().max_texture_dimension_2d as usize),
-                            );
-                            self.egui_integration = Some(egui_integration);
-                            self.egui_state = Some(egui_state);
-                            self.gpu = Some(gpu);
-                        }
-                        Err(e) => {
-                            error!("Failed to create GPU context: {}", e);
-                            event_loop.exit();
-                            return;
-                        }
-                    }
-
-                    self.window = Some(window);
-                }
-                Err(e) => {
-                    error!("Failed to create window: {}", e);
-                    event_loop.exit();
-                    return;
-                }
-            }
+        if self.window.is_none() && !self.create_window_and_gpu(event_loop) {
+            return;
         }
 
         if !self.initialized {
@@ -658,43 +302,17 @@ impl ApplicationHandler for RubatoApp {
         }
 
         match event {
-            // Bridge winit keyboard events to the input system
             WindowEvent::KeyboardInput { event, .. } => {
-                if let PhysicalKey::Code(keycode) = event.physical_key {
-                    let java_key = rubato_input::winit_input_bridge::winit_keycode_to_java(
-                        winit_to_bridge_keycode(keycode),
-                    );
-                    if java_key >= 0 {
-                        self.key_state
-                            .set_key_pressed(java_key, event.state.is_pressed());
-                    }
-                }
+                self.handle_keyboard_input(&event);
             }
-            // Bridge winit mouse position to SharedKeyState
             WindowEvent::CursorMoved { position, .. } => {
                 let scale = self.window.as_ref().map_or(1.0, |w| w.scale_factor());
                 self.key_state
                     .set_mouse_position((position.x / scale) as i32, (position.y / scale) as i32);
             }
-            // Bridge winit mouse button events to SharedKeyState
             WindowEvent::MouseInput { state, button, .. } => {
-                let btn = match button {
-                    winit::event::MouseButton::Left => {
-                        rubato_input::winit_input_bridge::MOUSE_BUTTON_LEFT
-                    }
-                    winit::event::MouseButton::Right => {
-                        rubato_input::winit_input_bridge::MOUSE_BUTTON_RIGHT
-                    }
-                    winit::event::MouseButton::Middle => {
-                        rubato_input::winit_input_bridge::MOUSE_BUTTON_MIDDLE
-                    }
-                    _ => -1,
-                };
-                if btn >= 0 {
-                    self.key_state.set_mouse_button(btn, state.is_pressed());
-                }
+                self.handle_mouse_input(state, button);
             }
-            // Bridge winit scroll events to SharedKeyState
             WindowEvent::MouseWheel { delta, .. } => {
                 let (dx, dy) = match delta {
                     winit::event::MouseScrollDelta::LineDelta(x, y) => (x, y),
@@ -704,266 +322,15 @@ impl ApplicationHandler for RubatoApp {
                 };
                 self.key_state.add_scroll(dx, dy);
             }
-            // Java: dispose() is called when the window is closed
             WindowEvent::CloseRequested => {
                 self.controller.dispose();
                 event_loop.exit();
             }
-            // Java: main.resize(width, height)
             WindowEvent::Resized(size) => {
-                // Surface uses physical pixels
-                if let Some(gpu) = &mut self.gpu {
-                    gpu.resize(size.width, size.height);
-                }
-                // Game coordinate space uses logical pixels (matching skin/config resolution)
-                let scale = self.window.as_ref().map_or(1.0, |w| w.scale_factor());
-                let logical_w = (size.width as f64 / scale) as i32;
-                let logical_h = (size.height as f64 / scale) as i32;
-                self.controller.resize(logical_w, logical_h);
-                // Keep SharedKeyState window size in sync for GdxGraphics
-                self.key_state.set_window_size(logical_w, logical_h);
+                self.handle_resize(size);
             }
-            // Java: main.render() — called every frame via ApplicationListener.render()
             WindowEvent::RedrawRequested => {
-                // FPS capping
-                // Java: gdxConfig.setForegroundFPS(config.getMaxFramePerSecond())
-                // Java: gdxConfig.setIdleFPS(config.getMaxFramePerSecond())
-                if self.max_fps > 0 {
-                    let target_frame_duration = Duration::from_secs_f64(1.0 / self.max_fps as f64);
-                    let elapsed = self.last_frame_time.elapsed();
-                    if elapsed < target_frame_duration {
-                        std::thread::sleep(target_frame_duration - elapsed);
-                    }
-                }
-                self.last_frame_time = Instant::now();
-
-                // Game logic update (timer, state render, sprite batch begin/end, input)
-                self.controller.render();
-
-                let Some(window) = &self.window else { return };
-                let Some(gpu) = &self.gpu else { return };
-
-                // Process window commands from MainController
-                if rubato_core::window_command::take_fullscreen_toggle() {
-                    if window.fullscreen().is_some() {
-                        window.set_fullscreen(None);
-                    } else {
-                        let monitor = window.current_monitor();
-                        window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(monitor)));
-                    }
-                }
-                let screenshot_requested = rubato_core::window_command::take_screenshot_request();
-
-                // Gather diagnostic info before egui frame (avoids borrow conflicts)
-                let diag_state_type = self.controller.current_state_type();
-                let diag_has_skin = self
-                    .controller
-                    .current_state()
-                    .map(|s| s.main_state_data().skin.is_some())
-                    .unwrap_or(false);
-
-                // Run egui frame
-                // Java: ImGuiRenderer.start() → ImGuiRenderer.render() → ImGuiRenderer.end()
-                let full_output = if let (Some(egui_state), Some(egui_integration)) =
-                    (&mut self.egui_state, &self.egui_integration)
-                {
-                    let raw_input = egui_state.take_egui_input(window);
-                    let full_output = egui_integration.ctx.run(raw_input, |ctx| {
-                        rubato_state::modmenu::imgui_renderer::ImGuiRenderer::render_ui(ctx);
-
-                        // Diagnostic overlay: show current state and skin status
-                        egui::Area::new(egui::Id::new("diag_overlay"))
-                            .fixed_pos(egui::pos2(10.0, 10.0))
-                            .show(ctx, |ui| {
-                                egui::Frame::new()
-                                    .fill(egui::Color32::from_black_alpha(180))
-                                    .inner_margin(8.0)
-                                    .corner_radius(4.0)
-                                    .show(ui, |ui| {
-                                        let state_str = match diag_state_type {
-                                            Some(st) => format!("{:?}", st),
-                                            None => "None".to_string(),
-                                        };
-                                        ui.colored_label(
-                                            egui::Color32::WHITE,
-                                            format!("State: {}", state_str),
-                                        );
-                                        let skin_color = if diag_has_skin {
-                                            egui::Color32::GREEN
-                                        } else {
-                                            egui::Color32::from_rgb(255, 100, 100)
-                                        };
-                                        ui.colored_label(
-                                            skin_color,
-                                            format!(
-                                                "Skin: {}",
-                                                if diag_has_skin {
-                                                    "loaded"
-                                                } else {
-                                                    "NOT loaded (load_skin stub)"
-                                                }
-                                            ),
-                                        );
-                                    });
-                            });
-                    });
-                    egui_state.handle_platform_output(window, full_output.platform_output.clone());
-                    Some(full_output)
-                } else {
-                    None
-                };
-
-                // wgpu render pass: clear screen, sprite batch flush, egui overlay, present
-                match gpu.current_texture() {
-                    Ok(output) => {
-                        let view = output
-                            .texture
-                            .create_view(&wgpu::TextureViewDescriptor::default());
-                        let mut encoder =
-                            gpu.device
-                                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                                    label: Some("rubato frame encoder"),
-                                });
-
-                        // Upload pending textures and prepare sprite batch resources
-                        // before the render pass (bind groups must outlive the render pass)
-                        let sprite_resources = if let Some(sprite_pipeline) = &self.sprite_pipeline
-                            && let Some(texture_manager) = &mut self.texture_manager
-                            && let Some(sprite_batch) = self.controller.sprite_batch_mut()
-                            && !sprite_batch.vertices().is_empty()
-                        {
-                            // Upload any new textures encountered this frame
-                            let pending = sprite_batch.drain_pending_textures();
-                            for (key, tex) in &pending {
-                                texture_manager.ensure_uploaded(
-                                    key,
-                                    tex.width,
-                                    tex.height,
-                                    &tex.rgba_data,
-                                    &rubato_render::gpu_texture_manager::TextureUploadContext {
-                                        device: &gpu.device,
-                                        queue: &gpu.queue,
-                                        texture_layout: &sprite_pipeline.texture_layout,
-                                        sampler_nearest: &sprite_pipeline.sampler_nearest,
-                                        sampler_linear: &sprite_pipeline.sampler_linear,
-                                    },
-                                );
-                            }
-
-                            // Create uniform bind group with projection matrix
-                            let projection_data = sprite_batch.projection();
-                            let uniform_buffer =
-                                gpu.device.create_buffer(&wgpu::BufferDescriptor {
-                                    label: Some("sprite uniform buffer"),
-                                    size: 64, // 4x4 f32 matrix
-                                    usage: wgpu::BufferUsages::UNIFORM
-                                        | wgpu::BufferUsages::COPY_DST,
-                                    mapped_at_creation: false,
-                                });
-                            gpu.queue.write_buffer(
-                                &uniform_buffer,
-                                0,
-                                bytemuck::cast_slice(projection_data),
-                            );
-                            let uniform_bind_group =
-                                gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                                    label: Some("sprite uniform bind group"),
-                                    layout: &sprite_pipeline.uniform_layout,
-                                    entries: &[wgpu::BindGroupEntry {
-                                        binding: 0,
-                                        resource: uniform_buffer.as_entire_binding(),
-                                    }],
-                                });
-
-                            Some(uniform_bind_group)
-                        } else {
-                            None
-                        };
-
-                        // Render pass: clear screen + SpriteBatch GPU flush
-                        // Java: Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT) + SpriteBatch draw
-                        // Build GpuRenderContext before render_pass so it outlives the pass
-                        let gpu_ctx = if let Some(ref uniform_bind_group) = sprite_resources
-                            && let Some(sprite_pipeline) = &self.sprite_pipeline
-                            && let Some(texture_manager) = &self.texture_manager
-                        {
-                            Some(rubato_render::sprite_batch::GpuRenderContext {
-                                device: &gpu.device,
-                                queue: &gpu.queue,
-                                pipeline: sprite_pipeline,
-                                uniform_bind_group,
-                                texture_manager,
-                            })
-                        } else {
-                            None
-                        };
-
-                        {
-                            let mut render_pass =
-                                encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                                    label: Some("rubato sprite pass"),
-                                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                                        view: &view,
-                                        resolve_target: None,
-                                        ops: wgpu::Operations {
-                                            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                                            store: wgpu::StoreOp::Store,
-                                        },
-                                    })],
-                                    depth_stencil_attachment: None,
-                                    timestamp_writes: None,
-                                    occlusion_query_set: None,
-                                });
-
-                            // Flush SpriteBatch vertices to GPU via the render pipeline
-                            // Java: SpriteBatch.flush() submits batched quads to GL
-                            if let Some(ref gpu_ctx) = gpu_ctx
-                                && let Some(sprite_batch) = self.controller.sprite_batch_mut()
-                            {
-                                sprite_batch.flush_to_gpu(&mut render_pass, gpu_ctx);
-                            }
-                        }
-
-                        // Render egui overlay on top of the game scene
-                        if let Some(full_output) = full_output
-                            && let Some(egui_integration) = &mut self.egui_integration
-                        {
-                            let screen_descriptor = egui_wgpu::ScreenDescriptor {
-                                size_in_pixels: [
-                                    gpu.surface_config.as_ref().map_or(self.width, |c| c.width),
-                                    gpu.surface_config
-                                        .as_ref()
-                                        .map_or(self.height, |c| c.height),
-                                ],
-                                pixels_per_point: window.scale_factor() as f32,
-                            };
-                            egui_integration.render(
-                                &mut encoder,
-                                &view,
-                                &gpu.device,
-                                &gpu.queue,
-                                &screen_descriptor,
-                                full_output,
-                            );
-                        }
-
-                        gpu.queue.submit(std::iter::once(encoder.finish()));
-
-                        // Capture screenshot after render pass, before present
-                        if screenshot_requested {
-                            self.capture_screenshot(gpu, &output.texture);
-                        }
-
-                        output.present();
-                    }
-                    Err(e) => {
-                        warn!("Failed to get surface texture: {}", e);
-                    }
-                }
-
-                if let Some(window) = &self.window {
-                    window.request_redraw();
-                }
+                self.handle_redraw();
             }
             _ => {}
         }
@@ -989,6 +356,478 @@ impl ApplicationHandler for RubatoApp {
 }
 
 impl RubatoApp {
+    // -----------------------------------------------------------------------
+    // Window & GPU initialization
+    // -----------------------------------------------------------------------
+
+    /// Create the application window and initialize GPU context.
+    /// Returns false if initialization failed and the event loop should exit.
+    fn create_window_and_gpu(&mut self, event_loop: &ActiveEventLoop) -> bool {
+        // Java: Find target monitor by config.monitorName
+        // Format: "MonitorName [virtualX, virtualY]"
+        let config = self.controller.config();
+        let monitor_name = config.integration.monitor_name.clone();
+
+        let target_monitor = if !monitor_name.is_empty() {
+            event_loop.available_monitors().find(|handle| {
+                let name = handle.name().unwrap_or_default();
+                let pos = handle.position();
+                let formatted = format!("{} [{}, {}]", name, pos.x, pos.y);
+                formatted == monitor_name
+            })
+        } else {
+            None
+        };
+
+        // Java: gdxConfig.setWindowedMode(w, h); gdxConfig.setTitle(MainController.getVersion())
+        let decorated = !matches!(
+            self.display_mode,
+            DisplayMode::FULLSCREEN | DisplayMode::BORDERLESS
+        );
+        let mut window_attributes = Window::default_attributes()
+            .with_title(&self.title)
+            .with_inner_size(winit::dpi::LogicalSize::new(self.width, self.height))
+            .with_decorations(decorated);
+
+        if matches!(self.display_mode, DisplayMode::FULLSCREEN) {
+            // Java: MainLoader.play() lines 177-208 — fullscreen setup
+            // Find best matching video mode on target (or primary) monitor
+            let monitor = target_monitor
+                .clone()
+                .or_else(|| event_loop.primary_monitor());
+
+            if let Some(monitor) = monitor {
+                // Java: find display mode matching w,h with highest refreshRate and bitsPerPixel
+                let best_mode = monitor
+                    .video_modes()
+                    .filter(|m| m.size().width == self.width && m.size().height == self.height)
+                    .max_by_key(|m| (m.refresh_rate_millihertz(), m.bit_depth()));
+
+                if let Some(mode) = best_mode {
+                    info!(
+                        "Fullscreen: {}x{} @{}mHz on monitor",
+                        mode.size().width,
+                        mode.size().height,
+                        mode.refresh_rate_millihertz()
+                    );
+                    window_attributes = window_attributes
+                        .with_fullscreen(Some(winit::window::Fullscreen::Exclusive(mode)));
+                } else {
+                    warn!(
+                        "Resolution {}x{} not available for exclusive fullscreen, using borderless",
+                        self.width, self.height
+                    );
+                    window_attributes = window_attributes.with_fullscreen(Some(
+                        winit::window::Fullscreen::Borderless(Some(monitor)),
+                    ));
+                }
+            }
+        } else if matches!(self.display_mode, DisplayMode::BORDERLESS) {
+            // Java: borderless mode with target monitor
+            let monitor = target_monitor
+                .clone()
+                .or_else(|| event_loop.primary_monitor());
+            if let Some(monitor) = monitor {
+                window_attributes = window_attributes
+                    .with_fullscreen(Some(winit::window::Fullscreen::Borderless(Some(monitor))));
+            }
+        } else if let Some(ref monitor) = target_monitor {
+            // Java: windowed mode — position at target monitor origin
+            let pos = monitor.position();
+            window_attributes =
+                window_attributes.with_position(winit::dpi::PhysicalPosition::new(pos.x, pos.y));
+        }
+
+        match event_loop.create_window(window_attributes) {
+            Ok(window) => {
+                let window = Arc::new(window);
+                if !self.init_gpu(event_loop, &window) {
+                    return false;
+                }
+                self.window = Some(window);
+                true
+            }
+            Err(e) => {
+                error!("Failed to create window: {}", e);
+                event_loop.exit();
+                false
+            }
+        }
+    }
+
+    /// Initialize wgpu GPU context, sprite pipeline, egui, and texture manager.
+    fn init_gpu(&mut self, event_loop: &ActiveEventLoop, window: &Arc<Window>) -> bool {
+        // wgpu SurfaceConfiguration expects physical pixels, not logical.
+        let physical = window.inner_size();
+        match pollster::block_on(GpuContext::new_with_surface(
+            Arc::clone(window),
+            physical.width,
+            physical.height,
+        )) {
+            Ok(gpu) => {
+                info!("wgpu GPU context created successfully");
+
+                // Create sprite render pipeline for skin object rendering
+                // Java: ShaderManager creates shader programs for SpriteBatch
+                let sprite_pipeline = SpriteRenderPipeline::new(&gpu.device, gpu.surface_format());
+                info!(
+                    "SpriteRenderPipeline created with {} pipelines",
+                    sprite_pipeline.pipeline_count()
+                );
+
+                // Create GPU texture manager for skin image rendering
+                let texture_manager = GpuTextureManager::new(
+                    &gpu.device,
+                    &gpu.queue,
+                    &sprite_pipeline.texture_layout,
+                    &sprite_pipeline.sampler_nearest,
+                    &sprite_pipeline.sampler_linear,
+                );
+                self.texture_manager = Some(texture_manager);
+                self.sprite_pipeline = Some(sprite_pipeline);
+
+                // Initialize egui integration
+                // Java: ImGui.createContext() + imGuiGl3.init() + imGuiGlfw.init()
+                let egui_integration = EguiIntegration::new(&gpu.device, gpu.surface_format());
+                let egui_state = egui_winit::State::new(
+                    egui_integration.ctx.clone(),
+                    egui::ViewportId::ROOT,
+                    event_loop,
+                    Some(window.scale_factor() as f32),
+                    None,
+                    Some(gpu.device.limits().max_texture_dimension_2d as usize),
+                );
+                self.egui_integration = Some(egui_integration);
+                self.egui_state = Some(egui_state);
+                self.gpu = Some(gpu);
+                true
+            }
+            Err(e) => {
+                error!("Failed to create GPU context: {}", e);
+                event_loop.exit();
+                false
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Input event handlers
+    // -----------------------------------------------------------------------
+
+    /// Bridge winit keyboard events to the input system.
+    fn handle_keyboard_input(&mut self, event: &winit::event::KeyEvent) {
+        if let PhysicalKey::Code(keycode) = event.physical_key {
+            let java_key = rubato_input::winit_input_bridge::winit_keycode_to_java(
+                winit_to_bridge_keycode(keycode),
+            );
+            if java_key >= 0 {
+                self.key_state
+                    .set_key_pressed(java_key, event.state.is_pressed());
+            }
+        }
+    }
+
+    /// Bridge winit mouse button events to SharedKeyState.
+    fn handle_mouse_input(
+        &mut self,
+        state: winit::event::ElementState,
+        button: winit::event::MouseButton,
+    ) {
+        let btn = match button {
+            winit::event::MouseButton::Left => rubato_input::winit_input_bridge::MOUSE_BUTTON_LEFT,
+            winit::event::MouseButton::Right => {
+                rubato_input::winit_input_bridge::MOUSE_BUTTON_RIGHT
+            }
+            winit::event::MouseButton::Middle => {
+                rubato_input::winit_input_bridge::MOUSE_BUTTON_MIDDLE
+            }
+            _ => -1,
+        };
+        if btn >= 0 {
+            self.key_state.set_mouse_button(btn, state.is_pressed());
+        }
+    }
+
+    /// Handle window resize: update GPU surface and game coordinate space.
+    fn handle_resize(&mut self, size: winit::dpi::PhysicalSize<u32>) {
+        // Surface uses physical pixels
+        if let Some(gpu) = &mut self.gpu {
+            gpu.resize(size.width, size.height);
+        }
+        // Game coordinate space uses logical pixels (matching skin/config resolution)
+        let scale = self.window.as_ref().map_or(1.0, |w| w.scale_factor());
+        let logical_w = (size.width as f64 / scale) as i32;
+        let logical_h = (size.height as f64 / scale) as i32;
+        self.controller.resize(logical_w, logical_h);
+        // Keep SharedKeyState window size in sync for GdxGraphics
+        self.key_state.set_window_size(logical_w, logical_h);
+    }
+
+    // -----------------------------------------------------------------------
+    // Render pipeline
+    // -----------------------------------------------------------------------
+
+    /// Main frame render: game logic, egui overlay, wgpu present.
+    fn handle_redraw(&mut self) {
+        // FPS capping
+        // Java: gdxConfig.setForegroundFPS(config.getMaxFramePerSecond())
+        if self.max_fps > 0 {
+            let target_frame_duration = Duration::from_secs_f64(1.0 / self.max_fps as f64);
+            let elapsed = self.last_frame_time.elapsed();
+            if elapsed < target_frame_duration {
+                std::thread::sleep(target_frame_duration - elapsed);
+            }
+        }
+        self.last_frame_time = Instant::now();
+
+        // Game logic update (timer, state render, sprite batch begin/end, input)
+        self.controller.render();
+
+        // Clone Arc<Window> and temporarily take GpuContext out of self to avoid
+        // holding immutable borrows on self across &mut self method calls.
+        let Some(window) = self.window.clone() else {
+            return;
+        };
+        let Some(gpu) = self.gpu.take() else {
+            return;
+        };
+
+        // Process window commands from MainController
+        if rubato_core::window_command::take_fullscreen_toggle() {
+            if window.fullscreen().is_some() {
+                window.set_fullscreen(None);
+            } else {
+                let monitor = window.current_monitor();
+                window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(monitor)));
+            }
+        }
+        let screenshot_requested = rubato_core::window_command::take_screenshot_request();
+
+        let full_output = self.run_egui_frame(&window);
+
+        self.submit_gpu_frame(&gpu, &window, full_output, screenshot_requested);
+
+        // Put gpu back
+        self.gpu = Some(gpu);
+
+        window.request_redraw();
+    }
+
+    /// Run the egui frame: gather input, render UI overlay, return output.
+    fn run_egui_frame(&mut self, window: &Window) -> Option<egui::FullOutput> {
+        // Gather diagnostic info before egui frame (avoids borrow conflicts)
+        let diag_state_type = self.controller.current_state_type();
+        let diag_has_skin = self
+            .controller
+            .current_state()
+            .map(|s| s.main_state_data().skin.is_some())
+            .unwrap_or(false);
+
+        let (Some(egui_state), Some(egui_integration)) =
+            (&mut self.egui_state, &self.egui_integration)
+        else {
+            return None;
+        };
+
+        // Java: ImGuiRenderer.start() → ImGuiRenderer.render() → ImGuiRenderer.end()
+        let raw_input = egui_state.take_egui_input(window);
+        let full_output = egui_integration.ctx.run(raw_input, |ctx| {
+            rubato_state::modmenu::imgui_renderer::ImGuiRenderer::render_ui(ctx);
+
+            // Diagnostic overlay: show current state and skin status
+            egui::Area::new(egui::Id::new("diag_overlay"))
+                .fixed_pos(egui::pos2(10.0, 10.0))
+                .show(ctx, |ui| {
+                    egui::Frame::new()
+                        .fill(egui::Color32::from_black_alpha(180))
+                        .inner_margin(8.0)
+                        .corner_radius(4.0)
+                        .show(ui, |ui| {
+                            let state_str = match diag_state_type {
+                                Some(st) => format!("{:?}", st),
+                                None => "None".to_string(),
+                            };
+                            ui.colored_label(egui::Color32::WHITE, format!("State: {}", state_str));
+                            let skin_color = if diag_has_skin {
+                                egui::Color32::GREEN
+                            } else {
+                                egui::Color32::from_rgb(255, 100, 100)
+                            };
+                            ui.colored_label(
+                                skin_color,
+                                format!(
+                                    "Skin: {}",
+                                    if diag_has_skin {
+                                        "loaded"
+                                    } else {
+                                        "NOT loaded (load_skin stub)"
+                                    }
+                                ),
+                            );
+                        });
+                });
+        });
+        egui_state.handle_platform_output(window, full_output.platform_output.clone());
+        Some(full_output)
+    }
+
+    /// Submit the GPU frame: sprite batch, egui overlay, present.
+    fn submit_gpu_frame(
+        &mut self,
+        gpu: &GpuContext,
+        window: &Window,
+        full_output: Option<egui::FullOutput>,
+        screenshot_requested: bool,
+    ) {
+        // wgpu render pass: clear screen, sprite batch flush, egui overlay, present
+        match gpu.current_texture() {
+            Ok(output) => {
+                let view = output
+                    .texture
+                    .create_view(&wgpu::TextureViewDescriptor::default());
+                let mut encoder =
+                    gpu.device
+                        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                            label: Some("rubato frame encoder"),
+                        });
+
+                // Upload pending textures and prepare sprite batch resources
+                // before the render pass (bind groups must outlive the render pass)
+                let sprite_resources = self.prepare_sprite_resources(gpu, &mut encoder);
+
+                // Build GpuRenderContext before render_pass so it outlives the pass
+                let gpu_ctx = if let Some(ref uniform_bind_group) = sprite_resources
+                    && let Some(sprite_pipeline) = &self.sprite_pipeline
+                    && let Some(texture_manager) = &self.texture_manager
+                {
+                    Some(rubato_render::sprite_batch::GpuRenderContext {
+                        device: &gpu.device,
+                        queue: &gpu.queue,
+                        pipeline: sprite_pipeline,
+                        uniform_bind_group,
+                        texture_manager,
+                    })
+                } else {
+                    None
+                };
+
+                // Render pass: clear screen + SpriteBatch GPU flush
+                {
+                    let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("rubato sprite pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: &view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                    });
+
+                    // Flush SpriteBatch vertices to GPU via the render pipeline
+                    // Java: SpriteBatch.flush() submits batched quads to GL
+                    if let Some(ref gpu_ctx) = gpu_ctx
+                        && let Some(sprite_batch) = self.controller.sprite_batch_mut()
+                    {
+                        sprite_batch.flush_to_gpu(&mut render_pass, gpu_ctx);
+                    }
+                }
+
+                // Render egui overlay on top of the game scene
+                if let Some(full_output) = full_output
+                    && let Some(egui_integration) = &mut self.egui_integration
+                {
+                    let screen_descriptor = egui_wgpu::ScreenDescriptor {
+                        size_in_pixels: [
+                            gpu.surface_config.as_ref().map_or(self.width, |c| c.width),
+                            gpu.surface_config
+                                .as_ref()
+                                .map_or(self.height, |c| c.height),
+                        ],
+                        pixels_per_point: window.scale_factor() as f32,
+                    };
+                    egui_integration.render(
+                        &mut encoder,
+                        &view,
+                        &gpu.device,
+                        &gpu.queue,
+                        &screen_descriptor,
+                        full_output,
+                    );
+                }
+
+                gpu.queue.submit(std::iter::once(encoder.finish()));
+
+                // Capture screenshot after render pass, before present
+                if screenshot_requested {
+                    self.capture_screenshot(gpu, &output.texture);
+                }
+
+                output.present();
+            }
+            Err(e) => {
+                warn!("Failed to get surface texture: {}", e);
+            }
+        }
+    }
+
+    /// Upload pending textures and create sprite batch uniform resources.
+    fn prepare_sprite_resources(
+        &mut self,
+        gpu: &GpuContext,
+        _encoder: &mut wgpu::CommandEncoder,
+    ) -> Option<wgpu::BindGroup> {
+        let sprite_pipeline = self.sprite_pipeline.as_ref()?;
+        let texture_manager = self.texture_manager.as_mut()?;
+        let sprite_batch = self.controller.sprite_batch_mut()?;
+        if sprite_batch.vertices().is_empty() {
+            return None;
+        }
+
+        // Upload any new textures encountered this frame
+        let pending = sprite_batch.drain_pending_textures();
+        for (key, tex) in &pending {
+            texture_manager.ensure_uploaded(
+                key,
+                tex.width,
+                tex.height,
+                &tex.rgba_data,
+                &rubato_render::gpu_texture_manager::TextureUploadContext {
+                    device: &gpu.device,
+                    queue: &gpu.queue,
+                    texture_layout: &sprite_pipeline.texture_layout,
+                    sampler_nearest: &sprite_pipeline.sampler_nearest,
+                    sampler_linear: &sprite_pipeline.sampler_linear,
+                },
+            );
+        }
+
+        // Create uniform bind group with projection matrix
+        let projection_data = sprite_batch.projection();
+        let uniform_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("sprite uniform buffer"),
+            size: 64, // 4x4 f32 matrix
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        gpu.queue
+            .write_buffer(&uniform_buffer, 0, bytemuck::cast_slice(projection_data));
+        let uniform_bind_group = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("sprite uniform bind group"),
+            layout: &sprite_pipeline.uniform_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: uniform_buffer.as_entire_binding(),
+            }],
+        });
+
+        Some(uniform_bind_group)
+    }
+
     /// Capture the rendered frame and save as a PNG screenshot.
     /// Must be called after the render pass with the rendered texture.
     fn capture_screenshot(&self, gpu: &GpuContext, texture: &wgpu::Texture) {
@@ -1089,8 +928,8 @@ impl RubatoApp {
 /// Java equivalent: the inline lambda `(md5) -> { SongData[] s = getSongDatabase().getSongDatas(md5); ... }`
 /// in MainController.create() line 497. Opens its own SQLite connection so the IPFS download
 /// background thread can query the song DB without borrowing MainController.
-struct SongDbMusicDatabaseAdapter {
-    songdb: rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor,
+pub(crate) struct SongDbMusicDatabaseAdapter {
+    pub(crate) songdb: rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor,
 }
 
 // SAFETY: SongDbMusicDatabaseAdapter contains SQLiteSongDatabaseAccessor which wraps
@@ -1116,9 +955,9 @@ impl rubato_song::md_processor::music_database_accessor::MusicDatabaseAccessor
 /// Java equivalent: `this` (MainController) passed to HttpDownloadProcessor constructor.
 /// The only method called is `update_song(path, force)` which ultimately calls
 /// `songdb.updateSongDatas()`. We call it directly on our own connection.
-struct SongDbMainControllerRef {
-    songdb: rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor,
-    bmsroot: Vec<String>,
+pub(crate) struct SongDbMainControllerRef {
+    pub(crate) songdb: rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor,
+    pub(crate) bmsroot: Vec<String>,
 }
 
 // SAFETY: SongDbMainControllerRef contains SQLiteSongDatabaseAccessor which wraps
@@ -1139,104 +978,13 @@ impl rubato_song::md_processor::MainControllerRef for SongDbMainControllerRef {
 /// `DownloadTaskMenu::set_processor` needs `Arc<HttpDownloadProcessor>` directly, while
 /// `MainController::set_http_download_processor` needs `Box<dyn HttpDownloadSubmitter>`.
 /// This wrapper bridges the two ownership models.
-struct HttpDownloadProcessorWrapper(
-    Arc<rubato_song::md_processor::http_download_processor::HttpDownloadProcessor>,
+pub(crate) struct HttpDownloadProcessorWrapper(
+    pub(crate) Arc<rubato_song::md_processor::http_download_processor::HttpDownloadProcessor>,
 );
 
 impl rubato_types::http_download_submitter::HttpDownloadSubmitter for HttpDownloadProcessorWrapper {
     fn submit_md5_task(&self, md5: &str, task_name: &str) {
         self.0.submit_md5_task(md5, task_name);
-    }
-}
-
-/// Convert winit's KeyCode to the bridge's WinitKeyCode enum.
-fn winit_to_bridge_keycode(
-    key: winit::keyboard::KeyCode,
-) -> rubato_input::winit_input_bridge::WinitKeyCode {
-    use rubato_input::winit_input_bridge::WinitKeyCode as B;
-    use winit::keyboard::KeyCode as W;
-    match key {
-        W::KeyA => B::KeyA,
-        W::KeyB => B::KeyB,
-        W::KeyC => B::KeyC,
-        W::KeyD => B::KeyD,
-        W::KeyE => B::KeyE,
-        W::KeyF => B::KeyF,
-        W::KeyG => B::KeyG,
-        W::KeyH => B::KeyH,
-        W::KeyI => B::KeyI,
-        W::KeyJ => B::KeyJ,
-        W::KeyK => B::KeyK,
-        W::KeyL => B::KeyL,
-        W::KeyM => B::KeyM,
-        W::KeyN => B::KeyN,
-        W::KeyO => B::KeyO,
-        W::KeyP => B::KeyP,
-        W::KeyQ => B::KeyQ,
-        W::KeyR => B::KeyR,
-        W::KeyS => B::KeyS,
-        W::KeyT => B::KeyT,
-        W::KeyU => B::KeyU,
-        W::KeyV => B::KeyV,
-        W::KeyW => B::KeyW,
-        W::KeyX => B::KeyX,
-        W::KeyY => B::KeyY,
-        W::KeyZ => B::KeyZ,
-        W::Digit0 => B::Digit0,
-        W::Digit1 => B::Digit1,
-        W::Digit2 => B::Digit2,
-        W::Digit3 => B::Digit3,
-        W::Digit4 => B::Digit4,
-        W::Digit5 => B::Digit5,
-        W::Digit6 => B::Digit6,
-        W::Digit7 => B::Digit7,
-        W::Digit8 => B::Digit8,
-        W::Digit9 => B::Digit9,
-        W::ArrowUp => B::ArrowUp,
-        W::ArrowDown => B::ArrowDown,
-        W::ArrowLeft => B::ArrowLeft,
-        W::ArrowRight => B::ArrowRight,
-        W::Home => B::Home,
-        W::End => B::End,
-        W::PageUp => B::PageUp,
-        W::PageDown => B::PageDown,
-        W::Enter => B::Enter,
-        W::Escape => B::Escape,
-        W::Backspace => B::Backspace,
-        W::Tab => B::Tab,
-        W::Space => B::Space,
-        W::Delete => B::Delete,
-        W::Insert => B::Insert,
-        W::ShiftLeft => B::ShiftLeft,
-        W::ShiftRight => B::ShiftRight,
-        W::ControlLeft => B::ControlLeft,
-        W::ControlRight => B::ControlRight,
-        W::AltLeft => B::AltLeft,
-        W::AltRight => B::AltRight,
-        W::Comma => B::Comma,
-        W::Period => B::Period,
-        W::Semicolon => B::Semicolon,
-        W::Quote => B::Quote,
-        W::Slash => B::Slash,
-        W::Backslash => B::Backslash,
-        W::Minus => B::Minus,
-        W::Equal => B::Equal,
-        W::BracketLeft => B::BracketLeft,
-        W::BracketRight => B::BracketRight,
-        W::Backquote => B::Backquote,
-        W::F1 => B::F1,
-        W::F2 => B::F2,
-        W::F3 => B::F3,
-        W::F4 => B::F4,
-        W::F5 => B::F5,
-        W::F6 => B::F6,
-        W::F7 => B::F7,
-        W::F8 => B::F8,
-        W::F9 => B::F9,
-        W::F10 => B::F10,
-        W::F11 => B::F11,
-        W::F12 => B::F12,
-        _ => B::Unknown,
     }
 }
 

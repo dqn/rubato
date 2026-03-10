@@ -124,13 +124,62 @@ impl BMSDecoder {
         md5_hasher.update(data);
         sha256_hasher.update(data);
 
-        let mut maxsec: usize = 0;
-
         // Decode MS932 (Shift_JIS) to string (Cow::Borrowed when pure ASCII)
         let (text, _, _) = encoding_rs::SHIFT_JIS.decode(data);
 
         model.set_mode(if ispms { Mode::POPN_9K } else { Mode::BEAT_5K });
 
+        self.reset_resource_tables();
+
+        let (maxsec, srandoms) = self.parse_lines(&text, &mut model, selected_random);
+
+        model.wavmap = std::mem::take(&mut self.wavlist);
+        model.bgamap = std::mem::take(&mut self.bgalist);
+
+        let sections = self.build_sections(&mut model, maxsec);
+        self.build_timelines(&mut model, &sections);
+
+        // Validate start BPM
+        let all_tl = &model.timelines;
+        if !all_tl.is_empty() && all_tl[0].bpm == 0.0 {
+            self.log.push(DecodeLog::new(
+                State::Error,
+                "開始BPMが定義されていないため、BMS解析に失敗しました",
+            ));
+            return None;
+        }
+
+        self.validate_model(&model);
+
+        let md5_result = md5_hasher.finalize();
+        let sha256_result = sha256_hasher.finalize();
+        model.md5 = convert_hex_string(&md5_result);
+        model.sha256 = convert_hex_string(&sha256_result);
+
+        let final_selected_random = if let Some(sr) = selected_random {
+            sr.to_vec()
+        } else {
+            srandoms
+        };
+
+        model.info = Some(ChartInformation::new(
+            path.map(|p| p.to_path_buf()),
+            self.lntype,
+            Some(final_selected_random),
+        ));
+
+        if let Some(p) = path {
+            self.print_log(p);
+        }
+
+        Some(model)
+    }
+
+    // -----------------------------------------------------------------------
+    // Phase 1: Reset resource tables
+    // -----------------------------------------------------------------------
+
+    fn reset_resource_tables(&mut self) {
         self.wavlist.clear();
         for v in self.wm.iter_mut() {
             *v = -2;
@@ -139,15 +188,23 @@ impl BMSDecoder {
         for v in self.bm.iter_mut() {
             *v = -2;
         }
-
-        // Ensure lines has 1000 slots
         self.lines.clear();
         self.lines.resize_with(1000, || None);
+    }
 
-        let mut randoms: Vec<i32> = Vec::with_capacity(8);
-        let mut srandoms: Vec<i32> = Vec::with_capacity(8);
-        let mut crandom: Vec<i32> = Vec::with_capacity(8);
-        let mut skip: Vec<bool> = Vec::with_capacity(8);
+    // -----------------------------------------------------------------------
+    // Phase 2: Parse all lines (RANDOM/IF, headers, bar data, resources)
+    // -----------------------------------------------------------------------
+
+    /// Parse all BMS lines. Returns (max_bar_index, selected_randoms).
+    fn parse_lines(
+        &mut self,
+        text: &str,
+        model: &mut BMSModel,
+        selected_random: Option<&[i32]>,
+    ) -> (usize, Vec<i32>) {
+        let mut maxsec: usize = 0;
+        let mut random_state = RandomDirectiveState::new();
 
         for line in text.lines() {
             if line.len() < 2 {
@@ -156,353 +213,10 @@ impl BMSDecoder {
 
             let first_char = line.as_bytes()[0] as char;
             if first_char == '#' {
-                if matches_reserve_word(line, "RANDOM") {
-                    let Some(arg) = line.get(8..) else {
-                        continue;
-                    };
-                    match arg.trim().parse::<i32>() {
-                        Ok(r) if r >= 1 => {
-                            randoms.push(r);
-                            if let Some(sr) = selected_random {
-                                if randoms.len() - 1 < sr.len() {
-                                    crandom.push(sr[randoms.len() - 1]);
-                                } else {
-                                    let val = (rand_f64() * (r as f64)) as i32 + 1;
-                                    crandom.push(val);
-                                    srandoms.push(val);
-                                }
-                            } else {
-                                let val = (rand_f64() * (r as f64)) as i32 + 1;
-                                crandom.push(val);
-                                srandoms.push(val);
-                            }
-                        }
-                        Ok(_) => {
-                            self.log.push(DecodeLog::new(
-                                State::Warning,
-                                "#RANDOMの値は1以上である必要があります",
-                            ));
-                        }
-                        Err(_) => {
-                            self.log.push(DecodeLog::new(
-                                State::Warning,
-                                "#RANDOMに数字が定義されていません",
-                            ));
-                        }
-                    }
-                } else if matches_reserve_word(line, "IF") {
-                    if !crandom.is_empty() {
-                        let Some(arg) = line.get(4..) else {
-                            continue;
-                        };
-                        match arg.trim().parse::<i32>() {
-                            Ok(val) => {
-                                skip.push(
-                                    *crandom
-                                        .last()
-                                        .expect("crandom non-empty checked at line 185")
-                                        != val,
-                                );
-                            }
-                            Err(_) => {
-                                self.log.push(DecodeLog::new(
-                                    State::Warning,
-                                    "#IFに数字が定義されていません",
-                                ));
-                            }
-                        }
-                    } else {
-                        self.log.push(DecodeLog::new(
-                            State::Warning,
-                            "#IFに対応する#RANDOMが定義されていません",
-                        ));
-                    }
-                } else if matches_reserve_word(line, "ENDIF") {
-                    if !skip.is_empty() {
-                        skip.pop();
-                    } else {
-                        self.log.push(DecodeLog::new(
-                            State::Warning,
-                            format!("ENDIFに対応するIFが存在しません: {}", line),
-                        ));
-                    }
-                } else if matches_reserve_word(line, "ENDRANDOM") {
-                    if !crandom.is_empty() {
-                        crandom.pop();
-                    } else {
-                        self.log.push(DecodeLog::new(
-                            State::Warning,
-                            format!("ENDRANDOMに対応するRANDOMが存在しません: {}", line),
-                        ));
-                    }
-                } else if !skip.last().copied().unwrap_or(false) {
-                    let c = line.as_bytes()[1] as char;
-                    let base = model.base();
-                    if c.is_ascii_digit() && line.len() > 6 {
-                        let c2 = line.as_bytes()[2] as char;
-                        let c3 = line.as_bytes()[3] as char;
-                        if c2.is_ascii_digit() && c3.is_ascii_digit() {
-                            let bar_index = ((c as usize) - ('0' as usize)) * 100
-                                + ((c2 as usize) - ('0' as usize)) * 10
-                                + ((c3 as usize) - ('0' as usize));
-                            if bar_index < 1000 {
-                                if self.lines[bar_index].is_none() {
-                                    self.lines[bar_index] = Some(Vec::new());
-                                }
-                                self.lines[bar_index]
-                                    .as_mut()
-                                    .expect("initialized above")
-                                    .push(line.to_owned());
-                                maxsec = if maxsec > bar_index {
-                                    maxsec
-                                } else {
-                                    bar_index
-                                };
-                            }
-                        } else {
-                            self.log.push(DecodeLog::new(
-                                State::Warning,
-                                format!("小節に数字が定義されていません : {}", line),
-                            ));
-                        }
-                    } else if matches_reserve_word(line, "BPM") {
-                        if line.len() > 4 && line.as_bytes()[4] == b' ' {
-                            match line[5..].trim().parse::<f64>() {
-                                Ok(bpm) => {
-                                    if bpm > 0.0 {
-                                        model.bpm = bpm;
-                                    } else {
-                                        self.log.push(DecodeLog::new(
-                                            State::Warning,
-                                            format!(
-                                                "#negative BPMはサポートされていません : {}",
-                                                line
-                                            ),
-                                        ));
-                                    }
-                                }
-                                Err(_) => {
-                                    self.log.push(DecodeLog::new(
-                                        State::Warning,
-                                        format!("#BPMに数字が定義されていません : {}", line),
-                                    ));
-                                }
-                            }
-                        } else if line.len() > 7 {
-                            let Some(bpm_arg) = line.get(7..) else {
-                                continue;
-                            };
-                            match bpm_arg.trim().parse::<f64>() {
-                                Ok(bpm) => {
-                                    if bpm > 0.0 {
-                                        if base == 62 {
-                                            match chart_decoder::parse_int62_str(line, 4) {
-                                                Ok(idx) => {
-                                                    self.bpmtable.insert(idx, bpm);
-                                                }
-                                                Err(_) => {
-                                                    self.log.push(DecodeLog::new(
-                                                        State::Warning,
-                                                        format!(
-                                                            "#BPMxxに数字が定義されていません : {}",
-                                                            line
-                                                        ),
-                                                    ));
-                                                }
-                                            }
-                                        } else {
-                                            match chart_decoder::parse_int36_str(line, 4) {
-                                                Ok(idx) => {
-                                                    self.bpmtable.insert(idx, bpm);
-                                                }
-                                                Err(_) => {
-                                                    self.log.push(DecodeLog::new(
-                                                        State::Warning,
-                                                        format!(
-                                                            "#BPMxxに数字が定義されていません : {}",
-                                                            line
-                                                        ),
-                                                    ));
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        self.log.push(DecodeLog::new(
-                                            State::Warning,
-                                            format!(
-                                                "#negative BPMはサポートされていません : {}",
-                                                line
-                                            ),
-                                        ));
-                                    }
-                                }
-                                Err(_) => {
-                                    self.log.push(DecodeLog::new(
-                                        State::Warning,
-                                        format!("#BPMxxに数字が定義されていません : {}", line),
-                                    ));
-                                }
-                            }
-                        }
-                    } else if matches_reserve_word(line, "WAV") {
-                        if line.len() >= 8 {
-                            let parse_result = if base == 62 {
-                                chart_decoder::parse_int62_str(line, 4)
-                            } else {
-                                chart_decoder::parse_int36_str(line, 4)
-                            };
-                            match parse_result {
-                                Ok(idx) => {
-                                    let raw = line.get(7..).unwrap_or("").trim();
-                                    let file_name = normalize_path_separators(raw);
-                                    if (idx as usize) < self.wm.len() {
-                                        self.wm[idx as usize] = self.wavlist.len() as i32;
-                                    } else {
-                                        log::warn!(
-                                            "WAV index {} out of bounds (max {})",
-                                            idx,
-                                            self.wm.len() - 1
-                                        );
-                                    }
-                                    self.wavlist.push(file_name.into_owned());
-                                }
-                                Err(_) => {
-                                    self.log.push(DecodeLog::new(
-                                        State::Warning,
-                                        format!("#WAVxxは不十分な定義です : {}", line),
-                                    ));
-                                }
-                            }
-                        } else {
-                            self.log.push(DecodeLog::new(
-                                State::Warning,
-                                format!("#WAVxxは不十分な定義です : {}", line),
-                            ));
-                        }
-                    } else if matches_reserve_word(line, "BMP") {
-                        if line.len() >= 8 {
-                            let parse_result = if base == 62 {
-                                chart_decoder::parse_int62_str(line, 4)
-                            } else {
-                                chart_decoder::parse_int36_str(line, 4)
-                            };
-                            match parse_result {
-                                Ok(idx) => {
-                                    let raw = line.get(7..).unwrap_or("").trim();
-                                    let file_name = normalize_path_separators(raw);
-                                    if (idx as usize) < self.bm.len() {
-                                        self.bm[idx as usize] = self.bgalist.len() as i32;
-                                    } else {
-                                        log::warn!(
-                                            "BMP index {} out of bounds (max {})",
-                                            idx,
-                                            self.bm.len() - 1
-                                        );
-                                    }
-                                    self.bgalist.push(file_name.into_owned());
-                                }
-                                Err(_) => {
-                                    self.log.push(DecodeLog::new(
-                                        State::Warning,
-                                        format!("#BMPxxは不十分な定義です : {}", line),
-                                    ));
-                                }
-                            }
-                        } else {
-                            self.log.push(DecodeLog::new(
-                                State::Warning,
-                                format!("#BMPxxは不十分な定義です : {}", line),
-                            ));
-                        }
-                    } else if matches_reserve_word(line, "STOP") {
-                        if line.len() >= 9 {
-                            let parse_result = if base == 62 {
-                                chart_decoder::parse_int62_str(line, 5)
-                            } else {
-                                chart_decoder::parse_int36_str(line, 5)
-                            };
-                            match parse_result {
-                                Ok(idx) => {
-                                    match line.get(8..).unwrap_or("").trim().parse::<f64>() {
-                                        Ok(mut stop) => {
-                                            stop /= 192.0;
-                                            if stop < 0.0 {
-                                                stop = stop.abs();
-                                                self.log.push(DecodeLog::new(
-                                                State::Warning,
-                                                format!(
-                                                    "#negative STOPはサポートされていません : {}",
-                                                    line
-                                                ),
-                                            ));
-                                            }
-                                            self.stoptable.insert(idx, stop);
-                                        }
-                                        Err(_) => {
-                                            self.log.push(DecodeLog::new(
-                                                State::Warning,
-                                                format!(
-                                                    "#STOPxxに数字が定義されていません : {}",
-                                                    line
-                                                ),
-                                            ));
-                                        }
-                                    }
-                                }
-                                Err(_) => {
-                                    self.log.push(DecodeLog::new(
-                                        State::Warning,
-                                        format!("#STOPxxに数字が定義されていません : {}", line),
-                                    ));
-                                }
-                            }
-                        } else {
-                            self.log.push(DecodeLog::new(
-                                State::Warning,
-                                format!("#STOPxxは不十分な定義です : {}", line),
-                            ));
-                        }
-                    } else if matches_reserve_word(line, "SCROLL") {
-                        if line.len() >= 11 {
-                            let parse_result = if base == 62 {
-                                chart_decoder::parse_int62_str(line, 7)
-                            } else {
-                                chart_decoder::parse_int36_str(line, 7)
-                            };
-                            match parse_result {
-                                Ok(idx) => match line.get(10..).unwrap_or("").trim().parse::<f64>()
-                                {
-                                    Ok(scroll) => {
-                                        self.scrolltable.insert(idx, scroll);
-                                    }
-                                    Err(_) => {
-                                        self.log.push(DecodeLog::new(
-                                            State::Warning,
-                                            format!(
-                                                "#SCROLLxxに数字が定義されていません : {}",
-                                                line
-                                            ),
-                                        ));
-                                    }
-                                },
-                                Err(_) => {
-                                    self.log.push(DecodeLog::new(
-                                        State::Warning,
-                                        format!("#SCROLLxxに数字が定義されていません : {}", line),
-                                    ));
-                                }
-                            }
-                        } else {
-                            self.log.push(DecodeLog::new(
-                                State::Warning,
-                                format!("#SCROLLxxは不十分な定義です : {}", line),
-                            ));
-                        }
-                    } else {
-                        // Command words
-                        let handled = process_command_word(line, &mut model, &mut self.log);
-                        let _ = handled;
-                    }
+                if let Some(directive) = RandomDirectiveState::try_parse(line) {
+                    random_state.handle_directive(directive, line, selected_random, &mut self.log);
+                } else if !random_state.should_skip() {
+                    self.parse_header_line(line, model, &mut maxsec);
                 }
             } else if first_char == '%' {
                 if let Some(index) = line.find(' ')
@@ -522,9 +236,315 @@ impl BMSDecoder {
             }
         }
 
-        model.wavmap = std::mem::take(&mut self.wavlist);
-        model.bgamap = std::mem::take(&mut self.bgalist);
+        (maxsec, random_state.into_srandoms())
+    }
 
+    /// Parse a single non-conditional header line (after # prefix, not RANDOM/IF/ENDIF/ENDRANDOM).
+    fn parse_header_line(&mut self, line: &str, model: &mut BMSModel, maxsec: &mut usize) {
+        let c = line.as_bytes()[1] as char;
+        let base = model.base();
+
+        // Bar data lines: #NNNcc:data
+        if c.is_ascii_digit() && line.len() > 6 {
+            self.try_collect_bar_data(line, c, maxsec);
+            return;
+        }
+
+        // Resource/timing table entries
+        if self.try_parse_resource_entry(line, base, model) {
+            return;
+        }
+
+        // Command words (TITLE, ARTIST, RANK, etc.)
+        process_command_word(line, model, &mut self.log);
+    }
+
+    /// Try to collect a bar data line (#NNNcc:data). Returns true if handled.
+    fn try_collect_bar_data(&mut self, line: &str, c: char, maxsec: &mut usize) {
+        let c2 = line.as_bytes()[2] as char;
+        let c3 = line.as_bytes()[3] as char;
+        if c2.is_ascii_digit() && c3.is_ascii_digit() {
+            let bar_index = ((c as usize) - ('0' as usize)) * 100
+                + ((c2 as usize) - ('0' as usize)) * 10
+                + ((c3 as usize) - ('0' as usize));
+            if bar_index < 1000 {
+                if self.lines[bar_index].is_none() {
+                    self.lines[bar_index] = Some(Vec::new());
+                }
+                self.lines[bar_index]
+                    .as_mut()
+                    .expect("initialized above")
+                    .push(line.to_owned());
+                if bar_index > *maxsec {
+                    *maxsec = bar_index;
+                }
+            }
+        } else {
+            self.log.push(DecodeLog::new(
+                State::Warning,
+                format!("小節に数字が定義されていません : {}", line),
+            ));
+        }
+    }
+
+    /// Try to parse a resource/timing table entry (#BPM, #WAV, #BMP, #STOP, #SCROLL).
+    /// Returns true if the line was handled.
+    fn try_parse_resource_entry(&mut self, line: &str, base: i32, model: &mut BMSModel) -> bool {
+        if matches_reserve_word(line, "BPM") {
+            self.parse_bpm_entry(line, base, model);
+            true
+        } else if matches_reserve_word(line, "WAV") {
+            self.parse_wav_entry(line, base);
+            true
+        } else if matches_reserve_word(line, "BMP") {
+            self.parse_bmp_entry(line, base);
+            true
+        } else if matches_reserve_word(line, "STOP") {
+            self.parse_stop_entry(line, base);
+            true
+        } else if matches_reserve_word(line, "SCROLL") {
+            self.parse_scroll_entry(line, base);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn parse_bpm_entry(&mut self, line: &str, base: i32, model: &mut BMSModel) {
+        if line.len() > 4 && line.as_bytes()[4] == b' ' {
+            // #BPM N (initial BPM)
+            match line[5..].trim().parse::<f64>() {
+                Ok(bpm) => {
+                    if bpm > 0.0 {
+                        model.bpm = bpm;
+                    } else {
+                        self.log.push(DecodeLog::new(
+                            State::Warning,
+                            format!("#negative BPMはサポートされていません : {}", line),
+                        ));
+                    }
+                }
+                Err(_) => {
+                    self.log.push(DecodeLog::new(
+                        State::Warning,
+                        format!("#BPMに数字が定義されていません : {}", line),
+                    ));
+                }
+            }
+        } else if line.len() > 7 {
+            // #BPMxx value (extended BPM table)
+            let Some(bpm_arg) = line.get(7..) else {
+                return;
+            };
+            match bpm_arg.trim().parse::<f64>() {
+                Ok(bpm) => {
+                    if bpm > 0.0 {
+                        self.parse_indexed_entry(
+                            line,
+                            base,
+                            4,
+                            |idx, this| {
+                                this.bpmtable.insert(idx, bpm);
+                            },
+                            "#BPMxxに数字が定義されていません",
+                        );
+                    } else {
+                        self.log.push(DecodeLog::new(
+                            State::Warning,
+                            format!("#negative BPMはサポートされていません : {}", line),
+                        ));
+                    }
+                }
+                Err(_) => {
+                    self.log.push(DecodeLog::new(
+                        State::Warning,
+                        format!("#BPMxxに数字が定義されていません : {}", line),
+                    ));
+                }
+            }
+        }
+    }
+
+    fn parse_wav_entry(&mut self, line: &str, base: i32) {
+        if line.len() >= 8 {
+            let parse_result = if base == 62 {
+                chart_decoder::parse_int62_str(line, 4)
+            } else {
+                chart_decoder::parse_int36_str(line, 4)
+            };
+            match parse_result {
+                Ok(idx) => {
+                    let raw = line.get(7..).unwrap_or("").trim();
+                    let file_name = normalize_path_separators(raw);
+                    if (idx as usize) < self.wm.len() {
+                        self.wm[idx as usize] = self.wavlist.len() as i32;
+                    } else {
+                        log::warn!(
+                            "WAV index {} out of bounds (max {})",
+                            idx,
+                            self.wm.len() - 1
+                        );
+                    }
+                    self.wavlist.push(file_name.into_owned());
+                }
+                Err(_) => {
+                    self.log.push(DecodeLog::new(
+                        State::Warning,
+                        format!("#WAVxxは不十分な定義です : {}", line),
+                    ));
+                }
+            }
+        } else {
+            self.log.push(DecodeLog::new(
+                State::Warning,
+                format!("#WAVxxは不十分な定義です : {}", line),
+            ));
+        }
+    }
+
+    fn parse_bmp_entry(&mut self, line: &str, base: i32) {
+        if line.len() >= 8 {
+            let parse_result = if base == 62 {
+                chart_decoder::parse_int62_str(line, 4)
+            } else {
+                chart_decoder::parse_int36_str(line, 4)
+            };
+            match parse_result {
+                Ok(idx) => {
+                    let raw = line.get(7..).unwrap_or("").trim();
+                    let file_name = normalize_path_separators(raw);
+                    if (idx as usize) < self.bm.len() {
+                        self.bm[idx as usize] = self.bgalist.len() as i32;
+                    } else {
+                        log::warn!(
+                            "BMP index {} out of bounds (max {})",
+                            idx,
+                            self.bm.len() - 1
+                        );
+                    }
+                    self.bgalist.push(file_name.into_owned());
+                }
+                Err(_) => {
+                    self.log.push(DecodeLog::new(
+                        State::Warning,
+                        format!("#BMPxxは不十分な定義です : {}", line),
+                    ));
+                }
+            }
+        } else {
+            self.log.push(DecodeLog::new(
+                State::Warning,
+                format!("#BMPxxは不十分な定義です : {}", line),
+            ));
+        }
+    }
+
+    fn parse_stop_entry(&mut self, line: &str, base: i32) {
+        if line.len() >= 9 {
+            let parse_result = if base == 62 {
+                chart_decoder::parse_int62_str(line, 5)
+            } else {
+                chart_decoder::parse_int36_str(line, 5)
+            };
+            match parse_result {
+                Ok(idx) => match line.get(8..).unwrap_or("").trim().parse::<f64>() {
+                    Ok(mut stop) => {
+                        stop /= 192.0;
+                        if stop < 0.0 {
+                            stop = stop.abs();
+                            self.log.push(DecodeLog::new(
+                                State::Warning,
+                                format!("#negative STOPはサポートされていません : {}", line),
+                            ));
+                        }
+                        self.stoptable.insert(idx, stop);
+                    }
+                    Err(_) => {
+                        self.log.push(DecodeLog::new(
+                            State::Warning,
+                            format!("#STOPxxに数字が定義されていません : {}", line),
+                        ));
+                    }
+                },
+                Err(_) => {
+                    self.log.push(DecodeLog::new(
+                        State::Warning,
+                        format!("#STOPxxに数字が定義されていません : {}", line),
+                    ));
+                }
+            }
+        } else {
+            self.log.push(DecodeLog::new(
+                State::Warning,
+                format!("#STOPxxは不十分な定義です : {}", line),
+            ));
+        }
+    }
+
+    fn parse_scroll_entry(&mut self, line: &str, base: i32) {
+        if line.len() >= 11 {
+            let parse_result = if base == 62 {
+                chart_decoder::parse_int62_str(line, 7)
+            } else {
+                chart_decoder::parse_int36_str(line, 7)
+            };
+            match parse_result {
+                Ok(idx) => match line.get(10..).unwrap_or("").trim().parse::<f64>() {
+                    Ok(scroll) => {
+                        self.scrolltable.insert(idx, scroll);
+                    }
+                    Err(_) => {
+                        self.log.push(DecodeLog::new(
+                            State::Warning,
+                            format!("#SCROLLxxに数字が定義されていません : {}", line),
+                        ));
+                    }
+                },
+                Err(_) => {
+                    self.log.push(DecodeLog::new(
+                        State::Warning,
+                        format!("#SCROLLxxに数字が定義されていません : {}", line),
+                    ));
+                }
+            }
+        } else {
+            self.log.push(DecodeLog::new(
+                State::Warning,
+                format!("#SCROLLxxは不十分な定義です : {}", line),
+            ));
+        }
+    }
+
+    /// Helper to parse an indexed entry (#XXXyy) with base-36 or base-62 index.
+    fn parse_indexed_entry(
+        &mut self,
+        line: &str,
+        base: i32,
+        offset: usize,
+        on_success: impl FnOnce(i32, &mut Self),
+        error_msg: &str,
+    ) {
+        let parse_result = if base == 62 {
+            chart_decoder::parse_int62_str(line, offset)
+        } else {
+            chart_decoder::parse_int36_str(line, offset)
+        };
+        match parse_result {
+            Ok(idx) => on_success(idx, self),
+            Err(_) => {
+                self.log.push(DecodeLog::new(
+                    State::Warning,
+                    format!("{} : {}", error_msg, line),
+                ));
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Phase 3: Build sections from collected bar data
+    // -----------------------------------------------------------------------
+
+    fn build_sections(&mut self, model: &mut BMSModel, maxsec: usize) -> Vec<Section> {
         let mut sections: Vec<Section> = Vec::with_capacity(maxsec + 1);
         let mut prev_sectionnum: f64 = 0.0;
         let mut prev_rate: f64 = 1.0;
@@ -538,7 +558,7 @@ impl BMSDecoder {
                 scroll: &self.scrolltable,
             };
             let section = Section::new(
-                &mut model,
+                model,
                 prev_sectionnum,
                 prev_rate,
                 is_first,
@@ -550,13 +570,19 @@ impl BMSDecoder {
             prev_rate = section.rate();
             sections.push(section);
         }
+        sections
+    }
 
+    // -----------------------------------------------------------------------
+    // Phase 4: Build timelines from sections
+    // -----------------------------------------------------------------------
+
+    fn build_timelines(&mut self, model: &mut BMSModel, sections: &[Section]) {
         let mode_key = model.mode().map(|m| m.key()).unwrap_or(0);
         let mut tlcache: BTreeMap<u64, TimeLineCache> = BTreeMap::new();
         let mut lnlist: Vec<Option<Vec<section::LnInfo>>> = vec![None; mode_key as usize];
         let mut lnendstatus: Vec<Option<section::StartLnInfo>> = vec![None; mode_key as usize];
-        let basetl = TimeLine::new(0.0, 0, mode_key);
-        let mut basetl = basetl;
+        let mut basetl = TimeLine::new(0.0, 0, mode_key);
         basetl.bpm = model.bpm;
         tlcache.insert(f64_to_key(0.0), TimeLineCache::new(0.0, basetl));
 
@@ -564,9 +590,9 @@ impl BMSDecoder {
             wavmap: &self.wm,
             bgamap: &self.bm,
         };
-        for section in &sections {
+        for section in sections {
             section.make_time_lines(
-                &mut model,
+                model,
                 &tl_maps,
                 &mut tlcache,
                 &mut lnlist,
@@ -578,15 +604,7 @@ impl BMSDecoder {
         let tl_vec: Vec<TimeLine> = tlcache.into_values().map(|tlc| tlc.timeline).collect();
         model.timelines = tl_vec;
 
-        let all_tl = &model.timelines;
-        if !all_tl.is_empty() && all_tl[0].bpm == 0.0 {
-            self.log.push(DecodeLog::new(
-                State::Error,
-                "開始BPMが定義されていないため、BMS解析に失敗しました",
-            ));
-            return None;
-        }
-
+        // Clean up unterminated LNs
         for (i, lnend) in lnendstatus.iter().enumerate() {
             if let Some(status) = lnend {
                 self.log.push(DecodeLog::new(
@@ -597,7 +615,6 @@ impl BMSDecoder {
                     ),
                 ));
                 if status.section != f64::MIN {
-                    // Find the timeline in model's timelines and clear the note
                     for tl in &mut model.timelines {
                         if tl.section() == status.section {
                             tl.set_note(i as i32, None);
@@ -607,7 +624,13 @@ impl BMSDecoder {
                 }
             }
         }
+    }
 
+    // -----------------------------------------------------------------------
+    // Phase 5: Validate model and produce warnings
+    // -----------------------------------------------------------------------
+
+    fn validate_model(&mut self, model: &BMSModel) {
         if model.total_type != TotalType::Bms {
             self.log
                 .push(DecodeLog::new(State::Warning, "TOTALが未定義です"));
@@ -639,29 +662,6 @@ impl BMSDecoder {
                 "#PLAYER定義が1にもかかわらず2P側のノーツ定義が存在します",
             ));
         }
-
-        let md5_result = md5_hasher.finalize();
-        let sha256_result = sha256_hasher.finalize();
-        model.md5 = convert_hex_string(&md5_result);
-        model.sha256 = convert_hex_string(&sha256_result);
-
-        let final_selected_random = if let Some(sr) = selected_random {
-            sr.to_vec()
-        } else {
-            srandoms
-        };
-
-        model.info = Some(ChartInformation::new(
-            path.map(|p| p.to_path_buf()),
-            self.lntype,
-            Some(final_selected_random),
-        ));
-
-        if let Some(p) = path {
-            self.print_log(p);
-        }
-
-        Some(model)
     }
 
     fn print_log(&self, path: &Path) {
@@ -678,6 +678,164 @@ impl BMSDecoder {
                 }
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// RANDOM/IF/ENDIF/ENDRANDOM directive state machine
+// ---------------------------------------------------------------------------
+
+/// Recognized conditional directives.
+enum RandomDirective {
+    Random,
+    If,
+    EndIf,
+    EndRandom,
+}
+
+/// Manages the RANDOM/IF/ENDIF/ENDRANDOM control-flow stack.
+struct RandomDirectiveState {
+    randoms: Vec<i32>,
+    srandoms: Vec<i32>,
+    crandom: Vec<i32>,
+    skip: Vec<bool>,
+}
+
+impl RandomDirectiveState {
+    fn new() -> Self {
+        Self {
+            randoms: Vec::with_capacity(8),
+            srandoms: Vec::with_capacity(8),
+            crandom: Vec::with_capacity(8),
+            skip: Vec::with_capacity(8),
+        }
+    }
+
+    /// Try to identify which directive a line represents.
+    fn try_parse(line: &str) -> Option<RandomDirective> {
+        if matches_reserve_word(line, "RANDOM") {
+            Some(RandomDirective::Random)
+        } else if matches_reserve_word(line, "IF") {
+            Some(RandomDirective::If)
+        } else if matches_reserve_word(line, "ENDIF") {
+            Some(RandomDirective::EndIf)
+        } else if matches_reserve_word(line, "ENDRANDOM") {
+            Some(RandomDirective::EndRandom)
+        } else {
+            None
+        }
+    }
+
+    fn should_skip(&self) -> bool {
+        self.skip.last().copied().unwrap_or(false)
+    }
+
+    fn handle_directive(
+        &mut self,
+        directive: RandomDirective,
+        line: &str,
+        selected_random: Option<&[i32]>,
+        log: &mut Vec<DecodeLog>,
+    ) {
+        match directive {
+            RandomDirective::Random => self.handle_random(line, selected_random, log),
+            RandomDirective::If => self.handle_if(line, log),
+            RandomDirective::EndIf => self.handle_endif(line, log),
+            RandomDirective::EndRandom => self.handle_endrandom(line, log),
+        }
+    }
+
+    fn handle_random(
+        &mut self,
+        line: &str,
+        selected_random: Option<&[i32]>,
+        log: &mut Vec<DecodeLog>,
+    ) {
+        let Some(arg) = line.get(8..) else { return };
+        match arg.trim().parse::<i32>() {
+            Ok(r) if r >= 1 => {
+                self.randoms.push(r);
+                if let Some(sr) = selected_random {
+                    if self.randoms.len() - 1 < sr.len() {
+                        self.crandom.push(sr[self.randoms.len() - 1]);
+                    } else {
+                        let val = (rand_f64() * (r as f64)) as i32 + 1;
+                        self.crandom.push(val);
+                        self.srandoms.push(val);
+                    }
+                } else {
+                    let val = (rand_f64() * (r as f64)) as i32 + 1;
+                    self.crandom.push(val);
+                    self.srandoms.push(val);
+                }
+            }
+            Ok(_) => {
+                log.push(DecodeLog::new(
+                    State::Warning,
+                    "#RANDOMの値は1以上である必要があります",
+                ));
+            }
+            Err(_) => {
+                log.push(DecodeLog::new(
+                    State::Warning,
+                    "#RANDOMに数字が定義されていません",
+                ));
+            }
+        }
+    }
+
+    fn handle_if(&mut self, line: &str, log: &mut Vec<DecodeLog>) {
+        if !self.crandom.is_empty() {
+            let Some(arg) = line.get(4..) else { return };
+            match arg.trim().parse::<i32>() {
+                Ok(val) => {
+                    self.skip.push(
+                        *self
+                            .crandom
+                            .last()
+                            .expect("crandom non-empty checked above")
+                            != val,
+                    );
+                }
+                Err(_) => {
+                    log.push(DecodeLog::new(
+                        State::Warning,
+                        "#IFに数字が定義されていません",
+                    ));
+                }
+            }
+        } else {
+            log.push(DecodeLog::new(
+                State::Warning,
+                "#IFに対応する#RANDOMが定義されていません",
+            ));
+        }
+    }
+
+    fn handle_endif(&mut self, line: &str, log: &mut Vec<DecodeLog>) {
+        if !self.skip.is_empty() {
+            self.skip.pop();
+        } else {
+            log.push(DecodeLog::new(
+                State::Warning,
+                format!("ENDIFに対応するIFが存在しません: {}", line),
+            ));
+        }
+    }
+
+    fn handle_endrandom(&mut self, line: &str, log: &mut Vec<DecodeLog>) {
+        if !self.crandom.is_empty() {
+            self.crandom.pop();
+        } else {
+            log.push(DecodeLog::new(
+                State::Warning,
+                format!("ENDRANDOMに対応するRANDOMが存在しません: {}", line),
+            ));
+        }
+    }
+
+    fn into_srandoms(self) -> Vec<i32> {
+        self.srandoms
     }
 }
 
@@ -805,39 +963,56 @@ mod tests {
     }
 
     #[test]
-    fn decode_playlevel() {
+    fn decode_bpm_case_insensitive() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#PLAYLEVEL 12"]);
+        let data = make_bms_bytes(&["#bpm 200"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().playlevel, "12");
+        assert!((model.unwrap().bpm - 200.0).abs() < f64::EPSILON);
     }
 
     #[test]
-    fn decode_genre() {
+    fn decode_negative_bpm_rejected() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#GENRE Hardcore"]);
+        let data = make_bms_bytes(&["#BPM -50", "#BPM 100"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().genre, "Hardcore");
+        // Negative BPM is rejected but fallback to last valid
+        assert!((model.unwrap().bpm - 100.0).abs() < f64::EPSILON);
+        assert!(decoder.log.iter().any(|l| l.message.contains("negative")));
     }
 
     #[test]
-    fn decode_subtitle() {
+    fn decode_player_valid() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#SUBTITLE [SPA]"]);
+        let data = make_bms_bytes(&["#BPM 120", "#PLAYER 1"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().sub_title, "[SPA]");
+        assert_eq!(model.unwrap().player, 1);
     }
 
     #[test]
-    fn decode_subartist() {
+    fn decode_player_invalid() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#SUBARTIST feat. Vocalist"]);
+        let data = make_bms_bytes(&["#BPM 120", "#PLAYER 5"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("#PLAYERに規定外の数字"))
+        );
+    }
+
+    #[test]
+    fn decode_rank() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#RANK 2"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().subartist, "feat. Vocalist");
+        let model = model.unwrap();
+        assert_eq!(model.judgerank, 2);
+        assert_eq!(model.judgerank_type, JudgeRankType::BmsRank);
     }
 
     #[test]
@@ -852,64 +1027,122 @@ mod tests {
     }
 
     #[test]
-    fn decode_difficulty() {
+    fn decode_playlevel() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#DIFFICULTY 4"]);
+        let data = make_bms_bytes(&["#BPM 120", "#PLAYLEVEL 12"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().difficulty, 4);
+        assert_eq!(model.unwrap().playlevel, "12");
     }
 
     #[test]
-    fn decode_rank() {
+    fn decode_lnobj() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#RANK 3"]);
+        let data = make_bms_bytes(&["#BPM 120", "#LNOBJ ZZ"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        let model = model.unwrap();
-        assert_eq!(model.judgerank, 3);
-        assert_eq!(model.judgerank_type, JudgeRankType::BmsRank);
+        // ZZ in base-36 = 35*36+35 = 1295
+        assert_eq!(model.unwrap().lnobj, 1295);
     }
 
     #[test]
     fn decode_stagefile() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#STAGEFILE bg\\stage.bmp"]);
+        let data = make_bms_bytes(&["#BPM 120", "#STAGEFILE bg\\image.bmp"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        // Backslash should be converted to forward slash
-        assert_eq!(model.unwrap().stagefile, "bg/stage.bmp");
+        assert_eq!(model.unwrap().stagefile, "bg/image.bmp");
     }
 
     #[test]
-    fn decode_banner() {
+    fn decode_wav_entry() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#BANNER banner.png"]);
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#WAV01 kick.wav",
+            "#WAV02 snare.wav",
+            "#00111:0102",
+        ]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().banner, "banner.png");
+        let model = model.unwrap();
+        assert!(model.wavmap.len() >= 2);
+        assert_eq!(model.wavmap[0], "kick.wav");
+        assert_eq!(model.wavmap[1], "snare.wav");
     }
 
     #[test]
-    fn decode_preview() {
+    fn decode_bmp_entry() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#PREVIEW preview.ogg"]);
+        let data = make_bms_bytes(&["#BPM 120", "#BMP01 bg.bmp"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().preview, "preview.ogg");
+        let model = model.unwrap();
+        assert!(!model.bgamap.is_empty());
+        assert_eq!(model.bgamap[0], "bg.bmp");
     }
 
     #[test]
-    fn decode_no_bpm_returns_none() {
+    fn decode_random_if() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#TITLE No BPM"]);
-        let model = decoder.decode_bytes(&data, false, None);
-        // Without BPM defined, the first timeline has BPM 0.0 and decode should fail
-        assert!(model.is_none());
+        // With selected_random = [1], #IF 1 body should execute
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#RANDOM 2",
+            "#IF 1",
+            "#TITLE RandomTitle",
+            "#ENDIF",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1]));
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().title, "RandomTitle");
     }
 
     #[test]
-    fn decode_pms_sets_popn_mode() {
+    fn decode_random_if_skip() {
+        let mut decoder = BMSDecoder::new();
+        // With selected_random = [2], #IF 1 body should be skipped
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#RANDOM 2",
+            "#IF 1",
+            "#TITLE SkippedTitle",
+            "#ENDIF",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[2]));
+        assert!(model.is_some());
+        // Title should remain default (empty)
+        assert_eq!(model.unwrap().title, "");
+    }
+
+    #[test]
+    fn decode_percent_value() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "%URL http://example.com"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        let model = model.unwrap();
+        assert_eq!(
+            model.values.get("URL").map(|s| s.as_str()),
+            Some("http://example.com")
+        );
+    }
+
+    #[test]
+    fn decode_at_value() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "@KEY somevalue"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        let model = model.unwrap();
+        assert_eq!(
+            model.values.get("KEY").map(|s| s.as_str()),
+            Some("somevalue")
+        );
+    }
+
+    #[test]
+    fn decode_pms_mode() {
         let mut decoder = BMSDecoder::new();
         let data = make_bms_bytes(&["#BPM 120"]);
         let model = decoder.decode_bytes(&data, true, None);
@@ -918,46 +1151,33 @@ mod tests {
     }
 
     #[test]
-    fn decode_bms_sets_beat5k_mode() {
+    fn decode_no_bpm_returns_none() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120"]);
+        let data = make_bms_bytes(&["#TITLE NoBPM"]);
         let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        assert_eq!(model.unwrap().mode(), Some(&Mode::BEAT_5K));
+        assert!(model.is_none());
     }
 
     #[test]
-    fn decode_generates_md5_and_sha256() {
+    fn decode_stop_entry() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#STOP01 192"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        // STOP value = 192 / 192 = 1.0
+        assert!((decoder.stoptable.get(&1).copied().unwrap_or(0.0) - 1.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn decode_md5_sha256_populated() {
         let mut decoder = BMSDecoder::new();
         let data = make_bms_bytes(&["#BPM 120"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
         let model = model.unwrap();
-        // MD5 hash should be 32 hex characters
-        assert_eq!(model.md5.len(), 32);
-        // SHA256 hash should be 64 hex characters
-        assert_eq!(model.sha256.len(), 64);
-        // Should only contain hex digits
-        assert!(model.md5.chars().all(|c| c.is_ascii_hexdigit()));
-        assert!(model.sha256.chars().all(|c| c.is_ascii_hexdigit()));
-    }
-
-    #[test]
-    fn decode_player() {
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#PLAYER 1"]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        assert_eq!(model.unwrap().player, 1);
-    }
-
-    #[test]
-    fn decode_volwav() {
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#VOLWAV 80"]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        assert_eq!(model.unwrap().volwav, 80);
+        assert!(!model.md5.is_empty());
+        assert!(!model.sha256.is_empty());
+        assert_eq!(model.md5.len(), 32); // MD5 hex = 32 chars
+        assert_eq!(model.sha256.len(), 64); // SHA256 hex = 64 chars
     }
 
     #[test]
@@ -972,7 +1192,52 @@ mod tests {
     }
 
     #[test]
-    fn decode_base_62() {
+    fn decode_genre() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#GENRE Techno"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().genre, "Techno");
+    }
+
+    #[test]
+    fn decode_subtitle() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#SUBTITLE -remix-"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().sub_title, "-remix-");
+    }
+
+    #[test]
+    fn decode_subartist() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#SUBARTIST feat. Someone"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().subartist, "feat. Someone");
+    }
+
+    #[test]
+    fn decode_difficulty() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#DIFFICULTY 3"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().difficulty, 3);
+    }
+
+    #[test]
+    fn decode_volwav() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#VOLWAV 80"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().volwav, 80);
+    }
+
+    #[test]
+    fn decode_base62() {
         let mut decoder = BMSDecoder::new();
         let data = make_bms_bytes(&["#BPM 120", "#BASE 62"]);
         let model = decoder.decode_bytes(&data, false, None);
@@ -981,339 +1246,110 @@ mod tests {
     }
 
     #[test]
+    fn decode_banner() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#BANNER img\\banner.png"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().banner, "img/banner.png");
+    }
+
+    #[test]
+    fn decode_preview() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#PREVIEW preview.ogg"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().preview, "preview.ogg");
+    }
+
+    #[test]
     fn decode_backbmp() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#BACKBMP img\\back.bmp"]);
+        let data = make_bms_bytes(&["#BPM 120", "#BACKBMP bg\\back.bmp"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
-        assert_eq!(model.unwrap().backbmp, "img/back.bmp");
+        assert_eq!(model.unwrap().backbmp, "bg/back.bmp");
     }
 
     #[test]
-    fn decode_percent_values() {
+    fn decode_total_low_warning() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "%URL http://example.com"]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        let model = model.unwrap();
-        assert_eq!(
-            model.values.get("URL"),
-            Some(&"http://example.com".to_string())
+        let data = make_bms_bytes(&["#BPM 120", "#TOTAL 50"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("TOTAL値が少なすぎます"))
         );
     }
 
     #[test]
-    fn decode_wav_definition() {
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&["#BPM 120", "#WAV01 sound\\kick.wav"]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        let model = model.unwrap();
-        let wav_list = &model.wavmap;
-        assert!(!wav_list.is_empty());
-        // Backslash should be converted to forward slash
-        assert!(wav_list.iter().any(|w| w == "sound/kick.wav"));
-    }
-
-    #[test]
-    fn decode_multiple_headers() {
+    fn decode_nested_random_if() {
         let mut decoder = BMSDecoder::new();
         let data = make_bms_bytes(&[
-            "#TITLE Combined Test",
-            "#ARTIST Multi Artist",
-            "#BPM 180",
-            "#PLAYLEVEL 7",
-            "#GENRE Trance",
-            "#TOTAL 350",
-            "#RANK 2",
-        ]);
-        let model = decoder.decode_bytes(&data, false, None).unwrap();
-
-        assert_eq!(model.title, "Combined Test");
-        assert_eq!(model.artist, "Multi Artist");
-        assert!((model.bpm - 180.0).abs() < f64::EPSILON);
-        assert_eq!(model.playlevel, "7");
-        assert_eq!(model.genre, "Trance");
-        assert!((model.total - 350.0).abs() < f64::EPSILON);
-        assert_eq!(model.judgerank, 2);
-    }
-
-    // --- process_command_word tests ---
-
-    #[test]
-    fn process_command_word_title() {
-        let mut model = BMSModel::new();
-        let mut log = Vec::new();
-        let handled = process_command_word("#TITLE Hello World", &mut model, &mut log);
-        assert!(handled);
-        assert_eq!(model.title, "Hello World");
-        assert!(log.is_empty());
-    }
-
-    #[test]
-    fn process_command_word_artist() {
-        let mut model = BMSModel::new();
-        let mut log = Vec::new();
-        let handled = process_command_word("#ARTIST Test Artist", &mut model, &mut log);
-        assert!(handled);
-        assert_eq!(model.artist, "Test Artist");
-    }
-
-    #[test]
-    fn process_command_word_unknown() {
-        let mut model = BMSModel::new();
-        let mut log = Vec::new();
-        let handled = process_command_word("#UNKNOWN something", &mut model, &mut log);
-        assert!(!handled);
-    }
-
-    #[test]
-    fn process_command_word_player_valid() {
-        let mut model = BMSModel::new();
-        let mut log = Vec::new();
-        let handled = process_command_word("#PLAYER 1", &mut model, &mut log);
-        assert!(handled);
-        assert_eq!(model.player, 1);
-        assert!(log.is_empty());
-    }
-
-    #[test]
-    fn process_command_word_player_invalid() {
-        let mut model = BMSModel::new();
-        let mut log = Vec::new();
-        let handled = process_command_word("#PLAYER 5", &mut model, &mut log);
-        assert!(handled);
-        // Invalid player value should produce a warning
-        assert!(!log.is_empty());
-    }
-
-    // --- Multi-byte char boundary safety regression tests ---
-    //
-    // These tests verify that string slicing does not panic when multi-byte
-    // UTF-8 characters (e.g., from Shift_JIS decoded text) appear at positions
-    // where the old byte-index slicing would land mid-character.
-
-    /// Helper: encode a UTF-8 string as Shift_JIS bytes (mimicking real BMS files).
-    fn make_bms_bytes_sjis(lines: &[&str]) -> Vec<u8> {
-        let mut content = String::new();
-        for line in lines {
-            content.push_str(line);
-            content.push('\n');
-        }
-        let (encoded, _, _) = encoding_rs::SHIFT_JIS.encode(&content);
-        encoded.into_owned()
-    }
-
-    #[test]
-    fn multibyte_title_no_panic() {
-        // #TITLE followed by multi-byte Japanese text
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes_sjis(&[
             "#BPM 120",
-            "#TITLE \u{8868}\u{793a}\u{30c6}\u{30b9}\u{30c8}",
-        ]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        assert_eq!(
-            model.unwrap().title,
-            "\u{8868}\u{793a}\u{30c6}\u{30b9}\u{30c8}"
-        );
-    }
-
-    #[test]
-    fn multibyte_artist_no_panic() {
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes_sjis(&["#BPM 120", "#ARTIST \u{97f3}\u{697d}\u{5bb6}"]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        assert_eq!(model.unwrap().artist, "\u{97f3}\u{697d}\u{5bb6}");
-    }
-
-    #[test]
-    fn multibyte_genre_no_panic() {
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes_sjis(&[
-            "#BPM 120",
-            "#GENRE \u{30cf}\u{30fc}\u{30c9}\u{30b3}\u{30a2}",
-        ]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        assert_eq!(
-            model.unwrap().genre,
-            "\u{30cf}\u{30fc}\u{30c9}\u{30b3}\u{30a2}"
-        );
-    }
-
-    #[test]
-    fn multibyte_wav_filename_no_panic() {
-        // #WAV01 with a Japanese filename
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes_sjis(&["#BPM 120", "#WAV01 \u{97f3}\u{58f0}.wav"]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        let model = model.unwrap();
-        let wav_list = &model.wavmap;
-        assert!(wav_list.iter().any(|w| w.contains(".wav")));
-    }
-
-    #[test]
-    fn multibyte_bmp_filename_no_panic() {
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes_sjis(&["#BPM 120", "#BMP01 \u{80cc}\u{666f}.bmp"]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        let model = model.unwrap();
-        let bga_list = model.bgamap;
-        assert!(bga_list.iter().any(|b| b.contains(".bmp")));
-    }
-
-    #[test]
-    fn multibyte_stagefile_no_panic() {
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes_sjis(&["#BPM 120", "#STAGEFILE \u{753b}\u{50cf}/stage.bmp"]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        assert!(model.unwrap().stagefile.contains("stage.bmp"));
-    }
-
-    #[test]
-    fn malformed_random_with_multibyte_no_panic() {
-        // #RANDOM followed directly by a multi-byte char (no space, no valid number).
-        // This used to panic when slicing at byte index 8 mid-character.
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes_sjis(&["#BPM 120", "#RANDOM\u{8868}"]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-    }
-
-    #[test]
-    fn malformed_if_with_multibyte_no_panic() {
-        // #IF followed by multi-byte char
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes_sjis(&[
-            "#BPM 120",
+            "#RANDOM 3",
+            "#IF 2",
             "#RANDOM 2",
-            "#IF \u{8868}",
-            "#ENDIF",
-            "#ENDRANDOM",
-        ]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-    }
-
-    #[test]
-    fn malformed_bpmxx_with_multibyte_no_panic() {
-        // #BPM with multi-byte chars in the index position
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes_sjis(&["#BPM 120", "#BPM\u{8868}\u{793a} 180"]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-    }
-
-    #[test]
-    fn process_command_word_multibyte_value_no_panic() {
-        let mut model = BMSModel::new();
-        let mut log = Vec::new();
-        let handled = process_command_word(
-            "#TITLE \u{8868}\u{793a}\u{30c6}\u{30b9}\u{30c8}",
-            &mut model,
-            &mut log,
-        );
-        assert!(handled);
-        assert_eq!(model.title, "\u{8868}\u{793a}\u{30c6}\u{30b9}\u{30c8}");
-    }
-
-    #[test]
-    fn process_command_word_multibyte_genre_no_panic() {
-        let mut model = BMSModel::new();
-        let mut log = Vec::new();
-        let handled = process_command_word(
-            "#GENRE \u{30cf}\u{30fc}\u{30c9}\u{30b3}\u{30a2}",
-            &mut model,
-            &mut log,
-        );
-        assert!(handled);
-        assert_eq!(model.genre, "\u{30cf}\u{30fc}\u{30c9}\u{30b3}\u{30a2}");
-    }
-
-    #[test]
-    fn full_bms_with_multibyte_metadata_no_panic() {
-        // Integration test: a complete BMS with all multi-byte metadata fields
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes_sjis(&[
-            "#TITLE \u{661f}\u{306e}\u{5668}",
-            "#ARTIST \u{4f5c}\u{66f2}\u{8005}",
-            "#GENRE \u{30c8}\u{30e9}\u{30f3}\u{30b9}",
-            "#SUBTITLE [\u{5225}\u{540d}]",
-            "#SUBARTIST feat.\u{6b4c}\u{624b}",
-            "#STAGEFILE \u{753b}\u{50cf}\\bg.bmp",
-            "#BPM 140",
-            "#PLAYLEVEL 12",
-            "#RANK 2",
-            "#TOTAL 300",
-            "#WAV01 \u{97f3}\u{58f0}/kick.wav",
-            "#BMP01 \u{80cc}\u{666f}/bg.bmp",
-        ]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        let model = model.unwrap();
-        assert_eq!(model.title, "\u{661f}\u{306e}\u{5668}");
-        assert_eq!(model.artist, "\u{4f5c}\u{66f2}\u{8005}");
-        assert_eq!(model.genre, "\u{30c8}\u{30e9}\u{30f3}\u{30b9}");
-        assert!((model.bpm - 140.0).abs() < f64::EPSILON);
-    }
-
-    // --- #RANDOM validation regression tests ---
-
-    #[test]
-    fn random_negative_value_rejected() {
-        // #RANDOM -5 is invalid (must be >= 1). The decoder should log a
-        // warning and not push to crandom, so the subsequent #IF has no
-        // matching RANDOM context.
-        let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&[
-            "#BPM 120",
-            "#WAV01 kick.wav",
-            "#RANDOM -5",
             "#IF 1",
-            "#00111:01",
+            "#TITLE NestedMatch",
+            "#ENDIF",
+            "#ENDRANDOM",
             "#ENDIF",
             "#ENDRANDOM",
         ]);
-        let model = decoder.decode_bytes(&data, false, None);
+        let model = decoder.decode_bytes(&data, false, Some(&[2, 1]));
         assert!(model.is_some());
-        // Verify that the decoder emitted a warning about invalid #RANDOM value.
+        assert_eq!(model.unwrap().title, "NestedMatch");
+    }
+
+    #[test]
+    fn decode_endrandom_without_random_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#ENDRANDOM"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(decoder.log.iter().any(|l| {
+            l.message
+                .contains("ENDRANDOMに対応するRANDOMが存在しません")
+        }));
+    }
+
+    #[test]
+    fn decode_endif_without_if_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#ENDIF"]);
+        let _ = decoder.decode_bytes(&data, false, None);
         assert!(
             decoder
                 .log
                 .iter()
-                .any(|l| l.state == State::Warning && l.message.contains("#RANDOM")),
-            "Expected warning log about invalid #RANDOM value"
+                .any(|l| l.message.contains("ENDIFに対応するIFが存在しません"))
         );
     }
 
     #[test]
-    fn random_zero_value_rejected() {
-        // #RANDOM 0 is invalid (must be >= 1). Same behavior as negative.
+    fn decode_if_without_random_warns() {
         let mut decoder = BMSDecoder::new();
-        let data = make_bms_bytes(&[
-            "#BPM 120",
-            "#WAV01 kick.wav",
-            "#RANDOM 0",
-            "#IF 1",
-            "#00111:01",
-            "#ENDIF",
-            "#ENDRANDOM",
-        ]);
-        let model = decoder.decode_bytes(&data, false, None);
-        assert!(model.is_some());
-        // Verify that the decoder emitted a warning about invalid #RANDOM value.
+        let data = make_bms_bytes(&["#BPM 120", "#IF 1", "#ENDIF"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(decoder.log.iter().any(|l| {
+            l.message
+                .contains("#IFに対応する#RANDOMが定義されていません")
+        }));
+    }
+
+    #[test]
+    fn decode_random_zero_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#RANDOM 0"]);
+        let _ = decoder.decode_bytes(&data, false, None);
         assert!(
             decoder
                 .log
                 .iter()
-                .any(|l| l.state == State::Warning && l.message.contains("#RANDOM")),
-            "Expected warning log about invalid #RANDOM value"
+                .any(|l| l.message.contains("#RANDOMの値は1以上"))
         );
     }
 }
