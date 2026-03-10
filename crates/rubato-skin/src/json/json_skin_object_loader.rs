@@ -28,6 +28,8 @@ pub trait JsonSkinObjectLoader {
 }
 
 /// Base skin object loading logic (translated from JsonSkinObjectLoader.loadSkinObject)
+///
+/// Dispatches to type-specific loader functions for each skin object category.
 pub fn load_base_skin_object(
     loader: &mut JSONSkinLoader,
     _skin: &SkinData,
@@ -37,14 +39,48 @@ pub fn load_base_skin_object(
 ) -> Option<SkinObjectData> {
     let dst_id = dst.id.as_deref()?;
 
-    // image
+    None.or_else(|| load_image_object(loader, sk, dst_id, p))
+        .or_else(|| load_imageset_object(sk, dst_id))
+        .or_else(|| load_value_object(sk, dst_id))
+        .or_else(|| load_floatvalue_object(sk, dst_id))
+        .or_else(|| load_text_object(sk, dst_id))
+        .or_else(|| load_slider_object(sk, dst_id))
+        .or_else(|| load_graph_object(sk, dst_id))
+        .or_else(|| load_gaugegraph_object(sk, dst_id))
+        .or_else(|| load_judgegraph_object(sk, dst_id))
+        .or_else(|| load_bpmgraph_object(sk, dst_id))
+        .or_else(|| load_hiterror_object(sk, dst_id))
+        .or_else(|| load_timingvisualizer_object(sk, dst_id))
+        .or_else(|| load_timingdist_object(sk, dst_id))
+        .or_else(|| load_gauge_object(sk, dst_id))
+}
+
+/// Convert JSON offset entries to SkinNumberOffset vec.
+fn map_number_offsets(offsets: Option<&Vec<json_skin::Value>>) -> Option<Vec<SkinNumberOffset>> {
+    offsets.map(|ofs| {
+        ofs.iter()
+            .map(|o| SkinNumberOffset {
+                x: o.x,
+                y: o.y,
+                w: o.w,
+                h: o.h,
+            })
+            .collect()
+    })
+}
+
+fn load_image_object(
+    loader: &mut JSONSkinLoader,
+    sk: &json_skin::Skin,
+    dst_id: &str,
+    p: &Path,
+) -> Option<SkinObjectData> {
     for img in &sk.image {
         if dst_id == img.id.as_deref().unwrap_or("") {
             let data = loader.source(img.src.as_deref().unwrap_or(""), p);
             let is_movie = matches!(&data, Some(SourceDataType::Movie(_)));
-
             if data.is_some() {
-                let obj = SkinObjectData {
+                return Some(SkinObjectData {
                     name: img.id.clone(),
                     object_type: SkinObjectType::Image {
                         src: img.src.clone(),
@@ -63,20 +99,18 @@ pub fn load_base_skin_object(
                         is_movie,
                     },
                     ..Default::default()
-                };
-                if img.act.is_some() {
-                    // Click event info captured in SkinObjectType::Image
-                }
-                return Some(obj);
+                });
             }
             return None;
         }
     }
+    None
+}
 
-    // imageset
+fn load_imageset_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for imgs in &sk.imageset {
         if dst_id == imgs.id.as_deref().unwrap_or("") {
-            let obj = SkinObjectData {
+            return Some(SkinObjectData {
                 name: imgs.id.clone(),
                 object_type: SkinObjectType::ImageSet {
                     images: imgs.images.clone(),
@@ -86,25 +120,16 @@ pub fn load_base_skin_object(
                     click: imgs.click,
                 },
                 ..Default::default()
-            };
-            return Some(obj);
+            });
         }
     }
+    None
+}
 
-    // value (SkinNumber)
+fn load_value_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for value in &sk.value {
         if dst_id == value.id.as_deref().unwrap_or("") {
-            let offsets = value.offset.as_ref().map(|ofs| {
-                ofs.iter()
-                    .map(|o| SkinNumberOffset {
-                        x: o.x,
-                        y: o.y,
-                        w: o.w,
-                        h: o.h,
-                    })
-                    .collect()
-            });
-            let obj = SkinObjectData {
+            return Some(SkinObjectData {
                 name: value.id.clone(),
                 object_type: SkinObjectType::Number {
                     src: value.src.clone(),
@@ -123,28 +148,19 @@ pub fn load_base_skin_object(
                     ref_id: value.ref_id,
                     value: value.value,
                     align: value.align,
-                    offsets,
+                    offsets: map_number_offsets(value.offset.as_ref()),
                 },
                 ..Default::default()
-            };
-            return Some(obj);
+            });
         }
     }
+    None
+}
 
-    // floatvalue (SkinFloat)
+fn load_floatvalue_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for fv in &sk.floatvalue {
         if dst_id == fv.id.as_deref().unwrap_or("") {
-            let offsets = fv.offset.as_ref().map(|ofs| {
-                ofs.iter()
-                    .map(|o| SkinNumberOffset {
-                        x: o.x,
-                        y: o.y,
-                        w: o.w,
-                        h: o.h,
-                    })
-                    .collect()
-            });
-            let obj = SkinObjectData {
+            return Some(SkinObjectData {
                 name: fv.id.clone(),
                 object_type: SkinObjectType::Float {
                     src: fv.src.clone(),
@@ -165,18 +181,19 @@ pub fn load_base_skin_object(
                     ref_id: fv.ref_id,
                     value: fv.value,
                     gain: fv.gain,
-                    offsets,
+                    offsets: map_number_offsets(fv.offset.as_ref()),
                 },
                 ..Default::default()
-            };
-            return Some(obj);
+            });
         }
     }
+    None
+}
 
-    // text
+fn load_text_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for text in &sk.text {
         if dst_id == text.id.as_deref().unwrap_or("") {
-            let obj = SkinObjectData {
+            return Some(SkinObjectData {
                 name: text.id.clone(),
                 object_type: SkinObjectType::Text {
                     font: text.font.clone(),
@@ -195,15 +212,16 @@ pub fn load_base_skin_object(
                     shadow_smoothness: text.shadow_smoothness,
                 },
                 ..Default::default()
-            };
-            return Some(obj);
+            });
         }
     }
+    None
+}
 
-    // slider
+fn load_slider_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for slider in &sk.slider {
         if dst_id == slider.id.as_deref().unwrap_or("") {
-            let obj = SkinObjectData {
+            return Some(SkinObjectData {
                 name: slider.id.clone(),
                 object_type: SkinObjectType::Slider {
                     src: slider.src.clone(),
@@ -226,17 +244,17 @@ pub fn load_base_skin_object(
                     max: slider.max,
                 },
                 ..Default::default()
-            };
-            return Some(obj);
+            });
         }
     }
+    None
+}
 
-    // graph
+fn load_graph_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for graph in &sk.graph {
         if dst_id == graph.id.as_deref().unwrap_or("") {
             if graph.graph_type < 0 {
-                // SkinDistributionGraph
-                let obj = SkinObjectData {
+                return Some(SkinObjectData {
                     name: graph.id.clone(),
                     object_type: SkinObjectType::DistributionGraph {
                         src: graph.src.clone(),
@@ -251,11 +269,9 @@ pub fn load_base_skin_object(
                         graph_type: graph.graph_type,
                     },
                     ..Default::default()
-                };
-                return Some(obj);
+                });
             } else {
-                // SkinGraph
-                let obj = SkinObjectData {
+                return Some(SkinObjectData {
                     name: graph.id.clone(),
                     object_type: SkinObjectType::Graph {
                         src: graph.src.clone(),
@@ -275,16 +291,17 @@ pub fn load_base_skin_object(
                         max: graph.max,
                     },
                     ..Default::default()
-                };
-                return Some(obj);
+                });
             }
         }
     }
+    None
+}
 
-    // gaugegraph
+fn load_gaugegraph_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for ggraph in &sk.gaugegraph {
         if dst_id == ggraph.id.as_deref().unwrap_or("") {
-            let obj = SkinObjectData {
+            return Some(SkinObjectData {
                 name: ggraph.id.clone(),
                 object_type: SkinObjectType::GaugeGraph {
                     color: ggraph.color.clone(),
@@ -306,15 +323,16 @@ pub fn load_base_skin_object(
                     border_color: ggraph.border_color.clone(),
                 },
                 ..Default::default()
-            };
-            return Some(obj);
+            });
         }
     }
+    None
+}
 
-    // judgegraph
+fn load_judgegraph_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for ggraph in &sk.judgegraph {
         if dst_id == ggraph.id.as_deref().unwrap_or("") {
-            let obj = SkinObjectData {
+            return Some(SkinObjectData {
                 name: ggraph.id.clone(),
                 object_type: SkinObjectType::JudgeGraph {
                     graph_type: ggraph.graph_type,
@@ -325,16 +343,16 @@ pub fn load_base_skin_object(
                     no_gap_x: ggraph.no_gap_x,
                 },
                 ..Default::default()
-            };
-            // Java uses break here (not return), so we break out of this loop
-            return Some(obj);
+            });
         }
     }
+    None
+}
 
-    // bpmgraph
+fn load_bpmgraph_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for ggraph in &sk.bpmgraph {
         if dst_id == ggraph.id.as_deref().unwrap_or("") {
-            let obj = SkinObjectData {
+            return Some(SkinObjectData {
                 name: ggraph.id.clone(),
                 object_type: SkinObjectType::BpmGraph {
                     delay: ggraph.delay,
@@ -347,15 +365,16 @@ pub fn load_base_skin_object(
                     transition_line_color: ggraph.transition_line_color.clone(),
                 },
                 ..Default::default()
-            };
-            return Some(obj);
+            });
         }
     }
+    None
+}
 
-    // hiterrorvisualizer
+fn load_hiterror_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for hev in &sk.hiterrorvisualizer {
         if dst_id == hev.id.as_deref().unwrap_or("") {
-            let obj = SkinObjectData {
+            return Some(SkinObjectData {
                 name: hev.id.clone(),
                 object_type: SkinObjectType::HitErrorVisualizer {
                     width: hev.width,
@@ -378,15 +397,16 @@ pub fn load_base_skin_object(
                     draw_decay: hev.draw_decay,
                 },
                 ..Default::default()
-            };
-            return Some(obj);
+            });
         }
     }
+    None
+}
 
-    // timingvisualizer
+fn load_timingvisualizer_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for tv in &sk.timingvisualizer {
         if dst_id == tv.id.as_deref().unwrap_or("") {
-            let obj = SkinObjectData {
+            return Some(SkinObjectData {
                 name: tv.id.clone(),
                 object_type: SkinObjectType::TimingVisualizer {
                     width: tv.width,
@@ -403,15 +423,16 @@ pub fn load_base_skin_object(
                     draw_decay: tv.draw_decay,
                 },
                 ..Default::default()
-            };
-            return Some(obj);
+            });
         }
     }
+    None
+}
 
-    // timingdistributiongraph
+fn load_timingdist_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for td in &sk.timingdistributiongraph {
         if dst_id == td.id.as_deref().unwrap_or("") {
-            let obj = SkinObjectData {
+            return Some(SkinObjectData {
                 name: td.id.clone(),
                 object_type: SkinObjectType::TimingDistributionGraph {
                     width: td.width,
@@ -428,16 +449,17 @@ pub fn load_base_skin_object(
                     draw_dev: td.draw_dev,
                 },
                 ..Default::default()
-            };
-            return Some(obj);
+            });
         }
     }
+    None
+}
 
-    // gauge
+fn load_gauge_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     if let Some(ref gauge) = sk.gauge
         && dst_id == gauge.id.as_deref().unwrap_or("")
     {
-        let obj = SkinObjectData {
+        return Some(SkinObjectData {
             name: gauge.id.clone(),
             object_type: SkinObjectType::Gauge {
                 nodes: gauge.nodes.clone(),
@@ -449,10 +471,8 @@ pub fn load_base_skin_object(
                 endtime: gauge.endtime,
             },
             ..Default::default()
-        };
-        return Some(obj);
+        });
     }
-
     None
 }
 
