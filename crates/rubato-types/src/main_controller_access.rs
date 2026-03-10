@@ -146,6 +146,12 @@ pub trait MainControllerAccess {
         // default no-op
     }
 
+    /// Check whether replay data exists for the given song hash and slot.
+    /// Delegates to PlayDataAccessor internally.
+    fn exists_replay_data(&self, _sha256: &str, _has_ln: bool, _lnmode: i32, _index: i32) -> bool {
+        false
+    }
+
     /// Read replay data for the given song hash.
     /// Delegates to PlayDataAccessor internally.
     fn read_replay_data(

@@ -184,6 +184,11 @@ impl MainControllerAccess for QueuedControllerAccess {
         self.commands.push(MainControllerCommand::ShuffleSounds);
     }
 
+    fn exists_replay_data(&self, sha256: &str, has_ln: bool, lnmode: i32, index: i32) -> bool {
+        self.play_data_accessor
+            .exists_replay_data(sha256, has_ln, lnmode, index)
+    }
+
     fn read_replay_data(
         &self,
         sha256: &str,

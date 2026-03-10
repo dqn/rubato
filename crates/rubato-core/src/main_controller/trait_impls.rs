@@ -117,6 +117,13 @@ impl MainControllerAccess for MainController {
         }
     }
 
+    fn exists_replay_data(&self, sha256: &str, has_ln: bool, lnmode: i32, index: i32) -> bool {
+        self.db
+            .playdata
+            .as_ref()
+            .is_some_and(|pda| pda.exists_replay_data(sha256, has_ln, lnmode, index))
+    }
+
     fn read_replay_data(
         &self,
         sha256: &str,

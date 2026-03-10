@@ -234,6 +234,7 @@ fn test_loader_runs_on_empty_bars() {
         is_folderlamp: false,
         banner_resource: None,
         stagefile_resource: None,
+        exists_replay_fn: None,
     };
     loader.run(&mut bars, &mut ctx);
     // Should complete without errors
@@ -253,6 +254,7 @@ fn test_loader_stops_early_when_signaled() {
         is_folderlamp: false,
         banner_resource: None,
         stagefile_resource: None,
+        exists_replay_fn: None,
     };
     loader.run(&mut bars, &mut ctx);
     // Should return immediately due to stop flag
@@ -287,6 +289,7 @@ fn test_loader_loads_score_from_cache() {
         is_folderlamp: false,
         banner_resource: None,
         stagefile_resource: None,
+        exists_replay_fn: None,
     };
 
     loader.run(&mut bars, &mut ctx);
@@ -332,6 +335,7 @@ fn test_loader_loads_banner_via_pool() {
         is_folderlamp: false,
         banner_resource: Some(&banner_pool),
         stagefile_resource: None,
+        exists_replay_fn: None,
     };
 
     loader.run(&mut bars, &mut ctx);
@@ -370,6 +374,7 @@ fn test_loader_loads_stagefile_via_pool() {
         is_folderlamp: false,
         banner_resource: None,
         stagefile_resource: Some(&stagefile_pool),
+        exists_replay_fn: None,
     };
 
     loader.run(&mut bars, &mut ctx);
@@ -406,6 +411,7 @@ fn test_loader_no_pool_skips_banner_loading() {
         is_folderlamp: false,
         banner_resource: None,
         stagefile_resource: None,
+        exists_replay_fn: None,
     };
 
     loader.run(&mut bars, &mut ctx);
@@ -440,6 +446,7 @@ fn test_loader_nonexistent_banner_file_not_loaded() {
         is_folderlamp: false,
         banner_resource: Some(&banner_pool),
         stagefile_resource: None,
+        exists_replay_fn: None,
     };
 
     loader.run(&mut bars, &mut ctx);

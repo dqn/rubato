@@ -234,7 +234,17 @@ impl BarContentsLoaderThread {
 
                 // Replay existence check
                 // Java: for(int i = 0; i < MusicSelector.REPLAY; i++) { ... }
-                // Requires PlayDataAccessor - blocked
+                if let Some(exists_fn) = ctx.exists_replay_fn {
+                    let has_ln = sd.chart.has_undefined_long_note();
+                    if let Some(sb) = bar.as_selectable_bar_mut() {
+                        for i in 0..super::super::music_selector::REPLAY {
+                            sb.set_exists_replay(
+                                i as i32,
+                                exists_fn(&sd.file.sha256, has_ln, lnmode, i as i32),
+                            );
+                        }
+                    }
+                }
             } else if let Some(gb) = bar.as_grade_bar()
                 && gb.exists_all_songs()
             {

@@ -128,11 +128,25 @@ impl MainController {
             {
                 input.set_play_config(self.player.play_config(mode));
             }
-            // TODO: Wire guide SE paths to audio driver
-            // Java: audio.setAdditionalKeySound(judge, true/false, path)
-            // Requires AudioDriver::set_additional_key_sound() implementation
-            if effects.guide_se {
-                log::debug!("Guide SE requested; audio wiring not yet implemented");
+            if effects.guide_se
+                && let Some(ref sm) = self.sound
+                && let Some(ref mut audio) = self.audio
+            {
+                use rubato_types::sound_type::SoundType;
+                let guide_se_types = [
+                    SoundType::GuidesePg,
+                    SoundType::GuideseGr,
+                    SoundType::GuideseGd,
+                    SoundType::GuideseBd,
+                    SoundType::GuidesePr,
+                    SoundType::GuideseMs,
+                ];
+                for (judge, sound_type) in guide_se_types.iter().enumerate() {
+                    let paths = sm.sound_paths(sound_type);
+                    let path = paths.first().map(|p| p.to_string_lossy().to_string());
+                    audio.set_additional_key_sound(judge as i32, true, path.as_deref());
+                    audio.set_additional_key_sound(judge as i32, false, path.as_deref());
+                }
             }
         }
 

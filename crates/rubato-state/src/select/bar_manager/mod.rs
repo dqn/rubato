@@ -32,6 +32,9 @@ pub struct UpdateBarContext<'a> {
     pub max_search_bar_count: i32,
 }
 
+/// Replay existence checker function type: (sha256, has_ln, lnmode, index) -> bool
+pub type ExistsReplayFn<'a> = &'a dyn Fn(&str, bool, i32, i32) -> bool;
+
 /// Context for loader thread operations.
 pub struct LoaderContext<'a> {
     pub player_config: &'a PlayerConfig,
@@ -43,6 +46,8 @@ pub struct LoaderContext<'a> {
     pub banner_resource: Option<&'a PixmapResourcePool>,
     /// Stagefile pixmap resource pool for loading stagefile images
     pub stagefile_resource: Option<&'a PixmapResourcePool>,
+    /// Replay existence checker
+    pub exists_replay_fn: Option<ExistsReplayFn<'a>>,
 }
 
 /// Bar manager for managing the song bar hierarchy
