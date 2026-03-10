@@ -73,12 +73,22 @@ impl SkinLuaAccessor {
         }
     }
 
-    /// Execute a Lua file and return the result
+    /// Execute a Lua file and return the result.
+    /// Falls back to Shift_JIS decoding when the file is not valid UTF-8.
     pub fn exec_file(&self, path: &Path) -> Option<LuaValue> {
         let path_str = path.to_string_lossy();
+        let source = match std::fs::read_to_string(path) {
+            Ok(s) => s,
+            Err(_) => {
+                // Fallback: read raw bytes and decode as Shift_JIS (CP932)
+                let bytes = std::fs::read(path).ok()?;
+                let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&bytes);
+                decoded.into_owned()
+            }
+        };
         match self
             .lua
-            .load(std::fs::read_to_string(path).ok()?.as_str())
+            .load(source.as_str())
             .set_name(path_str.as_ref())
             .call::<LuaValue>(())
         {

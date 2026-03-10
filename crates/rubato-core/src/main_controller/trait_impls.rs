@@ -216,4 +216,12 @@ impl MainControllerAccess for MainController {
             .and_then(|status| status.connection.as_ref())
             .map(|conn| conn.as_ref() as &dyn std::any::Any)
     }
+
+    fn load_new_profile(&self, pc: PlayerConfig) {
+        self.command_queue.push(
+            rubato_types::main_controller_access::MainControllerCommand::LoadNewProfile(Box::new(
+                pc,
+            )),
+        );
+    }
 }

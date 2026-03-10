@@ -86,21 +86,27 @@ impl MusicSelector {
                 let property_idx = self.config.select_settings.musicselectinput as usize;
                 let property = &MusicSelectKeyProperty::VALUES
                     [property_idx.min(MusicSelectKeyProperty::VALUES.len() - 1)];
+                let mut scratch_play_requested = false;
+                let mut scratch_stop_requested = false;
                 let mut bar_input_ctx = crate::select::bar_renderer::BarInputContext {
                     input,
                     property,
                     manager: &mut self.manager,
                     play_scratch: &mut || {
-                        // In Java: select.play(SCRATCH)
-                        // Sound playback requires MainController — deferred
+                        scratch_play_requested = true;
                     },
                     stop_scratch: &mut || {
-                        // In Java: select.stop(SCRATCH)
-                        // Sound playback requires MainController — deferred
+                        scratch_stop_requested = true;
                     },
                 };
                 bar.input(&mut bar_input_ctx);
                 self.bar_rendering.bar = Some(bar);
+                if scratch_play_requested {
+                    self.play_sound(SoundType::Scratch);
+                }
+                if scratch_stop_requested {
+                    self.stop_sound(SoundType::Scratch);
+                }
             }
         }
 

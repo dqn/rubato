@@ -243,57 +243,91 @@ fn change_play_mode(mode: &Mode) {
 }
 
 fn profile_switcher_ui(ui: &mut egui::Ui) {
-    let players = PLAYERS.lock().expect("PLAYERS lock poisoned");
-    let mut selected = *SELECTED_PLAYER
-        .lock()
-        .expect("SELECTED_PLAYER lock poisoned");
-    let selected_text = players
-        .get(selected as usize)
-        .map(|s| s.as_str())
-        .unwrap_or("(none)");
+    let mut switch_clicked = false;
+    let mut reload_clicked = false;
+    let mut switch_player_id: Option<String> = None;
 
-    ui.horizontal(|ui| {
-        egui::ComboBox::from_id_salt("player_profile")
-            .selected_text(selected_text)
-            .show_ui(ui, |ui| {
-                for (i, player) in players.iter().enumerate() {
-                    if ui
-                        .selectable_value(&mut selected, i as i32, player.as_str())
-                        .clicked()
-                    {
-                        *SELECTED_PLAYER
-                            .lock()
-                            .expect("SELECTED_PLAYER lock poisoned") = selected;
+    {
+        let players = PLAYERS.lock().expect("PLAYERS lock poisoned");
+        let mut selected = *SELECTED_PLAYER
+            .lock()
+            .expect("SELECTED_PLAYER lock poisoned");
+        let selected_text = players
+            .get(selected as usize)
+            .map(|s| s.as_str())
+            .unwrap_or("(none)");
+
+        ui.horizontal(|ui| {
+            egui::ComboBox::from_id_salt("player_profile")
+                .selected_text(selected_text)
+                .show_ui(ui, |ui| {
+                    for (i, player) in players.iter().enumerate() {
+                        if ui
+                            .selectable_value(&mut selected, i as i32, player.as_str())
+                            .clicked()
+                        {
+                            *SELECTED_PLAYER
+                                .lock()
+                                .expect("SELECTED_PLAYER lock poisoned") = selected;
+                        }
                     }
-                }
-            });
+                });
 
-        if ui.button("Switch").clicked() {
-            // Read the selected player profile and update config.
-            // Full MainController.loadNewProfile() integration is deferred
-            // (requires command queue wiring from modmenu).
-            let sel = selected as usize;
-            if sel < players.len() {
-                let player_id = &players[sel];
-                match PlayerConfig::read_player_config("player", player_id) {
-                    Ok(new_pc) => {
+            switch_clicked = ui.button("Switch").clicked();
+            if switch_clicked {
+                let sel = selected as usize;
+                if sel < players.len() {
+                    switch_player_id = Some(players[sel].clone());
+                }
+            }
+            reload_clicked = ui.button("Reload list").clicked();
+            ui.label("Player Profile");
+        });
+    }
+
+    // Handle switch outside the players lock to allow reload + re-lock
+    if switch_clicked && let Some(player_id) = switch_player_id {
+        let old_players = PLAYERS.lock().expect("PLAYERS lock poisoned").clone();
+        load_players();
+        let new_players = PLAYERS.lock().expect("PLAYERS lock poisoned");
+        if *new_players == old_players {
+            drop(new_players);
+            match PlayerConfig::read_player_config("player", &player_id) {
+                Ok(new_pc) => {
+                    // Update config.playername
+                    {
                         let mut config = CONFIG.lock().expect("CONFIG lock poisoned");
                         if let Some(ref mut c) = *config {
                             c.playername = new_pc.id.clone();
                         }
-                        log::info!("Profile switched to: {}", player_id);
                     }
-                    Err(e) => {
-                        log::error!("Failed to read player config '{}': {}", player_id, e);
+                    // Save config and load the new profile via MainController
+                    {
+                        let main = MAIN.lock().expect("MAIN lock poisoned");
+                        if let Some(ref m) = *main {
+                            m.save_config();
+                            m.load_new_profile(new_pc);
+                        }
                     }
+                    // Refresh play mode settings from the new profile
+                    let mode = CURRENT_PLAY_MODE
+                        .lock()
+                        .expect("CURRENT_PLAY_MODE lock poisoned")
+                        .unwrap_or(Mode::BEAT_7K);
+                    change_play_mode(&mode);
+                    log::info!("Profile switched to: {}", player_id);
+                }
+                Err(e) => {
+                    log::error!("Failed to read player config '{}': {}", player_id, e);
                 }
             }
+        } else {
+            log::info!("Player list changed during switch; aborting profile switch");
         }
-        if ui.button("Reload list").clicked() {
-            load_players();
-        }
-        ui.label("Player Profile");
-    });
+    }
+    if reload_clicked {
+        load_players();
+    }
 }
 
 fn load_players() {

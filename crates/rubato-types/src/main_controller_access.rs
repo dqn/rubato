@@ -259,6 +259,13 @@ pub trait MainControllerAccess {
     fn ir_connection_any(&self) -> Option<&dyn Any> {
         None
     }
+
+    /// Load a new player profile, reinitializing IR/play-data accessors
+    /// and re-entering MusicSelect.
+    /// Java: MainController.loadNewProfile(PlayerConfig)
+    fn load_new_profile(&self, _pc: PlayerConfig) {
+        // default no-op
+    }
 }
 
 /// Null implementation of MainControllerAccess for stub contexts.

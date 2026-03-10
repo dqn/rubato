@@ -126,12 +126,10 @@ impl ShortPCM {
             return self.clone();
         }
         let samples = self.get_sample((self.sample_rate as f32 / rate) as i32);
-        let start = ((((self.start as i64) as f32 / rate / self.sample_rate as f32) as i32)
-            .min(samples.len() as i32 - 1)
+        let start = (((self.start as f32 / rate) as i32).min(samples.len() as i32 - 1)
             / self.channels)
             * self.channels;
-        let len = ((((self.len as i64) as f32 / rate / self.sample_rate as f32) as i32)
-            .min(samples.len() as i32 - start)
+        let len = (((self.len as f32 / rate) as i32).min(samples.len() as i32 - start)
             / self.channels)
             * self.channels;
         ShortPCM::new(self.channels, self.sample_rate, start, len, samples)

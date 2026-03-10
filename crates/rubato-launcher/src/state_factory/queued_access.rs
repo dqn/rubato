@@ -274,6 +274,11 @@ impl MainControllerAccess for QueuedControllerAccess {
     fn ir_connection_any(&self) -> Option<&dyn Any> {
         self.ir_connection.as_ref().map(|conn| conn as &dyn Any)
     }
+
+    fn load_new_profile(&self, pc: rubato_types::player_config::PlayerConfig) {
+        self.commands
+            .push(MainControllerCommand::LoadNewProfile(Box::new(pc)));
+    }
 }
 
 pub fn new_state_main_controller_access(

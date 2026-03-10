@@ -49,8 +49,8 @@ pub struct SkinTimingDistributionGraph {
 
 impl SkinTimingDistributionGraph {
     pub fn new(config: TimingDistributionGraphConfig<'_>) -> Self {
-        let w = if 1 < config.width { config.width } else { 1 };
-        let lw = config.line_width.clamp(1, config.width);
+        let w = config.width.max(1);
+        let lw = config.line_width.clamp(1, w);
         let gx = w / lw;
         let c = gx / 2;
         let graph_color_val = Color::value_of(&color_string_validation(config.graph_color));
