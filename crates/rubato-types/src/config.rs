@@ -578,7 +578,10 @@ impl Config {
         let configpath_old = dir.join("config.json");
 
         let mut config: Option<Config> = None;
+        let mut attempted_existing = false;
+
         if configpath.exists() {
+            attempted_existing = true;
             match std::fs::read_to_string(&configpath) {
                 Ok(data) => match serde_json::from_str::<Config>(&data) {
                     Ok(c) => config = Some(c),
@@ -595,6 +598,7 @@ impl Config {
         }
         // Fall back to legacy config.json when config_sys.json is missing or corrupt
         if config.is_none() && configpath_old.exists() {
+            attempted_existing = true;
             match std::fs::read_to_string(&configpath_old) {
                 Ok(data) => match serde_json::from_str::<Config>(&data) {
                     Ok(c) => config = Some(c),
@@ -606,6 +610,13 @@ impl Config {
                     log::error!("Failed to read old config: {}", e);
                 }
             }
+        }
+
+        if config.is_none() && attempted_existing {
+            anyhow::bail!(
+                "Config file(s) exist but could not be loaded. Check logs for details. \
+                 Refusing to use defaults to prevent settings loss."
+            );
         }
 
         let config = config.unwrap_or_default();

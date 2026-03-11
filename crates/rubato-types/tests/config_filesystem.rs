@@ -59,23 +59,28 @@ fn read_nonexistent_returns_validated_default() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn read_corrupt_json_creates_backup() {
+fn read_corrupt_json_creates_backup_and_returns_error() {
     let dir = TempDir::new().unwrap();
 
     // Write garbage to config_sys.json
     let config_path = dir.path().join("config_sys.json");
     fs::write(&config_path, b"this is not valid json {{{").unwrap();
 
-    let config = Config::read_from(dir.path()).unwrap();
-
-    // Should return a validated default
+    // With only a corrupt config_sys.json and no legacy config.json,
+    // read_from should return an error to prevent silent settings loss.
+    let result = Config::read_from(dir.path());
     assert!(
-        config.audio.is_some(),
-        "Should return validated default after corrupt file"
+        result.is_err(),
+        "read_from should error when existing config is corrupt and no fallback exists"
     );
-    assert_eq!(config.paths.songpath, SONGPATH_DEFAULT);
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("could not be loaded"),
+        "Error message should mention load failure, got: {}",
+        err_msg
+    );
 
-    // A backup file should have been created
+    // A backup file should still have been created
     let backup_path = dir.path().join("config_sys_backup.json");
     assert!(
         backup_path.exists(),
@@ -85,6 +90,26 @@ fn read_corrupt_json_creates_backup() {
     // Backup should contain the original garbage
     let backup_content = fs::read_to_string(&backup_path).unwrap();
     assert_eq!(backup_content, "this is not valid json {{{");
+}
+
+#[test]
+fn read_corrupt_primary_falls_back_to_valid_legacy() {
+    let dir = TempDir::new().unwrap();
+
+    // Write garbage to config_sys.json
+    let config_path = dir.path().join("config_sys.json");
+    fs::write(&config_path, b"this is not valid json {{{").unwrap();
+
+    // Write a valid legacy config.json
+    let mut fallback = Config::default();
+    fallback.display.max_frame_per_second = 75;
+    fallback.paths.playerpath = dir.path().join("player").to_string_lossy().to_string();
+    let json = serde_json::to_string_pretty(&fallback).unwrap();
+    fs::write(dir.path().join("config.json"), json.as_bytes()).unwrap();
+
+    // Should succeed by falling back to the valid legacy config
+    let config = Config::read_from(dir.path()).unwrap();
+    assert_eq!(config.display.max_frame_per_second, 75);
 }
 
 // ---------------------------------------------------------------------------
