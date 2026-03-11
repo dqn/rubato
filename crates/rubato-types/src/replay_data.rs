@@ -161,6 +161,9 @@ impl ReplayData {
 
 impl Validatable for ReplayData {
     fn validate(&mut self) -> bool {
+        let had_keyinput = self.keyinput.is_some();
+        let mut decompression_ok = true;
+
         if let Some(keyinput) = self.keyinput.take()
             && let Ok(decoded) = URL_SAFE.decode(keyinput.as_bytes())
         {
@@ -191,14 +194,25 @@ impl Validatable for ReplayData {
                     });
                 }
                 self.keylog = keylogarray;
+            } else {
+                decompression_ok = false;
             }
+        } else if had_keyinput {
+            // keyinput was present but base64 decode failed
+            decompression_ok = false;
         }
 
         self.keylog.retain(|log| log.validate());
         if let Some(ref mut pattern) = self.pattern {
             pattern.retain(|p| p.validate());
         }
-        !self.keylog.is_empty()
+        // Accept zero-event replays (no keyinput, no keylog). Only reject if keyinput
+        // was present but decompression failed or produced no events (corrupt data).
+        if had_keyinput {
+            decompression_ok && !self.keylog.is_empty()
+        } else {
+            true
+        }
     }
 }
 
@@ -313,8 +327,8 @@ mod tests {
     #[test]
     fn test_replay_data_validate_empty_keylog() {
         let mut rd = ReplayData::new();
-        // No keylog and no keyinput => invalid
-        assert!(!rd.validate());
+        // No keylog and no keyinput => valid (zero-event replay)
+        assert!(rd.validate());
     }
 
     #[test]
@@ -503,6 +517,29 @@ mod tests {
         assert_eq!(loaded[1].sha256.as_deref(), Some("hash2"));
         assert_eq!(loaded[1].keylog.len(), 2);
         assert_eq!(loaded[1].keylog[0].time, 5000);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_zero_event_replay_brd_round_trip() {
+        let dir = std::env::temp_dir().join("rubato_test_brd_zero_event");
+        let _ = std::fs::remove_dir_all(&dir);
+        let path = dir.join("zero.brd");
+
+        let mut rd = ReplayData::new();
+        rd.player = Some("NoInputPlayer".to_string());
+        rd.sha256 = Some("zerohash".to_string());
+        rd.mode = 7;
+        // No keylog entries at all
+
+        rd.write_brd(&path).unwrap();
+        assert!(path.exists());
+
+        // read_brd calls validate() - must not reject zero-event replays
+        let loaded = ReplayData::read_brd(&path).unwrap();
+        assert_eq!(loaded.player.as_deref(), Some("NoInputPlayer"));
+        assert!(loaded.keylog.is_empty());
 
         let _ = std::fs::remove_dir_all(&dir);
     }
