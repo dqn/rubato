@@ -636,6 +636,14 @@ pub struct MusicSelector {
     /// Cached target score for skin property display on the select screen.
     /// Recomputed each frame based on config.select_settings.targetid and selected song notes.
     cached_target_score: Option<rubato_types::score_data::ScoreData>,
+
+    /// Pending IR ranking fetch result (song). Background thread sends completed RankingData.
+    pending_ir_song_fetch: Option<std::sync::mpsc::Receiver<RankingData>>,
+    /// Pending IR ranking fetch result (course). Background thread sends completed RankingData.
+    pending_ir_course_fetch: Option<std::sync::mpsc::Receiver<RankingData>>,
+    /// Pending BMS model parse result. Background thread sends the parsed model.
+    pending_note_graph:
+        Option<std::sync::mpsc::Receiver<Option<(::bms_model::bms_model::BMSModel, i64)>>>,
 }
 
 pub static MODE: [Option<bms_model::Mode>; 8] = [

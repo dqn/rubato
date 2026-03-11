@@ -30,6 +30,9 @@ impl MusicSelector {
             pending_state_change: None,
             player_resource: None,
             cached_target_score: None,
+            pending_ir_song_fetch: None,
+            pending_ir_course_fetch: None,
+            pending_note_graph: None,
         }
     }
 

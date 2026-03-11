@@ -3,8 +3,8 @@
 
 use std::path::PathBuf;
 
-use crate::property::string_property::StringProperty;
 use crate::loaders::skin_loader;
+use crate::property::string_property::StringProperty;
 use crate::stubs::{BitmapFont, BitmapFontData, Color, GlyphLayout, MainState, TextureRegion};
 use crate::text::skin_text::{OVERFLOW_OVERFLOW, OVERFLOW_SHRINK, OVERFLOW_TRUNCATE, SkinTextData};
 use crate::types::skin_object::{DrawImageAtParams, SkinObjectRenderer};

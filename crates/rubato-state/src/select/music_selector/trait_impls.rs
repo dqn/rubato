@@ -489,40 +489,104 @@ impl MainState for MusicSelector {
                     }
                 }
 
-                // Read BMS information (notes graph)
+                // Check for completed BMS model parse from background thread
+                if let Some(rx) = self.pending_note_graph.as_ref() {
+                    match rx.try_recv() {
+                        Ok(Some((model, _margin))) => {
+                            if let Some(sd) =
+                                self.player_resource.as_mut().and_then(|r| r.songdata_mut())
+                            {
+                                sd.set_bms_model(model);
+                            }
+                            self.pending_note_graph = None;
+                            self.preview_state.show_note_graph = true;
+                        }
+                        Ok(None) => {
+                            // BMS parsing returned no model
+                            self.pending_note_graph = None;
+                            self.preview_state.show_note_graph = true;
+                        }
+                        Err(std::sync::mpsc::TryRecvError::Empty) => {
+                            // Still in progress, wait for next frame
+                        }
+                        Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                            // Thread panicked or dropped sender
+                            self.pending_note_graph = None;
+                            self.preview_state.show_note_graph = true;
+                        }
+                    }
+                }
+
+                // Read BMS information (notes graph) - spawn background thread
                 if !self.preview_state.show_note_graph
                     && self.play.is_none()
+                    && self.pending_note_graph.is_none()
                     && now_time
                         > songbar_change_time + self.preview_state.notes_graph_duration as i64
                 {
                     if song_bar.exists_song() {
                         // Java: spawns thread to call resource.loadBMSModel(path, lnmode)
                         // and sets result on SongData for the density graph.
-                        // Rust: load synchronously (BMS parsing is fast).
                         let path = song_bar
                             .song_data()
                             .file
                             .path()
                             .map(std::path::PathBuf::from);
                         let lnmode = self.config.play_settings.lnmode;
-                        if let Some(path) = path
-                            && let Some((model, _margin)) =
-                                rubato_core::player_resource::PlayerResource::load_bms_model(
-                                    &path, lnmode, None,
-                                )
-                            && let Some(sd) =
-                                self.player_resource.as_mut().and_then(|r| r.songdata_mut())
-                        {
-                            sd.set_bms_model(model);
+                        if let Some(path) = path {
+                            let (tx, rx) = std::sync::mpsc::channel();
+                            std::thread::spawn(move || {
+                                let result =
+                                    rubato_core::player_resource::PlayerResource::load_bms_model(
+                                        &path, lnmode, None,
+                                    );
+                                let _ = tx.send(result);
+                            });
+                            self.pending_note_graph = Some(rx);
                         }
+                    } else {
+                        self.preview_state.show_note_graph = true;
                     }
-                    self.preview_state.show_note_graph = true;
                 }
             } else if current.as_grade_bar().is_some() {
                 // Grade bar: songdata/courseData already set above
             } else {
                 // Other bar types: songdata/courseData already cleared above
             }
+        }
+
+        // Check for completed IR song fetch from background thread
+        if let Some(rx) = self.pending_ir_song_fetch.as_ref()
+            && let Ok(rd) = rx.try_recv()
+        {
+            self.ranking.currentir = Some(rd.clone());
+            if let Some(main) = self.main.as_mut() {
+                let lnmode = main.player_config().play_settings.lnmode;
+                if let Some(song_bar) = self.manager.selected().and_then(|b| b.as_song_bar()) {
+                    let song = song_bar.song_data();
+                    if let Some(cache) = main.ranking_data_cache_mut() {
+                        cache.put_song_any(song, lnmode, Box::new(rd));
+                    }
+                }
+            }
+            self.pending_ir_song_fetch = None;
+        }
+
+        // Check for completed IR course fetch from background thread
+        if let Some(rx) = self.pending_ir_course_fetch.as_ref()
+            && let Ok(rd) = rx.try_recv()
+        {
+            self.ranking.currentir = Some(rd.clone());
+            if let Some(main) = self.main.as_mut() {
+                let lnmode = main.player_config().play_settings.lnmode;
+                if let Some(grade_bar) = self.manager.selected().and_then(|b| b.as_grade_bar()) {
+                    let course = grade_bar.course_data();
+                    if let Some(cache) = main.ranking_data_cache_mut() {
+                        cache.put_course_any(course, lnmode, Box::new(rd));
+                    }
+                }
+            }
+            self.pending_ir_course_fetch = None;
         }
 
         // IR ranking loading
@@ -561,7 +625,8 @@ impl MainState for MusicSelector {
                         self.ranking.currentir = cached;
                     }
                     // Java MusicSelector L251: irc.load(this, song)
-                    if let Some(ref mut rd) = self.ranking.currentir {
+                    // Spawn background thread for IR fetch (avoid blocking render thread)
+                    if self.pending_ir_song_fetch.is_none() {
                         use rubato_ir::ir_chart_data::IRChartData;
                         use rubato_ir::ir_connection::IRConnection;
                         use std::sync::Arc;
@@ -575,11 +640,13 @@ impl MainState for MusicSelector {
                                 song.chart.has_undefined_long_note(),
                                 lnmode,
                             );
-                            rd.load_song(conn_arc.as_ref(), &chart, local_score.as_ref());
-                            // Write back loaded ranking data to the cache
-                            if let Some(cache) = main.ranking_data_cache_mut() {
-                                cache.put_song_any(song, lnmode, Box::new(rd.clone()));
-                            }
+                            let (tx, rx) = std::sync::mpsc::channel();
+                            std::thread::spawn(move || {
+                                let mut rd = RankingData::new();
+                                rd.load_song(conn_arc.as_ref(), &chart, local_score.as_ref());
+                                let _ = tx.send(rd);
+                            });
+                            self.pending_ir_song_fetch = Some(rx);
                         }
                     }
                 }
@@ -604,7 +671,8 @@ impl MainState for MusicSelector {
                         self.ranking.currentir = cached;
                     }
                     // Java MusicSelector L261: irc.load(this, course)
-                    if let Some(ref mut rd) = self.ranking.currentir {
+                    // Spawn background thread for IR fetch (avoid blocking render thread)
+                    if self.pending_ir_course_fetch.is_none() {
                         use rubato_ir::ir_connection::IRConnection;
                         use rubato_ir::ir_course_data::IRCourseData;
                         use std::sync::Arc;
@@ -613,11 +681,13 @@ impl MainState for MusicSelector {
                                 .cloned()
                         }) {
                             let ir_course = IRCourseData::new_with_lntype(course, lnmode);
-                            rd.load_course(conn_arc.as_ref(), &ir_course, None);
-                            // Write back loaded ranking data to the cache
-                            if let Some(cache) = main.ranking_data_cache_mut() {
-                                cache.put_course_any(course, lnmode, Box::new(rd.clone()));
-                            }
+                            let (tx, rx) = std::sync::mpsc::channel();
+                            std::thread::spawn(move || {
+                                let mut rd = RankingData::new();
+                                rd.load_course(conn_arc.as_ref(), &ir_course, None);
+                                let _ = tx.send(rd);
+                            });
+                            self.pending_ir_course_fetch = Some(rx);
                         }
                     }
                 }
