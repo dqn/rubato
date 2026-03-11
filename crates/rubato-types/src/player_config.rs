@@ -464,6 +464,9 @@ impl PlayerConfig {
         self.mode24.validate(26);
         self.mode24double.validate(52);
 
+        // MusicSelectKeyProperty::VALUES has 3 entries (Beat7k, Popn9k, Beat14k)
+        self.select_settings.musicselectinput = self.select_settings.musicselectinput.clamp(0, 2);
+
         let max_sort = BarSorter::DEFAULT_SORTER.len() as i32 - 1;
         self.select_settings.sort = self.select_settings.sort.clamp(0, max_sort);
         if self.select_settings.sortid.is_none() {
@@ -634,7 +637,20 @@ impl PlayerConfig {
         let configpath_old = PathBuf::from(format!("{}/{}/config.json", playerpath, playerid));
 
         let mut player = if configpath.exists() {
-            load_player_config(playerpath, playerid, &configpath)?
+            load_player_config(playerpath, playerid, &configpath).unwrap_or_else(|e| {
+                log::warn!(
+                    "Failed to load config_player.json, trying legacy config.json: {}",
+                    e
+                );
+                if configpath_old.exists() {
+                    load_player_config_from_old_path(&configpath_old).unwrap_or_else(|e2| {
+                        log::warn!("Failed to load legacy config.json too: {}", e2);
+                        PlayerConfig::default()
+                    })
+                } else {
+                    PlayerConfig::default()
+                }
+            })
         } else if configpath_old.exists() {
             load_player_config_from_old_path(&configpath_old)?
         } else {

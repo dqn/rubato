@@ -142,6 +142,10 @@ impl PracticeConfiguration {
                 // Re-initialize gaugecategory (skipped by serde) from current mode
                 let mode = model.mode().copied().unwrap_or(Mode::BEAT_7K);
                 self.property.gaugecategory = Some(BMSPlayerRule::for_mode(&mode).gauge);
+                // Restore total from model if saved config omitted it (older version / manual edit)
+                if self.property.total == 0.0 {
+                    self.property.total = model.total;
+                }
                 let timeline_times: Vec<i32> = model.timelines.iter().map(|tl| tl.time()).collect();
                 self.model_data = Some(PracticeModelData {
                     mode,

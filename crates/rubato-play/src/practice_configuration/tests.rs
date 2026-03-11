@@ -398,3 +398,39 @@ fn test_get_element_text_out_of_bounds_no_panic() {
     let text = pc.element_text(9);
     assert!(text.contains("?"));
 }
+
+#[test]
+fn test_create_restores_total_from_saved_config_with_zero_total() {
+    // Simulate saved practice/<sha>.json with total=0.0 (missing field from older version)
+    let sha = "deadbeef1234567890abcdef1234567890abcdef1234567890abcdef12345678";
+    let dir = std::path::Path::new("practice");
+    std::fs::create_dir_all(dir).ok();
+    let path = dir.join(format!("{}.json", sha));
+    let saved = serde_json::json!({
+        "starttime": 1000,
+        "endtime": 5000,
+        "gaugetype": 2,
+        "startgauge": 20,
+        "random": 0,
+        "random2": 0,
+        "doubleop": 0,
+        "judgerank": 100,
+        "freq": 100,
+        "graphtype": 0
+        // total is absent -> serde default 0.0
+    });
+    std::fs::write(&path, serde_json::to_string(&saved).unwrap()).unwrap();
+
+    let mut model = make_test_model(&Mode::BEAT_7K, &[0, 5000]);
+    model.sha256 = sha.to_string();
+    model.total = 300.0;
+
+    let mut practice = PracticeConfiguration::new();
+    practice.create(&model);
+
+    // total should be restored from model, not left as 0.0
+    assert!((practice.practice_property().total - 300.0).abs() < f64::EPSILON);
+
+    // Cleanup
+    std::fs::remove_file(&path).ok();
+}

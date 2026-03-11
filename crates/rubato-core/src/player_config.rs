@@ -292,4 +292,37 @@ mod tests {
         assert_eq!(JUDGETIMING_MAX, 500);
         assert_eq!(JUDGETIMING_MIN, -500);
     }
+
+    #[test]
+    fn test_player_config_musicselectinput_clamped_on_validate() {
+        let mut pc = PlayerConfig::default();
+        pc.select_settings.musicselectinput = 99;
+        pc.validate();
+        assert_eq!(pc.select_settings.musicselectinput, 2);
+
+        pc.select_settings.musicselectinput = -5;
+        pc.validate();
+        assert_eq!(pc.select_settings.musicselectinput, 0);
+    }
+
+    #[test]
+    fn test_player_config_corrupt_json_falls_back_to_legacy() {
+        let tmp = tempfile::tempdir().unwrap();
+        let player_dir = tmp.path().join("player1");
+        std::fs::create_dir_all(&player_dir).unwrap();
+        // Write corrupt config_player.json
+        std::fs::write(player_dir.join("config_player.json"), "{corrupt").unwrap();
+        // Write valid legacy config.json
+        let legacy = PlayerConfig::default();
+        let mut legacy_mod = legacy.clone();
+        legacy_mod.play_settings.gauge = 3;
+        std::fs::write(
+            player_dir.join("config.json"),
+            serde_json::to_string(&legacy_mod).unwrap(),
+        )
+        .unwrap();
+        let result = PlayerConfig::read_player_config(tmp.path().to_str().unwrap(), "player1");
+        let pc = result.unwrap();
+        assert_eq!(pc.play_settings.gauge, 3);
+    }
 }

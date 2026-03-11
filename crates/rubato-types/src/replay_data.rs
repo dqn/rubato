@@ -15,7 +15,7 @@ use crate::stubs::{KeyInputLog, PatternModifyLog};
 use crate::validatable::Validatable;
 
 /// Replay data. Contains key input log, pattern modification info, and gauge type.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ReplayData {
     pub player: Option<String>,
@@ -37,6 +37,30 @@ pub struct ReplayData {
     pub randomoption2seed: i64,
     pub doubleoption: i32,
     pub config: Option<PlayConfig>,
+}
+
+impl Default for ReplayData {
+    fn default() -> Self {
+        Self {
+            player: None,
+            sha256: None,
+            mode: 0,
+            keylog: Vec::new(),
+            keyinput: None,
+            gauge: 0,
+            pattern: None,
+            lane_shuffle_pattern: None,
+            rand: Vec::new(),
+            date: 0,
+            seven_to_nine_pattern: 0,
+            randomoption: 0,
+            randomoptionseed: -1,
+            randomoption2: 0,
+            randomoption2seed: -1,
+            doubleoption: 0,
+            config: None,
+        }
+    }
 }
 
 impl ReplayData {
@@ -207,9 +231,18 @@ mod tests {
     #[test]
     fn test_replay_data_default() {
         let rd = ReplayData::default();
-        // Default doesn't set randomoptionseed to -1 (new() does)
-        assert_eq!(rd.randomoptionseed, 0);
-        assert_eq!(rd.randomoption2seed, 0);
+        // Default uses -1 sentinel for seeds (same as new())
+        assert_eq!(rd.randomoptionseed, -1);
+        assert_eq!(rd.randomoption2seed, -1);
+    }
+
+    #[test]
+    fn test_replay_data_serde_missing_seeds_default_to_sentinel() {
+        // Simulate an older .brd file that lacks randomoptionseed/randomoption2seed
+        let json = r#"{"mode":7,"gauge":0,"rand":[],"date":0}"#;
+        let rd: ReplayData = serde_json::from_str(json).unwrap();
+        assert_eq!(rd.randomoptionseed, -1);
+        assert_eq!(rd.randomoption2seed, -1);
     }
 
     #[test]
@@ -808,9 +841,9 @@ mod tests {
         assert_eq!(rd.date, 0);
         assert_eq!(rd.seven_to_nine_pattern, 0);
         assert_eq!(rd.randomoption, 0);
-        assert_eq!(rd.randomoptionseed, 0);
+        assert_eq!(rd.randomoptionseed, -1);
         assert_eq!(rd.randomoption2, 0);
-        assert_eq!(rd.randomoption2seed, 0);
+        assert_eq!(rd.randomoption2seed, -1);
         assert_eq!(rd.doubleoption, 0);
         assert!(rd.config.is_none());
 

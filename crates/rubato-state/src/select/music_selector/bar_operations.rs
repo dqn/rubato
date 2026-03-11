@@ -227,8 +227,13 @@ impl MusicSelector {
                 opt.randomoption = rival.play_option.option % 10;
                 opt.randomoption2 = (rival.play_option.option / 10) % 10;
                 opt.doubleoption = rival.play_option.option / 100;
-                opt.randomoptionseed = rival.play_option.seed % (65536 * 256);
-                opt.randomoption2seed = rival.play_option.seed / (65536 * 256);
+                if rival.play_option.seed == -1 {
+                    opt.randomoptionseed = -1;
+                    opt.randomoption2seed = -1;
+                } else {
+                    opt.randomoptionseed = rival.play_option.seed % (65536 * 256);
+                    opt.randomoption2seed = rival.play_option.seed / (65536 * 256);
+                }
                 opt
             }),
             ChartReplicationMode::RivalOption => rival_score.map(|rival| {
