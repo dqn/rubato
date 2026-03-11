@@ -24,7 +24,7 @@ impl JudgeTrainer {
     }
 
     pub fn set_judge_rank(judge_rank: i32) {
-        *JUDGE_RANK.lock().expect("JUDGE_RANK lock poisoned") = judge_rank;
+        *JUDGE_RANK.lock().expect("JUDGE_RANK lock poisoned") = judge_rank.clamp(0, 3);
     }
 
     pub fn judge_window_rate(mode: &Mode) -> i32 {

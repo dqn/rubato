@@ -101,7 +101,7 @@ impl ObsListener {
                     let client_for_stop = Arc::clone(&client_clone);
                     let scheduled_stop_task_clone = Arc::clone(&scheduled_stop_task);
                     let handle = tokio::spawn(async move {
-                        tokio::time::sleep(Duration::from_millis(stop_wait as u64)).await;
+                        tokio::time::sleep(Duration::from_millis(stop_wait.max(0) as u64)).await;
                         client_for_stop.request_stop_record();
                         let mut guard = lock_or_recover(&scheduled_stop_task_clone);
                         *guard = None;
@@ -179,7 +179,7 @@ impl ObsListener {
                 let client_clone = Arc::clone(client);
                 let scheduled_stop_task = Arc::clone(&self.scheduled_stop_task);
                 let handle = tokio::spawn(async move {
-                    tokio::time::sleep(Duration::from_millis(delay as u64)).await;
+                    tokio::time::sleep(Duration::from_millis(delay.max(0) as u64)).await;
                     client_clone.request_stop_record();
                     // Clear the task handle
                     let mut guard = lock_or_recover(&scheduled_stop_task);
