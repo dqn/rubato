@@ -183,7 +183,8 @@ impl ScoreDataProperty {
 
         if self.use_best_ghost {
             if let Some(ref ghost) = self.best_ghost {
-                for i in self.previous_notes..notes {
+                let end = notes.min(ghost.len() as i32);
+                for i in self.previous_notes..end {
                     self.nowbestscore += Self::get_ex_score(ghost[i as usize]);
                 }
             }
@@ -207,7 +208,8 @@ impl ScoreDataProperty {
         }
         if self.use_rival_ghost {
             if let Some(ref ghost) = self.rival_ghost {
-                for i in self.previous_notes..notes {
+                let end = notes.min(ghost.len() as i32);
+                for i in self.previous_notes..end {
                     self.nowrivalscore += Self::get_ex_score(ghost[i as usize]);
                 }
             }
@@ -244,9 +246,15 @@ impl ScoreDataProperty {
 
     pub fn update_target_score(&mut self, rivalscore: i32) {
         self.rivalscore = rivalscore;
-        self.rivalscorerate = (rivalscore as f32) / (self.totalnotes * 2) as f32;
-        self.rivalrate_int = (self.rivalscorerate * 100.0) as i32;
-        self.rivalrate_after_dot = ((self.rivalscorerate * 10000.0) as i32) % 100;
+        if self.totalnotes == 0 {
+            self.rivalscorerate = 0.0;
+            self.rivalrate_int = 0;
+            self.rivalrate_after_dot = 0;
+        } else {
+            self.rivalscorerate = (rivalscore as f32) / (self.totalnotes * 2) as f32;
+            self.rivalrate_int = (self.rivalscorerate * 100.0) as i32;
+            self.rivalrate_after_dot = ((self.rivalscorerate * 10000.0) as i32) % 100;
+        }
     }
 
     pub fn set_target_score(&mut self, bestscore: i32, rivalscore: i32, totalnotes: i32) {

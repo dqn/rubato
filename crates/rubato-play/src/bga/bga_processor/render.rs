@@ -90,7 +90,8 @@ impl BGAProcessor {
             let elapsed = self.time - self.misslayertime;
             let duration = self.get_misslayer_duration;
             if duration > 0 {
-                let idx = ((seq.len() as i64 - 1) * elapsed / duration).min(seq.len() as i64 - 1);
+                let idx =
+                    ((seq.len() as i64 - 1) * elapsed / duration).clamp(0, seq.len() as i64 - 1);
                 return seq[idx as usize].id;
             }
         }
