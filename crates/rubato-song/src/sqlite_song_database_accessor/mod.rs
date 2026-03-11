@@ -578,7 +578,7 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
 
         // Fallback to LIKE for substring-within-word matches
         let sql = "SELECT * FROM song WHERE rtrim(title||' '||subtitle||' '||artist||' '||subartist||' '||genre) LIKE ?1 ESCAPE '\\' GROUP BY sha256";
-        let escaped = text.replace('%', "\\%").replace('_', "\\_");
+        let escaped = escape_sql_like(text);
         let pattern = format!("%{}%", escaped);
         let songs = self.query_songs(sql, &[&pattern as &dyn rusqlite::types::ToSql]);
         remove_invalid_elements_vec(songs)
