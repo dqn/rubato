@@ -64,7 +64,7 @@ impl PortAudioDriver {
 }
 
 impl AudioDriver for PortAudioDriver {
-    fn play_path(&mut self, path: &str, volume: f32, _loop_play: bool) {
+    fn play_path(&mut self, path: &str, volume: f32, loop_play: bool) {
         if path.is_empty() {
             return;
         }
@@ -81,6 +81,9 @@ impl AudioDriver for PortAudioDriver {
                 Ok(sound_data) => match self.manager.play(sound_data) {
                     Ok(mut handle) => {
                         handle.set_volume(linear_to_db(volume), Tween::default());
+                        if loop_play {
+                            handle.set_loop_region(0.0..);
+                        }
                         self.path_sounds.insert(path.to_string(), handle);
                         return;
                     }
@@ -247,7 +250,12 @@ impl AudioDriver for PortAudioDriver {
                         let start_frame = (starttime * sample_rate / 1_000_000) as usize;
                         let duration_frames = (duration * sample_rate / 1_000_000) as usize;
                         let total_frames = base_sound.frames.len();
-                        let end_frame = (start_frame + duration_frames).min(total_frames);
+                        // duration == 0 means "play from offset to EOF" (BMSON convention)
+                        let end_frame = if duration_frames == 0 {
+                            total_frames
+                        } else {
+                            (start_frame + duration_frames).min(total_frames)
+                        };
 
                         if start_frame < total_frames {
                             let mut sliced = base_sound.clone();
