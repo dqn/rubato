@@ -604,14 +604,19 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
             }
         }
 
+        let mut had_error = false;
         for sd in songs {
             if let Err(e) = self.insert_song(sd) {
                 log::error!("Error inserting song: {}", e);
+                had_error = true;
             }
         }
 
         let conn = self.conn.lock().expect("conn lock poisoned");
-        if let Err(e) = conn.execute_batch("COMMIT") {
+        if had_error {
+            log::error!("Rolling back set_song_datas due to insert errors");
+            let _ = conn.execute_batch("ROLLBACK");
+        } else if let Err(e) = conn.execute_batch("COMMIT") {
             log::error!("Error committing transaction: {}", e);
         }
     }
