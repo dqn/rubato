@@ -53,9 +53,12 @@ impl CourseIRSendStatus {
 // ============================================================
 
 /// Compute average judge timing when notes > 0.
-/// Returns `total_duration / notes`.
+/// Returns `total_duration / notes`, or 0 when `notes == 0`.
 #[inline]
 pub(super) fn compute_avgjudge(total_duration: i64, notes: i32) -> i64 {
+    if notes == 0 {
+        return 0;
+    }
     total_duration / notes as i64
 }
 
