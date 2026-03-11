@@ -56,7 +56,7 @@ impl RhythmTimerProcessor {
                             while timelines[prev_index].section() - section_line_section < j {
                                 prev_index += 1;
                             }
-                            prev_index -= 1;
+                            prev_index = prev_index.saturating_sub(1);
                             let bpm = timelines[prev_index].bpm;
                             let bpm_safe = if bpm == 0.0 { 1.0 } else { bpm };
                             let time = timelines[prev_index].micro_time()
