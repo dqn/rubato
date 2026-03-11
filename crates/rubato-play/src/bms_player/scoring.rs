@@ -163,7 +163,7 @@ impl BMSPlayer {
                         let time = note.micro_play_time();
                         if (1..=4).contains(&state) {
                             play_times.push(time);
-                            avgduration += time.abs();
+                            avgduration += time.saturating_abs();
                             average += time;
                         }
                     }
@@ -177,13 +177,14 @@ impl BMSPlayer {
             score.timing_stats.avg = average / play_times.len() as i64;
         }
 
-        let mut stddev: i64 = 0;
+        let mut stddev_acc: i128 = 0;
         for &time in &play_times {
-            let mean_offset = time - score.timing_stats.avg;
-            stddev += mean_offset * mean_offset;
+            let mean_offset = time as i128 - score.timing_stats.avg as i128;
+            stddev_acc += mean_offset * mean_offset;
         }
+        let mut stddev: i64 = 0;
         if !play_times.is_empty() {
-            stddev = ((stddev / play_times.len() as i64) as f64).sqrt() as i64;
+            stddev = ((stddev_acc / play_times.len() as i128) as f64).sqrt() as i64;
         }
         score.timing_stats.stddev = stddev;
 
