@@ -496,7 +496,7 @@ fn validate_extracted_paths_recursive(root: &Path, dir: &Path) -> anyhow::Result
 }
 
 /// Recursively copy a directory tree.
-fn copy_dir_recursive(src: &Path, dst: &Path) -> anyhow::Result<()> {
+pub(super) fn copy_dir_recursive(src: &Path, dst: &Path) -> anyhow::Result<()> {
     fs::create_dir_all(dst)?;
     for entry in fs::read_dir(src)?.flatten() {
         let target = dst.join(entry.file_name());

@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
+use super::http_download_processor::copy_dir_recursive;
 use super::ipfs_information::IpfsInformation;
 use super::music_database_accessor::MusicDatabaseAccessor;
 
@@ -284,13 +285,13 @@ fn download_daemon_thread_run(state: DownloadDaemonState) {
                                 for entry in entries.flatten() {
                                     let src = entry.path();
                                     let dest = PathBuf::from(&path).join(entry.file_name());
-                                    let _ = fs::rename(&src, &dest);
+                                    move_path_with_fallback(&src, &dest);
                                 }
                             }
                             let _ = fs::remove_dir(&f);
                         } else if f.exists() {
                             let dest = PathBuf::from(&path).join(format!("{}.bms", diffpath));
-                            let _ = fs::rename(&f, &dest);
+                            move_path_with_fallback(&f, &dest);
                         }
                         diffpath = String::new();
                     } else {
@@ -431,8 +432,7 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
                     let src = entry.path();
                     let dest =
                         PathBuf::from(format!("{}/{}", path, entry.file_name().to_string_lossy()));
-                    if let Err(e) = fs::rename(&src, &dest) {
-                        log::error!("Failed to move {:?} to {:?}: {}", src, dest, e);
+                    if !move_path_with_fallback(&src, &dest) {
                         all_moved = false;
                     }
                 }
@@ -443,13 +443,44 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
                 log::error!("Skipping cleanup of {:?} due to move failures", dir);
             }
         } else if !PathBuf::from(path).exists() {
-            if let Err(e) = fs::rename(&dir, PathBuf::from(path)) {
-                log::error!("Failed to move {:?} to {}: {}", dir, path, e);
+            if !move_path_with_fallback(&dir, &PathBuf::from(path)) {
+                log::error!("Failed to move {:?} to {}", dir, path);
             }
         } else {
             let _ = fs::remove_dir_all(&dir).or_else(|_| fs::remove_file(&dir));
         }
     }
+}
+
+/// Move a file or directory from `src` to `dest`, falling back to copy-and-remove
+/// when `fs::rename()` fails (e.g., EXDEV on cross-filesystem moves).
+/// Returns `true` on success, `false` on failure.
+fn move_path_with_fallback(src: &Path, dest: &Path) -> bool {
+    if fs::rename(src, dest).is_ok() {
+        return true;
+    }
+    // rename failed (possibly cross-filesystem); fall back to copy + remove
+    if src.is_dir() {
+        if let Err(e) = copy_dir_recursive(src, dest) {
+            log::error!("Failed to copy dir {:?} to {:?}: {}", src, dest, e);
+            return false;
+        }
+        if let Err(e) = fs::remove_dir_all(src) {
+            log::error!("Failed to remove source dir {:?} after copy: {}", src, e);
+        }
+    } else if src.is_file() {
+        if let Err(e) = fs::copy(src, dest) {
+            log::error!("Failed to copy file {:?} to {:?}: {}", src, dest, e);
+            return false;
+        }
+        if let Err(e) = fs::remove_file(src) {
+            log::error!("Failed to remove source file {:?} after copy: {}", src, e);
+        }
+    } else {
+        // src doesn't exist or is a special file type
+        return false;
+    }
+    true
 }
 
 impl rubato_types::music_download_access::MusicDownloadAccess for MusicDownloadProcessor {
@@ -495,5 +526,52 @@ mod tests {
     #[test]
     fn normalize_ipfs_path_bare_prefix_only() {
         assert_eq!(normalize_ipfs_path("/ipfs/"), "");
+    }
+
+    #[test]
+    fn move_path_with_fallback_moves_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("source.bms");
+        let dest = tmp.path().join("dest.bms");
+        fs::write(&src, "hello").unwrap();
+
+        move_path_with_fallback(&src, &dest);
+
+        assert!(!src.exists());
+        assert_eq!(fs::read_to_string(&dest).unwrap(), "hello");
+    }
+
+    #[test]
+    fn move_path_with_fallback_moves_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src_dir = tmp.path().join("src_dir");
+        fs::create_dir_all(&src_dir).unwrap();
+        fs::write(src_dir.join("a.txt"), "aaa").unwrap();
+        fs::create_dir_all(src_dir.join("sub")).unwrap();
+        fs::write(src_dir.join("sub/b.txt"), "bbb").unwrap();
+
+        let dest_dir = tmp.path().join("dest_dir");
+
+        move_path_with_fallback(&src_dir, &dest_dir);
+
+        assert!(!src_dir.exists());
+        assert!(dest_dir.exists());
+        assert_eq!(fs::read_to_string(dest_dir.join("a.txt")).unwrap(), "aaa");
+        assert_eq!(
+            fs::read_to_string(dest_dir.join("sub/b.txt")).unwrap(),
+            "bbb"
+        );
+    }
+
+    #[test]
+    fn move_path_with_fallback_returns_false_on_missing_src() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("nonexistent");
+        let dest = tmp.path().join("dest");
+
+        let result = move_path_with_fallback(&src, &dest);
+
+        assert!(!result);
+        assert!(!dest.exists());
     }
 }
