@@ -104,8 +104,9 @@ impl Message {
         let now_millis = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .expect("system clock")
-            .as_millis() as f32;
-        let alpha = ((now_millis % 1440.0) / 4.0).to_radians().sin() * 0.3 + 0.7;
+            .as_millis() as u64;
+        let cycle = (now_millis % 1440) as f32;
+        let alpha = (cycle / 4.0).to_radians().sin() * 0.3 + 0.7;
 
         font.set_color(&rubato_render::color::Color::new(
             self.color.r,
