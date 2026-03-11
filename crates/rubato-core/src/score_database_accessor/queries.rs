@@ -190,11 +190,14 @@ impl ScoreDatabaseAccessor {
     pub fn player_datas(&self, count: i32) -> Vec<PlayerData> {
         let (sql, params): (&str, Vec<Box<dyn rusqlite::types::ToSql>>) = if count > 0 {
             (
-                "SELECT * FROM player ORDER BY date DESC LIMIT ?1",
+                "SELECT * FROM player ORDER BY date DESC, rowid DESC LIMIT ?1",
                 vec![Box::new(count) as Box<dyn rusqlite::types::ToSql>],
             )
         } else {
-            ("SELECT * FROM player ORDER BY date DESC", vec![])
+            (
+                "SELECT * FROM player ORDER BY date DESC, rowid DESC",
+                vec![],
+            )
         };
         let param_refs: Vec<&dyn rusqlite::types::ToSql> =
             params.iter().map(|p| p.as_ref()).collect();
