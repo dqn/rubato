@@ -149,27 +149,34 @@ impl ScreenShotFileExporter {
             return;
         }
 
-        let result: Result<(), Box<dyn std::error::Error>> = (|| {
-            let handler = WebhookHandler::new();
-            let payload = handler.create_webhook_payload(current_state);
-            let payload_as_string = serde_json::to_string(&payload)?;
+        // Extract all data from current_state before spawning the background thread,
+        // since MainState is not Send.
+        let webhook_urls: Vec<String> = current_state
+            .resource
+            .config()
+            .integration
+            .webhook_url
+            .to_vec();
 
-            let webhook_urls: Vec<String> = current_state
-                .resource
-                .config()
-                .integration
-                .webhook_url
-                .to_vec();
-
-            for webhook_url in &webhook_urls {
-                handler.send_webhook_with_image(&payload_as_string, path, webhook_url);
+        let handler = WebhookHandler::new();
+        let payload = match (|| -> Result<String, Box<dyn std::error::Error>> {
+            let p = handler.create_webhook_payload(current_state);
+            Ok(serde_json::to_string(&p)?)
+        })() {
+            Ok(p) => p,
+            Err(e) => {
+                log::error!("Webhook payload error: {}", e);
+                return;
             }
-            Ok(())
-        })();
+        };
 
-        if let Err(e) = result {
-            log::error!("Webhook error: {}", e);
-        }
+        let path = path.to_string();
+
+        std::thread::spawn(move || {
+            for webhook_url in &webhook_urls {
+                handler.send_webhook_with_image(&payload, &path, webhook_url);
+            }
+        });
     }
 }
 
