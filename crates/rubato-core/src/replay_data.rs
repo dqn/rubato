@@ -23,8 +23,9 @@ mod tests {
     #[test]
     fn test_replay_data_default() {
         let rd = ReplayData::default();
-        assert_eq!(rd.randomoptionseed, 0);
-        assert_eq!(rd.randomoption2seed, 0);
+        // Manual Default impl uses -1 sentinel for seeds (same as new())
+        assert_eq!(rd.randomoptionseed, -1);
+        assert_eq!(rd.randomoption2seed, -1);
         assert!(rd.keylog.is_empty());
     }
 
