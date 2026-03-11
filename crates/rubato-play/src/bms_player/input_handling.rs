@@ -184,6 +184,15 @@ impl BMSPlayer {
         for key in self.input.pending_analog_resets.drain(..) {
             input.reset_analog_input(key);
         }
+        // Apply pending start time / margin time for key logging.
+        // Java: input.setKeyLogMarginTime(resource.getMarginTime()) then
+        //       input.setStartTime(micronow + timer.getStartMicroTime() - starttimeoffset * 1000)
+        if let Some(margin) = self.input.pending_key_log_margin_time.take() {
+            input.set_key_log_margin_time(margin);
+        }
+        if let Some(start) = self.input.pending_input_start_time.take() {
+            input.set_start_time(start);
+        }
     }
 
     pub(super) fn sync_audio_impl(

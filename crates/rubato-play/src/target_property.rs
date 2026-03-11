@@ -556,13 +556,12 @@ impl InternetRankingTargetProperty {
                 // Not yet loaded or no ranking data available.
                 // Initiate background IR load if not already started.
                 if !self.loading_initiated
-                    && let Some(conn_arc) =
-                        main.ir_connection_any().and_then(|any| {
-                            any.downcast_ref::<std::sync::Arc<
+                    && let Some(conn_arc) = main.ir_connection_any().and_then(|any| {
+                        any.downcast_ref::<std::sync::Arc<
                                 dyn rubato_ir::ir_connection::IRConnection + Send + Sync,
                             >>()
                             .cloned()
-                        })
+                    })
                     && let Some(resource) = main.player_resource()
                     && let Some(songdata) = resource.songdata()
                 {

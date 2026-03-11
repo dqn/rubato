@@ -126,26 +126,34 @@ impl MainController {
             } else if let Some(mode) = effects.play_config_mode
                 && let Some(ref mut input) = self.input
             {
+                input.set_enable(true);
                 input.set_play_config(self.player.play_config(mode));
             }
-            if effects.guide_se
-                && let Some(ref sm) = self.sound
-                && let Some(ref mut audio) = self.audio
-            {
-                use rubato_types::sound_type::SoundType;
-                let guide_se_types = [
-                    SoundType::GuidesePg,
-                    SoundType::GuideseGr,
-                    SoundType::GuideseGd,
-                    SoundType::GuideseBd,
-                    SoundType::GuidesePr,
-                    SoundType::GuideseMs,
-                ];
-                for (judge, sound_type) in guide_se_types.iter().enumerate() {
-                    let paths = sm.sound_paths(sound_type);
-                    let path = paths.first().map(|p| p.to_string_lossy().to_string());
-                    audio.set_additional_key_sound(judge as i32, true, path.as_deref());
-                    audio.set_additional_key_sound(judge as i32, false, path.as_deref());
+            if let Some(ref mut audio) = self.audio {
+                if effects.guide_se {
+                    if let Some(ref sm) = self.sound {
+                        use rubato_types::sound_type::SoundType;
+                        let guide_se_types = [
+                            SoundType::GuidesePg,
+                            SoundType::GuideseGr,
+                            SoundType::GuideseGd,
+                            SoundType::GuideseBd,
+                            SoundType::GuidesePr,
+                            SoundType::GuideseMs,
+                        ];
+                        for (judge, sound_type) in guide_se_types.iter().enumerate() {
+                            let paths = sm.sound_paths(sound_type);
+                            let path = paths.first().map(|p| p.to_string_lossy().to_string());
+                            audio.set_additional_key_sound(judge as i32, true, path.as_deref());
+                            audio.set_additional_key_sound(judge as i32, false, path.as_deref());
+                        }
+                    }
+                } else {
+                    // Clear any previously set guide SE sounds.
+                    for judge in 0..6 {
+                        audio.set_additional_key_sound(judge, true, None);
+                        audio.set_additional_key_sound(judge, false, None);
+                    }
                 }
             }
         }

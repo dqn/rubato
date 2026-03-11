@@ -372,6 +372,10 @@ impl JSONSkinLoader {
 
         let header = self.load_header(p)?;
 
+        // Set enabled options so conditional blocks are evaluated during deserialization.
+        let enabled_options = self.get_enabled_options(&header);
+        json_skin::set_enabled_options(Some(enabled_options));
+
         // Read and parse JSON
         let content = match std::fs::read_to_string(p) {
             Ok(c) => c,
@@ -382,6 +386,7 @@ impl JSONSkinLoader {
                     decoded.into_owned()
                 }
                 Err(_) => {
+                    json_skin::set_enabled_options(None);
                     error!("JSON skin file not found: {:?}", p);
                     return None;
                 }
@@ -396,23 +401,26 @@ impl JSONSkinLoader {
                     match parse_skin_json(&decoded) {
                         Ok(s) => s,
                         Err(e) => {
+                            json_skin::set_enabled_options(None);
                             error!("Failed to parse JSON skin: {}", e);
                             return None;
                         }
                     }
                 }
                 Err(e) => {
+                    json_skin::set_enabled_options(None);
                     error!("Failed to read JSON skin: {}", e);
                     return None;
                 }
             },
         };
+        json_skin::set_enabled_options(None);
         self.sk = Some(sk.clone());
 
         self.load_json_skin(&header, &sk, skin_type, _property, p)
     }
 
-    fn _get_enabled_options(&self, header: &SkinHeaderData) -> HashSet<i32> {
+    fn get_enabled_options(&self, header: &SkinHeaderData) -> HashSet<i32> {
         let mut enabled = HashSet::new();
         for option in &header.custom_options {
             enabled.insert(option.selected_option);

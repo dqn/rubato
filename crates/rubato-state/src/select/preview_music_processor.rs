@@ -19,6 +19,21 @@ pub struct PreviewMusicProcessor {
     playing: String,
     current_volume: f32,
     default_started: bool,
+    /// Non-blocking fade-out state for the render-thread path.
+    /// When Some, we're fading out the default music before switching to a new track.
+    fade_out: Option<FadeOutState>,
+}
+
+/// Tracks non-blocking fade-out progress.
+struct FadeOutState {
+    /// Remaining fade steps (counting down from 10 to 0).
+    remaining_steps: i32,
+    /// System volume for scaling.
+    sys_vol: f32,
+    /// Path to switch to after fade completes.
+    next_path: String,
+    /// Timestamp of last fade step.
+    last_step_time: std::time::Instant,
 }
 
 trait PreviewAudioTarget {
@@ -91,6 +106,7 @@ impl PreviewMusicProcessor {
             playing: String::new(),
             current_volume: 0.0,
             default_started: false,
+            fade_out: None,
         }
     }
 
@@ -145,16 +161,36 @@ impl PreviewMusicProcessor {
         let sys_vol = config.audio.as_ref().map(|a| a.systemvolume).unwrap_or(0.5);
 
         if !self.preview_running.load(Ordering::SeqCst) {
+            self.fade_out = None;
             if !self.playing.is_empty() {
-                Self::stop_preview_internal(
-                    audio,
-                    &self.playing,
-                    &self.default_music,
-                    sys_vol,
-                    false,
-                );
+                Self::stop_preview_nonblocking(audio, &self.playing, &self.default_music, false);
                 self.playing.clear();
                 self.default_started = false;
+            }
+            return;
+        }
+
+        // Process ongoing fade-out animation (one step per tick, ~15ms apart).
+        if let Some(ref mut fade) = self.fade_out {
+            if fade.last_step_time.elapsed() >= std::time::Duration::from_millis(15) {
+                fade.remaining_steps -= 1;
+                let vol = fade.remaining_steps as f32 * 0.1 * fade.sys_vol;
+                audio.set_preview_volume(&self.default_music, vol.max(0.0));
+                fade.last_step_time = std::time::Instant::now();
+            }
+            if fade.remaining_steps <= 0 {
+                // Fade complete -- switch to the next track.
+                let next_path = std::mem::take(&mut fade.next_path);
+                let fade_sys_vol = fade.sys_vol;
+                self.fade_out = None;
+                if next_path != self.default_music {
+                    let looping = matches!(config.select.song_preview, SongPreview::LOOP);
+                    audio.play_preview_path(&next_path, fade_sys_vol, looping);
+                } else {
+                    audio.set_preview_volume(&self.default_music, fade_sys_vol);
+                }
+                self.playing = next_path;
+                self.current_volume = fade_sys_vol;
             }
             return;
         }
@@ -179,30 +215,56 @@ impl PreviewMusicProcessor {
                 path
             };
             if path != self.playing {
-                Self::stop_preview_internal(
-                    audio,
-                    &self.playing,
-                    &self.default_music,
-                    sys_vol,
-                    true,
-                );
-                if path != self.default_music {
-                    let looping = matches!(config.select.song_preview, SongPreview::LOOP);
-                    audio.play_preview_path(&path, sys_vol, looping);
+                if self.playing == self.default_music {
+                    // Fade out default music before switching (non-blocking).
+                    self.fade_out = Some(FadeOutState {
+                        remaining_steps: 10,
+                        sys_vol,
+                        next_path: path,
+                        last_step_time: std::time::Instant::now(),
+                    });
                 } else {
-                    audio.set_preview_volume(&self.default_music, sys_vol);
+                    // Non-default track: stop immediately, no fade.
+                    audio.stop_preview_path(&self.playing);
+                    audio.dispose_preview_path(&self.playing);
+                    if path != self.default_music {
+                        let looping = matches!(config.select.song_preview, SongPreview::LOOP);
+                        audio.play_preview_path(&path, sys_vol, looping);
+                    } else {
+                        audio.set_preview_volume(&self.default_music, sys_vol);
+                    }
+                    self.playing = path;
+                    self.current_volume = sys_vol;
                 }
-                self.playing = path;
-                self.current_volume = sys_vol;
             }
         } else if self.playing != self.default_music && !audio.is_preview_playing(&self.playing) {
-            Self::stop_preview_internal(audio, &self.playing, &self.default_music, sys_vol, true);
+            // Preview finished, return to default music.
+            audio.stop_preview_path(&self.playing);
+            audio.dispose_preview_path(&self.playing);
             audio.set_preview_volume(&self.default_music, sys_vol);
             self.playing = self.default_music.clone();
             self.current_volume = sys_vol;
         } else if (self.current_volume - sys_vol).abs() > f32::EPSILON {
             audio.set_preview_volume(&self.playing, sys_vol);
             self.current_volume = sys_vol;
+        }
+    }
+
+    /// Non-blocking stop: stops or disposes the track without fade-out sleep.
+    /// Used when preview is stopping entirely (not pausing).
+    fn stop_preview_nonblocking<T: PreviewAudioTarget + ?Sized>(
+        audio: &mut T,
+        playing: &str,
+        default_music: &str,
+        _pause: bool,
+    ) {
+        if !playing.is_empty() {
+            if playing != default_music {
+                audio.stop_preview_path(playing);
+                audio.dispose_preview_path(playing);
+            } else {
+                audio.stop_preview_path(playing);
+            }
         }
     }
 

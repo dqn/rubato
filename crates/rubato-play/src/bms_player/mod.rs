@@ -222,6 +222,11 @@ pub struct PlayerInputState {
     pub input_analog_diff_ticks: Vec<i32>,
     pub input_analog_recent_ms: Vec<i64>,
     pub pending_analog_resets: Vec<usize>,
+    /// Pending start time to set on BMSPlayerInputProcessor (enables key logging).
+    /// Set when transitioning to PlayState::Play; consumed by sync_input_back_to.
+    pub pending_input_start_time: Option<i64>,
+    /// Pending key log margin time (in milliseconds) to set on BMSPlayerInputProcessor.
+    pub pending_key_log_margin_time: Option<i64>,
 }
 
 impl PlayerInputState {
@@ -247,6 +252,8 @@ impl PlayerInputState {
             input_analog_diff_ticks: Vec::new(),
             input_analog_recent_ms: Vec::new(),
             pending_analog_resets: Vec::new(),
+            pending_input_start_time: None,
+            pending_key_log_margin_time: None,
         }
     }
 }

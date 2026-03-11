@@ -130,7 +130,7 @@ impl ScoreDatabaseAccessor {
             }
 
             for song in songs {
-                let has_uln = !song.file.sha256.is_empty();
+                let has_uln = song.chart.has_undefined_long_note();
                 if (hasln && has_uln) || (!hasln && !has_uln) {
                     let sha = song.file.sha256.as_str();
                     let mut found = false;

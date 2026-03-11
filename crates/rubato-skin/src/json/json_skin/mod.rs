@@ -8,6 +8,7 @@ mod graph_objects;
 mod skin_structs;
 mod visual_objects;
 
+pub use deserializers::set_enabled_options;
 pub use destination::*;
 pub use gameplay_objects::*;
 pub use graph_objects::*;

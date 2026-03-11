@@ -1,9 +1,42 @@
 // Custom serde deserializers for JSON skin data types.
 // Handles Lua coercion artifacts: numbers-as-strings, conditional blocks, etc.
 
+use std::cell::RefCell;
+use std::collections::HashSet;
+
 use serde::{Deserialize, Deserializer};
 
 use super::{Animation, Destination, Image, Text};
+
+thread_local! {
+    /// Enabled skin option IDs, set before deserializing a JSON skin.
+    /// When `Some`, conditional blocks are evaluated against these options.
+    /// When `None`, all conditional blocks are included (backward compat for tests/headers).
+    static ENABLED_OPTIONS: RefCell<Option<HashSet<i32>>> = const { RefCell::new(None) };
+}
+
+/// Set the enabled skin options for conditional evaluation during deserialization.
+/// Call this before `parse_skin_json` and clear it after.
+pub fn set_enabled_options(options: Option<HashSet<i32>>) {
+    ENABLED_OPTIONS.with(|eo| *eo.borrow_mut() = options);
+}
+
+/// Check if all option IDs in the given condition array are satisfied.
+/// Returns true if no enabled options are set (no filter), or if all conditions are met.
+fn conditions_satisfied(conditions: &[serde_json::Value]) -> bool {
+    if conditions.is_empty() {
+        return true;
+    }
+    ENABLED_OPTIONS.with(|eo| {
+        let enabled = eo.borrow();
+        match &*enabled {
+            None => true, // No filter set -- include everything
+            Some(set) => conditions
+                .iter()
+                .all(|c| c.as_i64().is_some_and(|id| set.contains(&(id as i32)))),
+        }
+    })
+}
 
 /// Deserialize an i32 that may come as either a JSON number or a string.
 /// Lua skin coercion converts "id" numbers to strings; this allows Offset/CustomEvent/CustomTimer
@@ -178,9 +211,10 @@ where
 /// Generic helper: deserialize a `Vec<T>` from a JSON array that may contain two kinds
 /// of conditional blocks:
 ///
-/// 1. **Object-based**: `{"if":[...], "values":[item, item, ...]}` -- all items are flattened in
-/// 2. **Array-based**: `[{"if":[924],"value":{...}}, {"if":[],"value":{...}}]` -- fallback
-///    (empty `if`) is used, or first entry if no fallback
+/// 1. **Object-based**: `{"if":[...], "values":[item, item, ...]}` -- include values only if
+///    all option IDs in the "if" array are enabled
+/// 2. **Array-based**: `[{"if":[924],"value":{...}}, {"if":[],"value":{...}}]` -- pick the
+///    first entry whose "if" conditions are satisfied, or fallback (empty "if")
 /// 3. **Direct**: a plain `T` object
 fn deserialize_vec_with_conditionals<T: serde::de::DeserializeOwned>(
     items: Vec<serde_json::Value>,
@@ -189,17 +223,28 @@ fn deserialize_vec_with_conditionals<T: serde::de::DeserializeOwned>(
     for item in items {
         if item.is_array() {
             // Array-based conditional: [{"if":[...],"value":{...}}, ...]
+            // Pick the first entry whose conditions are satisfied.
             if let Some(arr) = item.as_array() {
-                let fallback = arr
+                let matched = arr
                     .iter()
                     .find(|entry| {
                         entry
                             .get("if")
                             .and_then(|v| v.as_array())
-                            .is_some_and(|a| a.is_empty())
+                            .is_some_and(|conds| conditions_satisfied(conds))
                     })
-                    .or_else(|| arr.first());
-                if let Some(entry) = fallback
+                    .or_else(|| {
+                        // Fallback: entry with empty "if", or first entry
+                        arr.iter()
+                            .find(|entry| {
+                                entry
+                                    .get("if")
+                                    .and_then(|v| v.as_array())
+                                    .is_some_and(|a| a.is_empty())
+                            })
+                            .or_else(|| arr.first())
+                    });
+                if let Some(entry) = matched
                     && let Some(value) = entry.get("value")
                 {
                     let val: T =
@@ -209,7 +254,15 @@ fn deserialize_vec_with_conditionals<T: serde::de::DeserializeOwned>(
             }
         } else if item.is_object() && item.get("if").is_some() && item.get("values").is_some() {
             // Object-based conditional: {"if":[...], "values":[...]}
-            if let Some(vals) = item.get("values").and_then(|v| v.as_array()) {
+            // Include values only if the "if" conditions are satisfied.
+            let conds = item
+                .get("if")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+            if conditions_satisfied(&conds)
+                && let Some(vals) = item.get("values").and_then(|v| v.as_array())
+            {
                 for v in vals {
                     let val: T = serde_json::from_value(v.clone()).map_err(|e| e.to_string())?;
                     result.push(val);

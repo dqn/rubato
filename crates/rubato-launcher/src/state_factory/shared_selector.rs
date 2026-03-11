@@ -135,4 +135,8 @@ impl MainState for SharedMusicSelectorState {
     fn take_pending_state_change(&mut self) -> Option<MainStateType> {
         self.with_selector(|selector| selector.take_pending_state_change())
     }
+
+    fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
+        self.with_selector(|selector| selector.take_player_resource_box())
+    }
 }

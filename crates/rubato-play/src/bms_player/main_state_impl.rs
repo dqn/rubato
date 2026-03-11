@@ -568,8 +568,12 @@ impl MainState for BMSPlayer {
                         .timer
                         .set_micro_timer(TIMER_RHYTHM, micronow - self.starttimeoffset * 1000);
 
-                    // input.setStartTime(micronow + timer.getStartMicroTime() - starttimeoffset * 1000);
-                    // input.setKeyLogMarginTime(resource.getMarginTime());
+                    // Java: input.setStartTime(micronow + timer.getStartMicroTime() - starttimeoffset * 1000);
+                    // Java: input.setKeyLogMarginTime(resource.getMarginTime());
+                    let start_micro_time = self.main_state_data.timer.start_micro_time();
+                    self.input.pending_input_start_time =
+                        Some(micronow + start_micro_time - self.starttimeoffset * 1000);
+                    self.input.pending_key_log_margin_time = Some(self.margin_time);
                     // Java: keyinput.startJudge(model, replay != null ? replay.keylog : null, resource.getMarginTime())
                     if let Some(ref mut ki) = self.input.keyinput {
                         let timelines = &self.model.timelines;
