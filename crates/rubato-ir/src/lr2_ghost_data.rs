@@ -271,43 +271,16 @@ impl LR2GhostData {
             }
         }
 
-        let mut extra = 0;
-        for &ch in &notes {
-            if ch == '@' {
-                extra += 1;
-            }
-        }
-
-        let note_count = notes.len() - extra;
-        let mut ghost = vec![0i32; note_count];
-        let mut n = 0;
+        let mut ghost = Vec::new();
         for &ch in &notes {
             match ch {
-                'E' => {
-                    ghost[n] = 0; // pgreat
-                    n += 1;
-                }
-                'D' => {
-                    ghost[n] = 1; // great
-                    n += 1;
-                }
-                'C' => {
-                    ghost[n] = 2; // good
-                    n += 1;
-                }
-                'B' => {
-                    ghost[n] = 3; // bad
-                    n += 1;
-                }
-                'A' => {
-                    ghost[n] = 4; // poor
-                    n += 1;
-                }
-                // mash poors
-                // '@' => { ghost[n] = 5; n += 1; }
-                _ => {
-                    continue;
-                }
+                'E' => ghost.push(0), // pgreat
+                'D' => ghost.push(1), // great
+                'C' => ghost.push(2), // good
+                'B' => ghost.push(3), // bad
+                'A' => ghost.push(4), // poor
+                // mash poors ('@') and other chars are skipped
+                _ => {}
             }
         }
 
