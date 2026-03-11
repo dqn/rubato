@@ -379,6 +379,15 @@ impl LaneRenderer {
         let target_time = microtime + (base_duration as i64 * 1000);
         let time_difference = tl_microtime - target_time;
 
+        if alpha_limit == 0.0 {
+            // Instantaneous transition: notes at or past target are hidden, others fully visible
+            if time_difference >= 0 {
+                return None;
+            } else {
+                return Some(1.0);
+            }
+        }
+
         if alpha_limit >= 0.0 {
             if tl_microtime >= target_time {
                 if time_difference < alpha_limit as i64 {
