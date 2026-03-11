@@ -6,7 +6,7 @@ check:
     cargo check --workspace
 
 test:
-    cargo nextest run --workspace -E 'not test(render_snapshot_parity)'
+    cargo nextest run --workspace -E 'not (test(render_snapshot_parity) | test(skin_ecfn))'
 
 test-all:
     cargo nextest run --workspace
