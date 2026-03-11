@@ -157,8 +157,8 @@ impl<'a> PomyuCharaLoader<'a> {
                     && (dst[3].is_empty() || dst[3].len() == dst[0].len())
                 {
                     // Clamp loop values
-                    if loop_val[motion as usize] >= (dst[0].len() / 2 - 1) as i32 {
-                        loop_val[motion as usize] = (dst[0].len() / 2 - 2) as i32;
+                    if loop_val[motion as usize] >= (dst[0].len() / 2) as i32 - 1 {
+                        loop_val[motion as usize] = (dst[0].len() / 2) as i32 - 2;
                     } else if loop_val[motion as usize] < -1 {
                         loop_val[motion as usize] = -1;
                     }
@@ -375,7 +375,9 @@ impl<'a> PomyuCharaLoader<'a> {
 
                         let mut part = SkinImage::new_with_int_timer(images, timer, loop_time);
 
-                        for i in 0..(loop_frame + increase_rate) as usize {
+                        let dst_end =
+                            ((loop_frame + increase_rate) as usize).min(dstxywh.len());
+                        for i in 0..dst_end {
                             part.data.set_destination_with_int_timer_and_single_offset(
                                 &DestinationParams {
                                     time: (frame_time * i as f64) as i64,
@@ -403,7 +405,8 @@ impl<'a> PomyuCharaLoader<'a> {
                                 0,
                             );
                         }
-                        let last_pre = (loop_frame + increase_rate - 1) as usize;
+                        let last_pre =
+                            ((loop_frame + increase_rate - 1) as usize).min(dstxywh.len().saturating_sub(1));
                         part.data.set_destination_with_int_timer_and_single_offset(
                             &DestinationParams {
                                 time: (loop_time - 1) as i64,

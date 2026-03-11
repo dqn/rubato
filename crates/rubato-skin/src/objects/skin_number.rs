@@ -81,7 +81,7 @@ impl SkinNumber {
                 ))
             }),
             ref_prop: integer_property_factory::integer_property_by_id(id),
-            current_images: vec![None; config.keta as usize],
+            current_images: vec![None; config.keta.max(0) as usize],
             keta: config.keta,
             zeropadding: config.zeropadding,
             space: config.space,
@@ -114,7 +114,7 @@ impl SkinNumber {
                 ))
             }),
             ref_prop: Some(ref_prop),
-            current_images: vec![None; config.keta as usize],
+            current_images: vec![None; config.keta.max(0) as usize],
             keta: config.keta,
             zeropadding: config.zeropadding,
             space: config.space,
@@ -149,7 +149,7 @@ impl SkinNumber {
                 ))
             }),
             ref_prop: integer_property_factory::integer_property_by_id(id),
-            current_images: vec![None; config.keta as usize],
+            current_images: vec![None; config.keta.max(0) as usize],
             keta: config.keta,
             zeropadding: config.zeropadding,
             space: config.space,
@@ -184,7 +184,7 @@ impl SkinNumber {
                 ))
             }),
             ref_prop: Some(ref_prop),
-            current_images: vec![None; config.keta as usize],
+            current_images: vec![None; config.keta.max(0) as usize],
             keta: config.keta,
             zeropadding: config.zeropadding,
             space: config.space,
