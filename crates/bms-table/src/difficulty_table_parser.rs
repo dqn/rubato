@@ -546,17 +546,86 @@ impl DifficultyTableParser {
                 header.insert("attr".to_string(), Value::Object(obj));
             }
 
-            // Java: "TODO 後でcourseの仕様に合わせる" — incomplete in Java too (only name/style)
             let course = dt.course();
             if !course.is_empty() {
-                let mut grade: Vec<Value> = Vec::new();
-                for g in &course[0] {
-                    let mut m: serde_json::Map<String, Value> = serde_json::Map::new();
-                    m.insert("name".to_string(), Value::String(g.name().to_string()));
-                    m.insert("style".to_string(), Value::String(g.style.clone()));
-                    grade.push(Value::Object(m));
+                let mut all_groups: Vec<Value> = Vec::new();
+                for group in course {
+                    let mut grade: Vec<Value> = Vec::new();
+                    for g in group {
+                        let mut m: serde_json::Map<String, Value> = serde_json::Map::new();
+                        m.insert("name".to_string(), Value::String(g.name().to_string()));
+                        m.insert("style".to_string(), Value::String(g.style.clone()));
+                        if !g.constraint.is_empty() {
+                            let arr: Vec<Value> = g
+                                .constraint
+                                .iter()
+                                .map(|s| Value::String(s.clone()))
+                                .collect();
+                            m.insert("constraint".to_string(), Value::Array(arr));
+                        }
+                        if !g.trophy.is_empty() {
+                            let arr: Vec<Value> = g
+                                .trophy
+                                .iter()
+                                .map(|t| {
+                                    let mut tm: serde_json::Map<String, Value> =
+                                        serde_json::Map::new();
+                                    tm.insert(
+                                        "name".to_string(),
+                                        Value::String(t.name().to_string()),
+                                    );
+                                    tm.insert(
+                                        "style".to_string(),
+                                        Value::String(t.style().to_string()),
+                                    );
+                                    tm.insert(
+                                        "scorerate".to_string(),
+                                        Value::Number(
+                                            serde_json::Number::from_f64(t.scorerate)
+                                                .unwrap_or_else(|| {
+                                                    serde_json::Number::from_f64(0.0).unwrap()
+                                                }),
+                                        ),
+                                    );
+                                    tm.insert(
+                                        "missrate".to_string(),
+                                        Value::Number(
+                                            serde_json::Number::from_f64(t.missrate)
+                                                .unwrap_or_else(|| {
+                                                    serde_json::Number::from_f64(100.0).unwrap()
+                                                }),
+                                        ),
+                                    );
+                                    Value::Object(tm)
+                                })
+                                .collect();
+                            m.insert("trophy".to_string(), Value::Array(arr));
+                        }
+                        if !g.charts.is_empty() {
+                            let arr: Vec<Value> = g
+                                .charts
+                                .iter()
+                                .map(|c| {
+                                    Value::Object(
+                                        c.values
+                                            .iter()
+                                            .map(|(k, v)| (k.clone(), v.clone()))
+                                            .collect(),
+                                    )
+                                })
+                                .collect();
+                            m.insert("charts".to_string(), Value::Array(arr));
+                        }
+                        grade.push(Value::Object(m));
+                    }
+                    all_groups.push(Value::Array(grade));
                 }
-                header.insert("course".to_string(), Value::Array(grade));
+                // If only one group, serialize as flat array for backwards compat
+                if all_groups.len() == 1 {
+                    header.insert("course".to_string(), all_groups.into_iter().next().unwrap());
+                } else {
+                    header.insert("course".to_string(), Value::Array(all_groups));
+                }
             }
 
             let json = serde_json::to_string(&header)?;

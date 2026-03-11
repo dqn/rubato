@@ -139,7 +139,11 @@ impl SkinDistributionGraph {
         let percent: f32 = match task.download_task_status() {
             DownloadTaskStatus::Prepare => 0.0,
             DownloadTaskStatus::Downloading => {
-                task.download_size as f32 / task.content_length as f32
+                if task.content_length > 0 {
+                    (task.download_size as f32 / task.content_length as f32).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                }
             }
             DownloadTaskStatus::Downloaded => 1.0,
             DownloadTaskStatus::Extracted => 1.0,
@@ -235,6 +239,28 @@ mod tests {
         task.content_length = 100;
         let percent = compute_download_percent(&task);
         assert!((percent - 0.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_download_percent_zero_content_length() {
+        let mut task =
+            DownloadTask::new(10, "http://example.com".into(), "test".into(), "xyz".into());
+        task.set_download_task_status(DownloadTaskStatus::Downloading);
+        task.download_size = 50;
+        task.content_length = 0;
+        let percent = compute_download_percent(&task);
+        assert_eq!(percent, 0.0);
+    }
+
+    #[test]
+    fn test_download_percent_negative_content_length() {
+        let mut task =
+            DownloadTask::new(11, "http://example.com".into(), "test".into(), "neg".into());
+        task.set_download_task_status(DownloadTaskStatus::Downloading);
+        task.download_size = 50;
+        task.content_length = -1;
+        let percent = compute_download_percent(&task);
+        assert_eq!(percent, 0.0);
     }
 
     #[test]
@@ -354,7 +380,11 @@ mod tests {
         match task.download_task_status() {
             DownloadTaskStatus::Prepare => 0.0,
             DownloadTaskStatus::Downloading => {
-                task.download_size as f32 / task.content_length as f32
+                if task.content_length > 0 {
+                    (task.download_size as f32 / task.content_length as f32).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                }
             }
             DownloadTaskStatus::Downloaded => 1.0,
             DownloadTaskStatus::Extracted => 1.0,

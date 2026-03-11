@@ -350,12 +350,38 @@ fn test_sanitize_clamps_out_of_bounds() {
     prop.random2 = 15;
     prop.doubleop = 10;
     prop.graphtype = -1;
+    prop.freq = 0;
     prop.sanitize();
     assert!((prop.gaugetype as usize) < GAUGE.len());
     assert!((prop.random as usize) < RANDOM.len());
     assert!((prop.random2 as usize) < RANDOM.len());
     assert!((prop.doubleop as usize) < DPRANDOM.len());
     assert!((prop.graphtype as usize) < GRAPHTYPESTR.len());
+    assert_eq!(prop.freq, 50);
+}
+
+#[test]
+fn test_sanitize_clamps_freq_negative() {
+    let mut prop = PracticeProperty::new();
+    prop.freq = -10;
+    prop.sanitize();
+    assert_eq!(prop.freq, 50);
+}
+
+#[test]
+fn test_sanitize_clamps_freq_above_max() {
+    let mut prop = PracticeProperty::new();
+    prop.freq = 500;
+    prop.sanitize();
+    assert_eq!(prop.freq, 200);
+}
+
+#[test]
+fn test_sanitize_preserves_valid_freq() {
+    let mut prop = PracticeProperty::new();
+    prop.freq = 75;
+    prop.sanitize();
+    assert_eq!(prop.freq, 75);
 }
 
 #[test]

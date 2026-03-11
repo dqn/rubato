@@ -75,6 +75,7 @@ impl PracticeProperty {
         self.random2 = self.random2.rem_euclid(RANDOM.len() as i32);
         self.doubleop = self.doubleop.rem_euclid(DPRANDOM.len() as i32);
         self.graphtype = self.graphtype.rem_euclid(GRAPHTYPESTR.len() as i32);
+        self.freq = self.freq.clamp(50, 200);
     }
 }
 
@@ -138,8 +139,9 @@ impl PracticeConfiguration {
             {
                 saved.sanitize();
                 self.property = saved;
-                // Restore model-specific data
+                // Re-initialize gaugecategory (skipped by serde) from current mode
                 let mode = model.mode().copied().unwrap_or(Mode::BEAT_7K);
+                self.property.gaugecategory = Some(BMSPlayerRule::for_mode(&mode).gauge);
                 let timeline_times: Vec<i32> = model.timelines.iter().map(|tl| tl.time()).collect();
                 self.model_data = Some(PracticeModelData {
                     mode,
