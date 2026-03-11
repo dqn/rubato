@@ -233,13 +233,13 @@ pub(crate) struct LuaEvent {
 
 // SAFETY: LuaEvent contains Arc<Lua> which is !Send because mlua::Lua
 // (without the "send" feature) is not thread-safe. Access is restricted to a single
-// thread; debug_assert in exec() verifies this invariant at runtime in debug builds.
+// thread; assert in exec() verifies this invariant at runtime.
 unsafe impl Send for LuaEvent {}
 unsafe impl Sync for LuaEvent {}
 
 impl Event for LuaEvent {
     fn exec(&self, _state: &mut dyn MainState, arg1: i32, arg2: i32) {
-        debug_assert_eq!(
+        assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaEvent must be accessed on the thread where it was created"
@@ -267,13 +267,13 @@ pub(crate) struct LuaFloatWriter {
 
 // SAFETY: LuaFloatWriter contains Arc<Lua> which is !Send because mlua::Lua
 // (without the "send" feature) is not thread-safe. Access is restricted to a single
-// thread; debug_assert in set() verifies this invariant at runtime in debug builds.
+// thread; assert in set() verifies this invariant at runtime.
 unsafe impl Send for LuaFloatWriter {}
 unsafe impl Sync for LuaFloatWriter {}
 
 impl FloatWriter for LuaFloatWriter {
     fn set(&self, _state: &mut dyn MainState, value: f32) {
-        debug_assert_eq!(
+        assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaFloatWriter must be accessed on the thread where it was created"
