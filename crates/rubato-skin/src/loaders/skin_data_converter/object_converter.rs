@@ -183,19 +183,34 @@ pub(super) fn convert_skin_object(
         SkinObjectType::Text {
             font,
             size,
-            align: _,
+            align,
             ref_id,
             value,
-            constant_text: _,
-            wrapping: _,
-            overflow: _,
-            outline_color: _,
-            outline_width: _,
-            shadow_color: _,
-            shadow_offset_x: _,
-            shadow_offset_y: _,
-            shadow_smoothness: _,
-        } => convert_text(font, *size, *ref_id, *value),
+            constant_text,
+            wrapping,
+            overflow,
+            outline_color,
+            outline_width,
+            shadow_color,
+            shadow_offset_x,
+            shadow_offset_y,
+            shadow_smoothness,
+        } => convert_text(
+            font,
+            *size,
+            *align,
+            *ref_id,
+            *value,
+            constant_text,
+            *wrapping,
+            *overflow,
+            outline_color,
+            *outline_width,
+            shadow_color,
+            *shadow_offset_x,
+            *shadow_offset_y,
+            *shadow_smoothness,
+        ),
 
         SkinObjectType::Slider {
             src,
@@ -804,11 +819,22 @@ fn convert_float(
     Some(SkinObject::Float(sf))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn convert_text(
     font: &Option<String>,
     size: i32,
+    align: i32,
     ref_id: i32,
     value: Option<i32>,
+    constant_text: &Option<String>,
+    wrapping: bool,
+    overflow: i32,
+    outline_color: &String,
+    outline_width: f32,
+    shadow_color: &String,
+    shadow_offset_x: f32,
+    shadow_offset_y: f32,
+    shadow_smoothness: f32,
 ) -> Option<SkinObject> {
     if let Some(font_path) = font {
         let text_id = value.unwrap_or(ref_id);
@@ -817,7 +843,26 @@ fn convert_text(
         } else {
             None
         };
-        let stf = SkinTextFont::new_with_property(font_path, 0, size, 0, property);
+        let mut stf = SkinTextFont::new_with_property(font_path, 0, size, 0, property);
+        // Apply JSON text layout fields
+        stf.text_data.align = align;
+        stf.text_data.wrapping = wrapping;
+        stf.text_data.overflow = overflow;
+        if let Some(ct) = constant_text {
+            stf.text_data.set_constant_text(ct.clone());
+        }
+        if !outline_color.is_empty() && outline_color != "ffffff00" {
+            stf.text_data
+                .set_outline_color(crate::stubs::Color::value_of(outline_color));
+        }
+        stf.text_data.outline_width = outline_width;
+        if !shadow_color.is_empty() && shadow_color != "ffffff00" {
+            stf.text_data
+                .set_shadow_color(crate::stubs::Color::value_of(shadow_color));
+        }
+        stf.text_data
+            .set_shadow_offset(shadow_offset_x, shadow_offset_y);
+        stf.text_data.shadow_smoothness = shadow_smoothness;
         Some(SkinObject::TextFont(stf))
     } else {
         warn!("Text object without font path, skipping");

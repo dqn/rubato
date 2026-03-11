@@ -187,6 +187,15 @@ impl SkinImage {
         }
     }
 
+    /// Return the first frame of the first source (static snapshot).
+    /// Useful for extracting line image textures without time/state context.
+    pub fn first_frame_region(&self) -> Option<TextureRegion> {
+        self.image
+            .first()
+            .and_then(|opt| opt.as_ref())
+            .and_then(|source| source.first_frame())
+    }
+
     pub fn image(&self, time: i64, state: &dyn MainState) -> Option<TextureRegion> {
         self.image_at(0, time, state)
     }

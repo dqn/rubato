@@ -187,11 +187,31 @@ impl LR2SkinLoaderAccess for LR2PlaySkinLoaderState {
             }
         }
 
-        // 2. Add line SkinImage instances (already created during SRC_LINE/DST_LINE parsing)
-        for line_opt in &mut self.line_images {
-            if let Some(line_img) = line_opt.take() {
-                skin.add(SkinObject::Image(line_img));
+        // 2. Extract line image data for SkinNoteObject before consuming them.
+        // Line images are rendered dynamically at y_offsets from DrawCommands,
+        // NOT as standalone skin objects.
+        let mut extracted_lines: [Option<crate::skin_note_object::LineImage>; 8] =
+            Default::default();
+        for (i, line_opt) in self.line_images.iter().enumerate() {
+            if let Some(line_img) = line_opt
+                && let Some(region) = line_img.first_frame_region()
+            {
+                let (dst_w, dst_h) = line_img
+                    .data
+                    .dst
+                    .first()
+                    .map(|d| (d.region.width, d.region.height))
+                    .unwrap_or((0.0, 0.0));
+                extracted_lines[i] = Some(crate::skin_note_object::LineImage {
+                    region,
+                    dst_width: dst_w,
+                    dst_height: dst_h,
+                });
             }
+        }
+        // Consume line images (they're not standalone skin objects)
+        for line_opt in &mut self.line_images {
+            line_opt.take();
         }
 
         // 3. Add judgeline SkinImage (already created during SRC_JUDGELINE parsing)
@@ -203,6 +223,7 @@ impl LR2SkinLoaderAccess for LR2PlaySkinLoaderState {
         if self.lanerender {
             let lane_count = self.note.len();
             let mut note_obj = crate::skin_note_object::SkinNoteObject::new(lane_count);
+            note_obj.line_images = extracted_lines;
             for (i, lane_rect) in self.laner.iter().enumerate() {
                 if let Some(rect) = lane_rect {
                     note_obj.inner.set_lane_region(

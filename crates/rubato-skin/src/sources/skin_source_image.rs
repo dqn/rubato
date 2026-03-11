@@ -115,4 +115,8 @@ impl SkinSource for SkinSourceImage {
     fn is_disposed(&self) -> bool {
         self.disposed
     }
+
+    fn first_frame(&self) -> Option<TextureRegion> {
+        self.image.first().and_then(|tr| tr.clone())
+    }
 }

@@ -1,5 +1,6 @@
 use crate::MainController;
 use rubato_core::score_data::ScoreData;
+use rubato_types::main_controller_access::MainControllerAccess;
 
 /// Score target
 pub enum TargetProperty {
@@ -552,7 +553,28 @@ impl InternetRankingTargetProperty {
                 }
             }
             _ => {
-                // Not yet loaded or no ranking data available
+                // Not yet loaded or no ranking data available.
+                // Initiate background IR load if not already started.
+                if !self.loading_initiated
+                    && let Some(conn_arc) =
+                        main.ir_connection_any().and_then(|any| {
+                            any.downcast_ref::<std::sync::Arc<
+                                dyn rubato_ir::ir_connection::IRConnection + Send + Sync,
+                            >>()
+                            .cloned()
+                        })
+                    && let Some(resource) = main.player_resource()
+                    && let Some(songdata) = resource.songdata()
+                {
+                    let chart = rubato_ir::ir_chart_data::IRChartData::new(songdata);
+                    let lnmode = resource.player_config().play_settings.lnmode;
+                    let local_score = main.read_score_data_by_hash(
+                        &songdata.file.sha256,
+                        songdata.chart.has_long_note(),
+                        lnmode,
+                    );
+                    self.initiate_load(conn_arc, chart, local_score, self.target, self.value);
+                }
                 self.target_score.player = "NO DATA".to_string();
                 self.target_score.play_option.option = 0;
             }

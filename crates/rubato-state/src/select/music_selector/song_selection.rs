@@ -184,6 +184,9 @@ impl MusicSelector {
                     // The search result is applied via MusicSelector::search().
                     // In Rust, the egui overlay handles text input; this event
                     // signals that the search UI should be shown.
+                    if let Some(ref mut search) = self.search {
+                        search.has_focus = true;
+                    }
                     log::info!("Search popup requested");
                 }
             }

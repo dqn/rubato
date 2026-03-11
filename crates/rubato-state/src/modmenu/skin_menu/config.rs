@@ -173,7 +173,15 @@ pub(super) fn matches_skin_file_pattern_case_insensitive(filename: &str, pattern
     true
 }
 
+#[cfg(test)]
 pub(super) fn parse_custom_file(file: &CustomFile) -> Option<Vec<String>> {
+    parse_custom_file_with_skin_path(file, None)
+}
+
+fn parse_custom_file_with_skin_path(
+    file: &CustomFile,
+    skin_path: Option<&Path>,
+) -> Option<Vec<String>> {
     let mut file_selection: Vec<String> = Vec::new();
 
     let last_slash = file.path.rfind('/');
@@ -211,10 +219,21 @@ pub(super) fn parse_custom_file(file: &CustomFile) -> Option<Vec<String>> {
         name.to_string()
     };
 
-    let dirpath = if last_slash.is_some() {
+    let raw_dir = if last_slash.is_some() {
         PathBuf::from(&file.path[..last_slash_idx])
     } else {
         PathBuf::from(".")
+    };
+    // Resolve relative custom-file paths from the skin directory,
+    // not from the process working directory.
+    let dirpath = if raw_dir.is_relative() {
+        if let Some(skin_dir) = skin_path.and_then(|p| p.parent()) {
+            skin_dir.join(&raw_dir)
+        } else {
+            raw_dir
+        }
+    } else {
+        raw_dir
     };
 
     if !dirpath.exists() {
@@ -341,7 +360,9 @@ pub(super) fn complete_property(header: &SkinHeader) -> SkinProperty {
     }
 
     for file in header.custom_files() {
-        let file_selection = parse_custom_file(file).unwrap_or_else(|| vec!["Random".to_string()]);
+        let file_selection =
+            parse_custom_file_with_skin_path(file, header.path().map(|p| p.as_path()))
+                .unwrap_or_else(|| vec!["Random".to_string()]);
 
         {
             let mut available = AVAILABLE_FILES

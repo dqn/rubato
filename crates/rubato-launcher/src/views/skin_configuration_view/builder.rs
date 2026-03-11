@@ -198,9 +198,20 @@ impl SkinConfigurationView {
         }
 
         let slashindex = file.path.rfind('/');
-        let dirpath = match slashindex {
+        let raw_dir = match slashindex {
             Some(idx) => PathBuf::from(&file.path[..idx]),
             None => PathBuf::from("."),
+        };
+        // Resolve relative custom-file paths from the skin directory,
+        // not from the process working directory.
+        let dirpath = if raw_dir.is_relative() {
+            if let Some(skin_dir) = header.path().and_then(|p| p.parent()) {
+                skin_dir.join(&raw_dir)
+            } else {
+                raw_dir
+            }
+        } else {
+            raw_dir
         };
 
         if !dirpath.exists() {

@@ -189,10 +189,21 @@ fn load_floatvalue_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObje
 fn load_text_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for text in &sk.text {
         if dst_id == text.id.as_deref().unwrap_or("") {
+            // Resolve font: JSON skins express fonts by ID (e.g. "0"), not path.
+            // Look up the matching sk.font entry and use its path.
+            let resolved_font = text.font.as_ref().and_then(|font_str| {
+                for f in &sk.font {
+                    if f.id.as_deref() == Some(font_str) {
+                        return f.path.clone();
+                    }
+                }
+                // Not a font ID reference, treat as direct path
+                Some(font_str.clone())
+            });
             return Some(SkinObjectData {
                 name: text.id.clone(),
                 object_type: SkinObjectType::Text {
-                    font: text.font.clone(),
+                    font: resolved_font,
                     size: text.size,
                     align: text.align,
                     ref_id: text.ref_id,

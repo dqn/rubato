@@ -27,6 +27,17 @@ pub struct SkinNoteObject {
     pub mine_images: Vec<Option<crate::stubs::TextureRegion>>,
     /// Per-lane LN body textures (10 types).
     pub ln_body_images: Vec<[Option<crate::stubs::TextureRegion>; 10]>,
+    /// Line images: [0]=section, [1]=section(2P), [2]=BPM, [3]=BPM(2P),
+    /// [4]=stop, [5]=stop(2P), [6]=time, [7]=time(2P).
+    /// Each entry contains (TextureRegion, dst_x, dst_width, dst_height).
+    pub line_images: [Option<LineImage>; 8],
+}
+
+/// Line image data for section/BPM/stop/time lines.
+pub struct LineImage {
+    pub region: crate::stubs::TextureRegion,
+    pub dst_width: f32,
+    pub dst_height: f32,
 }
 
 impl SkinNoteObject {
@@ -38,6 +49,7 @@ impl SkinNoteObject {
             note_images: vec![None; lane_count],
             mine_images: vec![None; lane_count],
             ln_body_images: vec![Default::default(); lane_count],
+            line_images: Default::default(),
         }
     }
 
@@ -110,19 +122,43 @@ impl SkinNoteObject {
                         sprite.draw(region, *x, *y, *w, *h);
                     }
                 }
-                DrawCommand::DrawSectionLine { .. }
-                | DrawCommand::DrawTimeLine { .. }
-                | DrawCommand::DrawBpmLine { .. }
-                | DrawCommand::DrawStopLine { .. }
-                | DrawCommand::DrawTimeText { .. }
+                DrawCommand::DrawSectionLine { y_offset } => {
+                    self.draw_line_image(sprite, 0, *y_offset);
+                }
+                DrawCommand::DrawTimeLine { y_offset } => {
+                    self.draw_line_image(sprite, 6, *y_offset);
+                }
+                DrawCommand::DrawBpmLine { y_offset, .. } => {
+                    self.draw_line_image(sprite, 2, *y_offset);
+                }
+                DrawCommand::DrawStopLine { y_offset, .. } => {
+                    self.draw_line_image(sprite, 4, *y_offset);
+                }
+                DrawCommand::DrawTimeText { .. }
                 | DrawCommand::DrawBpmText { .. }
-                | DrawCommand::DrawStopText { .. }
-                | DrawCommand::DrawJudgeArea { .. } => {
-                    // These commands require additional skin resources (line images, fonts)
-                    // that are not yet available. They will be resolved when the skin
-                    // line and text rendering infrastructure is wired.
+                | DrawCommand::DrawStopText { .. } => {
+                    // Text rendering requires a wired BitmapFont; skipped until
+                    // the play-skin font pipeline is connected.
+                }
+                DrawCommand::DrawJudgeArea { .. } => {
+                    // Judge area rendering requires a solid-color fill primitive;
+                    // skipped until SpriteBatch supports fill_rect.
                 }
             }
+        }
+    }
+
+    /// Draw a line image at the given y_offset.
+    /// index: 0=section, 2=BPM, 4=stop, 6=time (even indices for 1P).
+    fn draw_line_image(&self, sprite: &mut SkinObjectRenderer, index: usize, y_offset: i32) {
+        if let Some(li) = &self.line_images[index] {
+            sprite.draw(
+                &li.region,
+                self.data.region.x,
+                self.data.region.y + y_offset as f32,
+                li.dst_width,
+                li.dst_height,
+            );
         }
     }
 

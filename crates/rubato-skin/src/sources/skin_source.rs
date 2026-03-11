@@ -6,6 +6,10 @@ pub trait SkinSource: Send + Sync {
     fn validate(&self) -> bool;
     fn dispose(&mut self);
     fn is_disposed(&self) -> bool;
+    /// Return the first frame without time/state context (for static extraction).
+    fn first_frame(&self) -> Option<TextureRegion> {
+        None
+    }
 }
 
 /// Helper to dispose multiple SkinSource objects
