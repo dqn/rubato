@@ -4,7 +4,8 @@
 use std::path::PathBuf;
 
 use crate::property::string_property::StringProperty;
-use crate::stubs::{BitmapFont, Color, GlyphLayout, MainState, TextureRegion};
+use crate::loaders::skin_loader;
+use crate::stubs::{BitmapFont, BitmapFontData, Color, GlyphLayout, MainState, TextureRegion};
 use crate::text::skin_text::{OVERFLOW_OVERFLOW, OVERFLOW_SHRINK, OVERFLOW_TRUNCATE, SkinTextData};
 use crate::types::skin_object::{DrawImageAtParams, SkinObjectRenderer};
 
@@ -433,15 +434,45 @@ impl SkinTextBitmapSource {
     /// Uses BitmapFontCache to avoid reloading the same font.
     pub fn font(&mut self) -> Option<BitmapFont> {
         if !crate::bitmap_font_cache::has(Some(&self.font_path)) {
-            let new_font = self.create_cacheable_font(&self.font_path, self.source_type);
+            // Parse the full .fnt data (glyph metrics, page image paths, etc.)
+            let font_data = BitmapFontData::from_fnt(&self.font_path).unwrap_or_default();
+
+            // Load texture regions for each page image
+            let image_regions: Vec<TextureRegion> = font_data
+                .image_paths
+                .iter()
+                .filter_map(|ip| {
+                    skin_loader::texture(ip, self.texture_options.use_cim)
+                        .map(TextureRegion::from_texture)
+                })
+                .collect();
+
+            // Use parsed font data metrics, fall back to create_cacheable_font header parsing
+            let mut size = font_data.line_height;
+            let mut scale_w = font_data.scale_w;
+            let mut scale_h = font_data.scale_h;
+
+            if size == 0.0 {
+                let header = self.create_cacheable_font(&self.font_path, self.source_type);
+                size = header.original_size;
+                scale_w = header.page_width;
+                scale_h = header.page_height;
+            }
+            if scale_w == 0.0 && !image_regions.is_empty() {
+                scale_w = image_regions[0].region_width as f32;
+                scale_h = image_regions[0].region_height as f32;
+            }
+
             crate::bitmap_font_cache::set(
                 self.font_path.clone(),
                 crate::bitmap_font_cache::CacheableBitmapFont {
-                    original_size: new_font.original_size,
-                    type_: new_font.font_type,
-                    page_width: new_font.page_width,
-                    page_height: new_font.page_height,
-                    ..Default::default()
+                    font: BitmapFont::new(),
+                    font_data,
+                    regions: image_regions,
+                    original_size: size,
+                    type_: self.source_type,
+                    page_width: scale_w,
+                    page_height: scale_h,
                 },
             );
         }
