@@ -200,7 +200,7 @@ impl SkinConfigurationView {
         let slashindex = file.path.rfind('/');
         let dirpath = match slashindex {
             Some(idx) => PathBuf::from(&file.path[..idx]),
-            None => PathBuf::from(&file.path),
+            None => PathBuf::from("."),
         };
 
         if !dirpath.exists() {

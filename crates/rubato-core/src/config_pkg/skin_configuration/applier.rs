@@ -301,7 +301,7 @@ impl SkinConfiguration {
             let last_slash = file_def.path.rfind('/');
             let dir_str = match last_slash {
                 Some(idx) => &file_def.path[..idx],
-                None => continue,
+                None => ".",
             };
 
             let dir_path = Path::new(dir_str);
@@ -311,13 +311,9 @@ impl SkinConfiguration {
 
             let mut items: Vec<String> = Vec::new();
             if let Ok(entries) = fs::read_dir(dir_path) {
-                let name_lower = name.to_lowercase();
-                let name_upper = name.to_uppercase();
                 for entry in entries.flatten() {
                     let fname = entry.file_name().to_string_lossy().to_string();
-                    if fname.to_lowercase().ends_with(&name_lower)
-                        || fname.to_uppercase().ends_with(&name_upper)
-                    {
+                    if matches_wildcard_case_insensitive(&fname, &name) {
                         items.push(fname);
                     }
                 }
@@ -883,6 +879,42 @@ impl SkinConfiguration {
             }
         }
     }
+}
+
+/// Case-insensitive wildcard matching for skin file patterns (e.g., `*.png`, `bg*.png`).
+fn matches_wildcard_case_insensitive(filename: &str, pattern: &str) -> bool {
+    let filename_lower = filename.to_ascii_lowercase();
+    let pattern_lower = pattern.to_ascii_lowercase();
+
+    if !pattern_lower.contains('*') {
+        return filename_lower == pattern_lower;
+    }
+
+    let parts: Vec<&str> = pattern_lower.split('*').collect();
+    let mut pos = 0usize;
+    for (i, part) in parts.iter().enumerate() {
+        if part.is_empty() {
+            continue;
+        }
+        if i == 0 {
+            // First part must be a prefix
+            if !filename_lower.starts_with(part) {
+                return false;
+            }
+            pos = part.len();
+        } else if i == parts.len() - 1 {
+            // Last part must be a suffix
+            if !filename_lower[pos..].ends_with(part) {
+                return false;
+            }
+            pos = filename_lower.len();
+        } else if let Some(found) = filename_lower[pos..].find(part) {
+            pos += found + part.len();
+        } else {
+            return false;
+        }
+    }
+    true
 }
 
 impl MainState for SkinConfiguration {

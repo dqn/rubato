@@ -154,42 +154,12 @@ impl SkinHeader {
                     if file.path != "Random" {
                         custom_file.filename = Some(file.path.clone());
                     } else {
-                        let ext_start = custom_file.path.rfind('*').map(|i| i + 1).unwrap_or(0);
-                        let ext;
-                        if custom_file.path.contains('|') {
-                            let pipe_idx = custom_file
-                                .path
-                                .rfind('|')
-                                .expect("pipe delimiter guaranteed by contains check");
-                            if custom_file.path.len() > pipe_idx + 1 {
-                                let star_idx =
-                                    custom_file.path.rfind('*').map(|i| i + 1).unwrap_or(0);
-                                let bar_idx = custom_file
-                                    .path
-                                    .find('|')
-                                    .expect("pipe delimiter guaranteed by contains check");
-                                ext = format!(
-                                    "{}{}",
-                                    &custom_file.path[star_idx..bar_idx],
-                                    &custom_file.path[pipe_idx + 1..]
-                                );
-                            } else {
-                                let star_idx =
-                                    custom_file.path.rfind('*').map(|i| i + 1).unwrap_or(0);
-                                let bar_idx = custom_file
-                                    .path
-                                    .find('|')
-                                    .expect("pipe delimiter guaranteed by contains check");
-                                ext = custom_file.path[star_idx..bar_idx].to_string();
-                            }
-                        } else {
-                            ext = custom_file.path[ext_start..].to_string();
-                        }
+                        let file_pattern = extract_file_pattern(&custom_file.path);
                         let slash_index = custom_file.path.rfind('/');
                         let dir_path = if let Some(idx) = slash_index {
                             &custom_file.path[..idx]
                         } else {
-                            &custom_file.path
+                            "."
                         };
                         let dir = std::path::Path::new(dir_path);
                         if dir.exists() && dir.is_dir() {
@@ -197,8 +167,11 @@ impl SkinHeader {
                             if let Ok(entries) = std::fs::read_dir(dir) {
                                 for entry in entries.flatten() {
                                     let path = entry.path();
-                                    if let Some(path_str) = path.to_str()
-                                        && path_str.to_lowercase().ends_with(&ext.to_lowercase())
+                                    if let Some(fname) = path.file_name()
+                                        && matches_wildcard_case_insensitive(
+                                            &fname.to_string_lossy(),
+                                            &file_pattern,
+                                        )
                                     {
                                         l.push(path);
                                     }
@@ -455,4 +428,124 @@ pub enum CustomItemEnum {
     Option(CustomOption),
     File(CustomFile),
     Offset(CustomOffset),
+}
+
+/// Extract filename pattern from a custom file path spec (handles `|` separator).
+/// For `bg/*.png` returns `*.png`; for `bg/bg*|.png|.bmp` returns `bg*.png.bmp`.
+fn extract_file_pattern(path: &str) -> String {
+    let after_slash = if let Some(idx) = path.rfind('/') {
+        &path[idx + 1..]
+    } else {
+        path
+    };
+
+    if path.contains('|') {
+        let slash_pos = path.rfind('/').map(|i| i + 1).unwrap_or(0);
+        let pipe_first = path.find('|').expect("contains('|') guarantees Some");
+        let pipe_last = path.rfind('|').expect("contains('|') guarantees Some");
+        if path.len() > pipe_last + 1 {
+            format!("{}{}", &path[slash_pos..pipe_first], &path[pipe_last + 1..])
+        } else {
+            path[slash_pos..pipe_first].to_string()
+        }
+    } else {
+        after_slash.to_string()
+    }
+}
+
+/// Case-insensitive wildcard matching for skin file patterns (e.g., `*.png`, `bg*.png`).
+fn matches_wildcard_case_insensitive(filename: &str, pattern: &str) -> bool {
+    let filename_lower = filename.to_ascii_lowercase();
+    let pattern_lower = pattern.to_ascii_lowercase();
+
+    if !pattern_lower.contains('*') {
+        return filename_lower == pattern_lower;
+    }
+
+    let parts: Vec<&str> = pattern_lower.split('*').collect();
+    let mut pos = 0usize;
+    for (i, part) in parts.iter().enumerate() {
+        if part.is_empty() {
+            continue;
+        }
+        if i == 0 {
+            if !filename_lower.starts_with(part) {
+                return false;
+            }
+            pos = part.len();
+        } else if i == parts.len() - 1 {
+            if !filename_lower[pos..].ends_with(part) {
+                return false;
+            }
+            pos = filename_lower.len();
+        } else if let Some(found) = filename_lower[pos..].find(part) {
+            pos += found + part.len();
+        } else {
+            return false;
+        }
+    }
+    true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_file_pattern_with_directory() {
+        assert_eq!(extract_file_pattern("bg/*.png"), "*.png");
+    }
+
+    #[test]
+    fn extract_file_pattern_with_prefix_wildcard() {
+        assert_eq!(extract_file_pattern("bg/bg*.png"), "bg*.png");
+    }
+
+    #[test]
+    fn extract_file_pattern_no_directory() {
+        assert_eq!(extract_file_pattern("*.png"), "*.png");
+    }
+
+    #[test]
+    fn extract_file_pattern_with_pipe() {
+        // bg/bg*|.png|.bmp -> bg*.png.bmp
+        assert_eq!(extract_file_pattern("bg/bg*|.png|.bmp"), "bg*.bmp");
+    }
+
+    #[test]
+    fn extract_file_pattern_pipe_no_trailing() {
+        assert_eq!(extract_file_pattern("bg/bg*|.png|"), "bg*");
+    }
+
+    #[test]
+    fn wildcard_star_dot_png_matches_any_png() {
+        assert!(matches_wildcard_case_insensitive("background.png", "*.png"));
+        assert!(matches_wildcard_case_insensitive("a.png", "*.png"));
+        assert!(!matches_wildcard_case_insensitive("a.jpg", "*.png"));
+    }
+
+    #[test]
+    fn wildcard_prefix_star_suffix() {
+        assert!(matches_wildcard_case_insensitive("bg01.png", "bg*.png"));
+        assert!(matches_wildcard_case_insensitive("bg.png", "bg*.png"));
+        assert!(!matches_wildcard_case_insensitive("other.png", "bg*.png"));
+    }
+
+    #[test]
+    fn wildcard_case_insensitive() {
+        assert!(matches_wildcard_case_insensitive("BG01.PNG", "bg*.png"));
+        assert!(matches_wildcard_case_insensitive("Bg01.Png", "bg*.png"));
+    }
+
+    #[test]
+    fn wildcard_no_star_exact_match() {
+        assert!(matches_wildcard_case_insensitive("file.png", "file.png"));
+        assert!(matches_wildcard_case_insensitive("FILE.PNG", "file.png"));
+        assert!(!matches_wildcard_case_insensitive("file2.png", "file.png"));
+    }
+
+    #[test]
+    fn wildcard_star_only_matches_everything() {
+        assert!(matches_wildcard_case_insensitive("anything.txt", "*"));
+    }
 }

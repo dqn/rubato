@@ -166,11 +166,11 @@ impl<'a> PomyuCharaLoader<'a> {
         let mut pattern_data: Vec<Vec<String>> = vec![Vec::new(), Vec::new(), Vec::new()];
 
         let chp_dir_prefix = {
-            let last_sep = chp
-                .rfind('\\')
-                .unwrap_or(0)
-                .max(chp.rfind('/').unwrap_or(0));
-            chp[..last_sep + 1].to_string()
+            let last_sep = chp.rfind('\\').max(chp.rfind('/'));
+            match last_sep {
+                Some(idx) => chp[..idx + 1].to_string(),
+                None => String::new(),
+            }
         };
 
         // Read the .chp file as raw bytes, then decode as MS932 (Shift_JIS)

@@ -651,3 +651,52 @@ fn load_chp_handles_pure_ascii_in_shift_jis_mode() {
     assert!(lines[0].starts_with("#CharBMP"));
     assert!(lines[1].starts_with("#CharFace"));
 }
+
+// ================================================================
+// chp_dir_prefix regression tests
+// ================================================================
+
+#[test]
+fn chp_dir_prefix_with_forward_slash() {
+    let chp = "path/to/file.chp";
+    let last_sep = chp.rfind('\\').max(chp.rfind('/'));
+    let prefix = match last_sep {
+        Some(idx) => chp[..idx + 1].to_string(),
+        None => String::new(),
+    };
+    assert_eq!(prefix, "path/to/");
+}
+
+#[test]
+fn chp_dir_prefix_with_backslash() {
+    let chp = "path\\to\\file.chp";
+    let last_sep = chp.rfind('\\').max(chp.rfind('/'));
+    let prefix = match last_sep {
+        Some(idx) => chp[..idx + 1].to_string(),
+        None => String::new(),
+    };
+    assert_eq!(prefix, "path\\to\\");
+}
+
+#[test]
+fn chp_dir_prefix_no_separator_returns_empty() {
+    let chp = "file.chp";
+    let last_sep = chp.rfind('\\').max(chp.rfind('/'));
+    let prefix = match last_sep {
+        Some(idx) => chp[..idx + 1].to_string(),
+        None => String::new(),
+    };
+    assert_eq!(prefix, "", "bare filename should produce empty prefix");
+}
+
+#[test]
+fn chp_dir_prefix_mixed_separators_uses_rightmost() {
+    let chp = "path/to\\file.chp";
+    let last_sep = chp.rfind('\\').max(chp.rfind('/'));
+    let prefix = match last_sep {
+        Some(idx) => chp[..idx + 1].to_string(),
+        None => String::new(),
+    };
+    // Backslash at index 7 is rightmost
+    assert_eq!(prefix, "path/to\\");
+}

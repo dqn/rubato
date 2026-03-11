@@ -214,7 +214,7 @@ pub(super) fn parse_custom_file(file: &CustomFile) -> Option<Vec<String>> {
     let dirpath = if last_slash.is_some() {
         PathBuf::from(&file.path[..last_slash_idx])
     } else {
-        PathBuf::from(&file.path)
+        PathBuf::from(".")
     };
 
     if !dirpath.exists() {

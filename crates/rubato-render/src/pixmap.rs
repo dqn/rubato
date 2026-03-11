@@ -156,6 +156,9 @@ impl Pixmap {
 
     /// Fill a rectangle with current color.
     pub fn fill_rectangle(&mut self, x: i32, y: i32, width: i32, height: i32) {
+        if width <= 0 || height <= 0 {
+            return;
+        }
         let x0 = x.max(0) as usize;
         let y0 = y.max(0) as usize;
         let x1 = ((x + width) as usize).min(self.width as usize);
@@ -359,5 +362,42 @@ mod tests {
         p.set_color_int(color);
         p.fill();
         assert_eq!(p.pixel(0, 0), color);
+    }
+
+    #[test]
+    fn test_fill_rectangle_negative_width_draws_nothing() {
+        let mut p = Pixmap::new(4, 4, PixmapFormat::RGBA8888);
+        p.set_color_rgba(1.0, 0.0, 0.0, 1.0);
+        p.fill_rectangle(2, 2, -3, 2);
+        // All pixels should remain transparent
+        for y in 0..4 {
+            for x in 0..4 {
+                assert_eq!(p.pixel(x, y), 0, "pixel ({x},{y}) should be untouched");
+            }
+        }
+    }
+
+    #[test]
+    fn test_fill_rectangle_negative_height_draws_nothing() {
+        let mut p = Pixmap::new(4, 4, PixmapFormat::RGBA8888);
+        p.set_color_rgba(1.0, 0.0, 0.0, 1.0);
+        p.fill_rectangle(2, 2, 2, -3);
+        for y in 0..4 {
+            for x in 0..4 {
+                assert_eq!(p.pixel(x, y), 0, "pixel ({x},{y}) should be untouched");
+            }
+        }
+    }
+
+    #[test]
+    fn test_fill_rectangle_zero_width_draws_nothing() {
+        let mut p = Pixmap::new(4, 4, PixmapFormat::RGBA8888);
+        p.set_color_rgba(1.0, 0.0, 0.0, 1.0);
+        p.fill_rectangle(1, 1, 0, 2);
+        for y in 0..4 {
+            for x in 0..4 {
+                assert_eq!(p.pixel(x, y), 0, "pixel ({x},{y}) should be untouched");
+            }
+        }
     }
 }

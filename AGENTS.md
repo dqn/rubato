@@ -14,6 +14,10 @@ beatoraja fork (Java 313 files / 72k+ lines) → Rust. 25 crates, 167k lines.
 - After completing a phase/task, update TODO.md and AGENTS.md.
 - Worktree isolation: **always merge worktree branches before sending shutdown requests**.
 - Worktree cleanup: **always run `rm -rf target/` inside a worktree before removing it** to avoid multi-GB disk waste. Each worktree's `target/` can be 4+ GB.
+- When writing or reviewing `create()`, `init()`, `load()`, or `prepare()` methods in state objects, enumerate ALL subsystems (input, audio, gauge, replay, BGA, callbacks, timers, skin) and verify each is initialized. "It compiles" does not mean "it's wired."
+- When passing data between states via handoff structs (`ScoreHandoff`, `StateCreateEffects`), verify every field is populated at the source and consumed at the destination. Empty/default fields in handoff structs are bugs.
+- When choosing between similar-sounding APIs (e.g., `has_long_note()` vs `has_undefined_long_note()`, `maxbpm` vs `mainbpm`), trace back to the Java source to verify which semantic is needed.
+- NEVER use blocking I/O (`rx.recv()`, synchronous HTTP) on the main/render thread. Use background threads + `try_recv()` or non-blocking poll.
 
 ## Type Mapping
 
