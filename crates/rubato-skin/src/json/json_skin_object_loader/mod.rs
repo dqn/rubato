@@ -15,8 +15,7 @@ use crate::json::json_skin_loader::{
 
 use utilities::map_number_offsets;
 pub use utilities::{
-    create_text, note_texture, parse_hex_color, set_destination_on_object, source_image,
-    src_id_path, texture,
+    create_text, note_texture, parse_hex_color, source_image, src_id_path, texture,
 };
 
 /// Corresponds to JsonSkinObjectLoader<S extends Skin>
