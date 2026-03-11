@@ -245,11 +245,17 @@ impl SkinBPMGraph {
             // Stubbed: we skip the song length check
             last_time += 1000;
 
+            let safe_mainbpm = if self.mainbpm == 0.0 {
+                1.0
+            } else {
+                self.mainbpm
+            };
+
             // Graph drawing
             for i in 1..self.bpm_data.len() {
                 // Vertical line
                 let x1 = (width as f64 * self.bpm_data[i][1] / last_time as f64) as i32;
-                let y1 = ((((self.bpm_data[i - 1][0] / self.mainbpm)
+                let y1 = ((((self.bpm_data[i - 1][0] / safe_mainbpm)
                     .max(self.min_value)
                     .min(self.max_value))
                 .log10()
@@ -257,7 +263,7 @@ impl SkinBPMGraph {
                     / (self.max_value_log - self.min_value_log)
                     * (height - self.line_width) as f64) as i32;
                 let _x2 = x1;
-                let y2 = ((((self.bpm_data[i][0] / self.mainbpm)
+                let y2 = ((((self.bpm_data[i][0] / safe_mainbpm)
                     .max(self.min_value)
                     .min(self.max_value))
                 .log10()
@@ -275,7 +281,7 @@ impl SkinBPMGraph {
                 }
                 // Horizontal line
                 let x1 = (width as f64 * self.bpm_data[i - 1][1] / last_time as f64) as i32;
-                let y1 = ((((self.bpm_data[i - 1][0] / self.mainbpm)
+                let y1 = ((((self.bpm_data[i - 1][0] / safe_mainbpm)
                     .max(self.min_value)
                     .min(self.max_value))
                 .log10()
@@ -301,7 +307,7 @@ impl SkinBPMGraph {
             // Last horizontal line
             let last_idx = self.bpm_data.len() - 1;
             let x1 = (width as f64 * self.bpm_data[last_idx][1] / last_time as f64) as i32;
-            let y1 = ((((self.bpm_data[last_idx][0] / self.mainbpm)
+            let y1 = ((((self.bpm_data[last_idx][0] / safe_mainbpm)
                 .max(self.min_value)
                 .min(self.max_value))
             .log10()

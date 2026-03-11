@@ -163,7 +163,7 @@ impl SkinNoteDistributionGraph {
             max: 20,
             graph_type: graph_type.clamp(0, DATA_LENGTH.len() as i32 - 1),
             is_back_tex_off: back_tex_off == 1,
-            delay,
+            delay: delay.max(0),
             is_order_reverse: order_reverse == 1,
             is_no_gap: no_gap == 1,
             is_no_gap_x: no_gap_x == 1,
