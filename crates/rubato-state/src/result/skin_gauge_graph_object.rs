@@ -205,7 +205,7 @@ impl SkinGaugeGraphObject {
         resource: &PlayerResource,
         is_course_result: bool,
     ) {
-        self.render = if time >= self.delay as i64 {
+        self.render = if self.delay <= 0 || time >= self.delay as i64 {
             1.0
         } else {
             time as f32 / self.delay as f32
