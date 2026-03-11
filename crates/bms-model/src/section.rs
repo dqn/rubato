@@ -132,7 +132,7 @@ impl Section {
                 SECTION_RATE => {
                     if let Some(colon_index) = line.find(':') {
                         match line[colon_index + 1..].parse::<f64>() {
-                            Ok(r) if r.is_finite() && r >= 0.0 && r <= 1000.0 => rate = r,
+                            Ok(r) if r.is_finite() && (0.0..=1000.0).contains(&r) => rate = r,
                             Ok(_) | Err(_) => {
                                 log.push(DecodeLog::new(
                                     State::Warning,
