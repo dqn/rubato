@@ -131,6 +131,9 @@ impl FloatPCM {
             return self.clone();
         }
         let samples = self.get_sample((self.sample_rate as f32 / rate) as i32);
+        if samples.is_empty() {
+            return FloatPCM::new(self.channels, self.sample_rate, 0, 0, Vec::new());
+        }
         let start = (((self.start as f32 / rate) as i32).min(samples.len() as i32 - 1)
             / self.channels)
             * self.channels;
@@ -514,6 +517,14 @@ mod tests {
         let result = pcm.change_frequency(2.0);
         // 2x speed -> half the samples
         assert_eq!(result.sample.len(), 2);
+    }
+
+    #[test]
+    fn change_frequency_empty_sample_returns_empty() {
+        let pcm = FloatPCM::new(1, 44100, 0, 0, Vec::new());
+        let result = pcm.change_frequency(0.5);
+        assert_eq!(result.sample.len(), 0);
+        assert_eq!(result.len, 0);
     }
 }
 

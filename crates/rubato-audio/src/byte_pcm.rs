@@ -102,6 +102,9 @@ impl BytePCM {
             return BytePCM::new(self.channels, sample, 0, 0, Vec::new());
         }
         let samples = self.get_sample(sample);
+        if samples.is_empty() {
+            return BytePCM::new(self.channels, sample, 0, 0, Vec::new());
+        }
         let start = ((((self.start as i64) * (sample as i64) / (self.sample_rate as i64)) as i32)
             .min(samples.len() as i32 - 1)
             / self.channels)
@@ -121,6 +124,9 @@ impl BytePCM {
             return self.clone();
         }
         let samples = self.get_sample((self.sample_rate as f32 / rate) as i32);
+        if samples.is_empty() {
+            return BytePCM::new(self.channels, self.sample_rate, 0, 0, Vec::new());
+        }
         let start = (((self.start as f32 / rate) as i32).min(samples.len() as i32 - 1)
             / self.channels)
             * self.channels;
@@ -560,5 +566,13 @@ mod tests {
         let pcm = BytePCM::new(1, 44100, 0, 4, vec![10, 20, 30, 40]);
         let result = pcm.change_frequency(2.0);
         assert_eq!(result.sample.len(), 2);
+    }
+
+    #[test]
+    fn change_frequency_empty_sample_returns_empty() {
+        let pcm = BytePCM::new(1, 44100, 0, 0, Vec::new());
+        let result = pcm.change_frequency(0.5);
+        assert_eq!(result.sample.len(), 0);
+        assert_eq!(result.len, 0);
     }
 }
