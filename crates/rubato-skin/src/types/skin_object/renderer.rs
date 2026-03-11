@@ -1,4 +1,6 @@
-use crate::stubs::{BitmapFont, Color, GlyphLayout, SpriteBatch, Texture, TextureRegion};
+use crate::stubs::{
+    BitmapFont, BlendMode, Color, GlyphLayout, SpriteBatch, Texture, TextureRegion,
+};
 
 /// Parameters for drawing a rotated texture region.
 pub struct DrawRotatedParams<'a> {
@@ -109,10 +111,10 @@ impl SkinObjectRenderer {
                     .set_blend_function(Self::GL_SRC_ALPHA, Self::GL_ONE);
             }
             3 => {
-                // Subtractive: SRC_ALPHA, ONE (with GL_FUNC_SUBTRACT equation)
-                // In wgpu, this is handled by the BlendMode::Subtractive pipeline
-                self.sprite
-                    .set_blend_function(Self::GL_SRC_ALPHA, Self::GL_ONE);
+                // Subtractive: same GL factors as Additive (SRC_ALPHA, ONE) but uses
+                // GL_FUNC_SUBTRACT equation. from_gl_factors cannot distinguish this,
+                // so set the blend mode directly.
+                self.sprite.set_blend_mode(BlendMode::Subtractive);
             }
             4 => {
                 // Multiply: ZERO, SRC_COLOR

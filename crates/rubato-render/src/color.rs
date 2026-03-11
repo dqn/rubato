@@ -146,7 +146,7 @@ impl Rectangle {
     }
 
     pub fn contains(&self, x: f32, y: f32) -> bool {
-        x >= 0.0 && x <= self.width && y >= 0.0 && y <= self.height
+        x >= self.x && x < self.x + self.width && y >= self.y && y < self.y + self.height
     }
 
     pub fn equals(&self, other: &Rectangle) -> bool {

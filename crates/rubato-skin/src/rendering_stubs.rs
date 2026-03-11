@@ -2,6 +2,7 @@
 // All types previously defined as stubs here are now backed by real wgpu implementations.
 
 // Re-export all public types from beatoraja-render
+pub use rubato_render::blend::BlendMode;
 pub use rubato_render::blend::gl11;
 pub use rubato_render::blend::gl20;
 pub use rubato_render::color::{Color, Matrix4, Rectangle};

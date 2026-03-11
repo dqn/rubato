@@ -179,6 +179,12 @@ impl Texture {
             return;
         }
 
+        // Guard against negative offsets: negative i32 wraps to large u32 in wgpu::Origin3d,
+        // producing invalid GPU write offsets.
+        if x < 0 || y < 0 || x >= self.width || y >= self.height {
+            return;
+        }
+
         // Ensure GPU texture exists
         if self.gpu_texture.is_none() && self.width > 0 && self.height > 0 {
             let rgba = self.rgba_data.clone();

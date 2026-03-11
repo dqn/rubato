@@ -184,6 +184,13 @@ impl SpriteBatch {
         self.blend_mode
     }
 
+    /// Directly set the blend mode, bypassing GL factor mapping.
+    /// Use when the desired blend mode cannot be distinguished by GL factors alone
+    /// (e.g. Subtractive shares factors with Additive but uses a different blend equation).
+    pub fn set_blend_mode(&mut self, mode: BlendMode) {
+        self.blend_mode = mode;
+    }
+
     /// Begin batching. Must be called before any draw calls.
     /// Java: SpriteBatch.begin()
     pub fn begin(&mut self) {

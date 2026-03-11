@@ -106,9 +106,8 @@ impl GlyphAtlas {
             self.row_height = 0;
         }
 
-        // Check if atlas has room vertically
-        if self.cursor_y + glyph_h > self.atlas_height {
-            // Atlas full — grow it
+        // Check if atlas has room vertically; a very large glyph may need multiple doublings
+        while self.cursor_y + glyph_h > self.atlas_height {
             self.grow_atlas();
         }
 
