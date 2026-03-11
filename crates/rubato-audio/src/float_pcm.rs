@@ -127,7 +127,7 @@ impl FloatPCM {
     ///
     /// Translated from: FloatPCM.changeFrequency
     pub fn change_frequency(&self, rate: f32) -> FloatPCM {
-        if rate <= 0.0 {
+        if rate <= 0.0 || self.channels == 0 || self.sample_rate == 0 {
             return self.clone();
         }
         let samples = self.get_sample((self.sample_rate as f32 / rate) as i32);
@@ -212,7 +212,7 @@ impl FloatPCM {
     ///
     /// Translated from: FloatPCM.slice
     pub fn slice(&self, starttime: i64, duration: i64) -> Option<FloatPCM> {
-        if starttime < 0 {
+        if starttime < 0 || self.sample_rate == 0 || self.channels == 0 {
             return None;
         }
         let mut duration = duration;
