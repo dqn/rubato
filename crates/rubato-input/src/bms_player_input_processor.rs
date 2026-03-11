@@ -2,6 +2,8 @@
 //!
 //! Translated from: bms.player.beatoraja.input.BMSPlayerInputProcessor
 
+use rubato_types::monotonic_clock::monotonic_micros;
+
 use crate::controller::lwjgl3_controller_manager::Lwjgl3ControllerManager;
 
 use crate::bm_controller_input_processor::{
@@ -450,18 +452,11 @@ impl BMSPlayerInputProcessor {
 
     pub fn reset_analog_input(&mut self, i: usize) {
         self.last_analog_value[i] = self.current_analog_value[i];
-        self.analog_last_reset_time[i] = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as i64;
+        self.analog_last_reset_time[i] = monotonic_micros();
     }
 
     pub fn time_since_last_analog_reset(&self, i: usize) -> i64 {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as i64;
-        now - self.analog_last_reset_time[i]
+        (monotonic_micros() - self.analog_last_reset_time[i]) / 1000
     }
 
     pub fn analog_diff(&self, i: usize) -> i32 {
