@@ -87,7 +87,7 @@ impl SkinHidden {
         if time < 0 {
             return 0;
         }
-        ((time * length as i64 / self.cycle as i64) % length as i64) as usize
+        ((time * length as i64 / self.cycle as i64).rem_euclid(length as i64)) as usize
     }
 
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
