@@ -212,7 +212,8 @@ impl AbstractResultData {
         }
     }
 
-    pub fn replay_status(&self, index: usize) -> ReplayStatus {
+    #[allow(dead_code)] // visibility intentionally reduced; callers will be wired later
+    pub(crate) fn replay_status(&self, index: usize) -> ReplayStatus {
         self.save_replay[index]
     }
 

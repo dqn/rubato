@@ -86,9 +86,9 @@ pub fn float_value(data: &AbstractResultData, id: i32) -> f32 {
 pub fn boolean_value(data: &AbstractResultData, id: i32) -> bool {
     match id {
         // Clear result
-        90 => data.oldscore.clear >= ClearType::AssistEasy as i32,
+        90 => data.oldscore.clear >= ClearType::AssistEasy.id(),
         // Fail result
-        91 => data.oldscore.clear < ClearType::AssistEasy as i32,
+        91 => data.oldscore.clear < ClearType::AssistEasy.id(),
         _ => false,
     }
 }
@@ -199,5 +199,37 @@ mod tests {
         assert_eq!(integer_value(&data, 3_661_000, 17), 1);
         assert_eq!(integer_value(&data, 3_661_000, 18), 1);
         assert_eq!(integer_value(&data, 3_661_000, 19), 1);
+    }
+
+    #[test]
+    fn test_boolean_value_clear_uses_id_not_discriminant() {
+        // Regression: boolean_value must use ClearType::AssistEasy.id() (== 2),
+        // not `ClearType::AssistEasy as i32` which relies on implicit discriminant
+        // ordering and could silently diverge if the enum is reordered.
+        let assist_easy_id = ClearType::AssistEasy.id();
+
+        // ID 90: clear result (clear >= AssistEasy)
+        // ID 91: fail result  (clear <  AssistEasy)
+        let mut data = AbstractResultData::new();
+
+        // Exactly at AssistEasy threshold -> cleared
+        data.oldscore.clear = assist_easy_id;
+        assert!(boolean_value(&data, 90));
+        assert!(!boolean_value(&data, 91));
+
+        // Above threshold -> cleared
+        data.oldscore.clear = assist_easy_id + 1;
+        assert!(boolean_value(&data, 90));
+        assert!(!boolean_value(&data, 91));
+
+        // Below threshold -> failed
+        data.oldscore.clear = assist_easy_id - 1;
+        assert!(!boolean_value(&data, 90));
+        assert!(boolean_value(&data, 91));
+
+        // NoPlay (0) -> failed
+        data.oldscore.clear = ClearType::NoPlay.id();
+        assert!(!boolean_value(&data, 90));
+        assert!(boolean_value(&data, 91));
     }
 }
