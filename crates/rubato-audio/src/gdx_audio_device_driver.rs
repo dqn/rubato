@@ -384,6 +384,13 @@ impl AudioDriver for GdxAudioDeviceDriver {
 
     fn set_global_pitch(&mut self, pitch: f32) {
         self.global_pitch = pitch;
+        let rate = PlaybackRate(pitch as f64);
+        for handle in self.wav_handles.values_mut() {
+            handle.set_playback_rate(rate, Tween::default());
+        }
+        for handle in self.slice_handles.values_mut() {
+            handle.set_playback_rate(rate, Tween::default());
+        }
     }
 
     fn get_global_pitch(&self) -> f32 {
