@@ -212,26 +212,18 @@ impl ScoreData {
         }
     }
 
-    #[allow(clippy::unbuffered_bytes)]
     pub fn decode_ghost(&self) -> Option<Vec<i32>> {
         if self.ghost.is_empty() {
+            return None;
+        }
+        if self.notes <= 0 {
             return None;
         }
         let decoded = match URL_SAFE.decode(self.ghost.as_bytes()) {
             Ok(d) => d,
             Err(_) => return None,
         };
-        let mut gz = match GzDecoder::new(&decoded[..])
-            .bytes()
-            .collect::<Result<Vec<u8>, _>>()
-        {
-            Ok(_bytes) => {
-                // Re-create decoder for proper reading
-                drop(_bytes);
-                GzDecoder::new(&decoded[..])
-            }
-            Err(_) => return None,
-        };
+        let mut gz = GzDecoder::new(&decoded[..]);
         let mut decompressed = Vec::new();
         if gz.read_to_end(&mut decompressed).is_err() {
             return None;
@@ -242,7 +234,9 @@ impl ScoreData {
         let value: Vec<i32> = (0..self.notes as usize)
             .map(|i| {
                 if i < decompressed.len() {
-                    let judge = decompressed[i] as i32;
+                    // Sign-extend u8 to match Java's signed byte semantics:
+                    // Java byte is -128..127, values > 127 map to negative (POOR=4).
+                    let judge = decompressed[i] as i8 as i32;
                     if judge >= 0 { judge } else { 4 }
                 } else {
                     4

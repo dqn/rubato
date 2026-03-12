@@ -113,12 +113,13 @@ fn ghost_encode_valid_judges_roundtrip() {
 
 #[test]
 fn ghost_encode_truncation_256() {
-    // 256 is clamped to 255 before encoding. On decode, 255u8 as i32 = 255.
+    // 256 is clamped to 255 before encoding. On decode, 255u8 as i8 = -1
+    // (Java signed byte semantics), and negative values map to POOR (4).
     let input = vec![256];
     let decoded = ghost_roundtrip(&input, 1);
     assert_eq!(
-        decoded[0], 255,
-        "value 256 should be clamped to 255 (actual: {})",
+        decoded[0], 4,
+        "value 256 clamped to 255, interpreted as Java signed byte -> POOR (actual: {})",
         decoded[0]
     );
 }

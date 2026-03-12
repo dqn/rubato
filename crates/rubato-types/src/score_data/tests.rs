@@ -263,8 +263,12 @@ fn test_ghost_encode_clamp_256() {
     sd.encode_ghost(Some(&ghost_data));
 
     let decoded = sd.decode_ghost().unwrap();
-    // value 256 is clamped to 255 in encode_ghost()
-    assert_eq!(decoded[0], 255, "value 256 should be clamped to 255");
+    // value 256 is clamped to 255 in encode_ghost(), then 255 as signed byte
+    // is -1 (negative in Java), which maps to POOR (4) in decode_ghost()
+    assert_eq!(
+        decoded[0], 4,
+        "value 256 clamped to 255, interpreted as Java signed byte -> POOR"
+    );
 }
 
 // -- SongTrophy tests --
@@ -927,5 +931,70 @@ mod prop_tests {
             ..Default::default()
         };
         assert!(score.decode_ghost().is_none());
+    }
+
+    /// Negative notes should return None, not wrap to a huge usize.
+    #[test]
+    fn ghost_decode_negative_notes_returns_none() {
+        let mut score = ScoreData::default();
+        score.notes = 5;
+        let ghost_data = vec![0, 1, 2, 3, 4];
+        score.encode_ghost(Some(&ghost_data));
+        assert!(!score.ghost.is_empty());
+
+        // Set notes to negative after encoding valid ghost data
+        score.notes = -1;
+        assert!(
+            score.decode_ghost().is_none(),
+            "negative notes should return None"
+        );
+    }
+
+    /// Zero notes should return None.
+    #[test]
+    fn ghost_decode_zero_notes_returns_none() {
+        let mut score = ScoreData::default();
+        score.notes = 5;
+        let ghost_data = vec![0, 1, 2, 3, 4];
+        score.encode_ghost(Some(&ghost_data));
+        assert!(!score.ghost.is_empty());
+
+        score.notes = 0;
+        assert!(
+            score.decode_ghost().is_none(),
+            "zero notes should return None"
+        );
+    }
+
+    /// Ghost bytes > 127 should be treated as negative in Java signed-byte
+    /// semantics and map to POOR (4).
+    #[test]
+    fn ghost_decode_high_byte_maps_to_poor() {
+        use base64::Engine;
+        use base64::engine::general_purpose::URL_SAFE;
+        use flate2::Compression;
+        use flate2::write::GzEncoder;
+        use std::io::Write;
+
+        // Manually build ghost data with bytes > 127 (would be negative in Java)
+        let raw_bytes: Vec<u8> = vec![0, 1, 128, 200, 255];
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(&raw_bytes).unwrap();
+        let compressed = encoder.finish().unwrap();
+
+        let mut score = ScoreData::default();
+        score.notes = 5;
+        score.ghost = URL_SAFE.encode(&compressed);
+
+        let decoded = score.decode_ghost().unwrap();
+        assert_eq!(decoded.len(), 5);
+        // Bytes 0 and 1 are valid judge values
+        assert_eq!(decoded[0], 0);
+        assert_eq!(decoded[1], 1);
+        // Bytes 128, 200, 255 are negative when interpreted as Java signed byte,
+        // so they should map to POOR (4)
+        assert_eq!(decoded[2], 4, "byte 128 should map to POOR");
+        assert_eq!(decoded[3], 4, "byte 200 should map to POOR");
+        assert_eq!(decoded[4], 4, "byte 255 should map to POOR");
     }
 }
