@@ -219,6 +219,17 @@ impl JudgeManager {
             judged_events: Vec::new(),
         };
         jm.score.notes = total_notes as i32;
+
+        // Populate play_option fields so scores record which algorithm/rule was used.
+        // Mirrors what init() does in accessors.rs.
+        jm.score.play_option.judge_algorithm = Some(match config.algorithm {
+            JudgeAlgorithm::Combo => rubato_types::judge_algorithm::JudgeAlgorithm::Combo,
+            JudgeAlgorithm::Duration => rubato_types::judge_algorithm::JudgeAlgorithm::Duration,
+            JudgeAlgorithm::Lowest => rubato_types::judge_algorithm::JudgeAlgorithm::Lowest,
+            JudgeAlgorithm::Score => rubato_types::judge_algorithm::JudgeAlgorithm::Timing,
+        });
+        jm.score.play_option.rule = Some(rubato_types::bms_player_rule::BMSPlayerRule::LR2);
+
         jm
     }
 }

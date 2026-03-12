@@ -1040,3 +1040,130 @@ fn gauge_not_double_updated_via_judged_events() {
         gauge_after_single,
     );
 }
+
+// --- from_config score play_option regression tests ---
+
+#[test]
+fn from_config_sets_judge_algorithm_combo() {
+    let model = make_model_with_notes(&[1_000_000]);
+    let notes = build_judge_notes(&model);
+    let jp = crate::judge_property::lr2();
+
+    let config = JudgeConfig {
+        notes: &notes,
+        mode: &Mode::BEAT_7K,
+        ln_type: LnType::LongNote,
+        judge_rank: 100,
+        judge_window_rate: [100, 100, 100],
+        scratch_judge_window_rate: [100, 100, 100],
+        algorithm: JudgeAlgorithm::Combo,
+        autoplay: false,
+        judge_property: &jp,
+        lane_property: None,
+        auto_adjust_enabled: false,
+        is_play_or_practice: true,
+        judgeregion: 1,
+    };
+    let jm = JudgeManager::from_config(&config);
+
+    assert_eq!(
+        jm.score().play_option.judge_algorithm,
+        Some(rubato_types::judge_algorithm::JudgeAlgorithm::Combo),
+    );
+    assert_eq!(
+        jm.score().play_option.rule,
+        Some(rubato_types::bms_player_rule::BMSPlayerRule::LR2),
+    );
+}
+
+#[test]
+fn from_config_sets_judge_algorithm_duration() {
+    let model = make_model_with_notes(&[1_000_000]);
+    let notes = build_judge_notes(&model);
+    let jp = crate::judge_property::lr2();
+
+    let config = JudgeConfig {
+        notes: &notes,
+        mode: &Mode::BEAT_7K,
+        ln_type: LnType::LongNote,
+        judge_rank: 100,
+        judge_window_rate: [100, 100, 100],
+        scratch_judge_window_rate: [100, 100, 100],
+        algorithm: JudgeAlgorithm::Duration,
+        autoplay: false,
+        judge_property: &jp,
+        lane_property: None,
+        auto_adjust_enabled: false,
+        is_play_or_practice: true,
+        judgeregion: 1,
+    };
+    let jm = JudgeManager::from_config(&config);
+
+    assert_eq!(
+        jm.score().play_option.judge_algorithm,
+        Some(rubato_types::judge_algorithm::JudgeAlgorithm::Duration),
+    );
+}
+
+#[test]
+fn from_config_sets_judge_algorithm_lowest() {
+    let model = make_model_with_notes(&[1_000_000]);
+    let notes = build_judge_notes(&model);
+    let jp = crate::judge_property::lr2();
+
+    let config = JudgeConfig {
+        notes: &notes,
+        mode: &Mode::BEAT_7K,
+        ln_type: LnType::LongNote,
+        judge_rank: 100,
+        judge_window_rate: [100, 100, 100],
+        scratch_judge_window_rate: [100, 100, 100],
+        algorithm: JudgeAlgorithm::Lowest,
+        autoplay: false,
+        judge_property: &jp,
+        lane_property: None,
+        auto_adjust_enabled: false,
+        is_play_or_practice: true,
+        judgeregion: 1,
+    };
+    let jm = JudgeManager::from_config(&config);
+
+    assert_eq!(
+        jm.score().play_option.judge_algorithm,
+        Some(rubato_types::judge_algorithm::JudgeAlgorithm::Lowest),
+    );
+}
+
+#[test]
+fn from_config_sets_judge_algorithm_score_maps_to_timing() {
+    let model = make_model_with_notes(&[1_000_000]);
+    let notes = build_judge_notes(&model);
+    let jp = crate::judge_property::lr2();
+
+    let config = JudgeConfig {
+        notes: &notes,
+        mode: &Mode::BEAT_7K,
+        ln_type: LnType::LongNote,
+        judge_rank: 100,
+        judge_window_rate: [100, 100, 100],
+        scratch_judge_window_rate: [100, 100, 100],
+        algorithm: JudgeAlgorithm::Score,
+        autoplay: false,
+        judge_property: &jp,
+        lane_property: None,
+        auto_adjust_enabled: false,
+        is_play_or_practice: true,
+        judgeregion: 1,
+    };
+    let jm = JudgeManager::from_config(&config);
+
+    // Score in the play crate maps to Timing in the types crate
+    assert_eq!(
+        jm.score().play_option.judge_algorithm,
+        Some(rubato_types::judge_algorithm::JudgeAlgorithm::Timing),
+    );
+    assert_eq!(
+        jm.score().play_option.rule,
+        Some(rubato_types::bms_player_rule::BMSPlayerRule::LR2),
+    );
+}

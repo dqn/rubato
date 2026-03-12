@@ -144,85 +144,7 @@ impl MainState for BMSPlayer {
         // Translated from: Java BMSPlayer.create() judge.init() call.
         // Uses from_config() which properly initializes lane_states, note_states,
         // keyassign, sckey, auto_presstime, and all lane iteration state.
-        self.judge_notes = bms_model::judge_note::build_judge_notes(&self.model);
-        let rule = BMSPlayerRule::for_mode(&mode);
-
-        // Compute judge window rates from player config, applying course constraints
-        let mut key_judge_window_rate = if self.player_config.judge_settings.custom_judge {
-            [
-                self.player_config
-                    .judge_settings
-                    .key_judge_window_rate_perfect_great,
-                self.player_config
-                    .judge_settings
-                    .key_judge_window_rate_great,
-                self.player_config.judge_settings.key_judge_window_rate_good,
-            ]
-        } else {
-            [100, 100, 100]
-        };
-        let mut scratch_judge_window_rate = if self.player_config.judge_settings.custom_judge {
-            [
-                self.player_config
-                    .judge_settings
-                    .scratch_judge_window_rate_perfect_great,
-                self.player_config
-                    .judge_settings
-                    .scratch_judge_window_rate_great,
-                self.player_config
-                    .judge_settings
-                    .scratch_judge_window_rate_good,
-            ]
-        } else {
-            [100, 100, 100]
-        };
-
-        // Apply course constraints to judge window rates
-        for con in &self.constraints {
-            match con {
-                CourseDataConstraint::NoGreat => {
-                    key_judge_window_rate[1] = 0;
-                    key_judge_window_rate[2] = 0;
-                    scratch_judge_window_rate[1] = 0;
-                    scratch_judge_window_rate[2] = 0;
-                }
-                CourseDataConstraint::NoGood => {
-                    key_judge_window_rate[2] = 0;
-                    scratch_judge_window_rate[2] = 0;
-                }
-                _ => {}
-            }
-        }
-
-        let autoplay = matches!(
-            self.play_mode.mode,
-            rubato_core::bms_player_mode::Mode::Autoplay
-        );
-        let is_play_or_practice = matches!(
-            self.play_mode.mode,
-            rubato_core::bms_player_mode::Mode::Play | rubato_core::bms_player_mode::Mode::Practice
-        );
-        let judgeregion = self.play_skin.judgeregion.max(1);
-
-        let judge_config = JudgeConfig {
-            notes: &self.judge_notes,
-            mode: &mode,
-            ln_type: self.model.lntype(),
-            judge_rank: self.model.judgerank,
-            judge_window_rate: key_judge_window_rate,
-            scratch_judge_window_rate,
-            algorithm: JudgeAlgorithm::Combo,
-            autoplay,
-            judge_property: &rule.judge,
-            lane_property: self.lane_property.as_ref(),
-            auto_adjust_enabled: self
-                .player_config
-                .judge_settings
-                .notes_display_timing_auto_adjust,
-            is_play_or_practice,
-            judgeregion,
-        };
-        self.judge = JudgeManager::from_config(&judge_config);
+        self.rebuild_judge_system(&mode);
 
         // --- Gauge initialization ---
         // Translated from: BMSPlayer.create() Java line ~540
@@ -590,9 +512,11 @@ impl MainState for BMSPlayer {
                     );
                     pm1.modify(&mut self.model);
 
-                    // Gauge, judgerank, lane init
+                    // Gauge, judgerank, judge, lane init
                     self.gauge = self.practice.gauge(&self.model);
                     self.model.judgerank = property.judgerank;
+                    let mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
+                    self.rebuild_judge_system(&mode);
                     if let Some(ref mut lr) = self.lanerender {
                         lr.init(&self.model);
                     }
@@ -1083,5 +1007,102 @@ impl MainState for BMSPlayer {
         }
         self.practice.dispose();
         log::info!("Play state resources disposed");
+    }
+}
+
+impl BMSPlayer {
+    /// Rebuild judge_notes and JudgeManager from the current model state.
+    ///
+    /// Used during initial create() and practice mode restarts so that the judge
+    /// system always references the current (possibly re-modified) model data.
+    fn rebuild_judge_system(&mut self, mode: &Mode) {
+        self.judge_notes = bms_model::judge_note::build_judge_notes(&self.model);
+        let rule = BMSPlayerRule::for_mode(mode);
+
+        // Compute judge window rates from player config, applying course constraints
+        let mut key_judge_window_rate = if self.player_config.judge_settings.custom_judge {
+            [
+                self.player_config
+                    .judge_settings
+                    .key_judge_window_rate_perfect_great,
+                self.player_config
+                    .judge_settings
+                    .key_judge_window_rate_great,
+                self.player_config.judge_settings.key_judge_window_rate_good,
+            ]
+        } else {
+            [100, 100, 100]
+        };
+        let mut scratch_judge_window_rate = if self.player_config.judge_settings.custom_judge {
+            [
+                self.player_config
+                    .judge_settings
+                    .scratch_judge_window_rate_perfect_great,
+                self.player_config
+                    .judge_settings
+                    .scratch_judge_window_rate_great,
+                self.player_config
+                    .judge_settings
+                    .scratch_judge_window_rate_good,
+            ]
+        } else {
+            [100, 100, 100]
+        };
+
+        // Apply course constraints to judge window rates
+        for con in &self.constraints {
+            match con {
+                CourseDataConstraint::NoGreat => {
+                    key_judge_window_rate[1] = 0;
+                    key_judge_window_rate[2] = 0;
+                    scratch_judge_window_rate[1] = 0;
+                    scratch_judge_window_rate[2] = 0;
+                }
+                CourseDataConstraint::NoGood => {
+                    key_judge_window_rate[2] = 0;
+                    scratch_judge_window_rate[2] = 0;
+                }
+                _ => {}
+            }
+        }
+
+        let autoplay = matches!(
+            self.play_mode.mode,
+            rubato_core::bms_player_mode::Mode::Autoplay
+        );
+        let is_play_or_practice = matches!(
+            self.play_mode.mode,
+            rubato_core::bms_player_mode::Mode::Play | rubato_core::bms_player_mode::Mode::Practice
+        );
+        let judgeregion = self.play_skin.judgeregion.max(1);
+
+        // Read judge algorithm from the mode-specific play config
+        let algorithm = self
+            .player_config
+            .play_config_ref(*mode)
+            .playconfig
+            .judgetype()
+            .parse::<JudgeAlgorithm>()
+            .unwrap_or(JudgeAlgorithm::Combo);
+
+        let judge_config = JudgeConfig {
+            notes: &self.judge_notes,
+            mode,
+            ln_type: self.model.lntype(),
+            judge_rank: self.model.judgerank,
+            judge_window_rate: key_judge_window_rate,
+            scratch_judge_window_rate,
+            algorithm,
+            autoplay,
+            judge_property: &rule.judge,
+            lane_property: self.lane_property.as_ref(),
+            auto_adjust_enabled: self
+                .player_config
+                .judge_settings
+                .notes_display_timing_auto_adjust,
+            is_play_or_practice,
+            judgeregion,
+        };
+        self.judge = JudgeManager::from_config(&judge_config);
     }
 }

@@ -3078,3 +3078,56 @@ fn create_with_negative_playtime_does_not_panic() {
         );
     }
 }
+
+// --- judge algorithm from player config ---
+
+#[test]
+fn create_reads_judge_algorithm_from_play_config() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    // Set the judge algorithm to Duration in the mode-specific PlayConfig
+    player
+        .player_config
+        .play_config(Mode::BEAT_7K)
+        .playconfig
+        .judgetype = "Duration".to_string();
+
+    player.create();
+
+    // The JudgeManager should use Duration algorithm, and the score should record it
+    assert_eq!(
+        player.judge_manager().score().play_option.judge_algorithm,
+        Some(rubato_types::judge_algorithm::JudgeAlgorithm::Duration),
+    );
+}
+
+#[test]
+fn create_defaults_to_combo_for_invalid_judgetype() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player
+        .player_config
+        .play_config(Mode::BEAT_7K)
+        .playconfig
+        .judgetype = "InvalidAlgorithm".to_string();
+
+    player.create();
+
+    // Should fall back to Combo
+    assert_eq!(
+        player.judge_manager().score().play_option.judge_algorithm,
+        Some(rubato_types::judge_algorithm::JudgeAlgorithm::Combo),
+    );
+}
+
+#[test]
+fn create_sets_rule_lr2_on_score() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.create();
+
+    assert_eq!(
+        player.judge_manager().score().play_option.rule,
+        Some(rubato_types::bms_player_rule::BMSPlayerRule::LR2),
+    );
+}
