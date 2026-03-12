@@ -139,7 +139,7 @@ impl MusicSelector {
                 && self.ranking.currentir.is_none()
             {
                 use rubato_ir::ranking_data::RankingData;
-                let lnmode = main.player_config().play_settings.lnmode;
+                let lnmode = self.config.play_settings.lnmode;
                 let rd = RankingData::new();
                 self.ranking.currentir = Some(rd.clone());
                 if let Some(cache) = main.ranking_data_cache_mut() {
@@ -560,7 +560,7 @@ impl MusicSelector {
                         // Refresh currentir from cache
                         if let Some(main) = self.main.as_ref() {
                             use rubato_ir::ranking_data::RankingData;
-                            let lnmode = main.player_config().play_settings.lnmode;
+                            let lnmode = self.config.play_settings.lnmode;
                             let song = song_bar.song_data();
                             self.ranking.currentir = main
                                 .ranking_data_cache()
@@ -586,7 +586,7 @@ impl MusicSelector {
                         // Refresh currentir from cache for course
                         if let Some(main) = self.main.as_ref() {
                             use rubato_ir::ranking_data::RankingData;
-                            let lnmode = main.player_config().play_settings.lnmode;
+                            let lnmode = self.config.play_settings.lnmode;
                             let course = grade_bar.course_data();
                             self.ranking.currentir = main
                                 .ranking_data_cache()

@@ -600,7 +600,16 @@ impl MainState for MusicSelector {
                 .manager
                 .selected()
                 .and_then(|b| b.as_grade_bar())
-                .is_some();
+                .is_some_and(|gb| {
+                    let current = gb.course_data();
+                    current.name() == requested_course.name()
+                        && current.hash.len() == requested_course.hash.len()
+                        && current
+                            .hash
+                            .iter()
+                            .zip(requested_course.hash.iter())
+                            .all(|(a, b)| a.file.sha256 == b.file.sha256)
+                });
             if current_matches {
                 self.ranking.currentir = Some(rd);
             }
@@ -622,7 +631,7 @@ impl MainState for MusicSelector {
                 && let Some(main) = self.main.as_mut()
             {
                 use rubato_ir::ranking_data::RankingData;
-                let lnmode = main.player_config().play_settings.lnmode;
+                let lnmode = self.config.play_settings.lnmode;
                 if let Some(song_bar) = current.as_song_bar()
                     && song_bar.exists_song()
                     && self.play.is_none()

@@ -198,15 +198,6 @@ impl MusicSelector {
         // The caller should track bar identity if precise change detection is needed.
     }
 
-    pub fn selected_bar_play_config(&self) -> Option<&PlayConfig> {
-        let mode = self
-            .config
-            .mode()
-            .cloned()
-            .unwrap_or(bms_model::Mode::BEAT_7K);
-        Some(&self.config.play_config_ref(mode).playconfig)
-    }
-
     pub fn current_ranking_data(&self) -> Option<&RankingData> {
         self.ranking.currentir.as_ref()
     }
@@ -474,7 +465,7 @@ impl MusicSelector {
             // Load/create cached IR ranking data for course
             if let Some(ref mut main) = self.main {
                 use rubato_ir::ranking_data::RankingData;
-                let lnmode = main.player_config().play_settings.lnmode;
+                let lnmode = self.config.play_settings.lnmode;
                 let course = gb.course_data();
                 let cached = main
                     .ranking_data_cache()

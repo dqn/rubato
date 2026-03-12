@@ -456,8 +456,11 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             103 => self
                 .selected_song_data()
                 .map_or(0.0, |s| s.chart.level as f32 / 12.0),
-            // Hi-speed (from default mode7 play config)
-            310 => self.selector.config.mode7.playconfig.hispeed,
+            // Hi-speed (from selected bar's play config)
+            310 => self
+                .selector
+                .get_selected_play_config_ref()
+                .map_or(0.0, |pc| pc.hispeed),
             _ => 0.0,
         }
     }
