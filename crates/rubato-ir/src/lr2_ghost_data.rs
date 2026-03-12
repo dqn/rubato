@@ -406,4 +406,29 @@ mod tests {
         assert_eq!(ghost.poor(), 1);
         assert_eq!(ghost.judgements().len(), 5);
     }
+
+    #[test]
+    fn test_parse_shift_jis_decoded_csv_with_japanese_name() {
+        // Simulate the ghost_data() HTTP response path: server sends Shift_JIS
+        // bytes, we decode with encoding_rs::SHIFT_JIS, then parse the CSV.
+        // The player name field contains Japanese characters.
+        //
+        // Shift_JIS encoding of the CSV line with Japanese player name:
+        // Header: "name,option,seed,ghost\n"
+        // Data:   "<Japanese name>,0,1,E3D2"
+        //
+        // We encode the CSV as Shift_JIS bytes and decode back to verify
+        // the full path produces correct results.
+        let csv_utf8 = "name,option,seed,ghost\n\u{30d7}\u{30ec}\u{30a4}\u{30e4}\u{30fc},0,1,E3D2";
+        let (encoded, _, _) = encoding_rs::SHIFT_JIS.encode(csv_utf8);
+        let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&encoded);
+        let ghost = LR2GhostData::parse(&decoded);
+        assert!(
+            ghost.is_some(),
+            "parse should succeed with Shift_JIS decoded Japanese CSV"
+        );
+        let ghost = ghost.unwrap();
+        assert_eq!(ghost.pgreat(), 3);
+        assert_eq!(ghost.great(), 2);
+    }
 }

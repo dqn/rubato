@@ -212,8 +212,14 @@ impl LR2IRConnection {
                     ImGuiNotify::error("Failed to load ghost data.");
                     return None;
                 }
-                match response.text() {
-                    Ok(body) => LR2GhostData::parse(&body),
+                // LR2IR sends Shift_JIS responses (ghost CSV can contain
+                // Japanese player names). Decode with encoding_rs, matching
+                // the pattern in make_post_request().
+                match response.bytes() {
+                    Ok(bytes) => {
+                        let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&bytes);
+                        LR2GhostData::parse(&decoded)
+                    }
                     Err(e) => {
                         error!("{}", e);
                         ImGuiNotify::error("Failed to load ghost data.");
