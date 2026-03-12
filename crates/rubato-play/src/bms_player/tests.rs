@@ -3014,3 +3014,23 @@ fn create_does_not_initialize_gauge_for_practice_mode() {
         "gauge should not be initialized in create() for Practice mode"
     );
 }
+
+#[test]
+fn create_with_negative_playtime_does_not_panic() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    // Simulate negative playtime from deserialized or incorrectly computed data.
+    // Before the fix, a sufficiently negative value like -1500 would compute
+    // (-1500 / 500 + 2) = -1, and casting -1_i32 as usize wraps to usize::MAX,
+    // causing an allocation panic.
+    player.playtime = -1500;
+    player.create();
+    // Gauge log should be allocated with a small capacity, not a huge one
+    for log in &player.gaugelog {
+        assert!(
+            log.capacity() <= 2,
+            "expected small capacity for negative playtime, got {}",
+            log.capacity()
+        );
+    }
+}
