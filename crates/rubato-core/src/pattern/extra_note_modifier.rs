@@ -25,6 +25,9 @@ impl PatternModifier for ExtraNoteModifier {
     fn modify(&mut self, model: &mut BMSModel) {
         let mut assist = AssistLevel::None;
         let mode_key = model.mode().map(|m| m.key()).unwrap_or(0);
+        if mode_key == 0 {
+            return;
+        }
         let scratch = self.scratch;
 
         let mode = model.mode().copied();
@@ -209,6 +212,27 @@ mod tests {
             }
         }
         assert_eq!(placed_count, 1, "depth=1 should place exactly 1 note");
+    }
+
+    // -- Bounds safety regression tests --
+
+    #[test]
+    fn extra_note_modifier_no_mode_no_panic() {
+        // When model has no mode (mode_key == 0), modify must not panic
+        // from modulo-by-zero in `% mode_key as usize`.
+        let mut model = bms_model::bms_model::BMSModel::new();
+        // model.mode() returns None -> mode_key = 0
+        let mut tl = TimeLine::new(0.0, 0, 0);
+        tl.add_back_ground_note(bms_model::note::Note::new_normal(1));
+        model.timelines = vec![tl];
+
+        let mut modifier = ExtraNoteModifier::new(0, 1, false);
+        // Before fix: panics with division by zero (% 0).
+        // After fix: early return when mode_key == 0.
+        modifier.modify(&mut model);
+
+        // Should remain None assist since nothing was placed
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
     }
 
     #[test]

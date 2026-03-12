@@ -91,7 +91,7 @@ impl PatternModifier for ModeModifier {
                 };
 
                 for i in 0..lanes {
-                    let m = if i < random.len() {
+                    let m = if i < random.len() && random[i] >= 0 && (random[i] as usize) < lanes {
                         random[i] as usize
                     } else {
                         i
@@ -112,8 +112,10 @@ impl PatternModifier for ModeModifier {
                                 if !is_end {
                                     // Java: endLnNoteTime[i] = ln2.getPair().getTime()
                                     // Store the END note's timeline time (not the start note's)
-                                    end_ln_note_time[i] =
-                                        note.pair().map(|idx| tl_times[idx]).unwrap_or(-1);
+                                    end_ln_note_time[i] = note
+                                        .pair()
+                                        .and_then(|idx| tl_times.get(idx).copied())
+                                        .unwrap_or(-1);
                                 }
                                 last_note_time[i] = tl.time();
                                 tl.set_note(i as i32, n);
@@ -760,5 +762,45 @@ mod tests {
 
         let mut modifier = ModeModifier::new(Mode::BEAT_7K, Mode::POPN_9K, config);
         modifier.modify(&mut model);
+    }
+
+    // -- Bounds safety regression tests --
+
+    #[test]
+    fn ln_pair_index_out_of_bounds_no_panic() {
+        // A long note with a pair index beyond tl_times.len() must not panic.
+        let config = PlayerConfig::default();
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        let mut ln_start = Note::new_long(1);
+        // Set pair index to a value far beyond the number of timelines
+        ln_start.set_pair_index(Some(9999));
+        tl.set_note(0, Some(ln_start));
+        let mut model = make_test_model(&Mode::BEAT_7K, vec![tl]);
+
+        // Before fix: panics with index out of bounds on tl_times[9999].
+        // After fix: safely falls back to -1 via .get().
+        let mut modifier = ModeModifier::new(Mode::BEAT_7K, Mode::BEAT_7K, config);
+        modifier.modify(&mut model);
+    }
+
+    #[test]
+    fn negative_random_value_no_panic() {
+        // When Algorithm::modify returns negative values in the random array,
+        // the i32-to-usize conversion must not wrap to a huge index.
+        // This is tested indirectly: if the random array contained a negative
+        // value, the guard ensures we fall back to identity mapping (i).
+        let config = PlayerConfig::default();
+        let mut tl = TimeLine::new(0.0, 0, 9);
+        tl.set_note(0, Some(Note::new_normal(1)));
+        let mut model = make_test_model(&Mode::POPN_9K, vec![tl]);
+
+        // POPN_9K -> POPN_9K: Algorithm::get returns None, uses keys_static
+        // as identity. No negative values appear in practice for this path,
+        // but the guard protects against corrupted random arrays.
+        let mut modifier = ModeModifier::new(Mode::POPN_9K, Mode::POPN_9K, config);
+        modifier.modify(&mut model);
+
+        // Note should still be at lane 0 (identity mapping)
+        assert_eq!(model.timelines[0].note(0).unwrap().wav(), 1);
     }
 }

@@ -88,7 +88,7 @@ fn lane_shuffle_modify(
             // Track which source lanes have already been consumed (moved)
             let mut consumed: Vec<bool> = vec![false; lanes];
             for i in 0..lanes {
-                let m = if i < random.len() {
+                let m = if i < random.len() && random[i] >= 0 && (random[i] as usize) < lanes {
                     random[i] as usize
                 } else {
                     i
@@ -740,6 +740,55 @@ mod tests {
         assert_eq!(result.len(), keys.len() * 2);
         assert_eq!(&result[..keys.len()], &keys[..]);
         assert_eq!(&result[keys.len()..], &keys[..]);
+    }
+
+    // -- Bounds safety regression tests --
+
+    #[test]
+    fn negative_random_value_falls_back_to_identity() {
+        // If a make_random callback somehow returns negative values,
+        // lane_shuffle_modify must not panic from wrapping i32 -> usize.
+        // We test this by directly calling lane_shuffle_modify with a
+        // callback that returns negative values.
+        let mode = Mode::BEAT_7K;
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_normal(42)));
+        let mut model = make_test_model(&mode, vec![tl]);
+
+        let mut base = PatternModifierBase::with_player(0);
+        let _random = lane_shuffle_modify(
+            &mut base,
+            &mut model,
+            false,
+            false,
+            |_keys, _model, _seed| vec![-1, -2, -3, -4, -5, -6, -7, -8],
+        );
+
+        // Should not panic; negative values fall back to identity mapping.
+        // Lane 0 should keep its original note (identity fallback).
+        assert_eq!(model.timelines[0].note(0).unwrap().wav(), 42);
+    }
+
+    #[test]
+    fn out_of_range_random_value_falls_back_to_identity() {
+        // If random values exceed lane count, they must not cause
+        // out-of-bounds panics on notes/hnotes/consumed vectors.
+        let mode = Mode::BEAT_7K;
+        let mut tl = TimeLine::new(0.0, 0, 8);
+        tl.set_note(0, Some(Note::new_normal(99)));
+        let mut model = make_test_model(&mode, vec![tl]);
+
+        let mut base = PatternModifierBase::with_player(0);
+        let _random = lane_shuffle_modify(
+            &mut base,
+            &mut model,
+            false,
+            false,
+            |_keys, _model, _seed| vec![100, 200, 300, 400, 500, 600, 700, 800],
+        );
+
+        // All values out of range -> all fall back to identity.
+        assert_eq!(model.timelines[0].note(0).unwrap().wav(), 99);
     }
 }
 
