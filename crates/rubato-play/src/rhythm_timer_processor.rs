@@ -53,8 +53,14 @@ impl RhythmTimerProcessor {
                     while j <= next_section_line_section {
                         if last || j != next_section_line_section {
                             let mut prev_index = i;
-                            while timelines[prev_index].section() - section_line_section < j {
+                            while prev_index < timelines.len()
+                                && timelines[prev_index].section() - section_line_section < j
+                            {
                                 prev_index += 1;
+                            }
+                            // Clamp to valid range if we overshot
+                            if prev_index >= timelines.len() {
+                                prev_index = timelines.len() - 1;
                             }
                             prev_index = prev_index.saturating_sub(1);
                             let bpm = timelines[prev_index].bpm;
@@ -151,5 +157,33 @@ mod tests {
             })
         }));
         assert!(result.is_ok(), "should not panic with extreme BPM");
+    }
+
+    /// Regression: prev_index while-loop must not go out of bounds when float
+    /// rounding causes the section difference to never reach the target j value.
+    /// This constructs a model where quarter-note scanning could overshoot
+    /// timelines.len() without the bounds check.
+    #[test]
+    fn quarter_note_prev_index_does_not_overflow() {
+        use bms_model::time_line::TimeLine;
+
+        let mut model = BMSModel::default();
+        // Create two section-line timelines at section 0.0 and 1.0
+        let mut tl0 = TimeLine::new(0.0, 0, 1);
+        tl0.section_line = true;
+        tl0.bpm = 120.0;
+        let mut tl1 = TimeLine::new(1.0, 500_000, 1);
+        tl1.section_line = true;
+        tl1.bpm = 120.0;
+        model.timelines = vec![tl0, tl1];
+
+        // Should not panic even with quarter-note time enabled
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            RhythmTimerProcessor::new(&model, true);
+        }));
+        assert!(
+            result.is_ok(),
+            "quarter-note construction should not panic on out-of-bounds"
+        );
     }
 }

@@ -473,7 +473,9 @@ impl InternetRankingTargetProperty {
                             idx
                         }
                         IRTarget::Rank => (value.min(total) - 1).max(0),
-                        IRTarget::RankRate => (total as i64 * value as i64 / 100) as i32,
+                        IRTarget::RankRate => ((total as i64 * value as i64 / 100) as i32)
+                            .min(total - 1)
+                            .max(0),
                     };
                     if let Some(ir_score) = ranking.score(target_index) {
                         let exscore = ir_score.exscore();
@@ -629,7 +631,10 @@ impl InternetRankingTargetProperty {
             }
             IRTarget::RankRate => {
                 // top value% rank index (matches Java: totalPlayer * value / 100)
-                (total as i64 * self.value as i64 / 100) as i32
+                // Clamp to valid 0-indexed range to prevent OOB when value==100
+                ((total as i64 * self.value as i64 / 100) as i32)
+                    .min(total - 1)
+                    .max(0)
             }
         }
     }
@@ -1114,6 +1119,60 @@ mod tests {
         assert!(
             prop.ir_result_rx.is_none(),
             "receiver should be consumed after receiving"
+        );
+    }
+
+    /// Regression: IRTarget::RankRate with value=100 must not produce an
+    /// out-of-bounds index (total_player() when array is 0-indexed).
+    /// The clamp to (total - 1).max(0) prevents ranking.score(total) returning None.
+    #[test]
+    fn test_ir_rankrate_100_percent_does_not_oob() {
+        use std::sync::Arc;
+
+        // Create 5 scores so total_player = 5
+        let scores: Vec<rubato_ir::ir_score_data::IRScoreData> = (0..5)
+            .map(|i| {
+                let mut sd = ScoreData::default();
+                sd.player = format!("Player{}", i);
+                sd.judge_counts.epg = 100 - i * 10;
+                rubato_ir::ir_score_data::IRScoreData::new(&sd)
+            })
+            .collect();
+
+        let conn: Arc<dyn rubato_ir::ir_connection::IRConnection + Send + Sync> =
+            Arc::new(MockIRConnection {
+                scores: scores.clone(),
+            });
+        let chart = rubato_ir::ir_chart_data::IRChartData::default();
+
+        // value=100 => total*100/100 = total = 5, which is OOB for 0..5
+        let mut prop = InternetRankingTargetProperty::new(IRTarget::RankRate, 100);
+        prop.initiate_load(conn, chart, None, IRTarget::RankRate, 100);
+
+        // Wait for background thread
+        let mut received = false;
+        for _ in 0..100 {
+            if let Some(ref rx) = prop.ir_result_rx {
+                match rx.try_recv() {
+                    Ok(result) => {
+                        prop.target_score = result;
+                        prop.ir_result_rx = None;
+                        received = true;
+                        break;
+                    }
+                    Err(std::sync::mpsc::TryRecvError::Empty) => {
+                        std::thread::sleep(std::time::Duration::from_millis(10));
+                    }
+                    Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
+                }
+            }
+        }
+
+        assert!(received, "should receive async result");
+        // Should resolve to a valid player, not "NO DATA" (which would happen on OOB)
+        assert_ne!(
+            prop.target_score.player, "NO DATA",
+            "100% rate should resolve to last-place score, not OOB"
         );
     }
 }

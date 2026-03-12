@@ -146,6 +146,10 @@ impl LaneProperty {
 
         let key = mode.key() as usize;
         let player_count = mode.player() as usize;
+        debug_assert!(
+            player_count > 0 && key.is_multiple_of(player_count),
+            "key ({key}) must be evenly divisible by player_count ({player_count})"
+        );
         let lane_to_player: Vec<i32> = (0..key)
             .map(|i| (i / (key / player_count)) as i32)
             .collect();
@@ -471,5 +475,32 @@ mod tests {
         let lp2 = lp.clone();
         assert_eq!(lp.key_lane_assign(), lp2.key_lane_assign());
         assert_eq!(lp.lane_player(), lp2.lane_player());
+    }
+
+    /// Regression: verify that key % player_count == 0 holds for all Mode variants,
+    /// ensuring the lane_to_player division never panics.
+    #[test]
+    fn all_modes_satisfy_lane_to_player_invariant() {
+        let modes = [
+            Mode::BEAT_5K,
+            Mode::BEAT_7K,
+            Mode::BEAT_10K,
+            Mode::BEAT_14K,
+            Mode::POPN_5K,
+            Mode::POPN_9K,
+            Mode::KEYBOARD_24K,
+            Mode::KEYBOARD_24K_DOUBLE,
+        ];
+        for mode in &modes {
+            let key = mode.key() as usize;
+            let player_count = mode.player() as usize;
+            assert!(
+                player_count > 0 && key.is_multiple_of(player_count),
+                "Mode {:?}: key={key} is not evenly divisible by player_count={player_count}",
+                mode
+            );
+            // Also verify construction succeeds
+            let _lp = LaneProperty::new(mode);
+        }
     }
 }
