@@ -209,6 +209,8 @@ impl JudgeManager {
         self.prevmtime = mtime;
 
         // --- Key press/release processing ---
+        let mjudge_scratch = self.smjudge.clone();
+        let mjudge_note = self.nmjudge.clone();
         for key in 0..self.keyassign.len() {
             let lane = self.keyassign[key];
             if lane == -1 {
@@ -275,15 +277,15 @@ impl JudgeManager {
                 } else {
                     // No LN processing - find target note
                     let mjudge = if sc >= 0 {
-                        self.smjudge.clone()
+                        &mjudge_scratch
                     } else {
-                        self.nmjudge.clone()
+                        &mjudge_note
                     };
                     self.lane_states[lane_idx].reset();
                     let mut tnote: Option<usize> = None;
                     let mut best_judge: i32 = 0;
                     self.multi_bad.clear();
-                    self.multi_bad.set_judge(&mjudge);
+                    self.multi_bad.set_judge(mjudge);
 
                     // Scan notes for best match
                     while let Some(note_idx) = self.lane_states[lane_idx].note() {
@@ -310,7 +312,7 @@ impl JudgeManager {
                                 notes[note_idx].time_us,
                                 self.note_states[note_idx].state,
                                 pmtime,
-                                &mjudge,
+                                mjudge,
                             )
                         {
                             let note_state = self.note_states[note_idx].state;
@@ -588,12 +590,14 @@ impl JudgeManager {
         }
 
         // --- Miss POOR and LN end processing ---
+        let mjudge_scratch = self.smjudge.clone();
+        let mjudge_note = self.nmjudge.clone();
         for lane_idx in 0..lane_count {
             let sc = self.lane_states[lane_idx].sckey;
             let mjudge = if sc >= 0 {
-                self.smjudge.clone()
+                &mjudge_scratch
             } else {
-                self.nmjudge.clone()
+                &mjudge_note
             };
             let releasemargin = if sc >= 0 {
                 self.sreleasemargin
