@@ -500,7 +500,8 @@ impl NoMurioshiRandomizer {
                     );
                     random_map.extend(remaining);
 
-                    // Apply permutation
+                    // Update note timestamps before applying permutation
+                    self.time_state.update_note_time(tl, &random_map);
                     return self.apply_permutation(tl, random_map);
                 }
             } else {

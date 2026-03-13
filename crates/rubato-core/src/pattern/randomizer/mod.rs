@@ -950,6 +950,53 @@ mod tests {
     }
 
     #[test]
+    fn no_murioshi_early_return_updates_note_time() {
+        // Regression: the early-return path in NoMurioshiRandomizer::permutate()
+        // (candidate2 empty) must call update_note_time() so subsequent timelines
+        // compute renda_lane from fresh timestamps, not stale ones.
+        let lanes: Vec<i32> = (0..7).collect();
+        let mut r = NoMurioshiRandomizer::new(100_000); // large threshold
+        r.base.mode = Some(Mode::BEAT_7K);
+        r.base.set_modify_lanes(&lanes);
+        r.time_state.init_lanes(&lanes);
+        r.base.set_random_seed(42);
+
+        // Set all lanes as "recently played" (within threshold but distinct from
+        // the timeline's milli_time) so candidate2 becomes empty, triggering the
+        // early-return path. Use 400 while the timeline will be at milli_time=500.
+        let stale_time: i64 = 400;
+        for &lane in &lanes {
+            r.time_state.last_note_time.insert(lane, stale_time);
+        }
+
+        // Create a timeline with 3 notes (note_count in 3..7 to set flag=true)
+        let tl_milli: i64 = 500;
+        let mut tl = TimeLine::new(0.0, tl_milli * 1000, 7); // milli_time = 500
+        tl.set_note(0, Some(Note::new_normal(1)));
+        tl.set_note(1, Some(Note::new_normal(2)));
+        tl.set_note(2, Some(Note::new_normal(3)));
+
+        let _perm = r.permutate(&mut tl);
+
+        // After the fix, update_note_time should have updated last_note_time
+        // entries for the mapped destination lanes to the current milli_time (500).
+        // Without the fix, all entries remain at stale_time (400).
+        let updated_count = r
+            .time_state
+            .last_note_time
+            .values()
+            .filter(|&&t| t == tl_milli)
+            .count();
+        assert!(
+            updated_count >= 3,
+            "Expected at least 3 lanes updated to milli_time {}, but only {} were. \
+             The early-return path likely skipped update_note_time().",
+            tl_milli,
+            updated_count,
+        );
+    }
+
+    #[test]
     fn spiral_randomizer_empty_modify_lanes_no_panic() {
         // set_modify_lanes with empty slice sets cycle = 0
         let config = PlayerConfig::default();
