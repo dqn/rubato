@@ -125,6 +125,7 @@ impl UpdateBar {
                     "{} has already been added",
                     data.metadata.full_title()
                 ));
+                return;
             }
             ImGuiNotify::info(&format!(
                 "Added {} to stream request list",
