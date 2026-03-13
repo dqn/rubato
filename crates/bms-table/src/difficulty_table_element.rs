@@ -173,11 +173,8 @@ impl DifficultyTableElement {
 
     pub fn set_values(&mut self, values: &HashMap<String, Value>) {
         self.element.set_values(values);
-        let statevalue: i32 = 0;
-        self.state = statevalue;
-
-        let evalvalue: i32 = 0;
-        self.eval = evalvalue;
+        self.state = values.get("state").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+        self.eval = values.get("eval").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
 
         let level = values.get("level");
         self.set_level(level.map(value_to_string).as_deref().or(Some("")));
@@ -228,5 +225,78 @@ fn value_to_string(v: &Value) -> String {
         Value::String(s) => s.clone(),
         Value::Null => String::new(),
         other => other.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn set_values_reads_state_from_hashmap() {
+        let mut dte = DifficultyTableElement::new();
+        let mut values = HashMap::new();
+        values.insert("state".to_string(), Value::Number(3.into()));
+        dte.set_values(&values);
+        assert_eq!(dte.state, 3);
+    }
+
+    #[test]
+    fn set_values_reads_eval_from_hashmap() {
+        let mut dte = DifficultyTableElement::new();
+        let mut values = HashMap::new();
+        values.insert("eval".to_string(), Value::Number(5.into()));
+        dte.set_values(&values);
+        assert_eq!(dte.eval, 5);
+    }
+
+    #[test]
+    fn set_values_defaults_state_and_eval_to_zero_when_missing() {
+        let mut dte = DifficultyTableElement::new();
+        dte.state = 99;
+        dte.eval = 99;
+        let values = HashMap::new();
+        dte.set_values(&values);
+        assert_eq!(dte.state, 0);
+        assert_eq!(dte.eval, 0);
+    }
+
+    #[test]
+    fn set_values_reads_level_and_other_fields() {
+        let mut dte = DifficultyTableElement::new();
+        let mut values = HashMap::new();
+        values.insert("level".to_string(), Value::String("★12".to_string()));
+        values.insert("name_diff".to_string(), Value::String("artist".to_string()));
+        values.insert(
+            "comment".to_string(),
+            Value::String("good chart".to_string()),
+        );
+        values.insert("tag".to_string(), Value::String("info tag".to_string()));
+        values.insert("proposer".to_string(), Value::String("someone".to_string()));
+        values.insert("state".to_string(), Value::Number(2.into()));
+        values.insert("eval".to_string(), Value::Number(4.into()));
+        dte.set_values(&values);
+        assert_eq!(dte.level, "★12");
+        assert_eq!(dte.append_artist(), "artist");
+        assert_eq!(dte.comment(), "good chart");
+        assert_eq!(dte.information(), "info tag");
+        assert_eq!(dte.proposer(), "someone");
+        assert_eq!(dte.state, 2);
+        assert_eq!(dte.eval, 4);
+    }
+
+    #[test]
+    fn values_roundtrip_preserves_state_and_eval() {
+        let mut dte = DifficultyTableElement::new();
+        let mut input = HashMap::new();
+        input.insert("state".to_string(), Value::Number(STATE_VOTE.into()));
+        input.insert("eval".to_string(), Value::Number(7.into()));
+        dte.set_values(&input);
+        let output = dte.values();
+        assert_eq!(
+            output.get("state").and_then(|v| v.as_i64()),
+            Some(STATE_VOTE as i64)
+        );
+        assert_eq!(output.get("eval").and_then(|v| v.as_i64()), Some(7));
     }
 }
