@@ -138,60 +138,94 @@ impl MiscSettingMenu {
                 ui.separator();
 
                 // Lane cover / Hidden / Lift / Constant settings
+                let mut dirty = false;
+
                 let mut lift_enabled = *ENABLE_LIFT.lock().expect("ENABLE_LIFT lock poisoned");
-                ui.checkbox(&mut lift_enabled, "Enable Lift");
-                *ENABLE_LIFT.lock().expect("ENABLE_LIFT lock poisoned") = lift_enabled;
+                if ui.checkbox(&mut lift_enabled, "Enable Lift").changed() {
+                    *ENABLE_LIFT.lock().expect("ENABLE_LIFT lock poisoned") = lift_enabled;
+                    dirty = true;
+                }
                 if lift_enabled {
                     let mut lift_val = *LIFT_VALUE.lock().expect("LIFT_VALUE lock poisoned");
-                    ui.add(egui::Slider::new(&mut lift_val, 0..=1000).text("Lift"));
-                    *LIFT_VALUE.lock().expect("LIFT_VALUE lock poisoned") = lift_val;
+                    if ui
+                        .add(egui::Slider::new(&mut lift_val, 0..=1000).text("Lift"))
+                        .changed()
+                    {
+                        *LIFT_VALUE.lock().expect("LIFT_VALUE lock poisoned") = lift_val;
+                        dirty = true;
+                    }
                 }
 
                 let mut hidden_enabled =
                     *ENABLE_HIDDEN.lock().expect("ENABLE_HIDDEN lock poisoned");
-                ui.checkbox(&mut hidden_enabled, "Enable Hidden");
-                *ENABLE_HIDDEN.lock().expect("ENABLE_HIDDEN lock poisoned") = hidden_enabled;
+                if ui.checkbox(&mut hidden_enabled, "Enable Hidden").changed() {
+                    *ENABLE_HIDDEN.lock().expect("ENABLE_HIDDEN lock poisoned") = hidden_enabled;
+                    dirty = true;
+                }
                 if hidden_enabled {
                     let mut hidden_val = *HIDDEN_VALUE.lock().expect("HIDDEN_VALUE lock poisoned");
-                    ui.add(egui::Slider::new(&mut hidden_val, 0..=1000).text("Hidden"));
-                    *HIDDEN_VALUE.lock().expect("HIDDEN_VALUE lock poisoned") = hidden_val;
+                    if ui
+                        .add(egui::Slider::new(&mut hidden_val, 0..=1000).text("Hidden"))
+                        .changed()
+                    {
+                        *HIDDEN_VALUE.lock().expect("HIDDEN_VALUE lock poisoned") = hidden_val;
+                        dirty = true;
+                    }
                 }
 
                 let mut lc_enabled = *ENABLE_LANECOVER
                     .lock()
                     .expect("ENABLE_LANECOVER lock poisoned");
-                ui.checkbox(&mut lc_enabled, "Enable Lane Cover");
-                *ENABLE_LANECOVER
-                    .lock()
-                    .expect("ENABLE_LANECOVER lock poisoned") = lc_enabled;
+                if ui.checkbox(&mut lc_enabled, "Enable Lane Cover").changed() {
+                    *ENABLE_LANECOVER
+                        .lock()
+                        .expect("ENABLE_LANECOVER lock poisoned") = lc_enabled;
+                    dirty = true;
+                }
                 if lc_enabled {
                     let mut lc_val = *LANECOVER_VALUE
                         .lock()
                         .expect("LANECOVER_VALUE lock poisoned");
-                    ui.add(egui::Slider::new(&mut lc_val, 0..=1000).text("Lane Cover"));
-                    *LANECOVER_VALUE
-                        .lock()
-                        .expect("LANECOVER_VALUE lock poisoned") = lc_val;
+                    if ui
+                        .add(egui::Slider::new(&mut lc_val, 0..=1000).text("Lane Cover"))
+                        .changed()
+                    {
+                        *LANECOVER_VALUE
+                            .lock()
+                            .expect("LANECOVER_VALUE lock poisoned") = lc_val;
+                        dirty = true;
+                    }
                 }
 
                 let mut constant = *ENABLE_CONSTANT
                     .lock()
                     .expect("ENABLE_CONSTANT lock poisoned");
-                ui.checkbox(&mut constant, "Enable Constant");
-                *ENABLE_CONSTANT
-                    .lock()
-                    .expect("ENABLE_CONSTANT lock poisoned") = constant;
+                if ui.checkbox(&mut constant, "Enable Constant").changed() {
+                    *ENABLE_CONSTANT
+                        .lock()
+                        .expect("ENABLE_CONSTANT lock poisoned") = constant;
+                    dirty = true;
+                }
                 if constant {
                     let mut constant_val =
                         *CONSTANT_VALUE.lock().expect("CONSTANT_VALUE lock poisoned");
-                    ui.add(
-                        egui::Slider::new(&mut constant_val, 0..=5000).text("Fade-in Time (ms)"),
-                    );
-                    *CONSTANT_VALUE.lock().expect("CONSTANT_VALUE lock poisoned") = constant_val;
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut constant_val, 0..=5000)
+                                .text("Fade-in Time (ms)"),
+                        )
+                        .changed()
+                    {
+                        *CONSTANT_VALUE.lock().expect("CONSTANT_VALUE lock poisoned") =
+                            constant_val;
+                        dirty = true;
+                    }
                 }
 
-                // Flush UI state back to PlayerConfig and command queue
-                flush_play_config();
+                // Flush UI state back to PlayerConfig and command queue only when changed
+                if dirty {
+                    flush_play_config();
+                }
 
                 ui.separator();
 
