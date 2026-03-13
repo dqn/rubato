@@ -96,7 +96,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     }
 
     fn gauge_value(&self) -> f32 {
-        shared_render_context::gauge_value(self.data)
+        shared_render_context::gauge_value(self.resource)
     }
 
     fn gauge_type(&self) -> i32 {

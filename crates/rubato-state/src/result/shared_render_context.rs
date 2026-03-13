@@ -20,9 +20,11 @@ pub fn replay_index_from_event_id(event_id: i32) -> Option<usize> {
 }
 
 /// Shared gauge_value computation for result render contexts.
+/// Returns the gauge fill percentage from the GrooveGauge (0.0-100.0),
+/// matching the play screen's behavior.
 #[inline]
-pub fn gauge_value(data: &AbstractResultData) -> f32 {
-    data.oldscore.play_option.gauge as f32 / 100.0
+pub fn gauge_value(resource: &PlayerResource) -> f32 {
+    resource.groove_gauge().map_or(0.0, |g| g.value())
 }
 
 /// Shared gauge_type accessor.
@@ -332,5 +334,215 @@ mod tests {
 
         data.ranking_offset = 5;
         assert_eq!(ranking_offset(&data), 5);
+    }
+
+    // ============================================================
+    // gauge_value tests
+    // ============================================================
+
+    /// Mock PlayerResourceAccess that holds an optional GrooveGauge
+    /// for testing gauge_value().
+    struct GaugeTestResourceAccess {
+        config: rubato_types::config::Config,
+        player_config: rubato_types::player_config::PlayerConfig,
+        groove_gauge: Option<rubato_types::groove_gauge::GrooveGauge>,
+        course_gauge: Vec<Vec<Vec<f32>>>,
+        course_replay: Vec<rubato_core::replay_data::ReplayData>,
+    }
+
+    impl rubato_types::player_resource_access::PlayerResourceAccess for GaugeTestResourceAccess {
+        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
+            self
+        }
+        fn config(&self) -> &rubato_types::config::Config {
+            &self.config
+        }
+        fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
+            &self.player_config
+        }
+        fn score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
+            None
+        }
+        fn rival_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
+            None
+        }
+        fn target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
+            None
+        }
+        fn course_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
+            None
+        }
+        fn set_course_score_data(&mut self, _score: rubato_core::score_data::ScoreData) {}
+        fn songdata(&self) -> Option<&rubato_types::song_data::SongData> {
+            None
+        }
+        fn songdata_mut(&mut self) -> Option<&mut rubato_types::song_data::SongData> {
+            None
+        }
+        fn set_songdata(&mut self, _data: Option<rubato_types::song_data::SongData>) {}
+        fn replay_data(&self) -> Option<&rubato_core::replay_data::ReplayData> {
+            None
+        }
+        fn replay_data_mut(&mut self) -> Option<&mut rubato_core::replay_data::ReplayData> {
+            None
+        }
+        fn course_replay(&self) -> &[rubato_core::replay_data::ReplayData] {
+            &self.course_replay
+        }
+        fn add_course_replay(&mut self, rd: rubato_core::replay_data::ReplayData) {
+            self.course_replay.push(rd);
+        }
+        fn course_data(&self) -> Option<&rubato_types::course_data::CourseData> {
+            None
+        }
+        fn course_index(&self) -> usize {
+            0
+        }
+        fn next_course(&mut self) -> bool {
+            false
+        }
+        fn constraint(&self) -> Vec<rubato_types::course_data::CourseDataConstraint> {
+            vec![]
+        }
+        fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
+            None
+        }
+        fn groove_gauge(&self) -> Option<&rubato_types::groove_gauge::GrooveGauge> {
+            self.groove_gauge.as_ref()
+        }
+        fn course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
+            &self.course_gauge
+        }
+        fn add_course_gauge(&mut self, gauge: Vec<Vec<f32>>) {
+            self.course_gauge.push(gauge);
+        }
+        fn course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
+            &mut self.course_gauge
+        }
+        fn score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
+            None
+        }
+        fn course_replay_mut(&mut self) -> &mut Vec<rubato_core::replay_data::ReplayData> {
+            &mut self.course_replay
+        }
+        fn maxcombo(&self) -> i32 {
+            0
+        }
+        fn org_gauge_option(&self) -> i32 {
+            0
+        }
+        fn set_org_gauge_option(&mut self, _val: i32) {}
+        fn assist(&self) -> i32 {
+            0
+        }
+        fn is_update_score(&self) -> bool {
+            false
+        }
+        fn is_update_course_score(&self) -> bool {
+            false
+        }
+        fn is_force_no_ir_send(&self) -> bool {
+            false
+        }
+        fn is_freq_on(&self) -> bool {
+            false
+        }
+        fn reverse_lookup_data(&self) -> Vec<String> {
+            vec![]
+        }
+        fn reverse_lookup_levels(&self) -> Vec<String> {
+            vec![]
+        }
+        fn clear(&mut self) {}
+        fn set_bms_file(
+            &mut self,
+            _path: &std::path::Path,
+            _mode_type: i32,
+            _mode_id: i32,
+        ) -> bool {
+            false
+        }
+        fn set_course_bms_files(&mut self, _files: &[std::path::PathBuf]) -> bool {
+            false
+        }
+        fn set_tablename(&mut self, _name: &str) {}
+        fn set_tablelevel(&mut self, _level: &str) {}
+        fn set_rival_score_data_option(
+            &mut self,
+            _score: Option<rubato_core::score_data::ScoreData>,
+        ) {
+        }
+        fn set_chart_option_data(&mut self, _option: Option<rubato_core::replay_data::ReplayData>) {
+        }
+        fn set_course_data(&mut self, _data: rubato_types::course_data::CourseData) {}
+        fn clear_course_data(&mut self) {}
+        fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
+            vec![]
+        }
+    }
+
+    fn make_resource_with_gauge(gauge_value: f32) -> PlayerResource {
+        use rubato_types::gauge_property::GaugeProperty;
+
+        let model = bms_model::bms_model::BMSModel::new();
+        let mut gg = rubato_types::groove_gauge::GrooveGauge::new(
+            &model,
+            rubato_types::groove_gauge::NORMAL,
+            &GaugeProperty::SevenKeys,
+        );
+        gg.set_value(gauge_value);
+        PlayerResource::new(
+            Box::new(GaugeTestResourceAccess {
+                config: rubato_types::config::Config::default(),
+                player_config: rubato_types::player_config::PlayerConfig::default(),
+                groove_gauge: Some(gg),
+                course_gauge: Vec::new(),
+                course_replay: Vec::new(),
+            }),
+            crate::result::stubs::BMSPlayerMode::new(crate::result::stubs::BMSPlayerModeType::Play),
+        )
+    }
+
+    #[test]
+    fn test_gauge_value_returns_fill_percentage_not_type() {
+        // Regression: gauge_value must return the gauge fill percentage
+        // from GrooveGauge, not the gauge type from PlayOption.gauge.
+        let resource = make_resource_with_gauge(75.0);
+        let value = gauge_value(&resource);
+        // Should return the fill percentage (75.0), not a gauge type / 100
+        assert!(
+            (value - 75.0).abs() < 0.01,
+            "gauge_value should return fill percentage 75.0, got {}",
+            value,
+        );
+    }
+
+    #[test]
+    fn test_gauge_value_zero_when_no_groove_gauge() {
+        let resource = PlayerResource::default();
+        assert_eq!(gauge_value(&resource), 0.0);
+    }
+
+    #[test]
+    fn test_gauge_value_full_gauge() {
+        let resource = make_resource_with_gauge(100.0);
+        let value = gauge_value(&resource);
+        assert!(
+            (value - 100.0).abs() < 0.01,
+            "gauge_value should return 100.0 for full gauge, got {}",
+            value,
+        );
+    }
+
+    #[test]
+    fn test_gauge_value_at_minimum() {
+        // NORMAL gauge has min=2.0, so set_value(2.0) stays at minimum.
+        let resource = make_resource_with_gauge(2.0);
+        let value = gauge_value(&resource);
+        assert!(
+            (value - 2.0).abs() < 0.01,
+            "gauge_value should return 2.0 at minimum gauge, got {}",
+            value,
+        );
     }
 }
