@@ -386,7 +386,7 @@ impl MainController {
 
         // Stop input polling
         self.input_poll_quit
-            .store(true, std::sync::atomic::Ordering::Relaxed);
+            .store(true, std::sync::atomic::Ordering::Release);
 
         // Dispose input processor
         if let Some(ref mut input) = self.input {
