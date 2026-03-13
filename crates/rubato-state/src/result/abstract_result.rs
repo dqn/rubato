@@ -213,8 +213,8 @@ impl AbstractResultData {
     }
 
     #[allow(dead_code)] // visibility intentionally reduced; callers will be wired later
-    pub(crate) fn replay_status(&self, index: usize) -> ReplayStatus {
-        self.save_replay[index]
+    pub(crate) fn replay_status(&self, index: usize) -> Option<ReplayStatus> {
+        self.save_replay.get(index).copied()
     }
 
     pub fn gauge_type(&self) -> i32 {
