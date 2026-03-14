@@ -180,7 +180,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
     fn mode_image_index(&self) -> Option<i32> {
         let current_mode = self.selector.config.mode();
         let mode_index = MODE.iter().position(|mode| mode.as_ref() == current_mode)?;
-        let lr2_mode_indices = [0, 2, 4, 5, 1, 3];
+        // LR2 skin image order: 0=all, 1=5k, 2=7k, 3=10k, 4=14k, 5=9k, 6=24k, 7=24kDP
+        // Maps MODE[i] -> LR2 image index for all 8 MODE entries.
+        let lr2_mode_indices = [0, 2, 4, 5, 1, 3, 6, 7];
         Some(
             lr2_mode_indices
                 .get(mode_index)

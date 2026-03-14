@@ -227,7 +227,7 @@ impl MusicSelector {
                 opt.randomoption = rival.play_option.option % 10;
                 opt.randomoption2 = (rival.play_option.option / 10) % 10;
                 opt.doubleoption = rival.play_option.option / 100;
-                if rival.play_option.seed == -1 {
+                if rival.play_option.seed < 0 {
                     opt.randomoptionseed = -1;
                     opt.randomoption2seed = -1;
                 } else {
@@ -372,6 +372,7 @@ impl MusicSelector {
         // Determine target index from the IR target type
         let target_index = if let Some(suffix) = targetid.strip_prefix("IR_NEXT_")
             && let Ok(value) = suffix.parse::<i32>()
+            && value >= 1
         {
             // On the select screen, nowscore is the local best score
             let nowscore = self
