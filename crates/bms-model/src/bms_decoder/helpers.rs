@@ -22,7 +22,7 @@ pub(super) fn matches_reserve_word(line: &str, s: &str) -> bool {
     for i in 0..len {
         let c = line_bytes[i + 1];
         let c2 = s_bytes[i];
-        if c != c2 && c != c2 + 32 {
+        if !c.eq_ignore_ascii_case(&c2) {
             return false;
         }
     }

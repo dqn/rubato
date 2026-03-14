@@ -908,6 +908,15 @@ mod tests {
         assert!(!matches_reserve_word("#", "BPM"));
     }
 
+    #[test]
+    fn matches_reserve_word_non_letter_no_false_positive() {
+        // '@' (64) + 32 = '`' (96). The old manual ASCII shift would falsely
+        // match '`' against '@'. eq_ignore_ascii_case must reject this.
+        assert!(!matches_reserve_word("#`", "@"));
+        // Also verify that non-letter uppercase chars don't match their +32 counterpart
+        assert!(!matches_reserve_word("#[", ";"));
+    }
+
     // --- BMSDecoder construction tests ---
 
     #[test]

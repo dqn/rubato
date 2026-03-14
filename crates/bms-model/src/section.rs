@@ -1400,6 +1400,9 @@ fn split_data(line: &str, base: i32, log: &mut Vec<DecodeLog>, title: &str) -> V
     let bytes = line.as_bytes();
     let mut result = Vec::with_capacity(split);
     for i in 0..split {
+        if findex + i * 2 + 1 >= bytes.len() {
+            break;
+        }
         let c1 = bytes[findex + i * 2] as char;
         let c2 = bytes[findex + i * 2 + 1] as char;
         let val = if base == 62 {
@@ -1432,6 +1435,9 @@ fn process_data_collect(
     let bytes = line.as_bytes();
     let mut results = Vec::new();
     for i in 0..split {
+        if findex + i * 2 + 1 >= bytes.len() {
+            break;
+        }
         let c1 = bytes[findex + i * 2] as char;
         let c2 = bytes[findex + i * 2 + 1] as char;
         let result = if base == 62 {
@@ -1623,5 +1629,40 @@ mod tests {
             .get(&f64_to_key(section0))
             .expect("entry should exist");
         assert_eq!(entry.time, 42.0, "existing entry should not be modified");
+    }
+
+    // --- split_data / process_data_collect bounds-check tests ---
+
+    #[test]
+    fn split_data_odd_length_no_panic() {
+        // Data portion "0A1" has 3 chars (odd), so split = 1 but the second
+        // pair byte would be out of bounds without the guard.
+        let mut log = Vec::new();
+        let result = split_data("#000XX:0A1", 36, &mut log, "test");
+        // Should parse the one complete pair "0A" = 10, and skip the trailing byte
+        assert_eq!(result, vec![10]);
+    }
+
+    #[test]
+    fn process_data_collect_odd_length_no_panic() {
+        let mut log = Vec::new();
+        let result = process_data_collect("#000XX:0A1", 36, &mut log, "test");
+        // "0A" = 10 > 0, position 0/1 = 0.0
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].1, 10);
+    }
+
+    #[test]
+    fn split_data_empty_data_portion() {
+        let mut log = Vec::new();
+        let result = split_data("#000XX:", 36, &mut log, "test");
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn process_data_collect_empty_data_portion() {
+        let mut log = Vec::new();
+        let result = process_data_collect("#000XX:", 36, &mut log, "test");
+        assert!(result.is_empty());
     }
 }
