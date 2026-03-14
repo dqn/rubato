@@ -1,6 +1,7 @@
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 
 use crate::select::bar::bar::Bar;
 use crate::select::bar::hash_bar::HashBar;
@@ -197,19 +198,27 @@ impl UpdateBar {
     /// (channel disconnected).
     pub fn run_loop(&mut self, receiver: mpsc::Receiver<String>) {
         loop {
-            // Use try_recv to drain all pending messages without blocking
-            match receiver.try_recv() {
+            // Block until a message arrives or timeout elapses.
+            // This avoids busy-spinning (previously try_recv + 10ms sleep).
+            match receiver.recv_timeout(Duration::from_millis(100)) {
                 Ok(sha256) => {
                     self.stack.push(sha256.clone());
                     self.add_message(&sha256);
                 }
-                Err(mpsc::TryRecvError::Empty) => {
-                    // No pending messages
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    // No messages within timeout, loop back
+                    continue;
                 }
-                Err(mpsc::TryRecvError::Disconnected) => {
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
                     // Sender dropped (dispose called), exit the loop
                     break;
                 }
+            }
+
+            // Drain any additional pending messages without blocking
+            while let Ok(sha256) = receiver.try_recv() {
+                self.stack.push(sha256.clone());
+                self.add_message(&sha256);
             }
 
             if !self.stack.is_empty() {
@@ -220,9 +229,6 @@ impl UpdateBar {
                     break;
                 }
             }
-
-            // Small sleep to avoid busy-waiting
-            thread::sleep(std::time::Duration::from_millis(10));
         }
     }
 }
