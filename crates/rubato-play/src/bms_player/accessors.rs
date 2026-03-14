@@ -59,6 +59,7 @@ impl BMSPlayer {
             initial_course_maxcombo: 0,
             orgmode: None,
             lnmode_override: None,
+            judge_note_to_model: Vec::new(),
         }
     }
 
