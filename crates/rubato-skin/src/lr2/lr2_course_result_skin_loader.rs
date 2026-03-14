@@ -17,6 +17,8 @@ pub struct LR2CourseResultSkinLoaderState {
     pub gauge: Rectangle,
     pub gaugeobj: Option<SkinGaugeGraphObject>,
     pub noteobj: Option<SkinNoteDistributionGraph>,
+    /// Rank time (ms) parsed from STARTINPUT str[2]; controls score animation timing.
+    pub ranktime: i32,
 }
 
 impl LR2CourseResultSkinLoaderState {
@@ -26,6 +28,7 @@ impl LR2CourseResultSkinLoaderState {
             gauge: Rectangle::default(),
             gaugeobj: None,
             noteobj: None,
+            ranktime: 0,
         }
     }
 
@@ -33,8 +36,12 @@ impl LR2CourseResultSkinLoaderState {
     pub fn process_course_command(&mut self, cmd: &str, str_parts: &[String]) {
         match cmd {
             "STARTINPUT" => {
-                // skin.setInput(parseInt(str[1]))
-                // skin.setRankTime(parseInt(str[2]))
+                // Delegate input time to base CSV loader (same as non-result skins)
+                self.csv.process_csv_command(cmd, str_parts, None);
+                // Parse ranktime (course-result-skin-specific; controls score animation timing)
+                if str_parts.len() > 2 {
+                    self.ranktime = str_parts[2].trim().parse().unwrap_or(0);
+                }
             }
             "SRC_GAUGECHART_1P" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
@@ -98,6 +105,64 @@ impl LR2CourseResultSkinLoaderState {
                 self.csv.process_csv_command(cmd, str_parts, None);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_state() -> LR2CourseResultSkinLoaderState {
+        let src = Resolution {
+            width: 640.0,
+            height: 480.0,
+        };
+        let dst = Resolution {
+            width: 1280.0,
+            height: 960.0,
+        };
+        LR2CourseResultSkinLoaderState::new(src, dst, false, String::new())
+    }
+
+    fn str_vec(parts: &[&str]) -> Vec<String> {
+        parts.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn startinput_delegates_input_and_parses_ranktime() {
+        let mut state = make_state();
+        state.process_course_command("STARTINPUT", &str_vec(&["STARTINPUT", "1000", "500"]));
+        assert_eq!(state.csv.skin_input, Some(1000));
+        assert_eq!(state.ranktime, 500);
+    }
+
+    #[test]
+    fn startinput_missing_ranktime_defaults_to_zero() {
+        let mut state = make_state();
+        state.process_course_command("STARTINPUT", &str_vec(&["STARTINPUT", "1000"]));
+        assert_eq!(state.csv.skin_input, Some(1000));
+        assert_eq!(state.ranktime, 0);
+    }
+
+    #[test]
+    fn startinput_invalid_ranktime_defaults_to_zero() {
+        let mut state = make_state();
+        state.process_course_command("STARTINPUT", &str_vec(&["STARTINPUT", "1000", "abc"]));
+        assert_eq!(state.csv.skin_input, Some(1000));
+        assert_eq!(state.ranktime, 0);
+    }
+
+    #[test]
+    fn startinput_negative_ranktime() {
+        let mut state = make_state();
+        state.process_course_command("STARTINPUT", &str_vec(&["STARTINPUT", "1000", "-200"]));
+        assert_eq!(state.ranktime, -200);
+    }
+
+    #[test]
+    fn initial_ranktime_is_zero() {
+        let state = make_state();
+        assert_eq!(state.ranktime, 0);
     }
 }
 

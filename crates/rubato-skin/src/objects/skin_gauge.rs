@@ -119,10 +119,11 @@ impl SkinGauge {
             match self.animation_type {
                 ANIMATION_RANDOM => {
                     if self.atime < time {
-                        // Use time-based pseudo-random instead of Math.random()
-                        self.animation = ((time % (self.animation_range as i64 + 1)).unsigned_abs()
-                            % (self.animation_range as u64 + 1))
-                            as i32;
+                        // Java uses Math.random() for uniform random selection.
+                        // Use a lightweight hash of time for pseudo-random behavior
+                        // instead of sequential cycling (time % range).
+                        let hash = (time as u64).wrapping_mul(2654435761) >> 16;
+                        self.animation = (hash % (self.animation_range as u64 + 1)) as i32;
                         self.atime = time + self.duration;
                     }
                 }
@@ -811,6 +812,47 @@ mod tests {
             (gauge.value - 30.0).abs() < f32::EPSILON,
             "value should update each frame"
         );
+    }
+
+    /// Regression: ANIMATION_RANDOM should produce pseudo-random distribution,
+    /// not a sequential sweep. The old code used `time % (range + 1)` which
+    /// cycles 0,1,2,3,4,0,1,2,... Java uses Math.random().
+    #[test]
+    fn animation_random_is_not_sequential() {
+        let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
+        let mut gauge = SkinGauge::new(images, 0, 0, 10, ANIMATION_RANDOM, 9, 1);
+
+        let state = GaugeMockState {
+            gauge_value: 50.0,
+            gauge_type: 0,
+        };
+
+        // Collect animation values over 10 consecutive time steps.
+        // With sequential cycling (old bug), values would be 0,1,2,...,9.
+        // With hash-based pseudo-random, the distribution should differ.
+        let mut values = Vec::new();
+        for t in 0..10 {
+            gauge.atime = 0; // force update each step
+            gauge.prepare(t, &state);
+            values.push(gauge.animation);
+        }
+
+        // The hash-based output should NOT be the trivial sequential pattern.
+        let sequential: Vec<i32> = (0..10).collect();
+        assert_ne!(
+            values, sequential,
+            "ANIMATION_RANDOM should not produce sequential 0..9 pattern, got {:?}",
+            values
+        );
+
+        // All values should be within range [0, animation_range]
+        for &v in &values {
+            assert!(
+                v >= 0 && v <= 9,
+                "animation value {} out of range [0, 9]",
+                v
+            );
+        }
     }
 
     #[test]

@@ -127,6 +127,14 @@ impl SkinHidden {
                         let new_height = (img.region_height as f32
                             * (region.y + region.height - dl)
                             / region.height) as i32;
+                        // Update v2 proportionally before overwriting region_height.
+                        // Java's TextureRegion.setRegionHeight() recalculates v2
+                        // from the texture dimensions. We mirror that by scaling
+                        // the UV range (v..v2) proportionally to the height change.
+                        if img.region_height != 0 {
+                            img.v2 = img.v
+                                + (img.v2 - img.v) * new_height as f32 / img.region_height as f32;
+                        }
                         img.region_height = new_height;
                     }
                     self.previous_y = region.y;
@@ -197,5 +205,100 @@ mod tests {
         let hidden = SkinHidden::new_with_int_timer(images, 0, 0);
         // With cycle=0, image index should always be 0
         assert_eq!(hidden.cycle, 0);
+    }
+
+    /// Regression: trimming region_height must also update v2 proportionally.
+    /// Without the v2 update, the sprite samples the full original UV range
+    /// and stretches it instead of cropping.
+    #[test]
+    fn trim_updates_v2_proportionally() {
+        use crate::stubs::Rectangle;
+
+        let mut img = TextureRegion::new();
+        img.region_height = 100;
+        img.v = 0.0;
+        img.v2 = 1.0;
+
+        let images = vec![img];
+        let mut hidden = SkinHidden::new_with_int_timer(images, 0, 0);
+        hidden.set_disapear_line(150.0);
+        hidden.is_disapear_line_link_lift = false;
+
+        // Set up draw region: y=100, height=100 => top=200
+        // disappear line = 150, so visible portion = 200 - 150 = 50
+        // ratio = 50 / 100 = 0.5
+        hidden.data.region = Rectangle::new(0.0, 100.0, 100.0, 100.0);
+
+        // Trigger the trimming path
+        let mut renderer = SkinObjectRenderer::new();
+        hidden.draw(&mut renderer);
+
+        // After trimming, region_height should be 50 and v2 should be 0.5
+        assert_eq!(hidden.trimmed_images[0].region_height, 50);
+        assert!(
+            (hidden.trimmed_images[0].v2 - 0.5).abs() < 1e-5,
+            "v2 should be proportionally updated, got {}",
+            hidden.trimmed_images[0].v2
+        );
+    }
+
+    /// Regression: trimming with non-zero v start must preserve proportionality.
+    #[test]
+    fn trim_updates_v2_with_nonzero_v_start() {
+        use crate::stubs::Rectangle;
+
+        let mut img = TextureRegion::new();
+        img.region_height = 200;
+        img.v = 0.25; // starts at 25% of texture
+        img.v2 = 0.75; // ends at 75% of texture (span = 0.5)
+
+        let images = vec![img];
+        let mut hidden = SkinHidden::new_with_int_timer(images, 0, 0);
+        hidden.set_disapear_line(50.0);
+        hidden.is_disapear_line_link_lift = false;
+
+        // region: y=0, height=100 => top=100
+        // disappear line = 50, visible = 100 - 50 = 50
+        // ratio = (200 * 50 / 100) / 200 = 0.5 of region_height
+        // new v2 = 0.25 + (0.75 - 0.25) * 100 / 200 = 0.25 + 0.25 = 0.5
+        hidden.data.region = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+
+        let mut renderer = SkinObjectRenderer::new();
+        hidden.draw(&mut renderer);
+
+        let new_height = hidden.trimmed_images[0].region_height;
+        // new_height = (200 * 50/100) = 100
+        assert_eq!(new_height, 100);
+
+        // v2 = 0.25 + (0.75 - 0.25) * 100 / 200 = 0.5
+        let expected_v2 = 0.25 + (0.75 - 0.25) * 100.0 / 200.0;
+        assert!(
+            (hidden.trimmed_images[0].v2 - expected_v2).abs() < 1e-5,
+            "v2 should be {}, got {}",
+            expected_v2,
+            hidden.trimmed_images[0].v2
+        );
+    }
+
+    /// Regression: trimming with zero region_height must not panic (div by zero guard).
+    #[test]
+    fn trim_zero_region_height_no_panic() {
+        use crate::stubs::Rectangle;
+
+        let mut img = TextureRegion::new();
+        img.region_height = 0;
+        img.v = 0.0;
+        img.v2 = 1.0;
+
+        let images = vec![img];
+        let mut hidden = SkinHidden::new_with_int_timer(images, 0, 0);
+        hidden.set_disapear_line(50.0);
+        hidden.is_disapear_line_link_lift = false;
+
+        hidden.data.region = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+
+        let mut renderer = SkinObjectRenderer::new();
+        // Should not panic
+        hidden.draw(&mut renderer);
     }
 }
