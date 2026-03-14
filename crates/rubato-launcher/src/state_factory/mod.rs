@@ -243,6 +243,16 @@ impl StateFactory for LauncherStateFactory {
                     player.set_constraints(res.constraint());
                 }
 
+                // Wire initial course combo from PlayerResource for course mode.
+                // Java: judge.init() checks resource.getGauge() != null, then sets
+                // coursecombo/coursemaxcombo from resource. The gauge is non-null on
+                // subsequent course stages (after the first play stores gauge data).
+                if let Some(res) = resource
+                    && res.gauge().is_some()
+                {
+                    player.set_initial_course_combo(res.combo, res.maxcombo);
+                }
+
                 // Wire guide SE from player config
                 player.set_guide_se(controller.player_config().display_settings.is_guide_se);
 

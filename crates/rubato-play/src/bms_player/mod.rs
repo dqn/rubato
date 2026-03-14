@@ -382,6 +382,12 @@ pub struct BMSPlayer {
     freq_on: bool,
     /// Whether IR score submission should be blocked (set when freq != 100 in practice mode).
     force_no_ir_send: bool,
+    /// Initial course combo carried from a previous course stage (via PlayerResource).
+    /// Set by the caller before create(); applied to JudgeManager in rebuild_judge_system().
+    /// Java: judge.init() calls setCourseCombo(resource.getCombo()) when resource.getGauge() != null.
+    initial_course_combo: i32,
+    /// Initial course max combo carried from a previous course stage (via PlayerResource).
+    initial_course_maxcombo: i32,
 }
 
 mod accessors;

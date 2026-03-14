@@ -55,6 +55,8 @@ impl BMSPlayer {
             device_type: rubato_input::bms_player_input_device::DeviceType::Keyboard,
             freq_on: false,
             force_no_ir_send: false,
+            initial_course_combo: 0,
+            initial_course_maxcombo: 0,
         }
     }
 
@@ -149,6 +151,18 @@ impl BMSPlayer {
     /// Set whether we are in course mode.
     pub fn set_course_mode(&mut self, is_course: bool) {
         self.is_course_mode = is_course;
+    }
+
+    /// Set the initial course combo/maxcombo carried from a previous course stage.
+    ///
+    /// In Java, `judge.init()` calls `setCourseCombo(resource.getCombo())` and
+    /// `setCourseMaxcombo(resource.getMaxcombo())` when `resource.getGauge() != null`
+    /// (meaning we are on a subsequent stage of a course, not the first one).
+    /// The caller should read combo/maxcombo from PlayerResource and pass them here
+    /// before create() is called.
+    pub fn set_initial_course_combo(&mut self, combo: i32, maxcombo: i32) {
+        self.initial_course_combo = combo;
+        self.initial_course_maxcombo = maxcombo;
     }
 
     /// Queue a system sound to be played by MainController.

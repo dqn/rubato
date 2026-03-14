@@ -1117,5 +1117,21 @@ impl BMSPlayer {
             judgeregion,
         };
         self.judge = JudgeManager::from_config(&judge_config);
+
+        // Carry course combo from previous stage.
+        // Translated from: JudgeManager.init() Java lines 211-214
+        // ```java
+        // FloatArray[] f = resource.getGauge();
+        // if (f != null) {
+        //     setCourseCombo(resource.getCombo());
+        //     setCourseMaxcombo(resource.getMaxcombo());
+        // }
+        // ```
+        // The initial_course_combo fields are only non-zero when the caller
+        // detected a non-null gauge on PlayerResource (i.e., not the first course stage).
+        if self.initial_course_combo != 0 || self.initial_course_maxcombo != 0 {
+            self.judge.set_course_combo(self.initial_course_combo);
+            self.judge.set_course_maxcombo(self.initial_course_maxcombo);
+        }
     }
 }

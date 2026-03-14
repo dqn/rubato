@@ -224,6 +224,22 @@ impl JudgeManager {
         self.coursemaxcombo
     }
 
+    /// Set the initial course combo carried from a previous course stage.
+    ///
+    /// Translated from: JudgeManager.setCourseCombo(int combo) (Java line 782)
+    /// Called in judge.init() when resource.getGauge() != null (i.e., not the first course stage).
+    pub fn set_course_combo(&mut self, combo: i32) {
+        self.coursecombo = combo;
+    }
+
+    /// Set the initial course max combo carried from a previous course stage.
+    ///
+    /// Translated from: JudgeManager.setCourseMaxcombo(int combo) (Java line 790)
+    /// Called in judge.init() when resource.getGauge() != null (i.e., not the first course stage).
+    pub fn set_course_maxcombo(&mut self, maxcombo: i32) {
+        self.coursemaxcombo = maxcombo;
+    }
+
     pub fn judge_time_region(&self, lane: usize) -> &[[i64; 2]] {
         if lane < self.lane_states.len() && self.lane_states[lane].sckey >= 0 {
             &self.smjudge
