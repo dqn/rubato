@@ -223,6 +223,10 @@ impl BytePCM {
         let start = ((starttime * self.sample_rate as i64 / 1000000) * self.channels as i64) as i32;
         let mut length =
             ((duration * self.sample_rate as i64 / 1000000) * self.channels as i64) as i32;
+        // Clamp length so self.start + start + length doesn't exceed sample.len().
+        // Malformed PCM data may have start + len > sample.len().
+        let max_length = (self.sample.len() as i32) - self.start - start;
+        length = length.min(max_length).max(0);
         while length > self.channels {
             let frame_start = (self.start + start + length - self.channels) as usize;
             let frame_end = (self.start + start + length) as usize;
@@ -574,5 +578,27 @@ mod tests {
         let result = pcm.change_frequency(0.5);
         assert_eq!(result.sample.len(), 0);
         assert_eq!(result.len, 0);
+    }
+
+    #[test]
+    fn slice_malformed_start_plus_len_exceeds_sample_len() {
+        // Regression: if start + len > sample.len(), the trailing-silence trim
+        // must not panic with an out-of-bounds index.
+        let pcm = BytePCM::new(1, 44100, 0, 100, vec![100, 50, 25, 10]);
+        let result = pcm.slice(0, 0);
+        assert!(result.is_some());
+        let sliced = result.unwrap();
+        assert!(
+            (sliced.start + sliced.len) as usize <= sliced.sample.len(),
+            "sliced region must not exceed sample buffer"
+        );
+    }
+
+    #[test]
+    fn slice_malformed_start_exceeds_sample_len() {
+        // start beyond sample buffer -- should return None (length clamped to 0)
+        let pcm = BytePCM::new(1, 44100, 10, 4, vec![100, 50]);
+        let result = pcm.slice(0, 0);
+        assert!(result.is_none());
     }
 }

@@ -78,7 +78,10 @@ impl ShortPCM {
                         pcm[i * 4 + 2],
                         pcm[i * 4 + 3],
                     ]);
-                    s[i] = (f * i16::MAX as f32) as i16;
+                    // Java: (short)(float * Short.MAX_VALUE) truncates via int then
+                    // narrows to short (keeping low 16 bits). Rust `as i16` saturates,
+                    // so go through i32 first to match Java truncation semantics.
+                    s[i] = (f * i16::MAX as f32) as i32 as i16;
                 }
                 sample = s;
             }
@@ -224,6 +227,10 @@ impl ShortPCM {
         let start = ((starttime * self.sample_rate as i64 / 1000000) * self.channels as i64) as i32;
         let mut length =
             ((duration * self.sample_rate as i64 / 1000000) * self.channels as i64) as i32;
+        // Clamp length so self.start + start + length doesn't exceed sample.len().
+        // Malformed PCM data may have start + len > sample.len().
+        let max_length = (self.sample.len() as i32) - self.start - start;
+        length = length.min(max_length).max(0);
         while length > self.channels {
             let frame_start = (self.start + start + length - self.channels) as usize;
             let frame_end = (self.start + start + length) as usize;
@@ -564,6 +571,59 @@ mod tests {
         let pcm = ShortPCM::new(1, 44100, 0, 4, vec![500, 250, 100, 50]);
         let result = pcm.slice(-1000, 0);
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn slice_malformed_start_plus_len_exceeds_sample_len() {
+        // Regression: if start + len > sample.len(), the trailing-silence trim
+        // must not panic with an out-of-bounds index. The length should be
+        // clamped to fit within the actual sample buffer.
+        let pcm = ShortPCM::new(1, 44100, 0, 100, vec![500, 250, 100, 50]);
+        // len=100 but sample only has 4 elements -- must not panic
+        let result = pcm.slice(0, 0);
+        assert!(result.is_some());
+        let sliced = result.unwrap();
+        // Clamped length should not exceed sample.len() - start
+        assert!(
+            (sliced.start + sliced.len) as usize <= sliced.sample.len(),
+            "sliced region must not exceed sample buffer"
+        );
+    }
+
+    #[test]
+    fn slice_malformed_start_exceeds_sample_len() {
+        // start beyond sample buffer -- should return None (length clamped to 0)
+        let pcm = ShortPCM::new(1, 44100, 10, 4, vec![500, 250]);
+        let result = pcm.slice(0, 0);
+        // With start=10 and only 2 samples, max_length is negative -> clamped to 0
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn load_pcm_32bit_float_truncation_matches_java() {
+        // Regression: Java (short)(float * Short.MAX_VALUE) truncates via int then
+        // narrows to short. Rust `as i16` saturates. Values outside i16 range must
+        // wrap like Java, not saturate.
+        //
+        // Example: 1.5 * 32767 = 49150.5 -> (int)49150 -> (short)49150
+        // As i16: 49150 wraps because 49150 > 32767.
+        // Java: (short)49150 = 49150 - 65536 = -16386
+        // Rust saturating: 32767 (WRONG)
+        // Rust via i32: (49150.5 as i32) = 49150, then as i16 = -16386 (CORRECT)
+        let val = 1.5f32;
+        let bytes = val.to_le_bytes();
+        let loader = crate::pcm::PCMLoader {
+            pcm_data: bytes.to_vec(),
+            channels: 1,
+            sample_rate: 44100,
+            bits_per_sample: 32,
+            block_align: 4,
+        };
+        let pcm = ShortPCM::load_pcm(&loader).unwrap();
+        let expected = (val * i16::MAX as f32) as i32 as i16;
+        assert_eq!(pcm.sample[0], expected);
+        // Verify it's NOT the saturated value
+        assert_ne!(pcm.sample[0], i16::MAX);
     }
 }
 
