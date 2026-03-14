@@ -297,10 +297,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             312 => self.selected_song_data().map_or(0, |s| s.chart.length),
             1163 => self
                 .selected_song_data()
-                .map_or(0, |s| s.chart.length / 60000),
+                .map_or(0, |s| s.chart.length.max(0) / 60000),
             1164 => self
                 .selected_song_data()
-                .map_or(0, |s| (s.chart.length % 60000) / 1000),
+                .map_or(0, |s| (s.chart.length.max(0) % 60000) / 1000),
             // Total notes
             350 => self.selected_song_data().map_or(0, |s| s.chart.notes),
             // System time

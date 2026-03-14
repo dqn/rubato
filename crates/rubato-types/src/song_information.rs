@@ -434,6 +434,24 @@ fn parse_int36(s: &str, index: usize) -> Result<i32, ()> {
     Ok(result_high + result_low)
 }
 
+impl SongInformation {
+    /// Re-populate `#[serde(skip)]` cached vectors from their encoded string
+    /// counterparts.  Must be called after JSON deserialization so that
+    /// `distribution_values`, `speedchange_values`, and `lanenotes_values`
+    /// are usable.
+    pub fn decode_cached_fields(&mut self) {
+        if self.distribution_values.is_empty() && !self.distribution.is_empty() {
+            self.set_distribution(self.distribution.clone());
+        }
+        if self.speedchange_values.is_empty() && !self.speedchange.is_empty() {
+            self.set_speedchange(self.speedchange.clone());
+        }
+        if self.lanenotes_values.is_empty() && !self.lanenotes.is_empty() {
+            self.set_lanenotes(self.lanenotes.clone());
+        }
+    }
+}
+
 impl Validatable for SongInformation {
     fn validate(&mut self) -> bool {
         if self.sha256.len() != 64 {
@@ -450,6 +468,7 @@ impl Validatable for SongInformation {
         {
             return false;
         }
+        self.decode_cached_fields();
         true
     }
 }
@@ -501,5 +520,65 @@ mod tests {
         let model = bms_model::bms_model::BMSModel::new();
         let info = SongInformation::from_model(&model);
         assert_eq!(info.enddensity, 0.0);
+    }
+
+    #[test]
+    fn validate_repopulates_cached_fields_from_encoded_strings() {
+        // Build a SongInformation with encoded strings but empty cached vecs
+        // (simulates JSON deserialization where serde(skip) fields are empty).
+        let model = model_with_notes(200.0, &[0, 1000, 2000]);
+        let original = SongInformation::from_model(&model);
+
+        // Simulate deserialization: keep encoded strings, clear cached vecs.
+        let mut deserialized = SongInformation {
+            sha256: "a".repeat(64),
+            distribution: original.distribution.clone(),
+            distribution_values: vec![],
+            speedchange: original.speedchange.clone(),
+            speedchange_values: vec![],
+            lanenotes: original.lanenotes.clone(),
+            lanenotes_values: vec![],
+            ..original.clone()
+        };
+
+        assert!(deserialized.distribution_values.is_empty());
+        assert!(deserialized.speedchange_values.is_empty());
+        assert!(deserialized.lanenotes_values.is_empty());
+
+        let valid = deserialized.validate();
+        assert!(valid);
+
+        // After validate(), cached fields should be repopulated from encoded strings.
+        assert_eq!(
+            deserialized.distribution_values.len(),
+            original.distribution_values.len()
+        );
+        assert_eq!(
+            deserialized.speedchange_values.len(),
+            original.speedchange_values.len()
+        );
+        assert_eq!(
+            deserialized.lanenotes_values.len(),
+            original.lanenotes_values.len()
+        );
+    }
+
+    #[test]
+    fn validate_repopulates_empty_encoded_strings_gracefully() {
+        // When encoded strings are empty, validate should still succeed
+        // and cached vecs should remain empty (no panic).
+        let mut info = SongInformation {
+            sha256: "b".repeat(64),
+            distribution: String::new(),
+            speedchange: String::new(),
+            lanenotes: String::new(),
+            ..Default::default()
+        };
+
+        let valid = info.validate();
+        assert!(valid);
+        assert!(info.distribution_values.is_empty());
+        assert!(info.speedchange_values.is_empty());
+        assert!(info.lanenotes_values.is_empty());
     }
 }

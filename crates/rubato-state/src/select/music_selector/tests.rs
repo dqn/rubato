@@ -1950,3 +1950,40 @@ fn integer_value_92_mainbpm_returns_min_when_no_song_selected() {
 
     assert_eq!(ctx.integer_value(92), i32::MIN);
 }
+
+#[test]
+fn integer_value_1163_1164_clamp_negative_length() {
+    // chart.length can be negative from corrupted data; duration must not go negative.
+    let mut selector = MusicSelector::new();
+    let mut song = make_song_data("neg-len", Some("/test/neg-len.bms"));
+    song.chart.length = -120000; // corrupted negative value
+    set_selected_bar(&mut selector, Bar::Song(Box::new(SongBar::new(song))));
+
+    let mut timer = TimerManager::new();
+    let ctx = SelectSkinContext {
+        timer: &mut timer,
+        selector: &mut selector,
+    };
+
+    // Minutes and seconds must both be non-negative.
+    assert_eq!(ctx.integer_value(1163), 0, "minutes must be non-negative");
+    assert_eq!(ctx.integer_value(1164), 0, "seconds must be non-negative");
+}
+
+#[test]
+fn integer_value_1163_1164_positive_length_unchanged() {
+    // Normal positive length should work as before.
+    let mut selector = MusicSelector::new();
+    let mut song = make_song_data("pos-len", Some("/test/pos-len.bms"));
+    song.chart.length = 125000; // 2 minutes, 5 seconds
+    set_selected_bar(&mut selector, Bar::Song(Box::new(SongBar::new(song))));
+
+    let mut timer = TimerManager::new();
+    let ctx = SelectSkinContext {
+        timer: &mut timer,
+        selector: &mut selector,
+    };
+
+    assert_eq!(ctx.integer_value(1163), 2, "minutes");
+    assert_eq!(ctx.integer_value(1164), 5, "seconds");
+}
