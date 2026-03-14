@@ -22,6 +22,8 @@ pub struct LR2ResultSkinLoaderState {
     pub noteobj: Option<SkinNoteDistributionGraph>,
     pub bpmgraphobj: Option<SkinBPMGraph>,
     pub timinggraphobj: Option<SkinTimingDistributionGraph>,
+    /// Rank time (ms) parsed from STARTINPUT str[2]; controls score animation timing.
+    pub ranktime: i32,
 }
 
 /// Get a trimmed string from str_parts at the given index, or empty string if out of bounds.
@@ -36,6 +38,7 @@ impl LR2ResultSkinLoaderState {
             noteobj: None,
             bpmgraphobj: None,
             timinggraphobj: None,
+            ranktime: 0,
         }
     }
 
@@ -43,8 +46,12 @@ impl LR2ResultSkinLoaderState {
     pub fn process_result_command(&mut self, cmd: &str, str_parts: &[String]) {
         match cmd {
             "STARTINPUT" => {
-                // skin.setInput(parseInt(str[1]))
-                // skin.setRankTime(parseInt(str[2]))
+                // Delegate input time to base CSV loader (same as non-result skins)
+                self.csv.process_csv_command(cmd, str_parts, None);
+                // Parse ranktime (result-skin-specific; controls score animation timing)
+                if str_parts.len() > 2 {
+                    self.ranktime = str_parts[2].trim().parse().unwrap_or(0);
+                }
             }
             "SRC_GAUGECHART_1P" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
