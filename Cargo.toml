@@ -159,7 +159,7 @@ egui-wgpu = "0.31"
 eframe = { version = "0.31", default-features = false, features = ["wgpu"] }
 
 # Video decoding
-ffmpeg-next = "7"
+ffmpeg-next = "8"
 
 # Gamepad input
 gilrs = "0.11"

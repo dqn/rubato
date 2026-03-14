@@ -3,12 +3,36 @@
 //! Translated from: FFmpegProcessor.java (inner class MovieSeekThread)
 //! In Rust, std::thread + mpsc channels replace Java Thread + LinkedBlockingDeque.
 
+#[cfg(feature = "ffmpeg")]
+use std::sync::Arc;
+
 use crate::Texture;
 use crate::bga::movie_processor::MovieProcessor;
 
 /// Timer observer for movie playback
 pub trait TimerObserver {
     fn micro_time(&self) -> i64;
+}
+
+/// Commands sent to the background movie seek thread.
+/// Translated from: FFmpegProcessor.Command enum in Java
+#[cfg(feature = "ffmpeg")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Command {
+    Play,
+    Loop,
+    Stop,
+    Halt,
+}
+
+/// Status of the FFmpeg processor texture.
+/// Translated from: FFmpegProcessor texture state in Java
+#[cfg(feature = "ffmpeg")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ProcessorStatus {
+    TextureInactive,
+    TextureActive,
+    Disposed,
 }
 
 // ============================================================
@@ -458,13 +482,14 @@ impl MovieProcessor for FFmpegProcessor {
                     .time
                     .store(time, std::sync::atomic::Ordering::Release);
                 // Check for new decoded frame
-                if let Ok(mut s) = handle.shared.lock() {
+                if let Ok(s) = handle.shared.lock() {
                     if s.status == ProcessorStatus::TextureActive {
                         if let Some(ref frame) = s.frame {
                             self._showing_tex = Some(Texture {
                                 width: frame.width as i32,
                                 height: frame.height as i32,
                                 disposed: false,
+                                rgba_data: Some(Arc::new(frame.pixels.clone())),
                                 ..Default::default()
                             });
                         }
