@@ -190,10 +190,12 @@ impl MainController {
             {
                 self.resource = Some(*core_resource);
             }
-            old_state.shutdown();
+            // Flush pending audio commands before shutdown so they operate on
+            // live state rather than potentially disposed resources.
             if let Some(ref mut audio) = self.audio {
                 old_state.sync_audio(audio.as_mut());
             }
+            old_state.shutdown();
             // setSkin(null) equivalent
             old_state.main_state_data_mut().skin = None;
         }

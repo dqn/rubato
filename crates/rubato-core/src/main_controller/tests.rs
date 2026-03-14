@@ -1063,7 +1063,9 @@ fn render_invokes_state_sync_audio_when_audio_driver_exists() {
 }
 
 #[test]
-fn state_transition_flushes_audio_after_shutdown() {
+fn state_transition_flushes_audio_before_shutdown() {
+    // sync_audio must be called BEFORE shutdown() so pending audio commands
+    // operate on live state, not potentially disposed resources.
     let render_sync_calls = Arc::new(Mutex::new(0));
     let shutdown_sync_calls = Arc::new(Mutex::new(0));
     let config = Config::default();
@@ -1078,7 +1080,10 @@ fn state_transition_flushes_audio_after_shutdown() {
     mc.change_state(MainStateType::MusicSelect);
     mc.change_state(MainStateType::Config);
 
-    assert_eq!(*shutdown_sync_calls.lock().expect("mutex poisoned"), 1);
+    // sync_audio fires before shutdown, so was_shutdown is still false
+    // and the call increments render_sync_calls (not shutdown_sync_calls).
+    assert_eq!(*render_sync_calls.lock().expect("mutex poisoned"), 1);
+    assert_eq!(*shutdown_sync_calls.lock().expect("mutex poisoned"), 0);
 }
 
 // --- Phase 24f: update_main_state_listener tests ---
