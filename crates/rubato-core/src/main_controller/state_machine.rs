@@ -196,7 +196,10 @@ impl MainController {
                 old_state.sync_audio(audio.as_mut());
             }
             old_state.shutdown();
-            // setSkin(null) equivalent
+            // setSkin(null) equivalent — Java's setSkin(null) calls skin.dispose() first
+            if let Some(ref mut skin) = old_state.main_state_data_mut().skin {
+                skin.dispose_skin();
+            }
             old_state.main_state_data_mut().skin = None;
         }
 

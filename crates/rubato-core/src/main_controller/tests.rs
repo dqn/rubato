@@ -1739,3 +1739,160 @@ fn update_play_config_command_forwards_to_current_state() {
     );
     assert!(updates[0].1.enablelift, "forwarded enablelift should match");
 }
+
+// --- Skin dispose_skin() called before dropping tests ---
+
+/// A SkinDrawable mock that records dispose_skin() calls via shared counter.
+struct DisposableSkinDrawable {
+    dispose_count: Arc<Mutex<usize>>,
+}
+
+impl DisposableSkinDrawable {
+    fn new(dispose_count: Arc<Mutex<usize>>) -> Self {
+        Self { dispose_count }
+    }
+}
+
+impl SkinDrawable for DisposableSkinDrawable {
+    fn draw_all_objects_timed(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+    ) {
+    }
+    fn update_custom_objects_timed(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+    ) {
+    }
+    fn mouse_pressed_at(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        _button: i32,
+        _x: i32,
+        _y: i32,
+    ) {
+    }
+    fn mouse_dragged_at(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        _button: i32,
+        _x: i32,
+        _y: i32,
+    ) {
+    }
+    fn prepare_skin(&mut self) {}
+    fn dispose_skin(&mut self) {
+        *self.dispose_count.lock().unwrap() += 1;
+    }
+    fn fadeout(&self) -> i32 {
+        0
+    }
+    fn input(&self) -> i32 {
+        0
+    }
+    fn scene(&self) -> i32 {
+        0
+    }
+    fn get_width(&self) -> f32 {
+        1280.0
+    }
+    fn get_height(&self) -> f32 {
+        720.0
+    }
+    fn swap_sprite_batch(&mut self, _batch: &mut SpriteBatch) {}
+}
+
+/// A state factory that produces states carrying a disposable skin.
+struct DisposableSkinStateFactory {
+    dispose_count: Arc<Mutex<usize>>,
+}
+
+impl StateFactory for DisposableSkinStateFactory {
+    fn create_state(
+        &self,
+        state_type: MainStateType,
+        _controller: &mut MainController,
+    ) -> Option<StateCreateResult> {
+        let skin = Box::new(DisposableSkinDrawable::new(self.dispose_count.clone()));
+        let mut data = MainStateData::new(TimerManager::new());
+        data.skin = Some(skin);
+        let state = DisposableSkinState {
+            state_data: data,
+            state_type,
+        };
+        Some(StateCreateResult {
+            state: Box::new(state),
+            target_score: None,
+        })
+    }
+}
+
+struct DisposableSkinState {
+    state_data: MainStateData,
+    state_type: MainStateType,
+}
+
+impl MainState for DisposableSkinState {
+    fn state_type(&self) -> Option<MainStateType> {
+        Some(self.state_type)
+    }
+    fn main_state_data(&self) -> &MainStateData {
+        &self.state_data
+    }
+    fn main_state_data_mut(&mut self) -> &mut MainStateData {
+        &mut self.state_data
+    }
+    fn create(&mut self) {}
+    fn render(&mut self) {}
+}
+
+#[test]
+fn transition_to_state_calls_dispose_skin_on_old_state() {
+    let dispose_count = Arc::new(Mutex::new(0usize));
+    let config = Config::default();
+    let player = PlayerConfig::default();
+    let mut mc = MainController::new(None, config, player, None, false);
+    mc.set_state_factory(Box::new(DisposableSkinStateFactory {
+        dispose_count: dispose_count.clone(),
+    }));
+
+    // Transition to first state (creates skin via factory)
+    mc.change_state(MainStateType::Config);
+    assert_eq!(
+        *dispose_count.lock().unwrap(),
+        0,
+        "no dispose on first transition"
+    );
+
+    // Transition to second state -- old state's skin.dispose_skin() must be called
+    mc.change_state(MainStateType::SkinConfig);
+    assert_eq!(
+        *dispose_count.lock().unwrap(),
+        1,
+        "dispose_skin must be called on old state's skin during transition"
+    );
+}
+
+#[test]
+fn default_mainstate_dispose_calls_dispose_skin() {
+    let dispose_count = Arc::new(Mutex::new(0usize));
+    let skin = Box::new(DisposableSkinDrawable::new(dispose_count.clone()));
+    let mut state = DisposableSkinState {
+        state_data: MainStateData::new(TimerManager::new()),
+        state_type: MainStateType::Config,
+    };
+    state.state_data.skin = Some(skin);
+
+    // Call the default MainState::dispose()
+    state.dispose();
+
+    assert_eq!(
+        *dispose_count.lock().unwrap(),
+        1,
+        "default dispose() must call dispose_skin() before dropping skin"
+    );
+    assert!(
+        state.state_data.skin.is_none(),
+        "skin should be None after dispose()"
+    );
+}

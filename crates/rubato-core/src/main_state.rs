@@ -119,6 +119,10 @@ pub trait MainState {
 
     fn dispose(&mut self) {
         let data = self.main_state_data_mut();
+        // Java: Optional.ofNullable(skin).ifPresent(skin -> skin.dispose());
+        if let Some(ref mut skin) = data.skin {
+            skin.dispose_skin();
+        }
         data.skin = None;
         data.stage = None;
     }
