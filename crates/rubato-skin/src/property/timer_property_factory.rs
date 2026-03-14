@@ -21,23 +21,23 @@ pub struct TimerPropertyImpl {
 
 impl TimerProperty for TimerPropertyImpl {
     fn get_micro(&self, state: &dyn MainState) -> i64 {
-        state.timer().micro_timer(self.timer_id)
+        MainState::timer(state).micro_timer(self.timer_id)
     }
 
     fn get(&self, state: &dyn MainState) -> i64 {
-        state.timer().timer(self.timer_id)
+        MainState::timer(state).timer(self.timer_id)
     }
 
     fn now_time(&self, state: &dyn MainState) -> i64 {
-        state.timer().now_time_for(self.timer_id)
+        MainState::timer(state).now_time_for(self.timer_id)
     }
 
     fn is_on(&self, state: &dyn MainState) -> bool {
-        state.timer().is_timer_on(self.timer_id)
+        MainState::timer(state).is_timer_on(self.timer_id)
     }
 
     fn is_off(&self, state: &dyn MainState) -> bool {
-        !state.timer().is_timer_on(self.timer_id)
+        !MainState::timer(state).is_timer_on(self.timer_id)
     }
 
     fn get_timer_id(&self) -> i32 {

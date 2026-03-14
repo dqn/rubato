@@ -9,281 +9,72 @@ pub use crate::rendering_stubs::*;
 // ============================================================
 
 /// Stub for beatoraja.MainState
-pub trait MainState {
+///
+/// Extends `SkinRenderContext` (which extends `TimerAccess`) so that all
+/// property value, config access, event, gauge, judge, audio, and timer
+/// methods are inherited from `SkinRenderContext`.
+///
+/// Only methods that depend on skin-crate-local types (`MainController`,
+/// `PlayerResource`, `TextureRegion`) remain here.
+pub trait MainState: rubato_types::skin_render_context::SkinRenderContext {
     fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess;
-    fn get_offset_value(&self, id: i32) -> Option<&SkinOffset>;
     fn get_main(&self) -> &MainController;
     fn get_image(&self, id: i32) -> Option<TextureRegion>;
     fn get_resource(&self) -> &PlayerResource;
 
-    /// Returns the integer property value for the given ID.
-    /// Used by IntegerPropertyFactory delegate to look up pre-computed values.
-    fn integer_value(&self, _id: i32) -> i32 {
-        0
-    }
-
-    /// Returns the image-index property value for the given ID.
-    /// This is separate from `integer_value()` because some LR2 IDs collide
-    /// between numeric refs and image selector refs.
-    fn image_index_value(&self, id: i32) -> i32 {
-        self.integer_value(id)
-    }
-
-    /// Returns the string property value for the given ID.
-    /// Used by StringPropertyFactory delegate to look up pre-computed values.
-    fn string_value(&self, _id: i32) -> String {
-        String::new()
-    }
-
-    /// Returns the boolean property value for the given ID.
-    /// Used by BooleanPropertyFactory delegate to look up pre-computed values.
-    fn boolean_value(&self, _id: i32) -> bool {
-        false
-    }
-
-    /// Returns the float property value for the given ID.
-    /// Used by FloatPropertyFactory delegate to look up pre-computed values.
-    fn float_value(&self, _id: i32) -> f32 {
-        0.0
-    }
-
-    /// Sets the float property value for the given ID.
-    /// Used by FloatWriter delegate to write values back to state.
-    fn set_float_value(&mut self, _id: i32, _value: f32) {
-        // default no-op
-    }
-
-    // ============================================================
-    // Event-facing methods (Phase 41h)
-    // These provide mutable config access for EventFactory events.
-    // Default implementations log warnings; real implementations
-    // are provided by concrete MainState types (MusicSelector, etc.)
-    // ============================================================
-
-    /// Returns true if this state is a MusicSelector.
-    fn is_music_selector(&self) -> bool {
-        false
-    }
-
-    /// Returns true if this state is a result screen (MusicResult or CourseResult).
-    fn is_result_state(&self) -> bool {
-        false
-    }
-
-    /// Returns the timing distribution data for result screens.
-    /// Used by SkinTimingDistributionGraph to render the judge timing histogram.
-    fn get_timing_distribution(&self) -> Option<&TimingDistribution> {
-        None
-    }
-
-    /// Returns mutable reference to the player config.
-    /// Returns None if config is not available (e.g., stub state).
-    fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
-        None
-    }
-
-    /// Returns immutable reference to the player config.
-    /// Returns None if config is not available (e.g., stub state).
-    fn get_player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
-        None
-    }
-
-    /// Returns mutable reference to the global config.
-    /// Returns None if config is not available.
-    fn get_config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
-        None
-    }
-
-    /// Returns immutable reference to the global config.
-    fn get_config_ref(&self) -> Option<&rubato_types::config::Config> {
-        None
-    }
-
-    /// Returns mutable reference to the currently selected bar's PlayConfig.
-    /// Only available for MusicSelector; returns None for other states.
-    fn get_selected_play_config_mut(
-        &mut self,
-    ) -> Option<&mut rubato_types::play_config::PlayConfig> {
-        None
-    }
-
-    /// Returns immutable reference to the currently selected bar's PlayConfig.
-    fn get_selected_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
-        None
-    }
-
-    /// Returns the distribution data (lamps/ranks) for the currently selected directory bar.
-    /// Used by SkinDistributionGraph to render folder lamp/rank graphs.
-    /// Only meaningful for MusicSelector; returns None for other states.
-    fn get_distribution_data(&self) -> Option<rubato_types::distribution_data::DistributionData> {
-        None
-    }
-
-    /// Play the OPTION_CHANGE system sound.
-    fn play_option_change_sound(&mut self) {
-        // default no-op
-    }
-
-    /// Update the bar manager after a config change (e.g., mode filter, sort).
-    /// Only meaningful for MusicSelector.
-    fn update_bar_after_change(&mut self) {
-        // default no-op
-    }
-
-    /// Execute a custom event by ID with arguments.
-    /// Delegates to skin.executeCustomEvent(this, id, arg1, arg2) in Java.
-    /// Default no-op — real implementations live in concrete MainState types.
-    /// SkinRenderContext now carries this capability at the SkinDrawable level.
-    fn execute_event(&mut self, _id: i32, _arg1: i32, _arg2: i32) {
-        // default no-op
-    }
-
-    /// Change the application state (e.g., to CONFIG, SKINCONFIG).
-    /// Default no-op — real implementations live in concrete MainState types.
-    /// SkinRenderContext now carries this capability at the SkinDrawable level.
-    fn change_state(&mut self, _state_type: rubato_types::main_state_type::MainStateType) {
-        // default no-op
-    }
-
     /// Select a song with the given play mode.
     /// Only meaningful for MusicSelector.
+    /// Note: SkinRenderContext has `select_song_mode(event_id: i32)` with a different signature.
     fn select_song(&mut self, _mode: rubato_core::bms_player_mode::BMSPlayerMode) {
         // default no-op
     }
 
     // ============================================================
-    // Lua MainStateAccessor methods (Phase 45)
-    // These provide read access to score/judge/gauge data and
-    // write access to timers, volumes, audio, and events.
+    // Backward-compatibility shims (Phase 3b)
+    // These delegate to the renamed SkinRenderContext methods so that
+    // existing callers continue to compile until Phase 3c migrates them.
     // ============================================================
 
-    /// Returns the ScoreDataProperty for the current state.
-    /// Used by Lua rate/exscore/rate_best/exscore_best/rate_rival/exscore_rival functions.
-    fn score_data_property(&self) -> &rubato_core::score_data_property::ScoreDataProperty {
-        static DEFAULT: std::sync::OnceLock<rubato_core::score_data_property::ScoreDataProperty> =
-            std::sync::OnceLock::new();
-        DEFAULT.get_or_init(rubato_core::score_data_property::ScoreDataProperty::default)
-    }
-
-    /// Returns the total judge count for the given judge index (fast + slow).
-    /// Used by Lua `judge(id)` function.
-    fn judge_count(&self, _judge: i32, _fast: bool) -> i32 {
-        0
-    }
-
-    /// Returns the gauge value (0.0-1.0). Only meaningful for BMSPlayer states.
-    /// Used by Lua `gauge()` function.
+    /// Deprecated: use `SkinRenderContext::gauge_value()` instead.
     fn get_gauge_value(&self) -> f32 {
-        0.0
+        self.gauge_value()
     }
 
-    /// Returns the gauge type ID. Only meaningful for BMSPlayer states.
-    /// Used by Lua `gauge_type()` function.
-    fn gauge_type(&self) -> i32 {
-        0
+    /// Deprecated: use `SkinRenderContext::now_judge()` instead.
+    fn get_now_judge(&self, player: i32) -> i32 {
+        self.now_judge(player)
     }
 
-    /// Returns whether the chart's original mode differs from the current mode
-    /// (e.g. 7-key chart converted to 9-key via chart options).
-    /// Used by SkinGauge to adjust parts count for border alignment.
-    fn is_mode_changed(&self) -> bool {
-        false
+    /// Deprecated: use `SkinRenderContext::now_combo()` instead.
+    fn get_now_combo(&self, player: i32) -> i32 {
+        self.now_combo(player)
     }
 
-    /// Returns (border, max) for each gauge type.
-    /// Used by SkinGauge to adjust parts count so borders divide evenly.
-    fn gauge_element_borders(&self) -> Vec<(f32, f32)> {
-        Vec::new()
+    /// Deprecated: use `SkinRenderContext::player_config_ref()` instead.
+    fn get_player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
+        self.player_config_ref()
     }
 
-    /// Returns gauge history per gauge type for result screen gauge graph rendering.
-    /// Each inner Vec<f32> is the gauge value at each note timing.
-    fn gauge_history(&self) -> Option<&Vec<Vec<f32>>> {
-        None
+    /// Deprecated: use `SkinRenderContext::config_ref()` instead.
+    fn get_config_ref(&self) -> Option<&rubato_types::config::Config> {
+        self.config_ref()
     }
 
-    /// Returns course gauge history for course result screens.
-    /// Outer: stages, middle: gauge types, inner: gauge values.
-    fn course_gauge_history(&self) -> &[Vec<Vec<f32>>] {
-        &[]
+    /// Deprecated: use `SkinRenderContext::config_mut()` instead.
+    fn get_config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
+        self.config_mut()
     }
 
-    /// Returns the gauge border (clear threshold) and max values.
-    /// Returns (border, max) for the current groove gauge.
-    fn gauge_border_max(&self) -> Option<(f32, f32)> {
-        None
+    /// Deprecated: use `SkinRenderContext::selected_play_config_mut()` instead.
+    fn get_selected_play_config_mut(
+        &mut self,
+    ) -> Option<&mut rubato_types::play_config::PlayConfig> {
+        self.selected_play_config_mut()
     }
 
-    /// Returns the result screen gauge type (may differ from play gauge type).
-    fn result_gauge_type(&self) -> i32 {
-        self.gauge_type()
-    }
-
-    /// Returns true if this state is a BMSPlayer (gameplay state).
-    fn is_bms_player(&self) -> bool {
-        false
-    }
-
-    /// Returns the recent judge timing offsets (milliseconds).
-    /// 100-element circular buffer from JudgeManager.
-    fn recent_judges(&self) -> &[i64] {
-        &[]
-    }
-
-    /// Returns the current write index into the recent judges circular buffer.
-    fn recent_judges_index(&self) -> usize {
-        0
-    }
-
-    /// Returns the current judge type for the given player (1-indexed, 0 = no judge).
-    /// Used by SkinJudge to determine which judge image to display.
-    fn get_now_judge(&self, _player: i32) -> i32 {
-        0
-    }
-
-    /// Returns the current combo count for the given player.
-    /// Used by SkinJudge to display the combo number.
-    fn get_now_combo(&self, _player: i32) -> i32 {
-        0
-    }
-
-    /// Returns whether the current gauge is at max value.
-    /// Used by SkinJudge to display the MAX PG variant.
-    fn is_gauge_max(&self) -> bool {
-        false
-    }
-
-    /// Returns true if the media (audio/BGA) has finished loading.
-    /// Used by PracticeConfiguration to show the "PRESS 1KEY TO PLAY" prompt.
-    fn is_media_load_finished(&self) -> bool {
-        false
-    }
-
-    /// Returns true if this is a practice mode play.
-    /// Used by SkinBGA to decide whether to draw practice UI or BGA.
-    fn is_practice_mode(&self) -> bool {
-        false
-    }
-
-    /// Set a timer value by ID. Only writable timers (custom timers) are allowed.
-    /// Used by Lua `set_timer(id, value)` function.
-    /// Default no-op — SkinRenderContext now carries this capability.
-    fn set_timer_micro(&mut self, _timer_id: rubato_types::timer_id::TimerId, _micro_time: i64) {
-        // default no-op
-    }
-
-    /// Play an audio file at the given path with volume and loop flag.
-    /// Used by Lua `audio_play` and `audio_loop` functions.
-    /// Default no-op — SkinRenderContext now carries this capability.
-    fn audio_play(&mut self, _path: &str, _volume: f32, _is_loop: bool) {
-        // default no-op
-    }
-
-    /// Stop an audio file at the given path.
-    /// Used by Lua `audio_stop` function.
-    /// Default no-op — SkinRenderContext now carries this capability.
-    fn audio_stop(&mut self, _path: &str) {
-        // default no-op
+    /// Deprecated: use `SkinRenderContext::current_play_config_ref()` instead.
+    fn get_selected_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
+        self.current_play_config_ref()
     }
 }
 

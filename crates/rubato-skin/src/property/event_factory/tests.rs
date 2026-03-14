@@ -36,23 +36,28 @@ impl TestMainState {
     }
 }
 
-impl MainState for TestMainState {
-    fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
-        &self.timer
+impl rubato_types::timer_access::TimerAccess for TestMainState {
+    fn now_time(&self) -> i64 {
+        self.timer.now_time()
     }
-    fn get_offset_value(&self, _id: i32) -> Option<&SkinOffset> {
-        None
+    fn now_micro_time(&self) -> i64 {
+        self.timer.now_micro_time()
     }
-    fn get_main(&self) -> &MainController {
-        &self.main
+    fn micro_timer(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+        self.timer.micro_timer(timer_id)
     }
-    fn get_image(&self, _id: i32) -> Option<TextureRegion> {
-        None
+    fn timer(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+        self.timer.timer(timer_id)
     }
-    fn get_resource(&self) -> &PlayerResource {
-        &self.resource
+    fn now_time_for(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+        self.timer.now_time_for(timer_id)
     }
+    fn is_timer_on(&self, timer_id: rubato_types::timer_id::TimerId) -> bool {
+        self.timer.is_timer_on(timer_id)
+    }
+}
 
+impl rubato_types::skin_render_context::SkinRenderContext for TestMainState {
     fn is_music_selector(&self) -> bool {
         self.is_selector
     }
@@ -61,25 +66,23 @@ impl MainState for TestMainState {
         Some(&mut self.player_config)
     }
 
-    fn get_player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
+    fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         Some(&self.player_config)
     }
 
-    fn get_config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
+    fn config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
         Some(&mut self.config)
     }
 
-    fn get_config_ref(&self) -> Option<&rubato_types::config::Config> {
+    fn config_ref(&self) -> Option<&rubato_types::config::Config> {
         Some(&self.config)
     }
 
-    fn get_selected_play_config_mut(
-        &mut self,
-    ) -> Option<&mut rubato_types::play_config::PlayConfig> {
+    fn selected_play_config_mut(&mut self) -> Option<&mut rubato_types::play_config::PlayConfig> {
         Some(&mut self.play_config)
     }
 
-    fn get_selected_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
+    fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
         Some(&self.play_config)
     }
 
@@ -97,6 +100,21 @@ impl MainState for TestMainState {
 
     fn change_state(&mut self, state_type: MainStateType) {
         self.changed_state = Some(state_type);
+    }
+}
+
+impl MainState for TestMainState {
+    fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+        &self.timer
+    }
+    fn get_main(&self) -> &MainController {
+        &self.main
+    }
+    fn get_image(&self, _id: i32) -> Option<TextureRegion> {
+        None
+    }
+    fn get_resource(&self) -> &PlayerResource {
+        &self.resource
     }
 
     fn select_song(&mut self, mode: BMSPlayerMode) {

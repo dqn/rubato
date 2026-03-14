@@ -233,14 +233,33 @@ pub use rubato_types::imgui_notify::ImGuiNotify;
 // to skin's property system (resolves type mismatch, not a circular dep)
 // ============================================================
 
+impl rubato_types::timer_access::TimerAccess for MainState {
+    fn now_time(&self) -> i64 {
+        0
+    }
+    fn now_micro_time(&self) -> i64 {
+        0
+    }
+    fn micro_timer(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+        i64::MIN
+    }
+    fn timer(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+        i64::MIN
+    }
+    fn now_time_for(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+        0
+    }
+    fn is_timer_on(&self, _: rubato_types::timer_id::TimerId) -> bool {
+        false
+    }
+}
+
+impl rubato_types::skin_render_context::SkinRenderContext for MainState {}
+
 impl rubato_skin::stubs::MainState for MainState {
     fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
         static TIMER: std::sync::OnceLock<rubato_skin::stubs::Timer> = std::sync::OnceLock::new();
         TIMER.get_or_init(rubato_skin::stubs::Timer::default)
-    }
-
-    fn get_offset_value(&self, _id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
-        None
     }
 
     fn get_main(&self) -> &rubato_skin::stubs::MainController {

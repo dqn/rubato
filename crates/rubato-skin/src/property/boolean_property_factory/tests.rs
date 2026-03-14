@@ -35,12 +35,42 @@ impl BoolMockState {
     }
 }
 
+impl rubato_types::timer_access::TimerAccess for BoolMockState {
+    fn now_time(&self) -> i64 {
+        self.timer.now_time()
+    }
+    fn now_micro_time(&self) -> i64 {
+        self.timer.now_micro_time()
+    }
+    fn micro_timer(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+        self.timer.micro_timer(timer_id)
+    }
+    fn timer(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+        self.timer.timer(timer_id)
+    }
+    fn now_time_for(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+        self.timer.now_time_for(timer_id)
+    }
+    fn is_timer_on(&self, timer_id: rubato_types::timer_id::TimerId) -> bool {
+        self.timer.is_timer_on(timer_id)
+    }
+}
+
+impl rubato_types::skin_render_context::SkinRenderContext for BoolMockState {
+    fn boolean_value(&self, id: i32) -> bool {
+        self.values.get(&id).copied().unwrap_or(false)
+    }
+    fn is_music_selector(&self) -> bool {
+        self.is_music_selector
+    }
+    fn is_result_state(&self) -> bool {
+        self.is_result_state
+    }
+}
+
 impl MainState for BoolMockState {
     fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
         &self.timer
-    }
-    fn get_offset_value(&self, _id: i32) -> Option<&SkinOffset> {
-        None
     }
     fn get_main(&self) -> &MainController {
         &self.main
@@ -50,15 +80,6 @@ impl MainState for BoolMockState {
     }
     fn get_resource(&self) -> &PlayerResource {
         &self.resource
-    }
-    fn boolean_value(&self, id: i32) -> bool {
-        self.values.get(&id).copied().unwrap_or(false)
-    }
-    fn is_music_selector(&self) -> bool {
-        self.is_music_selector
-    }
-    fn is_result_state(&self) -> bool {
-        self.is_result_state
     }
 }
 

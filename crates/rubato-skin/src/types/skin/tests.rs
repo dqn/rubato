@@ -111,8 +111,8 @@ fn test_timer_only_main_state_returns_expected_values() {
     let timer = crate::stubs::Timer::with_timers(1000, 1_000_000, Vec::new());
     let adapter = TimerOnlyMainState::from_timer(&timer);
     let state: &dyn MainState = &adapter;
-    assert_eq!(state.timer().now_time(), 1000);
-    assert_eq!(state.timer().now_micro_time(), 1_000_000);
+    assert_eq!(MainState::timer(state).now_time(), 1000);
+    assert_eq!(MainState::timer(state).now_micro_time(), 1_000_000);
     assert!(state.get_offset_value(0).is_none());
     assert!(state.get_image(0).is_none());
     assert!(!state.get_main().debug);
@@ -137,31 +137,23 @@ fn test_timer_manager_values_flow_through_to_skin_adapter() {
 
     // Timer 10 should be ON through the adapter
     assert!(
-        state
-            .timer()
-            .is_timer_on(rubato_types::timer_id::TimerId::new(10)),
+        MainState::timer(state).is_timer_on(rubato_types::timer_id::TimerId::new(10)),
         "Timer 10 should be ON through adapter"
     );
     // Timer 20 should be OFF
     assert!(
-        !state
-            .timer()
-            .is_timer_on(rubato_types::timer_id::TimerId::new(20)),
+        !MainState::timer(state).is_timer_on(rubato_types::timer_id::TimerId::new(20)),
         "Timer 20 should be OFF through adapter"
     );
     // micro_timer for ON timer should not be i64::MIN
     assert_ne!(
-        state
-            .timer()
-            .micro_timer(rubato_types::timer_id::TimerId::new(10)),
+        MainState::timer(state).micro_timer(rubato_types::timer_id::TimerId::new(10)),
         i64::MIN,
         "ON timer should return its activation time, not i64::MIN"
     );
     // micro_timer for OFF timer should be i64::MIN
     assert_eq!(
-        state
-            .timer()
-            .micro_timer(rubato_types::timer_id::TimerId::new(20)),
+        MainState::timer(state).micro_timer(rubato_types::timer_id::TimerId::new(20)),
         i64::MIN,
         "OFF timer should return i64::MIN"
     );

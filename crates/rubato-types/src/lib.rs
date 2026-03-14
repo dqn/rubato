@@ -103,6 +103,9 @@ pub mod player_information;
 // Song selection interface (modmenu↔select bridge)
 pub mod song_selection_access;
 
+// Score data property (calculated values from score data)
+pub mod score_data_property;
+
 // Skin render context (SkinDrawable expansion)
 pub mod skin_render_context;
 

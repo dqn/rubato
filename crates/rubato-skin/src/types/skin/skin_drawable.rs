@@ -42,31 +42,64 @@ impl<'a> TimerOnlyMainState<'a> {
     }
 }
 
-impl crate::stubs::MainState for TimerOnlyMainState<'_> {
-    fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+impl rubato_types::timer_access::TimerAccess for TimerOnlyMainState<'_> {
+    fn now_time(&self) -> i64 {
         if let Some(ctx) = self.ctx.as_deref() {
-            ctx
+            ctx.now_time()
         } else {
-            self.timer.expect("timer-only adapter must carry a timer")
+            self.timer
+                .expect("timer-only adapter must carry a timer")
+                .now_time()
         }
     }
-
-    fn get_offset_value(&self, _id: i32) -> Option<&crate::stubs::SkinOffset> {
-        None
+    fn now_micro_time(&self) -> i64 {
+        if let Some(ctx) = self.ctx.as_deref() {
+            ctx.now_micro_time()
+        } else {
+            self.timer
+                .expect("timer-only adapter must carry a timer")
+                .now_micro_time()
+        }
     }
-
-    fn get_main(&self) -> &crate::stubs::MainController {
-        &self.main_controller
+    fn micro_timer(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+        if let Some(ctx) = self.ctx.as_deref() {
+            ctx.micro_timer(timer_id)
+        } else {
+            self.timer
+                .expect("timer-only adapter must carry a timer")
+                .micro_timer(timer_id)
+        }
     }
-
-    fn get_image(&self, id: i32) -> Option<crate::rendering_stubs::TextureRegion> {
-        self.image_registry.get(&id).cloned()
+    fn timer(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+        if let Some(ctx) = self.ctx.as_deref() {
+            ctx.timer(timer_id)
+        } else {
+            self.timer
+                .expect("timer-only adapter must carry a timer")
+                .timer(timer_id)
+        }
     }
-
-    fn get_resource(&self) -> &crate::stubs::PlayerResource {
-        &self.resource
+    fn now_time_for(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+        if let Some(ctx) = self.ctx.as_deref() {
+            ctx.now_time_for(timer_id)
+        } else {
+            self.timer
+                .expect("timer-only adapter must carry a timer")
+                .now_time_for(timer_id)
+        }
     }
+    fn is_timer_on(&self, timer_id: rubato_types::timer_id::TimerId) -> bool {
+        if let Some(ctx) = self.ctx.as_deref() {
+            ctx.is_timer_on(timer_id)
+        } else {
+            self.timer
+                .expect("timer-only adapter must carry a timer")
+                .is_timer_on(timer_id)
+        }
+    }
+}
 
+impl rubato_types::skin_render_context::SkinRenderContext for TimerOnlyMainState<'_> {
     fn is_music_selector(&self) -> bool {
         self.ctx
             .as_deref()
@@ -135,7 +168,7 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
             .map_or(0, |c| c.judge_count(judge, fast))
     }
 
-    fn get_gauge_value(&self) -> f32 {
+    fn gauge_value(&self) -> f32 {
         self.ctx.as_deref().map_or(0.0, |c| c.gauge_value())
     }
 
@@ -155,21 +188,21 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
             .map_or_else(Vec::new, |c| c.gauge_element_borders())
     }
 
-    fn get_now_judge(&self, player: i32) -> i32 {
+    fn now_judge(&self, player: i32) -> i32 {
         self.ctx.as_deref().map_or(0, |c| c.now_judge(player))
     }
 
-    fn get_now_combo(&self, player: i32) -> i32 {
+    fn now_combo(&self, player: i32) -> i32 {
         self.ctx.as_deref().map_or(0, |c| c.now_combo(player))
     }
 
-    fn get_player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
+    fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         self.ctx
             .as_deref()
             .and_then(rubato_types::skin_render_context::SkinRenderContext::player_config_ref)
     }
 
-    fn get_config_ref(&self) -> Option<&rubato_types::config::Config> {
+    fn config_ref(&self) -> Option<&rubato_types::config::Config> {
         self.ctx
             .as_deref()
             .and_then(rubato_types::skin_render_context::SkinRenderContext::config_ref)
@@ -181,13 +214,13 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
             .and_then(rubato_types::skin_render_context::SkinRenderContext::player_config_mut)
     }
 
-    fn get_config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
+    fn config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
         self.ctx
             .as_deref_mut()
             .and_then(rubato_types::skin_render_context::SkinRenderContext::config_mut)
     }
 
-    fn get_selected_play_config_mut(
+    fn selected_play_config_mut(
         &mut self,
     ) -> Option<&mut rubato_types::play_config::PlayConfig> {
         self.ctx.as_deref_mut().and_then(
@@ -219,19 +252,6 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
         }
     }
 
-    fn select_song(&mut self, mode: rubato_core::bms_player_mode::BMSPlayerMode) {
-        let Some(ctx) = self.ctx.as_deref_mut() else {
-            return;
-        };
-        let event_id = match mode.mode {
-            rubato_core::bms_player_mode::Mode::Play => 15,
-            rubato_core::bms_player_mode::Mode::Autoplay => 16,
-            rubato_core::bms_player_mode::Mode::Practice => 315,
-            rubato_core::bms_player_mode::Mode::Replay => return,
-        };
-        ctx.select_song_mode(event_id);
-    }
-
     fn set_timer_micro(&mut self, timer_id: rubato_types::timer_id::TimerId, micro_time: i64) {
         if let Some(ctx) = self.ctx.as_deref_mut() {
             ctx.set_timer_micro(timer_id, micro_time);
@@ -248,6 +268,41 @@ impl crate::stubs::MainState for TimerOnlyMainState<'_> {
         if let Some(ctx) = self.ctx.as_deref_mut() {
             ctx.audio_stop(path);
         }
+    }
+}
+
+impl crate::stubs::MainState for TimerOnlyMainState<'_> {
+    fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+        if let Some(ctx) = self.ctx.as_deref() {
+            ctx
+        } else {
+            self.timer.expect("timer-only adapter must carry a timer")
+        }
+    }
+
+    fn get_main(&self) -> &crate::stubs::MainController {
+        &self.main_controller
+    }
+
+    fn get_image(&self, id: i32) -> Option<crate::rendering_stubs::TextureRegion> {
+        self.image_registry.get(&id).cloned()
+    }
+
+    fn get_resource(&self) -> &crate::stubs::PlayerResource {
+        &self.resource
+    }
+
+    fn select_song(&mut self, mode: rubato_core::bms_player_mode::BMSPlayerMode) {
+        let Some(ctx) = self.ctx.as_deref_mut() else {
+            return;
+        };
+        let event_id = match mode.mode {
+            rubato_core::bms_player_mode::Mode::Play => 15,
+            rubato_core::bms_player_mode::Mode::Autoplay => 16,
+            rubato_core::bms_player_mode::Mode::Practice => 315,
+            rubato_core::bms_player_mode::Mode::Replay => return,
+        };
+        ctx.select_song_mode(event_id);
     }
 }
 

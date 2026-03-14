@@ -180,7 +180,7 @@ impl SkinBgaObject {
             // Determine BGA time:
             // In Java: s == STATE_PRELOAD || s == STATE_PRACTICE || s == STATE_READY ? -1
             //          : player.timer.getNowTime(TIMER_PLAY)
-            let timer = state.timer();
+            let timer = MainState::timer(state);
             let play_time = timer.now_time_for(skin_property::TIMER_PLAY);
             // If play timer is not active (returns Long.MIN_VALUE in Java, which
             // we represent as i64::MIN or a negative value), pass -1

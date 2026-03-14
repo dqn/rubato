@@ -345,12 +345,12 @@ impl Skin {
             self.renderer = Some(SkinObjectRenderer::new());
         }
 
-        let microtime = state.timer().now_micro_time();
+        let microtime = MainState::timer(state).now_micro_time();
         let debug = false; // MainController.debug stubbed as false
 
         if !debug {
             if self.nextpreparetime <= microtime {
-                let time = state.timer().now_time();
+                let time = MainState::timer(state).now_time();
                 for idx in &self.objectarray_indices {
                     self.objects[*idx].prepare(time, state);
                 }

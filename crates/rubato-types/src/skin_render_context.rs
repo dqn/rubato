@@ -429,6 +429,128 @@ pub trait SkinRenderContext: TimerAccess {
     fn select_song_mode(&mut self, _event_id: i32) {
         // default no-op
     }
+
+    // ============================================================
+    // Offset access
+    // ============================================================
+
+    /// Returns the skin offset for the given ID.
+    /// Replaces `get_offset_value` from MainState.
+    fn get_offset_value(&self, _id: i32) -> Option<&crate::skin_offset::SkinOffset> {
+        None
+    }
+
+    // ============================================================
+    // Mouse position
+    // ============================================================
+
+    /// Returns the current mouse X position.
+    fn mouse_x(&self) -> f32 {
+        0.0
+    }
+
+    /// Returns the current mouse Y position.
+    fn mouse_y(&self) -> f32 {
+        0.0
+    }
+
+    // ============================================================
+    // Display config
+    // ============================================================
+
+    /// Returns the prepare frame-per-second value from config.
+    fn prepare_fps(&self) -> i32 {
+        60
+    }
+
+    /// Returns whether debug mode is active.
+    fn is_debug(&self) -> bool {
+        false
+    }
+
+    // ============================================================
+    // Timing distribution (for result screens)
+    // ============================================================
+
+    /// Returns the timing distribution data when available.
+    fn get_timing_distribution(&self) -> Option<&crate::timing_distribution::TimingDistribution> {
+        None
+    }
+
+    // ============================================================
+    // Score data property (for Lua rate/exscore accessors)
+    // ============================================================
+
+    /// Returns the ScoreDataProperty for the current state.
+    fn score_data_property(&self) -> &crate::score_data_property::ScoreDataProperty {
+        static DEFAULT: std::sync::OnceLock<crate::score_data_property::ScoreDataProperty> =
+            std::sync::OnceLock::new();
+        DEFAULT.get_or_init(crate::score_data_property::ScoreDataProperty::default)
+    }
+
+    // ============================================================
+    // Gauge history (for result screens)
+    // ============================================================
+
+    /// Returns the gauge history (per-frame gauge values per gauge type).
+    fn gauge_history(&self) -> Option<&Vec<Vec<f32>>> {
+        None
+    }
+
+    /// Returns the course gauge history (one entry per course stage).
+    fn course_gauge_history(&self) -> &[Vec<Vec<f32>>] {
+        &[]
+    }
+
+    /// Returns (border, max) for gauge rendering on result screens.
+    fn gauge_border_max(&self) -> Option<(f32, f32)> {
+        None
+    }
+
+    /// Returns the gauge type for result screen rendering.
+    fn result_gauge_type(&self) -> i32 {
+        self.gauge_type()
+    }
+
+    /// Returns whether the gauge reached max value.
+    fn is_gauge_max(&self) -> bool {
+        false
+    }
+
+    // ============================================================
+    // Media/practice state
+    // ============================================================
+
+    /// Returns whether media loading has finished.
+    fn is_media_load_finished(&self) -> bool {
+        false
+    }
+
+    /// Returns whether the current mode is practice mode.
+    fn is_practice_mode(&self) -> bool {
+        false
+    }
+
+    // ============================================================
+    // Distribution data (for folder lamp/rank graphs)
+    // ============================================================
+
+    /// Returns distribution data for the current folder selection.
+    fn get_distribution_data(&self) -> Option<crate::distribution_data::DistributionData> {
+        None
+    }
+
+    // ============================================================
+    // BMSPlayer state check
+    // ============================================================
+
+    /// Returns true when the current state is BMSPlayer (Play state).
+    fn is_bms_player(&self) -> bool {
+        matches!(
+            self.current_state_type(),
+            Some(crate::main_state_type::MainStateType::Play)
+        )
+    }
 }
 
 #[cfg(test)]

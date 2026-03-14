@@ -56,7 +56,10 @@ impl TimerUtility {
             // now_timer(timer_value) -> elapsed micro sec (0 if OFF)
             let now_timer_func = lua.create_function(move |_, timer_value: i64| {
                 let state = unsafe { &*sp.0 };
-                Ok(now_timer(timer_value, state.timer().now_micro_time()))
+                Ok(now_timer(
+                    timer_value,
+                    MainState::timer(state).now_micro_time(),
+                ))
             })?;
             table.set("now_timer", now_timer_func)?;
 
@@ -76,7 +79,7 @@ impl TimerUtility {
                 let tid = rubato_types::timer_id::TimerId::new(timer_id);
                 let timer_func = lua.create_function(move |_, ()| {
                     let state = unsafe { &*sp.0 };
-                    Ok(state.timer().micro_timer(tid))
+                    Ok(MainState::timer(state).micro_timer(tid))
                 })?;
                 Ok(timer_func)
             })?;
@@ -91,7 +94,7 @@ impl TimerUtility {
                         let state = unsafe { &*sp.0 };
                         let on: bool = func.call(()).unwrap_or(false);
                         let mut obs = observe_state.lock().expect("observe_state lock poisoned");
-                        Ok(obs.update(on, state.timer().now_micro_time()))
+                        Ok(obs.update(on, MainState::timer(state).now_micro_time()))
                     })?;
                     Ok(timer_func)
                 })?;
@@ -116,7 +119,7 @@ impl TimerUtility {
                 let turn_on_func = lua.create_function(move |_, ()| {
                     let state = unsafe { &*sp.0 };
                     let mut ps = ps.lock().expect("ps lock poisoned");
-                    ps.turn_on(state.timer().now_micro_time());
+                    ps.turn_on(MainState::timer(state).now_micro_time());
                     Ok(true)
                 })?;
                 tbl.set("turn_on", turn_on_func)?;
@@ -126,7 +129,7 @@ impl TimerUtility {
                 let turn_on_reset_func = lua.create_function(move |_, ()| {
                     let state = unsafe { &*sp.0 };
                     let mut ps = ps.lock().expect("ps lock poisoned");
-                    ps.turn_on_reset(state.timer().now_micro_time());
+                    ps.turn_on_reset(MainState::timer(state).now_micro_time());
                     Ok(true)
                 })?;
                 tbl.set("turn_on_reset", turn_on_reset_func)?;

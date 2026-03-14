@@ -14,7 +14,7 @@ pub trait TimerProperty: Send + Sync {
         if time == i64::MIN {
             0
         } else {
-            state.timer().now_time() - time / 1000
+            MainState::timer(state).now_time() - time / 1000
         }
     }
 

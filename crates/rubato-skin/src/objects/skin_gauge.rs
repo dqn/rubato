@@ -735,16 +735,42 @@ mod tests {
         gauge_type: i32,
     }
 
+    impl rubato_types::timer_access::TimerAccess for GaugeMockState {
+        fn now_time(&self) -> i64 {
+            0
+        }
+        fn now_micro_time(&self) -> i64 {
+            0
+        }
+        fn micro_timer(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+            i64::MIN
+        }
+        fn timer(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+            i64::MIN
+        }
+        fn now_time_for(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+            0
+        }
+        fn is_timer_on(&self, _: rubato_types::timer_id::TimerId) -> bool {
+            false
+        }
+    }
+
+    impl rubato_types::skin_render_context::SkinRenderContext for GaugeMockState {
+        fn gauge_value(&self) -> f32 {
+            self.gauge_value
+        }
+        fn gauge_type(&self) -> i32 {
+            self.gauge_type
+        }
+    }
+
     impl crate::stubs::MainState for GaugeMockState {
         fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             static TIMER: std::sync::OnceLock<crate::stubs::Timer> = std::sync::OnceLock::new();
             TIMER.get_or_init(crate::stubs::Timer::default)
         }
-        fn get_offset_value(&self, _id: i32) -> Option<&crate::stubs::SkinOffset> {
-            None
-        }
         fn get_main(&self) -> &crate::stubs::MainController {
-            // Safety: we never dereference this in tests
             static MC: crate::stubs::MainController = crate::stubs::MainController { debug: false };
             &MC
         }
@@ -754,12 +780,6 @@ mod tests {
         fn get_resource(&self) -> &crate::stubs::PlayerResource {
             static PR: crate::stubs::PlayerResource = crate::stubs::PlayerResource;
             &PR
-        }
-        fn get_gauge_value(&self) -> f32 {
-            self.gauge_value
-        }
-        fn gauge_type(&self) -> i32 {
-            self.gauge_type
         }
     }
 
@@ -884,13 +904,46 @@ mod tests {
         element_borders: Vec<(f32, f32)>,
     }
 
+    impl rubato_types::timer_access::TimerAccess for ModeChangeMockState {
+        fn now_time(&self) -> i64 {
+            0
+        }
+        fn now_micro_time(&self) -> i64 {
+            0
+        }
+        fn micro_timer(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+            i64::MIN
+        }
+        fn timer(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+            i64::MIN
+        }
+        fn now_time_for(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+            0
+        }
+        fn is_timer_on(&self, _: rubato_types::timer_id::TimerId) -> bool {
+            false
+        }
+    }
+
+    impl rubato_types::skin_render_context::SkinRenderContext for ModeChangeMockState {
+        fn gauge_value(&self) -> f32 {
+            self.gauge_value
+        }
+        fn gauge_type(&self) -> i32 {
+            self.gauge_type
+        }
+        fn is_mode_changed(&self) -> bool {
+            self.mode_changed
+        }
+        fn gauge_element_borders(&self) -> Vec<(f32, f32)> {
+            self.element_borders.clone()
+        }
+    }
+
     impl crate::stubs::MainState for ModeChangeMockState {
         fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             static TIMER: std::sync::OnceLock<crate::stubs::Timer> = std::sync::OnceLock::new();
             TIMER.get_or_init(crate::stubs::Timer::default)
-        }
-        fn get_offset_value(&self, _id: i32) -> Option<&crate::stubs::SkinOffset> {
-            None
         }
         fn get_main(&self) -> &crate::stubs::MainController {
             static MC: crate::stubs::MainController = crate::stubs::MainController { debug: false };
@@ -902,18 +955,6 @@ mod tests {
         fn get_resource(&self) -> &crate::stubs::PlayerResource {
             static PR: crate::stubs::PlayerResource = crate::stubs::PlayerResource;
             &PR
-        }
-        fn get_gauge_value(&self) -> f32 {
-            self.gauge_value
-        }
-        fn gauge_type(&self) -> i32 {
-            self.gauge_type
-        }
-        fn is_mode_changed(&self) -> bool {
-            self.mode_changed
-        }
-        fn gauge_element_borders(&self) -> Vec<(f32, f32)> {
-            self.element_borders.clone()
         }
     }
 

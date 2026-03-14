@@ -31,7 +31,7 @@ impl CustomEvent {
 
     pub fn execute(&mut self, state: &mut dyn MainState, arg1: i32, arg2: i32) {
         self.action.exec(state, arg1, arg2);
-        self.last_execute_time = state.timer().now_micro_time();
+        self.last_execute_time = MainState::timer(state).now_micro_time();
     }
 
     pub fn update(&mut self, state: &mut dyn MainState) {
@@ -42,11 +42,11 @@ impl CustomEvent {
         let condition = self.condition.as_ref().expect("condition is Some");
         if condition.get(state)
             && (self.last_execute_time == i64::MIN
-                || (state.timer().now_micro_time() - self.last_execute_time) / 1000
+                || (MainState::timer(state).now_micro_time() - self.last_execute_time) / 1000
                     >= self.min_interval as i64)
         {
             self.action.exec_no_args(state);
-            self.last_execute_time = state.timer().now_micro_time();
+            self.last_execute_time = MainState::timer(state).now_micro_time();
         }
     }
 }

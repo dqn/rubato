@@ -114,9 +114,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let timer_func = lua.create_function(move |_, id: i32| {
                 let state = unsafe { &*sp.0 };
-                Ok(state
-                    .timer()
-                    .micro_timer(rubato_types::timer_id::TimerId::new(id)))
+                Ok(MainState::timer(state).micro_timer(rubato_types::timer_id::TimerId::new(id)))
             })?;
             table.set("timer", timer_func)?;
 
@@ -127,7 +125,7 @@ impl MainStateAccessor {
             let sp = self.state_ptr;
             let time_func = lua.create_function(move |_, ()| {
                 let state = unsafe { &*sp.0 };
-                Ok(state.timer().now_micro_time())
+                Ok(MainState::timer(state).now_micro_time())
             })?;
             table.set("time", time_func)?;
 
@@ -515,28 +513,33 @@ mod tests {
         }
     }
 
-    impl MainState for LuaTestState {
-        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
-            &self.timer
+    impl rubato_types::timer_access::TimerAccess for LuaTestState {
+        fn now_time(&self) -> i64 {
+            self.timer.now_time()
         }
+        fn now_micro_time(&self) -> i64 {
+            self.timer.now_micro_time()
+        }
+        fn micro_timer(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+            self.timer.micro_timer(timer_id)
+        }
+        fn timer(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+            self.timer.timer(timer_id)
+        }
+        fn now_time_for(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+            self.timer.now_time_for(timer_id)
+        }
+        fn is_timer_on(&self, timer_id: rubato_types::timer_id::TimerId) -> bool {
+            self.timer.is_timer_on(timer_id)
+        }
+    }
 
-        fn get_offset_value(&self, id: i32) -> Option<&SkinOffset> {
+    impl rubato_types::skin_render_context::SkinRenderContext for LuaTestState {
+        fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
             self.offsets.get(&id)
         }
 
-        fn get_main(&self) -> &MainController {
-            &self.main
-        }
-
-        fn get_image(&self, _id: i32) -> Option<TextureRegion> {
-            None
-        }
-
-        fn get_resource(&self) -> &PlayerResource {
-            &self.resource
-        }
-
-        fn score_data_property(&self) -> &rubato_core::score_data_property::ScoreDataProperty {
+        fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
             &self.score_data_property
         }
 
@@ -544,7 +547,7 @@ mod tests {
             *self.judge_counts.get(&(judge, fast)).unwrap_or(&0)
         }
 
-        fn get_gauge_value(&self) -> f32 {
+        fn gauge_value(&self) -> f32 {
             self.gauge_value
         }
 
@@ -556,11 +559,11 @@ mod tests {
             self.is_bms_player
         }
 
-        fn get_config_ref(&self) -> Option<&rubato_types::config::Config> {
+        fn config_ref(&self) -> Option<&rubato_types::config::Config> {
             Some(&self.config)
         }
 
-        fn get_config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
+        fn config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
             Some(&mut self.config)
         }
 
@@ -580,6 +583,24 @@ mod tests {
 
         fn execute_event(&mut self, id: i32, arg1: i32, arg2: i32) {
             self.event_log.borrow_mut().push((id, arg1, arg2));
+        }
+    }
+
+    impl MainState for LuaTestState {
+        fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
+            &self.timer
+        }
+
+        fn get_main(&self) -> &MainController {
+            &self.main
+        }
+
+        fn get_image(&self, _id: i32) -> Option<TextureRegion> {
+            None
+        }
+
+        fn get_resource(&self) -> &PlayerResource {
+            &self.resource
         }
     }
 

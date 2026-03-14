@@ -345,14 +345,41 @@ mod tests {
         config: Option<rubato_types::config::Config>,
     }
 
+    impl rubato_types::timer_access::TimerAccess for MockMainState {
+        fn now_time(&self) -> i64 {
+            0
+        }
+        fn now_micro_time(&self) -> i64 {
+            0
+        }
+        fn micro_timer(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+            i64::MIN
+        }
+        fn timer(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+            i64::MIN
+        }
+        fn now_time_for(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+            0
+        }
+        fn is_timer_on(&self, _: rubato_types::timer_id::TimerId) -> bool {
+            false
+        }
+    }
+
+    impl rubato_types::skin_render_context::SkinRenderContext for MockMainState {
+        fn get_distribution_data(&self) -> Option<DistributionData> {
+            self.distribution.clone()
+        }
+        fn config_ref(&self) -> Option<&rubato_types::config::Config> {
+            self.config.as_ref()
+        }
+    }
+
     impl MainState for MockMainState {
         fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
             static NULL: rubato_types::timer_access::NullTimer =
                 rubato_types::timer_access::NullTimer;
             &NULL
-        }
-        fn get_offset_value(&self, _id: i32) -> Option<&SkinOffset> {
-            None
         }
         fn get_main(&self) -> &rubato_skin::stubs::MainController {
             static MAIN: std::sync::OnceLock<rubato_skin::stubs::MainController> =
@@ -366,12 +393,6 @@ mod tests {
             static RES: std::sync::OnceLock<rubato_skin::stubs::PlayerResource> =
                 std::sync::OnceLock::new();
             RES.get_or_init(|| rubato_skin::stubs::PlayerResource)
-        }
-        fn get_distribution_data(&self) -> Option<DistributionData> {
-            self.distribution.clone()
-        }
-        fn get_config_ref(&self) -> Option<&rubato_types::config::Config> {
-            self.config.as_ref()
         }
     }
 

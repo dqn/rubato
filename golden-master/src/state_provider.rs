@@ -139,13 +139,44 @@ impl<'a> StaticMainStateAdapter<'a> {
     }
 }
 
+impl rubato_types::timer_access::TimerAccess for StaticMainStateAdapter<'_> {
+    fn now_time(&self) -> i64 {
+        self.timer.now_time()
+    }
+    fn now_micro_time(&self) -> i64 {
+        self.timer.now_micro_time()
+    }
+    fn micro_timer(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+        self.timer.micro_timer(timer_id)
+    }
+    fn timer(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+        self.timer.timer(timer_id)
+    }
+    fn now_time_for(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+        self.timer.now_time_for(timer_id)
+    }
+    fn is_timer_on(&self, timer_id: rubato_types::timer_id::TimerId) -> bool {
+        self.timer.is_timer_on(timer_id)
+    }
+}
+
+impl rubato_types::skin_render_context::SkinRenderContext for StaticMainStateAdapter<'_> {
+    fn get_offset_value(&self, id: i32) -> Option<&SkinOffset> {
+        self.provider.offsets.get(&id)
+    }
+
+    fn integer_value(&self, id: i32) -> i32 {
+        self.provider.integers.get(&id).copied().unwrap_or(0)
+    }
+
+    fn string_value(&self, id: i32) -> String {
+        self.provider.strings.get(&id).cloned().unwrap_or_default()
+    }
+}
+
 impl MainState for StaticMainStateAdapter<'_> {
     fn timer(&self) -> &dyn rubato_types::timer_access::TimerAccess {
         &self.timer
-    }
-
-    fn get_offset_value(&self, id: i32) -> Option<&SkinOffset> {
-        self.provider.offsets.get(&id)
     }
 
     fn get_main(&self) -> &MainController {
@@ -158,14 +189,6 @@ impl MainState for StaticMainStateAdapter<'_> {
 
     fn get_resource(&self) -> &PlayerResource {
         &self.resource
-    }
-
-    fn integer_value(&self, id: i32) -> i32 {
-        self.provider.integers.get(&id).copied().unwrap_or(0)
-    }
-
-    fn string_value(&self, id: i32) -> String {
-        self.provider.strings.get(&id).cloned().unwrap_or_default()
     }
 }
 
