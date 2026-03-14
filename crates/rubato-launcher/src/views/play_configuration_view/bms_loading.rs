@@ -30,7 +30,7 @@ impl PlayConfigurationView {
             // judgealgorithm → judgetype
             // JudgeAlgorithm.values()[judgealgorithm.getValue()].name()
             if let Some(alg_idx) = self.judgealgorithm {
-                let judge_algs = rubato_core::stubs::JudgeAlgorithm::values();
+                let judge_algs = rubato_types::JudgeAlgorithm::values();
                 if (alg_idx as usize) < judge_algs.len() {
                     conf.judgetype = judge_algs[alg_idx as usize].name().to_string();
                 }
@@ -59,7 +59,7 @@ impl PlayConfigurationView {
             self.lift = (conf.lift * 1000.0) as i32;
             self.hidden = (conf.hidden * 1000.0) as i32;
             self.judgealgorithm =
-                Some(rubato_core::stubs::JudgeAlgorithm::index(&conf.judgetype).max(0));
+                Some(rubato_types::JudgeAlgorithm::index(&conf.judgetype).max(0));
             self.hispeedautoadjust = conf.hispeedautoadjust;
         }
     }
@@ -259,7 +259,7 @@ impl PlayConfigurationView {
     /// Import score data from LR2
     /// Translates: public void importScoreDataFromLR2()
     pub fn import_score_data_from_lr2(&mut self) {
-        let lr2_path = match crate::stubs::show_file_chooser("Select LR2 score database") {
+        let lr2_path = match crate::platform::show_file_chooser("Select LR2 score database") {
             Some(d) => d,
             None => return,
         };
@@ -305,73 +305,16 @@ impl PlayConfigurationView {
         importer.import_from_lr2_score_database(lr2_path, &songdb);
     }
 
-    /// Start Twitter auth
+    /// Start Twitter auth (deprecated -- Twitter API is not supported)
     /// Translates: public void startTwitterAuth()
     pub fn start_twitter_auth(&mut self) {
-        match TwitterAuth::start_auth(
-            &self.txt_twitter_consumer_key,
-            &self.txt_twitter_consumer_secret,
-        ) {
-            Ok((token, secret)) => {
-                if let Some(ref mut player) = self.player {
-                    player.twitter_consumer_key = Some(self.txt_twitter_consumer_key.clone());
-                    player.twitter_consumer_secret = Some(self.txt_twitter_consumer_secret.clone());
-                    player.twitter_access_token = Some(String::new());
-                    player.twitter_access_token_secret = Some(String::new());
-                }
-                self.request_token = Some((token, secret));
-                self.twitter_pin_enabled = true;
-                self.txt_twitter_authenticated_visible = false;
-                // Open browser with auth URL → todo
-            }
-            Err(e) => {
-                warn!("Twitter auth error: {}", e);
-            }
-        }
+        warn!("Twitter API is not supported in Rust port (twitter4j has no Rust equivalent)");
     }
 
-    /// Start PIN auth
+    /// Start PIN auth (deprecated -- Twitter API is not supported)
     /// Translates: public void startPINAuth()
     pub fn start_pin_auth(&mut self) {
-        let consumer_key = self
-            .player
-            .as_ref()
-            .and_then(|p| p.twitter_consumer_key.clone())
-            .unwrap_or_default();
-        let consumer_secret = self
-            .player
-            .as_ref()
-            .and_then(|p| p.twitter_consumer_secret.clone())
-            .unwrap_or_default();
-
-        if self.player.is_none() {
-            return;
-        }
-
-        let request_token = self.request_token.clone();
-        if let Some((ref token, ref secret)) = request_token {
-            match TwitterAuth::complete_pin_auth(
-                &consumer_key,
-                &consumer_secret,
-                token,
-                secret,
-                &self.txt_twitter_pin,
-            ) {
-                Ok((access_token, access_token_secret)) => {
-                    if let Some(ref mut player) = self.player {
-                        player.twitter_access_token = Some(access_token);
-                        player.twitter_access_token_secret = Some(access_token_secret);
-                    }
-                    self.commit();
-                    if let Some(config) = self.config.clone() {
-                        self.update(config);
-                    }
-                }
-                Err(e) => {
-                    warn!("Twitter PIN auth error: {}", e);
-                }
-            }
-        }
+        warn!("Twitter API is not supported in Rust port (twitter4j has no Rust equivalent)");
     }
 
     /// Exit

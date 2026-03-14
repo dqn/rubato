@@ -15,7 +15,8 @@ pub(crate) use rubato_song::song_database_update_listener::SongDatabaseUpdateLis
 pub(crate) use rubato_song::song_information_accessor::SongInformationAccessor;
 pub(crate) use rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor;
 
-pub(crate) use crate::stubs::{BMSPlayerMode, MainLoader, TwitterAuth, Version};
+pub(crate) use crate::main_loader::{BMSPlayerMode, MainLoader};
+pub(crate) use crate::version_checker::Version;
 pub(crate) use crate::views::config::audio_configuration_view::AudioConfigurationView;
 pub(crate) use crate::views::config::discord_configuration_view::DiscordConfigurationView;
 pub(crate) use crate::views::config::input_configuration_view::InputConfigurationView;
@@ -308,7 +309,6 @@ pub struct PlayConfigurationView {
     player: Option<PlayerConfig>,
     loader: Option<MainLoader>,
     pub(crate) song_updated: bool,
-    request_token: Option<(String, String)>,
     pc: Option<PlayMode>,
     /// Handle to the background BMS loading thread, if any.
     bms_loading_handle: Option<BmsLoadingHandle>,

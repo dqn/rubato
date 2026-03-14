@@ -6,7 +6,8 @@ use rubato_core::resolution::Resolution;
 
 use egui;
 
-use crate::stubs::{MainLoader, monitors};
+use crate::main_loader::MainLoader;
+use crate::platform::monitors;
 
 /// Translates: VideoConfigurationView (JavaFX → egui)
 ///

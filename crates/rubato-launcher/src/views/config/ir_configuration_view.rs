@@ -7,7 +7,7 @@ use rubato_core::ir_config::IRConfig;
 use rubato_core::player_config::PlayerConfig;
 use rubato_ir::ir_connection_manager::IRConnectionManager;
 
-use crate::stubs::open_url_in_browser;
+use crate::platform::open_url_in_browser;
 
 /// Translates: IRConfigurationView (JavaFX → egui)
 ///

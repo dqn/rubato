@@ -409,7 +409,7 @@ impl PlayConfigurationView {
     /// Add BGM path
     /// Translates: public void addBGMPath()
     pub fn add_bgm_path(&mut self) {
-        if let Some(s) = crate::stubs::show_directory_chooser("Select BGM root folder") {
+        if let Some(s) = crate::platform::show_directory_chooser("Select BGM root folder") {
             self.bgmpath = s;
         }
     }
@@ -417,7 +417,7 @@ impl PlayConfigurationView {
     /// Add sound path
     /// Translates: public void addSoundPath()
     pub fn add_sound_path(&mut self) {
-        if let Some(s) = crate::stubs::show_directory_chooser("Select sound effect root folder") {
+        if let Some(s) = crate::platform::show_directory_chooser("Select sound effect root folder") {
             self.soundpath = s;
         }
     }
@@ -425,12 +425,12 @@ impl PlayConfigurationView {
     /// Show file chooser
     /// Translates: private String showFileChooser(String title)
     fn _show_file_chooser(title: &str) -> Option<String> {
-        crate::stubs::show_file_chooser(title)
+        crate::platform::show_file_chooser(title)
     }
 
     /// Show directory chooser
     /// Translates: private String showDirectoryChooser(String title)
     fn _show_directory_chooser(title: &str) -> Option<String> {
-        crate::stubs::show_directory_chooser(title)
+        crate::platform::show_directory_chooser(title)
     }
 }

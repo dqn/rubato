@@ -4,7 +4,7 @@ use rubato_core::audio_config::{AudioConfig, DriverType, FrequencyType};
 
 use egui;
 
-use crate::stubs::port_audio_devices;
+use crate::platform::port_audio_devices;
 
 /// Translates: AudioConfigurationView (JavaFX → egui)
 ///

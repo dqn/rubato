@@ -65,7 +65,7 @@ impl LauncherUi {
                 egui::ComboBox::from_id_salt("audio_device_name")
                     .selected_text(&driver_name_display)
                     .show_ui(ui, |ui| {
-                        if let Ok(devices) = crate::stubs::port_audio_devices() {
+                        if let Ok(devices) = crate::platform::port_audio_devices() {
                             for device in &devices {
                                 let mut name = audio.driver_name.clone().unwrap_or_default();
                                 if ui
@@ -283,7 +283,7 @@ impl LauncherUi {
             ui.label(path);
         }
         if ui.button("Add BMS folder...").clicked()
-            && let Some(path) = crate::stubs::show_directory_chooser("Select BMS folder")
+            && let Some(path) = crate::platform::show_directory_chooser("Select BMS folder")
         {
             self.bms_paths.push(path);
         }

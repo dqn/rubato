@@ -11,7 +11,7 @@ use log::error;
 use rubato_core::config::{AVAILABLE_TABLEURL, Config};
 use rubato_core::table_data_accessor::TableDataAccessor;
 
-use crate::stubs::show_directory_chooser;
+use crate::platform::show_directory_chooser;
 use crate::views::play_configuration_view::PlayConfigurationView;
 
 /// TableInfo - inner data class for table URL entries
@@ -927,7 +927,7 @@ impl ResourceConfigurationView {
             .map(|t| t.url.clone())
             .collect::<Vec<_>>()
             .join("\n");
-        crate::stubs::copy_to_clipboard(&selection);
+        crate::platform::copy_to_clipboard(&selection);
     }
 
     /// Copy selected available table URLs to clipboard (Ctrl+C handler helper)
@@ -939,7 +939,7 @@ impl ResourceConfigurationView {
             .map(|t| t.url.clone())
             .collect::<Vec<_>>()
             .join("\n");
-        crate::stubs::copy_to_clipboard(&selection);
+        crate::platform::copy_to_clipboard(&selection);
     }
 
     /// Render the resource configuration UI.
