@@ -80,11 +80,7 @@ impl RankingDataCache {
 
     /// Get ranking data for a song with given LN mode. Returns None if not found.
     pub fn song(&self, song: &SongData, lnmode: i32) -> Option<RankingData> {
-        let cacheindex = if song.chart.has_undefined_long_note() {
-            lnmode.clamp(0, 3) as usize
-        } else {
-            3
-        };
+        let cacheindex = Self::song_cache_index(song, lnmode);
         let sha256 = song.file.sha256.clone();
         lock_or_recover(&self.inner).scorecache[cacheindex]
             .get(&sha256)
@@ -135,6 +131,54 @@ impl RankingDataCache {
         hasher.update(sb.as_bytes());
         let result = hasher.finalize();
         Some(convert_hex_string(&result))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rubato_types::song_data::FEATURE_UNDEFINEDLN;
+
+    /// Verify that `song()` and `put_song()` use the same cache index logic
+    /// (both delegate to `song_cache_index`). Previously `song()` had inline
+    /// logic that duplicated `song_cache_index()`, risking divergence.
+    #[test]
+    fn song_and_put_song_use_same_cache_index() {
+        let mut cache = RankingDataCache::new();
+
+        // Song WITH undefined LN: cache index depends on lnmode
+        let mut song_with_uln = SongData::default();
+        song_with_uln.chart.feature = FEATURE_UNDEFINEDLN;
+        song_with_uln.file.sha256 = "a".repeat(64);
+
+        let ranking = RankingData::new();
+        cache.put_song(&song_with_uln, 1, ranking);
+        assert!(
+            cache.song(&song_with_uln, 1).is_some(),
+            "song() should find what put_song() stored (with undefined LN, lnmode=1)"
+        );
+        // Different lnmode should not find it
+        assert!(
+            cache.song(&song_with_uln, 0).is_none(),
+            "song() with different lnmode should not find the entry"
+        );
+
+        // Song WITHOUT undefined LN: cache index is always 3
+        let mut song_no_uln = SongData::default();
+        song_no_uln.chart.feature = 0;
+        song_no_uln.file.sha256 = "b".repeat(64);
+
+        let ranking2 = RankingData::new();
+        cache.put_song(&song_no_uln, 0, ranking2);
+        // Should find it regardless of lnmode (index is always 3)
+        assert!(
+            cache.song(&song_no_uln, 0).is_some(),
+            "song() should find what put_song() stored (no undefined LN)"
+        );
+        assert!(
+            cache.song(&song_no_uln, 2).is_some(),
+            "song() should find entry regardless of lnmode when no undefined LN"
+        );
     }
 }
 

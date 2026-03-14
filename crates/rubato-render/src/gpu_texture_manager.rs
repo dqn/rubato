@@ -302,16 +302,58 @@ impl GpuTextureManager {
     /// since the last call to `evict_unused()`. Call once per frame after
     /// rendering to free stale GPU textures (e.g., old BGA video frames).
     pub fn evict_unused(&mut self) {
-        if !self.used_this_frame.is_empty() {
-            let used = &self.used_this_frame;
-            self.entries.retain(|k, _| used.contains(k));
-        }
+        let used = &self.used_this_frame;
+        self.entries.retain(|k, _| used.contains(k));
         self.used_this_frame.clear();
     }
 
     /// Return the number of cached texture entries (for diagnostics).
     pub fn entry_count(&self) -> usize {
         self.entries.len()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::{HashMap, HashSet};
+    use std::sync::Arc;
+
+    /// Test the eviction logic in isolation (mirrors `evict_unused` behavior).
+    /// This avoids needing a real wgpu device for the test.
+    fn evict_unused(entries: &mut HashMap<Arc<str>, ()>, used_this_frame: &mut HashSet<Arc<str>>) {
+        let used = &*used_this_frame;
+        entries.retain(|k, _| used.contains(k));
+        used_this_frame.clear();
+    }
+
+    #[test]
+    fn evict_unused_clears_all_entries_when_no_textures_referenced() {
+        let mut entries = HashMap::new();
+        entries.insert(Arc::<str>::from("tex_a"), ());
+        entries.insert(Arc::<str>::from("tex_b"), ());
+        entries.insert(Arc::<str>::from("tex_c"), ());
+        let mut used = HashSet::new();
+
+        // Blank frame: no textures referenced. All entries should be evicted.
+        evict_unused(&mut entries, &mut used);
+        assert!(
+            entries.is_empty(),
+            "All cached textures should be evicted when none were referenced"
+        );
+    }
+
+    #[test]
+    fn evict_unused_retains_only_referenced_textures() {
+        let mut entries = HashMap::new();
+        entries.insert(Arc::<str>::from("tex_a"), ());
+        entries.insert(Arc::<str>::from("tex_b"), ());
+        entries.insert(Arc::<str>::from("tex_c"), ());
+        let mut used = HashSet::new();
+        used.insert(Arc::<str>::from("tex_b"));
+
+        evict_unused(&mut entries, &mut used);
+        assert_eq!(entries.len(), 1);
+        assert!(entries.contains_key(&Arc::<str>::from("tex_b") as &str));
     }
 }
 
