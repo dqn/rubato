@@ -13,6 +13,11 @@ use super::connection::IPCConnection;
 /// On non-Windows platforms, the pipe path does not exist so connect() will fail at runtime.
 const PIPE_PATH: &str = r"\\.\pipe\discord-ipc-0";
 
+/// Read/write timeout in milliseconds for named pipe I/O.
+/// Matches the 100ms timeout used by UnixIPCConnection to prevent blocking
+/// the render thread when Discord IPC is slow or hung.
+const PIPE_TIMEOUT_MS: u32 = 100;
+
 pub struct WindowsIPCConnection {
     file: Option<File>,
 }
@@ -29,11 +34,50 @@ impl Default for WindowsIPCConnection {
     }
 }
 
+/// Set read/write timeouts on a Windows named pipe handle.
+/// Uses SetNamedPipeHandleState to configure PIPE_TIMEOUT_MS timeout.
+#[cfg(windows)]
+fn set_pipe_timeouts(file: &File) -> Result<()> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::System::Pipes::PIPE_WAIT;
+    use windows_sys::Win32::System::Pipes::SetNamedPipeHandleState;
+
+    let handle = file.as_raw_handle() as isize;
+    let mut mode: u32 = PIPE_WAIT;
+    let mut timeout: u32 = PIPE_TIMEOUT_MS;
+    let ret = unsafe {
+        SetNamedPipeHandleState(
+            handle,
+            &mut mode,
+            std::ptr::null_mut(),
+            &mut timeout as *mut u32 as *mut i32,
+        )
+    };
+    if ret == 0 {
+        anyhow::bail!(
+            "SetNamedPipeHandleState failed: {}",
+            std::io::Error::last_os_error()
+        );
+    }
+    Ok(())
+}
+
+/// No-op on non-Windows platforms (pipe timeout is set via UnixStream timeouts).
+#[cfg(not(windows))]
+fn set_pipe_timeouts(_file: &File) -> Result<()> {
+    Ok(())
+}
+
 impl IPCConnection for WindowsIPCConnection {
     /// Connect to the Discord IPC named pipe.
     /// Translated from: WindowsIPCConnection.connect()
     fn connect(&mut self) -> Result<()> {
         let file = OpenOptions::new().read(true).write(true).open(PIPE_PATH)?;
+        // Set timeouts to prevent blocking the render thread if Discord
+        // IPC is slow or hung (matching Unix's 100ms timeout).
+        if let Err(e) = set_pipe_timeouts(&file) {
+            log::warn!("Failed to set pipe timeouts: {}", e);
+        }
         self.file = Some(file);
         Ok(())
     }

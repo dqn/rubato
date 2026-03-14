@@ -9,7 +9,7 @@ use anyhow::Result;
 ///     void close();
 /// }
 /// ```
-pub trait IPCConnection {
+pub trait IPCConnection: Send {
     fn connect(&mut self) -> Result<()>;
     fn write(&mut self, buffer: &[u8]) -> Result<()>;
     fn read(&mut self, size: usize) -> Result<Vec<u8>>;
