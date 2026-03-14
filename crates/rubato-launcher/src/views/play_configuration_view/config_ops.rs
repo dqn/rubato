@@ -298,6 +298,7 @@ impl PlayConfigurationView {
             if let Some(ref source) = self.http_download_source_selected {
                 config.network.download_source = source.clone();
             }
+            config.network.default_download_url = self.default_download_url.clone();
             config.network.override_download_url = self.override_download_url.clone();
 
             config.integration.set_clipboard_screenshot = self.clipboard_screenshot;

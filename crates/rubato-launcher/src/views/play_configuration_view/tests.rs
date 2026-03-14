@@ -554,6 +554,41 @@ fn test_update_commit_roundtrip_preserves_config_fields() {
     assert!(view.clipboard_screenshot);
 }
 
+/// Regression test: when the user edits default_download_url in the UI,
+/// commit() must write the updated value back to the config.
+/// Previously, commit() omitted writing it back, so UI edits were lost.
+#[test]
+fn test_commit_writes_back_edited_default_download_url() {
+    let mut view = initialized_view();
+    let config = Config {
+        network: rubato_core::config::NetworkConfig {
+            default_download_url: "https://original.example.com".to_string(),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    view.update(config);
+    assert_eq!(
+        view.default_download_url, "https://original.example.com",
+        "update() should capture default_download_url"
+    );
+
+    // Simulate the user editing the field in the UI
+    view.default_download_url = "https://edited.example.com/new".to_string();
+
+    view.commit();
+
+    let committed_config = view
+        .config
+        .as_ref()
+        .expect("config should exist after commit");
+    assert_eq!(
+        committed_config.network.default_download_url, "https://edited.example.com/new",
+        "commit() must write the edited default_download_url back to config"
+    );
+}
+
 // ---- Roundtrip: update_player -> commit_player preserves player fields ----
 
 #[test]
