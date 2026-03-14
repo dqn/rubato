@@ -4193,6 +4193,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rubato-e2e"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bms-model",
+ "rubato-audio",
+ "rubato-core",
+ "rubato-input",
+ "rubato-types",
+]
+
+[[package]]
 name = "rubato-external"
 version = "0.1.0"
 dependencies = [
