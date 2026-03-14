@@ -28,6 +28,11 @@ impl BMSPlayer {
         {
             return;
         }
+        // Rust-only deviation: This check does NOT exist in Java BMSPlayer.stopPlay().
+        // Java always proceeds to Finished or Failed regardless of judge counts.
+        // Intentional improvement: when no notes were judged (e.g., autoplay was off
+        // but the user didn't play), abort instead of showing an empty result screen.
+        // Course mode is excluded because aborting mid-course would break the sequence.
         if self.state != PlayState::Finished
             && !self.is_course_mode
             && self.judge.judge_count(0)
@@ -36,7 +41,6 @@ impl BMSPlayer {
                 + self.judge.judge_count(3)
                 == 0
         {
-            // No notes judged and not in course mode - abort
             if let Some(ref mut keyinput) = self.input.keyinput {
                 keyinput.stop_judge();
             }
