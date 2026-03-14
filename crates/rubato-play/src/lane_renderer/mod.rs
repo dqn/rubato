@@ -1,17 +1,13 @@
 use bms_model::bms_model::{BMSModel, LNTYPE_CHARGENOTE, LNTYPE_HELLCHARGENOTE, LNTYPE_LONGNOTE};
 use bms_model::note::{Note, TYPE_CHARGENOTE, TYPE_HELLCHARGENOTE, TYPE_LONGNOTE, TYPE_UNDEFINED};
 use bms_model::time_line::TimeLine;
-use rubato_types::play_config::PlayConfig;
+use rubato_types::play_config::{
+    FIX_HISPEED_MAINBPM, FIX_HISPEED_MAXBPM, FIX_HISPEED_MINBPM, FIX_HISPEED_OFF,
+    FIX_HISPEED_STARTBPM, PlayConfig,
+};
 use std::collections::HashMap;
 
 use crate::skin::note::SkinLane;
-
-/// Fix hispeed modes
-pub const FIX_HISPEED_OFF: i32 = 0;
-pub const FIX_HISPEED_STARTBPM: i32 = 1;
-pub const FIX_HISPEED_MINBPM: i32 = 2;
-pub const FIX_HISPEED_MAXBPM: i32 = 3;
-pub const FIX_HISPEED_MAINBPM: i32 = 4;
 
 /// Draw command types emitted by draw_lane().
 /// These represent the rendering operations that the caller must execute

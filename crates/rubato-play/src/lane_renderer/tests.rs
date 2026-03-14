@@ -2,7 +2,10 @@ use super::*;
 use bms_model::bms_model::BMSModel;
 use bms_model::note::Note;
 use bms_model::time_line::TimeLine;
-use rubato_types::play_config::PlayConfig;
+use rubato_types::play_config::{
+    FIX_HISPEED_MAINBPM, FIX_HISPEED_MAXBPM, FIX_HISPEED_MINBPM, FIX_HISPEED_OFF,
+    FIX_HISPEED_STARTBPM, PlayConfig,
+};
 
 // --- Helper to create a minimal BMSModel with timelines ---
 
@@ -841,6 +844,141 @@ fn apply_play_config_updates_all_fields() {
         extracted.fixhispeed, FIX_HISPEED_MAINBPM,
         "fixhispeed round-trip"
     );
+}
+
+// =========================================================================
+// fixhispeed basebpm regression tests
+// =========================================================================
+
+/// Regression test: local FIX_HISPEED_* constants in lane_renderer had wrong
+/// values (MINBPM=2, MAXBPM=3, MAINBPM=4) swapped relative to the canonical
+/// constants in rubato_types::play_config (MAXBPM=2, MAINBPM=3, MINBPM=4,
+/// matching Java PlayConfig). With default fixhispeed=FIX_HISPEED_MAINBPM(3),
+/// the match hit the wrong arm, setting basebpm to maxbpm instead of mainbpm.
+///
+/// This test creates a model with four distinct BPM values:
+///   model.bpm (start) = 100, minbpm = 80, maxbpm = 200, mainbpm = 150
+/// and verifies each fixhispeed mode sets basebpm to the correct value.
+#[test]
+fn fixhispeed_basebpm_set_correctly_for_each_mode() {
+    // Timeline layout:
+    //   tl0: bpm=100 (model start bpm), 1 note
+    //   tl1: bpm=80  (will be minbpm), 1 note
+    //   tl2: bpm=200 (will be maxbpm), 1 note
+    //   tl3: bpm=150 (will be mainbpm - most notes), 3 notes
+    //   tl4: bpm=150, 3 notes (more notes at 150 to make it the main BPM)
+    let mut tl0 = make_timeline(0.0, 0, 100.0, 8);
+    tl0.set_note(0, Some(Note::new_normal(1)));
+
+    let mut tl1 = make_timeline(1.0, 500_000, 80.0, 8);
+    tl1.set_note(0, Some(Note::new_normal(1)));
+
+    let mut tl2 = make_timeline(2.0, 1_000_000, 200.0, 8);
+    tl2.set_note(0, Some(Note::new_normal(1)));
+
+    let mut tl3 = make_timeline(3.0, 1_500_000, 150.0, 8);
+    tl3.set_note(0, Some(Note::new_normal(1)));
+    tl3.set_note(1, Some(Note::new_normal(1)));
+    tl3.set_note(2, Some(Note::new_normal(1)));
+
+    let mut tl4 = make_timeline(4.0, 2_000_000, 150.0, 8);
+    tl4.set_note(0, Some(Note::new_normal(1)));
+    tl4.set_note(1, Some(Note::new_normal(1)));
+    tl4.set_note(2, Some(Note::new_normal(1)));
+
+    let model = make_model_with_timelines(vec![tl0, tl1, tl2, tl3, tl4], 100.0);
+
+    // Verify model properties are as expected
+    assert!(
+        (model.min_bpm() - 80.0).abs() < 0.001,
+        "minbpm should be 80"
+    );
+    assert!(
+        (model.max_bpm() - 200.0).abs() < 0.001,
+        "maxbpm should be 200"
+    );
+
+    // Test FIX_HISPEED_OFF: basebpm stays at default (0.0 from new())
+    {
+        let mut renderer = LaneRenderer::new(&model);
+        let pc = PlayConfig {
+            fixhispeed: FIX_HISPEED_OFF,
+            ..PlayConfig::default()
+        };
+        renderer.apply_play_config(&pc);
+        renderer.init(&model);
+        // OFF preserves previous basebpm, which is 0.0 since new() sets it to 0.0
+        // and first init() with OFF also preserves it
+        assert!(
+            renderer.base_bpm().abs() < 0.001,
+            "FIX_HISPEED_OFF: basebpm should remain 0.0, got {}",
+            renderer.base_bpm()
+        );
+    }
+
+    // Test FIX_HISPEED_STARTBPM: basebpm = model.bpm = 100
+    {
+        let mut renderer = LaneRenderer::new(&model);
+        let pc = PlayConfig {
+            fixhispeed: FIX_HISPEED_STARTBPM,
+            ..PlayConfig::default()
+        };
+        renderer.apply_play_config(&pc);
+        renderer.init(&model);
+        assert!(
+            (renderer.base_bpm() - 100.0).abs() < 0.001,
+            "FIX_HISPEED_STARTBPM: basebpm should be 100 (model.bpm), got {}",
+            renderer.base_bpm()
+        );
+    }
+
+    // Test FIX_HISPEED_MAXBPM (=2): basebpm = maxbpm = 200
+    {
+        let mut renderer = LaneRenderer::new(&model);
+        let pc = PlayConfig {
+            fixhispeed: FIX_HISPEED_MAXBPM,
+            ..PlayConfig::default()
+        };
+        renderer.apply_play_config(&pc);
+        renderer.init(&model);
+        assert!(
+            (renderer.base_bpm() - 200.0).abs() < 0.001,
+            "FIX_HISPEED_MAXBPM: basebpm should be 200 (maxbpm), got {}",
+            renderer.base_bpm()
+        );
+    }
+
+    // Test FIX_HISPEED_MAINBPM (=3): basebpm = mainbpm = 150
+    {
+        let mut renderer = LaneRenderer::new(&model);
+        let pc = PlayConfig {
+            fixhispeed: FIX_HISPEED_MAINBPM,
+            ..PlayConfig::default()
+        };
+        renderer.apply_play_config(&pc);
+        renderer.init(&model);
+        assert!(
+            (renderer.base_bpm() - 150.0).abs() < 0.001,
+            "FIX_HISPEED_MAINBPM: basebpm should be 150 (mainbpm), got {}",
+            renderer.base_bpm()
+        );
+    }
+
+    // Test FIX_HISPEED_MINBPM (=4): basebpm = minbpm = 80
+    {
+        let mut renderer = LaneRenderer::new(&model);
+        let pc = PlayConfig {
+            fixhispeed: FIX_HISPEED_MINBPM,
+            ..PlayConfig::default()
+        };
+        renderer.apply_play_config(&pc);
+        renderer.init(&model);
+        assert!(
+            (renderer.base_bpm() - 80.0).abs() < 0.001,
+            "FIX_HISPEED_MINBPM: basebpm should be 80 (minbpm), got {}",
+            renderer.base_bpm()
+        );
+    }
 }
 
 #[test]

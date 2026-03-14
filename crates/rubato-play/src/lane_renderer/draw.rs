@@ -915,6 +915,11 @@ impl LaneRenderer {
         self.mainbpm
     }
 
+    #[cfg(test)]
+    pub(crate) fn base_bpm(&self) -> f64 {
+        self.basebpm
+    }
+
     pub fn play_config(&self) -> PlayConfig {
         // Return a PlayConfig snapshot reflecting current renderer state.
         // In Java, LaneRenderer holds a PlayConfig reference and delegates to it.
