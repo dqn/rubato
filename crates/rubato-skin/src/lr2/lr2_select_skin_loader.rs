@@ -297,6 +297,14 @@ impl LR2SelectSkinLoaderState {
                             }
                         } else {
                             let d = if images.len() % 10 == 0 { 10 } else { 11 };
+                            if images.len() % d != 0 {
+                                log::warn!(
+                                    "SRC_BAR_LEVEL: image count {} is not divisible by {}; {} trailing image(s) will be ignored",
+                                    images.len(),
+                                    d,
+                                    images.len() % d,
+                                );
+                            }
                             let frames = images.len() / d;
                             let mut nimages = Vec::with_capacity(frames);
                             for f in 0..frames {

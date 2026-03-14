@@ -199,12 +199,14 @@ impl LR2PlaySkinLoaderState {
                             -1
                         };
                     } else {
-                        let offset = (lane / 10)
-                            * (self.laner.len() as i32 / self.playerr.len().max(1) as i32);
+                        // .max(1) guards against division by zero when playerr is
+                        // empty (e.g. before DST_PLAYER is parsed).
+                        let player_count = self.playerr.len().max(1) as i32;
+                        let offset = (lane / 10) * (self.laner.len() as i32 / player_count);
                         lane = if lane > 10 { lane - 11 } else { lane - 1 };
                         if lane
                             >= (self.laner.len() as i32 - mode.scratch_key().len() as i32)
-                                / self.playerr.len().max(1) as i32
+                                / player_count
                         {
                             lane = -1;
                         } else {
@@ -381,6 +383,15 @@ impl LR2PlaySkinLoaderState {
                 let divx = if values[7] > 0 { values[7] } else { 1 };
                 let divy = if values[8] > 0 { values[8] } else { 1 };
                 if let Some(simages) = self.csv.source_image(&values) {
+                    let required = (divx * divy) as usize;
+                    if simages.len() < required {
+                        log::warn!(
+                            "SRC_NOWCOMBO: image count {} < divx*divy {}; skipping",
+                            simages.len(),
+                            required,
+                        );
+                        return;
+                    }
                     // Rearrange flat images into [divy][divx] grid
                     let images_2d: Vec<Vec<TextureRegion>> = (0..divy)
                         .map(|j| {
