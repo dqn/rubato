@@ -584,7 +584,7 @@ impl BMSPlayerInputProcessor {
     }
 
     pub fn poll(&mut self) {
-        let now = rubato_types::monotonic_clock::monotonic_micros() - self.starttime;
+        let now = (rubato_types::monotonic_clock::monotonic_micros() - self.starttime).max(0);
 
         // Poll keyboard
         // We need to use a temporary struct to act as callback since
@@ -1184,6 +1184,49 @@ mod tests {
             assert!(
                 playconfig.midi.keys[0].is_none(),
                 "midi key[0] should be deduped to None"
+            );
+        }
+    }
+
+    /// Regression: poll() must clamp `now` to >= 0 when starttime is in the future.
+    /// A negative `now` would flow into key_changed_internal and store negative
+    /// press times, corrupting judge timing.
+    #[test]
+    fn test_poll_clamps_now_to_non_negative_when_starttime_is_future() {
+        let shared_state = SharedKeyState::new();
+        crate::gdx_compat::set_shared_key_state(shared_state.clone());
+
+        let config = Config::default();
+        let player = PlayerConfig::default();
+        let mut proc = BMSPlayerInputProcessor::new(&config, &player);
+        let mut kb_config = KeyboardConfig::default();
+        kb_config.duration = 0;
+        proc.set_keyboard_config(&kb_config);
+
+        // Set starttime far in the future so monotonic_micros() - starttime < 0
+        proc.set_start_time(i64::MAX);
+
+        // Press a key and poll
+        shared_state.set_key_pressed(Keys::Z, true);
+        proc.poll();
+
+        // If the key was detected, its changed time must be >= 0 (clamped)
+        if proc.key_state(0) {
+            assert!(
+                proc.key_changed_time(0) >= 0,
+                "key press time must not be negative when starttime is in the future, got {}",
+                proc.key_changed_time(0),
+            );
+        }
+        // Even if no key detected (duration gate), verify the internal time
+        // array was never written with a negative value by checking all slots
+        for i in 0..KEYSTATE_SIZE as i32 {
+            let t = proc.key_changed_time(i);
+            assert!(
+                t == i64::MIN || t >= 0,
+                "time[{}] must be either i64::MIN (unset) or >= 0, got {}",
+                i,
+                t,
             );
         }
     }
