@@ -13,4 +13,5 @@ pub mod gdx_sound_driver;
 pub mod ms_adpcm_decoder;
 pub mod pcm;
 pub mod port_audio_driver;
+pub mod recording_audio_driver;
 pub mod short_pcm;

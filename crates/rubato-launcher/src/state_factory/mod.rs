@@ -426,9 +426,6 @@ impl StateFactory for LauncherStateFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::bms_model::bms_model::BMSModel;
-    use ::bms_model::note::Note;
-    use rubato_audio::audio_driver::AudioDriver;
     use rubato_core::sprite_batch_helper::SpriteBatchHelper;
     use rubato_state::select::preview_music_processor::PreviewMusicProcessor;
     use rubato_types::main_controller_access::MainControllerAccess;
@@ -482,59 +479,7 @@ mod tests {
         }
     }
 
-    struct MockAudioDriver {
-        play_count: usize,
-    }
-
-    impl MockAudioDriver {
-        fn new() -> Self {
-            Self { play_count: 0 }
-        }
-    }
-
-    impl AudioDriver for MockAudioDriver {
-        fn play_path(&mut self, _path: &str, _volume: f32, _loop_play: bool) {
-            self.play_count += 1;
-        }
-
-        fn set_volume_path(&mut self, _path: &str, _volume: f32) {}
-
-        fn is_playing_path(&self, _path: &str) -> bool {
-            false
-        }
-
-        fn stop_path(&mut self, _path: &str) {}
-
-        fn dispose_path(&mut self, _path: &str) {}
-
-        fn set_model(&mut self, _model: &BMSModel) {}
-
-        fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
-
-        fn abort(&mut self) {}
-
-        fn get_progress(&self) -> f32 {
-            1.0
-        }
-
-        fn play_note(&mut self, _n: &Note, _volume: f32, _pitch: i32) {}
-
-        fn play_judge(&mut self, _judge: i32, _fast: bool) {}
-
-        fn stop_note(&mut self, _n: Option<&Note>) {}
-
-        fn set_volume_note(&mut self, _n: &Note, _volume: f32) {}
-
-        fn set_global_pitch(&mut self, _pitch: f32) {}
-
-        fn get_global_pitch(&self) -> f32 {
-            1.0
-        }
-
-        fn dispose_old(&mut self) {}
-
-        fn dispose(&mut self) {}
-    }
+    use rubato_audio::recording_audio_driver::RecordingAudioDriver;
 
     struct ChangeStateSkin;
 
@@ -822,11 +767,11 @@ mod tests {
         selector.preview_state.preview = Some(preview);
 
         let mut shared = SharedMusicSelectorState::new(Arc::new(Mutex::new(selector)));
-        let mut audio = MockAudioDriver::new();
+        let mut audio = RecordingAudioDriver::new();
 
         shared.sync_audio(&mut audio);
 
-        assert_eq!(audio.play_count, 1);
+        assert_eq!(audio.play_path_count(), 1);
     }
 
     #[test]

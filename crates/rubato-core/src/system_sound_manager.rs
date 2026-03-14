@@ -230,54 +230,7 @@ fn rand_f64() -> f64 {
 mod tests {
     use super::*;
 
-    /// Mock AudioDriver for testing play/stop/dispose calls.
-    struct MockAudioDriver {
-        played: Vec<(String, f32, bool)>,
-        stopped: Vec<String>,
-        disposed: Vec<String>,
-    }
-
-    impl MockAudioDriver {
-        fn new() -> Self {
-            Self {
-                played: Vec::new(),
-                stopped: Vec::new(),
-                disposed: Vec::new(),
-            }
-        }
-    }
-
-    impl rubato_audio::audio_driver::AudioDriver for MockAudioDriver {
-        fn play_path(&mut self, path: &str, volume: f32, loop_play: bool) {
-            self.played.push((path.to_string(), volume, loop_play));
-        }
-        fn set_volume_path(&mut self, _path: &str, _volume: f32) {}
-        fn is_playing_path(&self, _path: &str) -> bool {
-            false
-        }
-        fn stop_path(&mut self, path: &str) {
-            self.stopped.push(path.to_string());
-        }
-        fn dispose_path(&mut self, path: &str) {
-            self.disposed.push(path.to_string());
-        }
-        fn set_model(&mut self, _model: &bms_model::bms_model::BMSModel) {}
-        fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
-        fn abort(&mut self) {}
-        fn get_progress(&self) -> f32 {
-            0.0
-        }
-        fn play_note(&mut self, _n: &bms_model::note::Note, _volume: f32, _pitch: i32) {}
-        fn play_judge(&mut self, _judge: i32, _fast: bool) {}
-        fn stop_note(&mut self, _n: Option<&bms_model::note::Note>) {}
-        fn set_volume_note(&mut self, _n: &bms_model::note::Note, _volume: f32) {}
-        fn set_global_pitch(&mut self, _pitch: f32) {}
-        fn get_global_pitch(&self) -> f32 {
-            1.0
-        }
-        fn dispose_old(&mut self) {}
-        fn dispose(&mut self) {}
-    }
+    use rubato_audio::recording_audio_driver::{AudioEvent, RecordingAudioDriver};
 
     #[test]
     fn play_calls_audio_driver() {
@@ -286,12 +239,17 @@ mod tests {
         sm.soundmap
             .insert(SoundType::PlayReady, "test/ready.wav".to_string());
 
-        let mut audio = MockAudioDriver::new();
+        let mut audio = RecordingAudioDriver::new();
         sm.play(&SoundType::PlayReady, false, Some(&mut audio), 0.8);
-        assert_eq!(audio.played.len(), 1);
-        assert_eq!(audio.played[0].0, "test/ready.wav");
-        assert!((audio.played[0].1 - 0.8).abs() < f32::EPSILON);
-        assert!(!audio.played[0].2);
+        assert_eq!(audio.play_path_count(), 1);
+        assert_eq!(
+            audio.events()[0],
+            AudioEvent::PlayPath {
+                path: "test/ready.wav".to_string(),
+                volume: 0.8,
+                loop_play: false,
+            }
+        );
     }
 
     #[test]
@@ -300,10 +258,17 @@ mod tests {
         sm.soundmap
             .insert(SoundType::Select, "test/select.wav".to_string());
 
-        let mut audio = MockAudioDriver::new();
+        let mut audio = RecordingAudioDriver::new();
         sm.play(&SoundType::Select, true, Some(&mut audio), 1.0);
-        assert_eq!(audio.played.len(), 1);
-        assert!(audio.played[0].2); // loop = true
+        assert_eq!(audio.play_path_count(), 1);
+        assert_eq!(
+            audio.events()[0],
+            AudioEvent::PlayPath {
+                path: "test/select.wav".to_string(),
+                volume: 1.0,
+                loop_play: true,
+            }
+        );
     }
 
     #[test]
@@ -312,10 +277,10 @@ mod tests {
         sm.soundmap
             .insert(SoundType::PlayStop, "test/stop.wav".to_string());
 
-        let mut audio = MockAudioDriver::new();
+        let mut audio = RecordingAudioDriver::new();
         sm.stop(&SoundType::PlayStop, Some(&mut audio));
-        assert_eq!(audio.stopped.len(), 1);
-        assert_eq!(audio.stopped[0], "test/stop.wav");
+        assert_eq!(audio.stop_path_count(), 1);
+        assert_eq!(audio.stopped_paths(), vec!["test/stop.wav".to_string()]);
     }
 
     #[test]
@@ -339,19 +304,19 @@ mod tests {
     #[test]
     fn play_missing_sound_is_noop() {
         let sm = SystemSoundManager::new(None, None);
-        let mut audio = MockAudioDriver::new();
+        let mut audio = RecordingAudioDriver::new();
         // No sound in the map
         sm.play(&SoundType::PlayReady, false, Some(&mut audio), 0.5);
-        assert!(audio.played.is_empty());
+        assert_eq!(audio.play_path_count(), 0);
     }
 
     #[test]
     fn dispose_sound_calls_audio_driver() {
         let sm = SystemSoundManager::new(None, None);
-        let mut audio = MockAudioDriver::new();
+        let mut audio = RecordingAudioDriver::new();
         sm.dispose_sound("old/path.wav", Some(&mut audio));
-        assert_eq!(audio.disposed.len(), 1);
-        assert_eq!(audio.disposed[0], "old/path.wav");
+        assert_eq!(audio.disposed_paths().len(), 1);
+        assert_eq!(audio.disposed_paths(), vec!["old/path.wav".to_string()]);
     }
 
     /// Regression: rand_f64() used u32::MAX as divisor for subsec_nanos(),

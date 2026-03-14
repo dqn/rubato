@@ -368,55 +368,8 @@ impl PreviewMusicProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::bms_model::bms_model::BMSModel;
-    use ::bms_model::note::Note;
+    use rubato_audio::recording_audio_driver::RecordingAudioDriver;
     use std::sync::atomic::AtomicBool;
-    use std::sync::atomic::AtomicI32;
-
-    /// Mock AudioDriver for testing PreviewMusicProcessor.
-    struct MockAudioDriver {
-        play_count: AtomicI32,
-        stop_count: AtomicI32,
-    }
-
-    impl MockAudioDriver {
-        fn new() -> Self {
-            Self {
-                play_count: AtomicI32::new(0),
-                stop_count: AtomicI32::new(0),
-            }
-        }
-    }
-
-    impl AudioDriver for MockAudioDriver {
-        fn play_path(&mut self, _path: &str, _volume: f32, _loop_play: bool) {
-            self.play_count.fetch_add(1, Ordering::SeqCst);
-        }
-        fn set_volume_path(&mut self, _path: &str, _volume: f32) {}
-        fn is_playing_path(&self, _path: &str) -> bool {
-            false
-        }
-        fn stop_path(&mut self, _path: &str) {
-            self.stop_count.fetch_add(1, Ordering::SeqCst);
-        }
-        fn dispose_path(&mut self, _path: &str) {}
-        fn set_model(&mut self, _model: &BMSModel) {}
-        fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
-        fn abort(&mut self) {}
-        fn get_progress(&self) -> f32 {
-            1.0
-        }
-        fn play_note(&mut self, _n: &Note, _volume: f32, _pitch: i32) {}
-        fn play_judge(&mut self, _judge: i32, _fast: bool) {}
-        fn stop_note(&mut self, _n: Option<&Note>) {}
-        fn set_volume_note(&mut self, _n: &Note, _volume: f32) {}
-        fn set_global_pitch(&mut self, _pitch: f32) {}
-        fn get_global_pitch(&self) -> f32 {
-            1.0
-        }
-        fn dispose_old(&mut self) {}
-        fn dispose(&mut self) {}
-    }
 
     struct LockCheckingTarget {
         commands: Arc<Mutex<VecDeque<String>>>,
@@ -453,7 +406,7 @@ mod tests {
 
     #[test]
     fn test_new_with_audio_driver_trait() {
-        let _audio = MockAudioDriver::new();
+        let _audio = RecordingAudioDriver::new();
         let config = Config::default();
         let processor = PreviewMusicProcessor::new(&config);
         assert!(processor.song_data().is_none());
@@ -461,7 +414,7 @@ mod tests {
 
     #[test]
     fn test_set_default() {
-        let _audio = MockAudioDriver::new();
+        let _audio = RecordingAudioDriver::new();
         let config = Config::default();
         let mut processor = PreviewMusicProcessor::new(&config);
         processor.set_default("/path/to/bgm.ogg");
@@ -470,7 +423,7 @@ mod tests {
 
     #[test]
     fn test_start_with_none_song() {
-        let _audio = MockAudioDriver::new();
+        let _audio = RecordingAudioDriver::new();
         let config = Config::default();
         let mut processor = PreviewMusicProcessor::new(&config);
         processor.start(None);
@@ -481,7 +434,7 @@ mod tests {
 
     #[test]
     fn test_start_with_song() {
-        let _audio = MockAudioDriver::new();
+        let _audio = RecordingAudioDriver::new();
         let config = Config::default();
         let mut processor = PreviewMusicProcessor::new(&config);
 
@@ -494,7 +447,7 @@ mod tests {
 
     #[test]
     fn test_stop() {
-        let _audio = MockAudioDriver::new();
+        let _audio = RecordingAudioDriver::new();
         let config = Config::default();
         let mut processor = PreviewMusicProcessor::new(&config);
         processor.preview_running.store(true, Ordering::SeqCst);
@@ -504,7 +457,7 @@ mod tests {
 
     #[test]
     fn test_run_preview_loop_immediate_stop() {
-        let mut audio = MockAudioDriver::new();
+        let mut audio = RecordingAudioDriver::new();
         let config = Config::default();
         let mut processor = PreviewMusicProcessor::new(&config);
         processor.set_default("/bgm/default.ogg");
@@ -512,14 +465,14 @@ mod tests {
         // after playing default music and then calling stop_preview_internal
         processor.run_preview_loop(&mut audio, &config);
         // Should have played the default music
-        assert!(audio.play_count.load(Ordering::SeqCst) >= 1);
+        assert!(audio.play_path_count() >= 1);
         // Should have stopped the default music on exit
-        assert!(audio.stop_count.load(Ordering::SeqCst) >= 1);
+        assert!(audio.stop_path_count() >= 1);
     }
 
     #[test]
     fn test_tick_preview_starts_default_music_when_running() {
-        let mut audio = MockAudioDriver::new();
+        let mut audio = RecordingAudioDriver::new();
         let config = Config::default();
         let mut processor = PreviewMusicProcessor::new(&config);
         processor.set_default("/bgm/default.ogg");
@@ -527,7 +480,7 @@ mod tests {
 
         processor.tick_preview(&mut audio, &config);
 
-        assert_eq!(audio.play_count.load(Ordering::SeqCst), 1);
+        assert_eq!(audio.play_path_count(), 1);
     }
 
     #[test]

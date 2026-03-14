@@ -497,54 +497,8 @@ pub use crate::modmenu::freq_trainer_menu::FreqTrainerMenu;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bms_model::bms_model::BMSModel;
-    use bms_model::note::Note;
+    use rubato_audio::recording_audio_driver::RecordingAudioDriver;
     use rubato_types::song_data::SongData;
-
-    /// Mock AudioDriver for testing.
-    struct MockAudioDriver {
-        stop_note_called: bool,
-        global_pitch: f32,
-    }
-
-    impl MockAudioDriver {
-        fn new() -> Self {
-            Self {
-                stop_note_called: false,
-                global_pitch: 1.0,
-            }
-        }
-    }
-
-    impl AudioDriver for MockAudioDriver {
-        fn play_path(&mut self, _path: &str, _volume: f32, _loop_play: bool) {}
-        fn set_volume_path(&mut self, _path: &str, _volume: f32) {}
-        fn is_playing_path(&self, _path: &str) -> bool {
-            false
-        }
-        fn stop_path(&mut self, _path: &str) {}
-        fn dispose_path(&mut self, _path: &str) {}
-        fn set_model(&mut self, _model: &BMSModel) {}
-        fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
-        fn abort(&mut self) {}
-        fn get_progress(&self) -> f32 {
-            1.0
-        }
-        fn play_note(&mut self, _n: &Note, _volume: f32, _pitch: i32) {}
-        fn play_judge(&mut self, _judge: i32, _fast: bool) {}
-        fn stop_note(&mut self, _n: Option<&Note>) {
-            self.stop_note_called = true;
-        }
-        fn set_volume_note(&mut self, _n: &Note, _volume: f32) {}
-        fn set_global_pitch(&mut self, pitch: f32) {
-            self.global_pitch = pitch;
-        }
-        fn get_global_pitch(&self) -> f32 {
-            self.global_pitch
-        }
-        fn dispose_old(&mut self) {}
-        fn dispose(&mut self) {}
-    }
 
     #[test]
     fn test_main_controller_new_has_no_audio() {
@@ -556,7 +510,7 @@ mod tests {
     fn test_main_controller_with_audio_has_audio() {
         let mut mc = MainController::with_audio(
             Box::new(NullMainController),
-            Box::new(MockAudioDriver::new()),
+            Box::new(RecordingAudioDriver::new()),
         );
         assert!(mc.audio_processor_mut().is_some());
     }
@@ -565,7 +519,7 @@ mod tests {
     fn test_main_controller_audio_stop_note() {
         let mut mc = MainController::with_audio(
             Box::new(NullMainController),
-            Box::new(MockAudioDriver::new()),
+            Box::new(RecordingAudioDriver::new()),
         );
         if let Some(audio) = mc.audio_processor_mut() {
             audio.stop_note(None);
@@ -577,7 +531,7 @@ mod tests {
     fn test_main_controller_audio_set_global_pitch() {
         let mut mc = MainController::with_audio(
             Box::new(NullMainController),
-            Box::new(MockAudioDriver::new()),
+            Box::new(RecordingAudioDriver::new()),
         );
         if let Some(audio) = mc.audio_processor_mut() {
             audio.set_global_pitch(1.5);
@@ -743,7 +697,7 @@ mod tests {
 
         let mut mc = MainController::with_audio_and_ir(
             Box::new(NullMainController),
-            Box::new(MockAudioDriver::new()),
+            Box::new(RecordingAudioDriver::new()),
             ir_statuses,
         );
 
@@ -763,7 +717,7 @@ mod tests {
     fn test_with_audio_and_ir_empty_ir_still_has_audio() {
         let mut mc = MainController::with_audio_and_ir(
             Box::new(NullMainController),
-            Box::new(MockAudioDriver::new()),
+            Box::new(RecordingAudioDriver::new()),
             Vec::new(),
         );
 

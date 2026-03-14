@@ -945,59 +945,7 @@ fn test_update_state_references_does_not_panic() {
 
 use bms_model::bms_model::BMSModel;
 use bms_model::note::Note;
-
-/// Mock AudioDriver for testing. Tracks method calls.
-struct MockAudioDriver {
-    global_pitch: f32,
-    play_count: i32,
-    stop_count: i32,
-    set_model_count: i32,
-}
-
-impl MockAudioDriver {
-    fn new() -> Self {
-        Self {
-            global_pitch: 1.0,
-            play_count: 0,
-            stop_count: 0,
-            set_model_count: 0,
-        }
-    }
-}
-
-impl AudioDriver for MockAudioDriver {
-    fn play_path(&mut self, _path: &str, _volume: f32, _loop_play: bool) {
-        self.play_count += 1;
-    }
-    fn set_volume_path(&mut self, _path: &str, _volume: f32) {}
-    fn is_playing_path(&self, _path: &str) -> bool {
-        false
-    }
-    fn stop_path(&mut self, _path: &str) {
-        self.stop_count += 1;
-    }
-    fn dispose_path(&mut self, _path: &str) {}
-    fn set_model(&mut self, _model: &BMSModel) {
-        self.set_model_count += 1;
-    }
-    fn set_additional_key_sound(&mut self, _judge: i32, _fast: bool, _path: Option<&str>) {}
-    fn abort(&mut self) {}
-    fn get_progress(&self) -> f32 {
-        1.0
-    }
-    fn play_note(&mut self, _n: &Note, _volume: f32, _pitch: i32) {}
-    fn play_judge(&mut self, _judge: i32, _fast: bool) {}
-    fn stop_note(&mut self, _n: Option<&Note>) {}
-    fn set_volume_note(&mut self, _n: &Note, _volume: f32) {}
-    fn set_global_pitch(&mut self, pitch: f32) {
-        self.global_pitch = pitch;
-    }
-    fn get_global_pitch(&self) -> f32 {
-        self.global_pitch
-    }
-    fn dispose_old(&mut self) {}
-    fn dispose(&mut self) {}
-}
+use rubato_audio::recording_audio_driver::RecordingAudioDriver;
 
 #[test]
 fn test_audio_driver_initially_none() {
@@ -1008,14 +956,14 @@ fn test_audio_driver_initially_none() {
 #[test]
 fn test_set_audio_driver() {
     let mut mc = make_test_controller();
-    mc.set_audio_driver(Box::new(MockAudioDriver::new()));
+    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
     assert!(mc.audio_processor().is_some());
 }
 
 #[test]
 fn test_get_audio_processor_returns_trait_ref() {
     let mut mc = make_test_controller();
-    mc.set_audio_driver(Box::new(MockAudioDriver::new()));
+    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
 
     let audio = mc.audio_processor().unwrap();
     assert_eq!(audio.get_global_pitch(), 1.0);
@@ -1025,7 +973,7 @@ fn test_get_audio_processor_returns_trait_ref() {
 #[test]
 fn test_get_audio_processor_mut() {
     let mut mc = make_test_controller();
-    mc.set_audio_driver(Box::new(MockAudioDriver::new()));
+    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
 
     let audio = mc.audio_processor_mut().unwrap();
     audio.set_global_pitch(1.5);
@@ -1035,11 +983,11 @@ fn test_get_audio_processor_mut() {
 #[test]
 fn test_audio_driver_play_path() {
     let mut mc = make_test_controller();
-    mc.set_audio_driver(Box::new(MockAudioDriver::new()));
+    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
 
     let audio = mc.audio_processor_mut().unwrap();
     audio.play_path("/test/sound.wav", 0.8, false);
-    assert!(!audio.is_playing_path("/test/sound.wav"));
+    assert!(audio.is_playing_path("/test/sound.wav"));
 }
 
 #[test]
@@ -1053,7 +1001,7 @@ fn render_invokes_state_sync_audio_when_audio_driver_exists() {
         Arc::clone(&render_sync_calls),
         Arc::clone(&shutdown_sync_calls),
     )));
-    mc.set_audio_driver(Box::new(MockAudioDriver::new()));
+    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
 
     mc.change_state(MainStateType::MusicSelect);
     mc.render();
@@ -1075,7 +1023,7 @@ fn state_transition_flushes_audio_before_shutdown() {
         Arc::clone(&render_sync_calls),
         Arc::clone(&shutdown_sync_calls),
     )));
-    mc.set_audio_driver(Box::new(MockAudioDriver::new()));
+    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
 
     mc.change_state(MainStateType::MusicSelect);
     mc.change_state(MainStateType::Config);
