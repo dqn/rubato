@@ -84,13 +84,26 @@ pub fn float_value(data: &AbstractResultData, id: i32) -> f32 {
 }
 
 /// Shared boolean_value accessor for result render contexts.
+///
+/// Java reference (BooleanPropertyFactory):
+///   OPTION_RESULT_CLEAR (90): score.getClear() != Failed.id
+///   OPTION_RESULT_FAIL  (91): score.getClear() == Failed.id
+/// where `score` is getPlayerResource().getScoreData() (the current play's score).
 #[inline]
 pub fn boolean_value(data: &AbstractResultData, id: i32) -> bool {
     match id {
-        // Clear result
-        90 => data.oldscore.clear >= ClearType::AssistEasy.id(),
-        // Fail result
-        91 => data.oldscore.clear < ClearType::AssistEasy.id(),
+        // Clear result: current play's clear != Failed
+        90 => data
+            .score
+            .score
+            .as_ref()
+            .is_some_and(|s| s.clear != ClearType::Failed.id()),
+        // Fail result: current play's clear == Failed
+        91 => data
+            .score
+            .score
+            .as_ref()
+            .is_none_or(|s| s.clear == ClearType::Failed.id()),
         _ => false,
     }
 }
@@ -151,6 +164,7 @@ pub fn ranking_offset(data: &AbstractResultData) -> i32 {
 }
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
 
@@ -223,35 +237,48 @@ mod tests {
     }
 
     #[test]
-    fn test_boolean_value_clear_uses_id_not_discriminant() {
-        // Regression: boolean_value must use ClearType::AssistEasy.id() (== 2),
-        // not `ClearType::AssistEasy as i32` which relies on implicit discriminant
-        // ordering and could silently diverge if the enum is reordered.
-        let assist_easy_id = ClearType::AssistEasy.id();
+    fn test_boolean_value_uses_current_play_score_not_oldscore() {
+        // Regression: boolean_value IDs 90/91 must check the current play's
+        // score (data.score.score), not the old best score (data.oldscore).
+        // Java: OPTION_RESULT_CLEAR(90) = score.getClear() != Failed.id
+        //       OPTION_RESULT_FAIL(91)  = score.getClear() == Failed.id
+        let failed_id = ClearType::Failed.id();
 
-        // ID 90: clear result (clear >= AssistEasy)
-        // ID 91: fail result  (clear <  AssistEasy)
         let mut data = AbstractResultData::new();
 
-        // Exactly at AssistEasy threshold -> cleared
-        data.oldscore.clear = assist_easy_id;
-        assert!(boolean_value(&data, 90));
-        assert!(!boolean_value(&data, 91));
-
-        // Above threshold -> cleared
-        data.oldscore.clear = assist_easy_id + 1;
-        assert!(boolean_value(&data, 90));
-        assert!(!boolean_value(&data, 91));
-
-        // Below threshold -> failed
-        data.oldscore.clear = assist_easy_id - 1;
+        // No score data -> ID 90 false (not cleared), ID 91 true (failed)
         assert!(!boolean_value(&data, 90));
         assert!(boolean_value(&data, 91));
 
-        // NoPlay (0) -> failed
-        data.oldscore.clear = ClearType::NoPlay.id();
+        // Current play cleared (AssistEasy) -> clear=true, fail=false
+        let mut score = rubato_core::score_data::ScoreData::default();
+        score.clear = ClearType::AssistEasy.id();
+        data.score.score = Some(score.clone());
+        assert!(boolean_value(&data, 90));
+        assert!(!boolean_value(&data, 91));
+
+        // Current play cleared (FullCombo) -> clear=true, fail=false
+        score.clear = ClearType::FullCombo.id();
+        data.score.score = Some(score.clone());
+        assert!(boolean_value(&data, 90));
+        assert!(!boolean_value(&data, 91));
+
+        // Current play failed -> clear=false, fail=true
+        score.clear = failed_id;
+        data.score.score = Some(score.clone());
         assert!(!boolean_value(&data, 90));
         assert!(boolean_value(&data, 91));
+
+        // NoPlay (0) is not Failed (1) -> clear=true, fail=false
+        score.clear = ClearType::NoPlay.id();
+        data.score.score = Some(score);
+        assert!(boolean_value(&data, 90));
+        assert!(!boolean_value(&data, 91));
+
+        // Verify oldscore does NOT affect the result
+        data.oldscore.clear = failed_id;
+        assert!(boolean_value(&data, 90), "oldscore must not affect ID 90");
+        assert!(!boolean_value(&data, 91), "oldscore must not affect ID 91");
     }
 
     // ============================================================
