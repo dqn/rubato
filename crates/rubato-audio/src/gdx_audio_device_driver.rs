@@ -47,6 +47,8 @@ pub struct GdxAudioDeviceDriver {
     // Background loading state
     loading_receiver: Option<mpsc::Receiver<BackgroundLoadResult>>,
     pending_load_tasks: Option<Vec<LoadTask>>,
+    // JoinHandle for the keysound loader thread so we can join it on abort/dispose.
+    loading_thread: Option<std::thread::JoinHandle<()>>,
     // Path sound cache for preloaded sounds (avoids blocking I/O on play_path)
     path_sound_cache: HashMap<String, StaticSoundData>,
 }
@@ -79,6 +81,7 @@ impl GdxAudioDeviceDriver {
             additional_key_sound_handles: Default::default(),
             loading_receiver: None,
             pending_load_tasks: None,
+            loading_thread: None,
             path_sound_cache: HashMap::new(),
         }
     }
@@ -185,7 +188,10 @@ impl AudioDriver for GdxAudioDeviceDriver {
         self.slicesound.clear();
         self.slice_handles.clear();
 
-        // Cancel any in-progress background load
+        // Cancel any in-progress background load and join the previous loading thread
+        if let Some(handle) = self.loading_thread.take() {
+            let _ = handle.join();
+        }
         self.loading_receiver = None;
         self.pending_load_tasks = None;
 
@@ -270,7 +276,7 @@ impl AudioDriver for GdxAudioDeviceDriver {
             let (tx, rx) = mpsc::channel();
             let paths_vec: Vec<String> = paths_to_load.into_iter().collect();
 
-            std::thread::Builder::new()
+            let thread_handle = std::thread::Builder::new()
                 .name("keysound-loader".to_string())
                 .spawn(move || {
                     let newly_loaded: Vec<(String, StaticSoundData)> = paths_vec
@@ -293,6 +299,7 @@ impl AudioDriver for GdxAudioDeviceDriver {
 
             self.loading_receiver = Some(rx);
             self.pending_load_tasks = Some(load_tasks);
+            self.loading_thread = Some(thread_handle);
         }
     }
 
@@ -315,6 +322,9 @@ impl AudioDriver for GdxAudioDeviceDriver {
     fn abort(&mut self) {
         self.loading_receiver = None;
         self.pending_load_tasks = None;
+        if let Some(handle) = self.loading_thread.take() {
+            let _ = handle.join();
+        }
     }
 
     fn get_progress(&self) -> f32 {
@@ -452,6 +462,9 @@ impl AudioDriver for GdxAudioDeviceDriver {
     }
 
     fn dispose(&mut self) {
+        if let Some(handle) = self.loading_thread.take() {
+            let _ = handle.join();
+        }
         self.path_sounds.clear();
         self.wav_sounds.clear();
         self.wav_handles.clear();
@@ -562,6 +575,10 @@ impl GdxAudioDeviceDriver {
                 released
             );
         }
+
+        // Clear auxiliary sound caches to prevent unbounded growth across songs.
+        self.sound_cache.clear();
+        self.path_sound_cache.clear();
     }
 
     /// Play a single note's keysound (without layered notes).

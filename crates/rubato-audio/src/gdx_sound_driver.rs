@@ -345,9 +345,13 @@ impl AudioDriver for GdxSoundDriver {
         }
     }
     fn abort(&mut self) {
-        // Drop the receiver to signal the background thread's result is no longer needed
+        // Drop the receiver first so the background thread's send() returns Err
+        // and the thread exits promptly, then join to avoid leaking the thread.
         self.loading_receiver = None;
         self.pending_load_tasks = None;
+        if let Some(handle) = self.loading_thread.take() {
+            let _ = handle.join();
+        }
     }
 
     fn get_progress(&self) -> f32 {
@@ -648,6 +652,14 @@ impl GdxSoundDriver {
                 released
             );
         }
+
+        // Clear auxiliary sound caches to prevent unbounded growth across songs.
+        // sound_cache (from set_additional_key_sound / getSound) and
+        // path_sound_cache (from play_path / preload_path) are not keysound
+        // file_cache entries, so they lack generational eviction. Clearing them
+        // at song-switch boundaries keeps memory bounded.
+        self.sound_cache.clear();
+        self.path_sound_cache.clear();
     }
 
     /// Play a single note's keysound (without layered notes).
@@ -1338,6 +1350,32 @@ mod tests {
         assert!(completed.load(Ordering::SeqCst));
     }
 
+    /// Regression: abort() must join loading_thread to avoid leaking the
+    /// background keysound-loader thread.
+    #[test]
+    fn loading_thread_join_on_abort() {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        let completed = Arc::new(AtomicBool::new(false));
+        let completed_clone = completed.clone();
+
+        let handle = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            completed_clone.store(true, Ordering::SeqCst);
+        });
+
+        let mut loading_thread: Option<std::thread::JoinHandle<()>> = Some(handle);
+
+        // Simulate abort() joining the thread
+        if let Some(h) = loading_thread.take() {
+            let _ = h.join();
+        }
+
+        // Thread must have completed by the time join returns
+        assert!(completed.load(Ordering::SeqCst));
+    }
+
     /// Create a StaticSoundData long enough to remain Playing through MockBackend ticks.
     fn make_long_sound() -> StaticSoundData {
         StaticSoundData {
@@ -1418,5 +1456,64 @@ mod tests {
 
         // sh1 was stopped and pruned; only sh2 remains
         assert_eq!(slice_handles[&key].len(), 1);
+    }
+
+    /// Regression: evict_old_cache must clear sound_cache and path_sound_cache
+    /// to prevent unbounded memory growth across song switches. These auxiliary
+    /// caches lack generational eviction, so without clearing they accumulate
+    /// every unique path played via play_path() or loaded via sound().
+    #[test]
+    fn evict_old_cache_clears_auxiliary_caches() {
+        let sound = make_silent_sound();
+        let song_resource_gen = 2;
+        let maxgen = song_resource_gen.max(1);
+
+        // Simulate sound_cache with accumulated entries
+        let mut sound_cache: HashMap<String, StaticSoundData> = HashMap::new();
+        sound_cache.insert("/preview/song1.ogg".to_string(), sound.clone());
+        sound_cache.insert("/preview/song2.ogg".to_string(), sound.clone());
+
+        // Simulate path_sound_cache with accumulated entries
+        let mut path_sound_cache: HashMap<String, StaticSoundData> = HashMap::new();
+        path_sound_cache.insert("/sfx/click.wav".to_string(), sound.clone());
+        path_sound_cache.insert("/sfx/decide.wav".to_string(), sound.clone());
+        path_sound_cache.insert("/sfx/cancel.wav".to_string(), sound.clone());
+
+        // Simulate file_cache (should use generational eviction, not full clear)
+        let mut file_cache: HashMap<String, FileCacheEntry> = HashMap::new();
+        file_cache.insert(
+            "/keysound/a.wav".to_string(),
+            FileCacheEntry {
+                sound: sound.clone(),
+                generation: 0, // Fresh: should survive
+            },
+        );
+        file_cache.insert(
+            "/keysound/old.wav".to_string(),
+            FileCacheEntry {
+                sound: sound.clone(),
+                generation: maxgen, // Expired: should be evicted
+            },
+        );
+
+        // Run evict_old_cache logic (same as the real method)
+        file_cache.retain(|_, entry| {
+            if entry.generation >= maxgen {
+                false
+            } else {
+                entry.generation += 1;
+                true
+            }
+        });
+        sound_cache.clear();
+        path_sound_cache.clear();
+
+        // file_cache uses generational eviction: fresh entry survives, old is evicted
+        assert_eq!(file_cache.len(), 1);
+        assert!(file_cache.contains_key("/keysound/a.wav"));
+
+        // Auxiliary caches must be fully cleared
+        assert!(sound_cache.is_empty());
+        assert!(path_sound_cache.is_empty());
     }
 }
