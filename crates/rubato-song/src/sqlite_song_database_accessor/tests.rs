@@ -821,3 +821,163 @@ fn test_checked_parent_populated_after_folder_query() {
         parent_path
     );
 }
+
+/// Helper: set up a song database with one song and stub score DBs for
+/// authorizer tests.
+fn setup_authorizer_test() -> (
+    SQLiteSongDatabaseAccessor,
+    tempfile::TempDir,
+    std::path::PathBuf,
+    std::path::PathBuf,
+) {
+    let tmpdir = tempfile::tempdir().unwrap();
+    let db_path = tmpdir.path().join("song.db");
+    let accessor = SQLiteSongDatabaseAccessor::new(&db_path.to_string_lossy(), &[]).unwrap();
+
+    let mut sd = SongData::new();
+    sd.file.md5 = "md5_auth".to_string();
+    sd.file.sha256 = "sha256_auth".to_string();
+    sd.metadata.title = "Auth Test Song".to_string();
+    sd.chart.level = 5;
+    sd.file.set_path("auth/test.bms".to_string());
+    accessor.insert_song(&sd).unwrap();
+
+    let score_path = tmpdir.path().join("score.db");
+    let scorelog_path = tmpdir.path().join("scorelog.db");
+    create_stub_score_db(&score_path);
+    create_stub_score_db(&scorelog_path);
+
+    (accessor, tmpdir, score_path, scorelog_path)
+}
+
+/// Legitimate WHERE clauses must still work through the read-only authorizer.
+#[test]
+fn test_song_datas_by_sql_allows_read_queries() {
+    let (accessor, _tmpdir, score_path, scorelog_path) = setup_authorizer_test();
+
+    // Simple equality
+    let results = accessor.song_datas_by_sql(
+        "level = 5",
+        &score_path.to_string_lossy(),
+        &scorelog_path.to_string_lossy(),
+        None,
+    );
+    assert_eq!(results.len(), 1, "level = 5 should match one song");
+
+    // Tautology
+    let results = accessor.song_datas_by_sql(
+        "1=1",
+        &score_path.to_string_lossy(),
+        &scorelog_path.to_string_lossy(),
+        None,
+    );
+    assert_eq!(results.len(), 1, "1=1 should match all songs");
+
+    // No match
+    let results = accessor.song_datas_by_sql(
+        "level = 99",
+        &score_path.to_string_lossy(),
+        &scorelog_path.to_string_lossy(),
+        None,
+    );
+    assert!(results.is_empty(), "level = 99 should match nothing");
+}
+
+/// Legitimate WHERE clauses with subqueries must still work through the
+/// read-only authorizer.
+#[test]
+fn test_song_datas_by_sql_allows_subquery() {
+    let (accessor, _tmpdir, score_path, scorelog_path) = setup_authorizer_test();
+
+    let results = accessor.song_datas_by_sql(
+        "md5 IN (SELECT md5 FROM song) AND 1=(SELECT count(*) FROM song WHERE md5='md5_auth')",
+        &score_path.to_string_lossy(),
+        &scorelog_path.to_string_lossy(),
+        None,
+    );
+    assert_eq!(results.len(), 1, "read-only subquery should work");
+}
+
+/// Verify the authorizer is properly removed after the query, so subsequent
+/// trusted operations (like DETACH) work correctly.
+#[test]
+fn test_song_datas_by_sql_authorizer_cleanup() {
+    let (accessor, _tmpdir, score_path, scorelog_path) = setup_authorizer_test();
+
+    // Run a query - this installs and removes the authorizer
+    let results = accessor.song_datas_by_sql(
+        "1=1",
+        &score_path.to_string_lossy(),
+        &scorelog_path.to_string_lossy(),
+        None,
+    );
+    assert_eq!(results.len(), 1);
+
+    // Run another query to verify the authorizer was properly cleaned up
+    // (ATTACH in the second call would fail if authorizer was still active)
+    let results = accessor.song_datas_by_sql(
+        "level = 5",
+        &score_path.to_string_lossy(),
+        &scorelog_path.to_string_lossy(),
+        None,
+    );
+    assert_eq!(
+        results.len(),
+        1,
+        "second query should work after authorizer cleanup"
+    );
+}
+
+/// The read-only authorizer blocks destructive operations when set on a
+/// connection. This tests the authorizer directly against the underlying
+/// SQLite connection to verify it blocks INSERT, UPDATE, DELETE, DROP, and
+/// ATTACH at the prepare stage.
+#[test]
+fn test_read_only_authorizer_blocks_destructive_ops() {
+    use super::read_only_authorizer;
+    use rusqlite::hooks::{AuthContext, Authorization};
+
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE t (id INTEGER, name TEXT)")
+        .unwrap();
+    conn.execute("INSERT INTO t VALUES (1, 'hello')", [])
+        .unwrap();
+
+    // Install the read-only authorizer
+    conn.authorizer(Some(read_only_authorizer));
+
+    // SELECT should succeed
+    let count: i64 = conn
+        .query_row("SELECT count(*) FROM t", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(count, 1, "SELECT should work with read-only authorizer");
+
+    // INSERT should be blocked
+    let result = conn.execute("INSERT INTO t VALUES (2, 'evil')", []);
+    assert!(result.is_err(), "INSERT should be denied by authorizer");
+
+    // UPDATE should be blocked
+    let result = conn.execute("UPDATE t SET name = 'pwned'", []);
+    assert!(result.is_err(), "UPDATE should be denied by authorizer");
+
+    // DELETE should be blocked
+    let result = conn.execute("DELETE FROM t", []);
+    assert!(result.is_err(), "DELETE should be denied by authorizer");
+
+    // DROP TABLE should be blocked
+    let result = conn.execute_batch("DROP TABLE t");
+    assert!(result.is_err(), "DROP TABLE should be denied by authorizer");
+
+    // ATTACH should be blocked
+    let result = conn.execute("ATTACH DATABASE ':memory:' AS evil", []);
+    assert!(result.is_err(), "ATTACH should be denied by authorizer");
+
+    // Remove the authorizer
+    conn.authorizer(None::<fn(AuthContext<'_>) -> Authorization>);
+
+    // Verify data is intact
+    let count: i64 = conn
+        .query_row("SELECT count(*) FROM t", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(count, 1, "data should be intact after blocked operations");
+}

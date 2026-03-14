@@ -12,6 +12,7 @@ use rayon::prelude::*;
 use rubato_core::sqlite_database_accessor::{Column, SQLiteDatabaseAccessor, Table};
 use rubato_core::validatable::remove_invalid_elements_vec;
 use rusqlite::Connection;
+use rusqlite::hooks::{AuthAction, AuthContext, Authorization};
 
 use crate::folder_data::FolderData;
 use crate::song_data::SongData;
@@ -34,6 +35,18 @@ fn escape_sql_like(s: &str) -> String {
         }
     }
     out
+}
+
+/// SQLite authorizer callback that only allows read-only operations.
+/// Used to guard queries that interpolate untrusted SQL (e.g. course file WHERE clauses).
+fn read_only_authorizer(ctx: AuthContext<'_>) -> Authorization {
+    match ctx.action {
+        AuthAction::Select
+        | AuthAction::Read { .. }
+        | AuthAction::Function { .. }
+        | AuthAction::Recursive => Authorization::Allow,
+        _ => Authorization::Deny,
+    }
 }
 
 /// Plugin interface for song database accessor
@@ -546,7 +559,11 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
                      ON song.sha256 = information.sha256 WHERE {}",
                     sql
                 );
-                Self::query_songs_with_conn(&conn, &query, &[]).unwrap_or_default()
+                // Guard untrusted SQL with read-only authorizer
+                conn.authorizer(Some(read_only_authorizer));
+                let result = Self::query_songs_with_conn(&conn, &query, &[]).unwrap_or_default();
+                conn.authorizer(None::<fn(AuthContext<'_>) -> Authorization>);
+                result
             } else {
                 let query = format!(
                     "SELECT DISTINCT md5, song.sha256 AS sha256, title, subtitle, genre, artist, subartist, \
@@ -556,7 +573,11 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
                      FROM song LEFT OUTER JOIN (score LEFT OUTER JOIN scorelog ON score.sha256 = scorelog.sha256) ON song.sha256 = score.sha256 WHERE {}",
                     sql
                 );
-                Self::query_songs_with_conn(&conn, &query, &[]).unwrap_or_default()
+                // Guard untrusted SQL with read-only authorizer
+                conn.authorizer(Some(read_only_authorizer));
+                let result = Self::query_songs_with_conn(&conn, &query, &[]).unwrap_or_default();
+                conn.authorizer(None::<fn(AuthContext<'_>) -> Authorization>);
+                result
             };
 
             Ok(remove_invalid_elements_vec(songs))

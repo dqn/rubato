@@ -132,7 +132,7 @@ tar = "0.4"
 sevenz-rust = "0.6"
 
 # SQLite
-rusqlite = { version = "0.31", features = ["bundled"] }
+rusqlite = { version = "0.31", features = ["bundled", "hooks"] }
 
 # Parallelism
 rayon = "1"

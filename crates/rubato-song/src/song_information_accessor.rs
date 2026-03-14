@@ -5,9 +5,22 @@ use rubato_core::sqlite_database_accessor::{Column, SQLiteDatabaseAccessor, Tabl
 use rubato_core::validatable::remove_invalid_elements_vec;
 use rubato_types::song_information_db::SongInformationDb;
 use rusqlite::Connection;
+use rusqlite::hooks::{AuthAction, AuthContext, Authorization};
 
 use crate::song_data::SongData;
 use crate::song_information::SongInformation;
+
+/// SQLite authorizer callback that only allows read-only operations.
+/// Used to guard queries that interpolate untrusted SQL.
+fn read_only_authorizer(ctx: AuthContext<'_>) -> Authorization {
+    match ctx.action {
+        AuthAction::Select
+        | AuthAction::Read { .. }
+        | AuthAction::Function { .. }
+        | AuthAction::Recursive => Authorization::Allow,
+        _ => Authorization::Deny,
+    }
+}
 
 const LOAD_CHUNK_SIZE: usize = 1000;
 
@@ -50,13 +63,21 @@ impl SongInformationAccessor {
 
     pub fn informations(&self, sql: &str) -> Vec<SongInformation> {
         let query = format!("SELECT * FROM information WHERE {}", sql);
-        match self.query_informations(&query, &[]) {
+        // Guard untrusted SQL with read-only authorizer
+        let conn = self.conn.lock().expect("conn lock poisoned");
+        conn.authorizer(Some(read_only_authorizer));
+        drop(conn);
+        let result = match self.query_informations(&query, &[]) {
             Ok(infos) => remove_invalid_elements_vec(infos),
             Err(e) => {
                 log::error!("Error querying informations: {}", e);
                 Vec::new()
             }
-        }
+        };
+        let conn = self.conn.lock().expect("conn lock poisoned");
+        conn.authorizer(None::<fn(AuthContext<'_>) -> Authorization>);
+        drop(conn);
+        result
     }
 
     pub fn information(&self, sha256: &str) -> Option<SongInformation> {
@@ -226,5 +247,105 @@ impl SongInformationDb for SongInformationAccessor {
 
     fn end_update(&self) {
         self.end_update()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // 64-char hex string to pass SongInformation::validate() sha256 length check
+    const TEST_SHA256: &str = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2";
+
+    /// Helper: create a SongInformationAccessor with a test row.
+    fn setup_info_accessor() -> (SongInformationAccessor, tempfile::TempDir) {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let db_path = tmpdir.path().join("info.db");
+        let accessor = SongInformationAccessor::new(&db_path.to_string_lossy()).unwrap();
+        // Insert a test row
+        let conn = accessor.conn.lock().expect("conn lock poisoned");
+        conn.execute(
+            &format!(
+                "INSERT INTO information (sha256, n, ln, s, ls, total, density, peakdensity, enddensity, mainbpm, distribution, speedchange, lanenotes) \
+                 VALUES ('{}', 100, 10, 5, 2, 200.0, 5.0, 10.0, 3.0, 150.0, '', '', '')",
+                TEST_SHA256
+            ),
+            [],
+        ).unwrap();
+        drop(conn);
+        (accessor, tmpdir)
+    }
+
+    /// Legitimate WHERE clauses must still work through the read-only authorizer.
+    #[test]
+    fn informations_allows_read_queries() {
+        let (accessor, _tmpdir) = setup_info_accessor();
+
+        let results = accessor.informations("n = 100");
+        assert_eq!(results.len(), 1, "n = 100 should match one info");
+
+        let results = accessor.informations("1=1");
+        assert_eq!(results.len(), 1, "1=1 should match all infos");
+
+        let results = accessor.informations("n = 999");
+        assert!(results.is_empty(), "n = 999 should match nothing");
+    }
+
+    /// Verify the authorizer is properly removed after the query so
+    /// subsequent operations work correctly.
+    #[test]
+    fn informations_authorizer_cleanup() {
+        let (accessor, _tmpdir) = setup_info_accessor();
+
+        // First call installs and removes the authorizer
+        let results = accessor.informations("1=1");
+        assert_eq!(results.len(), 1);
+
+        // Second call should also work (authorizer was properly removed)
+        let results = accessor.informations("n = 100");
+        assert_eq!(
+            results.len(),
+            1,
+            "second query should work after authorizer cleanup"
+        );
+    }
+
+    /// The read-only authorizer blocks destructive operations when set on the
+    /// information connection. This tests the authorizer directly.
+    #[test]
+    fn informations_authorizer_blocks_destructive_ops() {
+        let (accessor, _tmpdir) = setup_info_accessor();
+
+        let conn = accessor.conn.lock().expect("conn lock poisoned");
+        conn.authorizer(Some(read_only_authorizer));
+
+        // SELECT should succeed
+        let count: i64 = conn
+            .query_row("SELECT count(*) FROM information", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 1, "SELECT should work with read-only authorizer");
+
+        // INSERT should be blocked
+        let result = conn.execute(
+            "INSERT INTO information (sha256) VALUES ('evil_sha256')",
+            [],
+        );
+        assert!(result.is_err(), "INSERT should be denied by authorizer");
+
+        // DELETE should be blocked
+        let result = conn.execute("DELETE FROM information", []);
+        assert!(result.is_err(), "DELETE should be denied by authorizer");
+
+        // DROP TABLE should be blocked
+        let result = conn.execute_batch("DROP TABLE information");
+        assert!(result.is_err(), "DROP TABLE should be denied by authorizer");
+
+        conn.authorizer(None::<fn(AuthContext<'_>) -> Authorization>);
+
+        // Verify data is intact
+        let count: i64 = conn
+            .query_row("SELECT count(*) FROM information", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 1, "data should be intact after blocked operations");
     }
 }
