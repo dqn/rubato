@@ -382,8 +382,8 @@ impl MusicSelector {
                 .and_then(|sb| sb.selectable.bar_data.score())
                 .map(|s| s.exscore())
                 .unwrap_or(0);
-            // Default to bottom of table when local score is below every IR entry.
-            let mut idx = (total - value).max(0);
+            // Default to rank 0 (best player) when local score is below every IR entry.
+            let mut idx = 0;
             for i in 0..total {
                 if let Some(score) = rd.score(i)
                     && score.exscore() <= nowscore
@@ -401,6 +401,7 @@ impl MusicSelector {
             total * value / 100
         } else if let Some(suffix) = targetid.strip_prefix("IR_RANK_")
             && let Ok(value) = suffix.parse::<i32>()
+            && value > 0
         {
             (value.min(total) - 1).max(0)
         } else {

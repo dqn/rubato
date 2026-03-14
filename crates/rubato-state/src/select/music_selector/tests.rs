@@ -2234,7 +2234,156 @@ fn ir_next_valid_with_no_local_score() {
         .cached_target_score
         .as_ref()
         .expect("IR_NEXT_1 with no local score should still produce a target");
-    // score[4] exscore=100 -> epg=50, egr=0
-    assert_eq!(target.judge_counts.epg, 50);
+    // Java fallback: return 0 (best player). score[0] exscore=500 -> epg=250, egr=0
+    assert_eq!(target.judge_counts.epg, 250);
+    assert_eq!(target.judge_counts.egr, 0);
+}
+
+// ============================================================
+// Regression: IR_NEXT fallback must target rank 0 (best player)
+// Java TargetProperty.java:429 returns 0 when no IR score <= local.
+// ============================================================
+
+#[test]
+fn ir_next_fallback_targets_best_player_not_bottom() {
+    // When the local best score exceeds every IR entry, Java returns
+    // rank 0 (the best player) as fallback. The bug was using
+    // (total - value).max(0) which pointed near the bottom.
+    let mut selector = MusicSelector::new();
+    selector.config.select_settings.targetid = "IR_NEXT_1".to_string();
+
+    // 5 players: exscores 500, 400, 300, 200, 100
+    selector.ranking.currentir = Some(make_ir_ranking_data(&[500, 400, 300, 200, 100]));
+
+    // Local score 600 beats everyone -- loop finds no entry <= 600
+    // because scores are sorted descending and all are <= 600,
+    // so the loop immediately hits score[0]=500 <= 600, idx = max(0-1,0) = 0.
+    // But for a truly-above-everyone case we need local > all scores.
+    // Actually: with 600, score[0].exscore()=500 <= 600, so idx = max(0-1,0) = 0.
+    // That case already works. The real regression is when NO score <= local:
+    // i.e., local score is 0 (below all entries). In that case the loop
+    // never breaks, and fallback must be 0 (Java), not total-value (old Rust).
+
+    // Use 3 players to make the math clearer: 300, 200, 100
+    selector.ranking.currentir = Some(make_ir_ranking_data(&[300, 200, 100]));
+
+    let mut song = make_song_data("ir-next-fallback", Some("/test/ir-next-fallback.bms"));
+    song.chart.notes = 500;
+    // No local score -> nowscore = 0. No IR entry has exscore <= 0.
+    set_selected_bar(&mut selector, Bar::Song(Box::new(SongBar::new(song))));
+
+    selector.refresh_cached_target_score();
+    let target = selector
+        .cached_target_score
+        .as_ref()
+        .expect("IR_NEXT_1 fallback should produce a target");
+    // Java returns rank 0 -> score[0] exscore=300 -> epg=150, egr=0
+    assert_eq!(
+        target.judge_counts.epg, 150,
+        "fallback should target rank 0 (best player), not bottom"
+    );
+    assert_eq!(target.judge_counts.egr, 0);
+}
+
+#[test]
+fn ir_next_fallback_with_large_offset() {
+    // IR_NEXT_3 with 5 players, no local score.
+    // Java fallback: return 0. Old Rust: (5-3).max(0) = 2.
+    let mut selector = MusicSelector::new();
+    selector.config.select_settings.targetid = "IR_NEXT_3".to_string();
+
+    selector.ranking.currentir = Some(make_ir_ranking_data(&[500, 400, 300, 200, 100]));
+
+    let mut song = make_song_data("ir-next-fb-large", Some("/test/ir-next-fb-large.bms"));
+    song.chart.notes = 500;
+    set_selected_bar(&mut selector, Bar::Song(Box::new(SongBar::new(song))));
+
+    selector.refresh_cached_target_score();
+    let target = selector
+        .cached_target_score
+        .as_ref()
+        .expect("IR_NEXT_3 fallback should produce a target");
+    // Java returns rank 0 -> score[0] exscore=500 -> epg=250, egr=0
+    assert_eq!(
+        target.judge_counts.epg, 250,
+        "IR_NEXT_3 fallback should target rank 0 (best player)"
+    );
+    assert_eq!(target.judge_counts.egr, 0);
+}
+
+// ============================================================
+// Regression: IR_RANK_ must reject value <= 0
+// Java TargetProperty.java:455 checks `if(index > 0)`.
+// ============================================================
+
+#[test]
+fn ir_rank_0_returns_none() {
+    // IR_RANK_0 is invalid: Java rejects index <= 0.
+    let mut selector = MusicSelector::new();
+    selector.config.select_settings.targetid = "IR_RANK_0".to_string();
+
+    selector.ranking.currentir = Some(make_ir_ranking_data(&[500, 400, 300, 200, 100]));
+
+    let mut song = make_song_data("ir-rank-0", Some("/test/ir-rank-0.bms"));
+    song.chart.notes = 500;
+    let mut song_bar = SongBar::new(song);
+    let mut local_score = ScoreData::default();
+    local_score.judge_counts.epg = 125;
+    song_bar.selectable.bar_data.score = Some(local_score);
+    set_selected_bar(&mut selector, Bar::Song(Box::new(song_bar)));
+
+    selector.refresh_cached_target_score();
+    assert!(
+        selector.cached_target_score.is_none(),
+        "IR_RANK_0 should return None (Java rejects index <= 0)"
+    );
+}
+
+#[test]
+fn ir_rank_negative_returns_none() {
+    // IR_RANK_-1 is invalid: Java rejects index <= 0.
+    let mut selector = MusicSelector::new();
+    selector.config.select_settings.targetid = "IR_RANK_-1".to_string();
+
+    selector.ranking.currentir = Some(make_ir_ranking_data(&[500, 400, 300, 200, 100]));
+
+    let mut song = make_song_data("ir-rank-neg", Some("/test/ir-rank-neg.bms"));
+    song.chart.notes = 500;
+    let mut song_bar = SongBar::new(song);
+    let mut local_score = ScoreData::default();
+    local_score.judge_counts.epg = 125;
+    song_bar.selectable.bar_data.score = Some(local_score);
+    set_selected_bar(&mut selector, Bar::Song(Box::new(song_bar)));
+
+    selector.refresh_cached_target_score();
+    assert!(
+        selector.cached_target_score.is_none(),
+        "IR_RANK_-1 should return None (Java rejects index <= 0)"
+    );
+}
+
+#[test]
+fn ir_rank_valid_returns_target() {
+    // IR_RANK_1 is valid: targets rank 1 (best player, index 0).
+    let mut selector = MusicSelector::new();
+    selector.config.select_settings.targetid = "IR_RANK_1".to_string();
+
+    selector.ranking.currentir = Some(make_ir_ranking_data(&[500, 400, 300, 200, 100]));
+
+    let mut song = make_song_data("ir-rank-1", Some("/test/ir-rank-1.bms"));
+    song.chart.notes = 500;
+    let mut song_bar = SongBar::new(song);
+    let mut local_score = ScoreData::default();
+    local_score.judge_counts.epg = 125;
+    song_bar.selectable.bar_data.score = Some(local_score);
+    set_selected_bar(&mut selector, Bar::Song(Box::new(song_bar)));
+
+    selector.refresh_cached_target_score();
+    let target = selector
+        .cached_target_score
+        .as_ref()
+        .expect("IR_RANK_1 should produce a valid target");
+    // rank 1 -> index 0 -> score[0] exscore=500 -> epg=250, egr=0
+    assert_eq!(target.judge_counts.epg, 250);
     assert_eq!(target.judge_counts.egr, 0);
 }
