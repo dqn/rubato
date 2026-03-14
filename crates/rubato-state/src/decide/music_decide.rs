@@ -105,12 +105,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
             // Song BPM from songdata
             90 => self.resource.songdata().map_or(0, |s| s.chart.maxbpm),
             91 => self.resource.songdata().map_or(0, |s| s.chart.minbpm),
-            // mainbpm: prefer SongInformation.mainbpm when available
-            92 => self.resource.songdata().map_or(0, |s| {
+            // mainbpm: prefer SongInformation.mainbpm when available.
+            // Java returns Integer.MIN_VALUE when SongInformation is absent,
+            // signaling "no data" so skin renderers hide the value.
+            92 => self.resource.songdata().map_or(i32::MIN, |s| {
                 s.info
                     .as_ref()
                     .map(|i| i.mainbpm as i32)
-                    .unwrap_or(s.chart.maxbpm)
+                    .unwrap_or(i32::MIN)
             }),
             // Total notes
             350 => self.resource.songdata().map_or(0, |s| s.chart.notes),
@@ -119,11 +121,11 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
             1163 => self
                 .resource
                 .songdata()
-                .map_or(0, |s| s.chart.length / 60000),
+                .map_or(0, |s| s.chart.length.max(0) / 60000),
             1164 => self
                 .resource
                 .songdata()
-                .map_or(0, |s| (s.chart.length % 60000) / 1000),
+                .map_or(0, |s| (s.chart.length.max(0) % 60000) / 1000),
             // Playtime
             17 => (self.timer.now_time() / 3_600_000) as i32,
             18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,
@@ -1054,10 +1056,12 @@ mod tests {
     }
 
     #[test]
-    fn decide_render_context_mainbpm_falls_back_to_maxbpm() {
+    fn decide_render_context_mainbpm_no_info_returns_min_value() {
+        // When SongInformation is absent, Java returns Integer.MIN_VALUE
+        // so skin renderers hide the value.
         let mut resource = SongLengthResource::with_length_ms(0);
         resource.song.chart.maxbpm = 180;
-        // No SongInformation set -> should fall back to maxbpm
+        // No SongInformation set -> should return i32::MIN, not maxbpm
 
         let mut timer = TimerManager::new();
         let main = MainControllerRef::new(Box::new(NullMainController));
@@ -1067,11 +1071,12 @@ mod tests {
             main: &main,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
-        assert_eq!(ctx.integer_value(92), 180);
+        assert_eq!(ctx.integer_value(92), i32::MIN);
     }
 
     #[test]
-    fn decide_render_context_mainbpm_no_songdata_returns_zero() {
+    fn decide_render_context_mainbpm_no_songdata_returns_min_value() {
+        // When songdata is absent, Java returns Integer.MIN_VALUE.
         let resource = NullPlayerResource::new();
         let mut timer = TimerManager::new();
         let main = MainControllerRef::new(Box::new(NullMainController));
@@ -1081,6 +1086,31 @@ mod tests {
             main: &main,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
-        assert_eq!(ctx.integer_value(92), 0);
+        assert_eq!(ctx.integer_value(92), i32::MIN);
+    }
+
+    #[test]
+    fn decide_render_context_negative_length_clamped_to_zero() {
+        // Negative chart.length should be clamped to 0, not produce
+        // negative minutes/seconds.
+        let resource = SongLengthResource::with_length_ms(-120_000);
+        let mut timer = TimerManager::new();
+        let main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &main,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert_eq!(
+            ctx.integer_value(1163),
+            0,
+            "negative length minutes should be 0"
+        );
+        assert_eq!(
+            ctx.integer_value(1164),
+            0,
+            "negative length seconds should be 0"
+        );
     }
 }
