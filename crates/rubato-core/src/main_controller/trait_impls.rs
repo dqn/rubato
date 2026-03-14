@@ -113,7 +113,12 @@ impl MainControllerAccess for MainController {
 
     fn shuffle_sounds(&mut self) {
         if let Some(ref mut sm) = self.sound {
-            sm.shuffle();
+            let old_paths = sm.shuffle();
+            if let Some(ref mut audio) = self.audio {
+                for path in &old_paths {
+                    audio.dispose_path(path);
+                }
+            }
         }
     }
 

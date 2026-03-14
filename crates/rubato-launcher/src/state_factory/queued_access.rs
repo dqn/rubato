@@ -180,7 +180,9 @@ impl MainControllerAccess for QueuedControllerAccess {
     }
 
     fn shuffle_sounds(&mut self) {
-        self.sound.shuffle();
+        // Old paths from this local mirror don't need disposal here --
+        // actual audio disposal happens when MainController processes ShuffleSounds.
+        let _old_paths = self.sound.shuffle();
         self.commands.push(MainControllerCommand::ShuffleSounds);
     }
 
