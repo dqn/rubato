@@ -51,6 +51,33 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
         Some(self.main.config())
     }
 
+    fn song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
+        self.resource.songdata()
+    }
+
+    fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
+        let mode = self
+            .resource
+            .songdata()
+            .and_then(|song| match song.chart.mode {
+                5 => Some(bms_model::mode::Mode::BEAT_5K),
+                7 => Some(bms_model::mode::Mode::BEAT_7K),
+                9 => Some(bms_model::mode::Mode::POPN_9K),
+                10 => Some(bms_model::mode::Mode::BEAT_10K),
+                14 => Some(bms_model::mode::Mode::BEAT_14K),
+                25 => Some(bms_model::mode::Mode::KEYBOARD_24K),
+                50 => Some(bms_model::mode::Mode::KEYBOARD_24K_DOUBLE),
+                _ => None,
+            })?;
+        Some(
+            &self
+                .resource
+                .player_config()
+                .play_config_ref(mode)
+                .playconfig,
+        )
+    }
+
     fn set_timer_micro(&mut self, timer_id: rubato_types::timer_id::TimerId, micro_time: i64) {
         self.timer.set_micro_timer(timer_id, micro_time);
     }
@@ -902,5 +929,94 @@ mod tests {
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(ctx.integer_value(1163), 0);
         assert_eq!(ctx.integer_value(1164), 0);
+    }
+
+    #[test]
+    fn decide_render_context_song_data_ref_returns_songdata() {
+        let resource = SongLengthResource::with_length_ms(100_000);
+        let mut timer = TimerManager::new();
+        let main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &main,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert!(ctx.song_data_ref().is_some());
+        assert_eq!(ctx.song_data_ref().unwrap().chart.length, 100_000);
+    }
+
+    #[test]
+    fn decide_render_context_song_data_ref_none_when_no_song() {
+        let resource = NullPlayerResource::new();
+        let mut timer = TimerManager::new();
+        let main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &main,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert!(ctx.song_data_ref().is_none());
+    }
+
+    #[test]
+    fn decide_render_context_current_play_config_ref_for_7k() {
+        let mut resource = SongLengthResource::with_length_ms(0);
+        resource.song.chart.mode = 7;
+        let mut timer = TimerManager::new();
+        let main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &main,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert!(ctx.current_play_config_ref().is_some());
+    }
+
+    #[test]
+    fn decide_render_context_current_play_config_ref_none_for_unknown_mode() {
+        let mut resource = SongLengthResource::with_length_ms(0);
+        resource.song.chart.mode = 999;
+        let mut timer = TimerManager::new();
+        let main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &main,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert!(ctx.current_play_config_ref().is_none());
+    }
+
+    #[test]
+    fn decide_render_context_current_play_config_ref_none_when_no_songdata() {
+        let resource = NullPlayerResource::new();
+        let mut timer = TimerManager::new();
+        let main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &main,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert!(ctx.current_play_config_ref().is_none());
+    }
+
+    #[test]
+    fn decide_render_context_favorite_image_index_uses_song_data_ref() {
+        let mut resource = SongLengthResource::with_length_ms(0);
+        resource.song.favorite = rubato_types::song_data::FAVORITE_SONG;
+        let mut timer = TimerManager::new();
+        let main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &main,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        // ID 89 (favorite_song) should now return 1 instead of -1
+        assert_eq!(ctx.image_index_value(89), 1);
     }
 }
