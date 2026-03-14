@@ -75,6 +75,8 @@ pub struct GdxSoundDriver {
     // Background loading state
     loading_receiver: Option<mpsc::Receiver<BackgroundLoadResult>>,
     pending_load_tasks: Option<Vec<LoadTask>>,
+    // JoinHandle for the keysound loader thread so we can join it on abort/dispose.
+    loading_thread: Option<std::thread::JoinHandle<()>>,
     // Path sound cache for preloaded sounds (avoids blocking I/O on play_path)
     path_sound_cache: HashMap<String, StaticSoundData>,
 }
@@ -100,6 +102,7 @@ impl GdxSoundDriver {
             additional_key_sound_handles: Default::default(),
             loading_receiver: None,
             pending_load_tasks: None,
+            loading_thread: None,
             path_sound_cache: HashMap::new(),
         })
     }
@@ -292,7 +295,7 @@ impl AudioDriver for GdxSoundDriver {
             let (tx, rx) = mpsc::channel();
             let paths_vec: Vec<String> = paths_to_load.into_iter().collect();
 
-            std::thread::Builder::new()
+            let handle = std::thread::Builder::new()
                 .name("keysound-loader".to_string())
                 .spawn(move || {
                     let newly_loaded: Vec<(String, StaticSoundData)> = paths_vec
@@ -315,6 +318,7 @@ impl AudioDriver for GdxSoundDriver {
 
             self.loading_receiver = Some(rx);
             self.pending_load_tasks = Some(load_tasks);
+            self.loading_thread = Some(handle);
         }
     }
 
@@ -489,11 +493,24 @@ impl AudioDriver for GdxSoundDriver {
     }
 
     fn dispose(&mut self) {
-        self.path_sounds.clear();
+        // Stop all active handles before clearing (mirrors set_model() pattern).
+        // Without this, sounds continue playing after the driver is disposed.
+        for (_, mut handle) in self.path_sounds.drain() {
+            handle.stop(Tween::default());
+        }
+        for (_, mut handle) in self.wav_handles.drain() {
+            handle.stop(Tween::default());
+        }
+        for (_, mut handle) in self.slice_handles.drain() {
+            handle.stop(Tween::default());
+        }
+        for row in &mut self.additional_key_sound_handles {
+            for handle in row.iter_mut().flatten() {
+                handle.stop(Tween::default());
+            }
+        }
         self.wav_sounds.clear();
-        self.wav_handles.clear();
         self.slicesound.clear();
-        self.slice_handles.clear();
         self.wav_pitch_shifts.clear();
         self.slice_pitch_shifts.clear();
         self.sound_cache.clear();
