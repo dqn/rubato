@@ -1900,3 +1900,53 @@ fn image_index_value_400_returns_zero_when_constant_disabled() {
 
     assert_eq!(ctx.image_index_value(400), 0);
 }
+
+#[test]
+fn integer_value_92_mainbpm_returns_min_when_no_song_info() {
+    // Java: returns Integer.MIN_VALUE when SongInformation is absent.
+    let mut selector = MusicSelector::new();
+    let mut song = make_song_data("mainbpm-test", Some("/test/mainbpm.bms"));
+    song.chart.maxbpm = 180;
+    song.info = None; // no SongInformation
+    set_selected_bar(&mut selector, Bar::Song(Box::new(SongBar::new(song))));
+
+    let mut timer = TimerManager::new();
+    let ctx = SelectSkinContext {
+        timer: &mut timer,
+        selector: &mut selector,
+    };
+
+    assert_eq!(ctx.integer_value(92), i32::MIN);
+}
+
+#[test]
+fn integer_value_92_mainbpm_returns_value_when_info_present() {
+    let mut selector = MusicSelector::new();
+    let mut song = make_song_data("mainbpm-test2", Some("/test/mainbpm2.bms"));
+    song.chart.maxbpm = 180;
+    song.info = Some(rubato_types::song_information::SongInformation {
+        mainbpm: 150.0,
+        ..Default::default()
+    });
+    set_selected_bar(&mut selector, Bar::Song(Box::new(SongBar::new(song))));
+
+    let mut timer = TimerManager::new();
+    let ctx = SelectSkinContext {
+        timer: &mut timer,
+        selector: &mut selector,
+    };
+
+    assert_eq!(ctx.integer_value(92), 150);
+}
+
+#[test]
+fn integer_value_92_mainbpm_returns_min_when_no_song_selected() {
+    let mut selector = MusicSelector::new();
+    let mut timer = TimerManager::new();
+    let ctx = SelectSkinContext {
+        timer: &mut timer,
+        selector: &mut selector,
+    };
+
+    assert_eq!(ctx.integer_value(92), i32::MIN);
+}
