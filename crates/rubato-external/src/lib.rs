@@ -30,8 +30,5 @@ pub mod screen_shot_exporter;
 // Screenshot file exporter
 pub mod screen_shot_file_exporter;
 
-// Screenshot Twitter exporter
-pub mod screen_shot_twitter_exporter;
-
 // Webhook handler for Discord webhooks
 pub mod webhook_handler;

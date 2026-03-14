@@ -51,8 +51,6 @@ pub use crate::pixmap_io::{BufferUtils, GdxGraphics, Pixmap, PixmapIO};
 //   Real traits in beatoraja-skin reference beatoraja-skin's own MainState stub
 //   trait, not this crate's MainState struct. Type mismatch.
 //
-// Twitter4j:
-//   No real Rust equivalent exists (twitter4j has no Rust port).
 //
 // ImGuiNotify:
 //   From beatoraja-modmenu (cannot depend on it).
@@ -373,127 +371,6 @@ pub use rubato_skin::skin_property::{
     OPTION_RESULT_E_1P, OPTION_RESULT_F_1P, STRING_FULLTITLE, STRING_TABLE_LEVEL,
     STRING_TABLE_NAME,
 };
-
-// ============================================================
-// Twitter4j stubs (entirely stubbed - no Rust equivalent)
-// ============================================================
-
-/// Stub for twitter4j.Twitter — Twitter API not supported in Rust port
-pub struct Twitter;
-
-impl Twitter {
-    pub fn upload_media(&self, _name: &str, _input: &[u8]) -> anyhow::Result<UploadedMedia> {
-        anyhow::bail!(
-            "Twitter API is not supported in Rust port (twitter4j has no Rust equivalent)"
-        )
-    }
-
-    pub fn update_status(&self, _update: &StatusUpdate) -> anyhow::Result<Status> {
-        anyhow::bail!(
-            "Twitter API is not supported in Rust port (twitter4j has no Rust equivalent)"
-        )
-    }
-}
-
-/// Stub for twitter4j.TwitterFactory
-pub struct TwitterFactory;
-
-impl TwitterFactory {
-    pub fn new(_config: TwitterConfiguration) -> Self {
-        Self
-    }
-
-    pub fn instance(&self) -> Twitter {
-        Twitter
-    }
-}
-
-/// Stub for twitter4j.conf.ConfigurationBuilder
-pub struct TwitterConfigurationBuilder {
-    pub consumer_key: String,
-    pub consumer_secret: String,
-    pub access_token: String,
-    pub access_token_secret: String,
-}
-
-impl Default for TwitterConfigurationBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl TwitterConfigurationBuilder {
-    pub fn new() -> Self {
-        Self {
-            consumer_key: String::new(),
-            consumer_secret: String::new(),
-            access_token: String::new(),
-            access_token_secret: String::new(),
-        }
-    }
-
-    pub fn set_o_auth_consumer_key(mut self, key: &str) -> Self {
-        self.consumer_key = key.to_string();
-        self
-    }
-
-    pub fn set_o_auth_consumer_secret(mut self, secret: &str) -> Self {
-        self.consumer_secret = secret.to_string();
-        self
-    }
-
-    pub fn set_o_auth_access_token(mut self, token: &str) -> Self {
-        self.access_token = token.to_string();
-        self
-    }
-
-    pub fn set_o_auth_access_token_secret(mut self, secret: &str) -> Self {
-        self.access_token_secret = secret.to_string();
-        self
-    }
-
-    pub fn build(self) -> TwitterConfiguration {
-        TwitterConfiguration
-    }
-}
-
-/// Stub for twitter4j.conf.Configuration
-pub struct TwitterConfiguration;
-
-/// Stub for twitter4j.UploadedMedia
-pub struct UploadedMedia {
-    pub media_id: i64,
-}
-
-impl std::fmt::Display for UploadedMedia {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "UploadedMedia(id={})", self.media_id)
-    }
-}
-
-/// Stub for twitter4j.StatusUpdate
-pub struct StatusUpdate {
-    pub text: String,
-    pub media_ids: Vec<i64>,
-}
-
-impl StatusUpdate {
-    pub fn new(text: String) -> Self {
-        Self {
-            text,
-            media_ids: Vec::new(),
-        }
-    }
-}
-
-/// Stub for twitter4j.Status
-pub struct Status;
-
-impl std::fmt::Display for Status {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Status")
-    }
-}
 
 // ============================================================
 // MainStateListener — replaced with trait from beatoraja-types

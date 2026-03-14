@@ -577,59 +577,6 @@ impl PlayConfigurationView {
 
         ui.separator();
 
-        // ---- Twitter (deprecated) ----
-        egui::CollapsingHeader::new("Twitter (deprecated)")
-            .default_open(false)
-            .show(ui, |ui| {
-                egui::Grid::new("pcv_twitter_grid")
-                    .num_columns(2)
-                    .show(ui, |ui| {
-                        ui.label("Consumer Key:");
-                        ui.text_edit_singleline(&mut self.txt_twitter_consumer_key);
-                        ui.end_row();
-
-                        ui.label("Consumer Secret:");
-                        ui.add(
-                            egui::TextEdit::singleline(&mut self.txt_twitter_consumer_secret)
-                                .password(true),
-                        );
-                        ui.end_row();
-
-                        if self.txt_twitter_authenticated_visible {
-                            ui.label("Status:");
-                            ui.label("Authenticated");
-                            ui.end_row();
-                        }
-
-                        ui.label("PIN:");
-                        ui.add_enabled(
-                            self.twitter_pin_enabled,
-                            egui::TextEdit::singleline(&mut self.txt_twitter_pin),
-                        );
-                        ui.end_row();
-                    });
-
-                ui.horizontal(|ui| {
-                    if ui
-                        .add_enabled(
-                            self.twitter_auth_button_enabled,
-                            egui::Button::new("Start Auth"),
-                        )
-                        .clicked()
-                    {
-                        self.start_twitter_auth();
-                    }
-                    if ui
-                        .add_enabled(self.twitter_pin_enabled, egui::Button::new("Submit PIN"))
-                        .clicked()
-                    {
-                        self.start_pin_auth();
-                    }
-                });
-            });
-
-        ui.separator();
-
         // ---- New version banner ----
         if !self.newversion_text.is_empty() {
             ui.horizontal(|ui| {
