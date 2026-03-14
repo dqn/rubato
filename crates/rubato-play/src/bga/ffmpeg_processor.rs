@@ -557,6 +557,12 @@ impl MovieProcessor for FFmpegProcessor {
     }
 }
 
+impl Drop for FFmpegProcessor {
+    fn drop(&mut self) {
+        self.dispose();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -608,5 +614,21 @@ mod tests {
         let mut proc = FFmpegProcessor::new(30);
         proc.play(0, false);
         proc.play(0, true);
+    }
+
+    #[test]
+    fn test_drop_without_dispose() {
+        // Dropping without explicit dispose() should not leak the background thread.
+        // Drop impl calls dispose() automatically.
+        let proc = FFmpegProcessor::new(30);
+        drop(proc);
+    }
+
+    #[test]
+    fn test_drop_after_dispose_is_safe() {
+        // Calling dispose() then dropping should not panic (double dispose is idempotent).
+        let mut proc = FFmpegProcessor::new(30);
+        proc.dispose();
+        drop(proc);
     }
 }
