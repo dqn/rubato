@@ -56,7 +56,7 @@ impl LR2CourseResultSkinLoaderState {
                         &DestinationParams {
                             time: values[2] as i64,
                             x: self.gauge.x * dstw,
-                            y: self.csv.dst.height - (values[4] as f32 + self.gauge.height) * dsth,
+                            y: self.gauge.y * dsth,
                             w: self.gauge.width * dstw,
                             h: self.gauge.height * dsth,
                             acc: values[7],

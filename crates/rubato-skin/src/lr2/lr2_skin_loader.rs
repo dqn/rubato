@@ -302,7 +302,7 @@ pub fn process_dst_notechart(
             &DestinationParams {
                 time: values[2] as i64,
                 x: gauge.x * dstw,
-                y: dst_height - (values[4] as f32 + gauge.height) * dsth,
+                y: gauge.y * dsth,
                 w: gauge.width * dstw,
                 h: gauge.height * dsth,
                 acc: values[7],
@@ -371,7 +371,7 @@ pub fn process_dst_bpmchart(
             &DestinationParams {
                 time: values[2] as i64,
                 x: gauge.x * dstw,
-                y: dst_height - (values[4] as f32 + gauge.height) * dsth,
+                y: gauge.y * dsth,
                 w: gauge.width * dstw,
                 h: gauge.height * dsth,
                 acc: values[7],
@@ -482,5 +482,101 @@ mod tests {
         let filemap = HashMap::new();
         let result = lr2_path("skin", "path\\to\\file.png", &filemap);
         assert_eq!(result, "path/to/file.png");
+    }
+
+    /// Helper: build a minimal str_parts array for DST chart commands.
+    /// values[2]=time, values[3]=x, values[4]=y, rest are defaults.
+    fn make_dst_str_parts(x: i32, y: i32) -> Vec<String> {
+        let mut parts = vec!["CMD".to_string()];
+        // [1]=unused, [2]=time, [3]=x, [4]=y, [5..6] unused, [7]=acc,
+        // [8..16]=a,r,g,b,blend,filter,angle,center,loop, [17]=timer, [18..20]=op, [21..]=offsets
+        parts.push("0".into()); // 1
+        parts.push("0".into()); // 2 (time)
+        parts.push(x.to_string()); // 3 (x)
+        parts.push(y.to_string()); // 4 (y)
+        for _ in 5..22 {
+            parts.push("0".into());
+        }
+        parts
+    }
+
+    #[test]
+    fn process_dst_notechart_y_matches_java() {
+        // Java: gauge.y = src.height - values[4], then y_dst = gauge.y * dh
+        // where dh = dst_height / src_height.
+        // With src=480, dst=720, gauge_h=100, y_val=200:
+        // Java: gauge.y = 480 - 200 = 280, y_dst = 280 * (720/480) = 420.0
+        let src_height: f32 = 480.0;
+        let dst_height: f32 = 720.0;
+        let src_width: f32 = 640.0;
+        let dst_width: f32 = 1280.0;
+        let gauge_w: f32 = 200.0;
+        let gauge_h: f32 = 100.0;
+
+        let str_parts = make_dst_str_parts(50, 200);
+        let mut gauge = crate::stubs::Rectangle::new(0.0, 0.0, gauge_w, gauge_h);
+        let mut noteobj =
+            Some(crate::skin_note_distribution_graph::SkinNoteDistributionGraph::new_default());
+        process_dst_notechart(
+            &str_parts,
+            src_height,
+            dst_width,
+            dst_height,
+            src_width,
+            &mut gauge,
+            &mut noteobj,
+        );
+        let obj = noteobj.unwrap();
+        let dst = &obj.data.dst[0];
+        let expected_y = (src_height - 200.0) * (dst_height / src_height); // 280 * 1.5 = 420
+        assert!(
+            (dst.region.y - expected_y).abs() < 0.01,
+            "notechart y={}, expected={}",
+            dst.region.y,
+            expected_y
+        );
+    }
+
+    #[test]
+    fn process_dst_bpmchart_y_matches_java() {
+        let src_height: f32 = 480.0;
+        let dst_height: f32 = 720.0;
+        let src_width: f32 = 640.0;
+        let dst_width: f32 = 1280.0;
+        let gauge_w: f32 = 200.0;
+        let gauge_h: f32 = 100.0;
+
+        let str_parts = make_dst_str_parts(50, 200);
+        let mut gauge = crate::stubs::Rectangle::new(0.0, 0.0, gauge_w, gauge_h);
+        let mut bpmobj = Some(crate::skin_bpm_graph::SkinBPMGraph::new(
+            crate::skin_bpm_graph::BpmGraphConfig {
+                delay: 0,
+                line_width: 1,
+                main_bpm_color: "",
+                min_bpm_color: "",
+                max_bpm_color: "",
+                other_bpm_color: "",
+                stop_line_color: "",
+                transition_line_color: "",
+            },
+        ));
+        process_dst_bpmchart(
+            &str_parts,
+            src_height,
+            dst_width,
+            dst_height,
+            src_width,
+            &mut gauge,
+            &mut bpmobj,
+        );
+        let obj = bpmobj.unwrap();
+        let dst = &obj.data.dst[0];
+        let expected_y = (src_height - 200.0) * (dst_height / src_height);
+        assert!(
+            (dst.region.y - expected_y).abs() < 0.01,
+            "bpmchart y={}, expected={}",
+            dst.region.y,
+            expected_y
+        );
     }
 }
