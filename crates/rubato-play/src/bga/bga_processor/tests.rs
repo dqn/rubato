@@ -565,6 +565,62 @@ fn test_draw_bga_miss_layer_active() {
     assert!(!renderer.draw_calls.is_empty());
 }
 
+// =========================================================================
+// Backward time seeking (practice mode scrub)
+// =========================================================================
+
+#[test]
+fn test_backward_seek_replays_earlier_bga_events() {
+    // BGA 1 at 1s, BGA 2 at 2s, BGA 3 at 3s
+    let model =
+        model_with_bga_timelines(&[(1_000_000, 1, -1), (2_000_000, 2, -1), (3_000_000, 3, -1)]);
+    let mut proc = BGAProcessor::from_model(&model);
+
+    // Advance to 3.5s — all events processed
+    proc.update(3_500_000);
+    assert_eq!(proc.current_bga_id(), 3);
+
+    // Seek backward to 1.5s — should see BGA 1 (not stuck at 3)
+    proc.update(1_500_000);
+    assert_eq!(proc.current_bga_id(), 1);
+}
+
+#[test]
+fn test_backward_seek_layer_replays() {
+    // Layer 10 at 1s, Layer 20 at 2s
+    let model = model_with_bga_timelines(&[(1_000_000, -1, 10), (2_000_000, -1, 20)]);
+    let mut proc = BGAProcessor::from_model(&model);
+
+    proc.update(2_500_000);
+    assert_eq!(proc.current_layer_id(), 20);
+
+    // Seek back before second event
+    proc.update(1_500_000);
+    assert_eq!(proc.current_layer_id(), 10);
+}
+
+#[test]
+fn test_backward_seek_then_forward_again() {
+    // BGA 5 at 1s, BGA 10 at 3s
+    let model = model_with_bga_timelines(&[(1_000_000, 5, -1), (3_000_000, 10, -1)]);
+    let mut proc = BGAProcessor::from_model(&model);
+
+    proc.update(3_500_000);
+    assert_eq!(proc.current_bga_id(), 10);
+
+    // Seek back to before all events
+    proc.update(500_000);
+    assert_eq!(proc.current_bga_id(), -1);
+
+    // Forward past first event only
+    proc.update(2_000_000);
+    assert_eq!(proc.current_bga_id(), 5);
+
+    // Forward past second event
+    proc.update(4_000_000);
+    assert_eq!(proc.current_bga_id(), 10);
+}
+
 #[test]
 fn test_dispose_cleans_up_movies() {
     let mut proc = BGAProcessor::new();

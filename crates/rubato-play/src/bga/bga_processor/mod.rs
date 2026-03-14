@@ -245,6 +245,16 @@ impl BGAProcessor {
             self.time = -1;
             return;
         }
+        // Reset scan position when seeking backward (e.g. practice mode scrubbing)
+        // so that timelines before the old position are not skipped.
+        if time < self.time {
+            self.pos = 0;
+            self.time = -1;
+            self.playingbgaid = -1;
+            self.playinglayerid = -1;
+            self.rbga = false;
+            self.rlayer = false;
+        }
         for i in self.pos..self.timelines.len() {
             let tl = &self.timelines[i];
             if tl.time_ms > time {

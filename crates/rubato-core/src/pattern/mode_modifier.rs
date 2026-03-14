@@ -193,6 +193,10 @@ impl Algorithm {
                 };
 
                 let mut result = vec![0i32; 9];
+                debug_assert!(
+                    key_lane as usize + 6 < result.len(),
+                    "key_lane too large for 9-key result"
+                );
                 for i in 0..7 {
                     result[i + key_lane as usize] = i as i32;
                 }
@@ -781,6 +785,36 @@ mod tests {
         // After fix: safely falls back to -1 via .get().
         let mut modifier = ModeModifier::new(Mode::BEAT_7K, Mode::BEAT_7K, config);
         modifier.modify(&mut model);
+    }
+
+    #[test]
+    fn seven_to_nine_key_lane_bounds_within_result() {
+        // Regression: verify that all seven_to_nine_pattern values produce key_lane
+        // values where key_lane + 6 < 9 (i.e. the 7 keys fit within the 9-key result).
+        // The debug_assert! in Algorithm::modify guards against future patterns
+        // introducing an out-of-bounds key_lane.
+        let alg = Algorithm::SevenToNine;
+        let activeln = vec![-1i32; 9];
+        let notes: Vec<Option<Note>> = vec![None; 9];
+        let last_note_time = vec![-100i32; 9];
+
+        for pattern in 0..=6 {
+            let result = alg.modify(&AlgorithmModifyParams {
+                _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
+                activeln: &activeln,
+                _notes: &notes,
+                last_note_time: &last_note_time,
+                now: 0,
+                duration: 125,
+                seven_to_nine_pattern: pattern,
+                seven_to_nine_type: 0,
+            });
+            assert_eq!(
+                result.len(),
+                9,
+                "pattern={pattern} should produce 9-element result"
+            );
+        }
     }
 
     #[test]
