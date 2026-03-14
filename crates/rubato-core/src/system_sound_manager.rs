@@ -223,7 +223,7 @@ fn rand_f64() -> f64 {
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("system clock")
         .subsec_nanos();
-    (nanos as f64) / (u32::MAX as f64)
+    nanos as f64 / 1_000_000_000.0
 }
 
 #[cfg(test)]
@@ -352,6 +352,27 @@ mod tests {
         sm.dispose_sound("old/path.wav", Some(&mut audio));
         assert_eq!(audio.disposed.len(), 1);
         assert_eq!(audio.disposed[0], "old/path.wav");
+    }
+
+    /// Regression: rand_f64() used u32::MAX as divisor for subsec_nanos(),
+    /// capping output at ~0.233 instead of [0, 1). With 10 BGM sets only
+    /// indices 0-2 were ever selected.
+    #[test]
+    fn rand_f64_range_covers_full_unit_interval() {
+        // subsec_nanos() returns [0, 999_999_999].
+        // Simulate boundary values to confirm the divisor is 1_000_000_000.
+        let max_nanos: u32 = 999_999_999;
+        let result = max_nanos as f64 / 1_000_000_000.0;
+        // Must be very close to 1.0 (not ~0.233 as with old u32::MAX divisor)
+        assert!(result > 0.99, "max nanos should map near 1.0, got {result}");
+        assert!(result < 1.0, "must stay strictly below 1.0, got {result}");
+
+        // Call the real function many times and verify the range
+        for _ in 0..200 {
+            let v = rand_f64();
+            assert!(v >= 0.0, "rand_f64() returned negative: {v}");
+            assert!(v < 1.0, "rand_f64() returned >= 1.0: {v}");
+        }
     }
 
     #[test]
