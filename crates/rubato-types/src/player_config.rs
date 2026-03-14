@@ -537,7 +537,7 @@ impl PlayerConfig {
         self.display_settings.scroll_mode = self
             .display_settings
             .scroll_mode
-            .clamp(0, scroll_speed_modifier::Mode::values().len() as i32);
+            .clamp(0, scroll_speed_modifier::Mode::values().len() as i32 - 1);
         self.display_settings.scroll_section = self.display_settings.scroll_section.clamp(1, 1024);
         self.display_settings.scroll_rate = self.display_settings.scroll_rate.clamp(0.0, 1.0);
         // longnote_mode: 0=off, 1-5=Remove/AddLn/AddCn/AddHcn/AddAll (6 values total,

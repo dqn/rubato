@@ -306,6 +306,38 @@ mod tests {
         assert_eq!(pc.select_settings.musicselectinput, 0);
     }
 
+    /// scroll_mode valid range is 0..=2 (Off=0, Variable=1, Fixed=2).
+    /// Value 3 is out of range and must be clamped down by validate().
+    /// Regression test for off-by-one: clamp upper bound was values().len()
+    /// (3) instead of values().len() - 1 (2).
+    #[test]
+    fn test_scroll_mode_clamped_to_valid_range() {
+        let mut pc = PlayerConfig::default();
+
+        // Value 2 (Fixed) is the maximum valid value
+        pc.display_settings.scroll_mode = 2;
+        pc.validate();
+        assert_eq!(pc.display_settings.scroll_mode, 2);
+
+        // Value 3 is out of range and must be clamped to 2
+        pc.display_settings.scroll_mode = 3;
+        pc.validate();
+        assert_eq!(
+            pc.display_settings.scroll_mode, 2,
+            "scroll_mode=3 should be clamped to 2 (max valid index)"
+        );
+
+        // Value 100 must also be clamped to 2
+        pc.display_settings.scroll_mode = 100;
+        pc.validate();
+        assert_eq!(pc.display_settings.scroll_mode, 2);
+
+        // Negative values clamped to 0
+        pc.display_settings.scroll_mode = -1;
+        pc.validate();
+        assert_eq!(pc.display_settings.scroll_mode, 0);
+    }
+
     #[test]
     fn test_player_config_corrupt_json_falls_back_to_legacy() {
         let tmp = tempfile::tempdir().unwrap();
