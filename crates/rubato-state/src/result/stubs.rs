@@ -405,6 +405,17 @@ impl PlayerResource {
     // ---- Crate-local methods (not on trait — types cause circular deps) ----
 
     pub fn bms_model(&self) -> &bms_model::bms_model::BMSModel {
+        // Verify local field and inner trait agree when both are available.
+        debug_assert!(
+            self.inner
+                .bms_model()
+                .is_none_or(|inner_model| { inner_model.sha256 == self.bms_model.sha256 }),
+            "PlayerResource: local bms_model sha256 ({}) diverges from inner ({})",
+            self.bms_model.sha256,
+            self.inner
+                .bms_model()
+                .map_or("<none>", |m| m.sha256.as_str()),
+        );
         &self.bms_model
     }
 

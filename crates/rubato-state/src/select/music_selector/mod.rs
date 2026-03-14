@@ -276,12 +276,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             90 => self.selected_song_data().map_or(0, |s| s.chart.maxbpm),
             91 => self.selected_song_data().map_or(0, |s| s.chart.minbpm),
             92 => {
-                // mainbpm: prefer SongInformation.mainbpm when available
-                self.selected_song_data().map_or(0, |s| {
+                // mainbpm: prefer SongInformation.mainbpm when available.
+                // Java returns Integer.MIN_VALUE when SongInformation is absent,
+                // signaling "no data" so skin renderers hide the value.
+                self.selected_song_data().map_or(i32::MIN, |s| {
                     s.info
                         .as_ref()
                         .map(|i| i.mainbpm as i32)
-                        .unwrap_or(s.chart.maxbpm)
+                        .unwrap_or(i32::MIN)
                 })
             }
             // Song play/clear/fail counts
@@ -671,6 +673,9 @@ pub struct MusicSelector {
     /// Pending BMS model parse result.
     /// Stores (requested path, receiver) so the result is applied to the correct song.
     pending_note_graph: Option<PendingNoteGraphRx>,
+    /// JoinHandles for background threads (BMS parse, IR song/course fetch).
+    /// Joined on dispose() to ensure clean shutdown.
+    background_threads: Vec<std::thread::JoinHandle<()>>,
 }
 
 pub static MODE: [Option<bms_model::Mode>; 8] = [
