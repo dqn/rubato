@@ -389,11 +389,13 @@ impl LR2SkinCSVLoaderState {
                     let values = Self::parse_int(str_parts);
                     if let Some(images) = self.source_image(&values) {
                         let mut om = SkinImage::new_with_int_timer(images, values[10], values[9]);
-                        // Set mouse hitbox rectangle
-                        let rect_x = values[12] as f32;
-                        let rect_y = (values[6] - values[13] - values[15]) as f32;
-                        let rect_w = values[14] as f32;
-                        let rect_h = values[15] as f32;
+                        // Set mouse hitbox rectangle (Java: skin.setMouseRect applies dw/dh scaling)
+                        let dstw = safe_div_f32(self.dst.width, self.src.width);
+                        let dsth = safe_div_f32(self.dst.height, self.src.height);
+                        let rect_x = values[12] as f32 * dstw;
+                        let rect_y = (values[6] - values[13] - values[15]) as f32 * dsth;
+                        let rect_w = values[14] as f32 * dstw;
+                        let rect_h = values[15] as f32 * dsth;
                         om.data.set_mouse_rect(rect_x, rect_y, rect_w, rect_h);
                         self.onmouse = Some(om);
                     }
