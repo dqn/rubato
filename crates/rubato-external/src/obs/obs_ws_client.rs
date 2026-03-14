@@ -11,11 +11,10 @@ use futures_util::{SinkExt, StreamExt};
 use log::{info, warn};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use tokio::net::TcpStream;
 use tokio::sync::Notify;
 use tokio::time::sleep;
+use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 
 use rubato_core::config::Config;
 
@@ -86,12 +85,9 @@ pub fn action_label(action: &str) -> Option<String> {
     None
 }
 
-/// Type for WebSocket write half
-type WsSink = futures_util::stream::SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
-
 /// Shared inner state for ObsWsClient
 struct ObsWsClientInner {
-    ws_sink: Option<WsSink>,
+    ws_sender: Option<tokio::sync::mpsc::UnboundedSender<Message>>,
     is_connected: bool,
     is_identified: bool,
     is_recording: bool,
@@ -153,7 +149,7 @@ impl ObsWsClient {
         let shutdown_notify = Arc::new(Notify::new());
 
         let inner = Arc::new(Mutex::new(ObsWsClientInner {
-            ws_sink: None,
+            ws_sender: None,
             is_connected: false,
             is_identified: false,
             is_recording: false,
@@ -249,12 +245,30 @@ impl ObsWsClient {
         shutdown_notify: Arc<Notify>,
     ) -> Result<()> {
         let (ws_stream, _) = connect_async(server_uri).await?;
-        let (sink, mut stream) = ws_stream.split();
+        let (mut sink, mut stream) = ws_stream.split();
 
-        // Store the sink
+        // Create an mpsc channel and spawn a dedicated writer task that
+        // serializes all WebSocket writes, eliminating the take-send-put-back
+        // race that previously caused concurrent message loss.
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Message>();
+        {
+            let inner_writer = Arc::clone(&inner);
+            tokio::spawn(async move {
+                while let Some(msg) = rx.recv().await {
+                    if let Err(e) = sink.send(msg).await {
+                        warn!("OBS WebSocket writer error: {}", e);
+                        let mut guard = lock_or_recover(&inner_writer);
+                        guard.is_connected = false;
+                        break;
+                    }
+                }
+            });
+        }
+
+        // Store the sender
         {
             let mut guard = lock_or_recover(&inner);
-            guard.ws_sink = Some(sink);
+            guard.ws_sender = Some(tx);
             guard.is_connected = true;
             guard.is_reconnecting = false;
             guard.current_reconnect_delay = INITIAL_RECONNECT_DELAY_MS;
@@ -630,7 +644,7 @@ impl ObsWsClient {
             let mut guard = lock_or_recover(inner);
             guard.is_shutting_down = true;
             guard.auto_reconnect = false;
-            guard.ws_sink = None;
+            guard.ws_sender = None;
             guard.is_connected = false;
             guard.is_identified = false;
         }
@@ -643,7 +657,7 @@ impl ObsWsClient {
             let was_connected = guard.is_connected;
             guard.is_connected = false;
             guard.is_identified = false;
-            guard.ws_sink = None;
+            guard.ws_sender = None;
             (
                 was_connected,
                 guard.auto_reconnect,
@@ -694,10 +708,10 @@ impl ObsWsClient {
         tokio::spawn(async move {
             sleep(Duration::from_millis(delay as u64)).await;
 
-            // Close existing connection
+            // Close existing connection (dropping the sender terminates the writer task)
             {
                 let mut guard = lock_or_recover(&inner_clone);
-                guard.ws_sink = None;
+                guard.ws_sender = None;
             }
 
             // Update backoff delay for next attempt
@@ -726,23 +740,16 @@ impl ObsWsClient {
         });
     }
 
-    /// Send a raw message through the WebSocket.
-    /// Note: if the future is cancelled between take() and put_back(), the sink is lost.
-    /// This is acceptable because tokio tasks in this crate are not cancelled externally.
+    /// Send a raw message through the WebSocket via the mpsc channel.
+    /// The dedicated writer task serializes all writes to the sink, so concurrent
+    /// callers never race on the sink and no messages are lost.
     async fn send_raw(inner: &Arc<Mutex<ObsWsClientInner>>, message: &str) {
-        let mut sink = {
-            let mut guard = lock_or_recover(inner);
-            guard.ws_sink.take()
+        let sender = {
+            let guard = lock_or_recover(inner);
+            guard.ws_sender.clone()
         };
-
-        if let Some(ref mut s) = sink {
-            let _ = s.send(Message::Text(message.to_string())).await;
-        }
-
-        // Put sink back
-        {
-            let mut guard = lock_or_recover(inner);
-            guard.ws_sink = sink;
+        if let Some(tx) = sender {
+            let _ = tx.send(Message::Text(message.to_string()));
         }
     }
 
@@ -957,7 +964,7 @@ impl ObsWsClient {
             let mut guard = lock_or_recover(&self.inner);
             guard.is_shutting_down = true;
             guard.auto_reconnect = false;
-            guard.ws_sink = None;
+            guard.ws_sender = None;
         }
         self.shutdown_notify.notify_waiters();
     }
@@ -1229,5 +1236,97 @@ mod tests {
         client.save_last_recording("ON_REPLAY");
         client.save_last_recording("KEEP_ALL");
         client.save_last_recording("INVALID_REASON");
+    }
+
+    // -- ws_sender channel tests --
+
+    #[test]
+    fn test_send_raw_uses_channel_no_message_loss() {
+        // Verify that concurrent send_raw calls through the mpsc channel do not
+        // lose messages. We wire up a real unbounded channel, store the sender in
+        // inner, then fire multiple send_raw calls concurrently and assert that
+        // all messages arrive at the receiver.
+        let config = make_test_config();
+        let client = ObsWsClient::new(&config).expect("failed to create client");
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Message>();
+
+        // Inject the sender as if we were connected
+        {
+            let mut guard = lock_or_recover(&client.inner);
+            guard.ws_sender = Some(tx);
+            guard.is_connected = true;
+            guard.is_identified = true;
+        }
+
+        let message_count = 50;
+        let inner = Arc::clone(&client.inner);
+
+        client.runtime.handle().block_on(async {
+            let mut handles = Vec::new();
+            for i in 0..message_count {
+                let inner_clone = Arc::clone(&inner);
+                let msg = format!("msg-{}", i);
+                handles.push(tokio::spawn(async move {
+                    ObsWsClient::send_raw(&inner_clone, &msg).await;
+                }));
+            }
+            for h in handles {
+                h.await.unwrap();
+            }
+        });
+
+        // Drain the receiver and count
+        let mut received = Vec::new();
+        while let Ok(msg) = rx.try_recv() {
+            if let Message::Text(text) = msg {
+                received.push(text);
+            }
+        }
+
+        assert_eq!(
+            received.len(),
+            message_count,
+            "all {} messages should arrive, got {}",
+            message_count,
+            received.len()
+        );
+    }
+
+    #[test]
+    fn test_send_raw_none_sender_does_not_panic() {
+        // When ws_sender is None (disconnected), send_raw should silently no-op.
+        let config = make_test_config();
+        let client = ObsWsClient::new(&config).expect("failed to create client");
+
+        // ws_sender is None by default
+        let inner = Arc::clone(&client.inner);
+        client.runtime.handle().block_on(async {
+            ObsWsClient::send_raw(&inner, "test message").await;
+        });
+        // No panic = pass
+    }
+
+    #[test]
+    fn test_close_drops_ws_sender() {
+        let config = make_test_config();
+        let client = ObsWsClient::new(&config).expect("failed to create client");
+
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel::<Message>();
+        {
+            let mut guard = lock_or_recover(&client.inner);
+            guard.ws_sender = Some(tx);
+            guard.is_connected = true;
+        }
+
+        client.close();
+
+        {
+            let guard = lock_or_recover(&client.inner);
+            assert!(
+                guard.ws_sender.is_none(),
+                "close() should drop the ws_sender"
+            );
+        }
     }
 }
