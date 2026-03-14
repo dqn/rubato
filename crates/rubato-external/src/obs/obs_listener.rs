@@ -221,6 +221,12 @@ impl ObsListener {
     }
 }
 
+impl Drop for ObsListener {
+    fn drop(&mut self) {
+        self.close();
+    }
+}
+
 impl MainStateListener for ObsListener {
     fn update(&mut self, current_state: &dyn MainStateAccess, _status: i32) {
         if self.obs_client.is_none() {
