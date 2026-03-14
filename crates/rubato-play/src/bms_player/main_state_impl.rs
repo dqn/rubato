@@ -951,23 +951,25 @@ impl MainState for BMSPlayer {
             // Translated from: Java BMSPlayer.render() lines 914-936
             PlayState::Aborted => {
                 // Quick retry check (START xor SELECT in PLAY mode, not course)
+                // Guard: skip if a state transition is already queued to avoid
+                // calling save_config() on every frame while keys are held.
                 if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Play
                     && (self.input.input_start_pressed ^ self.input.input_select_pressed)
                     && !self.is_course_mode
+                    && self.pending.pending_state_change.is_none()
                 {
                     self.pending.pending_global_pitch = Some(1.0);
                     self.save_config();
                     self.pending.pending_reload_bms = true;
                     self.pending.pending_state_change = Some(MainStateType::Play);
-                }
-
-                // skin.getFadeout() from the loaded skin
-                let skin_fadeout = self
-                    .main_state_data
-                    .skin
-                    .as_ref()
-                    .map_or(0, |s| s.fadeout()) as i64;
-                if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
+                } else if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT)
+                    > self
+                        .main_state_data
+                        .skin
+                        .as_ref()
+                        .map_or(0, |s| s.fadeout()) as i64
+                {
+                    // skin.getFadeout() from the loaded skin
                     // input.setEnable(true); input.setStartTime(0);
                     self.pending.pending_state_change = Some(MainStateType::MusicSelect);
                     log::info!("Aborted, transition to MUSICSELECT");

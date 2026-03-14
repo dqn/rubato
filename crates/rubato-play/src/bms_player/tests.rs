@@ -3768,3 +3768,34 @@ fn play_render_context_bpm_zero_when_no_lanerender() {
     assert_eq!(ctx.integer_value(92), 0);
     assert_eq!(ctx.integer_value(160), 0);
 }
+
+#[test]
+fn aborted_quick_retry_not_overwritten_by_fadeout() {
+    // Regression: when TIMER_FADEOUT has expired AND start/select is pressed,
+    // quick-retry (Play) must win over the fadeout transition (MusicSelect).
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.state = PlayState::Aborted;
+    player.lanerender = Some(LaneRenderer::new(&player.model));
+    player.play_mode = BMSPlayerMode::PLAY;
+    player.is_course_mode = false;
+
+    // Turn on TIMER_FADEOUT and make it expired (well past the skin fadeout of 0)
+    player.main_state_data.timer.set_timer_on(TIMER_FADEOUT);
+    player.main_state_data.timer.update();
+    let now = player.main_state_data.timer.now_micro_time();
+    player
+        .main_state_data
+        .timer
+        .set_micro_timer(TIMER_FADEOUT, now - 10_000_000); // 10 seconds ago
+
+    // START pressed, SELECT not pressed (XOR = true -> quick retry)
+    player.input.input_start_pressed = true;
+    player.input.input_select_pressed = false;
+
+    player.render();
+
+    // Quick retry should win: transition to Play, not MusicSelect
+    let state_change = player.take_pending_state_change();
+    assert_eq!(state_change, Some(MainStateType::Play));
+}
