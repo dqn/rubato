@@ -63,20 +63,19 @@ impl SongInformationAccessor {
 
     pub fn informations(&self, sql: &str) -> Vec<SongInformation> {
         let query = format!("SELECT * FROM information WHERE {}", sql);
-        // Guard untrusted SQL with read-only authorizer
+        // Hold the lock for the entire authorizer lifecycle to prevent
+        // another thread from seeing the read-only authorizer during
+        // concurrent write operations.
         let conn = self.conn.lock().expect("conn lock poisoned");
         conn.authorizer(Some(read_only_authorizer));
-        drop(conn);
-        let result = match self.query_informations(&query, &[]) {
+        let result = match Self::query_informations_on_conn(&conn, &query, &[]) {
             Ok(infos) => remove_invalid_elements_vec(infos),
             Err(e) => {
                 log::error!("Error querying informations: {}", e);
                 Vec::new()
             }
         };
-        let conn = self.conn.lock().expect("conn lock poisoned");
         conn.authorizer(None::<fn(AuthContext<'_>) -> Authorization>);
-        drop(conn);
         result
     }
 
@@ -152,6 +151,14 @@ impl SongInformationAccessor {
         params: &[&str],
     ) -> anyhow::Result<Vec<SongInformation>> {
         let conn = self.conn.lock().expect("conn lock poisoned");
+        Self::query_informations_on_conn(&conn, sql, params)
+    }
+
+    fn query_informations_on_conn(
+        conn: &Connection,
+        sql: &str,
+        params: &[&str],
+    ) -> anyhow::Result<Vec<SongInformation>> {
         let mut stmt = conn.prepare(sql)?;
         let param_values: Vec<&dyn rusqlite::types::ToSql> = params
             .iter()
@@ -308,6 +315,71 @@ mod tests {
             1,
             "second query should work after authorizer cleanup"
         );
+    }
+
+    /// After informations() returns, the authorizer must be fully cleared so
+    /// that write operations on the same connection succeed immediately.
+    /// This is a regression test for a TOCTOU race where the authorizer was
+    /// set and cleared in separate lock/unlock cycles.
+    #[test]
+    fn informations_authorizer_not_leaked_to_subsequent_writes() {
+        let (accessor, _tmpdir) = setup_info_accessor();
+
+        // Run a read-only query through informations()
+        let results = accessor.informations("1=1");
+        assert_eq!(results.len(), 1);
+
+        // Immediately after, a write operation on the same connection must succeed.
+        // If the authorizer leaked, this INSERT would be denied.
+        let sha2 = "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3";
+        let conn = accessor.conn.lock().expect("conn lock poisoned");
+        let result = conn.execute(
+            &format!(
+                "INSERT INTO information (sha256, n, ln, s, ls, total, density, peakdensity, enddensity, mainbpm, distribution, speedchange, lanenotes) \
+                 VALUES ('{}', 50, 5, 2, 1, 100.0, 2.0, 4.0, 1.0, 130.0, '', '', '')",
+                sha2
+            ),
+            [],
+        );
+        assert!(
+            result.is_ok(),
+            "INSERT after informations() must succeed; authorizer was not cleared: {:?}",
+            result.err()
+        );
+    }
+
+    /// Verify that interleaving informations() with insert_information()
+    /// from another thread does not cause the authorizer to block writes.
+    /// Regression test for TOCTOU where the authorizer was set/cleared
+    /// in separate lock cycles, allowing concurrent threads to see it.
+    #[test]
+    fn informations_does_not_block_concurrent_writes() {
+        let (accessor, _tmpdir) = setup_info_accessor();
+        let accessor = std::sync::Arc::new(accessor);
+
+        let accessor_clone = std::sync::Arc::clone(&accessor);
+        let write_handle = std::thread::spawn(move || {
+            // Attempt many writes while the other thread is calling informations()
+            for i in 0..50 {
+                let sha = format!("{:064x}", 0xc0ffee_u64 + i);
+                let info = SongInformation {
+                    sha256: sha,
+                    n: i as i32,
+                    ..SongInformation::new()
+                };
+                // This should never fail due to the authorizer being set
+                if let Err(e) = accessor_clone.insert_information(&info) {
+                    panic!("insert_information failed on iteration {}: {}", i, e);
+                }
+            }
+        });
+
+        // Run many reads concurrently
+        for _ in 0..50 {
+            let _ = accessor.informations("1=1");
+        }
+
+        write_handle.join().expect("writer thread panicked");
     }
 
     /// The read-only authorizer blocks destructive operations when set on the
