@@ -348,9 +348,7 @@ mod tests {
         );
         assert_eq!(
             driver.events()[1],
-            AudioEvent::StopNote {
-                wav_id: Some(42),
-            }
+            AudioEvent::StopNote { wav_id: Some(42) }
         );
     }
 
@@ -360,10 +358,7 @@ mod tests {
 
         driver.stop_note(None);
 
-        assert_eq!(
-            driver.events()[0],
-            AudioEvent::StopNote { wav_id: None }
-        );
+        assert_eq!(driver.events()[0], AudioEvent::StopNote { wav_id: None });
     }
 
     #[test]

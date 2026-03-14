@@ -6,9 +6,9 @@
 use bms_model::judge_note::{JUDGE_MS, JUDGE_PG, JUDGE_PR};
 use bms_model::mode::Mode;
 use golden_master::e2e_helpers::*;
+use rubato_types::KeyInputLog as ReplayKeyInputLog;
 use rubato_types::groove_gauge::{EXHARD, HARD, NORMAL};
 use rubato_types::replay_data::ReplayData;
-use rubato_types::stubs::KeyInputLog as ReplayKeyInputLog;
 
 /// Record autoplay key events from a simulation.
 ///

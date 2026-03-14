@@ -6,9 +6,9 @@
 use bms_model::judge_note::{JUDGE_GR, JUDGE_PG};
 use bms_model::mode::Mode;
 use golden_master::e2e_helpers::*;
+use rubato_types::KeyInputLog as ReplayKeyInputLog;
 use rubato_types::groove_gauge::{ASSISTEASY, EASY, EXHARD, HARD, NORMAL};
 use rubato_types::replay_data::ReplayData;
-use rubato_types::stubs::KeyInputLog as ReplayKeyInputLog;
 
 // ============================================================================
 // Full pipeline: BMS → Judge → Score → Replay → Re-simulate

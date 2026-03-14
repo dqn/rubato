@@ -8,8 +8,8 @@ use flate2::write::GzEncoder;
 use serde::{Deserialize, Serialize};
 
 use crate::course_data::CourseData;
-use crate::stubs::SongData;
 use crate::validatable::{Validatable, remove_invalid_elements_vec};
+use rubato_types::SongData;
 
 /// Table data (difficulty table)
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -128,7 +128,7 @@ impl Validatable for TableFolder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stubs::SongData;
+    use rubato_types::SongData;
 
     /// Helper to create a minimal valid TableData for testing.
     fn make_valid_table_data() -> TableData {

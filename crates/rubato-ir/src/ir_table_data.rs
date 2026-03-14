@@ -62,7 +62,7 @@ impl IRTableData {
         for tf in &table.folder {
             let mut charts = Vec::with_capacity(tf.songs.len());
             for song in &tf.songs {
-                // TableFolder songs are rubato_core::stubs::SongData
+                // TableFolder songs are rubato_types::SongData
                 charts.push(create_ir_chart_data_from_core_song(song));
             }
             folders.push(IRTableFolder::new(
@@ -84,8 +84,8 @@ impl IRTableData {
     }
 }
 
-/// Create IRChartData from rubato_core::stubs::SongData
-fn create_ir_chart_data_from_core_song(song: &rubato_core::stubs::SongData) -> IRChartData {
+/// Create IRChartData from rubato_types::SongData
+fn create_ir_chart_data_from_core_song(song: &rubato_types::song_data::SongData) -> IRChartData {
     IRChartData {
         md5: song.file.md5.clone(),
         sha256: song.file.sha256.clone(),

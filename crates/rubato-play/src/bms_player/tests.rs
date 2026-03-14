@@ -557,7 +557,7 @@ fn create_score_data_returns_some_when_aborted() {
 
 #[test]
 fn create_score_data_sets_device_type_keyboard() {
-    use rubato_types::stubs::bms_player_input_device;
+    use rubato_types::bms_player_input_device;
 
     let model = make_model();
     let mut player = BMSPlayer::new(model);
@@ -572,7 +572,7 @@ fn create_score_data_sets_device_type_keyboard() {
 
 #[test]
 fn create_score_data_sets_device_type_bm_controller() {
-    use rubato_types::stubs::bms_player_input_device;
+    use rubato_types::bms_player_input_device;
 
     let model = make_model();
     let mut player = BMSPlayer::new(model);
@@ -587,7 +587,7 @@ fn create_score_data_sets_device_type_bm_controller() {
 
 #[test]
 fn create_score_data_sets_device_type_midi() {
-    use rubato_types::stubs::bms_player_input_device;
+    use rubato_types::bms_player_input_device;
 
     let model = make_model();
     let mut player = BMSPlayer::new(model);

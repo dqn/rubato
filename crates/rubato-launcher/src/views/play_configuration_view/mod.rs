@@ -252,14 +252,6 @@ pub struct PlayConfigurationView {
     // CIM
     pub usecim: bool,
 
-    // Twitter
-    pub txt_twitter_consumer_key: String,
-    pub txt_twitter_consumer_secret: String,
-    pub txt_twitter_authenticated_visible: bool,
-    pub txt_twitter_pin: String,
-    pub twitter_pin_enabled: bool,
-    pub twitter_auth_button_enabled: bool,
-
     // IPFS
     pub enable_ipfs: bool,
     pub ipfsurl: String,

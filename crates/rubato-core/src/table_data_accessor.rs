@@ -322,7 +322,7 @@ mod tests {
             folder: vec![TableFolder {
                 name: Some("T1".to_string()),
                 songs: vec![{
-                    let mut s = crate::stubs::SongData::new();
+                    let mut s = rubato_types::SongData::new();
                     s.file.md5 = "abcdef0123456789abcdef0123456789".to_string();
                     s.metadata.title = "Test Song".to_string();
                     s
@@ -375,7 +375,7 @@ mod tests {
                 folder: vec![TableFolder {
                     name: Some(format!("T{}1", i)),
                     songs: vec![{
-                        let mut s = crate::stubs::SongData::new();
+                        let mut s = rubato_types::SongData::new();
                         s.file.md5 = format!("md5hash{:032}", i);
                         s.metadata.title = format!("Song {}", i);
                         s
@@ -402,7 +402,7 @@ mod tests {
             folder: vec![TableFolder {
                 name: Some("C1".to_string()),
                 songs: vec![{
-                    let mut s = crate::stubs::SongData::new();
+                    let mut s = rubato_types::SongData::new();
                     s.file.md5 = "custom_md5_hash_01234567890123".to_string();
                     s.metadata.title = "Custom Song".to_string();
                     s
@@ -431,7 +431,7 @@ mod tests {
             folder: vec![TableFolder {
                 name: Some("N1".to_string()),
                 songs: vec![{
-                    let mut s = crate::stubs::SongData::new();
+                    let mut s = rubato_types::SongData::new();
                     s.file.md5 = "named_md5_hash_012345678901234".to_string();
                     s.metadata.title = "Named Song".to_string();
                     s
@@ -465,7 +465,7 @@ mod tests {
             folder: vec![TableFolder {
                 name: Some("L1".to_string()),
                 songs: vec![{
-                    let mut s = crate::stubs::SongData::new();
+                    let mut s = rubato_types::SongData::new();
                     s.file.md5 = "local_md5_hash_01234567890123".to_string();
                     s.metadata.title = "Local Song".to_string();
                     s
@@ -517,7 +517,7 @@ mod tests {
             folder: vec![TableFolder {
                 name: Some("E1".to_string()),
                 songs: vec![{
-                    let mut s = crate::stubs::SongData::new();
+                    let mut s = rubato_types::SongData::new();
                     s.file.md5 = "existing_md5_hash_0123456789012".to_string();
                     s.metadata.title = "Existing Song".to_string();
                     s

@@ -58,8 +58,7 @@ impl PlayConfigurationView {
             self.enable_hidden = conf.enablehidden;
             self.lift = (conf.lift * 1000.0) as i32;
             self.hidden = (conf.hidden * 1000.0) as i32;
-            self.judgealgorithm =
-                Some(rubato_types::JudgeAlgorithm::index(&conf.judgetype).max(0));
+            self.judgealgorithm = Some(rubato_types::JudgeAlgorithm::index(&conf.judgetype).max(0));
             self.hispeedautoadjust = conf.hispeedautoadjust;
         }
     }
@@ -303,18 +302,6 @@ impl PlayConfigurationView {
 
         let importer = rubato_external::score_data_importer::ScoreDataImporter::new(scoredb);
         importer.import_from_lr2_score_database(lr2_path, &songdb);
-    }
-
-    /// Start Twitter auth (deprecated -- Twitter API is not supported)
-    /// Translates: public void startTwitterAuth()
-    pub fn start_twitter_auth(&mut self) {
-        warn!("Twitter API is not supported in Rust port (twitter4j has no Rust equivalent)");
-    }
-
-    /// Start PIN auth (deprecated -- Twitter API is not supported)
-    /// Translates: public void startPINAuth()
-    pub fn start_pin_auth(&mut self) {
-        warn!("Twitter API is not supported in Rust port (twitter4j has no Rust equivalent)");
     }
 
     /// Exit

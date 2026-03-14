@@ -4,8 +4,11 @@
 //! Note: The typo "Processeor" is preserved from the Java source.
 
 use crate::bms_player_input_device::{BMSPlayerInputDevice, DeviceType};
+use crate::gdx_compat::{GdxGraphics, GdxInput};
+use crate::keys::Keys;
 use crate::mouse_scratch_input::MouseScratchInput;
-use crate::stubs::{GdxGraphics, GdxInput, KeyboardConfig, Keys, Resolution};
+use rubato_types::play_mode_config::KeyboardConfig;
+use rubato_types::resolution::Resolution;
 
 pub const MASK_SHIFT: i32 = 1 << 0;
 pub const MASK_CTRL: i32 = 1 << 1;
@@ -518,8 +521,8 @@ impl BMSPlayerInputDevice for KeyBoardInputProcesseor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stubs::KeyboardConfig;
     use crate::winit_input_bridge::SharedKeyState;
+    use rubato_types::play_mode_config::KeyboardConfig;
 
     fn make_processor() -> KeyBoardInputProcesseor {
         let config = KeyboardConfig::default();

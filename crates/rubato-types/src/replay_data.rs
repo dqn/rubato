@@ -10,8 +10,9 @@ use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use serde::{Deserialize, Serialize};
 
+use crate::key_input_log::KeyInputLog;
+use crate::pattern_modify_log::PatternModifyLog;
 use crate::play_config::PlayConfig;
-use crate::stubs::{KeyInputLog, PatternModifyLog};
 use crate::validatable::Validatable;
 
 /// Replay data. Contains key input log, pattern modification info, and gauge type.

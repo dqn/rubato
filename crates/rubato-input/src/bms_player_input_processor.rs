@@ -10,15 +10,18 @@ use crate::bm_controller_input_processor::{
     BMControllerCallback, BMControllerInputProcessor, compute_analog_diff,
 };
 use crate::bms_player_input_device::{BMSPlayerInputDevice, DeviceType};
+use crate::controller::gdx_controller::GdxController;
 use crate::key_command::KeyCommand;
 use crate::key_input_log::KeyInputLog;
 use crate::keyboard_input_processor::{
     ControlKeys, KeyBoardInputProcesseor, KeyboardCallback, MASK_CTRL, MASK_SHIFT,
 };
 use crate::midi_input_processor::MidiInputProcessor;
-use crate::stubs::{
-    Config, Controller, ControllerConfig, KeyboardConfig, MidiConfig, PlayModeConfig, PlayerConfig,
+use rubato_types::config::Config;
+use rubato_types::play_mode_config::{
+    ControllerConfig, KeyboardConfig, MidiConfig, PlayModeConfig,
 };
+use rubato_types::player_config::PlayerConfig;
 
 pub const KEYSTATE_SIZE: usize = 256;
 
@@ -145,7 +148,7 @@ impl BMSPlayerInputProcessor {
                     name = format!("{}-{}", ctrl.name, index);
                 }
             }
-            let controller = Controller::with_state(
+            let controller = GdxController::with_state(
                 name.clone(),
                 ctrl.button_state.len(),
                 ctrl.axis_state.len(),
@@ -905,8 +908,10 @@ impl crate::midi_input_processor::MidiCallback for MidiEvents {
 #[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
-    use crate::stubs::{Config, Keys, PlayerConfig};
+    use crate::keys::Keys;
     use crate::winit_input_bridge::SharedKeyState;
+    use rubato_types::config::Config;
+    use rubato_types::player_config::PlayerConfig;
 
     fn make_input_processor() -> BMSPlayerInputProcessor {
         let config = Config::default();
@@ -1136,7 +1141,7 @@ mod tests {
 
     #[test]
     fn test_set_play_config_exclusive_keys_written_back_to_keyboard() {
-        use crate::stubs::PlayModeConfig;
+        use rubato_types::play_mode_config::PlayModeConfig;
 
         let mut proc = make_input_processor();
         let mut playconfig = PlayModeConfig::default();
@@ -1166,7 +1171,7 @@ mod tests {
 
     #[test]
     fn test_set_play_config_exclusive_keys_written_back_to_midi() {
-        use crate::stubs::PlayModeConfig;
+        use rubato_types::play_mode_config::PlayModeConfig;
 
         let mut proc = make_input_processor();
         let mut playconfig = PlayModeConfig::default();
@@ -1175,7 +1180,7 @@ mod tests {
         playconfig.keyboard.keys[0] = 42;
         // Set midi key[0] to Some
         if !playconfig.midi.keys.is_empty() {
-            playconfig.midi.keys[0] = Some(crate::stubs::MidiInput::default());
+            playconfig.midi.keys[0] = Some(rubato_types::play_mode_config::MidiInput::default());
         }
 
         proc.set_play_config(&mut playconfig);

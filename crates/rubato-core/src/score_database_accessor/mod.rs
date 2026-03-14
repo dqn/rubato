@@ -10,8 +10,8 @@ use crate::sqlite_database_accessor::{Column, SQLiteDatabaseAccessor, Table};
 
 use helpers::player_data_to_value;
 
-// Re-export SongData stub from stubs module for use by other accessors
-pub use crate::stubs::SongData;
+// Re-export SongData from rubato_types for use by other accessors
+pub use rubato_types::SongData;
 
 pub trait ScoreDataCollector {
     fn collect(&mut self, song: &SongData, score: Option<&ScoreData>);

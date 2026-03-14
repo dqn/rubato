@@ -166,7 +166,7 @@ impl KeyInputProccessor {
     pub fn start_judge(
         &mut self,
         last_timeline_micro_time: i64,
-        keylog: Option<&[rubato_types::stubs::KeyInputLog]>,
+        keylog: Option<&[rubato_types::KeyInputLog]>,
         milli_margin_time: i64,
     ) {
         // Convert DTO KeyInputLog entries to internal ReplayKeylogEntry

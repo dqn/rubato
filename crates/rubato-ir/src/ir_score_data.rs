@@ -1,6 +1,6 @@
 use rubato_core::clear_type::ClearType;
 use rubato_core::score_data::ScoreData;
-use rubato_core::stubs::{BMSPlayerRule, JudgeAlgorithm, bms_player_input_device};
+use rubato_types::{BMSPlayerRule, JudgeAlgorithm, bms_player_input_device};
 
 /// IR score data
 ///

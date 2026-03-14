@@ -269,16 +269,16 @@ impl ApplicationHandler for RubatoApp {
     /// Java: ApplicationListener.create() — called when the application is first created.
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         // Populate monitor cache for VideoConfigurationView
-        rubato_launcher::stubs::update_monitors_from_winit(event_loop);
+        rubato_launcher::platform::update_monitors_from_winit(event_loop);
 
         // Sync display mode cache to core MainLoader
         {
             use rubato_core::main_loader::MainLoader;
-            let modes = rubato_launcher::stubs::cached_display_modes();
+            let modes = rubato_launcher::platform::cached_display_modes();
             if !modes.is_empty() {
                 MainLoader::set_display_modes(modes);
             }
-            let desktop = rubato_launcher::stubs::cached_desktop_display_mode();
+            let desktop = rubato_launcher::platform::cached_desktop_display_mode();
             if desktop != (0, 0) {
                 MainLoader::set_desktop_display_mode(desktop);
             }

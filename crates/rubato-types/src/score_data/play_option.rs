@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::stubs::{BMSPlayerRule, JudgeAlgorithm, bms_player_input_device};
+use crate::bms_player_input_device;
+use crate::bms_player_rule::BMSPlayerRule;
+use crate::judge_algorithm::JudgeAlgorithm;
 
 /// Play options and configuration at the time of scoring.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]

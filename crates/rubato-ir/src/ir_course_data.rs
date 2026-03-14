@@ -51,9 +51,7 @@ impl IRCourseData {
         let songs = &course.hash;
         let mut charts = Vec::with_capacity(songs.len());
         for song in songs {
-            // CourseData uses rubato_core::stubs::SongData which is different from our stubs::SongData
-            // We need to create IRChartData from the available song data
-            // Since CourseData::SongData is a different type, we create a minimal IRChartData
+            // Create IRChartData from the song data in the course
             charts.push(create_ir_chart_data_from_core_song(song));
         }
 
@@ -74,8 +72,8 @@ impl IRCourseData {
     }
 }
 
-/// Create IRChartData from rubato_core::stubs::SongData
-fn create_ir_chart_data_from_core_song(song: &rubato_core::stubs::SongData) -> IRChartData {
+/// Create IRChartData from rubato_types::SongData
+fn create_ir_chart_data_from_core_song(song: &rubato_types::song_data::SongData) -> IRChartData {
     IRChartData {
         md5: song.file.md5.clone(),
         sha256: song.file.sha256.clone(),

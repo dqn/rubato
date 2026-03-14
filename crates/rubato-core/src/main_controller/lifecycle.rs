@@ -259,7 +259,7 @@ impl MainController {
                     rd.keylog = input
                         .key_input_log()
                         .iter()
-                        .map(|k| rubato_types::stubs::KeyInputLog {
+                        .map(|k| rubato_types::KeyInputLog {
                             time: k.time(),
                             keycode: k.keycode(),
                             pressed: k.is_pressed(),

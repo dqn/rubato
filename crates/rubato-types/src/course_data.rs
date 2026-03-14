@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::stubs::SongData;
+use crate::song_data::SongData;
 use crate::validatable::{Validatable, remove_invalid_elements_vec};
 
 /// Course data

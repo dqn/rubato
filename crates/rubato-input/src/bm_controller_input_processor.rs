@@ -3,7 +3,8 @@
 //! Translated from: bms.player.beatoraja.input.BMControllerInputProcessor
 
 use crate::bms_player_input_device::{BMSPlayerInputDevice, DeviceType};
-use crate::stubs::{Controller, ControllerConfig};
+use crate::controller::gdx_controller::GdxController;
+use rubato_types::play_mode_config::ControllerConfig;
 use rubato_types::play_mode_config::{ANALOG_SCRATCH_VER_1, ANALOG_SCRATCH_VER_2};
 
 /// BMKeys constants
@@ -301,7 +302,7 @@ impl AnalogScratchAlgorithm for AnalogScratchAlgorithmVersion2 {
 
 /// Dedicated controller input processing
 pub struct BMControllerInputProcessor {
-    pub(crate) controller: Controller,
+    pub(crate) controller: GdxController,
     /// Device name
     name: String,
     /// Controller enabled
@@ -345,7 +346,11 @@ pub trait BMControllerCallback {
 }
 
 impl BMControllerInputProcessor {
-    pub fn new(name: String, controller: Controller, controller_config: &ControllerConfig) -> Self {
+    pub fn new(
+        name: String,
+        controller: GdxController,
+        controller_config: &ControllerConfig,
+    ) -> Self {
         let mut proc = Self {
             controller,
             name,

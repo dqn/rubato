@@ -17,7 +17,8 @@ use crate::player_config::PlayerConfig;
 use crate::player_data::PlayerData;
 use crate::replay_data::ReplayData;
 use crate::score_data::ScoreData;
-use crate::stubs::*;
+use rubato_types::groove_gauge::GrooveGauge;
+use rubato_types::song_data::SongData;
 
 /// FloatArray stub (LibGDX equivalent)
 pub type FloatArray = Vec<f32>;

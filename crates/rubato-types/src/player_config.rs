@@ -2,12 +2,15 @@ use std::path::{Path, PathBuf};
 
 use bms_model::mode::Mode;
 
+use crate::bar_sorter::BarSorter;
 use crate::config::Config;
+use crate::groove_gauge::GrooveGauge;
 use crate::ir_config::IRConfig;
+use crate::ir_connection_registry::IRConnectionManager;
 use crate::play_mode_config::PlayModeConfig;
+use crate::scroll_speed_modifier;
 use crate::skin_config::SkinConfig;
 use crate::skin_type::SkinType;
-use crate::stubs::{BarSorter, GrooveGauge, IRConnectionManager, scroll_speed_modifier};
 use crate::validatable::{Validatable, remove_invalid_elements};
 
 pub const JUDGETIMING_MAX: i32 = 500;

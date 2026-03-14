@@ -4,8 +4,8 @@
 //! Uses midir for real MIDI device enumeration and input.
 
 use crate::bms_player_input_device::{BMSPlayerInputDevice, DeviceType};
-use crate::stubs::{MidiConfig, MidiInput, MidiInputType};
 use midir::{MidiInput as MidirInput, MidiInputConnection};
+use rubato_types::play_mode_config::{MidiConfig, MidiInput, MidiInputType};
 use std::sync::mpsc;
 
 const MAX_KEYS: usize = 128;

@@ -2,7 +2,7 @@
 
 use egui;
 use rubato_core::course_data::{CourseData, CourseDataConstraint, TrophyData};
-use rubato_core::stubs::SongData;
+use rubato_types::song_data::SongData;
 use rubato_types::song_database_accessor::SongDatabaseAccessor;
 
 use crate::views::editors::folder_editor_view::SongDataView;

@@ -1,11 +1,9 @@
 //! Shared type definitions, configuration structures, and trait interfaces
 //! for the rubato BMS player.
 
-// Stub types (downstream phase types that cannot be directly imported)
-pub mod stubs;
-
 // Types extracted from stubs (Phase 30a/30b)
 pub mod bar_sorter;
+pub mod bms_player_input_device;
 pub mod bms_player_rule;
 pub mod judge_algorithm;
 pub mod key_input_log;
@@ -13,6 +11,20 @@ pub mod long_note_modifier;
 pub mod mine_note_modifier;
 pub mod pattern_modify_log;
 pub mod scroll_speed_modifier;
+
+// IR connection registry (stub, will become a trait in Phase 6)
+pub mod ir_connection_registry;
+
+// Top-level re-exports (previously via stubs module)
+pub use bar_sorter::{BarSorter, BarSorterEntry};
+pub use bms_player_rule::BMSPlayerRule;
+pub use groove_gauge::GrooveGauge;
+pub use ir_connection_registry::IRConnectionManager;
+pub use judge_algorithm::JudgeAlgorithm;
+pub use key_input_log::KeyInputLog;
+pub use pattern_modify_log::PatternModifyLog;
+pub use skin_type::SkinType;
+pub use song_data::SongData;
 
 // Foundational types
 pub mod clear_type;

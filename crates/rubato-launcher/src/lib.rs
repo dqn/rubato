@@ -1,10 +1,12 @@
 //! Configuration UI views for audio, input, skin, and gameplay settings.
 
+pub mod display_mode;
 pub mod launcher_ui;
+pub mod main_loader;
 pub mod platform;
 pub mod state_factory;
-pub mod stubs;
 pub mod util;
+pub mod version_checker;
 pub mod views;
 
 pub use launcher_ui::LauncherUi;

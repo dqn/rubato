@@ -1,4 +1,4 @@
-use crate::stubs::IRConnectionManager;
+use crate::ir_connection_registry::IRConnectionManager;
 use crate::validatable::Validatable;
 
 const KEY: &str = "0123456789abcdef";

@@ -5,9 +5,9 @@
 // are marked `#[ignore]` so the suite stays green, while still serving as
 // living documentation of the vulnerabilities.
 
+use rubato_types::KeyInputLog;
 use rubato_types::replay_data::ReplayData;
 use rubato_types::score_data::ScoreData;
-use rubato_types::stubs::KeyInputLog;
 use rubato_types::validatable::Validatable;
 
 use bms_model::mode::Mode;

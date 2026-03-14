@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::course_data::{CourseData, CourseDataConstraint, TrophyData};
 use crate::random_stage_data::RandomStageData;
-use crate::stubs::SongData;
+use rubato_types::SongData;
 
 /// Random course data - selects songs by SQL query results
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]

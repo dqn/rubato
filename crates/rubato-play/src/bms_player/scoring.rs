@@ -249,13 +249,13 @@ impl BMSPlayer {
         // Java: score.setDeviceType(main.getInputProcessor().getDeviceType());
         score.play_option.device_type = Some(match device_type {
             rubato_input::bms_player_input_device::DeviceType::Keyboard => {
-                rubato_types::stubs::bms_player_input_device::Type::KEYBOARD
+                rubato_types::bms_player_input_device::Type::KEYBOARD
             }
             rubato_input::bms_player_input_device::DeviceType::BmController => {
-                rubato_types::stubs::bms_player_input_device::Type::BM_CONTROLLER
+                rubato_types::bms_player_input_device::Type::BM_CONTROLLER
             }
             rubato_input::bms_player_input_device::DeviceType::Midi => {
-                rubato_types::stubs::bms_player_input_device::Type::MIDI
+                rubato_types::bms_player_input_device::Type::MIDI
             }
         });
         score.play_option.skin = self.skin_name.clone();

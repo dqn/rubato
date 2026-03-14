@@ -1,4 +1,4 @@
-use crate::stubs::JudgeAlgorithm;
+use crate::judge_algorithm::JudgeAlgorithm;
 
 pub const HISPEED_MAX: f32 = 20.0;
 pub const HISPEED_MIN: f32 = 0.01;

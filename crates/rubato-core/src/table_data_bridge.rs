@@ -10,8 +10,8 @@ use bms_table::course::{Course, Trophy};
 use bms_table::difficulty_table::DifficultyTable;
 use bms_table::difficulty_table_element::DifficultyTableElement;
 
-use crate::stubs::SongData;
 use crate::table_data::{TableData, TableFolder};
+use rubato_types::SongData;
 use rubato_types::course_data::{CourseData, CourseDataConstraint, TrophyData};
 
 /// Convert a BmsTableElement to SongData.

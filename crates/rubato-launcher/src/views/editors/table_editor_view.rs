@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use regex::Regex;
 
 use egui;
-use rubato_core::stubs::SongData;
 use rubato_core::table_data::TableData;
+use rubato_types::song_data::SongData;
 use rubato_types::song_database_accessor::SongDatabaseAccessor;
 
 use crate::views::editors::course_editor_view::CourseEditorView;

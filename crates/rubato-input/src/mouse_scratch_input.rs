@@ -2,8 +2,9 @@
 //!
 //! Translated from: bms.player.beatoraja.input.MouseScratchInput
 
+use crate::gdx_compat::GdxInput;
 use crate::keyboard_input_processor::KeyboardCallback;
-use crate::stubs::{GdxInput, KeyboardConfig};
+use rubato_types::play_mode_config::KeyboardConfig;
 use rubato_types::play_mode_config::{MOUSE_SCRATCH_VER_1, MOUSE_SCRATCH_VER_2};
 
 const _MOUSESCRATCH_RIGHT: usize = 0;

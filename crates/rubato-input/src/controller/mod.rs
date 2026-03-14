@@ -1,3 +1,4 @@
+pub mod gdx_controller;
 pub mod lwjgl3_controller;
 pub mod lwjgl3_controller_manager;
 pub mod lwjgl3_controllers;

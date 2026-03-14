@@ -3,8 +3,8 @@ pub use rubato_types::replay_data::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stubs::KeyInputLog;
     use crate::validatable::Validatable;
+    use rubato_types::KeyInputLog;
 
     #[test]
     fn test_replay_data_new() {
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_replay_data_with_pattern() {
-        use crate::stubs::PatternModifyLog;
+        use rubato_types::PatternModifyLog;
 
         let mut rd = ReplayData::new();
         rd.pattern = Some(vec![

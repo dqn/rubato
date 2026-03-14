@@ -237,13 +237,6 @@ impl PlayConfigurationView {
         // streamController.update(player)
         self.stream_controller.update(&player);
 
-        self.twitter_pin_enabled = false;
-        if let Some(ref token) = player.twitter_access_token {
-            self.txt_twitter_authenticated_visible = !token.is_empty();
-        } else {
-            self.txt_twitter_authenticated_visible = false;
-        }
-
         self.pc = None;
         self.playconfig = Some(PlayMode::BEAT_7K);
         self.player = Some(player);
@@ -417,7 +410,8 @@ impl PlayConfigurationView {
     /// Add sound path
     /// Translates: public void addSoundPath()
     pub fn add_sound_path(&mut self) {
-        if let Some(s) = crate::platform::show_directory_chooser("Select sound effect root folder") {
+        if let Some(s) = crate::platform::show_directory_chooser("Select sound effect root folder")
+        {
             self.soundpath = s;
         }
     }
