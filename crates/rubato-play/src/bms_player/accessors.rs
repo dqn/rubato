@@ -57,6 +57,8 @@ impl BMSPlayer {
             force_no_ir_send: false,
             initial_course_combo: 0,
             initial_course_maxcombo: 0,
+            orgmode: None,
+            lnmode_override: None,
         }
     }
 
@@ -132,6 +134,14 @@ impl BMSPlayer {
         self.is_guide_se = enabled;
     }
 
+    /// Set the original BMS mode before chart-option conversion.
+    /// Called by the launcher from PlayerResource.original_mode() before create().
+    /// Used by SkinGauge to adjust parts count for border alignment when
+    /// the chart is played in a different mode (e.g. 7-key chart in 9-key mode).
+    pub fn set_orgmode(&mut self, mode: Option<Mode>) {
+        self.orgmode = mode;
+    }
+
     /// Set the player config. Used for save_config, gauge_auto_shift, chart_preview, etc.
     pub fn set_player_config(&mut self, config: PlayerConfig) {
         self.player_config = config;
@@ -200,6 +210,13 @@ impl BMSPlayer {
     /// Should be called during initialization for skin property display.
     pub fn set_key_volume(&mut self, volume: f32) {
         self.key_volume = volume;
+    }
+
+    /// Set the lnmode override from chart data (SongData).
+    /// Should be called during initialization when SongData is available.
+    /// Use `rubato_types::skin_render_context::compute_lnmode_from_chart()` to compute.
+    pub fn set_lnmode_override(&mut self, lnmode_override: Option<i32>) {
+        self.lnmode_override = lnmode_override;
     }
 
     /// Set play speed and optionally request global pitch change.

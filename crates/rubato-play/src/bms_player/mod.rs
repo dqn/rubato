@@ -395,6 +395,15 @@ pub struct BMSPlayer {
     initial_course_combo: i32,
     /// Initial course max combo carried from a previous course stage (via PlayerResource).
     initial_course_maxcombo: i32,
+    /// Original BMS mode before chart-option conversion (e.g. 7key->9key).
+    /// Set by the caller from PlayerResource.original_mode() before create().
+    /// Used by SkinGauge to adjust parts count for border alignment.
+    orgmode: Option<Mode>,
+    /// Pre-computed lnmode override from chart data (SongData).
+    /// When the chart explicitly defines LN types (has_any_long_note && !has_undefined_long_note),
+    /// this overrides the config setting for image_index_value ID 308.
+    /// Set by the caller before create() via `set_lnmode_override()`.
+    lnmode_override: Option<i32>,
 }
 
 mod accessors;

@@ -3586,6 +3586,8 @@ fn make_play_render_context_with_bpm_volume<'a>(
         system_volume: volume.0,
         key_volume: volume.1,
         bg_volume: volume.2,
+        is_mode_changed: false,
+        lnmode_override: None,
     }
 }
 

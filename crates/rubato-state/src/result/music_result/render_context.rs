@@ -107,6 +107,23 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
         shared_render_context::judge_count(self.data, judge, fast)
     }
 
+    fn image_index_value(&self, id: i32) -> i32 {
+        match id {
+            // Java IntegerPropertyFactory ID 308 (lnmode): on MusicResult, override
+            // from chart data when the chart explicitly defines LN types.
+            308 => {
+                if let Some(song) = self.resource.songdata()
+                    && let Some(override_val) =
+                        rubato_types::skin_render_context::compute_lnmode_from_chart(&song.chart)
+                {
+                    return override_val;
+                }
+                self.default_image_index_value(id)
+            }
+            _ => self.default_image_index_value(id),
+        }
+    }
+
     fn integer_value(&self, id: i32) -> i32 {
         shared_render_context::integer_value(self.data, self.timer.now_time(), id)
     }
@@ -120,7 +137,12 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     }
 
     fn float_value(&self, id: i32) -> f32 {
-        shared_render_context::float_value(self.data, id)
+        match id {
+            // FLOAT_GROOVEGAUGE_1P (1107): needs PlayerResource for gauge data.
+            // Java: AbstractResult -> gauge[gaugeType].last()
+            1107 => shared_render_context::gauge_value(self.resource),
+            _ => shared_render_context::float_value(self.data, id),
+        }
     }
 
     fn boolean_value(&self, id: i32) -> bool {

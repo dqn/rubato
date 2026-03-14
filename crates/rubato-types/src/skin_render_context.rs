@@ -1,5 +1,28 @@
 use crate::main_state_type::MainStateType;
+use crate::song_data::ChartInfo;
 use crate::timer_access::TimerAccess;
+
+/// Compute the lnmode image-index override from chart data.
+///
+/// Java IntegerPropertyFactory (ID 308 / lnmode): when on BMSPlayer or MusicResult,
+/// if the chart explicitly defines LN types (has_any_long_note && !has_undefined_long_note),
+/// return 0 (LN), 1 (CN), or 2 (HCN) from the chart instead of the config setting.
+///
+/// Returns `Some(value)` when the chart defines an explicit LN type, `None` otherwise.
+pub fn compute_lnmode_from_chart(chart: &ChartInfo) -> Option<i32> {
+    if chart.has_any_long_note() && !chart.has_undefined_long_note() {
+        if chart.has_long_note() {
+            Some(0)
+        } else if chart.has_charge_note() {
+            Some(1)
+        } else {
+            // HCN (hell charge note)
+            Some(2)
+        }
+    } else {
+        None
+    }
+}
 
 /// Extended context for skin rendering that provides timer access plus
 /// additional capabilities (event execution, state changes, audio, timers).
@@ -339,6 +362,19 @@ pub trait SkinRenderContext: TimerAccess {
         0
     }
 
+    /// Returns whether the chart's original mode differs from the current mode
+    /// (e.g. 7-key chart converted to 9-key via chart options).
+    /// Used by SkinGauge to adjust parts count for border alignment.
+    fn is_mode_changed(&self) -> bool {
+        false
+    }
+
+    /// Returns (border, max) for each gauge type.
+    /// Used by SkinGauge to adjust parts count so borders divide evenly.
+    fn gauge_element_borders(&self) -> Vec<(f32, f32)> {
+        Vec::new()
+    }
+
     /// Returns the current judge type for the given player.
     fn now_judge(&self, _player: i32) -> i32 {
         0
@@ -622,5 +658,79 @@ mod tests {
         let ctx = TestContext::new();
         assert_eq!(ctx.default_image_index_value(450), -1);
         assert_eq!(ctx.default_image_index_value(460), -1);
+    }
+
+    // ============================================================
+    // compute_lnmode_from_chart tests
+    // ============================================================
+
+    #[test]
+    fn lnmode_from_chart_longnote_returns_0() {
+        use crate::song_data::{ChartInfo, FEATURE_LONGNOTE};
+        let chart = ChartInfo {
+            feature: FEATURE_LONGNOTE,
+            ..ChartInfo::default()
+        };
+        assert_eq!(compute_lnmode_from_chart(&chart), Some(0));
+    }
+
+    #[test]
+    fn lnmode_from_chart_chargenote_returns_1() {
+        use crate::song_data::{ChartInfo, FEATURE_CHARGENOTE};
+        let chart = ChartInfo {
+            feature: FEATURE_CHARGENOTE,
+            ..ChartInfo::default()
+        };
+        assert_eq!(compute_lnmode_from_chart(&chart), Some(1));
+    }
+
+    #[test]
+    fn lnmode_from_chart_hellchargenote_returns_2() {
+        use crate::song_data::{ChartInfo, FEATURE_HELLCHARGENOTE};
+        let chart = ChartInfo {
+            feature: FEATURE_HELLCHARGENOTE,
+            ..ChartInfo::default()
+        };
+        assert_eq!(compute_lnmode_from_chart(&chart), Some(2));
+    }
+
+    #[test]
+    fn lnmode_from_chart_undefined_ln_returns_none() {
+        use crate::song_data::{ChartInfo, FEATURE_UNDEFINEDLN};
+        let chart = ChartInfo {
+            feature: FEATURE_UNDEFINEDLN,
+            ..ChartInfo::default()
+        };
+        assert_eq!(compute_lnmode_from_chart(&chart), None);
+    }
+
+    #[test]
+    fn lnmode_from_chart_no_ln_returns_none() {
+        use crate::song_data::ChartInfo;
+        let chart = ChartInfo::default();
+        assert_eq!(compute_lnmode_from_chart(&chart), None);
+    }
+
+    #[test]
+    fn lnmode_from_chart_longnote_plus_undefined_returns_none() {
+        use crate::song_data::{ChartInfo, FEATURE_LONGNOTE, FEATURE_UNDEFINEDLN};
+        // Both LN and undefined set: has_any_long_note is true but
+        // has_undefined_long_note is also true, so no override.
+        let chart = ChartInfo {
+            feature: FEATURE_LONGNOTE | FEATURE_UNDEFINEDLN,
+            ..ChartInfo::default()
+        };
+        assert_eq!(compute_lnmode_from_chart(&chart), None);
+    }
+
+    #[test]
+    fn lnmode_from_chart_longnote_plus_chargenote_returns_0() {
+        use crate::song_data::{ChartInfo, FEATURE_CHARGENOTE, FEATURE_LONGNOTE};
+        // Both LN and CN set: has_long_note() is checked first, returns 0.
+        let chart = ChartInfo {
+            feature: FEATURE_LONGNOTE | FEATURE_CHARGENOTE,
+            ..ChartInfo::default()
+        };
+        assert_eq!(compute_lnmode_from_chart(&chart), Some(0));
     }
 }

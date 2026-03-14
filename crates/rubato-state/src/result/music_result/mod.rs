@@ -1244,4 +1244,119 @@ mod tests {
             "prepare() should enter IR_PROCESSING state when IR statuses are present"
         );
     }
+
+    // ============================================================
+    // lnmode (ID 308) image_index_value override tests
+    // ============================================================
+
+    fn make_result_with_songdata(
+        song_data: Option<rubato_types::song_data::SongData>,
+    ) -> MusicResult {
+        let config = make_test_config("lnmode-result");
+        let main = MainController::new(Box::new(TestMainControllerAccess::new(config.clone())));
+        let mut res_access = MouseResultResourceAccess::new(config);
+        res_access.song_data = song_data;
+        // Set lnmode config to a sentinel value (99) so we can verify fallback
+        res_access.player_config.play_settings.lnmode = 99;
+        let resource = PlayerResource::new(
+            Box::new(res_access),
+            crate::result::stubs::BMSPlayerMode::new(BMSPlayerModeType::Play),
+        );
+        MusicResult::new(main, resource, TimerManager::new())
+    }
+
+    #[test]
+    fn result_lnmode_308_override_longnote() {
+        use rubato_types::song_data::{ChartInfo, FEATURE_LONGNOTE, SongData};
+        let mr = make_result_with_songdata(Some(SongData {
+            chart: ChartInfo {
+                feature: FEATURE_LONGNOTE,
+                ..ChartInfo::default()
+            },
+            ..SongData::default()
+        }));
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultRenderContext {
+            timer: &mut timer,
+            data: &mr.data,
+            resource: &mr.resource,
+            main: &mr.main,
+        };
+        assert_eq!(ctx.image_index_value(308), 0);
+    }
+
+    #[test]
+    fn result_lnmode_308_override_chargenote() {
+        use rubato_types::song_data::{ChartInfo, FEATURE_CHARGENOTE, SongData};
+        let mr = make_result_with_songdata(Some(SongData {
+            chart: ChartInfo {
+                feature: FEATURE_CHARGENOTE,
+                ..ChartInfo::default()
+            },
+            ..SongData::default()
+        }));
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultRenderContext {
+            timer: &mut timer,
+            data: &mr.data,
+            resource: &mr.resource,
+            main: &mr.main,
+        };
+        assert_eq!(ctx.image_index_value(308), 1);
+    }
+
+    #[test]
+    fn result_lnmode_308_override_hellchargenote() {
+        use rubato_types::song_data::{ChartInfo, FEATURE_HELLCHARGENOTE, SongData};
+        let mr = make_result_with_songdata(Some(SongData {
+            chart: ChartInfo {
+                feature: FEATURE_HELLCHARGENOTE,
+                ..ChartInfo::default()
+            },
+            ..SongData::default()
+        }));
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultRenderContext {
+            timer: &mut timer,
+            data: &mr.data,
+            resource: &mr.resource,
+            main: &mr.main,
+        };
+        assert_eq!(ctx.image_index_value(308), 2);
+    }
+
+    #[test]
+    fn result_lnmode_308_undefined_ln_falls_through_to_config() {
+        use rubato_types::song_data::{ChartInfo, FEATURE_UNDEFINEDLN, SongData};
+        let mr = make_result_with_songdata(Some(SongData {
+            chart: ChartInfo {
+                feature: FEATURE_UNDEFINEDLN,
+                ..ChartInfo::default()
+            },
+            ..SongData::default()
+        }));
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultRenderContext {
+            timer: &mut timer,
+            data: &mr.data,
+            resource: &mr.resource,
+            main: &mr.main,
+        };
+        // Falls through to player_config.play_settings.lnmode = 99
+        assert_eq!(ctx.image_index_value(308), 99);
+    }
+
+    #[test]
+    fn result_lnmode_308_no_songdata_falls_through_to_config() {
+        let mr = make_result_with_songdata(None);
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultRenderContext {
+            timer: &mut timer,
+            data: &mr.data,
+            resource: &mr.resource,
+            main: &mr.main,
+        };
+        // Falls through to player_config.play_settings.lnmode = 99
+        assert_eq!(ctx.image_index_value(308), 99);
+    }
 }

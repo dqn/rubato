@@ -102,6 +102,14 @@ impl BMSPlayer {
                 system_volume: self.system_volume,
                 key_volume: self.key_volume,
                 bg_volume: self.bg_volume,
+                is_mode_changed: self.orgmode.is_some_and(|org| {
+                    self.model
+                        .mode()
+                        .copied()
+                        .unwrap_or(bms_model::mode::Mode::BEAT_7K)
+                        != org
+                }),
+                lnmode_override: self.lnmode_override,
             };
             skin.update_custom_objects_timed(&mut ctx);
             skin.swap_sprite_batch(sprite);

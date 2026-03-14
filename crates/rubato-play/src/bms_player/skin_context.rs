@@ -25,6 +25,13 @@ pub(super) struct PlayRenderContext<'a> {
     pub(super) system_volume: f32,
     pub(super) key_volume: f32,
     pub(super) bg_volume: f32,
+    /// Whether the chart's original mode differs from the current mode
+    /// (e.g. 7-key chart converted to 9-key via chart options).
+    pub(super) is_mode_changed: bool,
+    /// Pre-computed lnmode override from chart data (SongData).
+    /// When the chart explicitly defines LN types, this overrides the config setting
+    /// for image_index_value ID 308.
+    pub(super) lnmode_override: Option<i32>,
 }
 
 impl rubato_types::timer_access::TimerAccess for PlayRenderContext<'_> {
@@ -93,6 +100,22 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
         self.gauge.map_or(0, |g| g.gauge_type())
     }
 
+    fn is_mode_changed(&self) -> bool {
+        self.is_mode_changed
+    }
+
+    fn gauge_element_borders(&self) -> Vec<(f32, f32)> {
+        match self.gauge {
+            Some(g) => (0..g.gauge_type_length())
+                .map(|i| {
+                    let prop = g.gauge_by_type(i as i32).property();
+                    (prop.border, prop.max)
+                })
+                .collect(),
+            None => Vec::new(),
+        }
+    }
+
     fn recent_judges(&self) -> &[i64] {
         rubato_types::skin_render_context::SkinRenderContext::recent_judges(self.timer)
     }
@@ -109,6 +132,20 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             .and_then(|lanes| lanes.get(lane))
             .copied()
             .unwrap_or(-1)
+    }
+
+    fn image_index_value(&self, id: i32) -> i32 {
+        match id {
+            // Java IntegerPropertyFactory ID 308 (lnmode): on BMSPlayer, override
+            // from chart data when the chart explicitly defines LN types.
+            308 => {
+                if let Some(override_val) = self.lnmode_override {
+                    return override_val;
+                }
+                self.default_image_index_value(id)
+            }
+            _ => self.default_image_index_value(id),
+        }
     }
 
     fn integer_value(&self, id: i32) -> i32 {
@@ -286,6 +323,20 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
         rubato_types::skin_render_context::SkinRenderContext::recent_judges_index(self.timer)
     }
 
+    fn image_index_value(&self, id: i32) -> i32 {
+        match id {
+            // Java IntegerPropertyFactory ID 308 (lnmode): on BMSPlayer, override
+            // from chart data when the chart explicitly defines LN types.
+            308 => {
+                if let Some(override_val) = self.player.lnmode_override {
+                    return override_val;
+                }
+                self.default_image_index_value(id)
+            }
+            _ => self.default_image_index_value(id),
+        }
+    }
+
     fn integer_value(&self, id: i32) -> i32 {
         match id {
             350 => self.player.total_notes,
@@ -409,6 +460,8 @@ mod tests {
             system_volume: 0.0,
             key_volume: 0.0,
             bg_volume: 0.0,
+            is_mode_changed: false,
+            lnmode_override: None,
         }
     }
 
@@ -489,6 +542,8 @@ mod tests {
             system_volume: 0.0,
             key_volume: 0.0,
             bg_volume: 0.0,
+            is_mode_changed: false,
+            lnmode_override: None,
         }
     }
 
@@ -536,5 +591,74 @@ mod tests {
         let ctx = make_render_ctx_with_pattern(Some(vec![vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 42]]));
         // ID 459 = 1P scratch (lane index 9) -> source lane 42
         assert_eq!(ctx.image_index_value(459), 42);
+    }
+
+    // ============================================================
+    // lnmode (ID 308) image_index_value override tests
+    // ============================================================
+
+    fn make_render_ctx_with_lnmode(lnmode_override: Option<i32>) -> PlayRenderContext<'static> {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let judge = Box::leak(Box::new(JudgeManager::default()));
+        let player_config = Box::leak(Box::new(PlayerConfig {
+            play_settings: rubato_types::player_config::PlaySettings {
+                lnmode: 99, // sentinel value to detect fallback
+                ..Default::default()
+            },
+            ..PlayerConfig::default()
+        }));
+        let option_info = Box::leak(Box::new(ReplayData::default()));
+        let play_config = Box::leak(Box::new(PlayConfig::default()));
+        PlayRenderContext {
+            timer,
+            judge,
+            gauge: None,
+            player_config,
+            option_info,
+            play_config,
+            target_score: None,
+            playtime: 0,
+            total_notes: 0,
+            play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
+            state: PlayState::Play,
+            media_load_finished: false,
+            now_bpm: 0.0,
+            min_bpm: 0.0,
+            max_bpm: 0.0,
+            main_bpm: 0.0,
+            system_volume: 0.0,
+            key_volume: 0.0,
+            bg_volume: 0.0,
+            is_mode_changed: false,
+            lnmode_override,
+        }
+    }
+
+    #[test]
+    fn lnmode_308_override_longnote() {
+        // Chart defines LN -> override returns 0
+        let ctx = make_render_ctx_with_lnmode(Some(0));
+        assert_eq!(ctx.image_index_value(308), 0);
+    }
+
+    #[test]
+    fn lnmode_308_override_chargenote() {
+        // Chart defines CN -> override returns 1
+        let ctx = make_render_ctx_with_lnmode(Some(1));
+        assert_eq!(ctx.image_index_value(308), 1);
+    }
+
+    #[test]
+    fn lnmode_308_override_hellchargenote() {
+        // Chart defines HCN -> override returns 2
+        let ctx = make_render_ctx_with_lnmode(Some(2));
+        assert_eq!(ctx.image_index_value(308), 2);
+    }
+
+    #[test]
+    fn lnmode_308_no_override_falls_through_to_config() {
+        // No chart override -> falls through to player_config.play_settings.lnmode (99)
+        let ctx = make_render_ctx_with_lnmode(None);
+        assert_eq!(ctx.image_index_value(308), 99);
     }
 }
