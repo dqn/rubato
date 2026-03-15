@@ -189,27 +189,25 @@ fn e2e_course_play_multi_song_sequence() {
         assert!(loaded, "Second song of course should load successfully");
     }
 
-    // Force a new Play state (simulates second song transition)
+    // First song finishes -> Result -> Play for second song.
+    // In real course mode: Play -> Result (brief) -> Play for each song.
+    // Note: Result takes the PlayerResource from controller during factory
+    // creation, and returns it via take_player_resource_box during shutdown.
+    // Play only reads the resource (non-consuming), so it works even when
+    // the resource is temporarily taken by Result.
     mc.change_state(MainStateType::Result);
     assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
     mc.render();
 
-    // Transition to Decide to restore the PlayerResource from Result,
-    // then load the third song's BMS file.
-    // (Result returns the resource via take_player_resource_box during
-    // transition_to_state, making it available on the controller again.)
-    mc.change_state(MainStateType::Decide);
-    assert_eq!(mc.current_state_type(), Some(MainStateType::Decide));
-    mc.render();
-
-    // Back to Play for third song (Decide returns resource during transition)
+    // Load third song's BMS file.
+    // After Result -> Play transition, Result returns the resource during
+    // shutdown (take_player_resource_box), so the controller has it again.
     mc.change_state(MainStateType::Play);
     assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
-    // Resource is now back on the controller after Decide returned it.
     {
         let resource = mc
             .player_resource_mut()
-            .expect("PlayerResource should exist");
+            .expect("PlayerResource should exist after Result returned it");
         let loaded = resource.set_bms_file(&bms_path, 0, 0);
         assert!(loaded, "Third song of course should load successfully");
     }
@@ -343,6 +341,8 @@ fn e2e_transitions_without_bms_data() {
     // All state transitions should work even without loading BMS data.
     // States will have default/empty models but should not panic.
     let mut mc = make_controller_with_factory();
+    // Initialize controller to create PlayerResource (required for Decide).
+    mc.create();
 
     // Transition through all gameplay states without loading any BMS file
     mc.change_state(MainStateType::MusicSelect);
@@ -422,6 +422,8 @@ fn e2e_render_pause_resume_on_all_states_without_bms() {
     // Exercise full lifecycle methods on every state type, even without BMS data.
     // This tests graceful fallback for missing skin/config resources.
     let mut mc = make_controller_with_factory();
+    // Initialize controller to create PlayerResource (required for Decide).
+    mc.create();
 
     let types = [
         MainStateType::MusicSelect,
@@ -503,6 +505,8 @@ fn e2e_config_screens_with_default_config() {
 #[test]
 fn e2e_rapid_select_decide_play_select_cycle() {
     let mut mc = make_controller_with_factory();
+    // Initialize controller to create PlayerResource (required for Decide).
+    mc.create();
 
     // Rapid cycle: select -> decide -> play -> select, repeated 10 times
     for iteration in 0..10 {
@@ -542,6 +546,8 @@ fn e2e_rapid_select_decide_play_select_cycle() {
 #[test]
 fn e2e_rapid_select_decide_play_result_select_cycle_with_render() {
     let mut mc = make_controller_with_factory();
+    // Initialize controller to create PlayerResource (required for Decide).
+    mc.create();
 
     // Full game loop cycle with render at each step, repeated
     for iteration in 0..5 {
@@ -667,6 +673,8 @@ fn e2e_rapid_full_cycle_with_bms_data() {
 fn e2e_rapid_config_transitions_interleaved_with_gameplay() {
     // Interleave config screens with gameplay transitions
     let mut mc = make_controller_with_factory();
+    // Initialize controller to create PlayerResource (required for Decide).
+    mc.create();
 
     for _ in 0..5 {
         // Gameplay path
@@ -722,6 +730,8 @@ fn e2e_dispose_during_mid_cycle() {
 
     for dispose_at in &types_to_dispose_at {
         let mut mc = make_controller_with_factory();
+        // Initialize controller to create PlayerResource (required for Decide).
+        mc.create();
         mc.change_state(*dispose_at);
         mc.render();
 

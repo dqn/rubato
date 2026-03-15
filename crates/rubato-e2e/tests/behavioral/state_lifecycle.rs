@@ -70,6 +70,8 @@ fn config_and_skin_config_transitions() {
 #[test]
 fn decide_state_creation() {
     let mut harness = harness_with_factory();
+    // Decide requires a PlayerResource; initialize the controller to create one.
+    harness.controller_mut().create();
 
     harness.change_state(MainStateType::Decide);
     assert_eq!(harness.current_state_type(), Some(MainStateType::Decide));
@@ -89,6 +91,8 @@ fn course_result_state_creation() {
 #[test]
 fn all_seven_state_types_can_be_created() {
     let mut harness = harness_with_factory();
+    // Initialize controller so PlayerResource is available for Decide.
+    harness.controller_mut().create();
 
     let types = [
         MainStateType::MusicSelect,
@@ -114,6 +118,8 @@ fn all_seven_state_types_can_be_created() {
 #[test]
 fn render_does_not_crash_for_any_state() {
     let mut harness = harness_with_factory();
+    // Initialize controller so PlayerResource is available for Decide.
+    harness.controller_mut().create();
 
     let types = [
         MainStateType::MusicSelect,

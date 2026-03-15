@@ -27,8 +27,7 @@ use rubato_state::result::course_result::CourseResult;
 use rubato_state::result::music_result::MusicResult;
 use rubato_state::select::music_selector::MusicSelector;
 use rubato_types::main_controller_access::MainControllerAccess as _;
-use rubato_types::player_resource_access::NullPlayerResource;
-use rubato_types::player_resource_access::PlayerResourceAccess as _;
+use rubato_types::player_resource_access::MediaAccess as _;
 use rubato_types::score_data::ScoreData;
 
 pub use queued_access::new_state_main_controller_access;
@@ -175,27 +174,33 @@ impl StateFactory for LauncherStateFactory {
             }
             MainStateType::Decide => {
                 // Java: decide = new MusicDecide(this);
-                let command_queue = controller.controller_command_queue();
-                let mc_access =
-                    QueuedControllerAccess::from_controller(controller, command_queue.clone());
-                let resource: Box<dyn rubato_types::player_resource_access::PlayerResourceAccess> =
-                    if let Some(r) = controller.take_player_resource() {
-                        Box::new(r)
-                    } else {
-                        Box::new(NullPlayerResource::new())
-                    };
-                let decide = MusicDecide::new(
-                    DecideMainControllerRef::with_audio(
-                        Box::new(mc_access),
-                        Box::new(QueuedAudioDriver::new(command_queue)),
-                    ),
-                    resource,
-                    TimerManager::new(),
-                );
-                Some(StateCreateResult {
-                    state: Box::new(decide),
-                    target_score: None,
-                })
+                match controller.take_player_resource() {
+                    Some(resource) => {
+                        let command_queue = controller.controller_command_queue();
+                        let mc_access = QueuedControllerAccess::from_controller(
+                            controller,
+                            command_queue.clone(),
+                        );
+                        let decide = MusicDecide::new(
+                            DecideMainControllerRef::with_audio(
+                                Box::new(mc_access),
+                                Box::new(QueuedAudioDriver::new(command_queue)),
+                            ),
+                            Box::new(resource),
+                            TimerManager::new(),
+                        );
+                        Some(StateCreateResult {
+                            state: Box::new(decide),
+                            target_score: None,
+                        })
+                    }
+                    None => {
+                        log::error!(
+                            "Cannot enter Decide without PlayerResource; falling back to MusicSelect"
+                        );
+                        self.create_state(MainStateType::MusicSelect, controller)
+                    }
+                }
             }
             MainStateType::Play => {
                 // Java: new BMSPlayer(this, resource)
@@ -545,9 +550,9 @@ mod tests {
         let factory = LauncherStateFactory::new();
         let mut controller = make_test_controller();
 
-        let types = [
+        // Decide requires a PlayerResource; without one it falls back to MusicSelect
+        let types_without_decide = [
             MainStateType::MusicSelect,
-            MainStateType::Decide,
             MainStateType::Play,
             MainStateType::Result,
             MainStateType::CourseResult,
@@ -555,7 +560,7 @@ mod tests {
             MainStateType::SkinConfig,
         ];
 
-        for state_type in &types {
+        for state_type in &types_without_decide {
             let result = factory.create_state(*state_type, &mut controller);
             assert!(
                 result.is_some(),
@@ -584,14 +589,15 @@ mod tests {
     }
 
     #[test]
-    fn test_decide_state() {
+    fn test_decide_state_falls_back_without_resource() {
         let factory = LauncherStateFactory::new();
         let mut controller = make_test_controller();
 
+        // Without PlayerResource, Decide should fall back to MusicSelect
         let result = factory
             .create_state(MainStateType::Decide, &mut controller)
             .unwrap();
-        assert_eq!(result.state.state_type(), Some(MainStateType::Decide));
+        assert_eq!(result.state.state_type(), Some(MainStateType::MusicSelect));
     }
 
     #[test]
@@ -660,8 +666,9 @@ mod tests {
         mc.change_state(MainStateType::MusicSelect);
         assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
+        // Decide without PlayerResource falls back to MusicSelect
         mc.change_state(MainStateType::Decide);
-        assert_eq!(mc.current_state_type(), Some(MainStateType::Decide));
+        assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 
         mc.change_state(MainStateType::Play);
         assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
@@ -873,6 +880,8 @@ mod tests {
         let player = PlayerConfig::default();
         let mut mc = MainController::new(None, config, player, None, false);
         mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+        // create() initializes PlayerResource, which Decide requires
+        mc.create();
         mc.change_state(MainStateType::Decide);
 
         {

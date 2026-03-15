@@ -31,6 +31,8 @@ fn make_controller_with_factory() -> MainController {
 #[test]
 fn e2e_select_to_decide_to_play_to_result() {
     let mut mc = make_controller_with_factory();
+    // Initialize controller to create PlayerResource (required for Decide).
+    mc.create();
 
     // 1. Start at MusicSelect
     mc.change_state(MainStateType::MusicSelect);
@@ -172,6 +174,8 @@ fn e2e_skip_decide_screen() {
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
     mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    // Initialize controller to create PlayerResource (required for Decide).
+    mc.create();
 
     mc.change_state(MainStateType::MusicSelect);
     assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
@@ -204,6 +208,8 @@ fn e2e_same_state_transition_noop() {
 #[test]
 fn e2e_all_state_types_reachable() {
     let mut mc = make_controller_with_factory();
+    // Initialize controller to create PlayerResource (required for Decide).
+    mc.create();
 
     let types = [
         MainStateType::MusicSelect,

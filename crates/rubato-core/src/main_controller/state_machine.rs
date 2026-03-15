@@ -24,6 +24,13 @@ impl MainController {
     /// }
     /// ```
     pub fn change_state(&mut self, state: MainStateType) {
+        // Emit transition start event
+        let from_state = self.current_state_type();
+        self.emit_state_event(rubato_types::state_event::StateEvent::TransitionStart {
+            from: from_state,
+            to: state,
+        });
+
         // Determine whether to create a new state
         let should_create = match state {
             MainStateType::MusicSelect => {
@@ -64,6 +71,19 @@ impl MainController {
             && current.state_type() == Some(actual_type)
         {
             return;
+        }
+
+        // Restore PlayerResource from the current state to the controller
+        // BEFORE creating the new state, so the factory can access it.
+        // Previously NullPlayerResource masked this sequencing issue: states
+        // like Decide that take the resource from the controller would
+        // silently get a null stub because the resource was still inside the
+        // old state and only restored during transition_to_state (too late).
+        if let Some(ref mut current) = self.current
+            && let Some(any_box) = current.take_player_resource_box()
+            && let Ok(core_resource) = any_box.downcast::<PlayerResource>()
+        {
+            self.resource = Some(*core_resource);
         }
 
         // Create the new state via factory.
@@ -113,6 +133,13 @@ impl MainController {
     fn transition_to_state(&mut self, mut new_state: Box<dyn MainState>) {
         // Create the new state
         new_state.create();
+
+        // Emit state created event
+        if let Some(st) = new_state.state_type() {
+            self.emit_state_event(rubato_types::state_event::StateEvent::StateCreated {
+                state: st,
+            });
+        }
 
         // Apply create side effects (input mode, guide SE)
         // Java: BMSPlayer.create() directly modifies input processor; in Rust the
@@ -195,6 +222,15 @@ impl MainController {
             if let Some(ref mut audio) = self.audio {
                 old_state.sync_audio(audio.as_mut());
             }
+            // Emit state shutdown event before shutdown.
+            // Access state_event_log directly to avoid borrowing all of `self`
+            // while `self.current` is mutably borrowed as `old_state`.
+            if let Some(st) = old_state.state_type()
+                && let Some(ref log) = self.state_event_log
+                && let Ok(mut guard) = log.lock()
+            {
+                guard.push(rubato_types::state_event::StateEvent::StateShutdown { state: st });
+            }
             old_state.shutdown();
             // setSkin(null) equivalent — Java's setSkin(null) calls skin.dispose() first
             if let Some(ref mut skin) = old_state.main_state_data_mut().skin {
@@ -223,6 +259,15 @@ impl MainController {
         }
 
         self.process_queued_controller_commands();
+
+        // Emit transition complete event
+        if let Some(ref current) = self.current
+            && let Some(st) = current.state_type()
+        {
+            self.emit_state_event(rubato_types::state_event::StateEvent::TransitionComplete {
+                state: st,
+            });
+        }
 
         self.update_main_state_listener(0);
     }
