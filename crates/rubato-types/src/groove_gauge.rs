@@ -647,6 +647,216 @@ mod tests {
         assert_eq!(gg.value_by_type(0), 55.0);
     }
 
+    // -- GaugeModifier with real notes --
+
+    #[test]
+    fn test_gauge_modifier_total_zero_notes_returns_unmodified() {
+        let model = make_model(); // no notes
+        assert_eq!(model.total_notes(), 0);
+        let result = GaugeModifier::Total.modify(1.0, &model);
+        assert_eq!(result, 1.0); // total_notes == 0, returns f unchanged
+    }
+
+    #[test]
+    fn test_gauge_modifier_limit_increment_zero_notes_returns_unmodified() {
+        let model = make_model(); // no notes
+        let result = GaugeModifier::LimitIncrement.modify(1.0, &model);
+        assert_eq!(result, 1.0);
+    }
+
+    #[test]
+    fn test_gauge_modifier_limit_increment_with_notes() {
+        let model = make_model_with_notes(100);
+        let result = GaugeModifier::LimitIncrement.modify(0.15, &model);
+        // pg = min(0.15, (2*300 - 320)/100) = min(0.15, 2.8) = 0.15
+        // result = 0.15 * 0.15 / 0.15 = 0.15
+        assert!((result - 0.15).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_gauge_modifier_modify_damage_low_total() {
+        // Model with low total (< 240) should amplify damage
+        let mut model = make_model_with_notes(100);
+        model.total = 100.0; // low total
+        let result = GaugeModifier::ModifyDamage.modify(-5.0, &model);
+        // fix1 = 10 / min(10, floor(100/16) - 5).max(1) = 10 / min(10, 1).max(1) = 10/1 = 10
+        // fix2 depends on notes (100): 100 < 125 -> fix2 = 4.0 + (125-100)/65 = 4.384
+        // result = -5.0 * max(10.0, 4.384) = -5.0 * 10.0 = -50.0
+        assert!(result < -5.0, "damage should be amplified for low TOTAL");
+    }
+
+    #[test]
+    fn test_gauge_modifier_modify_damage_very_few_notes() {
+        let model = make_model_with_notes(10);
+        let result = GaugeModifier::ModifyDamage.modify(-5.0, &model);
+        // 10 <= 20 -> fix2 = 10.0
+        // result = -5.0 * max(fix1, 10.0) = at least -50.0
+        assert!(
+            result <= -50.0,
+            "very few notes should amplify damage significantly"
+        );
+    }
+
+    #[test]
+    fn test_gauge_modifier_modify_damage_many_notes() {
+        let model = make_model_with_notes(2000);
+        let result = GaugeModifier::ModifyDamage.modify(-5.0, &model);
+        // 2000 >= 1000 -> fix2 = 1.0
+        // fix1 = 10 / min(10, floor(300/16) - 5).max(1) = 10 / min(10, 13).max(1) = 10/10 = 1.0
+        // result = -5.0 * max(1.0, 1.0) = -5.0
+        assert!(
+            (result - (-5.0)).abs() < 0.1,
+            "many notes with high total should not amplify"
+        );
+    }
+
+    // -- Gauge guts (damage reduction at low gauge values) --
+
+    #[test]
+    fn test_gauge_update_with_guts() {
+        let model = make_model();
+        let element = GaugeElementProperty {
+            modifier: None,
+            value: vec![0.15, 0.12, 0.03, -5.0, -10.0, -5.0],
+            min: 0.0,
+            max: 100.0,
+            init: 10.0,
+            border: 0.0,
+            death: 0.0,
+            guts: vec![vec![30.0, 0.5]], // below 30%, damage is halved
+        };
+        let mut gauge = Gauge::new(&model, element, ClearType::Hard);
+        assert_eq!(gauge.value(), 10.0);
+
+        // Update with BD (judge=3), rate=1.0 => -5.0 * 0.5 (guts) = -2.5
+        gauge.update(3, 1.0);
+        let expected = (10.0 - 2.5_f32).clamp(0.0, 100.0);
+        assert!(
+            (gauge.value() - expected).abs() < 1e-4,
+            "guts should halve damage: expected {}, got {}",
+            expected,
+            gauge.value()
+        );
+    }
+
+    // -- Gauge update with rate modifier --
+
+    #[test]
+    fn test_gauge_update_with_rate() {
+        let model = make_model();
+        let element = GaugeElementProperty {
+            modifier: None,
+            value: vec![0.15, 0.12, 0.03, -5.0, -10.0, -5.0],
+            min: 0.0,
+            max: 100.0,
+            init: 50.0,
+            border: 0.0,
+            death: 0.0,
+            guts: vec![],
+        };
+        let mut gauge = Gauge::new(&model, element, ClearType::Hard);
+
+        // Update with PG (judge=0), rate=2.0 => 0.15 * 2.0 = 0.30
+        gauge.update(0, 2.0);
+        let expected = (50.0 + 0.30_f32).clamp(0.0, 100.0);
+        assert!((gauge.value() - expected).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_gauge_update_negative_judge_is_noop() {
+        let model = make_model();
+        let element = GaugeElementProperty {
+            modifier: None,
+            value: vec![0.15, 0.12, 0.03, -5.0, -10.0, -5.0],
+            min: 0.0,
+            max: 100.0,
+            init: 50.0,
+            border: 0.0,
+            death: 0.0,
+            guts: vec![],
+        };
+        let mut gauge = Gauge::new(&model, element, ClearType::Hard);
+        gauge.update(-1, 1.0);
+        assert_eq!(gauge.value(), 50.0); // unchanged
+    }
+
+    #[test]
+    fn test_gauge_update_out_of_range_judge_is_noop() {
+        let model = make_model();
+        let element = GaugeElementProperty {
+            modifier: None,
+            value: vec![0.15, 0.12, 0.03, -5.0, -10.0, -5.0],
+            min: 0.0,
+            max: 100.0,
+            init: 50.0,
+            border: 0.0,
+            death: 0.0,
+            guts: vec![],
+        };
+        let mut gauge = Gauge::new(&model, element, ClearType::Hard);
+        gauge.update(99, 1.0);
+        assert_eq!(gauge.value(), 50.0); // unchanged
+    }
+
+    // -- GrooveGauge: all gauge types init correctly --
+
+    #[test]
+    fn test_groove_gauge_all_types_from_seven_keys() {
+        let model = make_model_with_notes(500);
+        for gauge_type in 0..=8 {
+            let gg = GrooveGauge::new(&model, gauge_type, &GaugeProperty::SevenKeys);
+            assert_eq!(gg.gauge_type(), gauge_type);
+            // Value should be initialized (not NaN or zero for non-hard gauges)
+            let val = gg.value();
+            assert!(!val.is_nan(), "gauge type {} has NaN value", gauge_type);
+        }
+    }
+
+    #[test]
+    fn test_groove_gauge_add_value() {
+        let model = make_model();
+        let mut gg = GrooveGauge::new(&model, NORMAL, &GaugeProperty::SevenKeys);
+        let initial = gg.value();
+        gg.add_value(10.0);
+        // Value should increase (clamped by each gauge's max)
+        assert!(gg.value() >= initial);
+    }
+
+    #[test]
+    fn test_groove_gauge_update_multiple_judges() {
+        let model = make_model_with_notes(100);
+        let mut gg = GrooveGauge::new(&model, NORMAL, &GaugeProperty::SevenKeys);
+        let initial = gg.value();
+
+        // PG should increase gauge
+        gg.update(0);
+        assert!(gg.value() >= initial);
+
+        // PR (judge=4) should decrease gauge
+        let before_pr = gg.value();
+        gg.update(4);
+        assert!(gg.value() < before_pr);
+    }
+
+    #[test]
+    fn test_groove_gauge_hard_starts_at_100() {
+        let model = make_model();
+        let gg = GrooveGauge::new(&model, HARD, &GaugeProperty::SevenKeys);
+        // HARD gauge starts at 100%
+        assert_eq!(gg.value_by_type(HARD), 100.0);
+    }
+
+    #[test]
+    fn test_groove_gauge_is_qualified_respects_border() {
+        let model = make_model();
+        let mut gg = GrooveGauge::new(&model, NORMAL, &GaugeProperty::SevenKeys);
+        // NORMAL init = 20.0, border = 75.0 (for SevenKeys)
+        assert!(!gg.is_qualified());
+
+        gg.set_value(80.0);
+        assert!(gg.is_qualified());
+    }
+
     #[test]
     fn test_gauge_dead_is_irrecoverable() {
         let model = make_model();

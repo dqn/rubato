@@ -248,6 +248,176 @@ fn test_update_no_change() {
     assert!(!sd.update(&newscore, true));
 }
 
+// -- Validate tests --
+
+#[test]
+fn test_validate_valid_score() {
+    use crate::validatable::Validatable;
+    let mut sd = ScoreData::new(Mode::BEAT_7K);
+    sd.judge_counts.epg = 50;
+    sd.notes = 100;
+    sd.passnotes = 50;
+    sd.playcount = 10;
+    sd.clearcount = 5;
+    sd.maxcombo = 50;
+    sd.minbp = 3;
+    sd.timing_stats.avgjudge = 100;
+    sd.play_option.random = 0;
+    sd.play_option.option = 0;
+    sd.play_option.assist = 0;
+    sd.play_option.gauge = 0;
+    assert!(sd.validate());
+}
+
+#[test]
+fn test_validate_negative_judge_count_fails() {
+    use crate::validatable::Validatable;
+    let mut sd = ScoreData::new(Mode::BEAT_7K);
+    sd.notes = 100;
+    sd.judge_counts.epg = -1;
+    assert!(!sd.validate());
+}
+
+#[test]
+fn test_validate_zero_notes_fails() {
+    use crate::validatable::Validatable;
+    let mut sd = ScoreData::new(Mode::BEAT_7K);
+    sd.notes = 0;
+    assert!(!sd.validate());
+}
+
+#[test]
+fn test_validate_passnotes_exceeds_notes_fails() {
+    use crate::validatable::Validatable;
+    let mut sd = ScoreData::new(Mode::BEAT_7K);
+    sd.notes = 100;
+    sd.passnotes = 101;
+    assert!(!sd.validate());
+}
+
+#[test]
+fn test_validate_clearcount_exceeds_playcount_fails() {
+    use crate::validatable::Validatable;
+    let mut sd = ScoreData::new(Mode::BEAT_7K);
+    sd.notes = 100;
+    sd.playcount = 5;
+    sd.clearcount = 10;
+    assert!(!sd.validate());
+}
+
+#[test]
+fn test_validate_negative_minbp_fails() {
+    use crate::validatable::Validatable;
+    let mut sd = ScoreData::new(Mode::BEAT_7K);
+    sd.notes = 100;
+    sd.minbp = -1;
+    assert!(!sd.validate());
+}
+
+#[test]
+fn test_validate_negative_mode_fails() {
+    use crate::validatable::Validatable;
+    let mut sd = ScoreData::new(Mode::BEAT_7K);
+    sd.notes = 100;
+    sd.mode = -1;
+    assert!(!sd.validate());
+}
+
+#[test]
+fn test_validate_clear_out_of_range_fails() {
+    use crate::validatable::Validatable;
+    let mut sd = ScoreData::new(Mode::BEAT_7K);
+    sd.notes = 100;
+    sd.clear = 99;
+    assert!(!sd.validate());
+}
+
+// -- Update tests: selective field updates --
+
+#[test]
+fn test_update_only_updates_clear_when_update_score_false() {
+    let mut sd = ScoreData::default();
+    sd.clear = 3;
+    sd.judge_counts.epg = 10;
+    sd.notes = 100;
+    sd.maxcombo = 50;
+    sd.minbp = 5;
+
+    let mut newscore = ScoreData::default();
+    newscore.clear = 5;
+    newscore.judge_counts.epg = 100; // better score
+    newscore.notes = 100;
+    newscore.maxcombo = 100;
+    newscore.minbp = 0;
+
+    sd.update(&newscore, false); // update_score = false
+
+    // Clear should be updated
+    assert_eq!(sd.clear, 5);
+    // Score fields should NOT be updated
+    assert_eq!(sd.judge_counts.epg, 10);
+    assert_eq!(sd.maxcombo, 50);
+    assert_eq!(sd.minbp, 5);
+}
+
+#[test]
+fn test_update_lower_clear_no_change() {
+    let mut sd = ScoreData::default();
+    sd.clear = 5;
+    sd.notes = 100;
+
+    let mut newscore = ScoreData::default();
+    newscore.clear = 3; // lower
+    newscore.notes = 100;
+
+    assert!(!sd.update(&newscore, true));
+    assert_eq!(sd.clear, 5); // unchanged
+}
+
+#[test]
+fn test_update_better_maxcombo() {
+    let mut sd = ScoreData::default();
+    sd.maxcombo = 50;
+    sd.notes = 100;
+
+    let mut newscore = ScoreData::default();
+    newscore.maxcombo = 100;
+    newscore.notes = 100;
+
+    assert!(sd.update(&newscore, true));
+    assert_eq!(sd.maxcombo, 100);
+}
+
+#[test]
+fn test_update_better_minbp() {
+    let mut sd = ScoreData::default();
+    sd.minbp = 10;
+    sd.notes = 100;
+
+    let mut newscore = ScoreData::default();
+    newscore.minbp = 5;
+    newscore.notes = 100;
+
+    assert!(sd.update(&newscore, true));
+    assert_eq!(sd.minbp, 5);
+}
+
+// -- Serde edge cases --
+
+#[test]
+fn test_score_data_deserialize_missing_fields_uses_defaults() {
+    // Minimal JSON with only required fields present
+    let json = r#"{"sha256":"","player":"","mode":0,"clear":0,"date":0,"playcount":0,
+                   "clearcount":0,"epg":0,"lpg":0,"egr":0,"lgr":0,"egd":0,"lgd":0,
+                   "ebd":0,"lbd":0,"epr":0,"lpr":0,"ems":0,"lms":0,
+                   "maxcombo":0,"notes":0,"passnotes":0,"minbp":0,
+                   "avgjudge":0,"trophy":"","ghost":"",
+                   "random":0,"option":0,"seed":0,"assist":0,"gauge":0,
+                   "state":0,"scorehash":"","playmode":"BEAT_7K"}"#;
+    let sd: ScoreData = serde_json::from_str(json).unwrap();
+    assert_eq!(sd.playmode, Mode::BEAT_7K);
+}
+
 // -- Phase 46b: ghost encoding truncation tests --
 
 #[test]

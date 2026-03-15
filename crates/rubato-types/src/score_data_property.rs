@@ -491,4 +491,220 @@ mod tests {
             "previous_notes should be reset on retry"
         );
     }
+
+    #[test]
+    fn update_score_zero_notes_sets_rate_one() {
+        let mut prop = ScoreDataProperty::default();
+        let sd = ScoreData::new(Mode::BEAT_7K);
+        // sd.notes = 0 by default
+        prop.update_score(Some(&sd));
+        // When totalnotes == 0, rate should be 1.0
+        assert_eq!(prop.rate, 1.0);
+        assert_eq!(prop.nowpoint, 0);
+    }
+
+    #[test]
+    fn update_score_none_leaves_defaults() {
+        let mut prop = ScoreDataProperty::default();
+        prop.update_score(None);
+        assert_eq!(prop.nowpoint, 0);
+        assert_eq!(prop.nowscore, 0);
+        assert_eq!(prop.rate, 1.0);
+    }
+
+    // -- Score calculation for different modes --
+
+    #[test]
+    fn update_score_beat_5k_mode_calculation() {
+        let mut prop = ScoreDataProperty::default();
+        let mut sd = ScoreData::new(Mode::BEAT_5K);
+        sd.judge_counts.epg = 50; // PG count
+        sd.judge_counts.lpg = 50;
+        sd.notes = 100;
+        prop.update_score(Some(&sd));
+        // BEAT_5K: (100000 * PG_total + 100000 * GR_total + 50000 * GD_total) / notes
+        // = (100000 * 100 + 0 + 0) / 100 = 100000
+        assert_eq!(prop.nowpoint, 100000);
+    }
+
+    #[test]
+    fn update_score_beat_7k_mode_includes_combo() {
+        let mut prop = ScoreDataProperty::default();
+        let mut sd = ScoreData::new(Mode::BEAT_7K);
+        sd.judge_counts.epg = 100;
+        sd.maxcombo = 100;
+        sd.notes = 100;
+        prop.update_score(Some(&sd));
+        // BEAT_7K: term1 = (150000 * 100) / 100 = 150000
+        //          term2 = 50000 * 100 / 100 = 50000
+        //          total = 200000
+        assert_eq!(prop.nowpoint, 200000);
+    }
+
+    #[test]
+    fn update_score_popn_mode_calculation() {
+        let mut prop = ScoreDataProperty::default();
+        let mut sd = ScoreData::new(Mode::POPN_9K);
+        sd.judge_counts.epg = 100;
+        sd.notes = 100;
+        prop.update_score(Some(&sd));
+        // POPN: (100000 * 100 + 0 + 0) / 100 = 100000
+        assert_eq!(prop.nowpoint, 100000);
+    }
+
+    // -- Rate calculations --
+
+    #[test]
+    fn rate_calculation_half_perfect() {
+        let mut prop = ScoreDataProperty::default();
+        let mut sd = ScoreData::new(Mode::BEAT_7K);
+        sd.judge_counts.epg = 50;
+        sd.notes = 100;
+        prop.update_score(Some(&sd));
+        // exscore = 50 * 2 = 100, totalnotes = 100, rate = 100 / 200 = 0.5
+        assert!((prop.rate - 0.5).abs() < 0.001);
+        assert_eq!(prop.rate_int, 50);
+        assert_eq!(prop.rate_after_dot, 0);
+    }
+
+    #[test]
+    fn rate_calculation_full_perfect() {
+        let mut prop = ScoreDataProperty::default();
+        let mut sd = ScoreData::new(Mode::BEAT_7K);
+        sd.judge_counts.epg = 100;
+        sd.notes = 100;
+        prop.update_score(Some(&sd));
+        assert!((prop.rate - 1.0).abs() < 0.001);
+        assert_eq!(prop.rate_int, 100);
+    }
+
+    // -- Rival score --
+
+    #[test]
+    fn update_score_and_rival_sets_rival_fields() {
+        let mut prop = ScoreDataProperty::default();
+        let mut sd = ScoreData::new(Mode::BEAT_7K);
+        sd.judge_counts.epg = 50;
+        sd.notes = 100;
+
+        let mut rival = ScoreData::new(Mode::BEAT_7K);
+        rival.judge_counts.epg = 80;
+        rival.notes = 100;
+
+        prop.update_score_and_rival(Some(&sd), Some(&rival));
+        // rival exscore = 80 * 2 = 160
+        assert_eq!(prop.rivalscore, 160);
+        assert!((prop.rivalscorerate - 0.8).abs() < 0.001);
+    }
+
+    #[test]
+    fn update_score_and_rival_none_rival() {
+        let mut prop = ScoreDataProperty::default();
+        let mut sd = ScoreData::new(Mode::BEAT_7K);
+        sd.judge_counts.epg = 50;
+        sd.notes = 100;
+
+        prop.update_score_and_rival(Some(&sd), None);
+        assert_eq!(prop.rivalscore, 0);
+        assert_eq!(prop.rivalscorerate, 1.0); // zero totalnotes for rival
+    }
+
+    // -- Target score --
+
+    #[test]
+    fn set_target_score_zero_notes() {
+        let mut prop = ScoreDataProperty::default();
+        prop.set_target_score(100, 50, 0);
+        assert_eq!(prop.bestscorerate, 0.0);
+        assert_eq!(prop.rivalscorerate, 0.0);
+        assert!(prop.bestrank.iter().all(|&b| !b));
+    }
+
+    #[test]
+    fn set_target_score_calculates_rates() {
+        let mut prop = ScoreDataProperty::default();
+        prop.set_target_score(100, 50, 100);
+        // bestscorerate = 100 / 200 = 0.5
+        assert!((prop.bestscorerate - 0.5).abs() < 0.001);
+        assert_eq!(prop.bestrate_int, 50);
+        // rivalscorerate = 50 / 200 = 0.25
+        assert!((prop.rivalscorerate - 0.25).abs() < 0.001);
+    }
+
+    // -- Ghost tracking --
+
+    #[test]
+    fn set_target_score_with_ghost_enables_ghost_tracking() {
+        let mut prop = ScoreDataProperty::default();
+        let ghost = vec![0, 0, 1, 1, 2]; // 5 notes
+        prop.set_target_score_with_ghost(10, Some(ghost), 5, None, 5);
+        assert!(prop.use_best_ghost);
+        assert!(!prop.use_rival_ghost); // no rival ghost
+    }
+
+    #[test]
+    fn set_target_score_with_ghost_mismatched_length_disables_ghost() {
+        let mut prop = ScoreDataProperty::default();
+        let ghost = vec![0, 0, 1]; // 3 entries but 5 total notes
+        prop.set_target_score_with_ghost(10, Some(ghost), 5, None, 5);
+        assert!(!prop.use_best_ghost); // length mismatch
+    }
+
+    #[test]
+    fn update_target_score_zero_totalnotes() {
+        let mut prop = ScoreDataProperty::default();
+        prop.totalnotes = 0;
+        prop.update_target_score(100);
+        assert_eq!(prop.rivalscore, 100);
+        assert_eq!(prop.rivalscorerate, 0.0);
+        assert_eq!(prop.rivalrate_int, 0);
+        assert_eq!(prop.rivalrate_after_dot, 0);
+    }
+
+    #[test]
+    fn update_target_score_with_totalnotes() {
+        let mut prop = ScoreDataProperty::default();
+        prop.totalnotes = 100;
+        prop.update_target_score(100);
+        assert_eq!(prop.rivalscore, 100);
+        // 100 / 200 = 0.5
+        assert!((prop.rivalscorerate - 0.5).abs() < 0.001);
+        assert_eq!(prop.rivalrate_int, 50);
+        assert_eq!(prop.rivalrate_after_dot, 0);
+    }
+
+    // -- Rank array boundary --
+
+    #[test]
+    fn rank_array_filled_correctly_for_max_score() {
+        let mut prop = ScoreDataProperty::default();
+        let mut sd = ScoreData::new(Mode::BEAT_7K);
+        sd.judge_counts.epg = 100;
+        sd.notes = 100;
+        prop.update_score(Some(&sd));
+        // All ranks should be true (rate = 1.0)
+        assert!(prop.rank.iter().all(|&r| r));
+    }
+
+    #[test]
+    fn rank_array_all_false_for_zero_totalnotes() {
+        let mut prop = ScoreDataProperty::default();
+        let sd = ScoreData::new(Mode::BEAT_7K);
+        // notes = 0
+        prop.update_score(Some(&sd));
+        assert!(prop.rank.iter().all(|&r| !r));
+    }
+
+    // -- Nextrank calculation --
+
+    #[test]
+    fn nextrank_for_max_score_is_zero_gap() {
+        let mut prop = ScoreDataProperty::default();
+        let mut sd = ScoreData::new(Mode::BEAT_7K);
+        sd.judge_counts.epg = 100;
+        sd.notes = 100;
+        prop.update_score(Some(&sd));
+        // At max, nextrank = (notes * 2) - exscore = 200 - 200 = 0
+        assert_eq!(prop.nextrank, 0);
+    }
 }

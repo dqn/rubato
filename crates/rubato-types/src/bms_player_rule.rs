@@ -1,4 +1,4 @@
-// BMSPlayerRule - moved from stubs.rs (Phase 30a)
+// BMSPlayerRule
 
 use bms_model::bms_model::BMSModel;
 use bms_model::bms_model::{JudgeRankType, TotalType};
@@ -206,6 +206,150 @@ mod tests {
 
         // Should calculate default total
         assert!(model.total > 0.0);
+    }
+
+    #[test]
+    fn test_validate_bms_rank_negative_uses_default() {
+        let mut model = BMSModel::new();
+        model.judgerank = -1;
+        model.judgerank_type = JudgeRankType::BmsRank;
+        model.total = 100.0;
+        model.total_type = TotalType::Bms;
+
+        BMSPlayerRule::validate(&mut model);
+        // Out of range (negative) -> defaults to index 2 -> 75
+        assert_eq!(model.judgerank, 75);
+    }
+
+    #[test]
+    fn test_validate_bms_rank_all_valid_indices() {
+        let expected = [25, 50, 75, 100, 125]; // normal table
+        for (i, &exp) in expected.iter().enumerate() {
+            let mut model = BMSModel::new();
+            model.judgerank = i as i32;
+            model.judgerank_type = JudgeRankType::BmsRank;
+            model.total = 100.0;
+            model.total_type = TotalType::Bms;
+
+            BMSPlayerRule::validate(&mut model);
+            assert_eq!(
+                model.judgerank, exp,
+                "BmsRank index {} should map to {}",
+                i, exp
+            );
+        }
+    }
+
+    #[test]
+    fn test_validate_bms_rank_popn_mode_uses_pms_table() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::POPN_9K);
+        model.judgerank = 3; // NORMAL in PMS table
+        model.judgerank_type = JudgeRankType::BmsRank;
+        model.total = 100.0;
+        model.total_type = TotalType::Bms;
+
+        BMSPlayerRule::validate(&mut model);
+        // PMS table: [33, 50, 70, 100, 133]
+        assert_eq!(model.judgerank, 100);
+    }
+
+    #[test]
+    fn test_validate_defexrank_zero_uses_default() {
+        let mut model = BMSModel::new();
+        model.judgerank = 0;
+        model.judgerank_type = JudgeRankType::BmsDefexrank;
+        model.total = 100.0;
+        model.total_type = TotalType::Bms;
+
+        BMSPlayerRule::validate(&mut model);
+        // Zero judgerank with defexrank -> default to table[2] = 75
+        assert_eq!(model.judgerank, 75);
+    }
+
+    #[test]
+    fn test_validate_defexrank_negative_uses_default() {
+        let mut model = BMSModel::new();
+        model.judgerank = -50;
+        model.judgerank_type = JudgeRankType::BmsDefexrank;
+        model.total = 100.0;
+        model.total_type = TotalType::Bms;
+
+        BMSPlayerRule::validate(&mut model);
+        assert_eq!(model.judgerank, 75);
+    }
+
+    #[test]
+    fn test_validate_bmson_judgerank_negative_uses_default() {
+        let mut model = BMSModel::new();
+        model.judgerank = -10;
+        model.judgerank_type = JudgeRankType::BmsonJudgerank;
+        model.total = 100.0;
+        model.total_type = TotalType::Bms;
+
+        BMSPlayerRule::validate(&mut model);
+        assert_eq!(model.judgerank, 100);
+    }
+
+    #[test]
+    fn test_validate_bmson_judgerank_positive_preserved() {
+        let mut model = BMSModel::new();
+        model.judgerank = 75;
+        model.judgerank_type = JudgeRankType::BmsonJudgerank;
+        model.total = 100.0;
+        model.total_type = TotalType::Bms;
+
+        BMSPlayerRule::validate(&mut model);
+        assert_eq!(model.judgerank, 75);
+    }
+
+    // -- Edge cases for TOTAL calculation --
+
+    #[test]
+    fn test_calculate_default_total_zero_notes() {
+        // 0 notes: 160 + (0 + 0) * 0.16 = 160
+        assert!((calculate_default_total(0) - 160.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_calculate_default_total_400_notes() {
+        // 400 notes: 160 + (400 + 0) * 0.16 = 160 + 64 = 224
+        assert!((calculate_default_total(400) - 224.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_calculate_default_total_negative_notes() {
+        // Negative notes: (notes - 400) clamp(0, 200) = 0
+        // 160 + (-100 + 0) * 0.16 = 160 - 16 = 144
+        assert!((calculate_default_total(-100) - 144.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_validate_total_bms_negative_gets_default() {
+        let mut model = BMSModel::new();
+        model.judgerank = 100;
+        model.judgerank_type = JudgeRankType::BmsonJudgerank;
+        model.total = -50.0;
+        model.total_type = TotalType::Bms;
+
+        BMSPlayerRule::validate(&mut model);
+        assert!(
+            model.total > 0.0,
+            "negative TOTAL should be replaced with default"
+        );
+    }
+
+    #[test]
+    fn test_validate_total_bmson_zero_gets_default() {
+        let mut model = BMSModel::new();
+        model.judgerank = 100;
+        model.judgerank_type = JudgeRankType::BmsonJudgerank;
+        model.total = 0.0;
+        model.total_type = TotalType::Bmson;
+
+        BMSPlayerRule::validate(&mut model);
+        let default_total = calculate_default_total(model.total_notes());
+        assert!((model.total - default_total).abs() < 0.001);
     }
 
     #[test]

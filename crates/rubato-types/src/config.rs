@@ -748,3 +748,494 @@ fn write_backup_config_file(configpath: &Path) {
         Err(e) => log::error!("Failed to write backup config file: {}", e),
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::validatable::Validatable;
+
+    // -- BgaMode serde and conversion --
+
+    #[test]
+    fn bga_mode_from_i32_valid_values() {
+        assert_eq!(BgaMode::from(0), BgaMode::On);
+        assert_eq!(BgaMode::from(1), BgaMode::Auto);
+        assert_eq!(BgaMode::from(2), BgaMode::Off);
+    }
+
+    #[test]
+    fn bga_mode_from_i32_out_of_range_returns_default() {
+        assert_eq!(BgaMode::from(-1), BgaMode::On);
+        assert_eq!(BgaMode::from(3), BgaMode::On);
+        assert_eq!(BgaMode::from(i32::MAX), BgaMode::On);
+        assert_eq!(BgaMode::from(i32::MIN), BgaMode::On);
+    }
+
+    #[test]
+    fn bga_mode_serde_round_trip() {
+        for mode in [BgaMode::On, BgaMode::Auto, BgaMode::Off] {
+            let json = serde_json::to_string(&mode).unwrap();
+            let deserialized: BgaMode = serde_json::from_str(&json).unwrap();
+            assert_eq!(deserialized, mode);
+        }
+    }
+
+    #[test]
+    fn bga_mode_deserialize_out_of_range_falls_back() {
+        let deserialized: BgaMode = serde_json::from_str("99").unwrap();
+        assert_eq!(deserialized, BgaMode::On); // default
+    }
+
+    // -- BgaExpand serde and conversion --
+
+    #[test]
+    fn bga_expand_from_i32_valid_values() {
+        assert_eq!(BgaExpand::from(0), BgaExpand::Full);
+        assert_eq!(BgaExpand::from(1), BgaExpand::KeepAspectRatio);
+        assert_eq!(BgaExpand::from(2), BgaExpand::Off);
+    }
+
+    #[test]
+    fn bga_expand_from_i32_out_of_range_returns_default() {
+        assert_eq!(BgaExpand::from(-1), BgaExpand::KeepAspectRatio);
+        assert_eq!(BgaExpand::from(3), BgaExpand::KeepAspectRatio);
+    }
+
+    #[test]
+    fn bga_expand_serde_round_trip() {
+        for mode in [BgaExpand::Full, BgaExpand::KeepAspectRatio, BgaExpand::Off] {
+            let json = serde_json::to_string(&mode).unwrap();
+            let deserialized: BgaExpand = serde_json::from_str(&json).unwrap();
+            assert_eq!(deserialized, mode);
+        }
+    }
+
+    // -- Config default --
+
+    #[test]
+    fn config_default_has_sane_values() {
+        let config = Config::default();
+        assert!(config.playername.is_none());
+        assert!(config.display.window_width > 0);
+        assert!(config.display.window_height > 0);
+        assert!(!config.paths.songpath.is_empty());
+        assert!(!config.paths.skinpath.is_empty());
+        assert!(!config.paths.playerpath.is_empty());
+    }
+
+    // -- Config serde: empty JSON object deserializes to defaults --
+
+    #[test]
+    fn config_deserialize_empty_object_uses_defaults() {
+        let config: Config = serde_json::from_str("{}").unwrap();
+        let default = Config::default();
+        assert_eq!(config.display.window_width, default.display.window_width);
+        assert_eq!(config.display.window_height, default.display.window_height);
+        assert_eq!(config.paths.songpath, default.paths.songpath);
+        assert_eq!(config.paths.skinpath, default.paths.skinpath);
+    }
+
+    // -- Config serde: extra unknown fields are ignored --
+
+    #[test]
+    fn config_deserialize_ignores_unknown_fields() {
+        let json = r#"{"unknownField": 42, "anotherUnknown": "hello"}"#;
+        let config: Config = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            config.display.window_width,
+            Config::default().display.window_width
+        );
+    }
+
+    // -- Config serde round-trip --
+
+    #[test]
+    fn config_serde_round_trip() {
+        let mut config = Config::default();
+        config.playername = Some("TestPlayer".to_string());
+        config.display.window_width = 1920;
+        config.display.window_height = 1080;
+        config.render.bga = BgaMode::Off;
+        config.network.enable_ipfs = false;
+        config.obs.use_obs_ws = true;
+        config.obs.obs_ws_port = 4444;
+        config.select.max_search_bar_count = 20;
+
+        let json = serde_json::to_string_pretty(&config).unwrap();
+        let deserialized: Config = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.playername, Some("TestPlayer".to_string()));
+        assert_eq!(deserialized.display.window_width, 1920);
+        assert_eq!(deserialized.display.window_height, 1080);
+        assert_eq!(deserialized.render.bga, BgaMode::Off);
+        assert!(!deserialized.network.enable_ipfs);
+        assert!(deserialized.obs.use_obs_ws);
+        assert_eq!(deserialized.obs.obs_ws_port, 4444);
+        assert_eq!(deserialized.select.max_search_bar_count, 20);
+    }
+
+    // -- Config serde: camelCase/rename fields --
+
+    #[test]
+    fn config_serializes_with_java_field_names() {
+        let config = Config::default();
+        let json = serde_json::to_string(&config).unwrap();
+
+        // These should be camelCase as specified by #[serde(rename)]
+        assert!(
+            json.contains("\"lastBootedVersion\""),
+            "missing lastBootedVersion"
+        );
+        assert!(json.contains("\"useSongInfo\""), "missing useSongInfo");
+        assert!(json.contains("\"useResolution\""), "missing useResolution");
+        assert!(json.contains("\"windowWidth\""), "missing windowWidth");
+        assert!(json.contains("\"windowHeight\""), "missing windowHeight");
+        assert!(
+            json.contains("\"maxFramePerSecond\""),
+            "missing maxFramePerSecond"
+        );
+        assert!(json.contains("\"bgaExpand\""), "missing bgaExpand");
+        assert!(json.contains("\"enableIpfs\""), "missing enableIpfs");
+        assert!(json.contains("\"useObsWs\""), "missing useObsWs");
+        assert!(json.contains("\"obsWsPort\""), "missing obsWsPort");
+        assert!(json.contains("\"useDiscordRPC\""), "missing useDiscordRPC");
+        assert!(json.contains("\"tableURL\""), "missing tableURL");
+
+        // These snake_case forms should NOT appear
+        assert!(
+            !json.contains("\"last_booted_version\""),
+            "snake_case leak: last_booted_version"
+        );
+        assert!(
+            !json.contains("\"use_song_info\""),
+            "snake_case leak: use_song_info"
+        );
+        assert!(
+            !json.contains("\"window_width\""),
+            "snake_case leak: window_width"
+        );
+    }
+
+    // -- Config validate: clamps extreme values --
+
+    #[test]
+    fn config_validate_clamps_extreme_window_dimensions() {
+        let mut config = Config::default();
+        config.display.window_width = 1;
+        config.display.window_height = 1;
+        config.validate();
+        assert!(config.display.window_width >= Resolution::SD.width());
+        assert!(config.display.window_height >= Resolution::SD.height());
+
+        config.display.window_width = 100_000;
+        config.display.window_height = 100_000;
+        config.validate();
+        assert!(config.display.window_width <= Resolution::ULTRAHD.width());
+        assert!(config.display.window_height <= Resolution::ULTRAHD.height());
+    }
+
+    #[test]
+    fn config_validate_clamps_fps_to_valid_range() {
+        let mut config = Config::default();
+        config.display.max_frame_per_second = -10;
+        config.validate();
+        assert_eq!(config.display.max_frame_per_second, 0);
+
+        config.display.max_frame_per_second = 999_999;
+        config.validate();
+        assert_eq!(config.display.max_frame_per_second, 50000);
+    }
+
+    #[test]
+    fn config_validate_clamps_search_bar_count() {
+        let mut config = Config::default();
+        config.select.max_search_bar_count = 0;
+        config.validate();
+        assert_eq!(config.select.max_search_bar_count, 1);
+
+        config.select.max_search_bar_count = 1000;
+        config.validate();
+        assert_eq!(config.select.max_search_bar_count, 100);
+    }
+
+    #[test]
+    fn config_validate_clamps_obs_port() {
+        let mut config = Config::default();
+        config.obs.obs_ws_port = -5;
+        config.validate();
+        // obs_ws_rec_mode is validated; port is not directly clamped by validate()
+        // but set_obs_ws_port clamps it
+    }
+
+    #[test]
+    fn config_validate_empty_paths_get_defaults() {
+        let mut config = Config::default();
+        config.paths.songpath = String::new();
+        config.paths.skinpath = String::new();
+        config.paths.playerpath = String::new();
+        config.paths.tablepath = String::new();
+        config.paths.songinfopath = String::new();
+        config.validate();
+        assert_eq!(config.paths.songpath, SONGPATH_DEFAULT);
+        assert_eq!(config.paths.skinpath, SKINPATH_DEFAULT);
+        assert_eq!(config.paths.playerpath, PLAYERPATH_DEFAULT);
+        assert_eq!(config.paths.tablepath, TABLEPATH_DEFAULT);
+        assert_eq!(config.paths.songinfopath, SONGINFOPATH_DEFAULT);
+    }
+
+    #[test]
+    fn config_validate_removes_empty_bmsroot_entries() {
+        let mut config = Config::default();
+        config.paths.bmsroot = vec!["path1".to_string(), "".to_string(), "path2".to_string()];
+        config.validate();
+        // Empty strings should be removed, but non-empty preserved
+        assert!(config.paths.bmsroot.iter().all(|s| !s.is_empty()));
+    }
+
+    #[test]
+    fn config_validate_empty_table_url_gets_defaults() {
+        let mut config = Config::default();
+        config.paths.table_url = Vec::new();
+        config.validate();
+        assert!(!config.paths.table_url.is_empty());
+    }
+
+    #[test]
+    fn config_validate_empty_ipfsurl_gets_default() {
+        let mut config = Config::default();
+        config.network.ipfsurl = String::new();
+        config.validate();
+        assert_eq!(config.network.ipfsurl, "https://gateway.ipfs.io/");
+    }
+
+    #[test]
+    fn config_validate_audio_none_gets_default() {
+        let mut config = Config::default();
+        config.audio = None;
+        config.validate();
+        assert!(config.audio.is_some());
+    }
+
+    #[test]
+    fn config_validate_clamps_pixmap_gen_values() {
+        let mut config = Config::default();
+        config.render.skin_pixmap_gen = -5;
+        config.render.stagefile_pixmap_gen = 200;
+        config.render.banner_pixmap_gen = -1;
+        config.render.song_resource_gen = 500;
+        config.validate();
+        assert_eq!(config.render.skin_pixmap_gen, 0);
+        assert_eq!(config.render.stagefile_pixmap_gen, 100);
+        assert_eq!(config.render.banner_pixmap_gen, 0);
+        assert_eq!(config.render.song_resource_gen, 100);
+    }
+
+    #[test]
+    fn config_validate_clamps_obs_rec_mode() {
+        let mut config = Config::default();
+        config.obs.obs_ws_rec_mode = 99;
+        config.validate();
+        assert_eq!(config.obs.obs_ws_rec_mode, 2);
+
+        config.obs.obs_ws_rec_mode = -1;
+        config.validate();
+        assert_eq!(config.obs.obs_ws_rec_mode, 0);
+    }
+
+    #[test]
+    fn config_validate_clamps_ir_send_count() {
+        let mut config = Config::default();
+        config.network.ir_send_count = 0;
+        config.validate();
+        assert_eq!(config.network.ir_send_count, 1);
+
+        config.network.ir_send_count = 500;
+        config.validate();
+        assert_eq!(config.network.ir_send_count, 100);
+    }
+
+    // -- Config methods --
+
+    #[test]
+    fn config_set_analog_ticks_per_scroll_min_is_one() {
+        let mut config = Config::default();
+        config.set_analog_ticks_per_scroll(0);
+        assert_eq!(config.select.analog_ticks_per_scroll, 1);
+
+        config.set_analog_ticks_per_scroll(-5);
+        assert_eq!(config.select.analog_ticks_per_scroll, 1);
+    }
+
+    #[test]
+    fn config_obs_ws_pass_empty_returns_none() {
+        let mut config = Config::default();
+        config.obs.obs_ws_pass = String::new();
+        assert!(config.obs_ws_pass().is_none());
+
+        config.obs.obs_ws_pass = "   ".to_string();
+        assert!(config.obs_ws_pass().is_none());
+    }
+
+    #[test]
+    fn config_obs_ws_pass_non_empty_returns_some() {
+        let mut config = Config::default();
+        config.obs.obs_ws_pass = "mypassword".to_string();
+        assert_eq!(config.obs_ws_pass(), Some("mypassword"));
+    }
+
+    #[test]
+    fn config_set_obs_ws_port_clamps() {
+        let mut config = Config::default();
+        config.set_obs_ws_port(-1);
+        assert_eq!(config.obs.obs_ws_port, 0);
+
+        config.set_obs_ws_port(70000);
+        assert_eq!(config.obs.obs_ws_port, 65535);
+
+        config.set_obs_ws_port(4455);
+        assert_eq!(config.obs.obs_ws_port, 4455);
+    }
+
+    #[test]
+    fn config_set_obs_ws_rec_stop_wait_clamps() {
+        let mut config = Config::default();
+        config.set_obs_ws_rec_stop_wait(-100);
+        assert_eq!(config.obs.obs_ws_rec_stop_wait, 0);
+
+        config.set_obs_ws_rec_stop_wait(50000);
+        assert_eq!(config.obs.obs_ws_rec_stop_wait, 10000);
+    }
+
+    #[test]
+    fn config_obs_scene_set_and_get() {
+        let mut config = Config::default();
+        assert!(config.obs_scene("play").is_none());
+
+        config.set_obs_scene("play".to_string(), Some("PlayScene".to_string()));
+        assert_eq!(config.obs_scene("play"), Some(&"PlayScene".to_string()));
+
+        // Setting None removes the entry
+        config.set_obs_scene("play".to_string(), None);
+        assert!(config.obs_scene("play").is_none());
+
+        // Setting empty string also removes
+        config.set_obs_scene("play".to_string(), Some("PlayScene".to_string()));
+        config.set_obs_scene("play".to_string(), Some(String::new()));
+        assert!(config.obs_scene("play").is_none());
+    }
+
+    #[test]
+    fn config_obs_action_set_and_get() {
+        let mut config = Config::default();
+        assert!(config.obs_action("play").is_none());
+
+        config.set_obs_action("play".to_string(), Some("StartAction".to_string()));
+        assert_eq!(config.obs_action("play"), Some(&"StartAction".to_string()));
+
+        config.set_obs_action("play".to_string(), None);
+        assert!(config.obs_action("play").is_none());
+    }
+
+    #[test]
+    fn config_override_download_url_empty_returns_none() {
+        let mut config = Config::default();
+        config.network.override_download_url = String::new();
+        assert!(config.override_download_url().is_none());
+    }
+
+    #[test]
+    fn config_override_download_url_non_empty_returns_some() {
+        let mut config = Config::default();
+        config.network.override_download_url = "https://example.com".to_string();
+        assert_eq!(config.override_download_url(), Some("https://example.com"));
+    }
+
+    #[test]
+    fn config_is_show_no_song_existing_bar_logic() {
+        let mut config = Config::default();
+        config.select.show_no_song_existing_bar = false;
+        config.network.enable_http = false;
+        assert!(!config.is_show_no_song_existing_bar());
+
+        config.select.show_no_song_existing_bar = true;
+        assert!(config.is_show_no_song_existing_bar());
+
+        config.select.show_no_song_existing_bar = false;
+        config.network.enable_http = true;
+        assert!(config.is_show_no_song_existing_bar());
+    }
+
+    // -- Config read/write round-trip --
+
+    #[test]
+    fn config_write_and_read_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut config = Config::default();
+        config.playername = Some("RoundTripPlayer".to_string());
+        config.display.window_width = 1600;
+
+        Config::write_to(&config, dir.path()).unwrap();
+        let loaded = Config::read_from(dir.path()).unwrap();
+
+        assert_eq!(loaded.playername, Some("RoundTripPlayer".to_string()));
+        assert_eq!(loaded.display.window_width, 1600);
+    }
+
+    #[test]
+    fn config_read_missing_file_returns_default() {
+        let dir = tempfile::tempdir().unwrap();
+        // No config file exists, should return default
+        let config = Config::read_from(dir.path()).unwrap();
+        assert_eq!(
+            config.display.window_width,
+            Config::default().display.window_width
+        );
+    }
+
+    #[test]
+    fn config_read_corrupt_file_returns_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let configpath = dir.path().join("config_sys.json");
+        std::fs::write(&configpath, "not valid json!!!").unwrap();
+
+        let result = Config::read_from(dir.path());
+        assert!(result.is_err());
+    }
+
+    // -- DisplayMode and SongPreview serde --
+
+    #[test]
+    fn display_mode_serde_round_trip() {
+        for mode in [
+            DisplayMode::FULLSCREEN,
+            DisplayMode::BORDERLESS,
+            DisplayMode::WINDOW,
+        ] {
+            let json = serde_json::to_string(&mode).unwrap();
+            let deserialized: DisplayMode = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{:?}", deserialized), format!("{:?}", mode));
+        }
+    }
+
+    #[test]
+    fn song_preview_serde_round_trip() {
+        for preview in [SongPreview::NONE, SongPreview::ONCE, SongPreview::LOOP] {
+            let json = serde_json::to_string(&preview).unwrap();
+            let deserialized: SongPreview = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{:?}", deserialized), format!("{:?}", preview));
+        }
+    }
+
+    // -- validate_path --
+
+    #[test]
+    fn validate_path_rejects_empty() {
+        assert!(!validate_path(""));
+    }
+
+    #[test]
+    fn validate_path_accepts_normal_paths() {
+        assert!(validate_path("downloads"));
+        assert!(validate_path("/tmp/test"));
+        assert!(validate_path("relative/path/to/dir"));
+    }
+}

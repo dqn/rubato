@@ -1362,4 +1362,274 @@ mod tests {
                 .any(|l| l.message.contains("#RANDOMの値は1以上"))
         );
     }
+
+    // -- Edge case: empty input --
+
+    #[test]
+    fn decode_empty_bytes_returns_none() {
+        let mut decoder = BMSDecoder::new();
+        let result = decoder.decode_bytes(&[], false, None);
+        // Empty file has no BPM defined, so first timeline BPM is 0 => None
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn decode_only_whitespace_returns_none() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["   ", "\t", ""]);
+        let result = decoder.decode_bytes(&data, false, None);
+        assert!(result.is_none());
+    }
+
+    // -- Edge case: BPM edge values --
+
+    #[test]
+    fn decode_bpm_negative_warns_and_uses_zero() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM -120"]);
+        let result = decoder.decode_bytes(&data, false, None);
+        // Negative BPM is rejected, BPM stays 0 => returns None
+        assert!(result.is_none());
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("negative BPM"))
+        );
+    }
+
+    #[test]
+    fn decode_bpm_very_large() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 999999"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().bpm, 999999.0);
+    }
+
+    #[test]
+    fn decode_bpm_fractional() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 133.33"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert!((model.unwrap().bpm - 133.33).abs() < 0.01);
+    }
+
+    #[test]
+    fn decode_bpm_non_numeric_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM abc"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("数字が定義されていません"))
+        );
+    }
+
+    // -- Edge case: title with special characters --
+
+    #[test]
+    fn decode_title_with_spaces_and_symbols() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#TITLE [HARD] Song ~remix~ (ver.2)"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().title, "[HARD] Song ~remix~ (ver.2)");
+    }
+
+    // -- Edge case: TOTAL --
+
+    #[test]
+    fn decode_total_zero_warns_and_keeps_default() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#TOTAL 0"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        // TOTAL 0 is rejected (not > 0), so model.total stays at default (100.0)
+        assert_eq!(model.unwrap().total, 100.0);
+        assert!(decoder.log.iter().any(|l| l.message.contains("TOTAL")));
+    }
+
+    #[test]
+    fn decode_total_negative_warns_and_keeps_default() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#TOTAL -100"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        // Negative total is rejected (not > 0), model.total stays at default
+        assert_eq!(model.unwrap().total, 100.0);
+        assert!(decoder.log.iter().any(|l| l.message.contains("TOTAL")));
+    }
+
+    // -- Edge case: multiple headers override each other --
+
+    #[test]
+    fn decode_duplicate_title_uses_last() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#TITLE First Title", "#TITLE Second Title"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().title, "Second Title");
+    }
+
+    #[test]
+    fn decode_duplicate_bpm_uses_last() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 100", "#BPM 200"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().bpm, 200.0);
+    }
+
+    // -- Edge case: difficulty boundary values --
+
+    #[test]
+    fn decode_difficulty_zero() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#DIFFICULTY 0"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().difficulty, 0);
+    }
+
+    #[test]
+    fn decode_difficulty_non_numeric_stays_default() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#DIFFICULTY abc"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        assert_eq!(model.unwrap().difficulty, 0); // default
+    }
+
+    // -- Edge case: playlevel --
+
+    #[test]
+    fn decode_playlevel_with_star_prefix_preserved() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#PLAYLEVEL *12"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        // Star prefix is preserved as-is (playlevel is a string field)
+        let model = model.unwrap();
+        assert_eq!(model.playlevel, "*12");
+    }
+
+    // -- Edge case: PMS mode --
+
+    #[test]
+    fn decode_pms_mode_sets_popn_9k() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120"]);
+        let model = decoder.decode_bytes(&data, true, None).unwrap();
+        use crate::mode::Mode;
+        assert_eq!(*model.mode().unwrap(), Mode::POPN_9K);
+    }
+
+    #[test]
+    fn decode_non_pms_defaults_to_beat_5k() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        use crate::mode::Mode;
+        assert_eq!(*model.unwrap().mode().unwrap(), Mode::BEAT_5K);
+    }
+
+    // -- Edge case: LNOBJ values --
+
+    #[test]
+    fn decode_lnobj_lowercase() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#LNOBJ zz"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        // zz in base-36 = 35*36+35 = 1295
+        assert_eq!(model.unwrap().lnobj, 1295);
+    }
+
+    // -- Edge case: % and @ value lines --
+
+    #[test]
+    fn decode_percent_and_at_values() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "%URL http://example.com", "@MAIL test@test.com"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        let model = model.unwrap();
+        assert_eq!(
+            model.values.get("URL"),
+            Some(&"http://example.com".to_string())
+        );
+        assert_eq!(model.values.get("MAIL"), Some(&"test@test.com".to_string()));
+    }
+
+    // -- Edge case: bar index boundary --
+
+    #[test]
+    fn decode_bar_index_999_is_valid() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#WAV01 kick.wav", "#99911:01"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+    }
+
+    // -- Edge case: MD5/SHA256 hashing --
+
+    #[test]
+    fn decode_produces_consistent_hashes() {
+        let data = make_bms_bytes(&["#BPM 120", "#TITLE Hash Test"]);
+        let mut decoder1 = BMSDecoder::new();
+        let model1 = decoder1.decode_bytes(&data, false, None).unwrap();
+
+        let mut decoder2 = BMSDecoder::new();
+        let model2 = decoder2.decode_bytes(&data, false, None).unwrap();
+
+        assert_eq!(model1.md5, model2.md5);
+        assert_eq!(model1.sha256, model2.sha256);
+        assert!(!model1.md5.is_empty());
+        assert!(!model1.sha256.is_empty());
+    }
+
+    #[test]
+    fn decode_different_data_produces_different_hashes() {
+        let data1 = make_bms_bytes(&["#BPM 120", "#TITLE Song A"]);
+        let data2 = make_bms_bytes(&["#BPM 120", "#TITLE Song B"]);
+
+        let mut decoder1 = BMSDecoder::new();
+        let model1 = decoder1.decode_bytes(&data1, false, None).unwrap();
+
+        let mut decoder2 = BMSDecoder::new();
+        let model2 = decoder2.decode_bytes(&data2, false, None).unwrap();
+
+        assert_ne!(model1.md5, model2.md5);
+        assert_ne!(model1.sha256, model2.sha256);
+    }
+
+    // -- Edge case: decoder reuse --
+
+    #[test]
+    fn decoder_reuse_clears_previous_state() {
+        let mut decoder = BMSDecoder::new();
+
+        let data1 = make_bms_bytes(&["#BPM 120", "#TITLE First"]);
+        let model1 = decoder.decode_bytes(&data1, false, None);
+        assert_eq!(model1.unwrap().title, "First");
+
+        let data2 = make_bms_bytes(&["#BPM 150", "#TITLE Second"]);
+        let model2 = decoder.decode_bytes(&data2, false, None);
+        assert_eq!(model2.unwrap().title, "Second");
+    }
+
+    // -- Edge case: short lines --
+
+    #[test]
+    fn decode_single_char_line_is_ignored() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#", "X"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+    }
 }

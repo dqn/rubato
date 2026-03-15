@@ -781,3 +781,345 @@ fn write_backup_player_config(playerpath: &str, playerid: &str, path: &Path) {
         Err(e) => log::error!("Failed to write backup config file: {}", e),
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- Default values --
+
+    #[test]
+    fn player_config_default_has_sane_values() {
+        let pc = PlayerConfig::default();
+        assert!(pc.id.is_none());
+        assert_eq!(pc.name, "NO NAME");
+        assert_eq!(pc.play_settings.gauge, 0);
+        assert_eq!(pc.judge_settings.judgetiming, 0);
+        assert!(!pc.skin.is_empty());
+        assert_eq!(pc.misc_settings.autosavereplay.len(), 4);
+    }
+
+    // -- Serde round-trip --
+
+    #[test]
+    fn player_config_serde_round_trip() {
+        let mut pc = PlayerConfig::default();
+        pc.name = "TestPlayer".to_string();
+        pc.play_settings.gauge = 3;
+        pc.judge_settings.judgetiming = 50;
+
+        let json = serde_json::to_string(&pc).unwrap();
+        let deserialized: PlayerConfig = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.name, "TestPlayer");
+        assert_eq!(deserialized.play_settings.gauge, 3);
+        assert_eq!(deserialized.judge_settings.judgetiming, 50);
+    }
+
+    #[test]
+    fn player_config_deserialize_empty_object() {
+        let pc: PlayerConfig = serde_json::from_str("{}").unwrap();
+        assert_eq!(pc.name, "NO NAME");
+        assert_eq!(pc.play_settings.gauge, 0);
+    }
+
+    // -- Validate: clamping --
+
+    #[test]
+    fn player_config_validate_clamps_gauge() {
+        let mut pc = PlayerConfig::default();
+        pc.play_settings.gauge = 99;
+        pc.validate();
+        assert_eq!(pc.play_settings.gauge, 5);
+
+        pc.play_settings.gauge = -1;
+        pc.validate();
+        assert_eq!(pc.play_settings.gauge, 0);
+    }
+
+    #[test]
+    fn player_config_validate_clamps_random() {
+        let mut pc = PlayerConfig::default();
+        pc.play_settings.random = 99;
+        pc.validate();
+        assert_eq!(pc.play_settings.random, 9);
+
+        pc.play_settings.random = -1;
+        pc.validate();
+        assert_eq!(pc.play_settings.random, 0);
+    }
+
+    #[test]
+    fn player_config_validate_clamps_judgetiming() {
+        let mut pc = PlayerConfig::default();
+        pc.judge_settings.judgetiming = 9999;
+        pc.validate();
+        assert_eq!(pc.judge_settings.judgetiming, JUDGETIMING_MAX);
+
+        pc.judge_settings.judgetiming = -9999;
+        pc.validate();
+        assert_eq!(pc.judge_settings.judgetiming, JUDGETIMING_MIN);
+    }
+
+    #[test]
+    fn player_config_validate_clamps_misslayer_duration() {
+        let mut pc = PlayerConfig::default();
+        pc.display_settings.misslayer_duration = -100;
+        pc.validate();
+        assert_eq!(pc.display_settings.misslayer_duration, 0);
+
+        pc.display_settings.misslayer_duration = 99999;
+        pc.validate();
+        assert_eq!(pc.display_settings.misslayer_duration, 5000);
+    }
+
+    #[test]
+    fn player_config_validate_clamps_judge_window_rates() {
+        let mut pc = PlayerConfig::default();
+        pc.judge_settings.key_judge_window_rate_perfect_great = 0;
+        pc.judge_settings.key_judge_window_rate_great = -10;
+        pc.judge_settings.key_judge_window_rate_good = 999;
+        pc.validate();
+        assert_eq!(pc.judge_settings.key_judge_window_rate_perfect_great, 25);
+        assert_eq!(pc.judge_settings.key_judge_window_rate_great, 0);
+        assert_eq!(pc.judge_settings.key_judge_window_rate_good, 400);
+    }
+
+    #[test]
+    fn player_config_validate_clamps_hran_threshold_bpm() {
+        let mut pc = PlayerConfig::default();
+        pc.play_settings.hran_threshold_bpm = 0;
+        pc.validate();
+        assert_eq!(pc.play_settings.hran_threshold_bpm, 1);
+
+        pc.play_settings.hran_threshold_bpm = 99999;
+        pc.validate();
+        assert_eq!(pc.play_settings.hran_threshold_bpm, 1000);
+    }
+
+    #[test]
+    fn player_config_validate_fixes_autosavereplay_length() {
+        let mut pc = PlayerConfig::default();
+        pc.misc_settings.autosavereplay = vec![1, 2]; // too short
+        pc.validate();
+        assert_eq!(pc.misc_settings.autosavereplay.len(), 4);
+    }
+
+    #[test]
+    fn player_config_validate_empty_chart_replication_mode_gets_default() {
+        let mut pc = PlayerConfig::default();
+        pc.play_settings.chart_replication_mode = String::new();
+        pc.validate();
+        assert_eq!(pc.play_settings.chart_replication_mode, "NONE");
+    }
+
+    #[test]
+    fn player_config_validate_empty_targetid_gets_default() {
+        let mut pc = PlayerConfig::default();
+        pc.select_settings.targetid = String::new();
+        pc.validate();
+        assert_eq!(pc.select_settings.targetid, "MAX");
+    }
+
+    #[test]
+    fn player_config_validate_clamps_longnote_mode() {
+        let mut pc = PlayerConfig::default();
+        pc.note_modifier_settings.longnote_mode = 99;
+        pc.validate();
+        assert_eq!(pc.note_modifier_settings.longnote_mode, 5);
+
+        pc.note_modifier_settings.longnote_mode = -1;
+        pc.validate();
+        assert_eq!(pc.note_modifier_settings.longnote_mode, 0);
+    }
+
+    #[test]
+    fn player_config_validate_clamps_longnote_rate() {
+        let mut pc = PlayerConfig::default();
+        pc.note_modifier_settings.longnote_rate = 5.0;
+        pc.validate();
+        assert_eq!(pc.note_modifier_settings.longnote_rate, 1.0);
+
+        pc.note_modifier_settings.longnote_rate = -1.0;
+        pc.validate();
+        assert_eq!(pc.note_modifier_settings.longnote_rate, 0.0);
+    }
+
+    #[test]
+    fn player_config_validate_clamps_mine_mode() {
+        let mut pc = PlayerConfig::default();
+        pc.play_settings.mine_mode = 99;
+        pc.validate();
+        assert_eq!(pc.play_settings.mine_mode, 4);
+    }
+
+    #[test]
+    fn player_config_validate_clamps_scroll_settings() {
+        let mut pc = PlayerConfig::default();
+        pc.display_settings.scroll_section = 0;
+        pc.display_settings.scroll_rate = -1.0;
+        pc.validate();
+        assert_eq!(pc.display_settings.scroll_section, 1);
+        assert_eq!(pc.display_settings.scroll_rate, 0.0);
+    }
+
+    // -- play_config_ref / play_config --
+
+    #[test]
+    fn play_config_ref_returns_correct_mode_config() {
+        let pc = PlayerConfig::default();
+        let mode5 = pc.play_config_ref(Mode::BEAT_5K);
+        // Just verify it returns without panic and has right mode
+        assert!(!mode5.controller.is_empty());
+    }
+
+    #[test]
+    fn play_config_by_id_default_fallback() {
+        let mut pc = PlayerConfig::default();
+        // Unknown mode_id should fall back to mode7
+        let config = pc.play_config_by_id(999);
+        // Should not panic and return mode7
+        assert!(!config.controller.is_empty());
+    }
+
+    // -- get_misslayer_duration --
+
+    #[test]
+    fn get_misslayer_duration_clamps_negative() {
+        let mut pc = PlayerConfig::default();
+        pc.display_settings.misslayer_duration = -100;
+        let duration = pc.get_misslayer_duration();
+        assert_eq!(duration, 0);
+    }
+
+    // -- skin accessor --
+
+    #[test]
+    fn skin_accessor_resizes_if_too_short() {
+        let mut pc = PlayerConfig::default();
+        pc.skin = vec![]; // empty
+        let skins = pc.skin();
+        assert!(skins.len() > 0);
+    }
+
+    // -- Read/write round-trip --
+
+    #[test]
+    fn player_config_write_and_read_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let playerpath = dir.path().to_str().unwrap();
+
+        // Create player directory
+        let player_dir = dir.path().join("test_player");
+        std::fs::create_dir(&player_dir).unwrap();
+
+        let mut pc = PlayerConfig::default();
+        pc.id = Some("test_player".to_string());
+        pc.name = "RoundTrip".to_string();
+        pc.play_settings.gauge = 2;
+
+        PlayerConfig::write(playerpath, &pc).unwrap();
+        let loaded = PlayerConfig::read_player_config(playerpath, "test_player").unwrap();
+
+        assert_eq!(loaded.name, "RoundTrip");
+        assert_eq!(loaded.play_settings.gauge, 2);
+        assert_eq!(loaded.id, Some("test_player".to_string()));
+    }
+
+    #[test]
+    fn player_config_read_missing_creates_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let playerpath = dir.path().to_str().unwrap();
+
+        let player_dir = dir.path().join("new_player");
+        std::fs::create_dir(&player_dir).unwrap();
+
+        let pc = PlayerConfig::read_player_config(playerpath, "new_player").unwrap();
+        assert_eq!(pc.name, "NO NAME");
+        assert_eq!(pc.id, Some("new_player".to_string()));
+    }
+
+    // -- read_all_player_id --
+
+    #[test]
+    fn read_all_player_id_returns_directories() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("player1")).unwrap();
+        std::fs::create_dir(dir.path().join("player2")).unwrap();
+        // Create a file (should be excluded)
+        std::fs::write(dir.path().join("not_a_player.txt"), "data").unwrap();
+
+        let ids = read_all_player_id(dir.path().to_str().unwrap());
+        assert_eq!(ids.len(), 2);
+        assert!(ids.contains(&"player1".to_string()));
+        assert!(ids.contains(&"player2".to_string()));
+    }
+
+    #[test]
+    fn read_all_player_id_empty_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let ids = read_all_player_id(dir.path().to_str().unwrap());
+        assert!(ids.is_empty());
+    }
+
+    #[test]
+    fn read_all_player_id_nonexistent_dir() {
+        let ids = read_all_player_id("/nonexistent/path/that/does/not/exist");
+        assert!(ids.is_empty());
+    }
+
+    // -- create_player --
+
+    #[test]
+    fn create_player_creates_directory_and_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let playerpath = dir.path().to_str().unwrap();
+
+        create_player(playerpath, "new_player").unwrap();
+
+        assert!(dir.path().join("new_player").exists());
+        assert!(dir.path().join("new_player/config_player.json").exists());
+    }
+
+    #[test]
+    fn create_player_idempotent() {
+        let dir = tempfile::tempdir().unwrap();
+        let playerpath = dir.path().to_str().unwrap();
+
+        create_player(playerpath, "player1").unwrap();
+        create_player(playerpath, "player1").unwrap(); // second call should be no-op
+
+        assert!(dir.path().join("player1").exists());
+    }
+
+    // -- Serde: camelCase fields --
+
+    #[test]
+    fn player_config_serializes_with_java_field_names() {
+        let pc = PlayerConfig::default();
+        let json = serde_json::to_string(&pc).unwrap();
+
+        assert!(
+            json.contains("\"gaugeAutoShift\""),
+            "missing gaugeAutoShift"
+        );
+        assert!(
+            json.contains("\"chartReplicationMode\""),
+            "missing chartReplicationMode"
+        );
+        assert!(
+            json.contains("\"notesDisplayTimingAutoAdjust\""),
+            "missing notesDisplayTimingAutoAdjust"
+        );
+        assert!(
+            json.contains("\"isGuideSe\"") || json.contains("\"isGuideSE\""),
+            "missing isGuideSe"
+        );
+
+        // These snake_case forms should NOT appear
+        assert!(!json.contains("\"gauge_auto_shift\""), "snake_case leak");
+        assert!(
+            !json.contains("\"chart_replication_mode\""),
+            "snake_case leak"
+        );
+    }
+}
