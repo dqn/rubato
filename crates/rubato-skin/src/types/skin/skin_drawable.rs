@@ -379,19 +379,30 @@ impl rubato_core::main_state::SkinDrawable for Skin {
     ) {
         let Some(lr) = lane_renderer.downcast_mut::<rubato_play::lane_renderer::LaneRenderer>()
         else {
+            log::warn!("compute_note_draw_commands: LaneRenderer downcast failed");
             return;
         };
         let Ok(ctx) = ctx.downcast::<rubato_play::lane_renderer::DrawLaneContext<'_>>() else {
+            log::warn!("compute_note_draw_commands: DrawLaneContext downcast failed");
             return;
         };
         for obj in &mut self.objects {
             if let SkinObject::Note(note) = obj {
                 let lanes = note.inner.lanes();
                 let result = lr.draw_lane(&ctx, lanes, &[]);
+                log::debug!(
+                    "compute_note_draw_commands: lanes={}, commands={}",
+                    lanes.len(),
+                    result.commands.len()
+                );
                 note.draw_commands = result.commands;
                 return;
             }
         }
+        log::warn!(
+            "compute_note_draw_commands: no SkinObject::Note found in {} objects",
+            self.objects.len()
+        );
     }
 }
 

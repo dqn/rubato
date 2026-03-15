@@ -38,6 +38,7 @@ impl LaneRenderer {
         let mut commands: Vec<DrawCommand> = Vec::new();
 
         if lanes.is_empty() {
+            log::debug!("draw_lane: lanes is empty, returning default");
             return DrawLaneResult::default();
         }
 

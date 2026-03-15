@@ -305,11 +305,21 @@ impl Skin {
             }
         }
 
-        debug!(
-            "Removing SkinObjects that are confirmed not to be drawn: {} / {}",
-            remove_indices.len(),
-            self.objects.len()
-        );
+        if !remove_indices.is_empty() {
+            let mut type_counts: std::collections::HashMap<&str, usize> =
+                std::collections::HashMap::new();
+            for &i in &remove_indices {
+                *type_counts
+                    .entry(self.objects[i].type_name())
+                    .or_default() += 1;
+            }
+            debug!(
+                "Skin::prepare removing {} / {} objects: {:?}",
+                remove_indices.len(),
+                self.objects.len(),
+                type_counts
+            );
+        }
 
         // Remove in reverse order to preserve indices
         remove_indices.sort_unstable();
@@ -359,6 +369,28 @@ impl Skin {
                     + 1)
                     * self.prepareduration;
             }
+
+            // One-shot diagnostic: log draw gate results by type on first frame
+            static LOGGED: std::sync::Once = std::sync::Once::new();
+            LOGGED.call_once(|| {
+                let mut drawable: std::collections::HashMap<&str, usize> =
+                    std::collections::HashMap::new();
+                let mut skipped: std::collections::HashMap<&str, usize> =
+                    std::collections::HashMap::new();
+                for idx in &self.objectarray_indices {
+                    let obj = &self.objects[*idx];
+                    if obj.is_draw() && obj.is_visible() {
+                        *drawable.entry(obj.type_name()).or_default() += 1;
+                    } else {
+                        *skipped.entry(obj.type_name()).or_default() += 1;
+                    }
+                }
+                log::debug!(
+                    "draw_all_objects first frame: drawable={:?}, skipped={:?}",
+                    drawable,
+                    skipped
+                );
+            });
 
             let renderer = self.renderer.as_mut().expect("renderer is Some");
             for idx in &self.objectarray_indices {

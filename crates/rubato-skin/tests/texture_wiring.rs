@@ -235,7 +235,105 @@ fn draw_note_without_texture_produces_no_vertices() {
 }
 
 // ===========================================================================
-// Test 6: lanerender=false means no SkinNoteObject is created
+// Test 6: compute_note_draw_commands produces non-empty commands
+// ===========================================================================
+
+/// Cross-boundary integration test: exercises the full
+/// compute_note_draw_commands() → draw_lane() pipeline through the
+/// SkinDrawable trait. Verifies that draw_commands is non-empty after
+/// the call, which is the precondition for SkinNoteObject::draw() to
+/// actually render anything.
+#[test]
+fn compute_note_draw_commands_produces_commands() {
+    use bms_model::bms_model::BMSModel;
+    use bms_model::note::Note;
+    use bms_model::time_line::TimeLine;
+    use rubato_core::main_state::SkinDrawable;
+    use rubato_play::lane_renderer::{DrawLaneContext, LaneRenderer};
+
+    // 1. Create a model with one note
+    let mut model = BMSModel::new();
+    model.bpm = 120.0;
+    let mode = bms_model::mode::Mode::BEAT_7K;
+    model.set_mode(mode);
+    let mut tl = TimeLine::new(0.0, 1_000_000, mode.key() as i32);
+    tl.bpm = 120.0;
+    tl.set_note(0, Some(Note::new_normal(1)));
+    model.timelines.push(tl);
+
+    // 2. Create LaneRenderer
+    let mut lr = LaneRenderer::new(&model);
+    lr.init(&model);
+
+    // 3. Create Skin with a SkinNoteObject (via LR2 loader helper)
+    let mut loader = make_loader_with_notes();
+    let mut skin = make_skin();
+    loader.assemble_objects(&mut skin);
+
+    // Verify Note exists before prepare
+    assert!(
+        find_note_object(&skin).is_some(),
+        "precondition: SkinNoteObject must be in skin before prepare"
+    );
+
+    // Run Skin::prepare() (as prepare_skin does with NullTimer)
+    // This is the step that builds objectarray_indices and may remove objects
+    skin.prepare_skin();
+
+    // Verify Note survives prepare
+    assert!(
+        find_note_object(&skin).is_some(),
+        "SkinNoteObject must survive Skin::prepare() - if this fails, \
+         prepare() is removing the Note due to validate/option/draw-condition failure"
+    );
+
+    // 4. Build a DrawLaneContext with TIMER_PLAY active.
+    // Safety: all_timelines is consumed synchronously within compute_note_draw_commands;
+    // model.timelines outlives the call. Same pattern as render_skin_impl.
+    let all_timelines: &'static [TimeLine] =
+        unsafe { std::mem::transmute(model.timelines.as_slice()) };
+    let draw_ctx = DrawLaneContext {
+        time: 1000,
+        timer_play: Some(0), // TIMER_PLAY started at time 0
+        timer_141: None,
+        judge_timing: 0,
+        is_practice: false,
+        practice_start_time: 0,
+        now_time: 1000,
+        now_quarter_note_time: 0,
+        note_expansion_rate: [100, 100],
+        lane_group_regions: Vec::new(),
+        show_bpmguide: false,
+        show_pastnote: false,
+        mark_processednote: false,
+        show_hiddennote: false,
+        show_judgearea: false,
+        lntype: bms_model::bms_model::LnType::ChargeNote,
+        judge_time_regions: vec![vec![[0, 0]; 5]; 8],
+        processing_long_notes: vec![None; 8],
+        passing_long_notes: vec![None; 8],
+        hell_charge_judges: vec![false; 8],
+        bad_judge_time: 0,
+        model_bpm: 120.0,
+        all_timelines,
+        forced_cn_endings: false,
+    };
+
+    // 5. Call compute_note_draw_commands via SkinDrawable trait
+    skin.compute_note_draw_commands(&mut lr, Box::new(draw_ctx));
+
+    // 6. Verify draw_commands is non-empty
+    let note = find_note_object(&skin).expect("SkinNoteObject must still be in skin");
+    assert!(
+        !note.draw_commands.is_empty(),
+        "draw_commands must be non-empty after compute_note_draw_commands(). \
+         Got 0 commands - this means draw_lane() returned empty, likely because \
+         lanes are empty or the SkinObject::Note was not found."
+    );
+}
+
+// ===========================================================================
+// Test 7: lanerender=false means no SkinNoteObject is created
 // ===========================================================================
 
 #[test]

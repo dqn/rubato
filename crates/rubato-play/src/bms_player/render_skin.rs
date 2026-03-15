@@ -43,12 +43,18 @@ impl BMSPlayer {
     ) {
         let mut skin = match self.main_state_data.skin.take() {
             Some(s) => s,
-            None => return,
+            None => {
+                log::debug!("render_skin_impl: skin is None, skipping");
+                return;
+            }
         };
         let mut timer = std::mem::take(&mut self.main_state_data.timer);
 
         // Compute note draw commands via the type-erased SkinDrawable bridge.
         // This calls LaneRenderer::draw_lane() inside the skin to populate SkinNoteObject.draw_commands.
+        if self.lanerender.is_none() {
+            log::debug!("render_skin_impl: lanerender is None, skipping note draw commands");
+        }
         if let Some(ref mut lr) = self.lanerender {
             let lane_count = self.model.mode().map_or(8, |m| m.key() as usize);
             // Safety: DrawLaneContext is consumed synchronously within compute_note_draw_commands.
