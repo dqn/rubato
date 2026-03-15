@@ -2,6 +2,7 @@
 
 use libfuzzer_sys::fuzz_target;
 
+use bms_model::bms_model::LnType;
 use bms_model::bmson::Bmson;
 use bms_model::bmson_decoder::BMSONDecoder;
 use std::io::Write;
@@ -19,7 +20,7 @@ fuzz_target!(|data: &[u8]| {
     let path = dir.path().join("fuzz.bmson");
     if let Ok(mut f) = std::fs::File::create(&path) {
         if f.write_all(data).is_ok() {
-            let mut decoder = BMSONDecoder::new(0);
+            let mut decoder = BMSONDecoder::new(LnType::LongNote);
             let _ = decoder.decode_path(&path);
         }
     }

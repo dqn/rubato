@@ -2,6 +2,7 @@
 
 use libfuzzer_sys::fuzz_target;
 
+use bms_model::bms_model::LnType;
 use bms_model::osu::Osu;
 use bms_model::osu_decoder::OSUDecoder;
 use std::io::{BufReader, Cursor, Write};
@@ -19,7 +20,7 @@ fuzz_target!(|data: &[u8]| {
     let path = dir.path().join("fuzz.osu");
     if let Ok(mut f) = std::fs::File::create(&path) {
         if f.write_all(data).is_ok() {
-            let mut decoder = OSUDecoder::new(0);
+            let mut decoder = OSUDecoder::new(LnType::LongNote);
             let _ = decoder.decode_path(&path);
         }
     }
