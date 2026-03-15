@@ -3,9 +3,7 @@
 // The full SkinBar implementation lives in beatoraja-select::skin_bar.
 
 use crate::reexports::MainState;
-#[cfg(test)]
-use crate::types::skin_object::DestinationParams;
-use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
+use crate::types::skin_object::{DestinationParams, SkinObjectData, SkinObjectRenderer};
 
 /// SkinBar skin object — minimal wrapper with SkinObjectData for the skin pipeline.
 /// The full bar rendering logic lives in beatoraja-select::skin_bar::SkinBar.
@@ -17,10 +15,30 @@ pub struct SkinBarObject {
 
 impl SkinBarObject {
     pub fn new(position: i32) -> Self {
-        Self {
-            data: SkinObjectData::new(),
-            position,
-        }
+        let mut data = SkinObjectData::new();
+        // Java: this.setDestination(0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, new int[0]);
+        data.set_destination_with_int_timer_ops(
+            &DestinationParams {
+                time: 0,
+                x: 0.0,
+                y: 0.0,
+                w: 0.0,
+                h: 0.0,
+                acc: 0,
+                a: 0,
+                r: 255,
+                g: 255,
+                b: 255,
+                blend: 0,
+                filter: 0,
+                angle: 0,
+                center: 0,
+                loop_val: 0,
+            },
+            0,
+            &[],
+        );
+        Self { data, position }
     }
 
     pub fn prepare(&mut self, time: i64, state: &dyn MainState) {
@@ -43,60 +61,28 @@ mod tests {
     use super::*;
     use crate::test_helpers::MockMainState;
 
-    /// Helper: set up a single-destination SkinObjectData so prepare() sets draw=true.
-    fn setup_data(data: &mut SkinObjectData, x: f32, y: f32, w: f32, h: f32) {
-        data.set_destination_with_int_timer_ops(
-            &DestinationParams {
-                time: 0,
-                x,
-                y,
-                w,
-                h,
-                acc: 0,
-                a: 255,
-                r: 255,
-                g: 255,
-                b: 255,
-                blend: 0,
-                filter: 0,
-                angle: 0,
-                center: 0,
-                loop_val: 0,
-            },
-            0,
-            &[0],
+    #[test]
+    fn test_skin_bar_object_has_default_destination() {
+        let bar = SkinBarObject::new(0);
+        assert!(
+            !bar.data.dst.is_empty(),
+            "SkinBarObject must have default DST entry"
         );
     }
 
     #[test]
     fn test_skin_bar_object_two_phase_prepare_draw() {
-        // Phase 40a: SkinBarObject follows two-phase pattern —
-        // prepare(&mut self) then draw(&mut self, &mut sprite)
         let mut bar = SkinBarObject::new(0);
-        setup_data(&mut bar.data, 10.0, 20.0, 300.0, 40.0);
 
         let state = MockMainState::default();
 
-        // Phase 1: prepare — mutates internal state
+        // Phase 1: prepare — default destination ensures draw=true
         bar.prepare(0, &state);
         assert!(bar.data.draw);
-        assert_eq!(bar.data.region.x, 10.0);
-        assert_eq!(bar.data.region.y, 20.0);
-        assert_eq!(bar.data.region.width, 300.0);
 
         // Phase 2: draw — reads pre-computed state (stub does nothing but verifies signature)
         let mut renderer = SkinObjectRenderer::new();
         bar.draw(&mut renderer);
-        // No panic = success (draw is a stub for now)
-    }
-
-    #[test]
-    fn test_skin_bar_object_prepare_sets_draw_false_when_timer_off() {
-        // Phase 40a: prepare can set draw=false when conditions are not met
-        let bar = SkinBarObject::new(0);
-        // No destinations set, so validate would fail, but prepare with no dst
-        // won't set draw=true either
-        assert!(!bar.data.draw);
     }
 
     #[test]

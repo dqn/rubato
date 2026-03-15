@@ -5,7 +5,7 @@
 use crate::objects::skin_image::SkinImage;
 use crate::objects::skin_number::SkinNumber;
 use crate::reexports::MainState;
-use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
+use crate::types::skin_object::{DestinationParams, SkinObjectData, SkinObjectRenderer};
 
 /// SkinJudge skin object — wraps play-side SkinJudge with SkinObjectData.
 ///
@@ -27,8 +27,31 @@ pub struct SkinJudgeObject {
 
 impl SkinJudgeObject {
     pub fn new(player: i32, shift: bool) -> Self {
+        let mut data = SkinObjectData::new();
+        // Java: this.setDestination(0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, new int[0]);
+        data.set_destination_with_int_timer_ops(
+            &DestinationParams {
+                time: 0,
+                x: 0.0,
+                y: 0.0,
+                w: 0.0,
+                h: 0.0,
+                acc: 0,
+                a: 0,
+                r: 255,
+                g: 255,
+                b: 255,
+                blend: 0,
+                filter: 0,
+                angle: 0,
+                center: 0,
+                loop_val: 0,
+            },
+            0,
+            &[],
+        );
         Self {
-            data: SkinObjectData::new(),
+            data,
             inner: rubato_play::skin_judge::SkinJudge::new(player, shift),
             judge_images: Default::default(),
             judge_counts: Default::default(),
@@ -280,6 +303,16 @@ mod tests {
         let judge = SkinJudgeObject::new(0, false);
         assert!(judge.now_judge_idx.is_none());
         assert!(judge.now_count_idx.is_none());
+    }
+
+    #[test]
+    fn test_new_has_default_destination() {
+        let judge = SkinJudgeObject::new(0, false);
+        assert!(
+            !judge.data.dst.is_empty(),
+            "SkinJudgeObject must have default DST entry"
+        );
+        assert!(judge.data.fixr.is_some());
     }
 
     #[test]
