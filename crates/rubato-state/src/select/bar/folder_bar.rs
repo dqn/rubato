@@ -100,74 +100,7 @@ impl FolderBar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_types::folder_data::FolderData;
-    use rubato_types::song_data::SongData;
-
-    /// Mock SongDatabaseAccessor for testing
-    struct MockSongDb {
-        songs: Vec<(String, String, Vec<SongData>)>,
-        folders: Vec<(String, String, Vec<FolderData>)>,
-    }
-
-    impl MockSongDb {
-        fn new() -> Self {
-            Self {
-                songs: Vec::new(),
-                folders: Vec::new(),
-            }
-        }
-
-        fn with_songs(mut self, key: &str, value: &str, songs: Vec<SongData>) -> Self {
-            self.songs.push((key.to_string(), value.to_string(), songs));
-            self
-        }
-
-        fn with_folders(mut self, key: &str, value: &str, folders: Vec<FolderData>) -> Self {
-            self.folders
-                .push((key.to_string(), value.to_string(), folders));
-            self
-        }
-    }
-
-    impl SongDatabaseAccessor for MockSongDb {
-        fn song_datas(&self, key: &str, value: &str) -> Vec<SongData> {
-            for (k, v, songs) in &self.songs {
-                if k == key && v == value {
-                    return songs.clone();
-                }
-            }
-            Vec::new()
-        }
-
-        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
-            Vec::new()
-        }
-
-        fn song_datas_by_sql(
-            &self,
-            _sql: &str,
-            _score: &str,
-            _scorelog: &str,
-            _info: Option<&str>,
-        ) -> Vec<SongData> {
-            Vec::new()
-        }
-
-        fn set_song_datas(&self, _songs: &[SongData]) {}
-
-        fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
-            Vec::new()
-        }
-
-        fn folder_datas(&self, key: &str, value: &str) -> Vec<FolderData> {
-            for (k, v, folders) in &self.folders {
-                if k == key && v == value {
-                    return folders.clone();
-                }
-            }
-            Vec::new()
-        }
-    }
+    use rubato_types::test_support::TestSongDb;
 
     #[test]
     fn folder_bar_get_children_returns_song_bars_when_songs_exist() {
@@ -175,7 +108,7 @@ mod tests {
         song.metadata.title = "Test Song".to_string();
         song.file.sha256 = "abc123".to_string();
 
-        let db = MockSongDb::new().with_songs("parent", "test_crc", vec![song]);
+        let db = TestSongDb::new().with_songs("parent", "test_crc", vec![song]);
 
         let bar = FolderBar::new(None, "test_crc".to_string());
         let children = bar.children(&db);
@@ -193,7 +126,7 @@ mod tests {
             ..Default::default()
         };
 
-        let db = MockSongDb::new().with_folders("parent", "test_crc", vec![folder]);
+        let db = TestSongDb::new().with_folders("parent", "test_crc", vec![folder]);
 
         let bar = FolderBar::new(None, "test_crc".to_string());
         let children = bar.children(&db);
@@ -205,7 +138,7 @@ mod tests {
 
     #[test]
     fn folder_bar_get_children_returns_empty_when_no_data() {
-        let db = MockSongDb::new();
+        let db = TestSongDb::new();
         let bar = FolderBar::new(None, "nonexistent".to_string());
         let children = bar.children(&db);
         assert!(children.is_empty());
@@ -223,7 +156,7 @@ mod tests {
             ..Default::default()
         };
 
-        let db = MockSongDb::new()
+        let db = TestSongDb::new()
             .with_songs("parent", "crc1", vec![song])
             .with_folders("parent", "crc1", vec![folder]);
 
@@ -273,7 +206,7 @@ mod tests {
             ..Default::default()
         };
 
-        let db = MockSongDb::new()
+        let db = TestSongDb::new()
             // Root level: folder with parent "e2977170"
             .with_folders("parent", "e2977170", vec![folder])
             // Songs stored under scanner's parent CRC

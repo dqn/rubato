@@ -38,52 +38,7 @@ impl SameFolderBar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_types::folder_data::FolderData;
-
-    struct MockSongDb {
-        songs: Vec<(String, String, Vec<SongData>)>,
-    }
-
-    impl MockSongDb {
-        fn new() -> Self {
-            Self { songs: Vec::new() }
-        }
-
-        fn with_songs(mut self, key: &str, value: &str, songs: Vec<SongData>) -> Self {
-            self.songs.push((key.to_string(), value.to_string(), songs));
-            self
-        }
-    }
-
-    impl SongDatabaseAccessor for MockSongDb {
-        fn song_datas(&self, key: &str, value: &str) -> Vec<SongData> {
-            for (k, v, songs) in &self.songs {
-                if k == key && v == value {
-                    return songs.clone();
-                }
-            }
-            Vec::new()
-        }
-        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
-            Vec::new()
-        }
-        fn song_datas_by_sql(
-            &self,
-            _sql: &str,
-            _score: &str,
-            _scorelog: &str,
-            _info: Option<&str>,
-        ) -> Vec<SongData> {
-            Vec::new()
-        }
-        fn set_song_datas(&self, _songs: &[SongData]) {}
-        fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
-            Vec::new()
-        }
-        fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
-            Vec::new()
-        }
-    }
+    use rubato_types::test_support::TestSongDb;
 
     #[test]
     fn same_folder_bar_get_children_returns_songs_in_folder() {
@@ -95,7 +50,7 @@ mod tests {
         song2.metadata.title = "Song B".to_string();
         song2.file.sha256 = "sha_b".to_string();
 
-        let db = MockSongDb::new().with_songs("folder", "folder_crc", vec![song1, song2]);
+        let db = TestSongDb::new().with_songs("folder", "folder_crc", vec![song1, song2]);
 
         let bar = SameFolderBar::new("Same Folder".to_string(), "folder_crc".to_string());
         let children = bar.children(&db);
@@ -107,7 +62,7 @@ mod tests {
 
     #[test]
     fn same_folder_bar_get_children_returns_empty_when_no_songs() {
-        let db = MockSongDb::new();
+        let db = TestSongDb::new();
         let bar = SameFolderBar::new("Empty".to_string(), "no_crc".to_string());
         let children = bar.children(&db);
         assert!(children.is_empty());

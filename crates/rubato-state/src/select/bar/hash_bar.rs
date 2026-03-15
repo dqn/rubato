@@ -79,42 +79,7 @@ impl HashBar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_types::folder_data::FolderData;
-
-    struct MockSongDb {
-        hash_songs: Vec<SongData>,
-    }
-
-    impl MockSongDb {
-        fn new(hash_songs: Vec<SongData>) -> Self {
-            Self { hash_songs }
-        }
-    }
-
-    impl SongDatabaseAccessor for MockSongDb {
-        fn song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
-            Vec::new()
-        }
-        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
-            self.hash_songs.clone()
-        }
-        fn song_datas_by_sql(
-            &self,
-            _sql: &str,
-            _score: &str,
-            _scorelog: &str,
-            _info: Option<&str>,
-        ) -> Vec<SongData> {
-            Vec::new()
-        }
-        fn set_song_datas(&self, _songs: &[SongData]) {}
-        fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
-            Vec::new()
-        }
-        fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
-            Vec::new()
-        }
-    }
+    use rubato_types::test_support::TestSongDb;
 
     #[test]
     fn hash_bar_get_children_returns_matched_songs() {
@@ -127,7 +92,7 @@ mod tests {
         db_song.file.sha256 = "hash_abc".to_string();
         db_song.file.set_path("test/path.bms".to_string());
 
-        let db = MockSongDb::new(vec![db_song]);
+        let db = TestSongDb::new().with_songs_by_hashes(vec![db_song]);
         let bar = HashBar::new("Test Hash".to_string(), vec![element]);
         let children = bar.children(&db);
 
@@ -142,7 +107,7 @@ mod tests {
         element.metadata.title = "Missing Song".to_string();
         element.file.sha256 = "hash_missing".to_string();
 
-        let db = MockSongDb::new(vec![]); // No songs in DB
+        let db = TestSongDb::new().with_songs_by_hashes(vec![]); // No songs in DB
         let bar = HashBar::new("Test Hash".to_string(), vec![element]);
         let children = bar.children(&db);
 
@@ -153,7 +118,7 @@ mod tests {
 
     #[test]
     fn hash_bar_get_children_empty_elements() {
-        let db = MockSongDb::new(vec![]);
+        let db = TestSongDb::new().with_songs_by_hashes(vec![]);
         let bar = HashBar::new("Empty".to_string(), vec![]);
         let children = bar.children(&db);
         assert!(children.is_empty());

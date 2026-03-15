@@ -22,4 +22,7 @@ lazy_static.workspace = true
 quick-xml.workspace = true
 urlencoding.workspace = true
 
+[features]
+test-support = []
+
 [dev-dependencies]

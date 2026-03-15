@@ -1,7 +1,7 @@
 //! Shared type definitions, configuration structures, and trait interfaces
 //! for the rubato BMS player.
 
-// Types extracted from stubs (Phase 30a/30b)
+// Shared types
 pub mod bar_sorter;
 pub mod bms_player_input_device;
 pub mod bms_player_rule;
@@ -15,7 +15,7 @@ pub mod scroll_speed_modifier;
 // IR connection registry (stub, will become a trait in Phase 6)
 pub mod ir_connection_registry;
 
-// Top-level re-exports (previously via stubs module)
+// Top-level re-exports
 pub use bar_sorter::{BarSorter, BarSorterEntry};
 pub use bms_player_rule::BMSPlayerRule;
 pub use groove_gauge::GrooveGauge;
@@ -85,7 +85,7 @@ pub mod event_id;
 pub mod timer_id;
 pub mod value_id;
 
-// Additional types from Phase 30+ stubs
+// Additional shared types
 pub mod abstract_result_access;
 pub mod event_type;
 pub mod last_played_sort;
@@ -153,3 +153,10 @@ pub mod fps_counter;
 
 // Process-global monotonic clock (equivalent to Java System.nanoTime())
 pub mod monotonic_clock;
+
+// State machine observability events (E2E testing)
+pub mod state_event;
+
+// Test support utilities (behind feature gate or in test builds)
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_support;

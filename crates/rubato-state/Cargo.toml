@@ -34,3 +34,5 @@ ffmpeg = ["rubato-play/ffmpeg"]
 [dev-dependencies]
 tempfile = { workspace = true }
 image = { workspace = true }
+rubato-types = { workspace = true, features = ["test-support"] }
+rubato-ir = { workspace = true, features = ["test-support"] }

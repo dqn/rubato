@@ -14,61 +14,10 @@ use rubato_core::main_controller::MainController;
 use rubato_core::main_loader::MainLoader;
 use rubato_core::player_config::PlayerConfig;
 use rubato_core::resolution::Resolution;
-use rubato_types::folder_data::FolderData;
-use rubato_types::song_data::SongData;
-use rubato_types::song_database_accessor::SongDatabaseAccessor;
+use rubato_types::test_support::TestSongDb;
 
 /// Global lock to serialize tests that touch shared static state (illegal songs, songdb).
 static TEST_LOCK: Mutex<()> = Mutex::new(());
-
-/// Mock SongDatabaseAccessor for testing.
-struct MockSongDb {
-    songs: Vec<SongData>,
-}
-
-impl MockSongDb {
-    fn new() -> Self {
-        Self { songs: Vec::new() }
-    }
-
-    fn _with_songs(songs: Vec<SongData>) -> Self {
-        Self { songs }
-    }
-}
-
-impl SongDatabaseAccessor for MockSongDb {
-    fn song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
-        self.songs.clone()
-    }
-
-    fn song_datas_by_hashes(&self, hashes: &[String]) -> Vec<SongData> {
-        self.songs
-            .iter()
-            .filter(|s| hashes.contains(&s.file.sha256) || hashes.contains(&s.file.md5))
-            .cloned()
-            .collect()
-    }
-
-    fn song_datas_by_sql(
-        &self,
-        _sql: &str,
-        _score: &str,
-        _scorelog: &str,
-        _info: Option<&str>,
-    ) -> Vec<SongData> {
-        Vec::new()
-    }
-
-    fn set_song_datas(&self, _songs: &[SongData]) {}
-
-    fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
-        Vec::new()
-    }
-
-    fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
-        Vec::new()
-    }
-}
 
 /// Helper: clear all global state and return the lock guard.
 fn lock_and_clear_state() -> std::sync::MutexGuard<'static, ()> {
@@ -262,7 +211,7 @@ fn play_passes_songdb_to_controller() {
     let _lock = lock_and_clear_state();
 
     // Set a mock songdb in the global slot
-    let mock = Box::new(MockSongDb::new());
+    let mock = Box::new(TestSongDb::new());
     MainLoader::set_score_database_accessor(mock);
 
     let controller = MainLoader::play(
@@ -291,7 +240,7 @@ fn play_clears_songdb_after_take() {
     let _lock = lock_and_clear_state();
 
     // Set a mock songdb
-    let mock = Box::new(MockSongDb::new());
+    let mock = Box::new(TestSongDb::new());
     MainLoader::set_score_database_accessor(mock);
 
     // First play() should take the songdb

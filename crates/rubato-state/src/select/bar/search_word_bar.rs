@@ -53,54 +53,7 @@ impl SearchWordBar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_types::folder_data::FolderData;
-
-    struct MockSongDb {
-        text_songs: Vec<(String, Vec<SongData>)>,
-    }
-
-    impl MockSongDb {
-        fn new() -> Self {
-            Self {
-                text_songs: Vec::new(),
-            }
-        }
-
-        fn with_text_results(mut self, text: &str, songs: Vec<SongData>) -> Self {
-            self.text_songs.push((text.to_string(), songs));
-            self
-        }
-    }
-
-    impl SongDatabaseAccessor for MockSongDb {
-        fn song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
-            Vec::new()
-        }
-        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
-            Vec::new()
-        }
-        fn song_datas_by_sql(
-            &self,
-            _sql: &str,
-            _score: &str,
-            _scorelog: &str,
-            _info: Option<&str>,
-        ) -> Vec<SongData> {
-            Vec::new()
-        }
-        fn set_song_datas(&self, _songs: &[SongData]) {}
-        fn song_datas_by_text(&self, text: &str) -> Vec<SongData> {
-            for (t, songs) in &self.text_songs {
-                if t == text {
-                    return songs.clone();
-                }
-            }
-            Vec::new()
-        }
-        fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
-            Vec::new()
-        }
-    }
+    use rubato_types::test_support::TestSongDb;
 
     #[test]
     fn search_word_bar_get_children_returns_matching_songs() {
@@ -108,7 +61,7 @@ mod tests {
         song.metadata.title = "Freedom Dive".to_string();
         song.file.sha256 = "fd_hash".to_string();
 
-        let db = MockSongDb::new().with_text_results("freedom", vec![song]);
+        let db = TestSongDb::new().with_songs_by_text("freedom", vec![song]);
 
         let bar = SearchWordBar::from_text("freedom".to_string());
         let children = bar.children(&db);
@@ -120,7 +73,7 @@ mod tests {
 
     #[test]
     fn search_word_bar_get_children_returns_empty_for_no_match() {
-        let db = MockSongDb::new();
+        let db = TestSongDb::new();
 
         let bar = SearchWordBar::from_text("nonexistent".to_string());
         let children = bar.children(&db);

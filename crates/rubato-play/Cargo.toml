@@ -25,3 +25,5 @@ ffmpeg = ["dep:ffmpeg-next"]
 
 [dev-dependencies]
 proptest = { workspace = true }
+rubato-types = { workspace = true, features = ["test-support"] }
+rubato-ir = { workspace = true, features = ["test-support"] }

@@ -9,37 +9,7 @@
 // Mutex wrapper — the Mutex itself can never be replaced or freed.
 
 use rubato_core::main_loader::MainLoader;
-use rubato_types::folder_data::FolderData;
-use rubato_types::song_data::SongData;
-use rubato_types::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
-
-/// Minimal mock SongDatabaseAccessor for lifecycle testing.
-struct MockSongDb;
-
-impl SongDatabaseAccessorTrait for MockSongDb {
-    fn song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
-        Vec::new()
-    }
-    fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
-        Vec::new()
-    }
-    fn song_datas_by_sql(
-        &self,
-        _sql: &str,
-        _score: &str,
-        _scorelog: &str,
-        _info: Option<&str>,
-    ) -> Vec<SongData> {
-        Vec::new()
-    }
-    fn set_song_datas(&self, _songs: &[SongData]) {}
-    fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
-        Vec::new()
-    }
-    fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
-        Vec::new()
-    }
-}
+use rubato_types::test_support::TestSongDb;
 
 // Global lock to serialize tests that touch shared statics.
 // MainLoader uses process-global OnceLock statics, so tests touching them
@@ -57,11 +27,11 @@ fn lifecycle_songdb_mutex_allows_replacement_via_clear_and_set() {
     MainLoader::clear_score_database_accessor();
 
     // First set
-    MainLoader::set_score_database_accessor(Box::new(MockSongDb));
+    MainLoader::set_score_database_accessor(Box::new(TestSongDb::new()));
 
     // Clear and re-set (this works because the Mutex inside OnceLock allows it)
     MainLoader::clear_score_database_accessor();
-    MainLoader::set_score_database_accessor(Box::new(MockSongDb));
+    MainLoader::set_score_database_accessor(Box::new(TestSongDb::new()));
 
     // Clean up
     MainLoader::clear_score_database_accessor();

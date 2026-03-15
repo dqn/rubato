@@ -304,36 +304,7 @@ mod tests {
 
     use rubato_core::course_data::{CourseData, CourseDataConstraint, TrophyData};
     use rubato_core::table_data::{TableData, TableFolder};
-    use rubato_types::folder_data::FolderData;
-    use rubato_types::song_data::SongData as TypesSongData;
-
-    /// Mock SongDatabaseAccessor for testing
-    struct MockSongDb;
-
-    impl SongDatabaseAccessor for MockSongDb {
-        fn song_datas(&self, _key: &str, _value: &str) -> Vec<TypesSongData> {
-            Vec::new()
-        }
-        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<TypesSongData> {
-            Vec::new()
-        }
-        fn song_datas_by_sql(
-            &self,
-            _sql: &str,
-            _score: &str,
-            _scorelog: &str,
-            _info: Option<&str>,
-        ) -> Vec<TypesSongData> {
-            Vec::new()
-        }
-        fn set_song_datas(&self, _songs: &[TypesSongData]) {}
-        fn song_datas_by_text(&self, _text: &str) -> Vec<TypesSongData> {
-            Vec::new()
-        }
-        fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
-            Vec::new()
-        }
-    }
+    use rubato_types::test_support::TestSongDb;
 
     fn make_song(title: &str, md5: &str, sha256: &str) -> SongData {
         let mut sd = SongData::new();
@@ -502,7 +473,7 @@ mod tests {
     #[test]
     fn test_init_sets_songdb() {
         let mut view = TableEditorView::new();
-        view.init(Box::new(MockSongDb), Box::new(MockSongDb));
+        view.init(Box::new(TestSongDb::new()), Box::new(TestSongDb::new()));
         // No panic; sub-controllers have their songdb set
     }
 

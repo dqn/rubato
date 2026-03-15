@@ -1,6 +1,6 @@
 //! Internet Ranking (IR) client for LR2IR score submission and ranking data.
 
-// Re-exports (formerly in stubs.rs)
+// Re-exports
 pub use bms_model::bms_decoder::convert_hex_string;
 pub use rubato_core::pattern::lr2_random::LR2Random;
 pub use rubato_core::pattern::random::Random;
@@ -32,3 +32,7 @@ pub mod ranking_data_cache;
 
 // IR rival provider (implementation of beatoraja-types::IRRivalProvider)
 pub mod ir_rival_provider_impl;
+
+// Test support utilities (behind feature gate or in test builds)
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_support;

@@ -448,36 +448,7 @@ impl Default for FolderEditorView {
 mod tests {
     use super::*;
     use rubato_core::table_data::TableFolder;
-    use rubato_types::folder_data::FolderData;
-    use rubato_types::song_data::SongData as TypesSongData;
-
-    /// Mock SongDatabaseAccessor for testing
-    struct MockSongDb;
-
-    impl SongDatabaseAccessor for MockSongDb {
-        fn song_datas(&self, _key: &str, _value: &str) -> Vec<TypesSongData> {
-            Vec::new()
-        }
-        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<TypesSongData> {
-            Vec::new()
-        }
-        fn song_datas_by_sql(
-            &self,
-            _sql: &str,
-            _score: &str,
-            _scorelog: &str,
-            _info: Option<&str>,
-        ) -> Vec<TypesSongData> {
-            Vec::new()
-        }
-        fn set_song_datas(&self, _songs: &[TypesSongData]) {}
-        fn song_datas_by_text(&self, _text: &str) -> Vec<TypesSongData> {
-            Vec::new()
-        }
-        fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
-            Vec::new()
-        }
-    }
+    use rubato_types::test_support::TestSongDb;
 
     fn make_song(title: &str, md5: &str, sha256: &str) -> SongData {
         let mut sd = SongData::new();
@@ -876,7 +847,7 @@ mod tests {
     #[test]
     fn test_search_songs_with_hash() {
         let mut view = FolderEditorView::new();
-        view.songdb = Some(Box::new(MockSongDb));
+        view.songdb = Some(Box::new(TestSongDb::new()));
         view.search = "abcdef1234567890abcdef1234567890".to_string();
 
         view.search_songs();
@@ -886,7 +857,7 @@ mod tests {
     #[test]
     fn test_search_songs_with_text() {
         let mut view = FolderEditorView::new();
-        view.songdb = Some(Box::new(MockSongDb));
+        view.songdb = Some(Box::new(TestSongDb::new()));
         view.search = "test query".to_string();
 
         view.search_songs();
@@ -896,7 +867,7 @@ mod tests {
     #[test]
     fn test_search_songs_short_text_skipped() {
         let mut view = FolderEditorView::new();
-        view.songdb = Some(Box::new(MockSongDb));
+        view.songdb = Some(Box::new(TestSongDb::new()));
         view.search = "a".to_string();
 
         view.search_songs();

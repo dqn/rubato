@@ -28,6 +28,9 @@ flate2 = { workspace = true }
 aes = { workspace = true }
 cbc = { workspace = true }
 
+[features]
+test-support = []
+
 [dev-dependencies]
 tempfile = { workspace = true }
 proptest = { workspace = true }

@@ -67,42 +67,7 @@ impl CommandBar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_types::folder_data::FolderData;
-
-    struct MockSongDb {
-        sql_songs: Vec<SongData>,
-    }
-
-    impl MockSongDb {
-        fn new(sql_songs: Vec<SongData>) -> Self {
-            Self { sql_songs }
-        }
-    }
-
-    impl SongDatabaseAccessor for MockSongDb {
-        fn song_datas(&self, _key: &str, _value: &str) -> Vec<SongData> {
-            Vec::new()
-        }
-        fn song_datas_by_hashes(&self, _hashes: &[String]) -> Vec<SongData> {
-            Vec::new()
-        }
-        fn song_datas_by_sql(
-            &self,
-            _sql: &str,
-            _score: &str,
-            _scorelog: &str,
-            _info: Option<&str>,
-        ) -> Vec<SongData> {
-            self.sql_songs.clone()
-        }
-        fn set_song_datas(&self, _songs: &[SongData]) {}
-        fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
-            Vec::new()
-        }
-        fn folder_datas(&self, _key: &str, _value: &str) -> Vec<FolderData> {
-            Vec::new()
-        }
-    }
+    use rubato_types::test_support::TestSongDb;
 
     #[test]
     fn command_bar_get_children_returns_sql_results() {
@@ -110,7 +75,7 @@ mod tests {
         song.metadata.title = "SQL Result Song".to_string();
         song.file.sha256 = "sql_hash".to_string();
 
-        let db = MockSongDb::new(vec![song]);
+        let db = TestSongDb::new().with_songs_by_sql(vec![song]);
         let ctx = CommandBarContext {
             score_db_path: "player/score.db",
             scorelog_db_path: "player/scorelog.db",
@@ -126,7 +91,7 @@ mod tests {
 
     #[test]
     fn command_bar_get_children_returns_empty_for_no_results() {
-        let db = MockSongDb::new(vec![]);
+        let db = TestSongDb::new().with_songs_by_sql(vec![]);
         let ctx = CommandBarContext {
             score_db_path: "player/score.db",
             scorelog_db_path: "player/scorelog.db",
