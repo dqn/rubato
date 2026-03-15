@@ -81,7 +81,9 @@ impl MusicSelector {
         };
         let path = std::path::Path::new(&path_str);
 
-        let load_success = PlayerResourceAccess::set_bms_file(res, path, mode_type, mode_id);
+        let load_success = rubato_types::player_resource_access::SessionMutation::set_bms_file(
+            res, path, mode_type, mode_id,
+        );
 
         if load_success {
             // Set table name/level from directory hierarchy

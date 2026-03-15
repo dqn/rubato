@@ -292,7 +292,7 @@ impl MainState for MusicSelector {
         // Prepare skin_bar sub-objects (sets data.draw = true on bar images).
         // Must be called before bar_renderer.prepare() which checks data.draw.
         if let Some(skin_bar) = &mut self.bar_rendering.skin_bar {
-            let timer_snapshot = rubato_skin::stubs::Timer::with_timers(
+            let timer_snapshot = rubato_skin::reexports::Timer::with_timers(
                 self.main_state_data.timer.now_time(),
                 self.main_state_data.timer.now_micro_time(),
                 self.main_state_data.timer.export_timer_array(),
@@ -341,7 +341,7 @@ impl MainState for MusicSelector {
 
         // Bar render — draw bar images, text, lamps, etc.
         {
-            let timer_snapshot = rubato_skin::stubs::Timer::with_timers(
+            let timer_snapshot = rubato_skin::reexports::Timer::with_timers(
                 self.main_state_data.timer.now_time(),
                 self.main_state_data.timer.now_micro_time(),
                 self.main_state_data.timer.export_timer_array(),
@@ -455,7 +455,7 @@ impl MainState for MusicSelector {
                 .and_then(|b| b.as_grade_bar())
                 .map(|gb| gb.course_data().clone());
             if let Some(res) = self.player_resource.as_mut() {
-                PlayerResourceAccess::set_songdata(res, song_data);
+                rubato_types::player_resource_access::SongAccess::set_songdata(res, song_data);
                 if let Some(cd) = course_data {
                     res.set_course_data(cd);
                 } else {
@@ -955,12 +955,11 @@ impl MainState for MusicSelector {
     /// Dispose — clean up bar renderer, search field, skin, and background threads.
     /// Corresponds to Java MusicSelector.dispose()
     fn dispose(&mut self) {
-        // Call parent dispose (clears skin and stage)
+        // Call parent dispose (clears skin)
         if let Some(ref mut skin) = self.main_state_data.skin {
             skin.dispose_skin();
         }
         self.main_state_data.skin = None;
-        self.main_state_data.stage = None;
 
         if let Some(bar) = &self.bar_rendering.bar {
             bar.dispose();

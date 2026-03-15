@@ -9,6 +9,7 @@ pub(crate) use rubato_types::imgui_notify::ImGuiNotify;
 pub(crate) use rubato_types::main_controller_access::MainControllerAccess;
 pub(crate) use rubato_types::main_state_access::MainStateAccess;
 pub(crate) use rubato_types::player_resource_access::PlayerResourceAccess;
+pub(crate) use rubato_types::player_resource_access::{MediaAccess, SongAccess};
 pub(crate) use rubato_types::ranking_data_cache_access::RankingDataCacheAccess;
 pub(crate) use rubato_types::screen_type::ScreenType;
 pub(crate) use rubato_types::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
@@ -119,7 +120,7 @@ pub struct IRStatus {
 
 // SongInformationAccessor: stub replaced by SongInformationDb trait (Phase 27c)
 
-// ObsListener/ObsWsClient stubs replaced by Box<dyn ObsAccess> (Phase 4)
+// ObsListener/ObsWsClient replaced by Box<dyn ObsAccess>
 // ImGuiRenderer stub replaced by Box<dyn ImGuiAccess> (Phase 4)
 
 // MusicDownloadProcessor stub removed — replaced by Box<dyn MusicDownloadAccess> (brs-4ls)
@@ -290,6 +291,11 @@ pub struct MainController {
 
     /// Debug flag
     pub debug: bool,
+
+    /// Optional event log for state machine observability (E2E testing).
+    /// When set, state transition / lifecycle / handoff events are pushed here.
+    state_event_log:
+        Option<std::sync::Arc<std::sync::Mutex<Vec<rubato_types::state_event::StateEvent>>>>,
 
     /// Loudness analyzer for volume normalization.
     ///

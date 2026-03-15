@@ -11,6 +11,6 @@ pub fn open_score_db(dir: &Path) -> ScoreDatabaseAccessor {
     let accessor =
         ScoreDatabaseAccessor::new(db_path.to_str().expect("temp path should be valid UTF-8"))
             .expect("ScoreDatabaseAccessor::new should succeed on a fresh file");
-    accessor.create_table();
+    accessor.create_table().expect("create table");
     accessor
 }

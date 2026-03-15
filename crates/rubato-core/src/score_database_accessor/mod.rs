@@ -105,22 +105,16 @@ impl ScoreDatabaseAccessor {
         Ok(Self { conn, base })
     }
 
-    pub fn create_table(&self) {
-        if let Err(e) = self.base.validate(&self.conn) {
-            log::error!("Exception during score database initialization: {}", e);
-            return;
-        }
+    pub fn create_table(&self) -> anyhow::Result<()> {
+        self.base.validate(&self.conn)?;
         if self.player_datas(1).is_empty() {
             let pd = PlayerData::default();
-            if let Err(e) = self
-                .base
+            self.base
                 .insert_with_values(&self.conn, "player", &|col_name| {
                     player_data_to_value(&pd, col_name)
-                })
-            {
-                log::error!("Exception during score database initialization: {}", e);
-            }
+                })?;
         }
+        Ok(())
     }
 
     pub fn connection(&self) -> &Connection {
@@ -129,8 +123,8 @@ impl ScoreDatabaseAccessor {
 }
 
 impl rubato_types::score_database_access::ScoreDatabaseAccess for ScoreDatabaseAccessor {
-    fn create_table(&self) {
-        ScoreDatabaseAccessor::create_table(self);
+    fn create_table(&self) -> anyhow::Result<()> {
+        ScoreDatabaseAccessor::create_table(self)
     }
 
     fn score_data(&self, sha256: &str, mode: i32) -> Option<ScoreData> {

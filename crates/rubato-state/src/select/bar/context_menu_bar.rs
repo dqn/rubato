@@ -253,7 +253,9 @@ impl ContextMenuBar {
                 let mut sd = song_for_fav.clone();
                 let new_fav = sd.favorite ^ FAVORITE_CHART;
                 sd.favorite = new_fav;
-                selector.songdb.set_song_datas(&[sd]);
+                if let Err(e) = selector.songdb.set_song_datas(&[sd]) {
+                    log::error!("Failed to set song data: {e}");
+                }
             }));
         }
         options.push(Bar::Function(Box::new(fav_chart)));
@@ -280,7 +282,9 @@ impl ContextMenuBar {
                 let mut sd = song_for_fav.clone();
                 let new_fav = sd.favorite ^ FAVORITE_SONG;
                 sd.favorite = new_fav;
-                selector.songdb.set_song_datas(&[sd]);
+                if let Err(e) = selector.songdb.set_song_datas(&[sd]) {
+                    log::error!("Failed to set song data: {e}");
+                }
             }));
         }
         options.push(Bar::Function(Box::new(fav_song)));

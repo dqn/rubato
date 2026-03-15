@@ -115,7 +115,7 @@ fn test_set_song_datas_batch() {
         make_test_song("batch_3", "sbatch_3", "Batch Song 3"),
     ];
 
-    accessor.set_song_datas(&songs);
+    accessor.set_song_datas(&songs).expect("set_song_datas");
 
     let results = accessor.song_datas("md5", "batch_1");
     assert_eq!(results.len(), 1);
@@ -393,13 +393,13 @@ fn test_set_song_datas_concurrent_no_interleaving() {
     let acc_a = Arc::clone(&accessor);
     let ba = batch_a.clone();
     let handle_a = std::thread::spawn(move || {
-        acc_a.set_song_datas(&ba);
+        acc_a.set_song_datas(&ba).expect("set_song_datas thread A");
     });
 
     let acc_b = Arc::clone(&accessor);
     let bb = batch_b.clone();
     let handle_b = std::thread::spawn(move || {
-        acc_b.set_song_datas(&bb);
+        acc_b.set_song_datas(&bb).expect("set_song_datas thread B");
     });
 
     handle_a.join().unwrap();
@@ -430,7 +430,7 @@ fn test_set_song_datas_transaction_atomicity() {
         })
         .collect();
 
-    accessor.set_song_datas(&songs);
+    accessor.set_song_datas(&songs).expect("set_song_datas");
 
     // All 10 songs must be present
     for i in 0..10 {

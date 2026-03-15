@@ -172,8 +172,10 @@ impl MusicSelector {
                     }
                 }
                 InputEvent::Exit => {
-                    if let Some(ref main) = self.main {
-                        main.exit();
+                    if let Some(ref main) = self.main
+                        && let Err(e) = main.exit()
+                    {
+                        log::error!("Failed to exit: {e}");
                     }
                 }
                 InputEvent::ChangeState(state_type) => {
@@ -456,7 +458,9 @@ impl MusicSelector {
                     .expect("player_resource is Some");
                 res.set_course_data(course_data.clone());
                 if !files.is_empty() {
-                    PlayerResourceAccess::set_bms_file(res, &files[0], mode_type, mode_id);
+                    rubato_types::player_resource_access::SessionMutation::set_bms_file(
+                        res, &files[0], mode_type, mode_id,
+                    );
                 }
             }
 

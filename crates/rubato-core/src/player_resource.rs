@@ -5,7 +5,10 @@ use bms_model::bms_model::BMSModel;
 use bms_model::bms_model_utils::set_start_note_time;
 use bms_model::chart_decoder;
 use bms_model::chart_information::ChartInformation;
-use rubato_types::player_resource_access::PlayerResourceAccess;
+use rubato_types::player_resource_access::{
+    ConfigAccess, CourseAccess, GaugeAccess, MediaAccess, PlayerResourceAccess, PlayerStateAccess,
+    ReplayAccess, ScoreAccess, SessionMutation, SongAccess,
+};
 
 use rubato_render::pixmap::Pixmap;
 
@@ -612,11 +615,7 @@ impl PlayerResource {
     }
 }
 
-impl PlayerResourceAccess for PlayerResource {
-    fn into_any_send(self: Box<Self>) -> Box<dyn Any + Send> {
-        self
-    }
-
+impl ConfigAccess for PlayerResource {
     fn config(&self) -> &Config {
         &self.config
     }
@@ -628,7 +627,9 @@ impl PlayerResourceAccess for PlayerResource {
     fn player_config_mut(&mut self) -> Option<&mut PlayerConfig> {
         Some(&mut self.pconfig)
     }
+}
 
+impl ScoreAccess for PlayerResource {
     fn score_data(&self) -> Option<&ScoreData> {
         self.score.as_ref()
     }
@@ -653,6 +654,12 @@ impl PlayerResourceAccess for PlayerResource {
         self.cscore = Some(score);
     }
 
+    fn score_data_mut(&mut self) -> Option<&mut ScoreData> {
+        self.score.as_mut()
+    }
+}
+
+impl SongAccess for PlayerResource {
     fn songdata(&self) -> Option<&rubato_types::song_data::SongData> {
         self.songdata.as_ref()
     }
@@ -665,6 +672,35 @@ impl PlayerResourceAccess for PlayerResource {
         self.songdata = data;
     }
 
+    fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
+        match self.course_bms_models() {
+            Some(models) => models
+                .iter()
+                .map(|m| {
+                    // Build SongData from model metadata without consuming the model
+                    let mut sd = rubato_types::song_data::SongData::default();
+                    sd.metadata.title = m.title.clone();
+                    sd.metadata.set_subtitle(m.sub_title.clone());
+                    sd.metadata.genre = m.genre.clone();
+                    sd.metadata.set_artist(m.artist.clone());
+                    sd.metadata.set_subartist(m.subartist.clone());
+                    if let Some(p) = m.path() {
+                        sd.file.set_path(p);
+                    }
+                    sd.file.md5 = m.md5.clone();
+                    sd.file.sha256 = m.sha256.clone();
+                    sd.chart.notes = m.total_notes();
+                    sd.chart.length = m.last_time();
+                    sd.chart.mode = m.mode().map(|mode| mode.id()).unwrap_or(0);
+                    sd
+                })
+                .collect(),
+            None => vec![],
+        }
+    }
+}
+
+impl ReplayAccess for PlayerResource {
     fn replay_data(&self) -> Option<&ReplayData> {
         self.replay.as_ref()
     }
@@ -681,6 +717,12 @@ impl PlayerResourceAccess for PlayerResource {
         self.course_replay.push(rd);
     }
 
+    fn course_replay_mut(&mut self) -> &mut Vec<ReplayData> {
+        &mut self.course_replay
+    }
+}
+
+impl CourseAccess for PlayerResource {
     fn course_data(&self) -> Option<&CourseData> {
         self.coursedata.as_ref()
     }
@@ -697,6 +739,16 @@ impl PlayerResourceAccess for PlayerResource {
         PlayerResource::constraint(self)
     }
 
+    fn set_course_data(&mut self, data: CourseData) {
+        PlayerResource::set_course_data(self, data)
+    }
+
+    fn clear_course_data(&mut self) {
+        self.coursedata = None;
+    }
+}
+
+impl GaugeAccess for PlayerResource {
     fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
         self.gauge.as_ref()
     }
@@ -716,15 +768,9 @@ impl PlayerResourceAccess for PlayerResource {
     fn course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
         &mut self.coursegauge
     }
+}
 
-    fn score_data_mut(&mut self) -> Option<&mut ScoreData> {
-        self.score.as_mut()
-    }
-
-    fn course_replay_mut(&mut self) -> &mut Vec<ReplayData> {
-        &mut self.course_replay
-    }
-
+impl PlayerStateAccess for PlayerResource {
     fn maxcombo(&self) -> i32 {
         self.maxcombo
     }
@@ -756,15 +802,9 @@ impl PlayerResourceAccess for PlayerResource {
     fn is_freq_on(&self) -> bool {
         self.freq_on
     }
+}
 
-    fn reverse_lookup_data(&self) -> Vec<String> {
-        PlayerResource::reverse_lookup_data(self)
-    }
-
-    fn reverse_lookup_levels(&self) -> Vec<String> {
-        PlayerResource::reverse_lookup_levels(self)
-    }
-
+impl SessionMutation for PlayerResource {
     fn clear(&mut self) {
         PlayerResource::clear(self)
     }
@@ -800,14 +840,6 @@ impl PlayerResourceAccess for PlayerResource {
         self.chart_option = option;
     }
 
-    fn set_course_data(&mut self, data: CourseData) {
-        PlayerResource::set_course_data(self, data)
-    }
-
-    fn clear_course_data(&mut self) {
-        self.coursedata = None;
-    }
-
     fn reload_bms_file(&mut self) {
         PlayerResource::reload_bms_file(self)
     }
@@ -823,6 +855,16 @@ impl PlayerResourceAccess for PlayerResource {
     fn next_song(&mut self) -> bool {
         PlayerResource::next_song(self)
     }
+}
+
+impl MediaAccess for PlayerResource {
+    fn reverse_lookup_data(&self) -> Vec<String> {
+        PlayerResource::reverse_lookup_data(self)
+    }
+
+    fn reverse_lookup_levels(&self) -> Vec<String> {
+        PlayerResource::reverse_lookup_levels(self)
+    }
 
     fn bms_model(&self) -> Option<&bms_model::bms_model::BMSModel> {
         PlayerResource::bms_model(self)
@@ -830,33 +872,6 @@ impl PlayerResourceAccess for PlayerResource {
 
     fn set_player_data(&mut self, player_data: rubato_types::player_data::PlayerData) {
         self.playerdata = player_data;
-    }
-
-    fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
-        match self.course_bms_models() {
-            Some(models) => models
-                .iter()
-                .map(|m| {
-                    // Build SongData from model metadata without consuming the model
-                    let mut sd = rubato_types::song_data::SongData::default();
-                    sd.metadata.title = m.title.clone();
-                    sd.metadata.set_subtitle(m.sub_title.clone());
-                    sd.metadata.genre = m.genre.clone();
-                    sd.metadata.set_artist(m.artist.clone());
-                    sd.metadata.set_subartist(m.subartist.clone());
-                    if let Some(p) = m.path() {
-                        sd.file.set_path(p);
-                    }
-                    sd.file.md5 = m.md5.clone();
-                    sd.file.sha256 = m.sha256.clone();
-                    sd.chart.notes = m.total_notes();
-                    sd.chart.length = m.last_time();
-                    sd.chart.mode = m.mode().map(|mode| mode.id()).unwrap_or(0);
-                    sd
-                })
-                .collect(),
-            None => vec![],
-        }
     }
 
     fn set_bms_banner_raw(&mut self, data: Option<(i32, i32, Vec<u8>)>) {
@@ -883,6 +898,12 @@ impl PlayerResourceAccess for PlayerResource {
 
     fn set_ranking_data_any(&mut self, data: Option<Box<dyn Any + Send + Sync>>) {
         self.ranking = data;
+    }
+}
+
+impl PlayerResourceAccess for PlayerResource {
+    fn into_any_send(self: Box<Self>) -> Box<dyn Any + Send> {
+        self
     }
 }
 
@@ -990,7 +1011,7 @@ mod tests {
         );
 
         // PlayerResourceAccess trait method should also return Some
-        let trait_songdata = PlayerResourceAccess::songdata(&resource as &dyn PlayerResourceAccess);
+        let trait_songdata = SongAccess::songdata(&resource as &dyn PlayerResourceAccess);
         assert!(
             trait_songdata.is_some(),
             "PlayerResourceAccess::songdata should return Some"

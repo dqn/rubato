@@ -44,7 +44,7 @@ fn get_song_datas_by_hashes_single_quote_handled_safely() {
         "Normal Song",
         "songs/normal.bms",
     );
-    accessor.set_song_datas(&[song]);
+    accessor.set_song_datas(&[song]).expect("set_song_datas");
 
     // A hash with a single quote is now safely parameterized
     let malicious_hash = "it'sbrokenAAAAAAAAAAAAAAAAAAAAAAAAA".to_string();
@@ -71,7 +71,9 @@ fn get_song_datas_by_hashes_injection_blocked() {
         "Song B",
         "songs/b.bms",
     );
-    accessor.set_song_datas(&[song_a, song_b]);
+    accessor
+        .set_song_datas(&[song_a, song_b])
+        .expect("set_song_datas");
 
     // Injection payload that previously broke out of IN clause
     let injected = "') OR 1=1 --AAAAAAAAAAAAAAAAAAAAAA".to_string();
@@ -98,7 +100,7 @@ fn get_song_datas_column_injection_blocked() {
         "Test Song",
         "songs/test.bms",
     );
-    accessor.set_song_datas(&[song]);
+    accessor.set_song_datas(&[song]).expect("set_song_datas");
 
     // Invalid column name returns empty (not an error)
     let results = accessor.song_datas("1=1 --", "ignored");
@@ -151,7 +153,7 @@ fn song_db_path_with_single_quote() {
         "Test Song",
         "songs/test.bms",
     );
-    accessor.set_song_datas(&[song]);
+    accessor.set_song_datas(&[song]).expect("set_song_datas");
     let results = accessor.song_datas("sha256", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     assert_eq!(results.len(), 1, "DB with quoted path should be functional");
 

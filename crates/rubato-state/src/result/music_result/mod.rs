@@ -689,7 +689,6 @@ impl MainState for MusicResult {
             skin.dispose_skin();
         }
         self.main_data.skin = None;
-        self.main_data.stage = None;
     }
 }
 
@@ -742,11 +741,7 @@ mod tests {
         }
     }
 
-    impl PlayerResourceAccess for MouseResultResourceAccess {
-        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
-            self
-        }
-
+    impl rubato_types::player_resource_access::ConfigAccess for MouseResultResourceAccess {
         fn config(&self) -> &rubato_types::config::Config {
             &self.config
         }
@@ -758,7 +753,9 @@ mod tests {
         fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
             Some(&mut self.player_config)
         }
+    }
 
+    impl rubato_types::player_resource_access::ScoreAccess for MouseResultResourceAccess {
         fn score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
             self.score_data.as_ref()
         }
@@ -777,6 +774,12 @@ mod tests {
 
         fn set_course_score_data(&mut self, _score: rubato_core::score_data::ScoreData) {}
 
+        fn score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
+            self.score_data.as_mut()
+        }
+    }
+
+    impl rubato_types::player_resource_access::SongAccess for MouseResultResourceAccess {
         fn songdata(&self) -> Option<&rubato_types::song_data::SongData> {
             self.song_data.as_ref()
         }
@@ -789,6 +792,12 @@ mod tests {
             self.song_data = data;
         }
 
+        fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
+            vec![]
+        }
+    }
+
+    impl rubato_types::player_resource_access::ReplayAccess for MouseResultResourceAccess {
         fn replay_data(&self) -> Option<&rubato_core::replay_data::ReplayData> {
             self.replay_data.as_ref()
         }
@@ -805,6 +814,12 @@ mod tests {
             self.course_replay.push(rd);
         }
 
+        fn course_replay_mut(&mut self) -> &mut Vec<rubato_core::replay_data::ReplayData> {
+            &mut self.course_replay
+        }
+    }
+
+    impl rubato_types::player_resource_access::CourseAccess for MouseResultResourceAccess {
         fn course_data(&self) -> Option<&rubato_types::course_data::CourseData> {
             self.course_data.as_ref()
         }
@@ -821,6 +836,16 @@ mod tests {
             vec![]
         }
 
+        fn set_course_data(&mut self, data: rubato_types::course_data::CourseData) {
+            self.course_data = Some(data);
+        }
+
+        fn clear_course_data(&mut self) {
+            self.course_data = None;
+        }
+    }
+
+    impl rubato_types::player_resource_access::GaugeAccess for MouseResultResourceAccess {
         fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
             None
         }
@@ -840,15 +865,9 @@ mod tests {
         fn course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
             &mut self.course_gauge
         }
+    }
 
-        fn score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
-            self.score_data.as_mut()
-        }
-
-        fn course_replay_mut(&mut self) -> &mut Vec<rubato_core::replay_data::ReplayData> {
-            &mut self.course_replay
-        }
-
+    impl rubato_types::player_resource_access::PlayerStateAccess for MouseResultResourceAccess {
         fn maxcombo(&self) -> i32 {
             0
         }
@@ -878,15 +897,9 @@ mod tests {
         fn is_freq_on(&self) -> bool {
             false
         }
+    }
 
-        fn reverse_lookup_data(&self) -> Vec<String> {
-            vec![]
-        }
-
-        fn reverse_lookup_levels(&self) -> Vec<String> {
-            vec![]
-        }
-
+    impl rubato_types::player_resource_access::SessionMutation for MouseResultResourceAccess {
         fn clear(&mut self) {}
 
         fn set_bms_file(&mut self, _path: &Path, _mode_type: i32, _mode_id: i32) -> bool {
@@ -909,17 +922,21 @@ mod tests {
 
         fn set_chart_option_data(&mut self, _option: Option<rubato_core::replay_data::ReplayData>) {
         }
+    }
 
-        fn set_course_data(&mut self, data: rubato_types::course_data::CourseData) {
-            self.course_data = Some(data);
-        }
-
-        fn clear_course_data(&mut self) {
-            self.course_data = None;
-        }
-
-        fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
+    impl rubato_types::player_resource_access::MediaAccess for MouseResultResourceAccess {
+        fn reverse_lookup_data(&self) -> Vec<String> {
             vec![]
+        }
+
+        fn reverse_lookup_levels(&self) -> Vec<String> {
+            vec![]
+        }
+    }
+
+    impl PlayerResourceAccess for MouseResultResourceAccess {
+        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
+            self
         }
     }
 
@@ -1013,10 +1030,9 @@ mod tests {
     #[test]
     fn test_dispose_clears_skin() {
         let mut mr = MusicResult::default();
-        // main_data.skin and stage should be None after dispose
+        // main_data.skin should be None after dispose
         <MusicResult as MainState>::dispose(&mut mr);
         assert!(mr.main_data.skin.is_none());
-        assert!(mr.main_data.stage.is_none());
     }
 
     #[test]
@@ -1152,7 +1168,6 @@ mod tests {
         <MusicResult as MainState>::shutdown(&mut mr);
         <MusicResult as MainState>::dispose(&mut mr);
         assert!(mr.main_data.skin.is_none());
-        assert!(mr.main_data.stage.is_none());
     }
 
     #[test]

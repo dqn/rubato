@@ -444,7 +444,9 @@ mod tests {
             Vec::new()
         }
 
-        fn set_song_datas(&self, _songs: &[SongData]) {}
+        fn set_song_datas(&self, _songs: &[SongData]) -> anyhow::Result<()> {
+            Ok(())
+        }
 
         fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
             Vec::new()

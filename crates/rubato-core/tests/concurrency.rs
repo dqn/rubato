@@ -24,7 +24,7 @@ fn concurrency_score_db_read_access_separate_connections() {
     // Create and populate the DB
     {
         let accessor = ScoreDatabaseAccessor::new(&db_path.to_string_lossy()).unwrap();
-        accessor.create_table();
+        accessor.create_table().expect("create table");
 
         // Insert test data
         let score = ScoreData {
@@ -74,7 +74,7 @@ fn concurrency_score_db_read_write_access() {
     // Create the DB with initial data
     {
         let accessor = ScoreDatabaseAccessor::new(&db_path.to_string_lossy()).unwrap();
-        accessor.create_table();
+        accessor.create_table().expect("create table");
 
         let score = ScoreData {
             sha256: "rw_test_hash".to_string(),

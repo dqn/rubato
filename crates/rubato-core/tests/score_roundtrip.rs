@@ -64,7 +64,7 @@ fn score_data_roundtrip() {
 
     let accessor =
         ScoreDatabaseAccessor::new(db_path.to_str().unwrap()).expect("Failed to create accessor");
-    accessor.create_table();
+    accessor.create_table().expect("create table");
 
     let score = make_test_score();
     accessor.set_score_data(&score);
@@ -126,7 +126,7 @@ fn score_data_roundtrip_with_different_mode() {
 
     let accessor =
         ScoreDatabaseAccessor::new(db_path.to_str().unwrap()).expect("Failed to create accessor");
-    accessor.create_table();
+    accessor.create_table().expect("create table");
 
     // Insert same hash with two different modes
     let mut score_mode0 = make_test_score();
@@ -165,7 +165,7 @@ fn score_data_get_nonexistent_returns_none() {
 
     let accessor =
         ScoreDatabaseAccessor::new(db_path.to_str().unwrap()).expect("Failed to create accessor");
-    accessor.create_table();
+    accessor.create_table().expect("create table");
 
     let result = accessor.score_data("nonexistent_hash", 0);
     assert!(result.is_none());
@@ -178,7 +178,7 @@ fn score_data_overwrite_same_key() {
 
     let accessor =
         ScoreDatabaseAccessor::new(db_path.to_str().unwrap()).expect("Failed to create accessor");
-    accessor.create_table();
+    accessor.create_table().expect("create table");
 
     let mut score = make_test_score();
     score.clear = 5;

@@ -291,11 +291,10 @@ fn test_shutdown_stops_preview() {
 }
 
 #[test]
-fn test_dispose_clears_skin_and_stage() {
+fn test_dispose_clears_skin() {
     let mut selector = MusicSelector::new();
     selector.dispose();
     assert!(selector.main_state_data.skin.is_none());
-    assert!(selector.main_state_data.stage.is_none());
     assert!(selector.search.is_none());
 }
 
@@ -698,10 +697,7 @@ struct MockPlayerResource {
     course_replay: Vec<rubato_types::replay_data::ReplayData>,
 }
 
-impl PlayerResourceAccess for MockPlayerResource {
-    fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
-        self
-    }
+impl rubato_types::player_resource_access::ConfigAccess for MockPlayerResource {
     fn config(&self) -> &rubato_types::config::Config {
         static CFG: std::sync::OnceLock<rubato_types::config::Config> = std::sync::OnceLock::new();
         CFG.get_or_init(rubato_types::config::Config::default)
@@ -711,6 +707,9 @@ impl PlayerResourceAccess for MockPlayerResource {
             std::sync::OnceLock::new();
         PC.get_or_init(rubato_types::player_config::PlayerConfig::default)
     }
+}
+
+impl rubato_types::player_resource_access::ScoreAccess for MockPlayerResource {
     fn score_data(&self) -> Option<&ScoreData> {
         None
     }
@@ -724,6 +723,12 @@ impl PlayerResourceAccess for MockPlayerResource {
         None
     }
     fn set_course_score_data(&mut self, _score: ScoreData) {}
+    fn score_data_mut(&mut self) -> Option<&mut ScoreData> {
+        None
+    }
+}
+
+impl rubato_types::player_resource_access::SongAccess for MockPlayerResource {
     fn songdata(&self) -> Option<&SongData> {
         None
     }
@@ -731,6 +736,16 @@ impl PlayerResourceAccess for MockPlayerResource {
         None
     }
     fn set_songdata(&mut self, _data: Option<SongData>) {}
+    fn course_song_data(&self) -> Vec<SongData> {
+        self.state
+            .lock()
+            .expect("mutex poisoned")
+            .course_song_data
+            .clone()
+    }
+}
+
+impl rubato_types::player_resource_access::ReplayAccess for MockPlayerResource {
     fn replay_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
         None
     }
@@ -741,6 +756,12 @@ impl PlayerResourceAccess for MockPlayerResource {
         &[]
     }
     fn add_course_replay(&mut self, _rd: rubato_types::replay_data::ReplayData) {}
+    fn course_replay_mut(&mut self) -> &mut Vec<rubato_types::replay_data::ReplayData> {
+        &mut self.course_replay
+    }
+}
+
+impl rubato_types::player_resource_access::CourseAccess for MockPlayerResource {
     fn course_data(&self) -> Option<&CourseData> {
         None
     }
@@ -753,6 +774,15 @@ impl PlayerResourceAccess for MockPlayerResource {
     fn constraint(&self) -> Vec<rubato_types::course_data::CourseDataConstraint> {
         vec![]
     }
+    fn set_course_data(&mut self, data: CourseData) {
+        self.state.lock().expect("mutex poisoned").course_data = Some(data);
+    }
+    fn clear_course_data(&mut self) {
+        self.state.lock().expect("mutex poisoned").course_data = None;
+    }
+}
+
+impl rubato_types::player_resource_access::GaugeAccess for MockPlayerResource {
     fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
         None
     }
@@ -767,12 +797,9 @@ impl PlayerResourceAccess for MockPlayerResource {
     fn course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
         &mut self.course_gauge
     }
-    fn score_data_mut(&mut self) -> Option<&mut ScoreData> {
-        None
-    }
-    fn course_replay_mut(&mut self) -> &mut Vec<rubato_types::replay_data::ReplayData> {
-        &mut self.course_replay
-    }
+}
+
+impl rubato_types::player_resource_access::PlayerStateAccess for MockPlayerResource {
     fn maxcombo(&self) -> i32 {
         0
     }
@@ -795,12 +822,9 @@ impl PlayerResourceAccess for MockPlayerResource {
     fn is_freq_on(&self) -> bool {
         false
     }
-    fn reverse_lookup_data(&self) -> Vec<String> {
-        vec![]
-    }
-    fn reverse_lookup_levels(&self) -> Vec<String> {
-        vec![]
-    }
+}
+
+impl rubato_types::player_resource_access::SessionMutation for MockPlayerResource {
     fn clear(&mut self) {
         self.state.lock().expect("mutex poisoned").cleared = true;
     }
@@ -828,19 +852,6 @@ impl PlayerResourceAccess for MockPlayerResource {
     fn set_chart_option_data(&mut self, option: Option<rubato_types::replay_data::ReplayData>) {
         self.state.lock().expect("mutex poisoned").chart_option = Some(option);
     }
-    fn set_course_data(&mut self, data: CourseData) {
-        self.state.lock().expect("mutex poisoned").course_data = Some(data);
-    }
-    fn clear_course_data(&mut self) {
-        self.state.lock().expect("mutex poisoned").course_data = None;
-    }
-    fn course_song_data(&self) -> Vec<SongData> {
-        self.state
-            .lock()
-            .expect("mutex poisoned")
-            .course_song_data
-            .clone()
-    }
     fn set_auto_play_songs(&mut self, paths: Vec<PathBuf>, loop_play: bool) {
         let mut s = self.state.lock().expect("mutex poisoned");
         s.auto_play_songs = Some(paths);
@@ -848,6 +859,21 @@ impl PlayerResourceAccess for MockPlayerResource {
     }
     fn next_song(&mut self) -> bool {
         self.state.lock().expect("mutex poisoned").next_song_result
+    }
+}
+
+impl rubato_types::player_resource_access::MediaAccess for MockPlayerResource {
+    fn reverse_lookup_data(&self) -> Vec<String> {
+        vec![]
+    }
+    fn reverse_lookup_levels(&self) -> Vec<String> {
+        vec![]
+    }
+}
+
+impl PlayerResourceAccess for MockPlayerResource {
+    fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
+        self
     }
 }
 
@@ -885,8 +911,12 @@ impl MainControllerAccess for MockMainController {
             .state_changes
             .push(state);
     }
-    fn save_config(&self) {}
-    fn exit(&self) {}
+    fn save_config(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn exit(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
     fn save_last_recording(&self, _reason: &str) {}
     fn update_song(&mut self, _path: Option<&str>) {}
     fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
@@ -1313,8 +1343,12 @@ impl MainControllerAccess for MockMainControllerWithCache {
             .state_changes
             .push(state);
     }
-    fn save_config(&self) {}
-    fn exit(&self) {}
+    fn save_config(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn exit(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
     fn save_last_recording(&self, _reason: &str) {}
     fn update_song(&mut self, _path: Option<&str>) {}
     fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {

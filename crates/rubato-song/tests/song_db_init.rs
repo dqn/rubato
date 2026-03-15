@@ -43,7 +43,7 @@ fn insert_and_query_song() {
     let (accessor, _tmpdir) = create_temp_accessor();
 
     let song = make_song("abc123", "Test Song", "songs/test.bms");
-    accessor.set_song_datas(&[song]);
+    accessor.set_song_datas(&[song]).expect("set_song_datas");
 
     let results = accessor.song_datas("sha256", "abc123");
     assert_eq!(results.len(), 1);
@@ -58,7 +58,7 @@ fn insert_and_query_by_text() {
 
     let mut song = make_song("sha_text1", "Starlight Symphony", "songs/starlight.bms");
     song.metadata.artist = "Aurora".to_string();
-    accessor.set_song_datas(&[song]);
+    accessor.set_song_datas(&[song]).expect("set_song_datas");
 
     // Search by title fragment
     let results = accessor.song_datas_by_text("Starlight");
@@ -100,7 +100,7 @@ fn reopen_preserves_data() {
     {
         let accessor = SQLiteSongDatabaseAccessor::new(&db_path.to_string_lossy(), &[]).unwrap();
         let song = make_song("persist_sha256", "Persistent Song", "songs/persist.bms");
-        accessor.set_song_datas(&[song]);
+        accessor.set_song_datas(&[song]).expect("set_song_datas");
 
         // Sanity check within the same session.
         let results = accessor.song_datas("sha256", "persist_sha256");

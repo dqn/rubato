@@ -32,7 +32,7 @@ fn set_player_data_does_not_panic() {
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("test_score.db");
     let accessor = ScoreDatabaseAccessor::new(db_path.to_str().unwrap()).unwrap();
-    accessor.create_table();
+    accessor.create_table().expect("create table");
 
     let pd = PlayerData {
         playcount: 10,

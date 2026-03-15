@@ -20,7 +20,7 @@ pub trait SongDatabaseAccessor: Send + Sync {
     ) -> Vec<SongData>;
 
     /// Set song data
-    fn set_song_datas(&self, songs: &[SongData]);
+    fn set_song_datas(&self, songs: &[SongData]) -> anyhow::Result<()>;
 
     /// Search song data by text
     fn song_datas_by_text(&self, text: &str) -> Vec<SongData>;

@@ -678,7 +678,6 @@ impl CourseResult {
             skin.dispose_skin();
         }
         self.main_data.skin = None;
-        self.main_data.stage = None;
     }
 }
 
@@ -868,16 +867,14 @@ mod tests {
     }
 
     #[test]
-    fn test_dispose_clears_skin_and_stage() {
+    fn test_dispose_clears_skin() {
         let mut cr = make_default();
         // Assign a skin so we can verify it gets cleared
         cr.main_data.skin = Some(Box::new(ExecuteEventSkin { event_id: 0 }));
-        cr.main_data.stage = Some(rubato_core::main_state::StageStub);
 
         <CourseResult as MainState>::dispose(&mut cr);
 
         assert!(cr.main_data.skin.is_none(), "dispose should clear skin");
-        assert!(cr.main_data.stage.is_none(), "dispose should clear stage");
     }
 
     // ---- IR processing tests ----
@@ -993,10 +990,7 @@ mod tests {
         }
     }
 
-    impl rubato_types::player_resource_access::PlayerResourceAccess for MockPlayerResourceForIR {
-        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
-            self
-        }
+    impl rubato_types::player_resource_access::ConfigAccess for MockPlayerResourceForIR {
         fn config(&self) -> &rubato_types::config::Config {
             static CONFIG: std::sync::OnceLock<rubato_types::config::Config> =
                 std::sync::OnceLock::new();
@@ -1008,6 +1002,9 @@ mod tests {
         fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
             Some(&mut self.player_config)
         }
+    }
+
+    impl rubato_types::player_resource_access::ScoreAccess for MockPlayerResourceForIR {
         fn score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
             None
         }
@@ -1023,12 +1020,25 @@ mod tests {
         fn set_course_score_data(&mut self, score: rubato_core::score_data::ScoreData) {
             self.course_score = Some(score);
         }
+        fn score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
+            None
+        }
+    }
+
+    impl rubato_types::player_resource_access::SongAccess for MockPlayerResourceForIR {
         fn songdata(&self) -> Option<&rubato_types::song_data::SongData> {
             self.song_data.as_ref()
         }
         fn songdata_mut(&mut self) -> Option<&mut rubato_types::song_data::SongData> {
             self.song_data.as_mut()
         }
+        fn set_songdata(&mut self, _data: Option<rubato_types::song_data::SongData>) {}
+        fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
+            vec![]
+        }
+    }
+
+    impl rubato_types::player_resource_access::ReplayAccess for MockPlayerResourceForIR {
         fn replay_data(&self) -> Option<&rubato_core::replay_data::ReplayData> {
             self.replay_data.as_ref()
         }
@@ -1041,6 +1051,12 @@ mod tests {
         fn add_course_replay(&mut self, rd: rubato_core::replay_data::ReplayData) {
             self.course_replay.push(rd);
         }
+        fn course_replay_mut(&mut self) -> &mut Vec<rubato_core::replay_data::ReplayData> {
+            &mut self.course_replay
+        }
+    }
+
+    impl rubato_types::player_resource_access::CourseAccess for MockPlayerResourceForIR {
         fn course_data(&self) -> Option<&rubato_core::course_data::CourseData> {
             self.course_data.as_ref()
         }
@@ -1053,6 +1069,11 @@ mod tests {
         fn constraint(&self) -> Vec<rubato_core::course_data::CourseDataConstraint> {
             vec![]
         }
+        fn set_course_data(&mut self, _data: rubato_core::course_data::CourseData) {}
+        fn clear_course_data(&mut self) {}
+    }
+
+    impl rubato_types::player_resource_access::GaugeAccess for MockPlayerResourceForIR {
         fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
             None
         }
@@ -1068,12 +1089,9 @@ mod tests {
         fn course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
             &mut self.course_gauge
         }
-        fn score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
-            None
-        }
-        fn course_replay_mut(&mut self) -> &mut Vec<rubato_core::replay_data::ReplayData> {
-            &mut self.course_replay
-        }
+    }
+
+    impl rubato_types::player_resource_access::PlayerStateAccess for MockPlayerResourceForIR {
         fn maxcombo(&self) -> i32 {
             0
         }
@@ -1096,12 +1114,9 @@ mod tests {
         fn is_freq_on(&self) -> bool {
             false
         }
-        fn reverse_lookup_data(&self) -> Vec<String> {
-            vec![]
-        }
-        fn reverse_lookup_levels(&self) -> Vec<String> {
-            vec![]
-        }
+    }
+
+    impl rubato_types::player_resource_access::SessionMutation for MockPlayerResourceForIR {
         fn clear(&mut self) {}
         fn set_bms_file(
             &mut self,
@@ -1122,11 +1137,20 @@ mod tests {
         ) {
         }
         fn set_chart_option_data(&mut self, _data: Option<rubato_core::replay_data::ReplayData>) {}
-        fn set_course_data(&mut self, _data: rubato_core::course_data::CourseData) {}
-        fn clear_course_data(&mut self) {}
-        fn set_songdata(&mut self, _data: Option<rubato_types::song_data::SongData>) {}
-        fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
+    }
+
+    impl rubato_types::player_resource_access::MediaAccess for MockPlayerResourceForIR {
+        fn reverse_lookup_data(&self) -> Vec<String> {
             vec![]
+        }
+        fn reverse_lookup_levels(&self) -> Vec<String> {
+            vec![]
+        }
+    }
+
+    impl rubato_types::player_resource_access::PlayerResourceAccess for MockPlayerResourceForIR {
+        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
+            self
         }
     }
 

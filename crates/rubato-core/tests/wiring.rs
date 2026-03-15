@@ -21,7 +21,7 @@ fn wiring_score_database_accessor_open_migrate_query() {
     let accessor = ScoreDatabaseAccessor::new(&db_path.to_string_lossy()).unwrap();
 
     // Migrate — creates tables (score, player, info)
-    accessor.create_table();
+    accessor.create_table().expect("create table");
 
     // Query — should return None (no data)
     let score = accessor.score_data("nonexistent_hash", 0);
@@ -45,7 +45,7 @@ fn wiring_score_database_accessor_insert_and_query_roundtrip() {
     let db_path = tmpdir.path().join("score.db");
 
     let accessor = ScoreDatabaseAccessor::new(&db_path.to_string_lossy()).unwrap();
-    accessor.create_table();
+    accessor.create_table().expect("create table");
 
     // Insert a score
     let score = ScoreData {

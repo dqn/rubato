@@ -68,7 +68,9 @@ impl PlayDataAccessor {
 
         let scoredb = match ScoreDatabaseAccessor::new(&score_path) {
             Ok(db) => {
-                db.create_table();
+                if let Err(e) = db.create_table() {
+                    log::error!("Failed to create score table: {e}");
+                }
                 Some(db)
             }
             Err(e) => {

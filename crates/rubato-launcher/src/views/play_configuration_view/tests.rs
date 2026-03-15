@@ -706,7 +706,7 @@ fn populate_song_db(songdb_path: &str, bmsroot: &str, songs: &[(&str, &str, i32)
             sd
         })
         .collect();
-    songdb.set_song_datas(&song_datas);
+    songdb.set_song_datas(&song_datas).expect("set_song_datas");
 }
 
 #[test]

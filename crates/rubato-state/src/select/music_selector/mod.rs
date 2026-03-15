@@ -6,7 +6,9 @@ pub(crate) use rubato_core::pixmap_resource_pool::PixmapResourcePool;
 pub(crate) use rubato_core::timer_manager::TimerManager;
 pub(crate) use rubato_ir::ranking_data;
 pub(crate) use rubato_types::main_controller_access::MainControllerAccess;
-pub(crate) use rubato_types::player_resource_access::PlayerResourceAccess;
+pub(crate) use rubato_types::player_resource_access::{
+    CourseAccess, MediaAccess, SessionMutation, SongAccess,
+};
 
 pub(crate) use super::bar::bar::Bar;
 pub(crate) use super::bar::grade_bar::GradeBar;
@@ -509,14 +511,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
     }
 }
 
-/// Minimal adapter implementing rubato_skin::stubs::MainState for BarRenderer's RenderContext.
+/// Minimal adapter implementing rubato_skin::reexports::MainState for BarRenderer's RenderContext.
 /// Delegates timer() to a Timer snapshot; other methods use defaults.
 struct MinimalSkinMainState<'a> {
-    timer: &'a rubato_skin::stubs::Timer,
+    timer: &'a rubato_skin::reexports::Timer,
 }
 
 impl<'a> MinimalSkinMainState<'a> {
-    fn new(timer: &'a rubato_skin::stubs::Timer) -> Self {
+    fn new(timer: &'a rubato_skin::reexports::Timer) -> Self {
         Self { timer }
     }
 }
@@ -544,7 +546,7 @@ impl rubato_types::timer_access::TimerAccess for MinimalSkinMainState<'_> {
 
 impl rubato_types::skin_render_context::SkinRenderContext for MinimalSkinMainState<'_> {}
 
-impl rubato_skin::stubs::MainState for MinimalSkinMainState<'_> {}
+impl rubato_skin::reexports::MainState for MinimalSkinMainState<'_> {}
 
 /// Preview music and note graph state.
 pub struct PreviewState {

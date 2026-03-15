@@ -135,7 +135,9 @@ impl RivalDataAccessor {
                                 Ok(scores) => {
                                     if let Ok(scoredb) = ScoreDatabaseAccessor::new(&db_path_clone)
                                     {
-                                        scoredb.create_table();
+                                        if let Err(e) = scoredb.create_table() {
+                                            log::error!("Failed to create score table: {e}");
+                                        }
                                         scoredb.set_information(&info_clone);
                                         let refs: Vec<&rubato_types::score_data::ScoreData> =
                                             scores.iter().collect();

@@ -382,7 +382,6 @@ impl MainState for MusicDecide {
             skin.dispose_skin();
         }
         self.data.skin = None;
-        self.data.stage = None;
     }
 
     fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
@@ -569,9 +568,13 @@ mod tests {
                 .push(state);
         }
 
-        fn save_config(&self) {}
+        fn save_config(&self) -> anyhow::Result<()> {
+            Ok(())
+        }
 
-        fn exit(&self) {}
+        fn exit(&self) -> anyhow::Result<()> {
+            Ok(())
+        }
 
         fn save_last_recording(&self, _reason: &str) {}
 
@@ -745,11 +748,10 @@ mod tests {
     }
 
     #[test]
-    fn test_dispose_clears_skin_and_stage() {
+    fn test_dispose_clears_skin() {
         let mut decide = make_decide();
         decide.dispose();
         assert!(decide.data.skin.is_none());
-        assert!(decide.data.stage.is_none());
     }
 
     #[test]
@@ -778,16 +780,16 @@ mod tests {
         }
     }
 
-    impl PlayerResourceAccess for SongLengthResource {
-        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
-            self
-        }
+    impl rubato_types::player_resource_access::ConfigAccess for SongLengthResource {
         fn config(&self) -> &rubato_types::config::Config {
             &self.config
         }
         fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
             &self.player_config
         }
+    }
+
+    impl rubato_types::player_resource_access::ScoreAccess for SongLengthResource {
         fn score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
             None
         }
@@ -801,6 +803,12 @@ mod tests {
             None
         }
         fn set_course_score_data(&mut self, _score: rubato_core::score_data::ScoreData) {}
+        fn score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
+            None
+        }
+    }
+
+    impl rubato_types::player_resource_access::SongAccess for SongLengthResource {
         fn songdata(&self) -> Option<&rubato_types::song_data::SongData> {
             Some(&self.song)
         }
@@ -808,6 +816,12 @@ mod tests {
             Some(&mut self.song)
         }
         fn set_songdata(&mut self, _data: Option<rubato_types::song_data::SongData>) {}
+        fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
+            vec![]
+        }
+    }
+
+    impl rubato_types::player_resource_access::ReplayAccess for SongLengthResource {
         fn replay_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
             None
         }
@@ -818,6 +832,14 @@ mod tests {
             &[]
         }
         fn add_course_replay(&mut self, _rd: rubato_types::replay_data::ReplayData) {}
+        fn course_replay_mut(&mut self) -> &mut Vec<rubato_types::replay_data::ReplayData> {
+            static mut EMPTY: Vec<rubato_types::replay_data::ReplayData> = Vec::new();
+            // SAFETY: only used in tests, never concurrently
+            unsafe { &mut *std::ptr::addr_of_mut!(EMPTY) }
+        }
+    }
+
+    impl rubato_types::player_resource_access::CourseAccess for SongLengthResource {
         fn course_data(&self) -> Option<&rubato_types::course_data::CourseData> {
             None
         }
@@ -830,6 +852,11 @@ mod tests {
         fn constraint(&self) -> Vec<rubato_types::course_data::CourseDataConstraint> {
             vec![]
         }
+        fn set_course_data(&mut self, _data: rubato_types::course_data::CourseData) {}
+        fn clear_course_data(&mut self) {}
+    }
+
+    impl rubato_types::player_resource_access::GaugeAccess for SongLengthResource {
         fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
             None
         }
@@ -846,14 +873,9 @@ mod tests {
             // SAFETY: only used in tests, never concurrently
             unsafe { &mut *std::ptr::addr_of_mut!(EMPTY) }
         }
-        fn score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
-            None
-        }
-        fn course_replay_mut(&mut self) -> &mut Vec<rubato_types::replay_data::ReplayData> {
-            static mut EMPTY: Vec<rubato_types::replay_data::ReplayData> = Vec::new();
-            // SAFETY: only used in tests, never concurrently
-            unsafe { &mut *std::ptr::addr_of_mut!(EMPTY) }
-        }
+    }
+
+    impl rubato_types::player_resource_access::PlayerStateAccess for SongLengthResource {
         fn maxcombo(&self) -> i32 {
             0
         }
@@ -876,12 +898,9 @@ mod tests {
         fn is_freq_on(&self) -> bool {
             false
         }
-        fn reverse_lookup_data(&self) -> Vec<String> {
-            vec![]
-        }
-        fn reverse_lookup_levels(&self) -> Vec<String> {
-            vec![]
-        }
+    }
+
+    impl rubato_types::player_resource_access::SessionMutation for SongLengthResource {
         fn clear(&mut self) {}
         fn set_bms_file(
             &mut self,
@@ -906,10 +925,20 @@ mod tests {
             _option: Option<rubato_types::replay_data::ReplayData>,
         ) {
         }
-        fn set_course_data(&mut self, _data: rubato_types::course_data::CourseData) {}
-        fn clear_course_data(&mut self) {}
-        fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
+    }
+
+    impl rubato_types::player_resource_access::MediaAccess for SongLengthResource {
+        fn reverse_lookup_data(&self) -> Vec<String> {
             vec![]
+        }
+        fn reverse_lookup_levels(&self) -> Vec<String> {
+            vec![]
+        }
+    }
+
+    impl PlayerResourceAccess for SongLengthResource {
+        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
+            self
         }
     }
 

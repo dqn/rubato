@@ -161,9 +161,13 @@ impl MainControllerAccess for TestMainControllerAccess {
 
     fn change_state(&mut self, _state: rubato_core::main_state::MainStateType) {}
 
-    fn save_config(&self) {}
+    fn save_config(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
 
-    fn exit(&self) {}
+    fn exit(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
 
     fn save_last_recording(&self, _reason: &str) {}
 

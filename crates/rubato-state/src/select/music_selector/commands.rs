@@ -282,7 +282,9 @@ impl MusicSelector {
                             2 => rubato_types::song_data::INVISIBLE_SONG,
                             _ => 0,
                         };
-                    self.songdb.set_song_datas(&[sd]);
+                    if let Err(e) = self.songdb.set_song_datas(&[sd]) {
+                        log::error!("Failed to set song data: {e}");
+                    }
                 }
                 self.play_option_change();
             }
@@ -307,7 +309,9 @@ impl MusicSelector {
                             2 => rubato_types::song_data::INVISIBLE_CHART,
                             _ => 0,
                         };
-                    self.songdb.set_song_datas(&[sd]);
+                    if let Err(e) = self.songdb.set_song_datas(&[sd]) {
+                        log::error!("Failed to set song data: {e}");
+                    }
                 }
                 self.play_option_change();
             }

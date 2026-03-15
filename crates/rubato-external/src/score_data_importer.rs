@@ -15,7 +15,9 @@ impl ScoreDataImporter {
 
     pub fn import_from_lr2_score_database(&self, path: &str, songdb: &dyn SongDatabaseAccessor) {
         let clears: [i32; 7] = [0, 1, 4, 5, 6, 8, 9];
-        self.scoredb.create_table();
+        if let Err(e) = self.scoredb.create_table() {
+            log::error!("Failed to create score table: {e}");
+        }
 
         match Self::read_lr2_scores(path) {
             Ok(scores) => {

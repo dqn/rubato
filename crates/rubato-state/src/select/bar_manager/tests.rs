@@ -1484,7 +1484,9 @@ impl SongDatabaseAccessor for FolderStatusMockDb {
     ) -> Vec<SongData> {
         Vec::new()
     }
-    fn set_song_datas(&self, _songs: &[SongData]) {}
+    fn set_song_datas(&self, _songs: &[SongData]) -> anyhow::Result<()> {
+        Ok(())
+    }
     fn song_datas_by_text(&self, _text: &str) -> Vec<SongData> {
         self.songs_by_text.clone()
     }

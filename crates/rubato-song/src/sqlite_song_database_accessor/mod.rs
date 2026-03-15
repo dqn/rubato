@@ -634,32 +634,25 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
         self.query_folders(&sql, &[&value as &dyn rusqlite::types::ToSql])
     }
 
-    fn set_song_datas(&self, songs: &[SongData]) {
+    fn set_song_datas(&self, songs: &[SongData]) -> anyhow::Result<()> {
         let mut conn = self.conn.lock().expect("conn lock poisoned");
-        let tx = match conn.transaction() {
-            Ok(tx) => tx,
-            Err(e) => {
-                log::error!("Error starting transaction: {}", e);
-                return;
-            }
-        };
+        let tx = conn
+            .transaction()
+            .map_err(|e| anyhow::anyhow!("Error starting transaction: {e}"))?;
 
-        let mut had_error = false;
         for sd in songs {
             if let Err(e) = Self::insert_song_with_conn(&self.base, &tx, sd) {
-                log::error!("Error inserting song: {}", e);
-                had_error = true;
+                log::error!("Error inserting song, rolling back: {}", e);
+                tx.rollback().map_err(|re| {
+                    anyhow::anyhow!("Rollback failed after insert error ({e}): {re}")
+                })?;
+                return Err(anyhow::anyhow!("Error inserting song: {e}"));
             }
         }
 
-        if had_error {
-            log::error!("Rolling back set_song_datas due to insert errors");
-            if let Err(e) = tx.rollback() {
-                log::error!("Error rolling back transaction: {}", e);
-            }
-        } else if let Err(e) = tx.commit() {
-            log::error!("Error committing transaction: {}", e);
-        }
+        tx.commit()
+            .map_err(|e| anyhow::anyhow!("Error committing transaction: {e}"))?;
+        Ok(())
     }
 
     fn update_song_datas(

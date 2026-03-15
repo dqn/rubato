@@ -88,10 +88,10 @@ pub trait MainControllerAccess {
     fn change_state(&mut self, state: MainStateType);
 
     /// Save config to disk
-    fn save_config(&self);
+    fn save_config(&self) -> anyhow::Result<()>;
 
     /// Exit the application
-    fn exit(&self);
+    fn exit(&self) -> anyhow::Result<()>;
 
     /// Save OBS last recording with the given reason tag
     fn save_last_recording(&self, reason: &str);
@@ -307,11 +307,13 @@ impl MainControllerAccess for NullMainController {
     fn change_state(&mut self, _state: MainStateType) {
         log::warn!("NullMainController::change_state called — no-op");
     }
-    fn save_config(&self) {
+    fn save_config(&self) -> anyhow::Result<()> {
         log::warn!("NullMainController::save_config called — no-op");
+        Ok(())
     }
-    fn exit(&self) {
+    fn exit(&self) -> anyhow::Result<()> {
         log::warn!("NullMainController::exit called — no-op");
+        Ok(())
     }
     fn save_last_recording(&self, _reason: &str) {
         log::warn!("NullMainController::save_last_recording called — no-op");
@@ -354,8 +356,12 @@ impl MainControllerAccess for ConfigMainControllerAccess {
     fn change_state(&mut self, _state: MainStateType) {
         // No-op: states use outbox pattern (pending_state_change)
     }
-    fn save_config(&self) {}
-    fn exit(&self) {}
+    fn save_config(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn exit(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
     fn save_last_recording(&self, _reason: &str) {}
     fn update_song(&mut self, _path: Option<&str>) {}
     fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {

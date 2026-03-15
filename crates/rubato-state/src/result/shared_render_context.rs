@@ -716,16 +716,16 @@ mod tests {
         course_replay: Vec<rubato_core::replay_data::ReplayData>,
     }
 
-    impl rubato_types::player_resource_access::PlayerResourceAccess for GaugeTestResourceAccess {
-        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
-            self
-        }
+    impl rubato_types::player_resource_access::ConfigAccess for GaugeTestResourceAccess {
         fn config(&self) -> &rubato_types::config::Config {
             &self.config
         }
         fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
             &self.player_config
         }
+    }
+
+    impl rubato_types::player_resource_access::ScoreAccess for GaugeTestResourceAccess {
         fn score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
             None
         }
@@ -739,6 +739,12 @@ mod tests {
             None
         }
         fn set_course_score_data(&mut self, _score: rubato_core::score_data::ScoreData) {}
+        fn score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
+            None
+        }
+    }
+
+    impl rubato_types::player_resource_access::SongAccess for GaugeTestResourceAccess {
         fn songdata(&self) -> Option<&rubato_types::song_data::SongData> {
             None
         }
@@ -746,6 +752,12 @@ mod tests {
             None
         }
         fn set_songdata(&mut self, _data: Option<rubato_types::song_data::SongData>) {}
+        fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
+            vec![]
+        }
+    }
+
+    impl rubato_types::player_resource_access::ReplayAccess for GaugeTestResourceAccess {
         fn replay_data(&self) -> Option<&rubato_core::replay_data::ReplayData> {
             None
         }
@@ -758,6 +770,12 @@ mod tests {
         fn add_course_replay(&mut self, rd: rubato_core::replay_data::ReplayData) {
             self.course_replay.push(rd);
         }
+        fn course_replay_mut(&mut self) -> &mut Vec<rubato_core::replay_data::ReplayData> {
+            &mut self.course_replay
+        }
+    }
+
+    impl rubato_types::player_resource_access::CourseAccess for GaugeTestResourceAccess {
         fn course_data(&self) -> Option<&rubato_types::course_data::CourseData> {
             None
         }
@@ -770,6 +788,11 @@ mod tests {
         fn constraint(&self) -> Vec<rubato_types::course_data::CourseDataConstraint> {
             vec![]
         }
+        fn set_course_data(&mut self, _data: rubato_types::course_data::CourseData) {}
+        fn clear_course_data(&mut self) {}
+    }
+
+    impl rubato_types::player_resource_access::GaugeAccess for GaugeTestResourceAccess {
         fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
             None
         }
@@ -785,12 +808,9 @@ mod tests {
         fn course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
             &mut self.course_gauge
         }
-        fn score_data_mut(&mut self) -> Option<&mut rubato_core::score_data::ScoreData> {
-            None
-        }
-        fn course_replay_mut(&mut self) -> &mut Vec<rubato_core::replay_data::ReplayData> {
-            &mut self.course_replay
-        }
+    }
+
+    impl rubato_types::player_resource_access::PlayerStateAccess for GaugeTestResourceAccess {
         fn maxcombo(&self) -> i32 {
             0
         }
@@ -813,12 +833,9 @@ mod tests {
         fn is_freq_on(&self) -> bool {
             false
         }
-        fn reverse_lookup_data(&self) -> Vec<String> {
-            vec![]
-        }
-        fn reverse_lookup_levels(&self) -> Vec<String> {
-            vec![]
-        }
+    }
+
+    impl rubato_types::player_resource_access::SessionMutation for GaugeTestResourceAccess {
         fn clear(&mut self) {}
         fn set_bms_file(
             &mut self,
@@ -840,10 +857,20 @@ mod tests {
         }
         fn set_chart_option_data(&mut self, _option: Option<rubato_core::replay_data::ReplayData>) {
         }
-        fn set_course_data(&mut self, _data: rubato_types::course_data::CourseData) {}
-        fn clear_course_data(&mut self) {}
-        fn course_song_data(&self) -> Vec<rubato_types::song_data::SongData> {
+    }
+
+    impl rubato_types::player_resource_access::MediaAccess for GaugeTestResourceAccess {
+        fn reverse_lookup_data(&self) -> Vec<String> {
             vec![]
+        }
+        fn reverse_lookup_levels(&self) -> Vec<String> {
+            vec![]
+        }
+    }
+
+    impl rubato_types::player_resource_access::PlayerResourceAccess for GaugeTestResourceAccess {
+        fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
+            self
         }
     }
 

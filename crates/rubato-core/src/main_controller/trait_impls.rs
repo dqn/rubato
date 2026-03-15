@@ -13,12 +13,14 @@ impl MainControllerAccess for MainController {
         MainController::change_state(self, state);
     }
 
-    fn save_config(&self) {
+    fn save_config(&self) -> anyhow::Result<()> {
         MainController::save_config(self);
+        Ok(())
     }
 
-    fn exit(&self) {
+    fn exit(&self) -> anyhow::Result<()> {
         MainController::exit(self);
+        Ok(())
     }
 
     fn save_last_recording(&self, reason: &str) {

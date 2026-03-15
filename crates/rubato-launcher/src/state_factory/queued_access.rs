@@ -95,12 +95,14 @@ impl MainControllerAccess for QueuedControllerAccess {
             .push(MainControllerCommand::ChangeState(state));
     }
 
-    fn save_config(&self) {
+    fn save_config(&self) -> anyhow::Result<()> {
         self.commands.push(MainControllerCommand::SaveConfig);
+        Ok(())
     }
 
-    fn exit(&self) {
+    fn exit(&self) -> anyhow::Result<()> {
         self.commands.push(MainControllerCommand::Exit);
+        Ok(())
     }
 
     fn save_last_recording(&self, reason: &str) {

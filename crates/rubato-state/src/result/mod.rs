@@ -2,7 +2,7 @@
 pub mod main_controller_wrapper;
 pub mod player_resource_wrapper;
 
-// Re-exports (formerly in stubs.rs)
+// Re-exports
 pub use rubato_core::bms_player_mode::BMSPlayerMode;
 pub use rubato_core::bms_player_mode::Mode as BMSPlayerModeType;
 pub use rubato_core::play_data_accessor::PlayDataAccessor;
@@ -14,16 +14,16 @@ pub use rubato_ir::ir_connection::IRConnection;
 pub use rubato_ir::ir_course_data::IRCourseData;
 pub use rubato_ir::ir_score_data::IRScoreData;
 pub use rubato_ir::ranking_data::RankingData;
+pub use rubato_skin::reexports::Color;
+pub use rubato_skin::reexports::Pixmap;
+pub use rubato_skin::reexports::PixmapFormat;
+pub use rubato_skin::reexports::Rectangle;
+pub use rubato_skin::reexports::Texture;
+pub use rubato_skin::reexports::TextureRegion;
 pub use rubato_skin::skin::Skin;
 pub use rubato_skin::skin_header::SkinHeader;
 pub use rubato_skin::skin_object::SkinObjectData;
 pub use rubato_skin::skin_object::SkinObjectRenderer;
-pub use rubato_skin::stubs::Color;
-pub use rubato_skin::stubs::Pixmap;
-pub use rubato_skin::stubs::PixmapFormat;
-pub use rubato_skin::stubs::Rectangle;
-pub use rubato_skin::stubs::Texture;
-pub use rubato_skin::stubs::TextureRegion;
 pub use rubato_types::groove_gauge::GrooveGauge;
 pub use rubato_types::main_controller_access::{MainControllerAccess, NullMainController};
 pub use rubato_types::player_resource_access::{NullPlayerResource, PlayerResourceAccess};

@@ -31,7 +31,7 @@ fn lifecycle_songdb_drop_and_reopen_preserves_data() {
     {
         let accessor = SQLiteSongDatabaseAccessor::new(&db_path.to_string_lossy(), &[]).unwrap();
         let song = make_song("lifecycle_sha", "Lifecycle Test", "songs/lifecycle.bms");
-        accessor.set_song_datas(&[song]);
+        accessor.set_song_datas(&[song]).expect("set_song_datas");
 
         let results = accessor.song_datas("sha256", "lifecycle_sha");
         assert_eq!(results.len(), 1, "Should find song in first session");
@@ -64,7 +64,7 @@ fn lifecycle_songdb_multiple_accessors_same_file_no_conflict() {
 
     // Insert via accessor1, read via accessor2
     let song = make_song("multi_sha", "Multi Access", "songs/multi.bms");
-    accessor1.set_song_datas(&[song]);
+    accessor1.set_song_datas(&[song]).expect("set_song_datas");
 
     let results = accessor2.song_datas("sha256", "multi_sha");
     assert_eq!(
