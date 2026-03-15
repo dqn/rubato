@@ -101,6 +101,13 @@ pub fn load_skin_from_config(
 ) -> Option<Skin> {
     let skin_type = SkinType::skin_type_by_id(skin_type_id)?;
 
+    log::debug!(
+        "load_skin_from_config: type_id={}, skin_type={:?}, player_config.skin.len={}",
+        skin_type_id,
+        skin_type,
+        player_config.skin.len()
+    );
+
     // Resolve skin path: player_config.skin[id] → fallback to default
     let skin_path = player_config
         .skin
@@ -120,6 +127,7 @@ pub fn load_skin_from_config(
             return None;
         }
     };
+    log::debug!("load_skin_from_config: skin_path={:?}", skin_path);
 
     let path = match resolve_skin_path(config, &skin_path) {
         Some(path) => path,

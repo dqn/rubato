@@ -314,15 +314,32 @@ impl StateFactory for LauncherStateFactory {
                 };
                 player.set_target_score(target_score.clone());
 
-                if let Some(skin_type) = player.skin_type()
-                    && let Some(skin) = rubato_skin::skin_loader::load_skin_from_config(
+                if let Some(skin_type) = player.skin_type() {
+                    log::info!(
+                        "Play skin loading: type={:?} id={}",
+                        skin_type,
+                        skin_type.id()
+                    );
+                    if let Some(skin) = rubato_skin::skin_loader::load_skin_from_config(
                         controller.config(),
                         controller.player_config(),
                         skin_type.id(),
-                    )
-                {
-                    player.set_skin_name(skin.header.name().map(str::to_string));
-                    player.main_state_data_mut().skin = Some(Box::new(skin));
+                    ) {
+                        log::info!(
+                            "Play skin loaded: {} objects",
+                            skin.objects().len()
+                        );
+                        player.set_skin_name(skin.header.name().map(str::to_string));
+                        player.main_state_data_mut().skin = Some(Box::new(skin));
+                    } else {
+                        log::warn!(
+                            "Play skin failed to load for type {:?} (id={})",
+                            skin_type,
+                            skin_type.id()
+                        );
+                    }
+                } else {
+                    log::warn!("Play skin_type() returned None");
                 }
 
                 Some(StateCreateResult {
