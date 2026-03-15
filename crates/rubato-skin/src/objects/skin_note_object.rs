@@ -5,7 +5,7 @@
 use rubato_play::lane_renderer::{DrawCommand, NoteImageType};
 
 use crate::reexports::MainState;
-use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
+use crate::types::skin_object::{DestinationParams, SkinObjectData, SkinObjectRenderer};
 
 /// SkinNote skin object — wraps play-side SkinNote with SkinObjectData.
 ///
@@ -42,8 +42,34 @@ pub struct LineImage {
 
 impl SkinNoteObject {
     pub fn new(lane_count: usize) -> Self {
+        let mut data = SkinObjectData::new();
+        // Java: this.setDestination(0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, new int[0]);
+        // A default destination is required so that prepare() sets draw=true.
+        // Without it, dst is empty and prepare_region() sets draw=false,
+        // causing draw_all_objects() to skip this object entirely.
+        data.set_destination_with_int_timer_ops(
+            &DestinationParams {
+                time: 0,
+                x: 0.0,
+                y: 0.0,
+                w: 0.0,
+                h: 0.0,
+                acc: 0,
+                a: 0,
+                r: 255,
+                g: 255,
+                b: 255,
+                blend: 0,
+                filter: 0,
+                angle: 0,
+                center: 0,
+                loop_val: 0,
+            },
+            0,
+            &[],
+        );
         Self {
-            data: SkinObjectData::new(),
+            data,
             inner: rubato_play::skin_note::SkinNote::new(lane_count),
             draw_commands: Vec::new(),
             note_images: vec![None; lane_count],
