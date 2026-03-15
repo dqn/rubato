@@ -692,7 +692,16 @@ fn test_note_judge_songlist_return_some() {
     let mut source_map = HashMap::new();
     let path = Path::new("/test/skin.json");
 
-    let note = convert_skin_object(&SkinObjectType::Note, &mut source_map, path, false, 1.0);
+    let note = convert_skin_object(
+        &SkinObjectType::Note {
+            lane_count: 8,
+            lane_regions: vec![],
+        },
+        &mut source_map,
+        path,
+        false,
+        1.0,
+    );
     assert!(note.is_some());
     assert_eq!(note.unwrap().type_name(), "SkinNote");
 

@@ -1,4 +1,6 @@
-use super::deserializers::deserialize_optional_string_from_int;
+use super::deserializers::{
+    deserialize_animations_with_conditionals, deserialize_optional_string_from_int,
+};
 use super::destination::{Animation, Destination};
 use super::graph_objects::default_500;
 use super::visual_objects::default_one;
@@ -32,6 +34,7 @@ pub struct NoteSet {
     pub mine: Vec<String>,
     pub hidden: Vec<String>,
     pub processed: Vec<String>,
+    #[serde(deserialize_with = "deserialize_animations_with_conditionals", default)]
     pub dst: Vec<Animation>,
     #[serde(default = "default_i32_min")]
     pub dst2: i32,

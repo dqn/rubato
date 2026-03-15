@@ -325,10 +325,7 @@ impl StateFactory for LauncherStateFactory {
                         controller.player_config(),
                         skin_type.id(),
                     ) {
-                        log::info!(
-                            "Play skin loaded: {} objects",
-                            skin.objects().len()
-                        );
+                        log::info!("Play skin loaded: {} objects", skin.objects().len());
                         player.set_skin_name(skin.header.name().map(str::to_string));
                         player.main_state_data_mut().skin = Some(Box::new(skin));
                     } else {

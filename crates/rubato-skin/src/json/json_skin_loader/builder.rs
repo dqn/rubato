@@ -207,10 +207,11 @@ impl JSONSkinLoader {
             }
             let option = CustomOptionData {
                 name: pr.name.clone().unwrap_or_default(),
-                option: op,
+                option: op.clone(),
                 names,
                 def: pr.def.clone(),
-                selected_option: 0,
+                // Default to the first option value (Java: property.item[0].op)
+                selected_option: op.first().copied().unwrap_or(0),
             };
 
             // Associate with categories
@@ -374,6 +375,7 @@ impl JSONSkinLoader {
 
         // Set enabled options so conditional blocks are evaluated during deserialization.
         let enabled_options = self.get_enabled_options(&header);
+        log::debug!("load: enabled_options = {:?}", enabled_options);
         json_skin::set_enabled_options(Some(enabled_options));
 
         // Read and parse JSON
@@ -461,6 +463,17 @@ impl JSONSkinLoader {
         skin.scene = sk.scene;
 
         // Process destinations
+        log::debug!(
+            "load_json_skin: {} destinations, {} images, {} values, {} imagesets, note={}, gauge={}, judge={}, bga={}",
+            sk.destination.len(),
+            sk.image.len(),
+            sk.value.len(),
+            sk.imageset.len(),
+            sk.note.is_some(),
+            sk.gauge.is_some(),
+            sk.judge.len(),
+            sk.bga.is_some(),
+        );
         for dst in &sk.destination {
             // Try to parse dst.id as negative integer for SkinImage(-id)
             let mut obj: Option<SkinObjectData> = None;

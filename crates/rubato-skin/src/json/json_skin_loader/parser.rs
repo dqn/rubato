@@ -532,7 +532,12 @@ pub enum SkinObjectType {
         endtime: i32,
     },
     /// SkinNote (play skin only)
-    Note,
+    Note {
+        /// Number of lanes (from note.dst or note.note length)
+        lane_count: usize,
+        /// Per-lane region (x, y, w, h) from note.dst
+        lane_regions: Vec<(f32, f32, f32, f32)>,
+    },
     /// SkinHidden (hidden cover, play skin only)
     HiddenCover {
         src: Option<String>,

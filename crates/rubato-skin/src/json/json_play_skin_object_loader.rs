@@ -38,9 +38,33 @@ impl JsonSkinObjectLoader for JsonPlaySkinObjectLoader {
         if let Some(ref note) = sk.note
             && dst_id == note.id.as_deref().unwrap_or("")
         {
+            // Determine lane count from note.dst (per-lane regions) or note.note (image IDs)
+            let lane_count = if !note.dst.is_empty() {
+                note.dst.len()
+            } else {
+                note.note.len()
+            };
+
+            // Extract lane regions from note.dst (each Animation = one lane's position)
+            let lane_regions: Vec<(f32, f32, f32, f32)> = note
+                .dst
+                .iter()
+                .map(|anim| (anim.x as f32, anim.y as f32, anim.w as f32, anim.h as f32))
+                .collect();
+
+            log::debug!(
+                "Note: lane_count={}, dst_count={}, note_images={}",
+                lane_count,
+                note.dst.len(),
+                note.note.len()
+            );
+
             let obj = SkinObjectData {
                 name: note.id.clone(),
-                object_type: SkinObjectType::Note,
+                object_type: SkinObjectType::Note {
+                    lane_count,
+                    lane_regions,
+                },
                 ..Default::default()
             };
             return Some(obj);
