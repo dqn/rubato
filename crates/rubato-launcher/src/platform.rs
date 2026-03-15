@@ -1,7 +1,7 @@
 // Platform integration helpers (rfd dialogs, arboard clipboard, open crate, cpal audio, monitors).
 // Moved from stubs.rs in Phase 25a.
 
-/// Stub for egui context (replaces JavaFX Stage/Scene)
+/// Marker type (egui has no Stage/Scene equivalent)
 #[derive(Clone, Debug, Default)]
 pub struct EguiContext;
 

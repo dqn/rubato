@@ -27,7 +27,7 @@ pub use texture::*;
 
 // Re-export LibGDX file types that are pure data and belong in the render crate.
 
-/// Stub for com.badlogic.gdx.files.FileHandle
+/// Path wrapper for LibGDX FileHandle API
 #[derive(Clone, Debug, Default)]
 pub struct FileHandle {
     pub path: String,
@@ -84,7 +84,13 @@ impl FileHandle {
     }
 
     pub fn list(&self) -> Vec<FileHandle> {
-        vec![]
+        match std::fs::read_dir(&self.path) {
+            Ok(entries) => entries
+                .filter_map(|e| e.ok())
+                .map(|e| FileHandle::new(&e.path().to_string_lossy()))
+                .collect(),
+            Err(_) => vec![],
+        }
     }
 
     pub fn read_string(&self) -> String {

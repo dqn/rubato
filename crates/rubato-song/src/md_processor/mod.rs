@@ -5,7 +5,7 @@ pub mod download_task_state;
 pub use rubato_core::config::Config;
 pub use rubato_types::imgui_notify::ImGuiNotify;
 
-/// Stub for MainController reference
+/// Trait for MainController reference in md-processor
 pub trait MainControllerRef: Send + Sync {
     fn update_song(&self, path: &str, force: bool);
 }

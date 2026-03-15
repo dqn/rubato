@@ -30,7 +30,7 @@ pub enum SourceDataType {
     Movie(SkinSourceMovie),
 }
 
-/// Stub for SkinSourceMovie
+/// Data holder for SkinSourceMovie JSON
 #[derive(Clone, Debug, Default)]
 pub struct SkinSourceMovie {
     pub path: String,

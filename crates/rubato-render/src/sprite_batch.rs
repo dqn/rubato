@@ -138,6 +138,11 @@ impl SpriteBatch {
         }
     }
 
+    /// Returns the number of vertices currently in the CPU-side buffer.
+    pub fn vertex_count(&self) -> usize {
+        self.vertices.len()
+    }
+
     /// Set the projection/transform matrix for the batch.
     /// Java: SpriteBatch.setTransformMatrix(matrix)
     pub fn set_transform_matrix(&mut self, matrix: &Matrix4) {

@@ -2,7 +2,7 @@
 // NOTE: This is the DTO version with pub fields for JSON serde.
 // The runtime version exists in beatoraja-input with private fields.
 
-/// Stub for beatoraja.input.KeyInputLog (pub fields; beatoraja-input uses private fields)
+/// Rust equivalent of beatoraja.input.KeyInputLog (pub fields; beatoraja-input uses private fields)
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct KeyInputLog {
     pub time: i64,

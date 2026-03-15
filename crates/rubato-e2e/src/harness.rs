@@ -1,10 +1,14 @@
 //! E2E test harness providing a MainController with RecordingAudioDriver
 //! and deterministic (frozen) timing.
 
+use std::sync::{Arc, Mutex};
+
 use rubato_audio::recording_audio_driver::{AudioEvent, RecordingAudioDriver};
+use rubato_audio::shared_recording_audio_driver::SharedRecordingAudioDriver;
 use rubato_core::config::Config;
-use rubato_core::main_controller::MainController;
+use rubato_core::main_controller::{MainController, StateFactory};
 use rubato_core::player_config::PlayerConfig;
+use rubato_types::main_state_type::MainStateType;
 
 /// One frame at 60 fps in microseconds (1_000_000 / 60 = 16_667, truncated).
 pub const FRAME_DURATION_US: i64 = 16_667;
@@ -16,6 +20,7 @@ pub const FRAME_DURATION_US: i64 = 16_667;
 /// `set_time()` to control the current time explicitly.
 pub struct E2eHarness {
     controller: MainController,
+    audio_handle: Arc<Mutex<RecordingAudioDriver>>,
 }
 
 impl E2eHarness {
@@ -28,15 +33,24 @@ impl E2eHarness {
         let player = PlayerConfig::default();
         let mut controller = MainController::new(None, config, player, None, false);
 
-        // Inject recording audio driver
-        controller.set_audio_driver(Box::new(RecordingAudioDriver::new()));
+        // Inject shared recording audio driver
+        let shared_driver = SharedRecordingAudioDriver::new();
+        let audio_handle = shared_driver.inner();
+        controller.set_audio_driver(Box::new(shared_driver));
 
         // Freeze timer so wall-clock time does not advance
         controller.timer_mut().frozen = true;
         controller.timer_mut().set_now_micro_time(0);
 
-        Self { controller }
+        Self {
+            controller,
+            audio_handle,
+        }
     }
+
+    // ============================================================
+    // Controller access
+    // ============================================================
 
     /// Access the MainController immutably.
     pub fn controller(&self) -> &MainController {
@@ -48,47 +62,32 @@ impl E2eHarness {
         &mut self.controller
     }
 
-    /// Return the RecordingAudioDriver's event log.
-    ///
-    /// Panics if the audio driver was not set or is not a RecordingAudioDriver
-    /// (should not happen when constructed via `E2eHarness::new()`).
+    // ============================================================
+    // Audio
+    // ============================================================
+
+    /// Return a snapshot of all recorded audio events.
     pub fn audio_events(&self) -> Vec<AudioEvent> {
-        // We cannot downcast through the trait-object accessor, so we
-        // query the audio processor trait for the event list indirectly.
-        // RecordingAudioDriver is behind Box<dyn AudioDriver>; since AudioDriver
-        // does not expose events(), we re-read through the trait's known methods.
-        //
-        // For now, return an empty vec -- callers that need events should use
-        // `with_recording_driver()` or we can add a downcast helper later.
-        //
-        // TODO: Add downcast support or event forwarding to AudioDriver trait.
-        Vec::new()
+        self.audio_handle.lock().unwrap().events().to_vec()
+    }
+
+    /// Clear the recorded audio events.
+    pub fn clear_audio_events(&self) {
+        self.audio_handle.lock().unwrap().clear_events();
     }
 
     /// Execute a closure with a mutable reference to the RecordingAudioDriver.
-    ///
-    /// This is the primary way to inspect or clear audio events, since the
-    /// driver is stored as `Box<dyn AudioDriver>` inside MainController.
-    ///
-    /// Returns `None` if the audio driver is not a RecordingAudioDriver.
-    pub fn with_recording_driver<F, R>(&mut self, f: F) -> Option<R>
+    pub fn with_recording_driver<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&mut RecordingAudioDriver) -> R,
     {
-        // AudioDriver is not Any-dowcastable by default, so we rely on the
-        // fact that MainController exposes audio_processor_mut() returning
-        // &mut dyn AudioDriver. We need to use unsafe downcast or add a
-        // method. For safety, we use a different approach: store the driver
-        // separately.
-        //
-        // Since we cannot downcast `dyn AudioDriver` without `Any`, and the
-        // trait does not extend `Any`, this method currently returns None.
-        // The recommended pattern is to create the RecordingAudioDriver
-        // externally and share it via Arc<Mutex<>> if event inspection is
-        // needed.
-        let _ = f;
-        None
+        let mut guard = self.audio_handle.lock().unwrap();
+        f(&mut guard)
     }
+
+    // ============================================================
+    // Time control
+    // ============================================================
 
     /// Step the timer forward by one frame (16,667 microseconds at 60 fps).
     pub fn step_frame(&mut self) {
@@ -114,6 +113,54 @@ impl E2eHarness {
     /// Return the current frozen time in microseconds.
     pub fn current_time_us(&self) -> i64 {
         self.controller.timer().now_micro_time()
+    }
+
+    // ============================================================
+    // State factory & transitions (Phase 4a/4b)
+    // ============================================================
+
+    /// Set a custom state factory for the harness.
+    pub fn with_state_factory(mut self, factory: Box<dyn StateFactory>) -> Self {
+        self.controller.set_state_factory(factory);
+        self
+    }
+
+    /// Trigger a state transition.
+    pub fn change_state(&mut self, state: MainStateType) {
+        self.controller.change_state(state);
+    }
+
+    /// Return the current state type (None if no state is active).
+    pub fn current_state_type(&self) -> Option<MainStateType> {
+        self.controller.current_state_type()
+    }
+
+    /// Render one frame: advance timer by 1 frame, then call controller.render().
+    pub fn render_frame(&mut self) {
+        self.step_frame();
+        self.controller.render();
+    }
+
+    /// Render `n` frames.
+    pub fn render_frames(&mut self, n: usize) {
+        for _ in 0..n {
+            self.render_frame();
+        }
+    }
+
+    /// Render frames until predicate returns true, up to `max_frames`.
+    /// Returns the number of frames rendered.
+    pub fn render_until<F>(&mut self, predicate: F, max_frames: usize) -> usize
+    where
+        F: Fn(&E2eHarness) -> bool,
+    {
+        for i in 0..max_frames {
+            if predicate(self) {
+                return i;
+            }
+            self.render_frame();
+        }
+        max_frames
     }
 }
 
@@ -158,7 +205,6 @@ mod tests {
     fn frozen_timer_does_not_advance_on_update() {
         let mut harness = E2eHarness::new();
         harness.set_time(1_000);
-        // Calling update() on a frozen timer should not change the time
         harness.controller_mut().timer_mut().update();
         assert_eq!(harness.current_time_us(), 1_000);
     }
@@ -167,5 +213,71 @@ mod tests {
     fn controller_has_audio_driver() {
         let harness = E2eHarness::new();
         assert!(harness.controller().audio_processor().is_some());
+    }
+
+    #[test]
+    fn audio_events_captures_play_path() {
+        let mut harness = E2eHarness::new();
+
+        harness
+            .controller_mut()
+            .audio_processor_mut()
+            .unwrap()
+            .play_path("test.ogg", 1.0, false);
+
+        let events = harness.audio_events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(
+            events[0],
+            AudioEvent::PlayPath {
+                path: "test.ogg".to_string(),
+                volume: 1.0,
+                loop_play: false,
+            }
+        );
+    }
+
+    #[test]
+    fn clear_audio_events_works() {
+        let mut harness = E2eHarness::new();
+
+        harness
+            .controller_mut()
+            .audio_processor_mut()
+            .unwrap()
+            .play_path("a.wav", 1.0, false);
+
+        assert_eq!(harness.audio_events().len(), 1);
+        harness.clear_audio_events();
+        assert!(harness.audio_events().is_empty());
+    }
+
+    #[test]
+    fn with_recording_driver_provides_access() {
+        let mut harness = E2eHarness::new();
+
+        harness
+            .controller_mut()
+            .audio_processor_mut()
+            .unwrap()
+            .play_path("bgm.ogg", 0.8, false);
+
+        let count = harness.with_recording_driver(|driver| driver.play_path_count());
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn current_state_type_none_without_factory() {
+        let harness = E2eHarness::new();
+        assert_eq!(harness.current_state_type(), None);
+    }
+
+    #[test]
+    fn render_until_stops_on_predicate() {
+        let mut harness = E2eHarness::new();
+        let target_time = FRAME_DURATION_US * 5;
+        let frames = harness.render_until(|h| h.current_time_us() >= target_time, 100);
+        assert!(frames <= 5);
+        assert!(harness.current_time_us() >= target_time);
     }
 }

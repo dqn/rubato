@@ -117,8 +117,6 @@ impl PreviewMusicProcessor {
     pub fn start(&mut self, song: Option<&SongData>) {
         if !self.preview_running.load(Ordering::SeqCst) {
             self.preview_running.store(true, Ordering::SeqCst);
-            // In Java: starts PreviewThread. Here we would spawn a thread.
-            // Stubbed since audio playback requires runtime integration.
         }
         self.current = song.cloned();
 

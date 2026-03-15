@@ -30,7 +30,7 @@ pub struct KeyConfiguration {
     mode: usize,
     _deletepressed: bool,
     // References to input processors and config are Phase 5+ types
-    // Stubbed for now
+    // egui rendering deferred to Phase 9 launcher
 }
 
 impl KeyConfiguration {

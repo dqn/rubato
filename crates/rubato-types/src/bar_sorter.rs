@@ -2,7 +2,7 @@
 // NOTE: This is a simplified stub version (BarSorterEntry with name strings).
 // The full enum-based BarSorter is in beatoraja-select/src/bar_sorter.rs.
 
-/// Stub for beatoraja.select.BarSorter
+/// Rust equivalent of beatoraja.select.BarSorter
 pub struct BarSorter;
 
 #[derive(Clone, Copy, Debug)]

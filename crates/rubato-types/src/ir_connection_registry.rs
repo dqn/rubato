@@ -1,4 +1,4 @@
-/// Stub for beatoraja.ir.IRConnectionManager
+/// Rust equivalent of beatoraja.ir.IRConnectionManager
 ///
 /// Will be turned into a trait in Phase 6.
 pub struct IRConnectionManager;

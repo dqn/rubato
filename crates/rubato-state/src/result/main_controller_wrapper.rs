@@ -202,7 +202,7 @@ mod tests {
     use rubato_audio::recording_audio_driver::RecordingAudioDriver;
     use rubato_ir::ranking_data::RankingData;
     use rubato_types::main_controller_access::NullMainController;
-    use rubato_types::player_resource_access::{NullPlayerResource, PlayerResourceAccess};
+    use rubato_types::player_resource_access::PlayerResourceAccess;
     use rubato_types::song_data::SongData;
 
     #[test]

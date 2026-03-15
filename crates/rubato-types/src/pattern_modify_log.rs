@@ -2,7 +2,7 @@
 // NOTE: This is the DTO version with pub fields for JSON serde.
 // The runtime version exists in beatoraja-pattern with a different field layout.
 
-/// Stub for beatoraja.pattern.PatternModifyLog (field layout differs from beatoraja-pattern)
+/// Rust equivalent of beatoraja.pattern.PatternModifyLog (field layout differs from beatoraja-pattern)
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct PatternModifyLog {
     pub old_lane: i32,
