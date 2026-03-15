@@ -668,7 +668,19 @@ impl PlayerConfig {
         } else if configpath_old.exists() {
             load_player_config_from_old_path(&configpath_old)?
         } else {
-            PlayerConfig::default()
+            // Fallback: check root-level config_player.json (outside player dir).
+            // Some setups (e.g., Java beatoraja migration) place the player config
+            // at the workspace root rather than inside player/{id}/.
+            let root_config = PathBuf::from("config_player.json");
+            if root_config.exists() {
+                log::info!(
+                    "Player config not found at {}, using root config_player.json",
+                    configpath.display()
+                );
+                load_player_config(playerpath, playerid, &root_config)?
+            } else {
+                PlayerConfig::default()
+            }
         };
 
         player.id = Some(playerid.to_string());
