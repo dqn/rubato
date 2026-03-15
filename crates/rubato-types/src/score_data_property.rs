@@ -102,7 +102,7 @@ impl ScoreDataProperty {
         self.rivalscorerate = if totalnotes == 0 {
             1.0f32
         } else {
-            (exscore as f32) / (totalnotes * 2) as f32
+            exscore as f32 / (totalnotes as f32 * 2.0)
         };
         self.rivalrate_int = (self.rivalscorerate * 100.0) as i32;
         self.rivalrate_after_dot = ((self.rivalscorerate * 10000.0) as i32) % 100;
@@ -152,14 +152,14 @@ impl ScoreDataProperty {
         self.rate = if totalnotes == 0 {
             1.0f32
         } else {
-            (exscore as f32) / (totalnotes * 2) as f32
+            exscore as f32 / (totalnotes as f32 * 2.0)
         };
         self.rate_int = (self.rate * 100.0) as i32;
         self.rate_after_dot = ((self.rate * 10000.0) as i32) % 100;
         self.nowrate = if notes == 0 {
             1.0f32
         } else {
-            (exscore as f32) / (notes * 2) as f32
+            exscore as f32 / (notes as f32 * 2.0)
         };
         self.nowrate_int = (self.nowrate * 100.0) as i32;
         self.nowrate_after_dot = ((self.nowrate * 10000.0) as i32) % 100;
@@ -168,13 +168,13 @@ impl ScoreDataProperty {
         for (i, rank) in self.rank.iter_mut().enumerate() {
             *rank = totalnotes != 0 && self.rate >= 1f32 * i as f32 / rank_len as f32;
             if i % 3 == 0 && !*rank && self.nextrank == i32::MIN {
-                self.nextrank = (((i as f64) * ((notes * 2) as f64) / (rank_len as f64))
-                    - (self.rate as f64) * ((notes * 2) as f64))
+                self.nextrank = (((i as f64) * (notes as f64 * 2.0) / (rank_len as f64))
+                    - (self.rate as f64) * (notes as f64 * 2.0))
                     .ceil() as i32;
             }
         }
         if self.nextrank == i32::MIN {
-            self.nextrank = (notes * 2) - exscore;
+            self.nextrank = (notes.saturating_mul(2)) - exscore;
         }
         let nowrank_len = self.nowrank.len();
         for (i, nowrank) in self.nowrank.iter_mut().enumerate() {
@@ -191,7 +191,7 @@ impl ScoreDataProperty {
             self.nowbestscorerate = if totalnotes == 0 {
                 0.0
             } else {
-                self.nowbestscore as f32 / (totalnotes * 2) as f32
+                self.nowbestscore as f32 / (totalnotes as f32 * 2.0)
             };
         } else {
             self.nowbestscore = if totalnotes == 0 {
@@ -216,7 +216,7 @@ impl ScoreDataProperty {
             self.nowrivalscorerate = if totalnotes == 0 {
                 0.0
             } else {
-                self.nowrivalscore as f32 / (totalnotes * 2) as f32
+                self.nowrivalscore as f32 / (totalnotes as f32 * 2.0)
             };
         } else {
             self.nowrivalscore = if totalnotes == 0 {
@@ -251,7 +251,7 @@ impl ScoreDataProperty {
             self.rivalrate_int = 0;
             self.rivalrate_after_dot = 0;
         } else {
-            self.rivalscorerate = (rivalscore as f32) / (self.totalnotes * 2) as f32;
+            self.rivalscorerate = rivalscore as f32 / (self.totalnotes as f32 * 2.0);
             self.rivalrate_int = (self.rivalscorerate * 100.0) as i32;
             self.rivalrate_after_dot = ((self.rivalscorerate * 10000.0) as i32) % 100;
         }
@@ -291,10 +291,10 @@ impl ScoreDataProperty {
             self.rivalrate_int = 0;
             self.rivalrate_after_dot = 0;
         } else {
-            self.bestscorerate = (bestscore as f32) / (totalnotes * 2) as f32;
+            self.bestscorerate = bestscore as f32 / (totalnotes as f32 * 2.0);
             self.bestrate_int = (self.bestscorerate * 100.0) as i32;
             self.bestrate_after_dot = ((self.bestscorerate * 10000.0) as i32) % 100;
-            self.rivalscorerate = (rivalscore as f32) / (totalnotes * 2) as f32;
+            self.rivalscorerate = rivalscore as f32 / (totalnotes as f32 * 2.0);
             let bestrank_len = self.bestrank.len();
             for (i, bestrank) in self.bestrank.iter_mut().enumerate() {
                 *bestrank = self.bestscorerate >= 1f32 * i as f32 / bestrank_len as f32;

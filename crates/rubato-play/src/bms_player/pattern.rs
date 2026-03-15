@@ -107,7 +107,9 @@ impl BMSPlayer {
                     Mode::BEAT_5K => Mode::BEAT_10K,
                     Mode::BEAT_7K => Mode::BEAT_14K,
                     Mode::KEYBOARD_24K => Mode::KEYBOARD_24K_DOUBLE,
-                    _ => unreachable!(),
+                    _ => unreachable!(
+                        "mode must be BEAT_5K, BEAT_7K, or KEYBOARD_24K per outer if-condition"
+                    ),
                 };
                 self.model.set_mode(new_mode);
 

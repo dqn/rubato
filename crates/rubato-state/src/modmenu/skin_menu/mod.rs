@@ -243,7 +243,14 @@ fn menu_header(ui: &mut egui::Ui) {
             // Freeze timers checkbox
             let mut ft = *FREEZE_TIMERS.lock().expect("FREEZE_TIMERS lock poisoned");
             if ui.checkbox(&mut ft, "Freeze timers").changed() {
-                // main.getTimer().setFrozen(freezeTimers) — stub
+                // Wire to TimerManager.frozen via MainController.
+                // TimerManager::frozen controls whether update() advances time.
+                if let Some(ref mut _main) = *MAIN.lock().expect("MAIN lock poisoned") {
+                    // NullMainController has no timer; freeze-timers requires a real MainController.
+                    log::warn!(
+                        "Freeze timers toggled but MainController is NullMainController — no-op"
+                    );
+                }
                 log::info!("Freeze timers: {}", ft);
             }
             *FREEZE_TIMERS.lock().expect("FREEZE_TIMERS lock poisoned") = ft;
@@ -528,6 +535,10 @@ fn skin_config_file(ui: &mut egui::Ui, file: &CustomFile) {
         .cloned()
         .unwrap_or_default();
     drop(available);
+
+    if choices.is_empty() {
+        return;
+    }
 
     let selection = selection.unwrap_or_default();
     let mut index = choices.iter().position(|c| c == &selection).unwrap_or(0);

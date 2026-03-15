@@ -6,7 +6,7 @@ use mlua::prelude::*;
 use crate::json::json_skin;
 use crate::json::json_skin_loader::{JSONSkinLoader, SkinConfigProperty, SkinData, SkinHeaderData};
 use crate::lua::skin_lua_accessor::SkinLuaAccessor;
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 /// Lua skin loader
 ///
@@ -459,5 +459,145 @@ mod tests {
             skin.is_some(),
             "default play Lua skin should load fully without MainState"
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // 3-layer coercion tests (numbers->strings, float->int, empty {}->remove)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_coerce_numbers_to_strings_for_id_field() {
+        // Layer 1: numbers in STRING_FIELD_KEYS positions -> strings
+        let input = serde_json::json!({"id": 42, "src": 99, "font": 3});
+        let coerced = coerce_json_for_skin(input);
+        assert_eq!(coerced["id"], serde_json::json!("42"));
+        assert_eq!(coerced["src"], serde_json::json!("99"));
+        assert_eq!(coerced["font"], serde_json::json!("3"));
+    }
+
+    #[test]
+    fn test_coerce_numbers_to_strings_preserves_existing_strings() {
+        let input = serde_json::json!({"id": "bg_image", "src": "texture.png"});
+        let coerced = coerce_json_for_skin(input);
+        assert_eq!(coerced["id"], serde_json::json!("bg_image"));
+        assert_eq!(coerced["src"], serde_json::json!("texture.png"));
+    }
+
+    #[test]
+    fn test_coerce_float_to_int_truncation() {
+        // Layer 2: floats in non-F32_FIELD_KEYS positions -> truncated to integers
+        // Lua arithmetic produces floats like 1920/2 = 960.0
+        let input = serde_json::json!({"x": 960.0, "y": 198.333, "w": 100.99});
+        let coerced = coerce_json_for_skin(input);
+        assert_eq!(coerced["x"], serde_json::json!(960));
+        assert_eq!(coerced["y"], serde_json::json!(198));
+        assert_eq!(coerced["w"], serde_json::json!(100));
+    }
+
+    #[test]
+    fn test_coerce_float_preserves_f32_fields() {
+        // F32_FIELD_KEYS should NOT be truncated
+        let input = serde_json::json!({
+            "gain": 0.75,
+            "alpha": 0.5,
+            "outlineWidth": 1.5,
+            "shadowOffsetX": 2.3,
+            "shadowOffsetY": -1.7,
+            "shadowSmoothness": 0.8
+        });
+        let coerced = coerce_json_for_skin(input);
+        assert_eq!(coerced["gain"], serde_json::json!(0.75));
+        assert_eq!(coerced["alpha"], serde_json::json!(0.5));
+        assert_eq!(coerced["outlineWidth"], serde_json::json!(1.5));
+    }
+
+    #[test]
+    fn test_coerce_empty_object_removed() {
+        // Layer 3: empty objects {} -> removed (let serde(default) handle it)
+        let input = serde_json::json!({
+            "name": "test",
+            "source": {},
+            "destination": {}
+        });
+        let coerced = coerce_json_for_skin(input);
+        assert_eq!(coerced["name"], serde_json::json!("test"));
+        assert!(
+            coerced.get("source").is_none(),
+            "Empty object should be removed"
+        );
+        assert!(
+            coerced.get("destination").is_none(),
+            "Empty object should be removed"
+        );
+    }
+
+    #[test]
+    fn test_coerce_non_empty_object_preserved() {
+        let input = serde_json::json!({"source": {"id": "bg"}});
+        let coerced = coerce_json_for_skin(input);
+        assert!(coerced.get("source").is_some());
+        assert_eq!(coerced["source"]["id"], serde_json::json!("bg"));
+    }
+
+    #[test]
+    fn test_coerce_empty_object_removed_for_vec_fields() {
+        // Empty objects for VEC_STRING_FIELD_KEYS are removed (not converted to []).
+        // The general empty-object removal (line 200-203) runs BEFORE coerce_value_for_key,
+        // so the VEC_STRING_FIELD_KEYS -> [] path only handles non-empty maps.
+        // With #[serde(default)], removing the key and providing [] are equivalent.
+        let input = serde_json::json!({"note": {}, "mine": {}, "images": {}});
+        let coerced = coerce_json_for_skin(input);
+        assert!(
+            coerced.get("note").is_none(),
+            "Empty object for Vec fields should be removed"
+        );
+        assert!(
+            coerced.get("mine").is_none(),
+            "Empty object for Vec fields should be removed"
+        );
+        assert!(
+            coerced.get("images").is_none(),
+            "Empty object for Vec fields should be removed"
+        );
+    }
+
+    #[test]
+    fn test_coerce_recursion_into_nested_objects() {
+        // Coercion should recurse into nested objects and arrays
+        let input = serde_json::json!({
+            "destination": [
+                {"x": 100.0, "y": 200.0, "id": 5}
+            ]
+        });
+        let coerced = coerce_json_for_skin(input);
+        let dest = &coerced["destination"][0];
+        assert_eq!(dest["x"], serde_json::json!(100));
+        assert_eq!(dest["y"], serde_json::json!(200));
+        assert_eq!(dest["id"], serde_json::json!("5"));
+    }
+
+    #[test]
+    fn test_coerce_integer_values_not_truncated() {
+        // Integer values (no decimal point) should pass through unchanged
+        let input = serde_json::json!({"x": 100, "y": 200});
+        let coerced = coerce_json_for_skin(input);
+        assert_eq!(coerced["x"], serde_json::json!(100));
+        assert_eq!(coerced["y"], serde_json::json!(200));
+    }
+
+    #[test]
+    fn test_coerce_path_number_to_string() {
+        // "path" is in STRING_FIELD_KEYS, so numeric values should be coerced to strings
+        let input = serde_json::json!({"path": 123});
+        let coerced = coerce_json_for_skin(input);
+        assert_eq!(coerced["path"], serde_json::json!("123"));
+    }
+
+    #[test]
+    fn test_coerce_constant_text_number_to_string() {
+        // "constantText" is in STRING_FIELD_KEYS
+        let input = serde_json::json!({"constantText": 42});
+        let coerced = coerce_json_for_skin(input);
+        assert_eq!(coerced["constantText"], serde_json::json!("42"));
     }
 }

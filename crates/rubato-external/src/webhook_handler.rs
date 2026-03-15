@@ -181,7 +181,7 @@ impl WebhookHandler {
             image.insert("url".to_string(), "attachment://screenshot.png".to_string());
             embed.insert(
                 "image".to_string(),
-                serde_json::to_value(&image).expect("JSON value conversion"),
+                serde_json::to_value(&image).expect("HashMap<String, _> is always valid JSON"),
             );
 
             let screen_type = get_screen_type(current_state);
@@ -245,7 +245,8 @@ impl WebhookHandler {
                     );
                     embed.insert(
                         "author".to_string(),
-                        serde_json::to_value(&author).expect("JSON value conversion"),
+                        serde_json::to_value(&author)
+                            .expect("HashMap<String, _> is always valid JSON"),
                     );
                     embed.insert(
                         "description".to_string(),
@@ -257,20 +258,21 @@ impl WebhookHandler {
                     );
                     embed.insert(
                         "footer".to_string(),
-                        serde_json::to_value(&footer).expect("JSON value conversion"),
+                        serde_json::to_value(&footer)
+                            .expect("HashMap<String, _> is always valid JSON"),
                     );
                 }
             } else {
                 author.insert("name".to_string(), "LR2oraja ~Endless Dream~".to_string());
                 embed.insert(
                     "author".to_string(),
-                    serde_json::to_value(&author).expect("JSON value conversion"),
+                    serde_json::to_value(&author).expect("HashMap<String, _> is always valid JSON"),
                 );
             }
 
             payload.insert(
                 "embeds".to_string(),
-                serde_json::to_value(vec![embed]).expect("JSON value conversion"),
+                serde_json::to_value(vec![embed]).expect("HashMap<String, _> is always valid JSON"),
             );
         }
 
@@ -491,12 +493,14 @@ fn get_screen_type(state: &MainState) -> ScreenType {
 }
 
 /// Get the AbstractResult from the current state.
-/// In Java this was done via cast: ((AbstractResult) currentState)
-fn get_abstract_result(_state: &MainState) -> Option<&dyn AbstractResultAccess> {
-    log::warn!(
-        "stub: get_abstract_result — blocked by screen type hierarchy (MainState → AbstractResult cast)"
-    );
-    None
+/// In Java this was done via cast: ((AbstractResult) currentState).
+/// In Rust the MainState carries an optional AbstractResultAccess field,
+/// populated when the current screen is MusicResult or CourseResult.
+fn get_abstract_result(state: &MainState) -> Option<&dyn AbstractResultAccess> {
+    state
+        .abstract_result
+        .as_deref()
+        .map(|r| r as &dyn AbstractResultAccess)
 }
 
 #[cfg(test)]
@@ -506,6 +510,7 @@ mod tests {
         MainState {
             resource: Default::default(),
             screen_type,
+            abstract_result: None,
         }
     }
 

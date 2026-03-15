@@ -380,7 +380,7 @@ impl Default for ObsConfig {
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct IntegrationConfig {
-    #[serde(rename = "useDiscordRpc", alias = "useDiscordRPC")]
+    #[serde(rename = "useDiscordRPC", alias = "useDiscordRpc")]
     pub use_discord_rpc: bool,
     #[serde(rename = "setClipboardScreenshot")]
     pub set_clipboard_screenshot: bool,

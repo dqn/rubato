@@ -595,7 +595,8 @@ impl DifficultyTableParser {
                                         Value::Number(
                                             serde_json::Number::from_f64(t.scorerate)
                                                 .unwrap_or_else(|| {
-                                                    serde_json::Number::from_f64(0.0).unwrap()
+                                                    serde_json::Number::from_f64(0.0)
+                                                        .expect("0.0 is a valid f64")
                                                 }),
                                         ),
                                     );
@@ -604,7 +605,8 @@ impl DifficultyTableParser {
                                         Value::Number(
                                             serde_json::Number::from_f64(t.missrate)
                                                 .unwrap_or_else(|| {
-                                                    serde_json::Number::from_f64(100.0).unwrap()
+                                                    serde_json::Number::from_f64(100.0)
+                                                        .expect("100.0 is a valid f64")
                                                 }),
                                         ),
                                     );
@@ -634,7 +636,13 @@ impl DifficultyTableParser {
                 }
                 // If only one group, serialize as flat array for backwards compat
                 if all_groups.len() == 1 {
-                    header.insert("course".to_string(), all_groups.into_iter().next().unwrap());
+                    header.insert(
+                        "course".to_string(),
+                        all_groups
+                            .into_iter()
+                            .next()
+                            .expect("invariant: len == 1 checked above"),
+                    );
                 } else {
                     header.insert("course".to_string(), Value::Array(all_groups));
                 }

@@ -38,7 +38,7 @@ pub struct PlaySettings {
     pub gauge_auto_shift: i32,
     #[serde(rename = "bottomShiftableGauge")]
     pub bottom_shiftable_gauge: i32,
-    #[serde(rename = "hranThresholdBpm", alias = "hranThresholdBPM")]
+    #[serde(rename = "hranThresholdBPM", alias = "hranThresholdBpm")]
     pub hran_threshold_bpm: i32,
     #[serde(rename = "mineMode")]
     pub mine_mode: i32,
@@ -112,7 +112,7 @@ pub struct DisplaySettings {
     pub showpastnote: bool,
     #[serde(rename = "chartPreview")]
     pub chart_preview: bool,
-    #[serde(rename = "isGuideSe", alias = "isGuideSE")]
+    #[serde(rename = "isGuideSE", alias = "isGuideSe")]
     pub is_guide_se: bool,
     #[serde(rename = "misslayerDuration")]
     pub misslayer_duration: i32,

@@ -36,12 +36,19 @@ impl SharedRecordingAudioDriver {
 
     /// Returns a snapshot of all recorded events.
     pub fn events(&self) -> Vec<AudioEvent> {
-        self.inner.lock().unwrap().events().to_vec()
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .events()
+            .to_vec()
     }
 
     /// Clears the event log.
     pub fn clear_events(&self) {
-        self.inner.lock().unwrap().clear_events();
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .clear_events();
     }
 }
 
@@ -55,79 +62,127 @@ impl AudioDriver for SharedRecordingAudioDriver {
     fn play_path(&mut self, path: &str, volume: f32, loop_play: bool) {
         self.inner
             .lock()
-            .unwrap()
+            .expect("recording audio driver mutex poisoned")
             .play_path(path, volume, loop_play);
     }
 
     fn set_volume_path(&mut self, path: &str, volume: f32) {
-        self.inner.lock().unwrap().set_volume_path(path, volume);
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .set_volume_path(path, volume);
     }
 
     fn is_playing_path(&self, path: &str) -> bool {
-        self.inner.lock().unwrap().is_playing_path(path)
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .is_playing_path(path)
     }
 
     fn stop_path(&mut self, path: &str) {
-        self.inner.lock().unwrap().stop_path(path);
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .stop_path(path);
     }
 
     fn dispose_path(&mut self, path: &str) {
-        self.inner.lock().unwrap().dispose_path(path);
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .dispose_path(path);
     }
 
     fn set_model(&mut self, model: &BMSModel) {
-        self.inner.lock().unwrap().set_model(model);
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .set_model(model);
     }
 
     fn set_additional_key_sound(&mut self, judge: i32, fast: bool, path: Option<&str>) {
         self.inner
             .lock()
-            .unwrap()
+            .expect("recording audio driver mutex poisoned")
             .set_additional_key_sound(judge, fast, path);
     }
 
     fn abort(&mut self) {
-        self.inner.lock().unwrap().abort();
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .abort();
     }
 
     fn get_progress(&self) -> f32 {
-        self.inner.lock().unwrap().get_progress()
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .get_progress()
     }
 
     fn preload_path(&mut self, path: &str) {
-        self.inner.lock().unwrap().preload_path(path);
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .preload_path(path);
     }
 
     fn play_note(&mut self, n: &Note, volume: f32, pitch: i32) {
-        self.inner.lock().unwrap().play_note(n, volume, pitch);
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .play_note(n, volume, pitch);
     }
 
     fn play_judge(&mut self, judge: i32, fast: bool) {
-        self.inner.lock().unwrap().play_judge(judge, fast);
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .play_judge(judge, fast);
     }
 
     fn stop_note(&mut self, n: Option<&Note>) {
-        self.inner.lock().unwrap().stop_note(n);
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .stop_note(n);
     }
 
     fn set_volume_note(&mut self, n: &Note, volume: f32) {
-        self.inner.lock().unwrap().set_volume_note(n, volume);
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .set_volume_note(n, volume);
     }
 
     fn set_global_pitch(&mut self, pitch: f32) {
-        self.inner.lock().unwrap().set_global_pitch(pitch);
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .set_global_pitch(pitch);
     }
 
     fn get_global_pitch(&self) -> f32 {
-        self.inner.lock().unwrap().get_global_pitch()
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .get_global_pitch()
     }
 
     fn dispose_old(&mut self) {
-        self.inner.lock().unwrap().dispose_old();
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .dispose_old();
     }
 
     fn dispose(&mut self) {
-        self.inner.lock().unwrap().dispose();
+        self.inner
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .dispose();
     }
 }
 
@@ -141,7 +196,10 @@ mod tests {
         let handle = shared.inner();
 
         // We need mutable access through the trait, so use the inner directly
-        handle.lock().unwrap().play_path("bgm.ogg", 0.8, false);
+        handle
+            .lock()
+            .expect("recording audio driver mutex poisoned")
+            .play_path("bgm.ogg", 0.8, false);
 
         let events = shared.events();
         assert_eq!(events.len(), 1);
@@ -164,7 +222,9 @@ mod tests {
         shared.play_path("test.wav", 1.0, true);
         shared.stop_path("test.wav");
 
-        let inner = handle.lock().unwrap();
+        let inner = handle
+            .lock()
+            .expect("recording audio driver mutex poisoned");
         assert_eq!(inner.events().len(), 2);
         assert!(!inner.is_playing_path("test.wav"));
     }
@@ -190,7 +250,9 @@ mod tests {
         boxed.play_path("moved.ogg", 0.5, false);
 
         // Handle still works
-        let inner = handle.lock().unwrap();
+        let inner = handle
+            .lock()
+            .expect("recording audio driver mutex poisoned");
         assert_eq!(inner.events().len(), 1);
         assert!(inner.is_playing_path("moved.ogg"));
     }
