@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::json::json_skin_loader::{ResolvedImageEntry, SourceData, SourceDataType};
 use crate::json::json_skin_object_loader::source_image;
 use crate::objects::skin_image::SkinImage;
-use crate::stubs::TextureRegion;
+use crate::reexports::TextureRegion;
 use crate::types::skin::SkinObject;
 
 /// Loads a texture from the source map, resolving the source ID path.
@@ -13,7 +13,7 @@ pub(super) fn get_texture_for_src(
     source_map: &mut HashMap<String, SourceData>,
     skin_path: &Path,
     _usecim: bool,
-) -> Option<crate::stubs::Texture> {
+) -> Option<crate::reexports::Texture> {
     let src_id = src_id?;
 
     // Check if already loaded
@@ -37,7 +37,7 @@ pub(super) fn get_texture_for_src(
     let image_path = format!("{}/{}", parent, data_path);
 
     let result = if std::path::Path::new(&image_path).exists() {
-        Some(SourceDataType::Texture(crate::stubs::Texture::new(
+        Some(SourceDataType::Texture(crate::reexports::Texture::new(
             &image_path,
         )))
     } else {

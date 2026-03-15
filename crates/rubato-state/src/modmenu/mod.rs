@@ -1,22 +1,22 @@
 // beatoraja-modmenu: In-game mod menu (egui)
 // Translated from Java: bms.player.beatoraja.modmenu package (15 files)
 
-// Types moved from stubs.rs
+// Types
 pub mod clipboard_wrapper;
 pub mod imgui_surrogates;
 pub mod modmenu_skin;
 
-// Re-exports (formerly in stubs.rs)
+// Re-exports
 pub use rubato_core::config::Config;
 pub use rubato_core::play_config::PlayConfig;
 pub use rubato_core::score_data::ScoreData;
 pub use rubato_core::version::{self, Version};
+pub use rubato_skin::reexports::Rectangle;
 pub use rubato_skin::skin_header::{
     CustomCategory, CustomFile, CustomItemEnum as CustomCategoryItem, CustomOffset, CustomOption,
     SkinHeader, TYPE_LR2SKIN,
 };
 pub use rubato_skin::skin_property::OPTION_RANDOM_VALUE;
-pub use rubato_skin::stubs::Rectangle;
 pub use rubato_types::main_controller_access::{MainControllerAccess, NullMainController};
 pub use rubato_types::player_config::PlayerConfig;
 pub use rubato_types::player_config::read_all_player_id;

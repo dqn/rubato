@@ -6,8 +6,8 @@ use std::collections::HashSet;
 use crate::property::boolean_property::BooleanProperty;
 use crate::property::boolean_property_factory;
 use crate::property::timer_property::TimerPropertyEnum;
+use crate::reexports::{Color, Rectangle};
 use crate::skin_property;
-use crate::stubs::{Color, Rectangle};
 
 use super::{CENTERX, CENTERY, DestinationParams, SkinObjectData, SkinObjectDestination};
 

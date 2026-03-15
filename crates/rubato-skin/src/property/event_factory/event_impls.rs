@@ -1,5 +1,5 @@
 use super::super::event::Event;
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 use rubato_core::bms_player_mode::BMSPlayerMode;
 use rubato_play::judge_algorithm::DEFAULT_ALGORITHM;

@@ -1,5 +1,5 @@
 // Batched 2D quad renderer.
-// Drop-in replacement for the SpriteBatch stub in rendering_stubs.rs.
+// Drop-in replacement for the SpriteBatch stub in render_reexports.rs.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -10,6 +10,20 @@ use crate::gpu_texture_manager::{GpuTextureManager, PendingTexture};
 use crate::render_pipeline::SpriteRenderPipeline;
 use crate::shader::ShaderProgram;
 use crate::texture::{Texture, TextureRegion};
+
+/// A captured draw quad for GPU-free verification in E2E tests.
+/// Records the position, size, color, texture, and blend mode of each
+/// quad submitted to the SpriteBatch.
+#[derive(Debug, Clone)]
+pub struct CapturedDrawQuad {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+    pub color: [f32; 4],
+    pub texture_key: Option<String>,
+    pub blend_mode: BlendMode,
+}
 
 /// Transform parameters for rotated sprite drawing.
 pub struct SpriteTransform {
@@ -117,6 +131,10 @@ pub struct SpriteBatch {
     gpu_vertex_buffer: Option<wgpu::Buffer>,
     /// Current capacity of `gpu_vertex_buffer` in bytes.
     gpu_vertex_buffer_capacity: u64,
+    /// Optional capture buffer for GPU-free draw verification.
+    /// When `Some`, every draw call records a `CapturedDrawQuad`.
+    /// Zero overhead when `None` (just an Option check).
+    capture_buffer: Option<Vec<CapturedDrawQuad>>,
 }
 
 #[allow(unused_variables)]
@@ -135,6 +153,7 @@ impl SpriteBatch {
             blend_mode: BlendMode::Normal,
             gpu_vertex_buffer: None,
             gpu_vertex_buffer_capacity: 0,
+            capture_buffer: None,
         }
     }
 
@@ -187,6 +206,33 @@ impl SpriteBatch {
 
     pub fn blend_mode(&self) -> BlendMode {
         self.blend_mode
+    }
+
+    // ============================================================
+    // Draw capture (GPU-free observability for E2E tests)
+    // ============================================================
+
+    /// Enable draw capture. All subsequent draw calls will record a
+    /// `CapturedDrawQuad` into an internal buffer.
+    pub fn enable_capture(&mut self) {
+        self.capture_buffer = Some(Vec::new());
+    }
+
+    /// Disable draw capture and drop the capture buffer.
+    pub fn disable_capture(&mut self) {
+        self.capture_buffer = None;
+    }
+
+    /// Return the captured quads, or an empty slice if capture is disabled.
+    pub fn captured_quads(&self) -> &[CapturedDrawQuad] {
+        self.capture_buffer.as_deref().unwrap_or(&[])
+    }
+
+    /// Clear the capture buffer without disabling capture.
+    pub fn clear_captured(&mut self) {
+        if let Some(ref mut buf) = self.capture_buffer {
+            buf.clear();
+        }
     }
 
     /// Directly set the blend mode, bypassing GL factor mapping.
@@ -343,6 +389,23 @@ impl SpriteBatch {
             self.ensure_batch(None);
         }
 
+        // Capture the quad if capture is enabled (use transform position/size)
+        if let Some(ref mut buf) = self.capture_buffer {
+            let texture_key = self
+                .draw_batches
+                .last()
+                .and_then(|b| b.texture_key.as_ref().map(|k| k.to_string()));
+            buf.push(CapturedDrawQuad {
+                x: transform.x,
+                y: transform.y,
+                w: transform.width * transform.scale_x,
+                h: transform.height * transform.scale_y,
+                color: self.current_color,
+                texture_key,
+                blend_mode: self.blend_mode,
+            });
+        }
+
         let cos = transform.angle.to_radians().cos();
         let sin = transform.angle.to_radians().sin();
 
@@ -457,6 +520,23 @@ impl SpriteBatch {
 
     /// Push a simple axis-aligned quad.
     fn push_quad(&mut self, x: f32, y: f32, w: f32, h: f32, uv: UVRect) {
+        // Capture the quad if capture is enabled (zero overhead when None)
+        if let Some(ref mut buf) = self.capture_buffer {
+            let texture_key = self
+                .draw_batches
+                .last()
+                .and_then(|b| b.texture_key.as_ref().map(|k| k.to_string()));
+            buf.push(CapturedDrawQuad {
+                x,
+                y,
+                w,
+                h,
+                color: self.current_color,
+                texture_key,
+                blend_mode: self.blend_mode,
+            });
+        }
+
         let color = self.current_color;
         // Y-up projection: (x, y) is bottom-left, (x+w, y+h) is top-right.
         // wgpu textures have UV (0,0) at top-left, so swap v1/v2 so that
@@ -852,5 +932,190 @@ mod tests {
         assert!(second.is_empty(), "drain should clear pending textures");
 
         batch.end();
+    }
+
+    #[test]
+    fn test_capture_disabled_by_default() {
+        let batch = SpriteBatch::new();
+        assert!(batch.captured_quads().is_empty());
+    }
+
+    #[test]
+    fn test_capture_records_quads() {
+        let mut batch = SpriteBatch::new();
+        batch.enable_capture();
+
+        let tex = Texture {
+            width: 10,
+            height: 10,
+            disposed: false,
+            path: Some(Arc::from("capture_tex")),
+            rgba_data: Some(Arc::new(vec![255u8; 400])),
+            ..Default::default()
+        };
+        batch.draw_texture(&tex, 5.0, 10.0, 20.0, 30.0);
+
+        let quads = batch.captured_quads();
+        assert_eq!(quads.len(), 1);
+        assert_eq!(quads[0].x, 5.0);
+        assert_eq!(quads[0].y, 10.0);
+        assert_eq!(quads[0].w, 20.0);
+        assert_eq!(quads[0].h, 30.0);
+        assert_eq!(quads[0].texture_key.as_deref(), Some("capture_tex"));
+        assert_eq!(quads[0].blend_mode, BlendMode::Normal);
+        assert_eq!(quads[0].color, [1.0, 1.0, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn test_capture_records_color_and_blend() {
+        let mut batch = SpriteBatch::new();
+        batch.enable_capture();
+        batch.set_color(&Color::new(1.0, 0.0, 0.5, 0.8));
+        batch.set_blend_function(0x0302, 1); // Additive
+
+        let tex = Texture::default();
+        batch.draw_texture(&tex, 0.0, 0.0, 10.0, 10.0);
+
+        let quads = batch.captured_quads();
+        assert_eq!(quads.len(), 1);
+        assert_eq!(quads[0].color, [1.0, 0.0, 0.5, 0.8]);
+        assert_eq!(quads[0].blend_mode, BlendMode::Additive);
+    }
+
+    #[test]
+    fn test_capture_no_recording_when_disabled() {
+        let mut batch = SpriteBatch::new();
+        // capture not enabled
+        let tex = Texture::default();
+        batch.draw_texture(&tex, 0.0, 0.0, 10.0, 10.0);
+        assert!(batch.captured_quads().is_empty());
+    }
+
+    #[test]
+    fn test_capture_clear() {
+        let mut batch = SpriteBatch::new();
+        batch.enable_capture();
+
+        let tex = Texture::default();
+        batch.draw_texture(&tex, 0.0, 0.0, 10.0, 10.0);
+        assert_eq!(batch.captured_quads().len(), 1);
+
+        batch.clear_captured();
+        assert!(batch.captured_quads().is_empty());
+    }
+
+    #[test]
+    fn test_capture_disable_drops_buffer() {
+        let mut batch = SpriteBatch::new();
+        batch.enable_capture();
+
+        let tex = Texture::default();
+        batch.draw_texture(&tex, 0.0, 0.0, 10.0, 10.0);
+        assert_eq!(batch.captured_quads().len(), 1);
+
+        batch.disable_capture();
+        assert!(batch.captured_quads().is_empty());
+    }
+
+    #[test]
+    fn test_capture_draw_region() {
+        let mut batch = SpriteBatch::new();
+        batch.enable_capture();
+
+        let tex = Texture {
+            width: 16,
+            height: 16,
+            disposed: false,
+            path: Some(Arc::from("region_tex")),
+            rgba_data: Some(Arc::new(vec![0u8; 1024])),
+            ..Default::default()
+        };
+        let region = TextureRegion {
+            u: 0.0,
+            v: 0.0,
+            u2: 0.5,
+            v2: 0.5,
+            region_x: 0,
+            region_y: 0,
+            region_width: 8,
+            region_height: 8,
+            texture: Some(tex),
+        };
+        batch.draw_region(&region, 100.0, 200.0, 50.0, 60.0);
+
+        let quads = batch.captured_quads();
+        assert_eq!(quads.len(), 1);
+        assert_eq!(quads[0].x, 100.0);
+        assert_eq!(quads[0].y, 200.0);
+        assert_eq!(quads[0].w, 50.0);
+        assert_eq!(quads[0].h, 60.0);
+        assert_eq!(quads[0].texture_key.as_deref(), Some("region_tex"));
+    }
+
+    #[test]
+    fn test_capture_rotated_draw() {
+        let mut batch = SpriteBatch::new();
+        batch.enable_capture();
+
+        let region = TextureRegion {
+            u: 0.0,
+            v: 0.0,
+            u2: 1.0,
+            v2: 1.0,
+            ..Default::default()
+        };
+        batch.draw_region_rotated(
+            &region,
+            &SpriteTransform {
+                x: 50.0,
+                y: 60.0,
+                center_x: 16.0,
+                center_y: 16.0,
+                width: 32.0,
+                height: 32.0,
+                scale_x: 2.0,
+                scale_y: 1.5,
+                angle: 45.0,
+            },
+        );
+
+        let quads = batch.captured_quads();
+        assert_eq!(quads.len(), 1);
+        assert_eq!(quads[0].x, 50.0);
+        assert_eq!(quads[0].y, 60.0);
+        assert_eq!(quads[0].w, 64.0); // 32.0 * 2.0
+        assert_eq!(quads[0].h, 48.0); // 32.0 * 1.5
+    }
+
+    #[test]
+    fn test_capture_multiple_quads() {
+        let mut batch = SpriteBatch::new();
+        batch.enable_capture();
+
+        let tex_a = Texture {
+            width: 4,
+            height: 4,
+            disposed: false,
+            path: Some(Arc::from("tex_a")),
+            rgba_data: Some(Arc::new(vec![0u8; 64])),
+            ..Default::default()
+        };
+        let tex_b = Texture {
+            width: 4,
+            height: 4,
+            disposed: false,
+            path: Some(Arc::from("tex_b")),
+            rgba_data: Some(Arc::new(vec![0u8; 64])),
+            ..Default::default()
+        };
+        batch.draw_texture(&tex_a, 0.0, 0.0, 10.0, 10.0);
+        batch.draw_texture(&tex_b, 20.0, 20.0, 10.0, 10.0);
+
+        let quads = batch.captured_quads();
+        assert_eq!(quads.len(), 2);
+        assert_eq!(quads[0].texture_key.as_deref(), Some("tex_a"));
+        assert_eq!(quads[1].texture_key.as_deref(), Some("tex_b"));
+        assert_eq!(quads[0].x, 0.0);
+        assert_eq!(quads[1].x, 20.0);
     }
 }

@@ -1,6 +1,6 @@
 use crate::property::timer_property::{TimerProperty, TimerPropertyEnum};
+use crate::reexports::{MainState, TextureRegion};
 use crate::sources::skin_source::SkinSource;
-use crate::stubs::{MainState, TextureRegion};
 
 /// Skin source image (SkinSourceImage.java)
 pub struct SkinSourceImage {

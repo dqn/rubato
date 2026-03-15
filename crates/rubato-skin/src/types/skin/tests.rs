@@ -21,7 +21,7 @@ impl BooleanProperty for AlwaysTrue {
 }
 
 struct RecordingSkinRenderContext {
-    timer: crate::stubs::Timer,
+    timer: crate::reexports::Timer,
     state_type: MainStateType,
     executed_events: Vec<(i32, i32, i32)>,
     changed_states: Vec<MainStateType>,
@@ -34,7 +34,7 @@ struct RecordingSkinRenderContext {
 impl RecordingSkinRenderContext {
     fn new(state_type: MainStateType) -> Self {
         Self {
-            timer: crate::stubs::Timer::with_timers(100, 100_000, Vec::new()),
+            timer: crate::reexports::Timer::with_timers(100, 100_000, Vec::new()),
             state_type,
             executed_events: Vec::new(),
             changed_states: Vec::new(),
@@ -108,7 +108,7 @@ fn make_test_skin() -> Skin {
 
 #[test]
 fn test_timer_only_main_state_returns_expected_values() {
-    let timer = crate::stubs::Timer::with_timers(1000, 1_000_000, Vec::new());
+    let timer = crate::reexports::Timer::with_timers(1000, 1_000_000, Vec::new());
     let adapter = TimerOnlyMainState::from_timer(&timer);
     let state: &dyn MainState = &adapter;
     assert_eq!(state.now_time(), 1000);
@@ -186,7 +186,7 @@ fn test_draw_all_objects_timed_empty_skin() {
 #[test]
 fn test_update_custom_objects_timed_empty_skin() {
     let mut skin = make_test_skin();
-    let mut timer = crate::stubs::Timer::with_timers(100, 100_000, Vec::new());
+    let mut timer = crate::reexports::Timer::with_timers(100, 100_000, Vec::new());
     // Should not panic with no custom objects
     skin.update_custom_objects_timed(&mut timer);
 }

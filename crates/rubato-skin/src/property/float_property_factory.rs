@@ -1,7 +1,7 @@
 use super::float_property::{FloatProperty, FloatPropertyEnum};
 use super::float_writer::FloatWriter;
 use super::property_lookup::{find_by_id_enum, find_by_name_enum};
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 /// Returns a FloatProperty for the given RateType ID.
 pub fn rate_property_by_id(optionid: i32) -> Option<FloatPropertyEnum> {
@@ -441,7 +441,7 @@ impl FloatWriter for DelegateFloatWriter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stubs::Timer;
+    use crate::reexports::Timer;
 
     /// MockMainState that returns configurable float values.
     struct FloatMockState {

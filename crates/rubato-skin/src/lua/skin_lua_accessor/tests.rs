@@ -1,7 +1,7 @@
 use super::*;
 use crate::property::float_property::FloatProperty;
 use crate::property::timer_property::TimerProperty;
-use crate::stubs::Timer;
+use crate::reexports::Timer;
 
 /// Minimal mock MainState for Lua property tests.
 struct MockMainState {

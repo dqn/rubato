@@ -2,7 +2,7 @@
 // Computes interpolated region, color, and angle for the current time.
 
 use crate::property::timer_property::TimerProperty;
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 use super::SkinObjectData;
 

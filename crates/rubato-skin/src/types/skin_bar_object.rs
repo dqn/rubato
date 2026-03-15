@@ -2,7 +2,7 @@
 // Minimal SkinBar type in beatoraja-skin to avoid circular dependency with beatoraja-select.
 // The full SkinBar implementation lives in beatoraja-select::skin_bar.
 
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 #[cfg(test)]
 use crate::types::skin_object::DestinationParams;
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
@@ -28,7 +28,9 @@ impl SkinBarObject {
     }
 
     pub fn draw(&mut self, _sprite: &mut SkinObjectRenderer) {
-        // Stub: bar drawing is handled by BarRenderer in beatoraja-select
+        // Intentionally empty: actual bar rendering is delegated to
+        // BarRenderer in rubato-select, which owns the bar layout logic
+        // and calls SkinObjectData methods directly on each bar element.
     }
 
     pub fn dispose(&mut self) {

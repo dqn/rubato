@@ -13,7 +13,7 @@ pub mod midi_input_processor;
 pub mod mouse_scratch_input;
 pub mod winit_input_bridge;
 
-// Re-exports from rubato_types (previously in stubs.rs)
+// Re-exports from rubato_types
 pub use rubato_types::config::Config;
 pub use rubato_types::play_mode_config::{
     ANALOG_SCRATCH_VER_1, ANALOG_SCRATCH_VER_2, ControllerConfig, KeyboardConfig,
@@ -23,5 +23,5 @@ pub use rubato_types::play_mode_config::{
 pub use rubato_types::player_config::PlayerConfig;
 pub use rubato_types::resolution::Resolution;
 
-// Re-exports from gdx_compat (previously in stubs.rs)
+// Re-exports from gdx_compat
 pub use gdx_compat::{GdxGraphics, GdxInput};

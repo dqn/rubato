@@ -1,5 +1,5 @@
 // Platform integration helpers (rfd dialogs, arboard clipboard, open crate, cpal audio, monitors).
-// Moved from stubs.rs in Phase 25a.
+//
 
 /// Marker type (egui has no Stage/Scene equivalent)
 #[derive(Clone, Debug, Default)]

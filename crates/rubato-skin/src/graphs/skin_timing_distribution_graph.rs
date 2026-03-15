@@ -2,7 +2,7 @@
 // Mechanical line-by-line translation.
 
 use crate::graphs::skin_timing_visualizer::color_string_validation;
-use crate::stubs::{Color, MainState, Pixmap, PixmapFormat, Texture, TextureRegion};
+use crate::reexports::{Color, MainState, Pixmap, PixmapFormat, Texture, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
 /// Configuration for constructing a `SkinTimingDistributionGraph`.

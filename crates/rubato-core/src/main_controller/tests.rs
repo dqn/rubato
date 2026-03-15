@@ -61,7 +61,6 @@ impl MainState for TestState {
     fn dispose(&mut self) {
         self.disposed = true;
         self.state_data.skin = None;
-        self.state_data.stage = None;
     }
 }
 

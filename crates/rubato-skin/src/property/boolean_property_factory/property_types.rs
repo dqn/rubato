@@ -1,5 +1,5 @@
 use crate::property::boolean_property::BooleanProperty;
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 // ============================================================
 // Property types with different staticness categories

@@ -1,12 +1,12 @@
 use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
 use crate::lr2::lr2_skin_loader::{self};
+use crate::reexports::{Rectangle, Resolution, TextureRegion};
 use crate::safe_div_f32;
 use crate::skin_bpm_graph::SkinBPMGraph;
 use crate::skin_image::SkinImage;
 use crate::skin_note_distribution_graph::SkinNoteDistributionGraph;
 use crate::skin_object::DestinationParams;
 use crate::skin_text::SkinText;
-use crate::stubs::{Rectangle, Resolution, TextureRegion};
 
 /// LR2 select skin loader
 ///

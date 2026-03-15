@@ -1,5 +1,5 @@
 use crate::property::timer_property::{TimerProperty, TimerPropertyEnum};
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 /// Custom timer definition
 ///

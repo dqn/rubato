@@ -10,7 +10,6 @@ pub enum KeyCommand {
     CopySongSha256Hash,
     SwitchScreenMode,
     SaveScreenshot,
-    PostTwitter,
     AddFavoriteSong,
     AddFavoriteChart,
     AutoplayFolder,

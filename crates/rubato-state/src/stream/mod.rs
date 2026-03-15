@@ -1,4 +1,4 @@
-// Re-exports (formerly in stubs.rs)
+// Re-exports
 pub use rubato_types::imgui_notify::ImGuiNotify;
 
 // Stream command trait (abstract class)

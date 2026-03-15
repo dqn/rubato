@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crate::property::boolean_property_factory::BooleanPropertyFactory;
+use crate::reexports::MainState;
 use crate::skin_object::DestinationParams;
-use crate::stubs::MainState;
 
 /// LR2 skin loader base
 ///
@@ -267,14 +267,14 @@ pub fn str_at(parts: &[String], idx: usize) -> &str {
 /// identical across play, select, result, and course-result loaders.
 pub fn process_src_notechart(
     str_parts: &[String],
-    gauge: &mut crate::stubs::Rectangle,
+    gauge: &mut crate::reexports::Rectangle,
     noteobj: &mut Option<crate::skin_note_distribution_graph::SkinNoteDistributionGraph>,
 ) {
     let values = parse_int(str_parts);
     let obj = crate::skin_note_distribution_graph::SkinNoteDistributionGraph::new(
         values[1], values[15], values[16], values[17], values[18], values[19],
     );
-    *gauge = crate::stubs::Rectangle::new(0.0, 0.0, values[11] as f32, values[12] as f32);
+    *gauge = crate::reexports::Rectangle::new(0.0, 0.0, values[11] as f32, values[12] as f32);
     *noteobj = Some(obj);
 }
 
@@ -288,7 +288,7 @@ pub fn process_dst_notechart(
     dst_width: f32,
     dst_height: f32,
     src_width: f32,
-    gauge: &mut crate::stubs::Rectangle,
+    gauge: &mut crate::reexports::Rectangle,
     noteobj: &mut Option<crate::skin_note_distribution_graph::SkinNoteDistributionGraph>,
 ) {
     let values = parse_int(str_parts);
@@ -329,7 +329,7 @@ pub fn process_dst_notechart(
 /// Shared across play, select, result, and course-result loaders.
 pub fn process_src_bpmchart(
     str_parts: &[String],
-    gauge: &mut crate::stubs::Rectangle,
+    gauge: &mut crate::reexports::Rectangle,
     bpmgraphobj: &mut Option<crate::skin_bpm_graph::SkinBPMGraph>,
 ) {
     let values = parse_int(str_parts);
@@ -343,7 +343,7 @@ pub fn process_src_bpmchart(
         stop_line_color: str_at(str_parts, 9),
         transition_line_color: str_at(str_parts, 10),
     });
-    *gauge = crate::stubs::Rectangle::new(0.0, 0.0, values[1] as f32, values[2] as f32);
+    *gauge = crate::reexports::Rectangle::new(0.0, 0.0, values[1] as f32, values[2] as f32);
     *bpmgraphobj = Some(obj);
 }
 
@@ -357,7 +357,7 @@ pub fn process_dst_bpmchart(
     dst_width: f32,
     dst_height: f32,
     src_width: f32,
-    gauge: &mut crate::stubs::Rectangle,
+    gauge: &mut crate::reexports::Rectangle,
     bpmgraphobj: &mut Option<crate::skin_bpm_graph::SkinBPMGraph>,
 ) {
     let values = parse_int(str_parts);
@@ -514,7 +514,7 @@ mod tests {
         let gauge_h: f32 = 100.0;
 
         let str_parts = make_dst_str_parts(50, 200);
-        let mut gauge = crate::stubs::Rectangle::new(0.0, 0.0, gauge_w, gauge_h);
+        let mut gauge = crate::reexports::Rectangle::new(0.0, 0.0, gauge_w, gauge_h);
         let mut noteobj =
             Some(crate::skin_note_distribution_graph::SkinNoteDistributionGraph::new_default());
         process_dst_notechart(
@@ -547,7 +547,7 @@ mod tests {
         let gauge_h: f32 = 100.0;
 
         let str_parts = make_dst_str_parts(50, 200);
-        let mut gauge = crate::stubs::Rectangle::new(0.0, 0.0, gauge_w, gauge_h);
+        let mut gauge = crate::reexports::Rectangle::new(0.0, 0.0, gauge_w, gauge_h);
         let mut bpmobj = Some(crate::skin_bpm_graph::SkinBPMGraph::new(
             crate::skin_bpm_graph::BpmGraphConfig {
                 delay: 0,

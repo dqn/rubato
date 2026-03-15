@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use crate::stubs::{BitmapFont, BitmapFontData, TextureRegion};
+use crate::reexports::{BitmapFont, BitmapFontData, TextureRegion};
 
 /// BitmapFont cache
 ///

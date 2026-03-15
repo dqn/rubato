@@ -1,6 +1,6 @@
 use super::property_lookup::{find_by_id, find_by_name};
 use super::string_property::StringProperty;
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 /// Returns a StringProperty for the given ID.
 pub fn string_property_by_id(id: i32) -> Option<Box<dyn StringProperty>> {

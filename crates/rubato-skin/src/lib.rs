@@ -6,14 +6,10 @@ pub mod property;
 
 // Rendering re-exports (wgpu-backed LibGDX equivalents from rubato-render)
 pub mod render_reexports;
-/// Backward-compatible alias for `render_reexports` module.
-pub use render_reexports as rendering_stubs;
-// Re-exports for backward compatibility (all shadow types removed)
+// Re-exports (convenience imports for commonly used types)
 pub mod reexports;
-/// Backward-compatible alias for `reexports` module.
-pub use reexports as stubs;
 
-// Extracted from stubs: real implementations and standalone types
+// Real implementations and standalone types
 pub mod main_state;
 pub mod skin_config_offset;
 pub mod skin_resolution;

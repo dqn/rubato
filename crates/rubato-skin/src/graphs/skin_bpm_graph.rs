@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use bms_model::bms_model::BMSModel;
 
-use crate::stubs::{
+use crate::reexports::{
     Color, MainState, Pixmap, PixmapFormat, SongData, SongInformation, Texture, TextureRegion,
 };
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
@@ -241,8 +241,9 @@ impl SkinBPMGraph {
             let mut shape_pixmap = Pixmap::new(width, height, PixmapFormat::RGBA8888);
 
             let mut last_time = self.bpm_data[self.bpm_data.len() - 1][1] as i32;
-            // In Java: song = state.main.getPlayerResource().getSongdata()
-            // Stubbed: we skip the song length check
+            // In Java: last_time = max(last_time, song.getInformation().getLastNoteTime() + 1000).
+            // SkinBpmGraph does not have access to SongData here (it only receives bpm_data
+            // via set_bpm_data). The +1000 padding provides a reasonable default end margin.
             last_time += 1000;
 
             let safe_mainbpm = if self.mainbpm == 0.0 {

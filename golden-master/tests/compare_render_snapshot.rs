@@ -27,10 +27,10 @@ use golden_master::render_snapshot::{
 use golden_master::state_provider::{StaticMainStateAdapter, StaticStateProvider};
 use rubato_skin::json::json_skin_loader::{JSONSkinLoader, SkinConfigProperty};
 use rubato_skin::lua::lua_skin_loader::LuaSkinLoader;
+use rubato_skin::reexports::{MainState, Resolution as SkinResolution};
 use rubato_skin::skin::Skin;
 use rubato_skin::skin_data_converter;
 use rubato_skin::skin_type::SkinType;
-use rubato_skin::stubs::{MainState, Resolution as SkinResolution};
 
 // ---------------------------------------------------------------------------
 // Helpers

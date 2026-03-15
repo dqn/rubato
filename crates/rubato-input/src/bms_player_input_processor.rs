@@ -523,7 +523,6 @@ impl BMSPlayerInputProcessor {
             }
             KeyCommand::SwitchScreenMode => self.is_control_key_pressed(ControlKeys::F4),
             KeyCommand::SaveScreenshot => self.is_control_key_pressed(ControlKeys::F6),
-            KeyCommand::PostTwitter => self.is_control_key_pressed(ControlKeys::F7),
             KeyCommand::AddFavoriteSong => self.is_control_key_pressed(ControlKeys::F8),
             KeyCommand::AddFavoriteChart => self.is_control_key_pressed(ControlKeys::F9),
             KeyCommand::AutoplayFolder => self.is_control_key_pressed(ControlKeys::F10),

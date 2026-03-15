@@ -7,9 +7,9 @@
 
 use rubato_skin::lr2::lr2_play_skin_loader::{LR2PlaySkinLoaderState, SkinSourceData};
 use rubato_skin::lr2::lr2_skin_csv_loader::LR2SkinLoaderAccess;
+use rubato_skin::reexports::{Rectangle, Resolution, TextureRegion};
 use rubato_skin::skin::Skin;
 use rubato_skin::skin_note_object::SkinNoteObject;
-use rubato_skin::stubs::{Rectangle, Resolution, TextureRegion};
 use rubato_skin::types::skin::SkinObject;
 use rubato_skin::types::skin_header::SkinHeader;
 

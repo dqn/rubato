@@ -1,4 +1,4 @@
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 pub trait BooleanProperty: Send + Sync {
     fn is_static(&self, state: &dyn MainState) -> bool;

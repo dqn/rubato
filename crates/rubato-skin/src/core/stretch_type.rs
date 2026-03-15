@@ -1,4 +1,4 @@
-use crate::stubs::{Rectangle, TextureRegion};
+use crate::reexports::{Rectangle, TextureRegion};
 
 /// Image stretch type (StretchType.java)
 #[derive(Clone, Copy, Debug, PartialEq)]

@@ -7,7 +7,7 @@ use crate::json::json_skin_loader::{
 use crate::json::json_skin_object_loader::source_image;
 use crate::objects::skin_image::SkinImage;
 use crate::objects::skin_number::SkinNumber;
-use crate::stubs::{Rectangle, TextureRegion};
+use crate::reexports::{Rectangle, TextureRegion};
 use crate::types::skin::SkinObject;
 
 use super::object_converter::{apply_destinations, convert_skin_object};

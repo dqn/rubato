@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::json::json_skin;
-use crate::stubs::Resolution;
+use crate::reexports::Resolution;
 
 pub(crate) fn parse_skin_json(content: &str) -> Result<json_skin::Skin, serde_json::Error> {
     let cleaned = fix_lenient_json(content);

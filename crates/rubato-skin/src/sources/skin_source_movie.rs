@@ -1,5 +1,5 @@
+use crate::reexports::{MainState, TextureRegion};
 use crate::sources::skin_source::SkinSource;
-use crate::stubs::{MainState, TextureRegion};
 
 #[cfg(feature = "ffmpeg")]
 use std::sync::Mutex;
@@ -200,7 +200,7 @@ impl SkinSource for SkinSourceMovie {
     fn get_image(&self, time: i64, _state: &dyn MainState) -> Option<TextureRegion> {
         #[cfg(feature = "ffmpeg")]
         {
-            use crate::stubs::Texture;
+            use crate::reexports::Texture;
 
             let mut guard = self.decoder.lock().ok()?;
             let decoder = guard.as_mut()?;

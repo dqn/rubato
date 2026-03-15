@@ -66,7 +66,7 @@ impl MusicSelectInputProcessor {
 
         // NUM2: sort switch
         if input.is_control_key_pressed(ControlKeys::Num2) {
-            SongManagerMenu::force_disable_last_played_sort();
+            rubato_types::last_played_sort::force_disable();
             ctx.events.push(InputEvent::ExecuteEvent(EventType::Sort));
         }
 

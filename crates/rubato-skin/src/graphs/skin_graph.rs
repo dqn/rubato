@@ -4,10 +4,10 @@
 use crate::property::float_property::{FloatProperty, FloatPropertyEnum};
 use crate::property::float_property_factory;
 use crate::property::timer_property::TimerPropertyEnum;
+use crate::reexports::{MainState, TextureRegion};
 use crate::sources::skin_source::SkinSource;
 use crate::sources::skin_source_image::SkinSourceImage;
 use crate::sources::skin_source_reference::SkinSourceReference;
-use crate::stubs::{MainState, TextureRegion};
 use crate::types::skin_object::{RateProperty, SkinObjectData, SkinObjectRenderer};
 
 pub struct SkinGraph {

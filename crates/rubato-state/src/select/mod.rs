@@ -1,17 +1,14 @@
-// Types moved from stubs.rs
 pub mod ir_status;
-pub mod song_manager_menu;
-pub use song_manager_menu::SongManagerMenu;
 
-// Re-exports (formerly in stubs.rs)
+// Re-exports
 
 // LibGDX types
-pub use rubato_skin::stubs::Color;
-pub use rubato_skin::stubs::Pixmap;
-pub use rubato_skin::stubs::PixmapFormat;
-pub use rubato_skin::stubs::Rectangle;
-pub use rubato_skin::stubs::Texture;
-pub use rubato_skin::stubs::TextureRegion;
+pub use rubato_skin::reexports::Color;
+pub use rubato_skin::reexports::Pixmap;
+pub use rubato_skin::reexports::PixmapFormat;
+pub use rubato_skin::reexports::Rectangle;
+pub use rubato_skin::reexports::Texture;
+pub use rubato_skin::reexports::TextureRegion;
 
 // beatoraja core types
 pub use rubato_core::audio_config::AudioConfig;
@@ -34,7 +31,7 @@ pub use rubato_types::folder_data::FolderData;
 pub use rubato_types::song_database_accessor::SongDatabaseAccessor;
 
 // MainState
-pub use rubato_skin::stubs::MainState;
+pub use rubato_skin::reexports::MainState;
 
 // MainStateType
 pub use rubato_types::main_state_type::MainStateType;

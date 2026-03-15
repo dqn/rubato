@@ -1,5 +1,5 @@
 // Real implementations replacing LibGDX Pixmap/GdxGraphics/BufferUtils/PixmapIO.
-// Moved from stubs.rs in Phase 25a.
+//
 
 /// Real RGBA8888 pixel buffer replacing LibGDX Pixmap.
 /// Stores width x height RGBA pixel data for screenshot capture.

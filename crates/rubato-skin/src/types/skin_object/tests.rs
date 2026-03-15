@@ -1,6 +1,6 @@
 use super::renderer::{DrawRotatedParams, SkinObjectRenderer};
 use super::*;
-use crate::stubs::{BitmapFont, GlyphLayout, Texture};
+use crate::reexports::{BitmapFont, GlyphLayout, Texture};
 
 #[test]
 fn test_skin_object_renderer_new() {
@@ -414,9 +414,9 @@ fn test_skin_object_renderer_draw_font_saves_restores_color() {
 #[test]
 fn test_skin_object_renderer_draw_font_layout_no_crash() {
     let mut renderer = SkinObjectRenderer::new();
-    let font = BitmapFont::new();
+    let mut font = BitmapFont::new();
     let layout = GlyphLayout::new();
-    renderer.draw_font_layout(&font, &layout, 10.0, 20.0);
+    renderer.draw_font_layout(&mut font, &layout, 10.0, 20.0);
     // No crash is the success criterion
 }
 

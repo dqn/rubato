@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use mlua::prelude::*;
 
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 /// Event utility for Lua
 ///

@@ -1,5 +1,5 @@
 // Cross-platform clipboard helper using arboard crate.
-// Moved from stubs.rs in Phase 25a.
+//
 
 /// Cross-platform clipboard helper using arboard crate
 pub struct ClipboardHelper;

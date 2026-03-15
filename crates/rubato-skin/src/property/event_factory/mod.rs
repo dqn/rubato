@@ -828,7 +828,7 @@ mod event_impls;
 use event_impls::*;
 
 #[cfg(test)]
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 #[cfg(test)]
 use rubato_types::play_config;
 

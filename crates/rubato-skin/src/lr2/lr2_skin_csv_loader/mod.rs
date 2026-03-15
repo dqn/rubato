@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use crate::lr2::lr2_skin_loader::LR2SkinLoaderState;
+use crate::reexports::{Resolution, Texture, TextureRegion};
 use crate::skin::SkinObject;
 use crate::skin_gauge::SkinGauge;
 use crate::skin_image::SkinImage;
 use crate::skin_text_image::SkinTextImageSource;
-use crate::stubs::{Resolution, Texture, TextureRegion};
 
 /// LR2 CSV skin loader base
 ///

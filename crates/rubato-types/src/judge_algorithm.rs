@@ -1,4 +1,4 @@
-// JudgeAlgorithm - moved from stubs.rs (Phase 30a)
+// JudgeAlgorithm
 
 use std::fmt;
 use std::str::FromStr;

@@ -2,7 +2,7 @@
 // Mechanical line-by-line translation.
 
 use crate::property::string_property::StringProperty;
-use crate::stubs::{
+use crate::reexports::{
     BitmapFont, Color, FreeTypeFontGenerator, FreeTypeFontParameter, GlyphLayout, MainState,
 };
 use crate::text::skin_text::{OVERFLOW_OVERFLOW, OVERFLOW_SHRINK, OVERFLOW_TRUNCATE, SkinTextData};
@@ -313,7 +313,7 @@ impl SkinTextFont {
                 break;
             }
 
-            let glyph_region = crate::stubs::TextureRegion::new();
+            let glyph_region = crate::reexports::TextureRegion::new();
             self.text_data.data.draw_image_at_with_color(
                 sprite,
                 &DrawImageAtParams {
@@ -370,7 +370,7 @@ impl crate::skin_text::SkinText for SkinTextFont {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stubs::Rectangle;
+    use crate::reexports::Rectangle;
 
     /// Helper to create a SkinTextFont with direct font injection for testing.
     /// Uses parameter.size as the base font size for scaling calculations.

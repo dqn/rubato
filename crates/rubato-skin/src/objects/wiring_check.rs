@@ -149,8 +149,8 @@ impl WiringCheck for super::skin_bga_object::SkinBgaObject {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::reexports::TextureRegion;
     use crate::skin_note_object::SkinNoteObject;
-    use crate::stubs::TextureRegion;
 
     #[test]
     fn note_object_with_no_textures_reports_error() {

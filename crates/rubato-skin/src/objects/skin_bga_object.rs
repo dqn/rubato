@@ -11,9 +11,9 @@ use rubato_play::skin_bga::{
 use rubato_render::color::Color;
 use rubato_render::texture::TextureRegion;
 
+use crate::reexports::{MainState, Rectangle};
 use crate::skin_object::{SkinObjectData, SkinObjectRenderer};
 use crate::skin_property;
-use crate::stubs::{MainState, Rectangle};
 
 /// Trait for BGA drawing, bridging BGAProcessor to the skin rendering system.
 /// This trait allows the skin to call BGA operations without knowing BGAProcessor internals.

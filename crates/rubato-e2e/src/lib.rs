@@ -6,8 +6,10 @@
 //! requiring GPU or audio hardware.
 
 pub mod harness;
+pub mod scenario;
 
-pub use harness::{E2eHarness, FRAME_DURATION_US};
+pub use harness::{E2eHarness, FRAME_DURATION_US, FrameState};
+pub use scenario::E2eScenario;
 
 // Re-export commonly needed types for E2E tests
 pub use rubato_audio::recording_audio_driver::AudioEvent;
@@ -15,3 +17,4 @@ pub use rubato_core::main_controller::StateFactory;
 pub use rubato_types::groove_gauge::GrooveGauge;
 pub use rubato_types::main_state_type::MainStateType;
 pub use rubato_types::score_data::ScoreData;
+pub use rubato_types::state_event::StateEvent;

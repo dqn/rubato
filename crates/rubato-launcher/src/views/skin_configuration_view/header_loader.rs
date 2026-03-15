@@ -20,8 +20,8 @@ pub fn load_skin_header(path: &Path, config: &Config) -> Option<SkinHeader> {
     use rubato_skin::json::json_skin_loader::JSONSkinLoader;
     use rubato_skin::lr2::lr2_skin_header_loader::LR2SkinHeaderLoader;
     use rubato_skin::lua::lua_skin_loader::LuaSkinLoader;
+    use rubato_skin::reexports::Resolution;
     use rubato_skin::skin_data_converter::convert_header_data;
-    use rubato_skin::stubs::Resolution;
 
     let path_string = path.to_string_lossy().to_lowercase();
     let default_src = Resolution {

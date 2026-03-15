@@ -1066,7 +1066,6 @@ impl MainState for BMSPlayer {
             skin.dispose_skin();
         }
         self.main_state_data.skin = None;
-        self.main_state_data.stage = None;
 
         if let Some(ref mut lr) = self.lanerender {
             lr.dispose();

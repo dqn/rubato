@@ -7,7 +7,6 @@ use std::path::PathBuf;
 use rubato_e2e::E2eHarness;
 use rubato_launcher::state_factory::LauncherStateFactory;
 use rubato_types::main_controller_access::MainControllerAccess;
-use rubato_types::player_resource_access::PlayerResourceAccess;
 
 fn test_bms_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))

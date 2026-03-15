@@ -9,7 +9,7 @@ use crate::property::float_writer::FloatWriter;
 use crate::property::integer_property::IntegerProperty;
 use crate::property::string_property::StringProperty;
 use crate::property::timer_property::TimerProperty;
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 // ============================================================
 // Lua-backed property implementations

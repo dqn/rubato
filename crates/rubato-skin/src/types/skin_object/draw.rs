@@ -1,7 +1,7 @@
 // Draw methods for SkinObjectData.
 // Renders prepared skin objects to a SkinObjectRenderer (sprite batch).
 
-use crate::stubs::TextureRegion;
+use crate::reexports::TextureRegion;
 
 use super::renderer::{DrawRotatedParams, SkinObjectRenderer};
 use super::{DrawImageAtParams, SkinObjectData};

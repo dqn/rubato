@@ -111,9 +111,16 @@ golden-master-real-bms-update:
 golden-master-ecfn-timepoint-update:
     UPDATE_ECFN_TIMEPOINT_SNAPSHOTS=1 cargo test -p golden-master --test skin_ecfn_integration skin_ecfn_timepoint_snapshot_regression -- --nocapture
 
-# Behavioral E2E tests (GPU not required)
+# Behavioral E2E tests (GPU not required, structural assertions only)
 e2e:
     cargo nextest run -p rubato-e2e
 
+# Update E2E snapshot fixtures (when render output intentionally changes)
+e2e-update-snapshots:
+    UPDATE_E2E_SNAPSHOTS=1 cargo nextest run -p rubato-e2e
+
 # Run all quality checks (excludes rubato-bin; use *-all variants for full coverage)
 all: check test clippy fmt-check
+
+# Run all quality checks including E2E
+all-e2e: check test e2e clippy fmt-check

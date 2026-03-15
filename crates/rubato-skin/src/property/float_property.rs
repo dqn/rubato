@@ -1,6 +1,6 @@
 use crate::lua::skin_lua_accessor::LuaFloatProperty;
 use crate::property::float_property_factory::DelegateFloatProperty;
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 use crate::types::skin_object::RateProperty;
 
 pub trait FloatProperty: Send + Sync {

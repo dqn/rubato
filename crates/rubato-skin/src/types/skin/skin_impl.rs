@@ -112,7 +112,7 @@ impl Skin {
     /// Create system placeholder images (BLACK=110, WHITE=111).
     /// These are always available regardless of song selection.
     fn create_system_image_registry() -> HashMap<i32, TextureRegion> {
-        use crate::rendering_stubs::{Pixmap, PixmapFormat, Texture};
+        use crate::render_reexports::{Pixmap, PixmapFormat, Texture};
         use crate::skin_property::{IMAGE_BLACK, IMAGE_WHITE};
 
         let mut registry = HashMap::new();

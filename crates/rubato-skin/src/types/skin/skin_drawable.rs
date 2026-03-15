@@ -1,4 +1,4 @@
-/// Adapter that provides timer data to skin objects via the stubs::MainState interface.
+/// Adapter that provides timer data to skin objects via the MainState trait.
 /// Used by SkinDrawable to bridge beatoraja-core's TimerManager to beatoraja-skin's internal interface.
 ///
 /// Holds a reference to the real `TimerAccess` (typically a `TimerManager`) so that
@@ -265,8 +265,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for TimerOnlyMainState
     }
 }
 
-impl crate::stubs::MainState for TimerOnlyMainState<'_> {
-    fn skin_image(&self, id: i32) -> Option<crate::rendering_stubs::TextureRegion> {
+impl crate::reexports::MainState for TimerOnlyMainState<'_> {
+    fn skin_image(&self, id: i32) -> Option<crate::render_reexports::TextureRegion> {
         self.image_registry.get(&id).cloned()
     }
 

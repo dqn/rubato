@@ -1,5 +1,5 @@
 // wgpu-backed Texture and TextureRegion.
-// Drop-in replacements for the types in rendering_stubs.rs.
+// Drop-in replacements for the types in render_reexports.rs.
 
 use std::sync::Arc;
 

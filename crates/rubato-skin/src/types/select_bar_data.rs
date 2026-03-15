@@ -1,6 +1,6 @@
 use crate::objects::skin_image::SkinImage;
 use crate::objects::skin_number::SkinNumber;
-use crate::stubs::{Rectangle, TextureRegion};
+use crate::reexports::{Rectangle, TextureRegion};
 use crate::text::skin_text::SkinTextEnum;
 
 /// Bar data extracted from select skin loaders (LR2, JSON).

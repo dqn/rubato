@@ -1,6 +1,6 @@
 use std::sync::{Mutex, MutexGuard};
 
-// Re-exports (formerly in stubs.rs)
+// Re-exports
 pub use rubato_types::imgui_notify::ImGuiNotify;
 
 /// Constants from ObsConfigurationView (from beatoraja-launcher, not yet available)

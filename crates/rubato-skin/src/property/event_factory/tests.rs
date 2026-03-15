@@ -1,5 +1,5 @@
 use super::*;
-use crate::stubs::Timer;
+use crate::reexports::Timer;
 
 /// Test implementation of MainState that provides mutable config access
 struct TestMainState {

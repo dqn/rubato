@@ -1,5 +1,5 @@
 use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
-use crate::stubs::{MainState, Rectangle};
+use crate::reexports::{MainState, Rectangle};
 
 use super::LR2PlaySkinLoaderState;
 

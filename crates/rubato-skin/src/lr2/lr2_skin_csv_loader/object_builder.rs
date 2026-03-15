@@ -1,4 +1,4 @@
-use crate::stubs::Resolution;
+use crate::reexports::Resolution;
 
 use super::LR2SkinCSVLoaderState;
 

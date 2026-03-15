@@ -6,9 +6,9 @@ use std::sync::Arc;
 
 use crate::objects::skin_image::SkinImage;
 use crate::property::timer_property::TimerProperty;
+use crate::reexports::{Pixmap, PixmapFormat, Texture, TextureRegion};
 use crate::skin_object::DestinationParams;
 use crate::skin_property::*;
-use crate::stubs::{Pixmap, PixmapFormat, Texture, TextureRegion};
 
 pub const PLAY: i32 = 0;
 pub const BACKGROUND: i32 = 1;

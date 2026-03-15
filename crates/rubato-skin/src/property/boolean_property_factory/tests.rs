@@ -1,5 +1,5 @@
 use super::*;
-use crate::stubs::{MainState, Timer};
+use crate::reexports::{MainState, Timer};
 
 /// MockMainState that returns configurable boolean values.
 struct BoolMockState {

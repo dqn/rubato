@@ -2,9 +2,10 @@ use std::path::Path;
 
 use crate::json::json_skin;
 use crate::json::json_skin_loader::{
-    JSONSkinLoader, SkinNumberOffset, SkinObjectData, SourceDataType, get_path_with_filemap,
+    JSONSkinLoader, SkinNumberOffset, SkinObjectData, SkinObjectType, SourceDataType,
+    get_path_with_filemap,
 };
-use crate::stubs::*;
+use crate::reexports::*;
 
 /// Convert JSON offset entries to SkinNumberOffset vec.
 pub(super) fn map_number_offsets(
@@ -92,6 +93,12 @@ pub fn note_texture(
 
 /// Create a SkinText from JSON text definition.
 /// Corresponds to Java JsonSkinObjectLoader.createText(JsonSkin.Text, Path)
+///
+/// Resolves the font ID to a font file path from the skin's font list,
+/// then returns a `SkinObjectData` with `SkinObjectType::Text`. The actual
+/// font loading (BitmapFont for .fnt, FreeTypeFontGenerator for .ttf/.otf)
+/// is handled downstream by the `object_converter` when building the
+/// concrete `SkinTextBitmap` or `SkinTextFont`.
 pub fn create_text(
     loader: &mut JSONSkinLoader,
     text: &json_skin::Text,
@@ -101,16 +108,40 @@ pub fn create_text(
     for font in &sk.font {
         if font.id.as_deref() == text.font.as_deref() {
             let font_path_str = font.path.as_deref().unwrap_or("");
-            let _path = skin_path.parent().map(|pp| pp.join(font_path_str));
-            // In Java: creates SkinTextBitmap or SkinTextFont based on file extension.
-            // Stubbed: requires font loading infrastructure.
-            let obj = SkinObjectData {
+            // Resolve the font path relative to the skin file's directory.
+            // The resolved path is stored in the Text variant so that the
+            // object_converter can load the correct font file later.
+            let resolved_font_path = skin_path
+                .parent()
+                .map(|pp| pp.join(font_path_str).to_string_lossy().to_string())
+                .unwrap_or_else(|| font_path_str.to_string());
+
+            return Some(SkinObjectData {
                 name: text.id.clone(),
+                object_type: SkinObjectType::Text {
+                    font: Some(resolved_font_path),
+                    size: text.size,
+                    align: text.align,
+                    ref_id: text.ref_id,
+                    value: text.value,
+                    constant_text: text.constant_text.clone(),
+                    wrapping: text.wrapping,
+                    overflow: text.overflow,
+                    outline_color: text.outline_color.clone(),
+                    outline_width: text.outline_width,
+                    shadow_color: text.shadow_color.clone(),
+                    shadow_offset_x: text.shadow_offset_x,
+                    shadow_offset_y: text.shadow_offset_y,
+                    shadow_smoothness: text.shadow_smoothness,
+                },
                 ..Default::default()
-            };
-            return Some(obj);
+            });
         }
     }
+    log::warn!(
+        "create_text: font ID {:?} not found in skin font list",
+        text.font
+    );
     None
 }
 

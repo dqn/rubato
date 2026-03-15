@@ -2,9 +2,9 @@ use crate::core::float_formatter::FloatFormatter;
 use crate::property::float_property::{FloatProperty, FloatPropertyEnum};
 use crate::property::float_property_factory;
 use crate::property::timer_property::TimerPropertyEnum;
+use crate::reexports::{MainState, Rectangle, SkinOffset, TextureRegion};
 use crate::sources::skin_source_image_set::SkinSourceImageSet;
 use crate::sources::skin_source_set::SkinSourceSet;
-use crate::stubs::{MainState, Rectangle, SkinOffset, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
 /// Display configuration for float number rendering.

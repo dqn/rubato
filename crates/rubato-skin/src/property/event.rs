@@ -1,6 +1,6 @@
 use rubato_types::event_id::EventId;
 
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 /// Events can be specified for reaction to buttons, and can be defined by users in a skin.
 pub trait Event: Send + Sync {

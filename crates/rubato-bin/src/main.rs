@@ -494,7 +494,7 @@ impl RubatoApp {
                 info!("wgpu GPU context created successfully");
 
                 // Create sprite render pipeline for skin object rendering
-                // Java: ShaderManager creates shader programs for SpriteBatch
+                // wgpu replaces LibGDX ShaderManager; pipelines are created directly
                 let sprite_pipeline = SpriteRenderPipeline::new(&gpu.device, gpu.surface_format());
                 info!(
                     "SpriteRenderPipeline created with {} pipelines",

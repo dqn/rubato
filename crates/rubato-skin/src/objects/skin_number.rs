@@ -4,9 +4,9 @@
 use crate::property::integer_property::IntegerProperty;
 use crate::property::integer_property_factory;
 use crate::property::timer_property::TimerPropertyEnum;
+use crate::reexports::{MainState, SkinOffset, TextureRegion};
 use crate::sources::skin_source_image_set::SkinSourceImageSet;
 use crate::sources::skin_source_set::SkinSourceSet;
-use crate::stubs::{MainState, SkinOffset, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
 /// Display configuration for integer number rendering.
@@ -394,8 +394,8 @@ impl SkinNumber {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::reexports::{Color, Rectangle, TextureRegion};
     use crate::skin_object::SkinObjectRenderer;
-    use crate::stubs::{Color, Rectangle, TextureRegion};
     use crate::test_helpers::MockMainState;
 
     /// Helper: make a TextureRegion with known dimensions.
@@ -831,7 +831,7 @@ mod tests {
     /// Constant integer property for testing.
     struct ConstIntProp(i32);
     impl IntegerProperty for ConstIntProp {
-        fn get(&self, _state: &dyn crate::stubs::MainState) -> i32 {
+        fn get(&self, _state: &dyn crate::reexports::MainState) -> i32 {
             self.0
         }
     }

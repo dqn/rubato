@@ -1,4 +1,4 @@
-// KeyInputLog DTO - moved from stubs.rs (Phase 30b)
+// KeyInputLog DTO
 // NOTE: This is the DTO version with pub fields for JSON serde.
 // The runtime version exists in beatoraja-input with private fields.
 

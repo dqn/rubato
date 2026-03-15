@@ -1,4 +1,4 @@
-use crate::stubs::{MainState, TextureRegion};
+use crate::reexports::{MainState, TextureRegion};
 
 /// Skin source image set trait (abstract base class in Java)
 pub trait SkinSourceSet: Send + Sync {

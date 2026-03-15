@@ -91,6 +91,7 @@ impl MainController {
             background_threads: Vec::new(),
             exit_requested: AtomicBool::new(false),
             debug: false,
+            state_event_log: None,
             loudness_analyzer: Some(
                 rubato_audio::bms_loudness_analyzer::BMSLoudnessAnalyzer::new(),
             ),
@@ -228,5 +229,25 @@ impl MainController {
     /// Translated from Java: stateListener.add(...)
     pub fn add_state_listener(&mut self, listener: Box<dyn MainStateListener>) {
         self.state_listener.push(listener);
+    }
+
+    /// Set the state event log for observability (E2E testing).
+    ///
+    /// When set, state machine events (transitions, lifecycle, handoffs) are
+    /// pushed to the shared log so test harnesses can assert on them.
+    pub fn set_state_event_log(
+        &mut self,
+        log: std::sync::Arc<std::sync::Mutex<Vec<rubato_types::state_event::StateEvent>>>,
+    ) {
+        self.state_event_log = Some(log);
+    }
+
+    /// Emit a state event to the log (if set). No-op when log is None.
+    pub(super) fn emit_state_event(&self, event: rubato_types::state_event::StateEvent) {
+        if let Some(ref log) = self.state_event_log
+            && let Ok(mut guard) = log.lock()
+        {
+            guard.push(event);
+        }
     }
 }

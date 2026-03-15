@@ -1,4 +1,4 @@
-use crate::stubs::{
+use crate::reexports::{
     BitmapFont, BlendMode, Color, GlyphLayout, SpriteBatch, Texture, TextureRegion,
 };
 
@@ -211,7 +211,13 @@ impl SkinObjectRenderer {
 
     /// Draw pre-laid-out text using a BitmapFont and GlyphLayout.
     /// Java: SkinObjectRenderer.draw(BitmapFont font, GlyphLayout layout, float x, float y)
-    pub fn draw_font_layout(&mut self, font: &BitmapFont, layout: &GlyphLayout, x: f32, y: f32) {
+    pub fn draw_font_layout(
+        &mut self,
+        font: &mut BitmapFont,
+        layout: &GlyphLayout,
+        x: f32,
+        y: f32,
+    ) {
         self.pre_draw();
         font.draw_layout(&mut self.sprite, layout, x, y);
         self.post_draw();

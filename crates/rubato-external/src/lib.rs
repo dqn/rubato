@@ -8,11 +8,11 @@ pub mod discord_rpc;
 // OBS WebSocket (merged from beatoraja-obs crate)
 pub mod obs;
 
-// Real implementations (moved from stubs.rs in Phase 25a)
+// Real implementations
 pub mod clipboard_helper;
 pub mod pixmap_io;
 
-// Adapter modules (moved from stubs.rs in Phase 5 cleanup)
+// Adapter modules
 pub mod main_state_adapter;
 pub mod player_resource_adapter;
 pub mod property_adapters;
@@ -36,7 +36,7 @@ pub mod screen_shot_file_exporter;
 pub mod webhook_handler;
 
 // ============================================================
-// Type re-exports (moved from stubs.rs)
+// Type re-exports
 // ============================================================
 
 pub use bms_model::mode::Mode;

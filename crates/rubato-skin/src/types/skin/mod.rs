@@ -24,7 +24,7 @@ use crate::objects::skin_slider::SkinSlider;
 use crate::property::boolean_property::BooleanProperty;
 use crate::property::timer_property::TimerPropertyEnum;
 use crate::property::timer_property_factory;
-use crate::stubs::{MainState, SkinConfigOffset, SkinOffset, TextureRegion};
+use crate::reexports::{MainState, SkinConfigOffset, SkinOffset, TextureRegion};
 use crate::text::skin_text_bitmap::SkinTextBitmap;
 use crate::text::skin_text_font::SkinTextFont;
 use crate::text::skin_text_image::SkinTextImage;

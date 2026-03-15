@@ -1,4 +1,4 @@
-// PatternModifyLog DTO - moved from stubs.rs (Phase 30b)
+// PatternModifyLog DTO
 // NOTE: This is the DTO version with pub fields for JSON serde.
 // The runtime version exists in beatoraja-pattern with a different field layout.
 

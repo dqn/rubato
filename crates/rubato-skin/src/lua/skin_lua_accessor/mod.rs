@@ -11,7 +11,7 @@ use mlua::prelude::*;
 use crate::lua::event_utility::EventUtility;
 use crate::lua::main_state_accessor::MainStateAccessor;
 use crate::lua::timer_utility::TimerUtility;
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 pub use property_impls::{LuaFloatProperty, LuaTimerProperty};
 
@@ -338,7 +338,7 @@ impl SkinLuaAccessor {
 #[derive(Clone, Debug, Default)]
 pub struct SkinConfigProperty {
     pub files: Vec<SkinConfigFilePath>,
-    pub offsets: Vec<crate::stubs::SkinConfigOffset>,
+    pub offsets: Vec<crate::reexports::SkinConfigOffset>,
 }
 
 /// Placeholder for SkinConfig.FilePath

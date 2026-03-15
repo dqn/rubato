@@ -8,7 +8,7 @@ use crate::property::event_factory;
 use crate::property::float_property::FloatProperty;
 use crate::property::integer_property_factory;
 use crate::property::timer_property::TimerPropertyEnum;
-use crate::stubs::{Color, MainState, Rectangle, SkinOffset, TextureRegion};
+use crate::reexports::{Color, MainState, Rectangle, SkinOffset, TextureRegion};
 
 mod destination;
 mod draw;

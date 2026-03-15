@@ -1,7 +1,7 @@
 // SkinTimingVisualizer.java -> skin_timing_visualizer.rs
 // Mechanical line-by-line translation.
 
-use crate::stubs::{Color, MainState, Pixmap, PixmapFormat, Texture, TextureRegion};
+use crate::reexports::{Color, MainState, Pixmap, PixmapFormat, Texture, TextureRegion};
 use crate::types::skin_object::{DrawImageAtParams, SkinObjectData, SkinObjectRenderer};
 
 /// Configuration for constructing a `SkinTimingVisualizer`.

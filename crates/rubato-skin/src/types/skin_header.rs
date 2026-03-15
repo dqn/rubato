@@ -5,8 +5,8 @@ use std::path::PathBuf;
 
 use rubato_types::offset_capabilities::OffsetCapabilities;
 
+use crate::reexports::{Resolution, SkinConfigOffset};
 use crate::skin_property;
-use crate::stubs::{Resolution, SkinConfigOffset};
 use crate::types::skin_type::SkinType;
 
 /// Skin header/metadata

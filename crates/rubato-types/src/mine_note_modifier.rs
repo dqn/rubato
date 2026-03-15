@@ -1,4 +1,4 @@
-// mine_note_modifier::Mode - moved from stubs.rs (Phase 30a)
+// mine_note_modifier::Mode
 
 #[derive(Clone, Copy, Debug)]
 pub enum Mode {

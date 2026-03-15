@@ -1,6 +1,6 @@
 // Font rasterization using ab_glyph.
 // Drop-in replacements for BitmapFont, BitmapFontData, GlyphLayout,
-// FreeTypeFontGenerator, and FreeTypeFontParameter from rendering_stubs.rs.
+// FreeTypeFontGenerator, and FreeTypeFontParameter from render_reexports.rs.
 
 use crate::color::Color;
 use crate::glyph_atlas::GlyphAtlas;
@@ -272,8 +272,8 @@ impl BitmapFont {
         batch.set_color(&saved_color);
     }
 
-    pub fn draw_layout(&self, batch: &mut SpriteBatch, layout: &GlyphLayout, x: f32, y: f32) {
-        // Layout-based drawing not yet implemented; text is drawn via draw()
+    pub fn draw_layout(&mut self, batch: &mut SpriteBatch, layout: &GlyphLayout, x: f32, y: f32) {
+        self.draw(batch, &layout.text, x, y);
     }
 
     pub fn dispose(&mut self) {
@@ -301,7 +301,11 @@ impl BitmapFont {
         }
 
         let height = scaled.height();
-        GlyphLayout { width, height }
+        GlyphLayout {
+            width,
+            height,
+            text: text.to_string(),
+        }
     }
 
     /// Compute positioned glyphs for text at the current scale.
@@ -342,10 +346,13 @@ impl BitmapFont {
 
 /// Pre-measured text layout.
 /// Corresponds to com.badlogic.gdx.graphics.g2d.GlyphLayout.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct GlyphLayout {
     pub width: f32,
     pub height: f32,
+    /// The text that was measured. Stored so that `draw_layout()` can render
+    /// without the caller re-supplying the string.
+    pub text: String,
 }
 
 impl GlyphLayout {

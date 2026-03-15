@@ -1,7 +1,7 @@
 pub mod download_task;
 pub mod download_task_state;
 
-// Re-exports (formerly in stubs.rs)
+// Re-exports
 pub use rubato_core::config::Config;
 pub use rubato_types::imgui_notify::ImGuiNotify;
 

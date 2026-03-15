@@ -4,11 +4,11 @@
 use crate::property::integer_property::IntegerProperty;
 use crate::property::integer_property_factory;
 use crate::property::timer_property::TimerPropertyEnum;
+use crate::reexports::{MainState, TextureRegion};
 use crate::sources::skin_source::SkinSource;
 use crate::sources::skin_source_image::SkinSourceImage;
 use crate::sources::skin_source_movie::SkinSourceMovie;
 use crate::sources::skin_source_reference::SkinSourceReference;
-use crate::stubs::{MainState, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
 pub struct SkinImage {
@@ -393,8 +393,8 @@ impl SkinImage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::reexports::{Color, Rectangle, TextureRegion};
     use crate::skin_object::{SkinObjectDestination, SkinObjectRenderer};
-    use crate::stubs::{Color, Rectangle, TextureRegion};
     use crate::test_helpers::MockMainState;
 
     /// Helper: make a TextureRegion with known dimensions.

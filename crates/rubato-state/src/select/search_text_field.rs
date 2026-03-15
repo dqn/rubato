@@ -4,8 +4,10 @@ use super::*;
 /// Translates: bms.player.beatoraja.select.SearchTextField
 ///
 /// In Java this extends com.badlogic.gdx.scenes.scene2d.Stage and creates
-/// a LibGDX TextField with font generation. In Rust, the rendering/input
-/// handling is stubbed since it requires a GUI framework.
+/// a LibGDX TextField with font generation. In Rust, the text rendering
+/// and input handling will be provided by egui when the skin menu overlay
+/// is migrated to egui. This struct holds the search state (text, focus,
+/// bounds) used by `MusicSelector` for filtering.
 pub struct SearchTextField {
     pub search_bounds: Option<Rectangle>,
     pub text: String,
@@ -16,7 +18,7 @@ pub struct SearchTextField {
 impl SearchTextField {
     pub fn new(_selector: &dyn std::any::Any, _resolution: &Resolution) -> Self {
         // In Java: creates Stage, FreeTypeFontGenerator, TextField, etc.
-        // All rendering is stubbed here.
+        // Rendering will be handled by egui in the skin menu overlay.
         Self {
             search_bounds: None,
             text: String::new(),

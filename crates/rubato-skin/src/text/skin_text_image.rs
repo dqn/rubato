@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use crate::stubs::{MainState, Texture, TextureRegion};
+use crate::reexports::{MainState, Texture, TextureRegion};
 use crate::text::skin_text::SkinTextData;
 use crate::types::skin_object::{DrawImageAtParams, SkinObjectRenderer};
 
@@ -278,8 +278,8 @@ impl SkinTextImageSourceRegion {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::reexports::{Color, Rectangle, Texture, TextureRegion};
     use crate::skin_object::SkinObjectRenderer;
-    use crate::stubs::{Color, Rectangle, Texture, TextureRegion};
 
     /// Helper: create a SkinTextImageSource with pre-populated glyph images.
     /// Inserts ASCII glyphs (char codes) mapping to TextureRegions with known widths.

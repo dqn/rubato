@@ -1,8 +1,8 @@
 use crate::lr2::lr2_skin_csv_loader::LR2SkinCSVLoaderState;
+use crate::reexports::{Rectangle, Resolution, TextureRegion};
 use crate::skin_bpm_graph::SkinBPMGraph;
 use crate::skin_image::SkinImage;
 use crate::skin_note_distribution_graph::SkinNoteDistributionGraph;
-use crate::stubs::{Rectangle, Resolution, TextureRegion};
 
 /// LR2 play skin loader
 ///
@@ -189,7 +189,7 @@ mod object_builder;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stubs::Texture;
+    use crate::reexports::Texture;
 
     fn make_state() -> LR2PlaySkinLoaderState {
         LR2PlaySkinLoaderState::new(

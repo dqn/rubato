@@ -1,5 +1,5 @@
 use crate::lr2::lr2_skin_csv_loader::{LR2SkinCSVLoaderState, LR2SkinLoaderAccess};
-use crate::stubs::Resolution;
+use crate::reexports::Resolution;
 
 /// LR2 decide skin loader
 ///

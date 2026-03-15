@@ -21,7 +21,7 @@ use crate::objects::skin_note_object::SkinNoteObject;
 use crate::objects::skin_number::{NumberDisplayConfig, SkinNumber};
 use crate::objects::skin_slider::SkinSlider;
 use crate::property::string_property_factory;
-use crate::stubs::{SkinOffset, TextureRegion};
+use crate::reexports::{SkinOffset, TextureRegion};
 use crate::text::skin_text_font::SkinTextFont;
 use crate::types::skin::SkinObject;
 use crate::types::skin_bar_object::SkinBarObject;
@@ -853,12 +853,12 @@ fn convert_text(
         }
         if !outline_color.is_empty() && outline_color != "ffffff00" {
             stf.text_data
-                .set_outline_color(crate::stubs::Color::value_of(outline_color));
+                .set_outline_color(crate::reexports::Color::value_of(outline_color));
         }
         stf.text_data.outline_width = outline_width;
         if !shadow_color.is_empty() && shadow_color != "ffffff00" {
             stf.text_data
-                .set_shadow_color(crate::stubs::Color::value_of(shadow_color));
+                .set_shadow_color(crate::reexports::Color::value_of(shadow_color));
         }
         stf.text_data
             .set_shadow_offset(shadow_offset_x, shadow_offset_y);

@@ -8,7 +8,7 @@ use rubato_core::config::Config;
 use rubato_core::pixmap_resource_pool::PixmapResourcePool;
 use rubato_core::player_config::PlayerConfig;
 
-use crate::stubs::{MainState, Texture};
+use crate::reexports::{MainState, Texture};
 use crate::types::skin::Skin;
 use crate::types::skin_type::SkinType;
 
@@ -176,7 +176,7 @@ pub fn load_skin_from_config(
         skin
     } else {
         // LR2 CSV skin
-        let dst = crate::stubs::Resolution {
+        let dst = crate::reexports::Resolution {
             width: config.display.window_width as f32,
             height: config.display.window_height as f32,
         };
@@ -375,8 +375,8 @@ pub fn texture_with_mipmaps(path: &str, usecim: bool, use_mip_maps: bool) -> Opt
             }
         }
 
-        // PixmapIO.writeCIM(Gdx.files.local(cim), pixmap);
-        // CIM writing is a LibGDX-specific format, stubbed here
+        // CIM cache writing skipped: LibGDX-specific optimization not needed in Rust.
+        // Existing CIM caches are still read (see cache hit logic above).
 
         result
     } else {

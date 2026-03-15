@@ -1,5 +1,5 @@
 use super::timer_property::{TimerProperty, TimerPropertyEnum};
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 use rubato_types::timer_id::TimerId;
 
 /// Returns a TimerProperty for the given timer ID.

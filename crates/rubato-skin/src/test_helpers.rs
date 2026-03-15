@@ -1,7 +1,7 @@
 // Test helpers for skin draw tests.
 // Provides a mock MainState that satisfies the trait for testing.
 
-use crate::stubs::{MainState, SkinOffset, Timer};
+use crate::reexports::{MainState, SkinOffset, Timer};
 
 /// A minimal MainState implementation for testing.
 pub struct MockMainState {

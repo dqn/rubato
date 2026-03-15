@@ -1,4 +1,4 @@
-// long_note_modifier::Mode - moved from stubs.rs (Phase 30a)
+// long_note_modifier::Mode
 
 #[derive(Clone, Copy, Debug)]
 pub enum Mode {

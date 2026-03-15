@@ -3,8 +3,8 @@ use std::path::Path;
 use rubato_types::offset_capabilities::OffsetCapabilities;
 
 use crate::lr2::lr2_skin_loader::LR2SkinLoaderState;
+use crate::reexports::{MainState, Resolution};
 use crate::skin_property::{OFFSET_ALL, OFFSET_JUDGE_1P, OFFSET_JUDGEDETAIL_1P, OFFSET_NOTES_1P};
-use crate::stubs::{MainState, Resolution};
 
 /// LR2 skin header loader
 ///

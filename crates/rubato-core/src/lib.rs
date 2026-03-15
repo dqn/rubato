@@ -43,7 +43,6 @@ pub mod performance_metrics;
 pub mod pixmap_resource_pool;
 pub mod player_resource;
 pub mod resource_pool;
-pub mod shader_manager;
 pub mod sprite_batch_helper;
 pub mod system_sound_manager;
 pub mod timer_manager;

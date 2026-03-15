@@ -650,7 +650,7 @@ impl BarManager {
                         .unwrap_or(BarSorter::Title);
                     l.sort_by(|a, b| sorter.compare(a, b));
 
-                    if SongManagerMenu::is_last_played_sort_enabled() {
+                    if rubato_types::last_played_sort::is_enabled() {
                         l.sort_by(|a, b| BarSorter::LastUpdate.compare(a, b));
                     }
                 } else {
@@ -808,7 +808,7 @@ impl BarManager {
     /// Corresponds to Java BarManager.close()
     pub fn close_with_context(&mut self, ctx: Option<&mut UpdateBarContext>) {
         if self.dir.is_empty() {
-            SongManagerMenu::force_disable_last_played_sort();
+            rubato_types::last_played_sort::force_disable();
             // In Java: select.executeEvent(EventType.sort)
             return;
         }

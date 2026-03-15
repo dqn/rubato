@@ -5,13 +5,13 @@ use log::warn;
 
 use crate::lr2::lr2_font_loader::LR2FontLoader;
 use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
+use crate::reexports::{MainState, Resolution, Texture, TextureRegion};
 use crate::safe_div_f32;
 use crate::skin::SkinObject;
 use crate::skin_gauge::SkinGauge;
 use crate::skin_image::SkinImage;
 use crate::skin_object::DestinationParams;
 use crate::skin_text_image::SkinTextImageSource;
-use crate::stubs::{MainState, Resolution, Texture, TextureRegion};
 
 use super::{ImageListEntry, LR2SkinCSVLoaderState};
 

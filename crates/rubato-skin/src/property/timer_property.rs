@@ -1,6 +1,6 @@
 use crate::lua::skin_lua_accessor::LuaTimerProperty;
 use crate::property::timer_property_factory::TimerPropertyImpl;
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 pub trait TimerProperty: Send + Sync {
     fn get_micro(&self, state: &dyn MainState) -> i64;

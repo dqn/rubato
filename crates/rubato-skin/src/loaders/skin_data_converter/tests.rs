@@ -3,7 +3,7 @@ use crate::json::json_skin_loader::{
     CustomOffsetData, CustomOptionData, CustomTimerData, DestinationData, RectData, SkinData,
     SkinHeaderData, SkinObjectData as DataSkinObjectData, SkinObjectType, SongListBarData,
 };
-use crate::stubs::Resolution;
+use crate::reexports::Resolution;
 
 fn make_test_header_data() -> SkinHeaderData {
     SkinHeaderData {

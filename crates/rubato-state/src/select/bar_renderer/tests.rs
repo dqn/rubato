@@ -1,7 +1,7 @@
 use super::*;
 use crate::select::bar::folder_bar::FolderBar;
 use crate::select::bar::song_bar::SongBar;
-use rubato_skin::stubs::Timer;
+use rubato_skin::reexports::Timer;
 
 /// Create a test SkinImage with draw=true and specified region.
 /// Uses a default TextureRegion (no real texture, but valid for layout tests).
@@ -12,7 +12,7 @@ fn make_test_image(x: f32, y: f32, w: f32, h: f32) -> SkinImage {
     img
 }
 
-/// Mock MainState for testing (implements rubato_skin::stubs::MainState)
+/// Mock MainState for testing (implements rubato_skin::reexports::MainState)
 struct MockMainState {
     timer: Timer,
 }

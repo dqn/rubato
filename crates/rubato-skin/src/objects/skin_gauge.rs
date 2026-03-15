@@ -2,9 +2,9 @@
 // Mechanical line-by-line translation.
 // Gauge object that renders a segmented gauge bar (e.g., groove gauge).
 
+use crate::reexports::{MainState, TextureRegion};
 use crate::sources::skin_source_image_set::SkinSourceImageSet;
 use crate::sources::skin_source_set::SkinSourceSet;
-use crate::stubs::{MainState, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
 /// Animation type: random flicker
@@ -561,7 +561,7 @@ mod tests {
         gauge.border = 80.0;
         gauge.gauge_type = 0;
         gauge.animation = 1;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.region = crate::reexports::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -574,7 +574,7 @@ mod tests {
         gauge.value = 0.0;
         gauge.max = 100.0;
         gauge.border = 80.0;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.region = crate::reexports::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -588,7 +588,7 @@ mod tests {
         gauge.max = 100.0;
         gauge.border = 80.0;
         gauge.gauge_type = 0;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.region = crate::reexports::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -603,7 +603,7 @@ mod tests {
         gauge.border = 80.0;
         gauge.gauge_type = 0;
         gauge.animation = 2;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.region = crate::reexports::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -618,7 +618,7 @@ mod tests {
         gauge.border = 80.0;
         gauge.gauge_type = 0;
         gauge.animation = 1;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.region = crate::reexports::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -635,7 +635,7 @@ mod tests {
         gauge.border = 80.0;
         gauge.gauge_type = 6;
         gauge.animation = 0;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.region = crate::reexports::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -647,7 +647,7 @@ mod tests {
         let mut gauge = SkinGauge::new(images, 0, 0, 10, 99, 2, 100);
         gauge.images = vec![TextureRegion::new(); 6];
         gauge.value = 50.0;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.region = crate::reexports::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         // Should not panic, just does nothing for unknown animation type
         gauge.draw(&mut renderer);
@@ -663,7 +663,7 @@ mod tests {
         gauge.max = 100.0;
         gauge.border = 80.0;
         gauge.gauge_type = 0;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.region = crate::reexports::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         // Some segments will compute img_idx >= 3, those should be skipped
         gauge.draw(&mut renderer);
@@ -717,7 +717,7 @@ mod tests {
         gauge.max = 100.0;
         gauge.border = 80.0;
         gauge.gauge_type = 0;
-        gauge.data.region = crate::stubs::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        gauge.data.region = crate::reexports::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
     }
@@ -765,7 +765,7 @@ mod tests {
         }
     }
 
-    impl crate::stubs::MainState for GaugeMockState {}
+    impl crate::reexports::MainState for GaugeMockState {}
 
     #[test]
     fn prepare_syncs_gauge_value_from_state() {
@@ -924,7 +924,7 @@ mod tests {
         }
     }
 
-    impl crate::stubs::MainState for ModeChangeMockState {}
+    impl crate::reexports::MainState for ModeChangeMockState {}
 
     #[test]
     fn mode_change_adjusts_parts_for_border_alignment() {

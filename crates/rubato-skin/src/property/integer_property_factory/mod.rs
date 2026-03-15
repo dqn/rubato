@@ -2,7 +2,7 @@ use rubato_types::value_id::ValueId;
 
 use super::integer_property::IntegerProperty;
 use super::property_lookup::{find_by_id, find_by_name};
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 mod index_types;
 mod value_type_data;
@@ -90,7 +90,7 @@ impl IntegerProperty for DelegateImageIndexProperty {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stubs::Timer;
+    use crate::reexports::Timer;
 
     struct TestState {
         timer: Timer,

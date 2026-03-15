@@ -4,7 +4,7 @@
 use bms_model::bms_model::BMSModel;
 use bms_model::mode::Mode;
 
-use crate::stubs::{
+use crate::reexports::{
     BlitRect, Color, MainState, Pixmap, PixmapFormat, Rectangle, SongData, Texture, TextureRegion,
 };
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
@@ -572,8 +572,13 @@ impl SkinNoteDistributionGraph {
                 if let Some(ref back) = self.back {
                     self.backtex = Some(TextureRegion::from_texture(Texture::from_pixmap(back)));
                 }
+            } else if let Some(ref mut backtex) = self.backtex
+                && let Some(ref back) = self.back
+                && let Some(ref mut tex) = backtex.texture
+            {
+                // Update existing texture from pixmap (CPU-side data blit)
+                tex.draw_pixmap(back, 0, 0);
             }
-            // else: backtex.getTexture().draw(back, 0, 0) - texture update stub
         }
 
         // Draw note distribution chips
@@ -671,8 +676,13 @@ impl SkinNoteDistributionGraph {
             if let Some(ref shape) = self.shape {
                 self.shapetex = Some(TextureRegion::from_texture(Texture::from_pixmap(shape)));
             }
+        } else if let Some(ref mut shapetex) = self.shapetex
+            && let Some(ref shape) = self.shape
+            && let Some(ref mut tex) = shapetex.texture
+        {
+            // Update existing texture from pixmap (CPU-side data blit)
+            tex.draw_pixmap(shape, 0, 0);
         }
-        // else: shapetex.getTexture().draw(shape, 0, 0) - texture update stub
     }
 
     pub fn dispose(&mut self) {

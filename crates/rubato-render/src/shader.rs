@@ -1,5 +1,5 @@
 // Shader pipeline wrapper.
-// Drop-in replacement for the ShaderProgram stub in rendering_stubs.rs.
+// Drop-in replacement for the ShaderProgram stub in render_reexports.rs.
 
 /// Wrapper around a wgpu render pipeline.
 /// Corresponds to com.badlogic.gdx.graphics.glutils.ShaderProgram.

@@ -1,5 +1,5 @@
 // CPU-side pixel buffer (RGBA Vec<u8>) with drawing operations.
-// Drop-in replacement for the Pixmap stub in rendering_stubs.rs.
+// Drop-in replacement for the Pixmap stub in render_reexports.rs.
 
 use crate::color::Color;
 
@@ -20,7 +20,7 @@ pub enum PixmapFormat {
 }
 
 /// CPU-side RGBA8888 pixel buffer with drawing operations.
-/// Replaces the stub Pixmap from rendering_stubs.rs.
+/// Replaces the stub Pixmap from render_reexports.rs.
 #[derive(Clone, Debug)]
 pub struct Pixmap {
     pub width: i32,

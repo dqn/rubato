@@ -10,7 +10,7 @@ use log::warn;
 use crate::json::json_skin;
 use crate::loaders::bitmap_font_cache::{self, CacheableBitmapFont};
 use crate::loaders::skin_loader;
-use crate::stubs::{BitmapFont, BitmapFontData, TextureRegion};
+use crate::reexports::{BitmapFont, BitmapFontData, TextureRegion};
 
 /// Parallelized bitmap font preloader.
 /// Largely adopted from SkinTextBitmap.java

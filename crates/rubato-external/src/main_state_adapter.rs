@@ -3,6 +3,8 @@
 use rubato_core::config::Config;
 use rubato_types::screen_type::ScreenType;
 
+use rubato_types::abstract_result_access::AbstractResultAccess;
+
 use crate::player_resource_adapter::PlayerResource;
 
 /// Legacy MainState wrapper for external code that accesses `state.resource`.
@@ -10,6 +12,9 @@ use crate::player_resource_adapter::PlayerResource;
 pub struct MainState {
     pub resource: PlayerResource,
     pub screen_type: ScreenType,
+    /// Abstract result data for result screens (MusicResult / CourseResult).
+    /// Populated when the current screen is a result screen; None otherwise.
+    pub abstract_result: Option<Box<dyn AbstractResultAccess + Send + Sync>>,
 }
 
 impl rubato_types::main_state_access::MainStateAccess for MainState {
@@ -24,6 +29,12 @@ impl rubato_types::main_state_access::MainStateAccess for MainState {
     fn config(&self) -> &Config {
         self.resource.config()
     }
+
+    fn abstract_result(&self) -> Option<&dyn AbstractResultAccess> {
+        self.abstract_result
+            .as_deref()
+            .map(|r| r as &dyn AbstractResultAccess)
+    }
 }
 
 impl Default for MainState {
@@ -31,6 +42,7 @@ impl Default for MainState {
         Self {
             resource: PlayerResource::default(),
             screen_type: ScreenType::Other,
+            abstract_result: None,
         }
     }
 }
@@ -61,7 +73,7 @@ impl rubato_types::timer_access::TimerAccess for MainState {
 
 impl rubato_types::skin_render_context::SkinRenderContext for MainState {}
 
-impl rubato_skin::stubs::MainState for MainState {}
+impl rubato_skin::reexports::MainState for MainState {}
 
 #[cfg(test)]
 mod tests {
@@ -79,6 +91,7 @@ mod tests {
         let state = MainState {
             resource: PlayerResource::default(),
             screen_type: ScreenType::MusicSelector,
+            abstract_result: None,
         };
         assert_eq!(state.screen_type(), ScreenType::MusicSelector);
     }
@@ -98,6 +111,7 @@ mod tests {
             let state = MainState {
                 resource: PlayerResource::default(),
                 screen_type: variant,
+                abstract_result: None,
             };
             assert_eq!(state.screen_type(), variant);
         }

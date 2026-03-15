@@ -124,7 +124,6 @@ pub trait MainState {
             skin.dispose_skin();
         }
         data.skin = None;
-        data.stage = None;
     }
 
     fn execute_event_id(&mut self, id: i32) {
@@ -386,8 +385,6 @@ pub trait SkinDrawable: Send {
 pub struct MainStateData {
     /// Skin (real Skin type via SkinDrawable trait)
     pub skin: Option<Box<dyn SkinDrawable>>,
-    /// Stage (scene2d)
-    pub stage: Option<StageStub>,
     /// Timer manager reference
     pub timer: TimerManager,
     /// Score data property
@@ -398,12 +395,8 @@ impl MainStateData {
     pub fn new(timer: TimerManager) -> Self {
         Self {
             skin: None,
-            stage: None,
             timer,
             score: ScoreDataProperty::new(),
         }
     }
 }
-
-// Phase 5+ stubs for types used in MainState
-pub struct StageStub;

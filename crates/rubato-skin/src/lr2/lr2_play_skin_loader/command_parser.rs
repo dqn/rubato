@@ -1,9 +1,9 @@
 use crate::lr2::lr2_skin_csv_loader::LR2SkinCSVLoaderState;
 use crate::lr2::lr2_skin_loader;
+use crate::reexports::{Rectangle, Texture, TextureRegion};
 use crate::safe_div_f32;
 use crate::skin_image::SkinImage;
 use crate::skin_object::DestinationParams;
-use crate::stubs::{Rectangle, Texture, TextureRegion};
 
 use super::{LR2PlaySkinLoaderState, PmCharaEntry, SkinSourceData};
 

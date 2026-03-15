@@ -1,4 +1,4 @@
-// BarSorter (stubs version) - moved from stubs.rs (Phase 30a)
+// BarSorter
 // NOTE: This is a simplified stub version (BarSorterEntry with name strings).
 // The full enum-based BarSorter is in beatoraja-select/src/bar_sorter.rs.
 

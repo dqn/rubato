@@ -6,7 +6,7 @@ use crate::property::float_property::FloatProperty;
 use crate::property::float_property_factory;
 use crate::property::integer_property_factory;
 use crate::property::string_property_factory;
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 /// Main state accessor for Lua
 ///
@@ -468,7 +468,7 @@ pub fn event_index_fn(state: &dyn MainState, id: i32) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stubs::{SkinOffset, Timer};
+    use crate::reexports::{SkinOffset, Timer};
     use std::cell::RefCell;
     use std::collections::HashMap;
 

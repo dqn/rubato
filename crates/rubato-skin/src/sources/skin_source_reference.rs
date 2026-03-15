@@ -1,5 +1,5 @@
+use crate::reexports::{MainState, TextureRegion};
 use crate::sources::skin_source::SkinSource;
-use crate::stubs::{MainState, TextureRegion};
 
 /// Skin source image (system reference) (SkinSourceReference.java)
 pub struct SkinSourceReference {

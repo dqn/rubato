@@ -208,6 +208,9 @@ impl MainController {
             pending_change = current.take_pending_state_change();
         }
 
+        // Capture sound count for observability event before consuming the Vec.
+        let pending_sounds_count = pending_sounds.len();
+
         // Apply sounds
         for (sound, loop_sound) in pending_sounds {
             let volume = self.config.audio.as_ref().map_or(1.0, |a| a.systemvolume);
@@ -225,6 +228,14 @@ impl MainController {
         {
             audio.set_global_pitch(pitch);
         }
+
+        // Capture handoff summary for observability event before values are consumed.
+        let handoff_summary = pending_handoff.as_ref().map(|h| {
+            let exscore = h.score_data.as_ref().map_or(0, |s| s.exscore());
+            let max_combo = h.maxcombo;
+            let gauge = h.groove_gauge.as_ref().map_or(0.0, |g| g.value() as f64);
+            (exscore, max_combo, gauge)
+        });
 
         // Apply score handoff to PlayerResource.
         // ORDERING INVARIANT: The handoff must be applied BEFORE the state change
@@ -281,6 +292,15 @@ impl MainController {
             }
         }
 
+        // Emit ScoreHandoffApplied event if a handoff was processed.
+        if let Some((exscore, max_combo, gauge)) = handoff_summary {
+            self.emit_state_event(rubato_types::state_event::StateEvent::ScoreHandoffApplied {
+                exscore,
+                max_combo,
+                gauge,
+            });
+        }
+
         // Apply play config update to MainController's PlayerConfig.
         // BMSPlayer owns a clone; save_config() writes to that clone and pushes
         // the updated PlayConfig back here so periodic_config_save() persists it.
@@ -306,8 +326,17 @@ impl MainController {
         }
 
         // State change (last - destroys current state)
+        let has_state_change = pending_change.is_some();
         if let Some(state_type) = pending_change {
             self.change_state(state_type);
+        }
+
+        // Emit OutboxDrained event when sounds or state changes were processed.
+        if pending_sounds_count > 0 || has_state_change {
+            self.emit_state_event(rubato_types::state_event::StateEvent::OutboxDrained {
+                sounds: pending_sounds_count,
+                state_change: has_state_change,
+            });
         }
 
         self.process_queued_controller_commands();
@@ -415,11 +444,6 @@ impl MainController {
                     log::info!("Screenshot requested");
                 }
 
-                // Twitter post (permanent stub — API deprecated)
-                if input.is_activated(KeyCommand::PostTwitter) {
-                    log::info!("Twitter post requested (API deprecated, no-op)");
-                }
-
                 // Mod menu toggle
                 if input.is_activated(KeyCommand::ToggleModMenu)
                     && let Some(ref mut imgui) = self.integration.imgui
@@ -463,7 +487,7 @@ impl MainController {
         if let Some(mut resource) = self.resource.take() {
             resource.dispose();
         }
-        // ShaderManager::dispose();
+        // ShaderManager removed: LibGDX shader management not needed with wgpu.
 
         // Join background threads (song update, table update) to ensure clean
         // shutdown and release of DB handles.

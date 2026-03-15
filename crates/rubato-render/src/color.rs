@@ -1,5 +1,5 @@
 // Color, Rectangle, Matrix4 — pure data types for rendering.
-// Drop-in replacements for the same types in rendering_stubs.rs.
+// Drop-in replacements for the same types in render_reexports.rs.
 
 /// RGBA color with float components in [0.0, 1.0].
 /// Corresponds to com.badlogic.gdx.graphics.Color.

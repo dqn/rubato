@@ -200,6 +200,7 @@ mod tests {
         MainState {
             resource: Default::default(),
             screen_type,
+            abstract_result: None,
         }
     }
 

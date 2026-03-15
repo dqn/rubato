@@ -5,9 +5,9 @@ use crate::property::float_property::{FloatProperty, FloatPropertyEnum};
 use crate::property::float_property_factory;
 use crate::property::float_writer::FloatWriter;
 use crate::property::timer_property::TimerPropertyEnum;
+use crate::reexports::{MainState, TextureRegion};
 use crate::sources::skin_source::SkinSource;
 use crate::sources::skin_source_image::SkinSourceImage;
-use crate::stubs::{MainState, TextureRegion};
 use crate::types::skin_object::{RateProperty, SkinObjectData, SkinObjectRenderer};
 
 /// Parameters for constructing a SkinSlider with integer timer and min/max rate.

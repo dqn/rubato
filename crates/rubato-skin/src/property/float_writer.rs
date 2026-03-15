@@ -1,4 +1,4 @@
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 /// Interface for writing float values back to state.
 pub trait FloatWriter: Send + Sync {

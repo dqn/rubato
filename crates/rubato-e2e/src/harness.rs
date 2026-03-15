@@ -8,7 +8,9 @@ use rubato_audio::shared_recording_audio_driver::SharedRecordingAudioDriver;
 use rubato_core::config::Config;
 use rubato_core::main_controller::{MainController, StateFactory};
 use rubato_core::player_config::PlayerConfig;
+use rubato_render::sprite_batch::CapturedDrawQuad;
 use rubato_types::main_state_type::MainStateType;
+use rubato_types::state_event::StateEvent;
 
 /// One frame at 60 fps in microseconds (1_000_000 / 60 = 16_667, truncated).
 pub const FRAME_DURATION_US: i64 = 16_667;
@@ -21,6 +23,7 @@ pub const FRAME_DURATION_US: i64 = 16_667;
 pub struct E2eHarness {
     controller: MainController,
     audio_handle: Arc<Mutex<RecordingAudioDriver>>,
+    state_event_log: Arc<Mutex<Vec<StateEvent>>>,
 }
 
 impl E2eHarness {
@@ -42,9 +45,14 @@ impl E2eHarness {
         controller.timer_mut().frozen = true;
         controller.timer_mut().set_now_micro_time(0);
 
+        // Wire up state event log for observability
+        let state_event_log = Arc::new(Mutex::new(Vec::new()));
+        controller.set_state_event_log(Arc::clone(&state_event_log));
+
         Self {
             controller,
             audio_handle,
+            state_event_log,
         }
     }
 
@@ -216,6 +224,208 @@ impl E2eHarness {
             .and_then(|r| r.groove_gauge())
             .is_some()
     }
+
+    // ============================================================
+    // State event observability (Phase 3)
+    // ============================================================
+
+    /// Return a snapshot of all recorded state events.
+    pub fn state_events(&self) -> Vec<StateEvent> {
+        self.state_event_log.lock().unwrap().clone()
+    }
+
+    /// Clear the recorded state events.
+    pub fn clear_state_events(&self) {
+        self.state_event_log.lock().unwrap().clear();
+    }
+
+    /// Assert that the recorded state events contain the given subsequence
+    /// in order. Panics with a diff if the expected sequence is not found.
+    pub fn assert_event_sequence(&self, expected: &[StateEvent]) {
+        let events = self.state_events();
+        if expected.is_empty() {
+            return;
+        }
+        let mut expected_idx = 0;
+        for event in &events {
+            if event == &expected[expected_idx] {
+                expected_idx += 1;
+                if expected_idx == expected.len() {
+                    return;
+                }
+            }
+        }
+        panic!(
+            "Expected event sequence not found.\n\
+             Expected ({} events): {:#?}\n\
+             Matched {}/{} events.\n\
+             Actual ({} events): {:#?}",
+            expected.len(),
+            expected,
+            expected_idx,
+            expected.len(),
+            events.len(),
+            events,
+        );
+    }
+
+    // ============================================================
+    // Rendering observability (Phase 4)
+    // ============================================================
+
+    /// Enable draw capture on the SpriteBatch, recording all draw quads
+    /// for GPU-free verification. No-op if no SpriteBatch exists yet.
+    pub fn enable_render_capture(&mut self) {
+        if let Some(sb) = self.controller.sprite_batch_mut() {
+            sb.enable_capture();
+        }
+    }
+
+    /// Disable draw capture and drop the capture buffer.
+    pub fn disable_render_capture(&mut self) {
+        if let Some(sb) = self.controller.sprite_batch_mut() {
+            sb.disable_capture();
+        }
+    }
+
+    /// Return a copy of all captured draw quads from the SpriteBatch.
+    /// Returns an empty Vec if capture is disabled or no SpriteBatch exists.
+    pub fn captured_draw_quads(&self) -> Vec<CapturedDrawQuad> {
+        self.controller
+            .sprite_batch()
+            .map(|sb| sb.captured_quads().to_vec())
+            .unwrap_or_default()
+    }
+
+    /// Clear the capture buffer without disabling capture.
+    pub fn clear_captured_quads(&mut self) {
+        if let Some(sb) = self.controller.sprite_batch_mut() {
+            sb.clear_captured();
+        }
+    }
+
+    /// Check if any captured quad has the given texture key.
+    pub fn assert_texture_drawn(&self, texture_key: &str) -> bool {
+        self.controller
+            .sprite_batch()
+            .map(|sb| {
+                sb.captured_quads()
+                    .iter()
+                    .any(|q| q.texture_key.as_deref() == Some(texture_key))
+            })
+            .unwrap_or(false)
+    }
+
+    /// Check if any captured quad is at the given position within tolerance.
+    pub fn assert_draw_at(&self, x: f32, y: f32, tolerance: f32) -> bool {
+        self.controller
+            .sprite_batch()
+            .map(|sb| {
+                sb.captured_quads()
+                    .iter()
+                    .any(|q| (q.x - x).abs() <= tolerance && (q.y - y).abs() <= tolerance)
+            })
+            .unwrap_or(false)
+    }
+
+    /// Render frames until the given state type is reached, up to `max_frames`.
+    /// Returns true if the target state was reached.
+    pub fn wait_for_state(&mut self, target: MainStateType, max_frames: usize) -> bool {
+        for _ in 0..max_frames {
+            if self.current_state_type() == Some(target) {
+                return true;
+            }
+            self.render_frame();
+        }
+        self.current_state_type() == Some(target)
+    }
+
+    // ============================================================
+    // Frame state dumper (Phase 6a)
+    // ============================================================
+
+    /// Capture a snapshot of the current harness state for debugging.
+    pub fn dump_frame_state(&self) -> FrameState {
+        FrameState {
+            state_type: self.current_state_type(),
+            time_us: self.current_time_us(),
+            gauge_value: self.gauge_value(),
+            audio_event_count: self.audio_events().len(),
+            draw_quad_count: self.captured_draw_quads().len(),
+            state_event_count: self.state_events().len(),
+        }
+    }
+
+    // ============================================================
+    // Fluent assertion helpers (Phase 6b)
+    // ============================================================
+
+    /// Assert that the current state matches the expected type.
+    pub fn assert_state(&self, expected: MainStateType) {
+        assert_eq!(
+            self.current_state_type(),
+            Some(expected),
+            "expected state {:?}, got {:?}",
+            expected,
+            self.current_state_type()
+        );
+    }
+
+    /// Assert that the gauge value is within `[min, max]`.
+    pub fn assert_gauge_between(&self, min: f32, max: f32) {
+        let g = self.gauge_value();
+        assert!(
+            g >= min && g <= max,
+            "gauge {} not in [{}, {}]",
+            g,
+            min,
+            max
+        );
+    }
+
+    /// Assert that the current exscore is at least `min_exscore`.
+    pub fn assert_score_at_least(&self, min_exscore: i32) {
+        if let Some(sd) = self.score_data() {
+            assert!(
+                sd.exscore() >= min_exscore,
+                "exscore {} < minimum {}",
+                sd.exscore(),
+                min_exscore
+            );
+        } else {
+            panic!(
+                "no score data available, expected exscore >= {}",
+                min_exscore
+            );
+        }
+    }
+
+    /// Assert that at least `min` audio events have been recorded.
+    pub fn assert_audio_event_count_at_least(&self, min: usize) {
+        let count = self.audio_events().len();
+        assert!(
+            count >= min,
+            "audio event count {} < minimum {}",
+            count,
+            min
+        );
+    }
+
+    /// Render `n` frames and assert no panics occur.
+    pub fn assert_no_panics_after_frames(&mut self, n: usize) {
+        self.render_frames(n);
+    }
+}
+
+/// Snapshot of harness state at a point in time, for debugging.
+#[derive(Debug)]
+pub struct FrameState {
+    pub state_type: Option<MainStateType>,
+    pub time_us: i64,
+    pub gauge_value: f32,
+    pub audio_event_count: usize,
+    pub draw_quad_count: usize,
+    pub state_event_count: usize,
 }
 
 impl Default for E2eHarness {
@@ -376,5 +586,46 @@ mod tests {
         );
         // Time should have advanced by 3 frames
         assert_eq!(harness.current_time_us(), FRAME_DURATION_US * 3);
+    }
+
+    #[test]
+    fn captured_draw_quads_empty_without_sprite_batch() {
+        let harness = E2eHarness::new();
+        // No SpriteBatch exists before create(), so captured quads is empty
+        assert!(harness.captured_draw_quads().is_empty());
+    }
+
+    #[test]
+    fn enable_render_capture_noop_without_sprite_batch() {
+        let mut harness = E2eHarness::new();
+        // Should not panic when no SpriteBatch exists
+        harness.enable_render_capture();
+        assert!(harness.captured_draw_quads().is_empty());
+    }
+
+    #[test]
+    fn assert_texture_drawn_false_without_sprite_batch() {
+        let harness = E2eHarness::new();
+        assert!(!harness.assert_texture_drawn("anything"));
+    }
+
+    #[test]
+    fn assert_draw_at_false_without_sprite_batch() {
+        let harness = E2eHarness::new();
+        assert!(!harness.assert_draw_at(0.0, 0.0, 1.0));
+    }
+
+    #[test]
+    fn clear_captured_quads_noop_without_sprite_batch() {
+        let mut harness = E2eHarness::new();
+        // Should not panic when no SpriteBatch exists
+        harness.clear_captured_quads();
+    }
+
+    #[test]
+    fn disable_render_capture_noop_without_sprite_batch() {
+        let mut harness = E2eHarness::new();
+        // Should not panic when no SpriteBatch exists
+        harness.disable_render_capture();
     }
 }

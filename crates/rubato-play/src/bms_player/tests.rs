@@ -718,12 +718,11 @@ fn lifecycle_preload_ready_play_finished() {
 // --- dispose test ---
 
 #[test]
-fn dispose_clears_skin_and_stage() {
+fn dispose_clears_skin() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
     player.dispose();
     assert!(player.main_state_data.skin.is_none());
-    assert!(player.main_state_data.stage.is_none());
 }
 
 // --- build_pattern_modifiers tests ---

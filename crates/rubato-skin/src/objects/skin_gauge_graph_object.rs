@@ -3,7 +3,7 @@
 // Gauge transition graph object (result screen).
 
 use crate::json::json_skin_object_loader::parse_hex_color;
-use crate::stubs::{MainState, Pixmap, PixmapFormat, Texture, TextureRegion};
+use crate::reexports::{MainState, Pixmap, PixmapFormat, Texture, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 use rubato_render::color::Color;
 

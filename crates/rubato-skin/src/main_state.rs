@@ -8,7 +8,7 @@
 pub trait MainState: rubato_types::skin_render_context::SkinRenderContext {
     /// Returns the skin image (texture region) for the given reference ID.
     /// Used by SkinSourceReference to look up system-defined images.
-    fn skin_image(&self, _id: i32) -> Option<super::rendering_stubs::TextureRegion> {
+    fn skin_image(&self, _id: i32) -> Option<super::render_reexports::TextureRegion> {
         None
     }
 

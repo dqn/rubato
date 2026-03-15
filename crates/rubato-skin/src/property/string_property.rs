@@ -1,4 +1,4 @@
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 
 pub trait StringProperty: Send + Sync {
     fn get(&self, state: &dyn MainState) -> String;

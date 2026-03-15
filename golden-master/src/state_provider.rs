@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use rubato_skin::stubs::{MainState, SkinOffset, Timer};
+use rubato_skin::reexports::{MainState, SkinOffset, Timer};
 use serde::{Deserialize, Serialize};
 
 /// Lightweight state provider for skin evaluation.

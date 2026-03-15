@@ -3,7 +3,7 @@
 
 use crate::property::string_property::StringProperty;
 use crate::property::string_property_factory;
-use crate::stubs::{Color, MainState};
+use crate::reexports::{Color, MainState};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
 pub const ALIGN_LEFT: i32 = 0;

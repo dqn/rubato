@@ -4,7 +4,7 @@
 
 use crate::property::timer_property::{TimerProperty, TimerPropertyEnum};
 use crate::property::timer_property_factory;
-use crate::stubs::{MainState, TextureRegion};
+use crate::reexports::{MainState, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
 /// Hidden/lift cover rendering object.
@@ -212,7 +212,7 @@ mod tests {
     /// and stretches it instead of cropping.
     #[test]
     fn trim_updates_v2_proportionally() {
-        use crate::stubs::Rectangle;
+        use crate::reexports::Rectangle;
 
         let mut img = TextureRegion::new();
         img.region_height = 100;
@@ -245,7 +245,7 @@ mod tests {
     /// Regression: trimming with non-zero v start must preserve proportionality.
     #[test]
     fn trim_updates_v2_with_nonzero_v_start() {
-        use crate::stubs::Rectangle;
+        use crate::reexports::Rectangle;
 
         let mut img = TextureRegion::new();
         img.region_height = 200;
@@ -283,7 +283,7 @@ mod tests {
     /// Regression: trimming with zero region_height must not panic (div by zero guard).
     #[test]
     fn trim_zero_region_height_no_panic() {
-        use crate::stubs::Rectangle;
+        use crate::reexports::Rectangle;
 
         let mut img = TextureRegion::new();
         img.region_height = 0;

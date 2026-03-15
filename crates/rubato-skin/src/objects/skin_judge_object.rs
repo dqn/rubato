@@ -4,7 +4,7 @@
 
 use crate::objects::skin_image::SkinImage;
 use crate::objects::skin_number::SkinNumber;
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
 /// SkinJudge skin object — wraps play-side SkinJudge with SkinObjectData.
@@ -175,7 +175,7 @@ impl SkinJudgeObject {
 mod tests {
     use super::*;
     use crate::objects::skin_number::NumberDisplayConfig;
-    use crate::stubs::{TextureRegion, Timer};
+    use crate::reexports::{TextureRegion, Timer};
 
     /// Mock MainState with configurable judge/combo values for testing SkinJudgeObject.
     struct JudgeMockState {

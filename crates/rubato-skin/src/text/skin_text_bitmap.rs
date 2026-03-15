@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use crate::loaders::skin_loader;
 use crate::property::string_property::StringProperty;
-use crate::stubs::{BitmapFont, BitmapFontData, Color, GlyphLayout, MainState, TextureRegion};
+use crate::reexports::{BitmapFont, BitmapFontData, Color, GlyphLayout, MainState, TextureRegion};
 use crate::text::skin_text::{OVERFLOW_OVERFLOW, OVERFLOW_SHRINK, OVERFLOW_TRUNCATE, SkinTextData};
 use crate::types::skin_object::{DrawImageAtParams, SkinObjectRenderer};
 
@@ -525,7 +525,7 @@ impl SkinTextBitmapSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stubs::Rectangle;
+    use crate::reexports::Rectangle;
 
     fn make_source(original_size: f32, source_type: i32) -> SkinTextBitmapSource {
         SkinTextBitmapSource {

@@ -4,7 +4,7 @@
 
 use rubato_play::lane_renderer::{DrawCommand, NoteImageType};
 
-use crate::stubs::MainState;
+use crate::reexports::MainState;
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
 
 /// SkinNote skin object — wraps play-side SkinNote with SkinObjectData.
@@ -22,11 +22,11 @@ pub struct SkinNoteObject {
     /// Set by the caller before draw() is invoked.
     pub draw_commands: Vec<DrawCommand>,
     /// Per-lane normal note textures (first frame of animation).
-    pub note_images: Vec<Option<crate::stubs::TextureRegion>>,
+    pub note_images: Vec<Option<crate::reexports::TextureRegion>>,
     /// Per-lane mine note textures.
-    pub mine_images: Vec<Option<crate::stubs::TextureRegion>>,
+    pub mine_images: Vec<Option<crate::reexports::TextureRegion>>,
     /// Per-lane LN body textures (10 types).
-    pub ln_body_images: Vec<[Option<crate::stubs::TextureRegion>; 10]>,
+    pub ln_body_images: Vec<[Option<crate::reexports::TextureRegion>; 10]>,
     /// Line images: [0]=section, [1]=section(2P), [2]=BPM, [3]=BPM(2P),
     /// [4]=stop, [5]=stop(2P), [6]=time, [7]=time(2P).
     /// Each entry contains (TextureRegion, dst_x, dst_width, dst_height).
@@ -35,7 +35,7 @@ pub struct SkinNoteObject {
 
 /// Line image data for section/BPM/stop/time lines.
 pub struct LineImage {
-    pub region: crate::stubs::TextureRegion,
+    pub region: crate::reexports::TextureRegion,
     pub dst_width: f32,
     pub dst_height: f32,
 }

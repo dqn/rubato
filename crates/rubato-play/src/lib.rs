@@ -31,6 +31,6 @@ pub use skin::hidden as skin_hidden;
 pub use skin::judge as skin_judge;
 pub use skin::note as skin_note;
 
-// Re-exports (formerly in stubs.rs)
+// Re-exports
 pub use rubato_core::main_controller::MainController;
 pub use rubato_render::Texture;

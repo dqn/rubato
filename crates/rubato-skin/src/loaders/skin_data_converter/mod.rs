@@ -16,7 +16,7 @@ use crate::json::json_skin_loader::{
 use crate::property::boolean_property_factory;
 use crate::property::event_factory;
 use crate::property::timer_property_factory;
-use crate::stubs::{Resolution, SkinConfigOffset};
+use crate::reexports::{Resolution, SkinConfigOffset};
 use crate::types::skin::Skin;
 use crate::types::skin_header::{
     CustomCategory, CustomFile, CustomItemEnum, CustomOffset, CustomOption, SkinHeader,

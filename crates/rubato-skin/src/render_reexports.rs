@@ -1,5 +1,5 @@
 // Rendering types — re-exported from beatoraja-render (Phase 13c-2).
-// All types previously defined as stubs here are now backed by real wgpu implementations.
+// All types previously defined here are now backed by real wgpu implementations.
 
 // Re-export all public types from beatoraja-render
 pub use rubato_render::blend::BlendMode;
