@@ -232,6 +232,13 @@ impl MainController {
                 guard.push(rubato_types::state_event::StateEvent::StateShutdown { state: st });
             }
             old_state.shutdown();
+            // Flush audio again after shutdown so tick-based processors (e.g.
+            // PreviewMusicProcessor) can see the stop flag and actually halt playback.
+            // In Java the preview thread exits its loop autonomously, but in Rust
+            // preview runs via sync_audio ticks on the main thread.
+            if let Some(ref mut audio) = self.audio {
+                old_state.sync_audio(audio.as_mut());
+            }
             // setSkin(null) equivalent — Java's setSkin(null) calls skin.dispose() first
             if let Some(ref mut skin) = old_state.main_state_data_mut().skin {
                 skin.dispose_skin();

@@ -1010,9 +1010,11 @@ fn render_invokes_state_sync_audio_when_audio_driver_exists() {
 }
 
 #[test]
-fn state_transition_flushes_audio_before_shutdown() {
-    // sync_audio must be called BEFORE shutdown() so pending audio commands
-    // operate on live state, not potentially disposed resources.
+fn state_transition_flushes_audio_before_and_after_shutdown() {
+    // sync_audio must be called both BEFORE shutdown() (so pending audio
+    // commands operate on live state) and AFTER shutdown() (so tick-based
+    // processors like PreviewMusicProcessor can see the stop flag and
+    // actually halt playback).
     let render_sync_calls = Arc::new(Mutex::new(0));
     let shutdown_sync_calls = Arc::new(Mutex::new(0));
     let config = Config::default();
@@ -1027,10 +1029,10 @@ fn state_transition_flushes_audio_before_shutdown() {
     mc.change_state(MainStateType::MusicSelect);
     mc.change_state(MainStateType::Config);
 
-    // sync_audio fires before shutdown, so was_shutdown is still false
-    // and the call increments render_sync_calls (not shutdown_sync_calls).
+    // First sync_audio fires before shutdown (render_sync_calls).
+    // Second sync_audio fires after shutdown (shutdown_sync_calls).
     assert_eq!(*render_sync_calls.lock().expect("mutex poisoned"), 1);
-    assert_eq!(*shutdown_sync_calls.lock().expect("mutex poisoned"), 0);
+    assert_eq!(*shutdown_sync_calls.lock().expect("mutex poisoned"), 1);
 }
 
 // --- Phase 24f: update_main_state_listener tests ---
