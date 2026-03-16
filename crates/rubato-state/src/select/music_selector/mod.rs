@@ -511,6 +511,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
     }
 }
 
+impl rubato_skin::reexports::MainState for SelectSkinContext<'_> {}
+
 /// Minimal adapter implementing rubato_skin::reexports::MainState for BarRenderer's RenderContext.
 /// Delegates timer() to a Timer snapshot; other methods use defaults.
 struct MinimalSkinMainState<'a> {

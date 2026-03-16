@@ -184,11 +184,25 @@ macro_rules! impl_result_main_state {
         }
 
         fn load_skin(&mut self, skin_type: i32) {
-            if let Some(skin) = rubato_skin::skin_loader::load_skin_from_config(
-                self.main.config(),
-                self.resource.player_config(),
-                skin_type,
-            ) {
+            let skin_path = self
+                .resource
+                .player_config()
+                .skin
+                .get(skin_type as usize)
+                .and_then(|skin| skin.as_ref())
+                .and_then(|skin| skin.path.clone())
+                .or_else(|| rubato_types::skin_config::SkinConfig::default_for_id(skin_type).path);
+            let mut ctx = $render_ctx {
+                timer: &mut self.main_data.timer,
+                data: &self.data,
+                resource: &self.resource,
+                main: &self.main,
+            };
+            if let Some(skin_path) = skin_path.as_deref()
+                && let Some(skin) = rubato_skin::skin_loader::load_skin_from_path_with_state(
+                    &mut ctx, skin_type, skin_path,
+                )
+            {
                 self.skin =
                     Some(crate::result::result_skin_data::ResultSkinData::from_loaded_skin(&skin));
                 self.main_data.skin = Some(Box::new(skin));

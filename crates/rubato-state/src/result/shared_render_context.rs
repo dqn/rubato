@@ -140,6 +140,16 @@ pub fn integer_value(data: &AbstractResultData, timer_now: i64, id: i32) -> i32 
         // Java: getOldScore().getClear()
         371 => data.oldscore.clear,
 
+        // ---- IR ranking EX score (ranking_exscore1-10: 380-389) ----
+        // Java: RankingData.getScore(offset + slot).getExscore()
+        380..=389 => ranking_exscore(data, id - 380),
+
+        // ---- IR ranking order (ranking_index1-10: 390-399) ----
+        // Java: RankingData.getScoreRanking(offset + slot)
+        // Image-index refs with the same IDs are handled separately by
+        // SkinRenderContext::image_index_value() and still map to clear lamps.
+        390..=399 => ranking_index(data, id - 390),
+
         // ---- Target max combo (NUMBER_TARGET_MAXCOMBO) ----
         // Java: oldScore.getCombo() > 0 ? combo : Integer.MIN_VALUE
         173 => {
@@ -497,6 +507,41 @@ pub fn ranking_score_clear_type(data: &AbstractResultData, slot: i32) -> i32 {
     }
 }
 
+/// Returns the player name for the ranking score at the given slot.
+pub fn ranking_name(data: &AbstractResultData, slot: i32) -> String {
+    if let Some(ref ranking) = data.ranking {
+        let index = data.ranking_offset + slot;
+        ranking
+            .score(index)
+            .map(|score| score.player.clone())
+            .unwrap_or_default()
+    } else {
+        String::new()
+    }
+}
+
+/// Returns the EX score for the ranking score at the given slot.
+pub fn ranking_exscore(data: &AbstractResultData, slot: i32) -> i32 {
+    if let Some(ref ranking) = data.ranking {
+        let index = data.ranking_offset + slot;
+        ranking
+            .score(index)
+            .map(|score| score.exscore())
+            .unwrap_or(i32::MIN)
+    } else {
+        i32::MIN
+    }
+}
+
+/// Returns the displayed ranking number for the ranking score at the given slot.
+pub fn ranking_index(data: &AbstractResultData, slot: i32) -> i32 {
+    if let Some(ref ranking) = data.ranking {
+        ranking.score_ranking(data.ranking_offset + slot)
+    } else {
+        i32::MIN
+    }
+}
+
 /// Returns the current ranking display offset.
 pub fn ranking_offset(data: &AbstractResultData) -> i32 {
     data.ranking_offset
@@ -656,6 +701,35 @@ mod tests {
         rd
     }
 
+    fn make_named_ranking_with_scores() -> rubato_ir::ranking_data::RankingData {
+        use rubato_ir::ir_score_data::IRScoreData;
+        use rubato_ir::ranking_data::RankingData;
+
+        let mut rd = RankingData::new();
+        let scores: Vec<IRScoreData> = vec![
+            {
+                let mut s = rubato_core::score_data::ScoreData::default();
+                s.player = "ALICE".to_string();
+                s.judge_counts.epg = 120;
+                IRScoreData::new(&s)
+            },
+            {
+                let mut s = rubato_core::score_data::ScoreData::default();
+                s.player = "YOU".to_string();
+                s.judge_counts.epg = 110;
+                IRScoreData::new(&s)
+            },
+            {
+                let mut s = rubato_core::score_data::ScoreData::default();
+                s.player = "BOB".to_string();
+                s.judge_counts.epg = 90;
+                IRScoreData::new(&s)
+            },
+        ];
+        rd.update_score(&scores, None);
+        rd
+    }
+
     #[test]
     fn test_ranking_score_clear_type_returns_clear_for_each_slot() {
         let mut data = AbstractResultData::new();
@@ -700,6 +774,31 @@ mod tests {
 
         data.ranking_offset = 5;
         assert_eq!(ranking_offset(&data), 5);
+    }
+
+    #[test]
+    fn test_ranking_name_returns_player_names_with_offset() {
+        let mut data = AbstractResultData::new();
+        data.ranking = Some(make_named_ranking_with_scores());
+        data.ranking_offset = 1;
+
+        assert_eq!(ranking_name(&data, 0), "YOU");
+        assert_eq!(ranking_name(&data, 1), "BOB");
+        assert_eq!(ranking_name(&data, 2), "");
+    }
+
+    #[test]
+    fn test_integer_value_ranking_exscore_and_index_respect_offset() {
+        let mut data = AbstractResultData::new();
+        data.ranking = Some(make_named_ranking_with_scores());
+        data.ranking_offset = 1;
+
+        assert_eq!(integer_value(&data, 0, 380), 220);
+        assert_eq!(integer_value(&data, 0, 381), 180);
+        assert_eq!(integer_value(&data, 0, 382), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 390), 2);
+        assert_eq!(integer_value(&data, 0, 391), 3);
+        assert_eq!(integer_value(&data, 0, 392), i32::MIN);
     }
 
     // ============================================================

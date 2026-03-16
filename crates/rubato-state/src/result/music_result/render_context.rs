@@ -186,10 +186,13 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
                     format!("{} {}", s.metadata.artist, s.metadata.subartist)
                 }
             }),
+            120..=129 => shared_render_context::ranking_name(self.data, id - 120),
             _ => String::new(),
         }
     }
 }
+
+impl rubato_skin::main_state::MainState for ResultRenderContext<'_> {}
 
 pub(super) struct ResultMouseContext<'a> {
     pub(super) timer: &'a mut TimerManager,

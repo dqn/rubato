@@ -90,6 +90,18 @@ pub fn get_resource() -> std::sync::MutexGuard<'static, Option<PixmapResourcePoo
     resource
 }
 
+pub fn skin_path_from_player_config(
+    player_config: &PlayerConfig,
+    skin_type_id: i32,
+) -> Option<String> {
+    player_config
+        .skin
+        .get(skin_type_id as usize)
+        .and_then(|sc| sc.as_ref())
+        .and_then(|sc| sc.path.clone())
+        .or_else(|| rubato_types::skin_config::SkinConfig::default_for_id(skin_type_id).path)
+}
+
 /// Loads a skin from config parameters without requiring a MainState reference.
 ///
 /// Resolves the skin path from PlayerConfig (with fallback to SkinConfig default),
@@ -109,14 +121,7 @@ pub fn load_skin_from_config(
     );
 
     // Resolve skin path: player_config.skin[id] → fallback to default
-    let skin_path = player_config
-        .skin
-        .get(skin_type_id as usize)
-        .and_then(|sc| sc.as_ref())
-        .and_then(|sc| sc.path.clone())
-        .or_else(|| rubato_types::skin_config::SkinConfig::default_for_id(skin_type_id).path);
-
-    let skin_path = match skin_path {
+    let skin_path = match skin_path_from_player_config(player_config, skin_type_id) {
         Some(ref p) if !p.is_empty() => p.clone(),
         _ => {
             log::warn!(
@@ -200,6 +205,64 @@ pub fn load_skin_from_config(
     }
 }
 
+/// Loads a skin for a stateful caller using an explicit skin path.
+///
+/// Lua skins loaded through this path receive the live `main_state` accessor,
+/// which result/select/decide Lua skins may require at load time.
+pub fn load_skin_from_path_with_state(
+    state: &mut dyn MainState,
+    skin_type_id: i32,
+    skin_path: &str,
+) -> Option<Skin> {
+    let skin_type = SkinType::skin_type_by_id(skin_type_id)?;
+    let config = state
+        .config_ref()
+        .cloned()
+        .expect("config required for skin loading");
+    let path = resolve_skin_path(&config, skin_path)?;
+    let property = crate::json::json_skin_loader::SkinConfigProperty;
+
+    let skin = if skin_path.ends_with(".json") {
+        let mut loader = crate::json::json_skin_loader::JSONSkinLoader::with_config(&config);
+        let header = loader.load_header(&path)?;
+        let data = loader.load(&path, &skin_type, &property)?;
+        crate::skin_data_converter::convert_skin_data(
+            &header,
+            data,
+            &mut loader.source_map,
+            &path,
+            loader.usecim,
+            &loader.dstr,
+        )
+    } else if skin_path.ends_with(".luaskin") {
+        let mut loader = crate::lua::lua_skin_loader::LuaSkinLoader::new_with_state(state, &config);
+        let header = loader.load_header(&path)?;
+        let data = loader.load(&path, &skin_type, &property)?;
+        crate::skin_data_converter::convert_skin_data(
+            &header,
+            data,
+            &mut loader.json_loader.source_map,
+            &path,
+            loader.json_loader.usecim,
+            &loader.json_loader.dstr,
+        )
+    } else {
+        let dst = crate::reexports::Resolution {
+            width: config.display.window_width as f32,
+            height: config.display.window_height as f32,
+        };
+        crate::lr2::lr2_skin_csv_loader::load_lr2_skin(&path, &skin_type, dst)
+    };
+
+    if let Ok(guard) = RESOURCE.lock()
+        && let Some(ref r) = *guard
+    {
+        r.dispose_old();
+    }
+
+    skin
+}
+
 /// Loads a skin for the given state and skin type.
 /// Corresponds to SkinLoader.load(MainState, SkinType)
 pub fn load(
@@ -222,7 +285,7 @@ pub fn load(
 ///
 /// Dispatches to JSONSkinLoader (.json), LuaSkinLoader (.luaskin), or LR2SkinCSVLoader.
 pub fn load_with_config(
-    _state: &dyn MainState,
+    _state: &mut dyn MainState,
     skin_type: &crate::skin_type::SkinType,
     skin_config_path: &str,
 ) -> Option<crate::json::json_skin_loader::SkinData> {
@@ -232,8 +295,9 @@ pub fn load_with_config(
         // JSONSkinLoader
         let config = _state
             .config_ref()
+            .cloned()
             .expect("config required for skin loading");
-        let mut loader = crate::json::json_skin_loader::JSONSkinLoader::with_config(config);
+        let mut loader = crate::json::json_skin_loader::JSONSkinLoader::with_config(&config);
         let result = loader.load_skin(Path::new(skin_config_path), skin_type, &property);
         // Dispose old resources after loading
         if let Ok(guard) = RESOURCE.lock()
@@ -246,8 +310,10 @@ pub fn load_with_config(
         // LuaSkinLoader
         let config = _state
             .config_ref()
+            .cloned()
             .expect("config required for skin loading");
-        let mut loader = crate::lua::lua_skin_loader::LuaSkinLoader::new_with_state(_state, config);
+        let mut loader =
+            crate::lua::lua_skin_loader::LuaSkinLoader::new_with_state(_state, &config);
         let result = loader.load_skin(Path::new(skin_config_path), skin_type, &property);
         if let Ok(guard) = RESOURCE.lock()
             && let Some(ref r) = *guard

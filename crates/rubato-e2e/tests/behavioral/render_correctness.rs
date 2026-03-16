@@ -13,6 +13,7 @@ use rubato_types::main_controller_access::MainControllerAccess;
 use rubato_types::player_config::PlayerConfig;
 use rubato_types::skin_config::SkinConfig;
 use rubato_types::skin_type::SkinType;
+use rubato_types::timer_id::TimerId;
 
 fn test_bms_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -265,5 +266,32 @@ fn test_main_loader_uses_root_ecfn_play_skin_and_renders() {
         quads.len() > 100,
         "MainLoader + root config_player.json should still render more than lane-only quads, got {}",
         quads.len()
+    );
+}
+
+#[test]
+fn test_main_loader_ecfn_play_turns_on_judge_timer() {
+    let Some(mut harness) = main_loader_harness_with_bms("minimal_7k.bms") else {
+        eprintln!("skipping: minimal_7k.bms not found");
+        return;
+    };
+
+    let judge_timer = TimerId::new(46);
+    let state_timer_on = |h: &E2eHarness| {
+        h.controller()
+            .current_state()
+            .is_some_and(|state| state.main_state_data().timer.is_timer_on(judge_timer))
+    };
+    assert!(
+        !state_timer_on(&harness),
+        "judge timer should start off before autoplay judgments"
+    );
+
+    harness.render_until(state_timer_on, 1200);
+
+    assert!(
+        state_timer_on(&harness),
+        "MainLoader ECFN play path should turn on judge timer 46, frame_state={:?}",
+        harness.dump_frame_state()
     );
 }

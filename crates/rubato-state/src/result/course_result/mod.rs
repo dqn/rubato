@@ -1444,4 +1444,43 @@ mod tests {
 
         assert!(ctx.song_data_ref().is_none());
     }
+
+    #[test]
+    fn test_course_result_render_context_returns_ranking_name_strings() {
+        use rubato_ir::ir_score_data::IRScoreData;
+        use rubato_ir::ranking_data::RankingData;
+
+        let resource = PlayerResource::default();
+        let mut data = AbstractResultData::new();
+        let mut ranking = RankingData::new();
+        let scores: Vec<IRScoreData> = vec![
+            {
+                let mut s = rubato_core::score_data::ScoreData::default();
+                s.player = "ALICE".to_string();
+                s.judge_counts.epg = 120;
+                IRScoreData::new(&s)
+            },
+            {
+                let mut s = rubato_core::score_data::ScoreData::default();
+                s.player = "YOU".to_string();
+                s.judge_counts.epg = 110;
+                IRScoreData::new(&s)
+            },
+        ];
+        ranking.update_score(&scores, None);
+        data.ranking = Some(ranking);
+        data.ranking_offset = 1;
+
+        let main = MainController::new(Box::new(crate::result::NullMainController));
+        let mut timer = rubato_core::timer_manager::TimerManager::new();
+        let ctx = CourseResultRenderContext {
+            timer: &mut timer,
+            data: &data,
+            resource: &resource,
+            main: &main,
+        };
+
+        assert_eq!(ctx.string_value(120), "YOU");
+        assert_eq!(ctx.string_value(121), "");
+    }
 }

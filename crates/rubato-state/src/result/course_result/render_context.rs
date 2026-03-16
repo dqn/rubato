@@ -150,10 +150,13 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
                 .resource
                 .songdata()
                 .map_or_else(String::new, |s| s.metadata.artist.clone()),
+            120..=129 => shared_render_context::ranking_name(self.data, id - 120),
             _ => String::new(),
         }
     }
 }
+
+impl rubato_skin::main_state::MainState for CourseResultRenderContext<'_> {}
 
 pub(super) struct CourseResultMouseContext<'a> {
     pub(super) timer: &'a mut rubato_core::timer_manager::TimerManager,

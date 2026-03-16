@@ -136,6 +136,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
     }
 }
 
+impl rubato_skin::reexports::MainState for DecideRenderContext<'_> {}
+
 struct DecideMouseContext<'a> {
     timer: &'a mut TimerManager,
     main: &'a mut MainControllerRef,
@@ -368,12 +370,22 @@ impl MainState for MusicDecide {
     }
 
     fn load_skin(&mut self, skin_type: i32) {
-        self.data.skin = rubato_skin::skin_loader::load_skin_from_config(
-            self.main.config(),
+        let skin_path = rubato_skin::skin_loader::skin_path_from_player_config(
             self.main.player_config(),
             skin_type,
-        )
-        .map(|skin| Box::new(skin) as Box<dyn rubato_core::main_state::SkinDrawable>);
+        );
+        let skin = {
+            let mut ctx = DecideRenderContext {
+                timer: &mut self.data.timer,
+                resource: &*self.resource,
+                main: &self.main,
+            };
+            skin_path.as_deref().and_then(|path| {
+                rubato_skin::skin_loader::load_skin_from_path_with_state(&mut ctx, skin_type, path)
+            })
+        };
+        self.data.skin =
+            skin.map(|skin| Box::new(skin) as Box<dyn rubato_core::main_state::SkinDrawable>);
     }
 
     fn dispose(&mut self) {

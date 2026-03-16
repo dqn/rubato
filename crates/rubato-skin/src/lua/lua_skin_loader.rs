@@ -29,10 +29,23 @@ impl LuaSkinLoader {
         }
     }
 
-    /// Create a new LuaSkinLoader with MainState and Config
-    /// Corresponds to Java: new LuaSkinLoader(MainState, Config)
-    pub fn new_with_state(_state: &dyn MainState, config: &rubato_core::config::Config) -> Self {
-        Self::new_without_state(config)
+    /// Create a new LuaSkinLoader with MainState and Config.
+    ///
+    /// The caller must keep `state` alive while the loader/Lua VM is in use
+    /// because exported Lua closures retain a raw pointer to it.
+    pub fn new_with_state(state: &mut dyn MainState, config: &rubato_core::config::Config) -> Self {
+        let loader = Self::new_without_state(config);
+        let state_ptr: *mut dyn MainState =
+            unsafe { std::mem::transmute(state as *mut dyn MainState) };
+        // SAFETY: the caller keeps `state` alive for the loader's lifetime; this
+        // matches MainStateAccessor's raw-pointer contract. The transmute only
+        // erases the trait-object lifetime; mutability already comes from the
+        // caller's `&mut dyn MainState`.
+        unsafe {
+            loader.lua.export_main_state_accessor(state_ptr);
+        }
+        loader.lua.export_utilities(state);
+        loader
     }
 
     /// Create a new LuaSkinLoader with Config only (no MainState reference needed)
@@ -318,9 +331,10 @@ mod tests {
     use super::*;
     use std::path::PathBuf;
 
-    use rubato_core::config::Config;
     use crate::objects::wiring_check::{Severity, WiringCheck};
     use crate::skin_type::SkinType;
+    use crate::test_helpers::MockMainState;
+    use rubato_core::config::Config;
 
     fn repo_path(relative: &str) -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -464,6 +478,48 @@ mod tests {
     }
 
     #[test]
+    fn test_new_with_state_exports_main_state_number_module() {
+        let mut state = MockMainState::default();
+        let loader = LuaSkinLoader::new_with_state(&mut state, &Config::default());
+        let value = loader
+            .lua
+            .exec(
+                "local loaded = package.loaded['main_state']; return type(loaded.number) .. ':' .. type(require('main_state').number)",
+            )
+            .expect("Lua should execute");
+        match value {
+            LuaValue::String(s) => assert_eq!(
+                s.to_str().expect("Lua string should be valid UTF-8"),
+                "function:function",
+                "new_with_state should export main_state.number for result/play Lua skins"
+            ),
+            other => panic!("expected Lua string result, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_load_ecfn_result_lua_skin_with_state() {
+        let mut state = MockMainState::default();
+        let mut loader = LuaSkinLoader::new_with_state(&mut state, &Config::default());
+        let path = repo_path("skin/ECFN/RESULT/result.luaskin");
+
+        let header = loader
+            .load_header(&path)
+            .expect("ECFN result Lua skin header should load");
+        assert_eq!(header.skin_type, crate::skin_type::SkinType::Result.id());
+
+        let skin = loader.load(
+            &path,
+            &crate::skin_type::SkinType::Result,
+            &SkinConfigProperty,
+        );
+        assert!(
+            skin.is_some(),
+            "ECFN result Lua skin should load with stateful main_state access"
+        );
+    }
+
+    #[test]
     fn test_ecfn_play_lua_skin_wires_judge_images() {
         let mut loader = LuaSkinLoader::new_without_state(&Config::default());
         let path = repo_path("skin/ECFN/play/play7.luaskin");
@@ -480,7 +536,10 @@ mod tests {
             .find_map(|obj| obj.resolved_judge.as_ref())
             .expect("ECFN play SkinData should contain a resolved judge object");
         assert!(
-            resolved_judge.judge_images().iter().any(|image| image.is_some()),
+            resolved_judge
+                .judge_images()
+                .iter()
+                .any(|image| image.is_some()),
             "ECFN play SkinData should wire judge child images before conversion"
         );
         let skin = crate::skin_data_converter::convert_skin_data(
@@ -504,9 +563,7 @@ mod tests {
         let issues = judge.check_wiring();
 
         assert!(
-            !issues
-                .iter()
-                .any(|issue| issue.severity == Severity::Error),
+            !issues.iter().any(|issue| issue.severity == Severity::Error),
             "ECFN judge object should have its images wired, issues={issues:?}"
         );
     }

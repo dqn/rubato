@@ -27,6 +27,15 @@ pub struct E2eHarness {
 }
 
 impl E2eHarness {
+    fn sync_current_state_timer_to_controller(&mut self) {
+        let now = self.controller.timer().now_micro_time();
+        if let Some(current) = self.controller.current_state_mut() {
+            let timer = &mut current.main_state_data_mut().timer;
+            timer.frozen = true;
+            timer.set_now_micro_time(now);
+        }
+    }
+
     fn instrument_controller(mut controller: MainController) -> Self {
         // Inject shared recording audio driver
         let shared_driver = SharedRecordingAudioDriver::new();
@@ -41,11 +50,13 @@ impl E2eHarness {
         let state_event_log = Arc::new(Mutex::new(Vec::new()));
         controller.set_state_event_log(Arc::clone(&state_event_log));
 
-        Self {
+        let mut harness = Self {
             controller,
             audio_handle,
             state_event_log,
-        }
+        };
+        harness.sync_current_state_timer_to_controller();
+        harness
     }
 
     /// Create a new harness with a RecordingAudioDriver and frozen timer.
@@ -119,6 +130,7 @@ impl E2eHarness {
         self.controller
             .timer_mut()
             .set_now_micro_time(current + FRAME_DURATION_US);
+        self.sync_current_state_timer_to_controller();
     }
 
     /// Step the timer forward by `n` frames.
@@ -127,11 +139,13 @@ impl E2eHarness {
         self.controller
             .timer_mut()
             .set_now_micro_time(current + FRAME_DURATION_US * n as i64);
+        self.sync_current_state_timer_to_controller();
     }
 
     /// Set the current time directly (microseconds from the state start).
     pub fn set_time(&mut self, time_us: i64) {
         self.controller.timer_mut().set_now_micro_time(time_us);
+        self.sync_current_state_timer_to_controller();
     }
 
     /// Return the current frozen time in microseconds.
@@ -152,6 +166,7 @@ impl E2eHarness {
     /// Trigger a state transition.
     pub fn change_state(&mut self, state: MainStateType) {
         self.controller.change_state(state);
+        self.sync_current_state_timer_to_controller();
     }
 
     /// Return the current state type (None if no state is active).
@@ -163,6 +178,7 @@ impl E2eHarness {
     pub fn render_frame(&mut self) {
         self.step_frame();
         self.controller.render();
+        self.sync_current_state_timer_to_controller();
     }
 
     /// Render `n` frames.
@@ -453,6 +469,56 @@ impl Default for E2eHarness {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rubato_core::main_controller::StateCreateResult;
+    use rubato_core::main_state::MainStateData;
+    use rubato_core::timer_manager::TimerManager;
+
+    struct TimerSyncState {
+        data: MainStateData,
+        state_type: MainStateType,
+    }
+
+    impl TimerSyncState {
+        fn new(state_type: MainStateType) -> Self {
+            Self {
+                data: MainStateData::new(TimerManager::new()),
+                state_type,
+            }
+        }
+    }
+
+    impl rubato_core::main_state::MainState for TimerSyncState {
+        fn state_type(&self) -> Option<MainStateType> {
+            Some(self.state_type)
+        }
+
+        fn main_state_data(&self) -> &MainStateData {
+            &self.data
+        }
+
+        fn main_state_data_mut(&mut self) -> &mut MainStateData {
+            &mut self.data
+        }
+
+        fn create(&mut self) {}
+
+        fn render(&mut self) {}
+    }
+
+    struct TimerSyncFactory;
+
+    impl StateFactory for TimerSyncFactory {
+        fn create_state(
+            &self,
+            state_type: MainStateType,
+            _controller: &mut MainController,
+        ) -> Option<StateCreateResult> {
+            Some(StateCreateResult {
+                state: Box::new(TimerSyncState::new(state_type)),
+                target_score: None,
+            })
+        }
+    }
 
     #[test]
     fn harness_starts_at_time_zero() {
@@ -583,6 +649,28 @@ mod tests {
         let frames = harness.render_until(|h| h.current_time_us() >= target_time, 100);
         assert!(frames <= 5);
         assert!(harness.current_time_us() >= target_time);
+    }
+
+    #[test]
+    fn step_frame_keeps_current_state_timer_in_sync_when_frozen() {
+        let mut harness = E2eHarness::new().with_state_factory(Box::new(TimerSyncFactory));
+        harness.controller_mut().create();
+        harness.change_state(MainStateType::MusicSelect);
+
+        harness.step_frame();
+
+        let state_time = harness
+            .controller()
+            .current_state()
+            .expect("current state should exist")
+            .main_state_data()
+            .timer
+            .now_micro_time();
+        assert_eq!(
+            state_time,
+            harness.current_time_us(),
+            "frozen harness must advance current state's timer together with controller timer"
+        );
     }
 
     #[test]

@@ -1067,6 +1067,29 @@ mod tests {
     }
 
     #[test]
+    fn test_create_loads_ecfn_result_lua_skin() {
+        let mut mr = make_result_for_mouse();
+        let result_skin_idx = rubato_skin::skin_type::SkinType::Result.id() as usize;
+        mr.resource
+            .player_config_mut()
+            .expect("player config should be mutable")
+            .skin[result_skin_idx] = Some(rubato_types::skin_config::SkinConfig::new_with_path(
+            "skin/ECFN/RESULT/result.luaskin",
+        ));
+
+        <MusicResult as MainState>::create(&mut mr);
+
+        assert!(
+            mr.main_data.skin.is_some(),
+            "MusicResult.create() should load ECFN result.luaskin when configured"
+        );
+        assert!(
+            mr.skin.is_some(),
+            "MusicResult.create() should keep ResultSkinData for ECFN result.luaskin"
+        );
+    }
+
+    #[test]
     fn test_prepare_sets_state_offline() {
         let mut mr = MusicResult::default();
         <MusicResult as MainState>::prepare(&mut mr);
@@ -1374,5 +1397,42 @@ mod tests {
         };
         // Falls through to player_config.play_settings.lnmode = 99
         assert_eq!(ctx.image_index_value(308), 99);
+    }
+
+    #[test]
+    fn result_render_context_returns_ranking_name_strings() {
+        use rubato_ir::ir_score_data::IRScoreData;
+        use rubato_ir::ranking_data::RankingData;
+
+        let mut mr = make_result_with_songdata(None);
+        let mut ranking = RankingData::new();
+        let scores: Vec<IRScoreData> = vec![
+            {
+                let mut s = rubato_core::score_data::ScoreData::default();
+                s.player = "ALICE".to_string();
+                s.judge_counts.epg = 120;
+                IRScoreData::new(&s)
+            },
+            {
+                let mut s = rubato_core::score_data::ScoreData::default();
+                s.player = "YOU".to_string();
+                s.judge_counts.epg = 110;
+                IRScoreData::new(&s)
+            },
+        ];
+        ranking.update_score(&scores, None);
+        mr.data.ranking = Some(ranking);
+        mr.data.ranking_offset = 1;
+
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultRenderContext {
+            timer: &mut timer,
+            data: &mr.data,
+            resource: &mr.resource,
+            main: &mr.main,
+        };
+
+        assert_eq!(ctx.string_value(120), "YOU");
+        assert_eq!(ctx.string_value(121), "");
     }
 }
