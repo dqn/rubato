@@ -11,6 +11,7 @@ use rubato_input::bms_player_input_processor::{BMSPlayerInputProcessor, KEYSTATE
 use rubato_input::keyboard_input_processor::ControlKeys;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::Mutex;
 
 fn make_model() -> BMSModel {
     let mut model = BMSModel::new();
@@ -135,6 +136,88 @@ impl SkinDrawable for ProbeImageIndexSkin {
     fn prepare_skin(&mut self) {}
 
     fn dispose_skin(&mut self) {}
+
+    fn fadeout(&self) -> i32 {
+        0
+    }
+
+    fn input(&self) -> i32 {
+        0
+    }
+
+    fn scene(&self) -> i32 {
+        0
+    }
+
+    fn get_width(&self) -> f32 {
+        0.0
+    }
+
+    fn get_height(&self) -> f32 {
+        0.0
+    }
+
+    fn swap_sprite_batch(&mut self, _batch: &mut SpriteBatch) {}
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ObservedDrawLaneTime {
+    time: i64,
+    timer_play: Option<i64>,
+}
+
+struct ProbeDrawLaneTimeSkin {
+    observed: Arc<Mutex<Option<ObservedDrawLaneTime>>>,
+}
+
+impl SkinDrawable for ProbeDrawLaneTimeSkin {
+    fn draw_all_objects_timed(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+    ) {
+    }
+
+    fn update_custom_objects_timed(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+    ) {
+    }
+
+    fn mouse_pressed_at(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        _button: i32,
+        _x: i32,
+        _y: i32,
+    ) {
+    }
+
+    fn mouse_dragged_at(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        _button: i32,
+        _x: i32,
+        _y: i32,
+    ) {
+    }
+
+    fn prepare_skin(&mut self) {}
+
+    fn dispose_skin(&mut self) {}
+
+    fn compute_note_draw_commands(
+        &mut self,
+        _lane_renderer: &mut dyn std::any::Any,
+        ctx: Box<dyn std::any::Any>,
+    ) {
+        let ctx = ctx
+            .downcast::<crate::lane_renderer::DrawLaneContext>()
+            .expect("render_skin_impl should pass DrawLaneContext");
+        *self.observed.lock().unwrap() = Some(ObservedDrawLaneTime {
+            time: ctx.time,
+            timer_play: ctx.timer_play,
+        });
+    }
 
     fn fadeout(&self) -> i32 {
         0
@@ -3533,6 +3616,32 @@ fn mouse_context_delegates_image_index_value_42() {
     <BMSPlayer as MainState>::handle_skin_mouse_pressed(&mut player, 0, 10, 10);
 
     assert_eq!(observed.load(Ordering::SeqCst), 3);
+}
+
+#[test]
+fn render_skin_passes_timer_play_start_time_to_note_draw_context() {
+    let model = make_model_with_time(120);
+    let mut player = BMSPlayer::new(model);
+    player.lanerender = Some(crate::lane_renderer::LaneRenderer::new(&player.model));
+    let observed = Arc::new(Mutex::new(None));
+    player.main_state_data.skin = Some(Box::new(ProbeDrawLaneTimeSkin {
+        observed: observed.clone(),
+    }));
+
+    player.main_state_data.timer.set_now_micro_time(3_000_000);
+    player.main_state_data.timer.set_micro_timer(TIMER_PLAY, 1_000_000);
+
+    let mut sprite = SpriteBatch::new();
+    player.render_skin_impl(&mut sprite);
+
+    assert_eq!(
+        *observed.lock().unwrap(),
+        Some(ObservedDrawLaneTime {
+            time: 3000,
+            timer_play: Some(1000),
+        }),
+        "render_skin_impl must pass TIMER_PLAY start time, not elapsed time, to DrawLaneContext"
+    );
 }
 
 /// Test skin that probes image_index_value during mouse_pressed_at.

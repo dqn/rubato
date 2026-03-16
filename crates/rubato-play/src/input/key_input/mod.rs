@@ -515,6 +515,33 @@ mod tests {
     }
 
     #[test]
+    fn test_input_release_swaps_beam_timers_during_manual_play() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        proc.input_key_on(0, &mut timer);
+        assert!(timer.is_timer_on(TimerId::new(101)));
+        assert!(!timer.is_timer_on(TimerId::new(121)));
+
+        proc.start_judge(10_000_000, None, 0);
+
+        let key_states = vec![false; 9];
+        let auto_presstime = vec![i64::MIN; 9];
+        let mut ctx = make_context(200, &key_states, &auto_presstime, false, &mut timer);
+        proc.input(&mut ctx);
+
+        assert!(
+            !ctx.timer.is_timer_on(TimerId::new(101)),
+            "manual play should turn KEYON off after release even while judge is running"
+        );
+        assert!(
+            ctx.timer.is_timer_on(TimerId::new(121)),
+            "manual play should turn KEYOFF on after release even while judge is running"
+        );
+    }
+
+    #[test]
     fn test_input_scratch_key_change_triggers_re_beam() {
         // BEAT_7K: lane 7 (scratch) has keys [7, 8], scratch_assign[7] = 0
         let lp = make_lane_property();

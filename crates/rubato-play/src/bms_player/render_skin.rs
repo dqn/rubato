@@ -102,12 +102,12 @@ impl BMSPlayer {
             let draw_ctx = crate::lane_renderer::DrawLaneContext {
                 time: timer.now_time(),
                 timer_play: if timer.is_timer_on(TIMER_PLAY) {
-                    Some(timer.now_time_for_id(TIMER_PLAY))
+                    Some(timer.timer(TIMER_PLAY))
                 } else {
                     None
                 },
                 timer_141: if timer.is_timer_on(TimerId::new(141)) {
-                    Some(timer.now_time_for_id(TimerId::new(141)))
+                    Some(timer.timer(TimerId::new(141)))
                 } else {
                     None
                 },

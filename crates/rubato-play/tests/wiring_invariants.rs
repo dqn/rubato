@@ -3,7 +3,7 @@
 //
 // These tests would have caught bugs #3 and #4 from the play-screen bug batch:
 // - Bug #3: JudgeManager never called input_key_on() for key beam timers
-// - Bug #4: input() key-release branch not guarded by is_judge_started
+// - Bug #4: input() key-release branch must still fire during manual play
 // - Bug #5: SkinGauge.prepare() never read gauge value from MainState
 
 use bms_model::bms_model::BMSModel;
@@ -160,11 +160,11 @@ fn input_key_on_works_for_multiple_lanes() {
 }
 
 // ===========================================================================
-// Test 3: input() does NOT clear timer during play (regression for bug #4)
+// Test 3: input() clears the key-on timer during play release (Java parity)
 // ===========================================================================
 
 #[test]
-fn input_does_not_clear_timer_during_play() {
+fn input_release_switches_to_keyoff_timer_during_play() {
     let lane_property = LaneProperty::new(&Mode::BEAT_7K);
     let mut processor = KeyInputProccessor::new(&lane_property);
     let mut timer = TimerManager::new();
@@ -177,8 +177,8 @@ fn input_does_not_clear_timer_during_play() {
     // Start judge (sets is_judge_started = true)
     processor.start_judge(10_000_000, None, 0);
 
-    // Call input() with all keys released — this should NOT clear the timer
-    // because is_judge_started is true and autoplay is false
+    // Call input() with all keys released. Java flips KEYON -> KEYOFF even
+    // while the judge thread is running.
     let key_count = Mode::BEAT_7K.key() as usize;
     let key_states = vec![false; key_count];
     let auto_presstime = vec![i64::MIN; key_count];
@@ -191,12 +191,13 @@ fn input_does_not_clear_timer_during_play() {
     };
     processor.input(&mut ctx);
 
-    // Timer should still be on — the fix ensures the else-if branch
-    // is guarded by !is_judge_started
     assert!(
-        ctx.timer.is_timer_on(timer_on),
-        "BUG: input() cleared the key beam timer during play! \
-         The else-if branch must be guarded by !is_judge_started"
+        !ctx.timer.is_timer_on(timer_on),
+        "manual play should turn KEYON off after release even while judge is running"
+    );
+    assert!(
+        ctx.timer.is_timer_on(keyoff_timer_for_lane(0)),
+        "manual play should turn KEYOFF on after release even while judge is running"
     );
 }
 
@@ -247,7 +248,7 @@ fn key_beam_lifecycle_during_play() {
         "key beam timer should be on after judge hit"
     );
 
-    // Simulate next frame: key is released, but timer should persist
+    // Simulate next frame: key is released and Java switches KEYON -> KEYOFF
     let released_states = vec![false; key_count];
     let auto_presstime = vec![i64::MIN; key_count];
     let mut ctx = InputContext {
@@ -259,10 +260,13 @@ fn key_beam_lifecycle_during_play() {
     };
     processor.input(&mut ctx);
 
-    // Key beam should still be visible (timer preserved during play)
     assert!(
-        ctx.timer.is_timer_on(timer_on),
-        "key beam timer must persist during play even after key release"
+        !ctx.timer.is_timer_on(timer_on),
+        "key beam KEYON timer should be cleared after release during play"
+    );
+    assert!(
+        ctx.timer.is_timer_on(keyoff_timer_for_lane(0)),
+        "key beam KEYOFF timer should be enabled after release during play"
     );
 }
 

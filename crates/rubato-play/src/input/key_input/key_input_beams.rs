@@ -72,16 +72,16 @@ impl KeyInputProccessor {
             let timer_on = key_on_timer_id(lane_players[lane], offset);
             let timer_off = key_off_timer_id(lane_players[lane], offset);
 
-            if !self.is_judge_started || ctx.is_autoplay {
-                if pressed {
+            if pressed {
+                if !self.is_judge_started || ctx.is_autoplay {
                     if !ctx.timer.is_timer_on(timer_on) || scratch_changed {
                         ctx.timer.set_timer_on(timer_on);
                         ctx.timer.set_timer_off(timer_off);
                     }
-                } else if ctx.timer.is_timer_on(timer_on) {
-                    ctx.timer.set_timer_on(timer_off);
-                    ctx.timer.set_timer_off(timer_on);
                 }
+            } else if ctx.timer.is_timer_on(timer_on) {
+                ctx.timer.set_timer_on(timer_off);
+                ctx.timer.set_timer_off(timer_on);
             }
         }
     }

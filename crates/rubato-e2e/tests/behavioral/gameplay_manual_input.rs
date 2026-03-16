@@ -8,6 +8,7 @@
 //! 3. Multiple keys can be pressed simultaneously
 
 use std::path::PathBuf;
+use std::time::Duration;
 
 use rubato_e2e::{E2eHarness, MainStateType};
 use rubato_launcher::state_factory::LauncherStateFactory;
@@ -171,6 +172,64 @@ fn stale_key_state_is_cleared_when_entering_manual_play() {
     assert!(
         !harness.controller().timer().is_timer_on(TimerId::new(101)),
         "stale key state must not leave the first lane beam timer on"
+    );
+}
+
+#[test]
+fn manual_play_release_switches_keyon_to_keyoff() {
+    let timer_play = TimerId::new(41);
+    let timer_keyon_first_lane = TimerId::new(101);
+    let timer_keyoff_first_lane = TimerId::new(121);
+
+    let mut harness = harness_with_bms("minimal_7k.bms");
+    harness.change_state(MainStateType::Play);
+
+    let frames = harness.render_until(
+        |h| {
+            h.controller().current_state().is_some_and(|state| {
+                state.main_state_data().timer.is_timer_on(timer_play)
+            })
+        },
+        240,
+    );
+    assert!(frames < 240, "play state should start TIMER_PLAY within warmup");
+
+    let play_start_us = harness
+        .controller()
+        .current_state()
+        .expect("play state should exist")
+        .main_state_data()
+        .timer
+        .micro_timer(timer_play);
+    assert_ne!(
+        play_start_us,
+        i64::MIN,
+        "manual play should have a TIMER_PLAY start time"
+    );
+
+    harness
+        .controller_mut()
+        .current_state_mut()
+        .expect("play state should still exist")
+        .main_state_data_mut()
+        .timer
+        .set_timer_on(timer_keyon_first_lane);
+    std::thread::sleep(Duration::from_millis(2));
+    harness.render_frame();
+
+    let timer = &harness
+        .controller()
+        .current_state()
+        .expect("play state should still exist")
+        .main_state_data()
+        .timer;
+    assert!(
+        !timer.is_timer_on(timer_keyon_first_lane),
+        "manual play release should clear KEYON during the next play frame"
+    );
+    assert!(
+        timer.is_timer_on(timer_keyoff_first_lane),
+        "manual play release should enable KEYOFF during the next play frame"
     );
 }
 
