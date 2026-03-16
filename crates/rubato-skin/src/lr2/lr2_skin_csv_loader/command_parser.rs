@@ -700,6 +700,7 @@ impl LR2SkinCSVLoaderState {
         if let Some(fadeout) = self.skin_fadeout {
             skin.fadeout = fadeout;
         }
+        skin.option.clone_from(self.base.option());
     }
 
     /// Load skin from file (corresponds to loadSkin0)

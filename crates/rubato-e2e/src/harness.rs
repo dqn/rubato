@@ -27,15 +27,7 @@ pub struct E2eHarness {
 }
 
 impl E2eHarness {
-    /// Create a new harness with a RecordingAudioDriver and frozen timer.
-    ///
-    /// The MainController is constructed with default Config and PlayerConfig.
-    /// The timer is frozen at time 0.
-    pub fn new() -> Self {
-        let config = Config::default();
-        let player = PlayerConfig::default();
-        let mut controller = MainController::new(None, config, player, None, false);
-
+    fn instrument_controller(mut controller: MainController) -> Self {
         // Inject shared recording audio driver
         let shared_driver = SharedRecordingAudioDriver::new();
         let audio_handle = shared_driver.inner();
@@ -54,6 +46,30 @@ impl E2eHarness {
             audio_handle,
             state_event_log,
         }
+    }
+
+    /// Create a new harness with a RecordingAudioDriver and frozen timer.
+    ///
+    /// The MainController is constructed with default Config and PlayerConfig.
+    /// The timer is frozen at time 0.
+    pub fn new() -> Self {
+        Self::new_with_config_player(Config::default(), PlayerConfig::default())
+    }
+
+    /// Create a new harness with a custom PlayerConfig.
+    pub fn new_with_player_config(player: PlayerConfig) -> Self {
+        Self::new_with_config_player(Config::default(), player)
+    }
+
+    /// Wrap an existing MainController with E2E instrumentation.
+    pub fn from_controller(controller: MainController) -> Self {
+        Self::instrument_controller(controller)
+    }
+
+    /// Create a new harness with custom Config and PlayerConfig.
+    pub fn new_with_config_player(config: Config, player: PlayerConfig) -> Self {
+        let controller = MainController::new(None, config, player, None, false);
+        Self::instrument_controller(controller)
     }
 
     // ============================================================
@@ -477,6 +493,30 @@ mod tests {
     fn controller_has_audio_driver() {
         let harness = E2eHarness::new();
         assert!(harness.controller().audio_processor().is_some());
+    }
+
+    #[test]
+    fn new_with_player_config_uses_custom_player() {
+        let mut player = PlayerConfig::default();
+        player.name = "ECFN Tester".to_string();
+
+        let harness = E2eHarness::new_with_player_config(player);
+
+        assert_eq!(harness.controller().player_config().name, "ECFN Tester");
+    }
+
+    #[test]
+    fn from_controller_preserves_existing_player() {
+        let mut player = PlayerConfig::default();
+        player.name = "MainLoader Player".to_string();
+
+        let controller = MainController::new(None, Config::default(), player, None, false);
+        let harness = E2eHarness::from_controller(controller);
+
+        assert_eq!(
+            harness.controller().player_config().name,
+            "MainLoader Player"
+        );
     }
 
     #[test]

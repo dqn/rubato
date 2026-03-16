@@ -671,8 +671,7 @@ impl PlayerConfig {
             // Fallback: check root-level config_player.json (outside player dir).
             // Some setups (e.g., Java beatoraja migration) place the player config
             // at the workspace root rather than inside player/{id}/.
-            let root_config = PathBuf::from("config_player.json");
-            if root_config.exists() {
+            if let Some(root_config) = resolve_root_player_config_path(playerpath) {
                 log::info!(
                     "Player config not found at {}, using root config_player.json",
                     configpath.display()
@@ -784,6 +783,30 @@ fn load_player_config_from_old_path(path: &Path) -> anyhow::Result<PlayerConfig>
     let data = std::fs::read_to_string(path)?;
     let player: PlayerConfig = serde_json::from_str(&data)?;
     Ok(player)
+}
+
+fn resolve_root_player_config_path(playerpath: &str) -> Option<PathBuf> {
+    let direct = PathBuf::from("config_player.json");
+    if direct.exists() {
+        return Some(direct);
+    }
+
+    if let Some(parent) = Path::new(playerpath).parent() {
+        let from_player_root = parent.join("config_player.json");
+        if from_player_root.exists() {
+            return Some(from_player_root);
+        }
+    }
+
+    let cwd = std::env::current_dir().ok()?;
+    for ancestor in cwd.ancestors() {
+        let candidate = ancestor.join("config_player.json");
+        if candidate.exists() {
+            return Some(candidate);
+        }
+    }
+
+    None
 }
 
 fn write_backup_player_config(playerpath: &str, playerid: &str, path: &Path) {
@@ -1048,6 +1071,46 @@ mod tests {
         let pc = PlayerConfig::read_player_config(playerpath, "new_player").unwrap();
         assert_eq!(pc.name, "NO NAME");
         assert_eq!(pc.id, Some("new_player".to_string()));
+    }
+
+    #[test]
+    fn resolve_root_player_config_path_finds_parent_of_absolute_playerpath() {
+        let dir = tempfile::tempdir().unwrap();
+        let player_root = dir.path().join("player");
+        std::fs::create_dir_all(&player_root).unwrap();
+        let root_config = dir.path().join("config_player.json");
+        std::fs::write(&root_config, "{}").unwrap();
+
+        let resolved = resolve_root_player_config_path(player_root.to_str().unwrap());
+
+        assert_eq!(resolved.as_deref(), Some(root_config.as_path()));
+    }
+
+    #[test]
+    fn player_config_reads_root_config_next_to_absolute_playerpath() {
+        let dir = tempfile::tempdir().unwrap();
+        let player_root = dir.path().join("player");
+        std::fs::create_dir_all(&player_root).unwrap();
+        std::fs::create_dir_all(player_root.join("default")).unwrap();
+
+        let mut pc = PlayerConfig::default();
+        pc.skin[SkinType::Play7Keys.id() as usize] =
+            Some(SkinConfig::new_with_path("skin/ECFN/play/play7.luaskin"));
+        std::fs::write(
+            dir.path().join("config_player.json"),
+            serde_json::to_string_pretty(&pc).unwrap(),
+        )
+        .unwrap();
+
+        let loaded =
+            PlayerConfig::read_player_config(player_root.to_str().unwrap(), "default").unwrap();
+
+        assert_eq!(
+            loaded.skin[SkinType::Play7Keys.id() as usize]
+                .as_ref()
+                .and_then(|skin| skin.path()),
+            Some("skin/ECFN/play/play7.luaskin")
+        );
     }
 
     // -- read_all_player_id --

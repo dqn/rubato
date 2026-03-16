@@ -137,12 +137,16 @@ mod tests {
         state.skin_input = Some(500);
         state.skin_scene = Some(60000);
         state.skin_fadeout = Some(200);
+        state.base.op.insert(30, 1);
+        state.base.op.insert(31, 0);
 
         let mut skin = crate::skin::Skin::new(crate::skin_header::SkinHeader::new());
         state.apply_to_skin(&mut skin);
         assert_eq!(skin.input(), 500);
         assert_eq!(skin.scene(), 60000);
         assert_eq!(skin.fadeout(), 200);
+        assert_eq!(skin.option().get(&30), Some(&1));
+        assert_eq!(skin.option().get(&31), Some(&0));
     }
 
     #[test]
@@ -250,6 +254,53 @@ SCENETIME,9999\n\
 
         state.load_skin0(&path, None).unwrap();
         assert_eq!(state.skin_fadeout, Some(100));
+    }
+
+    #[test]
+    fn test_apply_to_skin_preserves_option_gated_object_through_prepare() {
+        use crate::objects::skin_image::SkinImage;
+        use crate::skin::SkinObject;
+        use crate::skin_object::DestinationParams;
+        use rubato_core::main_state::SkinDrawable;
+
+        let mut state = make_state();
+        state.base.op.insert(30, 1);
+        state.base.op.insert(31, 0);
+
+        let mut skin = crate::skin::Skin::new(crate::skin_header::SkinHeader::new());
+        skin.add(SkinObject::Image(SkinImage::new_with_image_id(111)));
+        skin.set_destination(
+            0,
+            &DestinationParams {
+                time: 0,
+                x: 0.0,
+                y: 0.0,
+                w: 32.0,
+                h: 32.0,
+                acc: 0,
+                a: 255,
+                r: 255,
+                g: 255,
+                b: 255,
+                blend: 0,
+                filter: 0,
+                angle: 0,
+                center: 0,
+                loop_val: 0,
+            },
+            0,
+            &[30],
+            &[],
+        );
+
+        state.apply_to_skin(&mut skin);
+        skin.prepare_skin();
+
+        assert_eq!(
+            skin.objects().len(),
+            1,
+            "selected option must keep the gated object alive through Skin::prepare()"
+        );
     }
 
     // --- #IF / #ELSE / #ENDIF conditional processing ---
