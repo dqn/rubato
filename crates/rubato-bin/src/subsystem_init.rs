@@ -289,7 +289,7 @@ pub(crate) fn init_stream_controller(controller: &mut MainController) {
         return;
     }
 
-    let config = controller.config();
+    let config = controller.config().clone();
     let mut selector =
         match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
             &config.paths.songpath,
@@ -312,6 +312,7 @@ pub(crate) fn init_stream_controller(controller: &mut MainController) {
             rubato_launcher::state_factory::new_state_main_controller_access(controller),
         );
         selector.config = controller.player_config().clone();
+        selector.app_config = config;
     }
     let selector = std::sync::Arc::new(std::sync::Mutex::new(selector));
     // Store the shared selector on MainController for StateFactory to retrieve

@@ -151,7 +151,7 @@ impl StateFactory for LauncherStateFactory {
                 // Fallback: create a standalone selector (no stream controller).
                 // Open a separate SQLite connection for the selector (same pattern
                 // as download processors in main.rs).
-                let config = controller.config();
+                let config = controller.config().clone();
                 let mut selector = match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
                     &config.paths.songpath,
                     &config.paths.bmsroot,
@@ -167,6 +167,7 @@ impl StateFactory for LauncherStateFactory {
                 let mc_access = QueuedControllerAccess::from_controller(controller, command_queue);
                 selector.set_main_controller(Box::new(mc_access));
                 selector.config = controller.player_config().clone();
+                selector.app_config = config;
                 Some(StateCreateResult {
                     state: Box::new(selector),
                     target_score: None,
