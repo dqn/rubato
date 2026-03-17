@@ -1,7 +1,9 @@
 // IR resend background loop
 // Translated from: MainController.java lines 518-548
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
+use std::thread::JoinHandle;
 
 use rubato_types::ir_resend_service::IrResendService;
 
@@ -22,22 +24,60 @@ pub fn shared_ir_statuses() -> Arc<Mutex<Vec<IRSendStatusMain>>> {
 /// Starts the background resend thread using the shared status list.
 pub struct IrResendServiceImpl {
     ir_send_count: i32,
+    shutdown_flag: Arc<AtomicBool>,
+    handle: Mutex<Option<JoinHandle<()>>>,
 }
 
 impl IrResendServiceImpl {
     pub fn new(ir_send_count: i32) -> Self {
-        Self { ir_send_count }
+        Self {
+            ir_send_count,
+            shutdown_flag: Arc::new(AtomicBool::new(false)),
+            handle: Mutex::new(None),
+        }
     }
 }
 
 impl IrResendService for IrResendServiceImpl {
     fn start(&self) {
-        start_ir_resend_thread(shared_ir_statuses(), self.ir_send_count);
+        let handle = start_ir_resend_thread(
+            shared_ir_statuses(),
+            self.ir_send_count,
+            &self.shutdown_flag,
+        );
+        if let Ok(mut guard) = self.handle.lock() {
+            *guard = Some(handle);
+        }
     }
 
     fn stop(&self) {
-        // The resend thread is daemon-like (same as Java: Thread.setDaemon(true)).
-        // It will terminate when the process exits.
+        self.shutdown_flag.store(true, Ordering::Release);
+        if let Ok(mut guard) = self.handle.lock()
+            && let Some(handle) = guard.take()
+        {
+            // Wait up to 5 seconds for the thread to finish.
+            // The thread sleeps in 100ms increments and checks the flag,
+            // so it should respond within ~100ms.
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+            while !handle.is_finished() {
+                if std::time::Instant::now() >= deadline {
+                    log::warn!("IR resend thread did not shut down within 5s timeout");
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            if handle.is_finished()
+                && let Err(e) = handle.join()
+            {
+                log::warn!("IR resend thread panicked: {:?}", e);
+            }
+        }
+    }
+}
+
+impl Drop for IrResendServiceImpl {
+    fn drop(&mut self) {
+        self.stop();
     }
 }
 
@@ -52,63 +92,92 @@ impl IrResendService for IrResendServiceImpl {
 ///
 /// `ir_send_status` is the shared list of pending sends.
 /// `ir_send_count` is the maximum retry count from config.
+/// `shutdown_flag` is checked each iteration to allow graceful shutdown.
+///
+/// Returns the `JoinHandle` for the spawned thread.
 pub fn start_ir_resend_thread(
     ir_send_status: Arc<Mutex<Vec<IRSendStatusMain>>>,
     ir_send_count: i32,
-) {
+    shutdown_flag: &Arc<AtomicBool>,
+) -> JoinHandle<()> {
+    let shutdown = Arc::clone(shutdown_flag);
     std::thread::spawn(move || {
         loop {
+            if shutdown.load(Ordering::Acquire) {
+                break;
+            }
+
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis() as i64;
 
-            match ir_send_status.lock() {
-                Ok(mut statuses) => {
-                    // Java: List<IRSendStatus> removeIrSendStatus = new ArrayList<>();
-                    let mut remove_indices: Vec<usize> = Vec::new();
-
-                    for (i, score) in statuses.iter_mut().enumerate() {
-                        // Java: long timeUntilNextTry = (long)(Math.pow(4, score.retry) * 1000);
-                        let time_until_next_try = 4_i64
-                            .checked_pow(score.retry as u32)
-                            .unwrap_or(i64::MAX / 1000)
-                            .saturating_mul(1000);
-                        // Java: if (score.retry != 0 && now - score.lastTry >= timeUntilNextTry)
-                        if score.retry != 0 && now - score.last_try >= time_until_next_try {
-                            score.send();
-                        }
-                        // Java: if(score.isSent)
-                        if score.is_sent {
-                            remove_indices.push(i);
-                        }
-                        // Java: if(score.retry > getConfig().getIrSendCount())
-                        if score.retry > ir_send_count {
-                            remove_indices.push(i);
-                            log::error!(
-                                "Failed to send a score for {} {}",
-                                score.songdata.metadata.title,
-                                score.songdata.metadata.subtitle
-                            );
-                        }
-                    }
-
-                    // Remove in reverse order to preserve indices
-                    remove_indices.sort_unstable();
-                    remove_indices.dedup();
-                    for &i in remove_indices.iter().rev() {
-                        statuses.remove(i);
-                    }
-                }
+            // Phase 1: Take all entries out of the shared list so we can release the
+            // lock before performing blocking HTTP sends.
+            let mut snapshot: Vec<IRSendStatusMain> = match ir_send_status.lock() {
+                Ok(mut statuses) => statuses.drain(..).collect(),
                 Err(e) => {
                     log::error!("Failed to lock ir_send_status: {}", e);
+                    Vec::new()
+                }
+            };
+
+            // Phase 2: Perform blocking HTTP sends outside the lock.
+            for score in &mut snapshot {
+                // Java: long timeUntilNextTry = (long)(Math.pow(4, score.retry) * 1000);
+                let time_until_next_try = 4_i64
+                    .checked_pow(score.retry as u32)
+                    .unwrap_or(i64::MAX / 1000)
+                    .saturating_mul(1000);
+                // Java: if (score.retry != 0 && now - score.lastTry >= timeUntilNextTry)
+                if score.retry != 0 && now - score.last_try >= time_until_next_try {
+                    score.send();
+                }
+            }
+
+            // Phase 3: Re-acquire lock. Remove completed/exhausted entries, put back
+            // the rest. Any new entries added by other threads while we were sending
+            // are already in the vec and will be preserved.
+            {
+                let mut keep: Vec<IRSendStatusMain> = Vec::new();
+                for score in snapshot {
+                    if score.is_sent {
+                        // Successfully sent -- discard.
+                        continue;
+                    }
+                    if score.retry > ir_send_count {
+                        log::error!(
+                            "Failed to send a score for {} {}",
+                            score.songdata.metadata.title,
+                            score.songdata.metadata.subtitle
+                        );
+                        continue;
+                    }
+                    keep.push(score);
+                }
+                match ir_send_status.lock() {
+                    Ok(mut statuses) => {
+                        // Prepend kept entries before any newly added ones.
+                        let new_entries: Vec<IRSendStatusMain> = statuses.drain(..).collect();
+                        statuses.extend(keep);
+                        statuses.extend(new_entries);
+                    }
+                    Err(e) => {
+                        log::error!("Failed to lock ir_send_status (cleanup): {}", e);
+                    }
                 }
             }
 
             // Java: Thread.sleep(3000, 0);
-            std::thread::sleep(std::time::Duration::from_millis(3000));
+            // Sleep in small increments so we can respond to shutdown quickly.
+            for _ in 0..30 {
+                if shutdown.load(Ordering::Acquire) {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
         }
-    });
+    })
 }
 
 #[cfg(test)]
@@ -275,16 +344,22 @@ mod tests {
     // -- Thread lifecycle tests --
 
     #[test]
-    fn test_start_ir_resend_thread_spawns() {
-        // Verify the thread spawns and the shared status list remains accessible
+    fn test_start_ir_resend_thread_spawns_and_shuts_down() {
+        // Verify the thread spawns and can be shut down via the flag.
         let ir_send_status = Arc::new(Mutex::new(Vec::<IRSendStatusMain>::new()));
         let ir_send_count = 5;
+        let shutdown = Arc::new(AtomicBool::new(false));
 
-        start_ir_resend_thread(Arc::clone(&ir_send_status), ir_send_count);
+        let handle = start_ir_resend_thread(Arc::clone(&ir_send_status), ir_send_count, &shutdown);
 
         // The thread is running in the background; verify the shared list is still usable
         let statuses = ir_send_status.lock().expect("mutex poisoned");
         assert!(statuses.is_empty());
+        drop(statuses);
+
+        // Signal shutdown and join
+        shutdown.store(true, Ordering::Release);
+        handle.join().expect("thread should not panic");
     }
 
     #[test]
@@ -300,11 +375,11 @@ mod tests {
         status.last_try = 0;
 
         let ir_send_status = Arc::new(Mutex::new(vec![status]));
+        let shutdown = Arc::new(AtomicBool::new(false));
 
-        start_ir_resend_thread(Arc::clone(&ir_send_status), 5);
+        let handle = start_ir_resend_thread(Arc::clone(&ir_send_status), 5, &shutdown);
 
-        // Wait for the thread to process (it sleeps 3s between iterations,
-        // but the first iteration runs immediately)
+        // Wait for the thread to process (first iteration runs immediately)
         std::thread::sleep(std::time::Duration::from_millis(500));
 
         let statuses = ir_send_status.lock().expect("mutex poisoned");
@@ -312,6 +387,10 @@ mod tests {
             statuses.is_empty(),
             "successful status should be removed by the resend thread"
         );
+        drop(statuses);
+
+        shutdown.store(true, Ordering::Release);
+        handle.join().expect("thread should not panic");
     }
 
     #[test]
@@ -328,8 +407,9 @@ mod tests {
         status.last_try = 0;
 
         let ir_send_status = Arc::new(Mutex::new(vec![status]));
+        let shutdown = Arc::new(AtomicBool::new(false));
 
-        start_ir_resend_thread(Arc::clone(&ir_send_status), 5);
+        let handle = start_ir_resend_thread(Arc::clone(&ir_send_status), 5, &shutdown);
 
         // Wait for the thread to process the first iteration
         std::thread::sleep(std::time::Duration::from_millis(500));
@@ -339,5 +419,37 @@ mod tests {
             statuses.is_empty(),
             "exhausted-retry status should be removed by the resend thread"
         );
+        drop(statuses);
+
+        shutdown.store(true, Ordering::Release);
+        handle.join().expect("thread should not panic");
+    }
+
+    #[test]
+    fn test_ir_resend_service_impl_stop_joins_thread() {
+        let service = IrResendServiceImpl::new(5);
+        service.start();
+        // Thread should be running
+        assert!(service.handle.lock().unwrap().is_some());
+
+        service.stop();
+
+        // After stop, the shutdown flag should be set and handle consumed
+        assert!(service.shutdown_flag.load(Ordering::Acquire));
+        assert!(service.handle.lock().unwrap().is_none());
+    }
+
+    #[test]
+    fn test_ir_resend_service_impl_drop_shuts_down() {
+        let flag = {
+            let service = IrResendServiceImpl::new(5);
+            service.start();
+            let flag = Arc::clone(&service.shutdown_flag);
+            assert!(!flag.load(Ordering::Acquire));
+            flag
+            // service dropped here
+        };
+        // After drop, the shutdown flag should be set
+        assert!(flag.load(Ordering::Acquire));
     }
 }

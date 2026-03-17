@@ -49,6 +49,8 @@ pub struct CourseResult {
     skin: Option<ResultSkinData>,
     /// Receiver for async IR results (non-blocking).
     ir_rx: Option<std::sync::mpsc::Receiver<IrSendResult>>,
+    /// JoinHandle for the IR send background thread.
+    ir_thread: Option<std::thread::JoinHandle<()>>,
 }
 
 impl CourseResult {
@@ -66,6 +68,7 @@ impl CourseResult {
             property: ResultKeyProperty::beat_7k(),
             skin: None,
             ir_rx: None,
+            ir_thread: None,
         }
     }
 
@@ -219,7 +222,7 @@ impl CourseResult {
 
         let (tx, rx) = std::sync::mpsc::channel();
 
-        std::thread::spawn(move || {
+        let handle = std::thread::spawn(move || {
             let mut succeed = true;
             let mut irsend = 0;
             let mut remove_indices: Vec<usize> = Vec::new();
@@ -260,8 +263,9 @@ impl CourseResult {
             ));
         });
 
-        // Store receiver for non-blocking polling in render loop
+        // Store receiver and handle for non-blocking polling in render loop
         self.ir_rx = Some(rx);
+        self.ir_thread = Some(handle);
     }
 
     /// Determine LN mode for IR based on whether models contain undefined long notes.
@@ -429,6 +433,23 @@ impl CourseResult {
         // Java: stop(getSound(COURSE_CLOSE) != null ? COURSE_CLOSE : RESULT_CLOSE)
         self.stop_sound_inner(SoundType::CourseClose);
         self.stop_sound_inner(SoundType::ResultClose);
+
+        // Join the IR send thread if it is still running.
+        if let Some(handle) = self.ir_thread.take() {
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+            while !handle.is_finished() {
+                if std::time::Instant::now() >= deadline {
+                    log::warn!("CourseResult IR send thread did not finish within 10s timeout");
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            if handle.is_finished()
+                && let Err(e) = handle.join()
+            {
+                log::warn!("CourseResult IR send thread panicked: {:?}", e);
+            }
+        }
     }
 
     fn stop_sound_inner(&mut self, sound: SoundType) {

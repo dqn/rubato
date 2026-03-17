@@ -492,6 +492,12 @@ impl MainController {
         }
         // ShaderManager removed: LibGDX shader management not needed with wgpu.
 
+        // Stop the IR resend background thread.
+        if let Some(ref service) = self.integration.ir_resend_service {
+            service.stop();
+        }
+        self.integration.ir_resend_service = None;
+
         // Join background threads (song update, table update) to ensure clean
         // shutdown and release of DB handles.
         for handle in self.background_threads.drain(..) {

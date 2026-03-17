@@ -8,7 +8,10 @@ use crate::{
 
 /// ScreenShotFileExporter - saves screenshots to file and optionally copies to clipboard / sends webhook.
 /// Translated from Java: ScreenShotFileExporter implements ScreenShotExporter
-pub struct ScreenShotFileExporter;
+pub struct ScreenShotFileExporter {
+    /// JoinHandle for the most recent webhook send background thread.
+    webhook_thread: std::sync::Mutex<Option<std::thread::JoinHandle<()>>>,
+}
 
 impl ScreenShotExporter for ScreenShotFileExporter {
     fn send(&self, current_state: &MainState, pixels: &[u8]) -> bool {
@@ -110,7 +113,9 @@ impl ScreenShotExporter for ScreenShotFileExporter {
 
 impl ScreenShotFileExporter {
     pub fn new() -> Self {
-        Self
+        Self {
+            webhook_thread: std::sync::Mutex::new(None),
+        }
     }
 
     fn send_clipboard(&self, current_state: &MainState, path: &str) {
@@ -171,11 +176,48 @@ impl ScreenShotFileExporter {
 
         let path = path.to_string();
 
-        std::thread::spawn(move || {
+        let handle = std::thread::spawn(move || {
             for webhook_url in &webhook_urls {
                 handler.send_webhook_with_image(&payload, &path, webhook_url);
             }
         });
+
+        // Store the handle; join any previous thread that is still running.
+        if let Ok(mut guard) = self.webhook_thread.lock() {
+            if let Some(prev) = guard.take()
+                && prev.is_finished()
+                && let Err(e) = prev.join()
+            {
+                log::warn!("Previous webhook thread panicked: {:?}", e);
+            }
+            // If previous thread is still running, we let it detach
+            // (it will finish on its own). Storing the new handle ensures
+            // at least the latest thread is joined on drop.
+            *guard = Some(handle);
+        }
+    }
+}
+
+impl Drop for ScreenShotFileExporter {
+    fn drop(&mut self) {
+        // Join the webhook thread on drop to prevent orphaned threads.
+        if let Ok(mut guard) = self.webhook_thread.lock()
+            && let Some(handle) = guard.take()
+        {
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+            while !handle.is_finished() {
+                if std::time::Instant::now() >= deadline {
+                    log::warn!("Webhook send thread did not finish within 10s timeout on drop");
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            if handle.is_finished()
+                && let Err(e) = handle.join()
+            {
+                log::warn!("Webhook send thread panicked: {:?}", e);
+            }
+        }
     }
 }
 

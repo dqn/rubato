@@ -46,6 +46,8 @@ pub struct MusicResult {
     skin: Option<ResultSkinData>,
     /// Receiver for async IR results (non-blocking).
     ir_rx: Option<std::sync::mpsc::Receiver<MusicIrResult>>,
+    /// JoinHandle for the IR send background thread.
+    ir_thread: Option<std::thread::JoinHandle<()>>,
 }
 
 impl MusicResult {
@@ -58,6 +60,7 @@ impl MusicResult {
             property: ResultKeyProperty::beat_7k(),
             skin: None,
             ir_rx: None,
+            ir_thread: None,
         }
     }
 
@@ -198,7 +201,7 @@ impl MusicResult {
             let (tx, rx) = std::sync::mpsc::channel();
             self.ir_rx = Some(rx);
 
-            std::thread::spawn(move || {
+            let handle = std::thread::spawn(move || {
                 let mut irsend = 0;
                 let mut succeed = true;
                 for status in &mut ir_send_list_snapshot {
@@ -227,6 +230,7 @@ impl MusicResult {
 
                 let _ = tx.send((succeed, irsend > 0, ranking_scores, newscore_for_thread));
             });
+            self.ir_thread = Some(handle);
         }
 
         // Play result sound
@@ -253,6 +257,25 @@ impl MusicResult {
         self.stop_sound_inner(SoundType::ResultClear);
         self.stop_sound_inner(SoundType::ResultFail);
         self.stop_sound_inner(SoundType::ResultClose);
+
+        // Join the IR send thread if it is still running.
+        if let Some(handle) = self.ir_thread.take() {
+            // The thread is bounded (sends scores + fetches ranking, then exits).
+            // Give it a reasonable timeout so we don't block shutdown indefinitely.
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+            while !handle.is_finished() {
+                if std::time::Instant::now() >= deadline {
+                    log::warn!("MusicResult IR send thread did not finish within 10s timeout");
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            if handle.is_finished()
+                && let Err(e) = handle.join()
+            {
+                log::warn!("MusicResult IR send thread panicked: {:?}", e);
+            }
+        }
     }
 
     /// Poll for async IR results (non-blocking) and update ranking/timer state.
