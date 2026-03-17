@@ -11,9 +11,10 @@ use key_input_judge::JudgeThread;
 /// Key input processing thread
 pub struct KeyInputProccessor {
     prevtime: i64,
-    scratch: Vec<f32>,
+    /// Scratch turntable rotation state in 2160-degree space (6x 360).
+    /// Display angle is `scratch[s] / 6`.
+    scratch: Vec<i64>,
     scratch_key: Vec<i32>,
-    scratch_tt_graphic_speed: Vec<f32>,
     lane_property: LaneProperty,
     is_judge_started: bool,
     pub key_beam_stop: bool,
@@ -25,9 +26,8 @@ impl KeyInputProccessor {
         let scratch_len = lane_property.scratch_key_assign().len();
         KeyInputProccessor {
             prevtime: -1,
-            scratch: vec![0.0; scratch_len],
+            scratch: vec![0; scratch_len],
             scratch_key: vec![0; scratch_len],
-            scratch_tt_graphic_speed: vec![0.0; scratch_len],
             lane_property: lane_property.clone(),
             is_judge_started: false,
             key_beam_stop: false,
@@ -571,6 +571,17 @@ mod tests {
     }
 
     // --- Scratch animation tests ---
+    // Java algorithm (KeyInputProccessor.java lines 92-108):
+    //   deltatime = now - prevtime  (milliseconds)
+    //   scratch[s] += s % 2 == 0 ? 2160 - deltatime : deltatime  (base rotation)
+    //   if key0 active: scratch[s] += deltatime * 2
+    //   else if key1 active: scratch[s] += 2160 - deltatime * 2
+    //   scratch[s] %= 2160
+    //   display angle = scratch[s] / 6
+    //
+    // BEAT_7K: scratch_key_assign()[0] = [7, 8]
+    //   key0 = scratch_keys[0][1] = 8
+    //   key1 = scratch_keys[0][0] = 7
 
     #[test]
     fn test_input_scratch_initial_no_animation_on_first_frame() {
@@ -590,7 +601,11 @@ mod tests {
     }
 
     #[test]
-    fn test_input_scratch_idle_moves_towards_default_speed() {
+    fn test_input_scratch_idle_base_rotation_even_index() {
+        // Java: s=0 (even), idle, deltatime=16ms
+        // scratch[0] += 2160 - 16 = 2144
+        // scratch[0] %= 2160 -> 2144
+        // display = 2144 / 6 = 357
         let lp = make_lane_property();
         let mut proc = KeyInputProccessor::new(&lp);
         let mut timer = make_timer();
@@ -604,25 +619,55 @@ mod tests {
             proc.input(&mut ctx);
         }
 
-        // Second frame at 1000ms (deltatime = 1.0s)
+        // Second frame at 16ms (typical frame time)
         {
-            let mut ctx = make_context(1000, &key_states, &auto_presstime, false, &mut timer);
+            let mut ctx = make_context(16, &key_states, &auto_presstime, false, &mut timer);
             proc.input(&mut ctx);
         }
 
-        // Default target_speed=1.0, move_towards_speed=4.0
-        // scratch_tt_graphic_speed starts at 0.0
-        // |1.0 - 0.0| = 1.0 > deltatime(1.0) is false, so speed = target_speed = 1.0
-        assert_eq!(proc.scratch_tt_graphic_speed[0], 1.0);
-        // With speed=1.0 > 0: scratch += 360.0 - 1.0 * 1.0 * 270.0 = 90.0
-        assert!((proc.scratch_angles()[0] - 90.0).abs() < 0.01);
+        // s=0 (even): scratch += 2160 - 16 = 2144
+        assert_eq!(proc.scratch[0], 2144);
+        // display = 2144 / 6 = 357 (integer division)
+        assert_eq!(proc.scratch_angles()[0], 357.0);
     }
 
     #[test]
-    fn test_input_scratch_key0_sets_negative_direction() {
-        // BEAT_7K: scratch_to_key[0] = [7, 8]
-        // key0 = scratch_keys[0][1] = 8, key1 = scratch_keys[0][0] = 7
-        // Pressing key0 (=8) -> target_speed=-0.75, speed clamped to min(current, 0)
+    fn test_input_scratch_idle_base_rotation_odd_index() {
+        // Java: s=1 (odd), idle, deltatime=16ms
+        // scratch[1] += 16
+        // display = 16 / 6 = 2 (integer division)
+        let lp = LaneProperty::new(&Mode::BEAT_14K);
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        let key_states = vec![false; 20];
+        let auto_presstime = vec![i64::MIN; 20];
+
+        // First frame
+        {
+            let mut ctx = make_context(0, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+
+        // Second frame at 16ms
+        {
+            let mut ctx = make_context(16, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+
+        // s=0 (even): scratch += 2160 - 16 = 2144
+        assert_eq!(proc.scratch[0], 2144);
+        // s=1 (odd): scratch += 16
+        assert_eq!(proc.scratch[1], 16);
+        // display: 2144/6=357, 16/6=2
+        assert_eq!(proc.scratch_angles()[0], 357.0);
+        assert_eq!(proc.scratch_angles()[1], 2.0);
+    }
+
+    #[test]
+    fn test_input_scratch_key0_accelerates_positive() {
+        // Java: key0 active -> scratch[s] += deltatime * 2
+        // Combined with base rotation (s=0 even): 2160 - dt + dt*2 = 2160 + dt
         let lp = make_lane_property();
         let mut proc = KeyInputProccessor::new(&lp);
         let mut timer = make_timer();
@@ -636,22 +681,23 @@ mod tests {
             proc.input(&mut ctx);
         }
 
-        // Press key 8 (scratch key0 direction)
+        // Press key 8 (key0 = scratch_keys[0][1])
         key_states[8] = true;
         {
-            let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+            let mut ctx = make_context(16, &key_states, &auto_presstime, false, &mut timer);
             proc.input(&mut ctx);
         }
-        // deltatime = 100/1000 = 0.1
-        // key0 active: target=-0.75, move_towards=16.0, speed clamped to min(0, 0)=0
-        // |(-0.75) - 0| = 0.75 > 0.1 -> speed += signum(-0.75) * 0.1 * 16 = -1.6
-        assert!(proc.scratch_tt_graphic_speed[0] < 0.0);
+        // base: 2160 - 16 = 2144
+        // key0: + 16 * 2 = 32
+        // total: 2144 + 32 = 2176
+        // % 2160 = 16
+        assert_eq!(proc.scratch[0], 16);
+        assert_eq!(proc.scratch_angles()[0], 2.0); // 16 / 6 = 2
     }
 
     #[test]
-    fn test_input_scratch_key1_sets_positive_direction() {
-        // key1 = scratch_keys[0][0] = 7
-        // Pressing key1 (=7) -> target_speed=2.0
+    fn test_input_scratch_key1_accelerates_negative() {
+        // Java: key1 active -> scratch[s] += 2160 - deltatime * 2
         let lp = make_lane_property();
         let mut proc = KeyInputProccessor::new(&lp);
         let mut timer = make_timer();
@@ -665,49 +711,48 @@ mod tests {
             proc.input(&mut ctx);
         }
 
-        // Press key 7 (scratch key1 direction)
+        // Press key 7 (key1 = scratch_keys[0][0])
         key_states[7] = true;
         {
-            let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+            let mut ctx = make_context(16, &key_states, &auto_presstime, false, &mut timer);
             proc.input(&mut ctx);
         }
-        // key1 active: target=2.0, move_towards=16.0, speed clamped to max(0, 0)=0
-        // |2.0 - 0| = 2.0 > 0.1 -> speed += 1.0 * 0.1 * 16 = 1.6
-        assert!(proc.scratch_tt_graphic_speed[0] > 0.0);
-        assert!((proc.scratch_tt_graphic_speed[0] - 1.6).abs() < 0.01);
+        // base: 2160 - 16 = 2144
+        // key1: + 2160 - 16*2 = 2128
+        // total: 0 + 2144 + 2128 = 4272
+        // % 2160 = 4272 - 2160 = 2112
+        assert_eq!(proc.scratch[0], 2112);
+        assert_eq!(proc.scratch_angles()[0], (2112 / 6) as f32); // 352.0
     }
 
     #[test]
-    fn test_input_scratch_autoplay_ignores_key_states() {
-        // In autoplay mode, scratch animation uses default idle speed
+    fn test_input_scratch_auto_presstime_triggers_key0_acceleration() {
+        // auto_presstime[key0] != i64::MIN should trigger key0 acceleration
         let lp = make_lane_property();
         let mut proc = KeyInputProccessor::new(&lp);
         let mut timer = make_timer();
 
-        let mut key_states = vec![false; 9];
-        key_states[7] = true; // key pressed but autoplay ignores it
-        let auto_presstime = vec![i64::MIN; 9];
+        let key_states = vec![false; 9];
+        let mut auto_presstime = vec![i64::MIN; 9];
 
         // First frame
         {
-            let mut ctx = make_context(0, &key_states, &auto_presstime, true, &mut timer);
+            let mut ctx = make_context(0, &key_states, &auto_presstime, false, &mut timer);
             proc.input(&mut ctx);
         }
 
-        // Second frame
+        // key0 = scratch_keys[0][1] = 8: auto-pressed
+        auto_presstime[8] = 50_000;
         {
-            let mut ctx = make_context(100, &key_states, &auto_presstime, true, &mut timer);
+            let mut ctx = make_context(16, &key_states, &auto_presstime, false, &mut timer);
             proc.input(&mut ctx);
         }
-
-        // autoplay -> default target_speed=1.0, move_towards=4.0
-        // speed starts at 0, deltatime=0.1
-        // |1.0 - 0| = 1.0 > 0.1 -> speed += 1.0 * 0.1 * 4.0 = 0.4
-        assert!((proc.scratch_tt_graphic_speed[0] - 0.4).abs() < 0.01);
+        // Same as key0 physically pressed: base(2144) + key0(32) = 2176 % 2160 = 16
+        assert_eq!(proc.scratch[0], 16);
     }
 
     #[test]
-    fn test_input_scratch_angle_wraps_at_360() {
+    fn test_input_scratch_wraps_at_2160() {
         let lp = make_lane_property();
         let mut proc = KeyInputProccessor::new(&lp);
         let mut timer = make_timer();
@@ -715,18 +760,162 @@ mod tests {
         let key_states = vec![false; 9];
         let auto_presstime = vec![i64::MIN; 9];
 
-        // Set scratch angle close to 360
-        proc.scratch[0] = 350.0;
-        proc.scratch_tt_graphic_speed[0] = 1.0;
+        // Set scratch close to 2160
+        proc.scratch[0] = 2150;
         proc.prevtime = 0;
 
         {
-            let mut ctx = make_context(1000, &key_states, &auto_presstime, false, &mut timer);
+            let mut ctx = make_context(16, &key_states, &auto_presstime, false, &mut timer);
             proc.input(&mut ctx);
         }
-        // scratch += 360.0 - 1.0 * 1.0 * 270.0 = 90.0
-        // 350.0 + 90.0 = 440.0 % 360.0 = 80.0
-        assert!((proc.scratch_angles()[0] - 80.0).abs() < 0.01);
+        // 2150 + (2160 - 16) = 2150 + 2144 = 4294
+        // 4294 % 2160 = 4294 - 2160 = 2134
+        assert_eq!(proc.scratch[0], (2150 + 2144) % 2160);
+    }
+
+    #[test]
+    fn test_input_scratch_multi_frame_accumulation() {
+        // Verify scratch accumulates across multiple frames like Java
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        let key_states = vec![false; 9];
+        let auto_presstime = vec![i64::MIN; 9];
+
+        // Frame 0: prevtime = -1, no animation
+        {
+            let mut ctx = make_context(0, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        assert_eq!(proc.scratch[0], 0);
+
+        // Frame 1: deltatime=16, s=0 even, idle
+        {
+            let mut ctx = make_context(16, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        let after_f1 = (0 + 2160 - 16) % 2160; // 2144
+        assert_eq!(proc.scratch[0], after_f1);
+
+        // Frame 2: deltatime=16
+        {
+            let mut ctx = make_context(32, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        let after_f2 = (after_f1 + 2160 - 16) % 2160; // (2144 + 2144) % 2160 = 2128
+        assert_eq!(proc.scratch[0], after_f2);
+
+        // Frame 3: deltatime=16
+        {
+            let mut ctx = make_context(48, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        let after_f3 = (after_f2 + 2160 - 16) % 2160; // (2128 + 2144) % 2160 = 2112
+        assert_eq!(proc.scratch[0], after_f3);
+    }
+
+    /// Regression test: validates the ported scratch algorithm matches Java behavior
+    /// across a sequence of frames with mixed key presses, matching the Java source
+    /// in KeyInputProccessor.java lines 92-108.
+    #[test]
+    fn test_scratch_java_parity_mixed_input_sequence() {
+        let lp = make_lane_property();
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        // key0 = scratch_keys[0][1] = 8, key1 = scratch_keys[0][0] = 7
+        let mut key_states = vec![false; 9];
+        let auto_presstime = vec![i64::MIN; 9];
+
+        // Simulate Java execution step by step:
+        // Frame 0: prevtime = -1, skip animation
+        {
+            let mut ctx = make_context(0, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        assert_eq!(proc.scratch[0], 0);
+
+        // Frame 1: now=16, prevtime=0, deltatime=16, idle
+        // scratch += 2160 - 16 = 2144 -> 2144 % 2160 = 2144
+        {
+            let mut ctx = make_context(16, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        assert_eq!(proc.scratch[0], 2144);
+        assert_eq!(proc.scratch_angles()[0], (2144_i64 / 6) as f32);
+
+        // Frame 2: now=32, deltatime=16, key0 (8) pressed
+        // base: 2160 - 16 = 2144
+        // key0: + 16 * 2 = 32
+        // total: 2144 + 2144 + 32 = 4320
+        // 4320 % 2160 = 0
+        key_states[8] = true;
+        {
+            let mut ctx = make_context(32, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        assert_eq!(proc.scratch[0], (2144 + 2144 + 32) % 2160);
+
+        // Frame 3: now=48, deltatime=16, release key0, press key1 (7)
+        // base: 2160 - 16 = 2144
+        // key1: + 2160 - 16*2 = 2128
+        // total: prev + 2144 + 2128
+        key_states[8] = false;
+        key_states[7] = true;
+        let prev = proc.scratch[0];
+        {
+            let mut ctx = make_context(48, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        assert_eq!(proc.scratch[0], (prev + 2144 + 2128) % 2160);
+
+        // Frame 4: now=64, deltatime=16, no keys
+        key_states[7] = false;
+        let prev = proc.scratch[0];
+        {
+            let mut ctx = make_context(64, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+        assert_eq!(proc.scratch[0], (prev + 2144) % 2160);
+
+        // Verify display angle is always scratch / 6
+        let expected_display = (proc.scratch[0] / 6) as f32;
+        assert_eq!(proc.scratch_angles()[0], expected_display);
+    }
+
+    /// Regression test: verifies that s % 2 direction parity is preserved
+    /// for 14K mode (two scratches: even and odd index).
+    #[test]
+    fn test_scratch_java_parity_direction_depends_on_index_parity() {
+        let lp = LaneProperty::new(&Mode::BEAT_14K);
+        let mut proc = KeyInputProccessor::new(&lp);
+        let mut timer = make_timer();
+
+        let key_states = vec![false; 20];
+        let auto_presstime = vec![i64::MIN; 20];
+
+        // First frame
+        {
+            let mut ctx = make_context(0, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+
+        // Second frame: deltatime=100ms, idle
+        {
+            let mut ctx = make_context(100, &key_states, &auto_presstime, false, &mut timer);
+            proc.input(&mut ctx);
+        }
+
+        // s=0 (even): scratch += 2160 - 100 = 2060 -> rotates "backward"
+        assert_eq!(proc.scratch[0], 2060);
+        // s=1 (odd): scratch += 100 -> rotates "forward"
+        assert_eq!(proc.scratch[1], 100);
+
+        // They rotate in opposite directions, verifying s % 2 parity
+        // Display: 2060/6 = 343, 100/6 = 16
+        assert_eq!(proc.scratch_angles()[0], 343.0);
+        assert_eq!(proc.scratch_angles()[1], 16.0);
     }
 
     #[test]

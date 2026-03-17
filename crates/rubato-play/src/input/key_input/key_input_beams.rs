@@ -86,62 +86,48 @@ impl KeyInputProccessor {
         }
     }
 
-    /// Update scratch turntable rotation animation based on active scratch keys.
+    /// Update scratch turntable rotation animation.
+    ///
+    /// Faithfully ports Java's integer-based scratch animation:
+    /// - Base rotation: `scratch[s] += s % 2 == 0 ? 2160 - deltatime : deltatime`
+    /// - Key0 acceleration: `scratch[s] += deltatime * 2`
+    /// - Key1 acceleration: `scratch[s] += 2160 - deltatime * 2`
+    /// - Modulo 2160, display angle = scratch[s] / 6
     #[allow(clippy::needless_range_loop)] // Multiple parallel arrays indexed by s
     fn update_scratch_animation(&mut self, ctx: &InputContext) {
         if self.prevtime < 0 {
             return;
         }
 
-        let deltatime = (ctx.now - self.prevtime) as f32 / 1000.0;
+        let deltatime = ctx.now - self.prevtime;
         let scratch_keys = self.lane_property.scratch_key_assign();
 
         for s in 0..self.scratch.len() {
+            // Base rotation direction depends on s % 2
+            self.scratch[s] += if s % 2 == 0 {
+                2160 - deltatime
+            } else {
+                deltatime
+            };
+
             let key0 = scratch_keys[s][1];
             let key1 = scratch_keys[s][0];
-
-            let mut target_speed: f32 = 1.0;
-            let mut move_towards_speed: f32 = 4.0;
-
-            if !ctx.is_autoplay {
-                if is_key_active(key0, ctx) {
-                    target_speed = -0.75;
-                    move_towards_speed = 16.0;
-                    self.scratch_tt_graphic_speed[s] = self.scratch_tt_graphic_speed[s].min(0.0);
-                } else if is_key_active(key1, ctx) {
-                    target_speed = 2.0;
-                    move_towards_speed = 16.0;
-                    self.scratch_tt_graphic_speed[s] = self.scratch_tt_graphic_speed[s].max(0.0);
-                }
+            if is_key_active(key0, ctx) {
+                self.scratch[s] += deltatime * 2;
+            } else if is_key_active(key1, ctx) {
+                self.scratch[s] += 2160 - deltatime * 2;
             }
 
-            // Move towards target speed
-            // Java uses constant 1.0f in the abs check (not targetSpeed)
-            if (1.0_f32 - self.scratch_tt_graphic_speed[s]).abs() <= deltatime {
-                self.scratch_tt_graphic_speed[s] = target_speed;
-            } else {
-                self.scratch_tt_graphic_speed[s] +=
-                    (target_speed - self.scratch_tt_graphic_speed[s]).signum()
-                        * deltatime
-                        * move_towards_speed;
-            }
-
-            // Apply TT speed to scratch angle
-            if self.scratch_tt_graphic_speed[s] > 0.0 {
-                self.scratch[s] += 360.0 - self.scratch_tt_graphic_speed[s] * deltatime * 270.0;
-            } else if self.scratch_tt_graphic_speed[s] < 0.0 {
-                self.scratch[s] += -self.scratch_tt_graphic_speed[s] * deltatime * 270.0;
-            }
-
-            self.scratch[s] %= 360.0;
+            self.scratch[s] %= 2160;
         }
     }
 
-    /// Returns the current scratch angle values.
+    /// Returns the current scratch display angle values (0..360 degrees).
     ///
+    /// Java: `main.getOffset(OFFSET_SCRATCHANGLE_1P + s).r = scratch[s] / 6`
     /// The caller should write `angles[s]` to `main.getOffset(OFFSET_SCRATCHANGLE_1P + s).r`.
-    pub fn scratch_angles(&self) -> &[f32] {
-        &self.scratch
+    pub fn scratch_angles(&self) -> Vec<f32> {
+        self.scratch.iter().map(|&v| (v / 6) as f32).collect()
     }
 
     /// Key beam flag ON — called from judge synchronization.
