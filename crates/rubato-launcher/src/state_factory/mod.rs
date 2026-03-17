@@ -225,6 +225,9 @@ impl StateFactory for LauncherStateFactory {
                 // Wire player config
                 player.set_player_config(controller.player_config().clone());
 
+                // Wire global config for skin property queries (BGA mode, etc.)
+                player.set_config(controller.config().clone());
+
                 // Wire course mode flag
                 let is_course_mode = resource.and_then(|r| r.course_data()).is_some();
                 player.set_course_mode(is_course_mode);

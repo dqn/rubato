@@ -61,6 +61,7 @@ impl BMSPlayer {
             lnmode_override: None,
             judge_note_to_model: Vec::new(),
             previous_gauge_values: None,
+            config: rubato_types::config::Config::default(),
         }
     }
 
@@ -147,6 +148,11 @@ impl BMSPlayer {
     /// Set the player config. Used for save_config, gauge_auto_shift, chart_preview, etc.
     pub fn set_player_config(&mut self, config: PlayerConfig) {
         self.player_config = config;
+    }
+
+    /// Set the global config. Used for BGA mode and other skin property queries.
+    pub fn set_config(&mut self, config: rubato_types::config::Config) {
+        self.config = config;
     }
 
     /// Get the player config reference.

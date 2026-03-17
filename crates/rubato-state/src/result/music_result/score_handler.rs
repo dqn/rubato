@@ -76,6 +76,7 @@ impl MusicResult {
             }
         }
         self.data.timing_distribution.statistic_value_calculate();
+        self.data.sync_timing_distribution_cache();
 
         // Course mode score accumulation
         if self.resource.course_bms_models().is_some() {

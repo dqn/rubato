@@ -422,6 +422,9 @@ pub struct BMSPlayer {
     /// final gauge value from the previous stage.
     /// Java: resource.getGauge() -> FloatArray[] fed into GrooveGauge.create().
     previous_gauge_values: Option<Vec<Vec<f32>>>,
+    /// Global config snapshot for skin property queries (e.g., BGA mode for image_index ID 72).
+    /// Set by the caller before create() via `set_config()`.
+    config: rubato_types::config::Config,
 }
 
 mod accessors;

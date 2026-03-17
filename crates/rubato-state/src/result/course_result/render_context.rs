@@ -154,6 +154,28 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
             _ => String::new(),
         }
     }
+
+    fn gauge_history(&self) -> Option<&Vec<Vec<f32>>> {
+        shared_render_context::gauge_history(self.resource)
+    }
+
+    fn course_gauge_history(&self) -> &[Vec<Vec<f32>>] {
+        shared_render_context::course_gauge_history(self.resource)
+    }
+
+    fn gauge_border_max(&self) -> Option<(f32, f32)> {
+        shared_render_context::gauge_border_max(self.resource, self.data.gauge_type)
+    }
+
+    fn get_timing_distribution(
+        &self,
+    ) -> Option<&rubato_types::timing_distribution::TimingDistribution> {
+        shared_render_context::get_timing_distribution(self.data)
+    }
+
+    fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
+        shared_render_context::score_data_property(self.data)
+    }
 }
 
 impl rubato_skin::main_state::MainState for CourseResultRenderContext<'_> {}

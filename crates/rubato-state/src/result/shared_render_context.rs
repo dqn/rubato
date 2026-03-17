@@ -547,6 +547,43 @@ pub fn ranking_offset(data: &AbstractResultData) -> i32 {
     data.ranking_offset
 }
 
+/// Returns gauge history from the player resource.
+/// Used by SkinGaugeGraphObject::prepare() on result screens.
+pub fn gauge_history(resource: &PlayerResource) -> Option<&Vec<Vec<f32>>> {
+    resource.gauge()
+}
+
+/// Returns (border, max) for the current gauge type.
+/// Used by SkinGaugeGraphObject::prepare() on result screens.
+pub fn gauge_border_max(resource: &PlayerResource, gauge_type: i32) -> Option<(f32, f32)> {
+    let gauge = resource.groove_gauge()?;
+    let prop = gauge.gauge_by_type(gauge_type).property();
+    Some((prop.border, prop.max))
+}
+
+/// Returns the cached rubato_types TimingDistribution for the result screen.
+pub fn get_timing_distribution(
+    data: &AbstractResultData,
+) -> Option<&rubato_types::timing_distribution::TimingDistribution> {
+    if data.timing_distribution_cache.distribution.is_empty() {
+        None
+    } else {
+        Some(&data.timing_distribution_cache)
+    }
+}
+
+/// Returns the ScoreDataProperty for the result screen.
+pub fn score_data_property(
+    data: &AbstractResultData,
+) -> &rubato_types::score_data_property::ScoreDataProperty {
+    &data.score
+}
+
+/// Returns the course gauge history from the player resource.
+pub fn course_gauge_history(resource: &PlayerResource) -> &[Vec<Vec<f32>>] {
+    resource.course_gauge()
+}
+
 #[cfg(test)]
 #[allow(clippy::field_reassign_with_default)]
 mod tests {
@@ -1676,5 +1713,43 @@ mod tests {
     fn test_float_value_unknown_returns_zero() {
         let data = make_data_with_score();
         assert_eq!(float_value(&data, 9999), 0.0);
+    }
+
+    // ============================================================
+    // Tests for newly wired SkinRenderContext methods
+    // ============================================================
+
+    #[test]
+    fn test_get_timing_distribution_returns_none_when_empty() {
+        let data = AbstractResultData::new();
+        assert!(get_timing_distribution(&data).is_none());
+    }
+
+    #[test]
+    fn test_get_timing_distribution_returns_data_after_sync() {
+        let mut data = AbstractResultData::new();
+        data.timing_distribution.add(5);
+        data.timing_distribution.add(-3);
+        data.timing_distribution.statistic_value_calculate();
+        data.sync_timing_distribution_cache();
+
+        let td = get_timing_distribution(&data);
+        assert!(td.is_some());
+        let td = td.unwrap();
+        assert_eq!(td.array_center(), data.timing_distribution.array_center());
+        assert_eq!(
+            td.timing_distribution().len(),
+            data.timing_distribution.timing_distribution().len()
+        );
+    }
+
+    #[test]
+    fn test_score_data_property_returns_data_score() {
+        let mut data = AbstractResultData::new();
+        data.score.nowrate = 0.95;
+        data.score.nowscore = 1234;
+        let prop = score_data_property(&data);
+        assert!((prop.nowrate - 0.95).abs() < f32::EPSILON);
+        assert_eq!(prop.nowscore, 1234);
     }
 }

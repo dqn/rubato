@@ -32,6 +32,10 @@ pub(super) struct PlayRenderContext<'a> {
     /// When the chart explicitly defines LN types, this overrides the config setting
     /// for image_index_value ID 308.
     pub(super) lnmode_override: Option<i32>,
+    /// Global config reference for BGA mode and other skin property queries.
+    pub(super) config: &'a rubato_types::config::Config,
+    /// Score data property for Lua skin accessors (rate, exscore, etc.).
+    pub(super) score_data_property: &'a rubato_types::score_data_property::ScoreDataProperty,
 }
 
 impl rubato_types::timer_access::TimerAccess for PlayRenderContext<'_> {
@@ -62,6 +66,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
 
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         Some(self.player_config)
+    }
+
+    fn config_ref(&self) -> Option<&rubato_types::config::Config> {
+        Some(self.config)
+    }
+
+    fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
+        self.score_data_property
     }
 
     fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
@@ -440,6 +452,10 @@ mod tests {
         let player_config = Box::leak(Box::new(PlayerConfig::default()));
         let option_info = Box::leak(Box::new(ReplayData::default()));
         let play_config = Box::leak(Box::new(PlayConfig::default()));
+        let config = Box::leak(Box::new(rubato_types::config::Config::default()));
+        let score_data_property = Box::leak(Box::new(
+            rubato_types::score_data_property::ScoreDataProperty::default(),
+        ));
         PlayRenderContext {
             timer,
             judge,
@@ -462,6 +478,8 @@ mod tests {
             bg_volume: 0.0,
             is_mode_changed: false,
             lnmode_override: None,
+            config,
+            score_data_property,
         }
     }
 
@@ -522,6 +540,10 @@ mod tests {
             ..ReplayData::default()
         }));
         let play_config = Box::leak(Box::new(PlayConfig::default()));
+        let config = Box::leak(Box::new(rubato_types::config::Config::default()));
+        let score_data_property = Box::leak(Box::new(
+            rubato_types::score_data_property::ScoreDataProperty::default(),
+        ));
         PlayRenderContext {
             timer,
             judge,
@@ -544,6 +566,8 @@ mod tests {
             bg_volume: 0.0,
             is_mode_changed: false,
             lnmode_override: None,
+            config,
+            score_data_property,
         }
     }
 
@@ -609,6 +633,10 @@ mod tests {
         }));
         let option_info = Box::leak(Box::new(ReplayData::default()));
         let play_config = Box::leak(Box::new(PlayConfig::default()));
+        let config = Box::leak(Box::new(rubato_types::config::Config::default()));
+        let score_data_property = Box::leak(Box::new(
+            rubato_types::score_data_property::ScoreDataProperty::default(),
+        ));
         PlayRenderContext {
             timer,
             judge,
@@ -631,6 +659,8 @@ mod tests {
             bg_volume: 0.0,
             is_mode_changed: false,
             lnmode_override,
+            config,
+            score_data_property,
         }
     }
 
@@ -660,5 +690,97 @@ mod tests {
         // No chart override -> falls through to player_config.play_settings.lnmode (99)
         let ctx = make_render_ctx_with_lnmode(None);
         assert_eq!(ctx.image_index_value(308), 99);
+    }
+
+    // ============================================================
+    // config_ref and score_data_property tests
+    // ============================================================
+
+    #[test]
+    fn config_ref_returns_bga_mode() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let judge = Box::leak(Box::new(JudgeManager::default()));
+        let player_config = Box::leak(Box::new(PlayerConfig::default()));
+        let option_info = Box::leak(Box::new(ReplayData::default()));
+        let play_config = Box::leak(Box::new(PlayConfig::default()));
+        let config = Box::leak(Box::new(rubato_types::config::Config::default()));
+        let score_data_property = Box::leak(Box::new(
+            rubato_types::score_data_property::ScoreDataProperty::default(),
+        ));
+        let ctx = PlayRenderContext {
+            timer,
+            judge,
+            gauge: None,
+            player_config,
+            option_info,
+            play_config,
+            target_score: None,
+            playtime: 0,
+            total_notes: 0,
+            play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
+            state: PlayState::Play,
+            media_load_finished: false,
+            now_bpm: 0.0,
+            min_bpm: 0.0,
+            max_bpm: 0.0,
+            main_bpm: 0.0,
+            system_volume: 0.0,
+            key_volume: 0.0,
+            bg_volume: 0.0,
+            is_mode_changed: false,
+            lnmode_override: None,
+            config,
+            score_data_property,
+        };
+        // config_ref should return Some
+        assert!(ctx.config_ref().is_some());
+        // image_index_value(72) reads BGA mode from config -- default is 0 (ON)
+        let bga_index = ctx.image_index_value(72);
+        assert_eq!(bga_index, 0, "default BGA mode should be 0 (ON)");
+    }
+
+    #[test]
+    fn score_data_property_returns_live_data() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let judge = Box::leak(Box::new(JudgeManager::default()));
+        let player_config = Box::leak(Box::new(PlayerConfig::default()));
+        let option_info = Box::leak(Box::new(ReplayData::default()));
+        let play_config = Box::leak(Box::new(PlayConfig::default()));
+        let config = Box::leak(Box::new(rubato_types::config::Config::default()));
+        let score_data_property = Box::leak(Box::new(
+            rubato_types::score_data_property::ScoreDataProperty {
+                nowrate: 0.85,
+                nowscore: 999,
+                ..rubato_types::score_data_property::ScoreDataProperty::default()
+            },
+        ));
+        let ctx = PlayRenderContext {
+            timer,
+            judge,
+            gauge: None,
+            player_config,
+            option_info,
+            play_config,
+            target_score: None,
+            playtime: 0,
+            total_notes: 0,
+            play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
+            state: PlayState::Play,
+            media_load_finished: false,
+            now_bpm: 0.0,
+            min_bpm: 0.0,
+            max_bpm: 0.0,
+            main_bpm: 0.0,
+            system_volume: 0.0,
+            key_volume: 0.0,
+            bg_volume: 0.0,
+            is_mode_changed: false,
+            lnmode_override: None,
+            config,
+            score_data_property,
+        };
+        let prop = ctx.score_data_property();
+        assert!((prop.now_rate() - 0.85).abs() < f32::EPSILON);
+        assert_eq!(prop.now_ex_score(), 999);
     }
 }

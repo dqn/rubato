@@ -3751,6 +3751,11 @@ fn make_play_render_context_with_bpm_volume<'a>(
     bpm: (f64, f64, f64, f64),
     volume: (f32, f32, f32),
 ) -> skin_context::PlayRenderContext<'a> {
+    static DEFAULT_CONFIG: std::sync::OnceLock<rubato_types::config::Config> =
+        std::sync::OnceLock::new();
+    static DEFAULT_SCORE_DATA: std::sync::OnceLock<
+        rubato_types::score_data_property::ScoreDataProperty,
+    > = std::sync::OnceLock::new();
     skin_context::PlayRenderContext {
         timer,
         judge,
@@ -3773,6 +3778,9 @@ fn make_play_render_context_with_bpm_volume<'a>(
         bg_volume: volume.2,
         is_mode_changed: false,
         lnmode_override: None,
+        config: DEFAULT_CONFIG.get_or_init(rubato_types::config::Config::default),
+        score_data_property: DEFAULT_SCORE_DATA
+            .get_or_init(rubato_types::score_data_property::ScoreDataProperty::default),
     }
 }
 
