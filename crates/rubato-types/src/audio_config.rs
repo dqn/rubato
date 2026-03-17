@@ -1,5 +1,7 @@
 use crate::validatable::Validatable;
 
+pub const DEFAULT_AUDIO_VOLUME: f32 = 0.1;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
 pub enum DriverType {
     #[default]
@@ -51,9 +53,9 @@ impl Default for AudioConfig {
             sample_rate: 0,
             freq_option: FrequencyType::FREQUENCY,
             fast_forward: FrequencyType::FREQUENCY,
-            systemvolume: 0.5,
-            keyvolume: 0.5,
-            bgvolume: 0.5,
+            systemvolume: DEFAULT_AUDIO_VOLUME,
+            keyvolume: DEFAULT_AUDIO_VOLUME,
+            bgvolume: DEFAULT_AUDIO_VOLUME,
             normalize_volume: false,
             is_loop_result_sound: false,
             is_loop_course_result_sound: false,
@@ -79,5 +81,19 @@ impl Validatable for AudioConfig {
         self.keyvolume = self.keyvolume.clamp(0.0, 1.0);
         self.bgvolume = self.bgvolume.clamp(0.0, 1.0);
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AudioConfig;
+
+    #[test]
+    fn default_volumes_are_point_one() {
+        let config = AudioConfig::default();
+
+        assert_eq!(config.systemvolume, 0.1);
+        assert_eq!(config.keyvolume, 0.1);
+        assert_eq!(config.bgvolume, 0.1);
     }
 }

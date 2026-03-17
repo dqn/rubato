@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use rubato_audio::audio_driver::AudioDriver;
+use rubato_types::audio_config::DEFAULT_AUDIO_VOLUME;
 use rubato_types::main_controller_access::MainControllerAccess;
 
 use super::*;
@@ -156,7 +157,11 @@ impl PreviewMusicProcessor {
     }
 
     fn tick_with_target<T: PreviewAudioTarget + ?Sized>(&mut self, audio: &mut T, config: &Config) {
-        let sys_vol = config.audio.as_ref().map(|a| a.systemvolume).unwrap_or(0.5);
+        let sys_vol = config
+            .audio
+            .as_ref()
+            .map(|a| a.systemvolume)
+            .unwrap_or(DEFAULT_AUDIO_VOLUME);
 
         if !self.preview_running.load(Ordering::SeqCst) {
             self.fade_out = None;
@@ -274,13 +279,21 @@ impl PreviewMusicProcessor {
     /// 3. Stops preview and switches back to default when preview ends
     /// 4. Updates volume when system volume changes
     pub fn run_preview_loop(&self, audio: &mut dyn AudioDriver, config: &Config) {
-        let sys_vol = config.audio.as_ref().map(|a| a.systemvolume).unwrap_or(0.5);
+        let sys_vol = config
+            .audio
+            .as_ref()
+            .map(|a| a.systemvolume)
+            .unwrap_or(DEFAULT_AUDIO_VOLUME);
         audio.play_path(&self.default_music, sys_vol, true);
         let mut playing = self.default_music.clone();
         let mut current_volume = sys_vol;
 
         while self.preview_running.load(Ordering::SeqCst) {
-            let sys_vol = config.audio.as_ref().map(|a| a.systemvolume).unwrap_or(0.5);
+            let sys_vol = config
+                .audio
+                .as_ref()
+                .map(|a| a.systemvolume)
+                .unwrap_or(DEFAULT_AUDIO_VOLUME);
             // Drain command with lock held only briefly, then perform audio work unlocked.
             let next_cmd = self
                 .commands
@@ -331,7 +344,11 @@ impl PreviewMusicProcessor {
                 continue;
             }
         }
-        let sys_vol = config.audio.as_ref().map(|a| a.systemvolume).unwrap_or(0.5);
+        let sys_vol = config
+            .audio
+            .as_ref()
+            .map(|a| a.systemvolume)
+            .unwrap_or(DEFAULT_AUDIO_VOLUME);
         let mut target = AudioDriverTarget { inner: audio };
         Self::stop_preview_internal(&mut target, &playing, &self.default_music, sys_vol, false);
     }
@@ -503,5 +520,26 @@ mod tests {
             target.queue_was_unlocked_during_fade.load(Ordering::SeqCst),
             "command queue should not stay locked while fade-out work runs"
         );
+    }
+
+    #[test]
+    fn test_tick_preview_uses_default_volume_when_audio_config_missing() {
+        let mut config = Config::default();
+        config.audio = None;
+
+        let mut audio = RecordingAudioDriver::new();
+        let mut processor = PreviewMusicProcessor::new(&config);
+        processor.set_default("/bgm/default.ogg");
+        processor.preview_running.store(true, Ordering::SeqCst);
+
+        processor.tick_preview(&mut audio, &config);
+
+        assert!(matches!(
+            audio.events().first(),
+            Some(rubato_audio::recording_audio_driver::AudioEvent::PlayPath {
+                volume,
+                ..
+            }) if (*volume - 0.1).abs() < f32::EPSILON
+        ));
     }
 }

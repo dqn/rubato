@@ -5,6 +5,7 @@ pub(crate) use rubato_core::main_state::{MainState, MainStateData};
 pub(crate) use rubato_core::pixmap_resource_pool::PixmapResourcePool;
 pub(crate) use rubato_core::timer_manager::TimerManager;
 pub(crate) use rubato_ir::ranking_data;
+pub(crate) use rubato_types::audio_config::DEFAULT_AUDIO_VOLUME;
 pub(crate) use rubato_types::main_controller_access::MainControllerAccess;
 pub(crate) use rubato_types::player_resource_access::{
     CourseAccess, MediaAccess, SessionMutation, SongAccess,
@@ -317,7 +318,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
                     .selector
                     .app_config
                     .audio_config()
-                    .map_or(0.5, |a| a.systemvolume)
+                    .map_or(DEFAULT_AUDIO_VOLUME, |a| a.systemvolume)
                     * 100.0) as i32
             }
             58 => {
@@ -325,7 +326,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
                     .selector
                     .app_config
                     .audio_config()
-                    .map_or(0.5, |a| a.keyvolume)
+                    .map_or(DEFAULT_AUDIO_VOLUME, |a| a.keyvolume)
                     * 100.0) as i32
             }
             59 => {
@@ -333,7 +334,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
                     .selector
                     .app_config
                     .audio_config()
-                    .map_or(0.5, |a| a.bgvolume)
+                    .map_or(DEFAULT_AUDIO_VOLUME, |a| a.bgvolume)
                     * 100.0) as i32
             }
             // Display timing
@@ -541,17 +542,17 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
                 .selector
                 .app_config
                 .audio_config()
-                .map_or(0.5, |a| a.systemvolume),
+                .map_or(DEFAULT_AUDIO_VOLUME, |a| a.systemvolume),
             18 => self
                 .selector
                 .app_config
                 .audio_config()
-                .map_or(0.5, |a| a.keyvolume),
+                .map_or(DEFAULT_AUDIO_VOLUME, |a| a.keyvolume),
             19 => self
                 .selector
                 .app_config
                 .audio_config()
-                .map_or(0.5, |a| a.bgvolume),
+                .map_or(DEFAULT_AUDIO_VOLUME, |a| a.bgvolume),
             8 => self.selector.ranking_position(),
             // Level (0.0-1.0 normalized)
             103 => self
