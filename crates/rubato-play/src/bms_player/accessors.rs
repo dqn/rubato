@@ -62,6 +62,7 @@ impl BMSPlayer {
             judge_note_to_model: Vec::new(),
             previous_gauge_values: None,
             config: rubato_types::config::Config::default(),
+            song_metadata: rubato_types::song_data::SongMetadata::default(),
         }
     }
 
@@ -235,6 +236,12 @@ impl BMSPlayer {
     /// Use `rubato_types::skin_render_context::compute_lnmode_from_chart()` to compute.
     pub fn set_lnmode_override(&mut self, lnmode_override: Option<i32>) {
         self.lnmode_override = lnmode_override;
+    }
+
+    /// Set the song metadata for skin string property queries (title, artist, etc.).
+    /// Should be called during initialization when SongData is available.
+    pub fn set_song_metadata(&mut self, metadata: rubato_types::song_data::SongMetadata) {
+        self.song_metadata = metadata;
     }
 
     /// Set play speed and optionally request global pitch change.

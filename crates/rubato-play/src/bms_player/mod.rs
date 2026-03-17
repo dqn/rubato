@@ -425,6 +425,9 @@ pub struct BMSPlayer {
     /// Global config snapshot for skin property queries (e.g., BGA mode for image_index ID 72).
     /// Set by the caller before create() via `set_config()`.
     config: rubato_types::config::Config,
+    /// Song metadata for skin string property queries (title, artist, etc.).
+    /// Set by the caller before create() via `set_song_metadata()`.
+    song_metadata: rubato_types::song_data::SongMetadata,
 }
 
 mod accessors;

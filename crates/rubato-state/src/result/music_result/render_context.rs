@@ -103,6 +103,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
         shared_render_context::gauge_type(self.data)
     }
 
+    fn is_gauge_max(&self) -> bool {
+        shared_render_context::is_gauge_max(self.resource)
+    }
+
     fn judge_count(&self, judge: i32, fast: bool) -> i32 {
         shared_render_context::judge_count(self.data, judge, fast)
     }

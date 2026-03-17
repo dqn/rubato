@@ -3781,6 +3781,11 @@ fn make_play_render_context_with_bpm_volume<'a>(
         config: DEFAULT_CONFIG.get_or_init(rubato_types::config::Config::default),
         score_data_property: DEFAULT_SCORE_DATA
             .get_or_init(rubato_types::score_data_property::ScoreDataProperty::default),
+        song_metadata: {
+            static DEFAULT_META: std::sync::OnceLock<rubato_types::song_data::SongMetadata> =
+                std::sync::OnceLock::new();
+            DEFAULT_META.get_or_init(rubato_types::song_data::SongMetadata::default)
+        },
     }
 }
 
@@ -4587,6 +4592,87 @@ fn judge_note_to_model_reverse_index_built_correctly() {
     }
 }
 
+// Regression test: binary_search_by_key with duplicate timestamps must find
+// the timeline that actually has a note on the target lane, not an arbitrary
+// match (e.g., a barline-only timeline at the same time).
+#[test]
+fn judge_note_to_model_finds_correct_timeline_with_duplicate_timestamps() {
+    let mut model = BMSModel::new();
+    model.set_mode(Mode::BEAT_7K);
+    model.judgerank = 100;
+
+    // Create three timelines all at the same micro_time (1_000_000).
+    // Only the third one (index 2) has a note on lane 0.
+    let mut tl0 = bms_model::time_line::TimeLine::new(0.0, 1_000_000, 8);
+    // tl0: barline only, no notes
+    tl0.section_line = true;
+
+    let mut tl1 = bms_model::time_line::TimeLine::new(0.0, 1_000_000, 8);
+    // tl1: note on lane 3 only (different lane)
+    tl1.set_note(3, Some(bms_model::note::Note::new_normal(1)));
+
+    let mut tl2 = bms_model::time_line::TimeLine::new(0.0, 1_000_000, 8);
+    // tl2: note on lane 0 (this is the one we want)
+    tl2.set_note(0, Some(bms_model::note::Note::new_normal(1)));
+
+    model.timelines = vec![tl0, tl1, tl2];
+
+    let mut player = BMSPlayer::new(model);
+    let mode = player.model.mode().copied().unwrap_or(Mode::BEAT_7K);
+    player.rebuild_judge_system(&mode);
+
+    // There should be judge notes for lane 0 (from tl2) and lane 3 (from tl1).
+    // Find the judge_note_to_model entry for the lane-0 note.
+    let lane0_entries: Vec<_> = player
+        .judge_note_to_model
+        .iter()
+        .enumerate()
+        .filter(|&(_, &(_, lane))| lane == 0)
+        .collect();
+    assert!(
+        !lane0_entries.is_empty(),
+        "Should have at least one lane-0 judge note"
+    );
+    for &(jn_idx, &(tl_idx, _lane)) in &lane0_entries {
+        assert_ne!(
+            tl_idx,
+            usize::MAX,
+            "JudgeNote {} should map to a valid timeline",
+            jn_idx
+        );
+        // The mapped timeline must actually have a note on lane 0.
+        assert!(
+            player.model.timelines[tl_idx].note(0).is_some(),
+            "Timeline {} (for JudgeNote {}) must have a note on lane 0, \
+             but binary_search landed on a timeline without one",
+            tl_idx,
+            jn_idx,
+        );
+    }
+
+    // Also verify lane-3 entries map to a timeline with a note on lane 3.
+    let lane3_entries: Vec<_> = player
+        .judge_note_to_model
+        .iter()
+        .enumerate()
+        .filter(|&(_, &(_, lane))| lane == 3)
+        .collect();
+    for &(jn_idx, &(tl_idx, _lane)) in &lane3_entries {
+        assert_ne!(
+            tl_idx,
+            usize::MAX,
+            "JudgeNote {} should map to a valid timeline",
+            jn_idx
+        );
+        assert!(
+            player.model.timelines[tl_idx].note(3).is_some(),
+            "Timeline {} (for JudgeNote {}) must have a note on lane 3",
+            tl_idx,
+            jn_idx,
+        );
+    }
+}
+
 // --- Course gauge constraint (Finding 1) ---
 
 #[test]
@@ -4809,5 +4895,42 @@ fn pad_gaugelog_negative_playtime_no_entries() {
         gaugelog[0].len(),
         0,
         "negative playtime should produce no entries"
+    );
+}
+
+// Regression test: practice mode key-repeat uses game timer (monotonic),
+// not SystemTime::now(). Verify that holding RIGHT during practice render
+// increments the practice value using the game timer's now_time().
+#[test]
+fn practice_mode_render_uses_game_timer_for_key_repeat() {
+    // Need timelines with times large enough for STARTTIME increment guard:
+    // starttime + 2000 <= last_time (in millis). Use 60_000_000us = 60000ms.
+    let model = make_model_with_notes_at_times(&[0, 60_000_000]);
+    let mut player = BMSPlayer::new(model);
+    player.play_mode = BMSPlayerMode::PRACTICE;
+    player.create();
+    assert_eq!(player.state(), PlayState::Practice);
+
+    // Advance the game timer to a known value (e.g., 2000ms = 2_000_000us).
+    // This ensures now_time() returns a meaningful value, not 0.
+    player.main_state_data.timer.set_now_micro_time(2_000_000);
+
+    let start_value = player.practice.practice_property().starttime;
+
+    // Simulate holding RIGHT control key during a render cycle.
+    player.input.control_key_right = true;
+    player.render();
+
+    let after_value = player.practice.practice_property().starttime;
+
+    // RIGHT on cursor position 0 (STARTTIME) should increment by 100.
+    // If the code were still using SystemTime::now(), the presscount would
+    // be based on epoch millis (~1.7 trillion), creating a mismatch with
+    // the game timer domain. With the fix, presscount is based on now_time()
+    // (~2000ms), and the repeat logic works correctly.
+    assert_eq!(
+        after_value,
+        start_value + 100,
+        "Practice RIGHT should increment starttime by 100 using game timer"
     );
 }

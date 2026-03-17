@@ -28,6 +28,13 @@ pub fn gauge_value(resource: &PlayerResource) -> f32 {
     resource.groove_gauge().map_or(0.0, |g| g.value())
 }
 
+/// Returns whether the gauge reached max value.
+/// Used by skin properties to determine MAX PG judge display on result screens.
+#[inline]
+pub fn is_gauge_max(resource: &PlayerResource) -> bool {
+    resource.groove_gauge().is_some_and(|g| g.gauge().is_max())
+}
+
 /// Shared gauge_type accessor.
 #[inline]
 pub fn gauge_type(data: &AbstractResultData) -> i32 {
@@ -1860,5 +1867,36 @@ mod tests {
         let prop = score_data_property(&data);
         assert!((prop.nowrate - 0.95).abs() < f32::EPSILON);
         assert_eq!(prop.nowscore, 1234);
+    }
+
+    // ============================================================
+    // is_gauge_max() tests
+    // ============================================================
+
+    #[test]
+    fn test_is_gauge_max_true_when_at_max() {
+        let resource = make_resource_with_gauge(100.0);
+        assert!(
+            is_gauge_max(&resource),
+            "is_gauge_max should return true when gauge is at max (100.0)"
+        );
+    }
+
+    #[test]
+    fn test_is_gauge_max_false_when_not_at_max() {
+        let resource = make_resource_with_gauge(75.0);
+        assert!(
+            !is_gauge_max(&resource),
+            "is_gauge_max should return false when gauge is not at max (75.0)"
+        );
+    }
+
+    #[test]
+    fn test_is_gauge_max_false_when_no_gauge() {
+        let resource = PlayerResource::default();
+        assert!(
+            !is_gauge_max(&resource),
+            "is_gauge_max should return false when no groove gauge is present"
+        );
     }
 }

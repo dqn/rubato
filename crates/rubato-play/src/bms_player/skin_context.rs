@@ -36,6 +36,8 @@ pub(super) struct PlayRenderContext<'a> {
     pub(super) config: &'a rubato_types::config::Config,
     /// Score data property for Lua skin accessors (rate, exscore, etc.).
     pub(super) score_data_property: &'a rubato_types::score_data_property::ScoreDataProperty,
+    /// Song metadata for string property queries (title, artist, genre, etc.).
+    pub(super) song_metadata: &'a rubato_types::song_data::SongMetadata,
 }
 
 impl rubato_types::timer_access::TimerAccess for PlayRenderContext<'_> {
@@ -231,6 +233,35 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             // Loading state (PlayState::Preload = 0)
             80 => self.state == PlayState::Preload,
             _ => false,
+        }
+    }
+
+    fn string_value(&self, id: i32) -> String {
+        match id {
+            // title
+            10 => self.song_metadata.title.clone(),
+            // subtitle
+            11 => self.song_metadata.subtitle.clone(),
+            // fulltitle
+            12 => self.song_metadata.full_title(),
+            // genre
+            13 => self.song_metadata.genre.clone(),
+            // artist
+            14 => self.song_metadata.artist.clone(),
+            // subartist
+            15 => self.song_metadata.subartist.clone(),
+            // fullartist
+            16 => {
+                if self.song_metadata.subartist.is_empty() {
+                    self.song_metadata.artist.clone()
+                } else {
+                    format!(
+                        "{} {}",
+                        self.song_metadata.artist, self.song_metadata.subartist
+                    )
+                }
+            }
+            _ => String::new(),
         }
     }
 }
@@ -441,6 +472,28 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
             _ => false,
         }
     }
+
+    fn string_value(&self, id: i32) -> String {
+        match id {
+            10 => self.player.song_metadata.title.clone(),
+            11 => self.player.song_metadata.subtitle.clone(),
+            12 => self.player.song_metadata.full_title(),
+            13 => self.player.song_metadata.genre.clone(),
+            14 => self.player.song_metadata.artist.clone(),
+            15 => self.player.song_metadata.subartist.clone(),
+            16 => {
+                if self.player.song_metadata.subartist.is_empty() {
+                    self.player.song_metadata.artist.clone()
+                } else {
+                    format!(
+                        "{} {}",
+                        self.player.song_metadata.artist, self.player.song_metadata.subartist
+                    )
+                }
+            }
+            _ => String::new(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -484,6 +537,7 @@ mod tests {
             lnmode_override: None,
             config,
             score_data_property,
+            song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
         }
     }
 
@@ -572,6 +626,7 @@ mod tests {
             lnmode_override: None,
             config,
             score_data_property,
+            song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
         }
     }
 
@@ -665,6 +720,7 @@ mod tests {
             lnmode_override,
             config,
             score_data_property,
+            song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
         }
     }
 
@@ -735,6 +791,7 @@ mod tests {
             lnmode_override: None,
             config,
             score_data_property,
+            song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
         };
         // config_ref should return Some
         assert!(ctx.config_ref().is_some());
@@ -782,6 +839,7 @@ mod tests {
             lnmode_override: None,
             config,
             score_data_property,
+            song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
         };
         let prop = ctx.score_data_property();
         assert!((prop.now_rate() - 0.85).abs() < f32::EPSILON);
@@ -850,5 +908,108 @@ mod tests {
             !ctx.is_gauge_max(),
             "PlayRenderContext::is_gauge_max() should return false when gauge is None"
         );
+    }
+
+    // ============================================================
+    // string_value() delegation tests
+    // ============================================================
+
+    fn make_render_ctx_with_metadata(
+        metadata: rubato_types::song_data::SongMetadata,
+    ) -> PlayRenderContext<'static> {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let judge = Box::leak(Box::new(JudgeManager::default()));
+        let player_config = Box::leak(Box::new(PlayerConfig::default()));
+        let option_info = Box::leak(Box::new(ReplayData::default()));
+        let play_config = Box::leak(Box::new(PlayConfig::default()));
+        let config = Box::leak(Box::new(rubato_types::config::Config::default()));
+        let score_data_property = Box::leak(Box::new(
+            rubato_types::score_data_property::ScoreDataProperty::default(),
+        ));
+        let song_metadata = Box::leak(Box::new(metadata));
+        PlayRenderContext {
+            timer,
+            judge,
+            gauge: None,
+            player_config,
+            option_info,
+            play_config,
+            target_score: None,
+            playtime: 0,
+            total_notes: 0,
+            play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
+            state: PlayState::Play,
+            media_load_finished: false,
+            now_bpm: 0.0,
+            min_bpm: 0.0,
+            max_bpm: 0.0,
+            main_bpm: 0.0,
+            system_volume: 0.0,
+            key_volume: 0.0,
+            bg_volume: 0.0,
+            is_mode_changed: false,
+            lnmode_override: None,
+            config,
+            score_data_property,
+            song_metadata,
+        }
+    }
+
+    /// Build a SongMetadata with the given public fields set.
+    /// Uses Default::default() to handle private cached fields.
+    fn make_metadata(
+        title: &str,
+        subtitle: &str,
+        genre: &str,
+        artist: &str,
+        subartist: &str,
+    ) -> rubato_types::song_data::SongMetadata {
+        let mut m = rubato_types::song_data::SongMetadata::default();
+        m.title = title.to_string();
+        m.subtitle = subtitle.to_string();
+        m.genre = genre.to_string();
+        m.artist = artist.to_string();
+        m.subartist = subartist.to_string();
+        m
+    }
+
+    #[test]
+    fn string_value_returns_song_metadata() {
+        let metadata = make_metadata(
+            "Test Title",
+            "Test Subtitle",
+            "Test Genre",
+            "Test Artist",
+            "Test SubArtist",
+        );
+        let ctx = make_render_ctx_with_metadata(metadata);
+        assert_eq!(ctx.string_value(10), "Test Title");
+        assert_eq!(ctx.string_value(11), "Test Subtitle");
+        assert_eq!(ctx.string_value(12), "Test Title Test Subtitle");
+        assert_eq!(ctx.string_value(13), "Test Genre");
+        assert_eq!(ctx.string_value(14), "Test Artist");
+        assert_eq!(ctx.string_value(15), "Test SubArtist");
+        assert_eq!(ctx.string_value(16), "Test Artist Test SubArtist");
+    }
+
+    #[test]
+    fn string_value_fulltitle_without_subtitle() {
+        let metadata = make_metadata("Only Title", "", "", "", "");
+        let ctx = make_render_ctx_with_metadata(metadata);
+        assert_eq!(ctx.string_value(12), "Only Title");
+    }
+
+    #[test]
+    fn string_value_fullartist_without_subartist() {
+        let metadata = make_metadata("", "", "", "Only Artist", "");
+        let ctx = make_render_ctx_with_metadata(metadata);
+        assert_eq!(ctx.string_value(16), "Only Artist");
+    }
+
+    #[test]
+    fn string_value_unknown_id_returns_empty() {
+        let metadata = make_metadata("Test", "", "", "", "");
+        let ctx = make_render_ctx_with_metadata(metadata);
+        assert_eq!(ctx.string_value(999), "");
     }
 }
