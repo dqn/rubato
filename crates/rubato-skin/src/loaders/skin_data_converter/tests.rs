@@ -457,6 +457,7 @@ fn test_bga_returns_some() {
         path,
         false,
         1.0,
+        1.0,
     );
     assert!(bga.is_some());
     assert_eq!(bga.unwrap().type_name(), "SkinBGA");
@@ -488,6 +489,7 @@ fn test_gauge_graph_from_color_strings() {
         &mut source_map,
         path,
         false,
+        1.0,
         1.0,
     );
     assert!(gg.is_some());
@@ -524,6 +526,7 @@ fn test_gauge_graph_from_color_array() {
         path,
         false,
         1.0,
+        1.0,
     );
     assert!(gg.is_some());
     assert_eq!(gg.unwrap().type_name(), "SkinGaugeGraph");
@@ -547,6 +550,7 @@ fn test_gauge_returns_some() {
         &mut source_map,
         path,
         false,
+        1.0,
         1.0,
     );
     assert!(gauge.is_some());
@@ -576,6 +580,7 @@ fn test_hidden_cover_no_texture_returns_none() {
         path,
         false,
         1.0,
+        1.0,
     );
     assert!(hidden.is_none());
 }
@@ -603,6 +608,7 @@ fn test_lift_cover_no_texture_returns_none() {
         path,
         false,
         1.0,
+        1.0,
     );
     assert!(lift.is_none());
 }
@@ -622,6 +628,7 @@ fn test_pmchara_returns_some() {
         &mut source_map,
         path,
         false,
+        1.0,
         1.0,
     );
     assert!(pm.is_some());
@@ -645,6 +652,7 @@ fn test_search_text_region_returns_none() {
         path,
         false,
         1.0,
+        1.0,
     );
     // SearchTextRegion is a skin property, not a SkinObject
     assert!(sr.is_none());
@@ -667,6 +675,7 @@ fn test_imageset_empty_returns_none() {
         path,
         false,
         1.0,
+        1.0,
     );
     assert!(is.is_none());
 }
@@ -688,6 +697,7 @@ fn test_imageset_nonempty_returns_placeholder() {
         path,
         false,
         1.0,
+        1.0,
     );
     assert!(is.is_some());
     assert_eq!(is.unwrap().type_name(), "Image");
@@ -698,7 +708,14 @@ fn test_note_judge_songlist_return_some() {
     let mut source_map = HashMap::new();
     let path = Path::new("/test/skin.json");
 
-    let note = convert_skin_object(&SkinObjectType::Note, &mut source_map, path, false, 1.0);
+    let note = convert_skin_object(
+        &SkinObjectType::Note,
+        &mut source_map,
+        path,
+        false,
+        1.0,
+        1.0,
+    );
     assert!(note.is_some());
     assert_eq!(note.unwrap().type_name(), "SkinNote");
 
@@ -710,6 +727,7 @@ fn test_note_judge_songlist_return_some() {
         &mut source_map,
         path,
         false,
+        1.0,
         1.0,
     );
     assert!(judge.is_some());
@@ -724,6 +742,7 @@ fn test_note_judge_songlist_return_some() {
         &mut source_map,
         path,
         false,
+        1.0,
         1.0,
     );
     assert!(bar.is_some());

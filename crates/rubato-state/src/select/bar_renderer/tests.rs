@@ -5,6 +5,7 @@ use rubato_core::config::Config;
 use rubato_skin::json::json_skin_loader::SkinConfigProperty;
 use rubato_skin::reexports::Timer;
 use rubato_skin::skin_data_converter;
+use rubato_skin::skin_text::SkinText;
 use rubato_skin::skin_text::SkinTextEnum;
 use rubato_skin::text::skin_text_bitmap::{SkinTextBitmap, SkinTextBitmapSource};
 use rubato_types::skin_type::SkinType;
@@ -404,6 +405,141 @@ fn test_bar_renderer_render_draws_ecfn_loaded_songlist_bitmap_bartext_quads() {
     assert!(
         !quads.is_empty(),
         "bar renderer should emit textured glyph quads for ECFN-loaded bitmap bar text"
+    );
+}
+
+#[test]
+fn test_bar_renderer_centers_ecfn_loaded_songlist_bitmap_bartext_vertically() {
+    let path = ecfn_select_skin_path();
+    assert!(
+        path.exists(),
+        "ECFN select skin should exist: {}",
+        path.display()
+    );
+
+    let mut loader =
+        rubato_skin::lua::lua_skin_loader::LuaSkinLoader::new_without_state(&Config::default());
+    let header = loader
+        .load_header(&path)
+        .expect("ECFN select Lua skin header should load");
+    let data = loader
+        .load(&path, &SkinType::MusicSelect, &SkinConfigProperty)
+        .expect("ECFN select Lua skin should load into SkinData");
+    let mut skin = skin_data_converter::convert_skin_data(
+        &header,
+        data,
+        &mut loader.json_loader.source_map,
+        &path,
+        loader.json_loader.usecim,
+        &loader.json_loader.dstr,
+    )
+    .expect("ECFN select Lua skin should convert into runtime Skin");
+    let mut bar_data = skin
+        .take_select_bar_data()
+        .expect("ECFN select skin should expose SelectBarData");
+
+    let mut renderer = BarRenderer::new(300, 100, 5);
+    let mut bar = SkinBar::new(0);
+    let on_region = bar_data.barimageon[0]
+        .as_ref()
+        .and_then(|image| image.data.all_destination().first().map(|dst| dst.region))
+        .expect("ECFN select skin should provide scaled selected bar destination");
+    let off_region = bar_data.barimageoff[0]
+        .as_ref()
+        .and_then(|image| image.data.all_destination().first().map(|dst| dst.region))
+        .expect("ECFN select skin should provide scaled unselected bar destination");
+    bar.set_text(
+        SkinBar::BARTEXT_SONG_NORMAL,
+        bar_data.bartext[SkinBar::BARTEXT_SONG_NORMAL]
+            .take()
+            .expect("ECFN select skin should provide songlist song text"),
+    );
+    bar.barimageon[0] = Some(make_test_image(
+        on_region.x,
+        on_region.y,
+        on_region.width,
+        on_region.height,
+    ));
+    bar.barimageoff[0] = Some(make_test_image(
+        off_region.x,
+        off_region.y,
+        off_region.width,
+        off_region.height,
+    ));
+
+    let mut sd = SongData::default();
+    sd.file.sha256 = "ecfn-loaded-bartext-center".to_string();
+    sd.file.set_path("/path.bms".to_string());
+    sd.metadata.title = "FolderSong abc".to_string();
+    let songs = vec![Bar::Song(Box::new(SongBar::new(sd)))];
+
+    let prep_ctx = PrepareContext {
+        center_bar: 0,
+        currentsongs: &songs,
+        selectedindex: 0,
+    };
+    renderer.prepare(&bar, 1000, &prep_ctx);
+
+    let state = MockMainState::default();
+    bar.prepare(1000, &state);
+    let render_ctx = RenderContext {
+        center_bar: 0,
+        currentsongs: &songs,
+        rival: false,
+        state: &state,
+        lnmode: 0,
+        loader_finished: false,
+    };
+
+    let text_region = bar
+        .text(SkinBar::BARTEXT_SONG_NORMAL)
+        .expect("songlist text should stay available")
+        .get_text_data()
+        .data
+        .region;
+    let expected_center_y = renderer.bararea[0].y + text_region.y + text_region.height / 2.0;
+
+    let mut sprite = SkinObjectRenderer::new();
+    sprite.sprite.enable_capture();
+    renderer.render(&mut sprite, &mut bar, &render_ctx);
+
+    let glyph_quads = sprite
+        .sprite
+        .captured_quads()
+        .iter()
+        .filter(|quad| {
+            quad.texture_key
+                .as_deref()
+                .is_some_and(|texture| texture.starts_with("__pixmap_"))
+        })
+        .collect::<Vec<_>>();
+    assert!(
+        !glyph_quads.is_empty(),
+        "bar renderer should emit bitmap glyph quads for ECFN-loaded songlist text"
+    );
+
+    let min_y = glyph_quads
+        .iter()
+        .map(|quad| quad.y)
+        .fold(f32::INFINITY, f32::min);
+    let max_y = glyph_quads
+        .iter()
+        .map(|quad| quad.y + quad.h)
+        .fold(f32::NEG_INFINITY, f32::max);
+    let glyph_center_y = (min_y + max_y) / 2.0;
+
+    assert!(
+        (glyph_center_y - expected_center_y).abs() <= 4.0,
+        "songlist bitmap text should stay vertically centered in its destination, got glyph_center_y={}, expected_center_y={}, glyph_bbox=({}, {}), text_region=({}, {}, {}, {}), bar_offset_y={}",
+        glyph_center_y,
+        expected_center_y,
+        min_y,
+        max_y,
+        text_region.x,
+        text_region.y,
+        text_region.width,
+        text_region.height,
+        renderer.bararea[0].y
     );
 }
 

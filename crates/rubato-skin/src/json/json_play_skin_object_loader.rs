@@ -142,12 +142,14 @@ fn resolve_judge_child_skin_object(
     loader.set_destination(&mut dummy_skin, &mut obj_data, dst);
 
     let src = source_resolution(skin);
+    let scale_x = crate::safe_div_f32(loader.dstr.width, src.width);
     let scale_y = crate::safe_div_f32(loader.dstr.height, src.height);
     let mut obj = crate::skin_data_converter::convert_runtime_object(
         &obj_data.object_type,
         &mut loader.source_map,
         p,
         loader.usecim,
+        scale_x,
         scale_y,
     )?;
     apply_runtime_skin_object_data(&mut obj, &obj_data, &src, &loader.dstr);

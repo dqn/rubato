@@ -123,6 +123,7 @@ fn convert_bar_sub_images(
                 source_map,
                 skin_path,
                 usecim,
+                scale_x,
                 scale_y,
             )?;
             if let SkinObject::Image(mut img) = skin_obj {
@@ -151,6 +152,7 @@ fn convert_bar_sub_text(
                 source_map,
                 skin_path,
                 usecim,
+                scale_x,
                 scale_y,
             )?;
             match skin_obj {
@@ -194,6 +196,7 @@ fn convert_bar_sub_numbers(
                 source_map,
                 skin_path,
                 usecim,
+                scale_x,
                 scale_y,
             )?;
             if let SkinObject::Number(mut num) = skin_obj {

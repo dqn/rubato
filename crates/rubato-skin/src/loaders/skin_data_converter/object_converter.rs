@@ -57,6 +57,7 @@ pub(super) fn convert_skin_object(
     source_map: &mut HashMap<String, SourceData>,
     skin_path: &Path,
     usecim: bool,
+    scale_x: f32,
     scale_y: f32,
 ) -> Option<SkinObject> {
     match obj_type {
@@ -212,6 +213,7 @@ pub(super) fn convert_skin_object(
             *shadow_offset_y,
             *shadow_smoothness,
             usecim,
+            scale_x,
         ),
 
         SkinObjectType::Slider {
@@ -838,6 +840,7 @@ fn convert_text(
     shadow_offset_y: f32,
     shadow_smoothness: f32,
     usecim: bool,
+    scale_x: f32,
 ) -> Option<SkinObject> {
     if let Some(font_path) = font {
         let text_id = value.unwrap_or(ref_id);
@@ -852,7 +855,8 @@ fn convert_text(
             .is_some_and(|ext| ext.eq_ignore_ascii_case("fnt"));
         if is_bitmap_font {
             let source = SkinTextBitmapSource::new(PathBuf::from(font_path), usecim);
-            let mut stb = SkinTextBitmap::new_with_property(source, size as f32, property);
+            let mut stb =
+                SkinTextBitmap::new_with_property(source, size as f32 * scale_x, property);
             stb.text_data.align = align;
             stb.text_data.wrapping = wrapping;
             stb.text_data.overflow = overflow;
@@ -924,12 +928,46 @@ mod tests {
             0.0,
             0.0,
             false,
+            1.0,
         )
         .expect("bitmap text object should be created");
 
         assert!(
             matches!(obj, SkinObject::TextBitmap(_)),
             ".fnt fonts must become SkinObject::TextBitmap"
+        );
+    }
+
+    #[test]
+    fn convert_text_scales_bitmap_font_size_by_destination_width() {
+        let obj = convert_text(
+            &Some("skin/ECFN/_font/barfont.fnt".to_string()),
+            25,
+            0,
+            10,
+            None,
+            &None,
+            false,
+            1,
+            &String::new(),
+            0.0,
+            &String::new(),
+            0.0,
+            0.0,
+            0.0,
+            false,
+            1280.0 / 1920.0,
+        )
+        .expect("bitmap text object should be created");
+
+        let bitmap = match obj {
+            SkinObject::TextBitmap(bitmap) => bitmap,
+            _ => panic!("bitmap font should stay bitmap"),
+        };
+        assert!(
+            (bitmap.debug_size() - 25.0 * (1280.0 / 1920.0)).abs() < 0.01,
+            "bitmap font size should follow Java parity destination-width scaling, got {}",
+            bitmap.debug_size()
         );
     }
 
@@ -951,6 +989,7 @@ mod tests {
             0.0,
             0.0,
             false,
+            1.0,
         )
         .expect("font text object should be created");
 

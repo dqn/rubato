@@ -32,9 +32,10 @@ pub(crate) fn convert_runtime_object(
     source_map: &mut HashMap<String, SourceData>,
     skin_path: &Path,
     usecim: bool,
+    scale_x: f32,
     scale_y: f32,
 ) -> Option<crate::types::skin::SkinObject> {
-    convert_skin_object(object_type, source_map, skin_path, usecim, scale_y)
+    convert_skin_object(object_type, source_map, skin_path, usecim, scale_x, scale_y)
 }
 
 /// Converts SkinHeaderData into a SkinHeader.
@@ -227,6 +228,7 @@ pub fn convert_skin_data(
                 source_map,
                 skin_path,
                 usecim,
+                scale_x,
                 scale_y,
             )
         };

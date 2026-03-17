@@ -206,6 +206,11 @@ impl SkinTextBitmap {
     }
 
     #[cfg(test)]
+    pub(crate) fn debug_size(&self) -> f32 {
+        self.size
+    }
+
+    #[cfg(test)]
     pub(crate) fn debug_region_count(&self) -> usize {
         self.source.regions.len()
     }
@@ -603,7 +608,6 @@ impl SkinTextBitmapSource {
             .get(&(b' ' as u32))
             .map(|glyph| glyph.xadvance as f32 * scale)
             .unwrap_or(0.0);
-        let baseline_offset = data.base * scale;
         let mut cursor_x = 0.0f32;
         let mut glyphs = Vec::new();
 
@@ -615,10 +619,9 @@ impl SkinTextBitmapSource {
             if let Some(region) = self.bitmap_glyph_region(glyph) {
                 glyphs.push(PositionedBitmapGlyphRegion {
                     x: cursor_x + glyph.xoffset as f32 * scale,
-                    // BMFont yoffset is measured from the line top, while our sprite quads use
-                    // bottom-left coordinates. Convert through the baseline to preserve
-                    // lowercase/uppercase cap-height differences like LibGDX BitmapFont.
-                    y: baseline_offset - glyph.yoffset as f32 * scale - glyph.height as f32 * scale,
+                    // BMFont yoffset is measured downward from the line top. The text draw call
+                    // passes the line's top edge, while sprite quads use bottom-left coordinates.
+                    y: -glyph.yoffset as f32 * scale - glyph.height as f32 * scale,
                     width: glyph.width as f32 * scale,
                     height: glyph.height as f32 * scale,
                     region,
