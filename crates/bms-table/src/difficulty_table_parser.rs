@@ -310,7 +310,8 @@ impl DifficultyTableParser {
         jsonheader_url: &str,
     ) -> Result<()> {
         let response = Self::http_client()?.get(jsonheader_url).send()?;
-        let text = response.text()?;
+        let bytes = response.bytes()?;
+        let text = Self::decode_bytes_with_charset(&bytes);
         let result: HashMap<String, Value> = serde_json::from_str(&text)?;
         self.decode_json_table_header_internal(dt, &result)?;
         dt.table.head_url = jsonheader_url.to_string();
@@ -454,7 +455,8 @@ impl DifficultyTableParser {
             jsondata_url
         );
         let response = Self::http_client()?.get(jsondata_url).send()?;
-        let text = response.text()?;
+        let bytes = response.bytes()?;
+        let text = Self::decode_bytes_with_charset(&bytes);
         let result: Vec<HashMap<String, Value>> = serde_json::from_str(&text)?;
         self.decode_json_table_data_internal(dt, &result, false);
         Ok(())
