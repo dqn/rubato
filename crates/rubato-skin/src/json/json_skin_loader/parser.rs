@@ -102,19 +102,19 @@ fn fix_commas_string_aware(json: &str) -> String {
 fn strip_comments(json: &str) -> String {
     let bytes = json.as_bytes();
     let len = bytes.len();
-    let mut out = String::with_capacity(len);
+    let mut out = Vec::with_capacity(len);
     let mut i = 0;
     let mut in_string = false;
 
     while i < len {
         if in_string {
             let ch = bytes[i];
-            out.push(ch as char);
+            out.push(ch);
             if ch == b'\\' {
                 // Escaped character: copy next byte verbatim
                 i += 1;
                 if i < len {
-                    out.push(bytes[i] as char);
+                    out.push(bytes[i]);
                 }
             } else if ch == b'"' {
                 in_string = false;
@@ -126,7 +126,7 @@ fn strip_comments(json: &str) -> String {
         // Outside string
         if bytes[i] == b'"' {
             in_string = true;
-            out.push('"');
+            out.push(b'"');
             i += 1;
         } else if i + 1 < len && bytes[i] == b'/' && bytes[i + 1] == b'/' {
             // Line comment: skip to end of line
@@ -145,12 +145,13 @@ fn strip_comments(json: &str) -> String {
                 i += 2; // skip */
             }
         } else {
-            out.push(bytes[i] as char);
+            out.push(bytes[i]);
             i += 1;
         }
     }
 
-    out
+    // SAFETY: input is valid UTF-8 and we only removed ASCII comment sequences
+    String::from_utf8(out).unwrap_or_else(|_| json.to_string())
 }
 
 /// Recursively walk a JSON value tree and convert numeric values to strings

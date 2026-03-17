@@ -91,18 +91,18 @@ fn fix_commas_string_aware(json: &str) -> String {
 fn strip_comments(json: &str) -> String {
     let bytes = json.as_bytes();
     let len = bytes.len();
-    let mut out = String::with_capacity(len);
+    let mut out = Vec::with_capacity(len);
     let mut i = 0;
     let mut in_string = false;
 
     while i < len {
         if in_string {
             let ch = bytes[i];
-            out.push(ch as char);
+            out.push(ch);
             if ch == b'\\' {
                 i += 1;
                 if i < len {
-                    out.push(bytes[i] as char);
+                    out.push(bytes[i]);
                 }
             } else if ch == b'"' {
                 in_string = false;
@@ -113,7 +113,7 @@ fn strip_comments(json: &str) -> String {
 
         if bytes[i] == b'"' {
             in_string = true;
-            out.push('"');
+            out.push(b'"');
             i += 1;
         } else if i + 1 < len && bytes[i] == b'/' && bytes[i + 1] == b'/' {
             i += 2;
@@ -129,12 +129,13 @@ fn strip_comments(json: &str) -> String {
                 i += 2;
             }
         } else {
-            out.push(bytes[i] as char);
+            out.push(bytes[i]);
             i += 1;
         }
     }
 
-    out
+    // SAFETY: input is valid UTF-8 and we only removed ASCII comment sequences
+    String::from_utf8(out).unwrap_or_else(|_| json.to_string())
 }
 
 // =========================================================================
@@ -286,5 +287,58 @@ fn fix_lenient_json_nested_trailing_comma_handled() {
         "fix_lenient_json should handle nested object with trailing comma: \
          fixed={fixed:?}, err={:?}",
         result.err()
+    );
+}
+
+// =========================================================================
+// 9. strip_comments preserves multi-byte UTF-8 (Japanese text)
+//    Regression: the old implementation used `bytes[i] as char` which converts
+//    each raw byte to its Unicode code point, corrupting multi-byte sequences.
+// =========================================================================
+#[test]
+fn strip_comments_preserves_multibyte_utf8() {
+    // JSON with Japanese skin name and a line comment
+    let json =
+        "{\n  // skin comment\n  \"name\": \"\u{30c6}\u{30b9}\u{30c8}\u{30b9}\u{30ad}\u{30f3}\"\n}";
+    let fixed = fix_lenient_json(json);
+
+    let result: serde_json::Value = serde_json::from_str(&fixed)
+        .expect("fix_lenient_json with Japanese text should produce valid JSON");
+    assert_eq!(
+        result["name"].as_str().unwrap(),
+        "\u{30c6}\u{30b9}\u{30c8}\u{30b9}\u{30ad}\u{30f3}",
+        "Japanese text must be preserved verbatim through comment stripping"
+    );
+}
+
+#[test]
+fn strip_comments_preserves_multibyte_utf8_outside_strings() {
+    // Multi-byte UTF-8 outside string values (e.g. in a value position after comment removal)
+    // This tests that pass-through bytes outside strings are also preserved.
+    let json = "{\n  /* block comment */\n  \"author\": \"\u{4f5c}\u{8005}\u{540d}\"\n}";
+    let fixed = fix_lenient_json(json);
+
+    let result: serde_json::Value = serde_json::from_str(&fixed)
+        .expect("fix_lenient_json with Japanese author text should produce valid JSON");
+    assert_eq!(
+        result["author"].as_str().unwrap(),
+        "\u{4f5c}\u{8005}\u{540d}",
+        "Japanese author text must be preserved through block comment stripping"
+    );
+}
+
+#[test]
+fn strip_comments_preserves_multibyte_utf8_in_comment_adjacent_string() {
+    // Japanese text immediately after a line comment on the previous line
+    let json =
+        "{\n  // \u{30b3}\u{30e1}\u{30f3}\u{30c8}\n  \"key\": \"\u{65e5}\u{672c}\u{8a9e}\"\n}";
+    let fixed = fix_lenient_json(json);
+
+    let result: serde_json::Value = serde_json::from_str(&fixed)
+        .expect("fix_lenient_json with Japanese text near comments should parse");
+    assert_eq!(
+        result["key"].as_str().unwrap(),
+        "\u{65e5}\u{672c}\u{8a9e}",
+        "Japanese value text adjacent to comment must be preserved"
     );
 }
