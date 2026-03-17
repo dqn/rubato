@@ -1205,3 +1205,36 @@ fn apply_play_config_then_init_recalculates_basebpm() {
     let extracted = renderer.play_config();
     assert_eq!(extracted.fixhispeed, FIX_HISPEED_STARTBPM);
 }
+
+// =========================================================================
+// reset_hispeed division-by-zero guard tests
+// =========================================================================
+
+/// Regression test: reset_hispeed() divides by `self.duration as f64`.
+/// While PlayConfig::validate() clamps duration to DURATION_MIN=1, bypassing
+/// validate (e.g., direct field assignment) could leave duration=0, causing
+/// division by zero / inf / NaN in hispeed calculation.
+#[test]
+fn reset_hispeed_zero_duration_does_not_panic_or_produce_nan() {
+    let tl0 = make_timeline(0.0, 0, 120.0, 8);
+    let model = make_model_with_timelines(vec![tl0], 120.0);
+    let mut renderer = LaneRenderer::new(&model);
+
+    // Force duration to 0 (bypassing PlayConfig::validate)
+    renderer.duration = 0;
+    renderer.fixhispeed = FIX_HISPEED_MAINBPM;
+    let original_hispeed = renderer.hispeed();
+
+    // Should early-return without modifying hispeed
+    renderer.reset_hispeed(120.0);
+
+    assert_eq!(
+        renderer.hispeed(),
+        original_hispeed,
+        "hispeed should remain unchanged when duration is 0"
+    );
+    assert!(
+        renderer.hispeed().is_finite(),
+        "hispeed must never be NaN or Inf"
+    );
+}
