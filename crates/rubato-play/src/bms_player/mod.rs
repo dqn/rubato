@@ -417,6 +417,11 @@ pub struct BMSPlayer {
     /// Reverse index mapping JudgeNote index -> (timeline_index, lane) for syncing
     /// judge states back to model notes. Built during `rebuild_judge_system()`.
     judge_note_to_model: Vec<(usize, i32)>,
+    /// Previous course stage gauge values for restoring gauge state across stages.
+    /// Each inner Vec<f32> is a gauge log for one gauge type; the last element is the
+    /// final gauge value from the previous stage.
+    /// Java: resource.getGauge() -> FloatArray[] fed into GrooveGauge.create().
+    previous_gauge_values: Option<Vec<Vec<f32>>>,
 }
 
 mod accessors;
@@ -426,6 +431,9 @@ mod pattern;
 mod render_skin;
 mod scoring;
 mod skin_context;
+
+#[cfg(test)]
+pub(crate) use main_state_impl::pad_gaugelog_with_zeros;
 
 #[cfg(test)]
 mod tests;

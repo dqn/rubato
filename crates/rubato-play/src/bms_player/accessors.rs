@@ -60,6 +60,7 @@ impl BMSPlayer {
             orgmode: None,
             lnmode_override: None,
             judge_note_to_model: Vec::new(),
+            previous_gauge_values: None,
         }
     }
 
@@ -174,6 +175,16 @@ impl BMSPlayer {
     pub fn set_initial_course_combo(&mut self, combo: i32, maxcombo: i32) {
         self.initial_course_combo = combo;
         self.initial_course_maxcombo = maxcombo;
+    }
+
+    /// Set previous course stage gauge values for restoring gauge continuity.
+    ///
+    /// Java: `GrooveGauge.create(model, type, resource)` reads `resource.getGauge()`
+    /// (a `FloatArray[]` where each element is a gauge log for one gauge type) and
+    /// restores each gauge's value from the last entry of the corresponding log.
+    /// The caller should pass `resource.gauge()` (if non-None) before `create()`.
+    pub fn set_previous_gauge_values(&mut self, gauge_values: Vec<Vec<f32>>) {
+        self.previous_gauge_values = Some(gauge_values);
     }
 
     /// Queue a system sound to be played by MainController.

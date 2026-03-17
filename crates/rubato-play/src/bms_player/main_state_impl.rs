@@ -30,6 +30,27 @@ fn bomb_timer_id(player: i32, key: i32) -> rubato_types::timer_id::TimerId {
     rubato_types::timer_id::TimerId::UNDEFINED
 }
 
+/// Maximum number of gauge log entries to pad on stage failure.
+/// 100_000 entries at 500ms intervals covers ~14 hours, far exceeding any
+/// realistic song length while preventing unbounded allocation from corrupted
+/// playtime values.
+const GAUGELOG_PAD_MAX_ENTRIES: i64 = 100_000;
+
+/// Fill remaining gauge log entries with 0.0 from `start_ms` up to
+/// `playtime + 500` (in milliseconds), capped at `GAUGELOG_PAD_MAX_ENTRIES`
+/// to guard against corrupted playtime.
+pub(crate) fn pad_gaugelog_with_zeros(gaugelog: &mut [Vec<f32>], start_ms: i64, playtime: i32) {
+    let mut l = start_ms;
+    let mut entries_added = 0_i64;
+    while l < playtime as i64 + 500 && entries_added < GAUGELOG_PAD_MAX_ENTRIES {
+        for glog in gaugelog.iter_mut() {
+            glog.push(0.0);
+        }
+        l += 500;
+        entries_added += 1;
+    }
+}
+
 impl MainState for BMSPlayer {
     fn state_type(&self) -> Option<MainStateType> {
         Some(MainStateType::Play)
@@ -200,7 +221,7 @@ impl MainState for BMSPlayer {
 
         // --- Gauge initialization ---
         // Translated from: BMSPlayer.create() Java line ~540
-        // gauge = GrooveGauge.create(model, gauge_type, grade)
+        // gauge = GrooveGauge.create(model, gauge_type, resource)
         // For practice mode, gauge is initialized later in the practice loop (line 581).
         if self.play_mode.mode != rubato_core::bms_player_mode::Mode::Practice {
             // Java: gauge = GrooveGauge.create(model, replay != null ? replay.gauge : config.getGauge(), resource);
@@ -215,8 +236,52 @@ impl MainState for BMSPlayer {
                 self.player_config.play_settings.gauge
             };
             let grade = if self.is_course_mode { 1 } else { 0 };
-            self.gauge =
-                crate::groove_gauge::create_groove_gauge(&self.model, gauge_type, grade, None);
+
+            // Java: GrooveGauge.create(model, type, resource) extracts gauge property
+            // from course constraints when in course mode. Map constraint variants to
+            // GaugeProperty for courses that specify gauge tables.
+            let gauge_property = if self.is_course_mode {
+                self.constraints.iter().find_map(|c| match c {
+                    CourseDataConstraint::Gauge5Keys => {
+                        Some(crate::gauge_property::GaugeProperty::FiveKeys)
+                    }
+                    CourseDataConstraint::Gauge7Keys => {
+                        Some(crate::gauge_property::GaugeProperty::SevenKeys)
+                    }
+                    CourseDataConstraint::Gauge9Keys => {
+                        Some(crate::gauge_property::GaugeProperty::Pms)
+                    }
+                    CourseDataConstraint::Gauge24Keys => {
+                        Some(crate::gauge_property::GaugeProperty::Keyboard)
+                    }
+                    CourseDataConstraint::GaugeLr2 => {
+                        Some(crate::gauge_property::GaugeProperty::Lr2)
+                    }
+                    _ => None,
+                })
+            } else {
+                None
+            };
+
+            self.gauge = crate::groove_gauge::create_groove_gauge(
+                &self.model,
+                gauge_type,
+                grade,
+                gauge_property,
+            );
+
+            // Java: GrooveGauge.create(model, type, resource) restores gauge values
+            // from the previous course stage. After creating the gauge, read the last
+            // value from each gauge type's log and restore it.
+            if let Some(ref previous_values) = self.previous_gauge_values
+                && let Some(ref mut gauge) = self.gauge
+            {
+                for (i, log) in previous_values.iter().enumerate() {
+                    if let Some(&last_val) = log.last() {
+                        gauge.set_value_by_type(i as i32, last_val);
+                    }
+                }
+            }
         }
 
         // --- Note expansion rate from PlaySkin ---
@@ -970,13 +1035,8 @@ impl MainState for BMSPlayer {
                     if self.main_state_data.timer.is_timer_on(TIMER_PLAY) {
                         let failed_time = self.main_state_data.timer.timer(TIMER_FAILED);
                         let play_time = self.main_state_data.timer.timer(TIMER_PLAY);
-                        let mut l = (failed_time - play_time).max(0);
-                        while l < self.playtime as i64 + 500 {
-                            for glog in self.gaugelog.iter_mut() {
-                                glog.push(0.0);
-                            }
-                            l += 500;
-                        }
+                        let start_ms = (failed_time - play_time).max(0);
+                        pad_gaugelog_with_zeros(&mut self.gaugelog, start_ms, self.playtime);
                     }
                     // Ensure model notes have judge states before computing score data.
                     self.sync_judge_states_to_model();

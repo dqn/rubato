@@ -4579,6 +4579,153 @@ fn judge_note_to_model_reverse_index_built_correctly() {
     }
 }
 
+// --- Course gauge constraint (Finding 1) ---
+
+#[test]
+fn create_uses_gauge_7keys_constraint_for_course_gauge_property() {
+    // When constraints include Gauge7Keys, the GrooveGauge should use SevenKeys gauge
+    // tables instead of the default LR2 tables.
+    // SevenKeys HARD (index 3) has death=0.0, LR2 HARD has death=2.0.
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.is_course_mode = true;
+    player.constraints = vec![CourseDataConstraint::Gauge7Keys];
+    player.create();
+
+    let gauge = player.gauge.as_ref().expect("gauge should be created");
+    assert!(gauge.is_course_gauge(), "should be course gauge");
+    // Check HARD gauge (index 3): SevenKeys=death 0.0, LR2=death 2.0
+    let hard_gauge = gauge.gauge_by_type(3);
+    assert_eq!(
+        hard_gauge.property().death,
+        0.0,
+        "SevenKeys gauge property should have death=0.0 for HARD gauge; \
+         got {} which suggests LR2 gauge tables were used instead of SevenKeys",
+        hard_gauge.property().death
+    );
+}
+
+#[test]
+fn create_uses_gauge_5keys_constraint_for_course_gauge_property() {
+    // When constraints include Gauge5Keys, the GrooveGauge should use FiveKeys gauge tables.
+    // FiveKeys NORMAL (index 2) has border=75.0, SevenKeys NORMAL has border=80.0.
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.is_course_mode = true;
+    player.constraints = vec![CourseDataConstraint::Gauge5Keys];
+    player.create();
+
+    let gauge = player.gauge.as_ref().expect("gauge should be created");
+    // Check NORMAL (index 2) border: FiveKeys=75.0, SevenKeys=80.0
+    let normal_gauge = gauge.gauge_by_type(2);
+    assert_eq!(
+        normal_gauge.property().border,
+        75.0,
+        "FiveKeys gauge property should have border=75.0 for NORMAL gauge; \
+         got {} which suggests wrong gauge tables were used",
+        normal_gauge.property().border
+    );
+}
+
+#[test]
+fn create_without_gauge_constraint_uses_default_for_course() {
+    // Without gauge constraints, course mode should fall back to mode-based default.
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.is_course_mode = true;
+    // No gauge constraints, just Class
+    player.constraints = vec![CourseDataConstraint::Class];
+    player.create();
+
+    let gauge = player.gauge.as_ref().expect("gauge should be created");
+    assert!(gauge.is_course_gauge(), "should be course gauge");
+}
+
+// --- Course gauge restoration (Finding 2) ---
+
+#[test]
+fn create_restores_previous_stage_gauge_values() {
+    // On subsequent course stages, the gauge values from the previous stage should
+    // be restored. Java: GrooveGauge.create() reads resource.getGauge() and sets
+    // each gauge type's value to the last entry of the corresponding log.
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.is_course_mode = true;
+
+    // Simulate previous stage gauge log: 9 gauge types, each with some history.
+    // The last value of each log is what gets restored.
+    let mut previous_gauge: Vec<Vec<f32>> = Vec::new();
+    for i in 0..9 {
+        // Different final values per gauge type for verification
+        previous_gauge.push(vec![100.0, 90.0, 80.0 - i as f32 * 5.0]);
+    }
+    player.set_previous_gauge_values(previous_gauge.clone());
+    player.create();
+
+    let gauge = player.gauge.as_ref().expect("gauge should be created");
+    // Verify each gauge type got the last value from the previous log.
+    for i in 0..9 {
+        let expected = 80.0 - i as f32 * 5.0;
+        let actual = gauge.value_by_type(i as i32);
+        // Note: set_value clamps and applies death border, so some values may
+        // differ. For the first several types (init >= expected), the value
+        // should match or be clamped.
+        // Type 0-2 have min=2.0, so values >= 2.0 should survive.
+        // Types 3-8 have min=0.0.
+        if expected >= 2.0 {
+            assert!(
+                (actual - expected).abs() < 0.01 || actual == 0.0, // dead gauge
+                "gauge type {} expected {} but got {}",
+                i,
+                expected,
+                actual
+            );
+        }
+    }
+}
+
+#[test]
+fn create_without_previous_gauge_starts_fresh() {
+    // First course stage (no previous gauge log) should use default init values.
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.is_course_mode = true;
+    // No previous_gauge_values set
+    player.create();
+
+    let gauge = player.gauge.as_ref().expect("gauge should be created");
+    // Course mode with default gauge type (NORMAL=2) => id=6 (CLASS)
+    // CLASS gauge init for LR2/SevenKeys defaults = 100.0
+    let class_val = gauge.value_by_type(6);
+    assert!(
+        (class_val - 100.0).abs() < 0.01,
+        "first course stage CLASS gauge should start at init value 100.0, got {}",
+        class_val
+    );
+}
+
+#[test]
+fn create_restores_gauge_value_from_single_entry_log() {
+    // Edge case: previous gauge log has only one entry per type.
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.is_course_mode = true;
+
+    let previous_gauge: Vec<Vec<f32>> = (0..9).map(|_| vec![75.0]).collect();
+    player.set_previous_gauge_values(previous_gauge);
+    player.create();
+
+    let gauge = player.gauge.as_ref().expect("gauge should be created");
+    // NORMAL (type 2) with border 80.0 and value 75.0 should be not qualified
+    // (for 7key default). The value itself should be 75.0.
+    let normal_val = gauge.value_by_type(2);
+    assert!(
+        (normal_val - 75.0).abs() < 0.01,
+        "gauge type 2 should be restored to 75.0, got {}",
+        normal_val
+    );
+}
+
 #[test]
 fn sync_judge_states_skips_out_of_range_indices() {
     // Safety test: verify sync doesn't panic with empty/invalid reverse index
@@ -4594,4 +4741,65 @@ fn sync_judge_states_skips_out_of_range_indices() {
     player.judge_note_to_model = vec![(usize::MAX, 0)];
     player.sync_judge_states_to_model();
     // No assertion needed - just verifying no panic
+}
+
+// =========================================================================
+// pad_gaugelog_with_zeros tests
+// =========================================================================
+
+#[test]
+fn pad_gaugelog_normal_playtime() {
+    // Normal case: 2-second song (playtime=2000ms), failed at 1000ms into play.
+    // Should pad from 1000ms to 2500ms (playtime+500), i.e. 3 entries (1000, 1500, 2000).
+    let mut gaugelog = vec![vec![50.0]; 2]; // 2 gauge types, each with 1 existing entry
+    pad_gaugelog_with_zeros(&mut gaugelog, 1000, 2000);
+    // (2000 + 500 - 1000) / 500 = 3 entries
+    assert_eq!(
+        gaugelog[0].len(),
+        1 + 3,
+        "gauge type 0 should have 4 entries total"
+    );
+    assert_eq!(
+        gaugelog[1].len(),
+        1 + 3,
+        "gauge type 1 should have 4 entries total"
+    );
+    // Original entry preserved, rest are 0.0
+    assert_eq!(gaugelog[0][0], 50.0);
+    assert_eq!(gaugelog[0][1], 0.0);
+    assert_eq!(gaugelog[0][3], 0.0);
+}
+
+#[test]
+fn pad_gaugelog_corrupted_playtime_capped() {
+    // Corrupted playtime: i32::MAX (~2.1 billion ms). Without the cap this would
+    // try to push ~4.2 million entries per gauge type. With the cap it stops at 100_000.
+    let mut gaugelog = vec![Vec::new(); 1];
+    pad_gaugelog_with_zeros(&mut gaugelog, 0, i32::MAX);
+    assert_eq!(
+        gaugelog[0].len(),
+        100_000,
+        "should be capped at 100_000 entries"
+    );
+}
+
+#[test]
+fn pad_gaugelog_no_entries_when_already_past_playtime() {
+    // start_ms already beyond playtime + 500: no entries should be added.
+    let mut gaugelog = vec![vec![99.0]; 1];
+    pad_gaugelog_with_zeros(&mut gaugelog, 5000, 2000);
+    assert_eq!(gaugelog[0].len(), 1, "no entries should be added");
+    assert_eq!(gaugelog[0][0], 99.0, "existing entry should be preserved");
+}
+
+#[test]
+fn pad_gaugelog_negative_playtime_no_entries() {
+    // Negative playtime: playtime as i64 + 500 could be negative, loop should not execute.
+    let mut gaugelog = vec![vec![]; 1];
+    pad_gaugelog_with_zeros(&mut gaugelog, 0, -1000);
+    assert_eq!(
+        gaugelog[0].len(),
+        0,
+        "negative playtime should produce no entries"
+    );
 }
