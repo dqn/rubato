@@ -101,17 +101,14 @@ impl LaneRenderer {
 
         let region = Self::calc_region(nbpm, hispeed, nscroll);
 
-        // Y-down coordinate system (wgpu): region_y is at the top of the lane
-        // (small y = top of screen), region_y + region_height is at the bottom (judge line).
-        // hu = top of visible lane area (small y), hl = judge line (large y).
-        let hu = lanes[0].region_y;
+        // Java/original beatoraja coordinates are Y-up.
+        // region_y is the judge-line baseline and region_y + region_height is the top.
+        let hu = lanes[0].region_y + lanes[0].region_height;
         let hl = if self.enable_lift {
-            // Lift moves judge line upward from the bottom
-            lanes[0].region_y + lanes[0].region_height * (1.0 - self.lift)
+            lanes[0].region_y + lanes[0].region_height * self.lift
         } else {
-            lanes[0].region_y + lanes[0].region_height
+            lanes[0].region_y
         };
-        // rxhs is negative in Y-down: future notes have decreasing y (move upward on screen).
         let rxhs = (hu - hl) as f64 * hispeed as f64;
         let mut y = hl as f64;
 
@@ -122,14 +119,9 @@ impl LaneRenderer {
         };
         self.currentduration = (region * (1.0 - lanecover as f64)).round() as i32;
 
-        // Calculate offset results for LIFT, LANECOVER, HIDDEN
-        // In Y-down: default judge line is at region_y + region_height (bottom).
-        // Lift moves it upward (smaller y). Lift offset = how far it moved upward.
-        let default_hl = lanes[0].region_y + lanes[0].region_height;
-        let lift_offset_y = default_hl - hl;
-        // Lanecover: (hl - hu) is the visible lane height (positive in Y-down).
-        // In Java this was negative (hl < hu in Y-up); skin offsets expect the same sign.
-        let lanecover_offset_y = (hu - hl) as f64 * lanecover as f64;
+        // Calculate offset results for LIFT, LANECOVER, HIDDEN.
+        let lift_offset_y = hl - lanes[0].region_y;
+        let lanecover_offset_y = (hl - hu) as f64 * lanecover as f64;
 
         let hidden_result = if self.enable_hidden {
             let hidden_y = if self.enable_lift {
@@ -228,7 +220,7 @@ impl LaneRenderer {
         let alpha_limit = self.constant_fadein_time * 1000.0;
 
         for i in self.pos..tl_count {
-            if y < hu as f64 {
+            if y > hu as f64 {
                 break;
             }
             let tl = &all_tl[timelines[i]];
@@ -388,7 +380,7 @@ impl LaneRenderer {
 
         // Note rendering pass
         for i in self.pos..tl_count {
-            if y < hu as f64 {
+            if y > hu as f64 {
                 break;
             }
             let tl = &all_tl[timelines[i]];
@@ -544,28 +536,18 @@ impl LaneRenderer {
                                             prev_tl_ref = now_tl;
                                         }
 
-                                        // In Y-down, dy is negative (end note is above
-                                        // start note). Use absolute value for height.
-                                        let dy_abs = dy.abs();
-                                        if dy_abs > 0.0 {
+                                        if dy > 0.0 {
                                             let dscale = if dsth > scale {
                                                 (dsth - scale) / 2.0
                                             } else {
                                                 0.0
                                             };
-                                            // ln_y = end note position (above start in Y-down)
-                                            let ln_y = dsty - dy_abs as f32;
                                             let ln_height = if dsty
-                                                > (lanes[lane].region_y
-                                                    + lanes[lane].region_height
-                                                    + dscale)
+                                                < (lanes[lane].region_y - dscale)
                                             {
-                                                (lanes[lane].region_y
-                                                    + lanes[lane].region_height
-                                                    + dscale)
-                                                    - dsty
+                                                dsty - (lanes[lane].region_y - dscale)
                                             } else {
-                                                dy_abs as f32
+                                                dy as f32
                                             };
                                             self.draw_long_note_commands(
                                                 &mut commands,
@@ -573,7 +555,7 @@ impl LaneRenderer {
                                                 &DrawLongNoteParams {
                                                     lane,
                                                     x: dstx,
-                                                    y: ln_y,
+                                                    y: dsty + dy as f32,
                                                     width: dstw,
                                                     height: ln_height,
                                                     scale: dsth,

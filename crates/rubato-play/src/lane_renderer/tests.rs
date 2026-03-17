@@ -449,6 +449,57 @@ fn draw_lane_normal_note_emitted() {
 }
 
 #[test]
+fn draw_lane_future_note_moves_toward_judge_line_over_time() {
+    let mut tl0 = make_timeline(0.0, 0, 120.0, 8);
+    tl0.bpm = 120.0;
+    let mut tl1 = make_timeline(1.0, 1_000_000, 120.0, 8);
+    tl1.set_note(0, Some(Note::new_normal(1)));
+    let model = make_model_with_timelines(vec![tl0, tl1], 120.0);
+    let mut renderer = LaneRenderer::new(&model);
+    let lanes = make_lanes(8);
+
+    let all_tls = &model.timelines;
+    let mut early_ctx = default_ctx(all_tls);
+    early_ctx.time = 0;
+    let early = renderer.draw_lane(&early_ctx, &lanes, &[]);
+    let early_y = early
+        .commands
+        .iter()
+        .find_map(|cmd| match cmd {
+            DrawCommand::DrawNote {
+                lane: 0,
+                image_type: NoteImageType::Normal,
+                y,
+                ..
+            } => Some(*y),
+            _ => None,
+        })
+        .expect("future note should be drawable at early time");
+
+    let mut late_ctx = default_ctx(all_tls);
+    late_ctx.time = 500;
+    let late = renderer.draw_lane(&late_ctx, &lanes, &[]);
+    let late_y = late
+        .commands
+        .iter()
+        .find_map(|cmd| match cmd {
+            DrawCommand::DrawNote {
+                lane: 0,
+                image_type: NoteImageType::Normal,
+                y,
+                ..
+            } => Some(*y),
+            _ => None,
+        })
+        .expect("future note should still be drawable halfway to the judge line");
+
+    assert!(
+        late_y < early_y,
+        "with Y-up rendering, notes should move toward the judge line (smaller y) over time: early_y={early_y}, late_y={late_y}"
+    );
+}
+
+#[test]
 fn draw_lane_mine_note_emitted() {
     let mut tl0 = make_timeline(0.0, 0, 120.0, 8);
     tl0.bpm = 120.0;

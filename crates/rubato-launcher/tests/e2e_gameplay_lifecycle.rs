@@ -12,15 +12,27 @@
 // - Lifecycle methods (create/render/dispose) work with real chart data in each state
 // - PlayerResource correctly propagates BMS model to Play state via factory
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
+use rubato_core::bms_player_mode::BMSPlayerMode;
 use rubato_core::config::Config;
 use rubato_core::main_controller::MainController;
 use rubato_core::main_loader::MainLoader;
 use rubato_core::main_state::MainStateType;
 use rubato_core::player_config::PlayerConfig;
+use rubato_input::gdx_compat::set_shared_key_state;
+use rubato_input::keys::Keys;
+use rubato_input::winit_input_bridge::SharedKeyState;
 use rubato_launcher::state_factory::LauncherStateFactory;
 use rubato_types::main_controller_access::MainControllerAccess;
+use rubato_types::skin_config::SkinConfig;
+use rubato_types::skin_type::SkinType;
+use rubato_types::song_data::SongData;
+use rubato_types::timer_id::TimerId;
+use rubato_state::select::bar::bar::Bar;
+use rubato_state::select::bar::song_bar::SongBar;
+use rubato_state::select::music_selector::MusicSelector;
 
 fn test_bms_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -36,6 +48,27 @@ fn make_controller_with_factory() -> MainController {
     let mut mc = MainController::new(None, config, player, None, false);
     mc.set_state_factory(Box::new(LauncherStateFactory::new()));
     mc
+}
+
+fn ecfn_player_config() -> PlayerConfig {
+    let mut player = PlayerConfig::default();
+    player.skin[SkinType::Play7Keys.id() as usize] =
+        Some(SkinConfig::new_with_path("skin/ECFN/play/play7.luaskin"));
+    player.skin[SkinType::MusicSelect.id() as usize] =
+        Some(SkinConfig::new_with_path("skin/ECFN/select/select.luaskin"));
+    player.skin[SkinType::Decide.id() as usize] =
+        Some(SkinConfig::new_with_path("skin/ECFN/decide/decide.luaskin"));
+    player.validate();
+    player
+}
+
+fn make_song_bar(path: &Path) -> Bar {
+    let mut song = SongData::default();
+    song.metadata.title = "minimal_7k".to_string();
+    song.chart.mode = 7;
+    song.file.sha256 = "select-enter-minimal".to_string();
+    song.file.set_path(path.to_string_lossy().to_string());
+    Bar::Song(Box::new(SongBar::new(song)))
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +131,91 @@ fn e2e_gameplay_select_decide_play_result_with_bms() {
     mc.dispose();
     assert!(mc.current_state().is_none());
     assert!(mc.current_state_type().is_none());
+}
+
+#[test]
+fn e2e_select_enter_reaches_manual_play_without_stuck_beams() {
+    let bms_path = test_bms_path();
+    assert!(
+        bms_path.exists(),
+        "Test BMS file not found: {}",
+        bms_path.display()
+    );
+
+    let shared_state = SharedKeyState::new();
+    set_shared_key_state(shared_state.clone());
+
+    let player = ecfn_player_config();
+    let mut config = Config::default();
+    config.select.skip_decide_screen = true;
+    let mut selector = MusicSelector::new();
+    selector.config = player.clone();
+    selector.manager.currentsongs = vec![make_song_bar(&bms_path)];
+    selector.manager.selectedindex = 0;
+
+    let mut mc = MainController::new(None, config, player, None, false);
+    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_shared_music_selector(Box::new(Arc::new(Mutex::new(selector))));
+    mc.create();
+
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
+
+    shared_state.set_key_pressed(Keys::ENTER, true);
+    mc.render();
+    mc.render();
+    shared_state.set_key_pressed(Keys::ENTER, false);
+
+    for _ in 0..120 {
+        if mc.current_state_type() == Some(MainStateType::Play) {
+            break;
+        }
+        mc.render();
+    }
+
+    assert_eq!(
+        mc.current_state_type(),
+        Some(MainStateType::Play),
+        "Enter from MusicSelect should eventually transition into Play"
+    );
+    assert_eq!(
+        mc.player_resource().and_then(|r| r.play_mode()).copied(),
+        Some(BMSPlayerMode::PLAY),
+        "Enter start must keep manual PLAY mode"
+    );
+
+    let has_stuck_beam = mc.current_state().is_some_and(|state| {
+        (100..=119).any(|id| state.main_state_data().timer.is_timer_on(TimerId::new(id)))
+    });
+    assert!(
+        !has_stuck_beam,
+        "manual play should not enter with key beam timers already on"
+    );
+
+    mc.sprite_batch_mut()
+        .expect("sprite batch should exist after create")
+        .enable_capture();
+    for _ in 0..120 {
+        mc.render();
+    }
+    let quads = mc
+        .sprite_batch()
+        .expect("sprite batch should exist after rendering")
+        .captured_quads()
+        .to_vec();
+    let unique_textures = quads
+        .iter()
+        .filter_map(|quad| quad.texture_key.as_deref())
+        .collect::<std::collections::BTreeSet<_>>();
+    assert!(
+        quads.len() > 100,
+        "select->Enter manual play should render more than lane-only quads, got {}",
+        quads.len()
+    );
+    assert!(
+        unique_textures.len() >= 3,
+        "select->Enter manual play should use multiple texture groups, got {:?}",
+        unique_textures
+    );
 }
 
 // ---------------------------------------------------------------------------
