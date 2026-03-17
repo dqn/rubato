@@ -47,6 +47,52 @@ fn get_play_mode_options() -> Vec<String> {
 pub struct MiscSettingMenu;
 
 impl MiscSettingMenu {
+    /// Clear all static state. Must be called before `set_player_config` when
+    /// re-initializing after a profile switch (`load_new_profile`) so that stale
+    /// references to the old `PlayerConfig`, `Config`, and command queue are not
+    /// left behind.
+    pub fn clear() {
+        *PLAYER_CONFIG.lock().expect("PLAYER_CONFIG lock poisoned") = None;
+        *COMMAND_QUEUE.lock().expect("COMMAND_QUEUE lock poisoned") = None;
+        *CONFIG.lock().expect("CONFIG lock poisoned") = None;
+        *CURRENT_PLAY_MODE
+            .lock()
+            .expect("CURRENT_PLAY_MODE lock poisoned") = None;
+        *PLAY_MODE_VALUE
+            .lock()
+            .expect("PLAY_MODE_VALUE lock poisoned") = 1;
+        *NOTIFICATION_POSITION
+            .lock()
+            .expect("NOTIFICATION_POSITION lock poisoned") = 0;
+        *ENABLE_LIFT.lock().expect("ENABLE_LIFT lock poisoned") = false;
+        *LIFT_VALUE.lock().expect("LIFT_VALUE lock poisoned") = 0;
+        *ENABLE_HIDDEN.lock().expect("ENABLE_HIDDEN lock poisoned") = false;
+        *HIDDEN_VALUE.lock().expect("HIDDEN_VALUE lock poisoned") = 0;
+        *ENABLE_LANECOVER
+            .lock()
+            .expect("ENABLE_LANECOVER lock poisoned") = false;
+        *LANECOVER_VALUE
+            .lock()
+            .expect("LANECOVER_VALUE lock poisoned") = 0;
+        *LANE_COVER_MARGIN_LOW
+            .lock()
+            .expect("LANE_COVER_MARGIN_LOW lock poisoned") = 0.0;
+        *LANE_COVER_MARGIN_HIGH
+            .lock()
+            .expect("LANE_COVER_MARGIN_HIGH lock poisoned") = 0.0;
+        *LANE_COVER_SWITCH_DURATION
+            .lock()
+            .expect("LANE_COVER_SWITCH_DURATION lock poisoned") = 0;
+        *ENABLE_CONSTANT
+            .lock()
+            .expect("ENABLE_CONSTANT lock poisoned") = false;
+        *CONSTANT_VALUE.lock().expect("CONSTANT_VALUE lock poisoned") = 0;
+        *SELECTED_PLAYER
+            .lock()
+            .expect("SELECTED_PLAYER lock poisoned") = 0;
+        *PLAYERS.lock().expect("PLAYERS lock poisoned") = Vec::new();
+    }
+
     /// Initialize with a PlayerConfig and command queue for writing changes back to MainController.
     pub fn set_player_config(
         player_config: PlayerConfig,
@@ -634,6 +680,132 @@ mod tests {
             assert!((pc.play_config_ref(Mode::BEAT_7K).playconfig.hidden - 0.3).abs() < 0.001,);
             drop(pc_guard);
         }
+
+        reset_statics();
+    }
+
+    /// Verify that `MiscSettingMenu::clear()` resets all statics, preventing stale
+    /// references after a profile switch.
+    #[test]
+    fn test_clear_resets_all_statics() {
+        reset_statics();
+
+        // Populate statics with non-default values
+        let pc = PlayerConfig::default();
+        let queue = MainControllerCommandQueue::new();
+        let config = Config::default();
+
+        *lock_or_recover(&PLAYER_CONFIG) = Some(pc);
+        *lock_or_recover(&COMMAND_QUEUE) = Some(queue.clone());
+        *lock_or_recover(&CONFIG) = Some(config);
+        *lock_or_recover(&CURRENT_PLAY_MODE) = Some(Mode::BEAT_7K);
+        *lock_or_recover(&PLAY_MODE_VALUE) = 3;
+        *lock_or_recover(&NOTIFICATION_POSITION) = 2;
+        *lock_or_recover(&ENABLE_LIFT) = true;
+        *lock_or_recover(&LIFT_VALUE) = 500;
+        *lock_or_recover(&ENABLE_HIDDEN) = true;
+        *lock_or_recover(&HIDDEN_VALUE) = 300;
+        *lock_or_recover(&ENABLE_LANECOVER) = true;
+        *lock_or_recover(&LANECOVER_VALUE) = 700;
+        *lock_or_recover(&LANE_COVER_MARGIN_LOW) = 0.1;
+        *lock_or_recover(&LANE_COVER_MARGIN_HIGH) = 0.9;
+        *lock_or_recover(&LANE_COVER_SWITCH_DURATION) = 42;
+        *lock_or_recover(&ENABLE_CONSTANT) = true;
+        *lock_or_recover(&CONSTANT_VALUE) = 1000;
+        *lock_or_recover(&SELECTED_PLAYER) = 2;
+        *lock_or_recover(&PLAYERS) = vec!["alice".to_string(), "bob".to_string()];
+
+        // Verify statics are populated
+        assert!(lock_or_recover(&PLAYER_CONFIG).is_some());
+        assert!(lock_or_recover(&COMMAND_QUEUE).is_some());
+        assert!(lock_or_recover(&CONFIG).is_some());
+        assert!(lock_or_recover(&CURRENT_PLAY_MODE).is_some());
+
+        // Clear
+        MiscSettingMenu::clear();
+
+        // Verify all Option statics are None
+        assert!(lock_or_recover(&PLAYER_CONFIG).is_none());
+        assert!(lock_or_recover(&COMMAND_QUEUE).is_none());
+        assert!(lock_or_recover(&CONFIG).is_none());
+        assert!(lock_or_recover(&CURRENT_PLAY_MODE).is_none());
+
+        // Verify value statics are reset to defaults
+        assert_eq!(*lock_or_recover(&PLAY_MODE_VALUE), 1);
+        assert_eq!(*lock_or_recover(&NOTIFICATION_POSITION), 0);
+        assert!(!*lock_or_recover(&ENABLE_LIFT));
+        assert_eq!(*lock_or_recover(&LIFT_VALUE), 0);
+        assert!(!*lock_or_recover(&ENABLE_HIDDEN));
+        assert_eq!(*lock_or_recover(&HIDDEN_VALUE), 0);
+        assert!(!*lock_or_recover(&ENABLE_LANECOVER));
+        assert_eq!(*lock_or_recover(&LANECOVER_VALUE), 0);
+        assert_eq!(*lock_or_recover(&LANE_COVER_MARGIN_LOW), 0.0);
+        assert_eq!(*lock_or_recover(&LANE_COVER_MARGIN_HIGH), 0.0);
+        assert_eq!(*lock_or_recover(&LANE_COVER_SWITCH_DURATION), 0);
+        assert!(!*lock_or_recover(&ENABLE_CONSTANT));
+        assert_eq!(*lock_or_recover(&CONSTANT_VALUE), 0);
+        assert_eq!(*lock_or_recover(&SELECTED_PLAYER), 0);
+        assert!(lock_or_recover(&PLAYERS).is_empty());
+
+        // Verify that commands pushed to the old queue clone are not accessible
+        // via the cleared static (simulating stale queue scenario)
+        queue.push(MainControllerCommand::SaveConfig);
+        assert!(lock_or_recover(&COMMAND_QUEUE).is_none());
+
+        reset_statics();
+    }
+
+    /// Verify that `clear()` followed by `set_player_config()` produces a
+    /// consistent fresh state (the re-init path after profile switch).
+    #[test]
+    fn test_clear_then_reinit() {
+        reset_statics();
+
+        // Initial setup
+        let mut pc = PlayerConfig::default();
+        pc.mode7.playconfig.enablelift = true;
+        pc.mode7.playconfig.lift = 0.42;
+        let queue = MainControllerCommandQueue::new();
+        let config = Config::default();
+
+        MiscSettingMenu::set_player_config(pc, config, queue.clone());
+
+        // Simulate a play mode selection so CURRENT_PLAY_MODE is set
+        change_play_mode(&Mode::BEAT_7K);
+        assert!(*lock_or_recover(&ENABLE_LIFT));
+        assert_eq!(*lock_or_recover(&LIFT_VALUE), 420);
+
+        // Simulate profile switch: clear, then reinit with new profile
+        MiscSettingMenu::clear();
+
+        let mut new_pc = PlayerConfig::default();
+        new_pc.mode7.playconfig.enablelift = false;
+        new_pc.mode7.playconfig.lift = 0.0;
+        new_pc.mode7.playconfig.enablehidden = true;
+        new_pc.mode7.playconfig.hidden = 0.55;
+
+        let new_queue = MainControllerCommandQueue::new();
+        let new_config = Config::default();
+        MiscSettingMenu::set_player_config(new_pc, new_config, new_queue.clone());
+
+        // UI statics should still be cleared until change_play_mode is called
+        assert!(!*lock_or_recover(&ENABLE_LIFT));
+        assert_eq!(*lock_or_recover(&LIFT_VALUE), 0);
+
+        // After mode change, new profile values should be loaded
+        change_play_mode(&Mode::BEAT_7K);
+        assert!(!*lock_or_recover(&ENABLE_LIFT));
+        assert_eq!(*lock_or_recover(&LIFT_VALUE), 0);
+        assert!(*lock_or_recover(&ENABLE_HIDDEN));
+        assert_eq!(*lock_or_recover(&HIDDEN_VALUE), 550);
+
+        // Commands should go to the new queue, not the old one
+        flush_play_config();
+        assert!(queue.is_empty(), "old queue should receive no commands");
+        assert!(
+            !new_queue.is_empty(),
+            "new queue should receive the flush command"
+        );
 
         reset_statics();
     }
