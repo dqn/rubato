@@ -89,8 +89,10 @@ fn main() -> Result<()> {
     };
 
     // Java: if (Files.exists(Config.configpath) && (bmsPath != null || auto != null))
-    let config_exists =
-        PathBuf::from("config_sys.json").exists() || PathBuf::from("config.json").exists();
+    let config_exists = {
+        let cwd = std::env::current_dir().unwrap_or_default();
+        rubato_types::config::resolve_config_dir(&cwd).is_some()
+    };
 
     if config_exists && (args.bms_path.is_some() || player_mode.is_some()) {
         play(args.bms_path, player_mode)?;

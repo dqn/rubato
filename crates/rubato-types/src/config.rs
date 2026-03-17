@@ -753,8 +753,10 @@ fn write_backup_config_file(configpath: &Path) {
     }
 }
 
-fn resolve_config_dir(start_dir: &Path) -> Option<PathBuf> {
-    let start_dir = start_dir.canonicalize().unwrap_or_else(|_| start_dir.to_path_buf());
+pub fn resolve_config_dir(start_dir: &Path) -> Option<PathBuf> {
+    let start_dir = start_dir
+        .canonicalize()
+        .unwrap_or_else(|_| start_dir.to_path_buf());
 
     for dir in start_dir.ancestors() {
         if dir.join("config_sys.json").exists() || dir.join("config.json").exists() {

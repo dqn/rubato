@@ -123,8 +123,10 @@ impl MainLoader {
             *bp = Some(p.clone());
         }
 
-        let config_exists =
-            PathBuf::from("config_sys.json").exists() || PathBuf::from("config.json").exists();
+        let config_exists = {
+            let cwd = std::env::current_dir().unwrap_or_default();
+            rubato_types::config::resolve_config_dir(&cwd).is_some()
+        };
         let has_bms_path = bms_path.is_some();
         if config_exists && (has_bms_path || auto.is_some()) {
             let _main =
