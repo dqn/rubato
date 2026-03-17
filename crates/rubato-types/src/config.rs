@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::audio_config::AudioConfig;
 use crate::player_config::PlayerConfig;
@@ -632,11 +632,15 @@ impl Config {
     }
 
     pub fn read() -> anyhow::Result<Config> {
-        Self::read_from(Path::new("."))
+        let current_dir = std::env::current_dir()?;
+        let resolved_dir = resolve_config_dir(&current_dir).unwrap_or(current_dir);
+        Self::read_from(&resolved_dir)
     }
 
     pub fn write(config: &Config) -> anyhow::Result<()> {
-        Self::write_to(config, Path::new("."))
+        let current_dir = std::env::current_dir()?;
+        let resolved_dir = resolve_config_dir(&current_dir).unwrap_or(current_dir);
+        Self::write_to(config, &resolved_dir)
     }
 }
 
@@ -747,6 +751,18 @@ fn write_backup_config_file(configpath: &Path) {
         Ok(_) => log::info!("Backup config written to {:?}", backup_path),
         Err(e) => log::error!("Failed to write backup config file: {}", e),
     }
+}
+
+fn resolve_config_dir(start_dir: &Path) -> Option<PathBuf> {
+    let start_dir = start_dir.canonicalize().unwrap_or_else(|_| start_dir.to_path_buf());
+
+    for dir in start_dir.ancestors() {
+        if dir.join("config_sys.json").exists() || dir.join("config.json").exists() {
+            return Some(dir.to_path_buf());
+        }
+    }
+
+    None
 }
 #[cfg(test)]
 mod tests {

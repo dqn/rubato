@@ -4,10 +4,41 @@
 // fallback behavior, corrupt-file recovery, and validation side effects.
 
 use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 use rubato_types::config::{Config, PLAYERPATH_DEFAULT, SONGPATH_DEFAULT};
 use rubato_types::validatable::Validatable;
 use tempfile::TempDir;
+
+fn current_dir_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+fn lock_current_dir() -> std::sync::MutexGuard<'static, ()> {
+    current_dir_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+struct CurrentDirGuard {
+    original: PathBuf,
+}
+
+impl CurrentDirGuard {
+    fn set(dir: &Path) -> Self {
+        let original = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir).unwrap();
+        Self { original }
+    }
+}
+
+impl Drop for CurrentDirGuard {
+    fn drop(&mut self) {
+        std::env::set_current_dir(&self.original).unwrap();
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Round-trip
@@ -31,6 +62,66 @@ fn write_then_read_roundtrip() {
     assert_eq!(loaded.display.max_frame_per_second, 120);
     assert_eq!(loaded.display.window_width, 1920);
     assert_eq!(loaded.display.window_height, 1080);
+}
+
+#[test]
+fn read_resolves_config_from_parent_directory() {
+    let dir = TempDir::new().unwrap();
+    let root = dir.path();
+    let child = root.join("nested/workdir");
+    fs::create_dir_all(&child).unwrap();
+
+    let mut config = Config::default();
+    config.display.max_frame_per_second = 144;
+    config.paths.playerpath = root.join("player").to_string_lossy().to_string();
+    let audio = config.audio.get_or_insert_with(Default::default);
+    audio.systemvolume = 0.2;
+    audio.keyvolume = 0.2;
+    audio.bgvolume = 0.2;
+    Config::write_to(&config, root).unwrap();
+
+    let _lock = lock_current_dir();
+    let _cwd = CurrentDirGuard::set(&child);
+    let loaded = Config::read().unwrap();
+
+    assert_eq!(loaded.display.max_frame_per_second, 144);
+    let audio = loaded.audio.as_ref().expect("audio config should exist");
+    assert_eq!(audio.systemvolume, 0.2);
+    assert_eq!(audio.keyvolume, 0.2);
+    assert_eq!(audio.bgvolume, 0.2);
+}
+
+#[test]
+fn write_updates_parent_config_instead_of_creating_child_copy() {
+    let dir = TempDir::new().unwrap();
+    let root = dir.path();
+    let child = root.join("nested/workdir");
+    fs::create_dir_all(&child).unwrap();
+
+    let mut initial = Config::default();
+    initial.paths.playerpath = root.join("player").to_string_lossy().to_string();
+    Config::write_to(&initial, root).unwrap();
+
+    let _lock = lock_current_dir();
+    let _cwd = CurrentDirGuard::set(&child);
+
+    let mut loaded = Config::read().unwrap();
+    let audio = loaded.audio.get_or_insert_with(Default::default);
+    audio.systemvolume = 0.2;
+    audio.keyvolume = 0.2;
+    audio.bgvolume = 0.2;
+    Config::write(&loaded).unwrap();
+
+    assert!(
+        !child.join("config_sys.json").exists(),
+        "write() should keep saving to the resolved parent config, not create a child copy"
+    );
+
+    let saved = Config::read_from(root).unwrap();
+    let audio = saved.audio.as_ref().expect("audio config should exist");
+    assert_eq!(audio.systemvolume, 0.2);
+    assert_eq!(audio.keyvolume, 0.2);
+    assert_eq!(audio.bgvolume, 0.2);
 }
 
 // ---------------------------------------------------------------------------
