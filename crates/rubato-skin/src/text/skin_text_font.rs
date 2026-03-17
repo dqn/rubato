@@ -288,12 +288,12 @@ impl SkinTextFont {
         let x = params.x;
         let y = params.y;
         let region_width = params.region_width;
-        let font = match self.font.as_ref() {
+        let font = match self.font.as_mut() {
             Some(f) => f,
             None => return,
         };
 
-        let (glyphs, _total_width, line_height) = font.layout_glyphs(text);
+        let (glyphs, _total_width, _line_height) = font.layout_glyph_regions(text);
         if glyphs.is_empty() {
             return;
         }
@@ -304,7 +304,7 @@ impl SkinTextFont {
 
         for glyph in &glyphs {
             let gx = x + glyph.x;
-            let gy = y - line_height + glyph.y;
+            let gy = y + glyph.y;
             let gw = glyph.width;
             let gh = glyph.height;
 
@@ -313,11 +313,10 @@ impl SkinTextFont {
                 break;
             }
 
-            let glyph_region = crate::reexports::TextureRegion::new();
             self.text_data.data.draw_image_at_with_color(
                 sprite,
                 &DrawImageAtParams {
-                    image: &glyph_region,
+                    image: &glyph.region,
                     x: gx,
                     y: gy,
                     width: gw,
@@ -371,6 +370,7 @@ impl crate::skin_text::SkinText for SkinTextFont {
 mod tests {
     use super::*;
     use crate::reexports::Rectangle;
+    use std::path::PathBuf;
 
     /// Helper to create a SkinTextFont with direct font injection for testing.
     /// Uses parameter.size as the base font size for scaling calculations.
@@ -378,6 +378,28 @@ mod tests {
         SkinTextFont {
             text_data: SkinTextData::new_with_id(-1),
             font: Some(BitmapFont::new()),
+            layout: Some(GlyphLayout::new()),
+            generator: None,
+            parameter: FreeTypeFontParameter {
+                size: param_size,
+                ..Default::default()
+            },
+            prepared_fonts: None,
+        }
+    }
+
+    fn test_font_path() -> String {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../assets/fonts/NotoSansJP-Regular.ttf")
+            .to_string_lossy()
+            .into_owned()
+    }
+
+    fn make_loaded_font(param_size: i32) -> SkinTextFont {
+        let font_path = test_font_path();
+        SkinTextFont {
+            text_data: SkinTextData::new_with_id(-1),
+            font: Some(BitmapFont::from_file(&font_path, param_size as f32)),
             layout: Some(GlyphLayout::new()),
             generator: None,
             parameter: FreeTypeFontParameter {
@@ -435,6 +457,29 @@ mod tests {
         let mut renderer = SkinObjectRenderer::new();
         stf.draw_with_offset(&mut renderer, 0.0, 0.0);
         assert_eq!(renderer.toast_type(), SkinObjectRenderer::TYPE_LINEAR);
+    }
+
+    #[test]
+    fn test_draw_with_offset_uses_glyph_texture_regions() {
+        let mut stf = make_loaded_font(30);
+        stf.text_data.data.draw = true;
+        stf.text_data.data.region = Rectangle::new(0.0, 0.0, 240.0, 30.0);
+        stf.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        stf.text_data.set_text("Text".to_string());
+
+        let mut renderer = SkinObjectRenderer::new();
+        renderer.sprite.enable_capture();
+        stf.draw_with_offset(&mut renderer, 0.0, 0.0);
+
+        let quads = renderer.sprite.captured_quads();
+        assert!(
+            !quads.is_empty(),
+            "loaded text should emit glyph draw calls"
+        );
+        assert!(
+            quads.iter().all(|quad| quad.texture_key.is_some()),
+            "each glyph quad should be wired to a glyph texture region"
+        );
     }
 
     // ---- Font scale restore test ----

@@ -165,6 +165,11 @@ fn test_load_text() {
     let mut loader = make_loader();
     let skin = make_skin();
     let mut sk = make_sk();
+    sk.font.push(json_skin::Font {
+        id: Some("font1".to_string()),
+        path: Some("VL-Gothic-Regular.ttf".to_string()),
+        ..Default::default()
+    });
     sk.text.push(json_skin::Text {
         id: Some("txt1".to_string()),
         font: Some("font1".to_string()),
@@ -189,7 +194,7 @@ fn test_load_text() {
             wrapping,
             ..
         } => {
-            assert_eq!(*font, Some("font1".to_string()));
+            assert_eq!(*font, Some("/fake/VL-Gothic-Regular.ttf".to_string()));
             assert_eq!(*size, 24);
             assert_eq!(*align, 2);
             assert_eq!(*constant_text, Some("Hello".to_string()));

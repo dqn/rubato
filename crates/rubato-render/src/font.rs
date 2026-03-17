@@ -133,6 +133,16 @@ pub struct PositionedGlyph {
     pub height: f32,
 }
 
+/// Positioned glyph backed by a rasterized atlas region.
+#[derive(Clone, Debug)]
+pub struct PositionedGlyphRegion {
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+    pub region: TextureRegion,
+}
+
 /// Bitmap font for text rendering.
 /// Corresponds to com.badlogic.gdx.graphics.g2d.BitmapFont.
 use std::sync::Arc;
@@ -218,15 +228,6 @@ impl BitmapFont {
     /// positions, then flushes the atlas texture once, then draws all quads.
     /// This produces 1 texture clone per draw() call instead of N (one per new glyph).
     pub fn draw(&mut self, batch: &mut SpriteBatch, text: &str, x: f32, y: f32) {
-        use crate::glyph_atlas::CachedGlyph;
-        use ab_glyph::{Font, ScaleFont};
-
-        let Some(font) = self.font.clone() else {
-            return;
-        };
-        let atlas = self.atlas.get_or_insert_with(GlyphAtlas::new);
-        let scaled = font.as_scaled(ab_glyph::PxScale::from(self.scale));
-
         // Save current batch color
         let saved_color = batch.color();
         batch.set_color(&Color::new(
@@ -236,36 +237,15 @@ impl BitmapFont {
             self.color[3],
         ));
 
-        let ascent = scaled.ascent();
-
-        // Pass 1: rasterize all needed glyphs and collect positions
-        let mut glyphs_to_draw: Vec<(CachedGlyph, f32, f32)> = Vec::new();
-        let mut cursor_x = x;
-        let mut prev_glyph: Option<ab_glyph::GlyphId> = None;
-
-        for ch in text.chars() {
-            let glyph_id = scaled.glyph_id(ch);
-            if let Some(prev) = prev_glyph {
-                cursor_x += scaled.kern(prev, glyph_id);
-            }
-
-            if let Some(cached) = atlas.get_or_rasterize(&font, glyph_id, self.scale) {
-                let gx = cursor_x + cached.bearing_x;
-                let gy = y + ascent + cached.bearing_y;
-                glyphs_to_draw.push((cached, gx, gy));
-            }
-
-            cursor_x += scaled.h_advance(glyph_id);
-            prev_glyph = Some(glyph_id);
-        }
-
-        // Snapshot texture once (1 clone instead of N)
-        atlas.flush_texture_if_dirty();
-
-        // Pass 2: draw all quads (all reference same texture version → 1 DrawBatch)
-        for (cached, gx, gy) in &glyphs_to_draw {
-            let region = atlas.texture_region(cached);
-            batch.draw_region(&region, *gx, *gy, cached.width as f32, cached.height as f32);
+        let (glyphs, _width, _height) = self.layout_glyph_regions(text);
+        for glyph in &glyphs {
+            batch.draw_region(
+                &glyph.region,
+                x + glyph.x,
+                y + glyph.y,
+                glyph.width,
+                glyph.height,
+            );
         }
 
         // Restore batch color
@@ -341,6 +321,58 @@ impl BitmapFont {
         }
 
         (glyphs, cursor_x, height)
+    }
+
+    /// Compute positioned glyphs backed by atlas texture regions.
+    pub fn layout_glyph_regions(&mut self, text: &str) -> (Vec<PositionedGlyphRegion>, f32, f32) {
+        use crate::glyph_atlas::CachedGlyph;
+        use ab_glyph::{Font, ScaleFont};
+
+        let Some(font) = self.font.clone() else {
+            return (vec![], 0.0, 0.0);
+        };
+
+        let atlas = self.atlas.get_or_insert_with(GlyphAtlas::new);
+        let scaled = font.as_scaled(ab_glyph::PxScale::from(self.scale));
+        let ascent = scaled.ascent();
+        let line_height = scaled.height();
+
+        let mut cursor_x = 0.0f32;
+        let mut prev_glyph: Option<ab_glyph::GlyphId> = None;
+        let mut cached_glyphs: Vec<(CachedGlyph, f32, f32)> = Vec::new();
+
+        for ch in text.chars() {
+            let glyph_id = scaled.glyph_id(ch);
+            if let Some(prev) = prev_glyph {
+                cursor_x += scaled.kern(prev, glyph_id);
+            }
+
+            if let Some(cached) = atlas.get_or_rasterize(&font, glyph_id, self.scale) {
+                cached_glyphs.push((
+                    cached,
+                    cursor_x + cached.bearing_x,
+                    ascent + cached.bearing_y,
+                ));
+            }
+
+            cursor_x += scaled.h_advance(glyph_id);
+            prev_glyph = Some(glyph_id);
+        }
+
+        atlas.flush_texture_if_dirty();
+
+        let glyphs = cached_glyphs
+            .into_iter()
+            .map(|(cached, x, y)| PositionedGlyphRegion {
+                x,
+                y,
+                width: cached.width as f32,
+                height: cached.height as f32,
+                region: atlas.texture_region(&cached),
+            })
+            .collect();
+
+        (glyphs, cursor_x, line_height)
     }
 }
 

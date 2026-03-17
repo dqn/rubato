@@ -9,9 +9,7 @@ mod tests;
 use std::path::Path;
 
 use crate::json::json_skin;
-use crate::json::json_skin_loader::{
-    JSONSkinLoader, SkinData, SkinObjectData, SkinObjectType,
-};
+use crate::json::json_skin_loader::{JSONSkinLoader, SkinData, SkinObjectData, SkinObjectType};
 
 use utilities::map_number_offsets;
 pub use utilities::{
@@ -52,7 +50,7 @@ pub fn load_base_skin_object(
         .or_else(|| load_imageset_object(sk, dst_id))
         .or_else(|| load_value_object(sk, dst_id))
         .or_else(|| load_floatvalue_object(sk, dst_id))
-        .or_else(|| load_text_object(sk, dst_id))
+        .or_else(|| load_text_object(sk, dst_id, p))
         .or_else(|| load_slider_object(sk, dst_id))
         .or_else(|| load_graph_object(sk, dst_id))
         .or_else(|| load_gaugegraph_object(sk, dst_id))
@@ -190,15 +188,24 @@ fn load_floatvalue_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObje
     None
 }
 
-fn load_text_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
+fn load_text_object(
+    sk: &json_skin::Skin,
+    dst_id: &str,
+    skin_path: &Path,
+) -> Option<SkinObjectData> {
     for text in &sk.text {
         if dst_id == text.id.as_deref().unwrap_or("") {
             // Resolve font: JSON skins express fonts by ID (e.g. "0"), not path.
-            // Look up the matching sk.font entry and use its path.
+            // Look up the matching sk.font entry and resolve it relative to the skin file.
             let resolved_font = text.font.as_ref().and_then(|font_str| {
                 for f in &sk.font {
                     if f.id.as_deref() == Some(font_str) {
-                        return f.path.clone();
+                        return f.path.as_ref().map(|path| {
+                            skin_path
+                                .parent()
+                                .map(|parent| parent.join(path).to_string_lossy().to_string())
+                                .unwrap_or_else(|| path.clone())
+                        });
                     }
                 }
                 // Not a font ID reference, treat as direct path
