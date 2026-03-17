@@ -535,7 +535,7 @@ mod tests {
     #[test]
     fn test_poll_with_negative_control_key_does_not_panic() {
         let shared_state = SharedKeyState::new();
-        crate::gdx_compat::set_shared_key_state(shared_state);
+        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state);
 
         let mut proc = make_processor();
         // Set control keys to invalid negative values (corrupt config)
@@ -552,7 +552,7 @@ mod tests {
     #[test]
     fn test_poll_with_out_of_range_control_key_does_not_panic() {
         let shared_state = SharedKeyState::new();
-        crate::gdx_compat::set_shared_key_state(shared_state);
+        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state);
 
         let mut proc = make_processor();
         // Set control keys to out-of-bounds values (>= 256)

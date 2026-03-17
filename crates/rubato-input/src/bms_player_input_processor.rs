@@ -1038,9 +1038,9 @@ mod tests {
 
     #[test]
     fn test_poll_with_shared_key_state() {
-        // Set up the shared key state
+        // Set up the shared key state with RAII guard for cleanup
         let shared_state = SharedKeyState::new();
-        crate::gdx_compat::set_shared_key_state(shared_state.clone());
+        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state.clone());
 
         // Use a config with duration=0 to avoid timing issues in tests
         let config = Config::default();
@@ -1237,7 +1237,7 @@ mod tests {
     #[test]
     fn test_poll_clamps_now_to_non_negative_when_starttime_is_future() {
         let shared_state = SharedKeyState::new();
-        crate::gdx_compat::set_shared_key_state(shared_state.clone());
+        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state.clone());
 
         let config = Config::default();
         let player = PlayerConfig::default();

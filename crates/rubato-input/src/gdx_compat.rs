@@ -25,6 +25,33 @@ pub fn get_shared_key_state() -> Option<SharedKeyState> {
     guard.clone()
 }
 
+/// Clear the global shared key state, resetting it to None.
+pub fn clear_shared_key_state() {
+    let mut guard = SHARED_KEY_STATE
+        .lock()
+        .expect("SHARED_KEY_STATE lock poisoned");
+    *guard = None;
+}
+
+/// RAII guard that clears the shared key state on drop.
+/// Use in tests to ensure cleanup even on panic.
+#[cfg(test)]
+pub struct SharedKeyStateGuard;
+
+#[cfg(test)]
+impl Drop for SharedKeyStateGuard {
+    fn drop(&mut self) {
+        clear_shared_key_state();
+    }
+}
+
+/// Set shared key state and return a guard that clears it on drop.
+#[cfg(test)]
+pub fn set_shared_key_state_guarded(state: SharedKeyState) -> SharedKeyStateGuard {
+    set_shared_key_state(state);
+    SharedKeyStateGuard
+}
+
 /// Replacement for Gdx.input — reads from SharedKeyState when available.
 pub struct GdxInput;
 
@@ -118,5 +145,36 @@ impl GdxGraphics {
         } else {
             1080
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_guard_clears_state_on_drop() {
+        // State should be None initially (or from a previous test).
+        // Set it via the guarded helper inside a scope.
+        {
+            let _guard = set_shared_key_state_guarded(SharedKeyState::new());
+            assert!(
+                get_shared_key_state().is_some(),
+                "shared key state should be Some while guard is alive"
+            );
+        }
+        // After the guard is dropped, state must be None.
+        assert!(
+            get_shared_key_state().is_none(),
+            "shared key state should be None after guard is dropped"
+        );
+    }
+
+    #[test]
+    fn test_clear_shared_key_state() {
+        set_shared_key_state(SharedKeyState::new());
+        assert!(get_shared_key_state().is_some());
+        clear_shared_key_state();
+        assert!(get_shared_key_state().is_none());
     }
 }
