@@ -73,7 +73,6 @@ impl StreamCommand for StreamRequestCommand {
 /// UpdateBar inner class translated as a struct
 /// Translates: bms.player.beatoraja.stream.command.StreamRequestCommand.UpdateBar
 pub struct UpdateBar {
-    pub bar: HashBar,
     pub song_datas: Vec<SongData>,
     /// sha256 stack
     pub stack: Vec<String>,
@@ -88,18 +87,12 @@ impl UpdateBar {
             .expect("selector lock poisoned")
             .config
             .max_request_count;
-        let bar = HashBar::new("Stream Request".to_string(), vec![]);
-        // In Java: this.bar.setSortable(false)
-        // HashBar uses DirectoryBarData which has set_sortable
-        let mut update_bar = Self {
-            bar,
+        Self {
             song_datas: Vec::new(),
             stack: Vec::new(),
             selector,
             max_length,
-        };
-        update_bar.bar.directory.sortable = false;
-        update_bar
+        }
     }
 
     fn add_message(&self, sha256: &str) {
@@ -167,7 +160,6 @@ impl UpdateBar {
         }
 
         if !self.song_datas.is_empty() {
-            self.bar.set_elements(self.song_datas.clone());
             let mut selector = self.selector.lock().expect("selector lock poisoned");
             let bar = Bar::Hash(Box::new(HashBar::new(
                 "Stream Request".to_string(),
