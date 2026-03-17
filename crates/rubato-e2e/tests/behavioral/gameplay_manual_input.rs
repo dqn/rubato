@@ -10,6 +10,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
+use rubato_audio::recording_audio_driver::AudioEvent;
 use rubato_e2e::{E2eHarness, MainStateType};
 use rubato_launcher::state_factory::LauncherStateFactory;
 use rubato_types::main_controller_access::MainControllerAccess;
@@ -172,6 +173,43 @@ fn stale_key_state_is_cleared_when_entering_manual_play() {
     assert!(
         !harness.controller().timer().is_timer_on(TimerId::new(101)),
         "stale key state must not leave the first lane beam timer on"
+    );
+}
+
+#[test]
+fn gameplay_key_held_during_ready_is_cleared_at_play_start() {
+    let timer_play = TimerId::new(41);
+
+    let mut harness = harness_with_bms("minimal_7k.bms");
+    harness.change_state(MainStateType::Play);
+
+    harness.inject_key_down(0);
+    harness.clear_audio_events();
+
+    let frames_to_timer_play = harness.render_until(
+        |h| {
+            h.controller().current_state().is_some_and(|state| {
+                state.main_state_data().timer.is_timer_on(timer_play)
+            })
+        },
+        240,
+    );
+    assert!(
+        frames_to_timer_play < 240,
+        "manual play should start TIMER_PLAY within warmup"
+    );
+
+    harness.render_frames(240);
+
+    let play_note_events: Vec<AudioEvent> = harness
+        .audio_events()
+        .into_iter()
+        .filter(|event| matches!(event, AudioEvent::PlayNote { .. }))
+        .collect();
+    assert!(
+        play_note_events.is_empty(),
+        "held Ready input must not auto-play note sounds after play start: {:?}",
+        play_note_events
     );
 }
 

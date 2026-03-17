@@ -230,12 +230,8 @@ impl BMSPlayerInputProcessor {
     pub fn set_start_time(&mut self, starttime: i64) {
         self.starttime = starttime;
         if starttime != 0 {
-            self.reset_all_key_changed_time();
+            self.clear_live_game_input_state();
             self.keylog.clear();
-            self.kbinput.clear();
-            for bm in self.bminput.iter_mut() {
-                bm.clear();
-            }
         }
         self.midiinput.starttime = starttime;
     }
@@ -969,7 +965,12 @@ mod tests {
         let mut proc = make_input_processor();
         proc.set_key_state(0, true, 1000);
         proc.set_start_time(5000);
-        // After setStartTime(nonzero), times should be reset
+        // After setStartTime(nonzero), both pressed state and change times
+        // must be reset so Ready/Decide input cannot leak into active play.
+        assert!(
+            !proc.key_state(0),
+            "set_start_time must clear live pressed state for key 0"
+        );
         assert_eq!(proc.key_changed_time(0), i64::MIN);
         assert_eq!(proc.start_time(), 5000);
     }
