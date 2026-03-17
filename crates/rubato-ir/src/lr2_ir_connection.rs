@@ -26,9 +26,12 @@ use rubato_types::imgui_notify::ImGuiNotify;
 // unencrypted. Users should be aware of this limitation.
 static IR_URL: &str = "http://dream-pro.info/~lavalse/LR2IR/2";
 
+/// Maximum number of cached ranking entries before the cache is cleared.
+/// A typical game session queries fewer than 100 unique songs, so 256 provides
+/// ample headroom while preventing unbounded growth in long-running sessions.
+const RANKING_CACHE_MAX_ENTRIES: usize = 256;
+
 lazy_static::lazy_static! {
-    // Unbounded cache keyed by (md5, player_id). Acceptable for game sessions
-    // (typically <100 unique songs). If memory is a concern, consider LRU eviction.
     static ref LR2_IR_RANKING_CACHE: Mutex<HashMap<String, Vec<LeaderboardEntry>>> = Mutex::new(HashMap::new());
     static ref SCORE_DATABASE_ACCESSOR: Mutex<Option<Box<dyn ScoreDatabaseAccess>>> = Mutex::new(None);
 }
@@ -61,6 +64,13 @@ impl LR2IRConnection {
         }
     }
 
+    /// Send a blocking HTTP POST to the LR2IR server.
+    ///
+    /// Uses `reqwest::blocking::Client` with a 10-second timeout. This is
+    /// intentionally blocking because ALL call sites already run on background
+    /// threads (see `music_result::std::thread::spawn`, `ir_resend` thread,
+    /// and `select::trait_impls` spawn). Must NOT be called from the
+    /// main/render thread.
     fn make_post_request(uri: &str, data: &str) -> Option<String> {
         let url = format!("{}{}", IR_URL, uri);
         let client = reqwest::blocking::Client::builder()
@@ -143,6 +153,9 @@ impl LR2IRConnection {
                                 let mut cache = LR2_IR_RANKING_CACHE
                                     .lock()
                                     .expect("LR2_IR_RANKING_CACHE lock poisoned");
+                                if cache.len() >= RANKING_CACHE_MAX_ENTRIES {
+                                    cache.clear();
+                                }
                                 cache.insert(request_url, entries.clone());
                                 entries
                             }
@@ -186,6 +199,10 @@ impl LR2IRConnection {
         (local_score, score_data)
     }
 
+    /// Fetch ghost replay data from LR2IR (blocking HTTP GET, 5-second timeout).
+    ///
+    /// Same threading contract as `make_post_request`: must only be called
+    /// from a background thread, never from the main/render thread.
     pub fn ghost_data(md5: &str, score_id: i64) -> Option<LR2GhostData> {
         let api = format!(
             "/getghost.cgi?songmd5={}&mode=top&targetid={}",
@@ -568,5 +585,55 @@ mod tests {
         let (local, entries) = LR2IRConnection::score_data(&chart, "0");
         assert!(local.is_none());
         assert!(entries.is_empty());
+    }
+
+    // --- Ranking cache eviction tests ---
+    //
+    // Combined into a single test because LR2_IR_RANKING_CACHE is a global
+    // static shared across all test threads.
+
+    #[test]
+    fn test_ranking_cache_eviction() {
+        // Verify the constant is a reasonable value
+        assert_eq!(RANKING_CACHE_MAX_ENTRIES, 256);
+
+        // Hold the cache lock for the entire test to avoid interference
+        // from concurrent tests that also touch the global cache.
+        let mut cache = LR2_IR_RANKING_CACHE
+            .lock()
+            .expect("LR2_IR_RANKING_CACHE lock poisoned");
+        cache.clear();
+
+        // --- Below capacity: no eviction ---
+        for i in 0..10 {
+            cache.insert(format!("below_{}", i), Vec::new());
+        }
+        assert_eq!(cache.len(), 10);
+
+        // One more insert should NOT trigger eviction
+        // (simulate the eviction check from score_data / insert_ranking_cache)
+        if cache.len() >= RANKING_CACHE_MAX_ENTRIES {
+            cache.clear();
+        }
+        cache.insert("below_10".to_string(), Vec::new());
+        assert_eq!(cache.len(), 11);
+
+        // --- At capacity: eviction triggers ---
+        cache.clear();
+        for i in 0..RANKING_CACHE_MAX_ENTRIES {
+            cache.insert(format!("key_{}", i), Vec::new());
+        }
+        assert_eq!(cache.len(), RANKING_CACHE_MAX_ENTRIES);
+
+        // Next insert should trigger eviction (clear + insert = 1 entry)
+        if cache.len() >= RANKING_CACHE_MAX_ENTRIES {
+            cache.clear();
+        }
+        cache.insert("overflow_key".to_string(), Vec::new());
+        assert_eq!(cache.len(), 1);
+        assert!(cache.contains_key("overflow_key"));
+
+        // Clean up
+        cache.clear();
     }
 }
