@@ -87,7 +87,7 @@ rubato/              # Cargo workspace (15 crates) at repo root
 
 ## Status
 
-**5674 tests.** All 62 phases complete. Zero clippy warnings. Zero regressions.
+**5757 tests.** All 62 phases complete. Zero clippy warnings. Zero regressions.
 
 - **Migration:** 4,279 Java methods resolved (4,049 direct + 230 architectural redesigns). 0 functional gaps. ast-compare retired.
 - **Stubs:** 0 remaining. All 151 resolved (Phase 58-62). All 32 debug stubs resolved (12 implemented, 20 compile-time comments).
@@ -128,6 +128,7 @@ rubato/              # Cargo workspace (15 crates) at repo root
 - **Play config remap must clear live key state:** `set_play_config()` must clear live key/button/MIDI state before installing new mappings, or play starts with stuck beams and false autoplay.
 - **Ranking cache sharing:** IR ranking cache handles must stay shared across `MainController`, proxies, and result wrappers. Fresh per-wrapper caches break select→play/result reuse.
 - **Frozen harness timer sync:** `MainController.timer` and active state's `main_state_data.timer` are separate clocks. Test harnesses must advance both in lockstep.
+- **Mouse context cannot dispatch custom events:** All mouse contexts (`DecideMouseContext`, `ResultMouseContext`, etc.) share the same borrow limitation: the skin is `take()`-ed before the mouse context is created, so `execute_event` cannot call back to `skin.execute_custom_event()`. Custom events (1000-1999) from `DelegateEvent` clickevents are silently dropped during mouse handling. Non-custom events (state changes, timer sets, config cycles) work because they use direct `Event` implementations that call `change_state`/`set_timer_micro`/`player_config_mut` directly, bypassing `execute_event`. Fixing this requires either queued event dispatch or restructuring the `take()`-based borrow pattern.
 
 ### Rendering & Skin Pipeline
 
