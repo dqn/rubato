@@ -94,7 +94,7 @@ fn transparent_processing(
     let ta = rgba_data[br_idx + 3];
 
     // Create new pixmap with transparent color removed
-    let mut new_data = vec![0u8; (w * h * 4) as usize];
+    let mut new_data = vec![0u8; w as usize * h as usize * 4];
     for y in 0..h as usize {
         for x in 0..w as usize {
             let idx = (y * w as usize + x) * 4;
