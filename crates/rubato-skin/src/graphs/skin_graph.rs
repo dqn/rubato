@@ -179,7 +179,7 @@ impl SkinGraph {
             return;
         }
         self.current_value = if let Some(ref r) = self.ref_prop {
-            r.get(state)
+            r.get(state).clamp(0.0, 1.0)
         } else {
             0.0
         };
