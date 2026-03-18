@@ -188,6 +188,8 @@ impl DifficultyTableParser {
                     .to_lowercase()
                     .contains("<meta http-equiv=\"content-type\"")
                 {
+                    // Java parity: fragile double-quote splitting for meta-tag attribute extraction.
+                    // May miss tables with single-quoted or otherwise-formatted HTML meta tags.
                     let parts: Vec<&str> = line.split('"').collect();
                     if parts.len() > 3 {
                         let str_val = parts[3];

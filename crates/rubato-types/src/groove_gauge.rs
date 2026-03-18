@@ -119,6 +119,9 @@ impl Gauge {
     pub fn set_value(&mut self, value: f32) {
         if self.value > 0.0 {
             self.value = value.clamp(self.element.min, self.element.max);
+            // Rust-only extension: death-check after clamp. Java's setValue() only clamps.
+            // Currently moot because all GaugeProperty implementations set death == 0.0 or death == min,
+            // so the clamp already ensures value >= death. Kept as a safety net.
             if self.value < self.element.death {
                 self.value = 0.0;
             }
@@ -191,6 +194,10 @@ impl GrooveGauge {
                 ClearType::clear_type_by_gauge(i as i32).unwrap_or(ClearType::Failed),
             ));
         }
+        debug_assert!(
+            !gauges.is_empty(),
+            "GaugeProperty must provide at least one element"
+        );
         GrooveGauge {
             typeorg: gauge_type,
             gauge_type,

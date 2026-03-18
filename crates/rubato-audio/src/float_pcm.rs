@@ -208,8 +208,8 @@ impl FloatPCM {
         FloatPCM::new(
             channels,
             self.sample_rate,
-            self.start * channels / self.channels,
-            self.len * channels / self.channels,
+            (self.start as i64 * channels as i64 / self.channels as i64) as i32,
+            (self.len as i64 * channels as i64 / self.channels as i64) as i32,
             samples,
         )
     }

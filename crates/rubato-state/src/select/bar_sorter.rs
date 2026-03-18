@@ -338,6 +338,8 @@ impl BarSorter {
             (None, _) => Ordering::Greater,
             (_, None) => Ordering::Less,
             (Some((s1, r1)), Some((s2, r2))) => {
+                // Safe from overflow: clear values are ClearType enum indices (0..=8) in practice.
+                // Imported/manipulated DB values outside this range could theoretically overflow in debug mode.
                 let d1 = s1.clear - r1.clear;
                 let d2 = s2.clear - r2.clear;
                 d1.cmp(&d2)

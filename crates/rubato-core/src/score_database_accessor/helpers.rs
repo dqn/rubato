@@ -25,7 +25,14 @@ pub(super) fn row_to_score_data(row: &rusqlite::Row) -> ScoreData {
         maxcombo: row.get("combo").unwrap_or(0),
         minbp: row.get("minbp").unwrap_or(i32::MAX),
         timing_stats: TimingStats {
-            avgjudge: row.get("avgjudge").unwrap_or(i64::MAX),
+            avgjudge: {
+                let raw: i64 = row.get("avgjudge").unwrap_or(i64::MAX);
+                if raw == i32::MAX as i64 {
+                    i64::MAX
+                } else {
+                    raw
+                }
+            },
             ..Default::default()
         },
         playcount: row.get("playcount").unwrap_or(0),

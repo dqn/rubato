@@ -533,7 +533,10 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
         let mut attached_info = false;
 
         let result: anyhow::Result<Vec<SongData>> = (|| {
-            // ATTACH DATABASE doesn't support parameterized paths; escape single quotes
+            // ATTACH DATABASE with parameterized binding (e.g., ?1) is supported by SQLite but
+            // not well-tested with rusqlite. Single-quote escaping prevents SQL injection via the
+            // path string. Additional metacharacters (semicolons, newlines) are not exploitable
+            // because ATTACH parses only a single string expression, not multiple statements.
             let score_escaped = score.replace('\'', "''");
             let scorelog_escaped = scorelog.replace('\'', "''");
             conn.execute(
