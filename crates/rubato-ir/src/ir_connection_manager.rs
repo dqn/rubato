@@ -69,6 +69,7 @@ impl IRConnectionManager {
 /// have already been used. New entries are appended to the existing registry.
 ///
 /// Duplicate names are allowed (first match wins in lookups).
+/// No warning is logged for duplicates; current callers never register the same name twice.
 pub fn register_ir_connections(entries: Vec<IRConnectionEntry>) {
     match IR_CONNECTIONS.lock() {
         Ok(mut connections) => {

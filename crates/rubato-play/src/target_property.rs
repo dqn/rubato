@@ -473,6 +473,7 @@ impl InternetRankingTargetProperty {
                             idx
                         }
                         IRTarget::Rank => (value.min(total) - 1).max(0),
+                        // i32 safe: total (note count, max ~10k) * value (max 100) / 100 << i32::MAX.
                         IRTarget::RankRate => ((total as i64 * value as i64 / 100) as i32)
                             .min(total - 1)
                             .max(0),

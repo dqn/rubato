@@ -152,6 +152,8 @@ impl LR2IRConnection {
                             Some(ranking) => {
                                 let entries = ranking.to_rubato_score_data(chart);
                                 let mut cache = lock_or_recover(&LR2_IR_RANKING_CACHE);
+                                // Java parity: full eviction at capacity. Acceptable because
+                                // typical sessions query <100 songs (threshold is 256).
                                 if cache.len() >= RANKING_CACHE_MAX_ENTRIES {
                                     cache.clear();
                                 }

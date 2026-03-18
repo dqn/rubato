@@ -922,6 +922,8 @@ impl RubatoApp {
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
             let _ = tx.send(result);
         });
+        // Accepted single-frame stall: screenshots are user-triggered one-at-a-time operations.
+        // Synchronous poll + recv keeps the implementation simple with negligible UX impact.
         gpu.device.poll(wgpu::Maintain::Wait);
 
         match rx.recv() {

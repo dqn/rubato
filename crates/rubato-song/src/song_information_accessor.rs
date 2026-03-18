@@ -61,6 +61,10 @@ impl SongInformationAccessor {
         })
     }
 
+    /// # Safety contract
+    /// `sql` is injected directly into a WHERE clause. All current callers pass hardcoded
+    /// string literals. A `read_only_authorizer` prevents writes/DDL but does not prevent
+    /// expensive sub-selects. Do not pass user-supplied input without parameterization.
     pub fn informations(&self, sql: &str) -> Vec<SongInformation> {
         let query = format!("SELECT * FROM information WHERE {}", sql);
         // Hold the lock for the entire authorizer lifecycle to prevent
