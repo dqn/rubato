@@ -232,9 +232,14 @@ impl FloatPCM {
                 .max(0);
         }
 
-        let start = ((starttime * self.sample_rate as i64 / 1000000) * self.channels as i64) as i32;
-        let mut length =
-            ((duration * self.sample_rate as i64 / 1000000) * self.channels as i64) as i32;
+        let start_i64 = (starttime * self.sample_rate as i64 / 1000000) * self.channels as i64;
+        let length_i64 = (duration * self.sample_rate as i64 / 1000000) * self.channels as i64;
+        // Guard against i32 overflow for very long audio (>74 min at 192kHz stereo).
+        if start_i64 > i32::MAX as i64 || length_i64 > i32::MAX as i64 {
+            return None;
+        }
+        let start = start_i64 as i32;
+        let mut length = length_i64 as i32;
         // Clamp length so self.start + start + length doesn't exceed sample.len().
         // Malformed PCM data may have start + len > sample.len().
         let max_length = (self.sample.len() as i32) - self.start - start;
@@ -554,6 +559,16 @@ mod tests {
         let pcm = FloatPCM::new(1, 44100, 10, 4, vec![0.5, 0.25]);
         let result = pcm.slice(0, 0);
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn slice_overflow_i32_returns_none() {
+        let pcm = FloatPCM::new(2, 192000, 0, 100, vec![0.0; 100]);
+        let result = pcm.slice(6_000_000_000, 1_000_000);
+        assert!(
+            result.is_none(),
+            "should return None when sample offset overflows i32"
+        );
     }
 }
 
