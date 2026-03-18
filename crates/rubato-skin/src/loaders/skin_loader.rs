@@ -102,6 +102,46 @@ pub fn skin_path_from_player_config(
         .or_else(|| rubato_types::skin_config::SkinConfig::default_for_id(skin_type_id).path)
 }
 
+/// Copies user-configured offset values from PlayerConfig into the Skin's offset map.
+///
+/// Matching is by name: for each entry in `Skin.offset`, we look for a
+/// `PlayerConfig.skin[type_id].properties.offset` entry with the same name
+/// and copy its x/y/w/h/r/a values.
+pub fn apply_player_config_offsets(
+    skin: &mut Skin,
+    player_config: &PlayerConfig,
+    skin_type_id: i32,
+) {
+    let pc_offsets = player_config
+        .skin
+        .get(skin_type_id as usize)
+        .and_then(|sc| sc.as_ref())
+        .and_then(|sc| sc.properties.as_ref())
+        .map(|props| &props.offset);
+
+    let pc_offsets = match pc_offsets {
+        Some(offsets) => offsets,
+        None => return,
+    };
+
+    for cfg_offset in skin.offset_mut().values_mut() {
+        for pc_offset in pc_offsets.iter().flatten() {
+            if let Some(ref pc_name) = pc_offset.name
+                && *pc_name == cfg_offset.name
+            {
+                cfg_offset.x = pc_offset.x as f32;
+                cfg_offset.y = pc_offset.y as f32;
+                cfg_offset.w = pc_offset.w as f32;
+                cfg_offset.h = pc_offset.h as f32;
+                cfg_offset.r = pc_offset.r as f32;
+                cfg_offset.a = pc_offset.a as f32;
+                cfg_offset.enabled = true;
+                break;
+            }
+        }
+    }
+}
+
 /// Loads a skin from config parameters without requiring a MainState reference.
 ///
 /// Resolves the skin path from PlayerConfig (with fallback to SkinConfig default),
@@ -147,7 +187,7 @@ pub fn load_skin_from_config(
     };
     let property = crate::json::json_skin_loader::SkinConfigProperty;
 
-    if skin_path.ends_with(".json") {
+    let mut skin = if skin_path.ends_with(".json") {
         let mut loader = crate::json::json_skin_loader::JSONSkinLoader::with_config(config);
         let header = loader.load_header(&path)?;
         let data = loader.load(&path, &skin_type, &property)?;
@@ -202,7 +242,12 @@ pub fn load_skin_from_config(
         }
 
         skin
-    }
+    }?;
+
+    // Populate skin offset values from PlayerConfig
+    apply_player_config_offsets(&mut skin, player_config, skin_type_id);
+
+    Some(skin)
 }
 
 /// Loads a skin for a stateful caller using an explicit skin path.
@@ -519,5 +564,116 @@ mod tests {
         let filemap = HashMap::new();
         let result = path("other/file.png", &filemap);
         assert_eq!(result, PathBuf::from("other/file.png"));
+    }
+
+    // -- apply_player_config_offsets tests --
+
+    fn make_skin_with_offset(id: i32, name: &str) -> Skin {
+        use crate::skin_config_offset::SkinConfigOffset;
+        use crate::skin_header::SkinHeader;
+
+        let mut header = SkinHeader::new();
+        header.set_skin_type(SkinType::Play7Keys);
+        let mut skin = Skin::new(header);
+        skin.offset.insert(
+            id,
+            SkinConfigOffset {
+                name: name.to_string(),
+                ..Default::default()
+            },
+        );
+        skin
+    }
+
+    #[test]
+    fn apply_player_config_offsets_copies_values_by_name() {
+        use rubato_types::skin_config::{SkinConfig, SkinOffset, SkinProperty};
+
+        let mut skin = make_skin_with_offset(crate::skin_property::OFFSET_ALL, "All offset(%)");
+
+        let mut pc = PlayerConfig::default();
+        // Ensure skin vec is large enough for skin_type_id 0
+        while pc.skin.len() <= 0 {
+            pc.skin.push(None);
+        }
+        pc.skin[0] = Some(SkinConfig {
+            path: Some("test.json".to_string()),
+            properties: Some(SkinProperty {
+                option: vec![],
+                file: vec![],
+                offset: vec![Some(SkinOffset {
+                    name: Some("All offset(%)".to_string()),
+                    x: 5,
+                    y: 10,
+                    w: 20,
+                    h: 15,
+                    r: 0,
+                    a: 0,
+                })],
+            }),
+        });
+
+        apply_player_config_offsets(&mut skin, &pc, 0);
+
+        let cfg = skin
+            .offset()
+            .get(&crate::skin_property::OFFSET_ALL)
+            .unwrap();
+        assert_eq!(cfg.x, 5.0);
+        assert_eq!(cfg.y, 10.0);
+        assert_eq!(cfg.w, 20.0);
+        assert_eq!(cfg.h, 15.0);
+        assert!(cfg.enabled);
+    }
+
+    #[test]
+    fn apply_player_config_offsets_no_match_leaves_defaults() {
+        use rubato_types::skin_config::{SkinConfig, SkinOffset, SkinProperty};
+
+        let mut skin = make_skin_with_offset(crate::skin_property::OFFSET_ALL, "All offset(%)");
+
+        let mut pc = PlayerConfig::default();
+        while pc.skin.len() <= 0 {
+            pc.skin.push(None);
+        }
+        pc.skin[0] = Some(SkinConfig {
+            path: Some("test.json".to_string()),
+            properties: Some(SkinProperty {
+                option: vec![],
+                file: vec![],
+                offset: vec![Some(SkinOffset {
+                    name: Some("Different name".to_string()),
+                    x: 99,
+                    y: 99,
+                    w: 99,
+                    h: 99,
+                    r: 0,
+                    a: 0,
+                })],
+            }),
+        });
+
+        apply_player_config_offsets(&mut skin, &pc, 0);
+
+        let cfg = skin
+            .offset()
+            .get(&crate::skin_property::OFFSET_ALL)
+            .unwrap();
+        assert_eq!(cfg.x, 0.0, "unmatched offset should remain at default");
+        assert_eq!(cfg.y, 0.0);
+    }
+
+    #[test]
+    fn apply_player_config_offsets_no_properties_is_noop() {
+        let mut skin = make_skin_with_offset(crate::skin_property::OFFSET_ALL, "All offset(%)");
+        let pc = PlayerConfig::default();
+
+        apply_player_config_offsets(&mut skin, &pc, 0);
+
+        let cfg = skin
+            .offset()
+            .get(&crate::skin_property::OFFSET_ALL)
+            .unwrap();
+        assert_eq!(cfg.x, 0.0, "no properties should leave offsets unchanged");
     }
 }

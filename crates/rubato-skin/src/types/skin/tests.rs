@@ -344,6 +344,141 @@ fn test_skin_is_send() {
 }
 
 // =========================================================================
+// offset_all() regression tests
+// =========================================================================
+
+fn make_play_skin(skin_type: rubato_types::skin_type::SkinType) -> Skin {
+    let mut header = SkinHeader::new();
+    header.set_skin_type(skin_type);
+    Skin::new(header)
+}
+
+#[test]
+fn test_offset_all_returns_none_for_non_play_skin() {
+    let mut skin = make_play_skin(rubato_types::skin_type::SkinType::MusicSelect);
+    skin.offset.insert(
+        crate::skin_property::OFFSET_ALL,
+        crate::skin_config_offset::SkinConfigOffset {
+            name: "All offset(%)".to_string(),
+            x: 5.0,
+            y: 10.0,
+            w: 20.0,
+            h: 15.0,
+            ..Default::default()
+        },
+    );
+    assert!(
+        skin.offset_all().is_none(),
+        "non-play skin should return None"
+    );
+}
+
+#[test]
+fn test_offset_all_returns_none_for_battle_skin() {
+    let mut skin = make_play_skin(rubato_types::skin_type::SkinType::Play7KeysBattle);
+    skin.offset.insert(
+        crate::skin_property::OFFSET_ALL,
+        crate::skin_config_offset::SkinConfigOffset {
+            name: "All offset(%)".to_string(),
+            x: 5.0,
+            y: 10.0,
+            w: 20.0,
+            h: 15.0,
+            ..Default::default()
+        },
+    );
+    assert!(
+        skin.offset_all().is_none(),
+        "battle skin should return None"
+    );
+}
+
+#[test]
+fn test_offset_all_returns_none_when_all_values_zero() {
+    let mut skin = make_play_skin(rubato_types::skin_type::SkinType::Play7Keys);
+    skin.offset.insert(
+        crate::skin_property::OFFSET_ALL,
+        crate::skin_config_offset::SkinConfigOffset {
+            name: "All offset(%)".to_string(),
+            ..Default::default()
+        },
+    );
+    assert!(
+        skin.offset_all().is_none(),
+        "zero offsets should return None"
+    );
+}
+
+#[test]
+fn test_offset_all_returns_some_for_play_skin_with_nonzero_offset() {
+    let mut skin = make_play_skin(rubato_types::skin_type::SkinType::Play7Keys);
+    skin.offset.insert(
+        crate::skin_property::OFFSET_ALL,
+        crate::skin_config_offset::SkinConfigOffset {
+            name: "All offset(%)".to_string(),
+            x: 5.0,
+            y: 10.0,
+            w: 20.0,
+            h: 15.0,
+            r: 1.0,
+            a: 2.0,
+            enabled: true,
+        },
+    );
+    let result = skin.offset_all();
+    assert!(
+        result.is_some(),
+        "play skin with nonzero offset should return Some"
+    );
+    let oa = result.unwrap();
+    assert_eq!(oa.x, 5.0);
+    assert_eq!(oa.y, 10.0);
+    assert_eq!(oa.w, 20.0);
+    assert_eq!(oa.h, 15.0);
+    assert_eq!(oa.r, 1.0);
+    assert_eq!(oa.a, 2.0);
+}
+
+#[test]
+fn test_offset_all_works_for_all_non_battle_play_types() {
+    let play_types = [
+        rubato_types::skin_type::SkinType::Play5Keys,
+        rubato_types::skin_type::SkinType::Play7Keys,
+        rubato_types::skin_type::SkinType::Play9Keys,
+        rubato_types::skin_type::SkinType::Play10Keys,
+        rubato_types::skin_type::SkinType::Play14Keys,
+        rubato_types::skin_type::SkinType::Play24Keys,
+        rubato_types::skin_type::SkinType::Play24KeysDouble,
+    ];
+    for st in &play_types {
+        let mut skin = make_play_skin(*st);
+        skin.offset.insert(
+            crate::skin_property::OFFSET_ALL,
+            crate::skin_config_offset::SkinConfigOffset {
+                name: "All offset(%)".to_string(),
+                x: 1.0,
+                ..Default::default()
+            },
+        );
+        assert!(
+            skin.offset_all().is_some(),
+            "{:?} should support offset_all",
+            st
+        );
+    }
+}
+
+#[test]
+fn test_offset_all_returns_none_when_offset_not_registered() {
+    // Play skin without OFFSET_ALL in the offset map
+    let skin = make_play_skin(rubato_types::skin_type::SkinType::Play7Keys);
+    assert!(
+        skin.offset_all().is_none(),
+        "skin without OFFSET_ALL entry should return None"
+    );
+}
+
+// =========================================================================
 // Phase 40a: Two-phase prepare/draw via SkinObject enum dispatch
 // =========================================================================
 

@@ -350,9 +350,40 @@ impl Skin {
 
     pub fn draw_all_objects(&mut self, state: &dyn MainState) {
         if self.renderer.is_none() {
-            // Create renderer
-            // In Java, this also sets up transform matrix based on offsetAll
-            self.renderer = Some(SkinObjectRenderer::new());
+            let mut renderer = SkinObjectRenderer::new();
+            // Apply OFFSET_ALL transform matrix (Java: Skin.drawAllObjects)
+            let offset_all = self.offset_all();
+            let transform = if let Some(ref oa) = offset_all {
+                rubato_render::color::TransformComponents {
+                    tx: self.width * oa.x / 100.0,
+                    ty: self.height * oa.y / 100.0,
+                    tz: 0.0,
+                    qx: 0.0,
+                    qy: 0.0,
+                    qz: 0.0,
+                    qw: 0.0,
+                    sx: (oa.w + 100.0) / 100.0,
+                    sy: (oa.h + 100.0) / 100.0,
+                    sz: 1.0,
+                }
+            } else {
+                rubato_render::color::TransformComponents {
+                    tx: 0.0,
+                    ty: 0.0,
+                    tz: 0.0,
+                    qx: 0.0,
+                    qy: 0.0,
+                    qz: 0.0,
+                    qw: 0.0,
+                    sx: 1.0,
+                    sy: 1.0,
+                    sz: 1.0,
+                }
+            };
+            let mut matrix = rubato_render::color::Matrix4::new();
+            matrix.set(&transform);
+            renderer.sprite.set_transform_matrix(&matrix);
+            self.renderer = Some(renderer);
         }
 
         let microtime = state.now_micro_time();
@@ -472,6 +503,10 @@ impl Skin {
         &self.offset
     }
 
+    pub fn offset_mut(&mut self) -> &mut HashMap<i32, SkinConfigOffset> {
+        &mut self.offset
+    }
+
 
     pub fn scale_x(&self) -> f64 {
         self.dw as f64
@@ -481,14 +516,30 @@ impl Skin {
         self.dh as f64
     }
 
-    pub fn offset_all(&self, _state: &dyn MainState) -> Option<SkinOffset> {
-        // In Java, checks if state instanceof BMSPlayer and gets skin type
-        // For now, returns None as we can't do instanceof with trait objects
-        // The actual implementation would check play skin types:
-        // PLAY_5KEYS, PLAY_7KEYS, PLAY_9KEYS, PLAY_10KEYS, PLAY_14KEYS,
-        // PLAY_24KEYS, PLAY_24KEYS_DOUBLE
-        // and return state.getOffsetValue(SkinProperty.OFFSET_ALL)
-        None
+    /// Returns the OFFSET_ALL skin offset for play skins (non-battle).
+    ///
+    /// In Java, this checked `state instanceof BMSPlayer` and the skin type.
+    /// In Rust, we read from `self.offset` which is populated from PlayerConfig
+    /// at load time, and check the skin type from the header.
+    pub fn offset_all(&self) -> Option<SkinOffset> {
+        let skin_type = self.header.skin_type()?;
+        // Only non-battle play skins support OFFSET_ALL (matches Java's switch cases)
+        if !skin_type.is_play() || skin_type.is_battle() {
+            return None;
+        }
+        let cfg = self.offset.get(&crate::skin_property::OFFSET_ALL)?;
+        // Return None if all values are zero (no offset configured)
+        if cfg.x == 0.0 && cfg.y == 0.0 && cfg.w == 0.0 && cfg.h == 0.0 {
+            return None;
+        }
+        Some(SkinOffset {
+            x: cfg.x,
+            y: cfg.y,
+            w: cfg.w,
+            h: cfg.h,
+            r: cfg.r,
+            a: cfg.a,
+        })
     }
 
     pub fn add_custom_event(&mut self, event: CustomEvent) {
