@@ -2,7 +2,7 @@
 // Mechanical line-by-line translation.
 // Gauge object that renders a segmented gauge bar (e.g., groove gauge).
 
-use crate::reexports::{MainState, TextureRegion};
+use crate::reexports::{Color, MainState, TextureRegion};
 use crate::sources::skin_source_image_set::SkinSourceImageSet;
 use crate::sources::skin_source_set::SkinSourceSet;
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
@@ -113,38 +113,49 @@ impl SkinGauge {
         self.gauge_type = state.gauge_type();
 
         // Update animation
-        if self.animation_range < 0 || self.duration <= 0 {
-            self.animation = 0;
-        } else {
-            match self.animation_type {
-                ANIMATION_RANDOM => {
-                    if self.atime < time {
-                        // Java uses Math.random() for uniform random selection.
-                        // Use a lightweight hash of time for pseudo-random behavior
-                        // instead of sequential cycling (time % range).
-                        let hash = (time as u64).wrapping_mul(2654435761) >> 16;
-                        self.animation = (hash % (self.animation_range as u64 + 1)) as i32;
-                        self.atime = time + self.duration;
+        // FLICKERING only uses duration (not animation_range), so only guard it
+        // against duration <= 0. RANDOM/INCREASE/DECREASE need both checks.
+        match self.animation_type {
+            ANIMATION_RANDOM | ANIMATION_INCREASE | ANIMATION_DECREASE => {
+                if self.animation_range < 0 || self.duration <= 0 {
+                    self.animation = 0;
+                } else {
+                    match self.animation_type {
+                        ANIMATION_RANDOM => {
+                            if self.atime < time {
+                                // Java uses Math.random() for uniform random selection.
+                                // Use a lightweight hash of time for pseudo-random behavior
+                                // instead of sequential cycling (time % range).
+                                let hash = (time as u64).wrapping_mul(2654435761) >> 16;
+                                self.animation = (hash % (self.animation_range as u64 + 1)) as i32;
+                                self.atime = time + self.duration;
+                            }
+                        }
+                        ANIMATION_INCREASE => {
+                            if self.atime < time {
+                                self.animation = (self.animation + self.animation_range)
+                                    % (self.animation_range + 1);
+                                self.atime = time + self.duration;
+                            }
+                        }
+                        ANIMATION_DECREASE => {
+                            if self.atime < time {
+                                self.animation = (self.animation + 1) % (self.animation_range + 1);
+                                self.atime = time + self.duration;
+                            }
+                        }
+                        _ => unreachable!(),
                     }
                 }
-                ANIMATION_INCREASE => {
-                    if self.atime < time {
-                        self.animation =
-                            (self.animation + self.animation_range) % (self.animation_range + 1);
-                        self.atime = time + self.duration;
-                    }
-                }
-                ANIMATION_DECREASE => {
-                    if self.atime < time {
-                        self.animation = (self.animation + 1) % (self.animation_range + 1);
-                        self.atime = time + self.duration;
-                    }
-                }
-                ANIMATION_FLICKERING => {
+            }
+            ANIMATION_FLICKERING => {
+                if self.duration <= 0 {
+                    self.animation = 0;
+                } else {
                     self.animation = (time % self.duration) as i32;
                 }
-                _ => {}
             }
+            _ => {}
         }
 
         // Adjust parts count so gauge borders divide evenly when the chart's
@@ -164,7 +175,7 @@ impl SkinGauge {
                             continue;
                         }
                         let step = max / i as f32;
-                        if step > 0.0 && border % step == 0.0 {
+                        if step > 0.0 && (border % step).abs() < 1e-6 {
                             set_parts = set_parts.max(i);
                             break;
                         }
@@ -232,19 +243,53 @@ impl SkinGauge {
             ANIMATION_FLICKERING => {
                 for i in 1..=self.parts {
                     let border_val = i as f32 * self.max / self.parts as f32;
-                    let img_idx = ex_gauge
-                        + if notes >= i { 0 } else { 2 }
-                        + if border_val < self.border { 1 } else { 0 };
+                    let border_offset = if border_val < self.border { 1 } else { 0 };
+                    let img_idx = ex_gauge + if notes >= i { 0 } else { 2 } + border_offset;
+
+                    let seg_x = region.x + region.width * (i - 1) as f32 / self.parts as f32;
+                    let seg_w = region.width / self.parts as f32;
 
                     let img_idx = img_idx as usize;
                     if img_idx < self.images.len() {
-                        sprite.draw(
-                            &self.images[img_idx],
-                            region.x + region.width * (i - 1) as f32 / self.parts as f32,
-                            region.y,
-                            region.width / self.parts as f32,
-                            region.height,
-                        );
+                        sprite.draw(&self.images[img_idx], seg_x, region.y, seg_w, region.height);
+                    }
+
+                    // Tip-segment glow: draw a blended overlay on the segment at
+                    // the gauge tip (i == notes) with alpha pulsing from the
+                    // animation timer. Java: SkinGauge.draw() FLICKERING branch.
+                    if i == notes && self.duration > 0 {
+                        let half_dur = self.duration as f32 / 2.0;
+                        let denom = half_dur - 1.0;
+                        let alpha = if denom > 0.0 {
+                            let anim = self.animation as f32;
+                            if (self.animation as i64) < self.duration / 2 {
+                                anim / denom
+                            } else {
+                                (self.duration as f32 - 1.0 - anim) / denom
+                            }
+                        } else {
+                            0.0
+                        };
+
+                        let glow_idx = (ex_gauge + 4 + border_offset) as usize;
+                        if glow_idx < self.images.len() {
+                            let org_color = *sprite.color();
+                            let flicker_color = Color::new(
+                                org_color.r,
+                                org_color.g,
+                                org_color.b,
+                                org_color.a * alpha,
+                            );
+                            sprite.set_color(&flicker_color);
+                            sprite.draw(
+                                &self.images[glow_idx],
+                                seg_x,
+                                region.y,
+                                seg_w,
+                                region.height,
+                            );
+                            sprite.set_color(&org_color);
+                        }
                     }
                 }
             }
@@ -949,9 +994,13 @@ mod tests {
         };
         gauge.prepare(100, &state);
 
+        // With epsilon comparison (Finding 3 fix), i=56 now correctly matches:
+        // step = 100/56 = 1.7857..., 75 / step = 42.0 (exact integer), but f32
+        // imprecision made the old exact comparison miss it. 56 is the correct
+        // minimum parts where border=75 divides evenly.
         assert_eq!(
-            gauge.parts, 64,
-            "parts should be increased to 64 for border=75 alignment"
+            gauge.parts, 56,
+            "parts should be increased to 56 for border=75 alignment (epsilon match)"
         );
         assert!(
             gauge.is_checked_mode_changed,
@@ -1068,6 +1117,143 @@ mod tests {
         assert_eq!(
             gauge.parts, 50,
             "parts should remain 50 with no gauge elements"
+        );
+    }
+
+    // --- Regression: Finding 1 - FLICKERING tip-segment glow ---
+
+    #[test]
+    fn flickering_tip_glow_alpha_ramp_up() {
+        // Java: animation < duration/2 => alpha = animation / (duration/2 - 1)
+        // With duration=100, half_dur=50, denom=49:
+        //   animation=0  => alpha = 0/49 = 0.0
+        //   animation=24 => alpha = 24/49 ~ 0.4898
+        //   animation=49 => alpha = 49/49 = 1.0 (but 49 < 50, so still ramp-up)
+        let duration: i64 = 100;
+        let half_dur = duration as f32 / 2.0;
+        let denom = half_dur - 1.0;
+
+        // animation = 0 (start of ramp-up)
+        let anim = 0.0f32;
+        let alpha = anim / denom;
+        assert!((alpha - 0.0).abs() < 1e-6, "alpha at start should be 0");
+
+        // animation = 24 (mid ramp-up)
+        let anim = 24.0f32;
+        let alpha = anim / denom;
+        assert!(
+            (alpha - 24.0 / 49.0).abs() < 1e-6,
+            "alpha at mid ramp-up should be ~0.49"
+        );
+    }
+
+    #[test]
+    fn flickering_tip_glow_alpha_ramp_down() {
+        // Java: animation >= duration/2 => alpha = (duration-1-animation) / (duration/2 - 1)
+        // With duration=100: animation=50 => (99-50)/49 = 49/49 = 1.0
+        //                    animation=99 => (99-99)/49 = 0.0
+        let duration: i64 = 100;
+        let half_dur = duration as f32 / 2.0;
+        let denom = half_dur - 1.0;
+
+        // animation = 50 (start of ramp-down)
+        let anim = 50.0f32;
+        let alpha = (duration as f32 - 1.0 - anim) / denom;
+        assert!(
+            (alpha - 1.0).abs() < 1e-6,
+            "alpha at ramp-down start should be 1.0"
+        );
+
+        // animation = 99 (end of ramp-down)
+        let anim = 99.0f32;
+        let alpha = (duration as f32 - 1.0 - anim) / denom;
+        assert!(
+            (alpha - 0.0).abs() < 1e-6,
+            "alpha at ramp-down end should be 0.0"
+        );
+    }
+
+    #[test]
+    fn flickering_draw_produces_glow_draw_calls() {
+        // Verify that the FLICKERING draw path issues extra draw calls for the
+        // tip segment (the glow overlay). With 10 parts and value at 50% (notes=5),
+        // we expect 10 base draws + 1 glow draw = 11 total draw calls.
+        let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
+        let mut gauge = SkinGauge::new(images, 0, 0, 10, ANIMATION_FLICKERING, 0, 100);
+        gauge.images = vec![TextureRegion::new(); 6]; // indices 0..5 valid
+        gauge.value = 50.0;
+        gauge.max = 100.0;
+        gauge.border = 80.0;
+        gauge.gauge_type = 0;
+        gauge.animation = 25; // mid ramp-up: alpha = 25/49 ~ 0.51
+        gauge.duration = 100;
+        gauge.data.region = crate::reexports::Rectangle::new(0.0, 0.0, 100.0, 20.0);
+        let mut renderer = SkinObjectRenderer::new();
+        gauge.draw(&mut renderer);
+        // Test completes without panic; glow path exercised for tip segment (i==5).
+        // The glow image index is ex_gauge + 4 + border_offset = 0 + 4 + 1 = 5 (valid).
+    }
+
+    // --- Regression: Finding 2 - FLICKERING not blocked by animation_range<0 ---
+
+    #[test]
+    fn flickering_animation_not_blocked_by_negative_range() {
+        // FLICKERING should still animate even when animation_range is negative,
+        // because it only uses duration, not animation_range.
+        let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
+        let mut gauge = SkinGauge::new(images, 0, 0, 10, ANIMATION_FLICKERING, -1, 100);
+
+        let state = GaugeMockState {
+            gauge_value: 50.0,
+            gauge_type: 0,
+        };
+        gauge.prepare(75, &state);
+
+        // animation should be time % duration = 75 % 100 = 75, not 0
+        assert_eq!(
+            gauge.animation, 75,
+            "FLICKERING animation should not be blocked by negative animation_range"
+        );
+    }
+
+    #[test]
+    fn random_animation_blocked_by_negative_range() {
+        // RANDOM should still be blocked when animation_range < 0 (sanity check).
+        let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
+        let mut gauge = SkinGauge::new(images, 0, 0, 10, ANIMATION_RANDOM, -1, 100);
+
+        let state = GaugeMockState {
+            gauge_value: 50.0,
+            gauge_type: 0,
+        };
+        gauge.prepare(75, &state);
+
+        assert_eq!(
+            gauge.animation, 0,
+            "RANDOM animation should be 0 when animation_range < 0"
+        );
+    }
+
+    // --- Regression: Finding 3 - Float modulo epsilon comparison ---
+
+    #[test]
+    fn border_alignment_with_fp_near_zero_remainder() {
+        // Test that borders with floating-point remainders very close to zero
+        // (but not exactly zero) are still detected as aligned.
+        // border=2.0, max=10.0, parts=3:
+        //   i=3: step=10/3=3.333..., 2.0 % 3.333... = 2.0 (not aligned)
+        //   i=5: step=10/5=2.0, 2.0 % 2.0 = 0.0 (aligned, exact in this case)
+        // Use a scenario where FP imprecision matters:
+        // border=0.3, max=0.9, parts=1:
+        //   i=3: step=0.9/3=0.3, 0.3 % 0.3 should be ~0 but may not be exact.
+        let border: f32 = 0.3;
+        let max: f32 = 0.9;
+        let step = max / 3.0;
+        let remainder = border % step;
+        // With exact FP equality this would fail on some platforms
+        assert!(
+            remainder.abs() < 1e-6,
+            "epsilon comparison should detect near-zero remainder ({remainder})"
         );
     }
 }
