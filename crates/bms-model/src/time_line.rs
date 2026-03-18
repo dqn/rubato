@@ -203,8 +203,8 @@ impl TimeLine {
         self.section = section;
     }
 
-    pub fn stop(&self) -> i32 {
-        (self.stop / 1000) as i32
+    pub fn stop(&self) -> i64 {
+        self.stop / 1000
     }
 
     pub fn milli_stop(&self) -> i64 {

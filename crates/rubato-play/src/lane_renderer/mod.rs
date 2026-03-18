@@ -47,7 +47,7 @@ pub enum DrawCommand {
     /// Draw BPM change line
     DrawBpmLine { y_offset: i32, bpm: f64 },
     /// Draw stop line
-    DrawStopLine { y_offset: i32, stop_ms: i32 },
+    DrawStopLine { y_offset: i32, stop_ms: i64 },
     /// Draw timeline text (time display in practice mode)
     DrawTimeText { text: String, x: f32, y: f32 },
     /// Draw BPM text

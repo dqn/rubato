@@ -327,6 +327,7 @@ impl BMSRenderer {
             };
 
             // Load as PCM
+            debug_assert!(i <= i32::MAX as usize);
             if let Some(pcm) = PCM::load(&wav_path, self.channels, self.sample_rate) {
                 result.insert(i as i32, pcm);
                 loaded += 1;

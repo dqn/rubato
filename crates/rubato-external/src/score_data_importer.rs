@@ -36,22 +36,22 @@ impl ScoreDataImporter {
                             .unwrap_or(0)
                             .max(0) as usize;
                         let mut sd = ScoreData::default();
-                        sd.judge_counts.epg = Self::clamp_i64_to_i32(
+                        sd.judge_counts.epg = Self::clamp_nonneg_i64_to_i32(
                             score.get("perfect").and_then(|v| v.as_i64()).unwrap_or(0),
                         );
-                        sd.judge_counts.egr = Self::clamp_i64_to_i32(
+                        sd.judge_counts.egr = Self::clamp_nonneg_i64_to_i32(
                             score.get("great").and_then(|v| v.as_i64()).unwrap_or(0),
                         );
-                        sd.judge_counts.egd = Self::clamp_i64_to_i32(
+                        sd.judge_counts.egd = Self::clamp_nonneg_i64_to_i32(
                             score.get("good").and_then(|v| v.as_i64()).unwrap_or(0),
                         );
-                        sd.judge_counts.ebd = Self::clamp_i64_to_i32(
+                        sd.judge_counts.ebd = Self::clamp_nonneg_i64_to_i32(
                             score.get("bad").and_then(|v| v.as_i64()).unwrap_or(0),
                         );
-                        sd.judge_counts.epr = Self::clamp_i64_to_i32(
+                        sd.judge_counts.epr = Self::clamp_nonneg_i64_to_i32(
                             score.get("poor").and_then(|v| v.as_i64()).unwrap_or(0),
                         );
-                        sd.minbp = Self::clamp_i64_to_i32(
+                        sd.minbp = Self::clamp_nonneg_i64_to_i32(
                             score.get("minbp").and_then(|v| v.as_i64()).unwrap_or(0),
                         );
                         sd.clear = if clear_idx < clears.len() {
@@ -59,10 +59,10 @@ impl ScoreDataImporter {
                         } else {
                             0
                         };
-                        sd.playcount = Self::clamp_i64_to_i32(
+                        sd.playcount = Self::clamp_nonneg_i64_to_i32(
                             score.get("playcount").and_then(|v| v.as_i64()).unwrap_or(0),
                         );
-                        sd.clearcount = Self::clamp_i64_to_i32(
+                        sd.clearcount = Self::clamp_nonneg_i64_to_i32(
                             score
                                 .get("clearcount")
                                 .and_then(|v| v.as_i64())
@@ -130,7 +130,7 @@ impl ScoreDataImporter {
     }
 
     /// Clamp an i64 value from external data to i32 range, preventing silent wrapping.
-    fn clamp_i64_to_i32(val: i64) -> i32 {
+    fn clamp_nonneg_i64_to_i32(val: i64) -> i32 {
         val.clamp(0, i32::MAX as i64) as i32
     }
 
@@ -171,11 +171,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn clamp_i64_to_i32_prevents_wrapping_on_overflow() {
+    fn clamp_nonneg_i64_to_i32_prevents_wrapping_on_overflow() {
         // Regression: values exceeding i32::MAX were cast with `as i32`,
         // silently wrapping to negative numbers.
         let overflow_val: i64 = i32::MAX as i64 + 1;
-        let result = ScoreDataImporter::clamp_i64_to_i32(overflow_val);
+        let result = ScoreDataImporter::clamp_nonneg_i64_to_i32(overflow_val);
         assert_eq!(
             result,
             i32::MAX,
@@ -187,24 +187,30 @@ mod tests {
     }
 
     #[test]
-    fn clamp_i64_to_i32_preserves_normal_values() {
-        assert_eq!(ScoreDataImporter::clamp_i64_to_i32(0), 0);
-        assert_eq!(ScoreDataImporter::clamp_i64_to_i32(100), 100);
+    fn clamp_nonneg_i64_to_i32_preserves_normal_values() {
+        assert_eq!(ScoreDataImporter::clamp_nonneg_i64_to_i32(0), 0);
+        assert_eq!(ScoreDataImporter::clamp_nonneg_i64_to_i32(100), 100);
         assert_eq!(
-            ScoreDataImporter::clamp_i64_to_i32(i32::MAX as i64),
+            ScoreDataImporter::clamp_nonneg_i64_to_i32(i32::MAX as i64),
             i32::MAX
         );
     }
 
     #[test]
-    fn clamp_i64_to_i32_clamps_negative_to_zero() {
-        assert_eq!(ScoreDataImporter::clamp_i64_to_i32(-1), 0);
-        assert_eq!(ScoreDataImporter::clamp_i64_to_i32(i64::MIN), 0);
+    fn clamp_nonneg_i64_to_i32_clamps_negative_to_zero() {
+        assert_eq!(ScoreDataImporter::clamp_nonneg_i64_to_i32(-1), 0);
+        assert_eq!(ScoreDataImporter::clamp_nonneg_i64_to_i32(i64::MIN), 0);
     }
 
     #[test]
-    fn clamp_i64_to_i32_clamps_large_positive() {
-        assert_eq!(ScoreDataImporter::clamp_i64_to_i32(i64::MAX), i32::MAX);
-        assert_eq!(ScoreDataImporter::clamp_i64_to_i32(5_000_000_000), i32::MAX);
+    fn clamp_nonneg_i64_to_i32_clamps_large_positive() {
+        assert_eq!(
+            ScoreDataImporter::clamp_nonneg_i64_to_i32(i64::MAX),
+            i32::MAX
+        );
+        assert_eq!(
+            ScoreDataImporter::clamp_nonneg_i64_to_i32(5_000_000_000),
+            i32::MAX
+        );
     }
 }
