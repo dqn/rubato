@@ -238,9 +238,10 @@ fn test_score_data_to_value_default_fields() {
         score_data_to_value(&sd, "minbp"),
         rusqlite::types::Value::Integer(i32::MAX as i64)
     );
+    // score_data_to_value normalizes i64::MAX sentinel to i32::MAX for Java DB compatibility
     assert_eq!(
         score_data_to_value(&sd, "avgjudge"),
-        rusqlite::types::Value::Integer(i64::MAX)
+        rusqlite::types::Value::Integer(i32::MAX as i64)
     );
     assert_eq!(
         score_data_to_value(&sd, "seed"),

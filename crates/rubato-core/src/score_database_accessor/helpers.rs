@@ -94,7 +94,12 @@ pub(super) fn score_data_to_value(score: &ScoreData, col_name: &str) -> rusqlite
         "notes" => rusqlite::types::Value::Integer(score.notes as i64),
         "combo" => rusqlite::types::Value::Integer(score.maxcombo as i64),
         "minbp" => rusqlite::types::Value::Integer(score.minbp as i64),
-        "avgjudge" => rusqlite::types::Value::Integer(score.timing_stats.avgjudge),
+        // Normalize sentinel: write i32::MAX (not i64::MAX) for Java DB compatibility.
+        "avgjudge" => rusqlite::types::Value::Integer(if score.timing_stats.avgjudge == i64::MAX {
+            i32::MAX as i64
+        } else {
+            score.timing_stats.avgjudge
+        }),
         "playcount" => rusqlite::types::Value::Integer(score.playcount as i64),
         "clearcount" => rusqlite::types::Value::Integer(score.clearcount as i64),
         "trophy" => rusqlite::types::Value::Text(score.trophy.clone()),
