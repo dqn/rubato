@@ -107,7 +107,6 @@ impl SkinTextBitmap {
         let scale = self.size / original_size;
 
         // Java: font.getData().setScale(scale)
-        let original_scale = self.font.as_ref().map(BitmapFont::scale).unwrap_or(0.0);
         if let Some(font) = self.font.as_mut() {
             font.scale = original_size * scale;
         }
@@ -189,9 +188,9 @@ impl SkinTextBitmap {
             });
         }
 
-        // Java: font.getData().setScale(1)
+        // Java parity: BitmapFont.getData().setScale(1)
         if let Some(f) = self.font.as_mut() {
-            f.scale = original_scale;
+            f.scale = 1.0;
         }
     }
 
@@ -1060,6 +1059,34 @@ mod tests {
             uppercase_top,
             lowercase_top,
             quads
+        );
+    }
+
+    #[test]
+    fn test_font_scale_restored_to_one_after_draw() {
+        // Java: BitmapFont.getData().setScale(1) after drawing.
+        // Rust must restore font.scale to 1.0 (not original_scale) for Java parity.
+        let mut source = make_source(32.0, SkinTextBitmapSource::TYPE_STANDARD);
+        source.font = Some(BitmapFont::new());
+        let mut font = BitmapFont::new();
+        font.scale = 2.5; // Set non-1.0 scale to detect restoration target
+        let mut bitmap = SkinTextBitmap {
+            text_data: SkinTextData::new_with_id(-1),
+            font: Some(font),
+            source,
+            layout: GlyphLayout::new(),
+            size: 16.0,
+        };
+        bitmap.text_data.data.region = Rectangle::new(0.0, 0.0, 200.0, 30.0);
+
+        let mut renderer = SkinObjectRenderer::new();
+        bitmap.draw_with_offset(&mut renderer, 0.0, 0.0);
+
+        let final_scale = bitmap.font.as_ref().unwrap().scale;
+        assert_eq!(
+            final_scale, 1.0,
+            "font.scale must be restored to 1.0 (Java parity: setScale(1)), got {}",
+            final_scale
         );
     }
 }

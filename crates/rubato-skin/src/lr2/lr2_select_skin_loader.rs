@@ -342,6 +342,9 @@ impl LR2SelectSkinLoaderState {
             }
             "DST_BAR_LEVEL" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
+                if values[1] < 0 || values[1] >= BARLEVEL_COUNT as i32 {
+                    return;
+                }
                 let idx = values[1] as usize;
                 if idx < self.barlevel.len()
                     && let Some(ref mut sn) = self.barlevel[idx]
@@ -765,6 +768,9 @@ impl LR2SelectSkinLoaderState {
             }
             "DST_BAR_TITLE" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
+                if values[1] < 0 || values[1] >= BARTEXT_COUNT as i32 {
+                    return;
+                }
                 let idx = values[1] as usize;
                 if idx < self.bartext.len()
                     && let Some(ref mut text) = self.bartext[idx]
@@ -905,5 +911,37 @@ mod tests {
         let parts = make_str_parts(-1);
         loader.process_select_command("DST_BAR_BODY_ON", &parts);
         assert!(loader.barimageon.iter().all(|v| v.is_none()));
+    }
+
+    #[test]
+    fn dst_bar_level_negative_index_returns_early() {
+        let mut loader = make_loader();
+        let parts = make_str_parts(-1);
+        // Should not panic or modify state
+        loader.process_select_command("DST_BAR_LEVEL", &parts);
+        // No assertion on barlevel mutation needed -- the key check is no panic
+        // and no out-of-bounds access on negative index cast to usize.
+    }
+
+    #[test]
+    fn dst_bar_level_overflow_index_returns_early() {
+        let mut loader = make_loader();
+        let parts = make_str_parts(BARLEVEL_COUNT as i32);
+        loader.process_select_command("DST_BAR_LEVEL", &parts);
+        // Index == count is out of bounds, should return early
+    }
+
+    #[test]
+    fn dst_bar_title_negative_index_returns_early() {
+        let mut loader = make_loader();
+        let parts = make_str_parts(-1);
+        loader.process_select_command("DST_BAR_TITLE", &parts);
+    }
+
+    #[test]
+    fn dst_bar_title_overflow_index_returns_early() {
+        let mut loader = make_loader();
+        let parts = make_str_parts(BARTEXT_COUNT as i32);
+        loader.process_select_command("DST_BAR_TITLE", &parts);
     }
 }

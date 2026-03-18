@@ -620,6 +620,12 @@ fn convert_image(
     if len > 1 {
         // Multiple reference images
         let imgs_per_ref = srcimg.len() / (len as usize);
+        if imgs_per_ref == 0 {
+            // Not enough source images to distribute across refs.
+            // Java behavior for broken skin configs: silently produces empty entries.
+            // Return None to avoid creating a SkinImage with empty sub-arrays.
+            return None;
+        }
         let mut tr: Vec<Vec<TextureRegion>> = Vec::with_capacity(len as usize);
         for i in 0..(len as usize) {
             let mut row: Vec<TextureRegion> = Vec::with_capacity(imgs_per_ref);
@@ -1003,6 +1009,57 @@ mod tests {
         assert!(
             matches!(obj, SkinObject::TextFont(_)),
             ".ttf fonts must remain SkinObject::TextFont"
+        );
+    }
+
+    #[test]
+    fn convert_image_returns_none_when_srcimg_fewer_than_len() {
+        use super::convert_image;
+        use crate::json::json_skin_loader::{SourceData, SourceDataType};
+        use crate::reexports::Texture;
+        use std::collections::HashMap;
+        use std::path::Path;
+
+        // Create a small 2x2 texture that will produce only 4 source images (divx=2, divy=2).
+        // Request len=8, so imgs_per_ref = 4/8 = 0 -> bug triggers empty Vec entries.
+        let tex = Texture {
+            width: 64,
+            height: 64,
+            ..Default::default()
+        };
+        let mut source_map = HashMap::new();
+        source_map.insert(
+            "test_src".to_string(),
+            SourceData {
+                path: "test.png".to_string(),
+                loaded: true,
+                data: Some(SourceDataType::Texture(tex)),
+            },
+        );
+
+        let result = convert_image(
+            &Some("test_src".to_string()),
+            0,
+            0,
+            64,
+            64,
+            2, // divx: produces 2*2=4 source images
+            2, // divy
+            Some(0),
+            0,
+            8,   // len: 8 refs, but only 4 source images -> imgs_per_ref=0
+            100, // ref_id
+            false,
+            &mut source_map,
+            Path::new("/tmp"),
+            false,
+        );
+
+        // With imgs_per_ref == 0, the current code produces empty Vec entries.
+        // The fix should return None instead.
+        assert!(
+            result.is_none(),
+            "convert_image should return None when source images are fewer than len"
         );
     }
 }
