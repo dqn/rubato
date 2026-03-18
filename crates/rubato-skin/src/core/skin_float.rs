@@ -2,7 +2,7 @@ use crate::core::float_formatter::FloatFormatter;
 use crate::property::float_property::{FloatProperty, FloatPropertyEnum};
 use crate::property::float_property_factory;
 use crate::property::timer_property::TimerPropertyEnum;
-use crate::reexports::{MainState, Rectangle, SkinOffset, TextureRegion};
+use crate::reexports::{MainState, SkinOffset, TextureRegion};
 use crate::sources::skin_source_image_set::SkinSourceImageSet;
 use crate::sources::skin_source_set::SkinSourceSet;
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
@@ -42,8 +42,9 @@ pub struct SkinFloat {
     current_images: Vec<Option<TextureRegion>>,
     image_set: Option<Vec<TextureRegion>>,
     shift: f32,
-    pub region: Rectangle,
-    pub draw: bool,
+    // Design note: region and draw live on self.data (SkinObjectData).
+    // SkinFloat previously had redundant fields here; removed to avoid
+    // divergence from data.region / data.draw computed by prepare().
 }
 
 impl SkinFloat {
@@ -79,27 +80,25 @@ impl SkinFloat {
             current_images,
             image_set: None,
             shift: 0.0,
-            region: Rectangle::default(),
-            draw: false,
         }
     }
 
     fn new_with_images_timer_prop(
         image: Vec<Vec<Option<TextureRegion>>>,
         mimage: Option<Vec<Vec<Option<TextureRegion>>>>,
-        _timer: Option<TimerPropertyEnum>,
+        timer: Option<TimerPropertyEnum>,
         cycle: i32,
         display: FloatDisplayConfig,
     ) -> Self {
         let mut s = Self::new_base(display);
-        // Note: SkinSourceImageSet needs timer cloning which isn't trivial with TimerPropertyEnum
-        // For now, create without timer
         s.image = Some(Box::new(SkinSourceImageSet::new_with_timer(
-            image, None, cycle,
+            image,
+            timer.clone(),
+            cycle,
         )));
         if let Some(mimg) = mimage {
             s.mimage = Some(Box::new(SkinSourceImageSet::new_with_timer(
-                mimg, None, cycle,
+                mimg, timer, cycle,
             )));
         }
         s
@@ -254,11 +253,11 @@ impl SkinFloat {
 
     pub fn prepare_with_value(
         &mut self,
-        _time: i64,
-        _state: &dyn MainState,
+        time: i64,
+        state: &dyn MainState,
         value: f32,
-        _offset_x: f32,
-        _offset_y: f32,
+        offset_x: f32,
+        offset_y: f32,
     ) {
         let v = value * self.gain;
         if value == f32::MIN
@@ -270,7 +269,7 @@ impl SkinFloat {
             || self.keta == 0
         {
             self.length = 0.0;
-            self.draw = false;
+            self.data.draw = false;
             return;
         }
         let images = if self.mimage.is_none() || v >= 0.0 {
@@ -280,19 +279,23 @@ impl SkinFloat {
         };
         if images.is_none() {
             self.length = 0.0;
-            self.draw = false;
+            self.data.draw = false;
             return;
         }
-        // super.prepare(time, state, offsetX, offsetY) would be called here
-        self.draw = true;
+        self.data
+            .prepare_with_offset(time, state, offset_x, offset_y);
+        if !self.data.draw {
+            self.length = 0.0;
+            return;
+        }
 
         let image = images
             .as_ref()
             .expect("images is Some")
-            .get_images(_time, _state);
+            .get_images(time, state);
         if image.is_none() {
             self.length = 0.0;
-            self.draw = false;
+            self.data.draw = false;
             return;
         }
         let image = image.expect("image");
@@ -312,14 +315,14 @@ impl SkinFloat {
             }
         }
 
-        self.length = (self.region.width + self.space as f32)
+        self.length = (self.data.region.width + self.space as f32)
             * (self.current_images.len() as i32 - self.shiftbase) as f32;
         self.shift = if self.align == 0 {
             0.0
         } else if self.align == 1 {
-            (self.region.width + self.space as f32) * self.shiftbase as f32
+            (self.data.region.width + self.space as f32) * self.shiftbase as f32
         } else {
-            (self.region.width + self.space as f32) * 0.5 * self.shiftbase as f32
+            (self.data.region.width + self.space as f32) * 0.5 * self.shiftbase as f32
         };
     }
 
@@ -332,34 +335,34 @@ impl SkinFloat {
                     if j < offsets.len() {
                         sprite.draw(
                             img,
-                            self.region.x
-                                + (self.region.width + self.space as f32) * j as f32
+                            self.data.region.x
+                                + (self.data.region.width + self.space as f32) * j as f32
                                 + self.shift
                                 + offsets[j].x,
-                            self.region.y + offsets[j].y,
-                            self.region.width + offsets[j].w,
-                            self.region.height + offsets[j].h,
+                            self.data.region.y + offsets[j].y,
+                            self.data.region.width + offsets[j].w,
+                            self.data.region.height + offsets[j].h,
                         );
                     } else {
                         sprite.draw(
                             img,
-                            self.region.x
-                                + (self.region.width + self.space as f32) * j as f32
+                            self.data.region.x
+                                + (self.data.region.width + self.space as f32) * j as f32
                                 + self.shift,
-                            self.region.y,
-                            self.region.width,
-                            self.region.height,
+                            self.data.region.y,
+                            self.data.region.width,
+                            self.data.region.height,
                         );
                     }
                 } else {
                     sprite.draw(
                         img,
-                        self.region.x
-                            + (self.region.width + self.space as f32) * j as f32
+                        self.data.region.x
+                            + (self.data.region.width + self.space as f32) * j as f32
                             + self.shift,
-                        self.region.y,
-                        self.region.width,
-                        self.region.height,
+                        self.data.region.y,
+                        self.data.region.width,
+                        self.data.region.height,
                     );
                 }
             }
@@ -378,7 +381,7 @@ impl SkinFloat {
         offset_y: f32,
     ) {
         self.prepare_with_value(time, state, value, offset_x, offset_y);
-        if self.draw {
+        if self.data.draw {
             self.draw(sprite);
         }
     }
@@ -396,5 +399,87 @@ impl SkinFloat {
             mimage.dispose();
         }
         self.mimage = None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::skin_object::DestinationParams;
+    use crate::test_helpers::MockMainState;
+
+    fn make_region(w: i32, h: i32) -> TextureRegion {
+        TextureRegion {
+            region_width: w,
+            region_height: h,
+            u: 0.0,
+            v: 0.0,
+            u2: 1.0,
+            v2: 1.0,
+            ..TextureRegion::default()
+        }
+    }
+
+    /// Helper: create digit images for SkinFloat (12 entries: 0-9, space, minus).
+    fn make_float_images() -> Vec<Vec<Option<TextureRegion>>> {
+        let digits: Vec<Option<TextureRegion>> =
+            (0..12).map(|_| Some(make_region(24, 32))).collect();
+        vec![digits]
+    }
+
+    /// Helper: set up a single-destination SkinObjectData so prepare() sets draw=true.
+    fn setup_data(data: &mut crate::skin_object::SkinObjectData, x: f32, y: f32, w: f32, h: f32) {
+        data.set_destination_with_int_timer_ops(
+            &DestinationParams {
+                time: 0,
+                x,
+                y,
+                w,
+                h,
+                acc: 0,
+                a: 255,
+                r: 255,
+                g: 255,
+                b: 255,
+                blend: 0,
+                filter: 0,
+                angle: 0,
+                center: 0,
+                loop_val: 0,
+            },
+            0,
+            &[0],
+        );
+    }
+
+    #[test]
+    fn test_skin_float_prepare_sets_data_draw_true() {
+        // Bug 1: prepare_with_value must call self.data.prepare_with_offset()
+        // so that self.data.draw becomes true and self.data.region is computed.
+        let display = FloatDisplayConfig {
+            iketa: 3,
+            fketa: 2,
+            is_sign_visible: false,
+            align: 0,
+            zeropadding: 0,
+            space: 0,
+            gain: 1.0,
+        };
+        let mut sf = SkinFloat::new_with_images_int_timer(make_float_images(), None, 0, 0, display);
+        setup_data(&mut sf.data, 10.0, 20.0, 24.0, 32.0);
+
+        let state = MockMainState::default();
+        sf.prepare_with_value(0, &state, 3.14, 0.0, 0.0);
+
+        // After prepare, data.draw must be true (SkinObjectData was prepared)
+        assert!(
+            sf.data.draw,
+            "SkinObjectData.draw should be true after prepare_with_value"
+        );
+        // data.region should have been computed from the destination
+        assert!(
+            sf.data.region.width > 0.0,
+            "SkinObjectData.region.width should be set"
+        );
     }
 }

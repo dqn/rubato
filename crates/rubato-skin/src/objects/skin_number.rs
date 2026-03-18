@@ -276,6 +276,10 @@ impl SkinNumber {
             self.value = value;
             self.image_set = Some(image.clone());
             self.shiftbase = 0;
+            debug_assert!(
+                value != i32::MIN,
+                "i32::MIN sentinel should be caught earlier"
+            );
             let mut abs_value = value.unsigned_abs() as i32;
             for j in (0..self.current_images.len()).rev() {
                 if self.mimage.is_some() && self.zeropadding > 0 {

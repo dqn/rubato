@@ -724,6 +724,14 @@ fn convert_number(
         } else {
             11
         };
+        if !images.len().is_multiple_of(d) {
+            log::warn!(
+                "convert_number: image count {} is not divisible by {}, trailing {} images ignored",
+                images.len(),
+                d,
+                images.len() % d
+            );
+        }
         let set_count = images.len() / d;
         let mut nimages: Vec<Vec<TextureRegion>> = Vec::with_capacity(set_count);
         for j in 0..set_count {

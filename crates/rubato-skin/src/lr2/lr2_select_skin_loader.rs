@@ -253,6 +253,13 @@ impl LR2SelectSkinLoaderState {
             }
             "BAR_AVAILABLE" => {
                 let values = lr2_skin_loader::parse_int(str_parts);
+                if values[1] > values[2] {
+                    log::warn!(
+                        "BAR_AVAILABLE: start {} > end {}, no bars will be clickable",
+                        values[1],
+                        values[2]
+                    );
+                }
                 let clickable: Vec<i32> = (values[1]..=values[2]).collect();
                 self.clickable_bar = clickable;
             }
