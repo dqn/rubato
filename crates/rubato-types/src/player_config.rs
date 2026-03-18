@@ -786,11 +786,6 @@ fn load_player_config_from_old_path(path: &Path) -> anyhow::Result<PlayerConfig>
 }
 
 fn resolve_root_player_config_path(playerpath: &str) -> Option<PathBuf> {
-    let direct = PathBuf::from("config_player.json");
-    if direct.exists() {
-        return Some(direct);
-    }
-
     if let Some(parent) = Path::new(playerpath).parent() {
         let from_player_root = parent.join("config_player.json");
         if from_player_root.exists() {

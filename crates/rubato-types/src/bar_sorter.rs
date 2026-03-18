@@ -19,11 +19,13 @@ impl BarSorterEntry {
 impl BarSorter {
     pub const DEFAULT_SORTER: &'static [BarSorterEntry] = &[
         BarSorterEntry { name: "TITLE" },
+        BarSorterEntry { name: "ARTIST" },
+        BarSorterEntry { name: "BPM" },
+        BarSorterEntry { name: "LENGTH" },
+        BarSorterEntry { name: "LEVEL" },
         BarSorterEntry { name: "CLEAR" },
         BarSorterEntry { name: "SCORE" },
         BarSorterEntry { name: "MISSCOUNT" },
-        BarSorterEntry { name: "DATE" },
-        BarSorterEntry { name: "LEVEL" },
     ];
 
     pub const ALL_SORTER: &'static [BarSorterEntry] = &[
@@ -52,7 +54,7 @@ mod tests {
 
     #[test]
     fn test_bar_sorter_default_sorter_count() {
-        assert_eq!(BarSorter::DEFAULT_SORTER.len(), 6);
+        assert_eq!(BarSorter::DEFAULT_SORTER.len(), 8);
     }
 
     #[test]
@@ -60,7 +62,16 @@ mod tests {
         let names: Vec<&str> = BarSorter::DEFAULT_SORTER.iter().map(|e| e.name()).collect();
         assert_eq!(
             names,
-            vec!["TITLE", "CLEAR", "SCORE", "MISSCOUNT", "DATE", "LEVEL"]
+            vec![
+                "TITLE",
+                "ARTIST",
+                "BPM",
+                "LENGTH",
+                "LEVEL",
+                "CLEAR",
+                "SCORE",
+                "MISSCOUNT"
+            ]
         );
     }
 

@@ -213,7 +213,6 @@ pub(super) fn get_boolean_property0(optionid: i32) -> Option<Box<dyn BooleanProp
         | OPTION_DISABLE_SAVE_SCORE
         | OPTION_ENABLE_SAVE_SCORE
         | OPTION_NO_SAVE_CLEAR => Some(Box::new(DelegateBooleanProperty { id: optionid })),
-        // Default: delegate with no-static behavior
-        _ => Some(Box::new(DelegateBooleanProperty { id: optionid })),
+        _ => None,
     }
 }

@@ -96,12 +96,9 @@ fn test_negated_boolean_property() {
 
 #[test]
 fn test_delegate_boolean_property_fallback_id() {
-    let state = BoolMockState::new(std::collections::HashMap::new());
-
-    // ID 999 is not in known_ids, falls through to get_boolean_property0
-    let prop = boolean_property(999).expect("fallback id 999 should exist");
-    assert!(!prop.get(&state));
-    assert_eq!(prop.get_id(), 999);
+    // ID 999 is not in known_ids; Java returns null for unknown IDs,
+    // so skin-local custom option IDs remain in dstop for Skin::prepare() evaluation.
+    assert!(boolean_property(999).is_none());
 }
 
 #[test]

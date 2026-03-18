@@ -300,6 +300,8 @@ impl MainState for BMSPlayer {
         // Java: bga = resource.getBGAManager(); (BMSPlayer.java line 545)
         if let Ok(mut bga) = self.bga.lock() {
             bga.set_model_timelines(&self.model);
+            bga.get_misslayer_duration =
+                self.player_config.display_settings.misslayer_duration as i64;
 
             // Load BGA images and movies from model.bgamap.
             // Java: BMSResource dispatches image/movie loading after setModel().

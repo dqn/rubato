@@ -152,6 +152,10 @@ impl BarRenderer {
                 let sd = &ctx.currentsongs[idx];
                 if let Some(text) = baro.text.get_mut(ba.text).and_then(|o| o.as_mut()) {
                     text.get_text_data_mut().set_text(sd.title().to_string());
+                    // TODO: Java calls prepareFont() for all bar text widgets in a charset-collection
+                    // phase before the draw loop. Newly attached SkinTextFont widgets may not have their
+                    // font state initialized here. Finding 12's bartextupdate=true fix mitigates this for
+                    // initial load, but dynamically attached text objects may still need explicit prepare().
                     text.draw_with_offset(sprite, ba.x, ba.y);
                 }
             }

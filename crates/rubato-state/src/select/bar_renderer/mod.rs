@@ -56,7 +56,7 @@ impl BarRenderer {
             analog_ticks_per_scroll,
             barlength,
             bararea,
-            bartextupdate: false,
+            bartextupdate: true,
             bartextcharset: HashSet::with_capacity(1024),
             time: 0,
         }

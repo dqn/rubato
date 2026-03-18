@@ -89,7 +89,7 @@ fn test_bar_renderer_new() {
     assert_eq!(renderer.duration, 0);
     assert_eq!(renderer.angle, 0);
     assert!(!renderer.keyinput);
-    assert!(!renderer.bartextupdate);
+    assert!(renderer.bartextupdate);
 }
 
 #[test]
@@ -229,7 +229,8 @@ fn test_bar_renderer_prepare_song_bar_missing() {
 #[test]
 fn test_bar_renderer_update_bar_text() {
     let mut renderer = BarRenderer::new(300, 100, 5);
-    assert!(!renderer.bartextupdate);
+    // bartextupdate starts true to ensure fonts are prepared on first render pass
+    assert!(renderer.bartextupdate);
     renderer.update_bar_text();
     assert!(renderer.bartextupdate);
 }

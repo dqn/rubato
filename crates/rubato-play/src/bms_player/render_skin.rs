@@ -150,6 +150,10 @@ impl BMSPlayer {
                 timer: &mut timer,
                 judge: &self.judge,
                 gauge: self.gauge.as_ref(),
+                // TODO: Java reads hi-speed, lane-cover, and hidden toggles from live LaneRenderer state,
+                // not from the saved player config. During play, START/SELECT adjustments mutate LaneRenderer
+                // directly but player_config is only synced on retry/exit. Skin properties 310, 330-342 may
+                // show stale values until architectural alignment with Java's live-state approach.
                 player_config: &self.player_config,
                 option_info: &self.score.playinfo,
                 play_config: &self
