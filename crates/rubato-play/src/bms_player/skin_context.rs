@@ -377,6 +377,65 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
         self.player.gauge.as_ref().map_or(0, |g| g.gauge_type())
     }
 
+    fn is_gauge_max(&self) -> bool {
+        self.player
+            .gauge
+            .as_ref()
+            .is_some_and(|g| g.gauge().is_max())
+    }
+
+    fn gauge_border_max(&self) -> Option<(f32, f32)> {
+        let g = self.player.gauge.as_ref()?;
+        let prop = g.gauge_by_type(g.gauge_type()).property();
+        Some((prop.border, prop.max))
+    }
+
+    fn gauge_min(&self) -> f32 {
+        self.player
+            .gauge
+            .as_ref()
+            .map_or(0.0, |g| g.gauge_by_type(g.gauge_type()).property().min)
+    }
+
+    fn gauge_element_borders(&self) -> Vec<(f32, f32)> {
+        match self.player.gauge.as_ref() {
+            Some(g) => (0..g.gauge_type_length())
+                .map(|i| {
+                    let prop = g.gauge_by_type(i as i32).property();
+                    (prop.border, prop.max)
+                })
+                .collect(),
+            None => Vec::new(),
+        }
+    }
+
+    fn is_mode_changed(&self) -> bool {
+        self.player.orgmode.is_some_and(|org| {
+            self.player
+                .model
+                .mode()
+                .copied()
+                .unwrap_or(bms_model::mode::Mode::BEAT_7K)
+                != org
+        })
+    }
+
+    fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
+        &self.player.main_state_data.score
+    }
+
+    fn lane_shuffle_pattern_value(&self, player: usize, lane: usize) -> i32 {
+        self.player
+            .score
+            .playinfo
+            .lane_shuffle_pattern
+            .as_ref()
+            .and_then(|patterns| patterns.get(player))
+            .and_then(|lanes| lanes.get(lane))
+            .copied()
+            .unwrap_or(-1)
+    }
+
     fn recent_judges(&self) -> &[i64] {
         rubato_types::skin_render_context::SkinRenderContext::recent_judges(self.timer)
     }
@@ -1057,6 +1116,215 @@ mod tests {
             ctx.image_index_value(72),
             0,
             "PlayMouseContext should read BGA mode from config via config_ref()"
+        );
+    }
+
+    // ============================================================
+    // PlayMouseContext missing delegation regression tests
+    // ============================================================
+
+    #[test]
+    fn play_mouse_context_score_data_property_returns_live_data() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        player.main_state_data.score.nowrate = 0.75;
+        player.main_state_data.score.nowscore = 1234;
+        let ctx = PlayMouseContext { timer, player };
+        let prop = ctx.score_data_property();
+        assert!(
+            (prop.now_rate() - 0.75).abs() < f32::EPSILON,
+            "PlayMouseContext::score_data_property() must return live rate"
+        );
+        assert_eq!(
+            prop.now_ex_score(),
+            1234,
+            "PlayMouseContext::score_data_property() must return live exscore"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_gauge_border_max_returns_some_with_gauge() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new({
+            let mut m = bms_model::bms_model::BMSModel::new();
+            m.total = 300.0;
+            m
+        })));
+        player.gauge = Some(rubato_types::groove_gauge::GrooveGauge::new(
+            &player.model,
+            rubato_types::groove_gauge::NORMAL,
+            &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+        ));
+        let ctx = PlayMouseContext { timer, player };
+        let result = ctx.gauge_border_max();
+        assert!(
+            result.is_some(),
+            "PlayMouseContext::gauge_border_max() must return Some when gauge exists"
+        );
+        let (border, max) = result.unwrap();
+        assert!(border > 0.0, "border should be positive for NORMAL gauge");
+        assert!(
+            (max - 100.0).abs() < f32::EPSILON,
+            "max should be 100.0 for NORMAL gauge"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_gauge_border_max_returns_none_without_gauge() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        let ctx = PlayMouseContext { timer, player };
+        assert!(
+            ctx.gauge_border_max().is_none(),
+            "PlayMouseContext::gauge_border_max() must return None without gauge"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_gauge_min_returns_value_with_gauge() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new({
+            let mut m = bms_model::bms_model::BMSModel::new();
+            m.total = 300.0;
+            m
+        })));
+        player.gauge = Some(rubato_types::groove_gauge::GrooveGauge::new(
+            &player.model,
+            rubato_types::groove_gauge::NORMAL,
+            &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+        ));
+        let ctx = PlayMouseContext { timer, player };
+        // NORMAL gauge min is 2.0 (from GaugeProperty::SevenKeys NORMAL)
+        let min = ctx.gauge_min();
+        assert!(
+            min >= 0.0,
+            "PlayMouseContext::gauge_min() must return non-negative value"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_gauge_element_borders_non_empty_with_gauge() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new({
+            let mut m = bms_model::bms_model::BMSModel::new();
+            m.total = 300.0;
+            m
+        })));
+        player.gauge = Some(rubato_types::groove_gauge::GrooveGauge::new(
+            &player.model,
+            rubato_types::groove_gauge::NORMAL,
+            &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+        ));
+        let ctx = PlayMouseContext { timer, player };
+        let borders = ctx.gauge_element_borders();
+        assert!(
+            !borders.is_empty(),
+            "PlayMouseContext::gauge_element_borders() must be non-empty with gauge"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_gauge_element_borders_empty_without_gauge() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        let ctx = PlayMouseContext { timer, player };
+        assert!(
+            ctx.gauge_element_borders().is_empty(),
+            "PlayMouseContext::gauge_element_borders() must be empty without gauge"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_is_gauge_max_delegates() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new({
+            let mut m = bms_model::bms_model::BMSModel::new();
+            m.total = 300.0;
+            m
+        })));
+        player.gauge = Some(rubato_types::groove_gauge::GrooveGauge::new(
+            &player.model,
+            rubato_types::groove_gauge::NORMAL,
+            &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+        ));
+        // Gauge starts at init=20, not at max
+        let ctx = PlayMouseContext { timer, player };
+        assert!(
+            !ctx.is_gauge_max(),
+            "PlayMouseContext::is_gauge_max() must return false when gauge is not at max"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_is_gauge_max_true_when_maxed() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new({
+            let mut m = bms_model::bms_model::BMSModel::new();
+            m.total = 300.0;
+            m
+        })));
+        let mut gauge = rubato_types::groove_gauge::GrooveGauge::new(
+            &player.model,
+            rubato_types::groove_gauge::NORMAL,
+            &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+        );
+        gauge.add_value(200.0);
+        player.gauge = Some(gauge);
+        let ctx = PlayMouseContext { timer, player };
+        assert!(
+            ctx.is_gauge_max(),
+            "PlayMouseContext::is_gauge_max() must return true when gauge is at max"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_is_mode_changed_false_by_default() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        let ctx = PlayMouseContext { timer, player };
+        assert!(
+            !ctx.is_mode_changed(),
+            "PlayMouseContext::is_mode_changed() must be false when orgmode is None"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_lane_shuffle_pattern_delegates() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        player.score.playinfo.lane_shuffle_pattern = Some(vec![vec![2, 0, 1, 3, 4, 5, 6, 7, 8, 9]]);
+        let ctx = PlayMouseContext { timer, player };
+        // ID 450 = 1P lane 0 -> source lane 2
+        assert_eq!(
+            ctx.image_index_value(450),
+            2,
+            "PlayMouseContext must delegate lane_shuffle_pattern_value for image_index 450"
+        );
+        // ID 451 = 1P lane 1 -> source lane 0
+        assert_eq!(ctx.image_index_value(451), 0);
+    }
+
+    #[test]
+    fn play_mouse_context_lane_shuffle_pattern_none_returns_minus_one() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        let ctx = PlayMouseContext { timer, player };
+        assert_eq!(
+            ctx.image_index_value(450),
+            -1,
+            "PlayMouseContext must return -1 for lane shuffle when no pattern"
         );
     }
 }
