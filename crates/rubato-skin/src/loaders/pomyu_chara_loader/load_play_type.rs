@@ -200,9 +200,11 @@ impl<'a> PomyuCharaLoader<'a> {
                             let bytes = d.as_bytes();
                             let mut j = 0;
                             while j + 1 < bytes.len() {
+                                debug_assert!(bytes[j].is_ascii());
+                                debug_assert!(bytes[j + 1].is_ascii());
                                 for _k in 0..increase_rate {
-                                    chars.push(bytes[j] as char);
-                                    chars.push(bytes[j + 1] as char);
+                                    chars.push(char::from(bytes[j]));
+                                    chars.push(char::from(bytes[j + 1]));
                                 }
                                 j += 2;
                             }
