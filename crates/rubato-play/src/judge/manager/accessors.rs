@@ -120,7 +120,6 @@ impl JudgeManager {
         self.recent_judges = vec![i64::MIN; 100];
         self.micro_recent_judges = vec![i64::MIN; 100];
         self.recent_judges_index = 0;
-        self.presses_since_last_autoadjust = 0;
         self.judgetiming_delta = 0;
     }
 

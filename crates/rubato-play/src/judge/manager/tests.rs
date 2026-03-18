@@ -546,17 +546,17 @@ fn make_autoadjust_jm(note_times: &[i64]) -> (JudgeManager, Vec<JudgeNote>, Groo
 }
 
 #[test]
-fn auto_adjust_increments_delta_when_consistently_late() {
-    // 10 notes spaced 200ms apart, player presses 1ms late
-    // mfast = note_time - press_time < 0 (negative = late)
-    // Java: mfast < 0 → judgetiming += 1 (compensate lateness)
-    let times: Vec<i64> = (0..10).map(|i| 200_000 * (i + 1)).collect();
+fn auto_adjust_proportional_delta_late_hits() {
+    // Java formula (per note): delta -= (int)((mfast >= 0 ? mfast+15000 : mfast-15000) / 30000)
+    // 3 notes, player presses each 30ms (30000us) late => mfast = -30000
+    // Per note: biased = -30000 - 15000 = -45000, /30000 = -1, delta -= (-1) => delta += 1
+    // After 3 notes: cumulative delta = +3
+    let times: Vec<i64> = (0..3).map(|i| 200_000 * (i + 1)).collect();
     let (mut jm, notes, mut gauge) = make_autoadjust_jm(&times);
 
     let lp = LaneProperty::new(&Mode::BEAT_7K);
     let key_count = lp.key_lane_assign().len();
 
-    // Prime with -1 update
     jm.update(
         -1,
         &notes,
@@ -565,29 +565,155 @@ fn auto_adjust_increments_delta_when_consistently_late() {
         &mut gauge,
     );
 
-    // Press each note 1ms (1000μs) late => mfast = -(1000) < 0 => delta = +1
-    for i in 0..10 {
+    for i in 0..3 {
         let note_time = 200_000 * (i as i64 + 1);
-        let press_time = note_time + 1000; // 1ms late
+        let press_time = note_time + 30_000; // 30ms late
         let mut keys = vec![false; key_count];
-        keys[0] = true; // Press key 0 (lane 0)
+        keys[0] = true;
         let mut key_times = vec![i64::MIN; key_count];
         key_times[0] = press_time;
         jm.update(press_time, &notes, &keys, &key_times, &mut gauge);
     }
 
-    // After 10 good+ judgments with |mfast| >= 500, delta should be +1
-    // (mfast < 0 means late, Java compensates by increasing judgetiming)
     assert_eq!(
         jm.judgetiming_delta(),
-        1,
-        "late hits should increase judgetiming"
+        3,
+        "3 notes each 30ms late should produce cumulative delta +3"
+    );
+}
+
+#[test]
+fn auto_adjust_proportional_delta_early_hits() {
+    // 3 notes, player presses each 30ms (30000us) early => mfast = +30000
+    // Per note: biased = 30000 + 15000 = 45000, /30000 = 1, delta -= 1
+    // After 3 notes: cumulative delta = -3
+    let times: Vec<i64> = (0..3).map(|i| 200_000 * (i + 1)).collect();
+    let (mut jm, notes, mut gauge) = make_autoadjust_jm(&times);
+
+    let lp = LaneProperty::new(&Mode::BEAT_7K);
+    let key_count = lp.key_lane_assign().len();
+
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    for i in 0..3 {
+        let note_time = 200_000 * (i as i64 + 1);
+        let press_time = note_time - 30_000; // 30ms early
+        let mut keys = vec![false; key_count];
+        keys[0] = true;
+        let mut key_times = vec![i64::MIN; key_count];
+        key_times[0] = press_time;
+        jm.update(press_time, &notes, &keys, &key_times, &mut gauge);
+    }
+
+    assert_eq!(
+        jm.judgetiming_delta(),
+        -3,
+        "3 notes each 30ms early should produce cumulative delta -3"
+    );
+}
+
+#[test]
+fn auto_adjust_larger_offset_produces_larger_delta() {
+    // 1 note, player presses 50ms late => mfast = -50000
+    // biased = -50000 - 15000 = -65000, /30000 = -2, delta -= (-2) => delta = +2
+    let times: Vec<i64> = vec![200_000];
+    let (mut jm, notes, mut gauge) = make_autoadjust_jm(&times);
+
+    let lp = LaneProperty::new(&Mode::BEAT_7K);
+    let key_count = lp.key_lane_assign().len();
+
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    let mut keys = vec![false; key_count];
+    keys[0] = true;
+    let mut key_times = vec![i64::MIN; key_count];
+    key_times[0] = 200_000 + 50_000; // 50ms late
+    jm.update(200_000 + 50_000, &notes, &keys, &key_times, &mut gauge);
+
+    assert_eq!(
+        jm.judgetiming_delta(),
+        2,
+        "50ms late should produce delta +2 (proportional)"
+    );
+}
+
+#[test]
+fn auto_adjust_deadzone_no_delta_within_15ms() {
+    // 1 note, player presses 10ms late => mfast = -10000
+    // biased = -10000 - 15000 = -25000, /30000 = 0, delta = 0 (deadzone)
+    let times: Vec<i64> = vec![200_000];
+    let (mut jm, notes, mut gauge) = make_autoadjust_jm(&times);
+
+    let lp = LaneProperty::new(&Mode::BEAT_7K);
+    let key_count = lp.key_lane_assign().len();
+
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    let mut keys = vec![false; key_count];
+    keys[0] = true;
+    let mut key_times = vec![i64::MIN; key_count];
+    key_times[0] = 200_000 + 10_000; // 10ms late
+    jm.update(200_000 + 10_000, &notes, &keys, &key_times, &mut gauge);
+
+    assert_eq!(
+        jm.judgetiming_delta(),
+        0,
+        "10ms offset is within 15ms deadzone, should produce no delta"
+    );
+}
+
+#[test]
+fn auto_adjust_no_delta_beyond_150ms() {
+    // 1 note, player presses 160ms late => mfast = -160000
+    // |mfast| > 150000 => outside range, no adjustment
+    let times: Vec<i64> = vec![200_000];
+    let (mut jm, notes, mut gauge) = make_autoadjust_jm(&times);
+
+    let lp = LaneProperty::new(&Mode::BEAT_7K);
+    let key_count = lp.key_lane_assign().len();
+
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    let mut keys = vec![false; key_count];
+    keys[0] = true;
+    let mut key_times = vec![i64::MIN; key_count];
+    key_times[0] = 200_000 + 160_000; // 160ms late
+    jm.update(200_000 + 160_000, &notes, &keys, &key_times, &mut gauge);
+
+    assert_eq!(
+        jm.judgetiming_delta(),
+        0,
+        "160ms offset exceeds 150ms range, should produce no delta"
     );
 }
 
 #[test]
 fn auto_adjust_no_delta_when_disabled() {
-    let times: Vec<i64> = (0..10).map(|i| 200_000 * (i + 1)).collect();
+    let times: Vec<i64> = (0..3).map(|i| 200_000 * (i + 1)).collect();
     let model = make_model_with_notes(&times);
     let notes = build_judge_notes(&model);
     let jp = crate::judge_property::lr2();
@@ -621,9 +747,9 @@ fn auto_adjust_no_delta_when_disabled() {
         &mut gauge,
     );
 
-    for i in 0..10 {
+    for i in 0..3 {
         let note_time = 200_000 * (i as i64 + 1);
-        let press_time = note_time + 1000;
+        let press_time = note_time + 30_000; // 30ms late (would produce delta if enabled)
         let mut keys = vec![false; key_count];
         keys[0] = true;
         let mut key_times = vec![i64::MIN; key_count];
@@ -640,7 +766,7 @@ fn auto_adjust_no_delta_when_disabled() {
 
 #[test]
 fn auto_adjust_no_delta_when_not_play_mode() {
-    let times: Vec<i64> = (0..10).map(|i| 200_000 * (i + 1)).collect();
+    let times: Vec<i64> = (0..3).map(|i| 200_000 * (i + 1)).collect();
     let model = make_model_with_notes(&times);
     let notes = build_judge_notes(&model);
     let jp = crate::judge_property::lr2();
@@ -674,9 +800,9 @@ fn auto_adjust_no_delta_when_not_play_mode() {
         &mut gauge,
     );
 
-    for i in 0..10 {
+    for i in 0..3 {
         let note_time = 200_000 * (i as i64 + 1);
-        let press_time = note_time + 1000;
+        let press_time = note_time + 30_000; // 30ms late (would produce delta if play mode)
         let mut keys = vec![false; key_count];
         keys[0] = true;
         let mut key_times = vec![i64::MIN; key_count];
@@ -693,7 +819,7 @@ fn auto_adjust_no_delta_when_not_play_mode() {
 
 #[test]
 fn take_judgetiming_delta_resets_accumulator() {
-    let times: Vec<i64> = (0..10).map(|i| 200_000 * (i + 1)).collect();
+    let times: Vec<i64> = (0..3).map(|i| 200_000 * (i + 1)).collect();
     let (mut jm, notes, mut gauge) = make_autoadjust_jm(&times);
 
     let lp = LaneProperty::new(&Mode::BEAT_7K);
@@ -707,9 +833,9 @@ fn take_judgetiming_delta_resets_accumulator() {
         &mut gauge,
     );
 
-    for i in 0..10 {
+    for i in 0..3 {
         let note_time = 200_000 * (i as i64 + 1);
-        let press_time = note_time + 1000;
+        let press_time = note_time + 30_000; // 30ms late => delta per note = +1
         let mut keys = vec![false; key_count];
         keys[0] = true;
         let mut key_times = vec![i64::MIN; key_count];
@@ -718,7 +844,7 @@ fn take_judgetiming_delta_resets_accumulator() {
     }
 
     let delta = jm.take_judgetiming_delta();
-    assert_ne!(delta, 0);
+    assert_eq!(delta, 3, "3 notes 30ms late should produce delta +3");
     assert_eq!(jm.judgetiming_delta(), 0, "take should reset delta to 0");
 }
 

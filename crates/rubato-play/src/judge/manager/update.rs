@@ -925,15 +925,22 @@ impl JudgeManager {
             self.judged_events.push((judge, mtime));
         }
 
-        // Timing auto-adjust (Java JudgeManager lines 754-768)
-        if self.auto_adjust_enabled && self.is_play_or_practice && judge <= 3 {
-            self.presses_since_last_autoadjust += 1;
-            if self.presses_since_last_autoadjust > 9 {
-                if mfast <= -500 || mfast >= 500 {
-                    self.judgetiming_delta += if mfast < 0 { 1 } else { -1 };
-                }
-                self.presses_since_last_autoadjust = 0;
-            }
+        // Timing auto-adjust (Java JudgeManager lines 717-725)
+        // Java: if (judge <= 2 && mfast >= -150000 && mfast <= 150000) {
+        //     player.setJudgetiming(player.getJudgetiming()
+        //         - (int)((mfast >= 0 ? mfast + 15000 : mfast - 15000) / 30000));
+        // }
+        if self.auto_adjust_enabled
+            && self.is_play_or_practice
+            && judge <= 2
+            && (-150_000..=150_000).contains(&mfast)
+        {
+            let biased = if mfast >= 0 {
+                mfast + 15_000
+            } else {
+                mfast - 15_000
+            };
+            self.judgetiming_delta -= (biased / 30_000) as i32;
         }
     }
 }

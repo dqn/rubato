@@ -272,7 +272,6 @@ pub struct JudgeManager {
     recent_judges: Vec<i64>,
     micro_recent_judges: Vec<i64>,
     recent_judges_index: usize,
-    presses_since_last_autoadjust: i32,
     /// Whether timing auto-adjust is enabled
     auto_adjust_enabled: bool,
     /// Whether play mode is PLAY or PRACTICE
