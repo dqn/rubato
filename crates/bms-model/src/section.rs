@@ -146,6 +146,10 @@ impl Section {
                     let results = process_data_collect(line, base, log, &model.title);
                     for (pos, mut data) in results {
                         if base == 62 {
+                            // NOTE: This base62->base36 re-parsing is lossy for data values >= 1296
+                            // (base-36 two-digit max). This matches beatoraja's behavior. For base-62
+                            // charts, BPM changes should use channel 08 (extended BPM) instead of
+                            // channel 03 (standard BPM).
                             let s = chart_decoder::to_base62(data);
                             let sb = s.as_bytes();
                             data = chart_decoder::parse_int36(sb[0] as char, sb[1] as char);

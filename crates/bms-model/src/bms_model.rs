@@ -144,7 +144,7 @@ impl BMSModel {
     }
 
     pub fn all_times(&self) -> Vec<i64> {
-        self.timelines.iter().map(|tl| tl.time() as i64).collect()
+        self.timelines.iter().map(|tl| tl.milli_time()).collect()
     }
 
     pub fn last_time(&self) -> i32 {
@@ -740,6 +740,23 @@ mod tests {
         assert_eq!(times.len(), 2);
         assert_eq!(times[0], 0);
         assert_eq!(times[1], 5000); // get_time() returns time/1000
+    }
+
+    #[test]
+    fn all_times_beyond_i32_max_millis() {
+        // Songs longer than ~35 minutes have millisecond timestamps > i32::MAX (2_147_483_647).
+        // all_times() must not truncate through i32; it should use milli_time() directly.
+        let mut model = BMSModel::new();
+        // 2_200_000_000 ms = 2_200_000_000_000 us -- beyond i32::MAX milliseconds
+        let time_us: i64 = 2_200_000_000_000;
+        let tl = TimeLine::new(0.0, time_us, 8);
+        model.timelines = vec![tl];
+
+        let times = model.all_times();
+        assert_eq!(
+            times[0], 2_200_000_000,
+            "all_times() should handle timestamps beyond i32::MAX milliseconds without truncation"
+        );
     }
 
     #[test]

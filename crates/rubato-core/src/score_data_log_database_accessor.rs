@@ -103,7 +103,12 @@ fn score_data_to_value(score: &ScoreData, col_name: &str) -> rusqlite::types::Va
         "notes" => rusqlite::types::Value::Integer(score.notes as i64),
         "combo" => rusqlite::types::Value::Integer(score.maxcombo as i64),
         "minbp" => rusqlite::types::Value::Integer(score.minbp as i64),
-        "avgjudge" => rusqlite::types::Value::Integer(score.timing_stats.avgjudge),
+        // Normalize sentinel: write i32::MAX (not i64::MAX) for Java DB compatibility.
+        "avgjudge" => rusqlite::types::Value::Integer(if score.timing_stats.avgjudge == i64::MAX {
+            i32::MAX as i64
+        } else {
+            score.timing_stats.avgjudge
+        }),
         "playcount" => rusqlite::types::Value::Integer(score.playcount as i64),
         "clearcount" => rusqlite::types::Value::Integer(score.clearcount as i64),
         "trophy" => rusqlite::types::Value::Text(score.trophy.clone()),
@@ -115,5 +120,72 @@ fn score_data_to_value(score: &ScoreData, col_name: &str) -> rusqlite::types::Va
         "state" => rusqlite::types::Value::Integer(score.state as i64),
         "scorehash" => rusqlite::types::Value::Text(score.scorehash.clone()),
         _ => rusqlite::types::Value::Null,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rubato_types::score_data::TimingStats;
+
+    #[test]
+    fn score_data_log_avgjudge_sentinel_normalized_to_i32_max() {
+        // When avgjudge is i64::MAX (sentinel), it should be written as i32::MAX
+        // for consistency with the scoredata table and Java compatibility.
+        let mut sd = ScoreData::default();
+        sd.timing_stats.avgjudge = i64::MAX;
+
+        let value = score_data_to_value(&sd, "avgjudge");
+        assert_eq!(
+            value,
+            rusqlite::types::Value::Integer(i32::MAX as i64),
+            "i64::MAX sentinel should be normalized to i32::MAX on write"
+        );
+    }
+
+    #[test]
+    fn score_data_log_avgjudge_normal_value_preserved() {
+        // Normal avgjudge values should be written as-is.
+        let mut sd = ScoreData::default();
+        sd.timing_stats = TimingStats {
+            avgjudge: 42,
+            ..Default::default()
+        };
+
+        let value = score_data_to_value(&sd, "avgjudge");
+        assert_eq!(
+            value,
+            rusqlite::types::Value::Integer(42),
+            "normal avgjudge values should be preserved"
+        );
+    }
+
+    #[test]
+    fn score_data_log_avgjudge_sentinel_roundtrip_via_db() {
+        // Write a score with sentinel avgjudge to DB, read it back,
+        // and verify the sentinel is preserved through the roundtrip.
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("test_scoredatalog.db");
+        let accessor = ScoreDataLogDatabaseAccessor::new(db_path.to_str().unwrap()).unwrap();
+
+        let mut sd = ScoreData::default();
+        sd.sha256 = "test_hash".to_string();
+        sd.timing_stats.avgjudge = i64::MAX;
+        accessor.set_score_data_log(&sd);
+
+        // Verify that the raw DB value is i32::MAX (not i64::MAX)
+        let raw: i64 = accessor
+            .connection()
+            .query_row(
+                "SELECT avgjudge FROM scoredatalog WHERE sha256 = ?1",
+                rusqlite::params!["test_hash"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            raw,
+            i32::MAX as i64,
+            "DB should store i32::MAX, not i64::MAX"
+        );
     }
 }
