@@ -311,7 +311,7 @@ impl BMSPlayer {
         if self.judge.combo() == 0 {
             self.bga
                 .lock()
-                .expect("bga lock poisoned")
+                .unwrap_or_else(|e| e.into_inner())
                 .set_misslayer_tme(time);
         }
 

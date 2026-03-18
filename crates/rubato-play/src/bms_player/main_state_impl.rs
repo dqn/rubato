@@ -109,7 +109,6 @@ impl MainState for BMSPlayer {
     ) {
         if let Some(ref mut lr) = self.lanerender {
             lr.apply_play_config(&play_config);
-            lr.init(&self.model);
         }
         self.player_config.play_config(mode).playconfig = play_config;
     }
@@ -484,7 +483,7 @@ impl MainState for BMSPlayer {
 
                     self.bga
                         .lock()
-                        .expect("bga lock poisoned")
+                        .unwrap_or_else(|e| e.into_inner())
                         .prepare(&() as &dyn std::any::Any);
                     self.state = PlayState::Ready;
                     self.main_state_data.timer.set_timer_on(TIMER_READY);
@@ -673,7 +672,7 @@ impl MainState for BMSPlayer {
 
                     self.bga
                         .lock()
-                        .expect("bga lock poisoned")
+                        .unwrap_or_else(|e| e.into_inner())
                         .prepare(&() as &dyn std::any::Any);
                     self.state = PlayState::Ready;
                     self.main_state_data.timer.set_timer_on(TIMER_READY);

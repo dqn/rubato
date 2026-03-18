@@ -4954,3 +4954,94 @@ fn song_metadata_getter_returns_set_value() {
     assert_eq!(player.song_metadata().artist, "Test Artist");
     assert_eq!(player.song_metadata().genre, "Test Genre");
 }
+
+#[test]
+fn bga_poisoned_lock_does_not_crash_update_judge() {
+    // Bug 1: If the BGA background thread panics while holding the lock, a
+    // poisoned Mutex should NOT crash the render thread. The project convention
+    // is to use `unwrap_or_else(|e| e.into_inner())` (lock_or_recover pattern).
+    //
+    // update_judge() calls bga.lock().expect("bga lock poisoned") when combo == 0.
+    // A fresh JudgeManager starts with combo = 0, so this path is exercised.
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+
+    // Poison the BGA lock by panicking inside a thread that holds it.
+    let bga_clone = Arc::clone(&player.bga);
+    let handle = std::thread::spawn(move || {
+        let _guard = bga_clone.lock().unwrap();
+        panic!("intentional panic to poison BGA lock");
+    });
+    let _ = handle.join(); // join returns Err because of the panic
+
+    // The lock is now poisoned. Calling update_judge should NOT panic.
+    // Before fix: .expect("bga lock poisoned") panics on poisoned lock.
+    // After fix: .unwrap_or_else(|e| e.into_inner()) recovers gracefully.
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        player.update_judge(0, 1000);
+    }));
+    assert!(
+        result.is_ok(),
+        "update_judge should not panic when BGA lock is poisoned"
+    );
+}
+
+#[test]
+fn receive_updated_play_config_preserves_scroll_state() {
+    // Bug 2: receive_updated_play_config() calls lr.init(&self.model) which
+    // destructively resets scroll positions (pos, basebpm, basehispeed) during
+    // active gameplay. Only apply_play_config() should be called mid-game.
+    //
+    // Strategy: set fixhispeed = FIX_HISPEED_STARTBPM so that init() would
+    // recalculate hispeed via set_lanecover -> reset_hispeed. If init() is
+    // NOT called, hispeed stays at the config value.
+    use rubato_types::play_config::{FIX_HISPEED_STARTBPM, PlayConfig};
+
+    let mut model = make_model();
+    model.bpm = 120.0;
+    let mut player = BMSPlayer::new(model);
+    player.lanerender = Some(LaneRenderer::new(&player.model));
+
+    // First, apply a config that sets fixhispeed = STARTBPM and hispeed = 3.0
+    let setup_config = PlayConfig {
+        hispeed: 3.0,
+        duration: 500,
+        fixhispeed: FIX_HISPEED_STARTBPM,
+        ..Default::default()
+    };
+
+    // Apply directly to lanerender first, then call init to establish basebpm
+    if let Some(ref mut lr) = player.lanerender {
+        lr.apply_play_config(&setup_config);
+        lr.init(&player.model);
+        // After init with FIX_HISPEED_STARTBPM:
+        // basebpm = model.bpm = 120.0
+        // set_lanecover(0.0) -> reset_hispeed(120.0) recalculates hispeed
+        // basehispeed = recalculated hispeed
+    }
+    let hispeed_after_init = player.lanerender.as_ref().unwrap().hispeed();
+
+    // Now set hispeed to a specific value that differs from what init() would produce
+    let update_config = PlayConfig {
+        hispeed: 3.0,
+        duration: 500,
+        fixhispeed: FIX_HISPEED_STARTBPM,
+        ..Default::default()
+    };
+
+    let state: &mut dyn MainState = &mut player;
+    state.receive_updated_play_config(Mode::BEAT_7K, update_config);
+
+    let hispeed_after_update = player.lanerender.as_ref().unwrap().hispeed();
+
+    // If init() was called (bug), hispeed would be recalculated by
+    // set_lanecover -> reset_hispeed to the same value as hispeed_after_init.
+    // If init() was NOT called (fix), hispeed stays at the config value 3.0.
+    assert!(
+        (hispeed_after_update - 3.0).abs() < f32::EPSILON,
+        "hispeed should be the config value 3.0 after receive_updated_play_config, \
+         but was {} (init() destructively recalculated it to {})",
+        hispeed_after_update,
+        hispeed_after_init
+    );
+}
