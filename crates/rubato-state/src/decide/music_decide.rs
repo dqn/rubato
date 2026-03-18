@@ -147,6 +147,7 @@ impl rubato_skin::reexports::MainState for DecideRenderContext<'_> {}
 struct DecideMouseContext<'a> {
     timer: &'a mut TimerManager,
     main: &'a mut MainControllerRef,
+    resource: &'a dyn PlayerResourceAccess,
 }
 
 impl rubato_types::timer_access::TimerAccess for DecideMouseContext<'_> {
@@ -180,12 +181,22 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
         Some(rubato_types::main_state_type::MainStateType::Decide)
     }
 
+    fn execute_event(&mut self, _id: i32, _arg1: i32, _arg2: i32) {
+        // Decide screen has no state-specific event handling.
+        // Custom events (1000-1999) require skin access which the mouse context
+        // cannot provide (borrow conflict with skin.mouse_pressed_at).
+    }
+
     fn change_state(&mut self, state: rubato_types::main_state_type::MainStateType) {
         self.main.change_state(state);
     }
 
     fn set_timer_micro(&mut self, timer_id: rubato_types::timer_id::TimerId, micro_time: i64) {
         self.timer.set_micro_timer(timer_id, micro_time);
+    }
+
+    fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
+        Some(self.resource.player_config())
     }
 }
 
@@ -280,6 +291,7 @@ impl MainState for MusicDecide {
             let mut ctx = DecideMouseContext {
                 timer: &mut timer,
                 main: &mut self.main,
+                resource: self.resource.as_ref(),
             };
             skin.mouse_pressed_at(&mut ctx, button, x, y);
         }
@@ -299,6 +311,7 @@ impl MainState for MusicDecide {
             let mut ctx = DecideMouseContext {
                 timer: &mut timer,
                 main: &mut self.main,
+                resource: self.resource.as_ref(),
             };
             skin.mouse_dragged_at(&mut ctx, button, x, y);
         }

@@ -284,4 +284,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultMouseC
     fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
         self.result.resource.player_config_mut()
     }
+
+    fn set_float_value(&mut self, _id: i32, _value: f32) {
+        // Course result screen does not handle writable float properties.
+        // See ResultMouseContext for rationale.
+    }
 }

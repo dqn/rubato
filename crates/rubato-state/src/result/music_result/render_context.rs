@@ -277,4 +277,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
     fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
         self.result.resource.player_config_mut()
     }
+
+    fn set_float_value(&mut self, _id: i32, _value: f32) {
+        // Result screen does not handle writable float properties (volume sliders etc.)
+        // because the mouse context lacks mutable Config access.
+        // Volume slider writes (IDs 17-19) would need config_mut() on MainControllerAccess.
+    }
 }
