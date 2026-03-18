@@ -561,6 +561,9 @@ impl ResourceConfigurationView {
     /// Blocking HTTP work runs on a background thread so the egui event loop
     /// is not frozen.
     pub fn load_all_tables(&mut self) {
+        if self.table_load_handle.is_some() {
+            return;
+        }
         self.commit();
 
         if let Some(ref config) = self.config {
@@ -584,6 +587,9 @@ impl ResourceConfigurationView {
     /// Translates: loadSelectedTables()
     /// Blocking HTTP work runs on a background thread.
     pub fn load_selected_tables(&mut self) {
+        if self.table_load_handle.is_some() {
+            return;
+        }
         self.commit();
 
         if let Some(ref config) = self.config {
@@ -607,6 +613,9 @@ impl ResourceConfigurationView {
     /// Translates: loadNewTables()
     /// Blocking HTTP work runs on a background thread.
     pub fn load_new_tables(&mut self) {
+        if self.table_load_handle.is_some() {
+            return;
+        }
         self.commit();
 
         if let Some(ref config) = self.config {

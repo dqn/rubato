@@ -120,7 +120,7 @@ impl SQLiteSongDatabaseAccessor {
 
         let conn = Connection::open(filepath)?;
         conn.execute_batch(
-            "PRAGMA shared_cache = ON; PRAGMA synchronous = OFF; PRAGMA recursive_triggers = ON;",
+            "PRAGMA journal_mode = WAL; PRAGMA shared_cache = ON; PRAGMA synchronous = NORMAL; PRAGMA recursive_triggers = ON;",
         )?;
         let root = PathBuf::from(".");
 
