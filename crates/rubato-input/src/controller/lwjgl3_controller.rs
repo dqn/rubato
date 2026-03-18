@@ -182,7 +182,7 @@ impl Lwjgl3Controller {
             if (*state - new_val).abs() > f32::EPSILON {
                 // Fire local listeners
                 for listener in &mut self.listeners {
-                    if listener.axis_moved(0, i as i32, new_val) {
+                    if listener.axis_moved(self.index as usize, i as i32, new_val) {
                         break;
                     }
                 }
@@ -222,10 +222,10 @@ impl Lwjgl3Controller {
                 // Fire local listeners
                 for listener in &mut self.listeners {
                     if new_val {
-                        if listener.button_down(0, i as i32) {
+                        if listener.button_down(self.index as usize, i as i32) {
                             break;
                         }
-                    } else if listener.button_up(0, i as i32) {
+                    } else if listener.button_up(self.index as usize, i as i32) {
                         break;
                     }
                 }
@@ -705,6 +705,47 @@ mod tests {
         // Remove out-of-bounds index — no panic
         ctrl.remove_listener(99);
         assert_eq!(ctrl.listeners.len(), 1);
+    }
+
+    #[test]
+    fn local_listener_receives_controller_own_index_for_axis() {
+        // Controller with index=3 should pass 3 to local listeners, not 0
+        let mut ctrl = Lwjgl3Controller::new_with_state(3, 2, 0, "Pad".to_string());
+        let events = Arc::new(Mutex::new(Vec::new()));
+        ctrl.add_listener(Box::new(RecordingListener::new(events.clone(), false)));
+
+        ctrl.process_axis_changes(&[0.5, 0.0]);
+
+        let recorded = events.lock().expect("mutex poisoned");
+        assert_eq!(recorded.len(), 1);
+        assert_eq!(
+            recorded[0],
+            ListenerEvent::AxisMoved {
+                controller: 3,
+                axis: 0,
+                value: 0.5,
+            }
+        );
+    }
+
+    #[test]
+    fn local_listener_receives_controller_own_index_for_buttons() {
+        // Controller with index=5 should pass 5 to local listeners, not 0
+        let mut ctrl = Lwjgl3Controller::new_with_state(5, 0, 2, "Pad".to_string());
+        let events = Arc::new(Mutex::new(Vec::new()));
+        ctrl.add_listener(Box::new(RecordingListener::new(events.clone(), false)));
+
+        ctrl.process_button_changes(&[true, false]);
+
+        let recorded = events.lock().expect("mutex poisoned");
+        assert_eq!(recorded.len(), 1);
+        assert_eq!(
+            recorded[0],
+            ListenerEvent::ButtonDown {
+                controller: 5,
+                button: 0,
+            }
+        );
     }
 
     #[test]
