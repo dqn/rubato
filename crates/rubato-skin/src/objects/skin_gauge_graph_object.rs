@@ -361,7 +361,7 @@ impl SkinGaugeGraphObject {
             shape.set_color(&self.graph_color[self.color]);
             shape.fill();
 
-            let border = self.border;
+            let border = self.border.clamp(0.0, self.max);
             let max = self.max;
             if max > 0.0 {
                 shape.set_color(&self.border_color[self.color]);
@@ -544,5 +544,40 @@ mod tests {
         obj.line_width = 3;
         assert_eq!(obj.delay(), 2000);
         assert_eq!(obj.line_width(), 3);
+    }
+
+    #[test]
+    fn test_border_exceeding_max_is_clamped() {
+        // Regression: when border > max, fill_rectangle received out-of-bounds
+        // y-coordinate (y > height) and negative height. Clamping border to
+        // [0, max] prevents this.
+        use crate::reexports::Rectangle;
+
+        let mut obj = SkinGaugeGraphObject::new_default();
+        // Set border > max to trigger the bug
+        obj.border = 120.0;
+        obj.max = 100.0;
+        obj.current_type = 0;
+        obj.gaugehistory = vec![50.0, 60.0, 70.0];
+        obj.data.region = Rectangle::new(0.0, 0.0, 200.0, 100.0);
+        obj.data.draw = true;
+
+        let mut renderer = SkinObjectRenderer::new();
+        // Before the fix, this would produce a fill_rectangle with y > height
+        // and negative height for the border region. With the fix, border is
+        // clamped to max (100.0), so y = height and rect height = 0.
+        obj.draw(&mut renderer);
+
+        // Verify that draw completed without panic and that shapetex was created
+        assert!(obj.shapetex.is_some());
+        assert!(obj.backtex.is_some());
+
+        // Also verify negative border is clamped to 0
+        obj.dispose();
+        obj.border = -50.0;
+        obj.max = 100.0;
+        obj.draw(&mut renderer);
+        assert!(obj.shapetex.is_some());
+        assert!(obj.backtex.is_some());
     }
 }
