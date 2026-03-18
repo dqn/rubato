@@ -76,10 +76,16 @@ impl LR2IRConnection {
     /// main/render thread.
     fn make_post_request(uri: &str, data: &str) -> Option<String> {
         let url = format!("{}{}", IR_URL, uri);
-        let client = reqwest::blocking::Client::builder()
+        let client = match reqwest::blocking::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
             .build()
-            .expect("failed to build HTTP client");
+        {
+            Ok(c) => c,
+            Err(e) => {
+                log::error!("Failed to build HTTP client: {}", e);
+                return None;
+            }
+        };
         match client
             .post(&url)
             .header("Content-Type", "application/x-www-form-urlencoded")
