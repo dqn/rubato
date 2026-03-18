@@ -30,8 +30,11 @@ impl ScoreDataImporter {
                         .to_string();
                     let song = songdb.song_datas_by_hashes(std::slice::from_ref(&md5));
                     if !song.is_empty() {
-                        let clear_idx =
-                            score.get("clear").and_then(|v| v.as_i64()).unwrap_or(0) as usize;
+                        let clear_idx = score
+                            .get("clear")
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(0)
+                            .max(0) as usize;
                         let mut sd = ScoreData::default();
                         sd.judge_counts.epg =
                             score.get("perfect").and_then(|v| v.as_i64()).unwrap_or(0) as i32;

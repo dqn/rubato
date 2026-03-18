@@ -318,7 +318,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             // Player totals
             30 => self.player_data().map_or(0, |data| data.playcount as i32),
             333 => self.player_data().map_or(0, |data| {
-                (0..=3).map(|judge| data.judge_count(judge)).sum::<i64>() as i32
+                let total: i64 = (0..=3).map(|judge| data.judge_count(judge)).sum();
+                total.min(i32::MAX as i64) as i32
             }),
             // Volume (0-100 scale)
             57 => {
