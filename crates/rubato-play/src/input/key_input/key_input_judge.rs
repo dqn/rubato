@@ -68,7 +68,7 @@ impl JudgeThread {
         keylog: Option<Vec<ReplayKeylogEntry>>,
         milli_margin_time: i64,
     ) -> Self {
-        let last_time = last_timeline_micro_time + TIME_MARGIN as i64 * 1000;
+        let last_time = last_timeline_micro_time + TIME_MARGIN * 1000;
         JudgeThread {
             stop: false,
             micro_margin_time: milli_margin_time * 1000,

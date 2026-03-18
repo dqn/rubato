@@ -360,7 +360,7 @@ impl SongData {
             }
         }
 
-        self.chart.length = model.last_time();
+        self.chart.length = model.last_time().clamp(i32::MIN as i64, i32::MAX as i64) as i32;
         self.chart.notes = model.total_notes();
 
         if let Some(random) = model.random()

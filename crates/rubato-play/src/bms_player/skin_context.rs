@@ -11,7 +11,7 @@ pub(super) struct PlayRenderContext<'a> {
     pub(super) option_info: &'a ReplayData,
     pub(super) play_config: &'a PlayConfig,
     pub(super) target_score: Option<&'a ScoreData>,
-    pub(super) playtime: i32,
+    pub(super) playtime: i64,
     pub(super) total_notes: i32,
     pub(super) play_mode: BMSPlayerMode,
     pub(super) state: PlayState,
@@ -195,9 +195,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             92 => self.main_bpm as i32,
             160 => self.now_bpm as i32,
             // Song duration
-            312 => self.playtime,
-            1163 => self.playtime / 60000,
-            1164 => (self.playtime % 60000) / 1000,
+            312 => self.playtime.clamp(i32::MIN as i64, i32::MAX as i64) as i32,
+            1163 => (self.playtime / 60000) as i32,
+            1164 => ((self.playtime % 60000) / 1000) as i32,
             // Loading progress: 100 if media loaded, else 0
             165 => {
                 if self.media_load_finished {
@@ -500,9 +500,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
                 .lanerender
                 .as_ref()
                 .map_or(0, |lr| lr.now_bpm() as i32),
-            312 => self.player.playtime,
-            1163 => self.player.playtime / 60000,
-            1164 => (self.player.playtime % 60000) / 1000,
+            312 => self.player.playtime.clamp(i32::MIN as i64, i32::MAX as i64) as i32,
+            1163 => (self.player.playtime / 60000) as i32,
+            1164 => ((self.player.playtime % 60000) / 1000) as i32,
             165 => {
                 if self.player.media_load_finished {
                     100
@@ -587,7 +587,7 @@ mod tests {
     use rubato_types::skin_render_context::SkinRenderContext;
 
     /// Build a minimal PlayRenderContext with the given playtime (in ms).
-    fn make_render_ctx(playtime: i32) -> PlayRenderContext<'static> {
+    fn make_render_ctx(playtime: i64) -> PlayRenderContext<'static> {
         // Use Box::leak for test-only references so we get 'static lifetimes.
         let timer = Box::leak(Box::new(TimerManager::new()));
         let judge = Box::leak(Box::new(JudgeManager::default()));

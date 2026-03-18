@@ -64,7 +64,7 @@ pub fn total_notes_full(model: &BMSModel, start: i32, end: i32, note_type: i32, 
     let lntype = model.lntype();
     let mut count = 0;
     for tl in &model.timelines {
-        if tl.time() >= start && tl.time() < end {
+        if tl.time() >= start as i64 && tl.time() < end as i64 {
             match note_type {
                 TOTALNOTES_ALL => {
                     count += tl.total_notes_with_lntype(lntype);
@@ -172,7 +172,7 @@ pub fn max_notes_per_time(model: &BMSModel, range: i32) -> f64 {
     for i in 0..tl.len() {
         let mut notes = 0;
         let mut j = i;
-        while j < tl.len() && tl[j].time() < tl[i].time() + range {
+        while j < tl.len() && tl[j].time() < tl[i].time() + range as i64 {
             notes += tl[j].total_notes_with_lntype(lntype);
             j += 1;
         }

@@ -71,7 +71,7 @@ impl SongInformation {
         // Input comes from a validated BMS model so OOM from adversarial data is not a concern.
         let data_len = (last_time / 1000 + 2) as usize;
         let mut data = vec![[0i32; 7]; data_len];
-        let mut pos: i32 = 0;
+        let mut pos: i64 = 0;
         let total_notes = model.total_notes();
         let model_total = model.total;
         let mut border = if model_total != 0.0 {
@@ -79,7 +79,7 @@ impl SongInformation {
         } else {
             0
         };
-        let mut borderpos: i32 = 0;
+        let mut borderpos: i64 = 0;
 
         let lnmode = model.lnmode;
         let lntype = model.lntype();
@@ -173,9 +173,9 @@ impl SongInformation {
             info.density /= count as f64;
         }
 
-        let d = 5i32.min(data.len() as i32 - borderpos - 1).max(0);
+        let d = 5i64.min(data.len() as i64 - borderpos - 1).max(0);
         info.enddensity = 0.0;
-        for i in borderpos..(data.len() as i32 - d) {
+        for i in borderpos..(data.len() as i64 - d) {
             let mut notes = 0;
             for j in 0..d {
                 let idx = (i + j) as usize;

@@ -30,7 +30,7 @@ impl PatternModifier for PracticeModifier {
         for tl_idx in 0..tl_len {
             let time = timelines[tl_idx].time();
             for i in 0..mode_key {
-                if (time as i64) < self.start || (time as i64) >= self.end {
+                if time < self.start || time >= self.end {
                     move_to_background(timelines, tl_idx, i);
                 }
             }

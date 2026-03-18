@@ -3540,7 +3540,11 @@ fn mouse_context_delegates_integer_value_playtime() {
 
     <BMSPlayer as MainState>::handle_skin_mouse_pressed(&mut player, 0, 10, 10);
 
-    assert_eq!(observed.load(Ordering::SeqCst), expected_playtime);
+    // integer_value returns i32 (clamped from i64 playtime)
+    assert_eq!(
+        observed.load(Ordering::SeqCst),
+        expected_playtime.clamp(i32::MIN as i64, i32::MAX as i64) as i32
+    );
 }
 
 #[test]
@@ -4869,7 +4873,7 @@ fn pad_gaugelog_corrupted_playtime_capped() {
     // Corrupted playtime: i32::MAX (~2.1 billion ms). Without the cap this would
     // try to push ~4.2 million entries per gauge type. With the cap it stops at 100_000.
     let mut gaugelog = vec![Vec::new(); 1];
-    pad_gaugelog_with_zeros(&mut gaugelog, 0, i32::MAX);
+    pad_gaugelog_with_zeros(&mut gaugelog, 0, i32::MAX as i64);
     assert_eq!(
         gaugelog[0].len(),
         100_000,

@@ -10,8 +10,8 @@ pub(crate) struct AlgorithmModifyParams<'a> {
     pub _keys: &'a [i32],
     pub activeln: &'a [i32],
     pub _notes: &'a [Option<Note>],
-    pub last_note_time: &'a [i32],
-    pub now: i32,
+    pub last_note_time: &'a [i64],
+    pub now: i64,
     pub duration: i32,
     pub seven_to_nine_pattern: i32,
     pub seven_to_nine_type: i32,
@@ -43,8 +43,8 @@ impl PatternModifier for ModeModifier {
         let algorithm = Algorithm::get(&self.before_mode, &self.after_mode);
         let lanes = self.after_mode.key() as usize;
         let mut ln = vec![-1i32; lanes];
-        let mut last_note_time = vec![-100i32; lanes];
-        let mut end_ln_note_time = vec![-1i32; lanes];
+        let mut last_note_time = vec![-100i64; lanes];
+        let mut end_ln_note_time = vec![-1i64; lanes];
 
         if self.config.play_settings.hran_threshold_bpm <= 0 {
             self.hran_threshold = 0;
@@ -60,7 +60,7 @@ impl PatternModifier for ModeModifier {
 
         let timelines = &mut model.timelines;
         // Pre-compute timeline index → time for LN end note pair lookup
-        let tl_times: Vec<i32> = timelines.iter().map(|tl| tl.time()).collect();
+        let tl_times: Vec<i64> = timelines.iter().map(|tl| tl.time()).collect();
         for tl in timelines.iter_mut() {
             if tl.exist_note() || tl.exist_hidden_note() {
                 let mut notes: Vec<Option<Note>> = Vec::with_capacity(lanes);
@@ -215,7 +215,7 @@ impl Algorithm {
                 } else {
                     match seven_to_nine_type {
                         1 => {
-                            if now - last_note_time[sc_lane as usize] > duration
+                            if now - last_note_time[sc_lane as usize] > duration as i64
                                 || now - last_note_time[sc_lane as usize]
                                     >= now - last_note_time[rest_lane as usize]
                             {
@@ -297,7 +297,7 @@ mod tests {
         let alg = Algorithm::SevenToNine;
         let activeln = vec![-1i32; 9];
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let last_note_time = vec![-100i32; 9];
+        let last_note_time = vec![-100i64; 9];
 
         let result = alg.modify(&AlgorithmModifyParams {
             _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
@@ -330,7 +330,7 @@ mod tests {
         let alg = Algorithm::SevenToNine;
         let activeln = vec![-1i32; 9];
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let last_note_time = vec![-100i32; 9];
+        let last_note_time = vec![-100i64; 9];
 
         let result = alg.modify(&AlgorithmModifyParams {
             _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
@@ -363,7 +363,7 @@ mod tests {
         let alg = Algorithm::SevenToNine;
         let activeln = vec![-1i32; 9];
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let last_note_time = vec![-100i32; 9];
+        let last_note_time = vec![-100i64; 9];
 
         let result = alg.modify(&AlgorithmModifyParams {
             _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
@@ -396,7 +396,7 @@ mod tests {
         let alg = Algorithm::SevenToNine;
         let activeln = vec![-1i32; 9];
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let last_note_time = vec![-100i32; 9];
+        let last_note_time = vec![-100i64; 9];
 
         let result = alg.modify(&AlgorithmModifyParams {
             _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
@@ -429,7 +429,7 @@ mod tests {
         let alg = Algorithm::SevenToNine;
         let activeln = vec![-1i32; 9];
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let mut last_note_time = vec![-100i32; 9];
+        let mut last_note_time = vec![-100i64; 9];
         // sc_lane=1, rest_lane=0
         last_note_time[1] = 0; // now - 0 = 1000 > duration(125) -> sc gets 7
         last_note_time[0] = 900; // now - 900 = 100
@@ -456,7 +456,7 @@ mod tests {
         let alg = Algorithm::SevenToNine;
         let activeln = vec![-1i32; 9];
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let mut last_note_time = vec![-100i32; 9];
+        let mut last_note_time = vec![-100i64; 9];
         // sc_lane=1, rest_lane=0
         last_note_time[1] = 800; // now - 800 = 200 (older)
         last_note_time[0] = 900; // now - 900 = 100 (more recent)
@@ -484,7 +484,7 @@ mod tests {
         let alg = Algorithm::SevenToNine;
         let activeln = vec![-1i32; 9];
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let mut last_note_time = vec![-100i32; 9];
+        let mut last_note_time = vec![-100i64; 9];
         last_note_time[1] = 950; // sc: now - 950 = 50 <= duration(125) and 50 < 100
         last_note_time[0] = 900; // rest: now - 900 = 100
 
@@ -512,7 +512,7 @@ mod tests {
         let alg = Algorithm::SevenToNine;
         let activeln = vec![-1i32; 9];
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let mut last_note_time = vec![-100i32; 9];
+        let mut last_note_time = vec![-100i64; 9];
         last_note_time[1] = 500; // sc: now - 500 = 500
         last_note_time[0] = 800; // rest: now - 800 = 200
 
@@ -538,7 +538,7 @@ mod tests {
         let alg = Algorithm::SevenToNine;
         let activeln = vec![-1i32; 9];
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let mut last_note_time = vec![-100i32; 9];
+        let mut last_note_time = vec![-100i64; 9];
         last_note_time[1] = 900; // sc: now - 900 = 100
         last_note_time[0] = 500; // rest: now - 500 = 500
 
@@ -567,7 +567,7 @@ mod tests {
         let mut activeln = vec![-1i32; 9];
         activeln[1] = 7; // sc_lane=1 (for pattern=0) has active LN on lane 7
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let last_note_time = vec![-100i32; 9];
+        let last_note_time = vec![-100i64; 9];
 
         let result = alg.modify(&AlgorithmModifyParams {
             _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
@@ -592,7 +592,7 @@ mod tests {
         let mut activeln = vec![-1i32; 9];
         activeln[1] = 8; // sc_lane=1 has active LN on lane 8 (not 7)
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let last_note_time = vec![-100i32; 9];
+        let last_note_time = vec![-100i64; 9];
 
         let result = alg.modify(&AlgorithmModifyParams {
             _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
@@ -616,7 +616,7 @@ mod tests {
         let mut activeln = vec![-1i32; 9];
         activeln[0] = 8; // rest_lane=0 has active LN
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let last_note_time = vec![-100i32; 9];
+        let last_note_time = vec![-100i64; 9];
 
         let result = alg.modify(&AlgorithmModifyParams {
             _keys: &[0, 1, 2, 3, 4, 5, 6, 7, 8],
@@ -799,7 +799,7 @@ mod tests {
         let alg = Algorithm::SevenToNine;
         let activeln = vec![-1i32; 9];
         let notes: Vec<Option<Note>> = vec![None; 9];
-        let last_note_time = vec![-100i32; 9];
+        let last_note_time = vec![-100i64; 9];
 
         for pattern in 0..=6 {
             let result = alg.modify(&AlgorithmModifyParams {

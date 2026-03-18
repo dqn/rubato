@@ -1752,10 +1752,10 @@ mod tests {
         tl.set_note(0, Some(Note::new_normal(1)));
         model.timelines.push(tl);
 
-        // Verify the bug condition: last_note_time() wraps negative
+        // With i64 return type, last_note_time() no longer overflows
         assert!(
-            model.last_note_time() < 0,
-            "Precondition: last_note_time() should overflow to negative for extreme times"
+            model.last_note_time() > 0,
+            "last_note_time() should return correct positive value with i64 return type"
         );
 
         // Verify the fix: using last_note_milli_time().max(0) with upper bound

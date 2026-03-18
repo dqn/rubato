@@ -41,7 +41,7 @@ pub(crate) use rubato_types::play_config::PlayConfig;
 pub(crate) use rubato_types::replay_data::ReplayData;
 pub(crate) use rubato_types::skin_type::SkinType;
 
-pub static TIME_MARGIN: i32 = 5000;
+pub static TIME_MARGIN: i64 = 5000;
 
 /// Key state flags for replay mode.
 /// Corresponds to Java `main.getInputProcessor().getKeyState(N)` checks.
@@ -330,7 +330,7 @@ pub struct BMSPlayer {
     judge_notes: Vec<bms_model::judge_note::JudgeNote>,
     bga: Arc<Mutex<BGAProcessor>>,
     gauge: Option<GrooveGauge>,
-    playtime: i32,
+    playtime: i64,
     /// Input state snapshot (keys, buttons, analog, controllers).
     input: PlayerInputState,
     keysound: KeySoundProcessor,

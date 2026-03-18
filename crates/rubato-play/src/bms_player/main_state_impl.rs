@@ -39,10 +39,10 @@ const GAUGELOG_PAD_MAX_ENTRIES: i64 = 100_000;
 /// Fill remaining gauge log entries with 0.0 from `start_ms` up to
 /// `playtime + 500` (in milliseconds), capped at `GAUGELOG_PAD_MAX_ENTRIES`
 /// to guard against corrupted playtime.
-pub(crate) fn pad_gaugelog_with_zeros(gaugelog: &mut [Vec<f32>], start_ms: i64, playtime: i32) {
+pub(crate) fn pad_gaugelog_with_zeros(gaugelog: &mut [Vec<f32>], start_ms: i64, playtime: i64) {
     let mut l = start_ms;
     let mut entries_added = 0_i64;
-    while l < playtime as i64 + 500 && entries_added < GAUGELOG_PAD_MAX_ENTRIES {
+    while l < playtime + 500 && entries_added < GAUGELOG_PAD_MAX_ENTRIES {
         for glog in gaugelog.iter_mut() {
             glog.push(0.0);
         }
@@ -668,8 +668,7 @@ impl MainState for BMSPlayer {
                     } else {
                         0
                     };
-                    self.playtime =
-                        ((property.endtime as i64 + 1000) * 100 / freq) as i32 + TIME_MARGIN;
+                    self.playtime = (property.endtime as i64 + 1000) * 100 / freq + TIME_MARGIN;
 
                     self.bga
                         .lock()
@@ -910,7 +909,7 @@ impl MainState for BMSPlayer {
                 );
 
                 // Check play time elapsed
-                if (self.playtime as i64) < ptime {
+                if self.playtime < ptime {
                     self.state = PlayState::Finished;
                     self.main_state_data.timer.set_timer_on(TIMER_MUSIC_END);
                     for raw in TIMER_PM_CHARA_1P_NEUTRAL.as_i32()..=TIMER_PM_CHARA_2P_BAD.as_i32() {
@@ -920,7 +919,7 @@ impl MainState for BMSPlayer {
                         .timer
                         .set_timer_off(TIMER_PM_CHARA_DANCE);
                     log::info!("PlayState::Finished");
-                } else if (self.playtime - TIME_MARGIN) as i64 <= ptime {
+                } else if (self.playtime - TIME_MARGIN) <= ptime {
                     self.main_state_data
                         .timer
                         .switch_timer(TIMER_ENDOFNOTE_1P, true);

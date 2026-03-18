@@ -96,7 +96,7 @@ pub struct PracticeApplyResult {
 pub(super) struct PracticeModelData {
     pub(super) mode: Mode,
     /// Time values from all timelines (used for start/end time bounds)
-    pub(super) timeline_times: Vec<i32>,
+    pub(super) timeline_times: Vec<i64>,
 }
 
 /// Practice mode configuration display/edit
@@ -129,7 +129,8 @@ impl PracticeConfiguration {
     pub fn create(&mut self, model: &BMSModel) {
         self.sha256 = model.sha256.clone();
         self.property.judgerank = model.judgerank;
-        self.property.endtime = model.last_time() + 1000;
+        self.property.endtime =
+            (model.last_time() + 1000).clamp(i32::MIN as i64, i32::MAX as i64) as i32;
 
         // Load saved practice property from practice/<sha256>.json if exists
         if !self.sha256.is_empty() {
@@ -146,7 +147,7 @@ impl PracticeConfiguration {
                 if self.property.total == 0.0 {
                     self.property.total = model.total;
                 }
-                let timeline_times: Vec<i32> = model.timelines.iter().map(|tl| tl.time()).collect();
+                let timeline_times: Vec<i64> = model.timelines.iter().map(|tl| tl.time()).collect();
                 self.model_data = Some(PracticeModelData {
                     mode,
                     timeline_times,
@@ -160,7 +161,7 @@ impl PracticeConfiguration {
             self.property.gaugecategory = Some(BMSPlayerRule::for_mode(&mode).gauge);
         }
         let mode = model.mode().copied().unwrap_or(Mode::BEAT_7K);
-        let timeline_times: Vec<i32> = model.timelines.iter().map(|tl| tl.time()).collect();
+        let timeline_times: Vec<i64> = model.timelines.iter().map(|tl| tl.time()).collect();
         self.model_data = Some(PracticeModelData {
             mode,
             timeline_times,

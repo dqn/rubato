@@ -38,8 +38,8 @@ impl TimeLine {
         }
     }
 
-    pub fn time(&self) -> i32 {
-        (self.time / 1000) as i32
+    pub fn time(&self) -> i64 {
+        self.time / 1000
     }
 
     pub fn milli_time(&self) -> i64 {
@@ -479,5 +479,14 @@ mod tests {
         let layers = vec![Layer::new(Event::new(EventType::Always, 0), vec![])];
         tl.eventlayer = layers;
         assert_eq!(tl.eventlayer.len(), 1);
+    }
+
+    #[test]
+    fn time_returns_correct_value_beyond_i32_max() {
+        // 36 minutes = 2_160_000 ms > i32::MAX (2_147_483_647 ms ~ 35.8 min)
+        let micro_time: i64 = 2_160_000_000_000; // 36 min in microseconds
+        let tl = TimeLine::new(0.0, micro_time, 8);
+        assert_eq!(tl.time(), 2_160_000_000); // 36 min in milliseconds
+        assert!(tl.time() > i32::MAX as i64);
     }
 }

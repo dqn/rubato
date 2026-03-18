@@ -487,7 +487,7 @@ impl BMSPlayer {
         }
 
         // Adjust playtime: (lastNoteTime + 1000) * 100 / freq + TIME_MARGIN
-        self.playtime = (self.model.last_note_time() + 1000) * 100 / freq + TIME_MARGIN;
+        self.playtime = (self.model.last_note_time() + 1000) * 100 / freq as i64 + TIME_MARGIN;
 
         // Scale chart timing
         bms_model_utils::change_frequency(&mut self.model, freq as f32 / 100.0);

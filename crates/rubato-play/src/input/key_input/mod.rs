@@ -61,7 +61,7 @@ mod tests {
         assert_eq!(jt.micro_margin_time, 500_000); // 500ms * 1000
         assert_eq!(
             jt.last_time,
-            1_000_000 + crate::bms_player::TIME_MARGIN as i64 * 1000
+            1_000_000 + crate::bms_player::TIME_MARGIN * 1000
         );
         assert!(jt.keylog.is_none());
         assert_eq!(jt.index, 0);
@@ -93,7 +93,7 @@ mod tests {
     fn test_judge_thread_tick_past_last_time_finishes() {
         let last_tl_time = 1_000_000i64;
         let mut jt = JudgeThread::new(last_tl_time, None, 0);
-        let past_time = last_tl_time + crate::bms_player::TIME_MARGIN as i64 * 1000;
+        let past_time = last_tl_time + crate::bms_player::TIME_MARGIN * 1000;
         let result = jt.tick(past_time);
         assert!(result.finished);
         assert!(!result.should_update_judge);

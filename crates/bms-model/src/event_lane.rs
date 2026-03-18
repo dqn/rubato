@@ -96,7 +96,7 @@ impl EventLane {
         self.stopseekpos = self.stopbasepos;
     }
 
-    pub fn mark(&mut self, time: i32, timelines: &[TimeLine]) {
+    pub fn mark(&mut self, time: i64, timelines: &[TimeLine]) {
         if !self.sections.is_empty() {
             while self.sectionbasepos < self.sections.len() - 1
                 && timelines[self.sections[self.sectionbasepos + 1]].time() < time

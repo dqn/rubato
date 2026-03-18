@@ -185,8 +185,8 @@ impl OSUDecoder {
         let bgm_tl = get_timeline(&mut timelines, 0, 0.0, mode_key);
         let bgm = Note::new_normal_with_start_duration(0, 0, 0);
         bgm_tl.add_back_ground_note(bgm);
-        bgm_tl.bpm = get_bpm(&timing_points, bgm_tl.time());
-        bgm_tl.scroll = get_sv(&svs, bgm_tl.time());
+        bgm_tl.bpm = get_bpm(&timing_points, bgm_tl.time() as i32);
+        bgm_tl.scroll = get_sv(&svs, bgm_tl.time() as i32);
         bgm_tl.bga = bga_list.len() as i32 - 1;
 
         for (i, &(start_time, _)) in videos.iter().enumerate() {
@@ -276,8 +276,8 @@ impl OSUDecoder {
             let section = get_section(&timing_points, adjusted_time);
 
             let tl = get_timeline(&mut timelines, adjusted_time, section, mode_key);
-            tl.bpm = get_bpm(&timing_points, tl.time());
-            tl.scroll = get_sv(&svs, tl.time());
+            tl.bpm = get_bpm(&timing_points, tl.time() as i32);
+            tl.scroll = get_sv(&svs, tl.time() as i32);
             let is_mania_hold = (hit_object.hit_type & 0x80) > 0;
             let wav_idx: i32 = -2;
 

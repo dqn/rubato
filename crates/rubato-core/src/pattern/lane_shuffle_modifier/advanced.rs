@@ -361,7 +361,7 @@ impl LanePlayableRandomShuffleModifier {
         };
         let lanes = mode.key() as usize;
         let mut ln = vec![-1i32; lanes];
-        let mut end_ln_note_time = vec![-1i32; lanes];
+        let mut end_ln_note_time = vec![-1i64; lanes];
         let mut max = 0;
         for key in keys {
             max = max.max(*key);
@@ -384,7 +384,7 @@ impl LanePlayableRandomShuffleModifier {
                             ln[i] = i as i32;
                             if !n.is_end() {
                                 // Get pair time
-                                end_ln_note_time[i] = n.time();
+                                end_ln_note_time[i] = n.time() as i64;
                             }
                         }
                     }

@@ -690,7 +690,7 @@ impl SongAccess for PlayerResource {
                     sd.file.md5 = m.md5.clone();
                     sd.file.sha256 = m.sha256.clone();
                     sd.chart.notes = m.total_notes();
-                    sd.chart.length = m.last_time();
+                    sd.chart.length = m.last_time().clamp(i32::MIN as i64, i32::MAX as i64) as i32;
                     sd.chart.mode = m.mode().map(|mode| mode.id()).unwrap_or(0);
                     sd
                 })

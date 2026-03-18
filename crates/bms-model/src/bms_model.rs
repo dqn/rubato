@@ -144,11 +144,11 @@ impl BMSModel {
     }
 
     pub fn all_times(&self) -> Vec<i64> {
-        self.timelines.iter().map(|tl| tl.time() as i64).collect()
+        self.timelines.iter().map(|tl| tl.time()).collect()
     }
 
-    pub fn last_time(&self) -> i32 {
-        self.last_milli_time() as i32
+    pub fn last_time(&self) -> i64 {
+        self.last_milli_time()
     }
 
     pub fn last_milli_time(&self) -> i64 {
@@ -167,8 +167,8 @@ impl BMSModel {
         0
     }
 
-    pub fn last_note_time(&self) -> i32 {
-        self.last_note_milli_time() as i32
+    pub fn last_note_time(&self) -> i64 {
+        self.last_note_milli_time()
     }
 
     pub fn last_note_milli_time(&self) -> i64 {
@@ -899,6 +899,36 @@ mod tests {
 
         // Last timeline with a note is tl2 at 5_000_000 microseconds = 5000 ms
         assert_eq!(model.last_note_milli_time(), 5000);
+    }
+
+    #[test]
+    fn last_time_returns_correct_value_beyond_i32_max() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+
+        // 36 minutes = 2_160_000_000 ms, which exceeds i32::MAX (~2_147_483_647)
+        let micro_time: i64 = 2_160_000_000_000;
+        let mut tl = TimeLine::new(0.0, micro_time, 8);
+        tl.add_back_ground_note(Note::new_normal(1));
+        model.timelines = vec![tl];
+
+        assert_eq!(model.last_time(), 2_160_000_000);
+        assert!(model.last_time() > i32::MAX as i64);
+    }
+
+    #[test]
+    fn last_note_time_returns_correct_value_beyond_i32_max() {
+        let mut model = BMSModel::new();
+        model.set_mode(Mode::BEAT_7K);
+
+        // 36 minutes = 2_160_000_000 ms, which exceeds i32::MAX (~2_147_483_647)
+        let micro_time: i64 = 2_160_000_000_000;
+        let mut tl = TimeLine::new(0.0, micro_time, 8);
+        tl.set_note(0, Some(Note::new_normal(1)));
+        model.timelines = vec![tl];
+
+        assert_eq!(model.last_note_time(), 2_160_000_000);
+        assert!(model.last_note_time() > i32::MAX as i64);
     }
 
     #[test]
