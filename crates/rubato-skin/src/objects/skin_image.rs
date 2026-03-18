@@ -379,9 +379,8 @@ impl SkinImage {
     }
 
     pub fn dispose(&mut self) {
-        for source in self.removed_sources.drain(..) {
-            // dispose removed sources
-            let _ = source;
+        for mut source in self.removed_sources.drain(..) {
+            source.dispose();
         }
         for s in self.image.iter_mut().flatten() {
             s.dispose();

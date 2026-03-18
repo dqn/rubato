@@ -42,8 +42,10 @@ impl Default for Pixmap {
 
 impl Pixmap {
     pub fn new(width: i32, height: i32, _format: PixmapFormat) -> Self {
-        let w = width.max(0) as usize;
-        let h = height.max(0) as usize;
+        let width = width.max(0);
+        let height = height.max(0);
+        let w = width as usize;
+        let h = height as usize;
         Self {
             width,
             height,
@@ -402,9 +404,9 @@ mod tests {
     #[test]
     fn test_new_pixmap_negative_dimensions_clamped_to_zero() {
         let p = Pixmap::new(-5, -3, PixmapFormat::RGBA8888);
-        assert_eq!(p.width, -5);
-        assert_eq!(p.height, -3);
-        // data size uses max(0) so no panic
+        assert_eq!(p.width, 0);
+        assert_eq!(p.height, 0);
+        // dimensions normalized to 0, no panic
         assert!(p.data.is_empty());
     }
 

@@ -111,6 +111,7 @@ impl SkinTimingDistributionGraph {
                 }
             }
             self.max = max;
+            let max = max.min(4096);
 
             let mut shape = Pixmap::new(self.gx, max, PixmapFormat::RGBA8888);
             shape.set_color(&self.j_color[0]);
