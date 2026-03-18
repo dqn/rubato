@@ -466,7 +466,8 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
             params.iter().map(|p| p.as_ref()).collect();
         let mut songs = self.query_songs(&sql, &param_refs);
 
-        // Preserve search order
+        // Performance note: O(n*m) linear scan matches Java parity. Consider HashMap<&str, &ScoreData>
+        // lookup for large libraries if profiling shows this as a bottleneck.
         songs.sort_by(|a, b| {
             let mut a_index_sha256 = -1i32;
             let mut a_index_md5 = -1i32;

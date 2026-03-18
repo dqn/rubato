@@ -105,7 +105,7 @@ impl FloatPCM {
     ///
     /// Translated from: FloatPCM.changeSampleRate
     pub fn change_sample_rate(&self, sample: i32) -> FloatPCM {
-        if self.sample_rate == 0 || self.channels == 0 || sample == 0 {
+        if self.sample_rate == 0 || self.channels == 0 || sample <= 0 {
             return FloatPCM::new(self.channels, sample, 0, 0, Vec::new());
         }
         let samples = self.get_sample(sample);
@@ -190,6 +190,9 @@ impl FloatPCM {
     ///
     /// Translated from: FloatPCM.changeChannels
     pub fn change_channels(&self, channels: i32) -> FloatPCM {
+        if channels <= 0 {
+            return FloatPCM::new(channels, self.sample_rate, 0, 0, Vec::new());
+        }
         if self.channels == 0 {
             return FloatPCM::new(channels, self.sample_rate, 0, 0, Vec::new());
         }

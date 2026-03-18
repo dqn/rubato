@@ -81,7 +81,9 @@ impl JudgeManager {
                 // Autoplay processing
                 if self.autoplay {
                     if notes[note_idx].is_normal() && self.note_states[note_idx].state == 0 {
-                        let first_key = self.lane_states[lane_idx].laneassign[0];
+                        let Some(&first_key) = self.lane_states[lane_idx].laneassign.first() else {
+                            continue;
+                        };
                         self.auto_presstime[first_key] = mtime;
                         // Java line 265: keysound.play(note, keyvolume, 0)
                         self.keysound_play_indices.push(note_idx);
@@ -103,7 +105,10 @@ impl JudgeManager {
                             && self.note_states[note_idx].state == 0
                             && self.lane_states[lane_idx].processing.is_none()
                         {
-                            let first_key = self.lane_states[lane_idx].laneassign[0];
+                            let Some(&first_key) = self.lane_states[lane_idx].laneassign.first()
+                            else {
+                                continue;
+                            };
                             self.auto_presstime[first_key] = mtime;
                             // Java line 272: keysound.play(note, keyvolume, 0)
                             self.keysound_play_indices.push(note_idx);
@@ -737,7 +742,8 @@ impl JudgeManager {
             // Miss POOR detection
             self.lane_states[lane_idx].reset();
             while let Some(note_idx) = self.lane_states[lane_idx].note() {
-                if notes[note_idx].time_us >= mtime + mjudge[3][0] {
+                let miss_window = mjudge.get(3).map(|r| r[0]).unwrap_or(i64::MIN);
+                if notes[note_idx].time_us >= mtime + miss_window {
                     break;
                 }
                 let mjud = notes[note_idx].time_us - mtime;

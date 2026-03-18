@@ -55,6 +55,8 @@ impl DifficultyTableParser {
         self.get_meta_tag(urlname, "bmstable-alt")
     }
 
+    // NOTE: Uses reqwest::blocking::Client with 30s timeout. Callers must ensure this runs
+    // on a background thread, not the main/render thread, to avoid UI freezes.
     fn read_all_lines(&self, urlname: &str) -> Option<Vec<String>> {
         match Self::http_client().and_then(|c| Ok(c.get(urlname).send()?.error_for_status()?)) {
             Ok(response) => match response.bytes() {

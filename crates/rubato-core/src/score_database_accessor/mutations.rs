@@ -84,6 +84,8 @@ impl ScoreDatabaseAccessor {
             "state",
             "scorehash",
             "combo",
+            // Java parity: trophy string may accumulate duplicate characters across repeated plays.
+            // Consider deduplicating before write if string growth becomes an issue.
             "trophy",
         ];
 
