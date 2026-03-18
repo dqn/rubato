@@ -88,11 +88,11 @@ impl LR2SkinLoaderState {
                             if self.op.get(&opt).copied().unwrap_or(-1) == 1 {
                                 b = true;
                             }
-                        } else if self.op.get(&(-opt)).copied().unwrap_or(-1) == 0 {
+                        } else if self.op.get(&(opt.wrapping_neg())).copied().unwrap_or(-1) == 0 {
                             b = true;
                         }
                         if !b
-                            && !self.op.contains_key(&opt.abs())
+                            && !self.op.contains_key(&(opt.unsigned_abs() as i32))
                             && let Some(state) = state
                         {
                             let draw = BooleanPropertyFactory::boolean_property(opt);
@@ -129,11 +129,12 @@ impl LR2SkinLoaderState {
                                 if self.op.get(&opt).copied().unwrap_or(-1) == 1 {
                                     b = true;
                                 }
-                            } else if self.op.get(&(-opt)).copied().unwrap_or(-1) == 0 {
+                            } else if self.op.get(&(opt.wrapping_neg())).copied().unwrap_or(-1) == 0
+                            {
                                 b = true;
                             }
                             if !b
-                                && !self.op.contains_key(&opt.abs())
+                                && !self.op.contains_key(&(opt.unsigned_abs() as i32))
                                 && let Some(state) = state
                             {
                                 let draw = BooleanPropertyFactory::boolean_property(opt);
@@ -211,14 +212,15 @@ pub fn lr2_path(skinpath: &str, imagepath: &str, filemap: &HashMap<String, Strin
             let star_pos = resolved.rfind('*').expect("contains '*'");
             let pipe_pos = resolved.find('|').expect("contains '|'");
             let last_pipe = resolved.rfind('|').expect("contains '|'");
-            if resolved.len() > last_pipe + 1 {
-                ext = format!(
-                    "{}{}",
-                    &resolved[star_pos + 1..pipe_pos],
-                    &resolved[last_pipe + 1..]
-                );
+            let between = if star_pos < pipe_pos {
+                &resolved[star_pos + 1..pipe_pos]
             } else {
-                ext = resolved[star_pos + 1..pipe_pos].to_string();
+                ""
+            };
+            if resolved.len() > last_pipe + 1 {
+                ext = format!("{}{}", between, &resolved[last_pipe + 1..]);
+            } else {
+                ext = between.to_string();
             }
         }
         let ext_lower = ext.to_lowercase();
@@ -808,5 +810,36 @@ mod tests {
             dst.region.y,
             expected_y
         );
+    }
+
+    #[test]
+    fn process_line_directives_if_i32_min_does_not_panic() {
+        // Regression: i32::MIN.abs() and -i32::MIN both panic in debug mode.
+        // Skin CSV option values are user-editable, so i32::MIN is reachable
+        // via "!2147483648" which becomes "-2147483648" after '!' -> '-' replacement.
+        let mut state = LR2SkinLoaderState::new();
+        // Should not panic
+        state.process_line_directives("#IF,-2147483648", None);
+    }
+
+    #[test]
+    fn process_line_directives_elseif_i32_min_does_not_panic() {
+        // Same regression for #ELSEIF path
+        let mut state = LR2SkinLoaderState::new();
+        state.op.insert(1, 0); // make #IF fail so #ELSEIF is evaluated
+        state.process_line_directives("#IF,1", None);
+        assert!(state.skip);
+        state.process_line_directives("#ELSEIF,-2147483648", None);
+    }
+
+    #[test]
+    fn lr2_path_star_after_pipe_does_not_panic() {
+        // Regression: when '*' appears after '|' in the path,
+        // star_pos + 1 > pipe_pos causes slice panic.
+        let filemap = HashMap::new();
+        // Construct a path where pipe comes before star: "dir/file|ext*"
+        let result = lr2_path("skin", "dir/file|ext*.png", &filemap);
+        // Should not panic; exact result depends on filesystem but the function must not crash
+        let _ = result;
     }
 }
