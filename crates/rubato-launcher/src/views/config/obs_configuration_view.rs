@@ -111,10 +111,10 @@ impl ObsConfigurationView {
         ];
 
         for state in &main_state_types {
-            let name = format!("{:?}", state);
+            let name = state.obs_key().to_string();
             self.states.push(name.clone());
             self.create_state_row(&name);
-            if name == "Play" {
+            if name == "PLAY" {
                 self.states.push("PLAY_ENDED".to_string());
                 self.create_state_row("PLAY_ENDED");
             }

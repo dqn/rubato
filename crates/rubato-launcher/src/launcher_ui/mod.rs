@@ -155,7 +155,7 @@ impl LauncherUi {
         let mut obs_scene_selections = std::collections::HashMap::new();
         let mut obs_action_selections = std::collections::HashMap::new();
         for state in &obs_state_types {
-            let name = format!("{:?}", state);
+            let name = state.obs_key().to_string();
             obs_states.push(name.clone());
             let scene = config.obs_scene(&name).cloned().unwrap_or_default();
             obs_scene_selections.insert(
@@ -172,7 +172,7 @@ impl LauncherUi {
                 .unwrap_or_else(|| ACTION_NONE.to_string());
             obs_action_selections.insert(name.clone(), action_label);
 
-            if name == "Play" {
+            if name == "PLAY" {
                 obs_states.push("PLAY_ENDED".to_string());
                 let scene_ended = config.obs_scene("PLAY_ENDED").cloned().unwrap_or_default();
                 obs_scene_selections.insert(

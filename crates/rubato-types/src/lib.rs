@@ -154,6 +154,9 @@ pub mod fps_counter;
 // Process-global monotonic clock (equivalent to Java System.nanoTime())
 pub mod monotonic_clock;
 
+// Synchronization utilities (lock_or_recover)
+pub mod sync_utils;
+
 // State machine observability events (E2E testing)
 pub mod state_event;
 

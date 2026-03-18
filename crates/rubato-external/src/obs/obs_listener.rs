@@ -134,16 +134,7 @@ impl ObsListener {
     }
 
     pub fn trigger_state_change_by_type(&self, state_type: MainStateType) {
-        let name = match state_type {
-            MainStateType::MusicSelect => "MUSICSELECT",
-            MainStateType::Decide => "DECIDE",
-            MainStateType::Play => "PLAY",
-            MainStateType::Result => "RESULT",
-            MainStateType::CourseResult => "COURSERESULT",
-            MainStateType::Config => "CONFIG",
-            MainStateType::SkinConfig => "SKINCONFIG",
-        };
-        self.trigger_state_change(name);
+        self.trigger_state_change(state_type.obs_key());
     }
 
     pub fn trigger_state_change(&self, state_name: &str) {

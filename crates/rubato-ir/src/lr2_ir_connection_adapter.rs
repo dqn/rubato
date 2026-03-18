@@ -7,6 +7,8 @@
 
 use std::sync::Mutex;
 
+use rubato_types::sync_utils::lock_or_recover;
+
 use crate::ir_account::IRAccount;
 use crate::ir_chart_data::IRChartData;
 use crate::ir_connection::IRConnection;
@@ -54,7 +56,8 @@ impl IRConnection for LR2IRConnectionAdapter {
             return IRResponse::failure("Empty user ID".to_string());
         }
         // Store the player ID for subsequent API calls
-        if let Ok(mut id) = self.player_id.lock() {
+        {
+            let mut id = lock_or_recover(&self.player_id);
             *id = userid.clone();
         }
         // LR2IR has no login endpoint; accept any non-empty userid
@@ -66,7 +69,8 @@ impl IRConnection for LR2IRConnectionAdapter {
         if id.is_empty() {
             return IRResponse::failure("Empty user ID".to_string());
         }
-        if let Ok(mut pid) = self.player_id.lock() {
+        {
+            let mut pid = lock_or_recover(&self.player_id);
             *pid = id.to_string();
         }
         let player_data = IRPlayerData::new(id.to_string(), id.to_string(), String::new());
@@ -86,11 +90,7 @@ impl IRConnection for LR2IRConnectionAdapter {
         _player: Option<&IRPlayerData>,
         chart: &IRChartData,
     ) -> IRResponse<Vec<IRScoreData>> {
-        let player_id = self
-            .player_id
-            .lock()
-            .map(|id| id.clone())
-            .unwrap_or_default();
+        let player_id = lock_or_recover(&self.player_id).clone();
         let (_local_score, leaderboard) = LR2IRConnection::score_data(chart, &player_id);
         let scores: Vec<IRScoreData> = leaderboard.into_iter().map(|e| e.into_ir_score()).collect();
         IRResponse::success("OK".to_string(), scores)

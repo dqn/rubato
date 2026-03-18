@@ -21,6 +21,7 @@ use crate::song_database_accessor::SongDatabaseAccessor;
 use crate::song_database_update_listener::SongDatabaseUpdateListener;
 use crate::song_utils;
 use rubato_types::song_information_db::SongInformationDb;
+use rubato_types::sync_utils::lock_or_recover;
 
 /// Escape SQL LIKE wildcard characters (`%`, `_`, `\`) so that they are
 /// treated as literal characters in a `LIKE ... ESCAPE '\'` clause.
@@ -737,10 +738,7 @@ impl SQLiteSongDatabaseAccessor {
                 .parent()
                 .map(|pp| pp.to_string_lossy().to_string())
                 .unwrap_or_default();
-            let mut checked = self
-                .checked_parent
-                .lock()
-                .expect("checked_parent lock poisoned");
+            let mut checked = lock_or_recover(&self.checked_parent);
             if !checked.contains(&parent) {
                 let query = "SELECT * FROM folder WHERE path = ?1";
                 let folders = self.query_folders(query, &[&parent as &dyn rusqlite::types::ToSql]);
