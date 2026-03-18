@@ -1072,6 +1072,7 @@ mod tests {
             &mut source_map,
             Path::new("/tmp"),
             false,
+            &HashMap::new(),
         );
 
         // With imgs_per_ref == 0, the current code produces empty Vec entries.

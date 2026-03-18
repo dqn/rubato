@@ -18,7 +18,7 @@
 // skin_data_converter::convert_skin_data(). Loaders produce SkinData,
 // which is converted to runtime Skin objects for snapshot comparison.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use golden_master::render_snapshot::{
@@ -154,6 +154,7 @@ fn load_lua_skin_with_state(relative_path: &str, provider: &StaticStateProvider)
         &path,
         false,
         &dstr,
+        &HashMap::new(),
     )
     .unwrap_or_else(|| panic!("Failed to convert skin data: {}", path.display()))
 }
@@ -185,6 +186,7 @@ fn load_json_skin(relative_path: &str) -> Skin {
         &path,
         false,
         &dstr,
+        &HashMap::new(),
     )
     .unwrap_or_else(|| panic!("Failed to convert skin data: {}", path.display()))
 }

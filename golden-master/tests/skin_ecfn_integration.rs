@@ -6,7 +6,7 @@
 //
 // Run: cargo test -p golden-master -- skin_ecfn
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
 use golden_master::render_snapshot::capture_render_snapshot;
@@ -100,6 +100,7 @@ fn load_lua_skin_with_state(relative_path: &str, provider: &StaticStateProvider)
         &path,
         false,
         &dstr,
+        &HashMap::new(),
     )
     .unwrap_or_else(|| panic!("Failed to convert skin data: {}", path.display()))
 }
@@ -129,6 +130,7 @@ fn load_json_skin(relative_path: &str) -> Skin {
         &path,
         false,
         &dstr,
+        &HashMap::new(),
     )
     .unwrap_or_else(|| panic!("Failed to convert skin data: {}", path.display()))
 }
