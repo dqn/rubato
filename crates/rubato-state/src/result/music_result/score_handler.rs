@@ -399,10 +399,7 @@ mod tests {
         fn set_tablename(&mut self, _name: &str) {}
         fn set_tablelevel(&mut self, _level: &str) {}
         fn set_rival_score_data_option(&mut self, _score: Option<ScoreData>) {}
-        fn set_chart_option_data(
-            &mut self,
-            _option: Option<rubato_core::replay_data::ReplayData>,
-        ) {
+        fn set_chart_option_data(&mut self, _option: Option<rubato_core::replay_data::ReplayData>) {
         }
     }
 
@@ -538,7 +535,11 @@ mod tests {
             "course score notes should be sum of all model total_notes"
         );
         // minbp initialized to 0, not i32::MAX
-        assert_eq!(cs.minbp, 0 + 50, "course score minbp starts at 0, then adds newscore + remaining");
+        assert_eq!(
+            cs.minbp,
+            0 + 50,
+            "course score minbp starts at 0, then adds newscore + remaining"
+        );
         assert_eq!(cs.play_option.option, 42);
         assert_eq!(
             cs.play_option.device_type,
@@ -585,7 +586,10 @@ mod tests {
             "existing course_score_data notes should be preserved"
         );
         assert_eq!(cs.minbp, 8, "minbp should be accumulated (5 + 3)");
-        assert_eq!(cs.judge_counts.epg, 15, "epg should be accumulated (10 + 5)");
+        assert_eq!(
+            cs.judge_counts.epg, 15,
+            "epg should be accumulated (10 + 5)"
+        );
     }
 
     // --- 3. Judge count accumulation ---
@@ -671,7 +675,10 @@ mod tests {
         mr.accumulate_course_score(&newscore2);
 
         let cs = mr.resource.course_score_data().unwrap();
-        assert_eq!(cs.judge_counts.epg, 17, "epg should accumulate across calls");
+        assert_eq!(
+            cs.judge_counts.epg, 17,
+            "epg should accumulate across calls"
+        );
         assert_eq!(cs.judge_counts.lgr, 8, "lgr should accumulate across calls");
         assert_eq!(cs.minbp, 6, "minbp should accumulate across calls");
         assert_eq!(cs.passnotes, 35, "passnotes should accumulate across calls");
