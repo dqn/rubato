@@ -266,6 +266,7 @@ impl MainStateAccessor {
             // set_volume_sys(value) -> true
             let sp = self.state_ptr;
             let set_volume_sys_func = lua.create_function(move |_, value: f32| {
+                let value = value.clamp(0.0, 1.0);
                 let state = unsafe { &mut *sp.0 };
                 if let Some(config) = state.config_mut()
                     && let Some(ref mut audio) = config.audio
@@ -293,6 +294,7 @@ impl MainStateAccessor {
             // set_volume_key(value) -> true
             let sp = self.state_ptr;
             let set_volume_key_func = lua.create_function(move |_, value: f32| {
+                let value = value.clamp(0.0, 1.0);
                 let state = unsafe { &mut *sp.0 };
                 if let Some(config) = state.config_mut()
                     && let Some(ref mut audio) = config.audio
@@ -320,6 +322,7 @@ impl MainStateAccessor {
             // set_volume_bg(value) -> true
             let sp = self.state_ptr;
             let set_volume_bg_func = lua.create_function(move |_, value: f32| {
+                let value = value.clamp(0.0, 1.0);
                 let state = unsafe { &mut *sp.0 };
                 if let Some(config) = state.config_mut()
                     && let Some(ref mut audio) = config.audio
@@ -930,5 +933,41 @@ mod tests {
             0.25,
             "config should be updated"
         );
+    }
+
+    #[test]
+    fn test_set_volume_sys_clamps_out_of_range() {
+        let mut state = LuaTestState::default();
+        state.config.audio = Some(rubato_types::audio_config::AudioConfig::default());
+        let (_lua, table) = setup_lua_with_state(&mut state);
+        let func: mlua::Function = table.get("set_volume_sys").unwrap();
+        let _: bool = func.call(99.0f32).unwrap();
+        assert_eq!(state.config.audio.as_ref().unwrap().systemvolume, 1.0);
+        let _: bool = func.call(-5.0f32).unwrap();
+        assert_eq!(state.config.audio.as_ref().unwrap().systemvolume, 0.0);
+    }
+
+    #[test]
+    fn test_set_volume_key_clamps_out_of_range() {
+        let mut state = LuaTestState::default();
+        state.config.audio = Some(rubato_types::audio_config::AudioConfig::default());
+        let (_lua, table) = setup_lua_with_state(&mut state);
+        let func: mlua::Function = table.get("set_volume_key").unwrap();
+        let _: bool = func.call(2.0f32).unwrap();
+        assert_eq!(state.config.audio.as_ref().unwrap().keyvolume, 1.0);
+        let _: bool = func.call(-1.0f32).unwrap();
+        assert_eq!(state.config.audio.as_ref().unwrap().keyvolume, 0.0);
+    }
+
+    #[test]
+    fn test_set_volume_bg_clamps_out_of_range() {
+        let mut state = LuaTestState::default();
+        state.config.audio = Some(rubato_types::audio_config::AudioConfig::default());
+        let (_lua, table) = setup_lua_with_state(&mut state);
+        let func: mlua::Function = table.get("set_volume_bg").unwrap();
+        let _: bool = func.call(1.5f32).unwrap();
+        assert_eq!(state.config.audio.as_ref().unwrap().bgvolume, 1.0);
+        let _: bool = func.call(-0.1f32).unwrap();
+        assert_eq!(state.config.audio.as_ref().unwrap().bgvolume, 0.0);
     }
 }
