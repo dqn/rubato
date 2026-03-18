@@ -66,8 +66,9 @@ pub struct SkinHitErrorVisualizer {
 impl SkinHitErrorVisualizer {
     pub fn new(config: HitErrorVisualizerConfig<'_>) -> Self {
         let line_width = config.line_width.clamp(1, 4);
-        let center = config.judge_width_millis;
-        let judge_width_rate = config.width as f32 / (config.judge_width_millis as f32 * 2.0 + 1.0);
+        let center = config.judge_width_millis.clamp(1, 5000);
+        let width = config.width.clamp(1, 4096);
+        let judge_width_rate = width as f32 / (center as f32 * 2.0 + 1.0);
         let line_color_val = Color::value_of(&color_string_validation(config.line_color));
         let center_color_val = Color::value_of(&color_string_validation(config.center_color));
         let ema_color_val = Color::value_of(&color_string_validation(config.ema_color));
@@ -96,7 +97,7 @@ impl SkinHitErrorVisualizer {
             center_color: center_color_val,
             ema_color: ema_color_val,
             line_width,
-            width: config.width,
+            width,
             center,
             window_length,
             ema_mode: config.ema_mode,

@@ -52,8 +52,8 @@ pub struct SkinTimingVisualizer {
 impl SkinTimingVisualizer {
     pub fn new(config: TimingVisualizerConfig<'_>) -> Self {
         let line_width = config.line_width.clamp(1, 4);
-        let center = config.judge_width_millis;
-        let judge_width_rate = config.width as f32 / (config.judge_width_millis as f32 * 2.0 + 1.0);
+        let center = config.judge_width_millis.clamp(1, 5000);
+        let judge_width_rate = config.width as f32 / (center as f32 * 2.0 + 1.0);
         let line_color_val = Color::value_of(&color_string_validation(config.line_color));
         let center_color_val = Color::value_of(&color_string_validation(config.center_color));
         let j_color = vec![
@@ -151,6 +151,10 @@ impl SkinTimingVisualizer {
             pix.set_color(&Color::WHITE);
             pix.fill();
             self.line = Some(TextureRegion::from_texture(Texture::from_pixmap(&pix)));
+            pix.dispose();
+        }
+
+        if self.line_colors.len() != self.recent.len() {
             self.line_colors = (0..self.recent.len())
                 .map(|i| {
                     Color::new(
@@ -161,7 +165,6 @@ impl SkinTimingVisualizer {
                     )
                 })
                 .collect();
-            pix.dispose();
         }
     }
 
