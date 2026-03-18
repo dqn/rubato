@@ -49,7 +49,14 @@ pub static DEFAULT_ALGORITHM: &[JudgeAlgorithm] = &[
 
 impl JudgeAlgorithm {
     /// Compare two notes. Returns true if t2 is preferred over t1.
+    ///
+    /// # Panics
+    /// Panics if `judgetable.len() < 3` (Combo/Score variants index rows 1 and 2).
     pub fn compare(&self, t1: &Note, t2: &Note, ptime: i64, judgetable: &[Vec<i64>]) -> bool {
+        debug_assert!(
+            judgetable.len() >= 3,
+            "judgetable must have at least 3 rows"
+        );
         match self {
             JudgeAlgorithm::Combo => {
                 t2.state() == 0
@@ -71,6 +78,9 @@ impl JudgeAlgorithm {
     /// Compare two notes using raw time/state values and `[i64; 2]` judge table.
     /// Used by `JudgeManager::update()` where only `JudgeNote` (no mutable `Note`) is available.
     /// Returns true if t2 is preferred over t1.
+    ///
+    /// # Panics
+    /// Panics if `judgetable.len() < 3` (Combo/Score variants index rows 1 and 2).
     pub fn compare_times(
         &self,
         t1_time: i64,
@@ -79,6 +89,10 @@ impl JudgeAlgorithm {
         ptime: i64,
         judgetable: &[[i64; 2]],
     ) -> bool {
+        debug_assert!(
+            judgetable.len() >= 3,
+            "judgetable must have at least 3 rows"
+        );
         match self {
             JudgeAlgorithm::Combo => {
                 t2_state == 0
