@@ -286,6 +286,9 @@ impl WebhookHandler {
 
     // Calculates the number used in rank deltas. e.g. AA+76 MAX-133
     fn rank_relative_ex_diff(ex: i32, max: i32, rank_numerator: f32) -> i32 {
+        if max == 0 {
+            return 0;
+        }
         // Even numerators produce [GRADE]+ and odd produces [GRADE]-
         if rank_numerator as i32 % 2 == 0 {
             let grade_ex_target = (max as f32 * rank_numerator / 18.0f32).ceil();
@@ -512,6 +515,25 @@ mod tests {
             screen_type,
             abstract_result: None,
         }
+    }
+
+    #[test]
+    fn rank_relative_ex_diff_returns_zero_when_max_score_is_zero() {
+        // When max_score=0, there is no meaningful grade boundary, so delta must be 0.
+        assert_eq!(WebhookHandler::rank_relative_ex_diff(100, 0, 17.0), 0);
+        assert_eq!(WebhookHandler::rank_relative_ex_diff(100, 0, 16.0), 0);
+        assert_eq!(WebhookHandler::rank_relative_ex_diff(0, 0, 14.0), 0);
+        assert_eq!(WebhookHandler::rank_relative_ex_diff(50, 0, 13.0), 0);
+    }
+
+    #[test]
+    fn rank_relative_ex_diff_normal_case() {
+        // max=1800, numerator=14.0 (AA+): grade_ex_target = ceil(1800 * 14 / 18) = ceil(1400) = 1400
+        // ex=1500 => 1500 - 1400 = 100
+        assert_eq!(WebhookHandler::rank_relative_ex_diff(1500, 1800, 14.0), 100);
+        // max=1800, numerator=13.0 (AA-): grade_ex_target = ceil(1800 * 14 / 18) = 1400
+        // result = 1400 - 1300 = 100
+        assert_eq!(WebhookHandler::rank_relative_ex_diff(1300, 1800, 13.0), 100);
     }
 
     #[test]

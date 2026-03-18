@@ -216,6 +216,10 @@ impl PCMLoader {
             );
         }
 
+        if self.bits_per_sample == 0 {
+            bail!("invalid WAV: bits_per_sample is 0");
+        }
+
         // Trim trailing silence
         let mut bytes = self.pcm_data.len() as i32;
         let frame_size = if self.channels > 1 {
@@ -916,6 +920,54 @@ mod tests {
 
         // Next read should return -1 (EOF)
         assert_eq!(stream.read_byte(), -1);
+    }
+
+    /// Helper: build a WAV byte buffer with custom bits_per_sample.
+    fn build_wav_bytes_with_bps(pcm_data: &[u8], bits_per_sample: u16) -> Vec<u8> {
+        let data_size = pcm_data.len() as u32;
+        let file_size = 36 + data_size;
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"RIFF");
+        buf.extend_from_slice(&file_size.to_le_bytes());
+        buf.extend_from_slice(b"WAVE");
+        buf.extend_from_slice(b"fmt ");
+        buf.extend_from_slice(&16u32.to_le_bytes());
+        buf.extend_from_slice(&1u16.to_le_bytes()); // format: PCM
+        buf.extend_from_slice(&1u16.to_le_bytes()); // channels: mono
+        buf.extend_from_slice(&44100u32.to_le_bytes());
+        buf.extend_from_slice(&88200u32.to_le_bytes());
+        buf.extend_from_slice(&2u16.to_le_bytes()); // block align
+        buf.extend_from_slice(&bits_per_sample.to_le_bytes());
+        buf.extend_from_slice(b"data");
+        buf.extend_from_slice(&data_size.to_le_bytes());
+        buf.extend_from_slice(pcm_data);
+        buf
+    }
+
+    #[test]
+    fn load_pcm_rejects_bits_per_sample_zero() {
+        // A malformed WAV with bits_per_sample=0 must be rejected before the
+        // trailing-silence trimming block, which would otherwise panic on modulo-by-zero.
+        let pcm_data = vec![0x00, 0x01, 0xFF, 0x7F];
+        let wav_bytes = build_wav_bytes_with_bps(&pcm_data, 0);
+
+        let dir = std::env::temp_dir().join("rubato_test_bps_zero");
+        std::fs::create_dir_all(&dir).unwrap();
+        let wav_path = dir.join("bps_zero.wav");
+        std::fs::write(&wav_path, &wav_bytes).unwrap();
+
+        let mut loader = PCMLoader::new();
+        let result = loader.load_pcm(&wav_path);
+        assert!(result.is_err(), "Expected error for bits_per_sample=0");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("bits_per_sample is 0"),
+            "Expected 'bits_per_sample is 0' error, got: {}",
+            err_msg
+        );
+
+        // Cleanup
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
