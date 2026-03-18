@@ -238,6 +238,11 @@ impl BMSPlayer {
         self.lnmode_override = lnmode_override;
     }
 
+    /// Get the song metadata used for skin string property queries (title, artist, etc.).
+    pub fn song_metadata(&self) -> &rubato_types::song_data::SongMetadata {
+        &self.song_metadata
+    }
+
     /// Set the song metadata for skin string property queries (title, artist, etc.).
     /// Should be called during initialization when SongData is available.
     pub fn set_song_metadata(&mut self, metadata: rubato_types::song_data::SongMetadata) {

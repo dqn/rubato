@@ -261,6 +261,9 @@ impl StateFactory for LauncherStateFactory {
                             &songdata.chart,
                         ),
                     );
+                    // Wire song metadata for skin string property queries (title, artist, genre).
+                    // Java: StringPropertyFactory reads resource.getSongdata().getTitle() etc.
+                    player.set_song_metadata(songdata.metadata.clone());
                 }
 
                 // Wire course constraints

@@ -267,7 +267,7 @@ pub fn load_skin_from_path_with_state(
     let path = resolve_skin_path(&config, skin_path)?;
     let property = crate::json::json_skin_loader::SkinConfigProperty;
 
-    let skin = if skin_path.ends_with(".json") {
+    let mut skin = if skin_path.ends_with(".json") {
         let mut loader = crate::json::json_skin_loader::JSONSkinLoader::with_config(&config);
         let header = loader.load_header(&path)?;
         let data = loader.load(&path, &skin_type, &property)?;
@@ -303,6 +303,15 @@ pub fn load_skin_from_path_with_state(
         && let Some(ref r) = *guard
     {
         r.dispose_old();
+    }
+
+    // Apply player-configured skin offsets (parity with load_skin_from_config).
+    // Select, Result, and Decide states load skins through this path and their
+    // user-configured offsets were previously silently ignored.
+    if let Some(ref mut s) = skin
+        && let Some(pc) = state.player_config_ref()
+    {
+        apply_player_config_offsets(s, pc, skin_type_id);
     }
 
     skin

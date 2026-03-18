@@ -4934,3 +4934,23 @@ fn practice_mode_render_uses_game_timer_for_key_repeat() {
         "Practice RIGHT should increment starttime by 100 using game timer"
     );
 }
+
+#[test]
+fn song_metadata_getter_returns_set_value() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    assert!(
+        player.song_metadata().title.is_empty(),
+        "song_metadata should default to empty"
+    );
+
+    let mut metadata = rubato_types::song_data::SongMetadata::default();
+    metadata.title = "Test Song".to_string();
+    metadata.artist = "Test Artist".to_string();
+    metadata.genre = "Test Genre".to_string();
+    player.set_song_metadata(metadata);
+
+    assert_eq!(player.song_metadata().title, "Test Song");
+    assert_eq!(player.song_metadata().artist, "Test Artist");
+    assert_eq!(player.song_metadata().genre, "Test Genre");
+}
