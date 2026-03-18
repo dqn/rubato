@@ -356,7 +356,7 @@ impl BMSPlayer {
         self.judge.past_notes()
     }
 
-    pub fn playtime(&self) -> i32 {
+    pub fn playtime(&self) -> i64 {
         self.playtime
     }
 

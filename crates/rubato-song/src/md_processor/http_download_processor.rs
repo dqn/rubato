@@ -15,7 +15,6 @@ use super::http_download_source::HttpDownloadSource;
 use super::http_download_source_meta::HttpDownloadSourceMeta;
 use super::{ImGuiNotify, MainControllerRef};
 use super::{konmai_download_source, wriggle_download_source};
-use rubato_types::sync_utils::lock_or_recover;
 
 pub static DOWNLOAD_SOURCES: LazyLock<HashMap<String, &'static HttpDownloadSourceMeta>> =
     LazyLock::new(|| {

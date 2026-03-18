@@ -21,7 +21,6 @@ use crate::song_database_accessor::SongDatabaseAccessor;
 use crate::song_database_update_listener::SongDatabaseUpdateListener;
 use crate::song_utils;
 use rubato_types::song_information_db::SongInformationDb;
-use rubato_types::sync_utils::lock_or_recover;
 
 /// Escape SQL LIKE wildcard characters (`%`, `_`, `\`) so that they are
 /// treated as literal characters in a `LIKE ... ESCAPE '\'` clause.

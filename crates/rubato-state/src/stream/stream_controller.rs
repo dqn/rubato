@@ -9,7 +9,6 @@ use crate::select::music_selector::MusicSelector;
 
 use super::stream_command::StreamCommand;
 use super::stream_request_command::StreamRequestCommand;
-use rubato_types::sync_utils::lock_or_recover;
 
 type SharedCommands = Arc<Mutex<Vec<Box<dyn StreamCommand>>>>;
 
