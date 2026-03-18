@@ -1,5 +1,6 @@
 use super::{ScoreData, SongData, SongSelectionAccess};
 use rubato_types::last_played_sort;
+use rubato_types::sync_utils::lock_or_recover;
 
 use std::sync::Mutex;
 
@@ -42,7 +43,7 @@ impl SongManagerMenu {
     }
 
     pub fn inject_music_selector(selector: Box<dyn SongSelectionAccess>) {
-        *SELECTOR.lock().expect("SELECTOR lock poisoned") = Some(selector);
+        *lock_or_recover(&SELECTOR) = Some(selector);
     }
 
     pub fn is_last_played_sort_enabled() -> bool {
@@ -55,7 +56,7 @@ impl SongManagerMenu {
 }
 
 fn get_current_song_data() -> Option<SongData> {
-    let selector = SELECTOR.lock().expect("SELECTOR lock poisoned");
+    let selector = lock_or_recover(&SELECTOR);
     if let Some(ref sel) = *selector {
         return sel.selected_song_data();
     }
@@ -63,7 +64,7 @@ fn get_current_song_data() -> Option<SongData> {
 }
 
 fn get_current_score_data() -> Option<ScoreData> {
-    let selector = SELECTOR.lock().expect("SELECTOR lock poisoned");
+    let selector = lock_or_recover(&SELECTOR);
     if let Some(ref sel) = *selector {
         return sel.selected_score_data();
     }

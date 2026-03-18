@@ -2,6 +2,7 @@ use super::super::skin_bar::SkinBar;
 use super::BarRenderer;
 use super::types::RenderContext;
 use crate::select::*;
+use rubato_types::sync_utils::lock_or_recover;
 
 impl BarRenderer {
     /// Refresh the bar text character set for font preparation when songs change.
@@ -121,7 +122,7 @@ impl BarRenderer {
                 if let Some(song_bar) = sd.as_song_bar() {
                     let song_md5 = &song_bar.song_data().file.md5;
                     for task_arc in download_tasks.values() {
-                        let task = task_arc.lock().expect("task_arc lock poisoned");
+                        let task = lock_or_recover(task_arc);
                         if task.hash() != song_md5 {
                             continue;
                         }

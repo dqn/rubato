@@ -7,6 +7,7 @@ use rubato_core::main_state::{MainState, MainStateData, MainStateType};
 use rubato_core::timer_manager::TimerManager;
 use rubato_state::select::music_selector::MusicSelector;
 use rubato_types::sound_type::SoundType;
+use rubato_types::sync_utils::lock_or_recover;
 
 /// Wrapper that delegates MainState methods to a shared `Arc<Mutex<MusicSelector>>`.
 ///
@@ -27,7 +28,7 @@ pub(super) struct SharedMusicSelectorState {
 impl SharedMusicSelectorState {
     pub(super) fn new(selector: Arc<Mutex<MusicSelector>>) -> Self {
         let state_data = {
-            let mut selector_guard = selector.lock().expect("selector lock poisoned");
+            let mut selector_guard = lock_or_recover(&selector);
             std::mem::replace(
                 &mut selector_guard.main_state_data,
                 MainStateData::new(TimerManager::new()),
@@ -40,7 +41,7 @@ impl SharedMusicSelectorState {
     }
 
     fn with_selector<R>(&mut self, f: impl FnOnce(&mut MusicSelector) -> R) -> R {
-        let mut selector = self.selector.lock().expect("selector lock poisoned");
+        let mut selector = lock_or_recover(&self.selector);
         std::mem::swap(&mut self.state_data, &mut selector.main_state_data);
         let result = f(&mut selector);
         std::mem::swap(&mut self.state_data, &mut selector.main_state_data);
@@ -110,10 +111,7 @@ impl MainState for SharedMusicSelectorState {
     }
 
     fn sound(&self, sound: SoundType) -> Option<String> {
-        self.selector
-            .lock()
-            .expect("selector lock poisoned")
-            .sound(sound)
+        lock_or_recover(&self.selector).sound(sound)
     }
 
     fn play_sound_loop(&mut self, sound: SoundType, loop_sound: bool) {

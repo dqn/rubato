@@ -1,3 +1,4 @@
+use rubato_types::sync_utils::lock_or_recover;
 use std::sync::Mutex;
 
 use rubato_types::sync_utils::lock_or_recover;

@@ -1,6 +1,9 @@
 //! Shared type definitions, configuration structures, and trait interfaces
 //! for the rubato BMS player.
 
+// Synchronization utilities
+pub mod sync_utils;
+
 // Shared types
 pub mod bar_sorter;
 pub mod bms_player_input_device;

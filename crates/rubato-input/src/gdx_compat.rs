@@ -1,6 +1,7 @@
 // GdxInput/GdxGraphics replacements using SharedKeyState from winit_input_bridge.
 
 use crate::winit_input_bridge::SharedKeyState;
+use rubato_types::sync_utils::lock_or_recover;
 use std::sync::Mutex;
 
 /// Global shared key state. When set (via `set_shared_key_state()`),
@@ -11,25 +12,19 @@ static SHARED_KEY_STATE: Mutex<Option<SharedKeyState>> = Mutex::new(None);
 
 /// Set the global shared key state. Can be called multiple times (later calls replace earlier).
 pub fn set_shared_key_state(state: SharedKeyState) {
-    let mut guard = SHARED_KEY_STATE
-        .lock()
-        .expect("SHARED_KEY_STATE lock poisoned");
+    let mut guard = lock_or_recover(&SHARED_KEY_STATE);
     *guard = Some(state);
 }
 
 /// Get the global shared key state, if set.
 pub fn get_shared_key_state() -> Option<SharedKeyState> {
-    let guard = SHARED_KEY_STATE
-        .lock()
-        .expect("SHARED_KEY_STATE lock poisoned");
+    let guard = lock_or_recover(&SHARED_KEY_STATE);
     guard.clone()
 }
 
 /// Clear the global shared key state, resetting it to None.
 pub fn clear_shared_key_state() {
-    let mut guard = SHARED_KEY_STATE
-        .lock()
-        .expect("SHARED_KEY_STATE lock poisoned");
+    let mut guard = lock_or_recover(&SHARED_KEY_STATE);
     *guard = None;
 }
 

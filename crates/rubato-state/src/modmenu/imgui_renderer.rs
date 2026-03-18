@@ -9,6 +9,7 @@ use super::skin_menu::SkinMenu;
 use super::skin_widget_manager::SkinWidgetManager;
 use super::{Version, version};
 
+use rubato_types::sync_utils::lock_or_recover;
 use std::sync::Mutex;
 
 static WINDOW_WIDTH: Mutex<i32> = Mutex::new(0);
@@ -26,19 +27,19 @@ static SHOW_SKIN_MENU: Mutex<bool> = Mutex::new(false);
 static SHOW_MISC_SETTING: Mutex<bool> = Mutex::new(false);
 
 pub fn window_width() -> i32 {
-    *WINDOW_WIDTH.lock().expect("WINDOW_WIDTH lock poisoned")
+    *lock_or_recover(&WINDOW_WIDTH)
 }
 
 pub fn window_height() -> i32 {
-    *WINDOW_HEIGHT.lock().expect("WINDOW_HEIGHT lock poisoned")
+    *lock_or_recover(&WINDOW_HEIGHT)
 }
 
 pub struct ImGuiRenderer;
 
 impl ImGuiRenderer {
     pub fn init(width: i32, height: i32) {
-        *WINDOW_WIDTH.lock().expect("WINDOW_WIDTH lock poisoned") = width;
-        *WINDOW_HEIGHT.lock().expect("WINDOW_HEIGHT lock poisoned") = height;
+        *lock_or_recover(&WINDOW_WIDTH) = width;
+        *lock_or_recover(&WINDOW_HEIGHT) = height;
         // egui context is initialized in beatoraja-bin; nothing to do here.
     }
 
@@ -51,7 +52,7 @@ impl ImGuiRenderer {
     /// Java equivalent: ImGuiRenderer.render() — called between ImGui.newFrame() and ImGui.render().
     /// Called from beatoraja-bin's event loop within egui::Context::run().
     pub fn render_ui(ctx: &egui::Context) {
-        let show_mod_menu = *SHOW_MOD_MENU.lock().expect("SHOW_MOD_MENU lock poisoned");
+        let show_mod_menu = *lock_or_recover(&SHOW_MOD_MENU);
         if show_mod_menu {
             // Window positioning: 44% from left, 2% from top
             // Java: ImGui.setNextWindowPos(windowWidth * 0.44f, windowHeight * 0.02f, ImGuiCond.Once)
@@ -65,24 +66,20 @@ impl ImGuiRenderer {
                 .auto_sized()
                 .show(ctx, |ui| {
                     // Sub-window toggle checkboxes
-                    let mut freq = SHOW_FREQ_PLUS.lock().expect("SHOW_FREQ_PLUS lock poisoned");
+                    let mut freq = lock_or_recover(&SHOW_FREQ_PLUS);
                     ui.checkbox(&mut freq, "Show Rate Modifier Window");
                     drop(freq);
 
-                    let mut random = SHOW_RANDOM_TRAINER
-                        .lock()
-                        .expect("SHOW_RANDOM_TRAINER lock poisoned");
+                    let mut random = lock_or_recover(&SHOW_RANDOM_TRAINER);
                     ui.checkbox(&mut random, "Show Random Trainer Window");
                     drop(random);
 
-                    let mut judge = SHOW_JUDGE_TRAINER
-                        .lock()
-                        .expect("SHOW_JUDGE_TRAINER lock poisoned");
+                    let mut judge = lock_or_recover(&SHOW_JUDGE_TRAINER);
                     ui.checkbox(&mut judge, "Show Judge Trainer Window");
                     drop(judge);
 
                     {
-                        let mut skin = SHOW_SKIN_MENU.lock().expect("SHOW_SKIN_MENU lock poisoned");
+                        let mut skin = lock_or_recover(&SHOW_SKIN_MENU);
                         let old = *skin;
                         ui.checkbox(&mut skin, "Show Skin Configuration Window");
                         if *skin && !old {
@@ -90,28 +87,20 @@ impl ImGuiRenderer {
                         }
                     }
 
-                    let mut swm = SHOW_SKIN_WIDGET_MANAGER
-                        .lock()
-                        .expect("SHOW_SKIN_WIDGET_MANAGER lock poisoned");
+                    let mut swm = lock_or_recover(&SHOW_SKIN_WIDGET_MANAGER);
                     ui.checkbox(&mut swm, "Show Skin Widget Manager Window");
                     drop(swm);
 
-                    let mut song = SHOW_SONG_MANAGER
-                        .lock()
-                        .expect("SHOW_SONG_MANAGER lock poisoned");
+                    let mut song = lock_or_recover(&SHOW_SONG_MANAGER);
                     ui.checkbox(&mut song, "Show Song Manager Window");
                     drop(song);
 
-                    let mut dl = SHOW_DOWNLOAD_MENU
-                        .lock()
-                        .expect("SHOW_DOWNLOAD_MENU lock poisoned");
+                    let mut dl = lock_or_recover(&SHOW_DOWNLOAD_MENU);
                     ui.checkbox(&mut dl, "Show Download Tasks Window");
                     drop(dl);
 
                     {
-                        let mut perf = SHOW_PERFORMANCE_MONITOR
-                            .lock()
-                            .expect("SHOW_PERFORMANCE_MONITOR lock poisoned");
+                        let mut perf = lock_or_recover(&SHOW_PERFORMANCE_MONITOR);
                         let old = *perf;
                         ui.checkbox(&mut perf, "Show Performance Monitor Window");
                         if *perf && !old {
@@ -119,9 +108,7 @@ impl ImGuiRenderer {
                         }
                     }
 
-                    let mut misc = SHOW_MISC_SETTING
-                        .lock()
-                        .expect("SHOW_MISC_SETTING lock poisoned");
+                    let mut misc = lock_or_recover(&SHOW_MISC_SETTING);
                     ui.checkbox(&mut misc, "Show Misc Setting Window");
                     drop(misc);
 
@@ -134,59 +121,38 @@ impl ImGuiRenderer {
                     });
                 });
             if !show {
-                *SHOW_MOD_MENU.lock().expect("SHOW_MOD_MENU lock poisoned") = false;
+                *lock_or_recover(&SHOW_MOD_MENU) = false;
             }
 
             // Render sub-windows
-            if *SHOW_FREQ_PLUS.lock().expect("SHOW_FREQ_PLUS lock poisoned") {
+            if *lock_or_recover(&SHOW_FREQ_PLUS) {
                 FreqTrainerMenu::show_ui(ctx);
             }
-            if *SHOW_RANDOM_TRAINER
-                .lock()
-                .expect("SHOW_RANDOM_TRAINER lock poisoned")
-            {
+            if *lock_or_recover(&SHOW_RANDOM_TRAINER) {
                 RandomTrainerMenu::show_ui(ctx);
             }
-            if *SHOW_JUDGE_TRAINER
-                .lock()
-                .expect("SHOW_JUDGE_TRAINER lock poisoned")
-            {
+            if *lock_or_recover(&SHOW_JUDGE_TRAINER) {
                 JudgeTrainerMenu::show_ui(ctx);
             }
-            if *SHOW_SONG_MANAGER
-                .lock()
-                .expect("SHOW_SONG_MANAGER lock poisoned")
-            {
+            if *lock_or_recover(&SHOW_SONG_MANAGER) {
                 crate::modmenu::song_manager_menu::SongManagerMenu::show_ui(ctx);
             }
-            if *SHOW_DOWNLOAD_MENU
-                .lock()
-                .expect("SHOW_DOWNLOAD_MENU lock poisoned")
-            {
+            if *lock_or_recover(&SHOW_DOWNLOAD_MENU) {
                 DownloadTaskMenu::show_ui(ctx);
             }
-            if *SHOW_SKIN_WIDGET_MANAGER
-                .lock()
-                .expect("SHOW_SKIN_WIDGET_MANAGER lock poisoned")
-            {
+            if *lock_or_recover(&SHOW_SKIN_WIDGET_MANAGER) {
                 SkinWidgetManager::set_focus(true);
                 SkinWidgetManager::show_ui(ctx);
             } else {
                 SkinWidgetManager::set_focus(false);
             }
-            if *SHOW_PERFORMANCE_MONITOR
-                .lock()
-                .expect("SHOW_PERFORMANCE_MONITOR lock poisoned")
-            {
+            if *lock_or_recover(&SHOW_PERFORMANCE_MONITOR) {
                 PerformanceMonitor::show_ui(ctx);
             }
-            if *SHOW_SKIN_MENU.lock().expect("SHOW_SKIN_MENU lock poisoned") {
+            if *lock_or_recover(&SHOW_SKIN_MENU) {
                 SkinMenu::show_ui(ctx);
             }
-            if *SHOW_MISC_SETTING
-                .lock()
-                .expect("SHOW_MISC_SETTING lock poisoned")
-            {
+            if *lock_or_recover(&SHOW_MISC_SETTING) {
                 MiscSettingMenu::show_ui(ctx);
             }
         }
@@ -208,11 +174,11 @@ impl ImGuiRenderer {
     }
 
     pub fn get_show_mod_menu() -> bool {
-        *SHOW_MOD_MENU.lock().expect("SHOW_MOD_MENU lock poisoned")
+        *lock_or_recover(&SHOW_MOD_MENU)
     }
 
     pub fn toggle_menu() {
-        let mut menu = SHOW_MOD_MENU.lock().expect("SHOW_MOD_MENU lock poisoned");
+        let mut menu = lock_or_recover(&SHOW_MOD_MENU);
         *menu = !*menu;
     }
 

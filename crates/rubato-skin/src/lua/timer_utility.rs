@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use mlua::prelude::*;
 
 use crate::reexports::MainState;
+use rubato_types::sync_utils::lock_or_recover;
 
 /// Timer utility for Lua
 ///
@@ -90,7 +91,7 @@ impl TimerUtility {
                     let timer_func = lua.create_function(move |_, ()| {
                         let state = unsafe { &*sp.0 };
                         let on: bool = func.call(()).unwrap_or(false);
-                        let mut obs = observe_state.lock().expect("observe_state lock poisoned");
+                        let mut obs = lock_or_recover(&observe_state);
                         Ok(obs.update(on, state.now_micro_time()))
                     })?;
                     Ok(timer_func)
@@ -106,7 +107,7 @@ impl TimerUtility {
                 // timer() -> number
                 let ps = passive_state.clone();
                 let timer_func = lua.create_function(move |_, ()| {
-                    let ps = ps.lock().expect("ps lock poisoned");
+                    let ps = lock_or_recover(&ps);
                     Ok(ps.timer())
                 })?;
                 tbl.set("timer", timer_func)?;
@@ -115,7 +116,7 @@ impl TimerUtility {
                 let ps = passive_state.clone();
                 let turn_on_func = lua.create_function(move |_, ()| {
                     let state = unsafe { &*sp.0 };
-                    let mut ps = ps.lock().expect("ps lock poisoned");
+                    let mut ps = lock_or_recover(&ps);
                     ps.turn_on(state.now_micro_time());
                     Ok(true)
                 })?;
@@ -125,7 +126,7 @@ impl TimerUtility {
                 let ps = passive_state.clone();
                 let turn_on_reset_func = lua.create_function(move |_, ()| {
                     let state = unsafe { &*sp.0 };
-                    let mut ps = ps.lock().expect("ps lock poisoned");
+                    let mut ps = lock_or_recover(&ps);
                     ps.turn_on_reset(state.now_micro_time());
                     Ok(true)
                 })?;
@@ -134,7 +135,7 @@ impl TimerUtility {
                 // turn_off() -> true
                 let ps = passive_state.clone();
                 let turn_off_func = lua.create_function(move |_, ()| {
-                    let mut ps = ps.lock().expect("ps lock poisoned");
+                    let mut ps = lock_or_recover(&ps);
                     ps.turn_off();
                     Ok(true)
                 })?;

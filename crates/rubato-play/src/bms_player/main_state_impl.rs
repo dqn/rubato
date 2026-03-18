@@ -1,4 +1,5 @@
 use super::*;
+use rubato_types::sync_utils::lock_or_recover;
 
 fn judge_timer_id(player: usize) -> rubato_types::timer_id::TimerId {
     match player {
@@ -39,10 +40,10 @@ const GAUGELOG_PAD_MAX_ENTRIES: i64 = 100_000;
 /// Fill remaining gauge log entries with 0.0 from `start_ms` up to
 /// `playtime + 500` (in milliseconds), capped at `GAUGELOG_PAD_MAX_ENTRIES`
 /// to guard against corrupted playtime.
-pub(crate) fn pad_gaugelog_with_zeros(gaugelog: &mut [Vec<f32>], start_ms: i64, playtime: i64) {
+pub(crate) fn pad_gaugelog_with_zeros(gaugelog: &mut [Vec<f32>], start_ms: i64, playtime: i32) {
     let mut l = start_ms;
     let mut entries_added = 0_i64;
-    while l < playtime + 500 && entries_added < GAUGELOG_PAD_MAX_ENTRIES {
+    while l < playtime as i64 + 500 && entries_added < GAUGELOG_PAD_MAX_ENTRIES {
         for glog in gaugelog.iter_mut() {
             glog.push(0.0);
         }
@@ -109,6 +110,7 @@ impl MainState for BMSPlayer {
     ) {
         if let Some(ref mut lr) = self.lanerender {
             lr.apply_play_config(&play_config);
+            lr.init(&self.model);
         }
         self.player_config.play_config(mode).playconfig = play_config;
     }
@@ -481,10 +483,7 @@ impl MainState for BMSPlayer {
                         }
                     }
 
-                    self.bga
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner())
-                        .prepare(&() as &dyn std::any::Any);
+                    lock_or_recover(&self.bga).prepare(&() as &dyn std::any::Any);
                     self.state = PlayState::Ready;
                     self.main_state_data.timer.set_timer_on(TIMER_READY);
                     self.queue_sound(rubato_types::sound_type::SoundType::PlayReady);
@@ -667,12 +666,10 @@ impl MainState for BMSPlayer {
                     } else {
                         0
                     };
-                    self.playtime = (property.endtime as i64 + 1000) * 100 / freq + TIME_MARGIN;
+                    self.playtime =
+                        ((property.endtime as i64 + 1000) * 100 / freq) as i32 + TIME_MARGIN;
 
-                    self.bga
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner())
-                        .prepare(&() as &dyn std::any::Any);
+                    lock_or_recover(&self.bga).prepare(&() as &dyn std::any::Any);
                     self.state = PlayState::Ready;
                     self.main_state_data.timer.set_timer_on(TIMER_READY);
                     log::info!("Practice -> PlayState::Ready");
@@ -908,7 +905,7 @@ impl MainState for BMSPlayer {
                 );
 
                 // Check play time elapsed
-                if self.playtime < ptime {
+                if (self.playtime as i64) < ptime {
                     self.state = PlayState::Finished;
                     self.main_state_data.timer.set_timer_on(TIMER_MUSIC_END);
                     for raw in TIMER_PM_CHARA_1P_NEUTRAL.as_i32()..=TIMER_PM_CHARA_2P_BAD.as_i32() {
@@ -918,7 +915,7 @@ impl MainState for BMSPlayer {
                         .timer
                         .set_timer_off(TIMER_PM_CHARA_DANCE);
                     log::info!("PlayState::Finished");
-                } else if (self.playtime - TIME_MARGIN) <= ptime {
+                } else if (self.playtime - TIME_MARGIN) as i64 <= ptime {
                     self.main_state_data
                         .timer
                         .switch_timer(TIMER_ENDOFNOTE_1P, true);

@@ -3,6 +3,7 @@ use std::sync::Mutex;
 
 use super::selectable_bar::SelectableBarData;
 use crate::select::*;
+use rubato_types::sync_utils::lock_or_recover;
 
 /// Queue length for random index generation
 const QUEUE_LENGTH: usize = 1000;
@@ -23,12 +24,8 @@ pub struct ExecutableBar {
 
 impl Clone for ExecutableBar {
     fn clone(&self) -> Self {
-        let queue = self.queue.lock().expect("queue lock poisoned").clone();
-        let current_song = self
-            .current_song
-            .lock()
-            .expect("current_song lock poisoned")
-            .clone();
+        let queue = lock_or_recover(&self.queue).clone();
+        let current_song = lock_or_recover(&self.current_song).clone();
         Self {
             selectable: self.selectable.clone(),
             title: self.title.clone(),
@@ -57,26 +54,23 @@ impl ExecutableBar {
     }
 
     fn _get_song_data(&self) -> SongData {
-        let mut queue = self.queue.lock().expect("queue lock poisoned");
+        let mut queue = lock_or_recover(&self.queue);
         if queue.is_empty() {
             drop(queue);
             self.create_index_queue();
-            queue = self.queue.lock().expect("queue lock poisoned");
+            queue = lock_or_recover(&self.queue);
         }
 
         // In Java: if (state instanceof MusicSelector || currentSong == null)
         // Simplified: always get next random song
-        let mut current = self
-            .current_song
-            .lock()
-            .expect("current_song lock poisoned");
+        let mut current = lock_or_recover(&self.current_song);
         let index = queue.pop_front().expect("pop_front");
         *current = Some(self.songs[index].clone());
         current.as_ref().expect("current is Some").clone()
     }
 
     fn create_index_queue(&self) {
-        let mut queue = self.queue.lock().expect("queue lock poisoned");
+        let mut queue = lock_or_recover(&self.queue);
         queue.clear();
         if self.songs.is_empty() {
             return;

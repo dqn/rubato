@@ -1,6 +1,7 @@
 use bms_model::mode::Mode;
 use rubato_play::bms_player_rule::BMSPlayerRule;
 
+use rubato_types::sync_utils::lock_or_recover;
 use std::sync::Mutex;
 
 pub const JUDGE_OPTIONS: [&str; 4] = ["EASY", "NORMAL", "HARD", "VERY_HARD"];
@@ -12,19 +13,19 @@ pub struct JudgeTrainer;
 
 impl JudgeTrainer {
     pub fn is_active() -> bool {
-        *ACTIVE.lock().expect("ACTIVE lock poisoned")
+        *lock_or_recover(&ACTIVE)
     }
 
     pub fn set_active(active: bool) {
-        *ACTIVE.lock().expect("ACTIVE lock poisoned") = active;
+        *lock_or_recover(&ACTIVE) = active;
     }
 
     pub fn get_judge_rank() -> i32 {
-        *JUDGE_RANK.lock().expect("JUDGE_RANK lock poisoned")
+        *lock_or_recover(&JUDGE_RANK)
     }
 
     pub fn set_judge_rank(judge_rank: i32) {
-        *JUDGE_RANK.lock().expect("JUDGE_RANK lock poisoned") = judge_rank.clamp(0, 3);
+        *lock_or_recover(&JUDGE_RANK) = judge_rank.clamp(0, 3);
     }
 
     pub fn judge_window_rate(mode: &Mode) -> i32 {
@@ -36,7 +37,7 @@ impl JudgeTrainer {
         // Therefore, we need a transformation:
         // EASY 0 -> 3 | NORMAL: 1 -> 2 | HARD: 2 -> 1 | VERY-HARD: 3 -> 0
         // We can observe that the sum is always 3
-        let judge_rank = *JUDGE_RANK.lock().expect("JUDGE_RANK lock poisoned");
+        let judge_rank = *lock_or_recover(&JUDGE_RANK);
         let rule = BMSPlayerRule::for_mode(mode);
         rule.judge.windowrule.judgerank[(3 - judge_rank) as usize]
     }

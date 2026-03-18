@@ -11,6 +11,7 @@ use bms_model::note::Note;
 
 use crate::audio_driver::AudioDriver;
 use crate::recording_audio_driver::{AudioEvent, RecordingAudioDriver};
+use rubato_types::sync_utils::lock_or_recover;
 
 /// A shared wrapper around `RecordingAudioDriver` that implements `AudioDriver`.
 ///
@@ -36,19 +37,12 @@ impl SharedRecordingAudioDriver {
 
     /// Returns a snapshot of all recorded events.
     pub fn events(&self) -> Vec<AudioEvent> {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .events()
-            .to_vec()
+        lock_or_recover(&self.inner).events().to_vec()
     }
 
     /// Clears the event log.
     pub fn clear_events(&self) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .clear_events();
+        lock_or_recover(&self.inner).clear_events();
     }
 }
 
@@ -60,129 +54,75 @@ impl Default for SharedRecordingAudioDriver {
 
 impl AudioDriver for SharedRecordingAudioDriver {
     fn play_path(&mut self, path: &str, volume: f32, loop_play: bool) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .play_path(path, volume, loop_play);
+        lock_or_recover(&self.inner).play_path(path, volume, loop_play);
     }
 
     fn set_volume_path(&mut self, path: &str, volume: f32) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .set_volume_path(path, volume);
+        lock_or_recover(&self.inner).set_volume_path(path, volume);
     }
 
     fn is_playing_path(&self, path: &str) -> bool {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .is_playing_path(path)
+        lock_or_recover(&self.inner).is_playing_path(path)
     }
 
     fn stop_path(&mut self, path: &str) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .stop_path(path);
+        lock_or_recover(&self.inner).stop_path(path);
     }
 
     fn dispose_path(&mut self, path: &str) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .dispose_path(path);
+        lock_or_recover(&self.inner).dispose_path(path);
     }
 
     fn set_model(&mut self, model: &BMSModel) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .set_model(model);
+        lock_or_recover(&self.inner).set_model(model);
     }
 
     fn set_additional_key_sound(&mut self, judge: i32, fast: bool, path: Option<&str>) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .set_additional_key_sound(judge, fast, path);
+        lock_or_recover(&self.inner).set_additional_key_sound(judge, fast, path);
     }
 
     fn abort(&mut self) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .abort();
+        lock_or_recover(&self.inner).abort();
     }
 
     fn get_progress(&self) -> f32 {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .get_progress()
+        lock_or_recover(&self.inner).get_progress()
     }
 
     fn preload_path(&mut self, path: &str) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .preload_path(path);
+        lock_or_recover(&self.inner).preload_path(path);
     }
 
     fn play_note(&mut self, n: &Note, volume: f32, pitch: i32) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .play_note(n, volume, pitch);
+        lock_or_recover(&self.inner).play_note(n, volume, pitch);
     }
 
     fn play_judge(&mut self, judge: i32, fast: bool) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .play_judge(judge, fast);
+        lock_or_recover(&self.inner).play_judge(judge, fast);
     }
 
     fn stop_note(&mut self, n: Option<&Note>) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .stop_note(n);
+        lock_or_recover(&self.inner).stop_note(n);
     }
 
     fn set_volume_note(&mut self, n: &Note, volume: f32) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .set_volume_note(n, volume);
+        lock_or_recover(&self.inner).set_volume_note(n, volume);
     }
 
     fn set_global_pitch(&mut self, pitch: f32) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .set_global_pitch(pitch);
+        lock_or_recover(&self.inner).set_global_pitch(pitch);
     }
 
     fn get_global_pitch(&self) -> f32 {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .get_global_pitch()
+        lock_or_recover(&self.inner).get_global_pitch()
     }
 
     fn dispose_old(&mut self) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .dispose_old();
+        lock_or_recover(&self.inner).dispose_old();
     }
 
     fn dispose(&mut self) {
-        self.inner
-            .lock()
-            .expect("recording audio driver mutex poisoned")
-            .dispose();
+        lock_or_recover(&self.inner).dispose();
     }
 }
 

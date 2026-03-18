@@ -4,6 +4,7 @@ use super::imgui_notify::{ImGuiNotify, NOTIFICATION_POSITIONS};
 use super::{Config, PlayConfig, PlayerConfig, read_all_player_id};
 use rubato_types::main_controller_access::{MainControllerCommand, MainControllerCommandQueue};
 
+use rubato_types::sync_utils::lock_or_recover;
 use std::sync::Mutex;
 
 static PLAYER_CONFIG: Mutex<Option<PlayerConfig>> = Mutex::new(None);
@@ -52,45 +53,25 @@ impl MiscSettingMenu {
     /// references to the old `PlayerConfig`, `Config`, and command queue are not
     /// left behind.
     pub fn clear() {
-        *PLAYER_CONFIG.lock().expect("PLAYER_CONFIG lock poisoned") = None;
-        *COMMAND_QUEUE.lock().expect("COMMAND_QUEUE lock poisoned") = None;
-        *CONFIG.lock().expect("CONFIG lock poisoned") = None;
-        *CURRENT_PLAY_MODE
-            .lock()
-            .expect("CURRENT_PLAY_MODE lock poisoned") = None;
-        *PLAY_MODE_VALUE
-            .lock()
-            .expect("PLAY_MODE_VALUE lock poisoned") = 1;
-        *NOTIFICATION_POSITION
-            .lock()
-            .expect("NOTIFICATION_POSITION lock poisoned") = 0;
-        *ENABLE_LIFT.lock().expect("ENABLE_LIFT lock poisoned") = false;
-        *LIFT_VALUE.lock().expect("LIFT_VALUE lock poisoned") = 0;
-        *ENABLE_HIDDEN.lock().expect("ENABLE_HIDDEN lock poisoned") = false;
-        *HIDDEN_VALUE.lock().expect("HIDDEN_VALUE lock poisoned") = 0;
-        *ENABLE_LANECOVER
-            .lock()
-            .expect("ENABLE_LANECOVER lock poisoned") = false;
-        *LANECOVER_VALUE
-            .lock()
-            .expect("LANECOVER_VALUE lock poisoned") = 0;
-        *LANE_COVER_MARGIN_LOW
-            .lock()
-            .expect("LANE_COVER_MARGIN_LOW lock poisoned") = 0.0;
-        *LANE_COVER_MARGIN_HIGH
-            .lock()
-            .expect("LANE_COVER_MARGIN_HIGH lock poisoned") = 0.0;
-        *LANE_COVER_SWITCH_DURATION
-            .lock()
-            .expect("LANE_COVER_SWITCH_DURATION lock poisoned") = 0;
-        *ENABLE_CONSTANT
-            .lock()
-            .expect("ENABLE_CONSTANT lock poisoned") = false;
-        *CONSTANT_VALUE.lock().expect("CONSTANT_VALUE lock poisoned") = 0;
-        *SELECTED_PLAYER
-            .lock()
-            .expect("SELECTED_PLAYER lock poisoned") = 0;
-        *PLAYERS.lock().expect("PLAYERS lock poisoned") = Vec::new();
+        *lock_or_recover(&PLAYER_CONFIG) = None;
+        *lock_or_recover(&COMMAND_QUEUE) = None;
+        *lock_or_recover(&CONFIG) = None;
+        *lock_or_recover(&CURRENT_PLAY_MODE) = None;
+        *lock_or_recover(&PLAY_MODE_VALUE) = 1;
+        *lock_or_recover(&NOTIFICATION_POSITION) = 0;
+        *lock_or_recover(&ENABLE_LIFT) = false;
+        *lock_or_recover(&LIFT_VALUE) = 0;
+        *lock_or_recover(&ENABLE_HIDDEN) = false;
+        *lock_or_recover(&HIDDEN_VALUE) = 0;
+        *lock_or_recover(&ENABLE_LANECOVER) = false;
+        *lock_or_recover(&LANECOVER_VALUE) = 0;
+        *lock_or_recover(&LANE_COVER_MARGIN_LOW) = 0.0;
+        *lock_or_recover(&LANE_COVER_MARGIN_HIGH) = 0.0;
+        *lock_or_recover(&LANE_COVER_SWITCH_DURATION) = 0;
+        *lock_or_recover(&ENABLE_CONSTANT) = false;
+        *lock_or_recover(&CONSTANT_VALUE) = 0;
+        *lock_or_recover(&SELECTED_PLAYER) = 0;
+        *lock_or_recover(&PLAYERS) = Vec::new();
     }
 
     /// Initialize with a PlayerConfig and command queue for writing changes back to MainController.
@@ -105,21 +86,17 @@ impl MiscSettingMenu {
             .position(|p| config.playername().is_some_and(|name| p == name))
             .unwrap_or(0);
 
-        *PLAYERS.lock().expect("PLAYERS lock poisoned") = players;
-        *SELECTED_PLAYER
-            .lock()
-            .expect("SELECTED_PLAYER lock poisoned") = player_idx as i32;
-        *PLAYER_CONFIG.lock().expect("PLAYER_CONFIG lock poisoned") = Some(player_config);
-        *CONFIG.lock().expect("CONFIG lock poisoned") = Some(config);
-        *COMMAND_QUEUE.lock().expect("COMMAND_QUEUE lock poisoned") = Some(command_queue);
+        *lock_or_recover(&PLAYERS) = players;
+        *lock_or_recover(&SELECTED_PLAYER) = player_idx as i32;
+        *lock_or_recover(&PLAYER_CONFIG) = Some(player_config);
+        *lock_or_recover(&CONFIG) = Some(config);
+        *lock_or_recover(&COMMAND_QUEUE) = Some(command_queue);
     }
 
     /// Render the misc settings window using egui.
     pub fn show_ui(ctx: &egui::Context) {
         {
-            let mode = CURRENT_PLAY_MODE
-                .lock()
-                .expect("CURRENT_PLAY_MODE lock poisoned");
+            let mode = lock_or_recover(&CURRENT_PLAY_MODE);
             if mode.is_none() {
                 drop(mode);
                 change_play_mode(&Mode::BEAT_7K);
@@ -132,9 +109,7 @@ impl MiscSettingMenu {
             .auto_sized()
             .show(ctx, |ui| {
                 // Notification position
-                let mut pos = *NOTIFICATION_POSITION
-                    .lock()
-                    .expect("NOTIFICATION_POSITION lock poisoned");
+                let mut pos = *lock_or_recover(&NOTIFICATION_POSITION);
                 let pos_text = NOTIFICATION_POSITIONS
                     .get(pos as usize)
                     .copied()
@@ -144,9 +119,7 @@ impl MiscSettingMenu {
                     .show_ui(ui, |ui| {
                         for (i, name) in NOTIFICATION_POSITIONS.iter().enumerate() {
                             if ui.selectable_value(&mut pos, i as i32, *name).clicked() {
-                                *NOTIFICATION_POSITION
-                                    .lock()
-                                    .expect("NOTIFICATION_POSITION lock poisoned") = pos;
+                                *lock_or_recover(&NOTIFICATION_POSITION) = pos;
                                 ImGuiNotify::set_notification_position(pos as usize);
                             }
                         }
@@ -154,9 +127,7 @@ impl MiscSettingMenu {
 
                 // Play mode selector
                 let play_mode_options = get_play_mode_options();
-                let mut idx = *PLAY_MODE_VALUE
-                    .lock()
-                    .expect("PLAY_MODE_VALUE lock poisoned");
+                let mut idx = *lock_or_recover(&PLAY_MODE_VALUE);
                 let mode_text = play_mode_options
                     .get(idx as usize)
                     .map(|s| s.as_str())
@@ -169,9 +140,7 @@ impl MiscSettingMenu {
                                 .selectable_value(&mut idx, i as i32, option.as_str())
                                 .clicked()
                             {
-                                *PLAY_MODE_VALUE
-                                    .lock()
-                                    .expect("PLAY_MODE_VALUE lock poisoned") = idx;
+                                *lock_or_recover(&PLAY_MODE_VALUE) = idx;
                                 if let Some(mode) = Mode::from_hint(&play_mode_options[i]) {
                                     // Flush current mode's changes before switching
                                     flush_play_config();
@@ -186,75 +155,61 @@ impl MiscSettingMenu {
                 // Lane cover / Hidden / Lift / Constant settings
                 let mut dirty = false;
 
-                let mut lift_enabled = *ENABLE_LIFT.lock().expect("ENABLE_LIFT lock poisoned");
+                let mut lift_enabled = *lock_or_recover(&ENABLE_LIFT);
                 if ui.checkbox(&mut lift_enabled, "Enable Lift").changed() {
-                    *ENABLE_LIFT.lock().expect("ENABLE_LIFT lock poisoned") = lift_enabled;
+                    *lock_or_recover(&ENABLE_LIFT) = lift_enabled;
                     dirty = true;
                 }
                 if lift_enabled {
-                    let mut lift_val = *LIFT_VALUE.lock().expect("LIFT_VALUE lock poisoned");
+                    let mut lift_val = *lock_or_recover(&LIFT_VALUE);
                     if ui
                         .add(egui::Slider::new(&mut lift_val, 0..=1000).text("Lift"))
                         .changed()
                     {
-                        *LIFT_VALUE.lock().expect("LIFT_VALUE lock poisoned") = lift_val;
+                        *lock_or_recover(&LIFT_VALUE) = lift_val;
                         dirty = true;
                     }
                 }
 
-                let mut hidden_enabled =
-                    *ENABLE_HIDDEN.lock().expect("ENABLE_HIDDEN lock poisoned");
+                let mut hidden_enabled = *lock_or_recover(&ENABLE_HIDDEN);
                 if ui.checkbox(&mut hidden_enabled, "Enable Hidden").changed() {
-                    *ENABLE_HIDDEN.lock().expect("ENABLE_HIDDEN lock poisoned") = hidden_enabled;
+                    *lock_or_recover(&ENABLE_HIDDEN) = hidden_enabled;
                     dirty = true;
                 }
                 if hidden_enabled {
-                    let mut hidden_val = *HIDDEN_VALUE.lock().expect("HIDDEN_VALUE lock poisoned");
+                    let mut hidden_val = *lock_or_recover(&HIDDEN_VALUE);
                     if ui
                         .add(egui::Slider::new(&mut hidden_val, 0..=1000).text("Hidden"))
                         .changed()
                     {
-                        *HIDDEN_VALUE.lock().expect("HIDDEN_VALUE lock poisoned") = hidden_val;
+                        *lock_or_recover(&HIDDEN_VALUE) = hidden_val;
                         dirty = true;
                     }
                 }
 
-                let mut lc_enabled = *ENABLE_LANECOVER
-                    .lock()
-                    .expect("ENABLE_LANECOVER lock poisoned");
+                let mut lc_enabled = *lock_or_recover(&ENABLE_LANECOVER);
                 if ui.checkbox(&mut lc_enabled, "Enable Lane Cover").changed() {
-                    *ENABLE_LANECOVER
-                        .lock()
-                        .expect("ENABLE_LANECOVER lock poisoned") = lc_enabled;
+                    *lock_or_recover(&ENABLE_LANECOVER) = lc_enabled;
                     dirty = true;
                 }
                 if lc_enabled {
-                    let mut lc_val = *LANECOVER_VALUE
-                        .lock()
-                        .expect("LANECOVER_VALUE lock poisoned");
+                    let mut lc_val = *lock_or_recover(&LANECOVER_VALUE);
                     if ui
                         .add(egui::Slider::new(&mut lc_val, 0..=1000).text("Lane Cover"))
                         .changed()
                     {
-                        *LANECOVER_VALUE
-                            .lock()
-                            .expect("LANECOVER_VALUE lock poisoned") = lc_val;
+                        *lock_or_recover(&LANECOVER_VALUE) = lc_val;
                         dirty = true;
                     }
                 }
 
-                let mut constant = *ENABLE_CONSTANT
-                    .lock()
-                    .expect("ENABLE_CONSTANT lock poisoned");
+                let mut constant = *lock_or_recover(&ENABLE_CONSTANT);
                 if ui.checkbox(&mut constant, "Enable Constant").changed() {
-                    *ENABLE_CONSTANT
-                        .lock()
-                        .expect("ENABLE_CONSTANT lock poisoned") = constant;
+                    *lock_or_recover(&ENABLE_CONSTANT) = constant;
                     dirty = true;
                 }
                 if constant {
-                    let mut constant_val =
-                        *CONSTANT_VALUE.lock().expect("CONSTANT_VALUE lock poisoned");
+                    let mut constant_val = *lock_or_recover(&CONSTANT_VALUE);
                     if ui
                         .add(
                             egui::Slider::new(&mut constant_val, 0..=5000)
@@ -262,8 +217,7 @@ impl MiscSettingMenu {
                         )
                         .changed()
                     {
-                        *CONSTANT_VALUE.lock().expect("CONSTANT_VALUE lock poisoned") =
-                            constant_val;
+                        *lock_or_recover(&CONSTANT_VALUE) = constant_val;
                         dirty = true;
                     }
                 }
@@ -285,30 +239,17 @@ impl MiscSettingMenu {
 fn build_play_config_from_statics() -> PlayConfig {
     let base = get_play_config();
     PlayConfig {
-        enablelift: *ENABLE_LIFT.lock().expect("ENABLE_LIFT lock poisoned"),
-        lift: *LIFT_VALUE.lock().expect("LIFT_VALUE lock poisoned") as f32 / 1000.0,
-        enablehidden: *ENABLE_HIDDEN.lock().expect("ENABLE_HIDDEN lock poisoned"),
-        hidden: *HIDDEN_VALUE.lock().expect("HIDDEN_VALUE lock poisoned") as f32 / 1000.0,
-        enablelanecover: *ENABLE_LANECOVER
-            .lock()
-            .expect("ENABLE_LANECOVER lock poisoned"),
-        lanecover: *LANECOVER_VALUE
-            .lock()
-            .expect("LANECOVER_VALUE lock poisoned") as f32
-            / 1000.0,
-        lanecovermarginlow: *LANE_COVER_MARGIN_LOW
-            .lock()
-            .expect("LANE_COVER_MARGIN_LOW lock poisoned"),
-        lanecovermarginhigh: *LANE_COVER_MARGIN_HIGH
-            .lock()
-            .expect("LANE_COVER_MARGIN_HIGH lock poisoned"),
-        lanecoverswitchduration: *LANE_COVER_SWITCH_DURATION
-            .lock()
-            .expect("LANE_COVER_SWITCH_DURATION lock poisoned"),
-        enable_constant: *ENABLE_CONSTANT
-            .lock()
-            .expect("ENABLE_CONSTANT lock poisoned"),
-        constant_fadein_time: *CONSTANT_VALUE.lock().expect("CONSTANT_VALUE lock poisoned"),
+        enablelift: *lock_or_recover(&ENABLE_LIFT),
+        lift: *lock_or_recover(&LIFT_VALUE) as f32 / 1000.0,
+        enablehidden: *lock_or_recover(&ENABLE_HIDDEN),
+        hidden: *lock_or_recover(&HIDDEN_VALUE) as f32 / 1000.0,
+        enablelanecover: *lock_or_recover(&ENABLE_LANECOVER),
+        lanecover: *lock_or_recover(&LANECOVER_VALUE) as f32 / 1000.0,
+        lanecovermarginlow: *lock_or_recover(&LANE_COVER_MARGIN_LOW),
+        lanecovermarginhigh: *lock_or_recover(&LANE_COVER_MARGIN_HIGH),
+        lanecoverswitchduration: *lock_or_recover(&LANE_COVER_SWITCH_DURATION),
+        enable_constant: *lock_or_recover(&ENABLE_CONSTANT),
+        constant_fadein_time: *lock_or_recover(&CONSTANT_VALUE),
         ..base
     }
 }
@@ -316,10 +257,7 @@ fn build_play_config_from_statics() -> PlayConfig {
 /// Flush current UI state back to the local PlayerConfig and push an UpdatePlayConfig command
 /// so MainController stays in sync.
 fn flush_play_config() {
-    let mode = match *CURRENT_PLAY_MODE
-        .lock()
-        .expect("CURRENT_PLAY_MODE lock poisoned")
-    {
+    let mode = match *lock_or_recover(&CURRENT_PLAY_MODE) {
         Some(m) => m,
         None => return,
     };
@@ -328,14 +266,14 @@ fn flush_play_config() {
 
     // Update the local PlayerConfig clone
     {
-        let mut pc_guard = PLAYER_CONFIG.lock().expect("PLAYER_CONFIG lock poisoned");
+        let mut pc_guard = lock_or_recover(&PLAYER_CONFIG);
         if let Some(ref mut pc) = *pc_guard {
             pc.play_config(mode).playconfig = updated.clone();
         }
     }
 
     // Push command to MainController
-    let queue = COMMAND_QUEUE.lock().expect("COMMAND_QUEUE lock poisoned");
+    let queue = lock_or_recover(&COMMAND_QUEUE);
     if let Some(ref q) = *queue {
         q.push(MainControllerCommand::UpdatePlayConfig(
             mode,
@@ -346,11 +284,9 @@ fn flush_play_config() {
 
 /// Get current play mode(5k, 7k...) config from the local PlayerConfig clone.
 fn get_play_config() -> PlayConfig {
-    let pc_guard = PLAYER_CONFIG.lock().expect("PLAYER_CONFIG lock poisoned");
+    let pc_guard = lock_or_recover(&PLAYER_CONFIG);
     if let Some(ref pc) = *pc_guard {
-        let mode = CURRENT_PLAY_MODE
-            .lock()
-            .expect("CURRENT_PLAY_MODE lock poisoned");
+        let mode = lock_or_recover(&CURRENT_PLAY_MODE);
         if let Some(ref mode) = *mode {
             // Use play_config_ref() to avoid the &mut requirement of play_config()
             return pc.play_config_ref(*mode).playconfig.clone();
@@ -361,37 +297,23 @@ fn get_play_config() -> PlayConfig {
 
 /// Change current play mode, resetting related options
 fn change_play_mode(mode: &Mode) {
-    *CURRENT_PLAY_MODE
-        .lock()
-        .expect("CURRENT_PLAY_MODE lock poisoned") = Some(*mode);
+    *lock_or_recover(&CURRENT_PLAY_MODE) = Some(*mode);
     let conf = get_play_config();
 
-    *ENABLE_LIFT.lock().expect("ENABLE_LIFT lock poisoned") = conf.enablelift;
-    *LIFT_VALUE.lock().expect("LIFT_VALUE lock poisoned") = (conf.lift * 1000.0) as i32;
+    *lock_or_recover(&ENABLE_LIFT) = conf.enablelift;
+    *lock_or_recover(&LIFT_VALUE) = (conf.lift * 1000.0) as i32;
 
-    *ENABLE_HIDDEN.lock().expect("ENABLE_HIDDEN lock poisoned") = conf.enablehidden;
-    *HIDDEN_VALUE.lock().expect("HIDDEN_VALUE lock poisoned") = (conf.hidden * 1000.0) as i32;
+    *lock_or_recover(&ENABLE_HIDDEN) = conf.enablehidden;
+    *lock_or_recover(&HIDDEN_VALUE) = (conf.hidden * 1000.0) as i32;
 
-    *ENABLE_LANECOVER
-        .lock()
-        .expect("ENABLE_LANECOVER lock poisoned") = conf.enablelanecover;
-    *LANECOVER_VALUE
-        .lock()
-        .expect("LANECOVER_VALUE lock poisoned") = (conf.lanecover * 1000.0) as i32;
-    *LANE_COVER_MARGIN_LOW
-        .lock()
-        .expect("LANE_COVER_MARGIN_LOW lock poisoned") = conf.lanecovermarginlow;
-    *LANE_COVER_MARGIN_HIGH
-        .lock()
-        .expect("LANE_COVER_MARGIN_HIGH lock poisoned") = conf.lanecovermarginhigh;
-    *LANE_COVER_SWITCH_DURATION
-        .lock()
-        .expect("LANE_COVER_SWITCH_DURATION lock poisoned") = conf.lanecoverswitchduration;
+    *lock_or_recover(&ENABLE_LANECOVER) = conf.enablelanecover;
+    *lock_or_recover(&LANECOVER_VALUE) = (conf.lanecover * 1000.0) as i32;
+    *lock_or_recover(&LANE_COVER_MARGIN_LOW) = conf.lanecovermarginlow;
+    *lock_or_recover(&LANE_COVER_MARGIN_HIGH) = conf.lanecovermarginhigh;
+    *lock_or_recover(&LANE_COVER_SWITCH_DURATION) = conf.lanecoverswitchduration;
 
-    *ENABLE_CONSTANT
-        .lock()
-        .expect("ENABLE_CONSTANT lock poisoned") = conf.enable_constant;
-    *CONSTANT_VALUE.lock().expect("CONSTANT_VALUE lock poisoned") = conf.constant_fadein_time;
+    *lock_or_recover(&ENABLE_CONSTANT) = conf.enable_constant;
+    *lock_or_recover(&CONSTANT_VALUE) = conf.constant_fadein_time;
 }
 
 fn profile_switcher_ui(ui: &mut egui::Ui) {
@@ -400,10 +322,8 @@ fn profile_switcher_ui(ui: &mut egui::Ui) {
     let mut switch_player_id: Option<String> = None;
 
     {
-        let players = PLAYERS.lock().expect("PLAYERS lock poisoned");
-        let mut selected = *SELECTED_PLAYER
-            .lock()
-            .expect("SELECTED_PLAYER lock poisoned");
+        let players = lock_or_recover(&PLAYERS);
+        let mut selected = *lock_or_recover(&SELECTED_PLAYER);
         let selected_text = players
             .get(selected as usize)
             .map(|s| s.as_str())
@@ -418,9 +338,7 @@ fn profile_switcher_ui(ui: &mut egui::Ui) {
                             .selectable_value(&mut selected, i as i32, player.as_str())
                             .clicked()
                         {
-                            *SELECTED_PLAYER
-                                .lock()
-                                .expect("SELECTED_PLAYER lock poisoned") = selected;
+                            *lock_or_recover(&SELECTED_PLAYER) = selected;
                         }
                     }
                 });
@@ -439,23 +357,23 @@ fn profile_switcher_ui(ui: &mut egui::Ui) {
 
     // Handle switch outside the players lock to allow reload + re-lock
     if switch_clicked && let Some(player_id) = switch_player_id {
-        let old_players = PLAYERS.lock().expect("PLAYERS lock poisoned").clone();
+        let old_players = lock_or_recover(&PLAYERS).clone();
         load_players();
-        let new_players = PLAYERS.lock().expect("PLAYERS lock poisoned");
+        let new_players = lock_or_recover(&PLAYERS);
         if *new_players == old_players {
             drop(new_players);
             match PlayerConfig::read_player_config("player", &player_id) {
                 Ok(new_pc) => {
                     // Update config.playername
                     {
-                        let mut config = CONFIG.lock().expect("CONFIG lock poisoned");
+                        let mut config = lock_or_recover(&CONFIG);
                         if let Some(ref mut c) = *config {
                             c.playername = new_pc.id.clone();
                         }
                     }
                     // Push SaveConfig and LoadNewProfile commands via the queue
                     {
-                        let queue = COMMAND_QUEUE.lock().expect("COMMAND_QUEUE lock poisoned");
+                        let queue = lock_or_recover(&COMMAND_QUEUE);
                         if let Some(ref q) = *queue {
                             q.push(MainControllerCommand::SaveConfig);
                             q.push(MainControllerCommand::LoadNewProfile(Box::new(
@@ -464,12 +382,9 @@ fn profile_switcher_ui(ui: &mut egui::Ui) {
                         }
                     }
                     // Update local PlayerConfig
-                    *PLAYER_CONFIG.lock().expect("PLAYER_CONFIG lock poisoned") = Some(new_pc);
+                    *lock_or_recover(&PLAYER_CONFIG) = Some(new_pc);
                     // Refresh play mode settings from the new profile
-                    let mode = CURRENT_PLAY_MODE
-                        .lock()
-                        .expect("CURRENT_PLAY_MODE lock poisoned")
-                        .unwrap_or(Mode::BEAT_7K);
+                    let mode = lock_or_recover(&CURRENT_PLAY_MODE).unwrap_or(Mode::BEAT_7K);
                     change_play_mode(&mode);
                     log::info!("Profile switched to: {}", player_id);
                 }
@@ -487,20 +402,18 @@ fn profile_switcher_ui(ui: &mut egui::Ui) {
 }
 
 fn load_players() {
-    *PLAYERS.lock().expect("PLAYERS lock poisoned") = read_all_player_id("player");
+    *lock_or_recover(&PLAYERS) = read_all_player_id("player");
 }
 
 #[allow(dead_code)]
 fn profile_switcher() {
-    let players = PLAYERS.lock().expect("PLAYERS lock poisoned");
-    let selected = *SELECTED_PLAYER
-        .lock()
-        .expect("SELECTED_PLAYER lock poisoned") as usize;
+    let players = lock_or_recover(&PLAYERS);
+    let selected = *lock_or_recover(&SELECTED_PLAYER) as usize;
 
     // ImGui.combo("##Player Profile", SELECTED_PLAYER, players, 4);
     // ImGui.sameLine();
 
-    let config = CONFIG.lock().expect("CONFIG lock poisoned");
+    let config = lock_or_recover(&CONFIG);
     let _can_click = if let Some(c) = &*config {
         // In Java: main.getCurrentState() instanceof MusicSelector
         // && !config.getPlayername().equals(players[SELECTED_PLAYER.get()])

@@ -14,14 +14,13 @@ use super::{
     AVAILABLE_FILES, CURRENT_SKIN, CURRENT_SKIN_TYPE, DIRTY_CONFIG, MAIN, OffsetValue,
     PLAYER_CONFIG, READY, SET_FILES, SET_OFFSETS, SET_OPTIONS,
 };
+use rubato_types::sync_utils::lock_or_recover;
 
 pub(super) fn refresh() {
-    *SET_OPTIONS.lock().expect("SET_OPTIONS lock poisoned") = None;
-    *AVAILABLE_FILES
-        .lock()
-        .expect("AVAILABLE_FILES lock poisoned") = None;
-    *SET_FILES.lock().expect("SET_FILES lock poisoned") = None;
-    *SET_OFFSETS.lock().expect("SET_OFFSETS lock poisoned") = None;
+    *lock_or_recover(&SET_OPTIONS) = None;
+    *lock_or_recover(&AVAILABLE_FILES) = None;
+    *lock_or_recover(&SET_FILES) = None;
+    *lock_or_recover(&SET_OFFSETS) = None;
 
     // observedState = main.getCurrentState();
     // SkinHeader currentSceneSkin = observedState.getSkin().header;
@@ -29,7 +28,7 @@ pub(super) fn refresh() {
     // currentSkin = null;
     // switchCurrentSceneSkin(currentSceneSkin);
     // skins = loadAllSkins(currentSkinType);
-    *READY.lock().expect("READY lock poisoned") = true;
+    *lock_or_recover(&READY) = true;
 }
 
 #[allow(dead_code)]
@@ -39,7 +38,7 @@ pub(super) fn load_all_skins(skin_type: &SkinType) -> Vec<SkinHeader> {
     scan_skins(&skins_dir, &mut paths);
 
     let mut skins: Vec<SkinHeader> = Vec::new();
-    let current_skin = CURRENT_SKIN.lock().expect("CURRENT_SKIN lock poisoned");
+    let current_skin = lock_or_recover(&CURRENT_SKIN);
 
     for path in &paths {
         let path_string = path.to_string_lossy().to_lowercase();
@@ -60,7 +59,7 @@ pub(super) fn load_all_skins(skin_type: &SkinType) -> Vec<SkinHeader> {
                 let _ = loader.load_header(path);
                 // header stays None -- lua skin loader not yet fully implemented
             } else if path_string.ends_with(".lr2skin") {
-                let main = MAIN.lock().expect("MAIN lock poisoned");
+                let main = lock_or_recover(&MAIN);
                 if main.is_some() {
                     drop(main);
                     let mut loader = LR2SkinHeaderLoader::new("");

@@ -8,6 +8,7 @@ use rubato_types::sound_type::SoundType;
 use super::ir_send_status::IRSendStatusMain;
 use super::ir_status::IRStatus;
 use rubato_types::main_controller_access::MainControllerAccess;
+use rubato_types::sync_utils::lock_or_recover;
 
 /// Wrapper for bms.player.beatoraja.MainController.
 /// Delegates trait methods (config, player_config, change_state, save_last_recording)
@@ -166,15 +167,11 @@ impl MainController {
     }
 
     pub fn ir_send_status(&self) -> std::sync::MutexGuard<'_, Vec<IRSendStatusMain>> {
-        self.ir_send_statuses
-            .lock()
-            .expect("ir_send_statuses lock poisoned")
+        lock_or_recover(&self.ir_send_statuses)
     }
 
     pub fn ir_send_status_mut(&self) -> std::sync::MutexGuard<'_, Vec<IRSendStatusMain>> {
-        self.ir_send_statuses
-            .lock()
-            .expect("ir_send_statuses lock poisoned")
+        lock_or_recover(&self.ir_send_statuses)
     }
 
     pub fn play_data_accessor(&self) -> &PlayDataAccessor {

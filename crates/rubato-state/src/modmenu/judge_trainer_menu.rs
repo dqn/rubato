@@ -1,5 +1,6 @@
 use super::judge_trainer::JudgeTrainer;
 
+use rubato_types::sync_utils::lock_or_recover;
 use std::sync::Mutex;
 
 static OVERRIDE_CHART_JUDGE: Mutex<bool> = Mutex::new(false);
@@ -15,22 +16,16 @@ impl JudgeTrainerMenu {
             .open(&mut open)
             .auto_sized()
             .show(ctx, |ui| {
-                let mut override_judge = *OVERRIDE_CHART_JUDGE
-                    .lock()
-                    .expect("OVERRIDE_CHART_JUDGE lock poisoned");
+                let mut override_judge = *lock_or_recover(&OVERRIDE_CHART_JUDGE);
                 if ui
                     .checkbox(&mut override_judge, "Override chart's judge")
                     .changed()
                 {
-                    *OVERRIDE_CHART_JUDGE
-                        .lock()
-                        .expect("OVERRIDE_CHART_JUDGE lock poisoned") = override_judge;
+                    *lock_or_recover(&OVERRIDE_CHART_JUDGE) = override_judge;
                     JudgeTrainer::set_active(override_judge);
                 }
 
-                let mut rank = *OVERRIDE_JUDGE_RANK
-                    .lock()
-                    .expect("OVERRIDE_JUDGE_RANK lock poisoned");
+                let mut rank = *lock_or_recover(&OVERRIDE_JUDGE_RANK);
                 let judge_options = crate::modmenu::judge_trainer::JUDGE_OPTIONS;
                 let selected_text = judge_options
                     .get(rank as usize)
@@ -41,9 +36,7 @@ impl JudgeTrainerMenu {
                     .show_ui(ui, |ui| {
                         for (i, option) in judge_options.iter().enumerate() {
                             if ui.selectable_value(&mut rank, i as i32, *option).clicked() {
-                                *OVERRIDE_JUDGE_RANK
-                                    .lock()
-                                    .expect("OVERRIDE_JUDGE_RANK lock poisoned") = rank;
+                                *lock_or_recover(&OVERRIDE_JUDGE_RANK) = rank;
                                 JudgeTrainer::set_judge_rank(rank);
                             }
                         }

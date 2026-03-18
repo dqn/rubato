@@ -12,6 +12,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::keys::Keys;
+use rubato_types::sync_utils::lock_or_recover;
 
 /// Number of key slots (matches Java Gdx.input key array size)
 const KEY_COUNT: usize = 256;
@@ -60,52 +61,52 @@ impl SharedKeyState {
         if keycode < 0 || keycode as usize >= KEY_COUNT {
             return false;
         }
-        let inner = self.inner.lock().expect("inner lock poisoned");
+        let inner = lock_or_recover(&self.inner);
         inner.keys[keycode as usize]
     }
 
     /// Set key state (by Java keycode).
     pub fn set_key_pressed(&self, keycode: i32, pressed: bool) {
         if keycode >= 0 && (keycode as usize) < KEY_COUNT {
-            let mut inner = self.inner.lock().expect("inner lock poisoned");
+            let mut inner = lock_or_recover(&self.inner);
             inner.keys[keycode as usize] = pressed;
         }
     }
 
     /// Get mouse X position.
     pub fn mouse_x(&self) -> i32 {
-        let inner = self.inner.lock().expect("inner lock poisoned");
+        let inner = lock_or_recover(&self.inner);
         inner.mouse_x
     }
 
     /// Get mouse Y position.
     pub fn mouse_y(&self) -> i32 {
-        let inner = self.inner.lock().expect("inner lock poisoned");
+        let inner = lock_or_recover(&self.inner);
         inner.mouse_y
     }
 
     /// Set mouse position.
     pub fn set_mouse_position(&self, x: i32, y: i32) {
-        let mut inner = self.inner.lock().expect("inner lock poisoned");
+        let mut inner = lock_or_recover(&self.inner);
         inner.mouse_x = x;
         inner.mouse_y = y;
     }
 
     /// Get window width.
     pub fn window_width(&self) -> i32 {
-        let inner = self.inner.lock().expect("inner lock poisoned");
+        let inner = lock_or_recover(&self.inner);
         inner.window_width
     }
 
     /// Get window height.
     pub fn window_height(&self) -> i32 {
-        let inner = self.inner.lock().expect("inner lock poisoned");
+        let inner = lock_or_recover(&self.inner);
         inner.window_height
     }
 
     /// Set window size.
     pub fn set_window_size(&self, width: i32, height: i32) {
-        let mut inner = self.inner.lock().expect("inner lock poisoned");
+        let mut inner = lock_or_recover(&self.inner);
         inner.window_width = width;
         inner.window_height = height;
     }
@@ -121,7 +122,7 @@ impl SharedKeyState {
     /// Set mouse button state (libGDX button index: 0=left, 1=right, 2=middle).
     pub fn set_mouse_button(&self, button: i32, pressed: bool) {
         if button >= 0 && (button as usize) < 3 {
-            let mut inner = self.inner.lock().expect("inner lock poisoned");
+            let mut inner = lock_or_recover(&self.inner);
             inner.mouse_buttons[button as usize] = pressed;
         }
     }
@@ -131,20 +132,20 @@ impl SharedKeyState {
         if button < 0 || button as usize >= 3 {
             return false;
         }
-        let inner = self.inner.lock().expect("inner lock poisoned");
+        let inner = lock_or_recover(&self.inner);
         inner.mouse_buttons[button as usize]
     }
 
     /// Accumulate scroll delta from winit MouseWheel events.
     pub fn add_scroll(&self, dx: f32, dy: f32) {
-        let mut inner = self.inner.lock().expect("inner lock poisoned");
+        let mut inner = lock_or_recover(&self.inner);
         inner.scroll_dx += dx;
         inner.scroll_dy += dy;
     }
 
     /// Drain accumulated scroll delta (returns and resets to zero).
     pub fn drain_scroll(&self) -> (f32, f32) {
-        let mut inner = self.inner.lock().expect("inner lock poisoned");
+        let mut inner = lock_or_recover(&self.inner);
         let dx = inner.scroll_dx;
         let dy = inner.scroll_dy;
         inner.scroll_dx = 0.0;

@@ -10,6 +10,7 @@ use crate::select::music_selector::MusicSelector;
 
 use super::ImGuiNotify;
 use super::stream_command::StreamCommand;
+use rubato_types::sync_utils::lock_or_recover;
 
 /// Request command processing
 /// Translates: bms.player.beatoraja.stream.command.StreamRequestCommand
@@ -24,11 +25,7 @@ pub struct StreamRequestCommand {
 
 impl StreamRequestCommand {
     pub fn new(selector: Arc<Mutex<MusicSelector>>) -> Self {
-        let max_length = selector
-            .lock()
-            .expect("selector lock poisoned")
-            .config
-            .max_request_count;
+        let max_length = lock_or_recover(&selector).config.max_request_count;
         let (tx, rx) = mpsc::channel();
         let selector_clone = Arc::clone(&selector);
         let updater_thread = Some(thread::spawn(move || {
@@ -82,11 +79,7 @@ pub struct UpdateBar {
 
 impl UpdateBar {
     pub fn new(selector: Arc<Mutex<MusicSelector>>) -> Self {
-        let max_length = selector
-            .lock()
-            .expect("selector lock poisoned")
-            .config
-            .max_request_count;
+        let max_length = lock_or_recover(&selector).config.max_request_count;
         Self {
             song_datas: Vec::new(),
             stack: Vec::new(),
@@ -96,7 +89,7 @@ impl UpdateBar {
     }
 
     fn add_message(&self, sha256: &str) {
-        let selector = self.selector.lock().expect("selector lock poisoned");
+        let selector = lock_or_recover(&self.selector);
         let escaped = Self::escape(sha256);
         let song_datas_result = selector.songdb.song_datas_by_hashes(&[escaped]);
         if !song_datas_result.is_empty() {
@@ -147,7 +140,7 @@ impl UpdateBar {
                 // Already added, skip
                 continue;
             }
-            let selector = self.selector.lock().expect("selector lock poisoned");
+            let selector = lock_or_recover(&self.selector);
             let escaped = Self::escape(&sha256);
             let song_datas_result = selector.songdb.song_datas_by_hashes(&[escaped]);
             if !song_datas_result.is_empty() {
@@ -160,7 +153,7 @@ impl UpdateBar {
         }
 
         if !self.song_datas.is_empty() {
-            let mut selector = self.selector.lock().expect("selector lock poisoned");
+            let mut selector = lock_or_recover(&self.selector);
             let bar = Bar::Hash(Box::new(HashBar::new(
                 "Stream Request".to_string(),
                 self.song_datas.clone(),

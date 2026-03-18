@@ -2,6 +2,7 @@ use super::super::imgui_notify::ImGuiNotify;
 use super::super::{SkinObject, SkinObjectDestination};
 use super::{EPS, EVENT_HISTORY};
 
+use rubato_types::sync_utils::lock_or_recover;
 use std::collections::HashMap;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -196,7 +197,7 @@ impl SkinWidgetDestination {
     pub fn set_dst_x_with_event(&mut self, x: f32, create_event: bool) {
         let previous = self.dst_x();
         if create_event && ((x - previous) as f64).abs() > EPS {
-            let mut history = EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
+            let mut history = lock_or_recover(&EVENT_HISTORY);
             history.push_event(Event::ChangeSingleField {
                 event_type: EventType::ChangeX,
                 target_name: self.name.clone(),
@@ -214,7 +215,7 @@ impl SkinWidgetDestination {
     pub fn set_dst_y_with_event(&mut self, y: f32, create_event: bool) {
         let previous = self.dst_y();
         if create_event && ((y - previous) as f64).abs() > EPS {
-            let mut history = EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
+            let mut history = lock_or_recover(&EVENT_HISTORY);
             history.push_event(Event::ChangeSingleField {
                 event_type: EventType::ChangeY,
                 target_name: self.name.clone(),
@@ -232,7 +233,7 @@ impl SkinWidgetDestination {
     pub fn set_dst_w_with_event(&mut self, w: f32, create_event: bool) {
         let previous = self.dst_w();
         if create_event && ((w - previous) as f64).abs() > EPS {
-            let mut history = EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
+            let mut history = lock_or_recover(&EVENT_HISTORY);
             history.push_event(Event::ChangeSingleField {
                 event_type: EventType::ChangeW,
                 target_name: self.name.clone(),
@@ -250,7 +251,7 @@ impl SkinWidgetDestination {
     pub fn set_dst_h_with_event(&mut self, h: f32, create_event: bool) {
         let previous = self.dst_h();
         if create_event && ((h - previous) as f64).abs() > EPS {
-            let mut history = EVENT_HISTORY.lock().expect("EVENT_HISTORY lock poisoned");
+            let mut history = lock_or_recover(&EVENT_HISTORY);
             history.push_event(Event::ChangeSingleField {
                 event_type: EventType::ChangeH,
                 target_name: self.name.clone(),

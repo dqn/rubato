@@ -5,6 +5,7 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rubato_types::random_history;
 pub use rubato_types::random_history::RandomHistoryEntry;
+use rubato_types::sync_utils::lock_or_recover;
 
 static LANE_ORDER: Mutex<String> = Mutex::new(String::new());
 static LANES_TO_RANDOM: Mutex<Vec<char>> = Mutex::new(Vec::new());
@@ -14,11 +15,11 @@ static LANE_MASK: Mutex<Vec<bool>> = Mutex::new(Vec::new());
 static RANDOM_SEED_MAP: Mutex<Option<HashMap<i32, i64>>> = Mutex::new(None);
 
 fn init_defaults() {
-    let mut lane_order = LANE_ORDER.lock().expect("LANE_ORDER lock poisoned");
+    let mut lane_order = lock_or_recover(&LANE_ORDER);
     if lane_order.is_empty() {
         *lane_order = "1234567".to_string();
     }
-    let mut lane_mask = LANE_MASK.lock().expect("LANE_MASK lock poisoned");
+    let mut lane_mask = lock_or_recover(&LANE_MASK);
     if lane_mask.is_empty() {
         *lane_mask = vec![false; 7];
     }
@@ -35,9 +36,7 @@ impl Default for RandomTrainer {
 impl RandomTrainer {
     pub fn new() -> Self {
         init_defaults();
-        let mut seed_map = RANDOM_SEED_MAP
-            .lock()
-            .expect("RANDOM_SEED_MAP lock poisoned");
+        let mut seed_map = lock_or_recover(&RANDOM_SEED_MAP);
         if seed_map.is_none() {
             // In Java this loads from a serialized resource file "resources/randomtrainer.dat"
             // We stub this as an empty map since the binary resource is not available
@@ -51,13 +50,9 @@ impl RandomTrainer {
         init_defaults();
         let mut rng = thread_rng();
 
-        let black_white_permute = *BLACK_WHITE_PERMUTE
-            .lock()
-            .expect("BLACK_WHITE_PERMUTE lock poisoned");
-        let mut lane_order = LANE_ORDER.lock().expect("LANE_ORDER lock poisoned");
-        let lanes_to_random = LANES_TO_RANDOM
-            .lock()
-            .expect("LANES_TO_RANDOM lock poisoned");
+        let black_white_permute = *lock_or_recover(&BLACK_WHITE_PERMUTE);
+        let mut lane_order = lock_or_recover(&LANE_ORDER);
+        let lanes_to_random = lock_or_recover(&LANES_TO_RANDOM);
 
         if black_white_permute {
             let mut black: Vec<char> = Vec::new();
@@ -105,57 +100,46 @@ impl RandomTrainer {
     }
 
     pub fn is_lane_to_random(lane: char) -> bool {
-        let lanes = LANES_TO_RANDOM
-            .lock()
-            .expect("LANES_TO_RANDOM lock poisoned");
+        let lanes = lock_or_recover(&LANES_TO_RANDOM);
         lanes.contains(&lane)
     }
 
     pub fn set_lane_to_random(lane: char) {
-        let mut lanes = LANES_TO_RANDOM
-            .lock()
-            .expect("LANES_TO_RANDOM lock poisoned");
+        let mut lanes = lock_or_recover(&LANES_TO_RANDOM);
         lanes.push(lane);
     }
 
     pub fn remove_lane_to_random(lane: char) {
-        let mut lanes = LANES_TO_RANDOM
-            .lock()
-            .expect("LANES_TO_RANDOM lock poisoned");
+        let mut lanes = lock_or_recover(&LANES_TO_RANDOM);
         if let Some(pos) = lanes.iter().position(|&c| c == lane) {
             lanes.remove(pos);
         }
     }
 
     pub fn is_active() -> bool {
-        *ACTIVE.lock().expect("ACTIVE lock poisoned")
+        *lock_or_recover(&ACTIVE)
     }
 
     pub fn set_active(active: bool) {
-        *ACTIVE.lock().expect("ACTIVE lock poisoned") = active;
+        *lock_or_recover(&ACTIVE) = active;
     }
 
     pub fn get_random_seed_map() -> Option<HashMap<i32, i64>> {
-        RANDOM_SEED_MAP
-            .lock()
-            .expect("RANDOM_SEED_MAP lock poisoned")
-            .clone()
+        lock_or_recover(&RANDOM_SEED_MAP).clone()
     }
 
     pub fn set_black_white_permute(black_white_permute: bool) {
-        *BLACK_WHITE_PERMUTE
-            .lock()
-            .expect("BLACK_WHITE_PERMUTE lock poisoned") = black_white_permute;
+        *lock_or_recover(&BLACK_WHITE_PERMUTE) = black_white_permute;
     }
 
     /// Returns the current lane order string without shuffling.
     pub fn get_current_lane_order() -> String {
         init_defaults();
-        LANE_ORDER.lock().expect("LANE_ORDER lock poisoned").clone()
+        lock_or_recover(&LANE_ORDER).clone()
     }
 
     pub fn set_lane_order(number: &str) {
-        *LANE_ORDER.lock().expect("LANE_ORDER lock poisoned") = number.to_string();
+        *lock_or_recover(&LANE_ORDER) = number.to_string();
     }
 
     pub fn random_history() -> VecDeque<RandomHistoryEntry> {

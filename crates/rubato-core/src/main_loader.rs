@@ -5,6 +5,7 @@ use std::sync::{Mutex, OnceLock};
 use log::{error, info};
 
 use rubato_types::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
+use rubato_types::sync_utils::lock_or_recover;
 use rubato_types::validatable::Validatable;
 
 use crate::bms_player_mode::BMSPlayerMode;
@@ -36,7 +37,7 @@ impl GithubVersionChecker {
     fn information(&self) {
         // Phase 5+: HTTP request to GitHub API
         // https://api.github.com/repos/seraxis/lr2oraja-endlessdream/releases/latest
-        let mut msg = self.message.lock().expect("message lock poisoned");
+        let mut msg = lock_or_recover(&self.message);
         if msg.is_none() {
             *msg = Some("Version information unavailable".to_string());
         }
@@ -46,28 +47,24 @@ impl GithubVersionChecker {
 impl VersionChecker for GithubVersionChecker {
     fn get_message(&self) -> String {
         {
-            let msg = self.message.lock().expect("message lock poisoned");
+            let msg = lock_or_recover(&self.message);
             if let Some(ref m) = *msg {
                 return m.clone();
             }
         }
         self.information();
-        self.message
-            .lock()
-            .expect("message lock poisoned")
-            .clone()
-            .unwrap_or_default()
+        lock_or_recover(&self.message).clone().unwrap_or_default()
     }
 
     fn get_download_url(&self) -> Option<String> {
         {
-            let msg = self.message.lock().expect("message lock poisoned");
+            let msg = lock_or_recover(&self.message);
             if msg.is_none() {
                 drop(msg);
                 self.information();
             }
         }
-        self.dlurl.lock().expect("dlurl lock poisoned").clone()
+        lock_or_recover(&self.dlurl).clone()
     }
 }
 
@@ -116,10 +113,7 @@ impl MainLoader {
 
         // Store bms_path globally
         if let Some(ref p) = bms_path {
-            let mut bp = BMS_PATH
-                .get_or_init(|| Mutex::new(None))
-                .lock()
-                .expect("lock poisoned");
+            let mut bp = lock_or_recover(BMS_PATH.get_or_init(|| Mutex::new(None)));
             *bp = Some(p.clone());
         }
 
@@ -231,7 +225,7 @@ impl MainLoader {
     /// Called by the launcher (which has access to beatoraja-song) after creating
     /// SQLiteSongDatabaseAccessor. Must be called before play().
     pub fn set_score_database_accessor(songdb: Box<dyn SongDatabaseAccessorTrait>) {
-        let mut guard = Self::songdb_lock().lock().expect("lock poisoned");
+        let mut guard = lock_or_recover(Self::songdb_lock());
         *guard = Some(songdb);
     }
 
@@ -240,7 +234,7 @@ impl MainLoader {
     /// Used by play() to move the accessor into MainController.
     /// After this call, the global slot is empty (None).
     fn take_score_database_accessor() -> Option<Box<dyn SongDatabaseAccessorTrait>> {
-        let mut guard = Self::songdb_lock().lock().expect("lock poisoned");
+        let mut guard = lock_or_recover(Self::songdb_lock());
         guard.take()
     }
 
@@ -253,7 +247,7 @@ impl MainLoader {
     /// }
     /// ```
     fn check_illegal_songs() {
-        let guard = Self::songdb_lock().lock().expect("lock poisoned");
+        let guard = lock_or_recover(Self::songdb_lock());
         if let Some(ref songdb) = *guard {
             // SongUtils.illegalsongs = ["notme"]
             let illegal_hashes: Vec<String> = vec!["notme".to_string()];
@@ -270,40 +264,38 @@ impl MainLoader {
 
     pub fn set_version_checker(checker: Box<dyn VersionChecker>) {
         let vc = Self::version_checker();
-        let mut guard = vc.lock().expect("vc lock poisoned");
+        let mut guard = lock_or_recover(vc);
         *guard = Some(checker);
     }
 
     pub fn get_bms_path() -> Option<PathBuf> {
-        BMS_PATH
-            .get()
-            .and_then(|m| m.lock().expect("m lock poisoned").clone())
+        BMS_PATH.get().and_then(|m| lock_or_recover(m).clone())
     }
 
     pub fn put_illegal_song(hash: &str) {
-        let mut songs = Self::illegal_songs().lock().expect("lock poisoned");
+        let mut songs = lock_or_recover(Self::illegal_songs());
         songs.insert(hash.to_string());
     }
 
     pub fn get_illegal_songs() -> Vec<String> {
-        let songs = Self::illegal_songs().lock().expect("lock poisoned");
+        let songs = lock_or_recover(Self::illegal_songs());
         songs.iter().cloned().collect()
     }
 
     pub fn get_illegal_song_count() -> usize {
-        let songs = Self::illegal_songs().lock().expect("lock poisoned");
+        let songs = lock_or_recover(Self::illegal_songs());
         songs.len()
     }
 
     /// Clear all illegal songs. For testing — not present in Java.
     pub fn clear_illegal_songs() {
-        let mut songs = Self::illegal_songs().lock().expect("lock poisoned");
+        let mut songs = lock_or_recover(Self::illegal_songs());
         songs.clear();
     }
 
     /// Clear the global song database accessor. For testing — not present in Java.
     pub fn clear_score_database_accessor() {
-        let mut guard = Self::songdb_lock().lock().expect("lock poisoned");
+        let mut guard = lock_or_recover(Self::songdb_lock());
         *guard = None;
     }
 
@@ -313,7 +305,7 @@ impl MainLoader {
     /// In Java: Lwjgl3ApplicationConfiguration.getDisplayModes()
     /// In Rust: winit monitor enumeration via global cache.
     pub fn get_available_display_mode() -> Vec<(u32, u32)> {
-        let modes = DISPLAY_MODES.lock().expect("DISPLAY_MODES lock poisoned");
+        let modes = lock_or_recover(&DISPLAY_MODES);
         if modes.is_empty() {
             // Fallback before winit event loop populates the cache
             vec![(1280, 720), (1920, 1080)]
@@ -327,7 +319,7 @@ impl MainLoader {
     /// Translated from: MainLoader.getDesktopDisplayMode()
     /// In Java: Lwjgl3ApplicationConfiguration.getDisplayMode()
     pub fn get_desktop_display_mode() -> (u32, u32) {
-        let mode = *DESKTOP_MODE.lock().expect("DESKTOP_MODE lock poisoned");
+        let mode = *lock_or_recover(&DESKTOP_MODE);
         if mode == (0, 0) {
             // Fallback before winit event loop populates the cache
             (1920, 1080)
@@ -340,14 +332,14 @@ impl MainLoader {
     ///
     /// Called by the binary crate after winit event loop populates monitor info.
     pub fn set_display_modes(modes: Vec<(u32, u32)>) {
-        *DISPLAY_MODES.lock().expect("DISPLAY_MODES lock poisoned") = modes;
+        *lock_or_recover(&DISPLAY_MODES) = modes;
     }
 
     /// Set the cached desktop display mode from winit primary monitor.
     ///
     /// Called by the binary crate after winit event loop populates monitor info.
     pub fn set_desktop_display_mode(mode: (u32, u32)) {
-        *DESKTOP_MODE.lock().expect("DESKTOP_MODE lock poisoned") = mode;
+        *lock_or_recover(&DESKTOP_MODE) = mode;
     }
 
     /// JavaFX start method (launcher UI entry point).

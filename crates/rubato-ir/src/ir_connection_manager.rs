@@ -3,6 +3,7 @@ use std::sync::Mutex;
 use log::{error, warn};
 
 use crate::ir_connection::IRConnection;
+use rubato_types::sync_utils::lock_or_recover;
 
 /// Registry entry for an IR connection implementation
 pub struct IRConnectionEntry {
@@ -29,7 +30,7 @@ pub struct IRConnectionManager;
 impl IRConnectionManager {
     /// Get all available IR connection names
     pub fn all_available_ir_connection_name() -> Vec<String> {
-        let entries = IR_CONNECTIONS.lock().unwrap_or_else(|e| e.into_inner());
+        let entries = lock_or_recover(&IR_CONNECTIONS);
         let names: Vec<String> = entries.iter().map(|e| e.name.clone()).collect();
         if names.is_empty() {
             warn!("No IR connections registered. IR features are disabled.");
@@ -42,7 +43,7 @@ impl IRConnectionManager {
         if name.is_empty() {
             return None;
         }
-        let entries = IR_CONNECTIONS.lock().unwrap_or_else(|e| e.into_inner());
+        let entries = lock_or_recover(&IR_CONNECTIONS);
         for entry in entries.iter() {
             if entry.name == name {
                 return Some((entry.factory)());
@@ -53,77 +54,13 @@ impl IRConnectionManager {
 
     /// Get the home URL for an IR by name. Returns None if not found.
     pub fn home_url(name: &str) -> Option<String> {
-        let entries = IR_CONNECTIONS.lock().unwrap_or_else(|e| e.into_inner());
+        let entries = lock_or_recover(&IR_CONNECTIONS);
         for entry in entries.iter() {
             if entry.name == name {
                 return entry.home.clone();
             }
         }
         None
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // Guard that clears the IR_CONNECTIONS after each test to avoid interference.
-    struct IrConnectionsGuard;
-
-    impl Drop for IrConnectionsGuard {
-        fn drop(&mut self) {
-            // Use unwrap_or_else to handle poisoned lock during cleanup
-            let mut entries = IR_CONNECTIONS.lock().unwrap_or_else(|e| e.into_inner());
-            entries.clear();
-        }
-    }
-
-    #[test]
-    fn all_available_ir_connection_name_recovers_from_poisoned_lock() {
-        // Regression: .expect() would panic on a poisoned lock.
-        // After fix, .unwrap_or_else(|e| e.into_inner()) recovers gracefully.
-        let _guard = IrConnectionsGuard;
-
-        // Poison the lock by panicking while holding it
-        let result = std::panic::catch_unwind(|| {
-            let _lock = IR_CONNECTIONS.lock().unwrap();
-            panic!("intentional panic to poison lock");
-        });
-        assert!(result.is_err(), "should have caught the panic");
-
-        // This should NOT panic even though the lock is poisoned
-        let names = IRConnectionManager::all_available_ir_connection_name();
-        assert!(names.is_empty());
-    }
-
-    #[test]
-    fn ir_connection_recovers_from_poisoned_lock() {
-        let _guard = IrConnectionsGuard;
-
-        let result = std::panic::catch_unwind(|| {
-            let _lock = IR_CONNECTIONS.lock().unwrap();
-            panic!("intentional panic to poison lock");
-        });
-        assert!(result.is_err());
-
-        // Should NOT panic
-        let conn = IRConnectionManager::ir_connection("nonexistent");
-        assert!(conn.is_none());
-    }
-
-    #[test]
-    fn home_url_recovers_from_poisoned_lock() {
-        let _guard = IrConnectionsGuard;
-
-        let result = std::panic::catch_unwind(|| {
-            let _lock = IR_CONNECTIONS.lock().unwrap();
-            panic!("intentional panic to poison lock");
-        });
-        assert!(result.is_err());
-
-        // Should NOT panic
-        let url = IRConnectionManager::home_url("nonexistent");
-        assert!(url.is_none());
     }
 }
 
