@@ -11,6 +11,7 @@ use bms_model::osu_decoder::OSUDecoder;
 use rayon::prelude::*;
 use rubato_core::sqlite_database_accessor::{Column, SQLiteDatabaseAccessor, Table};
 use rubato_core::validatable::remove_invalid_elements_vec;
+use rubato_types::sync_utils::lock_or_recover;
 use rusqlite::Connection;
 use rusqlite::hooks::{AuthAction, AuthContext, Authorization};
 
@@ -139,7 +140,7 @@ impl SQLiteSongDatabaseAccessor {
     }
 
     fn create_table(&self) -> anyhow::Result<()> {
-        let conn = self.conn.lock().expect("conn lock poisoned");
+        let conn = lock_or_recover(&self.conn);
         self.base.validate(&conn)?;
 
         // Check if sha256 is primary key in song table (migration check)
@@ -225,7 +226,7 @@ impl SQLiteSongDatabaseAccessor {
     }
 
     fn query_songs(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql]) -> Vec<SongData> {
-        let conn = self.conn.lock().expect("conn lock poisoned");
+        let conn = lock_or_recover(&self.conn);
         match Self::query_songs_with_conn(&conn, sql, params) {
             Ok(songs) => songs,
             Err(e) => {
@@ -279,7 +280,7 @@ impl SQLiteSongDatabaseAccessor {
     }
 
     fn query_folders(&self, sql: &str, params: &[&dyn rusqlite::types::ToSql]) -> Vec<FolderData> {
-        let conn = self.conn.lock().expect("conn lock poisoned");
+        let conn = lock_or_recover(&self.conn);
         match Self::query_folders_with_conn(&conn, sql, params) {
             Ok(folders) => folders,
             Err(e) => {
@@ -314,7 +315,7 @@ impl SQLiteSongDatabaseAccessor {
 
     #[cfg(test)]
     fn insert_song(&self, sd: &SongData) -> anyhow::Result<()> {
-        let conn = self.conn.lock().expect("conn lock poisoned");
+        let conn = lock_or_recover(&self.conn);
         Self::insert_song_with_conn(&self.base, &conn, sd)
     }
 
@@ -364,7 +365,7 @@ impl SQLiteSongDatabaseAccessor {
 
     #[cfg(test)]
     fn insert_folder(&self, fd: &FolderData) -> anyhow::Result<()> {
-        let conn = self.conn.lock().expect("conn lock poisoned");
+        let conn = lock_or_recover(&self.conn);
         Self::insert_folder_with_conn(&self.base, &conn, fd)
     }
 
@@ -525,7 +526,7 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
         scorelog: &str,
         info: Option<&str>,
     ) -> Vec<SongData> {
-        let conn = self.conn.lock().expect("conn lock poisoned");
+        let conn = lock_or_recover(&self.conn);
 
         // Track which databases are attached so we can detach them on any exit path.
         let mut attached_score = false;
@@ -639,7 +640,7 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
     }
 
     fn set_song_datas(&self, songs: &[SongData]) -> anyhow::Result<()> {
-        let mut conn = self.conn.lock().expect("conn lock poisoned");
+        let mut conn = lock_or_recover(&self.conn);
         let tx = conn
             .transaction()
             .map_err(|e| anyhow::anyhow!("Error starting transaction: {e}"))?;
@@ -822,7 +823,7 @@ impl<'a> SongDatabaseUpdater<'a> {
 
         // Hold the lock for the entire transaction to prevent interleaving.
         // Connection is passed through to all DB operations via _with_conn methods.
-        let mut conn = accessor.conn.lock().expect("conn lock poisoned");
+        let mut conn = lock_or_recover(&accessor.conn);
         let tx = match conn.transaction() {
             Ok(tx) => tx,
             Err(e) => {

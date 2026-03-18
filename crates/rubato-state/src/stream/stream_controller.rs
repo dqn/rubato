@@ -3,6 +3,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use rubato_types::sync_utils::lock_or_recover;
+
 use crate::select::music_selector::MusicSelector;
 
 use super::stream_command::StreamCommand;
@@ -111,7 +113,7 @@ impl StreamController {
                 match line_result {
                     Ok(line) => {
                         log::info!("Received: {}", line);
-                        let mut cmds = commands_clone.lock().expect("commands_clone lock poisoned");
+                        let mut cmds = lock_or_recover(&commands_clone);
                         Self::execute_commands(&mut cmds, &line);
                     }
                     Err(e) => {
@@ -121,7 +123,7 @@ impl StreamController {
                 }
             }
             // Thread exiting: dispose all commands
-            let mut cmds = commands_clone.lock().expect("commands_clone lock poisoned");
+            let mut cmds = lock_or_recover(&commands_clone);
             for cmd in cmds.iter_mut() {
                 cmd.dispose();
             }

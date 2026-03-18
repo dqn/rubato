@@ -157,6 +157,9 @@ pub mod monotonic_clock;
 // State machine observability events (E2E testing)
 pub mod state_event;
 
+// Synchronization utilities (poison-recovery pattern)
+pub mod sync_utils;
+
 // Test support utilities (behind feature gate or in test builds)
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;
