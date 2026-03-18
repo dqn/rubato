@@ -226,15 +226,6 @@ impl ObsConfigurationView {
 
     /// saveSelections - saves scene/action selections to config
     fn save_selections(&mut self) {
-        if self.obs_cfg_client.is_none() {
-            return;
-        }
-        if let Some(ref client) = self.obs_cfg_client
-            && !client.is_connected()
-        {
-            return;
-        }
-
         let actions = obs_actions();
         let states_clone = self.states.clone();
 
@@ -269,7 +260,10 @@ impl ObsConfigurationView {
             }
         }
 
-        self.close_existing_connection();
+        // Only close the OBS connection if one is active
+        if self.obs_cfg_client.is_some() {
+            self.close_existing_connection();
+        }
     }
 
     /// connect - initiates OBS WebSocket connection

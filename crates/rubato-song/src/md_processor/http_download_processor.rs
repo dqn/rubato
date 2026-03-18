@@ -386,7 +386,10 @@ impl rubato_types::http_download_submitter::HttpDownloadSubmitter for HttpDownlo
     }
 }
 
-/// Download a file from url (no intermediate file protection)
+/// Download a file from url
+///
+/// Writes to a temporary `.tmp` file first and renames to the final path on
+/// success, so a partial download never destroys an existing file.
 ///
 /// # Arguments
 /// * `fallback_file_name` - fallback file name if remote server's response doesn't contain a valid file name
@@ -447,25 +450,46 @@ fn download_file_from_url(
     let content_length = response.content_length().map(|l| l as i64).unwrap_or(-1);
 
     let result = Path::new(download_directory).join(&file_name);
+    let tmp_path = result.with_extension(format!(
+        "{}.tmp",
+        result
+            .extension()
+            .map(|e| e.to_string_lossy().to_string())
+            .unwrap_or_default()
+    ));
 
-    // Stream body in chunks to avoid buffering entire archive in memory
-    let mut fos = fs::File::create(&result)?;
-    let mut download_bytes: i64 = 0;
-    let mut buf = [0u8; 8192];
-    let mut reader = response;
-    loop {
-        let read = std::io::Read::read(&mut reader, &mut buf)?;
-        if read == 0 {
-            break;
+    // Stream body in chunks to a temporary file to avoid destroying an
+    // existing file if the download fails partway through.
+    let write_result = (|| -> anyhow::Result<()> {
+        let mut fos = fs::File::create(&tmp_path)?;
+        let mut download_bytes: i64 = 0;
+        let mut buf = [0u8; 8192];
+        let mut reader = response;
+        loop {
+            let read = std::io::Read::read(&mut reader, &mut buf)?;
+            if read == 0 {
+                break;
+            }
+            fos.write_all(&buf[..read])?;
+            download_bytes += read as i64;
+            {
+                let mut t = lock_or_recover(task);
+                t.download_size = download_bytes;
+                t.content_length = content_length;
+            }
         }
-        fos.write_all(&buf[..read])?;
-        download_bytes += read as i64;
-        {
-            let mut t = lock_or_recover(task);
-            t.download_size = download_bytes;
-            t.content_length = content_length;
-        }
+        Ok(())
+    })();
+
+    if let Err(e) = write_result {
+        // Clean up the partial temp file on failure
+        let _ = fs::remove_file(&tmp_path);
+        return Err(e);
     }
+
+    // Atomically move the completed download to the final path
+    fs::rename(&tmp_path, &result)?;
+
     log::info!(
         "[HttpDownloadProcessor] Download successfully to {}",
         result.display()
