@@ -38,6 +38,9 @@ pub enum MainControllerCommand {
     /// Update the PlayConfig for a specific play mode.
     /// Used by MiscSettingMenu to write back UI changes to MainController's PlayerConfig.
     UpdatePlayConfig(bms_model::mode::Mode, Box<crate::play_config::PlayConfig>),
+    /// Update the audio config on MainController.
+    /// Used by select screen volume sliders to propagate changes from the cloned config.
+    UpdateAudioConfig(crate::audio_config::AudioConfig),
 }
 
 /// Shared command queue for state-facing MainController proxies.
@@ -273,6 +276,12 @@ pub trait MainControllerAccess {
     /// and re-entering MusicSelect.
     /// Java: MainController.loadNewProfile(PlayerConfig)
     fn load_new_profile(&self, _pc: PlayerConfig) {
+        // default no-op
+    }
+
+    /// Update audio config on MainController.
+    /// Used by select screen volume sliders to propagate changes from the cloned config back.
+    fn update_audio_config(&self, _audio: crate::audio_config::AudioConfig) {
         // default no-op
     }
 }

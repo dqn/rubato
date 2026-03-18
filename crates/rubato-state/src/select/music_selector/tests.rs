@@ -2854,3 +2854,90 @@ fn integer_value_300_directory_lamps_sum_saturates_on_overflow() {
     // Should saturate to i32::MAX instead of panicking.
     assert_eq!(ctx.integer_value(300), i32::MAX);
 }
+
+// ---- Volume slider propagation regression tests (Finding 2) ----
+
+/// Mock MainControllerAccess that captures update_audio_config calls via shared state.
+struct VolumeCapturingMock {
+    captured_audio: Arc<Mutex<Vec<rubato_types::audio_config::AudioConfig>>>,
+}
+
+impl VolumeCapturingMock {
+    fn new(captured: Arc<Mutex<Vec<rubato_types::audio_config::AudioConfig>>>) -> Self {
+        Self {
+            captured_audio: captured,
+        }
+    }
+}
+
+impl MainControllerAccess for VolumeCapturingMock {
+    fn config(&self) -> &rubato_types::config::Config {
+        static CFG: std::sync::OnceLock<rubato_types::config::Config> = std::sync::OnceLock::new();
+        CFG.get_or_init(rubato_types::config::Config::default)
+    }
+    fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
+        static PC: std::sync::OnceLock<rubato_types::player_config::PlayerConfig> =
+            std::sync::OnceLock::new();
+        PC.get_or_init(rubato_types::player_config::PlayerConfig::default)
+    }
+    fn change_state(&mut self, _state: MainStateType) {}
+    fn save_config(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn exit(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn save_last_recording(&self, _reason: &str) {}
+    fn update_song(&mut self, _path: Option<&str>) {}
+    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
+        None
+    }
+    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
+        None
+    }
+    fn update_audio_config(&self, audio: rubato_types::audio_config::AudioConfig) {
+        self.captured_audio.lock().unwrap().push(audio);
+    }
+}
+
+#[test]
+fn set_float_value_volume_propagates_to_main_controller() {
+    // Regression: volume slider changes (IDs 17/18/19) on select screen must propagate
+    // to MainController via update_audio_config, not just modify the local clone.
+    let captured: Arc<Mutex<Vec<rubato_types::audio_config::AudioConfig>>> =
+        Arc::new(Mutex::new(Vec::new()));
+    let mock = VolumeCapturingMock::new(captured.clone());
+
+    let mut selector = MusicSelector::new();
+    selector.app_config.audio = Some(rubato_types::audio_config::AudioConfig::default());
+    selector.set_main_controller(Box::new(mock));
+
+    let mut timer = TimerManager::new();
+    {
+        let mut ctx = SelectSkinContext {
+            timer: &mut timer,
+            selector: &mut selector,
+        };
+
+        // Set system volume (id 17)
+        ctx.set_float_value(17, 0.75);
+        // Set key volume (id 18)
+        ctx.set_float_value(18, 0.5);
+        // Set bg volume (id 19)
+        ctx.set_float_value(19, 0.25);
+    }
+
+    // Verify local clone was updated
+    let audio = selector.app_config.audio.as_ref().unwrap();
+    assert_eq!(audio.systemvolume, 0.75);
+    assert_eq!(audio.keyvolume, 0.5);
+    assert_eq!(audio.bgvolume, 0.25);
+
+    // Verify the command was propagated to MainController (via the mock).
+    let updates = captured.lock().unwrap();
+    assert_eq!(updates.len(), 3, "expected 3 audio config updates");
+    // Last update should contain all accumulated changes
+    assert_eq!(updates[2].systemvolume, 0.75);
+    assert_eq!(updates[2].keyvolume, 0.5);
+    assert_eq!(updates[2].bgvolume, 0.25);
+}

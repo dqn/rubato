@@ -310,6 +310,11 @@ impl MainControllerAccess for QueuedControllerAccess {
         self.commands
             .push(MainControllerCommand::LoadNewProfile(Box::new(pc)));
     }
+
+    fn update_audio_config(&self, audio: rubato_types::audio_config::AudioConfig) {
+        self.commands
+            .push(MainControllerCommand::UpdateAudioConfig(audio));
+    }
 }
 
 pub fn new_state_main_controller_access(

@@ -576,19 +576,22 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
         match id {
             1 => self.selector.manager.set_selected_position(value),
             8 => self.selector.set_ranking_position(value),
-            17 => {
+            17..=19 => {
                 if let Some(audio) = self.selector.app_config.audio.as_mut() {
-                    audio.systemvolume = value.clamp(0.0, 1.0);
+                    let clamped = value.clamp(0.0, 1.0);
+                    match id {
+                        17 => audio.systemvolume = clamped,
+                        18 => audio.keyvolume = clamped,
+                        19 => audio.bgvolume = clamped,
+                        _ => unreachable!(),
+                    }
                 }
-            }
-            18 => {
-                if let Some(audio) = self.selector.app_config.audio.as_mut() {
-                    audio.keyvolume = value.clamp(0.0, 1.0);
-                }
-            }
-            19 => {
-                if let Some(audio) = self.selector.app_config.audio.as_mut() {
-                    audio.bgvolume = value.clamp(0.0, 1.0);
+                // Propagate audio config change to MainController so it survives
+                // state transitions and config saves.
+                if let Some(audio) = self.selector.app_config.audio.clone()
+                    && let Some(ref main) = self.selector.main
+                {
+                    main.update_audio_config(audio);
                 }
             }
             _ => {}

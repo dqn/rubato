@@ -424,6 +424,17 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
         &self.player.main_state_data.score
     }
 
+    fn set_float_value(&mut self, id: i32, value: f32) {
+        match id {
+            // Volume (0.0-1.0): write back to BMSPlayer's cached volume fields
+            // so that skin property reads (float_value/integer_value) reflect the new value.
+            17 => self.player.system_volume = value.clamp(0.0, 1.0),
+            18 => self.player.key_volume = value.clamp(0.0, 1.0),
+            19 => self.player.bg_volume = value.clamp(0.0, 1.0),
+            _ => {}
+        }
+    }
+
     fn lane_shuffle_pattern_value(&self, player: usize, lane: usize) -> i32 {
         self.player
             .score
@@ -1325,6 +1336,101 @@ mod tests {
             ctx.image_index_value(450),
             -1,
             "PlayMouseContext must return -1 for lane shuffle when no pattern"
+        );
+    }
+
+    // ============================================================
+    // PlayMouseContext set_float_value volume delegation tests
+    // ============================================================
+
+    #[test]
+    fn play_mouse_set_float_value_system_volume() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        player.system_volume = 0.5;
+        let mut ctx = PlayMouseContext { timer, player };
+        ctx.set_float_value(17, 0.8);
+        assert!(
+            (ctx.player.system_volume - 0.8).abs() < f32::EPSILON,
+            "set_float_value(17) must update system_volume on BMSPlayer"
+        );
+    }
+
+    #[test]
+    fn play_mouse_set_float_value_key_volume() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        player.key_volume = 0.5;
+        let mut ctx = PlayMouseContext { timer, player };
+        ctx.set_float_value(18, 0.3);
+        assert!(
+            (ctx.player.key_volume - 0.3).abs() < f32::EPSILON,
+            "set_float_value(18) must update key_volume on BMSPlayer"
+        );
+    }
+
+    #[test]
+    fn play_mouse_set_float_value_bg_volume() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        player.bg_volume = 0.5;
+        let mut ctx = PlayMouseContext { timer, player };
+        ctx.set_float_value(19, 0.1);
+        assert!(
+            (ctx.player.bg_volume - 0.1).abs() < f32::EPSILON,
+            "set_float_value(19) must update bg_volume on BMSPlayer"
+        );
+    }
+
+    #[test]
+    fn play_mouse_set_float_value_clamps_volume() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        let mut ctx = PlayMouseContext { timer, player };
+        // Over 1.0 should clamp to 1.0
+        ctx.set_float_value(17, 1.5);
+        assert!(
+            (ctx.player.system_volume - 1.0).abs() < f32::EPSILON,
+            "set_float_value must clamp values above 1.0"
+        );
+        // Below 0.0 should clamp to 0.0
+        ctx.set_float_value(17, -0.5);
+        assert!(
+            ctx.player.system_volume.abs() < f32::EPSILON,
+            "set_float_value must clamp values below 0.0"
+        );
+    }
+
+    #[test]
+    fn play_mouse_set_float_value_unknown_id_no_op() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        player.system_volume = 0.5;
+        player.key_volume = 0.5;
+        player.bg_volume = 0.5;
+        let mut ctx = PlayMouseContext { timer, player };
+        ctx.set_float_value(999, 0.0);
+        assert!(
+            (ctx.player.system_volume - 0.5).abs() < f32::EPSILON,
+            "set_float_value with unknown ID must not change system_volume"
+        );
+        assert!(
+            (ctx.player.key_volume - 0.5).abs() < f32::EPSILON,
+            "set_float_value with unknown ID must not change key_volume"
+        );
+        assert!(
+            (ctx.player.bg_volume - 0.5).abs() < f32::EPSILON,
+            "set_float_value with unknown ID must not change bg_volume"
         );
     }
 }

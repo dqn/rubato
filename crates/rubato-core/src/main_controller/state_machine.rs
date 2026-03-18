@@ -348,6 +348,9 @@ impl MainController {
                         state.receive_updated_play_config(mode, pc);
                     }
                 }
+                MainControllerCommand::UpdateAudioConfig(audio) => {
+                    self.config.audio = Some(audio);
+                }
             }
         }
 
