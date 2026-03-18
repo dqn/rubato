@@ -344,6 +344,8 @@ impl Validatable for ScoreData {
             && self.passnotes >= 0
             && self.passnotes <= self.notes
             && self.minbp >= 0
+            // NOTE: i64::MAX sentinel (no timing data) intentionally passes this check.
+            // Consumers must guard against i64::MAX separately (e.g., bar_sorter compare_duration).
             && self.timing_stats.avgjudge >= 0
             && po.random >= 0
             && po.option >= 0

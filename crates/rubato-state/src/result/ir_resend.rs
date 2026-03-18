@@ -11,6 +11,8 @@ use super::ir_send_status::IRSendStatusMain;
 
 /// Global shared IR send status list.
 /// Both MusicResult (producer) and the resend thread (consumer) access this.
+/// NOTE: Process-global OnceLock. Tests using service.start() share this queue;
+/// tests that need isolation should pass a local Arc<Mutex<Vec>> to start_ir_resend_thread() directly.
 static SHARED_IR_STATUSES: OnceLock<Arc<Mutex<Vec<IRSendStatusMain>>>> = OnceLock::new();
 
 /// Get the shared IR send status list.
@@ -40,6 +42,8 @@ impl IrResendServiceImpl {
 
 impl IrResendService for IrResendServiceImpl {
     fn start(&self) {
+        // Reset shutdown flag so a restarted service doesn't exit immediately.
+        self.shutdown_flag.store(false, Ordering::Release);
         let handle = start_ir_resend_thread(
             shared_ir_statuses(),
             self.ir_send_count,

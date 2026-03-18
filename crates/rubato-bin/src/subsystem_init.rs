@@ -195,6 +195,7 @@ pub(crate) fn init_ir_config(controller: &mut MainController) {
     // Wire IR resend service
     let ir_send_count = controller.config().network.ir_send_count;
     let resend_service = rubato_state::result::ir_resend::IrResendServiceImpl::new(ir_send_count);
+    resend_service.start();
     controller.set_ir_resend_service(Box::new(resend_service));
 }
 
