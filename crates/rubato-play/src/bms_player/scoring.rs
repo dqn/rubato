@@ -196,6 +196,7 @@ impl BMSPlayer {
             + score.judge_counts.lms
             + self.total_notes
             - self.judge.past_notes();
+        score.minbp = score.minbp.max(0);
 
         // Timing statistics (Java BMSPlayer.createScoreData() lines 1053-1094)
         //
