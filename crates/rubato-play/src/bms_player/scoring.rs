@@ -312,7 +312,10 @@ impl BMSPlayer {
     /// double-update.
     pub fn update_judge(&mut self, judge: i32, time: i64) {
         if self.judge.combo() == 0 {
-            lock_or_recover(&self.bga).set_misslayer_tme(time);
+            // Java: main.update(judge, mtime / 1000) -- JudgeManager converts
+            // microseconds to milliseconds before calling BMSPlayer.update().
+            // BGAProcessor.time is in milliseconds, so misslayertime must match.
+            lock_or_recover(&self.bga).set_misslayer_tme(time / 1000);
         }
 
         // Full combo check

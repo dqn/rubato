@@ -330,6 +330,12 @@ impl BGAProcessor {
         self.playinglayerid
     }
 
+    /// Get the miss layer display start time (in milliseconds, matching `self.time`).
+    #[cfg(test)]
+    pub(crate) fn misslayer_time(&self) -> i64 {
+        self.misslayertime
+    }
+
     /// Get BGA texture data for the given id at the specified time.
     /// Translated from: Java BGAProcessor.getBGAData(long time, int id, boolean cont)
     ///

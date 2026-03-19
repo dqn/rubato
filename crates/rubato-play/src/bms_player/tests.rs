@@ -5049,3 +5049,37 @@ fn receive_updated_play_config_preserves_scroll_state() {
         hispeed_after_init
     );
 }
+
+#[test]
+fn update_judge_sets_bga_misslayertime_in_milliseconds() {
+    // Java JudgeManager calls main.update(judge, mtime / 1000), converting
+    // microseconds to milliseconds before passing to BMSPlayer.update().
+    // The Rust judged_events store raw microsecond mtime. update_judge must
+    // divide by 1000 before calling set_misslayer_tme() so that
+    // misslayertime is in the same clock domain as BGAProcessor.time (ms).
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.gauge = Some(
+        crate::groove_gauge::create_groove_gauge(
+            &player.model,
+            rubato_types::groove_gauge::NORMAL,
+            0,
+            None,
+        )
+        .unwrap(),
+    );
+
+    // combo starts at 0, so update_judge will call set_misslayer_tme.
+    let time_us: i64 = 5_000_000; // 5 seconds in microseconds
+    player.update_judge(4, time_us); // POOR/MISS -> combo stays 0
+
+    let bga = player.bga.lock().unwrap();
+    let expected_ms = time_us / 1000; // 5000 ms
+    assert_eq!(
+        bga.misslayer_time(),
+        expected_ms,
+        "misslayertime should be in milliseconds ({}), not microseconds ({})",
+        expected_ms,
+        time_us
+    );
+}
