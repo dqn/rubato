@@ -344,6 +344,11 @@ impl LR2PlaySkinLoaderState {
                     if let Some(ref mut judge_obj) = self.judge_objects[player]
                         && let Some(img) = judge_obj.judge_image_mut(judge_idx)
                     {
+                        let offset_judge = match player {
+                            0 => crate::skin_property::OFFSET_JUDGE_1P,
+                            1 => crate::skin_property::OFFSET_JUDGE_2P,
+                            _ => crate::skin_property::OFFSET_JUDGE_3P,
+                        };
                         img.data.set_destination_with_int_timer_and_offsets(
                             &DestinationParams {
                                 time: values[2] as i64,
@@ -368,7 +373,7 @@ impl LR2PlaySkinLoaderState {
                             values[18],
                             values[19],
                             values[20],
-                            &[],
+                            &[offset_judge, crate::skin_property::OFFSET_LIFT],
                         );
                     }
                 }
@@ -452,13 +457,19 @@ impl LR2PlaySkinLoaderState {
                         values[6] = -values[6];
                     }
                     if let Some(num) = judge_obj.judge_count_mut(judge_idx) {
+                        let offset_judge = match player {
+                            0 => crate::skin_property::OFFSET_JUDGE_1P,
+                            1 => crate::skin_property::OFFSET_JUDGE_2P,
+                            _ => crate::skin_property::OFFSET_JUDGE_3P,
+                        };
+                        // Java: setRelative(true) + negative y for combo count
+                        // positioned relative to judge image
+                        num.data.relative = true;
                         num.data.set_destination_with_int_timer_and_offsets(
                             &DestinationParams {
                                 time: values[2] as i64,
                                 x: values[3] as f32 * safe_div_f32(self.dstw, self.srcw),
-                                y: self.dsth
-                                    - (values[4] + values[6]) as f32
-                                        * safe_div_f32(self.dsth, self.srch),
+                                y: -(values[4] as f32) * safe_div_f32(self.dsth, self.srch),
                                 w: values[5] as f32 * safe_div_f32(self.dstw, self.srcw),
                                 h: values[6] as f32 * safe_div_f32(self.dsth, self.srch),
                                 acc: values[7],
@@ -476,7 +487,7 @@ impl LR2PlaySkinLoaderState {
                             values[18],
                             values[19],
                             values[20],
-                            &[],
+                            &[offset_judge, crate::skin_property::OFFSET_LIFT],
                         );
                     }
                 }
