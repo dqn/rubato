@@ -154,7 +154,7 @@ impl SkinTimingVisualizer {
             pix.dispose();
         }
 
-        if self.line_colors.len() != self.recent.len() {
+        if !self.recent.is_empty() && self.line_colors.len() != self.recent.len() {
             self.line_colors = (0..self.recent.len())
                 .map(|i| {
                     Color::new(

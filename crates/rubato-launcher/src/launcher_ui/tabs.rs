@@ -643,7 +643,7 @@ impl LauncherUi {
         ui.heading("Webhook");
 
         egui::Grid::new("discord_webhook_grid").show(ui, |ui| {
-            let webhook_options = ["All Clear", "FC / AAA", "Clear"];
+            let webhook_options = ["Off", "FC / AAA", "Clear"];
             let selected_label = webhook_options
                 .get(self.config.integration.webhook_option as usize)
                 .unwrap_or(&"All Clear");
