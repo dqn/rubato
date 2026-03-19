@@ -26,6 +26,10 @@ use rubato_types::imgui_notify::ImGuiNotify;
 // unencrypted. Users should be aware of this limitation.
 static IR_URL: &str = "http://dream-pro.info/~lavalse/LR2IR/2";
 
+/// Maximum allowed HTTP response size (64 MB).
+/// Prevents memory exhaustion from malicious or misconfigured servers.
+const MAX_RESPONSE_SIZE: u64 = 64 * 1024 * 1024;
+
 /// Maximum number of cached ranking entries before the cache is cleared.
 /// A typical game session queries fewer than 100 unique songs, so 256 provides
 /// ample headroom while preventing unbounded growth in long-running sessions.
@@ -101,10 +105,28 @@ impl LR2IRConnection {
                     ));
                     return None;
                 }
+                // Reject responses that exceed the size limit to prevent
+                // memory exhaustion from malicious or misconfigured servers.
+                if let Some(content_length) = response.content_length() {
+                    if content_length > MAX_RESPONSE_SIZE {
+                        ImGuiNotify::error(&format!(
+                            "Failed to send request to LR2IR: response too large ({} bytes)",
+                            content_length
+                        ));
+                        return None;
+                    }
+                }
                 // In Java, response is read with Shift_JIS encoding.
                 // reqwest returns bytes; we decode with encoding_rs.
                 match response.bytes() {
                     Ok(bytes) => {
+                        if bytes.len() as u64 > MAX_RESPONSE_SIZE {
+                            ImGuiNotify::error(&format!(
+                                "Failed to send request to LR2IR: response too large ({} bytes)",
+                                bytes.len()
+                            ));
+                            return None;
+                        }
                         let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&bytes);
                         Some(decoded.to_string())
                     }
@@ -234,11 +256,24 @@ impl LR2IRConnection {
                     ImGuiNotify::error("Failed to load ghost data.");
                     return None;
                 }
+                // Reject responses that exceed the size limit.
+                if let Some(content_length) = response.content_length() {
+                    if content_length > MAX_RESPONSE_SIZE {
+                        error!("Response too large: {} bytes", content_length);
+                        ImGuiNotify::error("Failed to load ghost data.");
+                        return None;
+                    }
+                }
                 // LR2IR sends Shift_JIS responses (ghost CSV can contain
                 // Japanese player names). Decode with encoding_rs, matching
                 // the pattern in make_post_request().
                 match response.bytes() {
                     Ok(bytes) => {
+                        if bytes.len() as u64 > MAX_RESPONSE_SIZE {
+                            error!("Response too large: {} bytes", bytes.len());
+                            ImGuiNotify::error("Failed to load ghost data.");
+                            return None;
+                        }
                         let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&bytes);
                         LR2GhostData::parse(&decoded)
                     }

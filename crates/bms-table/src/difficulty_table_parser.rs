@@ -10,6 +10,8 @@ use regex::Regex;
 use serde_json::Value;
 use url::Url;
 
+use anyhow::bail;
+
 use crate::bms_table_element::BmsTableElement;
 use crate::course::{Course, Trophy};
 use crate::difficulty_table::DifficultyTable;
@@ -29,6 +31,10 @@ fn html_regexes() -> &'static HtmlRegexes {
         avg_judge: Regex::new(r"Avg:.*JUDGE:[A-Z]+\s*").expect("valid avg_judge regex"),
     })
 }
+
+/// Maximum allowed HTTP response size (64 MB).
+/// Prevents memory exhaustion from malicious or misconfigured servers.
+const MAX_RESPONSE_SIZE: u64 = 64 * 1024 * 1024;
 
 pub struct DifficultyTableParser {
     data: HashMap<String, Vec<String>>,
@@ -59,20 +65,38 @@ impl DifficultyTableParser {
     // on a background thread, not the main/render thread, to avoid UI freezes.
     fn read_all_lines(&self, urlname: &str) -> Option<Vec<String>> {
         match Self::http_client().and_then(|c| Ok(c.get(urlname).send()?.error_for_status()?)) {
-            Ok(response) => match response.bytes() {
-                Ok(bytes) => {
-                    let text = Self::decode_bytes_with_charset(&bytes);
-                    let lines: Vec<String> = text.lines().map(|s| s.to_string()).collect();
-                    Some(lines)
+            Ok(response) => {
+                if let Some(content_length) = response.content_length() {
+                    if content_length > MAX_RESPONSE_SIZE {
+                        log::error!(
+                            "\u{96e3}\u{6613}\u{5ea6}\u{8868}\u{30b5}\u{30a4}\u{30c8}\u{89e3}\u{6790}\u{4e2d}\u{306e}\u{4f8b}\u{5916}:response too large ({} bytes)",
+                            content_length
+                        );
+                        return None;
+                    }
                 }
-                Err(e) => {
-                    log::error!(
-                        "\u{96e3}\u{6613}\u{5ea6}\u{8868}\u{30b5}\u{30a4}\u{30c8}\u{89e3}\u{6790}\u{4e2d}\u{306e}\u{4f8b}\u{5916}:{}",
-                        e
-                    );
-                    None
+                match response.bytes() {
+                    Ok(bytes) => {
+                        if bytes.len() as u64 > MAX_RESPONSE_SIZE {
+                            log::error!(
+                                "\u{96e3}\u{6613}\u{5ea6}\u{8868}\u{30b5}\u{30a4}\u{30c8}\u{89e3}\u{6790}\u{4e2d}\u{306e}\u{4f8b}\u{5916}:response too large ({} bytes)",
+                                bytes.len()
+                            );
+                            return None;
+                        }
+                        let text = Self::decode_bytes_with_charset(&bytes);
+                        let lines: Vec<String> = text.lines().map(|s| s.to_string()).collect();
+                        Some(lines)
+                    }
+                    Err(e) => {
+                        log::error!(
+                            "\u{96e3}\u{6613}\u{5ea6}\u{8868}\u{30b5}\u{30a4}\u{30c8}\u{89e3}\u{6790}\u{4e2d}\u{306e}\u{4f8b}\u{5916}:{}",
+                            e
+                        );
+                        None
+                    }
                 }
-            },
+            }
             Err(e) => {
                 log::error!(
                     "\u{96e3}\u{6613}\u{5ea6}\u{8868}\u{30b5}\u{30a4}\u{30c8}\u{89e3}\u{6790}\u{4e2d}\u{306e}\u{4f8b}\u{5916}:{}",
@@ -317,7 +341,15 @@ impl DifficultyTableParser {
             .get(jsonheader_url)
             .send()?
             .error_for_status()?;
+        if let Some(content_length) = response.content_length() {
+            if content_length > MAX_RESPONSE_SIZE {
+                bail!("Response too large: {} bytes", content_length);
+            }
+        }
         let bytes = response.bytes()?;
+        if bytes.len() as u64 > MAX_RESPONSE_SIZE {
+            bail!("Response too large: {} bytes", bytes.len());
+        }
         let text = Self::decode_bytes_with_charset(&bytes);
         let result: HashMap<String, Value> = serde_json::from_str(&text)?;
         self.decode_json_table_header_internal(dt, &result)?;
@@ -467,7 +499,15 @@ impl DifficultyTableParser {
             .get(jsondata_url)
             .send()?
             .error_for_status()?;
+        if let Some(content_length) = response.content_length() {
+            if content_length > MAX_RESPONSE_SIZE {
+                bail!("Response too large: {} bytes", content_length);
+            }
+        }
         let bytes = response.bytes()?;
+        if bytes.len() as u64 > MAX_RESPONSE_SIZE {
+            bail!("Response too large: {} bytes", bytes.len());
+        }
         let text = Self::decode_bytes_with_charset(&bytes);
         let result: Vec<HashMap<String, Value>> = serde_json::from_str(&text)?;
         self.decode_json_table_data_internal(dt, &result, false);
