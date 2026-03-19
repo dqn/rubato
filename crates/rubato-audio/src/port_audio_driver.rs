@@ -11,7 +11,7 @@ use rayon::prelude::*;
 
 use kira::sound::PlaybackState;
 use kira::sound::static_sound::{StaticSoundData, StaticSoundHandle};
-use kira::{AudioManager, AudioManagerSettings, DefaultBackend, PlaybackRate, Semitones, Tween};
+use kira::{AudioManager, AudioManagerSettings, DefaultBackend, PlaybackRate, Tween};
 
 use bms_model::bms_model::BMSModel;
 use bms_model::note::Note;
@@ -37,6 +37,10 @@ pub struct PortAudioDriver {
     // Sliced sounds by wav ID (for notes with non-zero starttime/duration)
     slicesound: HashMap<i32, Vec<SliceWav<StaticSoundData>>>,
     slice_handles: HashMap<(i32, i64, i64), StaticSoundHandle>,
+    // Per-note semitone pitch shifts for active handles, so set_global_pitch
+    // can compose global_pitch * 2^(shift/12) instead of overwriting.
+    wav_pitch_shifts: HashMap<i32, i32>,
+    slice_pitch_shifts: HashMap<(i32, i64, i64), i32>,
     // Cache for loaded sounds by path (matches Java soundmap)
     sound_cache: HashMap<String, StaticSoundData>,
     // File-level keysound cache across songs (matches Java AudioCache/ResourcePool)
@@ -66,6 +70,8 @@ impl PortAudioDriver {
             song_resource_gen,
             slicesound: HashMap::new(),
             slice_handles: HashMap::new(),
+            wav_pitch_shifts: HashMap::new(),
+            slice_pitch_shifts: HashMap::new(),
             sound_cache: HashMap::new(),
             file_cache: HashMap::new(),
             additional_key_sounds: Default::default(),
@@ -159,11 +165,17 @@ impl AudioDriver for PortAudioDriver {
     fn set_model(&mut self, model: &BMSModel) {
         log::info!("Loading keysound files.");
 
-        // Clear previous sounds
+        // Stop all active handles before clearing (matches stop_note(None) pattern)
+        for (_, mut handle) in self.wav_handles.drain() {
+            handle.stop(Tween::default());
+        }
+        for (_, mut handle) in self.slice_handles.drain() {
+            handle.stop(Tween::default());
+        }
         self.wav_sounds.clear();
-        self.wav_handles.clear();
         self.slicesound.clear();
-        self.slice_handles.clear();
+        self.wav_pitch_shifts.clear();
+        self.slice_pitch_shifts.clear();
 
         // Cancel any in-progress background load and join the previous loading thread
         if let Some(handle) = self.loading_thread.take() {
@@ -399,6 +411,8 @@ impl AudioDriver for PortAudioDriver {
                 for (_, mut handle) in self.slice_handles.drain() {
                     handle.stop(Tween::default());
                 }
+                self.wav_pitch_shifts.clear();
+                self.slice_pitch_shifts.clear();
             }
             Some(note) => {
                 self.stop_note_internal(note);
@@ -418,11 +432,23 @@ impl AudioDriver for PortAudioDriver {
 
     fn set_global_pitch(&mut self, pitch: f32) {
         self.global_pitch = pitch;
-        let rate = PlaybackRate(pitch as f64);
-        for handle in self.wav_handles.values_mut() {
+        let base = pitch as f64;
+        for (wav_id, handle) in self.wav_handles.iter_mut() {
+            let rate = match self.wav_pitch_shifts.get(wav_id) {
+                Some(&shift) if shift != 0 => {
+                    PlaybackRate(base * 2.0_f64.powf(shift as f64 / 12.0))
+                }
+                _ => PlaybackRate(base),
+            };
             handle.set_playback_rate(rate, Tween::default());
         }
-        for handle in self.slice_handles.values_mut() {
+        for (key, handle) in self.slice_handles.iter_mut() {
+            let rate = match self.slice_pitch_shifts.get(key) {
+                Some(&shift) if shift != 0 => {
+                    PlaybackRate(base * 2.0_f64.powf(shift as f64 / 12.0))
+                }
+                _ => PlaybackRate(base),
+            };
             handle.set_playback_rate(rate, Tween::default());
         }
     }
@@ -436,14 +462,30 @@ impl AudioDriver for PortAudioDriver {
     }
 
     fn dispose(&mut self) {
+        // Join the loading thread before disposing.
         if let Some(handle) = self.loading_thread.take() {
             let _ = handle.join();
         }
-        self.path_sounds.clear();
+        // Stop all active handles before clearing (mirrors set_model() pattern).
+        // Without this, sounds continue playing after the driver is disposed.
+        for (_, mut handle) in self.path_sounds.drain() {
+            handle.stop(Tween::default());
+        }
+        for (_, mut handle) in self.wav_handles.drain() {
+            handle.stop(Tween::default());
+        }
+        for (_, mut handle) in self.slice_handles.drain() {
+            handle.stop(Tween::default());
+        }
+        for row in &mut self.additional_key_sound_handles {
+            for handle in row.iter_mut().flatten() {
+                handle.stop(Tween::default());
+            }
+        }
         self.wav_sounds.clear();
-        self.wav_handles.clear();
         self.slicesound.clear();
-        self.slice_handles.clear();
+        self.wav_pitch_shifts.clear();
+        self.slice_pitch_shifts.clear();
         self.sound_cache.clear();
         self.file_cache.clear();
         self.additional_key_sounds = Default::default();
@@ -520,12 +562,15 @@ impl PortAudioDriver {
         None
     }
 
-    /// Apply pitch shift to a sound handle.
+    /// Apply pitch shift to a sound handle, composing per-note semitone shift
+    /// with the current global pitch: rate = global_pitch * 2^(shift/12).
     fn apply_pitch(&self, handle: &mut StaticSoundHandle, pitch_shift: i32) {
+        let base = self.global_pitch as f64;
         if pitch_shift != 0 {
-            handle.set_playback_rate(Semitones(pitch_shift as f64), Tween::default());
+            let rate = base * 2.0_f64.powf(pitch_shift as f64 / 12.0);
+            handle.set_playback_rate(PlaybackRate(rate), Tween::default());
         } else if (self.global_pitch - 1.0).abs() > f32::EPSILON {
-            handle.set_playback_rate(PlaybackRate(self.global_pitch as f64), Tween::default());
+            handle.set_playback_rate(PlaybackRate(base), Tween::default());
         }
     }
 
@@ -582,6 +627,11 @@ impl PortAudioDriver {
                         Ok(mut handle) => {
                             self.apply_pitch(&mut handle, pitch_shift);
                             self.slice_handles.insert(key, handle);
+                            if pitch_shift != 0 {
+                                self.slice_pitch_shifts.insert(key, pitch_shift);
+                            } else {
+                                self.slice_pitch_shifts.remove(&key);
+                            }
                         }
                         Err(e) => {
                             log::warn!("Failed to play sliced keysound wav {}: {}", wav_id, e);
@@ -602,6 +652,11 @@ impl PortAudioDriver {
                 Ok(mut handle) => {
                     self.apply_pitch(&mut handle, pitch_shift);
                     self.wav_handles.insert(wav_id, handle);
+                    if pitch_shift != 0 {
+                        self.wav_pitch_shifts.insert(wav_id, pitch_shift);
+                    } else {
+                        self.wav_pitch_shifts.remove(&wav_id);
+                    }
                 }
                 Err(e) => {
                     log::warn!("Failed to play keysound wav {}: {}", wav_id, e);
@@ -625,12 +680,14 @@ impl PortAudioDriver {
             let key = (wav_id, starttime, duration);
             if let Some(mut handle) = self.slice_handles.remove(&key) {
                 handle.stop(Tween::default());
+                self.slice_pitch_shifts.remove(&key);
                 return;
             }
         }
 
         if let Some(mut handle) = self.wav_handles.remove(&wav_id) {
             handle.stop(Tween::default());
+            self.wav_pitch_shifts.remove(&wav_id);
         }
     }
 
