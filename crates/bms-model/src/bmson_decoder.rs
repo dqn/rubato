@@ -831,7 +831,7 @@ fn ensure_timeline(
     resolution: f64,
     mode_key: i32,
 ) {
-    if tlcache.contains_key(&y) {
+    if y < 0 || tlcache.contains_key(&y) {
         return;
     }
 

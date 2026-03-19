@@ -251,7 +251,9 @@ impl LR2GhostData {
                 }
                 break;
             } else if next.is_ascii_digit() {
-                run_length = run_length * 10 + (next as i32 - '0' as i32);
+                run_length = run_length
+                    .saturating_mul(10)
+                    .saturating_add(next as i32 - '0' as i32);
             } else if ('@'..='E').contains(&next) {
                 if current_character == '\0' {
                     current_character = next;
