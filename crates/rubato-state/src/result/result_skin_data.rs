@@ -24,7 +24,7 @@ impl ResultSkinData {
         timing_skin.fadeout = skin.fadeout();
         Self {
             skin: timing_skin,
-            ranktime: 0,
+            ranktime: skin.ranktime,
         }
     }
 
@@ -42,5 +42,39 @@ impl ResultSkinData {
 
     pub fn fadeout(&self) -> i32 {
         self.skin.fadeout()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_loaded_skin_copies_ranktime() {
+        let header = SkinHeader::default();
+        let mut skin = Skin::new(header);
+        skin.ranktime = 750;
+
+        let result_data = ResultSkinData::from_loaded_skin(&skin);
+        assert_eq!(result_data.ranktime, 750);
+    }
+
+    #[test]
+    fn from_loaded_skin_copies_zero_ranktime() {
+        let header = SkinHeader::default();
+        let skin = Skin::new(header);
+
+        let result_data = ResultSkinData::from_loaded_skin(&skin);
+        assert_eq!(result_data.ranktime, 0);
+    }
+
+    #[test]
+    fn from_loaded_skin_copies_negative_ranktime() {
+        let header = SkinHeader::default();
+        let mut skin = Skin::new(header);
+        skin.ranktime = -300;
+
+        let result_data = ResultSkinData::from_loaded_skin(&skin);
+        assert_eq!(result_data.ranktime, -300);
     }
 }

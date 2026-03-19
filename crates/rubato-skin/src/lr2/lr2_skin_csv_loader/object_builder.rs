@@ -23,6 +23,12 @@ pub trait LR2SkinLoaderAccess {
     /// Assemble accumulated loader state into SkinObjects and add them to the Skin.
     /// Called after CSV parsing completes to convert parsed source data into drawable objects.
     fn assemble_objects(&mut self, skin: &mut crate::skin::Skin);
+
+    /// Return the parsed ranktime (ms) for result/course-result skins.
+    /// Defaults to 0 for non-result skin types.
+    fn ranktime(&self) -> i32 {
+        0
+    }
 }
 
 /// Create the appropriate LR2 skin loader for the given SkinType.
@@ -162,6 +168,9 @@ pub fn load_lr2_skin(
 
     // 6. Assemble parsed source data into SkinObjects
     loader.assemble_objects(&mut skin);
+
+    // 7. Transfer result-skin-specific ranktime
+    skin.ranktime = loader.ranktime();
 
     Some(skin)
 }

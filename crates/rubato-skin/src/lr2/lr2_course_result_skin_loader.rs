@@ -210,6 +210,10 @@ impl LR2SkinLoaderAccess for LR2CourseResultSkinLoaderState {
         Ok(())
     }
 
+    fn ranktime(&self) -> i32 {
+        self.ranktime
+    }
+
     fn assemble_objects(&mut self, skin: &mut crate::skin::Skin) {
         use crate::skin::SkinObject;
 

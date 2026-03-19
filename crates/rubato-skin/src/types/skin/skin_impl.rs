@@ -50,6 +50,10 @@ pub struct Skin {
     /// Select-specific bar data extracted from the skin loader.
     /// MusicSelector takes this after loading to build SkinBar + BarRenderer.
     pub select_bar_data: Option<crate::select_bar_data::SelectBarData>,
+
+    /// Rank time (ms) parsed from STARTINPUT str[2] in result/course-result skins.
+    /// Controls score animation timing on the result screen.
+    pub ranktime: i32,
 }
 
 impl Skin {
@@ -103,6 +107,7 @@ impl Skin {
             prepareduration: 1,
             image_registry: Self::create_system_image_registry(),
             select_bar_data: None,
+            ranktime: 0,
         }
     }
 

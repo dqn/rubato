@@ -195,6 +195,42 @@ impl LR2ResultSkinLoaderState {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_state() -> LR2ResultSkinLoaderState {
+        let src = Resolution {
+            width: 640.0,
+            height: 480.0,
+        };
+        let dst = Resolution {
+            width: 1280.0,
+            height: 960.0,
+        };
+        LR2ResultSkinLoaderState::new(src, dst, false, String::new())
+    }
+
+    fn str_vec(parts: &[&str]) -> Vec<String> {
+        parts.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn ranktime_trait_method_returns_parsed_value() {
+        let mut state = make_state();
+        state.process_result_command("STARTINPUT", &str_vec(&["STARTINPUT", "1000", "750"]));
+        let loader: &dyn LR2SkinLoaderAccess = &state;
+        assert_eq!(loader.ranktime(), 750);
+    }
+
+    #[test]
+    fn ranktime_trait_method_defaults_to_zero() {
+        let state = make_state();
+        let loader: &dyn LR2SkinLoaderAccess = &state;
+        assert_eq!(loader.ranktime(), 0);
+    }
+}
+
 impl LR2SkinLoaderAccess for LR2ResultSkinLoaderState {
     fn csv_mut(&mut self) -> &mut LR2SkinCSVLoaderState {
         &mut self.csv
@@ -218,6 +254,10 @@ impl LR2SkinLoaderAccess for LR2ResultSkinLoaderState {
 
         self.csv.finalize_active_objects();
         Ok(())
+    }
+
+    fn ranktime(&self) -> i32 {
+        self.ranktime
     }
 
     fn assemble_objects(&mut self, skin: &mut crate::skin::Skin) {
