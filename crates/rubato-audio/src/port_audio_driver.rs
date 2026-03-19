@@ -466,8 +466,9 @@ impl PortAudioDriver {
                         self.wav_sounds.insert(*wav_id, base_sound.clone());
                     } else {
                         let sample_rate = base_sound.sample_rate as i64;
-                        let start_frame = (starttime * sample_rate / 1_000_000) as usize;
-                        let duration_frames = (duration * sample_rate / 1_000_000) as usize;
+                        // Clamp negative values to 0 to prevent wrapping to usize::MAX.
+                        let start_frame = (starttime.max(0) * sample_rate / 1_000_000) as usize;
+                        let duration_frames = (duration.max(0) * sample_rate / 1_000_000) as usize;
                         let total_frames = base_sound.frames.len();
                         let end_frame = if duration_frames == 0 {
                             total_frames

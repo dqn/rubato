@@ -53,6 +53,7 @@ pub struct LR2SkinCSVLoaderState {
     pub imagesetarray: Vec<Vec<TextureRegion>>,
 
     // Active skin objects (built by SRC, destination set by DST)
+    pub image: Option<SkinImage>,
     pub button: Option<SkinImage>,
     pub onmouse: Option<SkinImage>,
     pub gauger: Option<SkinGauge>,

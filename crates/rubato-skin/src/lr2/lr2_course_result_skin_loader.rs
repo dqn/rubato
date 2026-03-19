@@ -171,6 +171,26 @@ impl LR2SkinLoaderAccess for LR2CourseResultSkinLoaderState {
         &mut self.csv
     }
 
+    fn load_skin_data(
+        &mut self,
+        path: &std::path::Path,
+        state: Option<&dyn crate::reexports::MainState>,
+    ) -> anyhow::Result<()> {
+        let raw_bytes = std::fs::read(path)?;
+        let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&raw_bytes);
+        let content = decoded.into_owned();
+
+        for line in content.lines() {
+            self.csv.line = Some(line.to_string());
+            if let Some((cmd, str_parts)) = self.csv.base.process_line_directives(line, state) {
+                self.process_course_command(&cmd, &str_parts);
+            }
+        }
+
+        self.csv.finalize_active_objects();
+        Ok(())
+    }
+
     fn assemble_objects(&mut self, skin: &mut crate::skin::Skin) {
         use crate::skin::SkinObject;
 

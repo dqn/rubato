@@ -177,6 +177,14 @@ impl LR2SkinLoaderAccess for LR2PlaySkinLoaderState {
         &mut self.csv
     }
 
+    fn load_skin_data(
+        &mut self,
+        path: &std::path::Path,
+        state: Option<&dyn crate::reexports::MainState>,
+    ) -> anyhow::Result<()> {
+        self.load_skin(path, state)
+    }
+
     fn assemble_objects(&mut self, skin: &mut crate::skin::Skin) {
         use crate::skin::SkinObject;
 

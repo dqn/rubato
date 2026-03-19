@@ -6,6 +6,20 @@ pub trait LR2SkinLoaderAccess {
     /// Get mutable reference to the base CSV loader state.
     fn csv_mut(&mut self) -> &mut LR2SkinCSVLoaderState;
 
+    /// Load and parse the CSV skin file, routing commands through the appropriate dispatcher.
+    ///
+    /// Override this in subclass loaders that have their own command routing
+    /// (e.g., play skins route through `process_play_command`, select skins through
+    /// `process_select_command`). The default implementation routes all commands
+    /// through the base `process_csv_command`.
+    fn load_skin_data(
+        &mut self,
+        path: &std::path::Path,
+        state: Option<&dyn crate::reexports::MainState>,
+    ) -> anyhow::Result<()> {
+        self.csv_mut().load_skin0(path, state)
+    }
+
     /// Assemble accumulated loader state into SkinObjects and add them to the Skin.
     /// Called after CSV parsing completes to convert parsed source data into drawable objects.
     fn assemble_objects(&mut self, skin: &mut crate::skin::Skin);
@@ -137,8 +151,8 @@ pub fn load_lr2_skin(
         }
     }
 
-    // Parse the CSV file
-    if let Err(e) = loader.csv_mut().load_skin0(path, None) {
+    // Parse the CSV file (routes through subclass-specific command dispatcher)
+    if let Err(e) = loader.load_skin_data(path, None) {
         log::warn!("LR2 CSV skin load failed: {}: {}", path.display(), e);
         return None;
     }

@@ -71,6 +71,7 @@ impl LR2SkinCSVLoaderState {
             groovey: 0,
             line: None,
             imagesetarray: Vec::new(),
+            image: None,
             button: None,
             onmouse: None,
             gauger: None,
@@ -278,6 +279,129 @@ impl LR2SkinCSVLoaderState {
                         }
                     }
                 }
+            }
+            "SRC_IMAGE" => {
+                // Finalize previous image
+                if let Some(img) = self.image.take() {
+                    self.collected_objects.push(SkinObject::Image(img));
+                }
+                let gr: i32 = str_parts
+                    .get(2)
+                    .and_then(|s| s.trim().parse().ok())
+                    .unwrap_or(0);
+                if gr >= 100 {
+                    // Reference image (gr >= 100): image index reference
+                    let img = SkinImage::new_with_int_timer_ref_id(vec![], 0, 0, gr);
+                    self.image = Some(img);
+                } else {
+                    let gr_usize = gr as usize;
+                    if gr_usize < self.imagelist.len() {
+                        if matches!(self.imagelist[gr_usize], ImageListEntry::Movie(_)) {
+                            // Movie source: create SkinImage wrapping the movie
+                            // (Movie rendering is handled by SkinBgaObject in practice;
+                            // for non-BGA movie images, create a placeholder SkinImage.)
+                            let img = SkinImage::new_with_int_timer(vec![], 0, 0);
+                            self.image = Some(img);
+                        } else {
+                            let values = Self::parse_int(str_parts);
+                            if let Some(images) = self.source_image(&values) {
+                                let img =
+                                    SkinImage::new_with_int_timer(images, values[10], values[9]);
+                                self.image = Some(img);
+                            }
+                        }
+                    }
+                }
+            }
+            "DST_IMAGE" => {
+                if let Some(ref mut image) = self.image {
+                    let mut values = Self::parse_int(str_parts);
+                    if values[5] < 0 {
+                        values[3] += values[5];
+                        values[5] = -values[5];
+                    }
+                    if values[6] < 0 {
+                        values[4] += values[6];
+                        values[6] = -values[6];
+                    }
+                    let dstw = safe_div_f32(self.dst.width, self.src.width);
+                    let dsth = safe_div_f32(self.dst.height, self.src.height);
+                    let offsets = Self::read_offset(str_parts, 21);
+                    image.data.set_destination_with_int_timer_ops(
+                        &DestinationParams {
+                            time: values[2] as i64,
+                            x: values[3] as f32 * dstw,
+                            y: self.dst.height - (values[4] + values[6]) as f32 * dsth,
+                            w: values[5] as f32 * dstw,
+                            h: values[6] as f32 * dsth,
+                            acc: values[7],
+                            a: values[8],
+                            r: values[9],
+                            g: values[10],
+                            b: values[11],
+                            blend: values[12],
+                            filter: values[13],
+                            angle: values[14],
+                            center: values[15],
+                            loop_val: values[16],
+                        },
+                        values[17],
+                        &offsets,
+                    );
+                    image.data.set_stretch_by_id(self.stretch);
+                }
+            }
+            "IMAGESET" => {
+                let values = Self::parse_int(str_parts);
+                let gr = values[2] as usize;
+                if gr < self.imagelist.len()
+                    && matches!(self.imagelist[gr], ImageListEntry::TextureEntry(_))
+                    && let Some(images) = self.source_image(&values)
+                {
+                    self.imagesetarray.push(images);
+                }
+            }
+            "SRC_IMAGESET" => {
+                // Finalize previous image
+                if let Some(img) = self.image.take() {
+                    self.collected_objects.push(SkinObject::Image(img));
+                }
+                let values = Self::parse_int(str_parts);
+                let count = values[4] as usize;
+                if count > 0 {
+                    let mut images_2d: Vec<Vec<TextureRegion>> = Vec::with_capacity(count);
+                    let mut valid = true;
+                    for i in 0..count {
+                        let idx = values[5 + i] as usize;
+                        if idx < self.imagesetarray.len() {
+                            images_2d.push(self.imagesetarray[idx].clone());
+                        } else {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    if valid && !images_2d.is_empty() {
+                        let img = SkinImage::new_with_int_timer_ref_id(
+                            images_2d, values[2], values[1], values[3],
+                        );
+                        self.image = Some(img);
+                    }
+                }
+            }
+            "SRC_NUMBER"
+            | "DST_NUMBER"
+            | "SRC_TEXT"
+            | "DST_TEXT"
+            | "SRC_SLIDER"
+            | "SRC_SLIDER_REFNUMBER"
+            | "DST_SLIDER"
+            | "SRC_BARGRAPH"
+            | "SRC_BARGRAPH_REFNUMBER"
+            | "DST_BARGRAPH" => {
+                // TODO: Implement LR2 CSV handlers for number, text, slider, bargraph objects.
+                // These commands are recognized but not yet handled in the CSV loader.
+                // LR2 skins using these object types will have missing elements.
+                log::debug!("LR2 CSV command not yet implemented: {}", cmd);
             }
             "SRC_BUTTON" => {
                 // Finalize previous button
@@ -676,6 +800,9 @@ impl LR2SkinCSVLoaderState {
     /// Finalize any active skin objects (button, onmouse, gauger) into collected_objects.
     /// Call this after CSV parsing completes.
     pub fn finalize_active_objects(&mut self) {
+        if let Some(img) = self.image.take() {
+            self.collected_objects.push(SkinObject::Image(img));
+        }
         if let Some(btn) = self.button.take() {
             self.collected_objects.push(SkinObject::Image(btn));
         }
