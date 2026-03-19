@@ -9,6 +9,15 @@ use crate::views::skin_configuration_view::{SkinConfigItem, SkinConfigurationVie
 
 use super::{IR_SEND_LABELS, LauncherUi};
 
+/// Clamp a signed option index to a valid array index.
+/// Returns 0 (first element) when the value is negative or out of bounds.
+pub(crate) fn clamped_option_index(value: i32, len: usize) -> usize {
+    usize::try_from(value)
+        .ok()
+        .filter(|&i| i < len)
+        .unwrap_or(0)
+}
+
 impl LauncherUi {
     pub(super) fn render_video_tab(&mut self, ui: &mut egui::Ui) {
         egui::Grid::new("video_grid").show(ui, |ui| {
@@ -643,12 +652,14 @@ impl LauncherUi {
 
         egui::Grid::new("discord_webhook_grid").show(ui, |ui| {
             let webhook_options = ["Off", "FC / AAA", "Clear"];
-            let selected_label = webhook_options
-                .get(self.config.integration.webhook_option as usize)
-                .unwrap_or(&"All Clear");
+            let clamped_index = clamped_option_index(
+                self.config.integration.webhook_option,
+                webhook_options.len(),
+            );
+            let selected_label = webhook_options[clamped_index];
             ui.label("Send On:");
             egui::ComboBox::from_id_salt("webhook_option")
-                .selected_text(*selected_label)
+                .selected_text(selected_label)
                 .show_ui(ui, |ui| {
                     for (i, label) in webhook_options.iter().enumerate() {
                         ui.selectable_value(

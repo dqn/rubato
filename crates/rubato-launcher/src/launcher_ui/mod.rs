@@ -1,7 +1,7 @@
 // LauncherUi -- egui-based launcher configuration window
 // Java equivalent: PlayConfigurationView (JavaFX Application)
 
-mod tabs;
+pub(crate) mod tabs;
 
 #[cfg(test)]
 #[allow(clippy::field_reassign_with_default)]

@@ -207,11 +207,13 @@ impl DiscordConfigurationView {
             .num_columns(2)
             .show(ui, |ui| {
                 ui.label("Send On:");
-                let selected_label = webhook_options
-                    .get(self.webhook_option as usize)
-                    .unwrap_or(&"All Clear");
+                let clamped_index = crate::launcher_ui::tabs::clamped_option_index(
+                    self.webhook_option,
+                    webhook_options.len(),
+                );
+                let selected_label = webhook_options[clamped_index];
                 egui::ComboBox::from_id_salt("discord_config_webhook_option")
-                    .selected_text(*selected_label)
+                    .selected_text(selected_label)
                     .show_ui(ui, |ui| {
                         for (i, label) in webhook_options.iter().enumerate() {
                             ui.selectable_value(&mut self.webhook_option, i as i32, *label);

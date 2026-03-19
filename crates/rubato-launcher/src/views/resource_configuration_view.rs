@@ -544,10 +544,21 @@ impl ResourceConfigurationView {
     /// loop so that `refresh_local_table_info()` runs on the UI thread once
     /// the background fetch finishes.
     pub fn poll_table_load(&mut self) {
-        if let Some(ref handle) = self.table_load_handle
-            && handle.is_finished()
-        {
-            self.table_load_handle = None;
+        let is_finished = self
+            .table_load_handle
+            .as_ref()
+            .is_some_and(|h| h.is_finished());
+        if is_finished {
+            if let Some(handle) = self.table_load_handle.take()
+                && let Err(panic_payload) = handle.join()
+            {
+                let msg = panic_payload
+                    .downcast_ref::<&str>()
+                    .copied()
+                    .or_else(|| panic_payload.downcast_ref::<String>().map(|s| s.as_str()))
+                    .unwrap_or("unknown panic");
+                error!("table load thread panicked: {}", msg);
+            }
             self.refresh_local_table_info();
         }
     }
@@ -1252,5 +1263,51 @@ mod tests {
         let latter = vec!["a".to_string()];
         let result = ResourceConfigurationView::subtract_table(&former, &latter);
         assert_eq!(result, vec!["b"]);
+    }
+
+    // -- poll_table_load --
+
+    #[test]
+    fn poll_table_load_joins_completed_thread() {
+        let mut view = ResourceConfigurationView::new();
+        view.table_load_handle = Some(std::thread::spawn(|| {}));
+        // Wait for the thread to finish
+        while !view
+            .table_load_handle
+            .as_ref()
+            .is_some_and(|h| h.is_finished())
+        {
+            std::thread::yield_now();
+        }
+        view.poll_table_load();
+        // Handle must be consumed (taken + joined)
+        assert!(view.table_load_handle.is_none());
+    }
+
+    #[test]
+    fn poll_table_load_handles_panicking_thread() {
+        let mut view = ResourceConfigurationView::new();
+        view.table_load_handle = Some(std::thread::spawn(|| {
+            panic!("simulated table load panic");
+        }));
+        // Wait for the thread to finish
+        while !view
+            .table_load_handle
+            .as_ref()
+            .is_some_and(|h| h.is_finished())
+        {
+            std::thread::yield_now();
+        }
+        // poll_table_load should not panic even if the thread panicked
+        view.poll_table_load();
+        assert!(view.table_load_handle.is_none());
+    }
+
+    #[test]
+    fn poll_table_load_noop_when_no_handle() {
+        let mut view = ResourceConfigurationView::new();
+        // No handle set -- should be a no-op
+        view.poll_table_load();
+        assert!(view.table_load_handle.is_none());
     }
 }

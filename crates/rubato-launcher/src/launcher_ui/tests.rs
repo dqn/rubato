@@ -1,4 +1,35 @@
+use super::tabs::clamped_option_index;
 use super::*;
+
+// -- clamped_option_index --
+
+#[test]
+fn clamped_option_index_valid_values() {
+    assert_eq!(clamped_option_index(0, 3), 0);
+    assert_eq!(clamped_option_index(1, 3), 1);
+    assert_eq!(clamped_option_index(2, 3), 2);
+}
+
+#[test]
+fn clamped_option_index_negative_falls_back_to_zero() {
+    assert_eq!(clamped_option_index(-1, 3), 0);
+    assert_eq!(clamped_option_index(-100, 3), 0);
+    assert_eq!(clamped_option_index(i32::MIN, 3), 0);
+}
+
+#[test]
+fn clamped_option_index_out_of_bounds_falls_back_to_zero() {
+    assert_eq!(clamped_option_index(3, 3), 0);
+    assert_eq!(clamped_option_index(100, 3), 0);
+    assert_eq!(clamped_option_index(i32::MAX, 3), 0);
+}
+
+#[test]
+fn clamped_option_index_empty_array_falls_back_to_zero() {
+    assert_eq!(clamped_option_index(0, 0), 0);
+}
+
+// -- LauncherUi tests --
 
 #[test]
 fn test_launcher_ui_new_defaults() {
