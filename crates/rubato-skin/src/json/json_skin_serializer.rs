@@ -141,6 +141,19 @@ impl JsonSkinSerializer {
         Some(file_path)
     }
 
+    /// Read a file as a string, falling back to Shift_JIS decoding when the
+    /// file is not valid UTF-8 (matching the main JSON skin loader behavior).
+    fn read_file_with_shift_jis_fallback(path: &Path) -> Option<String> {
+        match std::fs::read_to_string(path) {
+            Ok(s) => Some(s),
+            Err(_) => {
+                let bytes = std::fs::read(path).ok()?;
+                let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&bytes);
+                Some(decoded.into_owned())
+            }
+        }
+    }
+
     /// Pre-process a JSON value, resolving conditional branches and includes.
     /// This corresponds to ObjectSerializer.read in Java.
     pub fn preprocess_object(&self, value: &Value, base_path: &Path) -> Option<Value> {
@@ -163,7 +176,7 @@ impl JsonSkinSerializer {
         {
             let file_path = self.resolve_include_path(include_path, base_path)?;
             if file_path.exists()
-                && let Ok(content) = std::fs::read_to_string(&file_path)
+                && let Some(content) = Self::read_file_with_shift_jis_fallback(&file_path)
                 && let Ok(parsed) = serde_json::from_str::<Value>(&content)
             {
                 return Some(parsed);
@@ -233,7 +246,7 @@ impl JsonSkinSerializer {
         {
             if let Some(file_path) = self.resolve_include_path(include_path, base_path) {
                 if file_path.exists()
-                    && let Ok(content) = std::fs::read_to_string(&file_path)
+                    && let Some(content) = Self::read_file_with_shift_jis_fallback(&file_path)
                     && let Ok(parsed) = serde_json::from_str::<Value>(&content)
                     && let Some(arr) = parsed.as_array()
                 {
