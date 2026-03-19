@@ -215,14 +215,14 @@ impl SkinObjectData {
         if !self.offset.is_empty() {
             return;
         }
-        let mut seen = HashSet::new();
+        let mut seen = Vec::new();
         for &o in offset {
-            if o > 0 && o < skin_property::OFFSET_MAX + 1 {
-                seen.insert(o);
+            if o > 0 && o < skin_property::OFFSET_MAX + 1 && !seen.contains(&o) {
+                seen.push(o);
             }
         }
         if !seen.is_empty() {
-            self.offset = seen.into_iter().collect();
+            self.offset = seen;
             self.off = vec![None; self.offset.len()];
         }
     }
