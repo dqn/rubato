@@ -313,10 +313,10 @@ impl BarSorter {
         if o1.as_song_bar().is_none() || o2.as_song_bar().is_none() {
             return Self::compare_title(o1, o2);
         }
-        // Treat date == 0 (imported/default records never actually played) the same
-        // as "no score" by extracting only non-zero dates for comparison.
-        let d1 = o1.score().map(|s| s.date).filter(|&d| d != 0);
-        let d2 = o2.score().map(|s| s.date).filter(|&d| d != 0);
+        // Java: (int)(o1.getScore().getDate() - o2.getScore().getDate())
+        // date==0 sorts as epoch-0 (earliest), not as "no score".
+        let d1 = o1.score().map(|s| s.date);
+        let d2 = o2.score().map(|s| s.date);
         match (d1, d2) {
             (None, None) => Ordering::Equal,
             (None, _) => Ordering::Greater,
@@ -553,9 +553,8 @@ mod tests {
     }
 
     #[test]
-    fn compare_lastupdate_date_zero_treated_as_no_score() {
-        // date == 0 means imported/default record that was never actually played.
-        // It should sort the same as "no score" (pushed to end), not as a valid date.
+    fn compare_lastupdate_date_zero_sorts_as_epoch_zero() {
+        // date==0 is a valid date (epoch 0). Java sorts it before real timestamps.
         let score_zero = ScoreData {
             date: 0,
             ..Default::default()
@@ -566,16 +565,16 @@ mod tests {
         };
         let b_zero = song_bar_with_score("A", score_zero);
         let b_played = song_bar_with_score("B", score_played);
-        // date==0 should sort after a played song (Greater = pushed to end)
+        // date==0 sorts before date==1000 (Less = earlier)
         assert_eq!(
             BarSorter::LastUpdate.compare(&b_zero, &b_played),
-            Ordering::Greater
+            Ordering::Less
         );
     }
 
     #[test]
-    fn compare_lastupdate_date_zero_vs_no_score_is_equal() {
-        // Both date==0 and no-score represent "never played" and should be Equal.
+    fn compare_lastupdate_date_zero_vs_no_score() {
+        // date==0 (has score) sorts before no-score (no score pushed to end).
         let score_zero = ScoreData {
             date: 0,
             ..Default::default()
@@ -584,7 +583,7 @@ mod tests {
         let b_none = song_bar_no_score("B");
         assert_eq!(
             BarSorter::LastUpdate.compare(&b_zero, &b_none),
-            Ordering::Equal
+            Ordering::Less
         );
     }
 

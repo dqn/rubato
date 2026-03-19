@@ -179,6 +179,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
 
     fn integer_value(&self, id: i32) -> i32 {
         match id {
+            // Hi-speed (LR2 format: hispeed * 100, e.g. 3.5 -> 350)
+            10 => (self.play_config.hispeed * 100.0) as i32,
+            // Hi-speed fractional part (e.g. 3.52 -> 2)
+            311 => ((self.play_config.hispeed * 100.0) as i32) % 10,
             // Total notes
             350 => self.total_notes,
             // Playtime (hours/minutes/seconds from boot)
