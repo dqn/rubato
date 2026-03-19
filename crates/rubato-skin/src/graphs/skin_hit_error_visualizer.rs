@@ -121,6 +121,14 @@ impl SkinHitErrorVisualizer {
         }
         self.data.prepare(time, state);
 
+        // judgeArea = getJudgeArea(resource) -- populate from state
+        if !self._model_set {
+            self._model_set = true;
+            if let Some(ja) = state.judge_area() {
+                self.judge_area = ja;
+            }
+        }
+
         self.index = state.recent_judges_index();
         self.recent = state.recent_judges().to_vec();
     }
@@ -300,4 +308,130 @@ impl SkinHitErrorVisualizer {
 /// Validates color string - delegates to SkinTimingVisualizer.
 pub fn color_string_validation_hev(cs: &str) -> String {
     color_string_validation(cs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::reexports::{SkinOffset, Timer};
+
+    /// Mock MainState that provides judge_area and is_bms_player.
+    struct MockPlayState {
+        timer: Timer,
+        judge_area: Option<Vec<Vec<i32>>>,
+    }
+
+    impl MockPlayState {
+        fn with_judge_area(judge_area: Vec<Vec<i32>>) -> Self {
+            Self {
+                timer: Timer::default(),
+                judge_area: Some(judge_area),
+            }
+        }
+    }
+
+    impl rubato_types::timer_access::TimerAccess for MockPlayState {
+        fn now_time(&self) -> i64 {
+            self.timer.now_time()
+        }
+        fn now_micro_time(&self) -> i64 {
+            self.timer.now_micro_time()
+        }
+        fn micro_timer(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+            self.timer.micro_timer(timer_id)
+        }
+        fn timer(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+            self.timer.timer(timer_id)
+        }
+        fn now_time_for(&self, timer_id: rubato_types::timer_id::TimerId) -> i64 {
+            self.timer.now_time_for(timer_id)
+        }
+        fn is_timer_on(&self, timer_id: rubato_types::timer_id::TimerId) -> bool {
+            self.timer.is_timer_on(timer_id)
+        }
+    }
+
+    impl rubato_types::skin_render_context::SkinRenderContext for MockPlayState {
+        fn get_offset_value(&self, _id: i32) -> Option<&SkinOffset> {
+            None
+        }
+        fn is_bms_player(&self) -> bool {
+            true
+        }
+        fn judge_area(&self) -> Option<Vec<Vec<i32>>> {
+            self.judge_area.clone()
+        }
+    }
+
+    impl crate::reexports::MainState for MockPlayState {}
+
+    fn default_config() -> HitErrorVisualizerConfig<'static> {
+        HitErrorVisualizerConfig {
+            width: 200,
+            judge_width_millis: 100,
+            line_width: 2,
+            color_mode: 1,
+            hiterror_mode: 1,
+            ema_mode: 0,
+            line_color: "FFFFFFFF",
+            center_color: "FF0000FF",
+            pg_color: "00FF00FF",
+            gr_color: "0000FFFF",
+            gd_color: "FFFF00FF",
+            bd_color: "FF00FFFF",
+            pr_color: "888888FF",
+            ema_color: "CCCCCCFF",
+            alpha: 0.1,
+            window_length: 50,
+            transparent: 0,
+            draw_decay: 1,
+        }
+    }
+
+    #[test]
+    fn prepare_populates_judge_area_from_state() {
+        let ja = vec![
+            vec![-20, 20],
+            vec![-40, 40],
+            vec![-80, 80],
+            vec![-150, 150],
+            vec![-1000, 1000],
+        ];
+        let state = MockPlayState::with_judge_area(ja.clone());
+        let mut viz = SkinHitErrorVisualizer::new(default_config());
+
+        assert!(viz.judge_area.is_empty(), "judge_area should start empty");
+
+        viz.prepare(0, &state);
+
+        assert_eq!(
+            viz.judge_area, ja,
+            "judge_area must be populated from state after prepare()"
+        );
+    }
+
+    #[test]
+    fn prepare_sets_model_set_only_once() {
+        let ja1 = vec![
+            vec![-20, 20],
+            vec![-40, 40],
+            vec![-80, 80],
+            vec![-150, 150],
+            vec![-1000, 1000],
+        ];
+        let state = MockPlayState::with_judge_area(ja1.clone());
+        let mut viz = SkinHitErrorVisualizer::new(default_config());
+
+        viz.prepare(0, &state);
+        assert_eq!(viz.judge_area, ja1);
+
+        // Second prepare should not overwrite (_model_set is true)
+        let ja2 = vec![vec![-10, 10]];
+        let state2 = MockPlayState::with_judge_area(ja2);
+        viz.prepare(100, &state2);
+        assert_eq!(
+            viz.judge_area, ja1,
+            "judge_area should not change after _model_set"
+        );
+    }
 }
