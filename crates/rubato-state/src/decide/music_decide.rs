@@ -169,6 +169,12 @@ struct DecideMouseContext<'a> {
     timer: &'a mut TimerManager,
     main: &'a mut MainControllerRef,
     resource: &'a mut dyn PlayerResourceAccess,
+    /// Events collected during mouse handling for deferred dispatch.
+    /// Skin click events that route through `DelegateEvent` call `execute_event()`,
+    /// but most decide-screen interactions use direct trait methods (`change_state`,
+    /// `set_timer_micro`, `player_config_mut`) which bypass `execute_event` entirely.
+    /// Events collected here are replayed after the skin is restored.
+    pending_events: Vec<(i32, i32, i32)>,
 }
 
 impl rubato_types::timer_access::TimerAccess for DecideMouseContext<'_> {
@@ -202,10 +208,11 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
         Some(rubato_types::main_state_type::MainStateType::Decide)
     }
 
-    fn execute_event(&mut self, _id: i32, _arg1: i32, _arg2: i32) {
-        // Decide screen has no state-specific event handling.
-        // Custom events (1000-1999) require skin access which the mouse context
-        // cannot provide (borrow conflict with skin.mouse_pressed_at).
+    fn execute_event(&mut self, id: i32, arg1: i32, arg2: i32) {
+        // Queue events for replay after the skin is restored.
+        // During mouse handling the skin is `take()`-ed, so we cannot call
+        // `skin.execute_custom_event()` directly here.
+        self.pending_events.push((id, arg1, arg2));
     }
 
     fn change_state(&mut self, state: rubato_types::main_state_type::MainStateType) {
@@ -316,13 +323,28 @@ impl MainState for MusicDecide {
         };
         let mut timer = std::mem::take(&mut self.data.timer);
 
+        let pending_events;
         {
             let mut ctx = DecideMouseContext {
                 timer: &mut timer,
                 main: &mut self.main,
                 resource: &mut *self.resource,
+                pending_events: Vec::new(),
             };
             skin.mouse_pressed_at(&mut ctx, button, x, y);
+            pending_events = ctx.pending_events;
+        }
+
+        // Replay queued events now that the skin is available again
+        if !pending_events.is_empty() {
+            let mut ctx = DecideRenderContext {
+                timer: &mut timer,
+                resource: &*self.resource,
+                main: &self.main,
+            };
+            for (id, arg1, arg2) in pending_events {
+                skin.execute_custom_event(&mut ctx, id, arg1, arg2);
+            }
         }
 
         self.data.timer = timer;
@@ -336,13 +358,28 @@ impl MainState for MusicDecide {
         };
         let mut timer = std::mem::take(&mut self.data.timer);
 
+        let pending_events;
         {
             let mut ctx = DecideMouseContext {
                 timer: &mut timer,
                 main: &mut self.main,
                 resource: &mut *self.resource,
+                pending_events: Vec::new(),
             };
             skin.mouse_dragged_at(&mut ctx, button, x, y);
+            pending_events = ctx.pending_events;
+        }
+
+        // Replay queued events now that the skin is available again
+        if !pending_events.is_empty() {
+            let mut ctx = DecideRenderContext {
+                timer: &mut timer,
+                resource: &*self.resource,
+                main: &self.main,
+            };
+            for (id, arg1, arg2) in pending_events {
+                skin.execute_custom_event(&mut ctx, id, arg1, arg2);
+            }
         }
 
         self.data.timer = timer;

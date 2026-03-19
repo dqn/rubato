@@ -372,6 +372,19 @@ impl rubato_core::main_state::SkinDrawable for Skin {
         );
     }
 
+    fn execute_custom_event(
+        &mut self,
+        ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        id: i32,
+        arg1: i32,
+        arg2: i32,
+    ) {
+        let registry = std::mem::take(&mut self.image_registry);
+        let mut adapter = TimerOnlyMainState::from_render_context_with_images(ctx, &registry);
+        Skin::execute_custom_event(self, &mut adapter, id, arg1, arg2);
+        self.image_registry = registry;
+    }
+
     fn compute_note_draw_commands(
         &mut self,
         lane_renderer: &mut dyn std::any::Any,
