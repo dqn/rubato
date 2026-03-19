@@ -140,6 +140,7 @@ impl LauncherUi {
         skin_view.update_config(&config);
         skin_view.update_player(&player);
         let webhook_urls = config.integration.webhook_url.clone();
+        let bms_paths = config.paths.bmsroot.clone();
 
         // Initialize OBS state rows
         let mut obs_states = Vec::new();
@@ -197,7 +198,7 @@ impl LauncherUi {
             selected_tab: Tab::Option,
             player_name,
             selected_play_mode: 1, // BEAT_7K
-            bms_paths: Vec::new(),
+            bms_paths,
             selected_ir_index: 0,
             ir_userid_buf: String::new(),
             ir_password_buf: String::new(),
@@ -435,6 +436,8 @@ impl LauncherUi {
         self.config.playername = Some(self.player_name.clone());
         // Sync player.id so PlayerConfig::write() saves to the correct profile directory
         self.player.id = Some(self.player_name.clone());
+        // Commit BMS root paths
+        self.config.paths.bmsroot = self.bms_paths.clone();
         // Commit webhook URLs
         self.config.integration.webhook_url = self.webhook_urls.clone();
         // Commit OBS scene/action selections

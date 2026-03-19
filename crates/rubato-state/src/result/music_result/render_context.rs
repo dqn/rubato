@@ -268,6 +268,43 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
         shared_render_context::config_ref(&self.result.main)
     }
 
+    fn score_data_ref(&self) -> Option<&rubato_core::score_data::ScoreData> {
+        shared_render_context::score_data_ref(&self.result.data)
+    }
+
+    fn rival_score_data_ref(&self) -> Option<&rubato_core::score_data::ScoreData> {
+        shared_render_context::rival_score_data_ref(&self.result.data)
+    }
+
+    fn song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
+        shared_render_context::song_data_ref(&self.result.resource)
+    }
+
+    fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
+        let mode = self
+            .result
+            .resource
+            .songdata()
+            .and_then(|song| match song.chart.mode {
+                5 => Some(bms_model::mode::Mode::BEAT_5K),
+                7 => Some(bms_model::mode::Mode::BEAT_7K),
+                9 => Some(bms_model::mode::Mode::POPN_9K),
+                10 => Some(bms_model::mode::Mode::BEAT_10K),
+                14 => Some(bms_model::mode::Mode::BEAT_14K),
+                25 => Some(bms_model::mode::Mode::KEYBOARD_24K),
+                50 => Some(bms_model::mode::Mode::KEYBOARD_24K_DOUBLE),
+                _ => None,
+            })?;
+        Some(
+            &self
+                .result
+                .resource
+                .player_config()
+                .play_config_ref(mode)
+                .playconfig,
+        )
+    }
+
     fn execute_event(&mut self, id: i32, _arg1: i32, _arg2: i32) {
         if let Some(index) = shared_render_context::replay_index_from_event_id(id) {
             self.result.save_replay_data(index);

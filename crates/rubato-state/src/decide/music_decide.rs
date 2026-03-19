@@ -220,6 +220,107 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
         Some(self.resource.player_config())
     }
 
+    fn config_ref(&self) -> Option<&rubato_types::config::Config> {
+        Some(self.main.config())
+    }
+
+    fn score_data_ref(&self) -> Option<&rubato_core::score_data::ScoreData> {
+        self.resource.score_data()
+    }
+
+    fn song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
+        self.resource.songdata()
+    }
+
+    fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
+        let mode = self
+            .resource
+            .songdata()
+            .and_then(|song| match song.chart.mode {
+                5 => Some(bms_model::mode::Mode::BEAT_5K),
+                7 => Some(bms_model::mode::Mode::BEAT_7K),
+                9 => Some(bms_model::mode::Mode::POPN_9K),
+                10 => Some(bms_model::mode::Mode::BEAT_10K),
+                14 => Some(bms_model::mode::Mode::BEAT_14K),
+                25 => Some(bms_model::mode::Mode::KEYBOARD_24K),
+                50 => Some(bms_model::mode::Mode::KEYBOARD_24K_DOUBLE),
+                _ => None,
+            })?;
+        Some(
+            &self
+                .resource
+                .player_config()
+                .play_config_ref(mode)
+                .playconfig,
+        )
+    }
+
+    fn integer_value(&self, id: i32) -> i32 {
+        match id {
+            90 => self
+                .resource
+                .songdata()
+                .map_or(i32::MIN, |s| s.chart.maxbpm),
+            91 => self
+                .resource
+                .songdata()
+                .map_or(i32::MIN, |s| s.chart.minbpm),
+            92 => self.resource.songdata().map_or(i32::MIN, |s| {
+                s.info
+                    .as_ref()
+                    .map(|i| i.mainbpm as i32)
+                    .unwrap_or(i32::MIN)
+            }),
+            350 => self.resource.songdata().map_or(0, |s| s.chart.notes),
+            312 => self.resource.songdata().map_or(0, |s| s.chart.length),
+            1163 => self
+                .resource
+                .songdata()
+                .map_or(0, |s| s.chart.length.max(0) / 60000),
+            1164 => self
+                .resource
+                .songdata()
+                .map_or(0, |s| (s.chart.length.max(0) % 60000) / 1000),
+            17 => (self.timer.now_time() / 3_600_000) as i32,
+            18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,
+            19 => ((self.timer.now_time() % 60_000) / 1_000) as i32,
+            _ => 0,
+        }
+    }
+
+    fn image_index_value(&self, id: i32) -> i32 {
+        match id {
+            308 => {
+                if let Some(song) = self.resource.songdata()
+                    && let Some(override_val) =
+                        rubato_types::skin_render_context::compute_lnmode_from_chart(&song.chart)
+                {
+                    return override_val;
+                }
+                self.default_image_index_value(id)
+            }
+            _ => self.default_image_index_value(id),
+        }
+    }
+
+    fn string_value(&self, id: i32) -> String {
+        match id {
+            10 => self
+                .resource
+                .songdata()
+                .map_or_else(String::new, |s| s.metadata.title.clone()),
+            11 => self
+                .resource
+                .songdata()
+                .map_or_else(String::new, |s| s.metadata.subtitle.clone()),
+            14 => self
+                .resource
+                .songdata()
+                .map_or_else(String::new, |s| s.metadata.artist.clone()),
+            _ => String::new(),
+        }
+    }
+
     fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
         self.resource.player_config_mut()
     }
@@ -1439,6 +1540,142 @@ mod tests {
             ctx.image_index_value(370),
             -1,
             "ID 370 should return -1 when no score data is available"
+        );
+    }
+
+    // ============================================================
+    // DecideMouseContext missing delegation tests (Finding 2)
+    // ============================================================
+
+    #[test]
+    fn decide_mouse_context_score_data_ref_delegates_to_resource() {
+        let mut resource = SongLengthResource::with_length_ms(0);
+        let mut score = rubato_core::score_data::ScoreData::default();
+        score.clear = 4;
+        resource.score = Some(score);
+
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideMouseContext {
+            timer: &mut timer,
+            main: &mut main,
+            resource: &mut resource,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        let sd = ctx.score_data_ref();
+        assert!(
+            sd.is_some(),
+            "DecideMouseContext::score_data_ref() must delegate, not return None"
+        );
+        assert_eq!(sd.unwrap().clear, 4);
+    }
+
+    #[test]
+    fn decide_mouse_context_song_data_ref_delegates_to_resource() {
+        let mut resource = SongLengthResource::with_length_ms(0);
+        resource.song.metadata.title = "DecideTest".to_string();
+
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideMouseContext {
+            timer: &mut timer,
+            main: &mut main,
+            resource: &mut resource,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        let song = ctx.song_data_ref();
+        assert!(
+            song.is_some(),
+            "DecideMouseContext::song_data_ref() must delegate, not return None"
+        );
+        assert_eq!(song.unwrap().metadata.title, "DecideTest");
+    }
+
+    #[test]
+    fn decide_mouse_context_current_play_config_ref_delegates_for_7k() {
+        let mut resource = SongLengthResource::with_length_ms(0);
+        resource.song.chart.mode = 7;
+
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideMouseContext {
+            timer: &mut timer,
+            main: &mut main,
+            resource: &mut resource,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert!(
+            ctx.current_play_config_ref().is_some(),
+            "DecideMouseContext::current_play_config_ref() must delegate, not return None"
+        );
+    }
+
+    #[test]
+    fn decide_mouse_context_integer_value_delegates_bpm_ids() {
+        let mut resource = SongLengthResource::with_length_ms(150_000);
+        resource.song.chart.maxbpm = 200;
+        resource.song.chart.minbpm = 100;
+
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideMouseContext {
+            timer: &mut timer,
+            main: &mut main,
+            resource: &mut resource,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert_eq!(
+            ctx.integer_value(90),
+            200,
+            "DecideMouseContext::integer_value(90) must delegate maxbpm, not return 0"
+        );
+        assert_eq!(
+            ctx.integer_value(91),
+            100,
+            "DecideMouseContext::integer_value(91) must delegate minbpm, not return 0"
+        );
+    }
+
+    #[test]
+    fn decide_mouse_context_image_index_value_delegates_lnmode() {
+        // Set lnmode config to a non-zero sentinel so we can distinguish
+        // the chart-based override (CHARGENOTE -> 1) from the config fallback.
+        let mut resource = SongLengthResource::with_length_ms(0);
+        resource.song.chart.feature = rubato_types::song_data::FEATURE_CHARGENOTE;
+        resource.player_config.play_settings.lnmode = 99;
+
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideMouseContext {
+            timer: &mut timer,
+            main: &mut main,
+            resource: &mut resource,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert_eq!(
+            ctx.image_index_value(308),
+            1,
+            "DecideMouseContext::image_index_value(308) must return 1 (CN) from chart override, not config lnmode (99)"
+        );
+    }
+
+    #[test]
+    fn decide_mouse_context_string_value_delegates_title() {
+        let mut resource = SongLengthResource::with_length_ms(0);
+        resource.song.metadata.title = "DecideTitle".to_string();
+
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let ctx = DecideMouseContext {
+            timer: &mut timer,
+            main: &mut main,
+            resource: &mut resource,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert_eq!(
+            ctx.string_value(10),
+            "DecideTitle",
+            "DecideMouseContext::string_value(10) must delegate title, not return empty"
         );
     }
 }

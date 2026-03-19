@@ -1600,6 +1600,97 @@ mod tests {
         assert_eq!(calls[2].bgvolume, 0.25);
     }
 
+    // ============================================================
+    // ResultMouseContext missing delegation tests (Finding 1)
+    // ============================================================
+
+    #[test]
+    fn result_mouse_context_score_data_ref_delegates_to_data() {
+        let mut mr = make_result_for_mouse();
+        mr.data.score.score = Some(rubato_core::score_data::ScoreData {
+            clear: 5,
+            ..rubato_core::score_data::ScoreData::default()
+        });
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        let score = ctx.score_data_ref();
+        assert!(
+            score.is_some(),
+            "ResultMouseContext::score_data_ref() must delegate, not return None"
+        );
+        assert_eq!(score.unwrap().clear, 5);
+    }
+
+    #[test]
+    fn result_mouse_context_rival_score_data_ref_delegates_to_data() {
+        let mut mr = make_result_for_mouse();
+        mr.data.oldscore.clear = 3;
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        let rival = ctx.rival_score_data_ref();
+        assert!(
+            rival.is_some(),
+            "ResultMouseContext::rival_score_data_ref() must delegate, not return None"
+        );
+        assert_eq!(rival.unwrap().clear, 3);
+    }
+
+    #[test]
+    fn result_mouse_context_song_data_ref_delegates_to_resource() {
+        let config = make_test_config("mouse-songdata");
+        let main = MainController::new(Box::new(TestMainControllerAccess::new(config.clone())));
+        let mut res = MouseResultResourceAccess::new(config);
+        let mut song = rubato_types::song_data::SongData::default();
+        song.metadata.title = "TestSong".to_string();
+        res.song_data = Some(song);
+        let resource = PlayerResource::new(
+            Box::new(res),
+            crate::result::BMSPlayerMode::new(BMSPlayerModeType::Play),
+        );
+        let mut mr = MusicResult::new(main, resource, TimerManager::new());
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        let song_ref = ctx.song_data_ref();
+        assert!(
+            song_ref.is_some(),
+            "ResultMouseContext::song_data_ref() must delegate, not return None"
+        );
+        assert_eq!(song_ref.unwrap().metadata.title, "TestSong");
+    }
+
+    #[test]
+    fn result_mouse_context_current_play_config_ref_delegates_for_7k() {
+        let config = make_test_config("mouse-playconfig");
+        let main = MainController::new(Box::new(TestMainControllerAccess::new(config.clone())));
+        let mut res = MouseResultResourceAccess::new(config);
+        let mut song = rubato_types::song_data::SongData::default();
+        song.chart.mode = 7;
+        res.song_data = Some(song);
+        let resource = PlayerResource::new(
+            Box::new(res),
+            crate::result::BMSPlayerMode::new(BMSPlayerModeType::Play),
+        );
+        let mut mr = MusicResult::new(main, resource, TimerManager::new());
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        assert!(
+            ctx.current_play_config_ref().is_some(),
+            "ResultMouseContext::current_play_config_ref() must delegate, not return None"
+        );
+    }
+
     #[test]
     fn result_mouse_context_set_float_value_clamps_volume() {
         let captured: std::sync::Arc<
