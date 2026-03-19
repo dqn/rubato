@@ -1,4 +1,5 @@
 use crate::lr2::lr2_skin_csv_loader::LR2SkinCSVLoaderState;
+use crate::objects::skin_hidden::SkinHidden;
 use crate::reexports::{Rectangle, Resolution, TextureRegion};
 use crate::skin_bpm_graph::SkinBPMGraph;
 use crate::skin_image::SkinImage;
@@ -78,7 +79,7 @@ pub struct LR2PlaySkinLoaderState {
     pub noteobj: Option<SkinNoteDistributionGraph>,
     pub bpmgraphobj: Option<SkinBPMGraph>,
     pub playerr: Vec<Option<Rectangle>>,
-    pub hidden: bool,
+    pub hidden: Option<SkinHidden>,
     pub lanerender: bool,
     pub judgeline: Option<SkinImage>,
     pub bga: bool,
@@ -161,7 +162,7 @@ impl LR2PlaySkinLoaderState {
             noteobj: None,
             bpmgraphobj: None,
             playerr: Vec::new(),
-            hidden: false,
+            hidden: None,
             lanerender: false,
             judgeline: None,
             bga: false,
