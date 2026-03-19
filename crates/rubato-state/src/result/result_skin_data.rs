@@ -43,6 +43,16 @@ impl ResultSkinData {
     pub fn fadeout(&self) -> i32 {
         self.skin.fadeout()
     }
+
+    /// Create a ResultSkinData with explicit timing values (for tests).
+    #[cfg(test)]
+    pub fn new_with_timings(ranktime: i32, input: i32, scene: i32, fadeout: i32) -> Self {
+        let mut skin = Skin::new(SkinHeader::default());
+        skin.input = input;
+        skin.scene = scene;
+        skin.fadeout = fadeout;
+        Self { skin, ranktime }
+    }
 }
 
 #[cfg(test)]
