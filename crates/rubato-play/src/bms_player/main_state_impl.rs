@@ -598,6 +598,9 @@ impl MainState for BMSPlayer {
                     && micronow > load_threshold
                     && micronow - self.startpressedtime > 1_000_000
                 {
+                    // Stop keysound from previous practice run before restarting
+                    self.keysound.stop_bg_play();
+
                     // Apply practice configuration and start play
                     if let Some(ref mut control) = self.input.control {
                         control.enable_control = true;
@@ -1083,7 +1086,15 @@ impl MainState for BMSPlayer {
                             freq_on: self.freq_on,
                             force_no_ir_send: self.force_no_ir_send,
                             replay_data: Some(replay),
-                            updated_model: Some(self.model.clone()),
+                            // Practice mode mutates the model via PracticeModifier;
+                            // do not leak the modified model into the score handoff.
+                            updated_model: if self.play_mode.mode
+                                == rubato_core::bms_player_mode::Mode::Practice
+                            {
+                                None
+                            } else {
+                                Some(self.model.clone())
+                            },
                         });
                     // input.setEnable(true); input.setStartTime(0);
                     self.save_config();
@@ -1153,7 +1164,15 @@ impl MainState for BMSPlayer {
                             freq_on: self.freq_on,
                             force_no_ir_send: self.force_no_ir_send,
                             replay_data: Some(replay),
-                            updated_model: Some(self.model.clone()),
+                            // Practice mode mutates the model via PracticeModifier;
+                            // do not leak the modified model into the score handoff.
+                            updated_model: if self.play_mode.mode
+                                == rubato_core::bms_player_mode::Mode::Practice
+                            {
+                                None
+                            } else {
+                                Some(self.model.clone())
+                            },
                         });
                     // input.setEnable(true); input.setStartTime(0);
 
