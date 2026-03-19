@@ -1597,6 +1597,7 @@ mod tests {
             timer: &mut timer,
             main: &mut main,
             resource: &mut resource,
+            pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         let sd = ctx.score_data_ref();
@@ -1618,6 +1619,7 @@ mod tests {
             timer: &mut timer,
             main: &mut main,
             resource: &mut resource,
+            pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         let song = ctx.song_data_ref();
@@ -1639,6 +1641,7 @@ mod tests {
             timer: &mut timer,
             main: &mut main,
             resource: &mut resource,
+            pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert!(
@@ -1659,6 +1662,7 @@ mod tests {
             timer: &mut timer,
             main: &mut main,
             resource: &mut resource,
+            pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(
@@ -1687,6 +1691,7 @@ mod tests {
             timer: &mut timer,
             main: &mut main,
             resource: &mut resource,
+            pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(
@@ -1707,6 +1712,7 @@ mod tests {
             timer: &mut timer,
             main: &mut main,
             resource: &mut resource,
+            pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(

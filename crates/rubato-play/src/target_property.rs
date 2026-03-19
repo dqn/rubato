@@ -450,10 +450,10 @@ impl InternetRankingTargetProperty {
         // to prevent unbounded thread accumulation during rapid song navigation.
         // The old thread will finish on its own; its result is discarded because
         // reset_loading() already dropped the old receiver.
-        if let Some(ref handle) = self.fetch_handle {
-            if !handle.is_finished() {
-                return;
-            }
+        if let Some(ref handle) = self.fetch_handle
+            && !handle.is_finished()
+        {
+            return;
         }
         // Join the finished previous thread (if any) to clean up resources.
         if let Some(handle) = self.fetch_handle.take() {

@@ -750,7 +750,12 @@ impl RandomDirectiveState {
             Some(RandomDirective::Case)
         } else if matches_reserve_word(line, "SKIP") {
             Some(RandomDirective::Skip)
-        } else if matches_reserve_word(line, "DEF") && !line.as_bytes().get(4).is_some_and(|b| b.is_ascii_alphabetic()) {
+        } else if matches_reserve_word(line, "DEF")
+            && !line
+                .as_bytes()
+                .get(4)
+                .is_some_and(|b| b.is_ascii_alphabetic())
+        {
             Some(RandomDirective::Def)
         } else if matches_reserve_word(line, "ENDSW") {
             Some(RandomDirective::EndSw)
@@ -766,14 +771,14 @@ impl RandomDirectiveState {
         }
         // Check SWITCH/CASE skip state: if we're inside a switch block,
         // content is skipped unless a case has matched and #SKIP hasn't been hit.
-        if let Some(&is_sw) = self.is_switch.last() {
-            if is_sw {
-                let matched = self.case_matched.last().copied().unwrap_or(false);
-                let skipped = self.case_skipped.last().copied().unwrap_or(false);
-                // Skip if no case matched yet, or if #SKIP was hit
-                if !matched || skipped {
-                    return true;
-                }
+        if let Some(&is_sw) = self.is_switch.last()
+            && is_sw
+        {
+            let matched = self.case_matched.last().copied().unwrap_or(false);
+            let skipped = self.case_skipped.last().copied().unwrap_or(false);
+            // Skip if no case matched yet, or if #SKIP was hit
+            if !matched || skipped {
+                return true;
             }
         }
         false
@@ -802,11 +807,7 @@ impl RandomDirectiveState {
     }
 
     /// Push a random value onto the crandom stack. Used by both #RANDOM and #SWITCH.
-    fn push_random_value(
-        &mut self,
-        r: i32,
-        selected_random: Option<&[i32]>,
-    ) {
+    fn push_random_value(&mut self, r: i32, selected_random: Option<&[i32]>) {
         self.randoms.push(r);
         if let Some(sr) = selected_random {
             if self.randoms.len() - 1 < sr.len() {
@@ -824,11 +825,7 @@ impl RandomDirectiveState {
     }
 
     /// Push a deterministic value onto the crandom stack. Used by both #SETRANDOM and #SETSWITCH.
-    fn push_set_value(
-        &mut self,
-        n: i32,
-        selected_random: Option<&[i32]>,
-    ) {
+    fn push_set_value(&mut self, n: i32, selected_random: Option<&[i32]>) {
         self.randoms.push(n);
         if let Some(sr) = selected_random {
             if self.randoms.len() - 1 < sr.len() {
@@ -1021,7 +1018,10 @@ impl RandomDirectiveState {
         let Some(arg) = line.get(6..) else { return };
         match arg.trim().parse::<i32>() {
             Ok(val) => {
-                let crandom_val = *self.crandom.last().expect("crandom non-empty checked above");
+                let crandom_val = *self
+                    .crandom
+                    .last()
+                    .expect("crandom non-empty checked above");
                 let already_matched = self.case_matched.last().copied().unwrap_or(false);
                 let already_skipped = self.case_skipped.last().copied().unwrap_or(false);
 
@@ -1062,10 +1062,8 @@ impl RandomDirectiveState {
         // and we must NOT set case_skipped because that would prevent
         // subsequent #CASE directives from matching.
         let matched = self.case_matched.last().copied().unwrap_or(false);
-        if matched {
-            if let Some(skipped) = self.case_skipped.last_mut() {
-                *skipped = true;
-            }
+        if matched && let Some(skipped) = self.case_skipped.last_mut() {
+            *skipped = true;
         }
     }
 

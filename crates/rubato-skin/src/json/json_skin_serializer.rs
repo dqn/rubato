@@ -124,10 +124,7 @@ impl JsonSkinSerializer {
             match file_path.canonicalize() {
                 Ok(canonical) => {
                     if !canonical.starts_with(skin_root) {
-                        log::warn!(
-                            "Skin include path escapes skin root: {}",
-                            include_path
-                        );
+                        log::warn!("Skin include path escapes skin root: {}", include_path);
                         return None;
                     }
                 }
@@ -243,16 +240,13 @@ impl JsonSkinSerializer {
         let mut items = Vec::new();
         if let Some(include) = obj.get("include")
             && let Some(include_path) = include.as_str()
+            && let Some(file_path) = self.resolve_include_path(include_path, base_path)
+            && file_path.exists()
+            && let Some(content) = Self::read_file_with_shift_jis_fallback(&file_path)
+            && let Ok(parsed) = serde_json::from_str::<Value>(&content)
+            && let Some(arr) = parsed.as_array()
         {
-            if let Some(file_path) = self.resolve_include_path(include_path, base_path) {
-                if file_path.exists()
-                    && let Some(content) = Self::read_file_with_shift_jis_fallback(&file_path)
-                    && let Ok(parsed) = serde_json::from_str::<Value>(&content)
-                    && let Some(arr) = parsed.as_array()
-                {
-                    items.extend(arr.iter().cloned());
-                }
-            }
+            items.extend(arr.iter().cloned());
         }
         items
     }

@@ -359,10 +359,7 @@ fn download_daemon_thread_run(state: DownloadDaemonState) {
                     } else {
                         let ipfs_url = lock_or_recover(&ipfs).clone();
                         let diffpath_clone = diffpath.clone();
-                        let diff_dest = ipfs_dir
-                            .join(&diffpath)
-                            .to_string_lossy()
-                            .to_string();
+                        let diff_dest = ipfs_dir.join(&diffpath).to_string_lossy().to_string();
                         let message_clone = message.clone();
                         let alive_flag = download_ipfs_alive.clone();
                         let ipfs_dir_clone = ipfs_dir.clone();
@@ -515,11 +512,11 @@ fn download_ipfs_thread_run(
                     return;
                 }
             };
-            let _ = fs::create_dir_all(&ipfs_dir);
+            let _ = fs::create_dir_all(ipfs_dir);
 
             // Create a staging directory within the destination to avoid
             // cross-filesystem move issues and ensure atomic placement.
-            let staging_dir = match tempfile::tempdir_in(&ipfs_dir) {
+            let staging_dir = match tempfile::tempdir_in(ipfs_dir) {
                 Ok(d) => d,
                 Err(e) => {
                     log::error!("Failed to create staging directory: {}", e);
@@ -608,15 +605,14 @@ fn download_ipfs_thread_run(
             // staging directory (catches symlink escapes that entry-name checks
             // cannot detect).
             if let Err(e) = validate_staging_paths(&canonical_staging) {
-                log::error!(
-                    "Post-extraction path validation failed: {}; aborting",
-                    e
-                );
+                log::error!("Post-extraction path validation failed: {}; aborting", e);
                 return;
             }
 
             // Move validated contents from staging into final destination.
-            let canonical_dest = ipfs_dir.canonicalize().unwrap_or_else(|_| ipfs_dir.to_path_buf());
+            let canonical_dest = ipfs_dir
+                .canonicalize()
+                .unwrap_or_else(|_| ipfs_dir.to_path_buf());
             if let Ok(entries) = fs::read_dir(staging_dir.path()) {
                 for entry in entries.flatten() {
                     let target = canonical_dest.join(entry.file_name());

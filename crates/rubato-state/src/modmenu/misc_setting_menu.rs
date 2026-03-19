@@ -116,8 +116,7 @@ impl MiscSettingMenu {
     /// Render the misc settings window using egui.
     pub fn show_ui(ctx: &egui::Context) {
         debug_assert!(
-            lock_or_recover(&OWNER_THREAD)
-                .map_or(true, |tid| tid == std::thread::current().id()),
+            lock_or_recover(&OWNER_THREAD).is_none_or(|tid| tid == std::thread::current().id()),
             "MiscSettingMenu::show_ui() must run on the same thread as set_player_config()"
         );
         {
@@ -283,8 +282,7 @@ fn build_play_config_from_statics() -> PlayConfig {
 /// so MainController stays in sync.
 fn flush_play_config() {
     debug_assert!(
-        lock_or_recover(&OWNER_THREAD)
-            .map_or(true, |tid| tid == std::thread::current().id()),
+        lock_or_recover(&OWNER_THREAD).is_none_or(|tid| tid == std::thread::current().id()),
         "flush_play_config() must run on the same thread as set_player_config()"
     );
     let mode = match *lock_or_recover(&CURRENT_PLAY_MODE) {

@@ -55,20 +55,20 @@ impl IrResendService for IrResendServiceImpl {
 
     fn stop(&self) {
         self.shutdown_flag.store(true, Ordering::Release);
-        if let Ok(mut guard) = self.handle.lock() {
-            if let Some(handle) = guard.take() {
-                // The thread checks the shutdown flag every 100ms.
-                // Join if already finished; otherwise detach to avoid
-                // busy-waiting up to 5s on the calling thread.
-                if handle.is_finished() {
-                    if let Err(e) = handle.join() {
-                        log::warn!("IR resend thread panicked: {:?}", e);
-                    }
-                }
-                // If not finished, detach (drop the JoinHandle).
-                // The thread will observe the shutdown flag and exit
-                // within ~100ms on its own.
+        if let Ok(mut guard) = self.handle.lock()
+            && let Some(handle) = guard.take()
+        {
+            // The thread checks the shutdown flag every 100ms.
+            // Join if already finished; otherwise detach to avoid
+            // busy-waiting up to 5s on the calling thread.
+            if handle.is_finished()
+                && let Err(e) = handle.join()
+            {
+                log::warn!("IR resend thread panicked: {:?}", e);
             }
+            // If not finished, detach (drop the JoinHandle).
+            // The thread will observe the shutdown flag and exit
+            // within ~100ms on its own.
         }
     }
 }

@@ -110,10 +110,7 @@ impl RandomizerBase {
             if let Some(ref note) = n
                 && note.is_long()
             {
-                if note.is_end()
-                    && self.ln_active.contains_key(&x)
-                    && tl.time() == note.time()
-                {
+                if note.is_end() && self.ln_active.contains_key(&x) && tl.time() == note.time() {
                     self.ln_active.remove(&x);
                     self.changeable_lane.push(x);
                     self.assignable_lane.push(y);

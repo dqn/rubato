@@ -75,9 +75,7 @@ impl SRandomizer {
             if let Some(ref note) = n
                 && note.is_long()
             {
-                if note.is_end()
-                    && self.base.ln_active.contains_key(&x)
-                    && tl.time() == note.time()
+                if note.is_end() && self.base.ln_active.contains_key(&x) && tl.time() == note.time()
                 {
                     self.base.ln_active.remove(&x);
                     self.base.changeable_lane.push(x);
@@ -167,9 +165,7 @@ impl SpiralRandomizer {
             if let Some(ref note) = n
                 && note.is_long()
             {
-                if note.is_end()
-                    && self.base.ln_active.contains_key(&x)
-                    && tl.time() == note.time()
+                if note.is_end() && self.base.ln_active.contains_key(&x) && tl.time() == note.time()
                 {
                     self.base.ln_active.remove(&x);
                     self.base.changeable_lane.push(x);
@@ -332,9 +328,7 @@ impl AllScratchRandomizer {
             if let Some(ref note) = n
                 && note.is_long()
             {
-                if note.is_end()
-                    && self.base.ln_active.contains_key(&x)
-                    && tl.time() == note.time()
+                if note.is_end() && self.base.ln_active.contains_key(&x) && tl.time() == note.time()
                 {
                     self.base.ln_active.remove(&x);
                     self.base.changeable_lane.push(x);
@@ -574,9 +568,7 @@ impl NoMurioshiRandomizer {
             if let Some(ref note) = n
                 && note.is_long()
             {
-                if note.is_end()
-                    && self.base.ln_active.contains_key(&x)
-                    && tl.time() == note.time()
+                if note.is_end() && self.base.ln_active.contains_key(&x) && tl.time() == note.time()
                 {
                     self.base.ln_active.remove(&x);
                     self.base.changeable_lane.push(x);
@@ -697,9 +689,7 @@ impl ConvergeRandomizer {
             if let Some(ref note) = n
                 && note.is_long()
             {
-                if note.is_end()
-                    && self.base.ln_active.contains_key(&x)
-                    && tl.time() == note.time()
+                if note.is_end() && self.base.ln_active.contains_key(&x) && tl.time() == note.time()
                 {
                     self.base.ln_active.remove(&x);
                     self.base.changeable_lane.push(x);

@@ -203,15 +203,13 @@ impl Drop for ScreenShotFileExporter {
         // Webhook sends are fire-and-forget. Let any in-flight thread
         // finish on its own instead of busy-waiting up to 10s, which
         // would freeze the render thread during shutdown.
-        if let Ok(mut guard) = self.webhook_thread.lock() {
-            if let Some(handle) = guard.take() {
-                if handle.is_finished() {
-                    if let Err(e) = handle.join() {
-                        log::warn!("Webhook send thread panicked: {:?}", e);
-                    }
-                }
-                // If not finished, detach (drop the JoinHandle).
-            }
+        // If the thread finished, join to collect panics; otherwise detach (drop the JoinHandle).
+        if let Ok(mut guard) = self.webhook_thread.lock()
+            && let Some(handle) = guard.take()
+            && handle.is_finished()
+            && let Err(e) = handle.join()
+        {
+            log::warn!("Webhook send thread panicked: {:?}", e);
         }
     }
 }

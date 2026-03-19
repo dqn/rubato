@@ -411,78 +411,77 @@ impl LR2SkinCSVLoaderState {
                 let divx = if values[7] > 0 { values[7] } else { 1 };
                 let divy = if values[8] > 0 { values[8] } else { 1 };
 
-                if divx * divy >= 10 {
-                    if let Some(images) = self.source_image(&values) {
-                        if images.len() % 24 == 0 {
-                            // Signed number sheet: 24 images per animation frame
-                            // First 12 = positive digits (0-9, space, minus/sign)
-                            // Last 12 = negative digits
-                            let frame_count = images.len() / 24;
-                            let mut pn: Vec<Vec<TextureRegion>> = Vec::with_capacity(frame_count);
-                            let mut mn: Vec<Vec<TextureRegion>> = Vec::with_capacity(frame_count);
-                            for j in 0..frame_count {
-                                let mut pn_frame = Vec::with_capacity(12);
-                                let mut mn_frame = Vec::with_capacity(12);
-                                for i in 0..12 {
-                                    pn_frame.push(images[j * 24 + i].clone());
-                                    mn_frame.push(images[j * 24 + i + 12].clone());
-                                }
-                                pn.push(pn_frame);
-                                mn.push(mn_frame);
+                if divx * divy >= 10
+                    && let Some(images) = self.source_image(&values)
+                {
+                    if images.len() % 24 == 0 {
+                        // Signed number sheet: 24 images per animation frame
+                        // First 12 = positive digits (0-9, space, minus/sign)
+                        // Last 12 = negative digits
+                        let frame_count = images.len() / 24;
+                        let mut pn: Vec<Vec<TextureRegion>> = Vec::with_capacity(frame_count);
+                        let mut mn: Vec<Vec<TextureRegion>> = Vec::with_capacity(frame_count);
+                        for j in 0..frame_count {
+                            let mut pn_frame = Vec::with_capacity(12);
+                            let mut mn_frame = Vec::with_capacity(12);
+                            for i in 0..12 {
+                                pn_frame.push(images[j * 24 + i].clone());
+                                mn_frame.push(images[j * 24 + i + 12].clone());
                             }
-                            // Java: new SkinNumber(pn, mn, values[10], values[9],
-                            //   values[13]+1, str[14].length()>0 ? values[14] : 2,
-                            //   values[15], values[11], values[12])
-                            let zeropadding = if str_parts.get(14).map_or(true, |s| s.is_empty()) {
-                                2
-                            } else {
-                                values[14]
-                            };
-                            let n = SkinNumber::new_with_int_timer(
-                                pn,
-                                Some(mn),
-                                values[10],
-                                values[9],
-                                NumberDisplayConfig {
-                                    keta: values[13] + 1,
-                                    zeropadding,
-                                    space: values[15],
-                                    align: values[12],
-                                },
-                                values[11],
-                            );
-                            self.num = Some(n);
-                        } else {
-                            // Standard number sheet: 10 or 11 images per animation frame
-                            let d = if images.len() % 10 == 0 { 10 } else { 11 };
-                            let total = (divx * divy) as usize;
-                            let frame_count = total / d;
-                            let mut nimages: Vec<Vec<TextureRegion>> =
-                                Vec::with_capacity(frame_count);
-                            for j in 0..frame_count {
-                                let mut frame = Vec::with_capacity(d);
-                                for i in 0..d {
-                                    frame.push(images[j * d + i].clone());
-                                }
-                                nimages.push(frame);
-                            }
-                            // Java: new SkinNumber(nimages, values[10], values[9],
-                            //   values[13], d>10 ? 2 : 0, values[15], values[11], values[12])
-                            let n = SkinNumber::new_with_int_timer(
-                                nimages,
-                                None,
-                                values[10],
-                                values[9],
-                                NumberDisplayConfig {
-                                    keta: values[13],
-                                    zeropadding: if d > 10 { 2 } else { 0 },
-                                    space: values[15],
-                                    align: values[12],
-                                },
-                                values[11],
-                            );
-                            self.num = Some(n);
+                            pn.push(pn_frame);
+                            mn.push(mn_frame);
                         }
+                        // Java: new SkinNumber(pn, mn, values[10], values[9],
+                        //   values[13]+1, str[14].length()>0 ? values[14] : 2,
+                        //   values[15], values[11], values[12])
+                        let zeropadding = if str_parts.get(14).is_none_or(|s| s.is_empty()) {
+                            2
+                        } else {
+                            values[14]
+                        };
+                        let n = SkinNumber::new_with_int_timer(
+                            pn,
+                            Some(mn),
+                            values[10],
+                            values[9],
+                            NumberDisplayConfig {
+                                keta: values[13] + 1,
+                                zeropadding,
+                                space: values[15],
+                                align: values[12],
+                            },
+                            values[11],
+                        );
+                        self.num = Some(n);
+                    } else {
+                        // Standard number sheet: 10 or 11 images per animation frame
+                        let d = if images.len() % 10 == 0 { 10 } else { 11 };
+                        let total = (divx * divy) as usize;
+                        let frame_count = total / d;
+                        let mut nimages: Vec<Vec<TextureRegion>> = Vec::with_capacity(frame_count);
+                        for j in 0..frame_count {
+                            let mut frame = Vec::with_capacity(d);
+                            for i in 0..d {
+                                frame.push(images[j * d + i].clone());
+                            }
+                            nimages.push(frame);
+                        }
+                        // Java: new SkinNumber(nimages, values[10], values[9],
+                        //   values[13], d>10 ? 2 : 0, values[15], values[11], values[12])
+                        let n = SkinNumber::new_with_int_timer(
+                            nimages,
+                            None,
+                            values[10],
+                            values[9],
+                            NumberDisplayConfig {
+                                keta: values[13],
+                                zeropadding: if d > 10 { 2 } else { 0 },
+                                space: values[15],
+                                align: values[12],
+                            },
+                            values[11],
+                        );
+                        self.num = Some(n);
                     }
                 }
             }
@@ -523,20 +522,20 @@ impl LR2SkinCSVLoaderState {
                 }
                 let values = Self::parse_int(str_parts);
                 let font_index = values[2] as usize;
-                let text_obj: SkinObject =
-                    if font_index < self.fontlist.len() && self.fontlist[font_index].is_some() {
-                        let source = self.fontlist[font_index].clone().unwrap();
-                        let mut t = SkinTextImage::new_with_id(source, values[3]);
-                        t.text_data.align = values[4];
-                        t.text_data.editable = values[5] != 0;
-                        SkinObject::TextImage(t)
-                    } else {
-                        let mut t =
-                            SkinTextFont::new("skin/default/VL-Gothic-Regular.ttf", 0, 48, 2);
-                        t.text_data.align = values[4];
-                        t.text_data.editable = values[5] != 0;
-                        SkinObject::TextFont(t)
-                    };
+                let text_obj: SkinObject = if font_index < self.fontlist.len()
+                    && self.fontlist[font_index].is_some()
+                {
+                    let source = self.fontlist[font_index].clone().unwrap();
+                    let mut t = SkinTextImage::new_with_id(source, values[3]);
+                    t.text_data.align = values[4];
+                    t.text_data.editable = values[5] != 0;
+                    SkinObject::TextImage(t)
+                } else {
+                    let mut t = SkinTextFont::new("skin/default/VL-Gothic-Regular.ttf", 0, 48, 2);
+                    t.text_data.align = values[4];
+                    t.text_data.editable = values[5] != 0;
+                    SkinObject::TextFont(t)
+                };
                 self.text = Some(text_obj);
             }
             "DST_TEXT" => {
@@ -579,8 +578,11 @@ impl LR2SkinCSVLoaderState {
                     let dstw = safe_div_f32(self.dst.width, self.src.width);
                     let dsth = safe_div_f32(self.dst.height, self.src.height);
                     // Java: range * (angle==1||angle==3 ? dstw/srcw : dsth/srch)
-                    let range_scale =
-                        if values[11] == 1 || values[11] == 3 { dstw } else { dsth };
+                    let range_scale = if values[11] == 1 || values[11] == 3 {
+                        dstw
+                    } else {
+                        dsth
+                    };
                     let range = (values[12] as f32 * range_scale) as i32;
                     let changeable = values[14] == 0;
                     let s = SkinSlider::new_with_int_timer(
@@ -599,8 +601,11 @@ impl LR2SkinCSVLoaderState {
                 if let Some(images) = self.source_image(&values) {
                     let dstw = safe_div_f32(self.dst.width, self.src.width);
                     let dsth = safe_div_f32(self.dst.height, self.src.height);
-                    let range_scale =
-                        if values[11] == 1 || values[11] == 3 { dstw } else { dsth };
+                    let range_scale = if values[11] == 1 || values[11] == 3 {
+                        dstw
+                    } else {
+                        dsth
+                    };
                     let range = (values[12] as f32 * range_scale) as i32;
                     // Java: new SkinSlider(images, values[10], values[9], values[11], range, values[13], values[15], values[16])
                     let s = SkinSlider::new_with_int_timer_minmax(
@@ -682,22 +687,13 @@ impl LR2SkinCSVLoaderState {
                 if gr >= 100 {
                     // Java: new SkinGraph(gr, values[11], values[13], values[14], values[12])
                     let b = SkinGraph::new_with_image_id_minmax(
-                        gr,
-                        values[11],
-                        values[13],
-                        values[14],
-                        values[12],
+                        gr, values[11], values[13], values[14], values[12],
                     );
                     self.bar = Some(b);
                 } else if let Some(images) = self.source_image(&values) {
                     // Java: new SkinGraph(images, values[10], values[9], values[11], values[13], values[14], values[12])
                     let b = SkinGraph::new_with_int_timer_minmax(
-                        images,
-                        values[10],
-                        values[9],
-                        values[11],
-                        values[13],
-                        values[14],
+                        images, values[10], values[9], values[11], values[13], values[14],
                         values[12],
                     );
                     self.bar = Some(b);

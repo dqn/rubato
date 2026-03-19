@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
+use crate::graphs::skin_graph::SkinGraph;
 use crate::lr2::lr2_skin_loader::LR2SkinLoaderState;
-use crate::reexports::{Resolution, Texture, TextureRegion};
 use crate::objects::skin_number::SkinNumber;
 use crate::objects::skin_slider::SkinSlider;
-use crate::graphs::skin_graph::SkinGraph;
+use crate::reexports::{Resolution, Texture, TextureRegion};
 use crate::skin::SkinObject;
 use crate::skin_gauge::SkinGauge;
 use crate::skin_image::SkinImage;
