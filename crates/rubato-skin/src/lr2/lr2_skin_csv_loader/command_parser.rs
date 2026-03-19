@@ -290,8 +290,9 @@ impl LR2SkinCSVLoaderState {
                     .and_then(|s| s.trim().parse().ok())
                     .unwrap_or(0);
                 if gr >= 100 {
-                    // Reference image (gr >= 100): image index reference
-                    let img = SkinImage::new_with_int_timer_ref_id(vec![], 0, 0, gr);
+                    // Reference image (gr >= 100): creates SkinSourceReference
+                    // that resolves state.skin_image(id) at draw time.
+                    let img = SkinImage::new_with_image_id(gr);
                     self.image = Some(img);
                 } else {
                     let gr_usize = gr as usize;
@@ -367,7 +368,8 @@ impl LR2SkinCSVLoaderState {
                     self.collected_objects.push(SkinObject::Image(img));
                 }
                 let values = Self::parse_int(str_parts);
-                let count = values[4] as usize;
+                // Cap count: negative wraps to huge usize; values[5+i] is OOB for i>=17.
+                let count = (values[4].max(0) as usize).min(17);
                 if count > 0 {
                     let mut images_2d: Vec<Vec<TextureRegion>> = Vec::with_capacity(count);
                     let mut valid = true;

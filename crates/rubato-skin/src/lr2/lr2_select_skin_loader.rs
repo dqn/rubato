@@ -864,6 +864,11 @@ impl LR2SkinLoaderAccess for LR2SelectSkinLoaderState {
     fn assemble_objects(&mut self, skin: &mut crate::skin::Skin) {
         use crate::skin::SkinObject;
 
+        // Transfer generic objects from base CSV parser.
+        for obj in self.csv.collected_objects.drain(..) {
+            skin.add(obj);
+        }
+
         // Create SkinBarObject to register with the skin pipeline.
         // The SkinBarObject itself is a minimal wrapper — actual bar rendering
         // is handled by BarRenderer in rubato-state/select.

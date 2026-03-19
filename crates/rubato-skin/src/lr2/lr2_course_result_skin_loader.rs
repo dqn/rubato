@@ -194,6 +194,11 @@ impl LR2SkinLoaderAccess for LR2CourseResultSkinLoaderState {
     fn assemble_objects(&mut self, skin: &mut crate::skin::Skin) {
         use crate::skin::SkinObject;
 
+        // Transfer generic objects from base CSV parser.
+        for obj in self.csv.collected_objects.drain(..) {
+            skin.add(obj);
+        }
+
         if let Some(obj) = self.gaugeobj.take() {
             skin.add(SkinObject::GaugeGraph(obj));
         }

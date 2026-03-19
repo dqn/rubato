@@ -188,6 +188,12 @@ impl LR2SkinLoaderAccess for LR2PlaySkinLoaderState {
     fn assemble_objects(&mut self, skin: &mut crate::skin::Skin) {
         use crate::skin::SkinObject;
 
+        // Transfer generic objects (SRC_IMAGE, SRC_BUTTON, SRC_ONMOUSE, SRC_GROOVEGAUGE)
+        // accumulated by the base CSV parser into the skin.
+        for obj in self.csv.collected_objects.drain(..) {
+            skin.add(obj);
+        }
+
         // 1. Add SkinJudgeObject instances (already created during SRC_NOWJUDGE parsing)
         for judge_opt in &mut self.judge_objects {
             if let Some(judge) = judge_opt.take() {

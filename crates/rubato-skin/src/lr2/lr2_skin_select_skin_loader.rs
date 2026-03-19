@@ -83,7 +83,11 @@ impl LR2SkinLoaderAccess for LR2SkinSelectSkinLoaderState {
     }
 
     fn assemble_objects(&mut self, skin: &mut crate::skin::Skin) {
-        // Skin select skin has no LR2-specific objects beyond generic SRC/DST images.
+        // Transfer generic objects from base CSV parser.
+        for obj in self.csv.collected_objects.drain(..) {
+            skin.add(obj);
+        }
+
         // Count custom property buttons after all objects are assembled.
         self.count_custom_properties(skin);
     }
