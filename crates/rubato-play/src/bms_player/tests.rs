@@ -3570,7 +3570,7 @@ fn mouse_context_delegates_boolean_value_autoplay() {
     player.play_mode = BMSPlayerMode::AUTOPLAY;
     let observed = Arc::new(std::sync::atomic::AtomicBool::new(false));
     player.main_state_data.skin = Some(Box::new(ProbeMouseBoolSkin {
-        id: 200,
+        id: 33, // OPTION_AUTOPLAYON (Java parity)
         observed: observed.clone(),
     }));
 

@@ -261,15 +261,32 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
 
     fn boolean_value(&self, id: i32) -> bool {
         match id {
-            // Autoplay mode
-            200 => {
+            // OPTION_AUTOPLAYOFF (Java: SkinProperty.OPTION_AUTOPLAYOFF = 32)
+            32 => {
+                self.play_mode.mode != rubato_core::bms_player_mode::Mode::Autoplay
+                    && self.play_mode.mode != rubato_core::bms_player_mode::Mode::Replay
+            }
+            // OPTION_AUTOPLAYON (Java: SkinProperty.OPTION_AUTOPLAYON = 33)
+            33 => {
                 self.play_mode.mode == rubato_core::bms_player_mode::Mode::Autoplay
                     || self.play_mode.mode == rubato_core::bms_player_mode::Mode::Replay
             }
-            // Practice mode
-            201 => self.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice,
-            // Loading state (PlayState::Preload = 0)
+            // Loading state (OPTION_LOADING1 = 80)
             80 => self.state == PlayState::Preload,
+            // OPTION_LOADED (Java: 81)
+            81 => self.state != PlayState::Preload,
+            // OPTION_REPLAY_OFF (Java: 82)
+            82 => self.play_mode.mode != rubato_core::bms_player_mode::Mode::Replay,
+            // OPTION_REPLAY_PLAYING (Java: 84)
+            84 => self.play_mode.mode == rubato_core::bms_player_mode::Mode::Replay,
+            // OPTION_LANECOVER1_ON (Java: 271)
+            271 => self.live_lanecover > 0.0,
+            // OPTION_LIFT1_ON (Java: 272)
+            272 => self.live_lift > 0.0,
+            // OPTION_HIDDEN1_ON (Java: 273)
+            273 => self.live_hidden > 0.0,
+            // OPTION_STATE_PRACTICE (Java: 1080)
+            1080 => self.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice,
             _ => false,
         }
     }
@@ -626,12 +643,34 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
 
     fn boolean_value(&self, id: i32) -> bool {
         match id {
-            200 => {
+            32 => {
+                self.player.play_mode.mode != rubato_core::bms_player_mode::Mode::Autoplay
+                    && self.player.play_mode.mode != rubato_core::bms_player_mode::Mode::Replay
+            }
+            33 => {
                 self.player.play_mode.mode == rubato_core::bms_player_mode::Mode::Autoplay
                     || self.player.play_mode.mode == rubato_core::bms_player_mode::Mode::Replay
             }
-            201 => self.player.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice,
             80 => self.player.state == PlayState::Preload,
+            81 => self.player.state != PlayState::Preload,
+            82 => self.player.play_mode.mode != rubato_core::bms_player_mode::Mode::Replay,
+            84 => self.player.play_mode.mode == rubato_core::bms_player_mode::Mode::Replay,
+            271 => self
+                .player
+                .lanerender
+                .as_ref()
+                .is_some_and(|lr| lr.lanecover() > 0.0),
+            272 => self
+                .player
+                .lanerender
+                .as_ref()
+                .is_some_and(|lr| lr.lift_region() > 0.0),
+            273 => self
+                .player
+                .lanerender
+                .as_ref()
+                .is_some_and(|lr| lr.hidden_cover() > 0.0),
+            1080 => self.player.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice,
             _ => false,
         }
     }
