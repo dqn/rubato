@@ -295,7 +295,7 @@ impl BMSPlayer {
         rd.mode = self.player_config.play_settings.lnmode;
         rd.date = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_millis() as i64)
+            .map(|d| d.as_secs() as i64)
             .unwrap_or(0);
         if let Some(ref gauge) = self.gauge {
             rd.gauge = gauge.gauge_type();
@@ -303,6 +303,11 @@ impl BMSPlayer {
         if let Some(ref config) = self.score.replay_config {
             rd.config = Some(config.clone());
         }
+        rd.seven_to_nine_pattern = self
+            .player_config
+            .note_modifier_settings
+            .seven_to_nine_pattern;
+        rd.player = Some(self.player_config.name.clone());
         rd
     }
 
