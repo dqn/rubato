@@ -89,11 +89,26 @@ impl BMSPlayerRule {
     }
 }
 
-fn calculate_default_total(_mode: &Mode, totalnotes: i32) -> f64 {
-    160.0 + (totalnotes as f64 + (totalnotes as f64 - 400.0).clamp(0.0, 200.0)) * 0.16
+/// Java: BMSPlayerRule.calculateDefaultTotal
+///
+/// For most modes: max(260.0, 7.605 * n / (0.01 * n + 6.5))
+/// For KEYBOARD modes: max(300.0, 7.605 * (n + 100) / (0.01 * n + 6.5))
+fn calculate_default_total(mode: &Mode, totalnotes: i32) -> f64 {
+    let n = totalnotes as f64;
+    match mode {
+        Mode::KEYBOARD_24K | Mode::KEYBOARD_24K_DOUBLE => {
+            (300.0f64).max(7.605 * (n + 100.0) / (0.01 * n + 6.5))
+        }
+        _ => (260.0f64).max(7.605 * n / (0.01 * n + 6.5)),
+    }
 }
 
 /// BMSPlayerRuleSet::LR2
+///
+/// Java BMSPlayerRule.java:19 uses `JudgeProperty.SEVENKEYS` for the LR2 ruleset.
+/// Rubato intentionally uses `JudgePropertyType::Lr2` instead, which provides a more
+/// accurate approximation of LR2's non-linear judge window scaling behavior
+/// (see `lr2_judge_scaling` and `LR2_SCALING` in judge/property.rs).
 fn bms_player_rule_set_lr2() -> Vec<BMSPlayerRule> {
     vec![BMSPlayerRule::new(
         GaugeProperty::Lr2,
@@ -221,53 +236,76 @@ mod tests {
 
     // --- calculate_default_total tests ---
 
+    // Java formula: max(260.0, 7.605 * n / (0.01 * n + 6.5))
+    // For KEYBOARD: max(300.0, 7.605 * (n+100) / (0.01 * n + 6.5))
+
     #[test]
     fn default_total_with_zero_notes() {
-        // 160.0 + (0 + max(0 - 400, 0).min(200)) * 0.16
-        // = 160.0 + (0 + 0) * 0.16 = 160.0
+        // 7.605 * 0 / (0.0 + 6.5) = 0 < 260 => 260
         let total = calculate_default_total(&Mode::BEAT_7K, 0);
-        assert!((total - 160.0).abs() < f64::EPSILON);
+        assert!((total - 260.0).abs() < 1e-9);
     }
 
     #[test]
     fn default_total_with_400_notes() {
-        // 160.0 + (400 + max(400 - 400, 0).min(200)) * 0.16
-        // = 160.0 + (400 + 0) * 0.16 = 160.0 + 64.0 = 224.0
+        // 7.605 * 400 / (4.0 + 6.5) = 3042 / 10.5 = 289.71...
+        let n = 400.0f64;
+        let expected = 260.0f64.max(7.605 * n / (0.01 * n + 6.5));
         let total = calculate_default_total(&Mode::BEAT_7K, 400);
-        assert!((total - 224.0).abs() < f64::EPSILON);
+        assert!((total - expected).abs() < 1e-9);
     }
 
     #[test]
     fn default_total_with_500_notes() {
-        // 160.0 + (500 + max(500 - 400, 0).min(200)) * 0.16
-        // = 160.0 + (500 + 100) * 0.16 = 160.0 + 96.0 = 256.0
+        // 7.605 * 500 / (5.0 + 6.5) = 3802.5 / 11.5 = 330.65...
+        let n = 500.0f64;
+        let expected = 260.0f64.max(7.605 * n / (0.01 * n + 6.5));
         let total = calculate_default_total(&Mode::BEAT_7K, 500);
-        assert!((total - 256.0).abs() < f64::EPSILON);
+        assert!((total - expected).abs() < 1e-9);
+        // Sanity: must be higher than old formula result
+        assert!(total > 260.0);
     }
 
     #[test]
     fn default_total_with_700_notes() {
-        // 160.0 + (700 + max(700 - 400, 0).min(200)) * 0.16
-        // = 160.0 + (700 + min(300, 200)) * 0.16
-        // = 160.0 + (700 + 200) * 0.16 = 160.0 + 144.0 = 304.0
+        let n = 700.0f64;
+        let expected = 260.0f64.max(7.605 * n / (0.01 * n + 6.5));
         let total = calculate_default_total(&Mode::BEAT_7K, 700);
-        assert!((total - 304.0).abs() < f64::EPSILON);
+        assert!((total - expected).abs() < 1e-9);
     }
 
     #[test]
     fn default_total_with_1000_notes() {
-        // (1000 - 400).max(0).min(200) = 200
-        // 160.0 + (1000 + 200) * 0.16 = 160.0 + 192.0 = 352.0
+        let n = 1000.0f64;
+        let expected = 260.0f64.max(7.605 * n / (0.01 * n + 6.5));
         let total = calculate_default_total(&Mode::BEAT_7K, 1000);
-        assert!((total - 352.0).abs() < f64::EPSILON);
+        assert!((total - expected).abs() < 1e-9);
     }
 
     #[test]
     fn default_total_with_200_notes() {
-        // (200 - 400).max(0).min(200) = 0
-        // 160.0 + (200 + 0) * 0.16 = 160.0 + 32.0 = 192.0
+        // 7.605 * 200 / (2.0 + 6.5) = 1521 / 8.5 = 178.9... < 260 => 260
         let total = calculate_default_total(&Mode::BEAT_7K, 200);
-        assert!((total - 192.0).abs() < f64::EPSILON);
+        assert!((total - 260.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn default_total_keyboard_mode_uses_higher_floor() {
+        // KEYBOARD: max(300.0, 7.605 * (n+100) / (0.01 * n + 6.5))
+        // With 0 notes: 7.605 * 100 / 6.5 = 116.9... < 300 => 300
+        let total = calculate_default_total(&Mode::KEYBOARD_24K, 0);
+        assert!((total - 300.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn default_total_keyboard_uses_n_plus_100() {
+        let n = 500.0f64;
+        let expected = 300.0f64.max(7.605 * (n + 100.0) / (0.01 * n + 6.5));
+        let total = calculate_default_total(&Mode::KEYBOARD_24K, 500);
+        assert!((total - expected).abs() < 1e-9);
+        // Must exceed SevenKeys with same note count
+        let sk_total = calculate_default_total(&Mode::BEAT_7K, 500);
+        assert!(total > sk_total);
     }
 
     // --- validate tests ---

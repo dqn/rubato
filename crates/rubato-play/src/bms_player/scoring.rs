@@ -289,7 +289,9 @@ impl BMSPlayer {
     pub fn build_replay_data(&self) -> ReplayData {
         let mut rd = self.score.playinfo.clone();
         rd.sha256 = Some(self.model.sha256.clone());
-        rd.mode = self.model.mode().map(|m| m.id()).unwrap_or(0);
+        // Java BMSPlayer.java:846: replay.mode = config.getLnmode()
+        // Stores the LN mode setting (0=LONGNOTE, 1=CN, 2=HCN), not the chart mode ID.
+        rd.mode = self.player_config.play_settings.lnmode;
         rd.date = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_millis() as i64)

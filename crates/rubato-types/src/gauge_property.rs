@@ -675,7 +675,7 @@ mod tests {
     #[test]
     fn test_lr2_hard_has_death_border() {
         let values = GaugeProperty::Lr2.element_values();
-        // LR2 HARD gauge (index 3) has death=2.0
+        // LR2 HARD gauge (index 3) has death=2.0, matching the golden master fixture.
         let hard = &values[3];
         assert_eq!(hard.death, 2.0);
     }
