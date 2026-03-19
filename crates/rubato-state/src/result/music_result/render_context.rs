@@ -146,15 +146,27 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
 
     fn float_value(&self, id: i32) -> f32 {
         match id {
-            // FLOAT_GROOVEGAUGE_1P (1107): needs PlayerResource for gauge data.
-            // Java: AbstractResult -> gauge[gaugeType].last()
             1107 => shared_render_context::gauge_value(self.resource),
-            _ => shared_render_context::float_value(self.data, id),
+            _ => {
+                let shared = shared_render_context::float_value(self.data, id);
+                if shared != 0.0 {
+                    shared
+                } else {
+                    self.default_float_value(id)
+                }
+            }
         }
     }
 
     fn boolean_value(&self, id: i32) -> bool {
-        shared_render_context::boolean_value(self.data, self.resource.course_score_data(), id)
+        match id {
+            90 | 91 => shared_render_context::boolean_value(
+                self.data,
+                self.resource.course_score_data(),
+                id,
+            ),
+            _ => self.default_boolean_value(id),
+        }
     }
 
     fn string_value(&self, id: i32) -> String {
@@ -364,19 +376,27 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
 
     fn float_value(&self, id: i32) -> f32 {
         match id {
-            // FLOAT_GROOVEGAUGE_1P (1107): needs PlayerResource for gauge data.
-            // Java: AbstractResult -> gauge[gaugeType].last()
             1107 => shared_render_context::gauge_value(&self.result.resource),
-            _ => shared_render_context::float_value(&self.result.data, id),
+            _ => {
+                let shared = shared_render_context::float_value(&self.result.data, id);
+                if shared != 0.0 {
+                    shared
+                } else {
+                    self.default_float_value(id)
+                }
+            }
         }
     }
 
     fn boolean_value(&self, id: i32) -> bool {
-        shared_render_context::boolean_value(
-            &self.result.data,
-            self.result.resource.course_score_data(),
-            id,
-        )
+        match id {
+            90 | 91 => shared_render_context::boolean_value(
+                &self.result.data,
+                self.result.resource.course_score_data(),
+                id,
+            ),
+            _ => self.default_boolean_value(id),
+        }
     }
 
     fn string_value(&self, id: i32) -> String {

@@ -221,6 +221,7 @@ pub trait SkinRenderContext: TimerAccess {
                     "Combo" => 0,
                     "Duration" => 1,
                     "Lowest" => 2,
+                    "Score" => 3,
                     _ => -1,
                 }
             }),
