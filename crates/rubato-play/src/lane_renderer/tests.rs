@@ -1376,3 +1376,76 @@ fn practice_mode_timeline_text_correct_at_36_minutes() {
         time_texts
     );
 }
+
+// =========================================================================
+// Regression: LN body quad inverted when height < scale at lane-cover edge
+// =========================================================================
+
+/// Regression test for: draw_long_note_commands emitted `h: height - scale`
+/// without clamping. When a long note is partially scrolled behind the lane cover,
+/// `ln_height` is clamped to 0.0 at the outer call site (line 554) but
+/// `draw_long_note_commands` received `height=0.0` and computed `h = 0 - scale`
+/// (a negative body height), producing an inverted/flipped quad at the lane-cover
+/// boundary. All three LN types (LN, CN, HCN) shared the same bug.
+///
+/// This test calls `draw_long_note_commands` directly with `height < scale` and
+/// verifies that no DrawLongNote body command has a negative `h`.
+#[test]
+fn long_note_body_height_never_negative() {
+    let tl0 = make_timeline(0.0, 0, 120.0, 8);
+    let model = make_model_with_timelines(vec![tl0], 120.0);
+    let renderer = LaneRenderer::new(&model);
+
+    let all_tls: &[bms_model::time_line::TimeLine] = &[];
+    let ctx = default_ctx(all_tls);
+
+    // Build one LN start note for each of the three LN types
+    let ln_types = [
+        bms_model::note::TYPE_LONGNOTE,
+        bms_model::note::TYPE_CHARGENOTE,
+        bms_model::note::TYPE_HELLCHARGENOTE,
+    ];
+
+    for &ln_type in &ln_types {
+        let mut note = Note::new_long(1);
+        note.set_pair_index(Some(1)); // pair_tl_idx = 1
+        note.set_end(false);
+        // Force the note_type field so draw_long_note_commands routes to the right branch.
+        // Each branch is: `(ctx.lntype == LNTYPE_X && note_type == TYPE_UNDEFINED) || note_type == TYPE_X`
+        // Using explicit note_type avoids depending on ctx.lntype.
+        note.set_long_note_type(ln_type);
+
+        let mut commands = Vec::new();
+        // height=0.0, scale=20.0 -- exactly the case when ln_height was clamped to 0.0
+        // at the outer site but body height was computed as 0 - 20 = -20.
+        renderer.draw_long_note_commands(
+            &mut commands,
+            &ctx,
+            &DrawLongNoteParams {
+                lane: 0,
+                x: 0.0,
+                y: 0.0,
+                width: 30.0,
+                height: 0.0,
+                scale: 20.0,
+                note: &note,
+                pair_tl_idx: 1,
+                note_tl_idx: 0,
+            },
+        );
+
+        // Verify no body command has a negative h
+        for cmd in &commands {
+            if let DrawCommand::DrawLongNote { h, image_index, .. } = cmd {
+                // image_index 0,2,4,6,7,8,9 are body/start; only body (2,3,6,7,8,9) can be negative
+                // The start/end cap commands use `h: scale` (always positive) --
+                // so we only care about body commands which have even-indexed body images.
+                // But to be safe, assert all h values are non-negative.
+                assert!(
+                    *h >= 0.0,
+                    "DrawLongNote command has negative h={h} for ln_type={ln_type} image_index={image_index}"
+                );
+            }
+        }
+    }
+}

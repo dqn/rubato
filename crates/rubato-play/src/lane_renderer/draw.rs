@@ -796,14 +796,20 @@ impl LaneRenderer {
             } else {
                 7 // inactive body
             };
-            commands.push(DrawCommand::DrawLongNote {
-                lane,
-                x,
-                y: y - height + scale,
-                w: width,
-                h: height - scale,
-                image_index: body_idx,
-            });
+            // Clamp body height: when the LN span is shorter than one note image (height < scale),
+            // the body shrinks to zero. Without clamping, h = height - scale goes negative,
+            // producing an inverted/flipped quad at the lane-cover boundary.
+            let body_h = (height - scale).max(0.0);
+            if body_h > 0.0 {
+                commands.push(DrawCommand::DrawLongNote {
+                    lane,
+                    x,
+                    y: y - height + scale,
+                    w: width,
+                    h: body_h,
+                    image_index: body_idx,
+                });
+            }
             commands.push(DrawCommand::DrawLongNote {
                 lane,
                 x,
@@ -825,14 +831,18 @@ impl LaneRenderer {
         {
             // CN
             let body_idx = if is_processing { 2 } else { 3 };
-            commands.push(DrawCommand::DrawLongNote {
-                lane,
-                x,
-                y: y - height + scale,
-                w: width,
-                h: height - scale,
-                image_index: body_idx,
-            });
+            // Clamp body height: see HCN branch for rationale.
+            let body_h = (height - scale).max(0.0);
+            if body_h > 0.0 {
+                commands.push(DrawCommand::DrawLongNote {
+                    lane,
+                    x,
+                    y: y - height + scale,
+                    w: width,
+                    h: body_h,
+                    image_index: body_idx,
+                });
+            }
             commands.push(DrawCommand::DrawLongNote {
                 lane,
                 x,
@@ -854,14 +864,18 @@ impl LaneRenderer {
         {
             // LN
             let body_idx = if is_processing { 2 } else { 3 };
-            commands.push(DrawCommand::DrawLongNote {
-                lane,
-                x,
-                y: y - height + scale,
-                w: width,
-                h: height - scale,
-                image_index: body_idx,
-            });
+            // Clamp body height: see HCN branch for rationale.
+            let body_h = (height - scale).max(0.0);
+            if body_h > 0.0 {
+                commands.push(DrawCommand::DrawLongNote {
+                    lane,
+                    x,
+                    y: y - height + scale,
+                    w: width,
+                    h: body_h,
+                    image_index: body_idx,
+                });
+            }
             if ctx.forced_cn_endings {
                 commands.push(DrawCommand::DrawLongNote {
                     lane,
