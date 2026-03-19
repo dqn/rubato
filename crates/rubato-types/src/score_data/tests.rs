@@ -402,6 +402,71 @@ fn test_update_better_minbp() {
     assert_eq!(sd.minbp, 5);
 }
 
+#[test]
+fn test_update_better_avgjudge_copies_all_timing_stats() {
+    let mut sd = ScoreData {
+        timing_stats: TimingStats {
+            avgjudge: 500,
+            total_duration: 100_000,
+            avg: 400,
+            total_avg: 300,
+            stddev: 200,
+        },
+        ..ScoreData::default()
+    };
+
+    let newscore = ScoreData {
+        timing_stats: TimingStats {
+            avgjudge: 100,
+            total_duration: 250_000,
+            avg: 80,
+            total_avg: 90,
+            stddev: 50,
+        },
+        ..ScoreData::default()
+    };
+
+    assert!(sd.update(&newscore, true));
+    assert_eq!(sd.timing_stats.avgjudge, 100);
+    assert_eq!(sd.timing_stats.total_duration, 250_000);
+    assert_eq!(sd.timing_stats.avg, 80);
+    assert_eq!(sd.timing_stats.total_avg, 90);
+    assert_eq!(sd.timing_stats.stddev, 50);
+}
+
+#[test]
+fn test_update_worse_avgjudge_preserves_all_timing_stats() {
+    let mut sd = ScoreData {
+        timing_stats: TimingStats {
+            avgjudge: 100,
+            total_duration: 250_000,
+            avg: 80,
+            total_avg: 90,
+            stddev: 50,
+        },
+        ..ScoreData::default()
+    };
+
+    let newscore = ScoreData {
+        timing_stats: TimingStats {
+            avgjudge: 500,
+            total_duration: 100_000,
+            avg: 400,
+            total_avg: 300,
+            stddev: 200,
+        },
+        ..ScoreData::default()
+    };
+
+    // avgjudge is worse (higher), so no update
+    assert!(!sd.update(&newscore, true));
+    assert_eq!(sd.timing_stats.avgjudge, 100);
+    assert_eq!(sd.timing_stats.total_duration, 250_000);
+    assert_eq!(sd.timing_stats.avg, 80);
+    assert_eq!(sd.timing_stats.total_avg, 90);
+    assert_eq!(sd.timing_stats.stddev, 50);
+}
+
 // -- Serde edge cases --
 
 #[test]

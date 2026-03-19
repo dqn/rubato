@@ -297,7 +297,7 @@ impl ScoreData {
             update = true;
         }
         if self.timing_stats.avgjudge > newscore.timing_stats.avgjudge && update_score {
-            self.timing_stats.avgjudge = newscore.timing_stats.avgjudge;
+            self.timing_stats = newscore.timing_stats.clone();
             self.play_option.option = newscore.play_option.option;
             self.play_option.seed = newscore.play_option.seed;
             update = true;
