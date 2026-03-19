@@ -689,17 +689,30 @@ impl BMSDecoder {
 /// Recognized conditional directives.
 enum RandomDirective {
     Random,
+    SetRandom,
     If,
     EndIf,
     EndRandom,
+    Switch,
+    SetSwitch,
+    Case,
+    Skip,
+    Def,
+    EndSw,
 }
 
-/// Manages the RANDOM/IF/ENDIF/ENDRANDOM control-flow stack.
+/// Manages the RANDOM/IF/ENDIF/ENDRANDOM and SWITCH/CASE/SKIP/DEF/ENDSW control-flow stack.
 struct RandomDirectiveState {
     randoms: Vec<i32>,
     srandoms: Vec<i32>,
     crandom: Vec<i32>,
     skip: Vec<bool>,
+    /// Per nesting level: true if this level is a SWITCH block (vs RANDOM block).
+    is_switch: Vec<bool>,
+    /// Per SWITCH nesting level: true if any #CASE has matched (for fall-through).
+    case_matched: Vec<bool>,
+    /// Per SWITCH nesting level: true if #SKIP has been hit (skip rest until #ENDSW).
+    case_skipped: Vec<bool>,
 }
 
 impl RandomDirectiveState {
@@ -709,26 +722,61 @@ impl RandomDirectiveState {
             srandoms: Vec::with_capacity(8),
             crandom: Vec::with_capacity(8),
             skip: Vec::with_capacity(8),
+            is_switch: Vec::with_capacity(8),
+            case_matched: Vec::with_capacity(8),
+            case_skipped: Vec::with_capacity(8),
         }
     }
 
     /// Try to identify which directive a line represents.
     fn try_parse(line: &str) -> Option<RandomDirective> {
-        if matches_reserve_word(line, "RANDOM") {
+        // Check longer keywords before shorter ones that share a prefix:
+        // SETRANDOM before RANDOM, SETSWITCH before SWITCH, ENDRANDOM before ENDIF, ENDSW before ENDIF
+        if matches_reserve_word(line, "SETRANDOM") {
+            Some(RandomDirective::SetRandom)
+        } else if matches_reserve_word(line, "RANDOM") {
             Some(RandomDirective::Random)
         } else if matches_reserve_word(line, "IF") {
             Some(RandomDirective::If)
-        } else if matches_reserve_word(line, "ENDIF") {
-            Some(RandomDirective::EndIf)
         } else if matches_reserve_word(line, "ENDRANDOM") {
             Some(RandomDirective::EndRandom)
+        } else if matches_reserve_word(line, "ENDIF") {
+            Some(RandomDirective::EndIf)
+        } else if matches_reserve_word(line, "SETSWITCH") {
+            Some(RandomDirective::SetSwitch)
+        } else if matches_reserve_word(line, "SWITCH") {
+            Some(RandomDirective::Switch)
+        } else if matches_reserve_word(line, "CASE") {
+            Some(RandomDirective::Case)
+        } else if matches_reserve_word(line, "SKIP") {
+            Some(RandomDirective::Skip)
+        } else if matches_reserve_word(line, "DEF") && !line.as_bytes().get(4).is_some_and(|b| b.is_ascii_alphabetic()) {
+            Some(RandomDirective::Def)
+        } else if matches_reserve_word(line, "ENDSW") {
+            Some(RandomDirective::EndSw)
         } else {
             None
         }
     }
 
     fn should_skip(&self) -> bool {
-        self.skip.last().copied().unwrap_or(false)
+        // Check RANDOM/IF skip stack
+        if self.skip.last().copied().unwrap_or(false) {
+            return true;
+        }
+        // Check SWITCH/CASE skip state: if we're inside a switch block,
+        // content is skipped unless a case has matched and #SKIP hasn't been hit.
+        if let Some(&is_sw) = self.is_switch.last() {
+            if is_sw {
+                let matched = self.case_matched.last().copied().unwrap_or(false);
+                let skipped = self.case_skipped.last().copied().unwrap_or(false);
+                // Skip if no case matched yet, or if #SKIP was hit
+                if !matched || skipped {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     fn handle_directive(
@@ -740,9 +788,58 @@ impl RandomDirectiveState {
     ) {
         match directive {
             RandomDirective::Random => self.handle_random(line, selected_random, log),
+            RandomDirective::SetRandom => self.handle_setrandom(line, selected_random, log),
             RandomDirective::If => self.handle_if(line, log),
             RandomDirective::EndIf => self.handle_endif(line, log),
             RandomDirective::EndRandom => self.handle_endrandom(line, log),
+            RandomDirective::Switch => self.handle_switch(line, selected_random, log),
+            RandomDirective::SetSwitch => self.handle_setswitch(line, selected_random, log),
+            RandomDirective::Case => self.handle_case(line, log),
+            RandomDirective::Skip => self.handle_skip(log),
+            RandomDirective::Def => self.handle_def(log),
+            RandomDirective::EndSw => self.handle_endsw(line, log),
+        }
+    }
+
+    /// Push a random value onto the crandom stack. Used by both #RANDOM and #SWITCH.
+    fn push_random_value(
+        &mut self,
+        r: i32,
+        selected_random: Option<&[i32]>,
+    ) {
+        self.randoms.push(r);
+        if let Some(sr) = selected_random {
+            if self.randoms.len() - 1 < sr.len() {
+                self.crandom.push(sr[self.randoms.len() - 1]);
+            } else {
+                let val = (rand_f64() * (r as f64)) as i32 + 1;
+                self.crandom.push(val);
+                self.srandoms.push(val);
+            }
+        } else {
+            let val = (rand_f64() * (r as f64)) as i32 + 1;
+            self.crandom.push(val);
+            self.srandoms.push(val);
+        }
+    }
+
+    /// Push a deterministic value onto the crandom stack. Used by both #SETRANDOM and #SETSWITCH.
+    fn push_set_value(
+        &mut self,
+        n: i32,
+        selected_random: Option<&[i32]>,
+    ) {
+        self.randoms.push(n);
+        if let Some(sr) = selected_random {
+            if self.randoms.len() - 1 < sr.len() {
+                self.crandom.push(sr[self.randoms.len() - 1]);
+            } else {
+                self.crandom.push(n);
+                self.srandoms.push(n);
+            }
+        } else {
+            self.crandom.push(n);
+            self.srandoms.push(n);
         }
     }
 
@@ -755,20 +852,8 @@ impl RandomDirectiveState {
         let Some(arg) = line.get(8..) else { return };
         match arg.trim().parse::<i32>() {
             Ok(r) if r >= 1 => {
-                self.randoms.push(r);
-                if let Some(sr) = selected_random {
-                    if self.randoms.len() - 1 < sr.len() {
-                        self.crandom.push(sr[self.randoms.len() - 1]);
-                    } else {
-                        let val = (rand_f64() * (r as f64)) as i32 + 1;
-                        self.crandom.push(val);
-                        self.srandoms.push(val);
-                    }
-                } else {
-                    let val = (rand_f64() * (r as f64)) as i32 + 1;
-                    self.crandom.push(val);
-                    self.srandoms.push(val);
-                }
+                self.push_random_value(r, selected_random);
+                self.is_switch.push(false);
             }
             Ok(_) => {
                 log.push(DecodeLog::new(
@@ -780,6 +865,34 @@ impl RandomDirectiveState {
                 log.push(DecodeLog::new(
                     State::Warning,
                     "#RANDOMに数字が定義されていません",
+                ));
+            }
+        }
+    }
+
+    fn handle_setrandom(
+        &mut self,
+        line: &str,
+        selected_random: Option<&[i32]>,
+        log: &mut Vec<DecodeLog>,
+    ) {
+        // #SETRANDOM has 10 chars: "#SETRANDOM"
+        let Some(arg) = line.get(11..) else { return };
+        match arg.trim().parse::<i32>() {
+            Ok(n) if n >= 1 => {
+                self.push_set_value(n, selected_random);
+                self.is_switch.push(false);
+            }
+            Ok(_) => {
+                log.push(DecodeLog::new(
+                    State::Warning,
+                    "#SETRANDOMの値は1以上である必要があります",
+                ));
+            }
+            Err(_) => {
+                log.push(DecodeLog::new(
+                    State::Warning,
+                    "#SETRANDOMに数字が定義されていません",
                 ));
             }
         }
@@ -828,10 +941,169 @@ impl RandomDirectiveState {
     fn handle_endrandom(&mut self, line: &str, log: &mut Vec<DecodeLog>) {
         if !self.crandom.is_empty() {
             self.crandom.pop();
+            self.is_switch.pop();
         } else {
             log.push(DecodeLog::new(
                 State::Warning,
                 format!("ENDRANDOMに対応するRANDOMが存在しません: {}", line),
+            ));
+        }
+    }
+
+    fn handle_switch(
+        &mut self,
+        line: &str,
+        selected_random: Option<&[i32]>,
+        log: &mut Vec<DecodeLog>,
+    ) {
+        // #SWITCH has 7 chars: "#SWITCH"
+        let Some(arg) = line.get(8..) else { return };
+        match arg.trim().parse::<i32>() {
+            Ok(r) if r >= 1 => {
+                self.push_random_value(r, selected_random);
+                self.is_switch.push(true);
+                self.case_matched.push(false);
+                self.case_skipped.push(false);
+            }
+            Ok(_) => {
+                log.push(DecodeLog::new(
+                    State::Warning,
+                    "#SWITCHの値は1以上である必要があります",
+                ));
+            }
+            Err(_) => {
+                log.push(DecodeLog::new(
+                    State::Warning,
+                    "#SWITCHに数字が定義されていません",
+                ));
+            }
+        }
+    }
+
+    fn handle_setswitch(
+        &mut self,
+        line: &str,
+        selected_random: Option<&[i32]>,
+        log: &mut Vec<DecodeLog>,
+    ) {
+        // #SETSWITCH has 10 chars: "#SETSWITCH"
+        let Some(arg) = line.get(11..) else { return };
+        match arg.trim().parse::<i32>() {
+            Ok(n) if n >= 1 => {
+                self.push_set_value(n, selected_random);
+                self.is_switch.push(true);
+                self.case_matched.push(false);
+                self.case_skipped.push(false);
+            }
+            Ok(_) => {
+                log.push(DecodeLog::new(
+                    State::Warning,
+                    "#SETSWITCHの値は1以上である必要があります",
+                ));
+            }
+            Err(_) => {
+                log.push(DecodeLog::new(
+                    State::Warning,
+                    "#SETSWITCHに数字が定義されていません",
+                ));
+            }
+        }
+    }
+
+    fn handle_case(&mut self, line: &str, log: &mut Vec<DecodeLog>) {
+        if self.crandom.is_empty() {
+            log.push(DecodeLog::new(
+                State::Warning,
+                "#CASEに対応する#SWITCHが定義されていません",
+            ));
+            return;
+        }
+        let Some(arg) = line.get(6..) else { return };
+        match arg.trim().parse::<i32>() {
+            Ok(val) => {
+                let crandom_val = *self.crandom.last().expect("crandom non-empty checked above");
+                let already_matched = self.case_matched.last().copied().unwrap_or(false);
+                let already_skipped = self.case_skipped.last().copied().unwrap_or(false);
+
+                if already_matched && already_skipped {
+                    // A previous case matched and #SKIP was hit.
+                    // This case and all subsequent content stay skipped until #ENDSW.
+                } else if already_matched {
+                    // A previous case matched without #SKIP (fall-through).
+                    // Continue including content.
+                } else if crandom_val == val {
+                    // This case matches -- mark it and start including content.
+                    if let Some(matched) = self.case_matched.last_mut() {
+                        *matched = true;
+                    }
+                }
+                // If not matched and no fall-through, content is skipped
+                // (handled by should_skip checking case_matched)
+            }
+            Err(_) => {
+                log.push(DecodeLog::new(
+                    State::Warning,
+                    "#CASEに数字が定義されていません",
+                ));
+            }
+        }
+    }
+
+    fn handle_skip(&mut self, log: &mut Vec<DecodeLog>) {
+        if self.case_skipped.is_empty() {
+            log.push(DecodeLog::new(
+                State::Warning,
+                "#SKIPに対応する#SWITCHが定義されていません",
+            ));
+            return;
+        }
+        // #SKIP only takes effect when a case has been matched.
+        // When no case matched, content is already skipped via should_skip(),
+        // and we must NOT set case_skipped because that would prevent
+        // subsequent #CASE directives from matching.
+        let matched = self.case_matched.last().copied().unwrap_or(false);
+        if matched {
+            if let Some(skipped) = self.case_skipped.last_mut() {
+                *skipped = true;
+            }
+        }
+    }
+
+    fn handle_def(&mut self, log: &mut Vec<DecodeLog>) {
+        if self.crandom.is_empty() {
+            log.push(DecodeLog::new(
+                State::Warning,
+                "#DEFに対応する#SWITCHが定義されていません",
+            ));
+            return;
+        }
+        let already_matched = self.case_matched.last().copied().unwrap_or(false);
+        let already_skipped = self.case_skipped.last().copied().unwrap_or(false);
+
+        if already_matched && already_skipped {
+            // A case already matched and was ended with #SKIP.
+            // Default case should NOT activate.
+        } else if already_matched {
+            // Fall-through from a previous case continues.
+            // Content keeps being included.
+        } else {
+            // No case matched yet - default case activates.
+            if let Some(matched) = self.case_matched.last_mut() {
+                *matched = true;
+            }
+        }
+    }
+
+    fn handle_endsw(&mut self, line: &str, log: &mut Vec<DecodeLog>) {
+        if !self.crandom.is_empty() {
+            self.crandom.pop();
+            self.is_switch.pop();
+            self.case_matched.pop();
+            self.case_skipped.pop();
+        } else {
+            log.push(DecodeLog::new(
+                State::Warning,
+                format!("ENDSWに対応するSWITCHが存在しません: {}", line),
             ));
         }
     }
@@ -1656,8 +1928,6 @@ mod tests {
     #[test]
     fn orphaned_if_without_random_skips_content() {
         // An orphaned #IF (no preceding #RANDOM) should skip its body.
-        // Before the fix, the content between #IF and #ENDIF was parsed as
-        // live data because handle_if did not push to the skip stack.
         let mut decoder = BMSDecoder::new();
         let data = make_bms_bytes(&[
             "#BPM 120",
@@ -1669,15 +1939,565 @@ mod tests {
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
         let model = model.unwrap();
-        // The title inside the orphaned #IF block must NOT override the one outside.
         assert_eq!(model.title, "Correct");
-        // The decoder should have logged a warning about the orphaned #IF.
         assert!(
             decoder
                 .log
                 .iter()
                 .any(|l| l.message.contains("#IFに対応する#RANDOM")),
             "Expected warning about orphaned #IF"
+        );
+    }
+
+    // --- #SETRANDOM tests ---
+
+    #[test]
+    fn decode_setrandom_sets_deterministic_value() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SETRANDOM 2",
+            "#IF 2",
+            "#TITLE SetRandomMatch",
+            "#ENDIF",
+            "#ENDRANDOM",
+        ]);
+        let model = decoder.decode_bytes(&data, false, None).unwrap();
+        assert_eq!(model.title, "SetRandomMatch");
+    }
+
+    #[test]
+    fn decode_setrandom_non_matching_skips() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SETRANDOM 2",
+            "#IF 1",
+            "#TITLE SkippedBySetRandom",
+            "#ENDIF",
+            "#ENDRANDOM",
+        ]);
+        let model = decoder.decode_bytes(&data, false, None).unwrap();
+        assert_eq!(model.title, "");
+    }
+
+    #[test]
+    fn decode_setrandom_selected_random_overrides() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SETRANDOM 2",
+            "#IF 3",
+            "#TITLE OverriddenBySelectedRandom",
+            "#ENDIF",
+            "#ENDRANDOM",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[3])).unwrap();
+        assert_eq!(model.title, "OverriddenBySelectedRandom");
+    }
+
+    #[test]
+    fn decode_setrandom_invalid_value_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#SETRANDOM 0"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("#SETRANDOMの値は1以上"))
+        );
+    }
+
+    #[test]
+    fn decode_setrandom_non_numeric_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#SETRANDOM abc"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("#SETRANDOMに数字が定義されていません"))
+        );
+    }
+
+    // --- #SWITCH / #CASE / #ENDSW tests ---
+
+    #[test]
+    fn decode_switch_case_matching() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 3",
+            "#CASE 1",
+            "#TITLE Case1",
+            "#CASE 2",
+            "#TITLE Case2",
+            "#CASE 3",
+            "#TITLE Case3",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[2])).unwrap();
+        assert_eq!(model.title, "Case3");
+    }
+
+    #[test]
+    fn decode_switch_case_with_skip() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 3",
+            "#CASE 1",
+            "#TITLE Case1",
+            "#SKIP",
+            "#CASE 2",
+            "#TITLE Case2",
+            "#SKIP",
+            "#CASE 3",
+            "#TITLE Case3",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[2])).unwrap();
+        assert_eq!(model.title, "Case2");
+    }
+
+    #[test]
+    fn decode_switch_case_first_match() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 3",
+            "#CASE 1",
+            "#TITLE First",
+            "#SKIP",
+            "#CASE 2",
+            "#TITLE Second",
+            "#SKIP",
+            "#CASE 3",
+            "#TITLE Third",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        assert_eq!(model.title, "First");
+    }
+
+    #[test]
+    fn decode_switch_case_last_match() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 3",
+            "#CASE 1",
+            "#TITLE First",
+            "#SKIP",
+            "#CASE 2",
+            "#TITLE Second",
+            "#SKIP",
+            "#CASE 3",
+            "#TITLE Third",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[3])).unwrap();
+        assert_eq!(model.title, "Third");
+    }
+
+    #[test]
+    fn decode_switch_case_no_match_skips_all() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 5",
+            "#CASE 1",
+            "#TITLE Case1",
+            "#SKIP",
+            "#CASE 2",
+            "#TITLE Case2",
+            "#SKIP",
+            "#CASE 3",
+            "#TITLE Case3",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[4])).unwrap();
+        assert_eq!(model.title, "");
+    }
+
+    #[test]
+    fn decode_switch_case_fall_through_without_skip() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 3",
+            "#CASE 1",
+            "#TITLE FromCase1",
+            "#CASE 2",
+            "#TITLE FromCase2",
+            "#CASE 3",
+            "#TITLE FromCase3",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        assert_eq!(model.title, "FromCase3");
+    }
+
+    #[test]
+    fn decode_switch_case_partial_fall_through() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 3",
+            "#CASE 1",
+            "#TITLE FromCase1",
+            "#CASE 2",
+            "#TITLE FromCase2",
+            "#SKIP",
+            "#CASE 3",
+            "#TITLE FromCase3",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        assert_eq!(model.title, "FromCase2");
+    }
+
+    // --- #DEF (default case) tests ---
+
+    #[test]
+    fn decode_switch_def_when_no_case_matches() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 5",
+            "#CASE 1",
+            "#TITLE Case1",
+            "#SKIP",
+            "#CASE 2",
+            "#TITLE Case2",
+            "#SKIP",
+            "#DEF",
+            "#TITLE DefaultCase",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[4])).unwrap();
+        assert_eq!(model.title, "DefaultCase");
+    }
+
+    #[test]
+    fn decode_switch_def_skipped_when_case_matches_with_skip() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 3",
+            "#CASE 1",
+            "#TITLE Case1",
+            "#SKIP",
+            "#DEF",
+            "#TITLE DefaultCase",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        assert_eq!(model.title, "Case1");
+    }
+
+    #[test]
+    fn decode_switch_def_fall_through_from_case() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 3",
+            "#CASE 1",
+            "#TITLE Case1",
+            "#DEF",
+            "#TITLE DefaultCase",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        assert_eq!(model.title, "DefaultCase");
+    }
+
+    // --- #SETSWITCH tests ---
+
+    #[test]
+    fn decode_setswitch_deterministic() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SETSWITCH 2",
+            "#CASE 1",
+            "#TITLE Case1",
+            "#SKIP",
+            "#CASE 2",
+            "#TITLE Case2",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, None).unwrap();
+        assert_eq!(model.title, "Case2");
+    }
+
+    #[test]
+    fn decode_setswitch_selected_random_overrides() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SETSWITCH 2",
+            "#CASE 1",
+            "#TITLE Case1",
+            "#SKIP",
+            "#CASE 2",
+            "#TITLE Case2",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        assert_eq!(model.title, "Case1");
+    }
+
+    // --- Error/warning tests for SWITCH directives ---
+
+    #[test]
+    fn decode_switch_invalid_value_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#SWITCH 0"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("#SWITCHの値は1以上"))
+        );
+    }
+
+    #[test]
+    fn decode_switch_non_numeric_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#SWITCH abc"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("#SWITCHに数字が定義されていません"))
+        );
+    }
+
+    #[test]
+    fn decode_case_without_switch_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#CASE 1"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(decoder.log.iter().any(|l| {
+            l.message
+                .contains("#CASEに対応する#SWITCHが定義されていません")
+        }));
+    }
+
+    #[test]
+    fn decode_skip_without_switch_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#SKIP"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(decoder.log.iter().any(|l| {
+            l.message
+                .contains("#SKIPに対応する#SWITCHが定義されていません")
+        }));
+    }
+
+    #[test]
+    fn decode_def_without_switch_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#DEF"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(decoder.log.iter().any(|l| {
+            l.message
+                .contains("#DEFに対応する#SWITCHが定義されていません")
+        }));
+    }
+
+    #[test]
+    fn decode_endsw_without_switch_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#ENDSW"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("ENDSWに対応するSWITCHが存在しません"))
+        );
+    }
+
+    #[test]
+    fn decode_case_non_numeric_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#SWITCH 3", "#CASE abc", "#ENDSW"]);
+        let _ = decoder.decode_bytes(&data, false, Some(&[1]));
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("#CASEに数字が定義されていません"))
+        );
+    }
+
+    // --- Interaction: SWITCH does not interfere with DEFEXRANK ---
+
+    #[test]
+    fn decode_defexrank_not_confused_with_def() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#DEFEXRANK 100"]);
+        let model = decoder.decode_bytes(&data, false, None).unwrap();
+        assert_eq!(model.judgerank, 100);
+        assert_eq!(model.judgerank_type, JudgeRankType::BmsDefexrank);
+    }
+
+    // --- Nested SWITCH inside RANDOM ---
+
+    #[test]
+    fn decode_switch_nested_in_random() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#RANDOM 2",
+            "#IF 1",
+            "#SWITCH 2",
+            "#CASE 1",
+            "#TITLE NestedCase1",
+            "#SKIP",
+            "#CASE 2",
+            "#TITLE NestedCase2",
+            "#SKIP",
+            "#ENDSW",
+            "#ENDIF",
+            "#ENDRANDOM",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1, 2])).unwrap();
+        assert_eq!(model.title, "NestedCase2");
+    }
+
+    #[test]
+    fn decode_switch_nested_in_random_skipped_branch() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#RANDOM 2",
+            "#IF 2",
+            "#SWITCH 2",
+            "#CASE 1",
+            "#TITLE ShouldNotAppear",
+            "#SKIP",
+            "#ENDSW",
+            "#ENDIF",
+            "#ENDRANDOM",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        assert_eq!(model.title, "");
+    }
+
+    // --- Content outside switch cases is skipped ---
+
+    #[test]
+    fn decode_switch_content_before_first_case_skipped() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 2",
+            "#TITLE BeforeCase",
+            "#CASE 1",
+            "#TITLE Case1",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        assert_eq!(model.title, "Case1");
+    }
+
+    // --- SETRANDOM + SWITCH interleaved with selected_randoms ---
+
+    #[test]
+    fn decode_setrandom_and_switch_share_random_counter() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SETRANDOM 1",
+            "#IF 1",
+            "#ARTIST SetRandomArtist",
+            "#ENDIF",
+            "#ENDRANDOM",
+            "#SWITCH 3",
+            "#CASE 2",
+            "#TITLE SwitchCase2",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1, 2])).unwrap();
+        assert_eq!(model.artist, "SetRandomArtist");
+        assert_eq!(model.title, "SwitchCase2");
+    }
+
+    // --- Case-insensitive directive parsing ---
+
+    #[test]
+    fn decode_switch_case_insensitive() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#switch 2",
+            "#case 1",
+            "#TITLE Case1",
+            "#skip",
+            "#case 2",
+            "#TITLE Case2",
+            "#skip",
+            "#endsw",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[2])).unwrap();
+        assert_eq!(model.title, "Case2");
+    }
+
+    #[test]
+    fn decode_setrandom_case_insensitive() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#setrandom 1",
+            "#IF 1",
+            "#TITLE Match",
+            "#ENDIF",
+            "#ENDRANDOM",
+        ]);
+        let model = decoder.decode_bytes(&data, false, None).unwrap();
+        assert_eq!(model.title, "Match");
+    }
+
+    // --- SETSWITCH error tests ---
+
+    #[test]
+    fn decode_setswitch_invalid_value_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#SETSWITCH 0"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("#SETSWITCHの値は1以上"))
+        );
+    }
+
+    #[test]
+    fn decode_setswitch_non_numeric_warns() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#SETSWITCH abc"]);
+        let _ = decoder.decode_bytes(&data, false, None);
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("#SETSWITCHに数字が定義されていません"))
         );
     }
 }
