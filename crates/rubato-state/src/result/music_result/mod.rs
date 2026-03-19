@@ -175,22 +175,9 @@ impl MusicResult {
                     ));
                 }
             }
-            for status in pending_ir_sends {
-                self.main.ir_send_status_mut().push(status);
-            }
-
             // Spawn IR processing thread (sends scores + fetches ranking)
-            let ir_len = self.main.ir_status().len();
             let ir_send_count = self.main.config().network.ir_send_count;
-            let mut ir_send_list_snapshot: Vec<IRSendStatusMain> = {
-                let mut list = self.main.ir_send_status_mut();
-                let start = if list.len() >= ir_len {
-                    list.len() - ir_len
-                } else {
-                    0
-                };
-                list.drain(start..).collect()
-            };
+            let mut ir_send_list_snapshot: Vec<IRSendStatusMain> = pending_ir_sends;
             let ir_connection = self.main.ir_status().first().map(|s| s.connection.clone());
             let songdata_for_ranking = self.resource.songdata().cloned();
             let _oldscore_exscore = self.data.oldscore.exscore();
