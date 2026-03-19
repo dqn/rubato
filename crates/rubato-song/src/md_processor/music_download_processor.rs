@@ -172,6 +172,33 @@ fn has_path_traversal(s: &str) -> bool {
         .any(|c| matches!(c, std::path::Component::ParentDir))
 }
 
+/// Recursively validate that all paths under `root` are within `root` (no symlink escapes).
+fn validate_staging_paths(root: &Path) -> Result<(), String> {
+    validate_staging_paths_recursive(root, root)
+}
+
+fn validate_staging_paths_recursive(root: &Path, dir: &Path) -> Result<(), String> {
+    let entries = fs::read_dir(dir).map_err(|e| format!("Failed to read dir {:?}: {}", dir, e))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read entry in {:?}: {}", dir, e))?;
+        let canonical = entry
+            .path()
+            .canonicalize()
+            .map_err(|e| format!("Failed to canonicalize {:?}: {}", entry.path(), e))?;
+        if !canonical.starts_with(root) {
+            return Err(format!(
+                "Path traversal detected: {} escapes {}",
+                entry.path().display(),
+                root.display()
+            ));
+        }
+        if entry.path().is_dir() {
+            validate_staging_paths_recursive(root, &entry.path())?;
+        }
+    }
+    Ok(())
+}
+
 fn normalize_ipfs_path(path: &str) -> String {
     // Case-insensitive prefix match: "/ipfs/" is 6 characters, strip to get bare CID.
     // Use str::get() instead of direct slicing to avoid panics on non-ASCII char boundaries.
@@ -447,7 +474,8 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
     };
 
     if download_ok {
-        // Extract tar.gz
+        // Extract tar.gz via staging directory pattern: extract to a temporary
+        // staging directory first, validate contents, then move to final destination.
         let gz_path = std::path::Path::new("ipfs/bms.tar.gz");
         let mut extraction_ok = true;
         if gz_path.exists() {
@@ -459,10 +487,26 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
                     return;
                 }
             };
+            let dest = std::path::Path::new("ipfs");
+            let _ = fs::create_dir_all(dest);
+
+            // Create a staging directory within the destination to avoid
+            // cross-filesystem move issues and ensure atomic placement.
+            let staging_dir = match tempfile::tempdir_in(dest) {
+                Ok(d) => d,
+                Err(e) => {
+                    log::error!("Failed to create staging directory: {}", e);
+                    let _ = fs::remove_file(gz_path);
+                    return;
+                }
+            };
+            let canonical_staging = staging_dir
+                .path()
+                .canonicalize()
+                .unwrap_or_else(|_| staging_dir.path().to_path_buf());
+
             let decoder = flate2::read::GzDecoder::new(gz_file);
             let mut archive = tar::Archive::new(decoder);
-            let dest = std::path::Path::new("ipfs");
-            let canonical_dest = dest.canonicalize().unwrap_or_else(|_| dest.to_path_buf());
             match archive.entries() {
                 Ok(entries) => {
                     for entry_result in entries {
@@ -497,15 +541,15 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
                                     );
                                     continue;
                                 }
-                                let full_path = canonical_dest.join(&entry_path);
-                                if !full_path.starts_with(&canonical_dest) {
+                                let full_path = canonical_staging.join(&entry_path);
+                                if !full_path.starts_with(&canonical_staging) {
                                     log::warn!(
                                         "Skipping tar entry escaping destination: {:?}",
                                         entry_path
                                     );
                                     continue;
                                 }
-                                if let Err(e) = entry.unpack_in(&canonical_dest) {
+                                if let Err(e) = entry.unpack_in(&canonical_staging) {
                                     log::warn!(
                                         "Failed to extract tar entry {:?}: {}",
                                         entry_path,
@@ -529,8 +573,36 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
             let _ = fs::remove_file(gz_path);
             if !extraction_ok {
                 log::error!("Extraction failed; skipping move phase");
+                // staging_dir is dropped here, cleaning up partial extraction
                 return;
             }
+
+            // Defense-in-depth: validate all extracted paths stay within the
+            // staging directory (catches symlink escapes that entry-name checks
+            // cannot detect).
+            if let Err(e) = validate_staging_paths(&canonical_staging) {
+                log::error!(
+                    "Post-extraction path validation failed: {}; aborting",
+                    e
+                );
+                return;
+            }
+
+            // Move validated contents from staging into final destination.
+            let canonical_dest = dest.canonicalize().unwrap_or_else(|_| dest.to_path_buf());
+            if let Ok(entries) = fs::read_dir(staging_dir.path()) {
+                for entry in entries.flatten() {
+                    let target = canonical_dest.join(entry.file_name());
+                    if !move_path_with_fallback(&entry.path(), &target) {
+                        log::error!(
+                            "Failed to move {:?} from staging to {:?}",
+                            entry.file_name(),
+                            target
+                        );
+                    }
+                }
+            }
+            // staging_dir is dropped here, cleaning up the now-empty temp directory
         }
     }
 
