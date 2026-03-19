@@ -1349,10 +1349,9 @@ fn from_config_sets_judge_algorithm_score_maps_to_timing() {
     };
     let jm = JudgeManager::from_config(&config);
 
-    // Score in the play crate maps to Timing in the types crate
     assert_eq!(
         jm.score().play_option.judge_algorithm,
-        Some(rubato_types::judge_algorithm::JudgeAlgorithm::Timing),
+        Some(rubato_types::judge_algorithm::JudgeAlgorithm::Score),
     );
     assert_eq!(
         jm.score().play_option.rule,

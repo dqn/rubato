@@ -213,7 +213,7 @@ impl KeyConfiguration {
         let needed_keys = (max_key + 1) as usize;
         for cc in pmc.controller.iter_mut() {
             if cc.keys.len() < needed_keys {
-                cc.keys.resize(needed_keys, -1);
+                cc.keys.resize(needed_keys, 0);
             }
         }
     }

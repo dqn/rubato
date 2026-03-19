@@ -230,7 +230,7 @@ impl JudgeManager {
             JudgeAlgorithm::Combo => rubato_types::judge_algorithm::JudgeAlgorithm::Combo,
             JudgeAlgorithm::Duration => rubato_types::judge_algorithm::JudgeAlgorithm::Duration,
             JudgeAlgorithm::Lowest => rubato_types::judge_algorithm::JudgeAlgorithm::Lowest,
-            JudgeAlgorithm::Score => rubato_types::judge_algorithm::JudgeAlgorithm::Timing,
+            JudgeAlgorithm::Score => rubato_types::judge_algorithm::JudgeAlgorithm::Score,
         });
         jm.score.play_option.rule = Some(rubato_types::bms_player_rule::BMSPlayerRule::LR2);
 

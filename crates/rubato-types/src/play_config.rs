@@ -119,7 +119,7 @@ mod tests {
         pc.duration = 800;
         pc.enable_constant = true;
         pc.lanecover = 0.5;
-        pc.judgetype = "Timing".to_string();
+        pc.judgetype = "Score".to_string();
 
         let json = serde_json::to_string(&pc).unwrap();
         let deserialized: PlayConfig = serde_json::from_str(&json).unwrap();
@@ -128,7 +128,7 @@ mod tests {
         assert_eq!(deserialized.duration, 800);
         assert!(deserialized.enable_constant);
         assert_eq!(deserialized.lanecover, 0.5);
-        assert_eq!(deserialized.judgetype, "Timing");
+        assert_eq!(deserialized.judgetype, "Score");
     }
 
     #[test]
@@ -199,9 +199,9 @@ mod tests {
     #[test]
     fn play_config_validate_preserves_valid_judgetype() {
         let mut pc = PlayConfig::default();
-        pc.judgetype = "Timing".to_string();
+        pc.judgetype = "Score".to_string();
         pc.validate();
-        assert_eq!(pc.judgetype, "Timing");
+        assert_eq!(pc.judgetype, "Score");
     }
 
     #[test]

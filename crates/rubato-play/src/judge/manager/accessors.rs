@@ -23,7 +23,7 @@ impl JudgeManager {
             JudgeAlgorithm::Combo => rubato_types::judge_algorithm::JudgeAlgorithm::Combo,
             JudgeAlgorithm::Duration => rubato_types::judge_algorithm::JudgeAlgorithm::Duration,
             JudgeAlgorithm::Lowest => rubato_types::judge_algorithm::JudgeAlgorithm::Lowest,
-            JudgeAlgorithm::Score => rubato_types::judge_algorithm::JudgeAlgorithm::Timing,
+            JudgeAlgorithm::Score => rubato_types::judge_algorithm::JudgeAlgorithm::Score,
         });
         // BMSPlayerRule::get_bms_player_rule always returns the LR2 ruleset in the current
         // implementation (bms_player_rule_set_lr2). Map to the types-level enum accordingly.

@@ -9,7 +9,7 @@ pub enum JudgeAlgorithm {
     Combo,
     Duration,
     Lowest,
-    Timing,
+    Score,
 }
 
 impl FromStr for JudgeAlgorithm {
@@ -20,7 +20,7 @@ impl FromStr for JudgeAlgorithm {
             "Combo" => Ok(Self::Combo),
             "Duration" => Ok(Self::Duration),
             "Lowest" => Ok(Self::Lowest),
-            "Timing" => Ok(Self::Timing),
+            "Score" => Ok(Self::Score),
             _ => anyhow::bail!("unknown JudgeAlgorithm: {}", s),
         }
     }
@@ -32,7 +32,7 @@ impl fmt::Display for JudgeAlgorithm {
             Self::Combo => write!(f, "Combo"),
             Self::Duration => write!(f, "Duration"),
             Self::Lowest => write!(f, "Lowest"),
-            Self::Timing => write!(f, "Timing"),
+            Self::Score => write!(f, "Score"),
         }
     }
 }
@@ -43,7 +43,7 @@ impl JudgeAlgorithm {
             JudgeAlgorithm::Combo => "Combo",
             JudgeAlgorithm::Duration => "Duration",
             JudgeAlgorithm::Lowest => "Lowest",
-            JudgeAlgorithm::Timing => "Timing",
+            JudgeAlgorithm::Score => "Score",
         }
     }
 
@@ -60,7 +60,7 @@ impl JudgeAlgorithm {
             JudgeAlgorithm::Combo,
             JudgeAlgorithm::Duration,
             JudgeAlgorithm::Lowest,
-            JudgeAlgorithm::Timing,
+            JudgeAlgorithm::Score,
         ]
     }
 }
@@ -74,7 +74,7 @@ mod tests {
         assert_eq!(JudgeAlgorithm::Combo.name(), "Combo");
         assert_eq!(JudgeAlgorithm::Duration.name(), "Duration");
         assert_eq!(JudgeAlgorithm::Lowest.name(), "Lowest");
-        assert_eq!(JudgeAlgorithm::Timing.name(), "Timing");
+        assert_eq!(JudgeAlgorithm::Score.name(), "Score");
     }
 
     #[test]
@@ -82,7 +82,7 @@ mod tests {
         assert_eq!(JudgeAlgorithm::index("Combo"), 0);
         assert_eq!(JudgeAlgorithm::index("Duration"), 1);
         assert_eq!(JudgeAlgorithm::index("Lowest"), 2);
-        assert_eq!(JudgeAlgorithm::index("Timing"), 3);
+        assert_eq!(JudgeAlgorithm::index("Score"), 3);
         assert_eq!(JudgeAlgorithm::index("Unknown"), -1);
     }
 
@@ -93,7 +93,7 @@ mod tests {
         assert_eq!(values[0], JudgeAlgorithm::Combo);
         assert_eq!(values[1], JudgeAlgorithm::Duration);
         assert_eq!(values[2], JudgeAlgorithm::Lowest);
-        assert_eq!(values[3], JudgeAlgorithm::Timing);
+        assert_eq!(values[3], JudgeAlgorithm::Score);
     }
 
     #[test]
@@ -127,8 +127,8 @@ mod tests {
             JudgeAlgorithm::Lowest
         );
         assert_eq!(
-            "Timing".parse::<JudgeAlgorithm>().unwrap(),
-            JudgeAlgorithm::Timing
+            "Score".parse::<JudgeAlgorithm>().unwrap(),
+            JudgeAlgorithm::Score
         );
         assert!("Unknown".parse::<JudgeAlgorithm>().is_err());
         assert!("".parse::<JudgeAlgorithm>().is_err());
@@ -139,7 +139,7 @@ mod tests {
         assert_eq!(JudgeAlgorithm::Combo.to_string(), "Combo");
         assert_eq!(JudgeAlgorithm::Duration.to_string(), "Duration");
         assert_eq!(JudgeAlgorithm::Lowest.to_string(), "Lowest");
-        assert_eq!(JudgeAlgorithm::Timing.to_string(), "Timing");
+        assert_eq!(JudgeAlgorithm::Score.to_string(), "Score");
     }
 
     #[test]
@@ -182,8 +182,8 @@ mod tests {
 
     #[test]
     fn test_judge_algorithm_serde_from_json_string() {
-        let alg: JudgeAlgorithm = serde_json::from_str("\"Timing\"").unwrap();
-        assert_eq!(alg, JudgeAlgorithm::Timing);
+        let alg: JudgeAlgorithm = serde_json::from_str("\"Score\"").unwrap();
+        assert_eq!(alg, JudgeAlgorithm::Score);
     }
 
     #[test]
