@@ -73,7 +73,9 @@ impl BMSResource {
         // Dispose old stagefile and try to load the new one
         self.stagefile = None;
         if let Some(parent) = f.parent() {
-            if !model.stagefile.is_empty() {
+            if !model.stagefile.is_empty()
+                && rubato_audio::audio_driver::is_bms_resource_path_safe(&model.stagefile)
+            {
                 let stagefile_path = parent.join(&model.stagefile);
                 if let Some(pix) =
                     PixmapResourcePool::load_picture(&stagefile_path.to_string_lossy())
@@ -85,7 +87,9 @@ impl BMSResource {
 
             // Dispose old backbmp and try to load the new one
             self.backbmp = None;
-            if !model.backbmp.is_empty() {
+            if !model.backbmp.is_empty()
+                && rubato_audio::audio_driver::is_bms_resource_path_safe(&model.backbmp)
+            {
                 let backbmp_path = parent.join(&model.backbmp);
                 if let Some(pix) = PixmapResourcePool::load_picture(&backbmp_path.to_string_lossy())
                 {

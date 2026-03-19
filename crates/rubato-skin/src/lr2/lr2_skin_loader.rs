@@ -256,6 +256,69 @@ pub fn lr2_path(skinpath: &str, imagepath: &str, filemap: &HashMap<String, Strin
     resolved
 }
 
+/// Check whether a resolved resource path stays within the allowed base directory.
+///
+/// Returns `true` if the path is safe (no traversal outside `base_dir`).
+/// Returns `false` if the path contains `..` components that would escape,
+/// or if canonicalization reveals it is outside the base directory.
+///
+/// Used to prevent path traversal attacks from malicious skin files
+/// (e.g., `#INCLUDE ../../../../etc/passwd`).
+pub fn is_path_within(base_dir: &std::path::Path, resource_path: &std::path::Path) -> bool {
+    // Fast check: reject paths with ".." components before touching the filesystem
+    for component in resource_path.components() {
+        if matches!(component, std::path::Component::ParentDir) {
+            // The path contains ".." -- check if it still resolves within base_dir.
+            // We cannot reject blindly because "subdir/../other" is valid and stays within base.
+            break;
+        }
+    }
+
+    // Try canonicalizing both paths. If the resource doesn't exist yet,
+    // normalize manually by resolving ".." against the base.
+    let canonical_base = match base_dir.canonicalize() {
+        Ok(p) => p,
+        Err(_) => return true, // If base doesn't exist, skip the check (dev/test scenario)
+    };
+
+    // If the file exists, canonicalize it directly
+    if let Ok(canonical_resource) = resource_path.canonicalize() {
+        return canonical_resource.starts_with(&canonical_base);
+    }
+
+    // File doesn't exist yet: normalize manually by iterating components
+    let mut normalized = canonical_base.clone();
+    // Get the relative portion: strip any prefix that matches base_dir
+    let relative = if resource_path.starts_with(base_dir) {
+        resource_path
+            .strip_prefix(base_dir)
+            .unwrap_or(resource_path)
+    } else if resource_path.is_relative() {
+        resource_path
+    } else {
+        // Absolute path that doesn't start with base_dir
+        return false;
+    };
+
+    for component in relative.components() {
+        match component {
+            std::path::Component::ParentDir => {
+                if !normalized.starts_with(&canonical_base) {
+                    return false;
+                }
+                normalized.pop();
+            }
+            std::path::Component::Normal(c) => {
+                normalized.push(c);
+            }
+            std::path::Component::CurDir => {}
+            _ => {}
+        }
+    }
+
+    normalized.starts_with(&canonical_base)
+}
+
 /// Get a trimmed string at the given index, or "" if out of bounds.
 /// Shared helper used by LR2 play/select/result skin loaders.
 pub fn str_at(parts: &[String], idx: usize) -> &str {
@@ -847,5 +910,47 @@ mod tests {
         let result = lr2_path("skin", "dir/file|ext*.png", &filemap);
         // Should not panic; exact result depends on filesystem but the function must not crash
         let _ = result;
+    }
+
+    #[test]
+    fn is_path_within_rejects_traversal() {
+        let base = std::env::temp_dir();
+        // "../../../etc/passwd" escapes the base directory
+        let malicious = base.join("../../../etc/passwd");
+        assert!(
+            !is_path_within(&base, &malicious),
+            "path traversal should be rejected"
+        );
+    }
+
+    #[test]
+    fn is_path_within_allows_normal_subpath() {
+        let base = std::env::temp_dir();
+        let normal = base.join("skins/myskin/include.lr2skin");
+        assert!(
+            is_path_within(&base, &normal),
+            "normal subpath should be allowed"
+        );
+    }
+
+    #[test]
+    fn is_path_within_allows_benign_dotdot() {
+        // "subdir/../other" stays within base
+        let base = std::env::temp_dir();
+        let benign = base.join("subdir/../other.lr2skin");
+        assert!(
+            is_path_within(&base, &benign),
+            "benign parent traversal within base should be allowed"
+        );
+    }
+
+    #[test]
+    fn is_path_within_rejects_absolute_outside() {
+        let base = std::env::temp_dir();
+        let outside = std::path::PathBuf::from("/etc/passwd");
+        assert!(
+            !is_path_within(&base, &outside),
+            "absolute path outside base should be rejected"
+        );
     }
 }

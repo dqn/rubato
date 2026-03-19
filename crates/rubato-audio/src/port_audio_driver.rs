@@ -223,6 +223,11 @@ impl AudioDriver for PortAudioDriver {
                 if wav_path.is_empty() {
                     return None;
                 }
+                // Security: reject resource paths with directory traversal
+                if !crate::audio_driver::is_bms_resource_path_safe(wav_path) {
+                    log::warn!("Audio file path traversal blocked: {}", wav_path);
+                    return None;
+                }
                 let resolved = if let Some(ref dir) = bms_dir {
                     dir.join(wav_path)
                 } else {

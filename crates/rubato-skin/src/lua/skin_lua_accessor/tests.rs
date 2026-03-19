@@ -184,3 +184,93 @@ fn integer_property_panics_on_wrong_thread() {
     });
     handle.join().expect("thread should complete");
 }
+
+/// Verify that the Lua sandbox blocks os.execute (arbitrary command execution).
+#[test]
+fn lua_sandbox_blocks_os_execute() {
+    let accessor = SkinLuaAccessor::new(true);
+    let result = accessor.exec("return os ~= nil");
+    // os library should not be available; the expression should either
+    // return nil/false or fail entirely
+    match result {
+        Some(LuaValue::Boolean(true)) => {
+            panic!("SECURITY: os library is accessible in Lua sandbox");
+        }
+        _ => {
+            // os is nil or not available -- correct behavior
+        }
+    }
+}
+
+/// Verify that the Lua sandbox blocks io.open (file system access).
+#[test]
+fn lua_sandbox_blocks_io_open() {
+    let accessor = SkinLuaAccessor::new(true);
+    let result = accessor.exec("return io ~= nil");
+    match result {
+        Some(LuaValue::Boolean(true)) => {
+            panic!("SECURITY: io library is accessible in Lua sandbox");
+        }
+        _ => {
+            // io is nil or not available -- correct behavior
+        }
+    }
+}
+
+/// Verify that safe libraries (table, string, math) remain available.
+#[test]
+fn lua_sandbox_allows_safe_libraries() {
+    let accessor = SkinLuaAccessor::new(true);
+
+    // table library
+    let result = accessor.exec("return table ~= nil");
+    assert_eq!(
+        result,
+        Some(LuaValue::Boolean(true)),
+        "table library should be available"
+    );
+
+    // string library
+    let result = accessor.exec("return string ~= nil");
+    assert_eq!(
+        result,
+        Some(LuaValue::Boolean(true)),
+        "string library should be available"
+    );
+
+    // math library
+    let result = accessor.exec("return math ~= nil");
+    assert_eq!(
+        result,
+        Some(LuaValue::Boolean(true)),
+        "math library should be available"
+    );
+
+    // Base functions (print, pairs, ipairs, type, tonumber, tostring)
+    let result = accessor.exec("return type(print) == 'function'");
+    assert_eq!(
+        result,
+        Some(LuaValue::Boolean(true)),
+        "print should be available"
+    );
+
+    let result = accessor.exec("return type(pairs) == 'function'");
+    assert_eq!(
+        result,
+        Some(LuaValue::Boolean(true)),
+        "pairs should be available"
+    );
+}
+
+/// Verify that require() and package.loaded still work (needed for module loading).
+#[test]
+fn lua_sandbox_allows_require() {
+    let accessor = SkinLuaAccessor::new(false);
+    // package library should still be available for require/package.loaded
+    let result = accessor.exec("return package ~= nil");
+    assert_eq!(
+        result,
+        Some(LuaValue::Boolean(true)),
+        "package library should be available for skin module loading"
+    );
+}

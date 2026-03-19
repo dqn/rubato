@@ -305,6 +305,12 @@ impl BMSRenderer {
                 continue;
             }
 
+            // Security: reject resource paths with directory traversal
+            if !audio_driver::is_bms_resource_path_safe(wav_name) {
+                warn!("Audio file path traversal blocked: {}", wav_name);
+                continue;
+            }
+
             // Resolve audio file path
             let resolved_path = base_path.join(wav_name);
             let resolved_str = resolved_path.to_string_lossy().to_string();

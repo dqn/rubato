@@ -113,3 +113,70 @@ pub fn paths(path: &str) -> Vec<PathBuf> {
 
     result
 }
+
+/// Check whether a WAV/BMP resource path from a BMS file is safe (no directory traversal).
+///
+/// Returns `true` if the path does not contain `..` components that would escape
+/// the BMS file's directory. BMS resource paths are relative filenames (e.g., "kick.wav",
+/// "sfx/hit.ogg") and should never traverse upward.
+///
+/// This is a security measure to prevent malicious BMS files from reading arbitrary
+/// files via paths like `../../../../etc/passwd`.
+pub fn is_bms_resource_path_safe(resource_name: &str) -> bool {
+    let path = Path::new(resource_name);
+    for component in path.components() {
+        if matches!(component, std::path::Component::ParentDir) {
+            return false;
+        }
+        // Reject absolute paths on any platform
+        if matches!(
+            component,
+            std::path::Component::RootDir | std::path::Component::Prefix(_)
+        ) {
+            return false;
+        }
+    }
+    true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bms_resource_path_allows_simple_filename() {
+        assert!(is_bms_resource_path_safe("kick.wav"));
+    }
+
+    #[test]
+    fn bms_resource_path_allows_subdirectory() {
+        assert!(is_bms_resource_path_safe("sfx/hit.ogg"));
+    }
+
+    #[test]
+    fn bms_resource_path_rejects_parent_traversal() {
+        assert!(!is_bms_resource_path_safe("../../../etc/passwd"));
+    }
+
+    #[test]
+    fn bms_resource_path_rejects_mid_traversal() {
+        assert!(!is_bms_resource_path_safe("sfx/../../secret.wav"));
+    }
+
+    #[test]
+    fn bms_resource_path_rejects_absolute() {
+        assert!(!is_bms_resource_path_safe("/etc/passwd"));
+    }
+
+    #[test]
+    fn bms_resource_path_allows_dotfile() {
+        // ".hidden.wav" is a valid filename, not a traversal
+        assert!(is_bms_resource_path_safe(".hidden.wav"));
+    }
+
+    #[test]
+    fn bms_resource_path_allows_current_dir() {
+        // "./kick.wav" is fine
+        assert!(is_bms_resource_path_safe("./kick.wav"));
+    }
+}

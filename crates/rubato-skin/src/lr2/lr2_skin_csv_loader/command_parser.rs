@@ -268,6 +268,15 @@ impl LR2SkinCSVLoaderState {
                 let imagefile =
                     lr2_skin_loader::lr2_path(&self.skinpath, &str_parts[1], &self.filemap);
                 let path = Path::new(&imagefile);
+                // Security: reject paths that escape the skin root directory
+                let skin_root = Path::new(&self.skinpath);
+                if !lr2_skin_loader::is_path_within(skin_root, path) {
+                    warn!(
+                        "INCLUDE: path traversal blocked: {} (skin root: {})",
+                        imagefile, self.skinpath
+                    );
+                    return;
+                }
                 if path.exists() {
                     match std::fs::read(path) {
                         Ok(raw_bytes) => {

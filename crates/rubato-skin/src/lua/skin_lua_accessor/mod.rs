@@ -6,6 +6,7 @@ mod tests;
 use std::path::Path;
 use std::sync::Arc;
 
+use mlua::StdLib;
 use mlua::prelude::*;
 
 use crate::lua::event_utility::EventUtility;
@@ -42,8 +43,22 @@ impl SkinLuaAccessor {
         // Arc<Lua> is intentional: Lua is !Send+!Sync, but property types share ownership
         // of the VM via Arc (not across threads). Thread-safety is enforced via creation_thread_id
         // assertions in each property type's get() method.
+        //
+        // SECURITY: Only load safe library subset. Skin Lua scripts must not have access to
+        // OS (command execution), IO (file system), or DEBUG (sandbox escape) libraries.
+        // The skin code needs: base functions (auto-loaded), table, string, math, utf8,
+        // coroutine, and package (for require/package.loaded module system).
+        let safe_libs = StdLib::TABLE
+            | StdLib::STRING
+            | StdLib::MATH
+            | StdLib::UTF8
+            | StdLib::COROUTINE
+            | StdLib::PACKAGE;
         #[allow(clippy::arc_with_non_send_sync)]
-        let lua = Arc::new(Lua::new());
+        let lua = Arc::new(
+            Lua::new_with(safe_libs, mlua::LuaOptions::default())
+                .expect("Failed to create sandboxed Lua VM"),
+        );
 
         // Capture the initial package.path before any modifications
         let base_package_path = lua
