@@ -379,6 +379,20 @@ pub trait SkinDrawable: Send {
     /// Swap the internal SpriteBatch with the given one.
     /// Used to let the skin draw into MainController's SpriteBatch.
     fn swap_sprite_batch(&mut self, batch: &mut SpriteBatch);
+
+    /// Execute a custom skin event by ID.
+    /// Custom events (1000-1999) are defined by the skin and stored in a HashMap.
+    /// This method is called to replay events that were queued during mouse handling,
+    /// where the skin was borrowed and could not dispatch events directly.
+    fn execute_custom_event(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        _id: i32,
+        _arg1: i32,
+        _arg2: i32,
+    ) {
+        // default no-op
+    }
 }
 
 /// Shared data for MainState implementations

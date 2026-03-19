@@ -6,8 +6,13 @@ use rubato_types::main_controller_access::{MainControllerCommand, MainController
 
 use rubato_types::sync_utils::lock_or_recover;
 use std::sync::Mutex;
+use std::thread::ThreadId;
 
 static PLAYER_CONFIG: Mutex<Option<PlayerConfig>> = Mutex::new(None);
+
+/// Thread ID of the thread that called `set_player_config()`. Used for
+/// debug-asserting single-thread access in `show_ui()` and `flush_play_config()`.
+static OWNER_THREAD: Mutex<Option<ThreadId>> = Mutex::new(None);
 static COMMAND_QUEUE: Mutex<Option<MainControllerCommandQueue>> = Mutex::new(None);
 static CONFIG: Mutex<Option<Config>> = Mutex::new(None);
 
@@ -45,6 +50,19 @@ fn get_play_mode_options() -> Vec<String> {
     modes.iter().map(|m| m.hint().to_string()).collect()
 }
 
+/// In-game misc settings menu (egui overlay).
+///
+/// Threading model: `show_ui()` runs on the main thread within the egui render
+/// pass, NOT on a separate thread. Config changes are applied through a
+/// `MainControllerCommandQueue` which is drained by `MainController` at safe
+/// points (between state ticks), ensuring no config mutation races with
+/// `BMSPlayer`'s own config reads. The static Mutexes here are for global state
+/// storage (accessed only from the main thread), not for cross-thread
+/// synchronization.
+///
+/// Config flow: UI statics -> flush_play_config() -> local PLAYER_CONFIG +
+/// UpdatePlayConfig command -> MainController.process_queued_controller_commands()
+/// -> BMSPlayer.receive_updated_play_config() -> LaneRenderer.apply_play_config().
 pub struct MiscSettingMenu;
 
 impl MiscSettingMenu {
@@ -53,6 +71,7 @@ impl MiscSettingMenu {
     /// references to the old `PlayerConfig`, `Config`, and command queue are not
     /// left behind.
     pub fn clear() {
+        *lock_or_recover(&OWNER_THREAD) = None;
         *lock_or_recover(&PLAYER_CONFIG) = None;
         *lock_or_recover(&COMMAND_QUEUE) = None;
         *lock_or_recover(&CONFIG) = None;
@@ -80,6 +99,7 @@ impl MiscSettingMenu {
         config: Config,
         command_queue: MainControllerCommandQueue,
     ) {
+        *lock_or_recover(&OWNER_THREAD) = Some(std::thread::current().id());
         let players = read_all_player_id("player");
         let player_idx = players
             .iter()
@@ -95,6 +115,11 @@ impl MiscSettingMenu {
 
     /// Render the misc settings window using egui.
     pub fn show_ui(ctx: &egui::Context) {
+        debug_assert!(
+            lock_or_recover(&OWNER_THREAD)
+                .map_or(true, |tid| tid == std::thread::current().id()),
+            "MiscSettingMenu::show_ui() must run on the same thread as set_player_config()"
+        );
         {
             let mode = lock_or_recover(&CURRENT_PLAY_MODE);
             if mode.is_none() {
@@ -257,6 +282,11 @@ fn build_play_config_from_statics() -> PlayConfig {
 /// Flush current UI state back to the local PlayerConfig and push an UpdatePlayConfig command
 /// so MainController stays in sync.
 fn flush_play_config() {
+    debug_assert!(
+        lock_or_recover(&OWNER_THREAD)
+            .map_or(true, |tid| tid == std::thread::current().id()),
+        "flush_play_config() must run on the same thread as set_player_config()"
+    );
     let mode = match *lock_or_recover(&CURRENT_PLAY_MODE) {
         Some(m) => m,
         None => return,
