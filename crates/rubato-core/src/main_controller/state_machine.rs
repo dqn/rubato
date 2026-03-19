@@ -118,19 +118,70 @@ impl MainController {
     ///
     /// Translated from: MainController.changeState(MainState) (private overload)
     ///
-    /// Java lines 345-358:
+    /// Java lines 276-289:
     /// ```java
-    /// private void changeState(MainState newState) {
-    ///     newState.create();
-    ///     if(newState.getSkin() != null) { newState.getSkin().prepare(newState); }
-    ///     if(current != null) { current.shutdown(); current.setSkin(null); }
-    ///     current = newState;
-    ///     timer.setMainState(newState);
-    ///     current.prepare();
-    ///     updateMainStateListener(0);
+    /// if(current != null) {
+    ///     current.shutdown();
+    ///     current.setSkin(null);
     /// }
+    /// newState.create();
+    /// if(newState.getSkin() != null) { newState.getSkin().prepare(newState); }
+    /// current = newState;
+    /// timer.setMainState(newState);
+    /// current.prepare();
+    /// updateMainStateListener(0);
     /// ```
     fn transition_to_state(&mut self, mut new_state: Box<dyn MainState>) {
+        // Shutdown the old state BEFORE creating the new one (matching Java order).
+        // This frees GPU resources (textures, skins) and flushes audio before the
+        // new state loads its own resources, preventing resource contention.
+        if let Some(ref mut old_state) = self.current {
+            // Extract BGA processor cache before shutdown for reuse in subsequent plays.
+            // Java: BGAProcessor lives in BMSResource and persists across state transitions.
+            if let Some(bga_cache) = old_state.take_bga_cache()
+                && let Some(ref mut resource) = self.resource
+            {
+                resource.set_bga_any(bga_cache);
+            }
+            // Restore PlayerResource from the exiting state back to MainController.
+            // States receive ownership via take_player_resource() in the factory;
+            // we reclaim it here so it's available for the next state.
+            if let Some(any_box) = old_state.take_player_resource_box()
+                && let Ok(core_resource) = any_box.downcast::<PlayerResource>()
+            {
+                self.resource = Some(*core_resource);
+            }
+            // Flush pending audio commands before shutdown so they operate on
+            // live state rather than potentially disposed resources.
+            if let Some(ref mut audio) = self.audio {
+                old_state.sync_audio(audio.as_mut());
+            }
+            // Emit state shutdown event before shutdown.
+            // Access state_event_log directly to avoid borrowing all of `self`
+            // while `self.current` is mutably borrowed as `old_state`.
+            if let Some(st) = old_state.state_type()
+                && let Some(ref log) = self.state_event_log
+                && let Ok(mut guard) = log.lock()
+            {
+                guard.push(rubato_types::state_event::StateEvent::StateShutdown { state: st });
+            }
+            old_state.shutdown();
+            // Flush audio again after shutdown so tick-based processors (e.g.
+            // PreviewMusicProcessor) can see the stop flag and actually halt playback.
+            // In Java the preview thread exits its loop autonomously, but in Rust
+            // preview runs via sync_audio ticks on the main thread.
+            if let Some(ref mut audio) = self.audio {
+                old_state.sync_audio(audio.as_mut());
+            }
+            // setSkin(null) equivalent -- Java's setSkin(null) calls skin.dispose() first
+            if let Some(ref mut skin) = old_state.main_state_data_mut().skin {
+                skin.dispose_skin();
+            }
+            old_state.main_state_data_mut().skin = None;
+        }
+        // Drop the old state now that it has been shut down
+        self.current = None;
+
         // Create the new state
         new_state.create();
 
@@ -198,52 +249,6 @@ impl MainController {
         // In Java: if(newState.getSkin() != null) { newState.getSkin().prepare(newState); }
         if let Some(ref mut skin) = new_state.main_state_data_mut().skin {
             skin.prepare_skin();
-        }
-
-        // Shutdown the old state
-        if let Some(ref mut old_state) = self.current {
-            // Extract BGA processor cache before shutdown for reuse in subsequent plays.
-            // Java: BGAProcessor lives in BMSResource and persists across state transitions.
-            if let Some(bga_cache) = old_state.take_bga_cache()
-                && let Some(ref mut resource) = self.resource
-            {
-                resource.set_bga_any(bga_cache);
-            }
-            // Restore PlayerResource from the exiting state back to MainController.
-            // States receive ownership via take_player_resource() in the factory;
-            // we reclaim it here so it's available for the next state.
-            if let Some(any_box) = old_state.take_player_resource_box()
-                && let Ok(core_resource) = any_box.downcast::<PlayerResource>()
-            {
-                self.resource = Some(*core_resource);
-            }
-            // Flush pending audio commands before shutdown so they operate on
-            // live state rather than potentially disposed resources.
-            if let Some(ref mut audio) = self.audio {
-                old_state.sync_audio(audio.as_mut());
-            }
-            // Emit state shutdown event before shutdown.
-            // Access state_event_log directly to avoid borrowing all of `self`
-            // while `self.current` is mutably borrowed as `old_state`.
-            if let Some(st) = old_state.state_type()
-                && let Some(ref log) = self.state_event_log
-                && let Ok(mut guard) = log.lock()
-            {
-                guard.push(rubato_types::state_event::StateEvent::StateShutdown { state: st });
-            }
-            old_state.shutdown();
-            // Flush audio again after shutdown so tick-based processors (e.g.
-            // PreviewMusicProcessor) can see the stop flag and actually halt playback.
-            // In Java the preview thread exits its loop autonomously, but in Rust
-            // preview runs via sync_audio ticks on the main thread.
-            if let Some(ref mut audio) = self.audio {
-                old_state.sync_audio(audio.as_mut());
-            }
-            // setSkin(null) equivalent — Java's setSkin(null) calls skin.dispose() first
-            if let Some(ref mut skin) = old_state.main_state_data_mut().skin {
-                skin.dispose_skin();
-            }
-            old_state.main_state_data_mut().skin = None;
         }
 
         // Set as current
