@@ -301,7 +301,7 @@ impl LR2SelectSkinLoaderState {
                                 values[9],
                                 values[10],
                                 crate::skin_number::NumberDisplayConfig {
-                                    keta: divx,
+                                    keta: values[13] + 1,
                                     zeropadding: values[11],
                                     space: 0,
                                     align: 0,
@@ -333,8 +333,8 @@ impl LR2SelectSkinLoaderState {
                                 values[9],
                                 values[10],
                                 crate::skin_number::NumberDisplayConfig {
-                                    keta: divx,
-                                    zeropadding: values[11],
+                                    keta: values[13],
+                                    zeropadding: if d > 10 { 2 } else { 0 },
                                     space: 0,
                                     align: 0,
                                 },

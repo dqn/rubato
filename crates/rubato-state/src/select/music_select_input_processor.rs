@@ -70,6 +70,11 @@ impl MusicSelectInputProcessor {
             ctx.events.push(InputEvent::ExecuteEvent(EventType::Sort));
         }
 
+        // NUM3: LN mode switch
+        if input.is_control_key_pressed(ControlKeys::Num3) {
+            ctx.events.push(InputEvent::ExecuteEvent(EventType::Lnmode));
+        }
+
         let property = &MusicSelectKeyProperty::VALUES[config.select_settings.musicselectinput
             as usize
             % MusicSelectKeyProperty::VALUES.len()];
@@ -87,8 +92,13 @@ impl MusicSelectInputProcessor {
             }
         }
 
-        // NUM4: change replay
-        if input.is_control_key_pressed(ControlKeys::Num4) {
+        // NUM4 or configured NEXT_REPLAY key (when no option key held): change replay
+        if input.is_control_key_pressed(ControlKeys::Num4)
+            || (!input.start_pressed()
+                && !input.is_select_pressed()
+                && !input.control_key_state(ControlKeys::Num5)
+                && property.is_pressed(input, MusicSelectKey::NextReplay, true))
+        {
             ctx.events
                 .push(InputEvent::Execute(MusicSelectCommand::NextReplay));
         }
