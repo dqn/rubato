@@ -306,4 +306,11 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
             self.result.main.update_audio_config(audio);
         }
     }
+
+    fn play_option_change_sound(&mut self) {
+        self.result.main.play_sound(
+            &rubato_core::system_sound_manager::SoundType::OptionChange,
+            false,
+        );
+    }
 }

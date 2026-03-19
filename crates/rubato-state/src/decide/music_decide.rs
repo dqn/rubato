@@ -168,7 +168,7 @@ impl rubato_skin::reexports::MainState for DecideRenderContext<'_> {}
 struct DecideMouseContext<'a> {
     timer: &'a mut TimerManager,
     main: &'a mut MainControllerRef,
-    resource: &'a dyn PlayerResourceAccess,
+    resource: &'a mut dyn PlayerResourceAccess,
 }
 
 impl rubato_types::timer_access::TimerAccess for DecideMouseContext<'_> {
@@ -218,6 +218,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
 
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         Some(self.resource.player_config())
+    }
+
+    fn player_config_mut(&mut self) -> Option<&mut rubato_types::player_config::PlayerConfig> {
+        self.resource.player_config_mut()
+    }
+
+    fn play_option_change_sound(&mut self) {
+        self.main.play_sound(&SoundType::OptionChange, false);
     }
 }
 
@@ -312,7 +320,7 @@ impl MainState for MusicDecide {
             let mut ctx = DecideMouseContext {
                 timer: &mut timer,
                 main: &mut self.main,
-                resource: self.resource.as_ref(),
+                resource: &mut *self.resource,
             };
             skin.mouse_pressed_at(&mut ctx, button, x, y);
         }
@@ -332,7 +340,7 @@ impl MainState for MusicDecide {
             let mut ctx = DecideMouseContext {
                 timer: &mut timer,
                 main: &mut self.main,
-                resource: self.resource.as_ref(),
+                resource: &mut *self.resource,
             };
             skin.mouse_dragged_at(&mut ctx, button, x, y);
         }
