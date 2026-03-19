@@ -5,10 +5,9 @@ use rubato_core::audio_config::{DriverType, FrequencyType};
 use rubato_core::ir_config::IRConfig;
 use rubato_skin::skin_type::SkinType;
 
-use crate::views::config::obs_configuration_view::{ACTION_NONE, SCENE_NONE};
 use crate::views::skin_configuration_view::{SkinConfigItem, SkinConfigurationView};
 
-use super::{IR_SEND_LABELS, LauncherUi, OBS_REC_MODE_LABELS};
+use super::{IR_SEND_LABELS, LauncherUi};
 
 impl LauncherUi {
     pub(super) fn render_video_tab(&mut self, ui: &mut egui::Ui) {
@@ -701,102 +700,9 @@ impl LauncherUi {
 
     /// Java equivalent: ObsConfigurationView
     /// OBS WebSocket integration settings.
+    /// Delegates to ObsConfigurationView which handles connection, scene
+    /// fetching, and per-state scene/action selectors.
     pub(super) fn render_obs_tab(&mut self, ui: &mut egui::Ui) {
-        ui.heading("OBS WebSocket");
-
-        egui::Grid::new("obs_grid").show(ui, |ui| {
-            ui.label("Enable:");
-            ui.checkbox(&mut self.config.obs.use_obs_ws, "");
-            ui.end_row();
-
-            if self.config.obs.use_obs_ws {
-                ui.label("Host:");
-                ui.text_edit_singleline(&mut self.config.obs.obs_ws_host);
-                ui.end_row();
-
-                ui.label("Port:");
-                ui.add(egui::DragValue::new(&mut self.config.obs.obs_ws_port).range(1..=65535));
-                ui.end_row();
-
-                ui.label("Password:");
-                ui.text_edit_singleline(&mut self.config.obs.obs_ws_pass);
-                ui.end_row();
-
-                let selected_label = OBS_REC_MODE_LABELS
-                    .get(self.config.obs.obs_ws_rec_mode as usize)
-                    .unwrap_or(&"DEFAULT");
-                ui.label("Recording Mode:");
-                egui::ComboBox::from_id_salt("obs_rec_mode")
-                    .selected_text(*selected_label)
-                    .show_ui(ui, |ui| {
-                        for (i, label) in OBS_REC_MODE_LABELS.iter().enumerate() {
-                            ui.selectable_value(
-                                &mut self.config.obs.obs_ws_rec_mode,
-                                i as i32,
-                                *label,
-                            );
-                        }
-                    });
-                ui.end_row();
-
-                ui.label("Rec Stop Wait:");
-                ui.add(
-                    egui::DragValue::new(&mut self.config.obs.obs_ws_rec_stop_wait)
-                        .range(0..=10000),
-                );
-                ui.end_row();
-            }
-        });
-
-        if self.config.obs.use_obs_ws {
-            ui.separator();
-            ui.heading("State Actions");
-
-            // Action labels from OBS module
-            let actions = rubato_external::obs::obs_ws_client::obs_actions();
-            let action_labels: Vec<String> = std::iter::once(ACTION_NONE.to_string())
-                .chain(actions.keys().cloned())
-                .collect();
-
-            let obs_states = self.obs_states.clone();
-            egui::Grid::new("obs_state_grid")
-                .min_col_width(100.0)
-                .show(ui, |ui| {
-                    ui.label("State");
-                    ui.label("Scene");
-                    ui.label("Action");
-                    ui.end_row();
-
-                    for state in &obs_states {
-                        ui.label(state);
-
-                        // Scene selector (disabled until connected, show saved value)
-                        let scene_val = self
-                            .obs_scene_selections
-                            .entry(state.clone())
-                            .or_insert_with(|| SCENE_NONE.to_string());
-                        egui::ComboBox::from_id_salt(format!("obs_scene_{}", state))
-                            .selected_text(scene_val.as_str())
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(scene_val, SCENE_NONE.to_string(), SCENE_NONE);
-                            });
-
-                        // Action selector
-                        let action_val = self
-                            .obs_action_selections
-                            .entry(state.clone())
-                            .or_insert_with(|| ACTION_NONE.to_string());
-                        egui::ComboBox::from_id_salt(format!("obs_action_{}", state))
-                            .selected_text(action_val.as_str())
-                            .show_ui(ui, |ui| {
-                                for label in &action_labels {
-                                    ui.selectable_value(action_val, label.clone(), label.as_str());
-                                }
-                            });
-
-                        ui.end_row();
-                    }
-                });
-        }
+        self.obs_view.render(ui);
     }
 }

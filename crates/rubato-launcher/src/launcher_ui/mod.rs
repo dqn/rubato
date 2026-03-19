@@ -9,11 +9,10 @@ mod tests;
 
 use bms_model::mode::Mode;
 use rubato_core::config::Config;
-use rubato_core::main_state::MainStateType;
 use rubato_core::player_config::PlayerConfig;
 
-use crate::views::config::obs_configuration_view::{ACTION_NONE, SCENE_NONE};
-use crate::views::play_configuration_view::PlayMode;
+use crate::views::config::obs_configuration_view::ObsConfigurationView;
+use crate::views::play_configuration_view::{PlayConfigurationView, PlayMode};
 use crate::views::skin_configuration_view::SkinConfigurationView;
 
 /// Tab selection for the launcher UI.
@@ -68,7 +67,6 @@ impl Tab {
 }
 
 const IR_SEND_LABELS: [&str; 3] = ["ALWAYS", "COMPLETE SONG", "UPDATE SCORE"];
-const OBS_REC_MODE_LABELS: [&str; 3] = ["DEFAULT", "ON SCREENSHOT", "ON REPLAY"];
 
 /// Main launcher UI state.
 ///
@@ -94,12 +92,8 @@ pub struct LauncherUi {
     webhook_urls: Vec<String>,
     /// New webhook URL input buffer.
     webhook_url_input: String,
-    /// OBS state names (ordered list for consistent rendering).
-    obs_states: Vec<String>,
-    /// OBS scene selection per state.
-    obs_scene_selections: std::collections::HashMap<String, String>,
-    /// OBS action selection per state.
-    obs_action_selections: std::collections::HashMap<String, String>,
+    /// OBS configuration sub-view (connection, scene/action selectors).
+    obs_view: ObsConfigurationView,
     /// Whether the "What's New" popup is open.
     show_whats_new: bool,
     /// What's New message text.
@@ -142,55 +136,12 @@ impl LauncherUi {
         let webhook_urls = config.integration.webhook_url.clone();
         let bms_paths = config.paths.bmsroot.clone();
 
-        // Initialize OBS state rows
-        let mut obs_states = Vec::new();
-        let obs_state_types = [
-            MainStateType::MusicSelect,
-            MainStateType::Decide,
-            MainStateType::Play,
-            MainStateType::Result,
-            MainStateType::CourseResult,
-            MainStateType::Config,
-            MainStateType::SkinConfig,
-        ];
-        let mut obs_scene_selections = std::collections::HashMap::new();
-        let mut obs_action_selections = std::collections::HashMap::new();
-        for state in &obs_state_types {
-            let name = state.obs_key().to_string();
-            obs_states.push(name.clone());
-            let scene = config.obs_scene(&name).cloned().unwrap_or_default();
-            obs_scene_selections.insert(
-                name.clone(),
-                if scene.is_empty() {
-                    SCENE_NONE.to_string()
-                } else {
-                    scene
-                },
-            );
-            let action_label = config
-                .obs_action(&name)
-                .and_then(|a| rubato_external::obs::obs_ws_client::action_label(a))
-                .unwrap_or_else(|| ACTION_NONE.to_string());
-            obs_action_selections.insert(name.clone(), action_label);
-
-            if name == "PLAY" {
-                obs_states.push("PLAY_ENDED".to_string());
-                let scene_ended = config.obs_scene("PLAY_ENDED").cloned().unwrap_or_default();
-                obs_scene_selections.insert(
-                    "PLAY_ENDED".to_string(),
-                    if scene_ended.is_empty() {
-                        SCENE_NONE.to_string()
-                    } else {
-                        scene_ended
-                    },
-                );
-                let action_ended = config
-                    .obs_action("PLAY_ENDED")
-                    .and_then(|a| rubato_external::obs::obs_ws_client::action_label(a))
-                    .unwrap_or_else(|| ACTION_NONE.to_string());
-                obs_action_selections.insert("PLAY_ENDED".to_string(), action_ended);
-            }
-        }
+        // Initialize OBS configuration view
+        let mut obs_view = ObsConfigurationView::new();
+        obs_view.initialize();
+        let dummy_main = PlayConfigurationView::new();
+        obs_view.init(&dummy_main);
+        obs_view.update(config.clone());
 
         Self {
             config,
@@ -206,9 +157,7 @@ impl LauncherUi {
             skin_view,
             webhook_urls,
             webhook_url_input: String::new(),
-            obs_states,
-            obs_scene_selections,
-            obs_action_selections,
+            obs_view,
             show_whats_new: false,
             whats_new_text: String::new(),
             chart_details_open: false,
@@ -440,26 +389,10 @@ impl LauncherUi {
         self.config.paths.bmsroot = self.bms_paths.clone();
         // Commit webhook URLs
         self.config.integration.webhook_url = self.webhook_urls.clone();
-        // Commit OBS scene/action selections
-        let actions = rubato_external::obs::obs_ws_client::obs_actions();
-        for state in &self.obs_states {
-            if let Some(scene) = self.obs_scene_selections.get(state) {
-                let scene_val = if scene == SCENE_NONE {
-                    String::new()
-                } else {
-                    scene.clone()
-                };
-                self.config.set_obs_scene(state.clone(), Some(scene_val));
-            }
-            if let Some(action_label) = self.obs_action_selections.get(state) {
-                if action_label == ACTION_NONE {
-                    self.config
-                        .set_obs_action(state.clone(), Some(String::new()));
-                } else if let Some(action_req) = actions.get(action_label) {
-                    self.config
-                        .set_obs_action(state.clone(), Some(action_req.clone()));
-                }
-            }
+        // Commit OBS configuration (scene/action selections, connection settings)
+        self.obs_view.commit();
+        if let Some(obs_config) = self.obs_view.config() {
+            self.config.obs = obs_config.obs.clone();
         }
         // Flush IR userid/password buffers (triggers AES encryption)
         self.flush_ir_buffers();

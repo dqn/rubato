@@ -266,6 +266,11 @@ impl ObsConfigurationView {
         }
     }
 
+    /// Returns a reference to the internal config, if set.
+    pub fn config(&self) -> Option<&Config> {
+        self.config.as_ref()
+    }
+
     /// connect - initiates OBS WebSocket connection
     /// In Java, this spawns a new Thread. In Rust, this would use tokio::spawn.
     pub fn connect(&mut self) {
