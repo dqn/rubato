@@ -141,6 +141,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
         self.is_mode_changed
     }
 
+    fn is_media_load_finished(&self) -> bool {
+        self.media_load_finished
+    }
+
+    fn is_practice_mode(&self) -> bool {
+        self.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice
+    }
+
     fn gauge_element_borders(&self) -> Vec<(f32, f32)> {
         match self.gauge {
             Some(g) => (0..g.gauge_type_length())
@@ -437,6 +445,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
                 .unwrap_or(bms_model::mode::Mode::BEAT_7K)
                 != org
         })
+    }
+
+    fn is_media_load_finished(&self) -> bool {
+        self.player.media_load_finished
+    }
+
+    fn is_practice_mode(&self) -> bool {
+        self.player.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice
     }
 
     fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
@@ -1449,6 +1465,106 @@ mod tests {
         assert!(
             ctx.player.system_volume.abs() < f32::EPSILON,
             "set_float_value must clamp values below 0.0"
+        );
+    }
+
+    // ============================================================
+    // is_media_load_finished() delegation tests
+    // ============================================================
+
+    #[test]
+    fn play_render_context_is_media_load_finished_true() {
+        let mut ctx = make_render_ctx(0);
+        ctx.media_load_finished = true;
+        assert!(
+            ctx.is_media_load_finished(),
+            "PlayRenderContext::is_media_load_finished() must return true when media_load_finished is true"
+        );
+    }
+
+    #[test]
+    fn play_render_context_is_media_load_finished_false() {
+        let ctx = make_render_ctx(0);
+        assert!(
+            !ctx.is_media_load_finished(),
+            "PlayRenderContext::is_media_load_finished() must return false when media_load_finished is false"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_is_media_load_finished_true() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        player.media_load_finished = true;
+        let ctx = PlayMouseContext { timer, player };
+        assert!(
+            ctx.is_media_load_finished(),
+            "PlayMouseContext::is_media_load_finished() must return true when player.media_load_finished is true"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_is_media_load_finished_false() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        let ctx = PlayMouseContext { timer, player };
+        assert!(
+            !ctx.is_media_load_finished(),
+            "PlayMouseContext::is_media_load_finished() must return false by default"
+        );
+    }
+
+    // ============================================================
+    // is_practice_mode() delegation tests
+    // ============================================================
+
+    #[test]
+    fn play_render_context_is_practice_mode_true() {
+        let mut ctx = make_render_ctx(0);
+        ctx.play_mode = BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Practice);
+        assert!(
+            ctx.is_practice_mode(),
+            "PlayRenderContext::is_practice_mode() must return true in Practice mode"
+        );
+    }
+
+    #[test]
+    fn play_render_context_is_practice_mode_false() {
+        let ctx = make_render_ctx(0);
+        assert!(
+            !ctx.is_practice_mode(),
+            "PlayRenderContext::is_practice_mode() must return false in Play mode"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_is_practice_mode_true() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        player.play_mode = BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Practice);
+        let ctx = PlayMouseContext { timer, player };
+        assert!(
+            ctx.is_practice_mode(),
+            "PlayMouseContext::is_practice_mode() must return true in Practice mode"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_is_practice_mode_false() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        let ctx = PlayMouseContext { timer, player };
+        assert!(
+            !ctx.is_practice_mode(),
+            "PlayMouseContext::is_practice_mode() must return false in Play mode"
         );
     }
 

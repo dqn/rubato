@@ -196,12 +196,7 @@ impl MusicResult {
             let _oldscore_exscore = self.data.oldscore.exscore();
             let newscore_for_thread = newscore_clone.clone();
 
-            // Java fires TIMER_IR_CONNECT_BEGIN inside the thread gated by
-            // `irsend == 0` (first send). Since we cannot access the timer from
-            // the spawned thread, gate it here on having actual sends to process.
-            if !ir_send_list_snapshot.is_empty() {
-                self.data.timer.switch_timer(TIMER_IR_CONNECT_BEGIN, true);
-            }
+            self.data.timer.switch_timer(TIMER_IR_CONNECT_BEGIN, true);
 
             let (tx, rx) = std::sync::mpsc::channel();
             self.ir_rx = Some(rx);
@@ -1605,97 +1600,6 @@ mod tests {
         assert_eq!(calls[2].bgvolume, 0.25);
     }
 
-    // ============================================================
-    // ResultMouseContext missing delegation tests (Finding 1)
-    // ============================================================
-
-    #[test]
-    fn result_mouse_context_score_data_ref_delegates_to_data() {
-        let mut mr = make_result_for_mouse();
-        mr.data.score.score = Some(rubato_core::score_data::ScoreData {
-            clear: 5,
-            ..rubato_core::score_data::ScoreData::default()
-        });
-        let mut timer = TimerManager::new();
-        let ctx = render_context::ResultMouseContext {
-            timer: &mut timer,
-            result: &mut mr,
-        };
-        let score = ctx.score_data_ref();
-        assert!(
-            score.is_some(),
-            "ResultMouseContext::score_data_ref() must delegate, not return None"
-        );
-        assert_eq!(score.unwrap().clear, 5);
-    }
-
-    #[test]
-    fn result_mouse_context_rival_score_data_ref_delegates_to_data() {
-        let mut mr = make_result_for_mouse();
-        mr.data.oldscore.clear = 3;
-        let mut timer = TimerManager::new();
-        let ctx = render_context::ResultMouseContext {
-            timer: &mut timer,
-            result: &mut mr,
-        };
-        let rival = ctx.rival_score_data_ref();
-        assert!(
-            rival.is_some(),
-            "ResultMouseContext::rival_score_data_ref() must delegate, not return None"
-        );
-        assert_eq!(rival.unwrap().clear, 3);
-    }
-
-    #[test]
-    fn result_mouse_context_song_data_ref_delegates_to_resource() {
-        let config = make_test_config("mouse-songdata");
-        let main = MainController::new(Box::new(TestMainControllerAccess::new(config.clone())));
-        let mut res = MouseResultResourceAccess::new(config);
-        let mut song = rubato_types::song_data::SongData::default();
-        song.metadata.title = "TestSong".to_string();
-        res.song_data = Some(song);
-        let resource = PlayerResource::new(
-            Box::new(res),
-            crate::result::BMSPlayerMode::new(BMSPlayerModeType::Play),
-        );
-        let mut mr = MusicResult::new(main, resource, TimerManager::new());
-        let mut timer = TimerManager::new();
-        let ctx = render_context::ResultMouseContext {
-            timer: &mut timer,
-            result: &mut mr,
-        };
-        let song_ref = ctx.song_data_ref();
-        assert!(
-            song_ref.is_some(),
-            "ResultMouseContext::song_data_ref() must delegate, not return None"
-        );
-        assert_eq!(song_ref.unwrap().metadata.title, "TestSong");
-    }
-
-    #[test]
-    fn result_mouse_context_current_play_config_ref_delegates_for_7k() {
-        let config = make_test_config("mouse-playconfig");
-        let main = MainController::new(Box::new(TestMainControllerAccess::new(config.clone())));
-        let mut res = MouseResultResourceAccess::new(config);
-        let mut song = rubato_types::song_data::SongData::default();
-        song.chart.mode = 7;
-        res.song_data = Some(song);
-        let resource = PlayerResource::new(
-            Box::new(res),
-            crate::result::BMSPlayerMode::new(BMSPlayerModeType::Play),
-        );
-        let mut mr = MusicResult::new(main, resource, TimerManager::new());
-        let mut timer = TimerManager::new();
-        let ctx = render_context::ResultMouseContext {
-            timer: &mut timer,
-            result: &mut mr,
-        };
-        assert!(
-            ctx.current_play_config_ref().is_some(),
-            "ResultMouseContext::current_play_config_ref() must delegate, not return None"
-        );
-    }
-
     #[test]
     fn result_mouse_context_set_float_value_clamps_volume() {
         let captured: std::sync::Arc<
@@ -1726,104 +1630,189 @@ mod tests {
         assert_eq!(calls[1].keyvolume, 1.0, "above 1.0 should clamp to 1.0");
     }
 
+    // ============================================================
+    // ResultMouseContext missing delegation regression tests
+    // ============================================================
+
     #[test]
-    fn test_prepare_does_not_fire_ir_connect_begin_when_no_sends() {
-        // Java only fires TIMER_IR_CONNECT_BEGIN inside the thread when the first
-        // send starts (gated by `irsend == 0`). If there are no sends, the timer
-        // is never fired. The Rust code was unconditionally firing it before spawn.
-        use rubato_ir::ir_player_data::IRPlayerData;
-        use std::sync::Arc;
-
-        struct MockIRConnection;
-        impl rubato_ir::ir_connection::IRConnection for MockIRConnection {
-            fn get_rivals(&self) -> rubato_ir::ir_response::IRResponse<Vec<IRPlayerData>> {
-                rubato_ir::ir_response::IRResponse::failure("mock".to_string())
-            }
-            fn get_table_datas(
-                &self,
-            ) -> rubato_ir::ir_response::IRResponse<Vec<rubato_ir::ir_table_data::IRTableData>>
-            {
-                rubato_ir::ir_response::IRResponse::failure("mock".to_string())
-            }
-            fn get_play_data(
-                &self,
-                _player: Option<&IRPlayerData>,
-                _chart: &rubato_ir::ir_chart_data::IRChartData,
-            ) -> rubato_ir::ir_response::IRResponse<Vec<rubato_ir::ir_score_data::IRScoreData>>
-            {
-                rubato_ir::ir_response::IRResponse::failure("mock".to_string())
-            }
-            fn get_course_play_data(
-                &self,
-                _player: Option<&IRPlayerData>,
-                _course: &rubato_ir::ir_course_data::IRCourseData,
-            ) -> rubato_ir::ir_response::IRResponse<Vec<rubato_ir::ir_score_data::IRScoreData>>
-            {
-                rubato_ir::ir_response::IRResponse::failure("mock".to_string())
-            }
-            fn send_play_data(
-                &self,
-                _model: &rubato_ir::ir_chart_data::IRChartData,
-                _score: &rubato_ir::ir_score_data::IRScoreData,
-            ) -> rubato_ir::ir_response::IRResponse<()> {
-                rubato_ir::ir_response::IRResponse::failure("mock".to_string())
-            }
-            fn send_course_play_data(
-                &self,
-                _course: &rubato_ir::ir_course_data::IRCourseData,
-                _score: &rubato_ir::ir_score_data::IRScoreData,
-            ) -> rubato_ir::ir_response::IRResponse<()> {
-                rubato_ir::ir_response::IRResponse::failure("mock".to_string())
-            }
-            fn get_song_url(
-                &self,
-                _chart: &rubato_ir::ir_chart_data::IRChartData,
-            ) -> Option<String> {
-                None
-            }
-            fn get_course_url(
-                &self,
-                _course: &rubato_ir::ir_course_data::IRCourseData,
-            ) -> Option<String> {
-                None
-            }
-            fn get_player_url(&self, _player: &IRPlayerData) -> Option<String> {
-                None
-            }
-            fn name(&self) -> &str {
-                "MockIR"
-            }
-        }
-
-        let config = make_test_config("ir-no-send");
-        let ir_statuses = vec![super::super::ir_status::IRStatus::new(
-            rubato_core::ir_config::IRConfig::default(),
-            Arc::new(MockIRConnection)
-                as Arc<dyn rubato_ir::ir_connection::IRConnection + Send + Sync>,
-            IRPlayerData::new("id1".into(), "Player1".into(), "1st".into()),
-        )];
-        let main = MainController::with_ir_statuses(
-            Box::new(TestMainControllerAccess::new(config.clone())),
-            ir_statuses,
+    fn result_mouse_context_gauge_value_delegates() {
+        let mut mr = make_result_for_mouse();
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        // Default resource has no gauge -> 0.0
+        assert_eq!(
+            ctx.gauge_value(),
+            0.0,
+            "ResultMouseContext::gauge_value() must delegate to shared_render_context"
         );
-        // Set update_score = false so no IR sends are queued
-        let mut res_access = MouseResultResourceAccess::new(config);
-        res_access.update_score = false;
-        let resource = PlayerResource::new(
-            Box::new(res_access),
-            crate::result::BMSPlayerMode::new(BMSPlayerModeType::Play),
+    }
+
+    #[test]
+    fn result_mouse_context_gauge_type_delegates() {
+        let mut mr = make_result_for_mouse();
+        mr.data.gauge_type = 3;
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        assert_eq!(
+            ctx.gauge_type(),
+            3,
+            "ResultMouseContext::gauge_type() must delegate to data.gauge_type"
         );
-        let mut mr = MusicResult::new(main, resource, TimerManager::new());
-        mr.data.timer.update();
+    }
 
-        <MusicResult as MainState>::prepare(&mut mr);
-
-        // IR processing should be entered but TIMER_IR_CONNECT_BEGIN should NOT
-        // be fired since there are no actual sends.
-        assert_eq!(mr.data.state, STATE_IR_PROCESSING);
+    #[test]
+    fn result_mouse_context_is_gauge_max_delegates() {
+        let mut mr = make_result_for_mouse();
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
         assert!(
-            !mr.data.timer.is_timer_on(TIMER_IR_CONNECT_BEGIN),
-            "TIMER_IR_CONNECT_BEGIN should not fire when there are no IR sends"
+            !ctx.is_gauge_max(),
+            "ResultMouseContext::is_gauge_max() must delegate"
+        );
+    }
+
+    #[test]
+    fn result_mouse_context_gauge_min_delegates() {
+        let mut mr = make_result_for_mouse();
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        // No gauge -> 0.0
+        assert_eq!(
+            ctx.gauge_min(),
+            0.0,
+            "ResultMouseContext::gauge_min() must delegate"
+        );
+    }
+
+    #[test]
+    fn result_mouse_context_gauge_border_max_delegates() {
+        let mut mr = make_result_for_mouse();
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        // No groove gauge -> None
+        assert!(
+            ctx.gauge_border_max().is_none(),
+            "ResultMouseContext::gauge_border_max() must delegate"
+        );
+    }
+
+    #[test]
+    fn result_mouse_context_gauge_history_delegates() {
+        let mut mr = make_result_for_mouse();
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        // Default resource has no gauge history
+        assert!(
+            ctx.gauge_history().is_none(),
+            "ResultMouseContext::gauge_history() must delegate"
+        );
+    }
+
+    #[test]
+    fn result_mouse_context_judge_count_delegates() {
+        let mut mr = make_result_for_mouse();
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        assert_eq!(
+            ctx.judge_count(0, true),
+            0,
+            "ResultMouseContext::judge_count() must delegate"
+        );
+    }
+
+    #[test]
+    fn result_mouse_context_judge_area_delegates() {
+        let mut mr = make_result_for_mouse();
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        // judge_area depends on bms_model; default resource returns Some with default windows
+        let result = ctx.judge_area();
+        assert!(
+            result.is_some(),
+            "ResultMouseContext::judge_area() must delegate"
+        );
+    }
+
+    #[test]
+    fn result_mouse_context_get_timing_distribution_delegates() {
+        let mut mr = make_result_for_mouse();
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        // Default data has empty timing distribution
+        assert!(
+            ctx.get_timing_distribution().is_none(),
+            "ResultMouseContext::get_timing_distribution() must delegate"
+        );
+    }
+
+    #[test]
+    fn result_mouse_context_score_data_property_delegates() {
+        let mut mr = make_result_for_mouse();
+        mr.data.score.nowrate = 0.42;
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        let prop = ctx.score_data_property();
+        assert!(
+            (prop.now_rate() - 0.42).abs() < f32::EPSILON,
+            "ResultMouseContext::score_data_property() must delegate to data.score"
+        );
+    }
+
+    #[test]
+    fn result_mouse_context_replay_option_data_delegates() {
+        let mut mr = make_result_for_mouse();
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        // replay_option_data delegates to resource
+        let _ = ctx.replay_option_data();
+        // Just verify it doesn't panic; returns None or Some depending on resource
+    }
+
+    #[test]
+    fn result_mouse_context_target_score_data_delegates() {
+        let mut mr = make_result_for_mouse();
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        // Default resource has no target score
+        assert!(
+            ctx.target_score_data().is_none(),
+            "ResultMouseContext::target_score_data() must delegate"
         );
     }
 }

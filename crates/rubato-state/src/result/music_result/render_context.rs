@@ -268,6 +268,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
         shared_render_context::config_ref(&self.result.main)
     }
 
+    fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
+        shared_render_context::replay_option_data(&self.result.resource)
+    }
+
+    fn target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
+        shared_render_context::target_score_data(&self.result.resource)
+    }
+
     fn score_data_ref(&self) -> Option<&rubato_core::score_data::ScoreData> {
         shared_render_context::score_data_ref(&self.result.data)
     }
@@ -303,6 +311,48 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
                 .play_config_ref(mode)
                 .playconfig,
         )
+    }
+
+    fn gauge_value(&self) -> f32 {
+        shared_render_context::gauge_value(&self.result.resource)
+    }
+
+    fn gauge_type(&self) -> i32 {
+        shared_render_context::gauge_type(&self.result.data)
+    }
+
+    fn is_gauge_max(&self) -> bool {
+        shared_render_context::is_gauge_max(&self.result.resource)
+    }
+
+    fn gauge_min(&self) -> f32 {
+        shared_render_context::gauge_min(&self.result.resource, self.result.data.gauge_type)
+    }
+
+    fn gauge_border_max(&self) -> Option<(f32, f32)> {
+        shared_render_context::gauge_border_max(&self.result.resource, self.result.data.gauge_type)
+    }
+
+    fn gauge_history(&self) -> Option<&Vec<Vec<f32>>> {
+        shared_render_context::gauge_history(&self.result.resource)
+    }
+
+    fn judge_count(&self, judge: i32, fast: bool) -> i32 {
+        shared_render_context::judge_count(&self.result.data, judge, fast)
+    }
+
+    fn judge_area(&self) -> Option<Vec<Vec<i32>>> {
+        shared_render_context::judge_area(&self.result.resource)
+    }
+
+    fn get_timing_distribution(
+        &self,
+    ) -> Option<&rubato_types::timing_distribution::TimingDistribution> {
+        shared_render_context::get_timing_distribution(&self.result.data)
+    }
+
+    fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
+        shared_render_context::score_data_property(&self.result.data)
     }
 
     fn execute_event(&mut self, id: i32, _arg1: i32, _arg2: i32) {

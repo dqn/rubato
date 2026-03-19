@@ -709,6 +709,42 @@ fn test_get_score_data_property_date_i64() {
     assert_eq!(score_data_property(&score, "date"), 3_000_000_000_i64);
 }
 
+// ---- evaluate_filter_expression bare integer equality tests ----
+
+#[test]
+fn test_evaluate_filter_bare_integer_equality_match() {
+    // Java: propertyValue.equals(value) for bare integer strings.
+    // A bare "5" should match when property_value == 5.
+    assert!(evaluate_filter_expression("5", 5));
+}
+
+#[test]
+fn test_evaluate_filter_bare_integer_equality_mismatch() {
+    // A bare "5" should NOT match when property_value != 5.
+    assert!(!evaluate_filter_expression("5", 3));
+    assert!(!evaluate_filter_expression("5", 6));
+}
+
+#[test]
+fn test_evaluate_filter_bare_zero_equality() {
+    assert!(evaluate_filter_expression("0", 0));
+    assert!(!evaluate_filter_expression("0", 1));
+}
+
+#[test]
+fn test_evaluate_filter_bare_negative_equality() {
+    // Negative bare integer should also work as equality check.
+    // Note: "-5" does not match any operator prefix since '-' is not an operator.
+    assert!(evaluate_filter_expression("-5", -5));
+    assert!(!evaluate_filter_expression("-5", 5));
+}
+
+#[test]
+fn test_evaluate_filter_non_numeric_string_passes() {
+    // Non-numeric, non-operator string should still return true (no recognized filter).
+    assert!(evaluate_filter_expression("abc", 42));
+}
+
 // ---- bar_class_name tests ----
 
 #[test]
