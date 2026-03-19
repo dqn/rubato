@@ -810,6 +810,7 @@ impl RandomDirectiveState {
                 State::Warning,
                 "#IFに対応する#RANDOMが定義されていません",
             ));
+            self.skip.push(true);
         }
     }
 
@@ -1648,5 +1649,35 @@ mod tests {
         let data = make_bms_bytes(&["#BPM 120", "#", "X"]);
         let model = decoder.decode_bytes(&data, false, None);
         assert!(model.is_some());
+    }
+
+    // -- RANDOM/IF/ENDIF directive tests --
+
+    #[test]
+    fn orphaned_if_without_random_skips_content() {
+        // An orphaned #IF (no preceding #RANDOM) should skip its body.
+        // Before the fix, the content between #IF and #ENDIF was parsed as
+        // live data because handle_if did not push to the skip stack.
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#TITLE Correct",
+            "#IF 1",
+            "#TITLE Wrong",
+            "#ENDIF",
+        ]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        let model = model.unwrap();
+        // The title inside the orphaned #IF block must NOT override the one outside.
+        assert_eq!(model.title, "Correct");
+        // The decoder should have logged a warning about the orphaned #IF.
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("#IFに対応する#RANDOM")),
+            "Expected warning about orphaned #IF"
+        );
     }
 }
