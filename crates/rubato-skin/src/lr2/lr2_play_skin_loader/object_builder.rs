@@ -298,6 +298,11 @@ impl LR2SkinLoaderAccess for LR2PlaySkinLoaderState {
             skin.add(SkinObject::Note(note_obj));
         }
 
+        // 5a. Add SkinHidden (lane cover) object if created during SRC_HIDDEN/SRC_LIFT parsing
+        if let Some(hidden) = self.hidden.take() {
+            skin.add(SkinObject::Hidden(hidden));
+        }
+
         // 5. Create SkinBgaObject if BGA was requested
         if self.bga {
             let bga_obj = crate::skin_bga_object::SkinBgaObject::new(0);

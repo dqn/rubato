@@ -594,27 +594,118 @@ impl LR2PlaySkinLoaderState {
                 // skin.setDestination(timingobj, ...)
             }
             "SRC_HIDDEN" | "SRC_LIFT" => {
+                self.hidden = None;
                 let values = lr2_skin_loader::parse_int(str_parts);
-                let _images = self.csv.source_image(&values);
-                // hidden = new SkinHidden(images, values[10], values[9])
-                self.hidden = true;
+                if let Some(images) = self.csv.source_image(&values) {
+                    let mut h = crate::objects::skin_hidden::SkinHidden::new_with_int_timer(
+                        images, values[10], values[9],
+                    );
+                    // Java: if(str[11].length() > 0 && values[11] > 0) hidden.setDisapearLine(dsth - values[11] * dsth / srch)
+                    let str11 = str_parts.get(11).map(|s| s.trim()).unwrap_or("");
+                    if !str11.is_empty() && values[11] > 0 {
+                        let dsth = safe_div_f32(self.dsth, self.srch);
+                        h.set_disapear_line(self.dsth - values[11] as f32 * dsth);
+                    }
+                    // Java: hidden.setDisapearLineLinkLift(str[12].length() == 0 || values[12] != 0)
+                    let str12 = str_parts.get(12).map(|s| s.trim()).unwrap_or("");
+                    h.is_disapear_line_link_lift = str12.is_empty() || values[12] != 0;
+                    self.hidden = Some(h);
+                }
             }
             "DST_HIDDEN" => {
-                if self.hidden {
-                    let values = lr2_skin_loader::parse_int(str_parts);
+                if let Some(ref mut hidden) = self.hidden {
+                    let mut values = lr2_skin_loader::parse_int(str_parts);
+                    if values[5] < 0 {
+                        values[3] += values[5];
+                        values[5] = -values[5];
+                    }
+                    if values[6] < 0 {
+                        values[4] += values[6];
+                        values[6] = -values[6];
+                    }
+                    let offset = LR2SkinCSVLoaderState::read_offset_with_base(
+                        str_parts,
+                        21,
+                        &[
+                            crate::skin_property::OFFSET_LIFT,
+                            crate::skin_property::OFFSET_HIDDEN_COVER,
+                        ],
+                    );
+                    hidden.data.set_destination_with_int_timer_and_offsets(
+                        &DestinationParams {
+                            time: values[2] as i64,
+                            x: values[3] as f32 * safe_div_f32(self.dstw, self.srcw),
+                            y: self.dsth
+                                - (values[4] + values[6]) as f32
+                                    * safe_div_f32(self.dsth, self.srch),
+                            w: values[5] as f32 * safe_div_f32(self.dstw, self.srcw),
+                            h: values[6] as f32 * safe_div_f32(self.dsth, self.srch),
+                            acc: values[7],
+                            a: values[8],
+                            r: values[9],
+                            g: values[10],
+                            b: values[11],
+                            blend: values[12],
+                            filter: values[13],
+                            angle: values[14],
+                            center: values[15],
+                            loop_val: values[16],
+                        },
+                        values[17],
+                        values[18],
+                        values[19],
+                        values[20],
+                        &offset,
+                    );
                     // Store the Y coordinate for lane cover position calculation.
-                    // Java: skin.laneCover.setDestination(...) then
-                    // getLaneCoverPosition() returns last destination's y.
-                    // DST format: [0]=?, [1]=?, [2]=time, [3]=x, [4]=y, [5]=w, [6]=h, ...
+                    // Java: getLaneCoverPosition() returns last destination's y.
                     let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                     self.lane_cover_dst_y =
                         self.csv.dst.height - (values[4] + values[6]) as f32 * dsth;
                 }
             }
             "DST_LIFT" => {
-                if self.hidden {
-                    let _values = lr2_skin_loader::parse_int(str_parts);
-                    // hidden.setDestination(...)
+                if let Some(ref mut hidden) = self.hidden {
+                    let mut values = lr2_skin_loader::parse_int(str_parts);
+                    if values[5] < 0 {
+                        values[3] += values[5];
+                        values[5] = -values[5];
+                    }
+                    if values[6] < 0 {
+                        values[4] += values[6];
+                        values[6] = -values[6];
+                    }
+                    let offset = LR2SkinCSVLoaderState::read_offset_with_base(
+                        str_parts,
+                        21,
+                        &[crate::skin_property::OFFSET_LIFT],
+                    );
+                    hidden.data.set_destination_with_int_timer_and_offsets(
+                        &DestinationParams {
+                            time: values[2] as i64,
+                            x: values[3] as f32 * safe_div_f32(self.dstw, self.srcw),
+                            y: self.dsth
+                                - (values[4] + values[6]) as f32
+                                    * safe_div_f32(self.dsth, self.srch),
+                            w: values[5] as f32 * safe_div_f32(self.dstw, self.srcw),
+                            h: values[6] as f32 * safe_div_f32(self.dsth, self.srch),
+                            acc: values[7],
+                            a: values[8],
+                            r: values[9],
+                            g: values[10],
+                            b: values[11],
+                            blend: values[12],
+                            filter: values[13],
+                            angle: values[14],
+                            center: values[15],
+                            loop_val: values[16],
+                        },
+                        values[17],
+                        values[18],
+                        values[19],
+                        values[20],
+                        &offset,
+                    );
                 }
             }
             "DST_PM_CHARA_1P" | "DST_PM_CHARA_2P" => {

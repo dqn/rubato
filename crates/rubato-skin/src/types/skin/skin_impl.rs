@@ -22,7 +22,8 @@ pub struct Skin {
     pub scene: i32,
     /// Fadeout time (ms)
     pub fadeout: i32,
-    /// Rank animation time (ms) -- result/course-result skins only
+    /// Rank animation time (ms) -- result/course-result skins only.
+    /// Controls score animation timing. Set by LR2 STARTINPUT str[2].
     pub ranktime: i32,
 
     pub option: HashMap<i32, i32>,
