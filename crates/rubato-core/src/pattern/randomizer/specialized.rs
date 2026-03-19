@@ -77,7 +77,7 @@ impl SRandomizer {
             {
                 if note.is_end()
                     && self.base.ln_active.contains_key(&x)
-                    && tl.time() == note.time() as i64
+                    && tl.time() == note.time()
                 {
                     self.base.ln_active.remove(&x);
                     self.base.changeable_lane.push(x);
@@ -169,7 +169,7 @@ impl SpiralRandomizer {
             {
                 if note.is_end()
                     && self.base.ln_active.contains_key(&x)
-                    && tl.time() == note.time() as i64
+                    && tl.time() == note.time()
                 {
                     self.base.ln_active.remove(&x);
                     self.base.changeable_lane.push(x);
@@ -334,7 +334,7 @@ impl AllScratchRandomizer {
             {
                 if note.is_end()
                     && self.base.ln_active.contains_key(&x)
-                    && tl.time() == note.time() as i64
+                    && tl.time() == note.time()
                 {
                     self.base.ln_active.remove(&x);
                     self.base.changeable_lane.push(x);
@@ -576,7 +576,7 @@ impl NoMurioshiRandomizer {
             {
                 if note.is_end()
                     && self.base.ln_active.contains_key(&x)
-                    && tl.time() == note.time() as i64
+                    && tl.time() == note.time()
                 {
                     self.base.ln_active.remove(&x);
                     self.base.changeable_lane.push(x);
@@ -699,7 +699,7 @@ impl ConvergeRandomizer {
             {
                 if note.is_end()
                     && self.base.ln_active.contains_key(&x)
-                    && tl.time() == note.time() as i64
+                    && tl.time() == note.time()
                 {
                     self.base.ln_active.remove(&x);
                     self.base.changeable_lane.push(x);

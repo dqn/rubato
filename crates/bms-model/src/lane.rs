@@ -67,7 +67,7 @@ impl Lane {
         self.hiddenseekpos = self.hiddenbasepos;
     }
 
-    pub fn mark(&mut self, time: i32) {
+    pub fn mark(&mut self, time: i64) {
         if !self.notes.is_empty() {
             while self.notebasepos < self.notes.len() - 1
                 && self.notes[self.notebasepos + 1].time() < time

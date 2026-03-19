@@ -112,7 +112,7 @@ impl RandomizerBase {
             {
                 if note.is_end()
                     && self.ln_active.contains_key(&x)
-                    && tl.time() == note.time() as i64
+                    && tl.time() == note.time()
                 {
                     self.ln_active.remove(&x);
                     self.changeable_lane.push(x);

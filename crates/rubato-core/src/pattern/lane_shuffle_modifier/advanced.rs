@@ -384,7 +384,7 @@ impl LanePlayableRandomShuffleModifier {
                             ln[i] = i as i32;
                             if !n.is_end() {
                                 // Get pair time
-                                end_ln_note_time[i] = n.time() as i64;
+                                end_ln_note_time[i] = n.time();
                             }
                         }
                     }

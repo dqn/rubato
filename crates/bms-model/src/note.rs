@@ -182,8 +182,8 @@ impl Note {
         self.data_mut().section = section;
     }
 
-    pub fn time(&self) -> i32 {
-        (self.data().time / 1000) as i32
+    pub fn time(&self) -> i64 {
+        self.data().time / 1000
     }
 
     pub fn milli_time(&self) -> i64 {

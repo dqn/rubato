@@ -56,7 +56,7 @@ impl PatternModifier for AutoplayModifier {
                         && note.is_long()
                         && !note.is_end()
                     {
-                        endtime = endtime.max(note.time() as i64 + self.margin as i64);
+                        endtime = endtime.max(note.time() + self.margin as i64);
                     }
                 }
 
