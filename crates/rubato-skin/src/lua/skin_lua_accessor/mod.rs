@@ -31,6 +31,10 @@ pub struct SkinLuaAccessor {
     /// The Lua VM instance, wrapped in Arc so Lua property types can share
     /// ownership and the VM cannot be dropped while properties are alive.
     lua: Arc<Lua>,
+    /// The initial Lua package.path value, captured at construction time.
+    /// Used to reset package.path in set_directory() to prevent unbounded
+    /// growth from repeated skin loads (Java creates a new VM per load).
+    base_package_path: String,
 }
 
 impl SkinLuaAccessor {
@@ -40,6 +44,13 @@ impl SkinLuaAccessor {
         // assertions in each property type's get() method.
         #[allow(clippy::arc_with_non_send_sync)]
         let lua = Arc::new(Lua::new());
+
+        // Capture the initial package.path before any modifications
+        let base_package_path = lua
+            .globals()
+            .get::<LuaTable>("package")
+            .and_then(|pkg| pkg.get::<String>("path"))
+            .unwrap_or_default();
 
         if !is_global {
             // Pre-register empty tables so require("main_state") etc. don't error during header loading
@@ -59,7 +70,11 @@ impl SkinLuaAccessor {
             });
         }
 
-        Self { is_global, lua }
+        Self {
+            is_global,
+            lua,
+            base_package_path,
+        }
     }
 
     /// Execute a Lua script and return the result
@@ -100,15 +115,17 @@ impl SkinLuaAccessor {
         }
     }
 
-    /// Set the Lua package search directory
+    /// Set the Lua package search directory.
+    /// Resets package.path to the initial base value before appending the new
+    /// directory, preventing unbounded growth from repeated skin loads.
+    /// Java creates a new Lua VM per load, so this reset emulates that behavior.
     pub fn set_directory(&self, path: &Path) {
         let path_str = path.to_string_lossy();
         let result: Result<(), LuaError> = (|| {
             let pkg: LuaTable = self.lua.globals().get("package")?;
-            let current_path: String = pkg.get("path")?;
             let new_path = format!(
                 "{};{}{}?.lua",
-                current_path,
+                self.base_package_path,
                 path_str,
                 std::path::MAIN_SEPARATOR
             );
