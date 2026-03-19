@@ -167,9 +167,8 @@ impl StreamController {
     fn execute_commands(commands: &mut [Box<dyn StreamCommand>], line: &str) {
         for cmd in commands.iter_mut() {
             let cmd_str = format!("{} ", cmd.command_string());
-            if let Some(data) = line.strip_prefix(&cmd_str) {
-                cmd.run(data);
-            }
+            let data = line.strip_prefix(&cmd_str).unwrap_or("");
+            cmd.run(data);
         }
     }
 }
@@ -241,26 +240,28 @@ mod tests {
     }
 
     #[test]
-    fn execute_commands_skips_run_when_no_match() {
+    fn execute_commands_calls_run_with_empty_data_when_no_match() {
         let (cmd, calls, _disposed) = MockCommand::new("!!req");
         let mut commands: Vec<Box<dyn StreamCommand>> = vec![Box::new(cmd)];
 
-        // Line that doesn't contain "!!req "
+        // Line that doesn't contain "!!req " -- Java calls run("") unconditionally
         StreamController::execute_commands(&mut commands, "hello world");
 
         let recorded = calls.lock().unwrap();
-        assert_eq!(recorded.len(), 0);
+        assert_eq!(recorded.len(), 1);
+        assert_eq!(recorded[0], "");
     }
 
     #[test]
-    fn execute_commands_skips_run_on_empty_line() {
+    fn execute_commands_calls_run_with_empty_data_on_empty_line() {
         let (cmd, calls, _disposed) = MockCommand::new("!!req");
         let mut commands: Vec<Box<dyn StreamCommand>> = vec![Box::new(cmd)];
 
         StreamController::execute_commands(&mut commands, "");
 
         let recorded = calls.lock().unwrap();
-        assert_eq!(recorded.len(), 0);
+        assert_eq!(recorded.len(), 1);
+        assert_eq!(recorded[0], "");
     }
 
     #[test]
@@ -271,9 +272,10 @@ mod tests {
 
         StreamController::execute_commands(&mut commands, "!!play some_data");
 
-        // !!req should not be called (no match)
+        // !!req should be called with empty data (no match, Java parity)
         let recorded1 = calls1.lock().unwrap();
-        assert_eq!(recorded1.len(), 0);
+        assert_eq!(recorded1.len(), 1);
+        assert_eq!(recorded1[0], "");
 
         // !!play should get "some_data"
         let recorded2 = calls2.lock().unwrap();

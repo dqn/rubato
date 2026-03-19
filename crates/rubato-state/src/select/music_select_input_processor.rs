@@ -609,10 +609,9 @@ impl<'a> InputContext<'a> {
 }
 
 fn now_millis() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as i64
+    static EPOCH: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+    let epoch = EPOCH.get_or_init(std::time::Instant::now);
+    epoch.elapsed().as_millis() as i64
 }
 
 #[cfg(test)]
