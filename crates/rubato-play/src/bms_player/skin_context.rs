@@ -16,6 +16,14 @@ pub(super) struct PlayRenderContext<'a> {
     pub(super) play_mode: BMSPlayerMode,
     pub(super) state: PlayState,
     pub(super) media_load_finished: bool,
+    /// Live hi-speed value from LaneRenderer (mutated by START/SELECT during play).
+    pub(super) live_hispeed: f32,
+    /// Live lanecover value from LaneRenderer.
+    pub(super) live_lanecover: f32,
+    /// Live lift value from LaneRenderer.
+    pub(super) live_lift: f32,
+    /// Live hidden value from LaneRenderer.
+    pub(super) live_hidden: f32,
     /// BPM values from LaneRenderer for skin property display.
     pub(super) now_bpm: f64,
     pub(super) min_bpm: f64,
@@ -180,9 +188,16 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
     fn integer_value(&self, id: i32) -> i32 {
         match id {
             // Hi-speed (LR2 format: hispeed * 100, e.g. 3.5 -> 350)
-            10 => (self.play_config.hispeed * 100.0) as i32,
+            // Uses live LaneRenderer value, not saved player_config.
+            10 => (self.live_hispeed * 100.0) as i32,
             // Hi-speed fractional part (e.g. 3.52 -> 2)
-            311 => ((self.play_config.hispeed * 100.0) as i32) % 10,
+            311 => ((self.live_hispeed * 100.0) as i32) % 10,
+            // Lanecover (0-1000 scale from live LaneRenderer)
+            14 => (self.live_lanecover * 1000.0) as i32,
+            // Lift (0-1000 scale from live LaneRenderer)
+            314 => (self.live_lift * 1000.0) as i32,
+            // Hidden (0-1000 scale from live LaneRenderer)
+            315 => (self.live_hidden * 1000.0) as i32,
             // Total notes
             350 => self.total_notes,
             // Playtime (hours/minutes/seconds from boot)
@@ -230,8 +245,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             }
             // Gauge value (0.0-100.0)
             1107 => self.gauge.map_or(0.0, |g| g.value()),
-            // Hi-speed (from active play config, not always mode7)
-            310 => self.play_config.hispeed,
+            // Hi-speed (from live LaneRenderer, not saved play config)
+            310 => self.live_hispeed,
             _ => 0.0,
         }
     }
@@ -615,6 +630,10 @@ mod tests {
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
             state: PlayState::Play,
             media_load_finished: false,
+            live_hispeed: 0.0,
+            live_lanecover: 0.0,
+            live_lift: 0.0,
+            live_hidden: 0.0,
             now_bpm: 0.0,
             min_bpm: 0.0,
             max_bpm: 0.0,
@@ -704,6 +723,10 @@ mod tests {
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
             state: PlayState::Play,
             media_load_finished: false,
+            live_hispeed: 0.0,
+            live_lanecover: 0.0,
+            live_lift: 0.0,
+            live_hidden: 0.0,
             now_bpm: 0.0,
             min_bpm: 0.0,
             max_bpm: 0.0,
@@ -798,6 +821,10 @@ mod tests {
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
             state: PlayState::Play,
             media_load_finished: false,
+            live_hispeed: 0.0,
+            live_lanecover: 0.0,
+            live_lift: 0.0,
+            live_hidden: 0.0,
             now_bpm: 0.0,
             min_bpm: 0.0,
             max_bpm: 0.0,
@@ -869,6 +896,10 @@ mod tests {
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
             state: PlayState::Play,
             media_load_finished: false,
+            live_hispeed: 0.0,
+            live_lanecover: 0.0,
+            live_lift: 0.0,
+            live_hidden: 0.0,
             now_bpm: 0.0,
             min_bpm: 0.0,
             max_bpm: 0.0,
@@ -917,6 +948,10 @@ mod tests {
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
             state: PlayState::Play,
             media_load_finished: false,
+            live_hispeed: 0.0,
+            live_lanecover: 0.0,
+            live_lift: 0.0,
+            live_hidden: 0.0,
             now_bpm: 0.0,
             min_bpm: 0.0,
             max_bpm: 0.0,
@@ -1029,6 +1064,10 @@ mod tests {
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
             state: PlayState::Play,
             media_load_finished: false,
+            live_hispeed: 0.0,
+            live_lanecover: 0.0,
+            live_lift: 0.0,
+            live_hidden: 0.0,
             now_bpm: 0.0,
             min_bpm: 0.0,
             max_bpm: 0.0,
