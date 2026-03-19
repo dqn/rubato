@@ -92,7 +92,7 @@ impl FloatFormatter {
         let is_sign = (self.sign == 1) && (value < 10.0_f64.powi(self.iketa));
 
         if self.zeropadding == 0 {
-            let ival = (value as i32).abs();
+            let ival = value as i32;
             self.base = (self.iketa)
                 .min((if ival != 0 { ival } else { 1 } as f64).log10() as i32 + 1)
                 + self.sign;
