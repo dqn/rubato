@@ -12,7 +12,7 @@ use rayon::prelude::*;
 
 use kira::sound::PlaybackState;
 use kira::sound::static_sound::{StaticSoundData, StaticSoundHandle};
-use kira::{AudioManager, AudioManagerSettings, DefaultBackend, PlaybackRate, Semitones, Tween};
+use kira::{AudioManager, AudioManagerSettings, DefaultBackend, PlaybackRate, Tween};
 
 use bms_model::bms_model::BMSModel;
 use bms_model::note::Note;
@@ -579,12 +579,15 @@ impl GdxAudioDeviceDriver {
         None
     }
 
-    /// Apply pitch shift to a sound handle.
+    /// Apply pitch shift to a sound handle, composing per-note semitone shift
+    /// with the current global pitch: rate = global_pitch * 2^(shift/12).
     fn apply_pitch(&self, handle: &mut StaticSoundHandle, pitch_shift: i32) {
+        let base = self.global_pitch as f64;
         if pitch_shift != 0 {
-            handle.set_playback_rate(Semitones(pitch_shift as f64), Tween::default());
+            let rate = base * 2.0_f64.powf(pitch_shift as f64 / 12.0);
+            handle.set_playback_rate(PlaybackRate(rate), Tween::default());
         } else if (self.global_pitch - 1.0).abs() > f32::EPSILON {
-            handle.set_playback_rate(PlaybackRate(self.global_pitch as f64), Tween::default());
+            handle.set_playback_rate(PlaybackRate(base), Tween::default());
         }
     }
 
