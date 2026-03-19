@@ -2,7 +2,7 @@
 // JSON skin serializer with conditional branching and includes
 
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
@@ -18,6 +18,9 @@ use serde_json::Value;
 /// pre-processing step on the JSON before feeding it to serde.
 pub struct JsonSkinSerializer {
     pub options: HashSet<i32>,
+    /// Root directory for path traversal validation. Include paths that escape
+    /// this directory are rejected.
+    skin_root: Option<PathBuf>,
 }
 
 impl Default for JsonSkinSerializer {
@@ -30,11 +33,20 @@ impl JsonSkinSerializer {
     pub fn new() -> Self {
         Self {
             options: HashSet::new(),
+            skin_root: None,
         }
     }
 
     pub fn with_options(options: HashSet<i32>) -> Self {
-        Self { options }
+        Self {
+            options,
+            skin_root: None,
+        }
+    }
+
+    /// Set the skin root directory for include path traversal validation.
+    pub fn set_skin_root(&mut self, root: PathBuf) {
+        self.skin_root = Some(root);
     }
 
     /// Test option conditions.
@@ -98,6 +110,37 @@ impl JsonSkinSerializer {
         }
     }
 
+    /// Resolve an include path relative to `base_path`'s parent directory and
+    /// validate that it does not escape the skin root directory.
+    /// Returns `None` if the path escapes the skin root or cannot be resolved.
+    fn resolve_include_path(&self, include_path: &str, base_path: &Path) -> Option<PathBuf> {
+        let file_path = base_path
+            .parent()
+            .map(|p| p.join(include_path))
+            .unwrap_or_else(|| PathBuf::from(include_path));
+
+        // Validate against skin root to prevent path traversal
+        if let Some(ref skin_root) = self.skin_root {
+            match file_path.canonicalize() {
+                Ok(canonical) => {
+                    if !canonical.starts_with(skin_root) {
+                        log::warn!(
+                            "Skin include path escapes skin root: {}",
+                            include_path
+                        );
+                        return None;
+                    }
+                }
+                Err(_) => {
+                    // File does not exist or cannot be canonicalized
+                    return None;
+                }
+            }
+        }
+
+        Some(file_path)
+    }
+
     /// Pre-process a JSON value, resolving conditional branches and includes.
     /// This corresponds to ObjectSerializer.read in Java.
     pub fn preprocess_object(&self, value: &Value, base_path: &Path) -> Option<Value> {
@@ -118,10 +161,7 @@ impl JsonSkinSerializer {
             && let Some(include) = obj.get("include")
             && let Some(include_path) = include.as_str()
         {
-            let file_path = base_path
-                .parent()
-                .map(|p| p.join(include_path))
-                .unwrap_or_else(|| std::path::PathBuf::from(include_path));
+            let file_path = self.resolve_include_path(include_path, base_path)?;
             if file_path.exists()
                 && let Ok(content) = std::fs::read_to_string(&file_path)
                 && let Ok(parsed) = serde_json::from_str::<Value>(&content)
@@ -191,16 +231,14 @@ impl JsonSkinSerializer {
         if let Some(include) = obj.get("include")
             && let Some(include_path) = include.as_str()
         {
-            let file_path = base_path
-                .parent()
-                .map(|p| p.join(include_path))
-                .unwrap_or_else(|| std::path::PathBuf::from(include_path));
-            if file_path.exists()
-                && let Ok(content) = std::fs::read_to_string(&file_path)
-                && let Ok(parsed) = serde_json::from_str::<Value>(&content)
-                && let Some(arr) = parsed.as_array()
-            {
-                items.extend(arr.iter().cloned());
+            if let Some(file_path) = self.resolve_include_path(include_path, base_path) {
+                if file_path.exists()
+                    && let Ok(content) = std::fs::read_to_string(&file_path)
+                    && let Ok(parsed) = serde_json::from_str::<Value>(&content)
+                    && let Some(arr) = parsed.as_array()
+                {
+                    items.extend(arr.iter().cloned());
+                }
             }
         }
         items
