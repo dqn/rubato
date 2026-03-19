@@ -272,7 +272,9 @@ impl ScoreDataProperty {
         // Reset accumulated ghost state to prevent stale values carrying
         // across practice retries or song changes.
         self.nowbestscore = 0;
+        self.nowbestscorerate = 0.0;
         self.nowrivalscore = 0;
+        self.nowrivalscorerate = 0.0;
         self.previous_notes = 0;
 
         self.bestscore = bestscore;
