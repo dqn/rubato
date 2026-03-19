@@ -43,6 +43,7 @@ enum ProcessorStatus {
 mod ffmpeg_impl {
     use super::{Command, ProcessorStatus};
     use ffmpeg_next as ffmpeg;
+    use rubato_types::sync_utils::lock_or_recover;
     use std::sync::atomic::{AtomicI64, Ordering};
     use std::sync::mpsc;
     use std::sync::{Arc, Mutex};
@@ -221,7 +222,8 @@ mod ffmpeg_impl {
         loop {
             if state.eof {
                 // Set status to inactive
-                if let Ok(mut s) = shared.lock() {
+                {
+                    let mut s = lock_or_recover(&shared);
                     if s.status != ProcessorStatus::Disposed {
                         s.status = ProcessorStatus::TextureInactive;
                     }
@@ -272,15 +274,14 @@ mod ffmpeg_impl {
                 // Update shared state with latest decoded frame
                 // Translated from: Gdx.app.postRunnable() in MovieSeekThread
                 if let Some(pixels) = latest_pixels {
-                    if let Ok(mut s) = shared.lock() {
-                        if s.status != ProcessorStatus::Disposed {
-                            s.frame = Some(DecodedFrame {
-                                pixels,
-                                width: stream_info.width,
-                                height: stream_info.height,
-                            });
-                            s.status = ProcessorStatus::TextureActive;
-                        }
+                    let mut s = lock_or_recover(&shared);
+                    if s.status != ProcessorStatus::Disposed {
+                        s.frame = Some(DecodedFrame {
+                            pixels,
+                            width: stream_info.width,
+                            height: stream_info.height,
+                        });
+                        s.status = ProcessorStatus::TextureActive;
                     }
                 }
             } else {
@@ -482,7 +483,8 @@ impl MovieProcessor for FFmpegProcessor {
                     .time
                     .store(time, std::sync::atomic::Ordering::Release);
                 // Check for new decoded frame
-                if let Ok(s) = handle.shared.lock() {
+                {
+                    let s = rubato_types::sync_utils::lock_or_recover(&handle.shared);
                     if s.status == ProcessorStatus::TextureActive {
                         if let Some(ref frame) = s.frame {
                             self._showing_tex = Some(Texture {
@@ -541,7 +543,8 @@ impl MovieProcessor for FFmpegProcessor {
         {
             // Set disposed status first
             if let Some(ref handle) = self.handle {
-                if let Ok(mut s) = handle.shared.lock() {
+                {
+                    let mut s = rubato_types::sync_utils::lock_or_recover(&handle.shared);
                     s.status = ProcessorStatus::Disposed;
                 }
                 let _ = handle.cmd_tx.send(Command::Halt);
