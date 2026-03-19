@@ -31,16 +31,39 @@ impl BMSPlayer {
                     IDENTITY => self.score.playinfo.randomoption = MIRROR,
                     MIRROR => self.score.playinfo.randomoption = IDENTITY,
                     RANDOM => {
-                        // Reverse the decimal digit representation of the lane pattern
-                        let reversed: i32 = gb
-                            .lanes
-                            .to_string()
-                            .chars()
-                            .rev()
-                            .collect::<String>()
-                            .parse()
-                            .unwrap_or(gb.lanes);
-                        gb.lanes = reversed;
+                        // Mirror-invert the lane pattern by reversing digit
+                        // positions within each player's key range.
+                        // String reversal is wrong because:
+                        //   (a) i32 drops leading zeros (e.g. 0123456 -> 123456)
+                        //   (b) DP patterns need per-player-half reversal
+                        let mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
+                        let player_count = mode.player().max(1) as usize;
+                        let keys_per_player = (mode.key() / mode.player().max(1)) as usize;
+                        let total_digits = keys_per_player * player_count;
+
+                        // Extract digits from least-significant to most-significant,
+                        // padding with zeros to the expected total_digits count.
+                        let mut digits = vec![0i32; total_digits];
+                        let mut val = gb.lanes.unsigned_abs();
+                        for d in &mut digits {
+                            *d = (val % 10) as i32;
+                            val /= 10;
+                        }
+                        // digits[0] = lane 0's mapping, digits[1] = lane 1's, etc.
+
+                        // Reverse within each player's half
+                        for p in 0..player_count {
+                            let start = p * keys_per_player;
+                            let end = start + keys_per_player;
+                            digits[start..end].reverse();
+                        }
+
+                        // Re-encode: digits[0] is least-significant
+                        let mut result: i32 = 0;
+                        for (i, &d) in digits.iter().enumerate() {
+                            result += d * 10i32.pow(i as u32);
+                        }
+                        gb.lanes = result;
                     }
                     _ => {}
                 }
