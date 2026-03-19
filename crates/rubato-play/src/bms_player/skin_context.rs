@@ -198,8 +198,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             // Hi-speed (LR2 format: hispeed * 100, e.g. 3.5 -> 350)
             // Uses live LaneRenderer value, not saved player_config.
             10 => (self.live_hispeed * 100.0) as i32,
-            // Hi-speed fractional part (e.g. 3.52 -> 2)
-            311 => ((self.live_hispeed * 100.0) as i32) % 10,
+            // Hi-speed fractional part (e.g. 3.52 -> 52)
+            311 => ((self.live_hispeed * 100.0) as i32) % 100,
             // Lanecover (0-1000 scale from live LaneRenderer)
             14 => (self.live_lanecover * 1000.0) as i32,
             // Lift (0-1000 scale from live LaneRenderer)

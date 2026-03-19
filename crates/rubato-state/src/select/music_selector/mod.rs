@@ -477,10 +477,11 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             1000 => self.selector.manager.directory_string().to_string(),
             // Version
             1010 => rubato_core::version::Version::get_version().to_string(),
-            // Song hash
+            // Song hash (MD5)
             1030 => self
                 .selected_song_data()
-                .map_or_else(String::new, |s| s.file.sha256.clone()),
+                .map_or_else(String::new, |s| s.file.md5.clone()),
+            // Song hash (SHA256)
             1031 => self
                 .selected_song_data()
                 .map_or_else(String::new, |s| s.file.sha256.clone()),
