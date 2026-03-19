@@ -55,24 +55,19 @@ impl IrResendService for IrResendServiceImpl {
 
     fn stop(&self) {
         self.shutdown_flag.store(true, Ordering::Release);
-        if let Ok(mut guard) = self.handle.lock()
-            && let Some(handle) = guard.take()
-        {
-            // Wait up to 5 seconds for the thread to finish.
-            // The thread sleeps in 100ms increments and checks the flag,
-            // so it should respond within ~100ms.
-            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-            while !handle.is_finished() {
-                if std::time::Instant::now() >= deadline {
-                    log::warn!("IR resend thread did not shut down within 5s timeout");
-                    break;
+        if let Ok(mut guard) = self.handle.lock() {
+            if let Some(handle) = guard.take() {
+                // The thread checks the shutdown flag every 100ms.
+                // Join if already finished; otherwise detach to avoid
+                // busy-waiting up to 5s on the calling thread.
+                if handle.is_finished() {
+                    if let Err(e) = handle.join() {
+                        log::warn!("IR resend thread panicked: {:?}", e);
+                    }
                 }
-                std::thread::sleep(std::time::Duration::from_millis(50));
-            }
-            if handle.is_finished()
-                && let Err(e) = handle.join()
-            {
-                log::warn!("IR resend thread panicked: {:?}", e);
+                // If not finished, detach (drop the JoinHandle).
+                // The thread will observe the shutdown flag and exit
+                // within ~100ms on its own.
             }
         }
     }
