@@ -44,10 +44,7 @@ impl BMSPlayer {
         // Compute values before taking mutable borrows
         let is_note_end = self.is_note_end();
         let is_timer_play_on = self.main_state_data.timer.is_timer_on(TIMER_PLAY);
-        let now_millis = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as i64;
+        let now_millis = self.main_state_data.timer.now_time();
 
         // Process control input (START+SELECT, lane cover, hispeed, etc.)
         if let (Some(mut control), Some(lanerender)) =
