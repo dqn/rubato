@@ -3,15 +3,19 @@ use std::path::Path;
 
 use log::warn;
 
+use crate::graphs::skin_graph::SkinGraph;
 use crate::lr2::lr2_font_loader::LR2FontLoader;
 use crate::lr2::lr2_skin_loader::{self, LR2SkinLoaderState};
+use crate::objects::skin_number::{NumberDisplayConfig, SkinNumber};
+use crate::objects::skin_slider::SkinSlider;
 use crate::reexports::{MainState, Resolution, Texture, TextureRegion};
 use crate::safe_div_f32;
 use crate::skin::SkinObject;
 use crate::skin_gauge::SkinGauge;
 use crate::skin_image::SkinImage;
 use crate::skin_object::DestinationParams;
-use crate::skin_text_image::SkinTextImageSource;
+use crate::skin_text_font::SkinTextFont;
+use crate::skin_text_image::{SkinTextImage, SkinTextImageSource};
 
 use super::{ImageListEntry, LR2SkinCSVLoaderState};
 
@@ -72,6 +76,10 @@ impl LR2SkinCSVLoaderState {
             line: None,
             imagesetarray: Vec::new(),
             image: None,
+            num: None,
+            text: None,
+            slider: None,
+            bar: None,
             button: None,
             onmouse: None,
             gauger: None,
@@ -390,20 +398,341 @@ impl LR2SkinCSVLoaderState {
                     }
                 }
             }
-            "SRC_NUMBER"
-            | "DST_NUMBER"
-            | "SRC_TEXT"
-            | "DST_TEXT"
-            | "SRC_SLIDER"
-            | "SRC_SLIDER_REFNUMBER"
-            | "DST_SLIDER"
-            | "SRC_BARGRAPH"
-            | "SRC_BARGRAPH_REFNUMBER"
-            | "DST_BARGRAPH" => {
-                // TODO: Implement LR2 CSV handlers for number, text, slider, bargraph objects.
-                // These commands are recognized but not yet handled in the CSV loader.
-                // LR2 skins using these object types will have missing elements.
-                log::debug!("LR2 CSV command not yet implemented: {}", cmd);
+            "SRC_NUMBER" => {
+                // #SRC_NUMBER,(NULL),gr,x,y,w,h,div_x,div_y,cycle,timer,num,align,keta,zeropadding
+                // Finalize previous number
+                if let Some(n) = self.num.take() {
+                    self.collected_objects.push(SkinObject::Number(n));
+                }
+                let values = Self::parse_int(str_parts);
+                let divx = if values[7] > 0 { values[7] } else { 1 };
+                let divy = if values[8] > 0 { values[8] } else { 1 };
+
+                if divx * divy >= 10 {
+                    if let Some(images) = self.source_image(&values) {
+                        if images.len() % 24 == 0 {
+                            // Signed number sheet: 24 images per animation frame
+                            // First 12 = positive digits (0-9, space, minus/sign)
+                            // Last 12 = negative digits
+                            let frame_count = images.len() / 24;
+                            let mut pn: Vec<Vec<TextureRegion>> = Vec::with_capacity(frame_count);
+                            let mut mn: Vec<Vec<TextureRegion>> = Vec::with_capacity(frame_count);
+                            for j in 0..frame_count {
+                                let mut pn_frame = Vec::with_capacity(12);
+                                let mut mn_frame = Vec::with_capacity(12);
+                                for i in 0..12 {
+                                    pn_frame.push(images[j * 24 + i].clone());
+                                    mn_frame.push(images[j * 24 + i + 12].clone());
+                                }
+                                pn.push(pn_frame);
+                                mn.push(mn_frame);
+                            }
+                            // Java: new SkinNumber(pn, mn, values[10], values[9],
+                            //   values[13]+1, str[14].length()>0 ? values[14] : 2,
+                            //   values[15], values[11], values[12])
+                            let zeropadding = if str_parts.get(14).map_or(true, |s| s.is_empty()) {
+                                2
+                            } else {
+                                values[14]
+                            };
+                            let n = SkinNumber::new_with_int_timer(
+                                pn,
+                                Some(mn),
+                                values[10],
+                                values[9],
+                                NumberDisplayConfig {
+                                    keta: values[13] + 1,
+                                    zeropadding,
+                                    space: values[15],
+                                    align: values[12],
+                                },
+                                values[11],
+                            );
+                            self.num = Some(n);
+                        } else {
+                            // Standard number sheet: 10 or 11 images per animation frame
+                            let d = if images.len() % 10 == 0 { 10 } else { 11 };
+                            let total = (divx * divy) as usize;
+                            let frame_count = total / d;
+                            let mut nimages: Vec<Vec<TextureRegion>> =
+                                Vec::with_capacity(frame_count);
+                            for j in 0..frame_count {
+                                let mut frame = Vec::with_capacity(d);
+                                for i in 0..d {
+                                    frame.push(images[j * d + i].clone());
+                                }
+                                nimages.push(frame);
+                            }
+                            // Java: new SkinNumber(nimages, values[10], values[9],
+                            //   values[13], d>10 ? 2 : 0, values[15], values[11], values[12])
+                            let n = SkinNumber::new_with_int_timer(
+                                nimages,
+                                None,
+                                values[10],
+                                values[9],
+                                NumberDisplayConfig {
+                                    keta: values[13],
+                                    zeropadding: if d > 10 { 2 } else { 0 },
+                                    space: values[15],
+                                    align: values[12],
+                                },
+                                values[11],
+                            );
+                            self.num = Some(n);
+                        }
+                    }
+                }
+            }
+            "DST_NUMBER" => {
+                if let Some(ref mut num) = self.num {
+                    let values = Self::parse_int(str_parts);
+                    let dstw = safe_div_f32(self.dst.width, self.src.width);
+                    let dsth = safe_div_f32(self.dst.height, self.src.height);
+                    let offsets = Self::read_offset(str_parts, 21);
+                    num.data.set_destination_with_int_timer_ops(
+                        &DestinationParams {
+                            time: values[2] as i64,
+                            x: values[3] as f32 * dstw,
+                            y: self.dst.height - (values[4] + values[6]) as f32 * dsth,
+                            w: values[5] as f32 * dstw,
+                            h: values[6] as f32 * dsth,
+                            acc: values[7],
+                            a: values[8],
+                            r: values[9],
+                            g: values[10],
+                            b: values[11],
+                            blend: values[12],
+                            filter: values[13],
+                            angle: values[14],
+                            center: values[15],
+                            loop_val: values[16],
+                        },
+                        values[17],
+                        &offsets,
+                    );
+                }
+            }
+            "SRC_TEXT" => {
+                // #SRC_TEXT,(NULL),font,string_id,align,editable,panel
+                // Finalize previous text
+                if let Some(t) = self.text.take() {
+                    self.collected_objects.push(t);
+                }
+                let values = Self::parse_int(str_parts);
+                let font_index = values[2] as usize;
+                let text_obj: SkinObject =
+                    if font_index < self.fontlist.len() && self.fontlist[font_index].is_some() {
+                        let source = self.fontlist[font_index].clone().unwrap();
+                        let mut t = SkinTextImage::new_with_id(source, values[3]);
+                        t.text_data.align = values[4];
+                        t.text_data.editable = values[5] != 0;
+                        SkinObject::TextImage(t)
+                    } else {
+                        let mut t =
+                            SkinTextFont::new("skin/default/VL-Gothic-Regular.ttf", 0, 48, 2);
+                        t.text_data.align = values[4];
+                        t.text_data.editable = values[5] != 0;
+                        SkinObject::TextFont(t)
+                    };
+                self.text = Some(text_obj);
+            }
+            "DST_TEXT" => {
+                if let Some(ref mut text) = self.text {
+                    let values = Self::parse_int(str_parts);
+                    let dstw = safe_div_f32(self.dst.width, self.src.width);
+                    let dsth = safe_div_f32(self.dst.height, self.src.height);
+                    let offsets = Self::read_offset(str_parts, 21);
+                    text.data_mut().set_destination_with_int_timer_ops(
+                        &DestinationParams {
+                            time: values[2] as i64,
+                            x: values[3] as f32 * dstw,
+                            y: self.dst.height - (values[4] + values[6]) as f32 * dsth,
+                            w: values[5] as f32 * dstw,
+                            h: values[6] as f32 * dsth,
+                            acc: values[7],
+                            a: values[8],
+                            r: values[9],
+                            g: values[10],
+                            b: values[11],
+                            blend: values[12],
+                            filter: values[13],
+                            angle: values[14],
+                            center: values[15],
+                            loop_val: values[16],
+                        },
+                        values[17],
+                        &offsets,
+                    );
+                }
+            }
+            "SRC_SLIDER" => {
+                // #SRC_SLIDER,(NULL),gr,x,y,w,h,div_x,div_y,cycle,timer,angle,range,type,disable
+                // Finalize previous slider
+                if let Some(s) = self.slider.take() {
+                    self.collected_objects.push(SkinObject::Slider(s));
+                }
+                let values = Self::parse_int(str_parts);
+                if let Some(images) = self.source_image(&values) {
+                    let dstw = safe_div_f32(self.dst.width, self.src.width);
+                    let dsth = safe_div_f32(self.dst.height, self.src.height);
+                    // Java: range * (angle==1||angle==3 ? dstw/srcw : dsth/srch)
+                    let range_scale =
+                        if values[11] == 1 || values[11] == 3 { dstw } else { dsth };
+                    let range = (values[12] as f32 * range_scale) as i32;
+                    let changeable = values[14] == 0;
+                    let s = SkinSlider::new_with_int_timer(
+                        images, values[10], values[9], values[11], range, values[13], changeable,
+                    );
+                    self.slider = Some(s);
+                }
+            }
+            "SRC_SLIDER_REFNUMBER" => {
+                // #SRC_SLIDER_REFNUMBER,(NULL),gr,x,y,w,h,div_x,div_y,cycle,timer,muki,range,type,disable,min_value,max_value
+                // Finalize previous slider
+                if let Some(s) = self.slider.take() {
+                    self.collected_objects.push(SkinObject::Slider(s));
+                }
+                let values = Self::parse_int(str_parts);
+                if let Some(images) = self.source_image(&values) {
+                    let dstw = safe_div_f32(self.dst.width, self.src.width);
+                    let dsth = safe_div_f32(self.dst.height, self.src.height);
+                    let range_scale =
+                        if values[11] == 1 || values[11] == 3 { dstw } else { dsth };
+                    let range = (values[12] as f32 * range_scale) as i32;
+                    // Java: new SkinSlider(images, values[10], values[9], values[11], range, values[13], values[15], values[16])
+                    let s = SkinSlider::new_with_int_timer_minmax(
+                        crate::objects::skin_slider::SliderIntTimerMinmaxParams {
+                            image: images,
+                            timer: values[10],
+                            cycle: values[9],
+                            angle: values[11],
+                            range,
+                            type_id: values[13],
+                            min: values[15],
+                            max: values[16],
+                        },
+                    );
+                    self.slider = Some(s);
+                }
+            }
+            "DST_SLIDER" => {
+                if let Some(ref mut slider) = self.slider {
+                    let values = Self::parse_int(str_parts);
+                    let dstw = safe_div_f32(self.dst.width, self.src.width);
+                    let dsth = safe_div_f32(self.dst.height, self.src.height);
+                    let offsets = Self::read_offset(str_parts, 21);
+                    slider.data.set_destination_with_int_timer_ops(
+                        &DestinationParams {
+                            time: values[2] as i64,
+                            x: values[3] as f32 * dstw,
+                            y: self.dst.height - (values[4] + values[6]) as f32 * dsth,
+                            w: values[5] as f32 * dstw,
+                            h: values[6] as f32 * dsth,
+                            acc: values[7],
+                            a: values[8],
+                            r: values[9],
+                            g: values[10],
+                            b: values[11],
+                            blend: values[12],
+                            filter: values[13],
+                            angle: values[14],
+                            center: values[15],
+                            loop_val: values[16],
+                        },
+                        values[17],
+                        &offsets,
+                    );
+                }
+            }
+            "SRC_BARGRAPH" => {
+                // #SRC_BARGRAPH,(NULL),gr,x,y,w,h,div_x,div_y,cycle,timer,type,muki
+                // Finalize previous bar
+                if let Some(b) = self.bar.take() {
+                    self.collected_objects.push(SkinObject::Graph(b));
+                }
+                let values = Self::parse_int(str_parts);
+                let gr = values[2];
+                if gr >= 100 {
+                    // Reference bargraph: id = values[11] + 100, direction = values[12]
+                    let b = SkinGraph::new_with_image_id(gr, values[11] + 100, values[12]);
+                    self.bar = Some(b);
+                } else if let Some(images) = self.source_image(&values) {
+                    // Java: new SkinGraph(images, values[10], values[9], values[11]+100, values[12])
+                    let b = SkinGraph::new_with_int_timer(
+                        images,
+                        values[10],
+                        values[9],
+                        values[11] + 100,
+                        values[12],
+                    );
+                    self.bar = Some(b);
+                }
+            }
+            "SRC_BARGRAPH_REFNUMBER" => {
+                // #SRC_BARGRAPH_REFNUMBER,(NULL),gr,x,y,w,h,div_x,div_y,cycle,timer,type,muki,min_value,max_value
+                // Finalize previous bar
+                if let Some(b) = self.bar.take() {
+                    self.collected_objects.push(SkinObject::Graph(b));
+                }
+                let values = Self::parse_int(str_parts);
+                let gr = values[2];
+                if gr >= 100 {
+                    // Java: new SkinGraph(gr, values[11], values[13], values[14], values[12])
+                    let b = SkinGraph::new_with_image_id_minmax(
+                        gr,
+                        values[11],
+                        values[13],
+                        values[14],
+                        values[12],
+                    );
+                    self.bar = Some(b);
+                } else if let Some(images) = self.source_image(&values) {
+                    // Java: new SkinGraph(images, values[10], values[9], values[11], values[13], values[14], values[12])
+                    let b = SkinGraph::new_with_int_timer_minmax(
+                        images,
+                        values[10],
+                        values[9],
+                        values[11],
+                        values[13],
+                        values[14],
+                        values[12],
+                    );
+                    self.bar = Some(b);
+                }
+            }
+            "DST_BARGRAPH" => {
+                if let Some(ref mut bar) = self.bar {
+                    let mut values = Self::parse_int(str_parts);
+                    // Java: if (bar.direction == 1) { values[4] += values[6]; values[6] = -values[6]; }
+                    if bar.direction == 1 {
+                        values[4] += values[6];
+                        values[6] = -values[6];
+                    }
+                    let dstw = safe_div_f32(self.dst.width, self.src.width);
+                    let dsth = safe_div_f32(self.dst.height, self.src.height);
+                    let offsets = Self::read_offset(str_parts, 21);
+                    bar.data.set_destination_with_int_timer_ops(
+                        &DestinationParams {
+                            time: values[2] as i64,
+                            x: values[3] as f32 * dstw,
+                            y: self.dst.height - (values[4] + values[6]) as f32 * dsth,
+                            w: values[5] as f32 * dstw,
+                            h: values[6] as f32 * dsth,
+                            acc: values[7],
+                            a: values[8],
+                            r: values[9],
+                            g: values[10],
+                            b: values[11],
+                            blend: values[12],
+                            filter: values[13],
+                            angle: values[14],
+                            center: values[15],
+                            loop_val: values[16],
+                        },
+                        values[17],
+                        &offsets,
+                    );
+                }
             }
             "SRC_BUTTON" => {
                 // Finalize previous button
@@ -799,11 +1128,23 @@ impl LR2SkinCSVLoaderState {
         }
     }
 
-    /// Finalize any active skin objects (button, onmouse, gauger) into collected_objects.
+    /// Finalize any active skin objects into collected_objects.
     /// Call this after CSV parsing completes.
     pub fn finalize_active_objects(&mut self) {
         if let Some(img) = self.image.take() {
             self.collected_objects.push(SkinObject::Image(img));
+        }
+        if let Some(n) = self.num.take() {
+            self.collected_objects.push(SkinObject::Number(n));
+        }
+        if let Some(t) = self.text.take() {
+            self.collected_objects.push(t);
+        }
+        if let Some(s) = self.slider.take() {
+            self.collected_objects.push(SkinObject::Slider(s));
+        }
+        if let Some(b) = self.bar.take() {
+            self.collected_objects.push(SkinObject::Graph(b));
         }
         if let Some(btn) = self.button.take() {
             self.collected_objects.push(SkinObject::Image(btn));
