@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use crate::graphs::skin_graph::SkinGraph;
 use crate::lr2::lr2_skin_loader::LR2SkinLoaderState;
-use crate::objects::skin_number::SkinNumber;
-use crate::objects::skin_slider::SkinSlider;
 use crate::reexports::{Resolution, Texture, TextureRegion};
 use crate::skin::SkinObject;
 use crate::skin_gauge::SkinGauge;
@@ -57,10 +54,6 @@ pub struct LR2SkinCSVLoaderState {
 
     // Active skin objects (built by SRC, destination set by DST)
     pub image: Option<SkinImage>,
-    pub num: Option<SkinNumber>,
-    pub text: Option<SkinObject>,
-    pub slider: Option<SkinSlider>,
-    pub bar: Option<SkinGraph>,
     pub button: Option<SkinImage>,
     pub onmouse: Option<SkinImage>,
     pub gauger: Option<SkinGauge>,
@@ -1215,69 +1208,230 @@ SCENETIME,9999\n\
         assert!(state.button.is_none());
     }
 
-    /// Verify that DST_IMAGE passes values[18-20] as draw condition ops and
-    /// position 21+ as offset IDs (Java parity).
-    /// Bug: the code was calling set_destination_with_int_timer_ops which
-    /// treated offsets as draw condition ops and ignored values[18-20] entirely.
-    #[test]
-    fn test_dst_image_passes_ops_and_offsets_correctly() {
-        use crate::objects::skin_image::SkinImage;
-        use crate::reexports::TextureRegion;
+    // --- DST offset vs draw-condition parameter order tests ---
+    //
+    // Java's setDestination(... timer, op1, op2, op3, int[] offset) passes:
+    //   values[17] = timer, values[18/19/20] = draw condition ops, readOffset(str,21) = offsets.
+    // Rust must use set_destination_with_int_timer_and_offsets to match this.
 
-        let mut state = make_state();
-        // Set src/dst to 1:1 to simplify coordinate math
-        state.src = Resolution {
-            width: 640.0,
-            height: 480.0,
+    /// Helper: build a DST CSV line with specific timer, ops, and offset values.
+    /// Returns str_parts suitable for process_csv_command.
+    fn make_dst_parts(
+        cmd: &str,
+        timer: i32,
+        op1: i32,
+        op2: i32,
+        op3: i32,
+        offsets: &[i32],
+    ) -> Vec<String> {
+        // Positions: [0]=cmd, [1]=unused, [2]=time, [3]=x, [4]=y, [5]=w, [6]=h,
+        //   [7]=acc, [8]=a, [9]=r, [10]=g, [11]=b, [12]=blend, [13]=filter,
+        //   [14]=angle, [15]=center, [16]=loop, [17]=timer, [18]=op1, [19]=op2, [20]=op3,
+        //   [21+]=offsets
+        let mut parts = vec![
+            format!("#{}", cmd),
+            "0".to_string(),   // [1] unused
+            "0".to_string(),   // [2] time
+            "10".to_string(),  // [3] x
+            "20".to_string(),  // [4] y
+            "32".to_string(),  // [5] w
+            "32".to_string(),  // [6] h
+            "0".to_string(),   // [7] acc
+            "255".to_string(), // [8] a
+            "255".to_string(), // [9] r
+            "255".to_string(), // [10] g
+            "255".to_string(), // [11] b
+            "0".to_string(),   // [12] blend
+            "0".to_string(),   // [13] filter
+            "0".to_string(),   // [14] angle
+            "0".to_string(),   // [15] center
+            "0".to_string(),   // [16] loop
+            timer.to_string(), // [17] timer
+            op1.to_string(),   // [18] op1
+            op2.to_string(),   // [19] op2
+            op3.to_string(),   // [20] op3
+        ];
+        for &off in offsets {
+            parts.push(off.to_string());
+        }
+        parts
+    }
+
+    /// Helper: push a valid 32x32 texture into imagelist at index 0.
+    fn push_test_texture(state: &mut LR2SkinCSVLoaderState) {
+        let tex = Texture {
+            width: 32,
+            height: 32,
+            ..Default::default()
         };
-        state.dst = Resolution {
-            width: 640.0,
-            height: 480.0,
-        };
+        state.imagelist.push(ImageListEntry::TextureEntry(tex));
+    }
 
-        // Directly inject a SkinImage (bypass SRC_IMAGE which needs a texture)
-        let regions = vec![TextureRegion::new()];
-        state.image = Some(SkinImage::new_with_int_timer(regions, 0, 0));
-
-        // Build DST_IMAGE CSV parts:
-        // #DST_IMAGE, id, time, x, y, w, h, acc, a, r, g, b, blend, filter, angle, center, loop, timer, op1, op2, op3, offset...
-        // indices:     0   1     2   3  4  5  6    7  8  9 10 11  12     13    14     15      16    17    18   19   20   21+
+    /// Helper: create SRC_IMAGE pointing to imagelist[0] with 1x1 grid.
+    fn setup_src_image(state: &mut LR2SkinCSVLoaderState) {
         let parts = str_vec(&[
-            "#DST_IMAGE",
-            "0",   // id (values[1])
-            "0",   // time (values[2])
-            "10",  // x (values[3])
-            "20",  // y (values[4])
-            "100", // w (values[5])
-            "50",  // h (values[6])
-            "0",   // acc (values[7])
-            "255", // a (values[8])
-            "255", // r (values[9])
-            "255", // g (values[10])
-            "255", // b (values[11])
-            "0",   // blend (values[12])
-            "0",   // filter (values[13])
-            "0",   // angle (values[14])
-            "0",   // center (values[15])
-            "0",   // loop (values[16])
-            "0",   // timer (values[17])
-            "42",  // op1 (values[18]) -- draw condition op
-            "43",  // op2 (values[19]) -- draw condition op
-            "0",   // op3 (values[20]) -- zero = ignored
-            "5",   // offset[0] at str index 21
-            "10",  // offset[1] at str index 22
+            "#SRC_IMAGE",
+            "0",
+            "0",
+            "0",
+            "0",
+            "32",
+            "32",
+            "1",
+            "1",
+            "0",
+            "0",
         ]);
+        state.process_csv_command("SRC_IMAGE", &parts, None);
+    }
+
+    /// Helper: create SRC_BUTTON pointing to imagelist[0] with 1x1 grid.
+    fn setup_src_button(state: &mut LR2SkinCSVLoaderState) {
+        let parts = str_vec(&[
+            "#SRC_BUTTON",
+            "0",
+            "0",
+            "0",
+            "0",
+            "32",
+            "32",
+            "1",
+            "1",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+        ]);
+        state.process_csv_command("SRC_BUTTON", &parts, None);
+    }
+
+    /// Helper: create SRC_ONMOUSE pointing to imagelist[0].
+    fn setup_src_onmouse(state: &mut LR2SkinCSVLoaderState) {
+        // SRC_ONMOUSE format: gr=0, then standard SRC fields
+        let parts = str_vec(&[
+            "#SRC_ONMOUSE",
+            "0",
+            "0",
+            "0",
+            "0",
+            "32",
+            "32",
+            "1",
+            "1",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "32",
+            "32",
+        ]);
+        state.process_csv_command("SRC_ONMOUSE", &parts, None);
+    }
+
+    /// Helper: create SRC_GROOVEGAUGE pointing to imagelist[0].
+    fn setup_src_groovegauge(state: &mut LR2SkinCSVLoaderState) {
+        // Need divx*divy >= 4 for standard gauge (4 images per state)
+        let parts = str_vec(&[
+            "#SRC_GROOVEGAUGE",
+            "0",
+            "0",
+            "0",
+            "0",
+            "32",
+            "32",
+            "4",
+            "1",
+            "0",
+            "0",
+            "0",
+            "0",
+            "50",
+            "0",
+            "3",
+            "33",
+            "0",
+            "0",
+        ]);
+        state.process_csv_command("SRC_GROOVEGAUGE", &parts, None);
+    }
+
+    #[test]
+    fn test_dst_image_offsets_set_from_position_21() {
+        let mut state = make_state();
+        push_test_texture(&mut state);
+        setup_src_image(&mut state);
+        assert!(state.image.is_some(), "SRC_IMAGE should create image");
+
+        // DST_IMAGE with offset=5 at position 21, no draw condition ops
+        let parts = make_dst_parts("DST_IMAGE", 0, 0, 0, 0, &[5]);
         state.process_csv_command("DST_IMAGE", &parts, None);
 
-        let image = state.image.as_ref().expect("image should still exist");
-        // Verify offset IDs are set from position 21+ (values 5 and 10)
-        let offsets = image.data.offset_id();
-        let mut sorted_offsets = offsets.to_vec();
-        sorted_offsets.sort();
-        assert_eq!(
-            sorted_offsets,
-            vec![5, 10],
-            "offset IDs should come from str positions 21+ (values 5, 10), not be empty"
+        let image = state.image.as_ref().unwrap();
+        assert!(
+            image.data.offset.contains(&5),
+            "offset should contain 5 from position 21, got: {:?}",
+            image.data.offset
+        );
+    }
+
+    #[test]
+    fn test_dst_button_offsets_set_from_position_21() {
+        let mut state = make_state();
+        push_test_texture(&mut state);
+        setup_src_button(&mut state);
+        assert!(state.button.is_some(), "SRC_BUTTON should create button");
+
+        let parts = make_dst_parts("DST_BUTTON", 0, 0, 0, 0, &[10]);
+        state.process_csv_command("DST_BUTTON", &parts, None);
+
+        let button = state.button.as_ref().unwrap();
+        assert!(
+            button.data.offset.contains(&10),
+            "offset should contain 10 from position 21, got: {:?}",
+            button.data.offset
+        );
+    }
+
+    #[test]
+    fn test_dst_onmouse_offsets_set_from_position_21() {
+        let mut state = make_state();
+        push_test_texture(&mut state);
+        setup_src_onmouse(&mut state);
+        assert!(state.onmouse.is_some(), "SRC_ONMOUSE should create onmouse");
+
+        let parts = make_dst_parts("DST_ONMOUSE", 0, 0, 0, 0, &[15]);
+        state.process_csv_command("DST_ONMOUSE", &parts, None);
+
+        let onmouse = state.onmouse.as_ref().unwrap();
+        assert!(
+            onmouse.data.offset.contains(&15),
+            "offset should contain 15 from position 21, got: {:?}",
+            onmouse.data.offset
+        );
+    }
+
+    #[test]
+    fn test_dst_groovegauge_offsets_set_from_position_21() {
+        let mut state = make_state();
+        push_test_texture(&mut state);
+        setup_src_groovegauge(&mut state);
+        assert!(
+            state.gauger.is_some(),
+            "SRC_GROOVEGAUGE should create gauger"
+        );
+
+        let parts = make_dst_parts("DST_GROOVEGAUGE", 0, 0, 0, 0, &[20]);
+        state.process_csv_command("DST_GROOVEGAUGE", &parts, None);
+
+        let gauger = state.gauger.as_ref().unwrap();
+        assert!(
+            gauger.data.offset.contains(&20),
+            "offset should contain 20 from position 21, got: {:?}",
+            gauger.data.offset
         );
     }
 }
