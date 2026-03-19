@@ -376,6 +376,11 @@ impl LR2PlaySkinLoaderState {
                             &[offset_judge, crate::skin_property::OFFSET_LIFT],
                         );
                     }
+
+                    if !self.judge_detail_added[player] {
+                        self.judge_detail_added[player] = true;
+                        self.add_judge_detail(&values, player);
+                    }
                 }
             }
             "SRC_NOWCOMBO_1P" | "SRC_NOWCOMBO_2P" | "SRC_NOWCOMBO_3P" => {
@@ -898,6 +903,291 @@ impl LR2PlaySkinLoaderState {
                     cycle: if animation { values[9] } else { 0 },
                 });
             }
+        }
+    }
+
+    /// Add judge detail objects (EARLY/LATE indicators + duration numbers).
+    ///
+    /// Corresponds to Java LR2PlaySkinLoader.addJudgeDetail().
+    /// Creates 4 skin objects from "skin/default/judgedetail.png":
+    /// 1. SkinImage for EARLY text (left half: 0,0,50,20) with OPTION_xP_EARLY
+    /// 2. SkinImage for LATE text (right half: 50,0,50,20) with OPTION_xP_LATE
+    /// 3. SkinNumber for judge duration (rows 1-2 of 10x20 grid) with OPTION_xP_PERFECT
+    /// 4. SkinNumber for judge duration (rows 3-4 of 10x20 grid) with !OPTION_xP_PERFECT
+    fn add_judge_detail(&mut self, values: &[i32], player: usize) {
+        use crate::objects::skin_number::{NumberDisplayConfig, SkinNumber};
+        use crate::skin::SkinObject;
+        use crate::skin_property::{
+            OFFSET_JUDGEDETAIL_1P, OFFSET_JUDGEDETAIL_2P, OFFSET_JUDGEDETAIL_3P, OFFSET_LIFT,
+            OPTION_1P_EARLY, OPTION_1P_LATE, OPTION_1P_PERFECT, OPTION_2P_EARLY, OPTION_2P_LATE,
+            OPTION_2P_PERFECT, OPTION_3P_EARLY, OPTION_3P_LATE, OPTION_3P_PERFECT, TIMER_JUDGE_1P,
+            TIMER_JUDGE_2P, TIMER_JUDGE_3P, VALUE_JUDGE_1P_DURATION, VALUE_JUDGE_2P_DURATION,
+            VALUE_JUDGE_3P_DURATION,
+        };
+
+        let tex = Texture::new("skin/default/judgedetail.png");
+
+        let dw = safe_div_f32(self.dstw, 1280.0);
+        let dh = safe_div_f32(self.dsth, 720.0);
+
+        let judge_timer = match player {
+            0 => TIMER_JUDGE_1P.0,
+            1 => TIMER_JUDGE_2P.0,
+            _ => TIMER_JUDGE_3P.0,
+        };
+        let option_early = match player {
+            0 => OPTION_1P_EARLY,
+            1 => OPTION_2P_EARLY,
+            _ => OPTION_3P_EARLY,
+        };
+        let option_late = match player {
+            0 => OPTION_1P_LATE,
+            1 => OPTION_2P_LATE,
+            _ => OPTION_3P_LATE,
+        };
+        let value_judge_duration = match player {
+            0 => VALUE_JUDGE_1P_DURATION.0,
+            1 => VALUE_JUDGE_2P_DURATION.0,
+            _ => VALUE_JUDGE_3P_DURATION.0,
+        };
+        let option_perfect = match player {
+            0 => OPTION_1P_PERFECT,
+            1 => OPTION_2P_PERFECT,
+            _ => OPTION_3P_PERFECT,
+        };
+        let offset_judge_detail = match player {
+            0 => OFFSET_JUDGEDETAIL_1P,
+            1 => OFFSET_JUDGEDETAIL_2P,
+            _ => OFFSET_JUDGEDETAIL_3P,
+        };
+
+        // Common destination x/y computed from the DST_NOWJUDGE values
+        // Java: (values[3] + values[5] / 2) uses integer division for values[5] / 2
+        let x = (values[3] + values[5] / 2) as f32 * safe_div_f32(self.dstw, self.srcw);
+        let y = self.dsth - (values[4] - 5) as f32 * safe_div_f32(self.dsth, self.srch);
+
+        // 1. EARLY text indicator: region (0, 0, 50, 20)
+        let early_region = TextureRegion::from_texture_region(tex.clone(), 0, 0, 50, 20);
+        let mut early = SkinImage::new_with_single(early_region);
+        let early_params_0 = DestinationParams {
+            time: 0,
+            x,
+            y,
+            w: 40.0 * dw,
+            h: 16.0 * dh,
+            acc: 0,
+            a: 255,
+            r: 255,
+            g: 255,
+            b: 255,
+            blend: 0,
+            filter: 0,
+            angle: 0,
+            center: 0,
+            loop_val: -1,
+        };
+        early.data.set_destination_with_int_timer_and_offsets(
+            &early_params_0,
+            judge_timer,
+            1998,
+            0,
+            option_early,
+            &[offset_judge_detail, OFFSET_LIFT],
+        );
+        let early_params_500 = DestinationParams {
+            time: 500,
+            ..early_params_0
+        };
+        early.data.set_destination_with_int_timer_and_offsets(
+            &early_params_500,
+            judge_timer,
+            1998,
+            0,
+            option_early,
+            &[offset_judge_detail, OFFSET_LIFT],
+        );
+        self.csv.collected_objects.push(SkinObject::Image(early));
+
+        // 2. LATE text indicator: region (50, 0, 50, 20)
+        let late_region = TextureRegion::from_texture_region(tex.clone(), 50, 0, 50, 20);
+        let mut late = SkinImage::new_with_single(late_region);
+        let late_params_0 = DestinationParams {
+            time: 0,
+            x,
+            y,
+            w: 40.0 * dw,
+            h: 16.0 * dh,
+            acc: 0,
+            a: 255,
+            r: 255,
+            g: 255,
+            b: 255,
+            blend: 0,
+            filter: 0,
+            angle: 0,
+            center: 0,
+            loop_val: -1,
+        };
+        late.data.set_destination_with_int_timer_and_offsets(
+            &late_params_0,
+            judge_timer,
+            1998,
+            0,
+            option_late,
+            &[offset_judge_detail, OFFSET_LIFT],
+        );
+        let late_params_500 = DestinationParams {
+            time: 500,
+            ..late_params_0
+        };
+        late.data.set_destination_with_int_timer_and_offsets(
+            &late_params_500,
+            judge_timer,
+            1998,
+            0,
+            option_late,
+            &[offset_judge_detail, OFFSET_LIFT],
+        );
+        self.csv.collected_objects.push(SkinObject::Image(late));
+
+        // Split texture into 10x20 grid for digit images
+        // Java: TextureRegion.split(tex, 10, 20) returns rows of 10px-wide, 20px-tall tiles
+        let tile_w = 10;
+        let tile_h = 20;
+        let cols = tex.width / tile_w;
+        let rows = tex.height / tile_h;
+
+        // Helper: extract a row of tile regions from the texture grid
+        let extract_row = |row: i32| -> Vec<TextureRegion> {
+            if row >= rows {
+                return Vec::new();
+            }
+            (0..cols)
+                .map(|col| {
+                    TextureRegion::from_texture_region(
+                        tex.clone(),
+                        col * tile_w,
+                        row * tile_h,
+                        tile_w,
+                        tile_h,
+                    )
+                })
+                .collect()
+        };
+
+        // 3. SkinNumber num: image=row[1], mimage=row[2], OPTION_PERFECT condition
+        // Java: new SkinNumber({images[1]}, {images[2]}, 0, 0, 4, 0, values[15], VALUE_JUDGE_DURATION, values[12])
+        let row1 = extract_row(1);
+        let row2 = extract_row(2);
+        if !row1.is_empty() && !row2.is_empty() {
+            let mut num = SkinNumber::new_with_int_timer(
+                vec![row1],
+                Some(vec![row2]),
+                0,
+                0,
+                NumberDisplayConfig {
+                    keta: 4,
+                    zeropadding: 0,
+                    space: values[15],
+                    align: values[12],
+                },
+                value_judge_duration,
+            );
+            let num_params_0 = DestinationParams {
+                time: 0,
+                x,
+                y,
+                w: 8.0 * dw,
+                h: 16.0 * dh,
+                acc: 0,
+                a: 255,
+                r: 255,
+                g: 255,
+                b: 255,
+                blend: 0,
+                filter: 0,
+                angle: 0,
+                center: 0,
+                loop_val: -1,
+            };
+            num.data.set_destination_with_int_timer_and_offsets(
+                &num_params_0,
+                judge_timer,
+                1999,
+                0,
+                option_perfect,
+                &[offset_judge_detail, OFFSET_LIFT],
+            );
+            let num_params_500 = DestinationParams {
+                time: 500,
+                ..num_params_0
+            };
+            num.data.set_destination_with_int_timer_and_offsets(
+                &num_params_500,
+                judge_timer,
+                1999,
+                0,
+                option_perfect,
+                &[offset_judge_detail, OFFSET_LIFT],
+            );
+            self.csv.collected_objects.push(SkinObject::Number(num));
+        }
+
+        // 4. SkinNumber num2: image=row[3], mimage=row[4], !OPTION_PERFECT (negated)
+        let row3 = extract_row(3);
+        let row4 = extract_row(4);
+        if !row3.is_empty() && !row4.is_empty() {
+            let mut num2 = SkinNumber::new_with_int_timer(
+                vec![row3],
+                Some(vec![row4]),
+                0,
+                0,
+                NumberDisplayConfig {
+                    keta: 4,
+                    zeropadding: 0,
+                    space: values[15],
+                    align: values[12],
+                },
+                value_judge_duration,
+            );
+            let num2_params_0 = DestinationParams {
+                time: 0,
+                x,
+                y,
+                w: 8.0 * dw,
+                h: 16.0 * dh,
+                acc: 0,
+                a: 255,
+                r: 255,
+                g: 255,
+                b: 255,
+                blend: 0,
+                filter: 0,
+                angle: 0,
+                center: 0,
+                loop_val: -1,
+            };
+            num2.data.set_destination_with_int_timer_and_offsets(
+                &num2_params_0,
+                judge_timer,
+                1999,
+                0,
+                -option_perfect,
+                &[offset_judge_detail, OFFSET_LIFT],
+            );
+            let num2_params_500 = DestinationParams {
+                time: 500,
+                ..num2_params_0
+            };
+            num2.data.set_destination_with_int_timer_and_offsets(
+                &num2_params_500,
+                judge_timer,
+                1999,
+                0,
+                -option_perfect,
+                &[offset_judge_detail, OFFSET_LIFT],
+            );
+            self.csv.collected_objects.push(SkinObject::Number(num2));
         }
     }
 

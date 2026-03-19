@@ -899,6 +899,211 @@ mod tests {
         );
     }
 
+    // ===== DST_NOWJUDGE addJudgeDetail =====
+
+    /// Helper: set up SRC_NOWJUDGE + DST_NOWJUDGE for player 0 with judge index 0 (PG).
+    /// Returns the DST values array used for verification.
+    fn setup_judge_and_dst(state: &mut LR2PlaySkinLoaderState) -> Vec<i32> {
+        state.csv.imagelist.push(
+            crate::lr2::lr2_skin_csv_loader::ImageListEntry::TextureEntry(Texture::new("test")),
+        );
+        // SRC_NOWJUDGE_1P: values[1]=5 -> judge_idx = 5-5 = 0 (PG)
+        let src_parts = make_parts("SRC_NOWJUDGE_1P", &[5, 0, 0, 0, 10, 10, 1, 1, 0, 0, 0]);
+        state.process_play_command("SRC_NOWJUDGE_1P", &src_parts);
+
+        // DST_NOWJUDGE_1P: values[1]=5 -> judge_idx = 0
+        // x=100, y=200, w=300, h=40, center(values[15])=0, blend(values[12])=0
+        let dst_values = vec![
+            5, 0, 100, 200, 300, 40, 0, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let dst_parts = make_parts("DST_NOWJUDGE_1P", &dst_values);
+        state.process_play_command("DST_NOWJUDGE_1P", &dst_parts);
+        dst_values
+    }
+
+    #[test]
+    fn test_dst_nowjudge_sets_judge_detail_added_flag() {
+        let mut state = make_state();
+        assert!(!state.judge_detail_added[0]);
+        setup_judge_and_dst(&mut state);
+        assert!(
+            state.judge_detail_added[0],
+            "judge_detail_added[0] should be true after first DST_NOWJUDGE_1P"
+        );
+    }
+
+    #[test]
+    fn test_dst_nowjudge_adds_detail_objects() {
+        let mut state = make_state();
+        let initial_count = state.csv.collected_objects.len();
+        setup_judge_and_dst(&mut state);
+        // addJudgeDetail always creates at least 2 image objects (early, late).
+        // When judgedetail.png is loadable (has >= 5 rows of 20px tiles), it also
+        // creates 2 SkinNumber objects. In test env the texture may not load,
+        // so we check >= 2.
+        let added = state.csv.collected_objects.len() - initial_count;
+        assert!(
+            added >= 2,
+            "should add at least 2 detail objects (early + late images), got {}",
+            added
+        );
+        // If texture loaded successfully (4 objects), verify all types
+        if added == 4 {
+            let objs = &state.csv.collected_objects;
+            let len = objs.len();
+            assert!(matches!(&objs[len - 2], crate::skin::SkinObject::Number(_)));
+            assert!(matches!(&objs[len - 1], crate::skin::SkinObject::Number(_)));
+        }
+    }
+
+    #[test]
+    fn test_dst_nowjudge_detail_objects_are_images() {
+        use crate::skin::SkinObject;
+        let mut state = make_state();
+        let initial_count = state.csv.collected_objects.len();
+        setup_judge_and_dst(&mut state);
+        let objs = &state.csv.collected_objects;
+        let added = objs.len() - initial_count;
+        assert!(added >= 2);
+        // The first two detail objects are always SkinImage (early, late)
+        assert!(
+            matches!(&objs[initial_count], SkinObject::Image(_)),
+            "early indicator should be SkinImage"
+        );
+        assert!(
+            matches!(&objs[initial_count + 1], SkinObject::Image(_)),
+            "late indicator should be SkinImage"
+        );
+    }
+
+    #[test]
+    fn test_dst_nowjudge_detail_not_added_twice() {
+        let mut state = make_state();
+        setup_judge_and_dst(&mut state);
+        let count_after_first = state.csv.collected_objects.len();
+
+        // Process a second DST_NOWJUDGE_1P with a different judge index
+        // First, set up that judge index via SRC
+        let src2 = make_parts("SRC_NOWJUDGE_1P", &[4, 0, 0, 0, 10, 10, 1, 1, 0, 0, 0]);
+        state.process_play_command("SRC_NOWJUDGE_1P", &src2);
+
+        let dst2 = make_parts(
+            "DST_NOWJUDGE_1P",
+            &[
+                4, 0, 50, 100, 200, 30, 0, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ],
+        );
+        state.process_play_command("DST_NOWJUDGE_1P", &dst2);
+
+        assert_eq!(
+            state.csv.collected_objects.len(),
+            count_after_first,
+            "detail objects should not be added a second time"
+        );
+    }
+
+    #[test]
+    fn test_dst_nowjudge_detail_per_player() {
+        let mut state = make_state();
+        // Add texture for SRC lookups
+        state.csv.imagelist.push(
+            crate::lr2::lr2_skin_csv_loader::ImageListEntry::TextureEntry(Texture::new("test")),
+        );
+
+        // Player 0
+        let src1p = make_parts("SRC_NOWJUDGE_1P", &[5, 0, 0, 0, 10, 10, 1, 1, 0, 0, 0]);
+        state.process_play_command("SRC_NOWJUDGE_1P", &src1p);
+        let dst1p = make_parts(
+            "DST_NOWJUDGE_1P",
+            &[
+                5, 0, 100, 200, 300, 40, 0, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ],
+        );
+        state.process_play_command("DST_NOWJUDGE_1P", &dst1p);
+        assert!(state.judge_detail_added[0]);
+        assert!(!state.judge_detail_added[1]);
+        let count_1p = state.csv.collected_objects.len();
+
+        // Player 1
+        let src2p = make_parts("SRC_NOWJUDGE_2P", &[5, 0, 0, 0, 10, 10, 1, 1, 0, 0, 0]);
+        state.process_play_command("SRC_NOWJUDGE_2P", &src2p);
+        let dst2p = make_parts(
+            "DST_NOWJUDGE_2P",
+            &[
+                5, 0, 100, 200, 300, 40, 0, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ],
+        );
+        state.process_play_command("DST_NOWJUDGE_2P", &dst2p);
+        assert!(state.judge_detail_added[1]);
+        let added_2p = state.csv.collected_objects.len() - count_1p;
+        assert!(
+            added_2p >= 2,
+            "player 2 should also get at least 2 detail objects, got {}",
+            added_2p
+        );
+    }
+
+    #[test]
+    fn test_dst_nowjudge_detail_image_destinations() {
+        let mut state = make_state();
+        let initial_count = state.csv.collected_objects.len();
+        setup_judge_and_dst(&mut state);
+        let objs = &state.csv.collected_objects;
+
+        // Early and late images should each have 2 destination entries (time=0 and time=500)
+        if let crate::skin::SkinObject::Image(ref img) = objs[initial_count] {
+            assert_eq!(
+                img.data.dst.len(),
+                2,
+                "early image should have 2 destinations (t=0, t=500)"
+            );
+        } else {
+            panic!("expected SkinImage at index {}", initial_count);
+        }
+        if let crate::skin::SkinObject::Image(ref img) = objs[initial_count + 1] {
+            assert_eq!(
+                img.data.dst.len(),
+                2,
+                "late image should have 2 destinations (t=0, t=500)"
+            );
+        } else {
+            panic!("expected SkinImage at index {}", initial_count + 1);
+        }
+    }
+
+    #[test]
+    fn test_dst_nowjudge_detail_number_destinations() {
+        let mut state = make_state();
+        let initial_count = state.csv.collected_objects.len();
+        setup_judge_and_dst(&mut state);
+        let objs = &state.csv.collected_objects;
+        let added = objs.len() - initial_count;
+
+        // SkinNumber objects are only present when texture loaded (4 total objects)
+        if added >= 4 {
+            if let crate::skin::SkinObject::Number(ref num) = objs[initial_count + 2] {
+                assert_eq!(
+                    num.data.dst.len(),
+                    2,
+                    "num (perfect) should have 2 destinations (t=0, t=500)"
+                );
+            } else {
+                panic!("expected SkinNumber at index {}", initial_count + 2);
+            }
+            if let crate::skin::SkinObject::Number(ref num) = objs[initial_count + 3] {
+                assert_eq!(
+                    num.data.dst.len(),
+                    2,
+                    "num2 (!perfect) should have 2 destinations (t=0, t=500)"
+                );
+            } else {
+                panic!("expected SkinNumber at index {}", initial_count + 3);
+            }
+        }
+        // When texture is unavailable (test env), only images are created
+        // SkinNumber tests are effectively skipped
+    }
+
     #[test]
     fn test_make_default_line_height_multiplier() {
         let mut state = make_state();
