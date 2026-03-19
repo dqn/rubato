@@ -210,7 +210,7 @@ impl BMSPlayer {
         let mut total_count: i64 = 0;
         let mut average: i64 = 0;
         let mut play_times: Vec<i64> = Vec::new();
-        let lanes = self.model.mode().map(|m| m.key()).unwrap_or(0);
+        let lanes = self.model.mode().map(|m| m.key()).unwrap_or(8);
         for tl in &self.model.timelines {
             for i in 0..lanes {
                 if let Some(note) = tl.note(i) {
