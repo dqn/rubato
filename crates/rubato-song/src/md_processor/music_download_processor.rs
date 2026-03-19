@@ -31,6 +31,7 @@ pub struct MusicDownloadProcessor {
     daemon: Arc<Mutex<Option<DaemonHandle>>>,
     message: Arc<Mutex<String>>,
     pub main: Arc<dyn MusicDatabaseAccessor>,
+    download_directory: PathBuf,
 }
 
 struct DaemonHandle {
@@ -42,13 +43,18 @@ struct DaemonHandle {
 }
 
 impl MusicDownloadProcessor {
-    pub fn new(ipfs: String, main: Arc<dyn MusicDatabaseAccessor>) -> Self {
+    pub fn new(
+        ipfs: String,
+        main: Arc<dyn MusicDatabaseAccessor>,
+        download_directory: PathBuf,
+    ) -> Self {
         MusicDownloadProcessor {
             commands: Arc::new(Mutex::new(VecDeque::new())),
             ipfs: Arc::new(Mutex::new(ipfs)),
             daemon: Arc::new(Mutex::new(None)),
             message: Arc::new(Mutex::new(String::new())),
             main,
+            download_directory,
         }
     }
 
@@ -76,6 +82,7 @@ impl MusicDownloadProcessor {
             let download = Arc::new(AtomicBool::new(false));
             let downloadpath: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
             let dispose = Arc::new(AtomicBool::new(false));
+            let download_directory = self.download_directory.clone();
 
             let alive_clone = alive.clone();
             let download_clone = download.clone();
@@ -92,6 +99,7 @@ impl MusicDownloadProcessor {
                     download: download_clone,
                     downloadpath: downloadpath_clone,
                     dispose: dispose_clone,
+                    download_directory,
                 });
             });
 
@@ -191,6 +199,7 @@ struct DownloadDaemonState {
     pub download: Arc<AtomicBool>,
     pub downloadpath: Arc<Mutex<Option<String>>>,
     pub dispose: Arc<AtomicBool>,
+    pub download_directory: PathBuf,
 }
 
 fn download_daemon_thread_run(state: DownloadDaemonState) {
@@ -202,10 +211,12 @@ fn download_daemon_thread_run(state: DownloadDaemonState) {
     let download = state.download;
     let downloadpath = state.downloadpath;
     let dispose = state.dispose;
+    let download_directory = state.download_directory;
     let mut download_ipfs_handle: Option<thread::JoinHandle<()>> = None;
     let download_ipfs_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     dispose.store(false, Ordering::SeqCst);
 
+    let ipfs_dir = download_directory.join("ipfs");
     let mut ipfspath = String::new();
     let mut path = String::new();
     let mut diffpath = String::new();
@@ -234,7 +245,10 @@ fn download_daemon_thread_run(state: DownloadDaemonState) {
                 ipfspath = normalize_ipfs_path(&ipfspath);
                 path = format!("[{}]{}", song.artist(), song.title());
                 // path = "ipfs/" + path.replaceAll("[(\\\\|/|:|\\*|\\?|\"|<|>|\\|)]", "");
-                path = format!("ipfs/{}", path_sanitize_re.replace_all(&path, ""));
+                path = ipfs_dir
+                    .join(path_sanitize_re.replace_all(&path, "").as_ref())
+                    .to_string_lossy()
+                    .to_string();
 
                 if !diffpath.is_empty() {
                     diffpath = normalize_ipfs_path(&diffpath);
@@ -274,6 +288,7 @@ fn download_daemon_thread_run(state: DownloadDaemonState) {
                     let path_clone = path.clone();
                     let message_clone = message.clone();
                     let alive_flag = download_ipfs_alive.clone();
+                    let ipfs_dir_clone = ipfs_dir.clone();
                     alive_flag.store(true, Ordering::SeqCst);
                     download_ipfs_handle = Some(thread::spawn(move || {
                         download_ipfs_thread_run(
@@ -281,6 +296,7 @@ fn download_daemon_thread_run(state: DownloadDaemonState) {
                             &ipfspath_clone,
                             &path_clone,
                             message_clone,
+                            &ipfs_dir_clone,
                         );
                         alive_flag.store(false, Ordering::SeqCst);
                     }));
@@ -297,7 +313,7 @@ fn download_daemon_thread_run(state: DownloadDaemonState) {
 
             if is_download && (download_ipfs_handle.is_none() || !ipfs_thread_alive) {
                 if !diffpath.is_empty() {
-                    let f = PathBuf::from(format!("ipfs/{}", diffpath));
+                    let f = ipfs_dir.join(&diffpath);
                     if ipfspath.is_empty() {
                         if f.exists() && f.is_dir() {
                             if let Ok(entries) = fs::read_dir(&f) {
@@ -316,9 +332,13 @@ fn download_daemon_thread_run(state: DownloadDaemonState) {
                     } else {
                         let ipfs_url = lock_or_recover(&ipfs).clone();
                         let diffpath_clone = diffpath.clone();
-                        let diff_dest = format!("ipfs{}{}", std::path::MAIN_SEPARATOR, &diffpath);
+                        let diff_dest = ipfs_dir
+                            .join(&diffpath)
+                            .to_string_lossy()
+                            .to_string();
                         let message_clone = message.clone();
                         let alive_flag = download_ipfs_alive.clone();
+                        let ipfs_dir_clone = ipfs_dir.clone();
                         alive_flag.store(true, Ordering::SeqCst);
                         download_ipfs_handle = Some(thread::spawn(move || {
                             download_ipfs_thread_run(
@@ -326,6 +346,7 @@ fn download_daemon_thread_run(state: DownloadDaemonState) {
                                 &diffpath_clone,
                                 &diff_dest,
                                 message_clone,
+                                &ipfs_dir_clone,
                             );
                             alive_flag.store(false, Ordering::SeqCst);
                         }));
@@ -378,12 +399,19 @@ fn build_ipfs_download_url(gateway_base: &str, ipfspath: &str) -> String {
     )
 }
 
-fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc<Mutex<String>>) {
+fn download_ipfs_thread_run(
+    ipfs: &str,
+    ipfspath: &str,
+    path: &str,
+    message: Arc<Mutex<String>>,
+    ipfs_dir: &Path,
+) {
     *lock_or_recover(&message) = format!("downloading:{}", path);
 
     // Download tar.gz from IPFS gateway
     let url_str = build_ipfs_download_url(ipfs, ipfspath);
-    let _ = fs::remove_file("ipfs/bms.tar.gz");
+    let gz_staging = ipfs_dir.join("bms.tar.gz");
+    let _ = fs::remove_file(&gz_staging);
 
     let client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(60))
@@ -399,8 +427,8 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
                 );
                 false
             } else {
-                let _ = fs::create_dir_all("ipfs");
-                match fs::File::create("ipfs/bms.tar.gz") {
+                let _ = fs::create_dir_all(ipfs_dir);
+                match fs::File::create(&gz_staging) {
                     Ok(mut out) => {
                         let chunk_size = 1024 * 512;
                         let mut total: i64 = 0;
@@ -448,7 +476,7 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
 
     if download_ok {
         // Extract tar.gz
-        let gz_path = std::path::Path::new("ipfs/bms.tar.gz");
+        let gz_path = &gz_staging;
         let mut extraction_ok = true;
         if gz_path.exists() {
             let gz_file = match fs::File::open(gz_path) {
@@ -461,8 +489,7 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
             };
             let decoder = flate2::read::GzDecoder::new(gz_file);
             let mut archive = tar::Archive::new(decoder);
-            let dest = std::path::Path::new("ipfs");
-            let canonical_dest = dest.canonicalize().unwrap_or_else(|_| dest.to_path_buf());
+            let canonical_dest = ipfs_dir.canonicalize().unwrap_or_else(|_| ipfs_dir.to_path_buf());
             match archive.entries() {
                 Ok(entries) => {
                     for entry_result in entries {
@@ -535,7 +562,7 @@ fn download_ipfs_thread_run(ipfs: &str, ipfspath: &str, path: &str, message: Arc
     }
 
     // File move logic (post-extraction)
-    let dir = PathBuf::from(format!("ipfs{}{}", std::path::MAIN_SEPARATOR, ipfspath));
+    let dir = ipfs_dir.join(ipfspath);
     if !ipfspath.is_empty() && dir.to_string_lossy() != path && dir.exists() {
         if dir.is_dir() {
             let dest_path = PathBuf::from(path);

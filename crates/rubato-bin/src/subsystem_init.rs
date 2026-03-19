@@ -232,6 +232,7 @@ fn init_ipfs_download_processor(
                 rubato_song::md_processor::music_download_processor::MusicDownloadProcessor::new(
                     config.network.ipfsurl.clone(),
                     adapter,
+                    std::path::PathBuf::from(&config.network.download_directory),
                 );
             processor.start(None);
             controller.set_music_download_processor(Box::new(processor));
