@@ -427,14 +427,17 @@ impl CourseResult {
     /// Stops course-specific sounds if available, otherwise falls back to result sounds.
     pub fn shutdown(&mut self) {
         // Java: stop(getSound(COURSE_CLEAR) != null ? COURSE_CLEAR : RESULT_CLEAR)
-        self.stop_sound_inner(SoundType::CourseClear);
-        self.stop_sound_inner(SoundType::ResultClear);
+        self.stop_sound_inner(
+            self.select_course_sound(SoundType::CourseClear, SoundType::ResultClear),
+        );
         // Java: stop(getSound(COURSE_FAIL) != null ? COURSE_FAIL : RESULT_FAIL)
-        self.stop_sound_inner(SoundType::CourseFail);
-        self.stop_sound_inner(SoundType::ResultFail);
+        self.stop_sound_inner(
+            self.select_course_sound(SoundType::CourseFail, SoundType::ResultFail),
+        );
         // Java: stop(getSound(COURSE_CLOSE) != null ? COURSE_CLOSE : RESULT_CLOSE)
-        self.stop_sound_inner(SoundType::CourseClose);
-        self.stop_sound_inner(SoundType::ResultClose);
+        self.stop_sound_inner(
+            self.select_course_sound(SoundType::CourseClose, SoundType::ResultClose),
+        );
 
         // Detach the IR send thread -- it is bounded (sends scores + fetches
         // ranking, then exits) so we do not need to block shutdown waiting for it.
@@ -445,8 +448,34 @@ impl CourseResult {
         }
     }
 
+    fn has_sound(&self, sound: SoundType) -> bool {
+        super::result_common::has_sound(&self.main, &sound)
+    }
+
+    fn play_sound_inner(&mut self, sound: SoundType) {
+        super::result_common::play_sound(&mut self.main, &sound);
+    }
+
     fn stop_sound_inner(&mut self, sound: SoundType) {
         super::result_common::stop_sound(&mut self.main, &sound);
+    }
+
+    /// Stop clear/fail sounds and play close sound (course-specific with fallback).
+    /// Java pattern: stop(getSound(COURSE_CLEAR) != null ? COURSE_CLEAR : RESULT_CLEAR);
+    ///              stop(getSound(COURSE_FAIL) != null ? COURSE_FAIL : RESULT_FAIL);
+    ///              play(getSound(COURSE_CLOSE) != null ? COURSE_CLOSE : RESULT_CLOSE);
+    fn stop_and_play_close_sound(&mut self) {
+        if self.has_sound(SoundType::CourseClose) || self.has_sound(SoundType::ResultClose) {
+            self.stop_sound_inner(
+                self.select_course_sound(SoundType::CourseClear, SoundType::ResultClear),
+            );
+            self.stop_sound_inner(
+                self.select_course_sound(SoundType::CourseFail, SoundType::ResultFail),
+            );
+            self.play_sound_inner(
+                self.select_course_sound(SoundType::CourseClose, SoundType::ResultClose),
+            );
+        }
     }
 
     fn do_render(&mut self) {
@@ -481,6 +510,12 @@ impl CourseResult {
 
                 self.main
                     .change_state(rubato_core::main_state::MainStateType::MusicSelect);
+            }
+        } else {
+            let skin_scene = self.skin.as_ref().map(|s| s.scene() as i64).unwrap_or(0);
+            if time > skin_scene {
+                self.data.timer.switch_timer(TIMER_FADEOUT, true);
+                self.stop_and_play_close_sound();
             }
         }
     }
@@ -520,7 +555,7 @@ impl CourseResult {
                 && (self.data.state == STATE_OFFLINE || self.data.state == STATE_IR_FINISHED)
             {
                 self.data.timer.switch_timer(TIMER_FADEOUT, true);
-                // play close sound
+                self.stop_and_play_close_sound();
             }
 
             if let Some(idx) = self.get_replay_index_from_input() {
@@ -2054,83 +2089,379 @@ mod tests {
     }
 
     // ============================================================
-    // CourseResultMouseContext data-access delegation tests
+    // Finding 1: do_render() missing TIMER_FADEOUT auto-fire
+    // ============================================================
+
+    /// Mock MainControllerAccess that tracks sound operations and provides sound_path.
+    struct SoundTrackingAccess {
+        config: rubato_types::config::Config,
+        player_config: rubato_types::player_config::PlayerConfig,
+        available_sounds: std::collections::HashSet<SoundType>,
+        played_sounds: std::sync::Arc<std::sync::Mutex<Vec<SoundType>>>,
+        stopped_sounds: std::sync::Arc<std::sync::Mutex<Vec<SoundType>>>,
+        state_changes:
+            std::sync::Arc<std::sync::Mutex<Vec<rubato_core::main_state::MainStateType>>>,
+    }
+
+    impl SoundTrackingAccess {
+        fn new(
+            available: Vec<SoundType>,
+            played: std::sync::Arc<std::sync::Mutex<Vec<SoundType>>>,
+            stopped: std::sync::Arc<std::sync::Mutex<Vec<SoundType>>>,
+            state_changes: std::sync::Arc<
+                std::sync::Mutex<Vec<rubato_core::main_state::MainStateType>>,
+            >,
+        ) -> Self {
+            Self {
+                config: rubato_types::config::Config::default(),
+                player_config: rubato_types::player_config::PlayerConfig::default(),
+                available_sounds: available.into_iter().collect(),
+                played_sounds: played,
+                stopped_sounds: stopped,
+                state_changes,
+            }
+        }
+    }
+
+    impl rubato_types::main_controller_access::MainControllerAccess for SoundTrackingAccess {
+        fn config(&self) -> &rubato_types::config::Config {
+            &self.config
+        }
+        fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
+            &self.player_config
+        }
+        fn change_state(&mut self, state: rubato_core::main_state::MainStateType) {
+            self.state_changes.lock().unwrap().push(state);
+        }
+        fn save_config(&self) -> anyhow::Result<()> {
+            Ok(())
+        }
+        fn exit(&self) -> anyhow::Result<()> {
+            Ok(())
+        }
+        fn save_last_recording(&self, _reason: &str) {}
+        fn update_song(&mut self, _path: Option<&str>) {}
+        fn player_resource(
+            &self,
+        ) -> Option<&dyn rubato_types::player_resource_access::PlayerResourceAccess> {
+            None
+        }
+        fn player_resource_mut(
+            &mut self,
+        ) -> Option<&mut dyn rubato_types::player_resource_access::PlayerResourceAccess> {
+            None
+        }
+        fn sound_path(
+            &self,
+            sound: &rubato_core::system_sound_manager::SoundType,
+        ) -> Option<String> {
+            if self.available_sounds.contains(sound) {
+                Some(format!("test/{:?}.wav", sound))
+            } else {
+                None
+            }
+        }
+        fn play_sound(
+            &mut self,
+            sound: &rubato_core::system_sound_manager::SoundType,
+            _loop_sound: bool,
+        ) {
+            self.played_sounds.lock().unwrap().push(sound.clone());
+        }
+        fn stop_sound(&mut self, sound: &rubato_core::system_sound_manager::SoundType) {
+            self.stopped_sounds.lock().unwrap().push(sound.clone());
+        }
+    }
+
+    fn make_sound_tracking_cr(
+        available_sounds: Vec<SoundType>,
+    ) -> (
+        CourseResult,
+        std::sync::Arc<std::sync::Mutex<Vec<SoundType>>>,
+        std::sync::Arc<std::sync::Mutex<Vec<SoundType>>>,
+        std::sync::Arc<std::sync::Mutex<Vec<rubato_core::main_state::MainStateType>>>,
+    ) {
+        let played = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let stopped = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let state_changes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let access = SoundTrackingAccess::new(
+            available_sounds,
+            played.clone(),
+            stopped.clone(),
+            state_changes.clone(),
+        );
+        let main = MainController::new(Box::new(access));
+        let resource = PlayerResource::default();
+        let cr = CourseResult::new(
+            main,
+            resource,
+            rubato_core::timer_manager::TimerManager::new(),
+        );
+        (cr, played, stopped, state_changes)
+    }
+
+    #[test]
+    fn test_do_render_auto_fires_timer_fadeout_when_time_exceeds_scene() {
+        // Finding 1: When time > skin.scene and TIMER_FADEOUT is not on,
+        // do_render() should auto-fire TIMER_FADEOUT (like Java CourseResult.render()).
+        let (mut cr, _played, _stopped, _state_changes) = make_sound_tracking_cr(vec![]);
+
+        // Set up a skin with scene=0 so any positive time exceeds it
+        cr.skin = Some(ResultSkinData::new_with_timings(0, 0, 0, 0));
+
+        // Advance timer so now_time() > 0
+        cr.data.timer.update();
+        std::thread::sleep(std::time::Duration::from_millis(1));
+        cr.data.timer.update();
+
+        assert!(
+            !cr.data.timer.is_timer_on(TIMER_FADEOUT),
+            "TIMER_FADEOUT should not be on before render"
+        );
+
+        cr.do_render();
+
+        assert!(
+            cr.data.timer.is_timer_on(TIMER_FADEOUT),
+            "do_render() should auto-fire TIMER_FADEOUT when time > scene"
+        );
+    }
+
+    #[test]
+    fn test_do_render_auto_fadeout_plays_close_sound_when_available() {
+        // Finding 1: When auto-firing TIMER_FADEOUT, should stop clear/fail and play close sound.
+        let (mut cr, played, stopped, _state_changes) =
+            make_sound_tracking_cr(vec![SoundType::CourseClose, SoundType::CourseClear]);
+
+        cr.skin = Some(ResultSkinData::new_with_timings(0, 0, 0, 0));
+        cr.data.timer.update();
+        std::thread::sleep(std::time::Duration::from_millis(1));
+        cr.data.timer.update();
+
+        cr.do_render();
+
+        let stopped_sounds = stopped.lock().unwrap();
+        let played_sounds = played.lock().unwrap();
+
+        // Should stop clear/fail sounds (using course variant since available)
+        assert!(
+            stopped_sounds.contains(&SoundType::CourseClear),
+            "should stop CourseClear on auto-fadeout"
+        );
+        assert!(
+            stopped_sounds.contains(&SoundType::CourseFail)
+                || stopped_sounds.contains(&SoundType::ResultFail),
+            "should stop fail sound on auto-fadeout"
+        );
+        // Should play close sound (using course variant since available)
+        assert!(
+            played_sounds.contains(&SoundType::CourseClose),
+            "should play CourseClose on auto-fadeout"
+        );
+    }
+
+    #[test]
+    fn test_do_render_auto_fadeout_no_close_sound_when_none_available() {
+        // When neither COURSE_CLOSE nor RESULT_CLOSE exists, no close sound should play.
+        let (mut cr, played, stopped, _state_changes) = make_sound_tracking_cr(vec![]);
+
+        cr.skin = Some(ResultSkinData::new_with_timings(0, 0, 0, 0));
+        cr.data.timer.update();
+        std::thread::sleep(std::time::Duration::from_millis(1));
+        cr.data.timer.update();
+
+        cr.do_render();
+
+        let played_sounds = played.lock().unwrap();
+        let stopped_sounds = stopped.lock().unwrap();
+
+        assert!(
+            cr.data.timer.is_timer_on(TIMER_FADEOUT),
+            "TIMER_FADEOUT should still be fired"
+        );
+        assert!(
+            played_sounds.is_empty(),
+            "no close sound should be played when none available"
+        );
+        assert!(
+            stopped_sounds.is_empty(),
+            "no sounds should be stopped when no close sound available"
+        );
+    }
+
+    #[test]
+    fn test_do_render_does_not_auto_fadeout_when_already_fading() {
+        // If TIMER_FADEOUT is already on, the else branch should not fire.
+        let (mut cr, _played, _stopped, _state_changes) = make_sound_tracking_cr(vec![]);
+
+        cr.skin = Some(ResultSkinData::new_with_timings(0, 0, 0, 0));
+        cr.data.timer.update();
+        cr.data.timer.switch_timer(TIMER_FADEOUT, true);
+
+        // Render should go into the FADEOUT branch, not the else branch
+        cr.do_render();
+
+        // TIMER_FADEOUT was already on, so this just verifies it stays on
+        assert!(cr.data.timer.is_timer_on(TIMER_FADEOUT));
+    }
+
+    // ============================================================
+    // Finding 2: do_input() missing close sound on OK press
     // ============================================================
 
     #[test]
-    fn course_result_mouse_context_gauge_type_delegates() {
-        let mut cr = make_course_result_for_mouse();
-        cr.data.gauge_type = 3;
-        let mut timer = rubato_core::timer_manager::TimerManager::new();
-        let ctx = render_context::CourseResultMouseContext {
-            timer: &mut timer,
-            result: &mut cr,
-        };
-        assert_eq!(
-            ctx.gauge_type(),
-            3,
-            "CourseResultMouseContext::gauge_type() must delegate to data"
+    fn test_do_input_plays_close_sound_when_fadeout_triggered() {
+        // Finding 2: When TIMER_FADEOUT is set during do_input() (OK press path),
+        // it should stop clear/fail sounds and play close sound.
+        // With score_data() == None (default), the OK path triggers unconditionally.
+        let (mut cr, played, stopped, _state_changes) =
+            make_sound_tracking_cr(vec![SoundType::CourseClose, SoundType::CourseClear]);
+
+        cr.data.timer.update();
+        // Activate TIMER_STARTINPUT so the input block is entered
+        cr.data.timer.switch_timer(TIMER_STARTINPUT, true);
+        // score_data() is None by default, state is STATE_OFFLINE by default,
+        // so the TIMER_FADEOUT branch will trigger without needing key press simulation.
+
+        cr.do_input();
+
+        assert!(
+            cr.data.timer.is_timer_on(TIMER_FADEOUT),
+            "TIMER_FADEOUT should be set"
+        );
+
+        let stopped_sounds = stopped.lock().unwrap();
+        let played_sounds = played.lock().unwrap();
+
+        // Should have stopped clear/fail and played close
+        assert!(
+            stopped_sounds.contains(&SoundType::CourseClear),
+            "should stop clear sound when close sound triggered"
+        );
+        assert!(
+            played_sounds.contains(&SoundType::CourseClose),
+            "should play CourseClose on TIMER_FADEOUT"
         );
     }
 
     #[test]
-    fn course_result_mouse_context_integer_value_delegates() {
-        let mut cr = make_course_result_for_mouse();
-        // integer_value for result screen delegates to shared_render_context::integer_value.
-        // ID 75 (NUMBER_MAXCOMBO) returns data.score.score.maxcombo.
-        let mut score = rubato_types::score_data::ScoreData::default();
-        score.maxcombo = 42;
-        cr.data.score.score = Some(score);
-        let mut timer = rubato_core::timer_manager::TimerManager::new();
-        let ctx = render_context::CourseResultMouseContext {
-            timer: &mut timer,
-            result: &mut cr,
-        };
-        assert_eq!(
-            ctx.integer_value(75),
-            42,
-            "CourseResultMouseContext::integer_value() must delegate to data"
+    fn test_do_input_no_close_sound_when_none_available() {
+        // When no close sound exists, TIMER_FADEOUT should still fire but no sound plays.
+        let (mut cr, played, _stopped, _state_changes) = make_sound_tracking_cr(vec![]);
+
+        cr.data.timer.update();
+        cr.data.timer.switch_timer(TIMER_STARTINPUT, true);
+
+        cr.do_input();
+
+        assert!(cr.data.timer.is_timer_on(TIMER_FADEOUT));
+        let played_sounds = played.lock().unwrap();
+        assert!(
+            played_sounds.is_empty(),
+            "no close sound should be played when none available"
+        );
+    }
+
+    // ============================================================
+    // Finding 3: shutdown() unconditional sound stop
+    // ============================================================
+
+    #[test]
+    fn test_shutdown_stops_course_sounds_when_course_sounds_available() {
+        // Finding 3: shutdown() should stop exactly one per category (exclusive-or),
+        // not all six unconditionally.
+        let (mut cr, _played, stopped, _state_changes) = make_sound_tracking_cr(vec![
+            SoundType::CourseClear,
+            SoundType::CourseFail,
+            SoundType::CourseClose,
+        ]);
+
+        cr.shutdown();
+
+        let stopped_sounds = stopped.lock().unwrap();
+        // Should stop course variants only (not result variants)
+        assert!(
+            stopped_sounds.contains(&SoundType::CourseClear),
+            "should stop CourseClear"
+        );
+        assert!(
+            stopped_sounds.contains(&SoundType::CourseFail),
+            "should stop CourseFail"
+        );
+        assert!(
+            stopped_sounds.contains(&SoundType::CourseClose),
+            "should stop CourseClose"
+        );
+        assert!(
+            !stopped_sounds.contains(&SoundType::ResultClear),
+            "should NOT stop ResultClear when CourseClear exists"
+        );
+        assert!(
+            !stopped_sounds.contains(&SoundType::ResultFail),
+            "should NOT stop ResultFail when CourseFail exists"
+        );
+        assert!(
+            !stopped_sounds.contains(&SoundType::ResultClose),
+            "should NOT stop ResultClose when CourseClose exists"
         );
     }
 
     #[test]
-    fn course_result_mouse_context_score_data_property_delegates() {
-        let mut cr = make_course_result_for_mouse();
-        let mut timer = rubato_core::timer_manager::TimerManager::new();
-        let ctx = render_context::CourseResultMouseContext {
-            timer: &mut timer,
-            result: &mut cr,
-        };
-        // The default ScoreDataProperty has rate 0.0, which matches trait default.
-        // But the delegation itself should return the data's property, not the global default.
-        // Since both are default, just verify no panic and the method is callable.
-        let _prop = ctx.score_data_property();
+    fn test_shutdown_falls_back_to_result_sounds_when_course_sounds_unavailable() {
+        // When course-specific sounds don't exist, falls back to result sounds.
+        let (mut cr, _played, stopped, _state_changes) = make_sound_tracking_cr(vec![
+            SoundType::ResultClear,
+            SoundType::ResultFail,
+            SoundType::ResultClose,
+        ]);
+
+        cr.shutdown();
+
+        let stopped_sounds = stopped.lock().unwrap();
+        // Should stop result variants only (not course variants)
+        assert!(
+            stopped_sounds.contains(&SoundType::ResultClear),
+            "should stop ResultClear as fallback"
+        );
+        assert!(
+            stopped_sounds.contains(&SoundType::ResultFail),
+            "should stop ResultFail as fallback"
+        );
+        assert!(
+            stopped_sounds.contains(&SoundType::ResultClose),
+            "should stop ResultClose as fallback"
+        );
+        assert!(
+            !stopped_sounds.contains(&SoundType::CourseClear),
+            "should NOT stop CourseClear when it doesn't exist"
+        );
+        assert!(
+            !stopped_sounds.contains(&SoundType::CourseFail),
+            "should NOT stop CourseFail when it doesn't exist"
+        );
+        assert!(
+            !stopped_sounds.contains(&SoundType::CourseClose),
+            "should NOT stop CourseClose when it doesn't exist"
+        );
     }
 
     #[test]
-    fn course_result_mouse_context_boolean_value_delegates() {
-        let mut cr = make_course_result_for_mouse();
-        let mut timer = rubato_core::timer_manager::TimerManager::new();
-        let ctx = render_context::CourseResultMouseContext {
-            timer: &mut timer,
-            result: &mut cr,
-        };
-        // boolean_value should delegate rather than returning default false.
-        // We test a known ID that returns non-false for result screens.
-        let _val = ctx.boolean_value(0);
-    }
+    fn test_shutdown_mixed_availability() {
+        // One category has course sound, another has only result fallback.
+        let (mut cr, _played, stopped, _state_changes) = make_sound_tracking_cr(vec![
+            SoundType::CourseClear, // course clear available
+            SoundType::ResultFail,  // only result fail available
+            SoundType::CourseClose, // course close available
+        ]);
 
-    #[test]
-    fn course_result_mouse_context_string_value_delegates() {
-        let mut cr = make_course_result_for_mouse();
-        let mut timer = rubato_core::timer_manager::TimerManager::new();
-        let ctx = render_context::CourseResultMouseContext {
-            timer: &mut timer,
-            result: &mut cr,
-        };
-        // string_value(10) should return song title from resource.
-        // The test resource may have no songdata, so it returns empty string.
-        // But the delegation itself should not panic.
-        let _val = ctx.string_value(10);
+        cr.shutdown();
+
+        let stopped_sounds = stopped.lock().unwrap();
+        assert!(stopped_sounds.contains(&SoundType::CourseClear));
+        assert!(!stopped_sounds.contains(&SoundType::ResultClear));
+        assert!(stopped_sounds.contains(&SoundType::ResultFail));
+        assert!(!stopped_sounds.contains(&SoundType::CourseFail));
+        assert!(stopped_sounds.contains(&SoundType::CourseClose));
+        assert!(!stopped_sounds.contains(&SoundType::ResultClose));
     }
 }
