@@ -240,5 +240,8 @@ impl LR2SkinLoaderAccess for LR2ResultSkinLoaderState {
         if let Some(obj) = self.timinggraphobj.take() {
             skin.add(SkinObject::TimingDistributionGraph(obj));
         }
+
+        // Propagate ranktime to the Skin so ResultSkinData can read it.
+        skin.ranktime = self.ranktime;
     }
 }

@@ -208,5 +208,8 @@ impl LR2SkinLoaderAccess for LR2CourseResultSkinLoaderState {
         if let Some(obj) = self.noteobj.take() {
             skin.add(SkinObject::NoteDistributionGraph(obj));
         }
+
+        // Propagate ranktime to the Skin so ResultSkinData can read it.
+        skin.ranktime = self.ranktime;
     }
 }
