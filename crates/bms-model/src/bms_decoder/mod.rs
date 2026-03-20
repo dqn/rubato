@@ -219,21 +219,23 @@ impl BMSDecoder {
                 } else if !random_state.should_skip() {
                     self.parse_header_line(line, model, &mut maxsec);
                 }
-            } else if first_char == '%' {
-                if let Some(index) = line.find(' ')
+            } else if !random_state.should_skip() {
+                if first_char == '%' {
+                    if let Some(index) = line.find(' ')
+                        && line.len() > index + 1
+                    {
+                        model
+                            .values
+                            .insert(line[1..index].to_string(), line[index + 1..].to_string());
+                    }
+                } else if first_char == '@'
+                    && let Some(index) = line.find(' ')
                     && line.len() > index + 1
                 {
                     model
                         .values
                         .insert(line[1..index].to_string(), line[index + 1..].to_string());
                 }
-            } else if first_char == '@'
-                && let Some(index) = line.find(' ')
-                && line.len() > index + 1
-            {
-                model
-                    .values
-                    .insert(line[1..index].to_string(), line[index + 1..].to_string());
             }
         }
 
@@ -940,8 +942,17 @@ impl RandomDirectiveState {
 
     fn handle_endrandom(&mut self, line: &str, log: &mut Vec<DecodeLog>) {
         if !self.crandom.is_empty() {
-            self.crandom.pop();
-            self.is_switch.pop();
+            if self.is_switch.last().copied().unwrap_or(false) {
+                // Top entry is a SWITCH block, not a RANDOM block.
+                // Log warning but do not pop to avoid corrupting SWITCH state.
+                log.push(DecodeLog::new(
+                    State::Warning,
+                    format!("ENDRANDOMに対応するRANDOMが存在しません: {}", line),
+                ));
+            } else {
+                self.crandom.pop();
+                self.is_switch.pop();
+            }
         } else {
             log.push(DecodeLog::new(
                 State::Warning,
@@ -1097,10 +1108,19 @@ impl RandomDirectiveState {
 
     fn handle_endsw(&mut self, line: &str, log: &mut Vec<DecodeLog>) {
         if !self.crandom.is_empty() {
-            self.crandom.pop();
-            self.is_switch.pop();
-            self.case_matched.pop();
-            self.case_skipped.pop();
+            if self.is_switch.last().copied().unwrap_or(false) {
+                self.crandom.pop();
+                self.is_switch.pop();
+                self.case_matched.pop();
+                self.case_skipped.pop();
+            } else {
+                // Top entry is a RANDOM block, not a SWITCH block.
+                // Log warning but do not pop to avoid corrupting RANDOM state.
+                log.push(DecodeLog::new(
+                    State::Warning,
+                    format!("ENDSWに対応するSWITCHが存在しません: {}", line),
+                ));
+            }
         } else {
             log.push(DecodeLog::new(
                 State::Warning,
@@ -2590,5 +2610,138 @@ mod tests {
             .unwrap();
         // Case 1 matched. Case 2 is unentered so nested content should be skipped.
         assert_eq!(model.title, "Case1");
+    }
+
+    // -- Finding 1: % and @ lines must be skipped inside conditional blocks --
+
+    #[test]
+    fn percent_value_skipped_in_unmatched_if_branch() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#RANDOM 2",
+            "#IF 1",
+            "%URL http://included.com",
+            "#ENDIF",
+            "#IF 2",
+            "%URL http://skipped.com",
+            "#ENDIF",
+            "#ENDRANDOM",
+        ]);
+        // selected_random[0]=1 → IF 1 matches, IF 2 is skipped
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        assert_eq!(
+            model.values.get("URL"),
+            Some(&"http://included.com".to_string())
+        );
+    }
+
+    #[test]
+    fn at_value_skipped_in_unmatched_if_branch() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#RANDOM 2",
+            "#IF 1",
+            "@KEY included_val",
+            "#ENDIF",
+            "#IF 2",
+            "@KEY skipped_val",
+            "#ENDIF",
+            "#ENDRANDOM",
+        ]);
+        // selected_random[0]=1 → IF 1 matches, IF 2 is skipped
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        assert_eq!(model.values.get("KEY"), Some(&"included_val".to_string()));
+    }
+
+    #[test]
+    fn percent_value_skipped_in_unmatched_switch_case() {
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 2",
+            "#CASE 1",
+            "%URL http://case1.com",
+            "#SKIP",
+            "#CASE 2",
+            "%URL http://case2.com",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        // selected_random[0]=1 → CASE 1 matches
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        assert_eq!(
+            model.values.get("URL"),
+            Some(&"http://case1.com".to_string())
+        );
+    }
+
+    // -- Finding 2: ENDSW/ENDRANDOM must only close their own block type --
+
+    #[test]
+    fn endsw_does_not_pop_random_block() {
+        // Malformed BMS: #ENDSW when the top block is RANDOM.
+        // The ENDSW should be ignored (with warning), preserving the RANDOM state.
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#RANDOM 2",
+            "#IF 1",
+            "#TITLE CorrectTitle",
+            "#ENDSW",
+            "#ENDIF",
+            "#ENDRANDOM",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        // The title should be set because ENDSW should NOT have popped the RANDOM state.
+        assert_eq!(model.title, "CorrectTitle");
+    }
+
+    #[test]
+    fn endrandom_does_not_pop_switch_block() {
+        // Malformed BMS: #ENDRANDOM when the top block is SWITCH.
+        // The ENDRANDOM should be ignored (with warning), preserving the SWITCH state.
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 2",
+            "#CASE 1",
+            "#TITLE CorrectTitle",
+            "#ENDRANDOM",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[1])).unwrap();
+        // The title should be set because ENDRANDOM should NOT have popped the SWITCH state.
+        assert_eq!(model.title, "CorrectTitle");
+    }
+
+    #[test]
+    fn endsw_inside_random_does_not_corrupt_outer_switch() {
+        // Outer SWITCH with matched case wraps an inner RANDOM block.
+        // A stray #ENDSW inside the RANDOM should not pop the outer SWITCH's
+        // case_matched/case_skipped, which would corrupt skip state.
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 2",
+            "#CASE 1",
+            "#RANDOM 2",
+            "#IF 1",
+            "#TITLE InsideRandom",
+            "#ENDSW",
+            "#ENDIF",
+            "#ENDRANDOM",
+            "#TITLE AfterRandom",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        // selected_random[0]=1 → SWITCH picks 1 (CASE 1 matches)
+        // selected_random[1]=1 → RANDOM picks 1 (IF 1 matches)
+        let model = decoder.decode_bytes(&data, false, Some(&[1, 1])).unwrap();
+        // Without the fix, the stray #ENDSW would pop the outer SWITCH's case state,
+        // causing "AfterRandom" to be skipped. With the fix, it's correctly set.
+        assert_eq!(model.title, "AfterRandom");
     }
 }
