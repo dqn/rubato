@@ -75,6 +75,10 @@ impl MainControllerRef {
     pub fn update_audio_config(&self, audio: rubato_types::audio_config::AudioConfig) {
         self.inner.update_audio_config(audio);
     }
+
+    pub fn offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.inner.offset_value(id)
+    }
 }
 
 #[cfg(test)]

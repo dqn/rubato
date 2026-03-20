@@ -60,7 +60,10 @@ impl ObsListener {
             client.restart_recording();
         }
         self.trigger_state_change_by_type(MainStateType::MusicSelect);
-        let runtime_handle = client.runtime_handle().clone();
+        let Some(runtime_handle) = client.runtime_handle() else {
+            return;
+        };
+        let runtime_handle = runtime_handle.clone();
         let client_clone = Arc::clone(client);
 
         // Capture config values for PLAY state before entering async block,
@@ -172,7 +175,10 @@ impl ObsListener {
                 if stop_record_now {
                     return;
                 }
-                let runtime_handle = client.runtime_handle().clone();
+                let Some(runtime_handle) = client.runtime_handle() else {
+                    return;
+                };
+                let runtime_handle = runtime_handle.clone();
                 let client_clone = Arc::clone(client);
                 let scheduled_stop_task = Arc::clone(&self.scheduled_stop_task);
                 let handle = runtime_handle.spawn(async move {

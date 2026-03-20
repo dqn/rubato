@@ -131,9 +131,8 @@ impl HttpDownloadProcessor {
             }
             impl Drop for Md5Guard {
                 fn drop(&mut self) {
-                    if let Ok(mut md5s) = self.submitted_md5s.lock() {
-                        md5s.remove(&self.md5);
-                    }
+                    let mut md5s = lock_or_recover(&self.submitted_md5s);
+                    md5s.remove(&self.md5);
                 }
             }
             let _md5_guard = Md5Guard {
@@ -261,7 +260,8 @@ fn execute_download_task_static(
             ImGuiNotify::warning("Download queue is full, try again later");
             let mut task = lock_or_recover(&download_task);
             // Release the URL from submitted_urls so the user can retry later
-            if let Ok(mut urls) = submitted_urls.lock() {
+            {
+                let mut urls = lock_or_recover(submitted_urls);
                 urls.remove(task.url());
             }
             task.set_download_task_status(DownloadTaskStatus::Error);
@@ -291,9 +291,8 @@ fn execute_download_task_static(
             fn drop(&mut self) {
                 self.active_downloads.fetch_sub(1, Ordering::AcqRel);
                 // Remove URL from submitted set so it can be retried
-                if let Ok(mut urls) = self.submitted_urls.lock() {
-                    urls.remove(&self.download_url);
-                }
+                let mut urls = lock_or_recover(&self.submitted_urls);
+                urls.remove(&self.download_url);
             }
         }
         let (task_name, download_url, hash) = {

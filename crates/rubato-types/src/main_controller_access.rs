@@ -284,6 +284,12 @@ pub trait MainControllerAccess {
     fn update_audio_config(&self, _audio: crate::audio_config::AudioConfig) {
         // default no-op
     }
+
+    /// Returns the skin offset for the given ID.
+    /// Java: MainController.getOffset(id)
+    fn offset_value(&self, _id: i32) -> Option<&crate::skin_offset::SkinOffset> {
+        None
+    }
 }
 
 /// Null implementation of MainControllerAccess for stub contexts.

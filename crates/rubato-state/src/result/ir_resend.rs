@@ -55,9 +55,8 @@ impl IrResendService for IrResendServiceImpl {
 
     fn stop(&self) {
         self.shutdown_flag.store(true, Ordering::Release);
-        if let Ok(mut guard) = self.handle.lock()
-            && let Some(handle) = guard.take()
-        {
+        let mut guard = rubato_types::sync_utils::lock_or_recover(&self.handle);
+        if let Some(handle) = guard.take() {
             // The thread checks the shutdown flag every 100ms.
             // Join if already finished; otherwise detach to avoid
             // busy-waiting up to 5s on the calling thread.
@@ -112,12 +111,9 @@ pub fn start_ir_resend_thread(
 
             // Phase 1: Take all entries out of the shared list so we can release the
             // lock before performing blocking HTTP sends.
-            let mut snapshot: Vec<IRSendStatusMain> = match ir_send_status.lock() {
-                Ok(mut statuses) => statuses.drain(..).collect(),
-                Err(e) => {
-                    log::error!("Failed to lock ir_send_status: {}", e);
-                    Vec::new()
-                }
+            let mut snapshot: Vec<IRSendStatusMain> = {
+                let mut statuses = rubato_types::sync_utils::lock_or_recover(&ir_send_status);
+                statuses.drain(..).collect()
             };
 
             // Phase 2: Perform blocking HTTP sends outside the lock.
@@ -153,16 +149,12 @@ pub fn start_ir_resend_thread(
                     }
                     keep.push(score);
                 }
-                match ir_send_status.lock() {
-                    Ok(mut statuses) => {
-                        // Prepend kept entries before any newly added ones.
-                        let new_entries: Vec<IRSendStatusMain> = statuses.drain(..).collect();
-                        statuses.extend(keep);
-                        statuses.extend(new_entries);
-                    }
-                    Err(e) => {
-                        log::error!("Failed to lock ir_send_status (cleanup): {}", e);
-                    }
+                {
+                    let mut statuses = rubato_types::sync_utils::lock_or_recover(&ir_send_status);
+                    // Prepend kept entries before any newly added ones.
+                    let new_entries: Vec<IRSendStatusMain> = statuses.drain(..).collect();
+                    statuses.extend(keep);
+                    statuses.extend(new_entries);
                 }
             }
 

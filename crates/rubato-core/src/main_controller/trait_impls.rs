@@ -122,6 +122,21 @@ impl MainControllerAccess for MainController {
                 }
             }
         }
+
+        // Preload all system sound paths into the audio driver's path sound cache
+        // to avoid blocking file I/O on the render thread when play_path() is
+        // first called for each sound.
+        if let Some(ref sm) = self.sound {
+            let paths: Vec<String> = SoundType::values()
+                .iter()
+                .filter_map(|st| sm.sound(st).cloned())
+                .collect();
+            if let Some(ref mut audio) = self.audio {
+                for path in &paths {
+                    audio.preload_path(path);
+                }
+            }
+        }
     }
 
     fn exists_replay_data(&self, sha256: &str, has_ln: bool, lnmode: i32, index: i32) -> bool {
@@ -237,5 +252,9 @@ impl MainControllerAccess for MainController {
                 pc,
             )),
         );
+    }
+
+    fn offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.offset(id)
     }
 }

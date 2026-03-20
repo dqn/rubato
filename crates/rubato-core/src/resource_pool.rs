@@ -60,22 +60,37 @@ where
 
     /// Get a resource by key. If not in the pool, calls `load_fn` to load it.
     /// Returns None if the resource couldn't be loaded.
+    ///
+    /// The lock is released before calling `load_fn` so that blocking I/O
+    /// (e.g. disk reads) does not hold other threads. A double-check after
+    /// re-acquiring the lock handles the race where another thread loaded the
+    /// same key concurrently.
     pub fn get<F>(&self, key: &K, load_fn: F) -> Option<()>
     where
         F: FnOnce(&K) -> Option<V>,
     {
+        // Fast path: cache hit under lock.
+        {
+            let mut map = lock_or_recover(&self.resource_map);
+            if let Some(elem) = map.get_mut(key) {
+                elem.generation = 0;
+                return Some(());
+            }
+        }
+        // Lock released here -- call load_fn outside the lock.
+
+        let resource = load_fn(key)?;
+
+        // Re-acquire and double-check: another thread may have inserted.
         let mut map = lock_or_recover(&self.resource_map);
         if let Some(elem) = map.get_mut(key) {
+            // Another thread loaded it while we were loading; reset generation
+            // and discard our copy.
             elem.generation = 0;
-            return Some(());
-        }
-
-        if let Some(resource) = load_fn(key) {
-            map.insert(key.clone(), ResourceCacheElement::new(resource));
-            Some(())
         } else {
-            None
+            map.insert(key.clone(), ResourceCacheElement::new(resource));
         }
+        Some(())
     }
 
     /// Get a reference to the resource by key (if it exists in pool).
@@ -161,23 +176,39 @@ where
     /// Load a resource if not cached, then apply a function to it.
     /// Combines `get` (load-on-miss) with `with_resource` (callback access).
     /// Returns None if the resource couldn't be loaded.
+    ///
+    /// The lock is released before calling `load_fn` so that blocking I/O
+    /// does not hold other threads. A double-check after re-acquiring the
+    /// lock handles the race where another thread loaded the same key
+    /// concurrently.
     pub fn get_or_load<L, F2, R>(&self, key: &K, load_fn: L, f: F2) -> Option<R>
     where
         L: FnOnce(&K) -> Option<V>,
         F2: FnOnce(&V) -> R,
     {
+        // Fast path: cache hit under lock.
+        {
+            let mut map = lock_or_recover(&self.resource_map);
+            if let Some(elem) = map.get_mut(key) {
+                elem.generation = 0;
+                return Some(f(&elem.resource));
+            }
+        }
+        // Lock released here -- call load_fn outside the lock.
+
+        let resource = load_fn(key)?;
+
+        // Re-acquire and double-check: another thread may have inserted.
         let mut map = lock_or_recover(&self.resource_map);
         if let Some(elem) = map.get_mut(key) {
+            // Another thread loaded it; use the already-cached value and
+            // discard our copy.
             elem.generation = 0;
-            return Some(f(&elem.resource));
-        }
-
-        if let Some(resource) = load_fn(key) {
+            Some(f(&elem.resource))
+        } else {
             let result = f(&resource);
             map.insert(key.clone(), ResourceCacheElement::new(resource));
             Some(result)
-        } else {
-            None
         }
     }
 }
@@ -185,7 +216,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicI32, Ordering};
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 
     #[test]
     fn test_get_loads_on_miss() {
@@ -394,5 +426,118 @@ mod tests {
         // Operations should still work via lock_or_recover.
         assert!(pool.exists(&"key".to_string()));
         assert_eq!(pool.size(), 1);
+    }
+
+    #[test]
+    fn test_get_does_not_hold_lock_during_load_fn() {
+        // Regression: load_fn must run outside the mutex so other threads
+        // are not blocked by slow (I/O-bound) loads.
+        let pool = Arc::new(ResourcePool::<String, i32>::new(1));
+
+        // Pre-populate with a key that the other thread will read.
+        pool.get(&"existing".to_string(), |_| Some(100));
+
+        let loading = Arc::new(AtomicBool::new(false));
+        let accessed = Arc::new(AtomicBool::new(false));
+
+        let pool2 = Arc::clone(&pool);
+        let loading2 = Arc::clone(&loading);
+        let accessed2 = Arc::clone(&accessed);
+
+        // Thread 1: slow load of a new key.
+        let t1 = std::thread::spawn(move || {
+            pool2.get(&"slow_key".to_string(), |_| {
+                loading2.store(true, Ordering::SeqCst);
+                // Spin until thread 2 confirms it accessed the pool.
+                while !accessed2.load(Ordering::SeqCst) {
+                    std::thread::yield_now();
+                }
+                Some(42)
+            });
+        });
+
+        // Thread 2: wait for thread 1 to be inside load_fn, then access pool.
+        // If the lock were held during load_fn, this would deadlock.
+        while !loading.load(Ordering::SeqCst) {
+            std::thread::yield_now();
+        }
+        // This call must not block; the lock should be free.
+        assert!(pool.exists(&"existing".to_string()));
+        accessed.store(true, Ordering::SeqCst);
+
+        t1.join().unwrap();
+        assert!(pool.exists(&"slow_key".to_string()));
+    }
+
+    #[test]
+    fn test_get_concurrent_load_same_key_uses_first_value() {
+        // Two threads race to load the same key. The double-check
+        // ensures the first inserted value wins and no panic occurs.
+        let pool = Arc::new(ResourcePool::<String, i32>::new(1));
+
+        let barrier = Arc::new(std::sync::Barrier::new(2));
+        let load_count = Arc::new(AtomicI32::new(0));
+
+        let handles: Vec<_> = (0..2)
+            .map(|i| {
+                let pool = Arc::clone(&pool);
+                let barrier = Arc::clone(&barrier);
+                let load_count = Arc::clone(&load_count);
+                std::thread::spawn(move || {
+                    pool.get(&"same_key".to_string(), |_| {
+                        barrier.wait();
+                        load_count.fetch_add(1, Ordering::SeqCst);
+                        Some(i)
+                    });
+                })
+            })
+            .collect();
+
+        for h in handles {
+            h.join().unwrap();
+        }
+
+        assert!(pool.exists(&"same_key".to_string()));
+        assert_eq!(pool.size(), 1);
+        // Both threads called load_fn (neither was a cache hit on the first
+        // check), but only one value should be stored.
+        assert_eq!(load_count.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn test_get_or_load_does_not_hold_lock_during_load_fn() {
+        let pool = Arc::new(ResourcePool::<String, i32>::new(1));
+        pool.get(&"existing".to_string(), |_| Some(100));
+
+        let loading = Arc::new(AtomicBool::new(false));
+        let accessed = Arc::new(AtomicBool::new(false));
+
+        let pool2 = Arc::clone(&pool);
+        let loading2 = Arc::clone(&loading);
+        let accessed2 = Arc::clone(&accessed);
+
+        let t1 = std::thread::spawn(move || {
+            pool2.get_or_load(
+                &"slow_key".to_string(),
+                |_| {
+                    loading2.store(true, Ordering::SeqCst);
+                    while !accessed2.load(Ordering::SeqCst) {
+                        std::thread::yield_now();
+                    }
+                    Some(42)
+                },
+                |v| *v,
+            )
+        });
+
+        while !loading.load(Ordering::SeqCst) {
+            std::thread::yield_now();
+        }
+        assert!(pool.exists(&"existing".to_string()));
+        accessed.store(true, Ordering::SeqCst);
+
+        let result = t1.join().unwrap();
+        assert_eq!(result, Some(42));
+        assert!(pool.exists(&"slow_key".to_string()));
     }
 }
