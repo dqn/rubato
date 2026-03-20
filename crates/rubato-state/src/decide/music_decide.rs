@@ -194,7 +194,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
             17 => (self.timer.now_time() / 3_600_000) as i32,
             18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,
             19 => ((self.timer.now_time() % 60_000) / 1_000) as i32,
-            _ => 0,
+            // IDs 20-26 (FPS, system date/time) handled by default_integer_value
+            _ => self.default_integer_value(id),
         }
     }
 
@@ -345,7 +346,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
             17 => (self.timer.now_time() / 3_600_000) as i32,
             18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,
             19 => ((self.timer.now_time() % 60_000) / 1_000) as i32,
-            _ => 0,
+            // IDs 20-26 (FPS, system date/time) handled by default_integer_value
+            _ => self.default_integer_value(id),
         }
     }
 
