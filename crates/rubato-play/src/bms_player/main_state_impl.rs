@@ -416,7 +416,7 @@ impl MainState for BMSPlayer {
                 self.score.rival_score.clone()
             };
 
-            let (target_exscore, target_ghost) = match effective_target {
+            let (target_exscore, _target_ghost) = match effective_target {
                 Some(ref t) => (t.exscore(), t.decode_ghost()),
                 None => (0, None),
             };
@@ -425,7 +425,7 @@ impl MainState for BMSPlayer {
                 score.exscore(),
                 score.decode_ghost(),
                 target_exscore,
-                target_ghost,
+                None, // Java BMSPlayer.java:450 intentionally passes null for rivalGhost
                 total_notes,
             );
         }

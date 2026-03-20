@@ -709,4 +709,42 @@ mod tests {
         // At max, nextrank = (notes * 2) - exscore = 200 - 200 = 0
         assert_eq!(prop.nextrank, 0);
     }
+
+    /// Java BMSPlayer.java:450 intentionally passes null for rivalGhost so that
+    /// nowrivalscore uses linear interpolation (rivalscore * notes / totalnotes)
+    /// instead of per-note ghost-based accumulation. Passing a decoded ghost
+    /// would set use_rival_ghost=true and produce different rival score tracking.
+    #[test]
+    fn rival_ghost_none_uses_linear_interpolation() {
+        let total_notes = 10;
+        let rival_exscore = 16; // target has 16 exscore over 10 notes
+        // Ghost where every note is PGREAT (judge=0 → 2 ex each) = 20 total
+        let ghost = vec![0; total_notes as usize];
+
+        // Case 1: rival_ghost = None (Java parity) → linear interpolation
+        let mut prop_linear = ScoreDataProperty::default();
+        prop_linear.set_target_score_with_ghost(0, None, rival_exscore, None, total_notes);
+        assert!(!prop_linear.use_rival_ghost);
+        let mut sd = ScoreData::new(Mode::BEAT_7K);
+        sd.judge_counts.epg = 5;
+        sd.notes = total_notes;
+        prop_linear.update_score_with_notes(Some(&sd), 5);
+        // Linear: 16 * 5 / 10 = 8
+        assert_eq!(prop_linear.nowrivalscore, 8);
+
+        // Case 2: rival_ghost = Some(ghost) → ghost-based accumulation (wrong)
+        let mut prop_ghost = ScoreDataProperty::default();
+        prop_ghost.set_target_score_with_ghost(0, None, rival_exscore, Some(ghost), total_notes);
+        assert!(prop_ghost.use_rival_ghost);
+        let mut sd2 = ScoreData::new(Mode::BEAT_7K);
+        sd2.judge_counts.epg = 5;
+        sd2.notes = total_notes;
+        prop_ghost.update_score_with_notes(Some(&sd2), 5);
+        // Ghost: 5 PGREATs × 2 ex each = 10 (different from linear's 8)
+        assert_eq!(prop_ghost.nowrivalscore, 10);
+
+        // The two approaches yield different results, confirming the behavioral
+        // difference. Java passes null (Case 1) to get linear interpolation.
+        assert_ne!(prop_linear.nowrivalscore, prop_ghost.nowrivalscore);
+    }
 }

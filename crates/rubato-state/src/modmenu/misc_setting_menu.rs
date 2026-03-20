@@ -292,11 +292,14 @@ fn flush_play_config() {
 
     let updated = build_play_config_from_statics();
 
-    // Update the local PlayerConfig clone
+    // Update the local PlayerConfig clone (merge only modmenu-managed fields
+    // so we don't overwrite hispeed/duration that may have been changed live).
     {
         let mut pc_guard = lock_or_recover(&PLAYER_CONFIG);
         if let Some(ref mut pc) = *pc_guard {
-            pc.play_config(mode).playconfig = updated.clone();
+            pc.play_config(mode)
+                .playconfig
+                .apply_modmenu_fields(&updated);
         }
     }
 
@@ -512,6 +515,7 @@ mod tests {
     /// Reset all statics to their default state. Uses lock_or_recover to handle
     /// poisoned mutexes from prior panics.
     fn reset_statics() {
+        *lock_or_recover(&OWNER_THREAD) = None;
         *lock_or_recover(&PLAYER_CONFIG) = None;
         *lock_or_recover(&COMMAND_QUEUE) = None;
         *lock_or_recover(&CONFIG) = None;
@@ -621,6 +625,67 @@ mod tests {
             assert!((pc.play_config_ref(Mode::BEAT_7K).playconfig.hidden - 0.3).abs() < 0.001,);
             drop(pc_guard);
         }
+
+        reset_statics();
+    }
+
+    /// Regression: flush_play_config must not overwrite hispeed/duration in the
+    /// local PLAYER_CONFIG. If another code path (e.g. scroll wheel) updated
+    /// hispeed in the local clone while the modmenu was open, a full-struct write
+    /// would clobber it with the stale snapshot value.
+    #[test]
+    fn test_flush_preserves_non_modmenu_fields_in_local_config() {
+        reset_statics();
+
+        let mut pc = PlayerConfig::default();
+        // Simulate hispeed changed live (e.g. via scroll wheel) to a non-default value
+        pc.mode7.playconfig.hispeed = 5.0;
+        pc.mode7.playconfig.duration = 1200;
+        pc.mode7.playconfig.fixhispeed = 1; // FIX_HISPEED_STARTBPM
+        pc.mode7.playconfig.hispeedmargin = 3.5;
+        pc.mode7.playconfig.hispeedautoadjust = true;
+
+        let queue = MainControllerCommandQueue::new();
+
+        *lock_or_recover(&PLAYER_CONFIG) = Some(pc);
+        *lock_or_recover(&COMMAND_QUEUE) = Some(queue.clone());
+        *lock_or_recover(&CURRENT_PLAY_MODE) = Some(Mode::BEAT_7K);
+
+        // Simulate user toggling a modmenu field
+        *lock_or_recover(&ENABLE_LIFT) = true;
+        *lock_or_recover(&LIFT_VALUE) = 250;
+
+        flush_play_config();
+
+        // Non-modmenu fields must be preserved in the local PLAYER_CONFIG
+        let pc_guard = lock_or_recover(&PLAYER_CONFIG);
+        let live = &pc_guard
+            .as_ref()
+            .unwrap()
+            .play_config_ref(Mode::BEAT_7K)
+            .playconfig;
+        assert_eq!(
+            live.hispeed, 5.0,
+            "hispeed must not be overwritten by flush"
+        );
+        assert_eq!(
+            live.duration, 1200,
+            "duration must not be overwritten by flush"
+        );
+        assert_eq!(live.fixhispeed, 1, "fixhispeed must not be overwritten");
+        assert!(
+            (live.hispeedmargin - 3.5).abs() < 0.001,
+            "hispeedmargin must not be overwritten"
+        );
+        assert!(
+            live.hispeedautoadjust,
+            "hispeedautoadjust must not be overwritten"
+        );
+
+        // Modmenu-managed fields must be updated
+        assert!(live.enablelift);
+        assert!((live.lift - 0.25).abs() < 0.001);
+        drop(pc_guard);
 
         reset_statics();
     }
