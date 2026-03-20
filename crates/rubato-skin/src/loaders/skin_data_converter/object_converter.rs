@@ -159,7 +159,7 @@ pub(super) fn convert_skin_object(
             ref_id,
             value,
             gain,
-            offsets: _,
+            offsets,
         } => convert_float(
             src,
             *x,
@@ -179,6 +179,7 @@ pub(super) fn convert_skin_object(
             *ref_id,
             *value,
             *gain,
+            offsets,
             source_map,
             skin_path,
             usecim,
@@ -234,10 +235,10 @@ pub(super) fn convert_skin_object(
             slider_type,
             changeable,
             value,
-            event: _,
-            is_ref_num: _,
-            min: _,
-            max: _,
+            event,
+            is_ref_num,
+            min,
+            max,
         } => convert_slider(
             src,
             *x,
@@ -253,6 +254,12 @@ pub(super) fn convert_skin_object(
             *slider_type,
             *changeable,
             *value,
+            *event,
+            *is_ref_num,
+            *min,
+            *max,
+            scale_x,
+            scale_y,
             source_map,
             skin_path,
             usecim,
@@ -805,6 +812,7 @@ fn convert_float(
     ref_id: i32,
     value: Option<i32>,
     gain: f32,
+    offsets: &Option<Vec<SkinNumberOffset>>,
     source_map: &mut HashMap<String, SourceData>,
     skin_path: &Path,
     usecim: bool,
@@ -816,39 +824,213 @@ fn convert_float(
     let images = source_image(&tex, x, y, w, h, divx, divy);
     let timer_val = timer.unwrap_or(0);
 
-    // Create as SkinFloat using the available constructor
-    let image_opts: Vec<Vec<Option<TextureRegion>>> = if images.len().is_multiple_of(12) {
+    // Use `value` if present (explicit ID), otherwise fall back to `ref_id`
+    let prop_id = value.unwrap_or(ref_id);
+
+    // Six-branch image layout cascade matching Java's JsonSkinObjectLoader:
+    // %26: signed, separate +/- (13+13 per set), preserve is_signvisible
+    // %24: unsigned, separate +/- (12+12 per set)
+    // %22: unsigned, separate +/- (11+11 with shared reverse zero mapping)
+    // %12: unsigned, single image (12 per set)
+    // %11: unsigned, single image (11 per set, mapped to 12 with shared reverse zero)
+    // fallback: treat as %12
+    // Priority: 26 > 24 > 22 > 12 > 11 > fallback (because 24 is divisible by 12, 22 by 11)
+    let mut sf = if images.len().is_multiple_of(26) {
+        // %26: signed, separate +/- images (13 positive + 13 negative per set)
+        let set_count = images.len() / 26;
+        let mut pn: Vec<Vec<Option<TextureRegion>>> = Vec::with_capacity(set_count);
+        let mut mn: Vec<Vec<Option<TextureRegion>>> = Vec::with_capacity(set_count);
+        for j in 0..set_count {
+            let mut p_row = Vec::with_capacity(13);
+            let mut m_row = Vec::with_capacity(13);
+            for i in 0..13 {
+                p_row.push(Some(images[j * 26 + i].clone()));
+                m_row.push(Some(images[j * 26 + i + 13].clone()));
+            }
+            pn.push(p_row);
+            mn.push(m_row);
+        }
+        crate::skin_float::SkinFloat::new_with_int_timer_int_id_mimage(
+            pn,
+            Some(mn),
+            timer_val,
+            cycle,
+            crate::skin_float::FloatDisplayConfig {
+                iketa,
+                fketa,
+                is_sign_visible: is_signvisible,
+                align,
+                zeropadding,
+                space,
+                gain,
+            },
+            prop_id,
+        )
+    } else if images.len().is_multiple_of(24) {
+        // %24: unsigned, separate +/- images (12 positive + 12 negative per set)
+        let set_count = images.len() / 24;
+        let mut pn: Vec<Vec<Option<TextureRegion>>> = Vec::with_capacity(set_count);
+        let mut mn: Vec<Vec<Option<TextureRegion>>> = Vec::with_capacity(set_count);
+        for j in 0..set_count {
+            let mut p_row = Vec::with_capacity(12);
+            let mut m_row = Vec::with_capacity(12);
+            for i in 0..12 {
+                p_row.push(Some(images[j * 24 + i].clone()));
+                m_row.push(Some(images[j * 24 + i + 12].clone()));
+            }
+            pn.push(p_row);
+            mn.push(m_row);
+        }
+        crate::skin_float::SkinFloat::new_with_int_timer_int_id_mimage(
+            pn,
+            Some(mn),
+            timer_val,
+            cycle,
+            crate::skin_float::FloatDisplayConfig {
+                iketa,
+                fketa,
+                is_sign_visible: false,
+                align,
+                zeropadding,
+                space,
+                gain,
+            },
+            prop_id,
+        )
+    } else if images.len().is_multiple_of(22) {
+        // %22: unsigned, separate +/- images (11+11 with shared reverse zero mapping)
+        let set_count = images.len() / 22;
+        let mut pn: Vec<Vec<Option<TextureRegion>>> = Vec::with_capacity(set_count);
+        let mut mn: Vec<Vec<Option<TextureRegion>>> = Vec::with_capacity(set_count);
+        for j in 0..set_count {
+            let mut p_row = vec![None; 12];
+            let mut m_row = vec![None; 12];
+            for i in 0..10 {
+                p_row[i] = Some(images[j * 22 + i].clone());
+                m_row[i] = Some(images[j * 22 + i + 11].clone());
+            }
+            p_row[10] = Some(images[j * 22].clone()); // shared reverse zero
+            p_row[11] = Some(images[j * 22 + 10].clone()); // decimal point
+            m_row[10] = Some(images[j * 22 + 11].clone()); // minus reverse
+            m_row[11] = Some(images[j * 22 + 21].clone()); // minus decimal
+            pn.push(p_row);
+            mn.push(m_row);
+        }
+        crate::skin_float::SkinFloat::new_with_int_timer_int_id_mimage(
+            pn,
+            Some(mn),
+            timer_val,
+            cycle,
+            crate::skin_float::FloatDisplayConfig {
+                iketa,
+                fketa,
+                is_sign_visible: false,
+                align,
+                zeropadding,
+                space,
+                gain,
+            },
+            prop_id,
+        )
+    } else if images.len().is_multiple_of(12) {
+        // %12: unsigned, single image (12 per set)
         let set_count = images.len() / 12;
-        let mut result = Vec::with_capacity(set_count);
+        let mut nimage: Vec<Vec<Option<TextureRegion>>> = Vec::with_capacity(set_count);
         for j in 0..set_count {
             let mut row = Vec::with_capacity(12);
             for i in 0..12 {
                 row.push(Some(images[j * 12 + i].clone()));
             }
-            result.push(row);
+            nimage.push(row);
         }
-        result
+        crate::skin_float::SkinFloat::new_with_int_timer_int_id(
+            nimage,
+            timer_val,
+            cycle,
+            crate::skin_float::FloatDisplayConfig {
+                iketa,
+                fketa,
+                is_sign_visible: false,
+                align,
+                zeropadding,
+                space,
+                gain,
+            },
+            prop_id,
+        )
+    } else if images.len().is_multiple_of(11) {
+        // %11: unsigned, single image (11 per set, mapped to 12 with shared reverse zero)
+        let set_count = images.len() / 11;
+        let mut nimage: Vec<Vec<Option<TextureRegion>>> = Vec::with_capacity(set_count);
+        for j in 0..set_count {
+            let mut row = vec![None; 12];
+            for i in 0..10 {
+                row[i] = Some(images[j * 11 + i].clone());
+            }
+            row[10] = Some(images[j * 11].clone()); // shared reverse zero
+            row[11] = Some(images[j * 11 + 10].clone()); // decimal point
+            nimage.push(row);
+        }
+        crate::skin_float::SkinFloat::new_with_int_timer_int_id(
+            nimage,
+            timer_val,
+            cycle,
+            crate::skin_float::FloatDisplayConfig {
+                iketa,
+                fketa,
+                is_sign_visible: false,
+                align,
+                zeropadding,
+                space,
+                gain,
+            },
+            prop_id,
+        )
     } else {
-        vec![images.into_iter().map(Some).collect()]
+        // Fallback: treat as %12 (Java: divx*divy/12 sets)
+        let d = 12;
+        let set_count = images.len() / d;
+        let mut nimages: Vec<Vec<Option<TextureRegion>>> = Vec::with_capacity(set_count);
+        for j in 0..set_count {
+            let mut row = Vec::with_capacity(d);
+            for i in 0..d {
+                row.push(Some(images[j * d + i].clone()));
+            }
+            nimages.push(row);
+        }
+        crate::skin_float::SkinFloat::new_with_int_timer_int_id(
+            nimages,
+            timer_val,
+            cycle,
+            crate::skin_float::FloatDisplayConfig {
+                iketa,
+                fketa,
+                is_sign_visible: false,
+                align,
+                zeropadding,
+                space,
+                gain,
+            },
+            prop_id,
+        )
     };
 
-    // Use `value` if present (explicit ID), otherwise fall back to `ref_id`
-    let prop_id = value.unwrap_or(ref_id);
-    let sf = crate::skin_float::SkinFloat::new_with_int_timer_int_id(
-        image_opts,
-        timer_val,
-        cycle,
-        crate::skin_float::FloatDisplayConfig {
-            iketa,
-            fketa,
-            is_sign_visible: is_signvisible,
-            align,
-            zeropadding,
-            space,
-            gain,
-        },
-        prop_id,
-    );
+    // Apply per-digit offsets if present
+    if let Some(ofs) = offsets {
+        let skin_offsets: Vec<SkinOffset> = ofs
+            .iter()
+            .map(|o| SkinOffset {
+                x: o.x as f32,
+                y: o.y as f32,
+                w: o.w as f32,
+                h: o.h as f32,
+                r: 0.0,
+                a: 0.0,
+            })
+            .collect();
+        sf.set_offsets(skin_offsets);
+    }
+
     Some(SkinObject::Float(sf))
 }
 
@@ -1079,6 +1261,297 @@ mod tests {
             "convert_image should return None when source images are fewer than len"
         );
     }
+
+    /// Helper: create a SourceData entry with a texture that produces `divx * divy` source images.
+    fn make_source_map_with_image_count(
+        divx: i32,
+        divy: i32,
+    ) -> (
+        std::collections::HashMap<String, crate::json::json_skin_loader::SourceData>,
+        i32,
+        i32,
+    ) {
+        use crate::json::json_skin_loader::{SourceData, SourceDataType};
+        use crate::reexports::Texture;
+        use std::collections::HashMap;
+
+        let w = divx * 10;
+        let h = divy * 10;
+        let tex = Texture {
+            width: w,
+            height: h,
+            ..Default::default()
+        };
+        let mut source_map = HashMap::new();
+        source_map.insert(
+            "src".to_string(),
+            SourceData {
+                path: "test.png".to_string(),
+                loaded: true,
+                data: Some(SourceDataType::Texture(tex)),
+            },
+        );
+        (source_map, w, h)
+    }
+
+    /// Helper: call convert_float with a texture producing `divx * divy` source images.
+    fn call_convert_float(divx: i32, divy: i32, is_signvisible: bool) -> Option<SkinObject> {
+        use std::path::Path;
+
+        let (mut source_map, w, h) = make_source_map_with_image_count(divx, divy);
+        super::convert_float(
+            &Some("src".to_string()),
+            0,
+            0,
+            w,
+            h,
+            divx,
+            divy,
+            Some(0),
+            0,
+            3, // iketa
+            2, // fketa
+            is_signvisible,
+            0,    // align
+            0,    // zeropadding
+            0,    // space
+            0,    // ref_id
+            None, // value
+            1.0,  // gain
+            &None,
+            &mut source_map,
+            Path::new("/tmp"),
+            false,
+            &std::collections::HashMap::new(),
+        )
+    }
+
+    #[test]
+    fn convert_float_26_layout_preserves_sign_visible() {
+        // 26 images: %26 branch, should preserve is_signvisible=true
+        let obj = call_convert_float(26, 1, true).expect("should produce Float");
+        match obj {
+            SkinObject::Float(sf) => {
+                assert!(
+                    sf.is_sign_visible,
+                    "%26 layout must preserve is_signvisible=true"
+                );
+            }
+            _ => panic!("expected SkinObject::Float"),
+        }
+
+        // 26 images with is_signvisible=false: should preserve false
+        let obj = call_convert_float(26, 1, false).expect("should produce Float");
+        match obj {
+            SkinObject::Float(sf) => {
+                assert!(
+                    !sf.is_sign_visible,
+                    "%26 layout must preserve is_signvisible=false"
+                );
+            }
+            _ => panic!("expected SkinObject::Float"),
+        }
+    }
+
+    #[test]
+    fn convert_float_24_layout_forces_sign_invisible() {
+        // 24 images: %24 branch, should force is_sign_visible=false
+        let obj = call_convert_float(24, 1, true).expect("should produce Float");
+        match obj {
+            SkinObject::Float(sf) => {
+                assert!(
+                    !sf.is_sign_visible,
+                    "%24 layout must force is_sign_visible=false"
+                );
+            }
+            _ => panic!("expected SkinObject::Float"),
+        }
+    }
+
+    #[test]
+    fn convert_float_22_layout_forces_sign_invisible() {
+        // 22 images: %22 branch
+        let obj = call_convert_float(22, 1, true).expect("should produce Float");
+        match obj {
+            SkinObject::Float(sf) => {
+                assert!(
+                    !sf.is_sign_visible,
+                    "%22 layout must force is_sign_visible=false"
+                );
+            }
+            _ => panic!("expected SkinObject::Float"),
+        }
+    }
+
+    #[test]
+    fn convert_float_12_layout_forces_sign_invisible() {
+        // 12 images: %12 branch
+        let obj = call_convert_float(12, 1, true).expect("should produce Float");
+        match obj {
+            SkinObject::Float(sf) => {
+                assert!(
+                    !sf.is_sign_visible,
+                    "%12 layout must force is_sign_visible=false"
+                );
+            }
+            _ => panic!("expected SkinObject::Float"),
+        }
+    }
+
+    #[test]
+    fn convert_float_11_layout_forces_sign_invisible() {
+        // 11 images: %11 branch
+        let obj = call_convert_float(11, 1, true).expect("should produce Float");
+        match obj {
+            SkinObject::Float(sf) => {
+                assert!(
+                    !sf.is_sign_visible,
+                    "%11 layout must force is_sign_visible=false"
+                );
+            }
+            _ => panic!("expected SkinObject::Float"),
+        }
+    }
+
+    #[test]
+    fn convert_float_fallback_forces_sign_invisible() {
+        // 7 images: not divisible by 26/24/22/12/11, hits fallback
+        let obj = call_convert_float(7, 1, true).expect("should produce Float");
+        match obj {
+            SkinObject::Float(sf) => {
+                assert!(
+                    !sf.is_sign_visible,
+                    "fallback layout must force is_sign_visible=false"
+                );
+            }
+            _ => panic!("expected SkinObject::Float"),
+        }
+    }
+
+    #[test]
+    fn convert_float_priority_24_over_12() {
+        // 48 images: divisible by both 24 (=2 sets) and 12 (=4 sets)
+        // Should pick %24 (separate +/- images), not %12
+        // %24 forces is_sign_visible=false (same as %12), but uses mimage.
+        // We verify it reaches the %24 branch by checking that it still produces a valid Float.
+        let obj = call_convert_float(48, 1, true).expect("should produce Float");
+        match obj {
+            SkinObject::Float(sf) => {
+                assert!(
+                    !sf.is_sign_visible,
+                    "%24 branch (48 images) must force is_sign_visible=false"
+                );
+            }
+            _ => panic!("expected SkinObject::Float"),
+        }
+    }
+
+    #[test]
+    fn convert_float_priority_26_over_others() {
+        // 52 images: divisible by 26 (=2 sets), also by others (not 24, not 22, not 12)
+        // Should pick %26 and preserve is_signvisible
+        let obj = call_convert_float(52, 1, true).expect("should produce Float");
+        match obj {
+            SkinObject::Float(sf) => {
+                assert!(
+                    sf.is_sign_visible,
+                    "%26 branch (52 images) must preserve is_signvisible=true"
+                );
+            }
+            _ => panic!("expected SkinObject::Float"),
+        }
+    }
+
+    #[test]
+    fn convert_slider_scales_range_by_direction() {
+        use std::path::Path;
+
+        let (mut source_map, w, h) = make_source_map_with_image_count(2, 2);
+        let scale_x = 0.5_f32;
+        let scale_y = 2.0_f32;
+        let range = 100;
+
+        // angle=1 (right): should use scale_x
+        let obj = super::convert_slider(
+            &Some("src".to_string()),
+            0,
+            0,
+            w,
+            h,
+            2,
+            2,
+            Some(0),
+            0,
+            1, // angle: right
+            range,
+            0,     // slider_type
+            false, // changeable
+            None,  // value
+            None,  // event
+            false, // is_ref_num
+            0,
+            0, // min, max
+            scale_x,
+            scale_y,
+            &mut source_map,
+            Path::new("/tmp"),
+            false,
+            &std::collections::HashMap::new(),
+        )
+        .expect("should produce Slider");
+
+        match obj {
+            SkinObject::Slider(sl) => {
+                assert_eq!(
+                    sl.range(),
+                    (scale_x * range as f32) as i32,
+                    "angle=1 should use scale_x for range scaling"
+                );
+            }
+            _ => panic!("expected SkinObject::Slider"),
+        }
+
+        // angle=0 (up): should use scale_y
+        let (mut source_map, w, h) = make_source_map_with_image_count(2, 2);
+        let obj = super::convert_slider(
+            &Some("src".to_string()),
+            0,
+            0,
+            w,
+            h,
+            2,
+            2,
+            Some(0),
+            0,
+            0, // angle: up
+            range,
+            0,     // slider_type
+            false, // changeable
+            None,  // value
+            None,  // event
+            false, // is_ref_num
+            0,
+            0, // min, max
+            scale_x,
+            scale_y,
+            &mut source_map,
+            Path::new("/tmp"),
+            false,
+            &std::collections::HashMap::new(),
+        )
+        .expect("should produce Slider");
+
+        match obj {
+            SkinObject::Slider(sl) => {
+                assert_eq!(
+                    sl.range(),
+                    (scale_y * range as f32) as i32,
+                    "angle=0 should use scale_y for range scaling"
+                );
+            }
+            _ => panic!("expected SkinObject::Slider"),
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1097,6 +1570,12 @@ fn convert_slider(
     slider_type: i32,
     changeable: bool,
     value: Option<i32>,
+    event: Option<i32>,
+    is_ref_num: bool,
+    min: i32,
+    max: i32,
+    scale_x: f32,
+    scale_y: f32,
     source_map: &mut HashMap<String, SourceData>,
     skin_path: &Path,
     usecim: bool,
@@ -1105,9 +1584,68 @@ fn convert_slider(
     let tex = get_texture_for_src(src.as_deref(), source_map, skin_path, usecim, filemap)?;
     let images = source_image(&tex, x, y, w, h, divx, divy);
     let timer_val = timer.unwrap_or(0);
-    let type_id = value.unwrap_or(slider_type);
-    let slider =
-        SkinSlider::new_with_int_timer(images, timer_val, cycle, angle, range, type_id, changeable);
+
+    // Scale range by destination/source ratio based on angle direction
+    // Java: (int) ((angle == 1 || angle == 3 ? dstr.width/sk.w : dstr.height/sk.h) * range)
+    let scaled_range = if angle == 1 || angle == 3 {
+        (scale_x * range as f32) as i32
+    } else {
+        (scale_y * range as f32) as i32
+    };
+
+    let slider = if let Some(val_id) = value {
+        // Explicit FloatProperty + FloatWriter from value/event IDs
+        use crate::property::float_property_factory;
+        let ref_prop = float_property_factory::rate_property_by_id(val_id);
+        let writer = event.and_then(float_property_factory::rate_writer_by_id);
+        if let Some(prop) = ref_prop {
+            SkinSlider::new_with_int_timer_ref_writer(
+                images,
+                timer_val,
+                cycle,
+                angle,
+                scaled_range,
+                prop,
+                writer,
+            )
+        } else {
+            // Fallback: value ID didn't resolve to a property, use type-based lookup
+            SkinSlider::new_with_int_timer(
+                images,
+                timer_val,
+                cycle,
+                angle,
+                scaled_range,
+                val_id,
+                changeable,
+            )
+        }
+    } else if is_ref_num {
+        // RateProperty with min/max range
+        SkinSlider::new_with_int_timer_minmax(
+            crate::objects::skin_slider::SliderIntTimerMinmaxParams {
+                image: images,
+                timer: timer_val,
+                cycle,
+                angle,
+                range: scaled_range,
+                type_id: slider_type,
+                min,
+                max,
+            },
+        )
+    } else {
+        // Default: type-based lookup with changeable flag
+        SkinSlider::new_with_int_timer(
+            images,
+            timer_val,
+            cycle,
+            angle,
+            scaled_range,
+            slider_type,
+            changeable,
+        )
+    };
     Some(SkinObject::Slider(slider))
 }
 

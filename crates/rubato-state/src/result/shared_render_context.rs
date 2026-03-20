@@ -339,6 +339,36 @@ pub fn integer_value(data: &AbstractResultData, timer_now: i64, id: i32) -> i32 
         // Timing stddev (afterdot: tenths of ms)
         377 => ((data.stddev / 100) % 10) as i32,
 
+        // ---- Global IDs 20-26: FPS and system date/time ----
+        // Java IntegerPropertyFactory defines these as global lambdas (all screens).
+        // Since this is a free function (not a trait method), we inline the logic
+        // from SkinRenderContext::default_integer_value().
+        20 => rubato_types::fps_counter::current_fps(),
+        21 => {
+            let now = chrono::Local::now();
+            chrono::Datelike::year(&now)
+        }
+        22 => {
+            let now = chrono::Local::now();
+            chrono::Datelike::month(&now) as i32
+        }
+        23 => {
+            let now = chrono::Local::now();
+            chrono::Datelike::day(&now) as i32
+        }
+        24 => {
+            let now = chrono::Local::now();
+            chrono::Timelike::hour(&now) as i32
+        }
+        25 => {
+            let now = chrono::Local::now();
+            chrono::Timelike::minute(&now) as i32
+        }
+        26 => {
+            let now = chrono::Local::now();
+            chrono::Timelike::second(&now) as i32
+        }
+
         _ => 0,
     }
 }

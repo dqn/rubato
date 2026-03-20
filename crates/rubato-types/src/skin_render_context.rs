@@ -94,8 +94,50 @@ pub trait SkinRenderContext: TimerAccess {
 
     /// Returns the integer property value for the given ID.
     /// Delegate properties call this via MainState::integer_value().
-    fn integer_value(&self, _id: i32) -> i32 {
-        0
+    fn integer_value(&self, id: i32) -> i32 {
+        self.default_integer_value(id)
+    }
+
+    /// Default implementation for global integer property IDs.
+    ///
+    /// Handles IDs that Java IntegerPropertyFactory defines as global lambdas
+    /// (work on ALL screens):
+    /// - 20: current FPS
+    /// - 21-26: system date/time (year/month/day/hour/minute/second)
+    ///
+    /// Callers that override `integer_value()` should fall through to this
+    /// for unmatched IDs instead of returning `0`.
+    fn default_integer_value(&self, id: i32) -> i32 {
+        match id {
+            // Current FPS
+            20 => crate::fps_counter::current_fps(),
+            // System date/time
+            21 => {
+                let now = chrono::Local::now();
+                chrono::Datelike::year(&now)
+            }
+            22 => {
+                let now = chrono::Local::now();
+                chrono::Datelike::month(&now) as i32
+            }
+            23 => {
+                let now = chrono::Local::now();
+                chrono::Datelike::day(&now) as i32
+            }
+            24 => {
+                let now = chrono::Local::now();
+                chrono::Timelike::hour(&now) as i32
+            }
+            25 => {
+                let now = chrono::Local::now();
+                chrono::Timelike::minute(&now) as i32
+            }
+            26 => {
+                let now = chrono::Local::now();
+                chrono::Timelike::second(&now) as i32
+            }
+            _ => 0,
+        }
     }
 
     /// Returns the image-index property value for the given ID.
@@ -566,8 +608,12 @@ pub trait SkinRenderContext: TimerAccess {
     // ============================================================
 
     /// Returns the prepare frame-per-second value from config.
+    ///
+    /// Java Skin.java:241 reads `state.main.getConfig().getPrepareFramePerSecond()`.
+    /// When 0, `prepareduration` becomes 1 (every frame).
     fn prepare_fps(&self) -> i32 {
-        60
+        self.config_ref()
+            .map_or(0, |c| c.display.prepare_frame_per_second)
     }
 
     /// Returns whether debug mode is active.

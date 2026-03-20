@@ -405,37 +405,12 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
                 .map_or(0, |s| (s.chart.length.max(0) % 60000) / 1000),
             // Total notes
             350 => self.selected_song_data().map_or(0, |s| s.chart.notes),
-            // System time
-            20 => rubato_types::fps_counter::current_fps(),
-            21 => {
-                let now = chrono::Local::now();
-                chrono::Datelike::year(&now)
-            }
-            22 => {
-                let now = chrono::Local::now();
-                chrono::Datelike::month(&now) as i32
-            }
-            23 => {
-                let now = chrono::Local::now();
-                chrono::Datelike::day(&now) as i32
-            }
-            24 => {
-                let now = chrono::Local::now();
-                chrono::Timelike::hour(&now) as i32
-            }
-            25 => {
-                let now = chrono::Local::now();
-                chrono::Timelike::minute(&now) as i32
-            }
-            26 => {
-                let now = chrono::Local::now();
-                chrono::Timelike::second(&now) as i32
-            }
             // Playtime (hours/minutes/seconds from boot)
             17 => (self.timer.now_time() / 3_600_000) as i32,
             18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,
             19 => ((self.timer.now_time() % 60_000) / 1_000) as i32,
-            _ => 0,
+            // IDs 20-26 (FPS, system date/time) handled by default_integer_value
+            _ => self.default_integer_value(id),
         }
     }
 
@@ -614,6 +589,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
 
     fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
         self.selector.main_state_data.offsets.get(&id)
+    }
+
+    fn get_distribution_data(&self) -> Option<rubato_types::distribution_data::DistributionData> {
+        let dir = self.selected_directory_data()?;
+        Some(rubato_types::distribution_data::DistributionData {
+            lamps: *dir.lamps(),
+            ranks: *dir.ranks(),
+        })
     }
 }
 
