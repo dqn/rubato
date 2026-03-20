@@ -187,6 +187,12 @@ pub trait MediaAccess {
         None
     }
 
+    /// Get player data reference.
+    /// Java: PlayerResource.getPlayerData()
+    fn player_data(&self) -> Option<&PlayerData> {
+        None
+    }
+
     /// Set player data.
     /// Java: PlayerResource.setPlayerData(PlayerData)
     fn set_player_data(&mut self, _player_data: PlayerData) {

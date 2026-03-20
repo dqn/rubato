@@ -104,6 +104,7 @@ pub trait SkinRenderContext: TimerAccess {
     /// (work on ALL screens):
     /// - 20: current FPS
     /// - 21-26: system date/time (year/month/day/hour/minute/second)
+    /// - 27-29: boot time (hours/minutes/seconds since application start)
     ///
     /// Callers that override `integer_value()` should fall through to this
     /// for unmatched IDs instead of returning `0`.
@@ -136,6 +137,11 @@ pub trait SkinRenderContext: TimerAccess {
                 let now = chrono::Local::now();
                 chrono::Timelike::second(&now) as i32
             }
+            // Boot time (hours/minutes/seconds since application start)
+            // Java: main.getPlayTime() returns ms since boot
+            27 => (self.now_time() / 3_600_000) as i32,
+            28 => ((self.now_time() % 3_600_000) / 60_000) as i32,
+            29 => ((self.now_time() % 60_000) / 1_000) as i32,
             _ => 0,
         }
     }

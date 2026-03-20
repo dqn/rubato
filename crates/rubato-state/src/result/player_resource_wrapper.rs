@@ -149,6 +149,30 @@ impl PlayerResource {
         self.inner.is_freq_on()
     }
 
+    pub fn player_data(&self) -> &rubato_types::player_data::PlayerData {
+        static DEFAULT: rubato_types::player_data::PlayerData =
+            rubato_types::player_data::PlayerData {
+                date: 0,
+                playcount: 0,
+                clear: 0,
+                epg: 0,
+                lpg: 0,
+                egr: 0,
+                lgr: 0,
+                egd: 0,
+                lgd: 0,
+                ebd: 0,
+                lbd: 0,
+                epr: 0,
+                lpr: 0,
+                ems: 0,
+                lms: 0,
+                playtime: 0,
+                maxcombo: 0,
+            };
+        self.inner.player_data().unwrap_or(&DEFAULT)
+    }
+
     // ---- Crate-local methods (not on trait -- types cause circular deps) ----
 
     pub fn bms_model(&self) -> &bms_model::bms_model::BMSModel {

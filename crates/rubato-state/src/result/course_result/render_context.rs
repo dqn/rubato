@@ -143,7 +143,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
     }
 
     fn integer_value(&self, id: i32) -> i32 {
-        shared_render_context::integer_value(self.data, self.timer.now_time(), id)
+        let playtime = self.resource.player_data().playtime;
+        shared_render_context::integer_value(self.data, self.timer.now_time(), playtime, id)
     }
 
     fn ranking_score_clear_type(&self, slot: i32) -> i32 {
@@ -414,7 +415,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultMouseC
     }
 
     fn integer_value(&self, id: i32) -> i32 {
-        shared_render_context::integer_value(&self.result.data, self.timer.now_time(), id)
+        let playtime = self.result.resource.player_data().playtime;
+        shared_render_context::integer_value(&self.result.data, self.timer.now_time(), playtime, id)
     }
 
     fn ranking_score_clear_type(&self, slot: i32) -> i32 {

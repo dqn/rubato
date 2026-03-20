@@ -870,6 +870,10 @@ impl MediaAccess for PlayerResource {
         PlayerResource::bms_model(self)
     }
 
+    fn player_data(&self) -> Option<&rubato_types::player_data::PlayerData> {
+        Some(&self.playerdata)
+    }
+
     fn set_player_data(&mut self, player_data: rubato_types::player_data::PlayerData) {
         self.playerdata = player_data;
     }
