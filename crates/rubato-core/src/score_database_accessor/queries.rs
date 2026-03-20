@@ -55,7 +55,7 @@ impl ScoreDatabaseAccessor {
                 }
                 let mut best: Option<ScoreData> = None;
                 for s in scores {
-                    if best.is_none() || s.clear > best.as_ref().expect("best is Some").clear {
+                    if best.as_ref().is_none_or(|b| s.clear > b.clear) {
                         best = Some(s);
                     }
                 }

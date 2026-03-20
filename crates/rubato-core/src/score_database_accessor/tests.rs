@@ -808,3 +808,36 @@ fn set_score_data_map_all_whitelisted_columns_are_valid() {
         accessor.set_score_data_map(&map);
     }
 }
+
+// --- best-clear selection regression tests ---
+
+/// Regression: the best-clear selection loop in `score_data()` formerly used
+/// `best.is_none() || s.clear > best.as_ref().expect("best is Some").clear`
+/// which panics if short-circuit evaluation is ever disrupted. Verify the safe
+/// `map_or` replacement returns a result when only a single score exists (the
+/// path where `best` transitions from None to Some).
+#[test]
+fn score_data_best_clear_single_entry_returns_some() {
+    let accessor = memory_accessor();
+    let sd = make_score("single_best", 0, 4);
+    accessor.set_score_data(&sd);
+
+    let loaded = accessor.score_data("single_best", 0);
+    assert!(
+        loaded.is_some(),
+        "score_data must return Some when a single valid score exists (best starts as None)"
+    );
+    assert_eq!(loaded.unwrap().clear, 4);
+}
+
+/// Verify that score_data returns None (not panic) when no scores exist for
+/// the given hash, exercising the empty-scores early return.
+#[test]
+fn score_data_no_match_returns_none() {
+    let accessor = memory_accessor();
+    let result = accessor.score_data("nonexistent_hash", 0);
+    assert!(
+        result.is_none(),
+        "score_data must return None for nonexistent hash"
+    );
+}
