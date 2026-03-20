@@ -769,16 +769,19 @@ impl RandomDirectiveState {
         if self.skip.last().copied().unwrap_or(false) {
             return true;
         }
-        // Check SWITCH/CASE skip state: if we're inside a switch block,
-        // content is skipped unless a case has matched and #SKIP hasn't been hit.
-        if let Some(&is_sw) = self.is_switch.last()
-            && is_sw
-        {
-            let matched = self.case_matched.last().copied().unwrap_or(false);
-            let skipped = self.case_skipped.last().copied().unwrap_or(false);
-            // Skip if no case matched yet, or if #SKIP was hit
-            if !matched || skipped {
-                return true;
+        // Check ALL SWITCH nesting levels, not just the innermost.
+        // `is_switch` has one entry per RANDOM or SWITCH block, while
+        // `case_matched`/`case_skipped` only have entries for SWITCH blocks.
+        // Use a separate counter to index into the SWITCH-only vectors.
+        let mut switch_idx = 0;
+        for &is_sw in &self.is_switch {
+            if is_sw {
+                let matched = self.case_matched.get(switch_idx).copied().unwrap_or(false);
+                let skipped = self.case_skipped.get(switch_idx).copied().unwrap_or(false);
+                if !matched || skipped {
+                    return true;
+                }
+                switch_idx += 1;
             }
         }
         false
@@ -2497,5 +2500,95 @@ mod tests {
                 .iter()
                 .any(|l| l.message.contains("#SETSWITCHに数字が定義されていません"))
         );
+    }
+
+    // --- RANDOM nested inside unentered SWITCH case ---
+
+    #[test]
+    fn decode_random_nested_in_switch_unentered_case() {
+        // Outer SWITCH matches case 1 (crandom=1). After #SKIP, case 2 is unentered.
+        // Inner RANDOM with #IF 1 is inside the unentered case 2,
+        // so its body must be skipped and must NOT overwrite the title.
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 2",
+            "#CASE 1",
+            "#TITLE Case1",
+            "#SKIP",
+            "#CASE 2",
+            "#RANDOM 2",
+            "#IF 1",
+            "#TITLE ShouldNotAppear",
+            "#ENDIF",
+            "#ENDRANDOM",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        // selected_random[0]=1 → SWITCH picks 1 (case 1 matches),
+        // selected_random[1]=1 → inner RANDOM picks 1 (IF 1 matches inside unentered case)
+        let model = decoder.decode_bytes(&data, false, Some(&[1, 1])).unwrap();
+        // Case 1 matched and set title. Case 2 is unentered so RANDOM inside it should be skipped.
+        assert_eq!(model.title, "Case1");
+    }
+
+    #[test]
+    fn decode_random_nested_in_switch_after_skip() {
+        // SWITCH matches case 1, then #SKIP is hit.
+        // Inner RANDOM with #IF 1 is after the #SKIP, so its body should be skipped.
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 2",
+            "#CASE 1",
+            "#TITLE Case1",
+            "#SKIP",
+            "#RANDOM 2",
+            "#IF 1",
+            "#TITLE ShouldNotOverwrite",
+            "#ENDIF",
+            "#ENDRANDOM",
+            "#ENDSW",
+        ]);
+        // selected_random[0]=1 → SWITCH picks 1, selected_random[1]=1 → RANDOM picks 1
+        let model = decoder.decode_bytes(&data, false, Some(&[1, 1])).unwrap();
+        // CASE 1 matched and set title to "Case1", then #SKIP was hit.
+        // The RANDOM block after SKIP should not overwrite.
+        assert_eq!(model.title, "Case1");
+    }
+
+    #[test]
+    fn decode_switch_random_switch_nested() {
+        // Outer SWITCH matches case 1, then #SKIP. Case 2 is unentered.
+        // Inside unentered case 2: RANDOM → IF → innermost SWITCH → CASE with title.
+        // All content inside the unentered case 2 must be skipped.
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            "#SWITCH 3",
+            "#CASE 1",
+            "#TITLE Case1",
+            "#SKIP",
+            "#CASE 2",
+            "#RANDOM 2",
+            "#IF 1",
+            "#SWITCH 2",
+            "#CASE 1",
+            "#TITLE DeepNested",
+            "#SKIP",
+            "#ENDSW",
+            "#ENDIF",
+            "#ENDRANDOM",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        // selected_random[0]=1 → outer SWITCH picks 1 (case 1 matches)
+        // selected_random[1]=1 → inner RANDOM picks 1
+        // selected_random[2]=1 → innermost SWITCH picks 1
+        let model = decoder
+            .decode_bytes(&data, false, Some(&[1, 1, 1]))
+            .unwrap();
+        // Case 1 matched. Case 2 is unentered so nested content should be skipped.
+        assert_eq!(model.title, "Case1");
     }
 }
