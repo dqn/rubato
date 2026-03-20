@@ -277,6 +277,156 @@ impl rubato_types::skin_render_context::SkinRenderContext for TimerOnlyMainState
             .as_deref()
             .and_then(|c| c.get_offset_value(id))
     }
+
+    fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
+        self.ctx.as_deref().and_then(|c| c.replay_option_data())
+    }
+
+    fn target_score_data(&self) -> Option<&rubato_types::score_data::ScoreData> {
+        self.ctx.as_deref().and_then(|c| c.target_score_data())
+    }
+
+    fn score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
+        self.ctx.as_deref().and_then(|c| c.score_data_ref())
+    }
+
+    fn rival_score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
+        self.ctx.as_deref().and_then(|c| c.rival_score_data_ref())
+    }
+
+    fn ranking_score_clear_type(&self, slot: i32) -> i32 {
+        self.ctx
+            .as_deref()
+            .map_or(-1, |c| c.ranking_score_clear_type(slot))
+    }
+
+    fn ranking_offset(&self) -> i32 {
+        self.ctx.as_deref().map_or(0, |c| c.ranking_offset())
+    }
+
+    fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
+        self.ctx
+            .as_deref()
+            .and_then(rubato_types::skin_render_context::SkinRenderContext::current_play_config_ref)
+    }
+
+    fn song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
+        self.ctx
+            .as_deref()
+            .and_then(rubato_types::skin_render_context::SkinRenderContext::song_data_ref)
+    }
+
+    fn lane_shuffle_pattern_value(&self, player: usize, lane: usize) -> i32 {
+        self.ctx
+            .as_deref()
+            .map_or(-1, |c| c.lane_shuffle_pattern_value(player, lane))
+    }
+
+    fn mode_image_index(&self) -> Option<i32> {
+        self.ctx.as_deref().and_then(|c| c.mode_image_index())
+    }
+
+    fn sort_image_index(&self) -> Option<i32> {
+        self.ctx.as_deref().and_then(|c| c.sort_image_index())
+    }
+
+    fn notify_audio_config_changed(&mut self) {
+        if let Some(ctx) = self.ctx.as_deref_mut() {
+            ctx.notify_audio_config_changed();
+        }
+    }
+
+    fn select_song_mode(&mut self, event_id: i32) {
+        if let Some(ctx) = self.ctx.as_deref_mut() {
+            ctx.select_song_mode(event_id);
+        }
+    }
+
+    fn mouse_x(&self) -> f32 {
+        self.ctx.as_deref().map_or(0.0, |c| c.mouse_x())
+    }
+
+    fn mouse_y(&self) -> f32 {
+        self.ctx.as_deref().map_or(0.0, |c| c.mouse_y())
+    }
+
+    fn prepare_fps(&self) -> i32 {
+        self.ctx.as_deref().map_or(0, |c| c.prepare_fps())
+    }
+
+    fn is_debug(&self) -> bool {
+        self.ctx.as_deref().is_some_and(|c| c.is_debug())
+    }
+
+    fn get_timing_distribution(
+        &self,
+    ) -> Option<&rubato_types::timing_distribution::TimingDistribution> {
+        self.ctx
+            .as_deref()
+            .and_then(|c| c.get_timing_distribution())
+    }
+
+    fn judge_area(&self) -> Option<Vec<Vec<i32>>> {
+        self.ctx.as_deref().and_then(|c| c.judge_area())
+    }
+
+    fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
+        self.ctx
+            .as_deref()
+            .map_or_else(|| {
+                static DEFAULT: std::sync::OnceLock<rubato_types::score_data_property::ScoreDataProperty> =
+                    std::sync::OnceLock::new();
+                DEFAULT.get_or_init(rubato_types::score_data_property::ScoreDataProperty::default)
+            }, |c| c.score_data_property())
+    }
+
+    fn gauge_history(&self) -> Option<&Vec<Vec<f32>>> {
+        self.ctx.as_deref().and_then(|c| c.gauge_history())
+    }
+
+    fn course_gauge_history(&self) -> &[Vec<Vec<f32>>] {
+        self.ctx
+            .as_deref()
+            .map_or(&[] as &[Vec<Vec<f32>>], |c| c.course_gauge_history())
+    }
+
+    fn gauge_border_max(&self) -> Option<(f32, f32)> {
+        self.ctx.as_deref().and_then(|c| c.gauge_border_max())
+    }
+
+    fn gauge_min(&self) -> f32 {
+        self.ctx.as_deref().map_or(0.0, |c| c.gauge_min())
+    }
+
+    fn result_gauge_type(&self) -> i32 {
+        self.ctx
+            .as_deref()
+            .map_or_else(|| self.gauge_type(), |c| c.result_gauge_type())
+    }
+
+    fn is_gauge_max(&self) -> bool {
+        self.ctx.as_deref().is_some_and(|c| c.is_gauge_max())
+    }
+
+    fn is_media_load_finished(&self) -> bool {
+        self.ctx
+            .as_deref()
+            .is_some_and(|c| c.is_media_load_finished())
+    }
+
+    fn is_practice_mode(&self) -> bool {
+        self.ctx
+            .as_deref()
+            .is_some_and(|c| c.is_practice_mode())
+    }
+
+    fn get_distribution_data(
+        &self,
+    ) -> Option<rubato_types::distribution_data::DistributionData> {
+        self.ctx
+            .as_deref()
+            .and_then(|c| c.get_distribution_data())
+    }
 }
 
 impl crate::reexports::MainState for TimerOnlyMainState<'_> {
@@ -463,6 +613,361 @@ impl rubato_core::main_state::SkinDrawable for Skin {
             "compute_note_draw_commands: no SkinObject::Note found in {} objects",
             self.objects.len()
         );
+    }
+}
+
+#[cfg(test)]
+mod skin_drawable_delegation_tests {
+    use super::*;
+    use rubato_types::main_state_type::MainStateType;
+    use rubato_types::skin_render_context::SkinRenderContext;
+    use rubato_types::timer_access::TimerAccess;
+    use rubato_types::timer_id::TimerId;
+
+    /// A mock SkinRenderContext that returns distinctive non-default values
+    /// for every method. Used to verify TimerOnlyMainState delegates each
+    /// method to the wrapped context instead of silently returning trait defaults.
+    struct FullMockContext {
+        score: rubato_types::score_data::ScoreData,
+        replay: rubato_types::replay_data::ReplayData,
+        song: rubato_types::song_data::SongData,
+        play_config: rubato_types::play_config::PlayConfig,
+        timing_dist: rubato_types::timing_distribution::TimingDistribution,
+        score_prop: rubato_types::score_data_property::ScoreDataProperty,
+        gauge_hist: Vec<Vec<f32>>,
+        course_gauge_hist: Vec<Vec<Vec<f32>>>,
+    }
+
+    impl FullMockContext {
+        fn new() -> Self {
+            let mut score = rubato_types::score_data::ScoreData::default();
+            score.clear = 7;
+
+            Self {
+                score,
+                replay: rubato_types::replay_data::ReplayData::default(),
+                song: rubato_types::song_data::SongData::default(),
+                play_config: rubato_types::play_config::PlayConfig::default(),
+                timing_dist: rubato_types::timing_distribution::TimingDistribution::default(),
+                score_prop: rubato_types::score_data_property::ScoreDataProperty::default(),
+                gauge_hist: vec![vec![0.5, 0.6]],
+                course_gauge_hist: vec![vec![vec![0.1, 0.2]]],
+            }
+        }
+    }
+
+    impl TimerAccess for FullMockContext {
+        fn now_time(&self) -> i64 {
+            42
+        }
+        fn now_micro_time(&self) -> i64 {
+            42_000
+        }
+        fn micro_timer(&self, _: TimerId) -> i64 {
+            i64::MIN
+        }
+        fn timer(&self, _: TimerId) -> i64 {
+            i64::MIN
+        }
+        fn now_time_for(&self, _: TimerId) -> i64 {
+            i64::MIN
+        }
+        fn is_timer_on(&self, _: TimerId) -> bool {
+            false
+        }
+    }
+
+    impl SkinRenderContext for FullMockContext {
+        fn current_state_type(&self) -> Option<MainStateType> {
+            Some(MainStateType::Result)
+        }
+
+        fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
+            Some(&self.replay)
+        }
+
+        fn target_score_data(&self) -> Option<&rubato_types::score_data::ScoreData> {
+            Some(&self.score)
+        }
+
+        fn score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
+            Some(&self.score)
+        }
+
+        fn rival_score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
+            Some(&self.score)
+        }
+
+        fn ranking_score_clear_type(&self, slot: i32) -> i32 {
+            slot + 100
+        }
+
+        fn ranking_offset(&self) -> i32 {
+            5
+        }
+
+        fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
+            Some(&self.play_config)
+        }
+
+        fn song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
+            Some(&self.song)
+        }
+
+        fn lane_shuffle_pattern_value(&self, player: usize, lane: usize) -> i32 {
+            (player * 10 + lane) as i32
+        }
+
+        fn mode_image_index(&self) -> Option<i32> {
+            Some(3)
+        }
+
+        fn sort_image_index(&self) -> Option<i32> {
+            Some(7)
+        }
+
+        fn mouse_x(&self) -> f32 {
+            123.0
+        }
+
+        fn mouse_y(&self) -> f32 {
+            456.0
+        }
+
+        fn prepare_fps(&self) -> i32 {
+            30
+        }
+
+        fn is_debug(&self) -> bool {
+            true
+        }
+
+        fn get_timing_distribution(
+            &self,
+        ) -> Option<&rubato_types::timing_distribution::TimingDistribution> {
+            Some(&self.timing_dist)
+        }
+
+        fn judge_area(&self) -> Option<Vec<Vec<i32>>> {
+            Some(vec![vec![10, 20, 30]])
+        }
+
+        fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
+            &self.score_prop
+        }
+
+        fn gauge_history(&self) -> Option<&Vec<Vec<f32>>> {
+            Some(&self.gauge_hist)
+        }
+
+        fn course_gauge_history(&self) -> &[Vec<Vec<f32>>] {
+            &self.course_gauge_hist
+        }
+
+        fn gauge_border_max(&self) -> Option<(f32, f32)> {
+            Some((0.8, 1.0))
+        }
+
+        fn gauge_min(&self) -> f32 {
+            0.02
+        }
+
+        fn result_gauge_type(&self) -> i32 {
+            99
+        }
+
+        fn is_gauge_max(&self) -> bool {
+            true
+        }
+
+        fn is_media_load_finished(&self) -> bool {
+            true
+        }
+
+        fn is_practice_mode(&self) -> bool {
+            true
+        }
+
+        fn get_distribution_data(
+            &self,
+        ) -> Option<rubato_types::distribution_data::DistributionData> {
+            Some(rubato_types::distribution_data::DistributionData::default())
+        }
+    }
+
+    /// Regression test: verify that TimerOnlyMainState delegates ALL SkinRenderContext
+    /// methods to the wrapped context. Before this fix, many result-screen and data
+    /// accessor methods were missing, causing skin objects like SkinGaugeGraphObject
+    /// to silently receive default/empty values.
+    #[test]
+    fn test_timer_only_main_state_delegates_all_skin_render_context_methods() {
+        let registry = HashMap::new();
+        let mut ctx = FullMockContext::new();
+        let adapter = TimerOnlyMainState::from_render_context_with_images(&mut ctx, &registry);
+
+        // -- Data accessors (Option<&T>) --
+        assert!(
+            adapter.replay_option_data().is_some(),
+            "replay_option_data must delegate"
+        );
+        assert!(
+            adapter.target_score_data().is_some(),
+            "target_score_data must delegate"
+        );
+        assert_eq!(
+            adapter.score_data_ref().unwrap().clear,
+            7,
+            "score_data_ref must delegate"
+        );
+        assert!(
+            adapter.rival_score_data_ref().is_some(),
+            "rival_score_data_ref must delegate"
+        );
+        assert!(
+            adapter.current_play_config_ref().is_some(),
+            "current_play_config_ref must delegate"
+        );
+        assert!(
+            adapter.song_data_ref().is_some(),
+            "song_data_ref must delegate"
+        );
+        assert!(
+            adapter.get_timing_distribution().is_some(),
+            "get_timing_distribution must delegate"
+        );
+        assert!(
+            adapter.get_distribution_data().is_some(),
+            "get_distribution_data must delegate"
+        );
+
+        // -- Scalar values --
+        assert_eq!(
+            adapter.ranking_score_clear_type(2),
+            102,
+            "ranking_score_clear_type must delegate"
+        );
+        assert_eq!(
+            adapter.ranking_offset(),
+            5,
+            "ranking_offset must delegate"
+        );
+        assert_eq!(
+            adapter.lane_shuffle_pattern_value(1, 3),
+            13,
+            "lane_shuffle_pattern_value must delegate"
+        );
+        assert_eq!(
+            adapter.mode_image_index(),
+            Some(3),
+            "mode_image_index must delegate"
+        );
+        assert_eq!(
+            adapter.sort_image_index(),
+            Some(7),
+            "sort_image_index must delegate"
+        );
+        assert_eq!(adapter.mouse_x(), 123.0, "mouse_x must delegate");
+        assert_eq!(adapter.mouse_y(), 456.0, "mouse_y must delegate");
+        assert_eq!(adapter.prepare_fps(), 30, "prepare_fps must delegate");
+        assert_eq!(adapter.gauge_min(), 0.02, "gauge_min must delegate");
+        assert_eq!(
+            adapter.result_gauge_type(),
+            99,
+            "result_gauge_type must delegate"
+        );
+
+        // -- Boolean values --
+        assert!(adapter.is_debug(), "is_debug must delegate");
+        assert!(adapter.is_gauge_max(), "is_gauge_max must delegate");
+        assert!(
+            adapter.is_media_load_finished(),
+            "is_media_load_finished must delegate"
+        );
+        assert!(
+            adapter.is_practice_mode(),
+            "is_practice_mode must delegate"
+        );
+
+        // -- Complex return types --
+        assert_eq!(
+            adapter.judge_area(),
+            Some(vec![vec![10, 20, 30]]),
+            "judge_area must delegate"
+        );
+        assert!(
+            adapter.gauge_history().is_some(),
+            "gauge_history must delegate"
+        );
+        assert_eq!(
+            adapter.gauge_history().unwrap().len(),
+            1,
+            "gauge_history must delegate with correct data"
+        );
+        assert_eq!(
+            adapter.course_gauge_history().len(),
+            1,
+            "course_gauge_history must delegate"
+        );
+        assert_eq!(
+            adapter.gauge_border_max(),
+            Some((0.8, 1.0)),
+            "gauge_border_max must delegate"
+        );
+        // score_data_property returns a reference; just verify it doesn't panic
+        let _ = adapter.score_data_property();
+    }
+
+    /// Verify that when ctx is None (timer-only mode), all methods return
+    /// their trait defaults and do not panic.
+    #[test]
+    fn test_timer_only_mode_returns_defaults_for_all_methods() {
+        let timer = rubato_types::timer_access::NullTimer;
+        let adapter = TimerOnlyMainState::from_timer(&timer);
+
+        assert!(adapter.replay_option_data().is_none());
+        assert!(adapter.target_score_data().is_none());
+        assert!(adapter.score_data_ref().is_none());
+        assert!(adapter.rival_score_data_ref().is_none());
+        assert!(adapter.current_play_config_ref().is_none());
+        assert!(adapter.song_data_ref().is_none());
+        assert!(adapter.get_timing_distribution().is_none());
+        assert!(adapter.get_distribution_data().is_none());
+
+        assert_eq!(adapter.ranking_score_clear_type(0), -1);
+        assert_eq!(adapter.ranking_offset(), 0);
+        assert_eq!(adapter.lane_shuffle_pattern_value(0, 0), -1);
+        assert_eq!(adapter.mode_image_index(), None);
+        assert_eq!(adapter.sort_image_index(), None);
+        assert_eq!(adapter.mouse_x(), 0.0);
+        assert_eq!(adapter.mouse_y(), 0.0);
+        assert_eq!(adapter.prepare_fps(), 0);
+        assert_eq!(adapter.gauge_min(), 0.0);
+        // result_gauge_type falls back to gauge_type() which returns 0
+        assert_eq!(adapter.result_gauge_type(), 0);
+
+        assert!(!adapter.is_debug());
+        assert!(!adapter.is_gauge_max());
+        assert!(!adapter.is_media_load_finished());
+        assert!(!adapter.is_practice_mode());
+
+        assert!(adapter.judge_area().is_none());
+        assert!(adapter.gauge_history().is_none());
+        assert!(adapter.course_gauge_history().is_empty());
+        assert!(adapter.gauge_border_max().is_none());
+    }
+
+    /// Verify mutable context methods (notify_audio_config_changed, select_song_mode)
+    /// delegate through without panicking.
+    #[test]
+    fn test_mutable_methods_delegate_without_panic() {
+        let registry = HashMap::new();
+        let mut ctx = FullMockContext::new();
+        let mut adapter =
+            TimerOnlyMainState::from_render_context_with_images(&mut ctx, &registry);
+
+        // These should delegate to no-op defaults on FullMockContext without panicking
+        adapter.notify_audio_config_changed();
+        adapter.select_song_mode(15);
     }
 }
 
