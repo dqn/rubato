@@ -107,8 +107,14 @@ impl RandomizerBase {
             hnotes[lane as usize] = tl.hidden_note(lane).cloned();
         }
 
+        // Sort by source lane index for deterministic LN tracking state across iterations.
+        // Java HashMap also has non-deterministic order, but sorting here avoids
+        // non-deterministic changeable_lane/assignable_lane state that carries to future timelines.
+        let mut sorted_entries: Vec<_> = permutation_map.iter().collect();
+        sorted_entries.sort_by_key(|(k, _)| **k);
+
         // Safety: x values come from modify_lanes which are validated lane indices (0..mode_key).
-        for (&x, &y) in &permutation_map {
+        for &(&x, &y) in &sorted_entries {
             let n = notes[x as usize].take();
             let hn = hnotes[x as usize].take();
             if let Some(ref note) = n
