@@ -757,6 +757,28 @@ fn test_evaluate_filter_non_numeric_string_passes() {
     assert!(evaluate_filter_expression("abc", 42));
 }
 
+// ---- evaluate_filter_expression == prefix tests ----
+
+#[test]
+fn test_evaluate_filter_double_equals_match() {
+    assert!(evaluate_filter_expression("==5", 5));
+    assert!(evaluate_filter_expression("==0", 0));
+    assert!(evaluate_filter_expression("==-3", -3));
+}
+
+#[test]
+fn test_evaluate_filter_double_equals_mismatch() {
+    assert!(!evaluate_filter_expression("==5", 4));
+    assert!(!evaluate_filter_expression("==5", 6));
+    assert!(!evaluate_filter_expression("==0", 1));
+}
+
+#[test]
+fn test_evaluate_filter_double_equals_non_numeric_passes() {
+    // "==abc" is unparseable, falls through to true (with warning).
+    assert!(evaluate_filter_expression("==abc", 42));
+}
+
 // ---- bar_class_name tests ----
 
 #[test]

@@ -171,9 +171,14 @@ pub(super) fn evaluate_filter_expression(expr: &str, property_value: i64) -> boo
         && let Ok(v) = stripped.parse::<i64>()
     {
         return property_value < v;
+    } else if let Some(val_str) = expr.strip_prefix("==") {
+        if let Ok(v) = val_str.parse::<i64>() {
+            return property_value == v;
+        }
     } else if let Ok(v) = expr.parse::<i64>() {
         return property_value == v;
     }
+    log::warn!("Unparseable filter expression: {:?}", expr);
     true
 }
 
