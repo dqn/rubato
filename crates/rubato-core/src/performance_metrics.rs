@@ -1,7 +1,7 @@
 use rubato_types::sync_utils::lock_or_recover;
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
-use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
 
@@ -9,7 +9,7 @@ static INSTANCE: OnceLock<PerformanceMetrics> = OnceLock::new();
 
 thread_local! {
     /// Per-thread active block stack for correct parent-child event relationships.
-    static THREAD_ACTIVE_BLOCKS: RefCell<Vec<i32>> = const { RefCell::new(Vec::new()) };
+    static THREAD_ACTIVE_BLOCKS: RefCell<Vec<u64>> = const { RefCell::new(Vec::new()) };
 }
 
 /// PerformanceMetrics - tracks performance events and watch measurements
@@ -26,14 +26,14 @@ pub struct PerformanceMetrics {
 #[derive(Clone, Debug)]
 pub struct EventResult {
     pub name: String,
-    pub id: i32,
-    pub parent: i32,
+    pub id: u64,
+    pub parent: u64,
     pub start_time: i64,
     pub duration: i64,
     pub thread: String,
 }
 
-static NEXT_EVENT_ID: AtomicI32 = AtomicI32::new(1);
+static NEXT_EVENT_ID: AtomicU64 = AtomicU64::new(1);
 
 impl PerformanceMetrics {
     fn new() -> Self {
@@ -113,8 +113,8 @@ impl PerformanceMetrics {
 /// EventBlock - RAII block for measuring event duration
 pub struct EventBlock {
     name: String,
-    id: i32,
-    parent: i32,
+    id: u64,
+    parent: u64,
     start_time: i64,
 }
 

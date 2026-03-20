@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Instant;
 
-static EVENT_TREE: Mutex<Option<HashMap<i32, Vec<EventResult>>>> = Mutex::new(None);
+static EVENT_TREE: Mutex<Option<HashMap<u64, Vec<EventResult>>>> = Mutex::new(None);
 static LAST_EVENT_UPDATE: Mutex<Option<Instant>> = Mutex::new(None);
 
 struct WatchStats {
@@ -77,7 +77,7 @@ impl PerformanceMonitor {
                             *lock_or_recover(&SORT_BY_DURATION) = sort;
                         });
                         // Render root events
-                        if let Some(roots) = tree.get(&-1) {
+                        if let Some(roots) = tree.get(&0) {
                             let sort_by_duration = *lock_or_recover(&SORT_BY_DURATION);
                             let mut events: Vec<_> = roots.iter().collect();
                             if sort_by_duration {
@@ -100,7 +100,7 @@ impl PerformanceMonitor {
 
     pub fn reload_event_tree() {
         // copy the vector to avoid constantly reading the events while other threads might be writing
-        let mut new_tree: HashMap<i32, Vec<EventResult>> = HashMap::new();
+        let mut new_tree: HashMap<u64, Vec<EventResult>> = HashMap::new();
         let metrics = PerformanceMetrics::get();
         let events = {
             let results = lock_or_recover(&metrics.event_results);
@@ -150,7 +150,7 @@ fn render_event_table() {
 }
 
 #[allow(dead_code)]
-fn render_event_tree(group_id: i32, threshold: f32) {
+fn render_event_tree(group_id: u64, threshold: f32) {
     let event_tree = lock_or_recover(&EVENT_TREE);
     if let Some(ref tree) = *event_tree {
         if !tree.contains_key(&group_id) {
