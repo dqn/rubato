@@ -83,17 +83,21 @@ impl GpuContext {
             .await?;
 
         let surface_caps = surface.get_capabilities(&adapter);
+        // Use non-sRGB format to match LibGDX GL_RGBA8 behavior: no automatic
+        // sRGB-to-linear conversion on texture sampling. This keeps vertex colors
+        // and texture samples in the same color space, avoiding double-gamma on
+        // color tints.
         let format = surface_caps
             .formats
             .iter()
-            .find(|f| f.is_srgb())
+            .find(|f| !f.is_srgb())
             .copied()
             .unwrap_or_else(|| {
                 surface_caps
                     .formats
                     .first()
                     .copied()
-                    .unwrap_or(wgpu::TextureFormat::Rgba8UnormSrgb)
+                    .unwrap_or(wgpu::TextureFormat::Rgba8Unorm)
             });
 
         let config = wgpu::SurfaceConfiguration {
@@ -149,6 +153,29 @@ impl GpuContext {
         self.surface_config
             .as_ref()
             .map(|c| c.format)
-            .unwrap_or(wgpu::TextureFormat::Rgba8UnormSrgb)
+            .unwrap_or(wgpu::TextureFormat::Rgba8Unorm)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Verify headless surface format is non-sRGB (Rgba8Unorm) to match LibGDX GL_RGBA8 behavior.
+    /// LibGDX uses GL_RGBA8 throughout (no automatic sRGB conversion), so both vertex colors
+    /// and texture samples stay in the same color space. Using Rgba8UnormSrgb causes double-gamma
+    /// because wgpu auto-converts texture samples to linear but vertex colors remain sRGB.
+    #[tokio::test]
+    async fn test_headless_surface_format_is_non_srgb() {
+        let ctx = match GpuContext::new_headless().await {
+            Ok(ctx) => ctx,
+            Err(_) => return, // Skip if no GPU adapter (CI)
+        };
+        let format = ctx.surface_format();
+        assert_eq!(
+            format,
+            wgpu::TextureFormat::Rgba8Unorm,
+            "Surface format should be Rgba8Unorm (non-sRGB) to match LibGDX GL_RGBA8 behavior"
+        );
     }
 }
