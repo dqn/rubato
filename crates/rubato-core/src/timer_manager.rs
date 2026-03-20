@@ -24,6 +24,10 @@ pub struct TimerManager {
     recent_judges: Vec<i64>,
     /// Current write index into recent_judges circular buffer
     recent_judges_index: usize,
+    /// Milliseconds since application boot, set by MainController during state transition.
+    /// Java: MainController.getPlayTime() returns System.currentTimeMillis() - boottime.
+    /// Used by skin property IDs 27-29 (boot time hours/minutes/seconds).
+    boot_time_millis: i64,
 }
 
 /// SkinProperty.TIMER_MAX + 1 (Java TIMER_MAX = 2999)
@@ -42,6 +46,7 @@ impl TimerManager {
             state_type: None,
             recent_judges: Vec::new(),
             recent_judges_index: 0,
+            boot_time_millis: 0,
         }
     }
 
@@ -81,6 +86,18 @@ impl TimerManager {
 
     pub fn timer(&self, id: TimerId) -> i64 {
         self.micro_timer(id) / 1000
+    }
+
+    /// Returns milliseconds since application boot.
+    /// Set by MainController during state transitions.
+    pub fn boot_time_millis(&self) -> i64 {
+        self.boot_time_millis
+    }
+
+    /// Set the boot-relative time in milliseconds.
+    /// Called by MainController::transition_to_state() with play_time().
+    pub fn set_boot_time_millis(&mut self, millis: i64) {
+        self.boot_time_millis = millis;
     }
 
     /// Export a clone of the timer array for creating skin Timer snapshots.
@@ -209,6 +226,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for TimerManager {
 
     fn recent_judges_index(&self) -> usize {
         self.recent_judges_index
+    }
+
+    fn boot_time_millis(&self) -> i64 {
+        self.boot_time_millis
     }
 }
 
@@ -346,5 +367,30 @@ mod tests {
         let from_default = TimerManager::default();
         assert_eq!(from_new.now_time(), from_default.now_time());
         assert_eq!(from_new.timer.len(), from_default.timer.len());
+    }
+
+    #[test]
+    fn boot_time_millis_defaults_to_zero() {
+        let tm = TimerManager::new();
+        assert_eq!(tm.boot_time_millis(), 0);
+    }
+
+    #[test]
+    fn set_boot_time_millis_stores_value() {
+        let mut tm = TimerManager::new();
+        tm.set_boot_time_millis(123_456);
+        assert_eq!(tm.boot_time_millis(), 123_456);
+    }
+
+    #[test]
+    fn boot_time_millis_exposed_via_skin_render_context() {
+        use rubato_types::skin_render_context::SkinRenderContext;
+        let mut tm = TimerManager::new();
+        tm.set_boot_time_millis(7_200_000); // 2 hours
+        assert_eq!(SkinRenderContext::boot_time_millis(&tm), 7_200_000);
+        // IDs 27-29 should use boot time, not state-relative now_time
+        assert_eq!(tm.default_integer_value(27), 2); // hours
+        assert_eq!(tm.default_integer_value(28), 0); // minutes
+        assert_eq!(tm.default_integer_value(29), 0); // seconds
     }
 }

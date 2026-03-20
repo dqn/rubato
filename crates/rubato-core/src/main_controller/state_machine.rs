@@ -279,6 +279,14 @@ impl MainController {
             }
         }
 
+        // Propagate boot-relative time to the timer so skin properties (IDs 27-29)
+        // can display hours/minutes/seconds since application start.
+        // Java: main.getPlayTime() returns System.currentTimeMillis() - boottime.
+        new_state
+            .main_state_data_mut()
+            .timer
+            .set_boot_time_millis(self.play_time());
+
         // In Java: if(newState.getSkin() != null) { newState.getSkin().prepare(newState); }
         if let Some(ref mut skin) = new_state.main_state_data_mut().skin {
             skin.prepare_skin();

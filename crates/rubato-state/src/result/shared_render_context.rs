@@ -74,7 +74,7 @@ fn with_rival_score(data: &AbstractResultData, f: impl FnOnce(&ScoreData) -> i32
 /// CourseResult).
 pub fn integer_value(
     data: &AbstractResultData,
-    timer_now: i64,
+    boot_time_millis: i64,
     cumulative_playtime_seconds: i64,
     songdata: Option<&rubato_types::song_data::SongData>,
     id: i32,
@@ -377,10 +377,10 @@ pub fn integer_value(
         }
 
         // ---- Boot time (hours/minutes/seconds since application start) ----
-        // Java: main.getPlayTime() returns ms since boot
-        27 => (timer_now / 3_600_000) as i32,
-        28 => ((timer_now % 3_600_000) / 60_000) as i32,
-        29 => ((timer_now % 60_000) / 1_000) as i32,
+        // Java: main.getPlayTime() returns ms since boot (not state-relative)
+        27 => (boot_time_millis / 3_600_000) as i32,
+        28 => ((boot_time_millis % 3_600_000) / 60_000) as i32,
+        29 => ((boot_time_millis % 60_000) / 1_000) as i32,
 
         // ---- Song duration (NUMBER_DURATION: 312) ----
         // Java: songdata.getLength() (raw ms)

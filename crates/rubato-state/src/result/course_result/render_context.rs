@@ -37,6 +37,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
         Some(rubato_types::main_state_type::MainStateType::CourseResult)
     }
 
+    fn boot_time_millis(&self) -> i64 {
+        self.timer.boot_time_millis()
+    }
+
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         shared_render_context::player_config_ref(self.resource)
     }
@@ -146,7 +150,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
         let playtime = self.resource.player_data().playtime;
         shared_render_context::integer_value(
             self.data,
-            self.timer.now_time(),
+            self.timer.boot_time_millis(),
             playtime,
             self.resource.songdata(),
             id,
@@ -292,6 +296,10 @@ impl rubato_types::timer_access::TimerAccess for CourseResultMouseContext<'_> {
 impl rubato_types::skin_render_context::SkinRenderContext for CourseResultMouseContext<'_> {
     fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
         Some(rubato_types::main_state_type::MainStateType::CourseResult)
+    }
+
+    fn boot_time_millis(&self) -> i64 {
+        self.timer.boot_time_millis()
     }
 
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {

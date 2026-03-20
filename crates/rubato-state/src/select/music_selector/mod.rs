@@ -182,6 +182,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
         Some(rubato_types::main_state_type::MainStateType::MusicSelect)
     }
 
+    fn boot_time_millis(&self) -> i64 {
+        self.timer.boot_time_millis()
+    }
+
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         Some(&self.selector.config)
     }

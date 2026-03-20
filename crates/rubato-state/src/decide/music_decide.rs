@@ -46,6 +46,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
         Some(rubato_types::main_state_type::MainStateType::Decide)
     }
 
+    fn boot_time_millis(&self) -> i64 {
+        self.timer.boot_time_millis()
+    }
+
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         Some(self.main.player_config())
     }
@@ -259,6 +263,10 @@ impl rubato_types::timer_access::TimerAccess for DecideMouseContext<'_> {
 impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext<'_> {
     fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
         Some(rubato_types::main_state_type::MainStateType::Decide)
+    }
+
+    fn boot_time_millis(&self) -> i64 {
+        self.timer.boot_time_millis()
     }
 
     fn execute_event(&mut self, id: i32, arg1: i32, arg2: i32) {

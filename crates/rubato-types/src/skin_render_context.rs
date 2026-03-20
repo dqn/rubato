@@ -88,6 +88,14 @@ pub trait SkinRenderContext: TimerAccess {
         0
     }
 
+    /// Returns milliseconds since application boot.
+    /// Java: MainController.getPlayTime() returns System.currentTimeMillis() - boottime.
+    /// Used by default_integer_value for IDs 27-29 (boot time display).
+    /// Production adapters override this to return the real boot time from TimerManager.
+    fn boot_time_millis(&self) -> i64 {
+        0
+    }
+
     // ============================================================
     // Property value delegation (skin property factories)
     // ============================================================
@@ -138,10 +146,19 @@ pub trait SkinRenderContext: TimerAccess {
                 chrono::Timelike::second(&now) as i32
             }
             // Boot time (hours/minutes/seconds since application start)
-            // Java: main.getPlayTime() returns ms since boot
-            27 => (self.now_time() / 3_600_000) as i32,
-            28 => ((self.now_time() % 3_600_000) / 60_000) as i32,
-            29 => ((self.now_time() % 60_000) / 1_000) as i32,
+            // Java: main.getPlayTime() returns ms since boot (not state-relative)
+            27 => {
+                let bt = self.boot_time_millis();
+                (bt / 3_600_000) as i32
+            }
+            28 => {
+                let bt = self.boot_time_millis();
+                ((bt % 3_600_000) / 60_000) as i32
+            }
+            29 => {
+                let bt = self.boot_time_millis();
+                ((bt % 60_000) / 1_000) as i32
+            }
             _ => 0,
         }
     }
@@ -952,6 +969,70 @@ mod tests {
         let ctx = TestContext::new();
         assert_eq!(ctx.default_image_index_value(450), -1);
         assert_eq!(ctx.default_image_index_value(460), -1);
+    }
+
+    // ============================================================
+    // Boot time (IDs 27-29) tests
+    // ============================================================
+
+    #[test]
+    fn default_integer_value_boot_time_uses_boot_time_millis_not_now_time() {
+        // Regression test: IDs 27-29 must use boot_time_millis() (boot-relative),
+        // not now_time() (state-relative). In Java these use main.getPlayTime()
+        // which returns System.currentTimeMillis() - boottime.
+
+        struct BootTimeContext {
+            boot_millis: i64,
+            state_millis: i64,
+        }
+
+        impl TimerAccess for BootTimeContext {
+            fn now_time(&self) -> i64 {
+                // State-relative time (should NOT be used for IDs 27-29)
+                self.state_millis
+            }
+            fn now_micro_time(&self) -> i64 {
+                self.state_millis * 1000
+            }
+            fn micro_timer(&self, _: TimerId) -> i64 {
+                i64::MIN
+            }
+            fn timer(&self, _: TimerId) -> i64 {
+                i64::MIN
+            }
+            fn now_time_for(&self, _: TimerId) -> i64 {
+                0
+            }
+            fn is_timer_on(&self, _: TimerId) -> bool {
+                false
+            }
+        }
+
+        impl SkinRenderContext for BootTimeContext {
+            fn boot_time_millis(&self) -> i64 {
+                self.boot_millis
+            }
+        }
+
+        // Boot time: 2h 34m 56s = 9_296_000 ms
+        // State time: 5s = 5_000 ms (should be ignored for IDs 27-29)
+        let ctx = BootTimeContext {
+            boot_millis: 2 * 3_600_000 + 34 * 60_000 + 56 * 1_000,
+            state_millis: 5_000,
+        };
+
+        assert_eq!(ctx.default_integer_value(27), 2, "boot time hours");
+        assert_eq!(ctx.default_integer_value(28), 34, "boot time minutes");
+        assert_eq!(ctx.default_integer_value(29), 56, "boot time seconds");
+    }
+
+    #[test]
+    fn default_integer_value_boot_time_zero_when_not_overridden() {
+        // When boot_time_millis() returns default 0, IDs 27-29 should be 0.
+        let ctx = TestContext::new();
+        assert_eq!(ctx.default_integer_value(27), 0);
+        assert_eq!(ctx.default_integer_value(28), 0);
+        assert_eq!(ctx.default_integer_value(29), 0);
     }
 
     // ============================================================

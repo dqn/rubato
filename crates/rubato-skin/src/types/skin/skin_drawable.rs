@@ -132,6 +132,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for TimerOnlyMainState
         self.ctx.as_deref().map_or(0, |c| c.recent_judges_index())
     }
 
+    fn boot_time_millis(&self) -> i64 {
+        self.ctx.as_deref().map_or(0, |c| c.boot_time_millis())
+    }
+
     fn integer_value(&self, id: i32) -> i32 {
         self.ctx.as_deref().map_or(0, |c| c.integer_value(id))
     }
