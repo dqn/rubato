@@ -368,6 +368,16 @@ impl MusicSelector {
         self.cached_target_score = None;
     }
 
+    /// Recompute cached_score_data_property from the currently selected bar's score.
+    /// Called before rendering so that `SelectSkinContext::score_data_property()` returns
+    /// up-to-date values for Lua skins that read `main_state.rate()` / `main_state.exscore()`.
+    pub(super) fn refresh_cached_score_data_property(&mut self) {
+        let score = self.manager.selected().and_then(|b| b.score());
+        self.cached_score_data_property =
+            rubato_types::score_data_property::ScoreDataProperty::new();
+        self.cached_score_data_property.update_score(score);
+    }
+
     /// Resolve an IR-based target score from the current ranking data.
     fn resolve_ir_target_score(
         &self,

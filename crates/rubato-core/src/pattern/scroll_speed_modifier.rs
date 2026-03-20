@@ -1,6 +1,5 @@
 use bms_model::bms_model::BMSModel;
 
-use crate::pattern::java_random::JavaRandom;
 use crate::pattern::pattern_modifier::{AssistLevel, PatternModifier, PatternModifierBase};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -84,12 +83,12 @@ impl PatternModifier for ScrollSpeedModifier {
             let base = timelines[0].scroll;
             let mut current = base;
             let mut sectioncount = 0;
-            let mut rng = JavaRandom::new(self.base.seed);
             for tl in timelines.iter_mut() {
                 if tl.section_line {
                     sectioncount += 1;
                     if self.section == sectioncount {
-                        current = base * (1.0 + rng.next_double() * self.rate * 2.0 - self.rate);
+                        current =
+                            base * (1.0 + rand::random::<f64>() * self.rate * 2.0 - self.rate);
                         sectioncount = 0;
                     }
                 }

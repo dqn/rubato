@@ -598,6 +598,20 @@ pub fn score_data_property(
     &data.score
 }
 
+/// Returns (border, max) for each gauge type from the GrooveGauge.
+/// Used by SkinGauge to adjust parts count so borders divide evenly on result screens.
+pub fn gauge_element_borders(resource: &PlayerResource) -> Vec<(f32, f32)> {
+    match resource.groove_gauge() {
+        Some(g) => (0..g.gauge_type_length())
+            .map(|i| {
+                let prop = g.gauge_by_type(i as i32).property();
+                (prop.border, prop.max)
+            })
+            .collect(),
+        None => Vec::new(),
+    }
+}
+
 /// Returns the course gauge history from the player resource.
 pub fn course_gauge_history(resource: &PlayerResource) -> &[Vec<Vec<f32>>] {
     resource.course_gauge()

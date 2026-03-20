@@ -1,7 +1,6 @@
 use bms_model::bms_model::BMSModel;
 use bms_model::note::{Note, TYPE_CHARGENOTE, TYPE_HELLCHARGENOTE, TYPE_LONGNOTE, TYPE_UNDEFINED};
 
-use crate::pattern::java_random::JavaRandom;
 use crate::pattern::pattern_modifier::{AssistLevel, PatternModifier, PatternModifierBase};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -67,7 +66,6 @@ impl LongNoteModifier {
 impl PatternModifier for LongNoteModifier {
     fn modify(&mut self, model: &mut BMSModel) {
         let mode_key = model.mode().map(|m| m.key()).unwrap_or(0);
-        let mut rng = JavaRandom::new(self.base.seed);
 
         if self.mode == Mode::Remove {
             let mut assist = AssistLevel::None;
@@ -76,7 +74,7 @@ impl PatternModifier for LongNoteModifier {
                 for lane in 0..mode_key {
                     if let Some(note) = tl.note(lane)
                         && note.is_long()
-                        && rng.next_double() < self.rate
+                        && rand::random::<f64>() < self.rate
                     {
                         let replacement = if note.is_end() {
                             None
@@ -104,12 +102,12 @@ impl PatternModifier for LongNoteModifier {
                         .map(|n| n.is_normal())
                         .unwrap_or(false);
                     let next_empty = !timelines[i + 1].exist_note_at(lane);
-                    if is_normal && next_empty && rng.next_double() < self.rate {
+                    if is_normal && next_empty && rand::random::<f64>() < self.rate {
                         let lntype = match self.mode {
                             Mode::AddLn => TYPE_LONGNOTE,
                             Mode::AddCn => TYPE_CHARGENOTE,
                             Mode::AddHcn => TYPE_HELLCHARGENOTE,
-                            Mode::AddAll => (rng.next_double() * 3.0 + 1.0) as i32,
+                            Mode::AddAll => (rand::random::<f64>() * 3.0 + 1.0) as i32,
                             _ => TYPE_UNDEFINED,
                         };
 

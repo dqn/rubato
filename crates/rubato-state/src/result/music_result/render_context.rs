@@ -147,14 +147,13 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     fn float_value(&self, id: i32) -> f32 {
         match id {
             1107 => shared_render_context::gauge_value(self.resource),
-            _ => {
-                let shared = shared_render_context::float_value(self.data, id);
-                if shared != 0.0 {
-                    shared
-                } else {
-                    self.default_float_value(id)
-                }
+            // Explicit ID dispatch for shared float IDs to avoid 0.0 sentinel bug.
+            // shared_render_context::float_value returns 0.0 for unknown IDs AND for
+            // legitimate zero results, so we match known IDs directly.
+            85..=89 | 110..=115 | 122 | 135 | 155 | 157 | 183 | 285..=289 | 1102 | 1115 => {
+                shared_render_context::float_value(self.data, id)
             }
+            _ => self.default_float_value(id),
         }
     }
 
@@ -231,6 +230,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
 
     fn judge_area(&self) -> Option<Vec<Vec<i32>>> {
         shared_render_context::judge_area(self.resource)
+    }
+
+    fn gauge_element_borders(&self) -> Vec<(f32, f32)> {
+        shared_render_context::gauge_element_borders(self.resource)
     }
 }
 
@@ -377,14 +380,11 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
     fn float_value(&self, id: i32) -> f32 {
         match id {
             1107 => shared_render_context::gauge_value(&self.result.resource),
-            _ => {
-                let shared = shared_render_context::float_value(&self.result.data, id);
-                if shared != 0.0 {
-                    shared
-                } else {
-                    self.default_float_value(id)
-                }
+            // Explicit ID dispatch for shared float IDs to avoid 0.0 sentinel bug.
+            85..=89 | 110..=115 | 122 | 135 | 155 | 157 | 183 | 285..=289 | 1102 | 1115 => {
+                shared_render_context::float_value(&self.result.data, id)
             }
+            _ => self.default_float_value(id),
         }
     }
 
@@ -474,6 +474,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
 
     fn judge_area(&self) -> Option<Vec<Vec<i32>>> {
         shared_render_context::judge_area(&self.result.resource)
+    }
+
+    fn gauge_element_borders(&self) -> Vec<(f32, f32)> {
+        shared_render_context::gauge_element_borders(&self.result.resource)
     }
 
     fn execute_event(&mut self, id: i32, _arg1: i32, _arg2: i32) {

@@ -32,7 +32,7 @@ enum KeyHandlerType {
 
 /// MIDI input processor
 pub struct MidiInputProcessor {
-    // milliseconds
+    // microseconds
     pub starttime: i64,
 
     pitch: i32,

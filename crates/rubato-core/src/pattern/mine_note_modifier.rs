@@ -1,7 +1,6 @@
 use bms_model::bms_model::BMSModel;
 use bms_model::note::Note;
 
-use crate::pattern::java_random::JavaRandom;
 use crate::pattern::pattern_modifier::{AssistLevel, PatternModifier, PatternModifierBase};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -84,7 +83,6 @@ impl PatternModifier for MineNoteModifier {
             }
             self.base.assist = assist;
         } else {
-            let mut rng = JavaRandom::new(self.base.seed);
             let timelines = &mut model.timelines;
             let mut ln = vec![false; mode_key as usize];
             let mut blank = vec![false; mode_key as usize];
@@ -104,7 +102,7 @@ impl PatternModifier for MineNoteModifier {
                     if blank[key] {
                         match self.mode {
                             Mode::AddRandom => {
-                                if rng.next_double() > 0.9 {
+                                if rand::random::<f64>() > 0.9 {
                                     tl.set_note(
                                         key as i32,
                                         Some(Note::new_mine(-1, self.damage as f64)),
