@@ -48,6 +48,8 @@ pub(super) struct PlayRenderContext<'a> {
     pub(super) song_metadata: &'a rubato_types::song_data::SongMetadata,
     /// Song data for boolean property queries (chart mode, LN, BGA, difficulty, etc.).
     pub(super) song_data: Option<&'a rubato_types::song_data::SongData>,
+    /// Skin offset values for positional adjustments during prepare().
+    pub(super) offsets: &'a std::collections::HashMap<i32, rubato_types::skin_offset::SkinOffset>,
 }
 
 impl rubato_types::timer_access::TimerAccess for PlayRenderContext<'_> {
@@ -325,6 +327,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             _ => String::new(),
         }
     }
+
+    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.offsets.get(&id)
+    }
 }
 
 pub(super) struct PlayMouseContext<'a> {
@@ -486,14 +492,38 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
         &self.player.main_state_data.score
     }
 
+    fn config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
+        Some(&mut self.player.config)
+    }
+
     fn set_float_value(&mut self, id: i32, value: f32) {
-        match id {
-            // Volume (0.0-1.0): write back to BMSPlayer's cached volume fields
-            // so that skin property reads (float_value/integer_value) reflect the new value.
-            17 => self.player.system_volume = value.clamp(0.0, 1.0),
-            18 => self.player.key_volume = value.clamp(0.0, 1.0),
-            19 => self.player.bg_volume = value.clamp(0.0, 1.0),
-            _ => {}
+        // Volume (0.0-1.0): write back to BMSPlayer's cached volume fields
+        // so that skin property reads (float_value/integer_value) reflect the new value,
+        // and propagate to audio driver via pending_audio_config outbox.
+        if (17..=19).contains(&id) {
+            let clamped = value.clamp(0.0, 1.0);
+            match id {
+                17 => self.player.system_volume = clamped,
+                18 => self.player.key_volume = clamped,
+                19 => self.player.bg_volume = clamped,
+                _ => unreachable!(),
+            }
+            if let Some(mut audio) = self.player.config.audio.clone() {
+                match id {
+                    17 => audio.systemvolume = clamped,
+                    18 => audio.keyvolume = clamped,
+                    19 => audio.bgvolume = clamped,
+                    _ => unreachable!(),
+                }
+                self.player.config.audio = Some(audio.clone());
+                self.player.pending.pending_audio_config = Some(audio);
+            }
+        }
+    }
+
+    fn notify_audio_config_changed(&mut self) {
+        if let Some(audio) = self.player.config.audio.clone() {
+            self.player.pending.pending_audio_config = Some(audio);
         }
     }
 
@@ -706,12 +736,20 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
             _ => String::new(),
         }
     }
+
+    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.player.main_state_data.offsets.get(&id)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use rubato_types::skin_render_context::SkinRenderContext;
+
+    static EMPTY_OFFSETS: std::sync::LazyLock<
+        std::collections::HashMap<i32, rubato_types::skin_offset::SkinOffset>,
+    > = std::sync::LazyLock::new(std::collections::HashMap::new);
 
     /// Build a minimal PlayRenderContext with the given playtime (in ms).
     fn make_render_ctx(playtime: i64) -> PlayRenderContext<'static> {
@@ -755,7 +793,73 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            offsets: &EMPTY_OFFSETS,
         }
+    }
+
+    #[test]
+    fn play_render_context_get_offset_value_returns_populated_offsets() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let judge = Box::leak(Box::new(JudgeManager::default()));
+        let player_config = Box::leak(Box::new(PlayerConfig::default()));
+        let option_info = Box::leak(Box::new(ReplayData::default()));
+        let play_config = Box::leak(Box::new(PlayConfig::default()));
+        let config = Box::leak(Box::new(rubato_types::config::Config::default()));
+        let score_data_property = Box::leak(Box::new(
+            rubato_types::score_data_property::ScoreDataProperty::default(),
+        ));
+        let offsets = Box::leak(Box::new(std::collections::HashMap::from([(
+            3,
+            rubato_types::skin_offset::SkinOffset {
+                x: 10.0,
+                y: 20.0,
+                w: 0.0,
+                h: 0.0,
+                r: 0.0,
+                a: 0.0,
+            },
+        )])));
+        let ctx = PlayRenderContext {
+            timer,
+            judge,
+            gauge: None,
+            player_config,
+            option_info,
+            play_config,
+            target_score: None,
+            playtime: 0,
+            total_notes: 0,
+            play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
+            state: PlayState::Play,
+            media_load_finished: false,
+            live_hispeed: 0.0,
+            live_lanecover: 0.0,
+            live_lift: 0.0,
+            live_hidden: 0.0,
+            now_bpm: 0.0,
+            min_bpm: 0.0,
+            max_bpm: 0.0,
+            main_bpm: 0.0,
+            system_volume: 0.0,
+            key_volume: 0.0,
+            bg_volume: 0.0,
+            is_mode_changed: false,
+            lnmode_override: None,
+            config,
+            score_data_property,
+            song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
+            song_data: None,
+            offsets,
+        };
+
+        // Populated offset should be returned
+        let off = ctx.get_offset_value(3);
+        assert!(off.is_some(), "offset ID 3 should be present");
+        assert_eq!(off.unwrap().x, 10.0);
+        assert_eq!(off.unwrap().y, 20.0);
+
+        // Non-existent offset should return None
+        assert!(ctx.get_offset_value(999).is_none());
     }
 
     #[test]
@@ -849,6 +953,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            offsets: &EMPTY_OFFSETS,
         }
     }
 
@@ -948,6 +1053,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            offsets: &EMPTY_OFFSETS,
         }
     }
 
@@ -1024,6 +1130,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            offsets: &EMPTY_OFFSETS,
         };
         // config_ref should return Some
         assert!(ctx.config_ref().is_some());
@@ -1077,6 +1184,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            offsets: &EMPTY_OFFSETS,
         };
         let prop = ctx.score_data_property();
         assert!((prop.now_rate() - 0.85).abs() < f32::EPSILON);
@@ -1194,6 +1302,7 @@ mod tests {
             score_data_property,
             song_metadata,
             song_data: None,
+            offsets: &EMPTY_OFFSETS,
         }
     }
 

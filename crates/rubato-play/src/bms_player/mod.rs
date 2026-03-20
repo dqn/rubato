@@ -209,6 +209,12 @@ pub struct PendingActions {
     /// without modifying combo, gauge, or replay fields.
     /// Translated from: Java `resource.setScoreData(createScoreData())` in quick retry.
     pub pending_quick_retry_score: Option<rubato_types::score_data::ScoreData>,
+    /// Pending audio config update to propagate volume changes to MainController.
+    ///
+    /// Set by PlayMouseContext when volume sliders (set_float_value IDs 17-19) or
+    /// notify_audio_config_changed() are called. Drained by MainController each frame
+    /// via take_pending_audio_config().
+    pub pending_audio_config: Option<rubato_types::audio_config::AudioConfig>,
 }
 
 impl PendingActions {
@@ -225,6 +231,7 @@ impl PendingActions {
             pending_keysound_volume_sets: Vec::new(),
             pending_replay_seed_reset: false,
             pending_quick_retry_score: None,
+            pending_audio_config: None,
         }
     }
 }

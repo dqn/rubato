@@ -201,6 +201,7 @@ impl MainController {
 
         let mut pending_replay_seed_reset = false;
         let mut pending_quick_retry_score: Option<rubato_types::score_data::ScoreData> = None;
+        let mut pending_audio_config: Option<rubato_types::audio_config::AudioConfig> = None;
 
         if let Some(ref mut current) = self.current {
             pending_sounds = current.drain_pending_sounds();
@@ -210,6 +211,7 @@ impl MainController {
             pending_replay_seed_reset = current.take_pending_replay_seed_reset();
             pending_quick_retry_score = current.take_pending_quick_retry_score();
             pending_play_config = current.take_pending_play_config_update();
+            pending_audio_config = current.take_pending_audio_config();
             pending_change = current.take_pending_state_change();
         }
 
@@ -232,6 +234,11 @@ impl MainController {
             && let Some(ref mut audio) = self.audio
         {
             audio.set_global_pitch(pitch);
+        }
+
+        // Apply audio config (volume changes from skin sliders)
+        if let Some(audio_config) = pending_audio_config {
+            self.config.audio = Some(audio_config);
         }
 
         // Capture handoff summary for observability event before values are consumed.

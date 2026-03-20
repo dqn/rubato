@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use crate::score_data_property::ScoreDataProperty;
 use crate::timer_manager::TimerManager;
 use rubato_audio::audio_driver::AudioDriver;
 use rubato_input::bms_player_input_processor::BMSPlayerInputProcessor;
 use rubato_render::sprite_batch::SpriteBatch;
+use rubato_types::skin_offset::SkinOffset;
 use rubato_types::sound_type::SoundType;
 
 // MainStateType moved to beatoraja-types (Phase 15d)
@@ -245,6 +248,14 @@ pub trait MainState {
         None
     }
 
+    /// Take pending audio config update to propagate volume changes to the audio driver.
+    ///
+    /// BMSPlayer overrides this to return audio config set by PlayMouseContext
+    /// when volume sliders or notify_audio_config_changed() are called.
+    fn take_pending_audio_config(&mut self) -> Option<rubato_types::audio_config::AudioConfig> {
+        None
+    }
+
     /// Take pending play config update to push back to MainController's PlayerConfig.
     ///
     /// In Java, BMSPlayer writes directly to `main.getPlayerConfig()` (shared reference).
@@ -359,6 +370,13 @@ pub trait SkinDrawable: Send {
     /// Dispose all skin objects and release resources.
     fn dispose_skin(&mut self);
 
+    /// Returns the skin's offset configuration entries as (id, SkinOffset) pairs.
+    /// Used by MainController to populate MainStateData.offsets during skin loading,
+    /// mirroring Java's MainState.setSkin() which copies skin.offset into MainController.offset[].
+    fn skin_offsets(&self) -> HashMap<i32, SkinOffset> {
+        HashMap::new()
+    }
+
     /// Compute and store note draw commands for the SkinNoteObject.
     ///
     /// The lane_renderer and ctx are type-erased as `&mut dyn Any` / `Box<dyn Any>`
@@ -415,6 +433,10 @@ pub struct MainStateData {
     pub timer: TimerManager,
     /// Score data property
     pub score: ScoreDataProperty,
+    /// Skin offset values, populated from skin config during skin loading.
+    /// Keyed by offset ID, queried by skin objects during prepare().
+    /// Mirrors Java's MainController.offset[] array.
+    pub offsets: HashMap<i32, SkinOffset>,
 }
 
 impl MainStateData {
@@ -423,6 +445,7 @@ impl MainStateData {
             skin: None,
             timer,
             score: ScoreDataProperty::new(),
+            offsets: HashMap::new(),
         }
     }
 }

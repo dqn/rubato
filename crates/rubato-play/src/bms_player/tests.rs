@@ -4013,6 +4013,12 @@ fn make_play_render_context_with_bpm_volume<'a>(
             DEFAULT_META.get_or_init(rubato_types::song_data::SongMetadata::default)
         },
         song_data: None,
+        offsets: {
+            static EMPTY_OFFSETS: std::sync::OnceLock<
+                std::collections::HashMap<i32, rubato_types::skin_offset::SkinOffset>,
+            > = std::sync::OnceLock::new();
+            EMPTY_OFFSETS.get_or_init(std::collections::HashMap::new)
+        },
     }
 }
 
@@ -5339,5 +5345,291 @@ fn practice_to_ready_queues_play_ready_sound() {
             .any(|(s, _)| *s == rubato_types::sound_type::SoundType::PlayReady),
         "Practice->Ready transition should queue PlayReady sound, but pending_sounds = {:?}",
         player.pending.pending_sounds
+    );
+}
+
+// --- Volume slider / audio config propagation tests ---
+
+/// Test skin that calls set_float_value during mouse_pressed_at.
+struct VolumeSliderSkin {
+    volume_id: i32,
+    volume_value: f32,
+}
+
+impl SkinDrawable for VolumeSliderSkin {
+    fn draw_all_objects_timed(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+    ) {
+    }
+
+    fn update_custom_objects_timed(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+    ) {
+    }
+
+    fn mouse_pressed_at(
+        &mut self,
+        ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        _button: i32,
+        _x: i32,
+        _y: i32,
+    ) {
+        ctx.set_float_value(self.volume_id, self.volume_value);
+    }
+
+    fn mouse_dragged_at(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        _button: i32,
+        _x: i32,
+        _y: i32,
+    ) {
+    }
+
+    fn prepare_skin(&mut self) {}
+    fn dispose_skin(&mut self) {}
+    fn fadeout(&self) -> i32 {
+        0
+    }
+    fn input(&self) -> i32 {
+        0
+    }
+    fn scene(&self) -> i32 {
+        0
+    }
+    fn get_width(&self) -> f32 {
+        0.0
+    }
+    fn get_height(&self) -> f32 {
+        0.0
+    }
+    fn swap_sprite_batch(&mut self, _batch: &mut SpriteBatch) {}
+}
+
+/// Test skin that calls notify_audio_config_changed during mouse_pressed_at.
+struct NotifyAudioConfigSkin;
+
+impl SkinDrawable for NotifyAudioConfigSkin {
+    fn draw_all_objects_timed(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+    ) {
+    }
+
+    fn update_custom_objects_timed(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+    ) {
+    }
+
+    fn mouse_pressed_at(
+        &mut self,
+        ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        _button: i32,
+        _x: i32,
+        _y: i32,
+    ) {
+        ctx.notify_audio_config_changed();
+    }
+
+    fn mouse_dragged_at(
+        &mut self,
+        _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        _button: i32,
+        _x: i32,
+        _y: i32,
+    ) {
+    }
+
+    fn prepare_skin(&mut self) {}
+    fn dispose_skin(&mut self) {}
+    fn fadeout(&self) -> i32 {
+        0
+    }
+    fn input(&self) -> i32 {
+        0
+    }
+    fn scene(&self) -> i32 {
+        0
+    }
+    fn get_width(&self) -> f32 {
+        0.0
+    }
+    fn get_height(&self) -> f32 {
+        0.0
+    }
+    fn swap_sprite_batch(&mut self, _batch: &mut SpriteBatch) {}
+}
+
+#[test]
+fn set_float_value_system_volume_sets_pending_audio_config() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.set_config(rubato_types::config::Config {
+        audio: Some(rubato_types::audio_config::AudioConfig::default()),
+        ..Default::default()
+    });
+    player.main_state_data.skin = Some(Box::new(VolumeSliderSkin {
+        volume_id: 17,
+        volume_value: 0.75,
+    }));
+
+    <BMSPlayer as MainState>::handle_skin_mouse_pressed(&mut player, 0, 0, 0);
+
+    assert_eq!(
+        player.system_volume, 0.75,
+        "system_volume should be updated"
+    );
+    let audio = player
+        .pending
+        .pending_audio_config
+        .as_ref()
+        .expect("pending_audio_config should be set");
+    assert_eq!(
+        audio.systemvolume, 0.75,
+        "audio config systemvolume should match"
+    );
+}
+
+#[test]
+fn set_float_value_key_volume_sets_pending_audio_config() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.set_config(rubato_types::config::Config {
+        audio: Some(rubato_types::audio_config::AudioConfig::default()),
+        ..Default::default()
+    });
+    player.main_state_data.skin = Some(Box::new(VolumeSliderSkin {
+        volume_id: 18,
+        volume_value: 0.5,
+    }));
+
+    <BMSPlayer as MainState>::handle_skin_mouse_pressed(&mut player, 0, 0, 0);
+
+    assert_eq!(player.key_volume, 0.5, "key_volume should be updated");
+    let audio = player
+        .pending
+        .pending_audio_config
+        .as_ref()
+        .expect("pending_audio_config should be set");
+    assert_eq!(audio.keyvolume, 0.5, "audio config keyvolume should match");
+}
+
+#[test]
+fn set_float_value_bg_volume_sets_pending_audio_config() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.set_config(rubato_types::config::Config {
+        audio: Some(rubato_types::audio_config::AudioConfig::default()),
+        ..Default::default()
+    });
+    player.main_state_data.skin = Some(Box::new(VolumeSliderSkin {
+        volume_id: 19,
+        volume_value: 0.3,
+    }));
+
+    <BMSPlayer as MainState>::handle_skin_mouse_pressed(&mut player, 0, 0, 0);
+
+    assert_eq!(player.bg_volume, 0.3, "bg_volume should be updated");
+    let audio = player
+        .pending
+        .pending_audio_config
+        .as_ref()
+        .expect("pending_audio_config should be set");
+    assert!(
+        (audio.bgvolume - 0.3).abs() < f32::EPSILON,
+        "audio config bgvolume should match"
+    );
+}
+
+#[test]
+fn notify_audio_config_changed_sets_pending_audio_config() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    let mut audio_cfg = rubato_types::audio_config::AudioConfig::default();
+    audio_cfg.systemvolume = 0.8;
+    audio_cfg.keyvolume = 0.6;
+    audio_cfg.bgvolume = 0.4;
+    player.set_config(rubato_types::config::Config {
+        audio: Some(audio_cfg),
+        ..Default::default()
+    });
+    player.main_state_data.skin = Some(Box::new(NotifyAudioConfigSkin));
+
+    <BMSPlayer as MainState>::handle_skin_mouse_pressed(&mut player, 0, 0, 0);
+
+    let audio = player
+        .pending
+        .pending_audio_config
+        .as_ref()
+        .expect("pending_audio_config should be set by notify_audio_config_changed");
+    assert_eq!(audio.systemvolume, 0.8);
+    assert_eq!(audio.keyvolume, 0.6);
+    assert!(
+        (audio.bgvolume - 0.4).abs() < f32::EPSILON,
+        "audio config should preserve all volume fields"
+    );
+}
+
+#[test]
+fn take_pending_audio_config_drains_value() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.pending.pending_audio_config = Some(rubato_types::audio_config::AudioConfig::default());
+
+    let taken = player.take_pending_audio_config();
+    assert!(taken.is_some(), "first take should return Some");
+
+    let taken2 = player.take_pending_audio_config();
+    assert!(taken2.is_none(), "second take should return None (drained)");
+}
+
+#[test]
+fn set_float_value_volume_clamps_to_valid_range() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.set_config(rubato_types::config::Config {
+        audio: Some(rubato_types::audio_config::AudioConfig::default()),
+        ..Default::default()
+    });
+    player.main_state_data.skin = Some(Box::new(VolumeSliderSkin {
+        volume_id: 17,
+        volume_value: 1.5, // Over max
+    }));
+
+    <BMSPlayer as MainState>::handle_skin_mouse_pressed(&mut player, 0, 0, 0);
+
+    assert_eq!(player.system_volume, 1.0, "volume should clamp to 1.0");
+    let audio = player
+        .pending
+        .pending_audio_config
+        .as_ref()
+        .expect("pending_audio_config should be set");
+    assert_eq!(
+        audio.systemvolume, 1.0,
+        "audio config should use clamped value"
+    );
+}
+
+#[test]
+fn set_float_value_non_volume_id_does_not_set_pending_audio_config() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.set_config(rubato_types::config::Config {
+        audio: Some(rubato_types::audio_config::AudioConfig::default()),
+        ..Default::default()
+    });
+    player.main_state_data.skin = Some(Box::new(VolumeSliderSkin {
+        volume_id: 99, // Not a volume ID
+        volume_value: 0.5,
+    }));
+
+    <BMSPlayer as MainState>::handle_skin_mouse_pressed(&mut player, 0, 0, 0);
+
+    assert!(
+        player.pending.pending_audio_config.is_none(),
+        "non-volume IDs should not set pending_audio_config"
     );
 }

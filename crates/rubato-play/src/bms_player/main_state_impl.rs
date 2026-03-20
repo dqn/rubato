@@ -105,6 +105,10 @@ impl MainState for BMSPlayer {
         self.pending.pending_quick_retry_score.take()
     }
 
+    fn take_pending_audio_config(&mut self) -> Option<rubato_types::audio_config::AudioConfig> {
+        self.pending.pending_audio_config.take()
+    }
+
     fn take_pending_play_config_update(
         &mut self,
     ) -> Option<(bms_model::mode::Mode, rubato_types::play_config::PlayConfig)> {
