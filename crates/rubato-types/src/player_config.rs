@@ -495,6 +495,11 @@ impl PlayerConfig {
         self.play_settings.random = self.play_settings.random.clamp(0, 9);
         self.play_settings.random2 = self.play_settings.random2.clamp(0, 9);
         self.play_settings.doubleoption = self.play_settings.doubleoption.clamp(0, 3);
+        // gauge_auto_shift: 5 named constants (NONE/CONTINUE/SURVIVAL_TO_GROOVE/BESTCLEAR/SELECT_TO_UNDER)
+        self.play_settings.gauge_auto_shift = self.play_settings.gauge_auto_shift.clamp(0, 4);
+        // bottom_shiftable_gauge: ASSISTEASY(0)/EASY(1)/NORMAL(2), matching event factory count=3
+        self.play_settings.bottom_shiftable_gauge =
+            self.play_settings.bottom_shiftable_gauge.clamp(0, 2);
         if self.play_settings.chart_replication_mode.is_empty() {
             self.play_settings.chart_replication_mode = "NONE".to_string();
         }
@@ -1017,6 +1022,30 @@ mod tests {
         pc.validate();
         assert_eq!(pc.display_settings.scroll_section, 1);
         assert_eq!(pc.display_settings.scroll_rate, 0.0);
+    }
+
+    #[test]
+    fn player_config_validate_clamps_gauge_auto_shift() {
+        let mut pc = PlayerConfig::default();
+        pc.play_settings.gauge_auto_shift = 50;
+        pc.validate();
+        assert_eq!(pc.play_settings.gauge_auto_shift, 4);
+
+        pc.play_settings.gauge_auto_shift = -1;
+        pc.validate();
+        assert_eq!(pc.play_settings.gauge_auto_shift, 0);
+    }
+
+    #[test]
+    fn player_config_validate_clamps_bottom_shiftable_gauge() {
+        let mut pc = PlayerConfig::default();
+        pc.play_settings.bottom_shiftable_gauge = 50;
+        pc.validate();
+        assert_eq!(pc.play_settings.bottom_shiftable_gauge, 2);
+
+        pc.play_settings.bottom_shiftable_gauge = -1;
+        pc.validate();
+        assert_eq!(pc.play_settings.bottom_shiftable_gauge, 0);
     }
 
     // -- play_config_ref / play_config --
