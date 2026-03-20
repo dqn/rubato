@@ -69,7 +69,10 @@ impl SRandomizer {
             hnotes[lane as usize] = tl.hidden_note(lane).cloned();
         }
 
-        for (&x, &y) in &full_map {
+        // Sort by source lane index for deterministic LN tracking state across iterations.
+        let mut sorted_entries: Vec<_> = full_map.iter().collect();
+        sorted_entries.sort_by_key(|(k, _)| **k);
+        for &(&x, &y) in &sorted_entries {
             let n = notes[x as usize].take();
             let hn = hnotes[x as usize].take();
             if let Some(ref note) = n
@@ -159,7 +162,10 @@ impl SpiralRandomizer {
             hnotes[lane as usize] = tl.hidden_note(lane).cloned();
         }
 
-        for (&x, &y) in &full_map {
+        // Sort by source lane index for deterministic LN tracking state across iterations.
+        let mut sorted_entries: Vec<_> = full_map.iter().collect();
+        sorted_entries.sort_by_key(|(k, _)| **k);
+        for &(&x, &y) in &sorted_entries {
             let n = notes[x as usize].take();
             let hn = hnotes[x as usize].take();
             if let Some(ref note) = n
@@ -322,7 +328,10 @@ impl AllScratchRandomizer {
             hnotes[lane as usize] = tl.hidden_note(lane).cloned();
         }
 
-        for (&x, &y) in &full_map {
+        // Sort by source lane index for deterministic LN tracking state across iterations.
+        let mut sorted_entries: Vec<_> = full_map.iter().collect();
+        sorted_entries.sort_by_key(|(k, _)| **k);
+        for &(&x, &y) in &sorted_entries {
             let n = notes[x as usize].take();
             let hn = hnotes[x as usize].take();
             if let Some(ref note) = n
@@ -562,7 +571,10 @@ impl NoMurioshiRandomizer {
             hnotes[lane as usize] = tl.hidden_note(lane).cloned();
         }
 
-        for (&x, &y) in &full_map {
+        // Sort by source lane index for deterministic LN tracking state across iterations.
+        let mut sorted_entries: Vec<_> = full_map.iter().collect();
+        sorted_entries.sort_by_key(|(k, _)| **k);
+        for &(&x, &y) in &sorted_entries {
             let n = notes[x as usize].take();
             let hn = hnotes[x as usize].take();
             if let Some(ref note) = n
@@ -683,7 +695,10 @@ impl ConvergeRandomizer {
             hnotes[lane as usize] = tl.hidden_note(lane).cloned();
         }
 
-        for (&x, &y) in &full_map {
+        // Sort by source lane index for deterministic LN tracking state across iterations.
+        let mut sorted_entries: Vec<_> = full_map.iter().collect();
+        sorted_entries.sort_by_key(|(k, _)| **k);
+        for &(&x, &y) in &sorted_entries {
             let n = notes[x as usize].take();
             let hn = hnotes[x as usize].take();
             if let Some(ref note) = n

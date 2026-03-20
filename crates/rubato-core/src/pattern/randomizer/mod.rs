@@ -1154,6 +1154,72 @@ mod tests {
     }
 
     #[test]
+    fn srandomizer_ln_permutation_is_deterministic() {
+        // Regression: specialized randomizers iterated HashMap without sorting,
+        // causing non-deterministic LN tracking state (ln_active, changeable_lane,
+        // assignable_lane) that carried across timelines and produced different
+        // permutation results on different runs.
+        let lanes = &[0, 1, 2, 3, 4, 5, 6];
+        let seed = 42;
+
+        // Run the same sequence of timelines (with LN start/end) multiple times
+        // and verify all runs produce identical permutation sequences.
+        let mut all_runs: Vec<Vec<Vec<i32>>> = Vec::new();
+        for _ in 0..20 {
+            let config = PlayerConfig::default();
+            let mut r = Randomizer::create(Random::SRandom, &Mode::BEAT_7K, &config);
+            r.set_modify_lanes(lanes);
+            r.set_random_seed(seed);
+
+            let mut perms = Vec::new();
+
+            // Timeline 0: LN start on lanes 0 and 2
+            let mut tl0 = TimeLine::new(0.0, 0, 8);
+            tl0.set_note(0, Some(Note::new_long(1)));
+            tl0.set_note(2, Some(Note::new_long(2)));
+            tl0.set_note(4, Some(Note::new_normal(3)));
+            perms.push(r.permutate(&mut tl0));
+
+            // Timeline 1: normal notes while LNs are active
+            let mut tl1 = TimeLine::new(1.0, 100_000, 8);
+            tl1.set_note(1, Some(Note::new_normal(4)));
+            tl1.set_note(5, Some(Note::new_normal(5)));
+            perms.push(r.permutate(&mut tl1));
+
+            // Timeline 2: LN end on lanes 0 and 2 (time must match for end detection)
+            let mut tl2 = TimeLine::new(2.0, 200_000, 8);
+            let mut ln_end_0 = Note::new_long(1);
+            ln_end_0.set_end(true);
+            ln_end_0.set_micro_time(200_000);
+            let mut ln_end_2 = Note::new_long(2);
+            ln_end_2.set_end(true);
+            ln_end_2.set_micro_time(200_000);
+            tl2.set_note(0, Some(ln_end_0));
+            tl2.set_note(2, Some(ln_end_2));
+            tl2.set_note(3, Some(Note::new_normal(6)));
+            perms.push(r.permutate(&mut tl2));
+
+            // Timeline 3: fresh notes after LN release
+            let mut tl3 = TimeLine::new(3.0, 300_000, 8);
+            tl3.set_note(0, Some(Note::new_normal(7)));
+            tl3.set_note(1, Some(Note::new_normal(8)));
+            tl3.set_note(6, Some(Note::new_normal(9)));
+            perms.push(r.permutate(&mut tl3));
+
+            all_runs.push(perms);
+        }
+
+        // All 20 runs must produce identical permutation sequences
+        for (i, run) in all_runs.iter().enumerate().skip(1) {
+            assert_eq!(
+                &all_runs[0], run,
+                "Run {} produced different permutations than run 0",
+                i
+            );
+        }
+    }
+
+    #[test]
     #[should_panic(expected = "set_mode must be called before permutate")]
     #[cfg(debug_assertions)]
     fn permutate_without_set_mode_panics_in_debug() {
