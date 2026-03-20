@@ -189,22 +189,23 @@ impl ObsWsClient {
         })
     }
 
-    /// Returns a handle to the client's tokio runtime.
-    pub fn runtime_handle(&self) -> &tokio::runtime::Handle {
-        self.runtime
-            .as_ref()
-            .expect("runtime already shut down")
-            .handle()
+    /// Returns a handle to the client's tokio runtime, or `None` if the
+    /// runtime has already been shut down (e.g. during `Drop`).
+    pub fn runtime_handle(&self) -> Option<&tokio::runtime::Handle> {
+        self.runtime.as_ref().map(|rt| rt.handle())
     }
 
     /// Connect asynchronously (non-blocking)
     pub fn connect_async(&self) {
+        let Some(handle) = self.runtime_handle() else {
+            return;
+        };
         let inner = Arc::clone(&self.inner);
         let server_uri = self.server_uri.clone();
         let password = self.password.clone();
         let shutdown_notify = Arc::clone(&self.shutdown_notify);
 
-        self.runtime_handle().spawn(async move {
+        handle.spawn(async move {
             match Self::do_connect(inner, &server_uri, &password, shutdown_notify).await {
                 Ok(()) => {}
                 Err(_e) => {
@@ -216,12 +217,15 @@ impl ObsWsClient {
 
     /// Connect synchronously (blocking with timeout)
     pub fn connect(&self) -> Result<()> {
+        let Some(handle) = self.runtime_handle() else {
+            return Err(anyhow::anyhow!("runtime already shut down"));
+        };
         let inner = Arc::clone(&self.inner);
         let server_uri = self.server_uri.clone();
         let password = self.password.clone();
         let shutdown_notify = Arc::clone(&self.shutdown_notify);
 
-        self.runtime_handle().block_on(async move {
+        handle.block_on(async move {
             let result = tokio::time::timeout(
                 Duration::from_secs(5),
                 Self::do_connect(inner.clone(), &server_uri, &password, shutdown_notify),
@@ -820,6 +824,9 @@ impl ObsWsClient {
     }
 
     pub fn request_start_record(&self) {
+        let Some(handle) = self.runtime_handle() else {
+            return;
+        };
         let inner = Arc::clone(&self.inner);
         {
             let guard = lock_or_recover(&inner);
@@ -830,12 +837,15 @@ impl ObsWsClient {
             }
         }
         let inner_clone = Arc::clone(&self.inner);
-        self.runtime_handle().spawn(async move {
+        handle.spawn(async move {
             Self::send_request_inner(&inner_clone, "StartRecord").await;
         });
     }
 
     pub fn request_stop_record(&self) {
+        let Some(handle) = self.runtime_handle() else {
+            return;
+        };
         let inner = Arc::clone(&self.inner);
         {
             let guard = lock_or_recover(&inner);
@@ -848,7 +858,7 @@ impl ObsWsClient {
             }
         }
         let inner_clone = Arc::clone(&self.inner);
-        self.runtime_handle().spawn(async move {
+        handle.spawn(async move {
             Self::send_request_inner(&inner_clone, "StopRecord").await;
         });
     }
@@ -886,6 +896,9 @@ impl ObsWsClient {
         if !Self::can_send_request(&self.inner) {
             return;
         }
+        let Some(handle) = self.runtime_handle() else {
+            return;
+        };
 
         let request_id_val = self.request_id_counter.fetch_add(1, Ordering::SeqCst) + 1;
         let request = json!({
@@ -902,7 +915,7 @@ impl ObsWsClient {
         match serde_json::to_string(&request) {
             Ok(msg) => {
                 let inner = Arc::clone(&self.inner);
-                self.runtime_handle().spawn(async move {
+                handle.spawn(async move {
                     Self::send_raw(&inner, &msg).await;
                 });
             }
@@ -916,6 +929,9 @@ impl ObsWsClient {
         if !Self::can_send_request(&self.inner) {
             return;
         }
+        let Some(handle) = self.runtime_handle() else {
+            return;
+        };
 
         let request_id_val = self.request_id_counter.fetch_add(1, Ordering::SeqCst) + 1;
         let request = json!({
@@ -929,7 +945,7 @@ impl ObsWsClient {
         match serde_json::to_string(&request) {
             Ok(msg) => {
                 let inner = Arc::clone(&self.inner);
-                self.runtime_handle().spawn(async move {
+                handle.spawn(async move {
                     Self::send_raw(&inner, &msg).await;
                 });
             }
@@ -1184,7 +1200,10 @@ mod tests {
         let notify = Arc::clone(&client.shutdown_notify);
         let (tx, rx) = std::sync::mpsc::channel();
         let (ready_tx, ready_rx) = std::sync::mpsc::channel();
-        let handle = client.runtime_handle().clone();
+        let handle = client
+            .runtime_handle()
+            .expect("runtime should be available")
+            .clone();
         handle.spawn(async move {
             let future = notify.notified();
             tokio::pin!(future);
@@ -1273,19 +1292,22 @@ mod tests {
         let message_count = 50;
         let inner = Arc::clone(&client.inner);
 
-        client.runtime_handle().block_on(async {
-            let mut handles = Vec::new();
-            for i in 0..message_count {
-                let inner_clone = Arc::clone(&inner);
-                let msg = format!("msg-{}", i);
-                handles.push(tokio::spawn(async move {
-                    ObsWsClient::send_raw(&inner_clone, &msg).await;
-                }));
-            }
-            for h in handles {
-                h.await.unwrap();
-            }
-        });
+        client
+            .runtime_handle()
+            .expect("runtime should be available")
+            .block_on(async {
+                let mut handles = Vec::new();
+                for i in 0..message_count {
+                    let inner_clone = Arc::clone(&inner);
+                    let msg = format!("msg-{}", i);
+                    handles.push(tokio::spawn(async move {
+                        ObsWsClient::send_raw(&inner_clone, &msg).await;
+                    }));
+                }
+                for h in handles {
+                    h.await.unwrap();
+                }
+            });
 
         // Drain the receiver and count
         let mut received = Vec::new();
@@ -1312,9 +1334,12 @@ mod tests {
 
         // ws_sender is None by default
         let inner = Arc::clone(&client.inner);
-        client.runtime_handle().block_on(async {
-            ObsWsClient::send_raw(&inner, "test message").await;
-        });
+        client
+            .runtime_handle()
+            .expect("runtime should be available")
+            .block_on(async {
+                ObsWsClient::send_raw(&inner, "test message").await;
+            });
         // No panic = pass
     }
 
@@ -1359,7 +1384,10 @@ mod tests {
             guard.is_shutting_down = false;
         }
 
-        let handle = client.runtime_handle().clone();
+        let handle = client
+            .runtime_handle()
+            .expect("runtime should be available")
+            .clone();
         let barrier = Arc::new(std::sync::Barrier::new(10));
 
         // Spawn 10 threads that all call schedule_reconnect concurrently.
