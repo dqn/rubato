@@ -221,6 +221,27 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
         }
     }
 
+    fn set_float_value(&mut self, id: i32, value: f32) {
+        if (17..=19).contains(&id)
+            && let Some(mut audio) = self.main.config().audio.clone()
+        {
+            let clamped = value.clamp(0.0, 1.0);
+            match id {
+                17 => audio.systemvolume = clamped,
+                18 => audio.keyvolume = clamped,
+                19 => audio.bgvolume = clamped,
+                _ => unreachable!(),
+            }
+            self.main.update_audio_config(audio);
+        }
+    }
+
+    fn notify_audio_config_changed(&mut self) {
+        if let Some(audio) = self.main.config().audio.clone() {
+            self.main.update_audio_config(audio);
+        }
+    }
+
     fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
         self.offsets.get(&id)
     }
