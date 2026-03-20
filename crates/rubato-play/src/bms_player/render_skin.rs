@@ -74,7 +74,7 @@ impl BMSPlayer {
             let all_timelines =
                 unsafe { crate::lane_renderer::TimelinesRef::from_slice(&self.model.timelines) };
             let judge_table = self.judge.judge_table(false);
-            let bad_judge_time = judge_table.get(3).map_or(0, |jt| jt[1]);
+            let bad_judge_time = judge_table.get(2).map_or(0, |jt| jt[0]);
             // Convert JudgeNote indices to timeline indices for processing/passing LN state.
             // The judge manager stores JudgeNote array indices, but the draw code
             // compares against timeline Vec indices (a different index space).
@@ -306,5 +306,77 @@ mod tests {
             judge_note_idx_to_timeline_idx(1, &judge_notes, &timelines),
             Some(1)
         );
+    }
+
+    // =========================================================================
+    // Regression: bad_judge_time must read judge_table[2][0] (GOOD early-side),
+    // matching Java LaneRenderer.java:578 getJudgeTable(false)[2][0].
+    // Previously used [3][1] (BAD late-side) which is ~5x larger, causing PMS
+    // miss-POOR falling notes to remain visible too long below the judge line.
+    // =========================================================================
+
+    /// Extracts bad_judge_time from a judge table using the same logic as
+    /// the production code at line 77 of this file.
+    fn extract_bad_judge_time(judge_table: &[[i64; 2]]) -> i64 {
+        judge_table.get(2).map_or(0, |jt| jt[0])
+    }
+
+    #[test]
+    fn bad_judge_time_reads_good_early_side_index_2_0() {
+        // Standard sevenkeys note judge table (rank 100):
+        // Row 0 (PG):   [-20000,  20000]
+        // Row 1 (GR):   [-60000,  60000]
+        // Row 2 (GD):   [-150000, 150000]
+        // Row 3 (BD):   [-280000, 220000]
+        // Row 4 (POOR): [-150000, 500000]
+        let judge_table: Vec<[i64; 2]> = vec![
+            [-20000, 20000],
+            [-60000, 60000],
+            [-150000, 150000],
+            [-280000, 220000],
+            [-150000, 500000],
+        ];
+
+        let bad_judge_time = extract_bad_judge_time(&judge_table);
+
+        // Java: getJudgeTable(false)[2][0] = -150000 (GOOD early-side)
+        assert_eq!(
+            bad_judge_time, -150000,
+            "bad_judge_time must be judge_table[2][0] (GOOD early-side = -150000), \
+             not judge_table[3][1] (BAD late-side = 220000)"
+        );
+    }
+
+    #[test]
+    fn bad_judge_time_with_pms_judge_table() {
+        // PMS note judge table (rank 100):
+        // Row 0 (PG):   [-20000,  20000]
+        // Row 1 (GR):   [-50000,  50000]
+        // Row 2 (GD):   [-117000, 117000]
+        // Row 3 (BD):   [-183000, 183000]
+        // Row 4 (POOR): [-175000, 500000]
+        let judge_table: Vec<[i64; 2]> = vec![
+            [-20000, 20000],
+            [-50000, 50000],
+            [-117000, 117000],
+            [-183000, 183000],
+            [-175000, 500000],
+        ];
+
+        let bad_judge_time = extract_bad_judge_time(&judge_table);
+
+        // Java: [2][0] = -117000 (GOOD early-side)
+        assert_eq!(bad_judge_time, -117000);
+    }
+
+    #[test]
+    fn bad_judge_time_returns_zero_when_table_has_fewer_than_3_rows() {
+        // Edge case: table with only 2 rows (PG, GR) - no GOOD row
+        let judge_table: Vec<[i64; 2]> = vec![[-20000, 20000], [-60000, 60000]];
+
+        let bad_judge_time = extract_bad_judge_time(&judge_table);
+
+        // .get(2) returns None -> map_or(0, ...) -> 0
+        assert_eq!(bad_judge_time, 0);
     }
 }
