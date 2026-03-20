@@ -83,6 +83,10 @@ impl RandomizerBase {
             &mut JavaRandom,
         ) -> HashMap<i32, i32>,
     ) -> Vec<i32> {
+        debug_assert!(
+            self.mode.is_some(),
+            "set_mode must be called before permutate"
+        );
         let mut changeable = self.changeable_lane.clone();
         let mut assignable = self.assignable_lane.clone();
         let mut permutation_map =
@@ -1141,5 +1145,21 @@ mod tests {
         let perm = r.permutate(&mut tl);
         let mode_key = Mode::BEAT_7K.key() as usize;
         assert_eq!(perm.len(), mode_key);
+    }
+
+    #[test]
+    #[should_panic(expected = "set_mode must be called before permutate")]
+    #[cfg(debug_assertions)]
+    fn permutate_without_set_mode_panics_in_debug() {
+        // Regression: permutate() requires mode to be set. Without the
+        // debug_assert, mode=None silently produces a 0-length identity
+        // permutation, masking configuration bugs.
+        let mut base = RandomizerBase::new();
+        base.set_modify_lanes(&[0, 1, 2]);
+        let mut tl = TimeLine::new(0.0, 0, 3);
+        tl.set_note(0, Some(Note::new_normal(1)));
+        base.permutate(&mut tl, &mut |_tl, _changeable, _assignable, _rng| {
+            HashMap::new()
+        });
     }
 }

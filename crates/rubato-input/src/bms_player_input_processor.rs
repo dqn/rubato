@@ -28,44 +28,26 @@ pub const KEYSTATE_SIZE: usize = 256;
 /// Key logger
 struct KeyLogger {
     keylog: Vec<KeyInputLog>,
-    logpool: Vec<KeyInputLog>,
-    poolindex: usize,
 }
 
 impl KeyLogger {
     pub const INITIAL_LOG_COUNT: usize = 10000;
 
     pub fn new() -> Self {
-        let mut logger = Self {
+        Self {
             keylog: Vec::with_capacity(Self::INITIAL_LOG_COUNT),
-            logpool: Vec::with_capacity(Self::INITIAL_LOG_COUNT),
-            poolindex: 0,
-        };
-        logger.clear();
-        logger
+        }
     }
 
     /// Add key input log
     pub fn add(&mut self, presstime: i64, keycode: i32, pressed: bool) {
-        let log = if self.poolindex < self.logpool.len() {
-            let log = &mut self.logpool[self.poolindex];
-            log.set_data(presstime, keycode, pressed);
-            log.clone()
-        } else {
-            KeyInputLog::with_data(presstime, keycode, pressed)
-        };
-        self.poolindex += 1;
-        self.keylog.push(log);
+        self.keylog
+            .push(KeyInputLog::with_data(presstime, keycode, pressed));
     }
 
     /// Clear key log
     pub fn clear(&mut self) {
         self.keylog.clear();
-        self.logpool.clear();
-        for _ in 0..Self::INITIAL_LOG_COUNT {
-            self.logpool.push(KeyInputLog::new());
-        }
-        self.poolindex = 0;
     }
 
     pub fn to_array(&self) -> &[KeyInputLog] {
@@ -1361,5 +1343,43 @@ mod tests {
         // key[2]: exclusive[2] was false, key != -1 -> keep, mark exclusive
         assert_eq!(keys[2], 30);
         assert!(exclusive[2]);
+    }
+
+    // -- KeyLogger pool removal regression --
+
+    #[test]
+    fn test_keylogger_beyond_initial_capacity() {
+        // Regression: the old pool-based KeyLogger stopped reusing pooled objects
+        // after INITIAL_LOG_COUNT adds, silently degrading to fresh allocations.
+        // After removing the pool, all adds are uniform Vec::push.
+        let mut logger = KeyLogger::new();
+        let count = KeyLogger::INITIAL_LOG_COUNT + 100;
+        for i in 0..count {
+            logger.add(i as i64, (i % 256) as i32, i % 2 == 0);
+        }
+        let logs = logger.to_array();
+        assert_eq!(logs.len(), count);
+        // Verify first and last entries are correct
+        assert_eq!(logs[0].time(), 0);
+        assert_eq!(logs[0].keycode(), 0);
+        assert!(logs[0].is_pressed());
+        let last = &logs[count - 1];
+        assert_eq!(last.time(), (count - 1) as i64);
+        assert_eq!(last.keycode(), ((count - 1) % 256) as i32);
+    }
+
+    #[test]
+    fn test_keylogger_clear_resets_completely() {
+        let mut logger = KeyLogger::new();
+        for i in 0..100 {
+            logger.add(i, i as i32, true);
+        }
+        assert_eq!(logger.to_array().len(), 100);
+        logger.clear();
+        assert!(logger.to_array().is_empty());
+        // After clear, adding again should work correctly
+        logger.add(999, 42, false);
+        assert_eq!(logger.to_array().len(), 1);
+        assert_eq!(logger.to_array()[0].time(), 999);
     }
 }
