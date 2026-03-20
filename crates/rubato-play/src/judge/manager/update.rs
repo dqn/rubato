@@ -867,7 +867,11 @@ impl JudgeManager {
         {
             return;
         }
-        self.note_states[note_idx].play_time = mfast;
+        // Guard: only write play_time for first judgments or vanishing notes.
+        // Re-hits (judge=5, judge_vanish=false) must not overwrite the original timing.
+        if self.note_states[note_idx].state == 0 || judge_vanish {
+            self.note_states[note_idx].play_time = mfast;
+        }
         self.score.add_judge_count(judge, mfast >= 0, 1);
 
         if judge < 4 && !self.recent_judges.is_empty() {
@@ -917,7 +921,7 @@ impl JudgeManager {
                 self.judge[player][offset] = if judge == 0 {
                     1
                 } else {
-                    judge * 2 + if mfast > 0 { 0 } else { 1 }
+                    judge * 2 + if mfast >= 0 { 0 } else { 1 }
                 };
             }
         }

@@ -257,6 +257,18 @@ impl JudgeManager {
         &mut self.score
     }
 
+    /// Get the judge laser color value for a given player and offset (for testing).
+    ///
+    /// Returns 0 for out-of-bounds indices.
+    #[cfg(test)]
+    pub fn judge_laser_color(&self, player: usize, offset: usize) -> i32 {
+        self.judge
+            .get(player)
+            .and_then(|v| v.get(offset))
+            .copied()
+            .unwrap_or(0)
+    }
+
     pub fn judge_count(&self, judge: i32) -> i32 {
         self.score.judge_count_total(judge)
     }
