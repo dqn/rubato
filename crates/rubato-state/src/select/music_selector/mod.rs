@@ -607,6 +607,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
             _ => {}
         }
     }
+
+    fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
+        &self.selector.cached_score_data_property
+    }
 }
 
 impl rubato_skin::reexports::MainState for SelectSkinContext<'_> {}
@@ -766,6 +770,12 @@ pub struct MusicSelector {
     /// Cached target score for skin property display on the select screen.
     /// Recomputed each frame based on config.select_settings.targetid and selected song notes.
     cached_target_score: Option<rubato_types::score_data::ScoreData>,
+
+    /// Cached ScoreDataProperty for skin property delegation on the select screen.
+    /// Updated before each render from the currently selected bar's score data.
+    /// Java: MusicSelector inherits MainState.getScoreDataProperty() which Lua skins
+    /// call for main_state.rate()/exscore() etc.
+    cached_score_data_property: rubato_types::score_data_property::ScoreDataProperty,
 
     /// Pending IR ranking fetch result (song).
     /// Stores (requested SongData, lnmode, receiver) so the result is cached under the correct key.
