@@ -96,6 +96,11 @@ impl ScoreDatabaseAccessor {
                         log::warn!("Invalid column name for score update: {}", key);
                         continue;
                     }
+                    debug_assert!(
+                        !key.contains('[') && !key.contains(']'),
+                        "bracket in whitelisted column name would break SQL escaping: {}",
+                        key
+                    );
                     set_parts.push(format!("[{}] = ?{}", key, idx));
                     params.push(Box::new(val.clone()));
                     idx += 1;
