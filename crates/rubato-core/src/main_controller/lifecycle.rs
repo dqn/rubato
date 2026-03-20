@@ -164,6 +164,10 @@ impl MainController {
             // Rust has separate TimerManagers for controller and state).
             data.timer.update();
             data.timer.state_type = st;
+            // Keep boot-relative time in sync so skin property IDs 27-29 show
+            // time since application start, not time since state creation.
+            data.timer
+                .set_boot_time_millis(self.lifecycle.boottime.elapsed().as_millis() as i64);
 
             if current.main_state_data().skin.is_some() {
                 if let Some(ref mut s) = sprite {
@@ -218,6 +222,13 @@ impl MainController {
         // Capture sound count for observability event before consuming the Vec.
         let pending_sounds_count = pending_sounds.len();
 
+        // Apply audio config (volume changes from skin sliders)
+        // ORDERING: Must be applied BEFORE system sound playback so that
+        // sounds use the updated volume, not the stale one.
+        if let Some(audio_config) = pending_audio_config {
+            self.config.audio = Some(audio_config);
+        }
+
         // Apply sounds
         for (sound, loop_sound) in pending_sounds {
             let volume = self.config.audio.as_ref().map_or(1.0, |a| a.systemvolume);
@@ -234,11 +245,6 @@ impl MainController {
             && let Some(ref mut audio) = self.audio
         {
             audio.set_global_pitch(pitch);
-        }
-
-        // Apply audio config (volume changes from skin sliders)
-        if let Some(audio_config) = pending_audio_config {
-            self.config.audio = Some(audio_config);
         }
 
         // Capture handoff summary for observability event before values are consumed.
