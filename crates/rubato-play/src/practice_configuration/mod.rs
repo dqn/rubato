@@ -72,7 +72,7 @@ impl PracticeProperty {
         self.graphtype = self.graphtype.rem_euclid(GRAPHTYPESTR.len() as i32);
         self.freq = self.freq.clamp(50, 200);
         self.starttime = self.starttime.max(0);
-        self.endtime = self.endtime.max(self.starttime);
+        self.endtime = self.endtime.max(self.starttime.saturating_add(1000));
         self.startgauge = self.startgauge.clamp(0, 100);
         self.judgerank = self.judgerank.clamp(1, 400);
     }

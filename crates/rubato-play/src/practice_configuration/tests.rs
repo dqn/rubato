@@ -316,6 +316,33 @@ fn test_sanitize_preserves_valid_freq() {
 }
 
 #[test]
+fn test_sanitize_ensures_endtime_after_starttime_when_equal() {
+    let mut prop = PracticeProperty::new();
+    prop.starttime = 5000;
+    prop.endtime = 5000;
+    prop.sanitize();
+    assert_eq!(prop.endtime, 6000, "endtime should be starttime + 1000 when equal");
+}
+
+#[test]
+fn test_sanitize_ensures_endtime_after_starttime_when_inverted() {
+    let mut prop = PracticeProperty::new();
+    prop.starttime = 8000;
+    prop.endtime = 3000;
+    prop.sanitize();
+    assert_eq!(prop.endtime, 9000, "endtime should be starttime + 1000 when starttime > endtime");
+}
+
+#[test]
+fn test_sanitize_preserves_valid_endtime() {
+    let mut prop = PracticeProperty::new();
+    prop.starttime = 2000;
+    prop.endtime = 10000;
+    prop.sanitize();
+    assert_eq!(prop.endtime, 10000, "endtime should be unchanged when already > starttime + 1000");
+}
+
+#[test]
 fn test_get_element_text_out_of_bounds_no_panic() {
     let mut pc = PracticeConfiguration::default();
     pc.property.gaugetype = 99;
