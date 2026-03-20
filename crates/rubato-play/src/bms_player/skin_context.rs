@@ -261,7 +261,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             1107 => self.gauge.map_or(0.0, |g| g.value()),
             // Hi-speed (from live LaneRenderer, not saved play config)
             310 => self.live_hispeed,
-            _ => 0.0,
+            _ => self.default_float_value(id),
         }
     }
 
@@ -647,7 +647,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
                 .lanerender
                 .as_ref()
                 .map_or(0.0, |lr| lr.hispeed()),
-            _ => 0.0,
+            _ => self.default_float_value(id),
         }
     }
 
@@ -1688,6 +1688,49 @@ mod tests {
         assert!(
             (ctx.player.bg_volume - 0.5).abs() < f32::EPSILON,
             "set_float_value with unknown ID must not change bg_volume"
+        );
+    }
+
+    // ============================================================
+    // float_value fallthrough to default_float_value regression tests
+    // ============================================================
+
+    #[test]
+    fn play_render_context_float_value_falls_through_to_default() {
+        let mut song_data = rubato_types::song_data::SongData::default();
+        song_data.info = Some(rubato_types::song_information::SongInformation {
+            peakdensity: 12.5,
+            ..Default::default()
+        });
+        let song_data = Box::leak(Box::new(song_data));
+        let mut ctx = make_render_ctx(0);
+        ctx.song_data = Some(song_data);
+        // ID 360 = chart_peakdensity, handled by default_float_value
+        let val = ctx.float_value(360);
+        assert!(
+            (val - 12.5).abs() < f32::EPSILON,
+            "PlayRenderContext::float_value(360) must fall through to default_float_value, got {val}"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_float_value_falls_through_to_default() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        let mut song_data = rubato_types::song_data::SongData::default();
+        song_data.info = Some(rubato_types::song_information::SongInformation {
+            peakdensity: 7.25,
+            ..Default::default()
+        });
+        player.song_data = Some(song_data);
+        let ctx = PlayMouseContext { timer, player };
+        // ID 360 = chart_peakdensity, handled by default_float_value
+        let val = ctx.float_value(360);
+        assert!(
+            (val - 7.25).abs() < f32::EPSILON,
+            "PlayMouseContext::float_value(360) must fall through to default_float_value, got {val}"
         );
     }
 }
