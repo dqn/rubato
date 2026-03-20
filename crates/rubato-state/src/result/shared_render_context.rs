@@ -349,67 +349,67 @@ pub fn integer_value(data: &AbstractResultData, timer_now: i64, id: i32) -> i32 
 /// IDs dispatched here are state-independent (only need AbstractResultData).
 /// IDs that need PlayerResource (e.g. 1107 / groove gauge) are handled in
 /// the individual render contexts (music_result, course_result).
-pub fn float_value(data: &AbstractResultData, id: i32) -> f32 {
+pub fn float_value(data: &AbstractResultData, id: i32) -> Option<f32> {
     match id {
         // ---- Score rate (FLOAT_SCORE_RATE: 1102) ----
         // Java: score != null ? getNowRate() : Float.MIN_VALUE
-        1102 => {
+        1102 => Some({
             if data.score.score.is_some() {
                 data.score.nowrate
             } else {
                 f32::MIN
             }
-        }
+        }),
 
         // ---- Total rate (FLOAT_TOTAL_RATE: 1115) ----
         // Java: score != null ? getRate() : Float.MIN_VALUE
-        1115 => {
+        1115 => Some({
             if data.score.score.is_some() {
                 data.score.rate
             } else {
                 f32::MIN
             }
-        }
+        }),
 
         // ---- Score rate 2 (FLOAT_SCORE_RATE2: 155) ----
         // Java: same as total_rate
-        155 => {
+        155 => Some({
             if data.score.score.is_some() {
                 data.score.rate
             } else {
                 f32::MIN
             }
-        }
+        }),
 
         // ---- Score rate (RateType scorerate: 110) ----
         // Java: getScoreDataProperty().getRate()
-        110 => data.score.rate,
+        110 => Some(data.score.rate),
 
         // ---- Score rate final (RateType scorerate_final: 111) ----
         // Java: getScoreDataProperty().getNowRate()
-        111 => data.score.nowrate,
+        111 => Some(data.score.nowrate),
 
         // ---- Best score rate now (RateType bestscorerate_now: 112) ----
         // Java: getScoreDataProperty().getNowBestScoreRate()
-        112 => data.score.nowbestscorerate,
+        112 => Some(data.score.nowbestscorerate),
 
         // ---- Best score rate (RateType bestscorerate: 113 / FloatType best_rate: 183) ----
         // Java: getScoreDataProperty().getBestScoreRate()
-        113 | 183 => data.score.bestscorerate,
+        113 | 183 => Some(data.score.bestscorerate),
 
         // ---- Target score rate now (RateType targetscorerate_now: 114) ----
         // Java: getScoreDataProperty().getNowRivalScoreRate()
-        114 => data.score.nowrivalscorerate,
+        114 => Some(data.score.nowrivalscorerate),
 
         // ---- Target score rate (RateType targetscorerate: 115 / FloatType rival_rate: 122 / target_rate: 135 / target_rate2: 157) ----
         // Java: getScoreDataProperty().getRivalScoreRate()
-        115 | 122 | 135 | 157 => data.score.rivalscorerate,
+        115 | 122 | 135 | 157 => Some(data.score.rivalscorerate),
 
         // ---- Judge rates from score (FloatType perfect_rate..poor_rate: 85-89) ----
         // Java: score != null && notes > 0 ? judgeCount(j) / notes : Float.MIN_VALUE
         85..=89 => {
             let index = id - 85;
-            if let Some(ref s) = data.score.score {
+            Some(if let Some(ref s) = data.score.score {
                 if s.notes > 0 {
                     s.judge_count_total(index) as f32 / s.notes as f32
                 } else {
@@ -417,14 +417,14 @@ pub fn float_value(data: &AbstractResultData, id: i32) -> f32 {
                 }
             } else {
                 f32::MIN
-            }
+            })
         }
 
         // ---- Rival judge rates (FloatType rival_perfect_rate..rival_poor_rate: 285-289) ----
         // Java: rivalScore != null && notes > 0 ? count / notes : Float.MIN_VALUE
         285..=289 => {
             let index = id - 285;
-            if let Some(ref s) = data.score.rival {
+            Some(if let Some(ref s) = data.score.rival {
                 if s.notes > 0 {
                     s.judge_count_total(index) as f32 / s.notes as f32
                 } else {
@@ -432,10 +432,10 @@ pub fn float_value(data: &AbstractResultData, id: i32) -> f32 {
                 }
             } else {
                 f32::MIN
-            }
+            })
         }
 
-        _ => 0.0,
+        _ => None,
     }
 }
 
@@ -1721,7 +1721,7 @@ mod tests {
     fn test_float_value_score_rate_with_score() {
         let data = make_data_with_score();
         // ID 1102: nowrate when score exists
-        let v = float_value(&data, 1102);
+        let v = float_value(&data, 1102).unwrap();
         assert!((v - data.score.nowrate).abs() < 0.0001);
         assert!(v > 0.0);
     }
@@ -1730,60 +1730,60 @@ mod tests {
     fn test_float_value_score_rate_no_score() {
         let data = AbstractResultData::new();
         // No score -> f32::MIN
-        assert_eq!(float_value(&data, 1102), f32::MIN);
+        assert_eq!(float_value(&data, 1102), Some(f32::MIN));
     }
 
     #[test]
     fn test_float_value_total_rate() {
         let data = make_data_with_score();
         // ID 1115: rate when score exists
-        let v = float_value(&data, 1115);
+        let v = float_value(&data, 1115).unwrap();
         assert!((v - data.score.rate).abs() < 0.0001);
     }
 
     #[test]
     fn test_float_value_total_rate_no_score() {
         let data = AbstractResultData::new();
-        assert_eq!(float_value(&data, 1115), f32::MIN);
+        assert_eq!(float_value(&data, 1115), Some(f32::MIN));
     }
 
     #[test]
     fn test_float_value_score_rate2() {
         let data = make_data_with_score();
         // ID 155: same as total rate
-        let v = float_value(&data, 155);
+        let v = float_value(&data, 155).unwrap();
         assert!((v - data.score.rate).abs() < 0.0001);
     }
 
     #[test]
     fn test_float_value_score_rate2_no_score() {
         let data = AbstractResultData::new();
-        assert_eq!(float_value(&data, 155), f32::MIN);
+        assert_eq!(float_value(&data, 155), Some(f32::MIN));
     }
 
     #[test]
     fn test_float_value_rate_type_ids() {
         let data = make_data_with_score();
         // ID 110: rate
-        assert!((float_value(&data, 110) - data.score.rate).abs() < 0.0001);
+        assert!((float_value(&data, 110).unwrap() - data.score.rate).abs() < 0.0001);
         // ID 111: nowrate
-        assert!((float_value(&data, 111) - data.score.nowrate).abs() < 0.0001);
+        assert!((float_value(&data, 111).unwrap() - data.score.nowrate).abs() < 0.0001);
         // ID 112: nowbestscorerate
-        assert!((float_value(&data, 112) - data.score.nowbestscorerate).abs() < 0.0001);
+        assert!((float_value(&data, 112).unwrap() - data.score.nowbestscorerate).abs() < 0.0001);
         // ID 113: bestscorerate
-        assert!((float_value(&data, 113) - data.score.bestscorerate).abs() < 0.0001);
+        assert!((float_value(&data, 113).unwrap() - data.score.bestscorerate).abs() < 0.0001);
         // ID 183 (float): bestscorerate
-        assert!((float_value(&data, 183) - data.score.bestscorerate).abs() < 0.0001);
+        assert!((float_value(&data, 183).unwrap() - data.score.bestscorerate).abs() < 0.0001);
         // ID 114: nowrivalscorerate
-        assert!((float_value(&data, 114) - data.score.nowrivalscorerate).abs() < 0.0001);
+        assert!((float_value(&data, 114).unwrap() - data.score.nowrivalscorerate).abs() < 0.0001);
         // ID 115 (float): rivalscorerate
-        assert!((float_value(&data, 115) - data.score.rivalscorerate).abs() < 0.0001);
+        assert!((float_value(&data, 115).unwrap() - data.score.rivalscorerate).abs() < 0.0001);
         // ID 122: rivalscorerate
-        assert!((float_value(&data, 122) - data.score.rivalscorerate).abs() < 0.0001);
+        assert!((float_value(&data, 122).unwrap() - data.score.rivalscorerate).abs() < 0.0001);
         // ID 135: rivalscorerate
-        assert!((float_value(&data, 135) - data.score.rivalscorerate).abs() < 0.0001);
+        assert!((float_value(&data, 135).unwrap() - data.score.rivalscorerate).abs() < 0.0001);
         // ID 157: rivalscorerate
-        assert!((float_value(&data, 157) - data.score.rivalscorerate).abs() < 0.0001);
+        assert!((float_value(&data, 157).unwrap() - data.score.rivalscorerate).abs() < 0.0001);
     }
 
     #[test]
@@ -1793,7 +1793,7 @@ mod tests {
         // IDs 85-89: judge rate as float
         for j in 0..5 {
             let expected = s.judge_count_total(j) as f32 / s.notes as f32;
-            let v = float_value(&data, 85 + j);
+            let v = float_value(&data, 85 + j).unwrap();
             assert!(
                 (v - expected).abs() < 0.0001,
                 "float judge rate for index {}: got {}, expected {}",
@@ -1810,7 +1810,7 @@ mod tests {
         for id in 85..=89 {
             assert_eq!(
                 float_value(&data, id),
-                f32::MIN,
+                Some(f32::MIN),
                 "float judge rate ID {} should be f32::MIN without score",
                 id,
             );
@@ -1830,7 +1830,7 @@ mod tests {
 
         for j in 0..5 {
             let expected = rival.judge_count_total(j) as f32 / rival.notes as f32;
-            let v = float_value(&data, 285 + j);
+            let v = float_value(&data, 285 + j).unwrap();
             assert!(
                 (v - expected).abs() < 0.0001,
                 "rival float judge rate for index {}",
@@ -1843,14 +1843,27 @@ mod tests {
     fn test_float_value_rival_judge_rates_no_rival() {
         let data = make_data_with_score();
         for id in 285..=289 {
-            assert_eq!(float_value(&data, id), f32::MIN);
+            assert_eq!(float_value(&data, id), Some(f32::MIN));
         }
     }
 
     #[test]
-    fn test_float_value_unknown_returns_zero() {
+    fn test_float_value_unknown_returns_none() {
         let data = make_data_with_score();
-        assert_eq!(float_value(&data, 9999), 0.0);
+        assert_eq!(float_value(&data, 9999), None);
+    }
+
+    #[test]
+    fn test_float_value_zero_scorerate_not_confused_with_unmatched() {
+        // Regression: when scorerate is legitimately 0.0, float_value must
+        // return Some(0.0), not None. The old f32 return used 0.0 as sentinel
+        // for both "unmatched ID" and "legitimate zero", causing callers to
+        // fall through to default_float_value incorrectly.
+        let mut data = AbstractResultData::new();
+        data.score.rate = 0.0;
+        data.score.score = Some(rubato_core::score_data::ScoreData::default());
+        // ID 110 (scorerate) should return Some(0.0)
+        assert_eq!(float_value(&data, 110), Some(0.0));
     }
 
     // ============================================================

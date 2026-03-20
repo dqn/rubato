@@ -156,11 +156,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
     fn float_value(&self, id: i32) -> f32 {
         match id {
             1107 => shared_render_context::gauge_value(self.resource),
-            // Explicit ID dispatch for shared float IDs to avoid 0.0 sentinel bug.
-            85..=89 | 110..=115 | 122 | 135 | 155 | 157 | 183 | 285..=289 | 1102 | 1115 => {
-                shared_render_context::float_value(self.data, id)
-            }
-            _ => self.default_float_value(id),
+            _ => shared_render_context::float_value(self.data, id)
+                .unwrap_or_else(|| self.default_float_value(id)),
         }
     }
 
@@ -426,11 +423,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultMouseC
     fn float_value(&self, id: i32) -> f32 {
         match id {
             1107 => shared_render_context::gauge_value(&self.result.resource),
-            // Explicit ID dispatch for shared float IDs to avoid 0.0 sentinel bug.
-            85..=89 | 110..=115 | 122 | 135 | 155 | 157 | 183 | 285..=289 | 1102 | 1115 => {
-                shared_render_context::float_value(&self.result.data, id)
-            }
-            _ => self.default_float_value(id),
+            _ => shared_render_context::float_value(&self.result.data, id)
+                .unwrap_or_else(|| self.default_float_value(id)),
         }
     }
 
