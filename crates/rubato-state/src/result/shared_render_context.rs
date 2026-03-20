@@ -76,6 +76,7 @@ pub fn integer_value(
     data: &AbstractResultData,
     timer_now: i64,
     cumulative_playtime_seconds: i64,
+    songdata: Option<&rubato_types::song_data::SongData>,
     id: i32,
 ) -> i32 {
     match id {
@@ -380,6 +381,22 @@ pub fn integer_value(
         27 => (timer_now / 3_600_000) as i32,
         28 => ((timer_now % 3_600_000) / 60_000) as i32,
         29 => ((timer_now % 60_000) / 1_000) as i32,
+
+        // ---- Song duration (NUMBER_DURATION: 312) ----
+        // Java: songdata.getLength() (raw ms)
+        312 => songdata.map_or(0, |s| s.chart.length),
+
+        // ---- Song duration minutes (NUMBER_DURATION_MINUTE: 1163) ----
+        // Java: (songdata.getLength() / 60000) % 60
+        1163 => songdata.map_or(i32::MIN, |s| (s.chart.length.max(0) / 60000) % 60),
+
+        // ---- Song duration seconds (NUMBER_DURATION_SECOND: 1164) ----
+        // Java: (songdata.getLength() / 1000) % 60
+        1164 => songdata.map_or(i32::MIN, |s| (s.chart.length.max(0) / 1000) % 60),
+
+        // ---- Chart level (NUMBER_LEVEL: 96) ----
+        // Java: songdata.getLevel()
+        96 => songdata.map_or(i32::MIN, |s| s.chart.level),
 
         _ => 0,
     }
@@ -722,31 +739,31 @@ mod tests {
         data.stddev = 4700;
 
         // 372: duration_average integer part = 2500 / 1000 = 2
-        assert_eq!(integer_value(&data, 0, 0, 372), 2);
+        assert_eq!(integer_value(&data, 0, 0, None, 372), 2);
         // 373: duration_average afterdot = (2500 / 100) % 10 = 25 % 10 = 5
-        assert_eq!(integer_value(&data, 0, 0, 373), 5);
+        assert_eq!(integer_value(&data, 0, 0, None, 373), 5);
 
         // 374: timing_average integer part = -1300 / 1000 = -1
-        assert_eq!(integer_value(&data, 0, 0, 374), -1);
+        assert_eq!(integer_value(&data, 0, 0, None, 374), -1);
         // 375: timing_average afterdot = (-1300 / 100) % 10 = -13 % 10 = -3
-        assert_eq!(integer_value(&data, 0, 0, 375), -3);
+        assert_eq!(integer_value(&data, 0, 0, None, 375), -3);
 
         // 376: timing_stddev integer part = 4700 / 1000 = 4
-        assert_eq!(integer_value(&data, 0, 0, 376), 4);
+        assert_eq!(integer_value(&data, 0, 0, None, 376), 4);
         // 377: timing_stddev afterdot = (4700 / 100) % 10 = 47 % 10 = 7
-        assert_eq!(integer_value(&data, 0, 0, 377), 7);
+        assert_eq!(integer_value(&data, 0, 0, None, 377), 7);
     }
 
     #[test]
     fn test_integer_value_timing_stats_zero() {
         let data = AbstractResultData::new();
 
-        assert_eq!(integer_value(&data, 0, 0, 372), 0);
-        assert_eq!(integer_value(&data, 0, 0, 373), 0);
-        assert_eq!(integer_value(&data, 0, 0, 374), 0);
-        assert_eq!(integer_value(&data, 0, 0, 375), 0);
-        assert_eq!(integer_value(&data, 0, 0, 376), 0);
-        assert_eq!(integer_value(&data, 0, 0, 377), 0);
+        assert_eq!(integer_value(&data, 0, 0, None, 372), 0);
+        assert_eq!(integer_value(&data, 0, 0, None, 373), 0);
+        assert_eq!(integer_value(&data, 0, 0, None, 374), 0);
+        assert_eq!(integer_value(&data, 0, 0, None, 375), 0);
+        assert_eq!(integer_value(&data, 0, 0, None, 376), 0);
+        assert_eq!(integer_value(&data, 0, 0, None, 377), 0);
     }
 
     #[test]
@@ -757,12 +774,12 @@ mod tests {
         data.avg = 12345;
         data.stddev = 12345;
 
-        assert_eq!(integer_value(&data, 0, 0, 372), 12);
-        assert_eq!(integer_value(&data, 0, 0, 373), 3);
-        assert_eq!(integer_value(&data, 0, 0, 374), 12);
-        assert_eq!(integer_value(&data, 0, 0, 375), 3);
-        assert_eq!(integer_value(&data, 0, 0, 376), 12);
-        assert_eq!(integer_value(&data, 0, 0, 377), 3);
+        assert_eq!(integer_value(&data, 0, 0, None, 372), 12);
+        assert_eq!(integer_value(&data, 0, 0, None, 373), 3);
+        assert_eq!(integer_value(&data, 0, 0, None, 374), 12);
+        assert_eq!(integer_value(&data, 0, 0, None, 375), 3);
+        assert_eq!(integer_value(&data, 0, 0, None, 376), 12);
+        assert_eq!(integer_value(&data, 0, 0, None, 377), 3);
     }
 
     #[test]
@@ -770,19 +787,19 @@ mod tests {
         let data = AbstractResultData::new();
 
         // Verify unknown IDs still return 0
-        assert_eq!(integer_value(&data, 0, 0, 999), 0);
+        assert_eq!(integer_value(&data, 0, 0, None, 999), 0);
 
         // Verify cumulative playtime IDs (17-19) work
         // cumulative_playtime_seconds = 3661 = 1h 1m 1s
-        assert_eq!(integer_value(&data, 0, 3661, 17), 1);
-        assert_eq!(integer_value(&data, 0, 3661, 18), 1);
-        assert_eq!(integer_value(&data, 0, 3661, 19), 1);
+        assert_eq!(integer_value(&data, 0, 3661, None, 17), 1);
+        assert_eq!(integer_value(&data, 0, 3661, None, 18), 1);
+        assert_eq!(integer_value(&data, 0, 3661, None, 19), 1);
 
         // Verify boot time IDs (27-29) work
         // 3_661_000 ms = 1h 1m 1s
-        assert_eq!(integer_value(&data, 3_661_000, 0, 27), 1);
-        assert_eq!(integer_value(&data, 3_661_000, 0, 28), 1);
-        assert_eq!(integer_value(&data, 3_661_000, 0, 29), 1);
+        assert_eq!(integer_value(&data, 3_661_000, 0, None, 27), 1);
+        assert_eq!(integer_value(&data, 3_661_000, 0, None, 28), 1);
+        assert_eq!(integer_value(&data, 3_661_000, 0, None, 29), 1);
     }
 
     #[test]
@@ -1016,12 +1033,12 @@ mod tests {
         data.ranking = Some(make_named_ranking_with_scores());
         data.ranking_offset = 1;
 
-        assert_eq!(integer_value(&data, 0, 0, 380), 220);
-        assert_eq!(integer_value(&data, 0, 0, 381), 180);
-        assert_eq!(integer_value(&data, 0, 0, 382), i32::MIN);
-        assert_eq!(integer_value(&data, 0, 0, 390), 2);
-        assert_eq!(integer_value(&data, 0, 0, 391), 3);
-        assert_eq!(integer_value(&data, 0, 0, 392), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 380), 220);
+        assert_eq!(integer_value(&data, 0, 0, None, 381), 180);
+        assert_eq!(integer_value(&data, 0, 0, None, 382), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 390), 2);
+        assert_eq!(integer_value(&data, 0, 0, None, 391), 3);
+        assert_eq!(integer_value(&data, 0, 0, None, 392), i32::MIN);
     }
 
     // ============================================================
@@ -1315,25 +1332,25 @@ mod tests {
         let exscore = score.exscore();
 
         // IDs 71, 101, 171 should all return the new score's exscore
-        assert_eq!(integer_value(&data, 0, 0, 71), exscore);
-        assert_eq!(integer_value(&data, 0, 0, 101), exscore);
-        assert_eq!(integer_value(&data, 0, 0, 171), exscore);
+        assert_eq!(integer_value(&data, 0, 0, None, 71), exscore);
+        assert_eq!(integer_value(&data, 0, 0, None, 101), exscore);
+        assert_eq!(integer_value(&data, 0, 0, None, 171), exscore);
     }
 
     #[test]
     fn test_integer_value_score_ids_no_score() {
         let data = AbstractResultData::new();
         // No score -> return i32::MIN
-        assert_eq!(integer_value(&data, 0, 0, 71), i32::MIN);
-        assert_eq!(integer_value(&data, 0, 0, 101), i32::MIN);
-        assert_eq!(integer_value(&data, 0, 0, 171), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 71), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 101), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 171), i32::MIN);
     }
 
     #[test]
     fn test_integer_value_point() {
         let data = make_data_with_score();
         // ID 100: nowpoint (mode-dependent scoring)
-        assert_eq!(integer_value(&data, 0, 0, 100), data.score.nowpoint);
+        assert_eq!(integer_value(&data, 0, 0, None, 100), data.score.nowpoint);
         assert!(data.score.nowpoint > 0, "nowpoint should be populated");
     }
 
@@ -1342,80 +1359,89 @@ mod tests {
         let data = make_data_with_score();
         // ID 72: notes * 2
         let score = data.score.score.as_ref().unwrap();
-        assert_eq!(integer_value(&data, 0, 0, 72), score.notes * 2);
-        assert_eq!(integer_value(&data, 0, 0, 72), 223 * 2);
+        assert_eq!(integer_value(&data, 0, 0, None, 72), score.notes * 2);
+        assert_eq!(integer_value(&data, 0, 0, None, 72), 223 * 2);
     }
 
     #[test]
     fn test_integer_value_maxscore_no_score() {
         let data = AbstractResultData::new();
-        assert_eq!(integer_value(&data, 0, 0, 72), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 72), i32::MIN);
     }
 
     #[test]
     fn test_integer_value_maxcombo_aliases() {
         let data = make_data_with_score();
         // IDs 75, 105, 174 should all return maxcombo
-        assert_eq!(integer_value(&data, 0, 0, 75), 180);
-        assert_eq!(integer_value(&data, 0, 0, 105), 180);
-        assert_eq!(integer_value(&data, 0, 0, 174), 180);
+        assert_eq!(integer_value(&data, 0, 0, None, 75), 180);
+        assert_eq!(integer_value(&data, 0, 0, None, 105), 180);
+        assert_eq!(integer_value(&data, 0, 0, None, 174), 180);
     }
 
     #[test]
     fn test_integer_value_misscount_aliases() {
         let data = make_data_with_score();
         // IDs 76, 177 should both return minbp
-        assert_eq!(integer_value(&data, 0, 0, 76), 8);
-        assert_eq!(integer_value(&data, 0, 0, 177), 8);
+        assert_eq!(integer_value(&data, 0, 0, None, 76), 8);
+        assert_eq!(integer_value(&data, 0, 0, None, 177), 8);
     }
 
     #[test]
     fn test_integer_value_score_rate() {
         let data = make_data_with_score();
         // ID 102: nowrate_int (with score present)
-        let rate = integer_value(&data, 0, 0, 102);
+        let rate = integer_value(&data, 0, 0, None, 102);
         assert_eq!(rate, data.score.nowrate_int);
         assert!(rate > 0, "score rate should be > 0");
 
         // ID 103: nowrate_after_dot
-        let afterdot = integer_value(&data, 0, 0, 103);
+        let afterdot = integer_value(&data, 0, 0, None, 103);
         assert_eq!(afterdot, data.score.nowrate_after_dot);
     }
 
     #[test]
     fn test_integer_value_score_rate_no_score() {
         let data = AbstractResultData::new();
-        assert_eq!(integer_value(&data, 0, 0, 102), i32::MIN);
-        assert_eq!(integer_value(&data, 0, 0, 103), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 102), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 103), i32::MIN);
     }
 
     #[test]
     fn test_integer_value_total_rate() {
         let data = make_data_with_score();
         // IDs 115, 155: rate_int
-        assert_eq!(integer_value(&data, 0, 0, 115), data.score.rate_int);
-        assert_eq!(integer_value(&data, 0, 0, 155), data.score.rate_int);
+        assert_eq!(integer_value(&data, 0, 0, None, 115), data.score.rate_int);
+        assert_eq!(integer_value(&data, 0, 0, None, 155), data.score.rate_int);
         // IDs 116, 156: rate_after_dot
-        assert_eq!(integer_value(&data, 0, 0, 116), data.score.rate_after_dot);
-        assert_eq!(integer_value(&data, 0, 0, 156), data.score.rate_after_dot);
+        assert_eq!(
+            integer_value(&data, 0, 0, None, 116),
+            data.score.rate_after_dot
+        );
+        assert_eq!(
+            integer_value(&data, 0, 0, None, 156),
+            data.score.rate_after_dot
+        );
     }
 
     #[test]
     fn test_integer_value_total_rate_no_score() {
         let data = AbstractResultData::new();
-        assert_eq!(integer_value(&data, 0, 0, 115), i32::MIN);
-        assert_eq!(integer_value(&data, 0, 0, 155), i32::MIN);
-        assert_eq!(integer_value(&data, 0, 0, 116), i32::MIN);
-        assert_eq!(integer_value(&data, 0, 0, 156), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 115), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 155), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 116), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 156), i32::MIN);
     }
 
     #[test]
     fn test_integer_value_best_rate() {
         let data = make_data_with_score();
         // IDs 183, 184
-        assert_eq!(integer_value(&data, 0, 0, 183), data.score.bestrate_int);
         assert_eq!(
-            integer_value(&data, 0, 0, 184),
+            integer_value(&data, 0, 0, None, 183),
+            data.score.bestrate_int
+        );
+        assert_eq!(
+            integer_value(&data, 0, 0, None, 184),
             data.score.bestrate_after_dot
         );
     }
@@ -1425,8 +1451,8 @@ mod tests {
         let data = make_data_with_score();
         // IDs 150, 170: oldscore.exscore()
         let old_ex = data.oldscore.exscore();
-        assert_eq!(integer_value(&data, 0, 0, 150), old_ex);
-        assert_eq!(integer_value(&data, 0, 0, 170), old_ex);
+        assert_eq!(integer_value(&data, 0, 0, None, 150), old_ex);
+        assert_eq!(integer_value(&data, 0, 0, None, 170), old_ex);
         assert!(old_ex > 0, "old exscore should be populated");
     }
 
@@ -1434,24 +1460,30 @@ mod tests {
     fn test_integer_value_target_rival_score() {
         let data = make_data_with_score();
         // IDs 121, 151, 271
-        assert_eq!(integer_value(&data, 0, 0, 121), data.score.rivalscore);
-        assert_eq!(integer_value(&data, 0, 0, 151), data.score.rivalscore);
-        assert_eq!(integer_value(&data, 0, 0, 271), data.score.rivalscore);
+        assert_eq!(integer_value(&data, 0, 0, None, 121), data.score.rivalscore);
+        assert_eq!(integer_value(&data, 0, 0, None, 151), data.score.rivalscore);
+        assert_eq!(integer_value(&data, 0, 0, None, 271), data.score.rivalscore);
     }
 
     #[test]
     fn test_integer_value_target_rival_rate() {
         let data = make_data_with_score();
         // IDs 122, 157: rivalrate_int
-        assert_eq!(integer_value(&data, 0, 0, 122), data.score.rivalrate_int);
-        assert_eq!(integer_value(&data, 0, 0, 157), data.score.rivalrate_int);
+        assert_eq!(
+            integer_value(&data, 0, 0, None, 122),
+            data.score.rivalrate_int
+        );
+        assert_eq!(
+            integer_value(&data, 0, 0, None, 157),
+            data.score.rivalrate_int
+        );
         // IDs 123, 158: rivalrate_after_dot
         assert_eq!(
-            integer_value(&data, 0, 0, 123),
+            integer_value(&data, 0, 0, None, 123),
             data.score.rivalrate_after_dot
         );
         assert_eq!(
-            integer_value(&data, 0, 0, 158),
+            integer_value(&data, 0, 0, None, 158),
             data.score.rivalrate_after_dot
         );
     }
@@ -1461,9 +1493,9 @@ mod tests {
         let data = make_data_with_score();
         let expected = data.score.nowscore - data.score.nowrivalscore;
         // IDs 108, 128, 153
-        assert_eq!(integer_value(&data, 0, 0, 108), expected);
-        assert_eq!(integer_value(&data, 0, 0, 128), expected);
-        assert_eq!(integer_value(&data, 0, 0, 153), expected);
+        assert_eq!(integer_value(&data, 0, 0, None, 108), expected);
+        assert_eq!(integer_value(&data, 0, 0, None, 128), expected);
+        assert_eq!(integer_value(&data, 0, 0, None, 153), expected);
     }
 
     #[test]
@@ -1471,85 +1503,88 @@ mod tests {
         let data = make_data_with_score();
         let expected = data.score.nowscore - data.score.nowbestscore;
         // IDs 152, 172
-        assert_eq!(integer_value(&data, 0, 0, 152), expected);
-        assert_eq!(integer_value(&data, 0, 0, 172), expected);
+        assert_eq!(integer_value(&data, 0, 0, None, 152), expected);
+        assert_eq!(integer_value(&data, 0, 0, None, 172), expected);
     }
 
     #[test]
     fn test_integer_value_diff_nextrank() {
         let data = make_data_with_score();
         // ID 154
-        assert_eq!(integer_value(&data, 0, 0, 154), data.score.nextrank);
+        assert_eq!(integer_value(&data, 0, 0, None, 154), data.score.nextrank);
     }
 
     #[test]
     fn test_integer_value_clear_type() {
         let data = make_data_with_score();
         // ID 370: current play's clear
-        assert_eq!(integer_value(&data, 0, 0, 370), ClearType::Hard.id());
+        assert_eq!(integer_value(&data, 0, 0, None, 370), ClearType::Hard.id());
         // ID 371: old score's clear
-        assert_eq!(integer_value(&data, 0, 0, 371), ClearType::Normal.id());
+        assert_eq!(
+            integer_value(&data, 0, 0, None, 371),
+            ClearType::Normal.id()
+        );
     }
 
     #[test]
     fn test_integer_value_clear_type_no_score() {
         let data = AbstractResultData::new();
-        assert_eq!(integer_value(&data, 0, 0, 370), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 370), i32::MIN);
     }
 
     #[test]
     fn test_integer_value_target_maxcombo() {
         let data = make_data_with_score();
         // ID 173: oldscore.maxcombo (> 0)
-        assert_eq!(integer_value(&data, 0, 0, 173), 160);
+        assert_eq!(integer_value(&data, 0, 0, None, 173), 160);
     }
 
     #[test]
     fn test_integer_value_target_maxcombo_zero() {
         let mut data = AbstractResultData::new();
         data.oldscore.maxcombo = 0;
-        assert_eq!(integer_value(&data, 0, 0, 173), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 173), i32::MIN);
     }
 
     #[test]
     fn test_integer_value_diff_maxcombo() {
         let data = make_data_with_score();
         // ID 175: newCombo - oldCombo
-        assert_eq!(integer_value(&data, 0, 0, 175), 180 - 160);
+        assert_eq!(integer_value(&data, 0, 0, None, 175), 180 - 160);
     }
 
     #[test]
     fn test_integer_value_diff_maxcombo_old_zero() {
         let mut data = make_data_with_score();
         data.oldscore.maxcombo = 0;
-        assert_eq!(integer_value(&data, 0, 0, 175), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 175), i32::MIN);
     }
 
     #[test]
     fn test_integer_value_target_misscount() {
         let data = make_data_with_score();
         // ID 176: oldscore.minbp (not MAX)
-        assert_eq!(integer_value(&data, 0, 0, 176), 12);
+        assert_eq!(integer_value(&data, 0, 0, None, 176), 12);
     }
 
     #[test]
     fn test_integer_value_target_misscount_max() {
         let data = AbstractResultData::new();
         // Default minbp = i32::MAX -> return i32::MIN
-        assert_eq!(integer_value(&data, 0, 0, 176), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 176), i32::MIN);
     }
 
     #[test]
     fn test_integer_value_diff_misscount() {
         let data = make_data_with_score();
         // ID 178: newMinbp - oldMinbp
-        assert_eq!(integer_value(&data, 0, 0, 178), 8 - 12);
+        assert_eq!(integer_value(&data, 0, 0, None, 178), 8 - 12);
     }
 
     #[test]
     fn test_integer_value_diff_misscount_old_max() {
         let data = AbstractResultData::new();
-        assert_eq!(integer_value(&data, 0, 0, 178), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 178), i32::MIN);
     }
 
     #[test]
@@ -1557,11 +1592,11 @@ mod tests {
         let data = make_data_with_score();
         let s = data.score.score.as_ref().unwrap();
         // IDs 80-84: judge_count_total for PG, GR, GD, BD, PR
-        assert_eq!(integer_value(&data, 0, 0, 80), s.judge_count_total(0)); // PG = 150
-        assert_eq!(integer_value(&data, 0, 0, 81), s.judge_count_total(1)); // GR = 50
-        assert_eq!(integer_value(&data, 0, 0, 82), s.judge_count_total(2)); // GD = 15
-        assert_eq!(integer_value(&data, 0, 0, 83), s.judge_count_total(3)); // BD = 5
-        assert_eq!(integer_value(&data, 0, 0, 84), s.judge_count_total(4)); // PR = 2
+        assert_eq!(integer_value(&data, 0, 0, None, 80), s.judge_count_total(0)); // PG = 150
+        assert_eq!(integer_value(&data, 0, 0, None, 81), s.judge_count_total(1)); // GR = 50
+        assert_eq!(integer_value(&data, 0, 0, None, 82), s.judge_count_total(2)); // GD = 15
+        assert_eq!(integer_value(&data, 0, 0, None, 83), s.judge_count_total(3)); // BD = 5
+        assert_eq!(integer_value(&data, 0, 0, None, 84), s.judge_count_total(4)); // PR = 2
     }
 
     #[test]
@@ -1569,7 +1604,7 @@ mod tests {
         let data = AbstractResultData::new();
         for id in 80..=84 {
             assert_eq!(
-                integer_value(&data, 0, 0, id),
+                integer_value(&data, 0, 0, None, id),
                 i32::MIN,
                 "ID {} should return i32::MIN when no score",
                 id,
@@ -1585,7 +1620,7 @@ mod tests {
         for j in 0..5 {
             let expected = s.judge_count_total(j) * 100 / s.notes;
             assert_eq!(
-                integer_value(&data, 0, 0, 85 + j),
+                integer_value(&data, 0, 0, None, 85 + j),
                 expected,
                 "judge rate for index {}",
                 j,
@@ -1597,7 +1632,7 @@ mod tests {
     fn test_integer_value_judge_rates_no_score() {
         let data = AbstractResultData::new();
         for id in 85..=89 {
-            assert_eq!(integer_value(&data, 0, 0, id), i32::MIN);
+            assert_eq!(integer_value(&data, 0, 0, None, id), i32::MIN);
         }
     }
 
@@ -1609,7 +1644,7 @@ mod tests {
         for j in 0..5 {
             let expected = s.judge_count(j, true) + s.judge_count(j, false);
             assert_eq!(
-                integer_value(&data, 0, 0, 110 + j),
+                integer_value(&data, 0, 0, None, 110 + j),
                 expected,
                 "state judge count for index {}",
                 j,
@@ -1627,7 +1662,7 @@ mod tests {
             let early = offset % 2 == 0;
             let expected = s.judge_count(index, early);
             assert_eq!(
-                integer_value(&data, 0, 0, 410 + offset),
+                integer_value(&data, 0, 0, None, 410 + offset),
                 expected,
                 "early/late judge count for offset {} (index={}, early={})",
                 offset,
@@ -1647,14 +1682,14 @@ mod tests {
         for i in 1..6 {
             expected_early += s.judge_count(i, true);
         }
-        assert_eq!(integer_value(&data, 0, 0, 423), expected_early);
+        assert_eq!(integer_value(&data, 0, 0, None, 423), expected_early);
 
         // ID 424: total late (judges 1-5 late)
         let mut expected_late = 0;
         for i in 1..6 {
             expected_late += s.judge_count(i, false);
         }
-        assert_eq!(integer_value(&data, 0, 0, 424), expected_late);
+        assert_eq!(integer_value(&data, 0, 0, None, 424), expected_late);
     }
 
     #[test]
@@ -1666,7 +1701,7 @@ mod tests {
             + s.judge_count(3, false)
             + s.judge_count(4, true)
             + s.judge_count(4, false);
-        assert_eq!(integer_value(&data, 0, 0, 425), expected);
+        assert_eq!(integer_value(&data, 0, 0, None, 425), expected);
         assert_eq!(expected, 3 + 2 + 1 + 1); // ebd + lbd + epr + lpr
     }
 
@@ -1689,16 +1724,31 @@ mod tests {
         data.score.rival = Some(rival.clone());
 
         // IDs 280-284: rival judge_count_total
-        assert_eq!(integer_value(&data, 0, 0, 280), rival.judge_count_total(0));
-        assert_eq!(integer_value(&data, 0, 0, 281), rival.judge_count_total(1));
-        assert_eq!(integer_value(&data, 0, 0, 282), rival.judge_count_total(2));
-        assert_eq!(integer_value(&data, 0, 0, 283), rival.judge_count_total(3));
-        assert_eq!(integer_value(&data, 0, 0, 284), rival.judge_count_total(4));
+        assert_eq!(
+            integer_value(&data, 0, 0, None, 280),
+            rival.judge_count_total(0)
+        );
+        assert_eq!(
+            integer_value(&data, 0, 0, None, 281),
+            rival.judge_count_total(1)
+        );
+        assert_eq!(
+            integer_value(&data, 0, 0, None, 282),
+            rival.judge_count_total(2)
+        );
+        assert_eq!(
+            integer_value(&data, 0, 0, None, 283),
+            rival.judge_count_total(3)
+        );
+        assert_eq!(
+            integer_value(&data, 0, 0, None, 284),
+            rival.judge_count_total(4)
+        );
 
         // IDs 285-289: rival judge rates
         for j in 0..5 {
             let expected = rival.judge_count_total(j) * 100 / rival.notes;
-            assert_eq!(integer_value(&data, 0, 0, 285 + j), expected);
+            assert_eq!(integer_value(&data, 0, 0, None, 285 + j), expected);
         }
     }
 
@@ -1707,10 +1757,10 @@ mod tests {
         let data = make_data_with_score();
         // No rival score set -> MIN_VALUE
         for id in 280..=284 {
-            assert_eq!(integer_value(&data, 0, 0, id), i32::MIN);
+            assert_eq!(integer_value(&data, 0, 0, None, id), i32::MIN);
         }
         for id in 285..=289 {
-            assert_eq!(integer_value(&data, 0, 0, id), i32::MIN);
+            assert_eq!(integer_value(&data, 0, 0, None, id), i32::MIN);
         }
     }
 
@@ -1718,10 +1768,10 @@ mod tests {
     fn test_integer_value_ir_rank_offline() {
         let data = make_data_with_score();
         // IR offline (state == STATE_OFFLINE) -> i32::MIN
-        assert_eq!(integer_value(&data, 0, 0, 179), i32::MIN);
-        assert_eq!(integer_value(&data, 0, 0, 182), i32::MIN);
-        assert_eq!(integer_value(&data, 0, 0, 180), i32::MIN);
-        assert_eq!(integer_value(&data, 0, 0, 200), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 179), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 182), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 180), i32::MIN);
+        assert_eq!(integer_value(&data, 0, 0, None, 200), i32::MIN);
     }
 
     #[test]
@@ -1753,20 +1803,20 @@ mod tests {
 
         // rank/prevrank/total depend on ranking data state
         // total_player should be 2
-        assert_eq!(integer_value(&data, 0, 0, 180), 2);
-        assert_eq!(integer_value(&data, 0, 0, 200), 2);
+        assert_eq!(integer_value(&data, 0, 0, None, 180), 2);
+        assert_eq!(integer_value(&data, 0, 0, None, 200), 2);
         // rank and prevrank depend on player="" matching logic in update_score
         // The important thing is they do NOT return i32::MIN when state != OFFLINE
-        assert_ne!(integer_value(&data, 0, 0, 179), i32::MIN);
-        assert_ne!(integer_value(&data, 0, 0, 182), i32::MIN);
+        assert_ne!(integer_value(&data, 0, 0, None, 179), i32::MIN);
+        assert_ne!(integer_value(&data, 0, 0, None, 182), i32::MIN);
     }
 
     #[test]
     fn test_integer_value_totalnotes() {
         let data = make_data_with_score();
         // IDs 74, 106 should return totalnotes
-        assert_eq!(integer_value(&data, 0, 0, 74), data.score.totalnotes);
-        assert_eq!(integer_value(&data, 0, 0, 106), data.score.totalnotes);
+        assert_eq!(integer_value(&data, 0, 0, None, 74), data.score.totalnotes);
+        assert_eq!(integer_value(&data, 0, 0, None, 106), data.score.totalnotes);
         assert_eq!(data.score.totalnotes, 223);
     }
 
