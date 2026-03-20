@@ -1502,3 +1502,31 @@ fn draw_lane_ln_body_not_truncated_by_coincidental_section_match() {
         ln_count
     );
 }
+
+// =========================================================================
+// currentduration i32 overflow regression tests
+// =========================================================================
+
+/// Regression test: pathologically slow BPM produces a region value that
+/// exceeds i32 range. calc_region(0.00001, 1.0, 1.0) =
+/// 24_000_000_000_000 which far exceeds i32::MAX (~2.1 billion). The
+/// explicit clamp before i32 cast makes the saturation intent clear and
+/// guards against any future refactoring that might change the cast
+/// target type.
+#[test]
+fn currentduration_clamps_on_extreme_slow_bpm() {
+    // BPM = 0.00001 -> region = 240000/0.00001/1.0/1.0 = 24_000_000_000_000
+    let mut tl0 = make_timeline(0.0, 0, 0.00001, 8);
+    tl0.section_line = true;
+    let model = make_model_with_timelines(vec![tl0], 0.00001);
+    let mut renderer = LaneRenderer::new(&model);
+
+    let all_tls = &model.timelines;
+    let ctx = default_ctx(all_tls);
+    let lanes = make_lanes(8);
+    renderer.draw_lane(&ctx, &lanes, &[]);
+
+    // The region is astronomically large; currentduration must saturate
+    // to i32::MAX rather than wrapping or producing a negative value.
+    assert_eq!(renderer.current_duration(), i32::MAX);
+}

@@ -119,7 +119,9 @@ impl LaneRenderer {
         } else {
             0.0
         };
-        self.currentduration = (region * (1.0 - lanecover as f64)).round() as i32;
+        self.currentduration = (region * (1.0 - lanecover as f64))
+            .round()
+            .clamp(i32::MIN as f64, i32::MAX as f64) as i32;
 
         // Calculate offset results for LIFT, LANECOVER, HIDDEN.
         let lift_offset_y = hl - lanes[0].region_y;
