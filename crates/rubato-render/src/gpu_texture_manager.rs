@@ -151,7 +151,7 @@ impl GpuTextureManager {
             return;
         }
 
-        let expected_size = (width * height * 4) as usize;
+        let expected_size = (width as usize) * (height as usize) * 4;
         if rgba_data.len() < expected_size {
             log::warn!(
                 "Texture '{}' has insufficient data: {} bytes, expected {}",
@@ -359,7 +359,7 @@ mod tests {
 
 /// Bilinear interpolation resize for RGBA (4 bytes/pixel) image data.
 fn bilinear_resize(src: &[u8], src_w: u32, src_h: u32, dst_w: u32, dst_h: u32) -> Vec<u8> {
-    let mut dst = vec![0u8; (dst_w * dst_h * 4) as usize];
+    let mut dst = vec![0u8; (dst_w as usize) * (dst_h as usize) * 4];
     let src_w_f = src_w as f32;
     let src_h_f = src_h as f32;
     let dst_w_f = dst_w as f32;
@@ -385,12 +385,12 @@ fn bilinear_resize(src: &[u8], src_w: u32, src_h: u32, dst_w: u32, dst_h: u32) -
             let x1 = x1.clamp(0, src_w as i32 - 1) as u32;
             let y1 = y1.clamp(0, src_h as i32 - 1) as u32;
 
-            let idx00 = ((y0 * src_w + x0) * 4) as usize;
-            let idx10 = ((y0 * src_w + x1) * 4) as usize;
-            let idx01 = ((y1 * src_w + x0) * 4) as usize;
-            let idx11 = ((y1 * src_w + x1) * 4) as usize;
+            let idx00 = ((y0 as usize) * (src_w as usize) + (x0 as usize)) * 4;
+            let idx10 = ((y0 as usize) * (src_w as usize) + (x1 as usize)) * 4;
+            let idx01 = ((y1 as usize) * (src_w as usize) + (x0 as usize)) * 4;
+            let idx11 = ((y1 as usize) * (src_w as usize) + (x1 as usize)) * 4;
 
-            let dst_idx = ((dy * dst_w + dx) * 4) as usize;
+            let dst_idx = ((dy as usize) * (dst_w as usize) + (dx as usize)) * 4;
             for c in 0..4 {
                 let v00 = src[idx00 + c] as f32;
                 let v10 = src[idx10 + c] as f32;
