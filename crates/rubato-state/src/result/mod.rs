@@ -116,6 +116,7 @@ macro_rules! impl_result_main_state {
                     data: &self.data,
                     resource: &self.resource,
                     main: &self.main,
+                    offsets: &self.main_data.offsets,
                 };
                 skin.update_custom_objects_timed(&mut ctx);
                 skin.swap_sprite_batch(sprite);
@@ -192,17 +193,24 @@ macro_rules! impl_result_main_state {
                 .and_then(|skin| skin.as_ref())
                 .and_then(|skin| skin.path.clone())
                 .or_else(|| rubato_types::skin_config::SkinConfig::default_for_id(skin_type).path);
-            let mut ctx = $render_ctx {
-                timer: &mut self.main_data.timer,
-                data: &self.data,
-                resource: &self.resource,
-                main: &self.main,
+            // Take timer out to avoid borrowing self.main_data and its fields simultaneously
+            let mut timer = std::mem::take(&mut self.main_data.timer);
+            let loaded = {
+                let mut ctx = $render_ctx {
+                    timer: &mut timer,
+                    data: &self.data,
+                    resource: &self.resource,
+                    main: &self.main,
+                    offsets: &self.main_data.offsets,
+                };
+                skin_path.as_deref().and_then(|path| {
+                    rubato_skin::skin_loader::load_skin_from_path_with_state(
+                        &mut ctx, skin_type, path,
+                    )
+                })
             };
-            if let Some(skin_path) = skin_path.as_deref()
-                && let Some(skin) = rubato_skin::skin_loader::load_skin_from_path_with_state(
-                    &mut ctx, skin_type, skin_path,
-                )
-            {
+            self.main_data.timer = timer;
+            if let Some(skin) = loaded {
                 self.skin =
                     Some(crate::result::result_skin_data::ResultSkinData::from_loaded_skin(&skin));
                 self.main_data.skin = Some(Box::new(skin));

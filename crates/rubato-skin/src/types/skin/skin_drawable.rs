@@ -263,6 +263,12 @@ impl rubato_types::skin_render_context::SkinRenderContext for TimerOnlyMainState
             ctx.audio_stop(path);
         }
     }
+
+    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.ctx
+            .as_deref()
+            .and_then(|c| c.get_offset_value(id))
+    }
 }
 
 impl crate::reexports::MainState for TimerOnlyMainState<'_> {
@@ -340,6 +346,25 @@ impl rubato_core::main_state::SkinDrawable for Skin {
 
     fn dispose_skin(&mut self) {
         self.dispose();
+    }
+
+    fn skin_offsets(&self) -> std::collections::HashMap<i32, rubato_types::skin_offset::SkinOffset> {
+        self.offset
+            .iter()
+            .map(|(&id, cfg)| {
+                (
+                    id,
+                    rubato_types::skin_offset::SkinOffset {
+                        x: cfg.x,
+                        y: cfg.y,
+                        w: cfg.w,
+                        h: cfg.h,
+                        r: cfg.r,
+                        a: cfg.a,
+                    },
+                )
+            })
+            .collect()
     }
 
     fn fadeout(&self) -> i32 {

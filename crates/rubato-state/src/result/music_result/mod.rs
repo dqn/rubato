@@ -987,6 +987,7 @@ mod tests {
             data: &mr.data,
             resource: &mr.resource,
             main: &mr.main,
+            offsets: &mr.main_data.offsets,
         };
 
         assert_eq!(ctx.image_index_value(42), 6);
@@ -1339,6 +1340,7 @@ mod tests {
             data: &mr.data,
             resource: &mr.resource,
             main: &mr.main,
+            offsets: &mr.main_data.offsets,
         };
         assert_eq!(ctx.image_index_value(308), 0);
     }
@@ -1359,6 +1361,7 @@ mod tests {
             data: &mr.data,
             resource: &mr.resource,
             main: &mr.main,
+            offsets: &mr.main_data.offsets,
         };
         assert_eq!(ctx.image_index_value(308), 1);
     }
@@ -1379,6 +1382,7 @@ mod tests {
             data: &mr.data,
             resource: &mr.resource,
             main: &mr.main,
+            offsets: &mr.main_data.offsets,
         };
         assert_eq!(ctx.image_index_value(308), 2);
     }
@@ -1399,6 +1403,7 @@ mod tests {
             data: &mr.data,
             resource: &mr.resource,
             main: &mr.main,
+            offsets: &mr.main_data.offsets,
         };
         // Falls through to player_config.play_settings.lnmode = 99
         assert_eq!(ctx.image_index_value(308), 99);
@@ -1413,6 +1418,7 @@ mod tests {
             data: &mr.data,
             resource: &mr.resource,
             main: &mr.main,
+            offsets: &mr.main_data.offsets,
         };
         // Falls through to player_config.play_settings.lnmode = 99
         assert_eq!(ctx.image_index_value(308), 99);
@@ -1449,6 +1455,7 @@ mod tests {
             data: &mr.data,
             resource: &mr.resource,
             main: &mr.main,
+            offsets: &mr.main_data.offsets,
         };
 
         assert_eq!(ctx.string_value(120), "YOU");

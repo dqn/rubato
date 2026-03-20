@@ -261,6 +261,16 @@ impl MainController {
             audio.set_model(model);
         }
 
+        // In Java: MainState.setSkin(skin) copies skin.offset into MainController.offset[].
+        // In Rust, we copy the skin's offset config into MainStateData.offsets so that
+        // SkinRenderContext adapters can delegate get_offset_value() during rendering.
+        {
+            let msd = new_state.main_state_data_mut();
+            if let Some(ref skin) = msd.skin {
+                msd.offsets = skin.skin_offsets();
+            }
+        }
+
         // In Java: if(newState.getSkin() != null) { newState.getSkin().prepare(newState); }
         if let Some(ref mut skin) = new_state.main_state_data_mut().skin {
             skin.prepare_skin();

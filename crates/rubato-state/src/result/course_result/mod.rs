@@ -847,6 +847,7 @@ mod tests {
             data: &cr.data,
             resource: &cr.resource,
             main: &cr.main,
+            offsets: &cr.main_data.offsets,
         };
 
         assert_eq!(ctx.image_index_value(42), 5);
@@ -1496,11 +1497,13 @@ mod tests {
         let data = AbstractResultData::new();
         let main = MainController::new(Box::new(crate::result::NullMainController));
         let mut timer = rubato_core::timer_manager::TimerManager::new();
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
 
         let sd = ctx.song_data_ref();
@@ -1518,11 +1521,13 @@ mod tests {
         let data = AbstractResultData::new();
         let main = MainController::new(Box::new(crate::result::NullMainController));
         let mut timer = rubato_core::timer_manager::TimerManager::new();
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
 
         assert!(ctx.song_data_ref().is_none());
@@ -1556,11 +1561,13 @@ mod tests {
 
         let main = MainController::new(Box::new(crate::result::NullMainController));
         let mut timer = rubato_core::timer_manager::TimerManager::new();
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
 
         assert_eq!(ctx.string_value(120), "YOU");
@@ -1596,11 +1603,13 @@ mod tests {
         song.metadata.title = "MainTitle".to_string();
         song.metadata.subtitle = "[HARD]".to_string();
         let (resource, data, main, mut timer) = make_course_render_ctx_with_songdata(song);
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
         assert_eq!(ctx.string_value(12), "MainTitle [HARD]");
     }
@@ -1610,11 +1619,13 @@ mod tests {
         let mut song = rubato_types::song_data::SongData::default();
         song.metadata.title = "OnlyTitle".to_string();
         let (resource, data, main, mut timer) = make_course_render_ctx_with_songdata(song);
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
         assert_eq!(ctx.string_value(12), "OnlyTitle");
     }
@@ -1624,11 +1635,13 @@ mod tests {
         let mut song = rubato_types::song_data::SongData::default();
         song.metadata.genre = "Techno".to_string();
         let (resource, data, main, mut timer) = make_course_render_ctx_with_songdata(song);
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
         assert_eq!(ctx.string_value(13), "Techno");
     }
@@ -1638,11 +1651,13 @@ mod tests {
         let mut song = rubato_types::song_data::SongData::default();
         song.metadata.subartist = "feat. B".to_string();
         let (resource, data, main, mut timer) = make_course_render_ctx_with_songdata(song);
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
         assert_eq!(ctx.string_value(15), "feat. B");
     }
@@ -1653,11 +1668,13 @@ mod tests {
         song.metadata.artist = "ArtistA".to_string();
         song.metadata.subartist = "feat. B".to_string();
         let (resource, data, main, mut timer) = make_course_render_ctx_with_songdata(song);
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
         assert_eq!(ctx.string_value(16), "ArtistA feat. B");
     }
@@ -1667,11 +1684,13 @@ mod tests {
         let mut song = rubato_types::song_data::SongData::default();
         song.metadata.artist = "OnlyArtist".to_string();
         let (resource, data, main, mut timer) = make_course_render_ctx_with_songdata(song);
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
         assert_eq!(ctx.string_value(16), "OnlyArtist");
     }
@@ -1682,11 +1701,13 @@ mod tests {
         let data = AbstractResultData::new();
         let main = MainController::new(Box::new(crate::result::NullMainController));
         let mut timer = rubato_core::timer_manager::TimerManager::new();
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
         // All song metadata IDs should return empty when no songdata
         for id in [10, 11, 12, 13, 14, 15, 16] {
@@ -1706,11 +1727,13 @@ mod tests {
         // Set feature to have LN but not undefined LN
         song.chart.feature = rubato_types::song_data::FEATURE_LONGNOTE;
         let (resource, data, main, mut timer) = make_course_render_ctx_with_songdata(song);
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
         assert_eq!(
             ctx.image_index_value(308),
@@ -1724,11 +1747,13 @@ mod tests {
         let mut song = rubato_types::song_data::SongData::default();
         song.chart.feature = rubato_types::song_data::FEATURE_CHARGENOTE;
         let (resource, data, main, mut timer) = make_course_render_ctx_with_songdata(song);
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
         assert_eq!(
             ctx.image_index_value(308),
@@ -1742,11 +1767,13 @@ mod tests {
         let mut song = rubato_types::song_data::SongData::default();
         song.chart.feature = rubato_types::song_data::FEATURE_HELLCHARGENOTE;
         let (resource, data, main, mut timer) = make_course_render_ctx_with_songdata(song);
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
         assert_eq!(
             ctx.image_index_value(308),
@@ -1768,11 +1795,13 @@ mod tests {
         let data = AbstractResultData::new();
         let main = MainController::new(Box::new(crate::result::NullMainController));
         let mut timer = rubato_core::timer_manager::TimerManager::new();
+        let offsets = std::collections::HashMap::new();
         let ctx = CourseResultRenderContext {
             timer: &mut timer,
             data: &data,
             resource: &resource,
             main: &main,
+            offsets: &offsets,
         };
         assert_eq!(
             ctx.image_index_value(308),

@@ -118,6 +118,91 @@ fn test_timer_only_main_state_returns_expected_values() {
     assert!(!state.is_debug());
 }
 
+/// Verify that get_offset_value() delegates through TimerOnlyMainState to the underlying
+/// SkinRenderContext. Before the fix, TimerOnlyMainState did not override get_offset_value(),
+/// so all offset queries returned None even when the underlying context had offset data.
+#[test]
+fn test_offset_value_delegates_through_timer_only_adapter() {
+    use rubato_types::skin_offset::SkinOffset;
+
+    // Create a SkinRenderContext that has offset data
+    struct OffsetContext {
+        offsets: std::collections::HashMap<i32, SkinOffset>,
+    }
+    impl rubato_types::timer_access::TimerAccess for OffsetContext {
+        fn now_time(&self) -> i64 {
+            0
+        }
+        fn now_micro_time(&self) -> i64 {
+            0
+        }
+        fn micro_timer(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+            0
+        }
+        fn timer(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+            0
+        }
+        fn now_time_for(&self, _: rubato_types::timer_id::TimerId) -> i64 {
+            0
+        }
+        fn is_timer_on(&self, _: rubato_types::timer_id::TimerId) -> bool {
+            false
+        }
+    }
+    impl rubato_types::skin_render_context::SkinRenderContext for OffsetContext {
+        fn get_offset_value(&self, id: i32) -> Option<&SkinOffset> {
+            self.offsets.get(&id)
+        }
+    }
+    impl MainState for OffsetContext {}
+
+    let mut ctx = OffsetContext {
+        offsets: std::collections::HashMap::from([
+            (
+                5,
+                SkinOffset {
+                    x: 10.0,
+                    y: 20.0,
+                    w: 0.0,
+                    h: 0.0,
+                    r: 0.0,
+                    a: 0.0,
+                },
+            ),
+            (
+                10,
+                SkinOffset {
+                    x: -5.0,
+                    y: 0.0,
+                    w: 3.0,
+                    h: 4.0,
+                    r: 0.0,
+                    a: 1.0,
+                },
+            ),
+        ]),
+    };
+
+    // Wrap in TimerOnlyMainState (the bridge used by SkinDrawable)
+    let registry = std::collections::HashMap::new();
+    let adapter = TimerOnlyMainState::from_render_context_with_images(&mut ctx, &registry);
+    let state: &dyn MainState = &adapter;
+
+    // Offsets should delegate through to the underlying context
+    let off5 = state.get_offset_value(5);
+    assert!(off5.is_some(), "offset ID 5 should be present");
+    assert_eq!(off5.unwrap().x, 10.0);
+    assert_eq!(off5.unwrap().y, 20.0);
+
+    let off10 = state.get_offset_value(10);
+    assert!(off10.is_some(), "offset ID 10 should be present");
+    assert_eq!(off10.unwrap().x, -5.0);
+    assert_eq!(off10.unwrap().a, 1.0);
+
+    // Non-existent offset should return None
+    assert!(state.get_offset_value(99).is_none());
+}
+
 /// Verify that TimerManager timer values flow through SkinDrawable to the skin adapter.
 /// Before the fix, all per-timer-id queries returned 0 (frozen animations).
 #[test]

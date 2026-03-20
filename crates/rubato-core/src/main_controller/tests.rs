@@ -679,6 +679,116 @@ fn test_render_without_skin_does_not_panic() {
     assert!(mc.current_state().is_some());
 }
 
+/// Verify that SkinDrawable.skin_offsets() returns the expected data and that
+/// MainStateData.offsets can be populated from it. This tests the data path
+/// used by transition_to_state() without calling the private method directly.
+#[test]
+fn test_skin_offsets_populated_from_skin_drawable() {
+    use rubato_types::skin_offset::SkinOffset;
+    use std::collections::HashMap;
+
+    /// A mock skin that returns predefined offset data.
+    struct OffsetSkinDrawable {
+        offsets: HashMap<i32, SkinOffset>,
+    }
+    impl SkinDrawable for OffsetSkinDrawable {
+        fn draw_all_objects_timed(
+            &mut self,
+            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        ) {
+        }
+        fn update_custom_objects_timed(
+            &mut self,
+            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        ) {
+        }
+        fn mouse_pressed_at(
+            &mut self,
+            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+            _button: i32,
+            _x: i32,
+            _y: i32,
+        ) {
+        }
+        fn mouse_dragged_at(
+            &mut self,
+            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+            _button: i32,
+            _x: i32,
+            _y: i32,
+        ) {
+        }
+        fn prepare_skin(&mut self) {}
+        fn dispose_skin(&mut self) {}
+        fn skin_offsets(&self) -> HashMap<i32, SkinOffset> {
+            self.offsets.clone()
+        }
+        fn fadeout(&self) -> i32 {
+            0
+        }
+        fn input(&self) -> i32 {
+            0
+        }
+        fn scene(&self) -> i32 {
+            0
+        }
+        fn get_width(&self) -> f32 {
+            1280.0
+        }
+        fn get_height(&self) -> f32 {
+            720.0
+        }
+        fn swap_sprite_batch(&mut self, _batch: &mut SpriteBatch) {}
+    }
+
+    let expected_offsets = HashMap::from([
+        (
+            5,
+            SkinOffset {
+                x: 10.0,
+                y: -20.0,
+                w: 0.0,
+                h: 0.0,
+                r: 0.0,
+                a: 0.0,
+            },
+        ),
+        (
+            42,
+            SkinOffset {
+                x: 0.0,
+                y: 0.0,
+                w: 5.0,
+                h: 3.0,
+                r: 90.0,
+                a: 0.5,
+            },
+        ),
+    ]);
+    let skin: Box<dyn SkinDrawable> = Box::new(OffsetSkinDrawable {
+        offsets: expected_offsets.clone(),
+    });
+
+    // Simulate what transition_to_state does: copy skin offsets into MainStateData
+    let mut msd = MainStateData::new(TimerManager::new());
+    msd.offsets = skin.skin_offsets();
+    msd.skin = Some(skin);
+
+    assert_eq!(msd.offsets.len(), 2, "should have 2 offsets from skin");
+
+    let off5 = msd.offsets.get(&5).expect("offset 5 should exist");
+    assert_eq!(off5.x, 10.0);
+    assert_eq!(off5.y, -20.0);
+
+    let off42 = msd.offsets.get(&42).expect("offset 42 should exist");
+    assert_eq!(off42.w, 5.0);
+    assert_eq!(off42.r, 90.0);
+    assert_eq!(off42.a, 0.5);
+
+    // Non-existent offset should not be present
+    assert!(msd.offsets.get(&999).is_none());
+}
+
 #[test]
 fn test_render_skin_called_once_per_frame() {
     use std::sync::{Arc, Mutex};

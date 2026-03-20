@@ -17,6 +17,7 @@ struct DecideRenderContext<'a> {
     resource: &'a dyn PlayerResourceAccess,
     main: &'a MainControllerRef,
     score_data_property: &'a rubato_types::score_data_property::ScoreDataProperty,
+    offsets: &'a std::collections::HashMap<i32, rubato_types::skin_offset::SkinOffset>,
 }
 
 impl rubato_types::timer_access::TimerAccess for DecideRenderContext<'_> {
@@ -196,6 +197,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
             _ => 0,
         }
     }
+
+    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.offsets.get(&id)
+    }
 }
 
 impl rubato_skin::reexports::MainState for DecideRenderContext<'_> {}
@@ -205,6 +210,7 @@ struct DecideMouseContext<'a> {
     main: &'a mut MainControllerRef,
     resource: &'a mut dyn PlayerResourceAccess,
     score_data_property: &'a rubato_types::score_data_property::ScoreDataProperty,
+    offsets: &'a std::collections::HashMap<i32, rubato_types::skin_offset::SkinOffset>,
     /// Events collected during mouse handling for deferred dispatch.
     /// Skin click events that route through `DelegateEvent` call `execute_event()`,
     /// but most decide-screen interactions use direct trait methods (`change_state`,
@@ -426,6 +432,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
             self.main.update_audio_config(audio);
         }
     }
+
+    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.offsets.get(&id)
+    }
 }
 
 /// MusicDecide - music decide screen state
@@ -506,6 +516,7 @@ impl MainState for MusicDecide {
                 resource: &*self.resource,
                 main: &self.main,
                 score_data_property: &self.cached_score_data_property,
+                offsets: &self.data.offsets,
             };
             skin.update_custom_objects_timed(&mut ctx);
             skin.swap_sprite_batch(sprite);
@@ -531,6 +542,7 @@ impl MainState for MusicDecide {
                 main: &mut self.main,
                 resource: &mut *self.resource,
                 score_data_property: &self.cached_score_data_property,
+                offsets: &self.data.offsets,
                 pending_events: Vec::new(),
             };
             skin.mouse_pressed_at(&mut ctx, button, x, y);
@@ -544,6 +556,7 @@ impl MainState for MusicDecide {
                 resource: &*self.resource,
                 main: &self.main,
                 score_data_property: &self.cached_score_data_property,
+                offsets: &self.data.offsets,
             };
             for (id, arg1, arg2) in pending_events {
                 skin.execute_custom_event(&mut ctx, id, arg1, arg2);
@@ -568,6 +581,7 @@ impl MainState for MusicDecide {
                 main: &mut self.main,
                 resource: &mut *self.resource,
                 score_data_property: &self.cached_score_data_property,
+                offsets: &self.data.offsets,
                 pending_events: Vec::new(),
             };
             skin.mouse_dragged_at(&mut ctx, button, x, y);
@@ -581,6 +595,7 @@ impl MainState for MusicDecide {
                 resource: &*self.resource,
                 main: &self.main,
                 score_data_property: &self.cached_score_data_property,
+                offsets: &self.data.offsets,
             };
             for (id, arg1, arg2) in pending_events {
                 skin.execute_custom_event(&mut ctx, id, arg1, arg2);
@@ -670,6 +685,7 @@ impl MainState for MusicDecide {
                 resource: &*self.resource,
                 main: &self.main,
                 score_data_property: &self.cached_score_data_property,
+                offsets: &self.data.offsets,
             };
             skin_path.as_deref().and_then(|path| {
                 rubato_skin::skin_loader::load_skin_from_path_with_state(&mut ctx, skin_type, path)
@@ -703,6 +719,10 @@ mod tests {
     use rubato_core::sprite_batch_helper::SpriteBatch;
     use rubato_types::main_controller_access::MainControllerAccess;
     use std::sync::{Arc, Mutex};
+
+    static EMPTY_OFFSETS: std::sync::LazyLock<
+        std::collections::HashMap<i32, rubato_types::skin_offset::SkinOffset>,
+    > = std::sync::LazyLock::new(std::collections::HashMap::new);
 
     /// Mock SkinDrawable for testing render logic with configurable timing values.
     struct MockSkin {
@@ -1281,6 +1301,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(ctx.integer_value(312), 150_000, "ID 312: raw ms");
@@ -1299,6 +1320,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(ctx.integer_value(1163), 0);
@@ -1316,6 +1338,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert!(ctx.song_data_ref().is_some());
@@ -1333,6 +1356,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert!(ctx.song_data_ref().is_none());
@@ -1350,6 +1374,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert!(ctx.current_play_config_ref().is_some());
@@ -1367,6 +1392,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert!(ctx.current_play_config_ref().is_none());
@@ -1383,6 +1409,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert!(ctx.current_play_config_ref().is_none());
@@ -1400,6 +1427,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         // ID 89 (favorite_song) should now return 1 instead of -1
@@ -1424,6 +1452,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         // ID 92 should return mainbpm from SongInformation
@@ -1446,6 +1475,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(ctx.integer_value(92), i32::MIN);
@@ -1463,6 +1493,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(ctx.integer_value(92), i32::MIN);
@@ -1481,6 +1512,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(ctx.integer_value(90), i32::MIN);
@@ -1499,6 +1531,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(ctx.integer_value(91), i32::MIN);
@@ -1516,6 +1549,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(ctx.integer_value(90), 200);
@@ -1533,6 +1567,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(ctx.integer_value(91), 120);
@@ -1551,6 +1586,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(
@@ -1581,6 +1617,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(
@@ -1602,6 +1639,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(
@@ -1623,6 +1661,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(
@@ -1644,6 +1683,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         // default_image_index_value uses player_config.play_settings.lnmode (default 0)
@@ -1668,6 +1708,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         let default_lnmode = ctx.player_config_ref().unwrap().play_settings.lnmode;
@@ -1689,6 +1730,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         // No songdata -> falls through to config-based default
@@ -1725,6 +1767,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(
@@ -1746,6 +1789,7 @@ mod tests {
             resource: &resource,
             main: &main,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
         };
         use rubato_types::skin_render_context::SkinRenderContext;
         assert_eq!(
@@ -1774,6 +1818,7 @@ mod tests {
             main: &mut main,
             resource: &mut resource,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
             pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
@@ -1798,6 +1843,7 @@ mod tests {
             main: &mut main,
             resource: &mut resource,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
             pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
@@ -1822,6 +1868,7 @@ mod tests {
             main: &mut main,
             resource: &mut resource,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
             pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
@@ -1845,6 +1892,7 @@ mod tests {
             main: &mut main,
             resource: &mut resource,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
             pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
@@ -1876,6 +1924,7 @@ mod tests {
             main: &mut main,
             resource: &mut resource,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
             pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
@@ -1899,6 +1948,7 @@ mod tests {
             main: &mut main,
             resource: &mut resource,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
             pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
@@ -1935,6 +1985,7 @@ mod tests {
                 main: &mut main,
                 resource: &mut resource,
                 score_data_property: &sdp,
+                offsets: &EMPTY_OFFSETS,
                 pending_events: Vec::new(),
             };
             use rubato_types::skin_render_context::SkinRenderContext;
@@ -1975,6 +2026,7 @@ mod tests {
                 main: &mut main,
                 resource: &mut resource,
                 score_data_property: &sdp,
+                offsets: &EMPTY_OFFSETS,
                 pending_events: Vec::new(),
             };
             use rubato_types::skin_render_context::SkinRenderContext;
@@ -2015,6 +2067,7 @@ mod tests {
                 main: &mut main,
                 resource: &mut resource,
                 score_data_property: &sdp,
+                offsets: &EMPTY_OFFSETS,
                 pending_events: Vec::new(),
             };
             use rubato_types::skin_render_context::SkinRenderContext;
@@ -2055,6 +2108,7 @@ mod tests {
                 main: &mut main,
                 resource: &mut resource,
                 score_data_property: &sdp,
+                offsets: &EMPTY_OFFSETS,
                 pending_events: Vec::new(),
             };
             use rubato_types::skin_render_context::SkinRenderContext;
@@ -2091,6 +2145,7 @@ mod tests {
                 main: &mut main,
                 resource: &mut resource,
                 score_data_property: &sdp,
+                offsets: &EMPTY_OFFSETS,
                 pending_events: Vec::new(),
             };
             use rubato_types::skin_render_context::SkinRenderContext;
@@ -2127,6 +2182,7 @@ mod tests {
                 main: &mut main,
                 resource: &mut resource,
                 score_data_property: &sdp,
+                offsets: &EMPTY_OFFSETS,
                 pending_events: Vec::new(),
             };
             use rubato_types::skin_render_context::SkinRenderContext;
@@ -2157,6 +2213,7 @@ mod tests {
             main: &mut main,
             resource: &mut resource,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
             pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;
@@ -2176,6 +2233,7 @@ mod tests {
             main: &mut main,
             resource: &mut resource,
             score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
             pending_events: Vec::new(),
         };
         use rubato_types::skin_render_context::SkinRenderContext;

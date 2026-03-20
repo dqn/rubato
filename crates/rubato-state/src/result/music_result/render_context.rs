@@ -12,6 +12,7 @@ pub(super) struct ResultRenderContext<'a> {
     pub(super) data: &'a AbstractResultData,
     pub(super) resource: &'a PlayerResource,
     pub(super) main: &'a MainController,
+    pub(super) offsets: &'a std::collections::HashMap<i32, rubato_types::skin_offset::SkinOffset>,
 }
 
 impl rubato_types::timer_access::TimerAccess for ResultRenderContext<'_> {
@@ -229,6 +230,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
 
     fn gauge_element_borders(&self) -> Vec<(f32, f32)> {
         shared_render_context::gauge_element_borders(self.resource)
+    }
+
+    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.offsets.get(&id)
     }
 }
 
@@ -516,5 +521,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
             &rubato_core::system_sound_manager::SoundType::OptionChange,
             false,
         );
+    }
+
+    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.result.main_data.offsets.get(&id)
     }
 }
