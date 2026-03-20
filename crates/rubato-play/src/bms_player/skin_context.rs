@@ -580,7 +580,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
                 (hidden * 1000.0) as i32
             }
             // Total notes
-            350 => self.player.total_notes,
+            350 => self.player.total_notes(),
             // Playtime (hours/minutes/seconds from boot)
             17 => (self.timer.now_time() / 3_600_000) as i32,
             18 => ((self.timer.now_time() % 3_600_000) / 60_000) as i32,

@@ -178,7 +178,7 @@ impl BMSPlayer {
                     .playconfig,
                 target_score: self.score.target_score.as_ref(),
                 playtime: self.playtime,
-                total_notes: self.total_notes,
+                total_notes: self.total_notes(),
                 play_mode: self.play_mode,
                 state: self.state,
                 media_load_finished: self.media_load_finished,

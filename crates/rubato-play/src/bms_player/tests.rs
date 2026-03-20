@@ -396,6 +396,15 @@ fn state_ready_transitions_to_play() {
 fn state_play_transitions_to_finished_when_playtime_exceeded() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
+    player.gauge = Some(
+        crate::groove_gauge::create_groove_gauge(
+            &player.model,
+            rubato_types::groove_gauge::NORMAL,
+            0,
+            None,
+        )
+        .unwrap(),
+    );
     player.state = PlayState::Play;
     player.playtime = 0; // Instant finish
 
@@ -786,6 +795,22 @@ fn is_note_end_false_initially() {
 }
 
 #[test]
+fn total_notes_updates_after_practice_mode_model_reload() {
+    // Start with a model that has 3 notes
+    let model = make_model_with_notes_at_times(&[1_000_000, 2_000_000, 3_000_000]);
+    let mut player = BMSPlayer::new(model);
+    assert_eq!(player.total_notes(), 3);
+    assert!(!player.is_note_end()); // past_notes=0 != total_notes=3
+
+    // Simulate practice mode reload with a trimmed model (1 note)
+    let trimmed_model = make_model_with_notes_at_times(&[1_000_000]);
+    <BMSPlayer as MainState>::receive_reloaded_model(&mut player, trimmed_model);
+
+    // total_notes must reflect the new model, not the original
+    assert_eq!(player.total_notes(), 1);
+}
+
+#[test]
 fn get_now_quarter_note_time_zero_without_rhythm() {
     let model = make_model();
     let player = BMSPlayer::new(model);
@@ -798,6 +823,15 @@ fn get_now_quarter_note_time_zero_without_rhythm() {
 fn lifecycle_preload_ready_play_finished() {
     let model = make_model();
     let mut player = BMSPlayer::new(model);
+    player.gauge = Some(
+        crate::groove_gauge::create_groove_gauge(
+            &player.model,
+            rubato_types::groove_gauge::NORMAL,
+            0,
+            None,
+        )
+        .unwrap(),
+    );
     player.media_load_finished = true;
 
     // Start at PRELOAD
@@ -2158,16 +2192,14 @@ fn stop_play_failed_state_sets_pending_pitch_to_one() {
 
 #[test]
 fn stop_play_failed_path_sets_pending_pitch_to_one() {
-    let mut model = BMSModel::new();
-    model.set_mode(Mode::BEAT_7K);
-    model.judgerank = 100;
+    // Model with notes so total_notes > past_notes (triggers failed branch, not aborted)
+    let model = make_model_with_notes_at_times(&[1_000_000, 2_000_000]);
     let mut player = BMSPlayer::new(model);
     player.state = PlayState::Play;
 
     // Simulate some notes judged (not finished but notes exist)
     // Force the judge counts so we enter the failed branch
     player.judge.score_data_mut().judge_counts.epg = 5; // 5 early PGreats
-    player.total_notes = 100; // not all past
     player.stop_play();
     assert_eq!(player.state, PlayState::Failed);
     assert_eq!(player.take_pending_global_pitch(), Some(1.0));
@@ -2672,9 +2704,9 @@ fn sync_input_back_to_clears_consumed_start_and_select() {
 
 #[test]
 fn analog_cover_change_uses_live_input_and_flushes_reset_back() {
-    let model = make_model();
+    // Use a model with 1 note so is_note_end() returns false (past_notes=0 != total_notes=1)
+    let model = make_model_with_notes_at_times(&[1_000_000]);
     let mut player = BMSPlayer::new(model);
-    player.total_notes = 1;
     player.input.control = Some(ControlInputProcessor::new(Mode::BEAT_7K));
     player.lanerender = Some(LaneRenderer::new(&player.model));
     player
@@ -3710,7 +3742,7 @@ fn mouse_context_delegates_integer_value_total_notes() {
     <BMSPlayer as MainState>::handle_skin_mouse_pressed(&mut player, 0, 10, 10);
 
     // total_notes is computed from model (0 notes in empty model)
-    assert_eq!(observed.load(Ordering::SeqCst), player.total_notes);
+    assert_eq!(observed.load(Ordering::SeqCst), player.total_notes());
 }
 
 #[test]

@@ -9,7 +9,6 @@ impl BMSPlayer {
     /// Java: BGAProcessor(256, Math.max(config.getSongResourceGen(), 1))
     pub fn new_with_resource_gen(model: BMSModel, song_resource_gen: i32) -> Self {
         let playtime = model.last_note_time() + TIME_MARGIN;
-        let total_notes = model.total_notes();
         BMSPlayer {
             model,
             lanerender: None,
@@ -36,7 +35,6 @@ impl BMSPlayer {
             gaugelog: Vec::new(),
             play_skin: PlaySkin::new(),
             main_state_data: MainStateData::new(TimerManager::new()),
-            total_notes,
             margin_time: 0,
             pending: PendingActions::new(),
             fast_forward_freq_option: FrequencyType::UNPROCESSED,

@@ -365,8 +365,6 @@ pub struct BMSPlayer {
     play_skin: PlaySkin,
     /// MainState shared data
     main_state_data: MainStateData,
-    /// Total notes in song (from songdata)
-    total_notes: i32,
     /// Margin time in milliseconds (from resource)
     margin_time: i64,
     /// Pending side-effect requests produced during render/state transitions.

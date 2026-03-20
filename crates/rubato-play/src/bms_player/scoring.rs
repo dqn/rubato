@@ -98,7 +98,7 @@ impl BMSPlayer {
             return;
         }
         if self.state != PlayState::Finished
-            && (self.judge.past_notes() == self.total_notes
+            && (self.judge.past_notes() == self.total_notes()
                 || self.play_mode.mode == rubato_core::bms_player_mode::Mode::Autoplay)
         {
             self.state = PlayState::Finished;
@@ -194,7 +194,7 @@ impl BMSPlayer {
             + score.judge_counts.lpr
             + score.judge_counts.ems
             + score.judge_counts.lms
-            + self.total_notes
+            + self.total_notes()
             - self.judge.past_notes();
         score.minbp = score.minbp.max(0);
 
@@ -327,7 +327,7 @@ impl BMSPlayer {
         }
 
         // Full combo check
-        let is_fullcombo = self.judge.past_notes() == self.total_notes
+        let is_fullcombo = self.judge.past_notes() == self.total_notes()
             && self.judge.past_notes() == self.judge.combo();
         self.main_state_data
             .timer
@@ -361,8 +361,15 @@ impl BMSPlayer {
         self.play_skin.pomyu.pm_chara_judge = judge + 1;
     }
 
+    /// Total notes in the current model. Always reflects the live model,
+    /// which matters in practice mode where `receive_reloaded_model()` replaces
+    /// the model with a trimmed practice-range copy.
+    pub fn total_notes(&self) -> i32 {
+        self.model.total_notes()
+    }
+
     pub fn is_note_end(&self) -> bool {
-        self.judge.past_notes() == self.total_notes
+        self.judge.past_notes() == self.total_notes()
     }
 
     pub fn past_notes(&self) -> i32 {
