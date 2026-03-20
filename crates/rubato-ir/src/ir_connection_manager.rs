@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use log::{error, warn};
+use log::warn;
 
 use crate::ir_connection::IRConnection;
 use rubato_types::sync_utils::lock_or_recover;
@@ -72,15 +72,9 @@ impl IRConnectionManager {
 /// Duplicate names are allowed (first match wins in lookups).
 /// No warning is logged for duplicates; current callers never register the same name twice.
 pub fn register_ir_connections(entries: Vec<IRConnectionEntry>) {
-    match IR_CONNECTIONS.lock() {
-        Ok(mut connections) => {
-            for entry in &entries {
-                log::info!("Registering IR connection: {}", entry.name);
-            }
-            connections.extend(entries);
-        }
-        Err(e) => {
-            error!("Failed to register IR connections (lock poisoned): {}", e);
-        }
+    let mut connections = lock_or_recover(&IR_CONNECTIONS);
+    for entry in &entries {
+        log::info!("Registering IR connection: {}", entry.name);
     }
+    connections.extend(entries);
 }
