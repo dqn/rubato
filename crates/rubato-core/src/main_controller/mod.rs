@@ -79,22 +79,8 @@ pub trait StateReferencesCallback: Send {
     fn update_references(&self, config: &Config, player: &PlayerConfig);
 }
 
-/// SkinOffset - offset values for skin objects
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SkinOffset {
-    pub x: f32,
-    pub y: f32,
-    pub w: f32,
-    pub h: f32,
-    pub r: f32,
-    pub a: f32,
-}
-
-impl SkinOffset {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
+/// Re-export SkinOffset from rubato-types (single source of truth for the runtime type).
+pub use rubato_types::skin_offset::SkinOffset;
 
 /// SkinProperty constants
 pub const OFFSET_MAX: usize = 255;

@@ -2281,3 +2281,68 @@ fn input_gate_override_is_consumed_after_render() {
         "override should be consumed (taken) after one render call"
     );
 }
+
+// ============================================================
+// Offset unification and MainControllerAccess delegation
+// ============================================================
+
+#[test]
+fn offset_value_returns_skin_offset_from_controller() {
+    let dir = tempfile::tempdir().unwrap();
+    let _cwd = CurrentDirGuard::set(dir.path());
+
+    let mc = MainController::new(
+        None,
+        Config::default(),
+        PlayerConfig::default(),
+        None,
+        false,
+    );
+
+    // Default offset at index 0 should be all zeros
+    let offset = mc.offset(0);
+    assert!(offset.is_some(), "offset(0) should return Some");
+    let o = offset.unwrap();
+    assert_eq!(o.x, 0.0);
+    assert_eq!(o.y, 0.0);
+
+    // MainControllerAccess trait should delegate to the same data
+    let access: &dyn MainControllerAccess = &mc;
+    let trait_offset = access.offset_value(0);
+    assert!(
+        trait_offset.is_some(),
+        "offset_value(0) via trait should return Some"
+    );
+
+    // Out-of-range should return None
+    assert!(access.offset_value(-1).is_none());
+    assert!(access.offset_value(999).is_none());
+}
+
+#[test]
+fn offset_mut_updates_are_visible_through_offset_value() {
+    let dir = tempfile::tempdir().unwrap();
+    let _cwd = CurrentDirGuard::set(dir.path());
+
+    let mut mc = MainController::new(
+        None,
+        Config::default(),
+        PlayerConfig::default(),
+        None,
+        false,
+    );
+
+    // Write a value via offset_mut
+    if let Some(o) = mc.offset_mut(5) {
+        o.x = 42.0;
+        o.y = -7.5;
+    }
+
+    // Read it back via offset_value (trait method)
+    let access: &dyn MainControllerAccess = &mc;
+    let o = access
+        .offset_value(5)
+        .expect("offset_value(5) should be Some");
+    assert_eq!(o.x, 42.0);
+    assert_eq!(o.y, -7.5);
+}

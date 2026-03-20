@@ -444,6 +444,10 @@ pub struct BMSPlayer {
     /// Set by the caller before create() via `set_song_data()`.
     /// Java: SongDataBooleanProperty accesses state.resource.getSongdata().
     song_data: Option<rubato_types::song_data::SongData>,
+    /// Skin offset snapshot from MainController.
+    /// Populated by the caller via `set_offset_snapshot()` before create().
+    /// Java: MainState inherits MainController which holds offset[].
+    offset_snapshot: Vec<rubato_types::skin_offset::SkinOffset>,
 }
 
 mod accessors;

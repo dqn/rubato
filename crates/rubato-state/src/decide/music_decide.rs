@@ -196,6 +196,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
             _ => 0,
         }
     }
+
+    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.main.offset_value(id)
+    }
 }
 
 impl rubato_skin::reexports::MainState for DecideRenderContext<'_> {}
@@ -425,6 +429,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
         if let Some(audio) = self.main.config().audio.clone() {
             self.main.update_audio_config(audio);
         }
+    }
+
+    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.main.offset_value(id)
     }
 }
 

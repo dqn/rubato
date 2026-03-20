@@ -148,6 +148,10 @@ impl MainController {
         self.inner.update_audio_config(audio);
     }
 
+    pub fn offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.inner.offset_value(id)
+    }
+
     // ---- Locally-stored components (types not on MainControllerAccess trait) ----
 
     pub fn input_processor(&mut self) -> &mut BMSPlayerInputProcessor {

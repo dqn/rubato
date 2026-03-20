@@ -385,6 +385,25 @@ impl rubato_core::main_state::SkinDrawable for Skin {
         self.image_registry = registry;
     }
 
+    fn offset_entries(&self) -> Vec<(i32, rubato_types::skin_offset::SkinOffset)> {
+        self.offset
+            .iter()
+            .map(|(&id, cfg)| {
+                (
+                    id,
+                    rubato_types::skin_offset::SkinOffset {
+                        x: cfg.x,
+                        y: cfg.y,
+                        w: cfg.w,
+                        h: cfg.h,
+                        r: cfg.r,
+                        a: cfg.a,
+                    },
+                )
+            })
+            .collect()
+    }
+
     fn compute_note_draw_commands(
         &mut self,
         lane_renderer: &mut dyn std::any::Any,

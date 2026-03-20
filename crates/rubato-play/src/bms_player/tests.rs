@@ -4013,6 +4013,7 @@ fn make_play_render_context_with_bpm_volume<'a>(
             DEFAULT_META.get_or_init(rubato_types::song_data::SongMetadata::default)
         },
         song_data: None,
+        offsets: &[],
     }
 }
 

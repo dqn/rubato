@@ -392,6 +392,13 @@ pub trait SkinDrawable: Send {
     /// Used to let the skin draw into MainController's SpriteBatch.
     fn swap_sprite_batch(&mut self, batch: &mut SpriteBatch);
 
+    /// Returns the skin's offset config entries as (id, SkinOffset) pairs.
+    /// Used by MainController to copy skin config offsets into the runtime offset array
+    /// after skin loading (Java: MainState.setSkin() copies skin.getOffset() into main.offset[]).
+    fn offset_entries(&self) -> Vec<(i32, rubato_types::skin_offset::SkinOffset)> {
+        Vec::new()
+    }
+
     /// Execute a custom skin event by ID.
     /// Custom events (1000-1999) are defined by the skin and stored in a HashMap.
     /// This method is called to replay events that were queued during mouse handling,

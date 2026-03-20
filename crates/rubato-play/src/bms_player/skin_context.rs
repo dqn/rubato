@@ -48,6 +48,8 @@ pub(super) struct PlayRenderContext<'a> {
     pub(super) song_metadata: &'a rubato_types::song_data::SongMetadata,
     /// Song data for boolean property queries (chart mode, LN, BGA, difficulty, etc.).
     pub(super) song_data: Option<&'a rubato_types::song_data::SongData>,
+    /// Skin offset snapshot for position offset queries.
+    pub(super) offsets: &'a [rubato_types::skin_offset::SkinOffset],
 }
 
 impl rubato_types::timer_access::TimerAccess for PlayRenderContext<'_> {
@@ -323,6 +325,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
                 }
             }
             _ => String::new(),
+        }
+    }
+
+    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        if id >= 0 && (id as usize) < self.offsets.len() {
+            Some(&self.offsets[id as usize])
+        } else {
+            None
         }
     }
 }
@@ -706,6 +716,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
             _ => String::new(),
         }
     }
+
+    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        if id >= 0 && (id as usize) < self.player.offset_snapshot.len() {
+            Some(&self.player.offset_snapshot[id as usize])
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]
@@ -755,6 +773,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            offsets: &[],
         }
     }
 
@@ -849,6 +868,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            offsets: &[],
         }
     }
 
@@ -948,6 +968,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            offsets: &[],
         }
     }
 
@@ -1024,6 +1045,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            offsets: &[],
         };
         // config_ref should return Some
         assert!(ctx.config_ref().is_some());
@@ -1077,6 +1099,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            offsets: &[],
         };
         let prop = ctx.score_data_property();
         assert!((prop.now_rate() - 0.85).abs() < f32::EPSILON);
@@ -1194,6 +1217,7 @@ mod tests {
             score_data_property,
             song_metadata,
             song_data: None,
+            offsets: &[],
         }
     }
 

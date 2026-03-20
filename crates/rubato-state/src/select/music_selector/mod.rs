@@ -611,6 +611,13 @@ impl rubato_types::skin_render_context::SkinRenderContext for SelectSkinContext<
     fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
         &self.selector.cached_score_data_property
     }
+
+    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.selector
+            .main
+            .as_ref()
+            .and_then(|main| main.offset_value(id))
+    }
 }
 
 impl rubato_skin::reexports::MainState for SelectSkinContext<'_> {}

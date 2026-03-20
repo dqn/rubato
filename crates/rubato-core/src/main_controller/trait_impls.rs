@@ -238,4 +238,8 @@ impl MainControllerAccess for MainController {
             )),
         );
     }
+
+    fn offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.offset(id)
+    }
 }

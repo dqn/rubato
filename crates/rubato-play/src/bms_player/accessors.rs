@@ -62,6 +62,7 @@ impl BMSPlayer {
             config: rubato_types::config::Config::default(),
             song_metadata: rubato_types::song_data::SongMetadata::default(),
             song_data: None,
+            offset_snapshot: Vec::new(),
         }
     }
 
@@ -258,6 +259,24 @@ impl BMSPlayer {
     /// Java: SongDataBooleanProperty accesses state.resource.getSongdata().
     pub fn set_song_data(&mut self, song_data: rubato_types::song_data::SongData) {
         self.song_data = Some(song_data);
+    }
+
+    /// Set the skin offset snapshot from MainController.
+    /// Should be called during state creation when offset data is available.
+    /// Java: MainState inherits MainController which holds offset[].
+    pub fn set_offset_snapshot(&mut self, offsets: Vec<rubato_types::skin_offset::SkinOffset>) {
+        self.offset_snapshot = offsets;
+    }
+
+    /// Get a reference to the offset snapshot for read access.
+    pub fn offset_snapshot(&self) -> &[rubato_types::skin_offset::SkinOffset] {
+        &self.offset_snapshot
+    }
+
+    /// Get a mutable reference to the offset snapshot.
+    /// Used by render_skin to write back lanecover/lift offsets.
+    pub fn offset_snapshot_mut(&mut self) -> &mut Vec<rubato_types::skin_offset::SkinOffset> {
+        &mut self.offset_snapshot
     }
 
     /// Set play speed and optionally request global pitch change.

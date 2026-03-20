@@ -290,6 +290,18 @@ impl StateFactory for LauncherStateFactory {
                 // Wire guide SE from player config
                 player.set_guide_se(controller.player_config().display_settings.is_guide_se);
 
+                // Wire skin offset snapshot from MainController.
+                // Java: MainState inherits MainController.offset[] which skin objects
+                // read via getOffset(id) during prepare().
+                {
+                    let offset_count = rubato_core::main_controller::OFFSET_COUNT;
+                    let mut offsets = Vec::with_capacity(offset_count);
+                    for i in 0..offset_count {
+                        offsets.push(controller.offset(i as i32).copied().unwrap_or_default());
+                    }
+                    player.set_offset_snapshot(offsets);
+                }
+
                 // Wire audio config
                 if let Some(audio_config) = controller.config().audio_config() {
                     player.set_fast_forward_freq_option(audio_config.fast_forward);

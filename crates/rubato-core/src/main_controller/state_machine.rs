@@ -261,6 +261,17 @@ impl MainController {
             audio.set_model(model);
         }
 
+        // Copy skin config offsets into MainController's runtime offset array.
+        // Java: MainState.setSkin() copies skin.getOffset() entries into main.offset[].
+        // This must happen BEFORE skin.prepare() because skin objects read offsets during prepare.
+        if let Some(ref skin) = new_state.main_state_data().skin {
+            for (id, offset) in skin.offset_entries() {
+                if let Some(rt) = self.offset_mut(id) {
+                    *rt = offset;
+                }
+            }
+        }
+
         // In Java: if(newState.getSkin() != null) { newState.getSkin().prepare(newState); }
         if let Some(ref mut skin) = new_state.main_state_data_mut().skin {
             skin.prepare_skin();
