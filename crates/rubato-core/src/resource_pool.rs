@@ -64,10 +64,13 @@ where
     /// The lock is released before calling `load_fn` so that blocking I/O
     /// (e.g. disk reads) does not hold other threads. A double-check after
     /// re-acquiring the lock handles the race where another thread loaded the
-    /// same key concurrently.
-    pub fn get<F>(&self, key: &K, load_fn: F) -> Option<()>
+    /// same key concurrently. When another thread wins the race, the losing
+    /// thread's resource is passed to `race_dispose_fn` for cleanup (e.g.
+    /// GPU memory release).
+    pub fn get<F, D>(&self, key: &K, load_fn: F, race_dispose_fn: D) -> Option<()>
     where
         F: FnOnce(&K) -> Option<V>,
+        D: FnOnce(V),
     {
         // Fast path: cache hit under lock.
         {
@@ -85,8 +88,11 @@ where
         let mut map = lock_or_recover(&self.resource_map);
         if let Some(elem) = map.get_mut(key) {
             // Another thread loaded it while we were loading; reset generation
-            // and discard our copy.
+            // and discard our copy. Dispose the losing resource to prevent
+            // leaking resources that require explicit cleanup (e.g. GPU memory).
             elem.generation = 0;
+            drop(map);
+            race_dispose_fn(resource);
         } else {
             map.insert(key.clone(), ResourceCacheElement::new(resource));
         }
@@ -180,11 +186,19 @@ where
     /// The lock is released before calling `load_fn` so that blocking I/O
     /// does not hold other threads. A double-check after re-acquiring the
     /// lock handles the race where another thread loaded the same key
-    /// concurrently.
-    pub fn get_or_load<L, F2, R>(&self, key: &K, load_fn: L, f: F2) -> Option<R>
+    /// concurrently. When another thread wins the race, the losing thread's
+    /// resource is passed to `race_dispose_fn` for cleanup.
+    pub fn get_or_load<L, F2, D, R>(
+        &self,
+        key: &K,
+        load_fn: L,
+        f: F2,
+        race_dispose_fn: D,
+    ) -> Option<R>
     where
         L: FnOnce(&K) -> Option<V>,
         F2: FnOnce(&V) -> R,
+        D: FnOnce(V),
     {
         // Fast path: cache hit under lock.
         {
@@ -202,9 +216,13 @@ where
         let mut map = lock_or_recover(&self.resource_map);
         if let Some(elem) = map.get_mut(key) {
             // Another thread loaded it; use the already-cached value and
-            // discard our copy.
+            // dispose our copy to prevent leaking resources that require
+            // explicit cleanup (e.g. GPU memory).
             elem.generation = 0;
-            Some(f(&elem.resource))
+            let result = f(&elem.resource);
+            drop(map);
+            race_dispose_fn(resource);
+            Some(result)
         } else {
             let result = f(&resource);
             map.insert(key.clone(), ResourceCacheElement::new(resource));
@@ -224,7 +242,7 @@ mod tests {
         let pool: ResourcePool<String, i32> = ResourcePool::new(1);
         let key = "key1".to_string();
 
-        let result = pool.get(&key, |_| Some(42));
+        let result = pool.get(&key, |_| Some(42), |_| {});
         assert_eq!(result, Some(()));
         assert!(pool.exists(&key));
         assert_eq!(pool.size(), 1);
@@ -235,7 +253,7 @@ mod tests {
         let pool: ResourcePool<String, i32> = ResourcePool::new(1);
         let key = "key1".to_string();
 
-        let result = pool.get(&key, |_| None);
+        let result = pool.get(&key, |_| None, |_| {});
         assert_eq!(result, None);
         assert!(!pool.exists(&key));
         assert_eq!(pool.size(), 0);
@@ -247,14 +265,22 @@ mod tests {
         let key = "key1".to_string();
         let load_count = AtomicI32::new(0);
 
-        pool.get(&key, |_| {
-            load_count.fetch_add(1, Ordering::SeqCst);
-            Some(42)
-        });
-        pool.get(&key, |_| {
-            load_count.fetch_add(1, Ordering::SeqCst);
-            Some(99)
-        });
+        pool.get(
+            &key,
+            |_| {
+                load_count.fetch_add(1, Ordering::SeqCst);
+                Some(42)
+            },
+            |_| {},
+        );
+        pool.get(
+            &key,
+            |_| {
+                load_count.fetch_add(1, Ordering::SeqCst);
+                Some(99)
+            },
+            |_| {},
+        );
 
         assert_eq!(load_count.load(Ordering::SeqCst), 1);
         assert_eq!(pool.size(), 1);
@@ -265,7 +291,7 @@ mod tests {
         let pool: ResourcePool<String, i32> = ResourcePool::new(1);
         let key = "key1".to_string();
 
-        let result = pool.get_or_load(&key, |_| Some(42), |v| *v);
+        let result = pool.get_or_load(&key, |_| Some(42), |v| *v, |_| {});
         assert_eq!(result, Some(42));
         assert!(pool.exists(&key));
     }
@@ -283,6 +309,7 @@ mod tests {
                 Some(42)
             },
             |v| *v,
+            |_| {},
         );
         let result = pool.get_or_load(
             &key,
@@ -291,6 +318,7 @@ mod tests {
                 Some(99)
             },
             |v| *v,
+            |_| {},
         );
 
         assert_eq!(result, Some(42));
@@ -302,7 +330,7 @@ mod tests {
         let pool: ResourcePool<String, i32> = ResourcePool::new(1);
         let key = "key1".to_string();
 
-        let result: Option<i32> = pool.get_or_load(&key, |_| None, |v| *v);
+        let result: Option<i32> = pool.get_or_load(&key, |_| None, |v| *v, |_| {});
         assert_eq!(result, None);
         assert!(!pool.exists(&key));
     }
@@ -312,7 +340,7 @@ mod tests {
         let pool: ResourcePool<String, i32> = ResourcePool::new(1);
         let key = "key1".to_string();
 
-        pool.get(&key, |_| Some(42));
+        pool.get(&key, |_| Some(42), |_| {});
         assert_eq!(pool.size(), 1);
 
         // First dispose_old: generation 0 -> 1 (not evicted yet)
@@ -329,11 +357,11 @@ mod tests {
         let pool: ResourcePool<String, i32> = ResourcePool::new(1);
         let key = "key1".to_string();
 
-        pool.get(&key, |_| Some(42));
+        pool.get(&key, |_| Some(42), |_| {});
         pool.dispose_old(|_| {}); // gen 0 -> 1
 
         // Access resets generation to 0
-        pool.get(&key, |_| unreachable!());
+        pool.get(&key, |_| unreachable!(), |_| {});
         pool.dispose_old(|_| {}); // gen 0 -> 1 (not evicted)
         assert_eq!(pool.size(), 1);
     }
@@ -341,8 +369,8 @@ mod tests {
     #[test]
     fn test_dispose_all() {
         let pool: ResourcePool<String, i32> = ResourcePool::new(1);
-        pool.get(&"a".to_string(), |_| Some(1));
-        pool.get(&"b".to_string(), |_| Some(2));
+        pool.get(&"a".to_string(), |_| Some(1), |_| {});
+        pool.get(&"b".to_string(), |_| Some(2), |_| {});
         assert_eq!(pool.size(), 2);
 
         let mut disposed = Vec::new();
@@ -356,7 +384,7 @@ mod tests {
     fn test_with_resource() {
         let pool: ResourcePool<String, i32> = ResourcePool::new(1);
         let key = "key1".to_string();
-        pool.get(&key, |_| Some(42));
+        pool.get(&key, |_| Some(42), |_| {});
 
         let result = pool.with_resource(&key, |v| *v * 2);
         assert_eq!(result, Some(84));
@@ -372,8 +400,8 @@ mod tests {
     #[test]
     fn test_dispose_fn_panic_does_not_poison_lock() {
         let pool: ResourcePool<String, i32> = ResourcePool::new(1);
-        pool.get(&"a".to_string(), |_| Some(1));
-        pool.get(&"b".to_string(), |_| Some(2));
+        pool.get(&"a".to_string(), |_| Some(1), |_| {});
+        pool.get(&"b".to_string(), |_| Some(2), |_| {});
 
         // Panic inside dispose_fn. Because dispose_fn runs outside the lock,
         // the pool's Mutex should not be poisoned.
@@ -388,14 +416,14 @@ mod tests {
         assert!(!pool.resource_map.is_poisoned());
         // Some resources may have been drained before the panic, but the pool
         // should still be usable for new insertions.
-        pool.get(&"c".to_string(), |_| Some(3));
+        pool.get(&"c".to_string(), |_| Some(3), |_| {});
         assert!(pool.exists(&"c".to_string()));
     }
 
     #[test]
     fn test_dispose_old_fn_panic_does_not_poison_lock() {
         let pool: ResourcePool<String, i32> = ResourcePool::new(0);
-        pool.get(&"x".to_string(), |_| Some(10));
+        pool.get(&"x".to_string(), |_| Some(10), |_| {});
 
         // maxgen=0 means generation 0 == maxgen, so dispose_old evicts immediately.
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -407,14 +435,14 @@ mod tests {
 
         // The pool's lock must not be poisoned.
         assert!(!pool.resource_map.is_poisoned());
-        pool.get(&"y".to_string(), |_| Some(20));
+        pool.get(&"y".to_string(), |_| Some(20), |_| {});
         assert!(pool.exists(&"y".to_string()));
     }
 
     #[test]
     fn test_lock_or_recover_after_poison() {
         let pool: ResourcePool<String, i32> = ResourcePool::new(1);
-        pool.get(&"key".to_string(), |_| Some(42));
+        pool.get(&"key".to_string(), |_| Some(42), |_| {});
 
         // Manually poison the mutex.
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -435,7 +463,7 @@ mod tests {
         let pool = Arc::new(ResourcePool::<String, i32>::new(1));
 
         // Pre-populate with a key that the other thread will read.
-        pool.get(&"existing".to_string(), |_| Some(100));
+        pool.get(&"existing".to_string(), |_| Some(100), |_| {});
 
         let loading = Arc::new(AtomicBool::new(false));
         let accessed = Arc::new(AtomicBool::new(false));
@@ -446,14 +474,18 @@ mod tests {
 
         // Thread 1: slow load of a new key.
         let t1 = std::thread::spawn(move || {
-            pool2.get(&"slow_key".to_string(), |_| {
-                loading2.store(true, Ordering::SeqCst);
-                // Spin until thread 2 confirms it accessed the pool.
-                while !accessed2.load(Ordering::SeqCst) {
-                    std::thread::yield_now();
-                }
-                Some(42)
-            });
+            pool2.get(
+                &"slow_key".to_string(),
+                |_| {
+                    loading2.store(true, Ordering::SeqCst);
+                    // Spin until thread 2 confirms it accessed the pool.
+                    while !accessed2.load(Ordering::SeqCst) {
+                        std::thread::yield_now();
+                    }
+                    Some(42)
+                },
+                |_| {},
+            );
         });
 
         // Thread 2: wait for thread 1 to be inside load_fn, then access pool.
@@ -484,11 +516,15 @@ mod tests {
                 let barrier = Arc::clone(&barrier);
                 let load_count = Arc::clone(&load_count);
                 std::thread::spawn(move || {
-                    pool.get(&"same_key".to_string(), |_| {
-                        barrier.wait();
-                        load_count.fetch_add(1, Ordering::SeqCst);
-                        Some(i)
-                    });
+                    pool.get(
+                        &"same_key".to_string(),
+                        |_| {
+                            barrier.wait();
+                            load_count.fetch_add(1, Ordering::SeqCst);
+                            Some(i)
+                        },
+                        |_| {},
+                    );
                 })
             })
             .collect();
@@ -507,7 +543,7 @@ mod tests {
     #[test]
     fn test_get_or_load_does_not_hold_lock_during_load_fn() {
         let pool = Arc::new(ResourcePool::<String, i32>::new(1));
-        pool.get(&"existing".to_string(), |_| Some(100));
+        pool.get(&"existing".to_string(), |_| Some(100), |_| {});
 
         let loading = Arc::new(AtomicBool::new(false));
         let accessed = Arc::new(AtomicBool::new(false));
@@ -527,6 +563,7 @@ mod tests {
                     Some(42)
                 },
                 |v| *v,
+                |_| {},
             )
         });
 
@@ -539,5 +576,88 @@ mod tests {
         let result = t1.join().unwrap();
         assert_eq!(result, Some(42));
         assert!(pool.exists(&"slow_key".to_string()));
+    }
+
+    #[test]
+    fn test_get_race_calls_dispose_on_loser() {
+        // Regression: when two threads race to load the same key, the losing
+        // thread's resource must be disposed (not silently dropped).
+        let pool = Arc::new(ResourcePool::<String, i32>::new(1));
+        let dispose_count = Arc::new(AtomicI32::new(0));
+
+        let barrier = Arc::new(std::sync::Barrier::new(2));
+
+        let handles: Vec<_> = (0..2)
+            .map(|i| {
+                let pool = Arc::clone(&pool);
+                let barrier = Arc::clone(&barrier);
+                let dispose_count = Arc::clone(&dispose_count);
+                std::thread::spawn(move || {
+                    pool.get(
+                        &"race_key".to_string(),
+                        |_| {
+                            barrier.wait();
+                            Some(i)
+                        },
+                        |_| {
+                            dispose_count.fetch_add(1, Ordering::SeqCst);
+                        },
+                    );
+                })
+            })
+            .collect();
+
+        for h in handles {
+            h.join().unwrap();
+        }
+
+        assert_eq!(pool.size(), 1);
+        // Exactly one thread lost the race; its resource must have been disposed.
+        assert_eq!(
+            dispose_count.load(Ordering::SeqCst),
+            1,
+            "race-losing resource must be disposed exactly once"
+        );
+    }
+
+    #[test]
+    fn test_get_or_load_race_calls_dispose_on_loser() {
+        // Regression: same as above but for get_or_load().
+        let pool = Arc::new(ResourcePool::<String, i32>::new(1));
+        let dispose_count = Arc::new(AtomicI32::new(0));
+
+        let barrier = Arc::new(std::sync::Barrier::new(2));
+
+        let handles: Vec<_> = (0..2)
+            .map(|i| {
+                let pool = Arc::clone(&pool);
+                let barrier = Arc::clone(&barrier);
+                let dispose_count = Arc::clone(&dispose_count);
+                std::thread::spawn(move || {
+                    pool.get_or_load(
+                        &"race_key".to_string(),
+                        |_| {
+                            barrier.wait();
+                            Some(i)
+                        },
+                        |v| *v,
+                        |_| {
+                            dispose_count.fetch_add(1, Ordering::SeqCst);
+                        },
+                    )
+                })
+            })
+            .collect();
+
+        for h in handles {
+            h.join().unwrap();
+        }
+
+        assert_eq!(pool.size(), 1);
+        assert_eq!(
+            dispose_count.load(Ordering::SeqCst),
+            1,
+            "race-losing resource must be disposed exactly once"
+        );
     }
 }

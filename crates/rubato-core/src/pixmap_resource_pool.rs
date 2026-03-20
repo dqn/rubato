@@ -29,10 +29,16 @@ impl PixmapResourcePool {
 
     /// Ensure the resource is loaded into the pool (load-on-miss).
     pub fn get(&self, key: &str) -> Option<()> {
-        self.pool.get(&key.to_string(), |k| {
-            let pixmap = Self::load_picture(k);
-            pixmap.map(Self::convert)
-        })
+        self.pool.get(
+            &key.to_string(),
+            |k| {
+                let pixmap = Self::load_picture(k);
+                pixmap.map(Self::convert)
+            },
+            |mut resource| {
+                resource.dispose();
+            },
+        )
     }
 
     /// Load if needed, then apply a function to the cached resource.
@@ -45,6 +51,9 @@ impl PixmapResourcePool {
             &key.to_string(),
             |k| Self::load_picture(k).map(Self::convert),
             f,
+            |mut resource| {
+                resource.dispose();
+            },
         )
     }
 
