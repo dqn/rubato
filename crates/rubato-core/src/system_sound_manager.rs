@@ -217,14 +217,13 @@ impl SystemSoundManager {
     }
 }
 
-/// Simple random f64 in [0, 1) - equivalent to Math.random()
+/// Random f64 in [0, 1) - equivalent to Math.random().
+///
+/// Uses the `rand` crate's thread-local RNG, which is properly seeded and
+/// produces distinct values even for rapid successive calls within the same
+/// nanosecond.
 fn rand_f64() -> f64 {
-    use std::time::SystemTime;
-    let nanos = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .expect("system clock")
-        .subsec_nanos();
-    nanos as f64 / 1_000_000_000.0
+    rand::random::<f64>()
 }
 
 #[cfg(test)]
@@ -320,25 +319,30 @@ mod tests {
         assert_eq!(audio.disposed_paths(), vec!["old/path.wav".to_string()]);
     }
 
-    /// Regression: rand_f64() used u32::MAX as divisor for subsec_nanos(),
-    /// capping output at ~0.233 instead of [0, 1). With 10 BGM sets only
-    /// indices 0-2 were ever selected.
     #[test]
     fn rand_f64_range_covers_full_unit_interval() {
-        // subsec_nanos() returns [0, 999_999_999].
-        // Simulate boundary values to confirm the divisor is 1_000_000_000.
-        let max_nanos: u32 = 999_999_999;
-        let result = max_nanos as f64 / 1_000_000_000.0;
-        // Must be very close to 1.0 (not ~0.233 as with old u32::MAX divisor)
-        assert!(result > 0.99, "max nanos should map near 1.0, got {result}");
-        assert!(result < 1.0, "must stay strictly below 1.0, got {result}");
-
-        // Call the real function many times and verify the range
+        // Call the real function many times and verify the range.
         for _ in 0..200 {
             let v = rand_f64();
             assert!(v >= 0.0, "rand_f64() returned negative: {v}");
             assert!(v < 1.0, "rand_f64() returned >= 1.0: {v}");
         }
+    }
+
+    /// Regression: rand_f64() used subsec_nanos() as sole entropy source,
+    /// so two calls within the same nanosecond produced identical values.
+    /// This caused BGM and sound index selection to always pick the same set.
+    #[test]
+    fn rand_f64_rapid_successive_calls_produce_distinct_values() {
+        // Call twice in immediate succession and verify they differ.
+        // With a proper RNG this should virtually always produce distinct
+        // values (probability of collision ~2^-52).
+        let a = rand_f64();
+        let b = rand_f64();
+        assert_ne!(
+            a, b,
+            "two rapid successive calls must produce distinct values"
+        );
     }
 
     #[test]
