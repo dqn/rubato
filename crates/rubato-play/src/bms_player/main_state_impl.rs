@@ -808,6 +808,10 @@ impl MainState for BMSPlayer {
                 // Translated from: Java BMSPlayer.render() judge.update() call
                 {
                     let play_micro = self.main_state_data.timer.now_micro_time_for_id(TIMER_PLAY);
+                    debug_assert!(
+                        self.gauge.is_some(),
+                        "gauge should be initialized before judge update"
+                    );
                     if let Some(ref mut gauge) = self.gauge {
                         self.judge.update(
                             play_micro,
@@ -815,6 +819,10 @@ impl MainState for BMSPlayer {
                             &self.input.input_key_states,
                             &self.input.input_key_changed_times,
                             gauge,
+                        );
+                    } else {
+                        log::error!(
+                            "gauge is None during judge update; all note judgment is skipped"
                         );
                     }
                     // Trigger key beam timers for newly judged lanes.
