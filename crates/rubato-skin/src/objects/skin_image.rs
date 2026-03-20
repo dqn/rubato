@@ -265,6 +265,10 @@ impl SkinImage {
             self.data.draw = false;
             return;
         }
+        if self.image.is_empty() {
+            self.data.draw = false;
+            return;
+        }
         self.data
             .prepare_with_offset(time, state, offset_x, offset_y);
         if value >= self.image.len() as i32 {
@@ -692,5 +696,21 @@ mod tests {
         // Width = x1 - x0, Height = y1 - y0
         assert!((x1 - x0 - 200.0).abs() < 0.02);
         assert!((y1 - y0 - 150.0).abs() < 0.02);
+    }
+
+    /// Regression: prepare_with_value must early-return when image array is empty,
+    /// skipping the prepare_with_offset call that would otherwise run on invalid state.
+    #[test]
+    fn test_skin_image_prepare_empty_image_sets_draw_false() {
+        let mut img = SkinImage::new_empty();
+        setup_data(&mut img.data, 0.0, 0.0, 100.0, 100.0);
+
+        let state = MockMainState::default();
+        img.prepare(0, &state);
+
+        assert!(
+            !img.data.draw,
+            "draw should be false when image array is empty"
+        );
     }
 }

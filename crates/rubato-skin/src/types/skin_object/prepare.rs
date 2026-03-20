@@ -231,6 +231,11 @@ impl SkinObjectData {
             let i = i as usize;
             let time1 = self.dst[i].time;
             if time1 <= self.nowtime && time2 > self.nowtime {
+                if time2 == time1 {
+                    self.rate = 0.0;
+                    self.index = i as i32;
+                    return;
+                }
                 let mut rate = (self.nowtime - time1) as f32 / (time2 - time1) as f32;
                 match self.acc {
                     1 => {
@@ -249,5 +254,50 @@ impl SkinObjectData {
         }
         self.rate = 0.0;
         self.index = 0;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::reexports::{Color, Rectangle};
+    use crate::skin_object::SkinObjectDestination;
+
+    /// Regression: when two consecutive DST entries share the same timestamp,
+    /// (time2 - time1) is 0. Without the guard, dividing by zero produces
+    /// f32::INFINITY in the rate computation.
+    #[test]
+    fn test_rate_same_timestamp_no_division_by_zero() {
+        let mut data = crate::skin_object::SkinObjectData::new();
+
+        // Two DST entries at the same time (100)
+        data.dst.push(SkinObjectDestination::new(
+            100,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.dst.push(SkinObjectDestination::new(
+            100,
+            Rectangle::new(20.0, 20.0, 30.0, 30.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 100;
+        data.endtime = 100;
+
+        // Set nowtime so rate() will be called and the loop is entered
+        data.nowtime = 100;
+        data.rate = -1.0;
+        data.index = -1;
+        data.rate();
+
+        // rate must be finite (no INFINITY from 0/0 division)
+        assert!(
+            data.rate.is_finite(),
+            "rate should be finite, got {}",
+            data.rate
+        );
     }
 }
