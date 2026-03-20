@@ -94,6 +94,10 @@ impl rubato_types::timer_access::TimerAccess for TimerOnlyMainState<'_> {
 }
 
 impl rubato_types::skin_render_context::SkinRenderContext for TimerOnlyMainState<'_> {
+    fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
+        self.state_type
+    }
+
     fn is_music_selector(&self) -> bool {
         self.ctx
             .as_deref()
