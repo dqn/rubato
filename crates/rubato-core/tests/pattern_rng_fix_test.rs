@@ -1,6 +1,12 @@
-// Tests for the JavaRandom fix: these assert CORRECT behavior.
-// Before the fix: these tests FAIL (non-determinism due to rand::random()).
-// After the fix: these tests PASS (seeded JavaRandom produces deterministic output).
+// Tests for RNG behavior in pattern modifiers.
+//
+// LongNoteModifier, MineNoteModifier, and ScrollSpeedModifier use non-deterministic
+// rand::random() to match Java's Math.random() behavior. These modifiers intentionally
+// do NOT use seeded JavaRandom because Java's source uses Math.random(), not
+// new Random(seed).nextDouble().
+//
+// Deterministic seeded JavaRandom is only used by Randomizer (lane shuffling) and
+// other modifiers that use java.util.Random in the Java source.
 
 use bms_model::bms_model::BMSModel;
 use bms_model::mode::Mode;
@@ -17,16 +23,15 @@ fn make_test_model(mode: &Mode, timelines: Vec<TimeLine>) -> BMSModel {
     model
 }
 
-/// MineNoteModifier.modify() in AddRandom mode MUST be deterministic
-/// when the same seed is used.
+/// MineNoteModifier.modify() in AddRandom mode uses non-deterministic Math.random()
+/// equivalent. Verify it produces mine notes (probabilistic, not deterministic).
 #[test]
-fn mine_note_modifier_deterministic_with_seed() {
-    let seed: i64 = 42;
+fn mine_note_modifier_add_random_produces_expected_distribution() {
     let mode = Mode::BEAT_7K;
 
     let build_model = || {
         let mut timelines = Vec::new();
-        for section in 0..50 {
+        for section in 0..200 {
             let mut tl = TimeLine::new(section as f64, section * 1000, 8);
             tl.set_note(0, Some(Note::new_normal(10)));
             timelines.push(tl);
@@ -34,39 +39,33 @@ fn mine_note_modifier_deterministic_with_seed() {
         make_test_model(&mode, timelines)
     };
 
-    let extract_notes = |model: &BMSModel| -> Vec<Vec<Option<i32>>> {
-        model
-            .timelines
-            .iter()
-            .map(|tl| (0..8).map(|lane| tl.note(lane).map(|n| n.wav())).collect())
-            .collect()
-    };
+    let mut model = build_model();
+    let mut modifier = MineNoteModifier::with_mode(1); // AddRandom
+    modifier.modify(&mut model);
 
-    // Run 1
-    let mut model1 = build_model();
-    let mut modifier1 = MineNoteModifier::with_mode(1); // AddRandom
-    modifier1.set_seed(seed);
-    modifier1.modify(&mut model1);
-    let notes1 = extract_notes(&model1);
+    // Count mine notes placed in blank lanes (lanes 1-7 are blank)
+    let mine_count: usize = model
+        .timelines
+        .iter()
+        .map(|tl| {
+            (1..8)
+                .filter(|&lane| tl.note(lane).is_some_and(|n| n.is_mine()))
+                .count()
+        })
+        .sum();
 
-    // Run 2 — same seed, same input
-    let mut model2 = build_model();
-    let mut modifier2 = MineNoteModifier::with_mode(1);
-    modifier2.set_seed(seed);
-    modifier2.modify(&mut model2);
-    let notes2 = extract_notes(&model2);
-
-    assert_eq!(
-        notes1, notes2,
-        "MineNoteModifier with same seed must produce identical output"
+    // With 200 timelines * 7 blank lanes = 1400 opportunities at 10% probability,
+    // expected ~140 mines. Verify at least some mines were placed.
+    assert!(
+        mine_count > 0,
+        "MineNoteModifier AddRandom should place mine notes (got 0 out of 1400 opportunities)"
     );
 }
 
-/// LongNoteModifier.modify() with rate != 1.0 MUST be deterministic
-/// when the same seed is used.
+/// LongNoteModifier.modify() uses non-deterministic Math.random() equivalent.
+/// With rate=0.5, approximately half the LNs should be removed (not all or none).
 #[test]
-fn long_note_modifier_deterministic_with_seed() {
-    let seed: i64 = 42;
+fn long_note_modifier_remove_mode_partial_removal() {
     let mode = Mode::BEAT_7K;
 
     let build_model = || {
@@ -91,30 +90,28 @@ fn long_note_modifier_deterministic_with_seed() {
         make_test_model(&mode, timelines)
     };
 
-    let extract_notes = |model: &BMSModel| -> Vec<Vec<Option<i32>>> {
-        model
-            .timelines
-            .iter()
-            .map(|tl| (0..8).map(|lane| tl.note(lane).map(|n| n.wav())).collect())
-            .collect()
-    };
+    let mut model = build_model();
+    let mut modifier = LongNoteModifier::with_params(0, 0.5); // Remove mode, 50% rate
+    modifier.modify(&mut model);
 
-    // Run 1
-    let mut model1 = build_model();
-    let mut modifier1 = LongNoteModifier::with_params(0, 0.5); // Remove mode, 50% rate
-    modifier1.set_seed(seed);
-    modifier1.modify(&mut model1);
-    let notes1 = extract_notes(&model1);
+    // Count remaining long note starts on even timelines
+    let remaining_ln: usize = model
+        .timelines
+        .iter()
+        .map(|tl| {
+            (0..7)
+                .filter(|&lane| tl.note(lane).is_some_and(|n| n.is_long() && !n.is_end()))
+                .count()
+        })
+        .sum();
 
-    // Run 2 — same seed, same input
-    let mut model2 = build_model();
-    let mut modifier2 = LongNoteModifier::with_params(0, 0.5);
-    modifier2.set_seed(seed);
-    modifier2.modify(&mut model2);
-    let notes2 = extract_notes(&model2);
-
-    assert_eq!(
-        notes1, notes2,
-        "LongNoteModifier with same seed must produce identical output"
+    // Original: 50 timelines * 7 lanes = 350 LN starts
+    // With rate=0.5 and non-deterministic RNG, some but not all should be removed.
+    let total_original = 350;
+    assert!(
+        remaining_ln > 0 && remaining_ln < total_original,
+        "With rate=0.5, some but not all LNs should be removed. Got {} remaining out of {}",
+        remaining_ln,
+        total_original
     );
 }

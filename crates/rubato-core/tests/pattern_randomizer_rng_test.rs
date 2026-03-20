@@ -179,58 +179,53 @@ fn randomizer_base_uses_java_random() {
     );
 }
 
-/// 4-3b: MineNoteModifier.modify() now honors the seed field.
+/// 4-3b: MineNoteModifier.modify() uses non-deterministic Math.random() equivalent.
 ///
-/// In AddRandom mode (mode=1), MineNoteModifier now uses a seeded JavaRandom
-/// to decide whether to place mine notes. Same seed = same output.
+/// In AddRandom mode (mode=1), MineNoteModifier uses rand::random() to match
+/// Java's Math.random() behavior. The seed field is NOT used for this RNG.
+/// This test verifies the modifier runs without errors and produces mine notes.
 #[test]
-fn mine_note_modifier_honors_seed() {
-    let seed: i64 = 42;
+fn mine_note_modifier_add_random_produces_mines() {
     let mode = Mode::BEAT_7K;
 
-    let build_model = || {
-        let mut timelines = Vec::new();
-        for section in 0..50 {
-            let mut tl = TimeLine::new(section as f64, section * 1000, 8);
-            tl.set_note(0, Some(Note::new_normal(10)));
-            timelines.push(tl);
-        }
-        make_test_model(&mode, timelines)
-    };
-
-    // Run modify 10 times with the same seed, collect results
-    let mut results: Vec<Vec<Vec<Option<i32>>>> = Vec::new();
-    for _ in 0..10 {
-        let mut model = build_model();
-        let mut modifier = MineNoteModifier::with_mode(1); // AddRandom
-        modifier.set_seed(seed);
-        modifier.modify(&mut model);
-
-        let layout: Vec<Vec<Option<i32>>> = model
-            .timelines
-            .iter()
-            .map(|tl| (0..8).map(|lane| tl.note(lane).map(|n| n.wav())).collect())
-            .collect();
-        results.push(layout);
+    let mut timelines = Vec::new();
+    // Use enough timelines to statistically guarantee at least one mine
+    // with the 10% probability (Math.random() > 0.9).
+    for section in 0..200 {
+        let mut tl = TimeLine::new(section as f64, section * 1000, 8);
+        tl.set_note(0, Some(Note::new_normal(10)));
+        timelines.push(tl);
     }
+    let mut model = make_test_model(&mode, timelines);
 
-    // All 10 results must be identical — seeded JavaRandom is deterministic.
-    let all_identical = results.windows(2).all(|w| w[0] == w[1]);
+    let mut modifier = MineNoteModifier::with_mode(1); // AddRandom
+    modifier.modify(&mut model);
+
+    // With 200 timelines and 7 blank lanes each (lanes 1-7), at 10% probability,
+    // we expect ~140 mines. Verify at least one mine was placed.
+    let mine_count: usize = model
+        .timelines
+        .iter()
+        .map(|tl| {
+            (0..8)
+                .filter(|&lane| tl.note(lane).is_some_and(|n| n.is_mine()))
+                .count()
+        })
+        .sum();
 
     assert!(
-        all_identical,
-        "MineNoteModifier.modify() must be deterministic with the same seed — \
-         it now uses seeded JavaRandom instead of rand::random()."
+        mine_count > 0,
+        "MineNoteModifier AddRandom should place at least one mine note across 200 timelines"
     );
 }
 
-/// 4-3b: LongNoteModifier.modify() now honors the seed field.
+/// 4-3b: LongNoteModifier.modify() uses non-deterministic Math.random() equivalent.
 ///
-/// In Remove mode with rate=0.5, LongNoteModifier now uses a seeded JavaRandom
-/// to decide whether to convert long notes to normal notes. Same seed = same output.
+/// In Remove mode with rate=0.5, LongNoteModifier uses rand::random() to match
+/// Java's Math.random() behavior. The seed field is NOT used for this RNG.
+/// This test verifies that with rate=0.5, approximately half the LNs are removed.
 #[test]
-fn long_note_modifier_honors_seed() {
-    let seed: i64 = 42;
+fn long_note_modifier_remove_mode_uses_nondeterministic_rng() {
     let mode = Mode::BEAT_7K;
 
     let build_model = || {
@@ -255,29 +250,32 @@ fn long_note_modifier_honors_seed() {
         make_test_model(&mode, timelines)
     };
 
-    // Run modify 10 times with the same seed and rate=0.5
-    let mut results: Vec<Vec<Vec<Option<i32>>>> = Vec::new();
-    for _ in 0..10 {
-        let mut model = build_model();
-        let mut modifier = LongNoteModifier::with_params(0, 0.5); // Remove mode, 50% rate
-        modifier.set_seed(seed);
-        modifier.modify(&mut model);
+    // Count how many LN starts remain after Remove mode with rate=0.5
+    let mut model = build_model();
+    let mut modifier = LongNoteModifier::with_params(0, 0.5); // Remove mode, 50% rate
+    modifier.modify(&mut model);
 
-        let layout: Vec<Vec<Option<i32>>> = model
-            .timelines
-            .iter()
-            .map(|tl| (0..8).map(|lane| tl.note(lane).map(|n| n.wav())).collect())
-            .collect();
-        results.push(layout);
-    }
+    // Count remaining long notes (starts only, on even timelines)
+    let remaining_ln_count: usize = model
+        .timelines
+        .iter()
+        .map(|tl| {
+            (0..7)
+                .filter(|&lane| tl.note(lane).is_some_and(|n| n.is_long() && !n.is_end()))
+                .count()
+        })
+        .sum();
 
-    // All 10 results must be identical — seeded JavaRandom is deterministic.
-    let all_identical = results.windows(2).all(|w| w[0] == w[1]);
-
+    // Original: 50 even timelines * 7 lanes = 350 LN starts.
+    // With rate=0.5, roughly half should be removed. Allow wide margin for randomness.
+    // We just verify it's not all-or-nothing (which would indicate broken RNG).
+    let total_original = 350;
     assert!(
-        all_identical,
-        "LongNoteModifier.modify() must be deterministic with the same seed — \
-         it now uses seeded JavaRandom instead of rand::random()."
+        remaining_ln_count > 0 && remaining_ln_count < total_original,
+        "With rate=0.5 and non-deterministic RNG, some but not all LNs should be removed. \
+         Got {} remaining out of {}",
+        remaining_ln_count,
+        total_original
     );
 }
 
