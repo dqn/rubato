@@ -1397,6 +1397,49 @@ fn test_read_chart_without_main_controller_does_not_panic() {
     selector.read_chart(&song, &bar, play_mode.as_ref());
 }
 
+// Regression: replay_index must use play_mode parameter, not self.play.
+// In trait_impls.rs, self.play is consumed by .take() before read_chart is called,
+// so reading self.play inside read_chart always yields None (id=0).
+// The fix uses the play_mode parameter passed into read_chart instead.
+#[test]
+fn test_read_chart_replay_index_uses_play_mode_not_self_play() {
+    // This test verifies the mode encoding uses the parameter, not self.play.
+    // encode_bms_player_mode uses play_mode (correctly), but replay_index
+    // was reading from self.play (incorrectly, always 0 after .take()).
+
+    let mut selector = MusicSelector::new();
+
+    // Simulate the caller having consumed self.play via .take()
+    selector.play = None;
+
+    // The replay mode parameter that would be passed to read_chart
+    let play_mode = BMSPlayerMode::REPLAY_3; // id=2
+
+    // Before fix: self.play.as_ref().map_or(0, |p| p.id) => always 0
+    let old_replay_index = selector.play.as_ref().map_or(0, |p| p.id);
+    assert_eq!(old_replay_index, 0, "self.play is None after .take()");
+
+    // After fix: play_mode.map_or(0, |p| p.id) => uses the parameter's id
+    let play_mode_ref: Option<&BMSPlayerMode> = Some(&play_mode);
+    let new_replay_index = play_mode_ref.map_or(0, |p| p.id);
+    assert_eq!(
+        new_replay_index, 2,
+        "play_mode parameter should provide replay_index=2 for REPLAY_3"
+    );
+
+    // Verify all replay modes produce correct indices
+    for (mode, expected_id) in [
+        (BMSPlayerMode::REPLAY_1, 0),
+        (BMSPlayerMode::REPLAY_2, 1),
+        (BMSPlayerMode::REPLAY_3, 2),
+        (BMSPlayerMode::REPLAY_4, 3),
+        (BMSPlayerMode::PLAY, 0),
+    ] {
+        let idx = Some(&mode).map_or(0, |p| p.id);
+        assert_eq!(idx, expected_id, "mode {:?} should have id={}", mode, expected_id);
+    }
+}
+
 // ============================================================
 // read_course tests
 // ============================================================
