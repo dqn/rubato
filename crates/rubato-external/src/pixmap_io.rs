@@ -11,7 +11,9 @@ pub struct Pixmap {
 
 impl Pixmap {
     pub fn new(width: i32, height: i32) -> Self {
-        let size = (width.max(0) as usize) * (height.max(0) as usize) * 4;
+        let width = width.max(0);
+        let height = height.max(0);
+        let size = (width as usize) * (height as usize) * 4;
         Self {
             width,
             height,

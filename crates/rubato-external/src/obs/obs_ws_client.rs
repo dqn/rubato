@@ -497,11 +497,11 @@ impl ObsWsClient {
             "RecordStateChanged" => {
                 if event_data.get("outputState").is_some() {
                     let output_state = event_data["outputState"].as_str().unwrap_or("");
-                    let output_path_val = if event_data.get("outputPath").is_some() {
-                        event_data["outputPath"].as_str().unwrap_or("").to_string()
-                    } else {
-                        String::new()
-                    };
+                    let output_path_val = event_data
+                        .get("outputPath")
+                        .and_then(|v| v.as_str())
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.to_string());
 
                     let mut notify_message = String::new();
 
@@ -510,7 +510,9 @@ impl ObsWsClient {
                             let (should_restart, _recording_mode, path_to_delete) = {
                                 let mut guard = lock_or_recover(inner);
                                 guard.is_recording = false;
-                                guard.output_path = output_path_val.clone();
+                                if let Some(ref path) = output_path_val {
+                                    guard.output_path = path.clone();
+                                }
                                 let should_restart = guard.restart_recording;
                                 let recording_mode = guard.recording_mode;
                                 if should_restart {
@@ -519,11 +521,13 @@ impl ObsWsClient {
                                 let path_to_delete = if should_restart
                                     && recording_mode != ObsRecordingMode::KeepAll
                                 {
-                                    Some(output_path_val.clone())
+                                    output_path_val.clone()
                                 } else {
                                     None
                                 };
-                                guard.last_output_path = output_path_val;
+                                if let Some(path) = output_path_val {
+                                    guard.last_output_path = path;
+                                }
                                 (should_restart, recording_mode, path_to_delete)
                             };
 
@@ -553,7 +557,9 @@ impl ObsWsClient {
                             let (recording_mode, save_requested, last_output_path) = {
                                 let mut guard = lock_or_recover(inner);
                                 guard.is_recording = true;
-                                guard.output_path = output_path_val;
+                                if let Some(path) = output_path_val {
+                                    guard.output_path = path;
+                                }
                                 let rm = guard.recording_mode;
                                 let sr = guard.save_requested;
                                 let lop = guard.last_output_path.clone();
