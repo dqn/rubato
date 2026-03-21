@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use log::error;
 use serde::Deserialize;
@@ -34,6 +34,21 @@ const MAX_RESPONSE_SIZE: u64 = 64 * 1024 * 1024;
 /// A typical game session queries fewer than 100 unique songs, so 256 provides
 /// ample headroom while preventing unbounded growth in long-running sessions.
 const RANKING_CACHE_MAX_ENTRIES: usize = 256;
+
+/// Shared blocking HTTP client. Reused across all IR requests to preserve
+/// HTTP keep-alive connections and avoid rebuilding TLS state on every call.
+/// Uses the longer timeout (10s) as the default; per-request timeouts can
+/// override if needed.
+static HTTP_CLIENT: OnceLock<reqwest::blocking::Client> = OnceLock::new();
+
+fn get_http_client() -> &'static reqwest::blocking::Client {
+    HTTP_CLIENT.get_or_init(|| {
+        reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .expect("Failed to build HTTP client")
+    })
+}
 
 lazy_static::lazy_static! {
     static ref LR2_IR_RANKING_CACHE: Mutex<HashMap<String, Vec<LeaderboardEntry>>> = Mutex::new(HashMap::new());
@@ -80,16 +95,7 @@ impl LR2IRConnection {
     /// main/render thread.
     fn make_post_request(uri: &str, data: &str) -> Option<String> {
         let url = format!("{}{}", IR_URL, uri);
-        let client = match reqwest::blocking::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
-            .build()
-        {
-            Ok(c) => c,
-            Err(e) => {
-                log::error!("Failed to build HTTP client: {}", e);
-                return None;
-            }
-        };
+        let client = get_http_client();
         match client
             .post(&url)
             .header("Content-Type", "application/x-www-form-urlencoded")
@@ -159,10 +165,13 @@ impl LR2IRConnection {
             urlencoding::encode(&chart.md5),
             urlencoding::encode(player_id),
         );
+        // Use songmd5 alone as cache key so that varying `lastupdate` or `id`
+        // parameters don't create duplicate entries for the same chart.
+        let cache_key = chart.md5.clone();
 
         let score_data = {
             let cache = lock_or_recover(&LR2_IR_RANKING_CACHE);
-            cache.get(&request_url).cloned()
+            cache.get(&cache_key).cloned()
         };
 
         let score_data = match score_data {
@@ -180,12 +189,17 @@ impl LR2IRConnection {
                             Some(ranking) => {
                                 let entries = ranking.to_rubato_score_data(chart);
                                 let mut cache = lock_or_recover(&LR2_IR_RANKING_CACHE);
-                                // Java parity: full eviction at capacity. Acceptable because
-                                // typical sessions query <100 songs (threshold is 256).
+                                // Evict oldest quarter of entries at capacity to avoid
+                                // thundering-herd re-fetches from a full clear.
                                 if cache.len() >= RANKING_CACHE_MAX_ENTRIES {
-                                    cache.clear();
+                                    let to_remove = cache.len() / 4;
+                                    let keys: Vec<String> =
+                                        cache.keys().take(to_remove.max(1)).cloned().collect();
+                                    for key in keys {
+                                        cache.remove(&key);
+                                    }
                                 }
-                                cache.insert(request_url, entries.clone());
+                                cache.insert(cache_key, entries.clone());
                                 entries
                             }
                             None => {
@@ -237,17 +251,7 @@ impl LR2IRConnection {
             score_id // i64, no encoding needed
         );
         let url = format!("{}{}", IR_URL, api);
-        let client = reqwest::blocking::Client::builder()
-            .timeout(std::time::Duration::from_secs(5))
-            .build();
-        let client = match client {
-            Ok(c) => c,
-            Err(e) => {
-                error!("{}", e);
-                ImGuiNotify::error("Failed to load ghost data.");
-                return None;
-            }
-        };
+        let client = get_http_client();
         match client.get(&url).send() {
             Ok(response) => {
                 let status = response.status();
@@ -656,19 +660,27 @@ mod tests {
         cache.insert("below_10".to_string(), Vec::new());
         assert_eq!(cache.len(), 11);
 
-        // --- At capacity: eviction triggers ---
+        // --- At capacity: partial eviction triggers ---
         cache.clear();
         for i in 0..RANKING_CACHE_MAX_ENTRIES {
             cache.insert(format!("key_{}", i), Vec::new());
         }
         assert_eq!(cache.len(), RANKING_CACHE_MAX_ENTRIES);
 
-        // Next insert should trigger eviction (clear + insert = 1 entry)
+        // Next insert should trigger partial eviction (remove ~25% of entries)
         if cache.len() >= RANKING_CACHE_MAX_ENTRIES {
-            cache.clear();
+            let to_remove = cache.len() / 4;
+            let keys: Vec<String> = cache.keys().take(to_remove.max(1)).cloned().collect();
+            for key in keys {
+                cache.remove(&key);
+            }
         }
         cache.insert("overflow_key".to_string(), Vec::new());
-        assert_eq!(cache.len(), 1);
+        // After removing 64 entries (256/4) and inserting 1: 256 - 64 + 1 = 193
+        assert_eq!(
+            cache.len(),
+            RANKING_CACHE_MAX_ENTRIES - RANKING_CACHE_MAX_ENTRIES / 4 + 1
+        );
         assert!(cache.contains_key("overflow_key"));
 
         // Clean up
