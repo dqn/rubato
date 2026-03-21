@@ -725,10 +725,6 @@ impl ObsWsClient {
                 let mut guard = lock_or_recover(&inner_clone);
                 guard.current_reconnect_delay =
                     compute_next_reconnect_delay(guard.current_reconnect_delay);
-
-                if guard.auto_reconnect && !guard.is_shutting_down {
-                    guard.is_reconnecting = false;
-                }
             }
             let (server_uri, password, shutdown_notify) = {
                 let guard = lock_or_recover(&inner_clone);
@@ -738,9 +734,22 @@ impl ObsWsClient {
                     guard.shutdown_notify.clone(),
                 )
             };
-            if let Err(e) =
-                ObsWsClient::do_connect(inner_clone, &server_uri, &password, shutdown_notify).await
+            let connect_result = ObsWsClient::do_connect(
+                Arc::clone(&inner_clone),
+                &server_uri,
+                &password,
+                shutdown_notify,
+            )
+            .await;
+
+            // Clear is_reconnecting AFTER do_connect completes to prevent
+            // concurrent reconnection attempts from on_close firing mid-connect.
             {
+                let mut guard = lock_or_recover(&inner_clone);
+                guard.is_reconnecting = false;
+            }
+
+            if let Err(e) = connect_result {
                 log::warn!("OBS WebSocket reconnection failed: {}", e);
             }
         });

@@ -177,23 +177,30 @@ impl ScreenShotFileExporter {
 
         let path = path.to_string();
 
+        // Skip spawning a new webhook send if the previous thread is still running
+        // to avoid unbounded thread accumulation when screenshots are taken rapidly.
+        if let Ok(mut guard) = self.webhook_thread.lock()
+            && let Some(prev) = guard.take()
+        {
+            if prev.is_finished() {
+                if let Err(e) = prev.join() {
+                    log::warn!("Previous webhook thread panicked: {:?}", e);
+                }
+            } else {
+                // Previous send still in flight -- skip this webhook send.
+                log::warn!("Skipping webhook send: previous send still in progress");
+                *guard = Some(prev);
+                return;
+            }
+        }
+
         let handle = std::thread::spawn(move || {
             for webhook_url in &webhook_urls {
                 handler.send_webhook_with_image(&payload, &path, webhook_url);
             }
         });
 
-        // Store the handle; join any previous thread that is still running.
         if let Ok(mut guard) = self.webhook_thread.lock() {
-            if let Some(prev) = guard.take()
-                && prev.is_finished()
-                && let Err(e) = prev.join()
-            {
-                log::warn!("Previous webhook thread panicked: {:?}", e);
-            }
-            // If previous thread is still running, we let it detach
-            // (it will finish on its own). Storing the new handle ensures
-            // at least the latest thread is joined on drop.
             *guard = Some(handle);
         }
     }
@@ -201,13 +208,10 @@ impl ScreenShotFileExporter {
 
 impl Drop for ScreenShotFileExporter {
     fn drop(&mut self) {
-        // Webhook sends are fire-and-forget. Let any in-flight thread
-        // finish on its own instead of busy-waiting up to 10s, which
-        // would freeze the render thread during shutdown.
-        // If the thread finished, join to collect panics; otherwise detach (drop the JoinHandle).
+        // Join the webhook thread unconditionally on drop to avoid leaking threads.
+        // Webhook HTTP sends are short-lived, so blocking briefly on shutdown is acceptable.
         if let Ok(mut guard) = self.webhook_thread.lock()
             && let Some(handle) = guard.take()
-            && handle.is_finished()
             && let Err(e) = handle.join()
         {
             log::warn!("Webhook send thread panicked: {:?}", e);

@@ -136,8 +136,11 @@ impl Drop for EventBlock {
                 .unwrap_or("unknown")
                 .to_string(),
         };
-        let mut results = lock_or_recover(&metrics.event_results);
-        results.push(result);
+        // Use try_lock() instead of lock_or_recover() to avoid deadlock risk
+        // during panic unwinding when the same Mutex may already be held.
+        if let Ok(mut results) = metrics.event_results.try_lock() {
+            results.push(result);
+        }
     }
 }
 

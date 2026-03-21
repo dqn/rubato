@@ -701,6 +701,10 @@ impl GdxSoundDriver {
                             self.apply_pitch(&mut handle, pitch_shift);
                             let handles = self.slice_handles.entry(key).or_default();
                             handles.retain(|h| h.state() != PlaybackState::Stopped);
+                            // Cap at 256 handles per key, matching Java's ring buffer size.
+                            if handles.len() >= 256 {
+                                handles.remove(0);
+                            }
                             handles.push(handle);
                             if pitch_shift != 0 {
                                 self.slice_pitch_shifts.insert(key, pitch_shift);
@@ -727,6 +731,10 @@ impl GdxSoundDriver {
                     self.apply_pitch(&mut handle, pitch_shift);
                     let handles = self.wav_handles.entry(wav_id).or_default();
                     handles.retain(|h| h.state() != PlaybackState::Stopped);
+                    // Cap at 256 handles per key, matching Java's ring buffer size.
+                    if handles.len() >= 256 {
+                        handles.remove(0);
+                    }
                     handles.push(handle);
                     if pitch_shift != 0 {
                         self.wav_pitch_shifts.insert(wav_id, pitch_shift);
