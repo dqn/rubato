@@ -179,7 +179,7 @@ pub(super) fn evaluate_filter_expression(expr: &str, property_value: i64) -> boo
         return property_value == v;
     }
     log::warn!("Unparseable filter expression: {:?}", expr);
-    true
+    false
 }
 
 /// Random course result

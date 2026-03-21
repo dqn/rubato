@@ -652,8 +652,8 @@ fn test_evaluate_filter_exact_match() {
     assert!(!evaluate_filter_expression("5", 6));
     assert!(evaluate_filter_expression("0", 0));
     assert!(!evaluate_filter_expression("0", 1));
-    // Non-numeric expression falls through to true
-    assert!(evaluate_filter_expression("abc", 42));
+    // Non-numeric expression falls through to false (fail-closed)
+    assert!(!evaluate_filter_expression("abc", 42));
 }
 
 // ---- i64 truncation bug tests ----
@@ -752,9 +752,9 @@ fn test_evaluate_filter_bare_negative_equality() {
 }
 
 #[test]
-fn test_evaluate_filter_non_numeric_string_passes() {
-    // Non-numeric, non-operator string should still return true (no recognized filter).
-    assert!(evaluate_filter_expression("abc", 42));
+fn test_evaluate_filter_non_numeric_string_rejects() {
+    // Non-numeric, non-operator string should return false (fail-closed).
+    assert!(!evaluate_filter_expression("abc", 42));
 }
 
 // ---- evaluate_filter_expression == prefix tests ----
@@ -774,9 +774,36 @@ fn test_evaluate_filter_double_equals_mismatch() {
 }
 
 #[test]
-fn test_evaluate_filter_double_equals_non_numeric_passes() {
-    // "==abc" is unparseable, falls through to true (with warning).
-    assert!(evaluate_filter_expression("==abc", 42));
+fn test_evaluate_filter_double_equals_non_numeric_rejects() {
+    // "==abc" is unparseable, falls through to false (fail-closed, with warning).
+    assert!(!evaluate_filter_expression("==abc", 42));
+}
+
+// ---- evaluate_filter_expression fail-closed tests ----
+
+#[test]
+fn test_evaluate_filter_expression_fail_closed() {
+    // Empty expression = no filter = pass all
+    assert!(evaluate_filter_expression("", 0));
+    assert!(evaluate_filter_expression("", 42));
+
+    // Valid numeric (bare integer) = exact equality
+    assert!(evaluate_filter_expression("7", 7));
+    assert!(!evaluate_filter_expression("7", 8));
+
+    // Valid comparison expression
+    assert!(evaluate_filter_expression(">=10", 10));
+    assert!(evaluate_filter_expression(">=10", 15));
+    assert!(!evaluate_filter_expression(">=10", 9));
+
+    // Unparseable expressions must return false (fail-closed)
+    assert!(!evaluate_filter_expression("abc", 42));
+    assert!(!evaluate_filter_expression("not_a_number", 0));
+    assert!(!evaluate_filter_expression(">=xyz", 10));
+    assert!(!evaluate_filter_expression("<=abc", 10));
+    assert!(!evaluate_filter_expression(">foo", 10));
+    assert!(!evaluate_filter_expression("<bar", 10));
+    assert!(!evaluate_filter_expression("==baz", 10));
 }
 
 // ---- bar_class_name tests ----
