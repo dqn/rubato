@@ -159,7 +159,10 @@ pub trait SkinRenderContext: TimerAccess {
                 let bt = self.boot_time_millis();
                 ((bt % 60_000) / 1_000) as i32
             }
-            _ => 0,
+            // Unhandled IDs: return i32::MIN so SkinNumber hides the element.
+            // Java IntegerPropertyFactory returns null for unrecognized IDs,
+            // and SkinNumber.prepare() treats null as Integer.MIN_VALUE (hide).
+            _ => i32::MIN,
         }
     }
 

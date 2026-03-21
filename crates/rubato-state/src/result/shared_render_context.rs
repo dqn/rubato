@@ -418,7 +418,10 @@ pub fn integer_value(
         // Java: songdata.getLevel()
         96 => songdata.map_or(i32::MIN, |s| s.chart.level),
 
-        _ => 0,
+        // Unhandled IDs: return i32::MIN so SkinNumber hides the element.
+        // Java IntegerPropertyFactory returns null for unrecognized IDs,
+        // and SkinNumber.prepare() treats null as Integer.MIN_VALUE (hide).
+        _ => i32::MIN,
     }
 }
 
@@ -806,8 +809,8 @@ mod tests {
     fn test_integer_value_existing_ids_unchanged() {
         let data = AbstractResultData::new();
 
-        // Verify unknown IDs still return 0
-        assert_eq!(integer_value(&data, 0, 0, None, None, 999), 0);
+        // Verify unknown IDs return i32::MIN (hide sentinel for SkinNumber)
+        assert_eq!(integer_value(&data, 0, 0, None, None, 999), i32::MIN);
 
         // Verify cumulative playtime IDs (17-19) work
         // cumulative_playtime_seconds = 3661 = 1h 1m 1s

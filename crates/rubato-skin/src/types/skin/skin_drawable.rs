@@ -137,7 +137,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for TimerOnlyMainState
     }
 
     fn integer_value(&self, id: i32) -> i32 {
-        self.ctx.as_deref().map_or(0, |c| c.integer_value(id))
+        self.ctx
+            .as_deref()
+            .map_or(i32::MIN, |c| c.integer_value(id))
     }
 
     fn image_index_value(&self, id: i32) -> i32 {

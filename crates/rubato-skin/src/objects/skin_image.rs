@@ -246,7 +246,16 @@ impl SkinImage {
         offset_y: f32,
     ) {
         let value = if let Some(ref r) = self.ref_prop {
-            r.get(state)
+            let v = r.get(state);
+            // Java: SkinImage.prepare() uses `ref != null ? ref.get(state) : 0`.
+            // In Java, IntegerPropertyFactory returns null for unrecognized IDs,
+            // so SkinImage.ref would be null and the fallback is 0 (show variant 0).
+            // In Rust, DelegateIntegerProperty always exists, and unrecognized IDs
+            // return i32::MIN. Treat i32::MIN as "no data" and fall back to 0,
+            // matching the Java null-ref behavior. prepare_with_value treats
+            // negative values as "don't draw", so without this guard the image
+            // would be hidden instead of showing the default variant.
+            if v == i32::MIN { 0 } else { v }
         } else {
             0
         };
