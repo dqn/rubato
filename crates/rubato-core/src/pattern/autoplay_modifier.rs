@@ -251,4 +251,274 @@ mod tests {
         // Mine notes are removed entirely, not added to background
         assert!(tls[0].back_ground_notes().is_empty());
     }
+
+    // --- margin > 0 tests ---
+
+    #[test]
+    fn margin_no_conflict_keeps_note_playable() {
+        // Autoplay lane 0 with margin=100. Only lane 0 has notes, no
+        // non-autoplay lane notes within the margin window, so no conflict
+        // and the note should NOT be moved to background.
+        let mode = Mode::BEAT_7K;
+        // Two timelines far apart: time()=0 and time()=500000
+        // (raw times; time() divides by 1000, so time()=0 and time()=500)
+        let mut tl0 = TimeLine::new(0.0, 0, 8);
+        tl0.set_note(0, Some(Note::new_normal(10)));
+
+        let mut tl1 = TimeLine::new(1.0, 500_000, 8);
+        tl1.set_note(0, Some(Note::new_normal(20)));
+
+        let mut model = make_test_model(&mode, vec![tl0, tl1]);
+
+        // margin=100 means window is [time-100, time+100].
+        // No non-autoplay lane notes exist at all, so no conflict.
+        let mut modifier = AutoplayModifier::with_margin(vec![0], 100);
+        modifier.modify(&mut model);
+
+        // Notes should remain in their lanes (not moved to background)
+        assert!(model.timelines[0].note(0).is_some());
+        assert!(model.timelines[1].note(0).is_some());
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
+    }
+
+    #[test]
+    fn margin_conflict_moves_note_to_background() {
+        // Autoplay lane 0 with margin=200. Lane 1 (non-autoplay) has a note
+        // at time()=50 which is within margin window of lane 0's note at
+        // time()=0 (endtime=0+200=200, and 50 < 200), so conflict detected.
+        let mode = Mode::BEAT_7K;
+        let mut tl0 = TimeLine::new(0.0, 0, 8);
+        tl0.set_note(0, Some(Note::new_normal(10))); // autoplay lane
+
+        let mut tl1 = TimeLine::new(0.0, 50_000, 8);
+        tl1.set_note(1, Some(Note::new_normal(20))); // non-autoplay lane, within margin
+
+        let mut model = make_test_model(&mode, vec![tl0, tl1]);
+
+        let mut modifier = AutoplayModifier::with_margin(vec![0], 200);
+        modifier.modify(&mut model);
+
+        // Lane 0 note at tl0 should be moved to background (conflict detected)
+        assert!(model.timelines[0].note(0).is_none());
+        assert!(!model.timelines[0].back_ground_notes().is_empty());
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
+    }
+
+    #[test]
+    fn margin_conflict_outside_window_keeps_note() {
+        // Autoplay lane 0 with margin=50. Lane 1 has a note at time()=200,
+        // which is outside the margin window of lane 0's note at time()=0
+        // (endtime=0+50=50, and 200 >= 50), so no conflict.
+        let mode = Mode::BEAT_7K;
+        let mut tl0 = TimeLine::new(0.0, 0, 8);
+        tl0.set_note(0, Some(Note::new_normal(10)));
+
+        let mut tl1 = TimeLine::new(1.0, 200_000, 8);
+        tl1.set_note(1, Some(Note::new_normal(20)));
+
+        let mut model = make_test_model(&mode, vec![tl0, tl1]);
+
+        let mut modifier = AutoplayModifier::with_margin(vec![0], 50);
+        modifier.modify(&mut model);
+
+        // No conflict: lane 0 note stays
+        assert!(model.timelines[0].note(0).is_some());
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
+    }
+
+    #[test]
+    fn margin_exact_boundary_no_conflict() {
+        // Note in non-autoplay lane at exactly endtime should NOT trigger
+        // conflict because the scan breaks on `tl.time() >= endtime`.
+        let mode = Mode::BEAT_7K;
+        let mut tl0 = TimeLine::new(0.0, 0, 8);
+        tl0.set_note(0, Some(Note::new_normal(10)));
+
+        // endtime = 0 + 100 = 100. Non-autoplay note at time()=100 exactly.
+        let mut tl1 = TimeLine::new(1.0, 100_000, 8);
+        tl1.set_note(1, Some(Note::new_normal(20)));
+
+        let mut model = make_test_model(&mode, vec![tl0, tl1]);
+
+        let mut modifier = AutoplayModifier::with_margin(vec![0], 100);
+        modifier.modify(&mut model);
+
+        // time()=100 >= endtime=100, so the scan breaks before checking.
+        // No conflict; note stays.
+        assert!(model.timelines[0].note(0).is_some());
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
+    }
+
+    #[test]
+    fn margin_just_inside_boundary_triggers_conflict() {
+        // Non-autoplay note at time()=99, endtime=100. 99 < 100 so conflict.
+        let mode = Mode::BEAT_7K;
+        let mut tl0 = TimeLine::new(0.0, 0, 8);
+        tl0.set_note(0, Some(Note::new_normal(10)));
+
+        let mut tl1 = TimeLine::new(1.0, 99_000, 8);
+        tl1.set_note(1, Some(Note::new_normal(20)));
+
+        let mut model = make_test_model(&mode, vec![tl0, tl1]);
+
+        let mut modifier = AutoplayModifier::with_margin(vec![0], 100);
+        modifier.modify(&mut model);
+
+        // 99 < 100, conflict detected; lane 0 note moved to background
+        assert!(model.timelines[0].note(0).is_none());
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
+    }
+
+    #[test]
+    fn margin_multi_lane_conflict_detection() {
+        // Autoplay lanes [0, 1]. Non-autoplay lane 2 has a note within
+        // margin of lane 0's note. Both autoplay lane notes at the same
+        // timeline should be moved to background.
+        let mode = Mode::BEAT_7K;
+        let mut tl0 = TimeLine::new(0.0, 0, 8);
+        tl0.set_note(0, Some(Note::new_normal(10)));
+        tl0.set_note(1, Some(Note::new_normal(20)));
+
+        let mut tl1 = TimeLine::new(0.0, 50_000, 8);
+        tl1.set_note(2, Some(Note::new_normal(30))); // non-autoplay, within margin
+
+        let mut model = make_test_model(&mode, vec![tl0, tl1]);
+
+        let mut modifier = AutoplayModifier::with_margin(vec![0, 1], 200);
+        modifier.modify(&mut model);
+
+        // Both autoplay lanes should be moved to background
+        assert!(model.timelines[0].note(0).is_none());
+        assert!(model.timelines[0].note(1).is_none());
+        // Lane 2 in tl1 is not an autoplay lane; stays
+        assert!(model.timelines[1].note(2).is_some());
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
+    }
+
+    #[test]
+    fn margin_only_autoplay_lane_notes_in_window_no_conflict() {
+        // Two autoplay lanes with notes in same window. Non-autoplay lanes
+        // are empty. Even though notes from autoplay lanes are within
+        // the margin, there's no non-autoplay conflict.
+        let mode = Mode::BEAT_7K;
+        let mut tl0 = TimeLine::new(0.0, 0, 8);
+        tl0.set_note(0, Some(Note::new_normal(10)));
+
+        let mut tl1 = TimeLine::new(0.0, 50_000, 8);
+        tl1.set_note(0, Some(Note::new_normal(20)));
+
+        let mut model = make_test_model(&mode, vec![tl0, tl1]);
+
+        let mut modifier = AutoplayModifier::with_margin(vec![0], 200);
+        modifier.modify(&mut model);
+
+        // No non-autoplay notes anywhere, so no conflicts
+        assert!(model.timelines[0].note(0).is_some());
+        assert!(model.timelines[1].note(0).is_some());
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
+    }
+
+    #[test]
+    fn margin_ln_active_in_non_autoplay_lane_triggers_conflict() {
+        // An LN starts in non-autoplay lane 1 at tl0 (time=0) and ends
+        // at tl2 (time=500). An autoplay note appears at tl1 (time=300).
+        // The LN is active during tl1's window, so conflict is detected
+        // via the lns[] active state.
+        let mode = Mode::BEAT_7K;
+
+        // tl0: LN start in lane 1 (non-autoplay)
+        let mut tl0 = TimeLine::new(0.0, 0, 8);
+        let mut ln_start = Note::new_long(10);
+        ln_start.set_pair_index(Some(2)); // pairs with tl2
+        tl0.set_note(1, Some(ln_start));
+
+        // tl1: autoplay note in lane 0 at time()=300
+        // margin=100, so window scans [200, 400].
+        // pos advances past tl0 (time()=0 < 300-100=200), recording lns[1]=true.
+        // Then scan from pos to endtime checks if lns[1] is active -> conflict.
+        let mut tl1 = TimeLine::new(0.0, 300_000, 8);
+        tl1.set_note(0, Some(Note::new_normal(20)));
+
+        // tl2: LN end in lane 1 (non-autoplay)
+        let mut tl2 = TimeLine::new(1.0, 500_000, 8);
+        let mut ln_end = Note::new_long(10);
+        ln_end.set_end(true);
+        ln_end.set_pair_index(Some(0)); // pairs back with tl0
+        tl2.set_note(1, Some(ln_end));
+
+        let mut model = make_test_model(&mode, vec![tl0, tl1, tl2]);
+
+        let mut modifier = AutoplayModifier::with_margin(vec![0], 100);
+        modifier.modify(&mut model);
+
+        // Lane 0 note at tl1 should be moved to background due to
+        // active LN in lane 1
+        assert!(model.timelines[1].note(0).is_none());
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
+    }
+
+    #[test]
+    fn margin_ln_ended_before_window_no_conflict() {
+        // An LN in non-autoplay lane 1 starts at tl0 (time=0) and ends at
+        // tl1 (time=100). An autoplay note appears at tl2 (time=500).
+        // The LN ended well before the window, so lns[1] should be false
+        // and no conflict.
+        let mode = Mode::BEAT_7K;
+
+        // tl0: LN start in lane 1
+        let mut tl0 = TimeLine::new(0.0, 0, 8);
+        let mut ln_start = Note::new_long(10);
+        ln_start.set_pair_index(Some(1));
+        tl0.set_note(1, Some(ln_start));
+
+        // tl1: LN end in lane 1
+        let mut tl1 = TimeLine::new(0.0, 100_000, 8);
+        let mut ln_end = Note::new_long(10);
+        ln_end.set_end(true);
+        ln_end.set_pair_index(Some(0));
+        tl1.set_note(1, Some(ln_end));
+
+        // tl2: autoplay note in lane 0, far from the LN
+        let mut tl2 = TimeLine::new(1.0, 500_000, 8);
+        tl2.set_note(0, Some(Note::new_normal(20)));
+
+        let mut model = make_test_model(&mode, vec![tl0, tl1, tl2]);
+
+        let mut modifier = AutoplayModifier::with_margin(vec![0], 100);
+        modifier.modify(&mut model);
+
+        // LN ended before the window; no conflict; lane 0 note stays
+        assert!(model.timelines[2].note(0).is_some());
+        assert_eq!(modifier.assist_level(), AssistLevel::None);
+    }
+
+    #[test]
+    fn margin_multiple_timelines_mixed_conflicts() {
+        // Multiple autoplay notes: one has a conflict, one does not.
+        // Only the conflicting one should be moved.
+        let mode = Mode::BEAT_7K;
+
+        // tl0: autoplay note in lane 0 at time()=0
+        let mut tl0 = TimeLine::new(0.0, 0, 8);
+        tl0.set_note(0, Some(Note::new_normal(10)));
+
+        // tl1: non-autoplay note in lane 1 at time()=50 (within margin of tl0)
+        let mut tl1 = TimeLine::new(0.0, 50_000, 8);
+        tl1.set_note(1, Some(Note::new_normal(20)));
+
+        // tl2: autoplay note in lane 0 at time()=1000 (far from any non-autoplay notes)
+        let mut tl2 = TimeLine::new(1.0, 1_000_000, 8);
+        tl2.set_note(0, Some(Note::new_normal(30)));
+
+        let mut model = make_test_model(&mode, vec![tl0, tl1, tl2]);
+
+        let mut modifier = AutoplayModifier::with_margin(vec![0], 100);
+        modifier.modify(&mut model);
+
+        // tl0 has conflict (tl1's lane 1 note within window) -> moved
+        assert!(model.timelines[0].note(0).is_none());
+        // tl2 has no conflict -> stays
+        assert!(model.timelines[2].note(0).is_some());
+        assert_eq!(modifier.assist_level(), AssistLevel::Assist);
+    }
 }
