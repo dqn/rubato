@@ -131,11 +131,11 @@ impl<T> AbstractAudioDriverState<T> {
         if self.note_map_size == 0 {
             return 0.0;
         }
-        self.progress.load(Ordering::Relaxed) as f32 / self.note_map_size as f32
+        self.progress.load(Ordering::Acquire) as f32 / self.note_map_size as f32
     }
 
     pub fn abort(&self) {
-        self.progress.store(self.note_map_size, Ordering::Relaxed);
+        self.progress.store(self.note_map_size, Ordering::Release);
     }
 
     fn _channel(id: i32, pitch: i32) -> i32 {
@@ -160,4 +160,58 @@ fn _default_additional_key_sounds<T>() -> [[Option<T>; 2]; 6] {
         [None, None],
         [None, None],
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    #[test]
+    fn progress_returns_zero_when_note_map_size_is_zero() {
+        let state = AbstractAudioDriverState::<i32>::new(1);
+        assert_eq!(state.progress(), 0.0);
+    }
+
+    #[test]
+    fn progress_returns_fraction_of_loaded_notes() {
+        let mut state = AbstractAudioDriverState::<i32>::new(1);
+        state.note_map_size = 4;
+        state.progress.store(2, Ordering::Release);
+        assert_eq!(state.progress(), 0.5);
+    }
+
+    #[test]
+    fn abort_sets_progress_to_complete() {
+        let mut state = AbstractAudioDriverState::<i32>::new(1);
+        state.note_map_size = 10;
+        assert_eq!(state.progress(), 0.0);
+        state.abort();
+        assert_eq!(state.progress(), 1.0);
+    }
+
+    /// Verify that a Release store on one thread is visible via an Acquire load
+    /// on another thread. This exercises the producer-consumer contract between
+    /// background loading threads (store/Release) and the render thread
+    /// (load/Acquire).
+    #[test]
+    fn progress_store_visible_across_threads() {
+        let mut state = AbstractAudioDriverState::<i32>::new(1);
+        state.note_map_size = 100;
+        let progress = Arc::new(std::mem::replace(
+            &mut state.progress,
+            AtomicI32::new(0),
+        ));
+
+        let writer = Arc::clone(&progress);
+        let handle = std::thread::spawn(move || {
+            writer.store(100, Ordering::Release);
+        });
+        handle.join().unwrap();
+
+        // After the writer thread completes and is joined, the Acquire load
+        // must observe the stored value.
+        let val = progress.load(Ordering::Acquire);
+        assert_eq!(val, 100);
+    }
 }
