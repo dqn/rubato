@@ -1229,6 +1229,12 @@ impl MainState for BMSPlayer {
     }
 
     fn dispose(&mut self) {
+        // Stop BGA movie decoders to release system resources early.
+        // Java stops BGA during state transitions (STATE_FAILED / STATE_FINISHED);
+        // stopping here as well ensures decoders are released even if those
+        // transition paths were skipped (e.g. quick-retry, abnormal exit).
+        lock_or_recover(&self.bga).stop();
+
         // Call default MainState dispose
         if let Some(ref mut skin) = self.main_state_data.skin {
             skin.dispose_skin();
