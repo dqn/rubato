@@ -139,12 +139,9 @@ impl LR2GhostData {
         }
         let mut lanes: [i32; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
         for (i, &target) in targets[1..8].iter().enumerate() {
-            debug_assert!(
-                (0..8).contains(&target),
-                "lane shuffle produced out-of-range value: {}",
-                target
-            );
-            lanes[target as usize] = (i + 1) as i32;
+            if let Some(slot) = lanes.get_mut(target as usize) {
+                *slot = (i + 1) as i32;
+            }
         }
         // we store the lane order as a decimal where the digits
         // encode the lanes left-to-right, and most to least significant
