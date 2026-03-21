@@ -129,6 +129,11 @@ rubato/              # Cargo workspace (15 crates) at repo root
 - **Ranking cache sharing:** IR ranking cache handles must stay shared across `MainController`, proxies, and result wrappers. Fresh per-wrapper caches break select→play/result reuse.
 - **Frozen harness timer sync:** `MainController.timer` and active state's `main_state_data.timer` are separate clocks. Test harnesses must advance both in lockstep.
 - **Mouse context cannot dispatch custom events:** All mouse contexts (`DecideMouseContext`, `ResultMouseContext`, etc.) share the same borrow limitation: the skin is `take()`-ed before the mouse context is created, so `execute_event` cannot call back to `skin.execute_custom_event()`. Custom events (1000-1999) from `DelegateEvent` clickevents are silently dropped during mouse handling. Non-custom events (state changes, timer sets, config cycles) work because they use direct `Event` implementations that call `change_state`/`set_timer_micro`/`player_config_mut` directly, bypassing `execute_event`. Fixing this requires either queued event dispatch or restructuring the `take()`-based borrow pattern.
+- **Lock ordering: PLAYER_CONFIG before CURRENT_PLAY_MODE.** Any code acquiring both must take `PLAYER_CONFIG` first. `get_play_config()` copies the mode value and releases `CURRENT_PLAY_MODE` before acquiring `PLAYER_CONFIG`. Reverse order causes deadlock with `flush_play_config()`.
+- **state_factory take/put-back panic safety:** `MainController.state_factory` is `Option::take()`-ed before `create_state()`. If the create call panics, the factory is lost (None), causing double-panic on the next state transition. Wrap in `catch_unwind` and restore before resuming.
+- **Config propagation via command queue:** When menus (SkinMenu, MiscSettingMenu, etc.) save config changes, they must push changes back to MainController via `MainControllerCommandQueue` variants (e.g., `UpdateSkinConfig`, `UpdateSkinHistory`). Writing only to the local `PLAYER_CONFIG` clone loses changes between sessions.
+- **Practice mode reload must refresh derived fields:** When `receive_reloaded_model()` replaces the BMS model, also update `song_data`, `song_metadata`, and `lnmode_override`. Stale derived fields cause wrong metadata display if the BMS file was edited.
+- **Dispose ordering: BGA decoders before skin.** `dispose()` must stop BGA decoders first, then dispose skin. Skin disposal releases textures that BGA background threads may still be reading.
 
 ### Rendering & Skin Pipeline
 
@@ -143,6 +148,10 @@ rubato/              # Cargo workspace (15 crates) at repo root
 - **LR2 option handoff:** Copy `#SETOPTION` / custom option selections from loader into `Skin` before `prepare()`, which removes option-gated objects based on `Skin.option`.
 - **Property delegate pattern:** `integer_value(id)` / `float_value(id)` / `boolean_value(id)` on MainState; skin property factories delegate via ID lookup.
 - **Active skin verification:** Green tests on default JSON skin do not verify the user's configured Lua/bitmap-font skin. Check `config_player.json` and active profile first.
+- **Pixmap-backed textures must re-upload every frame:** Textures with `__pixmap_*` keys are mutated at runtime (e.g., graph drawing). `ensure_uploaded()` must always re-upload these, not skip them as already uploaded.
+- **Lua draw sentinel (-1) must not leak into property routing:** JSON skins use `Some(-1)` as a sentinel for "has Lua expression" in draw conditions. This must not reach `boolean_property(id)` dispatch, which would interpret -1 as an invalid property ID. Guard with explicit sentinel checks before routing.
+- **ImageSet entries must go through image resolution:** JSON `ImageSet` entries create multiple image references. Each must be resolved through the texture resolution pipeline, not dropped as unresolvable. Missing resolution causes blank skin elements.
+- **Absolute source paths must skip directory prefix joining:** When skin loaders resolve asset paths, absolute paths (`/path/to/font.ttf`) must be detected and used as-is. `Path::join()` on an absolute component silently discards the prefix directory.
 
 ### Input & Gameplay
 
@@ -154,6 +163,9 @@ rubato/              # Cargo workspace (15 crates) at repo root
 - **Lane renderer coordinate parity:** SpriteBatch uses Y-up projection. Keep Java's `hu`/`hl`/upward break condition/positive LN span semantics. Do not rewrite as Y-down.
 - **Selected play-config lookup:** Resolve play config from the selected bar's actual mode, not only the current selector mode.
 - **Target list fallback:** When `TargetProperty`'s global list is empty, fall back to `player_config.targetlist`.
+- **egui event consumption gates game input:** In `rubato-bin`, when egui reports `wants_pointer_input` or `wants_keyboard_input`, do not forward those events to game state. CursorMoved events must also propagate into drag/move callbacks via `SharedKeyState.mouse_dragged`.
+- **Rotated sprite V-flip:** `draw_region_rotated()` must apply Y-up V flip (matching `push_quad()`). Without it, rotated sprites render upside-down.
+- **FFmpeg frame pixel format:** FFmpegProcessor outputs RGBA directly. The `fs_ffmpeg` shader must NOT apply R/B swizzle, or double-swap causes color corruption.
 
 ### Render Context Adapter Completeness
 
@@ -165,6 +177,13 @@ rubato/              # Cargo workspace (15 crates) at repo root
 
 - **Process-global test state:** Use RAII guard patterns (guard struct with `Drop`) for tests modifying static Mutex / singletons / env vars. Without guards, parallel nextest causes non-deterministic interference.
 - **GUI subprocess smoke tests:** Use explicit timeouts, not `Command::output()` alone. Healthy GUI event loops run indefinitely, turning smoke tests into hangs.
+
+### Audio Pipeline
+
+- **Periodic audio handle cleanup:** `PortAudioDriver` must periodically sweep finished audio handles (`cleanup_stopped_handles`) to prevent unbounded handle accumulation. Matches Java's `GdxSoundDriver` pattern.
+- **WAV format tag distinction:** 32-bit WAV samples can be PCM integer (format_tag 1) or IEEE float (format_tag 3). `load_wav` must check the format tag and convert i32 samples to f32 accordingly. Misinterpreting PCM as float produces garbage audio.
+- **RIFF word-aligned padding:** Odd-length WAV chunks have a pad byte after the data. `seek_to_chunk` must account for this or subsequent chunk scans will be off by one byte.
+- **Loader thread: drop handle, don't join.** Background loader threads using `rayon::par_iter` can take a long time. `thread.join()` in abort/set_model blocks dispose. Drop the handle to detach instead.
 
 ## Issue Tracking with bd (beads)
 
