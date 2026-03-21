@@ -21,6 +21,22 @@ impl ScoreDataImporter {
 
         match Self::read_lr2_scores(path) {
             Ok(scores) => {
+                // Batch all MD5 hashes and query once instead of O(N) individual queries.
+                let all_hashes: Vec<String> = scores
+                    .iter()
+                    .filter_map(|s| {
+                        s.get("hash")
+                            .and_then(|v| v.as_str())
+                            .filter(|h| !h.is_empty())
+                            .map(|h| h.to_string())
+                    })
+                    .collect();
+                let all_songs = songdb.song_datas_by_hashes(&all_hashes);
+                let song_map: HashMap<String, _> = all_songs
+                    .into_iter()
+                    .map(|s| (s.file.md5.clone(), s))
+                    .collect();
+
                 let mut result: Vec<ScoreData> = Vec::new();
                 for score in &scores {
                     let md5 = score
@@ -28,8 +44,7 @@ impl ScoreDataImporter {
                         .and_then(|v| v.as_str())
                         .unwrap_or_default()
                         .to_string();
-                    let song = songdb.song_datas_by_hashes(std::slice::from_ref(&md5));
-                    if !song.is_empty() {
+                    if let Some(song) = song_map.get(&md5) {
                         let clear_idx = score
                             .get("clear")
                             .and_then(|v| v.as_i64())
@@ -68,12 +83,12 @@ impl ScoreDataImporter {
                                 .and_then(|v| v.as_i64())
                                 .unwrap_or(0),
                         );
-                        sd.sha256 = song[0].file.sha256.clone();
-                        sd.notes = song[0].chart.notes;
+                        sd.sha256 = song.file.sha256.clone();
+                        sd.notes = song.chart.notes;
                         // LR2 had no LN mode concept. For songs with undefined LN,
                         // import the score under all LN modes (0/1/2) so it is visible
                         // regardless of the user's current lnmode setting.
-                        if song[0].chart.has_undefined_long_note() {
+                        if song.chart.has_undefined_long_note() {
                             for lnmode in 0..3 {
                                 let mut sd_ln = sd.clone();
                                 sd_ln.mode = lnmode;
