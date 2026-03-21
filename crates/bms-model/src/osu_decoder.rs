@@ -273,6 +273,10 @@ impl OSUDecoder {
             let column_idx = ((hit_object.x as f32 * keymode as f32 / 512.0).floor() as i32)
                 .max(0)
                 .min(keymode - 1);
+            let lane = mapping[column_idx as usize];
+            if lane < 0 {
+                continue;
+            }
             let section = get_section(&timing_points, adjusted_time);
 
             let tl = get_timeline(&mut timelines, adjusted_time, section, mode_key);
@@ -295,13 +299,13 @@ impl OSUDecoder {
                         adjusted_time as i64 * 1000,
                         0,
                     );
-                    tl.set_note(mapping[column_idx as usize], Some(note));
+                    tl.set_note(lane, Some(note));
                     continue;
                 }
                 let mut head =
                     Note::new_long_with_start_duration(wav_idx, adjusted_time as i64 * 1000, 0);
                 head.set_long_note_type(model.lntype().as_i32());
-                tl.set_note(mapping[column_idx as usize], Some(head));
+                tl.set_note(lane, Some(head));
 
                 let tail_section = get_section(&timing_points, tail_time_ms);
                 let mut tail = Note::new_long_with_start_duration(wav_idx, tail_time_us, 0);
@@ -310,11 +314,11 @@ impl OSUDecoder {
                 let tail_tl = get_timeline(&mut timelines, tail_time_ms, tail_section, mode_key);
                 tail_tl.bpm = get_bpm(&timing_points, tail_time_ms);
                 tail_tl.scroll = get_sv(&svs, tail_time_ms);
-                tail_tl.set_note(mapping[column_idx as usize], Some(tail));
+                tail_tl.set_note(lane, Some(tail));
             } else {
                 let note =
                     Note::new_normal_with_start_duration(wav_idx, adjusted_time as i64 * 1000, 0);
-                tl.set_note(mapping[column_idx as usize], Some(note));
+                tl.set_note(lane, Some(note));
             }
         }
 

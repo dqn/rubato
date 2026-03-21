@@ -52,11 +52,7 @@ const CHANNELASSIGN_POPN: [i32; 18] = [
 type F64Key = u64;
 
 fn f64_key(f: f64) -> F64Key {
-    // For BTreeMap ordering to match f64 ordering for positive values,
-    // we use to_bits() which works correctly for non-negative f64s.
-    // For negative values we need to flip. But in this code, section
-    // positions are always >= 0, so to_bits() is fine.
-    f.to_bits()
+    f64_to_key(f)
 }
 
 fn key_f64(k: F64Key) -> f64 {
@@ -1312,7 +1308,7 @@ pub struct StartLnInfo {
 // ---------------------------------------------------------------------------
 
 pub fn f64_to_key(f: f64) -> u64 {
-    f.to_bits()
+    if f == 0.0 { 0u64 } else { f.to_bits() }
 }
 
 pub fn key_to_f64(k: u64) -> f64 {

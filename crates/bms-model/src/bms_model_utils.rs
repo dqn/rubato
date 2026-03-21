@@ -43,13 +43,17 @@ pub fn total_notes_full(model: &BMSModel, start: i32, end: i32, note_type: i32, 
     let mut i = start_idx;
     let mut index = 0;
     while index < slane_len {
+        if i >= scratch_key.len() {
+            break;
+        }
         slane.push(scratch_key[i]);
         i += 1;
         index += 1;
     }
 
     let nlane_len = ((mode_key - scratch_key.len() as i32)
-        / (if side == 0 { 1 } else { mode_player })) as usize;
+        / (if side == 0 { 1 } else { mode_player }))
+    .max(0) as usize;
     let mut nlane = Vec::with_capacity(nlane_len);
     let mut i = 0i32;
     let mut index = 0;

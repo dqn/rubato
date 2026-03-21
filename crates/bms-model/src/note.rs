@@ -154,8 +154,8 @@ impl Note {
         self.data_mut().duration = duration;
     }
 
-    pub fn play_time(&self) -> i32 {
-        (self.data().playtime / 1000) as i32
+    pub fn play_time(&self) -> i64 {
+        self.data().playtime / 1000
     }
 
     pub fn milli_play_time(&self) -> i64 {

@@ -75,7 +75,7 @@ impl MusicResult {
                         // summary statistics.
                         let play_time = note.play_time();
                         if state >= 1 {
-                            self.data.timing_distribution.add(play_time);
+                            self.data.timing_distribution.add(play_time as i32);
                         }
                     }
                 }
