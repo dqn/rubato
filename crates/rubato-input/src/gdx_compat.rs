@@ -52,9 +52,7 @@ pub struct GdxInput;
 
 impl GdxInput {
     pub fn is_key_pressed(keycode: i32) -> bool {
-        let guard = SHARED_KEY_STATE
-            .lock()
-            .expect("SHARED_KEY_STATE lock poisoned");
+        let guard = lock_or_recover(&SHARED_KEY_STATE);
         if let Some(ref state) = *guard {
             state.is_key_pressed(keycode)
         } else {
@@ -63,9 +61,7 @@ impl GdxInput {
     }
 
     pub fn get_x() -> i32 {
-        let guard = SHARED_KEY_STATE
-            .lock()
-            .expect("SHARED_KEY_STATE lock poisoned");
+        let guard = lock_or_recover(&SHARED_KEY_STATE);
         if let Some(ref state) = *guard {
             state.mouse_x()
         } else {
@@ -74,9 +70,7 @@ impl GdxInput {
     }
 
     pub fn get_y() -> i32 {
-        let guard = SHARED_KEY_STATE
-            .lock()
-            .expect("SHARED_KEY_STATE lock poisoned");
+        let guard = lock_or_recover(&SHARED_KEY_STATE);
         if let Some(ref state) = *guard {
             state.mouse_y()
         } else {
@@ -85,18 +79,14 @@ impl GdxInput {
     }
 
     pub fn set_cursor_position(x: i32, y: i32) {
-        let guard = SHARED_KEY_STATE
-            .lock()
-            .expect("SHARED_KEY_STATE lock poisoned");
+        let guard = lock_or_recover(&SHARED_KEY_STATE);
         if let Some(ref state) = *guard {
             state.set_cursor_position(x, y);
         }
     }
 
     pub fn is_button_pressed(button: i32) -> bool {
-        let guard = SHARED_KEY_STATE
-            .lock()
-            .expect("SHARED_KEY_STATE lock poisoned");
+        let guard = lock_or_recover(&SHARED_KEY_STATE);
         if let Some(ref state) = *guard {
             state.is_mouse_button_pressed(button)
         } else {
@@ -105,9 +95,7 @@ impl GdxInput {
     }
 
     pub fn drain_scroll() -> (f32, f32) {
-        let guard = SHARED_KEY_STATE
-            .lock()
-            .expect("SHARED_KEY_STATE lock poisoned");
+        let guard = lock_or_recover(&SHARED_KEY_STATE);
         if let Some(ref state) = *guard {
             state.drain_scroll()
         } else {
@@ -116,9 +104,7 @@ impl GdxInput {
     }
 
     pub fn drain_mouse_dragged() -> bool {
-        let guard = SHARED_KEY_STATE
-            .lock()
-            .expect("SHARED_KEY_STATE lock poisoned");
+        let guard = lock_or_recover(&SHARED_KEY_STATE);
         if let Some(ref state) = *guard {
             state.drain_mouse_dragged()
         } else {
@@ -132,9 +118,7 @@ pub struct GdxGraphics;
 
 impl GdxGraphics {
     pub fn get_width() -> i32 {
-        let guard = SHARED_KEY_STATE
-            .lock()
-            .expect("SHARED_KEY_STATE lock poisoned");
+        let guard = lock_or_recover(&SHARED_KEY_STATE);
         if let Some(ref state) = *guard {
             state.window_width()
         } else {
@@ -143,9 +127,7 @@ impl GdxGraphics {
     }
 
     pub fn get_height() -> i32 {
-        let guard = SHARED_KEY_STATE
-            .lock()
-            .expect("SHARED_KEY_STATE lock poisoned");
+        let guard = lock_or_recover(&SHARED_KEY_STATE);
         if let Some(ref state) = *guard {
             state.window_height()
         } else {
