@@ -1088,37 +1088,7 @@ impl MainState for BMSPlayer {
                         let start_ms = (failed_time - play_time).max(0);
                         pad_gaugelog_with_zeros(&mut self.gaugelog, start_ms, self.playtime);
                     }
-                    // Ensure model notes have judge states before computing score data.
-                    self.sync_judge_states_to_model();
-                    let score = if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Play
-                        || self.play_mode.mode == rubato_core::bms_player_mode::Mode::Replay
-                    {
-                        self.create_score_data(self.device_type)
-                    } else {
-                        None
-                    };
-                    let replay = self.build_replay_data();
-                    self.pending.pending_score_handoff =
-                        Some(rubato_types::score_handoff::ScoreHandoff {
-                            score_data: score,
-                            combo: self.judge.course_combo(),
-                            maxcombo: self.judge.course_maxcombo(),
-                            gauge: self.gaugelog.clone(),
-                            groove_gauge: self.gauge.clone(),
-                            assist: self.assist,
-                            freq_on: self.freq_on,
-                            force_no_ir_send: self.force_no_ir_send,
-                            replay_data: Some(replay),
-                            // Practice mode mutates the model via PracticeModifier;
-                            // do not leak the modified model into the score handoff.
-                            updated_model: if self.play_mode.mode
-                                == rubato_core::bms_player_mode::Mode::Practice
-                            {
-                                None
-                            } else {
-                                Some(self.model.clone())
-                            },
-                        });
+                    self.pending.pending_score_handoff = Some(self.build_score_handoff());
                     // input.setEnable(true); input.setStartTime(0);
                     self.save_config();
 
@@ -1165,38 +1135,8 @@ impl MainState for BMSPlayer {
                 if self.main_state_data.timer.now_time_for_id(TIMER_FADEOUT) > skin_fadeout {
                     self.pending.pending_global_pitch = Some(1.0);
                     // resource.getBGAManager().stop();
-                    // Ensure model notes have judge states before computing score data.
-                    self.sync_judge_states_to_model();
-                    let score = if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Play
-                        || self.play_mode.mode == rubato_core::bms_player_mode::Mode::Replay
-                    {
-                        self.create_score_data(self.device_type)
-                    } else {
-                        None
-                    };
+                    self.pending.pending_score_handoff = Some(self.build_score_handoff());
                     self.save_config();
-                    let replay = self.build_replay_data();
-                    self.pending.pending_score_handoff =
-                        Some(rubato_types::score_handoff::ScoreHandoff {
-                            score_data: score,
-                            combo: self.judge.course_combo(),
-                            maxcombo: self.judge.course_maxcombo(),
-                            gauge: self.gaugelog.clone(),
-                            groove_gauge: self.gauge.clone(),
-                            assist: self.assist,
-                            freq_on: self.freq_on,
-                            force_no_ir_send: self.force_no_ir_send,
-                            replay_data: Some(replay),
-                            // Practice mode mutates the model via PracticeModifier;
-                            // do not leak the modified model into the score handoff.
-                            updated_model: if self.play_mode.mode
-                                == rubato_core::bms_player_mode::Mode::Practice
-                            {
-                                None
-                            } else {
-                                Some(self.model.clone())
-                            },
-                        });
                     // input.setEnable(true); input.setStartTime(0);
 
                     // Transition: practice -> PlayState::Practice, else -> RESULT

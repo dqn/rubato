@@ -509,4 +509,40 @@ impl BMSPlayer {
             self.score.playinfo.randomoption
         }
     }
+
+    /// Build a `ScoreHandoff` by syncing judge states, computing score data,
+    /// building replay data, and capturing gauge/assist/model state.
+    ///
+    /// Callers should perform any path-specific mutations (e.g. gauge-log
+    /// padding for the Failed path) **before** calling this method.
+    pub(super) fn build_score_handoff(&mut self) -> rubato_types::score_handoff::ScoreHandoff {
+        // Ensure model notes have judge states before computing score data.
+        self.sync_judge_states_to_model();
+        let score = if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Play
+            || self.play_mode.mode == rubato_core::bms_player_mode::Mode::Replay
+        {
+            self.create_score_data(self.device_type)
+        } else {
+            None
+        };
+        let replay = self.build_replay_data();
+        rubato_types::score_handoff::ScoreHandoff {
+            score_data: score,
+            combo: self.judge.course_combo(),
+            maxcombo: self.judge.course_maxcombo(),
+            gauge: self.gaugelog.clone(),
+            groove_gauge: self.gauge.clone(),
+            assist: self.assist,
+            freq_on: self.freq_on,
+            force_no_ir_send: self.force_no_ir_send,
+            replay_data: Some(replay),
+            // Practice mode mutates the model via PracticeModifier;
+            // do not leak the modified model into the score handoff.
+            updated_model: if self.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice {
+                None
+            } else {
+                Some(self.model.clone())
+            },
+        }
+    }
 }
