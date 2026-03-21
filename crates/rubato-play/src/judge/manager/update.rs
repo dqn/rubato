@@ -291,8 +291,9 @@ impl JudgeManager {
                             // Java line 378: keysound.play(state.processing, keyvolume, 0)
                             self.keysound_play_indices.push(proc_idx);
                             let judge = if j >= mjudge.len() {
-                                // No window matched: miss-POOR.
-                                6
+                                // No window matched: pass mjudge.len() (same as Java's
+                                // j == mjudge.length after the for-loop).
+                                mjudge.len() as i32
                             } else {
                                 j as i32
                             };
@@ -940,7 +941,7 @@ impl JudgeManager {
                 self.judge[player][offset] = if judge == 0 {
                     1
                 } else {
-                    judge * 2 + if mfast >= 0 { 0 } else { 1 }
+                    judge * 2 + if mfast > 0 { 0 } else { 1 }
                 };
             }
         }

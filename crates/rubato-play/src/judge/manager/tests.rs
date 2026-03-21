@@ -2706,3 +2706,208 @@ fn ln_miss_both_start_and_end() {
     }
     assert_eq!(jm.max_combo(), 0, "no combo on misses");
 }
+
+// --- Regression tests for judge parity fixes ---
+
+#[test]
+fn laser_color_mfast_zero_is_slow_not_fast() {
+    // Java uses `mfast > 0` for the laser color, so mfast==0 should produce an
+    // odd (SLOW) laser value. Encoding: judge==0 -> 1; else judge*2 + (mfast>0 ? 0 : 1).
+    //
+    // To exercise mfast=0 with judge>0, we use a re-hit (empty-POOR) scenario:
+    //   1. Hit note[0] at 500ms (PG, state becomes 1).
+    //   2. Release key, advance time slightly.
+    //   3. Re-press at pmtime=500000 (update at mtime=502000).
+    //      The scan finds note[0] (state=1) with dmtime = 500000 - 500000 = 0.
+    //      dmtime=0 falls in the empty-POOR window [0, 1000000] -> judge=5, mfast=0.
+    //
+    // With fix   (mfast > 0):  laser = 5*2 + 1 = 11 (odd, SLOW)
+    // Without fix (mfast >= 0): laser = 5*2 + 0 = 10 (even, FAST)
+    let model = make_model_with_notes(&[500_000]);
+    let notes = build_judge_notes(&model);
+    let jp = crate::judge_property::lr2();
+
+    let config = JudgeConfig {
+        notes: &notes,
+        mode: &Mode::BEAT_7K,
+        ln_type: LnType::LongNote,
+        judge_rank: 100,
+        judge_window_rate: [100, 100, 100],
+        scratch_judge_window_rate: [100, 100, 100],
+        algorithm: JudgeAlgorithm::Combo,
+        autoplay: false,
+        judge_property: &jp,
+        lane_property: None,
+        auto_adjust_enabled: false,
+        is_play_or_practice: false,
+        judgeregion: 1,
+    };
+    let mut jm = JudgeManager::from_config(&config);
+
+    let gp = crate::gauge_property::GaugeProperty::Lr2;
+    let mut gauge = GrooveGauge::new(&model, GrooveGauge::NORMAL, &gp);
+
+    let lp = LaneProperty::new(&Mode::BEAT_7K);
+    let key_count = lp.key_lane_assign().len();
+
+    // Prime
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    // Step 1: Hit note[0] at exactly 500ms (PG). note[0].state becomes 1.
+    let note_time = 500_000;
+    let mut keys = vec![false; key_count];
+    keys[0] = true;
+    let mut key_times = vec![i64::MIN; key_count];
+    key_times[0] = note_time;
+    jm.update(note_time, &notes, &keys, &key_times, &mut gauge);
+
+    // PG always produces laser=1 regardless of mfast. Lane 0 -> offset 1 in BEAT_7K.
+    assert_eq!(jm.judge_laser_color(0, 1), 1, "PG should produce laser 1");
+
+    // Step 2: Release key. Advance time slightly.
+    jm.update(
+        note_time + 1000,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    // Step 3: Re-press at pmtime=note_time. note[0] now has state=1 (already judged).
+    // dmtime = note[0].time - pmtime = 500000 - 500000 = 0 -> in empty-POOR [0, 1000000].
+    // judge=5, mfast=0. Laser = 5*2 + (0>0 ? 0 : 1) = 11.
+    keys = vec![false; key_count];
+    keys[0] = true;
+    key_times = vec![i64::MIN; key_count];
+    key_times[0] = note_time; // same pmtime as the original note time
+    jm.update(note_time + 2000, &notes, &keys, &key_times, &mut gauge);
+
+    // With fix (mfast > 0):   judge=5, mfast=0, laser = 5*2+1 = 11 (SLOW, odd)
+    // Without fix (mfast >= 0): laser = 5*2+0 = 10 (FAST, even)
+    assert_eq!(
+        jm.judge_laser_color(0, 1),
+        11,
+        "Re-hit with mfast=0 should produce laser 11 (odd=SLOW), not 10 (even=FAST)"
+    );
+}
+
+/// Helper: create a BMSModel with a CN (charge note) LN pair on a scratch lane.
+///
+/// Lane 7 is the scratch lane in BEAT_7K mode.
+/// The CN start is placed at `start_us` and the CN end at `end_us`.
+fn make_model_with_scratch_cn_pair(start_us: i64, end_us: i64) -> BMSModel {
+    use bms_model::note::TYPE_CHARGENOTE;
+
+    let mut model = BMSModel::new();
+    model.set_mode(Mode::BEAT_7K);
+    model.judgerank = 100;
+
+    let mut tl_start = TimeLine::new(0.0, start_us, 8);
+    let mut note_start = Note::new_long(1);
+    note_start.set_micro_time(start_us);
+    note_start.set_long_note_type(TYPE_CHARGENOTE);
+    tl_start.set_note(7, Some(note_start));
+
+    let mut tl_end = TimeLine::new(1.0, end_us, 8);
+    let mut note_end = Note::new_long(1);
+    note_end.set_end(true);
+    note_end.set_micro_time(end_us);
+    note_end.set_long_note_type(TYPE_CHARGENOTE);
+    tl_end.set_note(7, Some(note_end));
+
+    model.timelines = vec![tl_start, tl_end];
+    model
+}
+
+#[test]
+fn bss_end_no_match_counts_as_ems_miss() {
+    // Java BSS end: when no judge window matches, j == mjudge.length (5 for standard
+    // tables). add_judge_count(5, ...) maps to ems/lms counters.
+    // The bug: Rust used hardcoded 6 which falls to `_ => {}` in add_judge_count,
+    // silently dropping BSS end misses from the score.
+    //
+    // Setup: CN (charge note) on scratch lane (lane 7 in BEAT_7K).
+    // 1. Press key 7 exactly at CN start to begin processing.
+    // 2. Press key 8 (opposite scratch direction) far from CN end time so no window
+    //    matches. This triggers BSS end with no-match judge.
+    // 3. Verify ems+lms counter is incremented (not dropped).
+
+    let model = make_model_with_scratch_cn_pair(500_000, 2_000_000);
+    let notes = build_judge_notes(&model);
+    let jp = crate::judge_property::lr2();
+
+    let config = JudgeConfig {
+        notes: &notes,
+        mode: &Mode::BEAT_7K,
+        ln_type: LnType::ChargeNote,
+        judge_rank: 100,
+        judge_window_rate: [100, 100, 100],
+        scratch_judge_window_rate: [100, 100, 100],
+        algorithm: JudgeAlgorithm::Combo,
+        autoplay: false,
+        judge_property: &jp,
+        lane_property: None,
+        auto_adjust_enabled: false,
+        is_play_or_practice: false,
+        judgeregion: 1,
+    };
+    let mut jm = JudgeManager::from_config(&config);
+
+    let gp = crate::gauge_property::GaugeProperty::Lr2;
+    let mut gauge = GrooveGauge::new(&model, GrooveGauge::NORMAL, &gp);
+
+    let lp = LaneProperty::new(&Mode::BEAT_7K);
+    let key_count = lp.key_lane_assign().len();
+
+    // Prime
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    // Step 1: Press key 7 (first scratch key) exactly at CN start time.
+    // key_lane_assign for BEAT_7K = [0, 1, 2, 3, 4, 5, 6, 7, 7]
+    // Keys 7 and 8 are both assigned to lane 7 (scratch).
+    let cn_start_time = 500_000;
+    let mut keys = vec![false; key_count];
+    keys[7] = true;
+    let mut key_times = vec![i64::MIN; key_count];
+    key_times[7] = cn_start_time;
+    jm.update(cn_start_time, &notes, &keys, &key_times, &mut gauge);
+
+    // Step 2: Press key 8 (opposite scratch direction) very far from CN end time.
+    // CN end is at 2_000_000. Press key 8 at 800_000. dmtime = 2_000_000 - 800_000 = 1_200_000.
+    // The scnendmjudge windows (LR2) are ~[-120000, 120000] for PG through ~[-120000, 120000] for PR.
+    // 1_200_000 is far outside all windows, so no match => j == mjudge.len() = 5.
+    let bss_end_time = 800_000;
+    let mut keys2 = vec![false; key_count];
+    keys2[7] = true; // key 7 still held
+    keys2[8] = true; // key 8 newly pressed (opposite direction)
+    let mut key_times2 = vec![i64::MIN; key_count];
+    key_times2[8] = bss_end_time; // only key 8 changed
+    jm.update(bss_end_time, &notes, &keys2, &key_times2, &mut gauge);
+
+    // Verify: BSS end no-match should increment a score counter, not be silently dropped.
+    // LR2's scnendmjudge has 4 entries (PG, GR, GD, BD). When no window matches,
+    // Java passes j = mjudge.length = 4 to updateMicro. Judge 4 maps to epr/lpr
+    // (POOR). The old Rust code used hardcoded 6 which fell to `_ => {}` and was
+    // silently dropped.
+    // dmtime = 2_000_000 - 800_000 = 1_200_000 > 0, so mfast >= 0 => "fast" flag
+    // is true => epr is incremented.
+    let score = jm.score_data();
+    assert!(
+        score.judge_counts.epr > 0,
+        "BSS end no-match should be counted as POOR (judge=4=mjudge.len()), got epr={} lpr={}",
+        score.judge_counts.epr,
+        score.judge_counts.lpr
+    );
+}
