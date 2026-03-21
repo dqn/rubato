@@ -307,27 +307,22 @@ impl LauncherUi {
             // Action buttons at the bottom
             ui.horizontal(|ui| {
                 if ui.button("Start").clicked() {
-                    self.commit_config();
                     self.play_requested = true;
                     log::info!("Start requested");
                 }
                 if ui.button("Load All BMS").clicked() {
-                    self.commit_config();
                     self.load_all_bms_requested = true;
                     log::info!("Load All BMS requested");
                 }
                 if ui.button("Load Diff BMS").clicked() {
-                    self.commit_config();
                     self.load_diff_bms_requested = true;
                     log::info!("Load Diff BMS requested");
                 }
                 if ui.button("Import Score").clicked() {
-                    self.commit_config();
                     self.import_score_requested = true;
                     log::info!("Import Score requested");
                 }
                 if ui.button("Exit").clicked() {
-                    self.commit_config();
                     self.exit_requested = true;
                 }
             });

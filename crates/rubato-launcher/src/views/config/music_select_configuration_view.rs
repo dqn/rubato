@@ -158,11 +158,11 @@ impl MusicSelectConfigurationView {
             .num_columns(2)
             .show(ui, |ui| {
                 ui.label("Scroll Duration Low:");
-                ui.add(egui::DragValue::new(&mut self.scrolldurationlow).range(0..=10000));
+                ui.add(egui::DragValue::new(&mut self.scrolldurationlow).range(2..=1000));
                 ui.end_row();
 
                 ui.label("Scroll Duration High:");
-                ui.add(egui::DragValue::new(&mut self.scrolldurationhigh).range(0..=10000));
+                ui.add(egui::DragValue::new(&mut self.scrolldurationhigh).range(1..=1000));
                 ui.end_row();
 
                 ui.label("Analog Scroll:");

@@ -402,14 +402,15 @@ fn profile_switcher_ui(ui: &mut egui::Ui) {
                             c.playername = new_pc.id.clone();
                         }
                     }
-                    // Push SaveConfig and LoadNewProfile commands via the queue
+                    // Push LoadNewProfile before SaveConfig so MainController.config.playername
+                    // is updated before the save (the modmenu's local CONFIG clone is separate).
                     {
                         let queue = lock_or_recover(&COMMAND_QUEUE);
                         if let Some(ref q) = *queue {
-                            q.push(MainControllerCommand::SaveConfig);
                             q.push(MainControllerCommand::LoadNewProfile(Box::new(
                                 new_pc.clone(),
                             )));
+                            q.push(MainControllerCommand::SaveConfig);
                         }
                     }
                     // Update local PlayerConfig
