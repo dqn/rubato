@@ -796,6 +796,7 @@ impl BarManager {
         if self.currentsongs.is_empty() {
             return false;
         }
+        self.selectedindex = self.selectedindex.min(self.currentsongs.len() - 1);
         let selected_bar = self.currentsongs[self.selectedindex].clone();
         self.update_bar_with_context(Some(&selected_bar), ctx)
     }

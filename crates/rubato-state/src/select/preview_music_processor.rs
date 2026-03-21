@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 use rubato_audio::audio_driver::AudioDriver;
 use rubato_types::audio_config::DEFAULT_AUDIO_VOLUME;
 use rubato_types::main_controller_access::MainControllerAccess;
+use rubato_types::sync_utils::lock_or_recover;
 
 use super::*;
 
@@ -133,9 +134,7 @@ impl PreviewMusicProcessor {
                 .to_string();
         }
 
-        if let Ok(mut cmds) = self.commands.lock() {
-            cmds.push_back(preview_path);
-        }
+        lock_or_recover(&self.commands).push_back(preview_path);
     }
 
     pub fn song_data(&self) -> Option<&SongData> {
@@ -205,11 +204,7 @@ impl PreviewMusicProcessor {
             self.default_started = true;
         }
 
-        let next_path = self
-            .commands
-            .lock()
-            .ok()
-            .and_then(|mut cmds| cmds.pop_front());
+        let next_path = lock_or_recover(&self.commands).pop_front();
 
         if let Some(path) = next_path {
             let path = if path.is_empty() {
@@ -295,11 +290,7 @@ impl PreviewMusicProcessor {
                 .map(|a| a.systemvolume)
                 .unwrap_or(DEFAULT_AUDIO_VOLUME);
             // Drain command with lock held only briefly, then perform audio work unlocked.
-            let next_cmd = self
-                .commands
-                .lock()
-                .ok()
-                .and_then(|mut cmds| cmds.pop_front());
+            let next_cmd = lock_or_recover(&self.commands).pop_front();
 
             if let Some(path) = next_cmd {
                 let path = if path.is_empty() {
