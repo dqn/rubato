@@ -388,7 +388,14 @@ impl JudgeManager {
                                 {
                                     j += 1;
                                 }
-                                judge = if j >= 4 { j as i32 + 1 } else { j as i32 };
+                                judge = if j >= mjudge.len() {
+                                    // No window matched: miss-POOR (6).
+                                    6
+                                } else if j >= 4 {
+                                    j as i32 + 1
+                                } else {
+                                    j as i32
+                                };
                             }
 
                             if judge < 6 {

@@ -78,13 +78,7 @@ impl BMSPlayer {
         // Intentional improvement: when no notes were judged (e.g., autoplay was off
         // but the user didn't play), abort instead of showing an empty result screen.
         // Course mode is excluded because aborting mid-course would break the sequence.
-        if self.state != PlayState::Finished
-            && !self.is_course_mode
-            && self.judge.judge_count(0)
-                + self.judge.judge_count(1)
-                + self.judge.judge_count(2)
-                + self.judge.judge_count(3)
-                == 0
+        if self.state != PlayState::Finished && !self.is_course_mode && self.judge.past_notes() == 0
         {
             if let Some(ref mut keyinput) = self.input.keyinput {
                 keyinput.stop_judge();
