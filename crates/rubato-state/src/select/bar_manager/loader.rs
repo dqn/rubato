@@ -141,12 +141,41 @@ impl RandomFolder {
 
 pub(super) fn score_data_property(score: &ScoreData, key: &str) -> i64 {
     match key {
+        // Direct ScoreData fields
         "clear" => score.clear as i64,
-        "exscore" => score.exscore() as i64,
-        "notes" => score.notes as i64,
-        "minbp" => score.minbp as i64,
         "date" => score.date,
         "playcount" => score.playcount as i64,
+        "clearcount" => score.clearcount as i64,
+        "combo" => score.maxcombo as i64,
+        "mode" => score.mode as i64,
+        "notes" => score.notes as i64,
+        "passnotes" => score.passnotes as i64,
+        "minbp" => score.minbp as i64,
+        "state" => score.state as i64,
+        // Computed
+        "exscore" => score.exscore() as i64,
+        // JudgeCounts (flattened)
+        "epg" => score.judge_counts.epg as i64,
+        "lpg" => score.judge_counts.lpg as i64,
+        "egr" => score.judge_counts.egr as i64,
+        "lgr" => score.judge_counts.lgr as i64,
+        "egd" => score.judge_counts.egd as i64,
+        "lgd" => score.judge_counts.lgd as i64,
+        "ebd" => score.judge_counts.ebd as i64,
+        "lbd" => score.judge_counts.lbd as i64,
+        "epr" => score.judge_counts.epr as i64,
+        "lpr" => score.judge_counts.lpr as i64,
+        "ems" => score.judge_counts.ems as i64,
+        "lms" => score.judge_counts.lms as i64,
+        // TimingStats (flattened)
+        "avgjudge" => score.timing_stats.avgjudge,
+        "totalDuration" => score.timing_stats.total_duration,
+        // PlayOption (flattened)
+        "option" => score.play_option.option as i64,
+        "random" => score.play_option.random as i64,
+        "seed" => score.play_option.seed,
+        "assist" => score.play_option.assist as i64,
+        "gauge" => score.play_option.gauge as i64,
         _ => 0,
     }
 }
