@@ -16,7 +16,6 @@ use rubato_types::sync_utils::lock_or_recover;
 /// Translates: bms.player.beatoraja.stream.command.StreamRequestCommand
 pub struct StreamRequestCommand {
     pub selector: Arc<Mutex<MusicSelector>>,
-    pub max_length: i32,
     pub updater_thread: Option<thread::JoinHandle<()>>,
     /// Channel sender for delivering sha256 hashes to the UpdateBar loop.
     /// Replaces `Arc<Mutex<UpdateBar>>` to eliminate lock ordering deadlock.
@@ -25,7 +24,6 @@ pub struct StreamRequestCommand {
 
 impl StreamRequestCommand {
     pub fn new(selector: Arc<Mutex<MusicSelector>>) -> Self {
-        let max_length = lock_or_recover(&selector).config.max_request_count;
         let (tx, rx) = mpsc::channel();
         let selector_clone = Arc::clone(&selector);
         let updater_thread = Some(thread::spawn(move || {
@@ -34,7 +32,6 @@ impl StreamRequestCommand {
         }));
         Self {
             selector,
-            max_length,
             updater_thread,
             sender: Some(tx),
         }
@@ -74,17 +71,14 @@ pub struct UpdateBar {
     /// sha256 stack
     pub stack: Vec<String>,
     pub selector: Arc<Mutex<MusicSelector>>,
-    pub max_length: i32,
 }
 
 impl UpdateBar {
     pub fn new(selector: Arc<Mutex<MusicSelector>>) -> Self {
-        let max_length = lock_or_recover(&selector).config.max_request_count;
         Self {
             song_datas: Vec::new(),
             stack: Vec::new(),
             selector,
-            max_length,
         }
     }
 
@@ -146,8 +140,9 @@ impl UpdateBar {
             if !song_datas_result.is_empty() {
                 self.song_datas.push(song_datas_result[0].clone());
             }
+            let max_length = selector.config.max_request_count;
             drop(selector);
-            if self.song_datas.len() as i32 > self.max_length {
+            if self.song_datas.len() as i32 > max_length {
                 self.song_datas.remove(0);
             }
         }
@@ -229,6 +224,75 @@ impl UpdateBar {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rubato_types::song_data::SongData;
+    use rubato_types::test_support::TestSongDb;
+
+    /// Helper: create a SongData with a given sha256 hash.
+    fn make_song(sha256: &str) -> SongData {
+        let mut s = SongData::new();
+        s.file.sha256 = sha256.to_string();
+        s
+    }
+
+    /// Helper: create a MusicSelector with a TestSongDb that returns the
+    /// given songs for any hash lookup, and set max_request_count on its config.
+    fn make_selector_with_db(songs: Vec<SongData>, max_request_count: i32) -> Arc<Mutex<MusicSelector>> {
+        let mut selector = MusicSelector::new();
+        selector.songdb = Box::new(
+            TestSongDb::new()
+                .with_songs_by_hashes(songs)
+                .with_hash_filtering(true),
+        );
+        selector.config.max_request_count = max_request_count;
+        Arc::new(Mutex::new(selector))
+    }
+
+    #[test]
+    fn update_reads_max_request_count_from_live_config() {
+        // Set up a selector with max_request_count = 2 and songs available
+        // for hash lookup.
+        let song_a = make_song("aaaa");
+        let song_b = make_song("bbbb");
+        let song_c = make_song("cccc");
+        let song_d = make_song("dddd");
+        let song_e = make_song("eeee");
+        let selector = make_selector_with_db(
+            vec![
+                song_a.clone(),
+                song_b.clone(),
+                song_c.clone(),
+                song_d.clone(),
+                song_e.clone(),
+            ],
+            2,
+        );
+
+        let mut updater = UpdateBar::new(Arc::clone(&selector));
+
+        // Push 3 hashes; with max_request_count=2, only 2 should remain
+        updater.stack.push("aaaa".to_string());
+        updater.stack.push("bbbb".to_string());
+        updater.stack.push("cccc".to_string());
+        updater.update();
+        assert_eq!(
+            updater.song_datas.len(),
+            2,
+            "should trim to max_request_count=2"
+        );
+
+        // Change max_request_count to 5 on the live config
+        lock_or_recover(&selector).config.max_request_count = 5;
+
+        // Push 2 more unique hashes; with the new limit of 5, all 4 should fit
+        updater.stack.push("dddd".to_string());
+        updater.stack.push("eeee".to_string());
+        updater.update();
+        assert_eq!(
+            updater.song_datas.len(),
+            4,
+            "should respect updated max_request_count=5 from live config"
+        );
+    }
 
     #[test]
     fn escape_no_special_chars() {
