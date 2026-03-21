@@ -73,6 +73,8 @@ impl LR2SkinCSVLoaderState {
             skin_fadeout: None,
             groovex: 0,
             groovey: 0,
+            include_depth: 0,
+            mode: None,
             line: None,
             imagesetarray: Vec::new(),
             image: None,
@@ -269,6 +271,13 @@ impl LR2SkinCSVLoaderState {
                     warn!("INCLUDE command missing path argument");
                     return;
                 }
+                if self.include_depth >= 16 {
+                    warn!(
+                        "INCLUDE: recursion depth limit (16) exceeded, skipping: {}",
+                        str_parts[1]
+                    );
+                    return;
+                }
                 let imagefile =
                     lr2_skin_loader::lr2_path(&self.skinpath, &str_parts[1], &self.filemap);
                 let path = Path::new(&imagefile);
@@ -286,6 +295,7 @@ impl LR2SkinCSVLoaderState {
                         Ok(raw_bytes) => {
                             let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&raw_bytes);
                             let content = decoded.into_owned();
+                            self.include_depth += 1;
                             for line in content.lines() {
                                 self.line = Some(line.to_string());
                                 if let Some((cmd, parts)) =
@@ -294,6 +304,7 @@ impl LR2SkinCSVLoaderState {
                                     self.process_csv_command(&cmd, &parts, state);
                                 }
                             }
+                            self.include_depth -= 1;
                         }
                         Err(e) => {
                             warn!("INCLUDE: failed to read {}: {}", imagefile, e);
@@ -548,6 +559,8 @@ impl LR2SkinCSVLoaderState {
                     SkinObject::TextImage(t)
                 } else {
                     let mut t = SkinTextFont::new("skin/default/VL-Gothic-Regular.ttf", 0, 48, 2);
+                    t.text_data.ref_prop =
+                        crate::property::string_property_factory::string_property_by_id(values[3]);
                     t.text_data.align = values[4];
                     t.text_data.editable = values[5] != 0;
                     SkinObject::TextFont(t)
@@ -941,10 +954,10 @@ impl LR2SkinCSVLoaderState {
                     let anim_range;
                     let duration;
                     if values[13] == 0 {
-                        // Default values (POPN_9K check omitted — would need mode context)
-                        parts = 50;
+                        let is_popn = self.mode == Some(bms_model::mode::Mode::POPN_9K);
+                        parts = if is_popn { 24 } else { 50 };
                         anim_type = 0;
-                        anim_range = 3;
+                        anim_range = if is_popn { 0 } else { 3 };
                         duration = 33;
                     } else {
                         parts = values[13];

@@ -11,6 +11,7 @@ impl LR2PlaySkinLoaderState {
     ) -> anyhow::Result<()> {
         // 1. Initialize note/lane arrays based on mode key count
         self.mode = self.skin_type.mode();
+        self.csv.mode = self.mode;
         if let Some(ref mode) = self.mode {
             let key = mode.key() as usize;
             self.note = vec![None; key];
