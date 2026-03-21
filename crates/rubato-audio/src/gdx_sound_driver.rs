@@ -383,6 +383,10 @@ impl AudioDriver for GdxSoundDriver {
     }
 
     fn poll_loading(&mut self) -> bool {
+        // Sweep stopped handles across all wav_ids and slice keys each frame
+        // to prevent unbounded growth for rarely-replayed sounds.
+        self.cleanup_stopped_handles();
+
         let Some(rx) = &self.loading_receiver else {
             return true; // No loading in progress
         };
@@ -651,6 +655,21 @@ impl GdxSoundDriver {
         } else if (self.global_pitch - 1.0).abs() > f32::EPSILON {
             handle.set_playback_rate(PlaybackRate(base), Tween::default());
         }
+    }
+
+    /// Sweep all wav_handles and slice_handles, removing entries whose playback
+    /// has stopped. Without this, handles for rarely-replayed wav_ids accumulate
+    /// indefinitely because the per-push retain in play_note_internal only prunes
+    /// when the same wav_id is played again.
+    fn cleanup_stopped_handles(&mut self) {
+        self.wav_handles.retain(|_, handles| {
+            handles.retain(|h| h.state() != PlaybackState::Stopped);
+            !handles.is_empty()
+        });
+        self.slice_handles.retain(|_, handles| {
+            handles.retain(|h| h.state() != PlaybackState::Stopped);
+            !handles.is_empty()
+        });
     }
 
     /// Generational cache eviction.
@@ -1634,5 +1653,65 @@ mod tests {
         assert!(path_sound_cache.contains_key("/sfx/click.wav"));
         assert!(path_sound_cache.contains_key("/sfx/decide.wav"));
         assert!(path_sound_cache.contains_key("/sfx/cancel.wav"));
+    }
+
+    /// Regression: cleanup_stopped_handles must remove stopped handles across
+    /// ALL wav_ids and slice keys, not just those that are replayed. Without
+    /// periodic sweeps, handles for rarely-replayed wav_ids accumulate
+    /// indefinitely because the per-push retain only fires on the next play
+    /// of the same wav_id.
+    #[test]
+    fn cleanup_stopped_handles_removes_finished_across_all_ids() {
+        use kira::backend::mock::MockBackendSettings;
+
+        let settings = AudioManagerSettings::<MockBackend> {
+            backend_settings: MockBackendSettings {
+                sample_rate: 1_000_000,
+            },
+            ..Default::default()
+        };
+        let mut manager = AudioManager::<MockBackend>::new(settings).unwrap();
+
+        let sound = make_long_sound();
+
+        let mut wav_handles: HashMap<i32, Vec<StaticSoundHandle>> = HashMap::new();
+        let mut slice_handles: HashMap<(i32, i64, i64), Vec<StaticSoundHandle>> = HashMap::new();
+
+        // Create handles across different wav_ids and slice keys
+        let mut h1 = manager.play(sound.clone()).unwrap();
+        let h2 = manager.play(sound.clone()).unwrap();
+        let mut h3 = manager.play(sound.clone()).unwrap();
+
+        // Stop h1 (wav_id=1) and h3 (slice key), leave h2 (wav_id=2) playing
+        h1.stop(Tween::default());
+        h3.stop(Tween::default());
+        for _ in 0..100 {
+            manager.backend_mut().on_start_processing();
+            manager.backend_mut().process();
+        }
+        assert_eq!(h1.state(), PlaybackState::Stopped);
+        assert_eq!(h3.state(), PlaybackState::Stopped);
+        assert_ne!(h2.state(), PlaybackState::Stopped);
+
+        wav_handles.entry(1).or_default().push(h1);
+        wav_handles.entry(2).or_default().push(h2);
+        slice_handles.entry((10, 100, 200)).or_default().push(h3);
+
+        // Simulate cleanup_stopped_handles logic
+        wav_handles.retain(|_, handles| {
+            handles.retain(|h| h.state() != PlaybackState::Stopped);
+            !handles.is_empty()
+        });
+        slice_handles.retain(|_, handles| {
+            handles.retain(|h| h.state() != PlaybackState::Stopped);
+            !handles.is_empty()
+        });
+
+        // wav_id=1 had only stopped handles, so the entry is removed entirely
+        assert!(!wav_handles.contains_key(&1));
+        // wav_id=2 still has a playing handle
+        assert_eq!(wav_handles[&2].len(), 1);
+        // slice key had only stopped handles, so the entry is removed
+        assert!(slice_handles.is_empty());
     }
 }

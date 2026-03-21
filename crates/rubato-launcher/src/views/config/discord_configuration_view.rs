@@ -201,7 +201,7 @@ impl DiscordConfigurationView {
         ui.separator();
         ui.heading("Webhook");
 
-        let webhook_options = ["Off", "FC / AAA", "Clear"];
+        let webhook_options = ["All Clear", "FC / AAA", "Clear"];
 
         egui::Grid::new("discord_config_grid")
             .num_columns(2)

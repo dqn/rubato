@@ -273,6 +273,10 @@ impl LaneRenderer {
         self.minbpm = model.min_bpm();
         self.maxbpm = model.max_bpm();
 
+        // Fall back to the chart's declared BPM when no timelines carry notes,
+        // so FIX_HISPEED_MAINBPM never operates on the 0.0 default.
+        self.mainbpm = model.bpm;
+
         // Find main BPM (BPM with most notes)
         let mut bpm_counts: HashMap<u64, (f64, i32)> = HashMap::new();
         for tl in all_tls {

@@ -180,7 +180,7 @@ impl MusicSelector {
                 .as_ref()
                 .and_then(|r| r.songdata())
                 .cloned();
-            let replay_index = self.play.as_ref().map_or(0, |p| p.id);
+            let replay_index = play_mode.map_or(0, |p| p.id);
             let chart_option = if let Some(main_ref) = self.main.as_deref() {
                 Self::compute_chart_option(
                     &self.config,

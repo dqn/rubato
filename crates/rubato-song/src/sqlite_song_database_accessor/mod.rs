@@ -737,10 +737,16 @@ impl SQLiteSongDatabaseAccessor {
                 .parent()
                 .map(|pp| pp.to_string_lossy().to_string())
                 .unwrap_or_default();
-            let mut checked = lock_or_recover(&self.checked_parent);
-            if !checked.contains(&parent) {
+            // Release checked_parent lock before calling query_folders(), which
+            // acquires the conn lock, to avoid nested Mutex acquisition deadlock.
+            let needs_parent_check = {
+                let checked = lock_or_recover(&self.checked_parent);
+                !checked.contains(&parent)
+            };
+            if needs_parent_check {
                 let query = "SELECT * FROM folder WHERE path = ?1";
                 let folders = self.query_folders(query, &[&parent as &dyn rusqlite::types::ToSql]);
+                let mut checked = lock_or_recover(&self.checked_parent);
                 checked.insert(parent.clone());
                 if folders.is_empty() {
                     path = Some(parent);

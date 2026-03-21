@@ -1082,4 +1082,126 @@ mod tests {
         loader.process_select_command("DST_BAR_LABEL", &parts);
         assert!(loader.barlabel.iter().all(|v| v.is_none()));
     }
+
+    /// Create a loader with a fake 100x100 texture at imagelist index 0.
+    fn make_loader_with_texture() -> LR2SelectSkinLoaderState {
+        use crate::lr2::lr2_skin_csv_loader::ImageListEntry;
+        use crate::render_reexports::Texture;
+
+        let mut loader = make_loader();
+        loader
+            .csv
+            .imagelist
+            .push(ImageListEntry::TextureEntry(Texture {
+                width: 100,
+                height: 100,
+                ..Default::default()
+            }));
+        loader
+    }
+
+    /// Build SRC_BAR_LEVEL str_parts with specific bar_index, timer, and cycle values.
+    /// Format: (cmd),bar_idx,gr,x,y,w,h,divx,divy,cycle,timer,0,0,keta,0,...
+    fn make_bar_level_parts(
+        bar_index: i32,
+        divx: i32,
+        divy: i32,
+        cycle: i32,
+        timer: i32,
+        keta: i32,
+    ) -> Vec<String> {
+        let mut parts = vec!["0".to_string(); 22];
+        parts[1] = bar_index.to_string();
+        parts[2] = "0".to_string(); // gr = 0 (first image)
+        parts[3] = "0".to_string(); // x
+        parts[4] = "0".to_string(); // y
+        parts[5] = "100".to_string(); // w
+        parts[6] = "100".to_string(); // h
+        parts[7] = divx.to_string();
+        parts[8] = divy.to_string();
+        parts[9] = cycle.to_string();
+        parts[10] = timer.to_string();
+        parts[13] = keta.to_string();
+        parts
+    }
+
+    #[test]
+    fn src_bar_level_standard_sheet_timer_cycle_order() {
+        // Regression: SRC_BAR_LEVEL was passing values[9] as timer and values[10] as cycle,
+        // but the LR2 CSV format has values[9]=cycle and values[10]=timer.
+        // The constructor signature is new_with_int_timer(image, mimage, timer, cycle, ...).
+        use crate::property::timer_property::TimerProperty;
+        use crate::sources::skin_source_image_set::SkinSourceImageSet;
+
+        let mut loader = make_loader_with_texture();
+        let cycle_val = 99;
+        let timer_val = 42;
+        // divx=10, divy=1 => 10 images => standard (non-signed) sheet
+        let parts = make_bar_level_parts(0, 10, 1, cycle_val, timer_val, 3);
+        loader.process_select_command("SRC_BAR_LEVEL", &parts);
+
+        let sn = loader.barlevel[0]
+            .as_ref()
+            .expect("barlevel[0] should be set");
+        let source = sn
+            .image_source_as_any()
+            .downcast_ref::<SkinSourceImageSet>()
+            .expect("image source should be SkinSourceImageSet");
+
+        assert_eq!(
+            source.cycle(),
+            cycle_val,
+            "cycle should be values[9]={}",
+            cycle_val
+        );
+        let timer_id = source
+            .timer()
+            .as_ref()
+            .expect("timer should be set")
+            .get_timer_id();
+        assert_eq!(
+            timer_id, timer_val,
+            "timer should be values[10]={}",
+            timer_val
+        );
+    }
+
+    #[test]
+    fn src_bar_level_signed_sheet_timer_cycle_order() {
+        // Regression: Same swap bug also affects the 24-image (signed) branch.
+        use crate::property::timer_property::TimerProperty;
+        use crate::sources::skin_source_image_set::SkinSourceImageSet;
+
+        let mut loader = make_loader_with_texture();
+        let cycle_val = 200;
+        let timer_val = 10;
+        // divx=24, divy=1 => 24 images => signed number sheet (images.len() % 24 == 0)
+        let parts = make_bar_level_parts(0, 24, 1, cycle_val, timer_val, 3);
+        loader.process_select_command("SRC_BAR_LEVEL", &parts);
+
+        let sn = loader.barlevel[0]
+            .as_ref()
+            .expect("barlevel[0] should be set");
+        let source = sn
+            .image_source_as_any()
+            .downcast_ref::<SkinSourceImageSet>()
+            .expect("image source should be SkinSourceImageSet");
+
+        assert_eq!(
+            source.cycle(),
+            cycle_val,
+            "cycle should be values[9]={}",
+            cycle_val
+        );
+        let timer_id = source
+            .timer()
+            .as_ref()
+            .expect("timer should be set")
+            .get_timer_id();
+        assert_eq!(
+            timer_id, timer_val,
+            "timer should be values[10]={}",
+            timer_val
+        );
+    }
 }

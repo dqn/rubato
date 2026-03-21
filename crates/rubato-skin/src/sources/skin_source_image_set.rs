@@ -76,6 +76,18 @@ impl SkinSourceImageSet {
         &self.image
     }
 
+    /// Returns the cycle value (test-only accessor for verifying loader correctness).
+    #[cfg(test)]
+    pub fn cycle(&self) -> i32 {
+        self.cycle
+    }
+
+    /// Returns the timer property (test-only accessor for verifying loader correctness).
+    #[cfg(test)]
+    pub fn timer(&self) -> &Option<TimerPropertyEnum> {
+        &self.timer
+    }
+
     fn get_image_index(&self, length: usize, time: i64, state: &dyn MainState) -> usize {
         if self.cycle == 0 {
             return 0;
@@ -132,5 +144,10 @@ impl SkinSourceSet for SkinSourceImageSet {
 
     fn is_disposed(&self) -> bool {
         self.disposed
+    }
+
+    #[cfg(test)]
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }

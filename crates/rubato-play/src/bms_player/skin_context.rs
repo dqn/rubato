@@ -245,18 +245,17 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             92 => self.main_bpm as i32,
             160 => self.now_bpm as i32,
             // Elapsed playtime from TIMER_PLAY (Java: timer.getNowTime(TIMER_PLAY))
-            // Division in i64 before narrowing to i32 to avoid overflow for songs >35.8 min.
             161 => (self.timer.now_time_for_id(TIMER_PLAY) / 60000) as i32,
             162 => ((self.timer.now_time_for_id(TIMER_PLAY) / 1000) % 60) as i32,
             // Remaining playtime (Java: max(playtime - elapsed + 1000, 0))
             163 => {
-                let remaining =
-                    (self.playtime - self.timer.now_time_for_id(TIMER_PLAY) + 1000).max(0);
+                let elapsed = self.timer.now_time_for_id(TIMER_PLAY);
+                let remaining = (self.playtime - elapsed + 1000).max(0);
                 (remaining / 60000) as i32
             }
             164 => {
-                let remaining =
-                    (self.playtime - self.timer.now_time_for_id(TIMER_PLAY) + 1000).max(0);
+                let elapsed = self.timer.now_time_for_id(TIMER_PLAY);
+                let remaining = (self.playtime - elapsed + 1000).max(0);
                 ((remaining / 1000) % 60) as i32
             }
             // Scroll duration from LaneRenderer (Java: getCurrentDuration())
@@ -280,7 +279,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
                     3 => self.max_bpm,
                     _ => 0.0,
                 };
-                if bpm == 0.0 || self.live_hispeed == 0.0 {
+                if bpm == 0.0 {
                     return 0;
                 }
                 (240000.0 / bpm / self.live_hispeed as f64
@@ -469,14 +468,6 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
 
     fn target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
         self.player.score.target_score.as_ref()
-    }
-
-    fn score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
-        self.player.score.db_score.as_ref()
-    }
-
-    fn rival_score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
-        self.player.score.rival_score.as_ref()
     }
 
     fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
@@ -723,18 +714,17 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
                 .as_ref()
                 .map_or(0, |lr| lr.now_bpm() as i32),
             // Elapsed playtime from TIMER_PLAY
-            // Division in i64 before narrowing to i32 to avoid overflow for songs >35.8 min.
             161 => (self.timer.now_time_for_id(TIMER_PLAY) / 60000) as i32,
             162 => ((self.timer.now_time_for_id(TIMER_PLAY) / 1000) % 60) as i32,
             // Remaining playtime
             163 => {
-                let remaining =
-                    (self.player.playtime - self.timer.now_time_for_id(TIMER_PLAY) + 1000).max(0);
+                let elapsed = self.timer.now_time_for_id(TIMER_PLAY);
+                let remaining = (self.player.playtime - elapsed + 1000).max(0);
                 (remaining / 60000) as i32
             }
             164 => {
-                let remaining =
-                    (self.player.playtime - self.timer.now_time_for_id(TIMER_PLAY) + 1000).max(0);
+                let elapsed = self.timer.now_time_for_id(TIMER_PLAY);
+                let remaining = (self.player.playtime - elapsed + 1000).max(0);
                 ((remaining / 1000) % 60) as i32
             }
             // Scroll duration from LaneRenderer (Java: getCurrentDuration())
@@ -767,10 +757,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
                     3 => lr.map_or(0.0, |lr| lr.max_bpm()),
                     _ => 0.0,
                 };
-                let hispeed = lr.map_or(1.0, |lr| lr.hispeed()) as f64;
-                if bpm == 0.0 || hispeed == 0.0 {
+                if bpm == 0.0 {
                     return 0;
                 }
+                let hispeed = lr.map_or(1.0, |lr| lr.hispeed()) as f64;
                 let lanecover = lr.map_or(0.0, |lr| lr.lanecover()) as f64;
                 (240000.0 / bpm / hispeed
                     * if cover { 1.0 - lanecover } else { 1.0 }
@@ -2314,6 +2304,103 @@ mod tests {
         ctx.timer.set_micro_timer(TIMER_PLAY, 30_000_000);
         assert_eq!(ctx.integer_value(163), 0, "remaining minutes clamped to 0");
         assert_eq!(ctx.integer_value(164), 0, "remaining seconds clamped to 0");
+    }
+
+    // ============================================================
+    // IDs 161-164: i64 overflow regression (songs > 35.8 min)
+    // ============================================================
+
+    #[test]
+    fn elapsed_playtime_no_overflow_for_large_timer_values() {
+        // 40 minutes = 2_400_000 ms, which exceeds i32::MAX (2_147_483_647) when
+        // expressed in microseconds. Verify division happens in i64 before cast.
+        let playtime_ms: i64 = 2_400_000; // 40 minutes
+        let ctx = make_render_ctx(playtime_ms);
+        // elapsed = 2_400_000 ms (40 min exactly)
+        // We set micro times so that now_time_for_id returns 2_400_000 ms.
+        // now_micro = 3_400_000_000 us, timer_play = 1_000_000_000 us
+        // elapsed = (3_400_000_000 - 1_000_000_000) / 1000 = 2_400_000 ms
+        ctx.timer.set_now_micro_time(3_400_000_000);
+        ctx.timer.set_micro_timer(TIMER_PLAY, 1_000_000_000);
+        assert_eq!(
+            ctx.integer_value(161),
+            40,
+            "elapsed minutes = 2400000/60000 = 40"
+        );
+        assert_eq!(
+            ctx.integer_value(162),
+            0,
+            "elapsed seconds = (2400000/1000)%60 = 0"
+        );
+    }
+
+    #[test]
+    fn remaining_playtime_no_overflow_for_large_values() {
+        // playtime = 3_600_000 ms (60 min), elapsed = 1_200_000 ms (20 min)
+        // remaining = max(3600000 - 1200000 + 1000, 0) = 2_401_000 ms
+        // This exceeds i32::MAX when the old code cast to i32 first.
+        let playtime_ms: i64 = 3_600_000;
+        let ctx = make_render_ctx(playtime_ms);
+        // elapsed = (2_200_000_000 - 1_000_000_000) / 1000 = 1_200_000 ms
+        ctx.timer.set_now_micro_time(2_200_000_000);
+        ctx.timer.set_micro_timer(TIMER_PLAY, 1_000_000_000);
+        assert_eq!(
+            ctx.integer_value(163),
+            40,
+            "remaining minutes = 2401000/60000 = 40"
+        );
+        assert_eq!(
+            ctx.integer_value(164),
+            1,
+            "remaining seconds = (2401000/1000)%60 = 1"
+        );
+    }
+
+    #[test]
+    fn elapsed_playtime_mouse_ctx_no_overflow_for_large_timer_values() {
+        // Same overflow regression test for PlayMouseContext
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        player.playtime = 2_400_000; // 40 min
+        timer.set_now_micro_time(3_400_000_000);
+        timer.set_micro_timer(TIMER_PLAY, 1_000_000_000);
+        let ctx = PlayMouseContext { timer, player };
+        assert_eq!(
+            ctx.integer_value(161),
+            40,
+            "mouse ctx elapsed minutes = 2400000/60000 = 40"
+        );
+        assert_eq!(
+            ctx.integer_value(162),
+            0,
+            "mouse ctx elapsed seconds = (2400000/1000)%60 = 0"
+        );
+    }
+
+    #[test]
+    fn remaining_playtime_mouse_ctx_no_overflow_for_large_values() {
+        // Same overflow regression test for PlayMouseContext remaining time
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        player.playtime = 3_600_000; // 60 min
+        // elapsed = (2_200_000_000 - 1_000_000_000) / 1000 = 1_200_000 ms
+        timer.set_now_micro_time(2_200_000_000);
+        timer.set_micro_timer(TIMER_PLAY, 1_000_000_000);
+        let ctx = PlayMouseContext { timer, player };
+        assert_eq!(
+            ctx.integer_value(163),
+            40,
+            "mouse ctx remaining minutes = 2401000/60000 = 40"
+        );
+        assert_eq!(
+            ctx.integer_value(164),
+            1,
+            "mouse ctx remaining seconds = (2401000/1000)%60 = 1"
+        );
     }
 
     // ============================================================

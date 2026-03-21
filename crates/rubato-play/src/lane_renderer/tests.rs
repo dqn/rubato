@@ -1530,3 +1530,68 @@ fn currentduration_clamps_on_extreme_slow_bpm() {
     // to i32::MAX rather than wrapping or producing a negative value.
     assert_eq!(renderer.current_duration(), i32::MAX);
 }
+
+// =========================================================================
+// mainbpm fallback regression tests
+// =========================================================================
+
+/// Regression test: when all timelines have zero notes, mainbpm must fall
+/// back to model.bpm (the chart's declared BPM) rather than staying at 0.0.
+/// Without the fallback, FIX_HISPEED_MAINBPM uses basebpm=0.0, which
+/// produces an infinite or NaN hispeed region.
+#[test]
+fn mainbpm_falls_back_to_model_bpm_when_no_notes() {
+    // Two timelines, neither has any notes.
+    let tl0 = make_timeline(0.0, 0, 140.0, 8);
+    let tl1 = make_timeline(1.0, 1_000_000, 140.0, 8);
+    let model = make_model_with_timelines(vec![tl0, tl1], 140.0);
+
+    let renderer = LaneRenderer::new(&model);
+    assert!(
+        (renderer.main_bpm() - 140.0).abs() < 0.001,
+        "mainbpm should fall back to model.bpm (140.0) when no notes exist, got {}",
+        renderer.main_bpm()
+    );
+}
+
+/// When notes do exist, mainbpm should still be determined by the BPM
+/// carrying the most notes (existing behavior preserved).
+#[test]
+fn mainbpm_uses_most_notes_bpm_when_notes_exist() {
+    let mut tl0 = make_timeline(0.0, 0, 120.0, 8);
+    tl0.set_note(0, Some(Note::new_normal(1)));
+    // 3 notes at BPM 150 -> should be the main BPM
+    let mut tl1 = make_timeline(1.0, 1_000_000, 150.0, 8);
+    tl1.set_note(0, Some(Note::new_normal(1)));
+    tl1.set_note(1, Some(Note::new_normal(1)));
+    tl1.set_note(2, Some(Note::new_normal(1)));
+    let model = make_model_with_timelines(vec![tl0, tl1], 120.0);
+
+    let renderer = LaneRenderer::new(&model);
+    assert!(
+        (renderer.main_bpm() - 150.0).abs() < 0.001,
+        "mainbpm should be 150.0 (most notes), got {}",
+        renderer.main_bpm()
+    );
+}
+
+/// FIX_HISPEED_MAINBPM with zero-note model should use chart BPM for
+/// basebpm, not 0.0.
+#[test]
+fn fixhispeed_mainbpm_uses_fallback_when_no_notes() {
+    let tl0 = make_timeline(0.0, 0, 160.0, 8);
+    let model = make_model_with_timelines(vec![tl0], 160.0);
+
+    let mut renderer = LaneRenderer::new(&model);
+    let pc = PlayConfig {
+        fixhispeed: FIX_HISPEED_MAINBPM,
+        ..PlayConfig::default()
+    };
+    renderer.apply_play_config(&pc);
+    renderer.init(&model);
+    assert!(
+        (renderer.base_bpm() - 160.0).abs() < 0.001,
+        "FIX_HISPEED_MAINBPM with no notes: basebpm should be 160.0, got {}",
+        renderer.base_bpm()
+    );
+}

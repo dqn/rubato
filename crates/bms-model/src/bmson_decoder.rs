@@ -835,7 +835,9 @@ fn ensure_timeline(
         return;
     }
 
-    let (&le_key, le_val) = tlcache.range(..y).next_back().expect("next_back");
+    let Some((&le_key, le_val)) = tlcache.range(..y).next_back() else {
+        return;
+    };
     let bpm = le_val.timeline.bpm;
     let time = if bpm != 0.0 {
         le_val.time

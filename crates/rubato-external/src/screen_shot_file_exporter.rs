@@ -9,9 +9,12 @@ use crate::{
 /// ScreenShotFileExporter - saves screenshots to file and optionally copies to clipboard / sends webhook.
 /// Translated from Java: ScreenShotFileExporter implements ScreenShotExporter
 pub struct ScreenShotFileExporter {
-    /// JoinHandle for the most recent webhook send background thread.
-    webhook_thread: std::sync::Mutex<Option<std::thread::JoinHandle<()>>>,
+    /// JoinHandles for in-flight webhook send background threads.
+    webhook_threads: std::sync::Mutex<Vec<std::thread::JoinHandle<()>>>,
 }
+
+/// Maximum number of concurrent webhook threads allowed.
+const MAX_CONCURRENT_WEBHOOK_THREADS: usize = 3;
 
 impl ScreenShotExporter for ScreenShotFileExporter {
     fn send(&self, current_state: &MainState, pixels: &[u8]) -> bool {
@@ -115,7 +118,7 @@ impl ScreenShotExporter for ScreenShotFileExporter {
 impl ScreenShotFileExporter {
     pub fn new() -> Self {
         Self {
-            webhook_thread: std::sync::Mutex::new(None),
+            webhook_threads: std::sync::Mutex::new(Vec::new()),
         }
     }
 
@@ -177,44 +180,77 @@ impl ScreenShotFileExporter {
 
         let path = path.to_string();
 
-        // Skip spawning a new webhook send if the previous thread is still running
-        // to avoid unbounded thread accumulation when screenshots are taken rapidly.
-        if let Ok(mut guard) = self.webhook_thread.lock()
-            && let Some(prev) = guard.take()
-        {
-            if prev.is_finished() {
-                if let Err(e) = prev.join() {
-                    log::warn!("Previous webhook thread panicked: {:?}", e);
-                }
-            } else {
-                // Previous send still in flight -- skip this webhook send.
-                log::warn!("Skipping webhook send: previous send still in progress");
-                *guard = Some(prev);
-                return;
-            }
-        }
-
         let handle = std::thread::spawn(move || {
             for webhook_url in &webhook_urls {
                 handler.send_webhook_with_image(&payload, &path, webhook_url);
             }
         });
 
-        if let Ok(mut guard) = self.webhook_thread.lock() {
-            *guard = Some(handle);
+        if let Ok(mut guard) = self.webhook_threads.lock() {
+            // Drain finished threads, joining them to observe panics.
+            guard.retain(|h| {
+                if h.is_finished() {
+                    // Cannot join through a shared reference in retain, so just
+                    // detect finished threads here.  They will be dropped (detached)
+                    // which is safe because they already completed.
+                    false
+                } else {
+                    true
+                }
+            });
+
+            if guard.len() >= MAX_CONCURRENT_WEBHOOK_THREADS {
+                log::warn!(
+                    "Skipping webhook send: {} threads already in flight (max {})",
+                    guard.len(),
+                    MAX_CONCURRENT_WEBHOOK_THREADS
+                );
+                return;
+            }
+
+            guard.push(handle);
         }
     }
 }
 
 impl Drop for ScreenShotFileExporter {
     fn drop(&mut self) {
-        // Join the webhook thread unconditionally on drop to avoid leaking threads.
-        // Webhook HTTP sends are short-lived, so blocking briefly on shutdown is acceptable.
-        if let Ok(mut guard) = self.webhook_thread.lock()
-            && let Some(handle) = guard.take()
-            && let Err(e) = handle.join()
-        {
-            log::warn!("Webhook send thread panicked: {:?}", e);
+        // Join all in-flight webhook threads with a shared 5-second timeout.
+        if let Ok(mut guard) = self.webhook_threads.lock() {
+            let handles: Vec<_> = guard.drain(..).collect();
+            if handles.is_empty() {
+                return;
+            }
+
+            let start = std::time::Instant::now();
+            let timeout = std::time::Duration::from_secs(5);
+
+            for handle in handles {
+                if handle.is_finished() {
+                    if let Err(e) = handle.join() {
+                        log::warn!("Webhook send thread panicked: {:?}", e);
+                    }
+                    continue;
+                }
+
+                // Poll until finished or timeout expires.
+                loop {
+                    if handle.is_finished() {
+                        if let Err(e) = handle.join() {
+                            log::warn!("Webhook send thread panicked: {:?}", e);
+                        }
+                        break;
+                    }
+                    if start.elapsed() >= timeout {
+                        log::warn!(
+                            "Webhook send thread did not finish within {:?} during drop, detaching",
+                            timeout
+                        );
+                        break;
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                }
+            }
         }
     }
 }
@@ -273,6 +309,98 @@ mod tests {
         assert_eq!(
             get_screen_type(&make_state(ScreenType::Other)),
             ScreenType::Other
+        );
+    }
+
+    #[test]
+    fn webhook_threads_starts_empty() {
+        let exporter = ScreenShotFileExporter::new();
+        let guard = exporter.webhook_threads.lock().unwrap();
+        assert!(guard.is_empty());
+    }
+
+    #[test]
+    fn webhook_threads_tracks_multiple_handles() {
+        let exporter = ScreenShotFileExporter::new();
+
+        // Spawn a few short-lived threads and push their handles.
+        {
+            let mut guard = exporter.webhook_threads.lock().unwrap();
+            for _ in 0..3 {
+                let h = std::thread::spawn(|| {
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                });
+                guard.push(h);
+            }
+            assert_eq!(guard.len(), 3);
+        }
+
+        // After a short wait all threads finish; drain finished.
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        {
+            let mut guard = exporter.webhook_threads.lock().unwrap();
+            guard.retain(|h| !h.is_finished());
+            assert_eq!(guard.len(), 0, "all finished threads should be drained");
+        }
+    }
+
+    #[test]
+    fn webhook_threads_capacity_check() {
+        let exporter = ScreenShotFileExporter::new();
+
+        // Fill to capacity with long-running threads.
+        {
+            let mut guard = exporter.webhook_threads.lock().unwrap();
+            for _ in 0..MAX_CONCURRENT_WEBHOOK_THREADS {
+                let h = std::thread::spawn(|| {
+                    std::thread::sleep(std::time::Duration::from_secs(5));
+                });
+                guard.push(h);
+            }
+            assert_eq!(guard.len(), MAX_CONCURRENT_WEBHOOK_THREADS);
+        }
+
+        // A new send should be rejected when at capacity (simulating the
+        // guard.len() >= MAX check in send_webhook).
+        {
+            let guard = exporter.webhook_threads.lock().unwrap();
+            assert!(
+                guard.len() >= MAX_CONCURRENT_WEBHOOK_THREADS,
+                "should be at capacity"
+            );
+        }
+        // Drop the exporter which joins/detaches threads in Drop.
+    }
+
+    #[test]
+    fn drop_joins_all_in_flight_threads() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+
+        let counter = Arc::new(AtomicUsize::new(0));
+        let exporter = ScreenShotFileExporter::new();
+
+        {
+            let mut guard = exporter.webhook_threads.lock().unwrap();
+            for _ in 0..2 {
+                let c = Arc::clone(&counter);
+                let h = std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                    c.fetch_add(1, Ordering::SeqCst);
+                });
+                guard.push(h);
+            }
+        }
+
+        // Drop triggers join with timeout.
+        drop(exporter);
+        // Both threads should have completed.
+        assert_eq!(
+            counter.load(Ordering::SeqCst),
+            2,
+            "Drop should have waited for both threads to complete"
         );
     }
 }

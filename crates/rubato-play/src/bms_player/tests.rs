@@ -879,6 +879,48 @@ fn dispose_clears_skin() {
     assert!(player.main_state_data.skin.is_none());
 }
 
+// Regression: dispose() must stop BGA movie decoders to release system resources
+#[test]
+fn dispose_stops_bga_movies() {
+    use crate::bga::movie_processor::MovieProcessor;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static STOP_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+    struct TrackingMovie;
+
+    impl MovieProcessor for TrackingMovie {
+        fn frame(&mut self, _time: i64) -> Option<crate::Texture> {
+            None
+        }
+        fn play(&mut self, _time: i64, _loop_play: bool) {}
+        fn stop(&mut self) {
+            STOP_COUNT.fetch_add(1, Ordering::SeqCst);
+        }
+        fn dispose(&mut self) {}
+    }
+
+    STOP_COUNT.store(0, Ordering::SeqCst);
+
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+
+    // Inject a mock movie into the BGA processor
+    {
+        let mut bga = player.bga.lock().unwrap();
+        bga.set_movie_count(1);
+        bga.set_movie(0, Box::new(TrackingMovie));
+    }
+
+    player.dispose();
+
+    assert_eq!(
+        STOP_COUNT.load(Ordering::SeqCst),
+        1,
+        "dispose() should call bga.stop() which stops all movie decoders"
+    );
+}
+
 // --- build_pattern_modifiers tests ---
 
 fn make_default_config() -> rubato_core::player_config::PlayerConfig {

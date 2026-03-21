@@ -2493,4 +2493,29 @@ mod tests {
         assert!(stopped_sounds.contains(&SoundType::CourseClose));
         assert!(!stopped_sounds.contains(&SoundType::ResultClose));
     }
+
+    #[test]
+    fn course_result_mouse_context_integer_value_uses_boot_time_millis() {
+        // Regression: CourseResultMouseContext.integer_value() must pass boot_time_millis
+        // (not now_time) to shared_render_context::integer_value for IDs 27-29.
+        let mut cr = make_course_result_for_mouse();
+        let mut timer = rubato_core::timer_manager::TimerManager::new();
+        timer.set_boot_time_millis(7_200_000); // 2 hours
+        timer.set_now_micro_time(5_000); // 5 ms state-relative
+        let ctx = render_context::CourseResultMouseContext {
+            timer: &mut timer,
+            result: &mut cr,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        // ID 27 = boot time hours: 7_200_000 / 3_600_000 = 2
+        assert_eq!(
+            ctx.integer_value(27),
+            2,
+            "ID 27 (boot hours) must use boot_time_millis, not now_time"
+        );
+        // ID 28 = boot time minutes: (7_200_000 % 3_600_000) / 60_000 = 0
+        assert_eq!(ctx.integer_value(28), 0);
+        // ID 29 = boot time seconds: (7_200_000 % 60_000) / 1_000 = 0
+        assert_eq!(ctx.integer_value(29), 0);
+    }
 }

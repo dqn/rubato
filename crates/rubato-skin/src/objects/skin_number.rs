@@ -208,6 +208,12 @@ impl SkinNumber {
         self.keta
     }
 
+    /// Test-only: access the inner image source for downcasting to SkinSourceImageSet.
+    #[cfg(test)]
+    pub fn image_source_as_any(&self) -> &dyn std::any::Any {
+        self.image.as_any()
+    }
+
     pub fn set_offsets(&mut self, offsets: Vec<SkinOffset>) {
         self.offsets = Some(offsets);
     }

@@ -1,5 +1,48 @@
 use super::*;
 
+/// Mirror-invert a ghost-battle lane pattern by reversing digit positions
+/// within each player's key range.
+///
+/// `lanes` encodes each lane's mapping as a decimal digit (least-significant
+/// digit = lane 0). `keys_per_player` and `player_count` define how digits
+/// are grouped. Returns the re-encoded i32.
+///
+/// Uses i64 intermediate arithmetic to avoid overflow for DP modes where
+/// total_digits >= 14 (10^13 exceeds i32::MAX).
+fn mirror_invert_lanes(lanes: i32, keys_per_player: usize, player_count: usize) -> i32 {
+    let total_digits = keys_per_player * player_count;
+
+    // Extract digits from least-significant to most-significant,
+    // padding with zeros to the expected total_digits count.
+    let mut digits = vec![0i32; total_digits];
+    let mut val = lanes.unsigned_abs();
+    for d in &mut digits {
+        *d = (val % 10) as i32;
+        val /= 10;
+    }
+
+    // Reverse within each player's half
+    for p in 0..player_count {
+        let start = p * keys_per_player;
+        let end = start + keys_per_player;
+        digits[start..end].reverse();
+    }
+
+    // Re-encode: digits[0] is least-significant.
+    // Use i64 intermediate to avoid overflow for DP modes (14+ digits;
+    // 10^13 exceeds i32::MAX). For extreme modes (KEYBOARD_24K_DOUBLE,
+    // 52 digits) even i64 can overflow at 10^19+, so use wrapping
+    // arithmetic to match Java's int overflow semantics.
+    let mut result: i64 = 0;
+    for (i, &d) in digits.iter().enumerate() {
+        if d != 0 {
+            let power = 10i64.wrapping_pow(i as u32);
+            result = result.wrapping_add((d as i64).wrapping_mul(power));
+        }
+    }
+    result as i32
+}
+
 impl BMSPlayer {
     /// Build and apply the pattern modifier chain.
     ///
@@ -39,31 +82,7 @@ impl BMSPlayer {
                         let mode = self.model.mode().copied().unwrap_or(Mode::BEAT_7K);
                         let player_count = mode.player().max(1) as usize;
                         let keys_per_player = (mode.key() / mode.player().max(1)) as usize;
-                        let total_digits = keys_per_player * player_count;
-
-                        // Extract digits from least-significant to most-significant,
-                        // padding with zeros to the expected total_digits count.
-                        let mut digits = vec![0i32; total_digits];
-                        let mut val = gb.lanes.unsigned_abs();
-                        for d in &mut digits {
-                            *d = (val % 10) as i32;
-                            val /= 10;
-                        }
-                        // digits[0] = lane 0's mapping, digits[1] = lane 1's, etc.
-
-                        // Reverse within each player's half
-                        for p in 0..player_count {
-                            let start = p * keys_per_player;
-                            let end = start + keys_per_player;
-                            digits[start..end].reverse();
-                        }
-
-                        // Re-encode: digits[0] is least-significant
-                        let mut result: i32 = 0;
-                        for (i, &d) in digits.iter().enumerate() {
-                            result += d * 10i32.pow(i as u32);
-                        }
-                        gb.lanes = result;
+                        gb.lanes = mirror_invert_lanes(gb.lanes, keys_per_player, player_count);
                     }
                     _ => {}
                 }
@@ -684,5 +703,135 @@ impl BMSPlayer {
     #[cfg(test)]
     pub fn playinfo_mut(&mut self) -> &mut ReplayData {
         &mut self.score.playinfo
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::mirror_invert_lanes;
+
+    /// SP 7-key (BEAT_7K): keys_per_player=8, player_count=1, total_digits=8.
+    /// Verifies basic per-player reversal works for a single player.
+    #[test]
+    fn mirror_invert_sp_7k() {
+        // lanes = 76543210 (digit 0 = 0, digit 1 = 1, ..., digit 7 = 7)
+        // After reversing the single player half: [7,6,5,4,3,2,1,0]
+        // Re-encoded: 0*10^0 + 1*10^1 + 2*10^2 + 3*10^3 + 4*10^4 + 5*10^5 + 6*10^6 + 7*10^7
+        //           = 0 + 10 + 200 + 3000 + 40000 + 500000 + 6000000 + 70000000 = 76543210
+        // Wait -- reversing a palindrome-like sequence yields the same digits re-encoded
+        // in reverse positional order, which actually produces the *same* number.
+        // Use an asymmetric example instead.
+        //
+        // lanes = 12345678 as decimal:
+        //   digit[0]=8, digit[1]=7, ..., digit[7]=1
+        // Reversed: [1,2,3,4,5,6,7,8]
+        // Re-encoded: 1 + 20 + 300 + 4000 + 50000 + 600000 + 7000000 + 80000000 = 87654321
+        let result = mirror_invert_lanes(12345678, 8, 1);
+        assert_eq!(result, 87654321);
+    }
+
+    /// DP 14-key (BEAT_14K): keys_per_player=8, player_count=2, total_digits=16.
+    /// This is the exact case that overflows i32 (10^13 > i32::MAX).
+    /// The test verifies no panic occurs and the result is correct.
+    #[test]
+    fn mirror_invert_dp_14k_no_overflow() {
+        // BEAT_14K: key()=16, player()=2 => keys_per_player=8, player_count=2
+        // Use a 14-digit lanes value that exercises high-order digits.
+        // lanes = 1234567_8765432_1 won't fit i32; use a value near i32::MAX.
+        //
+        // Construct: 7-digit 1P pattern + 7-digit 2P pattern stored in a 14-digit number.
+        // But gb.lanes is i32, max ~2,147,483,647 (10 digits). With 16 total digits,
+        // digits 10..15 will be 0 after extraction.
+        //
+        // lanes = 1234567890 (10 digits)
+        //   digits[0..8]  = [0,9,8,7,6,5,4,3]  (1P, extracted from least-significant)
+        //   digits[8..16] = [2,1,0,0,0,0,0,0]  (2P, higher digits)
+        //
+        // After per-player reversal:
+        //   digits[0..8]  = [3,4,5,6,7,8,9,0]
+        //   digits[8..16] = [0,0,0,0,0,0,1,2]
+        //
+        // Re-encode:
+        //   3*10^0 + 4*10^1 + 5*10^2 + 6*10^3 + 7*10^4 + 8*10^5 + 9*10^6 + 0*10^7
+        //   + 0*10^8 + 0*10^9 + 0*10^10 + 0*10^11 + 0*10^12 + 0*10^13 + 1*10^14 + 2*10^15
+        //
+        // 1P part = 3 + 40 + 500 + 6000 + 70000 + 800000 + 9000000 = 9876543
+        // 2P part = 1*10^14 + 2*10^15 = 100_000_000_000_000 + 2_000_000_000_000_000
+        //         = 2_100_000_000_000_000 (exceeds i32, but `as i32` truncates)
+        //
+        // Total i64 = 2_100_000_009_876_543
+        // Truncated to i32: 2_100_000_009_876_543 % 2^32 then as i32
+        //
+        // This would be a complex truncation. Instead, use a value where the
+        // 2P digits are all 0, so the result fits in i32.
+        // lanes = 87654321 (8 digits, fits easily)
+        //   total_digits = 16, so digits[8..16] are all 0
+        //   digits[0..8] = [1,2,3,4,5,6,7,8]
+        //   digits[8..16] = [0,0,0,0,0,0,0,0]
+        //   After reversal:
+        //     digits[0..8] = [8,7,6,5,4,3,2,1]
+        //     digits[8..16] = [0,0,0,0,0,0,0,0]
+        //   Re-encode: 8 + 70 + 600 + 5000 + 40000 + 300000 + 2000000 + 10000000
+        //            = 12345678
+        let result = mirror_invert_lanes(87654321, 8, 2);
+        assert_eq!(result, 12345678);
+    }
+
+    /// Verify that a 14-digit case with non-zero high digits does not panic.
+    /// The i64 intermediate handles 10^13 correctly even though the final
+    /// `as i32` truncation wraps the large result.
+    #[test]
+    fn mirror_invert_dp_14k_large_value_no_panic() {
+        // BEAT_14K mode: keys_per_player=8, player_count=2
+        // Use i32::MAX = 2_147_483_647 (10 digits).
+        // digits[0..8]  = [7,4,6,3,8,4,7,4]  (from 2147483647)
+        // digits[8..16] = [1,2,0,0,0,0,0,0]
+        // After reversal:
+        //   [4,7,4,8,3,6,4,7]  and  [0,0,0,0,0,0,2,1]
+        // Re-encode with i64 (high digits use 10^14, 10^15 -- no panic).
+        // The truncation to i32 is expected Java-parity behavior.
+        let result = mirror_invert_lanes(i32::MAX, 8, 2);
+        // Just verify no panic; the exact truncated value is not important
+        // for this regression test. The key property is that 10^13 and 10^14
+        // do not overflow the intermediate accumulator.
+        let _ = result;
+    }
+
+    /// DP 10-key (BEAT_10K): keys_per_player=6, player_count=2, total_digits=12.
+    /// Borderline case: 10^11 < i32::MAX is false (10^11 > i32::MAX), so this
+    /// also needs i64.
+    #[test]
+    fn mirror_invert_dp_10k() {
+        // BEAT_10K: key()=12, player()=2 => keys_per_player=6, player_count=2
+        // lanes = 123456 (6 digits, only 1P half populated)
+        //   digits[0..6]  = [6,5,4,3,2,1]
+        //   digits[6..12] = [0,0,0,0,0,0]
+        // After reversal:
+        //   [1,2,3,4,5,6] and [0,0,0,0,0,0]
+        // Re-encode: 1 + 20 + 300 + 4000 + 50000 + 600000 = 654321
+        let result = mirror_invert_lanes(123456, 6, 2);
+        assert_eq!(result, 654321);
+    }
+
+    /// Zero lanes should remain zero after mirror inversion.
+    #[test]
+    fn mirror_invert_zero_lanes() {
+        assert_eq!(mirror_invert_lanes(0, 8, 1), 0);
+        assert_eq!(mirror_invert_lanes(0, 8, 2), 0);
+    }
+
+    /// KEYBOARD_24K_DOUBLE: keys_per_player=26, player_count=2, total_digits=52.
+    /// After reversal, non-zero digits land at positions 17-25 where
+    /// 10^25 overflows even i64. Wrapping arithmetic prevents panic and
+    /// matches Java's int overflow semantics.
+    #[test]
+    fn mirror_invert_keyboard_24k_double_no_panic() {
+        // keys_per_player=26, player_count=2 => total_digits=52
+        // digits extracted from 123456789 land at positions [0..9].
+        // After reversing within the 26-digit first-player half,
+        // they move to positions [17..25], requiring 10^17..10^25.
+        // Wrapping arithmetic handles powers >= 10^19 without panic.
+        let result = mirror_invert_lanes(123456789, 26, 2);
+        let _ = result; // No panic is the assertion
     }
 }

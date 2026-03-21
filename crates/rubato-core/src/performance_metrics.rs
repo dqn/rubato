@@ -97,6 +97,11 @@ impl PerformanceMetrics {
                 }
             }
         }
+
+        // Evict old event results to prevent unbounded Vec growth over
+        // multi-hour sessions. Use the same 3-second window as watch_records.
+        let mut results = lock_or_recover(&self.event_results);
+        results.retain(|e| e.start_time >= keep);
     }
 
     pub fn watch_names(&self) -> Vec<String> {
@@ -155,5 +160,72 @@ impl Drop for WatchBlock {
         let metrics = PerformanceMetrics::get();
         let end_time = metrics.nanos();
         metrics.submit_watch_result(&self.name, self.start_time, end_time - self.start_time);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Regression: commit() must evict old event_results to prevent unbounded
+    /// Vec growth over multi-hour sessions. Events older than the 3-second
+    /// window should be removed.
+    #[test]
+    fn commit_evicts_old_event_results() {
+        let metrics = PerformanceMetrics::new();
+        let now = metrics.nanos();
+
+        // Insert an "old" event (4 seconds in the past) and a "recent" event
+        {
+            let mut results = lock_or_recover(&metrics.event_results);
+            results.push(EventResult {
+                name: "old_event".to_string(),
+                id: 1,
+                parent: 0,
+                start_time: now - 4_000_000_000, // 4 seconds ago
+                duration: 1000,
+                thread: "test".to_string(),
+            });
+            results.push(EventResult {
+                name: "recent_event".to_string(),
+                id: 2,
+                parent: 0,
+                start_time: now - 1_000_000_000, // 1 second ago
+                duration: 500,
+                thread: "test".to_string(),
+            });
+        }
+
+        metrics.commit();
+
+        let results = lock_or_recover(&metrics.event_results);
+        assert_eq!(results.len(), 1, "old event should have been evicted");
+        assert_eq!(results[0].name, "recent_event");
+    }
+
+    /// commit() should not remove events within the 3-second window.
+    #[test]
+    fn commit_keeps_recent_event_results() {
+        let metrics = PerformanceMetrics::new();
+        let now = metrics.nanos();
+
+        {
+            let mut results = lock_or_recover(&metrics.event_results);
+            for i in 0..5 {
+                results.push(EventResult {
+                    name: format!("event_{}", i),
+                    id: i as u64,
+                    parent: 0,
+                    start_time: now - 500_000_000 * (i as i64), // 0s, 0.5s, 1s, 1.5s, 2s ago
+                    duration: 100,
+                    thread: "test".to_string(),
+                });
+            }
+        }
+
+        metrics.commit();
+
+        let results = lock_or_recover(&metrics.event_results);
+        assert_eq!(results.len(), 5, "all events within 3s should be kept");
     }
 }

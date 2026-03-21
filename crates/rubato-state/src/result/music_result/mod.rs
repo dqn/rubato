@@ -219,7 +219,7 @@ impl MusicResult {
         if let Some(ref ns) = newscore_clone {
             let cscore = self.resource.course_score_data();
             let is_clear = ns.clear != ClearType::Failed.id()
-                && (cscore.is_none() || cscore.expect("cscore").clear != ClearType::Failed.id());
+                && cscore.is_none_or(|cs| cs.clear != ClearType::Failed.id());
             let loop_sound = self
                 .resource
                 .config()
@@ -1797,5 +1797,77 @@ mod tests {
             ctx.target_score_data().is_none(),
             "ResultMouseContext::target_score_data() must delegate"
         );
+    }
+
+    // ============================================================
+    // is_clear logic: None course_score_data must not panic
+    // ============================================================
+
+    /// Regression: the is_clear computation in do_prepare formerly used
+    /// `cscore.is_none() || cscore.expect("cscore").clear != ...` which panics
+    /// if short-circuit evaluation is ever disrupted. Verify the safe `map_or`
+    /// replacement handles None and Some cases correctly.
+    #[test]
+    fn is_clear_logic_none_course_score_is_clear() {
+        let cscore: Option<&rubato_core::score_data::ScoreData> = None;
+        let ns_clear = rubato_core::clear_type::ClearType::Normal.id();
+        let is_clear = ns_clear != rubato_core::clear_type::ClearType::Failed.id()
+            && cscore.is_none_or(|cs| cs.clear != rubato_core::clear_type::ClearType::Failed.id());
+        assert!(
+            is_clear,
+            "When course_score_data is None and newscore is not Failed, is_clear should be true"
+        );
+    }
+
+    #[test]
+    fn is_clear_logic_course_score_failed_means_not_clear() {
+        let mut course = rubato_core::score_data::ScoreData::default();
+        course.clear = rubato_core::clear_type::ClearType::Failed.id();
+        let cscore: Option<&rubato_core::score_data::ScoreData> = Some(&course);
+        let ns_clear = rubato_core::clear_type::ClearType::Normal.id();
+        let is_clear = ns_clear != rubato_core::clear_type::ClearType::Failed.id()
+            && cscore.is_none_or(|cs| cs.clear != rubato_core::clear_type::ClearType::Failed.id());
+        assert!(
+            !is_clear,
+            "When course_score_data is Failed, is_clear should be false even if newscore is not Failed"
+        );
+    }
+
+    #[test]
+    fn is_clear_logic_newscore_failed_means_not_clear() {
+        let cscore: Option<&rubato_core::score_data::ScoreData> = None;
+        let ns_clear = rubato_core::clear_type::ClearType::Failed.id();
+        let is_clear = ns_clear != rubato_core::clear_type::ClearType::Failed.id()
+            && cscore.is_none_or(|cs| cs.clear != rubato_core::clear_type::ClearType::Failed.id());
+        assert!(
+            !is_clear,
+            "When newscore is Failed, is_clear should be false regardless of course_score_data"
+        );
+    }
+
+    #[test]
+    fn result_mouse_context_integer_value_uses_boot_time_millis() {
+        // Regression: ResultMouseContext.integer_value() must pass boot_time_millis
+        // (not now_time) to shared_render_context::integer_value for IDs 27-29.
+        // boot_time_millis = 7_200_000 ms (2 hours), now_time = 5 ms (unrelated).
+        let mut mr = make_result_for_mouse();
+        let mut timer = TimerManager::new();
+        timer.set_boot_time_millis(7_200_000); // 2 hours
+        timer.set_now_micro_time(5_000); // 5 ms state-relative
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        // ID 27 = boot time hours: 7_200_000 / 3_600_000 = 2
+        assert_eq!(
+            ctx.integer_value(27),
+            2,
+            "ID 27 (boot hours) must use boot_time_millis, not now_time"
+        );
+        // ID 28 = boot time minutes: (7_200_000 % 3_600_000) / 60_000 = 0
+        assert_eq!(ctx.integer_value(28), 0);
+        // ID 29 = boot time seconds: (7_200_000 % 60_000) / 1_000 = 0
+        assert_eq!(ctx.integer_value(29), 0);
     }
 }

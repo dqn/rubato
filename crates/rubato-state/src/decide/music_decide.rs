@@ -66,6 +66,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
         self.resource.score_data()
     }
 
+    fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
+        self.resource.replay_data()
+    }
+
     fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
         let mode = self
             .resource
@@ -333,6 +337,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
 
     fn score_data_ref(&self) -> Option<&rubato_core::score_data::ScoreData> {
         self.resource.score_data()
+    }
+
+    fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
+        self.resource.replay_data()
     }
 
     fn song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
@@ -1184,6 +1192,7 @@ mod tests {
         config: rubato_types::config::Config,
         player_config: rubato_types::player_config::PlayerConfig,
         score: Option<rubato_core::score_data::ScoreData>,
+        replay_data: Option<rubato_types::replay_data::ReplayData>,
     }
 
     impl SongLengthResource {
@@ -1195,6 +1204,7 @@ mod tests {
                 config: rubato_types::config::Config::default(),
                 player_config: rubato_types::player_config::PlayerConfig::default(),
                 score: None,
+                replay_data: None,
             }
         }
     }
@@ -1242,10 +1252,10 @@ mod tests {
 
     impl rubato_types::player_resource_access::ReplayAccess for SongLengthResource {
         fn replay_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
-            None
+            self.replay_data.as_ref()
         }
         fn replay_data_mut(&mut self) -> Option<&mut rubato_types::replay_data::ReplayData> {
-            None
+            self.replay_data.as_mut()
         }
         fn course_replay(&self) -> &[rubato_types::replay_data::ReplayData] {
             &[]
@@ -2356,5 +2366,101 @@ mod tests {
         use rubato_types::skin_render_context::SkinRenderContext;
         // Should not panic
         ctx.notify_audio_config_changed();
+    }
+
+    // ============================================================
+    // replay_option_data delegation tests
+    // ============================================================
+
+    #[test]
+    fn decide_render_context_replay_option_data_returns_none_without_replay() {
+        // Regression: DecideRenderContext must delegate replay_option_data to resource.
+        let resource = SongLengthResource::with_length_ms(100_000);
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let sdp = rubato_types::score_data_property::ScoreDataProperty::new();
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &mut main,
+            score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert!(
+            ctx.replay_option_data().is_none(),
+            "DecideRenderContext::replay_option_data() must return None when resource has no replay"
+        );
+    }
+
+    #[test]
+    fn decide_render_context_replay_option_data_returns_some_with_replay() {
+        // Regression: DecideRenderContext must delegate replay_option_data to resource.
+        let mut resource = SongLengthResource::with_length_ms(100_000);
+        let mut rd = rubato_types::replay_data::ReplayData::default();
+        rd.randomoption = 3; // RANDOM option
+        resource.replay_data = Some(rd);
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let sdp = rubato_types::score_data_property::ScoreDataProperty::new();
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &mut main,
+            score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        let replay = ctx
+            .replay_option_data()
+            .expect("must return Some when resource has replay data");
+        assert_eq!(replay.randomoption, 3);
+    }
+
+    #[test]
+    fn decide_mouse_context_replay_option_data_returns_none_without_replay() {
+        // Regression: DecideMouseContext must delegate replay_option_data to resource.
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let mut resource = NullPlayerResource::new();
+        let sdp = rubato_types::score_data_property::ScoreDataProperty::new();
+        let ctx = DecideMouseContext {
+            timer: &mut timer,
+            main: &mut main,
+            resource: &mut resource,
+            score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
+            pending_events: Vec::new(),
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert!(
+            ctx.replay_option_data().is_none(),
+            "DecideMouseContext::replay_option_data() must return None when resource has no replay"
+        );
+    }
+
+    #[test]
+    fn decide_mouse_context_replay_option_data_returns_some_with_replay() {
+        // Regression: DecideMouseContext must delegate replay_option_data to resource.
+        let mut resource = SongLengthResource::with_length_ms(100_000);
+        let mut rd = rubato_types::replay_data::ReplayData::default();
+        rd.doubleoption = 2; // DP option
+        resource.replay_data = Some(rd);
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let sdp = rubato_types::score_data_property::ScoreDataProperty::new();
+        let ctx = DecideMouseContext {
+            timer: &mut timer,
+            main: &mut main,
+            resource: &mut resource,
+            score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
+            pending_events: Vec::new(),
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        let replay = ctx
+            .replay_option_data()
+            .expect("must return Some when resource has replay data");
+        assert_eq!(replay.doubleoption, 2);
     }
 }

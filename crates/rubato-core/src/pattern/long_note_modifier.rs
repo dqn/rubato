@@ -74,6 +74,8 @@ impl PatternModifier for LongNoteModifier {
                 for lane in 0..mode_key {
                     if let Some(note) = tl.note(lane)
                         && note.is_long()
+                        // Java uses Math.random() here (not seeded JavaRandom), so
+                        // rand::random() is the correct parity: both are non-deterministic.
                         && rand::random::<f64>() < self.rate
                     {
                         let replacement = if note.is_end() {
@@ -102,11 +104,14 @@ impl PatternModifier for LongNoteModifier {
                         .map(|n| n.is_normal())
                         .unwrap_or(false);
                     let next_empty = !timelines[i + 1].exist_note_at(lane);
+                    // Java uses Math.random() here (not seeded JavaRandom), so
+                    // rand::random() is the correct parity: both are non-deterministic.
                     if is_normal && next_empty && rand::random::<f64>() < self.rate {
                         let lntype = match self.mode {
                             Mode::AddLn => TYPE_LONGNOTE,
                             Mode::AddCn => TYPE_CHARGENOTE,
                             Mode::AddHcn => TYPE_HELLCHARGENOTE,
+                            // Java: (int)(Math.random() * 3 + 1) -- non-deterministic, not seeded.
                             Mode::AddAll => (rand::random::<f64>() * 3.0 + 1.0) as i32,
                             _ => TYPE_UNDEFINED,
                         };

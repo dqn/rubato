@@ -393,11 +393,6 @@ impl MainController {
 
         // ImGui rendering is handled by egui in main.rs
 
-        // Poll input (Java: done in a separate thread, Rust: done synchronously)
-        if let Some(ref mut input) = self.input {
-            input.poll();
-        }
-
         // Input gating by time delta (Java parity: System.currentTimeMillis)
         // Note: SystemTime is not monotonic; NTP jumps could briefly gate input.
         // Using Instant would be more robust but changes timing semantics vs Java.
@@ -412,6 +407,12 @@ impl MainController {
         };
         if time > self.lifecycle.prevtime {
             self.lifecycle.prevtime = time;
+            // Poll input (Java: done in a separate thread, Rust: done synchronously).
+            // Polling inside the time gate ensures no intermediate key transitions
+            // are lost between poll and sync_input_from/input/sync_input_back_to.
+            if let Some(ref mut input) = self.input {
+                input.poll();
+            }
             if let Some(ref input) = self.input
                 && let Some(ref mut current) = self.current
             {
