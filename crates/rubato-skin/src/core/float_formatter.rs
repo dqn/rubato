@@ -92,7 +92,7 @@ impl FloatFormatter {
         let is_sign = (self.sign == 1) && (value < 10.0_f64.powi(self.iketa));
 
         if self.zeropadding == 0 {
-            let ival = value as i32;
+            let ival = (value as i32).abs();
             self.base = (self.iketa)
                 .min((if ival != 0 { ival } else { 1 } as f64).log10() as i32 + 1)
                 + self.sign;
@@ -156,7 +156,7 @@ mod prop_tests {
             fketa in 0..=6i32,
             sign in proptest::bool::ANY,
             zeropadding in 0..=2i32,
-            value in 0.0..=999999.0f64,
+            value in -999999.0..=999999.0f64,
         ) {
             let mut formatter = FloatFormatter::new(iketa, fketa, sign, zeropadding);
             let expected_len = (formatter.keta_length() + 1) as usize;
@@ -215,5 +215,16 @@ mod prop_tests {
                 dp_count, iketa, fketa, sign, zeropadding, value,
             );
         }
+    }
+
+    #[test]
+    fn negative_value_with_zeropadding_zero_does_not_nan() {
+        // Regression: log10() of negative ival produced NaN, corrupting base.
+        let mut fmt = FloatFormatter::new(3, 2, true, 0);
+        let expected_len = (fmt.keta_length() + 1) as usize;
+        let digits = fmt.calculate_and_get_digits(-42.5);
+        assert_eq!(digits.len(), expected_len);
+        // Should contain the sign symbol somewhere.
+        assert!(digits.iter().any(|&d| d == SIGNSYMBOL));
     }
 }
