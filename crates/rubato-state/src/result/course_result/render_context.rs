@@ -230,6 +230,16 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
                 }
             }),
             120..=129 => shared_render_context::ranking_name(self.data, id - 120),
+            // Song hash (MD5)
+            1030 => self
+                .resource
+                .songdata()
+                .map_or_else(String::new, |s| s.file.md5.clone()),
+            // Song hash (SHA256)
+            1031 => self
+                .resource
+                .songdata()
+                .map_or_else(String::new, |s| s.file.sha256.clone()),
             _ => String::new(),
         }
     }
@@ -526,6 +536,18 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultMouseC
                     }
                 }),
             120..=129 => shared_render_context::ranking_name(&self.result.data, id - 120),
+            // Song hash (MD5)
+            1030 => self
+                .result
+                .resource
+                .songdata()
+                .map_or_else(String::new, |s| s.file.md5.clone()),
+            // Song hash (SHA256)
+            1031 => self
+                .result
+                .resource
+                .songdata()
+                .map_or_else(String::new, |s| s.file.sha256.clone()),
             _ => String::new(),
         }
     }
