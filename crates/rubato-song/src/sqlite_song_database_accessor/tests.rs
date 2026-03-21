@@ -279,8 +279,8 @@ fn test_update_song_datas_creates_folder_records() {
                     banner: row.get::<_, String>(4).unwrap_or_default(),
                     parent: row.get::<_, String>(5).unwrap_or_default(),
                     folder_type: row.get::<_, i32>(6).unwrap_or(0),
-                    date: row.get::<_, i32>(7).unwrap_or(0),
-                    adddate: row.get::<_, i32>(8).unwrap_or(0),
+                    date: row.get::<_, i64>(7).unwrap_or(0),
+                    adddate: row.get::<_, i64>(8).unwrap_or(0),
                     max: row.get::<_, i32>(9).unwrap_or(0),
                 })
             })
@@ -996,4 +996,28 @@ fn test_read_only_authorizer_blocks_destructive_ops() {
         .query_row("SELECT count(*) FROM t", [], |row| row.get(0))
         .unwrap();
     assert_eq!(count, 1, "data should be intact after blocked operations");
+}
+
+/// Regression: ChartInfo.date and ChartInfo.adddate must be i64 to avoid
+/// Y2038 overflow. Timestamps after 2038-01-19 03:14:07 UTC exceed i32::MAX.
+#[test]
+fn test_y2038_date_round_trip() {
+    let accessor = create_test_accessor();
+
+    let mut sd = make_test_song("y2038_test", "y2038_sha", "Y2038 Song");
+    // Timestamp after Y2038: 2040-01-01 00:00:00 UTC = 2208988800
+    sd.chart.date = 2_208_988_800;
+    sd.chart.adddate = 2_208_988_800;
+    accessor.insert_song(&sd).unwrap();
+
+    let results = accessor.song_datas("md5", "y2038_test");
+    assert_eq!(results.len(), 1);
+    assert_eq!(
+        results[0].chart.date, 2_208_988_800,
+        "date must survive round-trip without i32 truncation"
+    );
+    assert_eq!(
+        results[0].chart.adddate, 2_208_988_800,
+        "adddate must survive round-trip without i32 truncation"
+    );
 }

@@ -35,8 +35,8 @@ pub struct SongDataFixture {
     pub notes: i32,
     pub feature: i32,
     pub content: i32,
-    pub date: i32,
+    pub date: i64,
     pub favorite: i32,
-    pub adddate: i32,
+    pub adddate: i64,
     pub charthash: String,
 }

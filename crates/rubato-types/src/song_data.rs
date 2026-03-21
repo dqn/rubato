@@ -107,8 +107,8 @@ pub struct ChartInfo {
     pub length: i32,
     pub content: i32,
     pub notes: i32,
-    pub date: i32,
-    pub adddate: i32,
+    pub date: i64,
+    pub adddate: i64,
 }
 
 impl ChartInfo {

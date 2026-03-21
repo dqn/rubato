@@ -8,9 +8,9 @@ pub struct FolderData {
     pub path: String,
     pub banner: String,
     pub parent: String,
-    pub date: i32,
+    pub date: i64,
     pub max: i32,
-    pub adddate: i32,
+    pub adddate: i64,
     #[serde(rename = "type")]
     pub folder_type: i32,
 }
@@ -24,7 +24,7 @@ impl FolderData {
         &self.path
     }
 
-    pub fn adddate(&self) -> i32 {
+    pub fn adddate(&self) -> i64 {
         self.adddate
     }
 }

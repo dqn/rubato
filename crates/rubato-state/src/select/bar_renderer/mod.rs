@@ -236,7 +236,7 @@ impl BarRenderer {
                         && let Some(Bar::Song(sb)) = ctx.currentsongs.get(idx)
                     {
                         let song = sb.song_data();
-                        songstatus = if now_secs > song.chart.adddate as i64 + 3600 * 24 {
+                        songstatus = if now_secs > song.chart.adddate + 3600 * 24 {
                             2 // SongBar(normal)
                         } else {
                             3 // SongBar(new)

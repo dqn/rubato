@@ -269,9 +269,9 @@ impl SQLiteSongDatabaseAccessor {
             sd.chart.judge = row.get::<_, i32>(21).unwrap_or(0);
             sd.chart.feature = row.get::<_, i32>(22).unwrap_or(0);
             sd.chart.content = row.get::<_, i32>(23).unwrap_or(0);
-            sd.chart.date = row.get::<_, i32>(24).unwrap_or(0);
+            sd.chart.date = row.get::<_, i64>(24).unwrap_or(0);
             sd.favorite = row.get::<_, i32>(25).unwrap_or(0);
-            sd.chart.adddate = row.get::<_, i32>(26).unwrap_or(0);
+            sd.chart.adddate = row.get::<_, i64>(26).unwrap_or(0);
             sd.chart.notes = row.get::<_, i32>(27).unwrap_or(0);
             sd.file.charthash = row.get::<_, Option<String>>(28).unwrap_or(None);
             Ok(sd)
@@ -305,8 +305,8 @@ impl SQLiteSongDatabaseAccessor {
                 banner: row.get::<_, String>(4).unwrap_or_default(),
                 parent: row.get::<_, String>(5).unwrap_or_default(),
                 folder_type: row.get::<_, i32>(6).unwrap_or(0),
-                date: row.get::<_, i32>(7).unwrap_or(0),
-                adddate: row.get::<_, i32>(8).unwrap_or(0),
+                date: row.get::<_, i64>(7).unwrap_or(0),
+                adddate: row.get::<_, i64>(8).unwrap_or(0),
                 max: row.get::<_, i32>(9).unwrap_or(0),
             })
         })?;
@@ -1110,7 +1110,7 @@ impl BMSFolder {
                         let modified_secs = modified
                             .duration_since(UNIX_EPOCH)
                             .unwrap_or_default()
-                            .as_secs() as i32;
+                            .as_secs() as i64;
                         if record_date == modified_secs {
                             bf.update_folder = false;
                         }
@@ -1156,7 +1156,7 @@ impl BMSFolder {
             let folder_date = fs::metadata(&self.path)
                 .ok()
                 .and_then(|m| m.modified().ok())
-                .map(|t| t.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i32)
+                .map(|t| t.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64)
                 .unwrap_or(0);
 
             let folder = FolderData {
@@ -1169,7 +1169,7 @@ impl BMSFolder {
                 path: s,
                 parent: song_utils::crc32(&parentpath.to_string_lossy(), &self.bmsroot, &root_str),
                 date: folder_date,
-                adddate: property.updatetime as i32,
+                adddate: property.updatetime,
                 ..Default::default()
             };
 
@@ -1244,7 +1244,7 @@ impl BMSFolder {
                 };
                 if matched {
                     if let Some(rec) = record.as_ref()
-                        && rec.chart.date == last_modified_time as i32
+                        && rec.chart.date == last_modified_time
                     {
                         update = false;
                     }
@@ -1397,9 +1397,9 @@ impl BMSFolder {
                         );
                     }
                 }
-                sd.chart.date = *last_modified_time as i32;
+                sd.chart.date = *last_modified_time;
                 sd.favorite = favorite;
-                sd.chart.adddate = property.updatetime as i32;
+                sd.chart.adddate = property.updatetime;
 
                 if let Err(e) =
                     SQLiteSongDatabaseAccessor::insert_song_with_conn(&accessor.base, conn, &sd)
