@@ -304,15 +304,15 @@ impl LR2SelectSkinLoaderState {
                             let sn = crate::skin_number::SkinNumber::new_with_int_timer(
                                 pimages,
                                 Some(mimages),
-                                values[9],
                                 values[10],
+                                values[9],
                                 crate::skin_number::NumberDisplayConfig {
                                     keta: values[13] + 1,
-                                    zeropadding: values[11],
-                                    space: 0,
-                                    align: 0,
+                                    zeropadding: 0,
+                                    space: values[15],
+                                    align: values[12],
                                 },
-                                0,
+                                values[11],
                             );
                             if idx < self.barlevel.len() {
                                 self.barlevel[idx] = Some(sn);
@@ -336,15 +336,15 @@ impl LR2SelectSkinLoaderState {
                             let sn = crate::skin_number::SkinNumber::new_with_int_timer(
                                 nimages,
                                 None,
-                                values[9],
                                 values[10],
+                                values[9],
                                 crate::skin_number::NumberDisplayConfig {
                                     keta: values[13],
                                     zeropadding: if d > 10 { 2 } else { 0 },
-                                    space: 0,
-                                    align: 0,
+                                    space: values[15],
+                                    align: values[12],
                                 },
-                                0,
+                                values[11],
                             );
                             if idx < self.barlevel.len() {
                                 self.barlevel[idx] = Some(sn);
