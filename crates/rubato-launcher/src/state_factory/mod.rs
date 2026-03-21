@@ -377,36 +377,40 @@ impl StateFactory for LauncherStateFactory {
             }
             MainStateType::Result => {
                 // Java: result = new MusicResult(this);
+                let core_res = match controller.take_player_resource() {
+                    Some(r) => r,
+                    None => {
+                        log::error!(
+                            "Cannot enter Result without PlayerResource; falling back to MusicSelect"
+                        );
+                        return self.create_state(MainStateType::MusicSelect, controller);
+                    }
+                };
                 let ir_statuses = extract_ir_statuses(controller);
                 let command_queue = controller.controller_command_queue();
                 let mc_access =
                     QueuedControllerAccess::from_controller(controller, command_queue.clone());
-                let result_resource = if let Some(core_res) = controller.take_player_resource() {
-                    let pm = core_res
-                        .play_mode()
-                        .cloned()
-                        .unwrap_or_else(|| BMSPlayerMode::new(BMSPlayerModeType::Play));
-                    let bm = core_res.bms_model().cloned().unwrap_or_default();
-                    let cm = core_res.course_bms_models().cloned();
-                    let ranking = core_res
-                        .ranking_data_any()
-                        .and_then(|a| a.downcast_ref::<RankingData>())
-                        .cloned();
-                    let mut rr = ResultPlayerResource::new(Box::new(core_res), pm);
-                    rr.bms_model = bm;
-                    rr.course_bms_models = cm;
-                    rr.ranking_data = ranking;
-                    rr
-                } else {
-                    ResultPlayerResource::default()
-                };
+                let pm = core_res
+                    .play_mode()
+                    .cloned()
+                    .unwrap_or_else(|| BMSPlayerMode::new(BMSPlayerModeType::Play));
+                let bm = core_res.bms_model().cloned().unwrap_or_default();
+                let cm = core_res.course_bms_models().cloned();
+                let ranking = core_res
+                    .ranking_data_any()
+                    .and_then(|a| a.downcast_ref::<RankingData>())
+                    .cloned();
+                let mut rr = ResultPlayerResource::new(Box::new(core_res), pm);
+                rr.bms_model = bm;
+                rr.course_bms_models = cm;
+                rr.ranking_data = ranking;
                 let result = MusicResult::new(
                     ResultMainController::with_audio_and_ir(
                         Box::new(mc_access),
                         Box::new(QueuedAudioDriver::new(command_queue)),
                         ir_statuses,
                     ),
-                    result_resource,
+                    rr,
                     TimerManager::new(),
                 );
                 Some(StateCreateResult {
@@ -416,36 +420,40 @@ impl StateFactory for LauncherStateFactory {
             }
             MainStateType::CourseResult => {
                 // Java: gresult = new CourseResult(this);
+                let core_res = match controller.take_player_resource() {
+                    Some(r) => r,
+                    None => {
+                        log::error!(
+                            "Cannot enter CourseResult without PlayerResource; falling back to MusicSelect"
+                        );
+                        return self.create_state(MainStateType::MusicSelect, controller);
+                    }
+                };
                 let ir_statuses = extract_ir_statuses(controller);
                 let command_queue = controller.controller_command_queue();
                 let mc_access =
                     QueuedControllerAccess::from_controller(controller, command_queue.clone());
-                let result_resource = if let Some(core_res) = controller.take_player_resource() {
-                    let pm = core_res
-                        .play_mode()
-                        .cloned()
-                        .unwrap_or_else(|| BMSPlayerMode::new(BMSPlayerModeType::Play));
-                    let bm = core_res.bms_model().cloned().unwrap_or_default();
-                    let cm = core_res.course_bms_models().cloned();
-                    let ranking = core_res
-                        .ranking_data_any()
-                        .and_then(|a| a.downcast_ref::<RankingData>())
-                        .cloned();
-                    let mut rr = ResultPlayerResource::new(Box::new(core_res), pm);
-                    rr.bms_model = bm;
-                    rr.course_bms_models = cm;
-                    rr.ranking_data = ranking;
-                    rr
-                } else {
-                    ResultPlayerResource::default()
-                };
+                let pm = core_res
+                    .play_mode()
+                    .cloned()
+                    .unwrap_or_else(|| BMSPlayerMode::new(BMSPlayerModeType::Play));
+                let bm = core_res.bms_model().cloned().unwrap_or_default();
+                let cm = core_res.course_bms_models().cloned();
+                let ranking = core_res
+                    .ranking_data_any()
+                    .and_then(|a| a.downcast_ref::<RankingData>())
+                    .cloned();
+                let mut rr = ResultPlayerResource::new(Box::new(core_res), pm);
+                rr.bms_model = bm;
+                rr.course_bms_models = cm;
+                rr.ranking_data = ranking;
                 let course_result = CourseResult::new(
                     ResultMainController::with_audio_and_ir(
                         Box::new(mc_access),
                         Box::new(QueuedAudioDriver::new(command_queue)),
                         ir_statuses,
                     ),
-                    result_resource,
+                    rr,
                     TimerManager::new(),
                 );
                 Some(StateCreateResult {
@@ -589,11 +597,23 @@ mod tests {
     }
     use rubato_core::config::Config;
     use rubato_core::player_config::PlayerConfig;
+    use rubato_core::player_resource::PlayerResource;
 
     fn make_test_controller() -> MainController {
         let config = Config::default();
         let player = PlayerConfig::default();
         MainController::new(None, config, player, None, false)
+    }
+
+    /// Create a test controller with a PlayerResource installed so that
+    /// Result / CourseResult state creation does not fall back to MusicSelect.
+    fn make_test_controller_with_resource() -> MainController {
+        let mut mc = make_test_controller();
+        mc.restore_player_resource(PlayerResource::new(
+            Config::default(),
+            PlayerConfig::default(),
+        ));
+        mc
     }
 
     fn write_song_info_row(path: &std::path::Path, info: &SongInformation) {
@@ -611,9 +631,11 @@ mod tests {
     #[test]
     fn test_create_all_state_types() {
         let factory = LauncherStateFactory::new();
-        let mut controller = make_test_controller();
 
-        // Decide requires a PlayerResource; without one it falls back to MusicSelect
+        // Decide/Result/CourseResult require a PlayerResource; without one they fall back to MusicSelect.
+        // Use a controller with resource so all types create successfully.
+        let mut controller = make_test_controller_with_resource();
+
         let types_without_decide = [
             MainStateType::MusicSelect,
             MainStateType::Play,
@@ -624,6 +646,12 @@ mod tests {
         ];
 
         for state_type in &types_without_decide {
+            // Result/CourseResult consume the resource via take_player_resource(),
+            // so restore it before each iteration to ensure it is available.
+            controller.restore_player_resource(PlayerResource::new(
+                Config::default(),
+                PlayerConfig::default(),
+            ));
             let result = factory.create_state(*state_type, &mut controller);
             assert!(
                 result.is_some(),
@@ -677,7 +705,7 @@ mod tests {
     #[test]
     fn test_result_state() {
         let factory = LauncherStateFactory::new();
-        let mut controller = make_test_controller();
+        let mut controller = make_test_controller_with_resource();
 
         let result = factory
             .create_state(MainStateType::Result, &mut controller)
@@ -686,14 +714,38 @@ mod tests {
     }
 
     #[test]
-    fn test_course_result_state() {
+    fn test_result_state_falls_back_without_resource() {
         let factory = LauncherStateFactory::new();
         let mut controller = make_test_controller();
+
+        // Without PlayerResource, Result falls back to MusicSelect
+        let result = factory
+            .create_state(MainStateType::Result, &mut controller)
+            .unwrap();
+        assert_eq!(result.state.state_type(), Some(MainStateType::MusicSelect));
+    }
+
+    #[test]
+    fn test_course_result_state() {
+        let factory = LauncherStateFactory::new();
+        let mut controller = make_test_controller_with_resource();
 
         let result = factory
             .create_state(MainStateType::CourseResult, &mut controller)
             .unwrap();
         assert_eq!(result.state.state_type(), Some(MainStateType::CourseResult));
+    }
+
+    #[test]
+    fn test_course_result_state_falls_back_without_resource() {
+        let factory = LauncherStateFactory::new();
+        let mut controller = make_test_controller();
+
+        // Without PlayerResource, CourseResult falls back to MusicSelect
+        let result = factory
+            .create_state(MainStateType::CourseResult, &mut controller)
+            .unwrap();
+        assert_eq!(result.state.state_type(), Some(MainStateType::MusicSelect));
     }
 
     #[test]
@@ -736,9 +788,18 @@ mod tests {
         mc.change_state(MainStateType::Play);
         assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
+        // Result/CourseResult require a PlayerResource; install one before each transition
+        mc.restore_player_resource(PlayerResource::new(
+            Config::default(),
+            PlayerConfig::default(),
+        ));
         mc.change_state(MainStateType::Result);
         assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
 
+        mc.restore_player_resource(PlayerResource::new(
+            Config::default(),
+            PlayerConfig::default(),
+        ));
         mc.change_state(MainStateType::CourseResult);
         assert_eq!(mc.current_state_type(), Some(MainStateType::CourseResult));
 
@@ -1277,7 +1338,7 @@ mod tests {
     fn test_result_state_receives_ir_statuses_from_core_controller() {
         use rubato_ir::ir_player_data::IRPlayerData;
 
-        let mut mc = make_test_controller();
+        let mut mc = make_test_controller_with_resource();
         mc.set_state_factory(Box::new(LauncherStateFactory::new()));
         let conn: Arc<dyn rubato_ir::ir_connection::IRConnection + Send + Sync> =
             Arc::new(MockIRConnection);

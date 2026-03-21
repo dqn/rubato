@@ -14,6 +14,7 @@ use rubato_core::config::Config;
 use rubato_core::main_controller::MainController;
 use rubato_core::main_state::MainStateType;
 use rubato_core::player_config::PlayerConfig;
+use rubato_core::player_resource::PlayerResource;
 use rubato_launcher::state_factory::LauncherStateFactory;
 
 fn make_controller_with_factory() -> MainController {
@@ -73,6 +74,10 @@ fn e2e_select_to_play_to_course_result() {
     mc.change_state(MainStateType::Play);
     assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
+    mc.restore_player_resource(PlayerResource::new(
+        Config::default(),
+        PlayerConfig::default(),
+    ));
     mc.change_state(MainStateType::CourseResult);
     assert_eq!(mc.current_state_type(), Some(MainStateType::CourseResult));
 
@@ -140,7 +145,11 @@ fn e2e_lifecycle_across_transitions() {
     mc.resize(1280, 720);
     assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
-    // Transition to Result
+    // Transition to Result (requires a PlayerResource)
+    mc.restore_player_resource(PlayerResource::new(
+        Config::default(),
+        PlayerConfig::default(),
+    ));
     mc.change_state(MainStateType::Result);
     mc.render();
     assert_eq!(mc.current_state_type(), Some(MainStateType::Result));

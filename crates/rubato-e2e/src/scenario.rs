@@ -118,6 +118,10 @@ impl E2eScenario {
                     harness.render_frames(n);
                 }
                 ScenarioStep::ChangeState(state) => {
+                    // Result/CourseResult require a PlayerResource
+                    if matches!(state, MainStateType::Result | MainStateType::CourseResult) {
+                        harness.ensure_player_resource();
+                    }
                     harness.change_state(state);
                 }
                 ScenarioStep::AssertState(state) => {

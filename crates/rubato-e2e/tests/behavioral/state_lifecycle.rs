@@ -35,7 +35,8 @@ fn music_select_to_play_to_result_lifecycle() {
     harness.render_frame();
     assert_eq!(harness.current_state_type(), Some(MainStateType::Play));
 
-    // Result
+    // Result (requires a PlayerResource)
+    harness.ensure_player_resource();
     harness.change_state(MainStateType::Result);
     assert_eq!(harness.current_state_type(), Some(MainStateType::Result));
 
@@ -81,6 +82,7 @@ fn decide_state_creation() {
 fn course_result_state_creation() {
     let mut harness = harness_with_factory();
 
+    harness.ensure_player_resource();
     harness.change_state(MainStateType::CourseResult);
     assert_eq!(
         harness.current_state_type(),
@@ -105,6 +107,8 @@ fn all_seven_state_types_can_be_created() {
     ];
 
     for state_type in &types {
+        // Result/CourseResult require a PlayerResource
+        harness.ensure_player_resource();
         harness.change_state(*state_type);
         assert_eq!(
             harness.current_state_type(),
@@ -130,6 +134,8 @@ fn render_does_not_crash_for_any_state() {
     ];
 
     for state_type in &types {
+        // Result requires a PlayerResource
+        harness.ensure_player_resource();
         harness.change_state(*state_type);
         harness.render_frame();
         // No panic = success

@@ -8,6 +8,7 @@ use rubato_audio::shared_recording_audio_driver::SharedRecordingAudioDriver;
 use rubato_core::config::Config;
 use rubato_core::main_controller::{MainController, StateFactory};
 use rubato_core::player_config::PlayerConfig;
+use rubato_core::player_resource::PlayerResource;
 use rubato_render::sprite_batch::CapturedDrawQuad;
 use rubato_types::main_state_type::MainStateType;
 use rubato_types::state_event::StateEvent;
@@ -167,6 +168,17 @@ impl E2eHarness {
     pub fn with_state_factory(mut self, factory: Box<dyn StateFactory>) -> Self {
         self.controller.set_state_factory(factory);
         self
+    }
+
+    /// Install a default PlayerResource on the controller so that
+    /// Result / CourseResult state creation does not fall back to MusicSelect.
+    pub fn ensure_player_resource(&mut self) {
+        if self.controller.player_resource().is_none() {
+            self.controller.restore_player_resource(PlayerResource::new(
+                Config::default(),
+                PlayerConfig::default(),
+            ));
+        }
     }
 
     /// Trigger a state transition.

@@ -226,6 +226,8 @@ fn test_all_states_create_without_panic() {
     ];
 
     for state_type in &state_types {
+        // Result/CourseResult require a PlayerResource; ensure one is available
+        harness.ensure_player_resource();
         harness.change_state(*state_type);
         assert_eq!(
             harness.current_state_type(),

@@ -17,6 +17,7 @@ use rubato_core::config::Config;
 use rubato_core::main_controller::MainController;
 use rubato_core::main_state::MainStateType;
 use rubato_core::player_config::PlayerConfig;
+use rubato_core::player_resource::PlayerResource;
 use rubato_launcher::state_factory::LauncherStateFactory;
 use rubato_types::course_data::CourseData;
 use rubato_types::main_controller_access::MainControllerAccess;
@@ -601,6 +602,11 @@ fn e2e_rapid_play_result_alternation() {
         mc.change_state(MainStateType::Play);
         assert_eq!(mc.current_state_type(), Some(MainStateType::Play));
 
+        // Result requires a PlayerResource
+        mc.restore_player_resource(PlayerResource::new(
+            Config::default(),
+            PlayerConfig::default(),
+        ));
         mc.change_state(MainStateType::Result);
         assert_eq!(mc.current_state_type(), Some(MainStateType::Result));
     }

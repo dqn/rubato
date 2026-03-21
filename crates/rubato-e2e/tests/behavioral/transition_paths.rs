@@ -45,7 +45,8 @@ fn select_to_decide_to_play_to_result_flow() {
     harness.assert_state(MainStateType::Play);
     harness.render_frames(3);
 
-    // Move to Result
+    // Move to Result (requires a PlayerResource)
+    harness.ensure_player_resource();
     harness.change_state(MainStateType::Result);
     harness.assert_state(MainStateType::Result);
     harness.render_frames(3);
@@ -97,6 +98,8 @@ fn result_to_select_loop_back() {
         MainStateType::Result,
         MainStateType::MusicSelect,
     ] {
+        // Result/CourseResult require a PlayerResource
+        harness.ensure_player_resource();
         harness.change_state(*state);
         harness.assert_state(*state);
         harness.render_frames(2);
@@ -116,6 +119,7 @@ fn select_play_result_select_double_loop() {
         harness.render_frames(2);
         harness.change_state(MainStateType::Play);
         harness.render_frames(2);
+        harness.ensure_player_resource();
         harness.change_state(MainStateType::Result);
         harness.render_frames(2);
     }
@@ -134,6 +138,7 @@ fn select_to_course_result() {
 
     harness.change_state(MainStateType::MusicSelect);
     harness.render_frames(2);
+    harness.ensure_player_resource();
     harness.change_state(MainStateType::CourseResult);
     harness.assert_state(MainStateType::CourseResult);
     harness.render_frames(3);
@@ -145,6 +150,7 @@ fn play_to_course_result_path() {
 
     harness.change_state(MainStateType::Play);
     harness.render_frames(2);
+    harness.ensure_player_resource();
     harness.change_state(MainStateType::CourseResult);
     harness.assert_state(MainStateType::CourseResult);
     harness.render_frames(3);
@@ -182,6 +188,7 @@ fn back_from_play_to_select() {
 fn back_from_result_to_select() {
     let mut harness = harness_with_controller_create();
 
+    harness.ensure_player_resource();
     harness.change_state(MainStateType::Result);
     harness.assert_state(MainStateType::Result);
     harness.render_frames(2);
@@ -194,6 +201,7 @@ fn back_from_result_to_select() {
 fn back_from_course_result_to_select() {
     let mut harness = harness_with_controller_create();
 
+    harness.ensure_player_resource();
     harness.change_state(MainStateType::CourseResult);
     harness.assert_state(MainStateType::CourseResult);
     harness.render_frames(2);
@@ -262,6 +270,8 @@ fn rapid_cycle_through_all_states() {
     // Cycle through all states 3 times with only 1 frame between each
     for _ in 0..3 {
         for &state in &states {
+            // Result/CourseResult require a PlayerResource
+            harness.ensure_player_resource();
             harness.change_state(state);
             harness.render_frame();
         }
@@ -278,6 +288,7 @@ fn change_state_without_render_between() {
     // Change state 5 times without rendering
     harness.change_state(MainStateType::MusicSelect);
     harness.change_state(MainStateType::Play);
+    harness.ensure_player_resource();
     harness.change_state(MainStateType::Result);
     harness.change_state(MainStateType::MusicSelect);
     harness.change_state(MainStateType::Play);

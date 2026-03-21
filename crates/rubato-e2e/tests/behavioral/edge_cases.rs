@@ -80,6 +80,8 @@ fn test_rapid_state_transitions() {
     ];
 
     for state_type in &transitions {
+        // Result/CourseResult require a PlayerResource
+        harness.ensure_player_resource();
         harness.change_state(*state_type);
         assert_eq!(
             harness.current_state_type(),
