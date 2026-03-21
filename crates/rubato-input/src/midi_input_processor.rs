@@ -174,15 +174,26 @@ impl MidiInputProcessor {
     /// Poll pending MIDI messages from the channel and dispatch them.
     /// Must be called from the main thread each frame.
     pub fn poll(&mut self, callback: &mut dyn MidiCallback) {
-        // Temporarily take the receiver to avoid borrow conflict with &mut self
+        // Temporarily take the receiver to avoid borrow conflict with &mut self.
+        // Wrap in catch_unwind so that receiver is restored even if a panic
+        // occurs between take and put-back (panic safety, same pattern as
+        // state_factory in state_machine.rs).
         let receiver = match self.receiver.take() {
             Some(r) => r,
             None => return,
         };
 
         // Drain all pending messages (non-blocking)
-        while let Ok((command, data1, data2)) = receiver.try_recv() {
-            self.on_short_message(command, data1, data2, callback);
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            while let Ok((command, data1, data2)) = receiver.try_recv() {
+                self.on_short_message(command, data1, data2, callback);
+            }
+        })) {
+            Ok(()) => {}
+            Err(payload) => {
+                self.receiver = Some(receiver);
+                std::panic::resume_unwind(payload);
+            }
         }
 
         // Put the receiver back

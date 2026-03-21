@@ -147,43 +147,54 @@ impl MainController {
             current.sync_audio(audio.as_mut());
         }
 
-        // Take sprite batch to avoid borrow conflict with self.current
+        // Take sprite batch to avoid borrow conflict with self.current.
+        // Wrap in catch_unwind so that sprite is restored even if a panic
+        // occurs between take and put-back (panic safety, same pattern as
+        // state_factory in state_machine.rs).
         let mut sprite = self.sprite.take();
-        if let Some(ref mut s) = sprite {
-            s.begin();
-        }
-
-        // Skin update and draw — delegated to state via render_skin() override.
-        // Default implementation does update_custom_objects + draw_all_objects.
-        // MusicSelector overrides to add BarRenderer prepare/render around the cycle.
-        if let Some(ref mut current) = self.current {
-            // Read state type before mutable borrow
-            let st = current.state_type();
-            let data = current.main_state_data_mut();
-            // Advance the state's timer each frame (Java shares one timer;
-            // Rust has separate TimerManagers for controller and state).
-            data.timer.update();
-            data.timer.state_type = st;
-            // Keep boot-relative time in sync so skin property IDs 27-29 show
-            // time since application start, not time since state creation.
-            data.timer
-                .set_boot_time_millis(self.lifecycle.boottime.elapsed().as_millis() as i64);
-
-            if current.main_state_data().skin.is_some() {
-                if let Some(ref mut s) = sprite {
-                    current.render_skin(s);
-                }
-            } else {
-                use std::sync::Once;
-                static WARN_ONCE: Once = Once::new();
-                WARN_ONCE.call_once(|| {
-                    log::warn!("No skin loaded for current state — screen will be blank");
-                });
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            if let Some(ref mut s) = sprite {
+                s.begin();
             }
-        }
 
-        if let Some(ref mut s) = sprite {
-            s.end();
+            // Skin update and draw — delegated to state via render_skin() override.
+            // Default implementation does update_custom_objects + draw_all_objects.
+            // MusicSelector overrides to add BarRenderer prepare/render around the cycle.
+            if let Some(ref mut current) = self.current {
+                // Read state type before mutable borrow
+                let st = current.state_type();
+                let data = current.main_state_data_mut();
+                // Advance the state's timer each frame (Java shares one timer;
+                // Rust has separate TimerManagers for controller and state).
+                data.timer.update();
+                data.timer.state_type = st;
+                // Keep boot-relative time in sync so skin property IDs 27-29 show
+                // time since application start, not time since state creation.
+                data.timer
+                    .set_boot_time_millis(self.lifecycle.boottime.elapsed().as_millis() as i64);
+
+                if current.main_state_data().skin.is_some() {
+                    if let Some(ref mut s) = sprite {
+                        current.render_skin(s);
+                    }
+                } else {
+                    use std::sync::Once;
+                    static WARN_ONCE: Once = Once::new();
+                    WARN_ONCE.call_once(|| {
+                        log::warn!("No skin loaded for current state — screen will be blank");
+                    });
+                }
+            }
+
+            if let Some(ref mut s) = sprite {
+                s.end();
+            }
+        })) {
+            Ok(()) => {}
+            Err(payload) => {
+                self.sprite = sprite;
+                std::panic::resume_unwind(payload);
+            }
         }
         self.sprite = sprite;
 

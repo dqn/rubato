@@ -57,74 +57,86 @@ impl Lwjgl3ControllerManager {
             return;
         };
 
-        // Phase 1: Process pending gilrs events (updates internal gamepad state)
-        while let Some(gilrs::Event { id, event, .. }) = gilrs.next_event() {
-            match event {
-                gilrs::EventType::Connected => {
-                    log::info!("Gamepad connected event: {:?}", id);
-                }
-                gilrs::EventType::Disconnected => {
-                    log::info!("Gamepad disconnected event: {:?}", id);
-                }
-                _ => {}
-            }
-        }
-
-        // Phase 2: Discover newly connected gamepads
-        let new_gamepads: Vec<_> = gilrs
-            .gamepads()
-            .filter(|(_, gp)| gp.is_connected())
-            .filter(|(id, _)| !self.controllers.iter().any(|c| c.gamepad_id == Some(*id)))
-            .map(|(id, _)| id)
-            .collect();
-
-        let mut new_controllers = Vec::new();
-        for gid in new_gamepads {
-            let gamepad = gilrs.gamepad(gid);
-            let index = self.next_index;
-            self.next_index += 1;
-            new_controllers.push(Lwjgl3Controller::new_from_gilrs(index, &gamepad));
-        }
-
-        // Phase 3: Connect new controllers (self is freely available)
-        for controller in new_controllers {
-            self.connected(controller);
-        }
-
-        // Phase 4: Poll each connected controller, collecting changes
         struct ControllerChanges {
             idx: usize,
             axis_changes: Vec<(i32, f32)>,
             button_changes: Vec<(i32, bool)>,
         }
 
-        let mut all_changes: Vec<ControllerChanges> = Vec::new();
-        let mut disconnected_indices: Vec<usize> = Vec::new();
-
-        for (idx, controller) in self.controllers.iter_mut().enumerate() {
-            if let Some(gid) = controller.gamepad_id {
-                let gamepad = gilrs.gamepad(gid);
-                match controller.update_from_gamepad(&gamepad) {
-                    PollResult::Disconnected => {
-                        disconnected_indices.push(idx);
+        // Wrap phases 1-4 in catch_unwind so that gilrs is restored even if a
+        // panic occurs between take and put-back (panic safety, same pattern as
+        // state_factory in state_machine.rs).
+        let (all_changes, disconnected_indices) =
+            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                // Phase 1: Process pending gilrs events (updates internal gamepad state)
+                while let Some(gilrs::Event { id, event, .. }) = gilrs.next_event() {
+                    match event {
+                        gilrs::EventType::Connected => {
+                            log::info!("Gamepad connected event: {:?}", id);
+                        }
+                        gilrs::EventType::Disconnected => {
+                            log::info!("Gamepad disconnected event: {:?}", id);
+                        }
+                        _ => {}
                     }
-                    PollResult::Connected {
-                        axis_changes,
-                        button_changes,
-                    } => {
-                        if !axis_changes.is_empty() || !button_changes.is_empty() {
-                            all_changes.push(ControllerChanges {
-                                idx,
+                }
+
+                // Phase 2: Discover newly connected gamepads
+                let new_gamepads: Vec<_> = gilrs
+                    .gamepads()
+                    .filter(|(_, gp)| gp.is_connected())
+                    .filter(|(id, _)| !self.controllers.iter().any(|c| c.gamepad_id == Some(*id)))
+                    .map(|(id, _)| id)
+                    .collect();
+
+                let mut new_controllers = Vec::new();
+                for gid in new_gamepads {
+                    let gamepad = gilrs.gamepad(gid);
+                    let index = self.next_index;
+                    self.next_index += 1;
+                    new_controllers.push(Lwjgl3Controller::new_from_gilrs(index, &gamepad));
+                }
+
+                // Phase 3: Connect new controllers (self is freely available)
+                for controller in new_controllers {
+                    self.connected(controller);
+                }
+
+                // Phase 4: Poll each connected controller, collecting changes
+                let mut all_changes: Vec<ControllerChanges> = Vec::new();
+                let mut disconnected_indices: Vec<usize> = Vec::new();
+
+                for (idx, controller) in self.controllers.iter_mut().enumerate() {
+                    if let Some(gid) = controller.gamepad_id {
+                        let gamepad = gilrs.gamepad(gid);
+                        match controller.update_from_gamepad(&gamepad) {
+                            PollResult::Disconnected => {
+                                disconnected_indices.push(idx);
+                            }
+                            PollResult::Connected {
                                 axis_changes,
                                 button_changes,
-                            });
+                            } => {
+                                if !axis_changes.is_empty() || !button_changes.is_empty() {
+                                    all_changes.push(ControllerChanges {
+                                        idx,
+                                        axis_changes,
+                                        button_changes,
+                                    });
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
 
-        // Put gilrs back before firing events (which borrow self mutably)
+                (all_changes, disconnected_indices)
+            })) {
+                Ok(result) => result,
+                Err(payload) => {
+                    self.gilrs = Some(gilrs);
+                    std::panic::resume_unwind(payload);
+                }
+            };
         self.gilrs = Some(gilrs);
 
         // Phase 5: Fire manager-level events for changes
