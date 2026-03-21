@@ -2746,4 +2746,66 @@ mod tests {
         // causing "AfterRandom" to be skipped. With the fix, it's correctly set.
         assert_eq!(model.title, "AfterRandom");
     }
+
+    // -- randoms Vec is a monotonic index counter, NOT a stack --
+
+    #[test]
+    fn sequential_random_blocks_use_distinct_selected_random_slots() {
+        // Two sequential (non-nested) #RANDOM blocks.
+        // selected_random[0]=2 controls the first block, selected_random[1]=1 controls the second.
+        // The `randoms` Vec must NOT be popped on #ENDRANDOM, because it serves as a
+        // monotonically increasing index into the flat `selected_random` array.
+        // If `randoms` were popped, the second block would reuse index 0 and pick
+        // selected_random[0]=2, incorrectly skipping #IF 1.
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            // First RANDOM block: selected_random[0]=2, so #IF 1 is skipped
+            "#RANDOM 2",
+            "#IF 1",
+            "#TITLE FirstBlock",
+            "#ENDIF",
+            "#ENDRANDOM",
+            // Second RANDOM block: selected_random[1]=1, so #IF 1 matches
+            "#RANDOM 2",
+            "#IF 1",
+            "#TITLE SecondBlock",
+            "#ENDIF",
+            "#ENDRANDOM",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[2, 1])).unwrap();
+        // First block's #IF 1 is skipped (random value is 2).
+        // Second block's #IF 1 matches (random value is 1).
+        assert_eq!(model.title, "SecondBlock");
+    }
+
+    #[test]
+    fn sequential_switch_blocks_use_distinct_selected_random_slots() {
+        // Two sequential #SWITCH blocks. Each gets its own slot in selected_random.
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&[
+            "#BPM 120",
+            // First SWITCH: selected_random[0]=2, CASE 2 matches
+            "#SWITCH 2",
+            "#CASE 1",
+            "#TITLE Case1First",
+            "#SKIP",
+            "#CASE 2",
+            "#TITLE Case2First",
+            "#SKIP",
+            "#ENDSW",
+            // Second SWITCH: selected_random[1]=1, CASE 1 matches
+            "#SWITCH 2",
+            "#CASE 1",
+            "#TITLE Case1Second",
+            "#SKIP",
+            "#CASE 2",
+            "#TITLE Case2Second",
+            "#SKIP",
+            "#ENDSW",
+        ]);
+        let model = decoder.decode_bytes(&data, false, Some(&[2, 1])).unwrap();
+        // First SWITCH sets title to "Case2First", second overwrites to "Case1Second".
+        assert_eq!(model.title, "Case1Second");
+    }
 }

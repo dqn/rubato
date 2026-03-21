@@ -158,10 +158,6 @@ impl Note {
         self.data().playtime / 1000
     }
 
-    pub fn milli_play_time(&self) -> i64 {
-        self.data().playtime / 1000
-    }
-
     pub fn micro_play_time(&self) -> i64 {
         self.data().playtime
     }
@@ -465,7 +461,6 @@ mod tests {
         let mut note = Note::new_normal(1);
         note.set_play_time(500);
         assert_eq!(note.play_time(), 500);
-        assert_eq!(note.milli_play_time(), 500);
         assert_eq!(note.micro_play_time(), 500_000);
     }
 
@@ -474,7 +469,7 @@ mod tests {
         let mut note = Note::new_normal(1);
         note.set_micro_play_time(999_999);
         assert_eq!(note.micro_play_time(), 999_999);
-        assert_eq!(note.milli_play_time(), 999);
+        assert_eq!(note.play_time(), 999);
     }
 
     // --- Layered note tests ---
