@@ -568,7 +568,10 @@ impl PlayerConfig {
             self.note_modifier_settings.longnote_rate.clamp(0.0, 1.0);
         // mine_mode: 0=off, 1-4=modifier modes (5 values total, matching skin event cycling count).
         self.play_settings.mine_mode = self.play_settings.mine_mode.clamp(0, 4);
-        self.display_settings.extranote_depth = self.display_settings.extranote_depth.clamp(0, 100);
+        // ExtraNoteModifier places up to `depth` background notes per timeline
+        // position. Values above ~4 produce extremely dense, unplayable charts.
+        // Java uses [0, 100] but practical use is [0, 4].
+        self.display_settings.extranote_depth = self.display_settings.extranote_depth.clamp(0, 10);
 
         if self.irconfig.is_empty() {
             let irnames = IRConnectionManager::all_available_ir_connection_name();
