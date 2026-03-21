@@ -443,19 +443,41 @@ fn init_no_great_constraint_zeroes_great_and_good() {
     let nm_normal = jm_normal.judge_table(false);
     let nm_constrained = jm_constrained.judge_table(false);
 
-    // The NoGreat constraint zeroes rates [1] and [2], which affects
-    // Great and Good windows. The PerfectGreat window (index 0) stays.
-    // So constrained tables should differ from normal tables.
+    // NoGreat zeroes rates[1] (GREAT) and rates[2] (GOOD). After rate application,
+    // the monotonicity floor clamp forces GREAT and GOOD windows to collapse to
+    // PGREAT's width. This means only PGREAT timing is accepted; GREAT/GOOD
+    // windows offer no additional width.
+    assert_eq!(
+        nm_constrained[0], nm_normal[0],
+        "PGREAT key window should be unchanged"
+    );
+    assert_eq!(
+        nm_constrained[1], nm_constrained[0],
+        "GREAT key window should collapse to PGREAT width"
+    );
+    assert_eq!(
+        nm_constrained[2], nm_constrained[0],
+        "GOOD key window should collapse to PGREAT width"
+    );
+    // Verify the constraint actually changed the table (GREAT was wider before)
     assert_ne!(
-        nm_normal, nm_constrained,
-        "NoGreat should modify key judge tables"
+        nm_normal[1], nm_constrained[1],
+        "GREAT key window should differ from normal"
     );
 
     let sm_normal = jm_normal.judge_table(true);
     let sm_constrained = jm_constrained.judge_table(true);
+    assert_eq!(
+        sm_constrained[1], sm_constrained[0],
+        "GREAT scratch window should collapse to PGREAT width"
+    );
+    assert_eq!(
+        sm_constrained[2], sm_constrained[0],
+        "GOOD scratch window should collapse to PGREAT width"
+    );
     assert_ne!(
-        sm_normal, sm_constrained,
-        "NoGreat should modify scratch judge tables"
+        sm_normal[1], sm_constrained[1],
+        "GREAT scratch window should differ from normal"
     );
 }
 
@@ -476,17 +498,44 @@ fn init_no_good_constraint_zeroes_good_only() {
     let nm_normal = jm_normal.judge_table(false);
     let nm_constrained = jm_constrained.judge_table(false);
 
-    // NoGood zeroes only rate[2] (Good window), so tables should differ.
+    // NoGood zeroes only rate[2] (GOOD). After rate application, the monotonicity
+    // floor clamp forces GOOD window to collapse to GREAT's width. PGREAT and GREAT
+    // are unchanged.
+    assert_eq!(
+        nm_constrained[0], nm_normal[0],
+        "PGREAT key window should be unchanged"
+    );
+    assert_eq!(
+        nm_constrained[1], nm_normal[1],
+        "GREAT key window should be unchanged"
+    );
+    assert_eq!(
+        nm_constrained[2], nm_constrained[1],
+        "GOOD key window should collapse to GREAT width"
+    );
+    // Verify the constraint actually changed the table (GOOD was wider before)
     assert_ne!(
-        nm_normal, nm_constrained,
-        "NoGood should modify key judge tables"
+        nm_normal[2], nm_constrained[2],
+        "GOOD key window should differ from normal"
     );
 
     let sm_normal = jm_normal.judge_table(true);
     let sm_constrained = jm_constrained.judge_table(true);
+    assert_eq!(
+        sm_constrained[0], sm_normal[0],
+        "PGREAT scratch window should be unchanged"
+    );
+    assert_eq!(
+        sm_constrained[1], sm_normal[1],
+        "GREAT scratch window should be unchanged"
+    );
+    assert_eq!(
+        sm_constrained[2], sm_constrained[1],
+        "GOOD scratch window should collapse to GREAT width"
+    );
     assert_ne!(
-        sm_normal, sm_constrained,
-        "NoGood should modify scratch judge tables"
+        sm_normal[2], sm_constrained[2],
+        "GOOD scratch window should differ from normal"
     );
 }
 
@@ -502,17 +551,40 @@ fn init_no_great_zeroes_more_than_no_good() {
     let mut jm_no_great = JudgeManager::new();
     jm_no_great.init(&model, 1, None, &[CourseDataConstraint::NoGreat]);
 
-    // NoGreat zeroes both Great and Good, while NoGood only zeroes Good.
-    // So their tables should differ (NoGreat is strictly more restrictive).
-    assert_ne!(
-        jm_no_good.judge_table(false),
-        jm_no_great.judge_table(false),
-        "NoGreat should be more restrictive than NoGood for key"
+    // NoGreat collapses GREAT and GOOD to PGREAT width.
+    // NoGood collapses only GOOD to GREAT width (GREAT stays normal).
+    // So NoGreat is strictly more restrictive: its GREAT window is narrower.
+    let ng_key = jm_no_good.judge_table(false);
+    let ngr_key = jm_no_great.judge_table(false);
+
+    // NoGood keeps GREAT at its original width; NoGreat collapses GREAT to PGREAT.
+    assert!(
+        ng_key[1][1].abs() > ngr_key[1][1].abs(),
+        "NoGood GREAT key window ({:?}) should be wider than NoGreat ({:?})",
+        ng_key[1],
+        ngr_key[1]
     );
-    assert_ne!(
-        jm_no_good.judge_table(true),
-        jm_no_great.judge_table(true),
-        "NoGreat should be more restrictive than NoGood for scratch"
+    // NoGreat GREAT == PGREAT, NoGood GOOD == GREAT (which is wider than PGREAT)
+    assert!(
+        ng_key[2][1].abs() > ngr_key[2][1].abs(),
+        "NoGood GOOD key window ({:?}) should be wider than NoGreat GOOD ({:?})",
+        ng_key[2],
+        ngr_key[2]
+    );
+
+    let ng_sc = jm_no_good.judge_table(true);
+    let ngr_sc = jm_no_great.judge_table(true);
+    assert!(
+        ng_sc[1][1].abs() > ngr_sc[1][1].abs(),
+        "NoGood GREAT scratch window ({:?}) should be wider than NoGreat ({:?})",
+        ng_sc[1],
+        ngr_sc[1]
+    );
+    assert!(
+        ng_sc[2][1].abs() > ngr_sc[2][1].abs(),
+        "NoGood GOOD scratch window ({:?}) should be wider than NoGreat GOOD ({:?})",
+        ng_sc[2],
+        ngr_sc[2]
     );
 }
 
@@ -1177,9 +1249,15 @@ fn judgecombo_uses_coursecombo_not_combo() {
 #[test]
 fn gauge_not_double_updated_via_judged_events() {
     // Verify gauge.update is called exactly once per judgment (in update_micro),
-    // not again in the caller's update_judge. We do this by comparing gauge
-    // values between a direct simulation and one where we manually call update again.
-    let model = make_model_with_notes(&[500_000]);
+    // not again in the caller's update_judge. We assert the exact gauge value
+    // after a single PGREAT to detect any double-update.
+    //
+    // Setup: LR2 NORMAL gauge, total=10.0, 1 note => per-PGREAT increment =
+    // base(1.0) * total(10.0) / total_notes(1) = 10.0.
+    // Initial gauge = 20.0. After exactly 1 PGREAT: 30.0.
+    // A double-update would yield 40.0.
+    let mut model = make_model_with_notes(&[500_000]);
+    model.total = 10.0;
     let notes = build_judge_notes(&model);
     let jp = crate::judge_property::lr2();
 
@@ -1208,8 +1286,6 @@ fn gauge_not_double_updated_via_judged_events() {
     let key_states = vec![false; key_count];
     let key_times = vec![i64::MIN; key_count];
 
-    let gauge_before = gauge.value();
-
     jm.update(-1, &notes, &key_states, &key_times, &mut gauge);
 
     let mut time = 0i64;
@@ -1218,18 +1294,16 @@ fn gauge_not_double_updated_via_judged_events() {
         time += 1000;
     }
 
-    let gauge_after_single = gauge.value();
+    let gauge_after = gauge.value();
     let events = jm.drain_judged_events();
     assert_eq!(events.len(), 1, "expected exactly one judge event");
 
-    // If we were to call gauge.update(judge) again here, it would be a
-    // double-update. Instead, we verify the gauge changed exactly once.
-    // A PGREAT (judge=0) on a NORMAL gauge increases the value.
+    // LR2 NORMAL gauge: init=20.0, single PGREAT adds 10.0 => expected 30.0.
+    // A double-update bug would produce 40.0.
     assert!(
-        gauge_after_single > gauge_before,
-        "gauge should increase after PGREAT (before={}, after={})",
-        gauge_before,
-        gauge_after_single,
+        (gauge_after - 30.0).abs() < f32::EPSILON,
+        "gauge should be 30.0 after exactly one PGREAT update, got {}",
+        gauge_after,
     );
 }
 
@@ -1327,7 +1401,7 @@ fn from_config_sets_judge_algorithm_lowest() {
 }
 
 #[test]
-fn from_config_sets_judge_algorithm_score_maps_to_timing() {
+fn from_config_sets_judge_algorithm_score() {
     let model = make_model_with_notes(&[1_000_000]);
     let notes = build_judge_notes(&model);
     let jp = crate::judge_property::lr2();
