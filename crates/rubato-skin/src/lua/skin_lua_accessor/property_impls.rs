@@ -21,7 +21,8 @@ use rubato_types::sync_utils::lock_or_recover;
 // property is alive, preventing use-after-free. The Send+Sync impls are required
 // by the property traits; Lua (without the "send" feature) is !Send, so we rely
 // on the single-threaded access invariant. The creation_thread_id field enables
-// debug_assert checks that detect cross-thread access at runtime in debug builds.
+// debug_assert checks that panic in debug builds; in release builds, cross-thread
+// access logs a warning and returns a safe default value instead of panicking.
 
 pub(crate) struct LuaBooleanProperty {
     pub(super) func_key: Arc<Mutex<LuaRegistryKey>>,
@@ -30,7 +31,8 @@ pub(crate) struct LuaBooleanProperty {
 }
 
 // SAFETY: The Lua VM is accessed single-threaded in beatoraja's skin system.
-// assert in get() verifies this invariant at runtime in all builds.
+// debug_assert in get() verifies this invariant at runtime in debug builds;
+// release builds log a warning and return false on cross-thread access.
 unsafe impl Send for LuaBooleanProperty {}
 unsafe impl Sync for LuaBooleanProperty {}
 
@@ -40,11 +42,15 @@ impl BooleanProperty for LuaBooleanProperty {
     }
 
     fn get(&self, _state: &dyn MainState) -> bool {
-        assert_eq!(
+        debug_assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaBooleanProperty must be accessed on the thread where it was created"
         );
+        if std::thread::current().id() != self.creation_thread_id {
+            log::warn!("LuaBooleanProperty accessed from wrong thread");
+            return false;
+        }
         let key = lock_or_recover(&self.func_key);
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => match func.call::<LuaValue>(()) {
@@ -75,17 +81,22 @@ pub(crate) struct LuaIntegerProperty {
 
 // SAFETY: LuaIntegerProperty contains Arc<Lua> which is !Send because mlua::Lua
 // (without the "send" feature) is not thread-safe. Access is restricted to a single
-// thread; assert in get() verifies this invariant at runtime in all builds.
+// thread; debug_assert in get() verifies this invariant in debug builds;
+// release builds log a warning and return 0 on cross-thread access.
 unsafe impl Send for LuaIntegerProperty {}
 unsafe impl Sync for LuaIntegerProperty {}
 
 impl IntegerProperty for LuaIntegerProperty {
     fn get(&self, _state: &dyn MainState) -> i32 {
-        assert_eq!(
+        debug_assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaIntegerProperty must be accessed on the thread where it was created"
         );
+        if std::thread::current().id() != self.creation_thread_id {
+            log::warn!("LuaIntegerProperty accessed from wrong thread");
+            return 0;
+        }
         let key = lock_or_recover(&self.func_key);
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => match func.call::<LuaValue>(()) {
@@ -115,17 +126,22 @@ pub struct LuaFloatProperty {
 
 // SAFETY: LuaFloatProperty contains Arc<Lua> which is !Send because mlua::Lua
 // (without the "send" feature) is not thread-safe. Access is restricted to a single
-// thread; assert in get() verifies this invariant at runtime in all builds.
+// thread; debug_assert in get() verifies this invariant in debug builds;
+// release builds log a warning and return 0.0 on cross-thread access.
 unsafe impl Send for LuaFloatProperty {}
 unsafe impl Sync for LuaFloatProperty {}
 
 impl FloatProperty for LuaFloatProperty {
     fn get(&self, _state: &dyn MainState) -> f32 {
-        assert_eq!(
+        debug_assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaFloatProperty must be accessed on the thread where it was created"
         );
+        if std::thread::current().id() != self.creation_thread_id {
+            log::warn!("LuaFloatProperty accessed from wrong thread");
+            return 0.0;
+        }
         let key = lock_or_recover(&self.func_key);
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => match func.call::<LuaValue>(()) {
@@ -155,17 +171,22 @@ pub(crate) struct LuaStringProperty {
 
 // SAFETY: LuaStringProperty contains Arc<Lua> which is !Send because mlua::Lua
 // (without the "send" feature) is not thread-safe. Access is restricted to a single
-// thread; assert in get() verifies this invariant at runtime in all builds.
+// thread; debug_assert in get() verifies this invariant in debug builds;
+// release builds log a warning and return "" on cross-thread access.
 unsafe impl Send for LuaStringProperty {}
 unsafe impl Sync for LuaStringProperty {}
 
 impl StringProperty for LuaStringProperty {
     fn get(&self, _state: &dyn MainState) -> String {
-        assert_eq!(
+        debug_assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaStringProperty must be accessed on the thread where it was created"
         );
+        if std::thread::current().id() != self.creation_thread_id {
+            log::warn!("LuaStringProperty accessed from wrong thread");
+            return String::new();
+        }
         let key = lock_or_recover(&self.func_key);
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => match func.call::<LuaValue>(()) {
@@ -195,17 +216,22 @@ pub struct LuaTimerProperty {
 
 // SAFETY: LuaTimerProperty contains Arc<Lua> which is !Send because mlua::Lua
 // (without the "send" feature) is not thread-safe. Access is restricted to a single
-// thread; assert in get_micro() verifies this invariant at runtime in all builds.
+// thread; debug_assert in get_micro() verifies this invariant in debug builds;
+// release builds log a warning and return i64::MIN on cross-thread access.
 unsafe impl Send for LuaTimerProperty {}
 unsafe impl Sync for LuaTimerProperty {}
 
 impl TimerProperty for LuaTimerProperty {
     fn get_micro(&self, _state: &dyn MainState) -> i64 {
-        assert_eq!(
+        debug_assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaTimerProperty must be accessed on the thread where it was created"
         );
+        if std::thread::current().id() != self.creation_thread_id {
+            log::warn!("LuaTimerProperty accessed from wrong thread");
+            return i64::MIN;
+        }
         let key = lock_or_recover(&self.func_key);
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => match func.call::<LuaValue>(()) {
@@ -235,17 +261,22 @@ pub(crate) struct LuaEvent {
 
 // SAFETY: LuaEvent contains Arc<Lua> which is !Send because mlua::Lua
 // (without the "send" feature) is not thread-safe. Access is restricted to a single
-// thread; assert in exec() verifies this invariant at runtime.
+// thread; debug_assert in exec() verifies this invariant in debug builds;
+// release builds log a warning and return early on cross-thread access.
 unsafe impl Send for LuaEvent {}
 unsafe impl Sync for LuaEvent {}
 
 impl Event for LuaEvent {
     fn exec(&self, _state: &mut dyn MainState, arg1: i32, arg2: i32) {
-        assert_eq!(
+        debug_assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaEvent must be accessed on the thread where it was created"
         );
+        if std::thread::current().id() != self.creation_thread_id {
+            log::warn!("LuaEvent accessed from wrong thread");
+            return;
+        }
         let key = lock_or_recover(&self.func_key);
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => {
@@ -269,17 +300,22 @@ pub(crate) struct LuaFloatWriter {
 
 // SAFETY: LuaFloatWriter contains Arc<Lua> which is !Send because mlua::Lua
 // (without the "send" feature) is not thread-safe. Access is restricted to a single
-// thread; assert in set() verifies this invariant at runtime.
+// thread; debug_assert in set() verifies this invariant in debug builds;
+// release builds log a warning and return early on cross-thread access.
 unsafe impl Send for LuaFloatWriter {}
 unsafe impl Sync for LuaFloatWriter {}
 
 impl FloatWriter for LuaFloatWriter {
     fn set(&self, _state: &mut dyn MainState, value: f32) {
-        assert_eq!(
+        debug_assert_eq!(
             std::thread::current().id(),
             self.creation_thread_id,
             "LuaFloatWriter must be accessed on the thread where it was created"
         );
+        if std::thread::current().id() != self.creation_thread_id {
+            log::warn!("LuaFloatWriter accessed from wrong thread");
+            return;
+        }
         let key = lock_or_recover(&self.func_key);
         match self.lua.registry_value::<LuaFunction>(&key) {
             Ok(func) => {

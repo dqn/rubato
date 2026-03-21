@@ -141,8 +141,9 @@ fn float_writer_works_on_creation_thread() {
     }
 }
 
-/// Verify that the thread-safety assert fires when a Lua property is accessed from a
-/// different thread than where it was created.
+/// Verify that the thread-safety debug_assert fires when a Lua property is accessed
+/// from a different thread than where it was created (debug builds only).
+/// In release builds, the soft guard returns `false` instead of panicking.
 #[test]
 fn boolean_property_panics_on_wrong_thread() {
     let accessor = SkinLuaAccessor::new(true);
@@ -164,7 +165,8 @@ fn boolean_property_panics_on_wrong_thread() {
     handle.join().expect("thread should complete");
 }
 
-/// Verify that the thread-safety assert fires for integer property on wrong thread.
+/// Verify that the thread-safety debug_assert fires for integer property on wrong
+/// thread (debug builds only). In release builds, the soft guard returns `0`.
 #[test]
 fn integer_property_panics_on_wrong_thread() {
     let accessor = SkinLuaAccessor::new(true);
