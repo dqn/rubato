@@ -262,6 +262,7 @@ impl SpriteBatch {
     pub fn flush(&mut self) {
         self.vertices.clear();
         self.draw_batches.clear();
+        self.pending_textures.clear();
     }
 
     /// Flush batched vertices to GPU via a render pass.
