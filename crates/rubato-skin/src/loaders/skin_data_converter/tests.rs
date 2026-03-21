@@ -829,7 +829,7 @@ fn build_select_bar_data_propagates_graph_from_songlist() {
 }
 
 #[test]
-fn build_select_bar_data_preserves_bitmap_bar_text_objects() {
+fn build_select_bar_data_preserves_ecfn_bitmap_bar_text_objects() {
     let mut source_map = HashMap::new();
     let skin_path = std::path::Path::new("/test/skin.json");
     let bitmap_font_path = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -893,7 +893,7 @@ fn build_select_bar_data_preserves_bitmap_bar_text_objects() {
 }
 
 #[test]
-fn build_select_bar_data_scales_bitmap_bar_text_and_graph_region() {
+fn build_select_bar_data_scales_ecfn_bitmap_bar_text_and_graph_region() {
     let mut source_map = HashMap::new();
     let skin_path = std::path::Path::new("/test/skin.json");
     let bitmap_font_path = Path::new(env!("CARGO_MANIFEST_DIR"))

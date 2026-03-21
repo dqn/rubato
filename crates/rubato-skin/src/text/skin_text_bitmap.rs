@@ -982,7 +982,7 @@ mod tests {
     }
 
     #[test]
-    fn test_real_bitmap_font_japanese_text_emits_textured_quads() {
+    fn test_ecfn_real_bitmap_font_japanese_text_emits_textured_quads() {
         let font_path = ecfn_select_song_font_path();
         assert!(
             font_path.exists(),
@@ -1017,7 +1017,7 @@ mod tests {
     }
 
     #[test]
-    fn test_real_bitmap_font_lowercase_glyphs_do_not_top_align_with_uppercase() {
+    fn test_ecfn_real_bitmap_font_lowercase_glyphs_do_not_top_align_with_uppercase() {
         let font_path = ecfn_select_song_font_path();
         assert!(
             font_path.exists(),

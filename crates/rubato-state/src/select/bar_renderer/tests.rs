@@ -271,7 +271,7 @@ fn test_bar_renderer_render_bartextupdate_collects_chars() {
 }
 
 #[test]
-fn test_bar_renderer_render_draws_bitmap_bartext_quads() {
+fn test_bar_renderer_render_draws_ecfn_bitmap_bartext_quads() {
     let mut renderer = BarRenderer::new(300, 100, 5);
     let mut bar = SkinBar::new(0);
     let font_path = ecfn_barfont_path();
