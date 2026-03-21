@@ -144,12 +144,16 @@ impl LauncherUi {
         obs_view.update(config.clone());
 
         let has_ir = !player.irconfig.is_empty();
+        let selected_play_mode = player
+            .mode
+            .and_then(|m| PlayMode::values().iter().position(|pm| pm.to_mode() == m))
+            .unwrap_or(1); // fallback: BEAT_7K
         let mut ui = Self {
             config,
             player,
             selected_tab: Tab::Option,
             player_name,
-            selected_play_mode: 1, // BEAT_7K
+            selected_play_mode,
             bms_paths,
             selected_ir_index: 0,
             ir_userid_buf: String::new(),
@@ -387,6 +391,8 @@ impl LauncherUi {
         self.config.playername = Some(self.player_name.clone());
         // Sync player.id so PlayerConfig::write() saves to the correct profile directory
         self.player.id = Some(self.player_name.clone());
+        // Commit selected play mode
+        self.player.mode = Some(self.current_mode());
         // Commit BMS root paths
         self.config.paths.bmsroot = self.bms_paths.clone();
         // Commit webhook URLs
