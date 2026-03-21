@@ -36,4 +36,10 @@ pub struct ScoreHandoff {
     /// synced explicitly and the updated model is passed through the handoff so that
     /// the result screen can read note states for timing distribution computation.
     pub updated_model: Option<bms_model::bms_model::BMSModel>,
+    /// Recent judge timing offsets (milliseconds), 100-element circular buffer.
+    /// Transferred so the result screen's SkinTimingVisualizer and SkinHitErrorVisualizer
+    /// can display the scrolling judge offset visualization.
+    pub recent_judges: Vec<i64>,
+    /// Current write index into the recent_judges circular buffer.
+    pub recent_judges_index: usize,
 }

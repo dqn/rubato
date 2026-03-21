@@ -149,6 +149,14 @@ impl PlayerResource {
         self.inner.is_freq_on()
     }
 
+    pub fn recent_judges(&self) -> &[i64] {
+        self.inner.recent_judges()
+    }
+
+    pub fn recent_judges_index(&self) -> usize {
+        self.inner.recent_judges_index()
+    }
+
     pub fn player_data(&self) -> &rubato_types::player_data::PlayerData {
         static DEFAULT: rubato_types::player_data::PlayerData =
             rubato_types::player_data::PlayerData {

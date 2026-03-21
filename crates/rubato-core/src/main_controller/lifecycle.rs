@@ -192,6 +192,13 @@ impl MainController {
         })) {
             Ok(()) => {}
             Err(payload) => {
+                // Reset drawing state and clear partial buffers so that if a
+                // higher-level catch_unwind suppresses this panic, the next
+                // render cycle won't call begin() on an already-begun batch.
+                if let Some(ref mut s) = sprite {
+                    s.end();
+                    s.flush();
+                }
                 self.sprite = sprite;
                 std::panic::resume_unwind(payload);
             }
@@ -333,6 +340,9 @@ impl MainController {
             {
                 sd.set_bms_model(updated_model);
             }
+
+            // Transfer recent judge offsets for result screen visualizers.
+            resource.set_recent_judges(handoff.recent_judges_index, handoff.recent_judges);
         }
 
         // Emit ScoreHandoffApplied event if a handoff was processed.

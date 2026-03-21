@@ -105,6 +105,11 @@ pub struct PlayerResource {
     /// Stored via Box<dyn Any + Send> to avoid circular dependency (core cannot import play).
     /// Java: BMSResource holds BGAProcessor, reused via PlayerResource.getBGAManager().
     bga_any: Option<Box<dyn Any + Send>>,
+    /// Recent judge timing offsets (milliseconds), transferred from play session
+    /// via ScoreHandoff for result screen visualizers.
+    recent_judges: Vec<i64>,
+    /// Write index for recent_judges circular buffer.
+    recent_judges_index: usize,
 }
 
 impl PlayerResource {
@@ -149,6 +154,8 @@ impl PlayerResource {
             freq_string: None,
             force_no_ir_send: false,
             bga_any: None,
+            recent_judges: Vec::new(),
+            recent_judges_index: 0,
         }
     }
 
@@ -615,6 +622,19 @@ impl PlayerResource {
         }
         result
     }
+
+    pub fn recent_judges(&self) -> &[i64] {
+        &self.recent_judges
+    }
+
+    pub fn recent_judges_index(&self) -> usize {
+        self.recent_judges_index
+    }
+
+    pub fn set_recent_judges(&mut self, index: usize, judges: Vec<i64>) {
+        self.recent_judges_index = index;
+        self.recent_judges = judges;
+    }
 }
 
 impl ConfigAccess for PlayerResource {
@@ -803,6 +823,14 @@ impl PlayerStateAccess for PlayerResource {
 
     fn is_freq_on(&self) -> bool {
         self.freq_on
+    }
+
+    fn recent_judges(&self) -> &[i64] {
+        &self.recent_judges
+    }
+
+    fn recent_judges_index(&self) -> usize {
+        self.recent_judges_index
     }
 }
 

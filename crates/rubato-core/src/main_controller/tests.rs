@@ -1861,6 +1861,8 @@ fn make_handoff(
         force_no_ir_send,
         replay_data: None,
         updated_model: None,
+        recent_judges: Vec::new(),
+        recent_judges_index: 0,
     }
 }
 

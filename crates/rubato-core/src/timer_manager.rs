@@ -171,6 +171,14 @@ impl TimerManager {
         self.start_mono_micros = rubato_types::monotonic_clock::monotonic_micros();
         self.nowmicrotime = self.starttime.elapsed().as_micros() as i64;
     }
+    pub fn recent_judges(&self) -> &[i64] {
+        &self.recent_judges
+    }
+
+    pub fn recent_judges_index(&self) -> usize {
+        self.recent_judges_index
+    }
+
     pub fn set_recent_judges(&mut self, index: usize, judges: &[i64]) {
         self.recent_judges_index = index;
         self.recent_judges.clear();

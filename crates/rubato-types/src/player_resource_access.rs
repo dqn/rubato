@@ -119,6 +119,17 @@ pub trait PlayerStateAccess {
     fn is_force_no_ir_send(&self) -> bool;
     /// Whether frequency trainer is on
     fn is_freq_on(&self) -> bool;
+
+    /// Recent judge timing offsets (milliseconds) from the play session.
+    /// 100-element circular buffer, used by result screen visualizers.
+    fn recent_judges(&self) -> &[i64] {
+        &[]
+    }
+
+    /// Write index for the recent_judges circular buffer.
+    fn recent_judges_index(&self) -> usize {
+        0
+    }
 }
 
 /// Session mutation (BMS loading, state clearing, table info).

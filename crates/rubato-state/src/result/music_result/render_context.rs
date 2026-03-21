@@ -45,6 +45,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
         self.timer.boot_time_millis()
     }
 
+    fn recent_judges(&self) -> &[i64] {
+        self.timer.recent_judges()
+    }
+
+    fn recent_judges_index(&self) -> usize {
+        self.timer.recent_judges_index()
+    }
+
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {
         shared_render_context::player_config_ref(self.resource)
     }
@@ -307,6 +315,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
 
     fn boot_time_millis(&self) -> i64 {
         self.timer.boot_time_millis()
+    }
+
+    fn recent_judges(&self) -> &[i64] {
+        self.timer.recent_judges()
+    }
+
+    fn recent_judges_index(&self) -> usize {
+        self.timer.recent_judges_index()
     }
 
     fn player_config_ref(&self) -> Option<&rubato_types::player_config::PlayerConfig> {

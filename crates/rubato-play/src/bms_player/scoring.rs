@@ -537,6 +537,8 @@ impl BMSPlayer {
             } else {
                 Some(self.model.clone())
             },
+            recent_judges: self.judge.recent_judges().to_vec(),
+            recent_judges_index: self.judge.recent_judges_index(),
         }
     }
 }

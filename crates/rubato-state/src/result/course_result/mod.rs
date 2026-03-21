@@ -78,6 +78,13 @@ impl CourseResult {
     }
 
     fn do_create(&mut self) {
+        // Transfer recent judge offsets from play session so result screen
+        // visualizers (SkinTimingVisualizer, SkinHitErrorVisualizer) show data.
+        self.main_data.timer.set_recent_judges(
+            self.resource.recent_judges_index(),
+            self.resource.recent_judges(),
+        );
+
         for i in 0..REPLAY_SIZE {
             let models = self.resource.course_bms_models();
             if let Some(models) = models {
