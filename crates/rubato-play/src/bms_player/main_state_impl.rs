@@ -157,7 +157,10 @@ impl MainState for BMSPlayer {
         // Extract the model back out of SongData before storing both.
         // BMSModel is not Clone, so use Option::take to move it out.
         let mut sd = sd;
-        self.model = sd.model.take().expect("SongData always holds model after new_from_model");
+        self.model = sd
+            .model
+            .take()
+            .expect("SongData always holds model after new_from_model");
         self.song_data = Some(sd);
     }
 
@@ -1255,9 +1258,6 @@ impl MainState for BMSPlayer {
             skin.dispose_skin();
         }
         self.main_state_data.skin = None;
-
-        // Stop BGA movie decoders to release system resources between dispose() and next create()
-        lock_or_recover(&self.bga).stop();
 
         if let Some(ref mut lr) = self.lanerender {
             lr.dispose();

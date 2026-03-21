@@ -820,8 +820,7 @@ fn receive_reloaded_model_refreshes_song_data_and_metadata() {
     let mut player = BMSPlayer::new(model);
 
     // Set initial song_data/metadata from the original model
-    let original_sd =
-        rubato_types::song_data::SongData::new_from_model(make_model(), false);
+    let original_sd = rubato_types::song_data::SongData::new_from_model(make_model(), false);
     let mut orig_meta = rubato_types::song_data::SongMetadata::default();
     orig_meta.title = "Original Title".to_string();
     orig_meta.artist = "Original Artist".to_string();
@@ -844,7 +843,9 @@ fn receive_reloaded_model_refreshes_song_data_and_metadata() {
     assert_eq!(player.song_metadata().genre, "Edited Genre");
 
     // song_data must also be updated
-    let sd = player.song_data().expect("song_data should be Some after reload");
+    let sd = player
+        .song_data()
+        .expect("song_data should be Some after reload");
     assert_eq!(sd.metadata.title, "Edited Title");
     assert_eq!(sd.metadata.artist, "Edited Artist");
 }
@@ -6259,5 +6260,189 @@ fn prepare_pattern_pipeline_replay_seven_to_nine_no_change_for_non_7k() {
         player.mode(),
         Mode::BEAT_5K,
         "seven_to_nine mode change should not apply to BEAT_5K"
+    );
+}
+
+// --- build_score_handoff field completeness tests ---
+
+#[test]
+fn build_score_handoff_populates_all_fields_on_some_path() {
+    // Set up a model with 2 notes at known times for judge state verification.
+    let model = make_model_with_notes_at_times(&[1_000_000, 2_000_000]);
+    let mut player = BMSPlayer::new(model);
+
+    // Play mode (not Practice) so updated_model is Some and score_data is produced.
+    player.play_mode = BMSPlayerMode::PLAY;
+    // Use Aborted state to bypass the zero-notes-hit check in create_score_data.
+    player.state = PlayState::Aborted;
+    player.device_type = DeviceType::Keyboard;
+
+    // Build judge system (populates judge_notes and judge_note_to_model).
+    let mode = player.model.mode().copied().unwrap_or(Mode::BEAT_7K);
+    player.rebuild_judge_system(&mode);
+
+    // Initialize gauge so score_data produces clear type info.
+    player.gauge = crate::groove_gauge::create_groove_gauge(
+        &player.model,
+        rubato_types::groove_gauge::NORMAL,
+        0,
+        None,
+    );
+
+    // Directly populate judge score_data with non-default values since the judge
+    // is not in autoplay mode (play_mode is PLAY). This simulates 2 PGREAT notes.
+    player.judge.score_data_mut().judge_counts.epg = 2;
+    player.judge.score_data_mut().passnotes = 2;
+    player.judge.score_data_mut().maxcombo = 2;
+
+    // Set non-zero course combo/maxcombo (simulates course mode carry-over).
+    player.judge.set_course_combo(12);
+    player.judge.set_course_maxcombo(12);
+
+    // Set note states directly on the model so sync_judge_states_to_model sees them
+    // and updated_model carries judged notes.
+    player.model.timelines[0].note_mut(0).unwrap().set_state(1);
+    player.model.timelines[0]
+        .note_mut(0)
+        .unwrap()
+        .set_micro_play_time(500);
+    player.model.timelines[1].note_mut(0).unwrap().set_state(1);
+    player.model.timelines[1]
+        .note_mut(0)
+        .unwrap()
+        .set_micro_play_time(-300);
+
+    // Set non-default values for scalar fields on the handoff.
+    player.gaugelog = vec![vec![80.0, 85.0, 90.0]];
+    player.assist = 1;
+    player.freq_on = true;
+    player.force_no_ir_send = true;
+
+    // Set player name so replay_data.player is non-default.
+    player.player_config.name = "TestPlayer".to_string();
+    // Set model sha256 so replay_data.sha256 is non-default.
+    player.model.sha256 = "abc123".to_string();
+
+    // --- Call the method under test ---
+    let handoff = player.build_score_handoff();
+
+    // 1. score_data: Should be Some because play_mode is PLAY and state is Aborted.
+    assert!(
+        handoff.score_data.is_some(),
+        "score_data should be Some in Play mode"
+    );
+    let sd = handoff.score_data.as_ref().unwrap();
+    // 2 epg set on judge confirms non-default judge counts in score_data.
+    assert!(
+        sd.exscore() > 0,
+        "score_data.exscore should be positive after autoplay judgments, got {}",
+        sd.exscore()
+    );
+
+    // 2. combo: course_combo set to 12.
+    assert!(
+        handoff.combo > 0,
+        "combo (course_combo) should be > 0, got {}",
+        handoff.combo
+    );
+
+    // 3. maxcombo: course_maxcombo should be >= combo.
+    assert!(
+        handoff.maxcombo > 0,
+        "maxcombo (course_maxcombo) should be > 0, got {}",
+        handoff.maxcombo
+    );
+
+    // 4. gauge (gaugelog): Should contain the gauge log we set.
+    assert!(
+        !handoff.gauge.is_empty(),
+        "gauge (gaugelog) should not be empty"
+    );
+    assert_eq!(
+        handoff.gauge[0].len(),
+        3,
+        "gauge log should preserve the 3 entries we set"
+    );
+
+    // 5. groove_gauge: Should be Some because we initialized it.
+    assert!(
+        handoff.groove_gauge.is_some(),
+        "groove_gauge should be Some"
+    );
+
+    // 6. assist: Should be 1.
+    assert_eq!(handoff.assist, 1, "assist should be 1");
+
+    // 7. freq_on: Should be true.
+    assert!(handoff.freq_on, "freq_on should be true");
+
+    // 8. force_no_ir_send: Should be true.
+    assert!(handoff.force_no_ir_send, "force_no_ir_send should be true");
+
+    // 9. replay_data: Should be Some with populated fields.
+    assert!(handoff.replay_data.is_some(), "replay_data should be Some");
+    let rd = handoff.replay_data.as_ref().unwrap();
+    assert_eq!(
+        rd.player.as_deref(),
+        Some("TestPlayer"),
+        "replay_data.player should match player_config.name"
+    );
+    assert_eq!(
+        rd.sha256.as_deref(),
+        Some("abc123"),
+        "replay_data.sha256 should match model.sha256"
+    );
+
+    // 10. updated_model: Should be Some because play_mode is PLAY (not Practice).
+    assert!(
+        handoff.updated_model.is_some(),
+        "updated_model should be Some in Play mode"
+    );
+    let um = handoff.updated_model.as_ref().unwrap();
+    // The updated model should have synced judge states from sync_judge_states_to_model().
+    assert!(
+        um.timelines[0].note(0).unwrap().state() >= 1,
+        "updated_model note 0 should have synced judge state >= 1"
+    );
+    assert!(
+        um.timelines[1].note(0).unwrap().state() >= 1,
+        "updated_model note 1 should have synced judge state >= 1"
+    );
+}
+
+#[test]
+fn build_score_handoff_updated_model_none_in_practice_mode() {
+    // Practice mode should NOT include the model in the handoff to avoid
+    // leaking practice-modified models into score data.
+    let model = make_model_with_notes_at_times(&[1_000_000]);
+    let mut player = BMSPlayer::new(model);
+    player.play_mode = BMSPlayerMode::PRACTICE;
+    player.state = PlayState::Practice;
+
+    let handoff = player.build_score_handoff();
+
+    assert!(
+        handoff.updated_model.is_none(),
+        "updated_model should be None in Practice mode"
+    );
+}
+
+#[test]
+fn build_score_handoff_score_data_none_in_autoplay_mode() {
+    // In Autoplay mode, create_score_data returns None (no score recording).
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.play_mode = BMSPlayerMode::AUTOPLAY;
+
+    let handoff = player.build_score_handoff();
+
+    assert!(
+        handoff.score_data.is_none(),
+        "score_data should be None in Autoplay mode (no notes hit, not aborted)"
+    );
+    // But replay_data should still be populated.
+    assert!(
+        handoff.replay_data.is_some(),
+        "replay_data should be Some even in Autoplay mode"
     );
 }
