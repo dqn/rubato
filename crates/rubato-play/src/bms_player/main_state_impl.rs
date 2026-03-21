@@ -1295,6 +1295,9 @@ impl MainState for BMSPlayer {
         }
         self.main_state_data.skin = None;
 
+        // Stop BGA movie decoders to release system resources between dispose() and next create()
+        lock_or_recover(&self.bga).stop();
+
         if let Some(ref mut lr) = self.lanerender {
             lr.dispose();
         }
