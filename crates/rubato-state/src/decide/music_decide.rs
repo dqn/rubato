@@ -533,7 +533,8 @@ impl MusicDecide {
     ) -> Self {
         let mut cached_score_data_property =
             rubato_types::score_data_property::ScoreDataProperty::new();
-        cached_score_data_property.update_score(resource.score_data());
+        cached_score_data_property
+            .update_score_and_rival(resource.score_data(), resource.rival_score_data());
         Self {
             data: MainStateData::new(timer),
             main,

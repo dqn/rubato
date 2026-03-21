@@ -35,18 +35,19 @@ const MAX_RESPONSE_SIZE: u64 = 64 * 1024 * 1024;
 /// ample headroom while preventing unbounded growth in long-running sessions.
 const RANKING_CACHE_MAX_ENTRIES: usize = 256;
 
-/// Shared blocking HTTP client. Reused across all IR requests to preserve
-/// HTTP keep-alive connections and avoid rebuilding TLS state on every call.
-/// Uses the longer timeout (10s) as the default; per-request timeouts can
-/// override if needed.
+/// Shared HTTP client for LR2IR requests.
+///
+/// `reqwest::blocking::Client` maintains an internal connection pool, so reusing
+/// a single instance avoids the overhead of TLS/TCP setup on every call.
+/// Per-request timeouts are set at the call site via `RequestBuilder::timeout()`.
 static HTTP_CLIENT: OnceLock<reqwest::blocking::Client> = OnceLock::new();
 
-fn get_http_client() -> &'static reqwest::blocking::Client {
+/// Get or initialize the shared blocking HTTP client.
+fn http_client() -> &'static reqwest::blocking::Client {
     HTTP_CLIENT.get_or_init(|| {
         reqwest::blocking::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
             .build()
-            .expect("Failed to build HTTP client")
+            .unwrap_or_else(|_| reqwest::blocking::Client::new())
     })
 }
 
@@ -95,9 +96,10 @@ impl LR2IRConnection {
     /// main/render thread.
     fn make_post_request(uri: &str, data: &str) -> Option<String> {
         let url = format!("{}{}", IR_URL, uri);
-        let client = get_http_client();
+        let client = http_client();
         match client
             .post(&url)
+            .timeout(std::time::Duration::from_secs(10))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .header("Connection", "close")
             .body(data.to_string())
@@ -251,8 +253,12 @@ impl LR2IRConnection {
             score_id // i64, no encoding needed
         );
         let url = format!("{}{}", IR_URL, api);
-        let client = get_http_client();
-        match client.get(&url).send() {
+        let client = http_client();
+        match client
+            .get(&url)
+            .timeout(std::time::Duration::from_secs(5))
+            .send()
+        {
             Ok(response) => {
                 let status = response.status();
                 if status != reqwest::StatusCode::OK {

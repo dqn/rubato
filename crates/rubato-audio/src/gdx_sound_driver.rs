@@ -675,13 +675,11 @@ impl GdxSoundDriver {
             );
         }
 
-        // Clear auxiliary sound caches to prevent unbounded growth across songs.
-        // sound_cache (from set_additional_key_sound / getSound) and
-        // path_sound_cache (from play_path / preload_path) are not keysound
-        // file_cache entries, so they lack generational eviction. Clearing them
-        // at song-switch boundaries keeps memory bounded.
+        // Clear sound_cache (from set_additional_key_sound / getSound) to prevent
+        // unbounded growth across songs. path_sound_cache is intentionally preserved:
+        // it holds system/preview sounds preloaded via preload_path() that should
+        // survive song switches to avoid synchronous file I/O on the render thread.
         self.sound_cache.clear();
-        self.path_sound_cache.clear();
     }
 
     /// Play a single note's keysound (without layered notes).
@@ -708,6 +706,10 @@ impl GdxSoundDriver {
                             self.apply_pitch(&mut handle, pitch_shift);
                             let handles = self.slice_handles.entry(key).or_default();
                             handles.retain(|h| h.state() != PlaybackState::Stopped);
+                            // Cap at 256 handles per key, matching Java's ring buffer size.
+                            if handles.len() >= 256 {
+                                handles.remove(0);
+                            }
                             handles.push(handle);
                             if pitch_shift != 0 {
                                 self.slice_pitch_shifts.insert(key, pitch_shift);
@@ -734,6 +736,10 @@ impl GdxSoundDriver {
                     self.apply_pitch(&mut handle, pitch_shift);
                     let handles = self.wav_handles.entry(wav_id).or_default();
                     handles.retain(|h| h.state() != PlaybackState::Stopped);
+                    // Cap at 256 handles per key, matching Java's ring buffer size.
+                    if handles.len() >= 256 {
+                        handles.remove(0);
+                    }
                     handles.push(handle);
                     if pitch_shift != 0 {
                         self.wav_pitch_shifts.insert(wav_id, pitch_shift);
@@ -1565,12 +1571,13 @@ mod tests {
         assert_eq!(slice_handles[&key].len(), 1);
     }
 
-    /// Regression: evict_old_cache must clear sound_cache and path_sound_cache
-    /// to prevent unbounded memory growth across song switches. These auxiliary
-    /// caches lack generational eviction, so without clearing they accumulate
-    /// every unique path played via play_path() or loaded via sound().
+    /// Regression: evict_old_cache must clear sound_cache but preserve
+    /// path_sound_cache. sound_cache lacks generational eviction and accumulates
+    /// entries from set_additional_key_sound/getSound. path_sound_cache holds
+    /// system/preview sounds preloaded via preload_path() that must survive
+    /// song switches to avoid synchronous file I/O on the render thread.
     #[test]
-    fn evict_old_cache_clears_auxiliary_caches() {
+    fn evict_old_cache_clears_sound_cache_preserves_path_sound_cache() {
         let sound = make_silent_sound();
         let song_resource_gen = 2;
         let maxgen = song_resource_gen.max(1);
@@ -1580,7 +1587,7 @@ mod tests {
         sound_cache.insert("/preview/song1.ogg".to_string(), sound.clone());
         sound_cache.insert("/preview/song2.ogg".to_string(), sound.clone());
 
-        // Simulate path_sound_cache with accumulated entries
+        // Simulate path_sound_cache with preloaded system sounds
         let mut path_sound_cache: HashMap<String, StaticSoundData> = HashMap::new();
         path_sound_cache.insert("/sfx/click.wav".to_string(), sound.clone());
         path_sound_cache.insert("/sfx/decide.wav".to_string(), sound.clone());
@@ -1613,14 +1620,19 @@ mod tests {
             }
         });
         sound_cache.clear();
-        path_sound_cache.clear();
+        // path_sound_cache is intentionally NOT cleared
 
         // file_cache uses generational eviction: fresh entry survives, old is evicted
         assert_eq!(file_cache.len(), 1);
         assert!(file_cache.contains_key("/keysound/a.wav"));
 
-        // Auxiliary caches must be fully cleared
+        // sound_cache must be fully cleared
         assert!(sound_cache.is_empty());
-        assert!(path_sound_cache.is_empty());
+
+        // path_sound_cache must be preserved across song switches
+        assert_eq!(path_sound_cache.len(), 3);
+        assert!(path_sound_cache.contains_key("/sfx/click.wav"));
+        assert!(path_sound_cache.contains_key("/sfx/decide.wav"));
+        assert!(path_sound_cache.contains_key("/sfx/cancel.wav"));
     }
 }

@@ -402,15 +402,12 @@ impl SkinGaugeGraphObject {
                     // > 0 (populated from cumulative type_history lengths), so i-1 >= 0 in practice.
                     if self.section.contains(&(i as i32)) {
                         shape.set_color(&Color::value_of("ffffff"));
-                        shape.draw_line(
-                            (width as f32 * (i as f32 - 1.0) / gauge_len) as i32,
-                            0,
-                            (width as f32 * (i as f32 - 1.0) / gauge_len) as i32,
-                            height,
-                        );
+                        let boundary_x =
+                            (width as f32 * (i as f32 - 1.0).max(0.0) / gauge_len) as i32;
+                        shape.draw_line(boundary_x, 0, boundary_x, height);
                     }
                     if let Some(f1_val) = f1 {
-                        let x1 = (width as f32 * (i as f32 - 1.0) / gauge_len) as i32;
+                        let x1 = (width as f32 * (i as f32 - 1.0).max(0.0) / gauge_len) as i32;
                         let y1 = ((f1_val / max) * (height - line_width) as f32) as i32;
                         let x2 = (width as f32 * i as f32 / gauge_len) as i32;
                         let y2 = ((f2 / max) * (height - line_width) as f32) as i32;

@@ -2198,8 +2198,9 @@ fn stop_play_failed_path_sets_pending_pitch_to_one() {
     player.state = PlayState::Play;
 
     // Simulate some notes judged (not finished but notes exist)
-    // Force the judge counts so we enter the failed branch
+    // Force the judge counts and passnotes so we enter the failed branch
     player.judge.score_data_mut().judge_counts.epg = 5; // 5 early PGreats
+    player.judge.score_data_mut().passnotes = 5;
     player.stop_play();
     assert_eq!(player.state, PlayState::Failed);
     assert_eq!(player.take_pending_global_pitch(), Some(1.0));

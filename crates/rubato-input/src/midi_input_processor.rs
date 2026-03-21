@@ -375,16 +375,10 @@ impl MidiInputProcessor {
                 }
             }
             CONTROL_CHANGE => {
-                let cc_num = data1 as usize;
-                if cc_num < 128 {
-                    if let Some(handler) = &self.cc_map[cc_num] {
-                        let pressed = data2 > 0;
-                        Self::dispatch_handler(handler, pressed, self.current_time(), callback);
-                    }
-                    self.last_pressed_key_available = true;
-                    self.last_pressed_key.input_type = MidiInputType::CONTROL_CHANGE;
-                    self.last_pressed_key.value = cc_num as i32;
-                }
+                // Java intentionally ignores CC messages in MidiInputProcessor.send()
+                // (no CONTROL_CHANGE case). Dispatching CC here causes phantom key
+                // presses from mod wheels, sustain pedals, etc. during gameplay.
+                // CC handlers are registered via set_handler() but not dispatched.
             }
             PITCH_BEND => {
                 let new_pitch = ((data1 & 0x7f) | ((data2 & 0x7f) << 7)) as i16 as i32 - 0x2000;

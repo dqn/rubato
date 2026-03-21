@@ -367,7 +367,7 @@ impl MouseScratchAlgorithm for MouseScratchAlgorithmVersion1 {
             self.remaining_time = self.scratch_duration;
             self.current_scratch = -1;
         } else if self.remaining_time > 0 {
-            let dtime_clamped = dtime.min(i32::MAX as i64) as i32;
+            let dtime_clamped = dtime.clamp(0, i32::MAX as i64) as i32;
             self.remaining_time -= dtime_clamped;
         } else {
             self.current_scratch = 0;
@@ -458,7 +458,7 @@ impl MouseScratchAlgorithm for MouseScratchAlgorithmVersion2 {
         }
         self.positive_distance = 0.max(self.positive_distance + distance_diff);
         self.negative_distance = 0.max(self.negative_distance - distance_diff);
-        let dtime_clamped = dtime.min(i32::MAX as i64) as i32;
+        let dtime_clamped = dtime.clamp(0, i32::MAX as i64) as i32;
         self.positive_no_movement_time += dtime_clamped;
         self.negative_no_movement_time += dtime_clamped;
 

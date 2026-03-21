@@ -245,18 +245,19 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             92 => self.main_bpm as i32,
             160 => self.now_bpm as i32,
             // Elapsed playtime from TIMER_PLAY (Java: timer.getNowTime(TIMER_PLAY))
+            // Division in i64 before narrowing to i32 to avoid overflow for songs >35.8 min.
             161 => (self.timer.now_time_for_id(TIMER_PLAY) / 60000) as i32,
             162 => ((self.timer.now_time_for_id(TIMER_PLAY) / 1000) % 60) as i32,
             // Remaining playtime (Java: max(playtime - elapsed + 1000, 0))
             163 => {
-                let elapsed = self.timer.now_time_for_id(TIMER_PLAY);
-                let remaining = (self.playtime - elapsed + 1000).max(0);
+                let remaining =
+                    (self.playtime - self.timer.now_time_for_id(TIMER_PLAY) + 1000).max(0);
                 (remaining / 60000) as i32
             }
             164 => {
-                let elapsed = self.timer.now_time_for_id(TIMER_PLAY);
-                let remaining = (self.playtime - elapsed + 1000).max(0);
-                (remaining / 1000 % 60) as i32
+                let remaining =
+                    (self.playtime - self.timer.now_time_for_id(TIMER_PLAY) + 1000).max(0);
+                ((remaining / 1000) % 60) as i32
             }
             // Scroll duration from LaneRenderer (Java: getCurrentDuration())
             312 => self.current_duration,
@@ -468,6 +469,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
 
     fn target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
         self.player.score.target_score.as_ref()
+    }
+
+    fn score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
+        self.player.score.db_score.as_ref()
+    }
+
+    fn rival_score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
+        self.player.score.rival_score.as_ref()
     }
 
     fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
@@ -714,18 +723,19 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
                 .as_ref()
                 .map_or(0, |lr| lr.now_bpm() as i32),
             // Elapsed playtime from TIMER_PLAY
+            // Division in i64 before narrowing to i32 to avoid overflow for songs >35.8 min.
             161 => (self.timer.now_time_for_id(TIMER_PLAY) / 60000) as i32,
             162 => ((self.timer.now_time_for_id(TIMER_PLAY) / 1000) % 60) as i32,
             // Remaining playtime
             163 => {
-                let elapsed = self.timer.now_time_for_id(TIMER_PLAY);
-                let remaining = (self.player.playtime - elapsed + 1000).max(0);
+                let remaining =
+                    (self.player.playtime - self.timer.now_time_for_id(TIMER_PLAY) + 1000).max(0);
                 (remaining / 60000) as i32
             }
             164 => {
-                let elapsed = self.timer.now_time_for_id(TIMER_PLAY);
-                let remaining = (self.player.playtime - elapsed + 1000).max(0);
-                (remaining / 1000 % 60) as i32
+                let remaining =
+                    (self.player.playtime - self.timer.now_time_for_id(TIMER_PLAY) + 1000).max(0);
+                ((remaining / 1000) % 60) as i32
             }
             // Scroll duration from LaneRenderer (Java: getCurrentDuration())
             312 => self
