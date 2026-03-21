@@ -4,7 +4,7 @@
 
 use rubato_play::lane_renderer::{DrawCommand, NoteImageType};
 
-use crate::reexports::MainState;
+use crate::reexports::{BitmapFont, Color, MainState};
 use crate::types::skin_object::{DestinationParams, SkinObjectData, SkinObjectRenderer};
 
 /// SkinNote skin object — wraps play-side SkinNote with SkinObjectData.
@@ -31,6 +31,12 @@ pub struct SkinNoteObject {
     /// [4]=stop, [5]=stop(2P), [6]=time, [7]=time(2P).
     /// Each entry contains (TextureRegion, dst_x, dst_width, dst_height).
     pub line_images: [Option<LineImage>; 8],
+    /// White pixel texture for judge area rendering (IMAGE_WHITE).
+    /// Set by the caller after obtaining the system image registry.
+    pub judge_area_image: Option<crate::reexports::TextureRegion>,
+    /// Font for text overlay rendering (time/BPM/stop text in practice mode).
+    /// Set by the caller from LaneRenderer's font.
+    pub font: Option<BitmapFont>,
 }
 
 /// Line image data for section/BPM/stop/time lines.
@@ -76,6 +82,8 @@ impl SkinNoteObject {
             mine_images: vec![None; lane_count],
             ln_body_images: vec![Default::default(); lane_count],
             line_images: Default::default(),
+            judge_area_image: None,
+            font: None,
         }
     }
 
@@ -160,17 +168,50 @@ impl SkinNoteObject {
                 DrawCommand::DrawStopLine { y_offset, .. } => {
                     self.draw_line_image(sprite, 4, *y_offset);
                 }
-                DrawCommand::DrawTimeText { .. }
-                | DrawCommand::DrawBpmText { .. }
-                | DrawCommand::DrawStopText { .. } => {
-                    log::debug!(
-                        "DrawCommand text rendering not yet implemented (requires BitmapFont pipeline)"
-                    );
+                DrawCommand::DrawTimeText { text, x, y } => {
+                    if let Some(font) = &mut self.font {
+                        let color = Color::new(1.0, 1.0, 1.0, 1.0);
+                        sprite.draw_font(font, text, *x, *y, &color);
+                    }
                 }
-                DrawCommand::DrawJudgeArea { .. } => {
-                    log::debug!(
-                        "DrawCommand judge area rendering not yet implemented (requires fill_rect)"
-                    );
+                DrawCommand::DrawBpmText { text, x, y } => {
+                    if let Some(font) = &mut self.font {
+                        // Java: Color.valueOf("00c000") -> green
+                        let color = Color::new(0.0, 0.75, 0.0, 1.0);
+                        sprite.draw_font(font, text, *x, *y, &color);
+                    }
+                }
+                DrawCommand::DrawStopText { text, x, y } => {
+                    if let Some(font) = &mut self.font {
+                        // Java: Color.valueOf("c0c000") -> yellow
+                        let color = Color::new(0.75, 0.75, 0.0, 1.0);
+                        sprite.draw_font(font, text, *x, *y, &color);
+                    }
+                }
+                DrawCommand::DrawJudgeArea {
+                    x,
+                    y,
+                    w,
+                    h,
+                    color_index,
+                    ..
+                } => {
+                    if let Some(white) = &self.judge_area_image {
+                        // Java: Color.valueOf("0000ff20"), "00ff0020", "ffff0020", "ff800020", "ff000020"
+                        const JUDGE_COLORS: [(f32, f32, f32, f32); 5] = [
+                            (0.0, 0.0, 1.0, 0x20 as f32 / 255.0), // blue
+                            (0.0, 1.0, 0.0, 0x20 as f32 / 255.0), // green
+                            (1.0, 1.0, 0.0, 0x20 as f32 / 255.0), // yellow
+                            (1.0, 0.5, 0.0, 0x20 as f32 / 255.0), // orange
+                            (1.0, 0.0, 0.0, 0x20 as f32 / 255.0), // red
+                        ];
+                        let (cr, cg, cb, ca) = JUDGE_COLORS
+                            .get(*color_index)
+                            .copied()
+                            .unwrap_or(JUDGE_COLORS[0]);
+                        sprite.set_color_rgba(cr, cg, cb, ca);
+                        sprite.draw(white, *x, *y, *w, *h);
+                    }
                 }
             }
         }

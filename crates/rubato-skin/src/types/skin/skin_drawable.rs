@@ -611,6 +611,19 @@ impl rubato_core::main_state::SkinDrawable for Skin {
             self.objects.len()
         );
     }
+
+    fn play_skin_properties(&self) -> rubato_core::main_state::PlaySkinProperties {
+        rubato_core::main_state::PlaySkinProperties {
+            loadstart: self.play_loadstart,
+            loadend: self.play_loadend,
+            playstart: self.play_playstart,
+            close: self.play_close,
+            finish_margin: self.play_finish_margin,
+            judgetimer: self.play_judgetimer,
+            judgeregion: self.play_judgeregion,
+            note_expansion_rate: self.play_note_expansion_rate,
+        }
+    }
 }
 
 #[cfg(test)]

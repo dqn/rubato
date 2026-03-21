@@ -462,6 +462,11 @@ impl JSONSkinLoader {
         skin.fadeout = sk.fadeout;
         skin.input = sk.input;
         skin.scene = sk.scene;
+        skin.play_loadend = sk.loadend;
+        skin.play_playstart = sk.playstart;
+        skin.play_close = sk.close;
+        skin.play_finish_margin = sk.finishmargin;
+        skin.play_judgetimer = sk.judgetimer;
 
         // Process destinations
         log::debug!(

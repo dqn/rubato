@@ -64,7 +64,17 @@ fn main() -> Result<()> {
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
 
-    let args = Args::parse();
+    let mut args = Args::parse();
+
+    // Canonicalize BMS path before any CWD change so relative paths resolve
+    // against the original working directory.
+    if let Some(ref bms) = args.bms_path {
+        if bms.is_relative() {
+            if let Ok(abs) = bms.canonicalize() {
+                args.bms_path = Some(abs);
+            }
+        }
+    }
 
     // Determine player mode from arguments
     // Java: MainLoader.main() parses -a, -p, -r, -r1..r4, -s flags
@@ -324,17 +334,13 @@ impl ApplicationHandler for RubatoApp {
             && let Some(window) = &self.window
         {
             let response = state.on_window_event(window, &event);
-            // Skip game logic only for events that egui exclusively consumes
-            // (e.g. text input into an egui widget). Keyboard, mouse, and
+            // Skip game logic for events that egui has consumed (e.g. text
+            // input, pointer clicks inside an egui widget). Keyboard and
             // redraw events must ALWAYS reach the game's input system.
             if response.consumed
                 && !matches!(
                     event,
-                    WindowEvent::RedrawRequested
-                        | WindowEvent::KeyboardInput { .. }
-                        | WindowEvent::MouseInput { .. }
-                        | WindowEvent::CursorMoved { .. }
-                        | WindowEvent::MouseWheel { .. }
+                    WindowEvent::RedrawRequested | WindowEvent::KeyboardInput { .. }
                 )
             {
                 return;
@@ -349,6 +355,20 @@ impl ApplicationHandler for RubatoApp {
                 let scale = self.window.as_ref().map_or(1.0, |w| w.scale_factor());
                 self.key_state
                     .set_mouse_position((position.x / scale) as i32, (position.y / scale) as i32);
+                // If any mouse button is held, flag as drag so MainController
+                // dispatches handle_skin_mouse_dragged() on the next render.
+                if self
+                    .key_state
+                    .is_mouse_button_pressed(rubato_input::winit_input_bridge::MOUSE_BUTTON_LEFT)
+                    || self.key_state.is_mouse_button_pressed(
+                        rubato_input::winit_input_bridge::MOUSE_BUTTON_RIGHT,
+                    )
+                    || self.key_state.is_mouse_button_pressed(
+                        rubato_input::winit_input_bridge::MOUSE_BUTTON_MIDDLE,
+                    )
+                {
+                    self.key_state.set_mouse_dragged(true);
+                }
             }
             WindowEvent::MouseInput { state, button, .. } => {
                 self.handle_mouse_input(state, button);

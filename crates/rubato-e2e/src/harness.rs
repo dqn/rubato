@@ -56,11 +56,12 @@ impl E2eHarness {
         let state_event_log = Arc::new(Mutex::new(Vec::new()));
         controller.set_state_event_log(Arc::clone(&state_event_log));
 
+        let input_gate_time_ms = controller.input_gate_prevtime();
         let mut harness = Self {
             controller,
             audio_handle,
             state_event_log,
-            input_gate_time_ms: 0,
+            input_gate_time_ms,
         };
         harness.sync_current_state_timer_to_controller();
         harness

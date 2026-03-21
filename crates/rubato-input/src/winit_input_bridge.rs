@@ -37,6 +37,8 @@ struct KeyStateInner {
     /// Accumulated scroll delta (drained on read)
     scroll_dx: f32,
     scroll_dy: f32,
+    /// Mouse drag flag (set when cursor moves while a button is pressed, drained on read)
+    mouse_dragged: bool,
 }
 
 impl SharedKeyState {
@@ -51,6 +53,7 @@ impl SharedKeyState {
                 mouse_buttons: [false; 3],
                 scroll_dx: 0.0,
                 scroll_dy: 0.0,
+                mouse_dragged: false,
             })),
         }
     }
@@ -141,6 +144,20 @@ impl SharedKeyState {
         let mut inner = lock_or_recover(&self.inner);
         inner.scroll_dx += dx;
         inner.scroll_dy += dy;
+    }
+
+    /// Set mouse dragged flag (called from winit CursorMoved when a button is held).
+    pub fn set_mouse_dragged(&self, dragged: bool) {
+        let mut inner = lock_or_recover(&self.inner);
+        inner.mouse_dragged = dragged;
+    }
+
+    /// Drain mouse dragged flag (returns current value and resets to false).
+    pub fn drain_mouse_dragged(&self) -> bool {
+        let mut inner = lock_or_recover(&self.inner);
+        let dragged = inner.mouse_dragged;
+        inner.mouse_dragged = false;
+        dragged
     }
 
     /// Drain accumulated scroll delta (returns and resets to zero).

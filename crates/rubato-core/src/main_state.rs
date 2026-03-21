@@ -444,6 +444,41 @@ pub trait SkinDrawable: Send {
     ) {
         // default no-op
     }
+
+    /// Return play-skin-specific metadata (loadstart, loadend, playstart, etc.).
+    /// Only meaningful for play skins; other skin types return defaults.
+    fn play_skin_properties(&self) -> PlaySkinProperties {
+        PlaySkinProperties::default()
+    }
+}
+
+/// Play-skin-specific metadata extracted from the loaded skin.
+/// Corresponds to Java's PlaySkin fields that are not on the base Skin class.
+#[derive(Clone, Debug)]
+pub struct PlaySkinProperties {
+    pub loadstart: i32,
+    pub loadend: i32,
+    pub playstart: i32,
+    pub close: i32,
+    pub finish_margin: i32,
+    pub judgetimer: i32,
+    pub judgeregion: i32,
+    pub note_expansion_rate: [i32; 2],
+}
+
+impl Default for PlaySkinProperties {
+    fn default() -> Self {
+        Self {
+            loadstart: 0,
+            loadend: 0,
+            playstart: 0,
+            close: 0,
+            finish_margin: 0,
+            judgetimer: 1,
+            judgeregion: 0,
+            note_expansion_rate: [100, 100],
+        }
+    }
 }
 
 /// Shared data for MainState implementations

@@ -222,6 +222,13 @@ pub fn convert_skin_data(
     skin.input = data.input;
     skin.scene = data.scene;
 
+    // Set play-skin-specific metadata
+    skin.play_loadend = data.play_loadend;
+    skin.play_playstart = data.play_playstart;
+    skin.play_close = data.play_close;
+    skin.play_finish_margin = data.play_finish_margin;
+    skin.play_judgetimer = data.play_judgetimer;
+
     // Convert each SkinObjectData to a SkinObject
     for mut obj_data in data.objects {
         let scale_x = crate::safe_div_f32(dstr.width, src.width);
@@ -262,8 +269,10 @@ pub fn convert_skin_data(
                 let timer_id = dst.timer.unwrap_or(0);
 
                 // Handle draw condition
+                // draw_id -1 is a Lua expression sentinel (always draw); skip boolean_property lookup.
                 if let Some(draw_id) = dst.draw
                     && draw_id != 0
+                    && draw_id != -1
                 {
                     let timer_prop = if timer_id > 0 {
                         timer_property_factory::timer_property(timer_id)

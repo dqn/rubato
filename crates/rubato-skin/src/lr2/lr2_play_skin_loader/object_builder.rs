@@ -327,4 +327,31 @@ impl LR2SkinLoaderAccess for LR2PlaySkinLoaderState {
 
         log::debug!("LR2PlaySkinLoader: assembled objects into skin");
     }
+
+    fn apply_play_properties_to_skin(&self, skin: &mut crate::skin::Skin) {
+        if let Some(v) = self.play_loadstart {
+            skin.play_loadstart = v;
+        }
+        if let Some(v) = self.play_loadend {
+            skin.play_loadend = v;
+        }
+        if let Some(v) = self.play_playstart {
+            skin.play_playstart = v;
+        }
+        if let Some(v) = self.play_close {
+            skin.play_close = v;
+        }
+        if let Some(v) = self.play_finish_margin {
+            skin.play_finish_margin = v;
+        }
+        if let Some(v) = self.play_judgetimer {
+            skin.play_judgetimer = v;
+        }
+        if let Some(v) = self.computed_judge_reg {
+            skin.play_judgeregion = v;
+        }
+        if let Some(v) = self.play_note_expansion_rate {
+            skin.play_note_expansion_rate = v;
+        }
+    }
 }

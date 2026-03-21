@@ -43,6 +43,11 @@ pub(super) fn set_click_event_from_type(obj: &mut SkinObject, obj_type: &SkinObj
             act: Some(act_id),
             click,
             ..
+        }
+        | SkinObjectType::ResolvedImageSet {
+            act: Some(act_id),
+            click,
+            ..
         } => {
             obj.data_mut().set_clickevent_by_id(*act_id);
             obj.data_mut().clickevent_type = *click;
@@ -94,7 +99,7 @@ pub(super) fn convert_skin_object(
             click: _,
         } => convert_image_set(images, *ref_id, *value),
 
-        SkinObjectType::ResolvedImageSet { images, ref_id } => {
+        SkinObjectType::ResolvedImageSet { images, ref_id, .. } => {
             resolve_image_set(images, *ref_id, source_map, skin_path, usecim, filemap)
         }
 

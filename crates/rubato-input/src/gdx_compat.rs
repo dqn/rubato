@@ -114,6 +114,17 @@ impl GdxInput {
             (0.0, 0.0)
         }
     }
+
+    pub fn drain_mouse_dragged() -> bool {
+        let guard = SHARED_KEY_STATE
+            .lock()
+            .expect("SHARED_KEY_STATE lock poisoned");
+        if let Some(ref state) = *guard {
+            state.drain_mouse_dragged()
+        } else {
+            false
+        }
+    }
 }
 
 /// Replacement for Gdx.graphics — reads window size from SharedKeyState when available.

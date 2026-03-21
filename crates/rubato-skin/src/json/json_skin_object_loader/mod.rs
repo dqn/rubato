@@ -9,7 +9,9 @@ mod tests;
 use std::path::Path;
 
 use crate::json::json_skin;
-use crate::json::json_skin_loader::{JSONSkinLoader, SkinData, SkinObjectData, SkinObjectType};
+use crate::json::json_skin_loader::{
+    JSONSkinLoader, ResolvedImageEntry, SkinData, SkinObjectData, SkinObjectType,
+};
 
 use utilities::map_number_offsets;
 pub use utilities::{
@@ -108,12 +110,32 @@ fn load_image_object(
 fn load_imageset_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObjectData> {
     for imgs in &sk.imageset {
         if dst_id == imgs.id.as_deref().unwrap_or("") {
+            // Resolve each image name to its full Image definition from sk.image[],
+            // producing a ResolvedImageSet so the converter can load actual textures.
+            let entries: Vec<ResolvedImageEntry> = imgs
+                .images
+                .iter()
+                .filter_map(|name| {
+                    sk.image
+                        .iter()
+                        .find(|img| img.id.as_deref().unwrap_or("") == name.as_str())
+                })
+                .map(|img| ResolvedImageEntry {
+                    src: img.src.clone(),
+                    x: img.x,
+                    y: img.y,
+                    w: img.w,
+                    h: img.h,
+                    divx: img.divx,
+                    divy: img.divy,
+                })
+                .collect();
+            let ref_id = imgs.value.unwrap_or(imgs.ref_id);
             return Some(SkinObjectData {
                 name: imgs.id.clone(),
-                object_type: SkinObjectType::ImageSet {
-                    images: imgs.images.clone(),
-                    ref_id: imgs.ref_id,
-                    value: imgs.value,
+                object_type: SkinObjectType::ResolvedImageSet {
+                    images: entries,
+                    ref_id,
                     act: imgs.act,
                     click: imgs.click,
                 },

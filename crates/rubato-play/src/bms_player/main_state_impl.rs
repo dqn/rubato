@@ -211,6 +211,21 @@ impl MainState for BMSPlayer {
             self.load_skin(st.id());
         }
 
+        // Populate play_skin from loaded skin metadata.
+        // In Java, PlaySkin extends Skin so these fields are inherited directly.
+        // In Rust, they live on the Skin struct and must be copied to PlaySkin.
+        if let Some(ref skin) = self.main_state_data.skin {
+            let props = skin.play_skin_properties();
+            self.play_skin.loadstart = props.loadstart;
+            self.play_skin.loadend = props.loadend;
+            self.play_skin.playstart = props.playstart;
+            self.play_skin.close = props.close;
+            self.play_skin.finish_margin = props.finish_margin;
+            self.play_skin.judgetimer = props.judgetimer;
+            self.play_skin.judgeregion = props.judgeregion;
+            self.play_skin.note_expansion_rate = props.note_expansion_rate;
+        }
+
         // --- Guide SE setup ---
         // Translated from: BMSPlayer.create() Java lines 512-524
         // The guide SE flag is passed through to CreateSideEffects. The caller

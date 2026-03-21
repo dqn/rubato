@@ -35,6 +35,7 @@ fn assert_render_non_blocking(harness: &mut E2eHarness, frames: usize, max_ms: u
 #[test]
 fn render_path_non_blocking_music_select() {
     let mut harness = harness_with_factory();
+    harness.controller_mut().create();
     harness.change_state(MainStateType::MusicSelect);
     // 100 frames should complete in well under 5 seconds (no real I/O)
     assert_render_non_blocking(&mut harness, 100, 5000);
@@ -59,6 +60,7 @@ fn render_path_non_blocking_result() {
 #[test]
 fn render_path_non_blocking_config() {
     let mut harness = harness_with_factory();
+    harness.controller_mut().create();
     harness.change_state(MainStateType::Config);
     assert_render_non_blocking(&mut harness, 100, 5000);
 }

@@ -659,15 +659,34 @@ impl BMSPlayer {
         let resource_rand = self.score.playinfo.rand.clone();
         // Take active_replay temporarily to avoid borrow conflict
         let active_replay = self.score.active_replay.take();
-        let _rand_for_reload = self.handle_random_syntax(
+        let rand_for_reload = self.handle_random_syntax(
             still_replay,
             active_replay.as_ref(),
             resource_replay_seed,
             &resource_rand,
         );
         self.score.active_replay = active_replay;
-        // Note: actual model reload from rand is handled by the caller
-        // (state_factory / MainController) via PlayerResource.load_bms_model().
+
+        // Reload BMS model with selected RANDOM branches (Java lines 189-195)
+        if let Some(rand) = rand_for_reload
+            && let Some(path_str) = self.model.path()
+        {
+            let path = std::path::PathBuf::from(&path_str);
+            let lnmode = self.player_config.play_settings.lnmode;
+            if let Some((model, margin_time)) =
+                rubato_core::player_resource::PlayerResource::load_bms_model(
+                    &path,
+                    lnmode,
+                    Some(rand),
+                )
+            {
+                self.margin_time = margin_time;
+                if let Some(new_rand) = model.random().map(|r| r.to_vec()) {
+                    self.score.playinfo.rand = new_rand;
+                }
+                self.model = model;
+            }
+        }
 
         // Step 4: Non-modifier assist checks (Java lines 200-212)
         self.calculate_non_modifier_assist(&config);

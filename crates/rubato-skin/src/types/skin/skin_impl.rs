@@ -52,6 +52,25 @@ pub struct Skin {
     /// MusicSelector takes this after loading to build SkinBar + BarRenderer.
     pub select_bar_data: Option<crate::select_bar_data::SelectBarData>,
 
+    // --- Play-skin-specific metadata ---
+    // These correspond to Java PlaySkin fields. They are populated by the skin
+    // loader (LR2 CSV or JSON) and read by BMSPlayer to populate its PlaySkin.
+    /// Margin from STATE_READY to STATE_PLAY (ms). Java: PlaySkin.playstart
+    pub play_loadstart: i32,
+    /// Load start time (ms). Java: PlaySkin.loadstart
+    pub play_loadend: i32,
+    /// Load end time (ms). Java: PlaySkin.loadend
+    pub play_playstart: i32,
+    /// Margin from STATE_FAILED to exit (ms). Java: PlaySkin.close
+    pub play_close: i32,
+    /// Margin from STATE_FINISHED to fadeout (ms). Java: PlaySkin.finishMargin
+    pub play_finish_margin: i32,
+    /// Judge timer trigger condition (0:PG, 1:GR, 2:GD, 3:BD). Java: PlaySkin.judgetimer
+    pub play_judgetimer: i32,
+    /// Judge region count. Java: PlaySkin.judgeregion
+    pub play_judgeregion: i32,
+    /// PMS rhythm-based note expansion rate (%) [w, h]. Java: PlaySkin.noteExpansionRate
+    pub play_note_expansion_rate: [i32; 2],
 }
 
 impl Skin {
@@ -105,6 +124,14 @@ impl Skin {
             prepareduration: 1,
             image_registry: Self::create_system_image_registry(),
             select_bar_data: None,
+            play_loadstart: 0,
+            play_loadend: 0,
+            play_playstart: 0,
+            play_close: 0,
+            play_finish_margin: 0,
+            play_judgetimer: 1,
+            play_judgeregion: 0,
+            play_note_expansion_rate: [100, 100],
         }
     }
 

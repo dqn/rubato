@@ -260,6 +260,12 @@ pub struct SkinData {
     pub default_skin_type: i32,
     pub sample_bms: Option<Vec<String>>,
     pub custom_property_count: i32,
+    // Play-skin-specific metadata (populated from JSON skin fields)
+    pub play_loadend: i32,
+    pub play_playstart: i32,
+    pub play_close: i32,
+    pub play_finish_margin: i32,
+    pub play_judgetimer: i32,
 }
 
 impl SkinData {
@@ -321,6 +327,8 @@ pub enum SkinObjectType {
     ResolvedImageSet {
         images: Vec<ResolvedImageEntry>,
         ref_id: i32,
+        act: Option<i32>,
+        click: i32,
     },
     /// SkinNumber
     Number {

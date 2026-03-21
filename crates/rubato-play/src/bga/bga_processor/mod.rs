@@ -254,6 +254,8 @@ impl BGAProcessor {
             self.playinglayerid = -1;
             self.rbga = false;
             self.rlayer = false;
+            self.misslayer = None;
+            self.misslayertime = 0;
         }
         for i in self.pos..self.timelines.len() {
             let tl = &self.timelines[i];

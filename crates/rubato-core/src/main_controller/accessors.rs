@@ -249,6 +249,14 @@ impl MainController {
         self.lifecycle.override_input_gate_time = Some(time_ms);
     }
 
+    /// Return the current input gate `prevtime` (milliseconds).
+    ///
+    /// Used by the E2E harness to seed its monotonic input gate counter so
+    /// that an existing controller's time is not regressed.
+    pub fn input_gate_prevtime(&self) -> i64 {
+        self.lifecycle.prevtime
+    }
+
     /// Emit a state event to the log (if set). No-op when log is None.
     pub(super) fn emit_state_event(&self, event: rubato_types::state_event::StateEvent) {
         if let Some(ref log) = self.state_event_log

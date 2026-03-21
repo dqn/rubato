@@ -48,6 +48,25 @@ fn test_load_imageset() {
     let mut loader = make_loader();
     let skin = make_skin();
     let mut sk = make_sk();
+    // Add image entries so resolution can find them
+    sk.image.push(json_skin::Image {
+        id: Some("a".to_string()),
+        src: Some("src_a".to_string()),
+        x: 0,
+        y: 0,
+        w: 32,
+        h: 32,
+        ..Default::default()
+    });
+    sk.image.push(json_skin::Image {
+        id: Some("b".to_string()),
+        src: Some("src_b".to_string()),
+        x: 10,
+        y: 20,
+        w: 64,
+        h: 64,
+        ..Default::default()
+    });
     sk.imageset.push(json_skin::ImageSet {
         id: Some("imgset1".to_string()),
         ref_id: 42,
@@ -64,20 +83,21 @@ fn test_load_imageset() {
     let obj = result.unwrap();
     assert_eq!(obj.name, Some("imgset1".to_string()));
     match &obj.object_type {
-        SkinObjectType::ImageSet {
+        SkinObjectType::ResolvedImageSet {
             images,
             ref_id,
-            value,
             act,
             click,
         } => {
-            assert_eq!(images, &vec!["a".to_string(), "b".to_string()]);
-            assert_eq!(*ref_id, 42);
-            assert_eq!(*value, Some(100));
+            assert_eq!(images.len(), 2);
+            assert_eq!(images[0].src, Some("src_a".to_string()));
+            assert_eq!(images[1].src, Some("src_b".to_string()));
+            // value takes precedence over ref_id
+            assert_eq!(*ref_id, 100);
             assert_eq!(*act, Some(10));
             assert_eq!(*click, 1);
         }
-        _ => panic!("Expected ImageSet"),
+        _ => panic!("Expected ResolvedImageSet"),
     }
 }
 

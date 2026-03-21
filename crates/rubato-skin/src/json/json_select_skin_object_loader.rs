@@ -80,7 +80,11 @@ fn resolve_songlist_bar_data(
                 // converted with actual textures (bar rendering uses
                 // MinimalSkinMainState which can't resolve SkinSourceReference).
                 if let SkinObjectType::ImageSet {
-                    ref images, ref_id, ..
+                    ref images,
+                    ref_id,
+                    act,
+                    click,
+                    ..
                 } = obj.object_type
                 {
                     let entries: Vec<ResolvedImageEntry> = images
@@ -103,6 +107,8 @@ fn resolve_songlist_bar_data(
                     obj.object_type = SkinObjectType::ResolvedImageSet {
                         images: entries,
                         ref_id,
+                        act,
+                        click,
                     };
                 }
                 Some(obj)

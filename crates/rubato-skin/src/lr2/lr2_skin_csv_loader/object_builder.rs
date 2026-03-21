@@ -29,6 +29,12 @@ pub trait LR2SkinLoaderAccess {
     fn ranktime(&self) -> i32 {
         0
     }
+
+    /// Apply play-skin-specific properties to the Skin struct.
+    /// Only play skin loaders override this; other types use the default no-op.
+    fn apply_play_properties_to_skin(&self, _skin: &mut crate::skin::Skin) {
+        // default no-op for non-play skin types
+    }
 }
 
 /// Create the appropriate LR2 skin loader for the given SkinType.
@@ -169,7 +175,10 @@ pub fn load_lr2_skin(
     // 6. Assemble parsed source data into SkinObjects
     loader.assemble_objects(&mut skin);
 
-    // 7. Transfer result-skin-specific ranktime
+    // 7. Transfer play-skin-specific properties
+    loader.apply_play_properties_to_skin(&mut skin);
+
+    // 8. Transfer result-skin-specific ranktime
     skin.ranktime = loader.ranktime();
 
     Some(skin)
