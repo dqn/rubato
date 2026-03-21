@@ -6,4 +6,8 @@ pub trait SkinSourceSet: Send + Sync {
     fn validate(&self) -> bool;
     fn dispose(&mut self);
     fn is_disposed(&self) -> bool;
+
+    /// Downcast to concrete type for test assertions.
+    #[cfg(test)]
+    fn as_any(&self) -> &dyn std::any::Any;
 }
