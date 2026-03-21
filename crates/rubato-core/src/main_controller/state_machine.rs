@@ -89,6 +89,8 @@ impl MainController {
         // Create the new state via factory.
         // Take the factory out temporarily to avoid borrow conflict
         // (factory is borrowed immutably, but create_state needs &mut self).
+        // Restore the factory before resuming any panic so that subsequent
+        // state transitions don't double-panic on a missing factory.
         let factory = self.state_factory.take().unwrap_or_else(|| {
             panic!(
                 "No state factory set; cannot create state {:?}. \
@@ -96,7 +98,15 @@ impl MainController {
                 actual_type
             );
         });
-        let result = factory.create_state(actual_type, self);
+        let result = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            factory.create_state(actual_type, self)
+        })) {
+            Ok(result) => result,
+            Err(payload) => {
+                self.state_factory = Some(factory);
+                std::panic::resume_unwind(payload);
+            }
+        };
         self.state_factory = Some(factory);
 
         if let Some(result) = result {
