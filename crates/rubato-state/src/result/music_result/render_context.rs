@@ -152,6 +152,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
             self.timer.boot_time_millis(),
             playtime,
             self.resource.songdata(),
+            Some(self.resource.player_data()),
             id,
         )
     }
@@ -395,6 +396,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
             self.timer.boot_time_millis(),
             playtime,
             self.result.resource.songdata(),
+            Some(self.result.resource.player_data()),
             id,
         )
     }

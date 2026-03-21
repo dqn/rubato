@@ -354,6 +354,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             273 => self.live_hidden > 0.0,
             // OPTION_STATE_PRACTICE (Java: 1080)
             1080 => self.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice,
+            // OPTION_1P_0_9 through OPTION_1P_100 (Java: 230-240)
+            // Gauge value falls within the corresponding 10-unit range (max=100)
+            230..=240 => self.gauge.is_some_and(|g| {
+                let bucket = id - 230;
+                let low = bucket as f32 * 10.0;
+                let high = (bucket + 1) as f32 * 10.0;
+                g.value() >= low && g.value() < high
+            }),
             // OPTION_1P_BORDER_OR_MORE (Java: 1240) -- gauge >= clear threshold
             1240 => self.gauge.is_some_and(|g| g.is_qualified()),
             _ => self.default_boolean_value(id),
@@ -827,6 +835,13 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
                 .as_ref()
                 .is_some_and(|lr| lr.hidden_cover() > 0.0),
             1080 => self.player.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice,
+            // OPTION_1P_0_9 through OPTION_1P_100 (Java: 230-240)
+            230..=240 => self.player.gauge.as_ref().is_some_and(|g| {
+                let bucket = id - 230;
+                let low = bucket as f32 * 10.0;
+                let high = (bucket + 1) as f32 * 10.0;
+                g.value() >= low && g.value() < high
+            }),
             // OPTION_1P_BORDER_OR_MORE (Java: 1240) -- gauge >= clear threshold
             1240 => self.player.gauge.as_ref().is_some_and(|g| g.is_qualified()),
             _ => self.default_boolean_value(id),
@@ -2026,6 +2041,192 @@ mod tests {
         assert!(
             (val - 7.25).abs() < f32::EPSILON,
             "PlayMouseContext::float_value(360) must fall through to default_float_value, got {val}"
+        );
+    }
+
+    // ============================================================
+    // Gauge range boolean IDs 230-240 and 1240 tests
+    // ============================================================
+
+    /// Helper: create a GrooveGauge with NORMAL type and set gauge value.
+    fn make_gauge_with_value(value: f32) -> rubato_types::groove_gauge::GrooveGauge {
+        let model = {
+            let mut m = bms_model::bms_model::BMSModel::new();
+            m.total = 300.0;
+            m
+        };
+        let mut gauge = rubato_types::groove_gauge::GrooveGauge::new(
+            &model,
+            rubato_types::groove_gauge::NORMAL,
+            &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+        );
+        gauge.set_value(value);
+        gauge
+    }
+
+    #[test]
+    fn play_render_context_gauge_range_0_9_true_when_value_in_range() {
+        let gauge = Box::leak(Box::new(make_gauge_with_value(5.0)));
+        let mut ctx = make_render_ctx(0);
+        ctx.gauge = Some(gauge);
+        assert!(
+            ctx.boolean_value(230),
+            "ID 230 (0-9%) should be true when gauge value is 5.0 (max=100)"
+        );
+    }
+
+    #[test]
+    fn play_render_context_gauge_range_0_9_false_when_value_out_of_range() {
+        let gauge = Box::leak(Box::new(make_gauge_with_value(15.0)));
+        let mut ctx = make_render_ctx(0);
+        ctx.gauge = Some(gauge);
+        assert!(
+            !ctx.boolean_value(230),
+            "ID 230 (0-9%) should be false when gauge value is 15.0 (max=100)"
+        );
+    }
+
+    #[test]
+    fn play_render_context_gauge_range_50_59_true() {
+        let gauge = Box::leak(Box::new(make_gauge_with_value(55.0)));
+        let mut ctx = make_render_ctx(0);
+        ctx.gauge = Some(gauge);
+        assert!(
+            ctx.boolean_value(235),
+            "ID 235 (50-59%) should be true when gauge value is 55.0 (max=100)"
+        );
+    }
+
+    #[test]
+    fn play_render_context_gauge_range_100_true_when_at_max() {
+        let gauge = Box::leak(Box::new(make_gauge_with_value(100.0)));
+        let mut ctx = make_render_ctx(0);
+        ctx.gauge = Some(gauge);
+        assert!(
+            ctx.boolean_value(240),
+            "ID 240 (100%) should be true when gauge value is 100.0 (max=100)"
+        );
+    }
+
+    #[test]
+    fn play_render_context_gauge_range_100_false_when_not_at_max() {
+        let gauge = Box::leak(Box::new(make_gauge_with_value(99.0)));
+        let mut ctx = make_render_ctx(0);
+        ctx.gauge = Some(gauge);
+        assert!(
+            !ctx.boolean_value(240),
+            "ID 240 (100%) should be false when gauge value is 99.0 (max=100)"
+        );
+    }
+
+    #[test]
+    fn play_render_context_gauge_range_boundary_exclusive_high() {
+        let gauge = Box::leak(Box::new(make_gauge_with_value(10.0)));
+        let mut ctx = make_render_ctx(0);
+        ctx.gauge = Some(gauge);
+        assert!(
+            !ctx.boolean_value(230),
+            "ID 230 should be false at exact boundary 10.0 (exclusive high)"
+        );
+        assert!(
+            ctx.boolean_value(231),
+            "ID 231 should be true at exact boundary 10.0 (inclusive low)"
+        );
+    }
+
+    #[test]
+    fn play_render_context_gauge_range_false_without_gauge() {
+        let ctx = make_render_ctx(0);
+        assert!(
+            !ctx.boolean_value(230),
+            "ID 230 should be false when gauge is None"
+        );
+        assert!(
+            !ctx.boolean_value(1240),
+            "ID 1240 should be false when gauge is None"
+        );
+    }
+
+    #[test]
+    fn play_render_context_border_or_more_true_when_qualified() {
+        let gauge = Box::leak(Box::new(make_gauge_with_value(85.0)));
+        let mut ctx = make_render_ctx(0);
+        ctx.gauge = Some(gauge);
+        assert!(
+            ctx.boolean_value(1240),
+            "ID 1240 (BORDER_OR_MORE) should be true when gauge is qualified (value >= border)"
+        );
+    }
+
+    #[test]
+    fn play_render_context_border_or_more_false_when_not_qualified() {
+        let gauge = Box::leak(Box::new(make_gauge_with_value(50.0)));
+        let mut ctx = make_render_ctx(0);
+        ctx.gauge = Some(gauge);
+        assert!(
+            !ctx.boolean_value(1240),
+            "ID 1240 (BORDER_OR_MORE) should be false when gauge is not qualified (value < border)"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_gauge_range_50_59_true() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new({
+            let mut m = bms_model::bms_model::BMSModel::new();
+            m.total = 300.0;
+            m
+        })));
+        let mut gauge = rubato_types::groove_gauge::GrooveGauge::new(
+            &player.model,
+            rubato_types::groove_gauge::NORMAL,
+            &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+        );
+        gauge.set_value(55.0);
+        player.gauge = Some(gauge);
+        let ctx = PlayMouseContext { timer, player };
+        assert!(
+            ctx.boolean_value(235),
+            "PlayMouseContext ID 235 (50-59%) should be true when gauge value is 55.0"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_border_or_more_true_when_qualified() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new({
+            let mut m = bms_model::bms_model::BMSModel::new();
+            m.total = 300.0;
+            m
+        })));
+        let mut gauge = rubato_types::groove_gauge::GrooveGauge::new(
+            &player.model,
+            rubato_types::groove_gauge::NORMAL,
+            &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+        );
+        gauge.set_value(85.0);
+        player.gauge = Some(gauge);
+        let ctx = PlayMouseContext { timer, player };
+        assert!(
+            ctx.boolean_value(1240),
+            "PlayMouseContext ID 1240 (BORDER_OR_MORE) should be true when gauge is qualified"
+        );
+    }
+
+    #[test]
+    fn play_mouse_context_gauge_range_false_without_gauge() {
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let player = Box::leak(Box::new(BMSPlayer::new(
+            bms_model::bms_model::BMSModel::new(),
+        )));
+        let ctx = PlayMouseContext { timer, player };
+        assert!(
+            !ctx.boolean_value(235),
+            "PlayMouseContext ID 235 should be false when gauge is None"
+        );
+        assert!(
+            !ctx.boolean_value(1240),
+            "PlayMouseContext ID 1240 should be false when gauge is None"
         );
     }
 

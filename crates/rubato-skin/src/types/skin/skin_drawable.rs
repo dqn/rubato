@@ -272,10 +272,156 @@ impl rubato_types::skin_render_context::SkinRenderContext for TimerOnlyMainState
         }
     }
 
-    fn get_offset_value(&self, id: i32) -> Option<&rubato_types::skin_offset::SkinOffset> {
+    fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
+        static DEFAULT: std::sync::OnceLock<rubato_types::score_data_property::ScoreDataProperty> =
+            std::sync::OnceLock::new();
         self.ctx
             .as_deref()
-            .and_then(|c| c.get_offset_value(id))
+            .map(|c| c.score_data_property())
+            .unwrap_or_else(|| {
+                DEFAULT.get_or_init(rubato_types::score_data_property::ScoreDataProperty::default)
+            })
+    }
+
+    fn get_offset_value(
+        &self,
+        id: i32,
+    ) -> Option<&rubato_types::skin_offset::SkinOffset> {
+        self.ctx.as_deref().and_then(|c| c.get_offset_value(id))
+    }
+
+    fn get_distribution_data(
+        &self,
+    ) -> Option<rubato_types::distribution_data::DistributionData> {
+        self.ctx.as_deref().and_then(|c| c.get_distribution_data())
+    }
+
+    fn gauge_history(&self) -> Option<&Vec<Vec<f32>>> {
+        self.ctx.as_deref().and_then(|c| c.gauge_history())
+    }
+
+    fn course_gauge_history(&self) -> &[Vec<Vec<f32>>] {
+        self.ctx
+            .as_deref()
+            .map_or(&[] as &[Vec<Vec<f32>>], |c| c.course_gauge_history())
+    }
+
+    fn gauge_border_max(&self) -> Option<(f32, f32)> {
+        self.ctx.as_deref().and_then(|c| c.gauge_border_max())
+    }
+
+    fn gauge_min(&self) -> f32 {
+        self.ctx.as_deref().map_or(0.0, |c| c.gauge_min())
+    }
+
+    fn is_gauge_max(&self) -> bool {
+        self.ctx.as_deref().is_some_and(|c| c.is_gauge_max())
+    }
+
+    fn result_gauge_type(&self) -> i32 {
+        self.ctx
+            .as_deref()
+            .map_or_else(|| self.gauge_type(), |c| c.result_gauge_type())
+    }
+
+    fn is_media_load_finished(&self) -> bool {
+        self.ctx
+            .as_deref()
+            .is_some_and(|c| c.is_media_load_finished())
+    }
+
+    fn is_practice_mode(&self) -> bool {
+        self.ctx.as_deref().is_some_and(|c| c.is_practice_mode())
+    }
+
+    fn get_timing_distribution(
+        &self,
+    ) -> Option<&rubato_types::timing_distribution::TimingDistribution> {
+        self.ctx
+            .as_deref()
+            .and_then(|c| c.get_timing_distribution())
+    }
+
+    fn judge_area(&self) -> Option<Vec<Vec<i32>>> {
+        self.ctx.as_deref().and_then(|c| c.judge_area())
+    }
+
+    fn prepare_fps(&self) -> i32 {
+        self.ctx.as_deref().map_or(60, |c| c.prepare_fps())
+    }
+
+    fn is_debug(&self) -> bool {
+        self.ctx.as_deref().is_some_and(|c| c.is_debug())
+    }
+
+    fn mouse_x(&self) -> f32 {
+        self.ctx.as_deref().map_or(0.0, |c| c.mouse_x())
+    }
+
+    fn mouse_y(&self) -> f32 {
+        self.ctx.as_deref().map_or(0.0, |c| c.mouse_y())
+    }
+
+    fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
+        self.ctx.as_deref().and_then(|c| c.replay_option_data())
+    }
+
+    fn target_score_data(&self) -> Option<&rubato_types::score_data::ScoreData> {
+        self.ctx.as_deref().and_then(|c| c.target_score_data())
+    }
+
+    fn score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
+        self.ctx.as_deref().and_then(|c| c.score_data_ref())
+    }
+
+    fn rival_score_data_ref(&self) -> Option<&rubato_types::score_data::ScoreData> {
+        self.ctx.as_deref().and_then(|c| c.rival_score_data_ref())
+    }
+
+    fn ranking_score_clear_type(&self, slot: i32) -> i32 {
+        self.ctx
+            .as_deref()
+            .map_or(-1, |c| c.ranking_score_clear_type(slot))
+    }
+
+    fn ranking_offset(&self) -> i32 {
+        self.ctx.as_deref().map_or(0, |c| c.ranking_offset())
+    }
+
+    fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
+        self.ctx
+            .as_deref()
+            .and_then(|c| c.current_play_config_ref())
+    }
+
+    fn song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
+        self.ctx.as_deref().and_then(|c| c.song_data_ref())
+    }
+
+    fn lane_shuffle_pattern_value(&self, player: usize, lane: usize) -> i32 {
+        self.ctx
+            .as_deref()
+            .map_or(-1, |c| c.lane_shuffle_pattern_value(player, lane))
+    }
+
+    fn mode_image_index(&self) -> Option<i32> {
+        self.ctx.as_deref().and_then(|c| c.mode_image_index())
+    }
+
+    fn sort_image_index(&self) -> Option<i32> {
+        self.ctx.as_deref().and_then(|c| c.sort_image_index())
+    }
+
+    fn notify_audio_config_changed(&mut self) {
+        if let Some(ctx) = self.ctx.as_deref_mut() {
+            ctx.notify_audio_config_changed();
+        }
+    }
+
+    fn select_song_mode(&mut self, event_id: i32) {
+        if let Some(ctx) = self.ctx.as_deref_mut() {
+            ctx.select_song_mode(event_id);
+        }
     }
 
     fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {

@@ -1913,6 +1913,44 @@ fn autoplay_judges_notes_past_35_minutes() {
     assert_eq!(jm.past_notes(), 1, "The note should be counted as past");
 }
 
+/// Regression: auto_minduration must be 80_000 microseconds (80ms), not 80.
+/// Java's auto_minduration = 80 is in milliseconds (timer.getNowTime() returns ms).
+/// Rust timing uses microseconds, so 80 would mean 80us and release keys ~1000x too fast.
+#[test]
+fn auto_minduration_is_80ms_in_microseconds() {
+    // Verify JudgeManager::new()
+    let jm_new = JudgeManager::new();
+    assert_eq!(
+        jm_new.auto_minduration, 80_000,
+        "JudgeManager::new() auto_minduration must be 80_000us (80ms), not 80"
+    );
+
+    // Verify JudgeManager::from_config()
+    let model = make_model_with_notes(&[1_000_000]);
+    let notes = build_judge_notes(&model);
+    let jp = crate::judge_property::lr2();
+    let config = JudgeConfig {
+        notes: &notes,
+        mode: &Mode::BEAT_7K,
+        ln_type: LnType::LongNote,
+        judge_rank: 100,
+        judge_window_rate: [100, 100, 100],
+        scratch_judge_window_rate: [100, 100, 100],
+        algorithm: JudgeAlgorithm::Combo,
+        autoplay: true,
+        judge_property: &jp,
+        lane_property: None,
+        auto_adjust_enabled: false,
+        is_play_or_practice: false,
+        judgeregion: 1,
+    };
+    let jm_config = JudgeManager::from_config(&config);
+    assert_eq!(
+        jm_config.auto_minduration, 80_000,
+        "JudgeManager::from_config() auto_minduration must be 80_000us (80ms), not 80"
+    );
+}
+
 // --- Key beam (judged_lanes) regression tests ---
 
 #[test]

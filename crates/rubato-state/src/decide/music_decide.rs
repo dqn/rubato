@@ -216,6 +216,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
                 .resource
                 .player_data()
                 .map_or(0, |data| (data.playtime % 60) as i32),
+            // Chart level
+            96 => self.resource.songdata().map_or(i32::MIN, |s| s.chart.level),
             // IDs 20-29 (FPS, system date/time, boot time) handled by default_integer_value
             _ => self.default_integer_value(id),
         }
@@ -411,6 +413,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
                 .resource
                 .player_data()
                 .map_or(0, |data| (data.playtime % 60) as i32),
+            // Chart level
+            96 => self.resource.songdata().map_or(i32::MIN, |s| s.chart.level),
             // IDs 20-29 (FPS, system date/time, boot time) handled by default_integer_value
             _ => self.default_integer_value(id),
         }
@@ -2023,6 +2027,51 @@ mod tests {
             ctx.string_value(10),
             "DecideTitle",
             "DecideMouseContext::string_value(10) must delegate title, not return empty"
+        );
+    }
+
+    // DecideRenderContext / DecideMouseContext integer_value ID 96 (chart level) tests
+
+    #[test]
+    fn decide_render_context_integer_value_chart_level() {
+        let mut resource = SongLengthResource::with_length_ms(0);
+        resource.song.chart.level = 12;
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let sdp = rubato_types::score_data_property::ScoreDataProperty::new();
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &mut main,
+            score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert_eq!(
+            ctx.integer_value(96),
+            12,
+            "DecideRenderContext::integer_value(96) must return chart level"
+        );
+    }
+
+    #[test]
+    fn decide_render_context_integer_value_chart_level_no_songdata() {
+        let resource = NullPlayerResource::new();
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let sdp = rubato_types::score_data_property::ScoreDataProperty::new();
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &mut main,
+            score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert_eq!(
+            ctx.integer_value(96),
+            i32::MIN,
+            "DecideRenderContext::integer_value(96) must return i32::MIN when songdata is absent"
         );
     }
 
