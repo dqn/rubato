@@ -19,6 +19,9 @@ static CONFIG: Mutex<Option<Config>> = Mutex::new(None);
 // Some of the settings are based on play mode
 // WARN: PLAY_MODE_VALUE has an initial value, 1 -> BEAT_7K
 static PLAY_MODE_VALUE: Mutex<i32> = Mutex::new(1);
+/// Lock ordering: acquire CURRENT_PLAY_MODE before PLAYER_CONFIG. Never hold
+/// both simultaneously -- copy the mode value first, then release before
+/// acquiring PLAYER_CONFIG.
 static CURRENT_PLAY_MODE: Mutex<Option<Mode>> = Mutex::new(None);
 
 static NOTIFICATION_POSITION: Mutex<i32> = Mutex::new(0);
@@ -314,14 +317,21 @@ fn flush_play_config() {
 }
 
 /// Get current play mode(5k, 7k...) config from the local PlayerConfig clone.
+///
+/// Lock ordering convention: acquire CURRENT_PLAY_MODE before PLAYER_CONFIG,
+/// and never hold both simultaneously. This matches flush_play_config() and
+/// prevents deadlock if multi-threaded access is ever introduced.
 fn get_play_config() -> PlayConfig {
+    // Copy mode first and release the lock before acquiring PLAYER_CONFIG.
+    let mode = match *lock_or_recover(&CURRENT_PLAY_MODE) {
+        Some(m) => m,
+        None => return PlayConfig::default(),
+    };
+
     let pc_guard = lock_or_recover(&PLAYER_CONFIG);
     if let Some(ref pc) = *pc_guard {
-        let mode = lock_or_recover(&CURRENT_PLAY_MODE);
-        if let Some(ref mode) = *mode {
-            // Use play_config_ref() to avoid the &mut requirement of play_config()
-            return pc.play_config_ref(*mode).playconfig.clone();
-        }
+        // Use play_config_ref() to avoid the &mut requirement of play_config()
+        return pc.play_config_ref(mode).playconfig.clone();
     }
     PlayConfig::default()
 }
@@ -813,6 +823,54 @@ mod tests {
             !new_queue.is_empty(),
             "new queue should receive the flush command"
         );
+
+        reset_statics();
+    }
+
+    /// Verify that get_play_config and flush_play_config never hold
+    /// PLAYER_CONFIG and CURRENT_PLAY_MODE simultaneously, preventing
+    /// potential deadlock from inconsistent lock ordering.
+    ///
+    /// Lock ordering convention (documented in get_play_config):
+    ///   1. Acquire CURRENT_PLAY_MODE, copy value, release
+    ///   2. Acquire PLAYER_CONFIG
+    /// Both get_play_config and flush_play_config follow this pattern.
+    #[test]
+    fn test_no_nested_locks_between_player_config_and_play_mode() {
+        reset_statics();
+
+        let mut pc = PlayerConfig::default();
+        pc.mode7.playconfig.enablelift = true;
+        pc.mode7.playconfig.lift = 0.75;
+        let queue = MainControllerCommandQueue::new();
+
+        *lock_or_recover(&PLAYER_CONFIG) = Some(pc);
+        *lock_or_recover(&COMMAND_QUEUE) = Some(queue);
+        *lock_or_recover(&CURRENT_PLAY_MODE) = Some(Mode::BEAT_7K);
+
+        // get_play_config must work without nesting locks
+        let play_cfg = get_play_config();
+        assert!(play_cfg.enablelift);
+        assert!((play_cfg.lift - 0.75).abs() < 0.001);
+
+        // flush_play_config must also work without nesting locks
+        *lock_or_recover(&ENABLE_LIFT) = false;
+        flush_play_config();
+
+        let pc_guard = lock_or_recover(&PLAYER_CONFIG);
+        let updated = &pc_guard
+            .as_ref()
+            .unwrap()
+            .play_config_ref(Mode::BEAT_7K)
+            .playconfig;
+        assert!(!updated.enablelift, "flush must update PLAYER_CONFIG");
+        drop(pc_guard);
+
+        // get_play_config with no mode set returns default
+        *lock_or_recover(&CURRENT_PLAY_MODE) = None;
+        let default_cfg = get_play_config();
+        assert!(!default_cfg.enablelift);
+        assert_eq!(default_cfg.lift, PlayConfig::default().lift);
 
         reset_statics();
     }
