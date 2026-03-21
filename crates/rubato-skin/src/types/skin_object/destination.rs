@@ -227,3 +227,108 @@ impl SkinObjectData {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn default_params() -> DestinationParams {
+        DestinationParams {
+            time: 0,
+            x: 0.0,
+            y: 0.0,
+            w: 100.0,
+            h: 100.0,
+            acc: 0,
+            a: 255,
+            r: 255,
+            g: 255,
+            b: 255,
+            blend: 0,
+            filter: 0,
+            angle: 0,
+            center: 0,
+            loop_val: 0,
+        }
+    }
+
+    /// Regression: DST command values[18-20] must wire as draw conditions (dstdraw),
+    /// and read_offset values must wire as offset IDs.
+    /// A prior bug swapped these parameters, causing draw conditions to be lost
+    /// and offsets to be misinterpreted.
+    #[test]
+    fn set_destination_wires_draw_conditions_and_offsets() {
+        let mut data = SkinObjectData::default();
+
+        // op1=1 (OPTION_FOLDERBAR), op2=2 (OPTION_SONGBAR), op3=0 (no condition)
+        // These are known boolean property IDs that should produce dstdraw entries.
+        let op1 = 1;
+        let op2 = 2;
+        let op3 = 0;
+        let offsets = vec![10, 30]; // OFFSET_ALL, OFFSET_NOTES_1P
+
+        data.set_destination_with_int_timer_and_offsets(
+            &default_params(),
+            0,
+            op1,
+            op2,
+            op3,
+            &offsets,
+        );
+
+        assert_eq!(
+            data.dstdraw.len(),
+            2,
+            "expected 2 draw conditions from op1={op1}, op2={op2}; got {}",
+            data.dstdraw.len()
+        );
+
+        assert_eq!(
+            data.offset,
+            vec![10, 30],
+            "expected offset IDs [10, 30]; got {:?}",
+            data.offset
+        );
+        assert_eq!(data.off.len(), 2, "off slots must match offset count");
+    }
+
+    #[test]
+    fn set_draw_condition_deduplicates_ops() {
+        let mut data = SkinObjectData::default();
+        data.set_draw_condition_from_ops(&[1, 1, 2]);
+        assert_eq!(
+            data.dstdraw.len(),
+            2,
+            "duplicate op IDs should be deduplicated"
+        );
+    }
+
+    #[test]
+    fn set_offset_id_rejects_out_of_range() {
+        let mut data = SkinObjectData::default();
+        data.set_offset_id(&[0, -1, 200, 50]);
+        assert_eq!(data.offset, vec![50]);
+        assert_eq!(data.off.len(), 1);
+    }
+
+    #[test]
+    fn set_offset_id_does_not_overwrite() {
+        let mut data = SkinObjectData::default();
+        data.set_offset_id(&[10]);
+        assert_eq!(data.offset, vec![10]);
+
+        data.set_offset_id(&[20, 30]);
+        assert_eq!(data.offset, vec![10], "offset should not be overwritten");
+    }
+
+    #[test]
+    fn set_draw_condition_negative_id_produces_negated_property() {
+        let mut data = SkinObjectData::default();
+        data.set_draw_condition_from_ops(&[-1]);
+        assert_eq!(
+            data.dstdraw.len(),
+            1,
+            "negative ID should produce a negated draw condition"
+        );
+    }
+}
