@@ -390,10 +390,10 @@ impl StateFactory for LauncherStateFactory {
                 let command_queue = controller.controller_command_queue();
                 let mc_access =
                     QueuedControllerAccess::from_controller(controller, command_queue.clone());
-                let pm = core_res
-                    .play_mode()
-                    .cloned()
-                    .unwrap_or_else(|| BMSPlayerMode::new(BMSPlayerModeType::Play));
+                let pm = core_res.play_mode().cloned().unwrap_or_else(|| {
+                    log::warn!("PlayerResource missing play_mode for Result state");
+                    BMSPlayerMode::new(BMSPlayerModeType::Play)
+                });
                 let bm = core_res.bms_model().cloned().unwrap_or_default();
                 let cm = core_res.course_bms_models().cloned();
                 let ranking = core_res
@@ -433,10 +433,10 @@ impl StateFactory for LauncherStateFactory {
                 let command_queue = controller.controller_command_queue();
                 let mc_access =
                     QueuedControllerAccess::from_controller(controller, command_queue.clone());
-                let pm = core_res
-                    .play_mode()
-                    .cloned()
-                    .unwrap_or_else(|| BMSPlayerMode::new(BMSPlayerModeType::Play));
+                let pm = core_res.play_mode().cloned().unwrap_or_else(|| {
+                    log::warn!("PlayerResource missing play_mode for CourseResult state");
+                    BMSPlayerMode::new(BMSPlayerModeType::Play)
+                });
                 let bm = core_res.bms_model().cloned().unwrap_or_default();
                 let cm = core_res.course_bms_models().cloned();
                 let ranking = core_res
